@@ -9,72 +9,23 @@ import * as THREE from "three";
 import { useStudioStore } from "@/store/studio-store";
 import { getYawPitchDirection } from "@/simulation/geometry";
 import type { CameraNode } from "@/schema/security-scene";
+import { ENVIRONMENT_THEMES, SceneLighting, SceneFloor, SceneWalls, SceneObstructions } from "@/components/workspace/SharedScene";
 
 // ── Shared scene elements ──
 
-const ENV_THEME = {
-  background: "#0a0d13",
-  ambient: 0.66,
-  hemisphere: 0.62,
-  directional: 2.3,
-  fill: 0.55,
-};
+const CAMERA_WALL_THEME = ENVIRONMENT_THEMES.day;
 
 function SceneView() {
   const scene = useStudioStore((s) => s.scene);
   const { width, depth } = scene.dimensions;
+  const selectedId = useStudioStore((s) => s.selectedNodeId);
 
   return (
     <>
-      <color attach="background" args={["#0a0d13"]} />
-      <fog attach="fog" args={["#0a0d13", 12, 24]} />
-      <ambientLight intensity={ENV_THEME.ambient} />
-      <hemisphereLight groundColor="#0b0f15" color="#d9e6ff" intensity={ENV_THEME.hemisphere} />
-      <directionalLight position={[10, 14, 8]} intensity={ENV_THEME.directional} color="#eef4ff" castShadow shadow-mapSize={[512, 512]} />
-      <directionalLight position={[-5, 8, -8]} intensity={ENV_THEME.fill} color="#a5c2ff" />
-      <pointLight position={[5, 2.8, 3.5]} intensity={1.15} distance={8} color="#fff6d8" />
-
-      {/* Floor */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[width / 2, -0.0015, depth / 2]} receiveShadow>
-        <planeGeometry args={[width, depth]} />
-        <meshStandardMaterial color="#252d3a" roughness={0.97} />
-      </mesh>
-
-      {/* Walls */}
-      {scene.walls.map((wall) => {
-        const dx = wall.end[0] - wall.start[0];
-        const dz = wall.end[1] - wall.start[1];
-        const length = Math.hypot(dx, dz);
-        const angle = Math.atan2(dz, dx);
-        const cx = (wall.start[0] + wall.end[0]) / 2;
-        const cz = (wall.start[1] + wall.end[1]) / 2;
-        const isGlass = wall.material === "glass";
-        return (
-          <mesh key={wall.id} position={[cx, wall.heightM / 2, cz]} rotation={[0, -angle, 0]} castShadow receiveShadow>
-            <boxGeometry args={[length, wall.heightM, 0.18]} />
-            <meshStandardMaterial
-              color={isGlass ? "#cfe5ff" : "#d4dae6"}
-              transparent={isGlass}
-              opacity={isGlass ? 0.2 : 1}
-              roughness={0.78}
-              metalness={0.02}
-            />
-          </mesh>
-        );
-      })}
-
-      {/* Obstructions */}
-      {scene.obstructions.map((obs) => {
-        const [w, d, h] = obs.dimensions;
-        return (
-          <group key={obs.id} position={obs.position} rotation={[0, (obs.rotationYDeg * Math.PI) / 180, 0]}>
-            <mesh castShadow receiveShadow>
-              <boxGeometry args={[w, h, d]} />
-              <meshStandardMaterial color="#5c4324" roughness={0.82} metalness={0.08} />
-            </mesh>
-          </group>
-        );
-      })}
+      <SceneLighting theme={CAMERA_WALL_THEME} />
+      <SceneFloor width={width} depth={depth} showGrid={false} />
+      <SceneWalls walls={scene.walls} />
+      <SceneObstructions obstructions={scene.obstructions} selectedId={selectedId} />
     </>
   );
 }

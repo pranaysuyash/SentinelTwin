@@ -1,163 +1,53 @@
 "use client";
 
 import { Html, OrbitControls } from "@react-three/drei";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { motion } from "framer-motion";
 import { Pause, Play, RotateCcw, SkipBack, SkipForward } from "lucide-react";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
-
 import { useStudioStore } from "@/store/studio-store";
+import {
+  ENVIRONMENT_THEMES,
+  SceneLighting,
+  SceneFloor,
+  SceneWalls,
+  SceneObstructions,
+  CoverageHeatmapInstanced,
+  AdversarialPathLine,
+} from "@/components/workspace/SharedScene";
 
-// ── Shared scene (mirror of WorkspaceCanvas internals) ──
+// ── Shared scene ──
 
-const ENV_THEME = {
-  background: "#0a0d13",
-  ambient: 0.66,
-  hemisphere: 0.62,
-  directional: 2.3,
-  fill: 0.55,
-};
+const PATH_REPLAY_THEME = ENVIRONMENT_THEMES.day;
 
 function SceneView() {
   const scene = useStudioStore((s) => s.scene);
   const { width, depth } = scene.dimensions;
   const result = useStudioStore((s) => s.simulationResult);
+  const selectedId = useStudioStore((s) => s.selectedNodeId);
 
   return (
     <>
-      <color attach="background" args={["#0a0d13"]} />
-      <fog attach="fog" args={["#0a0d13", 12, 24]} />
-      <ambientLight intensity={ENV_THEME.ambient} />
-      <hemisphereLight groundColor="#0b0f15" color="#d9e6ff" intensity={ENV_THEME.hemisphere} />
-      <directionalLight position={[10, 14, 8]} intensity={ENV_THEME.directional} color="#eef4ff" castShadow shadow-mapSize={[512, 512]} />
-      <directionalLight position={[-5, 8, -8]} intensity={ENV_THEME.fill} color="#a5c2ff" />
-      <pointLight position={[5, 2.8, 3.5]} intensity={1.15} distance={8} color="#fff6d8" />
-
-      {/* Floor */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[width / 2, -0.0015, depth / 2]} receiveShadow>
-        <planeGeometry args={[width, depth]} />
-        <meshStandardMaterial color="#252d3a" roughness={0.97} />
-      </mesh>
-
-      {/* Floor grid */}
-      <gridHelper args={[Math.max(width, depth) + 1.5, (Math.max(width, depth) + 2) * 6, "#2d3444", "#181d28"]} position={[width / 2, 0.002, depth / 2]} />
-
-      {/* Walls */}
-      {scene.walls.map((wall) => {
-        const dx = wall.end[0] - wall.start[0];
-        const dz = wall.end[1] - wall.start[1];
-        const length = Math.hypot(dx, dz);
-        const angle = Math.atan2(dz, dx);
-        const cx = (wall.start[0] + wall.end[0]) / 2;
-        const cz = (wall.start[1] + wall.end[1]) / 2;
-        const isGlass = wall.material === "glass";
-        return (
-          <mesh key={wall.id} position={[cx, wall.heightM / 2, cz]} rotation={[0, -angle, 0]} castShadow receiveShadow>
-            <boxGeometry args={[length, wall.heightM, 0.18]} />
-            <meshStandardMaterial
-              color={isGlass ? "#cfe5ff" : "#d4dae6"}
-              transparent={isGlass}
-              opacity={isGlass ? 0.2 : 1}
-              roughness={0.78}
-              metalness={0.02}
-            />
-          </mesh>
-        );
-      })}
-
-      {/* Obstructions */}
-      {scene.obstructions.map((obs) => {
-        const [w, d, h] = obs.dimensions;
-        return (
-          <group key={obs.id} position={obs.position} rotation={[0, (obs.rotationYDeg * Math.PI) / 180, 0]}>
-            <mesh castShadow receiveShadow>
-              <boxGeometry args={[w, h, d]} />
-              <meshStandardMaterial color="#5c4324" roughness={0.82} metalness={0.08} />
-            </mesh>
-          </group>
-        );
-      })}
-
-      {/* Coverage heatmap if available */}
+      <SceneLighting theme={PATH_REPLAY_THEME} />
+      <SceneFloor width={width} depth={depth} />
+      <SceneWalls walls={scene.walls} />
+      <SceneObstructions obstructions={scene.obstructions} selectedId={selectedId} />
       {result?.coverageCells && (
-        <CoverageHeatmap cells={result.coverageCells} />
+        <CoverageHeatmapInstanced cells={result.coverageCells} />
       )}
     </>
   );
 }
 
-function CoverageHeatmap({ cells }: { cells: { x: number; z: number; quality: string }[] }) {
-  const meshRef = useRef<THREE.InstancedMesh>(null!);
-  const mat = useRef(new THREE.Matrix4());
-  const col = useRef(new THREE.Color());
+// ── Path Line + Markers ──
 
-  const QUALITY_COLORS: Record<string, THREE.Color> = {
-    identification: new THREE.Color("#3b82f6"),
-    recognition: new THREE.Color("#22c55e"),
-    observation: new THREE.Color("#eab308"),
-    detection: new THREE.Color("#f97316"),
-    none: new THREE.Color("#25090b"),
-  };
-
-  useEffect(() => {
-    const mesh = meshRef.current;
-    if (!mesh || cells.length === 0) return;
-    cells.forEach((cell, index) => {
-      mat.current.setPosition(cell.x, 0.008, cell.z);
-      mesh.setMatrixAt(index, mat.current);
-      col.current.copy(QUALITY_COLORS[cell.quality] ?? QUALITY_COLORS.none);
-      mesh.setColorAt(index, col.current);
-    });
-    mesh.instanceMatrix.needsUpdate = true;
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [cells]);
-
-  if (cells.length === 0) return null;
-
-  return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, cells.length]} renderOrder={1}>
-      <boxGeometry args={[0.22, 0.008, 0.22]} />
-      <meshBasicMaterial vertexColors transparent opacity={0.74} depthWrite={false} />
-    </instancedMesh>
-  );
-}
-
-// ── Adversarial Path Line ──
-
-function PathLine({ waypoints }: { waypoints: [number, number][] }) {
-  const verts = useMemo(() => {
-    const arr = new Float32Array(waypoints.length * 3);
-    waypoints.forEach(([x, z], index) => {
-      arr[index * 3] = x;
-      arr[index * 3 + 1] = 0.045;
-      arr[index * 3 + 2] = z;
-    });
-    return arr;
-  }, [waypoints]);
-
-  const geometry = useMemo(() => {
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.BufferAttribute(verts, 3));
-    return geo;
-  }, [verts]);
-
-  const line = useMemo(() => {
-    const dashedLine = new THREE.Line(
-      geometry,
-      new THREE.LineDashedMaterial({ color: "#f43f5e", dashSize: 0.1, gapSize: 0.06, scale: 1 }),
-    );
-    dashedLine.computeLineDistances();
-    return dashedLine;
-  }, [geometry]);
-
-  // Start/end markers
+function PathMarkers({ waypoints }: { waypoints: [number, number][] }) {
   const start = waypoints[0];
   const end = waypoints[waypoints.length - 1];
-
   return (
-    <group>
-      <primitive object={line} />
+    <>
       {start && (
         <mesh position={[start[0], 0.065, start[1]]}>
           <sphereGeometry args={[0.08, 12, 12]} />
@@ -170,51 +60,44 @@ function PathLine({ waypoints }: { waypoints: [number, number][] }) {
           <meshBasicMaterial color="#ef4444" />
         </mesh>
       )}
-    </group>
+    </>
   );
 }
 
-// ── Animated Actor ──
+// ── Animated Actor (useFrame for R3F-native per-frame updates) ──
 
-function PathActor({
-  waypoints,
-  currentIndex,
-  progress,
-}: {
+function PathActor({ waypoints, currentIndex, progress }: {
   waypoints: [number, number][];
   currentIndex: number;
   progress: number;
 }) {
   const groupRef = useRef<THREE.Group>(null!);
+  // Ref to latest props so useFrame always reads fresh values
+  const propsRef = useRef({ waypoints, currentIndex, progress });
+  propsRef.current = { waypoints, currentIndex, progress };
 
-  // Interpolate position between waypoints
-  const pos = useMemo(() => {
-    if (waypoints.length < 2) return null;
-    if (currentIndex >= waypoints.length - 1) {
-      return { x: waypoints[waypoints.length - 1][0], z: waypoints[waypoints.length - 1][1] };
+  // Directly mutate the Three.js object every frame — no React re-render
+  useFrame(() => {
+    const { waypoints: wps, currentIndex: idx, progress: prog } = propsRef.current;
+    if (!groupRef.current || wps.length < 2) return;
+
+    let x: number, z: number, dx = 0, dz = 0;
+    if (idx >= wps.length - 1) {
+      x = wps[wps.length - 1][0];
+      z = wps[wps.length - 1][1];
+    } else {
+      const a = wps[idx];
+      const b = wps[Math.min(idx + 1, wps.length - 1)];
+      dx = b[0] - a[0];
+      dz = b[1] - a[1];
+      x = a[0] + dx * prog;
+      z = a[1] + dz * prog;
     }
-    const a = waypoints[currentIndex];
-    const b = waypoints[Math.min(currentIndex + 1, waypoints.length - 1)];
-    return {
-      x: a[0] + (b[0] - a[0]) * progress,
-      z: a[1] + (b[1] - a[1]) * progress,
-      // Direction for rotation
-      dx: b[0] - a[0],
-      dz: b[1] - a[1],
-    };
-  }, [waypoints, currentIndex, progress]);
 
-  // Apply position and rotation every frame
-  useEffect(() => {
-    if (!groupRef.current || !pos) return;
-    groupRef.current.position.set(pos.x, 0.02, pos.z);
-    if (pos.dx !== undefined && pos.dz !== undefined) {
-      const angle = Math.atan2(pos.dx, pos.dz);
-      groupRef.current.rotation.y = angle;
-    }
-  }, [pos]);
-
-  if (!pos) return null;
+    groupRef.current.position.set(x, 0.02, z);
+    const angle = Math.atan2(dx, dz);
+    groupRef.current.rotation.y = angle;
+  });
 
   return (
     <group ref={groupRef}>
@@ -223,7 +106,7 @@ function PathActor({
         <circleGeometry args={[0.25, 16]} />
         <meshBasicMaterial color="#000" transparent opacity={0.2} />
       </mesh>
-      {/* Body - cylinder torso */}
+      {/* Body - capsule torso */}
       <mesh position={[0, 0.8, 0]} castShadow>
         <capsuleGeometry args={[0.12, 0.35, 4, 8]} />
         <meshStandardMaterial color="#1e293b" roughness={0.6} metalness={0.1} />
@@ -261,7 +144,13 @@ function PathActor({
   );
 }
 
-// ── Playback Controls (HTML overlay) ──
+// ── Playback Controls (framer-motion) ──
+
+const controlBtnVariants = {
+  rest: { scale: 1 },
+  hover: { scale: 1.08 },
+  tap: { scale: 0.92 },
+};
 
 function PlaybackControls({
   playing,
@@ -294,7 +183,12 @@ function PlaybackControls({
   };
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/90 via-black/70 to-transparent px-4 pb-3 pt-10">
+    <motion.div
+      initial={{ y: 40, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 260, damping: 22, delay: 0.15 }}
+      className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/90 via-black/70 to-transparent px-4 pb-3 pt-10"
+    >
       {/* Progress bar */}
       <div className="mb-2">
         <input
@@ -304,7 +198,7 @@ function PlaybackControls({
           step={0.05}
           value={currentTime}
           onChange={(e) => onSeek(parseFloat(e.target.value))}
-          className="h-1 w-full cursor-pointer appearance-none rounded-full bg-[#1f2536] [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#60a5fa] [&::-webkit-slider-thumb]:shadow-lg"
+          className="h-1 w-full cursor-pointer appearance-none rounded-full bg-[#1f2536] [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#60a5fa] [&::-webkit-slider-thumb]:shadow-lg transition-all"
           style={{
             background: `linear-gradient(to right, #60a5fa ${progress * 100}%, #1f2536 ${progress * 100}%)`,
           }}
@@ -314,23 +208,35 @@ function PlaybackControls({
       <div className="flex items-center justify-between">
         {/* Left: transport controls */}
         <div className="flex items-center gap-1.5">
-          <button
+          <motion.button
+            variants={controlBtnVariants}
+            initial="rest"
+            whileHover="hover"
+            whileTap="tap"
             onClick={onReset}
             className="flex h-7 w-7 items-center justify-center rounded-md text-[#5b667c] hover:bg-[#1a2333] hover:text-white"
             title="Reset"
           >
             <RotateCcw className="h-3.5 w-3.5" />
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            variants={controlBtnVariants}
+            initial="rest"
+            whileHover="hover"
+            whileTap="tap"
             onClick={() => onSeek(Math.max(0, currentTime - 2))}
             className="flex h-7 w-7 items-center justify-center rounded-md text-[#5b667c] hover:bg-[#1a2333] hover:text-white"
             title="Skip back 2s"
           >
             <SkipBack className="h-3.5 w-3.5" />
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            variants={controlBtnVariants}
+            initial="rest"
+            whileHover="hover"
+            whileTap="tap"
             onClick={onPlayPause}
-            className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${
+            className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
               playing
                 ? "bg-[#60a5fa] text-white shadow-[0_0_12px_rgba(96,165,250,0.4)]"
                 : "bg-[#1a2333] text-[#93c5fd] hover:bg-[#253454]"
@@ -344,42 +250,55 @@ function PlaybackControls({
             ) : (
               <Play className="h-3.5 w-3.5 ml-0.5" />
             )}
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            variants={controlBtnVariants}
+            initial="rest"
+            whileHover="hover"
+            whileTap="tap"
             onClick={() => onSeek(Math.min(duration, currentTime + 2))}
             className="flex h-7 w-7 items-center justify-center rounded-md text-[#5b667c] hover:bg-[#1a2333] hover:text-white"
             title="Skip forward 2s"
           >
             <SkipForward className="h-3.5 w-3.5" />
-          </button>
+          </motion.button>
         </div>
 
         {/* Center: time display */}
         <div className="flex items-center gap-3">
-          <span className="text-[10px] font-mono tabular-nums text-[#8b96ab]">
+          <motion.span
+            key={currentTime}
+            initial={{ opacity: 0.5 }}
+            animate={{ opacity: 1 }}
+            className="text-[10px] font-mono tabular-nums text-[#8b96ab]"
+          >
             {formatTime(currentTime)} / {formatTime(duration)}
-          </span>
+          </motion.span>
           <span className="text-[8px] text-[#4a5568]">{waypointCount} waypoints</span>
         </div>
 
         {/* Right: speed selector */}
         <div className="flex items-center gap-0.5">
           {[0.5, 1, 2, 4].map((s) => (
-            <button
+            <motion.button
               key={s}
+              variants={controlBtnVariants}
+              initial="rest"
+              whileHover="hover"
+              whileTap="tap"
               onClick={() => onSpeedChange(s)}
-              className={`rounded px-1.5 py-0.5 text-[9px] font-medium transition-all ${
+              className={`rounded px-1.5 py-0.5 text-[9px] font-medium transition-colors ${
                 speed === s
                   ? "bg-[#1a2333] text-[#93c5fd]"
                   : "text-[#4a5568] hover:bg-[#131a28] hover:text-[#8b96ab]"
               }`}
             >
               {s}×
-            </button>
+            </motion.button>
           ))}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -418,7 +337,7 @@ function CameraMarkers() {
   );
 }
 
-// ── Info overlay (top left) ──
+// ── Info overlay (framer-motion) ──
 
 function InfoOverlay({ waypointCount, exposureScore, targetReached }: {
   waypointCount: number;
@@ -426,8 +345,13 @@ function InfoOverlay({ waypointCount, exposureScore, targetReached }: {
   targetReached: boolean;
 }) {
   return (
-    <div className="absolute left-3 top-12 z-10 rounded-xl border border-[#1f2536] bg-[#0b0f17]/90 px-3 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.28)] backdrop-blur-sm">
-      <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#5b667c]">Adversarial Path</div>
+    <motion.div
+      initial={{ x: -20, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 280, damping: 24 }}
+      className="absolute left-3 top-12 z-10 rounded-xl border border-[#1f2536] bg-[#0b0f17]/90 px-3 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.28)] backdrop-blur-sm"
+    >
+      <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#5b667c]">Coverage Failure Path</div>
       <div className="mt-2 space-y-1">
         <div className="flex items-center justify-between gap-4">
           <span className="text-[9px] text-[#8b96ab]">Waypoints</span>
@@ -444,7 +368,7 @@ function InfoOverlay({ waypointCount, exposureScore, targetReached }: {
           </span>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -457,7 +381,7 @@ function EmptyReplayState() {
         <div className="mx-auto mb-3 h-12 w-12 rounded-full border border-dashed border-[#1f2536] flex items-center justify-center">
           <Play className="h-5 w-5 text-[#2a3246] ml-0.5" />
         </div>
-        <p className="text-[11px] text-[#4a5568]">Run simulation to generate adversarial path</p>
+        <p className="text-[11px] text-[#4a5568]">Run simulation to generate coverage failure path</p>
         <p className="mt-1 text-[9px] text-[#3a4158]">Toggle Path Replay after simulation completes</p>
       </div>
     </div>
@@ -468,7 +392,7 @@ function EmptyReplayState() {
 
 export function PathReplayView() {
   const result = useStudioStore((s) => s.simulationResult);
-  const adversarialPath = result?.adversarialPath;
+  const coverageFailurePath = result?.adversarialPath;
 
   // Playback state
   const [playing, setPlaying] = useState(false);
@@ -477,19 +401,19 @@ export function PathReplayView() {
 
   // Derived data
   const waypoints: [number, number][] = useMemo(() => {
-    if (!adversarialPath) return [];
-    return adversarialPath.waypoints.map((wp) => wp.position);
-  }, [adversarialPath]);
+    if (!coverageFailurePath) return [];
+    return coverageFailurePath.waypoints.map((wp) => wp.position);
+  }, [coverageFailurePath]);
 
-  const totalDuration = adversarialPath?.totalDurationS ?? 0;
+  const totalDuration = coverageFailurePath?.totalDurationS ?? 0;
 
   // Find current segment index + progress based on elapsed time
   const { currentIndex, progress } = useMemo(() => {
-    if (!adversarialPath || waypoints.length < 2) {
+    if (!coverageFailurePath || waypoints.length < 2) {
       return { currentIndex: 0, progress: 0 };
     }
 
-    const wps = adversarialPath.waypoints;
+    const wps = coverageFailurePath.waypoints;
     let cumulativeTime = 0;
 
     for (let i = 0; i < wps.length - 1; i++) {
@@ -505,7 +429,7 @@ export function PathReplayView() {
 
     // Past the end
     return { currentIndex: waypoints.length - 1, progress: 1 };
-  }, [adversarialPath, waypoints, currentTime]);
+  }, [coverageFailurePath, waypoints, currentTime]);
 
   // Auto-advance time when playing
   // Use a ref to track the "anchor" (time when playback was last resumed) so
@@ -567,17 +491,17 @@ export function PathReplayView() {
     });
   }, [totalDuration]);
 
-  if (!adversarialPath || waypoints.length < 2) {
+  if (!coverageFailurePath || waypoints.length < 2) {
     return <EmptyReplayState />;
   }
 
   return (
     <div className="relative flex-1 overflow-hidden bg-[#07090d]">
-      {adversarialPath && (
+      {coverageFailurePath && (
         <InfoOverlay
           waypointCount={waypoints.length}
-          exposureScore={adversarialPath.totalExposureScore}
-          targetReached={adversarialPath.targetReached}
+          exposureScore={coverageFailurePath.totalExposureScore}
+          targetReached={coverageFailurePath.targetReached}
         />
       )}
 
@@ -591,8 +515,9 @@ export function PathReplayView() {
           <SceneView />
         </Suspense>
 
-        {/* Adversarial path line */}
-        <PathLine waypoints={waypoints} />
+        {/* Coverage-failure path line */}
+        <AdversarialPathLine waypoints={waypoints} />
+        <PathMarkers waypoints={waypoints} />
 
         {/* Actor */}
         <PathActor waypoints={waypoints} currentIndex={currentIndex} progress={progress} />

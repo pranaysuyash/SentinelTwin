@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { Map, Monitor, Play } from "lucide-react";
 
 import type { ViewMode } from "@/store/studio-store";
@@ -21,14 +22,21 @@ export function ViewModeBar() {
         <button
           key={mode}
           onClick={() => setViewMode(mode)}
-          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-medium transition-all ${
-            viewMode === mode
-              ? "bg-[#1a2333] text-[#93c5fd] shadow-sm"
-              : "text-[#5b667c] hover:bg-[#131a28] hover:text-[#8b96ab]"
-          }`}
+          className="relative flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-medium"
         >
-          {icon}
-          {label}
+          {viewMode === mode && (
+            <motion.div
+              layoutId="view-tab-bg"
+              className="absolute inset-0 rounded-lg bg-[#1a2333] shadow-sm"
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            />
+          )}
+          <span className={`relative z-10 flex items-center gap-1.5 transition-colors ${
+            viewMode === mode ? "text-[#93c5fd]" : "text-[#5b667c] hover:text-[#8b96ab]"
+          }`}>
+            {icon}
+            {label}
+          </span>
         </button>
       ))}
     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { AnimatePresence, motion } from "framer-motion";
 import { useSimulation } from "@/hooks/use-simulation";
 import { useStudioStore } from "@/store/studio-store";
 import { TopBar } from "./TopBar";
@@ -10,7 +11,6 @@ import { InspectorPanel } from "@/components/inspector/InspectorPanel";
 import { BottomPanel } from "@/components/bottom-panel/BottomPanel";
 import { ScenarioPathPanel } from "@/components/bottom-panel/ScenarioPathPanel";
 import { BottomRow } from "@/components/bottom-row/BottomRow";
-import type { ViewMode } from "@/store/studio-store";
 import { ViewModeBar } from "@/components/view/ViewModeBar";
 
 const WorkspaceCanvas = dynamic(
@@ -30,14 +30,23 @@ const PathReplayView = dynamic(
 
 function WorkspaceArea() {
   const viewMode = useStudioStore((s) => s.viewMode);
-  switch (viewMode) {
-    case "wall":
-      return <CameraWallView />;
-    case "replay":
-      return <PathReplayView />;
-    default:
-      return <WorkspaceCanvas />;
-  }
+
+  return (
+    <AnimatePresence mode="popLayout">
+      <motion.div
+        key={viewMode}
+        initial={{ opacity: 0, scale: 0.97, filter: "blur(2px)" }}
+        animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+        exit={{ opacity: 0, scale: 0.97, filter: "blur(2px)" }}
+        transition={{ duration: 0.2, ease: "easeInOut" }}
+        className="absolute inset-0"
+      >
+        {viewMode === "wall" && <CameraWallView />}
+        {viewMode === "replay" && <PathReplayView />}
+        {viewMode === "map" && <WorkspaceCanvas />}
+      </motion.div>
+    </AnimatePresence>
+  );
 }
 
 export default function StudioShell() {

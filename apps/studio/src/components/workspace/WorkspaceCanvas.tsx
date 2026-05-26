@@ -6,76 +6,22 @@ import { Camera, Layers, Lightbulb, MousePointer2, RefreshCcw, Square } from "lu
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
-import { type CameraNode, type CoverageCellResult, type SecurityIssue } from "@/schema/security-scene";
+import { type CameraNode, type SecurityIssue } from "@/schema/security-scene";
 import { getYawPitchDirection } from "@/simulation/geometry";
 import { useStudioStore, type ActiveTool } from "@/store/studio-store";
+import {
+  ENVIRONMENT_THEMES,
+  SceneLighting,
+  SceneFloor,
+  SceneWalls,
+  SceneObstructions,
+  ScenePathLine,
+  AdversarialPathLine,
+  CoverageHeatmapInstanced,
+  type EnvironmentTheme,
+} from "./SharedScene";
 import { CoverageLegend } from "./CoverageLegend";
 import { createCameraNode, createObstructionNode, createSecurityLightNode } from "@/lib/node-factory";
-
-const QUALITY_COLORS: Record<string, THREE.Color> = {
-  identification: new THREE.Color("#3b82f6"),
-  recognition: new THREE.Color("#22c55e"),
-  observation: new THREE.Color("#eab308"),
-  detection: new THREE.Color("#f97316"),
-  none: new THREE.Color("#25090b"),
-};
-
-const ENVIRONMENT_THEMES = {
-  day: {
-    background: "#0a0d13",
-    ambient: 0.66,
-    hemisphere: 0.62,
-    directional: 2.3,
-    fill: 0.55,
-    poolOpacity: 0.17,
-  },
-  dusk: {
-    background: "#090b12",
-    ambient: 0.48,
-    hemisphere: 0.46,
-    directional: 1.6,
-    fill: 0.42,
-    poolOpacity: 0.12,
-  },
-  night: {
-    background: "#06080d",
-    ambient: 0.3,
-    hemisphere: 0.28,
-    directional: 0.95,
-    fill: 0.3,
-    poolOpacity: 0.08,
-  },
-} as const;
-
-function CoverageHeatmap({ cells }: { cells: CoverageCellResult[] }) {
-  const meshRef = useRef<THREE.InstancedMesh>(null!);
-  const mat = useRef(new THREE.Matrix4());
-  const col = useRef(new THREE.Color());
-
-  useEffect(() => {
-    const mesh = meshRef.current;
-    if (!mesh || cells.length === 0) return;
-
-    cells.forEach((cell, index) => {
-      mat.current.setPosition(cell.x, 0.008, cell.z);
-      mesh.setMatrixAt(index, mat.current);
-      col.current.copy(QUALITY_COLORS[cell.quality] ?? QUALITY_COLORS.none);
-      mesh.setColorAt(index, col.current);
-    });
-
-    mesh.instanceMatrix.needsUpdate = true;
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [cells]);
-
-  if (cells.length === 0) return null;
-
-  return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, cells.length]} renderOrder={1}>
-      <boxGeometry args={[0.22, 0.008, 0.22]} />
-      <meshBasicMaterial vertexColors transparent opacity={0.74} depthWrite={false} />
-    </instancedMesh>
-  );
-}
 
 function CameraFrustum({ camera, selected }: { camera: CameraNode; selected: boolean }) {
   const [px, py, pz] = camera.position;
@@ -161,111 +107,6 @@ function CameraMarker({ camera, selected }: { camera: CameraNode; selected: bool
           </div>
         </Html>
       )}
-    </group>
-  );
-}
-
-function WallSegment({
-  start,
-  end,
-  height,
-  material,
-}: {
-  start: [number, number];
-  end: [number, number];
-  height: number;
-  material: string;
-}) {
-  const dx = end[0] - start[0];
-  const dz = end[1] - start[1];
-  const length = Math.hypot(dx, dz);
-  const angle = Math.atan2(dz, dx);
-  const cx = (start[0] + end[0]) / 2;
-  const cz = (start[1] + end[1]) / 2;
-  const isGlass = material === "glass";
-
-  return (
-    <mesh position={[cx, height / 2, cz]} rotation={[0, -angle, 0]} castShadow receiveShadow>
-      <boxGeometry args={[length, height, 0.18]} />
-      <meshStandardMaterial
-        color={isGlass ? "#cfe5ff" : "#d4dae6"}
-        transparent={isGlass}
-        opacity={isGlass ? 0.2 : 1}
-        roughness={isGlass ? 0.08 : 0.78}
-        metalness={isGlass ? 0.28 : 0.02}
-      />
-    </mesh>
-  );
-}
-
-const OBSTRUCTION_COLORS: Record<string, string> = {
-  shelf: "#5c4324",
-  cupboard: "#624633",
-  counter: "#786552",
-  storage_boxes: "#5b4428",
-  other: "#414456",
-};
-
-function ObstructionBox({
-  obs,
-}: {
-  obs: {
-    id: string;
-    label: string;
-    position: [number, number, number];
-    dimensions: [number, number, number];
-    rotationYDeg: number;
-    obstructionType: string;
-  };
-}) {
-  const selectNode = useStudioStore((s) => s.selectNode);
-  const selectedId = useStudioStore((s) => s.selectedNodeId);
-  const isSelected = selectedId === obs.id;
-  const [width, depth, height] = obs.dimensions;
-  const [px, py, pz] = obs.position;
-  const color = OBSTRUCTION_COLORS[obs.obstructionType] ?? OBSTRUCTION_COLORS.other;
-  const isShelf = obs.obstructionType === "shelf";
-  const highlightBox = useMemo(
-    () => new THREE.BoxGeometry(width * 1.02, height * 1.02, depth * 1.02),
-    [depth, height, width],
-  );
-
-  return (
-    <group
-      position={[px, py, pz]}
-      rotation={[0, (obs.rotationYDeg * Math.PI) / 180, 0]}
-      onClick={(e) => { e.stopPropagation(); selectNode(obs.id); }}
-    >
-      <mesh castShadow receiveShadow>
-        <boxGeometry args={[width, height, depth]} />
-        <meshStandardMaterial
-          color={isSelected ? "#60a5fa" : color}
-          roughness={0.82}
-          metalness={0.08}
-          emissive={isSelected ? "#1e3a5f" : "#000000"}
-          emissiveIntensity={isSelected ? 0.4 : 0}
-        />
-      </mesh>
-      {isSelected && (
-        <lineSegments>
-          <edgesGeometry args={[highlightBox]} />
-          <lineBasicMaterial color="#60a5fa" transparent opacity={0.8} />
-        </lineSegments>
-      )}
-      {/* Shelf boards derived from actual shelf dimensions */}
-      {isShelf
-        ? [0.78, 0.42, 0.06].map((fraction, i) => (
-            <mesh key={i} position={[0, fraction * height - height / 2, 0]} castShadow>
-              <boxGeometry args={[width * 0.95, 0.03, depth * 0.94]} />
-              <meshStandardMaterial color="#6d522f" roughness={0.86} />
-            </mesh>
-          ))
-        : (
-          <mesh position={[0, height / 2 - 0.03, 0]} castShadow>
-            <boxGeometry args={[width * 0.96, 0.05, depth * 0.92]} />
-            <meshStandardMaterial color="#8f7a64" roughness={0.72} metalness={0.06} />
-          </mesh>
-        )}
     </group>
   );
 }
@@ -480,84 +321,7 @@ function EntryDoorLabel({ position }: { position: [number, number] }) {
   );
 }
 
-function PathLine({ points, color = "#7c3aed" }: { points: [number, number][]; color?: string }) {
-  const verts = useMemo(() => {
-    const arr = new Float32Array(points.length * 3);
-    points.forEach(([x, z], index) => {
-      arr[index * 3] = x;
-      arr[index * 3 + 1] = 0.045;
-      arr[index * 3 + 2] = z;
-    });
-    return arr;
-  }, [points]);
-
-  const geometry = useMemo(() => {
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.BufferAttribute(verts, 3));
-    return geo;
-  }, [verts]);
-
-  const line = useMemo(() => {
-    const dashedLine = new THREE.Line(
-      geometry,
-      new THREE.LineDashedMaterial({ color, dashSize: 0.14, gapSize: 0.08, scale: 1 }),
-    );
-    dashedLine.computeLineDistances();
-    return dashedLine;
-  }, [color, geometry]);
-
-  const start = points[0];
-  const end = points[points.length - 1];
-
-  return (
-    <group>
-      <primitive object={line} />
-      {start ? (
-        <mesh position={[start[0], 0.065, start[1]]}>
-          <sphereGeometry args={[0.08, 12, 12]} />
-          <meshBasicMaterial color="#22c55e" />
-        </mesh>
-      ) : null}
-      {end ? (
-        <mesh position={[end[0], 0.065, end[1]]}>
-          <sphereGeometry args={[0.08, 12, 12]} />
-          <meshBasicMaterial color="#f59e0b" />
-        </mesh>
-      ) : null}
-    </group>
-  );
-}
-
-function AdversarialPath({ waypoints }: { waypoints: [number, number][] }) {
-  const verts = useMemo(() => {
-    const arr = new Float32Array(waypoints.length * 3);
-    waypoints.forEach(([x, z], index) => {
-      arr[index * 3] = x;
-      arr[index * 3 + 1] = 0.05;
-      arr[index * 3 + 2] = z;
-    });
-    return arr;
-  }, [waypoints]);
-
-  const geometry = useMemo(() => {
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.BufferAttribute(verts, 3));
-    return geo;
-  }, [verts]);
-
-  const line = useMemo(() => {
-    const dashedLine = new THREE.Line(
-      geometry,
-      new THREE.LineDashedMaterial({ color: "#f43f5e", dashSize: 0.1, gapSize: 0.06, scale: 1 }),
-    );
-    dashedLine.computeLineDistances();
-    return dashedLine;
-  }, [geometry]);
-
-  return <primitive object={line} />;
-}
-
-function SceneGeometry({ theme }: { theme: (typeof ENVIRONMENT_THEMES)[keyof typeof ENVIRONMENT_THEMES] }) {
+function SceneGeometry() {
   const scene = useStudioStore((s) => s.scene);
   const result = useStudioStore((s) => s.simulationResult);
   const selected = useStudioStore((s) => s.selectedNodeId);
@@ -572,19 +336,13 @@ function SceneGeometry({ theme }: { theme: (typeof ENVIRONMENT_THEMES)[keyof typ
   return (
     <>
       {layers.walls_floors && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[width / 2, -0.0015, depth / 2]} receiveShadow>
-          <planeGeometry args={[width, depth]} />
-          <meshStandardMaterial color="#252d3a" roughness={0.97} />
-        </mesh>
-      )}
-
-      {layers.walls_floors && (
         <>
+          <SceneFloor width={width} depth={depth} showGrid={false} />
           <AccentSurface position={[width / 2, 0.002, depth / 2]} size={[width * 0.94, depth * 0.94]} color="#5b677d" opacity={0.06} />
           <AccentSurface position={[5, 0.0025, 5.58]} size={[2.5, 1.45]} color="#d7c542" opacity={0.16} />
           <AccentSurface position={[5, 0.003, 6.56]} size={[2, 0.34]} color="#7e8797" opacity={0.18} />
           <AccentSurface position={[8.25, 0.003, 1.12]} size={[2.9, 2.08]} color="#39404d" opacity={0.18} />
-          <AccentSurface position={[5, 0.005, 3.55]} size={[3.9, 5.1]} color="#ffffff" opacity={theme.poolOpacity} />
+          <AccentSurface position={[5, 0.005, 3.55]} size={[3.9, 5.1]} color="#ffffff" opacity={0.15} />
         </>
       )}
 
@@ -602,20 +360,21 @@ function SceneGeometry({ theme }: { theme: (typeof ENVIRONMENT_THEMES)[keyof typ
         />
       )}
 
-      {layers.walls_floors ? scene.walls.map((wall) => (
-        <WallSegment key={wall.id} start={wall.start} end={wall.end} height={wall.heightM} material={wall.material} />
-      )) : null}
+      {layers.walls_floors ? (
+        <SceneWalls walls={scene.walls} />
+      ) : null}
 
-      {layers.obstructions ? scene.obstructions.map((obs) => <ObstructionBox key={obs.id} obs={obs} />) : null}
+      {layers.obstructions ? (
+        <SceneObstructions obstructions={scene.obstructions} selectedId={selected} />
+      ) : null}
       {layers.lights ? <CeilingLightMarkers /> : null}
 
       {blockingIssues.map((issue) => {
-        // Extract obstruction label from description: "<Label> is obstructing coverage in: ..."
         const obsLabel = issue.description.split(" is obstructing")[0] ?? "";
         const matchingObs = scene.obstructions.find((obs) => obs.label === obsLabel);
         if (!matchingObs || !layers.labels) return null;
         const [ox, oy, oz] = matchingObs.position;
-        const [, , obsHeight] = matchingObs.dimensions; // [width, depth, height]
+        const [, , obsHeight] = matchingObs.dimensions;
         const warningY = oy + obsHeight / 2 + 0.35;
         return (
           <ObstructionWarning
@@ -627,7 +386,7 @@ function SceneGeometry({ theme }: { theme: (typeof ENVIRONMENT_THEMES)[keyof typ
         );
       })}
 
-      {layers.heatmap && result?.coverageCells ? <CoverageHeatmap cells={result.coverageCells} /> : null}
+      {layers.heatmap && result?.coverageCells ? <CoverageHeatmapInstanced cells={result.coverageCells} /> : null}
 
       {scene.criticalZones.map((zone) => (
         <CriticalZoneOverlay key={zone.id} zone={zone} result={result?.criticalZoneResults.find((entry) => entry.zoneId === zone.id)} />
@@ -639,11 +398,11 @@ function SceneGeometry({ theme }: { theme: (typeof ENVIRONMENT_THEMES)[keyof typ
       {layers.camera_cones ? scene.cameras.map((cam) => <CameraFrustum key={`frust_${cam.id}`} camera={cam} selected={selected === cam.id} />) : null}
 
       {layers.paths ? scene.paths.map((path) => (
-        <PathLine key={path.id} points={path.points.map((point) => point.position)} />
+        <ScenePathLine key={path.id} points={path.points.map((point) => point.position)} />
       )) : null}
 
       {layers.paths && result?.adversarialPath ? (
-        <AdversarialPath waypoints={result.adversarialPath.waypoints.map((waypoint) => waypoint.position)} />
+        <AdversarialPathLine waypoints={result.adversarialPath.waypoints.map((waypoint) => waypoint.position)} />
       ) : null}
     </>
   );
@@ -919,7 +678,7 @@ export function WorkspaceCanvas() {
         <pointLight position={[5, 2.8, 3.5]} intensity={envMode === "night" ? 0.8 : 1.15} distance={8} color="#fff6d8" />
 
         <Suspense fallback={null}>
-          <SceneGeometry theme={theme} />
+          <SceneGeometry />
         </Suspense>
 
         <ToolPlacementFloor />

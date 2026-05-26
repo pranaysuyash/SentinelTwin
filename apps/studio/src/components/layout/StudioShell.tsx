@@ -1,9 +1,9 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { AnimatePresence, motion } from "framer-motion";
+import { useCallback, useEffect, useState } from "react";
 import { useSimulation } from "@/hooks/use-simulation";
-import { useStudioStore } from "@/store/studio-store";
+import { useStudioStore, type ViewMode, type ActiveTool } from "@/store/studio-store";
 import { TopBar } from "./TopBar";
 import { StatusBar } from "./StatusBar";
 import { LeftPanel } from "@/components/left-panel/LeftPanel";
@@ -14,31 +14,11 @@ import { DockLayout } from "@/components/dock/DockLayout";
 import { DockPanel } from "@/components/dock/DockPanel";
 import { ContextBottomPanel } from "@/components/panels/ContextBottomPanel";
 import { ContextRightPanel } from "@/components/panels/ContextRightPanel";
-
-const WorkspaceCanvas = dynamic(
-  () => import("@/components/workspace/WorkspaceCanvas").then((m) => m.WorkspaceCanvas),
-  { ssr: false },
-);
-
-const CameraWallView = dynamic(
-  () => import("@/components/view/CameraWallView").then((m) => m.CameraWallView),
-  { ssr: false },
-);
-
-const CameraViewMode = dynamic(
-  () => import("@/components/view/CameraViewMode").then((m) => m.CameraViewMode),
-  { ssr: false },
-);
-
-const PathReplayView = dynamic(
-  () => import("@/components/view/PathReplayView").then((m) => m.PathReplayView),
-  { ssr: false },
-);
-
-const CompareView = dynamic(
-  () => import("@/components/view/CompareView").then((m) => m.CompareView),
-  { ssr: false },
-);
+import { WorkspaceCanvas } from "@/components/workspace/WorkspaceCanvas";
+import { CameraWallView } from "@/components/view/CameraWallView";
+import { CameraViewMode } from "@/components/view/CameraViewMode";
+import { PathReplayView } from "@/components/view/PathReplayView";
+import { CompareView } from "@/components/view/CompareView";
 
 function WorkspaceArea() {
   const viewMode = useStudioStore((s) => s.viewMode);
@@ -63,6 +43,67 @@ function WorkspaceArea() {
   );
 }
 
+const VIEW_MODE_KEYS: Record<string, ViewMode> = {
+  "1": "map",
+  "2": "camera_view",
+  "3": "wall",
+  "4": "replay",
+  "5": "compare",
+};
+
+const VIEW_MODE_PRESETS: Record<ViewMode, "edit" | "coverage" | "camera_wall" | "replay" | "compare"> = {
+  map: "edit",
+  camera_view: "coverage",
+  wall: "camera_wall",
+  replay: "replay",
+  compare: "compare",
+};
+
+const TOOL_SHORTCUTS: Record<string, ActiveTool> = {
+  c: "camera",
+  b: "obstruction",
+  l: "light",
+};
+
+function ShortcutsModal({ onClose }: { onClose: () => void }) {
+  const shortcuts = [
+    { keys: "⌘ + N", action: "New Scene" },
+    { keys: "⌘ + S", action: "Save Scene" },
+    { keys: "⌘ + O", action: "Open / Import Scene" },
+    { keys: "1 – 5", action: "Switch View Mode (Map, Camera, Wall, Replay, Compare)" },
+    { keys: "C", action: "Place Camera tool" },
+    { keys: "B", action: "Place Obstruction tool" },
+    { keys: "L", action: "Place Light tool" },
+    { keys: "Esc", action: "Select tool / Cancel placement" },
+    { keys: "?​?", action: "Toggle this shortcuts panel" },
+  ];
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-[420px] rounded-xl border border-[#1f2536] bg-[#0d1017] p-4 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 text-[11px] font-semibold text-white">Keyboard Shortcuts</div>
+        <div className="space-y-2">
+          {shortcuts.map(({ keys, action }) => (
+            <div key={keys} className="flex items-center justify-between">
+              <span className="text-[10px] text-[#8090a8]">{action}</span>
+              <kbd className="rounded border border-[#24283a] bg-[#111521] px-2 py-0.5 font-mono text-[10px] text-[#c7d0e4]">
+                {keys}
+              </kbd>
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-[9px] text-[#4a5568]">Press <kbd className="rounded border border-[#24283a] bg-[#111521] px-1 font-mono text-[9px]">?</kbd> or click anywhere to close.</p>
+      </div>
+    </div>
+  );
+}
+
 export default function StudioShell() {
   useSimulation();
   const demoMode = useStudioStore((s) => s.demoMode);
@@ -78,6 +119,91 @@ export default function StudioShell() {
   const setDockSize = useStudioStore((s) => s.setDockSize);
   const enterFocusMode = useStudioStore((s) => s.enterFocusMode);
   const restorePreviousLayout = useStudioStore((s) => s.restorePreviousLayout);
+
+  const viewMode = useStudioStore((s) => s.viewMode);
+  const setViewMode = useStudioStore((s) => s.setViewMode);
+  const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
+  const activeTool = useStudioStore((s) => s.activeTool);
+  const setActiveTool = useStudioStore((s) => s.setActiveTool);
+  const createNewScene = useStudioStore((s) => s.createNewScene);
+  const saveSceneToStorage = useStudioStore((s) => s.saveSceneToStorage);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
+  // Global keyboard shortcut handler
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    // Don't intercept when user is typing in an input
+    const tag = (e.target as HTMLElement)?.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+    const isCtrlOrMeta = e.ctrlKey || e.metaKey;
+
+    // Ctrl+N: New Scene
+    if (isCtrlOrMeta && e.key === "n") {
+      e.preventDefault();
+      if (confirm("Create a new blank scene? Unsaved changes will be lost.")) {
+        createNewScene();
+      }
+      return;
+    }
+
+    // Ctrl+S: Save Scene
+    if (isCtrlOrMeta && e.key === "s") {
+      e.preventDefault();
+      saveSceneToStorage();
+      return;
+    }
+
+    // Ctrl+O: Open / Import
+    if (isCtrlOrMeta && e.key === "o") {
+      e.preventDefault();
+      // Trigger the file input by dispatching a custom event
+      // The TopBar already has a file input — we reuse it
+      const fileInput = document.querySelector<HTMLInputElement>('input[type="file"][accept=".json"]');
+      fileInput?.click();
+      return;
+    }
+
+    // ?: Toggle shortcuts modal
+    if (e.key === "?" && !e.shiftKey) {
+      setShowShortcuts((v) => !v);
+      return;
+    }
+
+    // Esc: Cancel placement, revert to select
+    if (e.key === "Escape") {
+      if (activeTool !== "select") {
+        e.preventDefault();
+        setActiveTool("select");
+        return;
+      }
+    }
+
+    // View mode keys: 1-5
+    if (VIEW_MODE_KEYS[e.key]) {
+      const nextMode = VIEW_MODE_KEYS[e.key];
+      if (viewMode !== nextMode) {
+        setWorkspacePreset(VIEW_MODE_PRESETS[nextMode]);
+        setViewMode(nextMode);
+      }
+      return;
+    }
+
+    // Tool shortcuts: C, B, L
+    if (TOOL_SHORTCUTS[e.key.toLowerCase()]) {
+      const tool = TOOL_SHORTCUTS[e.key.toLowerCase()];
+      if (activeTool === tool) {
+        setActiveTool("select");
+      } else {
+        setActiveTool(tool);
+      }
+      return;
+    }
+  }, [createNewScene, saveSceneToStorage, setViewMode, setWorkspacePreset, viewMode, setActiveTool, activeTool]);
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[#0b0c10] text-[#dde2ef]">
@@ -135,7 +261,7 @@ export default function StudioShell() {
           </DockPanel>
         }
       >
-        <div className="relative flex-1 overflow-hidden">
+        <div className="relative flex-1 min-h-0 overflow-hidden">
           <ViewModeBar />
           <WorkspaceArea />
           <CommandBar />
@@ -144,6 +270,8 @@ export default function StudioShell() {
       </DockLayout>
 
       <StatusBar />
+
+      {showShortcuts && <ShortcutsModal onClose={() => setShowShortcuts(false)} />}
     </div>
   );
 }

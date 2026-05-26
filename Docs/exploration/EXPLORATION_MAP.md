@@ -1,7 +1,7 @@
 # Exploration Map — SentinelTwin
 
 **This is a living document. Append findings. Never replace.**
-**Last updated:** 2026-05-26 (Batch 6 complete: implementation research for P0 gaps - GSAP path animation, click-to-place, OpenAI Structured Outputs, Camera Wall viewport, Transform controls)
+**Last updated:** 2026-05-30 (Threads 87–96 added: camera sensor/optics, photo stitching, SfM photogrammetry, Three.js/R3F rendering, monocular depth estimation, physical threat intelligence, simulation validation/uncertainty, DES/agent-based sim, camera placement optimization, adversarial attack methodology)
 
 ---
 
@@ -2456,3 +2456,1176 @@ When replacing a component or function:
 **Files touched:**
 - `apps/studio/src/components/workspace/WorkspaceCanvas.tsx`
 - `apps/studio/src/components/view/PathReplayView.tsx`
+
+---
+
+## Thread 73: UI Implementation Session — Reference Screenshot Match
+
+**Status:** Complete (2026-05-26)
+
+**Work completed:**
+Six reference screenshots were used as the source of truth for a pixel-accurate UI implementation pass.
+
+### New files created
+- `apps/studio/src/components/view/CameraWallView.tsx` — 2×2 (adaptive) live POV feed grid with HUD overlays (status dot, name badge, timestamp, scanline texture, OFFLINE state)
+- `apps/studio/src/components/view/CameraViewMode.tsx` — Full-screen single-camera POV with gradient HUD, back button, camera selector pills
+- `apps/studio/src/components/view/CompareView.tsx` — Side-by-side dual 3D heatmap + scenario selector bar
+- `apps/studio/src/components/bottom-panel/CameraStatusSummaryPanel.tsx` — Camera status table + coverage donut (used in wall mode bottom panel)
+
+### Existing files materially upgraded
+- `TimelineTab.tsx` — Added adversarial path timeline event table (Time/Path/Seg/Event/Quality/Camera columns), quality-over-time bar chart, summary stats strip (events/duration/visible%/blind)
+- `BeforeAfterTab.tsx` — Added multi-metric SVG donut comparison (coverage, recognition cells, identification cells, critical zones), quality distribution stacked bars, per-snapshot issue/blindspot stats
+- `ViewModeBar.tsx` — Added `ContextChip` showing selected camera name (camera_view), path count (replay), or coverage % (map) next to active mode tab
+- `BottomPanel.tsx` — Made tab strip scrollable (`overflow-x-auto flex-shrink-0`), wall mode uses CameraStatusSummaryPanel, camera_view/replay auto-switch to timeline, compare auto-switches to beforeafter
+- `InspectorPanel.tsx` — Properties tab gets recommendation count badge, "Recommended Next Steps" section surfaces sim recommendations per camera, View tab had DORI legend + layer toggles
+- `studio-store.ts` — `setViewMode()` now auto-switches `bottomTab` (replay/camera_view→timeline, compare→beforeafter, map→metrics)
+- `CameraWallView.tsx` — Adaptive grid (1 cam=full, 2=side-by-side, 3=2+1, 4=2×2, 5-6=3×2)
+
+### Design principles applied (from design-review skill App UI rules)
+- **Calm surface hierarchy**: Consistent #0b0c10 background, #1f2536 borders, #dde2ef text
+- **Density with readability**: 10-11px labels in panels, 8-9px secondary metadata
+- **DORI color system**: identification=#4ade80, recognition=#60a5fa, observation=#facc15, detection=#fb923c, none=#ef4444 — consistent across heatmap/inspector/timeline/before-after
+- **Minimal chrome**: No decorative blobs, gradients, or emoji decoration
+- **Utility language**: Labels are direct ("DETECT 12.3m", "VISIBLE 87%") not aspirational
+
+### UX improvements delivered independently (not in reference screenshots)
+1. ViewModeBar context chip — always shows what you're looking at
+2. Auto bottom-tab switching on view mode change
+3. Timeline stats summary strip — quick-glance path health
+4. Inspector recommendation badge — surfaces AI suggestions without obscuring tab flow
+5. Adaptive camera wall grid — works with 1-6 cameras
+6. Scrollable bottom panel tabs — 8 tabs fit without overflow
+
+### Open UX gaps (for future sprint)
+- Privacy zone rendering (GAP-16) still not implemented
+- Redundancy/failure matrix (GAP-10) not started
+- Camera preset library (GAP-08) not started
+- The Timeline quality-over-time chart uses approximate slot bucketing — could be enhanced with real interpolation from waypoints when adversarial path result is present
+- BeforeAfterTab donut charts use SVG without animation — framer-motion `animate` on dashoffset would add polish
+
+---
+
+## Thread 74 — Failures Tab, Assumptions Editing, Zone Inspector (Session 2026-05-26)
+
+### Goals
+Close GAP-04 (Failures tab), GAP-06 (Assumptions panel editable), and add CriticalZoneInspector (new).
+
+### Files changed
+- `InspectorPanel.tsx` — Three improvements:
+  1. **Failures tab (GAP-04)**: Full implementation replacing static placeholder. Camera criticality score (0-10) derived from coverage contribution + non-redundant zone count. Toggle buttons for Offline / Dirty Lens / Night Vision Disabled that actually mutate `camera.status`, `camera.clarity`, `camera.nightMode`. "Failure active — re-run simulation" banner + Restore button. Zone coverage list with Redundant/No-Backup labels per zone. Adversarial path exposure count. Impact notes from `camResult.offlineImpact`.
+  2. **Critical Zone Inspector (new)**: `CriticalZoneInspector` component for when a zone is selected. Shows zone name, target type, priority, DORI required vs actual quality, editable properties (targetType, requiredQuality, priority, nightRequired, redundancyRequired), covering cameras list, coverage gap explanation, delete button. Wired in `InspectorPanel` dispatch chain: camera → zone → obstruction → light → NoSelection.
+  3. Added `CriticalZoneNode` to import
+
+- `studio-store.ts` — Added `updateAssumptions(patch)` action that does `{ ...scene.assumptions, ...patch }` and sets `simulationDirty: true`. Added to both type interface and implementation.
+
+- `BottomRow.tsx` — Rewrote `AssumptionsPanel` to support inline editing:
+  - "Edit" button → shows form with segmented controls (TimeOfDay, DORI Model, Light Level, Night Penalty) and number inputs (Person Height, Wall Height)
+  - "Save" / "Cancel" buttons apply/discard changes via draft state
+  - `SegmentedControl<T>` generic component for multi-value selectors
+  - `cur()` helper reads from draft or live assumptions
+  - Wired "Open Report Lite" button to `setBottomTab("report")`
+
+### Design decisions
+- **No separate useState for failure mode**: The toggles directly mutate camera state in the store, making failure state persistent (not transient). User must "Restore" explicitly. This is intentional — the failure simulation IS the state change; re-running simulation gives the real impact. More honest than a shadow "simulated only" state.
+- **Criticality score formula**: `min(10, round(coveragePct/12 + nonRedundantZones * 2))`. Balances coverage contribution vs zone exclusivity. Cameras covering 60% of scene or 3+ unique zones score ≥8 (Critical).
+- **Zone inspector placement**: Between camera and obstruction in the dispatch chain. Rationale: zones are objectives, not obstructions, so they should be higher priority in the chain.
+- **Assumptions editing inline**: Draft + commit pattern avoids partial mutations. All assumption changes mark scene dirty so simulation recompute is triggered.
+
+### UX principles applied
+- Failure toggles use the same pill toggle style as the inspector (consistent visual language)
+- Zone inspector uses existing SectionCard and Badge primitives (no new visual tokens)
+- "Failure active" banner uses amber (warning), not red (critical), because the failure is deliberate — it's a simulation mode, not an error
+- Assumptions edit form uses `SegmentedControl` for categorical values (4 or fewer options) and `<input type="number">` for continuous values
+
+### Open items from this thread
+- GAP-10 (Redundancy matrix) still not built
+- GAP-08 (Camera preset library) still not built
+- Zone inspector could add a DORI range bar visualization showing how far each camera reaches into the zone
+- Assumptions panel could expose PPM threshold editing for the `pixelsPerMeter` sub-object (currently hidden)
+
+---
+
+## Thread 75 — Docked Workspace, Shadow Deprecations, and Fiber Clock Warning (Session 2026-05-26)
+
+### Findings
+- **Canvas-first dock layout is the right product shape for SentinelTwin**: the studio shell now works better as collapsible left/right/bottom docks with workspace presets than as fixed side panels. That keeps the canvas dominant in coverage, replay, compare, and camera-wall modes while still allowing deep inspection when a selection demands it.
+- **`<Canvas shadows="percentage" />` avoids the `PCFSoftShadowMap` deprecation warning**: the runtime warning came from React Three Fiber default shadow handling, not from any app-local three.js shadow code. Switching the studio canvases to `shadows="percentage"` is the clean local fix.
+- **The `THREE.Clock` warning is dependency-level, not app-local**: inspection showed the warning originates inside `@react-three/fiber` internals (`dist/events-*.esm.js` uses `new THREE.Clock()`). This means the app code is not the direct source; the likely remedy is a dependency upgrade or upstream patch rather than a local refactor.
+
+### Useful implementation notes
+- Workspace presets should be updated whenever view mode changes so the shell can restore an appropriate layout automatically.
+- A contextual right inspector is more scalable than adding more fixed tabs, because selection type already determines the most relevant controls.
+- Bottom-dock content should be treated as mode-specific utility space rather than a permanent static panel.
+
+### Follow-up
+- Track the Fiber `Clock` warning as an open dependency issue until the upstream package changes.
+- Keep verifying any new canvases for shadow warnings so the deprecation does not regress as new scenes are added.
+
+---
+
+### Thread 76 — Phase 8: AI Agent Pipeline — Coordinator, Providers, and Tests (Session 2026-05-29)
+
+**Status:** Complete. 1 coordinator, 3 provider implementations, 2 test files, 0 TS/ESLint errors.
+
+**What was built:**
+- `src/agents/CoordinatorAgent.ts` — orchestrator that routes natural language commands to the correct provider, handles conversation state, and returns structured operations. Implements a request/response pattern with timeout handling.
+- `src/agents/providers/ModelProvider.ts` — abstract base class defining the provider interface (streamChat, complete, analyze).
+- `src/agents/providers/AgentConfig.ts` — configuration types and factory for provider selection (OpenAI, Gemini, Qwen switchable via config flag).
+- `src/agents/providers/GeminiProvider.ts` — Gemini 2.5 Flash/Pro implementation with streaming support.
+- `src/agents/providers/OpenAIProvider.ts` — GPT-4o implementation with structured output parsing.
+- `src/agents/providers/QwenProvider.ts` — Qwen2.5-VL implementation for vision-capable analysis.
+- `src/components/agents/AgentCoordinatorPanel.tsx`, `AgentCoordinatorView.tsx` — UI panels for agent interaction.
+- `src/components/agents/ProviderConfigPanel.tsx`, `ProviderConfigView.tsx` — provider configuration UI with API key management.
+- `src/hooks/useAiCommand.ts` — React hook wrapping the coordinator for component use.
+- `src/agents/__tests__/CoordinatorAgent.test.ts` — tests coordinator routing, error handling, response parsing.
+- `src/agents/__tests__/ModelProvider.test.ts` — tests provider abstraction, config validation, factory pattern.
+
+**Key findings:**
+- Provider abstraction works well — switching between OpenAI/Gemini/Qwen requires only a config flag change, no code changes.
+- The streaming response pattern (SSE-style) is essential for UX — users need to see partial results while the model reasons.
+- The coordinator pattern (single entry point → dispatch to specialized handlers) is simpler and more maintainable than a multi-agent swarm for V0.1 scope.
+- Model-agnostic from day one means no provider lock-in — critical for the open-source Apache 2.0 positioning.
+- Tests confirmed: routing works correctly for all provider types, error handling gracefully degrades, and config validation catches misconfiguration.
+
+**Useful implementation notes:**
+- The `AgentConfig` type uses a discriminated union to ensure provider-specific config is type-safe at compile time.
+- Provider selection happens once at initialization, not per-request — avoids latency spikes.
+- The coordinator validates that the scene state can accept the requested operation before delegating — prevents "AI hallucinated an impossible edit" scenarios.
+
+---
+
+### Thread 77 — Phase 9: Report Generation Engine — Multi-Format Export with DORI/OODPCVS Quality (Session 2026-05-29)
+
+**Status:** Complete. 1 engine module, 1 test file (72 assertions), 0 TS/ESLint errors.
+
+**What was built:**
+- `src/report/index.ts` — comprehensive report engine with:
+  - `buildReportData(scene, results)` — generates structured report data from a SecurityScene and SimulationResult
+  - `buildCompareReportData(beforeScene, beforeResult, afterScene, afterResult)` — before/after comparison report
+  - `exportAsHtml(data)` — produces a standalone HTML report with inline styling, coverage heatmap summary, DORI quality breakdown per camera, critical zone analysis, and recommendation cards
+  - `exportAsMarkdown(data)` — plain markdown export suitable for GitHub/Notion
+  - `exportAsText(data)` — plain text export for email inclusion
+  - Comparison exports (HTML/Markdown/Text) showing side-by-side coverage deltas
+- `src/components/bottom-panel/ReportLiteTab.tsx` — in-panel report viewer with export buttons
+- `src/components/bottom-panel/MetricsTab.tsx` — key metrics display (coverage %, DORI levels, zone-specific quality)
+- `src/report/__tests__/report-engine.test.ts` — 72 assertions covering:
+  - Report data construction with full scene including cameras, walls, zones
+  - Edge cases: empty scene, single camera, all missing cameras
+  - All 6 HTML/Markdown/Text export formats (single + comparison)
+  - DORI and OODPCVS quality levels in reports
+  - Compatibility re-exports from the module index
+
+**Key findings:**
+- The HTML report is the most valuable format — it renders cleanly in-browser and can be printed/saved as PDF for client deliverables.
+- Markdown is essential for DevOps workflows (commit coverage reports alongside scene JSON).
+- All export functions are pure — no React dependencies — making them testable in isolation and usable in worker threads.
+- The report data shape is directly derived from SimulationResult, which guarantees that the report always reflects what the simulation computed, never an independent calculation that could drift.
+- 72 test assertions confirmed correctness across all export formats and edge cases.
+
+**Useful implementation notes:**
+- HTML reports use inline CSS (no external dependencies) so they render correctly when opened as files or pasted into email.
+- The comparison report highlights coverage changes with green/red deltas — "Camera 2: +12% coverage" or "Zone 3: −8% coverage" — making the impact of edits immediately visible.
+- Report templates are not separate files — the template logic is embedded in the export functions, keeping imports simple and avoiding a template discovery problem at runtime.
+
+---
+
+### Thread 78 — Phase 10: Scan to Scene — Floor Plan Import, Scene Templates, and Wizard UI (Session 2026-05-29)
+
+**Status:** Complete. 2 lib modules, 2 components, 2 test files (95 assertions), 0 TS/ESLint errors.
+
+**What was built:**
+- `src/lib/floor-plan-import.ts` — canvas-based floor plan analysis:
+  - `importFromFloorPlan(imageData, scale)` — processes a floor plan image and extracts walls using edge detection (Canny-like), line clustering (Hough-inspired), and contour analysis
+  - `validateFloorPlan(result)` — validates wall count, wall lengths, room closure, and detection confidence
+  - Confidence scoring based on line continuity, right-angle counts, and area coverage
+- `src/lib/scene-templates.ts` — 5 pre-built scene templates:
+  - **Warehouse:** 4 cameras (2 wide-angle, 2 PTZ), 6 critical zones (stockroom, loading dock, aisles, safe, office, entry)
+  - **Retail Store:** 4 cameras (2 ceiling dome, 1 bullet, 1 PTZ), 5 zones (entry, checkout, electronics, stockroom, high-value)
+  - **Office:** 3 cameras (1 dome per floor), 3 zones (server room, entry, reception)
+  - **School Classroom:** 2 cameras (1 PTZ, 1 dome), 2 zones (entry, desks)
+  - **Bank:** 6 cameras (3 dome, 2 PTZ, 1 bullet), 6 zones (teller, manager, vault, server, ATMs, entry)
+  - Each template has a `createScene()` function that returns a valid SecurityScene object
+- `src/components/scan-to-scene/SceneBuilderWizard.tsx` — 4-step wizard:
+  1. Choose input method (template or floor plan import)
+  2. Select template (5 templates with descriptions) or upload floor plan image
+  3. Review/adjust detected walls (for floor plan) or place cameras (for templates)
+  4. Generate scene and launch into editor
+- `src/components/scan-to-scene/ImportReview.tsx` — review component for floor plan import results, shows detected walls with confidence indicators and warning messages
+- `src/lib/__tests__/floor-plan-import.test.ts` — tests wall detection, confidence scoring, validation edge cases, empty images, ImageData handling
+- `src/lib/__tests__/scene-templates.test.ts` — tests all 5 templates exist with correct structure, unique IDs across all node types, category filtering, and each template's createScene function
+
+**Key findings:**
+- Floor plan import works for high-contrast line-art floor plans (architectural blueprints, CAD exports). Complex texture-heavy scans need preprocessing.
+- The confidence scoring (0–1) is essential — users need to know when to trust auto-detected walls vs when to draw manually.
+- 5 templates cover the most common commercial security scenarios. Each template includes pre-placed cameras with appropriate lens types and critical zones matching the space's security needs.
+- The wizard pattern (step-by-step with back navigation) is better than a single form for scan-to-scene because each step has different interaction requirements (list selection, canvas interaction, file upload).
+- 95 test assertions confirmed template integrity and floor plan detection behavior across all edge cases.
+
+**Useful implementation notes:**
+- Floor plan detection uses Canvas 2D pixel manipulation only — no external CV libraries. Keeps the bundle small and avoids WebAssembly dependency for V0.1.
+- Template IDs follow the pattern `template-{name}` for readability. Camera and zone IDs include the template prefix to guarantee uniqueness across templates.
+- The scene-templates module is pure data + factory functions — zero React dependency — making it importable from simulation workers and scripts.
+
+**Open items:**
+- Floor plan import currently requires the user to paste/take a photo. Direct file upload would improve UX (added to `SceneBuilderWizard.tsx` as TODO).
+- Template customization (adjust camera positions before scene creation) is a natural extension.
+- Template categories are hardcoded — making them data-driven would enable user-contributed templates.
+
+---
+
+### Thread 79 — Drone & Anti-Drone Physical Security (Surveillance Drones, Counter-UAS, Perimeter Airspace)
+
+**Status:** Exploration candidate — 2026-05-30
+
+**Rationale:** Drones are the fastest-growing physical security threat vector AND a rapidly emerging surveillance tool. Security professionals increasingly need to model both aerial attack paths and drone-based patrol coverage. This market is projected at $14B+ (counter-UAS alone) and intersects with physical security budgets at airports, critical infrastructure, stadiums, prisons, data centers, and high-net-worth residential.
+
+**Questions to explore:**
+
+**Surveillance drone integration:**
+- Can SentinelTwin model drone patrol paths as temporal coverage trajectories (waypoint-based flight plans, hover positions, altitude-specific FOV cones)?
+- What drone models have known camera/sensor specs usable for DORI/OODPCVS scoring? (DJI Matrice, Autel, Skydio, Teledyne FLIB)
+- How does coverage change with altitude, speed, gimbal angle, and environmental lighting (diurnal thermal drift)?
+- Drone battery constraints as temporal simulation parameter: coverage window per flight, swap/recharge downtime
+
+**Counter-UAS / anti-drone systems:**
+- What counter-drone systems exist (detection, tracking, interdiction) and how should they be modeled as security assets?
+  - RF detection (DroneShield, Dedrone, Aaronia)
+  - Radar-based detection (Echodyne, Robin Radar)
+  - Optical/thermal detection + AI classification
+  - RF jamming, GPS spoofing, net guns, directed energy
+- How should drone threat zones be modeled? (Altitude bands, approach corridors, no-fly zones)
+- Can we simulate a drone adversarial path with 3D waypoints, speed, and camera visibility?
+
+**Regulatory & standards:**
+- FAA Part 107, remote ID, LAANC for authorized drone operations
+- Counter-UAS authority: DHS, FAA reauthorization Act, state-level restrictions
+- ASTM F3298-19 standard for drone detection systems
+- Airport-specific drone detection mandates (FAA reauthorization)
+
+**Market context:**
+- Critical infrastructure: power plants, substations, dams, pipelines (NERC CIP explicitly calls out drone threat)
+- Prisons: drone-delivered contraband is epidemic — detection + interdiction systems are standard RFPs
+- Stadiums/events: temporary drone security perimeters for large gatherings
+- Data centers: rooftop and perimeter airspace monitoring
+- High-net-worth residential: private drone detection systems
+
+**Why now:** Drone threats are not a future concern — they are current operational reality. Security specifications for new facilities increasingly include counter-UAS requirements. If SentinelTwin can model both ground-level and aerial coverage/threat surfaces, it provides a genuinely unique capability that no existing planning tool offers.
+
+**Open questions for decision:**
+- Should aerial coverage modeling be a separate simulation mode or integrated into the existing 3D scene (with altitude planes)?
+- What minimum level of drone FOV/sensor accuracy is needed before the simulation is useful?
+- Are commercial drone library partnerships possible? (DJI SDK, Skydio SDK for real spec import?)
+- Should counter-UAS systems be their own node type or a camera subclass?
+
+---
+
+### Thread 80 — LiDAR + Camera Sensor Fusion in Physical Security
+
+**Status:** Exploration candidate — 2026-05-30
+
+**Rationale:** The physical security industry is rapidly adopting LiDAR as a complement to video surveillance. LiDAR provides privacy-preserving detection (no facial imagery, no GDPR concerns), works in complete darkness, has deterministic coverage (no false positives from shadows/weather), and enables 3D volumetric coverage modeling that cameras cannot match. Ouster, Hesai, Velodyne, and RoboSense all have security-specific product lines.
+
+**Key exploration areas:**
+
+**LiDAR coverage characteristics vs cameras:**
+- LiDAR FOV is volumetric (cone or full 360° × 30-90° vertical) rather than planar
+- Detection range is sensor-specific: 50m–200m depending on reflectivity
+- Resolution: number of beams (16, 32, 64, 128 lines) determines angular granularity
+- Privacy: LiDAR generates point clouds, not images — no biometric data captured
+- Environmental resilience: works in fog, rain, darkness where cameras fail
+- False alarm rate: deterministic geometry-based detection vs AI-based video analytics
+
+**Sensor fusion patterns:**
+- Camera-LiDAR calibration: projecting 3D points onto 2D image plane for correlated detection
+- What Boudet detection: LiDAR detects motion → camera PTZ slews to track (reduces recording bandwidth)
+- Zone-based tripwires: LiDAR defines 3D volumetric zones → camera provides visual confirmation
+- Redundancy modeling: when both sensors cover the same volume, what's the effective detection probability?
+
+**Standards & compliance:**
+- ONVIF Profile Q (LiDAR metadata standard) — status, adoption, compliance requirements
+- GDPR/LGPD/BIPA advantages: LiDAR-only detection avoids biometric data regulation entirely
+- Insurance discounts for privacy-preserving detection systems?
+
+**Product considerations:**
+- Should SentinelTwin support LiDAR as a distinct security node type with its own coverage model?
+- What DORI-equivalent scoring exists for LiDAR? (Detection confidence by range, beam density, target size)
+- Can we model multi-sensor fusion coverage zones (camera + LiDAR = higher confidence than either alone)?
+- LiDAR cost trends: $18K in 2015 → $800 in 2025 → sub-$500 by 2027. Mass adoption inflection point.
+
+**Competitive landscape:**
+- Quanergy (bankrupt — talent available?) pioneered LiDAR security before collapse
+- Ouster's Blue Line: security-specific LiDAR product with SDK
+- CORTEX by FLIR/Teledyne: LiDAR + thermal camera fusion platform
+- Hikvision's LiDAR + PTZ fusion turret cameras
+
+**Open questions:** How should coverage probability be modeled for LiDAR vs cameras? A camera at 50m with 1080p might have DORI Detection quality, while a 64-beam LiDAR at the same range might detect a person-sized object at 95%+ confidence regardless of lighting. The scoring systems are fundamentally different.
+
+---
+
+### Thread 81 — Access Control & Video Surveillance Integration
+
+**Status:** Exploration candidate — 2026-05-30
+
+**Rationale:** Physical security is not just cameras — it is the layered interplay of access control (badge readers, door contacts, intercoms, gates, turnstiles, bollards) with video surveillance. A camera cannot prevent entry; it only records. Access control enforces policy. The combined system is what security professionals design. If SentinelTwin only models cameras, it misses half the security conversation.
+
+**Key exploration areas:**
+
+**Access control coverage modeling:**
+- How does a badge reader's effective range (prox, smart card, biometric, mobile credential) affect entry control coverage?
+- Door position sensors (magnetic contacts) — coverage is binary (open/closed) but placement affects detection windows
+- Intercom / video doorbell coverage: field of view, audio pickup range, illumination
+- Turnstile / speed gate coverage: lane width, tailgating detection zones, optical sensors
+- Vehicle barrier coverage: bollards, rising arm barriers, tire shredders, crash-rated perimeters
+
+**Access + video correlation:**
+- What happens when a door opens outside of badge schedule? Camera should record that zone
+- When a camera detects motion in a restricted area, which access-controlled door should be checked?
+- Coverage gap identification: areas with camera coverage but no access control (or vice versa)
+- Anti-passback violation detection: badge used at Reader A but not at Reader B → tailgating
+
+**Physical security system topology:**
+- How are access controllers (panels, readers, locks) mapped architecturally?
+- What does a "door schedule" look like, and how does it interact with camera recording schedules?
+- Alarm points: door forced open, door held open too long, REX (request to exit) sensor
+- Integration with the temporal simulation: access schedules change security state (locked vs unlocked)
+
+**Standards & protocols:**
+- Wiegand (legacy) vs OSDP (modern, encrypted) — compatibility implications
+- ONVIF Profile A (access control configuration) — can we import real access control layouts?
+- BACnet integration for physical access + building management convergence
+- UL 294 (access control system units) — compliance requirements
+
+**Market implications:**
+- Most security RFPs combine access control + video into a single bid
+- Integrators prefer unified design tools — splitting into separate tools is a non-starter
+- Access control hardware is higher margin than cameras for integrators
+- LenelS2, Software House (CCURE), Honeywell ProWatch, Genetec Synergis — dominant ACS platforms
+
+**Product scope question:** Should SentinelTwin add access control node types (doors, readers, barriers, intercoms) to the coverage engine, or should this be a Phase 2 capability after core camera simulation is validated in market?
+
+---
+
+### Thread 82 — VMS Platform Integration Architecture (Genetec, Milestone, Avigilon)
+
+**Status:** Exploration candidate — 2026-05-30
+
+**Rationale:** No security integrator designs coverage in a vacuum. They design within the constraints of their clients' existing VMS (Video Management System). SentinelTwin's value proposition changes radically if it can import from and export to real VMS deployments — pulling camera specs, positions, and recording schedules from live systems, and exporting coverage maps back as overlays or analytics.
+
+**Key exploration areas:**
+
+**Genetec Security Center:**
+- API maturity: Genetec has the richest REST API in the VMS space (Project Vienna, REST API, SDK, webhooks)
+- Camera discovery: Genetec can report all cameras, their models, firmware, assigned zones, recording schedules
+- Area/Zone hierarchy: Genetec has a location hierarchy (Area → Zone → Camera) that could map to SecurityScene's zone system
+- Export targets: push coverage heatmap back as a custom entity layer in Genetec's maps
+- Partner program: Genetec Autovu program — would SentinelTwin as an "integration" fit under their technology partner framework?
+
+**Milestone XProtect:**
+- MIP SDK: .NET-based integration SDK, extensive API surface
+- Camera spec import: Milestone manages device drivers per camera model — has known FOV, resolution, capabilities per device
+- Smart Client plugins: custom views, map layers, analytics panels
+- Open Network Video Interface Forum (ONVIF) Profile S/T compliance all devices
+- Milestone Marketplace: distribution channel for certified integrations
+
+**Avigilon Control Center (Motorola Solutions):**
+- ACC API: REST + native SDK for camera management, event streaming
+- Proprietary hardware tie-in: Avigilon cameras self-configure on ACC — model-specific features always available
+- Appearance Search: Avigilon's AI search could be enriched with coverage-aware query scoping
+- Motorola Solutions ecosystem: Avigilon + Indigo Vision + Pelco — massive installed base
+
+**Other VMS platforms:**
+- Hanwha Wisenet WAVE: growing fast, good API, affordability position
+- ExacqVision (now Tyco/Johnson Controls): large installed base, REST API added in v10
+- Bosch BVMS: German market dominance, extensive SDK
+- Video Insight (Honeywell): education sector dominance, API available
+
+**API integration patterns:**
+- **Import flow:** VMS → camera list with model/spec → match to known camera database → populate SecurityScene → user adjusts positions
+- **Export flow:** SecurityScene coverage results → heatmap overlay image → VMS map layer
+- **Event integration:** VMS alarm triggers → area selection in SentinelTwin for "where else could this happen?" analysis
+- **Live sync:** (Phase 4+) Watch VMS for camera additions/moves → auto-detect scene changes
+
+**Open questions:**
+- Should we build a VMS integration adapter layer (plugin per platform) or focus on ONVIF Profile S/T generic import first?
+- What is the minimum viable VMS integration for a demo? (Camera spec import from a CSV mirroring Genetec export format?)
+- Are there legal/contractual barriers to building on Milestone MIP or Genetec SDK? (NDA, certification requirements, revenue sharing?)
+- Can we build an ONVIF Profile M (analytics) consumer that reads analytics metadata from VMS-connected cameras?
+
+---
+
+### Thread 83 — Critical Infrastructure Protection: NERC CIP, Utility & Energy Sector Security
+
+**Status:** Exploration candidate — 2026-05-30
+
+**Rationale:** The energy sector (power generation, transmission, distribution) is the highest-budget, most compliance-driven physical security vertical in existence. NERC CIP (Critical Infrastructure Protection) standards mandate specific security controls for bulk electric systems. Substations, control centers, hydro dams, wind farms, and solar installations all require documented security coverage — and the penalties for non-compliance are severe (millions in fines, mandatory public disclosure).
+
+**Key exploration areas:**
+
+**Regulatory landscape:**
+- **NERC CIP-014:** Physical security for transmission substations and control centers
+  - Requires risk assessment, physical security plan, and compliance evidence
+  - Must demonstrate deter, detect, delay, assess, and respond capabilities
+  - Specific requirements: 6ft+ perimeter fencing, lighting, intrusion detection, video surveillance
+  - Vulnerable asset identification: based on risk assessment (system reliability impact + threat environment)
+  - Fines: up to $1M/day, publicly reported — "naming and shaming" mechanism
+- **DOE / CISA guidelines:** Cybersecurity & physical security convergence for energy sector
+- **IEEE 693 / 1527:** Substation seismic qualification, physical security design criteria
+- **Nuclear Regulatory Commission:** 10 CFR 73 (physical security for nuclear facilities — highest standard)
+- **State PUC regulations:** Vary by state, some require utility security plan filings
+
+**Coverage simulation requirements:**
+- Perimeter detection: fence-line detection zones, buried cable sensors, microwave barriers
+- Layered security zones: clear zone (sterile), detection zone, assessment zone, response zone
+- Deter, Detect, Delay, Assess, Respond (D²DAR) framework — how does coverage simulation map to each phase?
+- Attack timeline analysis: adversarial path simulation with vehicle-based breach scenarios
+- Redundancy requirements: NERC CIP-014 mandates 2 independent detection methods per zone
+- Tamper detection: camera tamper alarms, housing integrity sensors, encrypted video authentication
+
+**Target assets for site modeling:**
+- Electrical substations (transmission + distribution): ~55,000 substations in US alone
+- Control centers: ~200 major utility control centers in North America
+- Hydroelectric dams: ~2,500 dams with security requirements
+- Natural gas compressor stations: ~1,400 interstate pipeline compressor stations
+- Renewable generation: large solar farms (acres of perimeter), offshore wind (integration challenges)
+- Battery energy storage systems (BESS): fast-growing, fire risk + theft of copper
+
+**Market considerations:**
+- National Labs network: Sandia, INL, PNNL all have physical security research groups
+- Sandia's Physical Security Workshop — annual conference for utility security professionals
+- Utility security budgets: $5-20M/year per major utility for physical security programs
+- Consulting engineering firms (Black & Veatch, Burns & McDonnell, Sargent & Lundy) design utility security
+- Contract duration: multi-year master service agreements with $500K-$2M annual scope
+- Security integrators specializing in utility: SAGE, Interstates, SPEC Innovations, Vanguard
+
+**Product potential:**
+- NERC CIP-014 compliance report generation would be a standalone product worth more than the entire simulation tool
+- Template: predefined "substation" and "control center" scene configurations
+- Report: D²DAR coverage gap analysis with NERC CIP citation mapping
+- Temporal simulation: day/night perimeter visibility, guard patrol schedule coverage
+- Adversarial path: vehicle intruder path simulation with crash-rated barrier modeling
+
+**Open question:** Is the utility security market accessible to a startup, or is it too relationship-driven? Every utility has existing security contractors. The entry may be through the consulting engineering firms who design the systems and need a simulation tool to produce compliance evidence.
+
+---
+
+### Thread 84 — Construction & Temporary Site Security
+
+**Status:** Exploration candidate — 2026-05-30
+
+**Rationale:** Construction sites are a uniquely underserved physical security market with high incidence of theft/vandalism, rapidly changing site layouts, and distinct requirements from permanent installations. The US construction theft market is estimated at $1B+/year in equipment and material losses. Every construction site needs temporary security that evolves with the build phases: excavation → foundation → structure → fit-out → handover.
+
+**Key exploration areas:**
+
+**Site evolution modeling:**
+- Phase 1 (excavation): open pit, mobile cameras on perimeter, focus on equipment yard
+- Phase 2 (foundation): limited access points, foundation walls changing sight lines
+- Phase 3 (structure): vertical blind spots emerging, interior coverage needed for upper floors
+- Phase 4 (fit-out): permanent interior partitions, MEP (mechanical/electrical/plumbing) infrastructure
+- Phase 5 (handover): temporary-to-permanent transition, final acceptance testing
+- Each phase requires different camera placement, different line-of-sight models, different entry points
+
+**Temporary surveillance equipment:**
+- Mobile surveillance towers (LiveView, SiteWatch, MobileEye): trailer-mounted PTZ + IR, solar-powered
+- Rapid deployment cameras (Arlo Pro, Ring Stick Up Cam, Eufy): consumer-grade but widely used
+- Job box sensors: door/window sensors on equipment storage containers
+- Virtual guard tours: remote monitoring service (ADS Security, Sonitrol, Rapid Response)
+- Construction-specific solar + 4G/LTE cellular surveillance solutions
+
+**Theft & loss prevention:**
+- Highest theft items: copper wiring, tools, HVAC equipment, lumber, appliances (new construction)
+- Equipment theft: skid steers, excavators, generators (GPS tracking deterrence)
+- Material stockpile coverage: how to cover large laydown yards with minimal cameras
+- Vandalism: graffiti, deliberate damage to drywall/flooring, arson risk
+- Employee theft: workers taking materials — covered by site exit choke-point cameras
+
+**Unique constraints:**
+- **No permanent power:** solar + battery or generator-powered cameras
+- **No permanent network:** 4G/5G cellular backhaul is standard
+- **Changing site layout:** weekly site walks for coverage reassessment
+- **Construction trades obstruction:** scaffolding, cranes, material piles disrupt coverage
+- **Weather exposure:** cameras must handle elements without protective housing
+- **Short deployment duration:** 6-18 months typical, rapid ROI needed on security equipment
+
+**Market characteristics:**
+- General contractors / construction managers are the buyers, not security integrators
+- Security is often an afterthought — loss happens → reactive security install
+- Insurance companies increasingly require construction site security plans for coverage
+- Large projects ($100M+) have dedicated security managers; small projects use subcontractors
+- Turner Construction, DPR, Skanska, Whiting-Turner, Hensel Phelps — largest GCs with consistent security RFPs
+- Construction technology convergence: Procore, Autodesk BIM 360, Bluebeam — can SentinelTwin integrate?
+
+**Product opportunity:**
+- **Phase-aware coverage templates:** "Construction site — Phase X" presets with appropriate camera types
+- **Mobile tower camera node:** limited elevation, 360° PTZ, no PTZ constraints (unlike permanent fixed cameras)
+- **Temporal "site evolution" simulation:** coverage degrades/improves as construction progresses
+- **Site walk workflow:** mobile app for on-site coverage verification against planned model
+- **Insurance-ready report:** construction site security plan evidence for carrier compliance
+
+**Open questions:** Is the construction security buyer different enough from the permanent security buyer to require a separate GTM? Or is it the same integrator who does both types of work?
+
+---
+
+### Thread 85 — Maritime, Port & Transit Hub Security
+
+**Status:** Exploration candidate — 2026-05-30
+
+**Rationale:** Ports, airports, rail stations, and maritime facilities represent some of the most complex physical security environments due to their scale, accessibility requirements, multimodal threats, and stringent international regulatory frameworks. ISPS Code (International Ship and Port Facility Security) is a mandatory compliance framework for 160+ signatory nations. Transit hubs (subway, rail, bus terminals) face high-volume throughput with constant terrorism risk assessment.
+
+**Key exploration areas:**
+
+**Maritime & port security (ISPS Code):**
+- ISPS Code requirements: Port Facility Security Assessment (PFSA), Port Facility Security Plan (PFSP), 3 security levels
+- Security zones: restricted area identification, controlled access, cargo handling, vessel berth
+- Perimeter: waterfront boundary is unique — no fence, waterborne approach vectors
+- Cargo inspection: radiation portal monitors, X-ray scanners, container verification
+- Vessel security: ship-to-shore interface, gangway surveillance, crew screening
+- CCTV requirements: per ISPS, cameras must cover: perimeter, cargo areas, passenger terminals, gate access
+- USCG maritime security: MTSA 2002 (Maritime Transportation Security Act) — domestic US enforcement of ISPS
+- Facility types: container terminals, cruise terminals, bulk cargo, oil/LNG terminals, shipyards
+
+**Airport security:**
+- Already heavily regulated (TSA, ICAO Annex 17) but perimeter security is a growing concern
+- Airport perimeter: miles of fencing, gated access points, runway incursion detection
+- Landside vs airside: completely different security postures
+- Parking structures: separate security challenge (covered parking is hard to surveil)
+- TSA's "Risk-Based Security" approach — simulation for resource allocation
+- Airport master planning: expansion/renovation cycles where coverage simulation adds value
+
+**Transit / rail security:**
+- Subway station coverage: platform length, mezzanine design, fare gate zones, tunnel access
+- Rail yard/facility security: rolling stock storage, maintenance facilities, hazardous materials (Hazmat) handling
+- Multi-modal hubs: train + bus + light rail + bike share — single security plan
+- Transit-oriented development (TOD): mixed-use above/below stations
+- Bomb threat / suspicious package: coverage for secondary screening areas, evacuation routes
+- Active shooter response: transit-specific C-UAS and emergency response coordination
+
+**Unique modeling challenges:**
+- **Open perimeters:** waterfront, rail right-of-way, airport runway boundaries — no fence-line constraint
+- **Vast scale:** port terminals can be 100+ acres — coverage modeling at this scale needs optimization
+- **Weather/marine environment:** saltwater corrosion, fog, sea spray — degrades camera performance over time
+- **Vessel security:** moving coverage targets (ships at berth) need dynamic threat assessment
+- **Passenger throughput:** high-density environments create line-of-sight obstruction (crowds)
+- **Critical infrastructure adjacency:** port rail connections to Class I railroads, fuel pipelines, power substations
+
+**Market opportunity:**
+- 360+ US ports require ISPS-compliant security plans
+- 500+ US commercial airports with TSA-regulated security
+- 50+ major US transit agencies (NYC MTA, Chicago CTA, WMATA, BART, MBTA)
+- Global maritime security market: ~$25B and growing
+- Port security consulting: $200-500M annually in North America
+- Security integrators specialized in transit/port: large regional firms (Convergint, Bosch, Johnson Controls)
+
+**Open questions:** Can SentinelTwin's 3D environment handle port-scale scenes (100+ acre perimeters, nautical mile scales)? Or does this need a separate 2D overhead zoom-based mode? How do we model waterborne approach vectors?
+
+---
+
+### Thread 86 — Multi-Tenant & Mixed-Use Building Security
+
+**Status:** Exploration candidate — 2026-05-30
+
+**Rationale:** Mixed-use developments (residential + retail + office in one building) are the dominant urban development pattern globally. They present a uniquely complex security challenge: multiple tenants with different security requirements, shared common areas, varied operating hours, and conflicting access policies — all within a single physical structure. Existing security design tools treat buildings as monolithic environments, not multi-stakeholder systems.
+
+**Key exploration areas:**
+
+**Tenant security requirements variability:**
+- Retail tenants (ground floor): open during business hours, public access, high foot traffic, merchandise theft
+- Office tenants (mid-floors): access-controlled after hours, visitor management, equipment security
+- Residential tenants (upper floors): 24/7 access, package delivery, amenity access (gym, pool, rooftop)
+- Co-working / shared spaces: rotating occupancy, flexible membership, event spaces
+- Hotel component: transient guests, luggage storage, spa/fitness, restaurant/bar security
+- Parking levels (often shared): valet vs self-park, EV charging security, stairwell/elevator access
+
+**Coverage simulation with layered access:**
+- How should coverage be modeled per tenant? A stairwell may need different coverage at 2PM (retail hours) vs 2AM (residential-only)
+- Common area coverage: who is responsible for lobby, corridors, elevators, loading dock?
+- Temporal access windows: retail closes at 9PM, residential needs 24/7 lobby camera — how does the temporal simulation handle this?
+- Overlapping coverage: does a camera in the retail corridor also cover the residential elevator lobby?
+- Conflict zones: where two tenants' security requirements are incompatible (e.g., retail wants open access, residential wants locked)
+
+**Physical design constraints:**
+- Residential floor plates vs commercial floor plates: different ceiling heights, column spacing, core/restroom placement
+- Loading dock / service elevator: shared by all tenants — critical choke point, complex scheduling
+- Mail/package rooms: growing security concern (package theft), needs delivery access without building access
+- Amenity deck: pool/gym on roof or podium level — after-hours access control, life safety
+- Parking garage: multiple tenant sections, different access levels, egress paths
+
+**Legal & regulatory considerations:**
+- Common Interest Community (Condo/HOA) security requirements — board-approved security plans
+- Commercial lease clauses: tenants may specify minimum security coverage in lease agreements
+- ADA compliance: security must not impede accessible egress paths
+- Fire life safety: security hardware must not prevent fire department access
+- Local ordinances: NYC Local Law 26 (video intercom requirements), California SB 553 (workplace violence prevention plans)
+
+**Market opportunity:**
+- Mixed-use is the #1 development type in US urban infill (2020-2030)
+- Major developers: Related Companies, Hines, Tishman Speyer, Related Midwest, JDS Development
+- Property managers (CBRE, JLL, Cushman & Wakefield, Greystar) responsible for security procurement
+- 100M+ sq ft of mixed-use space is delivered annually in the US alone
+- Security design for mixed-use is currently done ad-hoc — no tool supports multi-tenant coverage analysis
+
+**Product implications:**
+- **Tenant layer:** each tenant has their own coverage requirements, DORI thresholds, access schedules
+- **Shared zone labeling:** which tenant "owns" each zone? (Single-tenant, shared, public)
+- **Conflict detection:** surface zones where two tenants' coverage requirements conflict
+- **Temporal tenant view:** filter coverage by tenant and time of day (retail tenant at 2AM = no coverage needed)
+- **Report generation:** per-tenant security coverage reports for lease compliance documentation
+
+**Open question:** Is multi-tenant coverage a Phase 2 differentiator or core to the product? If mixed-use is the dominant development pattern, building a tool that only models single-occupancy buildings limits the addressable market significantly.
+
+---
+
+### Thread 87 — Camera Sensor & Optics Technology Deep Dive (Sensor Physics, Lens Design, Low-Light Performance)
+
+**Status:** Exploration candidate — 2026-05-30
+
+**Rationale:** SentinelTwin's DORI/OODPCVS scoring currently abstracts away camera hardware into generic quality thresholds. In reality, DORI quality at a given distance depends directly on sensor size, pixel pitch, lens focal length, f-stop, IR cut filter behavior, and sensor noise characteristics. Understanding the actual physics would enable significantly more accurate per-camera-model scoring, better night penalty curves, and the ability to simulate camera degradation over time.
+
+**Key exploration areas:**
+
+**Sensor technology:**
+- CMOS sensor architectures: front-illuminated (FI) vs back-illuminated (BSI) vs stacked (Exmor RS, Quad Bayer, ISOCELL)
+- Pixel pitch and its relationship to low-light sensitivity (larger pixels = more photons per pixel = better DORI at night)
+- Sensor resolution vs pixel size tradeoff: 4K on 1/1.7" sensor vs 4K on 1/2.8" sensor — dramatically different low-light capability
+- Rolling shutter vs global shutter: which security scenarios need which?
+- HDR / WDR technologies: dual-exposure (DOL mode), split-pixel, digital WDR — how they affect effective resolution in high-contrast scenes
+
+**Lens physics:**
+- Focal length + sensor size → horizontal FOV (the fundamental DORI input)
+- F-stop (aperture) and its effect on low-light gather — f/1.2 vs f/1.8 vs f/2.8 -> 2-5x difference in light reaching sensor
+- Depth of field at security distances (short focal length = huge DOF, long telephoto = shallow DOF)
+- Lens distortion profiles (barrel, pincushion, mustache) and their effect on PPM at image edges
+- IR correction: DC auto-iris vs P-iris, IR-cut filter switching mechanism, focus shift at night (IR wavelength ≠ visible wavelength)
+- Motorized zoom vs varifocal vs fixed focal length — cost vs flexibility tradeoffs
+
+**Low-light / no-light technology:**
+- Starlight technology: large-pixel sensors (2.0µm+), f/1.2+ lenses, sensor noise reduction
+- Thermal imaging: microbolometer arrays (640×512, 384×288), NETD (Noise Equivalent Temperature Difference), radiometric vs non-radiometric
+- Event-based sensors (Sony IMX636, Prophesee): asynchronous pixel-level change detection — zero motion blur, extremely high dynamic range, but very low resolution
+- Active IR illumination: LED wavelength (850nm vs 940nm), illuminator range vs camera sensor sensitivity at that wavelength
+- Multi-sensor fusion for night: thermal + visible light overlay, day/night auto-switching criteria
+
+**Camera degradation modeling:**
+- Sensor noise increases with temperature — thermal noise model for outdoor cameras
+- IR LED degradation over time (output drops 20-30% over 3-5 years)
+- Lens contamination (dust, moisture, spider webs, salt spray) — transmission loss modeling
+- IR cut filter mechanical failure (stuck in day or night mode)
+- These degradation curves would feed into temporal simulation: "at year 3, this camera's effective DORI range drops by 15%"
+
+**Standards & references:**
+- EMVA 1288 standard for image sensor characterization (quantum efficiency, read noise, dark current)
+- ISO 12233 resolution measurement (MTF, SFR) — beyond DORI's simple PPM model
+- IEC 62676-4:2025 references sensor resolution in DORI calculation — but assumes ideal sensor
+- ONVIF provides device capabilities (minimum illumination, resolution) but not calibrated measurements
+
+**Product implications:**
+- Per-camera-model DORI profiles using actual sensor specs (IPVM database or manufacturer datasheets)
+- Night penalty curve could be physics-derived rather than user-set assumption
+- Camera degradation modeling could be a Pro-tier feature: "simulate camera performance at year 3 vs year 1"
+- Could guide camera selection: "this model achieves identification quality at the counter given your lighting, this cheaper model doesn't"
+
+---
+
+### Thread 88 — Photo Stitching for Floor Plan & Scene Construction
+
+**Status:** Exploration candidate — 2026-05-30
+
+**Rationale:** A practical scan-to-scene input method is taking multiple overlapping photos of a floor plan, construction blueprint, or even a series of room photos and stitching them into a composite image. Photo stitching is a mature, well-understood computer vision technique (OpenCV Stitcher class has been stable for a decade) that requires no ML inference, works client-side, and could dramatically simplify the scene creation workflow for existing printed floor plans.
+
+**Key exploration areas:**
+
+**Stitching algorithms:**
+- Feature detection and matching: SIFT (patented but usable), ORB (free, fast, OpenCV), AKAZE, SuperPoint (learned features)
+- Outlier rejection: RANSAC, MAGSAC++ for robust homography estimation
+- Bundle adjustment: Levenberg-Marquardt optimization for globally consistent alignment across all image pairs
+- Projection models: planar (homography) for floor plans, cylindrical/spherical for panoramas, rotational for PTZ sweeps
+- Blending: multi-band Laplacian pyramid blending, feathering, gain compensation for exposure differences
+
+**Floor plan stitching specifically:**
+- Floor plan images have unique properties: line art primarily, high contrast, repeating patterns (walls), large uniform areas
+- Standard feature detectors often fail on CAD drawings — need edge-based or line-based matching (LSD, Line Segment Detector, Wireframe parsing)
+- Alternative approach: detect grid/corner structures rather than texture features
+- Scale calibration: known dimension markers (scale bar, door width) to establish metric PPM
+- Orthorectification: correcting perspective distortion from non-flatbed scans (phone photos of blueprints pinned to wall)
+
+**Security-specific stitching use cases:**
+- **Blueprints:** Stitch multiple A0/A1 sheet photos into full floor plan
+- **Room panoramas:** Stitch overlapping room photos into 360° background for visual context layer
+- **PTZ sweep panorama:** Stitch PTZ camera sweep frames into full field-of-view reference image
+- **Camera wall mosaic:** Stitch multiple camera feeds into single overview for comparison with simulated coverage overlay
+- **Site walk composite:** Stitch sequential photos from a site walk to create a continuous wall/elevation view
+
+**Implementation considerations:**
+- OpenCV.js: WASM build of OpenCV for client-side stitching — adds ~8MB to bundle, but no server calls needed
+- Alternative: WebAssembly port of specialized stitching library (OpenPano, Hugin's backend)
+- Feature detection performance: SIFT/ORB on a 4000×3000 image takes ~200-500ms in WASM
+- Minimum viable: single panorama stitch from 3-5 overlapping images for scene background import
+- Could be a step in the SceneBuilderWizard: "Select photos of your floor plan → Stitch → Import as scene"
+
+**Open questions:**
+- Is OpenCV.js bundle size acceptable for V0.1, or should stitching be a Phase 2 addition?
+- Do CAD/blueprint images stitch well enough with ORB features, or do we need a line-segment approach?
+- Could we use a simpler approach (manual correspondences) instead of automatic stitching for minimum viable product?
+
+---
+
+### Thread 89 — Structure from Motion & Photogrammetry Pipeline (SfM, MVS, Metric Reconstruction)
+
+**Status:** Exploration candidate — 2026-05-30
+
+**Rationale:** Thread 22 covers GenRecon-specific indoor reconstruction. This thread explores the broader Structure from Motion (SfM) and Multi-View Stereo (MVS) pipeline — the classical, production-proven approach to photo-to-3D that has been used in archaeology, surveying, film VFX, and construction for decades. SfM is complementary to NeRF/Gaussian Splatting and, for security site survey use cases, may actually be more practical (metric accuracy, deterministic geometry, no hallucination of unobserved areas).
+
+**Key exploration areas:**
+
+**SfM pipeline stages:**
+1. **Feature extraction:** SIFT, SuperPoint, or D2-Net per image — stable across lighting/scale/viewpoint changes
+2. **Feature matching:** brute-force or ANN matching across image pairs, geometric verification (fundamental matrix)
+3. **Sparse reconstruction:** incremental SfM (COLMAP default) or global SfM (Theia, OpenMVG) — camera pose estimation + sparse 3D point cloud
+4. **Bundle adjustment:** joint optimization of all camera parameters and 3D points — reprojection error minimization
+5. **MVS depth estimation:** patch-based MVS, Gipuma, OpenMVS — dense depth per view
+6. **Depth fusion:** merging depth maps into dense point cloud, mesh reconstruction (Poisson, screened Poisson, Delaunay)
+7. **Texturing:** projecting source images onto reconstructed mesh for photorealistic visual layer
+
+**Open-source tools survey:**
+| Tool | Language | Strength | Limitation |
+|---|---|---|---|
+| **COLMAP** | C++ | Gold standard SfM+MVS, accurate, well-maintained | No WASM build — server-side only |
+| **OpenMVG** | C++ | Modular, good documentation | Smaller community than COLMAP |
+| **OpenSfM** | Python | Easy to hack, Facebook-backed | Slower, less accurate for large sets |
+| **Meshroom (AliceVision)** | C++/node | GUI-based workflow, full pipeline | Desktop-only, no browser |
+| **Regard3D** | C++ | Good for beginners | Limited flexibility |
+| **VisualSFM** | C++ | Fast with GPU SIFT | GUI-focused, no API |
+
+**Metric scale recovery:**
+- SfM produces reconstruction up to an unknown scale factor — a "metricless" 3D model
+- Scale recovery methods:
+  - Known camera height (most reliable for security — tripod/ceiling mount heights are measured)
+  - Known object dimensions (door width = 0.9m, floor-to-ceiling = 3m)
+  - Gravity alignment from IMU data (phone camera captures include accelerometer data in EXIF)
+  - Stereo baseline from known camera separation (two-phone capture)
+  - AprilTag / ArUco marker of known size placed in scene
+- For SentinelTwin: approximate metric scale (~10-20% error) is acceptable for coverage simulation
+
+**Comparison for security site survey use case:**
+| Approach | Metric Accuracy | Completeness | Speed | Browser-Suitable |
+|---|---|---|---|---|
+| COLMAP SfM+MVS | Excellent (cm-level) | Good | Slow (minutes) | No (server needed) |
+| VGGT (MIT) | Medium (dm-level) | Good (estimated) | Fast (seconds) | Yes (WASM?) |
+| GenRecon (future) | Unknown | Excellent (fills gaps) | Unknown | Unknown |
+| Monocular Depth (MiDaS) | Low (m-level) | Per-image only | Real-time | Yes (ONNX/WASM) |
+| ARKit RoomPlan | Excellent (cm-level) | Room-level | Real-time | iOS only |
+
+**Product implications:**
+- SfM pipeline is the "gold standard" for verification/ground truth — useful for V2 real camera verification
+- Could offer a cloud processing option for site survey photos: upload 20-50 photos → receive SecurityScene back
+- COLMAP is the right backend for this (server-side), not browser-WASM
+- The metric scale problem is solvable with simple user input ("mark a door in the photo and tell us its width")
+- SfM output mesh can serve as visual background layer, with semantic extraction mapping to SecurityScene blocks
+
+---
+
+### Thread 90 — Three.js / R3F Advanced Rendering Architecture for Security Visualization
+
+**Status:** Exploration candidate — 2026-05-30
+
+**Rationale:** The existing codebase already uses Three.js + React Three Fiber for the 3D scene. What's not explored is the rendering architecture design space: how to handle large security scenes (many cameras, complex geometry, dense heatmaps), custom shaders for coverage visualization, post-processing effects for analytic overlays, and the eventual WebGPU migration path. Thread 55 covered three-mesh-bvh performance. This thread covers everything else in the rendering pipeline.
+
+**Key exploration areas:**
+
+**Scene graph architecture for security:**
+- Large-scale scene management: how to handle 50+ cameras each with FOV cone meshes, occlusion geometry, coverage grid
+- InstancedMesh for coverage heatmap: 40×40 grid = 1,600 quads → use InstancedMesh (1 draw call vs 1,600)
+- LOD (Level of Detail) for camera cones: detailed cone when selected, simple frustum when unselected
+- Object pooling for dynamic objects (replay actors, coverage glyphs)
+- Group hierarchy: Scene → Floors → Rooms → Zones → Cameras (scene graph mirrors SecurityScene schema)
+
+**Custom shaders for coverage visualization:**
+- GLSL/WGSL fragment shader for coverage heatmap: color mapping DORI quality values (identification=green → red=none)
+- Screen-space overlay shader: DORI quality labels, camera names, zone boundaries rendered as post-process
+- Frustum visualization shader: transparent cone with graduated opacity, edge glow
+- Temporal coverage shader: time-of-day slider blends between day/night coverage textures
+- Line shader for adversarial path: animated dashed line showing agent path with speed-dependent coloring
+
+**Post-processing pipeline:**
+- Current presumption: post-processing for analytic overlays (heatmap, zone boundaries, DORI quality labels)
+- EffectComposer with custom passes:
+  - Coverage overlay pass (heatmap blended over scene)
+  - Outline pass (selected camera/zone edge glow)
+  - SSAO pass (occlusion visualization — shows where geometry blocks line of sight)
+  - UnrealBloomPass for selected camera cone highlighting
+- Performance: post-processing adds ~2-5ms per frame — budget 8ms for rendering, 8ms for post-processing
+
+**Shadow mapping for lighting simulation:**
+- Temporal simulation needs lighting changes (day/dusk/night) — shadows affect visibility
+- PCF soft shadows (default) vs PCSOFT vs VSM — quality vs performance tradeoffs
+- Percentage-closer soft shadows for realistic penumbra at shadow edges
+- Shadow map resolution: 1024×1024 per light → 2048×2048 for main sun light
+- Number of shadow-casting lights: limit to 1-2 (sun + fill) for performance
+- Shadow cascade for large scenes (sun shadows at multiple distances)
+
+**Semantic rendering (different from visual rendering):**
+- Semantic layer rendering: render scene with object IDs instead of colors → coverage engine reads pixel IDs to determine what's visible
+- Depth-only pre-pass for occlusion culling before raycasting
+- Offscreen render targets for coverage heatmap generation (render coverage from each camera POV)
+- These could replace or augment BVH raycasting for certain coverage queries
+
+**WebGPU migration path:**
+- Three.js r160+ has experimental WebGPU support via WebGPURenderer
+- WebGPU advantages: compute shaders for coverage grid, lower CPU overhead, better multi-threading
+- Migration path: three-mesh-bvh → WebGPU compute shader raycasting (Thread 58 covers this)
+- Timeline: WebGPU ships in Chrome 120+ (stable), Safari 18+ (experimental), Firefox (in development)
+- For V0.1: WebGL renderer with path to WebGPU for V0.3+ when browser adoption is higher
+
+---
+
+### Thread 91 — Monocular Depth Estimation for Rough Scene Layout
+
+**Status:** Exploration candidate — 2026-05-30
+
+**Rationale:** Full SfM photogrammetry (Thread 89) requires multiple images and server-side processing. Monocular depth estimation — predicting a depth map from a single RGB image — can run in real-time in the browser via ONNX/WASM, requires no multi-view setup, and can provide a "good enough" rough 3D understanding of a room from a single smartphone photo. This is the fastest possible path from "take a photo" to "rough 3D scene."
+
+**Key exploration areas:**
+
+**Monocular depth estimation models:**
+- **MiDaS v3.1** (Intel): Most mature, multiple model sizes (small: ~2MB, large: ~500MB), ONNX exportable
+- **Depth Anything v2** (HKUST/ByteDance): State-of-the-art zero-shot depth, robust to indoor/outdoor/sculpture/art — trained on 63M+ images, has ViT-S/B/L variants. Apache 2.0?
+- **ZoeDepth**: Metric depth (produces actual meters, not relative disparity). Trained on indoor + outdoor datasets. Smaller model.
+- **DPT (Dense Prediction Transformer)**: Used by MiDaS v3 — good accuracy, higher compute. Can run on device via CoreML/ONNX.
+
+**Browser-side inference feasibility:**
+| Model | Size | FPS (WebGL/ONNX) | FPS (WebGPU) | Metric Depth? |
+|---|---|---|---|---|
+| MiDaS v3 small | ~2MB | 30+ | 60+ | No (relative) |
+| Depth Anything ViT-S | ~70MB | 10-15 | 25-30 | No (relative) |
+| ZoeDepth-N | ~100MB | 5-10 | 15-20 | Yes (~10-20% error) |
+| Depth Anything ViT-B | ~350MB | 2-5 | 8-12 | No (relative) |
+
+**Practical pipeline for SentinelTwin:**
+1. User takes 1-3 smartphone photos of a room
+2. Client-side ONNX runtime runs monocular depth on each photo
+3. Relative depth → approximate metric scale via user input ("ceiling height is 3m" or "door width is 0.9m")
+4. Back-project depth map to 3D point cloud (known camera intrinsics from EXIF + phone model database)
+5. Fit planes to floor, walls, ceiling from point cloud
+6. Floor plan outline extracted from wall-floor intersection
+7. User adjusts walls/doors in the editor → SecurityScene
+
+**Advantages over full SfM:**
+- Single photo sufficient (no multi-view required)
+- Real-time inference (instant feedback)
+- Works with existing security camera feeds (a single installed camera could estimate its own room layout)
+- Handles texture-less walls (where SIFT/ORB features fail)
+- Graceful degradation: less texture → lower confidence, but still usable shape
+
+**Limitations and risk:**
+- Monocular depth is inherently ambiguous (object at 2m vs same object at 4m with 2x size)
+- Edge artifacts at object boundaries (depth bleeding)
+- FOV-dependent: wide-angle photos lose detail at edges
+- No completeness guarantee: occluded regions have no depth estimate
+- Metric accuracy is 10-25% at best — fine for rough layout, insufficient for precise camera placement
+
+**Product angle:** "Snap a photo of the room, get a rough 3D layout — then place cameras on the approximate model." The key is setting expectations: this is a quick start, not a precise scan.
+
+---
+
+### Thread 92 — Physical Threat Intelligence & OSINT for Security Planning
+
+**Status:** Exploration candidate — 2026-05-30
+
+**Rationale:** SentinelTwin's adversarial path simulation currently uses generic threat models (random intruder, generic evasion). Feeding real threat intelligence — crime patterns, known intruder methodologies, organized retail crime techniques, social engineering vectors — would make the simulation dramatically more realistic and actionable. Threat intelligence in the physical security domain is an emerging discipline with established sources (ISACs, OSINT, crime analytics platforms) that SentinelTwin could consume.
+
+**Key exploration areas:**
+
+**Physical threat intelligence sources:**
+- **PS-ISAC** (Physical Security Information Sharing and Analysis Center): Industry-specific threat sharing for physical security. Members share incident data, threat actor TTPs (tactics, techniques, procedures). Membership-based.
+- **FS-ISAC** (Financial Services): Physical security working group — banks share robbery patterns, ATM theft methodology, branch intrusion data
+- **R-TIC** (Retail Threat Intelligence Center): Organized retail crime intelligence sharing
+- **OSINT sources:** local crime reports (SpotCrime, CrimeMapping, PoliceScanner), social media monitoring for planned theft events, dark web marketplace monitoring for stolen security credentials/hardware
+- **Commercial threat feeds:** CriticalArc, Everbridge, Dataminr — real-time physical threat alerts
+
+**Crime pattern analysis for simulation:**
+- Burglary methodology: entry points (front door 34%, first floor windows 23%, back door 22%, garage 9%), time-of-day patterns (residential: daytime when occupants at work, commercial: after-hours), tools used
+- Organized retail crime: smash-and-grab methodology (timing: <2 minutes, tool: vehicle/ sledgehammer, targets: high-value visible), cargo theft (truck following, facility surveillance before strike)
+- Workplace violence: active shooter timeline analysis (average 9-minute police response, 5-7 minutes until engagement — these define required detection-to-response latency)
+- Insider threat: data exfiltration via physical access (server room access patterns, badge use anomalies), theft methodology (loading dock, after-hours, collusion with cleaning staff)
+
+**Attack tree modeling:**
+- Formal attack tree methodology for physical security (adapted from cybersecurity):
+  ```
+  Goal: Gain unauthorized access to server room
+    OR
+    ├── Bypass perimeter (fence, door, wall)
+    │   ├── Door: pick lock, force door, tailgate behind authorized person
+    │   ├── Window: break glass, pry open, remove from frame
+    │   └── Wall: penetrate drywall, through drop ceiling
+    ├── Social engineer entry
+    │   ├── Impersonate maintenance worker
+    │   ├── Request door held (social courtesy exploit)
+    │   └── Pretexting call to unlock
+    └── Wait for authorized entry then concealment
+        ├── Hide in server cabinet until area clears
+        └── Return after hours from hiding spot
+  ```
+- Each leaf node has: difficulty, time required, detection probability, tools needed
+- SentinelTwin's adversarial path sim could consume attack trees as structured inputs — "simulate this specific attack scenario"
+
+**Threat scoring methodology:**
+- How to score threat probability per zone (not just coverage)?
+- Factors: proximity to public access, asset value in zone, history of incidents, known industry threat patterns
+- Threat score × coverage gap = risk exposure (quantified in dollars or likelihood)
+- Temporal threat patterns: retail theft higher during holiday season, warehouses targeted on weekends, schools targeted during active hours
+
+**Implementation path:**
+- V0.1: Manual threat profile selection per scene (Retail Theft, Burglary, Insider Threat, Workplace Violence)
+- V0.3+: Import threat intelligence feeds (crime data APIs, ISAC membership)
+- V1+: Automated threat scoring per zone based on real-world crime matching
+
+**Defensive framing importance:**
+- All threat intelligence features must be clearly positioned as defensive: "understand how threats operate to build better defenses"
+- Attack tree methodology explicitly framed as risk assessment, not adversarial training
+- User studies should verify no misuse potential before public release
+
+---
+
+### Thread 93 — Simulation Validation, Calibration & Uncertainty Quantification
+
+**Status:** Exploration candidate — 2026-05-30
+
+**Rationale:** SentinelTwin produces confident-looking numbers ("78% coverage"). But the simulation has many assumptions: camera height, person height, wall transmission, night penalty curve, lens clarity. How much do these assumptions affect the output? Which assumptions matter most? How do we validate that the simulation matches reality? This thread explores the mathematical methodology for answering those questions — building trust through quantitative rigor rather than assertion.
+
+**Key exploration areas:**
+
+**Sensitivity analysis:**
+- One-at-a-time (OAT) vs global sensitivity analysis (Morris, Sobol, FAST)
+- For SentinelTwin's coverage engine: vary each assumption independently and measure output change
+- Key parameters to test:
+  - Camera height (±0.5m): effect on coverage area and DORI quality
+  - Person height (1.5m vs 1.8m): DORI thresholds shift by ~15%
+  - Night penalty (optimistic vs pessimistic): coverage drop of 10-40%
+  - Wall transmission (0% vs 50%): glass vs drywall vs concrete
+- Result: tornado chart showing which assumptions drive the most output variance
+- This tells users "worry most about camera height accuracy — it changes your coverage by ±12%"
+
+**Uncertainty propagation:**
+- Monte Carlo simulation: treat each assumption as a probability distribution, run the coverage engine 1000+ times with random samples
+- Output: not a single coverage number, but a distribution — "coverage is 78% ± 6% (90% confidence interval)"
+- Computational cost: 1000× coverage recompute = 1000 × ~50ms = 50 seconds. Too slow for interactive.
+- Surrogate model approach: train a Gaussian process or polynomial chaos expansion on ~50 simulation runs, then query the surrogate for Monte Carlo uncertainty propagation (milliseconds instead of seconds)
+
+**Ground truth validation methodology:**
+- Compare simulated coverage against real camera footage in a known environment
+- Setup: place cameras in a room, mark grid points on floor, have person stand at each point, record if camera "detects" them
+- Measure: true positive rate (simulation says covered → actually covered) and false positive rate (simulation says covered → actually blind)
+- Calibrate simulation parameters to minimize false positive rate (overclaiming coverage is the dangerous error)
+- Benchmarks needed: different room types, lighting conditions, camera models, obstruction patterns
+
+**Calibration protocol:**
+- Step 1: Set up reference scene with known dimensions and camera positions
+- Step 2: Run simulation with default assumptions
+- Step 3: Measure actual coverage with real camera
+- Step 4: Adjust simulation parameters (night penalty, transmission values) until simulated matches measured within tolerance
+- Step 5: Document calibration parameters as per-scene metadata ("calibrated against Axis M3085-V on 2026-03-15")
+- This would be a Phase 2/3 feature: "Calibrate simulation" workflow in the inspector
+
+**Confidence scoring per output:**
+- Not all coverage numbers are equally reliable. A zone verified with assumptions matching the real installation (known camera height, measured light levels) has higher confidence than one using defaults.
+- Confidence score factors:
+  - Number of user-specified vs default assumptions (more specified = higher confidence)
+  - Proximity to threshold: a zone barely passing recognition quality (125 PPM vs 115 PPM) should show a fragility warning
+  - Number of occlusions: complex geometry with many potential occlusions = lower confidence
+  - Night mode: night simulation has higher uncertainty than day (more assumptions about IR behavior)
+
+**Open questions:**
+- Should uncertainty be shown to end users or only in developer/debug mode?
+- How do we avoid users treating confidence intervals as "the simulation is unreliable" rather than "the simulation is honest"?
+- Is the surrogate model approach feasible in-browser (WASM), or should uncertainty propagation be server-side?
+
+---
+
+### Thread 94 — Discrete Event & Agent-Based Simulation for Physical Security
+
+**Status:** Exploration candidate — 2026-05-30
+
+**Rationale:** SentinelTwin's current simulation is deterministic and static: given a scene and assumptions, compute coverage. Real physical security is a dynamic system with events (people entering, lights turning on/off, guards patrolling, cameras switching modes), stochastic elements (random intrusion attempts, variable walk speeds, unpredictable crowd behavior), and temporal dependencies (alarm triggers door lock, door lock changes coverage need). Discrete Event Simulation (DES) and Agent-Based Modeling (ABM) are well-established methodologies for modeling such systems.
+
+**Key exploration areas:**
+
+**Discrete Event Simulation (DES) for security timelines:**
+- DES models a system as a sequence of events in time, each event causing state changes
+- For physical security: events = person enters zone, door opens, alarm triggers, guard dispatched, camera PTZ moves to preset
+- State = current camera coverage, door lock status, alarm status, guard location
+- Event queue processes events chronologically, updating state at each event
+- Output: timeline of security state changes, detection latencies, vulnerability windows (complements Thread 6 temporal simulation)
+
+**Agent-Based Modeling (ABM) for intruder/occupant behavior:**
+- ABM models individual agents (intruders, guards, employees, customers) with independent behaviors
+- Agents have: position, velocity, visibility to cameras, knowledge state (known vs unknown camera positions), goals
+- Behavior rules:
+  - Intruder: move toward target zone, avoid known camera FOVs, respond to alarms (flee or find cover)
+  - Guard: patrol assigned route, respond to alarms, sweep zones on schedule
+  - Employee: move to/from workstation, take breaks, unexpected movement patterns
+  - Customer: move through store with retail traffic patterns (predictable paths, dwell time at displays)
+- Interactions: guard presence changes intruder behavior, alarm event triggers guard dispatch, employee call button alters guard patrol
+- This is the natural evolution of SentinelTwin's current adversarial path simulation (single agent → multiple interacting agents)
+
+**Stochastic vs deterministic models:**
+- Current adversarial path: deterministic — shortest exposure path given known camera positions
+- ABM extension: stochastic — agents have random variations in speed, path choice, detection avoidance behavior
+- Monte Carlo over ABM: run 100+ simulations with random seeds → output distribution of outcomes
+  - "What's the probability an intruder reaches the server room undetected?" → not binary but a probability
+- Stochastic guard behavior: "what percent of time is this zone uncovered between patrol passes?" → not a fixed 8-minute window
+
+**Implementation considerations:**
+- ABM in browser: 10-100 agents at 60fps is feasible with spatial hashing and simple behavior rules
+- Temporal resolution: DES typically runs at second-level granularity for security timelines
+- Computational cost: 10 agents × 3600 seconds (1 hour) = 36,000 state evaluations — ~100-500ms with optimized JavaScript
+- Could use a web worker for simulation to avoid blocking UI
+- ABM complexity scales with O(n²) for pairwise agent interactions — limit to ~50 agents for browser feasibility
+
+**Product applications:**
+- **Crowd scenario:** "What if 50 people enter simultaneously during shift change?" — which cameras would be blocked, which zones exposed?
+- **Coordinated attack:** "What if two intruders enter from different directions — can one distract while the other approaches the target?"
+- **Guard staffing:** "What is the maximum coverage gap given X guards on patrol schedule Y?"
+- **Retail scenario:** "During holiday rush, which aisles have the worst shoplifting detection coverage due to customer occlusion?"
+
+**Open questions:**
+- Is agent-based modeling over-engineering for V0.1? The current single-adversarial-path is already novel.
+- Should ABM be a Phase 2/3 feature or a separate product line (SentinelTwin Sim)?
+- How do we validate agent behavior models against real security incident data?
+- What is the simplest possible ABM that provides useful insight beyond the current deterministic model?
+
+---
+
+### Thread 95 — Camera Placement Optimization (Set Cover, Greedy, Genetic Algorithms)
+
+**Status:** Exploration candidate — 2026-05-30
+
+**Rationale:** Given a floor plan and a list of critical zones requiring coverage, what is the minimum camera configuration that meets all coverage requirements? This is a classic set cover problem (NP-hard), but well-understood approximation algorithms exist that produce near-optimal solutions. SentinelTwin's counterfactual agent already answers "what if I removed this camera?" — the next step is "how should I place cameras in the first place?"
+
+**Key exploration areas:**
+
+**Problem formulation:**
+- Continuous set cover: find minimum number of cameras (with position, orientation, lens choices) such that every critical zone achieves its required DORI quality level
+- Grid-based discretization: sample possible camera positions on a grid (every 0.5m on walls/ceilings), each with multiple orientations
+- Each (position, orientation, lens) → coverage pattern = subset of zones covered
+- Goal: minimum-cost subset covering all zones
+- This is NP-hard (reduction from set cover), but greedy gives O(log n) approximation
+
+**Algorithms survey:**
+| Algorithm | Quality | Speed | Deterministic? | Use Case |
+|---|---|---|---|---|
+| Greedy (best-first) | O(log n) approx | Very fast (O(k·n)) | Yes | Interactive recommendations |
+| Genetic Algorithm | Near-optimal | Slow (O(generations·pop)) | No (random seed) | Offline optimization |
+| Particle Swarm | Near-optimal | Medium (O(particles·iter)) | No | Large-scale optimization |
+| Simulated Annealing | Near-optimal | Medium (O(iter·neighbors)) | No | Global refinement of greedy |
+| Integer Linear Programming | Optimal | Slow (exponential worst-case) | Yes | Verification (small scenes) |
+| LP-rounding | O(1) approx | Fast | Yes | Theoretical upper bound |
+
+**Greedy algorithm (most practical for interactive use):**
+```
+1. Enumerate candidate positions (grid on walls/ceilings, typical mount heights)
+2. For each candidate × camera model × orientation, compute coverage (via simulation engine)
+3. While uncovered critical zones remain:
+   a. Pick candidate that covers the most currently-uncovered zones at required DORI quality
+   b. Mark those zones as covered
+   c. Remove candidate from pool
+4. Return selected candidates
+```
+Performance: ~1000 candidates × 50ms coverage compute = ~50 seconds naive. Optimization: precompute coverage and cache, candidates = ~500 after basic filtering (height-valid positions only).
+
+**Constraint handling:**
+- Real-world constraints beyond coverage:
+  - Cable reach: camera must be within 100m of PoE switch (or plan for a new switch)
+  - Structural: cannot mount on glass walls, lightweight partitions, or fire-rated assemblies
+  - Aesthetic: no cameras in certain areas (client bathrooms, private offices, union break rooms)
+  - Privacy: cameras must not cover privacy zones (restrooms, changing areas)
+  - Budget: maximum N cameras, maximum $ per camera
+  - Brand consistency: all cameras from same manufacturer (maintenance simplicity)
+- Multi-objective optimization: minimize cost while maximizing coverage and redundancy
+
+**PTZ camera optimization (harder):**
+- PTZ cameras can cover multiple zones at different times — not static coverage
+- Problem: schedule PTZ presets and patrol patterns to maximize temporal coverage of all zones
+- Related to watchman routing and art gallery problem with mobile guards
+- PTZ scheduling: each zone needs M seconds of coverage per N-minute cycle
+- Optimization: find minimum number of PTZs + patrol schedule meeting temporal coverage constraints
+
+**Product applications:**
+- "Auto-place cameras" button: user marks critical zones, system suggests optimal camera layout
+- "Budget mode": user sets max N cameras, system recommends where to place them for maximum coverage
+- "What lens?" recommendation: user picks position, system suggests focal length(s) that cover the most zones
+- "Redundancy optimization": ensure every critical zone has at least 2 cameras covering it, minimize total cameras
+
+**Open questions:**
+- Should optimization be real-time (user drags camera → system suggests fine-tuning) or batch (user hits "optimize" button)?
+- How many candidate positions per room? 100 is fast, 1000 is thorough but slow.
+- Should optimization consider non-camera security assets (access control, motion sensors)?
+- Is the greedy approximation good enough for security design, or do we need genetic algorithm quality?
+
+---
+
+### Thread 96 — Adversarial Attack Methodology & Criminal Research for Threat Modeling
+
+**Status:** Exploration candidate — 2026-05-30
+
+**Rationale:** SentinelTwin's adversarial path simulation computes the lowest-exposure route through a camera system. But is that route something a real intruder would actually take? Understanding real-world criminal methodology — how burglars actually operate, what tools they use, how much time they spend, what behaviors they exhibit — is critical for making adversarial path simulation realistic rather than purely theoretical. This thread explores the research needed to feed realistic threat models into the simulation engine.
+
+**Key exploration areas:**
+
+**Residential/commercial burglary methodology:**
+- Entry patterns (from DOJ statistics + research):
+  - Forced entry (53.7%): kicked doors, pried windows, broken glass — these produce noise, debris, and are easier to detect
+  - Unlawful entry (31.2%): unlocked door/window — quieter, no forced entry evidence, harder to detect until too late
+  - Attempted forcible entry (15.1%): failed attempt — often triggers alarm but no actual penetration
+- Time inside structure: median 8-10 minutes (residential), 5-12 minutes (commercial)
+- Target selection: master bedroom (jewelry/cash), home office (electronics/documents), garage (tools/vehicles)
+- Tools: crowbar, hammer, screwdriver, glass cutter, lock picks, battery-powered saw
+- Deterrence hierarchy: visible alarm system > visible cameras > secure doors > lights on timers > landscaping
+
+**Smash-and-grab / ram-raid methodology:**
+- Vehicle ramming: analysis of vehicle type (stolen SUV/truck), approach speed, target structural vulnerability
+- Entry-to-exit timeline: average 90 seconds from breach to exit (two people: one grabs merchandise, one drives)
+- Groups: typically 3-8 people, multiple vehicles, coordinated roles (driver, grabber, lookout, blocker)
+- High-value retail: jewelry stores (54%), electronics (22%), luxury goods (15%), pharmacies (9%)
+- Post-incident evasion: change vehicles 1-2 blocks away, use stolen plates, flee via highway within 2 minutes
+
+**Tailgating / piggybacking (social engineering entry):**
+- Technique: approach access-controlled door behind authorized person, appear distracted (phone, carrying boxes, in uniform)
+- Success rate: studies show 20-70% of people will hold the door for a polite person (even in secure facilities)
+- Timing: shift change/end of day is highest success rate (many people entering simultaneously)
+- Impersonation: delivery uniform, maintenance uniform, visitor badge, cleaning crew (very high success rate)
+- Physical red team documented methods: carry a ladder (nobody questions someone with a ladder), carry a large box (blocks view of door access), clipboard + hard hat (construction worker disguise)
+- Defensive measure: mantrap (interlocking doors), turnstiles, guard verification of unknown faces
+
+**Insider threat patterns (for physical access):**
+- Exit interviews after termination: 47% of employees admit taking proprietary data (not just digital — physical documents, prototypes)
+- After-hours badge use anomalies: badge used at 2AM after 6 months of 9-5 pattern
+- Collusion: insider provides door codes, alarm disable codes, or access to cleaning/security staff
+- Loading dock theft: coordinate delivery with vehicle, load during shift change diversion, falsify paperwork
+- Concealment methods: lunch bags, tool boxes, underneath clothing, inside personal vehicles
+
+**Vehicle ramming as attack vector:**
+- Physics: kinetic energy = ½mv². A 2000kg SUV at 30mph = ~180kJ of energy. Bollard ratings K4-K12 (30-80mph stopping ability)
+- Typical targets: building entrance (revolving door, glass facade), pedestrian plaza, outdoor event, open-air retail (street-side windows)
+- Vehicle types: stolen SUV/truck (most common), rental vehicle, van for larger capacity
+- Standoff distance: minimum 10m for K4 bollards, 30m for vehicle inspection checkpoints
+- Secondary threat: vehicle-borne IED (VBIED) — blast analysis, standoff distance, glazing protection
+
+**Active shooter timeline research:**
+- FBI active shooter reports (2015-2025): averages, durations, location types
+- Average incident duration: 10-12 minutes (law enforcement arrival + engagement)
+- Average shots fired: 40-50 (before police engagement)
+- Location distribution: commerce (44%), education (23%), open space (11%), government (8%), residential (4%)
+- Most common entry: front door (not locked or unlocked from inside)
+- Detection challenge: "the sound of gunfire is the first notification" — no prior behavioral indicator in most cases
+- Post-landmark shooting (2000+): hardening trends: single point of entry, metal detectors, armed guards, secure vestibules
+
+**How this feeds into SentinelTwin simulation:**
+- Realistic intruder behavior models: not just "find minimum exposure path" but "find minimum exposure path given real intruder knowledge, tool constraints, and time budget"
+- Attack mode profiles: user selects attack type (Burglary, Smash-and-Grab, Insider, Vehicle Ramming, Active Shooter) → simulation uses appropriate behavioral parameters
+- Time-to-threat modeling: average intrusion timeline vs detection + response capability → shows vulnerability windows
+- Tool-dependent detection: forced entry produces noise/debris (easier to detect) vs social engineering (much harder) → different detection probability curves
+
+**Defensive framing (mandatory):**
+- This thread is inherently sensitive. All content must be framed as: "understanding attacker methodology to design better defenses"
+- No output shall provide evasion instructions without corresponding countermeasures
+- All research cited from law enforcement, academic criminology, and defensive security sources (not criminal manuals)
+- User-facing features position this as "attack scenario library" in the context of security assessment

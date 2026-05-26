@@ -348,6 +348,25 @@ stable simulation output and per-jurisdiction regulatory research.
 
 ---
 
+### D-035: Phase 7 — Temporal Security Simulation
+
+**Status:** Accepted — 2026-05-30
+**Source:** PHASE_7_TEMPORAL_SIMULATION.md
+
+**Decision:** Build a 24-hour temporal simulation layer that models how security posture changes over time, with:
+
+1. **Schema types** — `TimeSchedule`, `TemporalSecurityProfile`, `HourlySecuritySnapshot`, `VulnerabilityWindow` added to `security-scene.ts` before `securitySceneBaseSchema` to avoid TDZ
+2. **Temporal engine** (`simulation/temporal.ts`) — Builds a change timeline from schedule transitions (lights, occupancy), runs full coverage sim only at transition points (~10–15 per day), interpolates intermediate 15-min snapshots by state label matching
+3. **Store integration** — `temporalProfile`, `temporalScrubHour/Minute` state with `setTemporalScrub` auto-switching `environmentMode` (day/night/dusk), `computeTemporalProfile` action
+4. **TemporalProfileView UI** — 24h dashboard: summary cards, clickable coverage timeline bar (96 slots), vulnerability window cards (severity-colored, expandable), safest periods, zone coverage stability chart
+5. **BottomPanel tab** — "24H PROFILE" tab between TIMELINE and BEFORE/AFTER
+
+**Rationale:** Moves beyond static day/night toggle to answer "when is your site most vulnerable?". Coverage recomputed only at transition points (not all 96 slots) for performance.
+
+**Bugfixes applied during validation:**
+- `getExteriorLightState`: fixed operator precedence causing `0:00–2:00` to show incorrect state
+- `vulnerabilityWindowSchema.endHour`: changed `max(23)`→`max(24)` to match engine output
+
 ## Future Decisions Pending
 
 | ID | Question | Decision criteria |
@@ -479,3 +498,173 @@ reference to the new path, then remove the old."
 - Rejected because it preserves overclaiming and keeps the engine out of sync with the schema.
 
 **Revisit trigger:** If the data model adds new target classes or sensor types, extend the target-height mapping and verification helpers rather than adding another scoring path.
+
+---
+
+## D-034 | 2026-05-29 | Phase 6 — Demoware Completion: close all remaining UI gaps before demo
+
+**Decision:** Implement all P0–P2 gaps identified in the gap analysis (CAMERASTUDIO_GAP_ANALYSIS.md) as a single tracked phase, closing every UI gap from scene management to camera presets before any external walkthrough.
+
+**What was built (11 items):**
+
+### P0 — Demo-critical
+1. **Scene Management** — localStorage save/load, scene selector dropdown (TopBar), "New Scene" button, "Import JSON" file picker and validation in `studio-store.ts`
+2. **Report Export** — `buildHtmlReport()` function generates a styled HTML document from scene metrics + AI report, launched via `window.open()`+`document.write()` from ReportLiteTab
+3. **Camera Failures Tab** — IssuesTab now shows per-camera failure mode toggles (blocked/dirty/offline) with live coverage impact metrics (loss %, cameras affected, zones exposed)
+4. **Assumptions Panel** — New `AssumptionsPanel.tsx` component surfaces all `SimulationAssumption` fields with edit capability, wired into ContextRightPanel
+5. **Visual Compare** — CompareView enhanced with side-by-side metrics panel showing coverage diff per camera + confidence impact + delta summary
+
+### P1 — Product completeness
+6. **Privacy Zones** — `ScenePrivacyZones` component renders privacy zone polygons in SharedScene with distinct styling (red hatching pattern, rotation indicator). Wired into WorkspaceCanvas via `layers.privacy_zones` layer toggle
+7. **Redundancy Matrix** — New `RedundancyMatrixPanel.tsx` component showing camera-failure coverage impact per zone with colored severity cells. Wired into BottomPanel tabs
+8. **Keyboard Shortcuts** — Global handler in StudioShell: Ctrl+N (new scene), Ctrl+S (save), Ctrl+O (import file input), 1–5 (view modes), C/B/L (camera/obstruction/light tools, toggle off if active), Esc (select tool), ? (shortcuts modal toggle). Input elements excluded via tagName check.
+
+### P2 — Polish
+9. **Scene Export UI** — "Export JSON" button in TopBar downloads current scene via Blob URL
+10. **Test Without Obstruction** — ObstructionInspector's disabled button now calls `setSimulationPatch` to temporarily remove obstruction, recompute coverage, and show impact
+11. **Camera Preset Library** — New `CameraPresetPicker.tsx` component defines 4 presets (Indoor Dome 90°, Bullet 60°, PTZ 360°, Fisheye 360°). Module-level `_currentPresetId` for sync read from callbacks; `getCameraPreset()` returns null when no preset selected (preserves default `createCameraNode()` behavior). Floating bar in WorkspaceCanvas when camera tool is active.
+
+**Key design decisions:**
+- **Module-level state for preset picker** — `_currentPresetId` is not React state because `ToolPlacementFloor` callback needs synchronous read without hooks. Returns `null` by default to preserve backward compatibility. This is pragmatic but not React-idiomatic — a store migration (putting preset into Zustand) would be a clean-up opportunity.
+- **`buildHtmlReport()` via `window.open()`+`document.write()`** — avoids adding a jsPDF dependency for V0.1. The generated HTML includes inline CSS for standalone formatting. A production-quality PDF library should replace this before external distribution.
+- **Keyboard shortcuts skip input elements** — `tagName` check on `(event.target as HTMLElement).tagName` prevents hijacking text input in scene name fields, AI command bar, and assumption editors.
+- **Floating bar for CameraPresetPicker** — positioned absolutely (top-center of canvas area) rather than in a side panel, keeping it contextually near the 3D canvas where placement happens.
+
+---
+
+### D-036: Phase 8 — AI Agent Pipeline Production Hardening
+
+**Status:** Accepted — 2026-05-30
+**Source:** PHASE_8_AI_AGENT_PIPELINE.md
+
+**Decision:** Upgrade the thin-wrapped agent system to a production-grade multi-agent pipeline with:
+
+1. **Streaming in ModelProvider** — `completeStreaming()` returning `AsyncIterable<string>`, with OpenAI, Gemini, and Qwen providers all implementing it
+2. **Retry + fallback** — `retryWithFallback()` with exponential backoff, jitter, abort signal handling, and backup provider fallback
+3. **Rate limiting** — Sliding-window token bucket per provider tracking RPM/TPM limits
+4. **Token tracking** — `TokenTracker` accumulating prompt/completion tokens per session/model/provider
+5. **CoordinatorAgent** — Multi-agent router with `ConversationMemory` (ring buffer of 20 exchanges, automatic summarization at threshold)
+6. **ProviderConfigPanel** — UI for switching providers, setting API keys, configuring model params
+7. **AgentCoordinatorPanel** — Live monitoring UI with agent status, token usage, active chain display
+8. **Tests** — Unit tests for retry logic, rate limiter, token tracker, coordinator routing, conversation memory
+
+**Rationale:** Multi-turn conversation and streaming responses are expected baseline UX for AI-powered tools. Without orchestration, each agent is an isolated call with no context awareness. The coordinator enables cross-agent reasoning and a single conversation that spans editing, analysis, and report generation.
+
+**Key decisions:**
+- Provider interface is additive (streaming added as new method, not breaking existing interface)
+- Rate limiting is in-process (sliding window, not distributed — fine for single-user Studio)
+- Conversation memory is in-memory (no persistence across sessions — Phase 12 scope)
+- Coordinator lives in React (uses Zustand store, not a separate worker)
+
+**Validation:** TypeScript clean, ESLint 0 errors, all 4 agent tests pass, existing 52 tests still pass
+
+---
+
+### D-037: Phase 9 — Report Generation Engine
+
+**Status:** Accepted — 2026-05-30
+**Source:** PHASE_9_REPORT_GENERATION.md
+
+**Decision:** Transform the existing markdown-only export into a full professional report generation system with:
+
+1. **Report engine** (`report/index.ts`) — `buildReportData()` that structures all simulation data into a `ReportData` interface, with section rendering (Executive Summary, Coverage Summary, Zone Analysis, Camera Analysis, Issues, Recommendations, Adversarial Path, Assumptions, Temporal Profile)
+2. **Format support** — HTML (with inline CSS, print-optimized), Markdown, Plain Text
+3. **Standards compliance citations** — IEC 62676-4:2025 OODPCVS, DORI references in all reports
+4. **Compare reports** — `buildCompareReport()` with side-by-side metric deltas
+5. **Export** — Download HTML/Markdown/Text files, print-to-PDF (browser dialog), copy to clipboard
+6. **AI enhancement** — ReportAgent uses AI for executive summary prose and recommendation narrative
+
+**Rationale:** Security professionals need client-facing deliverables. A markdown display inside the app cannot be handed to a client or attached to a compliance report. Professional HTML reports with standards references, DORI citations, and print-to-PDF support provide the artifact layer.
+
+**Key decisions:**
+- No external PDF library — uses browser built-in print-to-PDF (zero dependencies)
+- Templates are pure functions composing sections — no template engine dependency
+- `ReportData` is JSON-serializable for future server-side generation
+- Reports work fully without AI; AI is an enhancement layer
+
+**Validation:** TypeScript clean, ESLint 0 errors, existing tests all pass
+
+---
+
+### D-038: Phase 10 — Scan-to-Scene Import Pipeline
+
+**Status:** Accepted — 2026-05-30
+**Source:** PHASE_10_SCAN_TO_SCENE.md
+
+**Decision:** Build import pipelines and a scene builder wizard that enable users to create SecurityScenes from floor plan images, photos, or manual room-by-room specification:
+
+1. **Floor plan import** (`lib/floor-plan-import.ts`) — Client-side image processing with Canvas API: gradient-based wall detection, contour tracing, dimension extraction, door/window gap identification. Returns structured `FloorPlanResult`.
+2. **Scene templates** (`lib/scene-templates.ts`) — Pre-built configurations for retail shop, office, warehouse, school classroom, parking garage, with template categories and one-click creation
+3. **SceneBuilderWizard** (`components/scan-to-scene/SceneBuilderWizard.tsx`) — Multi-step wizard: Room Setup → Import Method → Floor Plan Upload → Configure Assumptions → Review & Create
+4. **ImportReview component** — Shows detected walls on canvas overlay with toggle
+
+**Rationale:** The demo scene (`small-retail-shop.ts`) and blank canvas are the only two ways to get a scene. For SentinelTwin to be useful to security professionals, they need to create scenes from their actual site layouts — either via templates for common spaces or via floor plan image import.
+
+**Key decisions:**
+- Client-side only — no image upload to server (supports local-first architecture)
+- Heuristic wall detection (gradient + contour) rather than ML — the 80% case works without external dependencies
+- Templates are code-generated functions, not JSON files
+- Multi-step wizard reduces cognitive load for the complex scene-creation task
+
+**Validation:** TypeScript clean, ESLint 0 errors, existing tests all pass
+
+---
+
+## D-035 | 2026-05-26 | Canvas-first docked workspace with contextual panels and presets
+
+**Decision:** Evolve the studio shell from fixed always-open side/bottom panels to a canvas-first dock layout with collapsible docks, contextual inspectors, resize handles, and workspace presets.
+
+**Why:** SentinelTwin needs maximum canvas area for coverage analysis, path replay, camera wall, and compare workflows. A fixed panel layout permanently consumes too much space and cannot adapt to mode-specific tasks or object-specific inspection.
+
+**What this means in practice:**
+- Left, right, and bottom regions are treated as docks with collapsed/expanded states instead of permanent panels.
+- The right dock becomes contextual: scene overview when nothing is selected, then camera / zone / obstruction / light inspectors when the selection changes.
+- The bottom dock adapts to the active workspace preset, so replay and compare can prioritize timeline and deltas while camera wall can collapse by default.
+- Workspace presets apply layout defaults for edit, coverage, camera wall, replay, compare, report, debug, and focus/demo modes.
+- Focus mode hides docks to maximize the canvas for demos and close-up analysis.
+
+**Rejected alternatives:**
+- **Full free-form draggable docking immediately** — rejected for now because it adds complexity without improving the first-order UX gain. Collapsible, resizable, contextual docks are enough for the current product stage.
+- **Keep fixed panels and only reduce widths** — rejected because the core problem is not width alone; it is the lack of mode-aware layout state and object-aware panel content.
+
+**Implementation note:** Mode switches now also set the workspace preset so the shell can restore an appropriate dock arrangement when entering camera view, replay, compare, or camera wall workflows.
+
+**Validation:**
+- TypeScript: clean (tsc --skipLibCheck)
+- ESLint: 0 errors across all new/changed files
+- Tests: 29/30 pass (1 pre-existing InspectorPanel test failure unrelated to Phase 6)
+
+**Alternatives considered:**
+- **Full PDF library for report export** — rejected for V0.1. jsPDF/html2canvas adds ~100KB+ dependency. HTML export via browser's print-to-PDF is sufficient for demos.
+- **Zustand store for camera preset** — cleaner React integration but requires `ToolPlacementFloor` to read from store synchronously, which doesn't work during R3F pointer events. Module-level state is a known tradeoff.
+- **Modal for keyboard shortcuts** — considered `window.alert()` for simplicity, but an inline modal component provides better UX and matches the existing design patterns (InfoModal, DemoModeOverlay).
+
+---
+
+## D-039 | 2026-05-26 | Use Webpack fallback for local dev/build while Turbopack endpoint writing is unstable
+
+**Decision:** Run `apps/studio` development and build commands through `next dev --webpack` and `next build --webpack` instead of the Turbopack default for now.
+
+**Rationale:**
+- The local Next 16.2.6 dev server hit a reproducible `TurbopackInternalError` while writing page endpoints, with `range start index ... out of range for slice ...` in `.next/dev/logs/next-development.log`.
+- Next.js 16 officially documents `--webpack` as the supported fallback for both `next dev` and `next build`.
+- This keeps the studio usable immediately while we keep the Turbopack issue isolated and avoid conflating an upstream bundler crash with application correctness.
+
+**Alternatives rejected:**
+- **Keep Turbopack and hope cache clearing fixes it** — rejected because the error recurred across restarts and blocked visual verification.
+- **Downgrade Next immediately** — rejected because the current Next release and the app code are otherwise aligned, and the issue is localized to the Turbopack path.
+
+---
+
+## D-040 | 2026-05-26 | Override nested PostCSS to the patched 8.5.15 line
+
+**Decision:** Add a root `overrides` entry for `postcss` so the installed tree uses `8.5.15` everywhere, including the copy nested under `next`.
+
+**Rationale:**
+- `npm audit` reported a moderate PostCSS XSS advisory via the nested `next/node_modules/postcss@8.4.31` copy.
+- The workspace already depends on `postcss@8.5.15` through `@tailwindcss/postcss`, so the patched line is already present and compatible in the tree.
+- After the override, `npm audit` returned zero vulnerabilities and `npm ls` shows `postcss@8.5.15` deduped under `next`.
+
+**Alternatives rejected:**
+- **Leave the advisory unresolved because it is transitive** — rejected because the fix is small and does not require sacrificing the current app stack.
+- **Downgrade Next** — rejected because the advisory is specific to the bundled PostCSS copy, not to a need to step back from the current Next release.

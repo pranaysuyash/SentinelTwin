@@ -14,7 +14,7 @@ import {
 import { CameraFeedCanvas } from "@/components/inspector/CameraFeedCanvas";
 import { Badge } from "@/components/shared/Badge";
 import { cn } from "@/lib/cn";
-import type { CameraNode, ObstructionNode, SecurityLightNode } from "@/schema/security-scene";
+import type { CameraNode, CriticalZoneNode, ObstructionNode, SecurityLightNode } from "@/schema/security-scene";
 import { type InspectorTab, useStudioStore } from "@/store/studio-store";
 
 function Field({ label, value, unit }: { label: string; value: React.ReactNode; unit?: string }) {
@@ -297,8 +297,13 @@ function CameraInspector() {
 
   if (!camera) return null;
 
-  const tabs: { id: InspectorTab; label: string }[] = [
-    { id: "properties", label: "Properties" },
+  // Count recommendations relevant to this camera
+  const recCount = (result?.recommendations ?? []).filter(
+    (r) => !r.affectedNodeId || r.affectedNodeId === camera.id,
+  ).length;
+
+  const tabs: { id: InspectorTab; label: string; badge?: number }[] = [
+    { id: "properties", label: "Properties", badge: recCount > 0 ? recCount : undefined },
     { id: "view", label: "View" },
     { id: "status", label: "Status" },
     { id: "analytics", label: "Analytics" },
@@ -385,13 +390,18 @@ function CameraInspector() {
             key={tab.id}
             onClick={() => setTab(tab.id)}
             className={cn(
-              "-mb-px rounded-t-lg border-b-2 px-2 py-1.5 text-[10px] font-medium transition-colors",
+              "-mb-px relative rounded-t-lg border-b-2 px-2 py-1.5 text-[10px] font-medium transition-colors",
               inspectorTab === tab.id
                 ? "border-green-500 text-green-300"
                 : "border-transparent text-[#5a647a] hover:text-[#a1abc1]",
             )}
           >
             {tab.label}
+            {tab.badge !== undefined && tab.badge > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-blue-500 text-[7px] font-bold text-white">
+                {tab.badge > 9 ? "9+" : tab.badge}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -793,7 +803,11 @@ function CameraInspector() {
             {/* Go to Camera View button */}
             <button
               type="button"
-              onClick={() => useStudioStore.getState().setViewMode("camera_view")}
+              onClick={() => {
+                const store = useStudioStore.getState();
+                store.setWorkspacePreset("coverage");
+                store.setViewMode("camera_view");
+              }}
               className="mt-1 flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
             >
               Full Camera View
@@ -801,36 +815,238 @@ function CameraInspector() {
           </div>
         )}
 
-        {inspectorTab === "failures" && (
-          <div className="space-y-2.5">
-            <SectionCard title="Failure Simulation">
-              {camResult ? (
-                <div className="space-y-2">
-                  <div className="rounded-lg border border-[#1f2536] bg-[#111521] p-3 text-[10px] leading-relaxed text-[#c7d0e4]">
-                    {camera.name} contributes {camResult.coveragePct.toFixed(1)}% coverage in the current run and fails {camResult.criticalZonesFailed.length} critical zone(s).
+        {inspectorTab === "failures" && (() => {
+          // --- Criticality analysis ---
+          const coveragePct = camResult?.coveragePct ?? 0;
+          const zonesCovered = camResult?.criticalZonesCovered ?? [];
+
+          // Which of this camera's zones have NO backup camera?
+          const otherResults = (result?.cameraResults ?? []).filter((r) => r.cameraId !== camera.id);
+          const nonRedundantZones = zonesCovered.filter(
+            (zoneId) => !otherResults.some((o) => o.criticalZonesCovered.includes(zoneId))
+          );
+
+          // Criticality score 0-10: coverage contribution + non-redundant zone penalty
+          const critScore = Math.min(10, Math.round((coveragePct / 12) + nonRedundantZones.length * 2));
+          const critLabel = critScore >= 8 ? "Critical" : critScore >= 5 ? "Important" : "Redundant";
+          const critColor = critScore >= 8 ? "text-red-400" : critScore >= 5 ? "text-amber-400" : "text-green-400";
+          const critBorderColor = critScore >= 8 ? "#f87171" : critScore >= 5 ? "#fbbf24" : "#4ade80";
+
+          // Path segments that rely on this camera
+          const pathSegmentCount = (result?.pathResults ?? []).flatMap((pr) =>
+            pr.timeline.filter((t) => t.cameraId === camera.id)
+          ).length;
+
+          // Failure state derived from camera props (no extra useState needed)
+          const isOffline = camera.status !== "on";
+          const isDirty = camera.clarity === "poor";
+          const isNightDisabled = camera.nightMode === "none";
+          const isSimulatingFailure = isOffline || isDirty || isNightDisabled;
+
+          return (
+            <div className="space-y-2.5">
+              {/* Criticality card */}
+              {camResult && (
+                <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
+                  <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">
+                    Camera Criticality
                   </div>
-                  {offlineImpact.length > 0 ? (
-                    <div className="space-y-1.5">
-                      {offlineImpact.map((message, index) => (
-                        <div key={index} className="rounded-lg border border-amber-500/20 bg-amber-500/8 px-2 py-2 text-[10px] text-amber-200">
-                          {message}
-                        </div>
-                      ))}
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border-2"
+                      style={{ borderColor: critBorderColor }}
+                    >
+                      <span className={`text-[15px] font-bold ${critColor}`}>{critScore}</span>
                     </div>
-                  ) : (
-                    <div className="rounded-lg border border-[#1f2536] bg-[#111521] p-3 text-[10px] leading-relaxed text-[#6a748b]">
-                      No offline-failure impact is currently attributed to this camera in the latest simulation run.
+                    <div>
+                      <div className={`text-[12px] font-semibold ${critColor}`}>{critLabel}</div>
+                      <div className="mt-0.5 text-[9px] text-[#4a5568]">
+                        {coveragePct.toFixed(1)}% scene · {nonRedundantZones.length} sole-coverage zone{nonRedundantZones.length !== 1 ? "s" : ""}
+                      </div>
                     </div>
-                  )}
-                </div>
-              ) : (
-                <div className="rounded-lg border border-[#1f2536] bg-[#111521] p-3 text-[10px] leading-relaxed text-[#6a748b]">
-                  Run the simulation to populate camera failure analysis for this selected camera.
+                    <div className="ml-auto text-right">
+                      <div className="font-mono text-[13px] font-bold text-[#c7d0e4]">
+                        {pathSegmentCount}
+                      </div>
+                      <div className="text-[8px] text-[#4a5568]">path events</div>
+                    </div>
+                  </div>
                 </div>
               )}
-            </SectionCard>
-          </div>
-        )}
+
+              {/* Failure toggles */}
+              <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
+                <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">
+                  Simulate Failure
+                </div>
+                <div className="space-y-2">
+                  {/* Camera Offline */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="text-[10px] text-[#c7d0e4]">Camera Offline</div>
+                      <div className="text-[8px] text-[#4a5568]">Power cut / network loss</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateNode(camera.id, { status: isOffline ? "on" : "off" })}
+                      className={cn(
+                        "flex h-5 w-9 flex-shrink-0 items-center rounded-full px-0.5 transition-colors",
+                        isOffline ? "bg-red-500/60" : "bg-[#2a3246]",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "block h-4 w-4 rounded-full bg-white shadow transition-transform",
+                          isOffline ? "translate-x-4" : "translate-x-0",
+                        )}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Dirty / Blocked Lens */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="text-[10px] text-[#c7d0e4]">Dirty / Blocked Lens</div>
+                      <div className="text-[8px] text-[#4a5568]">Spray paint, grease, mud</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateNode(camera.id, { clarity: isDirty ? "good" : "poor" })}
+                      className={cn(
+                        "flex h-5 w-9 flex-shrink-0 items-center rounded-full px-0.5 transition-colors",
+                        isDirty ? "bg-amber-500/60" : "bg-[#2a3246]",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "block h-4 w-4 rounded-full bg-white shadow transition-transform",
+                          isDirty ? "translate-x-4" : "translate-x-0",
+                        )}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Night Vision Disabled */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="text-[10px] text-[#c7d0e4]">Night Vision Disabled</div>
+                      <div className="text-[8px] text-[#4a5568]">IR cut / low-light mode off</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateNode(camera.id, { nightMode: isNightDisabled ? "ir" : "none" })}
+                      className={cn(
+                        "flex h-5 w-9 flex-shrink-0 items-center rounded-full px-0.5 transition-colors",
+                        isNightDisabled ? "bg-amber-500/60" : "bg-[#2a3246]",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "block h-4 w-4 rounded-full bg-white shadow transition-transform",
+                          isNightDisabled ? "translate-x-4" : "translate-x-0",
+                        )}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Failure active banner */}
+                {isSimulatingFailure && (
+                  <div className="mt-2.5 flex items-center justify-between rounded-lg border border-amber-500/25 bg-amber-500/8 px-2 py-1.5">
+                    <span className="text-[9px] text-amber-300">Failure active — re-run simulation to see impact</span>
+                    <button
+                      type="button"
+                      onClick={() => updateNode(camera.id, { status: "on", clarity: "good", nightMode: "ir" })}
+                      className="ml-2 flex-shrink-0 rounded border border-amber-500/30 px-1.5 py-0.5 text-[8px] font-medium text-amber-300 transition-colors hover:bg-amber-500/15"
+                    >
+                      Restore
+                    </button>
+                  </div>
+                )}
+
+                {!isSimulatingFailure && (
+                  <div className="mt-2.5 text-[8px] text-[#3a4158]">
+                    Toggle failures above, then re-run simulation to compute impact.
+                  </div>
+                )}
+              </div>
+
+              {/* Zone redundancy map */}
+              {zonesCovered.length > 0 && (
+                <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
+                  <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">
+                    Zone Coverage ({zonesCovered.length})
+                  </div>
+                  <div className="space-y-1">
+                    {zonesCovered.map((zoneId) => {
+                      const hasBackup = otherResults.some((o) => o.criticalZonesCovered.includes(zoneId));
+                      const zoneName = scene.criticalZones.find((z) => z.id === zoneId)?.label ?? zoneId;
+                      return (
+                        <div key={zoneId} className="flex items-center justify-between gap-2">
+                          <span className="truncate text-[10px] text-[#8090a8]">{zoneName}</span>
+                          <span
+                            className={cn(
+                              "flex-shrink-0 rounded px-1.5 py-0.5 text-[7px] font-semibold",
+                              hasBackup
+                                ? "bg-green-900/30 text-green-400"
+                                : "bg-red-900/30 text-red-400",
+                            )}
+                          >
+                            {hasBackup ? "Redundant" : "No Backup"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Path exposure */}
+              {pathSegmentCount > 0 && (
+                <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
+                  <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">
+                    Adversarial Path Exposure
+                  </div>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-[17px] font-bold text-orange-300">{pathSegmentCount}</span>
+                    <span className="text-[9px] text-[#4a5568]">
+                      detection event{pathSegmentCount !== 1 ? "s" : ""} rely on this camera
+                    </span>
+                  </div>
+                  <div className="mt-1 text-[8px] text-[#3a4158]">
+                    If offline, {pathSegmentCount} path detection{pathSegmentCount !== 1 ? "s" : ""} would be lost.
+                  </div>
+                </div>
+              )}
+
+              {/* Simulation impact messages */}
+              {offlineImpact.length > 0 && (
+                <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
+                  <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">
+                    Impact Notes
+                  </div>
+                  <div className="space-y-1.5">
+                    {offlineImpact.map((message, index) => (
+                      <div
+                        key={index}
+                        className="rounded-lg border border-amber-500/20 bg-amber-500/8 px-2 py-1.5 text-[9px] text-amber-200"
+                      >
+                        {message}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* No simulation data yet */}
+              {!camResult && (
+                <div className="rounded-lg border border-[#1f2536] bg-[#111521] p-3 text-[10px] leading-relaxed text-[#6a748b]">
+                  Run simulation to populate failure impact analysis for this camera.
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       <div className="space-y-2 border-t border-[#1e2130] px-3 py-3">
@@ -848,7 +1064,9 @@ function CameraInspector() {
             type="button"
             onClick={() => {
               setTab("view");
-              useStudioStore.getState().setViewMode("camera_view");
+              const store = useStudioStore.getState();
+              store.setWorkspacePreset("coverage");
+              store.setViewMode("camera_view");
             }}
             className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
           >
@@ -875,13 +1093,248 @@ function CameraInspector() {
   );
 }
 
+// ── Critical Zone Inspector ──────────────────────────────────────────────────
+
+const TARGET_TYPE_LABELS: Record<CriticalZoneNode["targetType"], string> = {
+  person_detection: "Person Detection",
+  face_recognition: "Face Recognition",
+  face_identification: "Face ID",
+  vehicle_detection: "Vehicle Detection",
+  license_plate: "License Plate",
+  package_detection: "Package Detection",
+  cash_counter_activity: "Cash Counter",
+  door_entry_exit: "Door Entry/Exit",
+  perimeter_breach: "Perimeter Breach",
+};
+
+const PRIORITY_COLORS: Record<CriticalZoneNode["priority"], string> = {
+  low: "text-[#68738a]",
+  medium: "text-blue-400",
+  high: "text-amber-400",
+  critical: "text-red-400",
+};
+
+const QUALITY_BADGE_COLORS: Record<string, string> = {
+  identification: "bg-blue-900/40 text-blue-300",
+  recognition:    "bg-green-900/40 text-green-300",
+  observation:    "bg-yellow-900/40 text-yellow-300",
+  detection:      "bg-orange-900/40 text-orange-300",
+  none:           "bg-red-900/40 text-red-400",
+};
+
+function CriticalZoneInspector() {
+  const selectedId = useStudioStore((s) => s.selectedNodeId);
+  const scene = useStudioStore((s) => s.scene);
+  const result = useStudioStore((s) => s.simulationResult);
+  const updateNode = useStudioStore((s) => s.updateNode);
+  const removeNode = useStudioStore((s) => s.removeNode);
+
+  const zone = scene.criticalZones.find((z) => z.id === selectedId);
+  if (!zone) return null;
+
+  const zoneResult = result?.criticalZoneResults.find((r) => r.zoneId === zone.id);
+  const coveringCameras = zoneResult?.coveringCameras ?? [];
+  const isPassing = zoneResult?.status === "pass";
+  const isPartial = zoneResult?.status === "partial";
+
+  // Camera names lookup
+  const camNames: Record<string, string> = {};
+  for (const cam of scene.cameras) camNames[cam.id] = cam.name;
+
+  return (
+    <>
+      {/* Header */}
+      <div className="border-b border-[#1e2130] px-3 py-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/10">
+              <Shield className="h-4 w-4 text-emerald-400" />
+            </div>
+            <div>
+              <div className="text-[12px] font-semibold text-white">{zone.label}</div>
+              <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">
+                {TARGET_TYPE_LABELS[zone.targetType]} · {zone.priority}
+              </div>
+            </div>
+          </div>
+          {zoneResult ? (
+            <Badge variant={isPassing ? "green" : isPartial ? "amber" : "red"} dot>
+              {isPassing ? "Pass" : isPartial ? "Partial" : "Fail"}
+            </Badge>
+          ) : (
+            <Badge variant="gray">No run</Badge>
+          )}
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 overflow-y-auto px-3 py-2.5 space-y-2.5">
+        {/* Required vs Actual */}
+        <SectionCard title="DORI Quality">
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[10px] text-[#6a748b]">Required</span>
+              <span className={cn("rounded px-1.5 py-0.5 text-[9px] font-semibold capitalize", QUALITY_BADGE_COLORS[zone.requiredQuality] ?? "bg-[#1f2536] text-[#8090a8]")}>
+                {zone.requiredQuality}
+              </span>
+            </div>
+            {zoneResult && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] text-[#6a748b]">Actual</span>
+                <span className={cn("rounded px-1.5 py-0.5 text-[9px] font-semibold capitalize", QUALITY_BADGE_COLORS[zoneResult.actualQuality] ?? "bg-[#1f2536] text-[#8090a8]")}>
+                  {zoneResult.actualQuality}
+                </span>
+              </div>
+            )}
+          </div>
+        </SectionCard>
+
+        {/* Zone properties — editable */}
+        <SectionCard title="Properties">
+          {/* Target Type */}
+          <div className="flex items-center justify-between gap-2 border-b border-[#181c27] py-1.5">
+            <span className="text-[10px] text-[#6a748b]">Target Type</span>
+            <select
+              value={zone.targetType}
+              onChange={(e) => updateNode(zone.id, { targetType: e.target.value as CriticalZoneNode["targetType"] })}
+              className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] font-medium text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+            >
+              {(Object.keys(TARGET_TYPE_LABELS) as CriticalZoneNode["targetType"][]).map((t) => (
+                <option key={t} value={t}>{TARGET_TYPE_LABELS[t]}</option>
+              ))}
+            </select>
+          </div>
+          {/* Required Quality */}
+          <div className="flex items-center justify-between gap-2 border-b border-[#181c27] py-1.5">
+            <span className="text-[10px] text-[#6a748b]">Required Quality</span>
+            <select
+              value={zone.requiredQuality}
+              onChange={(e) => updateNode(zone.id, { requiredQuality: e.target.value as CriticalZoneNode["requiredQuality"] })}
+              className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] font-medium text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+            >
+              <option value="detection">Detection</option>
+              <option value="observation">Observation</option>
+              <option value="recognition">Recognition</option>
+              <option value="identification">Identification</option>
+            </select>
+          </div>
+          {/* Priority */}
+          <div className="flex items-center justify-between gap-2 border-b border-[#181c27] py-1.5">
+            <span className="text-[10px] text-[#6a748b]">Priority</span>
+            <select
+              value={zone.priority}
+              onChange={(e) => updateNode(zone.id, { priority: e.target.value as CriticalZoneNode["priority"] })}
+              className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] font-medium text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </select>
+          </div>
+          {/* Night Required */}
+          <div className="flex items-center justify-between gap-2 border-b border-[#181c27] py-1.5">
+            <span className="text-[10px] text-[#6a748b]">Night Coverage Required</span>
+            <button
+              type="button"
+              onClick={() => updateNode(zone.id, { nightRequired: !zone.nightRequired })}
+              className={cn(
+                "flex h-5 w-9 flex-shrink-0 items-center rounded-full px-0.5 transition-colors",
+                zone.nightRequired ? "bg-blue-600/50" : "bg-[#2a3246]",
+              )}
+            >
+              <span className={cn("block h-4 w-4 rounded-full bg-white shadow transition-transform", zone.nightRequired ? "translate-x-4" : "")} />
+            </button>
+          </div>
+          {/* Redundancy Required */}
+          <div className="flex items-center justify-between gap-2 py-1.5">
+            <span className="text-[10px] text-[#6a748b]">Redundancy Required</span>
+            <button
+              type="button"
+              onClick={() => updateNode(zone.id, { redundancyRequired: !zone.redundancyRequired })}
+              className={cn(
+                "flex h-5 w-9 flex-shrink-0 items-center rounded-full px-0.5 transition-colors",
+                zone.redundancyRequired ? "bg-blue-600/50" : "bg-[#2a3246]",
+              )}
+            >
+              <span className={cn("block h-4 w-4 rounded-full bg-white shadow transition-transform", zone.redundancyRequired ? "translate-x-4" : "")} />
+            </button>
+          </div>
+        </SectionCard>
+
+        {/* Covering cameras */}
+        {coveringCameras.length > 0 && (
+          <SectionCard title={`Covered By (${coveringCameras.length})`}>
+            <div className="space-y-1">
+              {coveringCameras.map((camId) => (
+                <div key={camId} className="flex items-center gap-1.5 text-[10px] text-[#8090a8]">
+                  <Camera className="h-3 w-3 flex-shrink-0 text-blue-400" />
+                  {camNames[camId] ?? camId}
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        )}
+
+        {zoneResult && !isPassing && (
+          <div className="rounded-xl border border-red-500/15 bg-red-500/5 p-2.5">
+            <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-red-400">Coverage Gap</div>
+            <div className="text-[9px] leading-relaxed text-[#c7d0e4]">
+              This zone requires <strong>{zone.requiredQuality}</strong> but is receiving <strong>{zoneResult.actualQuality}</strong>.
+              {coveringCameras.length === 0
+                ? " No camera currently covers this zone."
+                : ` ${coveringCameras.length} camera${coveringCameras.length !== 1 ? "s" : ""} cover it, but quality is insufficient.`}
+            </div>
+          </div>
+        )}
+
+        {!result && (
+          <div className="rounded-lg border border-[#1f2536] bg-[#111521] p-3 text-[10px] leading-relaxed text-[#6a748b]">
+            Run simulation to see zone coverage results.
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="border-t border-[#1e2130] px-3 py-3">
+        <button
+          type="button"
+          onClick={() => removeNode(zone.id)}
+          className="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-red-900/30 bg-red-950/15 text-[10px] font-medium text-red-400 transition-colors hover:border-red-700 hover:bg-red-950/30"
+        >
+          <Trash2 className="h-3 w-3" />
+          Delete Zone
+        </button>
+      </div>
+    </>
+  );
+}
+
+// ── Obstruction Inspector ─────────────────────────────────────────────────────
+
 function ObstructionInspector() {
   const selectedId = useStudioStore((s) => s.selectedNodeId);
   const scene = useStudioStore((s) => s.scene);
   const updateNode = useStudioStore((s) => s.updateNode);
+  const simulationResult = useStudioStore((s) => s.simulationResult);
+  const counterfactualResult = useStudioStore((s) => s.counterfactualResult);
+  const counterfactualObsId = useStudioStore((s) => s.counterfactualObsId);
+  const runCounterfactual = useStudioStore((s) => s.runCounterfactual);
+  const clearCounterfactual = useStudioStore((s) => s.clearCounterfactual);
 
   const obs = scene.obstructions.find((entry) => entry.id === selectedId);
   if (!obs) return null;
+
+  const isRunningForThis = counterfactualObsId === obs.id;
+  const delta = isRunningForThis && simulationResult && counterfactualResult ? {
+    coverage: counterfactualResult.totalCoveragePct - simulationResult.totalCoveragePct,
+    blindspot: simulationResult.blindspotPct - counterfactualResult.blindspotPct,
+    recognition: counterfactualResult.recognitionAreaPct - simulationResult.recognitionAreaPct,
+    zoneFlips: counterfactualResult.criticalZoneResults.filter((czr) => {
+      const baseline = simulationResult.criticalZoneResults.find((b) => b.zoneId === czr.zoneId);
+      return baseline && baseline.status !== "pass" && czr.status === "pass";
+    }),
+  } : null;
 
   return (
     <>
@@ -976,15 +1429,60 @@ function ObstructionInspector() {
         </SectionCard>
       </div>
 
-      <div className="border-t border-[#1e2130] px-3 py-3">
+      <div className="border-t border-[#1e2130] px-3 py-3 space-y-2">
         <button
           type="button"
-          disabled
-          title="Available in Phase 3"
-          className="flex h-8 w-full cursor-not-allowed items-center justify-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] text-[10px] font-medium text-[#6f7890] opacity-70"
+          onClick={() => isRunningForThis ? clearCounterfactual() : runCounterfactual(obs.id)}
+          disabled={!simulationResult}
+          className="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-blue-600/30 bg-blue-600/10 text-[10px] font-medium text-blue-300 transition-colors hover:bg-blue-600/20 disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          Test Without This Obstruction
+          {isRunningForThis ? "Clear Test" : "Test Without This Obstruction"}
         </button>
+
+        {delta && (
+          <div className="rounded-lg border border-[#1e2130] bg-[#0a0d15] p-2.5 space-y-1.5">
+            <div className="text-[9px] font-semibold uppercase tracking-widest text-[#3a4158] mb-2">
+              If removed — delta vs current
+            </div>
+            <div className="grid grid-cols-3 gap-1.5">
+              <div className="flex flex-col items-center rounded bg-[#0d1017] p-1.5">
+                <span className={`text-[13px] font-bold ${delta.coverage >= 0 ? "text-green-400" : "text-red-400"}`}>
+                  {delta.coverage > 0 ? "+" : ""}{delta.coverage.toFixed(1)}%
+                </span>
+                <span className="text-[8px] text-[#4a5568] mt-0.5">coverage</span>
+              </div>
+              <div className="flex flex-col items-center rounded bg-[#0d1017] p-1.5">
+                <span className={`text-[13px] font-bold ${delta.blindspot >= 0 ? "text-green-400" : "text-red-400"}`}>
+                  {delta.blindspot > 0 ? "-" : "+"}{Math.abs(delta.blindspot).toFixed(1)}%
+                </span>
+                <span className="text-[8px] text-[#4a5568] mt-0.5">blindspot</span>
+              </div>
+              <div className="flex flex-col items-center rounded bg-[#0d1017] p-1.5">
+                <span className={`text-[13px] font-bold ${delta.recognition >= 0 ? "text-green-400" : "text-red-400"}`}>
+                  {delta.recognition > 0 ? "+" : ""}{delta.recognition.toFixed(1)}%
+                </span>
+                <span className="text-[8px] text-[#4a5568] mt-0.5">recognition</span>
+              </div>
+            </div>
+            {delta.zoneFlips.length > 0 && (
+              <div className="mt-1.5">
+                {delta.zoneFlips.map((z) => (
+                  <div key={z.zoneId} className="flex items-center gap-1.5 text-[9px]">
+                    <span className="text-red-400">✗ FAIL</span>
+                    <span className="text-[#4a5568]">→</span>
+                    <span className="text-green-400">✓ PASS</span>
+                    <span className="text-[#8090a8]">{z.label ?? z.zoneId}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {delta.zoneFlips.length === 0 && delta.coverage < 0.5 && delta.blindspot < 0.5 && (
+              <div className="text-[9px] text-[#4a5568] text-center pt-1">
+                Minimal impact — obstruction may not be blocking critical sightlines
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </>
   );
@@ -1129,13 +1627,22 @@ export function InspectorPanel() {
   const camera = scene.cameras.find((entry) => entry.id === selectedId);
   const obstruction = scene.obstructions.find((entry) => entry.id === selectedId);
   const light = scene.securityLights.find((entry) => entry.id === selectedId);
+  const zone = scene.criticalZones.find((entry) => entry.id === selectedId);
 
   return (
     <aside className="flex w-[304px] flex-shrink-0 flex-col overflow-hidden border-l border-[#1e2130] bg-[#0d1017]">
       <div className="flex h-8 items-center border-b border-[#1e2130] px-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-[#4a5568]">
         Inspector
       </div>
-      {camera ? <CameraInspector /> : obstruction ? <ObstructionInspector /> : light ? <LightInspector /> : <NoSelection />}
+      {camera
+        ? <CameraInspector />
+        : zone
+        ? <CriticalZoneInspector />
+        : obstruction
+        ? <ObstructionInspector />
+        : light
+        ? <LightInspector />
+        : <NoSelection />}
     </aside>
   );
 }

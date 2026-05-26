@@ -1,9 +1,10 @@
 "use client";
 
-import { Camera, Edit3, FileText, Plus, Thermometer, Droplets, Wind, Sun } from "lucide-react";
+import { Camera, Check, Edit3, FileText, Plus, Thermometer, Droplets, Wind, Sun, X } from "lucide-react";
+import { useState } from "react";
 
 import { useStudioStore } from "@/store/studio-store";
-import type { DoriQuality } from "@/schema/security-scene";
+import type { DoriQuality, SimulationAssumptions } from "@/schema/security-scene";
 
 function panelTimeLabel(ts: number) {
   const d = new Date(ts);
@@ -109,32 +110,191 @@ function AssumptionRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+function SegmentedControl<T extends string>({
+  value, options, onChange,
+}: { value: T; options: { value: T; label: string }[]; onChange: (v: T) => void }) {
+  return (
+    <div className="inline-flex overflow-hidden rounded-md border border-[#24283a] bg-[#0b0f17]">
+      {options.map((opt) => (
+        <button
+          key={opt.value}
+          type="button"
+          onClick={() => onChange(opt.value)}
+          className={`px-2 py-0.5 text-[9px] font-medium transition-colors border-r border-[#24283a] last:border-r-0 ${
+            value === opt.value ? "bg-blue-600/25 text-blue-200" : "text-[#7f8aa3] hover:text-white"
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function AssumptionsPanel() {
   const scene = useStudioStore((s) => s.scene);
+  const updateAssumptions = useStudioStore((s) => s.updateAssumptions);
   const ass = scene.assumptions;
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<Partial<SimulationAssumptions>>({});
+
   const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+
+  const startEdit = () => {
+    setDraft({
+      timeOfDay: ass.timeOfDay,
+      personHeightM: ass.personHeightM,
+      wallHeightM: ass.wallHeightM,
+      doriStandard: ass.doriStandard,
+      interiorLightLevel: ass.interiorLightLevel,
+      nightPenaltyMode: ass.nightPenaltyMode,
+    });
+    setEditing(true);
+  };
+
+  const commitEdit = () => {
+    if (Object.keys(draft).length > 0) updateAssumptions(draft);
+    setEditing(false);
+    setDraft({});
+  };
+
+  const cancelEdit = () => { setEditing(false); setDraft({}); };
+
+  const cur = (key: keyof SimulationAssumptions) =>
+    (key in draft ? draft[key] : ass[key]) as never;
 
   return (
     <BottomSection
       title="Simulation Assumptions"
       action={
-        <button className="inline-flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[8px] text-[#aab5ca] transition-colors hover:border-[#32384d] hover:text-white">
-          <Edit3 className="h-3 w-3" />
-          Edit Assumptions
-        </button>
+        editing ? (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={commitEdit}
+              className="inline-flex items-center gap-1 rounded-md border border-green-600/40 bg-green-600/15 px-2 py-1 text-[8px] text-green-300 transition-colors hover:bg-green-600/25"
+            >
+              <Check className="h-3 w-3" />
+              Save
+            </button>
+            <button
+              onClick={cancelEdit}
+              className="inline-flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[8px] text-[#6a7490] transition-colors hover:text-white"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={startEdit}
+            className="inline-flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[8px] text-[#aab5ca] transition-colors hover:border-[#32384d] hover:text-white"
+          >
+            <Edit3 className="h-3 w-3" />
+            Edit
+          </button>
+        )
       }
     >
-      <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-[9px]">
-          <AssumptionRow label="DORI Model" value={ass.doriStandard === "simplified" ? "Simplified PPM" : ass.doriStandard} />
-          <AssumptionRow label="Lighting Model" value="Simplified" />
-          <AssumptionRow label="PPM Thresholds" value="25 / 62.5 / 125 / 250" />
-          <AssumptionRow label="Glass Handling" value="Partial Transmission" />
-          <AssumptionRow label="Person Height" value={`${ass.personHeightM} m`} />
-          <AssumptionRow label="Time of Day" value={capitalize(ass.timeOfDay)} />
-          <AssumptionRow label="Wall Height" value={`${ass.wallHeightM} m`} />
-          <AssumptionRow label="Night Mode" value={ass.timeOfDay === "night" ? "On" : "Off"} />
-        </div>
+      <div className="h-full overflow-y-auto rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+        {editing ? (
+          <div className="space-y-2 text-[9px]">
+            {/* Time of Day */}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[#647089]">Time of Day</span>
+              <SegmentedControl
+                value={cur("timeOfDay") as SimulationAssumptions["timeOfDay"]}
+                options={[
+                  { value: "day", label: "Day" },
+                  { value: "night", label: "Night" },
+                  { value: "custom", label: "Custom" },
+                ]}
+                onChange={(v) => setDraft((d) => ({ ...d, timeOfDay: v }))}
+              />
+            </div>
+            {/* DORI Standard */}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[#647089]">DORI Model</span>
+              <SegmentedControl
+                value={cur("doriStandard") as SimulationAssumptions["doriStandard"]}
+                options={[
+                  { value: "simplified", label: "PPM" },
+                  { value: "iec62676", label: "IEC" },
+                ]}
+                onChange={(v) => setDraft((d) => ({ ...d, doriStandard: v }))}
+              />
+            </div>
+            {/* Interior Light Level */}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[#647089]">Light Level</span>
+              <SegmentedControl
+                value={cur("interiorLightLevel") as SimulationAssumptions["interiorLightLevel"]}
+                options={[
+                  { value: "dark", label: "Dark" },
+                  { value: "dim", label: "Dim" },
+                  { value: "normal", label: "Norm" },
+                  { value: "bright", label: "Bright" },
+                ]}
+                onChange={(v) => setDraft((d) => ({ ...d, interiorLightLevel: v }))}
+              />
+            </div>
+            {/* Night Penalty */}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[#647089]">Night Penalty</span>
+              <SegmentedControl
+                value={cur("nightPenaltyMode") as SimulationAssumptions["nightPenaltyMode"]}
+                options={[
+                  { value: "none", label: "None" },
+                  { value: "simple", label: "Simple" },
+                  { value: "detailed", label: "Detail" },
+                ]}
+                onChange={(v) => setDraft((d) => ({ ...d, nightPenaltyMode: v }))}
+              />
+            </div>
+            {/* Person Height */}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[#647089]">Person Height</span>
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min={1.0}
+                  max={2.5}
+                  step={0.05}
+                  value={cur("personHeightM") as number}
+                  onChange={(e) => setDraft((d) => ({ ...d, personHeightM: parseFloat(e.target.value) || d.personHeightM }))}
+                  className="w-16 rounded border border-[#24283a] bg-[#111521] px-1.5 py-0.5 text-right font-mono text-[9px] text-white outline-none"
+                />
+                <span className="text-[#556076]">m</span>
+              </div>
+            </div>
+            {/* Wall Height */}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[#647089]">Wall Height</span>
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min={2.0}
+                  max={6.0}
+                  step={0.1}
+                  value={cur("wallHeightM") as number}
+                  onChange={(e) => setDraft((d) => ({ ...d, wallHeightM: parseFloat(e.target.value) || d.wallHeightM }))}
+                  className="w-16 rounded border border-[#24283a] bg-[#111521] px-1.5 py-0.5 text-right font-mono text-[9px] text-white outline-none"
+                />
+                <span className="text-[#556076]">m</span>
+              </div>
+            </div>
+            <div className="pt-1 text-[8px] text-[#3a4158]">Changes apply on next simulation run.</div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-[9px]">
+            <AssumptionRow label="DORI Model" value={ass.doriStandard === "simplified" ? "Simplified PPM" : ass.doriStandard} />
+            <AssumptionRow label="Lighting Model" value={capitalize(ass.interiorLightLevel)} />
+            <AssumptionRow label="Night Penalty" value={capitalize(ass.nightPenaltyMode)} />
+            <AssumptionRow label="Glass Handling" value="Partial Trans." />
+            <AssumptionRow label="Person Height" value={`${ass.personHeightM} m`} />
+            <AssumptionRow label="Time of Day" value={capitalize(ass.timeOfDay)} />
+            <AssumptionRow label="Wall Height" value={`${ass.wallHeightM} m`} />
+            <AssumptionRow label="Night Mode" value={ass.timeOfDay === "night" ? "On" : "Off"} />
+          </div>
+        )}
       </div>
     </BottomSection>
   );
@@ -154,6 +314,7 @@ function ReportBullet({ color, label, text }: { color: string; label: string; te
 
 function ReportSummaryPanel() {
   const result = useStudioStore((s) => s.simulationResult);
+  const setBottomTab = useStudioStore((s) => s.setBottomTab);
   const zone = result?.criticalZoneResults[0];
   const criticalIssue = result?.issues.find((issue) => issue.category === "quality_fail" && issue.severity === "critical")?.description
     ?? result?.issues.find((issue) => issue.category === "quality_fail")?.description
@@ -183,7 +344,10 @@ function ReportSummaryPanel() {
           <ReportBullet color="#9ca3af" label="Impact" text={impact} />
           <ReportBullet color="#60a5fa" label="Recommendation" text={recommendation} />
         </div>
-        <button className="mt-2 inline-flex w-fit items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[8px] text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white">
+        <button
+          onClick={() => setBottomTab("report")}
+          className="mt-2 inline-flex w-fit items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[8px] text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
+        >
           Open Report Lite
         </button>
       </div>

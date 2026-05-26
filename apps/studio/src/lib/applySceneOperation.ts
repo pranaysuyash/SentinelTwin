@@ -1,6 +1,6 @@
 import type { SceneOperation } from "@/schema/SceneOperation";
 import type { SecurityScene } from "@/schema/security-scene";
-import { createCameraNode, createObstructionNode, createSecurityLightNode } from "./node-factory";
+import { createSecurityLightNode } from "./node-factory";
 
 export interface ApplyResult {
   success: boolean;

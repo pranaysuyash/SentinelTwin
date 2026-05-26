@@ -20,7 +20,7 @@ import {
   CoverageSegmentPath,
 } from "@/components/workspace/SharedScene";
 import { VisibilityTimeline } from "@/components/view/VisibilityTimeline";
-import type { DoriQuality } from "@/schema/security-scene";
+import type { DoriQuality, SimulationResult } from "@/schema/security-scene";
 
 // ── Shared scene ──
 
@@ -70,6 +70,31 @@ function PathMarkers({ waypoints }: { waypoints: [number, number][] }) {
   );
 }
 
+function getPlaybackPosition(
+  coverageFailurePath: SimulationResult["adversarialPath"] | undefined,
+  currentTime: number,
+) {
+  if (!coverageFailurePath || coverageFailurePath.waypoints.length < 2) {
+    return { currentIndex: 0, progress: 0 };
+  }
+
+  const wps = coverageFailurePath.waypoints;
+  let cumulativeTime = 0;
+
+  for (let i = 0; i < wps.length - 1; i++) {
+    const segmentDuration = (wps[i + 1].timeS ?? 0) - (wps[i].timeS ?? 0);
+    if (currentTime >= cumulativeTime && currentTime < cumulativeTime + segmentDuration) {
+      const segProgress = segmentDuration > 0
+        ? (currentTime - cumulativeTime) / segmentDuration
+        : 0;
+      return { currentIndex: i, progress: Math.min(segProgress, 1) };
+    }
+    cumulativeTime += segmentDuration;
+  }
+
+  return { currentIndex: wps.length - 1, progress: 1 };
+}
+
 // ── Animated Actor (useFrame for R3F-native per-frame updates) ──
 
 function PathActor({ waypoints, currentIndex, progress }: {
@@ -80,7 +105,10 @@ function PathActor({ waypoints, currentIndex, progress }: {
   const groupRef = useRef<THREE.Group>(null!);
   // Ref to latest props so useFrame always reads fresh values
   const propsRef = useRef({ waypoints, currentIndex, progress });
-  propsRef.current = { waypoints, currentIndex, progress };
+
+  useEffect(() => {
+    propsRef.current = { waypoints, currentIndex, progress };
+  }, [waypoints, currentIndex, progress]);
 
   // Directly mutate the Three.js object every frame — no React re-render
   useFrame(() => {
@@ -580,31 +608,8 @@ export function PathReplayView() {
 
   const totalDuration = coverageFailurePath?.totalDurationS ?? 0;
 
-  // Find current segment index + progress based on elapsed time
-  // Depends only on coverageFailurePath and currentTime (not waypoints, which is derived)
-  // to satisfy react-hooks/preserve-manual-memoization.
-  const { currentIndex, progress } = useMemo(() => {
-    if (!coverageFailurePath || coverageFailurePath.waypoints.length < 2) {
-      return { currentIndex: 0, progress: 0 };
-    }
-
-    const wps = coverageFailurePath.waypoints;
-    let cumulativeTime = 0;
-
-    for (let i = 0; i < wps.length - 1; i++) {
-      const segmentDuration = (wps[i + 1].timeS ?? 0) - (wps[i].timeS ?? 0);
-      if (currentTime >= cumulativeTime && currentTime < cumulativeTime + segmentDuration) {
-        const segProgress = segmentDuration > 0
-          ? (currentTime - cumulativeTime) / segmentDuration
-          : 0;
-        return { currentIndex: i, progress: Math.min(segProgress, 1) };
-      }
-      cumulativeTime += segmentDuration;
-    }
-
-    // Past the end
-    return { currentIndex: wps.length - 1, progress: 1 };
-  }, [coverageFailurePath, currentTime]);
+  // Find current segment index + progress based on elapsed time.
+  const { currentIndex, progress } = getPlaybackPosition(coverageFailurePath, currentTime);
 
   // Auto-advance time when playing
   // Use a ref to track the "anchor" (time when playback was last resumed) so

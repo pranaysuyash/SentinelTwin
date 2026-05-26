@@ -4,6 +4,7 @@ import { MapPinned, MonitorSmartphone } from "lucide-react";
 
 import { ScenarioPathPanel } from "@/components/bottom-panel/ScenarioPathPanel";
 import { InspectorPanel } from "@/components/inspector/InspectorPanel";
+import { AssumptionsPanel } from "@/components/panels/AssumptionsPanel";
 import { cn } from "@/lib/cn";
 import { useStudioStore } from "@/store/studio-store";
 
@@ -35,6 +36,9 @@ export function ContextRightPanel() {
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="min-h-0 flex-1 overflow-hidden">
           <InspectorPanel />
+        </div>
+        <div className="shrink-0 border-t border-[#1e2130]">
+          <AssumptionsPanel />
         </div>
         <div className="h-[208px] flex-shrink-0 overflow-hidden border-t border-[#1e2130]">
           <ScenarioPathPanel />

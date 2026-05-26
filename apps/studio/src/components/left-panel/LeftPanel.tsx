@@ -270,7 +270,7 @@ export function LeftPanel() {
                     )}
                   </span>
                   <span className={cn("flex-1 truncate text-[10px]", visible ? "text-[#c6cfdf]" : "text-[#535d73]")}>{layer.label}</span>
-                  <button onClick={() => toggleLayer(layer.id)} className="text-[#57627a] opacity-0 transition-all hover:text-white group-hover:opacity-100">
+                  <button onClick={() => toggleLayer(layer.id)} className="flex-shrink-0 text-[#57627a] transition-all hover:text-white">
                     {visible ? <Eye className="h-2.5 w-2.5" /> : <EyeOff className="h-2.5 w-2.5" />}
                   </button>
                 </div>

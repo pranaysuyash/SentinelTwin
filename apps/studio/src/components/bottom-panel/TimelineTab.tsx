@@ -116,6 +116,13 @@ export function TimelineTab() {
   const hasResults  = result.pathResults.length > 0;
   const maxDuration = Math.max(...result.pathResults.map((pr) => pr.totalDurationS), 1);
 
+  // Summary stats across all path results
+  const totalEvents  = result.pathResults.reduce((acc, pr) => acc + pr.timeline.length, 0);
+  const totalVisible = result.pathResults.reduce((acc, pr) => acc + pr.visibleDurationS, 0);
+  const totalDur     = result.pathResults.reduce((acc, pr) => acc + pr.totalDurationS, 0);
+  const visiblePct   = totalDur > 0 ? Math.round((totalVisible / totalDur) * 100) : 0;
+  const lostSec      = result.pathResults.reduce((acc, pr) => acc + pr.lostDurationS, 0);
+
   // Camera name lookup
   const cameraNames: Record<string, string> = {};
   for (const cam of scene.cameras) cameraNames[cam.id] = cam.name;
@@ -174,6 +181,24 @@ export function TimelineTab() {
           {hasPaths ? `${currentT.toFixed(1)}s / ${maxDuration.toFixed(1)}s` : "No paths"}
         </span>
       </div>
+
+      {/* ── Stats summary strip ── */}
+      {hasResults && (
+        <div className="flex items-center gap-3 border-b border-[#1e2130] bg-[#090c12] px-3 py-1 flex-shrink-0">
+          {[
+            { label: "Paths", value: String(result.pathResults.length), color: "text-[#c7d0e4]" },
+            { label: "Events", value: String(totalEvents), color: "text-[#c7d0e4]" },
+            { label: "Duration", value: `${maxDuration.toFixed(1)}s`, color: "text-[#c7d0e4]" },
+            { label: "Visible", value: `${visiblePct}%`, color: visiblePct >= 80 ? "text-green-400" : visiblePct >= 50 ? "text-yellow-400" : "text-red-400" },
+            { label: "Blind", value: `${lostSec.toFixed(1)}s`, color: lostSec > 0 ? "text-orange-400" : "text-[#3a4158]" },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="flex items-baseline gap-1">
+              <span className={`font-mono text-[10px] font-semibold ${color}`}>{value}</span>
+              <span className="text-[8px] text-[#3a4158] uppercase tracking-wide">{label}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── Main content: table + quality-over-time ── */}
       <div className="flex flex-1 min-h-0 overflow-hidden">

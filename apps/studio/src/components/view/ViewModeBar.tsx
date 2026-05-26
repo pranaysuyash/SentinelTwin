@@ -8,8 +8,8 @@ import { useStudioStore } from "@/store/studio-store";
 
 const VIEW_OPTIONS: { mode: ViewMode; label: string; icon: React.ReactNode }[] = [
   { mode: "map", label: "Map View", icon: <LayoutDashboard className="h-3.5 w-3.5" /> },
-  { mode: "wall", label: "Camera Wall", icon: <Monitor className="h-3.5 w-3.5" /> },
   { mode: "camera_view", label: "Camera View", icon: <Camera className="h-3.5 w-3.5" /> },
+  { mode: "wall", label: "Camera Wall", icon: <Monitor className="h-3.5 w-3.5" /> },
   { mode: "replay", label: "Path Replay", icon: <Play className="h-3.5 w-3.5" /> },
   { mode: "compare", label: "Compare", icon: <GitCompare className="h-3.5 w-3.5" /> },
 ];
@@ -33,6 +33,48 @@ const iconVariants = {
   hover: { rotate: [0, -8, 8, 0] },
 };
 
+/** Context chip shown next to the active mode tab to orient the user */
+function ContextChip() {
+  const viewMode = useStudioStore((s) => s.viewMode);
+  const scene = useStudioStore((s) => s.scene);
+  const selectedId = useStudioStore((s) => s.selectedNodeId);
+  const result = useStudioStore((s) => s.simulationResult);
+
+  if (viewMode === "camera_view") {
+    const cam = scene.cameras.find((c) => c.id === selectedId) ?? scene.cameras[0];
+    if (!cam) return null;
+    return (
+      <div className="flex items-center gap-1 rounded-md border border-[#2a3246] bg-[#111827] px-2 py-1 text-[8px]">
+        <span className={`h-1.5 w-1.5 rounded-full ${cam.status === "on" ? "bg-emerald-400" : "bg-red-400"}`} />
+        <span className="text-[#93c5fd] font-medium">{cam.name}</span>
+      </div>
+    );
+  }
+
+  if (viewMode === "replay") {
+    const pathCount = scene.paths.length;
+    return (
+      <div className="flex items-center gap-1 rounded-md border border-[#2a3246] bg-[#111827] px-2 py-1 text-[8px]">
+        <Play className="h-2.5 w-2.5 text-emerald-400" />
+        <span className="text-[#93c5fd] font-medium">{pathCount} path{pathCount !== 1 ? "s" : ""}</span>
+      </div>
+    );
+  }
+
+  if (viewMode === "map" && result) {
+    const pct = Math.round(result.totalCoveragePct);
+    const color = pct > 80 ? "text-emerald-400" : pct > 60 ? "text-yellow-400" : "text-red-400";
+    return (
+      <div className="flex items-center gap-1 rounded-md border border-[#2a3246] bg-[#111827] px-2 py-1 text-[8px]">
+        <span className={`font-mono font-bold ${color}`}>{pct}%</span>
+        <span className="text-[#4a5568]">coverage</span>
+      </div>
+    );
+  }
+
+  return null;
+}
+
 export function ViewModeBar() {
   const viewMode = useStudioStore((s) => s.viewMode);
   const setViewMode = useStudioStore((s) => s.setViewMode);
@@ -43,7 +85,7 @@ export function ViewModeBar() {
       initial={{ y: -8, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ type: "spring", stiffness: 300, damping: 26, delay: 0.05 }}
-      className="absolute left-1/2 top-3 z-20 flex -translate-x-1/2 items-center gap-0.5 rounded-xl border border-[#1f2536] bg-[#0b0f17]/90 px-1 py-1 shadow-[0_8px_32px_rgba(0,0,0,0.32)] backdrop-blur-sm"
+      className="absolute left-1/2 top-3 z-20 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-[#1f2536] bg-[#0b0f17]/90 px-1 py-1 shadow-[0_8px_32px_rgba(0,0,0,0.32)] backdrop-blur-sm"
     >
       {VIEW_OPTIONS.map(({ mode, label, icon }) => (
         <motion.button
@@ -80,6 +122,9 @@ export function ViewModeBar() {
           </motion.span>
         </motion.button>
       ))}
+
+      {/* Context chip: shows camera name / path count / coverage% depending on active mode */}
+      <ContextChip />
     </motion.div>
   );
 }

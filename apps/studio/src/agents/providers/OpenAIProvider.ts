@@ -1,7 +1,6 @@
 import { z } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
 
-import type { ConversationMessage, ModelPrompt, ModelProvider, ModelResponse } from "./ModelProvider";
+import type { ModelPrompt, ModelProvider, ModelResponse } from "./ModelProvider";
 
 function buildOpenAiMessages(prompt: ModelPrompt) {
   return [
@@ -15,15 +14,17 @@ function buildOpenAiMessages(prompt: ModelPrompt) {
 
 /**
  * OpenAIProvider — uses GPT-4o with Structured Outputs for reliable JSON.
- *
- * Reads OPENAI_API_KEY or NEXT_PUBLIC_OPENAI_API_KEY from environment.
+ * Supports streaming, retry, and abort signals.
  */
 export class OpenAIProvider implements ModelProvider {
   readonly name = "openai-gpt4o";
   private apiKey: string;
   private baseUrl = "https://api.openai.com/v1";
+  /** Default model, overridable via agent config */
+  private model: string;
 
-  constructor() {
+  constructor(model = "gpt-4o") {
+    this.model = model;
     this.apiKey =
       typeof process !== "undefined"
         ? (process.env.OPENAI_API_KEY ?? process.env.NEXT_PUBLIC_OPENAI_API_KEY ?? "")
@@ -33,9 +34,9 @@ export class OpenAIProvider implements ModelProvider {
     }
   }
 
-  async complete(prompt: ModelPrompt): Promise<ModelResponse> {
+  async complete(prompt: ModelPrompt, signal?: AbortSignal): Promise<ModelResponse> {
     const body = {
-      model: "gpt-4o",
+      model: this.model,
       messages: buildOpenAiMessages(prompt),
       temperature: 0.1,
     };
@@ -44,6 +45,7 @@ export class OpenAIProvider implements ModelProvider {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${this.apiKey}` },
       body: JSON.stringify(body),
+      signal,
     });
 
     if (!res.ok) {
@@ -66,17 +68,68 @@ export class OpenAIProvider implements ModelProvider {
     };
   }
 
-  async completeStructured<T>(prompt: ModelPrompt, schema: z.ZodSchema<T>): Promise<T> {
-    // Build JSON schema from Zod using the robust zod-to-json-schema library
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const zodJson = zodToJsonSchema(schema as any);
+  async *completeStreaming(prompt: ModelPrompt, signal?: AbortSignal): AsyncIterable<string> {
+    const body = {
+      model: this.model,
+      messages: buildOpenAiMessages(prompt),
+      temperature: 0.1,
+      stream: true,
+    };
 
-    // OpenAI expects the schema under `schema` with `additionalProperties: false`
-    // at every object level. Ensure strict mode compatibility.
+    const res = await fetch(`${this.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${this.apiKey}` },
+      body: JSON.stringify(body),
+      signal,
+    });
+
+    if (!res.ok) {
+      const err = await res.text().catch(() => "unknown");
+      throw new Error(`OpenAI API error (${res.status}): ${err}`);
+    }
+
+    const reader = res.body?.getReader();
+    if (!reader) throw new Error("No response body for streaming");
+
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith("data: ")) continue;
+          const data = trimmed.slice(6);
+          if (data === "[DONE]") return;
+
+          try {
+            const parsed = JSON.parse(data);
+            const delta = parsed.choices?.[0]?.delta?.content;
+            if (delta) yield delta;
+          } catch {
+            // Skip malformed JSON chunks
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  }
+
+  async completeStructured<T>(prompt: ModelPrompt, schema: z.ZodSchema<T>, signal?: AbortSignal): Promise<T> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const zodJson = z.toJSONSchema(schema as any);
     const jsonSchema = ensureStrictMode(zodJson);
 
     const body = {
-      model: "gpt-4o",
+      model: this.model,
       messages: buildOpenAiMessages(prompt),
       temperature: 0.1,
       response_format: {
@@ -93,6 +146,7 @@ export class OpenAIProvider implements ModelProvider {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${this.apiKey}` },
       body: JSON.stringify(body),
+      signal,
     });
 
     if (!res.ok) {
@@ -110,21 +164,17 @@ export class OpenAIProvider implements ModelProvider {
 }
 
 /**
- * Recursively ensure the JSON schema is compatible with OpenAI's strict mode:
- * - Every object must have `additionalProperties: false`
- * - String enum schemas must use only `enum` (no `type`)
+ * Recursively ensure the JSON schema is compatible with OpenAI's strict mode.
  */
 function ensureStrictMode(schema: Record<string, unknown>): Record<string, unknown> {
   if (!schema || typeof schema !== "object") return schema;
 
   const result: Record<string, unknown> = { ...schema };
 
-  // OpenAI strict mode requires additionalProperties: false on all objects
   if (result.type === "object" && result.properties) {
     result.additionalProperties = false;
   }
 
-  // Recursively process nested schemas
   if (result.properties && typeof result.properties === "object" && !Array.isArray(result.properties)) {
     const props: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(result.properties as Record<string, unknown>)) {
@@ -133,12 +183,10 @@ function ensureStrictMode(schema: Record<string, unknown>): Record<string, unkno
     result.properties = props;
   }
 
-  // Process items (array elements)
   if (result.items && typeof result.items === "object") {
     result.items = ensureStrictMode(result.items as Record<string, unknown>);
   }
 
-  // Process oneOf / anyOf / allOf
   for (const key of ["oneOf", "anyOf", "allOf"] as const) {
     if (Array.isArray(result[key])) {
       result[key] = (result[key] as Record<string, unknown>[]).map((item) =>

@@ -386,6 +386,84 @@ export function CoverageSegmentPath({ waypoints }: { waypoints: { position: [num
   );
 }
 
+// ── Privacy Zones ──
+
+function PrivacyZoneMesh({ zone }: { zone: { id: string; label: string; polygon: [number, number][]; restriction: string } }) {
+  const shape = useMemo(() => {
+    const s = new THREE.Shape();
+    const pts = zone.polygon;
+    if (pts.length < 3) return s;
+    s.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) {
+      s.lineTo(pts[i][0], pts[i][1]);
+    }
+    s.closePath();
+    return s;
+  }, [zone.polygon]);
+
+  const geometry = useMemo(() => new THREE.ShapeGeometry(shape), [shape]);
+
+  const restrictionColor = zone.restriction === "no_video"
+    ? "#ef4444"
+    : zone.restriction === "restricted_view"
+      ? "#f59e0b"
+      : "#8b5cf6";
+
+  const cx = zone.polygon.reduce((sum, [x]) => sum + x, 0) / zone.polygon.length;
+  const cz = zone.polygon.reduce((sum, [, z]) => sum + z, 0) / zone.polygon.length;
+
+  return (
+    <group>
+      {/* Base fill */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+        <shapeGeometry args={[shape]} />
+        <meshBasicMaterial color={restrictionColor} transparent opacity={0.15} depthWrite={false} side={THREE.DoubleSide} />
+      </mesh>
+      {/* Outline */}
+      <lineSegments rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, 0]}>
+        <edgesGeometry args={[new THREE.ShapeGeometry(shape)]} />
+        <lineBasicMaterial color={restrictionColor} transparent opacity={0.5} />
+      </lineSegments>
+      {/* Label sprite */}
+      <PrivacyZoneLabel position={[cx, 0.5, cz]} text={zone.label} color={restrictionColor} />
+    </group>
+  );
+}
+
+function PrivacyZoneLabel({ position, text, color }: { position: [number, number, number]; text: string; color: string }) {
+  const texture = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 256;
+    canvas.height = 32;
+    const ctx = canvas.getContext("2d")!;
+    ctx.font = "bold 14px Inter, system-ui, sans-serif";
+    ctx.fillStyle = color.replace("#", "rgba(") + ", 0.7)".replace("rgba(#ef4444", "rgba(239, 68, 68");
+    // Simpler approach: use a dark background label
+    ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = color;
+    ctx.textAlign = "center";
+    ctx.fillText(text, 128, 22);
+    return new THREE.CanvasTexture(canvas);
+  }, [text, color]);
+
+  return (
+    <sprite position={position} scale={[1.6, 0.2, 1]}>
+      <spriteMaterial map={texture} transparent depthTest={false} />
+    </sprite>
+  );
+}
+
+export function ScenePrivacyZones({ zones }: { zones: { id: string; label: string; polygon: [number, number][]; restriction: string }[] }) {
+  return (
+    <>
+      {zones.map((zone) => (
+        <PrivacyZoneMesh key={zone.id} zone={zone} />
+      ))}
+    </>
+  );
+}
+
 // ── Path Line (generic, for scene paths with optional markers) ──
 
 export function ScenePathLine({

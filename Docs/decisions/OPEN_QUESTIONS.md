@@ -196,3 +196,11 @@ first has specific product implications:
 - What camera preset library do we need for India market? (CP Plus, TVT, Dahua primarily)
 - Does the freemium tier need to be meaningful enough to use standalone, not just a trial?
 - Should the demo scene be a small Indian shop by default, not a generic Western retail space?
+
+### Q-021: How should we eliminate the remaining `THREE.Clock` deprecation warning from React Three Fiber?
+The studio runtime warning still points into `@react-three/fiber` internals rather than app-local scene code.
+**Questions to answer:**
+- Is there a newer R3F release that replaces the deprecated `THREE.Clock` usage?
+- If not, is there a safe local patch or fork strategy we should use until upstream catches up?
+- Should we suppress the warning temporarily in development, or keep it visible as a dependency-health signal?
+**Related finding:** Thread 75 in `Docs/exploration/EXPLORATION_MAP.md`.

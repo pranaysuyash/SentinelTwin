@@ -364,6 +364,83 @@ export const simulationResultSchema = z.object({
   adversarialPath: adversarialPathResultSchema.optional(),
 });
 
+// ── Temporal Simulation Types (defined before base scene schema to avoid TDZ) ──
+
+export const timePeriodSchema = z.object({
+  startHour: z.number().min(0).max(23),
+  endHour: z.number().min(0).max(24),  // 24 = midnight next day
+  daysOfWeek: z.array(z.number().min(0).max(6)).optional(),
+});
+
+export const lightScheduleSchema = z.object({
+  lightId: z.string(),
+  periods: z.array(timePeriodSchema),
+});
+
+export const occupancyPeriodSchema = z.object({
+  level: z.enum(["empty", "low", "medium", "high"]),
+  timeRange: timePeriodSchema,
+  cameraObstructionMultiplier: z.number().min(0).max(1).default(0),
+});
+
+export const patrolScheduleSchema = z.object({
+  guardId: z.string(),
+  patrolRouteId: z.string(),
+  intervalMinutes: z.number().positive(),
+  durationMinutes: z.number().positive(),
+  firstPatrolHour: z.number().min(0).max(23),
+});
+
+export const timeScheduleSchema = z.object({
+  location: z.object({
+    latitude: z.number(),
+    longitude: z.number(),
+    timezone: z.string(),
+  }).optional(),
+  interiorLightSchedule: z.array(lightScheduleSchema).default([]),
+  exteriorLightSchedule: z.array(lightScheduleSchema).default([]),
+  doorLockSchedule: z.array(z.object({
+    doorId: z.string(),
+    periods: z.array(timePeriodSchema),
+  })).default([]),
+  occupancySchedule: z.array(occupancyPeriodSchema).default([]),
+  guardPatrolSchedule: z.array(patrolScheduleSchema).default([]),
+});
+
+export const hourlySecuritySnapshotSchema = z.object({
+  hour: z.number().int().min(0).max(23),
+  minute: z.number().int().min(0).max(59),
+  overallCoveragePct: z.number().min(0).max(100),
+  criticalZonePassCount: z.number().int().min(0),
+  criticalZoneTotalCount: z.number().int().min(0),
+  activeCameraCount: z.number().int().min(0),
+  activeLightCount: z.number().int().min(0),
+  adversarialPathExposureScore: z.number().min(0),
+  issues: z.array(z.string()),
+  stateLabel: z.string(),
+});
+
+export const vulnerabilityWindowSchema = z.object({
+  startHour: z.number().min(0).max(23),
+  startMinute: z.number().min(0).max(59),
+  endHour: z.number().min(0).max(24),
+  endMinute: z.number().min(0).max(59),
+  severity: z.enum(["high", "medium", "low"]),
+  reasons: z.array(z.string()),
+  criticalZonesFailing: z.array(z.string()),
+  adversarialRouteAvailable: z.boolean(),
+});
+
+export const temporalSecurityProfileSchema = z.object({
+  hoursAnalyzed: z.number().default(24),
+  resolutionMinutes: z.number().default(15),
+  hourlySnapshots: z.array(hourlySecuritySnapshotSchema),
+  peakVulnerabilityWindows: z.array(vulnerabilityWindowSchema),
+  safestPeriods: z.array(timePeriodSchema),
+  criticalZoneCoverageByHour: z.record(z.string(), z.array(z.number())),
+  computedAt: z.number().int().nonnegative(),
+});
+
 const securitySceneBaseSchema = z.object({
   id: z.string().startsWith("scene_"),
   name: z.string(),
@@ -386,7 +463,9 @@ const securitySceneBaseSchema = z.object({
   entryPoints: z.array(entryPointNodeSchema).default([]),
   paths: z.array(scenarioPathSchema).default([]),
   assumptions: simulationAssumptionsSchema,
+  timeSchedule: timeScheduleSchema.optional(),
   simulation: simulationResultSchema.optional(),
+  temporalProfile: temporalSecurityProfileSchema.optional(),
   source: z.enum([
     "manual",
     "ai_generated",
@@ -433,6 +512,7 @@ export type CoverageCellResult = z.infer<typeof coverageCellResultSchema>;
 export type SimulationResult = z.infer<typeof simulationResultSchema>;
 export type SceneSnapshot = z.infer<typeof sceneSnapshotSchema>;
 export type SecurityScene = z.infer<typeof securitySceneSchema>;
+export type SerializedSecurityScene = z.input<typeof securitySceneSchema>;
 export type AnyEditableNode =
   | WallNode
   | DoorNode
@@ -444,6 +524,15 @@ export type AnyEditableNode =
   | PrivacyZoneNode
   | EntryPointNode
   | ScenarioPath;
+
+export type TimePeriod = z.infer<typeof timePeriodSchema>;
+export type LightSchedule = z.infer<typeof lightScheduleSchema>;
+export type OccupancyPeriod = z.infer<typeof occupancyPeriodSchema>;
+export type PatrolSchedule = z.infer<typeof patrolScheduleSchema>;
+export type TimeSchedule = z.infer<typeof timeScheduleSchema>;
+export type HourlySecuritySnapshot = z.infer<typeof hourlySecuritySnapshotSchema>;
+export type VulnerabilityWindow = z.infer<typeof vulnerabilityWindowSchema>;
+export type TemporalSecurityProfile = z.infer<typeof temporalSecurityProfileSchema>;
 
 export function parseSecurityScene(input: unknown): SecurityScene {
   return securitySceneSchema.parse(input);

@@ -6,15 +6,20 @@ import {
   ChevronDown,
   Clapperboard,
   Copy,
+  Download,
   FileText,
   Loader2,
   Moon,
   Play,
   Shield,
   Sun,
+  Plus,
+  FolderOpen,
+  Upload,
+  Save,
   MoreHorizontal,
 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/cn";
 import { useStudioStore } from "@/store/studio-store";
@@ -65,22 +70,73 @@ function SurfaceButton({ className, children, ...props }: React.ButtonHTMLAttrib
   );
 }
 
-const scenes = [
-  "Small Retail Shop Demo",
-  "Warehouse Bay",
-  "Apartment Lobby",
-  "School Corridor",
-];
-
 export function TopBar() {
   const { runSimulation } = useSimulation();
   const envMode = useStudioStore((s) => s.environmentMode);
   const setEnvMode = useStudioStore((s) => s.setEnvironmentMode);
   const setBottomTab = useStudioStore((s) => s.setBottomTab);
   const saveSnapshot = useStudioStore((s) => s.saveSnapshot);
+  const scene = useStudioStore((s) => s.scene);
+  const savedScenes = useStudioStore((s) => s.savedScenes);
+  const createNewScene = useStudioStore((s) => s.createNewScene);
+  const setScene = useStudioStore((s) => s.setScene);
+  const importScene = useStudioStore((s) => s.importScene);
+  const saveSceneToStorage = useStudioStore((s) => s.saveSceneToStorage);
+  const deleteSavedScene = useStudioStore((s) => s.deleteSavedScene);
+  const refreshSavedScenesList = useStudioStore((s) => s.refreshSavedScenesList);
+  const exportScene = useStudioStore((s) => s.exportScene);
   const running = useStudioStore((s) => s.simulationRunning);
+  const demoMode = useStudioStore((s) => s.demoMode);
+  const setDemoMode = useStudioStore((s) => s.setDemoMode);
+
   const [sceneOpen, setSceneOpen] = useState(false);
   const [envOpen, setEnvOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+
+  useEffect(() => {
+    refreshSavedScenesList();
+  }, [refreshSavedScenesList]);
+
+  const handleImportScene = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = JSON.parse(e.target?.result as string);
+        const result = importScene(json);
+        if (!result.success) {
+          setImportError(result.error ?? "Invalid scene file");
+          setTimeout(() => setImportError(null), 4000);
+        } else {
+          setImportError(null);
+        }
+      } catch {
+        setImportError("Failed to parse JSON file");
+        setTimeout(() => setImportError(null), 4000);
+      }
+    };
+    reader.readAsText(file);
+    // Reset so the same file can be re-imported
+    event.target.value = "";
+  }, [importScene]);
+
+  const handleExportScene = useCallback(() => {
+    const sceneExport = exportScene();
+    const blob = new Blob([JSON.stringify(sceneExport, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${sceneExport.name.replace(/[^a-zA-Z0-9_-]/g, "_")}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [exportScene]);
 
   return (
     <header className="flex h-12 items-center gap-2 border-b border-[#1e2130] bg-[#0c0f16]/96 px-2.5 backdrop-blur-md">
@@ -107,31 +163,102 @@ export function TopBar() {
           </button>
           {sceneOpen && (
             <div
-              className="absolute left-0 top-full z-50 mt-1 w-52 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
+              className="absolute left-0 top-full z-50 mt-1 w-56 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
               onMouseLeave={() => setSceneOpen(false)}
             >
-              {scenes.map((scene) => (
+              {/* Saved scenes from localStorage */}
+              {savedScenes.length > 0 && (
+                <>
+                  {savedScenes.map((saved) => (
+                    <div key={saved.id} className="group flex items-center gap-0.5">
+                      <button
+                        onClick={() => {
+                          setScene(saved);
+                          setSceneOpen(false);
+                        }}
+                        className={cn(
+                          "flex-1 truncate rounded-lg px-2.5 py-2 text-left text-[11px] transition-colors hover:bg-[#171c2b]",
+                          saved.id === scene.id ? "text-emerald-400" : "text-[#c7d0e4]",
+                        )}
+                      >
+                        {saved.name}
+                      </button>
+                      <button
+                        onClick={() => deleteSavedScene(saved.id)}
+                        className="hidden rounded-lg px-1.5 py-2 text-[9px] text-red-400 opacity-60 transition-colors hover:opacity-100 group-hover:block"
+                        title="Delete scene"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                  <div className="my-1 border-t border-[#1e2130]" />
+                </>
+              )}
+              {savedScenes.length === 0 && (
+                <div className="px-2.5 py-2 text-[10px] text-[#4a5568]">No saved scenes yet</div>
+              )}
+
+              <div className="space-y-0.5">
                 <button
-                  key={scene}
-                  className={cn(
-                    "w-full rounded-lg px-2.5 py-2 text-left text-[11px] transition-colors hover:bg-[#171c2b]",
-                    scene === "Small Retail Shop Demo" ? "text-emerald-400" : "text-[#c7d0e4]",
-                  )}
-                  onClick={() => setSceneOpen(false)}
+                  onClick={() => {
+                    handleExportScene();
+                    setSceneOpen(false);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
                 >
-                  {scene}
+                  <Download className="h-3 w-3" />
+                  Export Scene JSON
                 </button>
-              ))}
-              <div className="mt-1 border-t border-[#1e2130] pt-1.5">
-                <button className="w-full rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white">
-                  Import SecurityScene JSON
+                <button
+                  onClick={() => {
+                    handleImportScene();
+                    setSceneOpen(false);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
+                >
+                  <Upload className="h-3 w-3" />
+                  Import Scene JSON
                 </button>
-                <button className="w-full rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white">
-                  Create Blank Test Scene
+                <button
+                  onClick={() => {
+                    createNewScene();
+                    setSceneOpen(false);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
+                >
+                  <Plus className="h-3 w-3" />
+                  New Blank Scene
+                </button>
+                <button
+                  onClick={() => {
+                    saveSceneToStorage();
+                    setSceneOpen(false);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
+                >
+                  <Save className="h-3 w-3" />
+                  Save Current Scene
                 </button>
               </div>
+
+              {/* Import error */}
+              {importError && (
+                <div className="mt-1.5 rounded-md bg-red-900/30 px-2.5 py-1.5 text-[9px] text-red-300">
+                  {importError}
+                </div>
+              )}
             </div>
           )}
+
+          {/* Hidden file input for import */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={handleFileSelected}
+          />
         </div>
 
         <div className="hidden xl:block">
@@ -240,9 +367,40 @@ export function TopBar() {
           Generate Report
         </SurfaceButton>
 
-        <button className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[#24283a] bg-[#111521] text-[#5d6880] transition-colors hover:border-[#32384d] hover:text-white">
-          <MoreHorizontal className="h-4 w-4" />
-        </button>
+        <div className="relative">
+          <button
+            onClick={() => setMoreOpen((v) => !v)}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[#24283a] bg-[#111521] text-[#5d6880] transition-colors hover:border-[#32384d] hover:text-white"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </button>
+          {moreOpen && (
+            <div
+              className="absolute right-0 top-full z-50 mt-1 w-44 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
+              onMouseLeave={() => setMoreOpen(false)}
+            >
+              <button
+                onClick={() => {
+                  setDemoMode(!demoMode);
+                  setMoreOpen(false);
+                }}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
+              >
+                {demoMode ? "Exit Demo Mode" : "Enter Demo Mode"}
+              </button>
+              <button
+                onClick={() => {
+                  handleExportScene();
+                  setMoreOpen(false);
+                }}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
+              >
+                <Download className="h-3 w-3" />
+                Export JSON
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

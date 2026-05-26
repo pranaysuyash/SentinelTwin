@@ -336,3 +336,38 @@ Based on spec priority, demo script requirements, and dependency order:
 | GAP-13 | ✅ Done | 2026-05-28 | PathReplayActor added to WorkspaceCanvas; TimelineTab Play/Pause/SkipBack wired; progress bar live |
 | GAP-19 | ✅ Done | 2026-05-28 | LightInspector in InspectorPanel; all fields editable; delete button |
 | GAP-21 | ✅ Done | 2026-05-28 | IssuesTab Apply Fix buttons; rotate_camera and move_object recommendations apply via updateNode; camera chips clickable for selectNode |
+
+---
+
+## 2026-05-26 Update: Reference Screenshot UI Implementation
+
+The following gaps have been resolved in this session:
+
+| Gap | Status | Notes |
+|-----|--------|-------|
+| GAP-03 (Camera Wall mode) | ✅ Done | CameraWallView with adaptive grid (1-6 cameras), POV Canvas per feed, HUD overlays, OFFLINE state |
+| GAP-02 (Camera Feed View) | ✅ Done | CameraViewMode full-screen POV, CameraFeedCanvas in inspector mini-feed |
+| GAP-13 (Path replay) | ✅ Done (prev session + enhanced) | TimelineTab now has adversarial path event table + quality-over-time bars + stats strip |
+| GAP-14 (Before/After comparison) | ✅ Done | BeforeAfterTab now has multi-metric donut comparison + quality distribution stacked bars |
+
+### New capabilities added beyond gap closure
+- **ViewModeBar context chip**: Shows selected camera name/path count/coverage% next to active mode tab
+- **Auto bottom-tab switching**: Entering replay/camera_view auto-selects timeline; compare auto-selects beforeafter; map auto-selects metrics
+- **Compare view**: Full side-by-side dual 3D heatmap with scenario selector bar
+- **Inspector recommendation badge**: Properties tab shows count badge when simulation has recommendations for the selected camera
+- **Inspector Recommended Next Steps**: Properties tab surfaces simulation recommendations at the bottom
+- **scrollable bottom tab strip**: 8 tabs now scroll instead of overflow
+
+### What is still NOT resolved
+- GAP-08: Camera preset library not built
+- GAP-09: Target-type switcher (person/vehicle/face) not implemented (note: targetType IS editable per-zone in ZoneInspector, but not a global scene-level switcher)
+- GAP-10: Redundancy failure matrix not built
+- GAP-11: Command bar not wired to simulation actions
+- GAP-16: Privacy zone rendering not implemented
+
+### Resolved in session 2026-05-26 (this session)
+- ✅ GAP-04: Failures tab — full implementation: criticality score, offline/dirty lens/night toggles, zone redundancy map, path exposure count, restore button
+- ✅ GAP-06: Assumptions panel — inline editable form with segmented controls and number inputs; `updateAssumptions` action added to store
+- ✅ GAP-22: Scene export/import buttons wired in TopBar scene dropdown (Export JSON, Import JSON with file picker)
+- ✅ NEW: CriticalZoneInspector — clicking a zone now shows a full inspector (target type, required quality, priority, night/redundancy flags, editable, covering cameras, gap explanation)
+- ✅ NEW: "Open Report Lite" button in BottomRow report summary now routes to the report tab

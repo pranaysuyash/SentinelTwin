@@ -12,6 +12,8 @@ import {
   safeParseSecurityScene,
 } from "@/schema/security-scene";
 import { simulateStudio } from "@/simulation/simulate-studio";
+import { computeTemporalProfile } from "@/simulation/temporal";
+import type { TemporalSecurityProfile } from "@/schema/security-scene";
 
 export type ViewMode = "map" | "wall" | "replay" | "camera_view" | "compare";
 export type DockSide = "left" | "right" | "bottom";
@@ -39,7 +41,7 @@ export type ActiveTool =
   | "select" | "camera" | "obstruction" | "light"
   | "path" | "zone" | "door_window" | "wall" | "measure" | "comment";
 
-export type BottomTab = "metrics" | "issues" | "timeline" | "beforeafter" | "counterfactual" | "report" | "debug" | "threat";
+export type BottomTab = "metrics" | "issues" | "timeline" | "beforeafter" | "report" | "debug" | "counterfactual" | "threat" | "redundancy" | "temporal";
 
 export type InspectorTab = "properties" | "view" | "status" | "analytics" | "failures";
 
@@ -50,6 +52,93 @@ export type LayerId =
 
 export type LayerVisibility = Record<LayerId, boolean>;
 
+const SCENE_STORAGE_KEY = "sentineltwin_saved_scenes";
+
+function loadSavedScenesFromStorage(): SecurityScene[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(SCENE_STORAGE_KEY);
+    if (!raw) return [];
+    const scenes = JSON.parse(raw);
+    if (!Array.isArray(scenes)) return [];
+    // Validate each scene — keep only valid ones
+    return scenes.filter((s: unknown) => {
+      const result = safeParseSecurityScene(s);
+      return result.success;
+    });
+  } catch {
+    return [];
+  }
+}
+
+function appendSavedScene(scene: SecurityScene) {
+  const scenes = loadSavedScenesFromStorage();
+  // Replace if same id exists, else append
+  const idx = scenes.findIndex((s) => s.id === scene.id);
+  const cloned = cloneSecurityScene(scene);
+  if (idx >= 0) {
+    scenes[idx] = cloned;
+  } else {
+    scenes.push(cloned);
+  }
+  try {
+    localStorage.setItem(SCENE_STORAGE_KEY, JSON.stringify(scenes));
+  } catch {
+    // Storage full or unavailable — silently fail
+  }
+}
+
+function removeSavedScene(sceneId: string) {
+  const scenes = loadSavedScenesFromStorage().filter((s) => s.id !== sceneId);
+  try {
+    localStorage.setItem(SCENE_STORAGE_KEY, JSON.stringify(scenes));
+  } catch {
+    // silently fail
+  }
+}
+
+function createBlankScene(): SecurityScene {
+  const now = Date.now();
+  return {
+    id: `scene_${now.toString(36)}`,
+    name: "Untitled Scene",
+    createdAt: now,
+    updatedAt: now,
+    units: "meters",
+    dimensions: { width: 10, depth: 8, height: 3 },
+    walls: [
+      { id: "wall_w", nodeType: "wall", label: "South Wall", start: [0, 0], end: [10, 0], heightM: 3, thicknessM: 0.18, material: "solid", visionTransmission: 0, source: "manual" },
+      { id: "wall_n", nodeType: "wall", label: "North Wall", start: [0, 8], end: [10, 8], heightM: 3, thicknessM: 0.18, material: "solid", visionTransmission: 0, source: "manual" },
+      { id: "wall_e", nodeType: "wall", label: "East Wall", start: [10, 0], end: [10, 8], heightM: 3, thicknessM: 0.18, material: "solid", visionTransmission: 0, source: "manual" },
+      { id: "wall_w2", nodeType: "wall", label: "West Wall", start: [0, 0], end: [0, 8], heightM: 3, thicknessM: 0.18, material: "solid", visionTransmission: 0, source: "manual" },
+    ],
+    doors: [],
+    windows: [],
+    cameras: [],
+    securityLights: [],
+    obstructions: [],
+    criticalZones: [],
+    privacyZones: [],
+    entryPoints: [],
+    paths: [],
+    assumptions: {
+      wallHeightM: 3,
+      personHeightM: 1.75,
+      vehicleHeightM: 1.5,
+      timeOfDay: "day",
+      interiorLightLevel: "normal",
+      nightPenaltyMode: "simple",
+      doriStandard: "iec62676",
+      pixelsPerMeter: { detection: 25, observation: 62.5, recognition: 125, identification: 250 },
+      showAssumptionsPanel: false,
+    },
+    source: "manual",
+    version: "0.1.0",
+    snapshots: [],
+    scenarios: [],
+  };
+}
+
 export type StudioStoreState = {
   scene: SecurityScene;
   simulationResult: SimulationResult | null;
@@ -57,6 +146,7 @@ export type StudioStoreState = {
   simulationRunning: boolean;
   snapshots: SceneSnapshot[];
   lastRunMs: number | null;
+  savedScenes: SecurityScene[];
 
   selectedNodeId: string | null;
   activeTool: ActiveTool;
@@ -75,6 +165,12 @@ export type StudioStoreState = {
   environmentMode: "day" | "night" | "dusk";
   showDebugOverlays: boolean;
   autoRecompute: boolean;
+  temporalProfile: TemporalSecurityProfile | null;
+  temporalScrubHour: number;
+  temporalScrubMinute: number;
+  setTemporalProfile: (profile: TemporalSecurityProfile | null) => void;
+  setTemporalScrub: (hour: number, minute: number) => void;
+  computeTemporalProfile: () => void;
   demoMode: boolean;
   demoStep: number;
   setDemoMode: (active: boolean) => void;
@@ -106,15 +202,30 @@ export type StudioStoreState = {
   addNode: (node: AnyEditableNode) => void;
   updateNode: (id: string, patch: Partial<AnyEditableNode>) => void;
   removeNode: (id: string) => void;
+  updateAssumptions: (patch: Partial<import("@/schema/security-scene").SimulationAssumptions>) => void;
 
   setSimulationRunning: (running: boolean) => void;
   setSimulationResult: (result: SimulationResult, durationMs: number) => void;
   markDirty: () => void;
 
+  counterfactualResult: SimulationResult | null;
+  counterfactualObsId: string | null;
+  runCounterfactual: (obstructionId: string) => void;
+  clearCounterfactual: () => void;
+
   addSnapshot: (label: string, result: SimulationResult) => void;
   saveSnapshot: (label: string) => void;
   importScene: (json: unknown) => { success: boolean; error?: string };
   exportScene: () => SecurityScene;
+
+  // Scene management
+  setScene: (scene: SecurityScene) => void;
+  createNewScene: () => void;
+  saveSceneToStorage: () => void;
+  loadScenesFromStorage: () => SecurityScene[];
+  refreshSavedScenesList: () => void;
+  deleteSavedScene: (sceneId: string) => void;
+  getSceneStorageKey: () => string;
 
   getSelectedCamera: () => CameraNode | null;
 };
@@ -175,7 +286,7 @@ const DEFAULT_LAYERS: LayerVisibility = {
 const DEFAULT_DOCK_SIZES = {
   left: 248,
   right: 344,
-  bottom: 248,
+  bottom: 360,
 } as const;
 
 const PRESET_LAYOUTS: Record<WorkspacePreset, Omit<DockSnapshot, "workspacePreset">> = {
@@ -185,7 +296,7 @@ const PRESET_LAYOUTS: Record<WorkspacePreset, Omit<DockSnapshot, "workspacePrese
     bottomDockCollapsed: false,
     leftDockSizePx: DEFAULT_DOCK_SIZES.left,
     rightDockSizePx: DEFAULT_DOCK_SIZES.right,
-    bottomDockSizePx: 248,
+    bottomDockSizePx: 360,
   },
   coverage: {
     leftDockCollapsed: true,
@@ -193,7 +304,7 @@ const PRESET_LAYOUTS: Record<WorkspacePreset, Omit<DockSnapshot, "workspacePrese
     bottomDockCollapsed: false,
     leftDockSizePx: DEFAULT_DOCK_SIZES.left,
     rightDockSizePx: 372,
-    bottomDockSizePx: 240,
+    bottomDockSizePx: 360,
   },
   camera_wall: {
     leftDockCollapsed: true,
@@ -201,7 +312,7 @@ const PRESET_LAYOUTS: Record<WorkspacePreset, Omit<DockSnapshot, "workspacePrese
     bottomDockCollapsed: true,
     leftDockSizePx: DEFAULT_DOCK_SIZES.left,
     rightDockSizePx: DEFAULT_DOCK_SIZES.right,
-    bottomDockSizePx: 216,
+    bottomDockSizePx: 40,
   },
   replay: {
     leftDockCollapsed: true,
@@ -209,7 +320,7 @@ const PRESET_LAYOUTS: Record<WorkspacePreset, Omit<DockSnapshot, "workspacePrese
     bottomDockCollapsed: false,
     leftDockSizePx: DEFAULT_DOCK_SIZES.left,
     rightDockSizePx: 360,
-    bottomDockSizePx: 324,
+    bottomDockSizePx: 360,
   },
   compare: {
     leftDockCollapsed: true,
@@ -217,7 +328,7 @@ const PRESET_LAYOUTS: Record<WorkspacePreset, Omit<DockSnapshot, "workspacePrese
     bottomDockCollapsed: false,
     leftDockSizePx: DEFAULT_DOCK_SIZES.left,
     rightDockSizePx: 368,
-    bottomDockSizePx: 280,
+    bottomDockSizePx: 360,
   },
   report: {
     leftDockCollapsed: false,
@@ -225,7 +336,7 @@ const PRESET_LAYOUTS: Record<WorkspacePreset, Omit<DockSnapshot, "workspacePrese
     bottomDockCollapsed: false,
     leftDockSizePx: DEFAULT_DOCK_SIZES.left,
     rightDockSizePx: 368,
-    bottomDockSizePx: 240,
+    bottomDockSizePx: 360,
   },
   debug: {
     leftDockCollapsed: false,
@@ -233,7 +344,7 @@ const PRESET_LAYOUTS: Record<WorkspacePreset, Omit<DockSnapshot, "workspacePrese
     bottomDockCollapsed: false,
     leftDockSizePx: DEFAULT_DOCK_SIZES.left,
     rightDockSizePx: 368,
-    bottomDockSizePx: 280,
+    bottomDockSizePx: 360,
   },
   focus: {
     leftDockCollapsed: true,
@@ -241,7 +352,7 @@ const PRESET_LAYOUTS: Record<WorkspacePreset, Omit<DockSnapshot, "workspacePrese
     bottomDockCollapsed: true,
     leftDockSizePx: DEFAULT_DOCK_SIZES.left,
     rightDockSizePx: DEFAULT_DOCK_SIZES.right,
-    bottomDockSizePx: DEFAULT_DOCK_SIZES.bottom,
+    bottomDockSizePx: 40,
   },
 };
 
@@ -354,6 +465,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   simulationRunning: false,
   snapshots: INITIAL_SNAPSHOTS,
   lastRunMs: null,
+  savedScenes: [],
 
   selectedNodeId: "cam_entrance",
   activeTool: "select",
@@ -373,6 +485,9 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   environmentMode: "day",
   showDebugOverlays: false,
   autoRecompute: true,
+  temporalProfile: null,
+  temporalScrubHour: 10,
+  temporalScrubMinute: 0,
   demoMode: false,
   demoStep: 0,
 
@@ -384,15 +499,29 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   selectNode: (id) => set({ selectedNodeId: id }),
   setActiveTool: (tool) => set({ activeTool: tool }),
   setViewMode: (mode) => {
-    // Auto-switch the bottom tab to the most contextually relevant tab for each view mode
     const TAB_FOR_MODE: Partial<Record<ViewMode, BottomTab>> = {
-      replay:      "timeline",
+      replay: "timeline",
       camera_view: "timeline",
-      compare:     "beforeafter",
-      map:         "metrics",
+      compare: "beforeafter",
+      map: "metrics",
+      wall: "metrics",
     };
+    const preset = VIEW_MODE_PRESETS[mode];
+    const layout = PRESET_LAYOUTS[preset];
     const autoTab = TAB_FOR_MODE[mode];
-    set({ viewMode: mode, ...(autoTab ? { bottomTab: autoTab } : {}) });
+    set({
+      viewMode: mode,
+      workspacePreset: preset,
+      focusMode: false,
+      previousLayout: null,
+      leftDockCollapsed: layout.leftDockCollapsed,
+      rightDockCollapsed: layout.rightDockCollapsed,
+      bottomDockCollapsed: layout.bottomDockCollapsed,
+      leftDockSizePx: layout.leftDockSizePx,
+      rightDockSizePx: layout.rightDockSizePx,
+      bottomDockSizePx: layout.bottomDockSizePx,
+      ...(autoTab ? { bottomTab: autoTab } : {}),
+    });
   },
   setWorkspacePreset: (preset) =>
     set((state) => {
@@ -475,6 +604,19 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     set((s) => ({ layerVisibility: { ...s.layerVisibility, [layer]: visible } })),
   setEnvironmentMode: (mode) => set({ environmentMode: mode }),
   toggleAutoRecompute: () => set((s) => ({ autoRecompute: !s.autoRecompute })),
+
+  setTemporalProfile: (profile) => set({ temporalProfile: profile }),
+  setTemporalScrub: (hour, minute) => {
+    // Auto-switch environment mode based on time of day
+    const envMode = (hour < 6 || hour >= 19) ? "night" : hour >= 17 ? "dusk" : "day";
+    set({ temporalScrubHour: hour, temporalScrubMinute: minute, environmentMode: envMode });
+  },
+  computeTemporalProfile: () => {
+    const { scene } = get();
+    const profile = computeTemporalProfile(scene);
+    set({ temporalProfile: profile });
+  },
+
   setDemoMode: (active) => set({ demoMode: active }),
   setDemoStep: (step) => set({ demoStep: step }),
 
@@ -484,6 +626,11 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     set((s) => ({ scene: patchNode(s.scene, id, patch), simulationDirty: true })),
   removeNode: (id) =>
     set((s) => ({ scene: removeNode(s.scene, id), simulationDirty: true })),
+  updateAssumptions: (patch) =>
+    set((s) => ({
+      scene: { ...s.scene, assumptions: { ...s.scene.assumptions, ...patch } },
+      simulationDirty: true,
+    })),
 
   setSimulationRunning: (running) => set({ simulationRunning: running }),
   setSimulationResult: (result, durationMs) =>
@@ -494,6 +641,19 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       return { scene, simulationResult: result, simulationDirty: false, simulationRunning: false, lastRunMs: durationMs };
     }),
   markDirty: () => set({ simulationDirty: true }),
+
+  counterfactualResult: null,
+  counterfactualObsId: null,
+  runCounterfactual: (obstructionId) => {
+    const { scene } = get();
+    const patched: import("@/schema/security-scene").SecurityScene = {
+      ...cloneSecurityScene(scene),
+      obstructions: scene.obstructions.filter((o) => o.id !== obstructionId),
+    };
+    const result = simulateStudio(patched);
+    set({ counterfactualResult: result, counterfactualObsId: obstructionId });
+  },
+  clearCounterfactual: () => set({ counterfactualResult: null, counterfactualObsId: null }),
 
   addSnapshot: (label: string, result) =>
     set((s) => {
@@ -535,6 +695,56 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   },
 
   exportScene: () => cloneSecurityScene(get().scene),
+
+  // Scene management
+  setScene: (scene) =>
+    set({
+      scene: cloneSecurityScene(scene),
+      snapshots: structuredClone(scene.snapshots ?? []),
+      simulationDirty: true,
+      simulationResult: null,
+      selectedNodeId: null,
+      viewMode: "map",
+      bottomTab: "metrics",
+      inspectorTab: "properties",
+      activeTool: "select",
+    }),
+
+  createNewScene: () => {
+    const blank = createBlankScene();
+    set({
+      scene: blank,
+      snapshots: [],
+      simulationResult: null,
+      simulationDirty: true,
+      selectedNodeId: null,
+      viewMode: "map",
+      bottomTab: "metrics",
+      inspectorTab: "properties",
+      activeTool: "select",
+    });
+  },
+
+  saveSceneToStorage: () => {
+    const scene = get().scene;
+    appendSavedScene(scene);
+    get().refreshSavedScenesList();
+  },
+
+  loadScenesFromStorage: () => {
+    return loadSavedScenesFromStorage();
+  },
+
+  refreshSavedScenesList: () => {
+    set({ savedScenes: loadSavedScenesFromStorage() });
+  },
+
+  deleteSavedScene: (sceneId) => {
+    removeSavedScene(sceneId);
+    get().refreshSavedScenesList();
+  },
+
+  getSceneStorageKey: () => SCENE_STORAGE_KEY,
 
   getSelectedCamera: () => {
     const { scene, selectedNodeId } = get();

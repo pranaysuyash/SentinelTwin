@@ -19,9 +19,11 @@ import {
   ScenePathLine,
   CoverageSegmentPath,
   CoverageHeatmapInstanced,
+  ScenePrivacyZones,
 } from "./SharedScene";
 import { CoverageLegend } from "./CoverageLegend";
 import { createCameraNode, createObstructionNode, createSecurityLightNode } from "@/lib/node-factory";
+import { CameraPresetPicker, applyCameraPreset, getCameraPreset } from "./CameraPresetPicker";
 
 function getMapFrame(width: number, depth: number) {
   const centerX = width / 2;
@@ -401,6 +403,10 @@ function SceneGeometry() {
         <CoverageSegmentPath waypoints={result.adversarialPath.waypoints} />
       ) : null}
 
+      {layers.privacy_zones && scene.privacyZones.length > 0 ? (
+        <ScenePrivacyZones zones={scene.privacyZones} />
+      ) : null}
+
       {layers.paths ? <PathReplayActor /> : null}
     </>
   );
@@ -559,7 +565,12 @@ function ToolPlacementFloor() {
       const pos: [number, number, number] = [point.x, 0, point.z];
 
       if (activeTool === "camera") {
+        const preset = getCameraPreset();
         const node = createCameraNode([pos[0], 2.8, pos[2]]);
+        if (preset) {
+          const presetOverrides = applyCameraPreset(preset);
+          Object.assign(node, presetOverrides);
+        }
         addNode(node);
         selectNode(node.id);
       } else if (activeTool === "obstruction") {
@@ -735,6 +746,11 @@ export function WorkspaceCanvas() {
       <NorthCompass />
       <ViewControls />
       <ControlHintBar />
+
+      {/* Camera preset picker — shown when camera tool is active */}
+      <div className="absolute left-1/2 top-12 z-10 -translate-x-1/2">
+        <CameraPresetPicker />
+      </div>
 
       <Canvas
         camera={{ position: [frame.position.x, frame.position.y, frame.position.z], fov: 44, near: 0.1, far: 260 }}

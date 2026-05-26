@@ -41,7 +41,27 @@ export type ActiveTool =
   | "select" | "camera" | "obstruction" | "light"
   | "path" | "zone" | "door_window" | "wall" | "measure" | "comment";
 
-export type BottomTab = "metrics" | "issues" | "timeline" | "beforeafter" | "report" | "debug" | "counterfactual" | "threat" | "redundancy" | "temporal";
+export type EditorMode =
+  | "idle"
+  | "placing"
+  | "drawing_wall"
+  | "drawing_polygon"
+  | "drawing_path"
+  | "transforming";
+
+export type EditorDraft = {
+  editorMode: EditorMode;
+  draftWallStart?: [number, number];
+  draftPolygonPoints: [number, number][];
+  draftPathPoints: [number, number][];
+  hoverPoint?: [number, number];
+  snapEnabled: boolean;
+  snapDistanceM: number;
+  gridSnapM: number;
+  selectedHandle?: string;
+};
+
+export type BottomTab = "metrics" | "issues" | "timeline" | "beforeafter" | "report" | "debug" | "counterfactual" | "threat" | "redundancy" | "temporal" | "assumptions";
 
 export type InspectorTab = "properties" | "view" | "status" | "analytics" | "failures";
 
@@ -51,6 +71,18 @@ export type LayerId =
   | "grid" | "walls_floors" | "labels";
 
 export type LayerVisibility = Record<LayerId, boolean>;
+
+type MapViewportTarget = "minimap" | "pathMap";
+
+export type MapViewportState = {
+  zoom: number;
+  pan: [number, number];
+};
+
+export type MapState = {
+  minimap: MapViewportState;
+  pathMap: MapViewportState;
+};
 
 const SCENE_STORAGE_KEY = "sentineltwin_saved_scenes";
 
@@ -150,6 +182,7 @@ export type StudioStoreState = {
 
   selectedNodeId: string | null;
   activeTool: ActiveTool;
+  editor: EditorDraft;
   bottomTab: BottomTab;
   inspectorTab: InspectorTab;
   workspacePreset: WorkspacePreset;
@@ -168,6 +201,9 @@ export type StudioStoreState = {
   temporalProfile: TemporalSecurityProfile | null;
   temporalScrubHour: number;
   temporalScrubMinute: number;
+  activePathId: string | null;
+  mapState: MapState;
+  hoveredMapNodeId: string | null;
   setTemporalProfile: (profile: TemporalSecurityProfile | null) => void;
   setTemporalScrub: (hour: number, minute: number) => void;
   computeTemporalProfile: () => void;
@@ -180,6 +216,20 @@ export type StudioStoreState = {
   setPathReplayPlaying: (playing: boolean) => void;
   setPathReplayProgress: (progress: number) => void;
   setPathReplaySpeed: (speed: number) => void;
+  setActivePathId: (id: string | null) => void;
+  setMapZoom: (target: MapViewportTarget, zoom: number) => void;
+  setMapPan: (target: MapViewportTarget, pan: [number, number]) => void;
+  fitMap: (target: MapViewportTarget) => void;
+  setHoveredMapNodeId: (id: string | null) => void;
+  setEditorMode: (mode: EditorMode) => void;
+  setDraftWallStart: (start?: [number, number]) => void;
+  setDraftPolygonPoints: (points: [number, number][]) => void;
+  setDraftPathPoints: (points: [number, number][]) => void;
+  setEditorHoverPoint: (point?: [number, number]) => void;
+  setSnapEnabled: (enabled: boolean) => void;
+  setSnapDistanceM: (value: number) => void;
+  setGridSnapM: (value: number) => void;
+  setSelectedHandle: (handle?: string) => void;
 
   selectNode: (id: string | null) => void;
   viewMode: ViewMode;
@@ -203,6 +253,14 @@ export type StudioStoreState = {
   updateNode: (id: string, patch: Partial<AnyEditableNode>) => void;
   removeNode: (id: string) => void;
   updateAssumptions: (patch: Partial<import("@/schema/security-scene").SimulationAssumptions>) => void;
+
+  commitSceneChange: (updater: (scene: SecurityScene) => SecurityScene, label?: string) => void;
+  undo: () => void;
+  redo: () => void;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
+  historyPast: SecurityScene[];
+  historyFuture: SecurityScene[];
 
   setSimulationRunning: (running: boolean) => void;
   setSimulationResult: (result: SimulationResult, durationMs: number) => void;
@@ -275,6 +333,30 @@ function insertNode(scene: SecurityScene, node: AnyEditableNode): SecurityScene 
   }
   next.updatedAt = Date.now();
   return next;
+}
+
+function purgeInvalidSelection(scene: SecurityScene, selectedNodeId: string | null): string | null {
+  if (!selectedNodeId) return null;
+
+  const exists = [
+    ...scene.walls,
+    ...scene.doors,
+    ...scene.windows,
+    ...scene.cameras,
+    ...scene.securityLights,
+    ...scene.obstructions,
+    ...scene.criticalZones,
+    ...scene.privacyZones,
+    ...scene.entryPoints,
+    ...scene.paths,
+  ].some((entry) => entry.id === selectedNodeId);
+
+  return exists ? selectedNodeId : null;
+}
+
+function cloneAndSetActivePath(scene: SecurityScene, activePathId: string | null): string | null {
+  if (!activePathId) return null;
+  return scene.paths.some((path) => path.id === activePathId) ? activePathId : scene.paths[0]?.id ?? null;
 }
 
 const DEFAULT_LAYERS: LayerVisibility = {
@@ -469,6 +551,17 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
 
   selectedNodeId: "cam_entrance",
   activeTool: "select",
+  editor: {
+    editorMode: "idle",
+    draftWallStart: undefined,
+    draftPolygonPoints: [],
+    draftPathPoints: [],
+    hoverPoint: undefined,
+    snapEnabled: true,
+    snapDistanceM: 0.25,
+    gridSnapM: 0.5,
+    selectedHandle: undefined,
+  },
   viewMode: "map",
   bottomTab: "metrics",
   inspectorTab: "properties",
@@ -490,11 +583,119 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   temporalScrubMinute: 0,
   demoMode: false,
   demoStep: 0,
+  activePathId: INITIAL_SCENE.paths[0]?.id ?? null,
+  mapState: {
+    minimap: { zoom: 1, pan: [0, 0] },
+    pathMap: { zoom: 1, pan: [0, 0] },
+  },
+  hoveredMapNodeId: null,
+  historyPast: [],
+  historyFuture: [],
 
   pathReplay: { playing: false, progress: 0, speed: 1 },
   setPathReplayPlaying: (playing) => set((s) => ({ pathReplay: { ...s.pathReplay, playing } })),
   setPathReplayProgress: (progress) => set((s) => ({ pathReplay: { ...s.pathReplay, progress } })),
   setPathReplaySpeed: (speed) => set((s) => ({ pathReplay: { ...s.pathReplay, speed } })),
+  setActivePathId: (id) => set({ activePathId: id }),
+  setMapZoom: (target, zoom) => {
+    const nextZoom = Math.max(0.05, Math.min(6, zoom));
+    if (target === "minimap") {
+      set((state) => ({ mapState: { ...state.mapState, minimap: { ...state.mapState.minimap, zoom: nextZoom } } }));
+      return;
+    }
+
+    set((state) => ({ mapState: { ...state.mapState, pathMap: { ...state.mapState.pathMap, zoom: nextZoom } } }));
+  },
+  setMapPan: (target, pan) => {
+    const nextPan = [pan[0], pan[1]] as [number, number];
+    if (target === "minimap") {
+      set((state) => ({ mapState: { ...state.mapState, minimap: { ...state.mapState.minimap, pan: nextPan } } }));
+      return;
+    }
+
+    set((state) => ({ mapState: { ...state.mapState, pathMap: { ...state.mapState.pathMap, pan: nextPan } } }));
+  },
+  fitMap: (target) => {
+    if (target === "minimap") {
+      set((state) => ({ mapState: { ...state.mapState, minimap: { zoom: 1, pan: [0, 0] } } }));
+      return;
+    }
+
+    set((state) => ({ mapState: { ...state.mapState, pathMap: { zoom: 1, pan: [0, 0] } } }));
+  },
+  setHoveredMapNodeId: (id) => set({ hoveredMapNodeId: id }),
+
+  setEditorMode: (mode) => set((s) => ({
+    editor: {
+      ...s.editor,
+      editorMode: mode,
+      draftWallStart: mode === "drawing_wall" ? s.editor.draftWallStart : s.editor.draftWallStart,
+      draftPolygonPoints: mode === "drawing_polygon" ? s.editor.draftPolygonPoints : s.editor.draftPolygonPoints,
+      draftPathPoints: mode === "drawing_path" ? s.editor.draftPathPoints : s.editor.draftPathPoints,
+    },
+  })),
+  setDraftWallStart: (start) => set((s) => ({
+    editor: { ...s.editor, editorMode: start ? "drawing_wall" : s.editor.editorMode, draftWallStart: start },
+  })),
+  setDraftPolygonPoints: (points) => set((s) => ({
+    editor: { ...s.editor, editorMode: points.length ? "drawing_polygon" : s.editor.editorMode, draftPolygonPoints: points },
+  })),
+  setDraftPathPoints: (points) => set((s) => ({
+    editor: { ...s.editor, editorMode: points.length ? "drawing_path" : s.editor.editorMode, draftPathPoints: points },
+  })),
+  setEditorHoverPoint: (point) => set((s) => ({ editor: { ...s.editor, hoverPoint: point } })),
+  setSnapEnabled: (enabled) => set((s) => ({ editor: { ...s.editor, snapEnabled: enabled } })),
+  setSnapDistanceM: (value) => set((s) => ({ editor: { ...s.editor, snapDistanceM: value } })),
+  setGridSnapM: (value) => set((s) => ({ editor: { ...s.editor, gridSnapM: value } })),
+  setSelectedHandle: (handle) => set((s) => ({ editor: { ...s.editor, selectedHandle: handle } })),
+
+  commitSceneChange: (updater, _label) =>
+    set((s) => {
+      const next = updater(cloneSecurityScene(s.scene));
+      return {
+        scene: next,
+        simulationDirty: true,
+        selectedNodeId: purgeInvalidSelection(next, s.selectedNodeId),
+        activePathId: cloneAndSetActivePath(next, s.activePathId),
+        historyPast: [...s.historyPast, cloneSecurityScene(s.scene)],
+        historyFuture: [],
+      };
+    }),
+
+  undo: () => set((s) => {
+    if (s.historyPast.length === 0) return s;
+    const previous = s.historyPast[s.historyPast.length - 1];
+    if (!previous) return s;
+    return {
+      scene: cloneSecurityScene(previous),
+      activePathId: cloneAndSetActivePath(previous, s.activePathId),
+      selectedNodeId: purgeInvalidSelection(previous, s.selectedNodeId),
+      simulationDirty: true,
+      historyPast: s.historyPast.slice(0, -1),
+      historyFuture: [cloneSecurityScene(s.scene), ...s.historyFuture],
+    };
+  }),
+  redo: () => set((s) => {
+    if (s.historyFuture.length === 0) return s;
+    const nextScene = s.historyFuture[0];
+    if (!nextScene) return s;
+    return {
+      scene: cloneSecurityScene(nextScene),
+      activePathId: cloneAndSetActivePath(nextScene, s.activePathId),
+      selectedNodeId: purgeInvalidSelection(nextScene, s.selectedNodeId),
+      simulationDirty: true,
+      historyPast: [...s.historyPast, cloneSecurityScene(s.scene)],
+      historyFuture: s.historyFuture.slice(1),
+    };
+  }),
+  canUndo: () => {
+    const state = useStudioStore.getState();
+    return state.historyPast.length > 0;
+  },
+  canRedo: () => {
+    const state = useStudioStore.getState();
+    return state.historyFuture.length > 0;
+  },
 
   selectNode: (id) => set({ selectedNodeId: id }),
   setActiveTool: (tool) => set({ activeTool: tool }),
@@ -620,12 +821,15 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   setDemoMode: (active) => set({ demoMode: active }),
   setDemoStep: (step) => set({ demoStep: step }),
 
-  addNode: (node) =>
-    set((s) => ({ scene: insertNode(s.scene, node), simulationDirty: true })),
-  updateNode: (id, patch) =>
-    set((s) => ({ scene: patchNode(s.scene, id, patch), simulationDirty: true })),
-  removeNode: (id) =>
-    set((s) => ({ scene: removeNode(s.scene, id), simulationDirty: true })),
+  addNode: (node) => {
+    useStudioStore.getState().commitSceneChange((scene) => insertNode(scene, node));
+  },
+  updateNode: (id, patch) => {
+    useStudioStore.getState().commitSceneChange((scene) => patchNode(scene, id, patch));
+  },
+  removeNode: (id) => {
+    useStudioStore.getState().commitSceneChange((scene) => removeNode(scene, id));
+  },
   updateAssumptions: (patch) =>
     set((s) => ({
       scene: { ...s.scene, assumptions: { ...s.scene.assumptions, ...patch } },
@@ -690,7 +894,26 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       return { success: false, error: result.error.issues.map((i) => i.message).join(", ") };
     }
     const scene = cloneSecurityScene(result.data);
-    set({ scene, snapshots: scene.snapshots, simulationDirty: true, simulationResult: null });
+    set({
+      scene,
+      snapshots: scene.snapshots,
+      historyPast: [],
+      historyFuture: [],
+      editor: {
+        editorMode: "idle",
+        draftWallStart: undefined,
+        draftPolygonPoints: [],
+        draftPathPoints: [],
+        hoverPoint: undefined,
+        snapEnabled: true,
+        snapDistanceM: 0.25,
+        gridSnapM: 0.5,
+        selectedHandle: undefined,
+      },
+      simulationDirty: true,
+      simulationResult: null,
+      activePathId: scene.paths[0]?.id ?? null,
+    });
     return { success: true };
   },
 
@@ -704,10 +927,24 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       simulationDirty: true,
       simulationResult: null,
       selectedNodeId: null,
+      activePathId: scene.paths[0]?.id ?? null,
       viewMode: "map",
       bottomTab: "metrics",
       inspectorTab: "properties",
       activeTool: "select",
+      historyPast: [],
+      historyFuture: [],
+      editor: {
+        editorMode: "idle",
+        draftWallStart: undefined,
+        draftPolygonPoints: [],
+        draftPathPoints: [],
+        hoverPoint: undefined,
+        snapEnabled: true,
+        snapDistanceM: 0.25,
+        gridSnapM: 0.5,
+        selectedHandle: undefined,
+      },
     }),
 
   createNewScene: () => {
@@ -718,10 +955,24 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       simulationResult: null,
       simulationDirty: true,
       selectedNodeId: null,
+      activePathId: null,
       viewMode: "map",
       bottomTab: "metrics",
       inspectorTab: "properties",
       activeTool: "select",
+      editor: {
+        editorMode: "idle",
+        draftWallStart: undefined,
+        draftPolygonPoints: [],
+        draftPathPoints: [],
+        hoverPoint: undefined,
+        snapEnabled: true,
+        snapDistanceM: 0.25,
+        gridSnapM: 0.5,
+        selectedHandle: undefined,
+      },
+      historyPast: [],
+      historyFuture: [],
     });
   },
 

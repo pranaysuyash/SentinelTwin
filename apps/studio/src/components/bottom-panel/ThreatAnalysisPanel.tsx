@@ -157,7 +157,7 @@ export function ThreatAnalysisPanel() {
               Run simulation first to generate an adversarial path for threat analysis.
             </p>
             {!result && (
-              <p className="text-[9px] text-[#3a4158]">Click "Run Simulation" in the status bar.</p>
+              <p className="text-[9px] text-[#3a4158]">Click &quot;Run Simulation&quot; in the status bar.</p>
             )}
           </>
         )}

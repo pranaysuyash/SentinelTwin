@@ -10,6 +10,7 @@ import {
   exportAsText,
   exportCompareAsHtml,
   exportCompareAsMarkdown,
+  buildCompareReport,
   type ReportData,
 } from "@/report/index";
 
@@ -34,6 +35,8 @@ describe("report engine", () => {
     expect(report.summary.issuesCount).toBe(result.issues.length);
     expect(report.summary.recommendationsCount).toBe(result.recommendations.length);
     expect(report.codeCompliant).toBeDefined();
+    expect(report.meetsModeledZoneRequirements).toBeDefined();
+    expect(report.meetsModeledZoneRequirements).toBe(report.codeCompliant);
     expect(report.standardsRef).toContain("IEC 62676");
   });
 
@@ -202,13 +205,13 @@ describe("exportAsHtml", () => {
       },
     });
     const html = exportAsHtml(report);
-    expect(html).toContain("Adversarial Path Analysis");
+    expect(html).toContain("Defensive Incident Replay");
     expect(html).toContain("8.5");
   });
 
   test("omits adversarial path section when not provided", () => {
     const html = exportAsHtml(makeReport({ adversarialPath: undefined }));
-    expect(html).not.toContain("Adversarial Path Analysis");
+    expect(html).not.toContain("Defensive Incident Replay");
   });
 
   test("includes temporal profile section when provided", () => {
@@ -236,7 +239,7 @@ describe("exportAsHtml", () => {
     expect(html).toContain("&lt;script&gt;");
   });
 
-  test("compliance section shows compliant when all zones pass", () => {
+  test("compliance section shows modeled requirements when all zones pass", () => {
     const passingReport = makeReport({
       summary: {
         ...makeReport().summary,
@@ -246,10 +249,10 @@ describe("exportAsHtml", () => {
       codeCompliant: true,
     });
     const html = exportAsHtml(passingReport);
-    expect(html).toContain("Compliant");
+    expect(html).toContain("Meets modeled zone requirements");
   });
 
-  test("compliance section shows non-compliant when zones fail", () => {
+  test("compliance section shows unmet modeled requirements when zones fail", () => {
     const failingReport = makeReport({
       summary: {
         ...makeReport().summary,
@@ -259,7 +262,7 @@ describe("exportAsHtml", () => {
       codeCompliant: false,
     });
     const html = exportAsHtml(failingReport);
-    expect(html).toContain("Non-compliant");
+    expect(html).toContain("Does not fully meet modeled zone requirements");
   });
 });
 
@@ -304,7 +307,7 @@ describe("exportAsMarkdown", () => {
       },
     });
     const md = exportAsMarkdown(report);
-    expect(md).toContain("Adversarial Path Analysis");
+    expect(md).toContain("Defensive Incident Replay");
     expect(md).toContain("5.0");
   });
 
@@ -329,7 +332,7 @@ describe("exportAsText", () => {
     const text = exportAsText(buildReportData(scene, result));
     expect(text).toContain(scene.name);
     expect(text).toContain("SUMMARY");
-    expect(text).toContain("COMPLIANT");
+    expect(text).toContain("Modeled requirements");
   });
 
   test("includes all key metrics", () => {
@@ -394,7 +397,6 @@ describe("buildCompareReport (compatibility export)", () => {
     const beforeResult = simulateStudio(scene);
     const afterResult = simulateStudio(afterScene);
 
-    const { buildCompareReport } = require("@/report/index");
     const direct = buildCompareReportData(scene, beforeResult, afterScene, afterResult);
     const compat = buildCompareReport(scene, beforeResult, afterScene, afterResult);
 

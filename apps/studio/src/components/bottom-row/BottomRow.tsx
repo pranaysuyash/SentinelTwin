@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, Check, Edit3, FileText, Plus, Thermometer, Droplets, Wind, Sun, X } from "lucide-react";
+import { Check, Edit3, FileText, Plus, Thermometer, Droplets, Wind, Sun, X } from "lucide-react";
 import { useState } from "react";
 
 import { useStudioStore } from "@/store/studio-store";
@@ -92,14 +92,6 @@ function SnapshotsPanel() {
     </BottomSection>
   );
 }
-
-const QUALITY_LABELS: Record<DoriQuality, string> = {
-  identification: "Identification (250 PPM)",
-  recognition: "Recognition (125 PPM)",
-  observation: "Observation (62.5 PPM)",
-  detection: "Detection (25 PPM)",
-  none: "None",
-};
 
 function AssumptionRow({ label, value }: { label: string; value: string }) {
   return (

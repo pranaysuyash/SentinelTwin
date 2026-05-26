@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { computeCoverageCells } from "@/simulation/coverage";
+import { getQualityShare } from "@/simulation/coverage";
 import {
   createTestCamera,
   createTestObstruction,
@@ -64,5 +65,124 @@ describe("computeCoverageCells occlusion handling", () => {
 
     expect(throughGrillCell.quality).not.toBe("none");
     expect(throughGrillCell.blockedBy).toContain("Blocker");
+  });
+
+  test("returns per-camera evaluation metadata for each visible and blocked sample", () => {
+    const cells = computeCoverageCells(createTestScene(), 4);
+    const cell = findCellNear(cells, 2.875, 1.125);
+
+    expect(cell.cameraEvaluations).toBeDefined();
+    expect(cell.cameraEvaluations).toHaveProperty("cam_test");
+    expect(cell.cameraEvaluations?.cam_test).toMatchObject({
+      quality: expect.any(String),
+      ppm: expect.any(Number),
+      probability: expect.any(Number),
+      inFov: expect.any(Boolean),
+      withinRange: true,
+      distanceM: expect.any(Number),
+      hAngleDeg: expect.any(Number),
+      vAngleDeg: expect.any(Number),
+    });
+  });
+
+  test("supports coverage denominator filtering to only included cells", () => {
+    const cells = [
+      {
+        x: 0,
+        z: 0,
+        quality: "none",
+        coveringCameras: ["cam_test"],
+        blockedBy: [],
+        ppm: 0,
+        coverageIncluded: true,
+        privacyRestricted: false,
+        cameraEvaluations: {},
+      },
+      {
+        x: 1,
+        z: 0,
+        quality: "none",
+        coveringCameras: [],
+        blockedBy: [],
+        ppm: 0,
+        coverageIncluded: false,
+        privacyRestricted: true,
+        cameraEvaluations: {},
+      },
+      {
+        x: 2,
+        z: 0,
+        quality: "detection",
+        coveringCameras: ["cam_test"],
+        blockedBy: [],
+        ppm: 20,
+        coverageIncluded: false,
+        privacyRestricted: true,
+        cameraEvaluations: {},
+      },
+    ];
+
+    expect(getQualityShare(cells, "none")).toBeCloseTo(33.3, 1);
+    expect(getQualityShare(cells, "none", true)).toBe(100);
+  });
+
+  test("marks privacy-restricted cells as non-counted but still computed", () => {
+    const scene = createTestScene({
+      width: 6,
+      depth: 6,
+      cameras: [createTestCamera({ yawDeg: 180, pitchDeg: -20, fovHorizontalDeg: 180, rangeM: 20 })],
+    });
+
+    scene.privacyZones = [
+      {
+        id: "privacy_restricted_area",
+        nodeType: "privacy_zone",
+        label: "Staff Restroom",
+        polygon: [
+          [1.5, 1.5],
+          [4.5, 1.5],
+          [4.5, 4.5],
+          [1.5, 4.5],
+        ],
+        restriction: "no_video",
+        regulation: "GDPR",
+      },
+    ];
+
+    const cells = computeCoverageCells(scene, 4);
+    const sample = findCellNear(cells, 3, 3);
+
+    expect(sample.privacyRestricted).toBe(true);
+    expect(sample.coverageIncluded).toBe(false);
+    expect(sample.quality).not.toBe("none");
+    expect(sample.coveringCameras).toBeDefined();
+  });
+
+  test("records range rejection separately from field-of-view and occlusion", () => {
+    const scene = createTestScene({
+      width: 8,
+      depth: 8,
+      cameras: [
+        createTestCamera({
+          id: "cam_short",
+          position: [1, 2.4, 1],
+          yawDeg: 0,
+          pitchDeg: -20,
+          rangeM: 1.5,
+        }),
+      ],
+    });
+    const cells = computeCoverageCells(scene, 4);
+    const farCell = cells.find(
+      (cell) => cell.cameraEvaluations?.cam_short?.withinRange === false
+        && cell.cameraEvaluations?.cam_short?.quality === "none",
+    );
+    const visibleCell = cells.find(
+      (cell) => cell.cameraEvaluations?.cam_short?.withinRange === true
+        && cell.cameraEvaluations?.cam_short.quality !== "none",
+    );
+
+    expect(farCell).toBeDefined();
+    expect(visibleCell).toBeDefined();
   });
 });

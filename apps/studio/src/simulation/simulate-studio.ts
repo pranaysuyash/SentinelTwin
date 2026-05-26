@@ -1,5 +1,6 @@
 import type {
   CameraResult,
+  CameraOfflineImpactEntry,
   DoriQuality,
   Recommendation,
   SecurityIssue,
@@ -8,11 +9,14 @@ import type {
   ZoneResult,
 } from "@/schema/security-scene";
 import { computeAdversarialPath } from "@/simulation/adversarial-path";
+import { analyseBlindSpotTopology } from "@/simulation/blind-spot-topology";
 import {
   createCoverageEvaluator,
+  type CellComputation,
   getIdentificationAreaPct,
   getQualityShare,
   getRecognitionAreaPct,
+  getQualityThresholds,
 } from "@/simulation/coverage";
 import { maxQuality, qualityToScore, scoreToQuality } from "@/simulation/dori";
 import { computePathResults } from "@/simulation/path-analysis";
@@ -21,6 +25,73 @@ import { pointInPolygon, polygonCenter } from "@/simulation/geometry";
 type EvaluatedZone = ZoneResult & {
   blockingLabels: string[];
   cameraQualityById: Record<string, DoriQuality>;
+  redundancyRequired: boolean;
+};
+
+type TargetSamplingMode = "any" | "all";
+
+type TargetProfile = {
+  sampleHeightsM: number[];
+  sampleMode: TargetSamplingMode;
+  primaryHeightM: number;
+  description: string;
+};
+
+const CRITICAL_ZONE_TARGET_PROFILES: Record<SecurityScene["criticalZones"][number]["targetType"], TargetProfile> = {
+  person_detection: {
+    sampleHeightsM: [0.9, 1.2, 1.6],
+    sampleMode: "any",
+    primaryHeightM: 1.2,
+    description: "person-body profile",
+  },
+  face_recognition: {
+    sampleHeightsM: [1.5, 1.65],
+    sampleMode: "any",
+    primaryHeightM: 1.6,
+    description: "face-level profile",
+  },
+  face_identification: {
+    sampleHeightsM: [1.5, 1.65],
+    sampleMode: "any",
+    primaryHeightM: 1.6,
+    description: "face-identification profile",
+  },
+  vehicle_detection: {
+    sampleHeightsM: [0.9, 1.25, 1.55],
+    sampleMode: "any",
+    primaryHeightM: 1.2,
+    description: "vehicle-profile",
+  },
+  license_plate: {
+    sampleHeightsM: [0.45, 0.6, 0.75],
+    sampleMode: "any",
+    primaryHeightM: 0.6,
+    description: "license-plate profile",
+  },
+  package_detection: {
+    sampleHeightsM: [0.2, 0.45, 0.8],
+    sampleMode: "any",
+    primaryHeightM: 0.45,
+    description: "package profile",
+  },
+  cash_counter_activity: {
+    sampleHeightsM: [0.9, 1.2, 1.5],
+    sampleMode: "any",
+    primaryHeightM: 1.0,
+    description: "cash-counter profile",
+  },
+  door_entry_exit: {
+    sampleHeightsM: [0.8, 1.3, 1.5],
+    sampleMode: "any",
+    primaryHeightM: 1.2,
+    description: "door-entry profile",
+  },
+  perimeter_breach: {
+    sampleHeightsM: [0.8, 1.2, 1.5],
+    sampleMode: "all",
+    primaryHeightM: 1.1,
+    description: "perimeter breach profile",
+  },
 };
 
 function getZoneQuality(zoneCells: { quality: DoriQuality }[]) {
@@ -33,32 +104,144 @@ function getZoneQuality(zoneCells: { quality: DoriQuality }[]) {
   return scoreToQuality(scores[percentileIndex] ?? 0);
 }
 
+function aggregateQualitySamples(qualities: DoriQuality[], mode: TargetSamplingMode) {
+  if (qualities.length === 0) return "none" as DoriQuality;
+
+  if (mode === "all") {
+    return qualities.reduce((acc, quality) => {
+      return qualityToScore(quality) < qualityToScore(acc) ? quality : acc;
+    }, "identification" as DoriQuality);
+  }
+
+  return qualities.reduce((acc, quality) =>
+    qualityToScore(quality) > qualityToScore(acc) ? quality : acc,
+  "none");
+}
+
+function getProfileForTargetType(targetType: SecurityScene["criticalZones"][number]["targetType"]) {
+  return CRITICAL_ZONE_TARGET_PROFILES[targetType] ?? {
+    sampleHeightsM: [1.2],
+    sampleMode: "any" as TargetSamplingMode,
+    primaryHeightM: 1.2,
+    description: "fallback profile",
+  };
+}
+
+function computeZoneEvaluations(
+  scene: SecurityScene,
+  evaluator?: ReturnType<typeof createCoverageEvaluator>,
+) {
+  const sceneEvaluator = evaluator ?? createCoverageEvaluator(scene);
+  const coverageCells = sceneEvaluator.computeCoverageCells(4);
+  const zoneEvaluations = scene.criticalZones.map((zone) =>
+    evaluateZone(scene, sceneEvaluator, coverageCells, zone),
+  );
+
+  return { coverageCells, zoneEvaluations, evaluator: sceneEvaluator };
+}
+
+function createOfflineImpactForCamera(
+  scene: SecurityScene,
+  camera: SecurityScene["cameras"][number],
+  baselineZoneEvaluations: Record<string, EvaluatedZone>,
+): CameraOfflineImpactEntry[] {
+  const patched = structuredClone(scene);
+  const patchedCamera = patched.cameras.find((candidate) => candidate.id === camera.id);
+  if (!patchedCamera || patchedCamera.status === "off") {
+    return [];
+  }
+
+  patchedCamera.status = "off";
+  const { zoneEvaluations: patchedZoneEvaluations } = computeZoneEvaluations(patched);
+
+  return patchedZoneEvaluations
+    .map((zoneAfter) => {
+      const zoneBefore = baselineZoneEvaluations[zoneAfter.zoneId];
+      if (!zoneBefore) return null;
+
+      const downgradedQuality =
+        qualityToScore(zoneAfter.actualQuality) < qualityToScore(zoneBefore.actualQuality);
+      const beforeRedundant = zoneBefore.redundancyRequired
+        && zoneBefore.redundancyCameraCount >= 2;
+      const afterRedundant = zoneAfter.redundancyRequired
+        && zoneAfter.redundancyCameraCount >= 2;
+      const losesRedundancy =
+        zoneAfter.redundancyRequired && beforeRedundant && !afterRedundant;
+
+      if (!downgradedQuality && !losesRedundancy) {
+        return null;
+      }
+
+      const reason = downgradedQuality
+        ? `${zoneAfter.label} drops from ${zoneBefore.actualQuality} to ${zoneAfter.actualQuality} if ${camera.name} is offline.`
+        : `${zoneAfter.label} loses redundancy if ${camera.name} is offline.`;
+
+      return {
+        zoneId: zoneAfter.zoneId,
+        label: zoneAfter.label,
+        beforeQuality: zoneBefore.actualQuality,
+        afterQuality: zoneAfter.actualQuality,
+        beforeStatus: zoneBefore.status,
+        afterStatus: zoneAfter.status,
+        reason,
+      } as CameraOfflineImpactEntry;
+    })
+    .filter((item): item is CameraOfflineImpactEntry => Boolean(item));
+}
+
 function coverageStatus(actual: DoriQuality, required: DoriQuality) {
   return qualityToScore(actual) >= qualityToScore(required) ? ("pass" as const) : ("fail" as const);
 }
 
-function getZoneSampleHeight(zone: SecurityScene["criticalZones"][number], scene: SecurityScene) {
-  const basePerson = scene.assumptions.personHeightM;
-  const baseVehicle = scene.assumptions.vehicleHeightM;
+function getZoneSampleHeights(zone: SecurityScene["criticalZones"][number], scene: SecurityScene) {
+  const profile = getProfileForTargetType(zone.targetType);
+  return profile.sampleHeightsM
+    .map((height) => Math.min(Math.max(0.2, height), zone.heightM))
+    .sort((a, b) => a - b);
+}
 
-  switch (zone.targetType) {
-    case "vehicle_detection":
-      return Math.min(zone.heightM, baseVehicle);
-    case "license_plate":
-      return Math.min(zone.heightM, 0.55);
-    case "face_recognition":
-    case "face_identification":
-      return Math.min(zone.heightM, Math.max(1.45, basePerson - 0.2));
-    case "cash_counter_activity":
-      return Math.min(zone.heightM, Math.max(1.05, basePerson - 0.45));
-    case "door_entry_exit":
-      return Math.min(zone.heightM, Math.max(1.45, basePerson - 0.1));
-    case "perimeter_breach":
-    case "package_detection":
-    case "person_detection":
-    default:
-      return Math.min(zone.heightM, basePerson);
+function collectPrivacyCoverageIssues(
+  scene: SecurityScene,
+  coverageCells: CellComputation[],
+): SecurityIssue[] {
+  const byZoneId = new Map<string, { label: string; cameras: Set<string>; cells: number }>();
+
+  for (const cell of coverageCells) {
+    if (!cell.privacyRestricted || cell.quality === "none") {
+      continue;
+    }
+
+    if (cell.coveringCameras.length === 0) {
+      continue;
+    }
+
+    for (const zone of scene.privacyZones) {
+      if (!pointInPolygon([cell.x, cell.z], zone.polygon)) {
+        continue;
+      }
+
+      const entry = byZoneId.get(zone.id) ?? {
+        label: zone.label,
+        cameras: new Set<string>(),
+        cells: 0,
+      };
+
+      for (const cameraId of cell.coveringCameras) {
+        entry.cameras.add(cameraId);
+      }
+
+      entry.cells += 1;
+      byZoneId.set(zone.id, entry);
+    }
   }
+
+  return Array.from(byZoneId.entries()).map(([zoneId, summary]) => ({
+    severity: "medium",
+    category: "privacy",
+    description: `Privacy zone "${summary.label}" is visible in ${summary.cells} sampled cells.`,
+    affectedZones: [zoneId],
+    affectedCameras: Array.from(summary.cameras),
+  }));
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -68,12 +251,13 @@ function clamp(value: number, min: number, max: number) {
 function evaluateZone(
   scene: SecurityScene,
   evaluator: ReturnType<typeof createCoverageEvaluator>,
-  coverageCells: { x: number; z: number; quality: DoriQuality; blockedBy: string[]; coveringCameras: string[] }[],
+  coverageCells: CellComputation[],
   zone: SecurityScene["criticalZones"][number],
   excludedCameraId?: string,
 ): EvaluatedZone {
   const zoneCells = coverageCells.filter((cell) => pointInPolygon([cell.x, cell.z], zone.polygon));
-  const sampleHeightM = getZoneSampleHeight(zone, scene);
+  const profile = getProfileForTargetType(zone.targetType);
+  const sampleHeightsM = getZoneSampleHeights(zone, scene);
 
   const cellQualities: { quality: DoriQuality }[] = [];
   const cameraQualityById: Record<string, DoriQuality> = Object.fromEntries(
@@ -88,13 +272,21 @@ function evaluateZone(
     for (const camera of scene.cameras) {
       if (camera.id === excludedCameraId) continue;
 
-      const evaluation = evaluator.evaluatePoint(camera, [cell.x, cell.z], sampleHeightM);
-      cameraQualityById[camera.id] = maxQuality(cameraQualityById[camera.id], evaluation.quality);
-      cellBest = maxQuality(cellBest, evaluation.quality);
+      const sampleQualities = sampleHeightsM.map((height) => {
+        const evaluation =
+          cell.cameraEvaluations?.[camera.id]
+            ?? evaluator.evaluatePoint(camera, [cell.x, cell.z], height);
 
-      if (evaluation.blockedBy) {
-        cellBlocking.add(evaluation.blockedBy);
-      }
+        if (evaluation.blockedBy) {
+          cellBlocking.add(evaluation.blockedBy);
+        }
+
+        return evaluation.quality;
+      });
+
+      const evaluationQuality = aggregateQualitySamples(sampleQualities, profile.sampleMode);
+      cameraQualityById[camera.id] = maxQuality(cameraQualityById[camera.id], evaluationQuality);
+      cellBest = maxQuality(cellBest, evaluationQuality);
     }
 
     cellQualities.push({ quality: cellBest });
@@ -116,7 +308,7 @@ function evaluateZone(
   const failureReasons: string[] = [];
   if (status !== "pass") {
     failureReasons.push(
-      `${zone.label} is below ${zone.requiredQuality} at approximately ${sampleHeightM.toFixed(2)}m.`,
+      `${zone.label} is below ${zone.requiredQuality} with ${profile.description} near ${zone.heightM.toFixed(2)}m.`,
     );
     if (blockingLabels.size > 0) {
       failureReasons.push(`Blocked by: ${Array.from(blockingLabels).join(", ")}.`);
@@ -133,6 +325,7 @@ function evaluateZone(
     actualQuality,
     coveringCameras,
     redundancyCameraCount,
+    redundancyRequired: zone.redundancyRequired,
     status,
     failureReasons,
     blockingLabels: Array.from(blockingLabels),
@@ -205,28 +398,37 @@ function rotateCameraTowardZone(
 
 function simulateStudioInternal(scene: SecurityScene, includeRecommendations: boolean): SimulationResult {
   const evaluator = createCoverageEvaluator(scene);
+  const coverageThresholds = getQualityThresholds(scene);
   const coverageCells = evaluator.computeCoverageCells(4);
-  const walkableCellCount = coverageCells.length;
+  const includedCoverageCells = coverageCells.filter((cell) => cell.coverageIncluded);
+  const includedCoverageCellCount = includedCoverageCells.length;
   const coverageByQuality = {
-    detection: getQualityShare(coverageCells, "detection"),
-    observation: getQualityShare(coverageCells, "observation"),
-    recognition: getQualityShare(coverageCells, "recognition"),
-    identification: getQualityShare(coverageCells, "identification"),
+    detection: getQualityShare(coverageCells, "detection", true),
+    observation: getQualityShare(coverageCells, "observation", true),
+    recognition: getQualityShare(coverageCells, "recognition", true),
+    identification: getQualityShare(coverageCells, "identification", true),
   };
 
   const totalCoveragePct =
-    walkableCellCount === 0
+    includedCoverageCellCount === 0
       ? 0
-      : (coverageCells.filter((cell) => cell.quality !== "none").length / walkableCellCount) * 100;
+      : (includedCoverageCells.filter((cell) => cell.quality !== "none").length /
+          includedCoverageCellCount) *
+        100;
   const blindspotPct = 100 - totalCoveragePct;
   const averageWalkableQuality =
-    walkableCellCount === 0
+    includedCoverageCellCount === 0
       ? 0
-      : coverageCells.reduce((sum, cell) => sum + qualityToScore(cell.quality), 0) / walkableCellCount;
+      : includedCoverageCells.reduce((sum, cell) => sum + qualityToScore(cell.quality), 0) /
+        includedCoverageCellCount;
 
   const zoneEvaluations = scene.criticalZones.map((zone) =>
     evaluateZone(scene, evaluator, coverageCells, zone),
   );
+
+  const baselineZoneById = Object.fromEntries(
+    zoneEvaluations.map((zone) => [zone.zoneId, zone]),
+  ) as Record<string, EvaluatedZone>;
 
   const criticalZoneResults: ZoneResult[] = zoneEvaluations.map((zone) => ({
     zoneId: zone.zoneId,
@@ -240,14 +442,16 @@ function simulateStudioInternal(scene: SecurityScene, includeRecommendations: bo
   }));
 
   const cameraResults: CameraResult[] = scene.cameras.map((camera) => {
-    const coveredCells = coverageCells.filter((cell) => cell.coveringCameras.includes(camera.id));
+    const coveredCells = includedCoverageCells.filter((cell) => cell.coveringCameras.includes(camera.id));
     const qualityByZone = Object.fromEntries(
       zoneEvaluations.map((zone) => [zone.label, zone.cameraQualityById[camera.id] ?? "none"]),
     ) as Record<string, DoriQuality>;
+    const offlineImpactDetail = createOfflineImpactForCamera(scene, camera, baselineZoneById);
 
     return {
       cameraId: camera.id,
-      coveragePct: walkableCellCount === 0 ? 0 : (coveredCells.length / walkableCellCount) * 100,
+      coveragePct:
+        includedCoverageCellCount === 0 ? 0 : (coveredCells.length / includedCoverageCellCount) * 100,
       qualityByZone,
       criticalZonesCovered: zoneEvaluations
         .filter((zone) => qualityToScore(zone.cameraQualityById[camera.id] ?? "none") >= qualityToScore(zone.requiredQuality))
@@ -258,18 +462,8 @@ function simulateStudioInternal(scene: SecurityScene, includeRecommendations: bo
           return own !== "none" && qualityToScore(own) < qualityToScore(zone.requiredQuality);
         })
         .map((zone) => zone.label),
-      offlineImpact: zoneEvaluations
-        .map((zone) => {
-          const withoutCamera = evaluateZone(scene, evaluator, coverageCells, scene.criticalZones.find((candidate) => candidate.id === zone.zoneId)!, camera.id);
-          if (qualityToScore(withoutCamera.actualQuality) < qualityToScore(zone.actualQuality)) {
-            return `${zone.label} drops from ${zone.actualQuality} to ${withoutCamera.actualQuality} if ${camera.name} is offline.`;
-          }
-          if (withoutCamera.redundancyCameraCount < zone.redundancyCameraCount && zone.redundancyCameraCount > 1) {
-            return `${zone.label} loses redundancy if ${camera.name} is offline.`;
-          }
-          return null;
-        })
-        .filter((message): message is string => Boolean(message)),
+      offlineImpact: offlineImpactDetail.map((entry) => entry.reason),
+      offlineImpactDetail,
     };
   });
 
@@ -318,6 +512,8 @@ function simulateStudioInternal(scene: SecurityScene, includeRecommendations: bo
       affectedCameras: affectedCameraIds,
     });
   }
+
+  issues.push(...collectPrivacyCoverageIssues(scene, coverageCells));
 
   const pathResults = computePathResults(scene, coverageCells);
   const adversarialPath = computeAdversarialPath(scene, coverageCells);
@@ -413,8 +609,12 @@ function simulateStudioInternal(scene: SecurityScene, includeRecommendations: bo
     blindspotPct: Number(blindspotPct.toFixed(1)),
     averageWalkableQuality: Number(averageWalkableQuality.toFixed(2)),
     worstAreaQuality,
-    recognitionAreaPct: Number(getRecognitionAreaPct(coverageCells, scene.assumptions.pixelsPerMeter).toFixed(1)),
-    identificationAreaPct: Number(getIdentificationAreaPct(coverageCells, scene.assumptions.pixelsPerMeter).toFixed(1)),
+    recognitionAreaPct: Number(
+      getRecognitionAreaPct(coverageCells, coverageThresholds, true).toFixed(1),
+    ),
+    identificationAreaPct: Number(
+      getIdentificationAreaPct(coverageCells, coverageThresholds, true).toFixed(1),
+    ),
     coverageByQuality: {
       detection: Number(coverageByQuality.detection.toFixed(1)),
       observation: Number(coverageByQuality.observation.toFixed(1)),
@@ -428,6 +628,9 @@ function simulateStudioInternal(scene: SecurityScene, includeRecommendations: bo
       coveringCameras: cell.coveringCameras,
       blockedBy: cell.blockedBy,
       ppm: cell.ppm,
+      coverageIncluded: cell.coverageIncluded,
+      privacyRestricted: cell.privacyRestricted,
+      cameraEvaluations: cell.cameraEvaluations,
     })),
     criticalZoneResults,
     cameraResults,
@@ -435,6 +638,11 @@ function simulateStudioInternal(scene: SecurityScene, includeRecommendations: bo
     issues,
     recommendations,
     adversarialPath,
+    coverageThresholds,
+    blindRegions: analyseBlindSpotTopology(scene, coverageCells.map((cell) => ({
+      x: cell.x, z: cell.z, quality: cell.quality,
+      coveringCameras: cell.coveringCameras, blockedBy: cell.blockedBy, ppm: cell.ppm,
+    }))),
   };
 }
 

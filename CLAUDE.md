@@ -15,8 +15,8 @@
 ## What This Project Is
 
 SentinelTwin is an AI-native physical security simulation platform.
-It forks [Pascal Editor](https://github.com/pascalorg/editor) (MIT) and adds a security
-simulation layer on top: camera coverage, DORI quality scoring, adversarial path simulation,
+It uses the existing `apps/studio` implementation as the canonical working surface and adds a security
+simulation layer on top: camera coverage, DORI quality scoring, defensive incident replay analysis,
 temporal security profiling, AI command layer, and client report generation.
 
 The founding principle: AI proposes. Simulation verifies. AI explains.
@@ -24,9 +24,9 @@ The simulation engine is deterministic geometry — not AI. AI is the interface.
 
 ## Current State
 
-**No code exists yet.** The repo is in pure documentation / architecture phase.
+**Working camera-studio alpha is present in `apps/studio`.** The data model, simulation engine, store, rendering, report tooling, and demo scenes are implemented, with remaining focus on hardening UX loops and editor creation tooling.
 All architectural decisions and data model designs are in `Docs/architecture/`.
-Read those before writing any code.
+Read `Docs/architecture/` and `Docs/todos/CURRENT_IMPLEMENTATION_STATE.md` before changing implementation.
 
 ## Architecture Docs (Must Read Before Coding)
 
@@ -36,7 +36,7 @@ Read those before writing any code.
 | `Docs/architecture/01_DATA_MODEL_SECURITY_SCENE.md` | The schema — foundation of everything |
 | `Docs/architecture/02_PASCAL_EDITOR_INTEGRATION.md` | Fork strategy, what we inherit |
 | `Docs/architecture/03_COVERAGE_ENGINE.md` | Raycasting, DORI, BVH, tests |
-| `Docs/architecture/04_ADVERSARIAL_PATH_SIMULATION.md` | Novel feature — Dijkstra design |
+| `Docs/architecture/04_ADVERSARIAL_PATH_SIMULATION.md` | Novel feature — Dijkstra design; referenced externally as defensive coverage stress testing |
 | `Docs/architecture/05_AI_AGENT_ARCHITECTURE.md` | Provider abstraction, agent types |
 | `Docs/architecture/06_TEMPORAL_SIMULATION.md` | 24h simulation (V0.3 feature) |
 | `Docs/architecture/07_RENDERING_PIPELINE.md` | R3F layout, heatmap, camera feed |

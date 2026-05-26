@@ -1,7 +1,7 @@
 "use client";
 
 import { Copy, Globe, Loader2, Printer, Sparkles } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 import type { SecurityReport } from "@/agents/ReportAgent";
 import { useAiCommand } from "@/hooks/use-ai-command";
@@ -10,16 +10,9 @@ import { useStudioStore } from "@/store/studio-store";
 export function ReportLiteTab() {
   const result = useStudioStore((s) => s.simulationResult);
   const scene = useStudioStore((s) => s.scene);
-  const { status, runReportGeneration } = useAiCommand();
+  const { runReportGeneration } = useAiCommand();
   const [aiReport, setAiReport] = useState<SecurityReport | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-
-  const handleGenerateAI = useCallback(async () => {
-    setIsGenerating(true);
-    const report = await runReportGeneration();
-    if (report) setAiReport(report);
-    setIsGenerating(false);
-  }, [runReportGeneration]);
 
   if (!result) {
     return (
@@ -36,7 +29,14 @@ export function ReportLiteTab() {
 
   const copy = () => navigator.clipboard.writeText(markdown);
 
-  const handleExportHtml = useCallback(() => {
+  const handleGenerateAI = async () => {
+    setIsGenerating(true);
+    const report = await runReportGeneration();
+    if (report) setAiReport(report);
+    setIsGenerating(false);
+  };
+
+  const handleExportHtml = () => {
     const html = buildHtmlReport(scene, result, aiReport);
     const blob = new Blob([html], { type: "text/html;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -45,9 +45,9 @@ export function ReportLiteTab() {
     a.download = `sentineltwin-report-${scene.name.replace(/[^a-zA-Z0-9_-]/g, "_")}.html`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [result, scene, aiReport]);
+  };
 
-  const handlePrint = useCallback(() => {
+  const handlePrint = () => {
     const html = buildHtmlReport(scene, result, aiReport);
     const win = window.open("", "_blank");
     if (win) {
@@ -56,7 +56,7 @@ export function ReportLiteTab() {
       win.focus();
       setTimeout(() => win.print(), 300);
     }
-  }, [result, scene, aiReport]);
+  };
 
   return (
     <div className="flex h-full flex-col overflow-hidden">

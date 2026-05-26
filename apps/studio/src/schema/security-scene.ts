@@ -238,6 +238,16 @@ export const zoneResultSchema = z.object({
   failureReasons: z.array(z.string()),
 });
 
+export const cameraOfflineImpactEntrySchema = z.object({
+  zoneId: z.string(),
+  label: z.string(),
+  beforeQuality: doriQualitySchema,
+  afterQuality: doriQualitySchema,
+  beforeStatus: z.enum(["pass", "fail", "partial"]),
+  afterStatus: z.enum(["pass", "fail", "partial"]),
+  reason: z.string(),
+});
+
 export const cameraResultSchema = z.object({
   cameraId: z.string(),
   coveragePct: z.number().min(0).max(100),
@@ -245,6 +255,7 @@ export const cameraResultSchema = z.object({
   criticalZonesCovered: z.array(z.string()),
   criticalZonesFailed: z.array(z.string()),
   offlineImpact: z.array(z.string()),
+  offlineImpactDetail: z.array(cameraOfflineImpactEntrySchema).optional(),
 });
 
 export const pathTimelineEventSchema = z.object({
@@ -305,6 +316,13 @@ export const recommendationSchema = z.object({
   suggestedPitchDeg: z.number().optional(),
 });
 
+export const qualityThresholdSchema = z.object({
+  detection: z.number().positive(),
+  observation: z.number().positive(),
+  recognition: z.number().positive(),
+  identification: z.number().positive(),
+});
+
 export const adversarialWaypointSchema = z.object({
   position: point2Schema,
   timeS: z.number().min(0),
@@ -339,6 +357,34 @@ export const coverageCellResultSchema = z.object({
   coveringCameras: z.array(z.string()),
   blockedBy: z.array(z.string()),
   ppm: z.number().min(0),
+  coverageIncluded: z.boolean(),
+  privacyRestricted: z.boolean(),
+  cameraEvaluations: z
+    .record(
+      z.object({
+        quality: doriQualitySchema,
+        ppm: z.number().min(0),
+        probability: z.number().min(0).max(1),
+        blockedBy: z.string().optional(),
+        inFov: z.boolean(),
+        withinRange: z.boolean(),
+        distanceM: z.number().min(0),
+        hAngleDeg: z.number(),
+        vAngleDeg: z.number(),
+      }),
+    )
+    .optional(),
+});
+
+export const blindRegionSchema = z.object({
+  id: z.string(),
+  cells: z.array(z.object({ x: z.number(), z: z.number() })),
+  areaSqM: z.number().min(0),
+  classification: z.enum(["entry_corridor", "entry_connected", "isolated"]),
+  severity: z.enum(["critical", "high", "medium", "low"]),
+  touchesCriticalZone: z.boolean(),
+  affectedZoneIds: z.array(z.string()),
+  description: z.string(),
 });
 
 export const simulationResultSchema = z.object({
@@ -362,6 +408,8 @@ export const simulationResultSchema = z.object({
   issues: z.array(securityIssueSchema),
   recommendations: z.array(recommendationSchema),
   adversarialPath: adversarialPathResultSchema.optional(),
+  blindRegions: z.array(blindRegionSchema).optional(),
+  coverageThresholds: qualityThresholdSchema.optional(),
 });
 
 // ── Temporal Simulation Types (defined before base scene schema to avoid TDZ) ──
@@ -503,12 +551,15 @@ export type EntryPointNode = z.infer<typeof entryPointNodeSchema>;
 export type ScenarioPath = z.infer<typeof scenarioPathSchema>;
 export type SimulationAssumptions = z.infer<typeof simulationAssumptionsSchema>;
 export type ZoneResult = z.infer<typeof zoneResultSchema>;
+export type QualityThresholds = z.infer<typeof qualityThresholdSchema>;
+export type CameraOfflineImpactEntry = z.infer<typeof cameraOfflineImpactEntrySchema>;
 export type CameraResult = z.infer<typeof cameraResultSchema>;
 export type PathVisibilityResult = z.infer<typeof pathVisibilityResultSchema>;
 export type SecurityIssue = z.infer<typeof securityIssueSchema>;
 export type Recommendation = z.infer<typeof recommendationSchema>;
 export type AdversarialPathResult = z.infer<typeof adversarialPathResultSchema>;
 export type CoverageCellResult = z.infer<typeof coverageCellResultSchema>;
+export type BlindRegionResult = z.infer<typeof blindRegionSchema>;
 export type SimulationResult = z.infer<typeof simulationResultSchema>;
 export type SceneSnapshot = z.infer<typeof sceneSnapshotSchema>;
 export type SecurityScene = z.infer<typeof securitySceneSchema>;

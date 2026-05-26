@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/cn";
 import { useStudioStore, type BottomTab } from "@/store/studio-store";
+import { AssumptionsTab } from "./AssumptionsTab";
 import { BeforeAfterTab } from "./BeforeAfterTab";
 import { CameraStatusSummaryPanel } from "./CameraStatusSummaryPanel";
 import { CounterfactualPanel } from "./CounterfactualPanel";
@@ -19,6 +20,7 @@ const TABS: { id: BottomTab; label: string; hasCount?: boolean }[] = [
   { id: "issues", label: "ISSUES", hasCount: true },
   { id: "timeline", label: "TIMELINE" },
   { id: "beforeafter", label: "BEFORE / AFTER" },
+  { id: "assumptions", label: "ASSUMPTIONS" },
   { id: "report", label: "REPORT LITE" },
   { id: "debug", label: "DEBUG" },
 ];
@@ -97,6 +99,7 @@ export function BottomPanel() {
         {activeTab === "timeline" && <TimelineTab />}
         {activeTab === "temporal" && <TemporalProfileView />}
         {activeTab === "beforeafter" && <BeforeAfterTab />}
+        {activeTab === "assumptions" && <AssumptionsTab />}
         {activeTab === "redundancy" && <RedundancyTab />}
         {activeTab === "counterfactual" && <CounterfactualPanel />}
         {activeTab === "report" && <ReportLiteTab />}

@@ -36,6 +36,7 @@ type VisionSource = {
   material: string;
   visionTransmission: number;
   label: string;
+  glarePenalty: boolean;
 };
 
 type VisionMesh = {
@@ -45,6 +46,7 @@ type VisionMesh = {
 
 export type CellComputation = CoverageCellResult & {
   probabilities: number[];
+  cameraEvaluations: Record<string, CameraEvaluation>;
 };
 
 export type CameraEvaluation = {
@@ -52,6 +54,11 @@ export type CameraEvaluation = {
   ppm: number;
   probability: number;
   blockedBy?: string;
+  inFov: boolean;
+  withinRange: boolean;
+  distanceM: number;
+  hAngleDeg: number;
+  vAngleDeg: number;
 };
 
 export type CoverageEvaluator = {
@@ -127,7 +134,7 @@ function getDetectionProbability(quality: DoriQuality) {
   }[quality];
 }
 
-function getQualityThresholds(scene: SecurityScene) {
+export function getQualityThresholds(scene: SecurityScene) {
   return scene.assumptions.doriStandard === "iec62676"
     ? scene.assumptions.pixelsPerMeter
     : DORI_THRESHOLDS;
@@ -165,6 +172,7 @@ function buildVisionMesh(scene: SecurityScene): VisionMesh {
       material: wall.material,
       visionTransmission: wall.visionTransmission,
       label: wall.label,
+      glarePenalty: false,
     });
   }
 
@@ -175,6 +183,7 @@ function buildVisionMesh(scene: SecurityScene): VisionMesh {
       material: obstruction.material,
       visionTransmission: obstruction.visionTransmission,
       label: obstruction.label,
+      glarePenalty: false,
     });
   }
 
@@ -188,8 +197,9 @@ function buildVisionMesh(scene: SecurityScene): VisionMesh {
     sources.push({
       id: door.id,
       material: "solid",
-      visionTransmission: doorState === "locked" || doorState === "restricted" ? 0.05 : 0,
+      visionTransmission: 0,
       label: door.label,
+      glarePenalty: false,
     });
   }
 
@@ -199,14 +209,23 @@ function buildVisionMesh(scene: SecurityScene): VisionMesh {
     const geometry = new THREE.BoxGeometry(width, height, thickness);
     geometry.translate(window.position[0], window.position[1], window.position[2]);
     geometries.push(geometry);
+    const isCurved = window.state === "reflective";
+    const transmission =
+      window.state === "closed_glass"
+        ? window.visionTransmission
+        : window.state === "grill"
+          ? 0.5
+          : window.state === "curtain"
+            ? 0.15
+            : window.state === "reflective"
+              ? Math.min(0.4, Math.max(0.12, window.visionTransmission))
+              : 0;
     sources.push({
       id: window.id,
       material: window.state,
-      visionTransmission:
-        window.state === "reflective"
-          ? Math.min(0.2, window.visionTransmission)
-          : window.visionTransmission,
+      visionTransmission: transmission,
       label: window.label,
+      glarePenalty: isCurved,
     });
   }
 
@@ -259,6 +278,7 @@ function assessOcclusion(
       blocked: false,
       materialPenalty: 1,
       blockedBy: undefined,
+      glarePenalty: 0,
     };
   }
 
@@ -269,13 +289,15 @@ function assessOcclusion(
       blocked: false,
       materialPenalty: 1,
       blockedBy: undefined,
+      glarePenalty: 0,
     };
   }
 
-  if (source.visionTransmission >= 0.45) {
+  if (source.visionTransmission > 0.05) {
     return {
       blocked: false,
       materialPenalty: source.visionTransmission,
+      glarePenalty: source.glarePenalty ? 0.86 : 0,
       blockedBy: source.label,
     };
   }
@@ -283,6 +305,7 @@ function assessOcclusion(
   return {
     blocked: true,
     materialPenalty: 0,
+    glarePenalty: 0,
     blockedBy: source.label,
   };
 }
@@ -301,6 +324,11 @@ function evaluateCameraAgainstCell(
       ppm: 0,
       probability: 0,
       blockedBy: undefined as string | undefined,
+      inFov: false,
+      withinRange: true,
+      distanceM: Number.MAX_VALUE,
+      hAngleDeg: 0,
+      vAngleDeg: 0,
     };
   }
 
@@ -313,6 +341,11 @@ function evaluateCameraAgainstCell(
       ppm: 0,
       probability: 0,
       blockedBy: undefined as string | undefined,
+      inFov: false,
+      withinRange: false,
+      distanceM: distance,
+      hAngleDeg: 0,
+      vAngleDeg: 0,
     };
   }
 
@@ -333,6 +366,11 @@ function evaluateCameraAgainstCell(
       ppm: 0,
       probability: 0,
       blockedBy: undefined as string | undefined,
+      inFov: false,
+      withinRange: true,
+      distanceM: distance,
+      hAngleDeg: hAngle,
+      vAngleDeg: vAngle,
     };
   }
 
@@ -344,6 +382,11 @@ function evaluateCameraAgainstCell(
       ppm: 0,
       probability: 0,
       blockedBy: occlusion.blockedBy,
+      inFov: true,
+      withinRange: true,
+      distanceM: distance,
+      hAngleDeg: hAngle,
+      vAngleDeg: vAngle,
     };
   }
 
@@ -356,6 +399,7 @@ function evaluateCameraAgainstCell(
 
   ppm *= getClarityMultiplier(camera);
   ppm *= occlusion.materialPenalty;
+  ppm *= 1 - occlusion.glarePenalty;
   ppm *= 1 - getLightingPenalty(camera, cell, scene.securityLights, scene);
 
   const quality = ppmToQuality(ppm, getQualityThresholds(scene));
@@ -365,6 +409,11 @@ function evaluateCameraAgainstCell(
     ppm,
     probability: getDetectionProbability(quality),
     blockedBy: occlusion.blockedBy,
+    inFov: true,
+    withinRange: true,
+    distanceM: distance,
+    hAngleDeg: hAngle,
+    vAngleDeg: vAngle,
   };
 }
 
@@ -382,6 +431,8 @@ export function createCoverageEvaluator(scene: SecurityScene): CoverageEvaluator
       x: point[0],
       z: point[1],
       walkable: true,
+      coverageIncluded: true,
+      privacyRestricted: false,
     };
 
     return evaluateCameraAgainstCell(
@@ -406,9 +457,11 @@ export function createCoverageEvaluator(scene: SecurityScene): CoverageEvaluator
       const coveringCameras: string[] = [];
       const blockedBy = new Set<string>();
       const probabilities: number[] = [];
+      const cameraEvaluations: Record<string, CameraEvaluation> = {};
 
       for (const camera of scene.cameras) {
         const evaluation = evaluatePoint(camera, [cell.x, cell.z], scene.assumptions.personHeightM);
+        cameraEvaluations[camera.id] = evaluation;
 
         if (evaluation.blockedBy) {
           blockedBy.add(evaluation.blockedBy);
@@ -427,10 +480,13 @@ export function createCoverageEvaluator(scene: SecurityScene): CoverageEvaluator
         x: cell.x,
         z: cell.z,
         quality: bestQuality,
+        coverageIncluded: cell.coverageIncluded,
+        privacyRestricted: cell.privacyRestricted,
         coveringCameras,
         blockedBy: [...blockedBy],
         ppm: bestPpm,
         probabilities,
+        cameraEvaluations,
       });
     }
 
@@ -448,22 +504,27 @@ export function getForwardVector(camera: CameraNode) {
   return getYawPitchDirection(camera.yawDeg, camera.pitchDeg);
 }
 
-export function getQualityShare(cells: CellComputation[], quality: DoriQuality) {
-  if (cells.length === 0) return 0;
-  return (cells.filter((cell) => cell.quality === quality).length / cells.length) * 100;
+export function getQualityShare(cells: CellComputation[], quality: DoriQuality, includeOnlyCoverageIncluded = false) {
+  const cellsToCount = includeOnlyCoverageIncluded ? cells.filter((cell) => cell.coverageIncluded) : cells;
+
+  if (cellsToCount.length === 0) return 0;
+  return (cellsToCount.filter((cell) => cell.quality === quality).length / cellsToCount.length) * 100;
 }
 
 export function getRecognitionAreaPct(
   cells: CellComputation[],
   thresholds: { detection: number; observation: number; recognition: number; identification: number } = DORI_THRESHOLDS,
+  includeOnlyCoverageIncluded = false,
 ) {
-  if (cells.length === 0) return 0;
+  const cellsToCount = includeOnlyCoverageIncluded ? cells.filter((cell) => cell.coverageIncluded) : cells;
+
+  if (cellsToCount.length === 0) return 0;
   return (
-    (cells.filter((cell) => {
+    (cellsToCount.filter((cell) => {
       const score = cell.ppm;
       return score >= thresholds.recognition;
     }).length /
-      cells.length) *
+      cellsToCount.length) *
     100
   );
 }
@@ -471,11 +532,14 @@ export function getRecognitionAreaPct(
 export function getIdentificationAreaPct(
   cells: CellComputation[],
   thresholds: { detection: number; observation: number; recognition: number; identification: number } = DORI_THRESHOLDS,
+  includeOnlyCoverageIncluded = false,
 ) {
-  if (cells.length === 0) return 0;
+  const cellsToCount = includeOnlyCoverageIncluded ? cells.filter((cell) => cell.coverageIncluded) : cells;
+
+  if (cellsToCount.length === 0) return 0;
   return (
-    (cells.filter((cell) => cell.ppm >= thresholds.identification).length /
-      cells.length) *
+    (cellsToCount.filter((cell) => cell.ppm >= thresholds.identification).length /
+      cellsToCount.length) *
     100
   );
 }

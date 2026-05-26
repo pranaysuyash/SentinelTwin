@@ -6,7 +6,17 @@ import { Camera, Layers, Lightbulb, MousePointer2, RefreshCcw, Square } from "lu
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
-import { type CameraNode, type SecurityIssue } from "@/schema/security-scene";
+import {
+  type CameraNode,
+  type SecurityIssue,
+  type WallNode,
+  type DoorNode,
+  type WindowNode,
+  type ObstructionNode,
+  type SecurityLightNode,
+  type CriticalZoneNode,
+  type PathPoint,
+} from "@/schema/security-scene";
 import { getYawPitchDirection } from "@/simulation/geometry";
 import { useStudioStore } from "@/store/studio-store";
 import {
@@ -21,8 +31,26 @@ import {
   CoverageHeatmapInstanced,
   ScenePrivacyZones,
 } from "./SharedScene";
+import { WallDrawTool, type WallDraft } from "./editing/WallDrawTool";
+import { PolygonDrawTool } from "./editing/PolygonDrawTool";
+import { PathDrawTool } from "./editing/PathDrawTool";
+import { makeSnapEngine } from "./editing/SnapEngine";
+import {
+  clampToScene,
+  applyShiftLock,
+  pathLength,
+  type Point2,
+} from "./editing/editor-geometry";
 import { CoverageLegend } from "./CoverageLegend";
-import { createCameraNode, createObstructionNode, createSecurityLightNode } from "@/lib/node-factory";
+import {
+  createCameraNode,
+  createDoorNode,
+  createObstructionNode,
+  createPathNode,
+  createCriticalZoneNode,
+  createWindowNode,
+  createSecurityLightNode,
+} from "@/lib/node-factory";
 import { CameraPresetPicker, applyCameraPreset, getCameraPreset } from "./CameraPresetPicker";
 
 function getMapFrame(width: number, depth: number) {
@@ -162,6 +190,7 @@ function AccentSurface({
 
 function CeilingLightMarkers() {
   const scene = useStudioStore((s) => s.scene);
+  const activePathId = useStudioStore((s) => s.activePathId);
 
   return (
     <group>
@@ -418,7 +447,7 @@ function PathReplayActor() {
   const setPathReplayProgress = useStudioStore((s) => s.setPathReplayProgress);
   const setPathReplayPlaying = useStudioStore((s) => s.setPathReplayPlaying);
 
-  const path = scene.paths[0];
+  const path = scene.paths.find((item) => item.id === activePathId) ?? scene.paths[0];
   const meshRef = useRef<THREE.Mesh>(null);
 
   const totalDuration = useMemo(() => {
@@ -730,6 +759,7 @@ function ControlHintBar() {
 export function WorkspaceCanvas() {
   const envMode = useStudioStore((s) => s.environmentMode);
   const scene = useStudioStore((s) => s.scene);
+  const activePathId = useStudioStore((s) => s.activePathId);
   const theme = ENVIRONMENT_THEMES[envMode] ?? ENVIRONMENT_THEMES.day;
   const frame = useMemo(
     () => getMapFrame(scene.dimensions.width, scene.dimensions.depth),

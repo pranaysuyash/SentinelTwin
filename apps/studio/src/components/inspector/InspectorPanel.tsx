@@ -10,12 +10,14 @@ import {
   Shield,
   Trash2,
 } from "lucide-react";
+import { useState } from "react";
 
 import { CameraFeedCanvas } from "@/components/inspector/CameraFeedCanvas";
 import { Badge } from "@/components/shared/Badge";
 import { cn } from "@/lib/cn";
 import type { CameraNode, CriticalZoneNode, ObstructionNode, SecurityLightNode } from "@/schema/security-scene";
 import { type InspectorTab, useStudioStore } from "@/store/studio-store";
+import type { DoriQuality } from "@/schema/security-scene";
 
 function Field({ label, value, unit }: { label: string; value: React.ReactNode; unit?: string }) {
   return (
@@ -263,10 +265,39 @@ function computeDoriRanges(camera: CameraNode) {
   // range = resW / (2 * ppm * tanHalfFov), capped at camera.rangeM
   const cap = camera.rangeM;
   const det  = Math.min(resW / (2 * 25  * tanHalfFov), cap);
+  const obs  = Math.min(resW / (2 * 62.5 * tanHalfFov), cap);
   const recog = Math.min(resW / (2 * 125 * tanHalfFov), cap);
   const ident = Math.min(resW / (2 * 250 * tanHalfFov), cap);
-  return { det, recog, ident };
+  return { det, obs, recog, ident };
 }
+
+type CameraViewMode = "normal" | "ir" | "low_light" | "thermal";
+
+const VIEW_MODES: Array<{ value: CameraViewMode; label: string }> = [
+  { value: "normal", label: "Normal" },
+  { value: "ir", label: "IR (B/W)" },
+  { value: "low_light", label: "Low Light" },
+  { value: "thermal", label: "Thermal" },
+];
+
+type ViewToggleKey = "overlays" | "dori" | "path" | "zones" | "timestamp" | "grid";
+const VIEW_TOGGLES: Array<{ key: ViewToggleKey; label: string }> = [
+  { key: "overlays", label: "Overlays" },
+  { key: "dori", label: "DORI" },
+  { key: "path", label: "Path" },
+  { key: "zones", label: "Zones" },
+  { key: "timestamp", label: "Timestamp" },
+  { key: "grid", label: "Grid" },
+];
+type ViewToggleState = Record<ViewToggleKey, boolean>;
+
+const QUALITY_LABEL: Record<DoriQuality, string> = {
+  none: "No Signal",
+  detection: "Detection",
+  observation: "Observation",
+  recognition: "Recognition",
+  identification: "Identification",
+};
 
 const OBSTRUCTION_MATERIALS = [
   { value: "solid", label: "Solid" },
@@ -292,9 +323,9 @@ function CameraInspector() {
   const addNode = useStudioStore((s) => s.addNode);
   const removeNode = useStudioStore((s) => s.removeNode);
   const selectNode = useStudioStore((s) => s.selectNode);
-  const layers = useStudioStore((s) => s.layerVisibility);
-  const toggleLayer = useStudioStore((s) => s.toggleLayer);
-
+  const addSnapshot = useStudioStore((s) => s.addSnapshot);
+  const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
+  const setViewMode = useStudioStore((s) => s.setViewMode);
   if (!camera) return null;
 
   // Count recommendations relevant to this camera
@@ -313,6 +344,16 @@ function CameraInspector() {
   const camResult = result?.cameraResults.find((entry) => entry.cameraId === camera.id);
   const offlineImpact = camResult?.offlineImpact ?? [];
   const firstCriticalZone = scene.criticalZones[0];
+  const [viewMode, setViewModeState] = useState<CameraViewMode>("normal");
+  const [viewToggles, setViewToggles] = useState<ViewToggleState>({
+    overlays: true,
+    dori: true,
+    path: false,
+    zones: true,
+    timestamp: true,
+    grid: false,
+  });
+  const [snapshotNote, setSnapshotNote] = useState("");
 
   // Derive resolution key for select
   const resolutionKey = `${camera.resolutionMP}_${camera.resolutionWidth ?? 2688}x${camera.resolutionHeight ?? 1520}`;
@@ -363,6 +404,22 @@ function CameraInspector() {
 
     addNode(duplicatedCamera);
     selectNode(duplicatedCamera.id);
+  };
+
+  const setViewToggle = (key: ViewToggleKey) => {
+    setViewToggles((current) => ({ ...current, [key]: !current[key] }));
+  };
+
+  const saveInspectionSnapshot = () => {
+    const stamp = new Date().toISOString().replace("T", " ").slice(0, 19);
+    const label = snapshotNote.trim().length > 0 ? `${snapshotNote.trim()} (${stamp})` : `View snapshot ${stamp}`;
+    addSnapshot(label, result ?? scene.simulation!);
+    setSnapshotNote("");
+  };
+
+  const openInCameraWall = () => {
+    setWorkspacePreset("camera_wall");
+    setViewMode("wall");
   };
 
   return (
@@ -728,90 +785,164 @@ function CameraInspector() {
         )}
 
         {inspectorTab === "view" && (
-          <div className="space-y-2">
-            <CameraFeedCanvas cameraId={camera.id} />
-
-            {/* DORI Quality Legend */}
-            <SectionCard title="Legend">
-              <div className="space-y-1">
-                {([
-                  { label: "Identification", color: "#3b82f6", ppm: "≥250 px/m" },
-                  { label: "Recognition", color: "#22c55e", ppm: "≥125 px/m" },
-                  { label: "Observation", color: "#eab308", ppm: "≥62.5 px/m" },
-                  { label: "Detection", color: "#f97316", ppm: "≥25 px/m" },
-                  { label: "Not Covered", color: "#ef4444", ppm: "<25 px/m" },
-                  { label: "Out of Range", color: "#6b7280", ppm: "—" },
-                ] as const).map(({ label, color, ppm }) => (
-                  <div key={label} className="flex items-center justify-between gap-2 py-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="h-2.5 w-2.5 flex-shrink-0 rounded-sm" style={{ backgroundColor: color }} />
-                      <span className="text-[10px] text-[#c7d0e4]">{label}</span>
-                    </div>
-                    <span className="font-mono text-[8px] text-[#556076]">{ppm}</span>
-                  </div>
+          <div className="space-y-2.5">
+            <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
+              <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">Live Camera Feed</div>
+              <CameraFeedCanvas cameraId={camera.id} />
+              <div className="mt-2 flex flex-wrap gap-1">
+                {VIEW_MODES.map((entry) => (
+                  <button
+                    key={entry.value}
+                    type="button"
+                    onClick={() => setViewModeState(entry.value)}
+                    className={cn(
+                      "rounded-md border px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] transition-colors",
+                      viewMode === entry.value
+                        ? "border-cyan-500/80 bg-cyan-500/10 text-cyan-200"
+                        : "border-[#293145] text-[#74829d] hover:text-[#c2cde3]",
+                    )}
+                  >
+                    {entry.label}
+                  </button>
                 ))}
               </div>
-            </SectionCard>
-
-            {/* Camera View Settings */}
-            <SectionCard title="Camera View Settings">
-              {([
-                { label: "Show Path Visibility", layer: "paths" },
-                { label: "Show Camera Labels", layer: "labels" },
-                { label: "Show Coverage Heatmap", layer: "heatmap" },
-                { label: "Show Camera Cones", layer: "camera_cones" },
-              ] as const).map(({ label, layer }) => {
-                const isOn = layers[layer];
-                return (
-                  <div key={layer} className="flex items-center justify-between border-b border-[#181c27] py-1.5 last:border-b-0">
-                    <span className="text-[10px] text-[#6a748b]">{label}</span>
-                    <button
-                      type="button"
-                      onClick={() => toggleLayer(layer)}
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {VIEW_TOGGLES.map((toggle) => (
+                  <button
+                    key={toggle.key}
+                    type="button"
+                    onClick={() => setViewToggle(toggle.key)}
+                    className={cn(
+                      "inline-flex items-center rounded-full border px-2 py-1 text-[9px] transition-colors",
+                      viewToggles[toggle.key]
+                        ? "border-cyan-500/60 bg-cyan-500/10 text-cyan-200"
+                        : "border-[#293145] text-[#6a758e]",
+                    )}
+                  >
+                    <span
                       className={cn(
-                        "h-4 w-7 rounded-full transition-colors",
-                        isOn ? "bg-emerald-500" : "bg-[#2a3246]",
+                        "mr-1.5 inline-block h-1.5 w-1.5 rounded-full",
+                        viewToggles[toggle.key] ? "bg-cyan-300" : "bg-[#5b657a]",
                       )}
-                    >
-                      <span
-                        className={cn(
-                          "block h-3 w-3 translate-x-0.5 rounded-full bg-white transition-transform",
-                          isOn ? "translate-x-3.5" : "",
+                    />
+                    {toggle.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <SectionCard title="View Metrics">
+                <div className="space-y-1">
+                  <Field label="Camera" value={camera.name} />
+                  <Field label="Status" value={camera.status === "on" ? "Online" : "Offline"} />
+                  <Field label="Mode" value={viewMode === "normal" ? "Normal" : viewMode === "ir" ? "IR (B/W)" : viewMode === "low_light" ? "Low Light" : "Thermal"} />
+                  <Field label="FOV" value={`${camera.fovHorizontalDeg}°`} />
+                  <Field label="Resolution" value={`${camera.resolutionMP}MP`} />
+                  <Field label="Range" value={`${camera.rangeM}m`} />
+                  {camResult ? <Field label="Coverage" value={`${camResult.coveragePct.toFixed(1)}%`} /> : null}
+                  {camResult ? <Field label="Critical zones passed" value={camResult.criticalZonesCovered.length} /> : null}
+                  {camResult ? <Field label="Critical zones failed" value={camResult.criticalZonesFailed.length} /> : null}
+                </div>
+              </SectionCard>
+
+              <SectionCard title="DORI Profile">
+                {(() => {
+                  const ranges = computeDoriRanges(camera);
+                  const sortedZoneEntries = Object.entries(camResult?.qualityByZone ?? {})
+                    .map(([zoneId, quality]) => {
+                      const zone = scene.criticalZones.find((entry) => entry.id === zoneId);
+                      return {
+                        name: zone?.label ?? zoneId,
+                        quality,
+                      };
+                    })
+                    .filter((entry) => entry.quality !== undefined);
+
+                  const doriRows = [
+                    ["identification", ranges.ident, "#60a5fa"],
+                    ["recognition", ranges.recog, "#22c55e"],
+                    ["observation", ranges.observation, "#eab308"],
+                    ["detection", ranges.det, "#f97316"],
+                  ] as const;
+
+                  return (
+                    <div className="space-y-2">
+                      <div className="space-y-1">
+                        <div className="text-[9px] font-semibold text-[#87a5cf]">Zone quality checkpoints</div>
+                        {sortedZoneEntries.length > 0 ? (
+                          <div className="space-y-1">
+                            {sortedZoneEntries.slice(0, 2).map((entry) => (
+                              <div key={entry.name} className="rounded-md border border-[#1f2b42] bg-[#111827] px-2 py-1.5">
+                                <div className="flex items-center justify-between gap-2 text-[10px]">
+                                  <span className="truncate text-[#c7d0e4]">{entry.name}</span>
+                                  <span className="font-semibold text-[#93c5fd]">{QUALITY_LABEL[entry.quality]}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-[9px] text-[#4a5568]">No active critical-zone quality samples yet.</div>
                         )}
-                      />
-                    </button>
-                  </div>
-                );
-              })}
-            </SectionCard>
+                      </div>
 
-            {/* Coverage details */}
-            <SectionCard title="Coverage Details">
-              <Field label="FOV" value={`${camera.fovHorizontalDeg}°`} />
-              <Field label="Resolution" value={`${camera.resolutionMP}MP`} />
-              <Field label="Range" value={`${camera.rangeM}m`} />
-              <Field label="Mode" value={scene.assumptions.timeOfDay === "night" ? "Night" : "Day"} />
-              {camResult && (
-                <>
-                  <Field label="Coverage" value={`${camResult.coveragePct.toFixed(1)}%`} />
-                  <Field label="Zones covered" value={camResult.criticalZonesCovered.length} />
-                  <Field label="Zones failed" value={camResult.criticalZonesFailed.length} />
-                </>
-              )}
-            </SectionCard>
+                      <div className="space-y-1">
+                        {doriRows.map(([label, value, color]) => (
+                          <div key={label} className="flex items-center justify-between gap-2 text-[10px]">
+                            <div className="flex items-center gap-2">
+                              <span className="h-2 w-2 rounded-sm" style={{ backgroundColor: color }} />
+                              <span className="text-[#d2d9e8] capitalize">{label}</span>
+                            </div>
+                            <span className="font-mono text-[10px] text-[#93a0bd]">{value.toFixed(1)}m</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </SectionCard>
+            </div>
 
-            {/* Go to Camera View button */}
-            <button
-              type="button"
-              onClick={() => {
-                const store = useStudioStore.getState();
-                store.setWorkspacePreset("coverage");
-                store.setViewMode("camera_view");
-              }}
-              className="mt-1 flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
-            >
-              Full Camera View
-            </button>
+            <div className="space-y-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
+              <div className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">Report Snapshot</div>
+              <div className="grid gap-2 md:grid-cols-[1fr_auto]">
+                <input
+                  value={snapshotNote}
+                  onChange={(event) => setSnapshotNote(event.target.value)}
+                  placeholder="e.g. before wall shift"
+                  className="rounded-lg border border-[#24283a] bg-[#111521] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={saveInspectionSnapshot}
+                  disabled={!result && !scene.simulation}
+                  className="rounded-lg border border-emerald-600/50 bg-emerald-700/10 px-2 py-1.5 text-[9px] font-medium text-emerald-200 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Take Snapshot
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={openInCameraWall}
+                className="rounded-lg border border-[#24283a] bg-[#111521] px-2 py-2 text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
+              >
+                Open in Camera Wall
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const store = useStudioStore.getState();
+                  store.setWorkspacePreset("coverage");
+                  store.setViewMode("camera_view");
+                }}
+                className="rounded-lg border border-[#24283a] bg-[#111521] px-2 py-2 text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
+              >
+                Enter Full Camera View
+              </button>
+            </div>
           </div>
         )}
 

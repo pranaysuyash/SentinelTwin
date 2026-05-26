@@ -106,7 +106,6 @@ function MetricColumn({
   const eff = total ?? 100;
   const delta = afterVal - beforeVal;
   const afterPct  = isPercent ? afterVal  : (eff > 0 ? (afterVal  / eff) * 100 : 0);
-  const beforePct = isPercent ? beforeVal : (eff > 0 ? (beforeVal / eff) * 100 : 0);
 
   return (
     <div className="flex flex-col items-center gap-1 min-w-0">

@@ -1,7 +1,7 @@
 # Exploration Map — SentinelTwin
 
 **This is a living document. Append findings. Never replace.**
-**Last updated:** 2026-05-30 (Threads 87–96 added: camera sensor/optics, photo stitching, SfM photogrammetry, Three.js/R3F rendering, monocular depth estimation, physical threat intelligence, simulation validation/uncertainty, DES/agent-based sim, camera placement optimization, adversarial attack methodology)
+**Last updated:** 2026-05-30 (Digital twin simulation physics: PTZ movement, BRDF reflectivity, dynamic lighting, view distance, placement constraints, scene fidelity, occlusion culling, camera feed synthesis, real-time feedback) — previous: Camera deep-dive (spec DB, PTZ, gimbal, multi-sensor, analytics, cybersecurity, mounting, power, degradation, ecosystems)
 
 ---
 
@@ -2551,6 +2551,7 @@ Close GAP-04 (Failures tab), GAP-06 (Assumptions panel editable), and add Critic
 - **Canvas-first dock layout is the right product shape for SentinelTwin**: the studio shell now works better as collapsible left/right/bottom docks with workspace presets than as fixed side panels. That keeps the canvas dominant in coverage, replay, compare, and camera-wall modes while still allowing deep inspection when a selection demands it.
 - **`<Canvas shadows="percentage" />` avoids the `PCFSoftShadowMap` deprecation warning**: the runtime warning came from React Three Fiber default shadow handling, not from any app-local three.js shadow code. Switching the studio canvases to `shadows="percentage"` is the clean local fix.
 - **The `THREE.Clock` warning is dependency-level, not app-local**: inspection showed the warning originates inside `@react-three/fiber` internals (`dist/events-*.esm.js` uses `new THREE.Clock()`). This means the app code is not the direct source; the likely remedy is a dependency upgrade or upstream patch rather than a local refactor.
+- **Browser QA confirmed the dock hierarchy is rendering as intended**: the live studio page shows the left tools dock, the bottom utility dock, and the contextual right inspector all mounting correctly around the canvas instead of the shell collapsing into a static three-panel frame. The default state is still intentionally dense for editing, but the new layout primitives are in place.
 
 ### Useful implementation notes
 - Workspace presets should be updated whenever view mode changes so the shell can restore an appropriate layout automatically.
@@ -3625,7 +3626,1215 @@ Performance: ~1000 candidates × 50ms coverage compute = ~50 seconds naive. Opti
 - Tool-dependent detection: forced entry produces noise/debris (easier to detect) vs social engineering (much harder) → different detection probability curves
 
 **Defensive framing (mandatory):**
+
+---
+
+### Thread 97 — Camera Spec Database: Schema Design, Data Pipeline & Automated Aggregation
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Rationale:** SentinelTwin's DORI/OODPCVS scoring currently uses simplified quality thresholds. For production accuracy, the engine needs real camera hardware specifications — sensor size, pixel pitch, focal length range, f-stop, IR range, and more. Building a camera spec database from manufacturer data enables per-model DORI calculation, camera recommendation, and automated coverage validation.
+
+**Key exploration areas:**
+
+**Schema design:**
+- Core fields: manufacturer, model, sensor type (CMOS/CCD/thermal), sensor size (1/3", 1/2.8", 1/1.8", 1/1.2", 2/3", 1"), pixel count (MP), pixel pitch (microns), focal length min/max (mm), aperture (f-stop), horizontal/vertical FOV (degrees), IR range (m), min illumination (lux/color/bw)
+- DORI-specific computed fields: effective PPM at max focal, DORI distances for each level, optimal mounting height range
+- Environmental: IP rating, IK rating, operating temp range, humidity tolerance
+- Network: PoE class (802.3af/at/bt), ONVIF profiles supported, video codecs (H.264/H.265/MJPEG), max frame rate per resolution
+- Classification: form factor (bullet/dome/PTZ/fisheye/box/thermal), indoor/outdoor, vandal-rated, NDAA compliance status
+
+**Data pipeline:**
+- Manufacturer datasheet scraping: target pages on Axis, Hanwha, Bosch, Hikvision, Dahua, Uniview
+- PDF download → OCR (Tesseract) → LLM extraction (structured field mapping)
+- Normalization challenges: same field named differently across manufacturers (e.g., "Night Vision Range" vs "IR Distance" vs "Effective IR Illumination")
+- ONVIF device discovery (WS-Discovery) as supplementary source for connected cameras
+- E-commerce aggregators (B&H, ADI, Anixter) as structured data source with verification
+
+**Open questions:**
+- Is IPVM's paid database API-accessible for license integration?
+- Can we build a community-maintained open camera spec database (like OpenCameraDatabase.org)?
+- How often do manufacturers update specs, and how do we detect drift?
+
+**Related:** Thread 87 (Sensor physics), Thread 90 (Rendering), Thread 95 (Placement optimization)
+
+---
+
+### Thread 98 — PTZ Movement Mechanics, Protocols & Behavioral Modeling
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Rationale:** PTZ cameras are not static — their movement patterns, speed, accuracy, and sequencing directly affect coverage dynamics. Modeling PTZ behavior is essential for temporal coverage simulation (where is the PTZ looking at time t?), guard tour effectiveness analysis, and PTZ vs fixed camera trade-offs.
+
+**Key exploration areas:**
+
+**PTZ motor types:**
+- Stepper motors: precise positioning, open-loop, can lose steps, common in consumer PTZs
+- Servo motors: closed-loop feedback (encoder), higher accuracy, more expensive, used in enterprise PTZs
+- DC motors: variable speed, simpler control, less precise, used in older/cheaper models
+- Motor + gear train: backlash effects on positioning accuracy reset
+
+**PTZ speed specifications:**
+- Pan speed: typical range 0.1-400 degrees/second (preset speeds vs manual/manual variable)
+- Tilt speed: typical range 0.1-200 degrees/second (faster pan than tilt due to motor load)
+- Preset speed: high-speed movement to pre-stored position (up to 700 deg/s on high-end units)
+- Speed profile: acceleration/deceleration curves, overshoot, and settling time
+- Position accuracy: typical 0.1-1.0 degrees (affected by backlash, calibration drift)
+
+**PTZ behaviors to model:**
+- Presets: stored (pan, tilt, zoom) coordinates, instant recall, sequence ordering
+- Guard tours / cruise: timed switching between presets, configurable dwell time per preset, random vs sequential patterns
+- Pattern recording: user-defined motion path (including zoom/focus changes), repeated exactly
+- Auxiliary functions: wiper control, heater, IR cut filter, defog, rain wipe
+- Privacy masking: polygon masks that follow pan/tilt movement, mask shapes (quad/polygon/circle)
+- Limit stops: electronic vs mechanical end stops, configurable pan/tilt limits for restricted zones
+
+**PTZ control protocols:**
+- Pelco-D: serial (RS-485/422), legacy open standard, 1-255 addresses, ASCII commands, limited to basic pan/tilt/zoom/iris/focus, 9600 baud typical
+- Pelco-P: binary variant of Pelco-D, faster communication, 256 addresses, less commonly used today
+- ONVIF PTZ: IP-based XML SOAP, AbsoluteMove/RelativeMove/ContinuousMove, velocity profiles, geo-referencing, smooth time-parametrized moves
+- VAPIX (Axis): HTTP-based, digital PTZ (ePTZ) and mechanical, event-driven PTZ triggers
+- CGIs: Hikvision/Dahua proprietary HTTP APIs for PTZ control
+
+**ePTZ vs physical PTZ:**
+- ePTZ: no moving parts, digital crop of high-res frame, instant switching, no mechanical wear, limited by sensor resolution
+- Physical PTZ: optical zoom preserves resolution, mechanical delay, wear over time, noise
+- Hybrid: overview fisheye/multi-sensor camera with ePTZ for situational awareness + PTZ for forensic zoom
+
+**Open questions:**
+- How does PTZ positioning accuracy degrade over time (gear wear, calibration drift)?
+- Can we model optimal guard tour patterns for coverage maximization given camera field of view and site geometry?
+- How do PTZ speed profiles affect adversarial path detection probability (can an intruder dodge a PTZ sweep)?
+
+---
+
+### Thread 100 — Multi-Sensor & Panoramic Camera Coverage Modeling
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Rationale:** Multi-sensor and panoramic cameras have fundamentally different coverage characteristics than single-sensor fixed cameras — extreme FOV, non-uniform resolution distribution, dewarping artifacts, ePTZ capability. These require specialized modeling.
+
+**Key exploration areas:**
+
+**Camera types:**
+- Fisheye/360: single ultra-wide sensor, hemispherical FOV, severe distortion, resolution distributed over hemisphere
+- Multi-sensor fusion: 2-4 independent sensors + lenses, stitched FOV (180h x 90v typical), uniform per-quadrant resolution, 12-48MP total
+- PTZ + overview: fixed panoramic overview + optical zoom PTZ in same housing (Axis Q87 series)
+- Multi-imager: separate imagers for day/night/thermal in single housing
+
+**Coverage modeling implications:**
+- Fisheye resolution density: 4MP over 360 = ~1.1 MP per 90 quadrant at center (less at edges)
+- Multi-sensor: 12MP over 180 = ~6MP per 90 half, uniform across FOV
+- Dewarping: spherical/cylindrical to rectilinear transformation, slight resolution loss at dewarped edges
+- Effective DORI: panoramic cameras have shorter effective DORI ranges than optical-zoom fixed cameras
+- Hybrid patterns: panoramic overview + optical zoom at choke points
+
+**Deployment considerations:**
+- Ceiling height minimums: 8-10ft for people detection, 12-15ft for optimal coverage radius
+- Ceiling mount (hemispherical) vs wall mount (180 sweep) vs pendant (open area 360)
+- Multi-sensor orientation: mapping each sensor's physical orientation (N/E/S/W quadrants)
+
+**Open questions:**
+- How should DORI be computed for panoramic cameras — per-quadrant, per-dewarped-virtual-camera, or hemispherical average?
+- What's the optimal overlap between adjacent panoramic cameras for seamless handoff?
+- Can we visualize ePTZ range as a digital zoom cone within panoramic FOV?
+
+---
+
+### Thread 101 — Camera Analytics, Edge AI & Intelligent Video Surveillance (IVS)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Rationale:** Modern cameras run AI inferencing on edge hardware. Analytics capabilities affect camera selection, placement, and coverage requirements (ANPR needs higher PPM than simple detection). Understanding the analytics landscape enables SentinelTwin to model smart coverage — zones where a camera can not only see but also classify and alert.
+
+**Key exploration areas:**
+
+**IVS rule types:**
+- Line crossing: virtual tripwire with direction, arming schedule
+- Intrusion detection: virtual zone with entry/exit rules
+- Loitering: time threshold in zone (1-999 seconds)
+- Object removal/abandoned: static object detection with time threshold
+- Fast moving / speed detection: object tracking velocity
+- People counting: bi-directional counting, queue length, dwell time
+- Crowd density estimation
+- Heat map: motion density visualization
+
+**Edge AI processor landscape:**
+- Haisili: Hi3559A, 3516DV300 — 4K + NPU, widely used in Hikvision/Dahua
+- Ambarella: CV22, CV25, CV52 — 4K + stereo depth + AI (Axis, Bosch, Hanwha)
+- NVIDIA Jetson: TX2, Xavier NX, Orin — high-end edge AI (Avigilon, custom)
+- NPU performance: 1-20 TOPS typical on-camera
+
+**ONVIF Profile M:**
+- Standardized analytics metadata schema
+- Object classifications: person/vehicle/animal/package
+- Bounding boxes, confidence scores, timestamps
+- Cross-manufacturer interoperability (limited in practice)
+
+**Analytics impact on DORI:**
+- AI vs human: AI often needs higher PPM for reliable classification (250+ for ANPR vs 125 for human)
+- ANPR specific: plates need 80-200 pixels wide = 30-70 PPM depending on plate standard
+- Facial recognition: inter-pupillary distance 40-80 pixels
+- Scene complexity: cluttered backgrounds reduce accuracy even at adequate PPM
+
+**Accuracy limitations:**
+- False positive rates: 1-5% typical edge AI, higher in complex scenes
+- Accuracy degradation: rain -20-40%, snow -30-50%, low light -10-30%
+- Certification: UL 2802, i-LIDS
+
+**Open questions:**
+- Should SentinelTwin model analytics coverage zones separately from visual coverage zones?
+- How does analytics accuracy degrade at DORI level boundaries?
+- Can we simulate analytics detection probability maps based on camera specs, scene conditions, and target types?
+
+---
+
+### Thread 99 — Gimbal Stabilization & Long-Range Surveillance Systems
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Rationale:** Standard PTZ cameras provide unusable imagery at extreme zoom (500mm+ equivalent) due to vibration. Gimbal-stabilized systems are required for long-range surveillance of perimeters, borders, coastlines, and critical infrastructure. Understanding gimbal technology is essential for modeling long-range DORI in SentinelTwin's coverage engine.
+
+**Key exploration areas:**
+
+**Stabilization technology:**
+- EIS: sensor crop + frame shift, reduces effective resolution, ineffective at high zoom, rolling shutter artifacts
+- Mechanical stabilization: gyroscope (MEMS/fiber optic) + brushless motors, active counter-rotation, ~0.01 deg stabilization accuracy, preserves full resolution
+- Hybrid stabilization: EIS for micro-vibrations + mechanical for macro-movements
+- Wind-induced vibration spectrum analysis for high-mast pole mounts
+
+**Gimbal system types:**
+- 2-axis: pan + tilt (sufficient for fixed-mount surveillance)
+- 3-axis: pan + tilt + roll (required for moving platforms: drones, vehicles, vessels)
+- Continuous rotation slip rings: power + data + video through rotating joints
+- Thermal + optical fusion: co-aligned thermal (LWIR) + visible sensors in same gimbal
+
+**Long-range surveillance:**
+- Focal lengths: 12-300mm standard PTZ, 30-750mm long range, 50-1500mm extreme range
+- Laser range finding: integrated LRF for distance measurement and auto-focus
+- Target tracking: automated geo-referenced target tracking (GPS + IMU + video)
+- Manufacturer landscape: FLIR/Teledyne, Infiniti EO, Silent Sentinel, Clear Align, Controp (tactical); Axis/Hanwha/Bosch (standard EIS only)
+
+**Open questions:**
+- What DORI range reduction factor applies for unstabilized cameras at >100x zoom?
+- Can we model vibration frequency based on pole height, wind speed, and mount type?
+- How does stabilization accuracy affect forensic identification probability in simulation?
+
+---
+
+### Thread 102 — Camera Cybersecurity, Hardening Standards & Regulatory Compliance
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Rationale:** Camera security is critical in regulated environments (government, healthcare, finance, critical infrastructure). NDAA compliance alone is insufficient — buyers require secure boot, signed firmware, FIPS 140-3, and vulnerability management. SentinelTwin should model these compliance attributes for camera recommendations.
+
+**Key exploration areas:**
+
+**Edge hardening:**
+- Secure boot: chain of trust boot ROM → bootloader → kernel → OS
+- Signed firmware: manufacturer code-signing (RSA/ECDSA), device rejects unsigned firmware
+- TPM: dedicated cryptographic processor, key storage, measured boot, attestation
+- Write-protected flash: read-only OS partitions
+
+**Network security:**
+- 802.1x: EAP-TLS (certificate), EAP-PEAP, MAB fallback
+- HTTPS/TLS 1.2/1.3: secure web interface and API communication
+- SRTP (RFC 3711): encrypts RTP video stream, AES-128/256
+- Encryption at rest: AES-256 for stored video
+- Protocol hardening: disable Telnet, HTTP, SNMPv1/v2c, FTP
+
+**Compliance frameworks:**
+- NDAA Section 889: bans Hikvision, Dahua, Huawei, ZTE from US federal procurement
+- TAA: products made in US, FTA, or designated countries
+- FIPS 140-2/3: NIST cryptographic module validation
+- UL 2900-1: software cybersecurity standard
+- GDPR: video data = personal data, DPIA, retention limits
+- CCPA/CPRA: California video privacy requirements
+
+**Vulnerability landscape:**
+- Major CVEs by manufacturer (Hikvision backdoor, Dahua auth bypass, Axis command injection)
+- Vulnerability disclosure programs (VDP) — which manufacturers have them
+- Patch cadence: monthly vs quarterly vs reactive
+- EOL notification, last firmware update, security support duration
+
+**Open questions:**
+- How should cybersecurity compliance be weighted in camera recommendation?
+- Can SentinelTwin model network architecture (VLAN, firewall, zero-trust segmentation)?
+- Should coverage reports include a cybersecurity risk score per camera model?
+
+---
+
+### Thread 103 — Camera Mounting, Environmental Engineering & FOV Constraints
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Rationale:** A camera's theoretical FOV is always constrained by mounting location, height, orientation, and environment. Real-world coverage modeling must account for mounting-specific constraints: occlusions from mount, vibration on poles, ice on domes, sun glare, and structural obstruction.
+
+**Key exploration areas:**
+
+**Mount types:**
+- Pendant: ceiling hanging, 360-degree unobstructed view below, sway in wind
+- Wall: L-shaped arm, 6-12 inch offset from wall, wall plane occlusion
+- Pole: band/clamp attachment, wind vibration, limited tilt adjustment
+- Corner: fills corner gaps, dual-surface attachment
+- Parapet: roof edge, building perimeter, line-of-sight requirements
+- Recessed: in-ceiling, minimal profile, limited adjustability
+
+**Environmental protection:**
+- IP66 (jet water, dust) sufficient for most outdoor
+- IP67 (1m immersion) for flood-prone areas
+- IP68 (continuous submersion) for tunnels/wash-down
+- IK10: 20J impact resistance (5kg mass from 40cm)
+- Thermal: internal heaters for sub-zero, blowers for humidity, sun shields for desert
+- Corrosion: 304 SS standard, 316L for marine/coastal (molybdenum prevents chloride pitting)
+- Dome materials: polycarbonate (impact resistant, scratches), acrylic (optical clarity, brittle), glass (best optics, heavy), sapphire (extreme scratch, expensive)
+
+**Wind loading and vibration:**
+- Wind loading: F = 0.5 * rho * v^2 * Cd * A
+- Vibration amplitude vs pole height: taller = larger amplitude
+- Vortex shedding: alternating vortex on cylindrical poles, crosswind vibration
+- Damping: tuned mass dampers, vibration isolation, guy wires
+- Wind-induced blur: resonant frequency, gust response, stabilization requirements
+
+**Mounting height vs FOV:**
+- Height-dependent: higher mount = wider coverage, smaller object pixels
+- Typical heights: 8-10ft retail, 10-15ft warehouse, 15-30ft parking, 30-50ft poles
+- Tilt angle: 15-30 deg for general, 30-45 for facial capture, 60-90 top-down for counting
+- Optimal height per DORI: identification needs lower mounts (10-15ft), detection allows higher (30-50ft)
+
+---
+
+### Thread 104 — Camera Power & Connectivity Infrastructure Engineering
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Rationale:** Cameras require power and network connectivity, and infrastructure constraints directly affect where cameras can be placed. PoE budgets limit cameras per switch, cable distances constrain placement, and wireless/cellular enables coverage in previously unreachable locations.
+
+**Key exploration areas:**
+
+**PoE standards:**
+- 802.3af (PoE): 15.4W at PSE, 12.95W at PD (standard fixed cameras)
+- 802.3at (PoE+): 30W at PSE, 25.5W at PD (cameras with IR, basic PTZ)
+- 802.3bt Type 3 (PoE++): 60W at PSE, 51W at PD (multi-sensor, outdoor PTZ with heater)
+- 802.3bt Type 4: 90W at PSE, 71.3W at PD (high-power PTZ, heated + IR + analytics)
+- LLDP negotiation vs hardware classification, power allocation per port vs total budget
+
+**Power budget calculation:**
+- Typical 48-port PoE+ switch: 720W total / 25.5W per port max
+- Camera power varies: daytime vs night (IR +2-10W), heater on (+30W outdoor)
+- Cable power loss: Cat5e ~0.5W/100m, Cat6 ~0.4W/100m, Cat6a ~0.3W/100m
+- Redundancy: dual power (PoE + 12V DC), UPS backup
+
+**Alternative power:**
+- 12V DC: local supply per camera, voltage drop ~1V/100m for 18AWG
+- 24V AC: lower voltage drop over distance, legacy PTZ compatibility
+- Power over Coax (HD-TVI/CVI/AHD): hybrid video+power over RG59/RG6, 500m reach
+- Solar/battery: panel sizing based on consumption + insolation, battery for night/cloud
+- Power over Fiber: hybrid fiber cable, 2km+ reach, used in perimeters
+
+**Network connectivity:
+- Wired: Cat5e/Cat6/Cat6a, 100m segment limit
+- Wireless: point-to-point bridges (2.4/5/60 GHz), mesh networks, Wi-Fi cameras
+- Cellular: 4G/LTE/5G for temp/remote sites, data plan costs, bandwidth limits
+- Fiber: single-mode (10km+) for perimeter, multi-mode (550m) for campus backbone
+
+---
+
+### Thread 105 — Camera Hardware Degradation & Failure Prediction Modeling
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Rationale:** Camera performance degrades over time — IR LEDs dim, sensors develop hot pixels, PTZ mechanisms wear, domes become hazy. SentinelTwin currently models failure as binary. For realistic lifecycle simulation and predictive maintenance, we need degradation curves.
+
+**Key exploration areas:**
+- IR LED L70 lifetime: 30,000-50,000 hours (3.4-5.7 years at 24/7), dependent on junction temperature
+- IR range over time: initial range to L70 (70% output) to L50 (50% output)
+- Sensor degradation: hot pixels (stuck on, increases with thermal cycling), dead pixels, PRNU fixed pattern noise, dark current thermal noise
+- Dome hazing: polycarbonate UV degradation turns clear dome milky/yellow (1-3 year replacement)
+- Lens fungus: fungal growth on optical surfaces in humid environments
+- PTZ wear: gear train backlash increase, belt stretch, limit switch failure, bearing wear
+- Capacitor aging: electrolytic capacitors in power supply, ESR increase, 2,000-10,000 hour lifetime
+- Weibull distribution for failure modeling: shape parameter determines infant mortality vs wear-out
+- MTBF ranges: 30,000-80,000 hours bullet/dome, 20,000-50,000 hours PTZ
+- Bathtub curve: infant mortality (90 days) → useful life → wear-out
+- Predictive maintenance signals: increasing hot pixels, decreasing SNR, PTZ calibration drift
+---
+
+### Thread 106 — Manufacturer Ecosystems, APIs & VMS Integration Landscape
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Rationale:** Camera selection is not just about hardware specs — it is about ecosystem integration. Different manufacturers have radically different APIs, SDK ecosystems, VMS compatibility, and openness. Understanding this landscape is critical for SentinelTwin camera recommendation and integration complexity modeling.
+
+**Key exploration areas:**
+- Hikvision: ISAPI HTTP API, C/C++ SDK, HiWatch sub-brand, ADI distribution, HikCentral VMS
+- Dahua: CGI HTTP API, C/C++ SDK, OEM supplier for CP Plus/Swann/Lorex, Smart PSS VMS
+- Axis: VAPIX open HTTP API (50+ modules), ACAP app platform (Linux, C/JS), AXIS Device Manager, VMS-agnostic
+- Bosch: BVMS enterprise VMS, C++ SDK for camera apps, BIS building integration, DIVAR IP NVR
+- Hanwha: Wisenet HTTP SDK, WAVE VMS, T/X/Q/L product tiers, ACAP-like app platform
+- Avigilon: ACC enterprise VMS (proprietary), appearance search API, H4/H5/H6 hardware gen AI
+- Pelco: VideoXpert VMS REST API, legacy proprietary protocols, newer ONVIF compliant
+- Open source VMS: Frigate (AI + Coral TPU), Shinobi (Node.js), Kerberos.io (Docker), Scrypted (HKSV bridge), ZoneMinder
+---
+
+
+### Thread 107 — PTZ Movement Kinematics & Temporal Coverage Modeling
+
+**Status:** Active exploration — 2026-05-30
+
+**Rationale:** SentinelTwin currently models PTZ cameras as a boolean flag with no behavior. For temporal coverage simulation to be accurate (the real-time digital twin, not just the 24h profile), PTZ cameras must be modeled as dynamic objects with position-dependent FOV. A PTZ looking at the far corner is not covering the entry point. Modeling PTZ movement directly affects real-time coverage computation, path visibility timing, and vulnerability window analysis.
+
+**Key exploration areas:**
+
+**PTZ movement physics:**
+- Pan speed: 0.1-400 deg/s typical. Speed depends on zoom level (optical zoom reduces effective pan speed)
+- Tilt speed: 0.1-200 deg/s typical. Often asymmetric (faster down than up)
+- Acceleration/deceleration: PTZ motors do not reach top speed instantly. Realistic movement needs velocity ramps
+- Preset recall time: 0.3-2.0 seconds for nearby presets, up to 5s for full-range moves (180 deg pan)
+- Settling time: 0.2-0.8s after movement completes for image stabilization to stabilize
+- Repeatability: ±0.1-0.5 deg mechanical tolerance. Over time, gear wear increases this
+
+**Modeling approach:**
+- State machine: IDLE → MOVING (accel) → MOVING (cruise) → MOVING (decel) → SETTLING → IDLE
+- FOV is a function of current (yaw, pitch, zoom) position, not initial preset
+- During movement, camera is effectively "blind" — no useful coverage (motion blur, stabilization artifacts)
+- Guard tour sweep: waypoint sequence with dwell times at each preset
+- Realistic coverage model: temporal duty cycle = (dwell_time) / (dwell_time + move_time + settle_time)
+
+**Direct impact on existing code:**
+- `CameraNode.ptz: boolean` needs expansion to `ptzConfig` with speed, acceleration, presets
+- Temporal simulation needs PTZ state at each time step — where is each PTZ looking RIGHT NOW?
+- Adversarial path simulation needs to know: is the PTZ currently covering this path segment?
+- Timeline tab should show PTZ movement events as coverage changes
+
+**Related threads:** Thread 90 (Three.js rendering), Thread 98 (PTZ protocols), Thread 87 (camera sensor physics)
+
+---
+
+### Thread 108 — Surface Material Reflectivity (BRDF) & Camera Visibility Physics
+
+**Status:** Active exploration — 2026-05-30
+
+**Rationale:** SentinelTwin's obstruction model uses `visionTransmission` (0-1) and `glareRisk` (boolean). Real surface physics are far richer — a painted wall, a glass display, a polished floor, and a matte partition all affect camera visibility differently depending on viewing angle, light position, and surface roughness. For realistic DORI scoring at steep angles, surface BRDF properties matter.
+
+**Key exploration areas:**
+
+**Surface types and their optical behavior:**
+- Matte/painted surfaces (drywall, painted metal): Lambertian diffuse, consistent from all angles, no glare
+- Glass display cases: Fresnel reflection at oblique angles (strong glare at >60 deg), high transmission at normal angles, double-surface ghost reflections
+- Polished floors (marble, tile, epoxy): Mirror-like reflections at shallow angles, can reflect light sources creating false targets
+- Metal surfaces: strongly polarized reflections, anisotropic (brushed metal reflects differently along vs across grain)
+- Curtains/fabrics: transmission varies with weave density, backlighting reveals what's behind
+- Window film: one-way mirror effect depends on light differential between sides
+- Vines/foliage: complex geometry with gaps, specular highlights from waxy leaf surfaces
+
+**BRDF parameters for security simulation:**
+- Diffuse reflectivity (0-1): fraction of incident light scattered diffusely
+- Specular intensity (0-1): fraction reflected as mirror-like highlight
+- Roughness: width of specular lobe — mirror-like (0.01) to completely matte (1.0)
+- Fresnel factor: how reflectivity increases at grazing angles
+- Transmission: fraction of light passing through (0 = opaque, 1 = clear glass)
+- Transmission roughness: how much transmitted light is scattered (frosted glass)
+
+**Impact on coverage scoring:**
+- High-gloss floor can reflect camera IR back, reducing effective IR range (false return)
+- Glass at oblique angles can make a detection-target invisible from that camera angle despite being "in FOV"
+- Matte surfaces provide consistent DORI across angles; glossy surfaces have angle-dependent quality
+- Backlighting through curtains reveals silhouettes but not facial features
+
+**Implementation approach:**
+- Extend `ObstructionMaterial` with BRDF parameters alongside existing `visionTransmission`
+- Add `materialPenalty` function in coverage engine that uses angle-of-incidence + BRDF to compute effective visibility
+- For V0.1: keep simplified (matte default, glass/reflective exceptions)
+- For V0.2+: full angle-dependent material penalty from camera-surface-subject geometry
+
+**Related threads:** Thread 87 (camera sensor physics)
+
+---
+
+### Thread 109 — Dynamic Light Modeling: Falloff, Color Temperature, Shadow Blindspots & Multiple Light Interaction
+
+**Status:** Active exploration — 2026-05-30
+
+**Rationale:** Current lighting in SentinelTwin is simple on/off with a `rangeM` limit. Real lighting is continuous: inverse-square falloff, color temperature affecting sensor performance, shadows creating absolute blind spots, and multiple light sources combining non-additively. This directly affects night-time DORI scoring and temporal security profile accuracy.
+
+**Key exploration areas:**
+
+**Light falloff physics:**
+- Inverse square law: illuminance ∝ 1/d². Light at twice the distance = 1/4 the intensity
+- Beam angle: light spreads, so off-axis cells receive less illumination than on-axis
+- Practical: a 20W LED flood at 10m provides ~50 lux, at 20m ~12.5 lux, at 40m ~3 lux (approaching moonlight)
+- IR illuminators: cone angle narrower than visible light, range depends on camera IR sensitivity + illuminator power
+
+**Color temperature effects:**
+- Warm light (2700-3000K): less blue content, monochrome cameras see less detail, color cameras struggle with white balance
+- Cool light (5000-6500K): more blue, matches camera white balance, better for color identification
+- Mixed lighting: different color temps create uneven exposure across a scene
+- Sodium vapor (street lights): monochromatic yellow (~589nm), monochrome cameras see well but no color info
+
+**Shadow modeling:**
+- Hard shadows: direct light occlusion by obstruction creates absolute dark zones where cameras cannot see (IR/no IR)
+- Soft shadows: area lights create penumbra zones where visibility is gradually reduced
+- Moving shadows: temporal coverage change as sun moves (outdoor), creating scheduled vulnerability windows
+- Self-shadowing: camera housing shadow on its own IR illuminator (common PTZ issue at extreme zoom)
+
+**Multiple light interaction:**
+- Non-additive: two lights at half brightness ≠ one light at full. Sensor exposure is global.
+- Overlap zones: over-illuminated areas can cause blooming/overexposure, reducing recognition quality
+- Dark gaps: between light coverage zones — the adversarial path exploits these "shadow corridors"
+
+**Implementation approach:**
+- Replace binary `illuminatedBy.length > 0` check with continuous light level calculation
+- Compute lux at each grid cell from all active lights using inverse-square + beam angle
+- Map lux to DORI penalty (e.g., < 1 lux = severe penalty, 1-10 lux = moderate, 10-50 lux = slight, > 50 lux = none)
+- Add shadow testing: if a light is behind an obstruction relative to the cell, apply shadow penalty
+
+---
+
+### Thread 110 — View Distance, Fog, Atmospheric Scattering & Long-Range Coverage Limits
+
+**Status:** Active exploration — 2026-05-30
+
+**Rationale:** SentinelTwin currently limits camera range via `maxRange` config. In reality, view distance is limited by atmospheric conditions (fog, haze, rain), camera optics (lens aperture, focal length), and sensor sensitivity. For outdoor/perimeter cameras at 50-200m ranges, these become significant factors missing from the coverage model.
+
+**Key exploration areas:**
+
+**Atmospheric visibility:**
+- Clear day: visibility 10-30km — no atmospheric limit for security camera ranges
+- Light haze: visibility 4-10km — slight contrast reduction
+- Moderate fog: visibility 1-4km — noticeable haze at 200m, reduces DORI by 1 level
+- Dense fog: visibility 50-500m — coverage severely limited, thermal cameras maintain performance
+- Rain: visibility 1-10km depending on intensity, water droplets scatter light (Mie scattering)
+
+**Atmospheric scattering types:**
+- Mie scattering: water droplets and dust particles scatter light in all directions, reducing contrast
+- Rayleigh scattering: molecular scattering (blue sky color), negligible at security camera ranges
+- Implementation: Beer-Lambert law for exponential distance-based contrast reduction
+
+**Camera-specific view distance factors:**
+- Aperture: larger aperture (smaller f-stop) gathers more light but reduces depth of field
+- Focal length: longer focal length magnifies atmospheric effects (heat shimmer at 200m+)
+- Sensor size: larger sensor has better SNR at low contrast (can see through more haze)
+- IR wavelength: 850nm IR penetrates haze better than visible light; 940nm IR even more
+- Thermal (LWIR): 8-14μm band penetrates fog significantly better than visible/IR
+
+**Three.js/R3F rendering implications:**
+- `THREE.FogExp2` for base atmospheric effect (cheap, exponential density)
+- Post-processing haze shader: depth-aware contrast reduction + color desaturation
+- God rays / volumetric light shafts for sunlight through haze (dramatic but expensive)
+- LOD system: switch to fog-only rendering for objects beyond DORI max range
+- Camera feed simulation: apply progressive blur + contrast loss with distance
+
+**Implementation approach:**
+- Add `atmosphericVisibility` parameter to `SimulationAssumptions` (clear/haze/fog/heavy_fog/rain)
+- Add distance-based contrast reduction factor to DORI PPM calculation (exponential decay)
+- Visual: apply atmospheric overlay in CameraFeedCanvas at simulated distances
+
+---
+
+### Thread 111 — Camera Placement Physics: Structural, Regulatory & Constraint-Based Modeling
+
+**Status:** Active exploration — 2026-05-30
+
+**Rationale:** The current camera placement model is purely geometric — position, yaw, pitch with no constraints. Real camera placement is heavily constrained: structural (beams block view), regulatory (privacy laws, fire codes, sight lines for emergency exits), physical (cable reach, conduit paths, junction box locations), and environmental (sun glare, weather exposure). Modeling these constraints enables realistic auto-placement vs naive geometric FOV computation.
+
+**Key exploration areas:**
+
+**Structural constraints:**
+- Ceiling beams and trusses: block ceiling-mounted camera FOV, especially wide-angle cameras
+- Columns and pillars: create persistent blind spots regardless of camera count
+- Bulkheads and soffits: dropped ceiling sections that block line of sight
+- HVAC ducts: large ducts in commercial ceilings block camera placement locations
+- Fire suppression pipes: sprinkler head placement can conflict with camera mounting
+
+**Mounting constraints:**
+- Wall thickness: must be sufficient for anchors — thin partitions can't support heavy PTZ cameras
+- Ceiling type: drop ceiling tiles cannot support camera weight; require reinforcement to structural ceiling
+- Pole mounting: pole diameter and material (steel vs concrete) affect mount selection
+- Corner mounting: only works with specific bracket types, limited yaw adjustment range
+
+**Regulatory constraints:**
+- Privacy zones: cameras must not view neighboring properties, bathrooms, changing rooms
+- HIPAA: cameras in healthcare corridors must avoid patient room interiors
+- Fire code: camera placement must not obstruct sprinkler coverage or emergency exit signage
+- ADA: low-mounted cameras must not protrude into walkways
+- Data protection (GDPR): signage zones, recording-only areas vs live monitoring zones
+
+**Sun glare modeling:**
+- Solar path computation: camera orientation vs sun position by time of day and season
+- Glare periods: specific windows when camera is directly facing sunrise/sunset (lens flare, sensor bloom)
+- Backlight compensation: cameras facing windows need WDR — but WDR reduces effective night sensitivity
+- West-facing cameras: worst glare in late afternoon; north/south in hemispheres, etc.
+
+**Implementation approach:**
+- Add `placementConstraints` schema to store known constraints (structural, regulatory, environmental)
+- Implement `computeFeasiblePlacements(room, constraints)` that returns valid (position, mount, orientation) candidates
+- Auto-placement algorithm (future): solve set cover with constraint satisfaction (CSP)
+- Sun glare overlay: show glare-affected periods per camera in temporal profile
+
+---
+
+### Thread 112 — Scene Geometry Fidelity & Digital Twin Accuracy Tradeoffs
+
+**Status:** Active exploration — 2026-05-30
+
+**Rationale:** SentinelTwin's coverage accuracy depends directly on scene geometry fidelity. A room modeled as a simple box with walls vs a room with actual furniture, columns, partitions, and fixtures will produce significantly different coverage results. Understanding when simplified geometry is sufficient vs when detailed geometry is required is critical for both UX (quick setup vs detailed audit) and simulation accuracy.
+
+**Key exploration areas:**
+
+**Fidelity levels for security simulation:**
+- Level 0 (Footprint only): room dimensions + wall positions — rough coverage % only, no occlusion accuracy
+- Level 1 (Shell): walls + doors + windows + ceiling height — good for ceiling-mounted camera planning
+- Level 2 (Major obstructions): + permanent fixtures (columns, beams, built-in counters) — accurate occlusion modeling
+- Level 3 (Detailed): + furniture, shelves, partitions, equipment — full occlusion accuracy
+- Level 4 (Temporal): + movable objects (carts, vehicles, temporary displays) — models changing occlusion over time
+
+**Accuracy impact of each level:**
+- L0→L1: coverage% may change by 5-15% as wall geometry corrects FOV boundary
+- L1→L2: coverage% changes by 10-30% as interior columns and beams create blind spots
+- L2→L3: coverage% changes by 5-20% as furniture creates local occlusion
+- L3→L4: temporal coverage changes as movable items shift during day
+
+**Mesh simplification for performance:**
+- BVH works best with moderate polygon counts (10K-100K triangles). 1M+ triangles starts to slow raycasting
+- Merge adjacent coplanar faces to reduce triangle count without losing occlusion accuracy
+- Use simplified collision geometry for raycasting vs detailed visual geometry
+- LOD system: lower detail at >50m from any camera (distant objects don't affect near-field raycasts)
+
+**Special geometry cases:**
+- Stairs: complex occlusion geometry, cameras on different levels have different coverage
+- Mezzanines/lofts: partial second level creates underhang blindspots
+- Open plan vs cubicles: different occlusion patterns
+- Atriums: multi-level open spaces where cameras on one level cover another level
+- Loading docks: varying floor height (dock levelers, ramps) changes coverage plane
+
+**Implementation approach:**
+- Performance test: measure coverage computation time at each fidelity level with BVH
+- Establish accuracy thresholds: at what point does adding more geometry change coverage results <5%?
+- Create guidance for scene builders: which geometry types matter for accurate DORI scoring?
+
+---
+
+### Thread 113 — Occlusion Culling & Visibility Graph Optimization for Large Security Scenes
+
+**Status:** Active exploration — 2026-05-30
+
+**Rationale:** As SentinelTwin scales to larger scenes (warehouses, campuses, parking garages), the naive approach of raycasting every camera to every grid cell becomes prohibitively expensive. Visibility graph precomputation and occlusion culling techniques can dramatically reduce the active raycast count while maintaining accuracy.
+
+**Key exploration areas:**
+
+**Visibility graph precomputation:**
+- Build a visibility graph once: for each camera, compute which grid cells are in FOV (pre-filtering by angle)
+- Only raycast cells already known to be in FOV — skip the 60-80% of cells outside the frustum
+- For PTZ cameras: recompute FOV-mask only when position changes, not every frame
+- Spatial partitioning: grid cells in BSP tree or quadtree for fast frustum-cell intersection tests
+
+**Portal-based occlusion:**
+- Rooms connected by doors/windows: a camera in Room A cannot see Room B except through the door portal
+- Compute portal visibility: which rooms are visible to which cameras through which portals
+- Drastically reduces: outdoor camera doesn't need to raycast indoor cells (and vice versa)
+- Example: 5 rooms, 10 cameras, 1600 grid cells → without portals = 16000 raycasts; with portals = ~3000
+
+**Hierarchical occlusion mapping (HOM):**
+- Precompute per-camera HOM: a low-res texture showing which areas are occluded by static geometry
+- Fast lookup: check cell against HOM before doing full raycast
+- Update HOM incrementally when geometry changes (add/remove obstruction)
+
+**From-before culling for real-time coverage:**
+- Cache last frame's visible cells per camera
+- On incremental changes (one obstruction moved), only re-check cells near the change
+- 90% of cells retain same visibility status after a local change
+
+**Implementation approach:**
+- V0.1: full recompute on change (current state) — good for small scenes
+- V0.2: add FOV pre-filtering per camera (skip cells outside frustum before raycasting)
+- V0.3: portal-based room visibility for multi-room scenes
+- V0.4: incremental recompute for real-time coverage feedback during drag
+
+---
+
+### Thread 114 — Camera Feed Simulation & Synthesized Fidelity (Noise, Blur, Compression, Realism)
+
+**Status:** Active exploration — 2026-05-30
+
+**Rationale:** SentinelTwin's CameraFeedCanvas currently offers basic overlay modes (realistic, IR, thermal, dirty lens). For a credible security digital twin, the camera feed must look like a security camera feed — not a pristine render from a game engine. Noise, compression artifacts, motion blur, auto-exposure adaptation, and sensor characteristics all affect the realistic representation of coverage quality.
+
+**Key exploration areas:**
+
+**Sensor noise modeling:**
+- Shot noise: photon arrival statistics (Poisson). Dominant in low light. Scales with sqrt(signal)
+- Read noise: sensor readout electronics. Fixed per frame. More visible in dark regions
+- Fixed pattern noise (FPN): per-pixel bias variations. Calibrated out in high-end cameras
+- Hot pixels: stuck-on pixels that don't respond to light. Increase with sensor age and temperature
+- Banding noise: sensor row-readout timing variation, visible in low light as horizontal bands
+- Implementation: additive Gaussian noise with signal-dependent variance + row banding pattern
+
+**Compression artifacts:**
+- H.264/H.265 macroblocking: 8×8 or 16×16 pixel blocks with quantization artifacts
+- Bitrate-limited: more compression at night (noise is harder to compress) = more visible artifacts
+- Keyframe interval: I-frames every 1-2s, P/B-frames between. Artifacts accumulate between keyframes
+- I-frame bloat: scene with motion uses more bits per frame, reducing quality of static background
+- Implementation: JPEG compression on rendered frames (libjpeg at controlled quality level)
+
+**Auto-exposure simulation:**
+- AE convergence time: 0.5-5 seconds after scene change (light turned on, person walks in)
+- Overexposure: bright window causes camera to underexpose interior, making faces dark silhouettes
+- WDR (Wide Dynamic Range): 120-140dB typical. Simulate by compressing highlight/shadow range
+- AE hunting: AE oscillating between two exposure settings — visible as periodic brightness shift
+
+**Motion blur:**
+- Shutter speed: 1/30s typical for indoor, 1/120s+ for outdoor. Fast movement at low shutter = blur
+- Rolling shutter: CMOS sensor scans row by row, fast movement creates skew distortion
+- PTZ motion blur: panning at 50 deg/s at 1/30s shutter = ~1.7 deg of blur per frame
+
+**Render approach:**
+- Post-processing in CameraFeedCanvas: apply effects chain sequentially
+- Performance: render at lower resolution (320×240) to keep post-processing cheap
+- Separate camera feeds: each feed canvas uses same chain but different camera position
+
+---
+
+### Thread 115 — Real-Time Coverage Feedback During Edit Operations
+
+**Status:** Active exploration — 2026-05-30
+
+**Rationale:** Currently the user drags a camera and sees the frustum move, but coverage only recomputes on mouse-up. For a responsive digital twin experience, the user should see near-real-time coverage feedback during placement — the heatmap should update as they drag, not after. This requires incremental coverage computation and predictive rendering.
+
+**Key exploration areas:**
+
+**Incremental coverage during drag:**
+- While dragging: only recompute cells affected by the moving camera (not all cells)
+- Track which cells are gained/lost as the camera moves (differential update)
+- Server-driven (or Web Worker): compute in background thread, push results to main thread
+- For PTZ preset: render coverage preview for each preset position as user browses
+
+**Ghost preview:**
+- Show translucent "if placed here" heatmap alongside current heatmap
+- User can see how adding a camera at the cursor position changes coverage
+- Show zone status changes (this zone would PASS with this camera here)
+- Show adversarial path before/after (this new camera closes the current vulnerability)
+
+**Real-time quality metric display:**
+- Floating HUD as user moves camera: "CAM-03: 67% → 82% coverage, +2 zones passed"
+- Color-coded feedback: green arrow (improving), red arrow (degrading)
+- Zone-by-zone impact: highlight zones that would change status with this placement
+
+**Technical approach:**
+- Debounced recompute: 50ms after last movement (rather than waiting for mouse-up)
+- Focus recompute on grid cells in new camera's FOV only
+- For instant feedback: precompute radial coverage map that can be evaluated without full raycast
+- Three.js: use transform controls onChange callback to trigger incremental recompute
+
+---
+
+### Thread 116 — Camera Fingerprinting & Optical Identification Through Lens/Sensor Signatures
+
+**Status:** Exploration candidate — 2026-05-30
+
+**Rationale:** Every camera has a unique optical signature — sensor pixel defects, lens dust patterns, fixed pattern noise, and color response variations. In forensic contexts, matching footage to a specific camera is done through Photo Response Non-Uniformity (PRNU) analysis. For SentinelTwin's digital twin, understanding camera fingerprints enables realistic feed simulation and video authenticity verification.
+
+**Key exploration areas:**
+- PRNU: pixel-to-pixel sensitivity variations, unique to each sensor, detectable across compressed video
+- Lens fingerprint: dust spots, scratches, chromatic aberration patterns
+- Brand signatures: processing pipeline differences (Hikvision blue-tinted night mode, Axis warm color balance)
+- Forensic applications: matching recovered footage to specific camera in system
+- Simulation application: additive PRNU pattern to generated feeds for realism
+- Privacy consideration: camera fingerprinting has privacy implications (deanonymization)
+
+---
+
+#include the following note
+
+**Note:** These threads (107-116) are directly relevant to the current digital twin simulation work — PTZ movement modeling, material reflectivity physics, dynamic lighting, atmospheric view distance, placement constraints, geometry fidelity, occlusion optimization, feed synthesis, and real-time feedback. They represent active exploration candidates for the current development sprint, not speculative future topics.
+
+
+### Thread 117 — AI-Based Forensic Search & Video Analytics Applications (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- Appearance search: clothing color, vehicle color/make/model, object shape/texture descriptors
+- Object-based retrieval: query-by-example across camera fleet
+- Cross-camera path reconstruction: object re-identification, last-known-position logging
+- Timeline event clustering: automatically group related events
+- Behavioral analytics: abandoned object, wrong direction, crowd formation, fighting detection
+- Privacy-preserving analytics: on-camera blurring/masking, differential privacy, federated learning
+- Synthetic data: generating training data from simulated SentinelTwin scenes
+---
+
+### Thread 118 — Cloud-Native vs On-Prem Video Management Architecture (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- Cloud VMS platforms: Verkada (full-stack hardware+cloud), Eagle Eye (VMS-as-a-service), Rhombus (edge AI + cloud), Motorola Aware (enterprise)
+- Hybrid: edge recording + cloud backup, metadata-only to cloud, local failover
+- Bandwidth optimization: H.265/SVC encoding, substream continuous + main stream on event
+- Storage tiering: edge SSD (hot), cloud nearline (warm), cloud archive (cold), tape (frozen)
+- Latency trade-offs: cloud PTZ lag, cloud analytics latency
+- TCO: cloud subscription ($10-50/cam/month) vs on-prem capital + maintenance
+- Compliance: data residency (GDPR), FedRAMP for government
+---
+
+### Thread 119 — Camera Testing & Benchmarking Methodologies (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- Resolution testing: ISO 12233 test chart, spatial frequency response, MTF
+- Low-light measurement: SNR across lux range, minimum illumination (lux at F-number)
+- Dynamic range: WDR activation threshold, HDR merge quality, motion artifacts
+- Latency: glass-to-glass (capture→encode→transmit→decode→display)
+- IPVM testing: independent lab protocol, standardized environment, camera comparison
+- Standards: UL 2802 (video analytics), IEC 62676 (CCTV), i-LIDS (detection scenarios)
+
+---
+
+### Thread 120 — Physical Security Standards Landscape Beyond IEC 62676 (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- UL 2900-1: software cybersecurity for network-connectable products
+- EN 50132 (Europe): alarm systems - CCTV surveillance standards
+- ASIS: security standards framework, physical asset protection (PAP)
+- BS 8418 (UK): remote monitoring and receiving center standards
+- CPNI (UK Centre for Protection of National Infrastructure): CNI security guidance
+- NIST CSF: cybersecurity framework mapping for physical security devices
+- SIA OSIPS: Open Security and Safety Integrity platform standards
+- Insurance industry: UL certified monitoring, annual maintenance verification requirements
+---
+
+### Thread 121 — Insurance & Liability Implications of Security Coverage (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- Premium reduction: verified coverage evidence for underwriters, 5-20% typical savings
+- Liability reduction: demonstrating reasonable security measures in premises liability
+- Duty of care: jurisdictional standards (foreseeability, reasonable security, proximate cause)
+- Insurance carrier requirements: minimum coverage for different industry classes
+- Self-insured retention: security evidence for SIR decisions
+- Litigation risk: coverage gaps as negligence evidence, chain of custody for video evidence
+- Insurtech integration: API-driven policy pricing based on verified coverage
+- Insurance-specific report formats: ISO Acord forms, carrier verification templates
+---
+
+### Thread 122 — Audio Monitoring & Gunshot Detection Technology (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- Acoustic gunshot detection: ShotSpotter (outdoor), Everbridge SafeZone (indoor), acoustic triangulation
+- Audio analytics: aggression detection (yelling frequency), glass break (specific frequency), scream detection
+- Privacy laws: 11 US states require all-party consent for audio recording, notice requirements
+- Audio+video correlation: audio events triggering PTZ presets, forensic search by audio type
+- Two-way audio: intercom, emergency call stations, verballerrent speaker systems
+- Acoustic forensics: direction-of-arrival estimation, weapon type classification from muzzle blast
+---
+
+### Thread 123 — Alarm Monitoring & Central Station Integration (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- Central station standards: UL 827 (central station), UL 1981 (automation), UL 681 (burglar alarm)
+- Alarm verification: audio listen-in, video verification, sequential cross-zoning
+- False alarm reduction: verified = higher police priority, unverified = lower/no response, 94-99% false alarm rate
+- Police response priority: verified video = Priority 1 (immediate), unverified = Priority 3 (delayed)
+- Communicators: cellular (GSM/LTE primary), IP (secondary), radio (backup)
+- Central station software: DICE, Micro Key, Bold Group
+---
+
+### Thread 124 — Building Management System (BMS) Integration for Security (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- BACnet integration: lighting control synchronized with camera events, HVAC for fire response
+- Elevator integration: lobby camera, floor access correlation
+- Intercom/PA: Talkmaster, Aiphone, Commend two-way communication systems
+- Fire alarm integration: pull station cameras, sprinkler activation verification
+- I/O relay control: door strikes on event, gates/barriers on LPR match
+- Guard tour systems: NFC/QR check-in at camera locations, route optimization
+- Mass notification: emergency alerts triggered by camera analytics
+
+---
+
+### Thread 125 — Theft & Shrinkage Analytics for Retail Security (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- Organized retail crime (ORC): flash mob patterns, booster bag detection
+- Point-of-sale monitoring: register exception video correlation (void/refund/no-sale)
+- Self-checkout protection: item scanning validation, walk-away detection
+- Fitting room: count-in vs count-out flow, tag detection
+- Back-of-house: receiving dock, stockroom access, employee theft detection
+- EAS integration: tag alarm to camera preset to video verification
+- Retail VMS: LiveView Technologies, Solink, SecureAlert, RiteTrack
+---
+
+### Thread 126 — Healthcare & Hospital Security Camera Applications (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- Infant protection: Hugs, SafePlace abduction prevention, exit alarm integration
+- Behavioral health: ligature-resistant housings, therapeutic vs surveillance balance
+- Emergency department: waiting room violence, patient elopement, staff assault detection
+- Pharmaceutical: narcotics cabinet surveillance, pharmacy access audit
+- HIPAA compliance: camera placement avoiding patient areas, de-identification for analytics
+- Parking/blue light: blue light phone integration, assault detection analytics
+---
+
+### Thread 127 — School & Campus Security Camera Systems (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- Single point of entry: door cameras, intercom, remote release, visitor screening
+- Visitor management: Raptor, LobbyGuard integration with cameras
+- Active shooter: acoustic detection, AI weapon detection, lockdown trigger
+- Classroom: interior door locks, intercom to office, panic buttons
+- Perimeter: parking lot, athletic fields, bus loop coverage
+- Bullying prevention: loitering in hallways/bathroom approaches
+- Emergency response: camera feeds to first responders, digital mapping
+- Funding: COPS grants, school safety grants, ESSER funds
+---
+
+### Thread 128 — Event Security, Stadium & Venue Surveillance (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- Crowd density: people counting per entrance, bottleneck detection
+- Egress monitoring: exit lane counting, wrong direction detection
+- VIP tracking: cross-camera re-identification, last-known-position logging
+- Ticketing integration: credential scanning, ticket-holder facial verification
+- Parking: space counting, LPR for event parking
+- Temporary coverage: portable towers, rapid deployment, temporary network
+- Command center: video wall management, incident response, multi-agency coordination
+- Concealed carry detection: weapon detection analytics at stadium scale
+---
+
+### Thread 129 — Warehouse, Logistics & Industrial Camera Applications (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- Rack coverage: shelf occlusion, multi-level coverage patterns
+- Loading dock: trailer ID LPR, seal check, door open/close correlation
+- Yard management: trailer parking verification, yard tractor tracking
+- Personnel safety: HAZMAT exclusion zones, forklift pedestrian detection
+- Inventory verification: cycle count video evidence, drone inventory count
+- 24/7 operations: night cameras, thermal for low-light person detection
+- Cold storage: condensation-proof cameras, sub-zero rated, defrosting mechanisms
+
+---
+
+### Thread 130 — Wireless/Cellular Camera Placement & Coverage (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- Bandwidth-constrained placement: lower frame rate, resolution scaling, motion-triggered recording
+- Signal strength modeling: cellular coverage heat maps, antenna optimization, signal booster requirements
+- Solar-powered sizing: panel wattage vs insolation vs consumption for 24/7 operation
+- Data cap management: recording scheduling, edge storage buffer, image-only vs video upload
+- Cellular failover: dual-path cameras (wired primary + cellular backup)
+- Temporary deployment: construction site, event, remote asset monitoring
+---
+
+### Thread 131 — Body-Worn & Mobile Camera Integration (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- Body-worn cameras: Axon, WatchGuard, Motorola VB400, upload/docking workflows
+- Bodycam coverage: POV coverage patterns, motion blur at DORI distances
+- Vehicle cameras: cruisers, patrol vehicles, mobile ALPR
+- Drone surveillance: DJI Dock, autonomous patrol, flight path coverage
+- Evidence management: chain of custody, redaction, discovery compliance
+- Mobile storage: 8-64GB edge capacity, resolution trade-offs
+- Docking: auto-upload on return, battery charging, firmware sync
+---
+
+### Thread 132 — Privacy Regulations & Camera Compliance (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- GDPR Article 6: lawful basis for video processing, legitimate interest assessment, DPIA
+- GDPR Article 13: privacy notices, signage, data subject rights
+- CCPA/CPRA: employee monitoring, video data as personal information
+- BIPA (Illinois): facial recognition consent, $1K-$5K per violation private right of action
+- Washington/New York: emerging biometric surveillance laws
+- EU AI Act: high-risk classification for biometric ID, conformity assessment
+- Privacy-by-design placement: avoiding non-target capture (sidewalks, neighbors)
+- Data retention: 30-90 day typical limit, evidence exceptions, auto-deletion
+---
+
+### Thread 133 — Camera Supply Chain & Procurement Best Practices (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- Lead times: 2-8 weeks standard, 8-16 weeks specialized (thermal, explosion-proof)
+- Gray market risks: unauthorized distributors, counterfeit hardware, region-locked firmware
+- Warranty: 3-5 years typical (Axis 5yr, Bosch 3yr, Hikvision 3yr)
+- EOL notification: 1-3 years notice, last-time-buy windows
+- NDAA sourcing: authorized US distributors (ADI, Anixter, ScanSource)
+- Project registration: manufacturer incentives, bid pricing, design assistance, demo units
+---
+
+### Thread 134 — Security Guard Force Integration & Patrol Optimization (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- Guard tour optimization: patrol route planning, uncovered interval minimization, GPS/NFC tracking
+- Alarm response: response time modeling, dispatch prioritization, camera-guided response
+- Manpower planning: guards-per-camera ratio, post-order development, site-specific staffing
+- Remote monitoring: virtual guarding (Pro-Vigil, Deep Sentinel), audio intervention first
+- Two-way audio: guard-to-intruder verbaliverrent, effectiveness data
+- Camera-guided response: approach from covered angle, situational awareness
+- Guard force management: TrackTik, Silvertrac, Corrigo, scheduling, incident reporting
+- Cost modeling: guard cost vs camera cost trade-offs for ROI analysis
+
+---
+
+### Thread 135 — Video Analytics Performance Standards & Certification (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- i-LIDS: UK Home Office detection scenarios (parked vehicle, stolen vehicle, loitering)
+- UL 2802: video analytics performance standard, test methodology
+- PETS: Performance Evaluation of Tracking and Surveillance benchmarks
+- Precision-Recall curves: threshold-dependent performance, F1, AUC
+- Operating point: high-precision (fewer false alarms) vs high-recall (fewer missed)
+- Scenario-specific accuracy: empty scene FA rate, crowded scene miss rate, all-weather performance
+- Third-party labs: i-LABS (Netherlands), Fraunhofer, independent certification
+- Accuracy vs distance: degradation curves, accuracy vs ambient light, vs object speed
+---
+
+### Thread 136 — Physical Security Information Management (PSIM) & Unified Platforms (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- PSIM platforms: Genetec Security Center, Milestone XProtect Corporate, Everbridge, CNL, Vidsys
+- Integration: single pane of glass, multi-system correlation, unified alarm management
+- Event correlation: cross-system rules (access denied + loitering + tailgating = security alert)
+- Map visualization: GIS integration, floor plan overlays, real-time sensor status
+- Incident management: case creation, evidence attachment, timeline, report generation
+- Compliance: automated report generation, retention rules per data type
+- Open vs closed: Genetec open SDK, Milestone MIP SDK, Azena ACAP marketplace
+- Cloud PSIM: Motorola Solutions, Everbridge SaaS, Genetec Stratocast
+---
+
+### Thread 137 — Thermal Imaging for Physical Security (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- Sensor types: uncooled microbolometer (VOx, a-Si), cooled (InSb, MCT) for extreme range
+- Key specs: resolution 160x120 to 640x480 thermal, NETD <50mK, spectral 8-14um LWIR
+- Thermal vs visible DORI: thermal better for DETECTION (temp contrast), worse for IDENTIFICATION (no texture)
+- Deployment: perimeter detection (heat signature), fire detection (overheating equipment), total darkness areas
+- Thermal + visible fusion: co-aligned sensors for detection + identification
+- Manufacturers: FLIR/Teledyne, Hikvision thermal, Dahua thermal, Opgal, Guide Infrared
+- Cost: 3-10x visible camera, decreasing with Chinese manufacturer entry
+---
+
+### Thread 138 — Gunshot & Weapon Detection Systems (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- Acoustic gunshot: ShotSpotter (municipal), Everbridge SafeZone (indoor), Omnilert, V-Alert
+- Acoustic sensors: microphone array, ultrasonic+audible, muzzle blast vs explosion discrimination
+- Gunshot location: TDOA triangulation (3+ sensors), GPS coordinates, map visualization
+- AI weapon detection: ZeroEyes (human-in-the-loop), Omnilert Gun Detect, Evolv weapons screening
+- Video analytics: concealed weapon AI, surface weapon detection
+- Lockdown integration: detection -> auto-lockdown, alert to security/first responders
+- Privacy: continuous audio for gunshot, facial rec in weapon detection systems
+- Response: police dispatch integration (ALI/ANI), real-time camera to first responders
+---
+
+### Thread 139 — LiDAR & 3D Sensing for Physical Security (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- Security LiDAR: fence-top breach, perimeter volumetric detection, privacy-free people counting
+- Types: 1D single beam (fence), 2D line scan (counting), 3D multi-beam (area)
+- LiDAR vs camera: works in total darkness, no shadows/glare, no privacy issues, lower resolution
+- Manufacturers: Ouster Blue Line, Velodyne, Hesai, Quanergy, Blickfeld
+- LiDAR+camera fusion: LiDAR detection -> PTZ identification
+- Point cloud processing: occupancy grid, voxel map, 3D background subtraction
+- LiDAR coverage: angular resolution, effective range vs reflectivity, FOV
+- False alarm comparison: LiDAR FA rate vs video analytics FA for outdoor perimeter
+- Cost: solid-state $500-$2K, mechanical $5K-$15K (declining)
+
+---
+
+### Thread 140 — Radar for Physical Security Detection (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- Security radar: perimeter (200m-2km), ground surveillance, water surface detection
+- Technology: FMCW (common), pulsed-Doppler (longer range), MIMO (resolution)
+- Specs: range resolution 1-5m, velocity resolution ~0.1 m/s
+- Target classification: radar cross-section analysis (person vs vehicle vs animal vs drone), micro-Doppler gait
+- Radar+camera fusion: radar detects -> PTZ slews to location for identification
+- Manufacturers: FLIR Ranger, SpotterRF, Navtech Radar, Echodyne, Thales
+- Coverage: fan-shaped beam, range-dependent resolution, multipath
+- Weather resilience: radar through fog, rain, snow, dust (vs camera limitations)
+- False alarms: vegetation motion, small animals, environmental clutter filtering
+---
+
+### Thread 141 — Video Data Retention, Storage & Evidence Management (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- Retention: 30-90 days general, 180-365 regulated (banks/casinos), indefinite for evidence
+- Storage tech: edge SD (64GB-1TB), NVR HDD (4-48TB RAID), cloud tiers, LTO tape
+- Codec impact: H.264 vs H.265 vs H.265+/Smart Codec, 30-50% savings
+- Bitrate: CBR (predictable), VBR (efficient), capped VBR (both)
+- Evidence management: secure export (write-protected, hash, timestamp), chain of custody, redaction
+- Legal hold: retention hold on evidence, preservation notices, discovery
+- Formula: (bitrate * cameras * hours/day * retention) / 8 / 1024^3 = TB
+- Cloud cost: S3 ~$23/TB/mo, Glacier ~$4/TB/mo, retrieval costs
+- TCO: $/TB, 3-5 year HDD life, RAID overhead, power/cooling
+---
+
+### Thread 142 — Security Operations Center (SOC) Design & Ergonomics (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- Video wall: layout, resolution per screen, multiview arrangement
+- Operator console: monitors per operator (4-8 typical), KVM switching, desk layout
+- Alarm fatigue: FA per operator/shift, overload threshold, intelligent prioritization
+- Shift handoff: incident handover, status board, shift log
+- SOC tiers: Tier 1 monitoring/alerting, Tier 2 investigation, Tier 3 forensics/management
+- PSAP: direct video to 911, real-time camera for first responders
+- Remote monitoring: off-site SOC, secure VPN, bandwidth requirements
+- Ergonomics: monitor distance (arm's length), ambient light (low/indirect), max 4hr per console session
+---
+
+### Thread 143 — Escalation & Emergency Response Workflow Modeling (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- Detection time: analytics (sub-second), human operator (seconds-minutes), patrol (minutes-hours)
+- Verification: video (seconds), audio call (seconds), guard dispatch (minutes)
+- Dispatch: internal guard (30-90s), alarm company (60-180s), police (varies)
+- Response: on-site guard (1-5min), local police (5-15min urban, 15-30min suburban, 30+ rural)
+- Total intervention: sum of all stages, 5-30min typical
+- SentrySafe TLE: loss expectancy based on response time and intruder dwell
+- Escalation matrix: severity * confidence -> response level (ignore/review/dispatch/alert police/lockdown)
+- Post-incident review: timeline reconstruction, response effectiveness, improvement recommendations
+---
+
+### Thread 144 — Perimeter Security Technology Landscape Beyond Cameras (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- Fence detection: fiber optic (deflection, 0.5-1m localization), triboelectric (vibration), taut wire (displacement)
+- Buried: leaky coax (guided radar), fiber buried (strain), seismic geophones (footstep)
+- Open-air: active IR beams (visibility), passive IR (thermal contrast), microwave barriers (weather resistant)
+- Ground radar: GPR for tunnel detection, surface radar for perimeter gaps
+- Sensor fusion: fence detect -> camera verify -> PTZ track -> guard dispatch
+- Nuisance filtering: vegetation/animal/weather FA management, zone sensitivity
+- Graded detection: Zone 1 outer (lower certainty) -> Zone 2 inner -> Zone 3 building (highest)
+- Standards: ASTM F3100 (physical security), CPNI graded security levels
+---
+
+### Thread 145 — Camera Integration with UGVs & Security Robotics (not exploring now)
+
+**Status:** Exploration backlog — 2026-05-30 (not currently exploring)
+
+**Topics for future exploration:**
+- Security robots: Knightscope (outdoor), Cobalt (indoor), SMP, ASI
+- Capabilities: autonomous GPS/LiDAR/IMU patrol, docking, 360 cam, two-way audio, PA
+- Patrol modeling: path-based coverage, revisit frequency, speed vs coverage tradeoff
+- Robot edge AI: same analytics as fixed cameras, PTZ equivalent tracking
+- Robot as mobile PTZ: stop at patrol point -> survey -> move to next point
+- Fleet coordination: multi-robot patrol, handoff, charging schedule optimization
+- Robot + fixed synergy: fixed cam detects anomaly -> robot dispatched to investigate
+- Constraints: battery (8-16hr), weather limitations, stair/clutter traversal
 - This thread is inherently sensitive. All content must be framed as: "understanding attacker methodology to design better defenses"
 - No output shall provide evasion instructions without corresponding countermeasures
 - All research cited from law enforcement, academic criminology, and defensive security sources (not criminal manuals)
 - User-facing features position this as "attack scenario library" in the context of security assessment
+
+---
+
+## Thread: Novel Algorithm 2 — Blind Spot Topology Analysis
+
+**Status:** Implemented and tested (2026-05-27)
+**File:** `apps/studio/src/simulation/blind-spot-topology.ts`
+
+**Problem it solves:** Raw coverage % and `quality === "none"` cells give no actionable spatial context.
+A 15% blind spot is very different depending on whether it's an isolated corner or a continuous corridor
+connecting an entry door to a critical zone.
+
+**Algorithm:**
+1. Filter `CoverageCellResult` to cells where `quality === "none"` and `walkable === true`
+2. Flood-fill BFS to cluster connected blind cells into discrete regions
+3. For each region:
+   - Compute `areaSqM` (cells × CELL_SIZE²)
+   - Check proximity to `EntryPointNode` positions (within 2 cell-widths = "entry adjacent")
+   - Check polygon overlap with `CriticalZoneNode` polygons
+   - Classify:
+     - `entry_corridor` — region connects an entry point to a critical zone (traversable blind route)
+     - `entry_connected` — region is adjacent to an entry point but doesn't reach a critical zone
+     - `isolated` — region has no entry proximity
+4. Severity assignment:
+   - `entry_corridor` → `critical`
+   - `entry_connected` + area ≥ 4m² → `high`, else `medium`
+   - `isolated` + area ≥ 9m² → `medium`, else `low`
+
+**Schema additions:**
+- `blindRegionSchema` added to `security-scene.ts`
+- `blindRegions?: BlindRegion[]` field added to `simulationResultSchema`
+- Type export: `BlindRegionResult`
+
+**UI integration:**
+- `IssuesTab.tsx` — "Blind Spot Topology" section below issues list
+- Shows: severity badge, classification label, area (m²), cell count, affected zone chips
+- Critical/high regions use tinted backgrounds (red/amber) for visual urgency
+
+**Tests:** 7 unit tests in `blind-spot-topology.test.ts` — all pass
+- Empty scene
+- Single isolated cell → isolated/low
+- Region near entry → entry_connected/medium
+- Entry-to-zone corridor → entry_corridor/critical
+- Two disconnected regions → correctly split
+- Sort order: critical first
+
+**Key insight:** Entry corridor regions are the highest-value finding — they represent a
+continuous unmonitored path from outside to the most sensitive zone. A 4m² corridor is
+more dangerous than a 20m² isolated blind spot.
+
+
+---
+
+## Suggested Deep-Dive Priorities
+
+The following are recorded as ready-to-start deep-dive topics from the digital twin simulation physics thread batch:
+
+| Priority | Thread | Topic | What to explore |
+|----------|--------|-------|-----------------|
+| **P0** | 107 | PTZ Movement Kinematics & Temporal Coverage | PTZ state machine model (IDLE→MOVING→SETTLING), acceleration/deceleration curves, preset recall timing, guard tour dwell patterns, temporal duty cycle calculation for moving cameras |
+| **P1** | 109 | Dynamic Light Modeling | Inverse-square light falloff implementation, shadow-based blindspot detection, multiple light source interaction, color temperature effects on camera sensor performance, lux-to-DORI penalty mapping |
+| **P2** | 108 | Surface Material BRDF & Visibility Physics | Extend obstruction material model with angle-dependent visibility scoring, Fresnel reflection at oblique angles, material-specific DORI penalty curves, backlighting through translucent materials |
+
+**Note:** These are directly relevant to the current development sprint. They build on existing work in the coverage engine, rendering pipeline, and temporal simulation.

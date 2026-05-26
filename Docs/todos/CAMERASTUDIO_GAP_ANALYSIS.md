@@ -371,3 +371,33 @@ The following gaps have been resolved in this session:
 - ✅ GAP-22: Scene export/import buttons wired in TopBar scene dropdown (Export JSON, Import JSON with file picker)
 - ✅ NEW: CriticalZoneInspector — clicking a zone now shows a full inspector (target type, required quality, priority, night/redundancy flags, editable, covering cameras, gap explanation)
 - ✅ NEW: "Open Report Lite" button in BottomRow report summary now routes to the report tab
+
+---
+
+## Session update: Build fix + Novel Algorithm 2 + GAP completions
+
+### Resolved in current session
+
+| Item | Status | Notes |
+|------|--------|-------|
+| Build errors (4 TypeScript failures) | ✅ Fixed | `scene-templates.ts` full rewrite with schema-correct helpers; `report/index.ts` ZoneResult/SecurityIssue field fixes; `floor-plan-import.ts` arg count fix |
+| GAP-05: "Test Without This Obstruction" | ✅ Verified done | `runCounterfactual` in store, delta panel in ObstructionInspector, button wired |
+| GAP-06: Assumptions panel surfaced in UI | ✅ Done | `AssumptionsTab` added to bottom panel with segmented controls for time-of-day, interior light, DORI standard, night penalty mode, and numeric fields. DORI standard switch auto-updates PPM thresholds. |
+| Novel Algorithm 2: Blind Spot Topology | ✅ Done | `blind-spot-topology.ts` pure function; flood-fill BFS; `entry_corridor`/`entry_connected`/`isolated` classification; severity `critical`→`low`; wired into `simulate-studio.ts`; 7 unit tests pass |
+| Blind regions in IssuesTab | ✅ Done | "Blind Spot Topology" section added after issues list showing severity badge, classification, area, cells count, and affected zone chips |
+
+### Test count
+- 128 tests pass (pre-session) → 135 tests pass (post-session)
+- Build: clean, no TypeScript errors
+
+### What is still NOT resolved
+- GAP-07: Scene selector / multiple scenes (no scene dropdown, no blank scene creation)
+- GAP-08: Camera preset library not built
+- GAP-09: Target-type switcher not implemented globally (per-zone IS editable)
+- GAP-10: Redundancy failure matrix not built
+- GAP-11: Command bar not wired to simulation actions
+- GAP-16: Privacy zone rendering not implemented
+- Novel Algorithm 1: Coverage Fragility Field
+- Novel Algorithm 3: Adversarial K-Robustness
+- Novel Algorithm 4: Camera Placement Oracle
+- Novel Algorithm 5: Temporal Security Profile Anomaly Detection

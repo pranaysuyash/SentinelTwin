@@ -6,7 +6,36 @@ export type GridCell = {
   x: number;
   z: number;
   walkable: boolean;
+  coverageIncluded: boolean;
+  privacyRestricted: boolean;
 };
+
+function isPointInsideOrientedRectangle(
+  point: [number, number],
+  center: [number, number],
+  width: number,
+  depth: number,
+  rotationDeg: number,
+) {
+  const [px, pz] = point;
+  const [cx, cz] = center;
+  const halfWidth = width / 2;
+  const halfDepth = depth / 2;
+
+  const dx = px - cx;
+  const dz = pz - cz;
+  const radians = (rotationDeg * Math.PI) / 180;
+  const cosR = Math.cos(-radians);
+  const sinR = Math.sin(-radians);
+
+  const localX = dx * cosR - dz * sinR;
+  const localZ = dx * sinR + dz * cosR;
+
+  return (
+    Math.abs(localX) <= halfWidth &&
+    Math.abs(localZ) <= halfDepth
+  );
+}
 
 export function buildCoverageGrid(scene: SecurityScene, cellsPerMeter = 4) {
   const cells: GridCell[] = [];
@@ -37,24 +66,31 @@ export function buildCoverageGrid(scene: SecurityScene, cellsPerMeter = 4) {
       const point: [number, number] = [x, z];
 
       const blockedByObstruction = scene.obstructions.some((obstruction) => {
-        const [width, depth] = obstruction.dimensions;
+        const [width, , depth] = obstruction.dimensions;
         const [ox, , oz] = obstruction.position;
-        return (
-          Math.abs(point[0] - ox) <= width / 2 &&
-          Math.abs(point[1] - oz) <= depth / 2 &&
-          obstruction.visionTransmission < 0.25
+        if (obstruction.visionTransmission >= 0.25) return false;
+        return isPointInsideOrientedRectangle(
+          point,
+          [ox, oz],
+          Math.max(width, 0.01),
+          Math.max(depth, 0.01),
+          obstruction.rotationYDeg,
         );
       });
 
-      const insidePrivacyZone = scene.privacyZones.some((zone) =>
+      const privacyRestricted = scene.privacyZones.some((zone) =>
         pointInPolygon(point, zone.polygon),
       );
+
+      const walkable = !blockedByObstruction && !isInsideClosedDoor(point);
 
       cells.push({
         id: `cell_${col}_${row}`,
         x,
         z,
-        walkable: !blockedByObstruction && !insidePrivacyZone && !isInsideClosedDoor(point),
+        walkable,
+        coverageIncluded: walkable && !privacyRestricted,
+        privacyRestricted,
       });
     }
   }

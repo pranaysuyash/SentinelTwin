@@ -350,7 +350,7 @@ stable simulation output and per-jurisdiction regulatory research.
 
 ### D-035: Phase 7 — Temporal Security Simulation
 
-**Status:** Accepted — 2026-05-30
+**Status:** Accepted — 2026-05-26
 **Source:** PHASE_7_TEMPORAL_SIMULATION.md
 
 **Decision:** Build a 24-hour temporal simulation layer that models how security posture changes over time, with:
@@ -388,7 +388,7 @@ stable simulation output and per-jurisdiction regulatory research.
 
 ---
 
-## D-030 | 2026-05-27 | Coverage grid cell size = 0.25m (4 cells/meter) for Phase 0
+## D-030 | 2026-05-26 | Coverage grid cell size = 0.25m (4 cells/meter) for Phase 0
 
 **Decision:** Coverage grid uses 0.25m cell size (4 cells/meter) as the standard resolution.
 
@@ -420,7 +420,7 @@ in the Studio status bar.
 
 ---
 
-## D-031 | 2026-05-27 | npm install over bun install for runtime production dependency resolution
+## D-031 | 2026-05-26 | npm install over bun install for runtime production dependency resolution
 
 **Decision:** Use `npm install` (not `bun install`) for installing runtime dependencies in `apps/studio`.
 Keep `bun test` for test execution (fast, works correctly with resolved node_modules).
@@ -501,7 +501,7 @@ reference to the new path, then remove the old."
 
 ---
 
-## D-034 | 2026-05-29 | Phase 6 — Demoware Completion: close all remaining UI gaps before demo
+## D-034 | 2026-05-26 | Phase 6 — Demoware Completion: close all remaining UI gaps before demo
 
 **Decision:** Implement all P0–P2 gaps identified in the gap analysis (CAMERASTUDIO_GAP_ANALYSIS.md) as a single tracked phase, closing every UI gap from scene management to camera presets before any external walkthrough.
 
@@ -534,7 +534,7 @@ reference to the new path, then remove the old."
 
 ### D-036: Phase 8 — AI Agent Pipeline Production Hardening
 
-**Status:** Accepted — 2026-05-30
+**Status:** Accepted — 2026-05-26
 **Source:** PHASE_8_AI_AGENT_PIPELINE.md
 
 **Decision:** Upgrade the thin-wrapped agent system to a production-grade multi-agent pipeline with:
@@ -562,7 +562,7 @@ reference to the new path, then remove the old."
 
 ### D-037: Phase 9 — Report Generation Engine
 
-**Status:** Accepted — 2026-05-30
+**Status:** Accepted — 2026-05-26
 **Source:** PHASE_9_REPORT_GENERATION.md
 
 **Decision:** Transform the existing markdown-only export into a full professional report generation system with:
@@ -588,7 +588,7 @@ reference to the new path, then remove the old."
 
 ### D-038: Phase 10 — Scan-to-Scene Import Pipeline
 
-**Status:** Accepted — 2026-05-30
+**Status:** Accepted — 2026-05-26
 **Source:** PHASE_10_SCAN_TO_SCENE.md
 
 **Decision:** Build import pipelines and a scene builder wizard that enable users to create SecurityScenes from floor plan images, photos, or manual room-by-room specification:
@@ -668,3 +668,18 @@ reference to the new path, then remove the old."
 **Alternatives rejected:**
 - **Leave the advisory unresolved because it is transitive** — rejected because the fix is small and does not require sacrificing the current app stack.
 - **Downgrade Next** — rejected because the advisory is specific to the bundled PostCSS copy, not to a need to step back from the current Next release.
+
+---
+
+## D-041 | 2026-05-26 | Pin the studio runtime to Node 24.13.0
+
+**Decision:** Add `engines.node` and `.nvmrc` for `apps/studio` to standardize on Node `24.13.0`.
+
+**Rationale:**
+- The local shell environment showed two different Node/npm combinations during install and audit work, which created noisy engine warnings and made reproducibility harder.
+- The studio dependency set is compatible with Node 24, and the current environment is already on `v24.13.0`.
+- Pinning the runtime reduces install drift without changing app behavior.
+
+**Alternatives rejected:**
+- **Leave Node unpinned** — rejected because the install warnings and environment drift are avoidable.
+- **Pin to Node 23** — rejected because the supporting packages and current shell are already on the Node 24 line.

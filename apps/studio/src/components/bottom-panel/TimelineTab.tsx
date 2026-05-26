@@ -33,7 +33,7 @@ function QualityBadge({ quality }: { quality: string }) {
 }
 
 // Builds a flat event list from all pathResults for the timeline table
-function buildTimelineRows(result: SimulationResult, cameraNames: Record<string, string>) {
+function buildTimelineRows(result: SimulationResult) {
   const rows: Array<{
     timeS: number;
     pathLabel: string;
@@ -127,7 +127,7 @@ export function TimelineTab() {
   const cameraNames: Record<string, string> = {};
   for (const cam of scene.cameras) cameraNames[cam.id] = cam.name;
 
-  const rows    = buildTimelineRows(result, cameraNames);
+  const rows    = buildTimelineRows(result);
   const barData = buildQualityBars(result);
 
   const currentT = pathReplay.progress * maxDuration;

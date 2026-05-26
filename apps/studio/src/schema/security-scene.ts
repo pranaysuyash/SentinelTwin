@@ -1,0 +1,453 @@
+import { z } from "zod";
+
+export const doriQualitySchema = z.enum([
+  "none",
+  "detection",
+  "observation",
+  "recognition",
+  "identification",
+]);
+
+export const sceneSourceSchema = z.enum([
+  "manual",
+  "ai",
+  "scan",
+  "import",
+  "preset",
+  "demo",
+]);
+
+const point3Schema = z.tuple([z.number(), z.number(), z.number()]);
+const point2Schema = z.tuple([z.number(), z.number()]);
+
+export const wallNodeSchema = z.object({
+  id: z.string().startsWith("wall_"),
+  nodeType: z.literal("wall"),
+  label: z.string(),
+  start: point2Schema,
+  end: point2Schema,
+  heightM: z.number().positive(),
+  thicknessM: z.number().positive(),
+  material: z.enum(["solid", "glass", "grill", "partial"]),
+  visionTransmission: z.number().min(0).max(1).default(0),
+  source: sceneSourceSchema,
+});
+
+export const doorNodeSchema = z.object({
+  id: z.string().startsWith("door_"),
+  nodeType: z.literal("door"),
+  label: z.string(),
+  position: point3Schema,
+  dimensions: point3Schema,
+  state: z.enum(["open", "closed", "locked", "restricted"]),
+  source: sceneSourceSchema,
+});
+
+export const windowNodeSchema = z.object({
+  id: z.string().startsWith("window_"),
+  nodeType: z.literal("window"),
+  label: z.string(),
+  position: point3Schema,
+  dimensions: point3Schema,
+  state: z.enum(["closed_glass", "open", "grill", "curtain", "reflective"]),
+  visionTransmission: z.number().min(0).max(1),
+  source: sceneSourceSchema,
+});
+
+export const cameraNodeSchema = z.object({
+  id: z.string().startsWith("cam_"),
+  nodeType: z.literal("camera"),
+  name: z.string(),
+  position: point3Schema,
+  yawDeg: z.number(),
+  pitchDeg: z.number(),
+  rollDeg: z.number().default(0),
+  mountType: z.enum(["wall", "ceiling", "pole", "corner", "desk"]),
+  mountHeightM: z.number().positive(),
+  fovHorizontalDeg: z.number().positive().max(180),
+  fovVerticalDeg: z.number().positive().max(180),
+  rangeM: z.number().positive(),
+  resolutionMP: z.number().positive(),
+  resolutionWidth: z.number().positive().optional(),
+  resolutionHeight: z.number().positive().optional(),
+  lensType: z.enum(["fixed", "varifocal", "fisheye", "panoramic"]),
+  focalLengthMm: z.number().positive().optional(),
+  status: z.enum(["on", "off", "blocked", "dirty", "malfunctioning"]),
+  nightMode: z.enum(["none", "ir", "low_light", "thermal"]),
+  irRangeM: z.number().min(0),
+  thermalCapable: z.boolean(),
+  ptz: z.boolean(),
+  clarity: z.enum(["poor", "average", "good", "excellent"]),
+  source: sceneSourceSchema,
+  notes: z.string().optional(),
+  tags: z.array(z.string()).default([]),
+});
+
+export const securityLightNodeSchema = z.object({
+  id: z.string().startsWith("light_"),
+  nodeType: z.literal("security_light"),
+  name: z.string(),
+  lightType: z.enum([
+    "ceiling",
+    "wall",
+    "flood",
+    "street",
+    "emergency",
+    "ir_flood",
+  ]),
+  position: point3Schema,
+  yawDeg: z.number().optional(),
+  pitchDeg: z.number().optional(),
+  status: z.enum(["on", "off", "failed"]),
+  brightness: z.enum(["dim", "low", "medium", "high", "very_high"]),
+  rangeM: z.number().positive(),
+  coneDeg: z.number().positive().max(180).optional(),
+  colorTemperatureK: z.number().positive().optional(),
+  emergencyPower: z.boolean(),
+  illuminatesNightCoverage: z.boolean(),
+  glareRisk: z.enum(["none", "low", "medium", "high"]),
+  source: sceneSourceSchema,
+});
+
+export const obstructionNodeSchema = z.object({
+  id: z.string().startsWith("obs_"),
+  nodeType: z.literal("obstruction"),
+  label: z.string(),
+  position: point3Schema,
+  rotationYDeg: z.number(),
+  dimensions: point3Schema,
+  material: z.enum([
+    "solid",
+    "glass",
+    "grill",
+    "mesh",
+    "curtain",
+    "reflective",
+    "partial",
+  ]),
+  visionTransmission: z.number().min(0).max(1),
+  glareRisk: z.boolean(),
+  nightIRReflective: z.boolean(),
+  movable: z.boolean(),
+  movableByAI: z.boolean(),
+  weightKg: z.number().positive().optional(),
+  obstructionType: z.enum([
+    "shelf",
+    "cupboard",
+    "counter",
+    "pillar",
+    "partition",
+    "vehicle",
+    "tree",
+    "gate",
+    "signboard",
+    "storage_boxes",
+    "glass_display",
+    "curtain",
+    "other",
+  ]),
+  source: sceneSourceSchema,
+});
+
+export const criticalZoneNodeSchema = z.object({
+  id: z.string().startsWith("zone_"),
+  nodeType: z.literal("critical_zone"),
+  label: z.string(),
+  polygon: z.array(point2Schema).min(3),
+  heightM: z.number().positive().default(2),
+  priority: z.enum(["low", "medium", "high", "critical"]),
+  requiredQuality: doriQualitySchema.exclude(["none"]),
+  targetType: z.enum([
+    "person_detection",
+    "face_recognition",
+    "face_identification",
+    "vehicle_detection",
+    "license_plate",
+    "package_detection",
+    "cash_counter_activity",
+    "door_entry_exit",
+    "perimeter_breach",
+  ]),
+  nightRequired: z.boolean(),
+  redundancyRequired: z.boolean(),
+  privacyZone: z.boolean().default(false),
+});
+
+export const privacyZoneNodeSchema = z.object({
+  id: z.string().startsWith("privacy_"),
+  nodeType: z.literal("privacy_zone"),
+  label: z.string(),
+  polygon: z.array(point2Schema).min(3),
+  restriction: z.enum(["no_video", "restricted_view", "blindspot_required"]),
+  regulation: z.string(),
+});
+
+export const entryPointNodeSchema = z.object({
+  id: z.string().startsWith("entry_"),
+  nodeType: z.literal("entry_point"),
+  label: z.string(),
+  position: point2Schema,
+});
+
+export const pathPointSchema = z.object({
+  position: point2Schema,
+  timestamp: z.number().min(0).optional(),
+  action: z.enum(["enter", "wait", "run", "crouch", "exit"]).optional(),
+});
+
+export const scenarioPathSchema = z.object({
+  id: z.string().startsWith("path_"),
+  nodeType: z.literal("path"),
+  label: z.string(),
+  actorType: z.enum(["person", "vehicle", "guard", "crowd"]),
+  points: z.array(pathPointSchema).min(2),
+  speedMps: z.number().positive(),
+  heightM: z.number().positive(),
+  widthM: z.number().positive().optional(),
+  timeOfDay: z.enum(["day", "night", "dusk", "dawn"]),
+  intent: z.enum(["authorized", "suspicious", "incident_replay"]),
+  labelDetail: z.string().optional(),
+});
+
+export const simulationAssumptionsSchema = z.object({
+  wallHeightM: z.number().positive(),
+  personHeightM: z.number().positive(),
+  vehicleHeightM: z.number().positive(),
+  timeOfDay: z.enum(["day", "night", "custom"]),
+  exteriorLightLux: z.number().positive().optional(),
+  interiorLightLevel: z.enum(["dark", "dim", "normal", "bright"]),
+  nightPenaltyMode: z.enum(["none", "simple", "detailed"]),
+  doriStandard: z.enum(["simplified", "iec62676"]),
+  pixelsPerMeter: z.object({
+    detection: z.number().positive(),
+    observation: z.number().positive(),
+    recognition: z.number().positive(),
+    identification: z.number().positive(),
+  }),
+  showAssumptionsPanel: z.boolean(),
+});
+
+export const zoneResultSchema = z.object({
+  zoneId: z.string(),
+  label: z.string(),
+  requiredQuality: doriQualitySchema.exclude(["none"]),
+  actualQuality: doriQualitySchema,
+  coveringCameras: z.array(z.string()),
+  redundancyCameraCount: z.number().int().min(0),
+  status: z.enum(["pass", "fail", "partial"]),
+  failureReasons: z.array(z.string()),
+});
+
+export const cameraResultSchema = z.object({
+  cameraId: z.string(),
+  coveragePct: z.number().min(0).max(100),
+  qualityByZone: z.record(z.string(), doriQualitySchema),
+  criticalZonesCovered: z.array(z.string()),
+  criticalZonesFailed: z.array(z.string()),
+  offlineImpact: z.array(z.string()),
+});
+
+export const pathTimelineEventSchema = z.object({
+  timeS: z.number().min(0),
+  event: z.enum(["visible", "lost", "quality_change"]),
+  cameraId: z.string().optional(),
+  quality: doriQualitySchema.optional(),
+  reason: z.string().optional(),
+});
+
+export const pathCameraVisibilitySchema = z.object({
+  cameraId: z.string(),
+  visibleS: z.number().min(0),
+  maxQuality: doriQualitySchema,
+  lostBehind: z.string().optional(),
+});
+
+export const pathVisibilityResultSchema = z.object({
+  pathId: z.string(),
+  totalDurationS: z.number().min(0),
+  visibleDurationS: z.number().min(0),
+  lostDurationS: z.number().min(0),
+  visibilityByCamera: z.record(z.string(), pathCameraVisibilitySchema),
+  timeline: z.array(pathTimelineEventSchema),
+});
+
+export const securityIssueSchema = z.object({
+  severity: z.enum(["critical", "high", "medium", "low"]),
+  category: z.enum([
+    "blindspot",
+    "quality_fail",
+    "redundancy",
+    "night",
+    "privacy",
+  ]),
+  description: z.string(),
+  affectedZones: z.array(z.string()),
+  affectedCameras: z.array(z.string()),
+});
+
+export const recommendationSchema = z.object({
+  type: z.enum([
+    "move_object",
+    "rotate_camera",
+    "add_camera",
+    "add_light",
+    "change_fov",
+    "other",
+  ]),
+  description: z.string(),
+  estimatedImpact: z.string(),
+  costCategory: z.enum(["free", "low", "medium", "high"]),
+  verified: z.boolean(),
+});
+
+export const adversarialWaypointSchema = z.object({
+  position: point2Schema,
+  timeS: z.number().min(0),
+  detectionQuality: doriQualitySchema,
+  detectionProbability: z.number().min(0).max(1),
+  usingCoverOf: z.string().optional(),
+  exposedToCamera: z.string().optional(),
+});
+
+export const adversarialPathResultSchema = z.object({
+  waypoints: z.array(adversarialWaypointSchema),
+  totalExposureScore: z.number().min(0),
+  totalDurationS: z.number().min(0),
+  detectionQualityExposure: z.object({
+    detection: z.number().min(0),
+    observation: z.number().min(0),
+    recognition: z.number().min(0),
+    identification: z.number().min(0),
+  }),
+  maxDetectionProbability: z.number().min(0).max(1),
+  blindspotsExploited: z.array(z.string()),
+  camerasEvaded: z.array(z.string()),
+  criticalZonesReached: z.array(z.string()),
+  targetReached: z.boolean(),
+  failureReason: z.string().optional(),
+});
+
+export const coverageCellResultSchema = z.object({
+  x: z.number(),
+  z: z.number(),
+  quality: doriQualitySchema,
+  coveringCameras: z.array(z.string()),
+  blockedBy: z.array(z.string()),
+  ppm: z.number().min(0),
+});
+
+export const simulationResultSchema = z.object({
+  computedAt: z.number().int().nonnegative(),
+  totalCoveragePct: z.number().min(0).max(100),
+  blindspotPct: z.number().min(0).max(100),
+  averageWalkableQuality: z.number().min(0),
+  worstAreaQuality: doriQualitySchema,
+  recognitionAreaPct: z.number().min(0).max(100),
+  identificationAreaPct: z.number().min(0).max(100),
+  coverageByQuality: z.object({
+    detection: z.number().min(0).max(100),
+    observation: z.number().min(0).max(100),
+    recognition: z.number().min(0).max(100),
+    identification: z.number().min(0).max(100),
+  }),
+  coverageCells: z.array(coverageCellResultSchema),
+  criticalZoneResults: z.array(zoneResultSchema),
+  cameraResults: z.array(cameraResultSchema),
+  pathResults: z.array(pathVisibilityResultSchema),
+  issues: z.array(securityIssueSchema),
+  recommendations: z.array(recommendationSchema),
+  adversarialPath: adversarialPathResultSchema.optional(),
+});
+
+const securitySceneBaseSchema = z.object({
+  id: z.string().startsWith("scene_"),
+  name: z.string(),
+  createdAt: z.number().int().nonnegative(),
+  updatedAt: z.number().int().nonnegative(),
+  units: z.enum(["meters", "feet"]),
+  dimensions: z.object({
+    width: z.number().positive(),
+    depth: z.number().positive(),
+    height: z.number().positive(),
+  }),
+  walls: z.array(wallNodeSchema),
+  doors: z.array(doorNodeSchema).default([]),
+  windows: z.array(windowNodeSchema).default([]),
+  cameras: z.array(cameraNodeSchema),
+  securityLights: z.array(securityLightNodeSchema).default([]),
+  obstructions: z.array(obstructionNodeSchema).default([]),
+  criticalZones: z.array(criticalZoneNodeSchema).default([]),
+  privacyZones: z.array(privacyZoneNodeSchema).default([]),
+  entryPoints: z.array(entryPointNodeSchema).default([]),
+  paths: z.array(scenarioPathSchema).default([]),
+  assumptions: simulationAssumptionsSchema,
+  simulation: simulationResultSchema.optional(),
+  source: z.enum([
+    "manual",
+    "ai_generated",
+    "floor_plan_import",
+    "scan_import",
+    "demo",
+  ]),
+  version: z.string(),
+});
+
+export const sceneSnapshotSchema = z.object({
+  id: z.string().startsWith("snap_"),
+  label: z.string(),
+  createdAt: z.number().int().nonnegative(),
+  scene: securitySceneBaseSchema,
+  simulation: simulationResultSchema.optional(),
+  notes: z.string().optional(),
+});
+
+export const securitySceneSchema = securitySceneBaseSchema.extend({
+  snapshots: z.array(sceneSnapshotSchema).default([]),
+  scenarios: z.array(z.string()).default([]),
+});
+
+export type DoriQuality = z.infer<typeof doriQualitySchema>;
+export type WallNode = z.infer<typeof wallNodeSchema>;
+export type DoorNode = z.infer<typeof doorNodeSchema>;
+export type WindowNode = z.infer<typeof windowNodeSchema>;
+export type CameraNode = z.infer<typeof cameraNodeSchema>;
+export type SecurityLightNode = z.infer<typeof securityLightNodeSchema>;
+export type ObstructionNode = z.infer<typeof obstructionNodeSchema>;
+export type CriticalZoneNode = z.infer<typeof criticalZoneNodeSchema>;
+export type PrivacyZoneNode = z.infer<typeof privacyZoneNodeSchema>;
+export type EntryPointNode = z.infer<typeof entryPointNodeSchema>;
+export type ScenarioPath = z.infer<typeof scenarioPathSchema>;
+export type SimulationAssumptions = z.infer<typeof simulationAssumptionsSchema>;
+export type ZoneResult = z.infer<typeof zoneResultSchema>;
+export type CameraResult = z.infer<typeof cameraResultSchema>;
+export type PathVisibilityResult = z.infer<typeof pathVisibilityResultSchema>;
+export type SecurityIssue = z.infer<typeof securityIssueSchema>;
+export type Recommendation = z.infer<typeof recommendationSchema>;
+export type AdversarialPathResult = z.infer<typeof adversarialPathResultSchema>;
+export type CoverageCellResult = z.infer<typeof coverageCellResultSchema>;
+export type SimulationResult = z.infer<typeof simulationResultSchema>;
+export type SceneSnapshot = z.infer<typeof sceneSnapshotSchema>;
+export type SecurityScene = z.infer<typeof securitySceneSchema>;
+export type AnyEditableNode =
+  | WallNode
+  | DoorNode
+  | WindowNode
+  | CameraNode
+  | SecurityLightNode
+  | ObstructionNode
+  | CriticalZoneNode
+  | PrivacyZoneNode
+  | EntryPointNode
+  | ScenarioPath;
+
+export function parseSecurityScene(input: unknown): SecurityScene {
+  return securitySceneSchema.parse(input);
+}
+
+export function safeParseSecurityScene(input: unknown) {
+  return securitySceneSchema.safeParse(input);
+}
+
+export function cloneSecurityScene(scene: SecurityScene): SecurityScene {
+  return structuredClone(scene);
+}

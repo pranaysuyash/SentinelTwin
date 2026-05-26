@@ -1,0 +1,60 @@
+version: 0.2
+updated_at: 2026-05-26
+
+candidates:
+  - id: stack_a_qwen_gotocr_groundingdino
+    status: active
+    description: Qwen VL parser with OCR assist and optional open-vocab detection pass.
+    components:
+      vlm:
+        model_id: Qwen/Qwen2.5-VL-7B-Instruct
+        role: primary_layout_parser
+      ocr:
+        model_id: stepfun-ai/GOT-OCR2_0
+        role: symbol_and_label_extraction
+      detector:
+        model_id: IDEA-Research/grounding-dino-base
+        role: optional_symbol_grounding
+    expected_strengths:
+      - strong multimodal reasoning for mixed floorplan styles
+      - robust fallback when symbol legend is sparse
+    known_risks:
+      - may produce over-confident inferred geometry on noisy scans
+      - requires strict schema-constrained prompting and post-validation
+
+  - id: stack_b_florence_gotocr
+    status: active
+    description: Florence prompt-task parser with OCR assist.
+    components:
+      vlm:
+        model_id: microsoft/Florence-2-base
+        role: task_prompted_detection_and_region_parsing
+      ocr:
+        model_id: stepfun-ai/GOT-OCR2_0
+        role: text_and_symbol_reading
+    expected_strengths:
+      - explicit task control via Florence prompts
+      - easier parse normalization using processor post-processing
+    known_risks:
+      - weaker spatial consistency unless multi-stage prompt flow is tuned
+
+  - id: stack_c_raster2seq_plus_qwen_repair
+    status: active
+    description: Floorplan-native polygon reconstruction with semantic repair pass.
+    components:
+      vectorizer:
+        model_id: haopt/Raster2Seq
+        role: polygon_sequence_reconstruction
+      semantic_repair:
+        model_id: Qwen/Qwen2.5-VL-7B-Instruct
+        role: class_label_cleanup_and_security_mapping
+    expected_strengths:
+      - potentially strongest wall/room geometry extraction on clean plans
+      - output shape aligned with downstream vector mapping
+    known_risks:
+      - may degrade sharply on low-quality scans or non-standard notation
+
+deprioritized:
+  - reason: license_unclear_or_restrictive
+  - reason: community_finetune_without_reliable_eval_card
+  - reason: opaque_end_to_end_output_without_intermediate_artifacts

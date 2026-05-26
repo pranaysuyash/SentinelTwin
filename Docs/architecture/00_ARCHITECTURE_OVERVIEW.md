@@ -12,6 +12,19 @@ SentinelTwin is not a CCTV planner. It is a **physical security simulation platf
 element of a physical space — cameras, lights, obstructions, access points, time of day, lighting
 conditions, and human movement — is an editable variable in a continuous risk model.
 
+SentinelTwin is an **ISO/IEC 30173-aligned digital twin**: a "digital representation of a target
+entity with data connections that enable convergence between the physical and digital" — where
+the target entity is a physical security installation, and the digital representation is the
+SecurityScene schema.
+
+This architectural alignment with ISO/IEC 30173 means:
+- Enterprise procurement RFPs requiring digital twin terminology pass a checkbox that pure
+  simulation tools cannot match
+- The SecurityScene schema is the "digital representation" and the simulation engine provides
+  the "data connections" between spatial design and security outcomes
+- The lifecycle view (edit → simulate → report → re-edit) maps to the digital twin lifecycle
+  defined in the standard
+
 The core product interaction is:
 
 ```
@@ -22,6 +35,10 @@ Edit scene
   → system recommends cheapest practical fix
   → report updates
 ```
+
+**Privacy compliance is in the core loop (see D-012, D-015).** Every edit is checked against privacy zone boundaries.
+The output layer (Layer 5) includes GDPR, BIPA, and HIPAA compliance evidence generation as
+a first-class feature, not an afterthought.
 
 Everything must feel alive. Every edit triggers a cascade.
 
@@ -120,6 +137,22 @@ type SecurityScene = {
 };
 ```
 
+**PrivacyZoneNode — first-class, not annotation:**
+`PrivacyZoneNode` is a built-in security node type with its own Zod schema, rendering overlay,
+and compliance report export. It is NOT a tag or annotation on CameraNode. This design decision
+(D-012) is driven by regulatory requirements:
+
+| Regulatory need | PrivacyZoneNode role |
+|---|---|
+| GDPR Art. 35 DPIA | Defines zones excluded from surveillance — documented in the scene |
+| BIPA (Illinois) | Marks areas where biometric capture is prohibited |
+| HIPAA | Protects zones where PHI could appear (patient screens, records) |
+| Joint Commission | Documents privacy protection in hospital security plans |
+
+Coverage engine respects privacy zones: no visibility computation inside privacy zone boundaries.
+Privacy zone overlay is visually distinct in the editor (red hatching).
+Compliance report section references applicable regulations per zone.
+
 ---
 
 ## 5. Coverage Engine
@@ -187,6 +220,39 @@ The pipeline is model-agnostic. All model calls go through a provider abstractio
 
 For OpenAI hackathon context: GPT-4o with Structured Outputs is default.
 Switch is a config flag, not a code change.
+
+**SOAR integration direction (V1+):**
+
+SentinelTwin's AI command layer is the early stage of a **physical security SOAR** (Security
+Orchestration, Automation, and Response) platform. The natural evolution:
+
+- **V0.1:** AI command = natural language scene editing + counterfactual analysis.
+  Isolated planning/simulation tool.
+- **V0.3+:** AI command = temporal simulation + "what-if" scenario testing.
+  Security advisor mode.
+- **V1+:** AI command = automated security design recommendations with verified coverage deltas.
+  Integrates with PSIM platforms (Genetec, Milestone) via coverage data export.
+- **V2+:** AI command integrates with live PSIM/SOAR systems — simulated coverage gaps
+  inform real-time response automation. Coverage prediction feeds automated barrier/lighting
+  response when an adversarial path aligns with a detected intrusion.
+
+The key insight: a SOAR playbook ("if door sensor triggers, lock down area and direct camera")
+is only as good as the coverage that supports it. If Camera 3 has a blindspot in the locked-down
+zone, the playbook fails. SentinelTwin predicts these failures before they happen.
+
+**Architecture implication for V0.1:**
+- Design the agent output format (CommandAction, CounterfactualProposal, SimulationSummary)
+  with SOAR integration in mind — event formats, timing models, PSIM API contracts (ONVIF
+  for device-level video/analytics interoperability, RESTful APIs for software-level
+  system integration).
+  **Note:** SIA OS-2 does not exist as a real standard. The correct references for physical
+  security API integration are:
+  - **ONVIF** (not PSIA — PSIA is no longer active): device discovery, video streaming,
+    analytics metadata (Profile M), access control (Profile A/C)
+  - **SIA OSDP**: Access control communication protocol between controllers and readers
+  - **RESTful APIs**: For modern cloud/web software integration
+- These are data model choices, not implementation commitments. The schema should support
+  future SOAR integration without retrofitting.
 
 Details in `Docs/architecture/05_AI_AGENT_ARCHITECTURE.md`.
 
@@ -269,18 +335,25 @@ Details in `Docs/architecture/08_MONOREPO_STRUCTURE.md`.
 
 | Phase | What | Status |
 |---|---|---|
-| 0 | Architecture documentation | In progress |
-| 1 | Pascal fork + monorepo scaffold | Not started |
-| 2 | SecurityScene schema + Zustand store | Not started |
-| 3 | Coverage engine: raycasting, DORI, heatmap | Not started |
-| 4 | Camera + light + obstruction node system | Not started |
-| 5 | AI command layer + counterfactual | Not started |
-| 6 | Adversarial path simulation | Not started |
-| 7 | Temporal simulation | Not started |
-| 8 | Before/after snapshots + report generation | Not started |
+| 0 | Architecture documentation | Near complete — 47 exploration threads, 4 new decisions, ISO 30173 alignment |
+| 1 | SecurityScene schema + Zustand store | Not started |
+| 2 | Coverage engine: raycasting, DORI/ODPCVS, heatmap, three-mesh-bvh | Not started |
+| 3 | Adversarial path simulation (Dijkstra, exposure cost) | Not started |
+| 4 | Camera + light + obstruction + privacy zone node system | Not started |
+| 5 | AI command layer + counterfactual + SOAR-ready output format | Not started |
+| 6 | Temporal simulation | Not started |
+| 7 | Before/after snapshots + privacy compliance report generation | Not started |
+| 8 | Pascal fork + monorepo scaffold (editor integration) | Not started |
 | 9 | Demo scene (Small Retail Shop) | Not started |
-| 10 | Scan/photo input (V0.2+) | Future |
+| 10 | Privacy compliance evidence export (GDPR, BIPA, HIPAA) | Not started |
+| 11 | Scan/photo input pipeline (VGGT → SpatialLM → SecurityScene, V0.4) | Future |
 
+**Why Phase 1 is now SecurityScene schema (not Pascal fork):** Per D-010, the simulation core
+is built first, independent of any editor foundation. Pascal fork (Phase 8) comes after the
+simulation pipeline is verified correct.
+
+**Why adversarial path is Phase 3 (not later):** Per D-011, this is a core primitive and the
+most differentiated feature. It is not a later add-on.
 ---
 
 ## 12. What SentinelTwin Is NOT
@@ -290,3 +363,4 @@ Details in `Docs/architecture/08_MONOREPO_STRUCTURE.md`.
 - Not an AI-hallucination security advisor (all recommendations are simulation-verified)
 - Not a robbery planning tool (defensive framing only, always)
 - Not a competitor to Figma for architecture — security simulation is the vertical
+- Not a live PSIM/SOAR platform in V0.1 — but the architecture is designed to evolve toward it (see Section 7)

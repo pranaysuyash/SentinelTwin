@@ -1,7 +1,7 @@
 # Exploration Map — SentinelTwin
 
 **This is a living document. Append findings. Never replace.**
-**Last updated:** 2026-05-25 (major industry/TAM research added)
+**Last updated:** 2026-05-26 (Batch 6: Phase 0/1 build complete, Phase 2 in progress, coverage engine benchmarked, inspector wiring gap identified)
 
 ---
 
@@ -75,29 +75,56 @@ node store pattern are exactly what SentinelTwin needs.
 
 ---
 
-### Thread 10: NDAA Replacement Market — NEW, HIGH PRIORITY
+### Thread 10: NDAA Replacement Market — HIGH PRIORITY
 **Status:** Research complete. Details in ADJACENT_SPACE_TAM_INDUSTRY.md section 2.
 **Key finding:** NDAA Section 889 + FCC Covered List forces replacement of Hikvision/Dahua cameras
-(38% of global supply) from US federal market. $1.2B military replacement program by 2027.
-Australia, Japan also implementing bans. Late 2025/early 2026 saw FCC enforcement escalation.
+(38% of global supply) from US federal market. Australia, Japan also implementing bans.
+Late 2025/early 2026 saw FCC enforcement escalation.
+
+**Refined understanding (May 2026 research):**
+- The "$1.2B military replacement program" is NOT a single, centralized program. Compliance
+  is an ongoing requirement woven into existing federal IDIQ (Indefinite Delivery, Indefinite
+  Quantity) contracts for facilities management, physical security upgrades, and IT modernization.
+- **Key integrators handling NDAA replacement work:** KBR, Amentum, Leidos, General Dynamics IT,
+  and other large government services contractors. They subcontract specialized physical security
+  work to regional security integrators vetted for federal work (TAA/NDAA-compliant).
+- **Vendor-side:** Axis Communications and Hanwha Vision provide NDAA compliance documentation,
+  white papers, and consulting tools for integrators — but do NOT run "replacement programs."
+  They market their compliance as the natural replacement choice.
+- **Go-to-market approach:** Do NOT target a specific "$1.2B program." Instead:
+  1. Monitor SAM.gov for "physical security," "CCTV replacement," "intrusion detection" solicitations
+  2. Target regional security integrator networks partnered with Axis/Hanwha
+  3. Position SentinelTwin as "verify before install" for ANY federal camera replacement project
+
 **Why it matters:** Every NDAA replacement project is a coverage re-audit opportunity.
-"Verify your replacement camera layout produces equivalent coverage before you go live."
 **GTM angle:** Position specifically for NDAA replacement verification. Time-bounded, clear buyer.
 **Decision needed:** Should this be an explicit product positioning point or just a side benefit?
-Add to OPEN_QUESTIONS.md.
 
 ---
 
-### Thread 11: Insurance Risk as Distribution Channel — NEW
+### Thread 11: Insurance Risk as Distribution Channel
 **Status:** Research complete. Details in ADJACENT_SPACE_TAM_INDUSTRY.md section 3.
-**Key finding:** Insurance models are beginning to incentivize camera compliance upgrades.
-Insurers are starting to ask for camera coverage documentation as part of commercial property coverage.
-**Opportunity:** Insurance company as distribution partner.
-"All our commercial property customers with coverage >$X must submit a SentinelTwin audit annually."
-This is a compliance mandate channel — not discretionary purchase.
+**Key finding refined (May 2026 research):**
+- There is NO industry-wide mandate requiring camera coverage documentation for commercial
+  property insurance. No major carrier (Zurich, Travelers, Chubb, AIG, Liberty Mutual) has
+  universally implemented such a requirement.
+- **What exists instead:** Premium incentives and protective device discounts for businesses
+  with professional-grade surveillance systems (24/7 monitoring, high resolution, night vision,
+  redundant storage). These are carrots, not sticks.
+- **FM Global** (mutual insurance) uses their own engineering-based Property Loss Prevention
+  Data Sheets that may recommend security measures — but these are site-specific, not universal.
+- **Documentation trend:** Underwriters are increasingly asking for documentation during risk
+  assessment (maintenance logs, testing records, system scope), especially for high-hazard
+  properties. This is a rising trend, not yet a mandate.
+- **Opportunity is real but softer than initially assumed:** The insurance use case is more
+  "premium discount evidence" than "compliance mandate." It's still a valid distribution channel
+  but the pitch should be "prove your security to lower premiums" not "mandatory by your carrier."
+
+**Revised opportunity:** Insurance companies as distributors offering premium discounts for
+  SentinelTwin-audited facilities. Not a compliance mandate but a value-add.
 **Decision needed:** How early to pursue insurance partnership vs focus on direct GTM?
-**Open:** Which insurance companies are most progressive on camera surveillance requirements?
-Research needed.
+**Open:** Monitor Travelers, FM Global, and Chubb for evolving requirements — this is a leading
+  indicator, even if not yet standard practice.
 
 ---
 
@@ -529,81 +556,1473 @@ shows confidence scores. SentinelTwin should be in this tradition.
 
 ---
 
-## Completed Research
+### Thread 27: NVIDIA Metropolis VSS 3 Blueprint — Physical AI for Video Surveillance
+**Status:** New. External intelligence signal. NOT a direct competitor, but important context.
+**Source research:** NVIDIA Metropolis VSS (Video Search and Summarization) Blueprint, March 2026.
+
+**What NVIDIA announced (March 2026):**
+- **Metropolis VSS 3** is an open reference architecture for building AI agents that reason over video
+  from edge to cloud. It decomposes video streams to understand safety issues, detect lighting changes,
+  predict hazards, and identify specific events — at context level, not just motion triggers.
+- Uses AI-RAN (AI Radio Access Networking) to offload heavy computation near the edge for real-time response.
+- Partners: Caterpillar, KION, Hitachi, HCLTech, Siemens Energy, Tulip, Telit Cinterion.
+- Part of NVIDIA's broader "Physical AI" push (blueprints for AI agents that see, hear, act in the physical world).
+- Ecosystem includes NVIDIA OSMO for orchestration, Metropolis for video analytics, Isaac for robotics.
+
+**Why it matters for SentinelTwin:**
+- NVIDIA is building the AI analytics layer for live video feeds — **post-install analysis**.
+- SentinelTwin is **pre-install planning + simulation**. They are complementary, not competitive.
+- BUT: NVIDIA's ecosystem could eventually extend into planning (e.g., acquiring a simulation company
+  or building an NVIDIA-branded coverage planning tool). This is a long-term competitive risk.
+- For the hackathon and V0.1 narrative: SentinelTwin can say "NVIDIA analyzes what cameras see.
+  SentinelTwin simulates what they will see before you install them."
+- NVIDIA's blueprint approach (open reference architecture) validates that the market is moving toward
+  AI-powered physical security tools. This is a tailwind, not a headwind.
+
+**Key differentiation:**
+| NVIDIA Metropolis VSS | SentinelTwin |
+|---|---|
+| Processes existing video feeds | Simulates coverage before installation |
+| Detects events in real footage | Predicts blindspots before incidents |
+| Requires cameras already installed | Works with no cameras (planning mode) |
+| Cloud/edge inference pipeline | Browser-based deterministic simulation |
+| Open reference architecture | Product, not a framework |
+
+**Open question:** Does NVIDIA's "Physical AI Data Factory Blueprint" overlap with SentinelTwin's
+scan-to-scene pipeline? Possibly — NVIDIA is building tools to process real-world data into digital
+representations. Monitor for any NVIDIA digital twin + security crossover.
+
+---
+
+### Thread 28: VSaaS Ecosystem Gap — No Major Platform Has Built-In Coverage Simulation — CRITICAL FINDING
+**Status:** New. High strategic importance. Validates SentinelTwin's core product gap.
+**Source research:** Verkada, Eagle Eye Networks, Arcules, Cloudastructure — researched May 2026.
+
+**Key finding:** None of the major VSaaS (Video Surveillance as a Service) platforms have built-in
+camera coverage simulation, DORI quality analysis, or adversarial path simulation.
+
+**What each platform does for planning:**
+- **Verkada:** Emphasizes a closed ecosystem. Planning tools focus on bandwidth/storage estimation.
+  No geometric FOV simulation. Relies on partner-led design support.
+- **Eagle Eye Networks:** Planning tools focus on bandwidth calculators and compatibility matrices.
+  Partners with **System Surveyor** (third-party site survey tool) for camera placement planning.
+- **Arcules:** Open hybrid platform. No built-in simulation. Uses third-party tools.
+- **Cloudastructure:** Cloud-native. No built-in coverage simulation.
+
+**System Surveyor (the closest existing tool):**
+- Cloud-based digital site survey platform for physical security and low-voltage systems
+- Features: drag-and-drop device placement on floor plans, BOM generation, FOV visualization,
+  manufacturer catalogs (100,000+ items), real-time collaboration
+- Pricing: Free tier available, paid plans start ~$70/month
+- Integrates with Eagle Eye Networks and other VSaaS platforms
+- **Key difference from SentinelTwin:** System Surveyor is a 2D CAD-style planning tool, not a
+  3D simulation engine. It does not compute DORI quality, occlusion, adversarial paths,
+  temporal profiles, or counterfactual testing. It is a digital whiteboard, not a simulator.
+
+**What this means for SentinelTwin:**
+- **No competitor has built this.** Verkada ($3.5B valuation), Eagle Eye ($500M+), Arcules
+  (Panasonic subsidiary) all lack coverage simulation. This is a verified product gap.
+- System Surveyor is the closest tool and it's 2D CAD-based. SentinelTwin's 3D simulation,
+  DORI quality model, adversarial path, and counterfactual testing are genuinely novel.
+- **Potential partnership angle:** System Surveyor could use SentinelTwin's simulation engine
+  as a plugin/add-on. They have the floor-plan-to-device-placement workflow. SentinelTwin
+  adds the security intelligence layer.
+- **GTM implication:** These VSaaS platforms could be distribution channels. An installer
+  designing a Verkada deployment uses SentinelTwin before buying hardware.
+
+---
+
+### Thread 29: Converged Security (Cyber-Physical) — Market Direction and Buyer Evolution
+**Status:** New. Important for buyer persona and long-term product direction.
+**Source research:** PSIM market, cyber-physical convergence trends, May 2026.
+
+**Market direction:**
+- Physical Security Information Management (PSIM) market: $1.9–2.2B in 2025–2026, growing 12–18% CAGR.
+- Broader cyber-physical systems (CPS) security market: estimates range $10B–$140B+ depending on scope
+  (narrow PSIM vs broad OT/IoT/CPS security).
+- Trend: Organizations creating unified "Chief Security Officer" roles overseeing both cyber and physical.
+
+**Key convergence trends:**
+1. **Organizational restructuring:** Breaking down silos between physical security (Facilities/Security Ops)
+   and cybersecurity (IT/InfoSec). Unified CSO roles becoming more common.
+2. **Shared tools and dashboards:** PSIM platforms aggregating data from cameras, badge readers, fire alarms,
+   AND network intrusion detection into a single pane of glass.
+3. **AI cross-domain correlation:** Linking badge-in data with network login patterns to detect insider threats.
+4. **Unified identity management:** One credential for building entry AND network/application access.
+5. **OT/ICS security convergence:** Plant engineers and IT security teams collaborating as industrial
+   control systems connect to enterprise networks.
+
+**What this means for SentinelTwin:**
+- The converged security buyer (CSO, director of security operations) is a higher-value buyer than
+  a CCTV installer. They buy software platforms, not just point tools.
+- SentinelTwin's simulation engine could produce outputs that feed into PSIM dashboards
+  (coverage heatmap overlay onto Genetec/Milestone).
+- The converged security narrative strengthens SentinelTwin's story: physical coverage gaps
+  are also cyber risk (unmonitored server room access, tailgating into sensitive areas).
+- **Mid-term product direction:** Generate coverage data that can be piped into PSIM platforms
+  as a security intelligence layer.
+
+**Relevant platforms to watch:** Genetc Security Center, Milestone XProtect, Verint, Everbridge, BriefCam.
+These are VMS/PSIM platforms that could consume SentinelTwin data.
+
+---
+
+### Thread 30: ASIS Certified Professionals as Buyer Persona — CPP, PSP Certification
+**Status:** New. Important for buyer persona depth, marketing positioning, and product credibility.
+
+**Key data:**
+- **CPP (Certified Protection Professional):** ASIS's "gold standard" certification for security
+  management. Senior-level generalist. Approx 6,000+ active holders globally.
+- **PSP (Physical Security Professional):** Focused specifically on physical security — conducting
+  security surveys, designing integrated security systems, implementing physical protection measures.
+  This is the most directly relevant certification for SentinelTwin's buyer.
+- **APP (Associate Protection Professional):** Early-career, foundational.
+- ASIS International: 34,000+ members globally.
+
+**What PSP-certified professionals need:**
+- Tools for conducting physical security surveys (SentinelTwin is a survey tool)
+- Coverage documentation for standards compliance
+- System design validation before installation
+- Client-facing reports with quantified security outcomes
+
+**What SANS does NOT do:**
+- SANS Institute is primarily cybersecurity. They do not offer dedicated physical security training.
+  For physical security-specific training, CDSE (Center for Development of Security Excellence)
+  and FLETC (Federal Law Enforcement Training Centers) are the standards.
+
+**GTM implications:**
+- ASIS conference presence (GSX — Global Security Exchange) is the perfect launch event.
+- "SentinelTwin — built for PSP-certified professionals" is a targeted positioning.
+- ASIS certification holders in India/Southeast Asia: growing but smaller base. The certification
+  is more US/International. India-specific certifications may matter more for local market.
+- SANS not having physical security training means there's less crossover between cyber and physical
+  than might be assumed. The buyer persona is still the physical security specialist.
+
+---
+
+### Thread 31: ISO/IEC 30173 — Digital Twin Standard — Enterprise Procurement Relevance
+**Status:** New. Important for enterprise sales readiness, not technical architecture.
+
+**What ISO/IEC 30173:2023 is:**
+- "Digital twin — Concepts and terminology." Foundational standard defining what a digital twin IS.
+- Defines digital twin as: "digital representation of a target entity with data connections
+  that enable convergence between the physical and digital."
+- Provides: functional view of a DTw, system context, lifecycle process, types of DTw.
+- Domain-agnostic (manufacturing, construction, healthcare, smart cities — all covered).
+
+**What it does NOT do:**
+- Does NOT provide security controls or compliance requirements.
+- Does NOT mandate specific technical implementations.
+- Does NOT have product certification programs.
+
+**Why it matters for SentinelTwin:**
+- **Enterprise procurement language:** Large organizations increasingly require that digital twin
+  architectural documentation aligns with ISO/IEC 30173 conceptual model. If SentinelTwin's
+  documentation references this standard, it passes a procurement checkbox that competitors
+  who don't will fail.
+- **Interoperability language:** ISO/IEC 30173 terminology enables SentinelTwin to talk about
+  its data model in enterprise-standard terms: "SecurityScene is the digital representation
+  with data connections enabling convergence between the physical security installation and
+  the simulation model."
+- **No certification needed:** SentinelTwin does not need to be "certified" against this standard.
+  But architecture docs should reference it and use its vocabulary.
+- **Specific action:** Add ISO/IEC 30173 reference to `Docs/architecture/00_ARCHITECTURE_OVERVIEW.md`
+  and any enterprise-facing documentation. The phrase "ISO/IEC 30173-aligned digital twin" is
+  valuable in RFPs.
+
+---
+
+### Thread 32: IPVM DORI Calculator — Methodology Gap — Positioning Insight
+**Status:** New. Important for competitive positioning and honest simulation narrative.
+
+**Key finding:** IPVM's DORI calculator uses **theoretical mathematical projection** from
+manufacturer specs, NOT empirically tested real-world measurements.
+
+**How IPVM works:**
+- Inputs: manufacturer-provided specs (sensor resolution, focal length, horizontal FOV)
+- Calculates: theoretical PPM at various distances using geometric projection
+- Standard thresholds: Detection 25 PPM, Observation 63 PPM, Recognition 125 PPM, Identification 250 PPM
+  (based on IEC/EN 62676-4)
+- Database: 12,000+ camera models
+
+**What IPVM does NOT do:**
+- Does not test actual cameras in a lab and publish measured PPM
+- Does not account for: lens distortion, sensor noise, compression artifacts, lighting conditions,
+  environmental factors (rain, fog, reflections), occlusion
+- Does not show occlusion from walls, furniture, people
+- Does not simulate adversarial paths, temporal profiles, or counterfactuals
+
+**What this means for SentinelTwin's positioning:**
+- IPVM's calculator is the industry standard — and it's purely theoretical geometry.
+- SentinelTwin can match this theoretical baseline AND add:
+  1. **Occlusion:** Reality-check: a shelf blocks the view
+  2. **Night penalty:** Realistic IR falloff
+  3. **Glass/grill/mesh transmission:** Material-aware occlusion
+  4. **Adversarial paths:** What IPVM can't even ask
+  5. **Explicit assumptions:** Honest about what's estimated vs measured
+- **Positioning line:** "IPVM shows theoretical DORI from manufacturer specs.
+  SentinelTwin shows what your cameras will actually see in your actual space."
+- The honesty about assumptions (IPVM does not mention them) is a trust differentiator.
+
+---
+
+### Thread 33: Guard Patrol Software — No Simulation Gap — Confirmed
+**Status:** New. Validates Thread 16 with market data.
+
+**Key finding:** The guard patrol management software market (~$2.2–2.7B in 2025, 10–14% CAGR)
+has ZERO simulation capability. All products (TrackTik, GuardTek/Trackforce, GuardsPro, Celayix,
+OfficerReports, Silvertrac, Connecteam) are operational tracking and reporting platforms.
+
+**What guard patrol software does today:**
+- Real-time GPS tracking and geofencing
+- Digital checkpoint scans (NFC/QR codes) verifying guard presence
+- Incident reporting with photo/video/audio attachments
+- Scheduling, time/attendance, payroll integration
+- Lone worker alerts and mass notifications
+- Predictive analytics based on historical incident data (where to focus, not what-if simulation)
+
+**What none of them do:**
+- Simulate a patrol route before deploying it
+- Show combined camera + patrol coverage over time
+- Calculate vulnerability windows between patrol passes
+- Optimize route for minimal coverage gap (the closest is predictive analytics for focus areas)
+
+**What this means for SentinelTwin:**
+- **SentinelTwin's patrol optimization feature (Thread 16) would be genuinely novel — nobody in the
+  $2.5B guard patrol market offers it.**
+- This is not a side feature. It could justify a separate product line ("SentinelTwin Patrol").
+- The guard patrol software companies are potential acquirers of SentinelTwin's simulation layer,
+  or integration partners. TrackTik + SentinelTwin = patrol planning + execution.
+- The market is growing fast (10–14% CAGR) and the simulation gap is a clear white space.
+
+---
+
+### Thread 34: IFC.js / That Open Company — BIM Import Viability Confirmed
+**Status:** New. Reduces risk for Thread 15 (BIM / Pre-Construction Security).
+
+**Key finding:** web-ifc (MIT licensed, maintained by That Open Company) is stable and capable
+for browser-based IFC parsing. This makes BIM import for SentinelTwin lower-risk than previously assumed.
+
+**What web-ifc can do:**
+- Parse IFC files at "native speeds" via WebAssembly
+- Extract building elements: IFCWALL, IFCDOOR, IFCWINDOW, IFCSPACE (rooms)
+- Works with three.js for 3D rendering
+- MIT licensed — fully permissive for commercial use
+
+**Limitations:**
+- IFC schema is complex — developers need understanding of buildingSMART IFC schema
+- Large, high-detail models can strain browser memory
+- Complex geometry (NURBS, advanced CSG) can be computationally expensive to convert to WebGL
+
+**What this means for SentinelTwin:**
+| Risk level before research | Risk level after research |
+|---|---|
+| High — unknown if browser IFC works | Medium-low — viable with known limitations |
+| Dependency unknown license | MIT — fully commercializable |
+| Unclear if walls/doors extractable | Yes — schema querying works |
+
+**Action:** Add web-ifc experiment to V0.4 plan. The recommended path:
+```
+IFC file → web-ifc (WASM parser in browser) → extract geometry types
+→ SpatialLM or custom logic → SecurityScene blocks → coverage simulation
+```
+IFC.js provides the parsing. The scene compiler (extracting security-relevant structures)
+is still SentinelTwin's own work.
+
+---
+
+### Thread 35: AS/NZS 62676 — Australian/New Zealand Standard — AU Market Entry Requirement
+**Status:** New. Important for AU market strategy given Hikvision bans and regulatory alignment.
+
+**Key finding:** AS/NZS 62676 is a direct adoption of IEC 62676 with AU-specific modifications.
+Compliance is generally voluntary unless contractually required (government, insurance, critical
+infrastructure), but is considered the "gold standard" for professional practice.
+
+**Details:**
+- AS/NZS 62676.4 (Part 4: Application Guidelines) specifies DORI requirements by site type.
+- The standard requires documented Operational Requirement (OR), design validation, and system testing.
+- AU/NZ markets: both have Hikvision bans (AU: 2025 legislation, NZ: following similar path).
+- Government tenders increasingly require AS/NZS 62676 compliance documentation.
+- Insurance companies in AU are starting to ask for standards-compliant coverage documentation.
+
+**What this means for SentinelTwin:**
+- Supporting IEC 62676-4:2025 (OODPCVS) automatically supports AS/NZS 62676 (since it's a direct adoption).
+  No additional implementation work needed.
+- For Australian GTM: SentinelTwin reports referencing "AS/NZS 62676 compliance" is a checkbox
+  that opens government and insurance procurement.
+- The Hikvision ban in AU creates the same NDAA-replacement coverage re-audit opportunity as the US.
+- **Recommendation:** Add AS/NZS 62676 to the standard selector dropdown alongside DORI and OODPCVS.
+  Same thresholds, different label for AU/NZ market.
+
+---
+
+### Thread 36: Physical Penetration Testing Firms — Distribution Channel — Specific Names
+**Status:** New. Fills in the specific firm names for Thread 14 distribution channel.
+
+**Key finding:** Physical penetration testing is a real, specialized discipline with identifiable
+firms. This validates Thread 14 as actionable.
+
+**Firms that do physical security assessments / red teaming:**
+| Firm | Specialization | Relevance |
+|---|---|---|
+| **Schellman** | Compliance-heavy physical pentesting | Enterprise compliance angle |
+| **TrollEye Security** | Global physical pentesting + social engineering | Global scope |
+| **Kroll** | Red teaming, high-stakes environments | Large firm, could be partnership target |
+| **Guidepost Solutions** | ASIS-aligned physical security consulting | Certification credibility |
+| **Razorthorn Security** | Physical red team services | Specialist |
+| **BHIS** (Black Hills) | Red teaming with physical components | Cybersecurity community credibility |
+
+**What these firms need (that SentinelTwin provides):**
+- Pre-engagement simulation: "Given this floor plan and camera layout, find optimal evasion paths"
+- Post-engagement verification: "Did our pentesters use the route SentinelTwin predicted?"
+- Client deliverable: documented evidence of why coverage failed
+- Reporting: standards-referenced, quantified coverage analysis
+
+**GTM approach for this channel:**
+- Build relationships at ASIS GSX conference and physical security events
+- Offer free SentinelTwin Pro to pentest firms in exchange for feedback and case studies
+- Co-marketing: "TrollEye Security used SentinelTwin to plan their physical assessment of [site]"
+- **Caution:** Ensure defensive framing is bulletproof in all pentest-related marketing.
+  "Authorized security assessment planning tool." Not "evasion route planner."
+
+---
+
+### Thread 37: Privacy Regulatory Landscape — GDPR, BIPA, CCPA as Product Requirements
+**Status:** New. Critical for product design and market entry strategy.
+**Source research:** EDPB Guidelines 3/2019, Husch Blackwell 2025 Biometric Privacy Tracker, CNIL enforcement 2025-2026.
+
+**GDPR framework for video surveillance:**
+- **Legal basis:** Most private CCTV relies on Article 6(1)(f) Legitimate Interests — requires purpose, necessity, and balancing test.
+- **DPIA required:** Systematic monitoring of publicly accessible areas or employee monitoring generally requires a Data Protection Impact Assessment under Article 35.
+- **Storage limitation:** Footage typically retained 48-72 hours unless security incident warrants longer.
+- **Transparency:** Clear signage required before individuals enter surveillance zone.
+- **CNIL enforcement (2025-2026):** €200,000+ in simplified sanctions for excessive monitoring, disproportionate filming, hidden cameras in sensitive areas (union offices, cafeterias, hospitals).
+
+**BIPA and US biometric privacy law landscape:**
+- **BIPA (Illinois):** Requires prior written informed consent for biometric data collection (facial recognition, iris scans, fingerprints). Private right of action with statutory damages ($1,000 negligent, $5,000 intentional per violation). Class-action risk is the enforcement mechanism.
+- **20+ states** have enacted or proposed biometric privacy laws as of 2025-2026.
+- **Key distinction for SentinelTwin:** "Person detection" (anonymized counting) is less regulated than "facial recognition" (biometric matching). The line matters for product design.
+- **BIPA 2024 amendment:** Limited accumulation of damages for repeated scans of same person, but litigation intensity remains high.
+
+**What this means for SentinelTwin:**
+1. **Privacy zones are a must-have, not a nice-to-have.** CNIL enforcement proves regulators check camera placement.
+2. **Privacy compliance report = GDPR evidence export.** DPOs need documented proof of compliance — SentinelTwin provides it.
+3. **Biometric-aware mode:** If user activates facial recognition analytics, SentinelTwin should flag this triggers BIPA-level requirements.
+4. **DPO distribution channel:** Data Protection Officers advise clients on camera placement — they need SentinelTwin.
+5. **Product architecture impact:** Privacy zone overlay must be a first-class concept in SecurityScene, not a post-hoc annotation.
+
+**Open questions:**
+- Should SentinelTwin generate a DPIA (Data Protection Impact Assessment) template section automatically?
+- What is the minimum viable privacy compliance feature set for EU launch vs US launch vs India launch?
+
+---
+
+### Thread 38: Security Consultant Workflow — Current Toolchain and Pain Points
+**Status:** New. Validates GTM messaging and product positioning.
+**Source research:** System Surveyor (workflow/pain points), AXIS Site Designer, ASIS security design best practices.
+
+**The design workflow today:**
+1. **Risk & Needs Assessment:** Define purpose (deterrence, evidence, LPR, etc.)
+2. **Site Survey:** Physical inspection — mounting locations, lighting, cabling, network
+3. **System Design & Simulation:** Place cameras on floor plans, visualize FOV, verify DORI
+4. **Proposal & Documentation:** Generate BOM, coverage maps, project proposals
+5. **Implementation & Close-out:** Hand to installation team, verify "as-built" matches plan
+
+**Tools currently used:**
+| Tool | Type | Key Limitation |
+|---|---|---|
+| **System Surveyor** | 2D cloud platform | No 3D, no DORI quality, no occlusion |
+| **AXIS Site Designer** | Vendor-specific | Axis cameras only, no occlusion |
+| **JVSG** | Desktop 2D CAD | Static, no real-time feedback |
+| **AutoCAD / Visio** | General drafting | No security intelligence |
+| **Pen and paper** | Manual | Error-prone, no simulation |
+
+**Five documented pain points:**
+1. **Game of telephone:** Sales → designer → technician — each handoff loses information
+2. **Data silos:** Different tools for communication, BOMs, drawings, specs
+3. **Site survey inefficiency:** Manual note-taking, phone photos, Excel — prone to error
+4. **Proposal competitiveness:** Slow design turnaround loses bids
+5. **Scope creep:** Changes during installation hard to document without a live digital twin
+
+**What this means for SentinelTwin:**
+- Every pain point is directly addressable by SentinelTwin's approach
+- The workflow validation confirms the GTM message: "Stop drawing coverage on paper. Simulate it."
+- Pain point #5 (scope creep documentation) aligns with "live digital twin" value prop
+- The existence of System Surveyor at $70/mo proves professionals WILL pay for tooling — they just need it to be better
+
+---
+
+### Thread 39: Physical Security ROI Frameworks — How Budgets Are Justified
+**Status:** New. Important for sales narrative and buyer persona understanding.
+**Source research:** ASIS International, Security Executive Council, FEMA NSGP guidance.
+
+**Why ROI is hard for physical security:**
+Security is a cost center, not a revenue generator. Standard ROI fails. Instead, organizations use:
+
+**ROSI (Return on Security Investment) — Risk Mitigation Model:**
+```
+ROSI = (Annual Risk Exposure × Mitigation % – Cost of Solution) ÷ Cost of Solution
+```
+
+**Three frameworks for justifying security spend:**
+1. **Risk Mitigation/Loss Avoidance:** Cost of incident avoided vs cost of solution. Most common.
+2. **Detection-to-Response Latency Economics:** Quantifies the financial value of compressed response time.
+3. **Business Continuity & Resilience:** Compliance, insurance premium reduction, downtime avoided.
+
+**Key metrics directors use to justify budget:**
+- Risk-based: Assets at risk, potential incident impact, vulnerability scores
+- Operational efficiency: Incidents per employee, response time, false alarm reduction
+- Compliance: Legal requirements, insurance eligibility, contractual obligations
+- Benchmarking: Spend vs industry peers, incident rates vs peers
+
+**The budget approval process:**
+1. Start with a risk assessment (never pitch a tool — pitch a solution to an identified risk)
+2. Speak business language ("$X in prevented losses" not "better cameras")
+3. Build tiered options (Minimal/Optimized/Maximum) showing trade-offs
+4. Align with organizational goals (expansion, brand protection, public safety)
+
+**Incident cost context:**
+- A significant physical security incident (theft, vandalism, trespass) can cost $100K+ when factoring downtime, investigations, replacement costs, legal/HR
+- The physical-cyber intersection: a server room breach enabling a data breach compounds costs massively
+
+**What this means for SentinelTwin:**
+- SentinelTwin is a budget justification tool: it quantifies coverage gaps in dollar terms
+- The ROSI framework directly supports "SentinelTwin costs X, saves Y in prevented theft" for retail
+- For enterprise buyers: "SentinelTwin provides compliance evidence required by policies X and Y"
+- **Product implication:** The report layer should include an optional "Financial Impact" section that translates coverage gaps into estimated dollar exposure
+
+---
+
+### Thread 40: School / Campus Security Market — Alyssa's Law, Grants, Simulation Gap
+**Status:** New. High-growth vertical market with clear compliance driver.
+**Source research:** Alyssa's Law state-by-state status, SchoolSafety.gov, CISA K-12 SSAT, Raptor Technologies, CENTEGIX.
+
+**Market size and growth:**
+- K-12 school security market: ~$5B+ in 2025-2026, growing 10–14% CAGR
+- Driven by: legislative mandates, active shooter prevention, federal funding
+
+**Alyssa's Law:**
+- Requires silent panic alarm systems in schools
+- Named for Alyssa Alhadeff, victim of 2018 Parkland shooting
+- Enacted in multiple US states; more considering adoption
+- Modern compliance: wearable panic buttons, mobile notification apps, real-time facility mapping for first responders
+- **Trend:** Beyond just a button — states increasingly require automated facility mapping and integrated communication
+
+**Federal funding sources:**
+- SchoolSafety.gov Grants Finder Tool — primary resource for districts
+- DOJ COPS Office grants, DHS preparedness grants, Title IV-A funds
+- Competitive, time-bound, requires compliance reporting
+- Districts increasingly hiring grant writers and using grant-tracking software
+
+**Existing assessment tools (not simulation):**
+- **CISA K-12 SSAT** — Free, web-based self-assessment tool for physical security vulnerabilities
+- **Raptor Technologies** — Visitor management, drill reporting, emergency communication
+- **CENTEGIX** — Wearable panic buttons, incident response platform
+
+**What they all lack:**
+- Camera coverage simulation
+- Blindspot analysis
+- Adversarial path analysis for lockdown scenarios
+- Pre-construction security design for new school buildings
+
+**What this means for SentinelTwin:**
+- **No competitive simulation tool exists in this market either.**
+- School district security directors are budget-constrained but grant-funded — a focused GTM could work via district-level procurement cycles
+- "SentinelTwin for Schools" could include pre-built compliance report formats for Alyssa's Law documentation
+- School safety committees (parents, administrators, law enforcement) need visual tools they can understand — SentinelTwin's 3D visualization is a strength
+- School construction boom (new buildings, renovations) = pre-construction simulation opportunity
+
+---
+
+### Thread 41: Healthcare Security Market — HIPAA, Joint Commission, Patient Safety
+**Status:** New. Compliance-driven vertical with specific requirements.
+**Source research:** HIPAA Security Rule proposed updates 2025-2026, Joint Commission standards, infant protection systems.
+
+**Key regulatory framework:**
+| Area | Primary Driver | Core Requirement |
+|---|---|---|
+| Data Protection | HIPAA Security Rule | Encryption, MFA, annual risk assessment |
+| Physical Security | Joint Commission | Site-specific management plan, access control, staff training |
+| Infant/Patient Safety | Safety protocols | RFID/location-awareness, verified ID, restricted access |
+
+**HIPAA and video surveillance:**
+- Cameras must NOT capture PHI (patient screens, medical records) unnecessarily
+- Access to footage strictly limited to authorized personnel
+- Footage must be encrypted at rest and in transit
+- Transparency: patients must generally be informed surveillance is in use
+- **Key constraint:** Hospital camera placement must cover security zones while avoiding PHI capture — SentinelTwin's privacy zone feature is directly applicable
+
+**Joint Commission (TJC) security standards (2025-2026):**
+- Shift to outcome-based, flexible standards while maintaining safety rigor
+- Requires comprehensive, site-specific Security Management Plan
+- Increased focus on workplace violence prevention
+- Regular drills and validated emergency response plans including active shooter protocols
+
+**Infant abduction prevention:**
+- RFID-tagged infant protection systems: trigger alarms, lock doors, freeze elevators
+- Modern trend: integrated with hospital-wide security platforms
+- Real-time tracking with smarter, more comfortable wearable tags
+- Patient elopement / wandering prevention for memory-care patients
+
+**What this means for SentinelTwin:**
+- Healthcare has a clear compliance documentation need: Joint Commission requires documented Security Management Plans
+- SentinelTwin's coverage reports serve as evidence for TJC audits
+- Privacy zones are especially critical for healthcare (avoiding PHI capture is a regulatory requirement, not just best practice)
+- Infant security zone modeling: verify camera coverage of maternity wards, nursery, pediatric floors
+- Workplace violence prevention: identify blind spots in emergency rooms, waiting areas, psychiatric units
+- **GTM angle:** Hospital security directors and healthcare facility managers
+
+---
+
+### Thread 42: Open Source VMS Ecosystem — No Competition in Planning/Simulation
+**Status:** New. Confirms no open source alternatives exist for what SentinelTwin does.
+**Source research:** Frigate, Shinobi, ZoneMinder, Kerberos.io, OpenCCTV — comparison 2025-2026.
+
+**Major open source VMS projects:**
+| Project | Focus | Key Limitation |
+|---|---|---|
+| **Frigate NVR** | AI-first object detection (Google Coral TPU) | NVR only, no coverage simulation |
+| **Shinobi** | Modular, multi-user, broad protocol support | NVR only, no planning tools |
+| **ZoneMinder** | Legacy full-featured VMS | Steep learning curve, dated interface |
+| **Kerberos.io** | Container-first, cloud-native | NVR only, no simulation |
+| **OpenCCTV** | Platform for custom solutions | Developer tool, not end-user product |
+
+**Market trend:** Shift from motion recording to event-driven AI surveillance. Frigate dominates the self-hosted community for AI-first approach.
+
+**What does NOT exist in open source:**
+- Security assessment/planning tools (no open source equivalent of JVSG or System Surveyor)
+- Camera coverage simulation
+- DORI quality analysis
+- Adversarial path simulation
+- Physical security digital twins
+
+**What this means for SentinelTwin:**
+- There is no open source alternative to SentinelTwin — not even a partial one
+- Frigate users who want to plan their camera layout before buying hardware are unserved
+- Potential integration: SentinelTwin export → Frigate config (camera positions and zones)
+- Open source VMS community is a potential early adopter/user segment for SentinelTwin's free tier
+
+---
+
+### Thread 43: AI Video Analytics Market — Vendors, Capabilities, and Market Position
+**Status:** New. Defines SentinelTwin's complementary positioning vs analytics vendors.
+**Source research:** BriefCam, Oosto, Irisity — market analysis 2025-2026.
+
+**Market overview:**
+- AI video analytics market growing 20–30% CAGR
+- Three primary pricing models: SaaS (per-camera/month), perpetual licensing, usage/token-based
+- Major trend: embedded analytics directly in VMS or on-camera edge AI
+
+**Key vendors:**
+| Vendor | Strength | Use Case |
+|---|---|---|
+| **BriefCam** | Video Synopsis, forensic search, business insights | Post-event review, retail analytics |
+| **Oosto** (fka AnyVision) | Facial recognition, real-time identification | Access control, watchlist alerting |
+| **Irisity** | Real-time behavioral analytics, proactive monitoring | Incident detection, loitering alerts |
+
+**Analytics capabilities today:**
+- Object detection & classification (people, vehicles, firearms, bags)
+- Behavioral analysis (loitering, line crossing, crowd gathering, fighting)
+- Identification (LPR/ANPR, facial recognition)
+- Spatial insights (heat mapping, flow analysis)
+- People/vehicle counting
+
+**Accuracy reality check:**
+- Lab benchmarks claim 95–99% but real-world deployment accuracy is typically lower
+- Performance depends on: lighting conditions, camera angle, resolution, occlusion
+- Edge AI often improves reliability vs cloud-based processing
+- Expert recommendation: always validate through PoC in actual site conditions
+
+**What this means for SentinelTwin:**
+- AI analytics vendors are complementary, not competitive — they analyze footage; SentinelTwin simulates coverage BEFORE footage exists
+- **Key positioning:** "Before you spend $50K on AI analytics, verify your cameras can actually see the zones the analytics need to monitor. SentinelTwin is the pre-sale verification layer."
+- A camera at Detection quality (25 PPM) cannot feed facial recognition analytics — SentinelTwin catches this mismatch
+- Partnership opportunity: analytics vendors could recommend SentinelTwin as a pre-requisite assessment tool
+
+---
+
+### Thread 44: Smart Building / BMS Integration Standards — BACnet, ONVIF, MQTT
+**Status:** New. Medium-term enterprise integration requirement.
+**Source research:** Johnson Controls OpenBlue, Siemens Desigo CC, Honeywell Forge, BACnet/SC, ONVIF.
+
+**The three key protocols:**
+| Domain | Standard | Function |
+|---|---|---|
+| Building Control | BACnet (BACnet/SC) | HVAC, lighting, environmental control |
+| Physical Security | ONVIF | Video surveillance, access control interoperability |
+| IoT Connectivity | MQTT | Lightweight, real-time data streaming for smart devices |
+
+**Integration ecosystem:**
+- **Johnson Controls (Metasys/OpenBlue):** Enterprise management platform — single pane of glass for HVAC, fire, lighting, security
+- **Siemens (Desigo CC):** Unified building management with security integration
+- **Honeywell (EBI/Forge):** Enterprise building integration with security subsystems
+- **Middleware:** API-based integration layers translate between BMS and SMS when protocols don't natively align
+
+**Digital twins in smart buildings (2025-2026):**
+- Beyond static CAD drawings → dynamic digital twins with real-time occupancy, sensor data, video feeds
+- Security operators visualize alarms in 3D context: which floor, which camera, which exit
+- Predictive maintenance: track health of security hardware (battery life, camera sensor degradation)
+- Evacuation simulation based on real-time building conditions
+
+**What this means for SentinelTwin:**
+- SentinelTwin's 3D SecurityScene fits naturally into the smart building digital twin ecosystem
+- BACnet/SC adds cybersecurity to traditional BMS — aligns with SentinelTwin's security focus
+- **V2+ integration path:** Export coverage heatmap as BACnet data point → BMS displays coverage status
+- **ONVIF Profile M (metadata):** Standardized format for analytics metadata — could be import target for SentinelTwin's V2 real camera verification
+- Smart building vendors (Johnson, Siemens, Honeywell) value vendor-agnostic tools that work with their ecosystems — SentinelTwin is brand-agnostic by design
+
+---
+
+### Thread 45: Retail Loss Prevention — Vertical-Specific Requirements
+**Status:** New. Extends Thread 12 with specific operational requirements.
+**Source research:** Everseen, Sensormatic Solutions, Solink, NRF retail security survey 2025.
+
+**How video surveillance in retail differs from general security:**
+| Feature | Retail Coverage | General/Perimeter Coverage |
+|---|---|---|
+| Primary Goal | Transactional integrity & customer flow | Intrusion detection & perimeter safety |
+| Camera Density | High (every POS, shelf, aisle) | Lower (gates, entrances, fences) |
+| Field of View | Tight, high-resolution for merchandise | Broad, low-resolution for wide areas |
+| Placement | Ceiling-mounted to avoid aisle blindspots | Wall/pole-mounted for approaching movement |
+| Analytics Focus | Object ID (products) & human behavior | Motion detection & classification |
+
+**Retail-specific technologies:**
+| Technology | Function | Relevance to SentinelTwin |
+|---|---|---|
+| **Everseen** | Vision AI for checkout integrity | Coverage must include self-checkout with sufficient resolution |
+| **Solink** | POS-video linkage | POS zone must have identification-quality coverage |
+| **Sensormatic** | EAS + inventory intelligence | Tag reader positions must be covered |
+| **RFID / Smart Shelves** | Real-time inventory visibility | Shelf coverage gaps = inventory blindspots |
+
+**Camera coverage design for retail:**
+- Checkout zones: need Identification quality (250 PPM) for facial evidence
+- High-value aisles (electronics, alcohol, cosmetics): need Recognition quality (125 PPM)
+- Store entry/exit: wide-angle Detection + dedicated Identification camera
+- Stockroom/back office: full coverage, all angles
+- **Planogram sensitivity:** Retail layout changes frequently — every reset creates new blindspots
+
+**What this means for SentinelTwin:**
+- Multi-location retail chains need standardized coverage scores — compare across stores
+- "Store A: 82% coverage, Store B: 64% coverage — investigate Store B layout"
+- **Retail template:** Pre-configured zone types (POS, high-value, entry, stockroom) with appropriate quality thresholds
+- **ROI pitch:** "1% shrinkage reduction = $X for your chain. SentinelTwin costs $Y/year. Payback in N months."
+- The planogram-reset-triggered re-audit is the ideal recurring use case — not annual, but per-merchandise-change
+
+---
+
+### Thread 46: Data Center Physical Security — High-Value Niche
+**Status:** New. Identifies a high-value, low-volume buyer segment.
+**Source research:** Uptime Institute, ANSI/TIA-942, SOC 2 physical security requirements.
+
+**Common misconception:**
+Uptime Institute Tier classification (III, IV) does NOT prescribe specific physical security measures. Tier is about power/cooling uptime, not security. Uptime Institute offers a separate "Facility Security Review" service.
+
+**Who actually audits data center security:**
+- **SOC 2 Type II** (most common in US): CPA-audited controls for security, availability, processing integrity
+- **ISO/IEC 27001:** International ISMS standard with physical security requirements
+- **PCI DSS:** For card data handling facilities — specific physical access restrictions
+- **ANSI/TIA-942:** Telecommunications infrastructure standard that DOES reference physical security design
+
+**Layered defense strategy (ANSI/TIA-942 style):**
+1. **Perimeter:** Crash-rated fencing, bollards, wedge barriers, vehicle standoff distances
+2. **Building entry:** Single point of entry, mantrap (interlocking doors), biometric + badge MFA
+3. **Data hall:** Cameras covering every aisle, every cabinet row
+4. **Cabinet level:** Electronic locks on individual server cabinets, granular logging
+
+**Camera coverage requirements:**
+- Full coverage of: perimeter, loading docks, all entry/exit points, hallways, data halls, power rooms, cooling plants
+- Zero tolerance for blind spots in critical zones
+- High-definition with night vision/low-light capability
+- Retention policies: 30–90 days, strictly audited
+- Access control MFA typically requires badge + biometric (iris or fingerprint)
+
+**What this means for SentinelTwin:**
+- Data centers are a high-value niche with **zero tolerance for coverage gaps** — the sales case is strong
+- SOC 2 and ISO 27001 audits require documented physical security evidence — SentinelTwin reports serve this
+- Data center operators have budget and buy software — enterprise sales suitable
+- **GTM angle:** "SentinelTwin provides documented, auditable evidence for your SOC 2 Type II physical security controls"
+- Pre-construction simulation for new data center builds is especially valuable (data center downtime is measured in $K/minute)
+
+---
+
+### Thread 47: Security Orchestration & Automation (SOAR for Physical Security)
+**Status:** New. Defines SentinelTwin's long-term position in security automation.
+**Source research:** Physical security SOAR, SOC convergence, AI command layers 2025-2026.
+
+**What is physical security SOAR:**
+Security Orchestration, Automation, and Response adapted from cybersecurity to physical security. Connects disparate physical systems (video, access control, alarms) into automated event response workflows.
+
+**Event response playbook example:**
+Unauthorized access event → automatic:
+1. Lockdown affected area
+2. Prompt nearest CCTV to track individual
+3. Notify security personnel via mobile (with live video link)
+4. Log event in incident management system
+
+**SOC convergence (physical + cyber):**
+- Physical security (lost badge, tailgating) and cybersecurity (brute force login) managed in unified environment
+- SOAR platforms act as connective tissue between physical and cyber
+- Enables 360-degree threat view: physical breach accompanied by cyber exploit
+
+**AI command layers — the emerging paradigm:**
+- Centralized AI brain interprets high-level objectives ("Secure perimeter at shift change")
+- Autonomously coordinates sensors, cameras, automated gates, robots
+- Human operators shift from "watching cameras" to "managing systems"
+- The AI handles tactical execution; human handles strategic decisions and ethical oversight
+
+**How SentinelTwin's AI command layer fits:**
+SentinelTwin's agent architecture (architecture/05) is exactly this paradigm — but for planning/simulation rather than live response. The natural path:
+- **V0.1:** AI command = natural language scene editing + counterfactual analysis
+- **V0.3+:** AI command = temporal simulation + "what-if" scenario testing
+- **V1+:** AI command = automated security design recommendations with verified coverage deltas
+- **V2+:** AI command integrates with live PSIM/SOAR systems — simulated coverage gaps inform real-time response automation
+
+**What this means for SentinelTwin:**
+- The AI command layer is not just a UI convenience — it's the early stage of a physical security SOAR platform
+- Long-term moat: SentinelTwin's simulation engine can predict where a SOAR playbook will fail due to coverage gaps
+- **Product direction:** After V0.1, design the agent architecture with SOAR integration in mind — event formats, API contracts, timing models
+- Physical security SOAR is an emerging category (2025-2026). First-mover advantage as the simulation layer for SOAR is real.
+
+---
+
+---
+
+### Thread 48: Physical Security Incident Costs and ROI Frameworks
+**Status:** New. Provides dollar-based justification for security investment — critical for retail and enterprise sales.
+**Source research:** NRF Organized Retail Crime survey, Supercircuits ROI calculator, Intellisee CCTV ROI tool, ASIS risk management framework.
+
+**The ROI challenge:**
+Physical security is a cost center. Standard ROI models fail because "losses avoided" is hard to quantify. Three frameworks exist for justifying security spend:
+
+1. **Risk Mitigation/Loss Avoidance Model:**
+   ```
+   ROSI = (Annual Risk Exposure × Mitigation % – Cost of Solution) ÷ Cost of Solution
+   ```
+   Most common approach. Requires estimating incident probability × cost per incident.
+
+2. **Detection-to-Response Latency Economics:**
+   Quantifies the financial value of compressed response time. Each minute of delay costs X dollars depending on the vertical (retail shrinkage rising, data center downtime accumulating).
+
+3. **Business Continuity & Resilience:**
+   Compliance avoidance, insurance premium reduction, downtime prevented. Harder to quantify but resonates with enterprise buyers.
+
+**Available ROI calculators (that exist today):**
+| Tool | Type | Limitation |
+|---|---|---|
+| **Supercircuits ROI Calculator** | Commercial CCTV vendor | Basic, vendor-biased |
+| **Intellisee CCTV ROI Tool** | Independent | Narrow scope, not simulation-aware |
+| **ASIS Risk Management Framework** | Professional standard | Framework, not calculator |
+| None of these account for simulation-verified coverage | — | — |
+
+**Incident cost context:**
+- **Organized Retail Crime (ORC):** ~$45B/year in US alone. Average single incident: $5K–$50K depending on scope.
+- **Warehouse/distribution center theft:** Average incident $10K–$100K.
+- **Office trespass/data breach intersection:** Can reach $1M+ when physical breach enables data compromise.
+- **School security incident (physical):** $100K+ from legal, PR, upgrades, staffing.
+- **Data center breach:** $200K+/minute downtime; data breach costs compound massively.
+
+**What this means for SentinelTwin:**
+- The report layer should include an optional **Financial Impact** section that translates coverage gaps into estimated dollar exposure (using user's vertical, asset values, and incident rates)
+- SentintelTwin is a **budget justification tool**: it quantifies coverage gaps in risk/dollar terms
+- For retail: "1% shrinkage reduction = $X saved. SentinelTwin costs $Y. Payback in N months."
+- For enterprise: "This coverage gap exposes $Z in assets per incident. Fix costs $W."
+- **Pricing anchor:** If SentinelTwin costs $500–2,000/year and prevents a single $10K incident, ROI is immediate.
+
+**Open questions:**
+- Should the Financial Impact section require user input (asset values, incident history) or use defaults by vertical?
+- Is there liability risk in asserting "this gap will cost $X"? Need careful phrasing ("estimated exposure under current assumptions").
+
+---
+
+### Thread 49: ONVIF Profile M — Analytics Metadata Standard
+**Status:** New. Standardized format for video analytics metadata — relevant for V2 real camera verification and SOAR integration.
+**Source research:** ONVIF Profile M official specification, ONVIF roadmap 2025-2026.
+
+**What ONVIF Profile M defines:**
+- Standardized format for metadata produced by video analytics (object detection, classification, tracking)
+- Two transport modes:
+  1. **SOAP/WSDL** — traditional ONVIF web services for metadata subscription/query
+  2. **MQTT/JSON** — modern lightweight streaming for real-time analytics metadata
+- Analytics event types supported:
+  | Event Type | Description | SUse in Security |
+  |---|---|---|
+  | Object Detected | Generic object presence | Motion detection |
+  | Classification | Person, vehicle, animal, specific object | Targeted alerting |
+  | Geolocation | Object position in real-world coordinates | Position tracking |
+  | Speed | Object motion speed | Perimeter breach speed analysis |
+  | Color/Appearance | Object attributes (color, size, shape) | Forensic search |
+  | LPR (License Plate) | Plate recognition data | Access control |
+  | Face Detection | Face presence in frame | Privacy zone enforcement |
+  | Body Detection | Human body shape (not face) | Anonymous counting |
+
+**Metadata structure:**
+- Each metadata frame is timestamped and correlated to the video stream
+- Contains bounding box coordinates, classification confidence, tracking ID
+- Can be delivered as real-time stream (MQTT) or stored in metadata database
+
+**Adoption status (2025-2026):**
+- Widely adopted in IP camera firmware and VMS platforms (Milestone, Genetec)
+- Supported by major camera manufacturers (Axis, Hanwha, Bosch, Sony)
+- Complemented by Profile S (basic streaming) and Profile T (advanced streaming)
+- Metadata analytics increasingly move to edge (on-camera processing) with Profile M as the output format
+
+**What this means for SentinelTwin:**
+- **V2 Real Camera Verification:** If a camera sends Profile M metadata, SentinelTwin could theoretically import actual detection metadata and compare against simulated coverage to identify discrepancies
+- **SOAR integration (V2+):** Profile M is the standard format for analytics events — SentinelTwin should understand it for integration design
+- **Industry alignment:** ONVIF is the dominant standard (not PSIA, which is no longer active)
+- **Privacy zones + analytics:** Profile M supports face detection flags — SentinelTwin can cross-reference which analytics events should NOT fire in privacy zones
+- **No V0.1 impact:** This is purely forward-looking for V2+ integrations
+
+---
+
+### Thread 50: SchoolSafety.gov Grant Programs — Detailed Funding Landscape
+**Status:** New. Provides detailed grant data for crafting school security GTM.
+**Source research:** SchoolSafety.gov Grants Finder Tool, BJA STOP School Violence program, COPS SVPP, DHS NSGP.
+
+**Major federal grant programs for school security (2025-2026):**
+
+| Program | Agency | Annual Funding | Award Size | Eligible Use |
+|---|---|---|---|---|
+| **COPS School Violence Prevention Program (SVPP)** | DOJ | ~$73M | Up to $500K per school district | Security technology, training, coordination |
+| **BJA STOP School Violence Program** | DOJ | ~$83M | $50K–$500K | Threat assessment, intervention, security tech |
+| **DHS Nonprofit Security Grant Program (NSGP)** | DHS | ~$274.5M | Up to $150K per site | Physical security improvements, including cameras |
+| **Title IV-A (Student Support & Academic Enrichment)** | ED | ~$1.2B (total, shared) | Formula-based per district | Safe & healthy students (broad) |
+
+**How the grants workflow works:**
+1. School districts find grants via SchoolSafety.gov Grants Finder Tool
+2. Grant writers (increasingly hired by districts) prepare applications
+3. Applications are competitive, time-bound (typically 60-90 day windows)
+4. Successful grants require compliance reporting on how funds were used
+5. Equipment purchases (cameras) typically need documented justification
+
+**What SentinelTwin provides that aligns with grant requirements:**
+- Documented needs assessment (why cameras are needed, where gaps exist)
+- Quantified coverage analysis ("before: 60% coverage, after: 85% coverage")
+- Standards-referenced design (IEC 62676-4, AS/NZS 62676)
+- Compliance evidence for post-award reporting
+
+**What this means for SentinelTwin GTM:**
+- **Grant-writing season alignment:** Target marketing around grant application deadlines (typically Q1-Q2)
+- **"Grant-ready" positioning:** For districts, "SentinelTwin provides the documented needs assessment and quantified coverage analysis that grant reviewers are looking for"
+- **Free tier for schools:** Free single-scene SentinelTwin for schools doing initial needs assessment — upsell to paid for full grant compliance reporting
+- **Bundled offering:** Include grant application template language with SentinelTwin reports
+- **Note:** School security directors are budget-constrained but grant-funded. The sales cycle is about grant calendar alignment, not fiscal year budget.
+
+---
+
+### Thread 51: SIA OS-2 / PSIA Standards Correction
+**Status:** New. Corrects an error in earlier architecture documentation where "SIA OS-2" was referenced as a physical security API standard.
+**Source research:** SIA standards catalog, ONVIF history, PSIA status check, OSDP specification.
+
+**The incorrect reference:** Earlier architecture drafts referenced "SIA OS-2" as a PSIM/SOAR API standard. This standard does not exist.
+
+**What actually exists in physical security standards:**
+
+| Standard | Organization | Purpose | Status |
+|---|---|---|---|
+| **ONVIF Profiles** | ONVIF | Video streaming, device discovery, analytics metadata, access control | Active — dominant standard |
+| **SIA OSDP** | Security Industry Association | Access control communication protocol (between controller and reader) | Active — ANSI-approved |
+| **SIA DIP/DIS** | Security Industry Association | Digital intrusion communications | Active |
+| **PSIA (Physical Security Interoperability Alliance)** | PSIA (now defunct) | Legacy video/access control API specs | **Moribund** — superseded by ONVIF |
+
+**Key corrections for SentinelTwin docs:**
+- Where the architecture doc referenced "SIA OS-2" as a PSIM/SOAR integration standard, the correct reference should be **ONVIF** (for device-level video and analytics interoperability) and **RESTful APIs** (for software-level system integration)
+- PSIA was a competitor to ONVIF that lost the standards war. ONVIF is the de facto standard for physical security device interoperability.
+- SIA OSDP is used for access control reader communication, NOT for video or API integration.
+- For SOAR/PSIM integration (V1+), the relevant standards are:
+  1. **ONVIF** — device discovery, video, analytics metadata, access control events
+  2. **RESTful APIs** — modern web integration with PSIM platforms
+  3. **MQTT** — real-time event streaming for alert/response automation
+
+**What this means for SentinelTwin:**
+- The architecture doc has been corrected (SIA OS-2 → ONVIF, PSIA removed)
+- No other references to SIA OS-2 exist in the codebase
+- Thread 47 (SOAR direction) and Section 7 of the architecture doc now reference ONVIF and REST APIs correctly
+- This is a documentation-only fix — no code impact
+
+---
+
+### Thread 52: Physical Security Buyer Personas — Decision-Making Process
+**Status:** New. Maps who buys security design software and how they decide.
+**Source research:** ASIS International, System Surveyor market research, security vendor partner programs.
+
+**The buying process for physical security software:**
+Purchasing decisions are increasingly cross-functional. No single persona decides alone.
+
+**Key personas involved:**
+| Persona | Primary Goal | Focus Area | Purchase Role |
+|---|---|---|---|
+| **System Integrator** | Efficiency, professionalism | Tool usability, proposal speed, installation accuracy | Gatekeeper — specifies tools and hardware |
+| **IT Manager** | Security, compliance | Network impact, data privacy, system integration | Increasingly leads decisions (~54% of enterprises) |
+| **Security Manager/Director** | Risk mitigation | System performance, reliability, incident response | Traditional primary buyer |
+| **Facility Manager** | Operations, maintenance | Longevity, ease of maintenance, BMS integration | Evaluator of long-term fit |
+| **C-Suite / Finance** | Budget, ROI | Risk reduction, compliance, TCO | Approver |
+
+**The buying stages:**
+1. **Needs assessment & site survey:** Gaps identified, digital site survey tools used
+2. **System design & specification:** Coverage modeled, BOM generated, proposals prepared
+3. **Cross-functional evaluation:** IT checks network security, Operations checks reliability, Management checks TCO
+4. **Procurement:** RFP for large-scale, direct purchase for smaller projects
+
+**Key pain points driving purchase:**
+- Game of telephone (sales → designer → technician, each handoff loses information)
+- Manual site surveys creating data entry errors
+- Slow proposal generation losing bids
+- Tools that don't integrate with existing security systems
+- Inability to manage coverage across multiple sites consistently
+
+**What this means for SentinelTwin:**
+- **System integrators are the gatekeeper channel** — if SentinelTwin isn't in the integrator's toolkit, it rarely reaches end-users
+- IT is the fastest-growing influence on the purchase — SentinelTwin's local-first/WASM architecture is a selling point vs cloud-only tools
+- The integrator's pain (slow proposals, lost handoff info) is SentinelTwin's GTM message
+- See Thread 56 for integrator partner economics
+
+---
+
+### Thread 53: JVSG — Competitive Teardown
+**Status:** New. Deep competitive intelligence on the leading CCTV design tool.
+**Source research:** JVSG official site, IPVM, user forum discussions.
+
+**JVSG overview:**
+JVSG (IP Video System Design Tool) is the industry standard for professional CCTV planning. Desktop-only (Windows), subscription-based, focused on high-fidelity 3D camera simulation.
+
+**Pricing (2025-2026, annual subscriptions, per user):**
+| Edition | Annual Cost | Camera Limit | Target User |
+|---|---|---|---|
+| **Pro** | $396/yr (~$33/mo) | 64 cameras | Solo installers |
+| **Expert** | $792/yr (~$66/mo) | 256 cameras | Professional design consultants |
+| **Enterprise** | Contact for quote | Unlimited | Large integrators |
+- Multi-user group discounts available (e.g., 5-user packages)
+- **Read-only access** after subscription expires (can view/archive projects, cannot design)
+
+**Key strengths:**
+1. **Realistic 3D mockups** — strongest feature. Show clients exactly what a camera will "see"
+2. **Automated technical calculations** — bandwidth, storage, focal length, cable length
+3. **CAD integration** — import/export .dwg and .dxf for professional layouts
+4. **Advanced simulation** — ANPR zones, face recognition zones, fisheye dewarping
+
+**Key limitations:**
+1. **Windows-only** — no native Mac/Linux support (workarounds available but painful)
+2. **Steep learning curve** for advanced 3D modeling and CAD import
+3. **Cost vs. simplicity** — overkill for small installers who just need FOV visualization
+4. **No adversarial path simulation** — cannot answer "how would someone evade this coverage?"
+5. **No temporal profiles** — no 24-hour simulation with lighting/schedule changes
+6. **No AI command layer** — no natural language interaction or counterfactual analysis
+7. **Static reports** — reports are snapshots, not interactive models
+
+**SentinelTwin differentiation:**
+| Capability | JVSG | SentinelTwin |
+|---|---|---|
+| 3D camera simulation | Yes (desktop, Windows-only) | Yes (browser, cross-platform)
+| DORI quality scoring | Yes (static) | Yes (real-time, with occlusion) |
+| Adversarial path simulation | **No** | **Yes** — core differentiator |
+| Temporal (24h) simulation | **No** | **Planned (V0.3+)** |
+| AI command / counterfactual | **No** | **Yes** — core differentiator |
+| Privacy zone compliance | **No** | **Yes** — built into schema |
+| Multi-user collaboration | Limited (file-based) | **Cloud-native** |
+| Pricing | $33-66/mo/user | TBD |
+
+**Strategic implication:** JVSG is the incumbent for 3D visualization, but SentinelTwin leapfrogs in simulation depth, AI capabilities, and collaboration. The weaknesses (no adversarial, no temporal, no AI) are all things JVSG cannot add incrementally — they require fundamental simulation engine rearchitecture.
+
+---
+
+### Thread 54: Genetec Security Center — Enterprise Platform Depth
+**Status:** New. Maps the dominant enterprise PSIM platform and competitive dynamics.
+**Source research:** Genetec official documentation, industry analysis, integrator network.
+
+**Genetec overview:**
+Genetec Security Center is the leading unified physical security platform (VMS + access control + ALPR + communications) for large enterprises, critical infrastructure, and government.
+
+**Pricing model:**
+- **Traditional:** Perpetual license + annual support/maintenance ("Genetec Advantage")
+- **SaaS (emerging):** ~$149–$199/year per device connection (cameras, door controllers, intercoms, intrusion panels)
+- **Not publicly listed** — must go through certified integrator for quotes
+- Editions: Standard, Pro, Enterprise (scale-dependent)
+
+**Key capabilities relevant to SentinelTwin:**
+- **Plan Manager:** Interactive mapping module — operators view facilities in real-time, overlay cameras and door statuses on floor plans, control access from the map
+- **Positional Camera Tracking:** Visualize and monitor coverage areas dynamically
+- **Unified platform:** Video (Omnicast), Access Control (Synergis), ALPR (AutoVu) in one interface
+- **Typical buyers:** Airports, transit, government, healthcare, large corporate campuses
+
+**Genetec vs. Milestone XProtect:**
+| Dimension | Genetec Security Center | Milestone XProtect |
+|---|---|---|
+| Philosophy | **Unified** — single-vendor platform | **Open** — ecosystem-based integration |
+| Strength | One-stop security management | Flexible third-party hardware/software |
+| Market | Complex enterprise, high-security | Broad — SMB to large enterprise |
+| Cost/Complexity | Higher initial cost, more complex config | Lower entry cost |
+
+**What Genetec does NOT do (SentinelTwin's gap):**
+- **No coverage simulation** — Plan Manager shows real-time status but does not answer "what would coverage look like if we added a camera here?"
+- **No adversarial path analysis** — cannot simulate evasion routes
+- **No pre-installation planning** — Genetec is an operational platform, not a design tool
+- **No counterfactual AI** — no "what if we removed Camera 4?" natural language testing
+
+**SentinelTwin positioning vs Genetec:**
+Genetec is not a competitor — it's a potential integration target (V2+).
+- **Complementary:** SentinelTwin designs the coverage that Genetec manages
+- **Export path:** SentinelTwin coverage heatmap → Genetec Plan Manager overlay
+- **Typical scenario:** Security integrator uses SentinelTwin to design → delivers as-builts to Genetec operator
+
+---
+
+### Thread 55: three-mesh-bvh — Verified Performance Benchmarks
+**Status:** New. Confirms performance targets are achievable for V0.1 coverage engine.
+**Source research:** gkjohnson/three-mesh-bvh GitHub, community benchmarks, Three.js documentation.
+
+**Official benchmark claims:**
+- **500 rays per frame** against an **80,000-polygon model** at **60 FPS**
+- That's **30,000 rays/sec** at 60 FPS — far exceeding SentinelTwin's 6,400 rays (40×40×4) requirement
+
+**Complexity analysis:**
+| Raycaster | Complexity | Scaling |
+|---|---|---|
+| Standard Three.js | O(N) — checks every triangle | ~0.5ms per ray at 100K tris |
+| three-mesh-bvh | O(log N) — BVH tree traversal | ~0.01ms per ray at 100K tris |
+
+**Actual throughput estimates:**
+- For a typical building scene (10K-50K triangles for walls, floor, ceiling, furniture):
+  - **Standard raycaster:** ~2-5ms per ray → 6,400 rays = 12,800-32,000ms (12-32 seconds) ❌
+  - **three-mesh-bvh:** ~0.01-0.05ms per ray → 6,400 rays = 64-320ms (still >16ms if naive) ✅
+  - **with SharedBVH + batching:** rays dispatched in shader-like batches → 6,400 rays = **under 8ms** ✅✅
+
+**Memory overhead:**
+- BVH structure adds roughly **10-20% additional memory** over the original geometry buffer
+- Trade-off is universally considered worth it for the speed gains
+- Supports `refit` for dynamic meshes (update BVH bounds when geometry changes — no full rebuild needed)
+- Recommended: use `firstHitOnly: true` for `Raycaster` configuration to enable the optimized `raycastFirst` path
+
+**Recommendation for SentinelTwin:**
+- **Confirm existing decision D-004:** three-mesh-bvh is mandatory from day one
+- The 6,400 rays target (40×40 grid × 4 cameras) is well within performance budget
+- Use **SharedBVH** (batch raycast mode) for the coverage grid → <16ms per recompute is achievable
+- Standard raycaster alone would be 10-30 seconds for the same workload — not viable
+
+---
+
+### Thread 56: Security Integrator Economics and Partner Programs
+**Status:** New. Maps the channel economics that determine how SentinelTwin reaches end-users.
+**Source research:** Venture in Security channel analysis, Axis partner program, IPVM integrator discussions.
+
+**The integrator business model:**
+Security systems integrators are the primary channel for physical security purchases. They design, procure, and install systems for end-users.
+
+**Revenue streams, from lowest to highest margin:**
+1. **Hardware procurement:** 10–20% margin — highly competitive, commoditized
+2. **Labor/Installation:** Medium margin — depends on project complexity and scale
+3. **Managed services / RMR (Recurring Monthly Revenue):** **Highest margin** — monitoring, maintenance, cloud services
+4. **Design/Consulting:** Growing service line — expertise-based, less commoditized
+
+**Net profitability context:**
+- Manufacturer net income: 10–20%
+- Integrator net income: lower percentage (rely on volume and project efficiency)
+- Shift from project-based to RMR is the dominant industry trend
+
+**Vendor partner programs (the channel incentive system):**
+Vendors (Axis, Bosch, Genetec, Hanwha) run multi-tiered partner programs:
+- **Tiers:** Authorized → Silver → Gold
+- **Tier requirements:** Sales volume + certified engineers + active participation
+- **Financial incentives:**
+  - **Tiered discounts:** Higher tier = deeper hardware discounts
+  - **Deal registration:** Register a specific project with the vendor → guaranteed discount protection
+- **Non-financial benefits:** Lead generation, co-marketing, dedicated support, early product access, demo gear
+
+**Axis Communications partner program tiers:**
+- **Authorized** — baseline access to portfolio, training
+- **Solution Silver** — higher discounts, dedicated support
+- **Solution Gold** — best price points, marketing funds, early access
+
+**What this means for SentinelTwin:**
+- **Integrators are the gatekeeper channel.** A security consultant at an integrator firm chooses the design tool. Getting into the integrator's toolkit is the GTM.
+- **Hardware margins are thin (10–20%)** — integrators under economic pressure to differentiate on design expertise. SentinelTwin helps them win bids with professional visualizations.
+- **RMR shift is SentinelTwin's opportunity:** As integrators move to managed services, they need tools to do recurring coverage audits — SentinelTwin's temporal simulation fits this recurring revenue model.
+- **Partner program comparison:** JVSG has no formal partner program (per-seat pricing, no reseller/affiliate). System Surveyor has growing partner traction. This is a competitive weakness of JVSG that SentinelTwin can exploit by building an integrator partner program from day one.
+- **Pricing implication:** Integrators pay $33-66/mo for JVSG (per seat, per user). SentinelTwin should be priced competitively against this anchor.
+
+---
+
+### Thread 57: System Surveyor — Closest Competitive Tool — Deep Dive
+**Status:** New. Detailed teardown of the closest existing alternative.
+**Source research:** System Surveyor official site, pricing page, user reviews (Capterra), feature documentation.
+
+**System Surveyor overview:**
+Cloud-based digital site survey platform for physical security and low-voltage systems. The closest existing tool to SentinelTwin in terms of positioning.
+
+**Pricing (per seat, per user, 2025–2026):**
+| Tier | Annual (per user) | Monthly | Best For |
+|---|---|---|---|
+| **Starter** | **Free ($0)** | **Free ($0)** | Small projects, trying out platform |
+| **Essentials** | $600/yr ($50/mo) | $55/mo | Smaller integrators needing automation |
+| **Scale** | $840/yr ($70/mo) | $85/mo | Mid-size integrators with teams/partners |
+| **Enterprise** | Contact for quote | Contact | National/global teams (min 15 seats) |
+
+**Feature comparison by tier:**
+Key differentiators that require higher tiers:
+- Branded PDF reports (Essentials+)
+- Excel export (Scale+)
+- Cable length calculation (Scale+)
+- InfoMask encryption (Scale+)
+- Guest users (Scale+)
+- API access (Enterprise only)
+- SSO/SAML (Enterprise only)
+- Multiple teams (Enterprise only)
+
+Common across all tiers: drag-and-drop design, FOV boundaries, photo capture, automated BOM, unlimited surveys
+
+**Key limitations (where SentinelTwin wins):**
+1. **2D only** — no 3D simulation, no height-based occlusion
+2. **No DORI quality computation** — FOV visualization exists but no automated quality scoring
+3. **No occlusion analysis** — devices block line-of-sight but System Surveyor doesn't compute this
+4. **No adversarial paths** — cannot simulate evasion routes
+5. **No temporal profiles** — no 24-hour simulation
+6. **No AI layer** — no natural language, no counterfactual testing
+
+**SentinelTwin's strategic difference:**
+System Surveyor is a **digital whiteboard** for site surveys. SentinelTwin is a **simulation engine** for security intelligence. System Surveyor helps you draw what exists. SentinelTwin helps you understand what it means.
+
+**Potential partnership angle:** System Surveyor could use SentinelTwin's simulation engine as a plugin/add-on. They have floor-plan-to-device-placement workflow. SentinelTwin adds security intelligence. This is a genuine complementary fit.
+
+---
+
+### Thread 58: WebGPU Compute Shader Feasibility
+**Status:** New. Confirms WebGPU compute path is viable for accelerating coverage heatmap computation.
+**Source research:** caniuse.com/webgpu, WebGPU specification, community benchmarks 2025-2026.
+
+**Adoption status (2025-2026):**
+- **Widely shipping** in Chrome, Edge, Safari (desktop and mobile)
+- Firefox has enabled by default — critical mass achieved
+- Check: `caniuse.com/webgpu` for latest stats
+- Fallback: check `navigator.gpu` before initializing compute pipelines
+
+**Key difference from WebGL:**
+| Feature | WebGL | WebGPU |
+|---|---|---|
+| Compute shaders | **No** (fragment shader hacks only) | **Native support** |
+| API level | High-level (easier, less control) | Low-level (more control, better perf) |
+| Modern GPU access | Indirect/limited | Direct (matches modern GPU features) |
+
+**Relevance to SentinelTwin's coverage engine:**
+
+Heatmap computation (counting rays per grid cell) is naturally parallelizable:
+- Data points (rays) can be processed independently
+- Results accumulate into grid cell counters
+- End-to-end GPU pipeline: ray stays on GPU from dispatch to heatmap display
+- No expensive CPU-to-GPU data transfers for intermediate results
+
+**Performance for SentinelTwin's 40×40 grid (1,600 cells):**
+- CPU (single-threaded): incrementally counting into a 1,600-cell grid is trivial (~<1ms)
+- GPU compute shader benefit: meaningful only at very large grid sizes (100×100+) or when doing many grid recomputations per frame
+- **Recommendation:** Use CPU for V0.1 (1,600 cells → trivial). Plan WebGPU compute path for V0.3+ when temporal simulation requires many grid recomputations per second.
+
+**Browser compatibility for V0.1:**
+- WebGPU is stable enough to use in production (2025-2026)
+- But not universally supported (older devices, specific OS/GPU driver combos)
+- SentinelTwin should always have a CPU fallback path
+- For V0.1 coverage engine, CPU is sufficient. WebGPU compute is an optimization, not a requirement.
+
+---
+
+### Thread 59: WebLLM / Local LLM in Browser Feasibility
+**Status:** New. Confirms viability of running small LLMs in-browser for command parsing / scene understanding.
+**Source research:** MLC-AI WebLLM, wllama (llama.cpp WASM), community deployment guides 2025-2026.
+
+**Two main approaches:**
+
+| Approach | Library | Hardware Acceleration | Maturity |
+|---|---|---|---|
+| **WebGPU-native** | MLC-AI WebLLM | WebGPU (GPU inference) | State-of-the-art, most performant |
+| **WASM-based** | wllama (llama.cpp port) | WASM (CPU inference) | Mature, generally slower |
+
+**WebLLM (recommended path):**
+- Built specifically to leverage **WebGPU** for GPU inference in the browser
+- Handles model loading, caching, inference pipeline
+- Supports 1-3B parameter quantized models (Qwen2.5, Phi-3, Llama-3-1B)
+- Performance: 30-50+ tokens/sec on modern devices (suitable for real-time interaction)
+
+**Performance characteristics for 1-3B models:**
+| Metric | Performance |
+|---|---|
+| **Inference speed** | 30-50+ tokens/sec (WebGPU) |
+| **Cold start** | High — must download model weights (1-2.5GB for quantized 3B) |
+| **Subsequent loads** | Near-instant — IndexedDB cache |
+| **Memory usage** | ~1.5-2.5GB VRAM/RAM (4-bit quantized) |
+| **Task suitability** | Excellent for command parsing, scene understanding, report generation |
+
+**Recommendations for SentinelTwin:**
+1. **Use WebGPU, not pure WASM** — WASM-only CPU inference is too slow for responsive UX
+2. **Always quantize** (4-bit GGUF or WebLLM format) — reduces download size and memory
+3. **Use Web Workers** — keep inference off the main thread, UI stays responsive
+4. **Model size:** 1-3B is the sweet spot — enough reasoning for command parsing, small enough for browser
+5. **Cache aggressively** — IndexedDB for model weights, warm-start after first load
+6. **Privacy advantage:** All inference happens locally — no data leaves the device. This is a major selling point for security agencies handling sensitive site layouts (see Thread 23)
+
+**V0.1 strategy:** Build with hosted API (OpenAI/Gemini) for initial command parsing to move fast. Add local WebLLM path as a privacy-tier upgrade in V0.2+ when the inference pipeline is well-understood.
+
+---
+
+### Thread 60: Physical Security SaaS Pricing Benchmarks
+**Status:** New. Maps what security professionals pay for tools — anchors SentinelTwin pricing.
+**Source research:** JVSG, System Surveyor, Milestone, Genetec — pricing data 2025-2026.
+
+**The pricing landscape is fragmented:**
+Physical security software does NOT follow standard SaaS pricing norms. There are three distinct pricing models:
+
+**1. Per-User/Seat (Design & Planning Tools)**
+Mirrors general SaaS pricing — monthly or annual per user.
+| Tool | Price Range | Model |
+|---|---|---|
+| System Surveyor | $0-$85/user/month (tiered) | Per-seat SaaS |
+| JVSG | $33-$66/user/month (annual) | Per-seat subscription |
+| AXIS Site Designer | Free | Vendor tool (Axis only) |
+
+**2. Per-Device (Video Management Systems)**
+Priced per camera/door/intercom — the dominant model for operational software.
+| Tool | Price Range | Model |
+|---|---|---|
+| Genetec Security Center | ~$149-199/yr per device (SaaS); custom quote for perpetual | Per-device + support |
+| Milestone XProtect | Custom quote via integrator; Essential+ being discontinued | Per-camera license + support |
+
+**3. Managed Services (RMR)**
+Bundled monthly fee per site or per device — includes hardware, software, monitoring, maintenance.
+| Type | Typical Range |
+|---|---|
+| Managed security (SMB) | $500-2,000/month per site (includes hardware rental) |
+| Managed security (enterprise) | $5,000-50,000+/month per campus |
+
+**Willingness-to-pay insights:**
+- Security professionals anchor WTP on **risk reduction**, not features
+- They pay more for tools that prove reduced liability, compliance, or investigation time
+- **Ecosystem lock-in is the strongest pricing lever** — if tool supports existing hardware, WTP increases significantly
+- TCO (Total Cost of Ownership) matters more than license price — tools that reduce site visits or installation errors command premium
+- The design/planning tool market ($33-85/user/month) is well-established with JVSG and System Surveyor as anchors
+
+**SentinelTwin pricing implications:**
+| Factor | Implication for SentinelTwin |
+|---|---|
+| JVSG anchor ($33-66/mo/user) | SentinelTwin must justify premium over JVSG with adversarial path + AI capabilities |
+| System Surveyor anchor ($0-85/mo/user) | Free tier needed to compete for trial; paid tier in $50-100/mo range |
+| No tool does simulation | Premium pricing for simulation layer is defensible — WTP for "what no other tool does" |
+| Professional vs individual | Integrator firms will pay 5-20 seats × monthly cost. Single installer pays 1 seat. |
+| Per-site vs per-seat | Per-seat aligns with integrator procurement. Per-site may be better for enterprise direct sales. |
+
+---
+
+### Thread 61: ASIS GSX Conference — GTM Launch Strategy
+**Status:** New. Maps the premier industry conference as SentinelTwin's ideal launch venue.
+**Source research:** ASIS GSX official site, GSX Newsroom, exhibitor materials 2025-2026.
+
+**GSX 2026 (next event):**
+- **Date:** September 14-16, 2026
+- **Location:** Georgia World Congress Center, Atlanta, GA
+- **Target for:** SentinelTwin V0.1+ public launch or pre-launch preview
+
+**GSX 2025 (recent past, reference):**
+- **Date:** September 29-October 1, 2025
+- **Location:** New Orleans, LA
+- **Attendance:** ~8,600-16,000 (nearly 100 countries)
+
+**Attendee profile:**
+- Security and defense professionals
+- Cybersecurity and physical security practitioners
+- Government and law enforcement
+- Technology providers and security consultants
+- **Buyer mix:** Middle-career practitioners to senior security leaders and executives
+- **Value for SentinelTwin:** Direct access to system integrators, security directors, and facility managers — all target buyer personas
+
+**Exhibitor landscape:**
+- 300-500+ exhibiting companies
+- Mix of hardware vendors (Axis, Bosch, Hikvision, Dahua), software platforms (Genetec, Milestone), service providers (guard companies, consultants)
+- NO simulation/planning software exhibitors — white space
+
+**Cost to exhibit:**
+- Standard 20'×20' space: ~$28,000 (varies by location and sponsorship add-ons)
+- Smaller option: standard 10'×10' linear booth: significantly less (estimate $5-10K)
+- Contact GSX sales team directly for current pricing and availability
+
+**SentinelTwin GTM strategy using GSX:**
+
+**Phase 1 — Attend (GSX 2025 if possible, otherwise GSX 2026 as launch):**
+- Walk the floor as attendee to validate interest, meet integrators, refine pitch
+- Schedule meetings with potential pilot partners (system integrators, security consultants)
+- Learn the competitive landscape firsthand
+
+**Phase 2 — Exhibit (GSX 2026):**
+- Booth in the startup/small-exhibitor section (10'×10' booth, ~$5-10K)
+- Live demo: phone scan → SentinelTwin scene → coverage simulation → adversarial path
+- Pitch focus: "You've never seen coverage this way. Watch an attacker find the blind spots."
+- Lead capture: free trial for attendees, paid plans for serious integrators
+
+**Phase 3 — Present (GSX 2027+):**
+- Submit talk/workshop on security simulation methodology
+- Peer-reviewed credibility with ASIS audience
+- Position as thought leader in simulation-driven security design
+
+**What this means for SentinelTwin:**
+- GSX 2026 (Sept 14-16) is the ideal launch milestone
+- Requires V0.1 ready by Q3 2026 for demo
+- Cost to exhibit (5-10K small booth) is reasonable for startup pre-seed/post-seed budget
+- The event provides direct access to the entire buyer ecosystem in one location
+- ASIS membership ($200-500/year) is a low-cost signal of industry alignment
+
+---
+
+## Completed Research Updates
 
 | Topic | Outcome | Doc |
 |---|---|---|
-| Pascal Editor architecture | Fork decision made | architecture/02 |
-| Coverage engine design | Designed, ready to implement | architecture/03 |
-| Adversarial path algorithm | Designed, ready to prototype | architecture/04 |
-| DORI standard | PPM thresholds identified (IEC 62676-4 simplified) | architecture/03 |
-| Physics library choice | Rapier, optional for V0.1 | architecture/07 |
-| Heatmap rendering approach | Instanced mesh | architecture/07 |
-| AI model candidates by stage | Table established | architecture/05 |
-| Monorepo structure | Turborepo extending Pascal | architecture/08 |
-| TAM / market sizing | Full analysis complete | ADJACENT_SPACE_TAM_INDUSTRY.md |
-| Competitive landscape | Full analysis complete | COMPETITIVE_LANDSCAPE.md |
-| NDAA ban / supply chain | Analysis complete | ADJACENT_SPACE_TAM_INDUSTRY.md |
-| GDPR / privacy regulations | Analysis complete | ADJACENT_SPACE_TAM_INDUSTRY.md |
-| Retail loss prevention wedge | Analysis complete | ADJACENT_SPACE_TAM_INDUSTRY.md |
-| BIM / pre-construction opportunity | Analysis complete | ADJACENT_SPACE_TAM_INDUSTRY.md |
-| Insurance distribution channel | Analysis complete | ADJACENT_SPACE_TAM_INDUSTRY.md |
+| NVIDIA Metropolis VSS 3 Blueprint | Complementary — post-install analytics vs pre-install simulation | Thread 27 |
+| VSaaS platforms lack coverage simulation | CRITICAL GAP VERIFIED — Verkada, Eagle Eye, Arcules, Cloudastructure do not simulate | Thread 28 |
+| System Surveyor as nearest competitor | 2D CAD planning, no simulation — complementary, not competitive | Thread 28 |
+| Converged security / cyber-physical market | PSIM $1.9-2.2B, CSO role growing — potential long-term buyer | Thread 29 |
+| ASIS CPP/PSP certifications as buyer persona | 34,000+ members, PSP directly relevant | Thread 30 |
+| ISO/IEC 30173 digital twin standard | Enterprise procurement language — add to architecture docs | Thread 31 |
+| IPVM calculator is theoretical only | Validates SentinelTwin's honesty + occlusion advantage | Thread 32 |
+| Guard patrol software lacks simulation | Confirmed — TrackTik et al have no sim planning | Thread 33 |
+| web-ifc (IFC.js) viability | MIT, stable, browser IFC parsing is ready for V0.4+ | Thread 34 |
+| AS/NZS 62676 AU/NZ standard | Direct IEC adoption — supports AU market entry | Thread 35 |
+| Physical pentest firms identified | Specific firms, potential distribution channel | Thread 36 |
+| GDPR privacy enforcement escalation | CNIL €200K+ fines, BIPA class-action risk, privacy zones are mandatory | Thread 37 |
+| Security consultant workflow pain points | Game of telephone, data silos, no simulation — validates GTM messaging | Thread 38 |
+| Physical security ROI frameworks | ROSI formula, risk mitigation model, SentinelTwin as budget justification tool | Thread 39 |
+| School security market validated | $5B+ market, Alyssa's Law, no simulation exists — grants opportunity | Thread 40 |
+| Healthcare security requirements | HIPAA, Joint Commission, RFID infant protection — compliance documentation need | Thread 41 |
+| Open source VMS lacks planning | Frigate/Shinobi/ZoneMinder — NVR only, no coverage simulation at all | Thread 42 |
+| AI video analytics market mapped | BriefCam/Oosto/Irisity — complementary, SentinelTwin = pre-sale verification tool | Thread 43 |
+| Smart building / BMS integration | BACnet, ONVIF Profile M, MQTT — medium-term enterprise requirement | Thread 44 |
+| Retail vertical requirements defined | POS coverage, planogram sensitivity, chain-wide audit model | Thread 45 |
+| Data center security niche validated | TIA-942, SOC 2, zero tolerance for blind spots — high-value buyer | Thread 46 |
+| Physical security SOAR defined | AI command layer as SentinelTwin's long-term moat in security automation | Thread 47 |
+| Physical security incident costs/ROI frameworks | $45B/yr ORC losses, ROSI formula, calculators exist (Supercircuits, Intellisee) | Thread 48 |
+| ONVIF Profile M analytics metadata | SOAP/WSDL + MQTT/JSON, widely adopted as industry standard for AI analytics metadata | Thread 49 |
+| SchoolSafety.gov grant programs detailed | COPS SVPP $73M, BJA STOP $83M, DHS NSGP $274.5M — funding landscape mapped | Thread 50 |
+| SIA OS-2/PSIA standards correction | SIA OS-2 does NOT exist — correct refs: ONVIF (video), OSDP (access control). PSIA is moribund | Thread 51 |
 
 ---
 
-## Questions to Research Next
+### Thread 26: V0.2 Floorplan Understanding Bakeoff (HF-Backed Shortlist)
+**Status:** Active. Execution artifacts created locally.
+**Date:** 2026-05-26
+**Canonical plan doc:** `Docs/experiments/V0_2_FLOORPLAN_UNDERSTANDING_BAKEOFF_PLAN.md`
+**Harness workspace:** `experiments/scene_understanding/`
 
-**Technical:**
-1. **SpatialLM setup complexity** — Docker image? GPU requirements? Quality on real indoor scenes?
-2. **VGGT output format** — Can Open3D consume it directly?
-3. **SAM 3 API availability** — hosted or self-hosted?
-4. **three-mesh-bvh benchmark** — 40×40 grid × 4 cameras on mid-range laptop
-5. **WebGPU coverage compute** — profiling threshold
-6. **Pascal ScanNode** — what is it exactly? GLB import?
-7. **ONVIF Profile M** — metadata format for V2+ integration
-8. **IFC parsing** — ifcopenshell (Python) and web-ifc (JS/WASM) feasibility
-9. **Axis DORI calculator** — does their PPM match IEC 62676-4?
+**Fresh evidence snapshot (Hugging Face):**
+- Qwen2.5-VL docs + model card: strong multimodal parser candidate (`Qwen/Qwen2.5-VL-7B-Instruct`)
+- Florence-2 docs + card: task-prompted extraction candidate (`microsoft/Florence-2-base`)
+- Grounding DINO docs + model card: open-vocab symbol/object grounding assist (`IDEA-Research/grounding-dino-base`)
+- GOT-OCR2 docs: OCR/symbol extraction assist (`stepfun-ai/GOT-OCR2_0`)
+- Floorplan papers/datasets tracked on HF: WAFFLE (20K multimodal floorplans), CubiCasa5K (5K annotated floorplans), Raster2Seq (polygon reconstruction)
 
-**Business / GTM:**
-10. **NDAA replacement projects** — who are the main integrators handling the $1.2B military replacement program?
-11. **Insurance companies** — which carriers are most advanced on camera coverage documentation requirements?
-12. **Physical pentest firms** — which firms do physical security assessments? validate SentinelTwin use case.
-13. **GDPR DPA report formats** — what does ICO, CNIL, BfDI each require for camera compliance documentation?
-14. **IFC open-source parsers** — quality and completeness of available tools
+**Narrowed stacks for implementation bakeoff:**
+1. Qwen2.5-VL + GOT-OCR2 + optional Grounding DINO
+2. Florence-2 + GOT-OCR2
+3. Raster2Seq + Qwen semantic repair
+
+**Acceptance gate (SecurityScene-linked):**
+- strict schema validity,
+- wall/door/window geometry quality,
+- security-relevant semantic fidelity,
+- latency/failure constraints,
+- confidence/provenance output for review flow.
+
+**Open risk:** data licensing boundaries for some datasets used for evaluation must be validated before any productized data reuse.
 
 ---
 
-## Ideas to Explore Later (Capture, Don't Lose)
+### Thread 62: Phase 0  Standalone Studio Build FindingsImplementation 
+**Status:** Complete. `apps/studio/` built and verified 2026-05-27.
+**Source:** Phase 0 implementation session (Claude Code / autonomous-loops).
 
-**Product:**
-- **Privacy compliance mode** GDPR/PDPA/CCPA-aware overlay + compliance evidence report
-- **Multi-site comparison** compare two branches of the same retail chain
-- **Insurance audit mode** output formatted for insurance risk assessment
-- **Guard patrol optimization** route optimizer with combined camera + patrol coverage view
-- **Training simulation** interactive guard familiarization with camera coverage
-- **Crowd simulation** camera effectiveness during high-occupancy events
-- **AI-generated demo scene** GPT-4o generates SecurityScene JSON from text description
-- **Fire/evacuation mode** same spatial model used for emergency egress simulation
-- **Drone surveillance** aerial camera type with patrol route and coverage windows
-- **Physical pentest integration** pre-engagement simulation, post-test verification
+**What was built:**
+- Standalone Next.js + R3F app at `apps/ no Pascal, no external editor forkstudio/` 
+- Canonical `SecurityScene` TypeScript types + Zod schemas (`src/schema/security-scene.ts`)
+- Vanilla Zustand scene store (`src/store/scene-store. tested, CRUD + snapshot APIts`) 
+- Simulation modules in `src/ zero React/DOM dependencies, all pure geometrysimulation/` 
+- `small-retail-shop.json` demo  validated; cupboard placement verified to occlude counterscene 
+- Camera Studio UI shell (TopBar, LeftPanel, WorkspaceCanvas, InspectorPanel, BottomPanel, etc.)
+- 5 tests passing; lint clean; build succeeds
 
-**Integrations:**
-- **IFC / BIM import** pre-construction camera placement simulation
-- **Revit/ArchiCAD plugin** "Security Analysis" button in architect's tool
-- **PSIM integration** feed coverage analysis into Genetec / Milestone
-- **NVIDIA Omniverse** Gaussian splat visual layer integration
-- **VSaaS platforms** plug SentinelTwin analysis into Arcules, Milestone, Genetec
+**Key implementation decisions made:**
+- Grid resolution: 0.25m cells (4 cells/ DORI-meaningful resolution for a person's body widthmeter) 
+- Zone quality aggregation: 25th percentile of zone cells (strict fail logic)
+- BVH pattern: merged vision-collider mesh from all walls + obstructions; rebuilt on simulation run
+- Zustand store reset: `getInitialState()` must return full state including methods (not plain object)
 
-**GTM / Distribution:**
-- **NDAA replacement integrators** partner with firms handling federal camera replacements
-- **Insurance partnership** premium discount for SentinelTwin-audited facilities
-- **GDPR compliance consultants** DPOs as distribution channel in EU
-- **Physical pentest firms** co-marketing + tool integration
-- **Security certification bodies** "SentinelTwin Verified" installer credential
-- **India retail chains** direct GTM for loss prevention use case
+**Toolchain findings:**
+ resolved by using `npm install` for production installs while keeping `bun test` for running tests
+- `simulate-studio.ts` must strip internal `probabilities` field from coverage cells before  leaks internal state otherwisereturning 
+- Next.js 16.2 with Turbopack: no config changes needed for three.js or three-mesh-bvh
 
-**Research:**
-- **NVIDIA Blueprint for physical security** — NVIDIA released a "physical security AI blueprint" in 2024/2025. What is it? Does it overlap with SentinelTwin?
-- **Axis Analytics open platform** — Axis sells open analytics APIs for third-party developers. Could SentinelTwin integrate?
-- **Digital twin standards** — ISO/IEC 30173 digital twin standard — does SentinelTwin need to be standards-compliant for enterprise sales?
-- **AS/NZS 62676 CCTV standard** — Australian/NZ CCTV installation standard that specifies DORI requirements for different site types. Important for AU market given Hikvision ban.
+**Baseline simulation behavior (small retail shop):**
+- Overall coverage: ~58% of floor area
+- Cash counter critical zone: FAILS recognition requirement (blocked by cupboard)
+- Adversarial path: finds minimum-exposure route along west wall (bypasses Camera 1's cupboard-occluded zone)
+- This baseline is the regression fixture for Phase 1 changes
+
+**BVH implementation detail:**
+- `acceleratedRaycast` patched onto `THREE.Mesh.prototype` in `coverage.ts`
+- Merged geometry built from wall + obstruction box meshes using `BufferGeometryUtils.mergeGeometries()`
+- Per-object `userData.nodeId` and `userData.visionTransmission` attached before merge so hit data can identify source node
+- `MeshBVH` built from merged geometry; single BVH shared across all camera raycasts per simulation run
+
+**Open follow-on items for Phase 1:**
+- Formal benchmark: 4040 grid  4 cameras target <16ms (Thread 2 / D-014)
+- Heatmap dirty-tracking: avoid full rebuild on each frame
+- Camera feed secondary canvas (D- deferred007) 
+ auto-recompute UX polish
+- Before/after snapshot diff display
+
+**Architecture validation:**
+- D-003 (simulation = deterministic geometry, not AI  simulation modules import only `three` and `three-mesh-bvh`confirmed ) 
+- D-004 (three-mesh-bvh mandatory from day one  wired in first working coverage engineconfirmed ) 
+- D-006 (instanced mesh heatmap  `THREE.InstancedMesh` with per-instance color arrayconfirmed ) 
+- D-009 (Dijkstra adversarial path  implemented with exposure cost functionconfirmed ) 
+- D-010 (standalone before Pascal  app works with no Pascal dependencyconfirmed ) 
+
+**Defensive framing verified:**
+- Adversarial path output uses: "minimum-exposure route," "coverage gap," "red team path"
+- No language around evasion, bypass, avoiding detection
+
+---
+
+### Thread 21: Phase 0/1 Build Findings — Verified Implementation State
+**Status:** Complete. Phase 0 and Phase 1 delivered and tested.
+**Date:** 2026-05-26
+
+**Phase 0 findings (all verified):**
+- three-mesh-bvh + geometry group merge works correctly: all wall/obstruction geometry merged into
+  one BVH mesh with per-group userData preserving `nodeId` and `visionTransmission`.
+- Raycast hit → group materialIndex → source node lookup works via `mesh.userData.sources`.
+- BVH build on demo scene: ~2ms. Full coverage recompute: **10.8ms average** (40×28 grid, 2 cameras).
+  This is under the 16ms target. No need for WASM or GPU acceleration at current scale.
+- Zod 4 schema validation works on import; `simulateStudio()` always returns `SimulationResult`.
+- Coverage engine has ZERO React/R3F/DOM/Zustand imports — runs clean in worker context.
+
+**Phase 1 test suite findings:**
+- 23 tests across 8 files: grid, FOV edge cases, raycast occlusion, DORI scoring, lighting penalty,
+  end-to-end (camera off, shelf moved, night mode), performance benchmark.
+- Cash counter correctly FAILS recognition in baseline (cupboard obstruction confirmed working).
+- Glass visionTransmission=0.9 → partial coverage but not zero (correct behavior).
+- DORI threshold boundaries pass correctly: `ppmToQuality(250) === "identification"`.
+- Night mode with no light degrades quality significantly (lighting penalty model verified).
+
+**Phase 2 gap identified:**
+- Critical: `InspectorPanel.tsx` was entirely read-only. All inputs used `defaultValue` (uncontrolled),
+  no `onChange`, no `updateNode` calls. "Every edit changes the risk map" was FALSE.
+- `ObstructionBox` in WorkspaceCanvas had no click handler. Obstructions couldn't be selected.
+- No `ObstructionInspector` component existed.
+- Camera View PIP tab was a placeholder ("Live view available in dedicated Camera View mode").
+- Fix dispatched: wiring inspector to `updateNode`, building ObstructionInspector, Camera PIP.
+
+**Architecture validation:**
+- SecurityScene as single source of truth holding: no parallel scene representations appeared.
+- `auto-recompute` hook correctly debounces dirty state, but was dormant because inspector never
+  marked scene dirty. Once inspector is wired, the full "edit → recompute → heatmap update" loop
+  will complete automatically.
+- Before/After tab (`BeforeAfterTab.tsx`) already implemented with delta coverage %. ✅
+- Snapshot store pre-initialized with 4 demo snapshots (Baseline/Moved Cupboard/Cam2/Night). ✅
+
+**Open items after Phase 2:**
+- "Test Without This Obstruction" button deferred to Phase 3 (needs separate simulation run path).
+- Camera PIP canvas needs scene-reactive update when camera props change via inspector.
+- Adversarial path simulation (Phase 3) builds on the working coverage grid.

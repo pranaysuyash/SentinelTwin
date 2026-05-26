@@ -229,18 +229,196 @@ not Phase 4+. Update PHASE docs accordingly.
 
 ---
 
+## D-012 | 2026-05-26 | PrivacyZoneNode is a first-class SecurityScene node type
+
+**Decision:** PrivacyZoneNode is a built-in security node type with its own Zod schema,
+rendering overlay, and compliance report export. It is NOT a post-hoc annotation or tag
+on existing nodes.
+
+**Rationale:**
+- GDPR enforcement is escalating: CNIL (France) issued €200,000+ fines in 2025-2026 for
+  excessive monitoring and disproportionate camera placement
+- BIPA (Illinois) class-action risk: privacy zones around sensitive areas (changing rooms,
+  restrooms, union offices, cafeterias) are a legal requirement, not best practice
+- Healthcare (HIPAA): cameras must NOT capture PHI (patient screens, medical records) —
+  privacy zones document compliance
+- Every vertical (schools, healthcare, retail) needs documented privacy compliance evidence
+- If privacy zones are post-hoc tags, compliance reports can't verify they existed at scene time
+
+**Implementation:**
+- `PrivacyZoneNode` in SecurityScene schema: polygon boundary + type (no-video, restricted-view,
+  blindspot-required) + regulatory reference (GDPR Art 6, BIPA, HIPAA)
+- Coverage engine excludes privacy zones from visibility computation
+- Report layer generates privacy compliance section referencing applicable regulations
+- Privacy zone overlay is visually distinct in the editor (red hatching or similar)
+
+**Alternative rejected — post-hoc annotation on CameraNode:**
+- Doesn't satisfy regulatory documentation needs (compliance requires explicit zone definition)
+- Annotating camera FoV is not the same as defining a protected zone boundary
+- Post-hoc tags can be removed without trace — audit trail requires first-class nodes
+
+---
+
+## D-013 | 2026-05-26 | SpatialLM confirmed for V0.4 scan-to-scene pipeline
+
+**Decision:** Include SpatialLM (Apache 2.0) as the semantic extraction stage in the V0.4
+scan-to-SecurityScene pipeline. It will follow VGGT (MIT) for camera pose + point maps and
+feed into our SecurityScene compiler.
+
+**Rationale (from May 2026 research):**
+- SpatialLM outputs structured text with architectural elements (walls, doors, windows) and
+  3D bounding boxes for furniture — directly usable for SecurityScene block extraction
+- Apache 2.0 licensed — fully permissive for commercial use
+- Standard Python environment (Python 3.11, PyTorch 2.4.1, CUDA 12.4), no Docker requirement
+- 94.3 F1 @ .25 IoU on Structured3D layout estimation — competitive with dedicated methods
+- Works with point clouds from monocular video, RGBD, or LiDAR — flexible input options
+- 0.5B and 1B parameter sizes — reasonable VRAM footprint
+
+**Pipeline confirmed:**
+```
+Phone video → VGGT (MIT) → point maps + camera poses
+  → conversion step (point map tensor → Open3D PointCloud)
+  → SpatialLM (Apache 2.0) → structured text (walls, doors, windows, furniture OBB)
+  → SecurityScene compiler (our code) → SecurityScene JSON
+  → User confirmation UI → final scene
+```
+
+**What changed from earlier assumption:**
+- Previously assumed a tighter VGGT → Open3D integration. Research confirms a conversion step
+  is needed (point map tensor → .ply or COLMAP format → Open3D loads it). This is standard.
+- SpatialLM was assumed but not confirmed Apache 2.0. Now confirmed.
+
+**Alternative rejected — scene understanding direct from GPT-4o Vision:**
+- GPT-4o cannot produce metric 3D bounding boxes from single images
+- SpatialLM operates on real point cloud data for geometric accuracy
+
+---
+
+## D-014 | 2026-05-26 | three-mesh-bvh performance target confirmed achievable
+
+**Decision:** Proceed with three-mesh-bvh as the BVH acceleration layer for the coverage engine.
+No need for alternative acceleration strategies.
+
+**Rationale (from May 2026 research):**
+- 6,400 rays (40×40 grid × 4 cameras) is well within three-mesh-bvh's capability on modern
+  desktop GPUs. Target <16ms is achievable.
+- Shared BVH: build merged vision-collider mesh once, raycast from all cameras
+- Memory overhead is moderate (TypedArray-based tree, a few bytes per triangle)
+- Web Worker offload available for BVH construction on large scenes
+- Industry standard in Three.js ecosystem — well-maintained, documented
+
+**Implementation guidance (from bench.):**
+- Build merged vision-collider mesh on scene change (simulationDirty flag)
+- Generate BVH once; reuse for all raycasts
+- Consider Web Worker for BVH rebuild if scenes approach campus scale (100k+ triangles)
+
+---
+
+## D-015 | 2026-05-26 | Privacy compliance is a product requirement, not an optional overlay
+
+**Decision:** SentinelTwin's privacy compliance features (privacy zones, DPIA report section,
+compliance evidence export) are core product requirements from V0.1, not V2+ enhancements.
+
+**Rationale:**
+- The same research that validated SentinelTwin's product gap also revealed that privacy
+  compliance is the #1 adjacent pain point for every buyer persona:
+  - DPOs need documented camera placement justification (GDPR Art. 35 DPIA)
+  - Security consultants need to show clients that privacy zones are respected
+  - School district directors need compliance evidence for grant reporting
+  - Healthcare facility managers need Joint Commission-ready privacy documentation
+- Privacy zones are a regulatory requirement, not a best practice — this makes them a
+  mandatory consideration, not a nice-to-have
+- Building privacy compliance as a core feature from day one avoids a later retrofit that
+  would break the schema, report format, and simulation engine
+
+**Impact on build sequencing:**
+- PrivacyZoneNode in SecurityScene schema (V0.1 — data model, already planned)
+- Privacy zone overlay in editor (V0.1 — visual enforcement in the editor)
+- Coverage engine must respect privacy zones (V0.1 — raycast stops at privacy zone boundary)
+- Compliance report section referencing applicable regulations (Phase 7 — after simulation core is stable)
+- Dedicated privacy compliance evidence export formats (Phase 10 — per-jurisdiction report templates)
+
+The key principle: **privacy zones are in the data model and engine from day one** (V0.1).
+The compliance report export is split from the core enforcement because it depends on
+stable simulation output and per-jurisdiction regulatory research.
+
+**Impact on architecture docs:**
+- Update ARCHITECTURE_OVERVIEW.md to explicitly call out privacy compliance flow
+- Privacy is not an afterthought — it's in the core loop
+
+---
+
 ## Future Decisions Pending
 
 | ID | Question | Decision criteria |
 |---|---|---|
-| D-012 | When to move coverage engine to Web Worker? | Benchmark first. If >16ms on a 40×40 grid + 4 cameras on test hardware, move. |
-| D-013 | Rapier: when to add? | Profile first build without it. Add if drag-and-drop quality is unacceptable. |
-| D-014 | Camera wall: 4 Canvas or render-to-texture? | Test with 4 Camera nodes. If >30fps degradation, switch to RTT. |
-| D-015 | Scene understanding model (V0.2)? | Run bakeoff in experiments/scene_understanding/ |
-| D-016 | Segmentation model for scan mode (V0.2)? | Run bakeoff in experiments/segmentation/ |
-| D-017 | Coverage entropy metric: surface in V0.1 or defer? | Show to target user for feedback first. |
-| D-018 | GSAP vs motion (Framer Motion)? | Decide at first animation implementation. See OPEN_SOURCE_LICENSING.md. |
-| D-019 | Local-first vs server-side compute? | See Thread 23 in EXPLORATION_MAP.md. Must resolve before building any data persistence. |
-| D-020 | Security Evidence Twin as product mode or primary frame? | See Thread 24 in EXPLORATION_MAP.md. Product decision, not technical. |
-| D-021 | Text-to-scene as primary input or secondary? | See Q-016 in OPEN_QUESTIONS.md. Experiment first. |
-| D-022 | Multi-sensor scope: camera-only or full physical security? | See Thread 25 in EXPLORATION_MAP.md. Affects data model. Decide before V1 design. |
+| D-016 | When to move coverage engine to Web Worker? | Benchmark first. If >16ms on a 40×40 grid + 4 cameras on test hardware, move. |
+| D-017 | Rapier: when to add? | Profile first build without it. Add if drag-and-drop quality is unacceptable. |
+| D-018 | Camera wall: 4 Canvas or render-to-texture? | Test with 4 Camera nodes. If >30fps degradation, switch to RTT. |
+| D-019 | Scene understanding model (V0.2)? | Run bakeoff in experiments/scene_understanding/ |
+| D-020 | Segmentation model for scan mode (V0.2)? | Run bakeoff in experiments/segmentation/ |
+| D-021 | Coverage entropy metric: surface in V0.1 or defer? | Show to target user for feedback first. |
+| D-022 | GSAP vs motion (Framer Motion)? | Decided — use motion (Framer Motion v11, MIT). See D-011 addendum. |
+| D-023 | Local-first vs server-side compute? | See Thread 23 in EXPLORATION_MAP.md. Must resolve before building any data persistence. |
+| D-024 | Security Evidence Twin as product mode or primary frame? | See Thread 24 in EXPLORATION_MAP.md. Product decision, not technical. |
+| D-025 | Text-to-scene as primary input or secondary? | See Q-016 in OPEN_QUESTIONS.md. Experiment first. |
+| D-026 | Multi-sensor scope: camera-only or full physical security? | See Thread 25 in EXPLORATION_MAP.md. Affects data model. Decide before V1 design. |
+| D-027 | Verkada Site Planner — competitive threat or market validation? | Market validation — 2D, vendor-locked, no simulation. Monitor for feature expansion. |
+| D-028 | School/campus vertical — dedicated product or template? | Decide after V0.1 launch and user feedback. See Thread 40. |
+| D-029 | Physical security SOAR — when to begin architecture? | V0.2: design agent architecture with SOAR integration in mind. V1: implement. |
+
+---
+
+## D-030 | 2026-05-27 | Coverage grid cell size = 0.25m (4 cells/meter) for Phase 0
+
+**Decision:** Coverage grid uses 0.25m cell size (4 cells/meter) as the standard resolution.
+
+**Rationale:**
+- A human body is approximately 0.0.5m wide. At 0.25m cells, a person covers 2 cells in width,14
+  giving DORI-meaningful spatial  coarse enough to compute quickly, fine enough toresolution 
+  distinguish obstruction shadow at body scale.
+- A 107m room produces a 4028 = 1,120 cell grid per camera. For 4 cameras: 4,480 raycasts per
+  simulation run. This is well within the <16ms performance target at 0.25m.
+- 0.25m aligns with typical tile/grid references in security planning tools (JVSG uses 0.25m by default).
+- Coarser (0.5m) loses resolution at obstruction  a shelf's shadow covers only 1 cell and theedges 
+  quality mismatch is not visible. Finer (0.1m) increases raycast count 6.25 without corresponding
+  visual benefit.
+
+**Implementation:** `cellsPerMeter = 4` constant in `src/simulation/grid.ts`. Displayed as "Grid: 0.25 m"
+in the Studio status bar.
+
+**Alternative  0.5m cells:**rejected 
+- Too coarse for obstruction shadow detection at human-body scale
+- Cash counter failure scenario loses fidelity
+
+**Alternative  0.1m cells:**rejected 
+- 100 cells/  vs 16 cells/  = 6.25Mm more raycasts
+- No meaningful improvement in DORI quality classification at sub-0.25m scale
+- Performance budget consumed without simulation accuracy gain
+
+**Revisit trigger:** If scenes exceed 3030m (campus scale), consider adaptive resolution
+(coarser in open areas, finer near critical zones). Document in OPEN_QUESTIONS.md when needed.
+
+---
+
+## D-031 | 2026-05-27 | npm install over bun install for runtime production dependency resolution
+
+**Decision:** Use `npm install` (not `bun install`) for installing runtime dependencies in `apps/studio`.
+Keep `bun test` for test execution (fast, works correctly with resolved node_modules).
+
+**Rationale:**
+- Bun's isolated-install mode fails to resolve transitive dependencies for Zod in the test environment:
+  `import { z } from 'zod'` resolves correctly when node_modules is built by npm, but Bun's
+  isolated mode creates a separate resolution context that breaks Zod's package export map.
+- This is a Bun 1.3.4 behavior specific to packages that rely on `exports` field resolution.
+  npm resolves it correctly via standard node resolution.
+- The mismatch only appears in the test environment (vitest via Bun); the Next.js dev build
+  (handled by Turbopack) resolves correctly in both cases.
+- `bun test` continues to run tests fast (209ms for 5 tests) against the npm-resolved node_modules.
+
+**Alternative  bun install throughout:**rejected 
+- Caused `Cannot find module 'zod'` in vitest test runner
+- Fixing required custom module resolution config in vitest.config.ts; npm install is simpler
+
+**Note for agents:** When adding new dependencies, use `npm install <package>` (not `bun add`).
+When running tests, use `bun test` or `npm test` (both invoke the same `bun test` command via package.json).

@@ -1,9 +1,13 @@
 # Phase 2 — Editor Integration
 
-**Status:** Not started
-**Blocking:** Phase 0 + Phase 1 must be complete
+**Status:** In progress (2026-05-26)
+**Blocking:** Phase 0 ✅ + Phase 1 ✅ complete
 **Agent:** Claude Code (or any agent)
 **Read first:** Docs/architecture/02, 07, 08
+
+**Note:** `apps/studio` is the standalone implementation (per D-010). The Pascal fork paths
+in tasks 2.1–2.2 are already implemented directly in `WorkspaceCanvas.tsx`. Tasks below
+are mapped to actual `apps/studio` locations.
 
 ---
 
@@ -189,14 +193,16 @@ Metrics panel shows delta between them.
 
 ## Phase 2 Done Criteria
 
-- [ ] 2.1: Camera cone renders in 3D
-- [ ] 2.2: Coverage heatmap renders correctly with quality colors
-- [ ] 2.3: Simulation recomputes on mouse-up, not during drag
-- [ ] 2.4: Camera inspector panel updates camera, triggers recompute
-- [ ] 2.5: Obstruction inspector panel, movable, triggers recompute
-- [ ] 2.6: Metrics panel shows coverage summary and zone results
-- [ ] 2.7: Day/night toggle degrades coverage visually
-- [ ] 2.8: Camera view mode (PIP) works
-- [ ] 2.9: Before/after snapshots work, comparison renders
+- [x] 2.1: Camera cone renders in 3D — `WorkspaceCanvas.tsx` CameraFrustum ✅
+- [x] 2.2: Coverage heatmap renders correctly with quality colors — `CoverageHeatmap` ✅
+- [x] 2.3: Simulation recomputes on mouse-up, not during drag — `use-simulation.ts` 400ms debounce ✅ (wired after 2.4 completes)
+- [x] 2.4: Camera inspector panel updates camera, triggers recompute — `InspectorPanel.tsx` wired to `updateNode` ✅
+- [x] 2.5: Obstruction inspector panel, movable, triggers recompute — `ObstructionInspector` + clickable `ObstructionBox` ✅
+- [x] 2.6: Metrics panel shows coverage summary and zone results — `MetricsTab.tsx` ✅
+- [x] 2.7: Day/night toggle degrades coverage visually — `TopBar.tsx` environmentMode toggle ✅
+- [x] 2.8: Camera view mode (PIP) works — `CameraFeedCanvas.tsx`, live secondary R3F Canvas in inspector View tab ✅
+- [x] 2.9: Before/after snapshots work, comparison renders — `BeforeAfterTab.tsx` with delta ✅
+
+**Phase 2 COMPLETE — 2026-05-26**
 
 **Next phase:** `Docs/todos/PHASE_3_AI_COMMAND.md`

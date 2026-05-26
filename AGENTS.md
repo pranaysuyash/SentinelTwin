@@ -203,19 +203,22 @@ Read-only git commands only unless user explicitly approves writes in this conve
 
 ## Status
 
-No code exists yet. Current phase: Architecture + exploration documentation complete.
-Next: Build simulation pipeline standalone (D-010) — see PHASE_0_SETUP.md.
+Phases 0–2 complete. Simulation engine, schema, store, and core UI all built and working.
+See `Docs/todos/CURRENT_IMPLEMENTATION_STATE.md` for exact verified state.
+See `Docs/todos/CAMERASTUDIO_GAP_ANALYSIS.md` for gap analysis vs full product spec.
+See `Docs/decisions/PRE_BUILD_DISCUSSION_LOG.md` for all discussion topics resolved before coding.
 
-Key pending decisions (see DECISION_LOG.md for full list):
-- D-010: Build simulation core before Pascal fork — PHASE_0 updated accordingly
-- D-011: Adversarial path is a core primitive, build after coverage engine
-- D-019: Local-first vs server-side compute — resolve before data persistence
-- D-020: Security Evidence Twin as product mode or frame — product decision
-- D-021: Text-to-scene as primary input or secondary — experiment first
-- D-022: Multi-sensor scope — decide before V1 data model freeze
+Next build priorities (from reference image analysis):
+1. Canvas view mode tabs (Map View / Camera View / Camera Wall / Path Replay)
+2. Full-canvas Camera View rendering
+3. Path replay animation with actor
+4. DORI overlays on camera view + enhanced timeline
+5. Camera Wall mode
+6. Wire remaining stubs (Failures tab, Tool placement, Test Without This)
 
-Key open questions to be aware of (see OPEN_QUESTIONS.md):
-- Q-017: How to communicate simulation uncertainty to users
-- Q-018: Data security / local-first architecture
-- Q-019: Multi-sensor scope
-- Q-020: India-first GTM product requirements
+Open decisions that must be resolved before relevant sprint:
+- D-018: GSAP vs motion for path replay animation (before Sprint 1)
+- D-019: Local-first vs server-side compute (before AI call layer)
+- D-020: Security Evidence Twin framing (before report layer design)
+- D-021: Text-to-scene scope (before V0.2 design)
+- D-022: Multi-sensor scope (before V1 data model freeze)

@@ -1,0 +1,552 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e640] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e641]:
+      - img [ref=e642]
+    - generic [ref=e645]:
+      - button "Open issues overlay" [ref=e646]:
+        - generic [ref=e647]:
+          - generic [ref=e648]: "0"
+          - generic [ref=e649]: "1"
+        - generic [ref=e650]: Issue
+      - button "Collapse issues badge" [ref=e651]:
+        - img [ref=e652]
+  - generic [ref=e654]:
+    - banner [ref=e655]:
+      - generic [ref=e656]:
+        - generic [ref=e657]:
+          - img [ref=e659]
+          - generic [ref=e661]:
+            - generic [ref=e662]: SentinelTwin Studio
+            - generic [ref=e663]: Camera Coverage Testbed
+        - button "Small Retail Shop Demo" [ref=e665]:
+          - generic [ref=e666]: Small Retail Shop Demo
+          - img [ref=e667]
+        - button "Day Mode" [ref=e670]:
+          - img [ref=e671]
+          - generic [ref=e677]: Day Mode
+          - img [ref=e678]
+      - generic [ref=e680]:
+        - generic [ref=e682]:
+          - img [ref=e683]
+          - text: Up to date
+        - button "Run Simulation" [ref=e686]:
+          - img [ref=e687]
+          - text: Run Simulation
+        - button "Night Mode" [ref=e689]:
+          - img [ref=e690]
+          - text: Night Mode
+        - button "Camera Failure" [ref=e692]:
+          - img [ref=e693]
+          - text: Camera Failure
+        - button "Save Snapshot" [ref=e695]:
+          - img [ref=e696]
+          - text: Save Snapshot
+        - button "Compare" [ref=e699]:
+          - img [ref=e700]
+          - text: Compare
+        - button "Generate Report" [ref=e705]:
+          - img [ref=e706]
+          - text: Generate Report
+        - button [ref=e709]:
+          - img [ref=e710]
+    - generic [ref=e714]:
+      - complementary [ref=e715]:
+        - generic [ref=e716]:
+          - generic [ref=e717]:
+            - generic [ref=e719]: Scene Tools
+            - generic [ref=e720]:
+              - button "Select V" [ref=e721]:
+                - img [ref=e723]
+                - generic [ref=e725]: Select
+                - generic [ref=e726]: V
+              - button "Camera C" [ref=e727]:
+                - img [ref=e729]
+                - generic [ref=e732]: Camera
+                - generic [ref=e733]: C
+              - button "Obstruction B" [ref=e734]:
+                - img [ref=e736]
+                - generic [ref=e738]: Obstruction
+                - generic [ref=e739]: B
+              - button "Light L" [ref=e740]:
+                - img [ref=e742]
+                - generic [ref=e748]: Light
+                - generic [ref=e749]: L
+              - button "Path P" [ref=e750]:
+                - img [ref=e752]
+                - generic [ref=e756]: Path
+                - generic [ref=e757]: P
+              - button "Zone Z" [ref=e758]:
+                - img [ref=e760]
+                - generic [ref=e762]: Zone
+                - generic [ref=e763]: Z
+              - button "Door / Window D" [ref=e764]:
+                - img [ref=e766]
+                - generic [ref=e769]: Door / Window
+                - generic [ref=e770]: D
+              - button "Wall W" [ref=e771]:
+                - img [ref=e773]
+                - generic [ref=e776]: Wall
+                - generic [ref=e777]: W
+              - button "Measure M" [ref=e778]:
+                - img [ref=e780]
+                - generic [ref=e786]: Measure
+                - generic [ref=e787]: M
+              - button "Comment T" [ref=e788]:
+                - img [ref=e790]
+                - generic [ref=e792]: Comment
+                - generic [ref=e793]: T
+          - generic [ref=e794]:
+            - generic [ref=e795]:
+              - img [ref=e796]
+              - generic [ref=e800]: Scene Layers
+            - generic [ref=e801]:
+              - generic [ref=e802]:
+                - img [ref=e804]
+                - generic [ref=e806]: Cameras
+                - button [ref=e807]:
+                  - img [ref=e808]
+              - generic [ref=e811]:
+                - img [ref=e813]
+                - generic [ref=e815]: Camera Cones
+                - button [ref=e816]:
+                  - img [ref=e817]
+              - generic [ref=e820]:
+                - img [ref=e822]
+                - generic [ref=e824]: Obstructions
+                - button [ref=e825]:
+                  - img [ref=e826]
+              - generic [ref=e829]:
+                - img [ref=e831]
+                - generic [ref=e833]: Lights
+                - button [ref=e834]:
+                  - img [ref=e835]
+              - generic [ref=e838]:
+                - img [ref=e840]
+                - generic [ref=e842]: Critical Zones
+                - button [ref=e843]:
+                  - img [ref=e844]
+              - generic [ref=e847]:
+                - img [ref=e849]
+                - generic [ref=e851]: Privacy Zones
+                - button [ref=e852]:
+                  - img [ref=e853]
+              - generic [ref=e856]:
+                - img [ref=e858]
+                - generic [ref=e860]: Paths
+                - button [ref=e861]:
+                  - img [ref=e862]
+              - generic [ref=e865]:
+                - img [ref=e867]
+                - generic [ref=e869]: Heatmap
+                - button [ref=e870]:
+                  - img [ref=e871]
+              - generic [ref=e874]:
+                - img [ref=e876]
+                - generic [ref=e878]: Grid
+                - button [ref=e879]:
+                  - img [ref=e880]
+              - generic [ref=e883]:
+                - img [ref=e885]
+                - generic [ref=e887]: Walls & Floors
+                - button [ref=e888]:
+                  - img [ref=e889]
+              - generic [ref=e892]:
+                - img [ref=e894]
+                - generic [ref=e896]: Labels
+                - button [ref=e897]:
+                  - img [ref=e898]
+          - generic [ref=e901]:
+            - generic [ref=e902]:
+              - img [ref=e903]
+              - generic [ref=e905]: Mini-Map
+            - generic [ref=e906]:
+              - img [ref=e907]
+              - generic [ref=e1962]:
+                - generic [ref=e1963]: Coverage
+                - generic [ref=e1964]: 10m x 7m
+              - generic [ref=e1965]:
+                - generic [ref=e1966]:
+                  - button [ref=e1967]:
+                    - img [ref=e1968]
+                  - button [ref=e1971]:
+                    - img [ref=e1972]
+                  - button "Fit" [ref=e1975]
+                - button "2D" [ref=e1976]
+      - generic [ref=e1977]:
+        - generic [ref=e1978]:
+          - generic [ref=e1979]:
+            - generic [ref=e1980]: Coverage Quality (PPM)
+            - generic [ref=e1981]:
+              - generic [ref=e1984]:
+                - generic [ref=e1985]: 250+
+                - generic [ref=e1986]: Identification · 250+ PPM
+              - generic [ref=e1989]:
+                - generic [ref=e1990]: 125-250
+                - generic [ref=e1991]: Recognition · 125-250 PPM
+              - generic [ref=e1994]:
+                - generic [ref=e1995]: 62.5-125
+                - generic [ref=e1996]: Observation · 62.5-125 PPM
+              - generic [ref=e1999]:
+                - generic [ref=e2000]: 25-62.5
+                - generic [ref=e2001]: Detection · 25-62.5 PPM
+              - generic [ref=e2004]:
+                - generic [ref=e2005]: <25
+                - generic [ref=e2006]: No Coverage · <25 PPM
+          - generic [ref=e2009]: "N"
+          - generic [ref=e2012]:
+            - button "3D" [ref=e2013]
+            - button "2D" [ref=e2014]
+            - button [ref=e2015]:
+              - img [ref=e2016]
+            - button [ref=e2021]:
+              - img [ref=e2022]
+          - generic [ref=e2026]:
+            - generic [ref=e2027]: "Left: Orbit"
+            - generic [ref=e2028]: •
+            - generic [ref=e2029]: "Middle: Pan"
+            - generic [ref=e2030]: •
+            - generic [ref=e2031]: "Right: Zoom"
+            - generic [ref=e2032]: •
+            - generic [ref=e2033]: "Scroll: Zoom"
+          - generic [ref=e2034]:
+            - generic:
+              - generic:
+                - generic:
+                  - generic: CUPBOARD
+                  - generic: Blocking Camera 1
+                  - generic: View obstructed
+            - generic:
+              - generic:
+                - generic:
+                  - generic: CASH COUNTER
+                  - generic: RECOGNITION REQUIRED
+                  - generic:
+                    - generic: FAILS
+            - generic:
+              - generic:
+                - generic: ENTRY DOOR
+            - generic:
+              - generic:
+                - generic:
+                  - generic: CAMERA 1
+                  - generic: 4MP Dome
+                  - generic:
+                    - generic: Active
+            - generic:
+              - generic:
+                - generic:
+                  - generic: CAMERA 2
+                  - generic: 4MP Bullet
+                  - generic:
+                    - generic: Active
+        - generic [ref=e2037]:
+          - generic [ref=e2038]:
+            - button "METRICS" [ref=e2039]
+            - button "ISSUES(2)" [ref=e2040]:
+              - text: ISSUES
+              - generic [ref=e2041]: (2)
+            - button "TIMELINE" [ref=e2042]
+            - button "BEFORE / AFTER" [ref=e2043]
+            - button "REPORT LITE" [ref=e2044]
+            - button "DEBUG" [ref=e2045]
+          - generic [ref=e2047]:
+            - generic [ref=e2048]:
+              - generic [ref=e2049]: Overall Coverage (Detection)
+              - generic [ref=e2050]:
+                - img [ref=e2051]
+                - generic [ref=e2054]:
+                  - generic [ref=e2055]: 58%
+                  - generic [ref=e2056]: Walkable Area
+              - generic [ref=e2057]: +6% vs last run
+            - generic [ref=e2058]:
+              - generic [ref=e2059]: Critical Zones
+              - generic [ref=e2060]:
+                - generic [ref=e2061]:
+                  - text: "0"
+                  - generic [ref=e2062]: /1
+                - generic [ref=e2063]: Zones Passing
+                - generic [ref=e2064]:
+                  - generic [ref=e2065]: Cash Counter
+                  - generic [ref=e2066]: FAILS
+            - generic [ref=e2067]:
+              - generic [ref=e2068]: Cameras
+              - generic [ref=e2069]:
+                - generic [ref=e2070]: "2"
+                - generic [ref=e2071]: Active
+                - generic [ref=e2072]: 0 Offline
+            - generic [ref=e2073]:
+              - generic [ref=e2074]: Average Quality (Walkable)
+              - generic [ref=e2075]:
+                - img [ref=e2076]
+                - generic [ref=e2079]:
+                  - generic [ref=e2080]: "1.6"
+                  - generic [ref=e2081]: DETECTION
+              - generic [ref=e2082]: "Target: RECOGNITION"
+            - generic [ref=e2083]:
+              - generic [ref=e2084]: Worst Area Quality
+              - generic [ref=e2085]:
+                - generic [ref=e2086]: "1"
+                - generic [ref=e2087]: NO COVERAGE
+                - generic [ref=e2088]: Near Cupboard
+            - generic [ref=e2089]:
+              - generic [ref=e2090]: Recognition Area
+              - generic [ref=e2091]:
+                - generic [ref=e2092]: 41%
+                - generic [ref=e2093]: of Walkable Area
+            - generic [ref=e2094]:
+              - generic [ref=e2095]: Identification Area
+              - generic [ref=e2096]:
+                - generic [ref=e2097]: 10%
+                - generic [ref=e2098]: of Walkable Area
+      - generic [ref=e2099]:
+        - complementary [ref=e2100]:
+          - generic [ref=e2101]: Inspector
+          - generic [ref=e2102]:
+            - generic [ref=e2103]:
+              - generic [ref=e2104]:
+                - img [ref=e2106]
+                - generic [ref=e2109]:
+                  - generic [ref=e2110]: Camera 1
+                  - generic [ref=e2111]: entrance
+              - generic [ref=e2112]: Active
+            - generic [ref=e2114]:
+              - generic [ref=e2115]:
+                - generic [ref=e2116]: 110 deg
+                - generic [ref=e2117]: FOV
+              - generic [ref=e2118]:
+                - generic [ref=e2119]: 11m
+                - generic [ref=e2120]: Range
+              - generic [ref=e2121]:
+                - generic [ref=e2122]: "Off"
+                - generic [ref=e2123]: Night
+          - generic [ref=e2124]:
+            - button "Properties" [ref=e2125]
+            - button "View" [ref=e2126]
+            - button "Status" [ref=e2127]
+            - button "Analytics" [ref=e2128]
+            - button "Failures" [ref=e2129]
+          - generic [ref=e2130]:
+            - generic [ref=e2131]:
+              - generic [ref=e2132]: Camera Spec
+              - generic [ref=e2133]:
+                - generic [ref=e2134]: Type
+                - generic [ref=e2135]: 4MP Indoor Dome
+              - generic [ref=e2136]:
+                - generic [ref=e2137]: Mount
+                - generic [ref=e2138]: Ceiling
+              - generic [ref=e2139]:
+                - generic [ref=e2140]: Resolution
+                - generic [ref=e2141]: 4MP (2688x1520)
+              - generic [ref=e2142]:
+                - generic [ref=e2143]: Lens
+                - generic [ref=e2144]: Fixed 2.8mm
+            - generic [ref=e2145]:
+              - generic [ref=e2146]: Placement
+              - generic [ref=e2147]:
+                - generic [ref=e2148]:
+                  - generic [ref=e2149]:
+                    - generic [ref=e2150]: X
+                    - generic [ref=e2151]: m
+                  - spinbutton "X m" [ref=e2152]: "2.1"
+                - generic [ref=e2153]:
+                  - generic [ref=e2154]:
+                    - generic [ref=e2155]: "Y"
+                    - generic [ref=e2156]: m
+                  - spinbutton "Y m" [ref=e2157]: "2.8"
+                - generic [ref=e2158]:
+                  - generic [ref=e2159]:
+                    - generic [ref=e2160]: Z
+                    - generic [ref=e2161]: m
+                  - spinbutton "Z m" [ref=e2162]: "1.3"
+              - generic [ref=e2163]:
+                - generic [ref=e2164]:
+                  - generic [ref=e2165]:
+                    - generic [ref=e2166]: Yaw
+                    - generic [ref=e2167]: 137°
+                  - slider [ref=e2168]: "137"
+                - generic [ref=e2169]:
+                  - generic [ref=e2170]:
+                    - generic [ref=e2171]: Pitch
+                    - generic [ref=e2172]: "-24°"
+                  - slider [ref=e2173]: "-24"
+              - generic [ref=e2175]:
+                - generic [ref=e2176]:
+                  - generic [ref=e2177]: Height
+                  - generic [ref=e2178]: m
+                - spinbutton "Height m" [ref=e2179]: "2.8"
+            - generic [ref=e2180]:
+              - generic [ref=e2181]: Optics
+              - generic [ref=e2182]:
+                - generic [ref=e2183]:
+                  - generic [ref=e2184]: FOV (Horizontal)
+                  - generic [ref=e2185]: 110°
+                - slider [ref=e2186]: "110"
+          - generic [ref=e2187]:
+            - generic [ref=e2188]:
+              - button "Aim at Zone" [ref=e2189]:
+                - img [ref=e2190]
+                - text: Aim at Zone
+              - button "Go To Camera View" [ref=e2192]:
+                - img [ref=e2193]
+                - text: Go To Camera View
+            - generic [ref=e2196]:
+              - button "Delete Camera" [ref=e2197]:
+                - img [ref=e2198]
+                - text: Delete Camera
+              - button "Duplicate" [ref=e2201]:
+                - img [ref=e2202]
+                - text: Duplicate
+        - generic [ref=e2205]:
+          - generic [ref=e2206]:
+            - generic [ref=e2207]: Scenario / Path
+            - img [ref=e2208]
+          - generic [ref=e2211]:
+            - generic [ref=e2212]:
+              - generic [ref=e2213]:
+                - generic [ref=e2214]: Active Path
+                - button "Night Entry → Cash Counter" [ref=e2215]:
+                  - generic [ref=e2216]: Night Entry → Cash Counter
+                  - img [ref=e2217]
+                - generic [ref=e2219]:
+                  - generic [ref=e2220]: person
+                  - generic [ref=e2221]: authorized
+                  - generic [ref=e2222]: 1.2 m/s
+              - generic [ref=e2223]:
+                - generic [ref=e2224]:
+                  - generic [ref=e2225]: 4.7 m
+                  - generic [ref=e2226]: Path Length
+                - generic [ref=e2227]:
+                  - generic [ref=e2228]: 4.0 sec
+                  - generic [ref=e2229]: Est. Time
+                - generic [ref=e2230]:
+                  - generic [ref=e2231]: 100%
+                  - generic [ref=e2232]: Visible
+              - generic [ref=e2233]:
+                - generic [ref=e2234]:
+                  - generic [ref=e2235]: Coverage Ribbon
+                  - generic [ref=e2236]: 5 events
+                - generic [ref=e2246]:
+                  - generic [ref=e2247]: Entry
+                  - generic [ref=e2248]: Cash Counter
+              - generic [ref=e2249]:
+                - button "Edit Path" [ref=e2250]:
+                  - img [ref=e2251]
+                  - text: Edit Path
+                - button "Play Path" [ref=e2253]:
+                  - img [ref=e2254]
+                  - text: Play Path
+            - generic [ref=e2256]:
+              - generic [ref=e2257]:
+                - generic [ref=e2258]: Path Map
+                - img [ref=e2259]
+              - img [ref=e2263]
+              - generic [ref=e2277]:
+                - generic [ref=e2280]: Start
+                - generic [ref=e2283]: Path
+                - generic [ref=e2286]: End (Cash Counter)
+    - generic [ref=e2287]:
+      - generic [ref=e2289]:
+        - generic [ref=e2290]:
+          - generic [ref=e2291]: Snapshots
+          - button "New" [ref=e2292]:
+            - img [ref=e2293]
+            - text: New
+        - generic [ref=e2295]:
+          - generic [ref=e2296]:
+            - generic [ref=e2301]: 58%
+            - generic [ref=e2302]: Baseline
+            - generic [ref=e2303]: Today, 09:17 AM
+          - generic [ref=e2304]:
+            - generic [ref=e2309]: 59%
+            - generic [ref=e2310]: Moved Cupboard
+            - generic [ref=e2311]: Today, 09:21 AM
+          - generic [ref=e2312]:
+            - generic [ref=e2317]: 63%
+            - generic [ref=e2318]: Cam 2 Rotated
+            - generic [ref=e2319]: Today, 09:25 AM
+          - generic [ref=e2320]:
+            - generic [ref=e2325]: 58%
+            - generic [ref=e2326]: Night Mode
+            - generic [ref=e2327]: Today, 09:28 AM
+          - button "New Snapshot" [ref=e2328]:
+            - img [ref=e2329]
+            - generic [ref=e2330]: New Snapshot
+      - generic [ref=e2332]:
+        - generic [ref=e2333]:
+          - generic [ref=e2334]: Assumptions
+          - button "Edit Assumptions" [ref=e2335]:
+            - img [ref=e2336]
+            - text: Edit Assumptions
+        - generic [ref=e2340]:
+          - generic [ref=e2341]:
+            - generic [ref=e2342]: DORI Model
+            - generic [ref=e2343]: Simplified PPM
+          - generic [ref=e2344]:
+            - generic [ref=e2345]: Lighting Model
+            - generic [ref=e2346]: Simplified
+          - generic [ref=e2347]:
+            - generic [ref=e2348]: PPM Thresholds
+            - generic [ref=e2349]: 25 / 62.5 / 125 / 250
+          - generic [ref=e2350]:
+            - generic [ref=e2351]: Glass Handling
+            - generic [ref=e2352]: Partial Transmission
+          - generic [ref=e2353]:
+            - generic [ref=e2354]: Person Height
+            - generic [ref=e2355]: 1.7 m
+          - generic [ref=e2356]:
+            - generic [ref=e2357]: Time of Day
+            - generic [ref=e2358]: Day
+          - generic [ref=e2359]:
+            - generic [ref=e2360]: Wall Height
+            - generic [ref=e2361]: 3 m
+          - generic [ref=e2362]:
+            - generic [ref=e2363]: Night Mode
+            - generic [ref=e2364]: "Off"
+      - generic [ref=e2366]:
+        - generic [ref=e2367]:
+          - generic [ref=e2368]: Report Summary (Latest Run)
+          - img [ref=e2369]
+        - generic [ref=e2373]:
+          - generic [ref=e2374]:
+            - generic [ref=e2377]:
+              - generic [ref=e2378]: "Critical Issue:"
+              - text: Cash Counter fails the recognition requirement.
+            - generic [ref=e2381]:
+              - generic [ref=e2382]: "Primary Cause:"
+              - text: Cupboard obstructs Camera 1 view. Distance too far for recognition from Camera 2.
+            - generic [ref=e2385]:
+              - generic [ref=e2386]: "Impact:"
+              - text: Subject can be observed but not recognized at the cash counter.
+            - generic [ref=e2389]:
+              - generic [ref=e2390]: "Recommendation:"
+              - text: Move the cupboard away from Camera 1's center ray. Rotate Camera 2 closer to the cash counter and tighten its field of view.
+          - button "Open Report Lite" [ref=e2391]
+      - generic [ref=e2393]:
+        - generic [ref=e2395]: Environment
+        - generic [ref=e2398]:
+          - generic [ref=e2399]:
+            - img [ref=e2400]
+            - generic [ref=e2402]: Temp.
+            - generic [ref=e2403]: 28°C
+          - generic [ref=e2404]:
+            - img [ref=e2405]
+            - generic [ref=e2408]: Humidity
+            - generic [ref=e2409]: 60%
+          - generic [ref=e2410]:
+            - img [ref=e2411]
+            - generic [ref=e2415]: Weather
+            - generic [ref=e2416]: Clear
+          - generic [ref=e2417]:
+            - img [ref=e2418]
+            - generic [ref=e2424]: Lighting Level
+            - generic [ref=e2425]: Normal
+    - contentinfo [ref=e2426]:
+      - generic [ref=e2427]: "Scene Scale: 1 unit = 1 meter"
+      - generic [ref=e2428]: "Grid: 0.25 m"
+      - generic [ref=e2429]: "Simulation Engine: Ready"
+      - generic [ref=e2430]: "Last Run: Today, 09:35 AM (0.0s)"
+      - 'button "Auto Recompute: On" [ref=e2431]':
+        - text: "Auto Recompute:"
+        - generic [ref=e2432]: "On"
+      - generic [ref=e2434]: Local Mode
+  - alert [ref=e2436]

@@ -1,0 +1,49 @@
+version: 0.2
+updated_at: 2026-05-26
+
+securityscene_subset_required:
+  - walls
+  - doors
+  - windows
+  - obstructions
+  - criticalZones
+  - extractionMeta
+
+acceptance_thresholds:
+  schema_valid_rate: 1.00
+  wall_topology_f1_min: 0.88
+  door_window_f1_min: 0.80
+  wall_endpoint_error_norm_max: 0.04
+  obstruction_macro_f1_min: 0.75
+  critical_zone_recall_min: 0.85
+  p95_latency_seconds_max: 12.0
+  hard_fail_rate_max: 0.05
+
+metrics:
+  geometry:
+    - wall_topology_f1
+    - wall_endpoint_error_norm
+    - door_f1
+    - window_f1
+  semantics:
+    - obstruction_macro_f1
+    - critical_zone_recall
+    - critical_zone_precision
+  reliability:
+    - schema_valid_rate
+    - hard_fail_rate
+    - ambiguity_rate
+  operations:
+    - p50_latency_seconds
+    - p95_latency_seconds
+    - estimated_cost_per_image
+
+failure_taxonomy:
+  - missing_major_structure
+  - wall_connectivity_break
+  - door_window_misclassification
+  - obstruction_class_confusion
+  - critical_zone_miss
+  - scale_inference_error
+  - parser_timeout
+  - schema_mapping_error

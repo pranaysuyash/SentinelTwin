@@ -217,20 +217,23 @@ console.log(`Average recompute: ${avg.toFixed(1)}ms`);
 Target: < 16ms (one frame budget) for small_retail_shop.json.
 If > 16ms: profile and optimize. If > 50ms: plan Web Worker migration.
 
+Observed in `apps/studio` test suite on 2026-05-26: `simulateStudio(createSmallRetailShopScene())`
+averaged **10.8ms** per run over 10 iterations via `bun test`.
+
 Document results in `Docs/decisions/OPEN_QUESTIONS.md` (Q-002 update).
 
 ---
 
 ## Phase 1 Done Criteria
 
-- [ ] 1.1: Grid sampler works, tests pass
+- [x] 1.1: Grid sampler works, tests pass
 - [ ] 1.2: Vision BVH mesh builds correctly
-- [ ] 1.3: FOV test accurate, edge cases handled
-- [ ] 1.4: Raycast occlusion correct for solid/glass/grill
-- [ ] 1.5: DORI quality scoring matches expected PPM values
-- [ ] 1.6: Lighting penalty correct for day/night/IR
-- [ ] 1.7: Full `computeCoverage()` produces valid SimulationResult
-- [ ] 1.8: All acceptance tests pass
-- [ ] 1.9: Benchmark result documented
+- [x] 1.3: FOV test accurate, edge cases handled
+- [x] 1.4: Raycast occlusion correct for solid/glass/grill
+- [x] 1.5: DORI quality scoring matches expected PPM values
+- [x] 1.6: Lighting penalty correct for day/night/IR
+- [x] 1.7: Full `computeCoverage()` produces valid SimulationResult
+- [x] 1.8: All acceptance tests pass
+- [x] 1.9: Benchmark result documented
 
 **Next phase:** `Docs/todos/PHASE_2_EDITOR_INTEGRATION.md`

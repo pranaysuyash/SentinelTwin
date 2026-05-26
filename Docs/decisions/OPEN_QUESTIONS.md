@@ -51,6 +51,9 @@ Qwen2.5-VL vs Gemini 2.5 Flash for "extract walls, doors, cameras, obstructions 
 **Bakeoff harness:** experiments/scene_understanding/
 **Test images needed:** 10 floor plan photos (retail, warehouse, corridor, lobby)
 **Scoring criteria:** accuracy of object detection, JSON output quality, latency, cost
+**2026-05-26 update:** HF-backed practical shortlist and workflow artifacts are now documented in
+`Docs/experiments/V0_2_FLOORPLAN_UNDERSTANDING_BAKEOFF_PLAN.md` and scaffolded under
+`experiments/scene_understanding/`. Next step is harness implementation and pilot run.
 
 ### Q-007: How do we handle user correction of AI-extracted scene?
 When the scene understanding agent extracts objects from a photo, it will make mistakes.

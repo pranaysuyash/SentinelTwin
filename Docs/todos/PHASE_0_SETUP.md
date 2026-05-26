@@ -1,6 +1,6 @@
 # Phase 0 — Repository and Pipeline Foundation
 
-**Status:** Not started
+**Status:** ✅ Complete — 2026-05-27
 **Blocking:** Everything
 **Agent:** Claude Code (or any agent)
 **Read first:** CLAUDE.md, Docs/decisions/DECISION_LOG.md (especially D-010), Docs/architecture/00–03
@@ -183,11 +183,55 @@ This must be installed from day one per D-004. Do not build any raycasting witho
 
 ## Phase 0 Done Criteria
 
-- [ ] 0.1: Next.js + R3F app runs in browser
-- [ ] 0.2: SecurityScene types + Zod schemas complete, all validate correctly
-- [ ] 0.3: Zustand store with CRUD, import, export, snapshots
-- [ ] 0.4: Demo scene JSON valid, loads via `importScene()`
-- [ ] 0.5: Demo scene renders in 3D — all nodes visible, correct positions
-- [ ] 0.6: three-mesh-bvh installed and importable
+- [x] 0.1: Next.js + R3F app runs in browser — `apps/studio/` with Next.js 16.2, React 19, TypeScript, Tailwind
+- [x] 0.2: SecurityScene types + Zod schemas complete — `src/schema/security-scene.ts`; all node types, SimulationResult, SceneSnapshot validated
+- [x] 0.3: Zustand store with CRUD, import, export, snapshots — `src/store/scene-store.ts` (vanilla Zustand, tested)
+- [x] 0.4: Demo scene JSON valid, loads via `importScene()` — `src/demo-scenes/small-retail-shop.json`; cupboard position verified to occlude Camera 1 sightline
+- [x] 0.5: Demo scene renders in 3D — all nodes visible in WorkspaceCanvas; walls, shelves, cupboard, cameras, lights, critical zone overlay, heatmap
+- [x] 0.6: three-mesh-bvh installed and importable — wired from day one in `coverage.ts` (`MeshBVH`, `acceleratedRaycast`); merged vision-collider mesh pattern established
+
+**All tests pass (5/5). Build passes. Lint passes (0 errors, 0 warnings).**
+
+---
+
+## Phase 0 Implementation Notes
+
+**Toolchain:**
+- Bun 1.3.4 bootstraps the Next.js project; npm is used for `npm install` at runtime due to Bun isolated-install quirks breaking Zod module resolution in the test environment. Scripts still use `bun test`.
+- Node v24.13.0, npm 11.6.2
+- Next.js 16.2.6 (Turbopack), React 19.2.4, Three.js 0.184, three-mesh-bvh 0.9.10
+
+**Coverage grid:**
+- `cellsPerMeter = 4` → 0.25m cells; displayed as "Grid: 0.25 m" in the status bar
+- Rationale: 0.25m gives DORI-meaningful resolution (a person's body width ~0.4m covers multiple cells) without making the grid too large for interactive performance
+- Benchmark target from Thread 2: <16ms for 40×40 grid × 4 cameras (not yet formally benchmarked)
+
+**Simulation baseline:**
+- Cash counter correctly fails recognition requirement in small retail shop scene
+- Cupboard at [4.2, 1.0, 2.5] partially blocks Camera 1 sightline to counter
+- Zone quality uses 25th-percentile aggregation (strict — 75% of zone cells must meet requirement)
+- Baseline coverage ≈ 58% of total floor area
+
+**Adversarial path:**
+- Dijkstra implemented in `adversarial-path.ts`; cost = detection probability × cell weight
+- Defensive framing throughout: "minimum-exposure route," "coverage gap analysis"
+
+**BVH implementation:**
+- Merged vision-collider mesh built from all wall + obstruction box geometries
+- Per-object `userData.nodeId` and `userData.visionTransmission` preserved via geometry groups approach
+- BVH rebuilt on each `simulateStudio()` call (scene change pattern); lazy rebuild can be added if needed
+
+**UI shell:**
+- Camera Studio reference image matched as closely as possible in the first pass
+- TopBar, LeftPanel, WorkspaceCanvas (R3F), InspectorPanel, BottomPanel, ScenarioPathPanel, BottomRow, StatusBar all implemented
+- R3F camera: position [11.2, 9.1, 10.6], OrbitControls target [5, 0.35, 3.9]
+- Instanced heatmap mesh renders coverage cells with per-instance color (D-006 implemented)
+
+**Known gaps for Phase 1:**
+- Heatmap currently renders all cells at once; no dirty-tracking optimization yet
+- Coverage BVH rebuild happens on every simulation run (acceptable for now; needs lazy rebuild for interactive drag performance)
+- Inspector edit → scene mutation → simulation dirty → recompute loop is wired but needs UX polish
+- Camera feed view panel (secondary canvas) not yet implemented (D-007 deferred to Phase 1)
+- Before/after snapshot comparison UI partially implemented; diff display not yet
 
 **Next phase:** `Docs/todos/PHASE_1_COVERAGE_ENGINE.md`

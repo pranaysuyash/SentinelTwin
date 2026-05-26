@@ -27,7 +27,7 @@ The raw files are preserved for:
 - Finding ideas that haven't been formally explored yet
 - Context when Pranay references something from "the ChatGPT discussion"
 
-| `claude_review_session_2026-05-25.md` | Claude's synthesis of three AI analysis documents (docs 4-6 from context), GenRecon reference disposition | Read when reviewing pre-build contradiction checks or exploring product-first framing |
+| `claude_review_session_2026-05-26.md` | Novel simulation algorithms doc, camera studio gap analysis, Trellis.2/Pixal3D thread, build order and product framing discussions | Most recent session — read first |
 
 ---
 

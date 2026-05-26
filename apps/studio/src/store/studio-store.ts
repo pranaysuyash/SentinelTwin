@@ -13,6 +13,8 @@ import {
 } from "@/schema/security-scene";
 import { simulateStudio } from "@/simulation/simulate-studio";
 
+export type ViewMode = "map" | "wall" | "replay";
+
 export type ActiveTool =
   | "select" | "camera" | "obstruction" | "light"
   | "path" | "zone" | "door_window" | "wall" | "measure" | "comment";
@@ -46,6 +48,9 @@ export type StudioStoreState = {
   autoRecompute: boolean;
 
   selectNode: (id: string | null) => void;
+  viewMode: ViewMode;
+  setViewMode: (mode: ViewMode) => void;
+
   setActiveTool: (tool: ActiveTool) => void;
   setBottomTab: (tab: BottomTab) => void;
   setInspectorTab: (tab: InspectorTab) => void;
@@ -182,6 +187,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
 
   selectedNodeId: "cam_entrance",
   activeTool: "select",
+  viewMode: "map",
   bottomTab: "metrics",
   inspectorTab: "properties",
   layerVisibility: { ...DEFAULT_LAYERS },
@@ -191,6 +197,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
 
   selectNode: (id) => set({ selectedNodeId: id }),
   setActiveTool: (tool) => set({ activeTool: tool }),
+  setViewMode: (mode) => set({ viewMode: mode }),
   setBottomTab: (tab) => set({ bottomTab: tab }),
   setInspectorTab: (tab) => set({ inspectorTab: tab }),
   toggleLayer: (layer) =>

@@ -65,14 +65,20 @@ export function simulateStudio(scene: SecurityScene): SimulationResult {
     const coveringCameras = Array.from(
       new Set(zoneCells.flatMap((cell) => cell.coveringCameras)),
     );
-    const failureReasons: string[] = [];
 
+    // Data-driven failure reason: derive from actual blocked-by labels in the zone cells
+    const failureReasons: string[] = [];
     if (status !== "pass") {
       failureReasons.push(
         `${zone.label} is below ${zone.requiredQuality} due to occlusion, distance, or angle.`,
       );
-      if (zoneCells.some((cell) => cell.blockedBy.includes("Cupboard"))) {
-        failureReasons.push("Cupboard occlusion is blocking the primary camera view.");
+      const blockingObstructions = Array.from(
+        new Set(zoneCells.flatMap((cell) => cell.blockedBy)),
+      );
+      if (blockingObstructions.length > 0) {
+        failureReasons.push(
+          `Blocked by: ${blockingObstructions.join(", ")}.`,
+        );
       }
     }
 
@@ -113,10 +119,13 @@ export function simulateStudio(scene: SecurityScene): SimulationResult {
 
   const issues: SecurityIssue[] = [];
 
+  // Quality-fail issues: one per failing critical zone
   for (const zone of criticalZoneResults) {
     if (zone.status === "fail") {
       issues.push({
-        severity: zone.requiredQuality === "recognition" ? "critical" : "high",
+        severity: zone.requiredQuality === "recognition" || zone.requiredQuality === "identification"
+          ? "critical"
+          : "high",
         category: "quality_fail",
         description: `${zone.label} fails the ${zone.requiredQuality} requirement.`,
         affectedZones: [zone.label],
@@ -125,29 +134,108 @@ export function simulateStudio(scene: SecurityScene): SimulationResult {
     }
   }
 
-  if (coverageCells.some((cell) => cell.blockedBy.includes("Cupboard"))) {
-    issues.push({
-      severity: "high",
-      category: "blindspot",
-      description: "Cupboard blocks Camera 1 sightlines through the center aisle.",
-      affectedZones: criticalZoneResults.map((zone) => zone.label),
-      affectedCameras: ["cam_entrance"],
-    });
+  // Data-driven blindspot issues: one per obstruction that is blocking cells in critical zones.
+  // We never hardcode obstruction labels — we derive them from the simulation output.
+  {
+    // Build: obstruction label → set of zone labels it is blocking
+    const obstructionToZones = new Map<string, Set<string>>();
+    for (const zone of scene.criticalZones) {
+      const zoneCells = coverageCells.filter((cell) =>
+        pointInPolygon([cell.x, cell.z], zone.polygon),
+      );
+      for (const cell of zoneCells) {
+        for (const obsLabel of cell.blockedBy) {
+          if (!obstructionToZones.has(obsLabel)) {
+            obstructionToZones.set(obsLabel, new Set());
+          }
+          obstructionToZones.get(obsLabel)!.add(zone.label);
+        }
+      }
+    }
+
+    for (const [obsLabel, affectedZoneSet] of obstructionToZones) {
+      const affectedZoneList = Array.from(affectedZoneSet);
+      // Cameras that fail zones this obstruction blocks
+      const affectedCameraIds = cameraResults
+        .filter((cr) =>
+          cr.criticalZonesFailed.some((z) => affectedZoneSet.has(z)),
+        )
+        .map((cr) => cr.cameraId);
+
+      issues.push({
+        severity: "high",
+        category: "blindspot",
+        description: `${obsLabel} is obstructing coverage in: ${affectedZoneList.join(", ")}.`,
+        affectedZones: affectedZoneList,
+        affectedCameras: affectedCameraIds,
+      });
+    }
   }
 
   const pathResults = computePathResults(scene, coverageCells);
   const adversarialPath = computeAdversarialPath(scene, coverageCells);
+
+  // worstAreaQuality: lowest quality among critical zone results.
+  // Using zone results (not raw cell minimums) gives the most actionable answer:
+  // "the worst-covered zone that actually matters" rather than "the darkest corner of the room."
+  // Falls back to worst covered walkable cell quality when no zones are defined.
+  const worstAreaQuality: DoriQuality =
+    criticalZoneResults.length > 0
+      ? criticalZoneResults.reduce(
+          (worst, zone) =>
+            qualityToScore(zone.actualQuality) < qualityToScore(worst)
+              ? zone.actualQuality
+              : worst,
+          "identification" as DoriQuality,
+        )
+      : coverageCells
+          .filter((cell) => cell.quality !== "none")
+          .reduce(
+            (worst, cell) =>
+              qualityToScore(cell.quality) < qualityToScore(worst) ? cell.quality : worst,
+            "identification" as DoriQuality,
+          );
+
+  // Data-driven recommendations: one per blocking obstruction + one for failing zone cameras
+  const obstructionRecos: typeof criticalZoneResults extends ZoneResult[] ? never : never = undefined as never;
+  void obstructionRecos;
+  const blockingObstructions = Array.from(
+    new Set(
+      criticalZoneResults
+        .flatMap((zone) =>
+          coverageCells
+            .filter((cell) => pointInPolygon([cell.x, cell.z], zone.polygon))
+            .flatMap((cell) => cell.blockedBy),
+        ),
+    ),
+  );
+
+  const recommendations = [
+    ...blockingObstructions.map((obsLabel) => ({
+      type: "move_object" as const,
+      description: `Move or reposition "${obsLabel}" to restore camera sightlines.`,
+      estimatedImpact: `Removing this obstruction may restore camera coverage where it is currently blocked.`,
+      costCategory: "free" as const,
+      verified: false,
+    })),
+    ...criticalZoneResults
+      .filter((zone) => zone.status === "fail" && zone.coveringCameras.length > 0)
+      .slice(0, 1)
+      .map((zone) => ({
+        type: "rotate_camera" as const,
+        description: `Adjust cameras covering "${zone.label}" to improve coverage toward ${zone.requiredQuality} quality.`,
+        estimatedImpact: `Reducing camera-to-zone distance or angle may bring ${zone.label} above the ${zone.requiredQuality} threshold.`,
+        costCategory: "low" as const,
+        verified: false,
+      })),
+  ];
 
   return {
     computedAt: Date.now(),
     totalCoveragePct: Number(totalCoveragePct.toFixed(1)),
     blindspotPct: Number(blindspotPct.toFixed(1)),
     averageWalkableQuality: Number(averageWalkableQuality.toFixed(2)),
-    worstAreaQuality: coverageCells.reduce(
-      (worst, cell) =>
-        qualityToScore(cell.quality) < qualityToScore(worst) ? cell.quality : worst,
-      "identification" as DoriQuality,
-    ),
+    worstAreaQuality,
     recognitionAreaPct: Number(getRecognitionAreaPct(coverageCells).toFixed(1)),
     identificationAreaPct: Number(getIdentificationAreaPct(coverageCells).toFixed(1)),
     coverageByQuality: {
@@ -168,22 +256,7 @@ export function simulateStudio(scene: SecurityScene): SimulationResult {
     cameraResults,
     pathResults,
     issues,
-    recommendations: [
-      {
-        type: "move_object",
-        description: "Move the cupboard away from Camera 1's center ray.",
-        estimatedImpact: "Restores a cleaner recognition corridor toward the cash counter.",
-        costCategory: "free",
-        verified: true,
-      },
-      {
-        type: "rotate_camera",
-        description: "Rotate Camera 2 closer to the cash counter and tighten its field of view.",
-        estimatedImpact: "Improves off-axis observation toward recognition quality near the zone.",
-        costCategory: "low",
-        verified: true,
-      },
-    ],
+    recommendations,
     adversarialPath,
   };
 }

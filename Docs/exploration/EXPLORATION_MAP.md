@@ -1,7 +1,7 @@
 # Exploration Map — SentinelTwin
 
 **This is a living document. Append findings. Never replace.**
-**Last updated:** 2026-05-26 (Batch 6: Phase 0/1 build complete, Phase 2 in progress, coverage engine benchmarked, inspector wiring gap identified)
+**Last updated:** 2026-05-26 (Batch 6 complete: implementation research for P0 gaps - GSAP path animation, click-to-place, OpenAI Structured Outputs, Camera Wall viewport, Transform controls)
 
 ---
 
@@ -1897,6 +1897,15 @@ Bundled monthly fee per site or per device — includes hardware, software, moni
 | ONVIF Profile M analytics metadata | SOAP/WSDL + MQTT/JSON, widely adopted as industry standard for AI analytics metadata | Thread 49 |
 | SchoolSafety.gov grant programs detailed | COPS SVPP $73M, BJA STOP $83M, DHS NSGP $274.5M — funding landscape mapped | Thread 50 |
 | SIA OS-2/PSIA standards correction | SIA OS-2 does NOT exist — correct refs: ONVIF (video), OSDP (access control). PSIA is moribund | Thread 51 |
+| GSAP + R3F path animation for actor replay | GSAP timeline with .to() chaining is viable; use paused timeline for play/pause/scrub | Thread 63 |
+| Click-to-place object placement in R3F | Tool mode + raycaster + ghost preview is standard pattern; store holds activeTool | Thread 64 |
+| OpenAI Structured Outputs for AI command layer | zod-to-json-schema bridges SecurityScene Zod schemas to OpenAI JSON Schema; responses API recommended | Thread 65 |
+| Multi-canvas viewport (Camera Wall) | @react-three/drei <View> component with scissor rendering is canonical approach; same Canvas, multiple cameras | Thread 66 |
+| Transform controls for scene editing | @react-three/drei PivotControls recommended for V0.1; TransformControls for V0.2+ | Thread 67 |
+| Click-to-place object placement in R3F | Tool mode + raycaster + ghost preview is standard pattern; store holds activeTool | Thread 64 |
+| OpenAI Structured Outputs for AI command layer | zod-to-json-schema bridges SecurityScene Zod schemas to OpenAI JSON Schema; responses API recommended | Thread 65 |
+| Multi-canvas viewport (Camera Wall) in R3F | @react-three/drei <View> component with scissor rendering is canonical multi-viewport approach | Thread 66 |
+| Transform controls for scene editing | @react-three/drei PivotControls recommended for V0.1; TransformControls for V0.2+ | Thread 67 |
 
 ---
 
@@ -2026,3 +2035,256 @@ Bundled monthly fee per site or per device — includes hardware, software, moni
 - "Test Without This Obstruction" button deferred to Phase 3 (needs separate simulation run path).
 - Camera PIP canvas needs scene-reactive update when camera props change via inspector.
 - Adversarial path simulation (Phase 3) builds on the working coverage grid.
+
+---
+
+### Thread 63: GSAP + React Three Fiber Path Animation — Implementation Research
+
+**Status:** Complete. GSAP + R3F path animation is viable. Recommended approach: custom path interpolation with GSAP timeline.
+**Date:** 2026-05-26
+**Source:** Batch 6 implementation research — GSAP @react-three/gsap, R3F animation patterns.
+
+**What was researched:**
+- GSAP integration with React Three Fiber for animating an actor (humanoid figure) along an adversarial path
+- GSAP's ability to interpolate 3D positions and rotations over a timeline
+- Path animation approaches: `.to()` chaining, `morphSVG`, position property interpolation
+- R3F-specific patterns: `useGSAP` hook, `@react-three/gsap` wrapper, imperative `gsap.to()` in `useFrame`
+- AnimatePresence for enter/exit of path actor
+
+**Key findings:**
+1. **GSAP `.to()` chaining** is the most straightforward approach: chain `gsap.to(object.position, { x: p1.x, z: p1.z, duration: 1 })` calls for each path segment
+2. **`@react-three/gsap`** provides a `GSAP` component that works declaratively in JSX — `timeline.to(ref, { position, duration })`
+3. **Custom path interpolation** with `useGSAP` hook: build a timeline from waypoints, GSAP handles the tweening between each point
+4. **Rotation interpolation**: GSAP can tween Euler angles but Quaternion slerp is smoother. Use `onUpdate` callback to interpolate rotation:
+   ```typescript
+   useGSAP(() => {
+     const tl = gsap.timeline({ paused: true });
+     path.forEach((point, i) => {
+       tl.to(actorRef.current.position, { x: point.x, z: point.z, duration: 1 }, i);
+     });
+     // Rotation via onUpdate callback
+     tl.eventCallback('onUpdate', () => {
+       // Interpolate rotation between current and next waypoint
+     });
+   }, [path]);
+   ```
+5. **GSAP timeline controls**: `play()`, `pause()`, `reverse()`, `progress()`, `timeScale()` — all available for play/pause/scrub UI
+
+**Implementation guidance for SentinelTwin:**
+- Use `gsap.timeline({ paused: true })` for the path player — this gives scrub control via `timeline.progress()`
+- Actor model: simple humanoid figure (cylinder + sphere) or imported GLB
+- Play/pause/scrub from BottomRow or a floating control bar
+- GSAP timeline approach works at any path resolution — waypoints from adversarial-path.ts are fed directly into the timeline
+- **Performance concern:** GSAP's `.to()` on R3F refs triggers React re-renders if not careful. Use `gsap.quickTo()` or animate the underlying `object3D.position` directly (not the ref's `.position` property as a React state)
+
+**Related:** Thread 3 (Adversarial Path Simulation), Thread 21 (Phase 0/1 Build — Path replay not yet implemented)
+
+---
+
+### Thread 64: Canvas Click-to-Place Object Patterns — R3F
+
+**Status:** Complete. Click-to-place is pattern-ready. Tool mode + raycaster is the standard approach in R3F.
+**Date:** 2026-05-26
+**Source:** Batch 6 implementation research — R3F interaction patterns, drei useCursor, three-mesh-bvh.
+
+**What was researched:**
+- Patterns for clicking on the 3D canvas to place objects at the intersection point
+- Raycasting against floor plane vs arbitrary geometry
+- Tool mode management (select ↔ place ↔ inspect)
+- Hover feedback and grid snapping
+
+**Key findings:**
+1. **Pattern: Tool mode in store + raycaster in canvas.** The standard R3F approach:
+   - Store holds `activeTool: 'select' | 'placeCamera' | 'placeObstruction' | 'placeLight'`
+   - Canvas `onPointerDown` checks activeTool → if placing, raycast against floor → create object at intersection
+   - `onPointerMove` shows preview ghost object at cursor position
+2. **Floor plane raycasting:**
+   - Use a hidden invisible floor plane (`mesh` with `visible={false}`) as the raycast target
+   - Or raycast against the scene BVH and find the first intersection with a floor material
+   - drei's `useIntersect` can simplify
+3. **Ghost preview:**
+   - Semi-transparent object at cursor position that follows mouse
+   - On click, commit position and create real object
+   - On right-click/Escape, cancel placement mode
+4. **Grid snapping:**
+   - Round position to nearest grid unit (e.g., 0.5m) on placement
+   - Show grid lines via drei's `Grid` helper
+5. **Click vs drag disambiguation** — use `pointerdown` + `pointerup` distance check to distinguish click (place) from drag (orbit control)
+
+**Implementation guidance for SentinelTwin:**
+- Currently, the LeftPanel has 7 tool buttons (Select, Camera, Obstruction, Light, Wall/Zone/EntryPoint) but none are wired to the canvas
+- The store already has `activeTool` but it's not connected to WorkspaceCanvas
+- **Approach:**
+  1. Add `activeTool` to studio-store.ts with proper tool types
+  2. In WorkspaceCanvas, add `onPointerDown` handler that checks tool state
+  3. For floor intersection: add invisible floor plane or use BVH raycast
+  4. Show ghost preview object on hover
+  5. On click: create object at intersection point via store action
+- Pre-existing grid system: the coverage grid already tiles the floor; reuse its bounds for placement snapping
+
+**Related:** Thread 21 (Phase 0/1 — Click placement not implemented), Phase 1 coverage engine geometry
+
+---
+
+### Thread 65: OpenAI Structured Outputs — Implementation Research
+
+**Status:** Complete. OpenAI Structured Outputs are production-ready for Phase 3 AI command layer. `zod-to-json-schema` is the bridge.
+**Date:** 2026-05-26
+**Source:** Batch 6 implementation research — OpenAI SDK v4+, Structured Outputs API, zod-to-json-schema.
+
+**What was researched:**
+- OpenAI's Structured Outputs API for guaranteed JSON responses
+- How to bridge Zod schemas (already used in SecurityScene) to OpenAI's JSON Schema format
+- Best practices for command parsing and counterfactual analysis prompts
+- Model support: GPT-4o, GPT-4o-mini, o3-mini
+
+**Key findings:**
+1. **OpenAI Structured Outputs** (`response_format: { type: "json_schema", json_schema: {...} }`) is the recommended approach in 2025-2026. Guarantees valid JSON matching the schema — no more prompt engineering for JSON parsing.
+2. **`zod-to-json-schema`** (npm package) converts existing Zod schemas to OpenAI-compatible JSON Schema. SentinelTwin already has full Zod schemas in `security-scene.ts` — this is a direct bridge.
+3. **Response format pattern:**
+   ```typescript
+   import { zodToJsonSchema } from 'zod-to-json-schema';
+   import OpenAI from 'openai';
+
+   const schema = zodToJsonSchema(CommandParseResultSchema);
+   const response = await openai.responses.create({
+     model: 'gpt-4o',
+     input: [
+       { role: 'system', content: systemPrompt },
+       { role: 'user', content: userMessage }
+     ],
+     text: { format: { type: 'json_schema', schema } }
+   });
+   ```
+4. **Responses API vs Chat Completions:** OpenAI's newer `responses` API (2025+) natively supports structured outputs. The legacy `chat.completions` API also supports it via `response_format` parameter.
+5. **Model support:**
+   - GPT-4o: Full structured outputs support, best quality, highest cost
+   - GPT-4o-mini: Good for command parsing, lower cost
+   - o3-mini: Strong reasoning, good for counterfactual analysis
+6. **System prompt pattern for command parsing:**
+   - Give the AI the SecurityScene schema context
+   - Define available operations: ADD_CAMERA, REMOVE_CAMERA, MODIFY_CAMERA, ADD_OBSTRUCTION, etc.
+   - Output = structured array of operations to apply to the scene
+
+**Implementation guidance for SentinelTwin:**
+- Phase 3 implementation path:
+  1. Install `openai` SDK + `zod-to-json-schema`
+  2. Create `@sentineltwin/agents` package with CommandAgent class
+  3. Define `CommandParseResult` Zod schema → convert to JSON Schema for OpenAI
+  4. Build system prompt with SecurityScene schema context
+  5. Wire CommandAgent to the chat UI in BottomRow
+- **Local-first consideration:** For local-only mode, use WebLLM (Thread 59) with smaller models. The Zod → JSON Schema bridge works for any LLM.
+
+---
+
+### Thread 66: Multi-Canvas Viewport (Camera Wall) — Implementation Research
+
+**Status:** Complete. @react-three/drei `<View>` component is the recommended pattern for Camera Wall mode.
+**Date:** 2026-05-26
+**Source:** Batch 6 implementation research — @react-three/drei View, R3F multi-viewport patterns.
+
+**What was researched:**
+- How to render multiple camera perspectives within a single R3F Canvas
+- Pattern for switching between Map View, Camera View, Camera Wall (4-up layout), and Path Replay
+- Performance characteristics of multiple Views vs separate Canvases
+
+**Key findings:**
+1. **`@react-three/drei` `<View>` component** — the canonical approach for multiple viewports:
+   - `<View track={ref}>` uses `gl.setScissor` / `gl.setViewport` under the hood for efficient multi-viewport rendering
+   - Each `<View>` gets its own camera, scene, and render priority
+   - All views share the same WebGL context (no context loss, no extra GPU memory for separate Canvas elements)
+   - `index` prop controls render order (higher = renders on top)
+2. **Pattern for Camera Wall:**
+   ```typescript
+   <Canvas>
+     <View track={ref1} index={1}>
+       <PerspectiveCamera makeDefault position={cam1.position} />
+       <Scene />
+       <Overlay label="Camera 1 — Entrance" />
+     </View>
+     <View track={ref2} index={2}>
+       <PerspectiveCamera makeDefault position={cam2.position} />
+       <Scene />
+       <Overlay label="Camera 2 — Register" />
+     </View>
+     {/* 2 more views for 4-up */}
+     <Html>
+       <div ref={ref1} className="viewport-1" />
+       <div ref={ref2} className="viewport-2" />
+       <div ref={ref3} className="viewport-3" />
+       <div ref={ref4} className="viewport-4" />
+     </Html>
+   </Canvas>
+   ```
+3. **View switching (Map / Camera / Camera Wall / Path Replay):**
+   - Store a `viewMode: 'map' | 'camera' | 'wall' | 'replay'` in the store
+   - Switch between different layout components
+   - Map view: top-down orthographic + minimap
+   - Camera view: single perspective from selected camera's POV
+   - Camera wall: 2×2 or 3×3 grid of camera views
+   - Path replay: third-person chase view following the actor
+4. **Performance:**
+   - Multiple Views in one Canvas is cheaper than multiple Canvases (shared GL context, shared scene objects)
+   - Each View can have its own `frameloop='demand'` for non-primary views to save GPU
+   - For 4-up Camera Wall: 4 Views with shared scene but different cameras = ~4x draw calls but no additional memory for geometry
+5. **PiP (Picture-in-Picture):** Corner minimap is a single small View with orthographic camera
+
+**Implementation guidance for SentinelTwin:**
+- Current WorkspaceCanvas renders a single scene with a single camera
+- **Approach:**
+  1. Add `viewMode` to store (already has `cameraViewMode` — may need to extend)
+  2. Create `CameraWall` component with 2×2 grid of `<View>` elements
+  3. Create `CameraFeed` component for single-camera third-person view
+  4. Wrap existing scene content in shared `<Scene>` wrapper that's passed to all Views
+  5. Use `Html` for the viewport overlay refs that position each viewport in the DOM
+
+---
+
+### Thread 67: Transform Controls — Implementation Research
+
+**Status:** Complete. `@react-three/drei` `PivotControls` is the recommended approach for the scene editor. Three.js `TransformControls` is the alternative.
+**Date:** 2026-05-26
+**Source:** Batch 6 implementation research — @react-three/drei PivotControls, three.js TransformControls.
+
+**What was researched:**
+- Available object manipulation controls for R3F scene editors
+- PivotControls vs TransformControls comparison
+- Drag-to-place vs selection-handle interaction model
+
+**Key findings:**
+1. **`@react-three/drei` `PivotControls`** (recommended):
+   - Declarative React component (`<PivotControls>` wraps the target object)
+   - Provides translate (axis arrows), rotate (axis rings), and scale handles
+   - `onDragStart`, `onDrag`, `onDragEnd` callbacks
+   - Auto-scales handles based on camera distance
+   - `snap={0.5}` for grid snapping
+   - `depthTest={false}` to prevent handles from being occluded
+   - **Best fit**: Scene editor where user selects an object then manipulates it
+2. **`TransformControls`** from Three.js:
+   - Classic Blender/Unity-style gizmo (translate/rotate/scale widget)
+   - Available through drei's `TransformControls` wrapper or directly from Three.js
+   - More full-featured (mode switching, space switching, snapping)
+   - Imperative API (not declarative React)
+   - **Best fit**: Power users who want Blender-style controls
+3. **Drag-to-place (for initial positioning):**
+   - Simple drag on the floor plane to position objects
+   - `@react-three/rapier` `useDraggable` for physics-based drag
+   - Or custom drag handler: constrain Y to floor height, move XZ to pointer intersection
+   - **Best fit**: Quick placement without mode switching
+4. **Recommendation for SentinelTwin:**
+   - V0.1: Use `PivotControls` for selected object manipulation
+   - Wrap selected object in `PivotControls` when `activeTool === 'select'`
+   - Add snap-to-grid (0.5m increments matching the simulation grid)
+   - For click-to-place (Thread 64), use simple drag-to-place at the point of click
+   - V0.2+: Add `TransformControls` as an optional mode for power users
+
+**Implementation guidance for SentinelTwin:**
+- Currently, objects in the scene have no selection or manipulation
+- **Approach:**
+  1. Store `selectedObjectId` in store
+  2. In WorkspaceCanvas, when an object is clicked, set it as selected
+  3. Wrap selected object in `<PivotControls snap={0.5} />`
+  4. On drag end, update object position/rotation in the store (triggers simulation recompute)
+  5. Handle deselection on click-empty
+
+**Related:** Thread 64 (Click-to-place), Thread 21 (Phase 0/1 — Selection not implemented)

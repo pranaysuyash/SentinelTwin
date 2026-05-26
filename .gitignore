@@ -36,3 +36,9 @@ tmp/
 
 # Agent-local docs/state (optional to version, excluded by default)
 .agent/
+
+# AI-generated screenshot artifacts
+.codex-studio-home-*.png
+
+# TypeScript build info
+*.tsbuildinfo

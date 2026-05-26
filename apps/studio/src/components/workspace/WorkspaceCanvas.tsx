@@ -1,15 +1,16 @@
 "use client";
 
 import { Html, OrbitControls } from "@react-three/drei";
-import { Canvas } from "@react-three/fiber";
-import { Layers, RefreshCcw } from "lucide-react";
-import { Suspense, useEffect, useMemo, useRef } from "react";
+import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber";
+import { Camera, Layers, Lightbulb, MousePointer2, RefreshCcw, Square } from "lucide-react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 import { type CameraNode, type CoverageCellResult, type SecurityIssue } from "@/schema/security-scene";
 import { getYawPitchDirection } from "@/simulation/geometry";
-import { useStudioStore } from "@/store/studio-store";
+import { useStudioStore, type ActiveTool } from "@/store/studio-store";
 import { CoverageLegend } from "./CoverageLegend";
+import { createCameraNode, createObstructionNode, createSecurityLightNode } from "@/lib/node-factory";
 
 const QUALITY_COLORS: Record<string, THREE.Color> = {
   identification: new THREE.Color("#3b82f6"),
@@ -223,6 +224,7 @@ function ObstructionBox({
   const [width, depth, height] = obs.dimensions;
   const [px, py, pz] = obs.position;
   const color = OBSTRUCTION_COLORS[obs.obstructionType] ?? OBSTRUCTION_COLORS.other;
+  const isShelf = obs.obstructionType === "shelf";
   const highlightBox = useMemo(
     () => new THREE.BoxGeometry(width * 1.02, height * 1.02, depth * 1.02),
     [depth, height, width],
@@ -250,10 +252,20 @@ function ObstructionBox({
           <lineBasicMaterial color="#60a5fa" transparent opacity={0.8} />
         </lineSegments>
       )}
-      <mesh position={[0, height / 2 - 0.03, 0]} castShadow>
-        <boxGeometry args={[width * 0.96, 0.05, depth * 0.92]} />
-        <meshStandardMaterial color="#8f7a64" roughness={0.72} metalness={0.06} />
-      </mesh>
+      {/* Shelf boards derived from actual shelf dimensions */}
+      {isShelf
+        ? [0.78, 0.42, 0.06].map((fraction, i) => (
+            <mesh key={i} position={[0, fraction * height - height / 2, 0]} castShadow>
+              <boxGeometry args={[width * 0.95, 0.03, depth * 0.94]} />
+              <meshStandardMaterial color="#6d522f" roughness={0.86} />
+            </mesh>
+          ))
+        : (
+          <mesh position={[0, height / 2 - 0.03, 0]} castShadow>
+            <boxGeometry args={[width * 0.96, 0.05, depth * 0.92]} />
+            <meshStandardMaterial color="#8f7a64" roughness={0.72} metalness={0.06} />
+          </mesh>
+        )}
     </group>
   );
 }
@@ -407,9 +419,11 @@ function CriticalZoneOverlay({
 
 function ObstructionWarning({
   issue,
+  obstructionLabel,
   position,
 }: {
   issue: SecurityIssue;
+  obstructionLabel: string;
   position: [number, number, number];
 }) {
   const layers = useStudioStore((s) => s.layerVisibility);
@@ -432,9 +446,9 @@ function ObstructionWarning({
           backdropFilter: "blur(5px)",
         }}
       >
-        <div style={{ fontSize: 9, fontWeight: 700, color: "#fca5a5" }}>CUPBOARD</div>
+        <div style={{ fontSize: 9, fontWeight: 700, color: "#fca5a5" }}>{obstructionLabel.toUpperCase()}</div>
         <div style={{ fontSize: 8, color: "#fecaca", marginTop: 1 }}>
-          Blocking {affectedCamera?.name ?? "Camera 1"}
+          Blocking {affectedCamera?.name ?? "camera view"}
         </div>
         <div style={{ fontSize: 8, fontWeight: 500, color: "#fca5a5", marginTop: 2 }}>View obstructed</div>
       </div>
@@ -550,7 +564,8 @@ function SceneGeometry({ theme }: { theme: (typeof ENVIRONMENT_THEMES)[keyof typ
   const layers = useStudioStore((s) => s.layerVisibility);
 
   const { width, depth } = scene.dimensions;
-  const cupboard = scene.obstructions.find((obs) => obs.obstructionType === "cupboard");
+  // Data-driven: one warning per blindspot issue, positioned above the matching obstruction.
+  // Label is extracted from the issue description (format: "<Label> is obstructing coverage in: ...").
   const blockingIssues = result?.issues.filter((issue) => issue.category === "blindspot") ?? [];
   const entryDoor = scene.entryPoints[0];
 
@@ -592,15 +607,25 @@ function SceneGeometry({ theme }: { theme: (typeof ENVIRONMENT_THEMES)[keyof typ
       )) : null}
 
       {layers.obstructions ? scene.obstructions.map((obs) => <ObstructionBox key={obs.id} obs={obs} />) : null}
-      {layers.walls_floors ? <DecorativeShelving /> : null}
       {layers.lights ? <CeilingLightMarkers /> : null}
 
-      {blockingIssues.length > 0 && cupboard && layers.labels ? (
-        <ObstructionWarning
-          issue={blockingIssues[0]!}
-          position={[cupboard.position[0], cupboard.position[1] + cupboard.dimensions[1] + 0.3, cupboard.position[2]]}
-        />
-      ) : null}
+      {blockingIssues.map((issue) => {
+        // Extract obstruction label from description: "<Label> is obstructing coverage in: ..."
+        const obsLabel = issue.description.split(" is obstructing")[0] ?? "";
+        const matchingObs = scene.obstructions.find((obs) => obs.label === obsLabel);
+        if (!matchingObs || !layers.labels) return null;
+        const [ox, oy, oz] = matchingObs.position;
+        const [, , obsHeight] = matchingObs.dimensions; // [width, depth, height]
+        const warningY = oy + obsHeight / 2 + 0.35;
+        return (
+          <ObstructionWarning
+            key={matchingObs.id}
+            issue={issue}
+            obstructionLabel={matchingObs.label}
+            position={[ox, warningY, oz]}
+          />
+        );
+      })}
 
       {layers.heatmap && result?.coverageCells ? <CoverageHeatmap cells={result.coverageCells} /> : null}
 
@@ -620,6 +645,182 @@ function SceneGeometry({ theme }: { theme: (typeof ENVIRONMENT_THEMES)[keyof typ
       {layers.paths && result?.adversarialPath ? (
         <AdversarialPath waypoints={result.adversarialPath.waypoints.map((waypoint) => waypoint.position)} />
       ) : null}
+    </>
+  );
+}
+
+const TOOL_GHOST_COLORS: Record<string, string> = {
+  camera: "#60a5fa",
+  obstruction: "#f97316",
+  light: "#eab308",
+  default: "#60a5fa",
+};
+
+const TOOL_ICONS: Record<string, React.ReactNode> = {
+  camera: <Camera className="h-3 w-3" />,
+  obstruction: <Square className="h-3 w-3" />,
+  light: <Lightbulb className="h-3 w-3" />,
+};
+
+const TOOL_LABELS: Record<string, string> = {
+  camera: "Place Camera",
+  obstruction: "Place Obstruction",
+  light: "Place Light",
+};
+
+/**
+ * Invisible floor plane that catches pointer events for tool placement.
+ * Shows ghost preview, places object on click.
+ */
+function ToolPlacementFloor() {
+  const activeTool = useStudioStore((s) => s.activeTool);
+  const addNode = useStudioStore((s) => s.addNode);
+  const selectNode = useStudioStore((s) => s.selectNode);
+  const scene = useStudioStore((s) => s.scene);
+  const { camera, size } = useThree();
+
+  const [hoverPos, setHoverPos] = useState<THREE.Vector3 | null>(null);
+  const [isHovering, setIsHovering] = useState(false);
+  const floorRef = useRef<THREE.Mesh>(null!);
+  const raycaster = useMemo(() => new THREE.Raycaster(), []);
+
+  const isPlacing = activeTool !== "select";
+
+  const getFloorPoint = useCallback(
+    (event: ThreeEvent<PointerEvent>): THREE.Vector3 | null => {
+      const ndc = new THREE.Vector2(
+        (event.nativeEvent.clientX / size.width) * 2 - 1,
+        -(event.nativeEvent.clientY / size.height) * 2 + 1,
+      );
+      raycaster.setFromCamera(ndc, camera);
+      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+      const point = new THREE.Vector3();
+      const hit = raycaster.ray.intersectPlane(plane, point);
+      if (!hit) return null;
+      // Clamp to scene bounds
+      const pad = 0.2;
+      point.x = Math.max(pad, Math.min(scene.dimensions.width - pad, point.x));
+      point.z = Math.max(pad, Math.min(scene.dimensions.depth - pad, point.z));
+      point.y = 0;
+      return point;
+    },
+    [camera, size, scene.dimensions],
+  );
+
+  const handlePointerMove = useCallback(
+    (event: ThreeEvent<PointerEvent>) => {
+      if (!isPlacing) return;
+      const point = getFloorPoint(event);
+      setHoverPos(point);
+    },
+    [isPlacing, getFloorPoint],
+  );
+
+  const handlePointerDown = useCallback(
+    (event: ThreeEvent<PointerEvent>) => {
+      if (!isPlacing) return;
+      const point = getFloorPoint(event);
+      if (!point) return;
+
+      const pos: [number, number, number] = [point.x, 0, point.z];
+
+      if (activeTool === "camera") {
+        const node = createCameraNode([pos[0], 2.8, pos[2]]);
+        addNode(node);
+        selectNode(node.id);
+      } else if (activeTool === "obstruction") {
+        const node = createObstructionNode([pos[0], 1, pos[2]]);
+        addNode(node);
+        selectNode(node.id);
+      } else if (activeTool === "light") {
+        const node = createSecurityLightNode([pos[0], 2.8, pos[2]]);
+        addNode(node);
+        selectNode(node.id);
+      }
+    },
+    [isPlacing, activeTool, addNode, selectNode, getFloorPoint],
+  );
+
+  if (!isPlacing) return null;
+
+  const ghostColor = TOOL_GHOST_COLORS[activeTool] ?? TOOL_GHOST_COLORS.default;
+
+  return (
+    <>
+      {/* Invisible floor catcher */}
+      <mesh
+        ref={floorRef}
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[scene.dimensions.width / 2, -0.005, scene.dimensions.depth / 2]}
+        onPointerMove={handlePointerMove}
+        onPointerDown={handlePointerDown}
+        onPointerEnter={() => setIsHovering(true)}
+        onPointerLeave={() => {
+          setIsHovering(false);
+          setHoverPos(null);
+        }}
+      >
+        <planeGeometry args={[scene.dimensions.width * 2, scene.dimensions.depth * 2]} />
+        <meshBasicMaterial transparent opacity={0} side={THREE.DoubleSide} depthWrite={false} />
+      </mesh>
+
+      {/* Ghost preview */}
+      {hoverPos && isHovering && (
+        <group position={[hoverPos.x, 0.02, hoverPos.z]}>
+          {/* Base ghost shape */}
+          {activeTool === "camera" ? (
+            <>
+              <mesh>
+                <cylinderGeometry args={[0.18, 0.18, 0.08, 18]} />
+                <meshBasicMaterial color={ghostColor} transparent opacity={0.35} />
+              </mesh>
+              <mesh position={[0.02, 0, 0.02]}>
+                <boxGeometry args={[0.12, 0.06, 0.14]} />
+                <meshBasicMaterial color={ghostColor} transparent opacity={0.35} />
+              </mesh>
+            </>
+          ) : activeTool === "obstruction" ? (
+            <mesh position={[0, 1, 0]}>
+              <boxGeometry args={[1, 2, 0.5]} />
+              <meshBasicMaterial color={ghostColor} transparent opacity={0.28} wireframe />
+            </mesh>
+          ) : (
+            <mesh>
+              <cylinderGeometry args={[0.18, 0.18, 0.05, 22]} />
+              <meshBasicMaterial color={ghostColor} transparent opacity={0.35} />
+            </mesh>
+          )}
+
+          {/* Ground ring */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.005, 0]}>
+            <ringGeometry args={[0.15, 0.28, 24]} />
+            <meshBasicMaterial color={ghostColor} transparent opacity={0.5} />
+          </mesh>
+
+          {/* Tool label above */}
+          <Html position={[0, 0.35, 0]} center distanceFactor={10} style={{ pointerEvents: "none" }}>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                background: `rgba(0,0,0,0.75)`,
+                border: `1.5px solid ${ghostColor}`,
+                borderRadius: 6,
+                padding: "3px 8px",
+                fontSize: 9,
+                fontWeight: 600,
+                color: ghostColor,
+                whiteSpace: "nowrap",
+                backdropFilter: "blur(4px)",
+              }}
+            >
+              {TOOL_ICONS[activeTool] ?? <MousePointer2 className="h-3 w-3" />}
+              {TOOL_LABELS[activeTool] ?? "Place"}
+            </div>
+          </Html>
+        </group>
+      )}
     </>
   );
 }
@@ -652,6 +853,22 @@ function ViewControls() {
 }
 
 function ControlHintBar() {
+  const activeTool = useStudioStore((s) => s.activeTool);
+
+  if (activeTool !== "select") {
+    const toolLabel = TOOL_LABELS[activeTool] ?? "Place";
+    const color = TOOL_GHOST_COLORS[activeTool] ?? TOOL_GHOST_COLORS.default;
+    return (
+      <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-[#1f2536] bg-[#0b0f17]/80 px-3 py-1 backdrop-blur-sm">
+        <span className="text-[8px]" style={{ color }}>◉ {toolLabel}</span>
+        <span className="text-[8px] text-[#2a3246]">•</span>
+        <span className="text-[8px] text-[#4a5568]">Click floor to place</span>
+        <span className="text-[8px] text-[#2a3246]">•</span>
+        <span className="text-[8px] text-[#4a5568]">Press {activeTool === 'camera' ? 'C' : activeTool === 'obstruction' ? 'B' : 'L'} or Esc to cancel</span>
+      </div>
+    );
+  }
+
   return (
     <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-[#1f2536] bg-[#0b0f17]/80 px-3 py-1 backdrop-blur-sm">
       <span className="text-[8px] text-[#4a5568]">Left: Orbit</span>
@@ -704,6 +921,8 @@ export function WorkspaceCanvas() {
         <Suspense fallback={null}>
           <SceneGeometry theme={theme} />
         </Suspense>
+
+        <ToolPlacementFloor />
 
         <OrbitControls
           makeDefault

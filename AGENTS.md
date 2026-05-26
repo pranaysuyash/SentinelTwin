@@ -207,6 +207,8 @@ Phases 0–2 complete. Simulation engine, schema, store, and core UI all built a
 See `Docs/todos/CURRENT_IMPLEMENTATION_STATE.md` for exact verified state.
 See `Docs/todos/CAMERASTUDIO_GAP_ANALYSIS.md` for gap analysis vs full product spec.
 See `Docs/decisions/PRE_BUILD_DISCUSSION_LOG.md` for all discussion topics resolved before coding.
+See `Docs/decisions/CODE_QUALITY_REVIEW_2026-05-26.md` for full FE/BE code audit.
+See `Docs/decisions/WIDE_OPEN_BRAINSTORM_2026-05-26.md` for wide-open brainstorm with 11 roles.
 
 Next build priorities (from reference image analysis):
 1. Canvas view mode tabs (Map View / Camera View / Camera Wall / Path Replay)

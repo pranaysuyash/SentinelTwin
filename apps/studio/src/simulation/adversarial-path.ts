@@ -90,11 +90,12 @@ export function computeAdversarialPath(
   const getNeighbors = (node: NavNode) => {
     const idParts = node.id.replace("cell_", "").split("_").map(Number);
     const [col, row] = idParts;
+    // 8-directional movement: 4 cardinal + 4 diagonal.
+    // stepDistance uses Math.hypot which naturally gives 1×cellSize for cardinals
+    // and √2×cellSize for diagonals — the cost function needs no special-casing.
     const neighborOffsets = [
-      [1, 0],
-      [-1, 0],
-      [0, 1],
-      [0, -1],
+      [1, 0],   [-1, 0],  [0, 1],  [0, -1],  // cardinal
+      [1, 1],   [1, -1], [-1, 1], [-1, -1],  // diagonal
     ];
 
     return neighborOffsets

@@ -205,13 +205,13 @@ describe("exportAsHtml", () => {
       },
     });
     const html = exportAsHtml(report);
-    expect(html).toContain("Defensive Incident Replay");
+    expect(html).toContain("Coverage Failure Replay");
     expect(html).toContain("8.5");
   });
 
   test("omits adversarial path section when not provided", () => {
     const html = exportAsHtml(makeReport({ adversarialPath: undefined }));
-    expect(html).not.toContain("Defensive Incident Replay");
+    expect(html).not.toContain("Coverage Failure Replay");
   });
 
   test("includes temporal profile section when provided", () => {
@@ -247,6 +247,7 @@ describe("exportAsHtml", () => {
         zonesTotal: 5,
       },
       codeCompliant: true,
+      meetsModeledZoneRequirements: true,
     });
     const html = exportAsHtml(passingReport);
     expect(html).toContain("Meets modeled zone requirements");
@@ -260,6 +261,7 @@ describe("exportAsHtml", () => {
         zonesTotal: 5,
       },
       codeCompliant: false,
+      meetsModeledZoneRequirements: false,
     });
     const html = exportAsHtml(failingReport);
     expect(html).toContain("Does not fully meet modeled zone requirements");
@@ -307,7 +309,7 @@ describe("exportAsMarkdown", () => {
       },
     });
     const md = exportAsMarkdown(report);
-    expect(md).toContain("Defensive Incident Replay");
+    expect(md).toContain("Coverage Failure Replay");
     expect(md).toContain("5.0");
   });
 
@@ -345,8 +347,29 @@ describe("exportAsText", () => {
     expect(text).toContain("Issues Found");
   });
 
-  test("includes issues when present", () => {
+  test("omits issues section when no issues are present", () => {
     const text = exportAsText(buildReportData(scene, result));
+    expect(text).not.toContain("ISSUES");
+  });
+
+  test("includes issues section when issues are present", () => {
+    const baseReport = buildReportData(scene, result);
+    const report = {
+      ...baseReport,
+      issues: [
+        {
+          severity: "high",
+          description: "Entrance coverage gap",
+          area: "entrance",
+          recommendation: "Add a camera",
+        },
+      ],
+      summary: {
+        ...baseReport.summary,
+        issuesCount: 1,
+      },
+    };
+    const text = exportAsText(report);
     expect(text).toContain("ISSUES");
   });
 });

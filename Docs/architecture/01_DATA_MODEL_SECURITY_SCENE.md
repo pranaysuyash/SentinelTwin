@@ -292,6 +292,36 @@ type CameraResult = {
   offlineImpact: string[];       // zones that fail if this camera goes offline
 };
 
+### CoverageCellResult
+
+```typescript
+type CameraCellEvaluation = {
+  quality: DORIQuality;
+  ppm: number;
+  probability: number;
+  visible: boolean;              // true when the target is geometrically visible
+  blockedBy?: string;            // source label when occluded or partially transmitted
+  inFov: boolean;
+  withinRange: boolean;
+  distanceM: number;
+  hAngleDeg: number;
+  vAngleDeg: number;
+  reasonCodes: string[];         // e.g. OUT_OF_RANGE, OUT_OF_FOV, PARTIAL_MATERIAL
+};
+
+type CoverageCellResult = {
+  x: number;
+  z: number;
+  quality: DORIQuality;
+  coveringCameras: string[];
+  blockedBy: string[];
+  ppm: number;
+  coverageIncluded: boolean;     // counts toward coverage KPI
+  privacyRestricted: boolean;    // true when the cell belongs to a privacy zone
+  cameraEvaluations?: Record<string, CameraCellEvaluation>;
+};
+```
+
 type PathVisibilityResult = {
   pathId: string;
   totalDurationS: number;

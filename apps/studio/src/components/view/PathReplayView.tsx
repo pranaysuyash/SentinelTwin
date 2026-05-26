@@ -20,7 +20,7 @@ import {
   CoverageSegmentPath,
 } from "@/components/workspace/SharedScene";
 import { VisibilityTimeline } from "@/components/view/VisibilityTimeline";
-import type { DoriQuality, SimulationResult } from "@/schema/security-scene";
+import type { DoriQuality, ScenarioPath } from "@/schema/security-scene";
 
 // ── Shared scene ──
 
@@ -71,14 +71,14 @@ function PathMarkers({ waypoints }: { waypoints: [number, number][] }) {
 }
 
 function getPlaybackPosition(
-  coverageFailurePath: SimulationResult["adversarialPath"] | undefined,
+  playbackWaypoints: { timeS: number }[] | undefined,
   currentTime: number,
 ) {
-  if (!coverageFailurePath || coverageFailurePath.waypoints.length < 2) {
+  if (!playbackWaypoints || playbackWaypoints.length < 2) {
     return { currentIndex: 0, progress: 0 };
   }
 
-  const wps = coverageFailurePath.waypoints;
+  const wps = playbackWaypoints;
   let cumulativeTime = 0;
 
   for (let i = 0; i < wps.length - 1; i++) {
@@ -93,6 +93,30 @@ function getPlaybackPosition(
   }
 
   return { currentIndex: wps.length - 1, progress: 1 };
+}
+
+function buildPlaybackWaypoints(path: ScenarioPath) {
+  const waypoints: { position: [number, number]; timeS: number }[] = [];
+  let elapsed = 0;
+
+  for (let index = 0; index < path.points.length; index += 1) {
+    const current = path.points[index]!;
+    if (index > 0) {
+      const previous = path.points[index - 1]!;
+      const segmentLength = Math.hypot(
+        current.position[0] - previous.position[0],
+        current.position[1] - previous.position[1],
+      );
+      elapsed += segmentLength / Math.max(path.speedMps, 0.01);
+    }
+
+    waypoints.push({
+      position: current.position,
+      timeS: elapsed,
+    });
+  }
+
+  return waypoints;
 }
 
 // ── Animated Actor (useFrame for R3F-native per-frame updates) ──
@@ -579,8 +603,18 @@ function EmptyReplayState() {
 // ── Main Path Replay View ──
 
 export function PathReplayView() {
+  const scene = useStudioStore((s) => s.scene);
   const result = useStudioStore((s) => s.simulationResult);
+  const activePathId = useStudioStore((s) => s.activePathId);
   const coverageFailurePath = result?.adversarialPath;
+  const activePath = useMemo(() => {
+    if (!scene.paths.length) return null;
+    return scene.paths.find((path) => path.id === activePathId) ?? scene.paths[0] ?? null;
+  }, [scene.paths, activePathId]);
+  const activePathResult = useMemo(() => {
+    if (!activePath || !result?.pathResults.length) return null;
+    return result.pathResults.find((entry) => entry.pathId === activePath.id) ?? null;
+  }, [activePath, result]);
 
   // Playback state
   const [playing, setPlaying] = useState(false);
@@ -588,15 +622,32 @@ export function PathReplayView() {
   const [speed, setSpeed] = useState(1);
 
   // Derived data
-  const waypoints: [number, number][] = useMemo(() => {
+  const playbackWaypoints = useMemo(() => {
+    if (activePath) {
+      return buildPlaybackWaypoints(activePath);
+    }
+
     if (!coverageFailurePath) return [];
-    return coverageFailurePath.waypoints.map((wp) => wp.position);
-  }, [coverageFailurePath]);
+    return coverageFailurePath.waypoints.map((wp) => ({ position: wp.position, timeS: wp.timeS }));
+  }, [activePath, coverageFailurePath]);
+
+  const waypoints: [number, number][] = useMemo(
+    () => playbackWaypoints.map((wp) => wp.position),
+    [playbackWaypoints],
+  );
 
   // Coverage bands data for the scrub bar (full waypoint objects with quality)
   const coverageBands = useMemo(() => {
+    if (activePathResult) {
+      return activePathResult.timeline.map((event) => ({
+        position: [0, 0] as [number, number],
+        timeS: event.timeS,
+        detectionQuality: event.quality ?? "none",
+      }));
+    }
+
     return coverageFailurePath?.waypoints ?? [];
-  }, [coverageFailurePath]);
+  }, [activePathResult, coverageFailurePath]);
 
   // Quality exposure breakdown for info overlay
   const qualityExposure = useMemo(() => {
@@ -606,10 +657,14 @@ export function PathReplayView() {
     return coverageFailurePath.detectionQualityExposure;
   }, [coverageFailurePath]);
 
-  const totalDuration = coverageFailurePath?.totalDurationS ?? 0;
+  const totalDuration =
+    activePathResult?.totalDurationS
+    ?? coverageFailurePath?.totalDurationS
+    ?? playbackWaypoints[playbackWaypoints.length - 1]?.timeS
+    ?? 0;
 
   // Find current segment index + progress based on elapsed time.
-  const { currentIndex, progress } = getPlaybackPosition(coverageFailurePath, currentTime);
+  const { currentIndex, progress } = getPlaybackPosition(playbackWaypoints, currentTime);
 
   // Auto-advance time when playing
   // Use a ref to track the "anchor" (time when playback was last resumed) so
@@ -700,7 +755,7 @@ export function PathReplayView() {
         </Suspense>
 
         {/* Coverage-failure path line — colored segments by DORI quality */}
-        {coverageFailurePath && (
+        {!activePath && coverageFailurePath && (
           <CoverageSegmentPath waypoints={coverageFailurePath.waypoints} />
         )}
         <PathMarkers waypoints={waypoints} />
@@ -738,7 +793,7 @@ export function PathReplayView() {
       {/* Visibility Timeline — shown below the canvas */}
       <div className="absolute bottom-[100px] left-3 right-3 z-10">
         <VisibilityTimeline
-          pathResult={result?.pathResults[0] ?? null}
+          pathResult={activePathResult ?? result?.pathResults[0] ?? null}
           currentTime={currentTime}
           onSeek={handleSeek}
         />

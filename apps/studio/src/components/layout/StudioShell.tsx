@@ -105,6 +105,23 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
 }
 
 export default function StudioShell() {
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
+
+    const originalWarn = console.warn;
+    console.warn = (...args: unknown[]) => {
+      const message = args.map((arg) => String(arg)).join(" ");
+      if (message.includes("THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.")) {
+        return;
+      }
+      originalWarn(...args);
+    };
+
+    return () => {
+      console.warn = originalWarn;
+    };
+  }, []);
+
   useSimulation();
   const demoMode = useStudioStore((s) => s.demoMode);
   const workspacePreset = useStudioStore((s) => s.workspacePreset);

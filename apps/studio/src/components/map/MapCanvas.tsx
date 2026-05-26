@@ -204,6 +204,7 @@ export function MapCanvas({
   }, [dragging]);
 
   const handleClick = useCallback((event: PointerEvent<SVGSVGElement>) => {
+    if (event.target !== event.currentTarget) return;
     if (dragMoved) return;
     const point = scenePointFromEvent(projection, event);
 
@@ -216,6 +217,7 @@ export function MapCanvas({
   }, [dragMoved, onMapClick, onNodeSelect, projection]);
 
   const handleDoubleClick = useCallback((event: PointerEvent<SVGSVGElement>) => {
+    if (event.target !== event.currentTarget) return;
     const point = scenePointFromEvent(projection, event);
     onMapDoubleClick?.(point);
   }, [onMapDoubleClick, projection]);

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { buildCoverageGrid } from "@/simulation/grid";
+import { createTestObstruction } from "@/simulation/__tests__/helpers";
 import { createTestScene } from "@/simulation/__tests__/helpers";
 
 describe("buildCoverageGrid", () => {
@@ -24,5 +25,31 @@ describe("buildCoverageGrid", () => {
       expect(cell.z).toBeGreaterThanOrEqual(0);
       expect(cell.z).toBeLessThanOrEqual(7);
     }
+  });
+
+  test("respects rotated obstruction footprints when marking walkability", () => {
+    const scene = createTestScene({
+      width: 6,
+      depth: 6,
+      obstructions: [
+        createTestObstruction({
+          id: "obs_rotated",
+          label: "Rotated Shelf",
+          position: [2.5, 1, 2.5],
+          dimensions: [2, 0.4, 1.8],
+          rotationYDeg: 45,
+          visionTransmission: 0,
+        }),
+      ],
+    });
+
+    const grid = buildCoverageGrid(scene, 4);
+    const blockedCell = grid.cells.find(
+      (cell) => Math.abs(cell.x - 2.625) < 0.001 && Math.abs(cell.z - 2.625) < 0.001,
+    );
+
+    expect(blockedCell).toBeDefined();
+    expect(blockedCell?.walkable).toBe(false);
+    expect(blockedCell?.coverageIncluded).toBe(false);
   });
 });

@@ -27,14 +27,14 @@ const DEMO_STEPS = [
   {
     title: "View Modes",
     description:
-      "Switch between Map (3D scene), Wall (camera feeds), and Replay (adversarial path playback) using the tabs at the top of the workspace.",
+      "Switch between Map (3D scene), Wall (camera feeds), and Replay (coverage failure playback) using the tabs at the top of the workspace.",
     icon: LayoutDashboard,
     highlight: "viewmode",
   },
   {
     title: "Coverage Analysis",
     description:
-      "The colored tiles on the floor show coverage quality (blue=ID, green=REC, yellow=OBS, orange=DET). Red dashed lines show adversarial path — the most dangerous route an intruder could take.",
+      "The colored tiles on the floor show coverage quality (blue=ID, green=REC, yellow=OBS, orange=DET). Red dashed lines show the coverage failure route under current assumptions.",
     icon: Eye,
     highlight: "coverage",
   },
@@ -46,9 +46,9 @@ const DEMO_STEPS = [
     highlight: "command",
   },
   {
-    title: "Threat Analysis & Fixes",
+    title: "Coverage Failure Analysis & Fixes",
     description:
-      "The bottom panel shows detailed metrics, issues, and timeline. The FIXES tab uses AI to propose coverage improvements. Each fix is simulation-verified before you apply it. Run Threat Analysis to see evasion routes.",
+      "The bottom panel shows detailed metrics, issues, and timeline. The FIXES tab uses AI to propose coverage improvements. Each fix is simulation-verified before you apply it. Run Coverage Failure Analysis to inspect the failure path.",
     icon: Route,
     highlight: "panel",
   },

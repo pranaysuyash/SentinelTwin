@@ -206,7 +206,7 @@ export function TimelineTab() {
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden border-r border-[#1e2130]">
           <div className="px-3 py-1 border-b border-[#1e2130] flex items-center justify-between flex-shrink-0">
             <span className="text-[8px] font-semibold uppercase tracking-[0.14em] text-[#4a5568]">
-              Adversarial Path Timeline
+              Coverage Failure Timeline
             </span>
             <span className="text-[8px] text-[#3a4158]">{rows.length} events</span>
           </div>

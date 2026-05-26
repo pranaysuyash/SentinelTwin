@@ -15,6 +15,7 @@ import {
 import { type MapProjection } from "@/components/map/MapProjection";
 import {
   obstacleRectPoints,
+  polygonCentroid,
   polygonToSvgPoints,
   pointOnPathAtProgress,
   estimateCoverageCellSize,
@@ -197,7 +198,7 @@ function makeFovPolygon(
 }
 
 function pathStroke(pathId: string, activePathId?: string | null) {
-  const isActive = !activePathId || pathId === activePathId;
+  const isActive = activePathId != null && pathId === activePathId;
   return {
     stroke: isActive ? "#8b5cf6" : "#64748b",
     strokeWidth: isActive ? 2.2 : 1.4,
@@ -210,6 +211,10 @@ function pathStroke(pathId: string, activePathId?: string | null) {
 
 function mapNodeLabel(nodeId: string, nodes: Map<string, string>): string {
   return nodes.get(nodeId) ?? nodeId;
+}
+
+function nodeActive(id: string, selectedNodeId?: string | null, hoveredNodeId?: string | null) {
+  return selectedNodeId === id || hoveredNodeId === id;
 }
 
 export function MapLayers({
@@ -291,7 +296,7 @@ export function MapLayers({
           {cells.map((cell, index) => {
             if (cell.quality === "none" && isMini) return null;
 
-            const [x, y] = projection.sceneToSvg([cell.x, cell.z]);
+            const { x, y } = projection.sceneToSvg([cell.x, cell.z]);
             return (
               <rect
                 key={`coverage-${index}`}
@@ -314,7 +319,7 @@ export function MapLayers({
             const a = projection.sceneToSvg(wall.start);
             const b = projection.sceneToSvg(wall.end);
             const style = styleForWall(wall.material);
-            const isSelected = hoveredNodeId === wall.id;
+            const isSelected = nodeActive(wall.id, selectedNodeId, hoveredNodeId);
             return (
               <line
                 key={wall.id}
@@ -343,7 +348,7 @@ export function MapLayers({
             const p1 = projection.sceneToSvg([startScene[0], startScene[2]]);
             const p2 = projection.sceneToSvg([endScene[0], endScene[2]]);
             const style = statusForDoor(door.state);
-            const isSelected = selectedNodeId === door.id;
+            const isSelected = nodeActive(door.id, selectedNodeId, hoveredNodeId);
             return (
               <g key={door.id}>
                 <line
@@ -384,7 +389,7 @@ export function MapLayers({
             const p1 = projection.sceneToSvg([x - wHalf, z]);
             const p2 = projection.sceneToSvg([x + wHalf, z]);
             const style = styleForWindow(windowNode.state);
-            const isSelected = selectedNodeId === windowNode.id;
+            const isSelected = nodeActive(windowNode.id, selectedNodeId, hoveredNodeId);
             return (
               <line
                 key={windowNode.id}
@@ -408,10 +413,9 @@ export function MapLayers({
           {scene.criticalZones.map((zone: CriticalZoneNode) => {
             const resultEntry = criticalById.get(zone.id);
             const fill = zoneStatusFill(resultEntry?.status ?? "none");
-            const polygon = polygonToSvgPoints(zone.polygon, projection.sceneToSvg);
-  const centroid = zone.polygon.length
-    ? projection.sceneToSvg([zone.polygon[0]![0], zone.polygon[0]![1]])
-    : projection.sceneToSvg([0, 0]);
+            const polygon = polygonToSvgPoints(zone.polygon, (point) => projection.sceneToSvg(point));
+            const centroid = projection.sceneToSvg(polygonCentroid(zone.polygon));
+            const isSelected = nodeActive(zone.id, selectedNodeId, hoveredNodeId);
 
             return (
               <g key={zone.id}>
@@ -419,9 +423,9 @@ export function MapLayers({
                   points={polygon}
                   fill={fill}
                   stroke={PRIORITY_STROKE[zone.priority] ?? "#cbd5e1"}
-                  strokeWidth={1.15}
+                  strokeWidth={isSelected ? 1.45 : 1.15}
                   strokeOpacity={0.95}
-                  fillOpacity={0.85}
+                  fillOpacity={isSelected ? 0.95 : 0.85}
                   {...makeNodeHandlers(zone.id, onNodeSelect, onNodeHover)}
                 />
                 {showNodeLabels ? (
@@ -458,19 +462,18 @@ export function MapLayers({
           </defs>
 
           {scene.privacyZones.map((zone: PrivacyZoneNode) => {
-            const polygon = polygonToSvgPoints(zone.polygon, projection.sceneToSvg);
-            const centroid = zone.polygon.length
-              ? projection.sceneToSvg([zone.polygon[0]![0], zone.polygon[0]![1]])
-              : projection.sceneToSvg([0, 0]);
+            const polygon = polygonToSvgPoints(zone.polygon, (point) => projection.sceneToSvg(point));
+            const centroid = projection.sceneToSvg(polygonCentroid(zone.polygon));
+            const isSelected = nodeActive(zone.id, selectedNodeId, hoveredNodeId);
 
             return (
               <g key={zone.id}>
                 <polygon
                   points={polygon}
                   fill={`url(#privacy-hatch-${mode})`}
-                  fillOpacity={0.38}
+                  fillOpacity={isSelected ? 0.5 : 0.38}
                   stroke="#fecdd3"
-                  strokeWidth={1}
+                  strokeWidth={isSelected ? 1.35 : 1}
                   {...makeNodeHandlers(zone.id, onNodeSelect, onNodeHover)}
                 />
                 <g transform={`translate(${centroid.x} ${centroid.y})`}>
@@ -511,18 +514,19 @@ export function MapLayers({
             const radius = projection.lengthToSvg(0.22);
             const coneDeg = light.coneDeg ?? 0;
             const hasCone = coneDeg > 0;
+            const isSelected = nodeActive(light.id, selectedNodeId, hoveredNodeId);
 
             return (
               <g key={light.id}>
                 {hasCone ? (
-                  <path
-                    d={`M ${point.x} ${point.y} ${makeFovPolygon(
+                  <polygon
+                    points={makeFovPolygon(
                       [light.position[0], light.position[2]],
                       light.yawDeg ?? 0,
                       Math.min(5, light.rangeM),
                       coneDeg,
                       projection,
-                    )}`}
+                    )}
                     fill={statusColor}
                     fillOpacity={0.1}
                     stroke="none"
@@ -533,7 +537,7 @@ export function MapLayers({
                   cy={point.y}
                   r={radius}
                   fill={statusColor}
-                  opacity={light.status === "off" ? 0.4 : 0.86}
+                  opacity={isSelected ? 1 : light.status === "off" ? 0.4 : 0.86}
                   {...makeNodeHandlers(light.id, onNodeSelect, onNodeHover)}
                 />
                 <circle
@@ -564,6 +568,7 @@ export function MapLayers({
               .map(([x, y]) => projection.sceneToSvg([x, y]))
               .map((p) => `${p.x},${p.y}`)
               .join(" ");
+            const isSelected = nodeActive(obs.id, selectedNodeId, hoveredNodeId);
 
             const fill = obs.material === "glass"
               ? "rgba(125,211,252,0.28)"
@@ -576,8 +581,8 @@ export function MapLayers({
                 key={obs.id}
                 points={points}
                 fill={fill}
-                stroke={selectedNodeId === obs.id ? "#fbbf24" : "#94a3b8"}
-                strokeWidth={selectedNodeId === obs.id ? 1.9 : 1.2}
+                stroke={isSelected ? "#fbbf24" : "#94a3b8"}
+                strokeWidth={isSelected ? 1.9 : 1.2}
                 strokeLinejoin="round"
                 {...makeNodeHandlers(obs.id, onNodeSelect, onNodeHover)}
               />
@@ -620,7 +625,7 @@ export function MapLayers({
         <g>
           {scene.cameras.map((camera: CameraNode) => {
             const point = projection.sceneToSvg([camera.position[0], camera.position[2]]);
-            const isSelected = selectedNodeId === camera.id;
+            const isSelected = nodeActive(camera.id, selectedNodeId, hoveredNodeId);
             const color = getCameraColorForId(camera.id);
             const yaw = (camera.yawDeg * Math.PI) / 180;
             const dir = projection.sceneToSvg([
@@ -670,9 +675,9 @@ export function MapLayers({
 
       {layers.paths && (
         <g>
-      {pathList.map((path) => {
+          {pathList.map((path) => {
             const style = pathStroke(path.id, activePathId);
-            const isActive = !activePathId || path.id === activePathId;
+            const isActive = activePathId != null && path.id === activePathId;
             const coverage = path.id === activePathId ? path.points.length : 0;
 
             return (
@@ -764,7 +769,7 @@ export function MapLayers({
       {result?.adversarialPath && layers.paths ? (
         <g>
           {result.adversarialPath.waypoints.slice(1).map((wp, index) => {
-            const prev = result.adversarialPath.waypoints[index]?.position ?? [0, 0];
+            const prev = result.adversarialPath?.waypoints[index]?.position ?? [0, 0];
             const a = projection.sceneToSvg([prev[0], prev[1]]);
             const b = projection.sceneToSvg([wp.position[0], wp.position[1]]);
             return (
@@ -786,12 +791,13 @@ export function MapLayers({
 
       {scene.entryPoints.map((entry) => {
         const p = projection.sceneToSvg(entry.position);
+        const isSelected = nodeActive(entry.id, selectedNodeId, hoveredNodeId);
         return (
           <g key={entry.id}>
             <polygon
               points={`${p.x},${p.y - 3.8} ${p.x - 3},${p.y + 3.2} ${p.x + 3},${p.y + 3.2}`}
-              fill="#93c5fd"
-              stroke="#e2e8f0"
+              fill={isSelected ? "#bfdbfe" : "#93c5fd"}
+              stroke={isSelected ? "#f8fafc" : "#e2e8f0"}
               strokeWidth={0.9}
               {...makeNodeHandlers(entry.id, onNodeSelect, onNodeHover)}
             />

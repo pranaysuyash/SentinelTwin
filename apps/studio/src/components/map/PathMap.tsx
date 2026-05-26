@@ -7,7 +7,7 @@ import { CoverageRibbon } from "@/components/map/CoverageRibbon";
 import { MapCanvas } from "@/components/map/MapCanvas";
 import { pathLengthM, pointOnPathAtProgress } from "@/components/map/map-utils";
 import { useStudioStore } from "@/store/studio-store";
-import type { DoriQuality, ScenarioPath } from "@/schema/security-scene";
+import type { DoriQuality } from "@/schema/security-scene";
 
 type PathMapProps = {
   width?: number;
@@ -60,7 +60,7 @@ export function PathMap({
   const setPathReplayPlaying = useStudioStore((s) => s.setPathReplayPlaying);
   const setPathReplayProgress = useStudioStore((s) => s.setPathReplayProgress);
 
-  const activePath = useMemo(() => scene.paths.find((path) => path.id === activePathId) ?? scene.paths[0] ?? null, [scene.paths, activePathId]);
+  const activePath = useMemo(() => scene.paths.find((path) => path.id === activePathId) ?? null, [scene.paths, activePathId]);
 
   useEffect(() => {
     if (scene.paths.length === 0 && activePathId !== null) {
@@ -68,12 +68,8 @@ export function PathMap({
       return;
     }
 
-    if (!activePathId && scene.paths.length > 0) {
-      setActivePathId(scene.paths[0]!.id);
-    }
-
     if (activePathId && !scene.paths.some((path) => path.id === activePathId) && scene.paths.length > 0) {
-      setActivePathId(scene.paths[0]!.id);
+      setActivePathId(null);
     }
   }, [activePathId, scene.paths, setActivePathId]);
 
@@ -108,15 +104,22 @@ export function PathMap({
           onChange={(event) => {
             const id = event.target.value;
             setActivePathId(id || null);
+            setSelectedSegment(null);
+            setPathReplayPlaying(false);
             setPathReplayProgress(0);
           }}
         >
           {scene.paths.length === 0 ? (
             <option value="">No paths</option>
           ) : (
-            scene.paths.map((path) => (
-              <option key={path.id} value={path.id}>{path.label}</option>
-            ))
+            <>
+              <option value="">Select path</option>
+              {scene.paths.map((path) => (
+                <option key={path.id} value={path.id}>
+                  {path.label}
+                </option>
+              ))}
+            </>
           )}
         </select>
 

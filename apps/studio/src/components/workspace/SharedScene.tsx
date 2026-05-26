@@ -109,7 +109,16 @@ export function SceneWalls({ walls }: { walls: WallNode[] }) {
         const cz = (wall.start[1] + wall.end[1]) / 2;
         const isGlass = wall.material === "glass";
         return (
-          <mesh key={wall.id} position={[cx, wall.heightM / 2, cz]} rotation={[0, -angle, 0]}>
+          <group
+            key={wall.id}
+            position={[cx, wall.heightM / 2, cz]}
+            rotation={[0, -angle, 0]}
+            onClick={(e) => {
+              e.stopPropagation();
+              useStudioStore.getState().selectNode(wall.id);
+            }}
+          >
+            <mesh>
             <boxGeometry args={[length, wall.heightM, 0.18]} />
             <meshStandardMaterial
               color={isGlass ? "#dceeff" : "#f0f2f6"}
@@ -118,7 +127,8 @@ export function SceneWalls({ walls }: { walls: WallNode[] }) {
               roughness={isGlass ? 0.08 : 0.65}
               metalness={isGlass ? 0.28 : 0.0}
             />
-          </mesh>
+            </mesh>
+          </group>
         );
       })}
     </>
@@ -136,7 +146,14 @@ export function SceneDoors({ doors }: { doors: DoorNode[] }) {
         const isLocked = door.state === "locked";
 
         return (
-          <group key={door.id} position={door.position}>
+          <group
+            key={door.id}
+            position={door.position}
+            onClick={(e) => {
+              e.stopPropagation();
+              useStudioStore.getState().selectNode(door.id);
+            }}
+          >
             <mesh rotation={[0, 0, 0]} castShadow receiveShadow visible={!isOpen}>
               <boxGeometry args={[width, height, Math.max(thickness, 0.08)]} />
               <meshStandardMaterial
@@ -173,7 +190,15 @@ export function SceneWindows({ windows }: { windows: WindowNode[] }) {
         const opacity = isOpen ? 0.1 : isCurtain ? 0.22 : isReflective ? 0.38 : 0.24;
 
         return (
-          <mesh key={window.id} position={window.position} castShadow receiveShadow visible={!isOpen}>
+          <group
+            key={window.id}
+            position={window.position}
+            onClick={(e) => {
+              e.stopPropagation();
+              useStudioStore.getState().selectNode(window.id);
+            }}
+          >
+            <mesh castShadow receiveShadow visible={!isOpen}>
             <boxGeometry args={[width, height, Math.max(thickness, 0.05)]} />
             <meshStandardMaterial
               color={isReflective ? "#e5f0ff" : "#cfe5ff"}
@@ -182,7 +207,8 @@ export function SceneWindows({ windows }: { windows: WindowNode[] }) {
               roughness={isReflective ? 0.05 : 0.15}
               metalness={isReflective ? 0.4 : 0.12}
             />
-          </mesh>
+            </mesh>
+          </group>
         );
       })}
     </>
@@ -468,10 +494,14 @@ export function ScenePathLine({
   points,
   color = "#7c3aed",
   showMarkers = true,
+  id,
+  onSelect,
 }: {
   points: [number, number][];
   color?: string;
   showMarkers?: boolean;
+  id?: string;
+  onSelect?: (id: string) => void;
 }) {
   const geometry = useMemo(() => {
     const arr = new Float32Array(points.length * 3);
@@ -498,7 +528,14 @@ export function ScenePathLine({
   const end = points[points.length - 1];
 
   return (
-    <group>
+    <group
+      onClick={(event) => {
+        event.stopPropagation();
+        if (id && onSelect) {
+          onSelect(id);
+        }
+      }}
+    >
       <primitive object={line} />
       {showMarkers && start && (
         <mesh position={[start[0], 0.065, start[1]]}>

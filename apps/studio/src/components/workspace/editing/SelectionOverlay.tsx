@@ -1,5 +1,3 @@
-import * as THREE from "three";
-
 import type { Point2 } from "./editor-geometry";
 
 export function SelectionOverlay({ center, label, showSnap = false }: {

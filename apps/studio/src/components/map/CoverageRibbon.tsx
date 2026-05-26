@@ -1,12 +1,8 @@
 import { useMemo } from "react";
 
 import { samplePathQuality, groupPathQualitySamples } from "@/components/map/map-utils";
-import type {
-  type CoverageCellLike,
-  type PathQualityBand,
-  type PathQualitySample,
-  type ScenarioPath,
-} from "@/components/map/map-utils";
+import type { CoverageCellLike, PathQualityBand, PathQualitySample } from "@/components/map/map-utils";
+import type { ScenarioPath } from "@/schema/security-scene";
 
 type CoverageRibbonProps = {
   path: ScenarioPath | null;

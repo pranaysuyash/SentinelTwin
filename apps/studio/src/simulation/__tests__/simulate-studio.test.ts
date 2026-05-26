@@ -16,9 +16,9 @@ describe("simulateStudio", () => {
     expect(result.cameraResults).toHaveLength(2);
     expect(result.criticalZoneResults).toHaveLength(1);
     expect(result.criticalZoneResults[0]?.label).toBe("Cash Counter");
-    expect(["pass", "fail", "partial"]).toContain(result.criticalZoneResults[0]?.status);
+    expect(result.criticalZoneResults[0]?.status).toBe("pass");
     expect(result.issues.length).toBeGreaterThanOrEqual(0);
-    expect(result.recommendations.length).toBeGreaterThan(0);
+    expect(result.recommendations).toHaveLength(0);
     expect(result.adversarialPath?.targetReached).toBe(true);
     expect(result.pathResults[0]?.timeline.length).toBeGreaterThan(0);
   });
@@ -176,12 +176,16 @@ describe("simulateStudio", () => {
       cameras: [
         createTestCamera({
           id: "cam_front",
-          position: [3, 2.5, 3],
-          yawDeg: 180,
-          pitchDeg: -25,
-          fovHorizontalDeg: 180,
-          fovVerticalDeg: 120,
+          position: [3, 2.5, 4],
+          yawDeg: 0,
+          pitchDeg: -20,
+          fovHorizontalDeg: 120,
+          fovVerticalDeg: 90,
           rangeM: 20,
+          resolutionMP: 8,
+          resolutionWidth: 3840,
+          resolutionHeight: 2160,
+          clarity: "excellent",
         }),
       ],
     });

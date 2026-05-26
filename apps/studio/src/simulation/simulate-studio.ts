@@ -193,7 +193,7 @@ function coverageStatus(actual: DoriQuality, required: DoriQuality) {
   return qualityToScore(actual) >= qualityToScore(required) ? ("pass" as const) : ("fail" as const);
 }
 
-function getZoneSampleHeights(zone: SecurityScene["criticalZones"][number], scene: SecurityScene) {
+function getZoneSampleHeights(zone: SecurityScene["criticalZones"][number]) {
   const profile = getProfileForTargetType(zone.targetType);
   return profile.sampleHeightsM
     .map((height) => Math.min(Math.max(0.2, height), zone.heightM))
@@ -257,7 +257,7 @@ function evaluateZone(
 ): EvaluatedZone {
   const zoneCells = coverageCells.filter((cell) => pointInPolygon([cell.x, cell.z], zone.polygon));
   const profile = getProfileForTargetType(zone.targetType);
-  const sampleHeightsM = getZoneSampleHeights(zone, scene);
+  const sampleHeightsM = getZoneSampleHeights(zone);
 
   const cellQualities: { quality: DoriQuality }[] = [];
   const cameraQualityById: Record<string, DoriQuality> = Object.fromEntries(
@@ -642,6 +642,7 @@ function simulateStudioInternal(scene: SecurityScene, includeRecommendations: bo
     blindRegions: analyseBlindSpotTopology(scene, coverageCells.map((cell) => ({
       x: cell.x, z: cell.z, quality: cell.quality,
       coveringCameras: cell.coveringCameras, blockedBy: cell.blockedBy, ppm: cell.ppm,
+      coverageIncluded: cell.coverageIncluded, privacyRestricted: cell.privacyRestricted,
     }))),
   };
 }

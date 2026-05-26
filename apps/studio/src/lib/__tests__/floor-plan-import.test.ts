@@ -20,7 +20,6 @@ import {
   extractFloorPlan,
   validateFloorPlan,
   type FloorPlanResult,
-  type FloorPlanConfig,
 } from "@/lib/floor-plan-import";
 
 /**
@@ -239,7 +238,7 @@ describe("validateFloorPlan", () => {
   });
 
   test("warns when fewer than 4 walls", () => {
-    const { valid, warnings } = validateFloorPlan(makeResult({ walls: [] }));
+    const { warnings } = validateFloorPlan(makeResult({ walls: [] }));
     expect(warnings.length).toBeGreaterThan(0);
     expect(warnings.some((w) => w.includes("Fewer than 4"))).toBe(true);
   });

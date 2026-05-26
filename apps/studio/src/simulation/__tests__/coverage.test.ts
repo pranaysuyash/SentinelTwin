@@ -77,11 +77,13 @@ describe("computeCoverageCells occlusion handling", () => {
       quality: expect.any(String),
       ppm: expect.any(Number),
       probability: expect.any(Number),
+      visible: expect.any(Boolean),
       inFov: expect.any(Boolean),
       withinRange: true,
       distanceM: expect.any(Number),
       hAngleDeg: expect.any(Number),
       vAngleDeg: expect.any(Number),
+      reasonCodes: expect.any(Array),
     });
   });
 
@@ -122,7 +124,7 @@ describe("computeCoverageCells occlusion handling", () => {
       },
     ];
 
-    expect(getQualityShare(cells, "none")).toBeCloseTo(33.3, 1);
+    expect(getQualityShare(cells, "none")).toBeCloseTo(66.7, 1);
     expect(getQualityShare(cells, "none", true)).toBe(100);
   });
 
@@ -131,6 +133,20 @@ describe("computeCoverageCells occlusion handling", () => {
       width: 6,
       depth: 6,
       cameras: [createTestCamera({ yawDeg: 180, pitchDeg: -20, fovHorizontalDeg: 180, rangeM: 20 })],
+    });
+
+    scene.cameras[0] = createTestCamera({
+      id: "cam_front",
+      position: [3, 2.5, 4],
+      yawDeg: 0,
+      pitchDeg: -20,
+      fovHorizontalDeg: 120,
+      fovVerticalDeg: 90,
+      rangeM: 20,
+      resolutionMP: 8,
+      resolutionWidth: 3840,
+      resolutionHeight: 2160,
+      clarity: "excellent",
     });
 
     scene.privacyZones = [
@@ -184,5 +200,8 @@ describe("computeCoverageCells occlusion handling", () => {
 
     expect(farCell).toBeDefined();
     expect(visibleCell).toBeDefined();
+    expect(farCell?.cameraEvaluations?.cam_short?.visible).toBe(false);
+    expect(visibleCell?.cameraEvaluations?.cam_short?.visible).toBe(true);
   });
+
 });

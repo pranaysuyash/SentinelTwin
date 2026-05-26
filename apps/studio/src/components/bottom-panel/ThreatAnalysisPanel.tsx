@@ -138,14 +138,14 @@ export function ThreatAnalysisPanel() {
           <>
             <ShieldAlert className="h-8 w-8 text-rose-400/40" />
             <p className="text-center text-[10px] text-[#5b667c] leading-relaxed max-w-[220px]">
-              Adversarial path computed. Run analysis to see detailed threat breakdown.
+              Coverage failure path computed. Run analysis to see detailed failure breakdown.
             </p>
             <button
               onClick={handleRunAnalysis}
               className="inline-flex items-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] px-3 py-2 text-[10px] font-medium text-rose-300 transition-colors hover:border-rose-500/30 hover:bg-rose-500/10"
             >
               <Zap className="h-3.5 w-3.5" />
-              Run Threat Analysis
+              Run Coverage Failure Analysis
             </button>
           </>
         ) : (
@@ -154,7 +154,7 @@ export function ThreatAnalysisPanel() {
               <Target className="h-8 w-8 text-[#3a4158]" />
             </div>
             <p className="text-center text-[10px] text-[#4d566b] max-w-[200px] leading-relaxed">
-              Run simulation first to generate an adversarial path for threat analysis.
+              Run simulation first to generate a coverage failure path for analysis.
             </p>
             {!result && (
               <p className="text-[9px] text-[#3a4158]">Click &quot;Run Simulation&quot; in the status bar.</p>
@@ -165,7 +165,7 @@ export function ThreatAnalysisPanel() {
     );
   }
 
-  // ── Threat report ──
+  // ── Coverage failure report ──
 
   return (
     <motion.div
@@ -177,7 +177,7 @@ export function ThreatAnalysisPanel() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ShieldAlert className="h-4 w-4 text-rose-400" />
-          <span className="text-[11px] font-semibold text-[#c7d0e4]">Threat Analysis Report</span>
+          <span className="text-[11px] font-semibold text-[#c7d0e4]">Coverage Failure Analysis Report</span>
         </div>
         {adversarialPath.targetReached && (
           <span className="flex items-center gap-1 rounded-md bg-red-500/15 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.12em] text-red-400">
@@ -202,7 +202,7 @@ export function ThreatAnalysisPanel() {
         />
         <StatCard
           icon={<EyeOff className="h-3.5 w-3.5" />}
-          label="Cameras Evaded"
+          label="Cameras Affected"
           value={`${adversarialPath.camerasEvaded.length}`}
           color="text-amber-400"
         />
@@ -213,7 +213,7 @@ export function ThreatAnalysisPanel() {
         />
       </div>
 
-      {/* Threat details */}
+      {/* Failure details */}
       <div className="grid grid-cols-3 gap-1.5">
         <StatCard
           icon={<AlertTriangle className="h-3.5 w-3.5" />}
@@ -253,11 +253,11 @@ export function ThreatAnalysisPanel() {
           />
         </div>
 
-        {/* Cameras evaded */}
+        {/* Cameras affected */}
         <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
           <div className="mb-1.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">
             <EyeOff className="h-3 w-3 text-rose-400" />
-            Cameras Evaded
+            Cameras Affected
           </div>
           <DetailList
             items={adversarialPath.camerasEvaded.map((id) => `📷 ${id}`)}

@@ -1,7 +1,6 @@
 "use client";
 
-import { ChevronDown, MapPin } from "lucide-react";
-
+import { MapPin } from "lucide-react";
 import { PathMap } from "@/components/map/PathMap";
 import { useStudioStore } from "@/store/studio-store";
 
@@ -9,8 +8,11 @@ export function ScenarioPathPanel() {
   const scene = useStudioStore((s) => s.scene);
   const result = useStudioStore((s) => s.simulationResult);
   const activePathId = useStudioStore((s) => s.activePathId);
+  const setActivePathId = useStudioStore((s) => s.setActivePathId);
+  const setPathReplayPlaying = useStudioStore((s) => s.setPathReplayPlaying);
+  const setPathReplayProgress = useStudioStore((s) => s.setPathReplayProgress);
 
-  const activePath = scene.paths.find((path) => path.id === activePathId) ?? scene.paths[0] ?? null;
+  const activePath = scene.paths.find((path) => path.id === activePathId) ?? null;
   const pathResult = activePath ? result?.pathResults.find((entry) => entry.pathId === activePath.id) : null;
   const visiblePct = pathResult && pathResult.totalDurationS > 0
     ? Math.round((pathResult.visibleDurationS / pathResult.totalDurationS) * 100)
@@ -27,10 +29,24 @@ export function ScenarioPathPanel() {
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
             <div className="mb-1 text-[9px] uppercase tracking-[0.18em] text-[#556076]">Active Path</div>
-            <button className="flex h-8 w-full items-center justify-between rounded-lg border border-[#24283a] bg-[#111521] px-2.5 text-[11px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white">
-              <span className="truncate">{activePath?.label ?? "No path defined"}</span>
-              <ChevronDown className="h-3 w-3 flex-shrink-0 text-[#556076]" />
-            </button>
+            <select
+              className="flex h-8 w-full items-center justify-between rounded-lg border border-[#24283a] bg-[#111521] px-2.5 text-[11px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
+              value={activePathId ?? ""}
+              onChange={(event) => {
+                const next = event.target.value || null;
+                setActivePathId(next);
+                setPathReplayPlaying(false);
+                setPathReplayProgress(0);
+              }}
+              aria-label="Select active path"
+            >
+              <option value="">No path selected</option>
+              {scene.paths.map((path) => (
+                <option key={path.id} value={path.id}>
+                  {path.label}
+                </option>
+              ))}
+            </select>
             {activePath ? (
               <div className="mt-2 flex flex-wrap gap-1.5">
                 <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[9px] text-[#9ea8bf]">

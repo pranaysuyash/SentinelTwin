@@ -4,7 +4,6 @@ import {
   SCENE_TEMPLATES,
   getTemplateById,
   getTemplatesByCategory,
-  type SceneTemplate,
 } from "@/lib/scene-templates";
 
 describe("SCENE_TEMPLATES", () => {

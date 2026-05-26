@@ -9,13 +9,6 @@ import * as THREE from "three";
 import {
   type CameraNode,
   type SecurityIssue,
-  type WallNode,
-  type DoorNode,
-  type WindowNode,
-  type ObstructionNode,
-  type SecurityLightNode,
-  type CriticalZoneNode,
-  type PathPoint,
 } from "@/schema/security-scene";
 import { getYawPitchDirection } from "@/simulation/geometry";
 import { useStudioStore } from "@/store/studio-store";
@@ -31,24 +24,22 @@ import {
   CoverageHeatmapInstanced,
   ScenePrivacyZones,
 } from "./SharedScene";
-import { WallDrawTool, type WallDraft } from "./editing/WallDrawTool";
-import { PolygonDrawTool } from "./editing/PolygonDrawTool";
-import { PathDrawTool } from "./editing/PathDrawTool";
 import { makeSnapEngine } from "./editing/SnapEngine";
-import {
-  clampToScene,
-  applyShiftLock,
-  pathLength,
-  type Point2,
-} from "./editing/editor-geometry";
+import { PathDrawTool } from "./editing/PathDrawTool";
+import { PolygonDrawTool } from "./editing/PolygonDrawTool";
+import { SelectionOverlay } from "./editing/SelectionOverlay";
+import { WallDrawTool } from "./editing/WallDrawTool";
+import { applyShiftLock, clampToScene, pathLength, pointDistance } from "./editing/editor-geometry";
+import { pointOnPathAtProgress } from "@/components/map/map-utils";
 import { CoverageLegend } from "./CoverageLegend";
 import {
   createCameraNode,
-  createDoorNode,
   createObstructionNode,
-  createPathNode,
-  createCriticalZoneNode,
+  createWallNode,
+  createDoorNode,
   createWindowNode,
+  createCriticalZoneNode,
+  createScenarioPathNode,
   createSecurityLightNode,
 } from "@/lib/node-factory";
 import { CameraPresetPicker, applyCameraPreset, getCameraPreset } from "./CameraPresetPicker";
@@ -190,7 +181,6 @@ function AccentSurface({
 
 function CeilingLightMarkers() {
   const scene = useStudioStore((s) => s.scene);
-  const activePathId = useStudioStore((s) => s.activePathId);
 
   return (
     <group>
@@ -443,11 +433,12 @@ function SceneGeometry() {
 
 function PathReplayActor() {
   const scene = useStudioStore((s) => s.scene);
+  const activePathId = useStudioStore((s) => s.activePathId);
   const pathReplay = useStudioStore((s) => s.pathReplay);
   const setPathReplayProgress = useStudioStore((s) => s.setPathReplayProgress);
   const setPathReplayPlaying = useStudioStore((s) => s.setPathReplayPlaying);
 
-  const path = scene.paths.find((item) => item.id === activePathId) ?? scene.paths[0];
+  const path = scene.paths.find((item) => item.id === activePathId) ?? null;
   const meshRef = useRef<THREE.Mesh>(null);
 
   const totalDuration = useMemo(() => {
@@ -474,14 +465,8 @@ function PathReplayActor() {
 
   const actorPos = useMemo(() => {
     if (!path || path.points.length < 2) return new THREE.Vector3(0, 0.18, 0);
-    const t = pathReplay.progress;
-    const n = path.points.length - 1;
-    const seg = t * n;
-    const i = Math.min(Math.floor(seg), n - 1);
-    const f = seg - i;
-    const [x0, z0] = path.points[i].position;
-    const [x1, z1] = path.points[i + 1]?.position ?? [x0, z0];
-    return new THREE.Vector3(x0 + (x1 - x0) * f, 0.18, z0 + (z1 - z0) * f);
+    const [x, z] = pointOnPathAtProgress(path, pathReplay.progress);
+    return new THREE.Vector3(x, 0.18, z);
   }, [path, pathReplay.progress]);
 
   if (!path || (!pathReplay.playing && pathReplay.progress === 0)) return null;
@@ -498,10 +483,10 @@ function SceneFrameRig() {
   const camera = useThree((s) => s.camera);
   const controls = useThree((s) => s.controls);
   const scene = useStudioStore((s) => s.scene);
+  const { width: sceneWidth, depth: sceneDepth } = scene.dimensions;
 
   useEffect(() => {
-    const { width, depth } = scene.dimensions;
-    const { target, position } = getMapFrame(width, depth);
+    const { target, position } = getMapFrame(sceneWidth, sceneDepth);
 
     camera.position.copy(position);
     camera.lookAt(target);
@@ -513,7 +498,7 @@ function SceneFrameRig() {
       orbitControls.target.copy(target);
       orbitControls.update();
     }
-  }, [camera, controls, scene.dimensions.depth, scene.dimensions.width]);
+  }, [camera, controls, sceneDepth, sceneWidth]);
 
   return null;
 }
@@ -546,14 +531,46 @@ function ToolPlacementFloor() {
   const addNode = useStudioStore((s) => s.addNode);
   const selectNode = useStudioStore((s) => s.selectNode);
   const scene = useStudioStore((s) => s.scene);
+  const editor = useStudioStore((s) => s.editor);
+  const { draftWallStart, draftPolygonPoints, draftPathPoints, hoverPoint } = editor;
+  const setEditorHoverPoint = useStudioStore((s) => s.setEditorHoverPoint);
+  const setDraftWallStart = useStudioStore((s) => s.setDraftWallStart);
+  const setDraftPolygonPoints = useStudioStore((s) => s.setDraftPolygonPoints);
+  const setDraftPathPoints = useStudioStore((s) => s.setDraftPathPoints);
+  const setEditorMode = useStudioStore((s) => s.setEditorMode);
+  const setActiveTool = useStudioStore((s) => s.setActiveTool);
   const { camera, size } = useThree();
 
   const [hoverPos, setHoverPos] = useState<THREE.Vector3 | null>(null);
   const [isHovering, setIsHovering] = useState(false);
   const floorRef = useRef<THREE.Mesh>(null!);
+  const hasEntryPointsRef = useRef(scene.entryPoints.length > 0);
   const raycaster = useMemo(() => new THREE.Raycaster(), []);
+  const { width: sceneWidth, depth: sceneDepth } = scene.dimensions;
+  const snapEngine = useMemo(() => makeSnapEngine(scene, {
+    snapEnabled: editor.snapEnabled,
+    snapDistanceM: editor.snapDistanceM,
+    gridSnapM: editor.gridSnapM,
+  }), [scene, editor.snapEnabled, editor.snapDistanceM, editor.gridSnapM]);
+
+  useEffect(() => {
+    hasEntryPointsRef.current = scene.entryPoints.length > 0;
+  }, [scene.entryPoints.length]);
 
   const isPlacing = activeTool !== "select";
+
+  const wallDraft = draftWallStart && hoverPoint
+    ? { start: draftWallStart, current: hoverPoint, length: pointDistance(draftWallStart, hoverPoint) }
+    : null;
+
+  const wallLength = wallDraft ? wallDraft.length : 0;
+
+  useEffect(() => {
+    if (activeTool !== "wall") setDraftWallStart(undefined);
+    if (activeTool !== "zone") setDraftPolygonPoints([]);
+    if (activeTool !== "path") setDraftPathPoints([]);
+    if (activeTool === "select") setEditorMode("idle");
+  }, [activeTool, setDraftWallStart, setDraftPathPoints, setDraftPolygonPoints, setEditorMode]);
 
   const getFloorPoint = useCallback(
     (event: ThreeEvent<PointerEvent>): THREE.Vector3 | null => {
@@ -567,23 +584,70 @@ function ToolPlacementFloor() {
       const hit = raycaster.ray.intersectPlane(plane, point);
       if (!hit) return null;
       // Clamp to scene bounds
-      const pad = 0.2;
-      point.x = Math.max(pad, Math.min(scene.dimensions.width - pad, point.x));
-      point.z = Math.max(pad, Math.min(scene.dimensions.depth - pad, point.z));
+      [point.x, point.z] = clampToScene([point.x, point.z], sceneWidth, sceneDepth, 0.2);
       point.y = 0;
       return point;
     },
-    [camera, size, scene.dimensions],
+    [camera, raycaster, sceneDepth, sceneWidth, size],
   );
 
   const handlePointerMove = useCallback(
     (event: ThreeEvent<PointerEvent>) => {
       if (!isPlacing) return;
       const point = getFloorPoint(event);
-      setHoverPos(point);
+      if (!point) return;
+
+      const basePoint = snapEngine.snapToGrid([point.x, point.z]);
+      let snapped = basePoint;
+
+      if (activeTool === "wall" && draftWallStart) {
+        const constrained = applyShiftLock(draftWallStart, basePoint, event.nativeEvent.shiftKey);
+        const profile = snapEngine.snapForPlacement(constrained, false);
+        snapped = profile.point;
+      } else if (activeTool === "door_window") {
+        const profile = snapEngine.snapToWall(basePoint);
+        if (profile.snappedToWall) {
+          snapped = profile.point;
+        }
+      }
+
+      setEditorHoverPoint(snapped);
+      setHoverPos(new THREE.Vector3(snapped[0], 0.02, snapped[1]));
     },
-    [isPlacing, getFloorPoint],
+    [activeTool, draftWallStart, getFloorPoint, isPlacing, setEditorHoverPoint, snapEngine],
   );
+
+  const commitDraftPolygon = useCallback(() => {
+    if (draftPolygonPoints.length < 3) return;
+    const zone = createCriticalZoneNode(draftPolygonPoints);
+    addNode(zone);
+    selectNode(zone.id);
+    setDraftPolygonPoints([]);
+    setEditorMode("idle");
+  }, [addNode, draftPolygonPoints, selectNode, setDraftPolygonPoints, setEditorMode]);
+
+  const commitDraftPath = useCallback(() => {
+    if (draftPathPoints.length < 2) return;
+    const path = createScenarioPathNode(
+      draftPathPoints.map((point) => ({ position: point })),
+    );
+    addNode(path);
+    selectNode(path.id);
+    setDraftPathPoints([]);
+    setEditorMode("idle");
+
+    if (!hasEntryPointsRef.current) {
+      const first = draftPathPoints[0];
+      if (first) {
+        useStudioStore.getState().addNode({
+          id: `entry_${Date.now().toString(36)}`,
+          nodeType: "entry_point",
+          label: "Entry",
+          position: first,
+        });
+      }
+    }
+  }, [addNode, draftPathPoints, selectNode, setDraftPathPoints, setEditorMode]);
 
   const handlePointerDown = useCallback(
     (event: ThreeEvent<PointerEvent>) => {
@@ -591,7 +655,18 @@ function ToolPlacementFloor() {
       const point = getFloorPoint(event);
       if (!point) return;
 
-      const pos: [number, number, number] = [point.x, 0, point.z];
+      const workingSnap = hoverPoint ?? snapEngine.snapToGrid([point.x, point.z]);
+      const pos: [number, number, number] = [workingSnap[0], 0, workingSnap[1]];
+
+      if (activeTool === "zone" && event.nativeEvent.detail > 1) {
+        commitDraftPolygon();
+        return;
+      }
+
+      if (activeTool === "path" && event.nativeEvent.detail > 1) {
+        commitDraftPath();
+        return;
+      }
 
       if (activeTool === "camera") {
         const preset = getCameraPreset();
@@ -610,10 +685,109 @@ function ToolPlacementFloor() {
         const node = createSecurityLightNode([pos[0], 2.8, pos[2]]);
         addNode(node);
         selectNode(node.id);
+      } else if (activeTool === "wall") {
+        if (!draftWallStart) {
+          setDraftWallStart(workingSnap);
+          setEditorMode("drawing_wall");
+          return;
+        }
+
+        const constrained = applyShiftLock(draftWallStart, workingSnap, event.nativeEvent.shiftKey);
+        const segmentLength = pointDistance(draftWallStart, constrained);
+        if (segmentLength < 0.2) return;
+        const wall = createWallNode(draftWallStart, constrained, {
+          wallHeightM: scene.assumptions.wallHeightM,
+          thicknessM: 0.18,
+          material: "solid",
+          visionTransmission: 0,
+        });
+        addNode(wall);
+        setDraftWallStart(constrained);
+        selectNode(wall.id);
+      } else if (activeTool === "zone") {
+        setDraftPolygonPoints([...draftPolygonPoints, workingSnap]);
+      } else if (activeTool === "path") {
+        setDraftPathPoints([...draftPathPoints, workingSnap]);
+      } else if (activeTool === "door_window") {
+        const wallProfile = snapEngine.snapToWall(workingSnap);
+        if (!wallProfile.snappedToWall) return;
+
+        const wantsWindow = event.nativeEvent.ctrlKey || event.nativeEvent.altKey;
+        const node = wantsWindow
+          ? createWindowNode([wallProfile.point[0], 1.4, wallProfile.point[1]])
+          : createDoorNode([wallProfile.point[0], 0, wallProfile.point[1]]);
+
+        addNode(node);
+        selectNode(node.id);
       }
     },
-    [isPlacing, activeTool, addNode, selectNode, getFloorPoint],
+    [
+      addNode,
+      activeTool,
+      commitDraftPath,
+      commitDraftPolygon,
+      draftPathPoints,
+      draftPolygonPoints,
+      draftWallStart,
+      getFloorPoint,
+      hoverPoint,
+      isPlacing,
+      scene.assumptions.wallHeightM,
+      selectNode,
+      setDraftPathPoints,
+      setDraftPolygonPoints,
+      setDraftWallStart,
+      setEditorMode,
+      snapEngine,
+    ],
   );
+
+  const tooltipText = useMemo(() => {
+    if (activeTool === "wall" && wallLength > 0) {
+      return `Wall: ${wallLength.toFixed(2)}m`;
+    }
+
+    if (activeTool === "path") {
+      const len = pathLength(draftPathPoints.concat(hoverPoint ? [hoverPoint] : []));
+      return len > 0 ? `Path: ${len.toFixed(2)}m` : "Click to add path point";
+    }
+
+    if (activeTool === "zone") {
+      return draftPolygonPoints.length > 0
+        ? `Zone: ${draftPolygonPoints.length} points`
+        : "Click to draw zone polygon";
+    }
+
+    return TOOL_LABELS[activeTool] ?? "Place";
+  }, [activeTool, wallLength, draftPolygonPoints.length, draftPathPoints, hoverPoint]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Enter") {
+        if (activeTool === "zone") {
+          commitDraftPolygon();
+          return;
+        }
+        if (activeTool === "path") {
+          commitDraftPath();
+          return;
+        }
+      }
+
+      if (event.key === "Escape") {
+        setActiveTool("select");
+        setDraftWallStart(undefined);
+        setDraftPolygonPoints([]);
+        setDraftPathPoints([]);
+        setEditorMode("idle");
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [activeTool, commitDraftPath, commitDraftPolygon, setActiveTool, setDraftPathPoints, setDraftPolygonPoints, setDraftWallStart, setEditorMode]);
 
   if (!isPlacing) return null;
 
@@ -625,18 +799,27 @@ function ToolPlacementFloor() {
       <mesh
         ref={floorRef}
         rotation={[-Math.PI / 2, 0, 0]}
-        position={[scene.dimensions.width / 2, -0.005, scene.dimensions.depth / 2]}
+        position={[sceneWidth / 2, -0.005, sceneDepth / 2]}
         onPointerMove={handlePointerMove}
         onPointerDown={handlePointerDown}
         onPointerEnter={() => setIsHovering(true)}
         onPointerLeave={() => {
           setIsHovering(false);
           setHoverPos(null);
+          setEditorHoverPoint(undefined);
         }}
       >
-        <planeGeometry args={[scene.dimensions.width * 2, scene.dimensions.depth * 2]} />
+        <planeGeometry args={[sceneWidth * 2, sceneDepth * 2]} />
         <meshBasicMaterial transparent opacity={0} side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
+
+      {/* Active draw previews */}
+      {activeTool === "wall" && wallDraft ? (
+        <WallDrawTool draft={{ start: wallDraft.start, current: wallDraft.current, length: wallDraft.length, snappedToWallEndpoint: false }} />
+      ) : null}
+
+      {activeTool === "zone" ? <PolygonDrawTool points={draftPolygonPoints} hoverPoint={hoverPoint} /> : null}
+      {activeTool === "path" ? <PathDrawTool points={draftPathPoints} hoverPoint={hoverPoint} /> : null}
 
       {/* Ghost preview */}
       {hoverPos && isHovering && (
@@ -684,17 +867,23 @@ function ToolPlacementFloor() {
                 padding: "3px 8px",
                 fontSize: 9,
                 fontWeight: 600,
-                color: ghostColor,
-                whiteSpace: "nowrap",
-                backdropFilter: "blur(4px)",
-              }}
-            >
+              color: ghostColor,
+              whiteSpace: "nowrap",
+              backdropFilter: "blur(4px)",
+            }}
+          >
+            <span className="inline-flex items-center gap-1">
               {TOOL_ICONS[activeTool] ?? <MousePointer2 className="h-3 w-3" />}
-              {TOOL_LABELS[activeTool] ?? "Place"}
-            </div>
-          </Html>
-        </group>
+              {tooltipText}
+            </span>
+          </div>
+        </Html>
+      </group>
       )}
+
+      {activeTool === "measure" && isHovering && hoverPoint ? (
+        <SelectionOverlay center={hoverPoint} label={tooltipText} showSnap />
+      ) : null}
     </>
   );
 }
@@ -759,7 +948,6 @@ function ControlHintBar() {
 export function WorkspaceCanvas() {
   const envMode = useStudioStore((s) => s.environmentMode);
   const scene = useStudioStore((s) => s.scene);
-  const activePathId = useStudioStore((s) => s.activePathId);
   const theme = ENVIRONMENT_THEMES[envMode] ?? ENVIRONMENT_THEMES.day;
   const frame = useMemo(
     () => getMapFrame(scene.dimensions.width, scene.dimensions.depth),

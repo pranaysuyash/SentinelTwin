@@ -145,8 +145,9 @@ export function createWallNode(
 
 export function createDoorNode(
   position: [number, number, number],
-  _wallId?: string,
+  wallId?: string,
 ): DoorNode {
+  void wallId;
   _doorCounter += 1;
 
   return {
@@ -162,8 +163,9 @@ export function createDoorNode(
 
 export function createWindowNode(
   position: [number, number, number],
-  _wallId?: string,
+  wallId?: string,
 ): WindowNode {
+  void wallId;
   _windowCounter += 1;
 
   return {

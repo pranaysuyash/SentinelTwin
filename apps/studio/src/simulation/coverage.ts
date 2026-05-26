@@ -53,12 +53,14 @@ export type CameraEvaluation = {
   quality: DoriQuality;
   ppm: number;
   probability: number;
+  visible: boolean;
   blockedBy?: string;
   inFov: boolean;
   withinRange: boolean;
   distanceM: number;
   hAngleDeg: number;
   vAngleDeg: number;
+  reasonCodes: string[];
 };
 
 export type CoverageEvaluator = {
@@ -132,6 +134,22 @@ function getDetectionProbability(quality: DoriQuality) {
     recognition: 0.85,
     identification: 0.99,
   }[quality];
+}
+
+function getReasonCodesForLighting(camera: CameraNode, lightingPenalty: number) {
+  const reasonCodes: string[] = [];
+
+  if (lightingPenalty <= 0) return reasonCodes;
+
+  if (camera.nightMode === "thermal") {
+    reasonCodes.push("THERMAL_MODE");
+  } else if (camera.nightMode === "ir" && lightingPenalty <= 0.32) {
+    reasonCodes.push("IR_RANGE");
+  } else {
+    reasonCodes.push("LOW_LIGHT");
+  }
+
+  return reasonCodes;
 }
 
 export function getQualityThresholds(scene: SecurityScene) {
@@ -323,12 +341,14 @@ function evaluateCameraAgainstCell(
       quality: "none" as DoriQuality,
       ppm: 0,
       probability: 0,
+      visible: false,
       blockedBy: undefined as string | undefined,
       inFov: false,
       withinRange: true,
       distanceM: Number.MAX_VALUE,
       hAngleDeg: 0,
       vAngleDeg: 0,
+      reasonCodes: ["CAMERA_OFF"],
     };
   }
 
@@ -340,12 +360,14 @@ function evaluateCameraAgainstCell(
       quality: "none" as DoriQuality,
       ppm: 0,
       probability: 0,
+      visible: false,
       blockedBy: undefined as string | undefined,
       inFov: false,
       withinRange: false,
       distanceM: distance,
       hAngleDeg: 0,
       vAngleDeg: 0,
+      reasonCodes: ["OUT_OF_RANGE"],
     };
   }
 
@@ -365,12 +387,14 @@ function evaluateCameraAgainstCell(
       quality: "none" as DoriQuality,
       ppm: 0,
       probability: 0,
+      visible: false,
       blockedBy: undefined as string | undefined,
       inFov: false,
       withinRange: true,
       distanceM: distance,
       hAngleDeg: hAngle,
       vAngleDeg: vAngle,
+      reasonCodes: ["OUT_OF_FOV"],
     };
   }
 
@@ -381,39 +405,73 @@ function evaluateCameraAgainstCell(
       quality: "none" as DoriQuality,
       ppm: 0,
       probability: 0,
+      visible: false,
       blockedBy: occlusion.blockedBy,
       inFov: true,
       withinRange: true,
       distanceM: distance,
       hAngleDeg: hAngle,
       vAngleDeg: vAngle,
+      reasonCodes: ["BLOCKED_BY_SOLID"],
     };
   }
 
   let ppm = computePixelDensity(camera, distance);
   const edgeAngle = Math.max(Math.abs(hAngle), Math.abs(vAngle));
+  const reasonCodes = new Set<string>();
 
-  if (edgeAngle > 55) ppm *= 0.42;
-  else if (edgeAngle > 42) ppm *= 0.58;
-  else if (edgeAngle > 28) ppm *= 0.76;
+  if (edgeAngle > 55) {
+    ppm *= 0.42;
+    reasonCodes.add("EDGE_OF_FOV");
+  } else if (edgeAngle > 42) {
+    ppm *= 0.58;
+    reasonCodes.add("EDGE_OF_FOV");
+  } else if (edgeAngle > 28) {
+    ppm *= 0.76;
+    reasonCodes.add("EDGE_OF_FOV");
+  }
 
-  ppm *= getClarityMultiplier(camera);
+  const clarityMultiplier = getClarityMultiplier(camera);
+  if (clarityMultiplier < 1) {
+    reasonCodes.add("DIRTY_CAMERA");
+  }
+  ppm *= clarityMultiplier;
+
   ppm *= occlusion.materialPenalty;
+  if (occlusion.materialPenalty < 1) {
+    reasonCodes.add("PARTIAL_MATERIAL");
+  }
+
+  if (occlusion.glarePenalty > 0) {
+    reasonCodes.add("GLARE_RISK");
+  }
+
   ppm *= 1 - occlusion.glarePenalty;
-  ppm *= 1 - getLightingPenalty(camera, cell, scene.securityLights, scene);
+
+  const lightingPenalty = getLightingPenalty(camera, cell, scene.securityLights, scene);
+  if (lightingPenalty > 0) {
+    getReasonCodesForLighting(camera, lightingPenalty).forEach((code) => reasonCodes.add(code));
+  }
+
+  ppm *= 1 - lightingPenalty;
 
   const quality = ppmToQuality(ppm, getQualityThresholds(scene));
+  if (quality === "none") {
+    reasonCodes.add("LOW_PPM");
+  }
 
   return {
     quality,
     ppm,
     probability: getDetectionProbability(quality),
+    visible: true,
     blockedBy: occlusion.blockedBy,
     inFov: true,
     withinRange: true,
     distanceM: distance,
     hAngleDeg: hAngle,
     vAngleDeg: vAngle,
+    reasonCodes: [...reasonCodes],
   };
 }
 

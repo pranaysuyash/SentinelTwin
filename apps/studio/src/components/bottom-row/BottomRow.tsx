@@ -4,7 +4,7 @@ import { Check, Edit3, FileText, Plus, Thermometer, Droplets, Wind, Sun, X } fro
 import { useState } from "react";
 
 import { useStudioStore } from "@/store/studio-store";
-import type { DoriQuality, SimulationAssumptions } from "@/schema/security-scene";
+import type { SimulationAssumptions } from "@/schema/security-scene";
 
 function panelTimeLabel(ts: number) {
   const d = new Date(ts);

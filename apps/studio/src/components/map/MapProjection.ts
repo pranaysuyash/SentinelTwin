@@ -174,23 +174,23 @@ export class MapProjectionImpl {
     };
   }
 
-  sceneToSvg(point: [number, number]) {
+  sceneToSvg = (point: [number, number]) => {
     return {
       x: (point[0] - this.sceneBounds.minX) * this.scale + this.baseX,
       y: (point[1] - this.sceneBounds.minY) * this.scale + this.baseY,
     };
-  }
+  };
 
-  svgToScene(point: { x: number; y: number }): [number, number] {
+  svgToScene = (point: { x: number; y: number }): [number, number] => {
     return [
       (point.x - this.baseX) / this.scale + this.sceneBounds.minX,
       (point.y - this.baseY) / this.scale + this.sceneBounds.minY,
     ];
-  }
+  };
 
-  lengthToSvg(meters: number) {
+  lengthToSvg = (meters: number) => {
     return Math.abs(meters * this.scale);
-  }
+  };
 
   getSceneBoundsForDebug() {
     return this.sceneBounds;

@@ -326,6 +326,17 @@ function CameraInspector() {
   const addSnapshot = useStudioStore((s) => s.addSnapshot);
   const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
   const setViewMode = useStudioStore((s) => s.setViewMode);
+  const [viewMode, setViewModeState] = useState<CameraViewMode>("normal");
+  const [viewToggles, setViewToggles] = useState<ViewToggleState>({
+    overlays: true,
+    dori: true,
+    path: false,
+    zones: true,
+    timestamp: true,
+    grid: false,
+  });
+  const [snapshotNote, setSnapshotNote] = useState("");
+
   if (!camera) return null;
 
   // Count recommendations relevant to this camera
@@ -344,17 +355,6 @@ function CameraInspector() {
   const camResult = result?.cameraResults.find((entry) => entry.cameraId === camera.id);
   const offlineImpact = camResult?.offlineImpact ?? [];
   const firstCriticalZone = scene.criticalZones[0];
-  const [viewMode, setViewModeState] = useState<CameraViewMode>("normal");
-  const [viewToggles, setViewToggles] = useState<ViewToggleState>({
-    overlays: true,
-    dori: true,
-    path: false,
-    zones: true,
-    timestamp: true,
-    grid: false,
-  });
-  const [snapshotNote, setSnapshotNote] = useState("");
-
   // Derive resolution key for select
   const resolutionKey = `${camera.resolutionMP}_${camera.resolutionWidth ?? 2688}x${camera.resolutionHeight ?? 1520}`;
   // Derive type key
@@ -849,8 +849,8 @@ function CameraInspector() {
               <SectionCard title="DORI Profile">
                 {(() => {
                   const ranges = computeDoriRanges(camera);
-                  const sortedZoneEntries = Object.entries(camResult?.qualityByZone ?? {})
-                    .map(([zoneId, quality]) => {
+                  const sortedZoneEntries = Object.entries(camResult?.qualityByZone ?? {} as Record<string, DoriQuality>)
+                    .map(([zoneId, quality]: [string, DoriQuality]) => {
                       const zone = scene.criticalZones.find((entry) => entry.id === zoneId);
                       return {
                         name: zone?.label ?? zoneId,
@@ -862,7 +862,7 @@ function CameraInspector() {
                   const doriRows = [
                     ["identification", ranges.ident, "#60a5fa"],
                     ["recognition", ranges.recog, "#22c55e"],
-                    ["observation", ranges.observation, "#eab308"],
+                    ["observation", ranges.obs, "#eab308"],
                     ["detection", ranges.det, "#f97316"],
                   ] as const;
 
@@ -1236,13 +1236,6 @@ const TARGET_TYPE_LABELS: Record<CriticalZoneNode["targetType"], string> = {
   cash_counter_activity: "Cash Counter",
   door_entry_exit: "Door Entry/Exit",
   perimeter_breach: "Perimeter Breach",
-};
-
-const PRIORITY_COLORS: Record<CriticalZoneNode["priority"], string> = {
-  low: "text-[#68738a]",
-  medium: "text-blue-400",
-  high: "text-amber-400",
-  critical: "text-red-400",
 };
 
 const QUALITY_BADGE_COLORS: Record<string, string> = {

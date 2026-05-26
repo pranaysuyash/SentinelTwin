@@ -218,6 +218,27 @@ as early as possible — immediately after basic coverage works.
   They are not the differentiator.
 - The adversarial path — showing the actual minimum-exposure route a motivated actor
   would take, updating live as objects and cameras change — does not exist anywhere.
+
+---
+
+## D-012 | 2026-05-26 | Shared 2D map system is canonical for minimap and path analysis
+
+**Decision:** SentinelTwin’s 2D navigation/analysis surfaces use one shared map stack under
+`apps/studio/src/components/map/` with a single coordinate projection, shared SVG layers,
+distance-weighted path sampling, and store-backed path selection state.
+
+**Rationale:**
+- MiniMap and PathMap now need to agree exactly on geometry, highlighting, and replay position.
+- Shared projection avoids the old “same scene, two slightly different SVG transforms” drift.
+- Distance-weighted sampling makes long path segments behave correctly instead of inheriting the
+  old equal-control-point bias.
+- Keeping `activePathId` global preserves replay, ribbon, and map selection sync across panels.
+
+**Alternatives rejected:**
+- Keep the old inline SVG snippets inside `LeftPanel.tsx` and `ScenarioPathPanel.tsx`.
+  That would preserve duplicated transforms and geometry drift.
+- Keep silently defaulting to `scene.paths[0]` whenever selection is missing.
+  That makes the path picker fake and hides selection state from the user.
   This is the feature that makes security professionals stop and say "I've never seen this."
 - Delaying it to Phase 6 means the most novel and defensible piece of the product
   is the last thing built and least likely to be ready when it matters.
@@ -683,3 +704,48 @@ reference to the new path, then remove the old."
 **Alternatives rejected:**
 - **Leave Node unpinned** — rejected because the install warnings and environment drift are avoidable.
 - **Pin to Node 23** — rejected because the supporting packages and current shell are already on the Node 24 line.
+
+---
+
+## D-042 | 2026-05-26 | Consolidate MiniMap and PathMap on one shared 2D map system
+
+**Decision:** Use a shared `apps/studio/src/components/map/` renderer stack for minimap and path-map views, with one projection model, shared SVG layers, and interpolated path-quality sampling.
+
+**Rationale:**
+- The previous MiniMap and PathMap implementations duplicated projection math and diverged on geometry fidelity, which made selection, hover, and path analytics inconsistent.
+- A shared projection plus reusable SVG layers keeps camera, obstruction, zone, path, and coverage rendering aligned across both surfaces.
+- Interpolated sampling is required so quality ribbons reflect the full route rather than only authored waypoints on long segments.
+
+**Alternatives rejected:**
+- **Keep separate per-panel SVG renderers** — rejected because the duplication already caused projection drift and bounding-box shortcuts.
+- **Leave path quality based only on authored points** — rejected because it can hide short low-quality spans inside long segments.
+
+---
+
+## D-043 | 2026-05-26 | Camera evaluation records should expose visibility and reason codes
+
+**Decision:** The coverage engine's per-camera cell evaluation contract now includes an explicit `visible` boolean and machine-readable `reasonCodes` array alongside quality, range, FOV, and occlusion data.
+
+**Rationale:**
+- The simulation trust sprint requires not only correct numbers but also explainable reasons for why a target is or is not visible.
+- A single `quality` field is insufficient for downstream UI, debug, and report surfaces to explain low-confidence or blocked cells.
+- Distinguishing geometric visibility from quality lets the UI explain "visible but low detail" versus "not visible at all" without collapsing those states.
+
+**Alternatives rejected:**
+- **Keep the contract quality-only** — rejected because it forces downstream consumers to infer visibility from quality zero, which is lossy and ambiguous.
+- **Add opaque freeform reason strings only** — rejected because machine-readable codes are easier to test, filter, and present consistently across UI surfaces.
+
+---
+
+## D-044 | 2026-05-27 | Authored scenario paths are the primary replay path; coverage-failure replay is secondary
+
+**Decision:** `PathReplayView` and the timeline surfaces should prioritize authored `scene.paths` when present, using the coverage-failure route only as a fallback/secondary defensive analysis.
+
+**Rationale:**
+- The product needs to let users replay their own scenario first, because that is the user-authored story of what happened or what they want to review.
+- Coverage-failure replay remains valuable as a defensive analysis layer, but it should not displace authored incident replay when both exist.
+- This keeps the replay UX aligned with the core product loop: user scenario first, simulation overlay second.
+
+**Alternatives rejected:**
+- **Keep the failure route as the primary replay story** — rejected because it makes the defensive analysis feel like the only replay mode and hides the user-authored scenario.
+- **Create a parallel replay system** — rejected because it would duplicate timing, controls, and timeline behavior instead of reusing the canonical path model.

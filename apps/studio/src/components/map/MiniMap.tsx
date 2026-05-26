@@ -5,6 +5,7 @@ import { useMemo } from "react";
 
 import { MapCanvas } from "@/components/map/MapCanvas";
 import { pointOnPathAtProgress } from "@/components/map/map-utils";
+import type { SecurityScene } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 
 type MiniMapProps = {
@@ -29,19 +30,19 @@ function mapLayerFlagsFromStore(layerVis: Record<string, boolean>) {
   };
 }
 
-function nodeLabel(scene: ReturnType<typeof useStudioStore.getState>, id: string | null): string | null {
+function nodeLabel(scene: SecurityScene, id: string | null): string | null {
   if (!id) return null;
   const candidates = [
-    ...scene.scene.walls,
-    ...scene.scene.doors,
-    ...scene.scene.windows,
-    ...scene.scene.cameras,
-    ...scene.scene.securityLights,
-    ...scene.scene.obstructions,
-    ...scene.scene.criticalZones,
-    ...scene.scene.privacyZones,
-    ...scene.scene.entryPoints,
-    ...scene.scene.paths,
+    ...scene.walls,
+    ...scene.doors,
+    ...scene.windows,
+    ...scene.cameras,
+    ...scene.securityLights,
+    ...scene.obstructions,
+    ...scene.criticalZones,
+    ...scene.privacyZones,
+    ...scene.entryPoints,
+    ...scene.paths,
   ];
 
   const match = candidates.find((item: { id: string; label?: string; name?: string }) => item.id === id);
@@ -60,6 +61,7 @@ export function MiniMap({
   const setZoom = useStudioStore((s) => s.setMapZoom);
   const setPan = useStudioStore((s) => s.setMapPan);
   const fitMap = useStudioStore((s) => s.fitMap);
+  const setViewMode = useStudioStore((s) => s.setViewMode);
   const mapState = useStudioStore((s) => s.mapState.minimap);
   const hovered = useStudioStore((s) => s.hoveredMapNodeId);
   const setHovered = useStudioStore((s) => s.setHoveredMapNodeId);
@@ -68,8 +70,8 @@ export function MiniMap({
   const setReplayProgress = useStudioStore((s) => s.setPathReplayProgress);
   const pathReplay = useStudioStore((s) => s.pathReplay);
 
-  const tooltipText = useMemo(() => nodeLabel(useStudioStore.getState(), hovered), [hovered]);
-  const activePath = scene.paths.find((path) => path.id === activePathId) ?? scene.paths[0] ?? null;
+  const tooltipText = nodeLabel(scene, hovered);
+  const activePath = scene.paths.find((path) => path.id === activePathId) ?? null;
   const replayActor = useMemo(() => {
     if (!activePath) return null;
     return pointOnPathAtProgress(activePath, pathReplay.progress);
@@ -118,7 +120,6 @@ export function MiniMap({
           <button
             onClick={() => {
               setZoom("minimap", mapState.zoom * 0.9);
-              setReplayProgress(0);
             }}
             className="flex h-5 w-5 items-center justify-center rounded-md border border-[#1f2536] text-[#556076] transition-colors hover:border-[#2b3246] hover:text-white"
             title="Zoom out"
@@ -149,10 +150,11 @@ export function MiniMap({
         </div>
         <button
           onClick={() => {
+            setViewMode("map");
             fitMap("minimap");
           }}
           className="h-5 rounded-md border border-[#1f2536] px-1.5 text-[9px] font-medium text-[#7f8ca6] transition-colors hover:border-[#2b3246] hover:text-white"
-          title="Reset map view"
+          title="Switch to map view"
         >
           2D
         </button>

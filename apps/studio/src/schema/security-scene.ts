@@ -361,16 +361,19 @@ export const coverageCellResultSchema = z.object({
   privacyRestricted: z.boolean(),
   cameraEvaluations: z
     .record(
+      z.string(),
       z.object({
         quality: doriQualitySchema,
         ppm: z.number().min(0),
         probability: z.number().min(0).max(1),
+        visible: z.boolean(),
         blockedBy: z.string().optional(),
         inFov: z.boolean(),
         withinRange: z.boolean(),
         distanceM: z.number().min(0),
         hAngleDeg: z.number(),
         vAngleDeg: z.number(),
+        reasonCodes: z.array(z.string()),
       }),
     )
     .optional(),

@@ -356,7 +356,7 @@ function purgeInvalidSelection(scene: SecurityScene, selectedNodeId: string | nu
 
 function cloneAndSetActivePath(scene: SecurityScene, activePathId: string | null): string | null {
   if (!activePathId) return null;
-  return scene.paths.some((path) => path.id === activePathId) ? activePathId : scene.paths[0]?.id ?? null;
+  return scene.paths.some((path) => path.id === activePathId) ? activePathId : null;
 }
 
 const DEFAULT_LAYERS: LayerVisibility = {
@@ -649,8 +649,9 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   setGridSnapM: (value) => set((s) => ({ editor: { ...s.editor, gridSnapM: value } })),
   setSelectedHandle: (handle) => set((s) => ({ editor: { ...s.editor, selectedHandle: handle } })),
 
-  commitSceneChange: (updater, _label) =>
+  commitSceneChange: (updater, label) =>
     set((s) => {
+      void label;
       const next = updater(cloneSecurityScene(s.scene));
       return {
         scene: next,
@@ -831,9 +832,12 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     useStudioStore.getState().commitSceneChange((scene) => removeNode(scene, id));
   },
   updateAssumptions: (patch) =>
-    set((s) => ({
-      scene: { ...s.scene, assumptions: { ...s.scene.assumptions, ...patch } },
-      simulationDirty: true,
+    useStudioStore.getState().commitSceneChange((scene) => ({
+      ...scene,
+      assumptions: {
+        ...scene.assumptions,
+        ...patch,
+      },
     })),
 
   setSimulationRunning: (running) => set({ simulationRunning: running }),

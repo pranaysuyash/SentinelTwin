@@ -13,6 +13,9 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 ### Simulation engine (src/simulation/) — complete, tested
 - `coverage.ts` — BVH-accelerated raycasting, DORI scoring, material penalties, lighting model ✅
 - `coverage.ts` — trust-hardening updates now enforce camera `rangeM` gates before scoring, wire scene `pixelsPerMeter` assumptions into quality mapping, emit per-camera evaluation metadata (`cameraEvaluations`) and mark privacy/coverage-denominator cells for traceable KPIs ✅
+- `coverage.ts` — camera evaluations now include `visible` plus machine-readable `reasonCodes`, and the debug/report surfaces show active PPM thresholds ✅
+- `coverage.ts` / coverage tests — door and window states now participate in deterministic vision occlusion with regression coverage for closed/open doors plus glass, grill, curtain, and reflective window behavior ✅
+- `grid.ts` / grid tests — rotated obstruction footprints now have explicit walkability regression coverage ✅
 - `adversarial-path.ts` — Dijkstra minimum-exposure pathfinding, full AdversarialPathResult output ✅
 - `dori.ts` — PPM thresholds, quality ordering, quality comparators ✅
 - `grid.ts` — floor sampling grid with walkability ✅
@@ -20,6 +23,7 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - `path-analysis.ts` — path visibility over time ✅
 - `simulate-studio.ts` — orchestrates full simulation run ✅
 - `simulate-studio.ts` — zone quality uses target-height profiles, privacy coverage issues are surfaced, and all aggregate metrics are computed over non-privacy walkable cells for canonical coverage denominators ✅
+- `PathReplayView` / `TimelineTab` — authored `scene.paths` are now the primary replay/timeline focus, with coverage-failure replay retained as secondary defensive analysis ✅
 - Confirmed performance: ~10.8ms average on 40×28 grid with 2 cameras — under 16ms target ✅
 - Zero React/DOM imports confirmed ✅
 

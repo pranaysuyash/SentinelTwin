@@ -338,6 +338,7 @@ export function exportAsHtml(report: ReportData): string {
       <tr><th>Person Height</th><td>${report.assumptions.personHeightM}m</td></tr>
       <tr><th>Vehicle Height</th><td>${report.assumptions.vehicleHeightM}m</td></tr>
       <tr><th>Time of Day</th><td>${report.assumptions.timeOfDay}</td></tr>
+      <tr><th>PPM Thresholds</th><td>${report.assumptions.ppm.detection} / ${report.assumptions.ppm.observation} / ${report.assumptions.ppm.recognition} / ${report.assumptions.ppm.identification}</td></tr>
     </table>
   </div>
 
@@ -410,7 +411,7 @@ export function exportAsHtml(report: ReportData): string {
   ` : ""}
 
   ${report.adversarialPath ? `
-  <h2>Defensive Incident Replay</h2>
+  <h2>Coverage Failure Replay</h2>
   <p>Coverage-stress simulation of the lowest-visibility route under current assumptions.</p>
   <table>
     <tr><th>Exposure Score</th><td>${report.adversarialPath.exposureScore.toFixed(1)}</td></tr>
@@ -457,6 +458,13 @@ export function exportAsMarkdown(report: ReportData): string {
     `| Issues Found | ${report.summary.issuesCount} |`,
     `| Verified Recommendations | ${report.summary.verifiedRecommendationsCount}/${report.summary.recommendationsCount} |`,
     "",
+    "## Assumptions",
+    `- DORI Standard: ${report.assumptions.doriStandard}`,
+    `- Person Height: ${report.assumptions.personHeightM}m`,
+    `- Vehicle Height: ${report.assumptions.vehicleHeightM}m`,
+    `- Time of Day: ${report.assumptions.timeOfDay}`,
+    `- PPM Thresholds: ${report.assumptions.ppm.detection} / ${report.assumptions.ppm.observation} / ${report.assumptions.ppm.recognition} / ${report.assumptions.ppm.identification}`,
+    "",
     "## Zone Analysis",
     "",
     ...(report.zones.length > 0
@@ -491,7 +499,7 @@ export function exportAsMarkdown(report: ReportData): string {
       : []),
     ...(report.adversarialPath
       ? [
-          "## Defensive Incident Replay",
+          "## Coverage Failure Replay",
           `- Exposure score: ${report.adversarialPath.exposureScore.toFixed(1)}`,
           `- Detection probability: ${(report.adversarialPath.detectionProbability * 100).toFixed(0)}%`,
           "",
@@ -516,6 +524,13 @@ export function exportAsText(report: ReportData): string {
     `Date: ${new Date(report.generatedAt).toLocaleDateString()}`,
     `Dimensions: ${report.dimensions.width}m x ${report.dimensions.depth}m x ${report.dimensions.height}m`,
     `Standard: ${report.standardsRef}`,
+    "",
+    "ASSUMPTIONS",
+    `DORI Standard: ${report.assumptions.doriStandard}`,
+    `Person Height: ${report.assumptions.personHeightM}m`,
+    `Vehicle Height: ${report.assumptions.vehicleHeightM}m`,
+    `Time of Day: ${report.assumptions.timeOfDay}`,
+    `PPM Thresholds: ${report.assumptions.ppm.detection} / ${report.assumptions.ppm.observation} / ${report.assumptions.ppm.recognition} / ${report.assumptions.ppm.identification}`,
     "",
     "SUMMARY",
     `${"-".repeat(30)}`,

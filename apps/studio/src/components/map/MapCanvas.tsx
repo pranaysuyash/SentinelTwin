@@ -252,7 +252,16 @@ export function MapCanvas({
 
         <rect width={width} height={height} fill={`url(#map-bg-${mode})`} rx={8} />
         <rect x={1} y={1} width={width - 2} height={height - 2} fill="none" stroke="#1d2435" strokeWidth={1} rx={8} />
-        {showGrid ? <rect x={0} y={0} width={width} height={height} fill={`url(#map-grid-${mode})`} opacity={0.12} />}
+        {showGrid ? (
+          <rect
+            x={0}
+            y={0}
+            width={width}
+            height={height}
+            fill={`url(#map-grid-${mode})`}
+            opacity={0.12}
+          />
+        ) : null}
 
         <MapLayers
           scene={scene}

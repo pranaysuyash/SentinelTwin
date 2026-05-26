@@ -74,16 +74,7 @@ export type PathQualityBand = {
 };
 
 export function pathLengthM(path: ScenarioPath): number {
-  if (path.points.length < 2) return 0;
-
-  let total = 0;
-  for (let i = 1; i < path.points.length; i += 1) {
-    const previous = path.points[i - 1]!.position;
-    const current = path.points[i]!.position;
-    total += Math.hypot(current[0] - previous[0], current[1] - previous[1]);
-  }
-
-  return Number(total.toFixed(3));
+  return Number(pathLengthRawM(path).toFixed(3));
 }
 
 export function pointOnPathAtProgress(path: ScenarioPath, progress: number): [number, number] {
@@ -96,17 +87,32 @@ export function pointOnPathAtProgress(path: ScenarioPath, progress: number): [nu
     return [final.position[0], final.position[1]];
   }
 
-  const segmentCount = path.points.length - 1;
-  const offset = clamped * segmentCount;
-  const segmentIndex = Math.min(segmentCount - 1, Math.floor(offset));
-  const localT = offset - segmentIndex;
-  const start = path.points[segmentIndex]!;
-  const end = path.points[segmentIndex + 1]!;
+  const total = pathLengthRawM(path);
+  if (total <= 0) {
+    const final = path.points[path.points.length - 1]!;
+    return [final.position[0], final.position[1]];
+  }
 
-  return [
-    start.position[0] + (end.position[0] - start.position[0]) * localT,
-    start.position[1] + (end.position[1] - start.position[1]) * localT,
-  ];
+  let target = total * clamped;
+  for (let i = 1; i < path.points.length; i += 1) {
+    const start = path.points[i - 1]!.position;
+    const end = path.points[i]!.position;
+    const segmentLength = Math.hypot(end[0] - start[0], end[1] - start[1]);
+    if (segmentLength <= 0) continue;
+
+    if (target <= segmentLength || i === path.points.length - 1) {
+      const localT = Math.max(0, Math.min(1, target / segmentLength));
+      return [
+        start[0] + (end[0] - start[0]) * localT,
+        start[1] + (end[1] - start[1]) * localT,
+      ];
+    }
+
+    target -= segmentLength;
+  }
+
+  const final = path.points[path.points.length - 1]!;
+  return [final.position[0], final.position[1]];
 }
 
 export function pathHasNoSteps(path: ScenarioPath): boolean {
@@ -125,6 +131,35 @@ export function polygonToSvgPoints(
       return `${mapped.x},${mapped.y}`;
     })
     .join(" ");
+}
+
+export function polygonCentroid(polygon: Point2[]): Point2 {
+  if (polygon.length === 0) return [0, 0];
+  if (polygon.length < 3) {
+    const sum = polygon.reduce<Point2>((acc, point) => [acc[0] + point[0], acc[1] + point[1]], [0, 0]);
+    return [sum[0] / polygon.length, sum[1] / polygon.length];
+  }
+
+  let twiceArea = 0;
+  let centerX = 0;
+  let centerY = 0;
+
+  for (let i = 0; i < polygon.length; i += 1) {
+    const current = polygon[i]!;
+    const next = polygon[(i + 1) % polygon.length]!;
+    const cross = current[0] * next[1] - next[0] * current[1];
+    twiceArea += cross;
+    centerX += (current[0] + next[0]) * cross;
+    centerY += (current[1] + next[1]) * cross;
+  }
+
+  if (Math.abs(twiceArea) < 1e-8) {
+    const sum = polygon.reduce<Point2>((acc, point) => [acc[0] + point[0], acc[1] + point[1]], [0, 0]);
+    return [sum[0] / polygon.length, sum[1] / polygon.length];
+  }
+
+  const factor = 1 / (3 * twiceArea);
+  return [centerX * factor, centerY * factor];
 }
 
 function nearestCell(cells: CoverageCellLike[], point: Point2) {
@@ -328,4 +363,17 @@ export function inferCoverageFromResult(sim: SimulationResult | null) {
 
 export function centerFromScene(scene: SecurityScene): Point2 {
   return [scene.dimensions.width / 2, scene.dimensions.depth / 2];
+}
+
+function pathLengthRawM(path: ScenarioPath): number {
+  if (path.points.length < 2) return 0;
+
+  let total = 0;
+  for (let i = 1; i < path.points.length; i += 1) {
+    const previous = path.points[i - 1]!.position;
+    const current = path.points[i]!.position;
+    total += Math.hypot(current[0] - previous[0], current[1] - previous[1]);
+  }
+
+  return total;
 }

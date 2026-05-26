@@ -5,7 +5,7 @@ import { useCallback, useRef, useState } from "react";
 import { parseCommand, type SceneContextSummary } from "@/agents/CommandAgent";
 import { proposeCounterfactuals, type CounterfactualCandidate } from "@/agents/CounterfactualAgent";
 import { OpenAIProvider } from "@/agents/providers/OpenAIProvider";
-import { generateReport, buildSimulationSummary, type SecurityReport } from "@/agents/ReportAgent";
+import { generateReport, buildSimulationSummary } from "@/agents/ReportAgent";
 import type { SceneOperation } from "@/schema/SceneOperation";
 import { applySceneOperation } from "@/lib/applySceneOperation";
 import { createSecurityLightNode } from "@/lib/node-factory";

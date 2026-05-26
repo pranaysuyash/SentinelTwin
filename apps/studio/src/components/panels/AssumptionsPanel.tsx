@@ -3,7 +3,6 @@
 import { Info, Settings2 } from "lucide-react";
 import { useState } from "react";
 
-import { type SimulationAssumptions } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -17,66 +16,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function NumberEdit({
-  value,
-  min,
-  max,
-  step = 0.1,
-  onChange,
-}: {
-  value: number;
-  min?: number;
-  max?: number;
-  step?: number;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <input
-      type="number"
-      value={Number.isFinite(value) ? value : 0}
-      min={min}
-      max={max}
-      step={step}
-      onChange={(e) => {
-        const next = Number(e.target.value);
-        if (!Number.isNaN(next)) onChange(next);
-      }}
-      className="w-16 rounded border border-[#24283a] bg-[#111521] px-1.5 py-0.5 text-right font-mono text-[10px] text-[#d2d9e8] outline-none"
-    />
-  );
-}
-
-function SelectEdit({
-  value,
-  options,
-  onChange,
-}: {
-  value: string;
-  options: { value: string; label: string }[];
-  onChange: (v: string) => void;
-}) {
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="rounded border border-[#24283a] bg-[#111521] px-1.5 py-0.5 text-[10px] font-medium text-[#d2d9e8] outline-none"
-    >
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>{o.label}</option>
-      ))}
-    </select>
-  );
-}
-
 export function AssumptionsPanel() {
   const scene = useStudioStore((s) => s.scene);
-  const updateNode = useStudioStore((s) => s.updateNode);
-  const markDirty = useStudioStore((s) => s.markDirty);
   const [collapsed, setCollapsed] = useState(false);
-
-  // We can't update assumptions directly via updateNode (it's not a node-type),
-  // so we use a local state and apply via scene mutation through markDirty.
-  // For now, show a read-only view with edit intent.
   const assumptions = scene.assumptions;
 
   return (

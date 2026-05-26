@@ -102,7 +102,6 @@ function ScenePanel({
 export function CompareView() {
   const snapshots = useStudioStore((s) => s.snapshots);
   const result = useStudioStore((s) => s.simulationResult);
-  const scene = useStudioStore((s) => s.scene);
 
   const snapshotA = snapshots[snapshots.length - 2] ?? snapshots[0];
   const snapshotB = snapshots[snapshots.length - 1];

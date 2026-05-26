@@ -14,7 +14,6 @@ import {
   Shield,
   Sun,
   Plus,
-  FolderOpen,
   Upload,
   Save,
   MoreHorizontal,

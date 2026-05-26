@@ -401,8 +401,6 @@ function PrivacyZoneMesh({ zone }: { zone: { id: string; label: string; polygon:
     return s;
   }, [zone.polygon]);
 
-  const geometry = useMemo(() => new THREE.ShapeGeometry(shape), [shape]);
-
   const restrictionColor = zone.restriction === "no_video"
     ? "#ef4444"
     : zone.restriction === "restricted_view"

@@ -3,7 +3,7 @@
 import { Html, OrbitControls } from "@react-three/drei";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { motion } from "framer-motion";
-import { Pause, Play, RotateCcw, SkipBack, SkipForward } from "lucide-react";
+import { ListRestart, Pause, Play, SkipBack, SkipForward } from "lucide-react";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
@@ -13,10 +13,14 @@ import {
   SceneLighting,
   SceneFloor,
   SceneWalls,
+  SceneDoors,
+  SceneWindows,
   SceneObstructions,
   CoverageHeatmapInstanced,
-  AdversarialPathLine,
+  CoverageSegmentPath,
 } from "@/components/workspace/SharedScene";
+import { VisibilityTimeline } from "@/components/view/VisibilityTimeline";
+import type { DoriQuality } from "@/schema/security-scene";
 
 // ── Shared scene ──
 
@@ -33,6 +37,8 @@ function SceneView() {
       <SceneLighting theme={PATH_REPLAY_THEME} />
       <SceneFloor width={width} depth={depth} />
       <SceneWalls walls={scene.walls} />
+      <SceneDoors doors={scene.doors} />
+      <SceneWindows windows={scene.windows} />
       <SceneObstructions obstructions={scene.obstructions} selectedId={selectedId} />
       {result?.coverageCells && (
         <CoverageHeatmapInstanced cells={result.coverageCells} />
@@ -161,7 +167,7 @@ function PlaybackControls({
   onReset,
   speed,
   onSpeedChange,
-  waypointCount,
+  coverageBands,
 }: {
   playing: boolean;
   currentTime: number;
@@ -171,7 +177,7 @@ function PlaybackControls({
   onReset: () => void;
   speed: number;
   onSpeedChange: (s: number) => void;
-  waypointCount: number;
+  coverageBands?: { position: [number, number]; timeS: number; detectionQuality: DoriQuality }[];
 }) {
   const progress = duration > 0 ? currentTime / duration : 0;
   const isEnd = currentTime >= duration && duration > 0;
@@ -189,8 +195,12 @@ function PlaybackControls({
       transition={{ type: "spring", stiffness: 260, damping: 22, delay: 0.15 }}
       className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/90 via-black/70 to-transparent px-4 pb-3 pt-10"
     >
-      {/* Progress bar */}
-      <div className="mb-2">
+      {/* Progress bar with coverage quality bands */}
+      <div className="group relative mb-1.5">
+        {/* Coverage quality bands rendered behind the slider */}
+        {coverageBands && (
+          <CoverageQualityBands waypoints={coverageBands} totalDuration={duration} />
+        )}
         <input
           type="range"
           min={0}
@@ -198,12 +208,19 @@ function PlaybackControls({
           step={0.05}
           value={currentTime}
           onChange={(e) => onSeek(parseFloat(e.target.value))}
-          className="h-1 w-full cursor-pointer appearance-none rounded-full bg-[#1f2536] [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#60a5fa] [&::-webkit-slider-thumb]:shadow-lg transition-all"
+          className="relative h-1.5 w-full cursor-pointer appearance-none rounded-full bg-transparent [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#60a5fa] [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(96,165,250,0.5)] [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:duration-150 [&::-webkit-slider-thumb]:hover:scale-125 [&::-webkit-slider-thumb]:active:scale-90"
           style={{
             background: `linear-gradient(to right, #60a5fa ${progress * 100}%, #1f2536 ${progress * 100}%)`,
           }}
         />
       </div>
+
+      {/* Coverage mini legend */}
+      {coverageBands && coverageBands.length >= 2 && (
+        <div className="mb-2 flex justify-center">
+          <CoverageMiniLegend />
+        </div>
+      )}
 
       <div className="flex items-center justify-between">
         {/* Left: transport controls */}
@@ -217,7 +234,7 @@ function PlaybackControls({
             className="flex h-7 w-7 items-center justify-center rounded-md text-[#5b667c] hover:bg-[#1a2333] hover:text-white"
             title="Reset"
           >
-            <RotateCcw className="h-3.5 w-3.5" />
+            <ListRestart className="h-3.5 w-3.5" />
           </motion.button>
           <motion.button
             variants={controlBtnVariants}
@@ -236,15 +253,15 @@ function PlaybackControls({
             whileHover="hover"
             whileTap="tap"
             onClick={onPlayPause}
-            className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+            className={`flex h-8 w-8 items-center justify-center rounded-full transition-all duration-200 ${
               playing
-                ? "bg-[#60a5fa] text-white shadow-[0_0_12px_rgba(96,165,250,0.4)]"
+                ? "bg-[#60a5fa] text-white shadow-[0_0_14px_rgba(96,165,250,0.5)] hover:shadow-[0_0_20px_rgba(96,165,250,0.6)]"
                 : "bg-[#1a2333] text-[#93c5fd] hover:bg-[#253454]"
             }`}
             title={playing ? "Pause" : "Play"}
           >
             {isEnd ? (
-              <RotateCcw className="h-3.5 w-3.5" />
+              <ListRestart className="h-3.5 w-3.5" />
             ) : playing ? (
               <Pause className="h-3.5 w-3.5" />
             ) : (
@@ -274,7 +291,6 @@ function PlaybackControls({
           >
             {formatTime(currentTime)} / {formatTime(duration)}
           </motion.span>
-          <span className="text-[8px] text-[#4a5568]">{waypointCount} waypoints</span>
         </div>
 
         {/* Right: speed selector */}
@@ -337,35 +353,179 @@ function CameraMarkers() {
   );
 }
 
+// ── Coverage quality color constants ──
+
+const QUALITY_COLORS: Record<DoriQuality, string> = {
+  identification: "#3b82f6",
+  recognition: "#22c55e",
+  observation: "#eab308",
+  detection: "#f97316",
+  none: "#ef4444",
+};
+
+const QUALITY_RANK: Record<DoriQuality, number> = {
+  identification: 4,
+  recognition: 3,
+  observation: 2,
+  detection: 1,
+  none: 0,
+};
+
+const QUALITY_LABELS: Record<DoriQuality, string> = {
+  identification: "ID",
+  recognition: "REC",
+  observation: "OBS",
+  detection: "DET",
+  none: "NONE",
+};
+
+// ── Coverage quality bands on the scrub bar ──
+
+function CoverageQualityBands({ waypoints, totalDuration }: {
+  waypoints: { position: [number, number]; timeS: number; detectionQuality: DoriQuality }[];
+  totalDuration: number;
+}) {
+  if (waypoints.length < 2 || totalDuration <= 0) return null;
+
+  const bands: { color: string; leftPct: number; widthPct: number; label: string }[] = [];
+
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const curr = waypoints[i];
+    const next = waypoints[i + 1];
+    const segDuration = (next.timeS ?? 0) - (curr.timeS ?? 0);
+    if (segDuration <= 0) continue;
+
+    // Use the more conservative (worse) quality for the segment
+    const quality = QUALITY_RANK[curr.detectionQuality] <= QUALITY_RANK[next.detectionQuality]
+      ? curr.detectionQuality
+      : next.detectionQuality;
+
+    bands.push({
+      color: QUALITY_COLORS[quality],
+      leftPct: ((curr.timeS ?? 0) / totalDuration) * 100,
+      widthPct: (segDuration / totalDuration) * 100,
+      label: QUALITY_LABELS[quality],
+    });
+  }
+
+  return (
+    <div className="absolute inset-x-0 top-0 h-full overflow-hidden rounded-full" style={{ pointerEvents: "none" }}>
+      {bands.map((band, i) => (
+        <div
+          key={i}
+          className="absolute top-0 h-full opacity-25 transition-opacity duration-200 group-hover:opacity-35"
+          style={{
+            left: `${band.leftPct}%`,
+            width: `${Math.max(band.widthPct, 0.5)}%`,
+            backgroundColor: band.color,
+          }}
+          title={`${band.label}`}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ── Mini coverage legend ──
+
+function CoverageMiniLegend() {
+  return (
+    <div className="flex items-center gap-3">
+      {(["identification", "recognition", "observation", "detection", "none"] as DoriQuality[]).map((q) => (
+        <div key={q} className="flex items-center gap-1">
+          <span
+            className="h-1.5 w-1.5 rounded-full"
+            style={{ backgroundColor: QUALITY_COLORS[q] }}
+          />
+          <span className="text-[7px] uppercase tracking-[0.08em] text-[#5b667c]">
+            {QUALITY_LABELS[q]}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Info overlay (framer-motion) ──
 
-function InfoOverlay({ waypointCount, exposureScore, targetReached }: {
+type QualityExposure = {
+  detection: number;
+  observation: number;
+  recognition: number;
+  identification: number;
+  none?: number;
+};
+const EXPOSURE_KEYS: (keyof QualityExposure)[] = ["identification", "recognition", "observation", "detection"];
+
+function InfoOverlay({ waypointCount, exposureScore, targetReached, qualityBands }: {
   waypointCount: number;
   exposureScore: number;
   targetReached: boolean;
+  qualityBands: QualityExposure;
 }) {
+  const maxExposure = Math.max(...EXPOSURE_KEYS.map((k) => qualityBands[k] ?? 0), 1);
+
   return (
     <motion.div
       initial={{ x: -20, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ type: "spring", stiffness: 280, damping: 24 }}
-      className="absolute left-3 top-12 z-10 rounded-xl border border-[#1f2536] bg-[#0b0f17]/90 px-3 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.28)] backdrop-blur-sm"
+      className="absolute left-3 top-12 z-10 rounded-xl border border-[#1f2536] bg-[#0b0f17]/90 px-3.5 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.32)] backdrop-blur-sm"
     >
-      <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#5b667c]">Coverage Failure Path</div>
-      <div className="mt-2 space-y-1">
-        <div className="flex items-center justify-between gap-4">
-          <span className="text-[9px] text-[#8b96ab]">Waypoints</span>
-          <span className="text-[9px] font-mono text-[#c7d0e4]">{waypointCount}</span>
-        </div>
-        <div className="flex items-center justify-between gap-4">
-          <span className="text-[9px] text-[#8b96ab]">Exposure</span>
-          <span className="text-[9px] font-mono text-[#f43f5e]">{exposureScore.toFixed(1)}</span>
-        </div>
-        <div className="flex items-center justify-between gap-4">
-          <span className="text-[9px] text-[#8b96ab]">Status</span>
-          <span className={`text-[9px] font-semibold ${targetReached ? "text-red-400" : "text-[#4a5568]"}`}>
-            {targetReached ? "TARGET REACHED" : "In progress"}
+      <div className="mb-2.5 flex items-center gap-3">
+        <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#5b667c]">Coverage Failure Path</div>
+        {targetReached && (
+          <span className="rounded-md bg-red-500/15 px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-[0.12em] text-red-400">
+            Breach
           </span>
+        )}
+      </div>
+
+      {/* Main stats */}
+      <div className="mb-2.5 grid grid-cols-3 gap-3">
+        <div>
+          <div className="text-[8px] text-[#5b667c]">Waypoints</div>
+          <div className="mt-0.5 text-[11px] font-mono font-semibold text-[#c7d0e4]">{waypointCount}</div>
+        </div>
+        <div>
+          <div className="text-[8px] text-[#5b667c]">Exposure</div>
+          <div className="mt-0.5 text-[11px] font-mono font-semibold text-[#f43f5e]">{exposureScore.toFixed(1)}</div>
+        </div>
+        <div>
+          <div className="text-[8px] text-[#5b667c]">Status</div>
+          <div className={`mt-0.5 text-[11px] font-semibold ${targetReached ? "text-red-400" : "text-[#5b667c]"}`}>
+            {targetReached ? "BREACHED" : "Secure"}
+          </div>
+        </div>
+      </div>
+
+      {/* Coverage quality exposure breakdown */}
+      <div className="border-t border-[#1f2536]/60 pt-2">
+        <div className="mb-1.5 text-[7px] font-semibold uppercase tracking-[0.15em] text-[#4a5568]">Exposure by quality</div>
+        <div className="space-y-1">
+          {EXPOSURE_KEYS.map((key) => (
+            <div key={key} className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: QUALITY_COLORS[key] }} />
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[7px] uppercase tracking-[0.05em] text-[#5b667c]">{key}</span>
+                  <span className="text-[7px] font-mono text-[#8b96ab]">
+                    {(qualityBands[key] ?? 0).toFixed(0)}s
+                  </span>
+                </div>
+                {/* Mini bar */}
+                <div className="mt-0.5 h-0.5 w-full overflow-hidden rounded-full bg-[#1a2333]">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${(((qualityBands[key] ?? 0) / maxExposure) * 100)}%`,
+                      backgroundColor: QUALITY_COLORS[key],
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </motion.div>
@@ -405,11 +565,26 @@ export function PathReplayView() {
     return coverageFailurePath.waypoints.map((wp) => wp.position);
   }, [coverageFailurePath]);
 
+  // Coverage bands data for the scrub bar (full waypoint objects with quality)
+  const coverageBands = useMemo(() => {
+    return coverageFailurePath?.waypoints ?? [];
+  }, [coverageFailurePath]);
+
+  // Quality exposure breakdown for info overlay
+  const qualityExposure = useMemo(() => {
+    if (!coverageFailurePath) {
+      return { detection: 0, observation: 0, recognition: 0, identification: 0 };
+    }
+    return coverageFailurePath.detectionQualityExposure;
+  }, [coverageFailurePath]);
+
   const totalDuration = coverageFailurePath?.totalDurationS ?? 0;
 
   // Find current segment index + progress based on elapsed time
+  // Depends only on coverageFailurePath and currentTime (not waypoints, which is derived)
+  // to satisfy react-hooks/preserve-manual-memoization.
   const { currentIndex, progress } = useMemo(() => {
-    if (!coverageFailurePath || waypoints.length < 2) {
+    if (!coverageFailurePath || coverageFailurePath.waypoints.length < 2) {
       return { currentIndex: 0, progress: 0 };
     }
 
@@ -428,8 +603,8 @@ export function PathReplayView() {
     }
 
     // Past the end
-    return { currentIndex: waypoints.length - 1, progress: 1 };
-  }, [coverageFailurePath, waypoints, currentTime]);
+    return { currentIndex: wps.length - 1, progress: 1 };
+  }, [coverageFailurePath, currentTime]);
 
   // Auto-advance time when playing
   // Use a ref to track the "anchor" (time when playback was last resumed) so
@@ -437,6 +612,8 @@ export function PathReplayView() {
   const playbackAnchorRef = useRef({ startWallTime: 0, startPlaybackTime: 0 });
 
   useEffect(() => {
+    // currentTime intentionally excluded from deps below: captured once in the ref when
+    // playback starts. Adding it would reset the anchor on every tick (break seek-while-playing).
     if (!playing || totalDuration <= 0) return;
 
     // Reset anchor when playback starts or restarts
@@ -461,6 +638,7 @@ export function PathReplayView() {
 
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playing, speed, totalDuration]);
 
   // Reset
@@ -502,6 +680,7 @@ export function PathReplayView() {
           waypointCount={waypoints.length}
           exposureScore={coverageFailurePath.totalExposureScore}
           targetReached={coverageFailurePath.targetReached}
+          qualityBands={qualityExposure}
         />
       )}
 
@@ -509,14 +688,16 @@ export function PathReplayView() {
         camera={{ position: [12.8, 7.6, 11.6], fov: 31, near: 0.1, far: 200 }}
         gl={{ antialias: true }}
         style={{ background: "#0a0d13" }}
-        shadows
+        shadows="percentage"
       >
         <Suspense fallback={null}>
           <SceneView />
         </Suspense>
 
-        {/* Coverage-failure path line */}
-        <AdversarialPathLine waypoints={waypoints} />
+        {/* Coverage-failure path line — colored segments by DORI quality */}
+        {coverageFailurePath && (
+          <CoverageSegmentPath waypoints={coverageFailurePath.waypoints} />
+        )}
         <PathMarkers waypoints={waypoints} />
 
         {/* Actor */}
@@ -546,8 +727,17 @@ export function PathReplayView() {
         onReset={handleReset}
         speed={speed}
         onSpeedChange={setSpeed}
-        waypointCount={waypoints.length}
+        coverageBands={coverageBands}
       />
+
+      {/* Visibility Timeline — shown below the canvas */}
+      <div className="absolute bottom-[100px] left-3 right-3 z-10">
+        <VisibilityTimeline
+          pathResult={result?.pathResults[0] ?? null}
+          currentTime={currentTime}
+          onSeek={handleSeek}
+        />
+      </div>
     </div>
   );
 }

@@ -2,35 +2,52 @@
 
 import { OrbitControls } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
-import { Camera, Video, VideoOff } from "lucide-react";
+import { Camera, VideoOff } from "lucide-react";
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
 import { useStudioStore } from "@/store/studio-store";
 import { getYawPitchDirection } from "@/simulation/geometry";
 import type { CameraNode } from "@/schema/security-scene";
-import { ENVIRONMENT_THEMES, SceneLighting, SceneFloor, SceneWalls, SceneObstructions } from "@/components/workspace/SharedScene";
-
-// ── Shared scene elements ──
+import {
+  ENVIRONMENT_THEMES,
+  SceneLighting,
+  SceneFloor,
+  SceneWalls,
+  SceneDoors,
+  SceneWindows,
+  SceneObstructions,
+} from "@/components/workspace/SharedScene";
 
 const CAMERA_WALL_THEME = ENVIRONMENT_THEMES.day;
 
+/** Format a timestamp for the camera overlay (e.g. "2026-01-11 13:27") */
+function nowTimestamp() {
+  const d = new Date();
+  const yy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}  ${hh}:${min}`;
+}
+
 function SceneView() {
   const scene = useStudioStore((s) => s.scene);
-  const { width, depth } = scene.dimensions;
   const selectedId = useStudioStore((s) => s.selectedNodeId);
+  const { width, depth } = scene.dimensions;
 
   return (
     <>
       <SceneLighting theme={CAMERA_WALL_THEME} />
       <SceneFloor width={width} depth={depth} showGrid={false} />
       <SceneWalls walls={scene.walls} />
+      <SceneDoors doors={scene.doors} />
+      <SceneWindows windows={scene.windows} />
       <SceneObstructions obstructions={scene.obstructions} selectedId={selectedId} />
     </>
   );
 }
-
-// ── Camera Rig ──
 
 function CameraRig({ camera: camData }: { camera: CameraNode }) {
   const camera = useThree((s) => s.camera);
@@ -39,75 +56,236 @@ function CameraRig({ camera: camData }: { camera: CameraNode }) {
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
+
     const forward = getYawPitchDirection(camData.yawDeg, camData.pitchDeg);
     const pos = new THREE.Vector3(...camData.position);
     const target = pos.clone().add(forward.clone().multiplyScalar(6));
+
     camera.position.copy(pos);
     camera.lookAt(target);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    camera.updateProjectionMatrix();
+  }, [camera, camData.pitchDeg, camData.position, camData.yawDeg]);
 
   return null;
 }
 
-// ── Individual camera feed panel ──
+/** Short label like "CAM 1" from camera name */
+function shortTag(name: string) {
+  const match = name.match(/\d+/);
+  return match ? `CAM ${match[0]}` : name.toUpperCase().slice(0, 6);
+}
 
-function CameraFeedPanel({ camera: camData }: { camera: CameraNode }) {
+function LiveFeedOverlay({ camera: camData }: { camera: CameraNode }) {
+  const isActive = camData.status === "on";
+  const timestamp = nowTimestamp();
+
+  return (
+    <>
+      {/* Top gradient */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-black/80 to-transparent" />
+      {/* Bottom gradient */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/75 to-transparent" />
+
+      {/* Top-left: status dot + tag + name */}
+      <div className="absolute left-2 top-2 flex items-center gap-1.5">
+        <span
+          className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-emerald-400 shadow-[0_0_4px_rgba(52,211,153,0.9)]" : "bg-red-400"}`}
+        />
+        <span className="text-[9px] font-bold tracking-wide text-white/90 [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]">
+          {shortTag(camData.name)} · {camData.name}
+        </span>
+        <span
+          className={`rounded px-1 py-0.5 text-[7px] font-semibold uppercase tracking-wide ${
+            isActive ? "bg-emerald-500/25 text-emerald-300" : "bg-red-500/25 text-red-300"
+          }`}
+        >
+          {isActive ? "Active" : "Offline"}
+        </span>
+      </div>
+
+      {/* Top-right: resolution + timestamp */}
+      <div className="absolute right-2 top-2 flex flex-col items-end gap-0.5">
+        <span className="rounded bg-black/60 px-1.5 py-0.5 text-[7px] font-semibold text-[#93c5fd]">
+          {camData.resolutionMP}MP
+        </span>
+        <span className="font-mono text-[8px] text-white/60 [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]">
+          {timestamp}
+        </span>
+      </div>
+
+      {/* Bottom metadata */}
+      <div className="absolute bottom-1.5 left-2 flex items-center gap-2">
+        <span className="text-[8px] text-white/50">{camData.fovHorizontalDeg}°</span>
+        <span className="text-[8px] text-white/25">·</span>
+        <span className="text-[8px] capitalize text-white/50">{camData.mountType}</span>
+        <span className="text-[8px] text-white/25">·</span>
+        <span className="text-[8px] text-white/50">{camData.rangeM}m range</span>
+      </div>
+    </>
+  );
+}
+
+function CameraFeedPanel({
+  camera: camData,
+  isSelected,
+}: {
+  camera: CameraNode;
+  isSelected: boolean;
+}) {
   const isActive = camData.status === "on";
 
   return (
-    <div className="relative overflow-hidden rounded-lg border border-[#1f2536] bg-[#07090d]">
-      <Canvas
-        camera={{ position: camData.position, fov: Math.min(camData.fovHorizontalDeg, 100), near: 0.1, far: 50 }}
-        gl={{ antialias: true, alpha: false }}
-        style={{ width: "100%", height: "100%" }}
-        shadows
-      >
-        <Suspense fallback={null}>
-          <SceneView />
-        </Suspense>
-        <CameraRig camera={camData} />
-        <OrbitControls enablePan={false} enableZoom={false} enableRotate={false} />
-      </Canvas>
+    <div
+      className={`relative h-full overflow-hidden rounded-lg border bg-[#07090d] ${
+        isSelected ? "border-blue-500/70" : "border-[#1f2536]"
+      }`}
+    >
+      {isActive ? (
+        <>
+          <Canvas
+            camera={{
+              position: camData.position,
+              fov: Math.min(camData.fovHorizontalDeg, 100),
+              near: 0.1,
+              far: 50,
+            }}
+            gl={{ antialias: true, alpha: false }}
+            style={{ width: "100%", height: "100%" }}
+            shadows="percentage"
+          >
+            <Suspense fallback={null}>
+              <SceneView />
+            </Suspense>
+            <CameraRig camera={camData} />
+            <OrbitControls enablePan={false} enableZoom={false} enableRotate={false} />
+          </Canvas>
+          {/* Subtle scanline overlay for authenticity */}
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 4px)",
+            }}
+          />
+          <LiveFeedOverlay camera={camData} />
+        </>
+      ) : (
+        <>
+          {/* Offline state */}
+          <div className="pointer-events-none absolute inset-0 bg-[#070a10]">
+            {/* Subtle noise/static texture */}
+            <div
+              className="absolute inset-0 opacity-10"
+              style={{
+                backgroundImage:
+                  "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(200,200,200,0.04) 2px, rgba(200,200,200,0.04) 4px), repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(200,200,200,0.02) 3px, rgba(200,200,200,0.02) 6px)",
+              }}
+            />
+          </div>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+            <div className="rounded-full border border-red-500/25 bg-red-500/10 p-2.5">
+              <VideoOff className="h-5 w-5 text-red-400/70" />
+            </div>
+            <div className="text-center">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-red-300/70">
+                Camera Offline
+              </div>
+              <div className="mt-0.5 text-[8px] text-[#4a5568]">{camData.name}</div>
+            </div>
+          </div>
+          {/* Offline overlay header */}
+          <div className="absolute inset-x-0 top-0 px-2 pt-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                <span className="text-[9px] font-bold text-white/60">
+                  {shortTag(camData.name)} · {camData.name}
+                </span>
+              </div>
+              <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-[7px] font-semibold text-red-300">
+                OFFLINE
+              </span>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
-      {/* Overlay label */}
-      <div className="absolute inset-x-0 top-0 bg-gradient-to-b from-black/70 to-transparent px-2.5 pb-4 pt-2">
-        <div className="flex items-center gap-1.5">
-          {isActive ? (
-            <Video className="h-3 w-3 text-green-400" />
-          ) : (
-            <VideoOff className="h-3 w-3 text-red-400" />
-          )}
-          <span className="text-[10px] font-semibold text-[#c7d0e4]">{camData.name}</span>
+function CameraGhost() {
+  return (
+    <svg
+      viewBox="0 0 64 48"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="4" y="12" width="56" height="30" rx="4" />
+      <circle cx="32" cy="27" r="10" />
+      <circle cx="32" cy="27" r="4" />
+      <rect x="18" y="8" width="10" height="5" rx="2" />
+      <circle cx="50" cy="22" r="1.5" />
+      <path d="M26 42 v4 h12 v-4" />
+    </svg>
+  );
+}
+
+function EmptySlot() {
+  return (
+    <div className="relative flex h-full items-center justify-center overflow-hidden rounded-lg border border-dashed border-[#1f2536] bg-[#0a0d14]">
+      <div
+        className="pointer-events-none absolute inset-0 opacity-25"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(37,53,84,0.07) 2px, rgba(37,53,84,0.07) 4px)",
+          animation: "scanDrift 8s linear infinite",
+        }}
+      />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#1a2538]/20 via-transparent to-transparent" />
+      <div className="relative z-10 text-center">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center text-[#1f2c44]">
+          <CameraGhost />
+        </div>
+        <div className="mt-2 flex items-center justify-center gap-1.5">
+          <Camera className="h-2.5 w-2.5 text-[#2a3a54]" />
+          <p className="text-[9px] font-medium text-[#3a4a60]">Empty Slot</p>
         </div>
       </div>
-      <div className="absolute bottom-2 left-2 flex items-center gap-2 rounded-md bg-black/70 px-2 py-1">
-        <span className="text-[8px] text-[#5b667c]">{camData.resolutionMP}MP</span>
-        <span className="text-[8px] text-[#4a5568]">·</span>
-        <span className="text-[8px] text-[#5b667c]">{camData.fovHorizontalDeg}°</span>
-        <span className="text-[8px] text-[#4a5568]">·</span>
-        <span className={`text-[8px] ${isActive ? "text-green-400" : "text-red-400"}`}>
-          {isActive ? "ON" : "OFF"}
-        </span>
-      </div>
+      <style>{`
+        @keyframes scanDrift {
+          0% { transform: translateY(0); }
+          100% { transform: translateY(-4px); }
+        }
+      `}</style>
     </div>
   );
 }
 
-// ── Empty placeholder panel ──
-
-function EmptyPanel() {
+function CameraSlotButton({
+  camera: cam,
+  isSelected,
+  onSelect,
+  className = "",
+}: {
+  camera: CameraNode;
+  isSelected: boolean;
+  onSelect: () => void;
+  className?: string;
+}) {
   return (
-    <div className="flex items-center justify-center rounded-lg border border-dashed border-[#1f2536] bg-[#0a0d14]">
-      <div className="text-center">
-        <Camera className="mx-auto h-6 w-6 text-[#2a3246]" />
-        <p className="mt-2 text-[10px] text-[#3a4158]">No Camera Feed</p>
-      </div>
-    </div>
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`cursor-pointer overflow-hidden rounded-lg text-left ${className}`}
+      style={{ display: "block" }}
+    >
+      <CameraFeedPanel camera={cam} isSelected={isSelected} />
+    </button>
   );
 }
-
-// ── Main export ──
 
 export function CameraWallView() {
   const scene = useStudioStore((s) => s.scene);
@@ -115,42 +293,115 @@ export function CameraWallView() {
   const selectNode = useStudioStore((s) => s.selectNode);
 
   const cameras = useMemo(() => {
-    // Show selected camera first, then active ones, then offline
-    const sorted = [...scene.cameras].sort((a, b) => {
+    // Sort: selected first, then active, then offline
+    return [...scene.cameras].sort((a, b) => {
       if (a.id === selectedId) return -1;
       if (b.id === selectedId) return 1;
       if (a.status === "on" && b.status !== "on") return -1;
       if (a.status !== "on" && b.status === "on") return 1;
       return 0;
     });
-    return sorted.slice(0, 4);
   }, [scene.cameras, selectedId]);
 
+  if (cameras.length === 0) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto h-16 w-16 text-[#1f2c44]">
+            <CameraGhost />
+          </div>
+          <p className="mt-3 text-[11px] font-medium text-[#4a5568]">No cameras in scene</p>
+          <p className="mt-1 text-[9px] text-[#3a4158]">
+            Place cameras on the map to see live POV feeds
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const count = Math.min(cameras.length, 6); // show up to 6
+  const visible = cameras.slice(0, count);
+
   return (
-    <div className="flex-1 p-3">
-      {cameras.length === 0 ? (
-        <div className="flex h-full items-center justify-center">
-          <div className="text-center">
-            <Camera className="mx-auto h-8 w-8 text-[#2a3246]" />
-            <p className="mt-2 text-[11px] text-[#4a5568]">Place cameras to see live feeds</p>
+    <div className="h-full p-2.5">
+      {count === 1 ? (
+        // Single camera: full screen
+        <CameraSlotButton
+          camera={visible[0]!}
+          isSelected={visible[0]!.id === selectedId}
+          onSelect={() => selectNode(visible[0]!.id)}
+          className="h-full w-full"
+        />
+      ) : count === 2 ? (
+        // Two cameras: side-by-side
+        <div className="grid h-full grid-cols-2 gap-2.5">
+          {visible.map((cam) => (
+            <CameraSlotButton
+              key={cam.id}
+              camera={cam}
+              isSelected={cam.id === selectedId}
+              onSelect={() => selectNode(cam.id)}
+              className="h-full w-full"
+            />
+          ))}
+        </div>
+      ) : count === 3 ? (
+        // Three cameras: 2 top + 1 wide bottom
+        <div className="grid h-full grid-cols-2 grid-rows-2 gap-2.5">
+          <CameraSlotButton
+            camera={visible[0]!}
+            isSelected={visible[0]!.id === selectedId}
+            onSelect={() => selectNode(visible[0]!.id)}
+            className="h-full w-full"
+          />
+          <CameraSlotButton
+            camera={visible[1]!}
+            isSelected={visible[1]!.id === selectedId}
+            onSelect={() => selectNode(visible[1]!.id)}
+            className="h-full w-full"
+          />
+          <div className="col-span-2 h-full">
+            <CameraSlotButton
+              camera={visible[2]!}
+              isSelected={visible[2]!.id === selectedId}
+              onSelect={() => selectNode(visible[2]!.id)}
+              className="h-full w-full"
+            />
           </div>
         </div>
+      ) : count <= 4 ? (
+        // 4 cameras: 2×2 grid with empty slots
+        <div className="grid h-full grid-cols-2 grid-rows-2 gap-2.5">
+          {[...visible, ...Array.from({ length: 4 - count }, () => null)].map((cam, i) =>
+            cam ? (
+              <CameraSlotButton
+                key={cam.id}
+                camera={cam}
+                isSelected={cam.id === selectedId}
+                onSelect={() => selectNode(cam.id)}
+                className="h-full w-full"
+              />
+            ) : (
+              <EmptySlot key={`empty-${i}`} />
+            ),
+          )}
+        </div>
       ) : (
-        <div className="grid h-full grid-cols-2 gap-3">
-          {cameras.map((cam) => (
-            <div
-              key={cam.id}
-              className={`cursor-pointer rounded-lg transition-all ${
-                cam.id === selectedId ? "ring-2 ring-[#60a5fa]" : ""
-              }`}
-              onClick={() => selectNode(cam.id)}
-            >
-              <CameraFeedPanel camera={cam} />
-            </div>
-          ))}
-          {Array.from({ length: Math.max(0, 4 - cameras.length) }).map((_, i) => (
-            <EmptyPanel key={`empty-${i}`} />
-          ))}
+        // 5-6 cameras: 3×2 grid
+        <div className="grid h-full gap-2.5" style={{ gridTemplateColumns: "repeat(3, 1fr)", gridTemplateRows: "repeat(2, 1fr)" }}>
+          {[...visible, ...Array.from({ length: 6 - count }, () => null)].map((cam, i) =>
+            cam ? (
+              <CameraSlotButton
+                key={cam.id}
+                camera={cam}
+                isSelected={cam.id === selectedId}
+                onSelect={() => selectNode(cam.id)}
+                className="h-full w-full"
+              />
+            ) : (
+              <EmptySlot key={`empty-${i}`} />
+            ),
+          )}
         </div>
       )}
     </div>

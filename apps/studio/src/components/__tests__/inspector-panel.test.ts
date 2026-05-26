@@ -10,7 +10,7 @@ describe("InspectorPanel", () => {
     expect(source).toContain("function ObstructionInspector()");
     expect(source).toContain('const obs = scene.obstructions.find((entry) => entry.id === selectedId);');
     expect(source).toContain("Test Without This Obstruction");
-    expect(source).toContain("obstruction ? <ObstructionInspector /> : <NoSelection />");
+    expect(source).toContain("obstruction ? <ObstructionInspector /> : light ? <LightInspector /> : <NoSelection />");
   });
 
   test("renders editable camera placement and optics controls", () => {

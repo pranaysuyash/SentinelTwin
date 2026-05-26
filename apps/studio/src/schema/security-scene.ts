@@ -298,6 +298,11 @@ export const recommendationSchema = z.object({
   estimatedImpact: z.string(),
   costCategory: z.enum(["free", "low", "medium", "high"]),
   verified: z.boolean(),
+  // Apply-fix support: node to act on and suggested transform
+  affectedNodeId: z.string().optional(),
+  suggestedPosition: point3Schema.optional(),
+  suggestedYawDeg: z.number().optional(),
+  suggestedPitchDeg: z.number().optional(),
 });
 
 export const adversarialWaypointSchema = z.object({

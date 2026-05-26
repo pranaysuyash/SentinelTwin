@@ -1,6 +1,7 @@
 import type {
   CameraResult,
   DoriQuality,
+  Recommendation,
   SecurityIssue,
   SecurityScene,
   SimulationResult,
@@ -8,14 +9,19 @@ import type {
 } from "@/schema/security-scene";
 import { computeAdversarialPath } from "@/simulation/adversarial-path";
 import {
-  computeCoverageCells,
+  createCoverageEvaluator,
   getIdentificationAreaPct,
   getQualityShare,
   getRecognitionAreaPct,
 } from "@/simulation/coverage";
-import { qualityToScore, scoreToQuality } from "@/simulation/dori";
+import { maxQuality, qualityToScore, scoreToQuality } from "@/simulation/dori";
 import { computePathResults } from "@/simulation/path-analysis";
-import { pointInPolygon } from "@/simulation/geometry";
+import { pointInPolygon, polygonCenter } from "@/simulation/geometry";
+
+type EvaluatedZone = ZoneResult & {
+  blockingLabels: string[];
+  cameraQualityById: Record<string, DoriQuality>;
+};
 
 function getZoneQuality(zoneCells: { quality: DoriQuality }[]) {
   if (zoneCells.length === 0) return "none" as DoriQuality;
@@ -28,14 +34,178 @@ function getZoneQuality(zoneCells: { quality: DoriQuality }[]) {
 }
 
 function coverageStatus(actual: DoriQuality, required: DoriQuality) {
-  const actualScore = qualityToScore(actual);
-  const requiredScore = qualityToScore(required);
-
-  return actualScore >= requiredScore ? ("pass" as const) : ("fail" as const);
+  return qualityToScore(actual) >= qualityToScore(required) ? ("pass" as const) : ("fail" as const);
 }
 
-export function simulateStudio(scene: SecurityScene): SimulationResult {
-  const coverageCells = computeCoverageCells(scene, 4);
+function getZoneSampleHeight(zone: SecurityScene["criticalZones"][number], scene: SecurityScene) {
+  const basePerson = scene.assumptions.personHeightM;
+  const baseVehicle = scene.assumptions.vehicleHeightM;
+
+  switch (zone.targetType) {
+    case "vehicle_detection":
+      return Math.min(zone.heightM, baseVehicle);
+    case "license_plate":
+      return Math.min(zone.heightM, 0.55);
+    case "face_recognition":
+    case "face_identification":
+      return Math.min(zone.heightM, Math.max(1.45, basePerson - 0.2));
+    case "cash_counter_activity":
+      return Math.min(zone.heightM, Math.max(1.05, basePerson - 0.45));
+    case "door_entry_exit":
+      return Math.min(zone.heightM, Math.max(1.45, basePerson - 0.1));
+    case "perimeter_breach":
+    case "package_detection":
+    case "person_detection":
+    default:
+      return Math.min(zone.heightM, basePerson);
+  }
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function evaluateZone(
+  scene: SecurityScene,
+  evaluator: ReturnType<typeof createCoverageEvaluator>,
+  coverageCells: { x: number; z: number; quality: DoriQuality; blockedBy: string[]; coveringCameras: string[] }[],
+  zone: SecurityScene["criticalZones"][number],
+  excludedCameraId?: string,
+): EvaluatedZone {
+  const zoneCells = coverageCells.filter((cell) => pointInPolygon([cell.x, cell.z], zone.polygon));
+  const sampleHeightM = getZoneSampleHeight(zone, scene);
+
+  const cellQualities: { quality: DoriQuality }[] = [];
+  const cameraQualityById: Record<string, DoriQuality> = Object.fromEntries(
+    scene.cameras.map((camera) => [camera.id, "none" as DoriQuality]),
+  );
+  const blockingLabels = new Set<string>();
+
+  for (const cell of zoneCells) {
+    let cellBest: DoriQuality = "none";
+    const cellBlocking = new Set<string>();
+
+    for (const camera of scene.cameras) {
+      if (camera.id === excludedCameraId) continue;
+
+      const evaluation = evaluator.evaluatePoint(camera, [cell.x, cell.z], sampleHeightM);
+      cameraQualityById[camera.id] = maxQuality(cameraQualityById[camera.id], evaluation.quality);
+      cellBest = maxQuality(cellBest, evaluation.quality);
+
+      if (evaluation.blockedBy) {
+        cellBlocking.add(evaluation.blockedBy);
+      }
+    }
+
+    cellQualities.push({ quality: cellBest });
+    cellBlocking.forEach((label) => blockingLabels.add(label));
+  }
+
+  const actualQuality = getZoneQuality(cellQualities);
+  const coveringCameras = Object.entries(cameraQualityById)
+    .filter(([, quality]) => quality !== "none")
+    .map(([cameraId]) => cameraId);
+  const redundancyCameraCount = Object.values(cameraQualityById).filter(
+    (quality) => qualityToScore(quality) >= qualityToScore(zone.requiredQuality),
+  ).length;
+  const status =
+    actualQuality === "none"
+      ? "fail"
+      : coverageStatus(actualQuality, zone.requiredQuality);
+
+  const failureReasons: string[] = [];
+  if (status !== "pass") {
+    failureReasons.push(
+      `${zone.label} is below ${zone.requiredQuality} at approximately ${sampleHeightM.toFixed(2)}m.`,
+    );
+    if (blockingLabels.size > 0) {
+      failureReasons.push(`Blocked by: ${Array.from(blockingLabels).join(", ")}.`);
+    }
+    if (coveringCameras.length === 0) {
+      failureReasons.push("No camera can currently sample this zone.");
+    }
+  }
+
+  return {
+    zoneId: zone.id,
+    label: zone.label,
+    requiredQuality: zone.requiredQuality,
+    actualQuality,
+    coveringCameras,
+    redundancyCameraCount,
+    status,
+    failureReasons,
+    blockingLabels: Array.from(blockingLabels),
+    cameraQualityById,
+  };
+}
+
+function getZoneByLabel(scene: SecurityScene, label: string) {
+  return scene.criticalZones.find((zone) => zone.label === label);
+}
+
+function getObstructionByLabel(scene: SecurityScene, label: string) {
+  return scene.obstructions.find((obstruction) => obstruction.label === label);
+}
+
+function moveObstructionAwayFromZone(
+  scene: SecurityScene,
+  zone: SecurityScene["criticalZones"][number],
+  obstructionLabel: string,
+) {
+  const obstruction = getObstructionByLabel(scene, obstructionLabel);
+  if (!obstruction) return null;
+
+  const next = structuredClone(scene);
+  const nextObstruction = next.obstructions.find((obs) => obs.id === obstruction.id);
+  if (!nextObstruction) return null;
+
+  const [zoneX, zoneZ] = polygonCenter(zone.polygon);
+  const [ox, oy, oz] = nextObstruction.position;
+  const vectorX = ox - zoneX;
+  const vectorZ = oz - zoneZ;
+  const vectorLength = Math.hypot(vectorX, vectorZ) || 1;
+  const pushDistance = Math.max(nextObstruction.dimensions[0], nextObstruction.dimensions[1]) + 1.2;
+  const targetX = clamp(
+    ox + (vectorX / vectorLength) * pushDistance,
+    0.4,
+    next.dimensions.width - 0.4,
+  );
+  const targetZ = clamp(
+    oz + (vectorZ / vectorLength) * pushDistance,
+    0.4,
+    next.dimensions.depth - 0.4,
+  );
+
+  nextObstruction.position = [targetX, oy, targetZ];
+  return next;
+}
+
+function rotateCameraTowardZone(
+  scene: SecurityScene,
+  zone: SecurityScene["criticalZones"][number],
+  cameraId: string,
+) {
+  const camera = scene.cameras.find((entry) => entry.id === cameraId);
+  if (!camera) return null;
+
+  const next = structuredClone(scene);
+  const nextCamera = next.cameras.find((entry) => entry.id === cameraId);
+  if (!nextCamera) return null;
+
+  const [zoneX, zoneZ] = polygonCenter(zone.polygon);
+  const dx = zoneX - nextCamera.position[0];
+  const dz = zoneZ - nextCamera.position[2];
+  const yaw = Math.atan2(dx, dz) * (180 / Math.PI);
+
+  nextCamera.yawDeg = Math.round(yaw);
+  nextCamera.pitchDeg = -28;
+  return next;
+}
+
+function simulateStudioInternal(scene: SecurityScene, includeRecommendations: boolean): SimulationResult {
+  const evaluator = createCoverageEvaluator(scene);
+  const coverageCells = evaluator.computeCoverageCells(4);
   const walkableCellCount = coverageCells.length;
   const coverageByQuality = {
     detection: getQualityShare(coverageCells, "detection"),
@@ -47,85 +217,73 @@ export function simulateStudio(scene: SecurityScene): SimulationResult {
   const totalCoveragePct =
     walkableCellCount === 0
       ? 0
-      : (coverageCells.filter((cell) => cell.quality !== "none").length / walkableCellCount) *
-        100;
+      : (coverageCells.filter((cell) => cell.quality !== "none").length / walkableCellCount) * 100;
   const blindspotPct = 100 - totalCoveragePct;
   const averageWalkableQuality =
     walkableCellCount === 0
       ? 0
-      : coverageCells.reduce((sum, cell) => sum + qualityToScore(cell.quality), 0) /
-        walkableCellCount;
+      : coverageCells.reduce((sum, cell) => sum + qualityToScore(cell.quality), 0) / walkableCellCount;
 
-  const criticalZoneResults: ZoneResult[] = scene.criticalZones.map((zone) => {
-    const zoneCells = coverageCells.filter((cell) =>
-      pointInPolygon([cell.x, cell.z], zone.polygon),
-    );
-    const actualQuality = getZoneQuality(zoneCells);
-    const status = coverageStatus(actualQuality, zone.requiredQuality);
-    const coveringCameras = Array.from(
-      new Set(zoneCells.flatMap((cell) => cell.coveringCameras)),
-    );
+  const zoneEvaluations = scene.criticalZones.map((zone) =>
+    evaluateZone(scene, evaluator, coverageCells, zone),
+  );
 
-    // Data-driven failure reason: derive from actual blocked-by labels in the zone cells
-    const failureReasons: string[] = [];
-    if (status !== "pass") {
-      failureReasons.push(
-        `${zone.label} is below ${zone.requiredQuality} due to occlusion, distance, or angle.`,
-      );
-      const blockingObstructions = Array.from(
-        new Set(zoneCells.flatMap((cell) => cell.blockedBy)),
-      );
-      if (blockingObstructions.length > 0) {
-        failureReasons.push(
-          `Blocked by: ${blockingObstructions.join(", ")}.`,
-        );
-      }
-    }
-
-    return {
-      zoneId: zone.id,
-      label: zone.label,
-      requiredQuality: zone.requiredQuality,
-      actualQuality,
-      coveringCameras,
-      redundancyCameraCount: coveringCameras.length,
-      status,
-      failureReasons,
-    };
-  });
+  const criticalZoneResults: ZoneResult[] = zoneEvaluations.map((zone) => ({
+    zoneId: zone.zoneId,
+    label: zone.label,
+    requiredQuality: zone.requiredQuality,
+    actualQuality: zone.actualQuality,
+    coveringCameras: zone.coveringCameras,
+    redundancyCameraCount: zone.redundancyCameraCount,
+    status: zone.status,
+    failureReasons: zone.failureReasons,
+  }));
 
   const cameraResults: CameraResult[] = scene.cameras.map((camera) => {
     const coveredCells = coverageCells.filter((cell) => cell.coveringCameras.includes(camera.id));
     const qualityByZone = Object.fromEntries(
-      criticalZoneResults.map((zone) => [zone.label, zone.actualQuality]),
-    );
+      zoneEvaluations.map((zone) => [zone.label, zone.cameraQualityById[camera.id] ?? "none"]),
+    ) as Record<string, DoriQuality>;
 
     return {
       cameraId: camera.id,
-      coveragePct:
-        walkableCellCount === 0 ? 0 : (coveredCells.length / walkableCellCount) * 100,
+      coveragePct: walkableCellCount === 0 ? 0 : (coveredCells.length / walkableCellCount) * 100,
       qualityByZone,
-      criticalZonesCovered: criticalZoneResults
-        .filter((zone) => zone.coveringCameras.includes(camera.id))
+      criticalZonesCovered: zoneEvaluations
+        .filter((zone) => qualityToScore(zone.cameraQualityById[camera.id] ?? "none") >= qualityToScore(zone.requiredQuality))
         .map((zone) => zone.label),
-      criticalZonesFailed: criticalZoneResults
-        .filter((zone) => zone.status !== "pass" && zone.coveringCameras.includes(camera.id))
+      criticalZonesFailed: zoneEvaluations
+        .filter((zone) => {
+          const own = zone.cameraQualityById[camera.id] ?? "none";
+          return own !== "none" && qualityToScore(own) < qualityToScore(zone.requiredQuality);
+        })
         .map((zone) => zone.label),
-      offlineImpact: criticalZoneResults
-        .filter((zone) => zone.coveringCameras.includes(camera.id))
-        .map((zone) => `${zone.label} loses ${zone.actualQuality} coverage if ${camera.name} is offline.`),
+      offlineImpact: zoneEvaluations
+        .map((zone) => {
+          const withoutCamera = evaluateZone(scene, evaluator, coverageCells, scene.criticalZones.find((candidate) => candidate.id === zone.zoneId)!, camera.id);
+          if (qualityToScore(withoutCamera.actualQuality) < qualityToScore(zone.actualQuality)) {
+            return `${zone.label} drops from ${zone.actualQuality} to ${withoutCamera.actualQuality} if ${camera.name} is offline.`;
+          }
+          if (withoutCamera.redundancyCameraCount < zone.redundancyCameraCount && zone.redundancyCameraCount > 1) {
+            return `${zone.label} loses redundancy if ${camera.name} is offline.`;
+          }
+          return null;
+        })
+        .filter((message): message is string => Boolean(message)),
     };
   });
 
   const issues: SecurityIssue[] = [];
 
-  // Quality-fail issues: one per failing critical zone
-  for (const zone of criticalZoneResults) {
-    if (zone.status === "fail") {
+  for (const zone of zoneEvaluations) {
+    if (zone.status !== "pass") {
       issues.push({
-        severity: zone.requiredQuality === "recognition" || zone.requiredQuality === "identification"
-          ? "critical"
-          : "high",
+        severity:
+          zone.requiredQuality === "recognition" || zone.requiredQuality === "identification"
+            ? "critical"
+            : zone.status === "partial"
+              ? "high"
+              : "medium",
         category: "quality_fail",
         description: `${zone.label} fails the ${zone.requiredQuality} requirement.`,
         affectedZones: [zone.label],
@@ -134,54 +292,39 @@ export function simulateStudio(scene: SecurityScene): SimulationResult {
     }
   }
 
-  // Data-driven blindspot issues: one per obstruction that is blocking cells in critical zones.
-  // We never hardcode obstruction labels — we derive them from the simulation output.
-  {
-    // Build: obstruction label → set of zone labels it is blocking
-    const obstructionToZones = new Map<string, Set<string>>();
-    for (const zone of scene.criticalZones) {
-      const zoneCells = coverageCells.filter((cell) =>
-        pointInPolygon([cell.x, cell.z], zone.polygon),
-      );
-      for (const cell of zoneCells) {
-        for (const obsLabel of cell.blockedBy) {
-          if (!obstructionToZones.has(obsLabel)) {
-            obstructionToZones.set(obsLabel, new Set());
-          }
-          obstructionToZones.get(obsLabel)!.add(zone.label);
-        }
+  const obstructionToZones = new Map<string, Set<string>>();
+  for (const zone of zoneEvaluations) {
+    for (const obsLabel of zone.blockingLabels) {
+      if (!obstructionToZones.has(obsLabel)) {
+        obstructionToZones.set(obsLabel, new Set());
       }
+      obstructionToZones.get(obsLabel)!.add(zone.label);
     }
+  }
 
-    for (const [obsLabel, affectedZoneSet] of obstructionToZones) {
-      const affectedZoneList = Array.from(affectedZoneSet);
-      // Cameras that fail zones this obstruction blocks
-      const affectedCameraIds = cameraResults
-        .filter((cr) =>
-          cr.criticalZonesFailed.some((z) => affectedZoneSet.has(z)),
-        )
-        .map((cr) => cr.cameraId);
+  for (const [obsLabel, affectedZoneSet] of obstructionToZones) {
+    const affectedZoneList = Array.from(affectedZoneSet);
+    const affectedCameraIds = cameraResults
+      .filter((camera) =>
+        camera.criticalZonesFailed.some((zoneLabel) => affectedZoneSet.has(zoneLabel)),
+      )
+      .map((camera) => camera.cameraId);
 
-      issues.push({
-        severity: "high",
-        category: "blindspot",
-        description: `${obsLabel} is obstructing coverage in: ${affectedZoneList.join(", ")}.`,
-        affectedZones: affectedZoneList,
-        affectedCameras: affectedCameraIds,
-      });
-    }
+    issues.push({
+      severity: "high",
+      category: "blindspot",
+      description: `${obsLabel} is obstructing coverage in: ${affectedZoneList.join(", ")}.`,
+      affectedZones: affectedZoneList,
+      affectedCameras: affectedCameraIds,
+    });
   }
 
   const pathResults = computePathResults(scene, coverageCells);
   const adversarialPath = computeAdversarialPath(scene, coverageCells);
 
-  // worstAreaQuality: lowest quality among critical zone results.
-  // Using zone results (not raw cell minimums) gives the most actionable answer:
-  // "the worst-covered zone that actually matters" rather than "the darkest corner of the room."
-  // Falls back to worst covered walkable cell quality when no zones are defined.
   const worstAreaQuality: DoriQuality =
-    criticalZoneResults.length > 0
-      ? criticalZoneResults.reduce(
+    zoneEvaluations.length > 0
+      ? zoneEvaluations.reduce(
           (worst, zone) =>
             qualityToScore(zone.actualQuality) < qualityToScore(worst)
               ? zone.actualQuality
@@ -196,39 +339,73 @@ export function simulateStudio(scene: SecurityScene): SimulationResult {
             "identification" as DoriQuality,
           );
 
-  // Data-driven recommendations: one per blocking obstruction + one for failing zone cameras
-  const obstructionRecos: typeof criticalZoneResults extends ZoneResult[] ? never : never = undefined as never;
-  void obstructionRecos;
-  const blockingObstructions = Array.from(
-    new Set(
-      criticalZoneResults
-        .flatMap((zone) =>
-          coverageCells
-            .filter((cell) => pointInPolygon([cell.x, cell.z], zone.polygon))
-            .flatMap((cell) => cell.blockedBy),
-        ),
-    ),
-  );
+  const recommendations: Recommendation[] = [];
+  if (includeRecommendations) {
+    const firstBlockingZone = zoneEvaluations.find((zone) => zone.blockingLabels.length > 0 && zone.status !== "pass");
+    const firstCameraZone = zoneEvaluations.find(
+      (zone) => zone.status !== "pass" && zone.coveringCameras.length > 0,
+    );
 
-  const recommendations = [
-    ...blockingObstructions.map((obsLabel) => ({
-      type: "move_object" as const,
-      description: `Move or reposition "${obsLabel}" to restore camera sightlines.`,
-      estimatedImpact: `Removing this obstruction may restore camera coverage where it is currently blocked.`,
-      costCategory: "free" as const,
-      verified: false,
-    })),
-    ...criticalZoneResults
-      .filter((zone) => zone.status === "fail" && zone.coveringCameras.length > 0)
-      .slice(0, 1)
-      .map((zone) => ({
-        type: "rotate_camera" as const,
-        description: `Adjust cameras covering "${zone.label}" to improve coverage toward ${zone.requiredQuality} quality.`,
-        estimatedImpact: `Reducing camera-to-zone distance or angle may bring ${zone.label} above the ${zone.requiredQuality} threshold.`,
-        costCategory: "low" as const,
-        verified: false,
-      })),
-  ];
+    if (firstBlockingZone) {
+      const obstructionLabel = firstBlockingZone.blockingLabels[0];
+      const zone = getZoneByLabel(scene, firstBlockingZone.label);
+      if (zone && obstructionLabel) {
+        const patchedScene = moveObstructionAwayFromZone(scene, zone, obstructionLabel);
+        if (patchedScene) {
+          const patchedResult = simulateStudioInternal(patchedScene, false);
+          const patchedZone = patchedResult.criticalZoneResults.find((entry) => entry.zoneId === zone.id);
+          const improved =
+            patchedZone &&
+            qualityToScore(patchedZone.actualQuality) > qualityToScore(firstBlockingZone.actualQuality);
+
+          const obsNode = getObstructionByLabel(patchedScene, obstructionLabel);
+          const movedObs = patchedScene.obstructions.find((o) => o.label === obstructionLabel);
+
+          recommendations.push({
+            type: "move_object",
+            description: `Move "${obstructionLabel}" away from "${firstBlockingZone.label}".`,
+            estimatedImpact: patchedZone
+              ? `Simulated zone quality changes from ${firstBlockingZone.actualQuality} to ${patchedZone.actualQuality}.`
+              : `Simulated scene improves visibility around ${firstBlockingZone.label}.`,
+            costCategory: "free",
+            verified: Boolean(improved),
+            affectedNodeId: obsNode?.id ?? movedObs?.id,
+            suggestedPosition: movedObs?.position,
+          });
+        }
+      }
+    }
+
+    if (firstCameraZone) {
+      const cameraId = firstCameraZone.coveringCameras[0];
+      const zone = getZoneByLabel(scene, firstCameraZone.label);
+      if (zone && cameraId) {
+        const patchedScene = rotateCameraTowardZone(scene, zone, cameraId);
+        if (patchedScene) {
+          const patchedResult = simulateStudioInternal(patchedScene, false);
+          const patchedZone = patchedResult.criticalZoneResults.find((entry) => entry.zoneId === zone.id);
+          const improved =
+            patchedZone &&
+            qualityToScore(patchedZone.actualQuality) > qualityToScore(firstCameraZone.actualQuality);
+
+          const patchedCamera = patchedScene.cameras.find((c) => c.id === cameraId);
+
+          recommendations.push({
+            type: "rotate_camera",
+            description: `Re-aim "${cameraId}" toward "${firstCameraZone.label}".`,
+            estimatedImpact: patchedZone
+              ? `Simulated zone quality changes from ${firstCameraZone.actualQuality} to ${patchedZone.actualQuality}.`
+              : `Simulated scene improves visibility around ${firstCameraZone.label}.`,
+            costCategory: "low",
+            verified: Boolean(improved),
+            affectedNodeId: cameraId,
+            suggestedYawDeg: patchedCamera?.yawDeg,
+            suggestedPitchDeg: patchedCamera?.pitchDeg,
+          });
+        }
+      }
+    }
+  }
 
   return {
     computedAt: Date.now(),
@@ -236,8 +413,8 @@ export function simulateStudio(scene: SecurityScene): SimulationResult {
     blindspotPct: Number(blindspotPct.toFixed(1)),
     averageWalkableQuality: Number(averageWalkableQuality.toFixed(2)),
     worstAreaQuality,
-    recognitionAreaPct: Number(getRecognitionAreaPct(coverageCells).toFixed(1)),
-    identificationAreaPct: Number(getIdentificationAreaPct(coverageCells).toFixed(1)),
+    recognitionAreaPct: Number(getRecognitionAreaPct(coverageCells, scene.assumptions.pixelsPerMeter).toFixed(1)),
+    identificationAreaPct: Number(getIdentificationAreaPct(coverageCells, scene.assumptions.pixelsPerMeter).toFixed(1)),
     coverageByQuality: {
       detection: Number(coverageByQuality.detection.toFixed(1)),
       observation: Number(coverageByQuality.observation.toFixed(1)),
@@ -259,4 +436,8 @@ export function simulateStudio(scene: SecurityScene): SimulationResult {
     recommendations,
     adversarialPath,
   };
+}
+
+export function simulateStudio(scene: SecurityScene): SimulationResult {
+  return simulateStudioInternal(scene, true);
 }

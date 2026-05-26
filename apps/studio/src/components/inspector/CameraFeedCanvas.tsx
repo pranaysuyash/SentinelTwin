@@ -5,6 +5,7 @@ import { Canvas } from "@react-three/fiber";
 import { useMemo } from "react";
 
 import type { CameraNode, SecurityScene } from "@/schema/security-scene";
+import { getYawPitchDirection } from "@/simulation/geometry";
 import { useStudioStore } from "@/store/studio-store";
 
 function CameraFeedScene({
@@ -19,16 +20,12 @@ function CameraFeedScene({
   dimensions: SecurityScene["dimensions"];
 }) {
   const target = useMemo(() => {
-    const yawRad = (camera.yawDeg * Math.PI) / 180;
-    const pitchRad = (camera.pitchDeg * Math.PI) / 180;
-    const lookDirX = Math.sin(yawRad) * Math.cos(pitchRad);
-    const lookDirY = Math.sin(pitchRad);
-    const lookDirZ = Math.cos(yawRad) * Math.cos(pitchRad);
+    const direction = getYawPitchDirection(camera.yawDeg, camera.pitchDeg);
 
     return [
-      camera.position[0] + lookDirX * 5,
-      camera.position[1] + lookDirY * 5,
-      camera.position[2] + lookDirZ * 5,
+      camera.position[0] + direction.x * 5,
+      camera.position[1] + direction.y * 5,
+      camera.position[2] + direction.z * 5,
     ] as [number, number, number];
   }, [camera.pitchDeg, camera.position, camera.yawDeg]);
 
@@ -99,7 +96,7 @@ export function CameraFeedCanvas({ cameraId }: { cameraId: string }) {
     <div className="relative w-full overflow-hidden rounded-lg border border-[#1f2536]" style={{ aspectRatio: "16 / 9" }}>
       <Canvas
         camera={{ position: camera.position, fov: camera.fovHorizontalDeg, near: 0.1, far: 50 }}
-        shadows
+        shadows="percentage"
         gl={{ preserveDrawingBuffer: true }}
       >
         <CameraFeedScene camera={camera} walls={scene.walls} obstructions={scene.obstructions} dimensions={scene.dimensions} />

@@ -47,6 +47,18 @@ export type CellComputation = CoverageCellResult & {
   probabilities: number[];
 };
 
+export type CameraEvaluation = {
+  quality: DoriQuality;
+  ppm: number;
+  probability: number;
+  blockedBy?: string;
+};
+
+export type CoverageEvaluator = {
+  evaluatePoint: (camera: CameraNode, point: [number, number], targetHeightM?: number) => CameraEvaluation;
+  computeCoverageCells: (cellsPerMeter?: number) => CellComputation[];
+};
+
 function deriveResolutionWidth(camera: CameraNode) {
   if (camera.resolutionWidth) {
     return camera.resolutionWidth;
@@ -115,6 +127,12 @@ function getDetectionProbability(quality: DoriQuality) {
   }[quality];
 }
 
+function getQualityThresholds(scene: SecurityScene) {
+  return scene.assumptions.doriStandard === "iec62676"
+    ? scene.assumptions.pixelsPerMeter
+    : DORI_THRESHOLDS;
+}
+
 function buildWallGeometry(wall: WallNode) {
   const [sx, sz] = wall.start;
   const [ex, ez] = wall.end;
@@ -160,6 +178,38 @@ function buildVisionMesh(scene: SecurityScene): VisionMesh {
     });
   }
 
+  for (const door of scene.doors) {
+    const doorState = String(door.state);
+    if (doorState === "open") continue;
+    const [width, height, thickness] = door.dimensions;
+    const geometry = new THREE.BoxGeometry(width, height, thickness);
+    geometry.translate(door.position[0], door.position[1], door.position[2]);
+    geometries.push(geometry);
+    sources.push({
+      id: door.id,
+      material: "solid",
+      visionTransmission: doorState === "locked" || doorState === "restricted" ? 0.05 : 0,
+      label: door.label,
+    });
+  }
+
+  for (const window of scene.windows) {
+    if (window.state === "open") continue;
+    const [width, height, thickness] = window.dimensions;
+    const geometry = new THREE.BoxGeometry(width, height, thickness);
+    geometry.translate(window.position[0], window.position[1], window.position[2]);
+    geometries.push(geometry);
+    sources.push({
+      id: window.id,
+      material: window.state,
+      visionTransmission:
+        window.state === "reflective"
+          ? Math.min(0.2, window.visionTransmission)
+          : window.visionTransmission,
+      label: window.label,
+    });
+  }
+
   const merged = mergeGeometries(geometries, true);
   merged.computeBoundsTree?.();
 
@@ -191,12 +241,11 @@ function getSourceForIntersection(mesh: THREE.Mesh, faceIndex?: number): VisionS
 
 function assessOcclusion(
   camera: CameraNode,
-  cell: GridCell,
+  target: THREE.Vector3,
   raycaster: THREE.Raycaster,
   visionMesh: VisionMesh,
 ) {
   const origin = new THREE.Vector3(...camera.position);
-  const target = new THREE.Vector3(cell.x, 1.2, cell.z);
   const direction = target.clone().sub(origin).normalize();
   const distance = origin.distanceTo(target);
 
@@ -239,12 +288,13 @@ function assessOcclusion(
 }
 
 function evaluateCameraAgainstCell(
+  scene: SecurityScene,
   camera: CameraNode,
   cell: GridCell,
+  targetHeightM: number,
   raycaster: THREE.Raycaster,
   visionMesh: VisionMesh,
-  scene: SecurityScene,
-) {
+): CameraEvaluation {
   if (camera.status !== "on") {
     return {
       quality: "none" as DoriQuality,
@@ -255,7 +305,17 @@ function evaluateCameraAgainstCell(
   }
 
   const origin = new THREE.Vector3(...camera.position);
-  const target = new THREE.Vector3(cell.x, 1.2, cell.z);
+  const target = new THREE.Vector3(cell.x, targetHeightM, cell.z);
+  const distance = origin.distanceTo(target);
+  if (distance > camera.rangeM) {
+    return {
+      quality: "none" as DoriQuality,
+      ppm: 0,
+      probability: 0,
+      blockedBy: undefined as string | undefined,
+    };
+  }
+
   const direction = target.clone().sub(origin).normalize();
   const targetYaw = THREE.MathUtils.radToDeg(Math.atan2(direction.x, -direction.z));
   const targetPitch = THREE.MathUtils.radToDeg(
@@ -267,7 +327,7 @@ function evaluateCameraAgainstCell(
   if (
     Math.abs(hAngle) > camera.fovHorizontalDeg / 2 ||
     Math.abs(vAngle) > camera.fovVerticalDeg / 2
-  ) {
+    ) {
     return {
       quality: "none" as DoriQuality,
       ppm: 0,
@@ -276,7 +336,7 @@ function evaluateCameraAgainstCell(
     };
   }
 
-  const occlusion = assessOcclusion(camera, cell, raycaster, visionMesh);
+  const occlusion = assessOcclusion(camera, target, raycaster, visionMesh);
 
   if (occlusion.blocked) {
     return {
@@ -287,7 +347,6 @@ function evaluateCameraAgainstCell(
     };
   }
 
-  const distance = origin.distanceTo(target);
   let ppm = computePixelDensity(camera, distance);
   const edgeAngle = Math.max(Math.abs(hAngle), Math.abs(vAngle));
 
@@ -299,7 +358,7 @@ function evaluateCameraAgainstCell(
   ppm *= occlusion.materialPenalty;
   ppm *= 1 - getLightingPenalty(camera, cell, scene.securityLights, scene);
 
-  const quality = ppmToQuality(ppm);
+  const quality = ppmToQuality(ppm, getQualityThresholds(scene));
 
   return {
     quality,
@@ -309,55 +368,80 @@ function evaluateCameraAgainstCell(
   };
 }
 
-export function computeCoverageCells(scene: SecurityScene, cellsPerMeter = 4) {
-  const { cells } = buildCoverageGrid(scene, cellsPerMeter);
+export function createCoverageEvaluator(scene: SecurityScene): CoverageEvaluator {
   const visionMesh = buildVisionMesh(scene);
   const raycaster = new THREE.Raycaster();
-  const results: CellComputation[] = [];
 
-  for (const cell of cells) {
-    if (!cell.walkable) continue;
+  const evaluatePoint = (
+    camera: CameraNode,
+    point: [number, number],
+    targetHeightM = scene.assumptions.personHeightM,
+  ): CameraEvaluation => {
+    const cellLike: GridCell = {
+      id: "point",
+      x: point[0],
+      z: point[1],
+      walkable: true,
+    };
 
-    let bestQuality: DoriQuality = "none";
-    let bestPpm = 0;
-    const coveringCameras: string[] = [];
-    const blockedBy = new Set<string>();
-    const probabilities: number[] = [];
+    return evaluateCameraAgainstCell(
+      scene,
+      camera,
+      cellLike,
+      targetHeightM,
+      raycaster,
+      visionMesh,
+    );
+  };
 
-    for (const camera of scene.cameras) {
-      const evaluation = evaluateCameraAgainstCell(
-        camera,
-        cell,
-        raycaster,
-        visionMesh,
-        scene,
-      );
+  const computeCoverageCells = (cellsPerMeter = 4) => {
+    const { cells } = buildCoverageGrid(scene, cellsPerMeter);
+    const results: CellComputation[] = [];
 
-      if (evaluation.blockedBy) {
-        blockedBy.add(evaluation.blockedBy);
+    for (const cell of cells) {
+      if (!cell.walkable) continue;
+
+      let bestQuality: DoriQuality = "none";
+      let bestPpm = 0;
+      const coveringCameras: string[] = [];
+      const blockedBy = new Set<string>();
+      const probabilities: number[] = [];
+
+      for (const camera of scene.cameras) {
+        const evaluation = evaluatePoint(camera, [cell.x, cell.z], scene.assumptions.personHeightM);
+
+        if (evaluation.blockedBy) {
+          blockedBy.add(evaluation.blockedBy);
+        }
+
+        if (evaluation.quality !== "none") {
+          coveringCameras.push(camera.id);
+          probabilities.push(evaluation.probability);
+        }
+
+        bestQuality = maxQuality(bestQuality, evaluation.quality);
+        bestPpm = Math.max(bestPpm, evaluation.ppm);
       }
 
-      if (evaluation.quality !== "none") {
-        coveringCameras.push(camera.id);
-        probabilities.push(evaluation.probability);
-      }
-
-      bestQuality = maxQuality(bestQuality, evaluation.quality);
-      bestPpm = Math.max(bestPpm, evaluation.ppm);
+      results.push({
+        x: cell.x,
+        z: cell.z,
+        quality: bestQuality,
+        coveringCameras,
+        blockedBy: [...blockedBy],
+        ppm: bestPpm,
+        probabilities,
+      });
     }
 
-    results.push({
-      x: cell.x,
-      z: cell.z,
-      quality: bestQuality,
-      coveringCameras,
-      blockedBy: [...blockedBy],
-      ppm: bestPpm,
-      probabilities,
-    });
-  }
+    return results;
+  };
 
-  return results;
+  return { evaluatePoint, computeCoverageCells };
+}
+
+export function computeCoverageCells(scene: SecurityScene, cellsPerMeter = 4) {
+  return createCoverageEvaluator(scene).computeCoverageCells(cellsPerMeter);
 }
 
 export function getForwardVector(camera: CameraNode) {
@@ -369,22 +453,28 @@ export function getQualityShare(cells: CellComputation[], quality: DoriQuality) 
   return (cells.filter((cell) => cell.quality === quality).length / cells.length) * 100;
 }
 
-export function getRecognitionAreaPct(cells: CellComputation[]) {
+export function getRecognitionAreaPct(
+  cells: CellComputation[],
+  thresholds: { detection: number; observation: number; recognition: number; identification: number } = DORI_THRESHOLDS,
+) {
   if (cells.length === 0) return 0;
   return (
     (cells.filter((cell) => {
       const score = cell.ppm;
-      return score >= DORI_THRESHOLDS.recognition;
+      return score >= thresholds.recognition;
     }).length /
       cells.length) *
     100
   );
 }
 
-export function getIdentificationAreaPct(cells: CellComputation[]) {
+export function getIdentificationAreaPct(
+  cells: CellComputation[],
+  thresholds: { detection: number; observation: number; recognition: number; identification: number } = DORI_THRESHOLDS,
+) {
   if (cells.length === 0) return 0;
   return (
-    (cells.filter((cell) => cell.ppm >= DORI_THRESHOLDS.identification).length /
+    (cells.filter((cell) => cell.ppm >= thresholds.identification).length /
       cells.length) *
     100
   );

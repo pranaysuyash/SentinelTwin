@@ -19,6 +19,7 @@ import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { useStudioStore } from "@/store/studio-store";
 import { useSimulation } from "@/hooks/use-simulation";
+import { WorkspacePresetSwitcher } from "@/components/dock/WorkspacePresetSwitcher";
 
 function SimStatus() {
   const dirty = useStudioStore((s) => s.simulationDirty);
@@ -75,6 +76,7 @@ export function TopBar() {
   const { runSimulation } = useSimulation();
   const envMode = useStudioStore((s) => s.environmentMode);
   const setEnvMode = useStudioStore((s) => s.setEnvironmentMode);
+  const setBottomTab = useStudioStore((s) => s.setBottomTab);
   const saveSnapshot = useStudioStore((s) => s.saveSnapshot);
   const running = useStudioStore((s) => s.simulationRunning);
   const [sceneOpen, setSceneOpen] = useState(false);
@@ -177,6 +179,8 @@ export function TopBar() {
           <SimStatus />
         </div>
 
+        <WorkspacePresetSwitcher />
+
         <button
           onClick={runSimulation}
           disabled={running}
@@ -191,12 +195,26 @@ export function TopBar() {
           {running ? "Running" : "Run Simulation"}
         </button>
 
-        <SurfaceButton>
+        <SurfaceButton onClick={() => setEnvMode(envMode === "night" ? "day" : "night")}>
           <Moon className="h-3 w-3" />
           Night Mode
         </SurfaceButton>
 
-        <SurfaceButton>
+        <SurfaceButton
+          onClick={() => {
+            const { scene, updateNode, getSelectedCamera, selectNode } = useStudioStore.getState();
+            const selectedCamera = getSelectedCamera();
+            if (!selectedCamera) {
+              const fallback = scene.cameras.find((camera) => camera.status === "on") ?? scene.cameras[0];
+              if (!fallback) return;
+              updateNode(fallback.id, { status: "off" });
+              selectNode(fallback.id);
+              return;
+            }
+
+            updateNode(selectedCamera.id, { status: selectedCamera.status === "on" ? "off" : "on" });
+          }}
+        >
           <Shield className="h-3 w-3" />
           Camera Failure
         </SurfaceButton>
@@ -212,12 +230,12 @@ export function TopBar() {
           Save Snapshot
         </SurfaceButton>
 
-        <SurfaceButton>
+        <SurfaceButton onClick={() => setBottomTab("beforeafter")}>
           <Clapperboard className="h-3 w-3" />
           Compare
         </SurfaceButton>
 
-        <SurfaceButton>
+        <SurfaceButton onClick={() => setBottomTab("report")}>
           <FileText className="h-3 w-3" />
           Generate Report
         </SurfaceButton>

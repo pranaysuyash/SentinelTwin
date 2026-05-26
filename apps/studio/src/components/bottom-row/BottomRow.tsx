@@ -156,17 +156,20 @@ function ReportSummaryPanel() {
   const result = useStudioStore((s) => s.simulationResult);
   const zone = result?.criticalZoneResults[0];
   const criticalIssue = result?.issues.find((issue) => issue.category === "quality_fail" && issue.severity === "critical")?.description
-    ?? "Cash Counter is not meeting Recognition requirement.";
-  const primaryCause = result?.issues.find((issue) => issue.category === "blindspot")
-    ? "Cupboard obstructs Camera 1 view. Distance too far for recognition from Camera 2."
-    : result?.recommendations[0]?.description
-      ?? "Cupboard obstructs Camera 1 view. Distance too far for recognition from Camera 2.";
+    ?? result?.issues.find((issue) => issue.category === "quality_fail")?.description
+    ?? "Critical zone is not meeting the requested quality threshold.";
+  const primaryCause = result?.issues.find((issue) => issue.category === "blindspot")?.description
+    ?? result?.recommendations[0]?.description
+    ?? "Coverage requires a scene or camera adjustment.";
   const impact = zone
-    ? `Subject can be observed but not recognized at the ${zone.label.toLowerCase()}.`
-    : "Subject can be observed but not recognized at the counter.";
+    ? `Current simulated quality for ${zone.label} is ${zone.actualQuality} against a ${zone.requiredQuality} target.`
+    : "A critical zone is below the requested target quality.";
   const recommendation = result?.recommendations.length
-    ? `${result.recommendations[0]?.description} ${result.recommendations[1]?.description ?? ""}`.trim()
-    : "Move cupboard or adjust Camera 2, consider higher resolution or reposition.";
+    ? result.recommendations
+      .map((rec) => `${rec.description}${rec.verified ? " (verified)" : " (not yet verified)"}`)
+      .slice(0, 2)
+      .join(" ")
+    : "No verified recommendation is available yet.";
 
   return (
     <BottomSection

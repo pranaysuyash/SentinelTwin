@@ -1,27 +1,44 @@
 "use client";
 
 import { Html, OrbitControls } from "@react-three/drei";
-import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber";
+import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { Camera, Layers, Lightbulb, MousePointer2, RefreshCcw, Square } from "lucide-react";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 import { type CameraNode, type SecurityIssue } from "@/schema/security-scene";
 import { getYawPitchDirection } from "@/simulation/geometry";
-import { useStudioStore, type ActiveTool } from "@/store/studio-store";
+import { useStudioStore } from "@/store/studio-store";
 import {
   ENVIRONMENT_THEMES,
-  SceneLighting,
   SceneFloor,
   SceneWalls,
+  SceneDoors,
+  SceneWindows,
   SceneObstructions,
   ScenePathLine,
-  AdversarialPathLine,
+  CoverageSegmentPath,
   CoverageHeatmapInstanced,
-  type EnvironmentTheme,
 } from "./SharedScene";
 import { CoverageLegend } from "./CoverageLegend";
 import { createCameraNode, createObstructionNode, createSecurityLightNode } from "@/lib/node-factory";
+
+function getMapFrame(width: number, depth: number) {
+  const centerX = width / 2;
+  const centerZ = depth / 2;
+  const span = Math.max(width, depth);
+
+  return {
+    // Look at slightly above floor so the room reads well
+    target: new THREE.Vector3(centerX, 0.5, centerZ),
+    // Classic isometric-style: 45° elevation, front-right corner view
+    position: new THREE.Vector3(
+      centerX + width * 0.55,
+      span * 0.62,
+      centerZ + depth * 0.88,
+    ),
+  };
+}
 
 function CameraFrustum({ camera, selected }: { camera: CameraNode; selected: boolean }) {
   const [px, py, pz] = camera.position;
@@ -29,8 +46,9 @@ function CameraFrustum({ camera, selected }: { camera: CameraNode; selected: boo
   const range = Math.min(camera.rangeM, 12);
 
   const quaternion = useMemo(() => {
-    const up = new THREE.Vector3(0, 1, 0);
-    return new THREE.Quaternion().setFromUnitVectors(up, forward);
+    // Flip: -Y (base/wide end) points in forward direction → tip at camera, base at far end
+    const down = new THREE.Vector3(0, -1, 0);
+    return new THREE.Quaternion().setFromUnitVectors(down, forward);
   }, [forward]);
 
   const centerPos = useMemo(
@@ -40,17 +58,27 @@ function CameraFrustum({ camera, selected }: { camera: CameraNode; selected: boo
 
   const radius = Math.tan((camera.fovHorizontalDeg / 2) * (Math.PI / 180)) * range;
 
+  const color = camera.status === "on" ? "#60a5fa" : "#6b7280";
+
   return (
-    <mesh position={centerPos} quaternion={quaternion}>
-      <coneGeometry args={[radius, range, 18, 1, true]} />
-      <meshBasicMaterial
-        color={camera.status === "on" ? "#60a5fa" : "#6b7280"}
-        transparent
-        opacity={selected ? 0.18 : 0.08}
-        side={THREE.DoubleSide}
-        depthWrite={false}
-      />
-    </mesh>
+    <group>
+      {/* Lateral surface — solid tri shape from above */}
+      <mesh position={centerPos} quaternion={quaternion}>
+        <coneGeometry args={[radius, range, 24, 1, false]} />
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={selected ? 0.55 : 0.38}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+        />
+      </mesh>
+      {/* Edge outline for the cone boundary */}
+      <lineSegments position={centerPos} quaternion={quaternion}>
+        <edgesGeometry args={[new THREE.ConeGeometry(radius, range, 24, 1, false)]} />
+        <lineBasicMaterial color={color} transparent opacity={selected ? 0.85 : 0.65} />
+      </lineSegments>
+    </group>
   );
 }
 
@@ -107,41 +135,6 @@ function CameraMarker({ camera, selected }: { camera: CameraNode; selected: bool
           </div>
         </Html>
       )}
-    </group>
-  );
-}
-
-function DecorativeShelving() {
-  const shelves = useMemo(
-    () => [
-      { position: [1.15, 0.65, 1.3], size: [0.34, 1.3, 2.6], rotation: 0 },
-      { position: [1.15, 0.65, 4.95], size: [0.34, 1.3, 2.9], rotation: 0 },
-      { position: [8.85, 0.65, 1.3], size: [0.34, 1.3, 2.6], rotation: 0 },
-      { position: [8.85, 0.65, 4.95], size: [0.34, 1.3, 2.9], rotation: 0 },
-      { position: [3.2, 0.75, 2.1], size: [1.85, 1.5, 0.48], rotation: Math.PI / 2 },
-      { position: [6.8, 0.75, 2.1], size: [1.85, 1.5, 0.48], rotation: Math.PI / 2 },
-      { position: [3.1, 0.6, 5.9], size: [1.55, 1.2, 0.48], rotation: Math.PI / 2 },
-      { position: [6.9, 0.6, 5.9], size: [1.55, 1.2, 0.48], rotation: Math.PI / 2 },
-    ],
-    [],
-  );
-
-  return (
-    <group>
-      {shelves.map((shelf, index) => (
-        <group key={index} position={shelf.position as [number, number, number]} rotation={[0, shelf.rotation, 0]}>
-          <mesh castShadow receiveShadow>
-            <boxGeometry args={shelf.size as [number, number, number]} />
-            <meshStandardMaterial color="#4c3824" roughness={0.84} metalness={0.06} />
-          </mesh>
-          {[0.42, 0.05, -0.32].map((offset) => (
-            <mesh key={offset} position={[0, offset, 0]} castShadow>
-              <boxGeometry args={[shelf.size[0] * 0.95, 0.03, shelf.size[2] * 0.94]} />
-              <meshStandardMaterial color="#6d522f" roughness={0.86} />
-            </mesh>
-          ))}
-        </group>
-      ))}
     </group>
   );
 }
@@ -364,6 +357,9 @@ function SceneGeometry() {
         <SceneWalls walls={scene.walls} />
       ) : null}
 
+      <SceneDoors doors={scene.doors} />
+      <SceneWindows windows={scene.windows} />
+
       {layers.obstructions ? (
         <SceneObstructions obstructions={scene.obstructions} selectedId={selected} />
       ) : null}
@@ -402,10 +398,89 @@ function SceneGeometry() {
       )) : null}
 
       {layers.paths && result?.adversarialPath ? (
-        <AdversarialPathLine waypoints={result.adversarialPath.waypoints.map((waypoint) => waypoint.position)} />
+        <CoverageSegmentPath waypoints={result.adversarialPath.waypoints} />
       ) : null}
+
+      {layers.paths ? <PathReplayActor /> : null}
     </>
   );
+}
+
+function PathReplayActor() {
+  const scene = useStudioStore((s) => s.scene);
+  const pathReplay = useStudioStore((s) => s.pathReplay);
+  const setPathReplayProgress = useStudioStore((s) => s.setPathReplayProgress);
+  const setPathReplayPlaying = useStudioStore((s) => s.setPathReplayPlaying);
+
+  const path = scene.paths[0];
+  const meshRef = useRef<THREE.Mesh>(null);
+
+  const totalDuration = useMemo(() => {
+    if (!path || path.points.length < 2) return 1;
+    let dist = 0;
+    for (let i = 1; i < path.points.length; i++) {
+      const [x0, z0] = path.points[i - 1].position;
+      const [x1, z1] = path.points[i].position;
+      dist += Math.sqrt((x1 - x0) ** 2 + (z1 - z0) ** 2);
+    }
+    return dist / (path.speedMps ?? 1.2);
+  }, [path]);
+
+  useFrame((_, delta) => {
+    if (!pathReplay.playing || !path || path.points.length < 2) return;
+    const next = pathReplay.progress + (delta * pathReplay.speed) / totalDuration;
+    if (next >= 1) {
+      setPathReplayPlaying(false);
+      setPathReplayProgress(0);
+      return;
+    }
+    setPathReplayProgress(next);
+  });
+
+  const actorPos = useMemo(() => {
+    if (!path || path.points.length < 2) return new THREE.Vector3(0, 0.18, 0);
+    const t = pathReplay.progress;
+    const n = path.points.length - 1;
+    const seg = t * n;
+    const i = Math.min(Math.floor(seg), n - 1);
+    const f = seg - i;
+    const [x0, z0] = path.points[i].position;
+    const [x1, z1] = path.points[i + 1]?.position ?? [x0, z0];
+    return new THREE.Vector3(x0 + (x1 - x0) * f, 0.18, z0 + (z1 - z0) * f);
+  }, [path, pathReplay.progress]);
+
+  if (!path || (!pathReplay.playing && pathReplay.progress === 0)) return null;
+
+  return (
+    <mesh ref={meshRef} position={actorPos}>
+      <sphereGeometry args={[0.18, 12, 12]} />
+      <meshStandardMaterial color="#f97316" emissive="#f97316" emissiveIntensity={0.5} />
+    </mesh>
+  );
+}
+
+function SceneFrameRig() {
+  const camera = useThree((s) => s.camera);
+  const controls = useThree((s) => s.controls);
+  const scene = useStudioStore((s) => s.scene);
+
+  useEffect(() => {
+    const { width, depth } = scene.dimensions;
+    const { target, position } = getMapFrame(width, depth);
+
+    camera.position.copy(position);
+    camera.lookAt(target);
+    camera.updateProjectionMatrix();
+
+    const orbitControls = controls as unknown as { target: THREE.Vector3; update: () => void } | undefined;
+
+    if (orbitControls) {
+      orbitControls.target.copy(target);
+      orbitControls.update();
+    }
+  }, [camera, controls, scene.dimensions.depth, scene.dimensions.width]);
+
+  return null;
 }
 
 const TOOL_GHOST_COLORS: Record<string, string> = {
@@ -643,10 +718,15 @@ function ControlHintBar() {
 
 export function WorkspaceCanvas() {
   const envMode = useStudioStore((s) => s.environmentMode);
+  const scene = useStudioStore((s) => s.scene);
   const theme = ENVIRONMENT_THEMES[envMode] ?? ENVIRONMENT_THEMES.day;
+  const frame = useMemo(
+    () => getMapFrame(scene.dimensions.width, scene.dimensions.depth),
+    [scene.dimensions.depth, scene.dimensions.width],
+  );
 
   return (
-    <div className="relative flex-1 overflow-hidden bg-[#07090d]">
+    <div className="absolute inset-0 overflow-hidden bg-[#07090d]">
       <div className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(circle_at_50%_36%,rgba(255,255,255,0.06),transparent_46%),linear-gradient(180deg,rgba(6,9,14,0.1),rgba(6,9,14,0.48)_100%)]" />
       <div className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-16 bg-gradient-to-b from-black/18 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-24 bg-gradient-to-t from-black/28 to-transparent" />
@@ -657,10 +737,10 @@ export function WorkspaceCanvas() {
       <ControlHintBar />
 
       <Canvas
-        camera={{ position: [12.8, 7.6, 11.6], fov: 31, near: 0.1, far: 200 }}
+        camera={{ position: [frame.position.x, frame.position.y, frame.position.z], fov: 44, near: 0.1, far: 260 }}
         gl={{ antialias: true, alpha: false }}
-        style={{ background: theme.background }}
-        shadows
+        style={{ width: "100%", height: "100%", background: theme.background }}
+        shadows="percentage"
       >
         <color attach="background" args={[theme.background]} />
         <fog attach="fog" args={[theme.background, 12, 24]} />
@@ -675,19 +755,20 @@ export function WorkspaceCanvas() {
           shadow-mapSize={[1024, 1024]}
         />
         <directionalLight position={[-5, 8, -8]} intensity={theme.fill} color="#a5c2ff" />
-        <pointLight position={[5, 2.8, 3.5]} intensity={envMode === "night" ? 0.8 : 1.15} distance={8} color="#fff6d8" />
+        <pointLight position={[5, 2.8, 3.5]} intensity={envMode === "night" ? 1.0 : 1.45} distance={10} color="#fff6d8" />
 
         <Suspense fallback={null}>
           <SceneGeometry />
         </Suspense>
 
+        <SceneFrameRig />
         <ToolPlacementFloor />
 
         <OrbitControls
           makeDefault
-          target={[5.05, 0.6, 3.8]}
+          target={[frame.target.x, frame.target.y, frame.target.z]}
           minDistance={5.5}
-          maxDistance={22}
+          maxDistance={40}
           minPolarAngle={Math.PI / 4.2}
           maxPolarAngle={Math.PI / 2.08}
           enableDamping

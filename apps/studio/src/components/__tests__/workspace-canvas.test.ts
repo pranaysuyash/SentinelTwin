@@ -2,15 +2,19 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
 const workspaceCanvasPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/workspace/WorkspaceCanvas.tsx";
+const sharedScenePath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/workspace/SharedScene.tsx";
 
 describe("WorkspaceCanvas obstruction selection", () => {
   test("makes obstruction boxes selectable and visually highlighted", () => {
-    const source = readFileSync(workspaceCanvasPath, "utf8");
+    const workspaceSource = readFileSync(workspaceCanvasPath, "utf8");
+    const sharedSceneSource = readFileSync(sharedScenePath, "utf8");
 
-    expect(source).toContain('const selectNode = useStudioStore((s) => s.selectNode);');
-    expect(source).toContain('const selectedId = useStudioStore((s) => s.selectedNodeId);');
-    expect(source).toContain('onClick={(e) => { e.stopPropagation(); selectNode(obs.id); }}');
-    expect(source).toContain('emissive={isSelected ? "#1e3a5f" : "#000000"}');
-    expect(source).toContain("<lineSegments>");
+    expect(workspaceSource).toContain('const selected = useStudioStore((s) => s.selectedNodeId);');
+    expect(workspaceSource).toContain('<SceneObstructions obstructions={scene.obstructions} selectedId={selected} />');
+    expect(sharedSceneSource).toContain('const storeSelect = useStudioStore((s) => s.selectNode);');
+    expect(sharedSceneSource).toContain('selectedId === obs.id');
+    expect(sharedSceneSource).toContain('onClick={(e) => { e.stopPropagation(); handleSelect(obs.id); }}');
+    expect(sharedSceneSource).toContain('emissive={isSelected ? "#1e3a5f" : "#000000"}');
+    expect(sharedSceneSource).toContain("<lineSegments>");
   });
 });

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-import { createSmallRetailShopScene } from "@/demo-scenes/small-retail-shop";
+import { createSmallRetailShopScene, smallRetailShopScene } from "@/demo-scenes/small-retail-shop";
 import {
   type AnyEditableNode,
   type CameraNode,
@@ -13,13 +13,33 @@ import {
 } from "@/schema/security-scene";
 import { simulateStudio } from "@/simulation/simulate-studio";
 
-export type ViewMode = "map" | "wall" | "replay";
+export type ViewMode = "map" | "wall" | "replay" | "camera_view" | "compare";
+export type DockSide = "left" | "right" | "bottom";
+export type WorkspacePreset =
+  | "edit"
+  | "coverage"
+  | "camera_wall"
+  | "replay"
+  | "compare"
+  | "report"
+  | "debug"
+  | "focus";
+
+type DockSnapshot = {
+  workspacePreset: WorkspacePreset;
+  leftDockCollapsed: boolean;
+  rightDockCollapsed: boolean;
+  bottomDockCollapsed: boolean;
+  leftDockSizePx: number;
+  rightDockSizePx: number;
+  bottomDockSizePx: number;
+};
 
 export type ActiveTool =
   | "select" | "camera" | "obstruction" | "light"
   | "path" | "zone" | "door_window" | "wall" | "measure" | "comment";
 
-export type BottomTab = "metrics" | "issues" | "timeline" | "beforeafter" | "report" | "debug";
+export type BottomTab = "metrics" | "issues" | "timeline" | "beforeafter" | "counterfactual" | "report" | "debug" | "threat";
 
 export type InspectorTab = "properties" | "view" | "status" | "analytics" | "failures";
 
@@ -42,14 +62,38 @@ export type StudioStoreState = {
   activeTool: ActiveTool;
   bottomTab: BottomTab;
   inspectorTab: InspectorTab;
+  workspacePreset: WorkspacePreset;
+  focusMode: boolean;
+  leftDockCollapsed: boolean;
+  rightDockCollapsed: boolean;
+  bottomDockCollapsed: boolean;
+  leftDockSizePx: number;
+  rightDockSizePx: number;
+  bottomDockSizePx: number;
+  previousLayout: DockSnapshot | null;
   layerVisibility: LayerVisibility;
   environmentMode: "day" | "night" | "dusk";
   showDebugOverlays: boolean;
   autoRecompute: boolean;
+  demoMode: boolean;
+  demoStep: number;
+  setDemoMode: (active: boolean) => void;
+  setDemoStep: (step: number) => void;
+
+  pathReplay: { playing: boolean; progress: number; speed: number };
+  setPathReplayPlaying: (playing: boolean) => void;
+  setPathReplayProgress: (progress: number) => void;
+  setPathReplaySpeed: (speed: number) => void;
 
   selectNode: (id: string | null) => void;
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
+  setWorkspacePreset: (preset: WorkspacePreset) => void;
+  toggleDock: (side: DockSide) => void;
+  setDockCollapsed: (side: DockSide, collapsed: boolean) => void;
+  setDockSize: (side: DockSide, sizePx: number) => void;
+  enterFocusMode: () => void;
+  restorePreviousLayout: () => void;
 
   setActiveTool: (tool: ActiveTool) => void;
   setBottomTab: (tab: BottomTab) => void;
@@ -128,6 +172,132 @@ const DEFAULT_LAYERS: LayerVisibility = {
   grid: true, walls_floors: true, labels: true,
 };
 
+const DEFAULT_DOCK_SIZES = {
+  left: 248,
+  right: 344,
+  bottom: 248,
+} as const;
+
+const PRESET_LAYOUTS: Record<WorkspacePreset, Omit<DockSnapshot, "workspacePreset">> = {
+  edit: {
+    leftDockCollapsed: false,
+    rightDockCollapsed: false,
+    bottomDockCollapsed: false,
+    leftDockSizePx: DEFAULT_DOCK_SIZES.left,
+    rightDockSizePx: DEFAULT_DOCK_SIZES.right,
+    bottomDockSizePx: 248,
+  },
+  coverage: {
+    leftDockCollapsed: true,
+    rightDockCollapsed: false,
+    bottomDockCollapsed: false,
+    leftDockSizePx: DEFAULT_DOCK_SIZES.left,
+    rightDockSizePx: 372,
+    bottomDockSizePx: 240,
+  },
+  camera_wall: {
+    leftDockCollapsed: true,
+    rightDockCollapsed: true,
+    bottomDockCollapsed: true,
+    leftDockSizePx: DEFAULT_DOCK_SIZES.left,
+    rightDockSizePx: DEFAULT_DOCK_SIZES.right,
+    bottomDockSizePx: 216,
+  },
+  replay: {
+    leftDockCollapsed: true,
+    rightDockCollapsed: false,
+    bottomDockCollapsed: false,
+    leftDockSizePx: DEFAULT_DOCK_SIZES.left,
+    rightDockSizePx: 360,
+    bottomDockSizePx: 324,
+  },
+  compare: {
+    leftDockCollapsed: true,
+    rightDockCollapsed: false,
+    bottomDockCollapsed: false,
+    leftDockSizePx: DEFAULT_DOCK_SIZES.left,
+    rightDockSizePx: 368,
+    bottomDockSizePx: 280,
+  },
+  report: {
+    leftDockCollapsed: false,
+    rightDockCollapsed: false,
+    bottomDockCollapsed: false,
+    leftDockSizePx: DEFAULT_DOCK_SIZES.left,
+    rightDockSizePx: 368,
+    bottomDockSizePx: 240,
+  },
+  debug: {
+    leftDockCollapsed: false,
+    rightDockCollapsed: false,
+    bottomDockCollapsed: false,
+    leftDockSizePx: DEFAULT_DOCK_SIZES.left,
+    rightDockSizePx: 368,
+    bottomDockSizePx: 280,
+  },
+  focus: {
+    leftDockCollapsed: true,
+    rightDockCollapsed: true,
+    bottomDockCollapsed: true,
+    leftDockSizePx: DEFAULT_DOCK_SIZES.left,
+    rightDockSizePx: DEFAULT_DOCK_SIZES.right,
+    bottomDockSizePx: DEFAULT_DOCK_SIZES.bottom,
+  },
+};
+
+const VIEW_MODE_PRESETS: Record<ViewMode, WorkspacePreset> = {
+  map: "edit",
+  wall: "camera_wall",
+  replay: "replay",
+  camera_view: "coverage",
+  compare: "compare",
+};
+
+const clampDockSize = (side: DockSide, sizePx: number) => {
+  const min = side === "bottom" ? 160 : 180;
+  const max = side === "bottom" ? 480 : 520;
+  return Math.max(min, Math.min(max, Math.round(sizePx)));
+};
+
+function snapshotLayout(state: Pick<
+  StudioStoreState,
+  | "workspacePreset"
+  | "leftDockCollapsed"
+  | "rightDockCollapsed"
+  | "bottomDockCollapsed"
+  | "leftDockSizePx"
+  | "rightDockSizePx"
+  | "bottomDockSizePx"
+>): DockSnapshot {
+  return {
+    workspacePreset: state.workspacePreset,
+    leftDockCollapsed: state.leftDockCollapsed,
+    rightDockCollapsed: state.rightDockCollapsed,
+    bottomDockCollapsed: state.bottomDockCollapsed,
+    leftDockSizePx: state.leftDockSizePx,
+    rightDockSizePx: state.rightDockSizePx,
+    bottomDockSizePx: state.bottomDockSizePx,
+  };
+}
+
+function dockSizeKey(side: DockSide) {
+  return side === "left"
+    ? "leftDockSizePx"
+    : side === "right"
+      ? "rightDockSizePx"
+      : "bottomDockSizePx";
+}
+
+function dockCollapsedKey(side: DockSide) {
+  return side === "left"
+    ? "leftDockCollapsed"
+    : side === "right"
+      ? "rightDockCollapsed"
+      : "bottomDockCollapsed";
+}
+
+const DEMO_SNAPSHOT_BASE_TS = smallRetailShopScene.createdAt + 18 * 60_000;
+
 function createSnapshotVariant(
   label: string,
   minutesAgo: number,
@@ -137,12 +307,12 @@ function createSnapshotVariant(
   mutate?.(scene);
   const simulation = simulateStudio(scene);
   scene.simulation = simulation;
-  scene.updatedAt = Date.now() - minutesAgo * 60_000;
+  scene.updatedAt = DEMO_SNAPSHOT_BASE_TS - minutesAgo * 60_000;
 
   return {
     id: `snap_${label.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`,
     label,
-    createdAt: Date.now() - minutesAgo * 60_000,
+    createdAt: DEMO_SNAPSHOT_BASE_TS - minutesAgo * 60_000,
     scene: cloneSecurityScene(scene),
     simulation,
   };
@@ -190,14 +360,113 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   viewMode: "map",
   bottomTab: "metrics",
   inspectorTab: "properties",
+  workspacePreset: "edit",
+  focusMode: false,
+  leftDockCollapsed: false,
+  rightDockCollapsed: false,
+  bottomDockCollapsed: false,
+  leftDockSizePx: DEFAULT_DOCK_SIZES.left,
+  rightDockSizePx: DEFAULT_DOCK_SIZES.right,
+  bottomDockSizePx: DEFAULT_DOCK_SIZES.bottom,
+  previousLayout: null,
   layerVisibility: { ...DEFAULT_LAYERS },
   environmentMode: "day",
   showDebugOverlays: false,
   autoRecompute: true,
+  demoMode: false,
+  demoStep: 0,
+
+  pathReplay: { playing: false, progress: 0, speed: 1 },
+  setPathReplayPlaying: (playing) => set((s) => ({ pathReplay: { ...s.pathReplay, playing } })),
+  setPathReplayProgress: (progress) => set((s) => ({ pathReplay: { ...s.pathReplay, progress } })),
+  setPathReplaySpeed: (speed) => set((s) => ({ pathReplay: { ...s.pathReplay, speed } })),
 
   selectNode: (id) => set({ selectedNodeId: id }),
   setActiveTool: (tool) => set({ activeTool: tool }),
-  setViewMode: (mode) => set({ viewMode: mode }),
+  setViewMode: (mode) => {
+    // Auto-switch the bottom tab to the most contextually relevant tab for each view mode
+    const TAB_FOR_MODE: Partial<Record<ViewMode, BottomTab>> = {
+      replay:      "timeline",
+      camera_view: "timeline",
+      compare:     "beforeafter",
+      map:         "metrics",
+    };
+    const autoTab = TAB_FOR_MODE[mode];
+    set({ viewMode: mode, ...(autoTab ? { bottomTab: autoTab } : {}) });
+  },
+  setWorkspacePreset: (preset) =>
+    set((state) => {
+      if (preset === "focus") {
+        if (state.focusMode) return state;
+        return {
+          previousLayout: snapshotLayout(state),
+          workspacePreset: preset,
+          focusMode: true,
+          leftDockCollapsed: true,
+          rightDockCollapsed: true,
+          bottomDockCollapsed: true,
+        };
+      }
+
+      const layout = PRESET_LAYOUTS[preset];
+      return {
+        workspacePreset: preset,
+        focusMode: false,
+        previousLayout: null,
+        leftDockCollapsed: layout.leftDockCollapsed,
+        rightDockCollapsed: layout.rightDockCollapsed,
+        bottomDockCollapsed: layout.bottomDockCollapsed,
+        leftDockSizePx: layout.leftDockSizePx,
+        rightDockSizePx: layout.rightDockSizePx,
+        bottomDockSizePx: layout.bottomDockSizePx,
+      };
+    }),
+  toggleDock: (side) =>
+    set((state) => {
+      if (state.focusMode) return state;
+      const key = dockCollapsedKey(side);
+      return { [key]: !state[key] } as Pick<StudioStoreState, typeof key>;
+    }),
+  setDockCollapsed: (side, collapsed) =>
+    set((state) => {
+      if (state.focusMode) return state;
+      const key = dockCollapsedKey(side);
+      return { [key]: collapsed } as Pick<StudioStoreState, typeof key>;
+    }),
+  setDockSize: (side, sizePx) =>
+    set((state) => {
+      if (state.focusMode) return state;
+      const key = dockSizeKey(side);
+      return { [key]: clampDockSize(side, sizePx) } as Pick<StudioStoreState, typeof key>;
+    }),
+  enterFocusMode: () =>
+    set((state) => {
+      if (state.focusMode) return state;
+      return {
+        previousLayout: snapshotLayout(state),
+        workspacePreset: "focus",
+        focusMode: true,
+        leftDockCollapsed: true,
+        rightDockCollapsed: true,
+        bottomDockCollapsed: true,
+      };
+    }),
+  restorePreviousLayout: () =>
+    set((state) => {
+      if (!state.previousLayout) return state;
+      const layout = state.previousLayout;
+      return {
+        workspacePreset: layout.workspacePreset,
+        focusMode: false,
+        leftDockCollapsed: layout.leftDockCollapsed,
+        rightDockCollapsed: layout.rightDockCollapsed,
+        bottomDockCollapsed: layout.bottomDockCollapsed,
+        leftDockSizePx: layout.leftDockSizePx,
+        rightDockSizePx: layout.rightDockSizePx,
+        bottomDockSizePx: layout.bottomDockSizePx,
+        previousLayout: null,
+      };
+    }),
   setBottomTab: (tab) => set({ bottomTab: tab }),
   setInspectorTab: (tab) => set({ inspectorTab: tab }),
   toggleLayer: (layer) =>
@@ -206,6 +475,8 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     set((s) => ({ layerVisibility: { ...s.layerVisibility, [layer]: visible } })),
   setEnvironmentMode: (mode) => set({ environmentMode: mode }),
   toggleAutoRecompute: () => set((s) => ({ autoRecompute: !s.autoRecompute })),
+  setDemoMode: (active) => set({ demoMode: active }),
+  setDemoStep: (step) => set({ demoStep: step }),
 
   addNode: (node) =>
     set((s) => ({ scene: insertNode(s.scene, node), simulationDirty: true })),

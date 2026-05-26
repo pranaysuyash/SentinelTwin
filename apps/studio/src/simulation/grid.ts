@@ -14,6 +14,22 @@ export function buildCoverageGrid(scene: SecurityScene, cellsPerMeter = 4) {
   const cols = Math.round(scene.dimensions.width * cellsPerMeter);
   const rows = Math.round(scene.dimensions.depth * cellsPerMeter);
 
+  const isInsideClosedDoor = (point: [number, number]) =>
+    scene.doors.some((door) => {
+      const doorState = String(door.state);
+      if (doorState === "open") return false;
+
+      const [width, , thickness] = door.dimensions;
+      const [dx, , dz] = door.position;
+      const halfWidth = width / 2;
+      const halfDepth = Math.max(thickness, 0.08) / 2;
+
+      return (
+        Math.abs(point[0] - dx) <= halfWidth &&
+        Math.abs(point[1] - dz) <= halfDepth
+      );
+    });
+
   for (let row = 0; row < rows; row += 1) {
     for (let col = 0; col < cols; col += 1) {
       const x = col * cellSize + cellSize / 2;
@@ -38,7 +54,7 @@ export function buildCoverageGrid(scene: SecurityScene, cellsPerMeter = 4) {
         id: `cell_${col}_${row}`,
         x,
         z,
-        walkable: !blockedByObstruction && !insidePrivacyZone,
+        walkable: !blockedByObstruction && !insidePrivacyZone && !isInsideClosedDoor(point),
       });
     }
   }

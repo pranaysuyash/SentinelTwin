@@ -422,3 +422,60 @@ Keep `bun test` for test execution (fast, works correctly with resolved node_mod
 
 **Note for agents:** When adding new dependencies, use `npm install <package>` (not `bun add`).
 When running tests, use `bun test` or `npm test` (both invoke the same `bun test` command via package.json).
+
+---
+
+## D-033 | 2026-05-26 | CoverageSegmentPath supersedes AdversarialPathLine; remove redundant overlays
+
+**Decision:** `CoverageSegmentPath` (colored segments per DORI quality level) supersedes
+`AdversarialPathLine` (uniform dashed red line) as the canonical adversarial path renderer.
+`AdversarialPathLine` was left in-place during Phase 4, creating a supersession violation:
+`WorkspaceCanvas.tsx` and `PathReplayView.tsx` both rendered the old component alongside the new one.
+
+**Rationale:**
+- Colored segments (DORI blue→green→amber→orange→red) carry more information than uniform red
+  — the security professional can immediately see which sections of the path are detected vs. blind
+- Two parallel path renders in the same scene create visual confusion (overlapping lines)
+- motto_v2.md Section 7 mandates removing superseded artifacts, not just building replacements
+
+**Files changed:**
+- `WorkspaceCanvas.tsx` — replaced `AdversarialPathLine` with `CoverageSegmentPath`, passing
+  waypoints with their `detectionQuality` for colored segment rendering
+- `PathReplayView.tsx` — removed redundant `AdversarialPathLine` overlay; `CoverageSegmentPath`
+  already renders the coverage failure path with richer color coding
+- `SharedScene.tsx` — `AdversarialPathLine` retained as a shared export (may be removed in
+  a future cleanup pass after confirming no remaining references)
+
+**Rejected alternative — keep both for different use cases:**
+- Uniform red line carries strictly less information than colored segments
+- No scenario where a uniform red line is preferable to color-coded quality bands
+- Two conflicting path renders in the same view is a visual bug, not a feature
+
+**Lesson:** When building a replacement component, immediately check all references to the old
+one and update them. Supersession is not "build new + keep old" — it's "build new + redirect every
+reference to the new path, then remove the old."
+
+---
+
+## D-032 | 2026-05-26 | Simulation trust boundaries must be verified against the scene contract
+
+**Decision:** The coverage engine must honor the schema it exposes: camera `rangeM`, scene assumption thresholds, target height profiles for zone analysis, closed-door walkability, and door/window visibility penalties are all part of the canonical simulation path. Recommendations are only marked verified after a patched scene is re-simulated and shows a measurable improvement.
+
+**Rationale:**
+- SentinelTwin's value depends on trust, not just visual polish. If the schema exposes a field, the engine should use it or remove it.
+- `rangeM` is a hard physical bound and must gate visibility before pixel-density scoring.
+- `pixelsPerMeter` is a product input, not documentation; the quality classifier and area metrics must use it.
+- Critical zones should be evaluated with target-specific sample heights so a face, plate, or vehicle is not reduced to a single hard-coded height.
+- Recommendations cannot claim verification without a counterfactual simulation pass.
+
+**Implementation:**
+- `apps/studio/src/simulation/coverage.ts`
+- `apps/studio/src/simulation/grid.ts`
+- `apps/studio/src/simulation/simulate-studio.ts`
+- `apps/studio/src/components/view/PathReplayView.tsx`
+- `apps/studio/src/components/bottom-panel/ReportLiteTab.tsx`
+
+**Alternative considered:** Leave the existing demo heuristics in place and only rename UI copy.
+- Rejected because it preserves overclaiming and keeps the engine out of sync with the schema.
+
+**Revisit trigger:** If the data model adds new target classes or sensor types, extend the target-height mapping and verification helpers rather than adding another scoring path.

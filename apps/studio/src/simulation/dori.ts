@@ -15,11 +15,18 @@ export const QUALITY_ORDER: DoriQuality[] = [
   "identification",
 ];
 
-export function ppmToQuality(ppm: number): DoriQuality {
-  if (ppm >= DORI_THRESHOLDS.identification) return "identification";
-  if (ppm >= DORI_THRESHOLDS.recognition) return "recognition";
-  if (ppm >= DORI_THRESHOLDS.observation) return "observation";
-  if (ppm >= DORI_THRESHOLDS.detection) return "detection";
+export type PpmThresholds = {
+  detection: number;
+  observation: number;
+  recognition: number;
+  identification: number;
+};
+
+export function ppmToQuality(ppm: number, thresholds: PpmThresholds = DORI_THRESHOLDS): DoriQuality {
+  if (ppm >= thresholds.identification) return "identification";
+  if (ppm >= thresholds.recognition) return "recognition";
+  if (ppm >= thresholds.observation) return "observation";
+  if (ppm >= thresholds.detection) return "detection";
   return "none";
 }
 

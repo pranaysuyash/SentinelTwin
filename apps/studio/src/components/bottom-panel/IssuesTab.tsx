@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, AlertTriangle, Info, ShieldAlert, ChevronRight } from "lucide-react";
+import { AlertCircle, AlertTriangle, ChevronRight, Info, ShieldAlert, Wrench } from "lucide-react";
 import { useStudioStore } from "@/store/studio-store";
 import { Badge } from "@/components/shared/Badge";
 import type { SecurityIssue } from "@/schema/security-scene";
@@ -26,6 +26,8 @@ function SeverityIcon({ severity }: { severity: SecurityIssue["severity"] }) {
 
 export function IssuesTab() {
   const result = useStudioStore((s) => s.simulationResult);
+  const updateNode = useStudioStore((s) => s.updateNode);
+  const selectNode = useStudioStore((s) => s.selectNode);
 
   if (!result) {
     return (
@@ -68,11 +70,16 @@ export function IssuesTab() {
                 <div className="mt-1 flex flex-wrap gap-1">
                   <span className="text-[8px] text-[#4a5568]">Cameras:</span>
                   {issue.affectedCameras.map((c) => (
-                    <span key={c} className="text-[8px] text-[#8090a8] bg-[#1a1d26] px-1 rounded">{c}</span>
+                    <button
+                      key={c}
+                      onClick={() => selectNode(c)}
+                      className="text-[8px] text-blue-400 bg-[#1a1d26] px-1 rounded hover:bg-[#1e2235] cursor-pointer transition-colors"
+                    >
+                      {c}
+                    </button>
                   ))}
                 </div>
               )}
-
             </div>
           </div>
         ))}
@@ -81,12 +88,36 @@ export function IssuesTab() {
         {result.recommendations.length > 0 && (
           <div className="mt-3">
             <div className="text-[9px] font-semibold text-[#3a4158] uppercase tracking-widest mb-2">Recommendations</div>
-            {result.recommendations.map((rec, i) => (
-              <div key={i} className="flex items-start gap-2 py-1.5 border-b border-[#181b26]">
-                <ChevronRight className="w-3 h-3 text-blue-400 mt-0.5 flex-shrink-0" />
-                <span className="text-[10px] text-[#8090a8]">{rec.description}</span>
-              </div>
-            ))}
+            {result.recommendations.map((rec, i) => {
+              const canFix = rec.verified && rec.affectedNodeId != null;
+              const applyFix = () => {
+                if (!rec.affectedNodeId) return;
+                if (rec.type === "rotate_camera" && rec.suggestedYawDeg != null && rec.suggestedPitchDeg != null) {
+                  updateNode(rec.affectedNodeId, { yawDeg: rec.suggestedYawDeg, pitchDeg: rec.suggestedPitchDeg });
+                  selectNode(rec.affectedNodeId);
+                } else if (rec.type === "move_object" && rec.suggestedPosition != null) {
+                  updateNode(rec.affectedNodeId, { position: rec.suggestedPosition });
+                  selectNode(rec.affectedNodeId);
+                }
+              };
+              return (
+                <div key={i} className="flex items-start gap-2 py-2 border-b border-[#181b26]">
+                  <ChevronRight className="w-3 h-3 text-blue-400 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[10px] text-[#8090a8]">{rec.description}</span>
+                    {canFix && (
+                      <button
+                        onClick={applyFix}
+                        className="mt-1.5 flex items-center gap-1 px-2 py-0.5 rounded bg-blue-600/20 border border-blue-600/30 text-[9px] text-blue-300 hover:bg-blue-600/30 transition-colors"
+                      >
+                        <Wrench className="w-2.5 h-2.5" />
+                        Apply Fix
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

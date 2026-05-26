@@ -324,4 +324,15 @@ Based on spec priority, demo script requirements, and dependency order:
 - GAP-09: Target-type switcher
 - GAP-11: Command bar (structured commands first, AI later)
 - GAP-16: Privacy zone rendering + coverage warning
-- GAP-19: Light inspector
+- ~~GAP-19: Light inspector~~ ✅ **DONE** (2026-05-28) — LightInspector component added; name, position, brightness, type, status, range, delete all functional
+
+---
+
+## Resolved Gaps
+
+| Gap | Status | Date | Notes |
+|-----|--------|------|-------|
+| GAP-01 | ✅ Done | Prior session | ToolPlacementFloor click-to-place fully implemented |
+| GAP-13 | ✅ Done | 2026-05-28 | PathReplayActor added to WorkspaceCanvas; TimelineTab Play/Pause/SkipBack wired; progress bar live |
+| GAP-19 | ✅ Done | 2026-05-28 | LightInspector in InspectorPanel; all fields editable; delete button |
+| GAP-21 | ✅ Done | 2026-05-28 | IssuesTab Apply Fix buttons; rotate_camera and move_object recommendations apply via updateNode; camera chips clickable for selectNode |

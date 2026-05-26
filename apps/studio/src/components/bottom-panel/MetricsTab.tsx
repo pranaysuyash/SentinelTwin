@@ -3,6 +3,7 @@
 import { useStudioStore } from "@/store/studio-store";
 import { DonutChart } from "@/components/shared/DonutChart";
 import { Badge } from "@/components/shared/Badge";
+import { qualityToScore } from "@/simulation/dori";
 
 function MetricCard({ label, children, className = "" }: {
   label: string; children: React.ReactNode; className?: string;
@@ -20,6 +21,7 @@ function MetricCard({ label, children, className = "" }: {
 export function MetricsTab() {
   const result = useStudioStore((s) => s.simulationResult);
   const scene  = useStudioStore((s) => s.scene);
+  const snapshots = useStudioStore((s) => s.snapshots);
 
   if (!result) {
     return (
@@ -44,12 +46,22 @@ export function MetricsTab() {
   const worstQuality = result.worstAreaQuality;
   const worstColor = worstQuality === "none" ? "#ef4444" : worstQuality === "detection" ? "#f97316" : "#eab308";
   const worstLabel = worstQuality === "none" ? "NO COVERAGE" : worstQuality.toUpperCase();
+  const worstScore = qualityToScore(worstQuality);
 
-  // Find obstruction near worst area
-  const hasBlockage = result.issues.some((i) => i.category === "blindspot");
-  const blockageLabel = hasBlockage ? "Near Cupboard" : "—";
+  // Data-driven: extract obstruction label from first blindspot issue description
+  const firstBlindspotIssue = result.issues.find((i) => i.category === "blindspot");
+  const blockageLabel = firstBlindspotIssue
+    ? firstBlindspotIssue.description.split(" is obstructing")[0] ?? "—"
+    : "—";
 
-  // Coverage donut color: orange/detection range
+  // Compute coverage delta from second-to-last snapshot
+  const prevCoverage = snapshots.length >= 2
+    ? snapshots[snapshots.length - 2]?.simulation?.totalCoveragePct
+    : undefined;
+  const coverageDelta = prevCoverage !== undefined
+    ? result.totalCoveragePct - prevCoverage
+    : undefined;
+
   const coverageColor = result.totalCoveragePct > 80 ? "#22c55e"
     : result.totalCoveragePct > 60 ? "#f97316"
     : "#ef4444";
@@ -66,7 +78,11 @@ export function MetricsTab() {
           label={`${Math.round(result.totalCoveragePct)}%`}
           sublabel="Walkable Area"
         />
-        <div className="mt-1 text-[9px] text-green-400 font-medium">+6% vs last run</div>
+        {coverageDelta !== undefined ? (
+          <div className={`mt-1 text-[9px] font-medium ${coverageDelta >= 0 ? "text-green-400" : "text-red-400"}`}>
+            {coverageDelta >= 0 ? "+" : ""}{coverageDelta.toFixed(1)}% vs previous
+          </div>
+        ) : null}
       </MetricCard>
 
       {/* 2: Critical Zones */}
@@ -126,7 +142,7 @@ export function MetricsTab() {
       {/* 5: Worst Area Quality */}
       <MetricCard label="Worst Area Quality">
         <div className="text-center">
-          <div className="text-[28px] font-bold leading-none" style={{ color: worstColor }}>1</div>
+          <div className="text-[28px] font-bold leading-none" style={{ color: worstColor }}>{worstScore}</div>
           <div className="mt-1 text-[10px] font-bold tracking-wide" style={{ color: worstColor }}>
             {worstLabel}
           </div>

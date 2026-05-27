@@ -34,3 +34,30 @@ _Search timed out. Retry when the retrieval store is less busy._
 ### Prompts and Guidelines
 - Collection: `projects_proj_sentineltwin`
 - Query: `prompts and guidelines for SentinelTwin`
+_Search timed out. Retry when the retrieval store is less busy._
+
+### System Learning Graph
+- Collection: `projects_proj_sentineltwin`
+- Query: `knowledge graph memory learning feedback loops autoresearch semantic taste graph for SentinelTwin`
+_Search timed out. Retry when the retrieval store is less busy._
+
+## Shared Cross-Project Retrieval
+
+### Reusable Patterns
+- Collection: `projects_workspace_shared`
+- Query: `similar architecture patterns for SentinelTwin`
+_Collection check timed out. Retry shortly._
+
+### Process Templates
+- Collection: `projects_workspace_shared`
+- Query: `project management templates and workflows`
+_Collection check timed out. Retry shortly._
+
+### Common Failure Modes
+- Collection: `projects_workspace_shared`
+- Query: `lessons learned mistakes retrospectives postmortems`
+_Search timed out. Retry when the retrieval store is less busy._
+
+### System Learning Graph
+- Collection: `projects_workspace_shared`
+- Query: `knowledge graph memory learning feedback loops autoresearch semantic taste graph`

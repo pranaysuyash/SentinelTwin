@@ -463,48 +463,6 @@ function IssuePill({
   );
 }
 
-function SceneCard({
-  scene,
-  result,
-  onOpen,
-}: {
-  scene: SecurityScene;
-  result: SimulationResult | null;
-  onOpen: () => void;
-}) {
-  const coverage = result?.totalCoveragePct ?? scene.simulation?.totalCoveragePct ?? null;
-  const issues = result?.issues.length ?? (scene.simulation?.issues ?? []).length ?? 0;
-  const pass = result?.criticalZoneResults.filter((zone) => zone.status === "pass").length ?? (scene.simulation?.criticalZoneResults ?? []).filter((zone) => zone.status === "pass").length;
-  const total = result?.criticalZoneResults.length ?? (scene.simulation?.criticalZoneResults ?? []).length ?? scene.criticalZones.length;
-
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="group min-w-[230px] rounded-[24px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(79,183,255,0.32)] hover:bg-[color:var(--st-panel-2)]"
-    >
-      <div className="overflow-hidden rounded-[18px] border border-white/[0.06]">
-        <ScenePreview scene={scene} result={result ?? scene.simulation ?? null} compact showLabels={false} />
-      </div>
-      <div className="mt-3">
-        <div className="truncate text-sm font-semibold text-white">{scene.name}</div>
-        <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">{sceneSummary(scene)}</div>
-      </div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] font-medium text-white">
-          {coverage != null ? `${Math.round(coverage)}% coverage` : "Simulation pending"}
-        </span>
-        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] font-medium text-white">
-          {issues} issues
-        </span>
-        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] font-medium text-white">
-          {pass}/{total} zones pass
-        </span>
-      </div>
-    </button>
-  );
-}
-
 function sourceLabel(scene: SecurityScene) {
   return SOURCE_LABELS[scene.source];
 }
@@ -536,7 +494,6 @@ export function StudioDashboardHome({
   const totalZones = result?.criticalZoneResults.length ?? (scene.simulation?.criticalZoneResults ?? []).length ?? scene.criticalZones.length;
   const issues = [...(result?.issues ?? scene.simulation?.issues ?? [])].sort((a, b) => ISSUE_SEVERITY_ORDER[a.severity] - ISSUE_SEVERITY_ORDER[b.severity]);
   const worstIssue = issues[0] ?? null;
-  const recentScenes = [...savedScenes].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 4);
   const [projectQuery, setProjectQuery] = useState("");
   const [projectSort, setProjectSort] = useState<ProjectSort>("recent");
   const browserScenes = useMemo(() => {

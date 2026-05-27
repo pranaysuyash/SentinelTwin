@@ -269,6 +269,7 @@ export type StudioStoreState = {
   toggleLayer: (layer: LayerId) => void;
   setLayerVisibility: (layer: LayerId, visible: boolean) => void;
   setEnvironmentMode: (mode: "day" | "night" | "dusk") => void;
+  setAllZoneTargetTypes: (targetType: string) => void;
   toggleAutoRecompute: () => void;
 
   addNode: (node: AnyEditableNode) => void;

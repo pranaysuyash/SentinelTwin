@@ -626,53 +626,6 @@ function CameraMarkers() {
   );
 }
 
-// ── Coverage quality color constants ──
-
-const QUALITY_COLORS: Record<DoriQuality, string> = {
-  none: "#ef4444",
-  detection: "#f97316",
-  overview: "#f97316",
-  outline: "#fb923c",
-  observation: "#eab308",
-  discern: "#eab308",
-  perceive: "#86efac",
-  recognition: "#22c55e",
-  characterize: "#22c55e",
-  validate: "#22d3ee",
-  identification: "#3b82f6",
-  scrutinize: "#3b82f6",
-};
-
-const QUALITY_RANK: Record<DoriQuality, number> = {
-  none: 0,
-  detection: 1,
-  overview: 1,
-  outline: 1,
-  observation: 2,
-  discern: 2,
-  perceive: 2,
-  recognition: 3,
-  characterize: 3,
-  validate: 4,
-  identification: 4,
-  scrutinize: 4,
-};
-
-const QUALITY_LABELS: Record<DoriQuality, string> = {
-  none: "NONE",
-  detection: "DET",
-  overview: "OVR",
-  outline: "OTL",
-  observation: "OBS",
-  discern: "DSC",
-  perceive: "PRC",
-  recognition: "REC",
-  characterize: "CHR",
-  validate: "VAL",
-  identification: "ID",
-  scrutinize: "SCR",
-};
-
 // ── Coverage quality bands on the scrub bar ──
 
 function CoverageQualityBands({ waypoints, totalDuration }: {
@@ -695,10 +648,10 @@ function CoverageQualityBands({ waypoints, totalDuration }: {
       : next.detectionQuality;
 
     bands.push({
-      color: QUALITY_COLORS[quality],
+      color: QUALITY_COLOR[quality],
       leftPct: ((curr.timeS ?? 0) / totalDuration) * 100,
       widthPct: (segDuration / totalDuration) * 100,
-      label: QUALITY_LABELS[quality],
+      label: QUALITY_ABBR[quality],
     });
   }
 
@@ -729,10 +682,10 @@ function CoverageMiniLegend() {
         <div key={q} className="flex items-center gap-1">
           <span
             className="h-1.5 w-1.5 rounded-full"
-            style={{ backgroundColor: QUALITY_COLORS[q] }}
+            style={{ backgroundColor: QUALITY_COLOR[q] }}
           />
           <span className="text-[7px] uppercase tracking-[0.08em] text-[#5b667c]">
-            {QUALITY_LABELS[q]}
+            {QUALITY_ABBR[q]}
           </span>
         </div>
       ))}
@@ -822,7 +775,7 @@ function InfoOverlay({
         <div className="space-y-1">
           {EXPOSURE_KEYS.map((key) => (
             <div key={key} className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: QUALITY_COLORS[key] }} />
+              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: QUALITY_COLOR[key] }} />
               <div className="flex-1">
                 <div className="flex items-center justify-between">
                   <span className="text-[7px] uppercase tracking-[0.05em] text-[#5b667c]">{key}</span>
@@ -836,7 +789,7 @@ function InfoOverlay({
                     className="h-full rounded-full transition-all duration-500"
                     style={{
                       width: `${(((qualityBands[key] ?? 0) / maxExposure) * 100)}%`,
-                      backgroundColor: QUALITY_COLORS[key],
+                      backgroundColor: QUALITY_COLOR[key],
                     }}
                   />
                 </div>

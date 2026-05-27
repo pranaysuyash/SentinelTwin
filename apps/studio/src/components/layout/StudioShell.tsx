@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useState } from "react";
 import { useSimulation } from "@/hooks/use-simulation";
 import { useStudioStore, type ViewMode, type ActiveTool } from "@/store/studio-store";
+import { VIEW_MODE_KEYS, VIEW_MODE_PRESETS, TOOL_SHORTCUTS } from "@/lib/studio-constants";
 import { TopBar } from "./TopBar";
 import { StatusBar } from "./StatusBar";
 import { LeftPanel } from "@/components/left-panel/LeftPanel";
@@ -43,27 +44,6 @@ function WorkspaceArea() {
   );
 }
 
-const VIEW_MODE_KEYS: Record<string, ViewMode> = {
-  "1": "map",
-  "2": "camera_view",
-  "3": "wall",
-  "4": "replay",
-  "5": "compare",
-};
-
-const VIEW_MODE_PRESETS: Record<ViewMode, "edit" | "coverage" | "camera_wall" | "replay" | "compare"> = {
-  map: "edit",
-  camera_view: "coverage",
-  wall: "camera_wall",
-  replay: "replay",
-  compare: "compare",
-};
-
-const TOOL_SHORTCUTS: Record<string, ActiveTool> = {
-  c: "camera",
-  b: "obstruction",
-  l: "light",
-};
 
 function ShortcutsModal({ onClose }: { onClose: () => void }) {
   const shortcuts = [

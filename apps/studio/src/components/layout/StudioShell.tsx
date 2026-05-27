@@ -87,6 +87,8 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
 export default function StudioShell() {
   useSimulation();
   const demoMode = useStudioStore((s) => s.demoMode);
+  const launchNotice = useStudioStore((s) => s.launchNotice);
+  const setLaunchNotice = useStudioStore((s) => s.setLaunchNotice);
   const workspacePreset = useStudioStore((s) => s.workspacePreset);
   const focusMode = useStudioStore((s) => s.focusMode);
   const leftDockCollapsed = useStudioStore((s) => s.leftDockCollapsed);
@@ -229,9 +231,30 @@ export default function StudioShell() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
+  useEffect(() => {
+    if (!launchNotice) return;
+    const timer = window.setTimeout(() => setLaunchNotice(null), 8000);
+    return () => window.clearTimeout(timer);
+  }, [launchNotice, setLaunchNotice]);
+
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[#0b0c10] text-[#dde2ef]">
       <TopBar />
+      {launchNotice ? (
+        <div className="flex items-center justify-between gap-3 border-b border-cyan-500/15 bg-cyan-500/8 px-3 py-2 text-[11px] text-cyan-100">
+          <div className="min-w-0">
+            <span className="font-semibold text-cyan-200">Launcher result:</span>{" "}
+            <span className="text-cyan-50">{launchNotice}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setLaunchNotice(null)}
+            className="shrink-0 rounded border border-cyan-500/20 px-2 py-0.5 text-[10px] text-cyan-100 hover:bg-cyan-500/10"
+          >
+            Dismiss
+          </button>
+        </div>
+      ) : null}
 
       {fullCanvasMode ? (
         <div className="relative flex-1 min-h-0 overflow-hidden">

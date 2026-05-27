@@ -7,6 +7,7 @@ interface CriticalZoneLabelCardProps {
   borderColor: string;
   badgeBg: string;
   badgeText: string;
+  compact?: boolean;
 }
 
 export function CriticalZoneLabelCard({
@@ -16,7 +17,16 @@ export function CriticalZoneLabelCard({
   borderColor,
   badgeBg,
   badgeText,
+  compact,
 }: CriticalZoneLabelCardProps) {
+  if (compact) {
+    return (
+      <SceneFloatingCard borderColor={borderColor} textAlign="center" compact>
+        <div style={{ fontSize: 7, fontWeight: 700, color: "#f7d94a" }}>{label.toUpperCase()}</div>
+      </SceneFloatingCard>
+    );
+  }
+
   return (
     <SceneFloatingCard borderColor={borderColor} textAlign="center">
       <div style={{ fontSize: 9, fontWeight: 700, color: "#f7d94a" }}>{label.toUpperCase()}</div>

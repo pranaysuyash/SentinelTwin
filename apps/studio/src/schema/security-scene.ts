@@ -432,12 +432,69 @@ export const simulationResultSchema = z.object({
   coverageFailurePath: adversarialPathResultSchema.optional(),
   adversarialPath: adversarialPathResultSchema.optional(),
   blindRegions: z.array(blindRegionSchema).optional(),
+  occlusionBlame: z.array(z.object({
+    zoneId: z.string(),
+    zoneLabel: z.string(),
+    baselineQuality: doriQualitySchema,
+    obstructions: z.array(z.object({
+      obstructionId: z.string(),
+      label: z.string(),
+      blameFraction: z.number().min(0).max(1),
+      qualityWithout: doriQualitySchema,
+      qualityImprovement: z.number().min(0),
+    })),
+  })).optional(),
   coverageThresholds: qualityThresholdSchema.optional(),
   fragilitySummary: z.object({
     meanFragility: z.number().min(0).max(1),
     fragileCellCount: z.number().int().nonnegative(),
     robustCellCount: z.number().int().nonnegative(),
     totalCells: z.number().int().nonnegative(),
+  }).optional(),
+  kRobustness: z.object({
+    kRobustness: z.number().int().nonnegative(),
+    totalCameras: z.number().int().nonnegative(),
+    criticalSets: z.array(z.object({
+      k: z.number().int().positive(),
+      cameraIds: z.array(z.string()),
+      cameraNames: z.array(z.string()),
+      exposureScore: z.number().min(0),
+      waypointCount: z.number().int().nonnegative(),
+    })),
+    isRobust: z.boolean(),
+  }).optional(),
+  placementOracle: z.object({
+    sampleCount: z.number().int().nonnegative(),
+    templateCameraId: z.string().nullable(),
+    candidateCount: z.number().int().nonnegative(),
+    bestCandidate: z.object({
+      position: point3Schema,
+      mountType: z.enum(["wall", "ceiling"]),
+      yawDeg: z.number(),
+      pitchDeg: z.number(),
+      templateCameraId: z.string().nullable(),
+      estimatedCoverageDeltaPct: z.number(),
+      estimatedRecognitionDeltaPct: z.number(),
+      estimatedIdentificationDeltaPct: z.number(),
+      estimatedCriticalZoneGain: z.number(),
+      improvedCriticalZones: z.array(z.string()),
+      privacyZoneHits: z.array(z.string()),
+      score: z.number(),
+    }).nullable(),
+    candidates: z.array(z.object({
+      position: point3Schema,
+      mountType: z.enum(["wall", "ceiling"]),
+      yawDeg: z.number(),
+      pitchDeg: z.number(),
+      templateCameraId: z.string().nullable(),
+      estimatedCoverageDeltaPct: z.number(),
+      estimatedRecognitionDeltaPct: z.number(),
+      estimatedIdentificationDeltaPct: z.number(),
+      estimatedCriticalZoneGain: z.number(),
+      improvedCriticalZones: z.array(z.string()),
+      privacyZoneHits: z.array(z.string()),
+      score: z.number(),
+    })),
   }).optional(),
 });
 
@@ -490,6 +547,7 @@ export const hourlySecuritySnapshotSchema = z.object({
   overallCoveragePct: z.number().min(0).max(100),
   criticalZonePassCount: z.number().int().min(0),
   criticalZoneTotalCount: z.number().int().min(0),
+  criticalZoneStatuses: z.record(z.string(), z.enum(["pass", "fail", "partial"])),
   activeCameraCount: z.number().int().min(0),
   activeLightCount: z.number().int().min(0),
   adversarialPathExposureScore: z.number().min(0),
@@ -508,6 +566,29 @@ export const vulnerabilityWindowSchema = z.object({
   adversarialRouteAvailable: z.boolean(),
 });
 
+export const temporalAnomalyWindowSchema = z.object({
+  startHour: z.number().min(0).max(23),
+  startMinute: z.number().min(0).max(59),
+  endHour: z.number().min(0).max(24),
+  endMinute: z.number().min(0).max(59),
+  severity: z.enum(["high", "medium", "low"]),
+  anomalyType: z.enum(["coverage_drop", "zone_flip", "adversarial_spike", "mixed"]),
+  coverageDeltaPct: z.number(),
+  zonePassDelta: z.number().int(),
+  exposureDelta: z.number(),
+  description: z.string(),
+  affectedZones: z.array(z.string()),
+});
+
+export const temporalAnomalySummarySchema = z.object({
+  totalAnomalies: z.number().int().nonnegative(),
+  highSeverityCount: z.number().int().nonnegative(),
+  mediumSeverityCount: z.number().int().nonnegative(),
+  lowSeverityCount: z.number().int().nonnegative(),
+  worstCoverageDropPct: z.number(),
+  worstExposureJump: z.number(),
+});
+
 export const temporalSecurityProfileSchema = z.object({
   hoursAnalyzed: z.number().default(24),
   resolutionMinutes: z.number().default(15),
@@ -515,6 +596,8 @@ export const temporalSecurityProfileSchema = z.object({
   peakVulnerabilityWindows: z.array(vulnerabilityWindowSchema),
   safestPeriods: z.array(timePeriodSchema),
   criticalZoneCoverageByHour: z.record(z.string(), z.array(z.number())),
+  anomalyWindows: z.array(temporalAnomalyWindowSchema).default([]),
+  anomalySummary: temporalAnomalySummarySchema.optional(),
   computedAt: z.number().int().nonnegative(),
 });
 
@@ -615,6 +698,8 @@ export type TimeSchedule = z.infer<typeof timeScheduleSchema>;
 export type HourlySecuritySnapshot = z.infer<typeof hourlySecuritySnapshotSchema>;
 export type VulnerabilityWindow = z.infer<typeof vulnerabilityWindowSchema>;
 export type TemporalSecurityProfile = z.infer<typeof temporalSecurityProfileSchema>;
+export type TemporalAnomalyWindow = z.infer<typeof temporalAnomalyWindowSchema>;
+export type TemporalAnomalySummary = z.infer<typeof temporalAnomalySummarySchema>;
 
 export function parseSecurityScene(input: unknown): SecurityScene {
   return securitySceneSchema.parse(input);

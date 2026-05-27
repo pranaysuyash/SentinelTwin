@@ -1,0 +1,15 @@
+import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+
+const studioShellPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/layout/StudioShell.tsx";
+
+describe("Studio shell launcher handoff", () => {
+  test("surfaces launcher results after AI draft entry", () => {
+    const source = readFileSync(studioShellPath, "utf8");
+
+    expect(source).toContain("Launcher result:");
+    expect(source).toContain("setLaunchNotice(null)");
+    expect(source).toContain("window.setTimeout(() => setLaunchNotice(null), 8000)");
+    expect(source).toContain("Dismiss");
+  });
+});

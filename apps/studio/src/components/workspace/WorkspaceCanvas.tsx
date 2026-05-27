@@ -51,6 +51,7 @@ import {
   createSecurityLightNode,
 } from "@/lib/node-factory";
 import { CameraPresetPicker, applyCameraPreset, getCameraPreset } from "./CameraPresetPicker";
+import { getCameraColorForId } from "@/lib/camera-colors";
 import "@/lib/three-compat";
 
 function getMapFrame(width: number, depth: number) {
@@ -210,7 +211,8 @@ function CameraFrustum({ camera, selected }: { camera: CameraNode; selected: boo
 
   const radius = Math.tan((camera.fovHorizontalDeg / 2) * (Math.PI / 180)) * range;
 
-  const color = camera.status === "on" ? "#60a5fa" : "#6b7280";
+  const cameraColor = getCameraColorForId(camera.id);
+  const color = camera.status === "on" ? cameraColor : "#6b7280";
 
   return (
     <group>
@@ -238,15 +240,23 @@ function CameraMarker({ camera, selected }: { camera: CameraNode; selected: bool
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
   const layers = useStudioStore((s) => s.layerVisibility);
+  const overlayDensity = useStudioStore((s) => s.overlayDensity);
+  const cameraLabelsVisible = useStudioStore((s) => s.overlayFilters.cameraLabels);
   const [px, py, pz] = camera.position;
   const isActive = camera.status === "on";
+  const cameraColor = getCameraColorForId(camera.id);
+
+  // Determine label rendering based on density
+  const showLabel = layers.labels && cameraLabelsVisible;
+  const labelCompact = overlayDensity === "compact";
+  const showOnlyOnHover = overlayDensity === "minimal";
 
   return (
     <group position={[px, py, pz]}>
       {selected && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.09, 0]}>
           <ringGeometry args={[0.16, 0.22, 28]} />
-          <meshBasicMaterial color="#93c5fd" transparent opacity={0.9} />
+          <meshBasicMaterial color={cameraColor} transparent opacity={0.9} />
         </mesh>
       )}
 
@@ -262,7 +272,7 @@ function CameraMarker({ camera, selected }: { camera: CameraNode; selected: bool
       >
         <mesh castShadow receiveShadow>
           <cylinderGeometry args={[0.12, 0.12, 0.08, 18]} />
-          <meshStandardMaterial color={selected ? "#71b0ff" : "#4d89eb"} emissive="#25497a" emissiveIntensity={selected ? 1.1 : 0.55} roughness={0.34} metalness={0.65} />
+          <meshStandardMaterial color={selected ? cameraColor : cameraColor} emissive={cameraColor} emissiveIntensity={selected ? 0.6 : 0.3} roughness={0.34} metalness={0.65} />
         </mesh>
         <mesh position={[0.06, 0, 0.07]} rotation={[0, Math.PI / 4, 0]} castShadow>
           <boxGeometry args={[0.09, 0.05, 0.11]} />
@@ -270,7 +280,7 @@ function CameraMarker({ camera, selected }: { camera: CameraNode; selected: bool
         </mesh>
       </group>
 
-      {layers.labels && (
+      {showLabel && (selected || !showOnlyOnHover) && (
         <Html position={[0, 0.34, 0]} center distanceFactor={11} style={{ pointerEvents: "none", whiteSpace: "nowrap" }}>
           <CameraLabelCard
             name={camera.name}
@@ -279,9 +289,26 @@ function CameraMarker({ camera, selected }: { camera: CameraNode; selected: bool
             isActive={isActive}
             status={camera.status}
             selected={selected}
+            compact={labelCompact}
           />
         </Html>
       )}
+
+      {/* In minimal mode, always show a small dot indicator for quick location */}
+      {showOnlyOnHover && !selected ? (
+        <Html position={[0, 0.18, 0]} center distanceFactor={14} style={{ pointerEvents: "none" }}>
+          <div
+            style={{
+              width: 4,
+              height: 4,
+              borderRadius: "50%",
+              backgroundColor: cameraColor,
+              opacity: 0.5,
+              boxShadow: `0 0 3px ${cameraColor}`,
+            }}
+          />
+        </Html>
+      ) : null}
     </group>
   );
 }
@@ -336,6 +363,8 @@ function CriticalZoneOverlay({
   const layers = useStudioStore((s) => s.layerVisibility);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
   const selectNode = useStudioStore((s) => s.selectNode);
+  const zoneLabelsVisible = useStudioStore((s) => s.overlayFilters.zoneLabels);
+  const overlayDensity = useStudioStore((s) => s.overlayDensity);
   if (!layers.critical_zones) return null;
 
   const xs = zone.polygon.map(([x]) => x);
@@ -376,16 +405,19 @@ function CriticalZoneOverlay({
         <edgesGeometry args={[new THREE.BoxGeometry(w, 0.01, d)]} />
         <lineBasicMaterial color={selected ? "#93c5fd" : color} transparent opacity={selected ? 0.95 : 0.72} />
       </lineSegments>
-      <Html position={[cx, 0.05, cz]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
-        <CriticalZoneLabelCard
-          label={zone.label}
-          requiredQuality={zone.requiredQuality}
-          status={status}
-          borderColor={color}
-          badgeBg={badgeBg}
-          badgeText={badgeText}
-        />
-      </Html>
+      {zoneLabelsVisible && (selected || overlayDensity !== "minimal") && (
+        <Html position={[cx, 0.05, cz]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
+          <CriticalZoneLabelCard
+            label={zone.label}
+            requiredQuality={zone.requiredQuality}
+            status={status}
+            borderColor={color}
+            badgeBg={badgeBg}
+            badgeText={badgeText}
+            compact={overlayDensity === "compact"}
+          />
+        </Html>
+      )}
     </group>
   );
 }
@@ -401,7 +433,8 @@ function ObstructionWarning({
 }) {
   const layers = useStudioStore((s) => s.layerVisibility);
   const scene = useStudioStore((s) => s.scene);
-  if (!layers.labels) return null;
+  const obsWarningsVisible = useStudioStore((s) => s.overlayFilters.obstructionWarnings);
+  if (!layers.labels || !obsWarningsVisible) return null;
 
   const affectedCamera = scene.cameras.find((camera) => camera.id === issue.affectedCameras[0]);
 
@@ -417,7 +450,8 @@ function ObstructionWarning({
 
 function EntryDoorLabel({ position }: { position: [number, number] }) {
   const layers = useStudioStore((s) => s.layerVisibility);
-  if (!layers.labels) return null;
+  const entryChipsVisible = useStudioStore((s) => s.overlayFilters.entryChips);
+  if (!layers.labels || !entryChipsVisible) return null;
 
   return (
     <Html position={[position[0], 0.14, position[1]]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
@@ -434,6 +468,7 @@ function SceneGeometry() {
   const layers = useStudioStore((s) => s.layerVisibility);
 
   const heatmapMode = useStudioStore((s) => s.heatmapMode);
+  const pathLabelsVisible = useStudioStore((s) => s.overlayFilters.pathLabels);
   const { width, depth } = scene.dimensions;
   // Data-driven: one warning per blindspot issue, positioned above the matching obstruction.
   // Label is extracted from the issue description (format: "<Label> is obstructing coverage in: ...").
@@ -513,17 +548,19 @@ function SceneGeometry() {
       {layers.cameras ? scene.cameras.map((cam) => <CameraMarker key={cam.id} camera={cam} selected={selected === cam.id} />) : null}
       {layers.camera_cones ? scene.cameras.map((cam) => <CameraFrustum key={`frust_${cam.id}`} camera={cam} selected={selected === cam.id} />) : null}
 
-      {layers.paths ? scene.paths.map((path) => (
-        <ScenePathLine
-          key={path.id}
-          id={path.id}
-          points={path.points.map((point) => point.position)}
-          onSelect={selectNode}
-          color={selected === path.id ? "#f59e0b" : undefined}
-        />
-      )) : null}
+      {layers.paths && pathLabelsVisible
+        ? scene.paths.map((path) => (
+          <ScenePathLine
+            key={path.id}
+            id={path.id}
+            points={path.points.map((point) => point.position)}
+            onSelect={selectNode}
+            color={selected === path.id ? "#f59e0b" : undefined}
+          />
+        ))
+        : null}
 
-      {layers.paths && result?.adversarialPath ? (
+      {layers.paths && pathLabelsVisible && result?.adversarialPath ? (
         <CoverageSegmentPath waypoints={result.adversarialPath.waypoints} />
       ) : null}
 
@@ -1176,6 +1213,7 @@ export function WorkspaceCanvas() {
   const scene = useStudioStore((s) => s.scene);
   const setSelectedNodes = useStudioStore((s) => s.setSelectedNodes);
   const clearSelection = useStudioStore((s) => s.clearSelection);
+  const editorMode = useStudioStore((s) => s.editor.editorMode);
   const theme = ENVIRONMENT_THEMES[envMode] ?? ENVIRONMENT_THEMES.day;
   const [selectionDrag, setSelectionDrag] = useState<SelectionDragState | null>(null);
   const frame = useMemo(
@@ -1237,6 +1275,7 @@ export function WorkspaceCanvas() {
 
         <OrbitControls
           makeDefault
+          enabled={editorMode !== "transforming"}
           target={[frame.target.x, frame.target.y, frame.target.z]}
           minDistance={5.5}
           maxDistance={40}

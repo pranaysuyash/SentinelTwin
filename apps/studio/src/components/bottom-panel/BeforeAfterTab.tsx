@@ -14,33 +14,44 @@ function QualityBar({ result }: { result: SimulationResult | undefined }) {
   const total = cells.length;
   if (total === 0) return <div className="h-3 rounded-sm bg-[#1a1d26]" />;
 
-  const counts = { identification: 0, recognition: 0, observation: 0, detection: 0, none: 0 };
-  for (const c of cells) {
-    if (c.quality in counts) counts[c.quality as keyof typeof counts]++;
-  }
-
-  const segs = [
-    { q: "identification", color: "#4ade80" },
-    { q: "recognition",    color: "#60a5fa" },
-    { q: "observation",    color: "#facc15" },
-    { q: "detection",      color: "#fb923c" },
-    { q: "none",           color: "#1a1d26" },
+  // Use score-based buckets so it works for both DORI and OODPCVS quality names
+  const Segments = [
+    { minScore: 6, maxScore: 7, label: "identification", color: "#4ade80" },
+    { minScore: 5, maxScore: 5, label: "recognition",    color: "#60a5fa" },
+    { minScore: 3, maxScore: 4, label: "observation",    color: "#facc15" },
+    { minScore: 1, maxScore: 2, label: "detection",      color: "#fb923c" },
   ] as const;
+  const noneCount = cells.filter((c) => qualityToScore(c.quality) === 0).length;
 
   return (
     <div className="flex h-3 w-full rounded overflow-hidden gap-px">
-      {segs.map(({ q, color }) => {
-        const w = (counts[q] / total) * 100;
+      {Segments.map(({ minScore, maxScore, label, color }) => {
+        const count = cells.filter((c) => {
+          const s = qualityToScore(c.quality);
+          return s >= minScore && s <= maxScore;
+        }).length;
+        const w = (count / total) * 100;
         if (w < 0.5) return null;
         return (
           <div
-            key={q}
+            key={label}
             className="h-full transition-all"
             style={{ width: `${w}%`, backgroundColor: color }}
-            title={`${q}: ${Math.round(w)}%`}
+            title={`${label}: ${Math.round(w)}%`}
           />
         );
       })}
+      {(() => {
+        const w = (noneCount / total) * 100;
+        if (w < 0.5) return null;
+        return (
+          <div
+            className="h-full transition-all"
+            style={{ width: `${w}%`, backgroundColor: "#1a1d26" }}
+            title={`none: ${Math.round(w)}%`}
+          />
+        );
+      })()}
     </div>
   );
 }

@@ -450,6 +450,7 @@ function ConfigureStep({
         {value.floorPlanResult ? (
           <div>
             <ImportReview
+              key={`${value.floorPlanResult.imageWidth}x${value.floorPlanResult.imageHeight}-${value.floorPlanResult.walls.length}-${value.floorPlanResult.doors.length}-${value.floorPlanResult.windows.length}-${value.floorPlanResult.confidence.toFixed(3)}`}
               result={value.floorPlanResult}
               warnings={value.importWarnings}
               onImageChange={() => onChange({ floorPlanResult: null, floorPlanFile: null })}

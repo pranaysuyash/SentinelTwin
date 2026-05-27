@@ -355,7 +355,16 @@ export function TransformHandles() {
       dragRef.current = null;
       setEditorMode("idle");
     }
-  }, [selected, setEditorMode]);
+
+    // Defensive reset: if component unmounts mid-drag, restore editor mode
+    return () => {
+      if (dragRef.current) {
+        dragRef.current = null;
+        setEditorMode("idle");
+        setSelectedHandle(undefined);
+      }
+    };
+  }, [selected, setEditorMode, setSelectedHandle]);
 
   useEffect(() => {
     const onMove = (event: MouseEvent) => {
@@ -460,12 +469,25 @@ export function TransformHandles() {
       );
     }
 
+    const yawRad = (node.yawDeg * Math.PI) / 180;
+
     return (
       <group>
+        {/* Yaw ring arc — thin torus segment showing the yaw direction plane */}
+        <mesh position={[node.position[0], node.position[1] + 0.02, node.position[2]]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.74, 0.82, 48]} />
+          <meshBasicMaterial color="#22c55e" transparent opacity={0.2} side={THREE.DoubleSide} depthWrite={false} />
+        </mesh>
+        {/* Directional arc indicator on the ring — highlights the viewing direction quadrant */}
+        <mesh position={[node.position[0], node.position[1] + 0.025, node.position[2]]} rotation={[-Math.PI / 2, 0, yawRad - Math.PI / 4]}>
+          <ringGeometry args={[0.74, 0.84, 12, 1, 0, Math.PI / 2]} />
+          <meshBasicMaterial color="#22c55e" transparent opacity={0.5} side={THREE.DoubleSide} depthWrite={false} />
+        </mesh>
+        {/* Handle spheres */}
         <HandleSphere position={[node.position[0], node.position[1], node.position[2]]} color="#60a5fa" onPointerDown={beginDrag("move")} label="Move" />
         <HandleSphere position={[node.position[0], Math.max(0.5, node.position[1] + 0.7), node.position[2]]} color="#f59e0b" onPointerDown={beginDrag("height")} label="Height" />
         <HandleSphere position={[node.position[0], node.position[1] + 0.95, node.position[2] + 0.12]} color="#38bdf8" onPointerDown={beginDrag("pitch")} label="Pitch" />
-        <HandleSphere position={[node.position[0] + Math.cos((node.yawDeg * Math.PI) / 180) * 0.8, node.position[1], node.position[2] + Math.sin((node.yawDeg * Math.PI) / 180) * 0.8]} color="#22c55e" onPointerDown={beginDrag("rotate")} label="Yaw" />
+        <HandleSphere position={[node.position[0] + Math.cos(yawRad) * 0.8, node.position[1], node.position[2] + Math.sin(yawRad) * 0.8]} color="#22c55e" onPointerDown={beginDrag("rotate")} label="Yaw" />
       </group>
     );
   }

@@ -229,8 +229,8 @@ export function recalibrateFloorPlanResult(
 
 export function normalizeFloorPlanResult(result: FloorPlanResult): FloorPlanResult {
   const normalizedWalls = mergeCollinearWalls(result.walls);
-  const normalizedDoors = snapOpeningsToWalls(result.doors, normalizedWalls);
-  const normalizedWindows = snapOpeningsToWalls(result.windows, normalizedWalls);
+  const normalizedDoors = snapOpeningsToWalls(result.doors, normalizedWalls, result.scalePixelsPerMeter);
+  const normalizedWindows = snapOpeningsToWalls(result.windows, normalizedWalls, result.scalePixelsPerMeter);
   const nextDimensions = extractDimensions(normalizedWalls, result.scalePixelsPerMeter, result.roomDimensions.heightM);
   const nextConfidence = calculateConfidence(normalizedWalls, result.imageWidth, result.imageHeight);
 
@@ -433,7 +433,7 @@ function detectOpenings(
     }
   }
 
-  return { doors: snapOpeningsToWalls(doors, walls), windows: snapOpeningsToWalls(windows, walls) };
+  return { doors: snapOpeningsToWalls(doors, walls, 50), windows: snapOpeningsToWalls(windows, walls, 50) };
 }
 
 function mergeCollinearWalls(walls: WallSegment[]): WallSegment[] {
@@ -518,6 +518,7 @@ function mergeIntervals<
 function snapOpeningsToWalls<T extends DoorOpening | WindowOpening>(
   openings: T[],
   walls: WallSegment[],
+  scalePixelsPerMeter: number,
 ): T[] {
   if (openings.length === 0 || walls.length === 0) return openings;
 
@@ -545,7 +546,7 @@ function snapOpeningsToWalls<T extends DoorOpening | WindowOpening>(
       const y = Math.round((bestWall.wall.start.y + bestWall.wall.end.y) / 2);
       const minX = Math.min(bestWall.wall.start.x, bestWall.wall.end.x);
       const maxX = Math.max(bestWall.wall.start.x, bestWall.wall.end.x);
-      const halfWidthPx = Math.max(4, Math.round((opening.widthM * 50) / 2));
+      const halfWidthPx = Math.max(4, Math.round((opening.widthM * scalePixelsPerMeter) / 2));
       const x = clamp(opening.position.x, minX + halfWidthPx, maxX - halfWidthPx);
       return { ...opening, position: { x, y } };
     }
@@ -553,7 +554,7 @@ function snapOpeningsToWalls<T extends DoorOpening | WindowOpening>(
     const x = Math.round((bestWall.wall.start.x + bestWall.wall.end.x) / 2);
     const minY = Math.min(bestWall.wall.start.y, bestWall.wall.end.y);
     const maxY = Math.max(bestWall.wall.start.y, bestWall.wall.end.y);
-    const halfWidthPx = Math.max(4, Math.round((opening.widthM * 50) / 2));
+    const halfWidthPx = Math.max(4, Math.round((opening.widthM * scalePixelsPerMeter) / 2));
     const y = clamp(opening.position.y, minY + halfWidthPx, maxY - halfWidthPx);
     return { ...opening, position: { x, y } };
   });

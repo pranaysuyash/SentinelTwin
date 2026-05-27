@@ -1,5 +1,7 @@
 import type { SecurityScene, SimulationResult } from "@/schema/security-scene";
 
+type ReportScene = Omit<SecurityScene, "snapshots" | "scenarios">;
+
 // ── Report Data Interface ──
 
 export interface ReportData {
@@ -65,7 +67,7 @@ export interface ReportData {
 // ── Build Report Data ──
 
 export function buildReportData(
-  scene: SecurityScene,
+  scene: ReportScene,
   result: SimulationResult,
   options?: {
     title?: string;
@@ -187,9 +189,9 @@ export interface CompareReportData {
 }
 
 export function buildCompareReportData(
-  beforeScene: SecurityScene,
+  beforeScene: ReportScene,
   beforeResult: SimulationResult,
-  afterScene: SecurityScene,
+  afterScene: ReportScene,
   afterResult: SimulationResult,
 ): CompareReportData {
   const before = buildReportData(beforeScene, beforeResult);
@@ -591,10 +593,31 @@ export function exportAsText(report: ReportData): string {
 
 // ── Compare Report Export ──
 
-export function exportCompareAsHtml(compare: CompareReportData): string {
+export function exportCompareAsHtml(
+  compare: CompareReportData,
+  visuals?: { beforeImageDataUrl?: string; afterImageDataUrl?: string },
+): string {
   const deltaClass = (val: number) =>
     val > 0 ? "delta-positive" : val < 0 ? "delta-negative" : "delta-neutral";
   const deltaSign = (val: number) => (val > 0 ? "+" : "") + val.toFixed(1);
+  const beforeEvidence = visuals?.beforeImageDataUrl ?? scenarioEvidenceDataUri({
+    label: "Before",
+    coverage: compare.before.summary.totalCoveragePct,
+    recognition: compare.before.summary.recognitionAreaPct,
+    zonesPassing: compare.before.summary.zonesPassing,
+    zonesTotal: compare.before.summary.zonesTotal,
+    issues: compare.before.summary.issuesCount,
+    accent: "#64748b",
+  });
+  const afterEvidence = visuals?.afterImageDataUrl ?? scenarioEvidenceDataUri({
+    label: "After",
+    coverage: compare.after.summary.totalCoveragePct,
+    recognition: compare.after.summary.recognitionAreaPct,
+    zonesPassing: compare.after.summary.zonesPassing,
+    zonesTotal: compare.after.summary.zonesTotal,
+    issues: compare.after.summary.issuesCount,
+    accent: "#16a34a",
+  });
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -623,6 +646,13 @@ export function exportCompareAsHtml(compare: CompareReportData): string {
     .before-card, .after-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; }
     .before-card h3 { color: #64748b; margin-bottom: 8px; }
     .after-card h3 { color: #16a34a; margin-bottom: 8px; }
+    .evidence {
+      width: 100%;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      background: #fff;
+      margin-bottom: 10px;
+    }
     .delta-summary { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin: 16px 0; }
     .delta-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center; }
     .delta-card .value { font-size: 16pt; font-weight: 700; }
@@ -650,6 +680,7 @@ export function exportCompareAsHtml(compare: CompareReportData): string {
   <div class="grid-2">
     <div class="before-card">
       <h3>Before</h3>
+      <img class="evidence" src="${beforeEvidence}" alt="Before scenario visual evidence" />
       <table>
         <tr><td>Coverage</td><td>${compare.before.summary.totalCoveragePct.toFixed(1)}%</td></tr>
         <tr><td>Recognition</td><td>${compare.before.summary.recognitionAreaPct.toFixed(1)}%</td></tr>
@@ -659,6 +690,7 @@ export function exportCompareAsHtml(compare: CompareReportData): string {
     </div>
     <div class="after-card">
       <h3>After</h3>
+      <img class="evidence" src="${afterEvidence}" alt="After scenario visual evidence" />
       <table>
         <tr><td>Coverage</td><td>${compare.after.summary.totalCoveragePct.toFixed(1)}%</td></tr>
         <tr><td>Recognition</td><td>${compare.after.summary.recognitionAreaPct.toFixed(1)}%</td></tr>
@@ -752,4 +784,51 @@ function formatHour(hour: number): string {
   const period = hour >= 12 ? "PM" : "AM";
   const h = hour % 12 || 12;
   return `${h}:00 ${period}`;
+}
+
+function scenarioEvidenceDataUri(input: {
+  label: string;
+  coverage: number;
+  recognition: number;
+  zonesPassing: number;
+  zonesTotal: number;
+  issues: number;
+  accent: string;
+}): string {
+  const width = 520;
+  const height = 170;
+  const coverageW = Math.max(0, Math.min(100, input.coverage)) * 4.2;
+  const recognitionW = Math.max(0, Math.min(100, input.recognition)) * 4.2;
+  const zonesPct = input.zonesTotal > 0 ? (input.zonesPassing / input.zonesTotal) * 100 : 0;
+  const zonesW = Math.max(0, Math.min(100, zonesPct)) * 4.2;
+  const issueSeverity = Math.min(100, input.issues * 12);
+  const issueW = issueSeverity * 4.2;
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+  <rect x="0" y="0" width="${width}" height="${height}" fill="#f8fafc"/>
+  <text x="16" y="22" font-family="Arial, sans-serif" font-size="13" fill="#0f172a" font-weight="700">${escapeForSvg(input.label)} Visual Evidence</text>
+  <text x="16" y="40" font-family="Arial, sans-serif" font-size="10" fill="#64748b">Modeled summary profile (coverage, recognition, zones, issues)</text>
+  <text x="16" y="67" font-family="Arial, sans-serif" font-size="10" fill="#334155">Coverage</text>
+  <rect x="100" y="58" width="420" height="12" rx="6" fill="#e2e8f0"/>
+  <rect x="100" y="58" width="${coverageW}" height="12" rx="6" fill="${input.accent}"/>
+  <text x="100" y="95" font-family="Arial, sans-serif" font-size="10" fill="#334155">Recognition</text>
+  <rect x="100" y="86" width="420" height="12" rx="6" fill="#e2e8f0"/>
+  <rect x="100" y="86" width="${recognitionW}" height="12" rx="6" fill="#2563eb"/>
+  <text x="100" y="123" font-family="Arial, sans-serif" font-size="10" fill="#334155">Zones Passing</text>
+  <rect x="100" y="114" width="420" height="12" rx="6" fill="#e2e8f0"/>
+  <rect x="100" y="114" width="${zonesW}" height="12" rx="6" fill="#16a34a"/>
+  <text x="100" y="151" font-family="Arial, sans-serif" font-size="10" fill="#334155">Issue Pressure</text>
+  <rect x="100" y="142" width="420" height="12" rx="6" fill="#e2e8f0"/>
+  <rect x="100" y="142" width="${issueW}" height="12" rx="6" fill="#dc2626"/>
+</svg>`;
+
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+function escapeForSvg(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }

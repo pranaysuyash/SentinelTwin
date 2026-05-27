@@ -11,6 +11,7 @@ import { SceneIntelligenceTab } from "./SceneIntelligenceTab";
 import { ThreatAnalysisPanel } from "./ThreatAnalysisPanel";
 import { IssuesTab } from "./IssuesTab";
 import { MetricsTab } from "./MetricsTab";
+import { NovelAlgorithmsTab } from "./NovelAlgorithmsTab";
 import { ReportLiteTab } from "./ReportLiteTab";
 import { TimelineTab } from "./TimelineTab";
 import { RedundancyTab } from "./RedundancyTab";
@@ -27,6 +28,7 @@ const TABS: { id: BottomTab; label: string; hasCount?: boolean }[] = [
   { id: "redundancy", label: "REDUNDANCY" },
   { id: "counterfactual", label: "COUNTERFACTUAL" },
   { id: "threat", label: "THREAT REVIEW" },
+  { id: "novel", label: "NOVEL ALGORITHMS" },
   { id: "report", label: "REPORT LITE" },
   { id: "debug", label: "DEBUG" },
 ];
@@ -159,6 +161,7 @@ export function BottomPanel() {
         {activeTab === "counterfactual" && <CounterfactualPanel />}
         {activeTab === "report" && <ReportLiteTab />}
         {activeTab === "threat" && <ThreatAnalysisPanel />}
+        {activeTab === "novel" && <NovelAlgorithmsTab />}
         {activeTab === "debug" && <DebugTab />}
       </div>
     </div>

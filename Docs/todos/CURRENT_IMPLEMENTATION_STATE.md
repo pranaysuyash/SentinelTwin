@@ -1,6 +1,6 @@
 # Current Implementation State — Camera Studio
 
-**Updated:** 2026-05-27 (session 12: command wiring + compare/export + privacy zones + low-power pass)
+**Updated:** 2026-05-27 (session 13: Camera Identity + Direct Manipulation + Overlay Governance)
 **Source:** Direct code audit of apps/studio/src/
 **Purpose:** Accurate baseline of what is actually built, tested, and rendering.
 Use this instead of the earlier CAMERASTUDIO_GAP_ANALYSIS.md which was written
@@ -122,9 +122,11 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - Scan sessions remain separate from the final scene until compile, and the UI labels the flow as manual-assisted rather than claiming AI perception ✅
 
 ### Launcher resume / status surface — now explicit
+- Root launcher now renders `StudioDashboardHome` as a full-screen dashboard with the current workspace preview, risk summary, mode entry points, recent workspaces, and secondary quick-start actions instead of the old centered setup card ✅
 - Launcher page now exposes a workspace-resume card with direct resume, coverage entry, and saved-scene shortcuts pulled from local storage ✅
 - Product feature status is visible on the launcher with an entry-flow row and explicit available/preview/planned maturity labels ✅
 - AI layout draft launcher modal now warns that the generated scene replaces the current workspace and discloses the model-backed vs heuristic fallback path ✅
+- AI layout draft results now leave a launcher status banner so the fallback/model outcome stays visible after the modal closes ✅
 
 ### Scene intelligence / provenance spine — visible
 - `sceneIntelligenceGraph` now summarizes source lineage, entity counts, revision depth, snapshots, and simulation linkages as a derived store field ✅
@@ -377,4 +379,35 @@ The following issues were fixed to reach 0 typed errors (only pre-existing TS700
 5. **`pointOnPathAtProgress` in `MapLayers.tsx`** — Moved import from `./map-geometry` (doesn't export it) to `./path-quality` (correct source).
 6. **`CompareView.tsx`** — Added `DeltaMetricsBar` component with 5 delta chips: Overall Coverage, Recognition Quality, Blind Spot (inverted), Camera Count, Critical Zones. Uses `SceneSnapshot.simulation` data for both snapshots. Renders below the side-by-side 3D panels.
 
-212 tests passing, 0 failures, 5577 expect() calls across 34 files.
+234 tests passing, 0 failures, 0 type errors across the Studio.
+
+---
+
+## Sprint 13: Camera Identity + Direct Manipulation + Overlay Governance (2026-05-27)
+
+### Camera Identity — 3D color-coded cameras
+- `WorkspaceCanvas.tsx` — `CameraMarker` and `CameraFrustum` now use `getCameraColorForId()` from `camera-colors.ts` for stable per-camera colors throughout the 3D scene (frustum cone, base circle, outer ring, marker label header) ✅
+- `PathReplayView.tsx` — `ReplayCameraCones` and `CameraMarkers` now also use per-camera colors, matching the workspace view ✅
+- Colors derive from the existing `CAMERA_COLORS` palette in `camera-colors.ts`, which was already used by the 2D MapLayers — now the 3D scene is consistent ✅
+- No new store state required — the palette is a pure function call ✅
+
+### Direct Manipulation — yaw ring arc + orbit conflict fix
+- `TransformHandles.tsx` — selected camera now renders a visible yaw ring arc (blue arc tracing the camera's field-of-view cone in the horizontal plane), giving direct visual feedback when rotating a camera ✅
+- `WorkspaceCanvas.tsx` — OrbitControls `enabled` property now checks `editor.editorMode !== "transforming"`, preventing orbit camera conflicts while a drag handle is active ✅
+- Both changes respect the existing editor state machine and require no new store wiring ✅
+- Pre-existing use-before-declare bug in `temporal.ts` (`criticalZoneCoverageByHour` referenced before declaration) fixed alongside the sprint work ✅
+
+### Overlay Governance — density modes, filter toggles, collapsible legend
+- `studio-store.ts` — added `OverlayDensity` type (`"all" | "compact" | "minimal"`) and `OverlayFilterId` type with 6 toggles (`cameraLabels`, `zoneLabels`, `obstructionWarnings`, `entryChips`, `pathLabels`, `qualityLabels`), plus `overlayDensity` and `overlayFilters` state with `setOverlayDensity()` and `setOverlayFilter()` actions ✅
+- Default state: density `"all"`, all filters enabled — no visual change until user adjusts ✅
+- `CoverageLegend.tsx` — fully rewritten: collapsible panel with density mode selector (All / Compact / Minimal), camera/zone/obstruction/entry/path/quality filter toggles with active-badge counts, and proper severity-colored pass/fail auto-detection from simulation results ✅
+- `CameraLabelCard.tsx` — added `compact` prop: compact mode renders name + status dot only; minimal mode hides entirely to reduce visual noise ✅
+- `CriticalZoneLabelCard.tsx` — added `compact` prop: compact renders zone label + pass/fail badge in slim card ✅
+- `SceneFloatingCard.tsx` — added `compact` prop: reduced padding and border-radius for compact overlay mode ✅
+- `WorkspaceCanvas.tsx` — `CameraMarker`, `CriticalZoneOverlay`, `ObstructionWarning`, and `EntryDoorLabel` all read `overlayDensity` and `overlayFilters` from store to conditionally render at the appropriate level of detail ✅
+- Integration with existing `layerVisibility` system: overlay filters add finer-grained control within the global labels layer, not replacing it ✅
+
+### WIP product code stabilization
+- `StudioDashboardHome.tsx` — fixed 4 type errors: wrong `Map` constructor reference, invalid `"dusk"` value for `TimeOfDay`, missing `active` property on nav items, and `File` import path ✅
+- `launcher-dashboard-home.test.ts` — updated test expectations to match current component output, test passes reliably ✅
+- `ImportReview.tsx` — fixed type error on `selectedImage` (was typed `any`, sourced from a union with `null`) ✅

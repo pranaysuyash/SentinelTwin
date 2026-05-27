@@ -313,7 +313,75 @@ export function useAiCommand() {
       const operations = await parseCommand(userText, context, provider);
 
       if (operations.length === 0) {
-        setStatusSafe({ state: "error", message: "Could not parse that as a valid scene operation." });
+        // Couldn't parse as a scene operation — try counterfactual agent instead
+        const storeState = useStudioStore.getState();
+        const sim = storeState.simulationResult;
+        if (!sim) {
+          setStatusSafe({ state: "error", message: "Could not parse that as a valid scene operation." });
+          return;
+        }
+
+        setStatusSafe({ state: "parsing" });
+
+        try {
+          const scene = storeState.scene;
+          const issuesSummary = sim.issues.map((i) => `[${i.severity}] ${i.description}`).join("\n");
+          const sceneSummary = [
+            `Cameras: ${scene.cameras.map((c) => c.name).join(", ")}`,
+            `Obstructions: ${scene.obstructions.map((o) => o.label).join(", ")}`,
+            `Zones: ${scene.criticalZones.map((z) => z.label).join(", ")}`,
+            `Time: ${scene.assumptions.timeOfDay}`,
+          ].join(" | ");
+
+          const rawCandidates = await proposeCounterfactuals(issuesSummary, sceneSummary, [userText], provider);
+
+          const verified = rawCandidates.map((candidate) => {
+            try {
+              const testScene = structuredClone(scene);
+              const ops = candidate.operations as unknown as SceneOperation[];
+              for (const op of ops) {
+                applySceneOperation(testScene, op);
+              }
+              const testResult = simulateStudio(testScene);
+              return {
+                ...candidate,
+                verifiedDelta: {
+                  totalCoveragePctDelta: Number((testResult.totalCoveragePct - sim.totalCoveragePct).toFixed(1)),
+                  blindspotPctDelta: Number((testResult.blindspotPct - sim.blindspotPct).toFixed(1)),
+                  criticalZoneStatusChanges: testResult.criticalZoneResults
+                    .map((z, i) => {
+                      const prev = sim.criticalZoneResults[i];
+                      if (prev && prev.status !== z.status) return `${z.label}: ${prev.status} → ${z.status}`;
+                      return null;
+                    })
+                    .filter((s): s is string => s !== null),
+                  worstIssueResolved: testResult.issues.filter((i) => i.severity === "critical").length < sim.issues.filter((i) => i.severity === "critical").length,
+                },
+              };
+            } catch {
+              return { ...candidate, verifiedDelta: undefined };
+            }
+          });
+
+          const ranked = verified
+            .filter((c) => c.verifiedDelta)
+            .sort((a, b) => (b.verifiedDelta?.totalCoveragePctDelta ?? 0) - (a.verifiedDelta?.totalCoveragePctDelta ?? 0))
+            .map((c, i) => ({ ...c, rank: i + 1 }));
+
+          if (ranked.length === 0) {
+            setStatusSafe({ state: "error", message: "No fixes found for that query." });
+            return;
+          }
+
+          setStatusSafe({
+            state: "candidates",
+            candidates: ranked,
+            description: `Found ${ranked.length} potential fix${ranked.length !== 1 ? "es" : ""}`,
+          });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Unknown error";
+          setStatusSafe({ state: "error", message });
+        }
         return;
       }
 
@@ -548,6 +616,10 @@ export function useAiCommand() {
   const applyCandidate = useCallback((ops: CounterfactualCandidate["operations"]) => {
     const storeState = useStudioStore.getState();
     const logEntries: string[] = [];
+
+    // Snapshot the current state for before/after comparison
+    storeState.saveSnapshot("Before fix  " + new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
+
     for (const op of ops) {
       const typedOp = op as { type: string };
       switch (typedOp.type) {
@@ -598,6 +670,12 @@ export function useAiCommand() {
       storeState.logChange(entry);
     }
     storeState.runSimulation();
+    // Queue an "after" snapshot once simulation completes
+    setTimeout(() => {
+      const current = useStudioStore.getState();
+      current.saveSnapshot("After fix " + new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
+      current.setBottomTab("beforeafter");
+    }, 200);
     setStatusSafe({ state: "idle" });
   }, [setStatusSafe]);
 

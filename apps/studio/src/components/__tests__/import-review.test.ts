@@ -10,10 +10,14 @@ describe("ImportReview", () => {
     expect(source).toContain("Detection Corrections");
     expect(source).toContain("Apply Corrections");
     expect(source).toContain("onUpdateResult");
-    expect(source).toContain("walls.filter");
-    expect(source).toContain("doors.filter");
-    expect(source).toContain("windows.filter");
+    expect(source).toContain("draftWalls.filter");
+    expect(source).toContain("draftDoors.filter");
+    expect(source).toContain("draftWindows.filter");
     expect(source).toContain("Spatial Preview");
     expect(source).toContain("normalizeFloorPlanResult(filtered)");
+    expect(source).toContain("Drag wall endpoints and door/window markers");
+    expect(source).toContain("Split First Kept Wall");
+    expect(source).toContain("Merge First Two Kept Walls");
+    expect(source).toContain("Snap Kept Walls Orthogonal");
   });
 });

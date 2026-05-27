@@ -3,7 +3,7 @@
 import { OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { ArrowLeftRight, GitCompare, Plus, AlertTriangle, Sparkles } from "lucide-react";
-import { Suspense, useCallback, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 import { useStudioStore } from "@/store/studio-store";
@@ -25,6 +25,7 @@ import { QUALITY_RANK } from "@/lib/quality-display";
 import type { SceneSnapshot, SimulationResult } from "@/schema/security-scene";
 
 type CoverageCell = SimulationResult["coverageCells"][number];
+type SceneNodeLike = { id?: string };
 
 type Metrics = {
   covered: number;
@@ -421,12 +422,96 @@ function buildComparisonExport(snapshotA: SceneSnapshot | null, snapshotB: Scene
   };
 }
 
+function diffNodeCollection<T extends SceneNodeLike>(baseline: T[], proposed: T[]) {
+  const baselineById = new Map(baseline.filter((item): item is T & { id: string } => Boolean(item.id)).map((item) => [item.id, item]));
+  const proposedById = new Map(proposed.filter((item): item is T & { id: string } => Boolean(item.id)).map((item) => [item.id, item]));
+
+  const added: string[] = [];
+  const removed: string[] = [];
+  const changed: string[] = [];
+
+  for (const [id, node] of proposedById.entries()) {
+    const prev = baselineById.get(id);
+    if (!prev) {
+      added.push(id);
+      continue;
+    }
+    if (JSON.stringify(prev) !== JSON.stringify(node)) {
+      changed.push(id);
+    }
+  }
+  for (const id of baselineById.keys()) {
+    if (!proposedById.has(id)) removed.push(id);
+  }
+
+  return {
+    before: baseline.length,
+    after: proposed.length,
+    added,
+    removed,
+    changed,
+  };
+}
+
+function ChangedObjectsPanel({ snapshotA, snapshotB }: { snapshotA: SceneSnapshot | null; snapshotB: SceneSnapshot | null }) {
+  if (!snapshotA || !snapshotB) {
+    return (
+      <div className="flex h-full flex-col rounded-xl border border-[#1d2330] bg-[#0b1018] p-3">
+        <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Changed Objects</div>
+        <div className="mt-2 text-[9px] text-[#556076]">Select two snapshots to compare object-level changes.</div>
+      </div>
+    );
+  }
+
+  const diffRows = [
+    { label: "Cameras", diff: diffNodeCollection(snapshotA.scene.cameras, snapshotB.scene.cameras) },
+    { label: "Obstructions", diff: diffNodeCollection(snapshotA.scene.obstructions, snapshotB.scene.obstructions) },
+    { label: "Lights", diff: diffNodeCollection(snapshotA.scene.securityLights, snapshotB.scene.securityLights) },
+    { label: "Walls", diff: diffNodeCollection(snapshotA.scene.walls, snapshotB.scene.walls) },
+  ];
+
+  return (
+    <div className="flex h-full flex-col rounded-xl border border-[#1d2330] bg-[#0b1018] p-3">
+      <div className="mb-2">
+        <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Changed Objects</div>
+        <div className="text-[9px] text-[#556076]">Scenario B deltas vs Scenario A by object class and IDs.</div>
+      </div>
+      <div className="space-y-2">
+        {diffRows.map(({ label, diff }) => (
+          <div key={label} className="rounded-lg border border-[#1d2330] bg-[#090d14] px-2.5 py-2">
+            <div className="flex items-center justify-between text-[9px]">
+              <span className="font-semibold text-[#c7d0e4]">{label}</span>
+              <span className="font-mono text-[#91a0bc]">{diff.before} → {diff.after}</span>
+            </div>
+            <div className="mt-1 grid grid-cols-3 gap-1 text-[8px]">
+              <span className="rounded border border-emerald-400/25 bg-emerald-500/10 px-1.5 py-0.5 text-emerald-300">+{diff.added.length}</span>
+              <span className="rounded border border-rose-400/25 bg-rose-500/10 px-1.5 py-0.5 text-rose-300">-{diff.removed.length}</span>
+              <span className="rounded border border-amber-400/25 bg-amber-500/10 px-1.5 py-0.5 text-amber-300">~{diff.changed.length}</span>
+            </div>
+            <div className="mt-1.5 space-y-0.5 text-[8px] text-[#9aa6bf]">
+              <div className="truncate">Added IDs: {diff.added.length > 0 ? diff.added.join(", ") : "--"}</div>
+              <div className="truncate">Removed IDs: {diff.removed.length > 0 ? diff.removed.join(", ") : "--"}</div>
+              <div className="truncate">Changed IDs: {diff.changed.length > 0 ? diff.changed.join(", ") : "--"}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function CompareView() {
   const snapshots = useStudioStore((s) => s.snapshots);
   const saveSnapshot = useStudioStore((s) => s.saveSnapshot);
+  const simulateSnapshot = useStudioStore((s) => s.simulateSnapshot);
+  const setCompareVisualEvidence = useStudioStore((s) => s.setCompareVisualEvidence);
+  const setCompareReportSelection = useStudioStore((s) => s.setCompareReportSelection);
+  const setBottomTab = useStudioStore((s) => s.setBottomTab);
   const [comparisonAId, setComparisonAId] = useState<string | null>(null);
   const [comparisonBId, setComparisonBId] = useState<string | null>(null);
   const [exportToast, setExportToast] = useState<string | null>(null);
+  const panelARef = useRef<HTMLDivElement | null>(null);
+  const panelBRef = useRef<HTMLDivElement | null>(null);
 
   const defaultA = snapshots[Math.max(snapshots.length - 2, 0)]?.id ?? null;
   const defaultB = snapshots[snapshots.length - 1]?.id ?? null;
@@ -469,6 +554,47 @@ export function CompareView() {
     setExportToast("Summary copied");
     window.setTimeout(() => setExportToast(null), 2500);
   }, [mA, mB, snapshotA, snapshotB]);
+
+  const handleCaptureVisualEvidence = useCallback(() => {
+    if (!snapshotA || !snapshotB) return;
+    const canvasA = panelARef.current?.querySelector("canvas");
+    const canvasB = panelBRef.current?.querySelector("canvas");
+    if (!(canvasA instanceof HTMLCanvasElement) || !(canvasB instanceof HTMLCanvasElement)) {
+      setExportToast("Could not capture compare canvases");
+      window.setTimeout(() => setExportToast(null), 2500);
+      return;
+    }
+    const beforeImageDataUrl = canvasA.toDataURL("image/png");
+    const afterImageDataUrl = canvasB.toDataURL("image/png");
+    setCompareVisualEvidence({
+      snapshotAId: snapshotA.id,
+      snapshotBId: snapshotB.id,
+      beforeImageDataUrl,
+      afterImageDataUrl,
+      capturedAt: Date.now(),
+    });
+    setExportToast("Visual evidence captured for report export");
+    window.setTimeout(() => setExportToast(null), 2500);
+  }, [setCompareVisualEvidence, snapshotA, snapshotB]);
+
+  useEffect(() => {
+    if (!snapshotA || !snapshotB) return;
+    const timer = window.setTimeout(() => {
+      const canvasA = panelARef.current?.querySelector("canvas");
+      const canvasB = panelBRef.current?.querySelector("canvas");
+      if (!(canvasA instanceof HTMLCanvasElement) || !(canvasB instanceof HTMLCanvasElement)) return;
+      const beforeImageDataUrl = canvasA.toDataURL("image/png");
+      const afterImageDataUrl = canvasB.toDataURL("image/png");
+      setCompareVisualEvidence({
+        snapshotAId: snapshotA.id,
+        snapshotBId: snapshotB.id,
+        beforeImageDataUrl,
+        afterImageDataUrl,
+        capturedAt: Date.now(),
+      });
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [setCompareVisualEvidence, snapshotA, snapshotB, cellsA, cellsB]);
 
   if (snapshots.length === 0) {
     return (
@@ -527,6 +653,26 @@ export function CompareView() {
           </button>
           <button
             type="button"
+            onClick={() => {
+              if (!snapshotA || !snapshotB) return;
+              setCompareReportSelection({ snapshotAId: snapshotA.id, snapshotBId: snapshotB.id });
+              setBottomTab("report");
+              setExportToast("Compare selection sent to report");
+              window.setTimeout(() => setExportToast(null), 2500);
+            }}
+            className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white"
+          >
+            Export Compare Report
+          </button>
+          <button
+            type="button"
+            onClick={handleCaptureVisualEvidence}
+            className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white"
+          >
+            Capture Visual Evidence
+          </button>
+          <button
+            type="button"
             onClick={() => saveSnapshot(`Scenario ${snapshots.length + 1}`)}
             className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white"
           >
@@ -572,13 +718,28 @@ export function CompareView() {
           <div className="flex items-center justify-between gap-2">
             <span>Scenario B has no saved simulation result yet. Run simulation before trusting before/after deltas.</span>
             {latestSimulatedSnapshot ? (
-              <button
-                type="button"
-                onClick={() => setComparisonBId(latestSimulatedSnapshot.id)}
-                className="rounded border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[9px] font-medium text-amber-200 hover:bg-amber-500/20"
-              >
-                Use Latest Simulated
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!snapshotB) return;
+                    const ok = simulateSnapshot(snapshotB.id);
+                    if (!ok) return;
+                    setExportToast("Scenario B simulated");
+                    window.setTimeout(() => setExportToast(null), 2500);
+                  }}
+                  className="rounded border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-medium text-emerald-200 hover:bg-emerald-500/20"
+                >
+                  Simulate Scenario B Now
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setComparisonBId(latestSimulatedSnapshot.id)}
+                  className="rounded border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[9px] font-medium text-amber-200 hover:bg-amber-500/20"
+                >
+                  Use Latest Simulated
+                </button>
+              </div>
             ) : null}
           </div>
         </div>
@@ -586,20 +747,24 @@ export function CompareView() {
 
       <div className="grid flex-1 min-h-0 grid-cols-2 gap-2 p-2">
         {snapshotA ? (
-          <ScenePanel
-            label={`Scenario A — ${snapshotA.label ?? "Baseline"}`}
-            accent="baseline"
-            scene={snapshotA.scene}
-            coverageCells={cellsA}
-          />
+          <div ref={panelARef} className="min-h-0">
+            <ScenePanel
+              label={`Scenario A — ${snapshotA.label ?? "Baseline"}`}
+              accent="baseline"
+              scene={snapshotA.scene}
+              coverageCells={cellsA}
+            />
+          </div>
         ) : null}
         {snapshotB ? (
-          <ScenePanel
-            label={`Scenario B — ${snapshotB.label ?? "Proposed Fix"}`}
-            accent="proposed"
-            scene={snapshotB.scene}
-            coverageCells={cellsB}
-          />
+          <div ref={panelBRef} className="min-h-0">
+            <ScenePanel
+              label={`Scenario B — ${snapshotB.label ?? "Proposed Fix"}`}
+              accent="proposed"
+              scene={snapshotB.scene}
+              coverageCells={cellsB}
+            />
+          </div>
         ) : null}
       </div>
 
@@ -621,32 +786,7 @@ export function CompareView() {
       <div className="grid min-h-[220px] grid-cols-[1.1fr_1.2fr_1fr] gap-2 px-2 pb-2">
         <NotesPanel snapshotA={snapshotA} snapshotB={snapshotB} />
         <QualityTrend snapshotA={snapshotA} snapshotB={snapshotB} />
-        <div className="flex h-full flex-col rounded-xl border border-[#1d2330] bg-[#0b1018] p-3">
-          <div className="mb-2">
-            <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Scenario Notes</div>
-            <div className="text-[9px] text-[#556076]">Short summary of the current comparison context.</div>
-          </div>
-          <div className="space-y-2 text-[9px] text-[#c7d0e4]">
-            <div className="rounded-lg border border-[#1d2330] bg-[#090d14] px-2.5 py-2">
-              <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Baseline</div>
-              <div className="mt-1 leading-snug">
-                {snapshotA?.label ?? "Baseline"} shows the current coverage pattern and failing critical zone state.
-              </div>
-            </div>
-            <div className="rounded-lg border border-[#1d2330] bg-[#090d14] px-2.5 py-2">
-              <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Proposed</div>
-              <div className="mt-1 leading-snug">
-                {snapshotB?.label ?? "Proposed Fix"} represents the edited scene and its recomputed security impact.
-              </div>
-            </div>
-            <div className="rounded-lg border border-[#1d2330] bg-[#090d14] px-2.5 py-2">
-              <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Outcome</div>
-              <div className="mt-1 leading-snug">
-                Compare the coverage delta, path exposure, and critical zone pass/fail results before exporting a report.
-              </div>
-            </div>
-          </div>
-        </div>
+        <ChangedObjectsPanel snapshotA={snapshotA} snapshotB={snapshotB} />
       </div>
     </div>
   );

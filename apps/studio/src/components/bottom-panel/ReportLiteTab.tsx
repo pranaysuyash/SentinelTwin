@@ -5,27 +5,27 @@ import { useState } from "react";
 
 import type { SecurityReport } from "@/agents/ReportAgent";
 import { useAiCommand } from "@/hooks/use-ai-command";
+import { buildCompareReportData, exportCompareAsHtml } from "@/report";
 import { useStudioStore } from "@/store/studio-store";
 
 export function ReportLiteTab() {
   const result = useStudioStore((s) => s.simulationResult);
   const scene = useStudioStore((s) => s.scene);
+  const snapshots = useStudioStore((s) => s.snapshots);
+  const temporalProfile = useStudioStore((s) => s.temporalProfile);
+  const compareVisualEvidence = useStudioStore((s) => s.compareVisualEvidence);
+  const compareReportSelection = useStudioStore((s) => s.compareReportSelection);
   const { runReportGeneration } = useAiCommand();
   const [aiReport, setAiReport] = useState<SecurityReport | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-
-  if (!result) {
-    return (
-      <div className="flex h-full items-center justify-center text-[11px] text-[#3a4158]">
-        Run simulation to generate report
-      </div>
-    );
-  }
+  const [reportMode, setReportMode] = useState<"single" | "compare">("single");
+  const [snapshotAId, setSnapshotAId] = useState<string | null>(null);
+  const [snapshotBId, setSnapshotBId] = useState<string | null>(null);
 
   // Build markdown from either AI report or simulation data
-  const markdown = aiReport
-    ? buildAiReportMarkdown(aiReport)
-    : defaultMarkdown(result, scene);
+  const markdown = result
+    ? (aiReport ? buildAiReportMarkdown(aiReport) : defaultMarkdown(result, scene, temporalProfile))
+    : "Run simulation to generate report.";
 
   const copy = () => navigator.clipboard.writeText(markdown);
 
@@ -36,8 +36,38 @@ export function ReportLiteTab() {
     setIsGenerating(false);
   };
 
+  const snapshotA = snapshots.find((snapshot) => snapshot.id === (snapshotAId ?? compareReportSelection?.snapshotAId)) ?? snapshots[Math.max(snapshots.length - 2, 0)] ?? null;
+  const snapshotB = snapshots.find((snapshot) => snapshot.id === (snapshotBId ?? compareReportSelection?.snapshotBId)) ?? snapshots[snapshots.length - 1] ?? null;
+  const visuals = compareVisualEvidence &&
+    compareVisualEvidence.snapshotAId === (snapshotA?.id ?? "") &&
+    compareVisualEvidence.snapshotBId === (snapshotB?.id ?? "") &&
+    compareVisualEvidence.capturedAt >= Math.max(snapshotA?.createdAt ?? 0, snapshotB?.createdAt ?? 0)
+    ? {
+      beforeImageDataUrl: compareVisualEvidence.beforeImageDataUrl,
+      afterImageDataUrl: compareVisualEvidence.afterImageDataUrl,
+    }
+    : undefined;
+
   const handleExportHtml = () => {
-    const html = buildHtmlReport(scene, result, aiReport);
+    if (reportMode === "compare" && snapshotA?.simulation && snapshotB?.simulation) {
+      const compare = buildCompareReportData(
+        { ...snapshotA.scene, snapshots: [], scenarios: [] } as never,
+        snapshotA.simulation,
+        { ...snapshotB.scene, snapshots: [], scenarios: [] } as never,
+        snapshotB.simulation,
+      );
+      const html = exportCompareAsHtml(compare, visuals);
+      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `sentineltwin-compare-report-${scene.name.replace(/[^a-zA-Z0-9_-]/g, "_")}.html`;
+      a.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
+    if (!result) return;
+    const html = buildHtmlReport(scene, result, aiReport, temporalProfile);
     const blob = new Blob([html], { type: "text/html;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -48,7 +78,25 @@ export function ReportLiteTab() {
   };
 
   const handlePrint = () => {
-    const html = buildHtmlReport(scene, result, aiReport);
+    if (reportMode === "compare" && snapshotA?.simulation && snapshotB?.simulation) {
+      const compare = buildCompareReportData(
+        { ...snapshotA.scene, snapshots: [], scenarios: [] } as never,
+        snapshotA.simulation,
+        { ...snapshotB.scene, snapshots: [], scenarios: [] } as never,
+        snapshotB.simulation,
+      );
+      const html = exportCompareAsHtml(compare, visuals);
+      const win = window.open("", "_blank");
+      if (win) {
+        win.document.write(html);
+        win.document.close();
+        win.focus();
+        setTimeout(() => win.print(), 300);
+      }
+      return;
+    }
+    if (!result) return;
+    const html = buildHtmlReport(scene, result, aiReport, temporalProfile);
     const win = window.open("", "_blank");
     if (win) {
       win.document.write(html);
@@ -66,9 +114,23 @@ export function ReportLiteTab() {
           {aiReport ? "AI Report" : "Markdown Report"}
         </span>
         <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 rounded border border-[#1e2130] bg-[#0f141f] p-0.5">
+            <button
+              onClick={() => setReportMode("single")}
+              className={`rounded px-2 py-0.5 text-[9px] ${reportMode === "single" ? "bg-[#1d2738] text-white" : "text-[#8090a8]"}`}
+            >
+              Single Scene
+            </button>
+            <button
+              onClick={() => setReportMode("compare")}
+              className={`rounded px-2 py-0.5 text-[9px] ${reportMode === "compare" ? "bg-[#1d2738] text-white" : "text-[#8090a8]"}`}
+            >
+              Before/After
+            </button>
+          </div>
           <button
             onClick={handleGenerateAI}
-            disabled={isGenerating}
+            disabled={isGenerating || !result}
             className="inline-flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-emerald-300 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10 disabled:opacity-40"
           >
             {isGenerating ? (
@@ -109,6 +171,47 @@ export function ReportLiteTab() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-3">
+        {reportMode === "compare" ? (
+          <div className="mb-3 rounded-lg border border-[#1e2130] bg-[#0b1018] p-3">
+            <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#7f8da8]">Compare Export Context</div>
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+              <label className="text-[9px] text-[#9aa6bf]">
+                Snapshot A
+                <select
+                  value={snapshotA?.id ?? ""}
+                  onChange={(event) => setSnapshotAId(event.target.value)}
+                  className="mt-1 w-full rounded border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] text-[#d2d9e8]"
+                >
+                  {snapshots.map((snapshot) => (
+                    <option key={snapshot.id} value={snapshot.id}>{snapshot.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-[9px] text-[#9aa6bf]">
+                Snapshot B
+                <select
+                  value={snapshotB?.id ?? ""}
+                  onChange={(event) => setSnapshotBId(event.target.value)}
+                  className="mt-1 w-full rounded border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] text-[#d2d9e8]"
+                >
+                  {snapshots.map((snapshot) => (
+                    <option key={snapshot.id} value={snapshot.id}>{snapshot.label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="mt-2 text-[9px] text-[#8090a8]">
+              {snapshotA?.simulation && snapshotB?.simulation
+                ? "Compare report includes before/after deltas and zone-level change table."
+                : "Selected snapshots must both have simulation results for compare export."}
+            </div>
+            <div className="mt-1 text-[9px] text-[#8090a8]">
+              {visuals
+                ? "Using captured Compare canvas images as visual evidence."
+                : "No fresh captured Compare canvases found for this pair; fallback generated evidence will be used."}
+            </div>
+          </div>
+        ) : null}
         {isGenerating ? (
           <div className="flex items-center justify-center gap-2 py-12 text-[11px] text-amber-300">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -158,10 +261,16 @@ function buildAiReportMarkdown(report: SecurityReport): string {
 function defaultMarkdown(
   result: NonNullable<ReturnType<typeof useStudioStore.getState>["simulationResult"]>,
   scene: ReturnType<typeof useStudioStore.getState>["scene"],
+  temporalProfile: ReturnType<typeof useStudioStore.getState>["temporalProfile"],
 ): string {
   const failingZones = result.criticalZoneResults.filter((zone) => zone.status !== "pass");
   const verifiedRecommendations = result.recommendations.filter((rec) => rec.verified);
   const topRecommendations = (verifiedRecommendations.length > 0 ? verifiedRecommendations : result.recommendations).slice(0, 5);
+  const kRobustness = result.kRobustness;
+  const placementOracle = result.placementOracle;
+  const anomalies = temporalProfile?.anomalyWindows ?? [];
+  const occlusion = result.occlusionBlame ?? [];
+  const blindRegions = result.blindRegions ?? [];
   const lines = [
     "# SentinelTwin Coverage Report",
     "## Scene: " + scene.name,
@@ -206,6 +315,16 @@ function defaultMarkdown(
     "### Recommendations",
     ...result.recommendations.map((r) => "- [" + (r.verified ? "verified" : "unverified") + "] " + r.description + " :: " + r.estimatedImpact),
     "",
+    "### Novel Algorithms",
+    "- Coverage Fragility: " + (result.fragilitySummary ? `${Math.round(result.fragilitySummary.meanFragility * 100)}% mean fragility across ${result.fragilitySummary.totalCells} cells` : "not computed"),
+    "- K-Robustness: " + (kRobustness ? `K=${kRobustness.kRobustness} from ${kRobustness.totalCameras} cameras` : "not computed"),
+    "- Placement Oracle: " + (placementOracle?.bestCandidate
+      ? `${placementOracle.bestCandidate.mountType} @ ${placementOracle.bestCandidate.position[0].toFixed(1)}, ${placementOracle.bestCandidate.position[2].toFixed(1)}`
+      : "not computed"),
+    "- Temporal Anomalies: " + (anomalies.length > 0 ? `${anomalies.length} windows` : "none detected"),
+    "- Occlusion Blame: " + (occlusion.length > 0 ? `${occlusion.length} critical zones` : "none"),
+    "- Blind Spot Topology: " + (blindRegions.length > 0 ? `${blindRegions.length} regions` : "none"),
+    "",
     "_Planning indicator only: modeled outcomes depend on assumptions and are not legal/forensic guarantees._",
   ];
   return lines.join("\n");
@@ -215,6 +334,7 @@ function buildHtmlReport(
   scene: ReturnType<typeof useStudioStore.getState>["scene"],
   result: NonNullable<ReturnType<typeof useStudioStore.getState>["simulationResult"]>,
   aiReport: SecurityReport | null,
+  temporalProfile: ReturnType<typeof useStudioStore.getState>["temporalProfile"],
 ): string {
   const isAi = aiReport != null;
   const title = isAi ? aiReport!.title : "SentinelTwin Coverage Report";
@@ -275,6 +395,19 @@ function buildHtmlReport(
   </div>
 
   ${isAi ? buildAiReportHtml(aiReport!) : buildDefaultHtml(result)}
+
+  <h2>Novel Algorithms</h2>
+  <table>
+    <thead><tr><th>Algorithm</th><th>Output</th></tr></thead>
+    <tbody>
+      <tr><td>Coverage Fragility</td><td>${result.fragilitySummary ? `${Math.round(result.fragilitySummary.meanFragility * 100)}% mean fragility across ${result.fragilitySummary.totalCells} cells` : "Not computed"}</td></tr>
+      <tr><td>K-Robustness</td><td>${result.kRobustness ? `K=${result.kRobustness.kRobustness} / ${result.kRobustness.totalCameras}` : "Not computed"}</td></tr>
+      <tr><td>Placement Oracle</td><td>${result.placementOracle?.bestCandidate ? `${result.placementOracle.bestCandidate.mountType} @ ${result.placementOracle.bestCandidate.position[0].toFixed(1)}, ${result.placementOracle.bestCandidate.position[2].toFixed(1)}` : "Not computed"}</td></tr>
+      <tr><td>Temporal Anomalies</td><td>${temporalProfile?.anomalyWindows?.length ? `${temporalProfile.anomalyWindows.length} windows` : "None detected or not computed"}</td></tr>
+      <tr><td>Occlusion Blame</td><td>${result.occlusionBlame?.length ? `${result.occlusionBlame.length} critical zones` : "Not computed"}</td></tr>
+      <tr><td>Blind Spot Topology</td><td>${result.blindRegions?.length ? `${result.blindRegions.length} regions` : "None detected"}</td></tr>
+    </tbody>
+  </table>
   
   <h2>Changes Applied</h2>
   ${scene.changeLog?.length

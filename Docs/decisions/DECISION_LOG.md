@@ -1151,3 +1151,83 @@ reference to the new path, then remove the old."
 - **Keep the camera wall always-on** — rejected because it wastes GPU on an otherwise static dashboard.
 - **Implement command shortcuts as UI-only state** — rejected because the commands need to affect the same simulation/workspace truth as the toolbar.
 - **Hide privacy/target controls behind only one surface** — rejected because the operator workflow needs both visible controls and command-driven access.
+
+### D-070: Compare mode should support snapshot-level simulation without mutating current working scene
+**Date:** 2026-05-27
+
+**Decision:** Added `simulateSnapshot(snapshotId)` in store and wired `Simulate Scenario B Now` in `CompareView` to recompute and persist simulation on the selected snapshot only.
+
+**Rationale:**
+- Before/after workflows need recovery for unsimulated snapshots without forcing users to switch current scene context.
+- Snapshot A/B integrity is preserved when simulation is attached directly to snapshot records.
+
+**Alternatives rejected:**
+- **Force user to switch scene then run global simulation** — rejected due workflow friction and error risk.
+- **Reuse latest simulated snapshot implicitly** — rejected because it can produce misleading A/B comparisons.
+
+### D-071: Floor-plan correction preview should be interactive for openings, not checkbox-only
+**Date:** 2026-05-27
+
+**Decision:** Added draggable door/window markers in `ImportReview` spatial preview and apply corrected positions through normalization.
+
+**Rationale:**
+- Operators need to correct near-miss detection coordinates, not only exclude entities.
+- Lightweight marker dragging closes the biggest practical correction gap without requiring full CAD editing controls.
+
+**Alternatives rejected:**
+- **Keep list-only include/exclude controls** — rejected because it cannot fix geometry drift.
+- **Defer all correction to post-import scene editing** — rejected because import review should produce coherent baseline geometry.
+
+### D-072: Opening snapping must use calibrated scale instead of hardcoded pixels-per-meter
+**Date:** 2026-05-27
+
+**Decision:** `snapOpeningsToWalls` now receives runtime `scalePixelsPerMeter` and uses it for opening width clamping.
+
+**Rationale:**
+- Hardcoded `50 px/m` breaks after user calibration and causes mis-clamped placements.
+- Scale-aware snapping keeps door/window placement coherent across varying import scales.
+
+**Alternatives rejected:**
+- **Keep fixed conversion factor** — rejected due calibration drift.
+- **Disable clamping entirely** — rejected because it allows off-wall openings.
+
+### D-073: Report-lite should include explicit before/after export mode from snapshots
+**Date:** 2026-05-27
+
+**Decision:** Report-lite now supports `Single Scene` and `Before/After` modes, with Snapshot A/B selectors and compare HTML export using `buildCompareReportData` and `exportCompareAsHtml`.
+
+**Rationale:**
+- Evidence export needs direct comparison artifacts, not only current-scene summaries.
+- Reusing canonical compare report engine avoids duplicate logic and drift.
+
+**Alternatives rejected:**
+- **Keep compare export only in Compare JSON utility** — rejected because operators need report-grade artifacts.
+- **Build a second compare export pipeline inside ReportLiteTab** — rejected due duplication risk.
+
+### D-074: Compare export should prefer captured live-canvas evidence when available
+**Date:** 2026-05-27
+
+**Decision:** Added `Capture Visual Evidence` in `CompareView`, persisted captured A/B canvas data URLs in store with snapshot IDs, and wired `ReportLiteTab` compare export to embed those captures when IDs match.
+
+**Rationale:**
+- Report evidence quality improves when it reflects actual rendered compare panels, not only synthetic summary graphics.
+- Snapshot-ID matching prevents accidental reuse of stale visuals after selection changes.
+
+**Alternatives rejected:**
+- **Always regenerate synthetic compare graphics only** — rejected due weaker evidence fidelity.
+- **Capture visuals only during report export** — rejected because report tab may not have compare canvases mounted.
+
+### D-075: Root launcher should be a studio dashboard home, not a centered setup card
+**Date:** 2026-05-27
+
+**Decision:** `apps/studio/src/app/page.tsx` now renders a full-screen `StudioDashboardHome` launch surface when not booted into `StudioShell`. The home screen centers the current workspace preview, current risk summary, operational mode links, recent workspaces, and quick-start actions.
+
+**Rationale:**
+- The root page is the product front door, so it must feel like the studio already exists rather than a form the user must complete before seeing the workspace.
+- A dashboard launch surface preserves the existing wizards/import/AI flows while making coverage, replay, compare, and report feel immediate.
+- The root should mirror the Studio shell language instead of presenting a centered onboarding card that implies setup is the primary job.
+
+**Alternatives rejected:**
+- **Keep the centered launcher card** — rejected because it reads like a checklist/form and undercuts the product.
+- **Turn root into marketing landing page** — rejected because this is a working workspace, not a public brochure.
+- **Split launch actions into a separate route** — rejected because the root should be the single, obvious entry point into the current workspace.

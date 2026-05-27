@@ -17,5 +17,11 @@ describe("CompareView", () => {
     expect(source).toContain("scene={snapshotA.scene}");
     expect(source).toContain("scene={snapshotB.scene}");
     expect(source).toContain("Use Latest Simulated");
+    expect(source).toContain("Simulate Scenario B Now");
+    expect(source).toContain("Changed Objects");
+    expect(source).toContain("Capture Visual Evidence");
+    expect(source).toContain("setCompareVisualEvidence");
+    expect(source).toContain("Export Compare Report");
+    expect(source).toContain("setCompareReportSelection");
   });
 });

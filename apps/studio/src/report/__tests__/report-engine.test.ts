@@ -390,6 +390,8 @@ describe("comparison exports", () => {
     expect(html).toContain("<!DOCTYPE html>");
     expect(html).toContain("Before/After Comparison");
     expect(html).toContain("Delta Summary");
+    expect(html).toContain("Before scenario visual evidence");
+    expect(html).toContain("data:image/svg+xml");
   });
 
   test("exportCompareAsMarkdown produces valid markdown", () => {

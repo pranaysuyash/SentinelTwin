@@ -11,6 +11,7 @@ import type {
 import { computeCoverageFailurePath } from "@/simulation/adversarial-path";
 import { analyseBlindSpotTopology } from "@/simulation/blind-spot-topology";
 import { computeCoverageFragility } from "@/simulation/coverage-fragility";
+import { analyzeOcclusionBlame } from "@/simulation/occlusion-blame";
 import {
   createCoverageEvaluator,
   type CellComputation,
@@ -19,8 +20,10 @@ import {
   getQualityThresholds,
 } from "@/simulation/coverage";
 import { maxQuality, qualityToScore, scoreToQuality } from "@/simulation/dori";
+import { computeKRobustness } from "@/simulation/k-robustness";
 import { computePathResults } from "@/simulation/path-analysis";
 import { pointInPolygon, polygonCenter } from "@/simulation/geometry";
+import { computePlacementOracle } from "@/simulation/placement-oracle";
 
 type EvaluatedZone = ZoneResult & {
   blockingLabels: string[];
@@ -394,7 +397,11 @@ function rotateCameraTowardZone(
   return next;
 }
 
-function simulateStudioInternal(scene: SecurityScene, includeRecommendations: boolean): SimulationResult {
+function simulateStudioInternal(
+  scene: SecurityScene,
+  includeRecommendations: boolean,
+  includeNovelAnalytics = true,
+): SimulationResult {
   const evaluator = createCoverageEvaluator(scene);
   const coverageThresholds = getQualityThresholds(scene);
   const coverageCells = evaluator.computeCoverageCells(4);
@@ -529,6 +536,9 @@ function simulateStudioInternal(scene: SecurityScene, includeRecommendations: bo
 
   const pathResults = computePathResults(scene, coverageCells);
   const adversarialPath = computeCoverageFailurePath(scene, coverageCells);
+  const kRobustness = includeNovelAnalytics ? computeKRobustness(scene) : undefined;
+  const placementOracle = includeNovelAnalytics ? computePlacementOracle(scene, coverageCells, criticalZoneResults) : undefined;
+  const occlusionBlame = includeNovelAnalytics ? analyzeOcclusionBlame(scene) : undefined;
 
   const worstAreaQuality: DoriQuality =
     zoneEvaluations.length > 0
@@ -560,7 +570,7 @@ function simulateStudioInternal(scene: SecurityScene, includeRecommendations: bo
       if (zone && obstructionLabel) {
         const patchedScene = moveObstructionAwayFromZone(scene, zone, obstructionLabel);
         if (patchedScene) {
-          const patchedResult = simulateStudioInternal(patchedScene, false);
+          const patchedResult = simulateStudioInternal(patchedScene, false, false);
           const patchedZone = patchedResult.criticalZoneResults.find((entry) => entry.zoneId === zone.id);
           const improved =
             patchedZone &&
@@ -590,7 +600,7 @@ function simulateStudioInternal(scene: SecurityScene, includeRecommendations: bo
       if (zone && cameraId) {
         const patchedScene = rotateCameraTowardZone(scene, zone, cameraId);
         if (patchedScene) {
-          const patchedResult = simulateStudioInternal(patchedScene, false);
+          const patchedResult = simulateStudioInternal(patchedScene, false, false);
           const patchedZone = patchedResult.criticalZoneResults.find((entry) => entry.zoneId === zone.id);
           const improved =
             patchedZone &&
@@ -658,12 +668,15 @@ function simulateStudioInternal(scene: SecurityScene, includeRecommendations: bo
       coveringCameras: cell.coveringCameras, blockedBy: cell.blockedBy, ppm: cell.ppm,
       coverageIncluded: cell.coverageIncluded, privacyRestricted: cell.privacyRestricted,
     }))),
+    occlusionBlame,
     fragilitySummary: fragility.totalCells > 0 ? {
       meanFragility: Number(fragility.meanFragility.toFixed(3)),
       fragileCellCount: fragility.fragileCellCount,
       robustCellCount: fragility.robustCellCount,
       totalCells: fragility.totalCells,
     } : undefined,
+    kRobustness,
+    placementOracle,
   };
 }
 

@@ -7,9 +7,33 @@ interface CameraLabelCardProps {
   isActive: boolean;
   status: string;
   selected: boolean;
+  compact?: boolean;
 }
 
-export function CameraLabelCard({ name, resolutionMP, mountType, isActive, status, selected }: CameraLabelCardProps) {
+export function CameraLabelCard({ name, resolutionMP, mountType, isActive, status, selected, compact }: CameraLabelCardProps) {
+  if (compact) {
+    return (
+      <SceneFloatingCard borderColor={selected ? "#60a5fa" : "#29456d"} compact>
+        <div className="flex items-center gap-1.5">
+          <div
+            className="h-1.5 w-1.5 rounded-full flex-shrink-0"
+            style={{ backgroundColor: isActive ? "#22c55e" : "#ef4444" }}
+          />
+          <span
+            style={{
+              fontWeight: 600,
+              fontSize: 7,
+              color: selected ? "#cfe2ff" : "#8bc0ff",
+              letterSpacing: "0.04em",
+            }}
+          >
+            {name.toUpperCase()}
+          </span>
+        </div>
+      </SceneFloatingCard>
+    );
+  }
+
   return (
     <SceneFloatingCard borderColor={selected ? "#60a5fa" : "#29456d"}>
       <div style={{ fontWeight: 700, fontSize: 9, color: selected ? "#cfe2ff" : "#8bc0ff" }}>

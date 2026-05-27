@@ -30,6 +30,7 @@ import { samplePathQuality } from "@/components/map/path-quality";
 import { VisibilityTimeline } from "@/components/view/VisibilityTimeline";
 import type { DoriQuality, ScenarioPath } from "@/schema/security-scene";
 import { getYawPitchDirection } from "@/simulation/geometry";
+import { getCameraColorForId } from "@/lib/camera-colors";
 import { buildCoverageGrid } from "@/simulation/grid";
 
 // ── Shared scene ──
@@ -273,7 +274,8 @@ function ReplayCameraCones() {
         const radius = Math.tan((camera.fovHorizontalDeg / 2) * (Math.PI / 180)) * range;
         const centerPos = new THREE.Vector3(...camera.position).add(forward.clone().multiplyScalar(range / 2));
         const quaternion = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, -1, 0), forward);
-        const color = camera.status === "on" ? "#60a5fa" : "#64748b";
+        const cameraColor = getCameraColorForId(camera.id);
+        const color = camera.status === "on" ? cameraColor : "#64748b";
 
         return (
           <group key={camera.id}>
@@ -521,30 +523,33 @@ function CameraMarkers() {
 
   return (
     <group>
-      {scene.cameras.map((cam) => (
-        <group key={cam.id} position={cam.position}>
-          <mesh>
-            <cylinderGeometry args={[0.1, 0.1, 0.06, 14]} />
-            <meshStandardMaterial color="#4d89eb" emissive="#25497a" emissiveIntensity={0.55} roughness={0.34} metalness={0.65} />
-          </mesh>
-          <Html position={[0, 0.28, 0]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
-            <div
-              style={{
-                background: "rgba(10,13,19,0.85)",
-                border: "1px solid #29456d",
-                borderRadius: 4,
-                padding: "2px 6px",
-                fontSize: 7,
-                color: "#8bc0ff",
-                fontWeight: 700,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {cam.name}
-            </div>
-          </Html>
-        </group>
-      ))}
+      {scene.cameras.map((cam) => {
+        const cameraColor = getCameraColorForId(cam.id);
+        return (
+          <group key={cam.id} position={cam.position}>
+            <mesh>
+              <cylinderGeometry args={[0.1, 0.1, 0.06, 14]} />
+              <meshStandardMaterial color={cameraColor} emissive={cameraColor} emissiveIntensity={0.4} roughness={0.34} metalness={0.65} />
+            </mesh>
+            <Html position={[0, 0.28, 0]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
+              <div
+                style={{
+                  background: "rgba(10,13,19,0.85)",
+                  border: `1px solid ${cameraColor}`,
+                  borderRadius: 4,
+                  padding: "2px 6px",
+                  fontSize: 7,
+                  color: "#8bc0ff",
+                  fontWeight: 700,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {cam.name}
+              </div>
+            </Html>
+          </group>
+        );
+      })}
     </group>
   );
 }

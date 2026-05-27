@@ -12,6 +12,7 @@
  * 2. DEFAULT_SCHEDULES — built-in demo schedule for scenes without timeSchedule
  */
 import { simulateStudio } from "@/simulation/simulate-studio";
+import { detectTemporalAnomalies } from "@/simulation/temporal-anomaly";
 import {
   type HourlySecuritySnapshot,
   type SecurityScene,
@@ -376,6 +377,9 @@ export function computeTemporalProfile(scene: SecurityScene): TemporalSecurityPr
       overallCoveragePct: result.totalCoveragePct,
       criticalZonePassCount: result.criticalZoneResults.filter((z) => z.status === "pass").length,
       criticalZoneTotalCount: result.criticalZoneResults.length,
+      criticalZoneStatuses: Object.fromEntries(
+        result.criticalZoneResults.map((zone) => [zone.label, zone.status]),
+      ),
       activeCameraCount: result.cameraResults.length,
       activeLightCount: patchedScene.securityLights.filter((l) => l.status === "on").length,
       adversarialPathExposureScore: result.adversarialPath?.totalExposureScore ?? 0,
@@ -401,6 +405,7 @@ export function computeTemporalProfile(scene: SecurityScene): TemporalSecurityPr
           overallCoveragePct: nearestSnapshot.overallCoveragePct,
           criticalZonePassCount: nearestSnapshot.criticalZonePassCount,
           criticalZoneTotalCount: nearestSnapshot.criticalZoneTotalCount,
+          criticalZoneStatuses: nearestSnapshot.criticalZoneStatuses,
           activeCameraCount: nearestSnapshot.activeCameraCount,
           activeLightCount: nearestSnapshot.activeLightCount,
           adversarialPathExposureScore: nearestSnapshot.adversarialPathExposureScore,
@@ -416,19 +421,29 @@ export function computeTemporalProfile(scene: SecurityScene): TemporalSecurityPr
     return a.minute - b.minute;
   });
 
-  const peakVulnerabilityWindows = detectVulnerabilityWindows(hourlySnapshots);
-  const safestPeriods = findSafestPeriods(hourlySnapshots);
-
   const criticalZoneCoverageByHour: Record<string, number[]> = {};
   const evaluatedZoneLabels = scene.criticalZones.map((z) => z.label);
   for (const zoneLabel of evaluatedZoneLabels) {
     criticalZoneCoverageByHour[zoneLabel] = hourlySnapshots.map(
-      (snap) =>
-        snap.criticalZoneTotalCount > 0
-          ? (snap.criticalZonePassCount / snap.criticalZoneTotalCount) * 100
-          : 100,
+      (snap) => {
+        const status = snap.criticalZoneStatuses[zoneLabel] ?? "fail";
+        return status === "pass" ? 100 : status === "partial" ? 50 : 0;
+      },
     );
   }
+
+  const peakVulnerabilityWindows = detectVulnerabilityWindows(hourlySnapshots);
+  const safestPeriods = findSafestPeriods(hourlySnapshots);
+  const anomalyAnalysis = detectTemporalAnomalies({
+    hoursAnalyzed: 24,
+    resolutionMinutes,
+    hourlySnapshots,
+    peakVulnerabilityWindows,
+    safestPeriods,
+    criticalZoneCoverageByHour,
+    computedAt: Date.now(),
+    anomalyWindows: [],
+  });
 
   return {
     hoursAnalyzed: 24,
@@ -437,6 +452,8 @@ export function computeTemporalProfile(scene: SecurityScene): TemporalSecurityPr
     peakVulnerabilityWindows,
     safestPeriods,
     criticalZoneCoverageByHour,
+    anomalyWindows: anomalyAnalysis.windows,
+    anomalySummary: anomalyAnalysis.summary,
     computedAt: Date.now(),
   };
 }

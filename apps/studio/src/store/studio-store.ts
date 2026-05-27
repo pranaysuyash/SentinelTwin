@@ -64,9 +64,13 @@ export type EditorDraft = {
   selectedHandle?: string;
 };
 
-export type BottomTab = "metrics" | "issues" | "timeline" | "beforeafter" | "report" | "debug" | "counterfactual" | "threat" | "redundancy" | "temporal" | "assumptions" | "provenance";
+export type BottomTab = "metrics" | "issues" | "timeline" | "beforeafter" | "report" | "debug" | "counterfactual" | "threat" | "redundancy" | "temporal" | "assumptions" | "provenance" | "novel";
 
 export type InspectorTab = "properties" | "view" | "status" | "analytics" | "failures";
+
+export type OverlayDensity = "all" | "compact" | "minimal";
+export type OverlayFilterId = "cameraLabels" | "zoneLabels" | "obstructionWarnings" | "entryChips" | "pathLabels";
+export type OverlayFilters = Record<OverlayFilterId, boolean>;
 
 export type LayerId =
   | "cameras" | "camera_cones" | "obstructions" | "lights"
@@ -157,6 +161,15 @@ export type StudioStoreState = {
   snapshots: SceneSnapshot[];
   lastRunMs: number | null;
   savedScenes: SecurityScene[];
+  launchNotice: string | null;
+  compareVisualEvidence: {
+    snapshotAId: string;
+    snapshotBId: string;
+    beforeImageDataUrl: string;
+    afterImageDataUrl: string;
+    capturedAt: number;
+  } | null;
+  compareReportSelection: { snapshotAId: string; snapshotBId: string } | null;
 
   selectedNodeId: string | null;
   selectedNodeIds: string[];
@@ -193,6 +206,9 @@ export type StudioStoreState = {
   demoStep: number;
   setDemoMode: (active: boolean) => void;
   setDemoStep: (step: number) => void;
+  setLaunchNotice: (launchNotice: string | null) => void;
+  setCompareVisualEvidence: (evidence: StudioStoreState["compareVisualEvidence"]) => void;
+  setCompareReportSelection: (selection: StudioStoreState["compareReportSelection"]) => void;
 
   pathReplay: { playing: boolean; progress: number; speed: number; followActor: boolean };
   setPathReplayPlaying: (playing: boolean) => void;
@@ -240,6 +256,10 @@ export type StudioStoreState = {
   setLayerVisibility: (layer: LayerId, visible: boolean) => void;
   setHeatmapMode: (mode: "quality" | "fragility") => void;
   setEnvironmentMode: (mode: "day" | "night" | "dusk") => void;
+  overlayDensity: OverlayDensity;
+  overlayFilters: OverlayFilters;
+  setOverlayDensity: (density: OverlayDensity) => void;
+  setOverlayFilter: (filter: OverlayFilterId, visible: boolean) => void;
   setAllZoneTargetTypes: (targetType: CriticalZoneNode["targetType"]) => void;
   toggleAutoRecompute: () => void;
   toggleCameraFailure: (cameraId: string) => void;
@@ -262,6 +282,7 @@ export type StudioStoreState = {
   setSimulationRunning: (running: boolean) => void;
   setSimulationResult: (result: SimulationResult, durationMs: number) => void;
   runSimulation: () => void;
+  simulateSnapshot: (snapshotId: string) => boolean;
   markDirty: () => void;
   logChange: (entry: string) => void;
   clearChangeLog: () => void;
@@ -530,10 +551,12 @@ function buildSimulationState(
   const nextScene = cloneSecurityScene(scene);
   nextScene.simulation = result;
   nextScene.updatedAt = Date.now();
+  const temporalProfile = computeTemporalProfile(nextScene);
 
   return {
     scene: nextScene,
     simulationResult: result,
+    temporalProfile,
     simulationDirty: false,
     simulationRunning: false,
     lastRunMs: durationMs,
@@ -791,6 +814,9 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   snapshots: INITIAL_SNAPSHOTS,
   lastRunMs: null,
   savedScenes: [],
+  launchNotice: null,
+  compareVisualEvidence: null,
+  compareReportSelection: null,
 
   selectedNodeId: "cam_entrance",
   selectedNodeIds: ["cam_entrance"],
@@ -824,7 +850,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   showDebugOverlays: false,
   autoRecompute: true,
   cameraFailures: [],
-  temporalProfile: null,
+  temporalProfile: computeTemporalProfile(INITIAL_SCENE),
   temporalScrubHour: 10,
   temporalScrubMinute: 0,
   demoMode: false,
@@ -832,6 +858,14 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   activePathId: INITIAL_SCENE.paths[0]?.id ?? null,
   mapState: cloneDefaultMapState(),
   hoveredMapNodeId: null,
+  overlayDensity: "all",
+  overlayFilters: {
+    cameraLabels: true,
+    zoneLabels: true,
+    obstructionWarnings: true,
+    entryChips: true,
+    pathLabels: true,
+  },
   focusScenePointRequest: null,
   cameraPresetId: null,
   sceneIntelligenceGraph: INITIAL_SCENE_INTELLIGENCE_GRAPH,
@@ -1096,6 +1130,8 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     set((s) => ({ layerVisibility: { ...s.layerVisibility, [layer]: visible } })),
   setHeatmapMode: (mode) => set({ heatmapMode: mode }),
   setEnvironmentMode: (mode) => set({ environmentMode: mode }),
+  setOverlayDensity: (density) => set({ overlayDensity: density }),
+  setOverlayFilter: (filter, visible) => set((s) => ({ overlayFilters: { ...s.overlayFilters, [filter]: visible } })),
   setAllZoneTargetTypes: (targetType) =>
     useStudioStore.getState().commitSceneChange((scene) => ({
       ...scene,
@@ -1126,6 +1162,9 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
 
   setDemoMode: (active) => set({ demoMode: active }),
   setDemoStep: (step) => set({ demoStep: step }),
+  setLaunchNotice: (launchNotice) => set({ launchNotice }),
+  setCompareVisualEvidence: (compareVisualEvidence) => set({ compareVisualEvidence }),
+  setCompareReportSelection: (compareReportSelection) => set({ compareReportSelection }),
 
   addNode: (node) => {
     useStudioStore.getState().commitSceneChange((scene) => insertNode(scene, node));
@@ -1211,6 +1250,32 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         set({ simulationRunning: false });
       }
     }, 30);
+  },
+  simulateSnapshot: (snapshotId) => {
+    const current = get();
+    const index = current.snapshots.findIndex((snapshot) => snapshot.id === snapshotId);
+    if (index === -1) return false;
+    const target = current.snapshots[index];
+    const fullScene = cloneSecurityScene(target.scene as unknown as SecurityScene);
+    const result = simulateStudio(fullScene);
+
+    set((state) => {
+      const nextSnapshots = state.snapshots.map((snapshot, i) =>
+        i === index
+          ? {
+            ...snapshot,
+            simulation: result,
+          }
+          : snapshot);
+      const nextScene = cloneSecurityScene(state.scene);
+      nextScene.snapshots = structuredClone(nextSnapshots);
+      return {
+        snapshots: nextSnapshots,
+        scene: nextScene,
+      };
+    });
+
+    return true;
   },
   markDirty: () => set({ simulationDirty: true }),
   logChange: (entry) =>
@@ -1302,6 +1367,8 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       focusScenePointRequest: null,
       mapState: cloneDefaultMapState(),
       sceneIntelligenceGraph: buildGraphState(scene, null, 0, scene.snapshots.length),
+      compareVisualEvidence: null,
+      compareReportSelection: null,
     });
     return { success: true };
   },
@@ -1327,6 +1394,8 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       historyPast: [],
       historyFuture: [],
       sceneIntelligenceGraph: buildGraphState(scene, null, 0, (scene.snapshots ?? []).length),
+      compareVisualEvidence: null,
+      compareReportSelection: null,
       editor: {
         editorMode: "idle",
         draftWallStart: undefined,
@@ -1370,6 +1439,8 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       historyPast: [],
       historyFuture: [],
       sceneIntelligenceGraph: buildGraphState(blank, null, 0, 0),
+      compareVisualEvidence: null,
+      compareReportSelection: null,
     });
   },
 

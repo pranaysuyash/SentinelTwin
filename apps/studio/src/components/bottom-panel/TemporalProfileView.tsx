@@ -4,7 +4,7 @@ import { AlertTriangle, Clock, Shield, ShieldAlert, Sun, Moon, Sunset, ChevronDo
 import { useCallback, useMemo, useState } from "react";
 import { useStudioStore } from "@/store/studio-store";
 import { computeTemporalProfile } from "@/simulation/temporal";
-import type { VulnerabilityWindow, HourlySecuritySnapshot } from "@/schema/security-scene";
+import type { HourlySecuritySnapshot, TemporalAnomalyWindow, VulnerabilityWindow } from "@/schema/security-scene";
 
 const DAY_COLORS = [
   "#22c55e", // 0  – safe
@@ -188,6 +188,31 @@ function VulnerabilityCard({ window, label }: { window: VulnerabilityWindow; lab
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function AnomalyCard({ anomaly }: { anomaly: TemporalAnomalyWindow }) {
+  const c = SEVERITY_COLORS[anomaly.severity] ?? SEVERITY_COLORS.medium!;
+  return (
+    <div className={`rounded-lg border ${c.border} ${c.bg} px-3 py-2`}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-[9px] font-semibold text-[#c7d0e4]">{anomaly.anomalyType.replace(/_/g, " ").toUpperCase()}</div>
+          <div className="text-[8px] text-[#4a5568]">
+            {anomaly.startHour.toString().padStart(2, "0")}:{anomaly.startMinute.toString().padStart(2, "0")} → {anomaly.endHour.toString().padStart(2, "0")}:{anomaly.endMinute.toString().padStart(2, "0")}
+          </div>
+        </div>
+        <span className={`rounded px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wide ${c.text} border ${c.border}`}>{anomaly.severity}</span>
+      </div>
+      <div className="mt-1.5 text-[9px] leading-relaxed text-[#9aa6bf]">{anomaly.description}</div>
+      <div className="mt-1.5 flex flex-wrap gap-1">
+        {anomaly.affectedZones.slice(0, 3).map((zone) => (
+          <span key={zone} className="rounded bg-[#111521] px-1.5 py-0.5 text-[8px] text-[#b7c1d8]">
+            {zone}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -423,6 +448,38 @@ export function TemporalProfileView() {
                     window={window}
                     label={`Window ${i + 1}`}
                   />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Temporal Anomalies ── */}
+          {temporalProfile.anomalyWindows.length > 0 && (
+            <div className="px-3 py-2 border-b border-[#1e2130]">
+              <div className="flex items-center gap-2 mb-1.5">
+                <AlertTriangle className="w-3 h-3 text-amber-400" />
+                <span className="text-[9px] font-semibold text-[#c7d0e4]">Temporal Anomalies</span>
+                <span className="text-[8px] text-[#4a5568]">
+                  ({temporalProfile.anomalyWindows.length} found)
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5 mb-2">
+                <div className="rounded-md border border-[#1e2130] bg-[#0b0f17] px-2 py-1">
+                  <div className="text-[7px] uppercase tracking-wide text-[#4a5568]">High</div>
+                  <div className="text-[14px] font-bold text-red-400">{temporalProfile.anomalySummary?.highSeverityCount ?? 0}</div>
+                </div>
+                <div className="rounded-md border border-[#1e2130] bg-[#0b0f17] px-2 py-1">
+                  <div className="text-[7px] uppercase tracking-wide text-[#4a5568]">Medium</div>
+                  <div className="text-[14px] font-bold text-orange-300">{temporalProfile.anomalySummary?.mediumSeverityCount ?? 0}</div>
+                </div>
+                <div className="rounded-md border border-[#1e2130] bg-[#0b0f17] px-2 py-1">
+                  <div className="text-[7px] uppercase tracking-wide text-[#4a5568]">Low</div>
+                  <div className="text-[14px] font-bold text-yellow-300">{temporalProfile.anomalySummary?.lowSeverityCount ?? 0}</div>
+                </div>
+              </div>
+              <div className="space-y-1.5 max-h-[220px] overflow-y-auto">
+                {temporalProfile.anomalyWindows.map((anomaly, i) => (
+                  <AnomalyCard key={`${anomaly.startHour}:${anomaly.startMinute}-${anomaly.endHour}:${anomaly.endMinute}-${i}`} anomaly={anomaly} />
                 ))}
               </div>
             </div>

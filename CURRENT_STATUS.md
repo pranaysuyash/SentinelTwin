@@ -12,6 +12,7 @@
 - Guided workflow copy/CTA language is now outcome-oriented with disabled-state hints when prerequisites are missing.
 - Root launcher now includes a visible `Product Feature Status` surface with `Available` / `Preview` / `Planned` labels and an entry-flow maturity row.
 - AI Layout Draft now clearly labels its model-backed generation path, warns about workspace replacement, and falls back deterministically when no public API key is present.
+- AI Layout Draft now leaves a visible launcher status banner so the generated/fallback draft result is not lost when the modal closes.
 - AI Layout Draft now applies prompt-aware enrichment (camera counts, shelves/counter hints, back-storage zone hints) to generated scenes.
 - `apps/studio` Next.js app is the active product surface with a working Studio shell.
 - Mode routing works inside studio: `Map`, `Camera View`, `Camera Wall`, `Path Replay`, `Compare`.
@@ -23,6 +24,8 @@
 - Floor-plan import now converts detected geometry into an editable scene skeleton (walls/doors/windows + dimensions).
 - Floor-plan review now supports manual scale calibration (known width/depth/height) before scene creation.
 - Floor-plan review now supports correction controls to exclude false-positive walls/doors/windows before scene creation.
+- Floor-plan review now supports draggable door/window marker correction in the spatial preview before applying normalization.
+- Floor-plan normalization now merges/snaps geometry and uses calibrated scale for opening clamping (no hardcoded px/m assumption).
 - Report-lite export surface exists and now uses defensive/disclaimer language.
 - Report-lite now includes a practical hardening section: failing zones + immediate action plan from recommendations.
 - Right-panel assumptions are visible and directly editable (time-of-day and quality model), with link to full assumptions editor.
@@ -30,6 +33,9 @@
 - Camera View now shows per-camera path-visibility status overlays during replay context.
 - Camera Wall now shows per-camera route-visibility overlays and active route context badges.
 - Compare mode now renders each selected snapshot's own scene geometry (not only current live scene geometry).
+- Compare mode now supports snapshot-level simulation recovery (`Simulate Scenario B Now`) and changed-object delta summaries.
+- Report-lite now supports a `Before/After` export mode using snapshot A/B compare data.
+- Compare mode now supports `Capture Visual Evidence` from live compare canvases, and Report-lite compare export embeds captured images when snapshot IDs match.
 - Golden simulation claims suite exists (`apps/studio/src/simulation/__tests__/golden-simulation-claims.test.ts`).
 
 ## Partial

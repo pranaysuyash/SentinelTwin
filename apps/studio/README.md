@@ -61,7 +61,9 @@ bun test src/simulation/__tests__/golden-simulation-claims.test.ts
 - Scene builder wizard paths: blank, template, floor-plan import prototype.
 - Floor-plan review supports manual scale calibration before creating the scene.
 - Floor-plan review also supports correction controls (drop false wall/door/window detections before scene creation).
+- Floor-plan review supports draggable door/window marker adjustments in preview before applying corrections.
 - Bottom panel: metrics, issues, timeline, before/after, report-lite, assumptions.
+- Report-lite supports `Single Scene` and `Before/After` export modes.
 
 ## What Works Well
 
@@ -77,6 +79,8 @@ bun test src/simulation/__tests__/golden-simulation-claims.test.ts
 - Camera view includes per-camera replay visibility status overlay.
 - Camera wall tiles include route visibility status/quality overlays and route-context chip in header.
 - Compare mode renders selected snapshot geometry per side for truthful before/after visuals.
+- Compare mode includes changed-object delta summaries and snapshot-level simulation recovery for unsimulated scenarios.
+- Compare mode can capture live canvas evidence for selected snapshot A/B, and Report-lite compare export consumes these captures when available.
 
 ## Known Gaps
 

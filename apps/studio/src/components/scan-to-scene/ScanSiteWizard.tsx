@@ -125,12 +125,15 @@ function StepBadge({ step, current, label }: { step: number; current: number; la
 export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
   const setScene = useStudioStore((s) => s.setScene);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const canvasRef = useRef<HTMLDivElement | null>(null);
   const [step, setStep] = useState<ScanStep>(0);
   const [activeKind, setActiveKind] = useState<ScanCandidateKind>("counter");
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
   const [isReading, setIsReading] = useState(false);
   const [isCompiling, setIsCompiling] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [draggingCandidateId, setDraggingCandidateId] = useState<string | null>(null);
+  const [compileLowConfidenceOverride, setCompileLowConfidenceOverride] = useState(false);
   const [session, setSession] = useState<ScanSession>(() => createScanSession("Manual Assisted Scan", 10, 8, 3));
 
   const candidateStats = useMemo(() => {
@@ -152,6 +155,26 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
     if (step === 2) return Boolean(session.imageDataUrl);
     return true;
   }, [session.imageDataUrl, session.roomName, step]);
+
+  const acceptedCandidates = useMemo(
+    () => session.candidates.filter((candidate) => candidate.status !== "rejected"),
+    [session.candidates],
+  );
+  const lowConfidenceAccepted = useMemo(
+    () => acceptedCandidates.filter((candidate) => candidate.confidence < 0.45),
+    [acceptedCandidates],
+  );
+  const scanSanityIssues = useMemo(() => {
+    const acceptedWalls = acceptedCandidates.filter((candidate) => candidate.kind === "wall").length;
+    const acceptedDoors = acceptedCandidates.filter((candidate) => candidate.kind === "door").length;
+    const acceptedCameras = acceptedCandidates.filter((candidate) => candidate.kind === "camera").length;
+    const issues: string[] = [];
+    if (acceptedWalls < 2) issues.push("Low wall evidence: fewer than 2 accepted wall candidates.");
+    if (acceptedDoors === 0) issues.push("No accepted door candidate; entry/exit flow may be inaccurate.");
+    if (acceptedCameras === 0) issues.push("No accepted camera candidate yet; coverage replay will be limited.");
+    if (lowConfidenceAccepted.length > 0) issues.push(`${lowConfidenceAccepted.length} accepted candidate(s) are below 45% confidence.`);
+    return issues;
+  }, [acceptedCandidates, lowConfidenceAccepted.length]);
 
   const updateSession = useCallback((patch: Partial<ScanSession>) => {
     setSession((current) => ({ ...current, ...patch, updatedAt: Date.now() }));
@@ -240,9 +263,34 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
     addCandidate(point);
   }, [addCandidate, session.imageDataUrl]);
 
+  const updateCandidatePointFromClient = useCallback((candidateId: string, clientX: number, clientY: number) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect || rect.width <= 0 || rect.height <= 0) return;
+    const point: [number, number] = [
+      Math.min(0.98, Math.max(0.02, (clientX - rect.left) / rect.width)),
+      Math.min(0.98, Math.max(0.02, (clientY - rect.top) / rect.height)),
+    ];
+    updateCandidate(candidateId, { point, status: "edited" });
+  }, [updateCandidate]);
+
+  const nudgeSelectedCandidate = useCallback((dx: number, dy: number) => {
+    if (!selectedCandidateId) return;
+    const selected = session.candidates.find((candidate) => candidate.id === selectedCandidateId);
+    if (!selected) return;
+    const point: [number, number] = [
+      Math.min(0.98, Math.max(0.02, selected.point[0] + dx)),
+      Math.min(0.98, Math.max(0.02, selected.point[1] + dy)),
+    ];
+    updateCandidate(selectedCandidateId, { point, status: "edited" });
+  }, [selectedCandidateId, session.candidates, updateCandidate]);
+
   const handleCompile = useCallback(async () => {
     if (!session.imageDataUrl) {
       setError("Upload a site image or choose the sample site before compiling.");
+      return;
+    }
+    if (lowConfidenceAccepted.length > 0 && !compileLowConfidenceOverride) {
+      setError("Low-confidence accepted candidates detected. Confirm override to compile anyway.");
       return;
     }
 
@@ -257,7 +305,7 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
     } finally {
       setIsCompiling(false);
     }
-  }, [onClose, session, setScene]);
+  }, [compileLowConfidenceOverride, lowConfidenceAccepted.length, onClose, session, setScene]);
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[#0b0f17]">
@@ -483,8 +531,31 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
                 <div className="relative h-full min-h-[360px] w-full">
                   {session.imageDataUrl ? (
                     <div
+                      ref={canvasRef}
                       className="relative h-full w-full cursor-crosshair overflow-hidden"
                       onClick={handleImageClick}
+                      onPointerMove={(event) => {
+                        if (!draggingCandidateId) return;
+                        updateCandidatePointFromClient(draggingCandidateId, event.clientX, event.clientY);
+                      }}
+                      onPointerUp={() => setDraggingCandidateId(null)}
+                      onPointerLeave={() => setDraggingCandidateId(null)}
+                      onKeyDown={(event) => {
+                        if (event.key === "ArrowLeft") {
+                          event.preventDefault();
+                          nudgeSelectedCandidate(-0.005, 0);
+                        } else if (event.key === "ArrowRight") {
+                          event.preventDefault();
+                          nudgeSelectedCandidate(0.005, 0);
+                        } else if (event.key === "ArrowUp") {
+                          event.preventDefault();
+                          nudgeSelectedCandidate(0, -0.005);
+                        } else if (event.key === "ArrowDown") {
+                          event.preventDefault();
+                          nudgeSelectedCandidate(0, 0.005);
+                        }
+                      }}
+                      tabIndex={0}
                     >
                       <img
                         src={session.imageDataUrl}
@@ -512,6 +583,11 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
                             onClick={(event) => {
                               event.stopPropagation();
                               setSelectedCandidateId(candidate.id);
+                            }}
+                            onPointerDown={(event) => {
+                              event.stopPropagation();
+                              setSelectedCandidateId(candidate.id);
+                              setDraggingCandidateId(candidate.id);
                             }}
                             title={`${candidate.label} (${candidate.status})`}
                           >
@@ -547,6 +623,9 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
               </div>
 
               <div className="mt-4 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
+                <div className="rounded-xl border border-[#243049] bg-[#09111b] px-3 py-2 text-[10px] text-[#89a0c2]">
+                  Drag markers to reposition. Use keyboard arrow keys for fine nudges when the canvas is focused.
+                </div>
                 {session.candidates.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-[#243049] bg-[#09111b] px-4 py-8 text-center text-xs text-[#73839f]">
                     Tap the image to add the first candidate. Use the kind chips above to switch what you are placing.
@@ -690,6 +769,28 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
 
               <div className="mt-4 rounded-2xl border border-cyan-500/20 bg-cyan-500/8 p-3 text-xs text-cyan-100/90">
                 No AI perception is claimed here. The image is a manual-assisted intake that compiles directly into the existing simulation pipeline.
+              </div>
+              <div className="mt-3 rounded-2xl border border-[#243049] bg-[#09111b] p-3">
+                <h4 className="text-xs font-semibold text-white">Geometry sanity checks</h4>
+                <div className="mt-2 space-y-1 text-[11px] text-[#8aa1c4]">
+                  {scanSanityIssues.length === 0 ? (
+                    <p className="text-emerald-300">No obvious structural issues detected.</p>
+                  ) : (
+                    scanSanityIssues.map((issue) => (
+                      <p key={issue}>• {issue}</p>
+                    ))
+                  )}
+                </div>
+                {lowConfidenceAccepted.length > 0 ? (
+                  <label className="mt-3 flex items-start gap-2 text-[11px] text-[#c6d3ea]">
+                    <input
+                      type="checkbox"
+                      checked={compileLowConfidenceOverride}
+                      onChange={(event) => setCompileLowConfidenceOverride(event.target.checked)}
+                    />
+                    <span>Compile anyway with low-confidence accepted candidates (manual override).</span>
+                  </label>
+                ) : null}
               </div>
             </div>
 

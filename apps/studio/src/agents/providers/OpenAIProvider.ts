@@ -124,8 +124,7 @@ export class OpenAIProvider implements ModelProvider {
   }
 
   async completeStructured<T>(prompt: ModelPrompt, schema: z.ZodSchema<T>, signal?: AbortSignal): Promise<T> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const zodJson = z.toJSONSchema(schema as any);
+    const zodJson = z.toJSONSchema(schema as unknown as Record<string, unknown>);
     const jsonSchema = ensureStrictMode(zodJson);
 
     const body = {

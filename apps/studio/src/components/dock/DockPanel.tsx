@@ -39,8 +39,8 @@ export function DockPanel({
   const isBottom = side === "bottom";
   const dimensionStyle = collapsed
     ? isBottom
-      ? { height: 40 }
-      : { width: 56 }
+      ? { height: 36 }
+      : { width: 48 }
     : isBottom
       ? { height: sizePx }
       : { width: sizePx };

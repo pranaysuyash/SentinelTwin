@@ -4,58 +4,14 @@ import { Eye, ListRestart, Pause, Play, Route, SkipBack, SkipForward } from "luc
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { cn } from "@/lib/cn";
+import { QUALITY_BAR_COLOR, QUALITY_RANK, qualityBadgeClasses } from "@/lib/quality-display";
 import { distance2D, lerp2D } from "@/simulation/geometry";
 import { VisibilityTimeline } from "@/components/view/VisibilityTimeline";
 import type { DoriQuality, ScenarioPath, SimulationResult } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 
-const QUALITY_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
-  scrutinize: { bg: "bg-sky-900/40", text: "text-sky-300", dot: "bg-sky-400" },
-  validate: { bg: "bg-blue-900/40", text: "text-blue-300", dot: "bg-blue-400" },
-  identification: { bg: "bg-blue-900/40", text: "text-blue-300", dot: "bg-blue-400" },
-  characterize: { bg: "bg-green-900/40", text: "text-green-300", dot: "bg-green-400" },
-  recognition: { bg: "bg-green-900/40", text: "text-green-300", dot: "bg-green-400" },
-  perceive: { bg: "bg-lime-900/40", text: "text-lime-300", dot: "bg-lime-400" },
-  observation: { bg: "bg-yellow-900/40", text: "text-yellow-300", dot: "bg-yellow-400" },
-  discern: { bg: "bg-yellow-900/40", text: "text-yellow-300", dot: "bg-yellow-400" },
-  outline: { bg: "bg-orange-900/40", text: "text-orange-300", dot: "bg-orange-400" },
-  overview: { bg: "bg-orange-900/40", text: "text-orange-300", dot: "bg-orange-400" },
-  detection: { bg: "bg-orange-900/40", text: "text-orange-300", dot: "bg-orange-400" },
-  none: { bg: "bg-red-900/40", text: "text-red-400", dot: "bg-red-500" },
-};
-
-const QUALITY_BAR_COLORS: Record<string, string> = {
-  scrutinize: "#0ea5e9",
-  validate: "#60a5fa",
-  identification: "#4ade80",
-  characterize: "#4ade80",
-  recognition: "#60a5fa",
-  perceive: "#84cc16",
-  observation: "#facc15",
-  discern: "#eab308",
-  outline: "#fb923c",
-  overview: "#fb923c",
-  detection: "#fb923c",
-  none: "#ef4444",
-};
-
-const QUALITY_RANK: Record<DoriQuality, number> = {
-  scrutinize: 11,
-  identification: 10,
-  validate: 9,
-  characterize: 8,
-  recognition: 7,
-  perceive: 6,
-  observation: 5,
-  discern: 4,
-  outline: 3,
-  overview: 2,
-  detection: 1,
-  none: 0,
-};
-
-function QualityBadge({ quality }: { quality: string }) {
-  const c = QUALITY_COLORS[quality] ?? QUALITY_COLORS.none!;
+function QualityBadge({ quality }: { quality: DoriQuality }) {
+  const c = qualityBadgeClasses(quality);
   return (
     <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider ${c.bg} ${c.text}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${c.dot}`} />
@@ -158,6 +114,8 @@ export function TimelineTab() {
   const setPathReplayPlaying = useStudioStore((s) => s.setPathReplayPlaying);
   const setPathReplayProgress = useStudioStore((s) => s.setPathReplayProgress);
   const setPathReplaySpeed = useStudioStore((s) => s.setPathReplaySpeed);
+  const pathReplayFollowActor = useStudioStore((s) => s.pathReplay.followActor);
+  const setPathReplayFollowActor = useStudioStore((s) => s.setPathReplayFollowActor);
   const activePathId = useStudioStore((s) => s.activePathId);
   const setActivePathId = useStudioStore((s) => s.setActivePathId);
 
@@ -172,7 +130,6 @@ export function TimelineTab() {
   }, [activePath, result]);
 
   const [subTab, setSubTab] = useState<"timeline" | "events" | "quality">("timeline");
-  const [followActor, setFollowActor] = useState(true);
   const playbackAnchorRef = useRef({ startWallTime: 0, startPlaybackTime: 0 });
   const totalDuration = activePathResult?.totalDurationS ?? 0;
   const currentTime = totalDuration > 0 ? pathReplay.progress * totalDuration : 0;
@@ -321,7 +278,7 @@ export function TimelineTab() {
                     style={{
                       left: `${slot.leftPct}%`,
                       width: `${Math.max(slot.widthPct, 0.5)}%`,
-                      backgroundColor: QUALITY_BAR_COLORS[slot.quality] ?? QUALITY_BAR_COLORS.none,
+                      backgroundColor: QUALITY_BAR_COLOR[slot.quality as DoriQuality] ?? QUALITY_BAR_COLOR.none,
                     }}
                   />
                 ))}
@@ -354,12 +311,12 @@ export function TimelineTab() {
           ))}
           <button
             type="button"
-            onClick={() => setFollowActor((value) => !value)}
-            className={cn(
-              "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-medium transition-colors",
-              followActor ? "bg-[#1a2333] text-[#93c5fd]" : "text-[#4a5568] hover:bg-[#131a28] hover:text-[#8b96ab]",
-            )}
-          >
+          onClick={() => setPathReplayFollowActor(!pathReplayFollowActor)}
+          className={cn(
+            "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-medium transition-colors",
+            pathReplayFollowActor ? "bg-[#1a2333] text-[#93c5fd]" : "text-[#4a5568] hover:bg-[#131a28] hover:text-[#8b96ab]",
+          )}
+        >
             <Eye className="h-3 w-3" />
             Follow
           </button>

@@ -1,4 +1,5 @@
 import type { DoriQuality } from "@/schema/security-scene";
+import { QUALITY_COLOR } from "@/lib/quality-display";
 
 export const MAP_COLORS = {
   background: "#0a0d14",
@@ -32,20 +33,7 @@ export const MAP_COLORS = {
     high: "#f97316",
     critical: "#ef4444",
   } as const,
-  quality: {
-    none: "#ef4444",
-    detection: "#f97316",
-    observation: "#eab308",
-    recognition: "#22c55e",
-    identification: "#3b82f6",
-    overview: "#f97316",
-    outline: "#fb923c",
-    discern: "#eab308",
-    perceive: "#86efac",
-    characterize: "#22c55e",
-    validate: "#3b82f6",
-    scrutinize: "#0ea5e9",
-  } satisfies Record<DoriQuality, string>,
+  quality: QUALITY_COLOR satisfies Record<DoriQuality, string>,
 } as const;
 
 export function qualityColor(quality: DoriQuality) {

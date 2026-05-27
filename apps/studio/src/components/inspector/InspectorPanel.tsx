@@ -378,8 +378,8 @@ function CameraInspector() {
   const setTab = useStudioStore((s) => s.setInspectorTab);
   const result = useStudioStore((s) => s.simulationResult);
   const updateNode = useStudioStore((s) => s.updateNode);
-  const addNode = useStudioStore((s) => s.addNode);
   const removeNode = useStudioStore((s) => s.removeNode);
+  const duplicateNode = useStudioStore((s) => s.duplicateNode);
   const selectNode = useStudioStore((s) => s.selectNode);
   const addSnapshot = useStudioStore((s) => s.addSnapshot);
   const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
@@ -452,16 +452,7 @@ function CameraInspector() {
   };
 
   const duplicateCamera = () => {
-    const duplicatedCamera: CameraNode = {
-      ...camera,
-      id: `cam_${Date.now().toString(36)}`,
-      name: `${camera.name} Copy`,
-      position: [camera.position[0] + 0.35, camera.position[1], camera.position[2] + 0.35],
-      source: "manual",
-    };
-
-    addNode(duplicatedCamera);
-    selectNode(duplicatedCamera.id);
+    duplicateNode(camera.id);
   };
 
   const setViewToggle = (key: ViewToggleKey) => {
@@ -2094,7 +2085,7 @@ export function InspectorPanel() {
   const entryPoint = scene.entryPoints.find((entry) => entry.id === selectedId);
 
   return (
-    <aside className="flex w-[304px] flex-shrink-0 flex-col overflow-hidden border-l border-[#1e2130] bg-[#0d1017]">
+    <aside className="flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l border-[#1e2130] bg-[#0d1017]">
       <div className="flex h-8 items-center border-b border-[#1e2130] px-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-[#4a5568]">
         Inspector
       </div>

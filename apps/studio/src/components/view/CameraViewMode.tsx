@@ -3,7 +3,7 @@
 import { OrbitControls } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
 import { ArrowLeft, Camera, ChevronLeft, ChevronRight, CircleSmall, VideoOff } from "lucide-react";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 import { useStudioStore } from "@/store/studio-store";
@@ -18,6 +18,7 @@ import {
   SceneWalls,
   SceneWindows,
 } from "@/components/workspace/SharedScene";
+import { QUALITY_RANK } from "@/lib/quality-display";
 import type { CameraNode, DoriQuality, SimulationAssumptions } from "@/schema/security-scene";
 
 type CameraFeedMode = "normal" | "ir_bw" | "low_light" | "thermal";
@@ -29,21 +30,6 @@ type OverlayFlags = {
   zones: boolean;
   timestamp: boolean;
   grid: boolean;
-};
-
-const QUALITY_RANK: Record<DoriQuality, number> = {
-  none: 0,
-  detection: 1,
-  overview: 1,
-  outline: 1,
-  observation: 2,
-  discern: 2,
-  perceive: 2,
-  recognition: 3,
-  characterize: 3,
-  validate: 4,
-  identification: 4,
-  scrutinize: 4,
 };
 
 function SceneView({ theme }: { theme: (typeof ENVIRONMENT_THEMES)[keyof typeof ENVIRONMENT_THEMES] }) {
@@ -240,6 +226,7 @@ export function DoriInsightCard({
   zoneLabel,
   currentQuality,
   requiredQuality,
+  zoneStatus,
   bestCameraName,
   distanceM,
   angleDeg,
@@ -249,15 +236,25 @@ export function DoriInsightCard({
   zoneLabel: string;
   currentQuality: string;
   requiredQuality: string;
+  zoneStatus: "pass" | "partial" | "fail" | "unknown";
   bestCameraName: string;
   distanceM: number;
   angleDeg: number;
   lightingLabel: string;
 }) {
+  const statusLabel =
+    zoneStatus === "pass" ? "PASSES"
+      : zoneStatus === "partial" ? "PARTIAL"
+        : zoneStatus === "fail" ? "FAILS"
+          : "UNKNOWN";
+
   return (
     <div className="absolute right-3 top-24 z-30 w-56 rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)] backdrop-blur-sm">
       <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-[#7dd3fc]">DORI OVERLAY</div>
       <div className="mt-1 text-[10px] font-semibold text-white">{zoneLabel}</div>
+      <div className="mt-1 text-[8px] uppercase tracking-[0.16em] text-[#8ea5cc]">
+        {requiredQuality.toUpperCase()} REQUIRED · {statusLabel}
+      </div>
       <div className="mt-2 space-y-1.5 text-[10px] text-[#d2d9e8]">
         <div className="flex items-center justify-between gap-2">
           <span className="text-[#6a748b]">Current Quality</span>
@@ -308,6 +305,8 @@ function BottomControlStrip({
   onFlagsChange: (next: OverlayFlags) => void;
   onBackToMap: () => void;
 }) {
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement | null>(null);
   const viewModes: Array<{ value: CameraFeedMode; label: string }> = [
     { value: "normal", label: "Normal" },
     { value: "ir_bw", label: "IR (B/W)" },
@@ -315,8 +314,20 @@ function BottomControlStrip({
     { value: "thermal", label: "Thermal" },
   ];
 
+  useEffect(() => {
+    const onPointerDown = (event: PointerEvent) => {
+      if (!moreRef.current) return;
+      if (event.target instanceof Node && !moreRef.current.contains(event.target)) {
+        setMoreOpen(false);
+      }
+    };
+
+    window.addEventListener("pointerdown", onPointerDown);
+    return () => window.removeEventListener("pointerdown", onPointerDown);
+  }, []);
+
   return (
-    <div className="absolute inset-x-3 bottom-3 z-30 flex items-stretch gap-1.5">
+    <div className="absolute inset-x-3 bottom-3 z-30 flex items-end gap-1.5">
       <div className="flex rounded-md border border-[#27364e] bg-black/55 p-1">
         {viewModes.map((entry) => (
           <button
@@ -377,9 +388,70 @@ function BottomControlStrip({
         >
           GRID {flags.grid ? "✓" : ""}
         </button>
-        <button type="button" className="border-l border-[#27364e] px-2 py-1 font-medium text-[#8ea5cc]">
-          MORE
-        </button>
+        <div ref={moreRef} className="relative border-l border-[#27364e]">
+          <button
+            type="button"
+            onClick={() => setMoreOpen((open) => !open)}
+            className={`px-2 py-1 font-medium transition-colors ${moreOpen ? "bg-blue-900/35 text-blue-200" : "text-[#8ea5cc]"}`}
+          >
+            MORE
+          </button>
+          {moreOpen ? (
+            <div className="absolute bottom-full left-0 mb-1.5 w-44 rounded-lg border border-[#27364e] bg-[#0b0f17]/96 p-1.5 shadow-[0_12px_24px_rgba(0,0,0,0.35)] backdrop-blur-sm">
+              <button
+                type="button"
+                onClick={() => {
+                  onFlagsChange({
+                    overlays: true,
+                    dori: true,
+                    path: true,
+                    zones: true,
+                    timestamp: true,
+                    grid: false,
+                  });
+                  setMoreOpen(false);
+                }}
+                className="w-full rounded-md px-2 py-1.5 text-left text-[9px] font-medium text-[#c7d0e4] transition-colors hover:bg-[#1a2233]"
+              >
+                Show replay essentials
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onFlagsChange({
+                    overlays: true,
+                    dori: false,
+                    path: false,
+                    zones: false,
+                    timestamp: false,
+                    grid: false,
+                  });
+                  setMoreOpen(false);
+                }}
+                className="w-full rounded-md px-2 py-1.5 text-left text-[9px] font-medium text-[#c7d0e4] transition-colors hover:bg-[#1a2233]"
+              >
+                Minimal camera feed
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onFlagsChange({
+                    overlays: true,
+                    dori: true,
+                    path: false,
+                    zones: true,
+                    timestamp: true,
+                    grid: false,
+                  });
+                  setMoreOpen(false);
+                }}
+                className="w-full rounded-md px-2 py-1.5 text-left text-[9px] font-medium text-[#c7d0e4] transition-colors hover:bg-[#1a2233]"
+              >
+                Inspection preset
+              </button>
+            </div>
+          ) : null}
+        </div>
         <button
           type="button"
           onClick={onBackToMap}
@@ -621,6 +693,7 @@ export function CameraViewMode() {
               zoneLabel={firstCriticalZone.label}
               currentQuality={zoneAnalysis.currentQuality}
               requiredQuality={zoneResult?.requiredQuality ?? firstCriticalZone.requiredQuality}
+              zoneStatus={zoneResult?.status ?? "unknown"}
               bestCameraName={zoneAnalysis.bestCameraName}
               distanceM={zoneAnalysis.distanceM}
               angleDeg={zoneAnalysis.angleDeg}

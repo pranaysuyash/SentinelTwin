@@ -24,6 +24,7 @@ import { cn } from "@/lib/cn";
 import { useStudioStore } from "@/store/studio-store";
 import { useSimulation } from "@/hooks/use-simulation";
 import { WorkspacePresetSwitcher } from "@/components/dock/WorkspacePresetSwitcher";
+import { SceneBuilderWizard } from "@/components/scan-to-scene/SceneBuilderWizard";
 
 function SimStatus() {
   const dirty = useStudioStore((s) => s.simulationDirty);
@@ -77,7 +78,6 @@ export function TopBar() {
   const saveSnapshot = useStudioStore((s) => s.saveSnapshot);
   const scene = useStudioStore((s) => s.scene);
   const savedScenes = useStudioStore((s) => s.savedScenes);
-  const createNewScene = useStudioStore((s) => s.createNewScene);
   const setScene = useStudioStore((s) => s.setScene);
   const importScene = useStudioStore((s) => s.importScene);
   const saveSceneToStorage = useStudioStore((s) => s.saveSceneToStorage);
@@ -91,6 +91,7 @@ export function TopBar() {
   const [sceneOpen, setSceneOpen] = useState(false);
   const [envOpen, setEnvOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
 
@@ -157,7 +158,7 @@ export function TopBar() {
             onClick={() => setSceneOpen((open) => !open)}
             className="flex h-7 min-w-[170px] max-w-[190px] items-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] px-2.5 text-[11px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
           >
-            <span className="truncate">Small Retail Shop Demo</span>
+            <span className="truncate">{scene.name || "Untitled Scene"}</span>
             <ChevronDown className="h-3 w-3 flex-shrink-0 text-[#546078]" />
           </button>
           {sceneOpen && (
@@ -221,13 +222,13 @@ export function TopBar() {
                 </button>
                 <button
                   onClick={() => {
-                    createNewScene();
+                    setWizardOpen(true);
                     setSceneOpen(false);
                   }}
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
                 >
                   <Plus className="h-3 w-3" />
-                  New Blank Scene
+                  New Scene...
                 </button>
                 <button
                   onClick={() => {
@@ -401,6 +402,14 @@ export function TopBar() {
           )}
         </div>
       </div>
+
+      {wizardOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="relative h-[520px] w-[640px] overflow-hidden rounded-2xl border border-[#202536] shadow-2xl shadow-black/50">
+            <SceneBuilderWizard onClose={() => setWizardOpen(false)} />
+          </div>
+        </div>
+      )}
     </header>
   );
 }

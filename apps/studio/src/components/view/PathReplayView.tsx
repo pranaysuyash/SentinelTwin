@@ -7,6 +7,7 @@ import { ListRestart, Pause, Play, SkipBack, SkipForward } from "lucide-react";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
+import { QUALITY_ABBR, QUALITY_COLOR, QUALITY_RANK } from "@/lib/quality-display";
 import { useStudioStore } from "@/store/studio-store";
 import "@/lib/three-compat";
 import {
@@ -17,12 +18,14 @@ import {
   SceneDoors,
   SceneWindows,
   SceneObstructions,
+  CoverageTileFloor,
   CoverageHeatmapInstanced,
   CoverageSegmentPath,
 } from "@/components/workspace/SharedScene";
 import { samplePathQuality } from "@/components/map/path-quality";
 import { VisibilityTimeline } from "@/components/view/VisibilityTimeline";
 import type { DoriQuality, ScenarioPath } from "@/schema/security-scene";
+import { buildCoverageGrid } from "@/simulation/grid";
 
 // ── Shared scene ──
 
@@ -121,6 +124,131 @@ function buildPlaybackWaypoints(path: ScenarioPath) {
   return waypoints;
 }
 
+function pointInsideOrientedRect(
+  point: [number, number],
+  center: [number, number],
+  width: number,
+  depth: number,
+  rotationDeg: number,
+) {
+  const [px, pz] = point;
+  const [cx, cz] = center;
+  const dx = px - cx;
+  const dz = pz - cz;
+  const radians = (rotationDeg * Math.PI) / 180;
+  const cosR = Math.cos(-radians);
+  const sinR = Math.sin(-radians);
+  const localX = dx * cosR - dz * sinR;
+  const localZ = dx * sinR + dz * cosR;
+  return Math.abs(localX) <= width / 2 && Math.abs(localZ) <= depth / 2;
+}
+
+function findPointCollision(
+  point: [number, number],
+  scene: ReturnType<typeof useStudioStore.getState>["scene"],
+) {
+  for (const obstruction of scene.obstructions) {
+    const [width, , depth] = obstruction.dimensions;
+    const [ox, , oz] = obstruction.position;
+
+    if (
+      pointInsideOrientedRect(
+        point,
+        [ox, oz],
+        Math.max(width, 0.01),
+        Math.max(depth, 0.01),
+        obstruction.rotationYDeg,
+      )
+    ) {
+      return obstruction;
+    }
+  }
+
+  return null;
+}
+
+function findNearestWalkablePoint(
+  point: [number, number],
+  walkableCells: { x: number; z: number; walkable: boolean }[],
+) {
+  let closest = walkableCells[0] ?? null;
+  let best = Number.POSITIVE_INFINITY;
+
+  for (const cell of walkableCells) {
+    const distance = Math.hypot(cell.x - point[0], cell.z - point[1]);
+    if (distance < best) {
+      best = distance;
+      closest = cell;
+    }
+  }
+
+  return closest ? [closest.x, closest.z] as [number, number] : point;
+}
+
+function buildLegalizedReplayWaypoints(
+  sourceWaypoints: { position: [number, number]; timeS: number }[],
+  scene: ReturnType<typeof useStudioStore.getState>["scene"],
+) {
+  if (sourceWaypoints.length < 2) return sourceWaypoints.map((waypoint) => ({
+    ...waypoint,
+    rawPosition: waypoint.position,
+    collided: false,
+  }));
+
+  const grid = buildCoverageGrid(scene, 6);
+  const walkableCells = grid.cells.filter((cell) => cell.walkable);
+  const legalized: Array<{
+    position: [number, number];
+    rawPosition: [number, number];
+    timeS: number;
+    collided: boolean;
+    blockedBy?: string;
+  }> = [];
+
+  for (let index = 0; index < sourceWaypoints.length - 1; index += 1) {
+    const current = sourceWaypoints[index]!;
+    const next = sourceWaypoints[index + 1]!;
+    const segmentDistance = Math.hypot(
+      next.position[0] - current.position[0],
+      next.position[1] - current.position[1],
+    );
+    const steps = Math.max(1, Math.ceil(segmentDistance / 0.22));
+
+    for (let step = 0; step < steps; step += 1) {
+      const ratio = step / steps;
+      const rawPoint: [number, number] = [
+        current.position[0] + (next.position[0] - current.position[0]) * ratio,
+        current.position[1] + (next.position[1] - current.position[1]) * ratio,
+      ];
+      const timeS = current.timeS + (next.timeS - current.timeS) * ratio;
+      const obstruction = findPointCollision(rawPoint, scene);
+      const adjustedPoint = obstruction
+        ? findNearestWalkablePoint(rawPoint, walkableCells)
+        : rawPoint;
+
+      legalized.push({
+        position: adjustedPoint,
+        rawPosition: rawPoint,
+        timeS,
+        collided: Boolean(obstruction),
+        blockedBy: obstruction?.label,
+      });
+    }
+  }
+
+  const last = sourceWaypoints[sourceWaypoints.length - 1]!;
+  const obstruction = findPointCollision(last.position, scene);
+  legalized.push({
+    position: obstruction ? findNearestWalkablePoint(last.position, walkableCells) : last.position,
+    rawPosition: last.position,
+    timeS: last.timeS,
+    collided: Boolean(obstruction),
+    blockedBy: obstruction?.label,
+  });
+
+  return legalized;
+}
+
 // ── Animated Actor (useFrame for R3F-native per-frame updates) ──
 
 function PathActor({ waypoints, currentIndex, progress }: {
@@ -200,6 +328,97 @@ function PathActor({ waypoints, currentIndex, progress }: {
         <ringGeometry args={[0.12, 0.28, 24]} />
         <meshBasicMaterial color="#22c55e" transparent opacity={0.5} />
       </mesh>
+    </group>
+  );
+}
+
+function ReplayCameraCones() {
+  const scene = useStudioStore((s) => s.scene);
+
+  return (
+    <group>
+      {scene.cameras.map((camera) => {
+        const forward = new THREE.Vector3(
+          Math.sin((camera.yawDeg * Math.PI) / 180) * Math.cos((camera.pitchDeg * Math.PI) / 180),
+          Math.sin((camera.pitchDeg * Math.PI) / 180),
+          Math.cos((camera.yawDeg * Math.PI) / 180) * Math.cos((camera.pitchDeg * Math.PI) / 180),
+        ).normalize();
+        const range = Math.min(camera.rangeM, 12);
+        const radius = Math.tan((camera.fovHorizontalDeg / 2) * (Math.PI / 180)) * range;
+        const centerPos = new THREE.Vector3(...camera.position).add(forward.clone().multiplyScalar(range / 2));
+        const quaternion = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, -1, 0), forward);
+        const color = camera.status === "on" ? "#60a5fa" : "#64748b";
+
+        return (
+          <group key={camera.id}>
+            <mesh position={centerPos} quaternion={quaternion}>
+              <coneGeometry args={[radius, range, 24, 1, false]} />
+              <meshBasicMaterial color={color} transparent opacity={0.18} side={THREE.DoubleSide} depthWrite={false} />
+            </mesh>
+            <lineSegments position={centerPos} quaternion={quaternion}>
+              <edgesGeometry args={[new THREE.ConeGeometry(radius, range, 24, 1, false)]} />
+              <lineBasicMaterial color={color} transparent opacity={0.6} />
+            </lineSegments>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+function ReplayCollisionMarkers({
+  samples,
+}: {
+  samples: {
+    position: [number, number];
+    rawPosition: [number, number];
+    timeS: number;
+    collided: boolean;
+    blockedBy?: string;
+  }[];
+}) {
+  const firstCollision = samples.find((sample) => sample.collided);
+  const collisionLine = useMemo(() => {
+    if (!firstCollision) return null;
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute(
+      "position",
+      new THREE.BufferAttribute(
+        new Float32Array([
+          firstCollision.rawPosition[0], 0.04, firstCollision.rawPosition[1],
+          firstCollision.position[0], 0.04, firstCollision.position[1],
+        ]),
+        3,
+      ),
+    );
+    return geometry;
+  }, [firstCollision]);
+
+  if (!firstCollision) return null;
+
+  return (
+    <group>
+      <mesh position={[firstCollision.rawPosition[0], 0.03, firstCollision.rawPosition[1]]}>
+        <ringGeometry args={[0.18, 0.3, 24]} />
+        <meshBasicMaterial color="#f97316" transparent opacity={0.95} />
+      </mesh>
+      <mesh position={[firstCollision.position[0], 0.02, firstCollision.position[1]]}>
+        <ringGeometry args={[0.08, 0.16, 24]} />
+        <meshBasicMaterial color="#22c55e" transparent opacity={0.7} />
+      </mesh>
+      {collisionLine && (
+        <primitive object={collisionLine} />
+      )}
+      {collisionLine && (
+        <lineSegments geometry={collisionLine}>
+          <lineBasicMaterial color="#f97316" transparent opacity={0.85} />
+        </lineSegments>
+      )}
+      <Html position={[firstCollision.rawPosition[0], 0.55, firstCollision.rawPosition[1]]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
+        <div className="rounded-md border border-[#f97316]/50 bg-black/80 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#fdba74]">
+          Collision corrected
+        </div>
+      </Html>
     </group>
   );
 }
@@ -533,11 +752,22 @@ type QualityExposure = {
 };
 const EXPOSURE_KEYS: DoriQuality[] = ["identification", "recognition", "observation", "detection"];
 
-function InfoOverlay({ waypointCount, exposureScore, targetReached, qualityBands }: {
+function InfoOverlay({
+  waypointCount,
+  exposureScore,
+  criticalZoneReachableAlongRoute,
+  qualityBands,
+  collisionCount,
+  firstCollisionLabel,
+  firstCollisionTimeS,
+}: {
   waypointCount: number;
   exposureScore: number;
-  targetReached: boolean;
+  criticalZoneReachableAlongRoute: boolean;
   qualityBands: QualityExposure;
+  collisionCount: number;
+  firstCollisionLabel?: string;
+  firstCollisionTimeS?: number;
 }) {
   const maxExposure = Math.max(...EXPOSURE_KEYS.map((k) => qualityBands[k] ?? 0), 1);
 
@@ -550,9 +780,9 @@ function InfoOverlay({ waypointCount, exposureScore, targetReached, qualityBands
     >
       <div className="mb-2.5 flex items-center gap-3">
         <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#5b667c]">Coverage Failure Path</div>
-        {targetReached && (
+        {criticalZoneReachableAlongRoute && (
           <span className="rounded-md bg-red-500/15 px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-[0.12em] text-red-400">
-            Breach
+            Critical Zone Reachable
           </span>
         )}
       </div>
@@ -569,11 +799,22 @@ function InfoOverlay({ waypointCount, exposureScore, targetReached, qualityBands
         </div>
         <div>
           <div className="text-[8px] text-[#5b667c]">Status</div>
-          <div className={`mt-0.5 text-[11px] font-semibold ${targetReached ? "text-red-400" : "text-[#5b667c]"}`}>
-            {targetReached ? "BREACHED" : "Secure"}
+          <div className={`mt-0.5 text-[11px] font-semibold ${criticalZoneReachableAlongRoute ? "text-red-400" : "text-[#5b667c]"}`}>
+            {criticalZoneReachableAlongRoute ? "Coverage Failure Risk" : "Route Covered"}
           </div>
         </div>
       </div>
+
+      {collisionCount > 0 && (
+        <div className="mb-2 rounded-lg border border-[#f97316]/30 bg-[#451a03]/40 px-2 py-1.5">
+          <div className="text-[7px] font-semibold uppercase tracking-[0.16em] text-[#fdba74]">Collision guard</div>
+          <div className="mt-0.5 text-[9px] text-[#fed7aa]">
+            {collisionCount} path sample{collisionCount === 1 ? "" : "s"} corrected away from
+            {firstCollisionLabel ? ` ${firstCollisionLabel}` : " an obstruction"}
+            {typeof firstCollisionTimeS === "number" ? ` at ${firstCollisionTimeS.toFixed(1)}s.` : "."}
+          </div>
+        </div>
+      )}
 
       {/* Coverage quality exposure breakdown */}
       <div className="border-t border-[#1f2536]/60 pt-2">
@@ -630,7 +871,8 @@ export function PathReplayView() {
   const scene = useStudioStore((s) => s.scene);
   const result = useStudioStore((s) => s.simulationResult);
   const activePathId = useStudioStore((s) => s.activePathId);
-  const coverageFailurePath = result?.adversarialPath;
+  const followActor = useStudioStore((s) => s.pathReplay.followActor);
+  const coverageFailurePath = result?.coverageFailurePath ?? result?.adversarialPath;
   const activePath = useMemo(() => {
     if (!scene.paths.length || !activePathId) return null;
     return scene.paths.find((path) => path.id === activePathId) ?? null;
@@ -655,10 +897,16 @@ export function PathReplayView() {
     return coverageFailurePath.waypoints.map((wp) => ({ position: wp.position, timeS: wp.timeS }));
   }, [activePath, coverageFailurePath]);
 
-  const waypoints: [number, number][] = useMemo(
-    () => playbackWaypoints.map((wp) => wp.position),
-    [playbackWaypoints],
+  const replaySamples = useMemo(
+    () => buildLegalizedReplayWaypoints(playbackWaypoints, scene),
+    [playbackWaypoints, scene],
   );
+
+  const waypoints: [number, number][] = useMemo(
+    () => replaySamples.map((wp) => wp.position),
+    [replaySamples],
+  );
+  const controlsRef = useRef<any>(null);
 
   // Coverage bands data for the scrub bar (full waypoint objects with quality)
   const coverageBands = useMemo(() => {
@@ -692,6 +940,18 @@ export function PathReplayView() {
       ...base,
     };
   }, [coverageFailurePath]);
+  const collisionCount = useMemo(
+    () => replaySamples.filter((sample) => sample.collided).length,
+    [replaySamples],
+  );
+  const firstCollision = useMemo(
+    () => replaySamples.find((sample) => sample.collided) ?? null,
+    [replaySamples],
+  );
+  const criticalZoneReachableAlongRoute =
+    coverageFailurePath?.criticalZoneReachableAlongRoute
+    ?? coverageFailurePath?.targetReached
+    ?? false;
 
   const totalDuration =
     activePathResult?.totalDurationS
@@ -701,6 +961,19 @@ export function PathReplayView() {
 
   // Find current segment index + progress based on elapsed time.
   const { currentIndex, progress } = getPlaybackPosition(playbackWaypoints, currentTime);
+  const actorPosition = useMemo<[number, number] | null>(() => {
+    if (waypoints.length === 0) return null;
+    if (currentIndex >= waypoints.length - 1) return waypoints[waypoints.length - 1] ?? null;
+
+    const current = waypoints[currentIndex] ?? null;
+    const next = waypoints[currentIndex + 1] ?? null;
+    if (!current || !next) return current;
+
+    return [
+      current[0] + (next[0] - current[0]) * progress,
+      current[1] + (next[1] - current[1]) * progress,
+    ];
+  }, [currentIndex, progress, waypoints]);
 
   // Auto-advance time when playing
   // Use a ref to track the "anchor" (time when playback was last resumed) so
@@ -736,6 +1009,12 @@ export function PathReplayView() {
     return () => cancelAnimationFrame(rafId);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playing, speed, totalDuration]);
+
+  useEffect(() => {
+    if (!followActor || !actorPosition || !controlsRef.current) return;
+    controlsRef.current.target.set(actorPosition[0], 0.6, actorPosition[1]);
+    controlsRef.current.update?.();
+  }, [actorPosition, followActor]);
 
   // Reset
   const handleReset = useCallback(() => {
@@ -775,8 +1054,11 @@ export function PathReplayView() {
         <InfoOverlay
           waypointCount={waypoints.length}
           exposureScore={coverageFailurePath.totalExposureScore}
-          targetReached={coverageFailurePath.targetReached}
+          criticalZoneReachableAlongRoute={criticalZoneReachableAlongRoute}
           qualityBands={qualityExposure}
+          collisionCount={collisionCount}
+          firstCollisionLabel={firstCollision?.blockedBy}
+          firstCollisionTimeS={firstCollision?.timeS}
         />
       )}
 
@@ -791,6 +1073,8 @@ export function PathReplayView() {
           <SceneView />
         </Suspense>
 
+        <CoverageTileFloor cells={result?.coverageCells ?? []} />
+
         {/* Coverage-failure path line — colored segments by DORI quality */}
         {!activePath && coverageFailurePath && (
           <CoverageSegmentPath waypoints={coverageFailurePath.waypoints} />
@@ -800,10 +1084,15 @@ export function PathReplayView() {
         {/* Actor */}
         <PathActor waypoints={waypoints} currentIndex={currentIndex} progress={progress} />
 
+        {/* Replay proof overlays */}
+        <ReplayCameraCones />
+        <ReplayCollisionMarkers samples={replaySamples} />
+
         {/* Camera markers */}
         <CameraMarkers />
 
         <OrbitControls
+          ref={controlsRef}
           makeDefault
           target={[5.05, 0.6, 3.8]}
           minDistance={5.5}

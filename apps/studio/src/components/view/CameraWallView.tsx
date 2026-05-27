@@ -3,7 +3,7 @@
 import { OrbitControls } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
 import { Camera, VideoOff } from "lucide-react";
-import { Suspense, useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 import "@/lib/three-compat";
@@ -14,6 +14,7 @@ import {
   SceneFloor,
   SceneLighting,
   SceneObstructions,
+  ScenePrivacyZones,
   SceneWalls,
   SceneWindows,
 } from "@/components/workspace/SharedScene";
@@ -47,6 +48,7 @@ function SceneView() {
       <SceneDoors doors={scene.doors} />
       <SceneWindows windows={scene.windows} />
       <SceneObstructions obstructions={scene.obstructions} selectedId={selectedId} />
+      <ScenePrivacyZones zones={scene.privacyZones} />
     </>
   );
 }
@@ -151,7 +153,9 @@ function CameraFeedPanel({
               near: 0.1,
               far: 50,
             }}
-            gl={{ antialias: true, alpha: false }}
+            dpr={1}
+            gl={{ antialias: false, alpha: false }}
+            frameloop="demand"
             style={{ width: "100%", height: "100%" }}
           >
             <Suspense fallback={null}>
@@ -342,6 +346,7 @@ export function CameraWallView() {
   const scene = useStudioStore((s) => s.scene);
   const selectedId = useStudioStore((s) => s.selectedNodeId);
   const selectNode = useStudioStore((s) => s.selectNode);
+  const [layoutMode, setLayoutMode] = useState<"quad" | "overview">("quad");
 
   const cameras = useMemo(() => {
     // Sort: selected first, then active, then offline
@@ -370,9 +375,13 @@ export function CameraWallView() {
     );
   }
 
-  const visible = cameras.slice(0, 5);
+  const visibleCount = layoutMode === "quad" ? 4 : 5;
+  const visible = cameras.slice(0, visibleCount);
   const hiddenCount = Math.max(0, cameras.length - visible.length);
-  const viewCount = Math.min(visible.length + 1, 6);
+  const viewCount = layoutMode === "quad" ? 4 : Math.min(visible.length + 1, 6);
+  const activeCount = cameras.filter((cam) => cam.status === "on").length;
+  const offlineCount = cameras.length - activeCount;
+  const selectedCamera = cameras.find((cam) => cam.id === selectedId) ?? null;
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[#07090d] p-2.5">
@@ -383,13 +392,37 @@ export function CameraWallView() {
             {visible.length} camera feed{visible.length === 1 ? "" : "s"} + map overview
             {hiddenCount > 0 ? ` + ${hiddenCount} more` : ""}
           </div>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[9px] text-[#6b7c95]">
+            <span className="rounded-md border border-emerald-500/15 bg-emerald-500/8 px-2 py-0.5 text-emerald-300">
+              Active {activeCount}
+            </span>
+            <span className="rounded-md border border-rose-500/15 bg-rose-500/8 px-2 py-0.5 text-rose-300">
+              Offline {offlineCount}
+            </span>
+            <span className="rounded-md border border-[#27364e] bg-black/30 px-2 py-0.5 text-[#c7d0e4]">
+              Selected {selectedCamera?.name ?? "None"}
+            </span>
+          </div>
         </div>
-        <div className="rounded-lg border border-[#27364e] bg-black/40 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#c7d0e4]">
-          {viewCount} Views
+        <div className="flex items-center gap-2">
+          <label className="flex items-center gap-1.5 rounded-lg border border-[#27364e] bg-black/40 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#c7d0e4]">
+            <span>Layout</span>
+            <select
+              value={layoutMode}
+              onChange={(event) => setLayoutMode(event.target.value as "quad" | "overview")}
+              className="bg-transparent text-[9px] font-semibold uppercase tracking-[0.16em] text-[#c7d0e4] outline-none"
+            >
+              <option value="quad">4 Views</option>
+              <option value="overview">6 Views</option>
+            </select>
+          </label>
+          <div className="rounded-lg border border-[#27364e] bg-black/40 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#c7d0e4]">
+            {viewCount} Views
+          </div>
         </div>
       </div>
 
-      {visible.length >= 5 ? (
+      {layoutMode === "overview" && visible.length >= 5 ? (
         <div className="grid flex-1 grid-cols-3 grid-rows-2 gap-2.5">
           {visible.slice(0, 5).map((cam) => (
             <CameraSlotButton

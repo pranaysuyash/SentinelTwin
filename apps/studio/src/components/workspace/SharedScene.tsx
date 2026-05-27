@@ -305,6 +305,45 @@ const HEATMAP_QUALITY_RGB: Record<string, [number, number, number]> = {
   none:           [0.85, 0.05, 0.05],  // vivid red (used only when explicitly shown)
 };
 
+const TILE_FLOOR_RGB: Record<string, [number, number, number]> = {
+  identification: [0.11, 0.34, 0.94],
+  recognition: [0.08, 0.72, 0.26],
+  observation: [0.96, 0.73, 0.14],
+  detection: [0.98, 0.46, 0.12],
+  none: [0.89, 0.83, 0.74],
+};
+
+export function CoverageTileFloor({ cells }: { cells: CoverageCellResult[] }) {
+  const meshRef = useRef<THREE.InstancedMesh>(null!);
+  const mat = useRef(new THREE.Matrix4());
+  const col = useRef(new THREE.Color());
+
+  useEffect(() => {
+    const mesh = meshRef.current;
+    if (!mesh || cells.length === 0) return;
+
+    cells.forEach((cell, index) => {
+      mat.current.setPosition(cell.x, 0.01, cell.z);
+      mesh.setMatrixAt(index, mat.current);
+      const rgb = TILE_FLOOR_RGB[cell.quality] ?? TILE_FLOOR_RGB.none;
+      col.current.setRGB(rgb[0], rgb[1], rgb[2]);
+      mesh.setColorAt(index, col.current);
+    });
+
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  }, [cells]);
+
+  if (cells.length === 0) return null;
+
+  return (
+    <instancedMesh ref={meshRef} args={[undefined, undefined, cells.length]} renderOrder={1}>
+      <boxGeometry args={[0.24, 0.014, 0.24]} />
+      <meshStandardMaterial vertexColors transparent opacity={0.92} roughness={0.95} metalness={0.02} depthWrite={false} />
+    </instancedMesh>
+  );
+}
+
 export function CoverageHeatmapInstanced({ cells }: { cells: CoverageCellResult[] }) {
   const meshRef = useRef<THREE.InstancedMesh>(null!);
   const mat = useRef(new THREE.Matrix4());

@@ -115,10 +115,4 @@ export function ppmToOodpcvsQuality(ppm: number): DoriQuality {
   return "none";
 }
 
-/**
- * Map PPM to quality level using the given standard's thresholds.
- * @deprecated Use ppmToDoriQuality() or ppmToOodpcvsQuality() explicitly.
- */
-export function ppmToQuality(ppm: number, thresholds: PpmThresholds = DORI_THRESHOLDS): DoriQuality {
-  return ppmToDoriQuality(ppm, thresholds);
-}
+

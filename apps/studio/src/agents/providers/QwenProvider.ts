@@ -132,8 +132,7 @@ export class QwenProvider implements ModelProvider {
 
   async completeStructured<T>(prompt: ModelPrompt, schema: z.ZodSchema<T>, signal?: AbortSignal): Promise<T> {
     // Use JSON mode (most OpenAI-compatible endpoints support it)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const jsonSchema = zodToJsonSchema(schema as any);
+    const jsonSchema = zodToJsonSchema(schema as unknown as Record<string, unknown>);
     const schemaStr = JSON.stringify(jsonSchema);
 
     const body = {

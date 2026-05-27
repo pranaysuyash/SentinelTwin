@@ -358,12 +358,14 @@ The following gaps have been resolved in this session:
 - **Inspector Recommended Next Steps**: Properties tab surfaces simulation recommendations at the bottom
 - **scrollable bottom tab strip**: 8 tabs now scroll instead of overflow
 
-### What is still NOT resolved
-- GAP-08: Camera preset library not built
-- GAP-09: Target-type switcher (person/vehicle/face) not implemented (note: targetType IS editable per-zone in ZoneInspector, but not a global scene-level switcher)
-- GAP-10: Redundancy failure matrix not built
+### What is still NOT resolved (updated 2026-05-27)
+- GAP-09: Target-type switcher (person/vehicle/face) not implemented globally (note: targetType IS editable per-zone in ZoneInspector, but not a global scene-level switcher)
 - GAP-11: Command bar not wired to simulation actions
 - GAP-16: Privacy zone rendering not implemented
+
+### Previously listed as NOT resolved — now RESOLVED (2026-05-27)
+- ~~GAP-08: Camera preset library~~ — **RESOLVED**: CameraPresetPicker.tsx with 4 presets integrated into placement flow.
+- ~~GAP-10: Redundancy failure matrix~~ — **RESOLVED**: RedundancyTab.tsx (411 lines) full matrix + RedundancyMatrixPanel.tsx card view.
 
 ### Resolved in session 2026-05-26 (this session)
 - ✅ GAP-04: Failures tab — full implementation: criticality score, offline/dirty lens/night toggles, zone redundancy map, path exposure count, restore button
@@ -391,13 +393,15 @@ The following gaps have been resolved in this session:
 - Build: clean, no TypeScript errors
 
 ### What is still NOT resolved
-- GAP-07: Scene selector / multiple scenes (no scene dropdown, no blank scene creation)
-- GAP-08: Camera preset library not built
-- GAP-09: Target-type switcher not implemented globally (per-zone IS editable)
-- GAP-10: Redundancy failure matrix not built
+- GAP-09: Target-type switcher not implemented globally (per-zone IS editable in CriticalZoneInspector with 9 target types)
 - GAP-11: Command bar not wired to simulation actions
 - GAP-16: Privacy zone rendering not implemented
 - Novel Algorithm 1: Coverage Fragility Field
 - Novel Algorithm 3: Adversarial K-Robustness
 - Novel Algorithm 4: Camera Placement Oracle
 - Novel Algorithm 5: Temporal Security Profile Anomaly Detection
+
+### Previously listed as NOT resolved — now RESOLVED (2026-05-27)
+- ~~GAP-07: Scene selector / multiple scenes~~ — **RESOLVED**: TopBar has full dropdown with saved scenes, import/export JSON, save to localStorage, Ctrl+N/S/O shortcuts. SceneBuilderWizard wired via "New Scene..." button with template/blank/floor-plan creation.
+- ~~GAP-08: Camera preset library~~ — **RESOLVED**: CameraPresetPicker.tsx with 4 presets (Indoor Dome, Bullet, PTZ, Fisheye 360) integrated into placement flow.
+- ~~GAP-10: Redundancy failure matrix~~ — **RESOLVED**: RedundancyTab.tsx (411 lines) full camera-vs-zone matrix with SPOF sidebar. RedundancyMatrixPanel.tsx as alternative card view. Both wired into BottomPanel.

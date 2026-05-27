@@ -51,4 +51,10 @@ describe("InspectorPanel", () => {
     expect(source).toContain("Failure active — re-run simulation to see impact");
     expect(source).toContain("Run simulation to populate failure impact analysis for this camera.");
   });
+
+  test("uses a full-width dock shell so the right panel can expand with context", () => {
+    const source = readFileSync(inspectorPath, "utf8");
+
+    expect(source).toContain("flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l border-[#1e2130] bg-[#0d1017]");
+  });
 });

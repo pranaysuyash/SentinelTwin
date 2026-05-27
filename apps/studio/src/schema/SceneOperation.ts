@@ -67,6 +67,9 @@ export const sceneOperationSchema = z.discriminatedUnion("type", [
     type: z.literal("run_adversarial"),
   }),
   z.object({
+    type: z.literal("run_coverage_failure_analysis"),
+  }),
+  z.object({
     type: z.literal("save_snapshot"),
     label: z.string(),
   }),

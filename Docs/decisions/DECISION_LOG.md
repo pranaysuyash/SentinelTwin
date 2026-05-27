@@ -258,6 +258,33 @@ on existing nodes.
 
 **Rationale:**
 - GDPR enforcement is escalating: CNIL (France) issued €200,000+ fines in 2025-2026 for
+
+---
+
+## D-013 | 2026-05-27 | Defensive framing is canonical for route-risk simulation outputs
+
+**Decision:** Route-risk simulation remains in the deterministic engine, but user-facing and report-facing
+surfaces must frame it as defensive coverage-failure analysis. Canonical field aliases were added:
+`coverageFailurePath`, `coverageGapsUsed`, `camerasWithoutCoverageOnRoute`,
+`criticalZonesReachableAlongRoute`, and `criticalZoneReachable`.
+
+**Rationale:**
+- Preserves security-audit value while avoiding evasion-oriented language.
+- Aligns product behavior with SentinelTwin’s defensive framing policy.
+- Keeps backward compatibility for existing stored data and existing UI/tests by retaining
+  older field names as deprecated aliases.
+
+**Alternatives rejected:**
+- Immediate hard delete of older adversarial field names. Rejected due migration risk and
+  parallel in-flight work that still references those names.
+- Pure copy-only wording fix with no schema aliasing. Rejected because downstream code and reports
+  would keep inconsistent semantics.
+
+**Implementation notes:**
+- `simulationResult` now exposes `coverageFailurePath` alongside the backward-compatible
+  `adversarialPath`.
+- `simulate-studio` populates both keys from one deterministic computation.
+- Threat and replay panels now prefer defensive aliases with fallback to legacy names.
   excessive monitoring and disproportionate camera placement
 - BIPA (Illinois) class-action risk: privacy zones around sensitive areas (changing rooms,
   restrooms, union offices, cafeterias) are a legal requirement, not best practice
@@ -769,3 +796,59 @@ reference to the new path, then remove the old."
 **Alternatives rejected:**
 - **Keep local per-component colors and geometry helpers** — rejected because it recreates the drift that caused the earlier half-finished map state.
 - **Call OrbitControls directly from the map components** — rejected because it couples SVG UI widgets to the 3D scene implementation and makes the focus behavior harder to test.
+
+### D-047: Map viewport state is scene-scoped, not remount-scoped
+**Date:** 2026-05-27
+
+**Decision:** MiniMap and PathMap keep their zoom/pan state in the shared store, but scene import/load/create resets both map viewports back to their canonical fit state.
+
+**Rationale:** Users should not lose their map framing when the component remounts inside the same scene, but a new scene should not inherit stale zoom/pan from the previous one. Resetting viewport state at scene boundaries keeps the 2D maps deterministic while preserving in-scene navigation.
+
+**Alternatives rejected:**
+- **Auto-fit on every map remount** — rejected because it overwrites deliberate user navigation whenever the panel is recreated.
+- **Keep viewport state across scenes** — rejected because it causes confusing stale framing when switching to a new scene or importing a different one.
+
+### D-048: Temporal engine reads scene.timeSchedule with range-based state resolution
+**Date:** 2026-05-27
+
+**Decision:** The temporal engine (`temporal.ts`) now resolves schedules from `scene.timeSchedule` when present, falling back to `DEFAULT_SCHEDULES` when the scene has no schedule. State functions use explicit range checks (`timeInPeriod` with wrap-around midnight support) rather than toggle logic.
+
+**Rationale:**
+- The original engine used hardcoded DEFAULT_SCHEDULES with simple range-based checks (e.g., `time >= 6 && time < 19` for daylight). Toggle-based generalization broke exterior light state because transitions wrap around midnight (hour 19→2→5→6) and don't follow a simple on/off toggle pattern.
+- Range-based resolution from schedule periods is correct by construction: if time falls within any defined period, lights are on. Outside all periods, lights are off.
+- `timeInPeriod(time, startHour, endHour)` handles wrap-around correctly (e.g., `endHour < startHour` means the period crosses midnight).
+
+**Alternatives rejected:**
+- **Toggle-based generalization** — rejected because it produces incorrect state when transitions wrap midnight (exterior lights showed ON during daylight, OFF during night).
+- **Only support DEFAULT_SCHEDULES** — rejected because scenes with user-configured time schedules would produce wrong temporal profiles.
+- **Require all schedule types** — rejected because partial schedules (e.g., only occupancy configured) should still work, with defaults filling the gaps.
+
+### D-049: Camera wall ships as adaptive multi-Canvas feeds, not a single shared `<View>` viewport
+**Date:** 2026-05-27
+
+**Decision:** The current camera wall implementation uses separate live `Canvas` feeds for each visible camera plus an overview slot, with adaptive ordering (selected-first, then active cameras) and a 1-6 layout. We are not forcing the single-Canvas `<View>`/scissor pattern yet, and we are not converting the wall to RTT preemptively.
+
+**Rationale:**
+- The shipped wall is easier to reason about because each feed owns its own HUD, status state, and camera lock.
+- The adaptive layout matches the current scene sizes better than a fixed 4-up grid.
+- This keeps the implementation aligned with the verified `camera_view` full-canvas shell and avoids inventing a parallel shared-viewport system before performance demands it.
+
+**Alternatives rejected:**
+- **Force a single-Canvas `<View>` stack now** — rejected because the implementation would be more complex than the current need and would not improve correctness today.
+- **Lock the wall to 4 views** — rejected because the current product state already needs to handle 1-6 cameras cleanly.
+- **Switch to render-to-texture immediately** — rejected because there is no verified performance need yet.
+
+### D-050: SceneBuilderWizard wired as modal overlay from TopBar "New Scene" button
+**Date:** 2026-05-27
+
+**Decision:** The SceneBuilderWizard (560 lines, previously dead code) is wired as a modal overlay triggered by the "New Scene..." button in the TopBar scene dropdown. The wizard provides three creation paths: blank canvas, template selection (5 templates), and floor plan import.
+
+**Rationale:**
+- The wizard was fully built but never imported by any component — pure dead code. Wiring it required only adding the import, a state flag, and a modal container in TopBar.
+- The "New Blank Scene" button was replaced because the wizard subsumes it (blank canvas is step 1 of the wizard).
+- Scene name is now dynamic (`scene.name || "Untitled Scene"`) instead of hardcoded "Small Retail Shop Demo".
+
+**Alternatives rejected:**
+- **Keep "New Blank Scene" and add separate template picker** — rejected because the wizard already provides both flows in a cohesive UX.
+- **Route wizard to a new page/route** — rejected because a modal overlay is simpler and keeps the user in context.
+- **Rewrite the wizard from scratch** — rejected because the existing implementation is complete, tested (templates have test coverage), and follows codebase conventions.

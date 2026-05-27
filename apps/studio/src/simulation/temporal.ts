@@ -6,6 +6,10 @@
  * coverage simulation only at transition points — not every 15-minute step.
  *
  * Typical scene: 10–15 transitions per day → 10–15 coverage computations instead of 96.
+ *
+ * Schedule resolution order:
+ * 1. scene.timeSchedule — user-configured per-light, per-occupancy schedules
+ * 2. DEFAULT_SCHEDULES — built-in demo schedule for scenes without timeSchedule
  */
 import { simulateStudio } from "@/simulation/simulate-studio";
 import {
@@ -13,17 +17,16 @@ import {
   type SecurityScene,
   type TemporalSecurityProfile,
   type TimePeriod,
+  type TimeSchedule,
   type VulnerabilityWindow,
 } from "@/schema/security-scene";
 
-// ── Default schedules for demo scenes ──
-
 const DEFAULT_SCHEDULES = {
   interiorLights: [
-    { hour: 6, label: "Business Hours" },   // on
-    { hour: 18, label: "Business Hours" },   // off (after hours)
-    { hour: 22, label: "Cleaning" },         // on (cleaning crew)
-    { hour: 24, label: "After Hours" },      // off
+    { hour: 6, label: "Business Hours" },
+    { hour: 18, label: "Business Hours" },
+    { hour: 22, label: "Cleaning" },
+    { hour: 24, label: "After Hours" },
   ],
   occupancy: [
     { hour: 7, level: "medium" as const, label: "Staff Arrival" },
@@ -33,14 +36,12 @@ const DEFAULT_SCHEDULES = {
     { hour: 22, level: "empty" as const, label: "After Hours" },
   ],
   exteriorLights: [
-    { hour: 6, label: "Daylight" },          // off (natural light)
-    { hour: 19, label: "Night" },            // on (sunset)
-    { hour: 2, label: "Deep Night" },        // off (timer cutout)
-    { hour: 5, label: "Pre-Dawn" },          // on (timer restore)
+    { hour: 6, label: "Daylight" },
+    { hour: 19, label: "Night" },
+    { hour: 2, label: "Deep Night" },
+    { hour: 5, label: "Pre-Dawn" },
   ],
 };
-
-// ── State builder ──
 
 type SimState = "day" | "night";
 type OccupancyLevel = "empty" | "low" | "medium" | "high";
@@ -59,7 +60,7 @@ function isNight(hour: number): SimState {
   return hour < 6 || hour >= 19 ? "night" : "day";
 }
 
-function getInteriorLightState(hour: number, minute: number): { on: boolean; label: string } {
+function getInteriorLightStateDefault(hour: number, minute: number): { on: boolean; label: string } {
   const time = hour + minute / 60;
   if (time >= 6 && time < 18) return { on: true, label: "Business Hours" };
   if (time >= 18 && time < 22) return { on: false, label: "After Hours" };
@@ -67,14 +68,14 @@ function getInteriorLightState(hour: number, minute: number): { on: boolean; lab
   return { on: false, label: "After Hours" };
 }
 
-function getExteriorLightState(hour: number, minute: number): { on: boolean; label: string } {
+function getExteriorLightStateDefault(hour: number, minute: number): { on: boolean; label: string } {
   const time = hour + minute / 60;
   if (time >= 6 && time < 19) return { on: false, label: "Daylight" };
   if (time >= 2 && time < 5) return { on: false, label: "Timer Cutout" };
   return { on: true, label: "Night" };
 }
 
-function getOccupancy(hour: number, minute: number): { level: OccupancyLevel; label: string } {
+function getOccupancyDefault(hour: number, minute: number): { level: OccupancyLevel; label: string } {
   const time = hour + minute / 60;
   if (time < 7) return { level: "empty", label: "After Hours" };
   if (time < 10) return { level: "medium", label: "Staff Arrival" };
@@ -84,10 +85,82 @@ function getOccupancy(hour: number, minute: number): { level: OccupancyLevel; la
   return { level: "empty", label: "After Hours" };
 }
 
-function computeTimeSliceState(hour: number, minute: number): TimeSliceState {
-  const interior = getInteriorLightState(hour, minute);
-  const exterior = getExteriorLightState(hour, minute);
-  const occupancy = getOccupancy(hour, minute);
+function timeInPeriod(time: number, startHour: number, endHour: number): boolean {
+  if (endHour > startHour) {
+    return time >= startHour && time < endHour;
+  }
+  return time >= startHour || time < endHour;
+}
+
+function getInteriorLightStateFromSchedule(
+  hour: number,
+  minute: number,
+  schedule: TimeSchedule,
+): { on: boolean; label: string } {
+  const time = hour + minute / 60;
+  for (const ls of schedule.interiorLightSchedule) {
+    for (const period of ls.periods) {
+      if (timeInPeriod(time, period.startHour, period.endHour)) {
+        return { on: true, label: ls.label ?? "Scheduled" };
+      }
+    }
+  }
+  return { on: false, label: "Off" };
+}
+
+function getExteriorLightStateFromSchedule(
+  hour: number,
+  minute: number,
+  schedule: TimeSchedule,
+): { on: boolean; label: string } {
+  const time = hour + minute / 60;
+  for (const ls of schedule.exteriorLightSchedule) {
+    for (const period of ls.periods) {
+      if (timeInPeriod(time, period.startHour, period.endHour)) {
+        return { on: true, label: ls.label ?? "Scheduled" };
+      }
+    }
+  }
+  return { on: false, label: "Off" };
+}
+
+function getOccupancyFromSchedule(
+  hour: number,
+  minute: number,
+  schedule: TimeSchedule,
+): { level: OccupancyLevel; label: string } {
+  const time = hour + minute / 60;
+  for (const op of schedule.occupancySchedule) {
+    if (timeInPeriod(time, op.timeRange.startHour, op.timeRange.endHour)) {
+      return { level: op.level, label: op.label };
+    }
+  }
+  return { level: "empty", label: "Unoccupied" };
+}
+
+function hasSceneSchedule(scene: SecurityScene): boolean {
+  const ts = scene.timeSchedule;
+  if (!ts) return false;
+  return (
+    ts.interiorLightSchedule.length > 0 ||
+    ts.exteriorLightSchedule.length > 0 ||
+    ts.occupancySchedule.length > 0
+  );
+}
+
+function computeTimeSliceState(hour: number, minute: number, scene: SecurityScene): TimeSliceState {
+  const ts = scene.timeSchedule;
+  const useScene = hasSceneSchedule(scene);
+
+  const interior = useScene && ts
+    ? getInteriorLightStateFromSchedule(hour, minute, ts)
+    : getInteriorLightStateDefault(hour, minute);
+  const exterior = useScene && ts
+    ? getExteriorLightStateFromSchedule(hour, minute, ts)
+    : getExteriorLightStateDefault(hour, minute);
+  const occupancy = useScene && ts
+    ? getOccupancyFromSchedule(hour, minute, ts)
+    : getOccupancyDefault(hour, minute);
 
   return {
     hour,
@@ -100,51 +173,53 @@ function computeTimeSliceState(hour: number, minute: number): TimeSliceState {
   };
 }
 
-// ── Change timeline builder ──
-
 type StateTransition = {
   hour: number;
   minute: number;
   label: string;
 };
 
-function buildChangeTimeline(): StateTransition[] {
-  // Collect all transition points from schedules, deduplicate
-  const transitions = new Map<string, StateTransition>();
+function collectScheduleTransitionHours(scene: SecurityScene): number[] {
+  const hours = new Set<number>();
+  const ts = scene.timeSchedule;
+
+  if (ts) {
+    for (const ls of ts.interiorLightSchedule) {
+      for (const period of ls.periods) {
+        hours.add(period.startHour);
+        hours.add(period.endHour < 24 ? period.endHour : 0);
+      }
+    }
+    for (const ls of ts.exteriorLightSchedule) {
+      for (const period of ls.periods) {
+        hours.add(period.startHour);
+        hours.add(period.endHour < 24 ? period.endHour : 0);
+      }
+    }
+    for (const op of ts.occupancySchedule) {
+      hours.add(op.timeRange.startHour);
+      hours.add(op.timeRange.endHour < 24 ? op.timeRange.endHour : 0);
+    }
+  }
 
   for (const entry of DEFAULT_SCHEDULES.interiorLights) {
-    const key = `${entry.hour}:00`;
-    if (!transitions.has(key)) {
-      transitions.set(key, { hour: entry.hour, minute: 0, label: entry.label });
-    }
+    hours.add(entry.hour < 24 ? entry.hour : 0);
   }
-
   for (const entry of DEFAULT_SCHEDULES.exteriorLights) {
-    const key = `${entry.hour}:00`;
-    if (!transitions.has(key)) {
-      transitions.set(key, { hour: entry.hour, minute: 0, label: entry.label });
-    }
+    hours.add(entry.hour < 24 ? entry.hour : 0);
   }
-
   for (const entry of DEFAULT_SCHEDULES.occupancy) {
-    const key = `${entry.hour}:00`;
-    if (!transitions.has(key)) {
-      transitions.set(key, { hour: entry.hour, minute: 0, label: entry.label });
-    }
+    hours.add(entry.hour < 24 ? entry.hour : 0);
   }
 
-  // Add 0:00 as start
-  if (!transitions.has("0:00")) {
-    transitions.set("0:00", { hour: 0, minute: 0, label: "Midnight" });
-  }
-
-  return Array.from(transitions.values()).sort((a, b) => {
-    if (a.hour !== b.hour) return a.hour - b.hour;
-    return a.minute - b.minute;
-  });
+  hours.add(0);
+  return Array.from(hours).sort((a, b) => a - b);
 }
 
-// ── Simulation runner ──
+function buildChangeTimeline(scene: SecurityScene): StateTransition[] {
+  const hours = collectScheduleTransitionHours(scene);
+  return hours.map((h) => ({ hour: h, minute: 0, label: `Transition ${h}:00` }));
+}
 
 function patchSceneForTimeSlice(
   scene: SecurityScene,
@@ -152,10 +227,8 @@ function patchSceneForTimeSlice(
 ): SecurityScene {
   const patched = structuredClone(scene);
 
-  // Set time of day
   patched.assumptions.timeOfDay = state.timeOfDay;
 
-  // Set interior light level based on occupancy and light state
   if (state.interiorLightsOn) {
     patched.assumptions.interiorLightLevel =
       state.occupancy === "high" || state.occupancy === "medium"
@@ -167,21 +240,18 @@ function patchSceneForTimeSlice(
     patched.assumptions.interiorLightLevel = "dark";
   }
 
-  // Toggle security lights based on exterior state
   patched.securityLights = scene.securityLights.map((light) => {
     if (light.illuminatesNightCoverage) {
-      return { ...light, status: state.exteriorLightsOn ? "on" as const : "off" as const };
+      return { ...light, status: state.exteriorLightsOn ? ("on" as const) : ("off" as const) };
     }
-    return { ...light, status: state.interiorLightsOn ? "on" as const : "off" as const };
+    return { ...light, status: state.interiorLightsOn ? ("on" as const) : ("off" as const) };
   });
 
-  // Toggle cameras with night mode based on time of day
   patched.cameras = scene.cameras.map((camera) => {
     if (state.timeOfDay === "night" && camera.nightMode !== "none") {
-      return camera; // keep on — night mode active
+      return camera;
     }
     if (state.timeOfDay === "night" && camera.nightMode === "none") {
-      // Camera without night mode — reduced effectiveness but still on
       return camera;
     }
     return camera;
@@ -189,8 +259,6 @@ function patchSceneForTimeSlice(
 
   return patched;
 }
-
-// ── Vulnerability detection ──
 
 function detectVulnerabilityWindows(
   snapshots: HourlySecuritySnapshot[],
@@ -223,14 +291,13 @@ function detectVulnerabilityWindows(
         currentWindow.adversarialAvailable = true;
       }
     } else if (!isVulnerable && currentWindow) {
-      // End of vulnerability window
       const severity =
         currentWindow.reasons.size >= 3 ||
         currentWindow.adversarialAvailable
-          ? "high" as const
+          ? ("high" as const)
           : currentWindow.reasons.size >= 2
-            ? "medium" as const
-            : "low" as const;
+            ? ("medium" as const)
+            : ("low" as const);
 
       windows.push({
         startHour: currentWindow.startHour,
@@ -246,7 +313,6 @@ function detectVulnerabilityWindows(
     }
   }
 
-  // Close any open window at end of day
   if (currentWindow) {
     windows.push({
       startHour: currentWindow.startHour,
@@ -291,21 +357,15 @@ function findSafestPeriods(snapshots: HourlySecuritySnapshot[]): TimePeriod[] {
   return periods;
 }
 
-// ── Public API ──
-
 export function computeTemporalProfile(scene: SecurityScene): TemporalSecurityProfile {
   const resolutionMinutes = 15;
-  const steps: TimeSliceState[] = [];
   const hourlySnapshots: HourlySecuritySnapshot[] = [];
 
-  // Build change timeline of transition points
-  const transitions = buildChangeTimeline();
-  const transitionHours = new Set(transitions.map((t) => t.hour));
+  const transitions = buildChangeTimeline(scene);
+  const transitionKeys = new Set(transitions.map((t) => `${t.hour}:${t.minute}`));
 
-  // Run coverage sim at each transition point
   for (const transition of transitions) {
-    const state = computeTimeSliceState(transition.hour, transition.minute);
-    steps.push(state);
+    const state = computeTimeSliceState(transition.hour, transition.minute, scene);
 
     const patchedScene = patchSceneForTimeSlice(scene, state);
     const result = simulateStudio(patchedScene);
@@ -324,17 +384,12 @@ export function computeTemporalProfile(scene: SecurityScene): TemporalSecurityPr
     });
   }
 
-  // Also generate intermediate 15-min steps by interpolating between transitions
-  // For each hour:minute not in transitions, find nearest transition and copy its state
   for (let h = 0; h < 24; h++) {
     for (let m = 0; m < 60; m += resolutionMinutes) {
-      if (transitionHours.has(h) && m === 0) continue; // already computed
+      if (transitionKeys.has(`${h}:${m}`)) continue;
 
-      // Find the "current" state by computing directly (cheap — no sim needed)
-      const state = computeTimeSliceState(h, m);
+      const state = computeTimeSliceState(h, m, scene);
 
-      // Find the nearest transition snapshot that has the same state label
-      // This avoids running coverage sim for every 15-min step
       const nearestSnapshot = hourlySnapshots.find(
         (snap) => snap.stateLabel === state.stateLabel,
       ) ?? hourlySnapshots[hourlySnapshots.length - 1];
@@ -356,17 +411,14 @@ export function computeTemporalProfile(scene: SecurityScene): TemporalSecurityPr
     }
   }
 
-  // Sort all snapshots by time
   hourlySnapshots.sort((a, b) => {
     if (a.hour !== b.hour) return a.hour - b.hour;
     return a.minute - b.minute;
   });
 
-  // Build vulnerability windows
   const peakVulnerabilityWindows = detectVulnerabilityWindows(hourlySnapshots);
   const safestPeriods = findSafestPeriods(hourlySnapshots);
 
-  // Build per-zone coverage by hour
   const criticalZoneCoverageByHour: Record<string, number[]> = {};
   const evaluatedZoneLabels = scene.criticalZones.map((z) => z.label);
   for (const zoneLabel of evaluatedZoneLabels) {
@@ -390,5 +442,5 @@ export function computeTemporalProfile(scene: SecurityScene): TemporalSecurityPr
 }
 
 export function computeTimeSliceStateForHour(hour: number, minute = 0): TimeSliceState {
-  return computeTimeSliceState(hour, minute);
+  return computeTimeSliceState(hour, minute, {} as SecurityScene);
 }

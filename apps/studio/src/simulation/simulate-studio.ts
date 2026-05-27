@@ -8,13 +8,12 @@ import type {
   SimulationResult,
   ZoneResult,
 } from "@/schema/security-scene";
-import { computeAdversarialPath } from "@/simulation/adversarial-path";
+import { computeCoverageFailurePath } from "@/simulation/adversarial-path";
 import { analyseBlindSpotTopology } from "@/simulation/blind-spot-topology";
 import {
   createCoverageEvaluator,
   type CellComputation,
   getIdentificationAreaPct,
-  getQualityShare,
   getRecognitionAreaPct,
   getQualityThresholds,
 } from "@/simulation/coverage";
@@ -144,17 +143,15 @@ function createOfflineImpactForCamera(
   scene: SecurityScene,
   camera: SecurityScene["cameras"][number],
   baselineZoneEvaluations: Record<string, EvaluatedZone>,
+  evaluator: ReturnType<typeof createCoverageEvaluator>,
+  coverageCells: CellComputation[],
 ): CameraOfflineImpactEntry[] {
-  const patched = structuredClone(scene);
-  const patchedCamera = patched.cameras.find((candidate) => candidate.id === camera.id);
-  if (!patchedCamera || patchedCamera.status === "off") {
+  if (!scene.cameras.some((candidate) => candidate.id === camera.id && candidate.status !== "off")) {
     return [];
   }
 
-  patchedCamera.status = "off";
-  const { zoneEvaluations: patchedZoneEvaluations } = computeZoneEvaluations(patched);
-
-  return patchedZoneEvaluations
+  return scene.criticalZones
+    .map((zone) => evaluateZone(scene, evaluator, coverageCells, zone, camera.id))
     .map((zoneAfter) => {
       const zoneBefore = baselineZoneEvaluations[zoneAfter.zoneId];
       if (!zoneBefore) return null;
@@ -455,7 +452,7 @@ function simulateStudioInternal(scene: SecurityScene, includeRecommendations: bo
     const qualityByZone = Object.fromEntries(
       zoneEvaluations.map((zone) => [zone.label, zone.cameraQualityById[camera.id] ?? "none"]),
     ) as Record<string, DoriQuality>;
-    const offlineImpactDetail = createOfflineImpactForCamera(scene, camera, baselineZoneById);
+    const offlineImpactDetail = createOfflineImpactForCamera(scene, camera, baselineZoneById, evaluator, coverageCells);
 
     return {
       cameraId: camera.id,
@@ -525,7 +522,7 @@ function simulateStudioInternal(scene: SecurityScene, includeRecommendations: bo
   issues.push(...collectPrivacyCoverageIssues(scene, coverageCells));
 
   const pathResults = computePathResults(scene, coverageCells);
-  const adversarialPath = computeAdversarialPath(scene, coverageCells);
+  const adversarialPath = computeCoverageFailurePath(scene, coverageCells);
 
   const worstAreaQuality: DoriQuality =
     zoneEvaluations.length > 0
@@ -646,6 +643,7 @@ function simulateStudioInternal(scene: SecurityScene, includeRecommendations: bo
     pathResults,
     issues,
     recommendations,
+    coverageFailurePath: adversarialPath,
     adversarialPath,
     coverageThresholds,
     blindRegions: analyseBlindSpotTopology(scene, coverageCells.map((cell) => ({

@@ -66,8 +66,7 @@ function removeSceneNode(scene: SecurityScene, id: string): SecurityScene {
 
   for (const key of collectionKeys) {
     const existingLength = nextScene[key].length;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (nextScene as any)[key] = (nextScene[key] as { id: string }[]).filter((node) => node.id !== id);
+    (nextScene as Record<string, { id: string }[]>)[key] = (nextScene[key] as { id: string }[]).filter((node) => node.id !== id);
     if (nextScene[key].length !== existingLength) {
       nextScene.updatedAt = Date.now();
       return nextScene;

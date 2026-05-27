@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
+import { useCallback, useMemo, useRef, useState, type PointerEvent } from "react";
 import type { WheelEvent } from "react";
 
 import {
@@ -151,10 +151,10 @@ export function MapCanvas({
   showNodeLabels,
 }: MapCanvasProps) {
   const mapLayers = layers ? { ...createLayerFlags(), ...layers } : createLayerFlags();
+  void onFit;
   const [dragging, setDragging] = useState(false);
   const [dragMoved, setDragMoved] = useState(false);
   const dragAnchor = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
-  const fittedTarget = useRef<MapViewportTarget | null>(null);
 
   const projectionPoints = useMemo(() => extractProjectionPoints(scene, paths), [scene, paths]);
   const projection = useMemo(
@@ -234,12 +234,6 @@ export function MapCanvas({
     const point = scenePointFromEvent(projection, event);
     onMapDoubleClick?.(point);
   }, [onMapDoubleClick, projection]);
-
-  useEffect(() => {
-    if (fittedTarget.current === mapTarget) return;
-    fittedTarget.current = mapTarget;
-    onFit?.(mapTarget);
-  }, [mapTarget, onFit]);
 
   return (
     <div className={`relative ${className ?? ""}`} style={{ width, height }}>

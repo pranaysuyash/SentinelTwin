@@ -32,7 +32,8 @@ You can perform these operations:
 - set_time_of_day: Switch between day, night, or dusk
 - save_snapshot: Save the current state with a label
 - generate_report: Generate a security audit report
-- run_adversarial: Run adversarial path analysis
+- run_coverage_failure_analysis: Run defensive coverage-failure route analysis
+- run_adversarial: Legacy alias for coverage-failure analysis
 
 Output ONLY valid JSON matching the schema. Do not explain, do not add commentary.`;
 

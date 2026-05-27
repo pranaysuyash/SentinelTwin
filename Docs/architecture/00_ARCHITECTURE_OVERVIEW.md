@@ -335,17 +335,17 @@ Details in `Docs/architecture/08_MONOREPO_STRUCTURE.md`.
 
 | Phase | What | Status |
 |---|---|---|
-| 0 | Architecture documentation | Near complete — 47 exploration threads, 4 new decisions, ISO 30173 alignment |
-| 1 | SecurityScene schema + Zustand store | Not started |
-| 2 | Coverage engine: raycasting, DORI/ODPCVS, heatmap, three-mesh-bvh | Not started |
-| 3 | Adversarial path simulation (Dijkstra, exposure cost) | Not started |
-| 4 | Camera + light + obstruction + privacy zone node system | Not started |
-| 5 | AI command layer + counterfactual + SOAR-ready output format | Not started |
-| 6 | Temporal simulation | Not started |
-| 7 | Before/after snapshots + privacy compliance report generation | Not started |
-| 8 | Pascal fork + monorepo scaffold (editor integration) | Not started |
-| 9 | Demo scene (Small Retail Shop) | Not started |
-| 10 | Privacy compliance evidence export (GDPR, BIPA, HIPAA) | Not started |
+| 0 | Architecture documentation | Complete — 47+ exploration threads, 12 decisions, ISO 30173 / IEC 62676-4 alignment |
+| 1 | SecurityScene schema + Zustand store | Complete — Zod schemas, TypeScript types, CRUD operations, import/export |
+| 2 | Coverage engine: raycasting, DORI/ODPCVS, heatmap, three-mesh-bvh | Complete — BVH-accelerated, ~10.8ms average, door/window/glass occlusion |
+| 3 | Adversarial path simulation (Dijkstra, exposure cost) | Complete — Dijkstra minimum-exposure pathfinding, full AdversarialPathResult |
+| 4 | Camera + light + obstruction + privacy zone node system | Complete — 11 node types, layer visibility, inspector panels |
+| 5 | AI command layer + counterfactual + SOAR-ready output format | Complete — CommandAgent, set_time_of_day, obstruction counterfactuals |
+| 6 | Temporal simulation | Complete — 24h profile engine, TemporalProfileView UI, 29 tests, tab surfaced |
+| 7 | Before/after snapshots + privacy compliance report generation | Complete — snapshot system, HTML/Markdown/JSON reports |
+| 8 | Pascal fork + monorepo scaffold (editor integration) | Deferred — standalone studio app built first (see D-010) |
+| 9 | Demo scene (Small Retail Shop) | Complete — small-retail-shop.json loads and validates |
+| 10 | Privacy compliance evidence export (GDPR, BIPA, HIPAA) | Partial — report generation built, compliance export format pending |
 | 11 | Scan/photo input pipeline (VGGT → SpatialLM → SecurityScene, V0.4) | Future |
 
 **Why Phase 1 is now SecurityScene schema (not Pascal fork):** Per D-010, the simulation core

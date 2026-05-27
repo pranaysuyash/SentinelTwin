@@ -2,37 +2,8 @@
 
 import { DonutChart } from "@/components/shared/DonutChart";
 import { cn } from "@/lib/cn";
+import { QUALITY_RANK, QUALITY_SHORT_LABEL, QUALITY_TEXT_COLOR } from "@/lib/quality-display";
 import { useStudioStore } from "@/store/studio-store";
-
-const QUALITY_LABEL: Record<string, string> = {
-  scrutinize: "SCRUT",
-  validate: "VALID",
-  identification: "IDENT",
-  characterize: "CHAR",
-  recognition: "RECOG",
-  perceive: "PERC",
-  observation: "OBS",
-  discern: "DISC",
-  outline: "OUTL",
-  overview: "OVER",
-  detection: "DETECT",
-  none: "—",
-};
-
-const QUALITY_COLOR: Record<string, string> = {
-  scrutinize: "text-sky-300",
-  validate: "text-blue-300",
-  identification: "text-blue-300",
-  characterize: "text-green-300",
-  recognition: "text-green-300",
-  perceive: "text-lime-300",
-  observation: "text-yellow-300",
-  discern: "text-yellow-300",
-  outline: "text-orange-300",
-  overview: "text-orange-300",
-  detection: "text-orange-300",
-  none: "text-[#4a5568]",
-};
 
 export function CameraStatusSummaryPanel() {
   const scene = useStudioStore((s) => s.scene);
@@ -80,8 +51,7 @@ export function CameraStatusSummaryPanel() {
                 const camResult = result?.cameraResults.find((r) => r.cameraId === cam.id);
                 // Derive best quality across all zones
                 const qualityValues = Object.values(camResult?.qualityByZone ?? {}) as string[];
-                const QUALITY_RANK: Record<string, number> = { none: 0, detection: 1, overview: 1, outline: 2, observation: 3, discern: 3, perceive: 4, recognition: 5, characterize: 5, validate: 6, identification: 6, scrutinize: 7 };
-                const quality = qualityValues.reduce<string>((best, q) => (QUALITY_RANK[q] ?? 0) > (QUALITY_RANK[best] ?? 0) ? q : best, "none");
+                const quality = qualityValues.reduce<string>((best, q) => (QUALITY_RANK[q as keyof typeof QUALITY_RANK] ?? 0) > (QUALITY_RANK[best as keyof typeof QUALITY_RANK] ?? 0) ? q : best, "none");
                 const coverage = camResult ? `${camResult.coveragePct.toFixed(0)}%` : "—";
                 const isActive = cam.status === "on";
                 const isSelected = cam.id === selectedId;
@@ -124,8 +94,8 @@ export function CameraStatusSummaryPanel() {
                       </span>
                     </td>
                     <td className="py-1.5 px-2">
-                      <span className={cn("font-medium", QUALITY_COLOR[quality])}>
-                        {QUALITY_LABEL[quality]}
+                      <span className={cn("font-medium", QUALITY_TEXT_COLOR[quality as keyof typeof QUALITY_TEXT_COLOR])}>
+                        {QUALITY_SHORT_LABEL[quality as keyof typeof QUALITY_SHORT_LABEL]}
                       </span>
                     </td>
                     <td className="py-1.5 px-2 text-[#c7d0e4]">{coverage}</td>

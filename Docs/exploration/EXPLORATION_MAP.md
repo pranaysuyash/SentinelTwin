@@ -2258,6 +2258,11 @@ Bundled monthly fee per site or per device — includes hardware, software, moni
   4. Wrap existing scene content in shared `<Scene>` wrapper that's passed to all Views
   5. Use `Html` for the viewport overlay refs that position each viewport in the DOM
 
+**Verified implementation note (2026-05-27):**
+- The shipped camera wall path currently uses separate live `Canvas` feeds instead of the single-Canvas `<View>` pattern above. That keeps each camera HUD isolated and keeps the selected/active/offline ordering simple, but it is a deliberate tradeoff rather than a missing implementation.
+- `StudioShell` now routes `map`, `camera_view`, `wall`, `replay`, and `compare` as full-canvas workspace modes.
+- `camera_view` is implemented as a full-screen single-camera POV with DORI/live-mode overlays, while `compare` is a dual-scene baseline/proposed shell with metrics and quality trend summaries.
+
 ---
 
 ### Thread 67: Transform Controls — Implementation Research

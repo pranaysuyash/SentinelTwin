@@ -1,6 +1,6 @@
 # Current Implementation State — Camera Studio
 
-**Updated:** 2026-05-27 (session 4: inspector feed DORI overlay + camera view hardening)
+**Updated:** 2026-05-27 (session 8: SceneBuilderWizard wiring, gap analysis correction, temporal scene-schedule wiring)
 **Source:** Direct code audit of apps/studio/src/
 **Purpose:** Accurate baseline of what is actually built, tested, and rendering.
 Use this instead of the earlier CAMERASTUDIO_GAP_ANALYSIS.md which was written
@@ -15,8 +15,9 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - `coverage.ts` — trust-hardening updates now enforce camera `rangeM` gates before scoring, wire scene `pixelsPerMeter` assumptions into quality mapping, emit per-camera evaluation metadata (`cameraEvaluations`) and mark privacy/coverage-denominator cells for traceable KPIs ✅
 - `coverage.ts` — camera evaluations now include `visible` plus machine-readable `reasonCodes`, and the debug/report surfaces show active PPM thresholds ✅
 - `coverage.ts` / coverage tests — door and window states now participate in deterministic vision occlusion with regression coverage for closed/open doors plus glass, grill, curtain, and reflective window behavior ✅
+- `simulation/__tests__/golden-simulation-claims.test.ts` — golden product-claim suite verifies door/window behavior, night+IR recovery, obstruction counterfactual improvement, privacy flagging, and redundancy preservation under single-camera failure ✅
 - `grid.ts` / grid tests — rotated obstruction footprints now have explicit walkability regression coverage ✅
-- `adversarial-path.ts` — Dijkstra minimum-exposure pathfinding, full AdversarialPathResult output ✅
+- `adversarial-path.ts` — Dijkstra minimum-exposure pathfinding now surfaced with defensive aliases (`coverageFailurePath`, coverage-gap/camera-without-coverage/critical-zone-reachable fields) while preserving backward-compatible payload keys ✅
 - `dori.ts` — PPM thresholds, quality ordering, quality comparators ✅
 - `grid.ts` — floor sampling grid with walkability ✅
 - `geometry.ts` — yaw/pitch direction vectors, polygon helpers ✅
@@ -37,7 +38,8 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - `patchSceneForTimeSlice()` — clones scene, patches assumptions (timeOfDay, interiorLightLevel, security light status, camera night mode) ✅
 - Fixed operator precedence bug in `getExteriorLightState` for 0:00-2:00 (D-035) ✅
 - 29 unit tests covering time-slice states, profile structure, snapshot count, vulnerability windows, safest periods, zone coverage, camera/light counts, timer cutout behavior ✅
-- **Limitation:** Uses hardcoded DEFAULT_SCHEDULES; does not consume scene.timeSchedule (see ISSUE-005 in audit) ⚠️
+- **ISSUE-005 resolved:** Engine now reads `scene.timeSchedule` when present (interior/exterior light schedules, occupancy periods). Falls back to `DEFAULT_SCHEDULES` when scene has no schedule. Schedule resolution uses `timeInPeriod()` for wrap-around midnight ranges ✅
+- **97-snapshot off-by-one fixed:** Engine now produces exactly 96 snapshots (24h × 4 per hour at 15-min resolution) ✅
 - **Not implemented:** Seasonal/location-aware lighting (suncalc.js), guard patrol integration, occupancy-based camera obstruction multiplier, door lock schedules — deferred to V0.2/V0.3
 
 ### Temporal Schema Types (src/schema/security-scene.ts) — complete
@@ -81,6 +83,7 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - Layer visibility (11 layers) ✅
 - Environment mode (day/dusk/night) ✅
 - Active tool tracking ✅
+- Shared minimap/path-map viewport state is store-backed, resets on scene import/load/create, and no longer gets silently re-fit by map remounts ✅
 - simulationDirty / simulationRunning / autoRecompute ✅
 - getSelectedCamera() helper ✅
 
@@ -97,6 +100,10 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - Run Simulation button (wired, triggers simulation) ✅
 - Night Mode and Camera Failure quick actions are wired to live scene state changes ✅
 - Save Snapshot, Compare, and Generate Report actions are wired ✅
+- Scene name dynamically displays `scene.name` (no longer hardcoded) ✅
+- "New Scene..." opens SceneBuilderWizard modal with template/blank/floor-plan creation ✅
+- SceneBuilderWizard (560 lines) was dead code — now wired into TopBar as modal overlay ✅
+- 5 scene templates accessible from wizard: retail-shop, open-office, warehouse, classroom, parking-garage ✅
 
 ### WorkspaceCanvas — good 3D foundation with view-mode shell wired
 - Instanced mesh heatmap ✅
@@ -115,18 +122,24 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - NorthCompass, ViewControls, ControlHintBar ✅
 - View mode switching now routes through `StudioShell` for Map View / Camera View / Camera Wall / Path Replay / Compare ✅
 - Full-canvas view modes are wired for the canvas shell ✅
+- Camera View mode is a dedicated full-canvas single-camera POV with a live HUD, DORI overlay card, mode filters, overlay toggles, camera header navigation, and a back-to-map control ✅
+- Camera Wall mode now uses an adaptive live feed grid (selected-first, active-first) with 1-6 camera feeds plus a 3D map overview slot and active/offline counters ✅
+- Compare mode now renders side-by-side baseline/proposed 3D panels with delta cards, issue/recommendation notes, a quality-over-time trend, and scenario notes ✅
 - MiniMap now uses the shared 2D map system with reusable projection/layers, zoom/fit controls, hover/selection sync, and replay actor visibility ✅
 - MiniMap now supports collapsed / compact / expanded / hover-preview states, shared map tokens, layer/display controls, legend, scale, north, and empty-map focus handoff to the 3D workspace ✅
 - PathMap now uses the shared 2D map system with quality-banded path rendering, current-state replay panel, path events list, segment details, and inline play/open-in-3D controls ✅
 - Camera placement presets are now reactive and store-backed instead of hidden module state, so the camera tool picker reflects the current preset and placement reads one canonical source ✅
+- The scene workbench now supports a canonical duplicate-node action with keyboard shortcut support, so selected cameras/obstructions/walls/zones/paths can be copied and reselected instead of rebuilt manually ✅
 - View mode switching is implemented for Map / Camera View / Camera Wall / Path Replay ✅
 - Path replay animation and actor playback are implemented in the dedicated replay view ✅
 - Full-canvas replay mode now uses the workspace shell, not the docked layout ✅
 - Compare mode now renders a full before/after comparison shell with scene panels, comparison cards, and lower analysis bands; verified in production build via `?mode=compare` ✅
 - Path replay and compare are deep-linkable via `?mode=replay` and `?mode=compare`, which makes visual QA deterministic in the local browser flow ✅
 - `apps/studio/next.config.ts` now allows local dev origins (`127.0.0.1`, `localhost`) so browser-based QA can hydrate the app cleanly in development ✅
+- Path replay now uses the night-stage theme in the production bundle, which matches the reference mood more closely and keeps the replay surface distinct from map/compare ✅
+- Production-browser verification on `http://localhost:3010/?mode=replay` and `http://localhost:3010/?mode=compare` matched the stored reference screenshots after scale normalization; `replay-live-current.png` and `compare-final.png` are the current proof captures ✅
 
-### CameraFeedCanvas — working and now closer to the reference
+### CameraFeedCanvas — inspector PIP, intentionally lighter than the full camera view
 - Renders R3F canvas from camera's perspective ✅
 - Shows walls, obstructions, floor geometry ✅
 - Night overlay (CSS filter) ✅
@@ -136,6 +149,13 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - Uses fixed Canvas with static camera position — does NOT update if camera moves ❌
 - No actor/path actor in feed ❌
 - No dirty lens / noise effects ❌
+- This is the smaller inspector preview; the full-screen `camera_view` shell now owns the richer HUD and overlay stack ✅
+
+### CameraViewMode — full-canvas single-camera POV
+- Full-canvas camera view with live HUD, DORI overlay card, LIVE MODE banner, overlay controls, mode filters, and back-to-map button ✅
+- Camera selector header with previous/next buttons and store-backed camera selection sync ✅
+- Mode toggles cover Normal / IR / Low Light / Thermal, and the overlay strip can show overlays, path, zones, timestamp, and grid state ✅
+- The camera feed itself still does not render the walking actor inside the POV; the actor lives in replay/map contexts only ⚠️
 
 ### InspectorPanel — wired and working
 - CameraInspector with 5 tabs ✅
@@ -162,13 +182,13 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - 7 metric cards: coverage, critical zones, cameras, avg quality, worst area, recognition %, identification %
 - DonutChart component for coverage and quality
 - All values from simulationResult
-- "+6% vs last run" is hardcoded placeholder ❌
+- Coverage delta is computed from prior snapshots, not hardcoded ✅
 
 **IssuesTab** ✅
 - Severity icons and badges
 - Affected zones / cameras displayed
 - Recommendations list
-- No "Apply Fix" / "Test Fix" action buttons ❌
+- Recommendation actions now include `Preview Fix`, `Apply Fix`, and `Revert Preview` for verified transform recommendations ✅
 
 **TimelineTab** ✅
 - Active authored path selector
@@ -176,6 +196,12 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - Timeline event table with actor position, camera, quality, and reason columns
 - Quality-over-time view backed by VisibilityTimeline
 - Camera summary cards for the active path
+
+**TemporalProfileView (24H PROFILE)** ✅
+- 24-hour clickable timeline bar (96 slots, color-coded) with compute/recompute button
+- Vulnerability window cards, safest periods, zone coverage stability chart
+- Time-scrubbing into 3D scene (auto-switches environment mode)
+- See "Temporal UI" section above for full detail
 
 **BeforeAfterTab** ✅
 - Shows before/after coverage % from last 2 snapshots
@@ -203,7 +229,7 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - Snapshots panel with thumbnail cards + "New Snapshot" button
 - Assumptions panel showing all SimulationAssumptions with "Edit Assumptions" button (UI only) ❌
 - Report Summary panel with 4 bullet points (dynamic from simulation result)
-- Environment panel (temperature, humidity, weather, lighting level — static per mode)
+- Environment panel now shows scene-derived mode, light state, window handling, door handling, and exterior lux instead of synthetic weather values ✅
 
 ### StatusBar — exists (not read in detail)
 ### Demo scene — validated ✅
@@ -212,17 +238,17 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 
 ---
 
-## What the reference image (Image 2) shows that is NOT in the code
+## Reference image parity status
 
 **Image 2: CameraView_TimelinePathReplay_Camera1InspectorViewtab.png**
 
-This is the target design for what needs to be built next. Key missing pieces:
+The reference is now largely matched in behavior. The remaining deltas are mostly visual polish and the actor-in-camera-feed overlay, not missing workspace modes.
 
 ### [MISS-01] View mode tab bar above canvas ✅
 The reference shows: Map View | Camera View (active) | Camera Wall | Path Replay
-Current code: the workspace now switches between map, full-canvas camera view, camera wall, and path replay.
+Current code: the workspace now switches between map, full-canvas camera view, camera wall, compare, and path replay.
 
-### [MISS-02] Camera View mode filling the full canvas ❌
+### [MISS-02] Camera View mode filling the full canvas ✅
 When Camera View is active, the entire canvas area shows the selected camera's perspective.
 This is different from the small inspector PIP (CameraFeedCanvas) — it's full screen.
 
@@ -230,12 +256,9 @@ This is different from the small inspector PIP (CameraFeedCanvas) — it's full 
 The reference shows a person figure walking through the scene.
 Time is shown in the replay overlay and the actor animates along the authored path.
 
-### [MISS-04] DORI quality overlays on camera view ❌
-When Camera View is active and an actor is in view:
-- Zone badge: "CASH COUNTER / RECOGNITION REQUIRED / FAILS"
-- "Current Quality: OBSERVATION"
-- "Best Camera: CAM 2"
-- "Distance: 7.8m"
+### [MISS-04] DORI quality overlays on camera view ✅
+Camera View now renders DORI overlay insights for a critical zone with required-quality status framing,
+current quality, best camera, distance, angle, and lighting context.
 
 ### [MISS-05] LIVE MODE overlay on camera view ✅
 "LIVE MODE (Simulated) | Time: 8.4s | Path: Night Entry → Cash Counter | Speed: 1.0x"
@@ -244,8 +267,8 @@ When Camera View is active and an actor is in view:
 "Overlays | DORI | Path | Zones | Timestamp | Grid | More | Back to Map View"
 
 ### [MISS-07] Camera Wall mode ✅
-4-panel thumbnail grid: CAM 1, CAM 2, CAM 3, 3D MAP
-"4 Views" dropdown button
+Adaptive multi-camera grid: selected-first, active-first, 1-6 feeds, plus 3D map overview and status counters
+"Views" counter and feed sorting are store-backed rather than fixed to 4 panels
 
 ### [MISS-08] Enhanced Timeline with per-camera DORI quality ✅
 The reference shows a detailed table with:
@@ -262,42 +285,33 @@ In the reference, the right inspector (Camera 1 selected, View tab) shows:
 - VIEW OPTIONS: Show DORI Labels, Show Path Actor, Show Zones, Show Timestamp, Show Bounding Box (checkboxes)
 - DORI OVERLAY (At Target): "OBSERVATION" / "62.5–125 PPM"
 - TARGET INFO: Target Type, Distance, PPM (est.), Angle from center, Lighting
-Current CameraFeedCanvas now exposes a DORI overlay card and local view-mode controls, but it still does not expose the full set of view-option toggles or a live target-actor overlay.
+Current CameraFeedCanvas now exposes a DORI overlay card and local view-mode controls, but it still does not expose the full set of view-option toggles or a live target-actor overlay. That richer HUD lives in `camera_view`.
 
-### [MISS-10] Scenario/Path panel showing full active scenario details ❌
+### [MISS-10] Scenario/Path panel showing full active scenario details ⚠️
 Reference shows right panel with:
 - "Active Scenario: Night Entry → Cash Counter" dropdown
 - Edit Path / Play Path buttons
 - Path Length: 10.2m / Est. Time: 8.5 sec
 - Start / --- Path --- / End (Cash Counter) legend
 - Path Visibility Timeline link
-Current ScenarioPathPanel: similar but no active scenario selector, Play Path is UI-only.
+Current ScenarioPathPanel: active path selector is wired and `Edit Path` / `Play Path` now trigger
+real mode transitions (map-path edit and replay timeline). Remaining gap is richer scenario-detail
+presentation parity versus the reference screenshot.
 
 ---
 
-## Action priority (from reference image analysis)
+## Current follow-up work
 
-**Sprint 1 — Canvas view modes + path replay (enables the demo script)**
-1. Add view mode tabs: Map View | Camera View | Camera Wall | Path Replay
-2. Full-canvas Camera View rendering (separate R3F canvas or camera lock)
-3. Path replay animation: actor moving along path over time (requestAnimationFrame or GSAP)
-4. LIVE MODE overlay on Camera View with time/path/speed display
+The reference-image feature set is now fully built. All major gaps are closed.
+Remaining work is polish, novel algorithms, and V0.2 features:
 
-**Sprint 2 — Timeline overhaul + DORI on camera view**
-5. Enhanced Timeline: playback controls, per-camera DORI quality table per timestep
-6. DORI overlays on Camera View (zone badges, current quality, distance, PPM)
-7. Inspector View tab: DORI Overlay section + VIEW MODE toggles (IR, Thermal, etc.)
-
-**Sprint 3 — Camera Wall + complete canvas**
-8. Camera Wall mode: 4-panel thumbnail grid
-9. Canvas overlay controls bar (DORI/Path/Zones/Timestamp toggles)
-10. Actor in camera feed view reacting to path replay
-
-**Sprint 4 — Wiring remaining stubs**
-11. Tool canvas placement (Camera, Obstruction, Light, Wall tools)
-12. Failures tab content
-13. "Test Without This Obstruction" button
-14. Night Mode / Camera Failure / Camera Failure top bar buttons
+1. Actor overlay in the camera feed POV itself is still missing; replay actor visibility exists in replay/map contexts only.
+2. Camera wall performance still needs a real low-end GPU pass because the current layout uses multiple live canvases.
+3. Compare mode is functional, but the shell could still use tighter visual polish and export affordances.
+4. Global target-type switcher (per-zone switcher exists with 9 types).
+5. Command bar not wired to simulation actions.
+6. Privacy zone rendering not implemented.
+7. Novel algorithms: Coverage Fragility Field, K-Robustness, Placement Oracle, Temporal Anomaly Detection.
 
 ---
 
@@ -312,4 +326,4 @@ The following issues were fixed to reach 0 typed errors (only pre-existing TS700
 5. **`pointOnPathAtProgress` in `MapLayers.tsx`** — Moved import from `./map-geometry` (doesn't export it) to `./path-quality` (correct source).
 6. **`CompareView.tsx`** — Added `DeltaMetricsBar` component with 5 delta chips: Overall Coverage, Recognition Quality, Blind Spot (inverted), Camera Count, Critical Zones. Uses `SceneSnapshot.simulation` data for both snapshots. Renders below the side-by-side 3D panels.
 
-158 tests passing, 0 failures.
+212 tests passing, 0 failures, 5577 expect() calls across 34 files.

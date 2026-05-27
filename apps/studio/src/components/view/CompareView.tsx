@@ -3,7 +3,7 @@
 import { OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { ArrowLeftRight, GitCompare, Plus, AlertTriangle, Sparkles } from "lucide-react";
-import { Suspense, useMemo } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
 
 import { useStudioStore } from "@/store/studio-store";
@@ -20,6 +20,7 @@ import {
   CoverageHeatmapInstanced,
 } from "@/components/workspace/SharedScene";
 import { cn } from "@/lib/cn";
+import { QUALITY_RANK } from "@/lib/quality-display";
 import type { SceneSnapshot, SimulationResult } from "@/schema/security-scene";
 
 type CoverageCell = SimulationResult["coverageCells"][number];
@@ -33,21 +34,6 @@ type Metrics = {
   critZoneTotal: number;
   visiblePathPct: number;
   lostPathPct: number;
-};
-
-const QUALITY_RANK: Record<string, number> = {
-  none: 0,
-  detection: 1,
-  observation: 2,
-  recognition: 3,
-  identification: 4,
-  overview: 1,
-  outline: 1,
-  discern: 2,
-  perceive: 2,
-  characterize: 3,
-  validate: 4,
-  scrutinize: 4,
 };
 
 function computeMetrics(sim: SimulationResult | undefined, cells: CoverageCell[]): Metrics | null {
@@ -95,15 +81,27 @@ function qualityForScore(score: number) {
   return "none";
 }
 
-function timelineSeries(sim: SimulationResult | undefined) {
-  const firstPath = sim?.pathResults[0];
-  if (!firstPath?.timeline?.length) return [];
-  return firstPath.timeline.map((event, index) => ({
+function timelineSeries(pathResult: SimulationResult["pathResults"][number] | null) {
+  if (!pathResult?.timeline?.length) return [];
+  return pathResult.timeline.map((event, index) => ({
     index,
     timeS: event.timeS,
     score: QUALITY_RANK[event.quality ?? "none"] ?? 0,
     quality: event.quality ?? "none",
   }));
+}
+
+function pickPrimaryPathResult(snapshot: SceneSnapshot | null) {
+  const simulation = snapshot?.simulation;
+  if (!simulation) return null;
+  const authoredPaths = snapshot.scene.paths.map((path) => path.id);
+
+  for (const pathId of authoredPaths) {
+    const match = simulation.pathResults.find((entry) => entry.pathId === pathId);
+    if (match) return match;
+  }
+
+  return simulation.pathResults[0] ?? null;
 }
 
 function buildTrendPath(points: Array<{ x: number; y: number }>) {
@@ -222,8 +220,8 @@ function MetricCard({
 }
 
 function QualityTrend({ snapshotA, snapshotB }: { snapshotA: SceneSnapshot | null; snapshotB: SceneSnapshot | null; }) {
-  const resultA = snapshotA?.simulation;
-  const resultB = snapshotB?.simulation;
+  const resultA = pickPrimaryPathResult(snapshotA);
+  const resultB = pickPrimaryPathResult(snapshotB);
   const seriesA = timelineSeries(resultA);
   const seriesB = timelineSeries(resultB);
   const width = 420;
@@ -295,7 +293,7 @@ function QualityTrend({ snapshotA, snapshotB }: { snapshotA: SceneSnapshot | nul
           return <circle key={`${pt.index}-${index}`} cx={x} cy={y} r="3.5" fill={color} />;
         })}
       </svg>
-      <div className="mt-2 grid grid-cols-3 gap-2 text-[9px] text-[#91a0bc]">
+        <div className="mt-2 grid grid-cols-3 gap-2 text-[9px] text-[#91a0bc]">
         <div className="rounded-lg border border-[#1d2330] bg-[#090d14] px-2 py-1.5">
           <div className="text-[#556076]">Baseline quality</div>
           <div className="mt-0.5 font-semibold text-red-300">{qualityLabel(qualityForScore(seriesA.at(-1)?.score ?? 0))}</div>
@@ -306,7 +304,7 @@ function QualityTrend({ snapshotA, snapshotB }: { snapshotA: SceneSnapshot | nul
         </div>
         <div className="rounded-lg border border-[#1d2330] bg-[#090d14] px-2 py-1.5">
           <div className="text-[#556076]">Path visibility</div>
-          <div className="mt-0.5 font-semibold text-[#d9e6ff]">{formatPct(((resultB?.pathResults[0]?.visibleDurationS ?? resultA?.pathResults[0]?.visibleDurationS ?? 0) / Math.max(resultB?.pathResults[0]?.totalDurationS ?? resultA?.pathResults[0]?.totalDurationS ?? 1, 1)) * 100)}</div>
+          <div className="mt-0.5 font-semibold text-[#d9e6ff]">{formatPct(((resultB?.visibleDurationS ?? resultA?.visibleDurationS ?? 0) / Math.max(resultB?.totalDurationS ?? resultA?.totalDurationS ?? 1, 1)) * 100)}</div>
         </div>
       </div>
     </div>
@@ -390,9 +388,20 @@ function NotesPanel({
 export function CompareView() {
   const snapshots = useStudioStore((s) => s.snapshots);
   const result = useStudioStore((s) => s.simulationResult);
+  const saveSnapshot = useStudioStore((s) => s.saveSnapshot);
+  const [comparisonAId, setComparisonAId] = useState<string | null>(null);
+  const [comparisonBId, setComparisonBId] = useState<string | null>(null);
 
-  const snapshotA = snapshots[snapshots.length - 2] ?? snapshots[0] ?? null;
-  const snapshotB = snapshots[snapshots.length - 1] ?? null;
+  useEffect(() => {
+    if (snapshots.length === 0) return;
+    const defaultA = snapshots[Math.max(snapshots.length - 2, 0)]?.id ?? null;
+    const defaultB = snapshots[snapshots.length - 1]?.id ?? null;
+    setComparisonAId((current) => (current && snapshots.some((snapshot) => snapshot.id === current) ? current : defaultA));
+    setComparisonBId((current) => (current && snapshots.some((snapshot) => snapshot.id === current) ? current : defaultB));
+  }, [snapshots]);
+
+  const snapshotA = snapshots.find((snapshot) => snapshot.id === comparisonAId) ?? snapshots[Math.max(snapshots.length - 2, 0)] ?? snapshots[0] ?? null;
+  const snapshotB = snapshots.find((snapshot) => snapshot.id === comparisonBId) ?? snapshots[snapshots.length - 1] ?? null;
 
   const cellsA = useMemo(() => snapshotA?.simulation?.coverageCells ?? [], [snapshotA]);
   const cellsB = useMemo(() => snapshotB?.simulation?.coverageCells ?? result?.coverageCells ?? [], [snapshotB, result]);
@@ -435,21 +444,45 @@ export function CompareView() {
             {snapshotB?.label ?? "Scenario B"}
           </div>
         </div>
-        <button className="ml-auto flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white">
+        <button
+          type="button"
+          onClick={() => saveSnapshot(`Scenario ${snapshots.length + 1}`)}
+          className="ml-auto flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white"
+        >
           <Plus className="h-2.5 w-2.5" />
           Add Scenario
         </button>
       </div>
 
-      <div className="flex items-center gap-2 border-b border-[#1e2130] bg-[#0a0d14] px-3 py-2">
-        <div className="flex items-center gap-2 text-[9px] uppercase tracking-[0.18em] text-[#556076]">
-          <span className="rounded-md border border-[#1f2636] bg-[#0f1420] px-2 py-1 text-[#b6c0d6]">Scenario A</span>
-          <span className="rounded-md border border-[#1f2636] bg-[#0f1420] px-2 py-1 text-[#b6c0d6]">Baseline</span>
-        </div>
-        <div className="ml-auto flex items-center gap-2 text-[9px] uppercase tracking-[0.18em] text-[#556076]">
-          <span className="rounded-md border border-[#1f2636] bg-[#0f1420] px-2 py-1 text-[#d2f5db]">Scenario B</span>
-          <span className="rounded-md border border-[#1f2636] bg-[#0f1420] px-2 py-1 text-[#d2f5db]">Proposed Fix</span>
-        </div>
+      <div className="grid grid-cols-2 gap-2 border-b border-[#1e2130] bg-[#0a0d14] px-3 py-2">
+        <label className="flex items-center gap-2 text-[9px] uppercase tracking-[0.16em] text-[#556076]">
+          <span className="min-w-[56px] text-[#9aa6bf]">Scenario A</span>
+          <select
+            value={snapshotA?.id ?? ""}
+            onChange={(event) => setComparisonAId(event.target.value)}
+            className="min-w-0 flex-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none"
+          >
+            {snapshots.map((snapshot) => (
+              <option key={snapshot.id} value={snapshot.id}>
+                {snapshot.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex items-center gap-2 text-[9px] uppercase tracking-[0.16em] text-[#556076]">
+          <span className="min-w-[56px] text-[#d2f5db]">Scenario B</span>
+          <select
+            value={snapshotB?.id ?? ""}
+            onChange={(event) => setComparisonBId(event.target.value)}
+            className="min-w-0 flex-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none"
+          >
+            {snapshots.map((snapshot) => (
+              <option key={snapshot.id} value={snapshot.id}>
+                {snapshot.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       <div className="grid flex-1 min-h-0 grid-cols-2 gap-2 p-2">

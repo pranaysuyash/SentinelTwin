@@ -74,4 +74,43 @@ describe("studio store", () => {
 
     expect(useStudioStore.getState().cameraPresetId).toBeNull();
   });
+
+  test("resets shared map viewport state when a new scene is loaded", () => {
+    useStudioStore.setState({
+      mapState: {
+        minimap: { zoom: 2.4, pan: [32, -18] },
+        pathMap: { zoom: 1.7, pan: [-12, 6] },
+      },
+    });
+
+    useStudioStore.getState().setScene(smallRetailShopScene);
+
+    expect(useStudioStore.getState().mapState).toEqual({
+      minimap: { zoom: 1, pan: [0, 0] },
+      pathMap: { zoom: 1, pan: [0, 0] },
+    });
+  });
+
+  test("duplicates the selected node and selects the duplicate", () => {
+    const originalCamera = smallRetailShopScene.cameras[0];
+    expect(originalCamera).toBeTruthy();
+
+    useStudioStore.setState({
+      scene: smallRetailShopScene,
+      simulationResult: null,
+      simulationDirty: false,
+      selectedNodeId: originalCamera!.id,
+    });
+
+    useStudioStore.getState().duplicateNode(originalCamera!.id);
+
+    const state = useStudioStore.getState();
+    const duplicated = state.scene.cameras.find((camera) => camera.id !== originalCamera!.id && camera.name.startsWith(originalCamera!.name));
+
+    expect(state.scene.cameras).toHaveLength(smallRetailShopScene.cameras.length + 1);
+    expect(state.selectedNodeId).toBe(duplicated?.id ?? null);
+    expect(duplicated?.name).toContain("Copy");
+    expect(duplicated?.position[0]).toBeCloseTo(originalCamera!.position[0] + 0.4, 6);
+    expect(duplicated?.position[2]).toBeCloseTo(originalCamera!.position[2] + 0.4, 6);
+  });
 });

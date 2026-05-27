@@ -155,6 +155,7 @@ export function useAiCommand() {
             store.setBottomTab("report");
             break;
           case "run_adversarial":
+          case "run_coverage_failure_analysis":
             store.setActiveTool("path");
             break;
           default:
@@ -180,7 +181,9 @@ export function useAiCommand() {
           case "set_time_of_day": return `Set to ${op.timeOfDay}`;
           case "save_snapshot": return `Saved "${op.label}"`;
           case "generate_report": return `Generated report`;
-          case "run_adversarial": return `Running adversarial`;
+          case "run_adversarial":
+          case "run_coverage_failure_analysis":
+            return "Running coverage-failure analysis";
           default: return op.type;
         }
       });

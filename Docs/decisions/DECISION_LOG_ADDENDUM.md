@@ -50,10 +50,14 @@ quality standard. IEC 62676-4:2014 (DORI, 4 levels) is supported as a legacy opt
   more granular and accurate for modern IP cameras
 
 **Implementation impact:**
-- `qualityScoring.ts`: add 7-level OODPCVS thresholds, keep 4-level DORI as fallback
-- `SimulationAssumptions`: add `doriStandard: "DORI_2014" | "OODPCVS_2025"`
-- All report templates: reference IEC 62676-4:2025 when using OODPCVS
-- Old architecture doc reference to "DORI 4 levels" must be updated
+- `apps/studio/src/simulation/dori.ts`: OODPCVS_THRESHOLDS (7-level), ppmToOodpcvsQuality(), full QUALITY_SCORE_MAP
+- `apps/studio/src/schema/security-scene.ts`: doriQualitySchema extended to 12 values, doriStandard: "dori_2014" | "oodpcvs_2025" with Zod transform for legacy values
+- `apps/studio/src/simulation/coverage.ts`: getQualityThresholds dispatches to ppmToOodpcvsQuality() in oodpcvs_2025 mode; cells store actual quality name; getQualityShare uses qualityToScore() matching
+- `apps/studio/src/simulation/simulate-studio.ts`: coverageByQuality uses score-based buckets
+- `apps/studio/src/report/index.ts`: standardsRef derives from scene's doriStandard
+- `apps/studio/src/lib/quality-display.ts`: canonical QUALITY_LABEL, QUALITY_ABBR, QUALITY_COLOR, QUALITY_BAR_COLOR, QUALITY_RANK
+- 6 display maps updated with full OODPCVS entries
+- InspectorPanel, CameraViewMode DORI ranges respect scene PPM thresholds
 
 **Open question:** Exact PPM thresholds for OODPCVS — see Q-016 in OPEN_QUESTIONS.md.
 

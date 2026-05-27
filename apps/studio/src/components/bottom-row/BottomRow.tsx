@@ -1,14 +1,82 @@
 "use client";
 
-import { Check, Edit3, FileText, Plus, Thermometer, Droplets, Wind, Sun, X } from "lucide-react";
+import { Check, Edit3, FileText, Lightbulb, Plus, X } from "lucide-react";
 import { useState } from "react";
 
 import { useStudioStore } from "@/store/studio-store";
-import type { SimulationAssumptions } from "@/schema/security-scene";
+import type { SecurityScene, SimulationAssumptions } from "@/schema/security-scene";
 
 function panelTimeLabel(ts: number) {
   const d = new Date(ts);
   return `Today, ${d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`;
+}
+
+type BottomRowScene = Pick<SecurityScene, "assumptions" | "windows" | "doors">;
+type BottomRowMode = "day" | "night" | "dusk";
+
+function capitalize(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function formatOptionalNumber(value: number | undefined, unit: string) {
+  if (value === undefined) return "Auto";
+  return `${value.toFixed(0)} ${unit}`;
+}
+
+export function summarizeWindowStates(scene: BottomRowScene) {
+  if (scene.windows.length === 0) return "No windows";
+
+  const counts = scene.windows.reduce<Record<string, number>>((acc, window) => {
+    acc[window.state] = (acc[window.state] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  const order: Array<[keyof typeof counts, string]> = [
+    ["closed_glass", "glass"],
+    ["open", "open"],
+    ["grill", "grill"],
+    ["curtain", "curtain"],
+    ["reflective", "reflective"],
+  ];
+
+  const parts = order
+    .map(([key, label]) => {
+      const count = counts[key] ?? 0;
+      return count > 0 ? `${count} ${label}` : null;
+    })
+    .filter((entry): entry is string => Boolean(entry));
+
+  return parts.length > 0 ? `${scene.windows.length} windows · ${parts.join(", ")}` : `${scene.windows.length} windows`;
+}
+
+export function summarizeDoorStates(scene: BottomRowScene) {
+  if (scene.doors.length === 0) return "No doors";
+
+  const counts = scene.doors.reduce<Record<string, number>>((acc, door) => {
+    acc[door.state] = (acc[door.state] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  const parts = (["open", "closed", "locked", "restricted"] as const)
+    .map((state) => {
+      const count = counts[state] ?? 0;
+      return count > 0 ? `${count} ${state}` : null;
+    })
+    .filter((entry): entry is string => Boolean(entry));
+
+  return parts.length > 0 ? `${scene.doors.length} doors · ${parts.join(", ")}` : `${scene.doors.length} doors`;
+}
+
+export function buildEnvironmentRows(scene: BottomRowScene, mode: BottomRowMode) {
+  return [
+    { label: "Mode", value: capitalize(mode) },
+    { label: "Time of Day", value: capitalize(scene.assumptions.timeOfDay) },
+    { label: "Interior Light", value: capitalize(scene.assumptions.interiorLightLevel) },
+    { label: "Night Penalty", value: capitalize(scene.assumptions.nightPenaltyMode) },
+    { label: "Exterior Lux", value: formatOptionalNumber(scene.assumptions.exteriorLightLux, "lx") },
+    { label: "Windows", value: summarizeWindowStates(scene) },
+    { label: "Doors", value: summarizeDoorStates(scene) },
+  ];
 }
 
 function BottomSection({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
@@ -129,8 +197,6 @@ function AssumptionsPanel() {
   const ass = scene.assumptions;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Partial<SimulationAssumptions>>({});
-
-  const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
   const startEdit = () => {
     setDraft({
@@ -280,7 +346,7 @@ function AssumptionsPanel() {
             <AssumptionRow label="Quality Model" value={ass.doriStandard === "oodpcvs_2025" ? "OODPCVS 2025" : "DORI 2014"} />
             <AssumptionRow label="Lighting Model" value={capitalize(ass.interiorLightLevel)} />
             <AssumptionRow label="Night Penalty" value={capitalize(ass.nightPenaltyMode)} />
-            <AssumptionRow label="Glass Handling" value="Partial Trans." />
+            <AssumptionRow label="Window Handling" value={summarizeWindowStates(scene)} />
             <AssumptionRow label="Person Height" value={`${ass.personHeightM} m`} />
             <AssumptionRow label="Time of Day" value={capitalize(ass.timeOfDay)} />
             <AssumptionRow label="Wall Height" value={`${ass.wallHeightM} m`} />
@@ -348,40 +414,21 @@ function ReportSummaryPanel() {
 }
 
 function EnvironmentPanel() {
+  const scene = useStudioStore((s) => s.scene);
   const envMode = useStudioStore((s) => s.environmentMode);
-
-  const envData: Record<"day" | "night" | "dusk", { temp: string; humidity: string; weather: string; lightingLevel: string }> = {
-    day: { temp: "28°C", humidity: "60%", weather: "Clear", lightingLevel: "Normal" },
-    night: { temp: "22°C", humidity: "72%", weather: "Clear", lightingLevel: "Low" },
-    dusk: { temp: "24°C", humidity: "66%", weather: "Clear", lightingLevel: "Dim" },
-  };
-
-  const env = envData[envMode] ?? envData.day;
+  const rows = buildEnvironmentRows(scene, envMode);
 
   return (
     <BottomSection title="Environment">
       <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
         <div className="space-y-2">
-          <div className="flex items-center gap-2 text-[9px]">
-            <Thermometer className="h-3.5 w-3.5 text-orange-400" />
-            <span className="text-[#647089]">Temp.</span>
-            <span className="ml-auto text-[#d3dbea]">{env.temp}</span>
-          </div>
-          <div className="flex items-center gap-2 text-[9px]">
-            <Droplets className="h-3.5 w-3.5 text-blue-400" />
-            <span className="text-[#647089]">Humidity</span>
-            <span className="ml-auto text-[#d3dbea]">{env.humidity}</span>
-          </div>
-          <div className="flex items-center gap-2 text-[9px]">
-            <Wind className="h-3.5 w-3.5 text-[#8b96ae]" />
-            <span className="text-[#647089]">Weather</span>
-            <span className="ml-auto text-[#d3dbea]">{env.weather}</span>
-          </div>
-          <div className="flex items-center gap-2 text-[9px]">
-            <Sun className="h-3.5 w-3.5 text-yellow-400" />
-            <span className="text-[#647089]">Lighting Level</span>
-            <span className="ml-auto text-[#d3dbea]">{env.lightingLevel}</span>
-          </div>
+          {rows.map((row) => (
+            <div key={row.label} className="flex items-center gap-2 text-[9px]">
+              {row.label === "Mode" ? <Lightbulb className="h-3.5 w-3.5 text-yellow-400" /> : null}
+              <span className="text-[#647089]">{row.label}</span>
+              <span className="ml-auto text-right text-[#d3dbea]">{row.value}</span>
+            </div>
+          ))}
         </div>
       </div>
     </BottomSection>

@@ -1,6 +1,6 @@
 # Standards, Compliance & Regulatory Landscape
 
-**Status:** Research complete — 2026-05-25
+**Status:** Research complete — 2026-05-25. **Implementation complete — 2026-05-27.** See `apps/studio/src/simulation/dori.ts` for OODPCVS_THRESHOLDS and `apps/studio/src/schema/security-scene.ts` for doriStandard (`"dori_2014"` | `"oodpcvs_2025"`). Default is now OODPCVS.
 **Purpose:** Document every standard and regulation SentinelTwin should know,
 implement, or produce evidence for. This is not optional reading — compliance
 is a product feature and a market entry requirement.

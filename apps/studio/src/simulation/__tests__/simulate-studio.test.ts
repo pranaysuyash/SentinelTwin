@@ -381,7 +381,6 @@ describe("simulateStudio", () => {
 
     const avgMs = (performance.now() - start) / iterations;
 
-    console.log(`Average: ${avgMs.toFixed(1)}ms per simulation`);
     expect(avgMs).toBeLessThan(1500);
   });
 });

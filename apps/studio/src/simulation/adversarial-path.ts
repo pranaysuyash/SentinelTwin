@@ -52,7 +52,7 @@ function nearestNode(target: [number, number], nodes: NavNode[]) {
   }, null as { node: NavNode; distance: number } | null)?.node;
 }
 
-export function computeAdversarialPath(
+export function computeCoverageFailurePath(
   scene: SecurityScene,
   coverageCells: CoverageCellLookup[],
 ): AdversarialPathResult | undefined {
@@ -153,6 +153,11 @@ export function computeAdversarialPath(
         identification: 0,
       },
       maxDetectionProbability: 0,
+      coverageGapsUsed: [],
+      camerasWithoutCoverageOnRoute: [],
+      criticalZonesReachableAlongRoute: [],
+      criticalZoneReachable: false,
+      // Backward compatibility payload
       blindspotsExploited: [],
       camerasEvaded: [],
       criticalZonesReached: [],
@@ -222,6 +227,16 @@ export function computeAdversarialPath(
     totalDurationS: Number((waypoints.length * cellSize).toFixed(2)),
     detectionQualityExposure,
     maxDetectionProbability: Math.max(...waypoints.map((waypoint) => waypoint.detectionProbability), 0),
+    coverageGapsUsed: blindspotsExploited,
+    camerasWithoutCoverageOnRoute: scene.cameras
+      .filter(
+        (camera) =>
+          !waypoints.some((waypoint) => waypoint.exposedToCamera === camera.id),
+      )
+      .map((camera) => camera.id),
+    criticalZonesReachableAlongRoute: criticalZonesReached,
+    criticalZoneReachable: criticalZonesReached.length > 0,
+    // Backward compatibility payload
     blindspotsExploited,
     camerasEvaded: scene.cameras
       .filter(
@@ -233,3 +248,5 @@ export function computeAdversarialPath(
     targetReached: criticalZonesReached.length > 0,
   };
 }
+
+export const computeAdversarialPath = computeCoverageFailurePath;

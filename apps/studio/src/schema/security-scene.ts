@@ -354,10 +354,16 @@ export const adversarialPathResultSchema = z.object({
   totalDurationS: z.number().min(0),
   detectionQualityExposure: z.record(z.string(), z.number().min(0)),
   maxDetectionProbability: z.number().min(0).max(1),
-  blindspotsExploited: z.array(z.string()),
-  camerasEvaded: z.array(z.string()),
-  criticalZonesReached: z.array(z.string()),
-  targetReached: z.boolean(),
+  // Defensive framing (canonical names)
+  coverageGapsUsed: z.array(z.string()),
+  camerasWithoutCoverageOnRoute: z.array(z.string()),
+  criticalZonesReachableAlongRoute: z.array(z.string()),
+  criticalZoneReachable: z.boolean(),
+  // Backward-compat fields (deprecated)
+  blindspotsExploited: z.array(z.string()).optional(),
+  camerasEvaded: z.array(z.string()).optional(),
+  criticalZonesReached: z.array(z.string()).optional(),
+  targetReached: z.boolean().optional(),
   failureReason: z.string().optional(),
 });
 
@@ -421,6 +427,7 @@ export const simulationResultSchema = z.object({
   pathResults: z.array(pathVisibilityResultSchema),
   issues: z.array(securityIssueSchema),
   recommendations: z.array(recommendationSchema),
+  coverageFailurePath: adversarialPathResultSchema.optional(),
   adversarialPath: adversarialPathResultSchema.optional(),
   blindRegions: z.array(blindRegionSchema).optional(),
   coverageThresholds: qualityThresholdSchema.optional(),

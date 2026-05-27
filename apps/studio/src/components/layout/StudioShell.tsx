@@ -126,6 +126,7 @@ export default function StudioShell() {
   const activeTool = useStudioStore((s) => s.activeTool);
   const setActiveTool = useStudioStore((s) => s.setActiveTool);
   const selectedNodeId = useStudioStore((s) => s.selectedNodeId);
+  const duplicateNode = useStudioStore((s) => s.duplicateNode);
   const removeNode = useStudioStore((s) => s.removeNode);
   const undo = useStudioStore((s) => s.undo);
   const redo = useStudioStore((s) => s.redo);
@@ -134,16 +135,15 @@ export default function StudioShell() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const fullCanvasMode = viewMode === "camera_view" || viewMode === "wall";
 
+  // Read ?mode= from URL on mount only — prevents URL from overriding user's mode changes.
   useEffect(() => {
     const mode = new URLSearchParams(window.location.search).get("mode");
     if (!mode) return;
     if (mode !== "map" && mode !== "wall" && mode !== "replay" && mode !== "camera_view" && mode !== "compare") {
       return;
     }
-    if (viewMode !== mode) {
-      setViewMode(mode as ViewMode);
-    }
-  }, [setViewMode, viewMode]);
+    setViewMode(mode as ViewMode);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Global keyboard shortcut handler
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -215,6 +215,12 @@ export default function StudioShell() {
       return;
     }
 
+    if (isCtrlOrMeta && e.key.toLowerCase() === "d" && selectedNodeId) {
+      e.preventDefault();
+      duplicateNode(selectedNodeId);
+      return;
+    }
+
     // View mode keys: 1-5
     if (VIEW_MODE_KEYS[e.key]) {
       const nextMode = VIEW_MODE_KEYS[e.key];
@@ -235,7 +241,7 @@ export default function StudioShell() {
       }
       return;
     }
-  }, [activeTool, createNewScene, removeNode, redo, saveSceneToStorage, selectedNodeId, setActiveTool, setViewMode, setWorkspacePreset, undo, viewMode]);
+  }, [activeTool, createNewScene, duplicateNode, removeNode, redo, saveSceneToStorage, selectedNodeId, setActiveTool, setViewMode, setWorkspacePreset, undo, viewMode]);
 
   useEffect(() => {
     window.addEventListener("keydown", handleKeyDown);

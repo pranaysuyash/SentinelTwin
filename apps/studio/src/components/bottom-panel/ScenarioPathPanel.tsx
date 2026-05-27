@@ -46,7 +46,10 @@ export function ScenarioPathPanel() {
   return (
     <div className="flex h-[208px] flex-shrink-0 flex-col border-t border-[#1e2130] bg-[#0d1017]">
       <div className="flex h-8 items-center justify-between border-b border-[#1e2130] px-3">
-        <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#4a5568]">Scenario / Path</span>
+        <div>
+          <div className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#4a5568]">Scenario / Path</div>
+          <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Active Scenario</div>
+        </div>
         <MapPin className="h-3 w-3 text-[#4a5568]" />
       </div>
 
@@ -84,6 +87,16 @@ export function ScenarioPathPanel() {
                   {activePath.speedMps.toFixed(1)} m/s
                 </span>
               </div>
+            ) : null}
+            {pathResult ? (
+              <button
+                type="button"
+                onClick={() => setBottomTab("timeline")}
+                className="mt-2 inline-flex items-center gap-1 rounded-md border border-blue-500/25 bg-blue-500/8 px-2 py-1 text-[9px] font-medium text-blue-200 transition-colors hover:bg-blue-500/15"
+              >
+                Path Visibility Timeline
+                <span className="text-[8px] text-blue-100/70">open</span>
+              </button>
             ) : null}
             <div className="mt-2 grid grid-cols-2 gap-2">
               <button

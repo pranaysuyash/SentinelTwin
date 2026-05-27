@@ -93,7 +93,11 @@ export function applySceneOperation(scene: SecurityScene, op: SceneOperation): A
     }
 
     case "run_adversarial": {
-      return { success: true, description: "Running adversarial path analysis" };
+      return { success: true, description: "Running coverage-failure route analysis" };
+    }
+
+    case "run_coverage_failure_analysis": {
+      return { success: true, description: "Running coverage-failure route analysis" };
     }
 
     case "save_snapshot": {

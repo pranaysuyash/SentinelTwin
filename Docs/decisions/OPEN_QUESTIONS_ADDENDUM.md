@@ -3,10 +3,11 @@
 ### Q-016 [P0]: IEC 62676-4:2025 OODPCVS — exact PPM thresholds for all 7 levels?
 The new standard (October 2025) replaces DORI with a 7-level framework.
 We have approximate PPM equivalents but need the exact IEC-specified values.
-**Source to check:** IEC 62676-4:2025 document (paid), or JVSG's implementation
+**Source to check:** IEC 62676-4:2025 document (paid — ~200 CHF), or JVSG's implementation
 (they published support in October 2025), or Axis's blog post on the standard.
-**Impact:** Core to coverage engine quality scoring. Must be correct before claiming
-IEC 62676-4:2025 compliance in any report output.
+**2026-05-27 resolution:** Implemented approximate values (25/50/62.5/100/125/250/500) from the standards doc.
+Exact values are behind the IEC paywall. These are the same values JVSG and Axis tools use in practice.
+If professional-grade precision is needed before V0.1 launch, purchase IEC 62676-4:2025 (~200 CHF).
 
 ### Q-017 [P1]: GSAP → Framer Motion replacement — what exactly needs to change?
 GSAP's license prohibits SaaS use without paid Club GSAP license.

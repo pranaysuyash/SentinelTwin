@@ -25,4 +25,12 @@ describe("ScenarioPathPanel", () => {
     expect(source).toContain("Edit Path");
     expect(source).toContain("Play Path");
   });
+
+  test("exposes the active scenario label and visibility timeline link", () => {
+    const source = readFileSync(panelPath, "utf8");
+
+    expect(source).toContain("Active Scenario");
+    expect(source).toContain("Path Visibility Timeline");
+    expect(source).toContain('setBottomTab("timeline")');
+  });
 });

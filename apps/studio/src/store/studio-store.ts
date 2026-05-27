@@ -84,6 +84,18 @@ export type MapState = {
   pathMap: MapViewportState;
 };
 
+const DEFAULT_MAP_STATE: MapState = {
+  minimap: { zoom: 1, pan: [0, 0] },
+  pathMap: { zoom: 1, pan: [0, 0] },
+};
+
+function cloneDefaultMapState(): MapState {
+  return {
+    minimap: { zoom: DEFAULT_MAP_STATE.minimap.zoom, pan: [...DEFAULT_MAP_STATE.minimap.pan] as [number, number] },
+    pathMap: { zoom: DEFAULT_MAP_STATE.pathMap.zoom, pan: [...DEFAULT_MAP_STATE.pathMap.pan] as [number, number] },
+  };
+}
+
 export type FocusScenePointRequest = {
   point: [number, number];
   source: MapViewportTarget;
@@ -218,10 +230,11 @@ export type StudioStoreState = {
   setDemoMode: (active: boolean) => void;
   setDemoStep: (step: number) => void;
 
-  pathReplay: { playing: boolean; progress: number; speed: number };
+  pathReplay: { playing: boolean; progress: number; speed: number; followActor: boolean };
   setPathReplayPlaying: (playing: boolean) => void;
   setPathReplayProgress: (progress: number) => void;
   setPathReplaySpeed: (speed: number) => void;
+  setPathReplayFollowActor: (followActor: boolean) => void;
   setActivePathId: (id: string | null) => void;
   setMapZoom: (target: MapViewportTarget, zoom: number) => void;
   setMapPan: (target: MapViewportTarget, pan: [number, number]) => void;
@@ -260,6 +273,7 @@ export type StudioStoreState = {
 
   addNode: (node: AnyEditableNode) => void;
   updateNode: (id: string, patch: Partial<AnyEditableNode>) => void;
+  duplicateNode: (id: string) => void;
   removeNode: (id: string) => void;
   updateAssumptions: (patch: Partial<import("@/schema/security-scene").SimulationAssumptions>) => void;
 
@@ -308,7 +322,7 @@ function patchNode(scene: SecurityScene, id: string, patch: Partial<AnyEditableN
     const idx = next[key].findIndex((n) => n.id === id);
     if (idx !== -1) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (next as any)[key][idx] = { ...(next[key][idx] as AnyEditableNode), ...patch };
+      (next as Record<string, AnyEditableNode[]>)[key][idx] = { ...(next[key][idx] as AnyEditableNode), ...patch };
       next.updatedAt = Date.now();
       return next;
     }
@@ -342,6 +356,79 @@ function insertNode(scene: SecurityScene, node: AnyEditableNode): SecurityScene 
   }
   next.updatedAt = Date.now();
   return next;
+}
+
+function duplicateNodeInScene(scene: SecurityScene, id: string): { scene: SecurityScene; duplicatedId: string | null } {
+  const next = cloneSecurityScene(scene);
+  const duplicateOffset = [0.4, 0.4] as const;
+  const prefixMap: Record<AnyEditableNode["nodeType"], string> = {
+    camera: "cam",
+    obstruction: "obs",
+    security_light: "light",
+    wall: "wall",
+    door: "door",
+    window: "window",
+    critical_zone: "zone",
+    privacy_zone: "privacy",
+    entry_point: "entry",
+    path: "path",
+  };
+
+  const makeDuplicateId = (prefix: string) => `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+
+  const duplicateScenePoint = (point: [number, number]) => [point[0] + duplicateOffset[0], point[1] + duplicateOffset[1]] as [number, number];
+  const duplicateScenePoint3 = (point: [number, number, number]) => [point[0] + duplicateOffset[0], point[1], point[2] + duplicateOffset[1]] as [number, number, number];
+
+  for (const key of collectionKeys) {
+    const index = next[key].findIndex((entry) => entry.id === id);
+    if (index === -1) continue;
+
+    const original = structuredClone(next[key][index] as AnyEditableNode);
+    const duplicatedId = makeDuplicateId(prefixMap[original.nodeType]);
+    let duplicate = original as AnyEditableNode;
+
+    if ("label" in duplicate && typeof duplicate.label === "string") {
+      duplicate.label = duplicate.label.endsWith(" Copy") ? duplicate.label : `${duplicate.label} Copy`;
+    }
+    if ("name" in duplicate && typeof duplicate.name === "string") {
+      duplicate.name = duplicate.name.endsWith(" Copy") ? duplicate.name : `${duplicate.name} Copy`;
+    }
+
+    switch (duplicate.nodeType) {
+      case "camera":
+      case "security_light":
+      case "obstruction":
+      case "door":
+      case "window":
+      case "entry_point":
+        duplicate.position = duplicateScenePoint3((duplicate as { position: [number, number, number] }).position);
+        break;
+      case "wall":
+        duplicate.start = duplicateScenePoint((duplicate as { start: [number, number] }).start);
+        duplicate.end = duplicateScenePoint((duplicate as { end: [number, number] }).end);
+        break;
+      case "critical_zone":
+      case "privacy_zone":
+        duplicate.polygon = (duplicate as { polygon: [number, number][] }).polygon.map(duplicateScenePoint);
+        break;
+      case "path":
+        duplicate.points = (duplicate as { points: { position: [number, number] }[] }).points.map((point) => ({
+          ...point,
+          position: duplicateScenePoint(point.position),
+        }));
+        break;
+    }
+
+    if ("source" in duplicate) {
+      duplicate.source = "manual";
+    }
+    duplicate.id = duplicatedId;
+    (next[key] as unknown as AnyEditableNode[]).push(duplicate as AnyEditableNode);
+    next.updatedAt = Date.now();
+    return { scene: next, duplicatedId };
+  }
+
+  return { scene: next, duplicatedId: null };
 }
 
 function purgeInvalidSelection(scene: SecurityScene, selectedNodeId: string | null): string | null {
@@ -635,20 +722,18 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   demoMode: false,
   demoStep: 0,
   activePathId: INITIAL_SCENE.paths[0]?.id ?? null,
-  mapState: {
-    minimap: { zoom: 1, pan: [0, 0] },
-    pathMap: { zoom: 1, pan: [0, 0] },
-  },
+  mapState: cloneDefaultMapState(),
   hoveredMapNodeId: null,
   focusScenePointRequest: null,
   cameraPresetId: null,
   historyPast: [],
   historyFuture: [],
 
-  pathReplay: { playing: false, progress: 0, speed: 1 },
+  pathReplay: { playing: false, progress: 0, speed: 1, followActor: true },
   setPathReplayPlaying: (playing) => set((s) => ({ pathReplay: { ...s.pathReplay, playing } })),
   setPathReplayProgress: (progress) => set((s) => ({ pathReplay: { ...s.pathReplay, progress } })),
   setPathReplaySpeed: (speed) => set((s) => ({ pathReplay: { ...s.pathReplay, speed } })),
+  setPathReplayFollowActor: (followActor) => set((s) => ({ pathReplay: { ...s.pathReplay, followActor } })),
   setActivePathId: (id) => set({ activePathId: id }),
   setMapZoom: (target, zoom) => {
     const nextZoom = Math.max(0.05, Math.min(6, zoom));
@@ -892,6 +977,18 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   updateNode: (id, patch) => {
     useStudioStore.getState().commitSceneChange((scene) => patchNode(scene, id, patch));
   },
+  duplicateNode: (id) => {
+    const { scene: next, duplicatedId } = duplicateNodeInScene(get().scene, id);
+    if (!duplicatedId) return;
+    set((state) => ({
+      scene: next,
+      simulationDirty: true,
+      selectedNodeId: duplicatedId,
+      activePathId: cloneAndSetActivePath(next, state.activePathId),
+      historyPast: [...state.historyPast, cloneSecurityScene(state.scene)],
+      historyFuture: [],
+    }));
+  },
   removeNode: (id) => {
     useStudioStore.getState().commitSceneChange((scene) => removeNode(scene, id));
   },
@@ -982,6 +1079,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       simulationResult: null,
       activePathId: scene.paths[0]?.id ?? null,
       focusScenePointRequest: null,
+      mapState: cloneDefaultMapState(),
     });
     return { success: true };
   },
@@ -998,6 +1096,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       selectedNodeId: null,
       activePathId: scene.paths[0]?.id ?? null,
       focusScenePointRequest: null,
+      mapState: cloneDefaultMapState(),
       viewMode: "map",
       bottomTab: "metrics",
       inspectorTab: "properties",
@@ -1027,6 +1126,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       selectedNodeId: null,
       activePathId: null,
       focusScenePointRequest: null,
+      mapState: cloneDefaultMapState(),
       viewMode: "map",
       bottomTab: "metrics",
       inspectorTab: "properties",

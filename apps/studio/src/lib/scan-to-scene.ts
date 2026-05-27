@@ -54,6 +54,17 @@ export type ScanSession = {
   updatedAt: number;
 };
 
+export type ScanCompilationProvenance = {
+  source: "scan_import";
+  totalCandidates: number;
+  acceptedCandidates: number;
+  rejectedCandidates: number;
+  averageConfidence: number;
+  confidenceLevel: "high" | "medium" | "low";
+  sourceCounts: Record<ScanCandidate["source"], number>;
+  summary: string;
+};
+
 export const SCAN_CANDIDATE_TYPES: Array<{ kind: ScanCandidateKind; label: string; description: string }> = [
   { kind: "wall", label: "Wall", description: "Confirm a room edge or perimeter segment." },
   { kind: "door", label: "Door", description: "Mark an entrance, exit, or internal door." },
@@ -127,6 +138,41 @@ function obstructionTypeFor(candidate: ScanCandidate): ObstructionNode["obstruct
     default:
       return "other";
   }
+}
+
+function confidenceLevelFromAverage(averageConfidence: number, acceptanceRate: number): ScanCompilationProvenance["confidenceLevel"] {
+  if (averageConfidence >= 0.8 && acceptanceRate >= 0.75) return "high";
+  if (averageConfidence >= 0.65 || acceptanceRate >= 0.5) return "medium";
+  return "low";
+}
+
+export function summarizeScanProvenance(session: ScanSession): ScanCompilationProvenance {
+  const accepted = session.candidates.filter((candidate) => candidate.status === "accepted" || candidate.status === "edited");
+  const rejected = session.candidates.filter((candidate) => candidate.status === "rejected");
+  const confidenceValues = accepted.map((candidate) => candidate.confidence);
+  const averageConfidence = confidenceValues.length > 0
+    ? confidenceValues.reduce((sum, value) => sum + value, 0) / confidenceValues.length
+    : 0;
+  const sourceCounts = session.candidates.reduce<Record<ScanCandidate["source"], number>>(
+    (counts, candidate) => {
+      counts[candidate.source] = (counts[candidate.source] ?? 0) + 1;
+      return counts;
+    },
+    { manual: 0, scan: 0 },
+  );
+  const acceptanceRate = session.candidates.length > 0 ? accepted.length / session.candidates.length : 0;
+  const confidenceLevel = confidenceLevelFromAverage(averageConfidence, acceptanceRate);
+
+  return {
+    source: "scan_import",
+    totalCandidates: session.candidates.length,
+    acceptedCandidates: accepted.length,
+    rejectedCandidates: rejected.length,
+    averageConfidence,
+    confidenceLevel,
+    sourceCounts,
+    summary: `Manual-assisted scan compiled ${accepted.length}/${session.candidates.length} accepted candidates at ${Math.round(averageConfidence * 100)}% average confidence.`,
+  };
 }
 
 function createCandidateNode(
@@ -308,7 +354,8 @@ function applyWalls(scene: SecurityScene, session: ScanSession) {
   });
 }
 
-export function compileScanSessionToScene(session: ScanSession): SecurityScene {
+export function compileScanSessionToScene(session: ScanSession): { scene: SecurityScene; provenance: ScanCompilationProvenance } {
+  const provenance = summarizeScanProvenance(session);
   const scene = createBlankSecurityScene();
   scene.name = session.roomName;
   scene.dimensions = {
@@ -327,6 +374,11 @@ export function compileScanSessionToScene(session: ScanSession): SecurityScene {
   scene.criticalZones = [];
   scene.entryPoints = [];
   scene.paths = [];
+  scene.changeLog = [
+    ...scene.changeLog,
+    `Provenance: ${provenance.summary}`,
+    `Provenance confidence: ${provenance.confidenceLevel}`,
+  ];
 
   for (const candidate of session.candidates) {
     const node = createCandidateNode(session, candidate);
@@ -360,5 +412,5 @@ export function compileScanSessionToScene(session: ScanSession): SecurityScene {
     }
   }
 
-  return scene;
+  return { scene, provenance };
 }

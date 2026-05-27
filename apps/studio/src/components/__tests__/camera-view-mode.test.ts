@@ -24,6 +24,11 @@ describe("CameraViewMode", () => {
     expect(source).toContain("Quality:");
     expect(source).toContain("Segment:");
     expect(source).toContain("Best Camera");
+    expect(source).toContain("Footage Verification");
+    expect(source).toContain("Planning aid only.");
+    expect(source).toContain("Reset align");
+    expect(source).toContain("Overlay");
+    expect(source).toContain("Split");
   });
 
   test("derives target labels from the zone target type", () => {

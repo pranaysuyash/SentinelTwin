@@ -122,7 +122,7 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - Scan sessions remain separate from the final scene until compile, and the UI labels the flow as manual-assisted rather than claiming AI perception ✅
 
 ### Launcher resume / status surface — now explicit
-- Root launcher now renders `StudioDashboardHome` as a full-screen dashboard with the current workspace preview, risk summary, mode entry points, recent workspaces, and secondary quick-start actions instead of the old centered setup card ✅
+- Root launcher now renders `StudioDashboardHome` as a full-screen dashboard with the current workspace preview, risk summary, mode entry points, searchable project browser, selected-workspace actions, and secondary quick-start actions instead of the old centered setup card ✅
 - Launcher page now exposes a workspace-resume card with direct resume, coverage entry, and saved-scene shortcuts pulled from local storage ✅
 - Product feature status is visible on the launcher with an entry-flow row and explicit available/preview/planned maturity labels ✅
 - AI layout draft launcher modal now warns that the generated scene replaces the current workspace and discloses the model-backed vs heuristic fallback path ✅

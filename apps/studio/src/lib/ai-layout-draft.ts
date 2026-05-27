@@ -7,6 +7,15 @@ import { createCameraNode, createCriticalZoneNode, createObstructionNode } from 
 type DraftResult = {
   scene: SecurityScene;
   warnings: string[];
+  provenance: DraftProvenance;
+};
+
+type DraftProvenance = {
+  source: SecurityScene["source"];
+  mode: "model" | "heuristic";
+  confidenceLevel: "high" | "medium" | "low";
+  summary: string;
+  warnings: string[];
 };
 
 const DIMENSION_PATTERN = /(\d+(?:\.\d+)?)\s*m?\s*[x×]\s*(\d+(?:\.\d+)?)\s*m?/i;
@@ -60,9 +69,17 @@ export function draftSceneFromPrompt(prompt: string): DraftResult {
     ? `AI Draft — ${prompt.trim().slice(0, 52)}${prompt.trim().length > 52 ? "..." : ""}`
     : `AI Draft — ${template.name}`;
   scene.source = "ai_generated";
+  const provenance: DraftProvenance = {
+    source: scene.source,
+    mode: "heuristic",
+    confidenceLevel: dimensionsMatch ? "medium" : "low",
+    summary: `Heuristic AI draft from prompt using ${template.name} template${dimensionsMatch ? "" : " with default dimensions"}.`,
+    warnings: [...warnings],
+  };
+  scene.changeLog = [...scene.changeLog, `Provenance: ${provenance.summary}`, `Provenance confidence: ${provenance.confidenceLevel}`];
   scene.updatedAt = Date.now();
 
-  return { scene, warnings };
+  return { scene, warnings, provenance };
 }
 
 export async function draftSceneFromPromptWithModel(
@@ -93,10 +110,19 @@ export async function draftSceneFromPromptWithModel(
 
   scene.name = structured.sceneName;
   scene.source = "ai_generated";
+  const confidenceLevel: DraftProvenance["confidenceLevel"] = structured.assumptions.length === 0 ? "high" : "medium";
+  const provenance: DraftProvenance = {
+    source: scene.source,
+    mode: "model",
+    confidenceLevel,
+    summary: `Model-backed AI draft from structured prompt output using ${template.name}.`,
+    warnings: [...structured.assumptions],
+  };
+  scene.changeLog = [...scene.changeLog, `Provenance: ${provenance.summary}`, `Provenance confidence: ${provenance.confidenceLevel}`];
   scene.updatedAt = Date.now();
 
   const warnings = structured.assumptions.length > 0 ? structured.assumptions : [];
-  return { scene, warnings };
+  return { scene, warnings, provenance };
 }
 
 function parseCount(promptLower: string, token: string): number | null {

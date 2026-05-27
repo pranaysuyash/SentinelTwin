@@ -7,6 +7,7 @@
  * The approach is heuristic-based (edge detection + contour tracing) rather than ML,
  * making it fast and dependency-free for common floor plan layouts.
  */
+import type { SecurityScene, DoorNode, WindowNode, WallNode } from "@/schema/security-scene";
 
 export interface WallSegment {
   start: { x: number; y: number };
@@ -92,6 +93,134 @@ export async function extractFloorPlan(
     roomDimensions: dimensions,
     scalePixelsPerMeter: cfg.scalePixelsPerMeter,
     confidence,
+  };
+}
+
+/**
+ * Convert extracted floor-plan geometry into a valid SecurityScene skeleton.
+ * This keeps the import path deterministic and editable inside Studio.
+ */
+export function createSceneFromFloorPlan(
+  name: string,
+  result: FloorPlanResult,
+): SecurityScene {
+  const now = Date.now();
+  let seq = 0;
+  const uid = (prefix: string) => `${prefix}_${(now + seq++).toString(36)}`;
+
+  const pxToMetersX = (x: number) => x / result.scalePixelsPerMeter;
+  const pxToMetersZ = (y: number) => y / result.scalePixelsPerMeter;
+  const roomHeight = result.roomDimensions.heightM;
+
+  const bounds = getWallBounds(result.walls);
+  const minX = bounds?.minX ?? 0;
+  const minY = bounds?.minY ?? 0;
+  const shiftX = (x: number) => Math.max(0, pxToMetersX(x - minX));
+  const shiftZ = (y: number) => Math.max(0, pxToMetersZ(y - minY));
+
+  const walls: WallNode[] = result.walls.length > 0
+    ? result.walls.map((wall, index) => ({
+      id: uid("wall"),
+      nodeType: "wall",
+      label: `Imported Wall ${index + 1}`,
+      start: [shiftX(wall.start.x), shiftZ(wall.start.y)],
+      end: [shiftX(wall.end.x), shiftZ(wall.end.y)],
+      heightM: roomHeight,
+      thicknessM: 0.18,
+      material: "solid",
+      visionTransmission: 0,
+      source: "import",
+    }))
+    : createFallbackRectWalls(uid, result.roomDimensions.widthM, result.roomDimensions.depthM, roomHeight);
+
+  const doors: DoorNode[] = result.doors.map((door, index) => ({
+    id: uid("door"),
+    nodeType: "door",
+    label: `Imported Door ${index + 1}`,
+    position: [shiftX(door.position.x), 0, shiftZ(door.position.y)],
+    dimensions: [door.widthM, 2.1, 0.1],
+    state: "closed",
+    source: "import",
+  }));
+
+  const windows: WindowNode[] = result.windows.map((window, index) => ({
+    id: uid("window"),
+    nodeType: "window",
+    label: `Imported Window ${index + 1}`,
+    position: [shiftX(window.position.x), 1.2, shiftZ(window.position.y)],
+    dimensions: [window.widthM, 1.4, 0.1],
+    state: "closed_glass",
+    visionTransmission: 0.85,
+    source: "import",
+  }));
+
+  return {
+    id: uid("scene"),
+    name,
+    createdAt: now,
+    updatedAt: now,
+    units: "meters",
+    dimensions: {
+      width: result.roomDimensions.widthM,
+      depth: result.roomDimensions.depthM,
+      height: roomHeight,
+    },
+    walls,
+    doors,
+    windows,
+    cameras: [],
+    securityLights: [],
+    obstructions: [],
+    criticalZones: [],
+    privacyZones: [],
+    entryPoints: [],
+    paths: [],
+    assumptions: {
+      wallHeightM: roomHeight,
+      personHeightM: 1.75,
+      vehicleHeightM: 1.5,
+      timeOfDay: "day",
+      interiorLightLevel: "normal",
+      nightPenaltyMode: "simple",
+      doriStandard: "oodpcvs_2025",
+      pixelsPerMeter: { detection: 25, observation: 62.5, recognition: 125, identification: 250 },
+      showAssumptionsPanel: false,
+    },
+    source: "floor_plan_import",
+    version: "0.1.0",
+    snapshots: [],
+    scenarios: [],
+  };
+}
+
+/**
+ * Recalibrate extracted floor-plan scale from known real-world room dimensions.
+ * Geometry stays in pixel-space; scale + derived meter dimensions are updated.
+ */
+export function recalibrateFloorPlanResult(
+  result: FloorPlanResult,
+  calibration: { widthM?: number; depthM?: number; heightM?: number },
+): FloorPlanResult {
+  const bounds = getWallBounds(result.walls);
+  const pixelWidth = bounds ? Math.max(1, bounds.maxX - bounds.minX) : Math.max(1, result.imageWidth);
+  const pixelDepth = bounds ? Math.max(1, bounds.maxY - bounds.minY) : Math.max(1, result.imageHeight);
+
+  const widthM = calibration.widthM ?? result.roomDimensions.widthM;
+  const depthM = calibration.depthM ?? result.roomDimensions.depthM;
+  const heightM = calibration.heightM ?? result.roomDimensions.heightM;
+
+  const widthScale = widthM > 0 ? pixelWidth / widthM : result.scalePixelsPerMeter;
+  const depthScale = depthM > 0 ? pixelDepth / depthM : result.scalePixelsPerMeter;
+  const nextScale = Number(((widthScale + depthScale) / 2).toFixed(2));
+
+  return {
+    ...result,
+    scalePixelsPerMeter: nextScale,
+    roomDimensions: {
+      widthM: Number(widthM.toFixed(2)),
+      depthM: Number(depthM.toFixed(2)),
+      heightM: Number(heightM.toFixed(2)),
+    },
   };
 }
 
@@ -281,6 +410,35 @@ function detectOpenings(
   }
 
   return { doors, windows };
+}
+
+function getWallBounds(walls: WallSegment[]): { minX: number; minY: number; maxX: number; maxY: number } | null {
+  if (walls.length === 0) return null;
+  let minX = Number.POSITIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+  for (const wall of walls) {
+    minX = Math.min(minX, wall.start.x, wall.end.x);
+    minY = Math.min(minY, wall.start.y, wall.end.y);
+    maxX = Math.max(maxX, wall.start.x, wall.end.x);
+    maxY = Math.max(maxY, wall.start.y, wall.end.y);
+  }
+  return { minX, minY, maxX, maxY };
+}
+
+function createFallbackRectWalls(
+  uid: (prefix: string) => string,
+  widthM: number,
+  depthM: number,
+  heightM: number,
+): WallNode[] {
+  return [
+    { id: uid("wall"), nodeType: "wall", label: "South Wall", start: [0, 0], end: [widthM, 0], heightM, thicknessM: 0.18, material: "solid", visionTransmission: 0, source: "import" },
+    { id: uid("wall"), nodeType: "wall", label: "North Wall", start: [0, depthM], end: [widthM, depthM], heightM, thicknessM: 0.18, material: "solid", visionTransmission: 0, source: "import" },
+    { id: uid("wall"), nodeType: "wall", label: "East Wall", start: [widthM, 0], end: [widthM, depthM], heightM, thicknessM: 0.18, material: "solid", visionTransmission: 0, source: "import" },
+    { id: uid("wall"), nodeType: "wall", label: "West Wall", start: [0, 0], end: [0, depthM], heightM, thicknessM: 0.18, material: "solid", visionTransmission: 0, source: "import" },
+  ];
 }
 
 function extractDimensions(

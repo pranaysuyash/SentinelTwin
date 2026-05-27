@@ -1,6 +1,6 @@
 # Current Implementation State — Camera Studio
 
-**Updated:** 2026-05-27 (session 8: SceneBuilderWizard wiring, gap analysis correction, temporal scene-schedule wiring)
+**Updated:** 2026-05-27 (session 9: Coverage Fragility Field end-to-end, /target command, three-compat test fix)
 **Source:** Direct code audit of apps/studio/src/
 **Purpose:** Accurate baseline of what is actually built, tested, and rendering.
 Use this instead of the earlier CAMERASTUDIO_GAP_ANALYSIS.md which was written
@@ -23,8 +23,11 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - `geometry.ts` — yaw/pitch direction vectors, polygon helpers ✅
 - `path-analysis.ts` — path visibility over time ✅
 - `simulate-studio.ts` — orchestrates full simulation run ✅
+- `coverage-fragility.ts` — Coverage Fragility Field: per-cell distance-to-DORI-threshold score (0=robust, 1=fragile), `computeCoverageFragility()` pure function with `FragilitySummary` output ✅
+- `simulate-studio.ts` — Coverage Fragility wired: per-cell `fragility` field + `fragilitySummary` attached to every `SimulationResult` ✅
 - `simulate-studio.ts` — zone quality uses target-height profiles, privacy coverage issues are surfaced, and all aggregate metrics are computed over non-privacy walkable cells for canonical coverage denominators ✅
 - `PathReplayView` / `TimelineTab` — authored `scene.paths` are now the primary replay/timeline focus, with coverage-failure replay retained as secondary defensive analysis ✅
+- `PathReplayView` / `TimelineTab` — replay follow state is now shared through the store, so the Follow toggle actually pans the replay camera toward the actor instead of changing only button chrome ✅
 - `studio-store` / store tests — obstruction counterfactuals now have direct regression coverage for simulated deltas and obstruction-id tracking ✅
 - Confirmed performance: ~10.8ms average on 40×28 grid with 2 cameras — under 16ms target ✅
 - Zero React/DOM imports confirmed ✅
@@ -73,6 +76,8 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - All node types: Camera, ObstructionNode, SecurityLightNode, WallNode, DoorNode, WindowNode,
   CriticalZoneNode, PrivacyZoneNode, EntryPointNode, ScenarioPath ✅
 - Full SimulationResult with coverageCells, criticalZoneResults, adversarialPath ✅
+- `CoverageCellResult.fragility?: number` (0=robust, 1=fragile) ✅
+- `SimulationResult.fragilitySummary?: { meanFragility, fragileCellCount, robustCellCount, totalCells }` ✅
 - SceneSnapshot schema ✅
 - parseSecurityScene, safeParseSecurityScene, cloneSecurityScene utilities ✅
 
@@ -81,6 +86,7 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - importScene / exportScene with Zod validation ✅
 - Snapshots system with 4 pre-built demo snapshots ✅
 - Layer visibility (11 layers) ✅
+- `heatmapMode: "quality" | "fragility"` — store-backed heatmap mode with `setHeatmapMode` action ✅
 - Environment mode (day/dusk/night) ✅
 - Active tool tracking ✅
 - Shared minimap/path-map viewport state is store-backed, resets on scene import/load/create, and no longer gets silently re-fit by map remounts ✅
@@ -104,9 +110,17 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - "New Scene..." opens SceneBuilderWizard modal with template/blank/floor-plan creation ✅
 - SceneBuilderWizard (560 lines) was dead code — now wired into TopBar as modal overlay ✅
 - 5 scene templates accessible from wizard: retail-shop, open-office, warehouse, classroom, parking-garage ✅
+- TopBar scene menu now also exposes `Scan a Site...`, which opens the dedicated manual-assisted scan intake flow and compiles into a canonical `scan_import` scene ✅
+
+### Scan-to-scene intake — built and visible
+- Launcher page now has a visible `Scan a Site` entry point alongside scene creation/import and AI layout draft ✅
+- `ScanSiteWizard` handles manual-assisted site photo intake, candidate placement/classification, review, and compile-to-scene handoff ✅
+- `apps/studio/src/lib/scene-skeleton.ts` centralizes the blank-scene shell used by both new-scene creation and scan compilation ✅
+- `apps/studio/src/lib/scan-to-scene.ts` converts scan candidates into real `SecurityScene` nodes without introducing a parallel scene model ✅
+- Scan sessions remain separate from the final scene until compile, and the UI labels the flow as manual-assisted rather than claiming AI perception ✅
 
 ### WorkspaceCanvas — good 3D foundation with view-mode shell wired
-- Instanced mesh heatmap ✅
+- Instanced mesh heatmap with quality/fragility mode toggle ✅
 - Camera frustum cones ✅
 - Camera markers with labels and status ✅
 - Wall segments with glass material handling ✅
@@ -125,15 +139,20 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - Camera View mode is a dedicated full-canvas single-camera POV with a live HUD, DORI overlay card, mode filters, overlay toggles, camera header navigation, and a back-to-map control ✅
 - Camera Wall mode now uses an adaptive live feed grid (selected-first, active-first) with 1-6 camera feeds plus a 3D map overview slot and active/offline counters ✅
 - Compare mode now renders side-by-side baseline/proposed 3D panels with delta cards, issue/recommendation notes, a quality-over-time trend, and scenario notes ✅
+- Compare mode now exposes explicit Scenario A / Scenario B selectors so comparison pairs do not drift silently when new snapshots are saved ✅
 - MiniMap now uses the shared 2D map system with reusable projection/layers, zoom/fit controls, hover/selection sync, and replay actor visibility ✅
 - MiniMap now supports collapsed / compact / expanded / hover-preview states, shared map tokens, layer/display controls, legend, scale, north, and empty-map focus handoff to the 3D workspace ✅
 - PathMap now uses the shared 2D map system with quality-banded path rendering, current-state replay panel, path events list, segment details, and inline play/open-in-3D controls ✅
 - Camera placement presets are now reactive and store-backed instead of hidden module state, so the camera tool picker reflects the current preset and placement reads one canonical source ✅
 - The scene workbench now supports a canonical duplicate-node action with keyboard shortcut support, so selected cameras/obstructions/walls/zones/paths can be copied and reselected instead of rebuilt manually ✅
+- The scene workbench now has shared grouped selection state, shift/meta multi-select, and drag-select bounds so the canvas can capture more than one object without losing the primary inspector selection ✅
+- The workbench transform layer now exposes obstruction width/depth resize handles and camera pitch affordances in addition to move/rotate/height controls ✅
 - View mode switching is implemented for Map / Camera View / Camera Wall / Path Replay ✅
 - Path replay animation and actor playback are implemented in the dedicated replay view ✅
+- Path replay now renders replay-proof overlays: legalized samples avoid obvious obstruction overlap, the scene shows camera frustums, and the floor is tiled so breach/collision explanations read directly from the canvas ✅
 - Full-canvas replay mode now uses the workspace shell, not the docked layout ✅
 - Compare mode now renders a full before/after comparison shell with scene panels, comparison cards, and lower analysis bands; verified in production build via `?mode=compare` ✅
+- Compare mode now keeps the selected snapshot pair explicit in the header and still uses canonical `saveSnapshot()` for Add Scenario ✅
 - Path replay and compare are deep-linkable via `?mode=replay` and `?mode=compare`, which makes visual QA deterministic in the local browser flow ✅
 - `apps/studio/next.config.ts` now allows local dev origins (`127.0.0.1`, `localhost`) so browser-based QA can hydrate the app cleanly in development ✅
 - Path replay now uses the night-stage theme in the production bundle, which matches the reference mood more closely and keeps the replay surface distinct from map/compare ✅
@@ -169,17 +188,22 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - Aim at Zone button: wired ✅
 - Duplicate camera button: wired ✅
 - Delete camera button: wired ✅
+- InspectorPanel now mounts as a full-width dock shell inside the contextual right panel, so the right dock can reclaim canvas space instead of reserving a fixed-width inner island ✅
+- The dock headers were tightened further so toggles live on each section without turning the header chrome into the dominant visual element ✅
 
 ### LeftPanel — UI complete
 - All 10 tool buttons with keyboard shortcut labels ✅
 - Layer visibility toggles for all 11 layers (wired to toggleLayer) ✅
 - MiniMap is now powered by the shared map module, not a panel-local SVG, and renders coverage cells, zones, walls, paths, adversarial path, cameras, path replay actor, and interactive zoom/fit/select controls ✅
 - Tools are buttons only — clicking canvas doesn't place objects ❌ (all tools except select are UI-only)
+- LeftPanel now behaves as a full-width dock shell with collapsible subpanels for Scene Tools, Scene Layers, and Mini-Map, instead of a fixed-width inner column that wasted canvas space ✅
+- Section headers now use compact badges and slimmer toggle controls so the sidebar gives more space back to tools and content ✅
 
 ### BottomPanel tabs — mostly complete
 
 **MetricsTab** ✅
-- 7 metric cards: coverage, critical zones, cameras, avg quality, worst area, recognition %, identification %
+- 7 core metric cards: coverage, critical zones, cameras, avg quality, worst area, recognition %, identification %
+- 8th card (Coverage Fragility) renders when simulation includes fragility data ✅
 - DonutChart component for coverage and quality
 - All values from simulationResult
 - Coverage delta is computed from prior snapshots, not hardcoded ✅
@@ -230,6 +254,8 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - Assumptions panel showing all SimulationAssumptions with "Edit Assumptions" button (UI only) ❌
 - Report Summary panel with 4 bullet points (dynamic from simulation result)
 - Environment panel now shows scene-derived mode, light state, window handling, door handling, and exterior lux instead of synthetic weather values ✅
+- AI command bar (`use-ai-command.ts`) handles: `/night`, `/dusk`, `/day`, `/report`, `/compare`, `/snapshot`, `/simulate`, `/run`, `/fail`, `/camera-failure`, `/fix`, `/improve`, `/target` ✅
+- `/target <type>` — sets targetType on all critical zones (face, face_recognition, face_identification, vehicle_detection, license_plate, package, cash, door, perimeter, person) ✅
 
 ### StatusBar — exists (not read in detail)
 ### Demo scene — validated ✅

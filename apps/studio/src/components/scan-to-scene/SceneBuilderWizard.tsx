@@ -7,6 +7,8 @@ import { useStudioStore } from "@/store/studio-store";
 import {
   loadImageToData,
   extractFloorPlan,
+  createSceneFromFloorPlan,
+  recalibrateFloorPlanResult,
   type FloorPlanResult,
   validateFloorPlan,
 } from "@/lib/floor-plan-import";
@@ -114,12 +116,7 @@ export function SceneBuilderWizard({ onClose }: SceneBuilderWizardProps) {
         heightM: state.heightM,
       });
     } else if (state.importMethod === "floor_plan" && state.floorPlanResult) {
-      const fp = state.floorPlanResult;
-      const base = createSmallRetailShopScene();
-      base.name = state.roomName;
-      base.dimensions = { width: fp.roomDimensions.widthM, depth: fp.roomDimensions.depthM, height: fp.roomDimensions.heightM };
-      base.source = "floor_plan_import";
-      scene = base;
+      scene = createSceneFromFloorPlan(state.roomName, state.floorPlanResult);
     } else {
       // Blank
       scene = createSmallRetailShopScene();
@@ -440,7 +437,20 @@ function ConfigureStep({
 
         {value.floorPlanResult ? (
           <div>
-            <ImportReview result={value.floorPlanResult} warnings={value.importWarnings} onImageChange={() => onChange({ floorPlanResult: null, floorPlanFile: null })} />
+            <ImportReview
+              result={value.floorPlanResult}
+              warnings={value.importWarnings}
+              onImageChange={() => onChange({ floorPlanResult: null, floorPlanFile: null })}
+              onRecalibrate={(calibration) => {
+                const recalibrated = recalibrateFloorPlanResult(value.floorPlanResult!, calibration);
+                const { warnings } = validateFloorPlan(recalibrated);
+                onChange({ floorPlanResult: recalibrated, importWarnings: warnings });
+              }}
+              onUpdateResult={(nextResult) => {
+                const { warnings } = validateFloorPlan(nextResult);
+                onChange({ floorPlanResult: nextResult, importWarnings: warnings });
+              }}
+            />
           </div>
         ) : (
           <div

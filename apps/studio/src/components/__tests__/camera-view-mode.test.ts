@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
+import { formatTargetTypeLabel } from "@/components/view/CameraViewMode";
+
 const cameraViewModePath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/view/CameraViewMode.tsx";
 
 describe("CameraViewMode", () => {
@@ -18,5 +20,11 @@ describe("CameraViewMode", () => {
     expect(source).toContain("Minimal camera feed");
     expect(source).toContain("Inspection preset");
     expect(source).toContain("MORE");
+  });
+
+  test("derives target labels from the zone target type", () => {
+    expect(formatTargetTypeLabel("face_recognition")).toBe("Face");
+    expect(formatTargetTypeLabel("cash_counter_activity")).toBe("Cash Counter");
+    expect(formatTargetTypeLabel("door_entry_exit")).toBe("Entry / Exit");
   });
 });

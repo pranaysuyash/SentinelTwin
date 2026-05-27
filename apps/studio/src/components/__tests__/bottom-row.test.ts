@@ -29,7 +29,7 @@ describe("BottomRow helpers", () => {
       { state: "open" },
       { state: "locked" },
     ],
-  } as const;
+  } as unknown as Parameters<typeof summarizeWindowStates>[0];
 
   test("summarizes scene window and door states from live scene data", () => {
     expect(summarizeWindowStates(scene)).toBe("3 windows · 1 glass, 1 open, 1 reflective");

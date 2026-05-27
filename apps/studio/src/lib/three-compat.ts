@@ -1,5 +1,3 @@
-import * as THREE from "three";
-
 type ClockLike = {
   autoStart: boolean;
   startTime: number;
@@ -60,15 +58,5 @@ class CompatClock implements ClockLike {
   }
 }
 
-const compatThree = THREE as typeof THREE & {
-  __sentinelTwinClockPatched?: boolean;
-};
-
-if (!compatThree.__sentinelTwinClockPatched) {
-  // Three.js now exposes Clock as a read-only export in this environment.
-  // Keep the compatibility module as a no-op side-effect guard so imports
-  // remain safe without mutating the library namespace.
-  compatThree.__sentinelTwinClockPatched = true;
-}
-
+// THREE module is not mutated — CompatClock is a standalone replacement for use in non-R3F contexts.
 export { CompatClock };

@@ -1,25 +1,17 @@
 "use client";
 
 import { OrbitControls } from "@react-three/drei";
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas } from "@react-three/fiber";
 import { ArrowLeft, Camera, ChevronLeft, ChevronRight, CircleSmall, VideoOff } from "lucide-react";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import * as THREE from "three";
 
 import { useStudioStore } from "@/store/studio-store";
-import { getYawPitchDirection } from "@/simulation/geometry";
 import "@/lib/three-compat";
-import {
-  ENVIRONMENT_THEMES,
-  SceneFloor,
-  SceneLighting,
-  SceneObstructions,
-  SceneDoors,
-  SceneWalls,
-  SceneWindows,
-} from "@/components/workspace/SharedScene";
+import { ENVIRONMENT_THEMES } from "@/components/workspace/SharedScene";
+import { pointOnPathAtProgress } from "@/components/map/path-quality";
 import { QUALITY_RANK } from "@/lib/quality-display";
-import type { CameraNode, DoriQuality, SimulationAssumptions } from "@/schema/security-scene";
+import { CameraRigLive, nowTimestamp, SceneFeedGeometry } from "@/components/view/SceneFeedCanvas";
+import type { CameraNode, DoriQuality, SimulationAssumptions, SecurityScene } from "@/schema/security-scene";
 
 type CameraFeedMode = "normal" | "ir_bw" | "low_light" | "thermal";
 
@@ -32,42 +24,30 @@ type OverlayFlags = {
   grid: boolean;
 };
 
-function SceneView({ theme }: { theme: (typeof ENVIRONMENT_THEMES)[keyof typeof ENVIRONMENT_THEMES] }) {
-  const scene = useStudioStore((s) => s.scene);
-  const selectedId = useStudioStore((s) => s.selectedNodeId);
-  const { width, depth } = scene.dimensions;
-
-  return (
-    <>
-      <SceneLighting theme={theme} />
-      <SceneFloor width={width} depth={depth} showGrid={false} />
-      <SceneWalls walls={scene.walls} />
-      <SceneDoors doors={scene.doors} />
-      <SceneWindows windows={scene.windows} />
-      <SceneObstructions obstructions={scene.obstructions} selectedId={selectedId} />
-    </>
-  );
+export function formatTargetTypeLabel(targetType: SecurityScene["criticalZones"][number]["targetType"]) {
+  switch (targetType) {
+    case "person_detection":
+      return "Person";
+    case "face_recognition":
+    case "face_identification":
+      return "Face";
+    case "vehicle_detection":
+      return "Vehicle";
+    case "license_plate":
+      return "License Plate";
+    case "package_detection":
+      return "Package";
+    case "cash_counter_activity":
+      return "Cash Counter";
+    case "door_entry_exit":
+      return "Entry / Exit";
+    case "perimeter_breach":
+      return "Perimeter";
+    default:
+      return `${targetType}`.replace(/_/g, " ");
+  }
 }
 
-function CameraRig({ camera: camData }: { camera: CameraNode }) {
-  const camera = useThree((s) => s.camera);
-
-  useEffect(() => {
-    const forward = getYawPitchDirection(camData.yawDeg, camData.pitchDeg);
-    const pos = new THREE.Vector3(...camData.position);
-    const target = pos.clone().add(forward.clone().multiplyScalar(8));
-    camera.position.copy(pos);
-    camera.lookAt(target);
-    camera.updateProjectionMatrix();
-  }, [camera, camData.id, camData.pitchDeg, camData.position, camData.yawDeg]);
-
-  return null;
-}
-
-function nowTimestamp() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}  ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
-}
 
 function formatCameraTag(name: string) {
   const match = name.match(/(\d+)/);
@@ -118,6 +98,74 @@ function modeFilter(mode: CameraFeedMode) {
   return null;
 }
 
+function pathYawAtProgress(path: SecurityScene["paths"][number], progress: number) {
+  if (path.points.length < 2) return 0;
+
+  const clamped = Math.max(0, Math.min(1, progress));
+  const total = path.points.reduce((acc, point, index) => {
+    if (index === 0) return acc;
+    const prev = path.points[index - 1]!.position;
+    const current = point.position;
+    return acc + Math.hypot(current[0] - prev[0], current[1] - prev[1]);
+  }, 0);
+
+  if (total <= 0) return 0;
+
+  let target = total * clamped;
+  for (let index = 1; index < path.points.length; index += 1) {
+    const start = path.points[index - 1]!.position;
+    const end = path.points[index]!.position;
+    const segmentLength = Math.hypot(end[0] - start[0], end[1] - start[1]);
+    if (segmentLength <= 0) continue;
+
+    if (target <= segmentLength || index === path.points.length - 1) {
+      return Math.atan2(end[0] - start[0], end[1] - start[1]);
+    }
+
+    target -= segmentLength;
+  }
+
+  const last = path.points[path.points.length - 1]!;
+  const prev = path.points[path.points.length - 2]!;
+  return Math.atan2(last.position[0] - prev.position[0], last.position[1] - prev.position[1]);
+}
+
+function ReplayActor({
+  path,
+  progress,
+}: {
+  path: SecurityScene["paths"][number];
+  progress: number;
+}) {
+  const [x, z] = pointOnPathAtProgress(path, progress);
+  const yaw = pathYawAtProgress(path, progress);
+
+  return (
+    <group position={[x, 0.02, z]} rotation={[0, yaw, 0]}>
+      <mesh position={[0, 0.86, 0]} castShadow>
+        <capsuleGeometry args={[0.13, 0.48, 4, 8]} />
+        <meshStandardMaterial color="#cfd6e3" roughness={0.7} metalness={0.05} />
+      </mesh>
+      <mesh position={[0, 1.16, 0]} castShadow>
+        <sphereGeometry args={[0.1, 10, 10]} />
+        <meshStandardMaterial color="#eef2f7" roughness={0.5} metalness={0.02} />
+      </mesh>
+      <mesh position={[0, 0.84, 0]} castShadow>
+        <boxGeometry args={[0.46, 1.7, 0.42]} />
+        <meshBasicMaterial color="#ef4444" transparent opacity={0.16} />
+      </mesh>
+      <mesh position={[0, 0.84, 0]} castShadow>
+        <boxGeometry args={[0.46, 1.7, 0.42]} />
+        <meshBasicMaterial color="#ef4444" wireframe transparent opacity={0.86} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.005, 0]}>
+        <ringGeometry args={[0.14, 0.3, 20]} />
+        <meshBasicMaterial color="#22c55e" transparent opacity={0.45} />
+      </mesh>
+    </group>
+  );
+}
+
 function CameraNoise() {
   return (
     <div
@@ -130,7 +178,7 @@ function CameraNoise() {
   );
 }
 
-function LiveFeedHUD({ camera: cam, mode, flags, ppm }: { camera: CameraNode; mode: CameraFeedMode; flags: OverlayFlags; ppm: SimulationAssumptions["pixelsPerMeter"] }) {
+function LiveFeedHUD({ camera: cam, mode, flags, ppm, targetType }: { camera: CameraNode; mode: CameraFeedMode; flags: OverlayFlags; ppm: SimulationAssumptions["pixelsPerMeter"]; targetType?: SecurityScene["criticalZones"][number]["targetType"] }) {
   const isActive = cam.status === "on";
   const ranges = rangeMeters(cam, ppm);
 
@@ -170,7 +218,7 @@ function LiveFeedHUD({ camera: cam, mode, flags, ppm }: { camera: CameraNode; mo
             <div className="flex justify-between"><span>Recognition</span><span className="font-mono text-[#22c55e]">{ranges.recognition.toFixed(1)}m</span></div>
             <div className="flex justify-between"><span>Identification</span><span className="font-mono text-[#60a5fa]">{ranges.identification.toFixed(1)}m</span></div>
           </div>
-          <div className="mt-1 border-t border-[#334563] pt-1 text-[8px] uppercase tracking-wide text-[#7a94c7]">Target: Face / Person</div>
+          {targetType ? <div className="mt-1 border-t border-[#334563] pt-1 text-[8px] uppercase tracking-wide text-[#7a94c7]">Target: {formatTargetTypeLabel(targetType)}</div> : null}
           <div className="text-[8px] text-[#95a9cf]">Mode: {mode === "normal" ? "Normal" : mode === "ir_bw" ? "IR (B/W)" : mode === "low_light" ? "Low Light" : "Thermal"}</div>
         </div>
       ) : null}
@@ -224,6 +272,7 @@ export function ReplayStatusOverlay({
 export function DoriInsightCard({
   camera,
   zoneLabel,
+  targetType,
   currentQuality,
   requiredQuality,
   zoneStatus,
@@ -234,6 +283,7 @@ export function DoriInsightCard({
 }: {
   camera: CameraNode;
   zoneLabel: string;
+  targetType: SecurityScene["criticalZones"][number]["targetType"];
   currentQuality: string;
   requiredQuality: string;
   zoneStatus: "pass" | "partial" | "fail" | "unknown";
@@ -254,6 +304,9 @@ export function DoriInsightCard({
       <div className="mt-1 text-[10px] font-semibold text-white">{zoneLabel}</div>
       <div className="mt-1 text-[8px] uppercase tracking-[0.16em] text-[#8ea5cc]">
         {requiredQuality.toUpperCase()} REQUIRED · {statusLabel}
+      </div>
+      <div className="mt-1 border-t border-[#334563] pt-1 text-[8px] uppercase tracking-wide text-[#7a94c7]">
+        Target: {formatTargetTypeLabel(targetType)}
       </div>
       <div className="mt-2 space-y-1.5 text-[10px] text-[#d2d9e8]">
         <div className="flex items-center justify-between gap-2">
@@ -577,6 +630,7 @@ export function CameraViewMode() {
   const pathTimeS = activePathResult && activePathResult.totalDurationS > 0
     ? pathReplay.progress * activePathResult.totalDurationS
     : 0;
+  const replayActorVisible = Boolean(activePath && activePathResult && (pathReplay.playing || pathReplay.progress > 0));
   const firstCriticalZone = scene.criticalZones[0] ?? null;
   const camResult = result?.cameraResults.find((entry) => entry.cameraId === camera?.id) ?? null;
   const zoneResult = firstCriticalZone ? result?.criticalZoneResults.find((entry) => entry.zoneId === firstCriticalZone.id) ?? null : null;
@@ -673,13 +727,16 @@ export function CameraViewMode() {
           >
             <color attach="background" args={[theme.background]} />
             <Suspense fallback={null}>
-              <SceneView theme={theme} />
+              <SceneFeedGeometry theme={theme} />
             </Suspense>
-            <CameraRig camera={camera} />
+            <CameraRigLive camera={camera} />
+            {replayActorVisible && activePath ? (
+              <ReplayActor path={activePath} progress={pathReplay.progress} />
+            ) : null}
             <OrbitControls enablePan={false} enableZoom={false} enableRotate={false} />
           </Canvas>
           {modeFilter(feedMode)}
-          <LiveFeedHUD camera={camera} mode={feedMode} flags={flags} ppm={scene.assumptions.pixelsPerMeter} />
+          <LiveFeedHUD camera={camera} mode={feedMode} flags={flags} ppm={scene.assumptions.pixelsPerMeter} targetType={firstCriticalZone?.targetType} />
           {activePath && activePathResult ? (
             <ReplayStatusOverlay
               pathLabel={activePath.label}
@@ -691,6 +748,7 @@ export function CameraViewMode() {
             <DoriInsightCard
               camera={camera}
               zoneLabel={firstCriticalZone.label}
+              targetType={firstCriticalZone.targetType}
               currentQuality={zoneAnalysis.currentQuality}
               requiredQuality={zoneResult?.requiredQuality ?? firstCriticalZone.requiredQuality}
               zoneStatus={zoneResult?.status ?? "unknown"}

@@ -1,34 +1,34 @@
 import { describe, expect, test } from "bun:test";
 
-import { DORI_THRESHOLDS, ppmToQuality } from "@/simulation/dori";
+import { DORI_THRESHOLDS, ppmToDoriQuality } from "@/simulation/dori";
 
-describe("ppmToQuality", () => {
+describe("ppmToDoriQuality", () => {
   test("maps representative ppm values to DORI quality bands", () => {
-    expect(ppmToQuality(300)).toBe("identification");
-    expect(ppmToQuality(200)).toBe("recognition");
-    expect(ppmToQuality(80)).toBe("observation");
-    expect(ppmToQuality(30)).toBe("detection");
-    expect(ppmToQuality(10)).toBe("none");
+    expect(ppmToDoriQuality(300)).toBe("identification");
+    expect(ppmToDoriQuality(200)).toBe("recognition");
+    expect(ppmToDoriQuality(80)).toBe("observation");
+    expect(ppmToDoriQuality(30)).toBe("detection");
+    expect(ppmToDoriQuality(10)).toBe("none");
   });
 
   test("treats threshold values as inclusive", () => {
-    expect(ppmToQuality(DORI_THRESHOLDS.recognition)).toBe("recognition");
-    expect(ppmToQuality(DORI_THRESHOLDS.identification)).toBe("identification");
+    expect(ppmToDoriQuality(DORI_THRESHOLDS.recognition)).toBe("recognition");
+    expect(ppmToDoriQuality(DORI_THRESHOLDS.identification)).toBe("identification");
   });
 
   test("supports custom stricter and looser quality thresholds", () => {
     const ppm = 80;
     const qualityRank = (quality: string) =>
       ["none", "detection", "observation", "recognition", "identification"].indexOf(quality);
-    const defaultQuality = ppmToQuality(ppm);
+    const defaultQuality = ppmToDoriQuality(ppm);
 
-    const stricter = ppmToQuality(ppm, {
+    const stricter = ppmToDoriQuality(ppm, {
       detection: 20,
       observation: 100,
       recognition: 200,
       identification: 400,
     });
-    const looser = ppmToQuality(ppm, {
+    const looser = ppmToDoriQuality(ppm, {
       detection: 10,
       observation: 30,
       recognition: 60,

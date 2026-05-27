@@ -13,7 +13,17 @@ import {
 import { useState } from "react";
 
 import { CameraFeedCanvas } from "@/components/inspector/CameraFeedCanvas";
+import {
+  Field,
+  NumberInput,
+  PropSelect,
+  SelectInput,
+  SliderInput,
+  SummaryStat,
+  ToggleField,
+} from "@/components/inspector/inspector-controls";
 import { Badge } from "@/components/shared/Badge";
+import { SectionCard } from "@/components/shared/SectionCard";
 import { cn } from "@/lib/cn";
 import { pathLength } from "@/components/workspace/editing/editor-geometry";
 import type {
@@ -30,185 +40,6 @@ import type {
 import { type InspectorTab, useStudioStore } from "@/store/studio-store";
 import type { DoriQuality, SimulationAssumptions } from "@/schema/security-scene";
 
-function Field({ label, value, unit }: { label: string; value: React.ReactNode; unit?: string }) {
-  return (
-    <div className="flex items-center justify-between gap-3 border-b border-[#181c27] py-2 last:border-b-0 last:pb-0 first:pt-0">
-      <span className="text-[10px] text-[#6a748b]">{label}</span>
-      <span className="flex items-center gap-1 text-right text-[11px] font-medium text-[#d2d9e8]">
-        {value}
-        {unit ? <span className="text-[9px] text-[#556076]">{unit}</span> : null}
-      </span>
-    </div>
-  );
-}
-
-function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
-      <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">{title}</div>
-      {children}
-    </section>
-  );
-}
-
-function NumberInput({
-  label,
-  value,
-  min,
-  max,
-  step = 0.1,
-  unit,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min?: number;
-  max?: number;
-  step?: number;
-  unit?: string;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <label className="block rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
-      <div className="mb-1 flex items-center justify-between gap-2">
-        <span className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">{label}</span>
-        {unit ? <span className="text-[8px] text-[#556076]">{unit}</span> : null}
-      </div>
-      <input
-        type="number"
-        value={Number.isFinite(value) ? value : 0}
-        min={min}
-        max={max}
-        step={step}
-        onChange={(event) => {
-          const next = Number(event.target.value);
-          if (Number.isNaN(next)) return;
-          onChange(next);
-        }}
-        className="w-full bg-transparent text-right font-mono text-[11px] text-[#d2d9e8] outline-none"
-      />
-    </label>
-  );
-}
-
-function SliderInput({
-  label,
-  value,
-  min = 0,
-  max = 180,
-  step = 1,
-  unit,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min?: number;
-  max?: number;
-  step?: number;
-  unit?: string;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <div className="border-b border-[#181c27] py-2 last:border-b-0 last:pb-0 first:pt-0">
-      <div className="mb-1.5 flex items-center justify-between gap-3">
-        <span className="text-[10px] text-[#6a748b]">{label}</span>
-        <span className="text-[11px] font-mono text-[#d2d9e8]">
-          {value}
-          {unit}
-        </span>
-      </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(event) => onChange(Number(event.target.value))}
-        className="w-full accent-blue-400"
-      />
-    </div>
-  );
-}
-
-function ToggleField({
-  label,
-  value,
-  trueLabel,
-  falseLabel,
-  onChange,
-}: {
-  label: string;
-  value: boolean;
-  trueLabel: string;
-  falseLabel: string;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 border-b border-[#181c27] py-2 last:border-b-0 last:pb-0 first:pt-0">
-      <span className="text-[10px] text-[#6a748b]">{label}</span>
-      <div className="inline-flex overflow-hidden rounded-md border border-[#24283a] bg-[#111521]">
-        <button
-          type="button"
-          onClick={() => onChange(true)}
-          className={cn(
-            "px-2 py-1 text-[10px] font-medium transition-colors",
-            value ? "bg-emerald-500/18 text-emerald-200" : "text-[#7f8aa3] hover:text-white",
-          )}
-        >
-          {trueLabel}
-        </button>
-        <button
-          type="button"
-          onClick={() => onChange(false)}
-          className={cn(
-            "border-l border-[#24283a] px-2 py-1 text-[10px] font-medium transition-colors",
-            !value ? "bg-red-500/15 text-red-200" : "text-[#7f8aa3] hover:text-white",
-          )}
-        >
-          {falseLabel}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function SelectInput({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  options: { value: string; label: string }[];
-  onChange: (v: string) => void;
-}) {
-  return (
-    <label className="flex items-center justify-between gap-3 border-b border-[#181c27] py-2 last:border-b-0 last:pb-0 first:pt-0">
-      <span className="text-[10px] text-[#6a748b]">{label}</span>
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-function SummaryStat({ label, value, accent = "text-[#d2d9e8]" }: { label: string; value: string; accent?: string }) {
-  return (
-    <div className="rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
-      <div className={cn("text-[12px] font-semibold", accent)}>{value}</div>
-      <div className="mt-0.5 text-[8px] uppercase tracking-[0.16em] text-[#556076]">{label}</div>
-    </div>
-  );
-}
 
 const CAMERA_STATUS_OPTIONS = [
   { value: "none", label: "Off" },
@@ -243,31 +74,6 @@ const LENS_OPTIONS = [
   { value: "6", label: "Fixed 6mm" },
   { value: "8", label: "Fixed 8mm" },
 ] as const;
-
-/** Inline select styled to match the inspector form */
-function PropSelect({
-  label, value, options, onChange,
-}: {
-  label: string;
-  value: string;
-  options: readonly { value: string; label: string }[];
-  onChange: (v: string) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 border-b border-[#181c27] py-1.5 last:border-b-0">
-      <span className="text-[10px] text-[#6a748b]">{label}</span>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
-      >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>{opt.label}</option>
-        ))}
-      </select>
-    </div>
-  );
-}
 
 /** Compute DORI effective ranges in metres for a camera, using the scene's PPM thresholds. */
 function computeDoriRanges(camera: CameraNode, scenePpm: SimulationAssumptions["pixelsPerMeter"]) {
@@ -2070,7 +1876,7 @@ function NoSelection() {
   );
 }
 
-export function InspectorPanel() {
+export function InspectorPanel({ showHeader = true }: { showHeader?: boolean } = {}) {
   const selectedId = useStudioStore((s) => s.selectedNodeId);
   const scene = useStudioStore((s) => s.scene);
   const camera = scene.cameras.find((entry) => entry.id === selectedId);
@@ -2086,9 +1892,11 @@ export function InspectorPanel() {
 
   return (
     <aside className="flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l border-[#1e2130] bg-[#0d1017]">
-      <div className="flex h-8 items-center border-b border-[#1e2130] px-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-[#4a5568]">
-        Inspector
-      </div>
+      {showHeader ? (
+        <div className="flex h-8 items-center border-b border-[#1e2130] px-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-[#4a5568]">
+          Inspector
+        </div>
+      ) : null}
       {camera
         ? <CameraInspector />
         : wall

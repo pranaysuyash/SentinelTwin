@@ -16,25 +16,9 @@ import {
 import { useCallback, useState } from "react";
 
 import { QUALITY_ABBR, QUALITY_COLOR } from "@/lib/quality-display";
+import { ExposureBar } from "@/components/shared/ExposureBar";
+import { StatCard } from "@/components/shared/StatCard";
 import { useStudioStore } from "@/store/studio-store";
-
-// ── Stat card ──
-
-function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string; color?: string }) {
-  return (
-    <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
-      <div className="flex items-center gap-2">
-        <div className={color ?? "text-[#556076]"}>
-          {icon}
-        </div>
-        <div>
-          <div className={`text-[13px] font-semibold font-mono ${color ?? "text-[#d7deed]"}`}>{value}</div>
-          <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">{label}</div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ── Exposure breakdown bars ──
 
@@ -55,15 +39,10 @@ function ExposureBreakdown({ exposure }: { exposure: Record<string, number> }) {
               </div>
               <span className="text-[9px] font-mono text-[#5b667c]">{(exposure[key] ?? 0).toFixed(1)}s</span>
             </div>
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#1a2333]">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${((exposure[key] ?? 0) / maxExposure) * 100}%` }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-                className="h-full rounded-full"
-                style={{ backgroundColor: QUALITY_COLOR[key] }}
-              />
-            </div>
+            <ExposureBar
+              color={QUALITY_COLOR[key]}
+              valuePct={((exposure[key] ?? 0) / maxExposure) * 100}
+            />
           </div>
         ))}
       </div>

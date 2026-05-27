@@ -1,9 +1,11 @@
 import { create } from "zustand";
 
 import { createSmallRetailShopScene, smallRetailShopScene } from "@/demo-scenes/small-retail-shop";
+import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 import {
   type AnyEditableNode,
   type CameraNode,
+  type CriticalZoneNode,
   type SecurityScene,
   type SimulationResult,
   type SceneSnapshot,
@@ -146,48 +148,6 @@ function removeSavedScene(sceneId: string) {
   }
 }
 
-function createBlankScene(): SecurityScene {
-  const now = Date.now();
-  return {
-    id: `scene_${now.toString(36)}`,
-    name: "Untitled Scene",
-    createdAt: now,
-    updatedAt: now,
-    units: "meters",
-    dimensions: { width: 10, depth: 8, height: 3 },
-    walls: [
-      { id: "wall_w", nodeType: "wall", label: "South Wall", start: [0, 0], end: [10, 0], heightM: 3, thicknessM: 0.18, material: "solid", visionTransmission: 0, source: "manual" },
-      { id: "wall_n", nodeType: "wall", label: "North Wall", start: [0, 8], end: [10, 8], heightM: 3, thicknessM: 0.18, material: "solid", visionTransmission: 0, source: "manual" },
-      { id: "wall_e", nodeType: "wall", label: "East Wall", start: [10, 0], end: [10, 8], heightM: 3, thicknessM: 0.18, material: "solid", visionTransmission: 0, source: "manual" },
-      { id: "wall_w2", nodeType: "wall", label: "West Wall", start: [0, 0], end: [0, 8], heightM: 3, thicknessM: 0.18, material: "solid", visionTransmission: 0, source: "manual" },
-    ],
-    doors: [],
-    windows: [],
-    cameras: [],
-    securityLights: [],
-    obstructions: [],
-    criticalZones: [],
-    privacyZones: [],
-    entryPoints: [],
-    paths: [],
-    assumptions: {
-      wallHeightM: 3,
-      personHeightM: 1.75,
-      vehicleHeightM: 1.5,
-      timeOfDay: "day",
-      interiorLightLevel: "normal",
-      nightPenaltyMode: "simple",
-      doriStandard: "oodpcvs_2025",
-      pixelsPerMeter: { detection: 25, observation: 62.5, recognition: 125, identification: 250 },
-      showAssumptionsPanel: false,
-    },
-    source: "manual",
-    version: "0.1.0",
-    snapshots: [],
-    scenarios: [],
-  };
-}
-
 export type StudioStoreState = {
   scene: SecurityScene;
   simulationResult: SimulationResult | null;
@@ -198,6 +158,7 @@ export type StudioStoreState = {
   savedScenes: SecurityScene[];
 
   selectedNodeId: string | null;
+  selectedNodeIds: string[];
   activeTool: ActiveTool;
   editor: EditorDraft;
   bottomTab: BottomTab;
@@ -212,6 +173,7 @@ export type StudioStoreState = {
   bottomDockSizePx: number;
   previousLayout: DockSnapshot | null;
   layerVisibility: LayerVisibility;
+  heatmapMode: "quality" | "fragility";
   environmentMode: "day" | "night" | "dusk";
   showDebugOverlays: boolean;
   autoRecompute: boolean;
@@ -252,6 +214,12 @@ export type StudioStoreState = {
   setSelectedHandle: (handle?: string) => void;
   cameraPresetId: string | null;
   setCameraPresetId: (presetId: string | null) => void;
+  setSelectedNodes: (ids: string[]) => void;
+  addSelectedNode: (id: string) => void;
+  toggleSelectedNode: (id: string) => void;
+  clearSelection: () => void;
+  translateSelectedNodes: (delta: [number, number]) => void;
+  removeSelectedNodes: (ids?: string[]) => void;
 
   selectNode: (id: string | null) => void;
   viewMode: ViewMode;
@@ -268,8 +236,9 @@ export type StudioStoreState = {
   setInspectorTab: (tab: InspectorTab) => void;
   toggleLayer: (layer: LayerId) => void;
   setLayerVisibility: (layer: LayerId, visible: boolean) => void;
+  setHeatmapMode: (mode: "quality" | "fragility") => void;
   setEnvironmentMode: (mode: "day" | "night" | "dusk") => void;
-  setAllZoneTargetTypes: (targetType: string) => void;
+  setAllZoneTargetTypes: (targetType: CriticalZoneNode["targetType"]) => void;
   toggleAutoRecompute: () => void;
 
   addNode: (node: AnyEditableNode) => void;
@@ -322,8 +291,7 @@ function patchNode(scene: SecurityScene, id: string, patch: Partial<AnyEditableN
   for (const key of collectionKeys) {
     const idx = next[key].findIndex((n) => n.id === id);
     if (idx !== -1) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (next as Record<string, AnyEditableNode[]>)[key][idx] = { ...(next[key][idx] as AnyEditableNode), ...patch };
+      (next as unknown as Record<string, AnyEditableNode[]>)[key][idx] = { ...(next[key][idx] as AnyEditableNode), ...patch } as unknown as AnyEditableNode;
       next.updatedAt = Date.now();
       return next;
     }
@@ -386,7 +354,7 @@ function duplicateNodeInScene(scene: SecurityScene, id: string): { scene: Securi
 
     const original = structuredClone(next[key][index] as AnyEditableNode);
     const duplicatedId = makeDuplicateId(prefixMap[original.nodeType]);
-    let duplicate = original as AnyEditableNode;
+    const duplicate = original as AnyEditableNode;
 
     if ("label" in duplicate && typeof duplicate.label === "string") {
       duplicate.label = duplicate.label.endsWith(" Copy") ? duplicate.label : `${duplicate.label} Copy`;
@@ -432,10 +400,23 @@ function duplicateNodeInScene(scene: SecurityScene, id: string): { scene: Securi
   return { scene: next, duplicatedId: null };
 }
 
-function purgeInvalidSelection(scene: SecurityScene, selectedNodeId: string | null): string | null {
-  if (!selectedNodeId) return null;
+function duplicateNodesInScene(scene: SecurityScene, ids: string[]): { scene: SecurityScene; duplicatedIds: string[] } {
+  let next = cloneSecurityScene(scene);
+  const duplicatedIds: string[] = [];
 
-  const exists = [
+  ids.forEach((id) => {
+    const result = duplicateNodeInScene(next, id);
+    next = result.scene;
+    if (result.duplicatedId) {
+      duplicatedIds.push(result.duplicatedId);
+    }
+  });
+
+  return { scene: next, duplicatedIds };
+}
+
+function sceneNodeIds(scene: SecurityScene) {
+  return [
     ...scene.walls,
     ...scene.doors,
     ...scene.windows,
@@ -446,9 +427,84 @@ function purgeInvalidSelection(scene: SecurityScene, selectedNodeId: string | nu
     ...scene.privacyZones,
     ...scene.entryPoints,
     ...scene.paths,
-  ].some((entry) => entry.id === selectedNodeId);
+  ].map((entry) => entry.id);
+}
 
-  return exists ? selectedNodeId : null;
+function purgeInvalidSelection(scene: SecurityScene, selectedNodeIds: string[]) {
+  const ids = new Set(sceneNodeIds(scene));
+  return selectedNodeIds.filter((id) => ids.has(id));
+}
+
+function primarySelection(selectedNodeIds: string[]) {
+  return selectedNodeIds[0] ?? null;
+}
+
+function setSelectionState(scene: SecurityScene, selectedNodeIds: string[]) {
+  const next = purgeInvalidSelection(scene, selectedNodeIds);
+  return {
+    selectedNodeIds: next,
+    selectedNodeId: primarySelection(next),
+  };
+}
+
+function translateNode(node: AnyEditableNode, delta: [number, number]): AnyEditableNode {
+  const [dx, dz] = delta;
+  const next = structuredClone(node) as AnyEditableNode;
+
+  if (next.nodeType === "camera" || next.nodeType === "security_light" || next.nodeType === "obstruction" || next.nodeType === "door" || next.nodeType === "window") {
+    next.position = [next.position[0] + dx, next.position[1], next.position[2] + dz] as typeof next.position;
+    return next;
+  }
+
+  if (next.nodeType === "entry_point") {
+    next.position = [next.position[0] + dx, next.position[1] + dz];
+    return next;
+  }
+
+  if (next.nodeType === "wall") {
+    next.start = [next.start[0] + dx, next.start[1] + dz];
+    next.end = [next.end[0] + dx, next.end[1] + dz];
+    return next;
+  }
+
+  if (next.nodeType === "critical_zone" || next.nodeType === "privacy_zone") {
+    next.polygon = next.polygon.map(([x, z]) => [x + dx, z + dz]);
+    return next;
+  }
+
+  if (next.nodeType === "path") {
+    next.points = next.points.map((point) => ({
+      ...point,
+      position: [point.position[0] + dx, point.position[1] + dz] as [number, number],
+    }));
+    return next;
+  }
+
+  return next;
+}
+
+function translateNodesInScene(scene: SecurityScene, ids: string[], delta: [number, number]): SecurityScene {
+  const next = cloneSecurityScene(scene);
+  const idSet = new Set(ids);
+  const collections: Array<keyof Pick<SecurityScene, "walls" | "doors" | "windows" | "cameras" | "securityLights" | "obstructions" | "criticalZones" | "privacyZones" | "entryPoints" | "paths">> = [
+    "walls",
+    "doors",
+    "windows",
+    "cameras",
+    "securityLights",
+    "obstructions",
+    "criticalZones",
+    "privacyZones",
+    "entryPoints",
+    "paths",
+  ];
+
+  collections.forEach((key) => {
+    next[key] = next[key].map((node) => (idSet.has(node.id) ? translateNode(node as AnyEditableNode, delta) : node)) as never;
+  });
+
+  next.updatedAt = Date.now();
+  return next;
 }
 
 function cloneAndSetActivePath(scene: SecurityScene, activePathId: string | null): string | null {
@@ -609,14 +665,19 @@ function createSnapshotVariant(
 }
 
 function buildDemoSnapshots() {
+  const movePrimaryObstruction = (scene: SecurityScene) => {
+    const target =
+      scene.obstructions.find((obs) => obs.id === "obs_cupboard_blocker")
+      ?? scene.obstructions.find((obs) => obs.movable)
+      ?? scene.obstructions[0];
+    if (target) {
+      target.position = [3.2, target.position[1], 2.4];
+    }
+  };
+
   return [
     createSnapshotVariant("Baseline", 18),
-    createSnapshotVariant("Moved Cupboard", 14, (scene) => {
-      const cupboard = scene.obstructions.find((obs) => obs.id === "obs_cupboard_blocker");
-      if (cupboard) {
-        cupboard.position = [3.2, cupboard.position[1], 2.4];
-      }
-    }),
+    createSnapshotVariant("Moved Obstruction", 14, movePrimaryObstruction),
     createSnapshotVariant("Cam 2 Rotated", 10, (scene) => {
       const cam2 = scene.cameras.find((camera) => camera.id === "cam_counter");
       if (cam2) {
@@ -689,6 +750,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   savedScenes: [],
 
   selectedNodeId: "cam_entrance",
+  selectedNodeIds: ["cam_entrance"],
   activeTool: "select",
   editor: {
     editorMode: "idle",
@@ -714,6 +776,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   bottomDockSizePx: DEFAULT_DOCK_SIZES.bottom,
   previousLayout: null,
   layerVisibility: { ...DEFAULT_LAYERS },
+  heatmapMode: "quality",
   environmentMode: "day",
   showDebugOverlays: false,
   autoRecompute: true,
@@ -797,7 +860,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       return {
         scene: next,
         simulationDirty: true,
-        selectedNodeId: purgeInvalidSelection(next, s.selectedNodeId),
+        ...setSelectionState(next, s.selectedNodeIds),
         activePathId: cloneAndSetActivePath(next, s.activePathId),
         historyPast: [...s.historyPast, cloneSecurityScene(s.scene)],
         historyFuture: [],
@@ -811,7 +874,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     return {
       scene: cloneSecurityScene(previous),
       activePathId: cloneAndSetActivePath(previous, s.activePathId),
-      selectedNodeId: purgeInvalidSelection(previous, s.selectedNodeId),
+      ...setSelectionState(previous, s.selectedNodeIds),
       simulationDirty: true,
       historyPast: s.historyPast.slice(0, -1),
       historyFuture: [cloneSecurityScene(s.scene), ...s.historyFuture],
@@ -824,7 +887,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     return {
       scene: cloneSecurityScene(nextScene),
       activePathId: cloneAndSetActivePath(nextScene, s.activePathId),
-      selectedNodeId: purgeInvalidSelection(nextScene, s.selectedNodeId),
+      ...setSelectionState(nextScene, s.selectedNodeIds),
       simulationDirty: true,
       historyPast: [...s.historyPast, cloneSecurityScene(s.scene)],
       historyFuture: s.historyFuture.slice(1),
@@ -837,7 +900,36 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     return get().historyFuture.length > 0;
   },
 
-  selectNode: (id) => set({ selectedNodeId: id }),
+  selectNode: (id) => set({
+    selectedNodeId: id,
+    selectedNodeIds: id ? [id] : [],
+  }),
+  setSelectedNodes: (ids) => set((state) => {
+    const next = purgeInvalidSelection(state.scene, ids);
+    return {
+      selectedNodeIds: next,
+      selectedNodeId: primarySelection(next),
+    };
+  }),
+  addSelectedNode: (id) => set((state) => {
+    if (state.selectedNodeIds.includes(id)) return state;
+    const next = purgeInvalidSelection(state.scene, [...state.selectedNodeIds, id]);
+    return {
+      selectedNodeIds: next,
+      selectedNodeId: primarySelection(next),
+    };
+  }),
+  toggleSelectedNode: (id) => set((state) => {
+    const next = state.selectedNodeIds.includes(id)
+      ? state.selectedNodeIds.filter((entry) => entry !== id)
+      : [...state.selectedNodeIds, id];
+    const filtered = purgeInvalidSelection(state.scene, next);
+    return {
+      selectedNodeIds: filtered,
+      selectedNodeId: primarySelection(filtered),
+    };
+  }),
+  clearSelection: () => set({ selectedNodeId: null, selectedNodeIds: [] }),
   setActiveTool: (tool) => set((s) => ({
     activeTool: tool,
     editor: {
@@ -954,7 +1046,15 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     set((s) => ({ layerVisibility: { ...s.layerVisibility, [layer]: !s.layerVisibility[layer] } })),
   setLayerVisibility: (layer, visible) =>
     set((s) => ({ layerVisibility: { ...s.layerVisibility, [layer]: visible } })),
+  setHeatmapMode: (mode) => set({ heatmapMode: mode }),
   setEnvironmentMode: (mode) => set({ environmentMode: mode }),
+  setAllZoneTargetTypes: (targetType) =>
+    set((s) => ({
+      scene: {
+        ...s.scene,
+        criticalZones: s.scene.criticalZones.map((z) => ({ ...z, targetType })),
+      },
+    })),
   toggleAutoRecompute: () => set((s) => ({ autoRecompute: !s.autoRecompute })),
 
   setTemporalProfile: (profile) => set({ temporalProfile: profile }),
@@ -979,12 +1079,17 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     useStudioStore.getState().commitSceneChange((scene) => patchNode(scene, id, patch));
   },
   duplicateNode: (id) => {
-    const { scene: next, duplicatedId } = duplicateNodeInScene(get().scene, id);
-    if (!duplicatedId) return;
+    const { scene: currentScene, selectedNodeIds } = get();
+    const idsToDuplicate = selectedNodeIds.length > 1 && selectedNodeIds.includes(id)
+      ? selectedNodeIds
+      : [id];
+    const { scene: next, duplicatedIds } = duplicateNodesInScene(currentScene, idsToDuplicate);
+    if (duplicatedIds.length === 0) return;
     set((state) => ({
       scene: next,
       simulationDirty: true,
-      selectedNodeId: duplicatedId,
+      selectedNodeId: duplicatedIds[0] ?? null,
+      selectedNodeIds: duplicatedIds,
       activePathId: cloneAndSetActivePath(next, state.activePathId),
       historyPast: [...state.historyPast, cloneSecurityScene(state.scene)],
       historyFuture: [],
@@ -1065,6 +1170,8 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       snapshots: scene.snapshots,
       historyPast: [],
       historyFuture: [],
+      selectedNodeId: null,
+      selectedNodeIds: [],
       editor: {
         editorMode: "idle",
         draftWallStart: undefined,
@@ -1095,6 +1202,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       simulationDirty: true,
       simulationResult: null,
       selectedNodeId: null,
+      selectedNodeIds: [],
       activePathId: scene.paths[0]?.id ?? null,
       focusScenePointRequest: null,
       mapState: cloneDefaultMapState(),
@@ -1118,13 +1226,14 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     }),
 
   createNewScene: () => {
-    const blank = createBlankScene();
+    const blank = createBlankSecurityScene();
     set({
       scene: blank,
       snapshots: [],
       simulationResult: null,
       simulationDirty: true,
       selectedNodeId: null,
+      selectedNodeIds: [],
       activePathId: null,
       focusScenePointRequest: null,
       mapState: cloneDefaultMapState(),

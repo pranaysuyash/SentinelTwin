@@ -101,7 +101,7 @@ function getInteriorLightStateFromSchedule(
   for (const ls of schedule.interiorLightSchedule) {
     for (const period of ls.periods) {
       if (timeInPeriod(time, period.startHour, period.endHour)) {
-        return { on: true, label: ls.label ?? "Scheduled" };
+        return { on: true, label: "Scheduled" };
       }
     }
   }
@@ -117,7 +117,7 @@ function getExteriorLightStateFromSchedule(
   for (const ls of schedule.exteriorLightSchedule) {
     for (const period of ls.periods) {
       if (timeInPeriod(time, period.startHour, period.endHour)) {
-        return { on: true, label: ls.label ?? "Scheduled" };
+        return { on: true, label: "Scheduled" };
       }
     }
   }
@@ -132,7 +132,7 @@ function getOccupancyFromSchedule(
   const time = hour + minute / 60;
   for (const op of schedule.occupancySchedule) {
     if (timeInPeriod(time, op.timeRange.startHour, op.timeRange.endHour)) {
-      return { level: op.level, label: op.label };
+      return { level: op.level, label: op.level };
     }
   }
   return { level: "empty", label: "Unoccupied" };

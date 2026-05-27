@@ -7,10 +7,15 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import * as THREE from "three";
 
 import {
+  type AnyEditableNode,
   type CameraNode,
   type SecurityIssue,
 } from "@/schema/security-scene";
 import { getYawPitchDirection } from "@/simulation/geometry";
+import { CameraLabelCard } from "@/components/workspace/overlays/CameraLabelCard";
+import { CriticalZoneLabelCard } from "@/components/workspace/overlays/CriticalZoneLabelCard";
+import { EntryDoorChip } from "@/components/workspace/overlays/EntryDoorChip";
+import { ObstructionWarningCard } from "@/components/workspace/overlays/ObstructionWarningCard";
 import { useStudioStore } from "@/store/studio-store";
 import {
   ENVIRONMENT_THEMES,
@@ -29,6 +34,7 @@ import { PathDrawTool } from "./editing/PathDrawTool";
 import { PolygonDrawTool } from "./editing/PolygonDrawTool";
 import { SelectionOverlay } from "./editing/SelectionOverlay";
 import { TransformHandles } from "./editing/TransformHandles";
+import { getSceneSelectionIds, normalizeBounds } from "./editing/selection-geometry";
 import { WallDrawTool } from "./editing/WallDrawTool";
 import { applyShiftLock, clampToScene, pathLength, pointDistance } from "./editing/editor-geometry";
 import { pointOnPathAtProgress } from "@/components/map/path-quality";
@@ -62,6 +68,128 @@ function getMapFrame(width: number, depth: number) {
       centerZ + depth * 0.88,
     ),
   };
+}
+
+type SelectionDragState = {
+  startClient: [number, number];
+  currentClient: [number, number];
+  startWorld: [number, number];
+  currentWorld: [number, number];
+};
+
+function SelectionRectangleOverlay({ drag }: { drag: SelectionDragState | null }) {
+  if (!drag) return null;
+
+  const left = Math.min(drag.startClient[0], drag.currentClient[0]);
+  const top = Math.min(drag.startClient[1], drag.currentClient[1]);
+  const width = Math.abs(drag.currentClient[0] - drag.startClient[0]);
+  const height = Math.abs(drag.currentClient[1] - drag.startClient[1]);
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20">
+      <div
+        className="absolute rounded-md border border-sky-300/80 bg-sky-400/10"
+        style={{
+          left,
+          top,
+          width,
+          height,
+          boxShadow: "0 0 0 1px rgba(125, 211, 252, 0.18), inset 0 0 0 1px rgba(125, 211, 252, 0.18)",
+        }}
+      />
+    </div>
+  );
+}
+
+function getSelectionAnchor(node: AnyEditableNode): [number, number, number] | null {
+  if (node.nodeType === "camera" || node.nodeType === "security_light" || node.nodeType === "obstruction" || node.nodeType === "door" || node.nodeType === "window") {
+    return [node.position[0], node.position[1], node.position[2]];
+  }
+
+  if (node.nodeType === "entry_point") {
+    return [node.position[0], 0.06, node.position[1]];
+  }
+
+  if (node.nodeType === "wall") {
+    return [
+      (node.start[0] + node.end[0]) / 2,
+      node.heightM / 2,
+      (node.start[1] + node.end[1]) / 2,
+    ];
+  }
+
+  if (node.nodeType === "critical_zone" || node.nodeType === "privacy_zone") {
+    const centroid = node.polygon.reduce(
+      (acc, [x, z]) => {
+        acc[0] += x;
+        acc[1] += z;
+        return acc;
+      },
+      [0, 0] as [number, number],
+    );
+    const count = Math.max(1, node.polygon.length);
+    return [centroid[0] / count, 0.05, centroid[1] / count];
+  }
+
+  if (node.nodeType === "path") {
+    const centroid = node.points.reduce(
+      (acc, point) => {
+        acc[0] += point.position[0];
+        acc[1] += point.position[1];
+        return acc;
+      },
+      [0, 0] as [number, number],
+    );
+    const count = Math.max(1, node.points.length);
+    return [centroid[0] / count, 0.05, centroid[1] / count];
+  }
+
+  return null;
+}
+
+function SelectionHighlights() {
+  const scene = useStudioStore((s) => s.scene);
+  const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
+
+  if (selectedNodeIds.length === 0) return null;
+
+  const nodesById = new Map<string, AnyEditableNode>([
+    ...scene.cameras,
+    ...scene.securityLights,
+    ...scene.obstructions,
+    ...scene.walls,
+    ...scene.doors,
+    ...scene.windows,
+    ...scene.criticalZones,
+    ...scene.privacyZones,
+    ...scene.entryPoints,
+    ...scene.paths,
+  ].map((node) => [node.id, node] as const));
+
+  return (
+    <>
+      {selectedNodeIds.map((id, index) => {
+        const node = nodesById.get(id);
+        if (!node) return null;
+        const anchor = getSelectionAnchor(node);
+        if (!anchor) return null;
+        const isPrimary = index === 0;
+        return (
+          <group key={id}>
+            <mesh position={anchor} rotation={[-Math.PI / 2, 0, 0]}>
+              <ringGeometry args={[isPrimary ? 0.18 : 0.14, isPrimary ? 0.28 : 0.22, 20]} />
+              <meshBasicMaterial color={isPrimary ? "#93c5fd" : "#60a5fa"} transparent opacity={0.75} />
+            </mesh>
+            <Html position={[anchor[0], anchor[1] + 0.2, anchor[2]]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
+              <div className="rounded border border-[#2b3a58] bg-[#0b0f17]/90 px-1.5 py-0.5 text-[8px] font-semibold text-[#d2d9e8]">
+                {isPrimary ? "Primary" : `+${index}`}
+              </div>
+            </Html>
+          </group>
+        );
+      })}
+    </>
+  );
 }
 
 function CameraFrustum({ camera, selected }: { camera: CameraNode; selected: boolean }) {
@@ -108,6 +236,7 @@ function CameraFrustum({ camera, selected }: { camera: CameraNode; selected: boo
 
 function CameraMarker({ camera, selected }: { camera: CameraNode; selected: boolean }) {
   const selectNode = useStudioStore((s) => s.selectNode);
+  const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
   const layers = useStudioStore((s) => s.layerVisibility);
   const [px, py, pz] = camera.position;
   const isActive = camera.status === "on";
@@ -121,7 +250,16 @@ function CameraMarker({ camera, selected }: { camera: CameraNode; selected: bool
         </mesh>
       )}
 
-      <group onClick={() => selectNode(camera.id)}>
+      <group
+        onClick={(event) => {
+          event.stopPropagation();
+          if (event.shiftKey || event.metaKey || event.ctrlKey) {
+            toggleSelectedNode(camera.id);
+            return;
+          }
+          selectNode(camera.id);
+        }}
+      >
         <mesh castShadow receiveShadow>
           <cylinderGeometry args={[0.12, 0.12, 0.08, 18]} />
           <meshStandardMaterial color={selected ? "#71b0ff" : "#4d89eb"} emissive="#25497a" emissiveIntensity={selected ? 1.1 : 0.55} roughness={0.34} metalness={0.65} />
@@ -134,29 +272,14 @@ function CameraMarker({ camera, selected }: { camera: CameraNode; selected: bool
 
       {layers.labels && (
         <Html position={[0, 0.34, 0]} center distanceFactor={11} style={{ pointerEvents: "none", whiteSpace: "nowrap" }}>
-          <div
-            style={{
-              background: "rgba(10,13,19,0.9)",
-              border: `1px solid ${selected ? "#60a5fa" : "#29456d"}`,
-              borderRadius: 6,
-              padding: "4px 8px",
-              boxShadow: "0 10px 24px rgba(0,0,0,0.26)",
-              backdropFilter: "blur(5px)",
-            }}
-          >
-            <div style={{ fontWeight: 700, fontSize: 9, color: selected ? "#cfe2ff" : "#8bc0ff" }}>
-              {camera.name.toUpperCase()}
-            </div>
-            <div style={{ fontWeight: 400, fontSize: 8, color: "#73809a" }}>
-              {camera.resolutionMP}MP {camera.mountType === "ceiling" ? "Dome" : "Bullet"}
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 2 }}>
-              <div style={{ width: 5, height: 5, borderRadius: "50%", backgroundColor: isActive ? "#22c55e" : "#ef4444" }} />
-              <span style={{ fontSize: 7, color: isActive ? "#4ade80" : "#ef4444" }}>
-                {isActive ? "Active" : camera.status}
-              </span>
-            </div>
-          </div>
+          <CameraLabelCard
+            name={camera.name}
+            resolutionMP={camera.resolutionMP}
+            mountType={camera.mountType}
+            isActive={isActive}
+            status={camera.status}
+            selected={selected}
+          />
         </Html>
       )}
     </group>
@@ -211,6 +334,8 @@ function CriticalZoneOverlay({
   onSelect?: (id: string) => void;
 }) {
   const layers = useStudioStore((s) => s.layerVisibility);
+  const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
+  const selectNode = useStudioStore((s) => s.selectNode);
   if (!layers.critical_zones) return null;
 
   const xs = zone.polygon.map(([x]) => x);
@@ -233,7 +358,14 @@ function CriticalZoneOverlay({
     <group
       onClick={(event) => {
         event.stopPropagation();
+        if (event.shiftKey || event.metaKey || event.ctrlKey) {
+          toggleSelectedNode(zone.id);
+          return;
+        }
         onSelect?.(zone.id);
+        if (!onSelect) {
+          selectNode(zone.id);
+        }
       }}
     >
       <mesh position={[cx, 0.012, cz]}>
@@ -245,40 +377,14 @@ function CriticalZoneOverlay({
         <lineBasicMaterial color={selected ? "#93c5fd" : color} transparent opacity={selected ? 0.95 : 0.72} />
       </lineSegments>
       <Html position={[cx, 0.05, cz]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
-        <div
-          style={{
-            background: "rgba(10,13,19,0.92)",
-            border: `1.5px solid ${color}`,
-            borderRadius: 6,
-            padding: "4px 8px",
-            textAlign: "center",
-            whiteSpace: "nowrap",
-            boxShadow: "0 10px 24px rgba(0,0,0,0.24)",
-            backdropFilter: "blur(5px)",
-          }}
-        >
-          <div style={{ fontSize: 9, fontWeight: 700, color: "#f7d94a" }}>{zone.label.toUpperCase()}</div>
-          <div style={{ fontSize: 8, color: "#e5d875", fontWeight: 600, marginTop: 1 }}>
-            {zone.requiredQuality.toUpperCase()} REQUIRED
-          </div>
-          <div style={{ marginTop: 4 }}>
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: 4,
-                padding: "2px 6px",
-                fontSize: 8,
-                fontWeight: 700,
-                background: badgeBg,
-                color: badgeText,
-              }}
-            >
-              {status === "pass" ? "PASS" : status === "fail" ? "FAILS" : status.toUpperCase()}
-            </span>
-          </div>
-        </div>
+        <CriticalZoneLabelCard
+          label={zone.label}
+          requiredQuality={zone.requiredQuality}
+          status={status}
+          borderColor={color}
+          badgeBg={badgeBg}
+          badgeText={badgeText}
+        />
       </Html>
     </group>
   );
@@ -301,24 +407,10 @@ function ObstructionWarning({
 
   return (
     <Html position={position} center distanceFactor={12} style={{ pointerEvents: "none" }}>
-      <div
-        style={{
-          background: "rgba(16,10,10,0.9)",
-          border: "1.5px solid #ef4444",
-          borderRadius: 6,
-          padding: "4px 10px",
-          textAlign: "left",
-          whiteSpace: "nowrap",
-          boxShadow: "0 10px 22px rgba(0,0,0,0.28)",
-          backdropFilter: "blur(5px)",
-        }}
-      >
-        <div style={{ fontSize: 9, fontWeight: 700, color: "#fca5a5" }}>{obstructionLabel.toUpperCase()}</div>
-        <div style={{ fontSize: 8, color: "#fecaca", marginTop: 1 }}>
-          Blocking {affectedCamera?.name ?? "camera view"}
-        </div>
-        <div style={{ fontSize: 8, fontWeight: 500, color: "#fca5a5", marginTop: 2 }}>View obstructed</div>
-      </div>
+      <ObstructionWarningCard
+        obstructionLabel={obstructionLabel}
+        affectedCameraName={affectedCamera?.name}
+      />
     </Html>
   );
 }
@@ -329,20 +421,7 @@ function EntryDoorLabel({ position }: { position: [number, number] }) {
 
   return (
     <Html position={[position[0], 0.14, position[1]]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
-      <div
-        style={{
-          background: "rgba(76,29,149,0.75)",
-          border: "1px solid #a78bfa",
-          borderRadius: 6,
-          padding: "3px 8px",
-          fontSize: 9,
-          fontWeight: 700,
-          color: "#ddd6fe",
-          whiteSpace: "nowrap",
-        }}
-      >
-        ENTRY DOOR
-      </div>
+      <EntryDoorChip label="ENTRY DOOR" />
     </Html>
   );
 }
@@ -354,6 +433,7 @@ function SceneGeometry() {
   const selectNode = useStudioStore((s) => s.selectNode);
   const layers = useStudioStore((s) => s.layerVisibility);
 
+  const heatmapMode = useStudioStore((s) => s.heatmapMode);
   const { width, depth } = scene.dimensions;
   // Data-driven: one warning per blindspot issue, positioned above the matching obstruction.
   // Label is extracted from the issue description (format: "<Label> is obstructing coverage in: ...").
@@ -416,7 +496,7 @@ function SceneGeometry() {
         );
       })}
 
-      {layers.heatmap && result?.coverageCells ? <CoverageHeatmapInstanced cells={result.coverageCells} /> : null}
+      {layers.heatmap && result?.coverageCells ? <CoverageHeatmapInstanced cells={result.coverageCells} mode={heatmapMode} /> : null}
 
       {scene.criticalZones.map((zone) => (
         <CriticalZoneOverlay
@@ -594,7 +674,17 @@ const TOOL_LABELS: Record<string, string> = {
  * Invisible floor plane that catches pointer events for tool placement.
  * Shows ghost preview, places object on click.
  */
-function ToolPlacementFloor() {
+function ToolPlacementFloor({
+  selectionDrag,
+  setSelectionDrag,
+  setSelectedNodes,
+  clearSelection,
+}: {
+  selectionDrag: SelectionDragState | null;
+  setSelectionDrag: React.Dispatch<React.SetStateAction<SelectionDragState | null>>;
+  setSelectedNodes: (ids: string[]) => void;
+  clearSelection: () => void;
+}) {
   const activeTool = useStudioStore((s) => s.activeTool);
   const addNode = useStudioStore((s) => s.addNode);
   const selectNode = useStudioStore((s) => s.selectNode);
@@ -654,6 +744,19 @@ function ToolPlacementFloor() {
 
   const handlePointerMove = useCallback(
     (event: ThreeEvent<PointerEvent>) => {
+      if (selectionDrag) {
+        const point = getFloorPoint(event);
+        if (point) {
+          const nextClient: [number, number] = [event.nativeEvent.clientX, event.nativeEvent.clientY];
+          setSelectionDrag({
+            ...selectionDrag,
+            currentClient: nextClient,
+            currentWorld: [point.x, point.z],
+          });
+        }
+        return;
+      }
+
       if (!isPlacing) return;
       const point = getFloorPoint(event);
       if (!point) return;
@@ -675,7 +778,7 @@ function ToolPlacementFloor() {
       setEditorHoverPoint(snapped);
       setHoverPos(new THREE.Vector3(snapped[0], 0.02, snapped[1]));
     },
-    [activeTool, draftWallStart, getFloorPoint, isPlacing, setEditorHoverPoint, snapEngine],
+    [activeTool, draftWallStart, getFloorPoint, isPlacing, selectionDrag, setEditorHoverPoint, setSelectionDrag, snapEngine],
   );
 
   const commitDraftPolygon = useCallback(() => {
@@ -708,7 +811,21 @@ function ToolPlacementFloor() {
   const handlePointerDown = useCallback(
     (event: ThreeEvent<PointerEvent>) => {
       if (activeTool === "select") {
-        selectNode(null);
+        if (event.nativeEvent.shiftKey || event.nativeEvent.metaKey || event.nativeEvent.ctrlKey) {
+          const point = getFloorPoint(event);
+          if (!point) return;
+          event.stopPropagation();
+          const client: [number, number] = [event.nativeEvent.clientX, event.nativeEvent.clientY];
+          setSelectionDrag({
+            startClient: client,
+            currentClient: client,
+            startWorld: [point.x, point.z],
+            currentWorld: [point.x, point.z],
+          });
+          return;
+        }
+
+        clearSelection();
         return;
       }
 
@@ -787,6 +904,7 @@ function ToolPlacementFloor() {
       activeTool,
       commitDraftPath,
       commitDraftPolygon,
+      clearSelection,
       draftPathPoints,
       draftPolygonPoints,
       draftWallStart,
@@ -799,9 +917,29 @@ function ToolPlacementFloor() {
       setDraftPolygonPoints,
       setDraftWallStart,
       setEditorMode,
+      setSelectionDrag,
       snapEngine,
     ],
   );
+
+  useEffect(() => {
+    const onMouseUp = () => {
+      if (!selectionDrag) return;
+      const bounds = normalizeBounds(selectionDrag.startWorld, selectionDrag.currentWorld);
+      const ids = getSceneSelectionIds(scene, bounds);
+      if (ids.length > 0) {
+        setSelectedNodes(ids);
+      } else {
+        clearSelection();
+      }
+      setSelectionDrag(null);
+    };
+
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [clearSelection, scene, selectionDrag, setSelectedNodes, setSelectionDrag]);
 
   const tooltipText = useMemo(() => {
     if (activeTool === "wall" && wallLength > 0) {
@@ -1027,6 +1165,8 @@ function ControlHintBar() {
       <span className="text-[8px] text-[#4a5568]">Right: Zoom</span>
       <span className="text-[8px] text-[#2a3246]">•</span>
       <span className="text-[8px] text-[#4a5568]">Scroll: Zoom</span>
+      <span className="text-[8px] text-[#2a3246]">•</span>
+      <span className="text-[8px] text-[#4a5568]">Shift+drag: Box select</span>
     </div>
   );
 }
@@ -1034,7 +1174,10 @@ function ControlHintBar() {
 export function WorkspaceCanvas() {
   const envMode = useStudioStore((s) => s.environmentMode);
   const scene = useStudioStore((s) => s.scene);
+  const setSelectedNodes = useStudioStore((s) => s.setSelectedNodes);
+  const clearSelection = useStudioStore((s) => s.clearSelection);
   const theme = ENVIRONMENT_THEMES[envMode] ?? ENVIRONMENT_THEMES.day;
+  const [selectionDrag, setSelectionDrag] = useState<SelectionDragState | null>(null);
   const frame = useMemo(
     () => getMapFrame(scene.dimensions.width, scene.dimensions.depth),
     [scene.dimensions.depth, scene.dimensions.width],
@@ -1050,6 +1193,7 @@ export function WorkspaceCanvas() {
       <NorthCompass />
       <ViewControls />
       <ControlHintBar />
+      <SelectionRectangleOverlay drag={selectionDrag} />
 
       {/* Camera preset picker — shown when camera tool is active */}
       <div className="absolute left-1/2 top-12 z-10 -translate-x-1/2">
@@ -1081,9 +1225,15 @@ export function WorkspaceCanvas() {
           <SceneGeometry />
         </Suspense>
 
+        <SelectionHighlights />
         <TransformHandles />
         <SceneFrameRig />
-        <ToolPlacementFloor />
+        <ToolPlacementFloor
+          selectionDrag={selectionDrag}
+          setSelectionDrag={setSelectionDrag}
+          setSelectedNodes={setSelectedNodes}
+          clearSelection={clearSelection}
+        />
 
         <OrbitControls
           makeDefault

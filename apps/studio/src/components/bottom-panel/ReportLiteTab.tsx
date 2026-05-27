@@ -159,6 +159,9 @@ function defaultMarkdown(
   result: NonNullable<ReturnType<typeof useStudioStore.getState>["simulationResult"]>,
   scene: ReturnType<typeof useStudioStore.getState>["scene"],
 ): string {
+  const failingZones = result.criticalZoneResults.filter((zone) => zone.status !== "pass");
+  const verifiedRecommendations = result.recommendations.filter((rec) => rec.verified);
+  const topRecommendations = (verifiedRecommendations.length > 0 ? verifiedRecommendations : result.recommendations).slice(0, 5);
   const lines = [
     "# SentinelTwin Coverage Report",
     "## Scene: " + scene.name,
@@ -186,8 +189,20 @@ function defaultMarkdown(
     "### Issues",
     ...result.issues.map((i) => "- [" + i.severity + "] " + i.description),
     "",
+    "### Zones Needing Hardening",
+    ...(failingZones.length > 0
+      ? failingZones.map((z) => `- ${z.label}: required ${z.requiredQuality}, actual ${z.actualQuality} (${z.status})`)
+      : ["- All modeled critical zones are currently passing."]),
+    "",
+    "### Immediate Action Plan",
+    ...(topRecommendations.length > 0
+      ? topRecommendations.map((r, index) => `${index + 1}. ${r.description} (${r.estimatedImpact})`)
+      : ["1. No recommendations generated yet. Review assumptions and rerun simulation."]),
+    "",
     "### Recommendations",
     ...result.recommendations.map((r) => "- [" + (r.verified ? "verified" : "unverified") + "] " + r.description + " :: " + r.estimatedImpact),
+    "",
+    "_Planning indicator only: modeled outcomes depend on assumptions and are not legal/forensic guarantees._",
   ];
   return lines.join("\n");
 }

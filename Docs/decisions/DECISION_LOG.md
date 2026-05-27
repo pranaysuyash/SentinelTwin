@@ -808,6 +808,17 @@ reference to the new path, then remove the old."
 - **Auto-fit on every map remount** — rejected because it overwrites deliberate user navigation whenever the panel is recreated.
 - **Keep viewport state across scenes** — rejected because it causes confusing stale framing when switching to a new scene or importing a different one.
 
+### D-050: Workspace selection keeps a primary anchor plus grouped ids
+**Date:** 2026-05-27
+
+**Decision:** The studio workbench now tracks both `selectedNodeId` and `selectedNodeIds`, with the first selected node staying as the primary inspector anchor while shift/meta click and drag-select can capture grouped selections.
+
+**Rationale:** The editor needs multi-object selection for real workbench workflows, but the inspector and transform handles still operate best with a single primary target. Keeping both a primary anchor and a grouped selection array preserves the existing inspector flow while enabling box-select and modifier-select without adding a separate selection model.
+
+**Alternatives rejected:**
+- **Replace the primary selection with only an array** — rejected because it would force a larger inspector and handles rewrite before grouped selection was even useful.
+- **Keep single-node selection only** — rejected because it blocks the requested drag-select and multi-select workbench polish.
+
 ### D-048: Temporal engine reads scene.timeSchedule with range-based state resolution
 **Date:** 2026-05-27
 
@@ -852,3 +863,166 @@ reference to the new path, then remove the old."
 - **Keep "New Blank Scene" and add separate template picker** — rejected because the wizard already provides both flows in a cohesive UX.
 - **Route wizard to a new page/route** — rejected because a modal overlay is simpler and keeps the user in context.
 - **Rewrite the wizard from scratch** — rejected because the existing implementation is complete, tested (templates have test coverage), and follows codebase conventions.
+
+### D-051: Studio docks should be full-width shells with collapsible subpanels, not fixed-width inner islands
+**Date:** 2026-05-27
+
+**Decision:** The Studio left and right docks now use full-width flex shells, and the contextual right dock is split into its own toggled subpanels for selection inspector, assumptions, and scenario/path. The left dock now exposes section-level collapse controls for tools, layers, and minimap instead of wasting width on a fixed-width inner wrapper.
+
+**Rationale:**
+- The previous shell used fixed-width inner panels (`w-[186px]`, `w-[304px]`) inside wider dock shells, which created dead space and made the collapse affordance feel like it was stealing canvas width rather than giving it back.
+- Section-level toggles match the product discussion better: users think in terms of tools, layers, minimap, selection inspector, assumptions, and path utilities, not one monolithic sidebar.
+- The new structure preserves the canvas-first layout while making each utility panel independently hideable.
+
+**Alternatives rejected:**
+- **Keep the fixed-width inner panels and only tweak spacing** — rejected because it still wastes width and keeps the dock behavior conceptually wrong.
+- **Collapse everything into one global toggle** — rejected because it removes context and makes the panel system less discoverable.
+- **Move immediately to free-floating draggable panels** — rejected because the current need is controlled collapse and context awareness, not a full docking framework.
+
+### D-052: Path replay should show collision-proofed samples, camera cones, and tile-floor coverage
+**Date:** 2026-05-27
+
+**Decision:** Path replay now visualizes the route using legalized replay samples, draws camera frustums in the replay canvas, and renders a tiled floor coverage surface so route failures are legible instead of implied.
+
+**Rationale:**
+- The replay actor must not visually walk through dense obstructions such as counters without the UI explicitly saying the route was corrected.
+- Camera cones are the fastest way to explain "how did it breach?" because they show the line-of-sight envelope in the same view as the actor.
+- A tiled floor makes the security map read as a live analytical surface, not a plain empty room with a few colored overlays.
+
+**Alternatives rejected:**
+- **Leave replay as a raw interpolation over authored points** — rejected because it hides obvious legality/collision problems.
+- **Show only text explanations without scene proof** — rejected because the value of replay is visual trust, not a note in the corner.
+- **Treat the floor as plain geometry and rely only on heatmap cells** — rejected because uncovered space still needs to feel like part of the security model.
+
+### D-053: Root route now starts with scene launcher, and floor-plan imports materialize editable geometry
+**Date:** 2026-05-27
+
+**Decision:** `apps/studio/src/app/page.tsx` now renders a launcher before Studio (`Create or Import Scene`, `Open Current Workspace`, JSON import), and floor-plan wizard creation now calls `createSceneFromFloorPlan(...)` to produce a real editable scene skeleton (walls/doors/windows + dimensions) instead of reusing retail demo geometry.
+
+**Rationale:**
+- `goal2.md` explicitly required a visible create/import entry point and a pre-Studio launcher flow.
+- Booting directly into `StudioShell` obscured product scope and made first-run scene setup non-discoverable.
+- Floor-plan import previously changed only scene name/dimensions on top of a demo scene, which was misleading and broke trust in import behavior.
+
+**Alternatives rejected:**
+- **Keep direct Studio boot and rely on TopBar menus only** — rejected because first-touch discoverability remained poor.
+- **Delay launcher until project backend exists** — rejected because the product shell can be fixed now without backend dependencies.
+- **Treat floor-plan import as dimension-only metadata** — rejected because users expect imported geometry to become editable walls/doors/windows immediately.
+
+### D-054: Floor-plan review must support manual calibration before scene creation
+**Date:** 2026-05-27
+
+**Decision:** The floor-plan review UI now supports explicit width/depth/height calibration and recalculates `scalePixelsPerMeter` through `recalibrateFloorPlanResult(...)` before converting to scene geometry.
+
+**Rationale:**
+- `goal2.md` requires a product-real floor-plan upload path with review and scale confirmation.
+- Heuristic extraction alone is insufficient; users need a direct way to apply known real-world dimensions before creating the scene.
+- Keeping geometry in pixel-space and updating scale/dimensions avoids lossy rewrites and keeps the conversion deterministic.
+
+**Alternatives rejected:**
+- **Auto-detection only** — rejected because confidence varies across plans and users need correction controls.
+- **Hidden numeric scale setting only** — rejected because width/depth/height is easier for field users than raw px/m.
+- **Full CAD editing before conversion** — rejected for now as it over-expands scope versus immediate goal2 requirements.
+
+### D-055: AI layout draft should output editable SecurityScene JSON from launcher prompts
+**Date:** 2026-05-27
+
+**Decision:** Added an `AI Layout Draft` launcher action that converts a text prompt into an editable `SecurityScene` (template + dimensions inference) rather than producing a static image or off-canvas text output.
+
+**Rationale:**
+- `goal2.md` explicitly asks for prompt-based layout draft output as `SecurityScene` JSON.
+- Keeping output as scene data preserves the product loop: edit -> simulate -> compare -> report.
+- A template-backed heuristic draft is sufficient as an initial bootstrap while model-backed semantic layout quality matures.
+
+**Alternatives rejected:**
+- **Image-only generation** — rejected because it cannot directly feed simulation and editing.
+- **Delay until full agentic layout planner is built** — rejected because goal2 requires immediate prompt-to-scene capability.
+- **Hardcode a single template output** — rejected because prompt keyword routing (retail/office/warehouse/classroom/residential) provides better first-pass relevance.
+
+### D-056: Camera wall POV must follow live camera edits, not mount-once initialization
+**Date:** 2026-05-27
+
+**Decision:** `CameraRigFixed` was changed to recompute position/look target whenever camera transform inputs change (`id`, `position`, `yawDeg`, `pitchDeg`) instead of running only once behind an initialization guard.
+
+**Rationale:**
+- `goal2.md` requires camera view/wall to react correctly to camera edits.
+- A mount-only rig can display stale POVs after in-studio camera moves/rotations, reducing trust in simulation review.
+- Re-synchronizing on transform changes keeps wall feeds aligned with current scene state.
+
+**Alternatives rejected:**
+- **Keep one-time initialization for stability** — rejected because it preserves stale camera views after edits.
+- **Force remount per tile key churn** — rejected because direct dependency-based sync is clearer and less brittle.
+
+### D-057: Floor-plan review should allow false-positive pruning before scene creation
+**Date:** 2026-05-27
+
+**Decision:** Added detection correction controls in `ImportReview` to selectively keep/remove detected walls, doors, and windows, then apply corrected geometry back into the wizard state before creating the scene.
+
+**Rationale:**
+- `goal2.md` requires a real floor-plan upload + review loop, not just passive metrics.
+- Heuristic extraction frequently over-detects segments; users need direct pruning controls to avoid importing noisy geometry.
+- Applying corrections at `FloorPlanResult` level keeps downstream scene conversion deterministic and testable.
+
+**Alternatives rejected:**
+- **Show detections read-only** — rejected because it blocks user correction of obvious false positives.
+- **Only recalibrate dimensions without geometry edits** — rejected because scale fixes do not remove noisy walls/openings.
+- **Delay correction controls until full CAD editor** — rejected because goal2 needs immediate practical review flow.
+
+### D-058: AI layout draft should use structured model output with deterministic fallback
+**Date:** 2026-05-27
+
+**Decision:** `AI Layout Draft` now attempts structured model generation (`templateId`, dimensions, scene name, assumptions) when `NEXT_PUBLIC_OPENAI_API_KEY` is available, and automatically falls back to deterministic local drafting if unavailable/failing.
+
+**Rationale:**
+- `goal2.md` requires prompt-to-`SecurityScene` output; model-backed parsing improves intent matching over pure keyword heuristics.
+- Fallback is required to keep the feature functional in offline/no-key development and tests.
+- Structured schema output keeps scene creation safe and predictable.
+
+**Alternatives rejected:**
+- **Heuristic-only drafting** — rejected as insufficient for full P3 expectations.
+- **Model-only with hard failure on missing key** — rejected because it breaks local usability and CI stability.
+- **Unstructured model text parsing** — rejected due fragility compared to schema-validated output.
+
+### D-059: AI draft should enrich generated scenes with key prompt intent hints
+**Date:** 2026-05-27
+
+**Decision:** Added deterministic post-generation enrichment that maps prompt cues into scene entities: requested camera count, shelf/counter hints, and back-storage critical zone hints.
+
+**Rationale:**
+- `goal2.md` P3 expectation is not just “any JSON,” but useful prompt-to-scene behavior aligned to user intent.
+- Template selection + dimensions alone often misses requested operational details (e.g., “two shelves”).
+- Post-generation enrichment preserves schema safety while improving practical fidelity.
+
+**Alternatives rejected:**
+- **Trust template defaults only** — rejected because it ignores explicit user constraints.
+- **Full free-form geometry synthesis immediately** — rejected as too brittle for this stage without stronger planner/validator loops.
+- **Model-only placement without deterministic guardrails** — rejected because fallback consistency and testability are required.
+
+### D-060: Launcher should expose explicit 5-step product workflow, not only feature cards
+**Date:** 2026-05-27
+
+**Decision:** Added a guided 5-step workflow section in the launcher with direct action buttons into assumptions, scene wizard, map builder, baseline simulation, and replay/night/report actions.
+
+**Rationale:**
+- `goal2.md` explicitly defines a 5-step user flow to reduce “only a testbed” confusion.
+- Feature cards alone communicate capabilities, but not operational sequence.
+- Direct action handoffs keep the onboarding flow executable instead of purely instructional.
+
+**Alternatives rejected:**
+- **Keep flow only in docs/README** — rejected because users need this guidance in product UI.
+- **Add separate onboarding route later** — rejected because launcher can deliver immediate product-shell clarity.
+
+### D-058: Guided scan intake should be a dedicated manual-assisted launch path that compiles into `scan_import`
+**Date:** 2026-05-27
+
+**Decision:** Added a dedicated `Scan a Site` intake flow in the launcher and TopBar that accepts a site photo, lets the user manually place and classify scan candidates, and compiles the result into a canonical `scan_import` `SecurityScene` through shared scene-skeleton helpers.
+
+**Rationale:**
+- The scan-first experience needs to be visible as its own product mode, not hidden inside floor-plan import or a generic scene wizard.
+- Manual-assisted scan is useful now and honest about current capability; the UI explicitly says AI perception is not wired yet.
+- Compiling into the same `SecurityScene` path preserves the simulation/edit/replay/report loop and avoids a parallel scene representation.
+
+**Alternatives rejected:**
+- **Fold scan-first into the floor-plan importer** — rejected because floor plans and site-photo intake are different user intents and require different review UX.
+- **Create a separate scan scene model** — rejected because it would fragment the product around multiple truth sources.
+- **Delay scan intake until AI segmentation is available** — rejected because the user asked for an end-to-end product flow now, and the manual-assisted path is already valuable without AI.

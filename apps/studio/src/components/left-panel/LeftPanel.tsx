@@ -65,14 +65,18 @@ function SectionTitle({
   summary?: string;
 }) {
   return (
-    <div className="mb-2 flex items-center gap-1.5 px-1 text-[9px] font-semibold uppercase tracking-[0.24em] text-[#4a556b]">
+    <div className="mb-1.5 flex items-center gap-1 px-0.5 text-[8px] font-semibold uppercase tracking-[0.22em] text-[#4a556b]">
       {icon}
       <span>{title}</span>
-      {summary ? <span className="ml-1 truncate text-[8px] normal-case tracking-normal text-[#657086]">{summary}</span> : null}
+      {summary ? (
+        <span className="ml-1 rounded-full border border-[#1f2536] bg-[#0b0f17] px-1.5 py-0.5 text-[7px] normal-case tracking-[0.12em] text-[#657086]">
+          {summary}
+        </span>
+      ) : null}
       <button
         type="button"
         onClick={onToggle}
-        className="ml-auto inline-flex h-5 w-5 items-center justify-center rounded-md border border-[#24283a] bg-[#111521] text-[#7f8aa3] transition-colors hover:border-[#32384d] hover:text-white"
+        className="ml-auto inline-flex h-6 w-6 items-center justify-center rounded-md border border-[#24283a] bg-[#111521] text-[#7f8aa3] transition-colors hover:border-[#32384d] hover:text-white"
         title={collapsed ? `Expand ${title}` : `Collapse ${title}`}
       >
         {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -98,7 +102,7 @@ export function LeftPanel() {
 
   return (
     <aside className="flex h-full min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto border-r border-[#1e2130] bg-[#0d1017]">
-      <div className="space-y-3 px-2 py-3">
+      <div className="space-y-2.5 px-2 py-2.5">
         <section>
           <SectionTitle
             title="Scene Tools"

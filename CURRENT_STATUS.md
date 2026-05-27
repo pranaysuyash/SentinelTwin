@@ -1,57 +1,60 @@
 # SentinelTwin Current Status
 
-**As of:** 2026-05-26
-**Scope:** repository-wide, documentation-first implementation baseline for `apps/studio`
+**As of:** 2026-05-27
+**Scope:** repo snapshot aligned to `goal2.md` execution checklist
 
-## What runs
+## Implemented
 
-- `apps/studio` app shell, routes, and 3D workspace render.
-- Security simulation stack: `coverage.ts`, `grid.ts`, `path-analysis.ts`, `simulate-studio.ts`, `adversarial-path.ts`.
-- Security scene schema + validation (`security-scene.ts`) and scene CRUD/store actions.
-- Report building and export surface (`buildReportData`, `exportAsHtml`, `exportAsMarkdown`, `exportAsText`).
-- Demo scene loading and snapshot handling.
+- Root launcher now gates entry into Studio with explicit `Create or Import Scene` and `Open Current Workspace`.
+- Root launcher includes `AI Layout Draft` prompt flow that generates editable `SecurityScene` JSON scenes.
+- Root launcher now includes explicit 5-step guided workflow actions (protect goal -> input -> build -> baseline sim -> next actions).
+- AI Layout Draft now supports model-backed structured generation when API key is present, with deterministic local fallback.
+- AI Layout Draft now applies prompt-aware enrichment (camera counts, shelves/counter hints, back-storage zone hints) to generated scenes.
+- `apps/studio` Next.js app is the active product surface with a working Studio shell.
+- Mode routing works inside studio: `Map`, `Camera View`, `Camera Wall`, `Path Replay`, `Compare`.
+- SecurityScene schema/store/simulation stack is active and test-covered.
+- Deterministic coverage + occlusion + quality simulation pipeline is functional.
+- Issues panel supports recommendation `Preview Fix`, `Apply Fix`, and `Revert Preview` loop.
+- Scene management exists: save/load, JSON import/export, snapshots, compare.
+- SceneBuilderWizard is wired from top bar (`New Scene...`) with blank/template/floor-plan options.
+- Floor-plan import now converts detected geometry into an editable scene skeleton (walls/doors/windows + dimensions).
+- Floor-plan review now supports manual scale calibration (known width/depth/height) before scene creation.
+- Floor-plan review now supports correction controls to exclude false-positive walls/doors/windows before scene creation.
+- Report-lite export surface exists and now uses defensive/disclaimer language.
+- Report-lite now includes a practical hardening section: failing zones + immediate action plan from recommendations.
+- Right-panel assumptions are visible and directly editable (time-of-day and quality model), with link to full assumptions editor.
+- Camera wall feed rigs now track live camera transform edits (no one-time POV lock).
+- Golden simulation claims suite exists (`apps/studio/src/simulation/__tests__/golden-simulation-claims.test.ts`).
 
-## What is wired
+## Partial
 
-- Auto simulation and manual run controls.
-- Heatmap rendering and zone/camera overlays.
-- Camera/obstruction/light/zone/path node mutation via store actions.
-- Simulation patching path for "Test Without Obstruction" in obstacle inspector (temporary scene patch, recompute, and revert).
-- Report generation and report-lite tab export UX.
-- Keyboard shortcuts and top-level tool panel state management.
-- Counterfactual recommendation generation and apply/verify loop scaffolding.
+- Floor-plan conversion, calibration, and basic correction controls are wired, but extraction quality and advanced correction UX are not yet production-ready.
+- Camera-view realism stack is present but still limited versus full product target.
+- Before/after experience is present but not yet full visual diff parity across all scenarios.
+- Assumptions/edit UX exists in part but still needs stronger end-to-end authoring flow.
+- AI command path exists but broader product-level AI layout workflow is not complete.
+- AI layout draft has model-backed structured output + fallback with basic semantic enrichment, but still needs deeper spatial intent fidelity and path-level planning quality for full production use.
 
-## What is stubbed / unfinished
+## Stubbed
 
-- Full canvas mode switching (Map / Camera View / Camera Wall / Path Replay) is incomplete.
-- Path replay actor animation exists only partially in overlays.
-- Timeline playback controls and per-camera DORI timeline UX are still below reference parity.
-- Some AI command/provider calls remain prototype-level; production confidence layer is pending.
-- Scan/import pipeline is present but not yet robust enough for real-world edge cases.
-- Several report sections still need stronger wording around assumptions and certainty bounds.
+- Several report/analysis panel affordances still include placeholder/static elements.
+- Some mode-adjacent controls are visible but do not yet drive full production behavior.
+- Template/floor-plan workflows rely on prototype logic in places.
 
-## Known warnings
+## Not Started
 
-- Past naming used security-sensitive language in docs (`adversarial`, `evaded`, `minimum-exposure`). We now use defensive incident replay framing for operator-facing reports/docs.
-- `DECISION_LOG.md` had future-dated entries; impossible dates have been corrected.
-- Some internal identifiers and code paths still use legacy names (`adversarialPath`, `run_adversarial`) by design for engine compatibility.
+- Full guided scan workflow (capture -> reconstruction -> editable scene).
+- Full AI layout draft to robust SecurityScene generation workflow.
+- Real footage verification workflow against simulated camera outcomes.
+- Product-grade multi-project backend collaboration layer.
 
-## Next 10 tasks (stabilization sprint)
+## Next Priority Order (Goal2-Aligned)
 
-1. Add and harden canvas mode switching with full-window camera view and camera wall presets.
-2. Deliver path replay actor animation with timeline playback sync.
-3. Expand timeline UX to per-camera DORI quality over time.
-4. Add DORI overlay controls and target-quality badges in camera replay mode.
-5. Finish tool-placement-to-canvas interactions for camera/light/obstruction/door/window.
-6. Wire remaining top-bar actions to stable scene/store handlers (Night Mode, Camera Failure, Compare, Generate Report).
-7. Add clear assumptions/disclaimer summary to every exported report format.
-8. Add a lightweight fixture/test harness for scene-level validation scenarios.
-9. Close known UI stub points listed in `Docs/todos/CURRENT_IMPLEMENTATION_STATE.md` and `CAMERASTUDIO_GAP_ANALYSIS.md`.
-10. Start editor UX plan for realistic scene creation (walls/doors/windows, object placement, scale calibration).
-
-## Documentation health tags
-
-- Canonical: `Docs/architecture/*`, `Docs/decisions/DECISION_LOG.md`, `Docs/decisions/OPEN_QUESTIONS.md`, `Docs/todos/CURRENT_IMPLEMENTATION_STATE.md`.
-- Historical: `CODE_QUALITY_REVIEW_2026-05-26.md`, `WIDE_OPEN_BRAINSTORM_2026-05-26.md`.
-- Stale: legacy milestone writeups that conflict with current state until reviewed (`PHASE_0_SETUP.md`, `CAMERASTUDIO_GAP_ANALYSIS.md`).
-- Superseded: earlier claims in older `CURRENT_IMPLEMENTATION_STATE` style notes without runtime validation.
+1. Expand launcher into full project/site start flow (recent projects, templates, guided onboarding).
+2. Strengthen first-run guidance from launcher into scene setup and first simulation run.
+3. Tighten mode labels and UX language so each mode outcome is obvious.
+4. Complete floor-plan import depth (actual walls/doors/windows generation + review/edit loop).
+5. Upgrade report-lite to stronger evidence framing and clearer assumptions display.
+6. Ensure camera feed behavior always reflects live camera transform/state edits.
+7. Reduce remaining stub/static controls in panels and close current goal2 P1 gaps.
+8. Start goal2 P3 AI layout draft pipeline only after P0-P2 reliability gates are stable.

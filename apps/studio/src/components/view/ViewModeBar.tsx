@@ -3,29 +3,22 @@
 import { motion } from "framer-motion";
 import { Camera, GitCompare, LayoutDashboard, Monitor, Play } from "lucide-react";
 
-import type { ViewMode, WorkspacePreset } from "@/store/studio-store";
+import { VIEW_MODE_PRESETS } from "@/lib/studio-constants";
+import type { ViewMode } from "@/store/studio-store";
 import { useStudioStore } from "@/store/studio-store";
 
 const VIEW_OPTIONS: { mode: ViewMode; label: string; icon: React.ReactNode }[] = [
-  { mode: "map", label: "Map View", icon: <LayoutDashboard className="h-3.5 w-3.5" /> },
-  { mode: "camera_view", label: "Camera View", icon: <Camera className="h-3.5 w-3.5" /> },
-  { mode: "wall", label: "Camera Wall", icon: <Monitor className="h-3.5 w-3.5" /> },
-  { mode: "replay", label: "Path Replay", icon: <Play className="h-3.5 w-3.5" /> },
-  { mode: "compare", label: "Compare", icon: <GitCompare className="h-3.5 w-3.5" /> },
+  { mode: "map", label: "Site Map", icon: <LayoutDashboard className="h-3.5 w-3.5" /> },
+  { mode: "camera_view", label: "Single Camera", icon: <Camera className="h-3.5 w-3.5" /> },
+  { mode: "wall", label: "Camera Wall Grid", icon: <Monitor className="h-3.5 w-3.5" /> },
+  { mode: "replay", label: "Route Replay", icon: <Play className="h-3.5 w-3.5" /> },
+  { mode: "compare", label: "Before/After", icon: <GitCompare className="h-3.5 w-3.5" /> },
 ];
 
 const tabVariants = {
   idle: { scale: 1 },
   hover: { scale: 1.04 },
   tap: { scale: 0.96 },
-};
-
-const VIEW_MODE_PRESETS: Record<ViewMode, WorkspacePreset> = {
-  map: "edit",
-  wall: "camera_wall",
-  replay: "replay",
-  camera_view: "coverage",
-  compare: "compare",
 };
 
 const iconVariants = {

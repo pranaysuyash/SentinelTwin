@@ -24,14 +24,14 @@ function SectionToggle({
     <button
       type="button"
       onClick={onToggle}
-      className="flex w-full items-center gap-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-left transition-colors hover:border-[#31405a]"
+      className="flex w-full items-center gap-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2 py-1.5 text-left transition-colors hover:border-[#31405a]"
     >
       <div className="flex h-6 w-6 items-center justify-center rounded-lg border border-[#24283a] bg-[#111521] text-[#7f8aa3]">
         {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[10px] font-semibold text-[#d7deed]">{title}</div>
-        <div className="truncate text-[8px] uppercase tracking-[0.18em] text-[#556076]">{summary}</div>
+        <div className="truncate text-[9px] font-semibold text-[#d7deed]">{title}</div>
+        <div className="truncate text-[7px] uppercase tracking-[0.18em] text-[#556076]">{summary}</div>
       </div>
     </button>
   );
@@ -65,18 +65,18 @@ export function ContextRightPanel() {
 
   return (
     <div className="flex h-full min-w-0 min-h-0 flex-col overflow-hidden bg-[#0c0f16]">
-      <div className="flex items-center gap-2 border-b border-[#1e2130] bg-[#0b0f17] px-3 py-2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-blue-500/20 bg-blue-500/12">
-          <MonitorSmartphone className="h-3.5 w-3.5 text-blue-400" />
+      <div className="flex items-center gap-2 border-b border-[#1e2130] bg-[#0b0f17] px-2.5 py-1.5">
+        <div className="flex h-6 w-6 items-center justify-center rounded-lg border border-blue-500/20 bg-blue-500/12">
+          <MonitorSmartphone className="h-3 w-3 text-blue-400" />
         </div>
         <div className="min-w-0">
-          <div className="truncate text-[11px] font-semibold text-white">Context Inspector</div>
-          <div className="truncate text-[9px] uppercase tracking-[0.18em] text-[#556076]">
+          <div className="truncate text-[10px] font-semibold text-white">Context Inspector</div>
+          <div className="truncate text-[8px] uppercase tracking-[0.18em] text-[#556076]">
             {workspacePreset.replace(/_/g, " ")} · {viewMode.replace(/_/g, " ")}
           </div>
         </div>
-        <div className="ml-auto inline-flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] text-[#8f9bb1]">
-          <MapPinned className="h-3 w-3" />
+        <div className="ml-auto inline-flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-0.5 text-[8px] text-[#8f9bb1]">
+          <MapPinned className="h-2.5 w-2.5" />
           <span className={cn("truncate", selectedNodeId ? "text-[#c7d0e4]" : "text-[#6c768f]")}>
             {selectedNodeId ?? "Scene overview"}
           </span>
@@ -92,8 +92,8 @@ export function ContextRightPanel() {
             onToggle={() => setInspectorOpen((current) => !current)}
           />
           {inspectorOpen ? (
-            <div className="mt-2 min-h-0 overflow-hidden rounded-xl border border-[#1f2536] bg-[#0d1017]">
-              <InspectorPanel />
+            <div className="mt-2 min-h-0 overflow-hidden">
+              <InspectorPanel showHeader={false} />
             </div>
           ) : (
             <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[9px] text-[#72809a]">
@@ -110,7 +110,7 @@ export function ContextRightPanel() {
             onToggle={() => setAssumptionsOpen((current) => !current)}
           />
           {assumptionsOpen ? (
-            <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0d1017]">
+            <div className="mt-2 overflow-hidden">
               <AssumptionsPanel />
             </div>
           ) : (
@@ -128,7 +128,7 @@ export function ContextRightPanel() {
             onToggle={() => setPathOpen((current) => !current)}
           />
           {pathOpen ? (
-            <div className="mt-2 overflow-hidden rounded-xl border border-[#1f2536] bg-[#0d1017]">
+            <div className="mt-2 overflow-hidden">
               <ScenarioPathPanel />
             </div>
           ) : (

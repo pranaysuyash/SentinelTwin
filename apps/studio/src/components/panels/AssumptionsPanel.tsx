@@ -18,6 +18,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 export function AssumptionsPanel() {
   const scene = useStudioStore((s) => s.scene);
+  const updateAssumptions = useStudioStore((s) => s.updateAssumptions);
+  const setBottomTab = useStudioStore((s) => s.setBottomTab);
   const [collapsed, setCollapsed] = useState(false);
   const assumptions = scene.assumptions;
 
@@ -41,13 +43,28 @@ export function AssumptionsPanel() {
             <span className="font-mono">{assumptions.vehicleHeightM.toFixed(2)}m</span>
           </Field>
           <Field label="Time of Day">
-            <span className="capitalize">{assumptions.timeOfDay}</span>
+            <select
+              value={assumptions.timeOfDay}
+              onChange={(event) => updateAssumptions({ timeOfDay: event.target.value as typeof assumptions.timeOfDay })}
+              className="rounded border border-[#1e2130] bg-[#111521] px-1.5 py-0.5 text-[10px] capitalize text-[#d2d9e8] outline-none focus:border-blue-500/40"
+            >
+              <option value="day">day</option>
+              <option value="night">night</option>
+              <option value="custom">custom</option>
+            </select>
           </Field>
           <Field label="Interior Light">
             <span className="capitalize">{assumptions.interiorLightLevel}</span>
           </Field>
           <Field label="DORI Standard">
-            <span>{assumptions.doriStandard === "oodpcvs_2025" ? "IEC 62676-4:2025 (OODPCVS)" : "DORI 2014"}</span>
+            <select
+              value={assumptions.doriStandard}
+              onChange={(event) => updateAssumptions({ doriStandard: event.target.value as typeof assumptions.doriStandard })}
+              className="rounded border border-[#1e2130] bg-[#111521] px-1.5 py-0.5 text-[10px] text-[#d2d9e8] outline-none focus:border-blue-500/40"
+            >
+              <option value="oodpcvs_2025">IEC 62676-4:2025 (OODPCVS)</option>
+              <option value="dori_2014">DORI 2014</option>
+            </select>
           </Field>
           <Field label="Night Penalty">
             <span className="capitalize">{assumptions.nightPenaltyMode}</span>
@@ -73,13 +90,12 @@ export function AssumptionsPanel() {
             </div>
           </div>
 
-          {/* Note about editing */}
-          <div className="mt-1.5 flex items-center gap-1.5 rounded-md border border-amber-500/15 bg-amber-500/8 px-2 py-1.5">
-            <Info className="h-3 w-3 flex-shrink-0 text-amber-400" />
-            <span className="text-[8px] leading-tight text-amber-200">
-              Add assumptions editing UI in settings. These values are set per scene in the JSON schema.
-            </span>
-          </div>
+          <button
+            onClick={() => setBottomTab("assumptions")}
+            className="mt-1.5 w-full rounded-md border border-[#2a3045] bg-[#111521] px-2 py-1.5 text-[8px] uppercase tracking-[0.14em] text-[#8ea6cc] transition-colors hover:border-blue-500/40 hover:text-white"
+          >
+            Open Full Assumptions Editor
+          </button>
         </div>
       )}
     </div>

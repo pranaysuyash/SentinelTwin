@@ -2260,6 +2260,7 @@ Bundled monthly fee per site or per device — includes hardware, software, moni
 
 **Verified implementation note (2026-05-27):**
 - The shipped camera wall path currently uses separate live `Canvas` feeds instead of the single-Canvas `<View>` pattern above. That keeps each camera HUD isolated and keeps the selected/active/offline ordering simple, but it is a deliberate tradeoff rather than a missing implementation.
+- The shipped camera wall path now includes a user-visible `4 Views` / `6 Views` layout selector, so the wall behaves like an operator-configurable panel rather than a fixed grid.
 - `StudioShell` now routes `map`, `camera_view`, `wall`, `replay`, and `compare` as full-canvas workspace modes.
 - `camera_view` is implemented as a full-screen single-camera POV with DORI/live-mode overlays, while `compare` is a dual-scene baseline/proposed shell with metrics and quality trend summaries.
 
@@ -2554,6 +2555,7 @@ Close GAP-04 (Failures tab), GAP-06 (Assumptions panel editable), and add Critic
 
 ### Findings
 - **Canvas-first dock layout is the right product shape for SentinelTwin**: the studio shell now works better as collapsible left/right/bottom docks with workspace presets than as fixed side panels. That keeps the canvas dominant in coverage, replay, compare, and camera-wall modes while still allowing deep inspection when a selection demands it.
+- **Full-width dock shells plus section-level toggles fix the “toggle eating space” problem**: the live Studio render looked materially better once the left and right panels stopped using fixed-width inner wrappers and instead exposed collapsers for tools, layers, minimap, selection inspector, assumptions, and path utilities. The canvas gained room immediately without hiding the important controls.
 - **`<Canvas shadows="percentage" />` avoids the `PCFSoftShadowMap` deprecation warning**: the runtime warning came from React Three Fiber default shadow handling, not from any app-local three.js shadow code. Switching the studio canvases to `shadows="percentage"` is the clean local fix.
 - **The `THREE.Clock` warning is dependency-level, not app-local**: inspection showed the warning originates inside `@react-three/fiber` internals (`dist/events-*.esm.js` uses `new THREE.Clock()`). This means the app code is not the direct source; the likely remedy is a dependency upgrade or upstream patch rather than a local refactor.
 - **Browser QA confirmed the dock hierarchy is rendering as intended**: the live studio page shows the left tools dock, the bottom utility dock, and the contextual right inspector all mounting correctly around the canvas instead of the shell collapsing into a static three-panel frame. The default state is still intentionally dense for editing, but the new layout primitives are in place.
@@ -4866,6 +4868,78 @@ The following are recorded as ready-to-start deep-dive topics from the digital t
 **Implication:** The shared map module should remain the canonical implementation for interaction behavior and style tokens, and future map additions should reuse the same language rather than introducing panel-specific variants.
 
 **Current implementation note:** Replay surfaces now respect `activePathId` instead of falling back to the first path, and the shared quality ribbon uses interpolated path sampling so long segments do not collapse into waypoint-only snapshots.
+
+---
+
+## Camera Sensor Specs and PPM Accuracy
+
+**Thread:** 2026-05-27 camera sensor database research
+
+**Files reviewed:**
+- `apps/studio/src/schema/security-scene.ts` (CameraNode schema)
+- `apps/studio/src/simulation/coverage.ts` (computePixelDensity, deriveResolutionWidth)
+- `apps/studio/src/components/inspector/InspectorPanel.tsx` (computeDoriRanges)
+- `apps/studio/src/components/view/CameraViewMode.tsx` (rangeMeters)
+- `apps/studio/src/components/workspace/CameraPresetPicker.tsx` (4 camera presets)
+
+**Current accuracy limits:**
+The coverage engine computes PPM (pixels per meter) using this formula:
+```
+PPM = resolutionWidth_px / (2 × distance_m × tan(FOV_H_deg × π / 360))
+```
+
+This requires only resolution width and horizontal FOV. Both are available (resolutionWidth is optional with fallbacks, FOV is required). The formula is correct for the input values.
+
+However, the inputs themselves may be incorrect or inconsistent because:
+
+1. **FOV is specified directly** (`fovHorizontalDeg`), not derived from focal length + sensor size. If a user sets focalLengthMm=4mm with fovHorizontalDeg=90° for a 1/3" sensor, the actual FOV should be ~62°, not 90°. There is no validation or derivation — the two fields are independent with no constraint.
+
+2. **Sensor size is absent from the schema.** Without `sensorWidthMm`/`sensorHeightMm` or `sensorFormat`, FOV cannot be cross-checked against focal length. This means:
+   - A user can set an impossible combination (wide focal length + wide FOV on a small sensor)
+   - Coverage calculations silently use whatever FOV is entered, producing wrong DORI ranges
+   - The lens picker (2.8mm, 4mm, 6mm, 8mm) sets `focalLengthMm` but has zero effect on coverage
+
+3. **Resolution width fallbacks are inconsistent** between UI components and the coverage engine:
+   - `computeDoriRanges`/`rangeMeters`: discrete breakpoints (≥8MP→3840, ≥4MP→2688, else→1920)
+   - `computePixelDensity` in coverage.ts: `√(MP × 1M × 16/9)` (continuous formula assuming 16:9)
+   - For 2MP: fallback gives 1920 vs formula gives 1886 — minor but inconsistent
+   - For 4MP: fallback gives 2688 vs formula gives 2667 — also minor drift
+
+4. **No aspect ratio is stored.** The schema has `resolutionWidth` and `resolutionHeight` as optional, but there is no `aspectRatio` field. The coverage engine hard-codes 16:9 in `deriveResolutionWidth`. Non-16:9 cameras (e.g., 4:3 for some multi-sensor) would compute wrong PPM.
+
+**Common sensor sizes for security cameras (not in codebase):**
+| Sensor Format | Width (mm) | Height (mm) | Used in |
+|---|---|---|---|
+| 1/4" | 3.2 | 2.4 | Budget dome cameras |
+| 1/3" | 4.8 | 3.6 | Common bullet cameras |
+| 1/2.7" | 5.37 | 4.04 | Common IP cameras |
+| 1/2.5" | 5.76 | 4.29 | Higher-end IP cameras |
+| 1/2" | 6.4 | 4.8 | PTZ cameras |
+| 1/1.8" | 7.18 | 5.32 | Multi-sensor, premium |
+| 2/3" | 8.8 | 6.6 | High-end PTZ |
+| 1" | 12.8 | 9.6 | Cinema-grade, advanced analytics |
+
+**Relationship that should exist in the engine:**
+```
+FOV_H = 2 × arctan(sensorWidth_mm / (2 × focalLength_mm))
+FOV_V = 2 × arctan(sensorHeight_mm / (2 × focalLength_mm))
+```
+
+This would let the engine derive FOV from focal length + sensor, or validate that a user-entered FOV is physically possible for the given lens/sensor combination.
+
+**Recommendation:**
+This is not needed for V0.1 because:
+- The camera preset library is 4 generic presets, not real camera models
+- Users enter FOV directly, which is the most intuitive parameter
+- The current PPM computation is correct as long as FOV is accurate
+- Adding sensor specs would increase schema complexity without changing coverage output
+
+Add sensor specs (`sensorWidthMm`, `sensorHeightMm`, `sensorFormat`) when:
+1. The camera preset library grows to include real camera models (CP Plus, Hikvision, Axis)
+2. A user reports that a real camera's FOV doesn't match their entry
+3. The FOV derivation feature is specifically requested (e.g., "I know my camera has a 4mm lens on a 1/2.7" sensor, what's my coverage?")
+
+**Status:** Research complete. Not implemented. Deferred to V0.2+.
 
 ---
 

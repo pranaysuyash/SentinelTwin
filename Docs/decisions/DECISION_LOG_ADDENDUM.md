@@ -112,3 +112,22 @@ open questions are updated. This is a hard requirement, not a preference.
 - Phase completion criteria in Docs/todos/ include documentation updates
 - AGENTS.md and CLAUDE.md explicitly state: "Documentation is part of delivery"
 - Every PR should update relevant docs alongside code changes
+
+---
+
+## D-042 | 2026-05-27 | Camera sensor specs deferred to V0.2+
+
+**Decision:** Do not add `sensorWidthMm`, `sensorHeightMm`, or `sensorFormat` to the CameraNode schema for V0.1. Current approach (FOV entered directly, resolution width optional with fallback) is sufficient.
+
+**Rationale:**
+- Adding sensor specs would require `FOV = 2 × arctan(sensorWidth / (2 × focalLength))` derivation, schema migration, and preset updates — for zero change in coverage output
+- Users enter FOV directly, which is the most intuitive camera parameter
+- Generic preset library has no real camera models needing sensor-accurate FOV
+- Sensor specs only matter when focal length differs from FOV — not a realistic V0.1 workflow
+
+**When to revisit:**
+1. Camera preset library grows to include real models (CP Plus, Hikvision, Axis)
+2. User reports FOV mismatch with a real camera
+3. "Enter lens + sensor, derive FOV" is requested as a feature
+
+**Research location:** Thread 114 in `Docs/exploration/EXPLORATION_MAP.md`. Full sensor size table documented there.

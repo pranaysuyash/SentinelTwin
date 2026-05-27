@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SentinelTwin Studio (`apps/studio`)
 
-## Getting Started
+SentinelTwin Studio is the active V0.1 Camera Coverage Testbed.
 
-First, run the development server:
+Core loop: `Edit scene -> run simulation -> inspect impact -> apply/revert fixes -> compare/report`.
+
+## Requirements
+
+- Node.js `>=24.13.0`
+- Bun (for tests)
+
+## Run
+
+From repo root:
 
 ```bash
+cd apps/studio
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Build and Test
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+# production build
+npm run build
 
-## Learn More
+# lint
+npm run lint
 
-To learn more about Next.js, take a look at the following resources:
+# tests (bun)
+npm test
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# watch mode
+npm run test:watch
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Useful targeted tests:
 
-## Deploy on Vercel
+```bash
+bun test src/components/__tests__/issues-tab.test.ts
+bun test src/components/__tests__/camera-view-mode.test.ts
+bun test src/components/__tests__/scenario-path-panel.test.ts
+bun test src/simulation/__tests__/golden-simulation-claims.test.ts
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Current Workflow Surface
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Root launcher flow before Studio shell: `Create or Import Scene` / `Open Current Workspace` / JSON import.
+- Root launcher includes a 5-step guided security workflow with direct handoff actions into Studio.
+- Root launcher also includes `AI Layout Draft` (prompt-to-`SecurityScene` starter).
+- AI Layout Draft uses structured model output when configured (`NEXT_PUBLIC_OPENAI_API_KEY`) and otherwise falls back to deterministic local drafting.
+- AI Layout Draft also maps key prompt hints into scene entities (camera count, shelves/counter, back-storage zone).
+- Studio shell with view modes: `Map`, `Camera View`, `Camera Wall`, `Path Replay`, `Compare`.
+- Scene controls in top bar: new scene wizard, save/load, import/export JSON, simulation run, snapshots, compare, report.
+- Scene builder wizard paths: blank, template, floor-plan import prototype.
+- Floor-plan review supports manual scale calibration before creating the scene.
+- Floor-plan review also supports correction controls (drop false wall/door/window detections before scene creation).
+- Bottom panel: metrics, issues, timeline, before/after, report-lite, assumptions.
+
+## What Works Well
+
+- Typed `SecurityScene` schema and validation.
+- Deterministic simulation pipeline (coverage, occlusion, quality scoring, path visibility).
+- Recommendation preview/apply/revert loop in issues tab.
+- Counterfactual scene comparisons and snapshot flow.
+- Defensive report wording and assumptions/disclaimer framing.
+- Report-lite includes failing-zone summaries and immediate action checklist output.
+- Assumptions are visible and editable in-panel (quick controls + full assumptions tab).
+- Golden simulation claim tests for major behavior checks.
+- Camera wall POV stays in sync with live camera transform edits.
+
+## Known Gaps
+
+- Floor-plan import now materializes basic walls/doors/windows but remains prototype-level (heuristic parsing, no robust correction loop).
+- Some UI surfaces are wired but still demo/static in parts.
+- Full product layers (guided scan, AI layout draft, real footage verification, project backend) are not implemented yet.
+
+## Defensive Framing
+
+This tool is for defensive security hardening and coverage-failure analysis. It does not provide offensive bypass guidance.
+
+## Notes
+
+- Main implementation status is tracked in:
+  - `CURRENT_STATUS.md` (repo snapshot)
+  - `Docs/todos/CURRENT_IMPLEMENTATION_STATE.md` (detailed implementation ledger)

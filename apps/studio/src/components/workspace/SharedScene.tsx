@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useEffect } from "react";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
 import type {
@@ -98,6 +99,8 @@ export function SceneFloor({
 // ── Walls (with glass richness) ──
 
 export function SceneWalls({ walls }: { walls: WallNode[] }) {
+  const selectNode = useStudioStore((s) => s.selectNode);
+  const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
   return (
     <>
       {walls.map((wall) => {
@@ -112,12 +115,16 @@ export function SceneWalls({ walls }: { walls: WallNode[] }) {
           <group
             key={wall.id}
             position={[cx, wall.heightM / 2, cz]}
-            rotation={[0, -angle, 0]}
-            onClick={(e) => {
-              e.stopPropagation();
-              useStudioStore.getState().selectNode(wall.id);
-            }}
-          >
+          rotation={[0, -angle, 0]}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (e.shiftKey || e.metaKey || e.ctrlKey) {
+              toggleSelectedNode(wall.id);
+              return;
+            }
+            selectNode(wall.id);
+          }}
+        >
             <mesh>
             <boxGeometry args={[length, wall.heightM, 0.18]} />
             <meshStandardMaterial
@@ -138,6 +145,8 @@ export function SceneWalls({ walls }: { walls: WallNode[] }) {
 // ── Doors ──
 
 export function SceneDoors({ doors }: { doors: DoorNode[] }) {
+  const selectNode = useStudioStore((s) => s.selectNode);
+  const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
   return (
     <>
       {doors.map((door) => {
@@ -148,12 +157,16 @@ export function SceneDoors({ doors }: { doors: DoorNode[] }) {
         return (
           <group
             key={door.id}
-            position={door.position}
-            onClick={(e) => {
-              e.stopPropagation();
-              useStudioStore.getState().selectNode(door.id);
-            }}
-          >
+          position={door.position}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (e.shiftKey || e.metaKey || e.ctrlKey) {
+              toggleSelectedNode(door.id);
+              return;
+            }
+            selectNode(door.id);
+          }}
+        >
             <mesh rotation={[0, 0, 0]} castShadow receiveShadow visible={!isOpen}>
               <boxGeometry args={[width, height, Math.max(thickness, 0.08)]} />
               <meshStandardMaterial
@@ -180,6 +193,8 @@ export function SceneDoors({ doors }: { doors: DoorNode[] }) {
 // ── Windows ──
 
 export function SceneWindows({ windows }: { windows: WindowNode[] }) {
+  const selectNode = useStudioStore((s) => s.selectNode);
+  const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
   return (
     <>
       {windows.map((window) => {
@@ -192,12 +207,16 @@ export function SceneWindows({ windows }: { windows: WindowNode[] }) {
         return (
           <group
             key={window.id}
-            position={window.position}
-            onClick={(e) => {
-              e.stopPropagation();
-              useStudioStore.getState().selectNode(window.id);
-            }}
-          >
+          position={window.position}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (e.shiftKey || e.metaKey || e.ctrlKey) {
+              toggleSelectedNode(window.id);
+              return;
+            }
+            selectNode(window.id);
+          }}
+        >
             <mesh castShadow receiveShadow visible={!isOpen}>
             <boxGeometry args={[width, height, Math.max(thickness, 0.05)]} />
             <meshStandardMaterial
@@ -291,6 +310,80 @@ export function SceneObstructions({
   );
 }
 
+// ── Path Actor (animated figure along waypoints) ──
+
+export function PathActor({ waypoints, currentIndex, progress }: {
+  waypoints: [number, number][];
+  currentIndex: number;
+  progress: number;
+}) {
+  const groupRef = useRef<THREE.Group>(null!);
+  const propsRef = useRef({ waypoints, currentIndex, progress });
+
+  useEffect(() => {
+    propsRef.current = { waypoints, currentIndex, progress };
+  }, [waypoints, currentIndex, progress]);
+
+  useFrame(() => {
+    const { waypoints: wps, currentIndex: idx, progress: prog } = propsRef.current;
+    if (!groupRef.current || wps.length < 2) return;
+
+    let x: number, z: number, dx = 0, dz = 0;
+    if (idx >= wps.length - 1) {
+      x = wps[wps.length - 1]![0];
+      z = wps[wps.length - 1]![1];
+    } else {
+      const a = wps[idx]!;
+      const b = wps[Math.min(idx + 1, wps.length - 1)]!;
+      dx = b[0] - a[0];
+      dz = b[1] - a[1];
+      x = a[0] + dx * prog;
+      z = a[1] + dz * prog;
+    }
+
+    groupRef.current.position.set(x, 0.02, z);
+    const angle = Math.atan2(dx, dz);
+    groupRef.current.rotation.y = angle;
+  });
+
+  return (
+    <group ref={groupRef}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.015, 0]}>
+        <circleGeometry args={[0.25, 16]} />
+        <meshBasicMaterial color="#000" transparent opacity={0.2} />
+      </mesh>
+      <mesh position={[0, 0.8, 0]} castShadow>
+        <capsuleGeometry args={[0.12, 0.35, 4, 8]} />
+        <meshStandardMaterial color="#1e293b" roughness={0.6} metalness={0.1} />
+      </mesh>
+      <mesh position={[0, 1.05, 0]} castShadow>
+        <sphereGeometry args={[0.09, 8, 8]} />
+        <meshStandardMaterial color="#475569" roughness={0.5} />
+      </mesh>
+      <mesh position={[-0.14, 0.82, 0]} rotation={[0, 0, 0.15]} castShadow>
+        <capsuleGeometry args={[0.03, 0.2, 4, 6]} />
+        <meshStandardMaterial color="#334155" />
+      </mesh>
+      <mesh position={[0.14, 0.82, 0]} rotation={[0, 0, -0.15]} castShadow>
+        <capsuleGeometry args={[0.03, 0.2, 4, 6]} />
+        <meshStandardMaterial color="#334155" />
+      </mesh>
+      <mesh position={[-0.06, 0.38, 0]} castShadow>
+        <capsuleGeometry args={[0.03, 0.25, 4, 6]} />
+        <meshStandardMaterial color="#0f172a" />
+      </mesh>
+      <mesh position={[0.06, 0.38, 0]} castShadow>
+        <capsuleGeometry args={[0.03, 0.25, 4, 6]} />
+        <meshStandardMaterial color="#0f172a" />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.005, 0]}>
+        <ringGeometry args={[0.12, 0.28, 24]} />
+        <meshBasicMaterial color="#22c55e" transparent opacity={0.5} />
+      </mesh>
+    </group>
+  );
+}
+
 // ── Coverage heatmap (instanced mesh) ──
 // NOTE: "none" cells are NOT rendered — the tan floor shows through uncovered areas.
 // Colors are explicit sRGB-correct values that render vividly with meshBasicMaterial.
@@ -344,16 +437,36 @@ export function CoverageTileFloor({ cells }: { cells: CoverageCellResult[] }) {
   );
 }
 
-export function CoverageHeatmapInstanced({ cells }: { cells: CoverageCellResult[] }) {
+function fragilityRGB(fragility: number): [number, number, number] {
+  // 0 = robust (green), 0.5 = amber, 1 = fragile (red)
+  const t = Math.max(0, Math.min(1, fragility));
+  if (t < 0.5) {
+    // green → amber
+    const s = t * 2;
+    return [s * 0.97, 0.7 - s * 0.07, 0.09];
+  }
+  // amber → red
+  const s = (t - 0.5) * 2;
+  return [0.97, (1 - s) * 0.63, 0.09 * (1 - s)];
+}
+
+export function CoverageHeatmapInstanced({
+  cells,
+  mode = "quality",
+}: {
+  cells: CoverageCellResult[];
+  mode?: "quality" | "fragility";
+}) {
   const meshRef = useRef<THREE.InstancedMesh>(null!);
   const mat = useRef(new THREE.Matrix4());
   const col = useRef(new THREE.Color());
 
-  // Only render cells that have actual coverage (skip "none" — let the floor show)
-  const visibleCells = useMemo(
-    () => cells.filter((c) => c.quality !== "none"),
-    [cells],
-  );
+  const visibleCells = useMemo(() => {
+    if (mode === "fragility") {
+      return cells.filter((c) => c.fragility != null && c.quality !== "none");
+    }
+    return cells.filter((c) => c.quality !== "none");
+  }, [cells, mode]);
 
   useEffect(() => {
     const mesh = meshRef.current;
@@ -362,14 +475,21 @@ export function CoverageHeatmapInstanced({ cells }: { cells: CoverageCellResult[
     visibleCells.forEach((cell, index) => {
       mat.current.setPosition(cell.x, 0.014, cell.z);
       mesh.setMatrixAt(index, mat.current);
-      const rgb = HEATMAP_QUALITY_RGB[cell.quality] ?? HEATMAP_QUALITY_RGB.none;
+
+      let rgb: [number, number, number];
+      if (mode === "fragility" && cell.fragility != null) {
+        rgb = fragilityRGB(cell.fragility);
+      } else {
+        rgb = HEATMAP_QUALITY_RGB[cell.quality] ?? HEATMAP_QUALITY_RGB.none;
+      }
+
       col.current.setRGB(rgb[0], rgb[1], rgb[2]);
       mesh.setColorAt(index, col.current);
     });
 
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [visibleCells]);
+  }, [visibleCells, mode]);
 
   if (visibleCells.length === 0) return null;
 
@@ -524,6 +644,8 @@ export function ScenePrivacyZones({
   zones: { id: string; label: string; polygon: [number, number][]; restriction: string }[];
   onSelect?: (id: string) => void;
 }) {
+  const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
+  const selectNode = useStudioStore((s) => s.selectNode);
   return (
     <>
       {zones.map((zone) => (
@@ -531,7 +653,12 @@ export function ScenePrivacyZones({
           key={zone.id}
           onClick={(event) => {
             event.stopPropagation();
+            if (event.shiftKey || event.metaKey || event.ctrlKey) {
+              toggleSelectedNode(zone.id);
+              return;
+            }
             onSelect?.(zone.id);
+            if (!onSelect) selectNode(zone.id);
           }}
         >
           <PrivacyZoneMesh zone={zone} />
@@ -556,6 +683,8 @@ export function ScenePathLine({
   id?: string;
   onSelect?: (id: string) => void;
 }) {
+  const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
+  const selectNode = useStudioStore((s) => s.selectNode);
   const geometry = useMemo(() => {
     const arr = new Float32Array(points.length * 3);
     points.forEach(([x, z], index) => {
@@ -585,7 +714,17 @@ export function ScenePathLine({
       onClick={(event) => {
         event.stopPropagation();
         if (id && onSelect) {
+          if (event.shiftKey || event.metaKey || event.ctrlKey) {
+            toggleSelectedNode(id);
+            return;
+          }
           onSelect(id);
+        } else if (id) {
+          if (event.shiftKey || event.metaKey || event.ctrlKey) {
+            toggleSelectedNode(id);
+          } else {
+            selectNode(id);
+          }
         }
       }}
     >

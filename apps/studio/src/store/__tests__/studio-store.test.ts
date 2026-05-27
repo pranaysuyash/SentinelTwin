@@ -112,5 +112,46 @@ describe("studio store", () => {
     expect(duplicated?.name).toContain("Copy");
     expect(duplicated?.position[0]).toBeCloseTo(originalCamera!.position[0] + 0.4, 6);
     expect(duplicated?.position[2]).toBeCloseTo(originalCamera!.position[2] + 0.4, 6);
+    expect(state.selectedNodeIds).toEqual([duplicated?.id ?? ""]);
+  });
+
+  test("supports grouped selection actions in shared editor state", () => {
+    const [first, second] = smallRetailShopScene.cameras;
+    expect(first).toBeTruthy();
+    expect(second).toBeTruthy();
+
+    useStudioStore.getState().setScene(smallRetailShopScene);
+    useStudioStore.getState().setSelectedNodes([first!.id, second!.id]);
+
+    expect(useStudioStore.getState().selectedNodeIds).toEqual([first!.id, second!.id]);
+    expect(useStudioStore.getState().selectedNodeId).toBe(first!.id);
+
+    useStudioStore.getState().toggleSelectedNode(first!.id);
+
+    expect(useStudioStore.getState().selectedNodeIds).toEqual([second!.id]);
+    expect(useStudioStore.getState().selectedNodeId).toBe(second!.id);
+  });
+
+  test("duplicates grouped selections when multiple nodes are selected", () => {
+    const [first, second] = smallRetailShopScene.cameras;
+    expect(first).toBeTruthy();
+    expect(second).toBeTruthy();
+
+    useStudioStore.setState({
+      scene: smallRetailShopScene,
+      simulationResult: null,
+      simulationDirty: false,
+      selectedNodeId: first!.id,
+      selectedNodeIds: [first!.id, second!.id],
+    });
+
+    useStudioStore.getState().duplicateNode(first!.id);
+
+    const state = useStudioStore.getState();
+
+    expect(state.scene.cameras).toHaveLength(smallRetailShopScene.cameras.length + 2);
+    expect(state.selectedNodeIds).toHaveLength(2);
+    expect(state.selectedNodeIds[0]).not.toBe(first!.id);
+    expect(state.selectedNodeIds[1]).not.toBe(second!.id);
   });
 });

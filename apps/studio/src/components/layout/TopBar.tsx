@@ -14,6 +14,7 @@ import {
   Shield,
   Sun,
   Plus,
+  ScanSearch,
   Upload,
   Save,
   MoreHorizontal,
@@ -21,10 +22,12 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/cn";
+import { SurfaceButton } from "@/components/shared/SurfaceButton";
 import { useStudioStore } from "@/store/studio-store";
 import { useSimulation } from "@/hooks/use-simulation";
 import { WorkspacePresetSwitcher } from "@/components/dock/WorkspacePresetSwitcher";
 import { SceneBuilderWizard } from "@/components/scan-to-scene/SceneBuilderWizard";
+import { ScanSiteWizard } from "@/components/scan-to-scene/ScanSiteWizard";
 
 function SimStatus() {
   const dirty = useStudioStore((s) => s.simulationDirty);
@@ -56,27 +59,16 @@ function SimStatus() {
   );
 }
 
-function SurfaceButton({ className, children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return (
-    <button
-      {...props}
-      className={cn(
-        "inline-flex h-7 items-center justify-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] px-2.5 text-[11px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white disabled:cursor-not-allowed disabled:border-green-900/40 disabled:bg-green-900/25 disabled:text-green-600",
-        className,
-      )}
-    >
-      {children}
-    </button>
-  );
-}
 
 export function TopBar() {
   const { runSimulation } = useSimulation();
   const envMode = useStudioStore((s) => s.environmentMode);
   const setEnvMode = useStudioStore((s) => s.setEnvironmentMode);
+  const setAllZoneTargetTypes = useStudioStore((s) => s.setAllZoneTargetTypes);
   const setBottomTab = useStudioStore((s) => s.setBottomTab);
   const saveSnapshot = useStudioStore((s) => s.saveSnapshot);
   const scene = useStudioStore((s) => s.scene);
+  const zoneCount = scene.criticalZones.length;
   const savedScenes = useStudioStore((s) => s.savedScenes);
   const setScene = useStudioStore((s) => s.setScene);
   const importScene = useStudioStore((s) => s.importScene);
@@ -90,8 +82,10 @@ export function TopBar() {
 
   const [sceneOpen, setSceneOpen] = useState(false);
   const [envOpen, setEnvOpen] = useState(false);
+  const [targetOpen, setTargetOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [scanWizardOpen, setScanWizardOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
 
@@ -222,6 +216,16 @@ export function TopBar() {
                 </button>
                 <button
                   onClick={() => {
+                    setScanWizardOpen(true);
+                    setSceneOpen(false);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
+                >
+                  <ScanSearch className="h-3 w-3" />
+                  Scan a Site...
+                </button>
+                <button
+                  onClick={() => {
                     setWizardOpen(true);
                     setSceneOpen(false);
                   }}
@@ -261,42 +265,38 @@ export function TopBar() {
           />
         </div>
 
-        <div className="hidden xl:block">
-          <SimStatus />
-        </div>
-
-        <div className="relative">
-          <button
-            onClick={() => setEnvOpen((open) => !open)}
-            className="flex h-7 min-w-[118px] items-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] px-2.5 text-[11px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
-          >
-            <Sun className="h-3 w-3 text-amber-300" />
-            <span>{envMode === "day" ? "Day Mode" : envMode === "night" ? "Night Mode" : "Dusk"}</span>
-            <ChevronDown className="h-3 w-3 text-[#546078]" />
-          </button>
-          {envOpen && (
-            <div
-              className="absolute left-0 top-full z-50 mt-1 w-40 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
-              onMouseLeave={() => setEnvOpen(false)}
+        {zoneCount > 0 && (
+          <div className="relative">
+            <button
+              onClick={() => setTargetOpen((open) => !open)}
+              className="flex h-7 min-w-[130px] items-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] px-2.5 text-[11px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
             >
-              {(["day", "night", "dusk"] as const).map((mode) => (
-                <button
-                  key={mode}
-                  className={cn(
-                    "w-full rounded-lg px-2.5 py-2 text-left text-[11px] capitalize transition-colors hover:bg-[#171c2b]",
-                    envMode === mode ? "text-emerald-400" : "text-[#c7d0e4]",
-                  )}
-                  onClick={() => {
-                    setEnvMode(mode);
-                    setEnvOpen(false);
-                  }}
-                >
-                  {mode === "day" ? "Day Mode" : mode === "night" ? "Night Mode" : "Dusk"}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+              <Shield className="h-3 w-3 text-cyan-300" />
+              <span>Target Type</span>
+              <ChevronDown className="h-3 w-3 text-[#546078]" />
+            </button>
+            {targetOpen && (
+              <div
+                className="absolute left-0 top-full z-50 mt-1 w-44 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
+                onMouseLeave={() => setTargetOpen(false)}
+              >
+                {(["person_detection", "vehicle_detection", "face_recognition", "license_plate", "package_detection"] as const).map((type) => (
+                  <button
+                    key={type}
+                    className="w-full rounded-lg px-2.5 py-2 text-left text-[11px] capitalize transition-colors hover:bg-[#171c2b] text-[#c7d0e4]"
+                    onClick={() => {
+                      setAllZoneTargetTypes(type);
+                      setTargetOpen(false);
+                    }}
+                  >
+                    {type.replace(/_/g, " ")}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
 
       <div className="flex-1" />
@@ -407,6 +407,14 @@ export function TopBar() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="relative h-[520px] w-[640px] overflow-hidden rounded-2xl border border-[#202536] shadow-2xl shadow-black/50">
             <SceneBuilderWizard onClose={() => setWizardOpen(false)} />
+          </div>
+        </div>
+      )}
+
+      {scanWizardOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="relative h-[720px] w-[1120px] overflow-hidden rounded-2xl border border-[#202536] shadow-2xl shadow-black/50">
+            <ScanSiteWizard onClose={() => setScanWizardOpen(false)} />
           </div>
         </div>
       )}

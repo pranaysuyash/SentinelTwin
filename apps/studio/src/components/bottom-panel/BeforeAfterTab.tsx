@@ -1,41 +1,10 @@
 "use client";
 
 import { GitCompare } from "lucide-react";
+import { DonutChart } from "@/components/shared/DonutChart";
 import { useStudioStore } from "@/store/studio-store";
 import type { SimulationResult } from "@/schema/security-scene";
 import { qualityToScore } from "@/simulation/dori";
-
-// ── Tiny SVG donut ──────────────────────────────────────────────────────────
-function Donut({
-  value,
-  total,
-  color,
-  size = 52,
-}: {
-  value: number;
-  total: number;
-  color: string;
-  size?: number;
-}) {
-  const r = 18;
-  const circ = 2 * Math.PI * r;
-  const pct  = total > 0 ? Math.min(value / total, 1) : 0;
-  const dash  = pct * circ;
-
-  return (
-    <svg width={size} height={size} viewBox="0 0 44 44" className="rotate-[-90deg]">
-      <circle cx="22" cy="22" r={r} fill="none" stroke="#1a1d26" strokeWidth="5" />
-      <circle
-        cx="22" cy="22" r={r}
-        fill="none"
-        stroke={color}
-        strokeWidth="5"
-        strokeDasharray={`${dash} ${circ - dash}`}
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
 
 // ── Coverage quality distribution mini bar ─────────────────────────────────
 function QualityBar({ result }: { result: SimulationResult | undefined }) {
@@ -115,7 +84,7 @@ function MetricColumn({
       </div>
 
       <div className="relative flex items-center justify-center">
-        <Donut value={afterPct} total={100} color={color} size={52} />
+        <DonutChart value={afterPct} color={color} size={52} strokeWidth={5} />
         <div className="absolute inset-0 flex items-center justify-center">
           <span className="text-[10px] font-bold text-white" style={{ transform: "rotate(90deg)" }}>
             {isPercent ? Math.round(afterVal) : afterVal}/{isPercent ? 100 : eff}

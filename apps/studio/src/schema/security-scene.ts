@@ -376,6 +376,8 @@ export const coverageCellResultSchema = z.object({
   ppm: z.number().min(0),
   coverageIncluded: z.boolean(),
   privacyRestricted: z.boolean(),
+  /** 0 = robust (far from threshold boundary), 1 = fragile (right on boundary). */
+  fragility: z.number().min(0).max(1).optional(),
   cameraEvaluations: z
     .record(
       z.string(),
@@ -431,6 +433,12 @@ export const simulationResultSchema = z.object({
   adversarialPath: adversarialPathResultSchema.optional(),
   blindRegions: z.array(blindRegionSchema).optional(),
   coverageThresholds: qualityThresholdSchema.optional(),
+  fragilitySummary: z.object({
+    meanFragility: z.number().min(0).max(1),
+    fragileCellCount: z.number().int().nonnegative(),
+    robustCellCount: z.number().int().nonnegative(),
+    totalCells: z.number().int().nonnegative(),
+  }).optional(),
 });
 
 // ── Temporal Simulation Types (defined before base scene schema to avoid TDZ) ──

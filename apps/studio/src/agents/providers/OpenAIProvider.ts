@@ -124,7 +124,7 @@ export class OpenAIProvider implements ModelProvider {
   }
 
   async completeStructured<T>(prompt: ModelPrompt, schema: z.ZodSchema<T>, signal?: AbortSignal): Promise<T> {
-    const zodJson = z.toJSONSchema(schema as unknown as Record<string, unknown>);
+    const zodJson = z.toJSONSchema(schema as unknown as Parameters<typeof z.toJSONSchema>[0]);
     const jsonSchema = ensureStrictMode(zodJson);
 
     const body = {

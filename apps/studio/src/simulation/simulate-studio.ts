@@ -10,6 +10,7 @@ import type {
 } from "@/schema/security-scene";
 import { computeCoverageFailurePath } from "@/simulation/adversarial-path";
 import { analyseBlindSpotTopology } from "@/simulation/blind-spot-topology";
+import { computeCoverageFragility } from "@/simulation/coverage-fragility";
 import {
   createCoverageEvaluator,
   type CellComputation,
@@ -397,6 +398,11 @@ function simulateStudioInternal(scene: SecurityScene, includeRecommendations: bo
   const evaluator = createCoverageEvaluator(scene);
   const coverageThresholds = getQualityThresholds(scene);
   const coverageCells = evaluator.computeCoverageCells(4);
+  const fragility = computeCoverageFragility(
+    coverageCells.map((c) => ({ ...c, ppm: c.ppm ?? 0, coverageIncluded: c.coverageIncluded, privacyRestricted: c.privacyRestricted ?? false, coveringCameras: c.coveringCameras, blockedBy: c.blockedBy ?? [] })),
+    scene.assumptions.doriStandard,
+  );
+  const fragilityCellMap = new Map(fragility.cells.map((fc) => [`${fc.cellX}:${fc.cellZ}`, fc.fragility]));
   const includedCoverageCells = coverageCells.filter((cell) => cell.coverageIncluded);
   const includedCoverageCellCount = includedCoverageCells.length;
   // coverageByQuality uses score-based buckets so it works regardless of which quality names cells carry.
@@ -637,6 +643,7 @@ function simulateStudioInternal(scene: SecurityScene, includeRecommendations: bo
       coverageIncluded: cell.coverageIncluded,
       privacyRestricted: cell.privacyRestricted,
       cameraEvaluations: cell.cameraEvaluations,
+      fragility: fragilityCellMap.get(`${cell.x}:${cell.z}`),
     })),
     criticalZoneResults,
     cameraResults,
@@ -651,6 +658,12 @@ function simulateStudioInternal(scene: SecurityScene, includeRecommendations: bo
       coveringCameras: cell.coveringCameras, blockedBy: cell.blockedBy, ppm: cell.ppm,
       coverageIncluded: cell.coverageIncluded, privacyRestricted: cell.privacyRestricted,
     }))),
+    fragilitySummary: fragility.totalCells > 0 ? {
+      meanFragility: Number(fragility.meanFragility.toFixed(3)),
+      fragileCellCount: fragility.fragileCellCount,
+      robustCellCount: fragility.robustCellCount,
+      totalCells: fragility.totalCells,
+    } : undefined,
   };
 }
 

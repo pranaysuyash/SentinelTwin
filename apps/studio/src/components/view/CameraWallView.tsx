@@ -1,10 +1,9 @@
 "use client";
 
 import { OrbitControls } from "@react-three/drei";
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas } from "@react-three/fiber";
 import { Camera, VideoOff } from "lucide-react";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import * as THREE from "three";
+import { Suspense, useMemo, useState } from "react";
 
 import "@/lib/three-compat";
 import {
@@ -14,64 +13,14 @@ import {
   SceneFloor,
   SceneLighting,
   SceneObstructions,
-  ScenePrivacyZones,
   SceneWalls,
   SceneWindows,
 } from "@/components/workspace/SharedScene";
+import { CameraRigFixed, nowTimestamp, SceneFeedGeometry } from "@/components/view/SceneFeedCanvas";
 import { useStudioStore } from "@/store/studio-store";
-import { getYawPitchDirection } from "@/simulation/geometry";
 import type { CameraNode } from "@/schema/security-scene";
 
 const CAMERA_WALL_THEME = ENVIRONMENT_THEMES.day;
-
-/** Format a timestamp for the camera overlay (e.g. "2026-01-11 13:27") */
-function nowTimestamp() {
-  const d = new Date();
-  const yy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  const hh = String(d.getHours()).padStart(2, "0");
-  const min = String(d.getMinutes()).padStart(2, "0");
-  return `${yy}-${mm}-${dd}  ${hh}:${min}`;
-}
-
-function SceneView() {
-  const scene = useStudioStore((s) => s.scene);
-  const selectedId = useStudioStore((s) => s.selectedNodeId);
-  const { width, depth } = scene.dimensions;
-
-  return (
-    <>
-      <SceneLighting theme={CAMERA_WALL_THEME} />
-      <SceneFloor width={width} depth={depth} showGrid={false} />
-      <SceneWalls walls={scene.walls} />
-      <SceneDoors doors={scene.doors} />
-      <SceneWindows windows={scene.windows} />
-      <SceneObstructions obstructions={scene.obstructions} selectedId={selectedId} />
-      <ScenePrivacyZones zones={scene.privacyZones} />
-    </>
-  );
-}
-
-function CameraRig({ camera: camData }: { camera: CameraNode }) {
-  const camera = useThree((s) => s.camera);
-  const initialized = useRef(false);
-
-  useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-
-    const forward = getYawPitchDirection(camData.yawDeg, camData.pitchDeg);
-    const pos = new THREE.Vector3(...camData.position);
-    const target = pos.clone().add(forward.clone().multiplyScalar(6));
-
-    camera.position.copy(pos);
-    camera.lookAt(target);
-    camera.updateProjectionMatrix();
-  }, [camera, camData.pitchDeg, camData.position, camData.yawDeg]);
-
-  return null;
-}
 
 /** Short label like "CAM 1" from camera name */
 function shortTag(name: string) {
@@ -159,9 +108,9 @@ function CameraFeedPanel({
             style={{ width: "100%", height: "100%" }}
           >
             <Suspense fallback={null}>
-              <SceneView />
+              <SceneFeedGeometry theme={CAMERA_WALL_THEME} showPrivacyZones />
             </Suspense>
-            <CameraRig camera={camData} />
+            <CameraRigFixed camera={camData} />
             <OrbitControls enablePan={false} enableZoom={false} enableRotate={false} />
           </Canvas>
           {/* Subtle scanline overlay for authenticity */}

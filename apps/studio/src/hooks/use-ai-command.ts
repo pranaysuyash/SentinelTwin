@@ -11,6 +11,7 @@ import { applySceneOperation } from "@/lib/applySceneOperation";
 import { createSecurityLightNode } from "@/lib/node-factory";
 import { useStudioStore } from "@/store/studio-store";
 import { simulateStudio } from "@/simulation/simulate-studio";
+import type { CameraNode, CriticalZoneNode } from "@/schema/security-scene";
 
 const provider = new OpenAIProvider();
 
@@ -19,7 +20,8 @@ export type AiCommandStatus =
   | { state: "parsing" }
   | { state: "applying"; descriptions: string[] }
   | { state: "error"; message: string }
-  | { state: "success"; message: string };
+  | { state: "success"; message: string }
+  | { state: "candidates"; candidates: CounterfactualCandidate[]; description: string };
 
 function buildSceneContext(): SceneContextSummary {
   const scene = useStudioStore.getState().scene;
@@ -69,8 +71,190 @@ export function useAiCommand() {
 
     // Check for special internal commands first
     if (userText.startsWith("/")) {
-      handleInternalCommand(userText);
-      return;
+      const cmd = userText.toLowerCase().trim();
+      const store = useStudioStore.getState();
+
+      // Parameterized: /target <type> — sets targetType on all critical zones
+      if (cmd.startsWith("/target")) {
+        const ARG_ALIASES: Record<string, CriticalZoneNode["targetType"]> = {
+          face: "face_recognition",
+          face_recognition: "face_recognition",
+          face_id: "face_identification",
+          face_identification: "face_identification",
+          vehicle: "vehicle_detection",
+          vehicle_detection: "vehicle_detection",
+          license_plate: "license_plate",
+          lpr: "license_plate",
+          package: "package_detection",
+          package_detection: "package_detection",
+          cash: "cash_counter_activity",
+          door: "door_entry_exit",
+          perimeter: "perimeter_breach",
+          person: "person_detection",
+          person_detection: "person_detection",
+        };
+        const arg = cmd.replace("/target", "").trim().replace(/-/g, "_");
+        const resolved = ARG_ALIASES[arg];
+        if (resolved) {
+          store.setAllZoneTargetTypes(resolved);
+          setStatusSafe({ state: "success", message: `Zone target type set to "${resolved}"` });
+        } else if (arg === "") {
+          setStatusSafe({ state: "error", message: "Usage: /target <face | face_recognition | face_identification | vehicle_detection | license_plate>" });
+        } else {
+          setStatusSafe({ state: "error", message: `Unknown target type "${arg}". Valid: face, face_recognition, face_identification, vehicle_detection, license_plate` });
+        }
+        autoDismiss();
+        return;
+      }
+
+      switch (cmd) {
+        case "/night":
+        case "/nightmode":
+          store.setEnvironmentMode("night");
+          setStatusSafe({ state: "success", message: "Switched to night mode" });
+          autoDismiss();
+          return;
+        case "/dusk":
+        case "/duskmode":
+          store.setEnvironmentMode("dusk");
+          setStatusSafe({ state: "success", message: "Switched to dusk mode" });
+          autoDismiss();
+          return;
+        case "/day":
+        case "/daymode":
+          store.setEnvironmentMode("day");
+          setStatusSafe({ state: "success", message: "Switched to day mode" });
+          autoDismiss();
+          return;
+        case "/report":
+          store.setBottomTab("report");
+          setStatusSafe({ state: "success", message: "Opened report panel" });
+          autoDismiss();
+          return;
+        case "/compare":
+          store.setBottomTab("beforeafter");
+          setStatusSafe({ state: "success", message: "Opened comparison panel" });
+          autoDismiss();
+          return;
+        case "/snapshot":
+          store.saveSnapshot(`Snapshot ${new Date().toLocaleTimeString()}`);
+          setStatusSafe({ state: "success", message: "Snapshot saved" });
+          autoDismiss();
+          return;
+        case "/simulate":
+        case "/run":
+          store.setSimulationRunning(true);
+          setTimeout(() => {
+            const result = simulateStudio(store.scene);
+            store.setSimulationResult(result, 0);
+          }, 50);
+          setStatusSafe({ state: "success", message: "Simulation started" });
+          autoDismiss();
+          return;
+        case "/fail":
+        case "/camera-failure": {
+          const { scene: s, updateNode, getSelectedCamera } = useStudioStore.getState();
+          const target = getSelectedCamera() ?? s.cameras.find((c) => c.status === "on") ?? s.cameras[0];
+          if (target) {
+            const newStatus = target.status === "on" ? "off" : "on";
+            updateNode(target.id, { status: newStatus as CameraNode["status"] });
+            setStatusSafe({ state: "success", message: `Turned ${target.name} ${newStatus}` });
+          } else {
+            setStatusSafe({ state: "success", message: "No camera to toggle" });
+          }
+          autoDismiss();
+          return;
+        }
+        case "/fix":
+        case "/improve": {
+          // Parse constraints from remaining text after the command
+          const constraints = userText.replace(/^\/fix\s*/i, "").replace(/^\/improve\s*/i, "").split(",").map((s) => s.trim()).filter(Boolean);
+
+          const { apiKeyAvailable: hasKey } = checkApiKey();
+          if (!hasKey) {
+            setStatusSafe({ state: "error", message: "OpenAI API key not configured. Set OPENAI_API_KEY." });
+            autoDismiss();
+            return;
+          }
+
+          const storeState = useStudioStore.getState();
+          const sim = storeState.simulationResult;
+          if (!sim) {
+            setStatusSafe({ state: "error", message: "Run simulation first before finding fixes." });
+            autoDismiss();
+            return;
+          }
+
+          setStatusSafe({ state: "parsing" });
+
+          try {
+            const scene = storeState.scene;
+            const issuesSummary = sim.issues.map((i) => `[${i.severity}] ${i.description}`).join("\n");
+            const sceneSummary = [
+              `Cameras: ${scene.cameras.map((c) => c.name).join(", ")}`,
+              `Obstructions: ${scene.obstructions.map((o) => o.label).join(", ")}`,
+              `Zones: ${scene.criticalZones.map((z) => z.label).join(", ")}`,
+              `Time: ${scene.assumptions.timeOfDay}`,
+            ].join(" | ");
+
+            const rawCandidates = await proposeCounterfactuals(issuesSummary, sceneSummary, constraints, provider);
+
+            // Verify each candidate by simulating
+            const verified = rawCandidates.map((candidate) => {
+              try {
+                const testScene = structuredClone(scene);
+                const ops = candidate.operations as unknown as SceneOperation[];
+                for (const op of ops) {
+                  applySceneOperation(testScene, op);
+                }
+                const testResult = simulateStudio(testScene);
+
+                const delta = {
+                  totalCoveragePctDelta: Number((testResult.totalCoveragePct - sim.totalCoveragePct).toFixed(1)),
+                  blindspotPctDelta: Number((testResult.blindspotPct - sim.blindspotPct).toFixed(1)),
+                  criticalZoneStatusChanges: testResult.criticalZoneResults
+                    .map((z, i) => {
+                      const prev = sim.criticalZoneResults[i];
+                      if (prev && prev.status !== z.status) return `${z.label}: ${prev.status} → ${z.status}`;
+                      return null;
+                    })
+                    .filter((s): s is string => s !== null),
+                  worstIssueResolved: testResult.issues.filter((i) => i.severity === "critical").length < sim.issues.filter((i) => i.severity === "critical").length,
+                };
+
+                return { ...candidate, verifiedDelta: delta };
+              } catch {
+                return { ...candidate, verifiedDelta: undefined };
+              }
+            });
+
+            const ranked = verified
+              .filter((c) => c.verifiedDelta)
+              .sort((a, b) => (b.verifiedDelta?.totalCoveragePctDelta ?? 0) - (a.verifiedDelta?.totalCoveragePctDelta ?? 0))
+              .map((c, i) => ({ ...c, rank: i + 1 }));
+
+            setStatusSafe({
+              state: "candidates",
+              candidates: ranked,
+              description: `Found ${ranked.length} fix candidate${ranked.length !== 1 ? "s" : ""}`,
+            });
+
+            if (ranked.length === 0) {
+              setStatusSafe({ state: "error", message: "No verified fixes found. Try different constraints." });
+              autoDismiss();
+            }
+          } catch (err) {
+            const message = err instanceof Error ? err.message : "Unknown error";
+            setStatusSafe({ state: "error", message });
+            autoDismiss();
+          }
+          return;
+        }
+        default:
+          setStatusSafe({ state: "error", message: `Unknown command: ${cmd}` });
+          autoDismiss();
+          return;
+      }
     }
 
     setStatusSafe({ state: "parsing" });
@@ -312,37 +496,61 @@ export function useAiCommand() {
 
   const dismissError = useCallback(() => setStatusSafe({ state: "idle" }), [setStatusSafe]);
 
-  return { status, executeCommand, runCounterfactuals, runReportGeneration, dismissError };
-}
+  const applyCandidate = useCallback((ops: CounterfactualCandidate["operations"]) => {
+    const storeState = useStudioStore.getState();
+    for (const op of ops) {
+      const typedOp = op as { type: string };
+      switch (typedOp.type) {
+        case "move_obstruction": {
+          const o = op as { obstructionId: string; newPosition: [number, number, number] };
+          const obs = storeState.scene.obstructions.find((x) => x.id === o.obstructionId);
+          if (obs) { obs.position = o.newPosition; storeState.markDirty(); }
+          break;
+        }
+        case "rotate_camera": {
+          const o = op as { cameraId: string; yawDeg: number; pitchDeg?: number };
+          const cam = storeState.scene.cameras.find((x) => x.id === o.cameraId);
+          if (cam) { cam.yawDeg = o.yawDeg; if (o.pitchDeg !== undefined) cam.pitchDeg = o.pitchDeg; storeState.markDirty(); }
+          break;
+        }
+        case "toggle_camera": {
+          const o = op as { cameraId: string; status: "on" | "off" };
+          const cam = storeState.scene.cameras.find((x) => x.id === o.cameraId);
+          if (cam) { cam.status = o.status; storeState.markDirty(); }
+          break;
+        }
+        case "add_light": {
+          const o = op as { position: [number, number, number] };
+          const light = createSecurityLightNode(o.position);
+          storeState.scene.securityLights.push(light);
+          storeState.markDirty();
+          break;
+        }
+        case "move_camera": {
+          const o = op as { cameraId: string; newPosition: [number, number, number] };
+          const cam = storeState.scene.cameras.find((x) => x.id === o.cameraId);
+          if (cam) { cam.position = o.newPosition; storeState.markDirty(); }
+          break;
+        }
+        case "resize_obstruction": {
+          const o = op as { obstructionId: string; newDimensions: [number, number, number] };
+          const obs = storeState.scene.obstructions.find((x) => x.id === o.obstructionId);
+          if (obs) { obs.dimensions = o.newDimensions; storeState.markDirty(); }
+          break;
+        }
+        default:
+          break;
+      }
+    }
+    storeState.setSimulationRunning(true);
+    setTimeout(() => {
+      const result = simulateStudio(storeState.scene);
+      storeState.setSimulationResult(result, 0);
+    }, 50);
+    setStatusSafe({ state: "idle" });
+  }, [setStatusSafe]);
 
-function handleInternalCommand(text: string) {
-  const store = useStudioStore.getState();
-  switch (text.toLowerCase()) {
-    case "/night":
-    case "/nightmode":
-      store.setEnvironmentMode("night");
-      break;
-    case "/day":
-    case "/daymode":
-      store.setEnvironmentMode("day");
-      break;
-    case "/report":
-      store.setBottomTab("report");
-      break;
-    case "/snapshot":
-      store.saveSnapshot(`Snapshot ${new Date().toLocaleTimeString()}`);
-      break;
-    case "/simulate":
-    case "/run":
-      store.setSimulationRunning(true);
-      setTimeout(() => {
-        const result = simulateStudio(store.scene);
-        store.setSimulationResult(result, 0);
-      }, 50);
-      break;
-    default:
-      break;
-  }
+  return { status, executeCommand, runCounterfactuals, runReportGeneration, dismissError, applyCandidate };
 }
 
 function checkApiKey() {

@@ -4,21 +4,12 @@ import { Eye, ListRestart, Pause, Play, Route, SkipBack, SkipForward } from "luc
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { cn } from "@/lib/cn";
-import { QUALITY_BAR_COLOR, QUALITY_RANK, qualityBadgeClasses } from "@/lib/quality-display";
+import { QUALITY_BAR_COLOR, QUALITY_RANK } from "@/lib/quality-display";
+import { QualityBadge } from "@/components/shared/QualityBadge";
 import { distance2D, lerp2D } from "@/simulation/geometry";
 import { VisibilityTimeline } from "@/components/view/VisibilityTimeline";
 import type { DoriQuality, ScenarioPath, SimulationResult } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
-
-function QualityBadge({ quality }: { quality: DoriQuality }) {
-  const c = qualityBadgeClasses(quality);
-  return (
-    <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider ${c.bg} ${c.text}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${c.dot}`} />
-      {quality}
-    </span>
-  );
-}
 
 function formatTime(seconds: number) {
   const m = Math.floor(seconds / 60);

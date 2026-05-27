@@ -392,6 +392,68 @@ export const SCENE_TEMPLATES: SceneTemplate[] = [
       };
     },
   },
+  {
+    id: "residential-house",
+    name: "Residential House",
+    description: "Single-family home with living areas, bedrooms, garage, and private outdoor space.",
+    category: "residential",
+    suggestedDimensions: { widthM: 18, depthM: 22, heightM: 3.5 },
+    suggestedCameras: 5,
+    icon: "home",
+    create: (overrides) => {
+      const w = overrides?.widthM ?? 18;
+      const d = overrides?.depthM ?? 22;
+      const h = overrides?.heightM ?? 3.5;
+      return {
+        ...makeBase("Residential House", w, d, h) as SecurityScene,
+        walls: [
+          ...rectWalls(w, d, h),
+          // Interior partitions
+          { id: uid("w"), nodeType: "wall" as const, label: "Hallway-Living", start: [0, 8] as [number, number], end: [12, 8] as [number, number], heightM: h, thicknessM: 0.12, material: "solid" as const, visionTransmission: 0, source: "manual" as const },
+          { id: uid("w"), nodeType: "wall" as const, label: "Living-Dining", start: [12, 8] as [number, number], end: [12, 16] as [number, number], heightM: h, thicknessM: 0.12, material: "solid" as const, visionTransmission: 0, source: "manual" as const },
+          { id: uid("w"), nodeType: "wall" as const, label: "Bedroom Divider", start: [0, 14] as [number, number], end: [10, 14] as [number, number], heightM: h, thicknessM: 0.12, material: "solid" as const, visionTransmission: 0, source: "manual" as const },
+        ],
+        doors: [
+          door("Front Door", [w / 2, 0, 0], 1.2),
+          door("Back Door", [w / 2, d, 0], 1.0),
+          door("Garage Door", [0, 3, 0], 3.0),
+        ],
+        windows: [
+          win("Living Room Window", [w / 4, 1.2, 0], [1.8, 1.5, 0.1]),
+          win("Bedroom Window", [3 * w / 4, 1.2, 0], [1.5, 1.5, 0.1]),
+          win("Kitchen Window", [w / 4, 1.2, d], [1.5, 1.2, 0.1]),
+        ],
+        cameras: [
+          cam("Front Door Cam", [w / 2, 2.8, 1], 180, 15, 90, 60, 2.8),
+          cam("Garage Cam", [4, 2.8, 17], 90, 10, 90, 60, 2.8),
+          cam("Back Yard Cam", [w / 2, 2.8, d - 1], 0, 20, 100, 65, 2.8),
+          cam("Hallway Cam", [1.5, 2.8, 9], 90, 30, 110, 70, 2.8),
+          cam("Living Room Cam", [15, 2.8, 12], 270, 25, 100, 65, 2.8),
+        ],
+        securityLights: [
+          light("Front Porch Light", [w / 2, 2.6, 0], 6),
+          light("Back Yard Light", [w / 2, 2.6, d], 6),
+          light("Garage Light", [0, 2.8, 3], 4),
+          light("Hallway Light", [1.5, 2.8, 9], 3),
+        ],
+        obstructions: [],
+        criticalZones: [
+          zone("Front Entry", [[w / 2 - 2, 0], [w / 2 + 2, 0], [w / 2 + 2, 2], [w / 2 - 2, 2]], "recognition", "high", "door_entry_exit"),
+          zone("Garage Entry", [[-1, 2], [2, 2], [2, 4], [-1, 4]], "recognition", "high", "door_entry_exit"),
+          zone("Back Door", [[w / 2 - 2, d], [w / 2 + 2, d], [w / 2 + 2, d - 2], [w / 2 - 2, d - 2]], "recognition", "high", "door_entry_exit"),
+          zone("Living Room", [[12, 10], [w, 10], [w, 16], [12, 16]], "observation", "medium", "person_detection"),
+          zone("Main Hallway", [[0, 8], [2, 8], [2, 14], [0, 14]], "detection", "medium", "person_detection"),
+        ],
+        entryPoints: [
+          { id: uid("entry"), nodeType: "entry_point" as const, label: "Front Door", position: [w / 2, 0] as [number, number] },
+          { id: uid("entry"), nodeType: "entry_point" as const, label: "Back Door", position: [w / 2, d] as [number, number] },
+          { id: uid("entry"), nodeType: "entry_point" as const, label: "Garage Door", position: [0, 3] as [number, number] },
+        ],
+        paths: [],
+        privacyZones: [],
+      };
+    },
+  },
 ];
 
 export function getTemplateById(id: string): SceneTemplate | undefined {

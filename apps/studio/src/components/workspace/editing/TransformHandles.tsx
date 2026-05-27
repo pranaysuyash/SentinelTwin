@@ -27,7 +27,7 @@ export type TransformableNode =
   | PrivacyZoneNode
   | ScenarioPath;
 
-type HandleKind = "move" | "rotate" | "height" | "wall_start" | "wall_end" | "vertex" | "path_point";
+type HandleKind = "move" | "rotate" | "height" | "pitch" | "scale_x" | "scale_z" | "wall_start" | "wall_end" | "vertex" | "path_point";
 
 type DragState = {
   handle: HandleKind;
@@ -101,6 +101,14 @@ function getPointFromEvent(
   return [point.x, point.z];
 }
 
+function getObstructionAxis(rotationYDeg: number) {
+  const angle = (rotationYDeg * Math.PI) / 180;
+  return {
+    xAxis: [Math.cos(angle), Math.sin(angle)] as Point2,
+    zAxis: [-Math.sin(angle), Math.cos(angle)] as Point2,
+  };
+}
+
 function updateDraft(
   node: TransformableNode,
   drag: DragState,
@@ -167,6 +175,31 @@ function updateDraft(
     } else if (next.nodeType === "obstruction") {
       next.rotationYDeg = Math.round(angleDeg);
     }
+    return next;
+  }
+
+  if (drag.handle === "pitch" && next.nodeType === "camera") {
+    const sn = drag.startNode as CameraNode;
+    const pitchDelta = (event.clientY - drag.startClient.y) * 0.15;
+    next.pitchDeg = Math.max(-85, Math.min(-1, Math.round(sn.pitchDeg + pitchDelta)));
+    return next;
+  }
+
+  if (drag.handle === "scale_x" && next.nodeType === "obstruction") {
+    const sn = drag.startNode as ObstructionNode;
+    const [dx, dz] = getObstructionAxis(sn.rotationYDeg).xAxis;
+    const projection = (currentPoint[0] - sn.position[0]) * dx + (currentPoint[1] - sn.position[2]) * dz;
+    const width = Math.max(0.2, Math.abs(projection) * 2);
+    next.dimensions = [width, sn.dimensions[1], sn.dimensions[2]];
+    return next;
+  }
+
+  if (drag.handle === "scale_z" && next.nodeType === "obstruction") {
+    const sn = drag.startNode as ObstructionNode;
+    const [dx, dz] = getObstructionAxis(sn.rotationYDeg).zAxis;
+    const projection = (currentPoint[0] - sn.position[0]) * dx + (currentPoint[1] - sn.position[2]) * dz;
+    const depth = Math.max(0.2, Math.abs(projection) * 2);
+    next.dimensions = [sn.dimensions[0], depth, sn.dimensions[2]];
     return next;
   }
 
@@ -335,6 +368,7 @@ export function TransformHandles() {
       <group>
         <HandleSphere position={[node.position[0], node.position[1], node.position[2]]} color="#60a5fa" onPointerDown={beginDrag("move")} label="Move" />
         <HandleSphere position={[node.position[0], Math.max(0.5, node.position[1] + 0.7), node.position[2]]} color="#f59e0b" onPointerDown={beginDrag("height")} label="Height" />
+        <HandleSphere position={[node.position[0], node.position[1] + 0.95, node.position[2] + 0.12]} color="#38bdf8" onPointerDown={beginDrag("pitch")} label="Pitch" />
         <HandleSphere position={[node.position[0] + Math.cos((node.yawDeg * Math.PI) / 180) * 0.8, node.position[1], node.position[2] + Math.sin((node.yawDeg * Math.PI) / 180) * 0.8]} color="#22c55e" onPointerDown={beginDrag("rotate")} label="Yaw" />
       </group>
     );
@@ -351,11 +385,14 @@ export function TransformHandles() {
 
   if (node.nodeType === "obstruction") {
     const [w, d, h] = node.dimensions;
+    const { xAxis, zAxis } = getObstructionAxis(node.rotationYDeg);
     return (
       <group>
         <HandleSphere position={[node.position[0], node.position[1], node.position[2]]} color="#fb923c" onPointerDown={beginDrag("move")} label="Move" />
         <HandleSphere position={[node.position[0], node.position[1] + h / 2 + 0.3, node.position[2]]} color="#f59e0b" onPointerDown={beginDrag("height")} label="Height" />
         <HandleSphere position={[node.position[0] + Math.cos((node.rotationYDeg * Math.PI) / 180) * (Math.max(w, d) / 2 + 0.45), node.position[1] + 0.1, node.position[2] + Math.sin((node.rotationYDeg * Math.PI) / 180) * (Math.max(w, d) / 2 + 0.45)]} color="#22c55e" onPointerDown={beginDrag("rotate")} label="Rotate" />
+        <HandleSphere position={[node.position[0] + xAxis[0] * (w / 2 + 0.45), node.position[1] + 0.08, node.position[2] + xAxis[1] * (w / 2 + 0.45)]} color="#38bdf8" onPointerDown={beginDrag("scale_x")} label="W" />
+        <HandleSphere position={[node.position[0] + zAxis[0] * (d / 2 + 0.45), node.position[1] + 0.08, node.position[2] + zAxis[1] * (d / 2 + 0.45)]} color="#38bdf8" onPointerDown={beginDrag("scale_z")} label="D" />
       </group>
     );
   }

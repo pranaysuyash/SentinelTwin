@@ -7,8 +7,6 @@ import { useCallback, useState } from "react";
 import type { CounterfactualCandidate } from "@/agents/CounterfactualAgent";
 import { useAiCommand } from "@/hooks/use-ai-command";
 import { cn } from "@/lib/cn";
-import { createSecurityLightNode } from "@/lib/node-factory";
-import { simulateStudio } from "@/simulation/simulate-studio";
 import { useStudioStore } from "@/store/studio-store";
 
 const COST_COLORS: Record<string, string> = {
@@ -103,7 +101,7 @@ export function CounterfactualPanel() {
   const [constraints, setConstraints] = useState("");
   const [candidates, setCandidates] = useState<CounterfactualCandidate[]>([]);
   const [showInput, setShowInput] = useState(false);
-  const { status, runCounterfactuals } = useAiCommand();
+  const { status, runCounterfactuals, applyCandidate } = useAiCommand();
   const store = useStudioStore();
 
   const handlePropose = useCallback(() => {
@@ -116,57 +114,9 @@ export function CounterfactualPanel() {
 
   const handleApply = useCallback(
     (ops: CounterfactualCandidate["operations"]) => {
-      // Apply each operation to the scene
-      for (const op of ops) {
-        const typedOp = op as { type: string };
-        const storeState = useStudioStore.getState();
-        switch (typedOp.type) {
-          case "move_obstruction": {
-            const o = op as { obstructionId: string; newPosition: [number, number, number] };
-            const obs = storeState.scene.obstructions.find((x) => x.id === o.obstructionId);
-            if (obs) {
-              obs.position = o.newPosition;
-              storeState.markDirty();
-            }
-            break;
-          }
-          case "rotate_camera": {
-            const o = op as { cameraId: string; yawDeg: number; pitchDeg?: number };
-            const cam = storeState.scene.cameras.find((x) => x.id === o.cameraId);
-            if (cam) {
-              cam.yawDeg = o.yawDeg;
-              if (o.pitchDeg !== undefined) cam.pitchDeg = o.pitchDeg;
-              storeState.markDirty();
-            }
-            break;
-          }
-          case "toggle_camera": {
-            const o = op as { cameraId: string; status: "on" | "off" };
-            const cam = storeState.scene.cameras.find((x) => x.id === o.cameraId);
-            if (cam) {
-              cam.status = o.status;
-              storeState.markDirty();
-            }
-            break;
-          }
-          case "add_light": {
-            const o = op as { position: [number, number, number] };
-            const light = createSecurityLightNode(o.position);
-            storeState.scene.securityLights.push(light);
-            storeState.markDirty();
-            break;
-          }
-          default:
-            break;
-        }
-      }
-      store.setSimulationRunning(true);
-      setTimeout(() => {
-        const result = simulateStudio(store.scene);
-        store.setSimulationResult(result, 0);
-      }, 50);
+      applyCandidate(ops);
     },
-    [store],
+    [applyCandidate],
   );
 
   const hasResult = store.simulationResult !== null;

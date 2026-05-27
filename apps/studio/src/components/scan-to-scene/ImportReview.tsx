@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle, CheckCircle2, ImageUp, RotateCcw } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { FloorPlanResult } from "@/lib/floor-plan-import";
 
@@ -8,9 +9,39 @@ interface ImportReviewProps {
   result: FloorPlanResult;
   warnings: string[];
   onImageChange: () => void;
+  onRecalibrate: (calibration: { widthM?: number; depthM?: number; heightM?: number }) => void;
+  onUpdateResult: (result: FloorPlanResult) => void;
 }
 
-export function ImportReview({ result, warnings, onImageChange }: ImportReviewProps) {
+export function ImportReview({ result, warnings, onImageChange, onRecalibrate, onUpdateResult }: ImportReviewProps) {
+  const [widthM, setWidthM] = useState(result.roomDimensions.widthM.toString());
+  const [depthM, setDepthM] = useState(result.roomDimensions.depthM.toString());
+  const [heightM, setHeightM] = useState(result.roomDimensions.heightM.toString());
+  const [wallMask, setWallMask] = useState<boolean[]>(result.walls.map(() => true));
+  const [doorMask, setDoorMask] = useState<boolean[]>(result.doors.map(() => true));
+  const [windowMask, setWindowMask] = useState<boolean[]>(result.windows.map(() => true));
+
+  useEffect(() => {
+    setWallMask(result.walls.map(() => true));
+    setDoorMask(result.doors.map(() => true));
+    setWindowMask(result.windows.map(() => true));
+    setWidthM(result.roomDimensions.widthM.toString());
+    setDepthM(result.roomDimensions.depthM.toString());
+    setHeightM(result.roomDimensions.heightM.toString());
+  }, [result]);
+
+  const hasCalibrationChange = useMemo(
+    () =>
+      Number(widthM) !== result.roomDimensions.widthM ||
+      Number(depthM) !== result.roomDimensions.depthM ||
+      Number(heightM) !== result.roomDimensions.heightM,
+    [widthM, depthM, heightM, result.roomDimensions.widthM, result.roomDimensions.depthM, result.roomDimensions.heightM],
+  );
+  const hasFilteredEdits = useMemo(
+    () => wallMask.some((v) => !v) || doorMask.some((v) => !v) || windowMask.some((v) => !v),
+    [wallMask, doorMask, windowMask],
+  );
+
   return (
     <div className="space-y-3">
       {/* Confidence & metrics */}
@@ -57,6 +88,157 @@ export function ImportReview({ result, warnings, onImageChange }: ImportReviewPr
             <span className="text-[#3a4158]">Windows Detected</span>
             <span className="text-[#68738a]">{result.windows.length}</span>
           </div>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-[#1e2130] bg-[#070a12] p-2">
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-[9px] font-medium text-[#59637a]">Detection Corrections</span>
+          <button
+            onClick={() => {
+              setWallMask(result.walls.map(() => true));
+              setDoorMask(result.doors.map(() => true));
+              setWindowMask(result.windows.map(() => true));
+            }}
+            className="text-[8px] text-[#8ea5c6] hover:text-white"
+          >
+            Reset
+          </button>
+        </div>
+        <div className="space-y-1.5">
+          <div>
+            <div className="mb-1 text-[8px] uppercase tracking-[0.14em] text-[#4f5a72]">Walls</div>
+            <div className="max-h-20 space-y-1 overflow-y-auto pr-1">
+              {result.walls.slice(0, 20).map((wall, index) => (
+                <label key={`wall-${index}`} className="flex items-center justify-between rounded border border-[#1b2233] px-1.5 py-1 text-[8px] text-[#9bb0ce]">
+                  <span>
+                    W{index + 1}: ({wall.start.x},{wall.start.y}) → ({wall.end.x},{wall.end.y})
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={wallMask[index] ?? true}
+                    onChange={(event) => {
+                      const next = [...wallMask];
+                      next[index] = event.target.checked;
+                      setWallMask(next);
+                    }}
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-1.5">
+            <div>
+              <div className="mb-1 text-[8px] uppercase tracking-[0.14em] text-[#4f5a72]">Doors</div>
+              <div className="max-h-16 space-y-1 overflow-y-auto pr-1">
+                {result.doors.length === 0 ? (
+                  <div className="text-[8px] text-[#4f5a72]">None detected</div>
+                ) : result.doors.map((door, index) => (
+                  <label key={`door-${index}`} className="flex items-center justify-between rounded border border-[#1b2233] px-1.5 py-1 text-[8px] text-[#9bb0ce]">
+                    <span>D{index + 1}: {door.widthM}m</span>
+                    <input
+                      type="checkbox"
+                      checked={doorMask[index] ?? true}
+                      onChange={(event) => {
+                        const next = [...doorMask];
+                        next[index] = event.target.checked;
+                        setDoorMask(next);
+                      }}
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-1 text-[8px] uppercase tracking-[0.14em] text-[#4f5a72]">Windows</div>
+              <div className="max-h-16 space-y-1 overflow-y-auto pr-1">
+                {result.windows.length === 0 ? (
+                  <div className="text-[8px] text-[#4f5a72]">None detected</div>
+                ) : result.windows.map((window, index) => (
+                  <label key={`window-${index}`} className="flex items-center justify-between rounded border border-[#1b2233] px-1.5 py-1 text-[8px] text-[#9bb0ce]">
+                    <span>Wn{index + 1}: {window.widthM}m</span>
+                    <input
+                      type="checkbox"
+                      checked={windowMask[index] ?? true}
+                      onChange={(event) => {
+                        const next = [...windowMask];
+                        next[index] = event.target.checked;
+                        setWindowMask(next);
+                      }}
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-2 flex items-center justify-between">
+          <span className="text-[8px] text-[#4f5a72]">Uncheck false detections, then apply.</span>
+          <button
+            disabled={!hasFilteredEdits}
+            onClick={() => {
+              const filtered: FloorPlanResult = {
+                ...result,
+                walls: result.walls.filter((_, idx) => wallMask[idx]),
+                doors: result.doors.filter((_, idx) => doorMask[idx]),
+                windows: result.windows.filter((_, idx) => windowMask[idx]),
+              };
+              onUpdateResult(filtered);
+            }}
+            className="rounded border border-[#2a3045] px-2 py-1 text-[8px] text-[#93a5c7] transition-colors hover:border-blue-500/40 hover:text-white disabled:opacity-40"
+          >
+            Apply Corrections
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-[#1e2130] bg-[#070a12] p-2">
+        <div className="mb-1.5 text-[9px] font-medium text-[#59637a]">Scale Calibration (meters)</div>
+        <div className="grid grid-cols-3 gap-1.5">
+          <label className="text-[8px] text-[#59637a]">
+            Width
+            <input
+              value={widthM}
+              onChange={(event) => setWidthM(event.target.value)}
+              className="mt-0.5 w-full rounded border border-[#1e2130] bg-[#0a0f18] px-1.5 py-1 text-[9px] text-[#c5ccdb] outline-none focus:border-blue-500/40"
+            />
+          </label>
+          <label className="text-[8px] text-[#59637a]">
+            Depth
+            <input
+              value={depthM}
+              onChange={(event) => setDepthM(event.target.value)}
+              className="mt-0.5 w-full rounded border border-[#1e2130] bg-[#0a0f18] px-1.5 py-1 text-[9px] text-[#c5ccdb] outline-none focus:border-blue-500/40"
+            />
+          </label>
+          <label className="text-[8px] text-[#59637a]">
+            Height
+            <input
+              value={heightM}
+              onChange={(event) => setHeightM(event.target.value)}
+              className="mt-0.5 w-full rounded border border-[#1e2130] bg-[#0a0f18] px-1.5 py-1 text-[9px] text-[#c5ccdb] outline-none focus:border-blue-500/40"
+            />
+          </label>
+        </div>
+        <div className="mt-2 flex items-center justify-between">
+          <span className="text-[8px] text-[#4f5a72]">Use known room dimensions to refine scale.</span>
+          <button
+            onClick={() => {
+              const nextWidth = Number(widthM);
+              const nextDepth = Number(depthM);
+              const nextHeight = Number(heightM);
+              if (Number.isFinite(nextWidth) && Number.isFinite(nextDepth) && Number.isFinite(nextHeight) && nextWidth > 0 && nextDepth > 0 && nextHeight > 0) {
+                onRecalibrate({ widthM: nextWidth, depthM: nextDepth, heightM: nextHeight });
+              }
+            }}
+            disabled={!hasCalibrationChange}
+            className="rounded border border-[#2a3045] px-2 py-1 text-[8px] text-[#93a5c7] transition-colors hover:border-blue-500/40 hover:text-white disabled:opacity-40"
+          >
+            Apply Calibration
+          </button>
         </div>
       </div>
 

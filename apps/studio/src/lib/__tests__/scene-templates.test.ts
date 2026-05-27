@@ -7,8 +7,8 @@ import {
 } from "@/lib/scene-templates";
 
 describe("SCENE_TEMPLATES", () => {
-  test("has all 5 templates", () => {
-    expect(SCENE_TEMPLATES.length).toBe(5);
+  test("has all 6 templates", () => {
+    expect(SCENE_TEMPLATES.length).toBe(6);
   });
 
   test("each template has required fields", () => {
@@ -76,7 +76,7 @@ describe("getTemplatesByCategory", () => {
     expect(getTemplatesByCategory("retail")).toHaveLength(1);
     expect(getTemplatesByCategory("office")).toHaveLength(1);
     expect(getTemplatesByCategory("education")).toHaveLength(1);
-    expect(getTemplatesByCategory("residential")).toHaveLength(0); // Not implemented yet
+    expect(getTemplatesByCategory("residential")).toHaveLength(1);
   });
 
   test("returns empty array for unknown category", () => {

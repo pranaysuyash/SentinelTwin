@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
 const inspectorPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/inspector/InspectorPanel.tsx";
+const controlsPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/inspector/inspector-controls.tsx";
 
 describe("InspectorPanel", () => {
   test("defines an obstruction inspector and obstruction selection branch", () => {
@@ -18,19 +19,22 @@ describe("InspectorPanel", () => {
   });
 
   test("renders editable camera placement and optics controls", () => {
-    const source = readFileSync(inspectorPath, "utf8");
+    const panelSource = readFileSync(inspectorPath, "utf8");
+    const controlsSource = readFileSync(controlsPath, "utf8");
 
-    expect(source).toContain("function NumberInput(");
-    expect(source).toContain("function SliderInput(");
-    expect(source).toContain('label="X"');
-    expect(source).toContain('label="Y"');
-    expect(source).toContain('label="Z"');
-    expect(source).toContain('label="Yaw"');
-    expect(source).toContain('label="Pitch"');
-    expect(source).toContain("FOV (Horizontal)");
-    expect(source).toContain("const updateHeight = (nextHeight: number) => {");
-    expect(source).toContain("Aim at Zone");
-    expect(source).toContain("Duplicate");
+    // Controls are now extracted to inspector-controls.tsx; InspectorPanel imports them
+    expect(panelSource).toContain("inspector-controls");
+    expect(controlsSource).toContain("export function NumberInput(");
+    expect(controlsSource).toContain("export function SliderInput(");
+    expect(panelSource).toContain('label="X"');
+    expect(panelSource).toContain('label="Y"');
+    expect(panelSource).toContain('label="Z"');
+    expect(panelSource).toContain('label="Yaw"');
+    expect(panelSource).toContain('label="Pitch"');
+    expect(panelSource).toContain("FOV (Horizontal)");
+    expect(panelSource).toContain("const updateHeight = (nextHeight: number) => {");
+    expect(panelSource).toContain("Aim at Zone");
+    expect(panelSource).toContain("Duplicate");
   });
 
   test("wires the inspector view tab to the camera feed canvas", () => {

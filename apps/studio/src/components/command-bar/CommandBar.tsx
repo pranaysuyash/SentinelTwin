@@ -1,16 +1,24 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowUp, Loader2, Sparkles, X } from "lucide-react";
+import { ArrowUp, CheckCircle2, Loader2, Sparkles, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useAiCommand } from "@/hooks/use-ai-command";
+import type { CounterfactualCandidate } from "@/agents/CounterfactualAgent";
+
+const COST_COLORS: Record<string, string> = {
+  free: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+  low: "text-blue-400 bg-blue-500/10 border-blue-500/20",
+  medium: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+  high: "text-red-400 bg-red-500/10 border-red-500/20",
+};
 
 export function CommandBar() {
   const [input, setInput] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { status, executeCommand, dismissError } = useAiCommand();
+  const { status, executeCommand, dismissError, applyCandidate } = useAiCommand();
 
   const handleSubmit = useCallback(() => {
     const trimmed = input.trim();
@@ -105,6 +113,26 @@ export function CommandBar() {
                 </button>
               </div>
             )}
+            {status.state === "candidates" && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-[11px] text-emerald-300">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {status.description}
+                </div>
+                <div className="max-h-[240px] space-y-2 overflow-y-auto">
+                  {status.candidates.map((candidate) => (
+                    <CandidateCard
+                      key={candidate.id}
+                      candidate={candidate}
+                      onApply={() => {
+                        applyCandidate(candidate.operations);
+                        dismissError();
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -161,7 +189,69 @@ export function CommandBar() {
             </button>
           ))}
         </div>
+        {/* Slash commands */}
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {["/dusk", "/compare", "/fail", "/fix", "/simulate", "/snapshot"].map((cmd) => (
+            <button
+              key={cmd}
+              onClick={() => {
+                setInput(cmd);
+                inputRef.current?.focus();
+              }}
+              className="rounded-md border border-[#1a2533] bg-[#0d141a] px-2 py-1 font-mono text-[9px] text-emerald-400/70 transition-colors hover:border-[#1a3540] hover:text-emerald-300"
+            >
+              {cmd}
+            </button>
+          ))}
+        </div>
       </div>
     </motion.div>
+  );
+}
+
+/** Compact candidate card rendered inline in the command bar results. */
+function CandidateCard({ candidate, onApply }: { candidate: CounterfactualCandidate; onApply: () => void }) {
+  return (
+    <div className="rounded-lg border border-[#1a2030] bg-[#07090f] px-2.5 py-2">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-1.5">
+          <span
+            className={`mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded text-[7px] font-bold ${
+              COST_COLORS[candidate.costCategory] ?? "text-[#647089] border border-[#24283a]"
+            }`}
+          >
+            {candidate.rank}
+          </span>
+          <p className="text-[10px] leading-snug text-[#c7d0e4]">{candidate.description}</p>
+        </div>
+        <span
+          className={`flex-shrink-0 rounded px-1 py-0.5 text-[7px] font-medium uppercase tracking-wider ${
+            COST_COLORS[candidate.costCategory] ?? "text-[#647089]"
+          }`}
+        >
+          {candidate.costCategory}
+        </span>
+      </div>
+      {candidate.verifiedDelta && (
+        <div className="mt-1 flex flex-wrap gap-3 rounded bg-[#0a0d15] px-2 py-1 text-[8px]">
+          <span className={candidate.verifiedDelta.totalCoveragePctDelta >= 0 ? "text-emerald-400" : "text-red-400"}>
+            {candidate.verifiedDelta.totalCoveragePctDelta >= 0 ? "+" : ""}{candidate.verifiedDelta.totalCoveragePctDelta}% cov
+          </span>
+          <span className={candidate.verifiedDelta.blindspotPctDelta <= 0 ? "text-emerald-400" : "text-red-400"}>
+            {candidate.verifiedDelta.blindspotPctDelta >= 0 ? "+" : ""}{candidate.verifiedDelta.blindspotPctDelta}% blind
+          </span>
+          {candidate.verifiedDelta.worstIssueResolved && (
+            <span className="text-emerald-400"><CheckCircle2 className="mr-0.5 inline h-2.5 w-2.5" />issue fixed</span>
+          )}
+        </div>
+      )}
+      <button
+        onClick={onApply}
+        className="mt-1.5 inline-flex w-full items-center justify-center gap-1 rounded border border-[#24283a] bg-[#111521] py-1 text-[9px] font-medium text-emerald-300 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10"
+      >
+        <Sparkles className="h-2.5 w-2.5" />
+        Apply This Fix
+      </button>
+    </div>
   );
 }

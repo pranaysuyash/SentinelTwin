@@ -313,9 +313,9 @@ describe("golden simulation product claims", () => {
     expect((zone?.redundancyCameraCount ?? 0) >= 2).toBe(true);
 
     for (const camera of result.cameraResults) {
-      const losesRedundancy = camera.offlineImpactDetail.some((entry) =>
+      const losesRedundancy = camera.offlineImpactDetail?.some((entry) =>
         entry.reason.includes("loses redundancy"),
-      );
+      ) ?? false;
       expect(losesRedundancy).toBe(false);
     }
   });

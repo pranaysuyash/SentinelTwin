@@ -720,10 +720,10 @@ export function MapLayers({
                 y1={a.y}
                 x2={b.x}
                 y2={b.y}
-                stroke="#f43f5e"
-                strokeWidth={1.3}
-                strokeDasharray="4 3"
-                opacity={0.75}
+                stroke={qualityColor(wp.detectionQuality)}
+                strokeWidth={1.5}
+                strokeLinecap="round"
+                opacity={0.85}
               />
             );
           })}

@@ -66,8 +66,19 @@ export function MetricsTab() {
     : result.totalCoveragePct > 60 ? "#f97316"
     : "#ef4444";
 
+  const fragilitySummary = result.fragilitySummary;
+  const fragilityPct = fragilitySummary
+    ? Math.round(fragilitySummary.meanFragility * 100)
+    : null;
+  const fragilityColor = fragilityPct === null ? "#4a5568"
+    : fragilityPct <= 30 ? "#22c55e"
+    : fragilityPct <= 60 ? "#f5a623"
+    : "#ef4444";
+
+  const colCount = fragilitySummary ? 8 : 7;
+
   return (
-    <div className="grid h-full" style={{gridTemplateColumns: "repeat(7, minmax(0, 1fr))"}}>
+    <div className="grid h-full" style={{gridTemplateColumns: `repeat(${colCount}, minmax(0, 1fr))`}}>
       {/* 1: Overall Coverage */}
       <MetricCard label="Overall Coverage (Detection)">
         <DonutChart
@@ -169,6 +180,26 @@ export function MetricsTab() {
           <div className="text-[9px] text-[#68738a] mt-1">of Walkable Area</div>
         </div>
       </MetricCard>
+
+      {/* 8: Coverage Fragility — only rendered when simulation includes fragility data */}
+      {fragilitySummary ? (
+        <MetricCard label="Coverage Fragility">
+          <div className="text-center">
+            <div className="text-[28px] font-bold leading-none" style={{ color: fragilityColor }}>
+              {fragilityPct}%
+            </div>
+            <div className="mt-1 text-[9px] font-semibold tracking-wide" style={{ color: fragilityColor }}>
+              {fragilityPct! <= 30 ? "ROBUST" : fragilityPct! <= 60 ? "MODERATE" : "FRAGILE"}
+            </div>
+            <div className="mt-2 text-[9px] text-[#68738a]">
+              {fragilitySummary.fragileCellCount} fragile cells
+            </div>
+            <div className="text-[9px] text-[#4a5568]">
+              {fragilitySummary.robustCellCount} robust
+            </div>
+          </div>
+        </MetricCard>
+      ) : null}
     </div>
   );
 }

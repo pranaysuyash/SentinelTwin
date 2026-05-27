@@ -132,7 +132,7 @@ export class QwenProvider implements ModelProvider {
 
   async completeStructured<T>(prompt: ModelPrompt, schema: z.ZodSchema<T>, signal?: AbortSignal): Promise<T> {
     // Use JSON mode (most OpenAI-compatible endpoints support it)
-    const jsonSchema = zodToJsonSchema(schema as unknown as Record<string, unknown>);
+    const jsonSchema = zodToJsonSchema(schema as unknown as Parameters<typeof zodToJsonSchema>[0]);
     const schemaStr = JSON.stringify(jsonSchema);
 
     const body = {

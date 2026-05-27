@@ -41,7 +41,7 @@ export function DockRail({
     <div
       className={cn(
         "flex h-full w-full items-stretch gap-1 border-[#1e2130] bg-[#0c0f16] text-[#c7d0e4]",
-        isBottom ? "flex-row border-t px-1.5 py-1" : "flex-col border-r px-1 py-1.5",
+        isBottom ? "flex-row border-t px-1.5 py-1" : "flex-col border-r px-1 py-1",
       )}
     >
       <button
@@ -63,10 +63,10 @@ export function DockRail({
         )}
       >
         <div className={cn("min-w-0", isBottom ? "flex items-center gap-2" : "space-y-0.5")}>
-          <div className="truncate text-[9px] font-semibold uppercase tracking-[0.2em] text-[#78839a]">
+          <div className="truncate text-[8px] font-semibold uppercase tracking-[0.18em] text-[#78839a]">
             {title}
           </div>
-          <div className="truncate text-[9px] text-[#556076]">{subtitle ?? workspacePreset.replace(/_/g, " ")}</div>
+          <div className="truncate text-[8px] text-[#556076]">{subtitle ?? workspacePreset.replace(/_/g, " ")}</div>
         </div>
 
         <div className={cn("flex items-center gap-1", isBottom ? "ml-auto" : "mt-1")}>

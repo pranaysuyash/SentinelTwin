@@ -1,7 +1,7 @@
 "use client";
 
 import { Html, OrbitControls } from "@react-three/drei";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas } from "@react-three/fiber";
 import { motion } from "framer-motion";
 import { ListRestart, Pause, Play, SkipBack, SkipForward } from "lucide-react";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -21,10 +21,12 @@ import {
   CoverageTileFloor,
   CoverageHeatmapInstanced,
   CoverageSegmentPath,
+  PathActor,
 } from "@/components/workspace/SharedScene";
 import { samplePathQuality } from "@/components/map/path-quality";
 import { VisibilityTimeline } from "@/components/view/VisibilityTimeline";
 import type { DoriQuality, ScenarioPath } from "@/schema/security-scene";
+import { getYawPitchDirection } from "@/simulation/geometry";
 import { buildCoverageGrid } from "@/simulation/grid";
 
 // ── Shared scene ──
@@ -193,6 +195,7 @@ function buildLegalizedReplayWaypoints(
     ...waypoint,
     rawPosition: waypoint.position,
     collided: false,
+    blockedBy: undefined as string | undefined,
   }));
 
   const grid = buildCoverageGrid(scene, 6);
@@ -213,8 +216,9 @@ function buildLegalizedReplayWaypoints(
       next.position[1] - current.position[1],
     );
     const steps = Math.max(1, Math.ceil(segmentDistance / 0.22));
+    const startStep = index === 0 ? 0 : 1;
 
-    for (let step = 0; step < steps; step += 1) {
+    for (let step = startStep; step < steps; step += 1) {
       const ratio = step / steps;
       const rawPoint: [number, number] = [
         current.position[0] + (next.position[0] - current.position[0]) * ratio,
@@ -237,100 +241,21 @@ function buildLegalizedReplayWaypoints(
   }
 
   const last = sourceWaypoints[sourceWaypoints.length - 1]!;
-  const obstruction = findPointCollision(last.position, scene);
-  legalized.push({
-    position: obstruction ? findNearestWalkablePoint(last.position, walkableCells) : last.position,
-    rawPosition: last.position,
-    timeS: last.timeS,
-    collided: Boolean(obstruction),
-    blockedBy: obstruction?.label,
-  });
+  if (legalized.length === 0 || legalized[legalized.length - 1]!.timeS !== last.timeS) {
+    const obstruction = findPointCollision(last.position, scene);
+    legalized.push({
+      position: obstruction ? findNearestWalkablePoint(last.position, walkableCells) : last.position,
+      rawPosition: last.position,
+      timeS: last.timeS,
+      collided: Boolean(obstruction),
+      blockedBy: obstruction?.label,
+    });
+  }
 
   return legalized;
 }
 
-// ── Animated Actor (useFrame for R3F-native per-frame updates) ──
 
-function PathActor({ waypoints, currentIndex, progress }: {
-  waypoints: [number, number][];
-  currentIndex: number;
-  progress: number;
-}) {
-  const groupRef = useRef<THREE.Group>(null!);
-  // Ref to latest props so useFrame always reads fresh values
-  const propsRef = useRef({ waypoints, currentIndex, progress });
-
-  useEffect(() => {
-    propsRef.current = { waypoints, currentIndex, progress };
-  }, [waypoints, currentIndex, progress]);
-
-  // Directly mutate the Three.js object every frame — no React re-render
-  useFrame(() => {
-    const { waypoints: wps, currentIndex: idx, progress: prog } = propsRef.current;
-    if (!groupRef.current || wps.length < 2) return;
-
-    let x: number, z: number, dx = 0, dz = 0;
-    if (idx >= wps.length - 1) {
-      x = wps[wps.length - 1][0];
-      z = wps[wps.length - 1][1];
-    } else {
-      const a = wps[idx];
-      const b = wps[Math.min(idx + 1, wps.length - 1)];
-      dx = b[0] - a[0];
-      dz = b[1] - a[1];
-      x = a[0] + dx * prog;
-      z = a[1] + dz * prog;
-    }
-
-    groupRef.current.position.set(x, 0.02, z);
-    const angle = Math.atan2(dx, dz);
-    groupRef.current.rotation.y = angle;
-  });
-
-  return (
-    <group ref={groupRef}>
-      {/* Actor shadow */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.015, 0]}>
-        <circleGeometry args={[0.25, 16]} />
-        <meshBasicMaterial color="#000" transparent opacity={0.2} />
-      </mesh>
-      {/* Body - capsule torso */}
-      <mesh position={[0, 0.8, 0]} castShadow>
-        <capsuleGeometry args={[0.12, 0.35, 4, 8]} />
-        <meshStandardMaterial color="#1e293b" roughness={0.6} metalness={0.1} />
-      </mesh>
-      {/* Head */}
-      <mesh position={[0, 1.05, 0]} castShadow>
-        <sphereGeometry args={[0.09, 8, 8]} />
-        <meshStandardMaterial color="#475569" roughness={0.5} />
-      </mesh>
-      {/* Left arm */}
-      <mesh position={[-0.14, 0.82, 0]} rotation={[0, 0, 0.15]} castShadow>
-        <capsuleGeometry args={[0.03, 0.2, 4, 6]} />
-        <meshStandardMaterial color="#334155" />
-      </mesh>
-      {/* Right arm */}
-      <mesh position={[0.14, 0.82, 0]} rotation={[0, 0, -0.15]} castShadow>
-        <capsuleGeometry args={[0.03, 0.2, 4, 6]} />
-        <meshStandardMaterial color="#334155" />
-      </mesh>
-      {/* Legs */}
-      <mesh position={[-0.06, 0.38, 0]} castShadow>
-        <capsuleGeometry args={[0.03, 0.25, 4, 6]} />
-        <meshStandardMaterial color="#0f172a" />
-      </mesh>
-      <mesh position={[0.06, 0.38, 0]} castShadow>
-        <capsuleGeometry args={[0.03, 0.25, 4, 6]} />
-        <meshStandardMaterial color="#0f172a" />
-      </mesh>
-      {/* Detection state indicator ring */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.005, 0]}>
-        <ringGeometry args={[0.12, 0.28, 24]} />
-        <meshBasicMaterial color="#22c55e" transparent opacity={0.5} />
-      </mesh>
-    </group>
-  );
-}
 
 function ReplayCameraCones() {
   const scene = useStudioStore((s) => s.scene);
@@ -338,11 +263,8 @@ function ReplayCameraCones() {
   return (
     <group>
       {scene.cameras.map((camera) => {
-        const forward = new THREE.Vector3(
-          Math.sin((camera.yawDeg * Math.PI) / 180) * Math.cos((camera.pitchDeg * Math.PI) / 180),
-          Math.sin((camera.pitchDeg * Math.PI) / 180),
-          Math.cos((camera.yawDeg * Math.PI) / 180) * Math.cos((camera.pitchDeg * Math.PI) / 180),
-        ).normalize();
+        const direction = getYawPitchDirection(camera.yawDeg, camera.pitchDeg);
+        const forward = new THREE.Vector3(direction.x, direction.y, direction.z).normalize();
         const range = Math.min(camera.rangeM, 12);
         const radius = Math.tan((camera.fovHorizontalDeg / 2) * (Math.PI / 180)) * range;
         const centerPos = new THREE.Vector3(...camera.position).add(forward.clone().multiplyScalar(range / 2));
@@ -406,9 +328,6 @@ function ReplayCollisionMarkers({
         <ringGeometry args={[0.08, 0.16, 24]} />
         <meshBasicMaterial color="#22c55e" transparent opacity={0.7} />
       </mesh>
-      {collisionLine && (
-        <primitive object={collisionLine} />
-      )}
       {collisionLine && (
         <lineSegments geometry={collisionLine}>
           <lineBasicMaterial color="#f97316" transparent opacity={0.85} />
@@ -902,9 +821,9 @@ export function PathReplayView() {
     [replaySamples],
   );
   const criticalZoneReachableAlongRoute =
-    coverageFailurePath?.criticalZoneReachableAlongRoute
-    ?? coverageFailurePath?.targetReached
-    ?? false;
+    coverageFailurePath?.criticalZonesReachableAlongRoute?.length
+      ? true
+      : (coverageFailurePath?.targetReached ?? false);
 
   const totalDuration =
     activePathResult?.totalDurationS

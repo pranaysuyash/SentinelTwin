@@ -47,7 +47,7 @@ export function AssumptionsPanel() {
             <span className="capitalize">{assumptions.interiorLightLevel}</span>
           </Field>
           <Field label="DORI Standard">
-            <span>{assumptions.doriStandard === "iec62676" ? "IEC 62676-4:2025" : "Simplified"}</span>
+            <span>{assumptions.doriStandard === "oodpcvs_2025" ? "IEC 62676-4:2025 (OODPCVS)" : "DORI 2014"}</span>
           </Field>
           <Field label="Night Penalty">
             <span className="capitalize">{assumptions.nightPenaltyMode}</span>

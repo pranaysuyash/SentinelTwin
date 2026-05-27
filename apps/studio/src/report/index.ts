@@ -149,7 +149,10 @@ export function buildReportData(
       : undefined,
     meetsModeledZoneRequirements,
     codeCompliant: meetsModeledZoneRequirements,
-    standardsRef: "IEC 62676-4:2025 (OODPCVS)",
+    standardsRef:
+      scene.assumptions.doriStandard === "oodpcvs_2025"
+        ? "IEC 62676-4:2025 (OODPCVS)"
+        : "DORI 2014 (IEC 62676-4:2014)",
   };
 }
 

@@ -1,26 +1,34 @@
 "use client";
 
 import { Edit3, Play } from "lucide-react";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 
 import { CoverageRibbon } from "@/components/map/CoverageRibbon";
 import { MapCanvas } from "@/components/map/MapCanvas";
-import { pathLengthM, pointOnPathAtProgress } from "@/components/map/map-utils";
+import { MAP_COLORS, qualityColor } from "@/components/map/map-colors";
+import { pathLengthM, pointOnPathAtProgress, samplePathQuality } from "@/components/map/path-quality";
+import type { DoriQuality, ScenarioPath } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
-import type { DoriQuality } from "@/schema/security-scene";
 
 type PathMapProps = {
   width?: number;
   height?: number;
 };
 
-const QUALITY_COLORS: Record<DoriQuality, string> = {
-  identification: "#3b82f6",
-  recognition: "#22c55e",
-  observation: "#eab308",
-  detection: "#f97316",
-  none: "#ef4444",
-};
+const QUALITY_ORDER: DoriQuality[] = [
+  "none",
+  "detection",
+  "overview",
+  "outline",
+  "observation",
+  "discern",
+  "perceive",
+  "recognition",
+  "characterize",
+  "validate",
+  "identification",
+  "scrutinize",
+];
 
 function mapLayerFlagsFromStore(layerVis: Record<string, boolean>) {
   return {
@@ -37,6 +45,35 @@ function mapLayerFlagsFromStore(layerVis: Record<string, boolean>) {
     coverage: layerVis.heatmap,
     labels: layerVis.labels,
   };
+}
+
+function findLastAtOrBefore<T extends { timeS: number }>(items: T[], timeS: number) {
+  for (let index = items.length - 1; index >= 0; index -= 1) {
+    if (items[index]!.timeS <= timeS) {
+      return items[index]!;
+    }
+  }
+  return null;
+}
+
+function findNextAfter<T extends { timeS: number }>(items: T[], timeS: number) {
+  return items.find((item) => item.timeS > timeS) ?? null;
+}
+
+function selectCurrentBestCamera(
+  sample: ReturnType<typeof samplePathQuality>[number] | null,
+  visibilityByCamera: Record<string, { visibleS: number }> | undefined,
+) {
+  if (sample?.coveringCameras.length) {
+    return sample.coveringCameras[0] ?? null;
+  }
+
+  if (!visibilityByCamera) return null;
+
+  const [cameraId] = Object.entries(visibilityByCamera)
+    .sort((left, right) => right[1].visibleS - left[1].visibleS)[0] ?? [];
+
+  return cameraId ?? null;
 }
 
 export function PathMap({
@@ -59,19 +96,10 @@ export function PathMap({
   const pathReplay = useStudioStore((s) => s.pathReplay);
   const setPathReplayPlaying = useStudioStore((s) => s.setPathReplayPlaying);
   const setPathReplayProgress = useStudioStore((s) => s.setPathReplayProgress);
+  const setViewMode = useStudioStore((s) => s.setViewMode);
+  const setFocusScenePointRequest = useStudioStore((s) => s.setFocusScenePointRequest);
 
   const activePath = useMemo(() => scene.paths.find((path) => path.id === activePathId) ?? null, [scene.paths, activePathId]);
-
-  useEffect(() => {
-    if (scene.paths.length === 0 && activePathId !== null) {
-      setActivePathId(null);
-      return;
-    }
-
-    if (activePathId && !scene.paths.some((path) => path.id === activePathId) && scene.paths.length > 0) {
-      setActivePathId(null);
-    }
-  }, [activePathId, scene.paths, setActivePathId]);
 
   const pathResult = useMemo(() => {
     if (!activePath) return null;
@@ -89,7 +117,36 @@ export function PathMap({
     return pointOnPathAtProgress(activePath, pathReplay.progress);
   }, [activePath, pathReplay.progress]);
 
-  const [selectedSegment, setSelectedSegment] = useState<string | null>(null);
+  const pathSamples = useMemo(() => {
+    if (!activePath) return [];
+    return samplePathQuality(activePath, result?.coverageCells ?? [], 0.3);
+  }, [activePath, result?.coverageCells]);
+
+  const currentTime = pathResult ? pathResult.totalDurationS * pathReplay.progress : 0;
+  const currentSampleIndex = useMemo(() => {
+    if (!pathSamples.length) return -1;
+    let winner = 0;
+    for (let index = 0; index < pathSamples.length; index += 1) {
+      if (pathSamples[index]!.timeS <= currentTime) {
+        winner = index;
+        continue;
+      }
+      break;
+    }
+    return winner;
+  }, [currentTime, pathSamples]);
+
+  const [selectedSegmentIndex, setSelectedSegmentIndex] = useState<number | null>(null);
+  const detailIndex = selectedSegmentIndex ?? currentSampleIndex;
+  const detailSample = detailIndex >= 0 ? pathSamples[Math.min(detailIndex, Math.max(pathSamples.length - 1, 0))] ?? null : null;
+  const currentBand = detailSample
+    ? pathSamples.find((sample, index) => index === detailIndex) ?? null
+    : null;
+  const currentEvent = pathResult ? findLastAtOrBefore(pathResult.timeline, currentTime) : null;
+  const nextEvent = pathResult ? findNextAfter(pathResult.timeline, currentTime) : null;
+  const currentBestCamera = selectCurrentBestCamera(detailSample ?? null, pathResult?.visibilityByCamera);
+  const currentQualityLabel = detailSample ? detailSample.quality.toUpperCase() : "NO PATH";
+  const currentQualityColor = detailSample ? qualityColor(detailSample.quality) : MAP_COLORS.quality.none;
 
   return (
     <div className="w-[194px] flex-shrink-0 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
@@ -104,7 +161,7 @@ export function PathMap({
           onChange={(event) => {
             const id = event.target.value;
             setActivePathId(id || null);
-            setSelectedSegment(null);
+            setSelectedSegmentIndex(null);
             setPathReplayPlaying(false);
             setPathReplayProgress(0);
           }}
@@ -115,9 +172,7 @@ export function PathMap({
             <>
               <option value="">Select path</option>
               {scene.paths.map((path) => (
-                <option key={path.id} value={path.id}>
-                  {path.label}
-                </option>
+                <option key={path.id} value={path.id}>{path.label}</option>
               ))}
             </>
           )}
@@ -148,13 +203,25 @@ export function PathMap({
         hoveredNodeId={hovered}
         activePathId={activePath?.id ?? null}
         paths={scene.paths}
+        selectedPathSegmentPathId={activePath?.id ?? null}
+        selectedPathSegmentIndex={selectedSegmentIndex}
         onNodeSelect={setSelected}
         onNodeHover={setHovered}
         onPathSegmentSelect={(pathId, index) => {
-          if (!activePath) return;
-          if (pathId === activePath.id) {
-            setSelectedSegment(`${pathId}:${index}`);
+          if (!activePath || pathId !== activePath.id) return;
+          setSelectedSegmentIndex(index);
+          const sample = pathSamples[index];
+          if (pathResult && sample && pathResult.totalDurationS > 0) {
+            setPathReplayProgress(Math.max(0, Math.min(1, sample.timeS / pathResult.totalDurationS)));
           }
+        }}
+        onMapClick={(point) => {
+          setSelectedSegmentIndex(null);
+          setFocusScenePointRequest({ point, source: "pathMap" });
+        }}
+        onMapDoubleClick={(point) => {
+          fitMap("pathMap");
+          setFocusScenePointRequest({ point, source: "pathMap" });
         }}
         mapTarget="pathMap"
         zoom={mapState.zoom}
@@ -167,23 +234,17 @@ export function PathMap({
         showGrid
       />
 
-      {selectedSegment ? (
-        <div className="mt-1.5 text-[8px] text-[#7f8ca6]">
-          Segment: <span className="font-mono text-[#c7d0e4]">{selectedSegment}</span>
-        </div>
-      ) : null}
-
-      <div className="mt-2 flex h-3 items-center gap-2 text-[8px]">
-        <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[#9ea8bf]">
-          {activePath?.actorType}
-        </span>
-        <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[#9ea8bf]">
-          {activePath ? activePath.intent.replace("_", " ") : "No path"}
-        </span>
-        <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[#9ea8bf]">
-          {activePath ? `${activePath.speedMps.toFixed(1)} m/s` : "0 m/s"}
-        </span>
-      </div>
+      <CurrentPathStatePanel
+        activePath={activePath}
+        currentSample={detailSample}
+        currentBand={currentBand}
+        currentEvent={currentEvent}
+        nextEvent={nextEvent}
+        currentBestCamera={currentBestCamera}
+        currentTime={currentTime}
+        currentQualityLabel={currentQualityLabel}
+        currentQualityColor={currentQualityColor}
+      />
 
       <div className="mt-2 grid grid-cols-3 gap-2">
         <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
@@ -229,6 +290,21 @@ export function PathMap({
         ) : null}
       </div>
 
+      <PathEventsList
+        timeline={pathResult?.timeline ?? []}
+        currentTime={currentTime}
+        onSeek={(timeS) => {
+          if (!pathResult || pathResult.totalDurationS <= 0) return;
+          setPathReplayProgress(Math.max(0, Math.min(1, timeS / pathResult.totalDurationS)));
+        }}
+      />
+
+      <PathSegmentDetails
+        path={activePath}
+        samples={pathSamples}
+        selectedIndex={detailIndex}
+      />
+
       <div className="mt-2 flex gap-1.5">
         <button
           className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border border-[#24283a] bg-[#111521] text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
@@ -239,6 +315,7 @@ export function PathMap({
         <button
           onClick={() => {
             if (!activePath) return;
+            setSelectedSegmentIndex(null);
             setPathReplayProgress(0);
             setPathReplayPlaying(true);
           }}
@@ -248,9 +325,16 @@ export function PathMap({
           <Play className="h-3 w-3" />
           Play Path
         </button>
+        <button
+          onClick={() => setViewMode("replay")}
+          className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border border-sky-800/35 bg-sky-900/20 text-[10px] font-medium text-sky-300 transition-colors hover:bg-sky-900/30"
+          disabled={!activePath}
+        >
+          Open in 3D Replay
+        </button>
       </div>
 
-      <div className="mt-1.5 flex flex-wrap gap-3 text-[8px] text-[#7f8ca6]">
+      <div className="mt-1.5 flex flex-wrap gap-3 text-[8px] text-[#7f7ca6]">
         <div className="flex items-center gap-1">
           <span className="h-2 w-2 rounded-full bg-green-500" />
           <span>Start</span>
@@ -269,8 +353,8 @@ export function PathMap({
         {activePath ? (
           <div className="space-y-0.5">
             <p>Coverage quality legend</p>
-            <div className="flex gap-2">
-              {(Object.keys(QUALITY_COLORS) as DoriQuality[]).map((quality) => (
+            <div className="flex flex-wrap gap-2">
+              {QUALITY_ORDER.map((quality) => (
                 <span
                   key={quality}
                   className="inline-flex items-center gap-1"
@@ -278,7 +362,7 @@ export function PathMap({
                 >
                   <span
                     className="inline-block h-2 w-2 rounded-sm"
-                    style={{ backgroundColor: QUALITY_COLORS[quality] }}
+                    style={{ backgroundColor: MAP_COLORS.quality[quality] }}
                   />
                   {quality}
                 </span>
@@ -286,6 +370,198 @@ export function PathMap({
             </div>
           </div>
         ) : null}
+      </div>
+    </div>
+  );
+}
+
+function CurrentPathStatePanel({
+  activePath,
+  currentSample,
+  currentBand,
+  currentEvent,
+  nextEvent,
+  currentBestCamera,
+  currentTime,
+  currentQualityLabel,
+  currentQualityColor,
+}: {
+  activePath: ScenarioPath | null;
+  currentSample: ReturnType<typeof samplePathQuality>[number] | null;
+  currentBand: ReturnType<typeof samplePathQuality>[number] | null;
+  currentEvent: { timeS: number; event: string; quality?: DoriQuality; cameraId?: string; reason?: string } | null;
+  nextEvent: { timeS: number; event: string; quality?: DoriQuality; cameraId?: string; reason?: string } | null;
+  currentBestCamera: string | null;
+  currentTime: number;
+  currentQualityLabel: string;
+  currentQualityColor: string;
+}) {
+  return (
+    <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">Current State</div>
+          <div className="mt-0.5 text-[10px] text-[#9aa6bf]">
+            {activePath ? activePath.label : "No path selected"}
+          </div>
+        </div>
+        <div className="rounded-full px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.16em]" style={{ backgroundColor: `${currentQualityColor}22`, color: currentQualityColor }}>
+          {currentQualityLabel}
+        </div>
+      </div>
+
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <div className="rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
+          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Time</div>
+          <div className="text-[11px] font-semibold text-[#dfe5f2]">{currentTime.toFixed(1)}s</div>
+        </div>
+        <div className="rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
+          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Best Camera</div>
+          <div className="text-[11px] font-semibold text-[#dfe5f2]">{currentBestCamera ?? "None"}</div>
+        </div>
+        <div className="rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
+          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Next Change</div>
+          <div className="text-[11px] font-semibold text-[#dfe5f2]">
+            {nextEvent ? `${nextEvent.event} @ ${nextEvent.timeS.toFixed(1)}s` : "End"}
+          </div>
+        </div>
+        <div className="rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
+          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Band</div>
+          <div className="text-[11px] font-semibold text-[#dfe5f2]">
+            {currentBand ? `${currentBand.quality} (${currentBand.distanceM.toFixed(1)}m)` : "None"}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-2 rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
+        <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Event</div>
+        <div className="text-[10px] font-semibold text-[#dfe5f2]">
+          {currentEvent ? `${currentEvent.event}${currentEvent.reason ? ` · ${currentEvent.reason}` : ""}` : "Awaiting replay"}
+        </div>
+      </div>
+
+      {currentSample ? (
+        <div className="mt-2 flex flex-wrap gap-1.5 text-[8px] text-[#7f8ca6]">
+          <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[#9ea8bf]">
+            {currentSample.coveringCameras.length > 0 ? currentSample.coveringCameras.join(", ") : "No cameras"}
+          </span>
+          <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[#9ea8bf]">
+            {currentSample.distanceM.toFixed(1)}m
+          </span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function PathEventsList({
+  timeline,
+  currentTime,
+  onSeek,
+}: {
+  timeline: { timeS: number; event: string; quality?: DoriQuality; cameraId?: string; reason?: string }[];
+  currentTime: number;
+  onSeek: (timeS: number) => void;
+}) {
+  if (timeline.length === 0) {
+    return (
+      <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 text-[9px] text-[#6f7b94]">
+        No replay events yet.
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+      <div className="mb-1.5 flex items-center justify-between">
+        <span className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">Path Events</span>
+        <span className="text-[8px] text-[#8f9bb1]">click to seek</span>
+      </div>
+      <div className="max-h-28 space-y-1 overflow-auto pr-1">
+        {timeline.map((event, index) => {
+          const active = event.timeS <= currentTime && timeline[index + 1]?.timeS > currentTime;
+          return (
+            <button
+              key={`${event.event}-${event.timeS}-${index}`}
+              type="button"
+              onClick={() => onSeek(event.timeS)}
+              className={`flex w-full items-center justify-between rounded-lg border px-2 py-1 text-left transition-colors ${
+                active
+                  ? "border-sky-500/40 bg-sky-500/10"
+                  : "border-[#243146] bg-[#0c1320] hover:border-[#2f3c53]"
+              }`}
+            >
+              <div className="min-w-0">
+                <div className="text-[9px] font-medium text-[#dfe5f2]">{event.event}</div>
+                <div className="text-[8px] text-[#7f8ca6]">
+                  {event.reason ?? event.cameraId ?? "No detail"}
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-0.5 text-[8px] text-[#9ea8bf]">
+                <span>{event.timeS.toFixed(1)}s</span>
+                {event.quality ? (
+                  <span className="rounded border border-[#2c3347] px-1 py-0.5" style={{ color: qualityColor(event.quality) }}>
+                    {event.quality}
+                  </span>
+                ) : null}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function PathSegmentDetails({
+  path,
+  samples,
+  selectedIndex,
+}: {
+  path: ScenarioPath | null;
+  samples: ReturnType<typeof samplePathQuality>;
+  selectedIndex: number;
+}) {
+  if (!path || samples.length < 2 || selectedIndex < 0) {
+    return (
+      <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 text-[9px] text-[#6f7b94]">
+        No segment selected.
+      </div>
+    );
+  }
+
+  const start = samples[selectedIndex] ?? samples[0];
+  const end = samples[Math.min(selectedIndex + 1, samples.length - 1)] ?? samples[samples.length - 1];
+
+  if (!start || !end) {
+    return null;
+  }
+
+  return (
+    <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+      <div className="mb-1.5 flex items-center justify-between">
+        <span className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">Segment Details</span>
+        <span className="text-[8px] text-[#8f9bb1]">
+          {selectedIndex + 1}/{Math.max(1, samples.length - 1)}
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-2 text-[9px]">
+        <div className="rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
+          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">From</div>
+          <div className="font-semibold text-[#dfe5f2]">{start.distanceM.toFixed(1)}m</div>
+        </div>
+        <div className="rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
+          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">To</div>
+          <div className="font-semibold text-[#dfe5f2]">{end.distanceM.toFixed(1)}m</div>
+        </div>
+        <div className="rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
+          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Quality</div>
+          <div className="font-semibold" style={{ color: qualityColor(start.quality) }}>{start.quality}</div>
+        </div>
+        <div className="rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
+          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Cameras</div>
+          <div className="font-semibold text-[#dfe5f2]">{start.coveringCameras.length > 0 ? start.coveringCameras.join(", ") : "None"}</div>
+        </div>
       </div>
     </div>
   );

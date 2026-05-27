@@ -84,6 +84,11 @@ export type MapState = {
   pathMap: MapViewportState;
 };
 
+export type FocusScenePointRequest = {
+  point: [number, number];
+  source: MapViewportTarget;
+};
+
 const SCENE_STORAGE_KEY = "sentineltwin_saved_scenes";
 
 function loadSavedScenesFromStorage(): SecurityScene[] {
@@ -160,7 +165,7 @@ function createBlankScene(): SecurityScene {
       timeOfDay: "day",
       interiorLightLevel: "normal",
       nightPenaltyMode: "simple",
-      doriStandard: "iec62676",
+      doriStandard: "oodpcvs_2025",
       pixelsPerMeter: { detection: 25, observation: 62.5, recognition: 125, identification: 250 },
       showAssumptionsPanel: false,
     },
@@ -204,6 +209,7 @@ export type StudioStoreState = {
   activePathId: string | null;
   mapState: MapState;
   hoveredMapNodeId: string | null;
+  focusScenePointRequest: FocusScenePointRequest | null;
   setTemporalProfile: (profile: TemporalSecurityProfile | null) => void;
   setTemporalScrub: (hour: number, minute: number) => void;
   computeTemporalProfile: () => void;
@@ -221,6 +227,7 @@ export type StudioStoreState = {
   setMapPan: (target: MapViewportTarget, pan: [number, number]) => void;
   fitMap: (target: MapViewportTarget) => void;
   setHoveredMapNodeId: (id: string | null) => void;
+  setFocusScenePointRequest: (request: FocusScenePointRequest | null) => void;
   setEditorMode: (mode: EditorMode) => void;
   setDraftWallStart: (start?: [number, number]) => void;
   setDraftPolygonPoints: (points: [number, number][]) => void;
@@ -230,6 +237,8 @@ export type StudioStoreState = {
   setSnapDistanceM: (value: number) => void;
   setGridSnapM: (value: number) => void;
   setSelectedHandle: (handle?: string) => void;
+  cameraPresetId: string | null;
+  setCameraPresetId: (presetId: string | null) => void;
 
   selectNode: (id: string | null) => void;
   viewMode: ViewMode;
@@ -382,11 +391,11 @@ const PRESET_LAYOUTS: Record<WorkspacePreset, Omit<DockSnapshot, "workspacePrese
   },
   coverage: {
     leftDockCollapsed: true,
-    rightDockCollapsed: false,
-    bottomDockCollapsed: false,
+    rightDockCollapsed: true,
+    bottomDockCollapsed: true,
     leftDockSizePx: DEFAULT_DOCK_SIZES.left,
     rightDockSizePx: 372,
-    bottomDockSizePx: 360,
+    bottomDockSizePx: 40,
   },
   camera_wall: {
     leftDockCollapsed: true,
@@ -540,6 +549,48 @@ INITIAL_SCENE.snapshots = INITIAL_SNAPSHOTS.map((snapshot) => ({
   scene: structuredClone(snapshot.scene),
 }));
 
+function getInitialViewMode(): ViewMode {
+  if (typeof window === "undefined") return "map";
+  const mode = new URLSearchParams(window.location.search).get("mode");
+  if (mode === "wall" || mode === "replay" || mode === "camera_view" || mode === "compare" || mode === "map") {
+    return mode;
+  }
+  return "map";
+}
+
+function viewModeToPreset(mode: ViewMode): WorkspacePreset {
+  switch (mode) {
+    case "wall":
+      return "camera_wall";
+    case "replay":
+      return "replay";
+    case "camera_view":
+      return "coverage";
+    case "compare":
+      return "compare";
+    case "map":
+    default:
+      return "edit";
+  }
+}
+
+function viewModeToBottomTab(mode: ViewMode): BottomTab {
+  switch (mode) {
+    case "replay":
+    case "camera_view":
+      return "timeline";
+    case "compare":
+      return "beforeafter";
+    case "wall":
+    case "map":
+    default:
+      return "metrics";
+  }
+}
+
+const INITIAL_VIEW_MODE = getInitialViewMode();
+const INITIAL_WORKSPACE_PRESET = viewModeToPreset(INITIAL_VIEW_MODE);
+
 export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   scene: INITIAL_SCENE,
   simulationResult: null,
@@ -562,10 +613,10 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     gridSnapM: 0.5,
     selectedHandle: undefined,
   },
-  viewMode: "map",
-  bottomTab: "metrics",
+  viewMode: INITIAL_VIEW_MODE,
+  bottomTab: viewModeToBottomTab(INITIAL_VIEW_MODE),
   inspectorTab: "properties",
-  workspacePreset: "edit",
+  workspacePreset: INITIAL_WORKSPACE_PRESET,
   focusMode: false,
   leftDockCollapsed: false,
   rightDockCollapsed: false,
@@ -589,6 +640,8 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     pathMap: { zoom: 1, pan: [0, 0] },
   },
   hoveredMapNodeId: null,
+  focusScenePointRequest: null,
+  cameraPresetId: null,
   historyPast: [],
   historyFuture: [],
 
@@ -624,6 +677,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     set((state) => ({ mapState: { ...state.mapState, pathMap: { zoom: 1, pan: [0, 0] } } }));
   },
   setHoveredMapNodeId: (id) => set({ hoveredMapNodeId: id }),
+  setFocusScenePointRequest: (request) => set({ focusScenePointRequest: request }),
 
   setEditorMode: (mode) => set((s) => ({
     editor: {
@@ -648,6 +702,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   setSnapDistanceM: (value) => set((s) => ({ editor: { ...s.editor, snapDistanceM: value } })),
   setGridSnapM: (value) => set((s) => ({ editor: { ...s.editor, gridSnapM: value } })),
   setSelectedHandle: (handle) => set((s) => ({ editor: { ...s.editor, selectedHandle: handle } })),
+  setCameraPresetId: (presetId) => set({ cameraPresetId: presetId }),
 
   commitSceneChange: (updater, label) =>
     set((s) => {
@@ -690,16 +745,25 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     };
   }),
   canUndo: () => {
-    const state = useStudioStore.getState();
-    return state.historyPast.length > 0;
+    return get().historyPast.length > 0;
   },
   canRedo: () => {
-    const state = useStudioStore.getState();
-    return state.historyFuture.length > 0;
+    return get().historyFuture.length > 0;
   },
 
   selectNode: (id) => set({ selectedNodeId: id }),
-  setActiveTool: (tool) => set({ activeTool: tool }),
+  setActiveTool: (tool) => set((s) => ({
+    activeTool: tool,
+    editor: {
+      ...s.editor,
+      editorMode: "idle",
+      draftWallStart: undefined,
+      draftPolygonPoints: [],
+      draftPathPoints: [],
+      hoverPoint: undefined,
+      selectedHandle: undefined,
+    },
+  })),
   setViewMode: (mode) => {
     const TAB_FOR_MODE: Partial<Record<ViewMode, BottomTab>> = {
       replay: "timeline",
@@ -917,6 +981,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       simulationDirty: true,
       simulationResult: null,
       activePathId: scene.paths[0]?.id ?? null,
+      focusScenePointRequest: null,
     });
     return { success: true };
   },
@@ -932,6 +997,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       simulationResult: null,
       selectedNodeId: null,
       activePathId: scene.paths[0]?.id ?? null,
+      focusScenePointRequest: null,
       viewMode: "map",
       bottomTab: "metrics",
       inspectorTab: "properties",
@@ -960,6 +1026,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       simulationDirty: true,
       selectedNodeId: null,
       activePathId: null,
+      focusScenePointRequest: null,
       viewMode: "map",
       bottomTab: "metrics",
       inspectorTab: "properties",
@@ -1007,3 +1074,17 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     return scene.cameras.find((c) => c.id === selectedNodeId) ?? null;
   },
 }));
+
+declare global {
+  interface Window {
+    __sentineltwinStore?: typeof useStudioStore;
+    __sentineltwinSetViewMode?: (mode: ViewMode) => void;
+  }
+}
+
+if (typeof window !== "undefined") {
+  window.__sentineltwinStore = useStudioStore;
+  window.__sentineltwinSetViewMode = (mode: ViewMode) => {
+    useStudioStore.getState().setViewMode(mode);
+  };
+}

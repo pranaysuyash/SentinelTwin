@@ -15,7 +15,7 @@ import type {
   SecurityScene,
   WallNode,
 } from "@/schema/security-scene";
-import { DORI_THRESHOLDS, maxQuality, ppmToQuality } from "@/simulation/dori";
+import { DORI_THRESHOLDS, maxQuality, ppmToDoriQuality, ppmToOodpcvsQuality, qualityToScore } from "@/simulation/dori";
 import { getYawPitchDirection, normalizeAngle } from "@/simulation/geometry";
 import { buildCoverageGrid, type GridCell } from "@/simulation/grid";
 
@@ -126,14 +126,22 @@ function getClarityMultiplier(camera: CameraNode) {
   }[camera.clarity];
 }
 
-function getDetectionProbability(quality: DoriQuality) {
-  return {
+function getDetectionProbability(quality: DoriQuality): number {
+  const table: Record<DoriQuality, number> = {
     none: 0,
     detection: 0.25,
+    overview: 0.25,
+    outline: 0.35,
     observation: 0.5,
+    discern: 0.5,
+    perceive: 0.65,
     recognition: 0.85,
+    characterize: 0.85,
+    validate: 0.92,
     identification: 0.99,
-  }[quality];
+    scrutinize: 0.99,
+  };
+  return table[quality];
 }
 
 function getReasonCodesForLighting(camera: CameraNode, lightingPenalty: number) {
@@ -153,9 +161,13 @@ function getReasonCodesForLighting(camera: CameraNode, lightingPenalty: number) 
 }
 
 export function getQualityThresholds(scene: SecurityScene) {
-  return scene.assumptions.doriStandard === "iec62676"
-    ? scene.assumptions.pixelsPerMeter
-    : DORI_THRESHOLDS;
+  if (scene.assumptions.doriStandard === "oodpcvs_2025") {
+    // In OODPCVS mode, the standard-defined thresholds are used by ppmToOodpcvsQuality.
+    // This returns DORI thresholds for legacy consumers (getRecognitionAreaPct, etc.).
+    return scene.assumptions.pixelsPerMeter;
+  }
+  // dori_2014 mode uses the scene's PPM values
+  return scene.assumptions.pixelsPerMeter;
 }
 
 function buildWallGeometry(wall: WallNode) {
@@ -455,7 +467,13 @@ function evaluateCameraAgainstCell(
 
   ppm *= 1 - lightingPenalty;
 
-  const quality = ppmToQuality(ppm, getQualityThresholds(scene));
+  // Determine cell quality based on the active standard.
+  const isOodpcvs = scene.assumptions.doriStandard === "oodpcvs_2025";
+  const doriThresholds = isOodpcvs ? scene.assumptions.pixelsPerMeter : DORI_THRESHOLDS;
+  const quality = isOodpcvs
+    ? ppmToOodpcvsQuality(ppm)
+    : ppmToDoriQuality(ppm, doriThresholds);
+
   if (quality === "none") {
     reasonCodes.add("LOW_PPM");
   }

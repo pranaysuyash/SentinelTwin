@@ -3,6 +3,7 @@
 import { GitCompare } from "lucide-react";
 import { useStudioStore } from "@/store/studio-store";
 import type { SimulationResult } from "@/schema/security-scene";
+import { qualityToScore } from "@/simulation/dori";
 
 // ── Tiny SVG donut ──────────────────────────────────────────────────────────
 function Donut({
@@ -158,8 +159,10 @@ export function BeforeAfterTab() {
   const aCov    = aSim?.totalCoveragePct ?? 0;
 
   // Recognition & identification zone counts: cells with quality >= threshold
-  const countQuality = (sim: SimulationResult | undefined, q: string) =>
-    (sim?.coverageCells ?? []).filter((c) => c.quality === q).length;
+  const countQuality = (sim: SimulationResult | undefined, q: string) => {
+    const threshold = qualityToScore(q as Parameters<typeof qualityToScore>[0]);
+    return (sim?.coverageCells ?? []).filter((c) => qualityToScore(c.quality) >= threshold).length;
+  };
 
   const bRecog  = countQuality(bSim, "recognition");
   const aRecog  = countQuality(aSim, "recognition");

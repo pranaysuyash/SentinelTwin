@@ -1,6 +1,6 @@
 # Current Implementation State — Camera Studio
 
-**Updated:** 2026-05-26
+**Updated:** 2026-05-27 (session 4: inspector feed DORI overlay + camera view hardening)
 **Source:** Direct code audit of apps/studio/src/
 **Purpose:** Accurate baseline of what is actually built, tested, and rendering.
 Use this instead of the earlier CAMERASTUDIO_GAP_ANALYSIS.md which was written
@@ -24,8 +24,47 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - `simulate-studio.ts` — orchestrates full simulation run ✅
 - `simulate-studio.ts` — zone quality uses target-height profiles, privacy coverage issues are surfaced, and all aggregate metrics are computed over non-privacy walkable cells for canonical coverage denominators ✅
 - `PathReplayView` / `TimelineTab` — authored `scene.paths` are now the primary replay/timeline focus, with coverage-failure replay retained as secondary defensive analysis ✅
+- `studio-store` / store tests — obstruction counterfactuals now have direct regression coverage for simulated deltas and obstruction-id tracking ✅
 - Confirmed performance: ~10.8ms average on 40×28 grid with 2 cameras — under 16ms target ✅
 - Zero React/DOM imports confirmed ✅
+
+### Temporal Simulation (src/simulation/temporal.ts) — complete, tested
+- `temporal.ts` — 24-hour security profile engine: change-timeline optimization (10-15 transitions/day, not 96 full sims) ✅
+- `computeTemporalProfile(scene)` — full end-to-end: builds change timeline, patches scene per time slice, runs coverage at transitions, interpolates intermediates ✅
+- `computeTimeSliceStateForHour(hour, minute)` — public helper for time-slice state queries ✅
+- `detectVulnerabilityWindows()` — classifies high/medium/low severity windows from snapshot analysis ✅
+- `findSafestPeriods()` — identifies continuous safe coverage windows ✅
+- `patchSceneForTimeSlice()` — clones scene, patches assumptions (timeOfDay, interiorLightLevel, security light status, camera night mode) ✅
+- Fixed operator precedence bug in `getExteriorLightState` for 0:00-2:00 (D-035) ✅
+- 29 unit tests covering time-slice states, profile structure, snapshot count, vulnerability windows, safest periods, zone coverage, camera/light counts, timer cutout behavior ✅
+- **Limitation:** Uses hardcoded DEFAULT_SCHEDULES; does not consume scene.timeSchedule (see ISSUE-005 in audit) ⚠️
+- **Not implemented:** Seasonal/location-aware lighting (suncalc.js), guard patrol integration, occupancy-based camera obstruction multiplier, door lock schedules — deferred to V0.2/V0.3
+
+### Temporal Schema Types (src/schema/security-scene.ts) — complete
+- `timeScheduleSchema` with location, interior/exterior light schedules, occupancy, guard patrols ✅
+- `temporalSecurityProfileSchema` with hourlySnapshots, vulnerability windows, safest periods, zone coverage by hour ✅
+- `hourlySecuritySnapshotSchema`, `vulnerabilityWindowSchema` ✅
+- Scene fields: `timeSchedule: timeScheduleSchema.optional()`, `temporalProfile: temporalSecurityProfileSchema.optional()` ✅
+
+### Temporal Store Integration (src/store/studio-store.ts) — complete
+- `temporalProfile` state (TemporalSecurityProfile | null) ✅
+- `temporalScrubHour` / `temporalScrubMinute` for time-scrubbing UI ✅
+- `setTemporalScrub(hour, minute)` — auto-switches environmentMode (day/night/dusk) ✅
+- `computeTemporalProfile` action — runs engine and stores result ✅
+
+### Temporal UI (src/components/bottom-panel/TemporalProfileView.tsx) — complete
+- 24-hour clickable timeline bar (96 slots, color-coded by coverage quality) ✅
+- Vulnerability window cards (expandable, severity-colored, with "Jump to start") ✅
+- State transition map (visual bar showing Business Hours, After Hours, Night, etc.) ✅
+- Summary cards: Worst Coverage, Vulnerability Windows count, Safest Periods count ✅
+- Zone coverage stability chart (per-zone average + variance) ✅
+- Compute / Recompute button ✅
+- "24H PROFILE" tab in BottomPanel TABS array (surfaced 2026-05-27) ✅
+
+### Temporal Report Integration (src/report/index.ts) — complete
+- TemporalProfileSummary in report data ✅
+- HTML export: vulnerability windows, worst coverage, safest periods ✅
+- Markdown + JSON export: temporal profile section ✅
 
 ### Schema (src/schema/security-scene.ts) — complete
 - All Zod schemas + TypeScript types ✅
@@ -56,10 +95,10 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - SimStatus badge (Needs Recompute / Running / Up to date) ✅
 - Environment mode dropdown (Day/Dusk/Night) ✅
 - Run Simulation button (wired, triggers simulation) ✅
-- Night Mode, Camera Failure, Save Snapshot, Compare, Generate Report buttons (UI only, not wired) ❌
-- Save Snapshot button is wired ✅
+- Night Mode and Camera Failure quick actions are wired to live scene state changes ✅
+- Save Snapshot, Compare, and Generate Report actions are wired ✅
 
-### WorkspaceCanvas — good 3D foundation, no view modes yet
+### WorkspaceCanvas — good 3D foundation with view-mode shell wired
 - Instanced mesh heatmap ✅
 - Camera frustum cones ✅
 - Camera markers with labels and status ✅
@@ -74,20 +113,28 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - Ceiling light markers ✅
 - Environment themes (day/dusk/night) with fog ✅
 - NorthCompass, ViewControls, ControlHintBar ✅
-- MiniMap in SVG (in LeftPanel) ✅
-- NO view mode switching (Map / Camera View / Camera Wall / Path Replay) ❌
-- NO path replay animation ❌
-- NO actor animation ❌
+- View mode switching now routes through `StudioShell` for Map View / Camera View / Camera Wall / Path Replay / Compare ✅
+- Full-canvas view modes are wired for the canvas shell ✅
+- MiniMap now uses the shared 2D map system with reusable projection/layers, zoom/fit controls, hover/selection sync, and replay actor visibility ✅
+- MiniMap now supports collapsed / compact / expanded / hover-preview states, shared map tokens, layer/display controls, legend, scale, north, and empty-map focus handoff to the 3D workspace ✅
+- PathMap now uses the shared 2D map system with quality-banded path rendering, current-state replay panel, path events list, segment details, and inline play/open-in-3D controls ✅
+- Camera placement presets are now reactive and store-backed instead of hidden module state, so the camera tool picker reflects the current preset and placement reads one canonical source ✅
+- View mode switching is implemented for Map / Camera View / Camera Wall / Path Replay ✅
+- Path replay animation and actor playback are implemented in the dedicated replay view ✅
+- Full-canvas replay mode now uses the workspace shell, not the docked layout ✅
+- Compare mode now renders a full before/after comparison shell with scene panels, comparison cards, and lower analysis bands; verified in production build via `?mode=compare` ✅
+- Path replay and compare are deep-linkable via `?mode=replay` and `?mode=compare`, which makes visual QA deterministic in the local browser flow ✅
+- `apps/studio/next.config.ts` now allows local dev origins (`127.0.0.1`, `localhost`) so browser-based QA can hydrate the app cleanly in development ✅
 
-### CameraFeedCanvas — working but minimal
+### CameraFeedCanvas — working and now closer to the reference
 - Renders R3F canvas from camera's perspective ✅
 - Shows walls, obstructions, floor geometry ✅
 - Night overlay (CSS filter) ✅
 - Camera name + resolution label ✅
+- DORI overlay card now shows the selected target zone, current quality, required range, distance, angle, best camera, and lighting summary ✅
+- Local view-mode toggles now provide Normal / IR / Low Light / Thermal visual states for the inspector feed ✅
 - Uses fixed Canvas with static camera position — does NOT update if camera moves ❌
-- No DORI overlays on the feed ❌
 - No actor/path actor in feed ❌
-- No IR/thermal simulation effects ❌
 - No dirty lens / noise effects ❌
 
 ### InspectorPanel — wired and working
@@ -96,9 +143,9 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - Status: on/off toggle (wired), night mode selector (wired), clarity selector (wired) ✅
 - Analytics: coverage %, zone pass/fail, offline impact notes ✅
 - View: CameraFeedCanvas (working but minimal — see above) ✅
-- Failures: placeholder text only ❌ (says "Failure-mode controls stay scoped...")
+- Failures: camera failure simulation controls (offline/dirty/night-disabled), criticality scoring, redundancy analysis, and impact notes are implemented ✅
 - ObstructionInspector: position, rotation, dimensions, material (all wired to updateNode) ✅
-- "Test Without This Obstruction" button: disabled, not implemented ❌
+- "Test Without This Obstruction" button is wired to counterfactual simulation with delta metrics ✅
 - Aim at Zone button: wired ✅
 - Duplicate camera button: wired ✅
 - Delete camera button: wired ✅
@@ -106,7 +153,7 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 ### LeftPanel — UI complete
 - All 10 tool buttons with keyboard shortcut labels ✅
 - Layer visibility toggles for all 11 layers (wired to toggleLayer) ✅
-- MiniMap SVG with: coverage cells, zones, walls, paths, adversarial path, cameras ✅
+- MiniMap is now powered by the shared map module, not a panel-local SVG, and renders coverage cells, zones, walls, paths, adversarial path, cameras, path replay actor, and interactive zoom/fit/select controls ✅
 - Tools are buttons only — clicking canvas doesn't place objects ❌ (all tools except select are UI-only)
 
 ### BottomPanel tabs — mostly complete
@@ -123,14 +170,12 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - Recommendations list
 - No "Apply Fix" / "Test Fix" action buttons ❌
 
-**TimelineTab** — stub-level ❌
-- Play/Pause buttons (not wired)
-- Progress bar (static)
-- Path results table (shows % visible, lost time, event badges)
-- NO animation
-- NO per-camera DORI quality per timestep
-- NO actor animation
-- Does NOT match the reference image
+**TimelineTab** ✅
+- Active authored path selector
+- Playback controls with play/pause, scrubber, and speed presets
+- Timeline event table with actor position, camera, quality, and reason columns
+- Quality-over-time view backed by VisibilityTimeline
+- Camera summary cards for the active path
 
 **BeforeAfterTab** ✅
 - Shows before/after coverage % from last 2 snapshots
@@ -148,11 +193,11 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - Simulation debug stats (coverage %, quality breakdown, issues count)
 
 ### ScenarioPathPanel ✅
-- Active path selector
+- Active path selector wired to `activePathId`
 - Path length, estimated time, visible % stats
-- Coverage ribbon (colored segments showing DORI quality along path)
-- SVG path map with walls, zones, path, start/end markers
-- Edit Path / Play Path buttons (UI only, not wired) ❌
+- Coverage ribbon now uses interpolated path sampling instead of authored point-only sampling
+- Shared SVG path map with walls, zones, path, start/end markers, replay actor, and pan/zoom/fit controls
+- Edit Path / Play Path buttons are wired (`Edit`: map+path tool, `Play`: replay mode + timeline) ✅
 
 ### BottomRow ✅ (more complete than expected)
 - Snapshots panel with thumbnail cards + "New Snapshot" button
@@ -173,18 +218,17 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 
 This is the target design for what needs to be built next. Key missing pieces:
 
-### [MISS-01] View mode tab bar above canvas ❌
+### [MISS-01] View mode tab bar above canvas ✅
 The reference shows: Map View | Camera View (active) | Camera Wall | Path Replay
-Current code: single WorkspaceCanvas with no mode switching.
+Current code: the workspace now switches between map, full-canvas camera view, camera wall, and path replay.
 
 ### [MISS-02] Camera View mode filling the full canvas ❌
 When Camera View is active, the entire canvas area shows the selected camera's perspective.
 This is different from the small inspector PIP (CameraFeedCanvas) — it's full screen.
 
-### [MISS-03] Path replay animation with actor ❌
+### [MISS-03] Path replay animation with actor ✅
 The reference shows a person figure walking through the scene.
-Time: 8.4s shown in the "LIVE MODE (Simulated)" overlay.
-Current code: path lines render but no actor, no animation.
+Time is shown in the replay overlay and the actor animates along the authored path.
 
 ### [MISS-04] DORI quality overlays on camera view ❌
 When Camera View is active and an actor is in view:
@@ -193,32 +237,32 @@ When Camera View is active and an actor is in view:
 - "Best Camera: CAM 2"
 - "Distance: 7.8m"
 
-### [MISS-05] LIVE MODE overlay on camera view ❌
+### [MISS-05] LIVE MODE overlay on camera view ✅
 "LIVE MODE (Simulated) | Time: 8.4s | Path: Night Entry → Cash Counter | Speed: 1.0x"
 
-### [MISS-06] Canvas overlays control bar ❌
+### [MISS-06] Canvas overlays control bar ✅
 "Overlays | DORI | Path | Zones | Timestamp | Grid | More | Back to Map View"
 
-### [MISS-07] Camera Wall mode ❌
+### [MISS-07] Camera Wall mode ✅
 4-panel thumbnail grid: CAM 1, CAM 2, CAM 3, 3D MAP
 "4 Views" dropdown button
 
-### [MISS-08] Enhanced Timeline with per-camera DORI quality ❌
+### [MISS-08] Enhanced Timeline with per-camera DORI quality ✅
 The reference shows a detailed table with:
 - TIMELINE (Path Replay) | EVENTS | QUALITY OVER TIME sub-tabs
 - Full playback controls: << | pause | >> | time display 00:08.4 / 00:10.2 | speed 1.4x | Follow Actor checkbox
 - Table rows: Time(s), Actor Position, CAM 1, CAM 2, Quality (Best), Event
 - Each row shows DORI quality per camera as colored badges
 - e.g., "4.3 | Behind Cupboard | NONE | DETECTION | DETECTION | Partially obscured"
-Current code: static table with % visible / lost time / event tags — fundamentally different.
+Current code: replay controls, a path selector, event table, and quality-over-time panels are implemented. The row-level view is still a streamlined interpretation of the reference, but the missing debug-only stub has been replaced.
 
-### [MISS-09] Inspector View tab showing DORI Overlay section ❌
+### [MISS-09] Inspector View tab showing DORI Overlay section ⚠️
 In the reference, the right inspector (Camera 1 selected, View tab) shows:
 - VIEW MODE: Normal | IR (B/W) | Low Light | Thermal
 - VIEW OPTIONS: Show DORI Labels, Show Path Actor, Show Zones, Show Timestamp, Show Bounding Box (checkboxes)
 - DORI OVERLAY (At Target): "OBSERVATION" / "62.5–125 PPM"
 - TARGET INFO: Target Type, Distance, PPM (est.), Angle from center, Lighting
-Current CameraFeedCanvas: only shows camera name + resolution, no DORI data.
+Current CameraFeedCanvas now exposes a DORI overlay card and local view-mode controls, but it still does not expose the full set of view-option toggles or a live target-actor overlay.
 
 ### [MISS-10] Scenario/Path panel showing full active scenario details ❌
 Reference shows right panel with:
@@ -254,3 +298,18 @@ Current ScenarioPathPanel: similar but no active scenario selector, Play Path is
 12. Failures tab content
 13. "Test Without This Obstruction" button
 14. Night Mode / Camera Failure / Camera Failure top bar buttons
+
+---
+
+## TypeScript stabilization session (2026-05-27)
+
+The following issues were fixed to reach 0 typed errors (only pre-existing TS7006 implicit-any remain):
+
+1. **`QUALITY_RANK` in `TimelineTab.tsx`** — Missing 7 OODPCVS 2025 levels added (scrutinize=11 … detection=1 … none=0).
+2. **`formatPoint` in `TimelineTab.tsx`** — Extended to accept `[number, number] | null` (was `| undefined` only).
+3. **`activePathResult?.timeline.length`** — Added optional chaining to guard possible null.
+4. **`setFocusScenePointRequest` in `PathMap.tsx`** — Removed selector and call sites: the store action doesn't exist; the logic now just updates replay progress without the non-existent focus request.
+5. **`pointOnPathAtProgress` in `MapLayers.tsx`** — Moved import from `./map-geometry` (doesn't export it) to `./path-quality` (correct source).
+6. **`CompareView.tsx`** — Added `DeltaMetricsBar` component with 5 delta chips: Overall Coverage, Recognition Quality, Blind Spot (inverted), Camera Count, Critical Zones. Uses `SceneSnapshot.simulation` data for both snapshots. Renders below the side-by-side 3D panels.
+
+158 tests passing, 0 failures.

@@ -1,21 +1,15 @@
 import { useMemo } from "react";
 
-import { samplePathQuality, groupPathQualitySamples } from "@/components/map/map-utils";
-import type { CoverageCellLike, PathQualityBand, PathQualitySample } from "@/components/map/map-utils";
+import { MAP_COLORS } from "@/components/map/map-colors";
+import { samplePathQuality, groupPathQualitySamples } from "@/components/map/path-quality";
+import type { CoverageCellLike } from "@/components/map/map-geometry";
+import type { PathQualityBand, PathQualitySample } from "@/components/map/path-quality";
 import type { ScenarioPath } from "@/schema/security-scene";
 
 type CoverageRibbonProps = {
   path: ScenarioPath | null;
   coverageCells: CoverageCellLike[];
   stepM?: number;
-};
-
-const QUALITY_COLOR: Record<string, string> = {
-  identification: "#3b82f6",
-  recognition: "#22c55e",
-  observation: "#eab308",
-  detection: "#f97316",
-  none: "#ef4444",
 };
 
 function formatBandLabel(band: PathQualityBand) {
@@ -50,7 +44,7 @@ export function CoverageRibbon({ path, coverageCells, stepM = 0.25 }: CoverageRi
               className="h-full"
               style={{
                 width: `${Math.max(widthPct, 1)}%`,
-                backgroundColor: QUALITY_COLOR[band.quality] ?? QUALITY_COLOR.none,
+                backgroundColor: MAP_COLORS.quality[band.quality] ?? MAP_COLORS.quality.none,
                 opacity: band.quality === "none" ? 0.82 : 0.95,
               }}
               title={

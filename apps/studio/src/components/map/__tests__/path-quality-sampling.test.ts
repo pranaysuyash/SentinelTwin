@@ -1,12 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
-import type { CoverageCellLike } from "@/components/map/map-utils";
+import type { CoverageCellLike } from "@/components/map/map-geometry";
+import { obstacleRectPoints, polygonToSvgPoints } from "@/components/map/map-geometry";
 import {
   groupPathQualitySamples,
-  obstacleRectPoints,
-  polygonToSvgPoints,
   samplePathQuality,
-} from "@/components/map/map-utils";
+} from "@/components/map/path-quality";
 import type { ScenarioPath } from "@/schema/security-scene";
 
 describe("map utility geometry and sampling", () => {

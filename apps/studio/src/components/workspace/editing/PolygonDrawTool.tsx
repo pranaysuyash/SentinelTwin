@@ -1,4 +1,4 @@
-import { Line, LineLoop } from "@react-three/drei";
+import { Line } from "@react-three/drei";
 import * as THREE from "three";
 import type { Point2 } from "./editor-geometry";
 
@@ -13,12 +13,16 @@ export function PolygonDrawTool({ points, hoverPoint }: PolygonDrawToolProps) {
   const previewPoints = points.map(([x, z]) => new THREE.Vector3(x, 0.004, z));
   if (hoverPoint) previewPoints.push(new THREE.Vector3(hoverPoint[0], 0.004, hoverPoint[1]));
 
+  const closedLoopPoints = points.length >= 2
+    ? [...points, points[0]!].map(([x, z]) => new THREE.Vector3(x, 0.002, z))
+    : null;
+
   if (points.length === 0 && !hoverPoint) return null;
 
   return (
     <group>
       {points.length > 1 ? <Line points={previewPoints} color="#22c55e" lineWidth={1.6} /> : null}
-      {points.length >= 2 && <LineLoop points={points.map(([x, z]) => new THREE.Vector3(x, 0.002, z))} color="#22c55e" lineWidth={1.2} />}
+      {closedLoopPoints ? <Line points={closedLoopPoints} color="#22c55e" lineWidth={1.2} /> : null}
       {points.map(([x, z], index) => (
         <mesh key={`${x}-${z}-${index}`} position={[x, 0.02, z]}>
           <ringGeometry args={[0.08, 0.13, 12]} />
@@ -28,7 +32,6 @@ export function PolygonDrawTool({ points, hoverPoint }: PolygonDrawToolProps) {
       {hasSegment && hoverPoint ? (
         <Line points={previewPoints} color="#86efac" lineWidth={1} />
       ) : null}
-      {points.length >= 3 ? null : null}
     </group>
   );
 }

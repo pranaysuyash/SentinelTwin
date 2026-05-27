@@ -2,12 +2,13 @@
 
 import { OrbitControls } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
-import { ArrowLeft, CircleSmall, VideoOff } from "lucide-react";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { ArrowLeft, Camera, ChevronLeft, ChevronRight, CircleSmall, VideoOff } from "lucide-react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
 
 import { useStudioStore } from "@/store/studio-store";
 import { getYawPitchDirection } from "@/simulation/geometry";
+import "@/lib/three-compat";
 import {
   ENVIRONMENT_THEMES,
   SceneFloor,
@@ -17,7 +18,7 @@ import {
   SceneWalls,
   SceneWindows,
 } from "@/components/workspace/SharedScene";
-import type { CameraNode } from "@/schema/security-scene";
+import type { CameraNode, DoriQuality, SimulationAssumptions } from "@/schema/security-scene";
 
 type CameraFeedMode = "normal" | "ir_bw" | "low_light" | "thermal";
 
@@ -28,6 +29,21 @@ type OverlayFlags = {
   zones: boolean;
   timestamp: boolean;
   grid: boolean;
+};
+
+const QUALITY_RANK: Record<DoriQuality, number> = {
+  none: 0,
+  detection: 1,
+  overview: 1,
+  outline: 1,
+  observation: 2,
+  discern: 2,
+  perceive: 2,
+  recognition: 3,
+  characterize: 3,
+  validate: 4,
+  identification: 4,
+  scrutinize: 4,
 };
 
 function SceneView({ theme }: { theme: (typeof ENVIRONMENT_THEMES)[keyof typeof ENVIRONMENT_THEMES] }) {
@@ -49,19 +65,15 @@ function SceneView({ theme }: { theme: (typeof ENVIRONMENT_THEMES)[keyof typeof 
 
 function CameraRig({ camera: camData }: { camera: CameraNode }) {
   const camera = useThree((s) => s.camera);
-  const initialized = useRef(false);
 
   useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-
     const forward = getYawPitchDirection(camData.yawDeg, camData.pitchDeg);
     const pos = new THREE.Vector3(...camData.position);
     const target = pos.clone().add(forward.clone().multiplyScalar(8));
     camera.position.copy(pos);
     camera.lookAt(target);
     camera.updateProjectionMatrix();
-  }, [camera, camData]);
+  }, [camera, camData.id, camData.pitchDeg, camData.position, camData.yawDeg]);
 
   return null;
 }
@@ -76,14 +88,14 @@ function formatCameraTag(name: string) {
   return `CAM ${match ? match[0] : "01"}`;
 }
 
-function rangeMeters(camera: CameraNode) {
+function rangeMeters(camera: CameraNode, ppm: SimulationAssumptions["pixelsPerMeter"]) {
   const width = camera.resolutionWidth ?? (camera.resolutionMP >= 8 ? 3840 : camera.resolutionMP >= 4 ? 2688 : 1920);
   const tanHalfFov = Math.tan((camera.fovHorizontalDeg / 2) * (Math.PI / 180));
   return {
-    detection: Math.min(width / (2 * 25 * tanHalfFov), camera.rangeM),
-    observation: Math.min(width / (2 * 62.5 * tanHalfFov), camera.rangeM),
-    recognition: Math.min(width / (2 * 125 * tanHalfFov), camera.rangeM),
-    identification: Math.min(width / (2 * 250 * tanHalfFov), camera.rangeM),
+    detection: Math.min(width / (2 * ppm.detection * tanHalfFov), camera.rangeM),
+    observation: Math.min(width / (2 * ppm.observation * tanHalfFov), camera.rangeM),
+    recognition: Math.min(width / (2 * ppm.recognition * tanHalfFov), camera.rangeM),
+    identification: Math.min(width / (2 * ppm.identification * tanHalfFov), camera.rangeM),
   };
 }
 
@@ -132,9 +144,9 @@ function CameraNoise() {
   );
 }
 
-function LiveFeedHUD({ camera: cam, mode, flags }: { camera: CameraNode; mode: CameraFeedMode; flags: OverlayFlags }) {
+function LiveFeedHUD({ camera: cam, mode, flags, ppm }: { camera: CameraNode; mode: CameraFeedMode; flags: OverlayFlags; ppm: SimulationAssumptions["pixelsPerMeter"] }) {
   const isActive = cam.status === "on";
-  const ranges = rangeMeters(cam);
+  const ranges = rangeMeters(cam, ppm);
 
   return (
     <>
@@ -196,16 +208,105 @@ function LiveFeedHUD({ camera: cam, mode, flags }: { camera: CameraNode; mode: C
   );
 }
 
+export function ReplayStatusOverlay({
+  pathLabel,
+  timeS,
+  speed,
+}: {
+  pathLabel: string;
+  timeS: number;
+  speed: number;
+}) {
+  return (
+    <div className="absolute left-3 bottom-24 z-30 rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)] backdrop-blur-sm">
+      <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-[#7dd3fc]">LIVE MODE (Simulated)</div>
+      <div className="mt-1 space-y-0.5 text-[10px] text-[#d2d9e8]">
+        <div>
+          <span className="text-[#6a748b]">Time:</span> {timeS.toFixed(1)}s
+        </div>
+        <div className="max-w-[220px] truncate">
+          <span className="text-[#6a748b]">Path:</span> {pathLabel}
+        </div>
+        <div>
+          <span className="text-[#6a748b]">Speed:</span> {speed.toFixed(1)}x
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function DoriInsightCard({
+  camera,
+  zoneLabel,
+  currentQuality,
+  requiredQuality,
+  bestCameraName,
+  distanceM,
+  angleDeg,
+  lightingLabel,
+}: {
+  camera: CameraNode;
+  zoneLabel: string;
+  currentQuality: string;
+  requiredQuality: string;
+  bestCameraName: string;
+  distanceM: number;
+  angleDeg: number;
+  lightingLabel: string;
+}) {
+  return (
+    <div className="absolute right-3 top-24 z-30 w-56 rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)] backdrop-blur-sm">
+      <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-[#7dd3fc]">DORI OVERLAY</div>
+      <div className="mt-1 text-[10px] font-semibold text-white">{zoneLabel}</div>
+      <div className="mt-2 space-y-1.5 text-[10px] text-[#d2d9e8]">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[#6a748b]">Current Quality</span>
+          <span className="rounded bg-[#152034] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[#93c5fd]">
+            {currentQuality}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[#6a748b]">Required</span>
+          <span className="rounded bg-[#152034] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[#c7d0e4]">
+            {requiredQuality}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[#6a748b]">Best Camera</span>
+          <span className="truncate text-right font-medium text-[#c7d0e4]">{bestCameraName}</span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[#6a748b]">Distance</span>
+          <span className="font-mono text-[#c7d0e4]">{distanceM.toFixed(1)}m</span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[#6a748b]">Angle</span>
+          <span className="font-mono text-[#c7d0e4]">{angleDeg.toFixed(0)}°</span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[#6a748b]">Lighting</span>
+          <span className="text-[#c7d0e4]">{lightingLabel}</span>
+        </div>
+      </div>
+      <div className="mt-2 rounded-lg border border-[#1f2b42] bg-[#111521] px-2 py-1.5 text-[9px] text-[#8b96ab]">
+        {camera.name} is being used to inspect the current coverage scenario.
+      </div>
+    </div>
+  );
+}
+
 function BottomControlStrip({
   mode,
   onModeChange,
   flags,
   onFlagsChange,
+  onBackToMap,
 }: {
   mode: CameraFeedMode;
   onModeChange: (value: CameraFeedMode) => void;
   flags: OverlayFlags;
   onFlagsChange: (next: OverlayFlags) => void;
+  onBackToMap: () => void;
 }) {
   const viewModes: Array<{ value: CameraFeedMode; label: string }> = [
     { value: "normal", label: "Normal" },
@@ -276,8 +377,15 @@ function BottomControlStrip({
         >
           GRID {flags.grid ? "✓" : ""}
         </button>
-        <button type="button" className="border-l border-[#27364e] rounded-r-md px-2 py-1 font-medium text-[#8ea5cc]">
+        <button type="button" className="border-l border-[#27364e] px-2 py-1 font-medium text-[#8ea5cc]">
           MORE
+        </button>
+        <button
+          type="button"
+          onClick={onBackToMap}
+          className="border-l border-[#27364e] rounded-r-md px-2 py-1 font-medium text-[#8ea5cc] transition-colors hover:text-white"
+        >
+          Back to Map View
         </button>
       </div>
     </div>
@@ -305,17 +413,136 @@ function OfflineFeed({ camera: cam }: { camera: CameraNode }) {
   );
 }
 
+function CameraHeader({
+  camera,
+  index,
+  total,
+  cameras,
+  onPrevious,
+  onNext,
+  onSelect,
+}: {
+  camera: CameraNode;
+  index: number;
+  total: number;
+  cameras: CameraNode[];
+  onPrevious: () => void;
+  onNext: () => void;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <div className="absolute left-3 top-3 z-30 flex items-center gap-2 rounded-xl border border-[#263246] bg-[#0b0f17]/90 px-3 py-2 backdrop-blur-sm">
+      <div className="flex items-center gap-2">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-300">
+          <Camera className="h-3.5 w-3.5" />
+        </div>
+        <div className="leading-tight">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">Camera View</div>
+          <div className="text-[11px] font-medium text-white">{camera.name}</div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-1 rounded-lg border border-[#27364e] bg-black/40 p-1">
+        <button
+          type="button"
+          onClick={onPrevious}
+          disabled={index <= 0}
+          className="flex h-7 w-7 items-center justify-center rounded-md text-[#8ea5cc] transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+          aria-label="Previous camera"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+        </button>
+        <select
+          value={camera.id}
+          onChange={(event) => onSelect(event.target.value)}
+          className="min-w-44 rounded-md border border-[#27364e] bg-[#111521] px-2 py-1 text-[10px] text-[#c7d0e4]"
+          aria-label="Select camera"
+        >
+          {cameras.map((entry) => (
+            <option key={entry.id} value={entry.id}>
+              {entry.name}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={onNext}
+          disabled={index >= total - 1}
+          className="flex h-7 w-7 items-center justify-center rounded-md text-[#8ea5cc] transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+          aria-label="Next camera"
+        >
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function CameraViewMode() {
   const scene = useStudioStore((s) => s.scene);
   const selectedId = useStudioStore((s) => s.selectedNodeId);
+  const selectNode = useStudioStore((s) => s.selectNode);
+  const result = useStudioStore((s) => s.simulationResult);
+  const pathReplay = useStudioStore((s) => s.pathReplay);
+  const activePathId = useStudioStore((s) => s.activePathId);
   const setViewMode = useStudioStore((s) => s.setViewMode);
   const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
   const envMode = useStudioStore((s) => s.environmentMode);
 
   const camera = scene.cameras.find((c) => c.id === selectedId) ?? scene.cameras[0];
+  const cameraIndex = useMemo(() => scene.cameras.findIndex((c) => c.id === camera?.id), [camera?.id, scene.cameras]);
+  const activePath = useMemo(() => {
+    if (!scene.paths.length) return null;
+    return scene.paths.find((path) => path.id === activePathId) ?? scene.paths[0] ?? null;
+  }, [activePathId, scene.paths]);
+  const activePathResult = useMemo(() => {
+    if (!result || !activePath) return null;
+    return result.pathResults.find((entry) => entry.pathId === activePath.id) ?? null;
+  }, [activePath, result]);
   const theme = ENVIRONMENT_THEMES[envMode] ?? ENVIRONMENT_THEMES.day;
   const [feedMode, setFeedMode] = useState<CameraFeedMode>("normal");
   const [flags, setFlags] = useState<OverlayFlags>({ overlays: true, dori: true, path: false, zones: true, timestamp: true, grid: false });
+  const pathTimeS = activePathResult && activePathResult.totalDurationS > 0
+    ? pathReplay.progress * activePathResult.totalDurationS
+    : 0;
+  const firstCriticalZone = scene.criticalZones[0] ?? null;
+  const camResult = result?.cameraResults.find((entry) => entry.cameraId === camera?.id) ?? null;
+  const zoneResult = firstCriticalZone ? result?.criticalZoneResults.find((entry) => entry.zoneId === firstCriticalZone.id) ?? null : null;
+
+  const zoneAnalysis = useMemo(() => {
+    if (!camera || !firstCriticalZone || !camResult) return null;
+
+    const centroid = firstCriticalZone.polygon.reduce(
+      (acc, [x, z]) => {
+        acc.x += x;
+        acc.z += z;
+        return acc;
+      },
+      { x: 0, z: 0 },
+    );
+    const count = Math.max(firstCriticalZone.polygon.length, 1);
+    const centroidX = centroid.x / count;
+    const centroidZ = centroid.z / count;
+    const dx = centroidX - camera.position[0];
+    const dz = centroidZ - camera.position[2];
+    const distanceM = Math.hypot(dx, dz);
+    const bearing = (Math.atan2(dx, dz) * 180) / Math.PI;
+    const angleDeg = Math.abs((((bearing - camera.yawDeg) % 360) + 540) % 360 - 180);
+    const currentQuality = camResult.qualityByZone[firstCriticalZone.id] ?? "none";
+    const bestCameraName = result?.cameraResults
+      .map((entry) => ({
+        cameraId: entry.cameraId,
+        quality: entry.qualityByZone[firstCriticalZone.id] ?? "none",
+      }))
+      .sort((a, b) => QUALITY_RANK[b.quality as DoriQuality] - QUALITY_RANK[a.quality as DoriQuality])[0];
+
+    return {
+      distanceM,
+      angleDeg,
+      currentQuality,
+      bestCameraName: bestCameraName ? (scene.cameras.find((entry) => entry.id === bestCameraName.cameraId)?.name ?? bestCameraName.cameraId) : camera.name,
+    };
+  }, [camera, camResult, firstCriticalZone, result, scene.cameras]);
 
   if (!camera) {
     return (
@@ -340,6 +567,27 @@ export function CameraViewMode() {
     <div className="relative h-full w-full overflow-hidden bg-[#07090d]">
       {camera.status === "on" ? (
         <>
+          <CameraHeader
+            camera={camera}
+            index={cameraIndex < 0 ? 0 : cameraIndex}
+            total={scene.cameras.length}
+            cameras={scene.cameras}
+            onPrevious={() => {
+              const nextIndex = Math.max(0, (cameraIndex < 0 ? 0 : cameraIndex) - 1);
+              const nextCamera = scene.cameras[nextIndex];
+              if (nextCamera) {
+                selectNode(nextCamera.id);
+              }
+            }}
+            onNext={() => {
+              const nextIndex = Math.min(scene.cameras.length - 1, (cameraIndex < 0 ? 0 : cameraIndex) + 1);
+              const nextCamera = scene.cameras[nextIndex];
+              if (nextCamera) {
+                selectNode(nextCamera.id);
+              }
+            }}
+            onSelect={(id) => selectNode(id)}
+          />
           <Canvas
             camera={{
               position: camera.position,
@@ -347,9 +595,9 @@ export function CameraViewMode() {
               near: 0.1,
               far: 60,
             }}
+            shadows="percentage"
             gl={{ antialias: true, alpha: false }}
             style={{ width: "100%", height: "100%" }}
-            shadows="percentage"
           >
             <color attach="background" args={[theme.background]} />
             <Suspense fallback={null}>
@@ -359,8 +607,27 @@ export function CameraViewMode() {
             <OrbitControls enablePan={false} enableZoom={false} enableRotate={false} />
           </Canvas>
           {modeFilter(feedMode)}
-          <LiveFeedHUD camera={camera} mode={feedMode} flags={flags} />
-          <BottomControlStrip mode={feedMode} onModeChange={setFeedMode} flags={flags} onFlagsChange={setFlags} />
+          <LiveFeedHUD camera={camera} mode={feedMode} flags={flags} ppm={scene.assumptions.pixelsPerMeter} />
+          {activePath && activePathResult ? (
+            <ReplayStatusOverlay
+              pathLabel={activePath.label}
+              timeS={pathTimeS}
+              speed={pathReplay.speed}
+            />
+          ) : null}
+          {zoneAnalysis && firstCriticalZone ? (
+            <DoriInsightCard
+              camera={camera}
+              zoneLabel={firstCriticalZone.label}
+              currentQuality={zoneAnalysis.currentQuality}
+              requiredQuality={zoneResult?.requiredQuality ?? firstCriticalZone.requiredQuality}
+              bestCameraName={zoneAnalysis.bestCameraName}
+              distanceM={zoneAnalysis.distanceM}
+              angleDeg={zoneAnalysis.angleDeg}
+              lightingLabel={envMode === "night" ? "Night" : envMode === "dusk" ? "Dusk" : "Day"}
+            />
+          ) : null}
+          <BottomControlStrip mode={feedMode} onModeChange={setFeedMode} flags={flags} onFlagsChange={setFlags} onBackToMap={() => { setWorkspacePreset("edit"); setViewMode("map"); }} />
         </>
       ) : (
         <div className="relative h-full w-full">
@@ -373,7 +640,7 @@ export function CameraViewMode() {
           setWorkspacePreset("edit");
           setViewMode("map");
         }}
-        className="absolute right-3 top-14 z-30 flex items-center gap-1.5 rounded-lg border border-[#2a3246] bg-[#0e1320]/90 px-3 py-1.5 text-[10px] font-medium text-[#c7d0e4] backdrop-blur-sm transition-colors hover:border-[#3a4a66] hover:text-white"
+        className="absolute right-3 top-3 z-30 flex items-center gap-1.5 rounded-lg border border-[#2a3246] bg-[#0e1320]/90 px-3 py-1.5 text-[10px] font-medium text-[#c7d0e4] backdrop-blur-sm transition-colors hover:border-[#3a4a66] hover:text-white"
       >
         <ArrowLeft className="h-3 w-3" />
         Back to Map View

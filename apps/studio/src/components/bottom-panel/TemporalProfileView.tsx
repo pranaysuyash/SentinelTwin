@@ -453,8 +453,9 @@ export function TemporalProfileView() {
               <div className="text-[9px] font-semibold text-[#c7d0e4] mb-1.5">Zone Coverage Stability</div>
               <div className="space-y-1">
                 {Object.entries(temporalProfile.criticalZoneCoverageByHour).map(([zoneLabel, values]) => {
-              const avg = values.reduce((s, v) => s + v, 0) / values.length;
-              const variance = values.reduce((s, v) => s + (v - avg) ** 2, 0) / values.length;
+              const numValues = values as number[];
+              const avg = numValues.reduce((s, v) => s + v, 0) / numValues.length;
+              const variance = numValues.reduce((s, v) => s + (v - avg) ** 2, 0) / numValues.length;
                   const stable = variance < 100;
                   return (
                     <div key={zoneLabel} className="flex items-center gap-2">

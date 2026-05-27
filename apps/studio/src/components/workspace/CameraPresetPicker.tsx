@@ -81,7 +81,9 @@ export const CAMERA_PRESETS: CameraPreset[] = [
 
 export function CameraPresetPicker() {
   const activeTool = useStudioStore((s) => s.activeTool);
-  const [selectedPreset, setSelectedPreset] = useCameraPreset();
+  const selectedPresetId = useStudioStore((s) => s.cameraPresetId);
+  const setSelectedPresetId = useStudioStore((s) => s.setCameraPresetId);
+  const selectedPreset = selectedPresetId ? CAMERA_PRESETS.find((preset) => preset.id === selectedPresetId) ?? null : null;
 
   if (activeTool !== "camera") return null;
 
@@ -93,11 +95,7 @@ export function CameraPresetPicker() {
       {CAMERA_PRESETS.map((preset) => (
         <button
           key={preset.id}
-          onClick={() =>
-            setSelectedPreset(
-              selectedPreset?.id === preset.id ? null : preset,
-            )
-          }
+          onClick={() => setSelectedPresetId(selectedPreset?.id === preset.id ? null : preset.id)}
           className={cn(
             "flex items-center gap-1.5 rounded-md px-2 py-1 text-[9px] transition-colors",
             selectedPreset?.id === preset.id
@@ -119,31 +117,14 @@ export function CameraPresetPicker() {
 }
 
 /**
- * Hook to get/set the currently selected camera preset.
- * Stores the preset ID in a URL-hash-friendly format.
- */
-let _currentPresetId: string | null = null;
-
-function useCameraPreset(): [CameraPreset | null, (preset: CameraPreset | null) => void] {
-  const preset = _currentPresetId
-    ? CAMERA_PRESETS.find((p) => p.id === _currentPresetId) ?? null
-    : null;
-
-  const setPreset = (next: CameraPreset | null) => {
-    _currentPresetId = next?.id ?? null;
-  };
-
-  return [preset, setPreset];
-}
-
-/**
  * Synchronous getter for the currently selected preset (callable from callbacks).
  * Returns null if the user hasn't explicitly selected a preset — preserves default
  * createCameraNode() behavior.
  */
 export function getCameraPreset(): CameraPreset | null {
-  if (!_currentPresetId) return null;
-  return CAMERA_PRESETS.find((p) => p.id === _currentPresetId) ?? null;
+  const presetId = useStudioStore.getState().cameraPresetId;
+  if (!presetId) return null;
+  return CAMERA_PRESETS.find((p) => p.id === presetId) ?? null;
 }
 
 /**

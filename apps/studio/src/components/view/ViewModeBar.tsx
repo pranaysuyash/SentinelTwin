@@ -38,6 +38,7 @@ function ContextChip() {
   const viewMode = useStudioStore((s) => s.viewMode);
   const scene = useStudioStore((s) => s.scene);
   const selectedId = useStudioStore((s) => s.selectedNodeId);
+  const activePathId = useStudioStore((s) => s.activePathId);
   const result = useStudioStore((s) => s.simulationResult);
 
   if (viewMode === "camera_view") {
@@ -52,11 +53,13 @@ function ContextChip() {
   }
 
   if (viewMode === "replay") {
-    const pathCount = scene.paths.length;
+    const activePath = scene.paths.find((path) => path.id === activePathId) ?? null;
     return (
       <div className="flex items-center gap-1 rounded-md border border-[#2a3246] bg-[#111827] px-2 py-1 text-[8px]">
         <Play className="h-2.5 w-2.5 text-emerald-400" />
-        <span className="text-[#93c5fd] font-medium">{pathCount} path{pathCount !== 1 ? "s" : ""}</span>
+        <span className="text-[#93c5fd] font-medium">
+          {activePath ? activePath.label : `${scene.paths.length} path${scene.paths.length !== 1 ? "s" : ""}`}
+        </span>
       </div>
     );
   }

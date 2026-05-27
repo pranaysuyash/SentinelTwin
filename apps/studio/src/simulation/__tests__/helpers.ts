@@ -180,7 +180,7 @@ export function createTestScene(
       timeOfDay: "day",
       interiorLightLevel: "normal",
       nightPenaltyMode: "detailed",
-      doriStandard: "simplified",
+      doriStandard: "dori_2014",
       pixelsPerMeter: {
         detection: 25,
         observation: 62.5,

@@ -1,329 +1,499 @@
 "use client";
 
-import { Pause, Play, SkipBack } from "lucide-react";
-import { useStudioStore } from "@/store/studio-store";
-import type { SimulationResult } from "@/schema/security-scene";
+import { Eye, ListRestart, Pause, Play, Route, SkipBack, SkipForward } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-type TimelineEvent = SimulationResult["pathResults"][number]["timeline"][number];
+import { cn } from "@/lib/cn";
+import { distance2D, lerp2D } from "@/simulation/geometry";
+import { VisibilityTimeline } from "@/components/view/VisibilityTimeline";
+import type { DoriQuality, ScenarioPath, SimulationResult } from "@/schema/security-scene";
+import { useStudioStore } from "@/store/studio-store";
 
 const QUALITY_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
-  identification: { bg: "bg-green-900/40",  text: "text-green-300",  dot: "bg-green-400"  },
-  recognition:    { bg: "bg-blue-900/40",   text: "text-blue-300",   dot: "bg-blue-400"   },
-  observation:    { bg: "bg-yellow-900/40", text: "text-yellow-300", dot: "bg-yellow-400" },
-  detection:      { bg: "bg-orange-900/40", text: "text-orange-300", dot: "bg-orange-400" },
-  none:           { bg: "bg-red-900/40",    text: "text-red-400",    dot: "bg-red-500"    },
+  scrutinize: { bg: "bg-sky-900/40", text: "text-sky-300", dot: "bg-sky-400" },
+  validate: { bg: "bg-blue-900/40", text: "text-blue-300", dot: "bg-blue-400" },
+  identification: { bg: "bg-blue-900/40", text: "text-blue-300", dot: "bg-blue-400" },
+  characterize: { bg: "bg-green-900/40", text: "text-green-300", dot: "bg-green-400" },
+  recognition: { bg: "bg-green-900/40", text: "text-green-300", dot: "bg-green-400" },
+  perceive: { bg: "bg-lime-900/40", text: "text-lime-300", dot: "bg-lime-400" },
+  observation: { bg: "bg-yellow-900/40", text: "text-yellow-300", dot: "bg-yellow-400" },
+  discern: { bg: "bg-yellow-900/40", text: "text-yellow-300", dot: "bg-yellow-400" },
+  outline: { bg: "bg-orange-900/40", text: "text-orange-300", dot: "bg-orange-400" },
+  overview: { bg: "bg-orange-900/40", text: "text-orange-300", dot: "bg-orange-400" },
+  detection: { bg: "bg-orange-900/40", text: "text-orange-300", dot: "bg-orange-400" },
+  none: { bg: "bg-red-900/40", text: "text-red-400", dot: "bg-red-500" },
 };
 
 const QUALITY_BAR_COLORS: Record<string, string> = {
+  scrutinize: "#0ea5e9",
+  validate: "#60a5fa",
   identification: "#4ade80",
-  recognition:    "#60a5fa",
-  observation:    "#facc15",
-  detection:      "#fb923c",
-  none:           "#ef4444",
+  characterize: "#4ade80",
+  recognition: "#60a5fa",
+  perceive: "#84cc16",
+  observation: "#facc15",
+  discern: "#eab308",
+  outline: "#fb923c",
+  overview: "#fb923c",
+  detection: "#fb923c",
+  none: "#ef4444",
+};
+
+const QUALITY_RANK: Record<DoriQuality, number> = {
+  scrutinize: 11,
+  identification: 10,
+  validate: 9,
+  characterize: 8,
+  recognition: 7,
+  perceive: 6,
+  observation: 5,
+  discern: 4,
+  outline: 3,
+  overview: 2,
+  detection: 1,
+  none: 0,
 };
 
 function QualityBadge({ quality }: { quality: string }) {
   const c = QUALITY_COLORS[quality] ?? QUALITY_COLORS.none!;
   return (
-    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-semibold uppercase tracking-wider ${c.bg} ${c.text}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
+    <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider ${c.bg} ${c.text}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${c.dot}`} />
       {quality}
     </span>
   );
 }
 
-// Builds a flat event list from all pathResults for the timeline table
-function buildTimelineRows(result: SimulationResult) {
+function formatTime(seconds: number) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toFixed(1).padStart(4, "0")}`;
+}
+
+function formatPoint(point?: [number, number] | null) {
+  if (!point) return "--";
+  return `${point[0].toFixed(1)}, ${point[1].toFixed(1)}`;
+}
+
+function samplePathPosition(path: ScenarioPath, timeS: number) {
+  if (path.points.length === 0) return null;
+  if (path.points.length === 1) return path.points[0]!.position;
+
+  let elapsed = 0;
+  for (let index = 0; index < path.points.length - 1; index += 1) {
+    const current = path.points[index]!;
+    const next = path.points[index + 1]!;
+    const segmentLength = distance2D(current.position, next.position);
+    const segmentDuration = segmentLength / Math.max(path.speedMps, 0.01);
+
+    if (timeS <= elapsed + segmentDuration) {
+      const localT = segmentDuration > 0 ? (timeS - elapsed) / segmentDuration : 0;
+      return lerp2D(current.position, next.position, Math.max(0, Math.min(1, localT)));
+    }
+
+    elapsed += segmentDuration;
+  }
+
+  return path.points[path.points.length - 1]!.position;
+}
+
+function buildRows(path: ScenarioPath, result: SimulationResult["pathResults"][number] | null) {
   const rows: Array<{
     timeS: number;
-    pathLabel: string;
-    segmentIdx: number;
+    position: [number, number] | null;
     event: string;
-    quality: string;
-    cameraId: string | undefined;
-    reason: string | undefined;
+    quality: DoriQuality;
+    cameraId?: string;
+    reason?: string;
   }> = [];
 
-  for (const pr of result.pathResults) {
-    pr.timeline.forEach((evt: TimelineEvent, i: number) => {
-      rows.push({
-        timeS: evt.timeS,
-        pathLabel: pr.pathId,
-        segmentIdx: i + 1,
-        event: evt.event,
-        quality: evt.quality ?? (evt.event === "lost" ? "none" : "detection"),
-        cameraId: evt.cameraId,
-        reason: evt.reason,
-      });
+  if (!result) return rows;
+
+  for (const evt of result.timeline) {
+    rows.push({
+      timeS: evt.timeS,
+      position: samplePathPosition(path, evt.timeS),
+      event: evt.event,
+      quality: evt.quality ?? (evt.event === "lost" ? "none" : "detection"),
+      cameraId: evt.cameraId,
+      reason: evt.reason,
     });
   }
 
-  rows.sort((a, b) => a.timeS - b.timeS);
   return rows;
 }
 
-// Build quality-over-time bar data from timeline events
-function buildQualityBars(result: SimulationResult) {
-  if (result.pathResults.length === 0) return [];
+function buildQualityRibbon(result: SimulationResult["pathResults"][number] | null, durationS: number) {
+  if (!result || durationS <= 0) return [];
 
-  // Collect all events across paths, bucket into 20 time slots
-  const maxT = Math.max(...result.pathResults.map((pr) => pr.totalDurationS), 1);
-  const SLOTS = 20;
-  const slotW = maxT / SLOTS;
+  const slots = 20;
+  const slotW = durationS / slots;
+  const timeline = [...result.timeline].sort((a, b) => a.timeS - b.timeS);
 
-  // For each slot, find dominant quality
-  const slots: string[] = [];
-  for (let s = 0; s < SLOTS; s++) {
-    const tStart = s * slotW;
-    const tEnd   = tStart + slotW;
+  return Array.from({ length: slots }, (_, index) => {
+    const start = index * slotW;
+    const end = start + slotW;
+    const active = timeline.filter((event) => event.timeS <= end).slice(-1)[0];
+    const quality = active?.quality ?? (active?.event === "lost" ? "none" : "detection");
+    return { quality, leftPct: (start / durationS) * 100, widthPct: (slotW / durationS) * 100 };
+  });
+}
 
-    const RANK: Record<string, number> = { none: 0, detection: 1, observation: 2, recognition: 3, identification: 4 };
-    let best = "none";
+function buildCameraSummary(result: SimulationResult["pathResults"][number] | null) {
+  if (!result) return [];
 
-    for (const pr of result.pathResults) {
-      // Find last event before tEnd
-      const evtsBefore = pr.timeline.filter((e) => e.timeS <= tEnd);
-      if (evtsBefore.length > 0) {
-        const last = evtsBefore[evtsBefore.length - 1]!;
-        const q = last.quality ?? (last.event === "visible" ? "detection" : "none");
-        if ((RANK[q] ?? 0) > (RANK[best] ?? 0)) best = q;
-      }
-    }
-
-    // If we're in the path time range, push; else skip
-    if (tStart < maxT) slots.push(best);
-  }
-
-  return slots.map((q, i) => ({ q, pct: ((i + 1) / SLOTS) * 100 }));
+  return Object.values(result.visibilityByCamera)
+    .sort((a, b) => {
+      const qualityDelta = QUALITY_RANK[b.maxQuality] - QUALITY_RANK[a.maxQuality];
+      if (qualityDelta !== 0) return qualityDelta;
+      return b.visibleS - a.visibleS;
+    })
+    .slice(0, 4);
 }
 
 export function TimelineTab() {
   const result = useStudioStore((s) => s.simulationResult);
-  const scene  = useStudioStore((s) => s.scene);
+  const scene = useStudioStore((s) => s.scene);
   const pathReplay = useStudioStore((s) => s.pathReplay);
-  const setPathReplayPlaying  = useStudioStore((s) => s.setPathReplayPlaying);
+  const setPathReplayPlaying = useStudioStore((s) => s.setPathReplayPlaying);
   const setPathReplayProgress = useStudioStore((s) => s.setPathReplayProgress);
+  const setPathReplaySpeed = useStudioStore((s) => s.setPathReplaySpeed);
+  const activePathId = useStudioStore((s) => s.activePathId);
+  const setActivePathId = useStudioStore((s) => s.setActivePathId);
 
-  if (!result) {
+  const activePath = useMemo(() => {
+    if (!scene.paths.length) return null;
+    return scene.paths.find((path) => path.id === activePathId) ?? scene.paths[0] ?? null;
+  }, [activePathId, scene.paths]);
+
+  const activePathResult = useMemo(() => {
+    if (!result || !activePath) return null;
+    return result.pathResults.find((entry) => entry.pathId === activePath.id) ?? null;
+  }, [activePath, result]);
+
+  const [subTab, setSubTab] = useState<"timeline" | "events" | "quality">("timeline");
+  const [followActor, setFollowActor] = useState(true);
+  const playbackAnchorRef = useRef({ startWallTime: 0, startPlaybackTime: 0 });
+  const totalDuration = activePathResult?.totalDurationS ?? 0;
+  const currentTime = totalDuration > 0 ? pathReplay.progress * totalDuration : 0;
+
+  useEffect(() => {
+    if (!pathReplay.playing || totalDuration <= 0) return;
+
+    playbackAnchorRef.current = { startWallTime: performance.now(), startPlaybackTime: currentTime };
+
+    let rafId = 0;
+    const tick = (now: number) => {
+      const elapsed = (now - playbackAnchorRef.current.startWallTime) / 1000;
+      const nextTime = Math.min(playbackAnchorRef.current.startPlaybackTime + elapsed * pathReplay.speed, totalDuration);
+      setPathReplayProgress(nextTime / totalDuration);
+
+      if (nextTime >= totalDuration) {
+        setPathReplayPlaying(false);
+      } else {
+        rafId = requestAnimationFrame(tick);
+      }
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [currentTime, pathReplay.playing, pathReplay.speed, setPathReplayPlaying, setPathReplayProgress, totalDuration]);
+
+  useEffect(() => {
+    setPathReplayPlaying(false);
+    setPathReplayProgress(0);
+  }, [activePath?.id, setPathReplayPlaying, setPathReplayProgress]);
+
+  const rows = useMemo(() => (activePath ? buildRows(activePath, activePathResult) : []), [activePath, activePathResult]);
+  const cameraSummary = useMemo(() => buildCameraSummary(activePathResult), [activePathResult]);
+  const qualityRibbon = useMemo(() => buildQualityRibbon(activePathResult, totalDuration), [activePathResult, totalDuration]);
+  const camerasById = useMemo(() => Object.fromEntries(scene.cameras.map((camera) => [camera.id, camera.name])), [scene.cameras]);
+
+  const bestCamera = cameraSummary[0];
+  const visiblePct = activePathResult && activePathResult.totalDurationS > 0
+    ? Math.round((activePathResult.visibleDurationS / activePathResult.totalDurationS) * 100)
+    : 0;
+
+  const handleSeek = useCallback((seconds: number) => {
+    if (totalDuration <= 0) return;
+    const clamped = Math.max(0, Math.min(seconds, totalDuration));
+    setPathReplayProgress(clamped / totalDuration);
+    if (pathReplay.playing) {
+      playbackAnchorRef.current = { startWallTime: performance.now(), startPlaybackTime: clamped };
+    }
+  }, [pathReplay.playing, setPathReplayProgress, totalDuration]);
+
+  const handleReset = useCallback(() => {
+    setPathReplayPlaying(false);
+    setPathReplayProgress(0);
+  }, [setPathReplayPlaying, setPathReplayProgress]);
+
+  const handlePlayPause = useCallback(() => {
+    if (currentTime >= totalDuration && totalDuration > 0) {
+      setPathReplayProgress(0);
+    }
+    setPathReplayPlaying(!pathReplay.playing);
+  }, [currentTime, pathReplay.playing, setPathReplayPlaying, setPathReplayProgress, totalDuration]);
+
+  if (!result || !activePath) {
     return (
-      <div className="flex items-center justify-center h-full text-[#3a4158] text-[11px]">
-        Run simulation to see timeline
+      <div className="flex h-full items-center justify-center text-[11px] text-[#3a4158]">
+        Add a path and run simulation to see the timeline.
       </div>
     );
   }
 
-  const hasPaths    = scene.paths.length > 0;
-  const hasResults  = result.pathResults.length > 0;
-  const maxDuration = Math.max(...result.pathResults.map((pr) => pr.totalDurationS), 1);
-
-  // Summary stats across all path results
-  const totalEvents  = result.pathResults.reduce((acc, pr) => acc + pr.timeline.length, 0);
-  const totalVisible = result.pathResults.reduce((acc, pr) => acc + pr.visibleDurationS, 0);
-  const totalDur     = result.pathResults.reduce((acc, pr) => acc + pr.totalDurationS, 0);
-  const visiblePct   = totalDur > 0 ? Math.round((totalVisible / totalDur) * 100) : 0;
-  const lostSec      = result.pathResults.reduce((acc, pr) => acc + pr.lostDurationS, 0);
-
-  // Camera name lookup
-  const cameraNames: Record<string, string> = {};
-  for (const cam of scene.cameras) cameraNames[cam.id] = cam.name;
-
-  const rows    = buildTimelineRows(result);
-  const barData = buildQualityBars(result);
-
-  const currentT = pathReplay.progress * maxDuration;
-
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-      {/* ── Controls row ── */}
-      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-[#1e2130] flex-shrink-0">
-        <button
-          onClick={() => { setPathReplayPlaying(false); setPathReplayProgress(0); }}
-          disabled={!hasPaths}
-          className="flex items-center justify-center w-6 h-6 rounded bg-[#1a1d26] hover:bg-[#1e2235] transition-colors disabled:opacity-40"
-          title="Reset"
-        >
-          <SkipBack className="w-3 h-3 text-[#68738a]" />
-        </button>
-        <button
-          onClick={() => hasPaths && setPathReplayPlaying(!pathReplay.playing)}
-          disabled={!hasPaths}
-          className="flex items-center justify-center w-6 h-6 rounded bg-[#1a1d26] hover:bg-[#1e2235] transition-colors disabled:opacity-40"
-          title={pathReplay.playing ? "Pause" : "Play"}
-        >
-          {pathReplay.playing
-            ? <Pause className="w-3 h-3 text-green-400" />
-            : <Play  className="w-3 h-3 text-[#68738a]" />}
-        </button>
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="flex flex-wrap items-center gap-2 border-b border-[#1e2130] px-3 py-2">
+        <div className="flex items-center gap-1.5">
+          <Route className="h-3.5 w-3.5 text-[#60a5fa]" />
+          <select
+            value={activePath.id}
+            onChange={(event) => setActivePathId(event.target.value)}
+            className="min-w-[190px] rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+          >
+            {scene.paths.map((path) => (
+              <option key={path.id} value={path.id}>{path.label}</option>
+            ))}
+          </select>
+        </div>
 
-        {/* Scrubber */}
-        <div className="flex-1 relative h-4 flex items-center group cursor-pointer"
-          onClick={(e) => {
-            if (!hasPaths) return;
-            const rect = e.currentTarget.getBoundingClientRect();
-            const p = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-            setPathReplayProgress(p);
-          }}
-        >
-          <div className="w-full h-1 bg-[#1a1d26] rounded-full overflow-hidden">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={handleReset}
+            className="flex h-6 w-6 items-center justify-center rounded bg-[#1a1d26] transition-colors hover:bg-[#1e2235]"
+            title="Reset"
+          >
+            <ListRestart className="h-3 w-3 text-[#68738a]" />
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSeek(Math.max(0, currentTime - 2))}
+            className="flex h-6 w-6 items-center justify-center rounded bg-[#1a1d26] transition-colors hover:bg-[#1e2235]"
+            title="Skip back 2s"
+          >
+            <SkipBack className="h-3 w-3 text-[#68738a]" />
+          </button>
+          <button
+            type="button"
+            onClick={handlePlayPause}
+            className={cn(
+              "flex h-7 w-7 items-center justify-center rounded-full transition-colors",
+              pathReplay.playing ? "bg-[#60a5fa] text-white" : "bg-[#1a2333] text-[#93c5fd]",
+            )}
+            title={pathReplay.playing ? "Pause" : "Play"}
+          >
+            {pathReplay.playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="ml-0.5 h-3.5 w-3.5" />}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSeek(Math.min(totalDuration, currentTime + 2))}
+            className="flex h-6 w-6 items-center justify-center rounded bg-[#1a1d26] transition-colors hover:bg-[#1e2235]"
+            title="Skip forward 2s"
+          >
+            <SkipForward className="h-3 w-3 text-[#68738a]" />
+          </button>
+        </div>
+
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <div
+            className="group relative h-4 flex-1 cursor-pointer"
+            onClick={(event) => {
+              const rect = event.currentTarget.getBoundingClientRect();
+              const pct = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+              handleSeek(pct * totalDuration);
+            }}
+          >
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#1a1d26]">
+              <div
+                className="h-full rounded-full bg-green-500/70 transition-all duration-100"
+                style={{ width: `${pathReplay.progress * 100}%` }}
+              />
+            </div>
+            {qualityRibbon.length > 0 ? (
+              <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-full">
+                {qualityRibbon.map((slot, index) => (
+                  <div
+                    key={index}
+                    className="absolute top-0 h-full opacity-25 transition-opacity duration-200 group-hover:opacity-35"
+                    style={{
+                      left: `${slot.leftPct}%`,
+                      width: `${Math.max(slot.widthPct, 0.5)}%`,
+                      backgroundColor: QUALITY_BAR_COLORS[slot.quality] ?? QUALITY_BAR_COLORS.none,
+                    }}
+                  />
+                ))}
+              </div>
+            ) : null}
             <div
-              className="h-full bg-green-500/70 rounded-full transition-all duration-100"
-              style={{ width: `${pathReplay.progress * 100}%` }}
+              className="pointer-events-none absolute top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-green-400 shadow"
+              style={{ left: `calc(${pathReplay.progress * 100}% - 5px)` }}
             />
           </div>
-          {/* Playhead */}
-          <div
-            className="absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-green-400 shadow transition-all duration-100 pointer-events-none"
-            style={{ left: `calc(${pathReplay.progress * 100}% - 5px)` }}
-          />
+
+          <div className="min-w-[96px] text-right font-mono text-[10px] text-[#8b96ab]">
+            {formatTime(currentTime)} / {formatTime(totalDuration)}
+          </div>
         </div>
 
-        <span className="text-[9px] font-mono text-[#4a5568] min-w-[60px] text-right">
-          {hasPaths ? `${currentT.toFixed(1)}s / ${maxDuration.toFixed(1)}s` : "No paths"}
-        </span>
+        <div className="flex items-center gap-1.5">
+          {[0.5, 1, 2, 4].map((speed) => (
+            <button
+              key={speed}
+              type="button"
+              onClick={() => setPathReplaySpeed(speed)}
+              className={cn(
+                "rounded px-1.5 py-0.5 text-[9px] font-medium transition-colors",
+                pathReplay.speed === speed ? "bg-[#1a2333] text-[#93c5fd]" : "text-[#4a5568] hover:bg-[#131a28] hover:text-[#8b96ab]",
+              )}
+            >
+              {speed}x
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setFollowActor((value) => !value)}
+            className={cn(
+              "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-medium transition-colors",
+              followActor ? "bg-[#1a2333] text-[#93c5fd]" : "text-[#4a5568] hover:bg-[#131a28] hover:text-[#8b96ab]",
+            )}
+          >
+            <Eye className="h-3 w-3" />
+            Follow
+          </button>
+        </div>
       </div>
 
-      {/* ── Stats summary strip ── */}
-      {hasResults && (
-        <div className="flex items-center gap-3 border-b border-[#1e2130] bg-[#090c12] px-3 py-1 flex-shrink-0">
-          {[
-            { label: "Paths", value: String(result.pathResults.length), color: "text-[#c7d0e4]" },
-            { label: "Events", value: String(totalEvents), color: "text-[#c7d0e4]" },
-            { label: "Duration", value: `${maxDuration.toFixed(1)}s`, color: "text-[#c7d0e4]" },
-            { label: "Visible", value: `${visiblePct}%`, color: visiblePct >= 80 ? "text-green-400" : visiblePct >= 50 ? "text-yellow-400" : "text-red-400" },
-            { label: "Blind", value: `${lostSec.toFixed(1)}s`, color: lostSec > 0 ? "text-orange-400" : "text-[#3a4158]" },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="flex items-baseline gap-1">
-              <span className={`font-mono text-[10px] font-semibold ${color}`}>{value}</span>
-              <span className="text-[8px] text-[#3a4158] uppercase tracking-wide">{label}</span>
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="flex items-center gap-3 border-b border-[#1e2130] bg-[#090c12] px-3 py-1.5 text-[8px] text-[#4d566b]">
+        <span>
+          Path: <span className="text-[#c7d0e4]">{activePath.label}</span>
+        </span>
+        <span>
+          Visible: <span className="font-mono text-emerald-300">{visiblePct}%</span>
+        </span>
+        <span>
+          Events: <span className="font-mono text-[#8b96ab]">{activePathResult?.timeline.length ?? 0}</span>
+        </span>
+        {bestCamera ? (
+          <span>
+            Best camera: <span className="text-[#c7d0e4]">{camerasById[bestCamera.cameraId] ?? bestCamera.cameraId}</span>
+          </span>
+        ) : null}
+      </div>
 
-      {/* ── Main content: table + quality-over-time ── */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Timeline event table */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden border-r border-[#1e2130]">
-          <div className="px-3 py-1 border-b border-[#1e2130] flex items-center justify-between flex-shrink-0">
-            <span className="text-[8px] font-semibold uppercase tracking-[0.14em] text-[#4a5568]">
+      <div className="flex items-center gap-0.5 border-b border-[#1e2130] px-2 pt-1.5">
+        {[
+          { id: "timeline" as const, label: "TIMELINE" },
+          { id: "events" as const, label: "EVENTS" },
+          { id: "quality" as const, label: "QUALITY OVER TIME" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setSubTab(tab.id)}
+            className={cn(
+              "-mb-px rounded-t-lg border-b-2 px-3 py-1.5 text-[10px] font-medium tracking-[0.06em] transition-colors",
+              subTab === tab.id
+                ? "border-green-500 text-green-300"
+                : "border-transparent text-[#5a647a] hover:text-[#a1abc1]",
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-hidden bg-[#0b0f17]">
+        {subTab === "timeline" && (
+          <div className="flex h-full min-h-0 flex-col overflow-hidden">
+            <div className="border-b border-[#1e2130] px-3 py-1.5 text-[8px] font-semibold uppercase tracking-[0.14em] text-[#4a5568]">
               Coverage Failure Timeline
-            </span>
-            <span className="text-[8px] text-[#3a4158]">{rows.length} events</span>
-          </div>
-
-          {!hasResults ? (
-            <div className="flex-1 flex items-center justify-center text-[10px] text-[#3a4158]">
-              Add paths and run simulation to see timeline events
             </div>
-          ) : (
-            <div className="flex-1 overflow-y-auto">
-              <table className="w-full text-[10px] border-collapse">
-                <thead className="sticky top-0 bg-[#0b0f17] z-10">
-                  <tr className="text-[8px] text-[#3a4158] uppercase tracking-wider">
-                    <th className="text-left px-2.5 py-1">Time</th>
-                    <th className="text-left px-2 py-1">Path</th>
-                    <th className="text-center px-2 py-1">Seg</th>
-                    <th className="text-center px-2 py-1">Event</th>
-                    <th className="text-left px-2 py-1">Quality</th>
-                    <th className="text-left px-2 py-1">Camera</th>
+            <div className="min-h-0 flex-1 overflow-auto">
+              <table className="w-full border-collapse text-[10px]">
+                <thead className="sticky top-0 bg-[#0b0f17] text-left text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+                  <tr>
+                    <th className="px-3 py-2 font-semibold">Time</th>
+                    <th className="px-3 py-2 font-semibold">Actor Position</th>
+                    <th className="px-3 py-2 font-semibold">Camera</th>
+                    <th className="px-3 py-2 font-semibold">Quality</th>
+                    <th className="px-3 py-2 font-semibold">Event</th>
+                    <th className="px-3 py-2 font-semibold">Reason</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((row, i) => {
-                    const isActive = Math.abs(row.timeS - currentT) < (maxDuration / 20);
-                    const camName  = row.cameraId ? (cameraNames[row.cameraId] ?? row.cameraId) : "—";
-                    return (
-                      <tr
-                        key={i}
-                        className={`border-t border-[#181b26] transition-colors ${
-                          isActive ? "bg-[#111827]" : "hover:bg-[#0d0f17]"
-                        }`}
-                      >
-                        <td className="px-2.5 py-1.5 font-mono text-[#5a6478]">
-                          {row.timeS.toFixed(1)}s
-                        </td>
-                        <td className="px-2 py-1.5 text-[#8090a8] truncate max-w-[80px]">
-                          {row.pathLabel.replace("path_", "P")}
-                        </td>
-                        <td className="px-2 py-1.5 text-center text-[#4a5568]">
-                          {row.segmentIdx}
-                        </td>
-                        <td className="px-2 py-1.5 text-center">
-                          <span className={`text-[8px] px-1 rounded font-medium ${
-                            row.event === "visible"        ? "text-green-400 bg-green-900/20"
-                            : row.event === "lost"         ? "text-red-400 bg-red-900/20"
-                            : row.event === "quality_change" ? "text-blue-400 bg-blue-900/20"
-                            : "text-[#4a5568]"
-                          }`}>
-                            {row.event === "quality_change" ? "change" : row.event}
-                          </span>
-                        </td>
-                        <td className="px-2 py-1.5">
-                          <QualityBadge quality={row.quality} />
-                        </td>
-                        <td className="px-2 py-1.5 text-[#5a6478] truncate max-w-[80px] text-[9px]">
-                          {camName}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {rows.map((row, index) => (
+                    <tr key={`${row.timeS}-${index}`} className="border-t border-[#141925] hover:bg-[#111521]">
+                      <td className="px-3 py-2 font-mono text-[#c7d0e4]">{row.timeS.toFixed(1)}s</td>
+                      <td className="px-3 py-2 font-mono text-[#8b96ab]">{formatPoint(row.position)}</td>
+                      <td className="px-3 py-2 text-[#c7d0e4]">
+                        {row.cameraId ? camerasById[row.cameraId] ?? row.cameraId : "—"}
+                      </td>
+                      <td className="px-3 py-2">
+                        <QualityBadge quality={row.quality} />
+                      </td>
+                      <td className="px-3 py-2 text-[#c7d0e4]">{row.event}</td>
+                      <td className="px-3 py-2 text-[#5b667c]">{row.reason ?? "—"}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
-          )}
-        </div>
-
-        {/* Quality Over Time sidebar */}
-        <div className="w-[140px] flex-shrink-0 flex flex-col overflow-hidden">
-          <div className="px-2.5 py-1 border-b border-[#1e2130] flex-shrink-0">
-            <span className="text-[8px] font-semibold uppercase tracking-[0.14em] text-[#4a5568]">
-              Quality / Time
-            </span>
           </div>
+        )}
 
-          <div className="flex-1 overflow-hidden px-2 py-2">
-            {barData.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-[9px] text-[#3a4158]">
-                No data
-              </div>
-            ) : (
-              <div className="flex items-end gap-0.5 h-full">
-                {barData.map(({ q }, i) => {
-                  const color = QUALITY_BAR_COLORS[q] ?? "#ef4444";
-                  const playheadSlot = Math.floor(pathReplay.progress * barData.length);
-                  const isActive = i === playheadSlot;
-                  return (
-                    <div
-                      key={i}
-                      className="flex-1 rounded-t-sm transition-all duration-200"
-                      style={{
-                        height: `${30 + (Object.keys(QUALITY_BAR_COLORS).indexOf(q)) * 14}%`,
-                        backgroundColor: color,
-                        opacity: isActive ? 1 : 0.55,
-                        minHeight: 4,
-                        maxHeight: "90%",
-                      }}
-                      title={`${q} @ ${((i / barData.length) * maxDuration).toFixed(1)}s`}
-                    />
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Legend */}
-          <div className="px-2 py-1.5 border-t border-[#1e2130] flex-shrink-0 space-y-0.5">
-            {(["identification", "recognition", "observation", "detection"] as const).map((q) => {
-              const c = QUALITY_COLORS[q]!;
-              return (
-                <div key={q} className="flex items-center gap-1">
-                  <span className={`w-1.5 h-1.5 rounded-sm flex-shrink-0 ${c.dot}`} />
-                  <span className={`text-[7px] capitalize ${c.text}`}>{q.slice(0, 5)}</span>
+        {subTab === "events" && (
+          <div className="h-full overflow-auto p-3">
+            <div className="grid gap-2 sm:grid-cols-2">
+              {rows.map((row, index) => (
+                <div key={`${row.timeS}-${index}`} className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <span className="font-mono text-[10px] text-[#c7d0e4]">{row.timeS.toFixed(1)}s</span>
+                    <QualityBadge quality={row.quality} />
+                  </div>
+                  <div className="text-[10px] text-[#8b96ab]">
+                    {row.cameraId ? camerasById[row.cameraId] ?? row.cameraId : "No camera"} · {row.event}
+                  </div>
+                  <div className="mt-1.5 text-[9px] text-[#5b667c]">
+                    Actor @ {formatPoint(row.position)}
+                  </div>
+                  {row.reason ? (
+                    <div className="mt-2 rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5 text-[9px] text-[#c7d0e4]">
+                      {row.reason}
+                    </div>
+                  ) : null}
                 </div>
-              );
-            })}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
+
+        {subTab === "quality" && (
+          <div className="h-full overflow-auto p-3">
+            <VisibilityTimeline
+              pathResult={activePathResult}
+              currentTime={currentTime}
+              onSeek={handleSeek}
+            />
+
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              {cameraSummary.map((entry) => (
+                <div key={entry.cameraId} className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="truncate text-[10px] font-medium text-[#c7d0e4]">
+                      {camerasById[entry.cameraId] ?? entry.cameraId}
+                    </div>
+                    <QualityBadge quality={entry.maxQuality} />
+                  </div>
+                  <div className="mt-1.5 text-[9px] text-[#5b667c]">
+                    Visible {entry.visibleS.toFixed(1)}s
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

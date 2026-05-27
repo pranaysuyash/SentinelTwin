@@ -2,7 +2,7 @@
 
 import { Html, OrbitControls } from "@react-three/drei";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
-import { Camera, Layers, Lightbulb, MousePointer2, RefreshCcw, Square } from "lucide-react";
+import { Camera, Layers, Lightbulb, MousePointer2, RefreshCcw, Shield, Square } from "lucide-react";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
@@ -28,13 +28,15 @@ import { makeSnapEngine } from "./editing/SnapEngine";
 import { PathDrawTool } from "./editing/PathDrawTool";
 import { PolygonDrawTool } from "./editing/PolygonDrawTool";
 import { SelectionOverlay } from "./editing/SelectionOverlay";
+import { TransformHandles } from "./editing/TransformHandles";
 import { WallDrawTool } from "./editing/WallDrawTool";
 import { applyShiftLock, clampToScene, pathLength, pointDistance } from "./editing/editor-geometry";
-import { pointOnPathAtProgress } from "@/components/map/map-utils";
+import { pointOnPathAtProgress } from "@/components/map/path-quality";
 import { CoverageLegend } from "./CoverageLegend";
 import {
   createCameraNode,
   createObstructionNode,
+  createEntryPointNode,
   createWallNode,
   createDoorNode,
   createWindowNode,
@@ -43,6 +45,7 @@ import {
   createSecurityLightNode,
 } from "@/lib/node-factory";
 import { CameraPresetPicker, applyCameraPreset, getCameraPreset } from "./CameraPresetPicker";
+import "@/lib/three-compat";
 
 function getMapFrame(width: number, depth: number) {
   const centerX = width / 2;
@@ -199,9 +202,13 @@ function CeilingLightMarkers() {
 function CriticalZoneOverlay({
   zone,
   result,
+  selected,
+  onSelect,
 }: {
   zone: { id: string; label: string; polygon: [number, number][]; heightM: number; requiredQuality: string };
   result?: { status: string; actualQuality: string };
+  selected?: boolean;
+  onSelect?: (id: string) => void;
 }) {
   const layers = useStudioStore((s) => s.layerVisibility);
   if (!layers.critical_zones) return null;
@@ -223,14 +230,19 @@ function CriticalZoneOverlay({
   const badgeText = status === "pass" ? "#86efac" : status === "fail" ? "#fca5a5" : "#d1d5db";
 
   return (
-    <group>
+    <group
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect?.(zone.id);
+      }}
+    >
       <mesh position={[cx, 0.012, cz]}>
         <boxGeometry args={[w, 0.01, d]} />
-        <meshBasicMaterial color={color} transparent opacity={0.1} depthWrite={false} />
+        <meshBasicMaterial color={selected ? "#93c5fd" : color} transparent opacity={selected ? 0.18 : 0.1} depthWrite={false} />
       </mesh>
       <lineSegments position={[cx, 0.014, cz]}>
         <edgesGeometry args={[new THREE.BoxGeometry(w, 0.01, d)]} />
-        <lineBasicMaterial color={color} transparent opacity={0.72} />
+        <lineBasicMaterial color={selected ? "#93c5fd" : color} transparent opacity={selected ? 0.95 : 0.72} />
       </lineSegments>
       <Html position={[cx, 0.05, cz]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
         <div
@@ -339,6 +351,7 @@ function SceneGeometry() {
   const scene = useStudioStore((s) => s.scene);
   const result = useStudioStore((s) => s.simulationResult);
   const selected = useStudioStore((s) => s.selectedNodeId);
+  const selectNode = useStudioStore((s) => s.selectNode);
   const layers = useStudioStore((s) => s.layerVisibility);
 
   const { width, depth } = scene.dimensions;
@@ -406,7 +419,13 @@ function SceneGeometry() {
       {layers.heatmap && result?.coverageCells ? <CoverageHeatmapInstanced cells={result.coverageCells} /> : null}
 
       {scene.criticalZones.map((zone) => (
-        <CriticalZoneOverlay key={zone.id} zone={zone} result={result?.criticalZoneResults.find((entry) => entry.zoneId === zone.id)} />
+        <CriticalZoneOverlay
+          key={zone.id}
+          zone={zone}
+          selected={selected === zone.id}
+          onSelect={selectNode}
+          result={result?.criticalZoneResults.find((entry) => entry.zoneId === zone.id)}
+        />
       ))}
 
       {entryDoor ? <EntryDoorLabel position={entryDoor.position} /> : null}
@@ -415,7 +434,13 @@ function SceneGeometry() {
       {layers.camera_cones ? scene.cameras.map((cam) => <CameraFrustum key={`frust_${cam.id}`} camera={cam} selected={selected === cam.id} />) : null}
 
       {layers.paths ? scene.paths.map((path) => (
-        <ScenePathLine key={path.id} points={path.points.map((point) => point.position)} />
+        <ScenePathLine
+          key={path.id}
+          id={path.id}
+          points={path.points.map((point) => point.position)}
+          onSelect={selectNode}
+          color={selected === path.id ? "#f59e0b" : undefined}
+        />
       )) : null}
 
       {layers.paths && result?.adversarialPath ? (
@@ -423,7 +448,7 @@ function SceneGeometry() {
       ) : null}
 
       {layers.privacy_zones && scene.privacyZones.length > 0 ? (
-        <ScenePrivacyZones zones={scene.privacyZones} />
+        <ScenePrivacyZones zones={scene.privacyZones} onSelect={selectNode} />
       ) : null}
 
       {layers.paths ? <PathReplayActor /> : null}
@@ -483,7 +508,10 @@ function SceneFrameRig() {
   const camera = useThree((s) => s.camera);
   const controls = useThree((s) => s.controls);
   const scene = useStudioStore((s) => s.scene);
+  const focusRequest = useStudioStore((s) => s.focusScenePointRequest);
+  const clearFocusRequest = useStudioStore((s) => s.setFocusScenePointRequest);
   const { width: sceneWidth, depth: sceneDepth } = scene.dimensions;
+  const previousTarget = useRef<THREE.Vector3 | null>(null);
 
   useEffect(() => {
     const { target, position } = getMapFrame(sceneWidth, sceneDepth);
@@ -497,29 +525,69 @@ function SceneFrameRig() {
     if (orbitControls) {
       orbitControls.target.copy(target);
       orbitControls.update();
+      previousTarget.current = target.clone();
     }
   }, [camera, controls, sceneDepth, sceneWidth]);
+
+  useEffect(() => {
+    if (!focusRequest) return;
+
+    const orbitControls = controls as unknown as { target: THREE.Vector3; update: () => void } | undefined;
+    const target = new THREE.Vector3(focusRequest.point[0], 0.5, focusRequest.point[1]);
+    const priorTarget = previousTarget.current ?? new THREE.Vector3(sceneWidth / 2, 0.5, sceneDepth / 2);
+
+    if (orbitControls) {
+      const delta = target.clone().sub(priorTarget);
+      camera.position.add(delta);
+      orbitControls.target.copy(target);
+      orbitControls.update();
+      previousTarget.current = target.clone();
+    }
+
+    clearFocusRequest(null);
+  }, [camera, clearFocusRequest, controls, focusRequest, sceneDepth, sceneWidth]);
 
   return null;
 }
 
 const TOOL_GHOST_COLORS: Record<string, string> = {
+  select: "#94a3b8",
   camera: "#60a5fa",
   obstruction: "#f97316",
   light: "#eab308",
+  wall: "#22c55e",
+  zone: "#86efac",
+  door_window: "#c084fc",
+  path: "#fb923c",
+  measure: "#f8fafc",
+  comment: "#94a3b8",
   default: "#60a5fa",
 };
 
 const TOOL_ICONS: Record<string, React.ReactNode> = {
+  select: <MousePointer2 className="h-3 w-3" />,
   camera: <Camera className="h-3 w-3" />,
   obstruction: <Square className="h-3 w-3" />,
   light: <Lightbulb className="h-3 w-3" />,
+  wall: <Square className="h-3 w-3" />,
+  zone: <Shield className="h-3 w-3" />,
+  door_window: <Layers className="h-3 w-3" />,
+  path: <RefreshCcw className="h-3 w-3" />,
+  measure: <Layers className="h-3 w-3" />,
+  comment: <Layers className="h-3 w-3" />,
 };
 
 const TOOL_LABELS: Record<string, string> = {
+  select: "Select",
   camera: "Place Camera",
   obstruction: "Place Obstruction",
   light: "Place Light",
+  wall: "Draw Wall",
+  zone: "Draw Zone",
+  door_window: "Place Door / Window",
+  path: "Draw Path",
+  measure: "Measure",
+  comment: "Comment",
 };
 
 /**
@@ -564,13 +632,6 @@ function ToolPlacementFloor() {
     : null;
 
   const wallLength = wallDraft ? wallDraft.length : 0;
-
-  useEffect(() => {
-    if (activeTool !== "wall") setDraftWallStart(undefined);
-    if (activeTool !== "zone") setDraftPolygonPoints([]);
-    if (activeTool !== "path") setDraftPathPoints([]);
-    if (activeTool === "select") setEditorMode("idle");
-  }, [activeTool, setDraftWallStart, setDraftPathPoints, setDraftPolygonPoints, setEditorMode]);
 
   const getFloorPoint = useCallback(
     (event: ThreeEvent<PointerEvent>): THREE.Vector3 | null => {
@@ -639,18 +700,18 @@ function ToolPlacementFloor() {
     if (!hasEntryPointsRef.current) {
       const first = draftPathPoints[0];
       if (first) {
-        useStudioStore.getState().addNode({
-          id: `entry_${Date.now().toString(36)}`,
-          nodeType: "entry_point",
-          label: "Entry",
-          position: first,
-        });
+        addNode(createEntryPointNode(first));
       }
     }
   }, [addNode, draftPathPoints, selectNode, setDraftPathPoints, setEditorMode]);
 
   const handlePointerDown = useCallback(
     (event: ThreeEvent<PointerEvent>) => {
+      if (activeTool === "select") {
+        selectNode(null);
+        return;
+      }
+
       if (!isPlacing) return;
       const point = getFloorPoint(event);
       if (!point) return;
@@ -758,6 +819,10 @@ function ToolPlacementFloor() {
         : "Click to draw zone polygon";
     }
 
+    if (activeTool === "select") {
+      return "Select and inspect objects";
+    }
+
     return TOOL_LABELS[activeTool] ?? "Place";
   }, [activeTool, wallLength, draftPolygonPoints.length, draftPathPoints, hoverPoint]);
 
@@ -780,6 +845,7 @@ function ToolPlacementFloor() {
         setDraftPolygonPoints([]);
         setDraftPathPoints([]);
         setEditorMode("idle");
+        selectNode(null);
       }
     };
 
@@ -787,11 +853,20 @@ function ToolPlacementFloor() {
     return () => {
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [activeTool, commitDraftPath, commitDraftPolygon, setActiveTool, setDraftPathPoints, setDraftPolygonPoints, setDraftWallStart, setEditorMode]);
-
-  if (!isPlacing) return null;
+  }, [
+    activeTool,
+    commitDraftPath,
+    commitDraftPolygon,
+    selectNode,
+    setActiveTool,
+    setDraftPathPoints,
+    setDraftPolygonPoints,
+    setDraftWallStart,
+    setEditorMode,
+  ]);
 
   const ghostColor = TOOL_GHOST_COLORS[activeTool] ?? TOOL_GHOST_COLORS.default;
+  const visibleHoverPos = activeTool === "select" ? null : hoverPos;
 
   return (
     <>
@@ -815,15 +890,15 @@ function ToolPlacementFloor() {
 
       {/* Active draw previews */}
       {activeTool === "wall" && wallDraft ? (
-        <WallDrawTool draft={{ start: wallDraft.start, current: wallDraft.current, length: wallDraft.length, snappedToWallEndpoint: false }} />
+        <WallDrawTool draft={{ start: wallDraft.start, current: wallDraft.current, length: wallDraft.length, snappedToWall: false }} />
       ) : null}
 
       {activeTool === "zone" ? <PolygonDrawTool points={draftPolygonPoints} hoverPoint={hoverPoint} /> : null}
       {activeTool === "path" ? <PathDrawTool points={draftPathPoints} hoverPoint={hoverPoint} /> : null}
 
       {/* Ghost preview */}
-      {hoverPos && isHovering && (
-        <group position={[hoverPos.x, 0.02, hoverPos.z]}>
+      {visibleHoverPos && isHovering && (
+        <group position={[visibleHoverPos.x, 0.02, visibleHoverPos.z]}>
           {/* Base ghost shape */}
           {activeTool === "camera" ? (
             <>
@@ -921,13 +996,24 @@ function ControlHintBar() {
   if (activeTool !== "select") {
     const toolLabel = TOOL_LABELS[activeTool] ?? "Place";
     const color = TOOL_GHOST_COLORS[activeTool] ?? TOOL_GHOST_COLORS.default;
+    const toolShortcut: Record<string, string> = {
+      camera: "C",
+      obstruction: "B",
+      light: "L",
+      wall: "W",
+      zone: "Z",
+      door_window: "D",
+      path: "P",
+      measure: "M",
+      comment: "T",
+    };
     return (
       <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-[#1f2536] bg-[#0b0f17]/80 px-3 py-1 backdrop-blur-sm">
         <span className="text-[8px]" style={{ color }}>◉ {toolLabel}</span>
         <span className="text-[8px] text-[#2a3246]">•</span>
         <span className="text-[8px] text-[#4a5568]">Click floor to place</span>
         <span className="text-[8px] text-[#2a3246]">•</span>
-        <span className="text-[8px] text-[#4a5568]">Press {activeTool === 'camera' ? 'C' : activeTool === 'obstruction' ? 'B' : 'L'} or Esc to cancel</span>
+        <span className="text-[8px] text-[#4a5568]">Press {toolShortcut[activeTool] ?? "Esc"} or Esc to cancel</span>
       </div>
     );
   }
@@ -972,9 +1058,9 @@ export function WorkspaceCanvas() {
 
       <Canvas
         camera={{ position: [frame.position.x, frame.position.y, frame.position.z], fov: 44, near: 0.1, far: 260 }}
+        shadows="percentage"
         gl={{ antialias: true, alpha: false }}
         style={{ width: "100%", height: "100%", background: theme.background }}
-        shadows="percentage"
       >
         <color attach="background" args={[theme.background]} />
         <fog attach="fog" args={[theme.background, 12, 24]} />
@@ -995,6 +1081,7 @@ export function WorkspaceCanvas() {
           <SceneGeometry />
         </Suspense>
 
+        <TransformHandles />
         <SceneFrameRig />
         <ToolPlacementFloor />
 

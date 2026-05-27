@@ -2,12 +2,23 @@
 
 import { Info } from "lucide-react";
 import { useStudioStore } from "@/store/studio-store";
-import type { SimulationAssumptions } from "@/schema/security-scene";
+import type { SimulationAssumptions, DoriQuality } from "@/schema/security-scene";
+import { OODPCVS_THRESHOLDS } from "@/simulation/dori";
 
-const DORI_PRESETS: Record<"simplified" | "iec62676", SimulationAssumptions["pixelsPerMeter"]> = {
-  simplified: { detection: 25, observation: 62.5, recognition: 125, identification: 250 },
-  iec62676:   { detection: 8,  observation: 25,   recognition: 50,  identification: 100 },
+const DORI_PRESETS: Record<SimulationAssumptions["doriStandard"], SimulationAssumptions["pixelsPerMeter"]> = {
+  dori_2014: { detection: 25, observation: 62.5, recognition: 125, identification: 250 },
+  oodpcvs_2025: { detection: 25, observation: 62.5, recognition: 125, identification: 250 },
 };
+
+const OODPCVS_DISPLAY_THRESHOLDS: { level: DoriQuality; ppm: number }[] = [
+  { level: "overview", ppm: OODPCVS_THRESHOLDS.overview },
+  { level: "outline", ppm: OODPCVS_THRESHOLDS.outline },
+  { level: "discern", ppm: OODPCVS_THRESHOLDS.discern },
+  { level: "perceive", ppm: OODPCVS_THRESHOLDS.perceive },
+  { level: "characterize", ppm: OODPCVS_THRESHOLDS.characterize },
+  { level: "validate", ppm: OODPCVS_THRESHOLDS.validate },
+  { level: "scrutinize", ppm: OODPCVS_THRESHOLDS.scrutinize },
+];
 
 const FIELD_LABEL: Record<string, string> = {
   wallHeightM: "Wall Height (m)",
@@ -80,11 +91,11 @@ export function AssumptionsTab() {
           </div>
         </div>
 
-        {/* DORI Standard */}
+        {/* Quality Standard */}
         <div>
           <div className="text-[9px] font-semibold text-[#3a4158] uppercase tracking-widest mb-1.5">Coverage Standard</div>
           <div className="flex gap-1">
-            {(["simplified", "iec62676"] as const).map((std) => (
+            {(["dori_2014", "oodpcvs_2025"] as const).map((std) => (
               <button
                 key={std}
                 onClick={() => setDoriStandard(std)}
@@ -94,25 +105,41 @@ export function AssumptionsTab() {
                     : "bg-[#0d0f17] border border-[#1e2130] text-[#59637a] hover:text-[#9da8c0]"
                 }`}
               >
-                {std === "simplified" ? "Simplified DORI" : "IEC 62676-4"}
+                {std === "dori_2014" ? "DORI 2014" : "IEC 62676-4:2025 (OODPCVS)"}
               </button>
             ))}
           </div>
         </div>
 
-        {/* PPM Thresholds (read-only derived from standard) */}
+        {/* PPM Thresholds */}
         <div>
-          <div className="text-[9px] font-semibold text-[#3a4158] uppercase tracking-widest mb-1.5">Quality Thresholds (px/m)</div>
-          <div className="grid grid-cols-4 gap-1">
-            {(["detection", "observation", "recognition", "identification"] as const).map((level) => (
-              <div key={level} className="text-center">
-                <div className="text-[8px] text-[#4a5568] capitalize mb-0.5">{level}</div>
-                <div className="text-[10px] font-mono font-semibold text-[#c0c8da] bg-[#0d0f17] border border-[#1e2130] rounded px-1 py-0.5">
-                  {assumptions.pixelsPerMeter[level]}
-                </div>
-              </div>
-            ))}
+          <div className="text-[9px] font-semibold text-[#3a4158] uppercase tracking-widest mb-1.5">
+            {assumptions.doriStandard === "oodpcvs_2025" ? "Quality Thresholds (px/m)" : "Quality Thresholds (px/m)"}
           </div>
+          {assumptions.doriStandard === "oodpcvs_2025" ? (
+            <div className="grid grid-cols-4 gap-1">
+              <div className="col-span-4 text-[8px] text-[#4a5568] mb-1">Standard-defined IEC 62676-4:2025 (7 levels)</div>
+              {OODPCVS_DISPLAY_THRESHOLDS.map(({ level, ppm }) => (
+                <div key={level} className="text-center">
+                  <div className="text-[8px] text-[#4a5568] capitalize mb-0.5">{level}</div>
+                  <div className="text-[10px] font-mono font-semibold text-[#c0c8da] bg-[#0d0f17] border border-[#1e2130] rounded px-1 py-0.5">
+                    {ppm}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-4 gap-1">
+              {(["detection", "observation", "recognition", "identification"] as const).map((level) => (
+                <div key={level} className="text-center">
+                  <div className="text-[8px] text-[#4a5568] capitalize mb-0.5">{level}</div>
+                  <div className="text-[10px] font-mono font-semibold text-[#c0c8da] bg-[#0d0f17] border border-[#1e2130] rounded px-1 py-0.5">
+                    {assumptions.pixelsPerMeter[level]}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Night Penalty */}

@@ -1,0 +1,77 @@
+import { beforeEach, describe, expect, test } from "bun:test";
+
+import { smallRetailShopScene } from "@/demo-scenes/small-retail-shop";
+import { simulateStudio } from "@/simulation/simulate-studio";
+import { useStudioStore } from "@/store/studio-store";
+
+describe("studio store", () => {
+  beforeEach(() => {
+    useStudioStore.setState(useStudioStore.getInitialState(), true);
+  });
+
+  test("runs obstruction counterfactuals and records the simulated delta", () => {
+    const baseline = simulateStudio(smallRetailShopScene);
+
+    useStudioStore.setState({
+      scene: smallRetailShopScene,
+      simulationResult: baseline,
+      simulationDirty: false,
+    });
+
+    useStudioStore.getState().runCounterfactual("obs_cupboard_blocker");
+
+    const state = useStudioStore.getState();
+
+    expect(state.counterfactualObsId).toBe("obs_cupboard_blocker");
+    expect(state.counterfactualResult).toBeDefined();
+    expect(state.counterfactualResult?.totalCoveragePct).toBeGreaterThanOrEqual(baseline.totalCoveragePct);
+    expect(
+      state.counterfactualResult?.criticalZoneResults[0]?.status === "pass"
+        || state.counterfactualResult?.criticalZoneResults[0]?.status === "partial"
+        || state.counterfactualResult?.criticalZoneResults[0]?.status === "fail",
+    ).toBe(true);
+  });
+
+  test("clears activePathId when the active path is removed", () => {
+    const activePathId = smallRetailShopScene.paths[0]?.id;
+
+    expect(activePathId).toBeTruthy();
+
+    useStudioStore.setState({
+      scene: smallRetailShopScene,
+      simulationResult: null,
+      simulationDirty: false,
+      activePathId,
+    });
+
+    useStudioStore.getState().commitSceneChange((draft) => ({
+      ...draft,
+      paths: draft.paths.filter((path) => path.id !== activePathId),
+    }));
+
+    expect(useStudioStore.getState().activePathId).toBeNull();
+  });
+
+  test("stores and clears map focus requests for the 3D workspace", () => {
+    useStudioStore.getState().setFocusScenePointRequest({ point: [4.5, 2.25], source: "minimap" });
+
+    expect(useStudioStore.getState().focusScenePointRequest).toEqual({
+      point: [4.5, 2.25],
+      source: "minimap",
+    });
+
+    useStudioStore.getState().setFocusScenePointRequest(null);
+
+    expect(useStudioStore.getState().focusScenePointRequest).toBeNull();
+  });
+
+  test("stores the active camera placement preset in shared editor state", () => {
+    useStudioStore.getState().setCameraPresetId("bullet_outdoor");
+
+    expect(useStudioStore.getState().cameraPresetId).toBe("bullet_outdoor");
+
+    useStudioStore.getState().setCameraPresetId(null);
+
+    expect(useStudioStore.getState().cameraPresetId).toBeNull();
+  });
+});

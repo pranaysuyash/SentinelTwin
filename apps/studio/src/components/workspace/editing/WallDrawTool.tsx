@@ -2,7 +2,7 @@ import { Line } from "@react-three/drei";
 import * as THREE from "three";
 import type { Point2 } from "./editor-geometry";
 
-type WallDraft = {
+export type WallDraft = {
   start: Point2;
   current: Point2;
   lockedAngle?: boolean;

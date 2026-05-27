@@ -15,12 +15,22 @@ import {
 import { type MapProjection } from "@/components/map/MapProjection";
 import {
   obstacleRectPoints,
+  formatSvgPoint,
   polygonCentroid,
   polygonToSvgPoints,
-  pointOnPathAtProgress,
   estimateCoverageCellSize,
   type MapLayerFlags,
-} from "./map-utils";
+} from "./map-geometry";
+import { samplePathQuality, pointOnPathAtProgress } from "./path-quality";
+import {
+  MAP_COLORS,
+  doorColor,
+  lightStatusColor,
+  priorityStrokeColor,
+  qualityColor,
+  wallStrokeColor,
+  windowStrokeColor,
+} from "./map-colors";
 import { getCameraColorForId } from "@/lib/camera-colors";
 
 type MapMode = "mini" | "path" | "overview" | "picker";
@@ -35,6 +45,8 @@ type MapLayersProps = {
   hoveredNodeId?: string | null;
   activePathId?: string | null;
   paths?: ScenarioPath[];
+  selectedPathSegmentPathId?: string | null;
+  selectedPathSegmentIndex?: number | null;
   replayActor?: [number, number] | null;
   onNodeSelect?: (id: string | null) => void;
   onNodeHover?: (id: string | null) => void;
@@ -43,27 +55,6 @@ type MapLayersProps = {
   coverageOpacity?: number;
   showNodeLabels?: boolean;
   showReplayPath?: boolean;
-};
-
-const QUALITY_COLOR: Record<string, string> = {
-  identification: "#22d3ee",
-  recognition: "#22c55e",
-  observation: "#eab308",
-  detection: "#f97316",
-  none: "#ef4444",
-};
-
-const LIGHT_STATUS: Record<string, string> = {
-  on: "#fbbf24",
-  off: "#6b7280",
-  failed: "#ef4444",
-};
-
-const PRIORITY_STROKE: Record<string, string> = {
-  low: "#22c55e",
-  medium: "#eab308",
-  high: "#f97316",
-  critical: "#ef4444",
 };
 
 function zoneStatusFill(level: string) {
@@ -79,81 +70,28 @@ function zoneStatusFill(level: string) {
 }
 
 function styleForWall(material: string) {
-  if (material === "glass") {
-    return {
-      stroke: "#74a7ff",
-      strokeWidth: 1.4,
-      strokeOpacity: 0.9,
-      strokeDasharray: "3 2",
-    };
-  }
-
-  if (material === "grill") {
-    return {
-      stroke: "#fb7185",
-      strokeWidth: 1.45,
-      strokeOpacity: 0.9,
-      strokeDasharray: "4 2",
-    };
-  }
-
   return {
-    stroke: "#cfd8e8",
+    stroke: wallStrokeColor(material),
     strokeWidth: 1.6,
     strokeOpacity: 0.94,
-    strokeDasharray: "none",
+    strokeDasharray: material === "glass" ? "3 2" : material === "grill" ? "4 2" : "none",
   };
 }
 
 function styleForWindow(state: string) {
-  if (state === "grill") {
-    return { stroke: "#ef4444", strokeWidth: 1.4, strokeDasharray: "4 3" };
-  }
-
-  if (state === "reflective") {
-    return { stroke: "#22d3ee", strokeWidth: 1.5, strokeDasharray: "2 2" };
-  }
-
-  if (state === "curtain") {
-    return { stroke: "#60a5fa", strokeWidth: 1.45, strokeDasharray: "10 4" };
-  }
-
-  return { stroke: "#7dd3fc", strokeWidth: 1.3, strokeDasharray: "none" };
+  return {
+    stroke: windowStrokeColor(state),
+    strokeWidth: 1.3,
+    strokeDasharray: state === "grill" ? "4 3" : state === "reflective" ? "2 2" : state === "curtain" ? "10 4" : "none",
+  };
 }
 
 function statusForDoor(state: string) {
-  if (state === "open") {
-    return {
-      stroke: "#86efac",
-      strokeWidth: 1.2,
-      strokeDasharray: "2 3",
-      opacity: 0.72,
-    };
-  }
-
-  if (state === "restricted") {
-    return {
-      stroke: "#fb7185",
-      strokeWidth: 1.7,
-      strokeDasharray: "1 2",
-      opacity: 0.98,
-    };
-  }
-
-  if (state === "locked") {
-    return {
-      stroke: "#f97316",
-      strokeWidth: 1.7,
-      strokeDasharray: "none",
-      opacity: 0.98,
-    };
-  }
-
   return {
-    stroke: "#93c5fd",
+    stroke: doorColor(state),
     strokeWidth: 1.4,
-    strokeDasharray: "none",
-    opacity: 0.82,
+    strokeDasharray: state === "open" ? "2 3" : state === "restricted" ? "1 2" : "none",
+    opacity: state === "open" ? 0.72 : 0.82,
   };
 }
 
@@ -194,7 +132,7 @@ function makeFovPolygon(
     point[1] + range * Math.cos(base + half),
   ]);
   const origin = projection.sceneToSvg(point);
-  return `${origin.x},${origin.y} ${left.x},${left.y} ${right.x},${right.y}`;
+  return `${formatSvgPoint(origin)} ${formatSvgPoint(left)} ${formatSvgPoint(right)}`;
 }
 
 function pathStroke(pathId: string, activePathId?: string | null) {
@@ -227,6 +165,8 @@ export function MapLayers({
   hoveredNodeId,
   activePathId,
   paths,
+  selectedPathSegmentPathId,
+  selectedPathSegmentIndex,
   replayActor,
   onNodeSelect,
   onNodeHover,
@@ -281,6 +221,8 @@ export function MapLayers({
   }
 
   const pathList = paths ?? scene.paths;
+  const replayPath = activePathForReplay ?? pathList.find((path) => path.id === activePathId) ?? null;
+  const replayPathSamples = replayPath ? samplePathQuality(replayPath, cells, 0.3) : [];
   const isMini = mode === "mini";
   const cellSize = estimateCoverageCellSize(cells);
   const cellHalf = Math.max(0.01, cellSize / 2);
@@ -298,16 +240,16 @@ export function MapLayers({
 
             const { x, y } = projection.sceneToSvg([cell.x, cell.z]);
             return (
-              <rect
-                key={`coverage-${index}`}
-                x={x - projection.lengthToSvg(cellHalf)}
-                y={y - projection.lengthToSvg(cellHalf)}
-                width={projection.lengthToSvg(cellSize)}
-                height={projection.lengthToSvg(cellSize)}
-                fill={QUALITY_COLOR[cell.quality] ?? QUALITY_COLOR.none}
-                opacity={coverageOpacity ?? 0.35}
-                stroke="none"
-              />
+                <rect
+                  key={`coverage-${index}`}
+                  x={x - projection.lengthToSvg(cellHalf)}
+                  y={y - projection.lengthToSvg(cellHalf)}
+                  width={projection.lengthToSvg(cellSize)}
+                  height={projection.lengthToSvg(cellSize)}
+                fill={qualityColor(cell.quality)}
+                  opacity={coverageOpacity ?? 0.35}
+                  stroke="none"
+                />
             );
           })}
         </g>
@@ -422,7 +364,7 @@ export function MapLayers({
                 <polygon
                   points={polygon}
                   fill={fill}
-                  stroke={PRIORITY_STROKE[zone.priority] ?? "#cbd5e1"}
+                  stroke={priorityStrokeColor(zone.priority)}
                   strokeWidth={isSelected ? 1.45 : 1.15}
                   strokeOpacity={0.95}
                   fillOpacity={isSelected ? 0.95 : 0.85}
@@ -510,7 +452,7 @@ export function MapLayers({
         <g>
           {scene.securityLights.map((light) => {
             const point = projection.sceneToSvg([light.position[0], light.position[2]]);
-            const statusColor = LIGHT_STATUS[light.status] ?? "#94a3b8";
+            const statusColor = lightStatusColor(light.status);
             const radius = projection.lengthToSvg(0.22);
             const coneDeg = light.coneDeg ?? 0;
             const hasCone = coneDeg > 0;
@@ -676,64 +618,63 @@ export function MapLayers({
       {layers.paths && (
         <g>
           {pathList.map((path) => {
-            const style = pathStroke(path.id, activePathId);
             const isActive = activePathId != null && path.id === activePathId;
-            const coverage = path.id === activePathId ? path.points.length : 0;
+            const selectedSegment = selectedPathSegmentPathId === path.id ? selectedPathSegmentIndex ?? null : null;
+            const activeQualityPath = isActive && replayPath?.id === path.id && replayPathSamples.length > 1;
 
             return (
               <g key={path.id}>
-                {path.points.slice(1).map((point, index) => {
-                  const prev = path.points[index]!.position;
-                  const current = point.position;
-                  const a = projection.sceneToSvg(prev);
-                  const b = projection.sceneToSvg(current);
+                {activeQualityPath ? (
+                  replayPathSamples.slice(1).map((sample, index) => {
+                    const prev = replayPathSamples[index]!;
+                    const a = projection.sceneToSvg(prev.position);
+                    const b = projection.sceneToSvg(sample.position);
+                    const isSelectedSegment = selectedSegment === index;
 
-                  const markerX = (a.x + b.x) / 2;
-                  const markerY = (a.y + b.y) / 2;
-                  const segDx = b.x - a.x;
-                  const segDy = b.y - a.y;
-                  const len = Math.hypot(segDx, segDy);
-
-                  const markerA = len > 0
-                    ? {
-                      x: markerX - segDy / len * 3,
-                      y: markerY + segDx / len * 3,
-                    }
-                    : { x: markerX, y: markerY };
-
-                  const markerB = len > 0
-                    ? {
-                      x: markerX + segDy / len * 3,
-                      y: markerY - segDx / len * 3,
-                    }
-                    : { x: markerX, y: markerY };
-
-                  return (
-                    <g key={`${path.id}-seg-${index}`}>
+                    return (
                       <line
+                        key={`${path.id}-qseg-${index}`}
                         x1={a.x}
                         y1={a.y}
                         x2={b.x}
                         y2={b.y}
-                        stroke={style.stroke}
-                        strokeWidth={style.strokeWidth + style.segmentBoost}
-                        strokeDasharray={style.dash}
+                        stroke={isSelectedSegment ? MAP_COLORS.selection : qualityColor(prev.quality)}
+                        strokeWidth={isSelectedSegment ? 3.4 : 2.2}
                         strokeLinecap="round"
-                        opacity={style.opacity}
+                        opacity={isSelectedSegment ? 1 : 0.95}
                         onPointerDown={() => onPathSegmentSelect?.(path.id, index)}
                         onPointerEnter={() => onNodeHover?.(path.id)}
                         onPointerLeave={() => onNodeHover?.(null)}
                       />
-                      {!isActive ? null : (
-                        <polygon
-                          points={`${markerA.x},${markerA.y} ${markerB.x},${markerB.y} ${b.x},${b.y}`}
-                          fill={style.stroke}
-                          fillOpacity={style.markerOpacity}
-                        />
-                      )}
-                    </g>
-                  );
-                })}
+                    );
+                  })
+                ) : (
+                  path.points.slice(1).map((point, index) => {
+                    const prev = path.points[index]!.position;
+                    const a = projection.sceneToSvg(prev);
+                    const b = projection.sceneToSvg(point.position);
+                    const style = pathStroke(path.id, activePathId);
+                    const isSelectedSegment = selectedSegment === index;
+
+                    return (
+                      <line
+                        key={`${path.id}-seg-${index}`}
+                        x1={a.x}
+                        y1={a.y}
+                        x2={b.x}
+                        y2={b.y}
+                        stroke={isSelectedSegment ? MAP_COLORS.selection : style.stroke}
+                        strokeWidth={style.strokeWidth + (isSelectedSegment ? 1.3 : 0)}
+                        strokeDasharray={style.dash}
+                        strokeLinecap="round"
+                        opacity={isSelectedSegment ? 1 : style.opacity}
+                        onPointerDown={() => onPathSegmentSelect?.(path.id, index)}
+                        onPointerEnter={() => onNodeHover?.(path.id)}
+                        onPointerLeave={() => onNodeHover?.(null)}
+                      />
+                    );
+                  })
+                )}
 
                 {isActive ? (
                   <g>
@@ -752,7 +693,7 @@ export function MapLayers({
                         );
                       }
 
-                      if (coverage > 0 && index % 2 === 1) {
+                      if (path.points.length > 0 && index % 2 === 1) {
                         return <circle key={`${path.id}-mid-${index}`} cx={p.x} cy={p.y} r={1.3} fill="#a78bfa" opacity={0.5} />;
                       }
 
@@ -795,7 +736,11 @@ export function MapLayers({
         return (
           <g key={entry.id}>
             <polygon
-              points={`${p.x},${p.y - 3.8} ${p.x - 3},${p.y + 3.2} ${p.x + 3},${p.y + 3.2}`}
+              points={
+                `${formatSvgPoint({ x: p.x, y: p.y - 3.8 })} `
+                + `${formatSvgPoint({ x: p.x - 3, y: p.y + 3.2 })} `
+                + `${formatSvgPoint({ x: p.x + 3, y: p.y + 3.2 })}`
+              }
               fill={isSelected ? "#bfdbfe" : "#93c5fd"}
               stroke={isSelected ? "#f8fafc" : "#e2e8f0"}
               strokeWidth={0.9}

@@ -79,6 +79,8 @@ The goal is not to make the smallest patch. The goal is to protect the project, 
 - Code, tests, docs, prompts, screenshots, instruction files, generated-but-source-controlled files, investigation notes, and review artifacts may all be valid project work.
 - Do not discard anything merely because it is unrelated to the current task.
 - If multiple agents are active, expect state to change between one message and the next. Re-check before acting.
+- Parallel-agent activity is not a stop condition. Do not pause only because the tree is dirty or changing.
+- Continue delivery by rebasing your understanding on current files, preserving others' work, and applying focused additive edits on top of live state.
 
 ---
 

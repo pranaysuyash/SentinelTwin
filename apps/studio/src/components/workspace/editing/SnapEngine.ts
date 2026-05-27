@@ -20,22 +20,24 @@ export type SnapProfile = {
 export function makeSnapEngine(scene: SecurityScene, options: SnapOptions) {
   const walls: Array<Pick<WallNode, "start" | "end">> = scene.walls;
 
-  const findWallEndpoint = (candidate: Point2) => {
-    let nearest: { distance: number; point: Point2; index: number } | null = null;
+  const findWallEndpoint = (candidate: Point2): { distance: number; point: Point2; index: number } | null => {
+    type WallEndpointSnap = { distance: number; point: Point2; index: number };
+    let nearest: WallEndpointSnap | null = null;
 
     walls.forEach((entry, wallIndex) => {
       const candidates: Point2[] = [entry.start, entry.end];
       for (const endpoint of candidates) {
         const dist = pointDistance(candidate, endpoint);
-        if (!nearest || dist < nearest.distance) {
-          nearest = { distance: dist, point: endpoint, index: wallIndex };
+        if (!nearest || dist < (nearest as WallEndpointSnap).distance) {
+          nearest = { distance: dist, point: endpoint, index: wallIndex } as WallEndpointSnap;
         }
       }
     });
 
-    if (!nearest) return null;
-    if (nearest.distance > options.snapDistanceM) return null;
-    return nearest;
+    if (nearest === null) return null;
+    const snap = nearest as WallEndpointSnap;
+    if (snap.distance > options.snapDistanceM) return null;
+    return snap;
   };
 
   const findWallAttachment = (candidate: Point2) => {

@@ -105,23 +105,6 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
 }
 
 export default function StudioShell() {
-  useEffect(() => {
-    if (process.env.NODE_ENV === "production") return;
-
-    const originalWarn = console.warn;
-    console.warn = (...args: unknown[]) => {
-      const message = args.map((arg) => String(arg)).join(" ");
-      if (message.includes("THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.")) {
-        return;
-      }
-      originalWarn(...args);
-    };
-
-    return () => {
-      console.warn = originalWarn;
-    };
-  }, []);
-
   useSimulation();
   const demoMode = useStudioStore((s) => s.demoMode);
   const workspacePreset = useStudioStore((s) => s.workspacePreset);
@@ -142,9 +125,25 @@ export default function StudioShell() {
   const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
   const activeTool = useStudioStore((s) => s.activeTool);
   const setActiveTool = useStudioStore((s) => s.setActiveTool);
+  const selectedNodeId = useStudioStore((s) => s.selectedNodeId);
+  const removeNode = useStudioStore((s) => s.removeNode);
+  const undo = useStudioStore((s) => s.undo);
+  const redo = useStudioStore((s) => s.redo);
   const createNewScene = useStudioStore((s) => s.createNewScene);
   const saveSceneToStorage = useStudioStore((s) => s.saveSceneToStorage);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const fullCanvasMode = viewMode === "camera_view" || viewMode === "wall";
+
+  useEffect(() => {
+    const mode = new URLSearchParams(window.location.search).get("mode");
+    if (!mode) return;
+    if (mode !== "map" && mode !== "wall" && mode !== "replay" && mode !== "camera_view" && mode !== "compare") {
+      return;
+    }
+    if (viewMode !== mode) {
+      setViewMode(mode as ViewMode);
+    }
+  }, [setViewMode, viewMode]);
 
   // Global keyboard shortcut handler
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -193,6 +192,27 @@ export default function StudioShell() {
         setActiveTool("select");
         return;
       }
+      return;
+    }
+
+    // Undo / redo
+    if (isCtrlOrMeta && e.key === "z") {
+      e.preventDefault();
+      if (e.shiftKey) {
+        redo();
+      } else {
+        undo();
+      }
+      return;
+    }
+
+    // Delete selected node
+    if ((e.key === "Backspace" || e.key === "Delete") && selectedNodeId) {
+      e.preventDefault();
+      if (confirm("Delete the selected scene object? This can be undone.")) {
+        removeNode(selectedNodeId);
+      }
+      return;
     }
 
     // View mode keys: 1-5
@@ -215,7 +235,7 @@ export default function StudioShell() {
       }
       return;
     }
-  }, [createNewScene, saveSceneToStorage, setViewMode, setWorkspacePreset, viewMode, setActiveTool, activeTool]);
+  }, [activeTool, createNewScene, removeNode, redo, saveSceneToStorage, selectedNodeId, setActiveTool, setViewMode, setWorkspacePreset, undo, viewMode]);
 
   useEffect(() => {
     window.addEventListener("keydown", handleKeyDown);
@@ -226,65 +246,74 @@ export default function StudioShell() {
     <div className="h-screen flex flex-col overflow-hidden bg-[#0b0c10] text-[#dde2ef]">
       <TopBar />
 
-      <DockLayout
-        leftDock={
-          <DockPanel
-            side="left"
-            title="Scene Tools"
-            subtitle={workspacePreset.replace(/_/g, " ")}
-            workspacePreset={workspacePreset}
-            collapsed={leftDockCollapsed}
-            focusMode={focusMode}
-            sizePx={leftDockSizePx}
-            onToggle={() => toggleDock("left")}
-            onResize={(sizePx) => setDockSize("left", sizePx)}
-            onFocus={enterFocusMode}
-            className="border-r"
-          >
-            <LeftPanel />
-          </DockPanel>
-        }
-        bottomDock={
-          <DockPanel
-            side="bottom"
-            title="Insights Drawer"
-            subtitle={focusMode ? "Focus mode" : workspacePreset.replace(/_/g, " ")}
-            workspacePreset={workspacePreset}
-            collapsed={bottomDockCollapsed}
-            focusMode={focusMode}
-            sizePx={bottomDockSizePx}
-            onToggle={() => toggleDock("bottom")}
-            onResize={(sizePx) => setDockSize("bottom", sizePx)}
-            onFocus={focusMode ? restorePreviousLayout : enterFocusMode}
-          >
-            <ContextBottomPanel sizePx={bottomDockSizePx} />
-          </DockPanel>
-        }
-        rightDock={
-          <DockPanel
-            side="right"
-            title="Inspector"
-            subtitle={workspacePreset.replace(/_/g, " ")}
-            workspacePreset={workspacePreset}
-            collapsed={rightDockCollapsed}
-            focusMode={focusMode}
-            sizePx={rightDockSizePx}
-            onToggle={() => toggleDock("right")}
-            onResize={(sizePx) => setDockSize("right", sizePx)}
-            onFocus={enterFocusMode}
-            className="border-l"
-          >
-            <ContextRightPanel />
-          </DockPanel>
-        }
-      >
+      {fullCanvasMode ? (
         <div className="relative flex-1 min-h-0 overflow-hidden">
           <ViewModeBar />
           <WorkspaceArea />
           <CommandBar />
           {demoMode ? <DemoModeOverlay /> : null}
         </div>
-      </DockLayout>
+      ) : (
+        <DockLayout
+          leftDock={
+            <DockPanel
+              side="left"
+              title="Scene Tools"
+              subtitle={workspacePreset.replace(/_/g, " ")}
+              workspacePreset={workspacePreset}
+              collapsed={leftDockCollapsed}
+              focusMode={focusMode}
+              sizePx={leftDockSizePx}
+              onToggle={() => toggleDock("left")}
+              onResize={(sizePx) => setDockSize("left", sizePx)}
+              onFocus={enterFocusMode}
+              className="border-r"
+            >
+              <LeftPanel />
+            </DockPanel>
+          }
+          bottomDock={
+            <DockPanel
+              side="bottom"
+              title="Insights Drawer"
+              subtitle={focusMode ? "Focus mode" : workspacePreset.replace(/_/g, " ")}
+              workspacePreset={workspacePreset}
+              collapsed={bottomDockCollapsed}
+              focusMode={focusMode}
+              sizePx={bottomDockSizePx}
+              onToggle={() => toggleDock("bottom")}
+              onResize={(sizePx) => setDockSize("bottom", sizePx)}
+              onFocus={focusMode ? restorePreviousLayout : enterFocusMode}
+            >
+              <ContextBottomPanel sizePx={bottomDockSizePx} />
+            </DockPanel>
+          }
+          rightDock={
+            <DockPanel
+              side="right"
+              title="Inspector"
+              subtitle={workspacePreset.replace(/_/g, " ")}
+              workspacePreset={workspacePreset}
+              collapsed={rightDockCollapsed}
+              focusMode={focusMode}
+              sizePx={rightDockSizePx}
+              onToggle={() => toggleDock("right")}
+              onResize={(sizePx) => setDockSize("right", sizePx)}
+              onFocus={enterFocusMode}
+              className="border-l"
+            >
+              <ContextRightPanel />
+            </DockPanel>
+          }
+        >
+          <div className="relative flex-1 min-h-0 overflow-hidden">
+            <ViewModeBar />
+            <WorkspaceArea />
+            <CommandBar />
+            {demoMode ? <DemoModeOverlay /> : null}
+          </div>
+        </DockLayout>
+      )}
 
       <StatusBar />
 

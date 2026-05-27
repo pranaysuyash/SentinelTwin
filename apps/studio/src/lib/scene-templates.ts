@@ -30,7 +30,7 @@ function makeBase(name: string, w: number, d: number, h: number): Partial<Securi
       timeOfDay: "day",
       interiorLightLevel: "normal",
       nightPenaltyMode: "simple",
-      doriStandard: "iec62676",
+      doriStandard: "oodpcvs_2025",
       pixelsPerMeter: { detection: 25, observation: 62.5, recognition: 125, identification: 250 },
       showAssumptionsPanel: false,
     },

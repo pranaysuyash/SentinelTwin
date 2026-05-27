@@ -11,12 +11,37 @@ export function ScenarioPathPanel() {
   const setActivePathId = useStudioStore((s) => s.setActivePathId);
   const setPathReplayPlaying = useStudioStore((s) => s.setPathReplayPlaying);
   const setPathReplayProgress = useStudioStore((s) => s.setPathReplayProgress);
+  const setViewMode = useStudioStore((s) => s.setViewMode);
+  const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
+  const setBottomTab = useStudioStore((s) => s.setBottomTab);
+  const setActiveTool = useStudioStore((s) => s.setActiveTool);
 
   const activePath = scene.paths.find((path) => path.id === activePathId) ?? null;
   const pathResult = activePath ? result?.pathResults.find((entry) => entry.pathId === activePath.id) : null;
   const visiblePct = pathResult && pathResult.totalDurationS > 0
     ? Math.round((pathResult.visibleDurationS / pathResult.totalDurationS) * 100)
     : null;
+  const hasActivePath = Boolean(activePath);
+
+  const startReplay = () => {
+    if (!activePath) return;
+    setActivePathId(activePath.id);
+    setPathReplayProgress(0);
+    setPathReplayPlaying(true);
+    setWorkspacePreset("replay");
+    setViewMode("replay");
+    setBottomTab("timeline");
+  };
+
+  const startPathEditing = () => {
+    if (!activePath) return;
+    setActivePathId(activePath.id);
+    setPathReplayPlaying(false);
+    setWorkspacePreset("edit");
+    setViewMode("map");
+    setBottomTab("timeline");
+    setActiveTool("path");
+  };
 
   return (
     <div className="flex h-[208px] flex-shrink-0 flex-col border-t border-[#1e2130] bg-[#0d1017]">
@@ -60,6 +85,24 @@ export function ScenarioPathPanel() {
                 </span>
               </div>
             ) : null}
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                disabled={!hasActivePath}
+                onClick={startPathEditing}
+                className="h-7 rounded-lg border border-[#24283a] bg-[#111521] px-2 text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Edit Path
+              </button>
+              <button
+                type="button"
+                disabled={!hasActivePath}
+                onClick={startReplay}
+                className="h-7 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2 text-[10px] font-medium text-emerald-200 transition-colors hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Play Path
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-3 gap-2">

@@ -15,9 +15,20 @@ import { useState } from "react";
 import { CameraFeedCanvas } from "@/components/inspector/CameraFeedCanvas";
 import { Badge } from "@/components/shared/Badge";
 import { cn } from "@/lib/cn";
-import type { CameraNode, CriticalZoneNode, ObstructionNode, SecurityLightNode } from "@/schema/security-scene";
+import { pathLength } from "@/components/workspace/editing/editor-geometry";
+import type {
+  CameraNode,
+  CriticalZoneNode,
+  DoorNode,
+  ObstructionNode,
+  PrivacyZoneNode,
+  ScenarioPath,
+  SecurityLightNode,
+  WallNode,
+  WindowNode,
+} from "@/schema/security-scene";
 import { type InspectorTab, useStudioStore } from "@/store/studio-store";
-import type { DoriQuality } from "@/schema/security-scene";
+import type { DoriQuality, SimulationAssumptions } from "@/schema/security-scene";
 
 function Field({ label, value, unit }: { label: string; value: React.ReactNode; unit?: string }) {
   return (
@@ -258,16 +269,16 @@ function PropSelect({
   );
 }
 
-/** Compute DORI effective ranges in metres for a camera. */
-function computeDoriRanges(camera: CameraNode) {
+/** Compute DORI effective ranges in metres for a camera, using the scene's PPM thresholds. */
+function computeDoriRanges(camera: CameraNode, scenePpm: SimulationAssumptions["pixelsPerMeter"]) {
   const resW = camera.resolutionWidth ?? (camera.resolutionMP >= 8 ? 3840 : camera.resolutionMP >= 4 ? 2688 : 1920);
   const tanHalfFov = Math.tan((camera.fovHorizontalDeg / 2) * (Math.PI / 180));
   // range = resW / (2 * ppm * tanHalfFov), capped at camera.rangeM
   const cap = camera.rangeM;
-  const det  = Math.min(resW / (2 * 25  * tanHalfFov), cap);
-  const obs  = Math.min(resW / (2 * 62.5 * tanHalfFov), cap);
-  const recog = Math.min(resW / (2 * 125 * tanHalfFov), cap);
-  const ident = Math.min(resW / (2 * 250 * tanHalfFov), cap);
+  const det  = Math.min(resW / (2 * scenePpm.detection  * tanHalfFov), cap);
+  const obs  = Math.min(resW / (2 * scenePpm.observation * tanHalfFov), cap);
+  const recog = Math.min(resW / (2 * scenePpm.recognition * tanHalfFov), cap);
+  const ident = Math.min(resW / (2 * scenePpm.identification * tanHalfFov), cap);
   return { det, obs, recog, ident };
 }
 
@@ -294,9 +305,16 @@ type ViewToggleState = Record<ViewToggleKey, boolean>;
 const QUALITY_LABEL: Record<DoriQuality, string> = {
   none: "No Signal",
   detection: "Detection",
+  overview: "Overview",
+  outline: "Outline",
   observation: "Observation",
+  discern: "Discern",
+  perceive: "Perceive",
   recognition: "Recognition",
+  characterize: "Characterize",
+  validate: "Validate",
   identification: "Identification",
+  scrutinize: "Scrutinize",
 };
 
 const OBSTRUCTION_MATERIALS = [
@@ -311,6 +329,46 @@ const VISION_TRANSMISSION: Partial<Record<ObstructionNode["material"], number>> 
   glass: 0.9,
   grill: 0.5,
   partial: 0.3,
+};
+
+const OBSTRUCTION_TYPE_OPTIONS = [
+  { value: "shelf", label: "Shelf" },
+  { value: "cupboard", label: "Cupboard" },
+  { value: "counter", label: "Counter" },
+  { value: "pillar", label: "Pillar" },
+  { value: "vehicle", label: "Vehicle" },
+  { value: "partition", label: "Partition" },
+  { value: "storage_boxes", label: "Storage Boxes" },
+  { value: "glass_display", label: "Glass Display" },
+  { value: "tree", label: "Tree" },
+  { value: "gate", label: "Gate" },
+  { value: "signboard", label: "Signboard" },
+  { value: "curtain", label: "Curtain" },
+  { value: "other", label: "Other" },
+] as const satisfies { value: ObstructionNode["obstructionType"]; label: string }[];
+
+const OBSTRUCTION_TYPE_CONFIG: Partial<Record<
+  ObstructionNode["obstructionType"],
+  {
+    label: string;
+    dimensions: [number, number, number];
+    material: ObstructionNode["material"];
+    visionTransmission: number;
+  }
+>> = {
+  shelf: { label: "Shelf", dimensions: [1.2, 0.5, 2.0], material: "solid", visionTransmission: 0 },
+  cupboard: { label: "Cupboard", dimensions: [1.0, 0.6, 2.1], material: "solid", visionTransmission: 0 },
+  counter: { label: "Counter", dimensions: [1.5, 0.8, 1.1], material: "solid", visionTransmission: 0 },
+  pillar: { label: "Pillar", dimensions: [0.6, 0.6, 2.8], material: "solid", visionTransmission: 0 },
+  vehicle: { label: "Vehicle", dimensions: [2.1, 4.2, 1.8], material: "solid", visionTransmission: 0 },
+  partition: { label: "Partition", dimensions: [1.5, 0.15, 2.1], material: "partial", visionTransmission: 0.3 },
+  storage_boxes: { label: "Storage Boxes", dimensions: [1.4, 0.8, 1.4], material: "solid", visionTransmission: 0 },
+  glass_display: { label: "Glass Display", dimensions: [1.4, 0.6, 1.9], material: "glass", visionTransmission: 0.65 },
+  tree: { label: "Tree", dimensions: [1.4, 1.4, 2.8], material: "solid", visionTransmission: 0 },
+  gate: { label: "Gate", dimensions: [1.5, 0.2, 2.2], material: "partial", visionTransmission: 0.3 },
+  signboard: { label: "Signboard", dimensions: [1.2, 0.1, 1.8], material: "solid", visionTransmission: 0 },
+  curtain: { label: "Curtain", dimensions: [1.6, 0.05, 2.3], material: "curtain", visionTransmission: 0.2 },
+  other: { label: "Obstruction", dimensions: [1.0, 0.5, 2.0], material: "solid", visionTransmission: 0 },
 };
 
 function CameraInspector() {
@@ -643,7 +701,7 @@ function CameraInspector() {
 
             {/* DORI analysis section */}
             {(() => {
-              const dori = computeDoriRanges(camera);
+              const dori = computeDoriRanges(camera, scene.assumptions.pixelsPerMeter);
               return (
                 <div className="mt-2.5 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
                   <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">
@@ -848,9 +906,9 @@ function CameraInspector() {
 
               <SectionCard title="DORI Profile">
                 {(() => {
-                  const ranges = computeDoriRanges(camera);
-                  const sortedZoneEntries = Object.entries(camResult?.qualityByZone ?? {} as Record<string, DoriQuality>)
-                    .map(([zoneId, quality]: [string, DoriQuality]) => {
+                  const ranges = computeDoriRanges(camera, scene.assumptions.pixelsPerMeter);
+                  const sortedZoneEntries = (Object.entries(camResult?.qualityByZone ?? {}) as [string, DoriQuality][])
+                    .map(([zoneId, quality]) => {
                       const zone = scene.criticalZones.find((entry) => entry.id === zoneId);
                       return {
                         name: zone?.label ?? zoneId,
@@ -1509,6 +1567,25 @@ function ObstructionInspector() {
           </div>
         </SectionCard>
 
+        <SectionCard title="Type">
+          <SelectInput
+            label="Subtype"
+            value={obs.obstructionType}
+            options={[...OBSTRUCTION_TYPE_OPTIONS]}
+            onChange={(value) => {
+              const config =
+                OBSTRUCTION_TYPE_CONFIG[value as ObstructionNode["obstructionType"]] ?? OBSTRUCTION_TYPE_CONFIG.other!;
+              updateNode(obs.id, {
+                obstructionType: value as ObstructionNode["obstructionType"],
+                label: config.label,
+                dimensions: config.dimensions,
+                material: config.material,
+                visionTransmission: config.visionTransmission,
+              });
+            }}
+          />
+        </SectionCard>
+
         <SectionCard title="Dimensions">
           <div className="grid grid-cols-3 gap-1.5">
             <NumberInput
@@ -1731,6 +1808,263 @@ function LightInspector() {
   );
 }
 
+function WallInspector() {
+  const selectedId = useStudioStore((s) => s.selectedNodeId);
+  const scene = useStudioStore((s) => s.scene);
+  const updateNode = useStudioStore((s) => s.updateNode);
+  const removeNode = useStudioStore((s) => s.removeNode);
+  const wall = scene.walls.find((entry) => entry.id === selectedId);
+  if (!wall) return null;
+
+  const lengthM = Math.hypot(wall.end[0] - wall.start[0], wall.end[1] - wall.start[1]);
+
+  return (
+    <>
+      <div className="border-b border-[#1e2130] px-3 py-3">
+        <div className="text-[12px] font-semibold text-white">{wall.label}</div>
+        <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">Wall · {lengthM.toFixed(2)}m</div>
+      </div>
+      <div className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
+        <SectionCard title="Endpoints">
+          <div className="grid grid-cols-2 gap-2">
+            <NumberInput label="Start X" value={wall.start[0]} step={0.1} unit="m" onChange={(value) => updateNode(wall.id, { start: [value, wall.start[1]] })} />
+            <NumberInput label="Start Z" value={wall.start[1]} step={0.1} unit="m" onChange={(value) => updateNode(wall.id, { start: [wall.start[0], value] })} />
+            <NumberInput label="End X" value={wall.end[0]} step={0.1} unit="m" onChange={(value) => updateNode(wall.id, { end: [value, wall.end[1]] })} />
+            <NumberInput label="End Z" value={wall.end[1]} step={0.1} unit="m" onChange={(value) => updateNode(wall.id, { end: [wall.end[0], value] })} />
+          </div>
+        </SectionCard>
+        <SectionCard title="Material">
+          <SelectInput
+            label="Material"
+            value={wall.material}
+            options={[
+              { value: "solid", label: "Solid" },
+              { value: "glass", label: "Glass" },
+              { value: "grill", label: "Grill" },
+              { value: "partial", label: "Partial" },
+            ]}
+            onChange={(value) => updateNode(wall.id, { material: value as WallNode["material"] })}
+          />
+          <NumberInput label="Height" value={wall.heightM} min={1.2} step={0.1} unit="m" onChange={(value) => updateNode(wall.id, { heightM: value })} />
+          <NumberInput label="Thickness" value={wall.thicknessM} min={0.05} step={0.01} unit="m" onChange={(value) => updateNode(wall.id, { thicknessM: value })} />
+          <NumberInput label="Transmission" value={wall.visionTransmission} min={0} max={1} step={0.05} onChange={(value) => updateNode(wall.id, { visionTransmission: value })} />
+        </SectionCard>
+      </div>
+      <div className="border-t border-[#1e2130] px-3 py-3">
+        <button type="button" onClick={() => removeNode(wall.id)} className="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-red-900/30 bg-red-950/15 text-[10px] font-medium text-red-400 transition-colors hover:border-red-700 hover:bg-red-950/30">
+          <Trash2 className="h-3 w-3" />
+          Delete Wall
+        </button>
+      </div>
+    </>
+  );
+}
+
+function DoorWindowInspector({ node }: { node: DoorNode | WindowNode }) {
+  const updateNode = useStudioStore((s) => s.updateNode);
+  const removeNode = useStudioStore((s) => s.removeNode);
+  const isWindow = node.nodeType === "window";
+  const stateOptions = isWindow
+    ? [
+        { value: "closed_glass", label: "Closed Glass" },
+        { value: "open", label: "Open" },
+        { value: "grill", label: "Grill" },
+        { value: "curtain", label: "Curtain" },
+        { value: "reflective", label: "Reflective" },
+      ]
+    : [
+        { value: "closed", label: "Closed" },
+        { value: "open", label: "Open" },
+        { value: "locked", label: "Locked" },
+        { value: "restricted", label: "Restricted" },
+      ];
+
+  return (
+    <>
+      <div className="border-b border-[#1e2130] px-3 py-3">
+        <div className="text-[12px] font-semibold text-white">{node.label}</div>
+        <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">{isWindow ? "Window" : "Door"}</div>
+      </div>
+      <div className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
+        <SectionCard title="Position">
+          <div className="grid grid-cols-3 gap-2">
+            <NumberInput label="X" value={node.position[0]} step={0.1} unit="m" onChange={(value) => updateNode(node.id, { position: [value, node.position[1], node.position[2]] })} />
+            <NumberInput label="Y" value={node.position[1]} step={0.1} unit="m" onChange={(value) => updateNode(node.id, { position: [node.position[0], value, node.position[2]] })} />
+            <NumberInput label="Z" value={node.position[2]} step={0.1} unit="m" onChange={(value) => updateNode(node.id, { position: [node.position[0], node.position[1], value] })} />
+          </div>
+        </SectionCard>
+        <SectionCard title="State">
+          <SelectInput label="State" value={node.state} options={stateOptions} onChange={(value) => updateNode(node.id, { state: value as DoorNode["state"] | WindowNode["state"] })} />
+          {isWindow ? <NumberInput label="Transmission" value={node.visionTransmission} min={0} max={1} step={0.05} onChange={(value) => updateNode(node.id, { visionTransmission: value })} /> : null}
+          <div className="grid grid-cols-3 gap-2">
+            <NumberInput label="W" value={node.dimensions[0]} min={0.1} step={0.05} unit="m" onChange={(value) => updateNode(node.id, { dimensions: [value, node.dimensions[1], node.dimensions[2]] })} />
+            <NumberInput label="H" value={node.dimensions[1]} min={0.1} step={0.05} unit="m" onChange={(value) => updateNode(node.id, { dimensions: [node.dimensions[0], value, node.dimensions[2]] })} />
+            <NumberInput label="D" value={node.dimensions[2]} min={0.01} step={0.01} unit="m" onChange={(value) => updateNode(node.id, { dimensions: [node.dimensions[0], node.dimensions[1], value] })} />
+          </div>
+        </SectionCard>
+      </div>
+      <div className="border-t border-[#1e2130] px-3 py-3">
+        <button type="button" onClick={() => removeNode(node.id)} className="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-red-900/30 bg-red-950/15 text-[10px] font-medium text-red-400 transition-colors hover:border-red-700 hover:bg-red-950/30">
+          <Trash2 className="h-3 w-3" />
+          Delete {isWindow ? "Window" : "Door"}
+        </button>
+      </div>
+    </>
+  );
+}
+
+function PathInspector() {
+  const selectedId = useStudioStore((s) => s.selectedNodeId);
+  const scene = useStudioStore((s) => s.scene);
+  const updateNode = useStudioStore((s) => s.updateNode);
+  const removeNode = useStudioStore((s) => s.removeNode);
+  const path = scene.paths.find((entry) => entry.id === selectedId);
+  if (!path) return null;
+
+  const lengthM = pathLength(path.points.map((point) => point.position));
+  const estimatedTimeS = lengthM / Math.max(0.1, path.speedMps);
+
+  return (
+    <>
+      <div className="border-b border-[#1e2130] px-3 py-3">
+        <div className="text-[12px] font-semibold text-white">{path.label}</div>
+        <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">Path · {lengthM.toFixed(2)}m · {estimatedTimeS.toFixed(1)}s</div>
+      </div>
+      <div className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
+        <SectionCard title="Actor">
+          <SelectInput
+            label="Actor Type"
+            value={path.actorType}
+            options={[
+              { value: "person", label: "Person" },
+              { value: "vehicle", label: "Vehicle" },
+              { value: "guard", label: "Guard" },
+              { value: "crowd", label: "Crowd" },
+            ]}
+            onChange={(value) => updateNode(path.id, { actorType: value as ScenarioPath["actorType"] })}
+          />
+          <NumberInput label="Speed" value={path.speedMps} min={0.1} step={0.1} unit="m/s" onChange={(value) => updateNode(path.id, { speedMps: value })} />
+          <SelectInput
+            label="Time"
+            value={path.timeOfDay}
+            options={[
+              { value: "day", label: "Day" },
+              { value: "night", label: "Night" },
+              { value: "dusk", label: "Dusk" },
+              { value: "dawn", label: "Dawn" },
+            ]}
+            onChange={(value) => updateNode(path.id, { timeOfDay: value as ScenarioPath["timeOfDay"] })}
+          />
+          <SelectInput
+            label="Intent"
+            value={path.intent}
+            options={[
+              { value: "authorized", label: "Authorized" },
+              { value: "suspicious", label: "Unverified / Investigative" },
+              { value: "incident_replay", label: "Incident Replay" },
+            ]}
+            onChange={(value) => updateNode(path.id, { intent: value as ScenarioPath["intent"] })}
+          />
+        </SectionCard>
+        <SectionCard title="Metrics">
+          <Field label="Length" value={lengthM.toFixed(2)} unit="m" />
+          <Field label="Est. Time" value={estimatedTimeS.toFixed(1)} unit="s" />
+          <Field label="Points" value={path.points.length} />
+        </SectionCard>
+      </div>
+      <div className="border-t border-[#1e2130] px-3 py-3">
+        <button type="button" onClick={() => removeNode(path.id)} className="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-red-900/30 bg-red-950/15 text-[10px] font-medium text-red-400 transition-colors hover:border-red-700 hover:bg-red-950/30">
+          <Trash2 className="h-3 w-3" />
+          Delete Path
+        </button>
+      </div>
+    </>
+  );
+}
+
+function PrivacyZoneInspector() {
+  const selectedId = useStudioStore((s) => s.selectedNodeId);
+  const scene = useStudioStore((s) => s.scene);
+  const updateNode = useStudioStore((s) => s.updateNode);
+  const removeNode = useStudioStore((s) => s.removeNode);
+  const zone = scene.privacyZones.find((entry) => entry.id === selectedId);
+  if (!zone) return null;
+
+  return (
+    <>
+      <div className="border-b border-[#1e2130] px-3 py-3">
+        <div className="text-[12px] font-semibold text-white">{zone.label}</div>
+        <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">Privacy Zone</div>
+      </div>
+      <div className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
+        <SectionCard title="Properties">
+          <SelectInput
+            label="Restriction"
+            value={zone.restriction}
+            options={[
+              { value: "no_video", label: "No Video" },
+              { value: "restricted_view", label: "Restricted View" },
+              { value: "blindspot_required", label: "Blindspot Required" },
+            ]}
+            onChange={(value) => updateNode(zone.id, { restriction: value as PrivacyZoneNode["restriction"] })}
+          />
+          <Field label="Vertices" value={zone.polygon.length} />
+          <label className="block rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <span className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Regulation</span>
+            </div>
+            <input
+              type="text"
+              value={zone.regulation}
+              onChange={(event) => updateNode(zone.id, { regulation: event.target.value })}
+              className="w-full bg-transparent text-right font-mono text-[11px] text-[#d2d9e8] outline-none"
+              placeholder="manual"
+            />
+          </label>
+        </SectionCard>
+      </div>
+      <div className="border-t border-[#1e2130] px-3 py-3">
+        <button type="button" onClick={() => removeNode(zone.id)} className="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-red-900/30 bg-red-950/15 text-[10px] font-medium text-red-400 transition-colors hover:border-red-700 hover:bg-red-950/30">
+          <Trash2 className="h-3 w-3" />
+          Delete Privacy Zone
+        </button>
+      </div>
+    </>
+  );
+}
+
+function EntryPointInspector() {
+  const selectedId = useStudioStore((s) => s.selectedNodeId);
+  const scene = useStudioStore((s) => s.scene);
+  const updateNode = useStudioStore((s) => s.updateNode);
+  const removeNode = useStudioStore((s) => s.removeNode);
+  const entryPoint = scene.entryPoints.find((entry) => entry.id === selectedId);
+  if (!entryPoint) return null;
+
+  return (
+    <>
+      <div className="border-b border-[#1e2130] px-3 py-3">
+        <div className="text-[12px] font-semibold text-white">{entryPoint.label}</div>
+        <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">Entry Point</div>
+      </div>
+      <div className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
+        <SectionCard title="Position">
+          <div className="grid grid-cols-2 gap-2">
+            <NumberInput label="X" value={entryPoint.position[0]} step={0.1} unit="m" onChange={(value) => updateNode(entryPoint.id, { position: [value, entryPoint.position[1]] })} />
+            <NumberInput label="Z" value={entryPoint.position[1]} step={0.1} unit="m" onChange={(value) => updateNode(entryPoint.id, { position: [entryPoint.position[0], value] })} />
+          </div>
+        </SectionCard>
+      </div>
+      <div className="border-t border-[#1e2130] px-3 py-3">
+        <button type="button" onClick={() => removeNode(entryPoint.id)} className="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-red-900/30 bg-red-950/15 text-[10px] font-medium text-red-400 transition-colors hover:border-red-700 hover:bg-red-950/30">
+          <Trash2 className="h-3 w-3" />
+          Delete Entry Point
+        </button>
+      </div>
+    </>
+  );
+}
+
 function NoSelection() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 px-5 text-center">
@@ -1739,7 +2073,7 @@ function NoSelection() {
       </div>
       <div>
         <div className="text-[11px] font-medium text-[#95a0b7]">No object selected</div>
-        <div className="mt-1 text-[9px] leading-relaxed text-[#556076]">Click a camera, zone, or obstruction in the canvas to inspect its verified properties.</div>
+        <div className="mt-1 text-[9px] leading-relaxed text-[#556076]">Click any camera, wall, door, window, zone, path, light, or obstruction in the canvas to inspect it.</div>
       </div>
     </div>
   );
@@ -1749,9 +2083,15 @@ export function InspectorPanel() {
   const selectedId = useStudioStore((s) => s.selectedNodeId);
   const scene = useStudioStore((s) => s.scene);
   const camera = scene.cameras.find((entry) => entry.id === selectedId);
+  const wall = scene.walls.find((entry) => entry.id === selectedId);
+  const door = scene.doors.find((entry) => entry.id === selectedId);
+  const windowNode = scene.windows.find((entry) => entry.id === selectedId);
   const obstruction = scene.obstructions.find((entry) => entry.id === selectedId);
   const light = scene.securityLights.find((entry) => entry.id === selectedId);
   const zone = scene.criticalZones.find((entry) => entry.id === selectedId);
+  const privacyZone = scene.privacyZones.find((entry) => entry.id === selectedId);
+  const path = scene.paths.find((entry) => entry.id === selectedId);
+  const entryPoint = scene.entryPoints.find((entry) => entry.id === selectedId);
 
   return (
     <aside className="flex w-[304px] flex-shrink-0 flex-col overflow-hidden border-l border-[#1e2130] bg-[#0d1017]">
@@ -1760,12 +2100,24 @@ export function InspectorPanel() {
       </div>
       {camera
         ? <CameraInspector />
+        : wall
+        ? <WallInspector />
+        : door
+        ? <DoorWindowInspector node={door} />
+        : windowNode
+        ? <DoorWindowInspector node={windowNode} />
         : zone
         ? <CriticalZoneInspector />
+        : privacyZone
+        ? <PrivacyZoneInspector />
+        : path
+        ? <PathInspector />
         : obstruction
         ? <ObstructionInspector />
         : light
         ? <LightInspector />
+        : entryPoint
+        ? <EntryPointInspector />
         : <NoSelection />}
     </aside>
   );

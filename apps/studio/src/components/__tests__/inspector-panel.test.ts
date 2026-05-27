@@ -39,4 +39,16 @@ describe("InspectorPanel", () => {
     expect(source).toContain("CameraFeedCanvas");
     expect(source).toContain("<CameraFeedCanvas cameraId={camera.id} />");
   });
+
+  test("includes failure simulation controls in the camera failures tab", () => {
+    const source = readFileSync(inspectorPath, "utf8");
+
+    expect(source).toContain('{ id: "failures", label: "Failures" }');
+    expect(source).toContain("Simulate Failure");
+    expect(source).toContain("Camera Offline");
+    expect(source).toContain("Dirty / Blocked Lens");
+    expect(source).toContain("Night Vision Disabled");
+    expect(source).toContain("Failure active — re-run simulation to see impact");
+    expect(source).toContain("Run simulation to populate failure impact analysis for this camera.");
+  });
 });

@@ -19,6 +19,7 @@ const TABS: { id: BottomTab; label: string; hasCount?: boolean }[] = [
   { id: "metrics", label: "METRICS" },
   { id: "issues", label: "ISSUES", hasCount: true },
   { id: "timeline", label: "TIMELINE" },
+  { id: "temporal", label: "24H PROFILE" },
   { id: "beforeafter", label: "BEFORE / AFTER" },
   { id: "assumptions", label: "ASSUMPTIONS" },
   { id: "report", label: "REPORT LITE" },

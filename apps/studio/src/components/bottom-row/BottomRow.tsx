@@ -208,8 +208,8 @@ function AssumptionsPanel() {
               <SegmentedControl
                 value={cur("doriStandard") as SimulationAssumptions["doriStandard"]}
                 options={[
-                  { value: "simplified", label: "PPM" },
-                  { value: "iec62676", label: "IEC" },
+                  { value: "dori_2014", label: "DORI" },
+                  { value: "oodpcvs_2025", label: "OODPCVS" },
                 ]}
                 onChange={(v) => setDraft((d) => ({ ...d, doriStandard: v }))}
               />
@@ -277,7 +277,7 @@ function AssumptionsPanel() {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-[9px]">
-            <AssumptionRow label="DORI Model" value={ass.doriStandard === "simplified" ? "Simplified PPM" : ass.doriStandard} />
+            <AssumptionRow label="Quality Model" value={ass.doriStandard === "oodpcvs_2025" ? "OODPCVS 2025" : "DORI 2014"} />
             <AssumptionRow label="Lighting Model" value={capitalize(ass.interiorLightLevel)} />
             <AssumptionRow label="Night Penalty" value={capitalize(ass.nightPenaltyMode)} />
             <AssumptionRow label="Glass Handling" value="Partial Trans." />

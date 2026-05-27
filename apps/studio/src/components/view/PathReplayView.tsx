@@ -8,6 +8,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import * as THREE from "three";
 
 import { useStudioStore } from "@/store/studio-store";
+import "@/lib/three-compat";
 import {
   ENVIRONMENT_THEMES,
   SceneLighting,
@@ -19,6 +20,7 @@ import {
   CoverageHeatmapInstanced,
   CoverageSegmentPath,
 } from "@/components/workspace/SharedScene";
+import { samplePathQuality } from "@/components/map/path-quality";
 import { VisibilityTimeline } from "@/components/view/VisibilityTimeline";
 import type { DoriQuality, ScenarioPath } from "@/schema/security-scene";
 
@@ -408,27 +410,48 @@ function CameraMarkers() {
 // ── Coverage quality color constants ──
 
 const QUALITY_COLORS: Record<DoriQuality, string> = {
-  identification: "#3b82f6",
-  recognition: "#22c55e",
-  observation: "#eab308",
-  detection: "#f97316",
   none: "#ef4444",
+  detection: "#f97316",
+  overview: "#f97316",
+  outline: "#fb923c",
+  observation: "#eab308",
+  discern: "#eab308",
+  perceive: "#86efac",
+  recognition: "#22c55e",
+  characterize: "#22c55e",
+  validate: "#22d3ee",
+  identification: "#3b82f6",
+  scrutinize: "#3b82f6",
 };
 
 const QUALITY_RANK: Record<DoriQuality, number> = {
-  identification: 4,
-  recognition: 3,
-  observation: 2,
-  detection: 1,
   none: 0,
+  detection: 1,
+  overview: 1,
+  outline: 1,
+  observation: 2,
+  discern: 2,
+  perceive: 2,
+  recognition: 3,
+  characterize: 3,
+  validate: 4,
+  identification: 4,
+  scrutinize: 4,
 };
 
 const QUALITY_LABELS: Record<DoriQuality, string> = {
-  identification: "ID",
-  recognition: "REC",
-  observation: "OBS",
-  detection: "DET",
   none: "NONE",
+  detection: "DET",
+  overview: "OVR",
+  outline: "OTL",
+  observation: "OBS",
+  discern: "DSC",
+  perceive: "PRC",
+  recognition: "REC",
+  characterize: "CHR",
+  validate: "VAL",
+  identification: "ID",
+  scrutinize: "SCR",
 };
 
 // ── Coverage quality bands on the scrub bar ──
@@ -506,8 +529,9 @@ type QualityExposure = {
   recognition: number;
   identification: number;
   none?: number;
+  [key: string]: number | undefined;
 };
-const EXPOSURE_KEYS: (keyof QualityExposure)[] = ["identification", "recognition", "observation", "detection"];
+const EXPOSURE_KEYS: DoriQuality[] = ["identification", "recognition", "observation", "detection"];
 
 function InfoOverlay({ waypointCount, exposureScore, targetReached, qualityBands }: {
   waypointCount: number;
@@ -608,8 +632,8 @@ export function PathReplayView() {
   const activePathId = useStudioStore((s) => s.activePathId);
   const coverageFailurePath = result?.adversarialPath;
   const activePath = useMemo(() => {
-    if (!scene.paths.length) return null;
-    return scene.paths.find((path) => path.id === activePathId) ?? scene.paths[0] ?? null;
+    if (!scene.paths.length || !activePathId) return null;
+    return scene.paths.find((path) => path.id === activePathId) ?? null;
   }, [scene.paths, activePathId]);
   const activePathResult = useMemo(() => {
     if (!activePath || !result?.pathResults.length) return null;
@@ -638,6 +662,14 @@ export function PathReplayView() {
 
   // Coverage bands data for the scrub bar (full waypoint objects with quality)
   const coverageBands = useMemo(() => {
+    if (activePath) {
+      return samplePathQuality(activePath, result?.coverageCells ?? [], 0.25).map((sample) => ({
+        position: sample.position,
+        timeS: sample.timeS,
+        detectionQuality: sample.quality,
+      }));
+    }
+
     if (activePathResult) {
       return activePathResult.timeline.map((event) => ({
         position: [0, 0] as [number, number],
@@ -647,14 +679,18 @@ export function PathReplayView() {
     }
 
     return coverageFailurePath?.waypoints ?? [];
-  }, [activePathResult, coverageFailurePath]);
+  }, [activePath, activePathResult, coverageFailurePath, result?.coverageCells]);
 
   // Quality exposure breakdown for info overlay
-  const qualityExposure = useMemo(() => {
-    if (!coverageFailurePath) {
-      return { detection: 0, observation: 0, recognition: 0, identification: 0 };
-    }
-    return coverageFailurePath.detectionQualityExposure;
+  const qualityExposure = useMemo((): QualityExposure => {
+    const base = coverageFailurePath?.detectionQualityExposure ?? {};
+    return {
+      detection: base.detection ?? 0,
+      observation: base.observation ?? 0,
+      recognition: base.recognition ?? 0,
+      identification: base.identification ?? 0,
+      ...base,
+    };
   }, [coverageFailurePath]);
 
   const totalDuration =
@@ -734,7 +770,7 @@ export function PathReplayView() {
   }
 
   return (
-    <div className="relative flex-1 overflow-hidden bg-[#07090d]">
+    <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#07090d]">
       {coverageFailurePath && (
         <InfoOverlay
           waypointCount={waypoints.length}
@@ -746,9 +782,10 @@ export function PathReplayView() {
 
       <Canvas
         camera={{ position: [12.8, 7.6, 11.6], fov: 31, near: 0.1, far: 200 }}
-        gl={{ antialias: true }}
-        style={{ background: "#0a0d13" }}
         shadows="percentage"
+        gl={{ antialias: true }}
+        className="flex-1 min-h-0"
+        style={{ background: "#0a0d13" }}
       >
         <Suspense fallback={null}>
           <SceneView />
@@ -793,7 +830,7 @@ export function PathReplayView() {
       {/* Visibility Timeline — shown below the canvas */}
       <div className="absolute bottom-[100px] left-3 right-3 z-10">
         <VisibilityTimeline
-          pathResult={activePathResult ?? result?.pathResults[0] ?? null}
+          pathResult={activePathResult}
           currentTime={currentTime}
           onSeek={handleSeek}
         />

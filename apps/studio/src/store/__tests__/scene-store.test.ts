@@ -12,7 +12,7 @@ describe("scene store", () => {
     const result = createSceneStore.getState().importScene(smallRetailShopScene);
 
     expect(result.success).toBe(true);
-    expect(createSceneStore.getState().scene?.cameras).toHaveLength(2);
+    expect(createSceneStore.getState().scene?.cameras).toHaveLength(smallRetailShopScene.cameras.length);
 
     createSceneStore.getState().updateNode("cam_entrance", { yawDeg: 30 });
 

@@ -1,81 +1,57 @@
 # SentinelTwin
 
-**AI-Native Physical Security Digital Twin**
+AI-native physical security digital twin for reviewing coverage in a live scene.
 
-> Not "where does the camera point?" — but "what security outcome does this setup actually achieve?"
+SentinelTwin is being built as a studio-first experience for understanding what a camera setup actually achieves in context, not just where cameras point.
 
----
+## Hackathon Update
 
-## What It Is
+The current submission shows an in-progress but coherent studio workflow:
 
-SentinelTwin is a live simulation environment where cameras, lights, obstructions, access points, time of day, lighting conditions, and human movement paths are all editable variables — and every change updates a continuous risk map.
+- map-first scene editing
+- camera, replay, and comparison review modes
+- coverage and blind-spot feedback
+- visual exploration of security risk in the scene
 
-Security agencies, CCTV installers, facility managers, and site owners can:
+This is a progress update, not a full product reveal. The repo is already moving in the right direction, and the visuals below show the current shape of the experience.
 
-- Test camera coverage and blind spots in an interactive 3D scene
-- Ask "what if this camera fails?", "what if this shelf moves?", "what if the lighting cuts out?"
-- Run defensive coverage stress tests to show where coverage is most likely to fail first
-- Run 24-hour temporal security profiles to find peak-vulnerability windows
-- Generate client-ready audit reports with before/after metrics (modeling estimates, not certifications)
+## Selected Screens
 
-## The Core Interaction
+### Core studio views
 
-```
-Move or change something in the scene
-→ coverage recomputes
-→ risk map updates
-→ AI explains what changed
-→ system recommends the cheapest practical fix
-```
+<table>
+  <tr>
+    <td><img src="./shot-map.png" alt="Studio map view" width="420" /></td>
+    <td><img src="./shot-camera-view.png" alt="Camera view" width="420" /></td>
+  </tr>
+  <tr>
+    <td><img src="./shot-path-replay.png" alt="Path replay view" width="420" /></td>
+    <td><img src="./shot-camera-wall.png" alt="Camera wall view" width="420" /></td>
+  </tr>
+  <tr>
+    <td><img src="./shot-compare.png" alt="Compare view" width="420" /></td>
+    <td><img src="./sentineltwin-final-check.png" alt="Final studio check" width="420" /></td>
+  </tr>
+</table>
 
-## What Makes It Different
+### Design direction
 
-Every CCTV planning tool shows camera fields of view. SentinelTwin runs a security simulation:
+<table>
+  <tr>
+    <td><img src="./sentineltwin-studio-map.png" alt="Studio map design" width="420" /></td>
+    <td><img src="./sentineltwin-expanded-final.png" alt="Expanded studio design" width="420" /></td>
+  </tr>
+</table>
 
-| What others do | What SentinelTwin does |
-|---|---|
-| Show FOV cones | Compute actual visibility with DORI-quality classification |
-| Static camera placement | Live counterfactual testing of any change |
-| Manual coverage check | Defensive incident replay — finds the lowest-visibility route and critical coverage gaps |
-| Single-state snapshot | 24-hour temporal simulation |
-| Designer's report | Planning-grade before/after metrics and assumptions, not legal compliance certification |
+## What is next
 
-## Architecture Foundation
+The next phase is about tightening the studio experience, finishing the remaining review flows, and making the security feedback easier to read at a glance.
 
-SentinelTwin is built as a Turborepo monorepo extending [Pascal Editor](https://github.com/pascalorg/editor) (MIT).
-Pascal provides the spatial editing layer — walls, rooms, doors, windows, zones, levels.
-SentinelTwin adds the security intelligence layer — cameras, coverage, simulation, defensive incident replay analysis, AI agents.
+## Repo structure
 
-See `Docs/architecture/` for complete technical design.
+- `apps/studio` - main studio app
+- `Docs/` - architecture, decisions, exploration, and progress notes
 
-## Docs Structure
+## Notes
 
-```
-Docs/
-├── context/
-│   └── origin/           — founding conversations and briefs
-├── architecture/         — full technical design (read before coding)
-├── exploration/          — living research maps, model investigations, options
-├── product/              — product thesis, users, use cases, roadmap
-└── decisions/            — architecture decision log + open questions
-```
-
-## Development Phase
-
-**Current: Studio alpha implemented under `apps/studio`; Pascal fork/true package split is now deferred to a tracked follow-up.**
-
-Build order:
-1. ✅ Architecture docs (this phase)
-2. ✅ SecurityScene data model implementation
-3. ✅ Coverage engine (raycast + DORI + heatmap)
-4. ✅ Camera + light + obstruction node system
-5. ✅ AI command layer + counterfactual engine
-6. ✅ Coverage stress test / incident replay analysis
-7. ✅ Temporal simulation
-8. ✅ Before/after snapshots + report generation
-9. ✅ Demo scene (Small Retail Shop)
-10. ☐ Pascal fork + remaining package-split migration (tracked follow-up)
-
-## Contributing Agents
-
-Read `AGENTS.md` before any implementation work.
+This README is intentionally high-level for the hackathon submission update. The detailed architecture and working notes live in `Docs/`.

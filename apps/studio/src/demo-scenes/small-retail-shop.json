@@ -279,6 +279,108 @@
         "counter",
         "register"
       ]
+    },
+    {
+      "id": "cam_aisle_wide",
+      "nodeType": "camera",
+      "name": "Camera 3",
+      "position": [
+        5,
+        2.7,
+        3.2
+      ],
+      "yawDeg": 180,
+      "pitchDeg": -20,
+      "rollDeg": 0,
+      "mountType": "ceiling",
+      "mountHeightM": 2.7,
+      "fovHorizontalDeg": 120,
+      "fovVerticalDeg": 76,
+      "rangeM": 11,
+      "resolutionMP": 4,
+      "resolutionWidth": 2688,
+      "resolutionHeight": 1520,
+      "lensType": "fisheye",
+      "focalLengthMm": 2.8,
+      "status": "on",
+      "nightMode": "low_light",
+      "irRangeM": 8,
+      "thermalCapable": false,
+      "ptz": false,
+      "clarity": "good",
+      "source": "demo",
+      "tags": [
+        "aisle",
+        "wide"
+      ]
+    },
+    {
+      "id": "cam_storage_offline",
+      "nodeType": "camera",
+      "name": "Camera 4",
+      "position": [
+        8.6,
+        2.55,
+        1.05
+      ],
+      "yawDeg": 112,
+      "pitchDeg": -18,
+      "rollDeg": 0,
+      "mountType": "wall",
+      "mountHeightM": 2.55,
+      "fovHorizontalDeg": 110,
+      "fovVerticalDeg": 68,
+      "rangeM": 10,
+      "resolutionMP": 2,
+      "resolutionWidth": 1920,
+      "resolutionHeight": 1080,
+      "lensType": "fixed",
+      "focalLengthMm": 2.8,
+      "status": "off",
+      "nightMode": "none",
+      "irRangeM": 0,
+      "thermalCapable": false,
+      "ptz": false,
+      "clarity": "average",
+      "source": "demo",
+      "tags": [
+        "storage",
+        "offline"
+      ]
+    },
+    {
+      "id": "cam_front_ptz",
+      "nodeType": "camera",
+      "name": "Camera 5",
+      "position": [
+        7.4,
+        2.9,
+        6.55
+      ],
+      "yawDeg": 236,
+      "pitchDeg": -26,
+      "rollDeg": 0,
+      "mountType": "ceiling",
+      "mountHeightM": 2.9,
+      "fovHorizontalDeg": 84,
+      "fovVerticalDeg": 52,
+      "rangeM": 12,
+      "resolutionMP": 8,
+      "resolutionWidth": 3840,
+      "resolutionHeight": 2160,
+      "lensType": "varifocal",
+      "focalLengthMm": 4,
+      "status": "on",
+      "nightMode": "low_light",
+      "irRangeM": 10,
+      "thermalCapable": false,
+      "ptz": true,
+      "clarity": "excellent",
+      "source": "demo",
+      "tags": [
+        "front",
+        "ptz"
+      ]
     }
   ],
   "securityLights": [

@@ -478,11 +478,25 @@ function PrivacyZoneLabel({ position, text, color }: { position: [number, number
   );
 }
 
-export function ScenePrivacyZones({ zones }: { zones: { id: string; label: string; polygon: [number, number][]; restriction: string }[] }) {
+export function ScenePrivacyZones({
+  zones,
+  onSelect,
+}: {
+  zones: { id: string; label: string; polygon: [number, number][]; restriction: string }[];
+  onSelect?: (id: string) => void;
+}) {
   return (
     <>
       {zones.map((zone) => (
-        <PrivacyZoneMesh key={zone.id} zone={zone} />
+        <group
+          key={zone.id}
+          onClick={(event) => {
+            event.stopPropagation();
+            onSelect?.(zone.id);
+          }}
+        >
+          <PrivacyZoneMesh zone={zone} />
+        </group>
       ))}
     </>
   );

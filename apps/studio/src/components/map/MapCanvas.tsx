@@ -6,7 +6,7 @@ import type { WheelEvent } from "react";
 import {
   type MapLayerFlags,
   createLayerFlags,
-} from "@/components/map/map-utils";
+} from "@/components/map/map-geometry";
 import {
   createMapProjection,
   inferSceneBounds,
@@ -31,6 +31,8 @@ export type MapCanvasProps = {
   hoveredNodeId?: string | null;
   activePathId?: string | null;
   paths?: ScenarioPath[];
+  selectedPathSegmentPathId?: string | null;
+  selectedPathSegmentIndex?: number | null;
   onNodeSelect?: (id: string | null) => void;
   onNodeHover?: (id: string | null) => void;
   onPathSegmentSelect?: (pathId: string, segmentIndex: number) => void;
@@ -46,6 +48,7 @@ export type MapCanvasProps = {
   coverageOpacity?: number;
   showGrid?: boolean;
   activePathForReplay?: ScenarioPath | null;
+  showNodeLabels?: boolean;
 };
 
 function extractProjectionPoints(scene: SecurityScene, paths?: ScenarioPath[]): Array<[number, number]> {
@@ -128,6 +131,8 @@ export function MapCanvas({
   hoveredNodeId,
   activePathId,
   paths,
+  selectedPathSegmentPathId,
+  selectedPathSegmentIndex,
   onNodeSelect,
   onNodeHover,
   onPathSegmentSelect,
@@ -143,11 +148,13 @@ export function MapCanvas({
   coverageOpacity,
   showGrid,
   activePathForReplay,
+  showNodeLabels,
 }: MapCanvasProps) {
   const mapLayers = layers ? { ...createLayerFlags(), ...layers } : createLayerFlags();
   const [dragging, setDragging] = useState(false);
   const [dragMoved, setDragMoved] = useState(false);
   const dragAnchor = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+  const fittedTarget = useRef<MapViewportTarget | null>(null);
 
   const projectionPoints = useMemo(() => extractProjectionPoints(scene, paths), [scene, paths]);
   const projection = useMemo(
@@ -204,8 +211,11 @@ export function MapCanvas({
   }, [dragging]);
 
   const handleClick = useCallback((event: PointerEvent<SVGSVGElement>) => {
-    if (event.target !== event.currentTarget) return;
     if (dragMoved) return;
+    const target = event.target as Element | null;
+    if (target && target !== event.currentTarget && !(target instanceof SVGElement && target.hasAttribute("data-map-background"))) {
+      return;
+    }
     const point = scenePointFromEvent(projection, event);
 
     if (onMapClick) {
@@ -217,12 +227,17 @@ export function MapCanvas({
   }, [dragMoved, onMapClick, onNodeSelect, projection]);
 
   const handleDoubleClick = useCallback((event: PointerEvent<SVGSVGElement>) => {
-    if (event.target !== event.currentTarget) return;
+    const target = event.target as Element | null;
+    if (target && target !== event.currentTarget && !(target instanceof SVGElement && target.hasAttribute("data-map-background"))) {
+      return;
+    }
     const point = scenePointFromEvent(projection, event);
     onMapDoubleClick?.(point);
   }, [onMapDoubleClick, projection]);
 
   useEffect(() => {
+    if (fittedTarget.current === mapTarget) return;
+    fittedTarget.current = mapTarget;
     onFit?.(mapTarget);
   }, [mapTarget, onFit]);
 
@@ -252,7 +267,7 @@ export function MapCanvas({
           </pattern>
         </defs>
 
-        <rect width={width} height={height} fill={`url(#map-bg-${mode})`} rx={8} />
+        <rect data-map-background="true" width={width} height={height} fill={`url(#map-bg-${mode})`} rx={8} />
         <rect x={1} y={1} width={width - 2} height={height - 2} fill="none" stroke="#1d2435" strokeWidth={1} rx={8} />
         {showGrid ? (
           <rect
@@ -275,13 +290,15 @@ export function MapCanvas({
           hoveredNodeId={hoveredNodeId}
           activePathId={activePathId}
           paths={paths}
+          selectedPathSegmentPathId={selectedPathSegmentPathId}
+          selectedPathSegmentIndex={selectedPathSegmentIndex}
           activePathForReplay={activePathForReplay}
           replayActor={replayActor}
           onNodeSelect={onNodeSelect}
           onNodeHover={onNodeHover}
           onPathSegmentSelect={onPathSegmentSelect}
           coverageOpacity={coverageOpacity}
-          showNodeLabels={mapLayers.labels}
+          showNodeLabels={showNodeLabels ?? mapLayers.labels}
         />
       </svg>
     </div>

@@ -19,7 +19,7 @@ function makeScene(overrides: Partial<SecurityScene> = {}): SecurityScene {
       timeOfDay: "day",
       interiorLightLevel: "normal",
       nightPenaltyMode: "simple",
-      doriStandard: "iec62676",
+      doriStandard: "oodpcvs_2025",
       pixelsPerMeter: { detection: 25, observation: 62.5, recognition: 125, identification: 250 },
       showAssumptionsPanel: false,
     },
@@ -52,6 +52,8 @@ function makeCells(
     coveringCameras: [],
     blockedBy: [],
     ppm: 0,
+    coverageIncluded: true,
+    privacyRestricted: false,
   }));
 }
 

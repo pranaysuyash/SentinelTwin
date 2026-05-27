@@ -749,3 +749,23 @@ reference to the new path, then remove the old."
 **Alternatives rejected:**
 - **Keep the failure route as the primary replay story** — rejected because it makes the defensive analysis feel like the only replay mode and hides the user-authored scenario.
 - **Create a parallel replay system** — rejected because it would duplicate timing, controls, and timeline behavior instead of reusing the canonical path model.
+
+### D-045: Path Replay is a dedicated full-canvas workspace mode
+**Date:** 2026-05-27
+
+**Decision:** `replay` now uses the full-canvas workspace shell, matching `camera_view` and `wall` so the replay surface can own the screen and present the actor/timeline as a primary workflow.
+
+**Rationale:** The replay experience reads as a stage, not a docked sidebar. Keeping it in the docked layout split attention and made the timeline feel like a secondary debug widget instead of the main operator flow.
+
+**Rejected alternative:** Leaving replay inside the docked layout and trying to widen the bottom panel. That still competes with the map and inspector chrome and does not produce the reference-style full-canvas playback experience.
+
+### D-046: Shared map tokens and focus requests keep the 2D map system canonical
+**Date:** 2026-05-27
+
+**Decision:** The studio map stack should share one projection/geometry/token layer for MiniMap and PathMap, with canonical map color helpers and an explicit `focusScenePointRequest` store action for empty-map focus handoff to the 3D workspace.
+
+**Rationale:** The minimap and path-map surfaces had started to diverge in projection math, quality coloring, and interaction semantics. Centralizing colors and geometry reduces drift, and using a store request for focus keeps the 2D map decoupled from the 3D workspace implementation while still enabling click-to-focus behavior.
+
+**Alternatives rejected:**
+- **Keep local per-component colors and geometry helpers** — rejected because it recreates the drift that caused the earlier half-finished map state.
+- **Call OrbitControls directly from the map components** — rejected because it couples SVG UI widgets to the 3D scene implementation and makes the focus behavior harder to test.

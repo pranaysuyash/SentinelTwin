@@ -2,10 +2,19 @@ import { z } from "zod";
 
 export const doriQualitySchema = z.enum([
   "none",
+  // DORI 2014 levels
   "detection",
   "observation",
   "recognition",
   "identification",
+  // OODPCVS 2025 levels (IEC 62676-4:2025)
+  "overview",
+  "outline",
+  "discern",
+  "perceive",
+  "characterize",
+  "validate",
+  "scrutinize",
 ]);
 
 export const sceneSourceSchema = z.enum([
@@ -217,7 +226,14 @@ export const simulationAssumptionsSchema = z.object({
   exteriorLightLux: z.number().positive().optional(),
   interiorLightLevel: z.enum(["dark", "dim", "normal", "bright"]),
   nightPenaltyMode: z.enum(["none", "simple", "detailed"]),
-  doriStandard: z.enum(["simplified", "iec62676"]),
+  /** Canonical values: "dori_2014" | "oodpcvs_2025". Legacy "simplified" and "iec62676" are normalized on parse. */
+  doriStandard: z
+    .enum(["simplified", "iec62676", "dori_2014", "oodpcvs_2025"])
+    .transform((val): "dori_2014" | "oodpcvs_2025" => {
+      if (val === "simplified" || val === "dori_2014") return "dori_2014";
+      return "oodpcvs_2025";
+    }),
+  /** PPM thresholds for DORI 2014 mode. In OODPCVS 2025 mode, the standard-defined 7-level thresholds are used instead. */
   pixelsPerMeter: z.object({
     detection: z.number().positive(),
     observation: z.number().positive(),
@@ -336,12 +352,7 @@ export const adversarialPathResultSchema = z.object({
   waypoints: z.array(adversarialWaypointSchema),
   totalExposureScore: z.number().min(0),
   totalDurationS: z.number().min(0),
-  detectionQualityExposure: z.object({
-    detection: z.number().min(0),
-    observation: z.number().min(0),
-    recognition: z.number().min(0),
-    identification: z.number().min(0),
-  }),
+  detectionQualityExposure: z.record(z.string(), z.number().min(0)),
   maxDetectionProbability: z.number().min(0).max(1),
   blindspotsExploited: z.array(z.string()),
   camerasEvaded: z.array(z.string()),
@@ -551,6 +562,7 @@ export type ObstructionNode = z.infer<typeof obstructionNodeSchema>;
 export type CriticalZoneNode = z.infer<typeof criticalZoneNodeSchema>;
 export type PrivacyZoneNode = z.infer<typeof privacyZoneNodeSchema>;
 export type EntryPointNode = z.infer<typeof entryPointNodeSchema>;
+export type PathPoint = z.infer<typeof pathPointSchema>;
 export type ScenarioPath = z.infer<typeof scenarioPathSchema>;
 export type SimulationAssumptions = z.infer<typeof simulationAssumptionsSchema>;
 export type ZoneResult = z.infer<typeof zoneResultSchema>;

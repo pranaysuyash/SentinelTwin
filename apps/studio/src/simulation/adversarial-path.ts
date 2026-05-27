@@ -24,14 +24,22 @@ type NavNode = {
   cameras: string[];
 };
 
-function detectionProbabilityForQuality(quality: DoriQuality) {
-  return {
+function detectionProbabilityForQuality(quality: DoriQuality): number {
+  const table: Record<DoriQuality, number> = {
     none: 0,
     detection: 0.25,
+    overview: 0.25,
+    outline: 0.35,
     observation: 0.5,
+    discern: 0.5,
+    perceive: 0.65,
     recognition: 0.85,
+    characterize: 0.85,
+    validate: 0.92,
     identification: 0.99,
-  }[quality];
+    scrutinize: 0.99,
+  };
+  return table[quality];
 }
 
 function nearestNode(target: [number, number], nodes: NavNode[]) {
@@ -160,11 +168,18 @@ export function computeAdversarialPath(
     cursor = previous.get(cursor);
   }
 
-  const detectionQualityExposure = {
+  const detectionQualityExposure: Record<string, number> = {
     detection: 0,
     observation: 0,
     recognition: 0,
     identification: 0,
+    overview: 0,
+    outline: 0,
+    discern: 0,
+    perceive: 0,
+    characterize: 0,
+    validate: 0,
+    scrutinize: 0,
   };
 
   const waypoints = path.map((node, index) => {

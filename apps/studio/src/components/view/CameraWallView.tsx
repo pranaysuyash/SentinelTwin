@@ -6,18 +6,20 @@ import { Camera, VideoOff } from "lucide-react";
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
+import "@/lib/three-compat";
+import {
+  CoverageHeatmapInstanced,
+  ENVIRONMENT_THEMES,
+  SceneDoors,
+  SceneFloor,
+  SceneLighting,
+  SceneObstructions,
+  SceneWalls,
+  SceneWindows,
+} from "@/components/workspace/SharedScene";
 import { useStudioStore } from "@/store/studio-store";
 import { getYawPitchDirection } from "@/simulation/geometry";
 import type { CameraNode } from "@/schema/security-scene";
-import {
-  ENVIRONMENT_THEMES,
-  SceneLighting,
-  SceneFloor,
-  SceneWalls,
-  SceneDoors,
-  SceneWindows,
-  SceneObstructions,
-} from "@/components/workspace/SharedScene";
 
 const CAMERA_WALL_THEME = ENVIRONMENT_THEMES.day;
 
@@ -151,7 +153,6 @@ function CameraFeedPanel({
             }}
             gl={{ antialias: true, alpha: false }}
             style={{ width: "100%", height: "100%" }}
-            shadows="percentage"
           >
             <Suspense fallback={null}>
               <SceneView />
@@ -209,6 +210,56 @@ function CameraFeedPanel({
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function WallOverviewPanel() {
+  const scene = useStudioStore((s) => s.scene);
+  const result = useStudioStore((s) => s.simulationResult);
+  const selectedId = useStudioStore((s) => s.selectedNodeId);
+  const theme = CAMERA_WALL_THEME;
+  const { width, depth } = scene.dimensions;
+
+  const cameraPos = useMemo<[number, number, number]>(() => {
+    const cx = width / 2;
+    const cz = depth / 2;
+    const span = Math.max(width, depth);
+    return [cx + width * 0.35, span * 0.95, cz + depth * 0.35];
+  }, [width, depth]);
+
+  return (
+    <div className="relative h-full overflow-hidden rounded-lg border border-[#1f2536] bg-[#07090d]">
+      <div className="absolute left-3 top-3 z-20 rounded-lg border border-[#27364e] bg-black/55 px-2.5 py-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#c7d0e4]">
+        3D Map
+      </div>
+      <Canvas
+        camera={{ position: cameraPos, fov: 48, near: 0.1, far: 200 }}
+        shadows="percentage"
+        gl={{ antialias: true, alpha: false }}
+        style={{ width: "100%", height: "100%", background: theme.background }}
+      >
+        <color attach="background" args={[theme.background]} />
+        <SceneLighting theme={theme} />
+        <Suspense fallback={null}>
+          <SceneFloor width={width} depth={depth} showGrid={false} />
+          <SceneWalls walls={scene.walls} />
+          <SceneDoors doors={scene.doors} />
+          <SceneWindows windows={scene.windows} />
+          <SceneObstructions obstructions={scene.obstructions} selectedId={selectedId} />
+          {result?.coverageCells?.length ? <CoverageHeatmapInstanced cells={result.coverageCells} /> : null}
+        </Suspense>
+        <OrbitControls
+          makeDefault
+          target={[width / 2, 0.1, depth / 2]}
+          minDistance={8}
+          maxDistance={40}
+          minPolarAngle={Math.PI / 4.1}
+          maxPolarAngle={Math.PI / 2.1}
+          enableDamping
+          dampingFactor={0.08}
+        />
+      </Canvas>
     </div>
   );
 }
@@ -319,23 +370,28 @@ export function CameraWallView() {
     );
   }
 
-  const count = Math.min(cameras.length, 6); // show up to 6
-  const visible = cameras.slice(0, count);
+  const visible = cameras.slice(0, 5);
+  const hiddenCount = Math.max(0, cameras.length - visible.length);
+  const viewCount = Math.min(visible.length + 1, 6);
 
   return (
-    <div className="h-full p-2.5">
-      {count === 1 ? (
-        // Single camera: full screen
-        <CameraSlotButton
-          camera={visible[0]!}
-          isSelected={visible[0]!.id === selectedId}
-          onSelect={() => selectNode(visible[0]!.id)}
-          className="h-full w-full"
-        />
-      ) : count === 2 ? (
-        // Two cameras: side-by-side
-        <div className="grid h-full grid-cols-2 gap-2.5">
-          {visible.map((cam) => (
+    <div className="flex h-full flex-col overflow-hidden bg-[#07090d] p-2.5">
+      <div className="mb-2 flex items-center justify-between rounded-xl border border-[#1f2536] bg-[#0b0f17] px-3 py-2">
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">Camera Wall</div>
+          <div className="mt-0.5 text-[11px] text-[#94a3b8]">
+            {visible.length} camera feed{visible.length === 1 ? "" : "s"} + map overview
+            {hiddenCount > 0 ? ` + ${hiddenCount} more` : ""}
+          </div>
+        </div>
+        <div className="rounded-lg border border-[#27364e] bg-black/40 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#c7d0e4]">
+          {viewCount} Views
+        </div>
+      </div>
+
+      {visible.length >= 5 ? (
+        <div className="grid flex-1 grid-cols-3 grid-rows-2 gap-2.5">
+          {visible.slice(0, 5).map((cam) => (
             <CameraSlotButton
               key={cam.id}
               camera={cam}
@@ -344,64 +400,41 @@ export function CameraWallView() {
               className="h-full w-full"
             />
           ))}
-        </div>
-      ) : count === 3 ? (
-        // Three cameras: 2 top + 1 wide bottom
-        <div className="grid h-full grid-cols-2 grid-rows-2 gap-2.5">
-          <CameraSlotButton
-            camera={visible[0]!}
-            isSelected={visible[0]!.id === selectedId}
-            onSelect={() => selectNode(visible[0]!.id)}
-            className="h-full w-full"
-          />
-          <CameraSlotButton
-            camera={visible[1]!}
-            isSelected={visible[1]!.id === selectedId}
-            onSelect={() => selectNode(visible[1]!.id)}
-            className="h-full w-full"
-          />
-          <div className="col-span-2 h-full">
-            <CameraSlotButton
-              camera={visible[2]!}
-              isSelected={visible[2]!.id === selectedId}
-              onSelect={() => selectNode(visible[2]!.id)}
-              className="h-full w-full"
-            />
-          </div>
-        </div>
-      ) : count <= 4 ? (
-        // 4 cameras: 2×2 grid with empty slots
-        <div className="grid h-full grid-cols-2 grid-rows-2 gap-2.5">
-          {[...visible, ...Array.from({ length: 4 - count }, () => null)].map((cam, i) =>
-            cam ? (
-              <CameraSlotButton
-                key={cam.id}
-                camera={cam}
-                isSelected={cam.id === selectedId}
-                onSelect={() => selectNode(cam.id)}
-                className="h-full w-full"
-              />
-            ) : (
-              <EmptySlot key={`empty-${i}`} />
-            ),
-          )}
+          <WallOverviewPanel />
         </div>
       ) : (
-        // 5-6 cameras: 3×2 grid
-        <div className="grid h-full gap-2.5" style={{ gridTemplateColumns: "repeat(3, 1fr)", gridTemplateRows: "repeat(2, 1fr)" }}>
-          {[...visible, ...Array.from({ length: 6 - count }, () => null)].map((cam, i) =>
-            cam ? (
-              <CameraSlotButton
-                key={cam.id}
-                camera={cam}
-                isSelected={cam.id === selectedId}
-                onSelect={() => selectNode(cam.id)}
-                className="h-full w-full"
-              />
-            ) : (
-              <EmptySlot key={`empty-${i}`} />
-            ),
+        <div className="grid flex-1 grid-cols-2 grid-rows-2 gap-2.5">
+          {visible[0] ? (
+            <CameraSlotButton
+              camera={visible[0]}
+              isSelected={visible[0].id === selectedId}
+              onSelect={() => selectNode(visible[0].id)}
+              className="h-full w-full"
+            />
+          ) : (
+            <EmptySlot />
           )}
+          {visible[1] ? (
+            <CameraSlotButton
+              camera={visible[1]}
+              isSelected={visible[1].id === selectedId}
+              onSelect={() => selectNode(visible[1].id)}
+              className="h-full w-full"
+            />
+          ) : (
+            <EmptySlot />
+          )}
+          {visible[2] ? (
+            <CameraSlotButton
+              camera={visible[2]}
+              isSelected={visible[2].id === selectedId}
+              onSelect={() => selectNode(visible[2].id)}
+              className="h-full w-full"
+            />
+          ) : (
+            <EmptySlot />
+          )}
+          <WallOverviewPanel />
         </div>
       )}
     </div>

@@ -5,19 +5,33 @@ import { useStudioStore } from "@/store/studio-store";
 // ── DORI quality tokens (canonical across the app) ────────────────────────────
 
 const QUALITY_COLOR: Record<string, string> = {
+  scrutinize: "#0ea5e9",
+  validate: "#3b82f6",
   identification: "#3b82f6",
-  recognition:    "#22c55e",
-  observation:    "#facc15",
-  detection:      "#fb923c",
-  none:           "#ef4444",
+  characterize: "#22c55e",
+  recognition: "#22c55e",
+  perceive: "#84cc16",
+  observation: "#facc15",
+  discern: "#facc15",
+  outline: "#f97316",
+  overview: "#fb923c",
+  detection: "#fb923c",
+  none: "#ef4444",
 };
 
 const QUALITY_ABBR: Record<string, string> = {
+  scrutinize: "SC",
+  validate: "VA",
   identification: "ID",
-  recognition:    "RE",
-  observation:    "OB",
-  detection:      "DE",
-  none:           "—",
+  characterize: "CH",
+  recognition: "RE",
+  perceive: "PE",
+  observation: "OB",
+  discern: "DI",
+  outline: "OU",
+  overview: "OV",
+  detection: "DE",
+  none: "—",
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

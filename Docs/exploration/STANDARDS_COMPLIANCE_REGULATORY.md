@@ -219,7 +219,7 @@ HIPAA requires protection of patient privacy. Cameras in healthcare:
 
 ### P0 — Before any professional use claim
 1. **IEC 62676-4:2025 OODPCVS** — replace old DORI with 7-level standard
-   - Update quality thresholds in `packages/simulation/src/coverage/qualityScoring.ts`
+   - Update quality thresholds in `apps/studio/src/simulation/dori.ts` (OODPCVS_THRESHOLDS) and add `oodpcvs_2025` to the `doriStandard` enum in `apps/studio/src/schema/security-scene.ts`
    - Add `standard: "DORI_2014" | "OODPCVS_2025"` to SimulationAssumptions
    - DORI as legacy option, OODPCVS as default
 

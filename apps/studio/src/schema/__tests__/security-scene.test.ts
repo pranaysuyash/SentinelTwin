@@ -9,7 +9,7 @@ describe("SecurityScene schema", () => {
 
     expect(parsed.name).toBe("Small Retail Shop Demo");
     expect(parsed.source).toBe("demo");
-    expect(parsed.cameras).toHaveLength(2);
+    expect(parsed.cameras).toHaveLength(smallRetailShopScene.cameras.length);
     expect(parsed.securityLights).toHaveLength(1);
     expect(parsed.criticalZones[0]?.requiredQuality).toBe("recognition");
     expect(parsed.paths[0]?.intent).toBe("authorized");

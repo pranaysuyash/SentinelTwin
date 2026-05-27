@@ -1,7 +1,7 @@
 # Exploration Map — SentinelTwin
 
 **This is a living document. Append findings. Never replace.**
-**Last updated:** 2026-05-30 (Digital twin simulation physics: PTZ movement, BRDF reflectivity, dynamic lighting, view distance, placement constraints, scene fidelity, occlusion culling, camera feed synthesis, real-time feedback) — previous: Camera deep-dive (spec DB, PTZ, gimbal, multi-sensor, analytics, cybersecurity, mounting, power, degradation, ecosystems)
+**Last updated:** 2026-05-27 (Digital twin simulation physics: PTZ movement, BRDF reflectivity, dynamic lighting, view distance, placement constraints, scene fidelity, occlusion culling, camera feed synthesis, real-time feedback) — previous: Camera deep-dive (spec DB, PTZ, gimbal, multi-sensor, analytics, cybersecurity, mounting, power, degradation, ecosystems)
 
 ---
 
@@ -4838,3 +4838,44 @@ The following are recorded as ready-to-start deep-dive topics from the digital t
 | **P2** | 108 | Surface Material BRDF & Visibility Physics | Extend obstruction material model with angle-dependent visibility scoring, Fresnel reflection at oblique angles, material-specific DORI penalty curves, backlighting through translucent materials |
 
 **Note:** These are directly relevant to the current development sprint. They build on existing work in the coverage engine, rendering pipeline, and temporal simulation.
+
+---
+
+## Map UI Design References
+
+**Thread:** 2026-05-27 map interaction / visual language review
+
+**Files reviewed:**
+- `DesignSystem_MapLayerVisualLanguage_CanonicalTokens.png`
+- `DesignSystem_MapInteractionStates_MiniMapPathMapWireframes.png`
+- `MiniMapComponent_ExpandedHoverState_DrawerNavigation.png`
+- `PathMapComponent_ScenarioPathPanel_RouteSummaryState.png`
+- `PathMapComponent_ReplayState_LiveActorVisibility.png`
+
+**Findings:**
+- MiniMap and PathMap are expected to share a single visual language for walls, doors, windows, cameras, FOV wedges, zones, and path quality colors.
+- Map interactions should be active, not decorative: hover should reveal quick context, clicks should select, drag should pan, wheel should zoom, and double-click should fit.
+- PathMap needs a live state summary that can show current replay time, current quality, and covering cameras, plus a segment detail surface for hovered or selected segments.
+- The MiniMap has an expanded/drawer state in the reference language, but the current studio only has the compact embedded version, so expansion remains an open follow-up.
+
+**Implication:** The shared map module should remain the canonical implementation for interaction behavior and style tokens, and future map additions should reuse the same language rather than introducing panel-specific variants.
+
+**Current implementation note:** Replay surfaces now respect `activePathId` instead of falling back to the first path, and the shared quality ribbon uses interpolated path sampling so long segments do not collapse into waypoint-only snapshots.
+
+---
+
+## R3F / Three.js Compatibility Audit
+
+**Thread:** 2026-05-27 runtime warning cleanup
+
+**Findings:**
+- `@react-three/fiber@9.6.1` still instantiates `new THREE.Clock()` internally, which triggers the Three.js r184 deprecation warning.
+- The app itself is not calling `THREE.Clock` directly in canvas code; the warning is dependency-driven.
+- `PCFSoftShadowMap` warnings were coming from R3F's default shadow setup, so the studio canvases now request `shadows="percentage"` to stay on the non-deprecated `PCFShadowMap` path.
+
+**Mitigation used:**
+- Added a local `three-compat` shim that replaces `THREE.Clock` with a drop-in compatibility clock before the R3F canvases mount.
+- Kept the runtime behavior the same for the current workspace while avoiding the noisy console deprecation.
+
+**Related cleanup:**
+- Restored the shared map utility export surface so `path-quality` continues to re-export `polygonToSvgPoints` and `obstacleRectPoints` for tests and map panels.

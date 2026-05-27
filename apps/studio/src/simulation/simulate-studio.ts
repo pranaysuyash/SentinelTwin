@@ -402,11 +402,20 @@ function simulateStudioInternal(scene: SecurityScene, includeRecommendations: bo
   const coverageCells = evaluator.computeCoverageCells(4);
   const includedCoverageCells = coverageCells.filter((cell) => cell.coverageIncluded);
   const includedCoverageCellCount = includedCoverageCells.length;
+  // coverageByQuality uses score-based buckets so it works regardless of which quality names cells carry.
   const coverageByQuality = {
-    detection: getQualityShare(coverageCells, "detection", true),
-    observation: getQualityShare(coverageCells, "observation", true),
-    recognition: getQualityShare(coverageCells, "recognition", true),
-    identification: getQualityShare(coverageCells, "identification", true),
+    detection: includedCoverageCellCount === 0
+      ? 0
+      : (includedCoverageCells.filter((c) => qualityToScore(c.quality) >= 1 && qualityToScore(c.quality) < 3).length / includedCoverageCellCount) * 100,
+    observation: includedCoverageCellCount === 0
+      ? 0
+      : (includedCoverageCells.filter((c) => qualityToScore(c.quality) >= 3 && qualityToScore(c.quality) < 5).length / includedCoverageCellCount) * 100,
+    recognition: includedCoverageCellCount === 0
+      ? 0
+      : (includedCoverageCells.filter((c) => qualityToScore(c.quality) >= 5 && qualityToScore(c.quality) < 6).length / includedCoverageCellCount) * 100,
+    identification: includedCoverageCellCount === 0
+      ? 0
+      : (includedCoverageCells.filter((c) => qualityToScore(c.quality) >= 6).length / includedCoverageCellCount) * 100,
   };
 
   const totalCoveragePct =

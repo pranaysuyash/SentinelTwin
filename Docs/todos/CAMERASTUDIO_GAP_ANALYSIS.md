@@ -167,9 +167,9 @@ Every result should cite its assumptions.
 ### P1 — Required for the full V0.1 product experience
 
 **[GAP-07] Dedicated launcher scene browser remains partial**
-TopBar already provides a canonical scene selector, and the launcher now adds direct saved-scene resume shortcuts. What is still missing is a richer project browser / recent-project surface inside the launcher itself.
+TopBar already provides a canonical scene selector, and the launcher now adds a searchable project browser with selected-workspace actions and direct saved-scene resume shortcuts.
 **Spec ref:** Section 4 (Top bar — Scene selector), section 20 (Reports/exports)
-**Needed:** A launcher-native project browser, recent scenes, and clearer scene/workspace separation.
+**Remaining:** Further multi-project organization such as folders, tags, cross-device sync, or shared project metadata if the product grows beyond local storage.
 
 ---
 

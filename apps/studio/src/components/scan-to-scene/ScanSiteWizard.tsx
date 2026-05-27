@@ -13,7 +13,7 @@ import {
 import { useCallback, useMemo, useRef, useState, type MouseEvent } from "react";
 
 import { SurfaceButton } from "@/components/shared/SurfaceButton";
-import { compileScanSessionToScene, createScanCandidate, createScanSession, SCAN_CANDIDATE_TYPES, type ScanCandidate, type ScanCandidateKind, type ScanSession } from "@/lib/scan-to-scene";
+import { compileScanSessionToScene, createScanCandidate, createScanSession, SCAN_CANDIDATE_TYPES, summarizeScanProvenance, type ScanCandidate, type ScanCandidateKind, type ScanSession } from "@/lib/scan-to-scene";
 import { useStudioStore } from "@/store/studio-store";
 
 interface ScanSiteWizardProps {
@@ -175,6 +175,7 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
     if (lowConfidenceAccepted.length > 0) issues.push(`${lowConfidenceAccepted.length} accepted candidate(s) are below 45% confidence.`);
     return issues;
   }, [acceptedCandidates, lowConfidenceAccepted.length]);
+  const provenance = useMemo(() => summarizeScanProvenance(session), [session]);
 
   const updateSession = useCallback((patch: Partial<ScanSession>) => {
     setSession((current) => ({ ...current, ...patch, updatedAt: Date.now() }));
@@ -298,7 +299,7 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
     setError(null);
     try {
       const compiled = compileScanSessionToScene(session);
-      setScene(compiled);
+      setScene(compiled.scene);
       onClose?.();
     } catch (compileError) {
       setError(compileError instanceof Error ? compileError.message : "Failed to compile scan session.");
@@ -780,6 +781,25 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
                       <p key={issue}>• {issue}</p>
                     ))
                   )}
+                </div>
+                <div className="mt-3 rounded-xl border border-[#243049] bg-[#09111b] px-3 py-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] uppercase tracking-[0.16em] text-[#8292af]">Provenance</span>
+                    <span className={[
+                      "rounded-full px-2 py-0.5 text-[9px] uppercase tracking-[0.18em]",
+                      provenance.confidenceLevel === "high"
+                        ? "bg-emerald-500/12 text-emerald-200"
+                        : provenance.confidenceLevel === "medium"
+                          ? "bg-amber-500/12 text-amber-200"
+                          : "bg-rose-500/12 text-rose-200",
+                    ].join(" ")}>
+                      {provenance.confidenceLevel} confidence
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[10px] text-[#8aa1c4]">{provenance.summary}</p>
+                  <p className="mt-1 text-[10px] text-[#73839f]">
+                    {provenance.acceptedCandidates}/{provenance.totalCandidates} accepted · {(provenance.averageConfidence * 100).toFixed(0)}% avg confidence
+                  </p>
                 </div>
                 {lowConfidenceAccepted.length > 0 ? (
                   <label className="mt-3 flex items-start gap-2 text-[11px] text-[#c6d3ea]">

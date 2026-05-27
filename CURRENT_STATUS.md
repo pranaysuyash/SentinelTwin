@@ -6,6 +6,7 @@
 ## Implemented
 
 - Root launcher now gates entry into Studio with explicit `Create or Import Scene`, `Open Current Workspace`, and direct saved-scene resume shortcuts.
+- Root launcher now includes a searchable launcher-native project browser with selected-workspace actions for reopening local scenes.
 - Root launcher includes `AI Layout Draft` prompt flow that generates editable `SecurityScene` JSON scenes.
 - Root launcher now includes explicit 5-step guided workflow actions (protect goal -> input -> build -> baseline sim -> next actions).
 - Guided workflow step-5 actions now include direct camera failure simulation and cheapest-fix counterfactual kickoff.
@@ -31,6 +32,7 @@
 - Right-panel assumptions are visible and directly editable (time-of-day and quality model), with link to full assumptions editor.
 - Camera wall feed rigs now track live camera transform edits (no one-time POV lock).
 - Camera View now shows per-camera path-visibility status overlays during replay context.
+- Camera View now includes first-cut footage verification UI (reference still upload, overlay/split comparison, opacity controls, alignment nudges) with defensive non-forensic disclaimer framing.
 - Camera Wall now shows per-camera route-visibility overlays and active route context badges.
 - Compare mode now renders each selected snapshot's own scene geometry (not only current live scene geometry).
 - Compare mode now supports snapshot-level simulation recovery (`Simulate Scenario B Now`) and changed-object delta summaries.
@@ -57,12 +59,12 @@
 
 - Full guided scan workflow (capture -> reconstruction -> editable scene).
 - Full AI layout draft to robust SecurityScene generation workflow.
-- Real footage verification workflow against simulated camera outcomes.
+- Product-grade footage verification workflow against simulated camera outcomes (current state is first-cut operator assist).
 - Product-grade multi-project backend collaboration layer.
 
 ## Next Priority Order (Goal2-Aligned)
 
-1. Expand launcher into full project/site start flow (recent projects, templates, guided onboarding).
+1. Expand launcher into full project/site start flow (templates, guided onboarding, multi-project organization).
 2. Strengthen first-run guidance from launcher into scene setup and first simulation run.
 3. Tighten mode labels and UX language so each mode outcome is obvious.
 4. Complete floor-plan import depth (actual walls/doors/windows generation + review/edit loop).

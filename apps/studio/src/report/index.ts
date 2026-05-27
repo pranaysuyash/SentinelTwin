@@ -1,6 +1,7 @@
 import type { SecurityScene, SimulationResult } from "@/schema/security-scene";
+import { buildSceneIntelligenceGraph } from "@/lib/scene-intelligence-graph";
 
-type ReportScene = Omit<SecurityScene, "snapshots" | "scenarios">;
+type ReportScene = SecurityScene;
 
 // ── Report Data Interface ──
 
@@ -48,6 +49,17 @@ export interface ReportData {
   }[];
   issues: { severity: string; description: string; area: string; recommendation: string }[];
   recommendations: { description: string; costCategory: string; verified: boolean; estimatedImpact: string }[];
+  provenance: {
+    sceneSource: string;
+    sceneSourceLabel: string;
+    sourceCounts: Record<string, number>;
+    nodeCount: number;
+    edgeCount: number;
+    revisionDepth: number;
+    snapshotCount: number;
+    confidenceNotes: string[];
+    sourceNotes: string[];
+  };
   adversarialPath?: {
     exposureScore: number;
     detectionProbability: number;
@@ -79,6 +91,12 @@ export function buildReportData(
   const totalZones = result.criticalZoneResults.length;
   const verifiedRecs = result.recommendations.filter((r) => r.verified).length;
   const meetsModeledZoneRequirements = zonesPassing === totalZones;
+  const graph = buildSceneIntelligenceGraph(scene, {
+    simulationResult: result,
+    revisionDepth: scene.changeLog.length,
+    snapshotCount: scene.snapshots?.length ?? 0,
+  });
+  const provenanceNotes = (scene.changeLog ?? []).filter((entry) => entry.startsWith("Provenance:") || entry.startsWith("Provenance confidence:"));
 
   return {
     title: options?.title ?? "Security Coverage Audit Report",
@@ -134,6 +152,17 @@ export function buildReportData(
       verified: r.verified,
       estimatedImpact: r.estimatedImpact,
     })),
+    provenance: {
+      sceneSource: scene.source,
+      sceneSourceLabel: graph.summary.sceneSourceLabel,
+      sourceCounts: graph.summary.sourceCounts,
+      nodeCount: graph.summary.nodeCount,
+      edgeCount: graph.summary.edgeCount,
+      revisionDepth: graph.summary.revisionDepth,
+      snapshotCount: graph.summary.snapshotCount,
+      confidenceNotes: provenanceNotes.filter((entry) => entry.startsWith("Provenance confidence:")),
+      sourceNotes: provenanceNotes.filter((entry) => entry.startsWith("Provenance:")),
+    },
     adversarialPath: options?.adversarialPath
       ? {
           exposureScore: options.adversarialPath.exposureScore,

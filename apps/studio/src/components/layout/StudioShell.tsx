@@ -106,8 +106,9 @@ export default function StudioShell() {
   const activeTool = useStudioStore((s) => s.activeTool);
   const setActiveTool = useStudioStore((s) => s.setActiveTool);
   const selectedNodeId = useStudioStore((s) => s.selectedNodeId);
+  const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
   const duplicateNode = useStudioStore((s) => s.duplicateNode);
-  const removeNode = useStudioStore((s) => s.removeNode);
+  const removeSelectedNodes = useStudioStore((s) => s.removeSelectedNodes);
   const undo = useStudioStore((s) => s.undo);
   const redo = useStudioStore((s) => s.redo);
   const createNewScene = useStudioStore((s) => s.createNewScene);
@@ -187,17 +188,17 @@ export default function StudioShell() {
     }
 
     // Delete selected node
-    if ((e.key === "Backspace" || e.key === "Delete") && selectedNodeId) {
+    if ((e.key === "Backspace" || e.key === "Delete") && (selectedNodeId || selectedNodeIds.length > 0)) {
       e.preventDefault();
       if (confirm("Delete the selected scene object? This can be undone.")) {
-        removeNode(selectedNodeId);
+        removeSelectedNodes();
       }
       return;
     }
 
-    if (isCtrlOrMeta && e.key.toLowerCase() === "d" && selectedNodeId) {
+    if (isCtrlOrMeta && e.key.toLowerCase() === "d" && (selectedNodeId || selectedNodeIds.length > 0)) {
       e.preventDefault();
-      duplicateNode(selectedNodeId);
+      duplicateNode(selectedNodeId ?? selectedNodeIds[0] ?? "");
       return;
     }
 
@@ -221,7 +222,7 @@ export default function StudioShell() {
       }
       return;
     }
-  }, [activeTool, createNewScene, duplicateNode, removeNode, redo, saveSceneToStorage, selectedNodeId, setActiveTool, setViewMode, setWorkspacePreset, undo, viewMode]);
+  }, [activeTool, createNewScene, duplicateNode, redo, removeSelectedNodes, saveSceneToStorage, selectedNodeId, selectedNodeIds.length, setActiveTool, setViewMode, setWorkspacePreset, undo, viewMode]);
 
   useEffect(() => {
     window.addEventListener("keydown", handleKeyDown);

@@ -269,6 +269,32 @@ export function ReplayStatusOverlay({
   );
 }
 
+function CameraPathVisibilityOverlay({
+  cameraName,
+  visibleSeconds,
+  totalSeconds,
+  maxQuality,
+}: {
+  cameraName: string;
+  visibleSeconds: number;
+  totalSeconds: number;
+  maxQuality: string;
+}) {
+  const ratio = totalSeconds > 0 ? visibleSeconds / totalSeconds : 0;
+  const pct = Math.round(ratio * 100);
+  const status = ratio > 0.7 ? "Strong Coverage" : ratio > 0.35 ? "Partial Coverage" : "Weak Coverage";
+  const statusColor = ratio > 0.7 ? "text-emerald-300" : ratio > 0.35 ? "text-amber-300" : "text-red-300";
+
+  return (
+    <div className="absolute left-3 bottom-3 z-30 rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2 backdrop-blur-sm">
+      <div className="text-[8px] uppercase tracking-[0.18em] text-[#7dd3fc]">Path Visibility</div>
+      <div className="mt-1 text-[10px] text-[#d2d9e8]">{cameraName}</div>
+      <div className={`mt-1 text-[10px] font-semibold ${statusColor}`}>{status}</div>
+      <div className="mt-1 text-[9px] text-[#9ab0ce]">{pct}% visible • best quality: {maxQuality.toUpperCase()}</div>
+    </div>
+  );
+}
+
 export function DoriInsightCard({
   camera,
   zoneLabel,
@@ -631,6 +657,10 @@ export function CameraViewMode() {
     ? pathReplay.progress * activePathResult.totalDurationS
     : 0;
   const replayActorVisible = Boolean(activePath && activePathResult && (pathReplay.playing || pathReplay.progress > 0));
+  const visibilityForCurrentCamera = useMemo(() => {
+    if (!activePathResult || !camera) return null;
+    return activePathResult.visibilityByCamera[camera.id] ?? null;
+  }, [activePathResult, camera]);
   const firstCriticalZone = scene.criticalZones[0] ?? null;
   const camResult = result?.cameraResults.find((entry) => entry.cameraId === camera?.id) ?? null;
   const zoneResult = firstCriticalZone ? result?.criticalZoneResults.find((entry) => entry.zoneId === firstCriticalZone.id) ?? null : null;
@@ -742,6 +772,14 @@ export function CameraViewMode() {
               pathLabel={activePath.label}
               timeS={pathTimeS}
               speed={pathReplay.speed}
+            />
+          ) : null}
+          {activePathResult && visibilityForCurrentCamera ? (
+            <CameraPathVisibilityOverlay
+              cameraName={camera.name}
+              visibleSeconds={visibilityForCurrentCamera.visibleS}
+              totalSeconds={activePathResult.totalDurationS}
+              maxQuality={visibilityForCurrentCamera.maxQuality}
             />
           ) : null}
           {zoneAnalysis && firstCriticalZone ? (

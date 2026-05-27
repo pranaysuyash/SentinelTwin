@@ -503,33 +503,6 @@ export function CoverageHeatmapInstanced({
 
 // ── Adversarial Path Line ──
 
-export const ADVERSARIAL_PATH_DASH = { color: "#f43f5e", dashSize: 0.1, gapSize: 0.06 };
-
-export function AdversarialPathLine({ waypoints }: { waypoints: [number, number][] }) {
-  const geometry = useMemo(() => {
-    const arr = new Float32Array(waypoints.length * 3);
-    waypoints.forEach(([x, z], index) => {
-      arr[index * 3] = x;
-      arr[index * 3 + 1] = 0.045;
-      arr[index * 3 + 2] = z;
-    });
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.BufferAttribute(arr, 3));
-    return geo;
-  }, [waypoints]);
-
-  const dashedLine = useMemo(() => {
-    const line = new THREE.Line(
-      geometry,
-      new THREE.LineDashedMaterial(ADVERSARIAL_PATH_DASH),
-    );
-    line.computeLineDistances();
-    return line;
-  }, [geometry]);
-
-  return <primitive object={dashedLine} />;
-}
-
 // ── Coverage-quality colored path segments ──
 // Each segment is colored by the DORI quality at its start waypoint.
 

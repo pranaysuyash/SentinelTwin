@@ -22,6 +22,7 @@ const TABS: { id: BottomTab; label: string; hasCount?: boolean }[] = [
   { id: "temporal", label: "24H PROFILE" },
   { id: "beforeafter", label: "BEFORE / AFTER" },
   { id: "assumptions", label: "ASSUMPTIONS" },
+  { id: "redundancy", label: "REDUNDANCY" },
   { id: "report", label: "REPORT LITE" },
   { id: "debug", label: "DEBUG" },
 ];
@@ -73,7 +74,7 @@ export function BottomPanel() {
 
   return (
     <div className="flex h-[208px] flex-shrink-0 flex-col border-t border-[#1e2130] bg-[#0d1017]">
-      {/* Tab strip — scrollable so 8 tabs don't overflow on narrow layouts */}
+      {/* Tab strip — scrollable so the dock tabs don't overflow on narrow layouts */}
       <div className="flex min-w-0 items-end gap-0.5 overflow-x-auto border-b border-[#1e2130] px-1.5 pt-1.5 scrollbar-none">
         {TABS.map(({ id, label, hasCount }) => (
           <button

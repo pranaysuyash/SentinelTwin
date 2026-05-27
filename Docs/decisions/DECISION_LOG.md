@@ -1012,6 +1012,32 @@ reference to the new path, then remove the old."
 - **Keep flow only in docs/README** — rejected because users need this guidance in product UI.
 - **Add separate onboarding route later** — rejected because launcher can deliver immediate product-shell clarity.
 
+### D-061: Guided step-5 actions should execute failure/counterfactual flows directly
+**Date:** 2026-05-27
+
+**Decision:** Extended launcher step-5 actions to include direct `Failure` (toggle an active camera off + open Issues) and `Cheapest Fix` (run obstruction counterfactual + open Counterfactual tab) controls.
+
+**Rationale:**
+- `goal2` flow calls for actionable “next action” operations, not just navigation links.
+- Fast-path controls let users experience core value (failure impact + fix deltas) without hunting through panels first.
+
+**Alternatives rejected:**
+- **Only navigate to tabs without executing actions** — rejected because it adds friction and weakens first-run clarity.
+- **Delay to command-bar-only interaction** — rejected because launcher is now the primary guided shell.
+
+### D-062: Camera View should surface per-camera replay visibility status
+**Date:** 2026-05-27
+
+**Decision:** Added a per-camera path visibility overlay in Camera View showing visibility percentage, quality ceiling, and status tier (strong/partial/weak) from `pathResults.visibilityByCamera`.
+
+**Rationale:**
+- Demo/design flow expects camera POV to communicate operational replay quality directly.
+- This closes a UX gap between timeline data and what users see in single-camera mode.
+
+**Alternatives rejected:**
+- **Keep visibility only in timeline tab** — rejected because users in camera mode lose route outcome context.
+- **Show only raw seconds** — rejected because percentage+status communicates risk faster.
+
 ### D-058: Guided scan intake should be a dedicated manual-assisted launch path that compiles into `scan_import`
 **Date:** 2026-05-27
 

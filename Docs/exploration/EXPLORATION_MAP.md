@@ -4958,3 +4958,18 @@ Add sensor specs (`sensorWidthMm`, `sensorHeightMm`, `sensorFormat`) when:
 
 **Related cleanup:**
 - Restored the shared map utility export surface so `path-quality` continues to re-export `polygonToSvgPoints` and `obstacleRectPoints` for tests and map panels.
+
+---
+
+## Thread 22: Camera Studio Screen Inventory and Map Visual Language
+
+**Status:** Implementation review complete. The live Studio shell already covers coverage/map, camera view, camera wall, path replay, compare, MiniMap, and PathMap; the remaining work is polish plus canonical surfacing.
+
+**Key findings:**
+- `BottomPanel` already had a render branch for `redundancy`, but the tab strip did not expose it until 2026-05-27.
+- `map-colors.ts` and `quality-display.ts` are the shared canonical sources for the 2D map language; new map surfaces should not invent their own palette.
+- The practical next step is not a brand-new screen, but keeping the current screen inventory and map-language docs synchronized with the implementation.
+
+**Next:**
+- Keep `Docs/design/CAMERA_STUDIO_SCREEN_STATUS.md` updated when a screen mode changes materially.
+- Keep `Docs/design/MAP_LAYER_VISUAL_LANGUAGE.md` aligned with the shared map token files whenever the palette changes.

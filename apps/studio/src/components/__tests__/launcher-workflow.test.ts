@@ -14,5 +14,7 @@ describe("Studio launcher workflow", () => {
     expect(source).toContain("4. Run baseline simulation + inspect pass/fail and blind spots.");
     expect(source).toContain("5. Next action: replay route, test night/failure, generate report.");
     expect(source).toContain("Run Baseline");
+    expect(source).toContain("Cheapest Fix");
+    expect(source).toContain("Failure");
   });
 });

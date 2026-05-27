@@ -23,6 +23,8 @@ export default function StudioPage() {
   const setEnvironmentMode = useStudioStore((s) => s.setEnvironmentMode);
   const setSimulationRunning = useStudioStore((s) => s.setSimulationRunning);
   const setSimulationResult = useStudioStore((s) => s.setSimulationResult);
+  const updateNode = useStudioStore((s) => s.updateNode);
+  const runCounterfactual = useStudioStore((s) => s.runCounterfactual);
   const sceneName = useStudioStore((s) => s.scene.name);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -193,6 +195,28 @@ export default function StudioPage() {
               <div className="flex gap-1">
                 <button onClick={() => { setViewMode("replay"); setEnterStudio(true); }} className="rounded border border-[#2b3953] px-2 py-0.5 text-[9px] text-[#d2ddf0]">Replay</button>
                 <button onClick={() => { setEnvironmentMode("night"); setEnterStudio(true); }} className="rounded border border-[#2b3953] px-2 py-0.5 text-[9px] text-[#d2ddf0]">Night</button>
+                <button
+                  onClick={() => {
+                    const target = scene.cameras.find((camera) => camera.status === "on") ?? scene.cameras[0];
+                    if (target) updateNode(target.id, { status: "off" });
+                    setBottomTab("issues");
+                    setEnterStudio(true);
+                  }}
+                  className="rounded border border-[#2b3953] px-2 py-0.5 text-[9px] text-[#d2ddf0]"
+                >
+                  Failure
+                </button>
+                <button
+                  onClick={() => {
+                    const targetObs = scene.obstructions.find((obs) => obs.movableByAI) ?? scene.obstructions[0];
+                    if (targetObs) runCounterfactual(targetObs.id);
+                    setBottomTab("counterfactual");
+                    setEnterStudio(true);
+                  }}
+                  className="rounded border border-[#2b3953] px-2 py-0.5 text-[9px] text-[#d2ddf0]"
+                >
+                  Cheapest Fix
+                </button>
                 <button onClick={() => { setBottomTab("report"); setEnterStudio(true); }} className="rounded border border-[#2b3953] px-2 py-0.5 text-[9px] text-[#d2ddf0]">Report</button>
               </div>
             </div>

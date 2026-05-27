@@ -8,6 +8,7 @@
 - Root launcher now gates entry into Studio with explicit `Create or Import Scene` and `Open Current Workspace`.
 - Root launcher includes `AI Layout Draft` prompt flow that generates editable `SecurityScene` JSON scenes.
 - Root launcher now includes explicit 5-step guided workflow actions (protect goal -> input -> build -> baseline sim -> next actions).
+- Guided workflow step-5 actions now include direct camera failure simulation and cheapest-fix counterfactual kickoff.
 - AI Layout Draft now supports model-backed structured generation when API key is present, with deterministic local fallback.
 - AI Layout Draft now applies prompt-aware enrichment (camera counts, shelves/counter hints, back-storage zone hints) to generated scenes.
 - `apps/studio` Next.js app is the active product surface with a working Studio shell.
@@ -24,6 +25,7 @@
 - Report-lite now includes a practical hardening section: failing zones + immediate action plan from recommendations.
 - Right-panel assumptions are visible and directly editable (time-of-day and quality model), with link to full assumptions editor.
 - Camera wall feed rigs now track live camera transform edits (no one-time POV lock).
+- Camera View now shows per-camera path-visibility status overlays during replay context.
 - Golden simulation claims suite exists (`apps/studio/src/simulation/__tests__/golden-simulation-claims.test.ts`).
 
 ## Partial

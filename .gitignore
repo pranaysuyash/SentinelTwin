@@ -33,6 +33,7 @@ __pycache__/
 .tmp/
 tmp/
 .cache/
+.chrome-profile/
 
 # Agent-local docs/state (optional to version, excluded by default)
 .agent/

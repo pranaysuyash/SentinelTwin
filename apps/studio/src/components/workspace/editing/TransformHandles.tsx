@@ -34,6 +34,7 @@ type DragState = {
   index?: number;
   startClient: { x: number; y: number };
   startWorld: Point2;
+  currentWorld: Point2;
   startNode: TransformableNode;
 };
 
@@ -284,7 +285,9 @@ function HandleSphere({
 export function TransformHandles() {
   const scene = useStudioStore((s) => s.scene);
   const selectedNodeId = useStudioStore((s) => s.selectedNodeId);
+  const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
   const updateNode = useStudioStore((s) => s.updateNode);
+  const translateSelectedNodes = useStudioStore((s) => s.translateSelectedNodes);
   const setEditorMode = useStudioStore((s) => s.setEditorMode);
   const setSelectedHandle = useStudioStore((s) => s.setSelectedHandle);
   const selected = useMemo<TransformableNode | null>(() => {
@@ -305,6 +308,36 @@ export function TransformHandles() {
   const [preview, setPreview] = useState<TransformableNode | null>(null);
   const previewRef = useRef<TransformableNode | null>(null);
   const dragRef = useRef<DragState | null>(null);
+  const isGroupSelection = selectedNodeIds.length > 1;
+  const groupSelection = isGroupSelection
+    ? selectedNodeIds
+        .map((id) => {
+          const collections: TransformableNode[] = [
+            ...scene.cameras,
+            ...scene.securityLights,
+            ...scene.obstructions,
+            ...scene.walls,
+            ...scene.criticalZones,
+            ...scene.privacyZones,
+            ...scene.paths,
+          ];
+          return collections.find((entry) => entry.id === id) ?? null;
+        })
+        .filter((node): node is TransformableNode => Boolean(node))
+    : [];
+  const groupCenter = isGroupSelection
+    ? groupSelection.reduce(
+        (acc, node) => {
+          const center = getCenterForNode(node);
+          acc[0] += center[0];
+          acc[1] += center[1];
+          return acc;
+        },
+        [0, 0] as Point2,
+      )
+    : [0, 0];
+  const groupCenterCount = Math.max(1, groupSelection.length);
+  const groupAnchor: [number, number] = [groupCenter[0] / groupCenterCount, groupCenter[1] / groupCenterCount];
 
   useEffect(() => {
     if (!selected) {
@@ -317,6 +350,11 @@ export function TransformHandles() {
   useEffect(() => {
     const onMove = (event: MouseEvent) => {
       if (!dragRef.current || !selected) return;
+      if (isGroupSelection && dragRef.current.handle === "move") {
+        const currentPoint = getPointFromEvent(event, camera, size, raycaster, 0) ?? dragRef.current.startWorld;
+        dragRef.current.currentWorld = currentPoint;
+        return;
+      }
       const next = updateDraft(selected, dragRef.current, event, camera, size, raycaster);
       previewRef.current = next;
       setPreview(next);
@@ -324,6 +362,20 @@ export function TransformHandles() {
 
     const onUp = () => {
       if (!dragRef.current || !selected) return;
+      if (isGroupSelection && dragRef.current.handle === "move") {
+        const finalPoint = dragRef.current.currentWorld;
+        const deltaX = finalPoint[0] - dragRef.current.startWorld[0];
+        const deltaZ = finalPoint[1] - dragRef.current.startWorld[1];
+        if (deltaX !== 0 || deltaZ !== 0) {
+          translateSelectedNodes([deltaX, deltaZ]);
+        }
+        dragRef.current = null;
+        setPreview(null);
+        previewRef.current = null;
+        setEditorMode("idle");
+        setSelectedHandle(undefined);
+        return;
+      }
       const next = previewRef.current ?? preview ?? selected;
       commitNode(updateNode, selected, next);
       dragRef.current = null;
@@ -339,7 +391,7 @@ export function TransformHandles() {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
     };
-  }, [camera, preview, raycaster, selected, setEditorMode, setSelectedHandle, size, updateNode]);
+  }, [camera, isGroupSelection, preview, raycaster, selected, setEditorMode, setSelectedHandle, size, translateSelectedNodes, updateNode]);
 
   if (!selected) return null;
 
@@ -354,6 +406,7 @@ export function TransformHandles() {
       index,
       startClient: { x: event.clientX, y: event.clientY },
       startWorld,
+      currentWorld: startWorld,
       startNode: selected,
     };
     const initialPreview = cloneNode(selected);
@@ -364,6 +417,14 @@ export function TransformHandles() {
   };
 
   if (node.nodeType === "camera") {
+    if (isGroupSelection) {
+      return (
+        <group>
+          <HandleSphere position={[groupAnchor[0], node.position[1], groupAnchor[1]]} color="#60a5fa" onPointerDown={beginDrag("move")} label={`Move ${groupSelection.length}`} />
+        </group>
+      );
+    }
+
     return (
       <group>
         <HandleSphere position={[node.position[0], node.position[1], node.position[2]]} color="#60a5fa" onPointerDown={beginDrag("move")} label="Move" />
@@ -375,6 +436,14 @@ export function TransformHandles() {
   }
 
   if (node.nodeType === "security_light") {
+    if (isGroupSelection) {
+      return (
+        <group>
+          <HandleSphere position={[groupAnchor[0], node.position[1], groupAnchor[1]]} color="#eab308" onPointerDown={beginDrag("move")} label={`Move ${groupSelection.length}`} />
+        </group>
+      );
+    }
+
     return (
       <group>
         <HandleSphere position={[node.position[0], node.position[1], node.position[2]]} color="#eab308" onPointerDown={beginDrag("move")} label="Move" />
@@ -386,6 +455,14 @@ export function TransformHandles() {
   if (node.nodeType === "obstruction") {
     const [w, d, h] = node.dimensions;
     const { xAxis, zAxis } = getObstructionAxis(node.rotationYDeg);
+    if (isGroupSelection) {
+      return (
+        <group>
+          <HandleSphere position={[groupAnchor[0], node.position[1], groupAnchor[1]]} color="#fb923c" onPointerDown={beginDrag("move")} label={`Move ${groupSelection.length}`} />
+        </group>
+      );
+    }
+
     return (
       <group>
         <HandleSphere position={[node.position[0], node.position[1], node.position[2]]} color="#fb923c" onPointerDown={beginDrag("move")} label="Move" />
@@ -398,6 +475,14 @@ export function TransformHandles() {
   }
 
   if (node.nodeType === "wall") {
+    if (isGroupSelection) {
+      return (
+        <group>
+          <HandleSphere position={[groupAnchor[0], 0.1, groupAnchor[1]]} color="#22c55e" onPointerDown={beginDrag("move")} label={`Move ${groupSelection.length}`} />
+        </group>
+      );
+    }
+
     return (
       <group>
         <HandleSphere position={[node.start[0], 0.08, node.start[1]]} color="#60a5fa" onPointerDown={beginDrag("wall_start")} label="A" />
@@ -408,6 +493,14 @@ export function TransformHandles() {
   }
 
   if (node.nodeType === "critical_zone" || node.nodeType === "privacy_zone") {
+    if (isGroupSelection) {
+      return (
+        <group>
+          <HandleSphere position={[groupAnchor[0], 0.08, groupAnchor[1]]} color={node.nodeType === "critical_zone" ? "#22c55e" : "#8b5cf6"} onPointerDown={beginDrag("move")} label={`Move ${groupSelection.length}`} />
+        </group>
+      );
+    }
+
     return (
       <group>
         <mesh position={[center[0], 0.014, center[1]]}>
@@ -430,6 +523,14 @@ export function TransformHandles() {
 
   if (node.nodeType === "path") {
     const points = node.points.map((point) => point.position);
+    if (isGroupSelection) {
+      return (
+        <group>
+          <HandleSphere position={[groupAnchor[0], 0.06, groupAnchor[1]]} color="#fb923c" onPointerDown={beginDrag("move")} label={`Move ${groupSelection.length}`} />
+        </group>
+      );
+    }
+
     return (
       <group>
         <HandleSphere position={[center[0], 0.06, center[1]]} color="#fb923c" onPointerDown={beginDrag("move")} label="Move" />

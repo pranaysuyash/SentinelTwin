@@ -10,8 +10,8 @@ describe("CameraWallView", () => {
     expect(source).toContain("Active {activeCount}");
     expect(source).toContain("Offline {offlineCount}");
     expect(source).toContain("Selected {selectedCamera?.name ?? \"None\"}");
-    expect(source).toContain("4 Views");
-    expect(source).toContain("6 Views");
+    expect(source).toContain("4-Panel Layout");
+    expect(source).toContain("6-Panel Layout");
     expect(source).toContain("Layout");
   });
 });

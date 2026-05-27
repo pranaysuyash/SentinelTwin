@@ -146,6 +146,7 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - Camera placement presets are now reactive and store-backed instead of hidden module state, so the camera tool picker reflects the current preset and placement reads one canonical source ✅
 - The scene workbench now supports a canonical duplicate-node action with keyboard shortcut support, so selected cameras/obstructions/walls/zones/paths can be copied and reselected instead of rebuilt manually ✅
 - The scene workbench now has shared grouped selection state, shift/meta multi-select, and drag-select bounds so the canvas can capture more than one object without losing the primary inspector selection ✅
+- The scene workbench now supports grouped move/delete/duplicate operations from the shared selection model, so multi-select behaves like a real edit set instead of just a visual highlight ✅
 - The workbench transform layer now exposes obstruction width/depth resize handles and camera pitch affordances in addition to move/rotate/height controls ✅
 - View mode switching is implemented for Map / Camera View / Camera Wall / Path Replay ✅
 - Path replay animation and actor playback are implemented in the dedicated replay view ✅
@@ -174,6 +175,7 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - Full-canvas camera view with live HUD, DORI overlay card, LIVE MODE banner, overlay controls, mode filters, and back-to-map button ✅
 - Camera selector header with previous/next buttons and store-backed camera selection sync ✅
 - Mode toggles cover Normal / IR / Low Light / Thermal, and the overlay strip can show overlays, path, zones, timestamp, and grid state ✅
+- DORI overlay target label now derives from the active critical zone target type instead of a generic "Face / Person" string ✅
 - The camera feed itself still does not render the walking actor inside the POV; the actor lives in replay/map contexts only ⚠️
 
 ### InspectorPanel — wired and working
@@ -200,6 +202,8 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - Section headers now use compact badges and slimmer toggle controls so the sidebar gives more space back to tools and content ✅
 
 ### BottomPanel tabs — mostly complete
+
+- BottomPanel tab strip now also surfaces `REDUNDANCY`, matching the existing render branch so redundancy analysis is reachable without hidden state changes ✅
 
 **MetricsTab** ✅
 - 7 core metric cards: coverage, critical zones, cameras, avg quality, worst area, recognition %, identification %

@@ -361,8 +361,8 @@ export function CameraWallView() {
               onChange={(event) => setLayoutMode(event.target.value as "quad" | "overview")}
               className="bg-transparent text-[9px] font-semibold uppercase tracking-[0.16em] text-[#c7d0e4] outline-none"
             >
-              <option value="quad">4 Views</option>
-              <option value="overview">6 Views</option>
+              <option value="quad">4-Panel Layout</option>
+              <option value="overview">6-Panel Layout</option>
             </select>
           </label>
           <div className="rounded-lg border border-[#27364e] bg-black/40 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#c7d0e4]">

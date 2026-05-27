@@ -98,7 +98,7 @@ export function ThreatAnalysisPanel() {
     ?? coverageFailurePath?.targetReached
     ?? false;
 
-  const handleRunAnalysis = useCallback(() => {
+  const handleShowDetails = useCallback(() => {
     setShowDetails(true);
   }, []);
 
@@ -116,11 +116,11 @@ export function ThreatAnalysisPanel() {
               Coverage failure path computed. Run analysis to see detailed failure breakdown.
             </p>
             <button
-              onClick={handleRunAnalysis}
+              onClick={handleShowDetails}
               className="inline-flex items-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] px-3 py-2 text-[10px] font-medium text-rose-300 transition-colors hover:border-rose-500/30 hover:bg-rose-500/10"
             >
               <Zap className="h-3.5 w-3.5" />
-              Run Coverage Failure Analysis
+              Show Coverage Breakdown
             </button>
           </>
         ) : (
@@ -152,7 +152,7 @@ export function ThreatAnalysisPanel() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ShieldAlert className="h-4 w-4 text-rose-400" />
-          <span className="text-[11px] font-semibold text-[#c7d0e4]">Coverage Failure Analysis Report</span>
+          <span className="text-[11px] font-semibold text-[#c7d0e4]">Coverage Failure Breakdown</span>
         </div>
         {criticalZoneReachableAlongRoute && (
           <span className="flex items-center gap-1 rounded-md bg-red-500/15 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.12em] text-red-400">

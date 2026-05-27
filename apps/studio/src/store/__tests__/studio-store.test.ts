@@ -154,4 +154,51 @@ describe("studio store", () => {
     expect(state.selectedNodeIds[0]).not.toBe(first!.id);
     expect(state.selectedNodeIds[1]).not.toBe(second!.id);
   });
+
+  test("translates the current grouped selection as one scene edit", () => {
+    const [first, second] = smallRetailShopScene.cameras;
+    expect(first).toBeTruthy();
+    expect(second).toBeTruthy();
+
+    useStudioStore.setState({
+      scene: smallRetailShopScene,
+      simulationResult: null,
+      simulationDirty: false,
+      selectedNodeId: first!.id,
+      selectedNodeIds: [first!.id, second!.id],
+    });
+
+    useStudioStore.getState().translateSelectedNodes([0.5, -0.25]);
+
+    const state = useStudioStore.getState();
+    const movedFirst = state.scene.cameras.find((camera) => camera.id === first!.id);
+    const movedSecond = state.scene.cameras.find((camera) => camera.id === second!.id);
+
+    expect(movedFirst?.position[0]).toBeCloseTo(first!.position[0] + 0.5, 6);
+    expect(movedFirst?.position[2]).toBeCloseTo(first!.position[2] - 0.25, 6);
+    expect(movedSecond?.position[0]).toBeCloseTo(second!.position[0] + 0.5, 6);
+    expect(movedSecond?.position[2]).toBeCloseTo(second!.position[2] - 0.25, 6);
+  });
+
+  test("removes the whole grouped selection when deleting multiple nodes", () => {
+    const [first, second] = smallRetailShopScene.cameras;
+    expect(first).toBeTruthy();
+    expect(second).toBeTruthy();
+
+    useStudioStore.setState({
+      scene: smallRetailShopScene,
+      simulationResult: null,
+      simulationDirty: false,
+      selectedNodeId: first!.id,
+      selectedNodeIds: [first!.id, second!.id],
+    });
+
+    useStudioStore.getState().removeSelectedNodes();
+
+    const state = useStudioStore.getState();
+    expect(state.scene.cameras.find((camera) => camera.id === first!.id)).toBeUndefined();
+    expect(state.scene.cameras.find((camera) => camera.id === second!.id)).toBeUndefined();
+    expect(state.selectedNodeIds).toEqual([]);
+    expect(state.selectedNodeId).toBeNull();
+  });
 });

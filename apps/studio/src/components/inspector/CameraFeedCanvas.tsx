@@ -10,7 +10,7 @@ import type { CameraNode, DoriQuality, SecurityScene } from "@/schema/security-s
 import { qualityToScore } from "@/simulation/dori";
 import { getYawPitchDirection } from "@/simulation/geometry";
 import { useStudioStore } from "@/store/studio-store";
-import { PathActor, AdversarialPathLine } from "@/components/workspace/SharedScene";
+import { PathActor, CoverageSegmentPath } from "@/components/workspace/SharedScene";
 
 type FeedViewMode = "normal" | "ir" | "low_light" | "thermal";
 
@@ -57,7 +57,9 @@ function CameraFeedScene({
   walls: SecurityScene["walls"];
   obstructions: SecurityScene["obstructions"];
   dimensions: SecurityScene["dimensions"];
-  adversarialPath?: { waypoints: [number, number][] };
+  adversarialPath?: {
+    waypoints: { position: [number, number]; detectionQuality: string }[];
+  };
 }) {
   const target = useMemo(() => {
     const direction = getYawPitchDirection(camera.yawDeg, camera.pitchDeg);
@@ -123,9 +125,9 @@ function CameraFeedScene({
 
       {adversarialPath && adversarialPath.waypoints.length > 0 && (
         <>
-          <AdversarialPathLine waypoints={adversarialPath.waypoints} />
+          <CoverageSegmentPath waypoints={adversarialPath.waypoints} />
           <PathActor
-            waypoints={adversarialPath.waypoints}
+            waypoints={adversarialPath.waypoints.map((wp) => wp.position)}
             currentIndex={0}
             progress={0}
           />
@@ -142,7 +144,6 @@ export function CameraFeedCanvas({ cameraId }: { cameraId: string }) {
   const camera = scene.cameras.find((entry) => entry.id === cameraId);
   const [viewMode, setViewMode] = useState<FeedViewMode>("normal");
   const adversarialPath = result?.adversarialPath ?? result?.coverageFailurePath ?? undefined;
-  const pathWaypoints = adversarialPath?.waypoints.map((wp) => wp.position) ?? undefined;
 
   if (!camera) return null;
 
@@ -203,7 +204,7 @@ export function CameraFeedCanvas({ cameraId }: { cameraId: string }) {
           shadows="percentage"
           gl={{ preserveDrawingBuffer: true }}
         >
-          <CameraFeedScene camera={camera} walls={scene.walls} obstructions={scene.obstructions} dimensions={scene.dimensions} adversarialPath={pathWaypoints ? { waypoints: pathWaypoints } : undefined} />
+          <CameraFeedScene camera={camera} walls={scene.walls} obstructions={scene.obstructions} dimensions={scene.dimensions} adversarialPath={adversarialPath ?? undefined} />
         </Canvas>
       </div>
 

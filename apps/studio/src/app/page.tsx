@@ -213,16 +213,18 @@ export default function StudioPage() {
                     setScene(draft.scene);
                     const warning =
                       draft.warnings[0] ?? (hasPublicKey ? "Model draft generated without warnings." : "Using heuristic draft because NEXT_PUBLIC_OPENAI_API_KEY is not set.");
+                    const provenanceNote = `${draft.provenance.summary} (${draft.provenance.confidenceLevel} confidence)`;
                     setAiWarning(warning);
-                    setAiDraftNotice(warning);
-                    setLaunchNotice(warning);
+                    setAiDraftNotice(provenanceNote);
+                    setLaunchNotice(provenanceNote);
                   } catch (error) {
                     const fallback = draftSceneFromPrompt(aiPrompt);
                     setScene(fallback.scene);
                     const warning = `Model draft failed; fallback used. ${error instanceof Error ? error.message : ""}`.trim();
+                    const provenanceNote = `${fallback.provenance.summary} (${fallback.provenance.confidenceLevel} confidence)`;
                     setAiWarning(warning);
-                    setAiDraftNotice(warning);
-                    setLaunchNotice(warning);
+                    setAiDraftNotice(provenanceNote);
+                    setLaunchNotice(provenanceNote);
                   } finally {
                     setAiGenerating(false);
                     setShowAiDraft(false);

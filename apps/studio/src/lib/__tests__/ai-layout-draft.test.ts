@@ -14,6 +14,8 @@ describe("draftSceneFromPrompt", () => {
     expect(scene.name).toContain("AI Draft");
     expect(scene.cameras.length).toBe(2);
     expect(warnings.length).toBe(0);
+    expect(provenance.mode).toBe("heuristic");
+    expect(scene.changeLog.some((entry) => entry.startsWith("Provenance:"))).toBe(true);
   });
 
   test("falls back to template defaults when dimensions missing", () => {
@@ -21,6 +23,7 @@ describe("draftSceneFromPrompt", () => {
     expect(scene.source).toBe("ai_generated");
     expect(scene.cameras.length).toBeGreaterThan(0);
     expect(warnings.length).toBeGreaterThan(0);
+    expect(scene.changeLog.some((entry) => entry.includes("Provenance confidence"))).toBe(true);
   });
 
   test("applies semantic prompt hints for shelves, counter, and back storage", () => {
@@ -67,5 +70,7 @@ describe("draftSceneFromPromptWithModel", () => {
     expect(result.scene.dimensions.width).toBe(18);
     expect(result.scene.dimensions.depth).toBe(12);
     expect(result.warnings[0]).toBe("Generated from prompt");
+    expect(result.provenance.mode).toBe("model");
+    expect(result.provenance.summary).toContain("Model-backed");
   });
 });

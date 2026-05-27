@@ -13,7 +13,11 @@ describe("Studio dashboard launcher surface", () => {
     expect(source).toContain("Import JSON");
     expect(source).toContain("New Scene");
     expect(source).toContain("Current Workspace Preview");
-    expect(source).toContain("Recent Workspaces");
+    expect(source).toContain("Project Browser");
+    expect(source).toContain("Search and reopen local workspaces without leaving the launcher.");
+    expect(source).toContain("Selected Workspace");
+    expect(source).toContain("Open Workspace");
+    expect(source).toContain("Open Coverage");
     expect(source).toContain("Quick Start");
     expect(source).toContain("Security Outcome");
     expect(source).toContain("Open Issues");

@@ -24,6 +24,8 @@ type OverlayFlags = {
   grid: boolean;
 };
 
+type VerificationViewMode = "overlay" | "split";
+
 export function formatTargetTypeLabel(targetType: SecurityScene["criticalZones"][number]["targetType"]) {
   switch (targetType) {
     case "person_detection":
@@ -588,6 +590,156 @@ function OfflineFeed({ camera: cam }: { camera: CameraNode }) {
   );
 }
 
+function FootageVerificationOverlay({
+  imageUrl,
+  mode,
+  opacity,
+  split,
+  offsetX,
+  offsetY,
+}: {
+  imageUrl: string;
+  mode: VerificationViewMode;
+  opacity: number;
+  split: number;
+  offsetX: number;
+  offsetY: number;
+}) {
+  const commonStyle = {
+    transform: `translate(${offsetX}px, ${offsetY}px)`,
+  } as const;
+
+  if (mode === "split") {
+    return (
+      <>
+        <div className="pointer-events-none absolute inset-0" style={{ clipPath: `inset(0 ${100 - split}% 0 0)` }}>
+          <img
+            src={imageUrl}
+            alt="Reference footage frame"
+            className="h-full w-full object-cover"
+            style={{ ...commonStyle, opacity: Math.min(0.95, Math.max(0.15, opacity + 0.05)) }}
+          />
+        </div>
+        <div className="pointer-events-none absolute inset-y-0" style={{ left: `${split}%` }}>
+          <div className="h-full w-px bg-cyan-300/80 shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <div className="pointer-events-none absolute inset-0">
+      <img
+        src={imageUrl}
+        alt="Reference footage frame"
+        className="h-full w-full object-cover"
+        style={{ ...commonStyle, opacity }}
+      />
+    </div>
+  );
+}
+
+function VerificationPanel({
+  enabled,
+  mode,
+  opacity,
+  split,
+  offsetX,
+  offsetY,
+  fileName,
+  onToggle,
+  onUpload,
+  onModeChange,
+  onOpacityChange,
+  onSplitChange,
+  onOffsetXChange,
+  onOffsetYChange,
+  onNudge,
+  onResetAlign,
+  onClear,
+}: {
+  enabled: boolean;
+  mode: VerificationViewMode;
+  opacity: number;
+  split: number;
+  offsetX: number;
+  offsetY: number;
+  fileName: string | null;
+  onToggle: (next: boolean) => void;
+  onUpload: (file: File) => void;
+  onModeChange: (mode: VerificationViewMode) => void;
+  onOpacityChange: (value: number) => void;
+  onSplitChange: (value: number) => void;
+  onOffsetXChange: (value: number) => void;
+  onOffsetYChange: (value: number) => void;
+  onNudge: (dx: number, dy: number) => void;
+  onResetAlign: () => void;
+  onClear: () => void;
+}) {
+  return (
+    <div className="absolute right-3 top-[330px] z-30 w-64 rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)] backdrop-blur-sm">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-[#7dd3fc]">Footage Verification</div>
+        <label className="inline-flex cursor-pointer items-center gap-1 text-[9px] text-[#c5d4ef]">
+          <input type="checkbox" checked={enabled} onChange={(event) => onToggle(event.target.checked)} />
+          Enable
+        </label>
+      </div>
+      <p className="mt-1 text-[9px] leading-4 text-[#8b96ab]">
+        Planning aid only. This compares a reference frame with simulated view and does not prove forensic identification.
+      </p>
+      <div className="mt-2 space-y-2 text-[9px] text-[#b8c5df]">
+        <label className="block">
+          <span className="text-[#7a8fb6]">Reference frame</span>
+          <input
+            type="file"
+            accept="image/*"
+            className="mt-1 block w-full rounded border border-[#2a3650] bg-[#0f1624] px-2 py-1 text-[9px] text-[#cdd8ee]"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) onUpload(file);
+              event.currentTarget.value = "";
+            }}
+          />
+          {fileName ? <span className="mt-1 block truncate text-[8px] text-[#8aa0c8]">{fileName}</span> : null}
+        </label>
+        <div className="flex gap-1">
+          <button type="button" onClick={() => onModeChange("overlay")} className={`rounded px-2 py-1 ${mode === "overlay" ? "bg-cyan-500/30 text-cyan-200" : "bg-[#1a2233] text-[#8ea5cc]"}`}>Overlay</button>
+          <button type="button" onClick={() => onModeChange("split")} className={`rounded px-2 py-1 ${mode === "split" ? "bg-cyan-500/30 text-cyan-200" : "bg-[#1a2233] text-[#8ea5cc]"}`}>Split</button>
+          <button type="button" onClick={onClear} className="rounded bg-[#2b1a20] px-2 py-1 text-rose-200">Clear</button>
+        </div>
+        <label className="block">
+          <div className="flex justify-between text-[#7a8fb6]"><span>Opacity</span><span>{Math.round(opacity * 100)}%</span></div>
+          <input type="range" min={0.15} max={0.95} step={0.01} value={opacity} onChange={(event) => onOpacityChange(Number(event.target.value))} className="mt-1 w-full accent-cyan-400" />
+        </label>
+        {mode === "split" ? (
+          <label className="block">
+            <div className="flex justify-between text-[#7a8fb6]"><span>Split</span><span>{Math.round(split)}%</span></div>
+            <input type="range" min={15} max={85} step={1} value={split} onChange={(event) => onSplitChange(Number(event.target.value))} className="mt-1 w-full accent-cyan-400" />
+          </label>
+        ) : null}
+        <label className="block">
+          <div className="flex justify-between text-[#7a8fb6]"><span>Offset X</span><span>{offsetX}px</span></div>
+          <input type="range" min={-120} max={120} step={1} value={offsetX} onChange={(event) => onOffsetXChange(Number(event.target.value))} className="mt-1 w-full accent-cyan-400" />
+        </label>
+        <label className="block">
+          <div className="flex justify-between text-[#7a8fb6]"><span>Offset Y</span><span>{offsetY}px</span></div>
+          <input type="range" min={-120} max={120} step={1} value={offsetY} onChange={(event) => onOffsetYChange(Number(event.target.value))} className="mt-1 w-full accent-cyan-400" />
+        </label>
+        <div className="flex items-center justify-between gap-1">
+          <div className="flex gap-1">
+            <button type="button" onClick={() => onNudge(-4, 0)} className="rounded bg-[#1a2233] px-1.5 py-1 text-[#c7d0e4]">◀</button>
+            <button type="button" onClick={() => onNudge(4, 0)} className="rounded bg-[#1a2233] px-1.5 py-1 text-[#c7d0e4]">▶</button>
+            <button type="button" onClick={() => onNudge(0, -4)} className="rounded bg-[#1a2233] px-1.5 py-1 text-[#c7d0e4]">▲</button>
+            <button type="button" onClick={() => onNudge(0, 4)} className="rounded bg-[#1a2233] px-1.5 py-1 text-[#c7d0e4]">▼</button>
+          </div>
+          <button type="button" onClick={onResetAlign} className="rounded bg-[#1d2b3f] px-2 py-1 text-[#9dd6ff]">Reset align</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CameraHeader({
   camera,
   index,
@@ -677,6 +829,14 @@ export function CameraViewMode() {
   const theme = ENVIRONMENT_THEMES[envMode] ?? ENVIRONMENT_THEMES.day;
   const [feedMode, setFeedMode] = useState<CameraFeedMode>("normal");
   const [flags, setFlags] = useState<OverlayFlags>({ overlays: true, dori: true, path: false, zones: true, timestamp: true, grid: false });
+  const [verificationEnabled, setVerificationEnabled] = useState(false);
+  const [verificationImageUrl, setVerificationImageUrl] = useState<string | null>(null);
+  const [verificationFileName, setVerificationFileName] = useState<string | null>(null);
+  const [verificationMode, setVerificationMode] = useState<VerificationViewMode>("overlay");
+  const [verificationOpacity, setVerificationOpacity] = useState(0.42);
+  const [verificationSplit, setVerificationSplit] = useState(50);
+  const [verificationOffsetX, setVerificationOffsetX] = useState(0);
+  const [verificationOffsetY, setVerificationOffsetY] = useState(0);
   const canvasFilter =
     feedMode === "normal"
       ? "brightness(0.82) contrast(1.08) saturate(0.92)"
@@ -755,6 +915,14 @@ export function CameraViewMode() {
   const replaySegmentLabel = activeTimelineEvent?.reason
     ?? (activePath ? `${activePath.label} active replay` : undefined);
 
+  useEffect(() => {
+    return () => {
+      if (verificationImageUrl && verificationImageUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(verificationImageUrl);
+      }
+    };
+  }, [verificationImageUrl]);
+
   if (!camera) {
     return (
       <div className="flex h-full items-center justify-center bg-[#07090d]">
@@ -820,6 +988,16 @@ export function CameraViewMode() {
             ) : null}
             <OrbitControls enablePan={false} enableZoom={false} enableRotate={false} />
           </Canvas>
+          {verificationEnabled && verificationImageUrl ? (
+            <FootageVerificationOverlay
+              imageUrl={verificationImageUrl}
+              mode={verificationMode}
+              opacity={verificationOpacity}
+              split={verificationSplit}
+              offsetX={verificationOffsetX}
+              offsetY={verificationOffsetY}
+            />
+          ) : null}
           {modeFilter(feedMode)}
           <LiveFeedHUD camera={camera} mode={feedMode} flags={flags} ppm={scene.assumptions.pixelsPerMeter} targetType={firstCriticalZone?.targetType} />
           {activePath && activePathResult ? (
@@ -854,6 +1032,46 @@ export function CameraViewMode() {
               reasonLine={zoneAnalysis.reasonLine}
             />
           ) : null}
+          <VerificationPanel
+            enabled={verificationEnabled}
+            mode={verificationMode}
+            opacity={verificationOpacity}
+            split={verificationSplit}
+            offsetX={verificationOffsetX}
+            offsetY={verificationOffsetY}
+            fileName={verificationFileName}
+            onToggle={setVerificationEnabled}
+            onUpload={(file) => {
+              if (verificationImageUrl && verificationImageUrl.startsWith("blob:")) {
+                URL.revokeObjectURL(verificationImageUrl);
+              }
+              const url = URL.createObjectURL(file);
+              setVerificationImageUrl(url);
+              setVerificationFileName(file.name);
+              setVerificationEnabled(true);
+            }}
+            onModeChange={setVerificationMode}
+            onOpacityChange={setVerificationOpacity}
+            onSplitChange={setVerificationSplit}
+            onOffsetXChange={setVerificationOffsetX}
+            onOffsetYChange={setVerificationOffsetY}
+            onNudge={(dx, dy) => {
+              setVerificationOffsetX((value) => value + dx);
+              setVerificationOffsetY((value) => value + dy);
+            }}
+            onResetAlign={() => {
+              setVerificationOffsetX(0);
+              setVerificationOffsetY(0);
+            }}
+            onClear={() => {
+              if (verificationImageUrl && verificationImageUrl.startsWith("blob:")) {
+                URL.revokeObjectURL(verificationImageUrl);
+              }
+              setVerificationImageUrl(null);
+              setVerificationFileName(null);
+              setVerificationEnabled(false);
+            }}
+          />
           <BottomControlStrip mode={feedMode} onModeChange={setFeedMode} flags={flags} onFlagsChange={setFlags} onBackToMap={() => { setWorkspacePreset("edit"); setViewMode("map"); }} />
         </>
       ) : (

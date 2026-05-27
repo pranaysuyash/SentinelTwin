@@ -14,6 +14,7 @@ import {
 } from "@/lib/floor-plan-import";
 import { SCENE_TEMPLATES, type SceneTemplate } from "@/lib/scene-templates";
 import { createSmallRetailShopScene } from "@/demo-scenes/small-retail-shop";
+import { suggestCameraPlacements } from "@/lib/camera-suggestions";
 import { ImportReview } from "./ImportReview";
 
 type ImportMethod = "blank" | "template" | "floor_plan";
@@ -129,6 +130,11 @@ export function SceneBuilderWizard({ onClose }: SceneBuilderWizardProps) {
       });
     } else if (state.importMethod === "floor_plan" && state.floorPlanResult) {
       scene = createSceneFromFloorPlan(state.roomName, state.floorPlanResult);
+      // Add suggested cameras at entry points so the user isn't dropped into a bare scene
+      const suggestions = suggestCameraPlacements(scene);
+      if (suggestions.length > 0) {
+        scene.cameras = suggestions;
+      }
     } else {
       // Blank
       scene = createSmallRetailShopScene();

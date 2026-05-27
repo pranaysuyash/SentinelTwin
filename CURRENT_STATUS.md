@@ -5,11 +5,13 @@
 
 ## Implemented
 
-- Root launcher now gates entry into Studio with explicit `Create or Import Scene` and `Open Current Workspace`.
+- Root launcher now gates entry into Studio with explicit `Create or Import Scene`, `Open Current Workspace`, and direct saved-scene resume shortcuts.
 - Root launcher includes `AI Layout Draft` prompt flow that generates editable `SecurityScene` JSON scenes.
 - Root launcher now includes explicit 5-step guided workflow actions (protect goal -> input -> build -> baseline sim -> next actions).
 - Guided workflow step-5 actions now include direct camera failure simulation and cheapest-fix counterfactual kickoff.
-- AI Layout Draft now supports model-backed structured generation when API key is present, with deterministic local fallback.
+- Guided workflow copy/CTA language is now outcome-oriented with disabled-state hints when prerequisites are missing.
+- Root launcher now includes a visible `Product Feature Status` surface with `Available` / `Preview` / `Planned` labels and an entry-flow maturity row.
+- AI Layout Draft now clearly labels its model-backed generation path, warns about workspace replacement, and falls back deterministically when no public API key is present.
 - AI Layout Draft now applies prompt-aware enrichment (camera counts, shelves/counter hints, back-storage zone hints) to generated scenes.
 - `apps/studio` Next.js app is the active product surface with a working Studio shell.
 - Mode routing works inside studio: `Map`, `Camera View`, `Camera Wall`, `Path Replay`, `Compare`.
@@ -26,6 +28,8 @@
 - Right-panel assumptions are visible and directly editable (time-of-day and quality model), with link to full assumptions editor.
 - Camera wall feed rigs now track live camera transform edits (no one-time POV lock).
 - Camera View now shows per-camera path-visibility status overlays during replay context.
+- Camera Wall now shows per-camera route-visibility overlays and active route context badges.
+- Compare mode now renders each selected snapshot's own scene geometry (not only current live scene geometry).
 - Golden simulation claims suite exists (`apps/studio/src/simulation/__tests__/golden-simulation-claims.test.ts`).
 
 ## Partial

@@ -6,6 +6,7 @@ import { Camera, VideoOff } from "lucide-react";
 import { Suspense, useMemo, useState } from "react";
 
 import "@/lib/three-compat";
+import { cn } from "@/lib/cn";
 import {
   CoverageHeatmapInstanced,
   ENVIRONMENT_THEMES,
@@ -15,10 +16,12 @@ import {
   SceneObstructions,
   SceneWalls,
   SceneWindows,
+  ScenePrivacyZones,
 } from "@/components/workspace/SharedScene";
 import { CameraRigFixed, nowTimestamp, SceneFeedGeometry } from "@/components/view/SceneFeedCanvas";
 import { useStudioStore } from "@/store/studio-store";
 import type { CameraNode } from "@/schema/security-scene";
+import { QUALITY_RANK } from "@/lib/quality-display";
 
 const CAMERA_WALL_THEME = ENVIRONMENT_THEMES.day;
 
@@ -28,9 +31,45 @@ function shortTag(name: string) {
   return match ? `CAM ${match[0]}` : name.toUpperCase().slice(0, 6);
 }
 
-function LiveFeedOverlay({ camera: camData }: { camera: CameraNode }) {
+function coverageStatusFromRatio(ratio: number) {
+  if (ratio > 0.7) {
+    return {
+      label: "Strong Route Visibility",
+      className: "text-emerald-300",
+    };
+  }
+  if (ratio > 0.35) {
+    return {
+      label: "Partial Route Visibility",
+      className: "text-amber-300",
+    };
+  }
+  return {
+    label: "Weak Route Visibility",
+    className: "text-rose-300",
+  };
+}
+
+function LiveFeedOverlay({
+  camera: camData,
+  pathVisibility,
+  isBestCamera = false,
+}: {
+  camera: CameraNode;
+  pathVisibility?: {
+    visibleS: number;
+    totalDurationS: number;
+    maxQuality: string;
+  } | null;
+  isBestCamera?: boolean;
+}) {
   const isActive = camData.status === "on";
   const timestamp = nowTimestamp();
+  const ratio = pathVisibility && pathVisibility.totalDurationS > 0
+    ? pathVisibility.visibleS / pathVisibility.totalDurationS
+    : 0;
+  const visiblePct = Math.round(ratio * 100);
+  const visibilityStatus = coverageStatusFromRatio(ratio);
 
   return (
     <>
@@ -54,6 +93,11 @@ function LiveFeedOverlay({ camera: camData }: { camera: CameraNode }) {
         >
           {isActive ? "Active" : "Offline"}
         </span>
+        {isBestCamera ? (
+          <span className="rounded bg-emerald-500/20 px-1 py-0.5 text-[7px] font-semibold uppercase tracking-wide text-emerald-200">
+            Best feed
+          </span>
+        ) : null}
       </div>
 
       {/* Top-right: resolution + timestamp */}
@@ -74,6 +118,20 @@ function LiveFeedOverlay({ camera: camData }: { camera: CameraNode }) {
         <span className="text-[8px] text-white/25">·</span>
         <span className="text-[8px] text-white/50">{camData.rangeM}m range</span>
       </div>
+
+      {pathVisibility ? (
+        <div className="absolute bottom-1.5 right-2 rounded-md border border-[#27405f] bg-black/65 px-2 py-1">
+          <div className="text-[7px] uppercase tracking-[0.14em] text-[#7dd3fc]">
+            Route Visibility
+          </div>
+          <div className={`text-[8px] font-semibold ${visibilityStatus.className}`}>
+            {visibilityStatus.label}
+          </div>
+          <div className="text-[8px] text-[#b6c2db]">
+            {visiblePct}% visible • max {pathVisibility.maxQuality.toUpperCase()}
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
@@ -81,17 +139,26 @@ function LiveFeedOverlay({ camera: camData }: { camera: CameraNode }) {
 function CameraFeedPanel({
   camera: camData,
   isSelected,
+  isBestCamera = false,
+  pathVisibility,
 }: {
   camera: CameraNode;
   isSelected: boolean;
+  isBestCamera?: boolean;
+  pathVisibility?: {
+    visibleS: number;
+    totalDurationS: number;
+    maxQuality: string;
+  } | null;
 }) {
   const isActive = camData.status === "on";
 
   return (
     <div
-      className={`relative h-full overflow-hidden rounded-lg border bg-[#07090d] ${
-        isSelected ? "border-blue-500/70" : "border-[#1f2536]"
-      }`}
+      className={cn(
+        "relative h-full overflow-hidden rounded-lg border bg-[#07090d]",
+        isSelected ? "border-blue-500/70" : isBestCamera ? "border-emerald-400/70" : "border-[#1f2536]",
+      )}
     >
       {isActive ? (
         <>
@@ -102,8 +169,8 @@ function CameraFeedPanel({
               near: 0.1,
               far: 50,
             }}
-            dpr={1}
-            gl={{ antialias: false, alpha: false }}
+            dpr={[0.8, 1.1]}
+            gl={{ antialias: false, alpha: false, powerPreference: "low-power" }}
             frameloop="demand"
             style={{ width: "100%", height: "100%" }}
           >
@@ -121,7 +188,7 @@ function CameraFeedPanel({
                 "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 4px)",
             }}
           />
-          <LiveFeedOverlay camera={camData} />
+          <LiveFeedOverlay camera={camData} pathVisibility={pathVisibility} isBestCamera={isBestCamera} />
         </>
       ) : (
         <>
@@ -188,8 +255,10 @@ function WallOverviewPanel() {
       </div>
       <Canvas
         camera={{ position: cameraPos, fov: 48, near: 0.1, far: 200 }}
-        shadows="percentage"
-        gl={{ antialias: true, alpha: false }}
+        shadows={false}
+        dpr={[0.8, 1.05]}
+        frameloop="demand"
+        gl={{ antialias: false, alpha: false, powerPreference: "low-power" }}
         style={{ width: "100%", height: "100%", background: theme.background }}
       >
         <color attach="background" args={[theme.background]} />
@@ -200,6 +269,7 @@ function WallOverviewPanel() {
           <SceneDoors doors={scene.doors} />
           <SceneWindows windows={scene.windows} />
           <SceneObstructions obstructions={scene.obstructions} selectedId={selectedId} />
+          {scene.privacyZones.length > 0 ? <ScenePrivacyZones zones={scene.privacyZones} /> : null}
           {result?.coverageCells?.length ? <CoverageHeatmapInstanced cells={result.coverageCells} /> : null}
         </Suspense>
         <OrbitControls
@@ -271,12 +341,20 @@ function EmptySlot() {
 function CameraSlotButton({
   camera: cam,
   isSelected,
+  isBestCamera,
   onSelect,
+  pathVisibility,
   className = "",
 }: {
   camera: CameraNode;
   isSelected: boolean;
+  isBestCamera?: boolean;
   onSelect: () => void;
+  pathVisibility?: {
+    visibleS: number;
+    totalDurationS: number;
+    maxQuality: string;
+  } | null;
   className?: string;
 }) {
   return (
@@ -286,13 +364,15 @@ function CameraSlotButton({
       className={`cursor-pointer overflow-hidden rounded-lg text-left ${className}`}
       style={{ display: "block" }}
     >
-      <CameraFeedPanel camera={cam} isSelected={isSelected} />
+      <CameraFeedPanel camera={cam} isSelected={isSelected} isBestCamera={isBestCamera} pathVisibility={pathVisibility} />
     </button>
   );
 }
 
 export function CameraWallView() {
   const scene = useStudioStore((s) => s.scene);
+  const simulationResult = useStudioStore((s) => s.simulationResult);
+  const activePathId = useStudioStore((s) => s.activePathId);
   const selectedId = useStudioStore((s) => s.selectedNodeId);
   const selectNode = useStudioStore((s) => s.selectNode);
   const [layoutMode, setLayoutMode] = useState<"quad" | "overview">("quad");
@@ -307,6 +387,25 @@ export function CameraWallView() {
       return 0;
     });
   }, [scene.cameras, selectedId]);
+  const activePath = useMemo(() => {
+    if (!scene.paths.length) return null;
+    return scene.paths.find((path) => path.id === activePathId) ?? scene.paths[0] ?? null;
+  }, [activePathId, scene.paths]);
+  const activePathResult = useMemo(() => {
+    if (!activePath || !simulationResult) return null;
+    return simulationResult.pathResults.find((entry) => entry.pathId === activePath.id) ?? null;
+  }, [activePath, simulationResult]);
+  const bestCameraId = useMemo(() => {
+    if (!activePathResult) return null;
+    const entries = Object.entries(activePathResult.visibilityByCamera);
+    if (entries.length === 0) return null;
+    const best = entries.sort((a, b) => {
+      const qualityDiff = QUALITY_RANK[(b[1]?.maxQuality ?? "none") as keyof typeof QUALITY_RANK] - QUALITY_RANK[(a[1]?.maxQuality ?? "none") as keyof typeof QUALITY_RANK];
+      if (qualityDiff !== 0) return qualityDiff;
+      return (b[1]?.visibleS ?? 0) - (a[1]?.visibleS ?? 0);
+    })[0];
+    return best?.[0] ?? null;
+  }, [activePathResult]);
 
   if (cameras.length === 0) {
     return (
@@ -351,6 +450,20 @@ export function CameraWallView() {
             <span className="rounded-md border border-[#27364e] bg-black/30 px-2 py-0.5 text-[#c7d0e4]">
               Selected {selectedCamera?.name ?? "None"}
             </span>
+            {activePath ? (
+              <span className="rounded-md border border-[#24527b] bg-[#0b1a2d]/60 px-2 py-0.5 text-[#93c5fd]">
+                Route Context {activePath.label}
+              </span>
+            ) : (
+              <span className="rounded-md border border-[#334155] bg-[#0f172a]/50 px-2 py-0.5 text-[#9ca3af]">
+                Route Context unavailable
+              </span>
+            )}
+            {bestCameraId ? (
+              <span className="rounded-md border border-emerald-500/15 bg-emerald-500/8 px-2 py-0.5 text-emerald-300">
+                Best camera now {scene.cameras.find((cam) => cam.id === bestCameraId)?.name ?? bestCameraId}
+              </span>
+            ) : null}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -378,7 +491,17 @@ export function CameraWallView() {
               key={cam.id}
               camera={cam}
               isSelected={cam.id === selectedId}
+              isBestCamera={cam.id === bestCameraId}
               onSelect={() => selectNode(cam.id)}
+              pathVisibility={
+                activePathResult
+                  ? {
+                    visibleS: activePathResult.visibilityByCamera[cam.id]?.visibleS ?? 0,
+                    totalDurationS: activePathResult.totalDurationS,
+                    maxQuality: activePathResult.visibilityByCamera[cam.id]?.maxQuality ?? "none",
+                  }
+                  : null
+              }
               className="h-full w-full"
             />
           ))}
@@ -390,7 +513,17 @@ export function CameraWallView() {
             <CameraSlotButton
               camera={visible[0]}
               isSelected={visible[0].id === selectedId}
+              isBestCamera={visible[0].id === bestCameraId}
               onSelect={() => selectNode(visible[0].id)}
+              pathVisibility={
+                activePathResult
+                  ? {
+                    visibleS: activePathResult.visibilityByCamera[visible[0].id]?.visibleS ?? 0,
+                    totalDurationS: activePathResult.totalDurationS,
+                    maxQuality: activePathResult.visibilityByCamera[visible[0].id]?.maxQuality ?? "none",
+                  }
+                  : null
+              }
               className="h-full w-full"
             />
           ) : (
@@ -400,7 +533,17 @@ export function CameraWallView() {
             <CameraSlotButton
               camera={visible[1]}
               isSelected={visible[1].id === selectedId}
+              isBestCamera={visible[1].id === bestCameraId}
               onSelect={() => selectNode(visible[1].id)}
+              pathVisibility={
+                activePathResult
+                  ? {
+                    visibleS: activePathResult.visibilityByCamera[visible[1].id]?.visibleS ?? 0,
+                    totalDurationS: activePathResult.totalDurationS,
+                    maxQuality: activePathResult.visibilityByCamera[visible[1].id]?.maxQuality ?? "none",
+                  }
+                  : null
+              }
               className="h-full w-full"
             />
           ) : (
@@ -410,7 +553,17 @@ export function CameraWallView() {
             <CameraSlotButton
               camera={visible[2]}
               isSelected={visible[2].id === selectedId}
+              isBestCamera={visible[2].id === bestCameraId}
               onSelect={() => selectNode(visible[2].id)}
+              pathVisibility={
+                activePathResult
+                  ? {
+                    visibleS: activePathResult.visibilityByCamera[visible[2].id]?.visibleS ?? 0,
+                    totalDurationS: activePathResult.totalDurationS,
+                    maxQuality: activePathResult.visibilityByCamera[visible[2].id]?.maxQuality ?? "none",
+                  }
+                  : null
+              }
               className="h-full w-full"
             />
           ) : (

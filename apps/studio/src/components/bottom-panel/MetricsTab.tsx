@@ -158,6 +158,9 @@ export function MetricsTab() {
             {worstLabel}
           </div>
           <div className="text-[9px] text-[#68738a] mt-1">{blockageLabel}</div>
+          <div className="mt-1 text-[8px] uppercase tracking-[0.12em] text-[#4a5568]">
+            Why: {blockageLabel !== "—" ? `${blockageLabel} is the current obstruction driver` : "No blindspot cause identified"}
+          </div>
         </div>
       </MetricCard>
 

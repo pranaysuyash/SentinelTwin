@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { createSceneFromFloorPlan, recalibrateFloorPlanResult, type FloorPlanResult } from "@/lib/floor-plan-import";
+import { createSceneFromFloorPlan, normalizeFloorPlanResult, recalibrateFloorPlanResult, type FloorPlanResult } from "@/lib/floor-plan-import";
 
 describe("createSceneFromFloorPlan", () => {
   test("materializes imported walls, doors, and windows into SecurityScene", () => {
@@ -22,7 +22,7 @@ describe("createSceneFromFloorPlan", () => {
 
     expect(scene.name).toBe("Imported Floor Plan");
     expect(scene.source).toBe("floor_plan_import");
-    expect(scene.dimensions).toEqual({ width: 10, depth: 8, height: 3 });
+    expect(scene.dimensions).toEqual({ width: 8, depth: 6, height: 3 });
     expect(scene.walls.length).toBe(2);
     expect(scene.doors.length).toBe(1);
     expect(scene.windows.length).toBe(1);
@@ -71,5 +71,45 @@ describe("recalibrateFloorPlanResult", () => {
     expect(calibrated.roomDimensions.depthM).toBe(3);
     expect(calibrated.roomDimensions.heightM).toBe(3.4);
     expect(calibrated.scalePixelsPerMeter).toBeGreaterThan(base.scalePixelsPerMeter);
+  });
+});
+
+describe("normalizeFloorPlanResult", () => {
+  test("snaps openings to nearest wall anchors and recomputes dimensions", () => {
+    const base: FloorPlanResult = {
+      imageWidth: 1200,
+      imageHeight: 900,
+      scalePixelsPerMeter: 100,
+      confidence: 0.3,
+      roomDimensions: { widthM: 1, depthM: 1, heightM: 3 },
+      walls: [
+        { start: { x: 100, y: 120 }, end: { x: 900, y: 120 }, detected: true },
+        { start: { x: 900, y: 120 }, end: { x: 900, y: 700 }, detected: true },
+      ],
+      doors: [{ position: { x: 500, y: 140 }, widthM: 0.9, orientation: "horizontal" }],
+      windows: [{ position: { x: 870, y: 400 }, widthM: 1.2, orientation: "vertical" }],
+    };
+
+    const normalized = normalizeFloorPlanResult(base);
+    expect(normalized.roomDimensions.widthM).toBeGreaterThan(1);
+    expect(normalized.roomDimensions.depthM).toBeGreaterThan(1);
+    expect(normalized.doors[0]?.position.y).toBe(120);
+    expect(normalized.windows[0]?.position.x).toBe(900);
+  });
+});
+
+describe("SceneBuilderWizard floor-plan extraction config", () => {
+  test("keeps the import scale control wired to the actual extractor config", async () => {
+    const { getFloorPlanExtractionConfig } = await import("@/components/scan-to-scene/SceneBuilderWizard");
+
+    expect(
+      getFloorPlanExtractionConfig({
+        heightM: 3.2,
+        floorPlanScalePixelsPerMeter: 72,
+      }),
+    ).toEqual({
+      roomHeightM: 3.2,
+      scalePixelsPerMeter: 72,
+    });
   });
 });

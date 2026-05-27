@@ -6,13 +6,13 @@ import {
   ChevronDown,
   Clapperboard,
   Copy,
+  Crosshair,
   Download,
   FileText,
   Loader2,
   Moon,
   Play,
   Shield,
-  Sun,
   Plus,
   ScanSearch,
   Upload,
@@ -24,10 +24,26 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { SurfaceButton } from "@/components/shared/SurfaceButton";
 import { useStudioStore } from "@/store/studio-store";
-import { useSimulation } from "@/hooks/use-simulation";
 import { WorkspacePresetSwitcher } from "@/components/dock/WorkspacePresetSwitcher";
 import { SceneBuilderWizard } from "@/components/scan-to-scene/SceneBuilderWizard";
 import { ScanSiteWizard } from "@/components/scan-to-scene/ScanSiteWizard";
+import type { CriticalZoneNode } from "@/schema/security-scene";
+
+const TARGET_TYPE_OPTIONS: Array<{
+  value: CriticalZoneNode["targetType"];
+  label: string;
+  hint: string;
+}> = [
+  { value: "person_detection", label: "Person Detection", hint: "General movement watch" },
+  { value: "face_recognition", label: "Face Recognition", hint: "Recognize known faces" },
+  { value: "face_identification", label: "Face Identification", hint: "Higher certainty face match" },
+  { value: "vehicle_detection", label: "Vehicle Detection", hint: "Cars, bikes, deliveries" },
+  { value: "license_plate", label: "License Plate", hint: "Entry lane / LPR" },
+  { value: "package_detection", label: "Package Detection", hint: "Counter, drop-off, parcels" },
+  { value: "cash_counter_activity", label: "Cash Counter", hint: "Checkout / till activity" },
+  { value: "door_entry_exit", label: "Entry / Exit", hint: "Doors and thresholds" },
+  { value: "perimeter_breach", label: "Perimeter", hint: "Fence or boundary breach" },
+];
 
 function SimStatus() {
   const dirty = useStudioStore((s) => s.simulationDirty);
@@ -61,7 +77,7 @@ function SimStatus() {
 
 
 export function TopBar() {
-  const { runSimulation } = useSimulation();
+  const runSimulation = useStudioStore((s) => s.runSimulation);
   const envMode = useStudioStore((s) => s.environmentMode);
   const setEnvMode = useStudioStore((s) => s.setEnvironmentMode);
   const setAllZoneTargetTypes = useStudioStore((s) => s.setAllZoneTargetTypes);
@@ -81,7 +97,6 @@ export function TopBar() {
   const setDemoMode = useStudioStore((s) => s.setDemoMode);
 
   const [sceneOpen, setSceneOpen] = useState(false);
-  const [envOpen, setEnvOpen] = useState(false);
   const [targetOpen, setTargetOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -277,19 +292,20 @@ export function TopBar() {
             </button>
             {targetOpen && (
               <div
-                className="absolute left-0 top-full z-50 mt-1 w-44 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
+                className="absolute left-0 top-full z-50 mt-1 w-64 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
                 onMouseLeave={() => setTargetOpen(false)}
               >
-                {(["person_detection", "vehicle_detection", "face_recognition", "license_plate", "package_detection"] as const).map((type) => (
+                {TARGET_TYPE_OPTIONS.map((entry) => (
                   <button
-                    key={type}
-                    className="w-full rounded-lg px-2.5 py-2 text-left text-[11px] capitalize transition-colors hover:bg-[#171c2b] text-[#c7d0e4]"
+                    key={entry.value}
+                    className="w-full rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-[#171c2b]"
                     onClick={() => {
-                      setAllZoneTargetTypes(type);
+                      setAllZoneTargetTypes(entry.value);
                       setTargetOpen(false);
                     }}
                   >
-                    {type.replace(/_/g, " ")}
+                    <div className="text-[11px] font-medium text-[#c7d0e4]">{entry.label}</div>
+                    <div className="text-[9px] text-[#5b667c]">{entry.hint}</div>
                   </button>
                 ))}
               </div>
@@ -360,6 +376,11 @@ export function TopBar() {
         <SurfaceButton onClick={() => setBottomTab("beforeafter")}>
           <Clapperboard className="h-3 w-3" />
           Compare
+        </SurfaceButton>
+
+        <SurfaceButton onClick={() => setBottomTab("threat")}>
+          <Crosshair className="h-3 w-3" />
+          Threat Path
         </SurfaceButton>
 
         <SurfaceButton onClick={() => setBottomTab("report")}>

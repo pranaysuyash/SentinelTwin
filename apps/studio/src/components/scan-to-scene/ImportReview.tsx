@@ -1,9 +1,9 @@
 "use client";
 
 import { AlertTriangle, CheckCircle2, ImageUp, RotateCcw } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
-import type { FloorPlanResult } from "@/lib/floor-plan-import";
+import { normalizeFloorPlanResult, type FloorPlanResult } from "@/lib/floor-plan-import";
 
 interface ImportReviewProps {
   result: FloorPlanResult;
@@ -21,15 +21,6 @@ export function ImportReview({ result, warnings, onImageChange, onRecalibrate, o
   const [doorMask, setDoorMask] = useState<boolean[]>(result.doors.map(() => true));
   const [windowMask, setWindowMask] = useState<boolean[]>(result.windows.map(() => true));
 
-  useEffect(() => {
-    setWallMask(result.walls.map(() => true));
-    setDoorMask(result.doors.map(() => true));
-    setWindowMask(result.windows.map(() => true));
-    setWidthM(result.roomDimensions.widthM.toString());
-    setDepthM(result.roomDimensions.depthM.toString());
-    setHeightM(result.roomDimensions.heightM.toString());
-  }, [result]);
-
   const hasCalibrationChange = useMemo(
     () =>
       Number(widthM) !== result.roomDimensions.widthM ||
@@ -41,6 +32,12 @@ export function ImportReview({ result, warnings, onImageChange, onRecalibrate, o
     () => wallMask.some((v) => !v) || doorMask.some((v) => !v) || windowMask.some((v) => !v),
     [wallMask, doorMask, windowMask],
   );
+  const preview = useMemo(() => {
+    const walls = result.walls.map((wall, index) => ({ wall, kept: wallMask[index] ?? true }));
+    const doors = result.doors.map((door, index) => ({ opening: door, kept: doorMask[index] ?? true }));
+    const windows = result.windows.map((window, index) => ({ opening: window, kept: windowMask[index] ?? true }));
+    return { walls, doors, windows };
+  }, [result, wallMask, doorMask, windowMask]);
 
   return (
     <div className="space-y-3">
@@ -105,6 +102,48 @@ export function ImportReview({ result, warnings, onImageChange, onRecalibrate, o
             Reset
           </button>
         </div>
+
+        <div className="mb-2 rounded border border-[#1b2233] bg-[#0b1220] p-1.5">
+          <div className="mb-1 text-[8px] uppercase tracking-[0.14em] text-[#4f5a72]">Spatial Preview</div>
+          <svg viewBox={`0 0 ${result.imageWidth} ${result.imageHeight}`} className="h-24 w-full rounded bg-[#060a12]">
+            {preview.walls.map(({ wall, kept }, idx) => (
+              <line
+                key={`pw-${idx}`}
+                x1={wall.start.x}
+                y1={wall.start.y}
+                x2={wall.end.x}
+                y2={wall.end.y}
+                stroke={kept ? "#7dd3fc" : "#fb7185"}
+                strokeOpacity={kept ? 0.9 : 0.45}
+                strokeWidth={kept ? 4 : 2}
+                strokeDasharray={kept ? undefined : "4 4"}
+              />
+            ))}
+            {preview.doors.map(({ opening, kept }, idx) => (
+              <rect
+                key={`pd-${idx}`}
+                x={opening.position.x - 6}
+                y={opening.position.y - 6}
+                width={12}
+                height={12}
+                fill={kept ? "#34d399" : "#fb7185"}
+                fillOpacity={kept ? 0.9 : 0.45}
+              />
+            ))}
+            {preview.windows.map(({ opening, kept }, idx) => (
+              <circle
+                key={`pwnd-${idx}`}
+                cx={opening.position.x}
+                cy={opening.position.y}
+                r={6}
+                fill={kept ? "#60a5fa" : "#fb7185"}
+                fillOpacity={kept ? 0.9 : 0.45}
+              />
+            ))}
+          </svg>
+          <div className="mt-1 text-[8px] text-[#4f5a72]">Blue/cyan/green = kept, red = excluded</div>
+        </div>
+
         <div className="space-y-1.5">
           <div>
             <div className="mb-1 text-[8px] uppercase tracking-[0.14em] text-[#4f5a72]">Walls</div>
@@ -186,7 +225,7 @@ export function ImportReview({ result, warnings, onImageChange, onRecalibrate, o
                 doors: result.doors.filter((_, idx) => doorMask[idx]),
                 windows: result.windows.filter((_, idx) => windowMask[idx]),
               };
-              onUpdateResult(filtered);
+              onUpdateResult(normalizeFloorPlanResult(filtered));
             }}
             className="rounded border border-[#2a3045] px-2 py-1 text-[8px] text-[#93a5c7] transition-colors hover:border-blue-500/40 hover:text-white disabled:opacity-40"
           >

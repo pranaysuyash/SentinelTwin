@@ -3,7 +3,7 @@
 import { OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { ArrowLeftRight, GitCompare, Plus, AlertTriangle, Sparkles } from "lucide-react";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useMemo, useState } from "react";
 import * as THREE from "three";
 
 import { useStudioStore } from "@/store/studio-store";
@@ -17,6 +17,7 @@ import {
   SceneDoors,
   SceneWindows,
   SceneObstructions,
+  ScenePrivacyZones,
   CoverageHeatmapInstanced,
 } from "@/components/workspace/SharedScene";
 import { cn } from "@/lib/cn";
@@ -112,13 +113,14 @@ function buildTrendPath(points: Array<{ x: number; y: number }>) {
 function ScenePanel({
   label,
   accent,
+  scene,
   coverageCells,
 }: {
   label: string;
   accent: "baseline" | "proposed";
+  scene: SceneSnapshot["scene"];
   coverageCells: CoverageCell[];
 }) {
-  const scene = useStudioStore((s) => s.scene);
   const { width, depth } = scene.dimensions;
 
   const theme = ENVIRONMENT_THEMES.day;
@@ -150,7 +152,9 @@ function ScenePanel({
         <Canvas
           camera={{ position: cameraPos, fov: 44, near: 0.1, far: 200 }}
           shadows="percentage"
-          gl={{ antialias: true, alpha: false }}
+          dpr={[0.85, 1.15]}
+          frameloop="demand"
+          gl={{ antialias: true, alpha: false, powerPreference: "low-power" }}
           className="absolute inset-0"
           style={{ background: theme.background }}
         >
@@ -165,6 +169,7 @@ function ScenePanel({
             <SceneDoors doors={scene.doors} />
             <SceneWindows windows={scene.windows} />
             <SceneObstructions obstructions={scene.obstructions} selectedId={null} />
+            {scene.privacyZones.length > 0 ? <ScenePrivacyZones zones={scene.privacyZones} /> : null}
             {coverageCells.length > 0 && <CoverageHeatmapInstanced cells={coverageCells} />}
           </Suspense>
           <OrbitControls
@@ -385,29 +390,85 @@ function NotesPanel({
   );
 }
 
+function buildComparisonExport(snapshotA: SceneSnapshot | null, snapshotB: SceneSnapshot | null, metricsA: Metrics | null, metricsB: Metrics | null) {
+  return {
+    exportedAt: new Date().toISOString(),
+    scenarioA: snapshotA
+      ? {
+          id: snapshotA.id,
+          label: snapshotA.label,
+          createdAt: snapshotA.createdAt,
+          metrics: metricsA,
+        }
+      : null,
+    scenarioB: snapshotB
+      ? {
+          id: snapshotB.id,
+          label: snapshotB.label,
+          createdAt: snapshotB.createdAt,
+          metrics: metricsB,
+        }
+      : null,
+    delta: metricsA && metricsB
+      ? {
+          coverage: Number((metricsB.covered - metricsA.covered).toFixed(1)),
+          recognition: Number((metricsB.recognition - metricsA.recognition).toFixed(1)),
+          blindspot: Number((metricsB.blindspot - metricsA.blindspot).toFixed(1)),
+          criticalZones: Number((metricsB.critZonePct - metricsA.critZonePct).toFixed(1)),
+          pathVisibility: Number((metricsB.visiblePathPct - metricsA.visiblePathPct).toFixed(1)),
+        }
+      : null,
+  };
+}
+
 export function CompareView() {
   const snapshots = useStudioStore((s) => s.snapshots);
-  const result = useStudioStore((s) => s.simulationResult);
   const saveSnapshot = useStudioStore((s) => s.saveSnapshot);
   const [comparisonAId, setComparisonAId] = useState<string | null>(null);
   const [comparisonBId, setComparisonBId] = useState<string | null>(null);
+  const [exportToast, setExportToast] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (snapshots.length === 0) return;
-    const defaultA = snapshots[Math.max(snapshots.length - 2, 0)]?.id ?? null;
-    const defaultB = snapshots[snapshots.length - 1]?.id ?? null;
-    setComparisonAId((current) => (current && snapshots.some((snapshot) => snapshot.id === current) ? current : defaultA));
-    setComparisonBId((current) => (current && snapshots.some((snapshot) => snapshot.id === current) ? current : defaultB));
-  }, [snapshots]);
+  const defaultA = snapshots[Math.max(snapshots.length - 2, 0)]?.id ?? null;
+  const defaultB = snapshots[snapshots.length - 1]?.id ?? null;
+  const validComparisonAId = comparisonAId && snapshots.some((snapshot) => snapshot.id === comparisonAId) ? comparisonAId : defaultA;
+  const validComparisonBId = comparisonBId && snapshots.some((snapshot) => snapshot.id === comparisonBId) ? comparisonBId : defaultB;
 
-  const snapshotA = snapshots.find((snapshot) => snapshot.id === comparisonAId) ?? snapshots[Math.max(snapshots.length - 2, 0)] ?? snapshots[0] ?? null;
-  const snapshotB = snapshots.find((snapshot) => snapshot.id === comparisonBId) ?? snapshots[snapshots.length - 1] ?? null;
+  const snapshotA = snapshots.find((snapshot) => snapshot.id === validComparisonAId) ?? snapshots[Math.max(snapshots.length - 2, 0)] ?? snapshots[0] ?? null;
+  const snapshotB = snapshots.find((snapshot) => snapshot.id === validComparisonBId) ?? snapshots[snapshots.length - 1] ?? null;
+  const latestSimulatedSnapshot = [...snapshots].reverse().find((snapshot) => Boolean(snapshot.simulation)) ?? null;
 
   const cellsA = useMemo(() => snapshotA?.simulation?.coverageCells ?? [], [snapshotA]);
-  const cellsB = useMemo(() => snapshotB?.simulation?.coverageCells ?? result?.coverageCells ?? [], [snapshotB, result]);
+  const cellsB = useMemo(() => snapshotB?.simulation?.coverageCells ?? [], [snapshotB]);
+  const snapshotBSimulationMissing = Boolean(snapshotB && !snapshotB.simulation);
 
   const mA = useMemo(() => computeMetrics(snapshotA?.simulation, cellsA), [snapshotA, cellsA]);
   const mB = useMemo(() => computeMetrics(snapshotB?.simulation, cellsB), [snapshotB, cellsB]);
+  const comparisonExport = useMemo(() => buildComparisonExport(snapshotA, snapshotB, mA, mB), [snapshotA, snapshotB, mA, mB]);
+  const handleExportComparison = useCallback(() => {
+    const blob = new Blob([JSON.stringify(comparisonExport, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `sentineltwin-comparison-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setExportToast("Comparison JSON exported");
+    window.setTimeout(() => setExportToast(null), 2500);
+  }, [comparisonExport]);
+  const handleCopySummary = useCallback(async () => {
+    const summary = [
+      `Scenario A: ${snapshotA?.label ?? "Baseline"}`,
+      `Scenario B: ${snapshotB?.label ?? "Proposed Fix"}`,
+      `Coverage delta: ${mA && mB ? formatDelta(mB.covered - mA.covered) : "--"}`,
+      `Recognition delta: ${mA && mB ? formatDelta(mB.recognition - mA.recognition) : "--"}`,
+      `Blindspot delta: ${mA && mB ? formatDelta(mB.blindspot - mA.blindspot) : "--"}`,
+      `Critical zones: ${mA && mB ? formatDelta(mB.critZonePct - mA.critZonePct) : "--"}`,
+      `Path visibility: ${mA && mB ? formatDelta(mB.visiblePathPct - mA.visiblePathPct) : "--"}`,
+    ].join("\n");
+    await navigator.clipboard.writeText(summary);
+    setExportToast("Summary copied");
+    window.setTimeout(() => setExportToast(null), 2500);
+  }, [mA, mB, snapshotA, snapshotB]);
 
   if (snapshots.length === 0) {
     return (
@@ -444,21 +505,42 @@ export function CompareView() {
             {snapshotB?.label ?? "Scenario B"}
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => saveSnapshot(`Scenario ${snapshots.length + 1}`)}
-          className="ml-auto flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white"
-        >
-          <Plus className="h-2.5 w-2.5" />
-          Add Scenario
-        </button>
+        <div className="ml-auto flex items-center gap-1.5">
+          {exportToast ? (
+            <span className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] text-emerald-300">
+              {exportToast}
+            </span>
+          ) : null}
+          <button
+            type="button"
+            onClick={handleCopySummary}
+            className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white"
+          >
+            Copy Summary
+          </button>
+          <button
+            type="button"
+            onClick={handleExportComparison}
+            className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white"
+          >
+            Export JSON
+          </button>
+          <button
+            type="button"
+            onClick={() => saveSnapshot(`Scenario ${snapshots.length + 1}`)}
+            className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white"
+          >
+            <Plus className="h-2.5 w-2.5" />
+            Add Scenario
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2 border-b border-[#1e2130] bg-[#0a0d14] px-3 py-2">
         <label className="flex items-center gap-2 text-[9px] uppercase tracking-[0.16em] text-[#556076]">
           <span className="min-w-[56px] text-[#9aa6bf]">Scenario A</span>
           <select
-            value={snapshotA?.id ?? ""}
+            value={validComparisonAId ?? ""}
             onChange={(event) => setComparisonAId(event.target.value)}
             className="min-w-0 flex-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none"
           >
@@ -472,7 +554,7 @@ export function CompareView() {
         <label className="flex items-center gap-2 text-[9px] uppercase tracking-[0.16em] text-[#556076]">
           <span className="min-w-[56px] text-[#d2f5db]">Scenario B</span>
           <select
-            value={snapshotB?.id ?? ""}
+            value={validComparisonBId ?? ""}
             onChange={(event) => setComparisonBId(event.target.value)}
             className="min-w-0 flex-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none"
           >
@@ -485,9 +567,40 @@ export function CompareView() {
         </label>
       </div>
 
+      {snapshotBSimulationMissing ? (
+        <div className="mx-2 mt-2 rounded-md border border-amber-500/25 bg-amber-500/10 px-3 py-1.5 text-[10px] text-amber-300">
+          <div className="flex items-center justify-between gap-2">
+            <span>Scenario B has no saved simulation result yet. Run simulation before trusting before/after deltas.</span>
+            {latestSimulatedSnapshot ? (
+              <button
+                type="button"
+                onClick={() => setComparisonBId(latestSimulatedSnapshot.id)}
+                className="rounded border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[9px] font-medium text-amber-200 hover:bg-amber-500/20"
+              >
+                Use Latest Simulated
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
       <div className="grid flex-1 min-h-0 grid-cols-2 gap-2 p-2">
-        <ScenePanel label={`Scenario A — ${snapshotA?.label ?? "Baseline"}`} accent="baseline" coverageCells={cellsA} />
-        <ScenePanel label={`Scenario B — ${snapshotB?.label ?? "Proposed Fix"}`} accent="proposed" coverageCells={cellsB} />
+        {snapshotA ? (
+          <ScenePanel
+            label={`Scenario A — ${snapshotA.label ?? "Baseline"}`}
+            accent="baseline"
+            scene={snapshotA.scene}
+            coverageCells={cellsA}
+          />
+        ) : null}
+        {snapshotB ? (
+          <ScenePanel
+            label={`Scenario B — ${snapshotB.label ?? "Proposed Fix"}`}
+            accent="proposed"
+            scene={snapshotB.scene}
+            coverageCells={cellsB}
+          />
+        ) : null}
       </div>
 
       <div className="px-2 pb-2">

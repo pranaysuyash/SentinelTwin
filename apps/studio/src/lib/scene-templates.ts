@@ -38,6 +38,7 @@ function makeBase(name: string, w: number, d: number, h: number): Partial<Securi
     version: "0.1.0",
     snapshots: [],
     scenarios: [],
+    changeLog: [],
   };
 }
 

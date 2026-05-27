@@ -32,5 +32,8 @@ describe("ScenarioPathPanel", () => {
     expect(source).toContain("Active Scenario");
     expect(source).toContain("Path Visibility Timeline");
     expect(source).toContain('setBottomTab("timeline")');
+    expect(source).toContain("No path created");
+    expect(source).toContain("No simulation yet");
+    expect(source).toContain("Run Simulation");
   });
 });

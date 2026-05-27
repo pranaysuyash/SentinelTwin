@@ -194,6 +194,7 @@ export function createTestScene(
     version: "0.1.0",
     snapshots: [],
     scenarios: [],
+    changeLog: [],
   });
 }
 

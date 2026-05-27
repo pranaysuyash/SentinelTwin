@@ -11,7 +11,8 @@ describe("ContextRightPanel", () => {
     expect(source).toContain("Selection Inspector");
     expect(source).toContain("Simulation Assumptions");
     expect(source).toContain("Scenario / Path");
-    expect(source).toContain('if (viewMode === "replay")');
+    expect(source).toContain('const pathOpenEffective = viewMode === "replay" ? true : pathOpen;');
+    expect(source).toContain("pathOpenEffective ? (");
     expect(source).toContain("Object properties hidden. Expand when you need detailed editing controls.");
     expect(source).toContain("Assumptions stay tucked away until you need to tune the model.");
     expect(source).toContain("Path controls are hidden. Expand them for replay and scenario editing.");

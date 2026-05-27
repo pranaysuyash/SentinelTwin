@@ -104,22 +104,23 @@ export function createSceneFromFloorPlan(
   name: string,
   result: FloorPlanResult,
 ): SecurityScene {
+  const normalized = normalizeFloorPlanResult(result);
   const now = Date.now();
   let seq = 0;
   const uid = (prefix: string) => `${prefix}_${(now + seq++).toString(36)}`;
 
-  const pxToMetersX = (x: number) => x / result.scalePixelsPerMeter;
-  const pxToMetersZ = (y: number) => y / result.scalePixelsPerMeter;
-  const roomHeight = result.roomDimensions.heightM;
+  const pxToMetersX = (x: number) => x / normalized.scalePixelsPerMeter;
+  const pxToMetersZ = (y: number) => y / normalized.scalePixelsPerMeter;
+  const roomHeight = normalized.roomDimensions.heightM;
 
-  const bounds = getWallBounds(result.walls);
+  const bounds = getWallBounds(normalized.walls);
   const minX = bounds?.minX ?? 0;
   const minY = bounds?.minY ?? 0;
   const shiftX = (x: number) => Math.max(0, pxToMetersX(x - minX));
   const shiftZ = (y: number) => Math.max(0, pxToMetersZ(y - minY));
 
-  const walls: WallNode[] = result.walls.length > 0
-    ? result.walls.map((wall, index) => ({
+  const walls: WallNode[] = normalized.walls.length > 0
+    ? normalized.walls.map((wall, index) => ({
       id: uid("wall"),
       nodeType: "wall",
       label: `Imported Wall ${index + 1}`,
@@ -131,9 +132,9 @@ export function createSceneFromFloorPlan(
       visionTransmission: 0,
       source: "import",
     }))
-    : createFallbackRectWalls(uid, result.roomDimensions.widthM, result.roomDimensions.depthM, roomHeight);
+    : createFallbackRectWalls(uid, normalized.roomDimensions.widthM, normalized.roomDimensions.depthM, roomHeight);
 
-  const doors: DoorNode[] = result.doors.map((door, index) => ({
+  const doors: DoorNode[] = normalized.doors.map((door, index) => ({
     id: uid("door"),
     nodeType: "door",
     label: `Imported Door ${index + 1}`,
@@ -143,7 +144,7 @@ export function createSceneFromFloorPlan(
     source: "import",
   }));
 
-  const windows: WindowNode[] = result.windows.map((window, index) => ({
+  const windows: WindowNode[] = normalized.windows.map((window, index) => ({
     id: uid("window"),
     nodeType: "window",
     label: `Imported Window ${index + 1}`,
@@ -161,8 +162,8 @@ export function createSceneFromFloorPlan(
     updatedAt: now,
     units: "meters",
     dimensions: {
-      width: result.roomDimensions.widthM,
-      depth: result.roomDimensions.depthM,
+      width: normalized.roomDimensions.widthM,
+      depth: normalized.roomDimensions.depthM,
       height: roomHeight,
     },
     walls,
@@ -190,6 +191,7 @@ export function createSceneFromFloorPlan(
     version: "0.1.0",
     snapshots: [],
     scenarios: [],
+    changeLog: [],
   };
 }
 
@@ -201,7 +203,8 @@ export function recalibrateFloorPlanResult(
   result: FloorPlanResult,
   calibration: { widthM?: number; depthM?: number; heightM?: number },
 ): FloorPlanResult {
-  const bounds = getWallBounds(result.walls);
+  const normalized = normalizeFloorPlanResult(result);
+  const bounds = getWallBounds(normalized.walls);
   const pixelWidth = bounds ? Math.max(1, bounds.maxX - bounds.minX) : Math.max(1, result.imageWidth);
   const pixelDepth = bounds ? Math.max(1, bounds.maxY - bounds.minY) : Math.max(1, result.imageHeight);
 
@@ -213,14 +216,35 @@ export function recalibrateFloorPlanResult(
   const depthScale = depthM > 0 ? pixelDepth / depthM : result.scalePixelsPerMeter;
   const nextScale = Number(((widthScale + depthScale) / 2).toFixed(2));
 
-  return {
-    ...result,
+  return normalizeFloorPlanResult({
+    ...normalized,
     scalePixelsPerMeter: nextScale,
     roomDimensions: {
       widthM: Number(widthM.toFixed(2)),
       depthM: Number(depthM.toFixed(2)),
       heightM: Number(heightM.toFixed(2)),
     },
+  });
+}
+
+export function normalizeFloorPlanResult(result: FloorPlanResult): FloorPlanResult {
+  const normalizedWalls = mergeCollinearWalls(result.walls);
+  const normalizedDoors = snapOpeningsToWalls(result.doors, normalizedWalls);
+  const normalizedWindows = snapOpeningsToWalls(result.windows, normalizedWalls);
+  const nextDimensions = extractDimensions(normalizedWalls, result.scalePixelsPerMeter, result.roomDimensions.heightM);
+  const nextConfidence = calculateConfidence(normalizedWalls, result.imageWidth, result.imageHeight);
+
+  return {
+    ...result,
+    walls: normalizedWalls,
+    doors: normalizedDoors,
+    windows: normalizedWindows,
+    roomDimensions: {
+      widthM: nextDimensions.widthM,
+      depthM: nextDimensions.depthM,
+      heightM: result.roomDimensions.heightM,
+    },
+    confidence: nextConfidence,
   };
 }
 
@@ -409,7 +433,134 @@ function detectOpenings(
     }
   }
 
-  return { doors, windows };
+  return { doors: snapOpeningsToWalls(doors, walls), windows: snapOpeningsToWalls(windows, walls) };
+}
+
+function mergeCollinearWalls(walls: WallSegment[]): WallSegment[] {
+  if (walls.length <= 1) return walls;
+
+  const horizontal = walls
+    .filter((wall) => Math.abs(wall.start.y - wall.end.y) < 3)
+    .map((wall) => ({
+      y: Math.round((wall.start.y + wall.end.y) / 2),
+      startX: Math.min(wall.start.x, wall.end.x),
+      endX: Math.max(wall.start.x, wall.end.x),
+      detected: wall.detected,
+    }));
+  const vertical = walls
+    .filter((wall) => Math.abs(wall.start.x - wall.end.x) < 3)
+    .map((wall) => ({
+      x: Math.round((wall.start.x + wall.end.x) / 2),
+      startY: Math.min(wall.start.y, wall.end.y),
+      endY: Math.max(wall.start.y, wall.end.y),
+      detected: wall.detected,
+    }));
+  const diagonal = walls.filter((wall) => Math.abs(wall.start.x - wall.end.x) >= 3 && Math.abs(wall.start.y - wall.end.y) >= 3);
+
+  const mergedHorizontal = mergeIntervals(horizontal, "y", "startX", "endX").map((segment) => ({
+    start: { x: segment.start, y: segment.anchor },
+    end: { x: segment.end, y: segment.anchor },
+    detected: segment.detected,
+  }));
+  const mergedVertical = mergeIntervals(vertical, "x", "startY", "endY").map((segment) => ({
+    start: { x: segment.anchor, y: segment.start },
+    end: { x: segment.anchor, y: segment.end },
+    detected: segment.detected,
+  }));
+
+  return [...mergedHorizontal, ...mergedVertical, ...diagonal];
+}
+
+function mergeIntervals<
+  T extends { detected: boolean },
+>(
+  segments: T[],
+  anchorKey: keyof T & string,
+  startKey: keyof T & string,
+  endKey: keyof T & string,
+): Array<{ anchor: number; start: number; end: number; detected: boolean }> {
+  const groups = new Map<number, T[]>();
+  for (const segment of segments) {
+    const anchor = Number(segment[anchorKey]);
+    if (!groups.has(anchor)) groups.set(anchor, []);
+    groups.get(anchor)!.push(segment);
+  }
+
+  const merged: Array<{ anchor: number; start: number; end: number; detected: boolean }> = [];
+  for (const [anchor, group] of groups.entries()) {
+    const sorted = [...group].sort((a, b) => Number(a[startKey]) - Number(b[startKey]));
+    const tolerance = 10;
+    let currentStart = Number(sorted[0][startKey]);
+    let currentEnd = Number(sorted[0][endKey]);
+    let currentDetected = sorted[0].detected;
+
+    for (let i = 1; i < sorted.length; i++) {
+      const next = sorted[i];
+      const nextStart = Number(next[startKey]);
+      const nextEnd = Number(next[endKey]);
+      if (nextStart <= currentEnd + tolerance) {
+        currentEnd = Math.max(currentEnd, nextEnd);
+        currentDetected = currentDetected || next.detected;
+      } else {
+        merged.push({ anchor, start: currentStart, end: currentEnd, detected: currentDetected });
+        currentStart = nextStart;
+        currentEnd = nextEnd;
+        currentDetected = next.detected;
+      }
+    }
+
+    merged.push({ anchor, start: currentStart, end: currentEnd, detected: currentDetected });
+  }
+
+  return merged;
+}
+
+function snapOpeningsToWalls<T extends DoorOpening | WindowOpening>(
+  openings: T[],
+  walls: WallSegment[],
+): T[] {
+  if (openings.length === 0 || walls.length === 0) return openings;
+
+  const horizontalWalls = walls.filter((wall) => Math.abs(wall.start.y - wall.end.y) < 3);
+  const verticalWalls = walls.filter((wall) => Math.abs(wall.start.x - wall.end.x) < 3);
+
+  return openings.map((opening) => {
+    const candidates = opening.orientation === "horizontal" ? horizontalWalls : verticalWalls;
+    if (candidates.length === 0) return opening;
+
+    const bestWall = candidates.reduce<{ wall: WallSegment; distance: number } | null>((best, wall) => {
+      const anchor = opening.orientation === "horizontal"
+        ? (wall.start.y + wall.end.y) / 2
+        : (wall.start.x + wall.end.x) / 2;
+      const distance = opening.orientation === "horizontal"
+        ? Math.abs(opening.position.y - anchor)
+        : Math.abs(opening.position.x - anchor);
+      if (!best || distance < best.distance) return { wall, distance };
+      return best;
+    }, null);
+
+    if (!bestWall || bestWall.distance > 40) return opening;
+
+    if (opening.orientation === "horizontal") {
+      const y = Math.round((bestWall.wall.start.y + bestWall.wall.end.y) / 2);
+      const minX = Math.min(bestWall.wall.start.x, bestWall.wall.end.x);
+      const maxX = Math.max(bestWall.wall.start.x, bestWall.wall.end.x);
+      const halfWidthPx = Math.max(4, Math.round((opening.widthM * 50) / 2));
+      const x = clamp(opening.position.x, minX + halfWidthPx, maxX - halfWidthPx);
+      return { ...opening, position: { x, y } };
+    }
+
+    const x = Math.round((bestWall.wall.start.x + bestWall.wall.end.x) / 2);
+    const minY = Math.min(bestWall.wall.start.y, bestWall.wall.end.y);
+    const maxY = Math.max(bestWall.wall.start.y, bestWall.wall.end.y);
+    const halfWidthPx = Math.max(4, Math.round((opening.widthM * 50) / 2));
+    const y = clamp(opening.position.y, minY + halfWidthPx, maxY - halfWidthPx);
+    return { ...opening, position: { x, y } };
+  });
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
 }
 
 function getWallBounds(walls: WallSegment[]): { minX: number; minY: number; maxX: number; maxY: number } | null {

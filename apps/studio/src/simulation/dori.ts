@@ -115,4 +115,11 @@ export function ppmToOodpcvsQuality(ppm: number): DoriQuality {
   return "none";
 }
 
+/**
+ * Backward-compatible PPM mapper that preserves the older DORI-only call site shape.
+ * @deprecated Use ppmToDoriQuality() or ppmToOodpcvsQuality() explicitly.
+ */
+export function ppmToQuality(ppm: number, thresholds: PpmThresholds = DORI_THRESHOLDS): DoriQuality {
+  return ppmToDoriQuality(ppm, thresholds);
+}
 

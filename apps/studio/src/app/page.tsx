@@ -1,13 +1,14 @@
 "use client";
 
-import { FileUp, FolderOpen, Plus, ScanSearch, ShieldCheck, Sparkles } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { ArrowRight, FileUp, FolderOpen, Plus, ScanSearch, ShieldCheck, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import StudioShell from "@/components/layout/StudioShell";
 import { SceneBuilderWizard } from "@/components/scan-to-scene/SceneBuilderWizard";
 import { ScanSiteWizard } from "@/components/scan-to-scene/ScanSiteWizard";
 import { useStudioStore } from "@/store/studio-store";
 import { draftSceneFromPrompt, draftSceneFromPromptWithModel } from "@/lib/ai-layout-draft";
+import { PRODUCT_FEATURE_STATUS, PRODUCT_FEATURE_STATUS_LAST_VERIFIED } from "@/lib/product-feature-status";
 import { OpenAIProvider } from "@/agents/providers/OpenAIProvider";
 import { simulateStudio } from "@/simulation/simulate-studio";
 
@@ -18,6 +19,8 @@ export default function StudioPage() {
   const importScene = useStudioStore((s) => s.importScene);
   const setScene = useStudioStore((s) => s.setScene);
   const scene = useStudioStore((s) => s.scene);
+  const savedScenes = useStudioStore((s) => s.savedScenes);
+  const refreshSavedScenesList = useStudioStore((s) => s.refreshSavedScenesList);
   const setViewMode = useStudioStore((s) => s.setViewMode);
   const setBottomTab = useStudioStore((s) => s.setBottomTab);
   const setEnvironmentMode = useStudioStore((s) => s.setEnvironmentMode);
@@ -37,6 +40,10 @@ export default function StudioPage() {
     if (typeof window === "undefined") return false;
     return new URLSearchParams(window.location.search).get("studio") === "1";
   }, []);
+
+  useEffect(() => {
+    refreshSavedScenesList();
+  }, [refreshSavedScenesList]);
 
   if (enterStudio || hasQueryBoot) {
     return <StudioShell />;
@@ -102,6 +109,110 @@ export default function StudioPage() {
           </button>
         </div>
 
+        <div className="mt-4 rounded-lg border border-[#212a3c] bg-[#0f1726] p-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-semibold text-white">Workspace Resume</div>
+              <p className="mt-0.5 text-[9px] text-[#7584a3]">
+                Resume the current scene, or open one of the saved workspaces that already lives in local storage.
+              </p>
+            </div>
+            <div className="rounded-full border border-[#2a3550] bg-[#111827] px-2 py-1 text-[9px] text-[#9ab0ce]">
+              {savedScenes.length} saved
+            </div>
+          </div>
+
+          <div className="mt-3 grid gap-3 lg:grid-cols-[1.25fr_0.75fr]">
+            <div className="rounded-lg border border-[#1f2a40] bg-[#111827] p-3">
+              <div className="text-[8px] font-semibold uppercase tracking-[0.18em] text-[#7584a3]">Current Workspace</div>
+              <div className="mt-1.5 flex items-center gap-2">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-white">{sceneName || "Untitled Scene"}</div>
+                  <div className="mt-0.5 text-[9px] text-[#7f91b2]">
+                    Resume this scene to continue editing, simulating, and reporting without rebuilding state.
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2 text-[9px] text-[#9ab0ce] sm:grid-cols-4">
+                <div className="rounded-md border border-[#1f2a40] bg-[#0f1623] px-2 py-1.5">
+                  <div className="text-[#7584a3]">Cameras</div>
+                  <div className="mt-0.5 font-mono text-white">{scene.cameras.length}</div>
+                </div>
+                <div className="rounded-md border border-[#1f2a40] bg-[#0f1623] px-2 py-1.5">
+                  <div className="text-[#7584a3]">Lights</div>
+                  <div className="mt-0.5 font-mono text-white">{scene.securityLights.length}</div>
+                </div>
+                <div className="rounded-md border border-[#1f2a40] bg-[#0f1623] px-2 py-1.5">
+                  <div className="text-[#7584a3]">Obstructions</div>
+                  <div className="mt-0.5 font-mono text-white">{scene.obstructions.length}</div>
+                </div>
+                <div className="rounded-md border border-[#1f2a40] bg-[#0f1623] px-2 py-1.5">
+                  <div className="text-[#7584a3]">Zones</div>
+                  <div className="mt-0.5 font-mono text-white">{scene.criticalZones.length}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <button
+                onClick={() => setEnterStudio(true)}
+                className="flex w-full items-center justify-between rounded-lg border border-[#263349] bg-[#131d2d] px-3 py-2 text-left transition-colors hover:border-[#395076] hover:bg-[#172235]"
+              >
+                <div>
+                  <div className="text-[10px] font-semibold text-white">Resume Current Workspace</div>
+                  <div className="text-[9px] text-[#8b96ae]">Open the scene already loaded in memory.</div>
+                </div>
+                <ArrowRight className="h-3.5 w-3.5 text-[#5fb0ff]" />
+              </button>
+              <button
+                onClick={() => {
+                  setBottomTab("metrics");
+                  setEnterStudio(true);
+                }}
+                className="flex w-full items-center justify-between rounded-lg border border-[#263349] bg-[#131d2d] px-3 py-2 text-left transition-colors hover:border-[#395076] hover:bg-[#172235]"
+              >
+                <div>
+                  <div className="text-[10px] font-semibold text-white">Open Coverage Workspace</div>
+                  <div className="text-[9px] text-[#8b96ae]">Jump straight into the latest simulation and analysis tabs.</div>
+                </div>
+                <ArrowRight className="h-3.5 w-3.5 text-[#5fb0ff]" />
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-3 rounded-lg border border-[#1f2a40] bg-[#0d1420] p-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#7584a3]">Saved Scenes</div>
+              <div className="text-[9px] text-[#7f91b2]">
+                {savedScenes.length > 0 ? "Open any saved workspace directly from the launcher." : "No saved scenes yet."}
+              </div>
+            </div>
+            {savedScenes.length > 0 ? (
+              <div className="mt-2 grid gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
+                {savedScenes.map((saved) => (
+                  <button
+                    key={saved.id}
+                    onClick={() => {
+                      setScene(saved);
+                      setEnterStudio(true);
+                    }}
+                    className="rounded-md border border-[#1f2a40] bg-[#111827] px-2.5 py-2 text-left transition-colors hover:border-[#3b4a69] hover:bg-[#172235]"
+                  >
+                    <div className="truncate text-[10px] font-medium text-[#d9e5ff]">{saved.name}</div>
+                    <div className="mt-0.5 text-[8px] text-[#7f91b2]">
+                      {saved.cameras.length} cameras · {saved.obstructions.length} obstructions · {saved.criticalZones.length} zones
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-2 rounded-md border border-dashed border-[#1f2a40] px-2.5 py-3 text-[9px] text-[#6f7f9b]">
+                Save a scene from Studio to make it appear here for one-click resume.
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="mt-4 rounded-lg border border-[#212a3c] bg-[#111827] p-3">
           <button
             onClick={() => fileInputRef.current?.click()}
@@ -147,7 +258,7 @@ export default function StudioPage() {
           </div>
           <div className="space-y-1.5 text-[10px] text-[#9ab0ce]">
             <div className="flex items-center justify-between rounded border border-[#1f2a40] px-2 py-1.5">
-              <span>1. What are you trying to protect?</span>
+              <span>1. Define outcomes: what must be detected/recognized and when?</span>
               <button
                 onClick={() => {
                   setBottomTab("assumptions");
@@ -155,15 +266,15 @@ export default function StudioPage() {
                 }}
                 className="rounded border border-[#2b3953] px-2 py-0.5 text-[9px] text-[#d2ddf0]"
               >
-                Open Assumptions
+                Set Assumptions
               </button>
             </div>
             <div className="flex items-center justify-between rounded border border-[#1f2a40] px-2 py-1.5">
-              <span>2. Choose input: template, floor plan, or scan.</span>
-              <button onClick={() => setShowWizard(true)} className="rounded border border-[#2b3953] px-2 py-0.5 text-[9px] text-[#d2ddf0]">Start Scene Wizard</button>
+              <span>2. Choose source: template, floor plan, scan, or AI draft.</span>
+              <button onClick={() => setShowWizard(true)} className="rounded border border-[#2b3953] px-2 py-0.5 text-[9px] text-[#d2ddf0]">Create Scene</button>
             </div>
             <div className="flex items-center justify-between rounded border border-[#1f2a40] px-2 py-1.5">
-              <span>3. Build scene: walls, openings, cameras, obstructions, zones.</span>
+              <span>3. Model site geometry: walls/openings/cameras/obstructions/zones.</span>
               <button
                 onClick={() => {
                   setViewMode("map");
@@ -171,11 +282,11 @@ export default function StudioPage() {
                 }}
                 className="rounded border border-[#2b3953] px-2 py-0.5 text-[9px] text-[#d2ddf0]"
               >
-                Open Map Builder
+                Open Site Map
               </button>
             </div>
             <div className="flex items-center justify-between rounded border border-[#1f2a40] px-2 py-1.5">
-              <span>4. Run baseline simulation + inspect pass/fail and blind spots.</span>
+              <span>4. Verify baseline: run simulation and inspect pass/fail, blind spots, reasons.</span>
               <button
                 onClick={() => {
                   setSimulationRunning(true);
@@ -187,14 +298,14 @@ export default function StudioPage() {
                 }}
                 className="rounded border border-[#2b3953] px-2 py-0.5 text-[9px] text-[#d2ddf0]"
               >
-                Run Baseline
+                Run Baseline Check
               </button>
             </div>
             <div className="flex items-center justify-between rounded border border-[#1f2a40] px-2 py-1.5">
-              <span>5. Next action: replay route, test night/failure, generate report.</span>
+              <span>5. Harden and report: replay route, stress conditions, then export evidence.</span>
               <div className="flex gap-1">
-                <button onClick={() => { setViewMode("replay"); setEnterStudio(true); }} className="rounded border border-[#2b3953] px-2 py-0.5 text-[9px] text-[#d2ddf0]">Replay</button>
-                <button onClick={() => { setEnvironmentMode("night"); setEnterStudio(true); }} className="rounded border border-[#2b3953] px-2 py-0.5 text-[9px] text-[#d2ddf0]">Night</button>
+                <button onClick={() => { setViewMode("replay"); setEnterStudio(true); }} className="rounded border border-[#2b3953] px-2 py-0.5 text-[9px] text-[#d2ddf0]">Replay Route</button>
+                <button onClick={() => { setEnvironmentMode("night"); setEnterStudio(true); }} className="rounded border border-[#2b3953] px-2 py-0.5 text-[9px] text-[#d2ddf0]">Night Stress</button>
                 <button
                   onClick={() => {
                     const target = scene.cameras.find((camera) => camera.status === "on") ?? scene.cameras[0];
@@ -202,9 +313,11 @@ export default function StudioPage() {
                     setBottomTab("issues");
                     setEnterStudio(true);
                   }}
+                  disabled={scene.cameras.length === 0}
+                  title={scene.cameras.length === 0 ? "Add a camera to run failure drill." : undefined}
                   className="rounded border border-[#2b3953] px-2 py-0.5 text-[9px] text-[#d2ddf0]"
                 >
-                  Failure
+                  Failure Drill
                 </button>
                 <button
                   onClick={() => {
@@ -213,13 +326,43 @@ export default function StudioPage() {
                     setBottomTab("counterfactual");
                     setEnterStudio(true);
                   }}
+                  disabled={scene.obstructions.length === 0}
+                  title={scene.obstructions.length === 0 ? "Add an obstruction to test counterfactual fix." : undefined}
                   className="rounded border border-[#2b3953] px-2 py-0.5 text-[9px] text-[#d2ddf0]"
                 >
-                  Cheapest Fix
+                  Test Cheapest Fix
                 </button>
-                <button onClick={() => { setBottomTab("report"); setEnterStudio(true); }} className="rounded border border-[#2b3953] px-2 py-0.5 text-[9px] text-[#d2ddf0]">Report</button>
+                <button onClick={() => { setBottomTab("report"); setEnterStudio(true); }} className="rounded border border-[#2b3953] px-2 py-0.5 text-[9px] text-[#d2ddf0]">Export Report</button>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-lg border border-[#212a3c] bg-[#0f1726] p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <div className="text-[11px] font-semibold text-white">Product Feature Status</div>
+            <div className="text-[9px] text-[#7584a3]">Last verified: {PRODUCT_FEATURE_STATUS_LAST_VERIFIED}</div>
+          </div>
+          <div className="space-y-1.5 text-[10px] text-[#9ab0ce]">
+            {PRODUCT_FEATURE_STATUS.map((entry) => (
+              <div key={entry.feature} className="flex items-start gap-2 rounded border border-[#1f2a40] px-2 py-1.5">
+                <span
+                  className={
+                    entry.status === "Available"
+                      ? "rounded border border-emerald-400/35 bg-emerald-500/12 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.12em] text-emerald-300"
+                      : entry.status === "Preview"
+                        ? "rounded border border-amber-400/35 bg-amber-500/12 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.12em] text-amber-300"
+                        : "rounded border border-[#3a455f] bg-[#1a2436] px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.12em] text-[#9fb0cf]"
+                  }
+                >
+                  {entry.status}
+                </span>
+                <div className="min-w-0">
+                  <div className="text-[10px] font-medium text-[#d9e5ff]">{entry.feature}</div>
+                  <div className="text-[9px] text-[#7f91b2]">{entry.detail}</div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -257,6 +400,9 @@ export default function StudioPage() {
             <p className="mt-1 text-xs text-[#91a4c5]">
               Prompt-to-scene draft. Output is a real editable `SecurityScene` JSON-backed scene.
             </p>
+            <div className="mt-2 rounded-lg border border-[#22314b] bg-[#101a2b] px-3 py-2 text-[10px] text-[#97a8c9]">
+              Model-backed if <code className="text-[#c4d5ff]">NEXT_PUBLIC_OPENAI_API_KEY</code> is set, otherwise a heuristic fallback is used. The generated scene will replace the current workspace.
+            </div>
             <textarea
               value={aiPrompt}
               onChange={(event) => setAiPrompt(event.target.value)}

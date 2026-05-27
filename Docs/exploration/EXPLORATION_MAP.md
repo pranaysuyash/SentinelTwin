@@ -4973,3 +4973,54 @@ Add sensor specs (`sensorWidthMm`, `sensorHeightMm`, `sensorFormat`) when:
 **Next:**
 - Keep `Docs/design/CAMERA_STUDIO_SCREEN_STATUS.md` updated when a screen mode changes materially.
 - Keep `Docs/design/MAP_LAYER_VISUAL_LANGUAGE.md` aligned with the shared map token files whenever the palette changes.
+
+---
+
+## Thread 23: Kenney all-in-one bundle asset direction for SentinelTwin
+
+**Status:** Research complete. Not implemented.
+
+**Source bundle:**
+- `/Users/pranay/Projects/adhoc_resources/game_assets/Kenney Game Assets All-in-1 3.4.0/`
+
+**Useful families for SentinelTwin:**
+- `3D assets/Building Kit`
+- `3D assets/Furniture Kit`
+- `3D assets/City Kit - Industrial`
+- `3D assets/City Kit - Commercial`
+- `3D assets/City Kit - Suburban`
+- `3D assets/Prototype Kit`
+- `3D assets/Modular Buildings`
+- `2D assets/Prototype Textures`
+- `2D assets/Road Textures`
+- `2D assets/Pattern Pack`
+- `2D assets/Brick Pack`
+
+**Representative file-name signals:**
+- Building Kit: `wall.png`, `floor.png`, `wall-doorway-square.png`, `wall-window-round.png`, `door-rotate-square-a.png`, `column.png`, `plating.png`
+- Furniture Kit: `desk_SE.png`, `deskCorner_SW.png`, `bookcaseClosedWide_NE.png`, `bookcaseOpenLow_SW.png`, `chairModernFrameCushion_NE.png`, `lampWall_NE.png`, `tableRound_SE.png`
+
+**Direction:**
+- Use Building Kit for the structural shell.
+- Use Furniture Kit for desks, counters, chairs, shelves, and lights.
+- Use City Kit - Commercial / Industrial only for exterior shells and site context.
+- Use Prototype Textures and Road Textures for restrained professional surfaces.
+- Avoid platformer, fantasy, dungeon, holiday, and collectible packs for core SentinelTwin visuals.
+
+---
+
+## Thread 24: Dock and evidence-hierarchy polish for studio analysis surfaces
+
+**Status:** Implemented in current pass. Polished after reference review.
+
+**Finding:**
+- The bottom drawer needed to behave like an explicit analysis surface, not a generic tab footer.
+- The camera wall, single-camera view, and replay view all benefited from a visible current-state summary: best camera, current quality, reason line, next event, and route context.
+- Explicitly exposing the counterfactual and threat analysis tabs reduced the sense of “hidden work” in the drawer and made the UI more honest without changing architecture.
+
+**Implementation signals:**
+- `BottomPanel.tsx` now includes a stronger analysis header and visible `COUNTERFACTUAL` / `THREAT REVIEW` tabs.
+- `ScenarioPathPanel.tsx` now shows no-path / no-simulation / current-issue states.
+- `CameraViewMode.tsx` now includes a reason line, replay quality/segment labels, and a clearer DORI overlay hierarchy.
+- `CameraWallView.tsx` now surfaces the current best camera and marks the best tile.
+- `PathReplayView.tsx` now includes a current-state card with time, segment, quality, best camera, and next event.

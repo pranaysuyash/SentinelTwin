@@ -14,5 +14,8 @@ describe("CompareView", () => {
     expect(source).toContain('const saveSnapshot = useStudioStore((s) => s.saveSnapshot);');
     expect(source).toContain('onClick={() => saveSnapshot(`Scenario ${snapshots.length + 1}`)}');
     expect(source).toContain("Add Scenario");
+    expect(source).toContain("scene={snapshotA.scene}");
+    expect(source).toContain("scene={snapshotB.scene}");
+    expect(source).toContain("Use Latest Simulated");
   });
 });

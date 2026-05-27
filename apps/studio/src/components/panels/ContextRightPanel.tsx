@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, ChevronRight, MapPinned, MonitorSmartphone } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { ScenarioPathPanel } from "@/components/bottom-panel/ScenarioPathPanel";
 import { InspectorPanel } from "@/components/inspector/InspectorPanel";
@@ -24,9 +24,9 @@ function SectionToggle({
     <button
       type="button"
       onClick={onToggle}
-      className="flex w-full items-center gap-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2 py-1.5 text-left transition-colors hover:border-[#31405a]"
+      className="flex w-full items-center gap-2 rounded-lg border border-[#1f2536] bg-[#0b0f17] px-2 py-1 text-left transition-colors hover:border-[#31405a]"
     >
-      <div className="flex h-6 w-6 items-center justify-center rounded-lg border border-[#24283a] bg-[#111521] text-[#7f8aa3]">
+      <div className="flex h-5 w-5 items-center justify-center rounded-md border border-[#24283a] bg-[#111521] text-[#7f8aa3]">
         {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
       </div>
       <div className="min-w-0 flex-1">
@@ -56,17 +56,12 @@ export function ContextRightPanel() {
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [assumptionsOpen, setAssumptionsOpen] = useState(false);
   const [pathOpen, setPathOpen] = useState(viewMode === "replay");
-
-  useEffect(() => {
-    if (viewMode === "replay") {
-      setPathOpen(true);
-    }
-  }, [viewMode]);
+  const pathOpenEffective = viewMode === "replay" ? true : pathOpen;
 
   return (
     <div className="flex h-full min-w-0 min-h-0 flex-col overflow-hidden bg-[#0c0f16]">
-      <div className="flex items-center gap-2 border-b border-[#1e2130] bg-[#0b0f17] px-2.5 py-1.5">
-        <div className="flex h-6 w-6 items-center justify-center rounded-lg border border-blue-500/20 bg-blue-500/12">
+      <div className="flex items-center gap-2 border-b border-[#1e2130] bg-[#0b0f17] px-2.5 py-1">
+        <div className="flex h-5 w-5 items-center justify-center rounded-md border border-blue-500/20 bg-blue-500/12">
           <MonitorSmartphone className="h-3 w-3 text-blue-400" />
         </div>
         <div className="min-w-0">
@@ -124,10 +119,10 @@ export function ContextRightPanel() {
           <SectionToggle
             title="Scenario / Path"
             summary={viewMode === "replay" ? "Replay workspace active" : "Path replay and editing"}
-            open={pathOpen}
+            open={pathOpenEffective}
             onToggle={() => setPathOpen((current) => !current)}
           />
-          {pathOpen ? (
+          {pathOpenEffective ? (
             <div className="mt-2 overflow-hidden">
               <ScenarioPathPanel />
             </div>

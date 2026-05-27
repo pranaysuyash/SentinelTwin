@@ -50,7 +50,9 @@ bun test src/simulation/__tests__/golden-simulation-claims.test.ts
 
 - Root launcher flow before Studio shell: `Create or Import Scene` / `Open Current Workspace` / JSON import.
 - Root launcher includes a 5-step guided security workflow with direct handoff actions into Studio.
+- Root launcher includes a visible `Product Feature Status` board (`Available`/`Preview`/`Planned`) to avoid demoware ambiguity.
 - Guided flow includes quick actions for baseline run, failure simulation, cheapest-fix counterfactual, replay, night mode, and report.
+- Guided flow uses outcome-focused CTA language and disables stress/fix actions when prerequisites are missing.
 - Root launcher also includes `AI Layout Draft` (prompt-to-`SecurityScene` starter).
 - AI Layout Draft uses structured model output when configured (`NEXT_PUBLIC_OPENAI_API_KEY`) and otherwise falls back to deterministic local drafting.
 - AI Layout Draft also maps key prompt hints into scene entities (camera count, shelves/counter, back-storage zone).
@@ -73,6 +75,8 @@ bun test src/simulation/__tests__/golden-simulation-claims.test.ts
 - Golden simulation claim tests for major behavior checks.
 - Camera wall POV stays in sync with live camera transform edits.
 - Camera view includes per-camera replay visibility status overlay.
+- Camera wall tiles include route visibility status/quality overlays and route-context chip in header.
+- Compare mode renders selected snapshot geometry per side for truthful before/after visuals.
 
 ## Known Gaps
 

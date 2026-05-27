@@ -13,5 +13,7 @@ describe("ImportReview", () => {
     expect(source).toContain("walls.filter");
     expect(source).toContain("doors.filter");
     expect(source).toContain("windows.filter");
+    expect(source).toContain("Spatial Preview");
+    expect(source).toContain("normalizeFloorPlanResult(filtered)");
   });
 });

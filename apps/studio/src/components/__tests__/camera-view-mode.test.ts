@@ -20,6 +20,10 @@ describe("CameraViewMode", () => {
     expect(source).toContain("Minimal camera feed");
     expect(source).toContain("Inspection preset");
     expect(source).toContain("MORE");
+    expect(source).toContain("Why this quality:");
+    expect(source).toContain("Quality:");
+    expect(source).toContain("Segment:");
+    expect(source).toContain("Best Camera");
   });
 
   test("derives target labels from the zone target type", () => {

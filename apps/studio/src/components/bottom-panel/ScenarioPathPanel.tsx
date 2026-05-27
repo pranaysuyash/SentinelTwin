@@ -2,11 +2,14 @@
 
 import { MapPin } from "lucide-react";
 import { PathMap } from "@/components/map/PathMap";
+import { QUALITY_RANK } from "@/lib/quality-display";
 import { useStudioStore } from "@/store/studio-store";
 
 export function ScenarioPathPanel() {
   const scene = useStudioStore((s) => s.scene);
   const result = useStudioStore((s) => s.simulationResult);
+  const simulationRunning = useStudioStore((s) => s.simulationRunning);
+  const runSimulation = useStudioStore((s) => s.runSimulation);
   const activePathId = useStudioStore((s) => s.activePathId);
   const setActivePathId = useStudioStore((s) => s.setActivePathId);
   const setPathReplayPlaying = useStudioStore((s) => s.setPathReplayPlaying);
@@ -22,6 +25,7 @@ export function ScenarioPathPanel() {
     ? Math.round((pathResult.visibleDurationS / pathResult.totalDurationS) * 100)
     : null;
   const hasActivePath = Boolean(activePath);
+  const noSimulationYet = !result;
 
   const startReplay = () => {
     if (!activePath) return;
@@ -56,6 +60,17 @@ export function ScenarioPathPanel() {
       <div className="flex min-h-0 flex-1 gap-2 px-2.5 py-2.5">
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+            {hasActivePath ? null : (
+              <div className="mb-2 rounded-lg border border-dashed border-[#26324a] bg-[#0a0d14] px-2.5 py-2 text-[9px] text-[#72809a]">
+                No path created. Add a path to summarize route visibility and replay behavior.
+              </div>
+            )}
+            {noSimulationYet ? (
+              <div className="mb-2 rounded-lg border border-amber-500/20 bg-amber-500/8 px-2.5 py-2 text-[9px] text-amber-200">
+                No simulation yet. Run the simulation to calculate path quality and visibility.
+              </div>
+            ) : null}
+
             <div className="mb-1 text-[9px] uppercase tracking-[0.18em] text-[#556076]">Active Path</div>
             <select
               className="flex h-8 w-full items-center justify-between rounded-lg border border-[#24283a] bg-[#111521] px-2.5 text-[11px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
@@ -116,6 +131,16 @@ export function ScenarioPathPanel() {
                 Play Path
               </button>
             </div>
+            {noSimulationYet ? (
+              <button
+                type="button"
+                onClick={runSimulation}
+                disabled={simulationRunning}
+                className="mt-2 h-7 w-full rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2 text-[10px] font-medium text-emerald-200 transition-colors hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {simulationRunning ? "Running simulation..." : "Run Simulation"}
+              </button>
+            ) : null}
           </div>
 
           <div className="grid grid-cols-3 gap-2">
@@ -145,6 +170,37 @@ export function ScenarioPathPanel() {
               <div className="mt-0.5 text-[8px] uppercase tracking-[0.18em] text-[#556076]">Visible</div>
             </div>
           </div>
+
+          {activePath && (
+            <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[9px] text-[#8c9bb4]">
+              <div className="mb-1 text-[8px] font-semibold uppercase tracking-[0.18em] text-[#556076]">Current issue</div>
+              {pathResult ? (
+                <div className="space-y-1">
+                  <div className="text-[#c7d0e4]">
+                    {visiblePct === null
+                      ? "Route summary is pending simulation."
+                      : visiblePct >= 80
+                        ? "Route stays visible for most of the walk."
+                        : visiblePct >= 50
+                          ? "Visibility drops in one or more segments."
+                          : "Route has a significant visibility loss."}
+                  </div>
+                  <div className="text-[#72809a]">
+                    Best camera {pathResult.visibilityByCamera && Object.entries(pathResult.visibilityByCamera).length > 0
+                      ? Object.entries(pathResult.visibilityByCamera)
+                        .sort((a, b) => {
+                          const diff = (QUALITY_RANK[b[1]?.maxQuality ?? "none"] ?? 0) - (QUALITY_RANK[a[1]?.maxQuality ?? "none"] ?? 0);
+                          if (diff !== 0) return diff;
+                          return (b[1]?.visibleS ?? 0) - (a[1]?.visibleS ?? 0);
+                        })[0]?.[0] ?? "unavailable"
+                      : "unavailable"}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-[#72809a]">Run simulation to populate route visibility details.</div>
+              )}
+            </div>
+          )}
         </div>
 
         <PathMap />

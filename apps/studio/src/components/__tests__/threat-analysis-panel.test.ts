@@ -4,11 +4,12 @@ import { readFileSync } from "node:fs";
 const threatAnalysisPanelPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/bottom-panel/ThreatAnalysisPanel.tsx";
 
 describe("ThreatAnalysisPanel", () => {
-  test("uses honest breakdown wording instead of pretending to rerun analysis", () => {
+  test("runs the shared simulation action instead of only revealing cached details", () => {
     const source = readFileSync(threatAnalysisPanelPath, "utf8");
 
     expect(source).toContain("Coverage Failure Breakdown");
-    expect(source).toContain("Show Coverage Breakdown");
-    expect(source).not.toContain("Run Coverage Failure Analysis");
+    expect(source).toContain("Run Coverage Failure Analysis");
+    expect(source).toContain("runSimulation");
+    expect(source).not.toContain("Show Coverage Breakdown");
   });
 });

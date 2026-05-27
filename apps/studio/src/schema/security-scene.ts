@@ -543,6 +543,7 @@ const securitySceneBaseSchema = z.object({
   timeSchedule: timeScheduleSchema.optional(),
   simulation: simulationResultSchema.optional(),
   temporalProfile: temporalSecurityProfileSchema.optional(),
+  changeLog: z.array(z.string()).default([]),
   source: z.enum([
     "manual",
     "ai_generated",

@@ -32,6 +32,28 @@ describe("studio store", () => {
     ).toBe(true);
   });
 
+  test("runs the shared simulation action and stores a fresh result", async () => {
+    useStudioStore.setState({
+      scene: smallRetailShopScene,
+      simulationResult: null,
+      simulationDirty: true,
+      simulationRunning: false,
+      lastRunMs: null,
+    });
+
+    useStudioStore.getState().runSimulation();
+
+    await new Promise((resolve) => setTimeout(resolve, 80));
+
+    const state = useStudioStore.getState();
+
+    expect(state.simulationRunning).toBe(false);
+    expect(state.simulationDirty).toBe(false);
+    expect(state.simulationResult).toBeDefined();
+    expect(state.scene.simulation).toBeDefined();
+    expect(state.lastRunMs).not.toBeNull();
+  });
+
   test("clears activePathId when the active path is removed", () => {
     const activePathId = smallRetailShopScene.paths[0]?.id;
 
@@ -89,6 +111,19 @@ describe("studio store", () => {
       minimap: { zoom: 1, pan: [0, 0] },
       pathMap: { zoom: 1, pan: [0, 0] },
     });
+  });
+
+  test("rebuilds the scene intelligence graph when snapshots are saved", () => {
+    useStudioStore.getState().setScene(smallRetailShopScene);
+
+    const before = useStudioStore.getState().sceneIntelligenceGraph.summary.snapshotCount;
+    useStudioStore.getState().saveSnapshot("Graph Snapshot");
+
+    const state = useStudioStore.getState();
+
+    expect(state.sceneIntelligenceGraph.summary.sceneSourceLabel).toBe("Demo Scene");
+    expect(state.sceneIntelligenceGraph.summary.snapshotCount).toBe(before + 1);
+    expect(state.scene.snapshots).toHaveLength(before + 1);
   });
 
   test("duplicates the selected node and selects the duplicate", () => {

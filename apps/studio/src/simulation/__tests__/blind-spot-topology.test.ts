@@ -37,6 +37,7 @@ function makeScene(overrides: Partial<SecurityScene> = {}): SecurityScene {
     version: "0.1.0",
     snapshots: [],
     scenarios: [],
+    changeLog: [],
     ...overrides,
   };
 }

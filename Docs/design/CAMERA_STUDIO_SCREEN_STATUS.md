@@ -13,7 +13,7 @@ This document is intentionally narrow. It captures the current screen/component 
 | Camera View | `CameraViewMode_TimelinePathReplay_Camera1InspectorViewtab.png` | `StudioShell`, `CameraViewMode`, `CameraFeedCanvas` | Partially done | Feed reactivity when camera moves, actor overlay in feed, lens/noise effects, DORI explanation polish | Hardening pass on the camera feed stack |
 | Camera Wall | `CameraWallMode_Timeline_Camera1InspectorViewTab.png` | `StudioShell`, `CameraWallView`, `BottomPanel` | Implemented, but layout differs from the generated board | Full docked-side layout is intentionally not used; quick-status summary and feed selection polish remain | Keep the full-canvas wall pattern and add lightweight summaries |
 | Path Replay | `PathReplayMode_Timeline_Camera1Inspector.png` | `StudioShell`, `PathReplayView`, `TimelineTab`, `PathMap` | Mostly done | Stronger annotations, actor state card, event hierarchy, handoff clarity | Polish replay language and event labeling |
-| Compare Mode | `CompareMode_BeforeAfter_Camera1InspectorViewTab.png` | `StudioShell`, `CompareView` | Implemented, needs polish | Apply-flow clarity, better snapshot selector, stronger baseline/proposed labels | Tighten the compare UX and wording |
+| Compare Mode | `CompareMode_BeforeAfter_Camera1InspectorViewTab.png` | `StudioShell`, `CompareView` | Implemented (snapshot-true geometry) | Snapshot-without-simulation warning + interaction polish remain | Keep visual truth strict and improve action affordances |
 | MiniMap (collapsed/expanded/hover) | N/A | `MiniMap`, `MapCanvas`, `MapLayers` | Implemented | Hover density and viewport rectangle verification | Visual QA against the board |
 | PathMap | N/A | `PathMap`, `ScenarioPathPanel`, `MapCanvas` | Implemented | Better path labels and event annotations | Visual QA and label polish |
 | Map interaction states | N/A | `MapCanvas`, `MapLayers`, `InspectorPanel` | Partial | Hover tooltips, empty states, privacy violation cards, no-path CTA | Finish the edge-state polish pass |
@@ -27,4 +27,3 @@ This document is intentionally narrow. It captures the current screen/component 
 - The live implementation already covers the core Studio shell, the main 3D workspace, replay, compare, and camera wall modes.
 - The remaining work is mostly polish, canonical surfacing, and consistency rather than building entirely new screens from scratch.
 - Any new screen proposal should be checked against this table first.
-

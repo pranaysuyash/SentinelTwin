@@ -64,19 +64,24 @@ export function useAiCommand() {
     if (!userText.trim()) return;
 
     const { apiKeyAvailable } = checkApiKey();
-    if (!apiKeyAvailable) {
-      setStatusSafe({ state: "error", message: "OpenAI API key not configured. Set OPENAI_API_KEY or NEXT_PUBLIC_OPENAI_API_KEY in your environment." });
-      return;
-    }
 
     // Check for special internal commands first
     if (userText.startsWith("/")) {
       const cmd = userText.toLowerCase().trim();
+      const rootCommand = cmd.split(/\s+/)[0] ?? "";
+      const commandArg = cmd.split(/\s+/).slice(1).join(" ").trim().replace(/-/g, "_");
       const store = useStudioStore.getState();
 
+      const setWorkspaceMode = (mode: "map" | "wall" | "replay" | "camera_view" | "compare") => {
+        store.setViewMode(mode);
+        setStatusSafe({ state: "success", message: `Switched to ${mode.replace("_", " ")} mode` });
+        autoDismiss();
+      };
+
       // Parameterized: /target <type> — sets targetType on all critical zones
-      if (cmd.startsWith("/target")) {
+      if (rootCommand === "/target") {
         const ARG_ALIASES: Record<string, CriticalZoneNode["targetType"]> = {
+          all: "person_detection",
           face: "face_recognition",
           face_recognition: "face_recognition",
           face_id: "face_identification",
@@ -89,25 +94,51 @@ export function useAiCommand() {
           package_detection: "package_detection",
           cash: "cash_counter_activity",
           door: "door_entry_exit",
+          entry: "door_entry_exit",
+          entry_exit: "door_entry_exit",
           perimeter: "perimeter_breach",
           person: "person_detection",
           person_detection: "person_detection",
         };
-        const arg = cmd.replace("/target", "").trim().replace(/-/g, "_");
-        const resolved = ARG_ALIASES[arg];
+        const resolved = ARG_ALIASES[commandArg];
         if (resolved) {
           store.setAllZoneTargetTypes(resolved);
           setStatusSafe({ state: "success", message: `Zone target type set to "${resolved}"` });
-        } else if (arg === "") {
+        } else if (commandArg === "") {
           setStatusSafe({ state: "error", message: "Usage: /target <face | face_recognition | face_identification | vehicle_detection | license_plate>" });
         } else {
-          setStatusSafe({ state: "error", message: `Unknown target type "${arg}". Valid: face, face_recognition, face_identification, vehicle_detection, license_plate` });
+          setStatusSafe({ state: "error", message: `Unknown target type "${commandArg}". Valid: face, face_recognition, face_identification, vehicle_detection, license_plate` });
         }
         autoDismiss();
         return;
       }
 
-      switch (cmd) {
+      if (rootCommand === "/privacy") {
+        if (commandArg === "on") {
+          store.setLayerVisibility("privacy_zones", true);
+          setStatusSafe({ state: "success", message: "Privacy zones enabled" });
+          autoDismiss();
+          return;
+        }
+        if (commandArg === "off") {
+          store.setLayerVisibility("privacy_zones", false);
+          setStatusSafe({ state: "success", message: "Privacy zones hidden" });
+          autoDismiss();
+          return;
+        }
+        if (commandArg === "toggle") {
+          const next = !store.layerVisibility.privacy_zones;
+          store.setLayerVisibility("privacy_zones", next);
+          setStatusSafe({ state: "success", message: `Privacy zones ${next ? "enabled" : "hidden"}` });
+          autoDismiss();
+          return;
+        }
+        setStatusSafe({ state: "error", message: "Usage: /privacy <on | off | toggle>" });
+        autoDismiss();
+        return;
+      }
+
+      switch (rootCommand) {
         case "/night":
         case "/nightmode":
           store.setEnvironmentMode("night");
@@ -126,15 +157,32 @@ export function useAiCommand() {
           setStatusSafe({ state: "success", message: "Switched to day mode" });
           autoDismiss();
           return;
+        case "/map":
+        case "/mapview":
+          setWorkspaceMode("map");
+          return;
+        case "/wall":
+        case "/camerawall":
+        case "/camera-wall":
+          setWorkspaceMode("wall");
+          return;
+        case "/replay":
+        case "/pathreplay":
+          setWorkspaceMode("replay");
+          return;
+        case "/camera":
+        case "/cameraview":
+        case "/camera-view":
+          setWorkspaceMode("camera_view");
+          return;
         case "/report":
           store.setBottomTab("report");
           setStatusSafe({ state: "success", message: "Opened report panel" });
           autoDismiss();
           return;
         case "/compare":
-          store.setBottomTab("beforeafter");
-          setStatusSafe({ state: "success", message: "Opened comparison panel" });
-          autoDismiss();
+        case "/beforeafter":
+          setWorkspaceMode("compare");
           return;
         case "/snapshot":
           store.saveSnapshot(`Snapshot ${new Date().toLocaleTimeString()}`);
@@ -143,11 +191,7 @@ export function useAiCommand() {
           return;
         case "/simulate":
         case "/run":
-          store.setSimulationRunning(true);
-          setTimeout(() => {
-            const result = simulateStudio(store.scene);
-            store.setSimulationResult(result, 0);
-          }, 50);
+          store.runSimulation();
           setStatusSafe({ state: "success", message: "Simulation started" });
           autoDismiss();
           return;
@@ -255,6 +299,11 @@ export function useAiCommand() {
           autoDismiss();
           return;
       }
+    }
+
+    if (!apiKeyAvailable) {
+      setStatusSafe({ state: "error", message: "OpenAI API key not configured. Set OPENAI_API_KEY or NEXT_PUBLIC_OPENAI_API_KEY in your environment." });
+      return;
     }
 
     setStatusSafe({ state: "parsing" });
@@ -498,25 +547,26 @@ export function useAiCommand() {
 
   const applyCandidate = useCallback((ops: CounterfactualCandidate["operations"]) => {
     const storeState = useStudioStore.getState();
+    const logEntries: string[] = [];
     for (const op of ops) {
       const typedOp = op as { type: string };
       switch (typedOp.type) {
         case "move_obstruction": {
           const o = op as { obstructionId: string; newPosition: [number, number, number] };
           const obs = storeState.scene.obstructions.find((x) => x.id === o.obstructionId);
-          if (obs) { obs.position = o.newPosition; storeState.markDirty(); }
+          if (obs) { obs.position = o.newPosition; storeState.markDirty(); logEntries.push(`Moved ${obs.label} to (${o.newPosition.map((n) => n.toFixed(1)).join(", ")})`); }
           break;
         }
         case "rotate_camera": {
           const o = op as { cameraId: string; yawDeg: number; pitchDeg?: number };
           const cam = storeState.scene.cameras.find((x) => x.id === o.cameraId);
-          if (cam) { cam.yawDeg = o.yawDeg; if (o.pitchDeg !== undefined) cam.pitchDeg = o.pitchDeg; storeState.markDirty(); }
+          if (cam) { cam.yawDeg = o.yawDeg; if (o.pitchDeg !== undefined) cam.pitchDeg = o.pitchDeg; storeState.markDirty(); logEntries.push(`Rotated ${cam.name} ${o.pitchDeg !== undefined ? `${o.yawDeg}° yaw, ${o.pitchDeg}° pitch` : `${o.yawDeg}° yaw`}`); }
           break;
         }
         case "toggle_camera": {
           const o = op as { cameraId: string; status: "on" | "off" };
           const cam = storeState.scene.cameras.find((x) => x.id === o.cameraId);
-          if (cam) { cam.status = o.status; storeState.markDirty(); }
+          if (cam) { cam.status = o.status; storeState.markDirty(); logEntries.push(`Turned ${o.status === "on" ? "on" : "off"} ${cam.name}`); }
           break;
         }
         case "add_light": {
@@ -524,29 +574,30 @@ export function useAiCommand() {
           const light = createSecurityLightNode(o.position);
           storeState.scene.securityLights.push(light);
           storeState.markDirty();
+          logEntries.push(`Added light at (${o.position.map((n) => n.toFixed(1)).join(", ")})`);
           break;
         }
         case "move_camera": {
           const o = op as { cameraId: string; newPosition: [number, number, number] };
           const cam = storeState.scene.cameras.find((x) => x.id === o.cameraId);
-          if (cam) { cam.position = o.newPosition; storeState.markDirty(); }
+          if (cam) { cam.position = o.newPosition; storeState.markDirty(); logEntries.push(`Moved ${cam.name} to (${o.newPosition.map((n) => n.toFixed(1)).join(", ")})`); }
           break;
         }
         case "resize_obstruction": {
           const o = op as { obstructionId: string; newDimensions: [number, number, number] };
           const obs = storeState.scene.obstructions.find((x) => x.id === o.obstructionId);
-          if (obs) { obs.dimensions = o.newDimensions; storeState.markDirty(); }
+          if (obs) { obs.dimensions = o.newDimensions; storeState.markDirty(); logEntries.push(`Resized ${obs.label} to ${o.newDimensions.join("×")}m`); }
           break;
         }
         default:
           break;
       }
     }
-    storeState.setSimulationRunning(true);
-    setTimeout(() => {
-      const result = simulateStudio(storeState.scene);
-      storeState.setSimulationResult(result, 0);
-    }, 50);
+    // Log the changes
+    for (const entry of logEntries) {
+      storeState.logChange(entry);
+    }
+    storeState.runSimulation();
     setStatusSafe({ state: "idle" });
   }, [setStatusSafe]);
 

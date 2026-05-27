@@ -1038,6 +1038,33 @@ reference to the new path, then remove the old."
 - **Keep visibility only in timeline tab** — rejected because users in camera mode lose route outcome context.
 - **Show only raw seconds** — rejected because percentage+status communicates risk faster.
 
+### D-063: Guided launcher CTAs should be outcome-first and state-aware
+**Date:** 2026-05-27
+
+**Decision:** Updated launcher 5-step copy and CTA labels to emphasize outcomes (assumptions, baseline check, stress, hardening, export), and disabled `Failure Drill` / `Test Cheapest Fix` when their prerequisites are missing.
+
+**Rationale:**
+- Docs/design flow called for an actionable sequence, not generic navigation text.
+- Outcome-focused wording improves first-run clarity for operators/auditors.
+- Disabled-state guardrails prevent dead-clicks and explain what must be configured first.
+
+**Alternatives rejected:**
+- **Keep generic labels** — rejected because they under-explain intent.
+- **Allow all actions regardless of scene state** — rejected because it creates avoidable user confusion.
+
+### D-064: Camera Wall should expose per-camera route visibility status
+**Date:** 2026-05-27
+
+**Decision:** Camera wall live-feed overlays now display per-camera route visibility percentage and quality-tier labels (strong/partial/weak), plus route-context badge in the wall header.
+
+**Rationale:**
+- The demo/context docs emphasize route viability as a primary outcome signal.
+- Showing this per tile makes the wall actionable without switching views for each camera.
+
+**Alternatives rejected:**
+- **Keep route context only at wall-header level** — rejected because tile-level variation is hidden.
+- **Display only quality without visibility ratio** — rejected because the time-visible dimension is core to route analysis.
+
 ### D-058: Guided scan intake should be a dedicated manual-assisted launch path that compiles into `scan_import`
 **Date:** 2026-05-27
 
@@ -1052,3 +1079,75 @@ reference to the new path, then remove the old."
 - **Fold scan-first into the floor-plan importer** — rejected because floor plans and site-photo intake are different user intents and require different review UX.
 - **Create a separate scan scene model** — rejected because it would fragment the product around multiple truth sources.
 - **Delay scan intake until AI segmentation is available** — rejected because the user asked for an end-to-end product flow now, and the manual-assisted path is already valuable without AI.
+
+### D-065: Compare mode must render selected snapshot geometry for visual truth
+**Date:** 2026-05-27
+
+**Decision:** `CompareView` scene panels now render `snapshot.scene` for each selected scenario, rather than always using the current store scene geometry.
+
+**Rationale:**
+- Product claim in compare mode is before/after visual truth; using current geometry for both sides can misrepresent scenario deltas.
+- Snapshot simulation cells and snapshot geometry must stay aligned in the same panel to maintain operator trust.
+
+**Alternatives rejected:**
+- **Keep current-scene geometry + only swap heatmap data** — rejected because it creates visually false comparisons.
+- **Hide geometry and show only metrics** — rejected because the core use-case is spatial before/after analysis.
+
+### D-066: Launcher should expose explicit feature maturity labels in-product
+**Date:** 2026-05-27
+
+**Decision:** Added a `Product Feature Status` panel on the launcher with `Available`, `Preview`, and `Planned` labels for key capability groups.
+
+**Rationale:**
+- Reduces confusion between prototype-ready and production-ready surfaces.
+- Keeps docs and UX aligned with honest product framing.
+- Helps demo operators avoid claiming unavailable flows as complete.
+
+**Alternatives rejected:**
+- **Keep maturity labels only in docs** — rejected because operators need this truth in the running app.
+- **Hide planned features completely** — rejected because roadmap visibility is useful when explicitly labeled as planned.
+
+### D-067: Scene intelligence should be a derived provenance graph layered on top of SecurityScene
+**Date:** 2026-05-27
+
+**Decision:** Added a derived `sceneIntelligenceGraph` in the studio store and surfaced it as a `PROVENANCE` bottom-panel tab that summarizes scene source lineage, entity counts, revision depth, snapshots, and simulation linkages without introducing a second scene model.
+
+**Rationale:**
+- The product needs a visible intelligence spine, not just more input modes, so operators can understand where scene data came from and how simulation validated it.
+- Keeping the graph derived from `SecurityScene` preserves the single-source-of-truth rule and avoids parallel representations of the scene.
+- Surfacing the graph in-product makes provenance, confidence, and evidence feel like first-class product concepts rather than hidden developer state.
+
+**Alternatives rejected:**
+- **Store provenance only in docs** — rejected because the product should make the scene spine visible to users and reviewers.
+- **Create a separate graph-backed scene model** — rejected because it would fragment the canonical scene data model.
+- **Delay provenance until live AI perception exists** — rejected because the derived graph is already useful with manual, scan, import, and simulation data.
+
+### D-068: Bottom drawer and full-canvas modes should surface current-state evidence, not just raw tab content
+**Date:** 2026-05-27
+
+**Decision:** Kept `BottomPanel` as the analysis drawer but made the hidden analysis routes explicit (`counterfactual`, `threat`) and added stronger mode-aware summary surfaces in `ScenarioPathPanel`, `CameraViewMode`, `CameraWallView`, and `PathReplayView` so each mode explains current state, best camera, quality reason, and next action.
+
+**Rationale:**
+- The user feedback was not about missing capability, but about visual hierarchy and clarity of evidence.
+- Exposing hidden tabs keeps the drawer honest and discoverable without flattening the architecture into one generic dashboard.
+- Mode-specific current-state overlays make camera replay, wall, and path analysis read like security-simulation tools rather than generic media panels.
+
+**Alternatives rejected:**
+- **Hide the extra analysis routes again** — rejected because the capability already exists and should be discoverable.
+- **Merge camera/wall/replay into one universal view** — rejected because each mode has a distinct operator job.
+- **Push all “why” data only into the inspector** — rejected because the bottom drawer and full-canvas modes also need immediate context.
+
+### D-069: Camera-wall rendering should prefer low-power demand updates, and command shortcuts should switch workspace state directly
+**Date:** 2026-05-27
+
+**Decision:** Switched camera wall and camera feed canvases to demand rendering with reduced device-pixel ratios and low-power WebGL hints, while extending the in-app command bar to drive workspace, privacy-zone, and simulation state directly (`/map`, `/wall`, `/replay`, `/camera-view`, `/compare`, `/privacy`, `/target`, `/simulate`, `/snapshot`).
+
+**Rationale:**
+- Camera wall is read-mostly and the previous always-on multi-canvas path was unnecessarily expensive on lower-end devices.
+- Workspace and analysis commands should mutate the same canonical store actions as the toolbar, not live in a separate command-specific code path.
+- Privacy-zone toggles and target-type changes are part of the simulation truth model, so command shortcuts should hit the same store methods as direct UI actions.
+
+**Alternatives rejected:**
+- **Keep the camera wall always-on** — rejected because it wastes GPU on an otherwise static dashboard.
+- **Implement command shortcuts as UI-only state** — rejected because the commands need to affect the same simulation/workspace truth as the toolbar.
+- **Hide privacy/target controls behind only one surface** — rejected because the operator workflow needs both visible controls and command-driven access.

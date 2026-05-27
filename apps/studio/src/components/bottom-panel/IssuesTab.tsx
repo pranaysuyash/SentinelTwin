@@ -248,6 +248,16 @@ export function IssuesTab() {
                   <ChevronRight className="w-3 h-3 text-blue-400 mt-0.5 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <span className="text-[10px] text-[#8090a8]">{rec.description}</span>
+                    {rec.type ? (
+                      <div className="mt-1 text-[8px] uppercase tracking-[0.12em] text-[#4a5568]">
+                        Cause: {rec.type.replace(/_/g, " ")}
+                      </div>
+                    ) : null}
+                    {rec.affectedNodeId ? (
+                      <div className="mt-0.5 text-[8px] text-[#68738a]">
+                        Evidence: affects <span className="text-[#c7d0e4]">{rec.affectedNodeId}</span>
+                      </div>
+                    ) : null}
                     {canFix && (
                       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                         {canPreview && !isPreviewActive ? (

@@ -27,7 +27,7 @@ export type TransformableNode =
   | PrivacyZoneNode
   | ScenarioPath;
 
-type HandleKind = "move" | "rotate" | "height" | "pitch" | "scale_x" | "scale_z" | "wall_start" | "wall_end" | "vertex" | "path_point";
+type HandleKind = "move" | "rotate" | "height" | "pitch" | "scale_x" | "scale_z" | "wall_start" | "wall_end" | "vertex" | "path_point" | "path_insert";
 
 type DragState = {
   handle: HandleKind;
@@ -108,6 +108,16 @@ function getObstructionAxis(rotationYDeg: number) {
     xAxis: [Math.cos(angle), Math.sin(angle)] as Point2,
     zAxis: [-Math.sin(angle), Math.cos(angle)] as Point2,
   };
+}
+
+function insertPathPoint(path: ScenarioPath, insertIndex: number, position: Point2): ScenarioPath {
+  const next = structuredClone(path) as ScenarioPath;
+  const points = [...next.points];
+  points.splice(insertIndex, 0, {
+    position,
+  });
+  next.points = points;
+  return next;
 }
 
 function updateDraft(
@@ -401,15 +411,40 @@ export function TransformHandles() {
   const beginDrag = (handle: HandleKind, index?: number) => (event: ReactPointerEvent) => {
     event.stopPropagation();
     const startWorld = getPointFromEvent(event.nativeEvent, camera, size, raycaster, 0) ?? getCenterForNode(selected);
+    let baseNode = selected;
+    let nextHandle = handle;
+    let nextIndex = index;
+
+    if (handle === "path_insert" && selected.nodeType === "path" && index !== undefined) {
+      const inserted = insertPathPoint(selected, index + 1, startWorld);
+      baseNode = inserted;
+      nextHandle = "path_point";
+      nextIndex = index + 1;
+      const initialPreview = cloneNode(inserted);
+      previewRef.current = initialPreview;
+      setPreview(initialPreview);
+      dragRef.current = {
+        handle: nextHandle,
+        index: nextIndex,
+        startClient: { x: event.clientX, y: event.clientY },
+        startWorld,
+        currentWorld: startWorld,
+        startNode: baseNode,
+      };
+      setEditorMode("transforming");
+      setSelectedHandle(`path_insert:${index}`);
+      return;
+    }
+
     dragRef.current = {
-      handle,
-      index,
+      handle: nextHandle,
+      index: nextIndex,
       startClient: { x: event.clientX, y: event.clientY },
       startWorld,
       currentWorld: startWorld,
-      startNode: selected,
+      startNode: baseNode,
     };
-    const initialPreview = cloneNode(selected);
+    const initialPreview = cloneNode(baseNode);
     previewRef.current = initialPreview;
     setPreview(initialPreview);
     setEditorMode("transforming");
@@ -534,6 +569,23 @@ export function TransformHandles() {
     return (
       <group>
         <HandleSphere position={[center[0], 0.06, center[1]]} color="#fb923c" onPointerDown={beginDrag("move")} label="Move" />
+        {points.slice(0, -1).map((point, index) => {
+          const nextPoint = points[index + 1]!;
+          const midpoint: [number, number, number] = [
+            (point[0] + nextPoint[0]) / 2,
+            0.06,
+            (point[1] + nextPoint[1]) / 2,
+          ];
+          return (
+            <HandleSphere
+              key={`insert-${node.id}-${index}`}
+              position={midpoint}
+              color="#38bdf8"
+              onPointerDown={beginDrag("path_insert", index)}
+              label="+"
+            />
+          );
+        })}
         {points.map((point, index) => (
           <HandleSphere
             key={`${node.id}-${index}`}

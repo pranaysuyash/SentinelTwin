@@ -1,6 +1,6 @@
 # Current Implementation State — Camera Studio
 
-**Updated:** 2026-05-27 (session 9: Coverage Fragility Field end-to-end, /target command, three-compat test fix)
+**Updated:** 2026-05-27 (session 12: command wiring + compare/export + privacy zones + low-power pass)
 **Source:** Direct code audit of apps/studio/src/
 **Purpose:** Accurate baseline of what is actually built, tested, and rendering.
 Use this instead of the earlier CAMERASTUDIO_GAP_ANALYSIS.md which was written
@@ -86,6 +86,7 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - importScene / exportScene with Zod validation ✅
 - Snapshots system with 4 pre-built demo snapshots ✅
 - Layer visibility (11 layers) ✅
+- `sceneIntelligenceGraph` derived from the canonical `SecurityScene` and rebuilt on scene edits, snapshot changes, simulation writes, undo/redo, import, and create-new flows ✅
 - `heatmapMode: "quality" | "fragility"` — store-backed heatmap mode with `setHeatmapMode` action ✅
 - Environment mode (day/dusk/night) ✅
 - Active tool tracking ✅
@@ -110,6 +111,7 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - "New Scene..." opens SceneBuilderWizard modal with template/blank/floor-plan creation ✅
 - SceneBuilderWizard (560 lines) was dead code — now wired into TopBar as modal overlay ✅
 - 5 scene templates accessible from wizard: retail-shop, open-office, warehouse, classroom, parking-garage ✅
+- Floor-plan import scale control now feeds the actual extractor config instead of acting as a dead UI field ✅
 - TopBar scene menu now also exposes `Scan a Site...`, which opens the dedicated manual-assisted scan intake flow and compiles into a canonical `scan_import` scene ✅
 
 ### Scan-to-scene intake — built and visible
@@ -118,6 +120,15 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - `apps/studio/src/lib/scene-skeleton.ts` centralizes the blank-scene shell used by both new-scene creation and scan compilation ✅
 - `apps/studio/src/lib/scan-to-scene.ts` converts scan candidates into real `SecurityScene` nodes without introducing a parallel scene model ✅
 - Scan sessions remain separate from the final scene until compile, and the UI labels the flow as manual-assisted rather than claiming AI perception ✅
+
+### Launcher resume / status surface — now explicit
+- Launcher page now exposes a workspace-resume card with direct resume, coverage entry, and saved-scene shortcuts pulled from local storage ✅
+- Product feature status is visible on the launcher with an entry-flow row and explicit available/preview/planned maturity labels ✅
+- AI layout draft launcher modal now warns that the generated scene replaces the current workspace and discloses the model-backed vs heuristic fallback path ✅
+
+### Scene intelligence / provenance spine — visible
+- `sceneIntelligenceGraph` now summarizes source lineage, entity counts, revision depth, snapshots, and simulation linkages as a derived store field ✅
+- `PROVENANCE` bottom-panel tab exposes the scene spine in-product so operators can inspect the canonical scene source, assumptions, snapshots, and source distribution without leaving the studio ✅
 
 ### WorkspaceCanvas — good 3D foundation with view-mode shell wired
 - Instanced mesh heatmap with quality/fragility mode toggle ✅
@@ -137,6 +148,7 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - View mode switching now routes through `StudioShell` for Map View / Camera View / Camera Wall / Path Replay / Compare ✅
 - Full-canvas view modes are wired for the canvas shell ✅
 - Camera View mode is a dedicated full-canvas single-camera POV with a live HUD, DORI overlay card, mode filters, overlay toggles, camera header navigation, and a back-to-map control ✅
+- Camera View mode now also renders the replay actor in the POV with a screen-space detection box and tighter CCTV-style exposure tuning so the subject reads in-frame like the reference footage ✅
 - Camera Wall mode now uses an adaptive live feed grid (selected-first, active-first) with 1-6 camera feeds plus a 3D map overview slot and active/offline counters ✅
 - Compare mode now renders side-by-side baseline/proposed 3D panels with delta cards, issue/recommendation notes, a quality-over-time trend, and scenario notes ✅
 - Compare mode now exposes explicit Scenario A / Scenario B selectors so comparison pairs do not drift silently when new snapshots are saved ✅
@@ -148,6 +160,7 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - The scene workbench now has shared grouped selection state, shift/meta multi-select, and drag-select bounds so the canvas can capture more than one object without losing the primary inspector selection ✅
 - The scene workbench now supports grouped move/delete/duplicate operations from the shared selection model, so multi-select behaves like a real edit set instead of just a visual highlight ✅
 - The workbench transform layer now exposes obstruction width/depth resize handles and camera pitch affordances in addition to move/rotate/height controls ✅
+- Path editing now includes segment-insert handles, so routes can be reshaped from the middle instead of only dragging existing waypoints ✅
 - View mode switching is implemented for Map / Camera View / Camera Wall / Path Replay ✅
 - Path replay animation and actor playback are implemented in the dedicated replay view ✅
 - Path replay now renders replay-proof overlays: legalized samples avoid obvious obstruction overlap, the scene shows camera frustums, and the floor is tiled so breach/collision explanations read directly from the canvas ✅
@@ -204,6 +217,7 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 ### BottomPanel tabs — mostly complete
 
 - BottomPanel tab strip now also surfaces `REDUNDANCY`, matching the existing render branch so redundancy analysis is reachable without hidden state changes ✅
+- BottomPanel tab strip now also surfaces `PROVENANCE`, which renders the derived scene intelligence graph as a visible provenance spine instead of a hidden debug-only structure ✅
 
 **MetricsTab** ✅
 - 7 core metric cards: coverage, critical zones, cameras, avg quality, worst area, recognition %, identification %
@@ -217,6 +231,10 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - Affected zones / cameras displayed
 - Recommendations list
 - Recommendation actions now include `Preview Fix`, `Apply Fix`, and `Revert Preview` for verified transform recommendations ✅
+
+**ThreatAnalysisPanel** ✅
+- `Run Coverage Failure Analysis` now calls the shared simulation recompute path instead of only revealing cached details ✅
+- The panel auto-refreshes its breakdown from the latest `simulationResult`, so the route metrics and waypoint ribbon always reflect the current scene state ✅
 
 **TimelineTab** ✅
 - Active authored path selector
@@ -245,6 +263,14 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 **DebugTab** ✅
 - Toggle switches for all 11 layers
 - Simulation debug stats (coverage %, quality breakdown, issues count)
+
+### Analysis drawer and current-state overlays ✅
+- BottomPanel now exposes `COUNTERFACTUAL` and `THREAT REVIEW` in the visible tab strip instead of leaving those routes hidden behind inactive branches ✅
+- BottomPanel also includes stronger mode-aware summary headers for wall and compare modes so the drawer reads like a deliberate analysis surface ✅
+- ScenarioPathPanel now shows no-path, no-simulation, and current-issue states so the route summary remains useful even before simulation data exists ✅
+- CameraViewMode now explains the current quality with a reason line, plus replay quality/segment context and best-camera handoff inside the feed HUD ✅
+- CameraWallView now highlights the best camera feed in both the header and the tile chrome ✅
+- PathReplayView now includes a current-state card with time, segment, quality, best camera, and next event so replay reads like an analysis mode, not a raw playhead ✅
 
 ### ScenarioPathPanel ✅
 - Active path selector wired to `activePathId`
@@ -315,7 +341,7 @@ In the reference, the right inspector (Camera 1 selected, View tab) shows:
 - VIEW OPTIONS: Show DORI Labels, Show Path Actor, Show Zones, Show Timestamp, Show Bounding Box (checkboxes)
 - DORI OVERLAY (At Target): "OBSERVATION" / "62.5–125 PPM"
 - TARGET INFO: Target Type, Distance, PPM (est.), Angle from center, Lighting
-Current CameraFeedCanvas now exposes a DORI overlay card and local view-mode controls, but it still does not expose the full set of view-option toggles or a live target-actor overlay. That richer HUD lives in `camera_view`.
+Current CameraFeedCanvas now exposes a DORI overlay card and local view-mode controls, while `camera_view` carries the richer CCTV HUD with the tracked actor overlay, path visibility, and zone overlays.
 
 ### [MISS-10] Scenario/Path panel showing full active scenario details ⚠️
 Reference shows right panel with:
@@ -332,16 +358,11 @@ presentation parity versus the reference screenshot.
 
 ## Current follow-up work
 
-The reference-image feature set is now fully built. All major gaps are closed.
-Remaining work is polish, novel algorithms, and V0.2 features:
+The reference-image feature set is now fully built. The remaining work is now narrower: novel algorithms, deeper V0.2 work, and any future pixel-tight polish.
 
-1. Actor overlay in the camera feed POV itself is still missing; replay actor visibility exists in replay/map contexts only.
-2. Camera wall performance still needs a real low-end GPU pass because the current layout uses multiple live canvases.
-3. Compare mode is functional, but the shell could still use tighter visual polish and export affordances.
-4. Global target-type switcher (per-zone switcher exists with 9 types).
-5. Command bar not wired to simulation actions.
-6. Privacy zone rendering not implemented.
-7. Novel algorithms: Coverage Fragility Field, K-Robustness, Placement Oracle, Temporal Anomaly Detection.
+1. Novel algorithms: Coverage Fragility Field, K-Robustness, Placement Oracle, Temporal Anomaly Detection.
+2. V0.2 feature expansion and any later model-integration work.
+3. Future pixel-level polish only if a new reference introduces a new mismatch.
 
 ---
 

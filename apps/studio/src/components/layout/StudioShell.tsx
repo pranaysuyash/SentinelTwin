@@ -222,7 +222,7 @@ export default function StudioShell() {
       }
       return;
     }
-  }, [activeTool, createNewScene, duplicateNode, redo, removeSelectedNodes, saveSceneToStorage, selectedNodeId, selectedNodeIds.length, setActiveTool, setViewMode, setWorkspacePreset, undo, viewMode]);
+  }, [activeTool, createNewScene, duplicateNode, redo, removeSelectedNodes, saveSceneToStorage, selectedNodeId, selectedNodeIds, setActiveTool, setViewMode, setWorkspacePreset, undo, viewMode]);
 
   useEffect(() => {
     window.addEventListener("keydown", handleKeyDown);

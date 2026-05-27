@@ -1,16 +1,28 @@
 # Phase 6: Demoware Completion — UI & Polish
 
-**Status:** ✅ Complete (2026-05-29)
+**Status:** 🚧 In Progress (updated 2026-05-27)
 **Depends on:** Phases 0–5 (all delivered)
-**Opens:** Product demo readiness
+**Opens:** Product demo readiness after remaining gaps are closed
 
 ---
 
 ## Goal
 
-Close all remaining UI gaps identified in the gap analysis (CAMERASTUDIO_GAP_ANALYSIS.md).
-Every item here makes the product more presentable for demos, more usable for walkthroughs,
-and closer to a production-quality security simulation tool.
+Close high-impact UI/product-shell gaps identified in the gap analysis (`CAMERASTUDIO_GAP_ANALYSIS.md`) with truthful status framing.
+Every item here should make demos more honest and workflows more executable.
+
+## Current truth snapshot (2026-05-27)
+
+- `Scene Management`: mostly done (`studio-store.ts`, top bar flows, import/export/snapshots working).
+- `Report Export`: partial (report-lite export exists; full product-grade export stack not complete).
+- `Camera Failures`: partially wired via failure drill + issues, not fully complete as a standalone matrix flow.
+- `Assumptions Panel`: partially done and editable, but broader authoring UX still incomplete.
+- `Visual Compare`: implemented with snapshot-true geometry rendering.
+- `Privacy/Redundancy`: partially implemented; not complete product surfaces.
+- `Keyboard shortcuts`: partially implemented.
+- `Preset/library and some inspector actions`: still incomplete.
+
+Do not mark this phase complete until all P0 requirements are verified against runtime behavior and docs are aligned.
 
 ---
 

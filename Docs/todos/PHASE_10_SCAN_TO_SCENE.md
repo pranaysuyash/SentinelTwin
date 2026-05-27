@@ -43,6 +43,10 @@ Enable users to create SecurityScenes from floor plan images, photos, or manual 
 - [x] **`scan-to-scene` compile helper**: Converts accepted scan candidates into real cameras, doors, windows, lights, obstructions, entry points, and critical zones
 - [x] **Manual-assisted honesty**: UI labels the flow as manual-assisted and does not claim AI segmentation/classification yet
 
+### P1.6 — Scene Intelligence / Provenance Spine
+- [x] **Derived provenance graph**: `sceneIntelligenceGraph` is rebuilt from `SecurityScene` and tracks source lineage, entities, snapshots, revision depth, and simulation linkages
+- [x] **Provenance tab**: `PROVENANCE` bottom-panel view surfaces the graph so operators can inspect the scene spine in-product
+
 ### P2 — Scene Template System
 - [x] **Template definitions**: Pre-built scene configurations for common spaces
 - [x] **Template categories**: Retail, Office, Industrial, Education, Residential
@@ -75,9 +79,11 @@ Enable users to create SecurityScenes from floor plan images, photos, or manual 
 - `apps/studio/src/lib/scene-templates.ts` — scene template definitions
 - `apps/studio/src/lib/scene-skeleton.ts` — shared blank-scene constructor
 - `apps/studio/src/lib/scan-to-scene.ts` — scan candidate/session types and compile helper
+- `apps/studio/src/lib/scene-intelligence-graph.ts` — derived provenance graph builder
 - `apps/studio/src/components/scan-to-scene/SceneBuilderWizard.tsx` — wizard component
 - `apps/studio/src/components/scan-to-scene/ImportReview.tsx` — import result review
 - `apps/studio/src/components/scan-to-scene/ScanSiteWizard.tsx` — guided manual-assisted scan intake
+- `apps/studio/src/components/bottom-panel/SceneIntelligenceTab.tsx` — provenance graph tab
 - `apps/studio/src/store/studio-store.ts` — `importFromFloorPlan`, `importFromTemplate` actions
 - `apps/studio/src/components/layout/TopBar.tsx` — scene menu entries, including `Scan a Site...`
 - `apps/studio/src/app/page.tsx` — launcher screen with direct scan entry point

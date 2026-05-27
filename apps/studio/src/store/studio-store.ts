@@ -2,6 +2,7 @@ import { create } from "zustand";
 
 import { createSmallRetailShopScene, smallRetailShopScene } from "@/demo-scenes/small-retail-shop";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
+import { buildSceneIntelligenceGraph, type SceneIntelligenceGraph } from "@/lib/scene-intelligence-graph";
 import {
   type AnyEditableNode,
   type CameraNode,
@@ -63,7 +64,7 @@ export type EditorDraft = {
   selectedHandle?: string;
 };
 
-export type BottomTab = "metrics" | "issues" | "timeline" | "beforeafter" | "report" | "debug" | "counterfactual" | "threat" | "redundancy" | "temporal" | "assumptions";
+export type BottomTab = "metrics" | "issues" | "timeline" | "beforeafter" | "report" | "debug" | "counterfactual" | "threat" | "redundancy" | "temporal" | "assumptions" | "provenance";
 
 export type InspectorTab = "properties" | "view" | "status" | "analytics" | "failures";
 
@@ -177,6 +178,7 @@ export type StudioStoreState = {
   environmentMode: "day" | "night" | "dusk";
   showDebugOverlays: boolean;
   autoRecompute: boolean;
+  cameraFailures: string[];
   temporalProfile: TemporalSecurityProfile | null;
   temporalScrubHour: number;
   temporalScrubMinute: number;
@@ -240,6 +242,8 @@ export type StudioStoreState = {
   setEnvironmentMode: (mode: "day" | "night" | "dusk") => void;
   setAllZoneTargetTypes: (targetType: CriticalZoneNode["targetType"]) => void;
   toggleAutoRecompute: () => void;
+  toggleCameraFailure: (cameraId: string) => void;
+  clearAllCameraFailures: () => void;
 
   addNode: (node: AnyEditableNode) => void;
   updateNode: (id: string, patch: Partial<AnyEditableNode>) => void;
@@ -257,10 +261,14 @@ export type StudioStoreState = {
 
   setSimulationRunning: (running: boolean) => void;
   setSimulationResult: (result: SimulationResult, durationMs: number) => void;
+  runSimulation: () => void;
   markDirty: () => void;
+  logChange: (entry: string) => void;
+  clearChangeLog: () => void;
 
   counterfactualResult: SimulationResult | null;
   counterfactualObsId: string | null;
+  sceneIntelligenceGraph: SceneIntelligenceGraph;
   runCounterfactual: (obstructionId: string) => void;
   clearCounterfactual: () => void;
 
@@ -512,6 +520,40 @@ function cloneAndSetActivePath(scene: SecurityScene, activePathId: string | null
   return scene.paths.some((path) => path.id === activePathId) ? activePathId : null;
 }
 
+function buildSimulationState(
+  scene: SecurityScene,
+  result: SimulationResult,
+  durationMs: number,
+  revisionDepth: number,
+  snapshotCount: number,
+) {
+  const nextScene = cloneSecurityScene(scene);
+  nextScene.simulation = result;
+  nextScene.updatedAt = Date.now();
+
+  return {
+    scene: nextScene,
+    simulationResult: result,
+    simulationDirty: false,
+    simulationRunning: false,
+    lastRunMs: durationMs,
+    sceneIntelligenceGraph: buildGraphState(nextScene, result, revisionDepth, snapshotCount),
+  };
+}
+
+function buildGraphState(
+  scene: SecurityScene,
+  simulationResult: SimulationResult | null,
+  revisionDepth = 0,
+  snapshotCount = scene.snapshots.length,
+): SceneIntelligenceGraph {
+  return buildSceneIntelligenceGraph(scene, {
+    simulationResult,
+    revisionDepth,
+    snapshotCount,
+  });
+}
+
 const DEFAULT_LAYERS: LayerVisibility = {
   cameras: true, camera_cones: true, obstructions: true, lights: true,
   critical_zones: true, privacy_zones: true, paths: true, heatmap: true,
@@ -697,6 +739,7 @@ INITIAL_SCENE.snapshots = INITIAL_SNAPSHOTS.map((snapshot) => ({
   ...snapshot,
   scene: structuredClone(snapshot.scene),
 }));
+const INITIAL_SCENE_INTELLIGENCE_GRAPH = buildGraphState(INITIAL_SCENE, null, 0, INITIAL_SNAPSHOTS.length);
 
 function getInitialViewMode(): ViewMode {
   if (typeof window === "undefined") return "map";
@@ -780,6 +823,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   environmentMode: "day",
   showDebugOverlays: false,
   autoRecompute: true,
+  cameraFailures: [],
   temporalProfile: null,
   temporalScrubHour: 10,
   temporalScrubMinute: 0,
@@ -790,6 +834,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   hoveredMapNodeId: null,
   focusScenePointRequest: null,
   cameraPresetId: null,
+  sceneIntelligenceGraph: INITIAL_SCENE_INTELLIGENCE_GRAPH,
   historyPast: [],
   historyFuture: [],
 
@@ -860,6 +905,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       return {
         scene: next,
         simulationDirty: true,
+        sceneIntelligenceGraph: buildGraphState(next, s.simulationResult, s.historyPast.length + 1, s.snapshots.length),
         ...setSelectionState(next, s.selectedNodeIds),
         activePathId: cloneAndSetActivePath(next, s.activePathId),
         historyPast: [...s.historyPast, cloneSecurityScene(s.scene)],
@@ -876,6 +922,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       activePathId: cloneAndSetActivePath(previous, s.activePathId),
       ...setSelectionState(previous, s.selectedNodeIds),
       simulationDirty: true,
+      sceneIntelligenceGraph: buildGraphState(previous, s.simulationResult, s.historyPast.length - 1, s.snapshots.length),
       historyPast: s.historyPast.slice(0, -1),
       historyFuture: [cloneSecurityScene(s.scene), ...s.historyFuture],
     };
@@ -889,6 +936,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       activePathId: cloneAndSetActivePath(nextScene, s.activePathId),
       ...setSelectionState(nextScene, s.selectedNodeIds),
       simulationDirty: true,
+      sceneIntelligenceGraph: buildGraphState(nextScene, s.simulationResult, s.historyPast.length + 1, s.snapshots.length),
       historyPast: [...s.historyPast, cloneSecurityScene(s.scene)],
       historyFuture: s.historyFuture.slice(1),
     };
@@ -1049,13 +1097,20 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   setHeatmapMode: (mode) => set({ heatmapMode: mode }),
   setEnvironmentMode: (mode) => set({ environmentMode: mode }),
   setAllZoneTargetTypes: (targetType) =>
-    set((s) => ({
-      scene: {
-        ...s.scene,
-        criticalZones: s.scene.criticalZones.map((z) => ({ ...z, targetType })),
-      },
-    })),
+    useStudioStore.getState().commitSceneChange((scene) => ({
+      ...scene,
+      criticalZones: scene.criticalZones.map((z) => ({ ...z, targetType })),
+    }), `Set all critical zones target type to ${targetType}`),
   toggleAutoRecompute: () => set((s) => ({ autoRecompute: !s.autoRecompute })),
+
+  toggleCameraFailure: (cameraId) =>
+    set((s) => {
+      const failures = s.cameraFailures.includes(cameraId)
+        ? s.cameraFailures.filter((id) => id !== cameraId)
+        : [...s.cameraFailures, cameraId];
+      return { cameraFailures: failures, simulationDirty: true };
+    }),
+  clearAllCameraFailures: () => set({ cameraFailures: [], simulationDirty: true }),
 
   setTemporalProfile: (profile) => set({ temporalProfile: profile }),
   setTemporalScrub: (hour, minute) => {
@@ -1088,6 +1143,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     set((state) => ({
       scene: next,
       simulationDirty: true,
+      sceneIntelligenceGraph: buildGraphState(next, state.simulationResult, state.historyPast.length + 1, state.snapshots.length),
       selectedNodeId: duplicatedIds[0] ?? null,
       selectedNodeIds: duplicatedIds,
       activePathId: cloneAndSetActivePath(next, state.activePathId),
@@ -1126,13 +1182,45 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
 
   setSimulationRunning: (running) => set({ simulationRunning: running }),
   setSimulationResult: (result, durationMs) =>
-    set((s) => {
-      const scene = cloneSecurityScene(s.scene);
-      scene.simulation = result;
-      scene.updatedAt = Date.now();
-      return { scene, simulationResult: result, simulationDirty: false, simulationRunning: false, lastRunMs: durationMs };
-    }),
+    set((s) => buildSimulationState(s.scene, result, durationMs, s.historyPast.length, s.snapshots.length)),
+  runSimulation: () => {
+    const state = get();
+    if (state.simulationRunning) return;
+
+    const sceneVersion = state.scene.updatedAt;
+    const sceneSnapshot = cloneSecurityScene(state.scene);
+
+    set({ simulationRunning: true });
+
+    setTimeout(() => {
+      try {
+        const start = performance.now();
+        const result = simulateStudio(sceneSnapshot);
+        const durationMs = Math.round(performance.now() - start);
+
+        if (get().scene.updatedAt !== sceneVersion) {
+          console.warn("[simulation] discarded stale result because the scene changed mid-run");
+          set({ simulationRunning: false });
+          return;
+        }
+
+        const current = get();
+        set(buildSimulationState(current.scene, result, durationMs, current.historyPast.length, current.snapshots.length));
+      } catch (err) {
+        console.error("[simulation] failed:", err);
+        set({ simulationRunning: false });
+      }
+    }, 30);
+  },
   markDirty: () => set({ simulationDirty: true }),
+  logChange: (entry) =>
+    set((state) => ({
+      scene: { ...state.scene, changeLog: [...state.scene.changeLog, entry] },
+    })),
+  clearChangeLog: () =>
+    set((state) => ({
+      scene: { ...state.scene, changeLog: [] },
+    })),
 
   counterfactualResult: null,
   counterfactualObsId: null,
@@ -1157,7 +1245,11 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         scene: cloneSecurityScene(parsed),
         simulation: result,
       };
-      return { snapshots: [...s.snapshots, snapshot] };
+      const snapshots = [...s.snapshots, snapshot];
+      return {
+        snapshots,
+        sceneIntelligenceGraph: buildGraphState(parsed, s.simulationResult, s.historyPast.length, snapshots.length),
+      };
     }),
 
   saveSnapshot: (label) =>
@@ -1173,7 +1265,11 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       const snapshots = [...s.snapshots, snapshot];
       const scene = cloneSecurityScene(parsed);
       scene.snapshots = snapshots;
-      return { snapshots, scene };
+      return {
+        snapshots,
+        scene,
+        sceneIntelligenceGraph: buildGraphState(scene, s.simulationResult, s.historyPast.length, snapshots.length),
+      };
     }),
 
   importScene: (json) => {
@@ -1205,6 +1301,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       activePathId: scene.paths[0]?.id ?? null,
       focusScenePointRequest: null,
       mapState: cloneDefaultMapState(),
+      sceneIntelligenceGraph: buildGraphState(scene, null, 0, scene.snapshots.length),
     });
     return { success: true };
   },
@@ -1229,6 +1326,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       activeTool: "select",
       historyPast: [],
       historyFuture: [],
+      sceneIntelligenceGraph: buildGraphState(scene, null, 0, (scene.snapshots ?? []).length),
       editor: {
         editorMode: "idle",
         draftWallStart: undefined,
@@ -1271,6 +1369,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       },
       historyPast: [],
       historyFuture: [],
+      sceneIntelligenceGraph: buildGraphState(blank, null, 0, 0),
     });
   },
 

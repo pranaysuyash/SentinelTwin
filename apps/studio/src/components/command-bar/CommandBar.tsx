@@ -191,7 +191,7 @@ export function CommandBar() {
         </div>
         {/* Slash commands */}
         <div className="mt-1.5 flex flex-wrap gap-1.5">
-          {["/dusk", "/compare", "/fail", "/fix", "/simulate", "/snapshot"].map((cmd) => (
+          {["/dusk", "/compare", "/replay", "/wall", "/camera-view", "/fail", "/fix", "/simulate", "/snapshot", "/privacy on", "/target license_plate"].map((cmd) => (
             <button
               key={cmd}
               onClick={() => {

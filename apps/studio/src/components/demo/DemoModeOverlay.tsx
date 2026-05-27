@@ -48,7 +48,7 @@ const DEMO_STEPS = [
   {
     title: "Coverage Failure Analysis & Fixes",
     description:
-      "The bottom panel shows detailed metrics, issues, and timeline. The FIXES tab uses AI to propose coverage improvements. Each fix is simulation-verified before you apply it. Run Coverage Failure Analysis to inspect the failure path.",
+      "The bottom panel shows detailed metrics, issues, and timeline. The FIXES tab uses AI to propose coverage improvements. Each fix is simulation-verified before you apply it. Open the Coverage Failure Breakdown to inspect the failure path.",
     icon: Route,
     highlight: "panel",
   },

@@ -1,6 +1,6 @@
 "use client";
 
-import { OrbitControls } from "@react-three/drei";
+import { Html, OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { ArrowLeft, Camera, ChevronLeft, ChevronRight, CircleSmall, VideoOff } from "lucide-react";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
@@ -142,25 +142,30 @@ function ReplayActor({
 
   return (
     <group position={[x, 0.02, z]} rotation={[0, yaw, 0]}>
-      <mesh position={[0, 0.86, 0]} castShadow>
-        <capsuleGeometry args={[0.13, 0.48, 4, 8]} />
-        <meshStandardMaterial color="#cfd6e3" roughness={0.7} metalness={0.05} />
+      <Html position={[0, 1.52, 0]} center distanceFactor={14} style={{ pointerEvents: "none" }}>
+        <div className="rounded-full border border-red-400/50 bg-black/75 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.2em] text-red-200 shadow-[0_0_24px_rgba(248,113,113,0.18)]">
+          Tracked Actor
+        </div>
+      </Html>
+      <mesh position={[0, 0.88, 0]} castShadow>
+        <capsuleGeometry args={[0.17, 0.62, 6, 10]} />
+        <meshStandardMaterial color="#e5ebf3" roughness={0.58} metalness={0.08} />
       </mesh>
-      <mesh position={[0, 1.16, 0]} castShadow>
-        <sphereGeometry args={[0.1, 10, 10]} />
-        <meshStandardMaterial color="#eef2f7" roughness={0.5} metalness={0.02} />
+      <mesh position={[0, 1.25, 0]} castShadow>
+        <sphereGeometry args={[0.13, 12, 12]} />
+        <meshStandardMaterial color="#f8fbff" roughness={0.35} metalness={0.04} />
       </mesh>
-      <mesh position={[0, 0.84, 0]} castShadow>
-        <boxGeometry args={[0.46, 1.7, 0.42]} />
-        <meshBasicMaterial color="#ef4444" transparent opacity={0.16} />
+      <mesh position={[0, 0.88, 0]} castShadow>
+        <boxGeometry args={[0.58, 1.9, 0.54]} />
+        <meshBasicMaterial color="#ef4444" transparent opacity={0.24} />
       </mesh>
-      <mesh position={[0, 0.84, 0]} castShadow>
-        <boxGeometry args={[0.46, 1.7, 0.42]} />
-        <meshBasicMaterial color="#ef4444" wireframe transparent opacity={0.86} />
+      <mesh position={[0, 0.88, 0]} castShadow>
+        <boxGeometry args={[0.58, 1.9, 0.54]} />
+        <meshBasicMaterial color="#f97316" wireframe transparent opacity={0.92} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.005, 0]}>
-        <ringGeometry args={[0.14, 0.3, 20]} />
-        <meshBasicMaterial color="#22c55e" transparent opacity={0.45} />
+        <ringGeometry args={[0.17, 0.35, 24]} />
+        <meshBasicMaterial color="#22c55e" transparent opacity={0.6} />
       </mesh>
     </group>
   );
@@ -246,10 +251,14 @@ export function ReplayStatusOverlay({
   pathLabel,
   timeS,
   speed,
+  qualityLabel,
+  segmentLabel,
 }: {
   pathLabel: string;
   timeS: number;
   speed: number;
+  qualityLabel?: string;
+  segmentLabel?: string;
 }) {
   return (
     <div className="absolute left-3 bottom-24 z-30 rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)] backdrop-blur-sm">
@@ -264,6 +273,16 @@ export function ReplayStatusOverlay({
         <div>
           <span className="text-[#6a748b]">Speed:</span> {speed.toFixed(1)}x
         </div>
+        {qualityLabel ? (
+          <div>
+            <span className="text-[#6a748b]">Quality:</span> {qualityLabel}
+          </div>
+        ) : null}
+        {segmentLabel ? (
+          <div className="max-w-[220px] truncate">
+            <span className="text-[#6a748b]">Segment:</span> {segmentLabel}
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -306,6 +325,7 @@ export function DoriInsightCard({
   distanceM,
   angleDeg,
   lightingLabel,
+  reasonLine,
 }: {
   camera: CameraNode;
   zoneLabel: string;
@@ -317,6 +337,7 @@ export function DoriInsightCard({
   distanceM: number;
   angleDeg: number;
   lightingLabel: string;
+  reasonLine: string;
 }) {
   const statusLabel =
     zoneStatus === "pass" ? "PASSES"
@@ -363,6 +384,9 @@ export function DoriInsightCard({
           <span className="text-[#6a748b]">Lighting</span>
           <span className="text-[#c7d0e4]">{lightingLabel}</span>
         </div>
+      </div>
+      <div className="mt-2 rounded-lg border border-[#1f2b42] bg-[#111521] px-2 py-1.5 text-[9px] text-[#8b96ab]">
+        Why this quality: {reasonLine}
       </div>
       <div className="mt-2 rounded-lg border border-[#1f2b42] bg-[#111521] px-2 py-1.5 text-[9px] text-[#8b96ab]">
         {camera.name} is being used to inspect the current coverage scenario.
@@ -653,6 +677,14 @@ export function CameraViewMode() {
   const theme = ENVIRONMENT_THEMES[envMode] ?? ENVIRONMENT_THEMES.day;
   const [feedMode, setFeedMode] = useState<CameraFeedMode>("normal");
   const [flags, setFlags] = useState<OverlayFlags>({ overlays: true, dori: true, path: false, zones: true, timestamp: true, grid: false });
+  const canvasFilter =
+    feedMode === "normal"
+      ? "brightness(0.82) contrast(1.08) saturate(0.92)"
+      : feedMode === "ir_bw"
+        ? "brightness(0.72) contrast(1.18) saturate(0.18)"
+        : feedMode === "low_light"
+          ? "brightness(0.65) contrast(1.1) saturate(0.8)"
+          : "brightness(0.78) contrast(1.22) saturate(1.1) sepia(0.08)";
   const pathTimeS = activePathResult && activePathResult.totalDurationS > 0
     ? pathReplay.progress * activePathResult.totalDurationS
     : 0;
@@ -692,13 +724,36 @@ export function CameraViewMode() {
       }))
       .sort((a, b) => QUALITY_RANK[b.quality as DoriQuality] - QUALITY_RANK[a.quality as DoriQuality])[0];
 
+    const reasonLine =
+      zoneResult?.status === "fail"
+        ? `Blocked or off-angle for ${distanceM.toFixed(1)}m at ${angleDeg.toFixed(0)}°`
+        : zoneResult?.status === "partial"
+          ? `Distance and angle limit the view to ${currentQuality}`
+          : `Camera geometry supports ${currentQuality} around the target`;
+
     return {
       distanceM,
       angleDeg,
       currentQuality,
+      reasonLine,
       bestCameraName: bestCameraName ? (scene.cameras.find((entry) => entry.id === bestCameraName.cameraId)?.name ?? bestCameraName.cameraId) : camera.name,
     };
   }, [camera, camResult, firstCriticalZone, result, scene.cameras]);
+
+  const activeTimelineEvent = useMemo(() => {
+    if (!activePathResult?.timeline?.length) return null;
+    const events = activePathResult.timeline.filter((event) => event.timeS <= pathTimeS);
+    return events[events.length - 1] ?? activePathResult.timeline[0] ?? null;
+  }, [activePathResult, pathTimeS]);
+
+  const replayQualityLabel = activeTimelineEvent?.quality
+    ? activeTimelineEvent.quality.toUpperCase()
+    : visibilityForCurrentCamera?.maxQuality
+      ? visibilityForCurrentCamera.maxQuality.toUpperCase()
+      : undefined;
+
+  const replaySegmentLabel = activeTimelineEvent?.reason
+    ?? (activePath ? `${activePath.label} active replay` : undefined);
 
   if (!camera) {
     return (
@@ -753,11 +808,11 @@ export function CameraViewMode() {
             }}
             shadows="percentage"
             gl={{ antialias: true, alpha: false }}
-            style={{ width: "100%", height: "100%" }}
+            style={{ width: "100%", height: "100%", filter: canvasFilter }}
           >
             <color attach="background" args={[theme.background]} />
             <Suspense fallback={null}>
-              <SceneFeedGeometry theme={theme} />
+              <SceneFeedGeometry theme={theme} showPrivacyZones />
             </Suspense>
             <CameraRigLive camera={camera} />
             {replayActorVisible && activePath ? (
@@ -772,6 +827,8 @@ export function CameraViewMode() {
               pathLabel={activePath.label}
               timeS={pathTimeS}
               speed={pathReplay.speed}
+              qualityLabel={replayQualityLabel}
+              segmentLabel={replaySegmentLabel}
             />
           ) : null}
           {activePathResult && visibilityForCurrentCamera ? (
@@ -794,6 +851,7 @@ export function CameraViewMode() {
               distanceM={zoneAnalysis.distanceM}
               angleDeg={zoneAnalysis.angleDeg}
               lightingLabel={envMode === "night" ? "Night" : envMode === "dusk" ? "Dusk" : "Day"}
+              reasonLine={zoneAnalysis.reasonLine}
             />
           ) : null}
           <BottomControlStrip mode={feedMode} onModeChange={setFeedMode} flags={flags} onFlagsChange={setFlags} onBackToMap={() => { setWorkspacePreset("edit"); setViewMode("map"); }} />

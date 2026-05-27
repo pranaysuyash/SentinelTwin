@@ -5,7 +5,9 @@ import { Canvas } from "@react-three/fiber";
 import { motion } from "framer-motion";
 import { ListRestart, Pause, Play, SkipBack, SkipForward } from "lucide-react";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { Ref } from "react";
 import * as THREE from "three";
+import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 
 import { QUALITY_ABBR, QUALITY_COLOR, QUALITY_RANK } from "@/lib/quality-display";
 import { useStudioStore } from "@/store/studio-store";
@@ -18,6 +20,7 @@ import {
   SceneDoors,
   SceneWindows,
   SceneObstructions,
+  ScenePrivacyZones,
   CoverageTileFloor,
   CoverageHeatmapInstanced,
   CoverageSegmentPath,
@@ -47,6 +50,7 @@ function SceneView() {
       <SceneDoors doors={scene.doors} />
       <SceneWindows windows={scene.windows} />
       <SceneObstructions obstructions={scene.obstructions} selectedId={selectedId} />
+      {scene.privacyZones.length > 0 ? <ScenePrivacyZones zones={scene.privacyZones} /> : null}
       {result?.coverageCells && (
         <CoverageHeatmapInstanced cells={result.coverageCells} />
       )}
@@ -632,6 +636,11 @@ function InfoOverlay({
   collisionCount,
   firstCollisionLabel,
   firstCollisionTimeS,
+  currentTime,
+  currentSegmentLabel,
+  currentQualityLabel,
+  bestCameraLabel,
+  nextEventLabel,
 }: {
   waypointCount: number;
   exposureScore: number;
@@ -640,6 +649,11 @@ function InfoOverlay({
   collisionCount: number;
   firstCollisionLabel?: string;
   firstCollisionTimeS?: number;
+  currentTime: number;
+  currentSegmentLabel?: string;
+  currentQualityLabel?: string;
+  bestCameraLabel?: string;
+  nextEventLabel?: string;
 }) {
   const maxExposure = Math.max(...EXPOSURE_KEYS.map((k) => qualityBands[k] ?? 0), 1);
 
@@ -673,6 +687,27 @@ function InfoOverlay({
           <div className="text-[8px] text-[#5b667c]">Status</div>
           <div className={`mt-0.5 text-[11px] font-semibold ${criticalZoneReachableAlongRoute ? "text-red-400" : "text-[#5b667c]"}`}>
             {criticalZoneReachableAlongRoute ? "Coverage Failure Risk" : "Route Covered"}
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-2 rounded-lg border border-[#243146] bg-[#111521] px-2 py-1.5">
+        <div className="text-[7px] font-semibold uppercase tracking-[0.16em] text-[#7dd3fc]">Current state</div>
+        <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] text-[#d2d9e8]">
+          <div>
+            <span className="text-[#6a748b]">Time:</span> {currentTime.toFixed(1)}s
+          </div>
+          <div className="truncate">
+            <span className="text-[#6a748b]">Quality:</span> {currentQualityLabel ?? "—"}
+          </div>
+          <div className="col-span-2 truncate">
+            <span className="text-[#6a748b]">Segment:</span> {currentSegmentLabel ?? "Route summary"}
+          </div>
+          <div className="col-span-2 truncate">
+            <span className="text-[#6a748b]">Best camera:</span> {bestCameraLabel ?? "unavailable"}
+          </div>
+          <div className="col-span-2 truncate">
+            <span className="text-[#6a748b]">Next event:</span> {nextEventLabel ?? "No upcoming event"}
           </div>
         </div>
       </div>
@@ -778,7 +813,7 @@ export function PathReplayView() {
     () => replaySamples.map((wp) => wp.position),
     [replaySamples],
   );
-  const controlsRef = useRef<any>(null);
+  const controlsRef = useRef<{ target: THREE.Vector3; update?: () => void } | null>(null);
 
   // Coverage bands data for the scrub bar (full waypoint objects with quality)
   const coverageBands = useMemo(() => {
@@ -824,6 +859,36 @@ export function PathReplayView() {
     coverageFailurePath?.criticalZonesReachableAlongRoute?.length
       ? true
       : (coverageFailurePath?.targetReached ?? false);
+  const currentTimelineEvent = useMemo(() => {
+    if (!activePathResult?.timeline?.length) return null;
+    const events = activePathResult.timeline.filter((event) => event.timeS <= currentTime);
+    return events[events.length - 1] ?? activePathResult.timeline[0] ?? null;
+  }, [activePathResult, currentTime]);
+  const nextTimelineEvent = useMemo(() => {
+    if (!activePathResult?.timeline?.length) return null;
+    return activePathResult.timeline.find((event) => event.timeS > currentTime) ?? null;
+  }, [activePathResult, currentTime]);
+  const currentQualityLabel = currentTimelineEvent?.quality?.toUpperCase() ?? (coverageFailurePath ? "Route replay" : undefined);
+  const currentSegmentLabel = currentTimelineEvent?.reason
+    ?? (currentTimelineEvent?.event === "lost"
+      ? "Visibility loss"
+      : currentTimelineEvent?.event === "quality_change"
+        ? "Quality transition"
+        : currentTimelineEvent?.event === "visible"
+          ? "Visible segment"
+          : undefined);
+  const bestCameraLabel = useMemo(() => {
+    if (!activePathResult) return undefined;
+    const entries = Object.entries(activePathResult.visibilityByCamera);
+    if (entries.length === 0) return undefined;
+    const best = entries.sort((a, b) => {
+      const diff = (b[1]?.maxQuality ? QUALITY_RANK[b[1].maxQuality] : 0) - (a[1]?.maxQuality ? QUALITY_RANK[a[1].maxQuality] : 0);
+      if (diff !== 0) return diff;
+      return (b[1]?.visibleS ?? 0) - (a[1]?.visibleS ?? 0);
+    })[0];
+    if (!best) return undefined;
+    return scene.cameras.find((camera) => camera.id === best[0])?.name ?? best[0];
+  }, [activePathResult, scene.cameras]);
 
   const totalDuration =
     activePathResult?.totalDurationS
@@ -931,6 +996,11 @@ export function PathReplayView() {
           collisionCount={collisionCount}
           firstCollisionLabel={firstCollision?.blockedBy}
           firstCollisionTimeS={firstCollision?.timeS}
+          currentTime={currentTime}
+          currentSegmentLabel={currentSegmentLabel}
+          currentQualityLabel={currentQualityLabel}
+          bestCameraLabel={bestCameraLabel}
+          nextEventLabel={nextTimelineEvent?.reason ?? nextTimelineEvent?.event?.replace(/_/g, " ")}
         />
       )}
 
@@ -964,7 +1034,7 @@ export function PathReplayView() {
         <CameraMarkers />
 
         <OrbitControls
-          ref={controlsRef}
+          ref={controlsRef as unknown as Ref<OrbitControlsImpl>}
           makeDefault
           target={[5.05, 0.6, 3.8]}
           minDistance={5.5}

@@ -24,6 +24,7 @@ interface WizardState {
   widthM: number;
   depthM: number;
   heightM: number;
+  floorPlanScalePixelsPerMeter: number;
   importMethod: ImportMethod | null;
   selectedTemplate: SceneTemplate | null;
   floorPlanResult: FloorPlanResult | null;
@@ -38,6 +39,7 @@ const initialState: WizardState = {
   widthM: 10,
   depthM: 8,
   heightM: 3,
+  floorPlanScalePixelsPerMeter: 50,
   importMethod: null,
   selectedTemplate: null,
   floorPlanResult: null,
@@ -46,6 +48,13 @@ const initialState: WizardState = {
   importWarnings: [],
 };
 
+export function getFloorPlanExtractionConfig(state: Pick<WizardState, "heightM" | "floorPlanScalePixelsPerMeter">) {
+  return {
+    roomHeightM: state.heightM,
+    scalePixelsPerMeter: state.floorPlanScalePixelsPerMeter,
+  };
+}
+
 interface SceneBuilderWizardProps {
   onClose?: () => void;
 }
@@ -53,6 +62,8 @@ interface SceneBuilderWizardProps {
 export function SceneBuilderWizard({ onClose }: SceneBuilderWizardProps) {
   const [state, setState] = useState<WizardState>(initialState);
   const setScene = useStudioStore((s) => s.setScene);
+  const roomHeightM = state.heightM;
+  const floorPlanScalePixelsPerMeter = state.floorPlanScalePixelsPerMeter;
 
   const update = useCallback((patch: Partial<WizardState>) => {
     setState((prev) => ({ ...prev, ...patch }));
@@ -91,7 +102,8 @@ export function SceneBuilderWizard({ onClose }: SceneBuilderWizardProps) {
     try {
       const imageData = await loadImageToData(file);
       const result = await extractFloorPlan(imageData, {
-        roomHeightM: state.heightM,
+        roomHeightM,
+        scalePixelsPerMeter: floorPlanScalePixelsPerMeter,
       });
       const { warnings } = validateFloorPlan(result);
       update({
@@ -105,7 +117,7 @@ export function SceneBuilderWizard({ onClose }: SceneBuilderWizardProps) {
         importWarnings: [`Failed to process image: ${err instanceof Error ? err.message : "Unknown error"}`],
       });
     }
-  }, [update, state.heightM]);
+  }, [floorPlanScalePixelsPerMeter, roomHeightM, update]);
 
   const handleCreate = useCallback(() => {
     let scene;
@@ -496,7 +508,12 @@ function ConfigureStep({
               type="number"
               min={10}
               max={200}
-              defaultValue={50}
+              value={value.floorPlanScalePixelsPerMeter}
+              onChange={(e) => {
+                const next = Number(e.target.value);
+                if (Number.isNaN(next)) return;
+                onChange({ floorPlanScalePixelsPerMeter: Math.max(10, Math.min(200, next)) });
+              }}
               className="w-20 rounded border border-[#1e2130] bg-[#0b0f17] px-2 py-1 text-[10px] text-[#c5ccdb] outline-none"
             />
             <span className="text-[8px] text-[#59637a]">pixels/meter</span>

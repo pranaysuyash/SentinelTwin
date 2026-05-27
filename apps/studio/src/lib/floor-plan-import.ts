@@ -155,6 +155,54 @@ export function createSceneFromFloorPlan(
     source: "import",
   }));
 
+  // Entry points at each detected door
+  const entryPoints = normalized.doors.map((door, index) => ({
+    id: uid("ep"),
+    nodeType: "entry_point" as const,
+    label: `Entry ${index + 1}`,
+    position: [shiftX(door.position.x), shiftZ(door.position.y)] as [number, number],
+    source: "import" as const,
+  }));
+
+  // Fallback entry point at room center-front if no doors detected
+  if (entryPoints.length === 0) {
+    entryPoints.push({
+      id: uid("ep"),
+      nodeType: "entry_point" as const,
+      label: "Main Entry",
+      position: [normalized.roomDimensions.widthM / 2, 0.5] as [number, number],
+      source: "import" as const,
+    });
+  }
+
+  // Critical zone at the far end of the room (opposite from first entry)
+  const firstEntry = entryPoints[0]!.position;
+  const farX = normalized.roomDimensions.widthM - firstEntry[0] > firstEntry[0]
+    ? normalized.roomDimensions.widthM - 2
+    : 2;
+  const farZ = normalized.roomDimensions.depthM - firstEntry[1] > firstEntry[1]
+    ? normalized.roomDimensions.depthM - 2
+    : 2;
+  const zoneSize = Math.min(normalized.roomDimensions.widthM, normalized.roomDimensions.depthM) * 0.2;
+  const criticalZones = [{
+    id: uid("zone"),
+    nodeType: "critical_zone" as const,
+    label: "High Value Zone",
+    polygon: [
+      [farX - zoneSize / 2, farZ - zoneSize / 2],
+      [farX + zoneSize / 2, farZ - zoneSize / 2],
+      [farX + zoneSize / 2, farZ + zoneSize / 2],
+      [farX - zoneSize / 2, farZ + zoneSize / 2],
+    ] as [[number, number], [number, number], [number, number], [number, number]],
+    heightM: 2,
+    priority: "high" as const,
+    requiredQuality: "recognition" as const,
+    targetType: "person_detection" as const,
+    nightRequired: false,
+    redundancyRequired: false,
+    privacyZone: false,
+  }];
+
   return {
     id: uid("scene"),
     name,
@@ -172,9 +220,9 @@ export function createSceneFromFloorPlan(
     cameras: [],
     securityLights: [],
     obstructions: [],
-    criticalZones: [],
+    criticalZones,
     privacyZones: [],
-    entryPoints: [],
+    entryPoints,
     paths: [],
     assumptions: {
       wallHeightM: roomHeight,

@@ -380,6 +380,37 @@ export function exportAsHtml(report: ReportData): string {
     </p>
   </div>
 
+  <h2>Provenance</h2>
+  <div class="assumptions-box">
+    <table>
+      <tr><th>Scene Source</th><td>${escapeHtml(report.provenance.sceneSourceLabel)} (${escapeHtml(report.provenance.sceneSource)})</td></tr>
+      <tr><th>Scene Graph Nodes</th><td>${report.provenance.nodeCount}</td></tr>
+      <tr><th>Scene Graph Edges</th><td>${report.provenance.edgeCount}</td></tr>
+      <tr><th>Revision Depth</th><td>${report.provenance.revisionDepth}</td></tr>
+      <tr><th>Snapshots Tracked</th><td>${report.provenance.snapshotCount}</td></tr>
+    </table>
+    <div style="margin-top:10px;">
+      <strong>Source counts</strong>
+      <p>${Object.entries(report.provenance.sourceCounts).map(([source, count]) => `${escapeHtml(source)}: ${count}`).join(" · ")}</p>
+    </div>
+    ${report.provenance.sourceNotes.length > 0 ? `
+    <div style="margin-top:10px;">
+      <strong>Source history</strong>
+      <ul style="margin-left:18px;">
+        ${report.provenance.sourceNotes.map((note) => `<li>${escapeHtml(note)}</li>`).join("")}
+      </ul>
+    </div>
+    ` : ""}
+    ${report.provenance.confidenceNotes.length > 0 ? `
+    <div style="margin-top:10px;">
+      <strong>Confidence history</strong>
+      <ul style="margin-left:18px;">
+        ${report.provenance.confidenceNotes.map((note) => `<li>${escapeHtml(note)}</li>`).join("")}
+      </ul>
+    </div>
+    ` : ""}
+  </div>
+
   <h2>Zone Analysis</h2>
   ${report.zones.length > 0 ? `
   <table>
@@ -505,6 +536,22 @@ export function exportAsMarkdown(report: ReportData): string {
     "",
     "_These outputs are estimated planning indicators under current assumptions, not legal or forensic guarantees._",
     "",
+    "## Provenance",
+    `- Scene Source: ${report.provenance.sceneSourceLabel} (${report.provenance.sceneSource})`,
+    `- Graph Nodes: ${report.provenance.nodeCount}`,
+    `- Graph Edges: ${report.provenance.edgeCount}`,
+    `- Revision Depth: ${report.provenance.revisionDepth}`,
+    `- Snapshots Tracked: ${report.provenance.snapshotCount}`,
+    `- Source Counts: ${Object.entries(report.provenance.sourceCounts).map(([source, count]) => `${source}:${count}`).join(" · ")}`,
+    ...(report.provenance.sourceNotes.length > 0 ? [
+      "- Source History:",
+      ...report.provenance.sourceNotes.map((note) => `  - ${note}`),
+    ] : []),
+    ...(report.provenance.confidenceNotes.length > 0 ? [
+      "- Confidence History:",
+      ...report.provenance.confidenceNotes.map((note) => `  - ${note}`),
+    ] : []),
+    "",
     "## Zone Analysis",
     "",
     ...(report.zones.length > 0
@@ -572,6 +619,23 @@ export function exportAsText(report: ReportData): string {
     `Vehicle Height: ${report.assumptions.vehicleHeightM}m`,
     `Time of Day: ${report.assumptions.timeOfDay}`,
     `PPM Thresholds: ${report.assumptions.ppm.detection} / ${report.assumptions.ppm.observation} / ${report.assumptions.ppm.recognition} / ${report.assumptions.ppm.identification}`,
+    "",
+    "PROVENANCE",
+    `${"-".repeat(30)}`,
+    `  Scene Source:              ${report.provenance.sceneSourceLabel} (${report.provenance.sceneSource})`,
+    `  Graph Nodes:               ${report.provenance.nodeCount}`,
+    `  Graph Edges:               ${report.provenance.edgeCount}`,
+    `  Revision Depth:            ${report.provenance.revisionDepth}`,
+    `  Snapshots Tracked:         ${report.provenance.snapshotCount}`,
+    `  Source Counts:             ${Object.entries(report.provenance.sourceCounts).map(([source, count]) => `${source}:${count}`).join(" · ")}`,
+    ...(report.provenance.sourceNotes.length > 0 ? [
+      "  Source History:",
+      ...report.provenance.sourceNotes.map((note) => `    - ${note}`),
+    ] : []),
+    ...(report.provenance.confidenceNotes.length > 0 ? [
+      "  Confidence History:",
+      ...report.provenance.confidenceNotes.map((note) => `    - ${note}`),
+    ] : []),
     "",
     "SUMMARY",
     `${"-".repeat(30)}`,

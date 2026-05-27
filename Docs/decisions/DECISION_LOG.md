@@ -1231,3 +1231,29 @@ reference to the new path, then remove the old."
 - **Keep the centered launcher card** — rejected because it reads like a checklist/form and undercuts the product.
 - **Turn root into marketing landing page** — rejected because this is a working workspace, not a public brochure.
 - **Split launch actions into a separate route** — rejected because the root should be the single, obvious entry point into the current workspace.
+
+### D-076: Footage verification ships as explicitly non-forensic operator assist in V0.1
+**Date:** 2026-05-27
+
+**Decision:** Implemented first-cut footage verification in Camera View as an operator-assist surface only: reference frame upload, overlay/split comparison, opacity and alignment controls, plus explicit planning-only/non-forensic disclaimer copy.
+
+**Rationale:**
+- Real-world validation needs a practical bridge between simulated view and observed footage, but current simulation assumptions are still heuristic.
+- Explicitly defensive language prevents overclaiming while enabling useful alignment and discrepancy inspection.
+
+**Alternatives rejected:**
+- **Delay all footage verification until full product version** — rejected because operators need immediate mismatch inspection capability.
+- **Ship verification without disclaimer framing** — rejected due trust and safety risk around forensic overinterpretation.
+
+### D-077: Manual scan correction must allow spatial repositioning before compile
+**Date:** 2026-05-27
+
+**Decision:** Extended `ScanSiteWizard` with interactive candidate correction: drag marker repositioning, arrow-key nudging, quick geometry sanity checks, and low-confidence compile override confirmation.
+
+**Rationale:**
+- Manual-assisted scan intake is only credible if users can correct geometry directly before scene compile.
+- Confidence-aware compile gating keeps uncertainty explicit without blocking expert operators from proceeding intentionally.
+
+**Alternatives rejected:**
+- **List-only relabel/reject flow** — rejected because it cannot correct spatial drift.
+- **Hard-block compile on all low-confidence inputs** — rejected because manual workflows need operator override.

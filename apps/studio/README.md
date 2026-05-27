@@ -62,6 +62,7 @@ bun test src/simulation/__tests__/golden-simulation-claims.test.ts
 - Floor-plan review supports manual scale calibration before creating the scene.
 - Floor-plan review also supports correction controls (drop false wall/door/window detections before scene creation).
 - Floor-plan review supports draggable door/window marker adjustments in preview before applying corrections.
+- Scan wizard supports direct candidate marker repositioning (drag and arrow-key nudge), quick geometry sanity checks, and low-confidence compile override confirmation.
 - Bottom panel: metrics, issues, timeline, before/after, report-lite, assumptions.
 - Report-lite supports `Single Scene` and `Before/After` export modes.
 
@@ -77,6 +78,7 @@ bun test src/simulation/__tests__/golden-simulation-claims.test.ts
 - Golden simulation claim tests for major behavior checks.
 - Camera wall POV stays in sync with live camera transform edits.
 - Camera view includes per-camera replay visibility status overlay.
+- Camera view includes first-cut footage verification (reference frame upload, overlay/split compare, opacity, alignment nudges) with explicit planning-only disclaimer language.
 - Camera wall tiles include route visibility status/quality overlays and route-context chip in header.
 - Compare mode renders selected snapshot geometry per side for truthful before/after visuals.
 - Compare mode includes changed-object delta summaries and snapshot-level simulation recovery for unsimulated scenarios.
@@ -86,7 +88,7 @@ bun test src/simulation/__tests__/golden-simulation-claims.test.ts
 
 - Floor-plan import now materializes basic walls/doors/windows but remains prototype-level (heuristic parsing, no robust correction loop).
 - Some UI surfaces are wired but still demo/static in parts.
-- Full product layers (guided scan, AI layout draft, real footage verification, project backend) are not implemented yet.
+- Full product layers (guided scan automation, robust AI layout draft, product-grade footage verification, project backend) are not implemented yet.
 
 ## Defensive Framing
 

@@ -1098,6 +1098,23 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   removeNode: (id) => {
     useStudioStore.getState().commitSceneChange((scene) => removeNode(scene, id));
   },
+  removeSelectedNodes: (ids) => {
+    const { selectedNodeIds } = get();
+    const idsToRemove = ids && ids.length > 0 ? ids : selectedNodeIds;
+    if (idsToRemove.length === 0) return;
+    useStudioStore.getState().commitSceneChange((scene) => {
+      let next = cloneSecurityScene(scene);
+      idsToRemove.forEach((id) => {
+        next = removeNode(next, id);
+      });
+      return next;
+    });
+  },
+  translateSelectedNodes: (delta) => {
+    const { selectedNodeIds } = get();
+    if (selectedNodeIds.length === 0) return;
+    useStudioStore.getState().commitSceneChange((scene) => translateNodesInScene(scene, selectedNodeIds, delta));
+  },
   updateAssumptions: (patch) =>
     useStudioStore.getState().commitSceneChange((scene) => ({
       ...scene,

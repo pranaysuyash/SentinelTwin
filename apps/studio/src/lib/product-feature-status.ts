@@ -35,13 +35,13 @@ export const PRODUCT_FEATURE_STATUS: ProductFeatureEntry[] = [
     detail: "Prompt-to-scene starter with model-backed output when configured.",
   },
   {
-    status: "Planned",
+    status: "Preview",
     feature: "Guided scan reconstruction",
-    detail: "Capture-driven reconstruction pipeline is not production-implemented yet.",
+    detail: "Guided scan kickoff and marker-driven reconstruction flow is available; automated multi-photo reconstruction remains in-progress.",
   },
   {
-    status: "Planned",
+    status: "Preview",
     feature: "Real footage verification",
-    detail: "Expected-vs-actual camera validation pipeline is not implemented.",
+    detail: "Reference image/video ingest with local frame extraction, overlay/split compare, alignment estimate, and difference heat overlay.",
   },
 ];

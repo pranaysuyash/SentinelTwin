@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const panelPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/bottom-panel/ScenarioPathPanel.tsx";
+const panelPath = "./src/components/bottom-panel/ScenarioPathPanel.tsx";
 
 describe("ScenarioPathPanel", () => {
   test("wires Play Path to replay mode and timeline", () => {

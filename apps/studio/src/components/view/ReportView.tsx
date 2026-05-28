@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { cn } from "@/lib/cn";
 import { ReportLiteTab } from "@/components/bottom-panel/ReportLiteTab";
 import { SecurityOutcomePanel } from "@/components/security-outcome/SecurityOutcomePanel";
+import { computeCoverageEntropy } from "@/simulation/coverage-entropy";
 import { computeCoveragePostureVariation } from "@/simulation/coverage-posture";
 import { computeCoverageUncertainty } from "@/simulation/coverage-uncertainty";
 import { buildRedundancyMatrixReport } from "@/report/redundancy-matrix";
@@ -52,6 +53,10 @@ export function ReportView() {
     const blindRegions = result?.blindRegions?.length ?? 0;
     const temporalWindows = scene.temporalProfile?.anomalyWindows.length ?? 0;
     const temporalWorstDrop = scene.temporalProfile?.anomalySummary?.worstCoverageDropPct;
+    const coverageEntropy = result ? computeCoverageEntropy(result.coverageCells) : null;
+    const coverageEntropySummary = coverageEntropy
+      ? `${coverageEntropy.normalizedEntropy.toFixed(2)} norm`
+      : "--";
     const uncertainty = computeCoverageUncertainty(scene, { sampleCount: 12 });
     const postureVariation = computeCoveragePostureVariation(scene);
     const redundancyMatrix = result ? buildRedundancyMatrixReport(scene, result) : null;
@@ -73,6 +78,7 @@ export function ReportView() {
       fragility,
       kRobustness,
       blindRegions,
+      coverageEntropySummary,
       uncertaintySummary,
       postureSummary,
       temporalWindows,
@@ -111,6 +117,7 @@ export function ReportView() {
             <StatCard label="Recommendations" value={String(summary.recs)} tone="amber" />
             <StatCard label="Critical Zones" value={String(summary.critical)} tone="emerald" />
             <StatCard label="Fragility" value={summary.fragility} tone={summary.fragility === "--" ? "emerald" : "amber"} />
+            <StatCard label="Coverage Entropy" value={summary.coverageEntropySummary} tone={summary.coverageEntropySummary === "--" ? "emerald" : "sky"} />
             <StatCard label="K-Robustness" value={summary.kRobustness} tone={summary.kRobustness === "--" ? "emerald" : "sky"} />
             <StatCard label="Blind Regions" value={String(summary.blindRegions)} tone={summary.blindRegions > 0 ? "amber" : "emerald"} />
             <StatCard label="Uncertainty" value={summary.uncertaintySummary} tone={summary.uncertaintySummary === "--" ? "emerald" : "rose"} />

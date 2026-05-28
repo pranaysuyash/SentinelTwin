@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const novelAlgorithmsPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/bottom-panel/NovelAlgorithmsTab.tsx";
+const novelAlgorithmsPath = "./src/components/bottom-panel/NovelAlgorithmsTab.tsx";
 
 describe("NovelAlgorithmsTab", () => {
   test("exposes a coverage time budget surface", () => {

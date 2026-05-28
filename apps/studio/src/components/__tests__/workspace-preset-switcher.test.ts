@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const switcherPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/dock/WorkspacePresetSwitcher.tsx";
+const switcherPath = "./src/components/dock/WorkspacePresetSwitcher.tsx";
 
 describe("WorkspacePresetSwitcher", () => {
   test("uses stable selectors instead of an object-literal snapshot", () => {

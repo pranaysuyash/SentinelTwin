@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const hookPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/hooks/use-ai-command.ts";
+const hookPath = "./src/hooks/use-ai-command.ts";
 
 describe("useAiCommand", () => {
   test("uses the offline parser fallback and the selected provider before requiring an API key", () => {

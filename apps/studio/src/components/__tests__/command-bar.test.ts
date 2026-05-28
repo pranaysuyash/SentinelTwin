@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const commandBarPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/command-bar/CommandBar.tsx";
+const commandBarPath = "./src/components/command-bar/CommandBar.tsx";
 
 describe("CommandBar", () => {
   test("surfaces the offline-first residency banner and mode chip", () => {

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const dashboardHomePath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/launcher/StudioDashboardHome.tsx";
+const dashboardHomePath = "./src/components/launcher/StudioDashboardHome.tsx";
 
 describe("Studio dashboard launcher surface", () => {
   test("surfaces the launcher entry flows and project/status cards", () => {
@@ -18,6 +18,10 @@ describe("Studio dashboard launcher surface", () => {
     expect(source).toContain("Scan Site Photo");
     expect(source).toContain("Guided Scan Reconstruction");
     expect(source).toContain("Verify Real Camera Footage");
+    expect(source).toContain('findFeatureEntryByName(featureStatus, "Guided scan reconstruction")');
+    expect(source).toContain('findFeatureEntryByName(featureStatus, "Real footage verification")');
+    expect(source).toContain("featureStatusValue(guidedScanFeature, \"Preview\")");
+    expect(source).toContain("featureStatusValue(verifyFootageFeature, \"Preview\")");
     expect(source).toContain("Manual-Assisted Scan");
     expect(source).toContain("Current Workspace Preview");
     expect(source).toContain("Project Browser");

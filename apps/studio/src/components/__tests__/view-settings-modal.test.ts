@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const viewSettingsPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/layout/ViewSettingsModal.tsx";
+const viewSettingsPath = "./src/components/layout/ViewSettingsModal.tsx";
 
 describe("ViewSettingsModal", () => {
   test("surfaces the AI provider selection alongside layout controls", () => {

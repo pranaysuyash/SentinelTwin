@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const constantsPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/lib/studio-constants.ts";
-const shellPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/layout/StudioShell.tsx";
+const constantsPath = "./src/lib/studio-constants.ts";
+const shellPath = "./src/components/layout/StudioShell.tsx";
 
 describe("Studio shell shortcuts", () => {
   test("wires all visible tool keys into the global shortcut map", () => {

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const issuesTabPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/bottom-panel/IssuesTab.tsx";
+const issuesTabPath = "./src/components/bottom-panel/IssuesTab.tsx";
 
 describe("IssuesTab", () => {
   test("supports preview/apply/revert recommendation actions", () => {

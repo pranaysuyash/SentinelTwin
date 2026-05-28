@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const tabPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/bottom-panel/SceneIntelligenceTab.tsx";
+const tabPath = "./src/components/bottom-panel/SceneIntelligenceTab.tsx";
 
 describe("SceneIntelligenceTab", () => {
   test("supports interactive provenance inspection and trace focus", () => {

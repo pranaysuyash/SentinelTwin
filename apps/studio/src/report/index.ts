@@ -1,5 +1,7 @@
 import type { SecurityScene, SimulationResult } from "@/schema/security-scene";
 import { buildSceneIntelligenceGraph } from "@/lib/scene-intelligence-graph";
+import { QUALITY_ORDER } from "@/simulation/dori";
+import { computeCoverageEntropy } from "@/simulation/coverage-entropy";
 import { computeCoveragePostureVariation } from "@/simulation/coverage-posture";
 import { computeCoverageUncertainty } from "@/simulation/coverage-uncertainty";
 import { buildRedundancyMatrixReport, type RedundancyMatrixReport } from "./redundancy-matrix";
@@ -75,6 +77,15 @@ export interface ReportData {
     worstCoverage: number;
   };
   novelAlgorithms?: {
+    coverageEntropy?: {
+      cellCount: number;
+      entropyBits: number;
+      normalizedEntropy: number;
+      dominantQuality: string;
+      dominantQualityCount: number;
+      dominantQualityShare: number;
+      qualityCounts: Record<string, number>;
+    };
     coverageFragility?: {
       meanFragility: number;
       fragileCellCount: number;
@@ -220,6 +231,7 @@ export function buildReportData(
   const sourceNotes = provenanceNotes.filter((entry) => entry.startsWith("Provenance:"));
   const confidenceNotes = provenanceNotes.filter((entry) => entry.startsWith("Provenance confidence:"));
   const coverageUncertainty = computeCoverageUncertainty(scene, { sampleCount: 12 });
+  const coverageEntropy = computeCoverageEntropy(result.coverageCells);
   const postureVariation = computeCoveragePostureVariation(scene);
   const redundancyMatrix = buildRedundancyMatrixReport(scene, result);
   if (sourceNotes.length === 0) {
@@ -310,6 +322,17 @@ export function buildReportData(
         }
       : undefined,
     novelAlgorithms: {
+      coverageEntropy: coverageEntropy
+        ? {
+            cellCount: coverageEntropy.cellCount,
+            entropyBits: coverageEntropy.entropyBits,
+            normalizedEntropy: coverageEntropy.normalizedEntropy,
+            dominantQuality: coverageEntropy.dominantQuality,
+            dominantQualityCount: coverageEntropy.dominantQualityCount,
+            dominantQualityShare: coverageEntropy.dominantQualityShare,
+            qualityCounts: coverageEntropy.qualityCounts,
+          }
+        : undefined,
       coverageFragility: result.fragilitySummary
         ? {
             meanFragility: result.fragilitySummary.meanFragility,
@@ -888,6 +911,7 @@ export function exportAsHtml(report: ReportData): string {
   ${report.novelAlgorithms ? `
   <h2>Novel Algorithms</h2>
   <table>
+    <tr><th>Coverage Entropy</th><td>${report.novelAlgorithms.coverageEntropy ? `${report.novelAlgorithms.coverageEntropy.normalizedEntropy.toFixed(2)} norm · ${report.novelAlgorithms.coverageEntropy.entropyBits.toFixed(2)} bits · dominant ${report.novelAlgorithms.coverageEntropy.dominantQuality} ${report.novelAlgorithms.coverageEntropy.dominantQualityShare.toFixed(1)}%` : "Not computed"}</td></tr>
     <tr><th>Coverage Fragility</th><td>${report.novelAlgorithms.coverageFragility ? `${(report.novelAlgorithms.coverageFragility.meanFragility * 100).toFixed(1)}% mean · ${report.novelAlgorithms.coverageFragility.fragileCellCount}/${report.novelAlgorithms.coverageFragility.totalCells} fragile cells` : "Not computed"}</td></tr>
     <tr><th>Coverage Uncertainty</th><td>${report.novelAlgorithms.coverageUncertainty ? `${report.novelAlgorithms.coverageUncertainty.sampleCount} samples · ${report.novelAlgorithms.coverageUncertainty.meanCoveragePct.toFixed(1)}% mean (${report.novelAlgorithms.coverageUncertainty.p5CoveragePct.toFixed(1)}%–${report.novelAlgorithms.coverageUncertainty.p95CoveragePct.toFixed(1)}%)` : "Not computed"}</td></tr>
     <tr><th>Coverage Posture Variation</th><td>${report.novelAlgorithms.postureVariation ? `${report.novelAlgorithms.postureVariation.profiles.length} profiles · worst ${report.novelAlgorithms.postureVariation.worstProfileLabel ?? "—"} ${report.novelAlgorithms.postureVariation.worstProfileCoveragePct != null ? `${report.novelAlgorithms.postureVariation.worstProfileCoveragePct.toFixed(1)}%` : ""} · largest drop ${report.novelAlgorithms.postureVariation.largestDropProfileLabel ?? "—"} (${formatSignedDelta(report.novelAlgorithms.postureVariation.largestDropDeltaPct)})` : "Not computed"}</td></tr>
@@ -913,6 +937,15 @@ export function exportAsHtml(report: ReportData): string {
         </tr>
       `).join("")}
     </tbody>
+  </table>
+  ` : ""}
+  ${report.novelAlgorithms.coverageEntropy ? `
+  <h3>Coverage Entropy</h3>
+  <table>
+    <tr><th>Cell Count</th><td>${report.novelAlgorithms.coverageEntropy.cellCount}</td></tr>
+    <tr><th>Entropy</th><td>${report.novelAlgorithms.coverageEntropy.normalizedEntropy.toFixed(2)} norm (${report.novelAlgorithms.coverageEntropy.entropyBits.toFixed(2)} bits)</td></tr>
+    <tr><th>Dominant Quality</th><td>${report.novelAlgorithms.coverageEntropy.dominantQuality} (${report.novelAlgorithms.coverageEntropy.dominantQualityShare.toFixed(1)}%)</td></tr>
+    <tr><th>Quality Distribution</th><td>${QUALITY_ORDER.filter((quality) => (report.novelAlgorithms?.coverageEntropy?.qualityCounts[quality] ?? 0) > 0).map((quality) => `${quality}: ${report.novelAlgorithms?.coverageEntropy?.qualityCounts[quality] ?? 0}`).join(" · ")}</td></tr>
   </table>
   ` : ""}
   ` : ""}
@@ -1122,6 +1155,7 @@ export function exportAsMarkdown(report: ReportData): string {
     ...(report.novelAlgorithms
       ? [
           "## Novel Algorithms",
+          `- Coverage Entropy: ${report.novelAlgorithms.coverageEntropy ? `${report.novelAlgorithms.coverageEntropy.normalizedEntropy.toFixed(2)} norm · ${report.novelAlgorithms.coverageEntropy.entropyBits.toFixed(2)} bits · dominant ${report.novelAlgorithms.coverageEntropy.dominantQuality} ${report.novelAlgorithms.coverageEntropy.dominantQualityShare.toFixed(1)}%` : "Not computed"}`,
           `- Coverage Fragility: ${report.novelAlgorithms.coverageFragility ? `${(report.novelAlgorithms.coverageFragility.meanFragility * 100).toFixed(1)}% mean · ${report.novelAlgorithms.coverageFragility.fragileCellCount}/${report.novelAlgorithms.coverageFragility.totalCells} fragile cells` : "Not computed"}`,
           `- Coverage Uncertainty: ${report.novelAlgorithms.coverageUncertainty ? `${report.novelAlgorithms.coverageUncertainty.sampleCount} samples · ${report.novelAlgorithms.coverageUncertainty.meanCoveragePct.toFixed(1)}% mean (${report.novelAlgorithms.coverageUncertainty.p5CoveragePct.toFixed(1)}%–${report.novelAlgorithms.coverageUncertainty.p95CoveragePct.toFixed(1)}%)` : "Not computed"}`,
           `- Coverage Posture Variation: ${report.novelAlgorithms.postureVariation ? `${report.novelAlgorithms.postureVariation.profiles.length} profiles · worst ${report.novelAlgorithms.postureVariation.worstProfileLabel ?? "—"} ${report.novelAlgorithms.postureVariation.worstProfileCoveragePct != null ? `${report.novelAlgorithms.postureVariation.worstProfileCoveragePct.toFixed(1)}%` : ""} · largest drop ${report.novelAlgorithms.postureVariation.largestDropProfileLabel ?? "—"} (${formatSignedDelta(report.novelAlgorithms.postureVariation.largestDropDeltaPct)})` : "Not computed"}`,
@@ -1308,6 +1342,7 @@ export function exportAsText(report: ReportData): string {
       ? [
           "NOVEL ALGORITHMS",
           `${"-".repeat(30)}`,
+          `  Coverage Entropy:      ${report.novelAlgorithms.coverageEntropy ? `${report.novelAlgorithms.coverageEntropy.normalizedEntropy.toFixed(2)} norm · ${report.novelAlgorithms.coverageEntropy.entropyBits.toFixed(2)} bits · dominant ${report.novelAlgorithms.coverageEntropy.dominantQuality} ${report.novelAlgorithms.coverageEntropy.dominantQualityShare.toFixed(1)}%` : "Not computed"}`,
           `  Coverage Fragility:    ${report.novelAlgorithms.coverageFragility ? `${(report.novelAlgorithms.coverageFragility.meanFragility * 100).toFixed(1)}% mean · ${report.novelAlgorithms.coverageFragility.fragileCellCount}/${report.novelAlgorithms.coverageFragility.totalCells} fragile cells` : "Not computed"}`,
           `  Coverage Uncertainty:   ${report.novelAlgorithms.coverageUncertainty ? `${report.novelAlgorithms.coverageUncertainty.sampleCount} samples · ${report.novelAlgorithms.coverageUncertainty.meanCoveragePct.toFixed(1)}% mean (${report.novelAlgorithms.coverageUncertainty.p5CoveragePct.toFixed(1)}%–${report.novelAlgorithms.coverageUncertainty.p95CoveragePct.toFixed(1)}%)` : "Not computed"}`,
           `  Coverage Posture Variation: ${report.novelAlgorithms.postureVariation ? `${report.novelAlgorithms.postureVariation.profiles.length} profiles · worst ${report.novelAlgorithms.postureVariation.worstProfileLabel ?? "—"} ${report.novelAlgorithms.postureVariation.worstProfileCoveragePct != null ? `${report.novelAlgorithms.postureVariation.worstProfileCoveragePct.toFixed(1)}%` : ""} · largest drop ${report.novelAlgorithms.postureVariation.largestDropProfileLabel ?? "—"} (${formatSignedDelta(report.novelAlgorithms.postureVariation.largestDropDeltaPct)})` : "Not computed"}`,

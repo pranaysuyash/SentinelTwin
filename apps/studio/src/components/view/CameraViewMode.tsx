@@ -26,6 +26,7 @@ type OverlayFlags = {
 };
 
 type VerificationViewMode = "overlay" | "split";
+type VerificationSourceType = "image" | "video";
 type CameraVerificationSnapshot = {
   id: string;
   fileName: string;
@@ -659,6 +660,78 @@ function alignmentQualityLabel(score: number) {
   return "Poor";
 }
 
+function formatSecondsShort(seconds: number) {
+  const clamped = Math.max(0, Math.floor(seconds));
+  const mins = Math.floor(clamped / 60);
+  const secs = clamped % 60;
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
+
+function waitForMediaEvent(target: HTMLMediaElement, eventName: keyof HTMLMediaElementEventMap) {
+  return new Promise<void>((resolve, reject) => {
+    const onSuccess = () => {
+      cleanup();
+      resolve();
+    };
+    const onError = () => {
+      cleanup();
+      reject(new Error(`Failed while waiting for video ${eventName}`));
+    };
+    const cleanup = () => {
+      target.removeEventListener(eventName, onSuccess as EventListener);
+      target.removeEventListener("error", onError as EventListener);
+    };
+
+    target.addEventListener(eventName, onSuccess as EventListener, { once: true });
+    target.addEventListener("error", onError as EventListener, { once: true });
+  });
+}
+
+async function extractVideoFrameDataUrl(file: File, sampleTimeSeconds?: number) {
+  const url = URL.createObjectURL(file);
+  const video = document.createElement("video");
+  video.preload = "metadata";
+  video.muted = true;
+  video.playsInline = true;
+  video.src = url;
+
+  try {
+    await waitForMediaEvent(video, "loadedmetadata");
+    const durationS = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+    const sampleTimeS = durationS > 0
+      ? Math.min(durationS, Math.max(0, sampleTimeSeconds ?? durationS * 0.5))
+      : 0;
+
+    if (durationS > 0) {
+      video.currentTime = sampleTimeS;
+      await waitForMediaEvent(video, "seeked");
+    } else {
+      await waitForMediaEvent(video, "loadeddata");
+    }
+
+    const width = Math.max(1, video.videoWidth || 1280);
+    const height = Math.max(1, video.videoHeight || 720);
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      throw new Error("Unable to create frame extraction canvas");
+    }
+    ctx.drawImage(video, 0, 0, width, height);
+
+    return {
+      dataUrl: canvas.toDataURL("image/png"),
+      durationS,
+      sampleTimeS,
+    };
+  } finally {
+    URL.revokeObjectURL(url);
+    video.removeAttribute("src");
+    video.load();
+  }
+}
+
 function VerificationPanel({
   enabled,
   mode,
@@ -669,6 +742,14 @@ function VerificationPanel({
   fileName,
   alignmentScore,
   alignmentLabel,
+  sourceType,
+  videoDurationS,
+  sampleTimeS,
+  extractionInProgress,
+  errorMessage,
+  canResample,
+  onSampleTimeChange,
+  onResampleVideoFrame,
   showHeatOverlay,
   snapshots,
   onToggle,
@@ -695,6 +776,14 @@ function VerificationPanel({
   fileName: string | null;
   alignmentScore: number | null;
   alignmentLabel: string | null;
+  sourceType: VerificationSourceType;
+  videoDurationS: number | null;
+  sampleTimeS: number | null;
+  extractionInProgress: boolean;
+  errorMessage: string | null;
+  canResample: boolean;
+  onSampleTimeChange: (value: number) => void;
+  onResampleVideoFrame: () => void;
   showHeatOverlay: boolean;
   snapshots: CameraVerificationSnapshot[];
   onToggle: (next: boolean) => void;
@@ -729,7 +818,7 @@ function VerificationPanel({
           <span className="text-[#7a8fb6]">Reference frame</span>
           <input
             type="file"
-            accept="image/*"
+            accept="image/*,video/*"
             className="mt-1 block w-full rounded border border-[#2a3650] bg-[#0f1624] px-2 py-1 text-[9px] text-[#cdd8ee]"
             onChange={(event) => {
               const file = event.target.files?.[0];
@@ -738,6 +827,36 @@ function VerificationPanel({
             }}
           />
           {fileName ? <span className="mt-1 block truncate text-[8px] text-[#8aa0c8]">{fileName}</span> : null}
+          {sourceType === "video" && videoDurationS !== null ? (
+            <div className="mt-1 space-y-1.5 rounded border border-[#2a3650] bg-[#0d1523] p-1.5">
+              <span className="block text-[8px] text-[#9db7e1]">
+                Video frame sampled at {sampleTimeS !== null ? formatSecondsShort(sampleTimeS) : "0:00"} / {formatSecondsShort(videoDurationS)}
+              </span>
+              <label className="block text-[8px] text-[#8aa0c8]">
+                <div className="flex justify-between"><span>Sample time</span><span>{formatSecondsShort(sampleTimeS ?? 0)}</span></div>
+                <input
+                  type="range"
+                  min={0}
+                  max={Math.max(0, videoDurationS)}
+                  step={0.25}
+                  value={sampleTimeS ?? 0}
+                  disabled={!canResample || extractionInProgress}
+                  onChange={(event) => onSampleTimeChange(Number(event.target.value))}
+                  className="mt-1 w-full accent-cyan-400"
+                />
+              </label>
+              <button
+                type="button"
+                disabled={!canResample || extractionInProgress}
+                onClick={onResampleVideoFrame}
+                className="rounded bg-[#14304a] px-2 py-1 text-[8px] text-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Extract frame at selected time
+              </button>
+            </div>
+          ) : null}
+          {extractionInProgress ? <span className="mt-1 block text-[8px] text-cyan-300">Extracting video frame…</span> : null}
+          {errorMessage ? <span className="mt-1 block text-[8px] text-rose-300">{errorMessage}</span> : null}
         </label>
         <div className="flex gap-1">
           <button type="button" onClick={() => onModeChange("overlay")} className={`rounded px-2 py-1 ${mode === "overlay" ? "bg-cyan-500/30 text-cyan-200" : "bg-[#1a2233] text-[#8ea5cc]"}`}>Overlay</button>
@@ -925,6 +1044,12 @@ export function CameraViewMode() {
   const [alignmentQualityScore, setAlignmentQualityScore] = useState<number | null>(null);
   const [alignmentHeatmapUrl, setAlignmentHeatmapUrl] = useState<string | null>(null);
   const [showDifferenceHeatOverlay, setShowDifferenceHeatOverlay] = useState(false);
+  const [verificationSourceType, setVerificationSourceType] = useState<VerificationSourceType>("image");
+  const [verificationVideoDurationS, setVerificationVideoDurationS] = useState<number | null>(null);
+  const [verificationSampleTimeS, setVerificationSampleTimeS] = useState<number | null>(null);
+  const [verificationVideoFile, setVerificationVideoFile] = useState<File | null>(null);
+  const [verificationExtracting, setVerificationExtracting] = useState(false);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
   const frameRootRef = useRef<HTMLDivElement | null>(null);
   const snapshotsForCamera = camera ? (cameraVerificationSnapshots[camera.id] ?? []) : [];
   const canvasFilter =
@@ -1004,6 +1129,27 @@ export function CameraViewMode() {
 
   const replaySegmentLabel = activeTimelineEvent?.reason
     ?? (activePath ? `${activePath.label} active replay` : undefined);
+
+  const extractFromCurrentVideo = (timeS?: number) => {
+    if (!verificationVideoFile) return;
+    setVerificationExtracting(true);
+    setVerificationError(null);
+    void extractVideoFrameDataUrl(verificationVideoFile, timeS)
+      .then((frame) => {
+        setVerificationSourceType("video");
+        setVerificationVideoDurationS(frame.durationS);
+        setVerificationSampleTimeS(frame.sampleTimeS);
+        setVerificationImageUrl(frame.dataUrl);
+        setVerificationFileName(`${verificationVideoFile.name} @ ${formatSecondsShort(frame.sampleTimeS)}`);
+        setVerificationEnabled(true);
+      })
+      .catch((error) => {
+        setVerificationError(error instanceof Error ? error.message : "Video frame extraction failed");
+      })
+      .finally(() => {
+        setVerificationExtracting(false);
+      });
+  };
 
   useEffect(() => {
     return () => {
@@ -1248,16 +1394,43 @@ export function CameraViewMode() {
             fileName={verificationFileName}
             alignmentScore={alignmentQualityScore}
             alignmentLabel={alignmentQualityScore !== null ? alignmentQualityLabel(alignmentQualityScore) : null}
+            sourceType={verificationSourceType}
+            videoDurationS={verificationVideoDurationS}
+            sampleTimeS={verificationSampleTimeS}
+            extractionInProgress={verificationExtracting}
+            errorMessage={verificationError}
+            canResample={verificationSourceType === "video" && verificationVideoFile !== null}
+            onSampleTimeChange={(value) => {
+              setVerificationSampleTimeS(value);
+            }}
+            onResampleVideoFrame={() => {
+              extractFromCurrentVideo(verificationSampleTimeS ?? undefined);
+            }}
             showHeatOverlay={showDifferenceHeatOverlay}
             snapshots={snapshotsForCamera}
             onToggle={setVerificationEnabled}
             onUpload={(file) => {
+              setVerificationError(null);
+              if (file.type.startsWith("video/")) {
+                setVerificationVideoFile(file);
+                setVerificationSampleTimeS(null);
+                extractFromCurrentVideo();
+                return;
+              }
+
               const reader = new FileReader();
               reader.onload = () => {
                 if (typeof reader.result !== "string") return;
+                setVerificationSourceType("image");
+                setVerificationVideoDurationS(null);
+                setVerificationSampleTimeS(null);
+                setVerificationVideoFile(null);
                 setVerificationImageUrl(reader.result);
                 setVerificationFileName(file.name);
                 setVerificationEnabled(true);
+              };
+              reader.onerror = () => {
+                setVerificationError("Unable to read image file");
               };
               reader.readAsDataURL(file);
             }}
@@ -1315,6 +1488,11 @@ export function CameraViewMode() {
               setVerificationImageUrl(null);
               setVerificationFileName(null);
               setVerificationEnabled(false);
+              setVerificationSourceType("image");
+              setVerificationVideoDurationS(null);
+              setVerificationSampleTimeS(null);
+              setVerificationVideoFile(null);
+              setVerificationError(null);
             }}
           />
           <BottomControlStrip mode={feedMode} onModeChange={setFeedMode} flags={flags} onFlagsChange={setFlags} onBackToMap={() => { setWorkspacePreset("edit"); setViewMode("map"); }} />

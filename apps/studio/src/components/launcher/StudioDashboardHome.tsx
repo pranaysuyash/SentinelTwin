@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/cn";
-import { PRODUCT_FEATURE_STATUS_LAST_VERIFIED, type ProductFeatureEntry } from "@/lib/product-feature-status";
+import { PRODUCT_FEATURE_STATUS_LAST_VERIFIED, type ProductFeatureEntry, type ProductFeatureStatus } from "@/lib/product-feature-status";
 import { getSceneSourceMeta } from "@/lib/scene-source";
 import { SecurityOutcomePanel } from "@/components/security-outcome/SecurityOutcomePanel";
 import type { BottomTab, SavedProjectRecord, ViewMode, WorkspacePreset } from "@/store/studio-store";
@@ -38,8 +38,6 @@ type LaunchMode = {
 
 type ProjectSort = "recent" | "name" | "coverage";
 type StarterTone = "blank" | "import" | "scan" | "ai";
-type WorkflowStatus = "Available" | "Preview" | "Planned";
-
 const LAUNCH_MODES: LaunchMode[] = [
   { label: "Coverage", description: "Open the main analysis workspace.", viewMode: "camera_view", preset: "coverage", accent: "blue" },
   { label: "Camera View", description: "Inspect one camera in full canvas.", viewMode: "camera_view", preset: "coverage", accent: "green" },
@@ -565,10 +563,22 @@ function ActionButton({
   );
 }
 
-function workflowStatusTone(status: WorkflowStatus) {
+function workflowStatusTone(status: ProductFeatureStatus) {
   if (status === "Available") return "border-emerald-400/25 bg-emerald-500/10 text-emerald-200";
   if (status === "Preview") return "border-amber-400/25 bg-amber-500/10 text-amber-200";
   return "border-slate-400/20 bg-slate-500/10 text-slate-200";
+}
+
+function findFeatureEntryByName(featureStatus: ProductFeatureEntry[], featureName: string) {
+  return featureStatus.find((entry) => entry.feature.toLowerCase() === featureName.toLowerCase()) ?? null;
+}
+
+function featureStatusValue(entry: ProductFeatureEntry | null, fallback: ProductFeatureStatus) {
+  return entry?.status ?? fallback;
+}
+
+function featureDetailValue(entry: ProductFeatureEntry | null, fallback: string) {
+  return entry?.detail ?? fallback;
 }
 
 function WorkflowCard({
@@ -579,7 +589,7 @@ function WorkflowCard({
 }: {
   title: string;
   description: string;
-  status: WorkflowStatus;
+  status: ProductFeatureStatus;
   onClick: () => void;
 }) {
   return (
@@ -1019,6 +1029,10 @@ export function StudioDashboardHome({
   const referenceDemoProjects = visibleProjects.filter((project) => project.scene.source === "demo");
   const assumptions = scene.assumptions;
   const lastRun = result?.computedAt ?? scene.simulation?.computedAt ?? null;
+  const aiLayoutDraftFeature = findFeatureEntryByName(featureStatus, "AI layout draft");
+  const manualScanFeature = findFeatureEntryByName(featureStatus, "Scan Site (manual-assisted)");
+  const guidedScanFeature = findFeatureEntryByName(featureStatus, "Guided scan reconstruction");
+  const verifyFootageFeature = findFeatureEntryByName(featureStatus, "Real footage verification");
   const visibleProjectCount = visibleProjects.length;
   const userWorkspaceCount = userWorkspaceProjects.length;
   const referenceDemoCount = referenceDemoProjects.length;
@@ -1124,10 +1138,30 @@ export function StudioDashboardHome({
                 <WorkflowCard title="Audit Existing Camera Setup" description="Run coverage, inspect failures, and generate report evidence." status="Available" onClick={onOpenCoverageWorkspace} />
                 <WorkflowCard title="Design New Camera Layout" description="Create a scene, place cameras, and test before install." status="Available" onClick={onCreateScene} />
                 <WorkflowCard title="Import Floor Plan" description="Upload plan, calibrate detections, review warnings, build baseline scene." status="Available" onClick={onImportFloorPlan} />
-                <WorkflowCard title="Describe Layout With AI" description="Generate a draft scene from prompt and refine." status="Preview" onClick={onAiDraft} />
-                <WorkflowCard title="Manual-Assisted Scan" description="Capture site inputs and compile into scene draft." status="Preview" onClick={onScanSite} />
-                <WorkflowCard title="Guided Scan Reconstruction" description="Capture-driven reconstruction pipeline (not production-ready)." status="Planned" onClick={onGuidedScanPlanned} />
-                <WorkflowCard title="Verify Real Camera Footage" description="Expected-vs-actual CCTV validation pipeline." status="Planned" onClick={onVerifyFootagePlanned} />
+                <WorkflowCard
+                  title="Describe Layout With AI"
+                  description={featureDetailValue(aiLayoutDraftFeature, "Generate a draft scene from prompt and refine.")}
+                  status={featureStatusValue(aiLayoutDraftFeature, "Preview")}
+                  onClick={onAiDraft}
+                />
+                <WorkflowCard
+                  title="Manual-Assisted Scan"
+                  description={featureDetailValue(manualScanFeature, "Capture site inputs and compile into scene draft.")}
+                  status={featureStatusValue(manualScanFeature, "Preview")}
+                  onClick={onScanSite}
+                />
+                <WorkflowCard
+                  title="Guided Scan Reconstruction"
+                  description={featureDetailValue(guidedScanFeature, "Capture-driven reconstruction pipeline (not production-ready).")}
+                  status={featureStatusValue(guidedScanFeature, "Preview")}
+                  onClick={onGuidedScanPlanned}
+                />
+                <WorkflowCard
+                  title="Verify Real Camera Footage"
+                  description={featureDetailValue(verifyFootageFeature, "Reference image/video compare with local frame extraction and alignment preview.")}
+                  status={featureStatusValue(verifyFootageFeature, "Preview")}
+                  onClick={onVerifyFootagePlanned}
+                />
                 <WorkflowCard title="Open Reference Demo" description="Use the retail baseline to demo the simulation loop." status="Available" onClick={onOpenStudio} />
               </div>
             </div>

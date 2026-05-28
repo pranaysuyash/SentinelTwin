@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const wizardPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/scan-to-scene/ScanSiteWizard.tsx";
+const wizardPath = "./src/components/scan-to-scene/ScanSiteWizard.tsx";
 
 describe("ScanSiteWizard", () => {
   test("supports manual correction controls and confidence-gated compile", () => {

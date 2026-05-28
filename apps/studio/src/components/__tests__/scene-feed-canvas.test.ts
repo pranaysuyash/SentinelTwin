@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const sceneFeedPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/view/SceneFeedCanvas.tsx";
+const sceneFeedPath = "./src/components/view/SceneFeedCanvas.tsx";
 
 describe("SceneFeedCanvas camera rigs", () => {
   test("keeps wall camera rig synchronized to live camera transforms", () => {

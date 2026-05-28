@@ -40,6 +40,8 @@ describe("report engine", () => {
     expect(report.standardsRef).toContain("IEC 62676");
     expect(report.provenance.sceneSourceLabel).toBe("Demo Scene");
     expect(report.provenance.nodeCount).toBeGreaterThan(0);
+    expect(report.novelAlgorithms?.coverageEntropy).toBeDefined();
+    expect(report.novelAlgorithms?.coverageEntropy?.cellCount).toBeGreaterThan(0);
     expect(report.novelAlgorithms?.coverageUncertainty).toBeDefined();
     expect(report.novelAlgorithms?.coverageUncertainty?.sampleCount).toBeGreaterThan(0);
     expect(report.novelAlgorithms?.postureVariation).toBeDefined();
@@ -204,6 +206,12 @@ describe("exportAsHtml", () => {
     const html = exportAsHtml(makeReport());
     expect(html).toContain("Coverage Uncertainty");
     expect(html).toContain("samples");
+  });
+
+  test("includes entropy section", () => {
+    const html = exportAsHtml(makeReport());
+    expect(html).toContain("Coverage Entropy");
+    expect(html).toContain("dominant");
   });
 
   test("includes posture variation section", () => {
@@ -436,6 +444,12 @@ describe("exportAsMarkdown", () => {
     expect(md).toContain("Coverage Uncertainty");
   });
 
+  test("includes entropy section", () => {
+    const md = exportAsMarkdown(baseReport);
+    expect(md).toContain("Coverage Entropy");
+    expect(md).toContain("dominant");
+  });
+
   test("includes posture variation section", () => {
     const md = exportAsMarkdown(baseReport);
     expect(md).toContain("Coverage Posture Variation");
@@ -583,6 +597,12 @@ describe("exportAsText", () => {
     const text = exportAsText(baseReport);
     expect(text).toContain("NOVEL ALGORITHMS");
     expect(text).toContain("Coverage Uncertainty");
+  });
+
+  test("includes entropy section", () => {
+    const text = exportAsText(baseReport);
+    expect(text).toContain("Coverage Entropy");
+    expect(text).toContain("dominant");
   });
 
   test("includes redundancy matrix section", () => {

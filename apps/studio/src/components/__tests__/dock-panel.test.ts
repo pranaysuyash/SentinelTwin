@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const dockPanelPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/dock/DockPanel.tsx";
-const dockRailPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/dock/DockRail.tsx";
+const dockPanelPath = "./src/components/dock/DockPanel.tsx";
+const dockRailPath = "./src/components/dock/DockRail.tsx";
 
 describe("Dock panels", () => {
   test("keep the collapsed rails compact so the canvas gets more room", () => {

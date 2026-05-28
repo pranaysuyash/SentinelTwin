@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const inspectorPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/inspector/InspectorPanel.tsx";
-const cameraInspectorPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/inspector/CameraInspector.tsx";
-const controlsPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/inspector/inspector-controls.tsx";
+const inspectorPath = "./src/components/inspector/InspectorPanel.tsx";
+const cameraInspectorPath = "./src/components/inspector/CameraInspector.tsx";
+const controlsPath = "./src/components/inspector/inspector-controls.tsx";
 
 describe("InspectorPanel", () => {
   test("defines an obstruction inspector and obstruction selection branch", () => {
@@ -55,6 +55,9 @@ describe("InspectorPanel", () => {
     expect(source).toContain("Show Bounding Box");
     expect(source).toContain("PPM est.");
     expect(source).toContain("Angle from center");
+    expect(source).toContain("Placement Presets");
+    expect(source).toContain("Best fit");
+    expect(source).toContain("Pick a placement preset for the next camera");
     expect(source).toContain("<CameraFeedCanvas cameraId={camera.id} overlayOptions={feedOverlayOptions} />");
   });
 

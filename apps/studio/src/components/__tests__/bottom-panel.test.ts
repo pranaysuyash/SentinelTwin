@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const bottomPanelPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/bottom-panel/BottomPanel.tsx";
+const bottomPanelPath = "./src/components/bottom-panel/BottomPanel.tsx";
 
 describe("BottomPanel", () => {
   test("surfaces the analysis tabs in the main tab strip", () => {

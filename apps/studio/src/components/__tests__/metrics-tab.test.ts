@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const metricsTabPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/bottom-panel/MetricsTab.tsx";
+const metricsTabPath = "./src/components/bottom-panel/MetricsTab.tsx";
 
 describe("MetricsTab", () => {
   test("exposes the live metric cards used by the studio shell", () => {

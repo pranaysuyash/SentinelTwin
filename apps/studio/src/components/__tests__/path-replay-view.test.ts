@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const pathReplayPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/view/PathReplayView.tsx";
+const pathReplayPath = "./src/components/view/PathReplayView.tsx";
 
 describe("PathReplayView", () => {
   test("follows the shared replay-follow state when enabled", () => {

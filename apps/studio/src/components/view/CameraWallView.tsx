@@ -239,8 +239,6 @@ const WallOverviewPanel = memo(function WallOverviewPanel() {
   const scene = useStudioStore((s) => s.scene);
   const result = useStudioStore((s) => s.simulationResult);
   const selectedId = useStudioStore((s) => s.selectedNodeId);
-  const selectedCameraId = useStudioStore((s) => s.selectedCameraId);
-  const setSelectedCameraId = useStudioStore((s) => s.setSelectedCameraId);
   const theme = CAMERA_WALL_THEME;
   const { width, depth } = scene.dimensions;
 
@@ -382,6 +380,7 @@ export function CameraWallView() {
   const simulationResult = useStudioStore((s) => s.simulationResult);
   const activePathId = useStudioStore((s) => s.activePathId);
   const selectedId = useStudioStore((s) => s.selectedNodeId);
+  const selectedCameraId = useStudioStore((s) => s.selectedCameraId);
   const [layoutMode, setLayoutMode] = useState<"quad" | "overview">("quad");
 
   const cameras = useMemo(() => {

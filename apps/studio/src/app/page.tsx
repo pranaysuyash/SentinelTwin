@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import StudioShell from "@/components/layout/StudioShell";
 import { SceneBuilderWizard } from "@/components/scan-to-scene/SceneBuilderWizard";
@@ -22,15 +22,13 @@ function formatClock(timestamp: number | null | undefined) {
   }).format(new Date(timestamp));
 }
 
-type StudioPageProps = {
-  searchParams?: Promise<{ studio?: string | string[] }>;
-};
-
-export default function StudioPage({ searchParams }: StudioPageProps) {
+export default function StudioPage() {
   const [enterStudio, setEnterStudio] = useState(false);
+  const [queryBootEnabled, setQueryBootEnabled] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const [showFloorPlanWizard, setShowFloorPlanWizard] = useState(false);
   const [showScanWizard, setShowScanWizard] = useState(false);
+  const [showGuidedScanKickoff, setShowGuidedScanKickoff] = useState(false);
   const [showAiDraft, setShowAiDraft] = useState(false);
   const [showVerifyFootagePreview, setShowVerifyFootagePreview] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("Create a 10m x 7m electronics shop with front entry, two shelves, right-side cash counter, back storage, and two cameras.");
@@ -66,8 +64,12 @@ export default function StudioPage({ searchParams }: StudioPageProps) {
   }, [currentResult?.computedAt]);
   const currentAiProvider = useMemo(() => describeAiProviderSelection(aiProviderSelection), [aiProviderSelection]);
 
-  const resolvedSearchParams = use(searchParams ?? Promise.resolve<{ studio?: string | string[] }>({}));
-  const hasQueryBoot = resolvedSearchParams.studio === "1";
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const query = new URLSearchParams(window.location.search);
+    setQueryBootEnabled(query.get("studio") === "1");
+  }, []);
 
   useEffect(() => {
     refreshSavedScenesList();
@@ -118,7 +120,7 @@ export default function StudioPage({ searchParams }: StudioPageProps) {
     fileInputRef.current?.click();
   };
 
-  if (enterStudio || hasQueryBoot) {
+  if (enterStudio || queryBootEnabled) {
     return <StudioShell />;
   }
 
@@ -143,7 +145,7 @@ export default function StudioPage({ searchParams }: StudioPageProps) {
         onImportScene={handleImportScene}
         onScanSite={() => setShowScanWizard(true)}
         onAiDraft={() => setShowAiDraft(true)}
-        onGuidedScanPlanned={() => setLaunchNotice("Guided scan reconstruction is planned and not product-implemented yet. Use Manual-Assisted Scan for now.")}
+        onGuidedScanPlanned={() => setShowGuidedScanKickoff(true)}
         onVerifyFootagePlanned={() => setShowVerifyFootagePreview(true)}
         onOpenReport={openReport}
         onOpenScene={openScene}
@@ -216,6 +218,54 @@ export default function StudioPage({ searchParams }: StudioPageProps) {
                 setEnterStudio(true);
               }}
             />
+          </div>
+        </div>
+      ) : null}
+
+      {showGuidedScanKickoff ? (
+        <div className="fixed inset-0 z-50 bg-black/55 p-4">
+          <div className="mx-auto max-w-3xl rounded-2xl border border-[#1f2637] bg-[#0b0f17] p-4 shadow-2xl">
+            <h2 className="text-sm font-semibold text-white">Guided Scan Reconstruction (Preview)</h2>
+            <p className="mt-1 text-xs text-[#91a4c5]">
+              Start a guided operator flow: capture key site markers, compile to canonical <code className="text-[#c4d5ff]">SecurityScene</code>, then continue in Studio.
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-[11px] text-emerald-100">
+                <div className="font-semibold uppercase tracking-[0.14em] text-emerald-200">Available now</div>
+                <div className="mt-1">Marker-based wall/door/window capture</div>
+                <div>Camera/light/object/zone placement markers</div>
+                <div>Optional route path point guidance</div>
+                <div>Compile to editable SecurityScene draft</div>
+              </div>
+              <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-[11px] text-amber-100">
+                <div className="font-semibold uppercase tracking-[0.14em] text-amber-200">Next upgrades</div>
+                <div>Auto structure inference from multiple images</div>
+                <div>Multi-photo correspondence + confidence surfacing</div>
+                <div>Pose/FOV auto-assist suggestions</div>
+                <div>Semi-automated reconstruction QA checks</div>
+              </div>
+            </div>
+            <div className="mt-3 rounded-lg border border-[#22314b] bg-[#101827] px-3 py-2 text-[10px] text-[#b6c6e6]">
+              Preview mode: guided marker capture is implementation-ready; fully automated reconstruction remains a subsequent phase.
+            </div>
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                onClick={() => setShowGuidedScanKickoff(false)}
+                className="rounded-lg border border-[#2a3347] px-3 py-1.5 text-xs text-[#9bb0cf]"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  setShowGuidedScanKickoff(false);
+                  setShowScanWizard(true);
+                  setLaunchNotice("Guided Scan kickoff opened. Capture markers to compile your first scene draft.");
+                }}
+                className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500"
+              >
+                Start Guided Scan Session
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
@@ -302,13 +352,14 @@ export default function StudioPage({ searchParams }: StudioPageProps) {
               <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-[11px] text-emerald-100">
                 <div className="font-semibold uppercase tracking-[0.14em] text-emerald-200">Available now</div>
                 <div className="mt-1">Reference frame upload</div>
+                <div>Local video ingest + frame extraction</div>
                 <div>Overlay/split comparison</div>
                 <div>Alignment quality estimate</div>
                 <div>Difference heat overlay</div>
               </div>
               <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-[11px] text-amber-100">
                 <div className="font-semibold uppercase tracking-[0.14em] text-amber-200">Not implemented yet</div>
-                <div>Video ingestion + frame sampling</div>
+                <div>Multi-frame timeline selection + auto best-frame scoring</div>
                 <div>Auto camera pose/FOV recovery</div>
                 <div>ONVIF/RTSP integration</div>
                 <div>Forensic-grade proof claims</div>

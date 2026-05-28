@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const compareViewPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/view/CompareView.tsx";
+const compareViewPath = "./src/components/view/CompareView.tsx";
 
 describe("CompareView", () => {
   test("exposes explicit scenario selectors and canonical snapshot saving", () => {

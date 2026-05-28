@@ -18,6 +18,7 @@ import { cn } from "@/lib/cn";
 import type { CameraNode, DoriQuality, SimulationAssumptions } from "@/schema/security-scene";
 import { qualityToScore } from "@/simulation/dori";
 import { type InspectorTab, useStudioStore } from "@/store/studio-store";
+import { applyCameraPreset, CAMERA_PRESETS, describeCameraPreset, findBestCameraPreset, getCameraPreset } from "@/components/workspace/CameraPresetPicker";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -146,6 +147,7 @@ export function CameraInspector() {
   const addSnapshot = useStudioStore((s) => s.addSnapshot);
   const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
   const setViewMode = useStudioStore((s) => s.setViewMode);
+  const setCameraPresetId = useStudioStore((s) => s.setCameraPresetId);
   const [viewMode, setViewModeState] = useState<CameraViewMode>("normal");
   const [viewToggles, setViewToggles] = useState<ViewToggleState>({
     overlays: true, dori: true, path: false, zones: true, timestamp: true, boundingBox: false, grid: false,
@@ -154,6 +156,8 @@ export function CameraInspector() {
 
   if (!camera) return null;
 
+  const placementPreset = getCameraPreset();
+  const bestPreset = findBestCameraPreset(camera);
   const recCount = (result?.recommendations ?? []).filter(
     (r) => !r.affectedNodeId || r.affectedNodeId === camera.id,
   ).length;
@@ -314,6 +318,82 @@ export function CameraInspector() {
             <div className="mb-2.5">
               <CameraFeedCanvas cameraId={camera.id} />
             </div>
+
+            <SectionCard title="Placement Presets">
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Tool rail</div>
+                    <div className="mt-0.5 text-[10px] font-medium text-[#d2d9e8]">
+                      {placementPreset ? placementPreset.label : "Custom camera"}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Best fit</div>
+                    <div className="mt-0.5 text-[10px] font-medium text-[#d2d9e8]">
+                      {bestPreset ? bestPreset.label : "None"}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-[9px] leading-relaxed text-[#6a748b]">
+                  Pick a placement preset for the next camera, or stamp one onto this camera so the inspector and editor stay on the same optics profile.
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {CAMERA_PRESETS.map((preset) => {
+                    const isPlacementPreset = placementPreset?.id === preset.id;
+                    const isBestPreset = bestPreset?.id === preset.id;
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => {
+                          setCameraPresetId(preset.id);
+                          updateNode(camera.id, applyCameraPreset(preset));
+                        }}
+                        className={cn(
+                          "rounded-xl border px-2.5 py-2 text-left transition-colors",
+                          isPlacementPreset
+                            ? "border-blue-400/50 bg-blue-500/10"
+                            : "border-[#1f2536] bg-[#0b0f17] hover:border-[#2d3750] hover:bg-[#111521]",
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="truncate text-[11px] font-semibold text-[#e6ebf7]">{preset.label}</div>
+                            <div className="mt-0.5 text-[9px] leading-relaxed text-[#7b889f]">{describeCameraPreset(preset)}</div>
+                          </div>
+                          <div className="flex shrink-0 flex-col items-end gap-1">
+                            {isPlacementPreset ? (
+                              <span className="rounded-full border border-blue-400/25 bg-blue-500/10 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.12em] text-blue-200">
+                                Tool
+                              </span>
+                            ) : null}
+                            {isBestPreset ? (
+                              <span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.12em] text-emerald-200">
+                                Best
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          <span className="rounded-full border border-[#1f2536] bg-[#111521] px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] text-[#7d8aa4]">
+                            {preset.mountType}
+                          </span>
+                          <span className="rounded-full border border-[#1f2536] bg-[#111521] px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] text-[#7d8aa4]">
+                            {preset.ptz ? "PTZ" : "Fixed"}
+                          </span>
+                          <span className="rounded-full border border-[#1f2536] bg-[#111521] px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] text-[#7d8aa4]">
+                            {preset.nightMode === "ir" ? "IR" : preset.nightMode === "low_light" ? "Low light" : preset.nightMode}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </SectionCard>
 
             <div className="flex items-center justify-between gap-3 border-b border-[#181c27] py-1.5">
               <span className="text-[10px] text-[#6a748b]">Type</span>

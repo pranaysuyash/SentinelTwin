@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const reportLitePath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/bottom-panel/ReportLiteTab.tsx";
+const reportLitePath = "./src/components/bottom-panel/ReportLiteTab.tsx";
 
 describe("ReportLiteTab", () => {
   test("exposes markdown and html export actions for the handoff report", () => {

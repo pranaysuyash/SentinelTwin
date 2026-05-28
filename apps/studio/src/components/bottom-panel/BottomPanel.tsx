@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { cn } from "@/lib/cn";
 import { useStudioStore, type BottomTab } from "@/store/studio-store";
 import { AssumptionsTab } from "./AssumptionsTab";
@@ -18,6 +20,24 @@ import { TimelineTab } from "./TimelineTab";
 import { RedundancyTab } from "./RedundancyTab";
 import { TemporalProfileView } from "./TemporalProfileView";
 import { SecurityOutcomePanel } from "@/components/security-outcome/SecurityOutcomePanel";
+
+const PANEL_EXPLAINERS: Record<BottomTab, string> = {
+  outcome: "Security verdict, top failures, camera responsibility, redundancy, and recommended next actions.",
+  metrics: "Coverage quality totals and health indicators for the current scene assumptions.",
+  issues: "Prioritized issue stack with scene focus controls and fix handoff actions.",
+  timeline: "Path replay visibility over time, including where coverage is lost.",
+  temporal: "24-hour environment profile showing vulnerable windows and safest periods.",
+  beforeafter: "Baseline vs proposed snapshots with delta metrics and outcome changes.",
+  assumptions: "Model assumptions that qualify all simulation claims and report language.",
+  provenance: "Evidence graph: what data and operations produced the current result.",
+  redundancy: "Single-point-failure checks and camera-offline impact review.",
+  counterfactual: "What-if simulation lane for proposed scene changes before applying them.",
+  threat: "Defensive coverage-failure analysis for hardening, not attacker optimization.",
+  novel: "Advanced experimental signals used for deeper analysis and diagnostics.",
+  report: "Client-facing summary output with exports from the same simulation evidence.",
+  help: "Workflow guidance and shortcuts for first-run and power-user operation.",
+  debug: "Low-level inspection output for implementation and troubleshooting.",
+};
 
 const TABS: { id: BottomTab; label: string; hasCount?: boolean }[] = [
   { id: "outcome", label: "SECURITY OUTCOME" },
@@ -68,11 +88,13 @@ export function BottomPanel() {
   const pinnedAnalysisModule = useStudioStore((s) => s.pinnedAnalysisModule);
   const result = useStudioStore((s) => s.simulationResult);
   const issueCount = result?.issues.length ?? 0;
+  const [showPanelExplain, setShowPanelExplain] = useState(false);
   const enabledTabs = TABS.filter((tab) => enabledAnalysisModules[tab.id]);
   const activeTabSafe = enabledAnalysisModules[activeTab] ? activeTab : enabledTabs[0]?.id ?? "metrics";
   const singleModuleTab = pinnedAnalysisModule && enabledAnalysisModules[pinnedAnalysisModule]
     ? pinnedAnalysisModule
     : activeTabSafe;
+  const panelExplainer = PANEL_EXPLAINERS[activeTabSafe] ?? "Analysis module details.";
 
   const renderTab = (tab: BottomTab) => {
     switch (tab) {
@@ -187,7 +209,7 @@ export function BottomPanel() {
 
   // Compare mode: show before/after tab by default
   if (viewMode === "compare") {
-    const compareTabs = enabledTabs.filter((tab) => tab.id === "beforeafter" || tab.id === "metrics");
+    const compareTabs = enabledTabs.filter((tab) => tab.id === "beforeafter" || tab.id === "metrics" || tab.id === "outcome");
     const compareActiveTab = compareTabs.some((tab) => tab.id === activeTabSafe) ? activeTabSafe : compareTabs[0]?.id ?? activeTabSafe;
     return (
       <div className="flex h-[208px] flex-shrink-0 flex-col border-t border-[#1e2130] bg-[#0d1017]">
@@ -234,6 +256,13 @@ export function BottomPanel() {
           </div>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setShowPanelExplain((state) => !state)}
+            className="rounded border border-[#273246] bg-[#111521] px-2 py-1 text-[10px] text-[#9bb0cf] transition-colors hover:border-sky-400/30 hover:text-white"
+          >
+            Explain this panel
+          </button>
           <TabBadge tone={issueCount > 0 ? "red" : "green"}>
             {issueCount > 0 ? `${issueCount} issues` : "No issues"}
           </TabBadge>
@@ -266,6 +295,12 @@ export function BottomPanel() {
           ))}
         </div>
       </div>
+
+      {showPanelExplain ? (
+        <div className="border-b border-[#1e2130] bg-[#0f141f] px-3 py-1.5 text-[11px] text-[#9bb0cf]">
+          <span className="font-medium text-[#d8e5ff]">{getTabLabel(activeTabSafe)}:</span> {panelExplainer}
+        </div>
+      ) : null}
 
       <div className="flex-1 overflow-hidden bg-[#0b0f17]">
         {enabledTabs.length === 0 ? (

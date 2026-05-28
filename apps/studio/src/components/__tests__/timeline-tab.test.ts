@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const timelineTabPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/bottom-panel/TimelineTab.tsx";
+const timelineTabPath = "./src/components/bottom-panel/TimelineTab.tsx";
 
 describe("TimelineTab", () => {
   test("wires Follow to the shared replay-follow state", () => {

@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const workspaceCanvasPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/workspace/WorkspaceCanvas.tsx";
-const sharedScenePath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/workspace/SharedScene.tsx";
+const workspaceCanvasPath = "./src/components/workspace/WorkspaceCanvas.tsx";
+const sharedScenePath = "./src/components/workspace/SharedScene.tsx";
 
 describe("WorkspaceCanvas obstruction selection", () => {
   test("makes obstruction boxes selectable and visually highlighted", () => {

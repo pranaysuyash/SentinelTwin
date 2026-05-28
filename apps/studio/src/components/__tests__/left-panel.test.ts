@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const leftPanelPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/left-panel/LeftPanel.tsx";
+const leftPanelPath = "./src/components/left-panel/LeftPanel.tsx";
 
 describe("LeftPanel", () => {
   test("uses a full-width dock shell with collapsible subpanels", () => {

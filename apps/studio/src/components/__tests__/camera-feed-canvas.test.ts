@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const cameraFeedCanvasPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/inspector/CameraFeedCanvas.tsx";
+const cameraFeedCanvasPath = "./src/components/inspector/CameraFeedCanvas.tsx";
 
 describe("CameraFeedCanvas", () => {
   test("exposes the inspector DORI overlay, live rig, and actor/noise cues", () => {

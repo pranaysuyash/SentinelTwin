@@ -146,6 +146,9 @@ export default function StudioShell() {
   const setActiveTool = useStudioStore((s) => s.setActiveTool);
   const selectedNodeId = useStudioStore((s) => s.selectedNodeId);
   const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
+  const selectedCameraId = useStudioStore((s) => s.selectedCameraId);
+  const selectNode = useStudioStore((s) => s.selectNode);
+  const scene = useStudioStore((s) => s.scene);
   const rightPanelMode = useStudioStore((s) => s.rightPanelMode);
   const setRightPanelMode = useStudioStore((s) => s.setRightPanelMode);
   const duplicateNode = useStudioStore((s) => s.duplicateNode);
@@ -363,6 +366,16 @@ export default function StudioShell() {
       setRightPanelMode("inspector");
     }
   }, [rightPanelMode, selectedNodeId, setRightPanelMode]);
+
+  useEffect(() => {
+    if (viewMode !== "camera_view") return;
+    const selectedIsCamera = !!selectedNodeId && scene.cameras.some((camera) => camera.id === selectedNodeId);
+    if (selectedIsCamera) return;
+    const fallbackCamera = scene.cameras.find((camera) => camera.id === selectedCameraId) ?? scene.cameras[0];
+    if (fallbackCamera) {
+      selectNode(fallbackCamera.id);
+    }
+  }, [scene.cameras, selectNode, selectedCameraId, selectedNodeId, viewMode]);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[#0b0c10] text-[#dde2ef]">

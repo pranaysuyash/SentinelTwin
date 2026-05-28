@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const topBarPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/layout/TopBar.tsx";
+const topBarPath = "./src/components/layout/TopBar.tsx";
 
 describe("TopBar target-type switcher", () => {
   test("exposes the global target-type dropdown, live label, and assumptions shortcut", () => {

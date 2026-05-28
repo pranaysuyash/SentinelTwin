@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const importReviewPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/scan-to-scene/ImportReview.tsx";
+const importReviewPath = "./src/components/scan-to-scene/ImportReview.tsx";
 
 describe("ImportReview", () => {
   test("exposes detection correction controls for walls, doors, and windows", () => {

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const beforeAfterTabPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/bottom-panel/BeforeAfterTab.tsx";
+const beforeAfterTabPath = "./src/components/bottom-panel/BeforeAfterTab.tsx";
 
 describe("BeforeAfterTab", () => {
   test("surfaces a visual diff summary and compare workspace handoff", () => {

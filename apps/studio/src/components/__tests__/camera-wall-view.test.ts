@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const cameraWallPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/view/CameraWallView.tsx";
+const cameraWallPath = "./src/components/view/CameraWallView.tsx";
 
 describe("CameraWallView", () => {
   test("surfaces live/offline counts, a layout selector, and the selected camera in the wall header", () => {

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const viewModeBarPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/view/ViewModeBar.tsx";
+const viewModeBarPath = "./src/components/view/ViewModeBar.tsx";
 
 describe("ViewModeBar", () => {
   test("includes report mode and respects view mode bar visibility", () => {

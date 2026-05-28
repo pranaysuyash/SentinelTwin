@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const threatAnalysisPanelPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/bottom-panel/ThreatAnalysisPanel.tsx";
+const threatAnalysisPanelPath = "./src/components/bottom-panel/ThreatAnalysisPanel.tsx";
 
 describe("ThreatAnalysisPanel", () => {
   test("runs the shared simulation action instead of only revealing cached details", () => {

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const redundancyPanelPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/bottom-panel/RedundancyMatrixPanel.tsx";
+const redundancyPanelPath = "./src/components/bottom-panel/RedundancyMatrixPanel.tsx";
 
 describe("RedundancyMatrixPanel", () => {
   test("offers the shared simulation action when redundancy data is missing", () => {

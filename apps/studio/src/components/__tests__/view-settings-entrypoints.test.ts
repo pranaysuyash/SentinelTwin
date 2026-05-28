@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const topBarPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/layout/TopBar.tsx";
-const workspaceCanvasPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/workspace/WorkspaceCanvas.tsx";
+const topBarPath = "./src/components/layout/TopBar.tsx";
+const workspaceCanvasPath = "./src/components/workspace/WorkspaceCanvas.tsx";
 
 describe("view settings entrypoints", () => {
   test("wires the top bar and canvas chrome to the view settings modal", () => {

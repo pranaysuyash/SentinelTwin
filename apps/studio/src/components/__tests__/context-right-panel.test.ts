@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const rightPanelPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/panels/ContextRightPanel.tsx";
-const assumptionsPanelPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/panels/AssumptionsPanel.tsx";
+const rightPanelPath = "./src/components/panels/ContextRightPanel.tsx";
+const assumptionsPanelPath = "./src/components/panels/AssumptionsPanel.tsx";
 
 describe("ContextRightPanel", () => {
   test("exposes the right panel mode switcher and inspector sections", () => {

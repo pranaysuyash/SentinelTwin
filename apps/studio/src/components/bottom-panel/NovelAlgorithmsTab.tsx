@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { Badge } from "@/components/shared/Badge";
 import { StatCard } from "@/components/shared/StatCard";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
+import { computeCoverageEntropy } from "@/simulation/coverage-entropy";
 import { computeCoverageTimeBudget } from "@/simulation/coverage-time-budget";
 import { computeCoveragePostureVariation } from "@/simulation/coverage-posture";
 import { computeCoverageUncertainty } from "@/simulation/coverage-uncertainty";
@@ -64,6 +65,7 @@ export function NovelAlgorithmsTab() {
   const kRobustness = result?.kRobustness;
   const placementOracle = result?.placementOracle;
   const fragility = result?.fragilitySummary;
+  const entropy = useMemo(() => (result ? computeCoverageEntropy(result.coverageCells) : null), [result]);
   const occlusion = result?.occlusionBlame ?? [];
   const anomalies = temporalProfile?.anomalyWindows ?? [];
   const blindRegions = result?.blindRegions ?? [];
@@ -136,6 +138,12 @@ export function NovelAlgorithmsTab() {
         />
         <StatCard
           icon={<Sigma className="h-3.5 w-3.5" />}
+          label="Coverage Entropy"
+          value={entropy ? `${entropy.normalizedEntropy.toFixed(2)}` : "—"}
+          color={entropy ? "text-fuchsia-300" : "text-[#8090a8]"}
+        />
+        <StatCard
+          icon={<Sigma className="h-3.5 w-3.5" />}
           label="Uncertainty"
           value={uncertainty ? `${uncertainty.sampleCount} runs` : "—"}
           color={uncertainty ? "text-violet-300" : "text-[#8090a8]"}
@@ -176,6 +184,25 @@ export function NovelAlgorithmsTab() {
             </div>
           ) : (
             <div className="text-[9px] text-[#59637a]">Fragility field not computed yet.</div>
+          )}
+        </Section>
+
+        <Section title="Coverage Entropy" icon={<Sigma className="h-3 w-3 text-fuchsia-400" />}>
+          {entropy ? (
+            <div className="space-y-1.5">
+              <CandidateLine label="Normalized" value={entropy.normalizedEntropy.toFixed(2)} />
+              <CandidateLine label="Raw bits" value={entropy.entropyBits.toFixed(2)} />
+              <CandidateLine label="Dominant band" value={`${entropy.dominantQuality} ${entropy.dominantQualityShare.toFixed(1)}%`} />
+              <div className="text-[9px] text-[#8b96ab]">
+                {entropy.normalizedEntropy < 0.33
+                  ? "Coverage is concentrated in a few quality bands, which reads as a more stable layout."
+                  : entropy.normalizedEntropy < 0.66
+                    ? "Coverage is moderately mixed across bands."
+                    : "Coverage is spread across many quality bands, which suggests a more varied but less concentrated layout."}
+              </div>
+            </div>
+          ) : (
+            <div className="text-[9px] text-[#59637a]">Coverage entropy not computed yet.</div>
           )}
         </Section>
 

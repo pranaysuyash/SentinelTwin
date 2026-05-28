@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 
 import { formatTargetTypeLabel } from "@/components/view/CameraViewMode";
 
-const cameraViewModePath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/view/CameraViewMode.tsx";
+const cameraViewModePath = "./src/components/view/CameraViewMode.tsx";
 
 describe("CameraViewMode", () => {
   test("exposes the live overlay strip and replay presets", () => {
@@ -32,6 +32,14 @@ describe("CameraViewMode", () => {
     expect(source).toContain("Alignment Quality");
     expect(source).toContain("Difference heat overlay");
     expect(source).toContain("non-forensic");
+    expect(source).toContain("accept=\"image/*,video/*\"");
+    expect(source).toContain("Extracting video frame…");
+    expect(source).toContain("Video frame sampled at");
+    expect(source).toContain("extractVideoFrameDataUrl");
+    expect(source).toContain("Extract frame at selected time");
+    expect(source).toContain("Sample time");
+    expect(source).toContain("verificationVideoFile");
+    expect(source).toContain("extractFromCurrentVideo");
     expect(source).toContain("Excellent");
     expect(source).toContain("Good");
     expect(source).toContain("Fair");

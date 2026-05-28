@@ -74,6 +74,9 @@ export function ImportReview({ result, warnings, onImageChange, onRecalibrate, o
     return { walls, doors, windows };
   }, [result, draftWalls, wallMask, doorMask, windowMask, draftDoors, draftWindows]);
   const diagnostics = useMemo(() => getFloorPlanDiagnostics(result), [result]);
+  const unresolvedCount = warnings.length;
+  const confidencePct = Math.round(result.confidence * 100);
+  const confidenceBand = confidencePct >= 75 ? "high" : confidencePct >= 50 ? "medium" : "low";
 
   const updateDraggedOpening = (
     event: ReactPointerEvent<SVGSVGElement>,
@@ -105,6 +108,40 @@ export function ImportReview({ result, warnings, onImageChange, onRecalibrate, o
 
   return (
     <div className="space-y-3">
+      <div className="rounded-lg border border-[#22314b] bg-[#0b1220] p-2">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#9bb0cf]">Floor Plan Preview Lane</div>
+            <div className="mt-0.5 text-[8px] text-[#7083a5]">Review extraction confidence and unresolved warnings before committing this plan into an editable scene.</div>
+          </div>
+          <span
+            className={`rounded border px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] ${
+              confidenceBand === "high"
+                ? "border-emerald-500/30 bg-emerald-500/12 text-emerald-200"
+                : confidenceBand === "medium"
+                  ? "border-amber-500/30 bg-amber-500/12 text-amber-100"
+                  : "border-red-500/30 bg-red-500/12 text-red-200"
+            }`}
+          >
+            Confidence {confidencePct}%
+          </span>
+        </div>
+        <div className="mt-2 grid grid-cols-3 gap-2 text-[8px]">
+          <div className="rounded border border-[#1f2a3e] bg-[#0a101d] px-2 py-1 text-[#9fb2d1]">
+            <div className="text-[#6f82a4]">Warnings</div>
+            <div className={unresolvedCount > 0 ? "text-amber-200" : "text-emerald-200"}>{unresolvedCount} unresolved</div>
+          </div>
+          <div className="rounded border border-[#1f2a3e] bg-[#0a101d] px-2 py-1 text-[#9fb2d1]">
+            <div className="text-[#6f82a4]">Openings</div>
+            <div>{result.doors.length + result.windows.length} total</div>
+          </div>
+          <div className="rounded border border-[#1f2a3e] bg-[#0a101d] px-2 py-1 text-[#9fb2d1]">
+            <div className="text-[#6f82a4]">Walls</div>
+            <div>{result.walls.length} detected</div>
+          </div>
+        </div>
+      </div>
+
       {/* Confidence & metrics */}
       <div className="grid grid-cols-3 gap-2">
         <div className="rounded-lg border border-[#1e2130] bg-[#070a12] p-2 text-center">

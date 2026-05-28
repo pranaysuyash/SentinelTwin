@@ -3,7 +3,7 @@
 import { Html, OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { ArrowLeft, Camera, ChevronLeft, ChevronRight, CircleSmall, VideoOff } from "lucide-react";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useStudioStore } from "@/store/studio-store";
 import "@/lib/three-compat";
@@ -32,12 +32,25 @@ type CameraVerificationSnapshot = {
   fileName: string;
   imageUrl: string;
   mode: VerificationViewMode;
+  sourceType?: VerificationSourceType;
+  sampleTimeS?: number | null;
+  videoDurationS?: number | null;
+  candidateCount?: number;
+  bestCandidateId?: string | null;
+  selectedCandidateId?: string | null;
   opacity: number;
   split: number;
   offsetX: number;
   offsetY: number;
   alignmentScore: number | null;
   createdAt: number;
+};
+
+type VideoFrameCandidate = {
+  id: string;
+  timeS: number;
+  dataUrl: string;
+  qualityScore: number;
 };
 
 export function formatTargetTypeLabel(targetType: SecurityScene["criticalZones"][number]["targetType"]) {
@@ -667,6 +680,112 @@ function formatSecondsShort(seconds: number) {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
+function formatSnapshotEvidenceSummary(snapshot: CameraVerificationSnapshot) {
+  if (snapshot.sourceType !== "video") return "Image upload";
+
+  const sampled = snapshot.sampleTimeS !== null && snapshot.sampleTimeS !== undefined
+    ? formatSecondsShort(snapshot.sampleTimeS)
+    : "0:00";
+  const duration = snapshot.videoDurationS !== null && snapshot.videoDurationS !== undefined
+    ? formatSecondsShort(snapshot.videoDurationS)
+    : "--:--";
+  const frames = typeof snapshot.candidateCount === "number" && snapshot.candidateCount > 0
+    ? `${snapshot.candidateCount} frame${snapshot.candidateCount === 1 ? "" : "s"}`
+    : "frame set unavailable";
+  const picked = snapshot.selectedCandidateId
+    ? snapshot.selectedCandidateId === snapshot.bestCandidateId
+      ? "best frame selected"
+      : "manual frame selected"
+    : "no frame selected";
+
+  return `Video ${sampled}/${duration} · ${frames} · ${picked}`;
+}
+
+function evaluateAlignmentSample({
+  canvas,
+  image,
+  offsetX,
+  offsetY,
+  mode,
+  split,
+  opacity,
+}: {
+  canvas: HTMLCanvasElement;
+  image: HTMLImageElement;
+  offsetX: number;
+  offsetY: number;
+  mode: VerificationViewMode;
+  split: number;
+  opacity: number;
+}) {
+  const sampleWidth = 96;
+  const sampleHeight = 54;
+
+  const renderCanvas = document.createElement("canvas");
+  renderCanvas.width = sampleWidth;
+  renderCanvas.height = sampleHeight;
+  const renderCtx = renderCanvas.getContext("2d", { willReadFrequently: true });
+  if (!renderCtx) return null;
+
+  const referenceCanvas = document.createElement("canvas");
+  referenceCanvas.width = sampleWidth;
+  referenceCanvas.height = sampleHeight;
+  const refCtx = referenceCanvas.getContext("2d", { willReadFrequently: true });
+  if (!refCtx) return null;
+
+  const overlayCanvas = document.createElement("canvas");
+  overlayCanvas.width = sampleWidth;
+  overlayCanvas.height = sampleHeight;
+  const overlayCtx = overlayCanvas.getContext("2d");
+  if (!overlayCtx) return null;
+
+  renderCtx.clearRect(0, 0, sampleWidth, sampleHeight);
+  renderCtx.drawImage(canvas, 0, 0, sampleWidth, sampleHeight);
+
+  refCtx.clearRect(0, 0, sampleWidth, sampleHeight);
+  const dx = Math.round((offsetX / Math.max(1, canvas.clientWidth)) * sampleWidth);
+  const dy = Math.round((offsetY / Math.max(1, canvas.clientHeight)) * sampleHeight);
+  refCtx.drawImage(image, dx, dy, sampleWidth, sampleHeight);
+
+  if (mode === "split") {
+    const splitX = Math.round((split / 100) * sampleWidth);
+    refCtx.clearRect(splitX, 0, sampleWidth - splitX, sampleHeight);
+    renderCtx.clearRect(splitX, 0, sampleWidth - splitX, sampleHeight);
+  }
+
+  const renderPixels = renderCtx.getImageData(0, 0, sampleWidth, sampleHeight);
+  const refPixels = refCtx.getImageData(0, 0, sampleWidth, sampleHeight);
+  const heat = overlayCtx.createImageData(sampleWidth, sampleHeight);
+  let diffSum = 0;
+  let samples = 0;
+
+  for (let i = 0; i < renderPixels.data.length; i += 4) {
+    const dr = Math.abs(renderPixels.data[i] - refPixels.data[i]);
+    const dg = Math.abs(renderPixels.data[i + 1] - refPixels.data[i + 1]);
+    const db = Math.abs(renderPixels.data[i + 2] - refPixels.data[i + 2]);
+    const diff = (dr + dg + db) / (3 * 255);
+    diffSum += diff;
+    samples += 1;
+
+    const level = Math.min(255, Math.round(diff * 320));
+    heat.data[i] = level;
+    heat.data[i + 1] = 40;
+    heat.data[i + 2] = 255 - Math.round(level * 0.55);
+    heat.data[i + 3] = Math.round(diff * 190);
+  }
+
+  overlayCtx.putImageData(heat, 0, 0);
+  const mismatch = samples > 0 ? diffSum / samples : 1;
+  const opacityWeight = 0.6 + opacity * 0.4;
+  const adjustedMismatch = Math.min(1, mismatch * opacityWeight);
+  const score = Math.max(0, Math.min(100, (1 - adjustedMismatch) * 100));
+
+  return {
+    score,
+    heatmapUrl: overlayCanvas.toDataURL("image/png"),
+  };
+}
+
 function waitForMediaEvent(target: HTMLMediaElement, eventName: keyof HTMLMediaElementEventMap) {
   return new Promise<void>((resolve, reject) => {
     const onSuccess = () => {
@@ -732,6 +851,91 @@ async function extractVideoFrameDataUrl(file: File, sampleTimeSeconds?: number) 
   }
 }
 
+function estimateFrameQuality(ctx: CanvasRenderingContext2D, width: number, height: number) {
+  const sample = ctx.getImageData(0, 0, width, height).data;
+  let luminanceSum = 0;
+  let luminanceSqSum = 0;
+  let count = 0;
+
+  for (let i = 0; i < sample.length; i += 4) {
+    const y = sample[i]! * 0.299 + sample[i + 1]! * 0.587 + sample[i + 2]! * 0.114;
+    luminanceSum += y;
+    luminanceSqSum += y * y;
+    count += 1;
+  }
+
+  if (count === 0) return 0;
+  const mean = luminanceSum / count;
+  const variance = Math.max(0, luminanceSqSum / count - mean * mean);
+  return Math.sqrt(variance);
+}
+
+async function extractVideoFrameCandidates(file: File, candidateCount = 5) {
+  const url = URL.createObjectURL(file);
+  const video = document.createElement("video");
+  video.preload = "metadata";
+  video.muted = true;
+  video.playsInline = true;
+  video.src = url;
+
+  try {
+    await waitForMediaEvent(video, "loadedmetadata");
+    const durationS = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+    const width = Math.max(1, video.videoWidth || 1280);
+    const height = Math.max(1, video.videoHeight || 720);
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) {
+      throw new Error("Unable to create candidate extraction canvas");
+    }
+
+    const targetCount = Math.max(1, Math.floor(candidateCount));
+    const candidates: VideoFrameCandidate[] = [];
+
+    if (durationS <= 0) {
+      await waitForMediaEvent(video, "loadeddata");
+      ctx.drawImage(video, 0, 0, width, height);
+      const qualityScore = estimateFrameQuality(ctx, width, height);
+      candidates.push({
+        id: `video_candidate_0`,
+        timeS: 0,
+        dataUrl: canvas.toDataURL("image/png"),
+        qualityScore,
+      });
+      return { durationS, candidates, bestCandidateId: candidates[0]!.id };
+    }
+
+    for (let index = 0; index < targetCount; index += 1) {
+      const ratio = targetCount === 1 ? 0.5 : (index + 1) / (targetCount + 1);
+      const timeS = Math.min(durationS, Math.max(0, durationS * ratio));
+      video.currentTime = timeS;
+      await waitForMediaEvent(video, "seeked");
+
+      ctx.drawImage(video, 0, 0, width, height);
+      const qualityScore = estimateFrameQuality(ctx, width, height);
+      candidates.push({
+        id: `video_candidate_${index}`,
+        timeS,
+        dataUrl: canvas.toDataURL("image/png"),
+        qualityScore,
+      });
+    }
+
+    const best = candidates.reduce((acc, candidate) => (candidate.qualityScore > acc.qualityScore ? candidate : acc), candidates[0]!);
+    return {
+      durationS,
+      candidates,
+      bestCandidateId: best.id,
+    };
+  } finally {
+    URL.revokeObjectURL(url);
+    video.removeAttribute("src");
+    video.load();
+  }
+}
+
 function VerificationPanel({
   enabled,
   mode,
@@ -748,6 +952,11 @@ function VerificationPanel({
   extractionInProgress,
   errorMessage,
   canResample,
+  videoCandidates,
+  selectedCandidateId,
+  bestCandidateId,
+  onSelectVideoCandidate,
+  onAutoPickBestFrame,
   onSampleTimeChange,
   onResampleVideoFrame,
   showHeatOverlay,
@@ -764,6 +973,7 @@ function VerificationPanel({
   onOffsetYChange,
   onToggleHeatOverlay,
   onNudge,
+  onAutoAlign,
   onResetAlign,
   onClear,
 }: {
@@ -782,6 +992,11 @@ function VerificationPanel({
   extractionInProgress: boolean;
   errorMessage: string | null;
   canResample: boolean;
+  videoCandidates: VideoFrameCandidate[];
+  selectedCandidateId: string | null;
+  bestCandidateId: string | null;
+  onSelectVideoCandidate: (candidateId: string) => void;
+  onAutoPickBestFrame: () => void;
   onSampleTimeChange: (value: number) => void;
   onResampleVideoFrame: () => void;
   showHeatOverlay: boolean;
@@ -798,6 +1013,7 @@ function VerificationPanel({
   onOffsetYChange: (value: number) => void;
   onToggleHeatOverlay: (next: boolean) => void;
   onNudge: (dx: number, dy: number) => void;
+  onAutoAlign: () => void;
   onResetAlign: () => void;
   onClear: () => void;
 }) {
@@ -853,6 +1069,39 @@ function VerificationPanel({
               >
                 Extract frame at selected time
               </button>
+
+              {videoCandidates.length ? (
+                <div className="rounded border border-[#2a3650] bg-[#0b1220] p-1.5">
+                  <div className="mb-1 flex items-center justify-between text-[8px] text-[#9db7e1]">
+                    <span className="uppercase tracking-[0.12em]">Extracted frames</span>
+                    <button
+                      type="button"
+                      disabled={!bestCandidateId}
+                      onClick={onAutoPickBestFrame}
+                      className="rounded bg-[#1b3a5a] px-1.5 py-0.5 text-[8px] text-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Auto-pick best extracted frame
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {videoCandidates.map((candidate) => {
+                      const selected = selectedCandidateId === candidate.id;
+                      const isBest = bestCandidateId === candidate.id;
+                      return (
+                        <button
+                          key={candidate.id}
+                          type="button"
+                          onClick={() => onSelectVideoCandidate(candidate.id)}
+                          className={`rounded border px-1.5 py-0.5 text-[8px] ${selected ? "border-cyan-300 bg-cyan-500/20 text-cyan-100" : "border-[#2a3650] bg-[#111b2c] text-[#9db7e1]"}`}
+                          title={`Sharpness score ${candidate.qualityScore.toFixed(1)}`}
+                        >
+                          {formatSecondsShort(candidate.timeS)}{isBest ? " · Best" : ""}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
           {extractionInProgress ? <span className="mt-1 block text-[8px] text-cyan-300">Extracting video frame…</span> : null}
@@ -869,22 +1118,27 @@ function VerificationPanel({
             <div className="mb-1 text-[8px] uppercase tracking-[0.12em] text-[#7a8fb6]">Saved snapshots</div>
             <div className="max-h-24 space-y-1 overflow-y-auto pr-1">
               {snapshots.map((snapshot) => (
-                <div key={snapshot.id} className="flex items-center justify-between gap-1 rounded border border-[#243146] bg-[#0c1320] px-1.5 py-1">
-                  <button
-                    type="button"
-                    onClick={() => onLoadSnapshot(snapshot.id)}
-                    className="truncate text-left text-[8px] text-[#c9d8f3] hover:text-white"
-                    title={snapshot.fileName}
-                  >
-                    {snapshot.fileName}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onDeleteSnapshot(snapshot.id)}
-                    className="rounded bg-[#2b1a20] px-1 py-0.5 text-[8px] text-rose-200"
-                  >
-                    Del
-                  </button>
+                <div key={snapshot.id} className="rounded border border-[#243146] bg-[#0c1320] px-1.5 py-1">
+                  <div className="flex items-center justify-between gap-1">
+                    <button
+                      type="button"
+                      onClick={() => onLoadSnapshot(snapshot.id)}
+                      className="truncate text-left text-[8px] text-[#c9d8f3] hover:text-white"
+                      title={snapshot.fileName}
+                    >
+                      {snapshot.fileName}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDeleteSnapshot(snapshot.id)}
+                      className="rounded bg-[#2b1a20] px-1 py-0.5 text-[8px] text-rose-200"
+                    >
+                      Del
+                    </button>
+                  </div>
+                  <div className="mt-0.5 truncate text-[8px] text-[#8aa0c8]" title={formatSnapshotEvidenceSummary(snapshot)}>
+                    {formatSnapshotEvidenceSummary(snapshot)}
+                  </div>
                 </div>
               ))}
             </div>
@@ -928,7 +1182,10 @@ function VerificationPanel({
             <button type="button" onClick={() => onNudge(0, -4)} className="rounded bg-[#1a2233] px-1.5 py-1 text-[#c7d0e4]">▲</button>
             <button type="button" onClick={() => onNudge(0, 4)} className="rounded bg-[#1a2233] px-1.5 py-1 text-[#c7d0e4]">▼</button>
           </div>
-          <button type="button" onClick={onResetAlign} className="rounded bg-[#1d2b3f] px-2 py-1 text-[#9dd6ff]">Reset align</button>
+          <div className="flex gap-1">
+            <button type="button" onClick={onAutoAlign} className="rounded bg-[#13354a] px-2 py-1 text-[#8ce3ff]">Auto align</button>
+            <button type="button" onClick={onResetAlign} className="rounded bg-[#1d2b3f] px-2 py-1 text-[#9dd6ff]">Reset align</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1048,6 +1305,9 @@ export function CameraViewMode() {
   const [verificationVideoDurationS, setVerificationVideoDurationS] = useState<number | null>(null);
   const [verificationSampleTimeS, setVerificationSampleTimeS] = useState<number | null>(null);
   const [verificationVideoFile, setVerificationVideoFile] = useState<File | null>(null);
+  const [verificationVideoCandidates, setVerificationVideoCandidates] = useState<VideoFrameCandidate[]>([]);
+  const [verificationSelectedCandidateId, setVerificationSelectedCandidateId] = useState<string | null>(null);
+  const [verificationBestCandidateId, setVerificationBestCandidateId] = useState<string | null>(null);
   const [verificationExtracting, setVerificationExtracting] = useState(false);
   const [verificationError, setVerificationError] = useState<string | null>(null);
   const frameRootRef = useRef<HTMLDivElement | null>(null);
@@ -1141,6 +1401,7 @@ export function CameraViewMode() {
         setVerificationSampleTimeS(frame.sampleTimeS);
         setVerificationImageUrl(frame.dataUrl);
         setVerificationFileName(`${verificationVideoFile.name} @ ${formatSecondsShort(frame.sampleTimeS)}`);
+        setVerificationSelectedCandidateId(null);
         setVerificationEnabled(true);
       })
       .catch((error) => {
@@ -1150,6 +1411,99 @@ export function CameraViewMode() {
         setVerificationExtracting(false);
       });
   };
+
+  const applyVideoCandidate = (candidate: VideoFrameCandidate, fileName: string) => {
+    setVerificationSourceType("video");
+    setVerificationSampleTimeS(candidate.timeS);
+    setVerificationImageUrl(candidate.dataUrl);
+    setVerificationFileName(`${fileName} @ ${formatSecondsShort(candidate.timeS)}`);
+    setVerificationEnabled(true);
+  };
+
+  const autoAlignVerification = useCallback(() => {
+    if (!verificationEnabled || !verificationImageUrl) return;
+
+    const host = frameRootRef.current;
+    const canvas = host?.querySelector("canvas");
+    if (!canvas) return;
+
+    setVerificationExtracting(true);
+    setVerificationError(null);
+
+    const image = new Image();
+    image.decoding = "async";
+
+    image.onload = () => {
+      let bestX = verificationOffsetX;
+      let bestY = verificationOffsetY;
+      let bestScore = -1;
+
+      const phases = [
+        { step: 16, radius: 96 },
+        { step: 6, radius: 24 },
+        { step: 2, radius: 8 },
+      ];
+
+      for (const phase of phases) {
+        const centerX = bestX;
+        const centerY = bestY;
+        for (let dx = -phase.radius; dx <= phase.radius; dx += phase.step) {
+          for (let dy = -phase.radius; dy <= phase.radius; dy += phase.step) {
+            const candidateX = centerX + dx;
+            const candidateY = centerY + dy;
+            const sample = evaluateAlignmentSample({
+              canvas,
+              image,
+              offsetX: candidateX,
+              offsetY: candidateY,
+              mode: verificationMode,
+              split: verificationSplit,
+              opacity: verificationOpacity,
+            });
+            if (!sample) continue;
+            if (sample.score > bestScore) {
+              bestScore = sample.score;
+              bestX = candidateX;
+              bestY = candidateY;
+            }
+          }
+        }
+      }
+
+      setVerificationOffsetX(bestX);
+      setVerificationOffsetY(bestY);
+
+      const finalSample = evaluateAlignmentSample({
+        canvas,
+        image,
+        offsetX: bestX,
+        offsetY: bestY,
+        mode: verificationMode,
+        split: verificationSplit,
+        opacity: verificationOpacity,
+      });
+      if (finalSample) {
+        setAlignmentQualityScore(finalSample.score);
+        setAlignmentHeatmapUrl(finalSample.heatmapUrl);
+      }
+      setVerificationExtracting(false);
+    };
+
+    image.onerror = () => {
+      setVerificationError("Unable to auto-align reference frame");
+      setVerificationExtracting(false);
+    };
+
+    image.src = verificationImageUrl;
+  }, [
+    verificationEnabled,
+    verificationImageUrl,
+    verificationMode,
+    verificationOffsetX,
+    verificationOffsetY,
+    verificationOpacity,
+    verificationSplit,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -1181,73 +1535,23 @@ export function CameraViewMode() {
     const canvas = host?.querySelector("canvas");
     if (!canvas) return;
 
-    const sampleWidth = 96;
-    const sampleHeight = 54;
-    const renderCanvas = document.createElement("canvas");
-    renderCanvas.width = sampleWidth;
-    renderCanvas.height = sampleHeight;
-    const renderCtx = renderCanvas.getContext("2d", { willReadFrequently: true });
-    if (!renderCtx) return;
-
-    const referenceCanvas = document.createElement("canvas");
-    referenceCanvas.width = sampleWidth;
-    referenceCanvas.height = sampleHeight;
-    const refCtx = referenceCanvas.getContext("2d", { willReadFrequently: true });
-    if (!refCtx) return;
-
-    const overlayCanvas = document.createElement("canvas");
-    overlayCanvas.width = sampleWidth;
-    overlayCanvas.height = sampleHeight;
-    const overlayCtx = overlayCanvas.getContext("2d");
-    if (!overlayCtx) return;
-
     let canceled = false;
     const image = new Image();
     image.decoding = "async";
     image.onload = () => {
       if (canceled) return;
-      renderCtx.clearRect(0, 0, sampleWidth, sampleHeight);
-      renderCtx.drawImage(canvas, 0, 0, sampleWidth, sampleHeight);
-
-      refCtx.clearRect(0, 0, sampleWidth, sampleHeight);
-      const dx = Math.round((verificationOffsetX / Math.max(1, canvas.clientWidth)) * sampleWidth);
-      const dy = Math.round((verificationOffsetY / Math.max(1, canvas.clientHeight)) * sampleHeight);
-      refCtx.drawImage(image, dx, dy, sampleWidth, sampleHeight);
-
-      if (verificationMode === "split") {
-        const splitX = Math.round((verificationSplit / 100) * sampleWidth);
-        refCtx.clearRect(splitX, 0, sampleWidth - splitX, sampleHeight);
-        renderCtx.clearRect(splitX, 0, sampleWidth - splitX, sampleHeight);
-      }
-
-      const renderPixels = renderCtx.getImageData(0, 0, sampleWidth, sampleHeight);
-      const refPixels = refCtx.getImageData(0, 0, sampleWidth, sampleHeight);
-      const heat = overlayCtx.createImageData(sampleWidth, sampleHeight);
-      let diffSum = 0;
-      let samples = 0;
-
-      for (let i = 0; i < renderPixels.data.length; i += 4) {
-        const dr = Math.abs(renderPixels.data[i] - refPixels.data[i]);
-        const dg = Math.abs(renderPixels.data[i + 1] - refPixels.data[i + 1]);
-        const db = Math.abs(renderPixels.data[i + 2] - refPixels.data[i + 2]);
-        const diff = (dr + dg + db) / (3 * 255);
-        diffSum += diff;
-        samples += 1;
-
-        const level = Math.min(255, Math.round(diff * 320));
-        heat.data[i] = level;
-        heat.data[i + 1] = 40;
-        heat.data[i + 2] = 255 - Math.round(level * 0.55);
-        heat.data[i + 3] = Math.round(diff * 190);
-      }
-
-      overlayCtx.putImageData(heat, 0, 0);
-      const mismatch = samples > 0 ? diffSum / samples : 1;
-      const opacityWeight = 0.6 + verificationOpacity * 0.4;
-      const adjustedMismatch = Math.min(1, mismatch * opacityWeight);
-      const score = Math.max(0, Math.min(100, (1 - adjustedMismatch) * 100));
-      setAlignmentQualityScore(score);
-      setAlignmentHeatmapUrl(overlayCanvas.toDataURL("image/png"));
+      const sample = evaluateAlignmentSample({
+        canvas,
+        image,
+        offsetX: verificationOffsetX,
+        offsetY: verificationOffsetY,
+        mode: verificationMode,
+        split: verificationSplit,
+        opacity: verificationOpacity,
+      });
+      if (!sample) return;
+      setAlignmentQualityScore(sample.score);
+      setAlignmentHeatmapUrl(sample.heatmapUrl);
     };
     image.src = verificationImageUrl;
 
@@ -1400,6 +1704,23 @@ export function CameraViewMode() {
             extractionInProgress={verificationExtracting}
             errorMessage={verificationError}
             canResample={verificationSourceType === "video" && verificationVideoFile !== null}
+            videoCandidates={verificationVideoCandidates}
+            selectedCandidateId={verificationSelectedCandidateId}
+            bestCandidateId={verificationBestCandidateId}
+            onSelectVideoCandidate={(candidateId) => {
+              if (!verificationVideoFile) return;
+              const candidate = verificationVideoCandidates.find((entry) => entry.id === candidateId);
+              if (!candidate) return;
+              setVerificationSelectedCandidateId(candidateId);
+              applyVideoCandidate(candidate, verificationVideoFile.name);
+            }}
+            onAutoPickBestFrame={() => {
+              if (!verificationBestCandidateId || !verificationVideoFile) return;
+              const best = verificationVideoCandidates.find((entry) => entry.id === verificationBestCandidateId);
+              if (!best) return;
+              setVerificationSelectedCandidateId(best.id);
+              applyVideoCandidate(best, verificationVideoFile.name);
+            }}
             onSampleTimeChange={(value) => {
               setVerificationSampleTimeS(value);
             }}
@@ -1414,7 +1735,29 @@ export function CameraViewMode() {
               if (file.type.startsWith("video/")) {
                 setVerificationVideoFile(file);
                 setVerificationSampleTimeS(null);
-                extractFromCurrentVideo();
+                setVerificationExtracting(true);
+                void extractVideoFrameCandidates(file)
+                  .then((result) => {
+                    setVerificationSourceType("video");
+                    setVerificationVideoDurationS(result.durationS);
+                    setVerificationVideoCandidates(result.candidates);
+                    setVerificationBestCandidateId(result.bestCandidateId);
+
+                    const preferred = result.candidates.find((entry) => entry.id === result.bestCandidateId) ?? result.candidates[0] ?? null;
+                    if (preferred) {
+                      setVerificationSelectedCandidateId(preferred.id);
+                      applyVideoCandidate(preferred, file.name);
+                    }
+                  })
+                  .catch((error) => {
+                    setVerificationError(error instanceof Error ? error.message : "Video frame extraction failed");
+                    setVerificationVideoCandidates([]);
+                    setVerificationBestCandidateId(null);
+                    setVerificationSelectedCandidateId(null);
+                  })
+                  .finally(() => {
+                    setVerificationExtracting(false);
+                  });
                 return;
               }
 
@@ -1425,6 +1768,9 @@ export function CameraViewMode() {
                 setVerificationVideoDurationS(null);
                 setVerificationSampleTimeS(null);
                 setVerificationVideoFile(null);
+                setVerificationVideoCandidates([]);
+                setVerificationBestCandidateId(null);
+                setVerificationSelectedCandidateId(null);
                 setVerificationImageUrl(reader.result);
                 setVerificationFileName(file.name);
                 setVerificationEnabled(true);
@@ -1441,6 +1787,12 @@ export function CameraViewMode() {
                 fileName: verificationFileName,
                 imageUrl: verificationImageUrl,
                 mode: verificationMode,
+                sourceType: verificationSourceType,
+                sampleTimeS: verificationSampleTimeS,
+                videoDurationS: verificationVideoDurationS,
+                candidateCount: verificationVideoCandidates.length,
+                bestCandidateId: verificationBestCandidateId,
+                selectedCandidateId: verificationSelectedCandidateId,
                 opacity: verificationOpacity,
                 split: verificationSplit,
                 offsetX: verificationOffsetX,
@@ -1457,6 +1809,13 @@ export function CameraViewMode() {
               setVerificationImageUrl(snapshot.imageUrl);
               setVerificationFileName(snapshot.fileName);
               setVerificationMode(snapshot.mode);
+              setVerificationSourceType(snapshot.sourceType ?? "image");
+              setVerificationSampleTimeS(snapshot.sampleTimeS ?? null);
+              setVerificationVideoDurationS(snapshot.videoDurationS ?? null);
+              setVerificationBestCandidateId(snapshot.bestCandidateId ?? null);
+              setVerificationSelectedCandidateId(snapshot.selectedCandidateId ?? null);
+              setVerificationVideoCandidates([]);
+              setVerificationVideoFile(null);
               setVerificationOpacity(snapshot.opacity);
               setVerificationSplit(snapshot.split);
               setVerificationOffsetX(snapshot.offsetX);
@@ -1477,6 +1836,7 @@ export function CameraViewMode() {
               setVerificationOffsetX((value) => value + dx);
               setVerificationOffsetY((value) => value + dy);
             }}
+            onAutoAlign={autoAlignVerification}
             onResetAlign={() => {
               setVerificationOffsetX(0);
               setVerificationOffsetY(0);
@@ -1492,6 +1852,9 @@ export function CameraViewMode() {
               setVerificationVideoDurationS(null);
               setVerificationSampleTimeS(null);
               setVerificationVideoFile(null);
+              setVerificationVideoCandidates([]);
+              setVerificationBestCandidateId(null);
+              setVerificationSelectedCandidateId(null);
               setVerificationError(null);
             }}
           />

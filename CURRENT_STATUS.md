@@ -11,6 +11,8 @@
 - Root launcher now includes explicit 5-step guided workflow actions (protect goal -> input -> build -> baseline sim -> next actions).
 - Guided workflow step-5 actions now include direct camera failure simulation and cheapest-fix counterfactual kickoff.
 - Guided workflow copy/CTA language is now outcome-oriented with disabled-state hints when prerequisites are missing.
+- Root dashboard now includes explicit preview parity controls (2D/3D toggle, north/compass indicator, PPM legend chips, obstruction callout) over the live workspace preview.
+- Root dashboard now includes an explicit footer/status row (`Security Simulation Studio`, version marker, systems operational, feedback/help actions) to match studio-home target composition.
 - Root launcher now includes a visible `Product Feature Status` surface with `Available` / `Preview` / `Planned` labels and an entry-flow maturity row.
 - AI Layout Draft now clearly labels its model-backed generation path, warns about workspace replacement, and falls back deterministically when no public API key is present.
 - AI Layout Draft now leaves a visible launcher status banner so the generated/fallback draft result is not lost when the modal closes.
@@ -25,7 +27,10 @@
 - Launcher now has a dedicated floor-plan entry flow that opens SceneBuilderWizard directly in floor-plan mode (separate from generic new scene path).
 - Floor-plan import now converts detected geometry into an editable scene skeleton (walls/doors/windows + dimensions).
 - Manual-assisted `Scan a Site` flow now supports photo upload, marker placement/edit/reposition, candidate type switching (including path points), and review warnings before compile.
-- Scan compile now deterministically maps markers into canonical `scan_import` SecurityScene nodes (walls, doors, windows, entry points, cameras, lights, obstructions, critical zones, optional path) with schema validation and explicit warnings.
+- Scan Site now exposes explicit camera/light mount defaults and critical-zone night requirement controls, then compiles through a review step that summarizes what will be created before Studio handoff.
+- The launcher now shows `Scan a Site` as `Preview / Manual-assisted`, with a CTA that makes the scan-first entry path feel like a first-class product flow instead of a hidden tool.
+- Scan compile now deterministically maps markers into canonical `scan` SecurityScene nodes (walls, doors, windows, entry points, cameras, lights, obstructions, critical zones, optional path) with schema validation and explicit warnings.
+- Guided scan reconstruction remains `Planned` and is explicitly framed as future guided capture plus segmentation/depth reconstruction, not as available AI scan automation.
 - Scan handoff now emits launcher notice with compiled counts and auto-runs baseline simulation when camera + critical zone are present.
 - Floor-plan review now supports manual scale calibration (known width/depth/height) before scene creation.
 - Floor-plan review now supports correction controls to exclude false-positive walls/doors/windows before scene creation.
@@ -35,6 +40,7 @@
 - Report-lite now includes a practical hardening section: failing zones + immediate action plan from recommendations.
 - Right-panel assumptions are visible and directly editable (time-of-day and quality model), with link to full assumptions editor.
 - Camera wall feed rigs now track live camera transform edits (no one-time POV lock).
+- Camera-view entry no longer force-overrides selection when a valid selected camera already exists, improving camera selection persistence across mode switches.
 - Camera View now shows per-camera path-visibility status overlays during replay context.
 - Camera View now includes metric-backed footage verification assist (reference still upload, overlay/split comparison, opacity/alignment controls, `Alignment Quality` score, and optional difference heat overlay) with defensive non-forensic disclaimer framing.
 - Launcher now includes a dedicated `Verify Real Camera Footage (Preview)` modal that explicitly separates current overlay assist capabilities from not-yet-implemented forensic/video pipelines.

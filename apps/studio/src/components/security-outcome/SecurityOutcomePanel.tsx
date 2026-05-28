@@ -11,6 +11,7 @@ import { OutcomeEmptyState } from "./OutcomeEmptyState";
 import { OutcomeSummaryCard } from "./OutcomeSummaryCard";
 import { PathOutcomeReview } from "./PathOutcomeReview";
 import { RecommendationReview } from "./RecommendationReview";
+import { RecommendationCard } from "./RecommendationCard";
 import { PrivacyReview } from "./PrivacyReview";
 import { RedundancyReview } from "./RedundancyReview";
 import { RedundancyMatrixPanel } from "@/components/bottom-panel/RedundancyMatrixPanel";
@@ -29,6 +30,25 @@ export function SecurityOutcomePanel({ compact = false }: { compact?: boolean })
     <div className="space-y-3 p-3 text-[#ced7e8]">
       <OutcomeSummaryCard summary={model.summary} />
       <IssueStack issues={model.topIssues} compact={compact} />
+      {compact ? (
+        <div className="rounded-lg border border-[#1f2536] bg-[#0b0f17] px-3 py-2 text-[10px] text-[#9fb1cf]">
+          <div className="font-semibold uppercase tracking-[0.16em] text-[#d8e1f3]">Quick Risk Review</div>
+          <div className="mt-1">Critical zones: {model.summary.criticalZonesPassing}/{model.summary.criticalZonesTotal} passing</div>
+          <div>Redundancy: {model.summary.redundancyStatus.replace(/_/g, " ")}</div>
+          <div>Night readiness: {model.summary.nightReadiness}</div>
+          <div className="mt-1 text-[#7e90b2]">
+            Use full Security Outcome mode for camera responsibility, recommendation apply/preview, and path evidence details.
+          </div>
+        </div>
+      ) : null}
+      {compact && model.recommendations[0] ? (
+        <section className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-3">
+          <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8ea0bf]">Recommended Next Step</h3>
+          <div className="mt-2">
+            <RecommendationCard recommendation={model.recommendations[0]} />
+          </div>
+        </section>
+      ) : null}
       <AssumptionDisclosure assumptions={scene.assumptions} />
       <PrivacyReview result={result} privacyZonesCount={scene.privacyZones.length} compact={compact} />
       {!compact ? (

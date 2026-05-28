@@ -104,6 +104,70 @@ function ScanTypeChips({
   );
 }
 
+function isSupportedScanImage(file: File) {
+  if (file.type.startsWith("image/")) return true;
+  return /\.(png|jpe?g|webp|svg)$/i.test(file.name);
+}
+
+function unsupportedScanFileMessage(files: File[]) {
+  const names = files.map((file) => file.name).filter(Boolean);
+  if (names.length === 0) {
+    return "Unsupported file type. Use PNG, JPG, WEBP, or SVG images.";
+  }
+  return `Unsupported file type${names.length > 1 ? "s" : ""}: ${names.join(", ")}. Use PNG, JPG, WEBP, or SVG images.`;
+}
+
+function PhotoCard({
+  photo,
+  active,
+  onClick,
+  compact = false,
+}: {
+  photo: ScanSession["photos"][number];
+  active: boolean;
+  onClick: () => void;
+  compact?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        "group w-full overflow-hidden rounded-2xl border text-left transition-colors",
+        active ? "border-cyan-500/45 bg-cyan-500/10" : "border-[#243049] bg-[#09111b] hover:border-[#39506f] hover:bg-[#0b1320]",
+        compact ? "p-2.5" : "p-3",
+      ].join(" ")}
+    >
+      <div className={compact ? "flex items-start gap-3" : "space-y-3"}>
+        <div className={[
+          "overflow-hidden rounded-xl border border-white/8 bg-black/20",
+          compact ? "h-16 w-24 flex-none" : "h-24 w-full",
+        ].join(" ")}>
+          <img
+            src={photo.dataUrl}
+            alt={photo.name}
+            className="h-full w-full object-cover"
+            draggable={false}
+          />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="truncate text-sm font-medium text-white">{photo.name}</div>
+              <div className="mt-1 text-[11px] text-[#8da0bf]">
+                {photo.widthPx} × {photo.heightPx}px
+              </div>
+            </div>
+            <span className="rounded-full border border-amber-400/25 bg-amber-500/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-amber-200">
+              Manual marking required
+            </span>
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+}
+
 function StepBadge({ step, current, label }: { step: number; current: number; label: string }) {
   const active = step === current;
   const complete = step < current;
@@ -127,6 +191,9 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
   const setScene = useStudioStore((s) => s.setScene);
   const runSimulation = useStudioStore((s) => s.runSimulation);
   const setLaunchNotice = useStudioStore((s) => s.setLaunchNotice);
+  const setViewMode = useStudioStore((s) => s.setViewMode);
+  const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
+  const setBottomTab = useStudioStore((s) => s.setBottomTab);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const [step, setStep] = useState<ScanStep>(0);
@@ -166,10 +233,10 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
 
   const canProceed = useMemo(() => {
     if (step === 0) return session.roomName.trim().length > 0;
-    if (step === 1) return Boolean(session.imageDataUrl);
-    if (step === 2) return Boolean(session.imageDataUrl);
+    if (step === 1) return session.photos.length > 0;
+    if (step === 2) return session.photos.length > 0;
     return true;
-  }, [session.imageDataUrl, session.roomName, step]);
+  }, [session.photos.length, session.roomName, step]);
 
   const acceptedCandidates = useMemo(
     () => session.candidates.filter((candidate) => candidate.status !== "rejected"),
@@ -269,40 +336,66 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
     setSession((current) => ({ ...current, ...patch, updatedAt: Date.now() }));
   }, []);
 
-  const handleFile = useCallback(async (file: File) => {
+  const handleFiles = useCallback(async (files: File[]) => {
     setIsReading(true);
     setError(null);
     try {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result ?? ""));
-        reader.onerror = () => reject(new Error("Failed to read image file."));
-        reader.readAsDataURL(file);
-      });
-      const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
-        const image = new Image();
-        image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
-        image.onerror = () => reject(new Error("Failed to load image dimensions."));
-        image.src = dataUrl;
-      });
+      const supportedFiles = files.filter(isSupportedScanImage);
+      const rejectedFiles = files.filter((file) => !isSupportedScanImage(file));
 
-      const photoId = `photo_${Date.now().toString(36)}`;
+      if (supportedFiles.length === 0) {
+        setError(unsupportedScanFileMessage(rejectedFiles.length > 0 ? rejectedFiles : files));
+        return;
+      }
+
+      const importedPhotos: Array<{
+        id: string;
+        name: string;
+        dataUrl: string;
+        widthPx: number;
+        heightPx: number;
+      }> = [];
+
+      for (const file of supportedFiles) {
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result ?? ""));
+          reader.onerror = () => reject(new Error(`Failed to read image file: ${file.name}`));
+          reader.readAsDataURL(file);
+        });
+        const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
+          image.onerror = () => reject(new Error(`Failed to load image dimensions: ${file.name}`));
+          image.src = dataUrl;
+        });
+
+        importedPhotos.push({
+          id: `photo_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+          name: file.name,
+          dataUrl,
+          widthPx: dimensions.width,
+          heightPx: dimensions.height,
+        });
+      }
+
+      const activePhoto = importedPhotos.at(-1) ?? null;
       setSession((current) => ({
         ...current,
-        imageDataUrl: dataUrl,
-        imageName: file.name,
-        imageWidthPx: dimensions.width,
-        imageHeightPx: dimensions.height,
-        imageId: photoId,
-        activePhotoId: photoId,
-        photos: [
-          ...current.photos,
-          { id: photoId, name: file.name, dataUrl, widthPx: dimensions.width, heightPx: dimensions.height },
-        ],
+        imageDataUrl: activePhoto?.dataUrl ?? current.imageDataUrl,
+        imageName: activePhoto?.name ?? current.imageName,
+        imageWidthPx: activePhoto?.widthPx ?? current.imageWidthPx,
+        imageHeightPx: activePhoto?.heightPx ?? current.imageHeightPx,
+        imageId: activePhoto?.id ?? current.imageId,
+        activePhotoId: activePhoto?.id ?? current.activePhotoId,
+        photos: [...current.photos, ...importedPhotos],
         updatedAt: Date.now(),
       }));
       setStep(2);
       setSelectedCandidateId(null);
+      if (rejectedFiles.length > 0) {
+        setError(unsupportedScanFileMessage(rejectedFiles));
+      }
     } catch (readError) {
       setError(readError instanceof Error ? readError.message : "Failed to read image file.");
     } finally {
@@ -315,7 +408,7 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
   }, []);
 
   const handleSampleSite = useCallback(() => {
-    const photoId = `photo_${Date.now().toString(36)}`;
+    const photoId = `photo_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
     updateSession({
       imageDataUrl: SAMPLE_SITE_IMAGE,
       imageName: "sample-retail-site.svg",
@@ -438,11 +531,20 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
       const compiled = compileScanSessionToScene(session, { autoCreateEntryToZonePath: autoCreatePath });
       setCompileWarnings(compiled.warnings);
       setScene(compiled.scene);
+      setViewMode("map");
+      setWorkspacePreset("coverage");
       if (compiled.scene.cameras.length > 0 && compiled.scene.criticalZones.length > 0) {
+        setBottomTab("metrics");
         setTimeout(() => runSimulation(), 80);
+      } else {
+        setBottomTab("assumptions");
       }
+      const simulationNotice =
+        compiled.scene.cameras.length > 0 && compiled.scene.criticalZones.length > 0
+          ? "Baseline simulation will run in Studio."
+          : "Add at least one camera and one critical zone to run simulation.";
       setLaunchNotice(
-        `Manual-assisted scan compiled: ${compiled.scene.cameras.length} cameras, ${compiled.scene.obstructions.length} obstructions, ${compiled.scene.criticalZones.length} critical zones.`,
+        `Manual-assisted scan compiled: ${compiled.scene.cameras.length} cameras, ${compiled.scene.obstructions.length} obstructions, ${compiled.scene.criticalZones.length} critical zones. ${simulationNotice}`,
       );
       onClose?.();
     } catch (compileError) {
@@ -450,7 +552,7 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
     } finally {
       setIsCompiling(false);
     }
-  }, [autoCreatePath, compileBlockingErrors, compileLowConfidenceOverride, lowConfidenceAccepted.length, onClose, runSimulation, session, setLaunchNotice, setScene, unresolvedWarnings.length, warningsReviewed]);
+  }, [autoCreatePath, compileBlockingErrors, compileLowConfidenceOverride, lowConfidenceAccepted.length, onClose, runSimulation, session, setBottomTab, setLaunchNotice, setScene, setViewMode, setWorkspacePreset, unresolvedWarnings.length, warningsReviewed]);
 
   const handleMergeNearDuplicates = useCallback(() => {
     setSession((current) => {
@@ -653,6 +755,42 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
                   />
                 </label>
 
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <label className="block">
+                    <span className="text-[11px] text-[#9db0d0]">Camera mount default</span>
+                    <select
+                      value={session.cameraMountType}
+                      onChange={(event) => updateSession({ cameraMountType: event.target.value as ScanSession["cameraMountType"] })}
+                      className="mt-1 w-full rounded-xl border border-[#243049] bg-[#0a0f17] px-3 py-2 text-sm text-[#e3ebf8] outline-none focus:border-cyan-500/50"
+                    >
+                      <option value="wall">Wall</option>
+                      <option value="ceiling">Ceiling</option>
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="text-[11px] text-[#9db0d0]">Light mount default</span>
+                    <select
+                      value={session.lightMountType}
+                      onChange={(event) => updateSession({ lightMountType: event.target.value as ScanSession["lightMountType"] })}
+                      className="mt-1 w-full rounded-xl border border-[#243049] bg-[#0a0f17] px-3 py-2 text-sm text-[#e3ebf8] outline-none focus:border-cyan-500/50"
+                    >
+                      <option value="ceiling">Ceiling</option>
+                      <option value="wall">Wall</option>
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="text-[11px] text-[#9db0d0]">Critical zone night requirement</span>
+                    <select
+                      value={session.criticalZoneNightRequired ? "yes" : "no"}
+                      onChange={(event) => updateSession({ criticalZoneNightRequired: event.target.value === "yes" })}
+                      className="mt-1 w-full rounded-xl border border-[#243049] bg-[#0a0f17] px-3 py-2 text-sm text-[#e3ebf8] outline-none focus:border-cyan-500/50"
+                    >
+                      <option value="yes">Yes</option>
+                      <option value="no">No</option>
+                    </select>
+                  </label>
+                </div>
+
                 <div className="rounded-xl border border-cyan-500/15 bg-cyan-500/8 p-3 text-xs text-cyan-100/90">
                   This flow is intentionally manual-assisted. Tap the image to place candidates, then classify each object before compiling.
                 </div>
@@ -679,6 +817,16 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
                   <div className="mt-1 text-sm font-medium text-cyan-200">Manual scan</div>
                 </div>
               </div>
+              <div className="mt-3 rounded-xl border border-[#243049] bg-[#0a0f17] p-3 text-[11px] text-[#9db0d0]">
+                <div className="flex items-center justify-between gap-2">
+                  <span>Wall height</span>
+                  <span className="text-white">{session.heightM} m</span>
+                </div>
+                <div className="mt-1 flex items-center justify-between gap-2">
+                  <span>Person height</span>
+                  <span className="text-white">1.75 m</span>
+                </div>
+              </div>
             </div>
           </div>
         ) : null}
@@ -686,9 +834,9 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
         {step === 1 ? (
           <div className="grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
             <div className="rounded-2xl border border-[#1f2536] bg-[#0c111b] p-4">
-              <h3 className="text-sm font-semibold text-white">Choose a site image</h3>
+              <h3 className="text-sm font-semibold text-white">Choose one or more site images</h3>
               <p className="mt-1 text-xs text-[#8292af]">
-                Upload a photo or use the bundled sample. This keeps the scan flow testable without waiting on AI perception.
+                Upload one or more photos or use the bundled sample. Everything stays local in this browser session.
               </p>
 
               <div
@@ -697,9 +845,9 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={(event) => {
                   event.preventDefault();
-                  const file = event.dataTransfer.files[0];
-                  if (file && file.type.startsWith("image/")) {
-                    void handleFile(file);
+                  const files = Array.from(event.dataTransfer.files ?? []);
+                  if (files.length > 0) {
+                    void handleFiles(files);
                   }
                 }}
               >
@@ -711,14 +859,14 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
                 ) : (
                   <>
                     <ImageUp className="h-10 w-10 text-[#5d6b84]" />
-                    <p className="mt-4 text-sm font-medium text-[#d6dfef]">Drop an image here or click to upload</p>
-                    <p className="mt-1 text-xs text-[#73839f]">PNG, JPG, or SVG. You can also use the built-in sample site.</p>
+                    <p className="mt-4 text-sm font-medium text-[#d6dfef]">Drop photos here or click to upload</p>
+                    <p className="mt-1 text-xs text-[#73839f]">PNG, JPG, WEBP, or SVG. You can also use the built-in sample site.</p>
                     <div className="mt-5 flex gap-2">
                       <SurfaceButton type="button" onClick={(event) => {
                         event.stopPropagation();
                         handleUploadClick();
                       }}>
-                        Upload photo
+                        Upload photos
                       </SurfaceButton>
                       <SurfaceButton type="button" onClick={(event) => {
                         event.stopPropagation();
@@ -734,16 +882,13 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
               <input
                 ref={fileInputRef}
                 type="file"
+                multiple
                 accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
                 className="hidden"
                 onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) {
-                    if (!file.type.startsWith("image/")) {
-                      setError("Unsupported file type. Use PNG, JPG, WEBP, or SVG.");
-                      return;
-                    }
-                    void handleFile(file);
+                  const files = Array.from(event.target.files ?? []);
+                  if (files.length > 0) {
+                    void handleFiles(files);
                   }
                   event.target.value = "";
                 }}
@@ -756,12 +901,37 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
                   <div>Photos in session: <span className="text-white">{session.photos.length}</span></div>
                 </div>
               ) : null}
+
+              {session.photos.length > 0 ? (
+                <div className="mt-4">
+                  <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-[#6d7d9b]">Photo set</div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {session.photos.map((photo) => (
+                      <PhotoCard
+                        key={photo.id}
+                        photo={photo}
+                        active={session.activePhotoId === photo.id}
+                        onClick={() => {
+                          updateSession({
+                            imageDataUrl: photo.dataUrl,
+                            imageName: photo.name,
+                            imageWidthPx: photo.widthPx,
+                            imageHeightPx: photo.heightPx,
+                            imageId: photo.id,
+                            activePhotoId: photo.id,
+                          });
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <div className="rounded-2xl border border-[#1f2536] bg-[#0c111b] p-4">
               <h3 className="text-sm font-semibold text-white">What happens next</h3>
               <div className="mt-4 space-y-3 text-xs text-[#8292af]">
-                <p>1. You upload a photo of the site or use the sample retail layout.</p>
+                <p>1. You upload one or more photos of the site or use the sample retail layout.</p>
                 <p>2. You tap locations on the image and classify them as wall, door, camera, cupboard, counter, or another object type.</p>
                 <p>3. The scan candidates remain separate from the final scene until you compile them.</p>
                 <p>4. The result becomes a real SecurityScene, ready for the existing coverage and replay flow.</p>
@@ -775,14 +945,14 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
             <div className="flex min-h-0 flex-col rounded-2xl border border-[#1f2536] bg-[#0c111b] p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-sm font-semibold text-white">Annotate the photo</h3>
+                  <h3 className="text-sm font-semibold text-white">Annotate the active photo</h3>
                   <p className="mt-1 text-xs text-[#8292af]">
                     Click a point on the image to add a candidate. Classification is manual for now, so the flow is honest about what is real today.
                   </p>
                 </div>
                 <SurfaceButton type="button" onClick={handleUploadClick}>
                   <ImageUp className="h-3.5 w-3.5" />
-                  Replace image
+                  Add photos
                 </SurfaceButton>
               </div>
 
@@ -1014,31 +1184,29 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
                   })
                 )}
               </div>
-              {session.photos.length > 1 ? (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {session.photos.map((photo) => (
-                    <button
-                      key={photo.id}
-                      type="button"
-                      onClick={() =>
-                        updateSession({
-                          imageDataUrl: photo.dataUrl,
-                          imageName: photo.name,
-                          imageWidthPx: photo.widthPx,
-                          imageHeightPx: photo.heightPx,
-                          imageId: photo.id,
-                          activePhotoId: photo.id,
-                        })
-                      }
-                      className={`rounded border px-2 py-1 text-[10px] ${
-                        session.activePhotoId === photo.id
-                          ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-100"
-                          : "border-[#2a354d] bg-[#0a0f17] text-[#8ea5cc]"
-                      }`}
-                    >
-                      {photo.name}
-                    </button>
-                  ))}
+              {session.photos.length > 0 ? (
+                <div className="mt-4">
+                  <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-[#6d7d9b]">All photos</div>
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    {session.photos.map((photo) => (
+                      <PhotoCard
+                        key={photo.id}
+                        photo={photo}
+                        active={session.activePhotoId === photo.id}
+                        compact
+                        onClick={() =>
+                          updateSession({
+                            imageDataUrl: photo.dataUrl,
+                            imageName: photo.name,
+                            imageWidthPx: photo.widthPx,
+                            imageHeightPx: photo.heightPx,
+                            imageId: photo.id,
+                            activePhotoId: photo.id,
+                          })
+                        }
+                      />
+                    ))}
+                  </div>
                 </div>
               ) : null}
             </div>
@@ -1083,6 +1251,12 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
                   <div>Critical zones: <span className="text-white">{candidateStats.criticalZoneCount}</span></div>
                   <div>Path points: <span className="text-white">{candidateStats.pathPointCount}</span></div>
                   <div>Image: <span className="text-white">{session.imageName ?? "none"}</span></div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 rounded-xl border border-[#243049] bg-[#09111b] px-3 py-2 text-[11px] text-[#9db0d0]">
+                  <div>Camera mount: <span className="text-white">{session.cameraMountType}</span></div>
+                  <div>Light mount: <span className="text-white">{session.lightMountType}</span></div>
+                  <div>Wall height: <span className="text-white">{session.heightM} m</span></div>
+                  <div>Night zone: <span className="text-white">{session.criticalZoneNightRequired ? "required" : "optional"}</span></div>
                 </div>
               </div>
 
@@ -1181,6 +1355,15 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
                     </label>
                   </div>
                 ) : null}
+              </div>
+
+              <div className="mt-3 rounded-2xl border border-[#243049] bg-[#09111b] p-3">
+                <h4 className="text-xs font-semibold text-white">What will be created</h4>
+                <div className="mt-2 space-y-1 text-[11px] text-[#8aa1c4]">
+                  <p>• Canonical <code className="text-[#c4d5ff]">SecurityScene</code> with real walls, openings, obstructions, lights, cameras, zones, and optional path.</p>
+                  <p>• Editable in Studio, starting in map mode with the metrics panel visible.</p>
+                  <p>• Simulation-ready when at least one camera and one critical zone are present.</p>
+                </div>
               </div>
             </div>
 

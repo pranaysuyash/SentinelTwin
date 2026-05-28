@@ -8,6 +8,7 @@ describe("NovelAlgorithmsTab", () => {
     const source = readFileSync(novelAlgorithmsPath, "utf8");
 
     expect(source).toContain("Coverage Time Budget");
+    expect(source).toContain("Coverage Entropy");
     expect(source).toContain("Coverage Uncertainty");
     expect(source).toContain("Coverage Under Posture Variation");
     expect(source).toContain("Blind Spot Topology");
@@ -19,6 +20,7 @@ describe("NovelAlgorithmsTab", () => {
     expect(source).toContain("2s budget");
     expect(source).toContain("3s budget");
     expect(source).toContain("computeCoverageTimeBudget");
+    expect(source).toContain("computeCoverageEntropy");
     expect(source).toContain("computeCoverageUncertainty");
     expect(source).toContain("computeCoveragePostureVariation");
     expect(source).toContain("reflectiveBounce");

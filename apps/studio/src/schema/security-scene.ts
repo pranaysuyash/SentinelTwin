@@ -310,6 +310,7 @@ export const securityIssueSchema = z.object({
   description: z.string(),
   affectedZones: z.array(z.string()),
   affectedCameras: z.array(z.string()),
+  pathId: z.string().optional(),
 });
 
 export const recommendationSchema = z.object({
@@ -403,6 +404,12 @@ export const blindRegionSchema = z.object({
   description: z.string(),
 });
 
+export const reflectiveBounceSchema = z.object({
+  reflectiveWindowCount: z.number().int().nonnegative(),
+  affectedCellCount: z.number().int().nonnegative(),
+  affectedCameraCount: z.number().int().nonnegative(),
+});
+
 export const simulationResultSchema = z.object({
   computedAt: z.number().int().nonnegative(),
   totalCoveragePct: z.number().min(0).max(100),
@@ -447,11 +454,7 @@ export const simulationResultSchema = z.object({
       isolated: z.number().int().nonnegative(),
     }),
   }).optional(),
-  reflectiveBounce: z.object({
-    reflectiveWindowCount: z.number().int().nonnegative(),
-    affectedCellCount: z.number().int().nonnegative(),
-    affectedCameraCount: z.number().int().nonnegative(),
-  }).optional(),
+  reflectiveBounce: reflectiveBounceSchema.optional(),
   occlusionBlame: z.array(z.object({
     zoneId: z.string(),
     zoneLabel: z.string(),
@@ -688,6 +691,7 @@ export type Recommendation = z.infer<typeof recommendationSchema>;
 export type AdversarialPathResult = z.infer<typeof adversarialPathResultSchema>;
 export type CoverageCellResult = z.infer<typeof coverageCellResultSchema>;
 export type BlindRegionResult = z.infer<typeof blindRegionSchema>;
+export type ReflectiveBounceResult = z.infer<typeof reflectiveBounceSchema>;
 export type SimulationResult = z.infer<typeof simulationResultSchema>;
 export type SceneSnapshot = z.infer<typeof sceneSnapshotSchema>;
 export type SecurityScene = z.infer<typeof securitySceneSchema>;

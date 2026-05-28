@@ -137,6 +137,22 @@ export function SceneIntelligenceTab() {
   const [selectedNodeId, setSelectedNodeId] = useState(graph.rootId);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
 
+  const nodeById = useMemo(() => new Map(graph.nodes.map((node) => [node.id, node] as const)), [graph.nodes]);
+  const edgeById = useMemo(() => new Map(graph.edges.map((edge) => [edge.id, edge] as const)), [graph.edges]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const nodeParam = params.get("provenanceNode");
+    const edgeParam = params.get("provenanceEdge");
+    if (nodeParam && nodeById.has(nodeParam)) {
+      setSelectedNodeId(nodeParam);
+    }
+    if (edgeParam && edgeById.has(edgeParam)) {
+      setSelectedEdgeId(edgeParam);
+    }
+  }, [edgeById, nodeById]);
+
   useEffect(() => {
     if (!graph.nodes.some((node) => node.id === selectedNodeId)) {
       setSelectedNodeId(graph.rootId);
@@ -149,8 +165,19 @@ export function SceneIntelligenceTab() {
     }
   }, [graph.edges, selectedEdgeId]);
 
-  const nodeById = useMemo(() => new Map(graph.nodes.map((node) => [node.id, node] as const)), [graph.nodes]);
-  const edgeById = useMemo(() => new Map(graph.edges.map((edge) => [edge.id, edge] as const)), [graph.edges]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    params.set("provenanceNode", selectedNodeId);
+    if (selectedEdgeId) {
+      params.set("provenanceEdge", selectedEdgeId);
+    } else {
+      params.delete("provenanceEdge");
+    }
+
+    const nextUrl = `${window.location.pathname}?${params.toString()}${window.location.hash}`;
+    window.history.replaceState(null, "", nextUrl);
+  }, [selectedEdgeId, selectedNodeId]);
 
   const selectedNode = nodeById.get(selectedNodeId) ?? nodeById.get(graph.rootId) ?? graph.nodes[0] ?? null;
   const selectedEdge = selectedEdgeId ? edgeById.get(selectedEdgeId) ?? null : null;
@@ -255,6 +282,19 @@ export function SceneIntelligenceTab() {
 
   const handleEdgeSelect = (edgeId: string) => {
     setSelectedEdgeId(edgeId);
+  };
+
+  const copyDeepLink = async () => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    params.set("provenanceNode", selectedNodeId);
+    if (selectedEdgeId) {
+      params.set("provenanceEdge", selectedEdgeId);
+    } else {
+      params.delete("provenanceEdge");
+    }
+    const deepLink = `${window.location.origin}${window.location.pathname}?${params.toString()}${window.location.hash}`;
+    await navigator.clipboard.writeText(deepLink);
   };
 
   return (
@@ -414,6 +454,25 @@ export function SceneIntelligenceTab() {
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <StatCard label="Incoming" value={incomingEdges.length} detail="Relations that point here" />
                     <StatCard label="Outgoing" value={outgoingEdges.length} detail="Relations this node creates" />
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={copyDeepLink}
+                      className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium hover:bg-white/[0.08]"
+                    >
+                      Copy deep link
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedEdgeId(null);
+                        setSelectedNodeId(graph.rootId);
+                      }}
+                      className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium hover:bg-white/[0.08]"
+                    >
+                      Reset trace
+                    </button>
                   </div>
                 </div>
               </div>

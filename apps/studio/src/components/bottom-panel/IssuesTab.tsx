@@ -49,6 +49,7 @@ export function IssuesTab() {
   const scene = useStudioStore((s) => s.scene);
   const result = useStudioStore((s) => s.simulationResult);
   const updateNode = useStudioStore((s) => s.updateNode);
+  const runSimulation = useStudioStore((s) => s.runSimulation);
   const selectNode = useStudioStore((s) => s.selectNode);
   const [previewStateByRecKey, setPreviewStateByRecKey] = useState<Record<string, Record<string, unknown>>>({});
 
@@ -288,6 +289,10 @@ export function IssuesTab() {
                 updateNode(rec.affectedNodeId, patch);
                 selectNode(rec.affectedNodeId);
               };
+              const testFix = () => {
+                previewFix();
+                runSimulation();
+              };
               const applyFix = () => {
                 if (!rec.affectedNodeId) return;
                 const patch = makePatch(rec);
@@ -334,6 +339,14 @@ export function IssuesTab() {
                             className="flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-600/20 border border-emerald-600/30 text-[9px] text-emerald-300 hover:bg-emerald-600/30 transition-colors"
                           >
                             Preview Fix
+                          </button>
+                        ) : null}
+                        {canPreview ? (
+                          <button
+                            onClick={testFix}
+                            className="flex items-center gap-1 px-2 py-0.5 rounded bg-violet-600/20 border border-violet-600/30 text-[9px] text-violet-300 hover:bg-violet-600/30 transition-colors"
+                          >
+                            Test Fix
                           </button>
                         ) : null}
                         <button

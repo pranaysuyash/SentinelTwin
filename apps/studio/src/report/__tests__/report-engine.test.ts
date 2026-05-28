@@ -176,10 +176,11 @@ describe("report engine", () => {
 describe("exportAsHtml", () => {
   const scene = createSmallRetailShopScene();
   const result = simulateStudio(scene);
+  const baseReport = buildReportData(scene, result);
 
   function makeReport(overrides?: Partial<ReportData>): ReportData {
     return {
-      ...buildReportData(scene, result),
+      ...baseReport,
       ...overrides,
     };
   }
@@ -375,7 +376,7 @@ describe("exportAsHtml", () => {
   test("compliance section shows modeled requirements when all zones pass", () => {
     const passingReport = makeReport({
       summary: {
-        ...makeReport().summary,
+        ...baseReport.summary,
         zonesPassing: 5,
         zonesTotal: 5,
       },
@@ -389,7 +390,7 @@ describe("exportAsHtml", () => {
   test("compliance section shows unmet modeled requirements when zones fail", () => {
     const failingReport = makeReport({
       summary: {
-        ...makeReport().summary,
+        ...baseReport.summary,
         zonesPassing: 2,
         zonesTotal: 5,
       },

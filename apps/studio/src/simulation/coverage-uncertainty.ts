@@ -1,5 +1,4 @@
 import type { CameraNode, DoriQuality, SecurityScene } from "@/schema/security-scene";
-import { qualityToScore } from "@/simulation/dori";
 import { simulateStudioLite } from "@/simulation/simulate-studio";
 
 export type CoverageUncertaintyZoneRate = {

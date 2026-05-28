@@ -13,6 +13,9 @@ describe("SceneIntelligenceTab", () => {
     expect(source).toContain("Inspect");
     expect(source).toContain("Focus source");
     expect(source).toContain("Focus target");
+    expect(source).toContain("Copy deep link");
+    expect(source).toContain("provenanceNode");
+    expect(source).toContain("provenanceEdge");
     expect(source).toContain("Provenance notes");
     expect(source).toContain("selectedEdgeId");
   });

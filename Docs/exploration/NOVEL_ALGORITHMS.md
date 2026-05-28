@@ -55,6 +55,33 @@ implementable version of that idea.
 
 ---
 
+## Algorithm 1.5: Coverage Entropy
+
+**Status:** Implemented in the live Novel Algorithms panel and report handoff.
+
+**What it is:**
+Coverage entropy measures how concentrated the scene's quality distribution is across
+all sampled cells. A low value means the scene is dominated by one or two bands
+(for example, mostly blind or mostly recognition), while a higher value means the
+quality landscape is more mixed.
+
+**Algorithm:**
+1. Count how many cells fall into each DORI / OODPCVS quality band.
+2. Compute Shannon entropy over the observed distribution.
+3. Normalize the entropy by the maximum possible entropy for the observed bands.
+4. Report the dominant band and its share so the score is interpretable.
+
+**Why this matters:**
+Entropy is a compact way to describe whether the scene is concentrated, uniform, or
+mixed. It complements the existing average-quality metrics by showing how varied the
+coverage landscape is, without replacing the actual zone pass/fail results.
+
+**Current implementation:**
+The live Novel Algorithms panel and report handoff now show the normalized entropy,
+raw entropy bits, dominant quality band, and the current quality distribution.
+
+---
+
 ## Algorithm 2: Blind Spot Topology Analysis
 
 **Status:** Implemented in V0.1.4 studio simulation and report surfaces.
@@ -426,6 +453,7 @@ math, but the live panel and report now already expose the effect.
 | Algorithm | Novelty | Complexity | Value | Status |
 |---|---|---|---|---|
 | Coverage Fragility Field | High | Medium | High | Unexplored |
+| Coverage Entropy | Medium | Low | Medium | Implemented in live panel and report handoff |
 | Blind Spot Topology | Very High | Medium | Very High | Unexplored |
 | Placement Oracle | High | Medium | High | Implemented in live panel and report handoff |
 | Adversarial K-Robustness | Very High | Medium | High | Partially designed |

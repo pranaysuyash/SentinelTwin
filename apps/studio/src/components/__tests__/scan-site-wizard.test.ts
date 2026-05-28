@@ -1,13 +1,27 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 
-const wizardPath = "./src/components/scan-to-scene/ScanSiteWizard.tsx";
+const wizardPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../scan-to-scene/ScanSiteWizard.tsx");
 
 describe("ScanSiteWizard", () => {
-  test("supports manual correction controls and confidence-gated compile", () => {
+  test("supports multi-photo manual intake, correction controls, and confidence-gated compile", () => {
     const source = readFileSync(wizardPath, "utf8");
 
     expect(source).toContain("Drag markers to reposition.");
+    expect(source).toContain("Choose one or more site images");
+    expect(source).toContain("Annotate the active photo");
+    expect(source).toContain("Add photos");
+    expect(source).toContain("Photo set");
+    expect(source).toContain("All photos");
+    expect(source).toContain("Manual marking required");
+    expect(source).toContain("Camera mount default");
+    expect(source).toContain("Light mount default");
+    expect(source).toContain("Critical zone night requirement");
+    expect(source).toContain("What will be created");
+    expect(source).toContain("multiple");
+    expect(source).toContain("Unsupported file type. Use PNG, JPG, WEBP, or SVG images.");
     expect(source).toContain("ArrowLeft");
     expect(source).toContain("Geometry sanity checks");
     expect(source).toContain("Structural auto-fix assist (explicit)");

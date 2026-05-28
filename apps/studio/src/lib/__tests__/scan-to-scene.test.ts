@@ -8,7 +8,7 @@ import {
 import { safeParseSecurityScene } from "@/schema/security-scene";
 
 describe("scan-to-scene", () => {
-  test("creates valid scene from door + camera + obstruction + counter markers", () => {
+  test("creates valid scene from door + camera + obstruction + counter + light markers", () => {
     const session = createScanSession("Manual Assisted Scan", 12, 9, 3.2);
     session.imageDataUrl = "data:image/svg+xml;base64,PHN2Zy8+";
     session.imageName = "site.svg";
@@ -17,19 +17,25 @@ describe("scan-to-scene", () => {
       { ...createScanCandidate("counter", [0.58, 0.62], 1), label: "Cash Counter", confidence: 0.91 },
       { ...createScanCandidate("door", [0.5, 0.05], 2), label: "Front Door", confidence: 0.79 },
       { ...createScanCandidate("critical_zone", [0.61, 0.66], 3), label: "Counter Zone", confidence: 0.76 },
+      { ...createScanCandidate("light", [0.74, 0.18], 4), label: "Ceiling Light", confidence: 0.88 },
     ];
 
     const { scene, provenance } = compileScanSessionToScene(session);
     expect(scene.source).toBe("scan");
     expect(scene.walls).toHaveLength(4);
     expect(scene.cameras).toHaveLength(1);
+    expect(scene.securityLights).toHaveLength(1);
     expect(scene.obstructions).toHaveLength(1);
     expect(scene.doors).toHaveLength(1);
     expect(scene.entryPoints.length).toBeGreaterThan(0);
     expect(scene.criticalZones).toHaveLength(1);
     expect(scene.cameras[0]?.source).toBe("scan");
+    expect(scene.cameras[0]?.mountType).toBe("wall");
+    expect(scene.cameras[0]?.yawDeg).toBeGreaterThan(45);
+    expect(scene.cameras[0]?.yawDeg).toBeLessThan(75);
+    expect(scene.securityLights[0]?.glareRisk).toBe("low");
     expect(provenance.source).toBe("scan");
-    expect(provenance.acceptedCandidates).toBe(4);
+    expect(provenance.acceptedCandidates).toBe(5);
     expect(safeParseSecurityScene(scene).success).toBe(true);
   });
 
@@ -86,5 +92,19 @@ describe("scan-to-scene", () => {
     const { warnings } = compileScanSessionToScene(session);
     expect(warnings.some((warning) => warning.code === "NO_CAMERA")).toBe(true);
     expect(warnings.some((warning) => warning.code === "NO_CRITICAL_ZONE")).toBe(true);
+  });
+
+  test("warns when no wall markers are present and falls back to the room shell", () => {
+    const session = createScanSession("Fallback Walls", 11, 7, 3);
+    session.imageDataUrl = "data:image/png;base64,AA==";
+    session.imageName = "fallback.png";
+    session.candidates = [
+      createScanCandidate("camera", [0.2, 0.2], 0),
+      createScanCandidate("critical_zone", [0.7, 0.7], 1),
+    ];
+
+    const { scene, warnings } = compileScanSessionToScene(session);
+    expect(scene.walls).toHaveLength(4);
+    expect(warnings.some((warning) => warning.code === "NO_WALL")).toBe(true);
   });
 });

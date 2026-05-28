@@ -168,7 +168,7 @@ export function TopBar() {
   }, [exportScene]);
 
   return (
-    <header className="relative z-[140] isolate flex h-12 items-center gap-2 overflow-visible border-b border-[#1e2130] bg-[#0c0f16]/96 px-2.5 backdrop-blur-md">
+    <header className="relative z-[320] isolate flex h-12 items-center gap-2 overflow-visible border-b border-[#1e2130] bg-[#0c0f16]/96 px-2.5 backdrop-blur-md">
       <div className="flex min-w-0 items-center gap-2.5">
         <div className="flex min-w-0 items-center gap-2 pr-2.5">
           <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border border-emerald-500/25 bg-emerald-500/12 shadow-[0_0_18px_rgba(16,185,129,0.18)]">
@@ -176,7 +176,7 @@ export function TopBar() {
           </div>
           <div className="min-w-0 leading-tight">
             <div className="truncate text-[12px] font-semibold tracking-[0.01em] text-white">SentinelTwin Studio</div>
-            <div className="truncate text-[9px] uppercase tracking-[0.22em] text-[#4d566b]">Camera Coverage Testbed</div>
+            <div className="truncate text-[10px] uppercase tracking-[0.18em] text-[#5a6882]">Camera Coverage Testbed</div>
           </div>
         </div>
 
@@ -192,7 +192,7 @@ export function TopBar() {
           </button>
           {sceneOpen && (
             <div
-              className="absolute left-0 top-full z-[220] mt-1 w-56 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
+              className="absolute left-0 top-full z-[420] mt-1 w-56 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
               onMouseLeave={() => setSceneOpen(false)}
             >
               {/* Saved scenes from localStorage */}
@@ -218,7 +218,7 @@ export function TopBar() {
                             deleteSavedScene(saved.id);
                           }
                         }}
-                        className="hidden rounded-lg px-1.5 py-2 text-[9px] text-red-400 opacity-60 transition-colors hover:opacity-100 group-hover:block"
+                        className="hidden rounded-lg px-1.5 py-2 text-[10px] text-red-400 opacity-60 transition-colors hover:opacity-100 group-hover:block"
                         title="Delete scene"
                       >
                         ✕
@@ -229,7 +229,7 @@ export function TopBar() {
                 </>
               )}
               {savedScenes.length === 0 && (
-                <div className="px-2.5 py-2 text-[10px] text-[#4a5568]">No saved scenes yet</div>
+                <div className="px-2.5 py-2 text-[11px] text-[#6f7f9d]">No saved scenes yet</div>
               )}
 
               <div className="space-y-0.5">
@@ -316,7 +316,7 @@ export function TopBar() {
             </button>
             {targetOpen && (
               <div
-                className="absolute left-0 top-full z-[220] mt-1 w-64 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
+                className="absolute left-0 top-full z-[420] mt-1 w-64 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
                 onMouseLeave={() => setTargetOpen(false)}
               >
                 {TARGET_TYPE_OPTIONS.map((entry) => (
@@ -423,6 +423,11 @@ export function TopBar() {
             Assumptions
           </SurfaceButton>
 
+          <SurfaceButton onClick={() => setBottomTab("provenance")}>
+            <SlidersHorizontal className="h-3 w-3" />
+            Provenance
+          </SurfaceButton>
+
           {/* Visible keyboard shortcut toggle */}
           <button
             onClick={() => window.dispatchEvent(new CustomEvent("sentineltwin:toggle-shortcuts"))}
@@ -443,7 +448,7 @@ export function TopBar() {
           </button>
           {moreOpen && (
             <div
-              className="absolute right-0 top-full z-[220] mt-1 w-44 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
+              className="absolute right-0 top-full z-[420] mt-1 w-44 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
               onMouseLeave={() => setMoreOpen(false)}
             >
               {/* XL-only actions shown in menu for narrow widths */}
@@ -496,6 +501,13 @@ export function TopBar() {
                 >
                   <Info className="h-3 w-3" />
                   Assumptions
+                </button>
+                <button
+                  onClick={() => { setBottomTab("provenance"); setMoreOpen(false); }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
+                >
+                  <SlidersHorizontal className="h-3 w-3" />
+                  Provenance
                 </button>
                 <div className="my-1 border-t border-[#1e2130]" />
               </div>

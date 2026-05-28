@@ -1,0 +1,105 @@
+{
+  "image_id": "retail_02_grocery",
+  "source_type": "clean_digital",
+  "scale_reference": {
+    "known_dimension_m": 10.0,
+    "axis_hint": "height"
+  },
+  "walls": [
+    {
+      "x1": 0.04,
+      "y1": 0.033,
+      "x2": 0.96,
+      "y2": 0.033
+    },
+    {
+      "x1": 0.96,
+      "y1": 0.033,
+      "x2": 0.96,
+      "y2": 0.967
+    },
+    {
+      "x1": 0.96,
+      "y1": 0.967,
+      "x2": 0.04,
+      "y2": 0.967
+    },
+    {
+      "x1": 0.04,
+      "y1": 0.967,
+      "x2": 0.04,
+      "y2": 0.033
+    }
+  ],
+  "doors": [
+    {
+      "x1": 0.48,
+      "y1": 0.967,
+      "x2": 0.56,
+      "y2": 1.0,
+      "class": "entry"
+    }
+  ],
+  "windows": [
+    {
+      "x1": 0.2,
+      "y1": 0.033,
+      "x2": 0.4,
+      "y2": 0.033,
+      "class": "storefront"
+    }
+  ],
+  "obstructions": [
+    {
+      "x1": 0.12,
+      "y1": 0.167,
+      "x2": 0.24,
+      "y2": 0.417,
+      "class": "aisle"
+    },
+    {
+      "x1": 0.28,
+      "y1": 0.167,
+      "x2": 0.4,
+      "y2": 0.417,
+      "class": "aisle"
+    },
+    {
+      "x1": 0.44,
+      "y1": 0.167,
+      "x2": 0.56,
+      "y2": 0.417,
+      "class": "aisle"
+    },
+    {
+      "x1": 0.6,
+      "y1": 0.167,
+      "x2": 0.72,
+      "y2": 0.417,
+      "class": "aisle"
+    },
+    {
+      "x1": 0.4,
+      "y1": 0.583,
+      "x2": 0.8,
+      "y2": 0.75,
+      "class": "counter"
+    }
+  ],
+  "critical_zones": [
+    {
+      "polygon": [
+        0.4,
+        0.583,
+        0.8,
+        0.583,
+        0.8,
+        0.75,
+        0.4,
+        0.75
+      ],
+      "zone_type": "cash_register"
+    }
+  ],
+  "notes": "Synthetic floor plan for bakeoff pilot"
+}

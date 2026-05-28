@@ -156,7 +156,7 @@ reflected in report/workspace surfaces so the model posture is always apparent.
 ### P1 — Required for the full V0.1 product experience
 
 **[GAP-07] Dedicated launcher scene browser remains partial**
-TopBar already provides a canonical scene selector, and the launcher now adds a searchable project browser with selected-workspace actions, direct saved-scene resume shortcuts, and launcher-side folder/tag/pin metadata management.
+TopBar already provides a canonical scene selector, and the launcher now adds a searchable project browser with selected-workspace actions, direct saved-scene resume shortcuts, launcher-side folder/tag/pin metadata management, and a source filter row.
 **Spec ref:** Section 4 (Top bar — Scene selector), section 20 (Reports/exports)
 **Remaining:** Cross-device sync, shared project metadata, and multi-user project collaboration if the product grows beyond local storage.
 

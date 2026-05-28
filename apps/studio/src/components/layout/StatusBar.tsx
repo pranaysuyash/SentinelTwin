@@ -1,7 +1,24 @@
 "use client";
 
+import type { SecurityScene, SimulationResult } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 import { simulateStudio } from "@/simulation/simulate-studio";
+
+type StatusBarNode = {
+  nodeType?: string;
+  name?: string;
+  label?: string;
+  id: string;
+};
+
+const VIEW_MODE_LABELS: Record<string, string> = {
+  map: "Map / Edit",
+  wall: "Camera Wall",
+  replay: "Path Replay",
+  camera_view: "Camera View",
+  compare: "Before / After",
+  report: "Report",
+};
 
 function formatRunText(timestamp: number | null, durationMs: number | null) {
   if (!timestamp || durationMs === null) {
@@ -14,6 +31,75 @@ function formatRunText(timestamp: number | null, durationMs: number | null) {
   })} (${(durationMs / 1000).toFixed(1)}s)`;
 }
 
+function getNodeLabel(node: StatusBarNode) {
+  return node.name ?? node.label ?? node.id;
+}
+
+function findSceneNode(scene: SecurityScene, selectedNodeId: string | null, selectedCameraId: string | null, selectedNodeIds: string[]) {
+  const ids = selectedNodeIds.length > 0 ? selectedNodeIds : [selectedNodeId ?? selectedCameraId].filter(Boolean) as string[];
+  const primaryId = ids[0] ?? null;
+  if (!primaryId) return null;
+
+  return scene.cameras.find((entry) => entry.id === primaryId)
+    ?? scene.walls.find((entry) => entry.id === primaryId)
+    ?? scene.doors.find((entry) => entry.id === primaryId)
+    ?? scene.windows.find((entry) => entry.id === primaryId)
+    ?? scene.obstructions.find((entry) => entry.id === primaryId)
+    ?? scene.securityLights.find((entry) => entry.id === primaryId)
+    ?? scene.criticalZones.find((entry) => entry.id === primaryId)
+    ?? scene.privacyZones.find((entry) => entry.id === primaryId)
+    ?? scene.paths.find((entry) => entry.id === primaryId)
+    ?? scene.entryPoints.find((entry) => entry.id === primaryId)
+    ?? null;
+}
+
+function describeSelection(scene: SecurityScene, selectedNodeId: string | null, selectedCameraId: string | null, selectedNodeIds: string[]) {
+  if (selectedNodeIds.length > 1) {
+    return `${selectedNodeIds.length} selected`;
+  }
+
+  const selectedNode = findSceneNode(scene, selectedNodeId, selectedCameraId, selectedNodeIds);
+  if (!selectedNode) return "Scene overview";
+
+  const label = getNodeLabel(selectedNode as StatusBarNode);
+  switch (selectedNode.nodeType) {
+    case "camera":
+      return `Camera: ${label}`;
+    case "critical_zone":
+      return `Zone: ${label}`;
+    case "security_light":
+      return `Light: ${label}`;
+    case "obstruction":
+      return `Obstruction: ${label}`;
+    case "path":
+      return `Path: ${label}`;
+    case "door":
+      return `Door: ${label}`;
+    case "window":
+      return `Window: ${label}`;
+    case "entry_point":
+      return `Entry: ${label}`;
+    case "wall":
+      return `Wall: ${label}`;
+    case "privacy_zone":
+      return `Privacy zone: ${label}`;
+    default:
+      return `Selection: ${label}`;
+  }
+}
+
+function formatCoverageSummary(result: SimulationResult | null) {
+  if (!result) {
+    return "Coverage: Pending · Issues: Pending";
+  }
+
+  return `Coverage: ${result.totalCoveragePct.toFixed(0)}% · Issues: ${result.issues.length}`;
+}
+
+function formatViewModeLabel(viewMode: string) {
+  return VIEW_MODE_LABELS[viewMode] ?? viewMode.replace(/_/g, " ");
+}
+
 export function StatusBar() {
   const running = useStudioStore((s) => s.simulationRunning);
   const result = useStudioStore((s) => s.simulationResult);
@@ -22,6 +108,10 @@ export function StatusBar() {
   const toggleAuto = useStudioStore((s) => s.toggleAutoRecompute);
   const visible = useStudioStore((s) => s.visibleComponents.status_bar);
   const scene = useStudioStore((s) => s.scene);
+  const viewMode = useStudioStore((s) => s.viewMode);
+  const selectedNodeId = useStudioStore((s) => s.selectedNodeId);
+  const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
+  const selectedCameraId = useStudioStore((s) => s.selectedCameraId);
   const setSimulationRunning = useStudioStore((s) => s.setSimulationRunning);
   const setSimulationResult = useStudioStore((s) => s.setSimulationResult);
   const simulationDirty = useStudioStore((s) => s.simulationDirty);
@@ -30,6 +120,9 @@ export function StatusBar() {
 
   const runText = formatRunText(result?.computedAt ?? null, lastRunMs);
   const neverRun = !result?.computedAt;
+  const selectionText = describeSelection(scene, selectedNodeId, selectedCameraId, selectedNodeIds);
+  const viewModeText = formatViewModeLabel(viewMode);
+  const coverageText = formatCoverageSummary(result);
 
   return (
     <footer className="flex h-6 flex-shrink-0 select-none items-center gap-4 border-t border-[#1e2130] bg-[#0b0c10] px-3">
@@ -41,18 +134,31 @@ export function StatusBar() {
         </span>
       ) : null}
 
-      <span className="text-[10px] text-[#3a4158]">Scale: 1 m/unit</span>
-      <span className="text-[10px] text-[#3a4158]">Grid: 0.25 m</span>
+      <div className="flex min-w-0 items-center gap-3 text-[10px] text-[#3a4158]">
+        <span className="max-w-[22rem] truncate text-[#c7d0e4]" title={scene.name}>
+          Scene: {scene.name}
+        </span>
+        <span className="whitespace-nowrap">View: {viewModeText}</span>
+        <span className="max-w-[18rem] truncate text-[#8fa2c3]" title={selectionText}>
+          {selectionText}
+        </span>
+      </div>
+
       <div className="flex-1" />
 
       {/* Engine status with dot */}
-      <span className="flex items-center gap-1.5 text-[10px] text-[#3a4158]">
-        Engine:
-        <span className={running ? "text-amber-400" : "text-green-500"}>
-          {running ? "Running" : "Ready"}
+      <div className="flex items-center gap-3 text-[10px] text-[#3a4158]">
+        <span className="whitespace-nowrap" title={coverageText}>
+          {coverageText}
         </span>
-        <span className={`h-1.5 w-1.5 rounded-full ${running ? "animate-pulse bg-amber-400" : "bg-green-500"}`} />
-      </span>
+        <span className="flex items-center gap-1.5 whitespace-nowrap">
+          Engine:
+          <span className={running ? "text-amber-400" : "text-green-500"}>
+            {running ? "Running" : "Ready"}
+          </span>
+          <span className={`h-1.5 w-1.5 rounded-full ${running ? "animate-pulse bg-amber-400" : "bg-green-500"}`} />
+        </span>
+      </div>
 
       {/* Last run — clickable to run when stale or never-run */}
       <button
@@ -98,6 +204,9 @@ export function StatusBar() {
         <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
         Local
       </span>
+
+      <span className="text-[10px] text-[#3a4158]">Scale: 1 m/unit</span>
+      <span className="text-[10px] text-[#3a4158]">Grid: 0.25 m</span>
     </footer>
   );
 }

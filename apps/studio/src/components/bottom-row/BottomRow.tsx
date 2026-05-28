@@ -5,6 +5,8 @@ import { useState } from "react";
 
 import { useStudioStore } from "@/store/studio-store";
 import type { SecurityScene, SimulationAssumptions } from "@/schema/security-scene";
+import { buildSecurityOutcomeModel } from "@/lib/security-outcome/security-outcome-model";
+import { buildReportSummaryLines } from "@/lib/report-summary";
 
 function panelTimeLabel(ts: number) {
   const d = new Date(ts);
@@ -365,24 +367,11 @@ function ReportBullet({ color, label, text }: { color: string; label: string; te
 }
 
 function ReportSummaryPanel() {
+  const scene = useStudioStore((s) => s.scene);
   const result = useStudioStore((s) => s.simulationResult);
   const setBottomTab = useStudioStore((s) => s.setBottomTab);
-  const zone = result?.criticalZoneResults[0];
-  const criticalIssue = result?.issues.find((issue) => issue.category === "quality_fail" && issue.severity === "critical")?.description
-    ?? result?.issues.find((issue) => issue.category === "quality_fail")?.description
-    ?? "Critical zone is not meeting the requested quality threshold.";
-  const primaryCause = result?.issues.find((issue) => issue.category === "blindspot")?.description
-    ?? result?.recommendations[0]?.description
-    ?? "Coverage requires a scene or camera adjustment.";
-  const impact = zone
-    ? `Current simulated quality for ${zone.label} is ${zone.actualQuality} against a ${zone.requiredQuality} target.`
-    : "A critical zone is below the requested target quality.";
-  const recommendation = result?.recommendations.length
-    ? result.recommendations
-      .map((rec) => `${rec.description}${rec.verified ? " (verified)" : " (not yet verified)"}`)
-      .slice(0, 2)
-      .join(" ")
-    : "No verified recommendation is available yet.";
+  const outcome = buildSecurityOutcomeModel(scene, result, null);
+  const reportSummary = buildReportSummaryLines(outcome, result);
 
   return (
     <BottomSection
@@ -391,10 +380,26 @@ function ReportSummaryPanel() {
     >
       <div className="flex h-full flex-col rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
         <div className="flex-1 space-y-1.5 overflow-y-auto">
-          <ReportBullet color="#ef4444" label="Critical Issue" text={criticalIssue} />
-          <ReportBullet color="#f59e0b" label="Primary Cause" text={primaryCause} />
-          <ReportBullet color="#9ca3af" label="Impact" text={impact} />
-          <ReportBullet color="#60a5fa" label="Recommendation" text={recommendation} />
+          {reportSummary ? reportSummary.map((line) => (
+            <ReportBullet
+              key={line.label}
+              color={
+                line.label === "Critical Issue"
+                  ? "#ef4444"
+                  : line.label === "Primary Cause"
+                    ? "#f59e0b"
+                    : line.label === "Impact"
+                      ? "#9ca3af"
+                      : "#60a5fa"
+              }
+              label={line.label}
+              text={line.text}
+            />
+          )) : (
+            <div className="rounded-lg border border-dashed border-[#24283a] bg-[#111521] px-2.5 py-3 text-[10px] text-[#6f7f9d]">
+              Run simulation to populate the report summary.
+            </div>
+          )}
         </div>
         <button
           onClick={() => setBottomTab("report")}

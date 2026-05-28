@@ -71,7 +71,7 @@ function TabBadge({ children, tone = "slate" }: { children: React.ReactNode; ton
   }[tone];
 
   return (
-    <span className={`rounded-md border px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] ${toneClass}`}>
+      <span className={`rounded-md border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] ${toneClass}`}>
       {children}
     </span>
   );
@@ -138,9 +138,9 @@ export function BottomPanel() {
     return (
       <div className="flex h-[208px] flex-shrink-0 flex-col border-t border-[#1e2130] bg-[#0d1017]">
         <div className="flex items-center gap-2 border-b border-[#1e2130] px-3 py-1.5">
-          <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">Camera Wall Summary</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#5f6f8e]">Camera Wall Summary</div>
           <TabBadge tone="blue">Live multiview</TabBadge>
-          <div className="ml-auto text-[8px] uppercase tracking-[0.14em] text-[#556076]">Focus on active feeds and coverage gaps</div>
+          <div className="ml-auto text-[10px] uppercase tracking-[0.12em] text-[#6a7b99]">Focus on active feeds and coverage gaps</div>
         </div>
         <div className="flex-1 overflow-hidden bg-[#0b0f17]">
           <CameraStatusSummaryPanel />
@@ -153,12 +153,12 @@ export function BottomPanel() {
     return (
       <div className="flex h-[72px] flex-shrink-0 flex-col border-t border-[#1e2130] bg-[#0d1017]">
         <div className="flex h-full items-center gap-2 px-3">
-          <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">Analysis Drawer Hidden</div>
-          <div className="text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#5f6f8e]">Analysis Drawer Hidden</div>
+          <div className="text-[10px] uppercase tracking-[0.12em] text-[#6a7b99]">
             {workspacePreset.replace(/_/g, " ")} · {enabledTabs.length > 0 ? `${enabledTabs.length} modules available` : "No modules enabled"}
           </div>
           <div className="ml-auto flex items-center gap-1">
-            <span className="rounded border border-[#273246] bg-[#111521] px-2 py-1 text-[8px] font-semibold text-[#8ea5cc]">
+            <span className="rounded border border-[#273246] bg-[#111521] px-2 py-1 text-[10px] font-semibold text-[#8ea5cc]">
               {getTabLabel(singleModuleTab)}
             </span>
             <button
@@ -167,7 +167,7 @@ export function BottomPanel() {
                 setBottomDrawerMode("single_module");
                 setTab(singleModuleTab);
               }}
-              className="rounded border border-[#273246] bg-[#111521] px-2 py-1 text-[8px] font-semibold text-[#d7deed] transition-colors hover:border-sky-400/30 hover:text-white"
+              className="rounded border border-[#273246] bg-[#111521] px-2 py-1 text-[10px] font-semibold text-[#d7deed] transition-colors hover:border-sky-400/30 hover:text-white"
             >
               Show Current Module
             </button>
@@ -181,20 +181,20 @@ export function BottomPanel() {
     return (
       <div className="flex h-[208px] flex-shrink-0 flex-col border-t border-[#1e2130] bg-[#0d1017]">
         <div className="flex items-center gap-2 border-b border-[#1e2130] px-3 py-1.5">
-          <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">Single-Module Drawer</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#5f6f8e]">Single-Module Drawer</div>
           <TabBadge tone="amber">{getTabLabel(singleModuleTab)}</TabBadge>
           <div className="ml-auto flex items-center gap-1">
             <button
               type="button"
               onClick={() => setBottomDrawerMode("tabs")}
-              className="rounded border border-[#273246] bg-[#111521] px-2 py-1 text-[8px] font-semibold text-[#d7deed] transition-colors hover:border-sky-400/30 hover:text-white"
+              className="rounded border border-[#273246] bg-[#111521] px-2 py-1 text-[10px] font-semibold text-[#d7deed] transition-colors hover:border-sky-400/30 hover:text-white"
             >
               Show Tabs
             </button>
             <button
               type="button"
               onClick={() => setBottomDrawerMode("hidden")}
-              className="rounded border border-[#273246] bg-[#111521] px-2 py-1 text-[8px] font-semibold text-[#d7deed] transition-colors hover:border-amber-400/30 hover:text-white"
+              className="rounded border border-[#273246] bg-[#111521] px-2 py-1 text-[10px] font-semibold text-[#d7deed] transition-colors hover:border-amber-400/30 hover:text-white"
             >
               Hide Drawer
             </button>
@@ -214,9 +214,9 @@ export function BottomPanel() {
     return (
       <div className="flex h-[208px] flex-shrink-0 flex-col border-t border-[#1e2130] bg-[#0d1017]">
         <div className="flex items-center gap-2 border-b border-[#1e2130] px-3 py-1.5">
-          <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">Compare Drawer</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#5f6f8e]">Compare Drawer</div>
           <TabBadge tone="green">Before / After</TabBadge>
-          <div className="ml-auto text-[8px] uppercase tracking-[0.14em] text-[#556076]">Snapshot deltas and comparison metrics</div>
+          <div className="ml-auto text-[10px] uppercase tracking-[0.12em] text-[#6a7b99]">Snapshot deltas and comparison metrics</div>
         </div>
         <div className="flex items-end gap-0.5 border-b border-[#1e2130] px-1.5 pt-1.5">
           {compareTabs.map(({ id }) => (
@@ -246,8 +246,8 @@ export function BottomPanel() {
       {/* Tab strip — scrollable so the dock tabs don't overflow on narrow layouts */}
       <div className="flex min-w-0 items-center gap-2 border-b border-[#1e2130] px-3 py-1.5">
         <div>
-          <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">Analysis Drawer</div>
-          <div className="text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#5f6f8e]">Analysis Drawer</div>
+          <div className="text-[10px] uppercase tracking-[0.12em] text-[#6a7b99]">
             {viewMode === "replay"
               ? "Timeline-first replay analysis"
               : viewMode === "camera_view"

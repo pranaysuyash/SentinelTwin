@@ -14,6 +14,13 @@ describe("MetricsTab", () => {
     expect(source).toContain("Worst Area Quality");
     expect(source).toContain("Recognition Area");
     expect(source).toContain("Identification Area");
+    expect(source).toContain("Coverage Entropy");
+    expect(source).toContain("K-Robustness");
+    expect(source).toContain("Placement Oracle");
+    expect(source).toContain("Blind Spot Fingerprint");
+    expect(source).toContain("Reflective Bounce");
+    expect(source).toContain("Temporal Anomalies");
+    expect(source).toContain("Occlusion Blame");
     expect(source).toContain("result.totalCoveragePct");
     expect(source).toContain("qualityToScore");
   });

@@ -149,9 +149,9 @@ function hasSceneSchedule(scene: SecurityScene): boolean {
   );
 }
 
-function computeTimeSliceState(hour: number, minute: number, scene: SecurityScene): TimeSliceState {
-  const ts = scene.timeSchedule;
-  const useScene = hasSceneSchedule(scene);
+function computeTimeSliceState(hour: number, minute: number, scene?: SecurityScene): TimeSliceState {
+  const ts = scene?.timeSchedule;
+  const useScene = !!scene && hasSceneSchedule(scene);
 
   const interior = useScene && ts
     ? getInteriorLightStateFromSchedule(hour, minute, ts)
@@ -246,16 +246,6 @@ function patchSceneForTimeSlice(
       return { ...light, status: state.exteriorLightsOn ? ("on" as const) : ("off" as const) };
     }
     return { ...light, status: state.interiorLightsOn ? ("on" as const) : ("off" as const) };
-  });
-
-  patched.cameras = scene.cameras.map((camera) => {
-    if (state.timeOfDay === "night" && camera.nightMode !== "none") {
-      return camera;
-    }
-    if (state.timeOfDay === "night" && camera.nightMode === "none") {
-      return camera;
-    }
-    return camera;
   });
 
   return patched;
@@ -459,5 +449,5 @@ export function computeTemporalProfile(scene: SecurityScene): TemporalSecurityPr
 }
 
 export function computeTimeSliceStateForHour(hour: number, minute = 0): TimeSliceState {
-  return computeTimeSliceState(hour, minute, {} as SecurityScene);
+  return computeTimeSliceState(hour, minute);
 }

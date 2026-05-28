@@ -13,6 +13,9 @@ describe("ReportLiteTab", () => {
     expect(source).toContain("Export HTML");
     expect(source).toContain("Copy");
     expect(source).toContain("Print");
+    expect(source).toContain("Report Summary");
+    expect(source).toContain("buildReportSummaryLines");
+    expect(source).toContain("Latest Run");
     expect(source).toContain("Occlusion Blame");
     expect(source).toContain("Quality Without");
   });

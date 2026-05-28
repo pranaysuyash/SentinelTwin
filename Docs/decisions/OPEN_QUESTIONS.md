@@ -98,6 +98,9 @@ Coverage entropy captures "how fragile is the coverage" — cells near their DOR
 are fragile (one dirty lens or slight rotation puts them below threshold).
 **Question:** Does a security professional find this useful, or is it information overload?
 **Research needed:** Show concept to target users before building.
+**Update:** Implemented in the live Novel Algorithms panel and report handoff as a normalized
+Shannon entropy over the coverage-cell quality distribution. The remaining question is UX
+interpretability, not engine availability.
 
 ### Q-013: How do we handle the `ScanNode` in Pascal's architecture?
 The Pascal architecture article mentions a `Scan` node type for "3D reference scans from
@@ -117,6 +120,8 @@ Build the feature to flag zones, not to guarantee compliance.
 **Open:** How accurate is GPT-4o at placing objects with realistic coordinates?
 Will it place a 2m shelf at a reasonable position, or hallucinate impossible geometry?
 **Experiment:** Test this in experiments/scene_generation/ before committing to the feature.
+**Update:** The current AI draft flow already generates editable `SecurityScene` drafts from prompt text and now enriches obvious shop prompts with entry points, lighting, and a basic entry-to-counter path. Direct prompt-to-final JSON generation remains the open next step.
+**Update 2:** The model-backed draft path now compiles an explicit scene blueprint with concrete camera, light, obstruction, zone, entry, and path placements when the provider supports structured output. What remains open is whether we should expose the full raw `SecurityScene` JSON surface directly to users, or keep the current blueprint abstraction as the final prompt-to-scene contract.
 
 ---
 
@@ -149,6 +154,7 @@ those assumptions, not a measured fact.
 **This is both a UX question and a product ethics question.** A security manager who treats
 "78% coverage" as a hard fact could make a bad decision. We are responsible for that framing.
 **Related:** Assumptions panel in architecture docs. SimulationAssumptions type.
+**Update:** The product now surfaces assumptions in the report workspace, security outcome rail, and live novelty/report handoff surfaces. The remaining question is how much extra explanation to attach to entropy/uncertainty metrics versus the existing coverage labels.
 
 ### Q-018: Local-first vs server-side — data security architecture
 A CCTV installer or security agency will not upload their client's facility layout —

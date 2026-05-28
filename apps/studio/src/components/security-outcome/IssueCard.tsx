@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import type { OutcomeIssueCard } from "@/lib/security-outcome/security-outcome-model";
 
 function severityTone(severity: OutcomeIssueCard["severity"]) {
@@ -18,6 +20,8 @@ export function IssueCard({
   onFocusZone?: (zoneId: string) => void;
   onViewCamera?: (cameraId: string) => void;
 }) {
+  const [showWhy, setShowWhy] = useState(false);
+
   return (
     <div className="rounded-lg border border-[#1f2536] bg-[#0d0f17] p-2.5">
       <div className="flex items-center gap-2">
@@ -36,7 +40,7 @@ export function IssueCard({
                 onClick={() => onFocusZone(zoneId)}
                 className="rounded border border-[#2a3045] bg-[#111521] px-1.5 py-0.5 text-[8px] text-[#9db7e1] hover:text-white"
               >
-                Focus {zoneId}
+                Focus in Scene
               </button>
             ))
           : null}
@@ -48,11 +52,26 @@ export function IssueCard({
                 onClick={() => onViewCamera(cameraId)}
                 className="rounded border border-[#2a3045] bg-[#111521] px-1.5 py-0.5 text-[8px] text-[#9dd6ff] hover:text-white"
               >
-                View {cameraId}
+                View Camera
               </button>
             ))
           : null}
+        <button
+          type="button"
+          onClick={() => setShowWhy((value) => !value)}
+          className="rounded border border-[#2a3045] bg-[#111521] px-1.5 py-0.5 text-[8px] text-[#c8d3ea] hover:text-white"
+        >
+          Why?
+        </button>
       </div>
+      {showWhy ? (
+        <div className="mt-2 rounded border border-[#2a3045] bg-[#0b1220] px-2 py-1.5 text-[9px] text-[#9fb2d3]">
+          <div>Category: {issue.category.replace(/_/g, " ")}</div>
+          <div>Severity: {issue.severity}</div>
+          <div>Affected zones: {issue.affectedZones.length > 0 ? issue.affectedZones.join(", ") : "none mapped"}</div>
+          <div>Affected cameras: {issue.affectedCameras.length > 0 ? issue.affectedCameras.join(", ") : "none mapped"}</div>
+        </div>
+      ) : null}
     </div>
   );
 }

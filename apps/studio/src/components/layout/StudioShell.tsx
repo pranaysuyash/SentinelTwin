@@ -369,12 +369,14 @@ export default function StudioShell() {
 
   useEffect(() => {
     if (viewMode !== "camera_view") return;
+    if (scene.cameras.length === 0) return;
     const selectedIsCamera = !!selectedNodeId && scene.cameras.some((camera) => camera.id === selectedNodeId);
     if (selectedIsCamera) return;
-    const fallbackCamera = scene.cameras.find((camera) => camera.id === selectedCameraId) ?? scene.cameras[0];
-    if (fallbackCamera) {
-      selectNode(fallbackCamera.id);
-    }
+    const selectedCameraExists = !!selectedCameraId && scene.cameras.some((camera) => camera.id === selectedCameraId);
+    if (selectedCameraExists) return;
+    const fallbackCamera = scene.cameras[0];
+    if (!fallbackCamera) return;
+    selectNode(fallbackCamera.id);
   }, [scene.cameras, selectNode, selectedCameraId, selectedNodeId, viewMode]);
 
   return (
@@ -399,7 +401,7 @@ export default function StudioShell() {
       <ViewSettingsModal />
 
       {fullCanvasMode ? (
-        <div className="relative flex-1 min-h-0 overflow-hidden">
+        <div className="relative z-0 flex-1 min-h-0 overflow-hidden">
           {visibleComponents.view_mode_bar ? <ViewModeBar /> : null}
           <WorkspaceArea />
           {visibleComponents.command_bar ? <CommandBar /> : null}
@@ -458,7 +460,7 @@ export default function StudioShell() {
             </DockPanel>
           ) : null}
         >
-          <div className="relative flex-1 min-h-0 overflow-hidden">
+          <div className="relative z-0 flex-1 min-h-0 overflow-hidden">
             {visibleComponents.view_mode_bar ? <ViewModeBar /> : null}
             <WorkspaceArea />
             {visibleComponents.command_bar ? <CommandBar /> : null}

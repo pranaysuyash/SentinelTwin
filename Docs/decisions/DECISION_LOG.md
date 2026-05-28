@@ -1151,15 +1151,16 @@ reference to the new path, then remove the old."
 - **Keep route context only at wall-header level** — rejected because tile-level variation is hidden.
 - **Display only quality without visibility ratio** — rejected because the time-visible dimension is core to route analysis.
 
-### D-058: Guided scan intake should be a dedicated manual-assisted launch path that compiles into `scan_import`
+### D-058: Guided scan intake should be a dedicated manual-assisted launch path that compiles into `scan`
 **Date:** 2026-05-27
 
-**Decision:** Added a dedicated `Scan a Site` intake flow in the launcher and TopBar that accepts a site photo, lets the user manually place and classify scan candidates, and compiles the result into a canonical `scan_import` `SecurityScene` through shared scene-skeleton helpers.
+**Decision:** Added a dedicated `Scan a Site` intake flow in the launcher and TopBar that accepts site photos, lets the user manually place and classify scan candidates, and compiles the result into a canonical `scan` `SecurityScene` through shared scene-skeleton helpers.
 
 **Rationale:**
 - The scan-first experience needs to be visible as its own product mode, not hidden inside floor-plan import or a generic scene wizard.
 - Manual-assisted scan is useful now and honest about current capability; the UI explicitly says AI perception is not wired yet.
 - Compiling into the same `SecurityScene` path preserves the simulation/edit/replay/report loop and avoids a parallel scene representation.
+- The implemented schema uses `source: "scan"` as the canonical scan import value. Earlier shorthand like `scan_import` was treated as descriptive wording, not a schema enum, so the docs now track the actual source token instead of a non-existent alias.
 
 **Alternatives rejected:**
 - **Fold scan-first into the floor-plan importer** — rejected because floor plans and site-photo intake are different user intents and require different review UX.
@@ -1275,6 +1276,21 @@ reference to the new path, then remove the old."
 - **Move provenance inspection to a separate page** — rejected because the operator should inspect provenance in the same workflow where they are already reviewing the scene.
 - **Delay relation inspection until a future evidence system** — rejected because the graph already contains usable relations and can support trace focus now.
 
+### D-073: Provenance selections should be shareable through deep links
+**Date:** 2026-05-28
+
+**Decision:** Added URL-backed `provenanceNode` and `provenanceEdge` selection state to the `PROVENANCE` tab, plus a copyable deep-link action that preserves the current trace selection when sharing the workspace URL.
+
+**Rationale:**
+- Shareable trace links let a reviewer reopen the exact provenance state that matters instead of re-navigating the whole graph by hand.
+- Persisting selection in the URL keeps provenance inspectable and reproducible without introducing another scene-state store.
+- This keeps the provenance experience aligned with the rest of SentinelTwin’s evidence-first workflow.
+
+**Alternatives rejected:**
+- **Keep selection local-only** — rejected because the selected trace becomes hard to share and reference.
+- **Serialize selection into the report model** — rejected because the trace is a UI-navigation state, not part of the canonical scene data.
+- **Create a separate provenance viewer route** — rejected because the current tab already provides the right work surface.
+
 **Alternatives rejected:**
 - **Keep list-only include/exclude controls** — rejected because it cannot fix geometry drift.
 - **Defer all correction to post-import scene editing** — rejected because import review should produce coherent baseline geometry.
@@ -1291,6 +1307,21 @@ reference to the new path, then remove the old."
 **Alternatives rejected:**
 - **Keep fixed conversion factor** — rejected due calibration drift.
 - **Disable clamping entirely** — rejected because it allows off-wall openings.
+
+### D-074: Floor-plan import review must expose structural diagnostics before scene creation
+**Date:** 2026-05-28
+
+**Decision:** `apps/studio/src/lib/floor-plan-import.ts` now emits machine-readable floor-plan diagnostics during validation: wall orientation counts, near-duplicate wall pairs, short wall fragments, off-wall door/window markers, and bounds coverage. `ImportReview` surfaces those flags in the detection details panel before the user creates a `SecurityScene`.
+
+**Rationale:**
+- Floor-plan import is only trustworthy if users can see why the heuristic extraction may be risky before it becomes canonical scene geometry.
+- Diagnostics preserve the single-source-of-truth rule by staying on `FloorPlanResult` validation/review instead of creating a parallel scene model.
+- This closes the practical gap between passive warnings and actionable review: duplicate fragments and off-wall openings are exactly the import failures operators can correct with existing prune/drag controls.
+
+**Alternatives rejected:**
+- **Rely only on confidence percentage** — rejected because a scalar confidence score does not tell the user what to fix.
+- **Push all cleanup into post-import scene editing** — rejected because the baseline imported scene should be coherent before simulation/reporting.
+- **Introduce an ML extractor now** — rejected for this slice; deterministic diagnostics harden the existing local-first path and will remain useful even when model-backed extraction arrives.
 
 ### D-073: Report-lite should include explicit before/after export mode from snapshots
 **Date:** 2026-05-27
@@ -1416,7 +1447,7 @@ reference to the new path, then remove the old."
 ### D-081: Homepage should foreground real scene work alongside the demo baseline
 **Date:** 2026-05-28
 
-**Decision:** Rebalanced the Studio homepage so `New Blank Scene`, `Import SecurityScene JSON`, `Scan Site Photo`, and `AI Layout Draft` are surfaced as a dedicated `Scene Work` entry point, instead of leaving them as secondary or footer-only actions beneath the demo preview.
+**Decision:** Rebalanced the Studio homepage so `New Blank Scene`, `Import SecurityScene JSON`, `Scan a Site`, and `AI Layout Draft` are surfaced as a dedicated `Scene Work` entry point, instead of leaving them as secondary or footer-only actions beneath the demo preview.
 
 **Rationale:**
 - The demo scene should stay as the canonical reference baseline, but it cannot be the perceived end state of the product.
@@ -1444,7 +1475,7 @@ reference to the new path, then remove the old."
 ### D-083: Homepage should promote scene creation/import/scan as a primary call to action
 **Date:** 2026-05-28
 
-**Decision:** Added a prominent `Start a Scene` strip in the center column of the launcher so `New Blank Scene`, `Import SecurityScene JSON`, `Scan Site Photo`, and `AI Layout Draft` are visible as first-class actions alongside the workspace preview.
+**Decision:** Added a prominent `Start a Scene` strip in the center column of the launcher so `New Blank Scene`, `Import SecurityScene JSON`, `Scan a Site`, and `AI Layout Draft` are visible as first-class actions alongside the workspace preview.
 
 **Rationale:**
 - The app must encourage actual scene work, not just demo browsing.
@@ -2001,3 +2032,241 @@ reference to the new path, then remove the old."
 **Alternatives rejected:**
 - **Leave presets hidden in the canvas only** — rejected because users have to switch tools before discovering the library.
 - **Create a separate preset management page** — rejected because the preset list is a placement aid, not a standalone settings domain.
+
+### D-123: Footage verification preview should ship a multi-frame strip with deterministic best-frame scoring
+**Date:** 2026-05-28
+
+**Decision:** Extend Camera View verification preview to extract multiple timestamped frame candidates from local video uploads, score candidate quality deterministically, auto-pick a best candidate, and allow operators to override selection directly from the candidate strip.
+
+**Rationale:**
+- Single midpoint extraction is brittle for real clips where the target view may only appear in a subset of frames.
+- A deterministic local quality score keeps the feature fast, offline-friendly, and aligned with the geometry-first simulation posture.
+- Exposing auto-pick plus manual override in one panel gives operators speed and control without introducing backend ingest complexity.
+
+**Alternatives rejected:**
+- **Keep manual re-sampling only via timestamp slider** — rejected because operators still have to hunt blindly for good frames.
+- **Delay multi-frame support until ONVIF/RTSP integration** — rejected because local file workflows are already high-value and can ship independently.
+
+### D-124: Verification snapshots must persist video evidence lineage metadata
+**Date:** 2026-05-28
+
+**Decision:** Extend camera verification snapshots to persist source lineage metadata (`sourceType`, sampled timestamp, video duration, candidate-count, and best/selected candidate ids) so restored snapshots keep their acquisition context instead of only rendering state.
+
+**Rationale:**
+- Without lineage metadata, saved snapshots lose critical context about how the reference frame was chosen.
+- Persisting metadata now improves operator trust and prepares the verification path for future evidence export without introducing a second data model.
+- This remains lightweight and backward-compatible because metadata fields are optional.
+
+**Alternatives rejected:**
+- **Keep snapshots render-only (image + transforms)** — rejected because it discards frame selection provenance.
+- **Store lineage only in transient component state** — rejected because reloading/restoring snapshots would still lose acquisition context.
+
+### D-125: Saved verification snapshots must display evidence lineage summary in-panel
+**Date:** 2026-05-28
+
+**Decision:** Render a compact evidence summary under each saved verification snapshot entry in Camera View (`Image upload` for static uploads, and `Video sampledTime/duration · candidateCount · selected-mode` for video-derived references).
+
+**Rationale:**
+- Persisted metadata is only valuable if operators can inspect it without loading each snapshot blindly.
+- A compact line keeps the panel dense while still surfacing critical provenance needed for auditability.
+- This improves trust and speeds triage when multiple snapshots are saved for the same camera.
+
+**Alternatives rejected:**
+- **Only show filename in saved list** — rejected because it hides frame provenance and forces repeated load/inspect loops.
+- **Move lineage details to a separate modal** — rejected because it adds unnecessary interaction cost for a high-frequency workflow.
+
+### D-126: Coverage entropy should ship as a normalized, interpretable quality-distribution metric
+**Date:** 2026-05-28
+
+**Decision:** Implement Coverage Entropy as a normalized Shannon entropy over the simulated coverage-cell quality distribution, then expose it in the live Novel Algorithms panel, report workspace, and report exports.
+
+**Rationale:**
+- The open question was not whether the metric can be computed, but whether it can be made interpretable enough to be useful.
+- A normalized entropy score plus dominant-quality share gives users both the compact signal and the explanation.
+- Reusing the same helper across the panel and exports keeps the metric deterministic and avoids another one-off report-only summary.
+
+**Alternatives rejected:**
+- **Leave coverage entropy as a research note only** — rejected because the existing coverage-cell distribution already makes the metric cheap to compute.
+- **Show entropy without a dominant-quality explanation** — rejected because the raw score alone is too abstract for operators.
+
+### D-126: Footage verification should include deterministic auto-align assist
+**Date:** 2026-05-28
+
+**Decision:** Add an in-panel `Auto align` action that runs a deterministic multi-phase local search over overlay offsets and applies the best-scoring alignment match.
+
+**Rationale:**
+- Manual nudge controls are useful but slow for larger offset corrections.
+- A deterministic local search keeps behavior explainable and offline-friendly while materially reducing operator effort.
+- This builds on the existing alignment score model instead of introducing a second scoring pipeline.
+
+**Alternatives rejected:**
+- **Keep manual arrow/slider alignment only** — rejected because it is too slow for frequent verification loops.
+- **Use model-based alignment inference** — rejected for now because deterministic geometry-first behavior is preferred for this preview stage.
+
+### D-127: Heuristic AI drafts should enrich obvious scene prompts with entry, light, and path hints
+**Date:** 2026-05-28
+
+**Decision:** Extend the deterministic AI layout draft fallback so obvious shop-like prompts also produce explicit front-entry labels, prompt-driven lighting, and a basic entry-to-counter path when the prompt calls for it.
+
+**Rationale:**
+- The current draft flow already turns text into editable `SecurityScene` drafts, but it was still template-heavy for common retail prompts.
+- Adding these prompt hints makes the generated scene look authored rather than merely templated, which better matches the product's text-to-scene promise.
+- The change stays deterministic, offline-friendly, and easy to test, so it is a safe improvement on the canonical draft path.
+
+**Alternatives rejected:**
+- **Wait for a full model-generated SecurityScene JSON pipeline** — rejected because the heuristic path can be improved immediately and still remains useful when no provider key is available.
+- **Leave the template-only heuristic untouched** — rejected because obvious prompt cues like entry, lighting, and simple paths are already present in the user language and should be reflected in the draft.
+
+### D-128: Model-backed AI drafts should compile an explicit scene blueprint
+**Date:** 2026-05-28
+
+**Decision:** Extend the model-backed AI layout draft path so structured output includes a concrete scene blueprint with explicit camera, light, obstruction, zone, entry, and path placements, then compile that blueprint into the editable `SecurityScene`.
+
+**Rationale:**
+- The existing structured draft path was useful but still mostly template-selection plus enrichment.
+- A scene blueprint makes prompt-to-scene behavior materially more faithful to the user's request while staying schema-validated and deterministic at compile time.
+- Keeping the blueprint as the structured boundary is safer than asking the model to emit raw full-scene JSON directly, because the compiler can normalize IDs, defaults, and node wiring consistently.
+
+**Alternatives rejected:**
+- **Ask the model for raw full `SecurityScene` JSON immediately** — rejected because the full schema is large and would be harder to keep stable across providers.
+- **Keep structured output limited to template and dimensions only** — rejected because the product now needs more than a template selector to feel like legitimate text-to-scene.
+
+### D-129: AI Layout Draft launcher should be preview-first, then apply
+**Date:** 2026-05-28
+
+**Decision:** Change the launcher's AI Layout Draft modal so it generates a reviewable preview card first, and only replaces the current workspace after the user explicitly chooses to apply the draft.
+
+**Rationale:**
+- The other scene-ingest flows already use review-first UX where possible, and the AI draft path should follow the same operator-safe pattern.
+- A preview card makes the draft more transparent by surfacing scene name, counts, warnings, and provenance before any workspace replacement happens.
+- Keeping application separate from generation reduces accidental workspace overwrite risk while still letting the user move quickly once the preview looks right.
+
+**Alternatives rejected:**
+- **Keep the immediate-apply launcher behavior** — rejected because it hides the draft contents until after the workspace has already been replaced.
+- **Open Studio before previewing the draft** — rejected because the user should be able to inspect the result in the launcher and decide whether to use it.
+
+### D-130: AI Layout Draft preview should show current-vs-draft replacement impact
+**Date:** 2026-05-28
+
+**Decision:** Add a compact current-vs-draft comparison strip to the AI Layout Draft preview modal so the user can see the replacement impact before applying the draft.
+
+**Rationale:**
+- A preview card is more trustworthy when it explicitly shows what the draft would change in the workspace.
+- Current-vs-draft counts make the launcher safer for non-demo work because users can spot unexpected object growth or loss before committing.
+- The comparison is lightweight and fits the launcher modal without needing a separate compare view.
+
+**Alternatives rejected:**
+- **Keep the preview card summary only** — rejected because it answers "what is this?" but not "what will this replace?"
+- **Force the user into Studio for comparison** — rejected because the launcher should support review before commit on its own.
+
+### D-131: AI Layout Draft preview should expose the generated SecurityScene JSON
+**Date:** 2026-05-28
+
+**Decision:** Add an expandable raw JSON disclosure inside the AI Layout Draft preview modal, plus a copy action, so users can inspect the exact generated `SecurityScene` before applying it.
+
+**Rationale:**
+- Prompt-to-scene becomes more trustworthy when the user can inspect the actual generated structure, not only a human summary and counts.
+- A raw JSON view keeps the launcher aligned with the product's "AI proposes, user reviews, simulation verifies" framing.
+- Copying the generated JSON is useful for debugging, handoff, and future import/export workflows without forcing a full Studio context switch.
+
+**Alternatives rejected:**
+- **Hide the generated JSON behind Studio-only tooling** — rejected because the launcher should already be able to disclose what it is about to apply.
+- **Replace the preview summary with raw JSON only** — rejected because the summary and comparison still matter for quick human review.
+
+### D-132: Report Lite should surface the latest-run executive summary before raw markdown
+**Date:** 2026-05-28
+
+**Decision:** Add a four-bullet executive summary card to the top of Report Lite so the report handoff begins with critical issue, primary cause, impact, and recommendation before the raw markdown body.
+
+**Rationale:**
+- The report handoff is more useful when the reader gets a compact decision summary first, rather than immediately dropping into raw markdown text.
+- The bottom-row report summary already establishes the same four-bullet pattern, so surfacing it in Report Lite keeps the product’s report story consistent across surfaces.
+- The summary is derived from the live simulation result, so it stays aligned with the actual modeled scene instead of becoming a static explanation.
+
+**Alternatives rejected:**
+- **Keep Report Lite as raw markdown only** — rejected because the handoff should be readable at a glance.
+- **Invent a second summary model for the report tab** — rejected because the existing outcome/result data already provides the needed detail.
+
+### D-133: Bottom row and Report Lite should share the same executive summary helper
+**Date:** 2026-05-28
+
+**Decision:** Move the four-bullet report summary into a shared helper so the bottom row and Report Lite render the same executive summary data from the same source of truth.
+
+**Rationale:**
+- The bottom row and report tab were both describing the same latest-run story with duplicated logic.
+- Sharing the helper prevents drift between the compact report summary and the handoff tab summary.
+- This keeps the report story aligned across surfaces without introducing a new summary model.
+
+**Alternatives rejected:**
+- **Leave the two summaries duplicated** — rejected because the text can diverge over time.
+- **Remove the bottom-row summary** — rejected because the compact summary is still valuable as a glanceable state indicator.
+
+### D-134: StatusBar should surface scene, view, selection, and coverage context
+**Date:** 2026-05-28
+
+**Decision:** Expand the compact status bar footer to show the current scene name, active view mode, selection summary, and live coverage/issue summary alongside the existing engine and run controls.
+
+**Rationale:**
+- The footer is visible on every studio surface, so it should carry a small amount of cockpit context rather than only engine and grid metadata.
+- Scene name, view mode, and selection context help users orient themselves without opening a side panel.
+- A live coverage/issue summary makes the footer a useful state indicator while remaining lighter than the full report or security-outcome surfaces.
+
+**Alternatives rejected:**
+- **Keep the footer as engine-only chrome** — rejected because it underuses a globally visible surface.
+- **Move all context into the right rail** — rejected because the right rail is not always visible and already has heavier inspector content.
+
+### D-135: Provenance should be a first-class top-bar destination
+**Date:** 2026-05-28
+
+**Decision:** Add a direct Provenance action to the TopBar so users can jump into the scene-intelligence trace graph from the main shell instead of hunting for the bottom tab.
+
+**Rationale:**
+- Provenance is a core SentinelTwin promise: users should be able to inspect how the current result was derived.
+- The bottom tab already exists, but a top-bar shortcut makes the traceability workflow feel like a first-class command rather than a hidden analysis panel.
+- The same action is available in the overflow menu, so the affordance remains reachable on narrower viewports.
+
+**Alternatives rejected:**
+- **Leave provenance only in the bottom tabs** — rejected because it undersells a core evidence feature.
+- **Create a separate provenance drawer** — rejected because the existing scene-intelligence tab already provides the necessary surface.
+
+### D-136: Issues tab recommendations should support explicit test/apply/revert
+**Date:** 2026-05-28
+
+**Decision:** Add a `Test Fix` action to the Issues tab recommendation cards that previews the recommendation patch and immediately re-runs the simulation before the user commits with `Apply Fix`.
+
+**Rationale:**
+- The triage loop is more useful when users can test a recommendation in one click instead of manually previewing and then separately running simulation.
+- `Preview Fix`, `Test Fix`, `Apply Fix`, and `Revert Preview` create a clearer progression from safe inspection to committed scene change.
+- The existing recommendation patch logic already supports deterministic preview/apply/revert, so the explicit test action is a low-risk usability improvement.
+
+**Alternatives rejected:**
+- **Keep preview/apply only** — rejected because the triage flow should make validation explicit.
+- **Auto-apply recommendations without review** — rejected because it would be too aggressive for a security workspace.
+
+### D-137: Metrics tab should surface advanced live signals alongside core coverage cards
+**Date:** 2026-05-28
+
+**Decision:** Expand the Metrics tab with a second row of advanced live signals, including coverage entropy, K-robustness, placement oracle, blind-spot fingerprint, reflective bounce, temporal anomalies, and occlusion blame counts.
+
+**Rationale:**
+- The Metrics tab is the fastest at-a-glance summary, so it should expose the richer live signals already computed by the simulation.
+- These signals are useful before opening the deeper novel-algorithms/report surfaces and help the shell feel more like a true cockpit.
+- Keeping them in a second row preserves the existing core metric cards while making the advanced signals visible without adding another panel.
+
+**Alternatives rejected:**
+- **Leave advanced signals only in lower tabs and reports** — rejected because users should see the richer signals at a glance.
+- **Replace the core metrics row** — rejected because the core coverage/zone/camera summary is still the primary summary.
+
+### D-138: Launcher browser should filter by scene source directly
+**Date:** 2026-05-28
+
+**Decision:** Add a source filter row to the launcher browser so users can directly filter workspace cards by origin (`Demo`, `Draft`, `Import`, `Scan`, `AI`, `Preset`) alongside the existing search, sort, folder, and tag controls.
+
+**Rationale:**
+- Scene origin is a primary way users distinguish baseline demo content from their own work.
+- The launcher already has the counts and badges needed to make source filtering cheap and visible.
+- A source filter closes the last obvious browser gap without introducing a new browser surface or changing the overall layout.
+
+**Alternatives rejected:**
+- **Keep source only as a badge** — rejected because users should be able to filter by origin, not just read it.
+- **Add a separate browser page** — rejected because the existing launcher already owns the canonical workspace browsing surface.

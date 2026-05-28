@@ -1,16 +1,16 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 
 import {
   ArrowRight,
   Camera,
+  Compass,
   FileUp,
   FolderOpen,
   LayoutDashboard,
   Layers3,
   Map as MapIcon,
-  Monitor,
   Play,
   Plus,
   Radar,
@@ -22,38 +22,30 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/cn";
-import { PRODUCT_FEATURE_STATUS_LAST_VERIFIED, type ProductFeatureEntry, type ProductFeatureStatus } from "@/lib/product-feature-status";
+import { PRODUCT_FEATURE_STATUS_LAST_VERIFIED, type ProductFeatureEntry } from "@/lib/product-feature-status";
 import { getSceneSourceMeta } from "@/lib/scene-source";
-import { SecurityOutcomePanel } from "@/components/security-outcome/SecurityOutcomePanel";
 import type { BottomTab, SavedProjectRecord, ViewMode, WorkspacePreset } from "@/store/studio-store";
 import type { SecurityScene, SecurityIssue, SimulationResult, DoriQuality, ScenarioPath, CameraNode, ObstructionNode, SecurityLightNode } from "@/schema/security-scene";
 
-type LaunchMode = {
-  label: string;
-  description: string;
-  viewMode: ViewMode;
-  preset: WorkspacePreset;
-  accent: "blue" | "green" | "amber" | "violet" | "slate";
-};
-
 type ProjectSort = "recent" | "name" | "coverage";
+type ProjectSourceFilter = "All" | SecurityScene["source"];
 type StarterTone = "blank" | "import" | "scan" | "ai";
-const LAUNCH_MODES: LaunchMode[] = [
-  { label: "Coverage", description: "Open the main analysis workspace.", viewMode: "camera_view", preset: "coverage", accent: "blue" },
-  { label: "Camera View", description: "Inspect one camera in full canvas.", viewMode: "camera_view", preset: "coverage", accent: "green" },
-  { label: "Camera Wall", description: "Review live feeds and statuses.", viewMode: "wall", preset: "camera_wall", accent: "amber" },
-  { label: "Path Replay", description: "Replay the active route over the scene.", viewMode: "replay", preset: "replay", accent: "violet" },
-  { label: "Compare", description: "See baseline versus proposed fixes.", viewMode: "compare", preset: "compare", accent: "slate" },
-  { label: "Report Lite", description: "Open the evidence and export path.", viewMode: "report", preset: "report", accent: "blue" },
-];
-
 const NAV_ITEMS = [
-  { label: "Studio", detail: "Launch", active: true as const },
+  { label: "Home", detail: "Studio dashboard", active: true as const },
   { label: "Projects", detail: "Local workspaces", active: false as const },
   { label: "Demo Sites", detail: "Retail / Office / Warehouse", active: false as const },
   { label: "Reports", detail: "Evidence exports", active: false as const },
   { label: "Docs", detail: "Architecture notes", active: false as const },
   { label: "Settings", detail: "Studio preferences", active: false as const },
+] as const;
+
+const WORKSPACE_MODE_ITEMS = [
+  { label: "Coverage", detail: "Map & Analysis", viewMode: "map" as const, preset: "coverage" as const, tab: "metrics" as const },
+  { label: "Camera View", detail: "Single Camera", viewMode: "camera_view" as const, preset: "coverage" as const, tab: "metrics" as const },
+  { label: "Camera Wall", detail: "Multi Camera", viewMode: "wall" as const, preset: "camera_wall" as const, tab: "metrics" as const },
+  { label: "Path Replay", detail: "Route Analysis", viewMode: "replay" as const, preset: "replay" as const, tab: "timeline" as const },
+  { label: "Compare", detail: "Before / After", viewMode: "compare" as const, preset: "compare" as const, tab: "beforeafter" as const },
+  { label: "Report Lite", detail: "Quick Report", viewMode: "report" as const, preset: "report" as const, tab: "report" as const },
 ] as const;
 
 const SOURCE_LABELS: Record<SecurityScene["source"], string> = {
@@ -72,6 +64,8 @@ const ISSUE_SEVERITY_ORDER: Record<SecurityIssue["severity"], number> = {
   low: 3,
 };
 
+type IssueSeverity = keyof typeof ISSUE_SEVERITY_ORDER;
+
 function issueSeverityLabel(severity: SecurityIssue["severity"]) {
   switch (severity) {
     case "critical":
@@ -83,6 +77,19 @@ function issueSeverityLabel(severity: SecurityIssue["severity"]) {
     case "low":
     default:
       return "Low";
+  }
+}
+
+function issueSeverityTone(severity: SecurityIssue["severity"]) {
+  switch (severity) {
+    case "critical":
+      return "text-red-300";
+    case "high":
+      return "text-orange-300";
+    case "medium":
+      return "text-amber-300";
+    default:
+      return "text-sky-300";
   }
 }
 
@@ -101,13 +108,9 @@ const QUALITY_COLOR: Record<DoriQuality, string> = {
   scrutinize: "#1d4ed8",
 };
 
-const ACCENT_CLASS: Record<LaunchMode["accent"], string> = {
-  blue: "from-sky-400/20 to-sky-500/5 text-sky-200 border-sky-400/25",
-  green: "from-emerald-400/20 to-emerald-500/5 text-emerald-200 border-emerald-400/25",
-  amber: "from-amber-400/20 to-amber-500/5 text-amber-200 border-amber-400/25",
-  violet: "from-violet-400/20 to-violet-500/5 text-violet-200 border-violet-400/25",
-  slate: "from-slate-300/20 to-slate-500/5 text-slate-200 border-slate-300/20",
-};
+function formatDoriStandard(standard: "dori_2014" | "oodpcvs_2025" | (string & {})) {
+  return standard === "oodpcvs_2025" ? "OODPCVS (7-level)" : "Simplified PPM";
+}
 
 const STARTER_PREVIEW_CLASS: Record<StarterTone, string> = {
   blank: "from-sky-500/18 via-sky-500/8 to-transparent",
@@ -563,58 +566,14 @@ function ActionButton({
   );
 }
 
-function workflowStatusTone(status: ProductFeatureStatus) {
-  if (status === "Available") return "border-emerald-400/25 bg-emerald-500/10 text-emerald-200";
-  if (status === "Preview") return "border-amber-400/25 bg-amber-500/10 text-amber-200";
-  return "border-slate-400/20 bg-slate-500/10 text-slate-200";
-}
-
-function findFeatureEntryByName(featureStatus: ProductFeatureEntry[], featureName: string) {
-  return featureStatus.find((entry) => entry.feature.toLowerCase() === featureName.toLowerCase()) ?? null;
-}
-
-function featureStatusValue(entry: ProductFeatureEntry | null, fallback: ProductFeatureStatus) {
-  return entry?.status ?? fallback;
-}
-
-function featureDetailValue(entry: ProductFeatureEntry | null, fallback: string) {
-  return entry?.detail ?? fallback;
-}
-
-function WorkflowCard({
-  title,
-  description,
-  status,
-  onClick,
-}: {
-  title: string;
-  description: string;
-  status: ProductFeatureStatus;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group rounded-2xl border border-[color:var(--st-border)] bg-white/[0.03] p-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(79,183,255,0.35)] hover:bg-[color:var(--st-panel-2)]"
-    >
-      <div className="flex items-center justify-between gap-2">
-        <div className="text-sm font-semibold text-white">{title}</div>
-        <span className={cn("rounded-full border px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em]", workflowStatusTone(status))}>
-          {status}
-        </span>
-      </div>
-      <div className="mt-1 text-[11px] leading-4 text-[color:var(--st-muted)]">{description}</div>
-    </button>
-  );
-}
-
 function SceneStarterCard({
   icon,
   title,
   description,
   hint,
   badge,
+  status,
+  ctaLabel = "Start",
   tone,
   onClick,
   variant = "secondary",
@@ -624,6 +583,8 @@ function SceneStarterCard({
   description: string;
   hint: string;
   badge: string;
+  status?: string;
+  ctaLabel?: string;
   tone: StarterTone;
   onClick: () => void;
   variant?: "primary" | "secondary";
@@ -638,27 +599,32 @@ function SceneStarterCard({
           ? "border-sky-400/30 bg-sky-500/12 text-sky-50 shadow-[0_12px_36px_rgba(14,165,233,0.12)] hover:border-sky-300/45 hover:bg-sky-500/16"
           : "border-[color:var(--st-border)] bg-white/[0.03] text-[color:var(--st-text)] hover:border-[rgba(79,183,255,0.35)] hover:bg-[color:var(--st-panel-2)]",
       )}
-    >
-      <div className={cn("mb-3 overflow-hidden rounded-[18px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-2", STARTER_PREVIEW_CLASS[tone])}>
-        <div className="flex h-[46px] items-end justify-between gap-2">
-          <div className="flex items-end gap-1">
-            <span className="h-3.5 w-8 rounded-md border border-white/12 bg-white/8" />
-            <span className="h-5 w-3 rounded-md border border-white/12 bg-white/8" />
-            <span className="h-2.5 w-5 rounded-md border border-white/12 bg-white/8" />
-          </div>
-          <div className="flex items-end gap-1.5">
-            {tone === "blank" ? <span className="h-7 w-7 rounded-full border border-dashed border-sky-300/40 bg-sky-500/10" /> : null}
-            {tone === "import" ? <span className="h-7 w-7 rounded-lg border border-cyan-300/30 bg-cyan-500/10" /> : null}
-            {tone === "scan" ? <span className="h-6 w-10 rounded-md border border-emerald-300/30 bg-emerald-500/10" /> : null}
-            {tone === "ai" ? <span className="h-7 w-7 rounded-full border border-violet-300/30 bg-violet-500/10" /> : null}
+      >
+        <div className={cn("mb-3 overflow-hidden rounded-[18px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-2", STARTER_PREVIEW_CLASS[tone])}>
+          <div className="flex h-[46px] items-end justify-between gap-2">
+            <div className="flex items-end gap-1">
+              <span className="h-3.5 w-8 rounded-md border border-white/12 bg-white/8" />
+              <span className="h-5 w-3 rounded-md border border-white/12 bg-white/8" />
+              <span className="h-2.5 w-5 rounded-md border border-white/12 bg-white/8" />
+            </div>
+            <div className="flex items-end gap-1.5">
+              {tone === "blank" ? <span className="h-7 w-7 rounded-full border border-dashed border-sky-300/40 bg-sky-500/10" /> : null}
+              {tone === "import" ? <span className="h-7 w-7 rounded-lg border border-cyan-300/30 bg-cyan-500/10" /> : null}
+              {tone === "scan" ? <span className="h-6 w-10 rounded-md border border-emerald-300/30 bg-emerald-500/10" /> : null}
+              {tone === "ai" ? <span className="h-7 w-7 rounded-full border border-violet-300/30 bg-violet-500/10" /> : null}
+            </div>
           </div>
         </div>
-      </div>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
+          <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
             <span className="text-[color:var(--st-accent)]">{icon}</span>
             <span>{badge}</span>
+            {status ? (
+              <span className="whitespace-nowrap rounded-full border border-amber-400/25 bg-amber-500/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-amber-200">
+                {status}
+              </span>
+            ) : null}
           </div>
           <div className="mt-2 text-lg font-semibold tracking-tight">{title}</div>
           <div className="mt-1 text-[11px] leading-4 text-[color:var(--st-muted)]">{description}</div>
@@ -669,7 +635,7 @@ function SceneStarterCard({
         <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
           {hint}
         </span>
-        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--st-muted)]">Start</span>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--st-muted)]">{ctaLabel}</span>
       </div>
     </button>
   );
@@ -950,13 +916,59 @@ export function StudioDashboardHome({
     () => true,
     () => false,
   );
+  const [browserReady, setBrowserReady] = useState(false);
+  const [previewMode, setPreviewMode] = useState<"2d" | "3d">("2d");
   const coverage = result?.totalCoveragePct ?? scene.simulation?.totalCoveragePct ?? null;
   const passCount = result?.criticalZoneResults.filter((zone) => zone.status === "pass").length ?? (scene.simulation?.criticalZoneResults ?? []).filter((zone) => zone.status === "pass").length;
   const totalZones = result?.criticalZoneResults.length ?? (scene.simulation?.criticalZoneResults ?? []).length ?? scene.criticalZones.length;
   const issues = [...(result?.issues ?? scene.simulation?.issues ?? [])].sort((a, b) => ISSUE_SEVERITY_ORDER[a.severity] - ISSUE_SEVERITY_ORDER[b.severity]);
   const worstIssue = issues[0] ?? null;
+  const issuesBySeverity = useMemo(() => {
+    const grouped: Record<IssueSeverity, SecurityIssue[]> = { critical: [], high: [], medium: [], low: [] };
+    for (const issue of issues) {
+      grouped[issue.severity].push(issue);
+    }
+    return grouped;
+  }, [issues]);
+  const topObstructionIssue = useMemo(
+    () => issues.find((issue) => issue.description.toLowerCase().includes("block")
+      || issue.description.toLowerCase().includes("obstruct")
+      || issue.description.toLowerCase().includes("blind spot")),
+    [issues],
+  );
+  const outcomeSummary = useMemo(() => {
+    const zoneMap = criticalZoneStatusMap(result ?? scene.simulation ?? null);
+    return scene.criticalZones.slice(0, 3).map((zone) => {
+      const resultEntry = zoneMap.get(zone.id);
+      return {
+        id: zone.id,
+        label: zone.label,
+        required: zone.requiredQuality,
+        status: resultEntry?.status ?? "not-computed",
+        actual: resultEntry?.actualQuality ?? "none",
+      };
+    });
+  }, [scene.criticalZones, result, scene.simulation]);
+  const sceneAssumptions = scene.assumptions;
+  const sceneAssumptionRows = useMemo(
+    () => [
+      { label: "DORI Model", value: formatDoriStandard(sceneAssumptions.doriStandard) },
+      { label: "Person Height", value: `${sceneAssumptions.personHeightM} m` },
+      {
+        label: sceneAssumptions.timeOfDay === "night" ? "Night Mode" : sceneAssumptions.timeOfDay === "custom" ? "Custom Mode" : "Day Mode",
+        value: sceneAssumptions.timeOfDay === "day" ? "Day mode assumptions" : sceneAssumptions.timeOfDay === "night" ? "Night mode assumptions" : "Custom assumptions",
+      },
+      {
+        label: "Grid Resolution",
+        value: `${sceneAssumptions.pixelsPerMeter.detection} / ${sceneAssumptions.pixelsPerMeter.observation} / ${sceneAssumptions.pixelsPerMeter.recognition} / ${sceneAssumptions.pixelsPerMeter.identification} PPM`,
+      },
+      { label: "Glass Handling", value: sceneAssumptions.nightPenaltyMode === "none" ? "Standard" : "Adjusted for reduced transmission" },
+    ],
+    [sceneAssumptions],
+  );
   const [projectQuery, setProjectQuery] = useState("");
   const [projectSort, setProjectSort] = useState<ProjectSort>("recent");
+  const [activeSource, setActiveSource] = useState<ProjectSourceFilter>("All");
   const browserProjects = useMemo(() => {
     const query = projectQuery.trim().toLowerCase();
     const filtered = savedProjects.filter((project) => {
@@ -1002,11 +1014,25 @@ export function StudioDashboardHome({
     return browserProjects[0] ?? null;
   }, [browserProjects, selectedProjectId]);
   const selectedProjectScene = selectedProjectRecord?.scene ?? scene;
+  const manualScanFeature = featureStatus.find((entry) => entry.feature === "Scan Site (manual-assisted)") ?? null;
+  const guidedScanFeature = featureStatus.find((entry) => entry.feature === "Guided scan reconstruction") ?? null;
+  const aiLayoutDraftFeature = featureStatus.find((entry) => entry.feature === "AI layout draft") ?? null;
+  const verifyFootageFeature = featureStatus.find((entry) => entry.feature === "Real footage verification") ?? null;
+  useEffect(() => {
+    setBrowserReady(true);
+  }, []);
   const folderCounts = useMemo(() => {
     return browserProjects.reduce<Record<string, number>>((acc, project) => {
       acc[project.folder] = (acc[project.folder] ?? 0) + 1;
       return acc;
     }, {});
+  }, [browserProjects]);
+  const sourceCounts = useMemo(() => {
+    return browserProjects.reduce<Record<ProjectSourceFilter, number>>((acc, project) => {
+      const source = project.scene.source;
+      acc[source] = (acc[source] ?? 0) + 1;
+      return acc;
+    }, { All: browserProjects.length } as Record<ProjectSourceFilter, number>);
   }, [browserProjects]);
   const tagCounts = useMemo(() => {
     return browserProjects.reduce<Record<string, number>>((acc, project) => {
@@ -1016,23 +1042,27 @@ export function StudioDashboardHome({
       return acc;
     }, {});
   }, [browserProjects]);
+  const sourceFilters = useMemo(
+    () => {
+      const sources = Object.keys(sourceCounts).filter((source) => source !== "All") as SecurityScene["source"][];
+      return ["All", ...sources.sort((a, b) => sourceCounts[b] - sourceCounts[a] || SOURCE_LABELS[a].localeCompare(SOURCE_LABELS[b]))] as ProjectSourceFilter[];
+    },
+    [sourceCounts],
+  );
   const folderFilters = ["All", ...Object.keys(folderCounts).sort((a, b) => folderCounts[b] - folderCounts[a] || a.localeCompare(b))];
   const tagFilters = Object.keys(tagCounts).sort((a, b) => tagCounts[b] - tagCounts[a] || a.localeCompare(b)).slice(0, 8);
   const [activeFolder, setActiveFolder] = useState<string>("All");
   const [activeTag, setActiveTag] = useState<string>("All");
   const visibleProjects = browserProjects.filter((project) => {
+    const sourceMatch = activeSource === "All" || project.scene.source === activeSource;
     const folderMatch = activeFolder === "All" || project.folder === activeFolder;
     const tagMatch = activeTag === "All" || project.tags.includes(activeTag);
-    return folderMatch && tagMatch;
+    return sourceMatch && folderMatch && tagMatch;
   });
   const userWorkspaceProjects = visibleProjects.filter((project) => project.scene.source !== "demo");
   const referenceDemoProjects = visibleProjects.filter((project) => project.scene.source === "demo");
-  const assumptions = scene.assumptions;
+  const headerAssumptions = scene.assumptions;
   const lastRun = result?.computedAt ?? scene.simulation?.computedAt ?? null;
-  const aiLayoutDraftFeature = findFeatureEntryByName(featureStatus, "AI layout draft");
-  const manualScanFeature = findFeatureEntryByName(featureStatus, "Scan Site (manual-assisted)");
-  const guidedScanFeature = findFeatureEntryByName(featureStatus, "Guided scan reconstruction");
-  const verifyFootageFeature = findFeatureEntryByName(featureStatus, "Real footage verification");
   const visibleProjectCount = visibleProjects.length;
   const userWorkspaceCount = userWorkspaceProjects.length;
   const referenceDemoCount = referenceDemoProjects.length;
@@ -1082,7 +1112,7 @@ export function StudioDashboardHome({
                   {coverage == null ? "Simulation pending" : simulationDirty ? "Needs recompute" : "Up to date"}
                 </span>
                 <span className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1.5 text-[11px] text-[color:var(--st-muted)]">
-                  {assumptions.timeOfDay === "night" ? "Night Mode" : assumptions.timeOfDay === "custom" ? "Custom" : "Day Mode"}
+                  {headerAssumptions.timeOfDay === "night" ? "Night Mode" : headerAssumptions.timeOfDay === "custom" ? "Custom" : "Day Mode"}
                 </span>
                 {currentRunLabel ? (
                   <span
@@ -1132,78 +1162,7 @@ export function StudioDashboardHome({
             <div>
               <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-[color:var(--st-muted)]">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-300" />
-                Security Jobs
-              </div>
-              <div className="mt-3 space-y-2">
-                <WorkflowCard title="Audit Existing Camera Setup" description="Run coverage, inspect failures, and generate report evidence." status="Available" onClick={onOpenCoverageWorkspace} />
-                <WorkflowCard title="Design New Camera Layout" description="Create a scene, place cameras, and test before install." status="Available" onClick={onCreateScene} />
-                <WorkflowCard title="Import Floor Plan" description="Upload plan, calibrate detections, review warnings, build baseline scene." status="Available" onClick={onImportFloorPlan} />
-                <WorkflowCard
-                  title="Describe Layout With AI"
-                  description={featureDetailValue(aiLayoutDraftFeature, "Generate a draft scene from prompt and refine.")}
-                  status={featureStatusValue(aiLayoutDraftFeature, "Preview")}
-                  onClick={onAiDraft}
-                />
-                <WorkflowCard
-                  title="Manual-Assisted Scan"
-                  description={featureDetailValue(manualScanFeature, "Capture site inputs and compile into scene draft.")}
-                  status={featureStatusValue(manualScanFeature, "Preview")}
-                  onClick={onScanSite}
-                />
-                <WorkflowCard
-                  title="Guided Scan Reconstruction"
-                  description={featureDetailValue(guidedScanFeature, "Capture-driven reconstruction pipeline (not production-ready).")}
-                  status={featureStatusValue(guidedScanFeature, "Preview")}
-                  onClick={onGuidedScanPlanned}
-                />
-                <WorkflowCard
-                  title="Verify Real Camera Footage"
-                  description={featureDetailValue(verifyFootageFeature, "Reference image/video compare with local frame extraction and alignment preview.")}
-                  status={featureStatusValue(verifyFootageFeature, "Preview")}
-                  onClick={onVerifyFootagePlanned}
-                />
-                <WorkflowCard title="Open Reference Demo" description="Use the retail baseline to demo the simulation loop." status="Available" onClick={onOpenStudio} />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-[color:var(--st-muted)]">
-                <Plus className="h-3.5 w-3.5 text-emerald-300" />
-                Scene Work
-              </div>
-              <div className="mt-3 space-y-2">
-                <ActionButton
-                  icon={<Plus className="h-4 w-4" />}
-                  label="New Blank Scene"
-                  description="Start from an empty scene shell."
-                  onClick={onCreateScene}
-                  variant="primary"
-                />
-                <ActionButton
-                  icon={<FileUp className="h-4 w-4" />}
-                  label="Import SecurityScene JSON"
-                  description="Load a canonical scene file."
-                  onClick={onImportScene}
-                />
-                <ActionButton
-                  icon={<ScanSearch className="h-4 w-4" />}
-                  label="Scan Site Photo"
-                  description="Preview: manual-assisted photo intake compiled into SecurityScene."
-                  onClick={onScanSite}
-                />
-                <ActionButton
-                  icon={<Sparkles className="h-4 w-4" />}
-                  label="AI Layout Draft"
-                  description="Generate a prompt-backed draft scene."
-                  onClick={onAiDraft}
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-[color:var(--st-muted)]">
-                <LayoutDashboard className="h-3.5 w-3.5 text-sky-300" />
-                Navigation
+                Studio
               </div>
               <div className="mt-3 space-y-1.5">
                 {NAV_ITEMS.map((item) => (
@@ -1226,31 +1185,29 @@ export function StudioDashboardHome({
             <div>
               <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-[color:var(--st-muted)]">
                 <Layers3 className="h-3.5 w-3.5 text-emerald-300" />
-                Modes
+                Workspace Modes
               </div>
-              <div className="mt-3 space-y-2">
-                {LAUNCH_MODES.map((mode) => (
+              <div className="mt-3 space-y-1.5">
+                {WORKSPACE_MODE_ITEMS.map((mode) => (
                   <button
                     key={mode.label}
                     type="button"
-                    onClick={() => onOpenMode(mode.viewMode, mode.preset, mode.label === "Report Lite" ? "report" : undefined)}
+                    onClick={() => onOpenMode(mode.viewMode, mode.preset, mode.tab)}
                     className={cn(
-                      "group w-full rounded-2xl border bg-gradient-to-br p-3 text-left transition-all duration-200 hover:-translate-y-0.5",
-                      ACCENT_CLASS[mode.accent],
+                      "w-full rounded-2xl border px-3 py-2 text-left transition-colors",
+                      "border-[color:var(--st-border)] bg-white/[0.03] text-[#dfe8ff] hover:border-sky-400/25 hover:bg-sky-500/8",
                     )}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="text-sm font-semibold">{mode.label}</div>
-                      <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
-                    </div>
-                    <div className="mt-1 text-[11px] leading-4 opacity-80">{mode.description}</div>
+                    <div className="text-sm font-semibold">{mode.label}</div>
+                    <div className="mt-0.5 text-[11px] text-[color:var(--st-muted)]">{mode.detail}</div>
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="mt-auto space-y-2">
-              <ActionButton icon={<Monitor className="h-4 w-4" />} label="Open Report" description="Jump to the report/export surface." onClick={onOpenReport} />
+            <div className="mt-auto rounded-2xl border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2">
+              <div className="text-sm font-semibold text-white">Studio User</div>
+              <div className="mt-0.5 text-[11px] text-[color:var(--st-muted)]">Admin</div>
             </div>
           </aside>
 
@@ -1281,7 +1238,59 @@ export function StudioDashboardHome({
               </div>
 
               <div className="mt-4 overflow-hidden rounded-[24px] border border-white/[0.05] bg-black/[0.15]">
-                <ScenePreview scene={scene} result={result ?? scene.simulation ?? null} hydrated={hydrated} />
+                <div className={cn(
+                  "relative",
+                  previewMode === "3d" ? "[transform:perspective(1800px)_rotateX(8deg)] [transform-origin:center_top]" : "",
+                )}>
+                  <ScenePreview scene={scene} result={result ?? scene.simulation ?? null} hydrated={hydrated} />
+                  <div className="pointer-events-none absolute right-3 top-3 z-20 flex items-center gap-2 rounded-xl border border-[#2a334a] bg-[#0b111e]/88 px-3 py-1.5 text-[10px] text-[#c7d0e4] backdrop-blur-sm">
+                    <Compass className="h-3.5 w-3.5 text-cyan-300" />
+                    <span className="font-semibold">N</span>
+                    <span className="text-[#8ea0bf]">Top view</span>
+                  </div>
+                  <div className="absolute left-3 top-3 z-20 inline-flex rounded-xl border border-[#2a334a] bg-[#0b111e]/88 p-1 backdrop-blur-sm">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewMode("2d")}
+                      className={cn(
+                        "rounded-md px-2 py-1 text-[10px] transition-colors",
+                        previewMode === "2d" ? "bg-cyan-500/25 text-cyan-100" : "text-[#91a4c7] hover:text-white",
+                      )}
+                    >
+                      2D
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewMode("3d")}
+                      className={cn(
+                        "rounded-md px-2 py-1 text-[10px] transition-colors",
+                        previewMode === "3d" ? "bg-cyan-500/25 text-cyan-100" : "text-[#91a4c7] hover:text-white",
+                      )}
+                    >
+                      3D
+                    </button>
+                  </div>
+                  <div className="absolute bottom-3 left-3 z-20 w-[220px] rounded-xl border border-[#2a334a] bg-[#0a111d]/90 px-3 py-2 text-[10px] text-[#c8d3ea] backdrop-blur-sm">
+                    <div className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#8ea5cc]">Coverage (PPM)</div>
+                    <div className="mt-1 grid grid-cols-[12px_1fr] items-center gap-x-2 gap-y-1">
+                      <span className="h-2.5 w-2.5 rounded-sm bg-[#38bdf8]" />
+                      <span>250+ Identification</span>
+                      <span className="h-2.5 w-2.5 rounded-sm bg-[#22c55e]" />
+                      <span>125-250 Recognition</span>
+                      <span className="h-2.5 w-2.5 rounded-sm bg-[#fbbf24]" />
+                      <span>62.5-125 Observation</span>
+                      <span className="h-2.5 w-2.5 rounded-sm bg-[#f59e0b]" />
+                      <span>25-62.5 Detection</span>
+                      <span className="h-2.5 w-2.5 rounded-sm bg-[#ef4444]" />
+                      <span>&lt;25 No Coverage</span>
+                    </div>
+                    {topObstructionIssue ? (
+                      <div className="mt-2 rounded border border-amber-500/30 bg-amber-500/12 px-2 py-1 text-amber-100">
+                        Obstructed: {topObstructionIssue.description}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
               </div>
 
               <div className="mt-4 grid gap-3 lg:grid-cols-4">
@@ -1301,64 +1310,71 @@ export function StudioDashboardHome({
               <div className="mt-4 rounded-[24px] border border-sky-400/15 bg-sky-500/8 p-4">
                 <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
                   <Sparkles className="h-3.5 w-3.5 text-sky-300" />
-                  Scene Starter Gallery
+                  Quick Start
                 </div>
                 <div className="mt-3 grid gap-2 lg:grid-cols-2 xl:grid-cols-5">
-                      <SceneStarterCard
-                        icon={<Plus className="h-4 w-4" />}
-                        badge="Blank"
-                        tone="blank"
-                        title="New Blank Scene"
-                        description="Start from an empty scene shell and build your own shop, lobby, or corridor from scratch."
-                        hint="Blank canvas"
-                        onClick={onCreateScene}
-                        variant="primary"
+                  <SceneStarterCard
+                    icon={<Plus className="h-4 w-4" />}
+                    badge="Blank"
+                    tone="blank"
+                    title="New Blank Scene"
+                    description="Start from an empty scene shell and build your own shop, lobby, or corridor from scratch."
+                    hint="Blank canvas"
+                    ctaLabel="Open"
+                    onClick={onCreateScene}
+                    variant="primary"
                   />
-                      <SceneStarterCard
-                        icon={<FileUp className="h-4 w-4" />}
-                        badge="Import"
-                        tone="import"
-                        title="Import SecurityScene JSON"
-                        description="Bring in an existing site definition and continue work from a real workspace file."
-                        hint="Import a scene"
-                        onClick={onImportScene}
-                      />
-                      <SceneStarterCard
-                        icon={<MapIcon className="h-4 w-4" />}
-                        badge="Floor Plan"
-                        tone="import"
-                        title="Import Floor Plan Workflow"
-                        description="Dedicated lane: upload floor plan, review extraction summary/warnings, then commit to scene."
-                        hint="Plan-first flow"
-                        onClick={onImportFloorPlan}
-                      />
+                  <SceneStarterCard
+                    icon={<FileUp className="h-4 w-4" />}
+                    badge="Import"
+                    tone="import"
+                    title="Import Scene JSON"
+                    description="Bring in an existing site definition and continue work from a real workspace file."
+                    hint="Import a scene"
+                    ctaLabel="Open"
+                    onClick={onImportScene}
+                  />
+                  <SceneStarterCard
+                    icon={<MapIcon className="h-4 w-4" />}
+                    badge="Floor Plan"
+                    tone="import"
+                    title="Import Floor Plan Workflow"
+                    description="Upload a floor plan, review extraction summary and warnings, then commit to a scene."
+                    hint="Plan-first flow"
+                    ctaLabel="Open"
+                    onClick={onImportFloorPlan}
+                  />
                       <SceneStarterCard
                         icon={<ScanSearch className="h-4 w-4" />}
                         badge="Scan"
+                        status="Preview / Manual-assisted"
                         tone="scan"
-                        title="Scan Site Photo"
-                        description="Preview manual-assisted flow: mark walls/doors/cameras/objects on site photo, then compile into editable scene."
-                        hint="Photo-assisted"
-                        onClick={onScanSite}
-                      />
-                      <SceneStarterCard
-                        icon={<Sparkles className="h-4 w-4" />}
-                        badge="AI"
-                        tone="ai"
-                        title="AI Layout Draft"
-                        description="Generate a draft scene from a prompt, then refine it in Studio."
-                        hint="Prompt draft"
-                        onClick={onAiDraft}
-                      />
+                        title="Scan a Site"
+                        description="Build a security scene from site photos by marking walls, doors, cameras, obstructions, lights, and critical zones."
+                    hint="Photo-assisted"
+                    ctaLabel="Start Scan"
+                    onClick={onScanSite}
+                  />
+                  <SceneStarterCard
+                    icon={<Sparkles className="h-4 w-4" />}
+                    badge="AI"
+                    tone="ai"
+                    title="AI Layout Draft"
+                    description="Generate a draft scene from a prompt, then refine it in Studio."
+                    hint="Prompt draft"
+                    ctaLabel="Draft"
+                    onClick={onAiDraft}
+                  />
                 </div>
               </div>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_360px]">
+            {browserReady ? (
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_360px]">
               <div className="rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Project Browser</div>
+                    <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Recent Workspaces</div>
                     <div className="mt-1 text-sm text-[color:var(--st-muted)]">
                       Search, pin, and reopen your workspaces first. The demo remains available as the reference baseline below.
                     </div>
@@ -1402,6 +1418,27 @@ export function StudioDashboardHome({
                 </div>
 
                 <div className="mt-4 space-y-3">
+                  <div className="flex flex-wrap gap-1.5">
+                    {sourceFilters.map((source) => {
+                      const isActive = activeSource === source;
+                      const count = sourceCounts[source] ?? 0;
+                      return (
+                        <button
+                          key={source}
+                          type="button"
+                          onClick={() => setActiveSource(source)}
+                          className={cn(
+                            "rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
+                            isActive
+                              ? "border-sky-400/30 bg-sky-500/12 text-sky-100"
+                              : "border-[color:var(--st-border)] bg-white/[0.03] text-[color:var(--st-muted)] hover:bg-white/[0.05]",
+                          )}
+                        >
+                          {source === "All" ? "All sources" : SOURCE_LABELS[source]} <span className="text-[10px] opacity-70">({count})</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                   <div className="flex flex-wrap gap-1.5">
                     {folderFilters.slice(0, 10).map((folder) => (
                       <button
@@ -1649,7 +1686,7 @@ export function StudioDashboardHome({
               <div className="rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
                 <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
                   <Settings2 className="h-3.5 w-3.5 text-sky-300" />
-                  Selected Workspace
+                  Quick Start
                 </div>
                 {selectedProjectRecord ? (
                   <>
@@ -1682,28 +1719,196 @@ export function StudioDashboardHome({
                 <div className="mt-4">
                   <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
                     <Layers3 className="h-3.5 w-3.5 text-emerald-300" />
-                    Scene Work
+                    Quick Start
+                  </div>
+                  <div className="mt-3 rounded-[20px] border border-[color:var(--st-border)] bg-white/[0.025] p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Entry flow maturity</div>
+                      <div className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+                        Manual-assisted now
+                      </div>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      {manualScanFeature ? (
+                        <div className="flex items-start gap-2 rounded-2xl border border-cyan-400/15 bg-cyan-500/8 px-3 py-2">
+                          <span className={cn(
+                            "rounded-full border px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em]",
+                            manualScanFeature.status === "Available"
+                              ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-200"
+                              : manualScanFeature.status === "Preview"
+                                ? "border-amber-400/25 bg-amber-500/10 text-amber-200"
+                                : "border-slate-400/20 bg-slate-500/10 text-slate-200",
+                          )}>
+                            {manualScanFeature.status}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="text-[11px] font-medium text-white">Scan Site (manual-assisted)</div>
+                            <div className="text-[10px] text-[color:var(--st-muted)]">{manualScanFeature.detail}</div>
+                          </div>
+                        </div>
+                      ) : null}
+                      {guidedScanFeature ? (
+                        <div className="flex items-start gap-2 rounded-2xl border border-slate-400/15 bg-slate-500/8 px-3 py-2">
+                          <span className={cn(
+                            "rounded-full border px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em]",
+                            guidedScanFeature.status === "Available"
+                              ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-200"
+                              : guidedScanFeature.status === "Preview"
+                                ? "border-amber-400/25 bg-amber-500/10 text-amber-200"
+                                : "border-slate-400/20 bg-slate-500/10 text-slate-200",
+                          )}>
+                            {guidedScanFeature.status}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="text-[11px] font-medium text-white">Guided scan reconstruction</div>
+                            <div className="text-[10px] text-[color:var(--st-muted)]">{guidedScanFeature.detail}</div>
+                          </div>
+                        </div>
+                      ) : null}
+                      {aiLayoutDraftFeature ? (
+                        <div className="flex items-start gap-2 rounded-2xl border border-violet-400/15 bg-violet-500/8 px-3 py-2">
+                          <span className={cn(
+                            "rounded-full border px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em]",
+                            aiLayoutDraftFeature.status === "Available"
+                              ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-200"
+                              : aiLayoutDraftFeature.status === "Preview"
+                                ? "border-amber-400/25 bg-amber-500/10 text-amber-200"
+                                : "border-slate-400/20 bg-slate-500/10 text-slate-200",
+                          )}>
+                            {aiLayoutDraftFeature.status}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="text-[11px] font-medium text-white">AI layout draft</div>
+                            <div className="text-[10px] text-[color:var(--st-muted)]">{aiLayoutDraftFeature.detail}</div>
+                          </div>
+                        </div>
+                      ) : null}
+                      {verifyFootageFeature ? (
+                        <div className="flex items-start gap-2 rounded-2xl border border-amber-400/15 bg-amber-500/8 px-3 py-2">
+                          <span className={cn(
+                            "rounded-full border px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em]",
+                            verifyFootageFeature.status === "Available"
+                              ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-200"
+                              : verifyFootageFeature.status === "Preview"
+                                ? "border-amber-400/25 bg-amber-500/10 text-amber-200"
+                                : "border-slate-400/20 bg-slate-500/10 text-slate-200",
+                          )}>
+                            {verifyFootageFeature.status}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="text-[11px] font-medium text-white">Real footage verification</div>
+                            <div className="text-[10px] text-[color:var(--st-muted)]">{verifyFootageFeature.detail}</div>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                   <div className="mt-4 space-y-2">
                     <ActionButton icon={<Plus className="h-4 w-4" />} label="New Blank Scene" description="Start from an empty scene shell." onClick={onCreateScene} />
-                    <ActionButton icon={<FileUp className="h-4 w-4" />} label="Import SecurityScene JSON" description="Load a canonical scene file." onClick={onImportScene} />
-                    <ActionButton icon={<ScanSearch className="h-4 w-4" />} label="Scan Site Photo" description="Preview: manual-assisted photo intake flow." onClick={onScanSite} />
+                    <ActionButton icon={<FileUp className="h-4 w-4" />} label="Import Scene JSON" description="Load a canonical scene file." onClick={onImportScene} />
+                    <ActionButton icon={<ScanSearch className="h-4 w-4" />} label="Scan a Site" description="Preview: manual-assisted photo marking compiles to editable SecurityScene." onClick={onScanSite} />
                     <ActionButton icon={<Sparkles className="h-4 w-4" />} label="AI Layout Draft" description="Generate a prompt-backed draft scene." onClick={onAiDraft} />
                   </div>
                 </div>
               </div>
             </div>
+            ) : (
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_360px]">
+                  <div className="rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
+                  <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Recent Workspaces</div>
+                  <div className="mt-3 rounded-[22px] border border-dashed border-[color:var(--st-border)] bg-white/[0.02] p-4 text-sm text-[color:var(--st-muted)]">
+                    Loading local workspace history...
+                  </div>
+                </div>
+                <div className="rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
+                  <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Selected Workspace</div>
+                  <div className="mt-3 rounded-[22px] border border-dashed border-[color:var(--st-border)] bg-white/[0.02] p-4 text-sm text-[color:var(--st-muted)]">
+                    Loading selected workspace...
+                  </div>
+                </div>
+              </div>
+            )}
           </section>
 
           <aside className="flex flex-col gap-4 rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
             <div>
               <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
                 <TriangleAlert className="h-3.5 w-3.5 text-amber-300" />
-                Security Outcome
+                Security Status
               </div>
-              <div className="mt-2 text-[11px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">Open Issues</div>
-              <div className="mt-1 text-[11px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">Simulation Assumptions</div>
-              <SecurityOutcomePanel compact />
+              <div className="mt-2 text-[11px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">OUTCOME SUMMARY</div>
+              <div className="mt-2 space-y-2">
+                {outcomeSummary.length > 0 ? (
+                  outcomeSummary.slice(0, 3).map((row) => (
+                    <div key={row.id} className="rounded-xl border border-[#243252] bg-white/[0.02] px-3 py-2">
+                      <div className="text-sm font-semibold">{row.label}</div>
+                      <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
+                        {row.required} required · {row.actual} actual
+                        <span className={cn(
+                          "ml-2 rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em]",
+                          row.status === "pass"
+                            ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-200"
+                            : "border-amber-400/25 bg-amber-500/10 text-amber-200",
+                        )}>
+                          {row.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-xl border border-dashed border-[color:var(--st-border)] p-3 text-[11px] text-[color:var(--st-muted)]">
+                    No critical-zone outcome computed yet.
+                  </div>
+                )}
+              </div>
+              <div className="mt-4 text-[11px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">OPEN ISSUES ({issues.length})</div>
+              <div className="mt-2 space-y-2">
+                {(["critical", "high", "medium", "low"] as const).flatMap((severity) =>
+                  issuesBySeverity[severity]
+                    .slice(0, 2)
+                    .map((issue) => (
+                      <div key={`${issue.severity}-${issue.description}`} className="rounded-xl border border-[#243252] bg-white/[0.02] px-3 py-2">
+                        <div className="flex items-center justify-between gap-2 text-xs">
+                          <span className={cn("rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em]", issueSeverityTone(issue.severity))}>
+                            {issue.severity}
+                          </span>
+                          <span className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--st-muted)]">
+                            {issue.pathId ? `Path ${issue.pathId}` : "General"}
+                          </span>
+                        </div>
+                        <div className="mt-1 text-sm">{issue.description}</div>
+                      </div>
+                    ))
+                ).slice(0, 4)}
+                {issues.length === 0 ? (
+                  <div className="rounded-xl border border-[#243252] bg-white/[0.02] px-3 py-2 text-sm text-[color:var(--st-muted)]">No open issues.</div>
+                ) : null}
+              </div>
+              <div className="mt-4 text-[11px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">SIMULATION ASSUMPTIONS</div>
+              <div className="mt-2 space-y-1.5">
+                {sceneAssumptionRows.map((assumption) => (
+                  <div key={assumption.label} className="rounded-xl border border-[#243252] bg-white/[0.02] px-3 py-2">
+                    <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">{assumption.label}</div>
+                    <div className="mt-0.5 text-sm text-white">{assumption.value}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={onOpenIssues}
+                  className="inline-flex items-center justify-center rounded-xl border border-amber-400/25 bg-amber-500/12 px-3 py-2 text-xs font-medium text-amber-100 transition-colors hover:border-amber-300/35 hover:bg-amber-500/16"
+                >
+                  See all issues & recommendations
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenReport}
+                  className="inline-flex items-center justify-center rounded-xl border border-sky-400/25 bg-sky-500/12 px-3 py-2 text-xs font-medium text-sky-100 transition-colors hover:border-sky-300/35 hover:bg-sky-500/16"
+                >
+                  Open Report
+                </button>
+              </div>
               <button
                 type="button"
                 onClick={onOpenStudio}
@@ -1735,12 +1940,38 @@ export function StudioDashboardHome({
                       <div className="text-sm">{entry.feature}</div>
                       <div className="text-[11px] text-[color:var(--st-muted)]">{entry.detail}</div>
                     </div>
+                    {entry.feature === "Real footage verification" ? (
+                      <button
+                        type="button"
+                        className="rounded-md border border-white/10 px-2 py-1 text-[10px] font-medium hover:bg-white/[0.04]"
+                        onClick={onVerifyFootagePlanned}
+                      >
+                        Open
+                      </button>
+                    ) : null}
+                    {entry.feature === "Guided scan reconstruction" ? (
+                      <button
+                        type="button"
+                        className="rounded-md border border-white/10 px-2 py-1 text-[10px] font-medium hover:bg-white/[0.04]"
+                        onClick={onGuidedScanPlanned}
+                      >
+                        Start
+                      </button>
+                    ) : null}
                   </div>
                 ))}
               </div>
             </details>
           </aside>
         </div>
+        <footer className="mt-auto flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[color:var(--st-border)] bg-[color:var(--st-panel)] px-4 py-2.5 text-[11px] text-[color:var(--st-muted)]">
+          <div>© 2026 SentinelTwin · Security Simulation Studio · v0.9.0</div>
+          <div className="flex items-center gap-3">
+            <span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-200">All systems operational</span>
+            <button type="button" className="hover:text-white">Give Feedback</button>
+            <button type="button" className="hover:text-white">Help</button>
+          </div>
+        </footer>
       </div>
     </main>
   );

@@ -1,0 +1,10 @@
+{
+  "run_id": "stack_b_gpt4o_dev_de0dc1ea",
+  "candidate_id": "stack_b_gpt4o",
+  "timestamp": "2026-05-28T12:42:35Z",
+  "split": "dev",
+  "images_processed": 5,
+  "images_succeeded": 5,
+  "images_failed": 0,
+  "total_timing_ms": 29990.21315574646
+}

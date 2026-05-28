@@ -1,6 +1,6 @@
 # Session Context
 
-- Generated: 2026-05-28T11:55:10Z
+- Generated: 2026-05-28T13:07:57Z
 - Project: `SentinelTwin`
 - Provider: `local`
 - Model: `BAAI/bge-m3`
@@ -16,29 +16,88 @@
 
 ## Project-Focused Retrieval
 
-> NOTE: Project collection check timed out; using shared workspace context for this run.
+### Architecture Decisions
+- Collection: `projects_proj_sentineltwin`
+- Query: `architecture decisions for SentinelTwin`
+_Search timed out. Retry when the retrieval store is less busy._
 
 ## Shared Cross-Project Retrieval
 
 ### Reusable Patterns
 - Collection: `projects_workspace_shared`
 - Query: `similar architecture patterns for SentinelTwin`
-_Fast mode (--skip-index): retrieval skipped to keep startup non-blocking. Run `/Users/pranay/Projects/agent-start --project SentinelTwin` for full retrieval, or set `AGENT_START_SKIP_INDEX_RETRIEVE=1` if you want retrieval with skip-index._
+_Collection not available yet._
 
 ### Process Templates
 - Collection: `projects_workspace_shared`
 - Query: `project management templates and workflows`
-_Fast mode (--skip-index): retrieval skipped to keep startup non-blocking. Run `/Users/pranay/Projects/agent-start --project SentinelTwin` for full retrieval, or set `AGENT_START_SKIP_INDEX_RETRIEVE=1` if you want retrieval with skip-index._
+_Collection check timed out. Retry shortly._
 
 ### Common Failure Modes
 - Collection: `projects_workspace_shared`
 - Query: `lessons learned mistakes retrospectives postmortems`
-_Fast mode (--skip-index): retrieval skipped to keep startup non-blocking. Run `/Users/pranay/Projects/agent-start --project SentinelTwin` for full retrieval, or set `AGENT_START_SKIP_INDEX_RETRIEVE=1` if you want retrieval with skip-index._
+_Search timed out. Retry when the retrieval store is less busy._
+
+### Project Management Workflow
+- Collection: `projects_proj_sentineltwin`
+- Query: `project management workflow for SentinelTwin`
+_Collection not available yet._
+
+### Known Issues and Worklogs
+- Collection: `projects_proj_sentineltwin`
+- Query: `known issues and worklog for SentinelTwin`
+_Search timed out. Retry when the retrieval store is less busy._
+
+### Prompts and Guidelines
+- Collection: `projects_proj_sentineltwin`
+- Query: `prompts and guidelines for SentinelTwin`
+_Search timed out. Retry when the retrieval store is less busy._
 
 ### System Learning Graph
 - Collection: `projects_workspace_shared`
 - Query: `knowledge graph memory learning feedback loops autoresearch semantic taste graph`
-_Fast mode (--skip-index): retrieval skipped to keep startup non-blocking. Run `/Users/pranay/Projects/agent-start --project SentinelTwin` for full retrieval, or set `AGENT_START_SKIP_INDEX_RETRIEVE=1` if you want retrieval with skip-index._
+_Search timed out. Retry when the retrieval store is less busy._
+
+### System Learning Graph
+- Collection: `projects_proj_sentineltwin`
+- Query: `knowledge graph memory learning feedback loops autoresearch semantic taste graph for SentinelTwin`
+_Search timed out. Retry when the retrieval store is less busy._
+
+
+---
+## Agent Collaboration Style
+
+Pranay expects the agent to act as a genuine technical collaborator, not an instruction executor:
+- Have and express opinions on design, naming, logic, test quality
+- Push back when something is wrong - don't just flag it, fix it with a rationale
+- Catch bugs proactively without waiting to be asked
+- Discuss tradeoffs directly: here is why X is wrong and Y is better
+- The goal is two engineers reviewing each other's work, not a contractor following a spec
+
+This applies to code review, test quality, naming, architecture boundaries, commit grouping strategy, and anything that would affect the project long-term.
+_Search timed out. Retry when the retrieval store is less busy._
+
+## Shared Cross-Project Retrieval
+
+### Reusable Patterns
+- Collection: `projects_workspace_shared`
+- Query: `similar architecture patterns for SentinelTwin`
+_Collection check timed out. Retry shortly._
+
+### Process Templates
+- Collection: `projects_workspace_shared`
+- Query: `project management templates and workflows`
+_Collection check timed out. Retry shortly._
+
+### Common Failure Modes
+- Collection: `projects_workspace_shared`
+- Query: `lessons learned mistakes retrospectives postmortems`
+_Collection check timed out. Retry shortly._
+
+### System Learning Graph
+- Collection: `projects_workspace_shared`
+- Query: `knowledge graph memory learning feedback loops autoresearch semantic taste graph`
+_Collection check timed out. Retry shortly._
 
 
 ---

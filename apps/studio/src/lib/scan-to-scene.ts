@@ -51,6 +51,9 @@ export type ScanSession = {
   widthM: number;
   depthM: number;
   heightM: number;
+  cameraMountType: "wall" | "ceiling";
+  lightMountType: "ceiling" | "wall";
+  criticalZoneNightRequired: boolean;
   imageDataUrl: string | null;
   imageName: string | null;
   imageWidthPx: number | null;
@@ -86,6 +89,7 @@ export type ScanCompilationWarningCode =
   | "NO_CRITICAL_ZONE"
   | "NO_ENTRY"
   | "NO_OBSTRUCTION"
+  | "NO_WALL"
   | "NO_PATH";
 
 export type ScanCompilationWarning = {
@@ -128,6 +132,10 @@ function normalizePoint(point: [number, number], widthM: number, depthM: number)
   ];
 }
 
+function roomCenterPoint(session: ScanSession): [number, number] {
+  return [session.widthM / 2, session.depthM / 2];
+}
+
 function nearestWallSide(point: [number, number]) {
   const distances = [
     { side: "south" as const, value: point[1] },
@@ -153,6 +161,22 @@ function snapToWall(point: [number, number], widthM: number, depthM: number, off
     default:
       return [x, 0, offsetM];
   }
+}
+
+function wallMountPosition(point: [number, number], widthM: number, depthM: number, heightM: number) {
+  const [x, , z] = snapToWall(point, widthM, depthM);
+  return [x, Math.max(2.4, heightM - 0.2), z] as [number, number, number];
+}
+
+function ceilingMountPosition(point: [number, number], widthM: number, depthM: number, heightM: number) {
+  const [x, , z] = normalizePoint(point, widthM, depthM);
+  return [x, Math.max(2.4, heightM - 0.2), z] as [number, number, number];
+}
+
+function yawTowardPoint(from: [number, number, number], target: [number, number]) {
+  const dx = target[0] - from[0];
+  const dz = target[1] - from[2];
+  return Math.round((Math.atan2(dx, dz) * 180) / Math.PI);
 }
 
 function scanCandidateLabel(candidate: ScanCandidate) {
@@ -216,15 +240,23 @@ function createCandidateNode(
   if (!accepted) return null;
 
   const worldPoint = normalizePoint(candidate.point, session.widthM, session.depthM);
+  const roomCenter = roomCenterPoint(session);
+  const zoneFocus = session.candidates.find((entry) => entry.status !== "rejected" && (entry.kind === "critical_zone" || entry.kind === "counter")) ?? null;
+  const zoneCenter = zoneFocus ? normalizePoint(zoneFocus.point, session.widthM, session.depthM) : null;
+  const targetPoint: [number, number] = zoneCenter ? [zoneCenter[0], zoneCenter[2]] : roomCenter;
 
   switch (candidate.kind) {
     case "camera": {
-      const camera = createCameraNode([worldPoint[0], Math.max(2.4, session.heightM - 0.25), worldPoint[2]]);
+      const cameraPosition =
+        session.cameraMountType === "ceiling"
+          ? ceilingMountPosition(candidate.point, session.widthM, session.depthM, session.heightM)
+          : wallMountPosition(candidate.point, session.widthM, session.depthM, session.heightM);
+      const camera = createCameraNode(cameraPosition);
       camera.name = scanCandidateLabel(candidate);
-      camera.pitchDeg = -15;
-      camera.yawDeg = nearestWallSide(candidate.point) === "south" ? 180 : nearestWallSide(candidate.point) === "north" ? 0 : nearestWallSide(candidate.point) === "west" ? 90 : -90;
-      camera.mountType = "wall";
-      camera.mountHeightM = 2.8;
+      camera.pitchDeg = session.cameraMountType === "ceiling" ? -18 : -15;
+      camera.yawDeg = yawTowardPoint(cameraPosition, targetPoint);
+      camera.mountType = session.cameraMountType;
+      camera.mountHeightM = cameraPosition[1];
       camera.fovHorizontalDeg = 90;
       camera.fovVerticalDeg = 60;
       camera.rangeM = 20;
@@ -240,8 +272,16 @@ function createCandidateNode(
       return camera;
     }
     case "light": {
-      const light = createSecurityLightNode([worldPoint[0], Math.max(2.7, session.heightM - 0.18), worldPoint[2]]);
+      const lightPosition =
+        session.lightMountType === "wall"
+          ? wallMountPosition(candidate.point, session.widthM, session.depthM, session.heightM)
+          : ceilingMountPosition(candidate.point, session.widthM, session.depthM, session.heightM);
+      const light = createSecurityLightNode(lightPosition);
       light.name = scanCandidateLabel(candidate);
+      light.lightType = session.lightMountType;
+      light.yawDeg = yawTowardPoint(lightPosition, targetPoint);
+      light.pitchDeg = session.lightMountType === "wall" ? -35 : -12;
+      light.glareRisk = "low";
       light.source = "scan";
       return light;
     }
@@ -298,6 +338,7 @@ function createCandidateNode(
       zone.requiredQuality = "recognition";
       zone.targetType = candidate.label.toLowerCase().includes("counter") ? "cash_counter_activity" : "person_detection";
       zone.priority = "high";
+      zone.nightRequired = session.criticalZoneNightRequired;
       return zone;
     }
     case "wall": {
@@ -317,6 +358,9 @@ export function createScanSession(roomName: string, widthM = 10, depthM = 8, hei
     widthM,
     depthM,
     heightM,
+    cameraMountType: "wall",
+    lightMountType: "ceiling",
+    criticalZoneNightRequired: true,
     imageDataUrl: null,
     imageName: null,
     imageWidthPx: null,
@@ -511,6 +555,9 @@ export function compileScanSessionToScene(
   if (scene.criticalZones.length === 0) warnings.push({ code: "NO_CRITICAL_ZONE", message: "No high-value/critical zone marker accepted; add one to evaluate outcome quality." });
   if (scene.entryPoints.length === 0) warnings.push({ code: "NO_ENTRY", message: "No door or entry marker accepted; path replay and entry risk analysis will be limited." });
   if (scene.obstructions.length === 0) warnings.push({ code: "NO_OBSTRUCTION", message: "No obstruction marker accepted; blindspot exploration may be unrealistic." });
+  if (session.candidates.filter((candidate) => candidate.kind === "wall" && candidate.status !== "rejected").length === 0) {
+    warnings.push({ code: "NO_WALL", message: "No wall markers accepted; using the room dimensions to build a rectangular shell." });
+  }
   if (scene.paths.length === 0) warnings.push({ code: "NO_PATH", message: "No path points created; add path points or enable auto entry-to-zone path." });
 
   const parsed = safeParseSecurityScene(scene);

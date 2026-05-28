@@ -15,5 +15,7 @@ describe("TopBar target-type switcher", () => {
     expect(source).toContain("zoneCount > 0");
     expect(source).toContain('<SurfaceButton onClick={() => setBottomTab("assumptions")}>');
     expect(source).toContain("Assumptions");
+    expect(source).toContain('<SurfaceButton onClick={() => setBottomTab("provenance")}>');
+    expect(source).toContain("Provenance");
   });
 });

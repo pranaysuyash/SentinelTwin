@@ -1,6 +1,6 @@
-import type { CoverageCellLike } from "@/components/map/map-geometry";
-import { groupPathQualitySamples, pathLengthM, samplePathQuality } from "@/components/map/path-quality";
 import { qualityToScore } from "@/simulation/dori";
+import type { CoverageCellLike } from "@/simulation/path-quality";
+import { groupPathQualitySamples, pathLengthM, samplePathQuality } from "@/simulation/path-quality";
 import type { DoriQuality, ScenarioPath } from "@/schema/security-scene";
 
 export type CoverageTimeBudgetSegment = {

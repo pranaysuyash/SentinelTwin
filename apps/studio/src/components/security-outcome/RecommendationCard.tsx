@@ -25,7 +25,7 @@ export function RecommendationCard({ recommendation }: { recommendation: Outcome
       </div>
       <div className="mt-2 flex gap-1 text-[10px]">
         <button onClick={doPreview} className="rounded border border-[#2d3750] px-2 py-1 text-[#bcd3ff] hover:bg-[#1a2233]">Preview Fix</button>
-        <button onClick={() => store.setBottomTab("beforeafter")} className="rounded border border-[#2d3750] px-2 py-1 text-[#bcd3ff] hover:bg-[#1a2233]">Compare</button>
+        <button onClick={() => store.setBottomTab("beforeafter")} className="rounded border border-[#2d3750] px-2 py-1 text-[#bcd3ff] hover:bg-[#1a2233]">Compare Fix</button>
         <button onClick={doApply} className="rounded border border-emerald-500/30 px-2 py-1 text-emerald-300 hover:bg-emerald-500/10">Apply Fix</button>
       </div>
     </div>

@@ -8,6 +8,13 @@ describe("product feature status", () => {
     expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Launcher entry flows")).toBe(true);
     expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.status === "Available")).toBe(true);
     expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.status === "Preview")).toBe(true);
+    expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Scan Site (manual-assisted)" && entry.status === "Preview")).toBe(true);
+    expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Scan Site (manual-assisted)" && entry.detail.includes("AI segmentation/depth is not implemented yet"))).toBe(true);
+    expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Guided scan reconstruction" && entry.status === "Planned")).toBe(true);
+    expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Guided scan reconstruction" && entry.detail.includes("guided phone capture"))).toBe(true);
     expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Real footage verification" && entry.status === "Preview")).toBe(true);
+    expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Real footage verification" && entry.detail.includes("auto best-frame scoring"))).toBe(true);
+    expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Real footage verification" && entry.detail.includes("saved snapshot evidence lineage"))).toBe(true);
+    expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Real footage verification" && entry.detail.includes("deterministic auto-align assist"))).toBe(true);
   });
 });

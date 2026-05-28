@@ -9,6 +9,7 @@ import { buildSecurityOutcomeModel } from "@/lib/security-outcome/security-outco
 import { buildCompareReportData, exportCompareAsHtml, exportCompareAsMarkdown } from "@/report";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { useStudioStore } from "@/store/studio-store";
+import { buildReportSummaryLines } from "@/lib/report-summary";
 
 export function ReportLiteTab() {
   const result = useStudioStore((s) => s.simulationResult);
@@ -26,6 +27,7 @@ export function ReportLiteTab() {
   const [snapshotBId, setSnapshotBId] = useState<string | null>(null);
   const activePath = scene.paths.find((path) => path.id === activePathId) ?? null;
   const outcome = buildSecurityOutcomeModel(scene, result, activePath);
+  const reportSummary = buildReportSummaryLines(outcome, result);
 
   // Build markdown from either AI report or simulation data
   const markdown = result
@@ -209,6 +211,43 @@ export function ReportLiteTab() {
             className="rounded-xl border border-dashed border-[#2a3246] bg-[#0b0f17] px-3 py-4"
             message="Run the shared simulation to generate a report and security outcome."
           />
+        ) : null}
+        {reportSummary ? (
+          <div className="mb-3 rounded-xl border border-[#1e2130] bg-[#0b1018] p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div>
+                <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#7f8da8]">Report Summary</div>
+                <div className="text-[9px] text-[#6f7f9d]">Four bullet executive summary from the latest run.</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReportMode("single")}
+                className="rounded border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#32384d] hover:text-white"
+              >
+                Latest Run
+              </button>
+            </div>
+            <div className="grid gap-1.5 text-[10px] text-[#b9c7df]">
+              {reportSummary.map((line) => (
+                <div key={line.label} className="rounded-lg border border-[#1e2130] bg-[#101521] px-2.5 py-2">
+                  <span
+                    className={`font-semibold ${
+                      line.label === "Critical Issue"
+                        ? "text-red-300"
+                        : line.label === "Primary Cause"
+                          ? "text-amber-300"
+                          : line.label === "Impact"
+                            ? "text-slate-200"
+                            : "text-blue-300"
+                    }`}
+                  >
+                    {line.label}:
+                  </span>{" "}
+                  {line.text}
+                </div>
+              ))}
+            </div>
+          </div>
         ) : null}
         <div className="mb-3 rounded-lg border border-[#1e2130] bg-[#0b1018] p-3 text-[10px] text-[#b9c7df]">
           Security Outcome: {outcome.summary.status.replace(/_/g, " ")} · Coverage {outcome.summary.coveragePct == null ? "n/a" : `${Math.round(outcome.summary.coveragePct)}%`} · Critical Zones {outcome.summary.criticalZonesPassing}/{outcome.summary.criticalZonesTotal} · Issues {outcome.summary.issueCount}

@@ -35,8 +35,8 @@ function SectionToggle({
           {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[9px] font-semibold text-[#d7deed]">{title}</div>
-          <div className="truncate text-[9px] uppercase tracking-[0.18em] text-[#556076]">{summary}</div>
+          <div className="truncate text-[10px] font-semibold text-[#d7deed]">{title}</div>
+          <div className="truncate text-[10px] uppercase tracking-[0.14em] text-[#64738f]">{summary}</div>
         </div>
       </button>
       <ExplainBadge text="Expand to inspect and edit this section. Collapsing preserves context while reducing panel noise." />
@@ -75,12 +75,12 @@ export function ContextRightPanel() {
           <MonitorSmartphone className="h-3 w-3 text-blue-400" />
         </div>
         <div className="min-w-0">
-          <div className="truncate text-[10px] font-semibold text-white">Context Inspector</div>
-          <div className="truncate text-[8px] uppercase tracking-[0.18em] text-[#556076]">
+          <div className="truncate text-[11px] font-semibold text-white">Context Inspector</div>
+          <div className="truncate text-[10px] uppercase tracking-[0.14em] text-[#64738f]">
             {workspacePreset.replace(/_/g, " ")} · {viewMode.replace(/_/g, " ")}
           </div>
         </div>
-        <div className="ml-auto inline-flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-0.5 text-[8px] text-[#8f9bb1]">
+        <div className="ml-auto inline-flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-0.5 text-[10px] text-[#9fb1d1]">
           <MapPinned className="h-2.5 w-2.5" />
           <span className={cn("truncate", selectedNodeId ? "text-[#c7d0e4]" : "text-[#6c768f]")}>
             {selectedNodeId ?? "Scene overview"}
@@ -100,7 +100,7 @@ export function ContextRightPanel() {
             key={mode}
             type="button"
             onClick={() => setRightPanelMode(mode)}
-            className={cn("rounded px-2 py-1 text-[9px]", rightPanelMode === mode ? "bg-[#1a2233] text-white" : "text-[#8190ad]")}
+            className={cn("rounded px-2 py-1 text-[10px]", rightPanelMode === mode ? "bg-[#1a2233] text-white" : "text-[#92a5c8]")}
           >
             {label}
           </button>
@@ -127,7 +127,7 @@ export function ContextRightPanel() {
                   <InspectorPanel showHeader={false} />
                 </div>
               ) : (
-                <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[9px] text-[#72809a]">
+                <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[10px] text-[#8192b0]">
                   Object properties hidden. Expand when you need detailed editing controls.
                 </div>
               )}
@@ -145,7 +145,7 @@ export function ContextRightPanel() {
                   <AssumptionsPanel />
                 </div>
               ) : (
-                <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[9px] text-[#72809a]">
+                <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[10px] text-[#8192b0]">
                   Assumptions stay tucked away until you need to tune the model.
                 </div>
               )}
@@ -163,7 +163,7 @@ export function ContextRightPanel() {
                   <ScenarioPathPanel />
                 </div>
               ) : (
-                <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[9px] text-[#72809a]">
+                <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[10px] text-[#8192b0]">
                   Path controls are hidden. Expand them for replay and scenario editing.
                 </div>
               )}

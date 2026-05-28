@@ -447,6 +447,12 @@ export type StudioStoreState = {
     fileName: string;
     imageUrl: string;
     mode: "overlay" | "split";
+    sourceType?: "image" | "video";
+    sampleTimeS?: number | null;
+    videoDurationS?: number | null;
+    candidateCount?: number;
+    bestCandidateId?: string | null;
+    selectedCandidateId?: string | null;
     opacity: number;
     split: number;
     offsetX: number;

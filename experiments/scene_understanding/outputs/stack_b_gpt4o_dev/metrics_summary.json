@@ -1,0 +1,15 @@
+{
+  "candidate_id": "stack_b_gpt4o",
+  "run_id": "stack_b_gpt4o_dev_de0dc1ea",
+  "schema_valid_rate": 1.0,
+  "wall_f1_mean": 0.43636363636363634,
+  "door_f1_mean": 0.0,
+  "window_f1_mean": 0.0,
+  "obstruction_f1_mean": 0.4666666666666667,
+  "critical_zone_recall_mean": 0.0,
+  "critical_zone_precision_mean": 0.0,
+  "wall_endpoint_error_mean": 0.9715392295125878,
+  "hard_fail_rate": 0.0,
+  "p50_latency_ms": 5686.3,
+  "p95_latency_ms": 8300.1
+}

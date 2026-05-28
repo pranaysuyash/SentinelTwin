@@ -5,6 +5,7 @@ import { DonutChart } from "@/components/shared/DonutChart";
 import { Badge } from "@/components/shared/Badge";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { qualityToScore } from "@/simulation/dori";
+import { computeCoverageEntropy } from "@/simulation/coverage-entropy";
 
 function MetricCard({ label, children, className = "" }: {
   label: string; children: React.ReactNode; className?: string;
@@ -77,10 +78,65 @@ export function MetricsTab() {
     : fragilityPct <= 60 ? "#f5a623"
     : "#ef4444";
 
-  const colCount = fragilitySummary ? 8 : 7;
+  const coverageEntropy = computeCoverageEntropy(result.coverageCells);
+  const blindSpotFingerprint = result.blindSpotFingerprint;
+  const kRobustness = result.kRobustness;
+  const placementOracle = result.placementOracle;
+  const reflectiveBounce = result.reflectiveBounce;
+  const occlusionBlameCount = result.occlusionBlame?.length ?? 0;
+  const temporalSummary = scene.temporalProfile?.anomalySummary;
+  const advancedSignals = [
+    {
+      label: "Coverage Entropy",
+      value: coverageEntropy ? `${coverageEntropy.normalizedEntropy.toFixed(2)} norm` : "—",
+      detail: coverageEntropy
+        ? `dominant ${coverageEntropy.dominantQuality} ${coverageEntropy.dominantQualityShare.toFixed(1)}%`
+        : "Not computed",
+    },
+    {
+      label: "K-Robustness",
+      value: kRobustness ? `K=${kRobustness.kRobustness}` : "—",
+      detail: kRobustness ? `${kRobustness.isRobust ? "robust" : "fragile"} · ${kRobustness.criticalSets.length} critical sets` : "Not computed",
+    },
+    {
+      label: "Placement Oracle",
+      value: placementOracle?.bestCandidate ? `${placementOracle.candidateCount} candidates` : "—",
+      detail: placementOracle?.bestCandidate
+        ? `best ${placementOracle.bestCandidate.mountType} score ${placementOracle.bestCandidate.score.toFixed(1)}`
+        : "Not computed",
+    },
+    {
+      label: "Blind Spot Fingerprint",
+      value: blindSpotFingerprint ? blindSpotFingerprint.fingerprint : "—",
+      detail: blindSpotFingerprint
+        ? `${blindSpotFingerprint.regionCount} regions · ${blindSpotFingerprint.totalBlindAreaSqM.toFixed(1)} m²`
+        : "Not computed",
+    },
+    {
+      label: "Reflective Bounce",
+      value: reflectiveBounce ? `${reflectiveBounce.reflectiveWindowCount} windows` : "—",
+      detail: reflectiveBounce
+        ? `${reflectiveBounce.affectedCellCount} cells · ${reflectiveBounce.affectedCameraCount} cameras`
+        : "Not computed",
+    },
+    {
+      label: "Temporal Anomalies",
+      value: temporalSummary ? `${temporalSummary.totalAnomalies} windows` : "—",
+      detail: temporalSummary
+        ? `${temporalSummary.highSeverityCount} high · worst ${temporalSummary.worstCoverageDropPct.toFixed(1)}% drop`
+        : "Not computed",
+    },
+    {
+      label: "Occlusion Blame",
+      value: occlusionBlameCount > 0 ? `${occlusionBlameCount} zones` : "—",
+      detail: occlusionBlameCount > 0 ? "Blame fractions from obstruction analysis" : "Not computed",
+    },
+  ];
+  const baseColCount = fragilitySummary ? 8 : 7;
 
   return (
-    <div className="grid h-full" style={{gridTemplateColumns: `repeat(${colCount}, minmax(0, 1fr))`}}>
+    <div className="h-full">
+      <div className="grid gap-2" style={{gridTemplateColumns: `repeat(${baseColCount}, minmax(0, 1fr))`}}>
       {/* 1: Overall Coverage */}
       <MetricCard label="Overall Coverage (Detection)">
         <DonutChart
@@ -205,6 +261,21 @@ export function MetricsTab() {
           </div>
         </MetricCard>
       ) : null}
+
+      </div>
+
+      <div className="mt-2 grid gap-2" style={{gridTemplateColumns: "repeat(4, minmax(0, 1fr))"}}>
+        {advancedSignals.map((signal) => (
+          <MetricCard key={signal.label} label={signal.label}>
+            <div className="text-center">
+              <div className="max-w-[120px] truncate text-[16px] font-semibold text-[#e5ecfb]" title={signal.value}>
+                {signal.value}
+              </div>
+              <div className="mt-1 text-[9px] text-[#68738a]">{signal.detail}</div>
+            </div>
+          </MetricCard>
+        ))}
+      </div>
     </div>
   );
 }

@@ -46,6 +46,7 @@ Enable users to create SecurityScenes from floor plan images, photos, or manual 
 ### P1.6 — Scene Intelligence / Provenance Spine
 - [x] **Derived provenance graph**: `sceneIntelligenceGraph` is rebuilt from `SecurityScene` and tracks source lineage, entities, snapshots, revision depth, and simulation linkages
 - [x] **Provenance tab**: `PROVENANCE` bottom-panel view surfaces the graph so operators can inspect the scene spine in-product
+- [x] **Interactive provenance trace**: graph nodes and relations are clickable, with selected-node trace details and source/target focus controls
 
 ### P2 — Scene Template System
 - [x] **Template definitions**: Pre-built scene configurations for common spaces

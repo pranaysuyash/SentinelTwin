@@ -100,7 +100,7 @@ describe("normalizeFloorPlanResult", () => {
 
 describe("SceneBuilderWizard floor-plan extraction config", () => {
   test("keeps the import scale control wired to the actual extractor config", async () => {
-    const { getFloorPlanExtractionConfig } = await import("@/components/scan-to-scene/SceneBuilderWizard");
+    const { getFloorPlanExtractionConfig } = await import("@/components/scan-to-scene/floor-plan-extraction-config");
 
     expect(
       getFloorPlanExtractionConfig({

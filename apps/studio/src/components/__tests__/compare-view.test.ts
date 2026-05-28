@@ -19,9 +19,16 @@ describe("CompareView", () => {
     expect(source).toContain("Use Latest Simulated");
     expect(source).toContain("Simulate Scenario B Now");
     expect(source).toContain("Changed Objects");
+    expect(source).toContain("Camera Comparison");
+    expect(source).toContain("Compare two cameras from the current scene");
     expect(source).toContain("Capture Visual Evidence");
     expect(source).toContain("setCompareVisualEvidence");
     expect(source).toContain("Export Compare Report");
     expect(source).toContain("setCompareReportSelection");
+    expect(source).toContain("Export MD");
+    expect(source).toContain("Export HTML");
+    expect(source).toContain("Open 3D Replay");
+    expect(source).toContain("exportCompareAsMarkdown");
+    expect(source).toContain("exportCompareAsHtml");
   });
 });

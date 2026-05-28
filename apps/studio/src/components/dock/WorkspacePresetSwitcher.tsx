@@ -1,9 +1,24 @@
 "use client";
 
-import { ChevronDown, LayoutGrid, Monitor, PencilRuler, Play, Shield, Sparkles, Columns3, FileText } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import {
+  ChevronDown,
+  LayoutGrid,
+  Monitor,
+  PencilRuler,
+  Play,
+  Shield,
+  Sparkles,
+  Columns3,
+  FileText,
+  RotateCcw,
+  SlidersHorizontal,
+  Trash2,
+} from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import { cn } from "@/lib/cn";
+import { DEFAULT_LAYERS } from "@/lib/workspace-layouts";
+import { getPresetLayoutSnapshot, isWorkspaceLayoutModified } from "@/lib/workspace-layouts";
 import { useStudioStore, type WorkspacePreset } from "@/store/studio-store";
 
 const PRESETS: Array<{
@@ -23,13 +38,87 @@ const PRESETS: Array<{
 ];
 
 export function WorkspacePresetSwitcher() {
-  const preset = useStudioStore((s) => s.workspacePreset);
+  const workspacePreset = useStudioStore((s) => s.workspacePreset);
+  const viewMode = useStudioStore((s) => s.viewMode);
+  const canvasMode = useStudioStore((s) => s.canvasMode);
+  const leftDockCollapsed = useStudioStore((s) => s.leftDockCollapsed);
+  const rightDockCollapsed = useStudioStore((s) => s.rightDockCollapsed);
+  const bottomDockCollapsed = useStudioStore((s) => s.bottomDockCollapsed);
+  const leftDockSizePx = useStudioStore((s) => s.leftDockSizePx);
+  const rightDockSizePx = useStudioStore((s) => s.rightDockSizePx);
+  const bottomDockSizePx = useStudioStore((s) => s.bottomDockSizePx);
+  const visibleComponents = useStudioStore((s) => s.visibleComponents);
+  const enabledAnalysisModules = useStudioStore((s) => s.enabledAnalysisModules);
+  const layerVisibility = useStudioStore((s) => s.layerVisibility);
+  const rightPanelMode = useStudioStore((s) => s.rightPanelMode);
+  const bottomDrawerMode = useStudioStore((s) => s.bottomDrawerMode);
+  const pinnedAnalysisModule = useStudioStore((s) => s.pinnedAnalysisModule);
+  const overlayDensity = useStudioStore((s) => s.overlayDensity);
+  const showDebugOverlays = useStudioStore((s) => s.showDebugOverlays);
+  const clientDemoOptions = useStudioStore((s) => s.clientDemoOptions);
   const focusMode = useStudioStore((s) => s.focusMode);
   const setPreset = useStudioStore((s) => s.setWorkspacePreset);
   const restore = useStudioStore((s) => s.restorePreviousLayout);
+  const setViewSettingsOpen = useStudioStore((s) => s.setViewSettingsOpen);
+  const savedLayouts = useStudioStore((s) => s.savedLayouts);
+  const applySavedLayout = useStudioStore((s) => s.applySavedLayout);
+  const deleteSavedLayout = useStudioStore((s) => s.deleteSavedLayout);
   const [open, setOpen] = useState(false);
 
-  const active = PRESETS.find((entry) => entry.id === preset) ?? PRESETS[0]!;
+  const current = useMemo(() => ({
+    workspacePreset,
+    viewMode,
+    canvasMode,
+    leftDockCollapsed,
+    rightDockCollapsed,
+    bottomDockCollapsed,
+    leftDockSizePx,
+    rightDockSizePx,
+    bottomDockSizePx,
+    visibleComponents,
+    enabledAnalysisModules,
+    layerVisibility,
+    rightPanelMode,
+    bottomDrawerMode,
+    pinnedAnalysisModule,
+    overlayDensity,
+    showDebugOverlays,
+    clientDemoOptions,
+    focusMode,
+  }), [
+    workspacePreset,
+    viewMode,
+    canvasMode,
+    leftDockCollapsed,
+    rightDockCollapsed,
+    bottomDockCollapsed,
+    leftDockSizePx,
+    rightDockSizePx,
+    bottomDockSizePx,
+    visibleComponents,
+    enabledAnalysisModules,
+    layerVisibility,
+    rightPanelMode,
+    bottomDrawerMode,
+    pinnedAnalysisModule,
+    overlayDensity,
+    showDebugOverlays,
+    clientDemoOptions,
+    focusMode,
+  ]);
+
+  const active = PRESETS.find((entry) => entry.id === workspacePreset) ?? PRESETS[0]!;
+
+  const isModified = useMemo(() => {
+    const baseline = getPresetLayoutSnapshot(workspacePreset, DEFAULT_LAYERS);
+    return isWorkspaceLayoutModified(
+      {
+        ...current,
+        clientDemoOptions: current.clientDemoOptions,
+      },
+      baseline,
+    );
+  }, [current, workspacePreset]);
 
   return (
     <div className="relative">
@@ -40,6 +129,11 @@ export function WorkspacePresetSwitcher() {
       >
         {active.icon}
         <span>{active.label}</span>
+        {isModified ? (
+          <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] text-amber-300">
+            Modified
+          </span>
+        ) : null}
         <ChevronDown className="h-3 w-3 text-[#546078]" />
       </button>
 
@@ -58,7 +152,7 @@ export function WorkspacePresetSwitcher() {
                 type="button"
                 onClick={() => {
                   if (entry.id === "focus") {
-                    if (focusMode) restore();
+                    if (current.focusMode) restore();
                     else setPreset("focus");
                   } else {
                     setPreset(entry.id);
@@ -67,7 +161,7 @@ export function WorkspacePresetSwitcher() {
                 }}
                 className={cn(
                   "flex items-start gap-2 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-[#171c2b]",
-                  preset === entry.id ? "bg-[#171c2b] text-emerald-300" : "text-[#c7d0e4]",
+                  current.workspacePreset === entry.id ? "bg-[#171c2b] text-emerald-300" : "text-[#c7d0e4]",
                 )}
               >
                 <span className="mt-0.5 text-[#8da0c5]">{entry.icon}</span>
@@ -77,6 +171,79 @@ export function WorkspacePresetSwitcher() {
                 </span>
               </button>
             ))}
+          </div>
+
+          <div className="mt-2 border-t border-[#1e2130] pt-2">
+            <div className="px-2 py-1 text-[9px] uppercase tracking-[0.22em] text-[#4d566b]">
+              Layout actions
+            </div>
+            <div className="grid gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setViewSettingsOpen(true);
+                  setOpen(false);
+                }}
+                className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#c7d0e4] transition-colors hover:bg-[#171c2b] hover:text-white"
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5 text-sky-300" />
+                Customize current layout...
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (current.focusMode) {
+                    restore();
+                  } else {
+                    setPreset(current.workspacePreset);
+                  }
+                  setOpen(false);
+                }}
+                className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#c7d0e4] transition-colors hover:bg-[#171c2b] hover:text-white"
+              >
+                <RotateCcw className="h-3.5 w-3.5 text-emerald-300" />
+                Reset current preset
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-2 border-t border-[#1e2130] pt-2">
+            <div className="px-2 py-1 text-[9px] uppercase tracking-[0.22em] text-[#4d566b]">
+              Custom layouts
+            </div>
+            {savedLayouts.length > 0 ? (
+              <div className="max-h-48 space-y-1 overflow-y-auto pr-1">
+                {savedLayouts.map((layout) => (
+                  <div key={layout.id} className="flex items-center gap-1 rounded-lg border border-[#1f2536] bg-[#0b0f17] px-2 py-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        applySavedLayout(layout.id);
+                        setOpen(false);
+                      }}
+                      className="min-w-0 flex-1 text-left text-[11px] text-[#d7deed] transition-colors hover:text-white"
+                    >
+                      <span className="block truncate font-medium">{layout.name}</span>
+                      <span className="block truncate text-[9px] text-[#6c768f]">
+                        {layout.workspacePreset.replace(/_/g, " ")} · {layout.viewMode.replace(/_/g, " ")}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteSavedLayout(layout.id)}
+                      className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-[#24283a] bg-[#111521] text-[#7f8aa3] transition-colors hover:border-red-400/25 hover:text-red-200"
+                      title={`Delete ${layout.name}`}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-[#22314b] px-2.5 py-2 text-[10px] text-[#72809a]">
+                No custom layouts saved yet.
+              </div>
+            )}
           </div>
         </div>
       ) : null}

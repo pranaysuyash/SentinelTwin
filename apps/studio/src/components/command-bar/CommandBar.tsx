@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useAiCommand } from "@/hooks/use-ai-command";
 import type { CounterfactualCandidate } from "@/agents/CounterfactualAgent";
+import { useStudioStore } from "@/store/studio-store";
 
 const COST_COLORS: Record<string, string> = {
   free: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
@@ -18,7 +19,10 @@ export function CommandBar() {
   const [input, setInput] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { status, executeCommand, dismissError, applyCandidate } = useAiCommand();
+  const { status, executeCommand, dismissError, applyCandidate, mode } = useAiCommand();
+  const visible = useStudioStore((s) => s.visibleComponents.command_bar);
+
+  if (!visible) return null;
 
   const handleSubmit = useCallback(() => {
     const trimmed = input.trim();
@@ -67,6 +71,12 @@ export function CommandBar() {
       >
         <Sparkles className="h-3.5 w-3.5 text-emerald-400/70 group-hover:text-emerald-400" />
         AI Command
+        <span className="rounded-full border border-emerald-500/15 bg-emerald-500/10 px-1.5 py-0.5 text-[8px] text-emerald-300">
+          {mode.label}
+        </span>
+        <span className="rounded-full border border-[#24283a] bg-[#111521] px-1.5 py-0.5 text-[8px] text-[#8b96ab]">
+          {mode.providerLabel}
+        </span>
         <kbd className="ml-1 rounded border border-[#24283a] bg-[#111521] px-1 py-0.5 text-[8px] text-[#4d566b]">
           ⌘K
         </kbd>
@@ -83,6 +93,32 @@ export function CommandBar() {
       className="absolute bottom-3 left-3 right-3 z-30"
     >
       <div className="mx-auto max-w-2xl rounded-2xl border border-[#1f2536] bg-[#0b0f17]/95 p-2 shadow-[0_8px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+        <div className="mb-2 flex items-start justify-between gap-2 rounded-xl border border-[#1a2030] bg-[#07090f]/70 px-3 py-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="rounded-full border border-emerald-500/15 bg-emerald-500/10 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
+                {mode.label}
+              </span>
+              <span className="rounded-full border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[8px] text-[#8b96ab]">
+                {mode.providerLabel}
+              </span>
+              <span className="rounded-full border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[8px] text-[#8b96ab]">
+                {mode.cloudAvailable ? "Cloud-backed available" : "Local-only"}
+              </span>
+            </div>
+            <p className="mt-1 text-[10px] leading-snug text-[#8b96ab]">{mode.detail}</p>
+          </div>
+          <button
+            onClick={() => {
+              setIsExpanded(false);
+              dismissError();
+            }}
+            className="rounded-lg border border-[#24283a] bg-[#111521] p-1 text-[#5d6880] hover:border-[#32384d] hover:text-white"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+
         {/* Status indicators */}
         {status.state !== "idle" && (
           <div className="mb-2 rounded-xl border border-[#1a2030] bg-[#07090f]/60 px-3 py-2">
@@ -151,15 +187,6 @@ export function CommandBar() {
           />
           <div className="flex items-center gap-1">
             <span className="text-[8px] text-[#3a4158]">Esc</span>
-            <button
-              onClick={() => {
-                setIsExpanded(false);
-                dismissError();
-              }}
-              className="rounded-lg border border-[#24283a] bg-[#111521] p-1 text-[#5d6880] hover:border-[#32384d] hover:text-white"
-            >
-              <X className="h-3 w-3" />
-            </button>
           </div>
           <button
             onClick={handleSubmit}
@@ -188,6 +215,9 @@ export function CommandBar() {
               {hint}
             </button>
           ))}
+        </div>
+        <div className="mt-1.5 rounded-lg border border-[#1a2030] bg-[#07090f]/70 px-2.5 py-1.5 text-[9px] text-[#8090a8]">
+          Offline-first: recognized scene edits run locally. Cloud-backed parsing and fix proposals use a configured API key.
         </div>
         {/* Slash commands */}
         <div className="mt-1.5 flex flex-wrap gap-1.5">

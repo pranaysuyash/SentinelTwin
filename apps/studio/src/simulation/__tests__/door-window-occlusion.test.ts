@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { computeCoverageCells } from "@/simulation/coverage";
+import { qualityToScore } from "@/simulation/dori";
 import {
   createTestCamera,
   createTestScene,
@@ -98,5 +99,48 @@ describe("door and window occlusion", () => {
     expect(glassTarget.cameraEvaluations?.cam_test).toBeDefined();
     expect(curtainTarget.cameraEvaluations?.cam_test).toBeDefined();
     expect(reflectiveTarget.cameraEvaluations?.cam_test).toBeDefined();
+  });
+
+  test("reflective windows can improve visibility via bounce", () => {
+    const scene = createTestScene({
+      width: 8,
+      depth: 8,
+      cameras: [
+        createTestCamera({
+          position: [4, 2.5, 1],
+          yawDeg: 180,
+          pitchDeg: -25,
+          fovHorizontalDeg: 70,
+          rangeM: 12,
+          clarity: "excellent",
+        }),
+      ],
+    });
+
+    scene.windows = [
+      {
+        id: "window_reflective",
+        nodeType: "window",
+        label: "Reflective Window",
+        position: [4, 1.2, 3],
+        dimensions: [2.5, 1.8, 0.1],
+        state: "reflective",
+        visionTransmission: 0.4,
+        source: "manual",
+      },
+    ];
+    const reflectiveCells = computeCoverageCells(scene, 4);
+    const reflectiveTarget = findCellNear(reflectiveCells, 4.125, 6.875);
+
+    const glassScene = structuredClone(scene);
+    glassScene.windows[0].state = "closed_glass";
+    const glassCells = computeCoverageCells(glassScene, 4);
+    const glassTarget = findCellNear(glassCells, 4.125, 6.875);
+
+    expect(reflectiveTarget.cameraEvaluations?.cam_test).toBeDefined();
+    expect(reflectiveTarget.cameraEvaluations?.cam_test?.reasonCodes).toContain("REFLECTIVE_BOUNCE");
+    expect(qualityToScore(reflectiveTarget.quality)).toBeGreaterThanOrEqual(
+      qualityToScore(glassTarget.quality),
+    );
   });
 });

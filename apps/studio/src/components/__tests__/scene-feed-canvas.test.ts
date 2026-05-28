@@ -11,5 +11,7 @@ describe("SceneFeedCanvas camera rigs", () => {
     expect(source).toContain("camData.id");
     expect(source).toContain("camData.position");
     expect(source).not.toContain("initialized.current");
+    expect(source).toContain("selectable={false}");
+    expect(source).toContain("onSelect={() => {}}");
   });
 });

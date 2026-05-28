@@ -1,11 +1,13 @@
 "use client";
 
-import { Copy, Globe, Loader2, Printer, Sparkles } from "lucide-react";
+import { Copy, FileText, Globe, Loader2, Printer, Sparkles } from "lucide-react";
 import { useState } from "react";
 
 import type { SecurityReport } from "@/agents/ReportAgent";
 import { useAiCommand } from "@/hooks/use-ai-command";
-import { buildCompareReportData, exportCompareAsHtml } from "@/report";
+import { buildSecurityOutcomeModel } from "@/lib/security-outcome/security-outcome-model";
+import { buildCompareReportData, exportCompareAsHtml, exportCompareAsMarkdown } from "@/report";
+import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { useStudioStore } from "@/store/studio-store";
 
 export function ReportLiteTab() {
@@ -15,17 +17,20 @@ export function ReportLiteTab() {
   const temporalProfile = useStudioStore((s) => s.temporalProfile);
   const compareVisualEvidence = useStudioStore((s) => s.compareVisualEvidence);
   const compareReportSelection = useStudioStore((s) => s.compareReportSelection);
+  const activePathId = useStudioStore((s) => s.activePathId);
   const { runReportGeneration } = useAiCommand();
   const [aiReport, setAiReport] = useState<SecurityReport | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [reportMode, setReportMode] = useState<"single" | "compare">("single");
   const [snapshotAId, setSnapshotAId] = useState<string | null>(null);
   const [snapshotBId, setSnapshotBId] = useState<string | null>(null);
+  const activePath = scene.paths.find((path) => path.id === activePathId) ?? null;
+  const outcome = buildSecurityOutcomeModel(scene, result, activePath);
 
   // Build markdown from either AI report or simulation data
   const markdown = result
     ? (aiReport ? buildAiReportMarkdown(aiReport) : defaultMarkdown(result, scene, temporalProfile))
-    : "Run simulation to generate report.";
+    : "";
 
   const copy = () => navigator.clipboard.writeText(markdown);
 
@@ -73,6 +78,28 @@ export function ReportLiteTab() {
     const a = document.createElement("a");
     a.href = url;
     a.download = `sentineltwin-report-${scene.name.replace(/[^a-zA-Z0-9_-]/g, "_")}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportMarkdown = () => {
+    const filenameBase = `sentineltwin-report-${scene.name.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+    const text = reportMode === "compare" && snapshotA?.simulation && snapshotB?.simulation
+      ? exportCompareAsMarkdown(
+          buildCompareReportData(
+            { ...snapshotA.scene, snapshots: [], scenarios: [] } as never,
+            snapshotA.simulation,
+            { ...snapshotB.scene, snapshots: [], scenarios: [] } as never,
+            snapshotB.simulation,
+          ),
+        )
+      : markdown;
+    if (!text) return;
+    const blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${filenameBase}.md`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -148,6 +175,12 @@ export function ReportLiteTab() {
               Default
             </button>
             <button
+              onClick={handleExportMarkdown}
+              className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
+            >
+              <FileText className="h-3 w-3" /> Export Markdown
+            </button>
+            <button
               onClick={handleExportHtml}
               className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
             >
@@ -171,6 +204,15 @@ export function ReportLiteTab() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-3">
+        {!result && reportMode === "single" ? (
+          <RunSimulationPrompt
+            className="rounded-xl border border-dashed border-[#2a3246] bg-[#0b0f17] px-3 py-4"
+            message="Run the shared simulation to generate a report and security outcome."
+          />
+        ) : null}
+        <div className="mb-3 rounded-lg border border-[#1e2130] bg-[#0b1018] p-3 text-[10px] text-[#b9c7df]">
+          Security Outcome: {outcome.summary.status.replace(/_/g, " ")} · Coverage {outcome.summary.coveragePct == null ? "n/a" : `${Math.round(outcome.summary.coveragePct)}%`} · Critical Zones {outcome.summary.criticalZonesPassing}/{outcome.summary.criticalZonesTotal} · Issues {outcome.summary.issueCount}
+        </div>
         {reportMode === "compare" ? (
           <div className="mb-3 rounded-lg border border-[#1e2130] bg-[#0b1018] p-3">
             <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#7f8da8]">Compare Export Context</div>
@@ -219,7 +261,7 @@ export function ReportLiteTab() {
           </div>
         ) : (
           <pre className="whitespace-pre-wrap font-mono text-[9px] leading-relaxed text-[#8090a8]">
-            {markdown}
+            {markdown || "Run simulation to generate report."}
           </pre>
         )}
       </div>
@@ -322,9 +364,22 @@ function defaultMarkdown(
       ? `${placementOracle.bestCandidate.mountType} @ ${placementOracle.bestCandidate.position[0].toFixed(1)}, ${placementOracle.bestCandidate.position[2].toFixed(1)}`
       : "not computed"),
     "- Temporal Anomalies: " + (anomalies.length > 0 ? `${anomalies.length} windows` : "none detected"),
-    "- Occlusion Blame: " + (occlusion.length > 0 ? `${occlusion.length} critical zones` : "none"),
+    "- Occlusion Blame: " + (occlusion.length > 0 ? `${occlusion.length} zones` : "none"),
     "- Blind Spot Topology: " + (blindRegions.length > 0 ? `${blindRegions.length} regions` : "none"),
     "",
+    ...(occlusion.length > 0
+      ? [
+          "### Occlusion Blame",
+          ...occlusion.flatMap((zone) => [
+            `- ${zone.zoneLabel} (${zone.baselineQuality})`,
+            ...zone.obstructions.map(
+              (obstruction) =>
+                `  - ${obstruction.label}: ${(obstruction.blameFraction * 100).toFixed(0)}% blame, ${obstruction.qualityWithout} without, +${obstruction.qualityImprovement.toFixed(1)} improvement`,
+            ),
+          ]),
+          "",
+        ]
+      : []),
     "_Planning indicator only: modeled outcomes depend on assumptions and are not legal/forensic guarantees._",
   ];
   return lines.join("\n");
@@ -404,10 +459,30 @@ function buildHtmlReport(
       <tr><td>K-Robustness</td><td>${result.kRobustness ? `K=${result.kRobustness.kRobustness} / ${result.kRobustness.totalCameras}` : "Not computed"}</td></tr>
       <tr><td>Placement Oracle</td><td>${result.placementOracle?.bestCandidate ? `${result.placementOracle.bestCandidate.mountType} @ ${result.placementOracle.bestCandidate.position[0].toFixed(1)}, ${result.placementOracle.bestCandidate.position[2].toFixed(1)}` : "Not computed"}</td></tr>
       <tr><td>Temporal Anomalies</td><td>${temporalProfile?.anomalyWindows?.length ? `${temporalProfile.anomalyWindows.length} windows` : "None detected or not computed"}</td></tr>
-      <tr><td>Occlusion Blame</td><td>${result.occlusionBlame?.length ? `${result.occlusionBlame.length} critical zones` : "Not computed"}</td></tr>
+      <tr><td>Occlusion Blame</td><td>${result.occlusionBlame?.length ? `${result.occlusionBlame.length} zones` : "Not computed"}</td></tr>
       <tr><td>Blind Spot Topology</td><td>${result.blindRegions?.length ? `${result.blindRegions.length} regions` : "None detected"}</td></tr>
     </tbody>
   </table>
+
+  ${result.occlusionBlame?.length ? `
+  <h2>Occlusion Blame</h2>
+  ${result.occlusionBlame.map((zone) => `
+    <h3>${escapeHtml(zone.zoneLabel)} (${zone.baselineQuality})</h3>
+    <table>
+      <thead><tr><th>Obstruction</th><th>Blame</th><th>Quality Without</th><th>Improvement</th></tr></thead>
+      <tbody>
+        ${zone.obstructions.map((obstruction) => `
+          <tr>
+            <td>${escapeHtml(obstruction.label)}</td>
+            <td>${(obstruction.blameFraction * 100).toFixed(0)}%</td>
+            <td>${obstruction.qualityWithout}</td>
+            <td>+${obstruction.qualityImprovement.toFixed(1)}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `).join("")}
+  ` : ""}
   
   <h2>Changes Applied</h2>
   ${scene.changeLog?.length

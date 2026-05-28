@@ -61,14 +61,14 @@ These are implemented, tested in structure, and rendering correctly:
 - Properties tab: spec info, position XYZ, yaw/pitch sliders, FOV, height ✅
 - Status tab: on/off toggle, night mode, clarity, PTZ, thermal ✅
 - Analytics tab: coverage %, zone pass/fail, offline impact notes ✅
-- View tab: has CameraFeedCanvas (unknown implementation state — see gaps) 🔶
-- Failures tab: placeholder text only ❌
+- View tab: has CameraFeedCanvas with a live POV feed, DORI overlay, path actor toggle, and failure-state artifacts ✅
+- Failures tab: live failure simulation controls, counterfactual impact panel, and restore state ✅
 - ObstructionInspector: position, rotation, dimensions, material, vision transmission ✅
-- "Test Without This" button: disabled, not implemented ❌
+- "Test Without This" button: wired to counterfactual simulation and delta metrics ✅
 - NoSelection state ✅
 
 ### LeftPanel
-- All 10 tool buttons (select, camera, obstruction, light, path, zone, door/window, wall, measure, comment) ✅ (UI only)
+- All 10 tool buttons (select, camera, obstruction, light, path, zone, door/window, wall, measure, comment) ✅
 - Layer visibility toggles for all 11 layers ✅
 - MiniMap with coverage cells, zones, walls, paths, adversarial path, cameras ✅
 
@@ -98,45 +98,36 @@ Ordered by priority based on spec and DEMO_SCRIPT.md.
 
 ### P0 — Required for basic demo completeness
 
-**[GAP-01] Tool actions — no canvas placement behavior**
-All tool buttons exist but only `select` (click on object) works.
-Clicking the canvas with Camera tool active does not place a camera.
-Clicking with Obstruction tool active does not place an obstruction.
-This means the planner cannot build a scene interactively.
-**Spec ref:** Section 5 (Tool list), section 9 (Canvas controls — transform handles)
-**Needed:**
-- Raycaster against floor plane for canvas click
-- Camera placement handler: click → place CameraNode at hit position
-- Obstruction placement handler: click → place ObstructionNode with preset type
-- Light placement handler
-- Wall drawing handler (click-drag for wall segments)
+**[GAP-01] Tool actions — no canvas placement behavior** ✅ Resolved
+The floor catcher in `WorkspaceCanvas.tsx` now handles click placement for camera,
+obstruction, light, wall, zone, path, and door/window tools. The placement flow includes
+raycast-to-floor snapping, wall snapping for doors/windows, draft wall drawing, and the
+camera preset picker. The regression test now asserts the core placement handlers are
+present in the workspace canvas source.
 
 ---
 
-**[GAP-02] Camera Feed View not implemented**
-The `view` tab in the inspector says "CameraFeedCanvas" exists. Unknown if it renders
-an actual second R3F canvas locked to the camera's perspective.
-The spec describes a separate Canvas per camera, with:
+**[GAP-02] Camera Feed View not implemented** ✅ Resolved
+The `view` tab now renders `CameraFeedCanvas` as a live inspector POV with:
 - Timestamp overlay
 - DORI quality label
-- Night/IR grayscale effect
-- Noise/blur for dirty lens
-- Subject bounding box
+- Night/IR/low-light/thermal visual states
+- Noise/blur for dirty lens and failure-state artifacts
+- Subject bounding box toggle
 - "Lost / blocked" indicator
 **Spec ref:** Section 12.2 (Single Camera View), section 10.1 View tab
-**Status:** Unknown/likely stub. Must verify.
 
 ---
 
-**[GAP-03] Camera Wall mode not implemented**
-The 4-panel camera wall (2×2 grid of camera feeds + main map) is not in the canvas.
-**Spec ref:** Section 12.3 (Camera Wall), section 7.10 (Camera Feed View)
-**Needed:** Mode toggle that replaces main canvas with camera wall layout.
+**[GAP-03] Camera Wall mode not implemented** ✅ Resolved
+The 4-panel camera wall is now implemented as a live mode with adaptive camera-feed grid,
+map overview slot, and live/offline counters. The shell routes through the camera wall
+workspace and the mode is covered by source-level regression tests.
 
 ---
 
-**[GAP-04] Inspector Failures tab is a placeholder**
-The failures tab shows static text. It should show:
+**[GAP-04] Inspector Failures tab is a placeholder** ✅ Resolved
+The failures tab now surfaces live failure simulation controls:
 - Toggle camera offline
 - Mark as dirty/blocked
 - Reduce clarity/resolution
@@ -146,30 +137,28 @@ The failures tab shows static text. It should show:
 
 ---
 
-**[GAP-05] "Test Without This Obstruction" button is disabled**
-This is a critical counterfactual action. Should:
-- Temporarily set obstruction visionTransmission = 1.0
-- Re-run simulation
-- Show delta
-- Revert to original state
+**[GAP-05] "Test Without This Obstruction" button is disabled** ✅ Resolved
+The obstruction inspector now runs a live counterfactual test:
+- Temporarily sets obstruction visionTransmission to 1.0
+- Re-runs simulation
+- Shows delta metrics
+- Restores the original state via clear test / revert preview
 **Spec ref:** Section 10.2 (Obstruction inspector actions)
 
 ---
 
-**[GAP-06] Assumptions panel not surfaced in UI**
-The `simulationAssumptions` is in the schema and store but not visible to the user.
-The spec is explicit: assumptions must always be visible (section 19).
-Every result should cite its assumptions.
-**Needed:** Collapsible assumptions panel, accessible from canvas or bottom panel.
+**[GAP-06] Assumptions panel not surfaced in UI** ✅ Resolved
+The assumptions panel is now visible in the shell, editable from the bottom panel, and
+reflected in report/workspace surfaces so the model posture is always apparent.
 
 ---
 
 ### P1 — Required for the full V0.1 product experience
 
 **[GAP-07] Dedicated launcher scene browser remains partial**
-TopBar already provides a canonical scene selector, and the launcher now adds a searchable project browser with selected-workspace actions and direct saved-scene resume shortcuts.
+TopBar already provides a canonical scene selector, and the launcher now adds a searchable project browser with selected-workspace actions, direct saved-scene resume shortcuts, and launcher-side folder/tag/pin metadata management.
 **Spec ref:** Section 4 (Top bar — Scene selector), section 20 (Reports/exports)
-**Remaining:** Further multi-project organization such as folders, tags, cross-device sync, or shared project metadata if the product grows beyond local storage.
+**Remaining:** Cross-device sync, shared project metadata, and multi-user project collaboration if the product grows beyond local storage.
 
 ---
 
@@ -184,9 +173,8 @@ Dome", etc. Each preset fills in the camera spec fields automatically.
 **[GAP-09] No target-type switcher**
 The requiredQuality in critical zones is fixed. There's no way to say
 "test this setup for license plate recognition" vs "face identification."
+**Status:** Resolved in the live shell. The top bar exposes a global target-type dropdown and the zone inspector still supports per-zone overrides, so the scene can now be retargeted from the shell or at the object level.
 **Spec ref:** Section 15 (Target-type testing)
-**Needed:** Target type dropdown (person detection, face recognition, vehicle detection,
-license plate, etc.) that updates the PPM thresholds and report language accordingly.
 
 ---
 
@@ -198,22 +186,20 @@ No matrix view showing coverage outcome per zone per camera-failure scenario.
 ---
 
 **[GAP-11] AI command bar not wired**
-The spec describes a natural language command bar. A COMMAND tab appears in the
-BottomPanel tab list definition... wait — checking the actual tab list in BottomPanel.tsx:
-The tabs are: metrics, issues, timeline, beforeafter, report, debug.
-No command tab. The command functionality is completely absent.
-**Spec ref:** Section 11.7 (Command tab), section 16 (Natural language commands)
-**Needed:** A command input in the bottom panel or top bar. Commands parse to
-structured ScenePatch operations. AI layer not needed for V0.1 — can use structured
-dropdown commands first.
+The spec describes a natural language command bar. A COMMAND tab never existed in the
+bottom drawer, but the actual product shell now exposes a dedicated AI command bar and
+an offline parser fallback for common natural-language scene edits when no API key is
+configured.
+**Status:** Resolved in the live shell. The command bar now supports slash commands and
+deterministic offline actions for report, privacy, snapshot, view-mode, and common scene
+manipulation flows.
 
 ---
 
 **[GAP-12] Debug tab content unknown**
-The DebugTab component exists but its content isn't read. May be stub.
-**Spec ref:** Section 11.6 (Debug tab), section 19 (Debug/developer mode)
-**Needed:** Toggles for coverage grid, raycasts, vision colliders, physics colliders,
-recompute time, BVH rebuild stats.
+The DebugTab component now exposes live overlay-density controls, debug-overlay toggles,
+auto-recompute, scene-graph stats, camera-failure chips, and layer visibility controls.
+**Status:** Resolved in the live product. Remaining debug polish would be incremental, not a missing tab.
 
 ---
 
@@ -238,8 +224,8 @@ BeforeAfterTab exists but its implementation is unknown. Likely shows metrics on
 Simulation results are presented as hard numbers. No indication of assumption
 sensitivity or confidence.
 **Spec ref:** Section 19 (Assumptions and uncertainty), NOVEL_ALGORITHMS.md Algorithm 7
-**Needed:** Fragility indicators on zone results. "Passes by X%" shown prominently.
-Assumptions panel always accessible.
+**Status:** Resolved in the live product surfaces. Fragility and k-robustness now appear in the metrics / report / report-lite surfaces, and the assumptions panel remains visible.
+**Maintenance note:** Keep the legacy doc in sync if future product changes move these summaries again.
 
 ---
 
@@ -248,21 +234,26 @@ Assumptions panel always accessible.
 **[GAP-16] No privacy zone rendering or enforcement**
 PrivacyZoneNode is in the schema, the privacy_zones layer exists, but nothing renders
 and no coverage warnings fire for cameras that cover privacy zones.
+**Status:** Resolved in the live product. Privacy zones render in map/canvas/wall/replay views, the simulation emits privacy issues for visible restricted cells, and the Issues / Security Outcome / Report surfaces now expose them.
 
 **[GAP-17] No mounting snap behavior**
 The spec describes snapping cameras to walls, ceiling, poles. Currently camera position
 is set via the inspector number inputs only.
+**Status:** Partially resolved in the live product. The camera inspector now includes a wall snap action that repositions the selected camera to the nearest wall and re-aims it toward the room interior.
 
 **[GAP-18] No camera comparison mode**
 No way to compare two specific cameras' individual coverage contributions side by side.
+**Status:** Resolved in the live compare workspace. CompareView now includes a camera comparison section that contrasts two cameras from the current scene using live simulation results, coverage, critical-zone counts, and DORI reach.
 
 **[GAP-19] No light inspector**
 SecurityLightNodes exist but clicking a light doesn't open a light inspector.
 The ObstructionInspector exists, CameraInspector exists, but no LightInspector.
+**Status:** Resolved in the live inspector. LightInspector is present, editable, and covered by the inspector regression test.
+**Status:** Resolved in the live inspector. LightInspector is present, editable, and covered by the inspector regression test.
 
 **[GAP-20] Metrics tab content unknown**
 MetricsTab component exists but not read. May show stale or incomplete metrics.
-Must verify: does it show all the spec-required metrics cards?
+**Status:** Resolved in the live shell. MetricsTab renders the 7 core metric cards plus the optional Coverage Fragility card, all driven from simulationResult and prior snapshots.
 
 **[GAP-21] Issues tab — fix actions not wired**
 IssuesTab exists. Does each issue show "Apply Fix" / "Test Fix" buttons?
@@ -270,14 +261,17 @@ Based on the issues schema (severity, affectedZones, affectedCameras), this is p
 Currently unknown if the buttons are functional.
 
 **[GAP-22] No scene export UI**
-`exportScene()` exists in the store. No UI button triggers it.
+`exportScene()` exists in the store and the top bar now exposes it through the scene dropdown.
+**Status:** Resolved in the live shell. Scene JSON export is available alongside import and save actions.
 
 **[GAP-23] No report export**
-Report Lite renders in a tab. No "Export Markdown" or "Copy" button wired.
+Report Lite now exposes Copy, Export Markdown, Export HTML, and Print actions directly in the handoff toolbar.
+**Status:** Resolved in the live shell.
 
 **[GAP-24] No keyboard shortcuts active**
 The spec lists keyboard shortcuts (V, C, B, L, P, Z, D, W, M, T, R, N, F, S).
-None appear to be wired to actual handlers.
+**Status:** Resolved in the live shell. The shortcut handler now wires the visible tool
+keys (V, C, B, L, P, Z, D, W, M, T), the single-key actions (R, N, F, S), and view keys 1–6.
 
 ---
 
@@ -299,10 +293,6 @@ Priority order for implementation:
 Based on spec priority, demo script requirements, and dependency order:
 
 **Sprint 1 — Complete the core demo loop (DEMO_SCRIPT.md must work)**
-- GAP-01: Canvas click placement for camera and obstruction tools
-- GAP-04: Failures tab — camera offline toggle with recompute
-- GAP-05: Test Without This Obstruction (single-click counterfactual)
-- GAP-06: Assumptions panel (visible, editable)
 - Verify GAP-02: CameraFeedCanvas — fix if stub
 
 **Sprint 2 — Harden the simulation outputs**
@@ -319,9 +309,8 @@ Based on spec priority, demo script requirements, and dependency order:
 - Novel Algorithm 1: Coverage Fragility Field
 
 **Sprint 4 — Full Camera Suite**
-- GAP-03: Camera Wall mode
 - GAP-09: Target-type switcher
-- GAP-11: Command bar (structured commands first, AI later)
+- GAP-11: Command bar (resolved — offline parser + AI command flow)
 - GAP-16: Privacy zone rendering + coverage warning
 - ~~GAP-19: Light inspector~~ ✅ **DONE** (verified 2026-05-27) — LightInspector component added; name, position, brightness, type, status, range, delete all functional
 
@@ -359,7 +348,7 @@ The following gaps have been resolved in this session:
 
 ### What is still NOT resolved (updated 2026-05-27)
 - GAP-09: Target-type switcher (person/vehicle/face) not implemented globally (note: targetType IS editable per-zone in ZoneInspector, but not a global scene-level switcher)
-- GAP-11: Command bar not wired to simulation actions
+- GAP-11: Command bar resolved to offline parser + AI flow
 - GAP-16: Privacy zone rendering not implemented
 
 ### Previously listed as NOT resolved — now RESOLVED (2026-05-27)
@@ -393,7 +382,7 @@ The following gaps have been resolved in this session:
 
 ### What is still NOT resolved
 - GAP-09: Target-type switcher not implemented globally (per-zone IS editable in CriticalZoneInspector with 9 target types)
-- GAP-11: Command bar not wired to simulation actions
+- GAP-11: Command bar resolved to offline parser + AI flow
 - GAP-16: Privacy zone rendering not implemented
 - Novel Algorithm 1: Coverage Fragility Field
 - Novel Algorithm 3: Adversarial K-Robustness

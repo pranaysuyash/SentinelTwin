@@ -10,6 +10,7 @@ import type {
 } from "@/schema/security-scene";
 import { computeCoverageFailurePath } from "@/simulation/adversarial-path";
 import { analyseBlindSpotTopology } from "@/simulation/blind-spot-topology";
+import { computeBlindSpotFingerprint } from "@/simulation/blind-spot-fingerprint";
 import { computeCoverageFragility } from "@/simulation/coverage-fragility";
 import { analyzeOcclusionBlame } from "@/simulation/occlusion-blame";
 import {
@@ -539,6 +540,42 @@ function simulateStudioInternal(
   const kRobustness = includeNovelAnalytics ? computeKRobustness(scene) : undefined;
   const placementOracle = includeNovelAnalytics ? computePlacementOracle(scene, coverageCells, criticalZoneResults) : undefined;
   const occlusionBlame = includeNovelAnalytics ? analyzeOcclusionBlame(scene) : undefined;
+  const blindRegions = includeNovelAnalytics ? analyseBlindSpotTopology(scene, coverageCells.map((cell) => ({
+    x: cell.x, z: cell.z, quality: cell.quality,
+    coveringCameras: cell.coveringCameras, blockedBy: cell.blockedBy, ppm: cell.ppm,
+    coverageIncluded: cell.coverageIncluded, privacyRestricted: cell.privacyRestricted,
+  }))) : undefined;
+  const blindSpotFingerprint = includeNovelAnalytics ? computeBlindSpotFingerprint(blindRegions ?? []) : undefined;
+  const reflectiveBounce = includeNovelAnalytics
+    ? (() => {
+        const reflectiveWindowCount = scene.windows.filter((window) => window.state === "reflective").length;
+        const affectedCameraIds = new Set<string>();
+        let affectedCellCount = 0;
+
+        for (const cell of coverageCells) {
+          const hasReflectiveBounce = Object.values(cell.cameraEvaluations ?? {}).some((evaluation) =>
+            evaluation.reasonCodes.includes("REFLECTIVE_BOUNCE"));
+          if (!hasReflectiveBounce) continue;
+
+          affectedCellCount += 1;
+          for (const [cameraId, evaluation] of Object.entries(cell.cameraEvaluations ?? {})) {
+            if (evaluation.reasonCodes.includes("REFLECTIVE_BOUNCE")) {
+              affectedCameraIds.add(cameraId);
+            }
+          }
+        }
+
+        if (reflectiveWindowCount === 0 && affectedCellCount === 0) {
+          return undefined;
+        }
+
+        return {
+          reflectiveWindowCount,
+          affectedCellCount,
+          affectedCameraCount: affectedCameraIds.size,
+        };
+      })()
+    : undefined;
 
   const worstAreaQuality: DoriQuality =
     zoneEvaluations.length > 0
@@ -663,11 +700,9 @@ function simulateStudioInternal(
     coverageFailurePath: adversarialPath,
     adversarialPath,
     coverageThresholds,
-    blindRegions: analyseBlindSpotTopology(scene, coverageCells.map((cell) => ({
-      x: cell.x, z: cell.z, quality: cell.quality,
-      coveringCameras: cell.coveringCameras, blockedBy: cell.blockedBy, ppm: cell.ppm,
-      coverageIncluded: cell.coverageIncluded, privacyRestricted: cell.privacyRestricted,
-    }))),
+    blindRegions,
+    blindSpotFingerprint,
+    reflectiveBounce,
     occlusionBlame,
     fragilitySummary: fragility.totalCells > 0 ? {
       meanFragility: Number(fragility.meanFragility.toFixed(3)),
@@ -682,4 +717,8 @@ function simulateStudioInternal(
 
 export function simulateStudio(scene: SecurityScene): SimulationResult {
   return simulateStudioInternal(scene, true);
+}
+
+export function simulateStudioLite(scene: SecurityScene): SimulationResult {
+  return simulateStudioInternal(scene, false, false);
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSimulation } from "@/hooks/use-simulation";
 import { useStudioStore, type ViewMode, type ActiveTool } from "@/store/studio-store";
 import { VIEW_MODE_KEYS, VIEW_MODE_PRESETS, TOOL_SHORTCUTS } from "@/lib/studio-constants";
@@ -15,11 +15,13 @@ import { DockLayout } from "@/components/dock/DockLayout";
 import { DockPanel } from "@/components/dock/DockPanel";
 import { ContextBottomPanel } from "@/components/panels/ContextBottomPanel";
 import { ContextRightPanel } from "@/components/panels/ContextRightPanel";
+import { ViewSettingsModal } from "@/components/layout/ViewSettingsModal";
 import { WorkspaceCanvas } from "@/components/workspace/WorkspaceCanvas";
 import { CameraWallView } from "@/components/view/CameraWallView";
 import { CameraViewMode } from "@/components/view/CameraViewMode";
 import { PathReplayView } from "@/components/view/PathReplayView";
 import { CompareView } from "@/components/view/CompareView";
+import { ReportView } from "@/components/view/ReportView";
 
 function WorkspaceArea() {
   const viewMode = useStudioStore((s) => s.viewMode);
@@ -39,6 +41,7 @@ function WorkspaceArea() {
         {viewMode === "camera_view" && <CameraViewMode />}
         {viewMode === "replay" && <PathReplayView />}
         {viewMode === "compare" && <CompareView />}
+        {viewMode === "report" && <ReportView />}
       </motion.div>
     </AnimatePresence>
   );
@@ -50,12 +53,24 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
     { keys: "⌘ + N", action: "New Scene" },
     { keys: "⌘ + S", action: "Save Scene" },
     { keys: "⌘ + O", action: "Open / Import Scene" },
-    { keys: "1 – 5", action: "Switch View Mode (Map, Camera, Wall, Replay, Compare)" },
+    { keys: "⌘ + Enter", action: "Run Simulation" },
+    { keys: "1 – 6", action: "Switch View Mode (Map, Camera, Wall, Replay, Compare, Report)" },
+    { keys: "V", action: "Select tool" },
     { keys: "C", action: "Place Camera tool" },
     { keys: "B", action: "Place Obstruction tool" },
     { keys: "L", action: "Place Light tool" },
+    { keys: "P", action: "Place Path tool" },
+    { keys: "Z", action: "Place Zone tool" },
+    { keys: "D", action: "Place Door/Window tool" },
+    { keys: "W", action: "Place Wall tool" },
+    { keys: "M", action: "Measure tool" },
+    { keys: "T", action: "Comment tool" },
+    { keys: "R", action: "Open Report" },
+    { keys: "N", action: "Toggle Night Mode" },
+    { keys: "F", action: "Toggle Focus Mode" },
+    { keys: "S", action: "Save Snapshot" },
     { keys: "Esc", action: "Select tool / Cancel placement" },
-    { keys: "?​?", action: "Toggle this shortcuts panel" },
+    { keys: "?", action: "Toggle this shortcuts panel" },
   ];
 
   return (
@@ -84,6 +99,27 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+function FirstRunGuide({ onClose, onOpenHelp }: { onClose: () => void; onOpenHelp: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/55 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-[560px] max-w-[92vw] rounded-xl border border-[#26304a] bg-[#0d111a] p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="text-[13px] font-semibold text-white">Welcome to SentinelTwin Studio</div>
+        <div className="mt-2 text-[12px] text-[#9fb0ce]">First run flow:</div>
+        <ol className="mt-2 space-y-1 text-[12px] text-[#c6d3eb]">
+          <li>1. Place/select cameras and assumptions.</li>
+          <li>2. Run simulation with <kbd className="rounded border border-[#2a3248] bg-[#11182a] px-1">Ctrl/Cmd + Enter</kbd>.</li>
+          <li>3. Open Security Outcome to review failures and causes.</li>
+          <li>4. Preview Fix, compare before/after, then apply.</li>
+        </ol>
+        <div className="mt-3 flex items-center justify-end gap-2">
+          <button onClick={onOpenHelp} className="rounded border border-[#2d3750] px-3 py-1.5 text-[11px] text-[#cfe0ff] hover:bg-[#161f31]">Open Help</button>
+          <button onClick={onClose} className="rounded border border-emerald-500/35 px-3 py-1.5 text-[11px] text-emerald-300 hover:bg-emerald-500/10">Start</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function StudioShell() {
   useSimulation();
   const demoMode = useStudioStore((s) => s.demoMode);
@@ -97,6 +133,7 @@ export default function StudioShell() {
   const leftDockSizePx = useStudioStore((s) => s.leftDockSizePx);
   const rightDockSizePx = useStudioStore((s) => s.rightDockSizePx);
   const bottomDockSizePx = useStudioStore((s) => s.bottomDockSizePx);
+  const visibleComponents = useStudioStore((s) => s.visibleComponents);
   const toggleDock = useStudioStore((s) => s.toggleDock);
   const setDockSize = useStudioStore((s) => s.setDockSize);
   const enterFocusMode = useStudioStore((s) => s.enterFocusMode);
@@ -109,26 +146,35 @@ export default function StudioShell() {
   const setActiveTool = useStudioStore((s) => s.setActiveTool);
   const selectedNodeId = useStudioStore((s) => s.selectedNodeId);
   const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
+  const rightPanelMode = useStudioStore((s) => s.rightPanelMode);
+  const setRightPanelMode = useStudioStore((s) => s.setRightPanelMode);
   const duplicateNode = useStudioStore((s) => s.duplicateNode);
   const removeSelectedNodes = useStudioStore((s) => s.removeSelectedNodes);
   const undo = useStudioStore((s) => s.undo);
   const redo = useStudioStore((s) => s.redo);
   const createNewScene = useStudioStore((s) => s.createNewScene);
   const saveSceneToStorage = useStudioStore((s) => s.saveSceneToStorage);
+  const saveSnapshot = useStudioStore((s) => s.saveSnapshot);
+  const runSimulation = useStudioStore((s) => s.runSimulation);
+  const setBottomTab = useStudioStore((s) => s.setBottomTab);
+  const uiDensity = useStudioStore((s) => s.uiDensity);
+  const uiTheme = useStudioStore((s) => s.uiTheme);
   const [showShortcuts, setShowShortcuts] = useState(false);
-  const fullCanvasMode = viewMode === "camera_view" || viewMode === "wall";
+  const [showFirstRunGuide, setShowFirstRunGuide] = useState(false);
+  const rightRailAutoSetRef = useRef(false);
+  const fullCanvasMode = viewMode === "camera_view" || viewMode === "wall" || viewMode === "report";
 
   // Read ?mode= from URL on mount only — prevents URL from overriding user's mode changes.
   useEffect(() => {
     const mode = new URLSearchParams(window.location.search).get("mode");
     if (!mode) return;
-    if (mode !== "map" && mode !== "wall" && mode !== "replay" && mode !== "camera_view" && mode !== "compare") {
+    if (mode !== "map" && mode !== "wall" && mode !== "replay" && mode !== "camera_view" && mode !== "compare" && mode !== "report") {
       return;
     }
     setViewMode(mode as ViewMode);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Global keyboard shortcut handler
+  // Keyboard shortcut handler
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // Don't intercept when user is typing in an input
     const tag = (e.target as HTMLElement)?.tagName;
@@ -162,9 +208,22 @@ export default function StudioShell() {
       return;
     }
 
+    // Ctrl+Enter: Run simulation
+    if (isCtrlOrMeta && e.key === "Enter") {
+      e.preventDefault();
+      runSimulation();
+      return;
+    }
+
     // ?: Toggle shortcuts modal
     if (e.key === "?" && !e.shiftKey) {
       setShowShortcuts((v) => !v);
+      return;
+    }
+
+    if (e.shiftKey && e.key.toLowerCase() === "v") {
+      e.preventDefault();
+      useStudioStore.getState().toggleViewSettingsOpen();
       return;
     }
 
@@ -204,7 +263,37 @@ export default function StudioShell() {
       return;
     }
 
-    // View mode keys: 1-5
+    // Single-key command shortcuts from the spec / shell hints
+    if (!isCtrlOrMeta && e.key.toLowerCase() === "r") {
+      e.preventDefault();
+      setBottomTab("report");
+      setViewMode("report");
+      return;
+    }
+
+    if (!isCtrlOrMeta && e.key.toLowerCase() === "n") {
+      e.preventDefault();
+      useStudioStore.getState().setEnvironmentMode(useStudioStore.getState().environmentMode === "night" ? "day" : "night");
+      return;
+    }
+
+    if (!isCtrlOrMeta && e.key.toLowerCase() === "f") {
+      e.preventDefault();
+      if (focusMode) {
+        restorePreviousLayout();
+      } else {
+        enterFocusMode();
+      }
+      return;
+    }
+
+    if (!isCtrlOrMeta && e.key.toLowerCase() === "s") {
+      e.preventDefault();
+      saveSnapshot(`Snapshot ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`);
+      return;
+    }
+
+    // View mode keys: 1-6
     if (VIEW_MODE_KEYS[e.key]) {
       const nextMode = VIEW_MODE_KEYS[e.key];
       if (viewMode !== nextMode) {
@@ -224,18 +313,56 @@ export default function StudioShell() {
       }
       return;
     }
-  }, [activeTool, createNewScene, duplicateNode, redo, removeSelectedNodes, saveSceneToStorage, selectedNodeId, selectedNodeIds, setActiveTool, setViewMode, setWorkspacePreset, undo, viewMode]);
+  }, [activeTool, createNewScene, duplicateNode, enterFocusMode, focusMode, redo, removeSelectedNodes, restorePreviousLayout, runSimulation, saveSceneToStorage, saveSnapshot, selectedNodeId, selectedNodeIds, setActiveTool, setBottomTab, setViewMode, setWorkspacePreset, undo, viewMode]);
 
   useEffect(() => {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
+  // Listen for custom event from TopBar keyboard button
+  useEffect(() => {
+    const handler = () => setShowShortcuts((v) => !v);
+    window.addEventListener("sentineltwin:toggle-shortcuts", handler);
+    return () => window.removeEventListener("sentineltwin:toggle-shortcuts", handler);
+  }, []);
+
   useEffect(() => {
     if (!launchNotice) return;
     const timer = window.setTimeout(() => setLaunchNotice(null), 8000);
     return () => window.clearTimeout(timer);
   }, [launchNotice, setLaunchNotice]);
+
+  useEffect(() => {
+    const key = "sentineltwin_first_run_guide_seen_v1";
+    if (typeof window === "undefined") return;
+    if (!window.localStorage.getItem(key)) {
+      setShowFirstRunGuide(true);
+      window.localStorage.setItem(key, "1");
+    }
+  }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.dataset.theme = uiTheme;
+    root.dataset.density = uiDensity;
+    window.localStorage.setItem("sentineltwin_ui_theme", uiTheme);
+    window.localStorage.setItem("sentineltwin_ui_density", uiDensity);
+  }, [uiDensity, uiTheme]);
+
+  useEffect(() => {
+    if (!rightRailAutoSetRef.current) {
+      rightRailAutoSetRef.current = true;
+      if (!selectedNodeId && rightPanelMode === "inspector") {
+        setRightPanelMode("security_status");
+      }
+      return;
+    }
+
+    if (selectedNodeId && rightPanelMode === "security_status") {
+      setRightPanelMode("inspector");
+    }
+  }, [rightPanelMode, selectedNodeId, setRightPanelMode]);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[#0b0c10] text-[#dde2ef]">
@@ -256,16 +383,18 @@ export default function StudioShell() {
         </div>
       ) : null}
 
+      <ViewSettingsModal />
+
       {fullCanvasMode ? (
         <div className="relative flex-1 min-h-0 overflow-hidden">
-          <ViewModeBar />
+          {visibleComponents.view_mode_bar ? <ViewModeBar /> : null}
           <WorkspaceArea />
-          <CommandBar />
+          {visibleComponents.command_bar ? <CommandBar /> : null}
           {demoMode ? <DemoModeOverlay /> : null}
         </div>
       ) : (
         <DockLayout
-          leftDock={
+          leftDock={visibleComponents.left_dock ? (
             <DockPanel
               side="left"
               title="Scene Tools"
@@ -281,8 +410,8 @@ export default function StudioShell() {
             >
               <LeftPanel />
             </DockPanel>
-          }
-          bottomDock={
+          ) : null}
+          bottomDock={visibleComponents.bottom_dock ? (
             <DockPanel
               side="bottom"
               title="Insights Drawer"
@@ -297,8 +426,8 @@ export default function StudioShell() {
             >
               <ContextBottomPanel sizePx={bottomDockSizePx} />
             </DockPanel>
-          }
-          rightDock={
+          ) : null}
+          rightDock={visibleComponents.right_dock ? (
             <DockPanel
               side="right"
               title="Inspector"
@@ -314,20 +443,29 @@ export default function StudioShell() {
             >
               <ContextRightPanel />
             </DockPanel>
-          }
+          ) : null}
         >
           <div className="relative flex-1 min-h-0 overflow-hidden">
-            <ViewModeBar />
+            {visibleComponents.view_mode_bar ? <ViewModeBar /> : null}
             <WorkspaceArea />
-            <CommandBar />
+            {visibleComponents.command_bar ? <CommandBar /> : null}
             {demoMode ? <DemoModeOverlay /> : null}
           </div>
         </DockLayout>
       )}
 
-      <StatusBar />
+      {visibleComponents.status_bar ? <StatusBar /> : null}
 
       {showShortcuts && <ShortcutsModal onClose={() => setShowShortcuts(false)} />}
+      {showFirstRunGuide && (
+        <FirstRunGuide
+          onClose={() => setShowFirstRunGuide(false)}
+          onOpenHelp={() => {
+            setBottomTab("help");
+            setShowFirstRunGuide(false);
+          }}
+        />
+      )}
     </div>
   );
 }

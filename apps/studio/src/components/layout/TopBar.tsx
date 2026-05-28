@@ -9,6 +9,8 @@ import {
   Crosshair,
   Download,
   FileText,
+  Info,
+  Keyboard,
   Loader2,
   Moon,
   Play,
@@ -18,6 +20,7 @@ import {
   Upload,
   Save,
   MoreHorizontal,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -44,6 +47,18 @@ const TARGET_TYPE_OPTIONS: Array<{
   { value: "door_entry_exit", label: "Entry / Exit", hint: "Doors and thresholds" },
   { value: "perimeter_breach", label: "Perimeter", hint: "Fence or boundary breach" },
 ];
+
+const TARGET_TYPE_LABELS: Record<CriticalZoneNode["targetType"], string> = {
+  person_detection: "Person Detection",
+  face_recognition: "Face Recognition",
+  face_identification: "Face Identification",
+  vehicle_detection: "Vehicle Detection",
+  license_plate: "License Plate",
+  package_detection: "Package Detection",
+  cash_counter_activity: "Cash Counter",
+  door_entry_exit: "Entry / Exit",
+  perimeter_breach: "Perimeter",
+};
 
 function SimStatus() {
   const dirty = useStudioStore((s) => s.simulationDirty);
@@ -82,6 +97,7 @@ export function TopBar() {
   const setEnvMode = useStudioStore((s) => s.setEnvironmentMode);
   const setAllZoneTargetTypes = useStudioStore((s) => s.setAllZoneTargetTypes);
   const setBottomTab = useStudioStore((s) => s.setBottomTab);
+  const toggleViewSettingsOpen = useStudioStore((s) => s.toggleViewSettingsOpen);
   const saveSnapshot = useStudioStore((s) => s.saveSnapshot);
   const scene = useStudioStore((s) => s.scene);
   const zoneCount = scene.criticalZones.length;
@@ -95,6 +111,10 @@ export function TopBar() {
   const running = useStudioStore((s) => s.simulationRunning);
   const demoMode = useStudioStore((s) => s.demoMode);
   const setDemoMode = useStudioStore((s) => s.setDemoMode);
+  const currentTargetType = scene.criticalZones[0]?.targetType ?? null;
+  const currentTargetLabel = currentTargetType ? TARGET_TYPE_LABELS[currentTargetType] : "Target Type";
+  const targetTypeConsistent = scene.criticalZones.length > 0
+    && scene.criticalZones.every((zone) => zone.targetType === currentTargetType);
 
   const [sceneOpen, setSceneOpen] = useState(false);
   const [targetOpen, setTargetOpen] = useState(false);
@@ -148,7 +168,7 @@ export function TopBar() {
   }, [exportScene]);
 
   return (
-    <header className="flex h-12 items-center gap-2 border-b border-[#1e2130] bg-[#0c0f16]/96 px-2.5 backdrop-blur-md">
+    <header className="relative z-[80] flex h-12 items-center gap-2 border-b border-[#1e2130] bg-[#0c0f16]/96 px-2.5 backdrop-blur-md">
       <div className="flex min-w-0 items-center gap-2.5">
         <div className="flex min-w-0 items-center gap-2 pr-2.5">
           <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border border-emerald-500/25 bg-emerald-500/12 shadow-[0_0_18px_rgba(16,185,129,0.18)]">
@@ -193,7 +213,11 @@ export function TopBar() {
                         {saved.name}
                       </button>
                       <button
-                        onClick={() => deleteSavedScene(saved.id)}
+                        onClick={() => {
+                          if (confirm(`Delete saved scene "${saved.name}"? This cannot be undone.`)) {
+                            deleteSavedScene(saved.id);
+                          }
+                        }}
                         className="hidden rounded-lg px-1.5 py-2 text-[9px] text-red-400 opacity-60 transition-colors hover:opacity-100 group-hover:block"
                         title="Delete scene"
                       >
@@ -287,7 +311,7 @@ export function TopBar() {
               className="flex h-7 min-w-[130px] items-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] px-2.5 text-[11px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
             >
               <Shield className="h-3 w-3 text-cyan-300" />
-              <span>Target Type</span>
+              <span className="truncate">{targetTypeConsistent ? `Target: ${currentTargetLabel}` : "Target: Mixed"}</span>
               <ChevronDown className="h-3 w-3 text-[#546078]" />
             </button>
             {targetOpen && (
@@ -323,6 +347,11 @@ export function TopBar() {
         </div>
 
         <WorkspacePresetSwitcher />
+
+        <SurfaceButton onClick={() => toggleViewSettingsOpen()}>
+          <SlidersHorizontal className="h-3 w-3" />
+          View Settings
+        </SurfaceButton>
 
         <button
           onClick={runSimulation}
@@ -383,10 +412,24 @@ export function TopBar() {
           Threat Path
         </SurfaceButton>
 
-        <SurfaceButton onClick={() => setBottomTab("report")}>
+          <SurfaceButton onClick={() => setBottomTab("report")}>
           <FileText className="h-3 w-3" />
           Generate Report
         </SurfaceButton>
+
+        <SurfaceButton onClick={() => setBottomTab("assumptions")}>
+          <Info className="h-3 w-3" />
+          Assumptions
+        </SurfaceButton>
+
+        {/* Visible keyboard shortcut toggle */}
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent("sentineltwin:toggle-shortcuts"))}
+          className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[#24283a] bg-[#111521] text-[#5d6880] transition-colors hover:border-[#32384d] hover:text-white"
+          title="Keyboard shortcuts (?)"
+        >
+          <Keyboard className="h-3.5 w-3.5" />
+        </button>
 
         <div className="relative">
           <button
@@ -408,6 +451,16 @@ export function TopBar() {
                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
               >
                 {demoMode ? "Exit Demo Mode" : "Enter Demo Mode"}
+              </button>
+              <button
+                onClick={() => {
+                  toggleViewSettingsOpen();
+                  setMoreOpen(false);
+                }}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
+              >
+                <SlidersHorizontal className="h-3 w-3" />
+                View Settings
               </button>
               <button
                 onClick={() => {

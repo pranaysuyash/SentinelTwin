@@ -4,6 +4,7 @@ import { AlertCircle, AlertTriangle, ChevronRight, Eye, EyeOff, Info, ShieldAler
 import { useState } from "react";
 import { useStudioStore } from "@/store/studio-store";
 import { Badge } from "@/components/shared/Badge";
+import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import type { BlindRegionResult, SecurityIssue } from "@/schema/security-scene";
 
 function SeverityBadge({ severity }: { severity: SecurityIssue["severity"] }) {
@@ -89,13 +90,17 @@ export function IssuesTab() {
 
   if (!result) {
     return (
-      <div className="flex items-center justify-center h-full text-[#3a4158] text-[11px]">
-        Run simulation to see issues
-      </div>
+      <RunSimulationPrompt
+        className="h-full px-4"
+        message="Run the shared simulation to populate issue detection and recommendations."
+      />
     );
   }
 
   const hasIssues = result.issues.length > 0;
+  const privacyIssues = result.issues.filter((issue) => issue.category === "privacy");
+  const privacyIssueZones = [...new Set(privacyIssues.flatMap((issue) => issue.affectedZones))];
+  const privacyIssueCameras = [...new Set(privacyIssues.flatMap((issue) => issue.affectedCameras))];
   const blindRegions = result.blindRegions ?? [];
   const criticalBlindRegions = blindRegions.filter((r) => r.severity === "critical" || r.severity === "high");
 
@@ -145,6 +150,69 @@ export function IssuesTab() {
             </div>
           </div>
         ))}
+
+        {privacyIssues.length > 0 && (
+          <div className="mt-3">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="text-[9px] font-semibold text-[#3a4158] uppercase tracking-widest">Privacy Review</div>
+              <Badge variant="blue">{privacyIssues.length} issues</Badge>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5 mb-2">
+              <div className="rounded-lg border border-[#1e2130] bg-[#090d14] px-2 py-1.5 text-[9px]">
+                <div className="text-[#4a5568] uppercase tracking-[0.12em]">Zones</div>
+                <div className="text-[#c7d0e4]">{privacyIssueZones.length}</div>
+              </div>
+              <div className="rounded-lg border border-[#1e2130] bg-[#090d14] px-2 py-1.5 text-[9px]">
+                <div className="text-[#4a5568] uppercase tracking-[0.12em]">Cameras</div>
+                <div className="text-[#c7d0e4]">{privacyIssueCameras.length}</div>
+              </div>
+              <div className="rounded-lg border border-[#1e2130] bg-[#090d14] px-2 py-1.5 text-[9px]">
+                <div className="text-[#4a5568] uppercase tracking-[0.12em]">Restricted Cells</div>
+                <div className="text-[#c7d0e4]">{result.coverageCells.filter((cell) => cell.privacyRestricted).length}</div>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              {privacyIssues.map((issue, index) => (
+                <div key={`privacy-${index}`} className="rounded-lg border border-[#1e2130] bg-[#0d0f17] p-2.5">
+                  <div className="flex items-start gap-2">
+                    <ShieldAlert className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-rose-400" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[10px] font-semibold text-[#dce5f7]">{issue.description}</div>
+                      <div className="mt-0.5 text-[9px] text-[#68738a]">
+                        Zones: {issue.affectedZones.length > 0 ? issue.affectedZones.join(", ") : "None"} · Cameras: {issue.affectedCameras.length > 0 ? issue.affectedCameras.join(", ") : "None"}
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {issue.affectedZones.map((zoneId) => {
+                          const zone = scene.privacyZones.find((entry) => entry.id === zoneId);
+                          return (
+                            <button
+                              key={zoneId}
+                              type="button"
+                              onClick={() => selectNode(zoneId)}
+                              className="rounded bg-[#1a1d26] px-1.5 py-0.5 text-[8px] text-amber-300 hover:bg-[#222635]"
+                            >
+                              {zone?.label ?? zoneId}
+                            </button>
+                          );
+                        })}
+                        {issue.affectedCameras.map((cameraId) => (
+                          <button
+                            key={cameraId}
+                            type="button"
+                            onClick={() => selectNode(cameraId)}
+                            className="rounded bg-[#1a1d26] px-1.5 py-0.5 text-[8px] text-blue-300 hover:bg-[#222635]"
+                          >
+                            {cameraId}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Blind Region Topology Section */}
         {blindRegions.length > 0 && (

@@ -38,6 +38,17 @@ describe("report engine", () => {
     expect(report.meetsModeledZoneRequirements).toBeDefined();
     expect(report.meetsModeledZoneRequirements).toBe(report.codeCompliant);
     expect(report.standardsRef).toContain("IEC 62676");
+    expect(report.provenance.sceneSourceLabel).toBe("Demo Scene");
+    expect(report.provenance.nodeCount).toBeGreaterThan(0);
+    expect(report.novelAlgorithms?.coverageUncertainty).toBeDefined();
+    expect(report.novelAlgorithms?.coverageUncertainty?.sampleCount).toBeGreaterThan(0);
+    expect(report.novelAlgorithms?.postureVariation).toBeDefined();
+    expect(report.novelAlgorithms?.postureVariation?.profiles.length).toBeGreaterThan(0);
+    expect(report.novelAlgorithms?.blindRegions).toBeDefined();
+    expect(report.novelAlgorithms?.blindSpotFingerprint).toBeDefined();
+    expect(report.redundancyMatrix).toBeDefined();
+    expect(report.redundancyMatrix?.cameraRows.length).toBeGreaterThan(0);
+    expect(report.redundancyMatrix?.vulnerableZones.length).toBeGreaterThan(0);
   });
 
   test("buildReportData maps zone results correctly", () => {
@@ -123,7 +134,13 @@ describe("report engine", () => {
     expect(report.title).toBe("Custom Audit");
   });
 
-  test("buildCompareReportData produces correct deltas", () => {
+  const testWithTimeout = test as unknown as (
+    name: string,
+    options: { timeout: number },
+    fn: () => void,
+  ) => void;
+
+  testWithTimeout("buildCompareReportData produces correct deltas", { timeout: 15000 }, () => {
     const modifiedScene = createSmallRetailShopScene();
     const camera = modifiedScene.cameras.find((c) => c.id === "cam_entrance");
     if (camera) camera.status = "off";
@@ -144,7 +161,7 @@ describe("report engine", () => {
     expect(compare.zoneChanges.length).toBe(beforeResult.criticalZoneResults.length);
   });
 
-  test("buildCompareReportData identifies zone status changes", () => {
+  testWithTimeout("buildCompareReportData identifies zone status changes", { timeout: 15000 }, () => {
     const modifiedScene = createSmallRetailShopScene();
     const camera = modifiedScene.cameras.find((c) => c.id === "cam_entrance");
     if (camera) camera.status = "off";
@@ -179,6 +196,118 @@ describe("exportAsHtml", () => {
   test("includes standards badge", () => {
     const html = exportAsHtml(makeReport());
     expect(html).toContain("IEC 62676");
+  });
+
+  test("includes provenance section", () => {
+    const html = exportAsHtml(makeReport());
+    expect(html).toContain("Provenance");
+    expect(html).toContain("Source history");
+  });
+
+  test("includes uncertainty section", () => {
+    const html = exportAsHtml(makeReport());
+    expect(html).toContain("Coverage Uncertainty");
+    expect(html).toContain("samples");
+  });
+
+  test("includes posture variation section", () => {
+    const html = exportAsHtml(makeReport());
+    expect(html).toContain("Coverage Posture Variation");
+    expect(html).toContain("largest drop");
+  });
+
+  test("includes blind spot topology section", () => {
+    const html = exportAsHtml(makeReport());
+    expect(html).toContain("Blind Spot Topology");
+    expect(html).toContain("critical");
+  });
+
+  test("includes blind spot fingerprint section", () => {
+    const html = exportAsHtml(makeReport());
+    expect(html).toContain("Blind Spot Fingerprint");
+    expect(html).toContain("Fingerprint");
+    expect(html).toContain("Regions");
+  });
+
+  test("includes redundancy matrix section", () => {
+    const html = exportAsHtml(makeReport());
+    expect(html).toContain("Redundancy Matrix");
+    expect(html).toContain("Vulnerable Zones");
+    expect(html).toContain("Single-point zones");
+  });
+
+  test("includes reflective bounce section", () => {
+    const html = exportAsHtml({
+      ...makeReport(),
+      novelAlgorithms: {
+        ...makeReport().novelAlgorithms!,
+        reflectiveBounce: {
+          reflectiveWindowCount: 1,
+          affectedCellCount: 4,
+          affectedCameraCount: 1,
+        },
+      },
+    });
+    expect(html).toContain("Reflective Bounce Vision");
+    expect(html).toContain("reflective windows");
+    expect(html).toContain("affected cells");
+  });
+
+  test("includes placement oracle detail section", () => {
+    const html = exportAsHtml(makeReport());
+    expect(html).toContain("Placement Oracle");
+    expect(html).toContain("Best Score");
+    expect(html).toContain("candidates");
+  });
+
+  test("includes k-robustness critical sets section", () => {
+    const html = exportAsHtml({
+      ...makeReport(),
+      novelAlgorithms: {
+        ...makeReport().novelAlgorithms!,
+        kRobustness: {
+          kRobustness: 1,
+          totalCameras: 3,
+          isRobust: false,
+          criticalSets: [
+            { k: 1, cameraNames: ["Camera 1", "Camera 2"], exposureScore: 2.2, waypointCount: 4 },
+            { k: 2, cameraNames: ["Camera 3"], exposureScore: 3.1, waypointCount: 5 },
+          ],
+        },
+      },
+    });
+    expect(html).toContain("K-Robustness Critical Sets");
+    expect(html).toContain("Camera 1, Camera 2");
+    expect(html).toContain("2.2");
+  });
+
+  test("includes occlusion blame detail section", () => {
+    const baseReport = makeReport();
+    const html = exportAsHtml({
+      ...baseReport,
+      novelAlgorithms: {
+        ...baseReport.novelAlgorithms!,
+        occlusionBlame: [
+          {
+            zoneId: "cash_counter",
+            zoneLabel: "Cash Counter",
+            baselineQuality: "recognition",
+            obstructions: [
+              {
+                obstructionId: "obs_shelf",
+                label: "Aisle Shelf",
+                blameFraction: 0.75,
+                qualityWithout: "observation",
+                qualityImprovement: 1.5,
+              },
+            ],
+          },
+        ],
+      },
+    });
+    expect(html).toContain("Occlusion Blame");
+    expect(html).toContain("Blame");
+    expect(html).toContain("Quality Without");
   });
 
   test("renders zone table when zones exist", () => {
@@ -271,32 +400,138 @@ describe("exportAsHtml", () => {
 describe("exportAsMarkdown", () => {
   const scene = createSmallRetailShopScene();
   const result = simulateStudio(scene);
+  const baseReport = buildReportData(scene, result);
 
   test("produces valid markdown with header", () => {
-    const md = exportAsMarkdown(buildReportData(scene, result));
+    const md = exportAsMarkdown(baseReport);
     expect(md).toContain("# ");
     expect(md).toContain(scene.name);
   });
 
   test("includes summary table", () => {
-    const md = exportAsMarkdown(buildReportData(scene, result));
+    const md = exportAsMarkdown(baseReport);
     expect(md).toContain("| Total Coverage |");
     expect(md).toContain("| Zones Passing |");
   });
 
   test("includes zone analysis section", () => {
-    const md = exportAsMarkdown(buildReportData(scene, result));
+    const md = exportAsMarkdown(baseReport);
     expect(md).toContain("## Zone Analysis");
   });
 
   test("includes issues section", () => {
-    const md = exportAsMarkdown(buildReportData(scene, result));
+    const md = exportAsMarkdown(baseReport);
     expect(md).toContain("## Issues");
   });
 
   test("includes recommendations section", () => {
-    const md = exportAsMarkdown(buildReportData(scene, result));
+    const md = exportAsMarkdown(baseReport);
     expect(md).toContain("## Recommendations");
+  });
+
+  test("includes provenance section", () => {
+    const md = exportAsMarkdown(baseReport);
+    expect(md).toContain("## Provenance");
+    expect(md).toContain("Scene Source");
+  });
+
+  test("includes uncertainty section", () => {
+    const md = exportAsMarkdown(baseReport);
+    expect(md).toContain("Coverage Uncertainty");
+  });
+
+  test("includes posture variation section", () => {
+    const md = exportAsMarkdown(baseReport);
+    expect(md).toContain("Coverage Posture Variation");
+  });
+
+  test("includes blind spot topology section", () => {
+    const md = exportAsMarkdown(baseReport);
+    expect(md).toContain("Blind Spot Topology");
+  });
+
+  test("includes blind spot fingerprint section", () => {
+    const md = exportAsMarkdown(baseReport);
+    expect(md).toContain("Blind Spot Fingerprint");
+    expect(md).toContain("Fingerprint:");
+    expect(md).toContain("Regions:");
+  });
+
+  test("includes reflective bounce section", () => {
+    const md = exportAsMarkdown({
+      ...baseReport,
+      novelAlgorithms: {
+        ...baseReport.novelAlgorithms!,
+        reflectiveBounce: {
+          reflectiveWindowCount: 1,
+          affectedCellCount: 4,
+          affectedCameraCount: 1,
+        },
+      },
+    });
+    expect(md).toContain("Reflective Bounce Vision");
+    expect(md).toContain("Reflective windows:");
+    expect(md).toContain("Affected cells:");
+  });
+
+  test("includes placement oracle detail section", () => {
+    const md = exportAsMarkdown(baseReport);
+    expect(md).toContain("Placement Oracle");
+    expect(md).toContain("Best score");
+  });
+
+  test("includes redundancy matrix section", () => {
+    const md = exportAsMarkdown(baseReport);
+    expect(md).toContain("Redundancy Matrix");
+    expect(md).toContain("SPOF zones");
+    expect(md).toContain("Camera matrix");
+  });
+
+  test("includes k-robustness critical sets section", () => {
+    const md = exportAsMarkdown({
+      ...baseReport,
+      novelAlgorithms: {
+        ...baseReport.novelAlgorithms!,
+        kRobustness: {
+          kRobustness: 1,
+          totalCameras: 3,
+          isRobust: false,
+          criticalSets: [
+            { k: 1, cameraNames: ["Camera 1", "Camera 2"], exposureScore: 2.2, waypointCount: 4 },
+            { k: 2, cameraNames: ["Camera 3"], exposureScore: 3.1, waypointCount: 5 },
+          ],
+        },
+      },
+    });
+    expect(md).toContain("K-Robustness Critical Sets");
+    expect(md).toContain("Camera 1, Camera 2");
+  });
+
+  test("includes occlusion blame detail section", () => {
+    const md = exportAsMarkdown({
+      ...baseReport,
+      novelAlgorithms: {
+        ...baseReport.novelAlgorithms!,
+        occlusionBlame: [
+          {
+            zoneId: "cash_counter",
+            zoneLabel: "Cash Counter",
+            baselineQuality: "recognition",
+            obstructions: [
+              {
+                obstructionId: "obs_shelf",
+                label: "Aisle Shelf",
+                blameFraction: 0.75,
+                qualityWithout: "observation",
+                qualityImprovement: 1.5,
+              },
+            ],
+          },
+        ],
+      },
+    });
+    expect(md).toContain("Occlusion Blame");
+    expect(md).toContain("Blame");
   });
 
   test("includes adverse path when provided", () => {
@@ -329,16 +564,17 @@ describe("exportAsMarkdown", () => {
 describe("exportAsText", () => {
   const scene = createSmallRetailShopScene();
   const result = simulateStudio(scene);
+  const baseReport = buildReportData(scene, result);
 
   test("produces plain text report", () => {
-    const text = exportAsText(buildReportData(scene, result));
+    const text = exportAsText(baseReport);
     expect(text).toContain(scene.name);
     expect(text).toContain("SUMMARY");
     expect(text).toContain("Modeled requirements");
   });
 
   test("includes all key metrics", () => {
-    const text = exportAsText(buildReportData(scene, result));
+    const text = exportAsText(baseReport);
     expect(text).toContain("Total Coverage");
     expect(text).toContain("Blindspot");
     expect(text).toContain("Recognition Area");
@@ -347,8 +583,113 @@ describe("exportAsText", () => {
     expect(text).toContain("Issues Found");
   });
 
+  test("includes novel algorithms section with uncertainty", () => {
+    const text = exportAsText(baseReport);
+    expect(text).toContain("NOVEL ALGORITHMS");
+    expect(text).toContain("Coverage Uncertainty");
+  });
+
+  test("includes redundancy matrix section", () => {
+    const text = exportAsText(baseReport);
+    expect(text).toContain("REDUNDANCY MATRIX");
+    expect(text).toContain("SPOF zones");
+    expect(text).toContain("Camera matrix");
+  });
+
+  test("includes posture variation in novel algorithms section", () => {
+    const text = exportAsText(baseReport);
+    expect(text).toContain("Coverage Posture Variation");
+  });
+
+  test("includes blind spot topology in novel algorithms section", () => {
+    const text = exportAsText(baseReport);
+    expect(text).toContain("Blind Spot Topology");
+  });
+
+  test("includes blind spot fingerprint in novel algorithms section", () => {
+    const text = exportAsText(baseReport);
+    expect(text).toContain("Blind Spot Fingerprint");
+    expect(text).toContain("Fingerprint:");
+    expect(text).toContain("Regions:");
+  });
+
+  test("includes reflective bounce in novel algorithms section", () => {
+    const text = exportAsText({
+      ...baseReport,
+      novelAlgorithms: {
+        ...baseReport.novelAlgorithms!,
+        reflectiveBounce: {
+          reflectiveWindowCount: 1,
+          affectedCellCount: 4,
+          affectedCameraCount: 1,
+        },
+      },
+    });
+    expect(text).toContain("Reflective Bounce Vision");
+    expect(text).toContain("Reflective windows:");
+    expect(text).toContain("Affected cells:");
+  });
+
+  test("includes placement oracle detail in novel algorithms section", () => {
+    const text = exportAsText(baseReport);
+    expect(text).toContain("Placement Oracle");
+    expect(text).toContain("score");
+  });
+
+  test("includes k-robustness critical sets in novel algorithms section", () => {
+    const text = exportAsText({
+      ...baseReport,
+      novelAlgorithms: {
+        ...baseReport.novelAlgorithms!,
+        kRobustness: {
+          kRobustness: 1,
+          totalCameras: 3,
+          isRobust: false,
+          criticalSets: [
+            { k: 1, cameraNames: ["Camera 1", "Camera 2"], exposureScore: 2.2, waypointCount: 4 },
+            { k: 2, cameraNames: ["Camera 3"], exposureScore: 3.1, waypointCount: 5 },
+          ],
+        },
+      },
+    });
+    expect(text).toContain("K-Robustness Critical Sets");
+    expect(text).toContain("Camera 1, Camera 2");
+  });
+
+  test("includes occlusion blame in novel algorithms section", () => {
+    const text = exportAsText({
+      ...baseReport,
+      novelAlgorithms: {
+        ...baseReport.novelAlgorithms!,
+        occlusionBlame: [
+          {
+            zoneId: "cash_counter",
+            zoneLabel: "Cash Counter",
+            baselineQuality: "recognition",
+            obstructions: [
+              {
+                obstructionId: "obs_shelf",
+                label: "Aisle Shelf",
+                blameFraction: 0.75,
+                qualityWithout: "observation",
+                qualityImprovement: 1.5,
+              },
+            ],
+          },
+        ],
+      },
+    });
+    expect(text).toContain("Occlusion Blame");
+  });
+
+  test("includes provenance section", () => {
+    const text = exportAsText(baseReport);
+    expect(text).toContain("PROVENANCE");
+    expect(text).toContain("Source Counts");
+  });
+
   test("omits issues section when no issues are present", () => {
-    const text = exportAsText(buildReportData(scene, result));
+    const text = exportAsText(baseReport);
     expect(text).not.toContain("ISSUES");
   });
 

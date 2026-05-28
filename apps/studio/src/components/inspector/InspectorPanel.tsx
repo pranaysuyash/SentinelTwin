@@ -25,7 +25,7 @@ import {
 import { Badge } from "@/components/shared/Badge";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { cn } from "@/lib/cn";
-import { pathLength } from "@/components/workspace/editing/editor-geometry";
+import { nearestPointOnWall, pathLength } from "@/components/workspace/editing/editor-geometry";
 import type {
   CameraNode,
   CriticalZoneNode,
@@ -33,6 +33,7 @@ import type {
   ObstructionNode,
   PrivacyZoneNode,
   ScenarioPath,
+  SecurityScene,
   SecurityLightNode,
   WallNode,
   WindowNode,
@@ -86,6 +87,24 @@ function computeDoriRanges(camera: CameraNode, scenePpm: SimulationAssumptions["
   const recog = Math.min(resW / (2 * scenePpm.recognition * tanHalfFov), cap);
   const ident = Math.min(resW / (2 * scenePpm.identification * tanHalfFov), cap);
   return { det, obs, recog, ident };
+}
+
+function snapCameraToNearestWall(camera: CameraNode, scene: SecurityScene) {
+  if (scene.walls.length === 0) return null;
+
+  const { wallPoint } = nearestPointOnWall([camera.position[0], camera.position[2]], scene.walls);
+  const snappedHeight = Math.max(2.4, scene.assumptions.wallHeightM - 0.25);
+  const centerX = scene.dimensions.width / 2;
+  const centerZ = scene.dimensions.depth / 2;
+  const yawDeg = Math.atan2(centerX - wallPoint[0], centerZ - wallPoint[1]) * (180 / Math.PI);
+
+  return {
+    mountType: "wall" as const,
+    mountHeightM: snappedHeight,
+    position: [wallPoint[0], snappedHeight, wallPoint[1]] as [number, number, number],
+    yawDeg: Math.round(yawDeg),
+    pitchDeg: Math.min(camera.pitchDeg, -20),
+  };
 }
 
 type CameraViewMode = "normal" | "ir" | "low_light" | "thermal";
@@ -235,6 +254,12 @@ function CameraInspector() {
     });
   };
 
+  const snapToWall = () => {
+    const patch = snapCameraToNearestWall(camera, scene);
+    if (!patch) return;
+    updateNode(camera.id, patch);
+  };
+
   const aimAtZone = () => {
     if (!firstCriticalZone) return;
 
@@ -355,6 +380,26 @@ function CameraInspector() {
               options={MOUNT_OPTIONS}
               onChange={(v) => updateNode(camera.id, { mountType: v as CameraNode["mountType"] })}
             />
+
+            <SectionCard title="Mount Snap">
+              <div className="space-y-2">
+                <div className="text-[10px] leading-relaxed text-[#6a748b]">
+                  Snap this camera to the nearest wall, raise it to a realistic mount height, and re-aim it toward the room interior.
+                </div>
+                <button
+                  type="button"
+                  onClick={snapToWall}
+                  disabled={scene.walls.length === 0}
+                  className="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-cyan-500/25 bg-cyan-500/10 text-[10px] font-medium text-cyan-300 transition-colors hover:border-cyan-400/40 hover:bg-cyan-500/15 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Crosshair className="h-3.5 w-3.5" />
+                  Snap to Nearest Wall
+                </button>
+                <div className="text-[9px] text-[#4a5568]">
+                  Uses the current room walls as the snap target.
+                </div>
+              </div>
+            </SectionCard>
 
             {/* Position */}
             <div className="border-b border-[#181c27] py-1.5">
@@ -592,6 +637,41 @@ function CameraInspector() {
                 <SummaryStat label="Zones Pass" value={camResult ? `${camResult.criticalZonesCovered.length}` : "--"} accent="text-blue-300" />
                 <SummaryStat label="Zones Fail" value={camResult ? `${camResult.criticalZonesFailed.length}` : "--"} accent="text-amber-300" />
               </div>
+            </SectionCard>
+
+            <SectionCard title="Privacy Impact">
+              {result ? (() => {
+                const privacyIssues = result.issues.filter((issue) => issue.category === "privacy" && issue.affectedCameras.includes(camera.id));
+                const restrictedCells = result.coverageCells.filter((cell) => cell.privacyRestricted && cell.coveringCameras.includes(camera.id)).length;
+                const affectedZones = [...new Set(privacyIssues.flatMap((issue) => issue.affectedZones))];
+                return (
+                  <div className="space-y-1.5">
+                    <div className="grid grid-cols-3 gap-1.5">
+                      <SummaryStat label="Issues" value={String(privacyIssues.length)} accent={privacyIssues.length > 0 ? "text-rose-300" : "text-emerald-300"} />
+                      <SummaryStat label="Restricted Cells" value={String(restrictedCells)} accent={restrictedCells > 0 ? "text-amber-300" : "text-emerald-300"} />
+                      <SummaryStat label="Zones" value={String(affectedZones.length)} accent={affectedZones.length > 0 ? "text-rose-300" : "text-emerald-300"} />
+                    </div>
+                    {privacyIssues.length > 0 ? (
+                      <div className="space-y-1.5">
+                        {privacyIssues.slice(0, 2).map((issue) => (
+                          <div key={issue.description} className="rounded-lg border border-[#1f2b42] bg-[#111827] px-2 py-1.5 text-[10px] text-[#d2d9e8]">
+                            <div className="font-medium text-[#deebff]">{issue.description}</div>
+                            <div className="mt-0.5 text-[#7384a5]">
+                              Affected zones: {issue.affectedZones.join(", ") || "None"} · Cameras: {issue.affectedCameras.join(", ") || "None"}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-[#1f2b42] bg-[#111827] px-2 py-1.5 text-[10px] text-[#7384a5]">
+                        This camera does not currently trigger privacy-specific issues in the latest simulation.
+                      </div>
+                    )}
+                  </div>
+                );
+              })() : (
+                <div className="text-[10px] text-[#6a748b]">Run simulation to see privacy impact for this camera.</div>
+              )}
             </SectionCard>
 
             <SectionCard title="Verified Notes">
@@ -1768,6 +1848,74 @@ function PathInspector() {
           <Field label="Est. Time" value={estimatedTimeS.toFixed(1)} unit="s" />
           <Field label="Points" value={path.points.length} />
         </SectionCard>
+        <SectionCard title="Waypoints">
+          <div className="space-y-2">
+            {path.points.map((point, index) => (
+              <div key={`${path.id}-${index}`} className="rounded-lg border border-[#1f2536] bg-[#111521] p-2">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">Point {index + 1}</div>
+                  {path.points.length > 2 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateNode(path.id, {
+                          points: path.points.filter((_, pointIndex) => pointIndex !== index),
+                        });
+                      }}
+                      className="rounded border border-red-900/30 bg-red-950/15 px-1.5 py-0.5 text-[8px] font-medium text-red-300 transition-colors hover:border-red-700 hover:bg-red-950/30"
+                    >
+                      Remove
+                    </button>
+                  ) : null}
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <NumberInput
+                    label="X"
+                    value={point.position[0]}
+                    step={0.1}
+                    unit="m"
+                    onChange={(value) => {
+                      updateNode(path.id, {
+                        points: path.points.map((entry, pointIndex) => pointIndex === index
+                          ? { ...entry, position: [value, entry.position[1]] as [number, number] }
+                          : entry),
+                      });
+                    }}
+                  />
+                  <NumberInput
+                    label="Z"
+                    value={point.position[1]}
+                    step={0.1}
+                    unit="m"
+                    onChange={(value) => {
+                      updateNode(path.id, {
+                        points: path.points.map((entry, pointIndex) => pointIndex === index
+                          ? { ...entry, position: [entry.position[0], value] as [number, number] }
+                          : entry),
+                      });
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                const last = path.points[path.points.length - 1];
+                const prev = path.points[path.points.length - 2] ?? last;
+                if (!last || !prev) return;
+                const midpoint: [number, number] = [
+                  (last.position[0] + prev.position[0]) / 2,
+                  (last.position[1] + prev.position[1]) / 2,
+                ];
+                updateNode(path.id, { points: [...path.points, { position: midpoint }] });
+              }}
+              className="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-blue-900/30 bg-blue-950/15 text-[10px] font-medium text-blue-300 transition-colors hover:border-blue-700 hover:bg-blue-950/30"
+            >
+              Add Waypoint
+            </button>
+          </div>
+        </SectionCard>
       </div>
       <div className="border-t border-[#1e2130] px-3 py-3">
         <button type="button" onClick={() => removeNode(path.id)} className="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-red-900/30 bg-red-950/15 text-[10px] font-medium text-red-400 transition-colors hover:border-red-700 hover:bg-red-950/30">
@@ -1878,7 +2026,11 @@ function NoSelection() {
 
 export function InspectorPanel({ showHeader = true }: { showHeader?: boolean } = {}) {
   const selectedId = useStudioStore((s) => s.selectedNodeId);
+  const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
   const scene = useStudioStore((s) => s.scene);
+  const clearSelection = useStudioStore((s) => s.clearSelection);
+  const duplicateNode = useStudioStore((s) => s.duplicateNode);
+  const removeSelectedNodes = useStudioStore((s) => s.removeSelectedNodes);
   const camera = scene.cameras.find((entry) => entry.id === selectedId);
   const wall = scene.walls.find((entry) => entry.id === selectedId);
   const door = scene.doors.find((entry) => entry.id === selectedId);
@@ -1889,12 +2041,50 @@ export function InspectorPanel({ showHeader = true }: { showHeader?: boolean } =
   const privacyZone = scene.privacyZones.find((entry) => entry.id === selectedId);
   const path = scene.paths.find((entry) => entry.id === selectedId);
   const entryPoint = scene.entryPoints.find((entry) => entry.id === selectedId);
+  const selectedCount = selectedNodeIds.length;
+  const groupedSelection = selectedCount > 1;
 
   return (
     <aside className="flex h-full min-w-0 flex-1 flex-col overflow-hidden border-l border-[#1e2130] bg-[#0d1017]">
       {showHeader ? (
         <div className="flex h-8 items-center border-b border-[#1e2130] px-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-[#4a5568]">
           Inspector
+        </div>
+      ) : null}
+      {groupedSelection ? (
+        <div className="border-b border-[#1e2130] px-3 py-3">
+          <div className="mb-2 flex items-start justify-between gap-3">
+            <div>
+              <div className="text-[12px] font-semibold text-white">{selectedCount} objects selected</div>
+              <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">Primary inspector still follows the first selection</div>
+            </div>
+            <Badge variant="blue">{selectedCount} selected</Badge>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => duplicateNode(selectedId ?? selectedNodeIds[0] ?? "")}
+              className="flex h-8 items-center justify-center gap-1.5 rounded-lg border border-[#24304a] bg-[#111521] text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#3b4a69] hover:bg-[#172235]"
+            >
+              <Copy className="h-3 w-3" />
+              Duplicate
+            </button>
+            <button
+              type="button"
+              onClick={() => removeSelectedNodes()}
+              className="flex h-8 items-center justify-center gap-1.5 rounded-lg border border-red-900/30 bg-red-950/15 text-[10px] font-medium text-red-300 transition-colors hover:border-red-700 hover:bg-red-950/30"
+            >
+              <Trash2 className="h-3 w-3" />
+              Delete
+            </button>
+            <button
+              type="button"
+              onClick={() => clearSelection()}
+              className="flex h-8 items-center justify-center gap-1.5 rounded-lg border border-[#24304a] bg-[#111521] text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#3b4a69] hover:bg-[#172235]"
+            >
+              Clear
+            </button>
+          </div>
         </div>
       ) : null}
       {camera

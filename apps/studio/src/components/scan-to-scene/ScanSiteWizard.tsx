@@ -160,6 +160,58 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
     () => session.candidates.filter((candidate) => candidate.status !== "rejected"),
     [session.candidates],
   );
+  const duplicateCandidateGroups = useMemo(() => {
+    const groups: Array<{ kind: ScanCandidateKind; ids: string[] }> = [];
+    const byKind = new Map<ScanCandidateKind, ScanCandidate[]>();
+    for (const candidate of acceptedCandidates) {
+      const list = byKind.get(candidate.kind) ?? [];
+      list.push(candidate);
+      byKind.set(candidate.kind, list);
+    }
+
+    const nearThreshold = 0.035;
+    for (const [kind, candidates] of byKind.entries()) {
+      const visited = new Set<string>();
+      for (let i = 0; i < candidates.length; i += 1) {
+        const base = candidates[i];
+        if (visited.has(base.id)) continue;
+        const cluster: string[] = [base.id];
+        visited.add(base.id);
+        for (let j = i + 1; j < candidates.length; j += 1) {
+          const other = candidates[j];
+          if (visited.has(other.id)) continue;
+          const dx = base.point[0] - other.point[0];
+          const dy = base.point[1] - other.point[1];
+          const dist = Math.hypot(dx, dy);
+          if (dist <= nearThreshold) {
+            cluster.push(other.id);
+            visited.add(other.id);
+          }
+        }
+        if (cluster.length > 1) {
+          groups.push({ kind, ids: cluster });
+        }
+      }
+    }
+    return groups;
+  }, [acceptedCandidates]);
+  const openingWithoutWallNearbyCount = useMemo(() => {
+    const walls = acceptedCandidates.filter((candidate) => candidate.kind === "wall");
+    if (walls.length === 0) {
+      return acceptedCandidates.filter((candidate) => candidate.kind === "door" || candidate.kind === "window").length;
+    }
+    const maxNearbyDistance = 0.08;
+    return acceptedCandidates.filter((candidate) => {
+      if (candidate.kind !== "door" && candidate.kind !== "window") return false;
+      const nearest = walls.reduce((best, wall) => {
+        const dx = candidate.point[0] - wall.point[0];
+        const dy = candidate.point[1] - wall.point[1];
+        const dist = Math.hypot(dx, dy);
+        return Math.min(best, dist);
+      }, Number.POSITIVE_INFINITY);
+      return nearest > maxNearbyDistance;
+    }).length;
+  }, [acceptedCandidates]);
   const lowConfidenceAccepted = useMemo(
     () => acceptedCandidates.filter((candidate) => candidate.confidence < 0.45),
     [acceptedCandidates],
@@ -307,6 +359,112 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
       setIsCompiling(false);
     }
   }, [compileLowConfidenceOverride, lowConfidenceAccepted.length, onClose, session, setScene]);
+
+  const handleMergeNearDuplicates = useCallback(() => {
+    setSession((current) => {
+      const activeCandidates = current.candidates.filter((candidate) => candidate.status !== "rejected");
+      const nearThreshold = 0.035;
+      const groupedIds: string[][] = [];
+      const byKind = new Map<ScanCandidateKind, ScanCandidate[]>();
+      for (const candidate of activeCandidates) {
+        const list = byKind.get(candidate.kind) ?? [];
+        list.push(candidate);
+        byKind.set(candidate.kind, list);
+      }
+      for (const candidates of byKind.values()) {
+        const visited = new Set<string>();
+        for (let i = 0; i < candidates.length; i += 1) {
+          const base = candidates[i];
+          if (visited.has(base.id)) continue;
+          const cluster: string[] = [base.id];
+          visited.add(base.id);
+          for (let j = i + 1; j < candidates.length; j += 1) {
+            const other = candidates[j];
+            if (visited.has(other.id)) continue;
+            const dx = base.point[0] - other.point[0];
+            const dy = base.point[1] - other.point[1];
+            if (Math.hypot(dx, dy) <= nearThreshold) {
+              cluster.push(other.id);
+              visited.add(other.id);
+            }
+          }
+          if (cluster.length > 1) groupedIds.push(cluster);
+        }
+      }
+      if (groupedIds.length === 0) return current;
+
+      const groupMap = new Map<string, string[]>();
+      for (const group of groupedIds) {
+        for (const id of group) groupMap.set(id, group);
+      }
+      const nextCandidates: ScanCandidate[] = current.candidates.map((candidate) => {
+        const group = groupMap.get(candidate.id);
+        if (!group) return candidate;
+        const [keeperId] = group;
+        if (candidate.id !== keeperId) {
+          return {
+            ...candidate,
+            status: "rejected" as ScanCandidate["status"],
+            note: "Auto-fix: merged into nearest same-type duplicate group.",
+          };
+        }
+        const groupedCandidates = current.candidates.filter((entry) => group.includes(entry.id));
+        const avgX = groupedCandidates.reduce((sum, entry) => sum + entry.point[0], 0) / groupedCandidates.length;
+        const avgY = groupedCandidates.reduce((sum, entry) => sum + entry.point[1], 0) / groupedCandidates.length;
+        const avgConfidence = groupedCandidates.reduce((sum, entry) => sum + entry.confidence, 0) / groupedCandidates.length;
+        return {
+          ...candidate,
+          point: [avgX, avgY] as [number, number],
+          confidence: avgConfidence,
+          status: "edited" as ScanCandidate["status"],
+          note: `Auto-fix: merged ${groupedCandidates.length} near-duplicate candidates.`,
+        };
+      });
+      return {
+        ...current,
+        candidates: nextCandidates,
+        updatedAt: Date.now(),
+      };
+    });
+  }, []);
+
+  const handleSnapOpeningsToWalls = useCallback(() => {
+    setSession((current) => {
+      const walls = current.candidates.filter((candidate) => candidate.status !== "rejected" && candidate.kind === "wall");
+      if (walls.length === 0) return current;
+      let changed = false;
+      const nextCandidates: ScanCandidate[] = current.candidates.map((candidate) => {
+        if (candidate.status === "rejected" || (candidate.kind !== "door" && candidate.kind !== "window")) {
+          return candidate;
+        }
+        const nearestWall = walls.reduce((best, wall) => {
+          const dx = candidate.point[0] - wall.point[0];
+          const dy = candidate.point[1] - wall.point[1];
+          const dist = Math.hypot(dx, dy);
+          if (!best || dist < best.dist) return { wall, dist };
+          return best;
+        }, null as { wall: ScanCandidate; dist: number } | null);
+        if (!nearestWall) return candidate;
+        const snappedPoint: [number, number] = [
+          candidate.point[0] * 0.65 + nearestWall.wall.point[0] * 0.35,
+          candidate.point[1] * 0.65 + nearestWall.wall.point[1] * 0.35,
+        ];
+        changed = true;
+        return {
+          ...candidate,
+          point: snappedPoint,
+          status: "edited" as ScanCandidate["status"],
+          note: `Auto-fix: snapped toward nearest wall (${(nearestWall.dist * 100).toFixed(1)}% normalized distance).`,
+        };
+      });
+      if (!changed) return current;
+      return {
+        ...current,
+        candidates: nextCandidates,
+        updatedAt: Date.now(),
+      };
+    });
+  }, []);
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[#0b0f17]">
@@ -772,8 +930,25 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
                 No AI perception is claimed here. The image is a manual-assisted intake that compiles directly into the existing simulation pipeline.
               </div>
               <div className="mt-3 rounded-2xl border border-[#243049] bg-[#09111b] p-3">
+                <h4 className="text-xs font-semibold text-white">Structural auto-fix assist (explicit)</h4>
+                <p className="mt-1 text-[11px] text-[#8aa1c4]">
+                  These actions are manual and visible. They do not run automatically and only update candidate annotations.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <SurfaceButton type="button" onClick={handleMergeNearDuplicates}>
+                    Merge near-duplicate candidates (same type, close points)
+                  </SurfaceButton>
+                  <SurfaceButton type="button" onClick={handleSnapOpeningsToWalls}>
+                    Snap door/window candidates closer to nearest wall
+                  </SurfaceButton>
+                </div>
+              </div>
+              <div className="mt-3 rounded-2xl border border-[#243049] bg-[#09111b] p-3">
                 <h4 className="text-xs font-semibold text-white">Geometry sanity checks</h4>
                 <div className="mt-2 space-y-1 text-[11px] text-[#8aa1c4]">
+                  <p>• Duplicate groups (same type + close points): {duplicateCandidateGroups.length}</p>
+                  <p>• Door/window without nearby wall: {openingWithoutWallNearbyCount}</p>
+                  <p>• Pending candidate count: {candidateStats.pending}</p>
                   {scanSanityIssues.length === 0 ? (
                     <p className="text-emerald-300">No obvious structural issues detected.</p>
                   ) : (
@@ -808,7 +983,7 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
                       checked={compileLowConfidenceOverride}
                       onChange={(event) => setCompileLowConfidenceOverride(event.target.checked)}
                     />
-                    <span>Compile anyway with low-confidence accepted candidates (manual override).</span>
+                    <span>Compile anyway with low-confidence accepted candidates (explicit manual override).</span>
                   </label>
                 ) : null}
               </div>

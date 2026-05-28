@@ -101,6 +101,7 @@ function makeNodeHandlers(
   onNodeHover?: (id: string | null) => void,
 ) {
   return {
+    style: { cursor: "pointer" as const },
     onPointerDown: (event: PointerEvent<SVGElement>) => {
       event.stopPropagation();
       onNodeSelect?.(id);
@@ -542,6 +543,7 @@ export function MapLayers({
             }
 
             const color = getCameraColorForId(camera.id);
+            const isSuggested = camera.tags?.includes("suggested");
             return (
               <polygon
                 key={`${camera.id}-fov`}
@@ -553,10 +555,11 @@ export function MapLayers({
                   projection,
                 )}
                 fill={color}
-                fillOpacity={camera.status === "on" ? 0.08 : 0.04}
+                fillOpacity={camera.status === "on" ? (isSuggested ? 0.04 : 0.08) : 0.04}
                 stroke={color}
-                strokeWidth={0.7}
-                strokeOpacity={camera.status === "on" ? 0.45 : 0.2}
+                strokeWidth={isSuggested ? 0.7 : 0.7}
+                strokeOpacity={camera.status === "on" ? (isSuggested ? 0.25 : 0.45) : 0.2}
+                strokeDasharray={isSuggested ? "2 3" : undefined}
               />
             );
           })}
@@ -568,6 +571,7 @@ export function MapLayers({
           {scene.cameras.map((camera: CameraNode) => {
             const point = projection.sceneToSvg([camera.position[0], camera.position[2]]);
             const isSelected = nodeActive(camera.id, selectedNodeId, hoveredNodeId);
+            const isHovered = hoveredNodeId === camera.id;
             const color = getCameraColorForId(camera.id);
             const yaw = (camera.yawDeg * Math.PI) / 180;
             const dir = projection.sceneToSvg([
@@ -576,6 +580,7 @@ export function MapLayers({
             ]);
 
             const isOff = camera.status === "off";
+            const isSuggested = camera.tags?.includes("suggested");
 
             return (
               <g key={camera.id}>
@@ -585,30 +590,57 @@ export function MapLayers({
                   x2={dir.x}
                   y2={dir.y}
                   stroke={color}
-                  strokeWidth={1}
-                  opacity={isOff ? 0.45 : 0.88}
+                  strokeWidth={isHovered ? 1.4 : 1}
+                  opacity={isOff ? 0.45 : (isHovered ? 1 : isSuggested ? 0.5 : 0.88)}
                 />
                 <circle
                   cx={point.x}
                   cy={point.y}
-                  r={Math.max(2.3, projection.lengthToSvg(0.22))}
+                  r={Math.max(2.3, projection.lengthToSvg(isHovered ? 0.28 : 0.22))}
                   fill={color}
-                  opacity={isOff ? 0.35 : 0.94}
+                  opacity={isOff ? 0.35 : (isHovered ? 1 : isSuggested ? 0.5 : 0.94)}
                   stroke={isSelected ? "#f8fafc" : "transparent"}
-                  strokeWidth={1}
+                  strokeWidth={isHovered ? 1.4 : 1}
                   {...makeNodeHandlers(camera.id, onNodeSelect, onNodeHover)}
                 />
-                {isSelected ? (
+                {(isSelected || isHovered) ? (
                   <circle
                     cx={point.x}
                     cy={point.y}
-                    r={projection.lengthToSvg(0.2) + 4}
+                    r={projection.lengthToSvg(0.2) + (isHovered ? 7 : 4)}
                     fill="none"
-                    stroke="#c7d2fe"
-                    strokeWidth={1}
-                    strokeDasharray="2 2"
+                    stroke={isHovered ? "#e0e7ff" : "#c7d2fe"}
+                    strokeWidth={isHovered ? 1.4 : 1}
+                    strokeDasharray={isHovered ? "1 2" : "2 2"}
                   />
                 ) : null}
+                {isSuggested && !isHovered && (
+                  <circle
+                    cx={point.x}
+                    cy={point.y}
+                    r={projection.lengthToSvg(0.2) + 5}
+                    fill="none"
+                    stroke={color}
+                    strokeWidth={0.7}
+                    strokeDasharray="2 3"
+                    opacity={0.5}
+                  />
+                )}
+                {(isSelected || isHovered) && (
+                  <text
+                    x={point.x + 7}
+                    y={point.y - 7}
+                    fontSize="9"
+                    fontWeight="700"
+                    fill={isHovered ? "#e0e7ff" : "#cbd5e1"}
+                    stroke="#06080d"
+                    strokeWidth="2"
+                    paintOrder="stroke"
+                    pointerEvents="none"
+                  >
+                    {camera.name}
+                  </text>
+                )}
               </g>
             );
           })}

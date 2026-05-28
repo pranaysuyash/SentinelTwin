@@ -2,13 +2,14 @@
 
 import { OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { ArrowLeftRight, GitCompare, Plus, AlertTriangle, Sparkles } from "lucide-react";
+import { ArrowLeftRight, GitCompare, Globe, Plus, AlertTriangle, Sparkles } from "lucide-react";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 import { useStudioStore } from "@/store/studio-store";
 import { qualityToScore } from "@/simulation/dori";
 import "@/lib/three-compat";
+import { buildCompareReportData, exportCompareAsHtml, exportCompareAsMarkdown } from "@/report";
 import {
   ENVIRONMENT_THEMES,
   SceneLighting,
@@ -22,6 +23,7 @@ import {
 } from "@/components/workspace/SharedScene";
 import { cn } from "@/lib/cn";
 import { QUALITY_RANK } from "@/lib/quality-display";
+import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
 import type { SceneSnapshot, SimulationResult } from "@/schema/security-scene";
 
 type CoverageCell = SimulationResult["coverageCells"][number];
@@ -37,6 +39,25 @@ type Metrics = {
   visiblePathPct: number;
   lostPathPct: number;
 };
+
+type DoriThresholds = {
+  detection: number;
+  observation: number;
+  recognition: number;
+  identification: number;
+};
+
+function computeCameraDoriRanges(camera: SceneSnapshot["scene"]["cameras"][number], ppm: DoriThresholds) {
+  const resW = camera.resolutionWidth ?? (camera.resolutionMP >= 8 ? 3840 : camera.resolutionMP >= 4 ? 2688 : 1920);
+  const tanHalfFov = Math.tan((camera.fovHorizontalDeg / 2) * (Math.PI / 180));
+  const cap = camera.rangeM;
+  return {
+    detection: Math.min(resW / (2 * ppm.detection * tanHalfFov), cap),
+    observation: Math.min(resW / (2 * ppm.observation * tanHalfFov), cap),
+    recognition: Math.min(resW / (2 * ppm.recognition * tanHalfFov), cap),
+    identification: Math.min(resW / (2 * ppm.identification * tanHalfFov), cap),
+  };
+}
 
 function computeMetrics(sim: SimulationResult | undefined, cells: CoverageCell[]): Metrics | null {
   if (!sim && cells.length === 0) return null;
@@ -163,7 +184,7 @@ function ScenePanel({
           <ambientLight intensity={theme.ambient} />
           <hemisphereLight groundColor="#0b0f15" color="#d9e6ff" intensity={theme.hemisphere} />
           <directionalLight position={[10, 14, 8]} intensity={theme.directional} color="#eef4ff" castShadow />
-          <Suspense fallback={null}>
+          <Suspense fallback={<CanvasLoadingOverlay label="Loading compare scene" />}>
             <SceneLighting theme={theme} />
             <SceneFloor width={width} depth={depth} showGrid={false} />
             <SceneWalls walls={scene.walls} />
@@ -502,16 +523,23 @@ function ChangedObjectsPanel({ snapshotA, snapshotB }: { snapshotA: SceneSnapsho
 
 export function CompareView() {
   const snapshots = useStudioStore((s) => s.snapshots);
+  const scene = useStudioStore((s) => s.scene);
+  const simulation = useStudioStore((s) => s.simulationResult);
   const saveSnapshot = useStudioStore((s) => s.saveSnapshot);
   const simulateSnapshot = useStudioStore((s) => s.simulateSnapshot);
   const setCompareVisualEvidence = useStudioStore((s) => s.setCompareVisualEvidence);
   const setCompareReportSelection = useStudioStore((s) => s.setCompareReportSelection);
   const setBottomTab = useStudioStore((s) => s.setBottomTab);
+  const setViewMode = useStudioStore((s) => s.setViewMode);
+  const compareVisualEvidence = useStudioStore((s) => s.compareVisualEvidence);
   const [comparisonAId, setComparisonAId] = useState<string | null>(null);
   const [comparisonBId, setComparisonBId] = useState<string | null>(null);
+  const [cameraComparisonAId, setCameraComparisonAId] = useState<string | null>(null);
+  const [cameraComparisonBId, setCameraComparisonBId] = useState<string | null>(null);
   const [exportToast, setExportToast] = useState<string | null>(null);
   const panelARef = useRef<HTMLDivElement | null>(null);
   const panelBRef = useRef<HTMLDivElement | null>(null);
+  const sceneName = scene.name;
 
   const defaultA = snapshots[Math.max(snapshots.length - 2, 0)]?.id ?? null;
   const defaultB = snapshots[snapshots.length - 1]?.id ?? null;
@@ -528,7 +556,48 @@ export function CompareView() {
 
   const mA = useMemo(() => computeMetrics(snapshotA?.simulation, cellsA), [snapshotA, cellsA]);
   const mB = useMemo(() => computeMetrics(snapshotB?.simulation, cellsB), [snapshotB, cellsB]);
+  const defaultCameraAId = scene.cameras[0]?.id ?? null;
+  const defaultCameraBId = scene.cameras[1]?.id ?? scene.cameras[0]?.id ?? null;
+  const validCameraAId = cameraComparisonAId && scene.cameras.some((camera) => camera.id === cameraComparisonAId)
+    ? cameraComparisonAId
+    : defaultCameraAId;
+  const validCameraBId = cameraComparisonBId && scene.cameras.some((camera) => camera.id === cameraComparisonBId)
+    ? cameraComparisonBId
+    : defaultCameraBId;
+  const cameraA = scene.cameras.find((camera) => camera.id === validCameraAId) ?? null;
+  const cameraB = scene.cameras.find((camera) => camera.id === validCameraBId) ?? null;
+  const cameraResultA = simulation?.cameraResults.find((entry) => entry.cameraId === cameraA?.id) ?? null;
+  const cameraResultB = simulation?.cameraResults.find((entry) => entry.cameraId === cameraB?.id) ?? null;
+  const cameraDeltas = useMemo(() => {
+    if (!cameraA || !cameraB || !cameraResultA || !cameraResultB) return null;
+    return {
+      coverage: cameraResultB.coveragePct - cameraResultA.coveragePct,
+      passedZones: cameraResultB.criticalZonesCovered.length - cameraResultA.criticalZonesCovered.length,
+      failedZones: cameraResultB.criticalZonesFailed.length - cameraResultA.criticalZonesFailed.length,
+      doriA: computeCameraDoriRanges(cameraA, scene.assumptions.pixelsPerMeter),
+      doriB: computeCameraDoriRanges(cameraB, scene.assumptions.pixelsPerMeter),
+    };
+  }, [cameraA, cameraB, cameraResultA, cameraResultB, scene.assumptions.pixelsPerMeter]);
   const comparisonExport = useMemo(() => buildComparisonExport(snapshotA, snapshotB, mA, mB), [snapshotA, snapshotB, mA, mB]);
+  const compareReportData = useMemo(() => {
+    if (!snapshotA?.simulation || !snapshotB?.simulation) return null;
+    const compare = buildCompareReportData(
+      { ...snapshotA.scene, snapshots: [], scenarios: [] } as never,
+      snapshotA.simulation,
+      { ...snapshotB.scene, snapshots: [], scenarios: [] } as never,
+      snapshotB.simulation,
+    );
+    const visuals = compareVisualEvidence &&
+      compareVisualEvidence.snapshotAId === snapshotA.id &&
+      compareVisualEvidence.snapshotBId === snapshotB.id &&
+      compareVisualEvidence.capturedAt >= Math.max(snapshotA.createdAt, snapshotB.createdAt)
+      ? {
+          beforeImageDataUrl: compareVisualEvidence.beforeImageDataUrl,
+          afterImageDataUrl: compareVisualEvidence.afterImageDataUrl,
+        }
+      : undefined;
+    return { compare, visuals };
+  }, [compareVisualEvidence, snapshotA, snapshotB]);
   const handleExportComparison = useCallback(() => {
     const blob = new Blob([JSON.stringify(comparisonExport, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -540,6 +609,32 @@ export function CompareView() {
     setExportToast("Comparison JSON exported");
     window.setTimeout(() => setExportToast(null), 2500);
   }, [comparisonExport]);
+  const handleExportMarkdown = useCallback(() => {
+    if (!compareReportData) return;
+    const markdown = exportCompareAsMarkdown(compareReportData.compare);
+    const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `sentineltwin-comparison-${sceneName.replace(/[^a-zA-Z0-9_-]/g, "_")}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setExportToast("Comparison Markdown exported");
+    window.setTimeout(() => setExportToast(null), 2500);
+  }, [compareReportData, sceneName]);
+  const handleExportHtml = useCallback(() => {
+    if (!compareReportData) return;
+    const html = exportCompareAsHtml(compareReportData.compare, compareReportData.visuals);
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `sentineltwin-comparison-${sceneName.replace(/[^a-zA-Z0-9_-]/g, "_")}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setExportToast("Comparison HTML exported");
+    window.setTimeout(() => setExportToast(null), 2500);
+  }, [compareReportData, sceneName]);
   const handleCopySummary = useCallback(async () => {
     const summary = [
       `Scenario A: ${snapshotA?.label ?? "Baseline"}`,
@@ -576,6 +671,12 @@ export function CompareView() {
     setExportToast("Visual evidence captured for report export");
     window.setTimeout(() => setExportToast(null), 2500);
   }, [setCompareVisualEvidence, snapshotA, snapshotB]);
+  const handleOpenReplay = useCallback(() => {
+    setBottomTab("timeline");
+    setViewMode("replay");
+    setExportToast("Opened replay view");
+    window.setTimeout(() => setExportToast(null), 2500);
+  }, [setBottomTab, setViewMode]);
 
   useEffect(() => {
     if (!snapshotA || !snapshotB) return;
@@ -653,6 +754,22 @@ export function CompareView() {
           </button>
           <button
             type="button"
+            onClick={handleExportMarkdown}
+            className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white"
+          >
+            <Globe className="h-2.5 w-2.5" />
+            Export MD
+          </button>
+          <button
+            type="button"
+            onClick={handleExportHtml}
+            className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white"
+          >
+            <Globe className="h-2.5 w-2.5" />
+            Export HTML
+          </button>
+          <button
+            type="button"
             onClick={() => {
               if (!snapshotA || !snapshotB) return;
               setCompareReportSelection({ snapshotAId: snapshotA.id, snapshotBId: snapshotB.id });
@@ -663,6 +780,13 @@ export function CompareView() {
             className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white"
           >
             Export Compare Report
+          </button>
+          <button
+            type="button"
+            onClick={handleOpenReplay}
+            className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white"
+          >
+            Open 3D Replay
           </button>
           <button
             type="button"
@@ -780,6 +904,104 @@ export function CompareView() {
               tone={card.tone}
             />
           ))}
+        </div>
+      </div>
+
+      <div className="px-2 pb-2">
+        <div className="rounded-xl border border-[#1d2330] bg-[#0b1018] p-3">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Camera Comparison</div>
+              <div className="text-[9px] text-[#556076]">Compare two cameras from the current scene using live simulation results.</div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-[9px] uppercase tracking-[0.16em] text-[#556076]">
+              <label className="flex items-center gap-1.5 rounded-md border border-[#1d2330] bg-[#090d14] px-2 py-1">
+                <span className="text-[#9aa6bf]">Camera A</span>
+                <select
+                  value={validCameraAId ?? ""}
+                  onChange={(event) => setCameraComparisonAId(event.target.value)}
+                  className="rounded border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none"
+                >
+                  {scene.cameras.map((camera) => (
+                    <option key={camera.id} value={camera.id}>
+                      {camera.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex items-center gap-1.5 rounded-md border border-[#1d2330] bg-[#090d14] px-2 py-1">
+                <span className="text-[#d2f5db]">Camera B</span>
+                <select
+                  value={validCameraBId ?? ""}
+                  onChange={(event) => setCameraComparisonBId(event.target.value)}
+                  className="rounded border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none"
+                >
+                  {scene.cameras.map((camera) => (
+                    <option key={camera.id} value={camera.id}>
+                      {camera.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </div>
+
+          {!cameraA || !cameraB || !cameraResultA || !cameraResultB || !cameraDeltas ? (
+            <div className="rounded-lg border border-dashed border-[#1d2330] bg-[#090d14] px-3 py-4 text-[10px] text-[#556076]">
+              Run simulation to compare two cameras. Once results exist, this card will compare their coverage, zone performance, and DORI reach side by side.
+            </div>
+          ) : (
+            <div className="grid gap-2 lg:grid-cols-2">
+              {[
+                { camera: cameraA, result: cameraResultA, dori: cameraDeltas.doriA, tone: "baseline" as const },
+                { camera: cameraB, result: cameraResultB, dori: cameraDeltas.doriB, tone: "proposed" as const },
+              ].map(({ camera, result, dori, tone }) => (
+                <div key={camera.id} className="rounded-lg border border-[#1d2330] bg-[#090d14] p-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className={cn("text-[9px] font-semibold uppercase tracking-[0.18em]", tone === "baseline" ? "text-red-300" : "text-emerald-300")}>
+                        {tone === "baseline" ? "Camera A" : "Camera B"}
+                      </div>
+                      <div className="text-[12px] font-semibold text-[#dfe7f7]">{camera.name}</div>
+                      <div className="text-[9px] text-[#556076]">{camera.mountType} mount · {camera.fovHorizontalDeg}° FOV · {camera.rangeM}m range</div>
+                    </div>
+                    <div className={cn("rounded-md border px-2 py-1 text-right", tone === "baseline" ? "border-red-500/20 bg-red-500/10" : "border-emerald-500/20 bg-emerald-500/10")}>
+                      <div className="text-[8px] uppercase tracking-[0.16em] text-[#8da0bf]">Coverage</div>
+                      <div className={cn("font-mono text-[15px] font-semibold", tone === "baseline" ? "text-red-300" : "text-emerald-300")}>
+                        {result.coveragePct.toFixed(1)}%
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-[9px]">
+                    <div className="rounded border border-[#1d2330] bg-[#0b1018] px-2 py-1.5">
+                      <div className="text-[#556076]">Critical zones passed</div>
+                      <div className="mt-0.5 font-semibold text-emerald-300">{result.criticalZonesCovered.length}</div>
+                    </div>
+                    <div className="rounded border border-[#1d2330] bg-[#0b1018] px-2 py-1.5">
+                      <div className="text-[#556076]">Critical zones failed</div>
+                      <div className="mt-0.5 font-semibold text-rose-300">{result.criticalZonesFailed.length}</div>
+                    </div>
+                    <div className="rounded border border-[#1d2330] bg-[#0b1018] px-2 py-1.5">
+                      <div className="text-[#556076]">Detection range</div>
+                      <div className="mt-0.5 font-mono font-semibold text-[#f97316]">{dori.detection.toFixed(1)}m</div>
+                    </div>
+                    <div className="rounded border border-[#1d2330] bg-[#0b1018] px-2 py-1.5">
+                      <div className="text-[#556076]">Recognition range</div>
+                      <div className="mt-0.5 font-mono font-semibold text-[#22c55e]">{dori.recognition.toFixed(1)}m</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 rounded border border-[#1d2330] bg-[#0b1018] px-2 py-1.5 text-[9px] text-[#9aa6bf]">
+                    {result.offlineImpact.length > 0 ? result.offlineImpact[0] : "No offline impact warnings for this camera."}
+                  </div>
+                </div>
+              ))}
+              <div className="lg:col-span-2 rounded-lg border border-[#1d2330] bg-[#090d14] px-3 py-2 text-[9px] text-[#91a0bc]">
+                Camera delta: coverage {cameraDeltas.coverage >= 0 ? "+" : ""}{cameraDeltas.coverage.toFixed(1)}%, passed zones {cameraDeltas.passedZones >= 0 ? "+" : ""}{cameraDeltas.passedZones}, failed zones {cameraDeltas.failedZones >= 0 ? "+" : ""}{cameraDeltas.failedZones}.
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

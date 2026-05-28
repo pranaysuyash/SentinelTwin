@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Camera, GitCompare, LayoutDashboard, Monitor, Play } from "lucide-react";
+import { Camera, FileText, GitCompare, LayoutDashboard, Monitor, Play } from "lucide-react";
 
 import { VIEW_MODE_PRESETS } from "@/lib/studio-constants";
 import type { ViewMode } from "@/store/studio-store";
@@ -13,6 +13,7 @@ const VIEW_OPTIONS: { mode: ViewMode; label: string; icon: React.ReactNode }[] =
   { mode: "wall", label: "Camera Wall Grid", icon: <Monitor className="h-3.5 w-3.5" /> },
   { mode: "replay", label: "Route Replay", icon: <Play className="h-3.5 w-3.5" /> },
   { mode: "compare", label: "Before/After", icon: <GitCompare className="h-3.5 w-3.5" /> },
+  { mode: "report", label: "Report", icon: <FileText className="h-3.5 w-3.5" /> },
 ];
 
 const tabVariants = {
@@ -75,6 +76,9 @@ export function ViewModeBar() {
   const viewMode = useStudioStore((s) => s.viewMode);
   const setViewMode = useStudioStore((s) => s.setViewMode);
   const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
+  const visible = useStudioStore((s) => s.visibleComponents.view_mode_bar);
+
+  if (!visible) return null;
 
   return (
     <motion.div

@@ -34,7 +34,7 @@ describe("scan-to-scene", () => {
       },
     ];
 
-    const scene = compileScanSessionToScene(session);
+    const { scene, provenance } = compileScanSessionToScene(session);
 
     expect(scene.source).toBe("scan_import");
     expect(scene.name).toBe("Manual Assisted Scan");
@@ -47,5 +47,8 @@ describe("scan-to-scene", () => {
     expect(scene.cameras[0]?.source).toBe("scan");
     expect(scene.obstructions[0]?.source).toBe("scan");
     expect(scene.doors[0]?.source).toBe("scan");
+    expect(provenance.source).toBe("scan_import");
+    expect(provenance.acceptedCandidates).toBe(4);
+    expect(scene.changeLog.some((entry) => entry.startsWith("Provenance:"))).toBe(true);
   });
 });

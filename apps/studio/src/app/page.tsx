@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { use, useEffect, useMemo, useRef, useState } from "react";
 
 import StudioShell from "@/components/layout/StudioShell";
 import { SceneBuilderWizard } from "@/components/scan-to-scene/SceneBuilderWizard";
@@ -9,18 +9,24 @@ import { StudioDashboardHome } from "@/components/launcher/StudioDashboardHome";
 import { useStudioStore, type BottomTab, type ViewMode, type WorkspacePreset } from "@/store/studio-store";
 import { draftSceneFromPrompt, draftSceneFromPromptWithModel } from "@/lib/ai-layout-draft";
 import { PRODUCT_FEATURE_STATUS } from "@/lib/product-feature-status";
-import { OpenAIProvider } from "@/agents/providers/OpenAIProvider";
+import { createModelProvider, describeAiProviderSelection, providerKeyAvailable } from "@/agents/provider-selection";
 import { simulateStudio } from "@/simulation/simulate-studio";
 
 function formatClock(timestamp: number | null | undefined) {
   if (!timestamp) return null;
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
     minute: "2-digit",
+    hour12: true,
+    timeZone: "UTC",
   }).format(new Date(timestamp));
 }
 
-export default function StudioPage() {
+type StudioPageProps = {
+  searchParams?: Promise<{ studio?: string | string[] }>;
+};
+
+export default function StudioPage({ searchParams }: StudioPageProps) {
   const [enterStudio, setEnterStudio] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const [showScanWizard, setShowScanWizard] = useState(false);
@@ -45,21 +51,34 @@ export default function StudioPage() {
   const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
   const setSimulationRunning = useStudioStore((s) => s.setSimulationRunning);
   const setSimulationResult = useStudioStore((s) => s.setSimulationResult);
+  const savedProjects = useStudioStore((s) => s.savedProjects);
+  const updateSavedSceneMetadata = useStudioStore((s) => s.updateSavedSceneMetadata);
+  const aiProviderSelection = useStudioStore((s) => s.aiProviderSelection);
 
   const currentResult = simulationResult ?? scene.simulation ?? null;
+  const bootstrapRef = useRef(false);
   const currentRunLabel = useMemo(() => {
     const label = formatClock(currentResult?.computedAt);
     return label ? `Last run ${label}` : null;
   }, [currentResult?.computedAt]);
+  const currentAiProvider = useMemo(() => describeAiProviderSelection(aiProviderSelection), [aiProviderSelection]);
 
-  const hasQueryBoot = useMemo(() => {
-    if (typeof window === "undefined") return false;
-    return new URLSearchParams(window.location.search).get("studio") === "1";
-  }, []);
+  const resolvedSearchParams = use(searchParams ?? Promise.resolve<{ studio?: string | string[] }>({}));
+  const hasQueryBoot = resolvedSearchParams.studio === "1";
 
   useEffect(() => {
     refreshSavedScenesList();
   }, [refreshSavedScenesList]);
+
+  useEffect(() => {
+    if (bootstrapRef.current) return;
+    if (currentResult || !simulationDirty || scene.source !== "demo") return;
+    bootstrapRef.current = true;
+    setSimulationRunning(true);
+    const start = performance.now();
+    const result = simulateStudio(scene);
+    setSimulationResult(result, performance.now() - start);
+  }, [currentResult, scene, scene.source, setSimulationResult, setSimulationRunning, simulationDirty]);
 
   const launchWorkspace = (viewMode: ViewMode, preset: WorkspacePreset, bottomTab?: BottomTab) => {
     setWorkspacePreset(preset);
@@ -73,7 +92,7 @@ export default function StudioPage() {
   const openCameraWall = () => launchWorkspace("wall", "camera_wall", "metrics");
   const openPathReplay = () => launchWorkspace("replay", "replay", "timeline");
   const openCompareFixes = () => launchWorkspace("compare", "compare", "beforeafter");
-  const openReport = () => launchWorkspace("map", "report", "report");
+  const openReport = () => launchWorkspace("report", "report", "report");
   const openIssues = () => launchWorkspace("map", "edit", "issues");
 
   const runSimulation = () => {
@@ -107,6 +126,7 @@ export default function StudioPage() {
         result={currentResult}
         simulationDirty={simulationDirty}
         savedScenes={savedScenes}
+        savedProjects={savedProjects}
         currentRunLabel={currentRunLabel}
         onOpenStudio={openStudio}
         onOpenCoverageWorkspace={openCoverageWorkspace}
@@ -121,6 +141,7 @@ export default function StudioPage() {
         onAiDraft={() => setShowAiDraft(true)}
         onOpenReport={openReport}
         onOpenScene={openScene}
+        onUpdateProjectMetadata={updateSavedSceneMetadata}
         onOpenMode={(viewMode, preset, bottomTab) => launchWorkspace(viewMode, preset, bottomTab)}
         featureStatus={PRODUCT_FEATURE_STATUS}
       />
@@ -187,7 +208,10 @@ export default function StudioPage() {
               Prompt-to-scene draft. Output is a real editable `SecurityScene` JSON-backed scene.
             </p>
             <div className="mt-2 rounded-lg border border-[#22314b] bg-[#101a2b] px-3 py-2 text-[10px] text-[#97a8c9]">
-              Model-backed if <code className="text-[#c4d5ff]">NEXT_PUBLIC_OPENAI_API_KEY</code> is set, otherwise a heuristic fallback is used. The generated scene will replace the current workspace.
+              Model-backed if <code className="text-[#c4d5ff]">{currentAiProvider.envKey}</code> is set, otherwise a heuristic fallback is used. The generated scene will replace the current workspace.
+              <span className="ml-2 rounded-full border border-[#2a3347] bg-[#0d1421] px-2 py-0.5 text-[9px] text-[#c4d5ff]">
+                {currentAiProvider.providerLabel}
+              </span>
             </div>
             <textarea
               value={aiPrompt}
@@ -206,13 +230,14 @@ export default function StudioPage() {
                 onClick={async () => {
                   setAiGenerating(true);
                   try {
-                    const hasPublicKey = Boolean(process.env.NEXT_PUBLIC_OPENAI_API_KEY);
-                    const draft = hasPublicKey
-                      ? await draftSceneFromPromptWithModel(aiPrompt, new OpenAIProvider())
+                    const provider = createModelProvider(aiProviderSelection);
+                    const hasProviderKey = providerKeyAvailable(aiProviderSelection.providerId);
+                    const draft = hasProviderKey
+                      ? await draftSceneFromPromptWithModel(aiPrompt, provider)
                       : draftSceneFromPrompt(aiPrompt);
                     setScene(draft.scene);
                     const warning =
-                      draft.warnings[0] ?? (hasPublicKey ? "Model draft generated without warnings." : "Using heuristic draft because NEXT_PUBLIC_OPENAI_API_KEY is not set.");
+                      draft.warnings[0] ?? (hasProviderKey ? `Model draft generated with ${currentAiProvider.providerLabel}.` : `Using heuristic draft because ${currentAiProvider.envKey} is not set.`);
                     const provenanceNote = `${draft.provenance.summary} (${draft.provenance.confidenceLevel} confidence)`;
                     setAiWarning(warning);
                     setAiDraftNotice(provenanceNote);

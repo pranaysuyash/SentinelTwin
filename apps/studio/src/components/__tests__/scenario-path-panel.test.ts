@@ -30,7 +30,14 @@ describe("ScenarioPathPanel", () => {
     const source = readFileSync(panelPath, "utf8");
 
     expect(source).toContain("Active Scenario");
+    expect(source).toContain("Active Scenario");
+    expect(source).toContain("Path Length");
+    expect(source).toContain("Est. Time");
+    expect(source).toContain("Route Legend");
     expect(source).toContain("Path Visibility Timeline");
+    expect(source).toContain("Edit Path");
+    expect(source).toContain("Play Path");
+    expect(source).toContain("actorType.replace(\"_\", \" \")");
     expect(source).toContain('setBottomTab("timeline")');
     expect(source).toContain("No path created");
     expect(source).toContain("No simulation yet");

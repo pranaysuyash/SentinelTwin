@@ -4,16 +4,15 @@ import { useCallback, useRef, useState } from "react";
 
 import { parseCommand, type SceneContextSummary } from "@/agents/CommandAgent";
 import { proposeCounterfactuals, type CounterfactualCandidate } from "@/agents/CounterfactualAgent";
-import { OpenAIProvider } from "@/agents/providers/OpenAIProvider";
+import { createModelProvider, describeAiProviderSelection, providerKeyAvailable } from "@/agents/provider-selection";
 import { generateReport, buildSimulationSummary } from "@/agents/ReportAgent";
 import type { SceneOperation } from "@/schema/SceneOperation";
 import { applySceneOperation } from "@/lib/applySceneOperation";
 import { createSecurityLightNode } from "@/lib/node-factory";
+import { parseOfflineCommand, type OfflineCommandAction } from "@/lib/offline-command-parser";
 import { useStudioStore } from "@/store/studio-store";
 import { simulateStudio } from "@/simulation/simulate-studio";
 import type { CameraNode, CriticalZoneNode } from "@/schema/security-scene";
-
-const provider = new OpenAIProvider();
 
 export type AiCommandStatus =
   | { state: "idle" }
@@ -22,6 +21,14 @@ export type AiCommandStatus =
   | { state: "error"; message: string }
   | { state: "success"; message: string }
   | { state: "candidates"; candidates: CounterfactualCandidate[]; description: string };
+
+export type AiCommandMode = {
+  label: string;
+  detail: string;
+  cloudAvailable: boolean;
+  providerLabel: string;
+  providerName: string;
+};
 
 function buildSceneContext(): SceneContextSummary {
   const scene = useStudioStore.getState().scene;
@@ -41,8 +48,27 @@ function buildSceneContext(): SceneContextSummary {
 }
 
 export function useAiCommand() {
+  const aiProviderSelection = useStudioStore((s) => s.aiProviderSelection);
   const [status, setStatus] = useState<AiCommandStatus>({ state: "idle" });
   const dismissRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const providerSummary = describeAiProviderSelection(aiProviderSelection);
+  const provider = createModelProvider(aiProviderSelection);
+  const apiKeyAvailable = providerKeyAvailable(aiProviderSelection.providerId);
+  const mode: AiCommandMode = apiKeyAvailable
+    ? {
+        label: "Offline-first",
+        detail: `Recognized scene edits run locally. ${providerSummary.providerName} is available for open-ended prompts and fix proposals.`,
+        cloudAvailable: true,
+        providerLabel: providerSummary.providerLabel,
+        providerName: providerSummary.providerName,
+      }
+    : {
+        label: "Offline-first",
+        detail: `Recognized scene edits run locally. Open-ended prompts and fix proposals stay offline until ${providerSummary.envKey} is set.`,
+        cloudAvailable: false,
+        providerLabel: providerSummary.providerLabel,
+        providerName: providerSummary.providerName,
+      };
 
   const setStatusSafe = useCallback((newStatus: AiCommandStatus) => {
     // Clear any pending auto-dismiss when status changes
@@ -51,7 +77,7 @@ export function useAiCommand() {
       dismissRef.current = null;
     }
     setStatus(newStatus);
-  }, []);
+  }, [aiProviderSelection.providerId, provider, providerSummary.providerName]);
 
   const autoDismiss = useCallback(() => {
     dismissRef.current = setTimeout(() => {
@@ -62,8 +88,6 @@ export function useAiCommand() {
 
   const executeCommand = useCallback(async (userText: string) => {
     if (!userText.trim()) return;
-
-    const { apiKeyAvailable } = checkApiKey();
 
     // Check for special internal commands first
     if (userText.startsWith("/")) {
@@ -214,9 +238,9 @@ export function useAiCommand() {
           // Parse constraints from remaining text after the command
           const constraints = userText.replace(/^\/fix\s*/i, "").replace(/^\/improve\s*/i, "").split(",").map((s) => s.trim()).filter(Boolean);
 
-          const { apiKeyAvailable: hasKey } = checkApiKey();
+          const hasKey = providerKeyAvailable(aiProviderSelection.providerId);
           if (!hasKey) {
-            setStatusSafe({ state: "error", message: "OpenAI API key not configured. Set OPENAI_API_KEY." });
+            setStatusSafe({ state: "error", message: `${providerSummary.providerName} API key not configured. Set ${providerSummary.envKey}.` });
             autoDismiss();
             return;
           }
@@ -301,10 +325,29 @@ export function useAiCommand() {
       }
     }
 
-    if (!apiKeyAvailable) {
-      setStatusSafe({ state: "error", message: "OpenAI API key not configured. Set OPENAI_API_KEY or NEXT_PUBLIC_OPENAI_API_KEY in your environment." });
+    const storeState = useStudioStore.getState();
+    const offlinePlan = parseOfflineCommand(userText, storeState.scene);
+    if (offlinePlan) {
+      if (offlinePlan.action) {
+        applyOfflineAction(offlinePlan.action);
+      }
+      if (offlinePlan.operations.length > 0) {
+        setStatusSafe({ state: "applying", descriptions: offlinePlan.operations.map((op) => op.type) });
+        applySceneOperations(offlinePlan.operations);
+        setStatusSafe({ state: "success", message: offlinePlan.message });
+        autoDismiss();
+      } else {
+        setStatusSafe({ state: "success", message: offlinePlan.message });
+        autoDismiss();
+      }
       return;
     }
+
+          const hasProviderKey = providerKeyAvailable(aiProviderSelection.providerId);
+          if (!hasProviderKey) {
+            setStatusSafe({ state: "error", message: `${providerSummary.providerName} API key not configured. Try commands like /night, /privacy on, /simulate, /report, or /target license_plate.` });
+            return;
+          }
 
     setStatusSafe({ state: "parsing" });
 
@@ -499,12 +542,12 @@ export function useAiCommand() {
       const message = err instanceof Error ? err.message : "Unknown error";
       setStatusSafe({ state: "error", message });
     }
-  }, [setStatusSafe, autoDismiss]);
+  }, [setStatusSafe, autoDismiss, aiProviderSelection.providerId, providerSummary.envKey, providerSummary.providerName, provider]);
 
   const runCounterfactuals = useCallback(async (constraints: string[], onCandidates: (candidates: CounterfactualCandidate[]) => void) => {
-    const { apiKeyAvailable } = checkApiKey();
+    const apiKeyAvailable = providerKeyAvailable(aiProviderSelection.providerId);
     if (!apiKeyAvailable) {
-      setStatus({ state: "error", message: "OpenAI API key not configured." });
+      setStatus({ state: "error", message: `${providerSummary.providerName} API key not configured.` });
       return;
     }
 
@@ -578,12 +621,12 @@ export function useAiCommand() {
       const message = err instanceof Error ? err.message : "Unknown error";
       setStatus({ state: "error", message });
     }
-  }, []);
+  }, [aiProviderSelection.providerId, provider, providerSummary.providerName]);
 
   const runReportGeneration = useCallback(async () => {
-    const { apiKeyAvailable } = checkApiKey();
+    const apiKeyAvailable = providerKeyAvailable(aiProviderSelection.providerId);
     if (!apiKeyAvailable) {
-      setStatus({ state: "error", message: "OpenAI API key not configured." });
+      setStatus({ state: "error", message: `${providerSummary.providerName} API key not configured.` });
       return null;
     }
 
@@ -609,7 +652,7 @@ export function useAiCommand() {
       setStatus({ state: "error", message });
       return null;
     }
-  }, []);
+  }, [aiProviderSelection.providerId, providerSummary.providerName]);
 
   const dismissError = useCallback(() => setStatusSafe({ state: "idle" }), [setStatusSafe]);
 
@@ -679,12 +722,114 @@ export function useAiCommand() {
     setStatusSafe({ state: "idle" });
   }, [setStatusSafe]);
 
-  return { status, executeCommand, runCounterfactuals, runReportGeneration, dismissError, applyCandidate };
+  return { status, executeCommand, runCounterfactuals, runReportGeneration, dismissError, applyCandidate, mode };
 }
 
-function checkApiKey() {
-  const key = typeof process !== "undefined"
-    ? (process.env.OPENAI_API_KEY ?? process.env.NEXT_PUBLIC_OPENAI_API_KEY)
-    : "";
-  return { apiKeyAvailable: Boolean(key) };
+function applyOfflineAction(action: OfflineCommandAction) {
+  const store = useStudioStore.getState();
+  switch (action.type) {
+    case "set_environment_mode":
+      store.setEnvironmentMode(action.mode);
+      break;
+    case "set_view_mode":
+      store.setViewMode(action.mode);
+      break;
+    case "set_bottom_tab":
+      store.setBottomTab(action.tab);
+      break;
+    case "set_layer_visibility":
+      store.setLayerVisibility(action.layer, action.visible);
+      break;
+    case "run_simulation":
+      store.runSimulation();
+      break;
+    case "save_snapshot":
+      store.saveSnapshot(action.label);
+      break;
+    default:
+      break;
+  }
+}
+
+function applySceneOperations(operations: SceneOperation[]) {
+  const store = useStudioStore.getState();
+  const scene = store.scene;
+  for (const op of operations) {
+    switch (op.type) {
+      case "move_camera": {
+        const cam = scene.cameras.find((c) => c.id === op.cameraId);
+        if (cam) cam.position = op.newPosition;
+        break;
+      }
+      case "rotate_camera": {
+        const cam = scene.cameras.find((c) => c.id === op.cameraId);
+        if (cam) {
+          cam.yawDeg = op.yawDeg;
+          if (op.pitchDeg !== undefined) cam.pitchDeg = op.pitchDeg;
+        }
+        break;
+      }
+      case "change_camera_fov": {
+        const cam = scene.cameras.find((c) => c.id === op.cameraId);
+        if (cam) cam.fovHorizontalDeg = op.fovHorizontalDeg;
+        break;
+      }
+      case "toggle_camera": {
+        const cam = scene.cameras.find((c) => c.id === op.cameraId);
+        if (cam) cam.status = op.status;
+        break;
+      }
+      case "move_obstruction": {
+        const obs = scene.obstructions.find((o) => o.id === op.obstructionId);
+        if (obs) obs.position = op.newPosition;
+        break;
+      }
+      case "resize_obstruction": {
+        const obs = scene.obstructions.find((o) => o.id === op.obstructionId);
+        if (obs) obs.dimensions = op.newDimensions;
+        break;
+      }
+      case "rotate_obstruction": {
+        const obs = scene.obstructions.find((o) => o.id === op.obstructionId);
+        if (obs) obs.rotationYDeg = op.rotationYDeg;
+        break;
+      }
+      case "add_light": {
+        const light = createSecurityLightNode(op.position);
+        if (op.name) light.name = op.name;
+        if (op.lightType) light.lightType = op.lightType;
+        if (op.brightness) light.brightness = op.brightness;
+        scene.securityLights.push(light);
+        break;
+      }
+      case "toggle_light": {
+        const light = scene.securityLights.find((l) => l.id === op.lightId);
+        if (light) light.status = op.status;
+        break;
+      }
+      case "set_time_of_day":
+        store.setEnvironmentMode(op.timeOfDay);
+        scene.assumptions.timeOfDay = op.timeOfDay === "dusk" ? "custom" : op.timeOfDay;
+        break;
+      case "save_snapshot":
+        store.saveSnapshot(op.label);
+        break;
+      case "generate_report":
+        store.setBottomTab("report");
+        break;
+      case "run_adversarial":
+      case "run_coverage_failure_analysis":
+        store.setActiveTool("path");
+        break;
+      case "replay_path":
+        store.setActivePathId(op.pathId);
+        store.setViewMode("replay");
+        break;
+      default:
+        break;
+    }
+  }
+  scene.updatedAt = Date.now();
+  store.markDirty();
+  store.runSimulation();
 }

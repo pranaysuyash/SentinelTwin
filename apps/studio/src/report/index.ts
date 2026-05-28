@@ -1,5 +1,8 @@
 import type { SecurityScene, SimulationResult } from "@/schema/security-scene";
 import { buildSceneIntelligenceGraph } from "@/lib/scene-intelligence-graph";
+import { computeCoveragePostureVariation } from "@/simulation/coverage-posture";
+import { computeCoverageUncertainty } from "@/simulation/coverage-uncertainty";
+import { buildRedundancyMatrixReport, type RedundancyMatrixReport } from "./redundancy-matrix";
 
 type ReportScene = SecurityScene;
 
@@ -47,6 +50,7 @@ export interface ReportData {
     zonesCovered: string[];
     issues: string[];
   }[];
+  redundancyMatrix?: RedundancyMatrixReport;
   issues: { severity: string; description: string; area: string; recommendation: string }[];
   recommendations: { description: string; costCategory: string; verified: boolean; estimatedImpact: string }[];
   provenance: {
@@ -70,6 +74,123 @@ export interface ReportData {
     vulnerabilityWindowCount: number;
     safestPeriods: { startHour: number; endHour: number; label: string }[];
     worstCoverage: number;
+  };
+  novelAlgorithms?: {
+    coverageFragility?: {
+      meanFragility: number;
+      fragileCellCount: number;
+      robustCellCount: number;
+      totalCells: number;
+    };
+    coverageUncertainty?: {
+      sampleCount: number;
+      meanCoveragePct: number;
+      p5CoveragePct: number;
+      p95CoveragePct: number;
+      worstZoneLabel: string | null;
+      worstZonePassRate: number | null;
+    };
+    postureVariation?: {
+      baselineProfileLabel: string;
+      profiles: {
+        profileId: string;
+        label: string;
+        targetHeightM: number;
+        description: string;
+        totalCoveragePct: number;
+        blindspotPct: number;
+        recognitionAreaPct: number;
+        identificationAreaPct: number;
+        averageWalkableQuality: number;
+        zonesPassing: number;
+        zonesTotal: number;
+        worstZoneLabel: string | null;
+        worstZoneStatus: "pass" | "fail" | null;
+        worstZoneActualQuality: string | null;
+        worstZoneRequiredQuality: string | null;
+      }[];
+      worstProfileLabel: string | null;
+      worstProfileCoveragePct: number | null;
+      largestDropProfileLabel: string | null;
+      largestDropDeltaPct: number | null;
+      worstZoneLabel: string | null;
+      worstZoneProfileLabel: string | null;
+    };
+    kRobustness?: {
+      kRobustness: number;
+      totalCameras: number;
+      isRobust: boolean;
+      criticalSets: {
+        k: number;
+        cameraNames: string[];
+        exposureScore: number;
+        waypointCount: number;
+      }[];
+    };
+    placementOracle?: {
+      candidateCount: number;
+      bestCandidateScore: number;
+      bestCandidateMountType: string;
+      bestCandidatePosition: [number, number, number];
+    };
+    temporalAnomalies?: {
+      anomalyWindowCount: number;
+      highSeverityCount: number;
+      mediumSeverityCount: number;
+      lowSeverityCount: number;
+      worstCoverageDropPct: number;
+      worstExposureJump: number;
+    };
+    occlusionBlameCount?: number;
+    blindRegionCount?: number;
+    blindRegions?: {
+      id: string;
+      areaSqM: number;
+      classification: "entry_corridor" | "entry_connected" | "isolated";
+      severity: "critical" | "high" | "medium" | "low";
+      touchesCriticalZone: boolean;
+      affectedZoneIds: string[];
+      description: string;
+    }[];
+    blindSpotFingerprint?: {
+      fingerprint: string;
+      signature: string;
+      regionCount: number;
+      criticalRegionCount: number;
+      entryConnectedRegionCount: number;
+      isolatedRegionCount: number;
+      totalBlindAreaSqM: number;
+      largestRegionAreaSqM: number;
+      affectedZoneCount: number;
+      severityCounts: {
+        critical: number;
+        high: number;
+        medium: number;
+        low: number;
+      };
+      classificationCounts: {
+        entry_corridor: number;
+        entry_connected: number;
+        isolated: number;
+      };
+    };
+    reflectiveBounce?: {
+      reflectiveWindowCount: number;
+      affectedCellCount: number;
+      affectedCameraCount: number;
+    };
+    occlusionBlame?: {
+      zoneId: string;
+      zoneLabel: string;
+      baselineQuality: string;
+      obstructions: {
+        obstructionId: string;
+        label: string;
+        blameFraction: number;
+        qualityWithout: string;
+        qualityImprovement: number;
+      }[];
+    }[];
   };
   meetsModeledZoneRequirements: boolean;
   codeCompliant: boolean;
@@ -97,6 +218,16 @@ export function buildReportData(
     snapshotCount: scene.snapshots?.length ?? 0,
   });
   const provenanceNotes = (scene.changeLog ?? []).filter((entry) => entry.startsWith("Provenance:") || entry.startsWith("Provenance confidence:"));
+  const sourceNotes = provenanceNotes.filter((entry) => entry.startsWith("Provenance:"));
+  const confidenceNotes = provenanceNotes.filter((entry) => entry.startsWith("Provenance confidence:"));
+  const coverageUncertainty = computeCoverageUncertainty(scene, { sampleCount: 12 });
+  const postureVariation = computeCoveragePostureVariation(scene);
+  const redundancyMatrix = buildRedundancyMatrixReport(scene, result);
+  if (sourceNotes.length === 0) {
+    sourceNotes.push(`Provenance: ${graph.summary.sceneSourceLabel} scene derived from the canonical SecurityScene.`);
+  }
+
+  const cameraMap = new Map(scene.cameras.map((camera) => [camera.id, camera]));
 
   return {
     title: options?.title ?? "Security Coverage Audit Report",
@@ -134,12 +265,13 @@ export function buildReportData(
     })),
     cameras: result.cameraResults.map((c) => ({
       id: c.cameraId,
-      name: c.cameraId,
-      status: "on",
+      name: cameraMap.get(c.cameraId)?.name ?? c.cameraId,
+      status: cameraMap.get(c.cameraId)?.status ?? "unknown",
       coveragePct: c.coveragePct,
       zonesCovered: c.criticalZonesCovered ?? [],
       issues: [],
     })),
+    redundancyMatrix: redundancyMatrix ?? undefined,
     issues: result.issues.map((i) => ({
       severity: i.severity,
       description: i.description,
@@ -160,8 +292,8 @@ export function buildReportData(
       edgeCount: graph.summary.edgeCount,
       revisionDepth: graph.summary.revisionDepth,
       snapshotCount: graph.summary.snapshotCount,
-      confidenceNotes: provenanceNotes.filter((entry) => entry.startsWith("Provenance confidence:")),
-      sourceNotes: provenanceNotes.filter((entry) => entry.startsWith("Provenance:")),
+      confidenceNotes,
+      sourceNotes,
     },
     adversarialPath: options?.adversarialPath
       ? {
@@ -178,6 +310,130 @@ export function buildReportData(
           worstCoverage: options.temporalProfile.worstCoverage,
         }
       : undefined,
+    novelAlgorithms: {
+      coverageFragility: result.fragilitySummary
+        ? {
+            meanFragility: result.fragilitySummary.meanFragility,
+            fragileCellCount: result.fragilitySummary.fragileCellCount,
+            robustCellCount: result.fragilitySummary.robustCellCount,
+            totalCells: result.fragilitySummary.totalCells,
+          }
+        : undefined,
+      coverageUncertainty: coverageUncertainty
+        ? {
+            sampleCount: coverageUncertainty.sampleCount,
+            meanCoveragePct: coverageUncertainty.meanCoveragePct,
+            p5CoveragePct: coverageUncertainty.p5CoveragePct,
+            p95CoveragePct: coverageUncertainty.p95CoveragePct,
+            worstZoneLabel: coverageUncertainty.worstZoneLabel,
+            worstZonePassRate: coverageUncertainty.worstZonePassRate,
+          }
+        : undefined,
+      postureVariation: postureVariation
+        ? {
+            baselineProfileLabel: postureVariation.baselineProfileLabel,
+            profiles: postureVariation.profiles.map((profile) => ({
+              profileId: profile.profileId,
+              label: profile.label,
+              targetHeightM: profile.targetHeightM,
+              description: profile.description,
+              totalCoveragePct: profile.totalCoveragePct,
+              blindspotPct: profile.blindspotPct,
+              recognitionAreaPct: profile.recognitionAreaPct,
+              identificationAreaPct: profile.identificationAreaPct,
+              averageWalkableQuality: profile.averageWalkableQuality,
+              zonesPassing: profile.zonesPassing,
+              zonesTotal: profile.zonesTotal,
+              worstZoneLabel: profile.worstZoneLabel,
+              worstZoneStatus: profile.worstZoneStatus,
+              worstZoneActualQuality: profile.worstZoneActualQuality,
+              worstZoneRequiredQuality: profile.worstZoneRequiredQuality,
+            })),
+            worstProfileLabel: postureVariation.worstProfileLabel,
+            worstProfileCoveragePct: postureVariation.worstProfileCoveragePct,
+            largestDropProfileLabel: postureVariation.largestDropProfileLabel,
+            largestDropDeltaPct: postureVariation.largestDropDeltaPct,
+            worstZoneLabel: postureVariation.worstZoneLabel,
+            worstZoneProfileLabel: postureVariation.worstZoneProfileLabel,
+          }
+        : undefined,
+      kRobustness: result.kRobustness
+        ? {
+            kRobustness: result.kRobustness.kRobustness,
+            totalCameras: result.kRobustness.totalCameras,
+            isRobust: result.kRobustness.isRobust,
+            criticalSets: result.kRobustness.criticalSets.map((set) => ({
+              k: set.k,
+              cameraNames: set.cameraNames,
+              exposureScore: set.exposureScore,
+              waypointCount: set.waypointCount,
+            })),
+          }
+        : undefined,
+      placementOracle: result.placementOracle?.bestCandidate
+        ? {
+            candidateCount: result.placementOracle.candidateCount,
+            bestCandidateScore: result.placementOracle.bestCandidate.score,
+            bestCandidateMountType: result.placementOracle.bestCandidate.mountType,
+            bestCandidatePosition: result.placementOracle.bestCandidate.position,
+          }
+        : undefined,
+      temporalAnomalies: options?.temporalProfile
+        ? {
+            anomalyWindowCount: options.temporalProfile.vulnerabilityWindowCount,
+            highSeverityCount: 0,
+            mediumSeverityCount: 0,
+            lowSeverityCount: 0,
+            worstCoverageDropPct: options.temporalProfile.worstCoverage,
+            worstExposureJump: 0,
+          }
+        : undefined,
+      occlusionBlameCount: result.occlusionBlame?.length ?? 0,
+      blindRegionCount: result.blindRegions?.length ?? 0,
+      blindRegions: result.blindRegions?.map((region) => ({
+        id: region.id,
+        areaSqM: region.areaSqM,
+        classification: region.classification,
+        severity: region.severity,
+        touchesCriticalZone: region.touchesCriticalZone,
+        affectedZoneIds: region.affectedZoneIds,
+        description: region.description,
+      })),
+      blindSpotFingerprint: result.blindSpotFingerprint
+        ? {
+            fingerprint: result.blindSpotFingerprint.fingerprint,
+            signature: result.blindSpotFingerprint.signature,
+            regionCount: result.blindSpotFingerprint.regionCount,
+            criticalRegionCount: result.blindSpotFingerprint.criticalRegionCount,
+            entryConnectedRegionCount: result.blindSpotFingerprint.entryConnectedRegionCount,
+            isolatedRegionCount: result.blindSpotFingerprint.isolatedRegionCount,
+            totalBlindAreaSqM: result.blindSpotFingerprint.totalBlindAreaSqM,
+            largestRegionAreaSqM: result.blindSpotFingerprint.largestRegionAreaSqM,
+            affectedZoneCount: result.blindSpotFingerprint.affectedZoneCount,
+            severityCounts: result.blindSpotFingerprint.severityCounts,
+            classificationCounts: result.blindSpotFingerprint.classificationCounts,
+          }
+        : undefined,
+      reflectiveBounce: result.reflectiveBounce
+        ? {
+            reflectiveWindowCount: result.reflectiveBounce.reflectiveWindowCount,
+            affectedCellCount: result.reflectiveBounce.affectedCellCount,
+            affectedCameraCount: result.reflectiveBounce.affectedCameraCount,
+          }
+        : undefined,
+      occlusionBlame: result.occlusionBlame?.map((zone) => ({
+        zoneId: zone.zoneId,
+        zoneLabel: zone.zoneLabel,
+        baselineQuality: zone.baselineQuality,
+        obstructions: zone.obstructions.map((obstruction) => ({
+          obstructionId: obstruction.obstructionId,
+          label: obstruction.label,
+          blameFraction: obstruction.blameFraction,
+          qualityWithout: obstruction.qualityWithout,
+          qualityImprovement: obstruction.qualityImprovement,
+        })),
+      })),
+    },
     meetsModeledZoneRequirements,
     codeCompliant: meetsModeledZoneRequirements,
     standardsRef:
@@ -446,6 +702,56 @@ export function exportAsHtml(report: ReportData): string {
   </table>
   ` : "<p>No cameras configured.</p>"}
 
+  ${report.redundancyMatrix ? `
+  <h2>Redundancy Matrix</h2>
+  <p>Rows show how each camera contributes to zone coverage. Single-point zones are the cells most likely to fail if a camera goes offline.</p>
+  <table>
+    <thead>
+      <tr><th>Cameras</th><th>Zones</th><th>Redundant</th><th>SPOF</th><th>Uncovered</th><th>Vulnerable Rows</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>${report.redundancyMatrix.cameraCount}</td>
+        <td>${report.redundancyMatrix.zoneCount}</td>
+        <td>${report.redundancyMatrix.redundantZoneCount}</td>
+        <td>${report.redundancyMatrix.spofZoneCount}</td>
+        <td>${report.redundancyMatrix.uncoveredZoneCount}</td>
+        <td>${report.redundancyMatrix.vulnerableZones.length}</td>
+      </tr>
+    </tbody>
+  </table>
+  ${report.redundancyMatrix.vulnerableZones.length > 0 ? `
+  <h3>Vulnerable Zones</h3>
+  <table>
+    <thead><tr><th>Zone</th><th>Status</th><th>Cameras</th></tr></thead>
+    <tbody>
+      ${report.redundancyMatrix.vulnerableZones.map((zone) => `
+        <tr>
+          <td>${escapeHtml(zone.label)}</td>
+          <td>${escapeHtml(zone.status.replace(/_/g, " "))}</td>
+          <td>${zone.coveringCameraNames.length > 0 ? zone.coveringCameraNames.map((name) => escapeHtml(name)).join(", ") : "none"}</td>
+        </tr>
+      `).join("")}
+    </tbody>
+  </table>
+  ` : ""}
+  <table>
+    <thead><tr><th>Camera</th><th>Status</th><th>Coverage</th><th>Criticality</th><th>Single-point zones</th><th>Covered zones</th></tr></thead>
+    <tbody>
+      ${report.redundancyMatrix.cameraRows.map((row) => `
+        <tr>
+          <td>${escapeHtml(row.cameraName)}</td>
+          <td>${escapeHtml(row.status)}</td>
+          <td>${row.coveragePct.toFixed(1)}%</td>
+          <td>${escapeHtml(row.criticalityLabel)} (${row.criticalityScore}/10)</td>
+          <td>${row.soleCoverageZones.map((zone) => escapeHtml(zone.label)).join(", ") || "none"}</td>
+          <td>${row.coveredZones.map((zone) => escapeHtml(zone.label + (zone.isSole ? " ⚠" : ""))).join(", ") || "none"}</td>
+        </tr>
+      `).join("")}
+    </tbody>
+  </table>
+  ` : ""}
+
   <h2>Issues Found (${report.issues.length})</h2>
   ${report.issues.length > 0
     ? report.issues.map((i) => `
@@ -486,6 +792,112 @@ export function exportAsHtml(report: ReportData): string {
     <tr><th>Exposure Score</th><td>${report.adversarialPath.exposureScore.toFixed(1)}</td></tr>
     <tr><th>Detection Probability</th><td>${(report.adversarialPath.detectionProbability * 100).toFixed(0)}%</td></tr>
     <tr><th>Path Distance</th><td>${report.adversarialPath.totalDistance.toFixed(1)}m</td></tr>
+  </table>
+  ` : ""}
+
+  ${report.novelAlgorithms ? `
+  <h2>Novel Algorithms</h2>
+  <table>
+    <tr><th>Coverage Fragility</th><td>${report.novelAlgorithms.coverageFragility ? `${(report.novelAlgorithms.coverageFragility.meanFragility * 100).toFixed(1)}% mean · ${report.novelAlgorithms.coverageFragility.fragileCellCount}/${report.novelAlgorithms.coverageFragility.totalCells} fragile cells` : "Not computed"}</td></tr>
+    <tr><th>Coverage Uncertainty</th><td>${report.novelAlgorithms.coverageUncertainty ? `${report.novelAlgorithms.coverageUncertainty.sampleCount} samples · ${report.novelAlgorithms.coverageUncertainty.meanCoveragePct.toFixed(1)}% mean (${report.novelAlgorithms.coverageUncertainty.p5CoveragePct.toFixed(1)}%–${report.novelAlgorithms.coverageUncertainty.p95CoveragePct.toFixed(1)}%)` : "Not computed"}</td></tr>
+    <tr><th>Coverage Posture Variation</th><td>${report.novelAlgorithms.postureVariation ? `${report.novelAlgorithms.postureVariation.profiles.length} profiles · worst ${report.novelAlgorithms.postureVariation.worstProfileLabel ?? "—"} ${report.novelAlgorithms.postureVariation.worstProfileCoveragePct != null ? `${report.novelAlgorithms.postureVariation.worstProfileCoveragePct.toFixed(1)}%` : ""} · largest drop ${report.novelAlgorithms.postureVariation.largestDropProfileLabel ?? "—"} (${formatSignedDelta(report.novelAlgorithms.postureVariation.largestDropDeltaPct)})` : "Not computed"}</td></tr>
+    <tr><th>Blind Spot Topology</th><td>${report.novelAlgorithms.blindRegions ? `${report.novelAlgorithms.blindRegionCount ?? report.novelAlgorithms.blindRegions.length} regions · ${report.novelAlgorithms.blindRegions.filter((region) => region.severity === "critical").length} critical · ${report.novelAlgorithms.blindRegions.filter((region) => region.touchesCriticalZone).length} touching critical zones` : "Not computed"}</td></tr>
+    <tr><th>Blind Spot Fingerprint</th><td>${report.novelAlgorithms.blindSpotFingerprint ? `${report.novelAlgorithms.blindSpotFingerprint.fingerprint} · ${report.novelAlgorithms.blindSpotFingerprint.regionCount} regions` : "Not computed"}</td></tr>
+    <tr><th>Reflective Bounce</th><td>${report.novelAlgorithms.reflectiveBounce ? `${report.novelAlgorithms.reflectiveBounce.reflectiveWindowCount} reflective windows · ${report.novelAlgorithms.reflectiveBounce.affectedCellCount} affected cells` : "Not computed"}</td></tr>
+    <tr><th>K-Robustness</th><td>${report.novelAlgorithms.kRobustness ? `K=${report.novelAlgorithms.kRobustness.kRobustness} / ${report.novelAlgorithms.kRobustness.totalCameras} (${report.novelAlgorithms.kRobustness.isRobust ? "robust" : "not robust"})` : "Not computed"}</td></tr>
+    <tr><th>Placement Oracle</th><td>${report.novelAlgorithms.placementOracle ? `${report.novelAlgorithms.placementOracle.candidateCount} candidates · best ${report.novelAlgorithms.placementOracle.bestCandidateMountType} @ ${report.novelAlgorithms.placementOracle.bestCandidatePosition[0].toFixed(1)}, ${report.novelAlgorithms.placementOracle.bestCandidatePosition[2].toFixed(1)} · score ${report.novelAlgorithms.placementOracle.bestCandidateScore.toFixed(1)}` : "Not computed"}</td></tr>
+    <tr><th>Temporal Anomalies</th><td>${report.novelAlgorithms.temporalAnomalies ? `${report.novelAlgorithms.temporalAnomalies.anomalyWindowCount} windows` : "Not computed"}</td></tr>
+    <tr><th>Occlusion Blame</th><td>${report.novelAlgorithms.occlusionBlame ? `${report.novelAlgorithms.occlusionBlame.length} zones · ${report.novelAlgorithms.occlusionBlame[0] ? report.novelAlgorithms.occlusionBlame[0].obstructions.length : 0} top blockers in first zone` : `${report.novelAlgorithms.occlusionBlameCount ?? 0} groups`}</td></tr>
+  </table>
+  ${report.novelAlgorithms.kRobustness?.criticalSets?.length ? `
+  <h3>K-Robustness Critical Sets</h3>
+  <table>
+    <thead><tr><th>K</th><th>Cameras</th><th>Exposure</th><th>Waypoints</th></tr></thead>
+    <tbody>
+      ${report.novelAlgorithms.kRobustness.criticalSets.slice(0, 5).map((set) => `
+        <tr>
+          <td>${set.k}</td>
+          <td>${escapeHtml(set.cameraNames.join(", "))}</td>
+          <td>${set.exposureScore.toFixed(1)}</td>
+          <td>${set.waypointCount}</td>
+        </tr>
+      `).join("")}
+    </tbody>
+  </table>
+  ` : ""}
+  ` : ""}
+
+  ${report.novelAlgorithms?.blindRegions && report.novelAlgorithms.blindRegions.length > 0 ? `
+  <h2>Blind Spot Topology</h2>
+  <p>Blind regions are grouped connected areas of zero-visibility cells. Severity reflects whether they connect entries to critical zones or remain isolated.</p>
+  <table>
+    <thead><tr><th>Region</th><th>Severity</th><th>Class</th><th>Area</th><th>Touching Critical</th><th>Affected Zones</th></tr></thead>
+    <tbody>
+      ${report.novelAlgorithms.blindRegions.map((region) => `
+        <tr>
+          <td>${escapeHtml(region.description)}</td>
+          <td>${region.severity}</td>
+          <td>${region.classification}</td>
+          <td>${region.areaSqM.toFixed(1)}m²</td>
+          <td>${region.touchesCriticalZone ? "Yes" : "No"}</td>
+          <td>${region.affectedZoneIds.join(", ") || "none"}</td>
+        </tr>
+      `).join("")}
+    </tbody>
+  </table>
+  ` : ""}
+
+  ${report.novelAlgorithms?.blindSpotFingerprint ? `
+  <h2>Blind Spot Fingerprint</h2>
+  <p>A deterministic fingerprint for the scene's blind-region pattern. Use it to recognize when two layouts share the same blind-spot shape.</p>
+  <table>
+    <tr><th>Fingerprint</th><td>${report.novelAlgorithms.blindSpotFingerprint.fingerprint}</td></tr>
+    <tr><th>Regions</th><td>${report.novelAlgorithms.blindSpotFingerprint.regionCount}</td></tr>
+    <tr><th>Critical / Entry-linked / Isolated</th><td>${report.novelAlgorithms.blindSpotFingerprint.criticalRegionCount} / ${report.novelAlgorithms.blindSpotFingerprint.entryConnectedRegionCount} / ${report.novelAlgorithms.blindSpotFingerprint.isolatedRegionCount}</td></tr>
+    <tr><th>Total blind area</th><td>${report.novelAlgorithms.blindSpotFingerprint.totalBlindAreaSqM.toFixed(1)} m²</td></tr>
+    <tr><th>Largest region</th><td>${report.novelAlgorithms.blindSpotFingerprint.largestRegionAreaSqM.toFixed(1)} m²</td></tr>
+    <tr><th>Affected zones</th><td>${report.novelAlgorithms.blindSpotFingerprint.affectedZoneCount}</td></tr>
+  </table>
+  ` : ""}
+
+  ${report.novelAlgorithms?.reflectiveBounce ? `
+  <h2>Reflective Bounce Vision</h2>
+  <p>Reflective windows can act as deterministic mirror proxies when they improve the visible quality of cells on the far side of the reflective surface.</p>
+  <table>
+    <tr><th>Reflective windows</th><td>${report.novelAlgorithms.reflectiveBounce.reflectiveWindowCount}</td></tr>
+    <tr><th>Affected cells</th><td>${report.novelAlgorithms.reflectiveBounce.affectedCellCount}</td></tr>
+    <tr><th>Affected cameras</th><td>${report.novelAlgorithms.reflectiveBounce.affectedCameraCount}</td></tr>
+  </table>
+  ` : ""}
+
+  ${report.novelAlgorithms?.occlusionBlame && report.novelAlgorithms.occlusionBlame.length > 0 ? `
+  <h2>Occlusion Blame</h2>
+  <p>When a zone fails, this section attributes the quality loss to the specific obstructions that improve the zone when removed.</p>
+  ${report.novelAlgorithms.occlusionBlame.map((zone) => `
+    <h3>${escapeHtml(zone.zoneLabel)} (${zone.baselineQuality})</h3>
+    <table>
+      <thead><tr><th>Obstruction</th><th>Blame</th><th>Quality Without</th><th>Improvement</th></tr></thead>
+      <tbody>
+        ${zone.obstructions.map((obstruction) => `
+          <tr>
+            <td>${escapeHtml(obstruction.label)}</td>
+            <td>${(obstruction.blameFraction * 100).toFixed(0)}%</td>
+            <td>${obstruction.qualityWithout}</td>
+            <td>+${obstruction.qualityImprovement.toFixed(1)}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `).join("")}
+  ` : ""}
+
+  ${report.novelAlgorithms?.placementOracle ? `
+  <h2>Placement Oracle</h2>
+  <p>The placement oracle scores wall and ceiling mount candidates to highlight the next best camera location.</p>
+  <table>
+    <tr><th>Candidate Count</th><td>${report.novelAlgorithms.placementOracle.candidateCount}</td></tr>
+    <tr><th>Best Candidate</th><td>${report.novelAlgorithms.placementOracle.bestCandidateMountType} @ ${report.novelAlgorithms.placementOracle.bestCandidatePosition[0].toFixed(1)}, ${report.novelAlgorithms.placementOracle.bestCandidatePosition[2].toFixed(1)}</td></tr>
+    <tr><th>Best Score</th><td>${report.novelAlgorithms.placementOracle.bestCandidateScore.toFixed(1)}</td></tr>
   </table>
   ` : ""}
 
@@ -576,6 +988,30 @@ export function exportAsMarkdown(report: ReportData): string {
         )
       : ["No recommendations."]),
     "",
+    ...(report.redundancyMatrix
+      ? [
+          "## Redundancy Matrix",
+          `- Cameras: ${report.redundancyMatrix.cameraCount}`,
+          `- Zones: ${report.redundancyMatrix.zoneCount}`,
+          `- Redundant zones: ${report.redundancyMatrix.redundantZoneCount}`,
+          `- SPOF zones: ${report.redundancyMatrix.spofZoneCount}`,
+          `- Uncovered zones: ${report.redundancyMatrix.uncoveredZoneCount}`,
+          ...(report.redundancyMatrix.vulnerableZones.length > 0
+            ? [
+                "- Vulnerable zones:",
+                ...report.redundancyMatrix.vulnerableZones.map((zone) =>
+                  `  - ${zone.label}: ${zone.status.replace(/_/g, " ")}${zone.coveringCameraNames.length > 0 ? ` (${zone.coveringCameraNames.join(", ")})` : ""}`,
+                ),
+              ]
+            : []),
+          "- Camera matrix:",
+          ...report.redundancyMatrix.cameraRows.map(
+            (row) =>
+              `  - ${row.cameraName} (${row.status}, ${row.coveragePct.toFixed(1)}%, ${row.criticalityLabel} ${row.criticalityScore}/10) | single-point: ${row.soleCoverageZones.map((zone) => zone.label).join(", ") || "none"} | covered: ${row.coveredZones.map((zone) => `${zone.label}${zone.isSole ? " ⚠" : ""}`).join(", ") || "none"}`,
+          ),
+          "",
+        ]
+      : []),
     ...(report.temporalProfile
       ? [
           "## Temporal Profile",
@@ -590,6 +1026,83 @@ export function exportAsMarkdown(report: ReportData): string {
           "- Defensive route-risk analysis for coverage hardening (not attacker guidance)",
           `- Exposure score: ${report.adversarialPath.exposureScore.toFixed(1)}`,
           `- Detection probability: ${(report.adversarialPath.detectionProbability * 100).toFixed(0)}%`,
+          "",
+        ]
+      : []),
+    ...(report.novelAlgorithms
+      ? [
+          "## Novel Algorithms",
+          `- Coverage Fragility: ${report.novelAlgorithms.coverageFragility ? `${(report.novelAlgorithms.coverageFragility.meanFragility * 100).toFixed(1)}% mean · ${report.novelAlgorithms.coverageFragility.fragileCellCount}/${report.novelAlgorithms.coverageFragility.totalCells} fragile cells` : "Not computed"}`,
+          `- Coverage Uncertainty: ${report.novelAlgorithms.coverageUncertainty ? `${report.novelAlgorithms.coverageUncertainty.sampleCount} samples · ${report.novelAlgorithms.coverageUncertainty.meanCoveragePct.toFixed(1)}% mean (${report.novelAlgorithms.coverageUncertainty.p5CoveragePct.toFixed(1)}%–${report.novelAlgorithms.coverageUncertainty.p95CoveragePct.toFixed(1)}%)` : "Not computed"}`,
+          `- Coverage Posture Variation: ${report.novelAlgorithms.postureVariation ? `${report.novelAlgorithms.postureVariation.profiles.length} profiles · worst ${report.novelAlgorithms.postureVariation.worstProfileLabel ?? "—"} ${report.novelAlgorithms.postureVariation.worstProfileCoveragePct != null ? `${report.novelAlgorithms.postureVariation.worstProfileCoveragePct.toFixed(1)}%` : ""} · largest drop ${report.novelAlgorithms.postureVariation.largestDropProfileLabel ?? "—"} (${formatSignedDelta(report.novelAlgorithms.postureVariation.largestDropDeltaPct)})` : "Not computed"}`,
+          `- Blind Spot Topology: ${report.novelAlgorithms.blindRegions ? `${report.novelAlgorithms.blindRegionCount ?? report.novelAlgorithms.blindRegions.length} regions · ${report.novelAlgorithms.blindRegions.filter((region) => region.severity === "critical").length} critical` : "Not computed"}`,
+          `- Blind Spot Fingerprint: ${report.novelAlgorithms.blindSpotFingerprint ? `${report.novelAlgorithms.blindSpotFingerprint.fingerprint} · ${report.novelAlgorithms.blindSpotFingerprint.regionCount} regions` : "Not computed"}`,
+          `- Reflective Bounce: ${report.novelAlgorithms.reflectiveBounce ? `${report.novelAlgorithms.reflectiveBounce.reflectiveWindowCount} reflective windows · ${report.novelAlgorithms.reflectiveBounce.affectedCellCount} affected cells` : "Not computed"}`,
+          `- K-Robustness: ${report.novelAlgorithms.kRobustness ? `K=${report.novelAlgorithms.kRobustness.kRobustness} / ${report.novelAlgorithms.kRobustness.totalCameras}` : "Not computed"}`,
+          `- Placement Oracle: ${report.novelAlgorithms.placementOracle ? `${report.novelAlgorithms.placementOracle.candidateCount} candidates · best ${report.novelAlgorithms.placementOracle.bestCandidateMountType} @ ${report.novelAlgorithms.placementOracle.bestCandidatePosition[0].toFixed(1)}, ${report.novelAlgorithms.placementOracle.bestCandidatePosition[2].toFixed(1)} · score ${report.novelAlgorithms.placementOracle.bestCandidateScore.toFixed(1)}` : "Not computed"}`,
+          `- Temporal Anomalies: ${report.novelAlgorithms.temporalAnomalies ? `${report.novelAlgorithms.temporalAnomalies.anomalyWindowCount} windows` : "Not computed"}`,
+          `- Occlusion Blame: ${report.novelAlgorithms.occlusionBlame ? `${report.novelAlgorithms.occlusionBlame.length} zones` : `${report.novelAlgorithms.occlusionBlameCount ?? 0} groups`}`,
+          `- Blind Regions: ${report.novelAlgorithms.blindRegionCount ?? 0} regions`,
+          "",
+        ]
+      : []),
+    ...(report.novelAlgorithms?.occlusionBlame && report.novelAlgorithms.occlusionBlame.length > 0
+      ? [
+          "## Occlusion Blame",
+          ...report.novelAlgorithms.occlusionBlame.map((zone) => [
+            `- ${zone.zoneLabel} (${zone.baselineQuality})`,
+            ...zone.obstructions.map(
+              (obstruction) =>
+                `  - ${obstruction.label}: ${(obstruction.blameFraction * 100).toFixed(0)}% blame, ${obstruction.qualityWithout} without, +${obstruction.qualityImprovement.toFixed(1)} improvement`,
+            ),
+          ]).flat(),
+          "",
+        ]
+      : []),
+    ...(report.novelAlgorithms?.blindRegions && report.novelAlgorithms.blindRegions.length > 0
+      ? [
+          "## Blind Spot Topology",
+          ...report.novelAlgorithms.blindRegions.map(
+            (region) =>
+              `- [${region.severity.toUpperCase()}] ${region.description} (${region.classification}, ${region.areaSqM.toFixed(1)}m²)${region.affectedZoneIds.length > 0 ? ` — zones: ${region.affectedZoneIds.join(", ")}` : ""}`,
+          ),
+          "",
+        ]
+      : []),
+    ...(report.novelAlgorithms?.blindSpotFingerprint
+      ? [
+          "## Blind Spot Fingerprint",
+          `- Fingerprint: ${report.novelAlgorithms.blindSpotFingerprint.fingerprint}`,
+          `- Regions: ${report.novelAlgorithms.blindSpotFingerprint.regionCount}`,
+          `- Critical / Entry-linked / Isolated: ${report.novelAlgorithms.blindSpotFingerprint.criticalRegionCount} / ${report.novelAlgorithms.blindSpotFingerprint.entryConnectedRegionCount} / ${report.novelAlgorithms.blindSpotFingerprint.isolatedRegionCount}`,
+          `- Total blind area: ${report.novelAlgorithms.blindSpotFingerprint.totalBlindAreaSqM.toFixed(1)} m²`,
+          "",
+        ]
+      : []),
+    ...(report.novelAlgorithms?.reflectiveBounce
+      ? [
+          "## Reflective Bounce Vision",
+          `- Reflective windows: ${report.novelAlgorithms.reflectiveBounce.reflectiveWindowCount}`,
+          `- Affected cells: ${report.novelAlgorithms.reflectiveBounce.affectedCellCount}`,
+          `- Affected cameras: ${report.novelAlgorithms.reflectiveBounce.affectedCameraCount}`,
+          "",
+        ]
+      : []),
+    ...(report.novelAlgorithms?.placementOracle
+      ? [
+          "## Placement Oracle",
+          `- Candidate count: ${report.novelAlgorithms.placementOracle.candidateCount}`,
+          `- Best candidate: ${report.novelAlgorithms.placementOracle.bestCandidateMountType} @ ${report.novelAlgorithms.placementOracle.bestCandidatePosition[0].toFixed(1)}, ${report.novelAlgorithms.placementOracle.bestCandidatePosition[2].toFixed(1)}`,
+          `- Best score: ${report.novelAlgorithms.placementOracle.bestCandidateScore.toFixed(1)}`,
+          "",
+        ]
+      : []),
+    ...(report.novelAlgorithms?.kRobustness?.criticalSets?.length
+      ? [
+          "## K-Robustness Critical Sets",
+          ...report.novelAlgorithms.kRobustness.criticalSets.slice(0, 5).map(
+            (set) => `- K=${set.k}: ${set.cameraNames.join(", ")} (exposure ${set.exposureScore.toFixed(1)}, ${set.waypointCount} waypoints)`,
+          ),
           "",
         ]
       : []),
@@ -673,6 +1186,64 @@ export function exportAsText(report: ReportData): string {
           ...report.recommendations.map((r) =>
             `  [${r.verified ? "✓" : "○"}] ${r.description} (${r.costCategory})`,
           ),
+          "",
+        ]
+      : []),
+    ...(report.redundancyMatrix
+      ? [
+          "REDUNDANCY MATRIX",
+          `${"-".repeat(30)}`,
+          `  Cameras:               ${report.redundancyMatrix.cameraCount}`,
+          `  Zones:                 ${report.redundancyMatrix.zoneCount}`,
+          `  Redundant zones:       ${report.redundancyMatrix.redundantZoneCount}`,
+          `  SPOF zones:            ${report.redundancyMatrix.spofZoneCount}`,
+          `  Uncovered zones:       ${report.redundancyMatrix.uncoveredZoneCount}`,
+          ...(report.redundancyMatrix.vulnerableZones.length > 0
+            ? [
+                "  Vulnerable zones:",
+                ...report.redundancyMatrix.vulnerableZones.map(
+                  (zone) => `    - ${zone.label}: ${zone.status.replace(/_/g, " ")}${zone.coveringCameraNames.length > 0 ? ` (${zone.coveringCameraNames.join(", ")})` : ""}`,
+                ),
+              ]
+            : []),
+          "  Camera matrix:",
+          ...report.redundancyMatrix.cameraRows.map(
+            (row) =>
+              `    - ${row.cameraName} (${row.status}, ${row.coveragePct.toFixed(1)}%, ${row.criticalityLabel} ${row.criticalityScore}/10) | single-point: ${row.soleCoverageZones.map((zone) => zone.label).join(", ") || "none"} | covered: ${row.coveredZones.map((zone) => `${zone.label}${zone.isSole ? " ⚠" : ""}`).join(", ") || "none"}`,
+          ),
+          "",
+        ]
+      : []),
+    ...(report.novelAlgorithms
+      ? [
+          "NOVEL ALGORITHMS",
+          `${"-".repeat(30)}`,
+          `  Coverage Fragility:    ${report.novelAlgorithms.coverageFragility ? `${(report.novelAlgorithms.coverageFragility.meanFragility * 100).toFixed(1)}% mean · ${report.novelAlgorithms.coverageFragility.fragileCellCount}/${report.novelAlgorithms.coverageFragility.totalCells} fragile cells` : "Not computed"}`,
+          `  Coverage Uncertainty:   ${report.novelAlgorithms.coverageUncertainty ? `${report.novelAlgorithms.coverageUncertainty.sampleCount} samples · ${report.novelAlgorithms.coverageUncertainty.meanCoveragePct.toFixed(1)}% mean (${report.novelAlgorithms.coverageUncertainty.p5CoveragePct.toFixed(1)}%–${report.novelAlgorithms.coverageUncertainty.p95CoveragePct.toFixed(1)}%)` : "Not computed"}`,
+          `  Coverage Posture Variation: ${report.novelAlgorithms.postureVariation ? `${report.novelAlgorithms.postureVariation.profiles.length} profiles · worst ${report.novelAlgorithms.postureVariation.worstProfileLabel ?? "—"} ${report.novelAlgorithms.postureVariation.worstProfileCoveragePct != null ? `${report.novelAlgorithms.postureVariation.worstProfileCoveragePct.toFixed(1)}%` : ""} · largest drop ${report.novelAlgorithms.postureVariation.largestDropProfileLabel ?? "—"} (${formatSignedDelta(report.novelAlgorithms.postureVariation.largestDropDeltaPct)})` : "Not computed"}`,
+          `  Blind Spot Topology:   ${report.novelAlgorithms.blindRegions ? `${report.novelAlgorithms.blindRegionCount ?? report.novelAlgorithms.blindRegions.length} regions · ${report.novelAlgorithms.blindRegions.filter((region) => region.severity === "critical").length} critical` : "Not computed"}`,
+          `  Blind Spot Fingerprint: ${report.novelAlgorithms.blindSpotFingerprint ? `${report.novelAlgorithms.blindSpotFingerprint.fingerprint} · ${report.novelAlgorithms.blindSpotFingerprint.regionCount} regions` : "Not computed"}`,
+          ...(report.novelAlgorithms.reflectiveBounce
+            ? [
+                `  Reflective Bounce Vision:`,
+                `    Reflective windows: ${report.novelAlgorithms.reflectiveBounce.reflectiveWindowCount}`,
+                `    Affected cells: ${report.novelAlgorithms.reflectiveBounce.affectedCellCount}`,
+                `    Affected cameras: ${report.novelAlgorithms.reflectiveBounce.affectedCameraCount}`,
+              ]
+            : [`  Reflective Bounce Vision: Not computed`]),
+          `  K-Robustness:           ${report.novelAlgorithms.kRobustness ? `K=${report.novelAlgorithms.kRobustness.kRobustness} / ${report.novelAlgorithms.kRobustness.totalCameras}` : "Not computed"}`,
+          ...(report.novelAlgorithms.kRobustness?.criticalSets?.length
+            ? [
+                "  K-Robustness Critical Sets:",
+                ...report.novelAlgorithms.kRobustness.criticalSets.slice(0, 5).map(
+                  (set) => `    - K=${set.k}: ${set.cameraNames.join(", ")} (exposure ${set.exposureScore.toFixed(1)}, ${set.waypointCount} waypoints)`,
+                ),
+              ]
+            : []),
+          `  Placement Oracle:       ${report.novelAlgorithms.placementOracle ? `${report.novelAlgorithms.placementOracle.candidateCount} candidates · best ${report.novelAlgorithms.placementOracle.bestCandidateMountType} @ ${report.novelAlgorithms.placementOracle.bestCandidatePosition[0].toFixed(1)}, ${report.novelAlgorithms.placementOracle.bestCandidatePosition[2].toFixed(1)} · score ${report.novelAlgorithms.placementOracle.bestCandidateScore.toFixed(1)}` : "Not computed"}`,
+          `  Temporal Anomalies:     ${report.novelAlgorithms.temporalAnomalies ? `${report.novelAlgorithms.temporalAnomalies.anomalyWindowCount} windows` : "Not computed"}`,
+          `  Occlusion Blame:        ${report.novelAlgorithms.occlusionBlame ? `${report.novelAlgorithms.occlusionBlame.length} zones` : `${report.novelAlgorithms.occlusionBlameCount ?? 0} groups`}`,
+          `  Blind Regions:          ${report.novelAlgorithms.blindRegionCount ?? 0} regions`,
           "",
         ]
       : []),
@@ -793,6 +1364,18 @@ export function exportCompareAsHtml(
     </div>
   </div>
 
+  <h2>Provenance</h2>
+  <table>
+    <thead><tr><th>Field</th><th>Before</th><th>After</th></tr></thead>
+    <tbody>
+      <tr><td>Scene Source</td><td>${escapeHtml(compare.before.provenance.sceneSourceLabel)}</td><td>${escapeHtml(compare.after.provenance.sceneSourceLabel)}</td></tr>
+      <tr><td>Graph Nodes</td><td>${compare.before.provenance.nodeCount}</td><td>${compare.after.provenance.nodeCount}</td></tr>
+      <tr><td>Graph Edges</td><td>${compare.before.provenance.edgeCount}</td><td>${compare.after.provenance.edgeCount}</td></tr>
+      <tr><td>Revision Depth</td><td>${compare.before.provenance.revisionDepth}</td><td>${compare.after.provenance.revisionDepth}</td></tr>
+      <tr><td>Snapshots Tracked</td><td>${compare.before.provenance.snapshotCount}</td><td>${compare.after.provenance.snapshotCount}</td></tr>
+    </tbody>
+  </table>
+
   ${compare.zoneChanges.some((z) => z.changed) ? `
   <h2>Zone Status Changes</h2>
   <table>
@@ -846,6 +1429,15 @@ export function exportCompareAsMarkdown(compare: CompareReportData): string {
     `- Zones Passing: ${compare.after.summary.zonesPassing}/${compare.after.summary.zonesTotal}`,
     `- Issues: ${compare.after.summary.issuesCount}`,
     "",
+    "## Provenance",
+    `| Field | Before | After |`,
+    `|------|--------|-------|`,
+    `| Scene Source | ${compare.before.provenance.sceneSourceLabel} | ${compare.after.provenance.sceneSourceLabel} |`,
+    `| Graph Nodes | ${compare.before.provenance.nodeCount} | ${compare.after.provenance.nodeCount} |`,
+    `| Graph Edges | ${compare.before.provenance.edgeCount} | ${compare.after.provenance.edgeCount} |`,
+    `| Revision Depth | ${compare.before.provenance.revisionDepth} | ${compare.after.provenance.revisionDepth} |`,
+    `| Snapshots Tracked | ${compare.before.provenance.snapshotCount} | ${compare.after.provenance.snapshotCount} |`,
+    "",
     `--- *Generated by SentinelTwin Studio*`,
   ];
   return lines.join("\n");
@@ -877,6 +1469,11 @@ function formatHour(hour: number): string {
   const period = hour >= 12 ? "PM" : "AM";
   const h = hour % 12 || 12;
   return `${h}:00 ${period}`;
+}
+
+function formatSignedDelta(delta: number | null | undefined) {
+  if (delta == null || Number.isNaN(delta)) return "—";
+  return `${delta > 0 ? "+" : ""}${delta.toFixed(1)}%`;
 }
 
 function scenarioEvidenceDataUri(input: {

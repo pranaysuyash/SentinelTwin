@@ -1,35 +1,49 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 
-import { smallRetailShopScene } from "@/demo-scenes/small-retail-shop";
-import { simulateStudio } from "@/simulation/simulate-studio";
 import { useStudioStore } from "@/store/studio-store";
+import { smallRetailShopScene } from "@/demo-scenes/small-retail-shop";
 
 describe("studio store", () => {
   beforeEach(() => {
     useStudioStore.setState(useStudioStore.getInitialState(), true);
   });
 
-  test("runs obstruction counterfactuals and records the simulated delta", () => {
-    const baseline = simulateStudio(smallRetailShopScene);
-
-    useStudioStore.setState({
-      scene: smallRetailShopScene,
-      simulationResult: baseline,
-      simulationDirty: false,
-    });
-
-    useStudioStore.getState().runCounterfactual("obs_cupboard_blocker");
-
+  test("boots the demo scene with a seeded simulation result on first load", () => {
     const state = useStudioStore.getState();
 
-    expect(state.counterfactualObsId).toBe("obs_cupboard_blocker");
-    expect(state.counterfactualResult).toBeDefined();
-    expect(state.counterfactualResult?.totalCoveragePct).toBeGreaterThanOrEqual(baseline.totalCoveragePct);
-    expect(
-      state.counterfactualResult?.criticalZoneResults[0]?.status === "pass"
-        || state.counterfactualResult?.criticalZoneResults[0]?.status === "partial"
-        || state.counterfactualResult?.criticalZoneResults[0]?.status === "fail",
-    ).toBe(true);
+    expect(state.scene.source).toBe("demo");
+    expect(state.simulationDirty).toBe(false);
+    expect(state.simulationResult).toBeDefined();
+    const seededSimulation = state.scene.simulation;
+    const seededResult = state.simulationResult;
+    if (!seededSimulation) {
+      throw new Error("Expected the demo scene to start with a seeded simulation result");
+    }
+    if (!seededResult) {
+      throw new Error("Expected the demo store to start with a seeded simulation result");
+    }
+    expect(seededSimulation).toBe(seededResult);
+    expect(state.lastRunMs).not.toBeNull();
+  });
+
+  test("seeds at least one real draft workspace alongside the demo baseline", () => {
+    const state = useStudioStore.getState();
+    const manualWorkspace = state.savedProjects.find((record) => record.scene.source !== "demo");
+
+    expect(manualWorkspace).toBeDefined();
+    expect(manualWorkspace?.scene.source).toBe("manual");
+    expect(manualWorkspace?.scene.name).toContain("Shop Layout Draft");
+    expect(manualWorkspace?.scene.cameras.length).toBeGreaterThan(0);
+    expect(manualWorkspace?.scene.criticalZones.length).toBeGreaterThan(0);
+    expect(manualWorkspace?.scene.simulation).toBeDefined();
+    expect(state.savedProjects.length).toBeGreaterThan(1);
+  });
+
+  test("seeds unique saved project scene ids on first load", () => {
+    const state = useStudioStore.getState();
+    const ids = state.savedProjects.map((record) => record.scene.id);
+
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   test("runs the shared simulation action and stores a fresh result", async () => {

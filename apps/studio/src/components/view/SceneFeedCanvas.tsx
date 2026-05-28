@@ -36,10 +36,10 @@ export function SceneFeedGeometry({
     <>
       <SceneLighting theme={resolvedTheme} />
       <SceneFloor width={width} depth={depth} showGrid={false} />
-      <SceneWalls walls={scene.walls} />
-      <SceneDoors doors={scene.doors} />
-      <SceneWindows windows={scene.windows} />
-      <SceneObstructions obstructions={scene.obstructions} selectedId={selectedId} />
+      <SceneWalls walls={scene.walls} selectable={false} />
+      <SceneDoors doors={scene.doors} selectable={false} />
+      <SceneWindows windows={scene.windows} selectable={false} />
+      <SceneObstructions obstructions={scene.obstructions} selectedId={selectedId} onSelect={() => {}} />
       {showPrivacyZones && <ScenePrivacyZones zones={scene.privacyZones} />}
     </>
   );

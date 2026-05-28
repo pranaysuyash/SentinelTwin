@@ -198,12 +198,98 @@ before integrating Pascal or any other external 3D editor repo.
 - Not a rejection of Pascal. Pascal remains the current best candidate for the spatial
   editor foundation and the fork decision (D-001) stands as the plan once we reach that stage.
 - Not a scope reduction. The full architecture is still the target.
+
+---
+
+## D-101 | 2026-05-28 | Camera inspector View tab should lead with explicit mode and target information
+
+**Decision:** In the camera inspector, the View tab should surface a dedicated View Mode card and
+Target Info card before the live feed, while keeping the DORI overlay summary and view toggles
+wired to the same underlying feed state.
+
+**Rationale:**
+- The reference product treats mode selection and target context as first-class inspector controls,
+  not as hidden footer chrome below the preview
+- Surfacing the mode and target blocks first makes the inspector easier to scan and keeps the live
+  feed from feeling like a static preview with a few toggle buttons attached
+- The live feed still remains the source of truth for overlays; this decision is purely about
+  information hierarchy and discoverability
+
+**Alternatives rejected:**
+- Keep view mode controls only below the feed: too easy to miss and weaker screenshot parity
+- Merge target info into the DORI summary: collapses two distinct mental models into one block
 - Not a hackathon compromise. This is the correct engineering sequence regardless of timeline.
 
 **Alternative rejected — start with Pascal fork:**
 - Forces understanding of Pascal's internals before we understand our own requirements
 - Any mismatch between Pascal's architecture and our simulation needs requires retrofitting
 - We may discover we need things Pascal does not support, or don't need things it provides
+
+---
+
+## D-102 | 2026-05-28 | Assumptions panel should surface a concise model summary before the detailed editor
+
+**Decision:** The right-rail assumptions surface should start with a compact summary of the core model inputs
+(DORI model, person height, grid resolution, lighting) and then provide the full editable assumptions form
+below or in the bottom drawer.
+
+**Rationale:**
+- The reference security cockpit exposes assumptions as a quick-review summary, not only as a hidden editing form
+- The user needs to know the model posture at a glance before diving into detailed thresholds
+- Keeping the compact summary in the right rail preserves the full editor without making the shell feel heavy
+
+**Alternatives rejected:**
+- Keep the assumptions UI as a pure form: too utilitarian and too easy to miss in the right rail
+- Move all assumptions to the bottom drawer: hides the key model posture from the main workspace
+
+---
+
+## D-103 | 2026-05-28 | Scenario/path panel should prioritize scenario summary over raw path controls
+
+**Decision:** The scenario/path panel should present the active scenario as a summary card first,
+with actor, intent, speed, path length, estimated time, route legend, and timeline link visible
+before the lower edit/play controls.
+
+**Rationale:**
+- The reference screenshot is a scenario briefing surface, not just a path editor
+- Making the scenario summary the primary structure helps the lower edit/play actions read as
+  task actions instead of the whole purpose of the panel
+- This keeps the active-path selector, replay link, and route metrics visible without forcing the
+  user to parse a dense control stack
+
+**Alternatives rejected:**
+- Keep the panel as a path control strip: too flat and less aligned with the cockpit reference
+- Move the timeline link lower than the stats: hurts discoverability for replay analysis
+
+---
+
+## D-104 | 2026-05-28 | Security Status rail should keep assumptions visible in compact mode
+
+**Decision:** The compact Security Status right rail should render the assumption disclosure alongside the outcome summary and top issues instead of hiding assumptions behind a separate rail mode.
+
+**Rationale:**
+- The reference security cockpit keeps the model posture visible inside the status rail
+- Compact mode should still communicate the planning assumptions that govern the numbers shown above it
+- This keeps the default rail useful without forcing operators to switch modes just to understand the current model inputs
+
+**Alternatives rejected:**
+- Keep assumptions only in the dedicated assumptions rail: too hidden for the default security view
+- Remove the disclosure entirely in compact mode: would reduce trust in the reported outcome
+
+---
+
+## D-105 | 2026-05-28 | Security outcomes should surface a dedicated privacy review section
+
+**Decision:** Add an explicit privacy review section to the security outcome/report surfaces so privacy zones, restricted cells, and privacy-specific issues are visible instead of only being implicit in the generic issue list.
+
+**Rationale:**
+- Privacy zones are already part of the canonical scene model and simulation output
+- If privacy is modeled, it should be reported in a dedicated review section, not hidden among unrelated issues
+- Surfacing privacy separately better supports trust, compliance review, and explanation of why the simulation flags certain areas
+
+**Alternatives rejected:**
+- Leave privacy only in the generic issue list: too easy to miss and too weak for compliance-oriented review
+- Put privacy only in the debug tab: would make an important modeled concept effectively invisible to users
 
 ---
 
@@ -1174,6 +1260,21 @@ reference to the new path, then remove the old."
 - Operators need to correct near-miss detection coordinates, not only exclude entities.
 - Lightweight marker dragging closes the biggest practical correction gap without requiring full CAD editing controls.
 
+### D-072: Provenance graph should be interactive, not static
+**Date:** 2026-05-28
+
+**Decision:** Upgraded the `PROVENANCE` tab from a static graph summary into an interactive inspection surface with selectable nodes, selectable relations, selected-node trace counts, relation details, and focus controls that jump between source and target nodes.
+
+**Rationale:**
+- A visible provenance spine is useful, but the real product value comes when operators can trace a scene element back to its source and forward into simulation evidence without leaving the tab.
+- Clickable nodes and relations make the graph a working diagnostic tool instead of a decorative dashboard panel.
+- Keeping this inside the derived graph view preserves the single-source-of-truth rule while improving usability.
+
+**Alternatives rejected:**
+- **Keep the graph static and add more cards** — rejected because it does not support real trace exploration.
+- **Move provenance inspection to a separate page** — rejected because the operator should inspect provenance in the same workflow where they are already reviewing the scene.
+- **Delay relation inspection until a future evidence system** — rejected because the graph already contains usable relations and can support trace focus now.
+
 **Alternatives rejected:**
 - **Keep list-only include/exclude controls** — rejected because it cannot fix geometry drift.
 - **Defer all correction to post-import scene editing** — rejected because import review should produce coherent baseline geometry.
@@ -1257,3 +1358,604 @@ reference to the new path, then remove the old."
 **Alternatives rejected:**
 - **List-only relabel/reject flow** — rejected because it cannot correct spatial drift.
 - **Hard-block compile on all low-confidence inputs** — rejected because manual workflows need operator override.
+
+### D-078: Footage verification should surface quantitative mismatch and visual-diff assist together
+**Date:** 2026-05-27
+
+**Decision:** Extended Camera View verification with a local downsampled mismatch score (`Alignment Quality`, 0-100 with Excellent/Good/Fair/Poor labels) and an optional difference heat overlay.
+
+**Rationale:**
+- Operators need more than visual intuition when comparing simulated feed vs reference frame.
+- A bounded local metric and heat layer improve operator guidance while preserving the current defensive, non-forensic product framing.
+
+**Alternatives rejected:**
+- **Overlay-only comparison without metrics** — rejected because it does not quantify drift.
+- **Server-side CV verification at this stage** — rejected due scope and architecture sequencing; local assist is sufficient for current phase.
+
+### D-079: Scan reconstruction correction should include explicit structural auto-fix actions
+**Date:** 2026-05-27
+
+**Decision:** Added explicit review-step structural auto-fix actions in `ScanSiteWizard`: merge near-duplicate same-type candidates, snap door/window candidates toward nearest wall, and show diagnostics for duplicate groups/opening-wall proximity/pending candidates.
+
+**Rationale:**
+- Manual correction alone is slow and inconsistent when candidate density rises.
+- Explicit, reversible auto-fix actions preserve operator control while accelerating structurally coherent scene preparation.
+
+**Alternatives rejected:**
+- **Keep correction fully manual** — rejected for operator throughput and inconsistency.
+- **Apply hidden automatic corrections during compile** — rejected due trust and auditability concerns.
+
+### D-078: Novel algorithms must ship through the canonical simulation/report spine, not a sidecar panel
+**Date:** 2026-05-27
+
+**Decision:** Wired Coverage Fragility Field, K-Robustness, Placement Oracle, Occlusion Blame Attribution, and Temporal Anomaly Detection into `simulate-studio.ts`, surfaced them in the `NOVEL ALGORITHMS` panel, and mirrored the same derived summaries into both the live report tab and canonical report export module.
+
+**Rationale:**
+- Novel analytics are only useful long-term if they flow through the same deterministic scene/result pipeline as the rest of SentinelTwin.
+- Keeping the report exporter aligned with the dashboard drawer prevents the common drift where a “proof” panel and an “export” panel quietly diverge.
+
+**Alternatives rejected:**
+- **Leave the novel analytics as a dashboard-only experiment** — rejected because it would never become part of the product spine.
+- **Build a separate export path just for novel metrics** — rejected because it creates duplicate summary logic and increases drift risk.
+
+### D-080: Studio Home should expose a lightweight View Settings surface, not a full window manager
+**Date:** 2026-05-28
+
+**Decision:** Added a lightweight `View Settings` modal to the Studio shell that unifies the most important workspace controls: main view, canvas mode, scene layers, dock visibility, workspace presets, and saved layouts. The homepage now also auto-runs the demo simulation on first load and seeds demo workspaces/layouts when local storage is empty.
+
+**Rationale:**
+- The attached design and product feedback call for a clear way to show or hide major workspace pieces without forcing users into a desktop-style layout editor.
+- The repo already had the building blocks scattered across presets, dock state, layer toggles, and view modes; the new modal makes that structure discoverable without inventing a second UI model.
+- Auto-running the demo scene avoids the misleading empty-state problem where the dashboard says `Simulation pending` even though the built demo scene is available.
+
+**Alternatives rejected:**
+- **Build a full draggable window manager now** — rejected as too heavy for the current product stage and unnecessary for the immediate homepage gap.
+- **Keep layout controls scattered across dock headers and side panels** — rejected because users need one place to reason about what is visible and why.
+- **Leave the demo scene manual-only on first load** — rejected because it makes the default homepage feel like a launcher instead of a living security workspace.
+
+### D-081: Homepage should foreground real scene work alongside the demo baseline
+**Date:** 2026-05-28
+
+**Decision:** Rebalanced the Studio homepage so `New Blank Scene`, `Import SecurityScene JSON`, `Scan Site Photo`, and `AI Layout Draft` are surfaced as a dedicated `Scene Work` entry point, instead of leaving them as secondary or footer-only actions beneath the demo preview.
+
+**Rationale:**
+- The demo scene should stay as the canonical reference baseline, but it cannot be the perceived end state of the product.
+- Users need an immediate path to actual site work: blank scenes, imported scenes, and scan-assisted reconstruction.
+- The product story is stronger when the homepage says "here is the demo baseline, and here is how you move into your own site work" rather than treating real scenes as an afterthought.
+
+**Alternatives rejected:**
+- **Leave real scene creation in the lower quick-start area only** — rejected because it makes the demo appear more important than actual user work.
+- **Remove the demo entirely from the homepage** — rejected because the demo remains the best trust-building baseline and should remain visible.
+
+### D-082: Homepage should separate user workspaces from reference demos
+**Date:** 2026-05-28
+
+**Decision:** Reworked the launcher project browser into two explicit groups: `Your Workspaces` for user-created/imported/scanned scenes, and `Reference Demo` for the canonical retail baseline.
+
+**Rationale:**
+- This makes the product story honest: demo scenes are reference material, not the center of gravity.
+- Users need a visible mental model for where their own work will appear once they create or import it.
+- Separating the two groups avoids the impression that the demo scene is the only meaningful workspace in the app.
+
+**Alternatives rejected:**
+- **Keep demo and user projects mixed in one list** — rejected because it blurs the product boundary the user explicitly called out.
+- **Hide demo scenes entirely** — rejected because the demo remains valuable as a trust-building baseline and regression reference.
+
+### D-083: Homepage should promote scene creation/import/scan as a primary call to action
+**Date:** 2026-05-28
+
+**Decision:** Added a prominent `Start a Scene` strip in the center column of the launcher so `New Blank Scene`, `Import SecurityScene JSON`, `Scan Site Photo`, and `AI Layout Draft` are visible as first-class actions alongside the workspace preview.
+
+**Rationale:**
+- The app must encourage actual scene work, not just demo browsing.
+- The center column is the most attention-rich area of the homepage, so it should lead with user-created scene entry points.
+- This better matches the intended product story: the demo is a trust-building baseline, but the user’s own scene is the real destination.
+
+**Alternatives rejected:**
+- **Keep real scene creation only in the left rail or footer** — rejected because it remains too easy to miss.
+- **Remove the demo preview entirely** — rejected because the demo still provides a useful reference and validation target.
+
+### D-083: Workspace layout manager should own view composition
+**Date:** 2026-05-28
+
+**Decision:** Treated the View Settings surface as the canonical workspace composition layer for Studio. The store now owns the full layout snapshot: view mode, workspace preset, canvas mode, dock collapse state, component visibility, analysis module visibility, right-panel mode, bottom drawer mode, pinned module, and custom layout persistence.
+
+**Rationale:**
+- The product already had strong subsystems, but they were spread across multiple chrome elements and hidden in separate controls.
+- A single layout manager gives users one place to decide what they are seeing, which makes the workspace legible for editing, coverage review, replay, report generation, and client demos.
+- Persisting custom layouts separately from scenes keeps the "what is the site?" model distinct from the "how should I inspect it?" model.
+
+**Alternatives rejected:**
+- **Keep all layout controls distributed across shell components** — rejected because it preserves the current discoverability problem.
+- **Fold layout state into scene metadata** — rejected because scene content and UI composition have different lifecycles and should not drift together.
+- **Treat report/client-demo modes as separate apps** — rejected because they are just workspace compositions over the same scene and simulation data.
+
+### D-084: Homepage should use visual scene starter cards instead of plain action buttons
+**Date:** 2026-05-28
+
+**Decision:** Converted the `Start a Scene` callout into a `Scene Starter Gallery` of visual cards, so blank/import/scan/AI scene paths look like real primary workflows instead of utility actions.
+
+**Rationale:**
+- The homepage needed a stronger visual cue that actual scene work is first-class.
+- Cards communicate distinct workflows better than a flat button list, which reduces the risk that users interpret scene creation as a secondary launcher task.
+- This preserves the demo baseline while making the real scene path feel like the intended next step.
+
+**Alternatives rejected:**
+- **Keep the scene entry points as a button cluster** — rejected because the UI still read like a toolbar instead of a product path.
+- **Move the scene entry points only into the side rail** — rejected because the center column is the strongest attention surface on the page.
+
+### D-085: Homepage should treat "Your Workspaces" as a workspace hub, not just a saved-scene list
+**Date:** 2026-05-28
+
+**Decision:** Added starter tiles inside the `Your Workspaces` region itself, so the section offers blank/import/scan/AI workspace entry points even before the user has any saved projects.
+
+**Rationale:**
+- A workspace hub should show where to start, not only what already exists.
+- This reduces the empty-state problem and keeps the demo from feeling like the only meaningful option.
+- Repeating the starter affordances in the workspace region makes the user's own scene journey much more obvious.
+
+**Alternatives rejected:**
+- **Keep `Your Workspaces` as a passive list only** — rejected because new users would still have to infer how to begin real work.
+- **Move starter tiles somewhere else entirely** — rejected because the workspace section is where users naturally expect to find their own scenes and starting points.
+
+### D-086: Saved workspace cards should include thumbnail previews
+**Date:** 2026-05-28
+
+**Decision:** Added compact scene thumbnails to the `Your Workspaces` and `Reference Demo` cards so the homepage visually communicates real site layouts instead of relying on text and badges alone.
+
+**Rationale:**
+- Scene thumbnails make the workspace hub feel like a gallery of real projects.
+- Visual previews help users distinguish their own sites from the demo baseline at a glance.
+- Thumbnails reinforce that the app is about editable site scenes, not just launcher metadata.
+
+**Alternatives rejected:**
+- **Keep workspace cards text-only** — rejected because that still reads like a list rather than a workspace gallery.
+- **Replace the full preview panel with thumbnails** — rejected because the larger workspace preview remains useful as the focal context area.
+
+### D-087: Scene starter cards should carry origin badges
+**Date:** 2026-05-28
+
+**Decision:** Added origin badges to the scene starter cards and workspace seed tiles (`Blank`, `Import`, `Scan`, `AI`) so the homepage distinguishes entry paths immediately instead of relying on title text alone.
+
+**Rationale:**
+- The user asked for real scene work to be visible, and visual differentiation is part of making that feel first-class.
+- Origin badges help users map each action to the kind of workspace they are about to create.
+- This makes the launcher feel more like a project hub with distinct workflows rather than a generic action menu.
+
+**Alternatives rejected:**
+- **Use only card titles for differentiation** — rejected because titles are too subtle once the page is scanned quickly.
+- **Use color alone with no labels** — rejected because labels remain necessary for accessibility and clarity.
+
+### D-088: Selected workspace panel should reuse the same origin labels as the cards
+**Date:** 2026-05-28
+
+**Decision:** Added the same origin badge treatment to the selected workspace details panel so the demo/user workspace distinction stays consistent across the launcher.
+
+**Rationale:**
+- The launcher should tell one coherent story across the card grid and the detail panel.
+- If the selected workspace panel used different language, the demo/reference distinction would be easy to miss.
+- Reusing the same labels reduces cognitive load and keeps the homepage honest about what is a reference demo versus a user's own workspace.
+
+**Alternatives rejected:**
+- **Leave the detail panel unlabeled** — rejected because the selected workspace is the moment users actually inspect a scene and should not lose origin clarity.
+- **Invent a different label system for the detail panel** — rejected because that would make the homepage inconsistent and harder to scan.
+
+### D-089: Seed the demo scene with an initial simulation result on boot
+**Date:** 2026-05-28
+
+**Decision:** Seed the canonical demo scene with its simulation result during store initialization so the default homepage can show truthy coverage and last-run state on first paint instead of a pending placeholder.
+
+**Rationale:**
+- The homepage is the first product impression, so the baseline demo should behave like a real analyzed workspace immediately.
+- Seeding the simulation avoids an unnecessary pending state before hydration while preserving the normal dirty/recompute flow after edits.
+- The demo still remains a baseline, but now it is a truthful baseline rather than a blank shell.
+
+**Alternatives rejected:**
+- **Keep the first paint pending and rely on client-side recompute** — rejected because that preserves the exact demo-first rough edge we want to remove.
+- **Remove the demo entirely from first load** — rejected because the demo remains important as a reference baseline and onboarding anchor.
+
+### D-090: Seed one manual draft workspace alongside the reference demos
+**Date:** 2026-05-28
+
+**Decision:** Seed the default project list with a non-demo manual draft workspace so the launcher always contains at least one real user-workspace object, not just reference demos and creation shortcuts.
+
+**Rationale:**
+- The user wanted the product to move beyond demo-only framing, and a real draft workspace makes that visible immediately.
+- The launcher now has a concrete "your work" item on first load while still preserving the demo baseline as a reference.
+- This helps the workspace hub feel like a living project board instead of a demo gallery with action buttons attached.
+
+**Alternatives rejected:**
+- **Rely only on blank/import/scan starter cards** — rejected because those are actions, not workspace objects.
+- **Seed multiple synthetic user projects** — rejected because one honest manual draft workspace is enough to prove the non-demo path without inventing a fake project library.
+
+### D-091: Make the manual draft workspace contain actual scene content
+**Date:** 2026-05-28
+
+**Decision:** Populate the seeded manual draft workspace with a small but real scene layout: perimeter walls, a camera, a light, an obstruction, a critical zone, an entry point, and a path.
+
+**Rationale:**
+- A manual workspace should look like a genuine draft, not an empty placeholder with a user label.
+- This keeps the homepage honest about actual scene work while still preserving the demo as the reference baseline.
+- The seeded draft now demonstrates the same editing primitives the product is built around, just at a smaller starting scale than the full retail demo.
+
+**Alternatives rejected:**
+- **Keep the manual workspace blank** — rejected because a blank card still reads as a shortcut, not a real project.
+- **Clone the retail demo and relabel it as manual** — rejected because that would blur the line between reference baseline and user work.
+
+### D-092: Visually distinguish the seeded manual draft workspace from the demo baseline
+**Date:** 2026-05-28
+
+**Decision:** Gave the seeded manual workspace draft-specific visual treatment in the launcher cards and detail panel so it reads as in-progress user work rather than another generic saved scene.
+
+**Rationale:**
+- A real work object should be distinguishable from the reference demo at a glance.
+- The UI should tell the user which scene is a draft workspace, not just list it in a different section.
+- The draft accent helps preserve the story that the demo is the baseline while the manual workspace is where actual site work begins.
+
+**Alternatives rejected:**
+- **Keep the manual draft visually identical to other user workspaces** — rejected because then it still reads like a generic seeded example.
+- **Make the manual draft look like the demo** — rejected because that undermines the baseline-vs-user-work distinction.
+
+### D-093: Use hydration-stable time formatting in the launcher
+**Date:** 2026-05-28
+
+**Decision:** Format launcher timestamps with an explicit `hour12: true` setting so the server-rendered and client-rendered text stay aligned across locales.
+
+**Rationale:**
+- The launcher is a client component that still server-renders, so locale drift can cause hydration mismatches.
+- A stable timestamp format keeps the homepage from re-rendering itself on boot.
+- The workspace hub should be quiet and deterministic on first load.
+
+**Alternatives rejected:**
+- **Leave locale defaults in place** — rejected because the same timestamp can render differently between server and browser locales.
+- **Hide timestamps entirely** — rejected because last-run visibility is part of the dashboard story.
+
+### D-094: Ensure seeded saved projects have unique scene ids
+**Date:** 2026-05-28
+
+**Decision:** Assign unique ids to the seeded demo project scenes instead of reusing the cloned demo scene id across every seeded card.
+
+**Rationale:**
+- Duplicate keys in the project list produce noisy runtime warnings and can cause unstable card identity.
+- Each seeded project card should behave like a distinct workspace record even when it originates from the same canonical demo source.
+- Unique ids make the workspace hub act more like a real project board.
+
+**Alternatives rejected:**
+- **Keep reused ids because the scenes are conceptually the same demo** — rejected because React list identity still needs unique keys.
+- **Drop some seeded demo variants** — rejected because the reference demo gallery is useful for onboarding and comparison.
+
+### D-095: Seed the draft workspace with a real computed result and site-oriented name
+**Date:** 2026-05-28
+
+**Decision:** Rename the seeded manual workspace to `Shop Layout Draft` and compute its initial simulation result at bootstrap so the non-demo workspace is a real analyzed scene, not just a labeled placeholder.
+
+**Rationale:**
+- The user asked for actual scene work, and a draft with its own computed result makes that visible immediately.
+- A site-oriented name reads more like a work-in-progress project than an internal seed artifact.
+- Seeding the result means the draft card can show real coverage/issue state on first load, not a stubbed blank card.
+
+**Alternatives rejected:**
+- **Keep the manual draft result-less** — rejected because it still looks synthetic and incomplete.
+- **Rename it to another generic seed label** — rejected because the point is to make it feel like a real scene work item, not another bootstrap artifact.
+
+### D-096: Deduplicate saved projects on load and suppress the launcher's dynamic run-label hydration mismatch
+**Date:** 2026-05-28
+
+**Decision:** Deduplicate saved projects by scene id before exposing them to the launcher and suppress hydration warnings on the launcher's `currentRunLabel` so the homepage can render deterministically even when old local-storage data or timestamp formatting would otherwise drift.
+
+**Rationale:**
+- The launcher is a client component that still server-renders, so its dynamic timestamp label can differ slightly between server and browser hydration.
+- Old local-storage records can contain repeated scene ids, which creates noisy React key warnings and makes the workspace list feel unstable.
+- The launcher should stay quiet on first paint; user-facing content should not fail just because browser state is stale.
+
+**Alternatives rejected:**
+- **Leave the duplicate rows in place** — rejected because the warnings are noisy and the cards lose stable identity.
+- **Remove the timestamp label entirely** — rejected because last-run context is part of the dashboard story.
+
+### D-097: Defer launcher SVG previews until after hydration
+**Date:** 2026-05-28
+
+**Decision:** Render the launcher's math-heavy SVG scene previews behind a client-only hydration gate and show deterministic placeholder cards on the server / initial client paint.
+
+**Rationale:**
+- The preview polygons are derived from scene geometry and can produce small server/client string differences that React reports as attribute hydration mismatches.
+- The placeholder keeps the launcher visually stable on first paint while preserving the richer preview once the client has mounted.
+- This removes the last noisy hydration warning without removing the preview content entirely.
+
+**Alternatives rejected:**
+- **Keep SSR for the SVG previews and suppress warnings** — rejected because the underlying mismatch still exists and remains noisy in dev tools.
+- **Remove the previews entirely** — rejected because the previews are part of the product story and help the launcher feel like a real workspace hub.
+
+### D-098: Launch Report Lite into the report workspace
+**Date:** 2026-05-28
+
+**Decision:** Change the launcher's Report Lite entry points to open the dedicated `report` workspace mode instead of entering as `map + report preset`.
+
+**Rationale:**
+- The report surface already exists as a first-class `ReportView` in the shell, so launching it as a report workspace matches the product model better.
+- Keeping the launcher on `map` forced the user to rely on a preset to discover the report destination, which diluted the distinction between analysis and report handoff.
+- The report path should feel like a real destination, not a side drawer that happens to be available from the map workspace.
+
+**Alternatives rejected:**
+- **Keep the map-based launch path** — rejected because it undersells the report workspace and makes the launcher story less coherent.
+- **Remove the Report Lite launcher action** — rejected because report export is a core product path and should remain visible.
+
+### D-099: Default the right rail to Security Status until inspection is needed
+**Date:** 2026-05-28
+
+**Decision:** Make the studio right rail auto-fall back to `Security Status` when no scene object is selected, then auto-return to `Inspector` when the user selects an editable object.
+
+**Rationale:**
+- The design’s product posture is security-first, so an empty scene overview should read like a status cockpit rather than a properties editor.
+- The inspector still needs to be front-and-center once a camera, obstruction, or zone is actually selected.
+- This preserves the existing manual mode switcher while making the default state less editor-centric.
+
+**Alternatives rejected:**
+- **Keep `Inspector` as the default** — rejected because it makes the workspace feel like a generic editor when no object is selected.
+- **Always force `Security Status`** — rejected because it would hide editing controls even when the user explicitly wants to inspect an object.
+
+### D-100: Resolve `?studio=1` from page search params instead of `window.location`
+**Date:** 2026-05-28
+
+**Decision:** Use the page's resolved `searchParams` promise to decide the studio launch shortcut, rather than branching off `window.location` during render.
+
+**Rationale:**
+- The launcher/server mismatch was causing a hydration divergence between the dashboard shell and the direct-studio path.
+- Resolving the query from page props makes the initial render deterministic and keeps the `?studio=1` shortcut aligned between server and client.
+- This preserves the shortcut while removing the need for a client-only URL branch.
+
+**Alternatives rejected:**
+- **Keep `window.location` gating** — rejected because it reintroduces hydration mismatch on direct studio entry.
+- **Remove the shortcut entirely** — rejected because the quick studio boot path is useful for power users and QA.
+
+### D-101: Surface privacy metrics in the report workspace header
+**Date:** 2026-05-28
+
+**Decision:** Show privacy summary stats directly in `ReportView` alongside the existing coverage, issue, recommendation, and critical-zone cards.
+
+**Rationale:**
+- The report workspace is the handoff surface, so it should expose privacy posture at a glance instead of leaving it only inside the detailed outcome panel.
+- Privacy zones, restricted cells, and privacy-specific issues are already modeled in the simulation result and in `SecurityOutcomePanel`, so surfacing them in the report header improves trust without adding new computation.
+- The report needs to read like a client-ready evidence summary, and privacy is part of that evidence story.
+
+**Alternatives rejected:**
+- **Keep privacy only in the outcome panel** — rejected because the report header would remain incomplete relative to the modeled security posture.
+- **Add a separate privacy-only report page** — rejected because it fragments the handoff surface and duplicates the same simulation evidence.
+
+### D-102: Surface fragility and k-robustness in the report workspace header
+**Date:** 2026-05-28
+
+**Decision:** Show the simulation's fragility summary and k-robustness state directly in `ReportView` alongside the existing coverage, issue, recommendation, critical-zone, and privacy cards.
+
+**Rationale:**
+- The report workspace should communicate not just the current score, but how sensitive that score is to small scene changes and camera failures.
+- The engine already computes `fragilitySummary` and `kRobustness`, and the report-lite surface already uses them; the full report header should match that level of rigor.
+- Presenting the uncertainty posture in the handoff view makes the product more honest about the confidence and resilience of the result.
+
+**Alternatives rejected:**
+- **Leave fragility only in the bottom analysis tabs** — rejected because the report header would understate the uncertainty model.
+- **Introduce a new separate uncertainty page** — rejected because the existing report workspace is the correct handoff surface.
+
+### D-104: Add a wall snap action to the camera inspector
+**Date:** 2026-05-28
+
+**Decision:** Add a `Snap to Nearest Wall` control in the camera inspector that repositions the selected camera to the closest wall, raises it to a realistic mount height, and re-aims it toward the room interior.
+
+**Rationale:**
+- The editor already exposes raw camera position and mount fields, but the product spec also expects mount-aware snapping behavior so camera placement feels intentional rather than purely numeric.
+- Reusing the existing wall geometry keeps the action grounded in the current scene model instead of introducing a separate placement heuristic.
+- Putting the action in the inspector makes the control discoverable where users already tune camera optics and mount state.
+
+**Alternatives rejected:**
+- **Leave snapping to scene import only** — rejected because interactive camera tuning would still be missing a core workflow affordance.
+- **Add a separate floating snap tool** — rejected because it would fragment the camera-placement workflow away from the inspector.
+
+### D-105: Add a live camera comparison section to CompareView
+**Date:** 2026-05-28
+
+**Decision:** Extend `CompareView` with a camera-specific comparison section that compares two cameras from the current scene using live simulation results, in addition to the existing snapshot comparison workflow.
+
+**Rationale:**
+- The compare workspace already compares scenarios well, but the product spec and gap audit also call for camera-vs-camera analysis.
+- The simulation already computes per-camera coverage, covered/failed critical zones, and offline impact, so the extra compare surface can reuse existing verified data.
+- Keeping this inside `CompareView` preserves the scenario compare workflow while giving users a direct camera analysis view in the same destination.
+
+**Alternatives rejected:**
+- **Create a separate camera compare page** — rejected because it fragments the compare workflow and duplicates the snapshot compare shell.
+- **Do nothing and keep snapshot-only compare** — rejected because it leaves one of the remaining visible comparison gaps intact.
+
+### D-106: Surface per-camera privacy impact in the inspector analytics tab
+**Date:** 2026-05-28
+
+**Decision:** Add a `Privacy Impact` section to the camera inspector analytics tab that shows privacy issues, restricted cells, and affected zones for the selected camera.
+
+**Rationale:**
+- Privacy is not only a report-level concern; it should be actionable while the user is tuning a specific camera.
+- The simulation already carries privacy-restricted cells and privacy-category issues, so the inspector can surface that data without adding new model state.
+- Putting the privacy impact in the camera analytics tab closes the last meaningful gap between privacy modeling and camera-level editing feedback.
+
+**Alternatives rejected:**
+- **Leave privacy only in the report panel** — rejected because it hides the camera-level source of the issue.
+- **Add a separate privacy editor** — rejected because it would duplicate the existing inspector workflow and slow down camera tuning.
+
+### D-107: Surface privacy issues in the Issues tab as a dedicated review section
+**Date:** 2026-05-28
+
+**Decision:** Add a privacy review block to the Issues tab so privacy issues, affected zones, affected cameras, and restricted-cell counts are visible in the same stream as general issues and recommendations.
+
+**Rationale:**
+- Privacy enforcement is now modeled by the simulation, but it should be actionable from the issues workflow where operators triage problems.
+- The Issues tab is the natural place to jump from a finding to the impacted cameras and zones.
+- Keeping privacy in a dedicated section preserves the general issue list while preventing privacy from getting buried in it.
+
+**Alternatives rejected:**
+- **Leave privacy issues only in the report panel** — rejected because operators need them earlier in the workflow.
+- **Duplicate a full privacy dashboard** — rejected because it would be redundant with the existing report and inspector surfaces.
+
+### D-108: Add an offline fallback parser to the AI command bar
+**Date:** 2026-05-28
+
+**Decision:** When no OpenAI API key is configured, the AI command bar should fall back to a deterministic offline parser for common scene-edit commands instead of hard-failing.
+
+**Rationale:**
+- The studio shell already exposes useful slash commands and common natural-language hints for scene work, so a missing key should not block the core edit loop.
+- Common local actions like toggling day/night, report view, privacy visibility, snapshots, camera toggles, simple move/rotate/FOV edits, and light placement can be handled deterministically against the current `SecurityScene`.
+- This keeps the command bar useful in local development and demo flows while preserving the OpenAI-backed path for richer candidate generation and report work.
+
+**Alternatives rejected:**
+- **Keep hard-failing without an API key** — rejected because it makes the command bar feel dead for common local workflows.
+- **Send all commands through heuristic AI without an API key** — rejected because the local fallback should remain deterministic and testable.
+
+### D-109: Wire the full visible tool rail into keyboard shortcuts
+**Date:** 2026-05-28
+
+**Decision:** The keyboard shortcut handler should mirror the visible tool rail and expose the same tool keys that the left panel advertises.
+
+**Rationale:**
+- The UI already teaches the keys in the left rail, so leaving most of them inactive makes the shell feel incomplete.
+- This is a low-risk ergonomics improvement: the handler delegates to the existing active-tool state and does not change the scene model.
+- Matching the visible rail and shortcut modal keeps the discoverability story honest for new users.
+
+**Alternatives rejected:**
+- **Leave only C/B/L wired** — rejected because the rest of the visible tool shortcuts would still be fake affordances.
+- **Add a separate shortcut system** — rejected because that would duplicate the existing shell handler and invite drift.
+
+### D-110: Expose Markdown export directly in the report handoff toolbar
+**Date:** 2026-05-28
+
+**Decision:** The report handoff tab should expose direct Markdown export alongside HTML, copy, and print actions.
+
+**Rationale:**
+- SentinelTwin reports are meant to be handed to clients and teammates in multiple formats, not only as a rendered HTML page.
+- The report engine already produces canonical markdown, so surfacing it in the UI is low-risk and makes the handoff surface self-contained.
+- Keeping export actions in the report toolbar avoids burying them in a secondary menu and matches the “workspace destination” framing of the report shell.
+
+**Alternatives rejected:**
+- **Keep Markdown export implicit through clipboard only** — rejected because it makes the export path too invisible.
+- **Add a separate export dialog** — rejected because it would add extra friction without new capability.
+
+### D-111: Wire the remaining single-key shell shortcuts from the spec
+**Date:** 2026-05-28
+
+**Decision:** Add the remaining single-key shell shortcuts for report, night mode, focus mode, and snapshot capture so the modal hints and the shell handler stay aligned with the spec language.
+
+**Rationale:**
+- The shell already had the corresponding actions, so wiring the keys is a low-risk usability improvement.
+- Matching the keyboard hint modal to actual behavior keeps the studio honest and makes expert workflows faster.
+- The actions map cleanly to existing store methods and do not introduce new scene logic.
+
+**Alternatives rejected:**
+- **Leave the shortcuts as toolbar-only** — rejected because the shell already advertises keyboard-driven workflows.
+- **Create a separate shortcut subsystem** — rejected because that would duplicate existing handler logic and make drift more likely.
+
+### D-112: Treat posture variation as a first-class deterministic report surface
+**Date:** 2026-05-28
+
+**Decision:** Implement coverage-under-posture variation as a deterministic target-height sweep over the canonical coverage evaluator, and surface it in the Novel Algorithms panel plus report exports.
+
+**Rationale:**
+- The existing evaluator already accepts an explicit target height, so posture variation can be expressed as a thin deterministic wrapper instead of a separate model.
+- The product value is in showing how the same scene behaves for crouching, seated, child, and standing targets, not in inventing a second coverage engine.
+- Surfacing the result in both the live panel and report exports keeps the analysis consistent across working and handoff contexts.
+
+**Alternatives rejected:**
+- **Keep posture variation as a docs-only idea** — rejected because the evaluator already supported the necessary primitive and the user-facing value is immediate.
+- **Add a probabilistic body-pose model** — rejected for now because the requirement is to show posture sensitivity, not to simulate biomechanical motion.
+
+### D-113: Export blind spot topology with severity and classification detail
+**Date:** 2026-05-28
+
+**Decision:** Carry blind-region topology detail into report exports and the report workspace summary rather than flattening it to a region count.
+
+**Rationale:**
+- The live Novel Algorithms panel already shows blind-region classifications, severity, and affected zones.
+- The report/handoff surface should carry the same topology truth so clients can see whether the blind area is an isolated corner or an entry corridor to a critical zone.
+- The detailed export is still deterministic and lightweight because it reuses the blind-region list already produced by the simulation.
+
+**Alternatives rejected:**
+- **Keep a count-only summary** — rejected because it hides the difference between isolated and critical blind regions.
+- **Duplicate the topology analysis in the report layer** — rejected because the simulation already computes the canonical blind-region list.
+
+### D-114: Export occlusion blame with per-obstruction detail
+**Date:** 2026-05-28
+
+**Decision:** Carry occlusion blame detail into report exports and the report-lite handoff surface so zone failure analysis remains actionable outside the live panel.
+
+**Rationale:**
+- The simulation already computes per-zone blame fractions, quality-without values, and improvement deltas for each obstruction.
+- Flattening the result to a zone count would hide which obstruction is actually degrading the target zone.
+- Exporting the obstruction list keeps the live novel panel, report workspace, and downloadable handoff aligned.
+
+**Alternatives rejected:**
+- **Keep occlusion blame count-only in exports** — rejected because it hides the specific obstruction-level action the user needs.
+- **Move occlusion blame into a separate report-only analysis** — rejected because the simulation already computes the canonical occlusion-blame list.
+
+### D-115: Export blind spot fingerprints with the blind-region topology
+**Date:** 2026-05-28
+
+**Decision:** Compute a deterministic fingerprint for the blind-region topology and carry it through the live novel panel and report exports.
+
+**Rationale:**
+- The live blind-spot topology view already exposes the connected region list, but a stable fingerprint makes the same failure pattern easier to compare across scenes and exports.
+- The fingerprint is derived from the canonical blind-region list, so it stays deterministic and does not introduce another analysis path.
+- Surfacing the fingerprint in both the live panel and handoff report keeps the comparison workflow aligned with the rest of the novel-algorithm bundle.
+
+**Alternatives rejected:**
+- **Keep blind spot fingerprinting as a docs-only idea** — rejected because the stable signature is inexpensive to compute and immediately useful in handoffs.
+- **Build the full dataset clustering layer first** — rejected because the signature itself already has standalone value and does not require the dataset to be useful.
+
+### D-116: Ship a first-pass reflective bounce proxy before full physical optics
+**Date:** 2026-05-28
+
+**Decision:** Implement Reflective Bounce Vision as a deterministic mirror-plane proxy using reflective windows, visibility checks, and an ignored-surface bounce pass, then expose it in the live novelty panel and report handoff.
+
+**Rationale:**
+- The product already needed a concrete user-visible answer for reflective windows instead of leaving the idea as pure research text.
+- A deterministic mirror-plane proxy is inexpensive, stable, and consistent with the rest of the simulation engine's geometry-first approach.
+- Shipping the first-pass version now keeps the live panel, report export, and novelty roadmap aligned while leaving room for future angle-of-incidence and reflectivity refinements.
+
+**Alternatives rejected:**
+- **Keep Reflective Bounce Vision as research-only** — rejected because the reflective-window effect was already cheap to model and immediately useful in the current product shell.
+- **Wait for a full physical optics model** — rejected because that would delay the user-facing value and is not necessary for the current launch-quality simulation workflows.
+
+### D-117: Export K-Robustness critical failure sets
+**Date:** 2026-05-28
+
+**Decision:** Carry the K-Robustness critical failure sets into the live novel panel and report handoff, not just the scalar `K=` result.
+
+**Rationale:**
+- The scalar robustness value tells users whether the setup survives a failure count, but not which cameras create the critical failure mode.
+- Surfacing the actual failing camera sets keeps the analysis actionable and aligns the handoff report with the live panel.
+- The simulation already computes the critical sets, so the export cost is low and deterministic.
+
+**Alternatives rejected:**
+- **Keep K-Robustness scalar-only** — rejected because it leaves the user without the concrete failure set needed to plan the fix.
+- **Move the critical set detail into a separate modal only** — rejected because the report and live novelty panel should expose the same core result.
+
+### D-118: Expose AI command residency as offline-first with cloud-backed availability
+**Date:** 2026-05-28
+
+**Decision:** Show an explicit offline-first residency banner in the AI command bar, and label whether cloud-backed parsing is available.
+
+**Rationale:**
+- The command hook already prefers the local offline parser for recognized scene edits, so the UI should say that out loud instead of implying every command is cloud-backed.
+- Security-layout users need a clear indicator of what stays local and what requires a configured provider key.
+- The command bar is the right place to disclose this because it is where the user decides whether to type a natural-language command at all.
+
+**Alternatives rejected:**
+- **Keep residency implicit** — rejected because it hides a product-critical data-residency behavior.
+- **Hide it in a settings panel only** — rejected because the command bar itself is the point of trust and should disclose the mode immediately.
+
+### D-119: Persist and surface the active AI provider in workspace settings
+**Date:** 2026-05-28
+
+**Decision:** Persist the active AI provider selection in studio state and expose it in View Settings so the command layer and AI draft launcher use the same provider source of truth.
+
+**Rationale:**
+- The command bar, report generation, and AI draft launcher were previously hard-wired or implicit, which made the shell lie about which model was active.
+- A small store-backed provider selection keeps the shell coherent without introducing a second configuration path.
+- Showing the provider in View Settings makes the AI surface discoverable and lets users verify the active model before typing a command.
+
+**Alternatives rejected:**
+- **Leave provider choice code-only** — rejected because the shell would still hide the active model.
+- **Build a separate provider settings page** — rejected because View Settings already owns the layout and AI tool surface controls.

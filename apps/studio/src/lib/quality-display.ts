@@ -122,20 +122,21 @@ export const QUALITY_BAR_COLOR: Record<DoriQuality, string> = {
 
 /**
  * Quality rank for ordering/sorting.
- * DORI and OODPCVS equivalents share the same rank so they sort together.
+ * Uses the full IEC 62676-4:2025 / DORI ladder so OODPCVS levels are preserved
+ * distinctly in sort-based UI surfaces such as the timeline and camera summary.
  * Range: 0 (none) → 11 (scrutinize).
  */
 export const QUALITY_RANK: Record<DoriQuality, number> = {
   none: 0,
   detection: 1,
-  overview: 1,
-  outline: 2,
-  observation: 3,
-  discern: 3,
-  perceive: 4,
-  recognition: 5,
-  characterize: 5,
-  validate: 6,
-  identification: 6,
-  scrutinize: 7,
+  overview: 2,
+  outline: 3,
+  observation: 4,
+  discern: 5,
+  perceive: 6,
+  recognition: 7,
+  characterize: 8,
+  validate: 9,
+  identification: 10,
+  scrutinize: 11,
 };

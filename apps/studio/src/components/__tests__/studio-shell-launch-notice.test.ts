@@ -12,4 +12,13 @@ describe("Studio shell launcher handoff", () => {
     expect(source).toContain("window.setTimeout(() => setLaunchNotice(null), 8000)");
     expect(source).toContain("Dismiss");
   });
+
+  test("defaults the right rail to security status until an object is selected", () => {
+    const source = readFileSync(studioShellPath, "utf8");
+
+    expect(source).toContain('if (!selectedNodeId && rightPanelMode === "inspector")');
+    expect(source).toContain('setRightPanelMode("security_status")');
+    expect(source).toContain('if (selectedNodeId && rightPanelMode === "security_status")');
+    expect(source).toContain('setRightPanelMode("inspector")');
+  });
 });

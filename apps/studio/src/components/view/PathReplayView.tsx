@@ -32,6 +32,8 @@ import type { DoriQuality, ScenarioPath } from "@/schema/security-scene";
 import { getYawPitchDirection } from "@/simulation/geometry";
 import { getCameraColorForId } from "@/lib/camera-colors";
 import { buildCoverageGrid } from "@/simulation/grid";
+import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
+import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 
 // ── Shared scene ──
 
@@ -730,7 +732,7 @@ function InfoOverlay({
 
       {/* Coverage quality exposure breakdown */}
       <div className="border-t border-[#1f2536]/60 pt-2">
-        <div className="mb-1.5 text-[7px] font-semibold uppercase tracking-[0.15em] text-[#4a5568]">Exposure by quality</div>
+        <div className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.15em] text-[#4a5568]">Exposure by quality</div>
         <div className="space-y-1">
           {EXPOSURE_KEYS.map((key) => (
             <div key={key} className="flex items-center gap-2">
@@ -765,14 +767,11 @@ function InfoOverlay({
 
 function EmptyReplayState() {
   return (
-    <div className="flex h-full flex-col items-center justify-center bg-[#07090d]">
-      <div className="text-center">
-        <div className="mx-auto mb-3 h-12 w-12 rounded-full border border-dashed border-[#1f2536] flex items-center justify-center">
-          <Play className="h-5 w-5 text-[#2a3246] ml-0.5" />
-        </div>
-        <p className="text-[11px] text-[#4a5568]">Run simulation to generate coverage failure path</p>
-        <p className="mt-1 text-[9px] text-[#3a4158]">Toggle Path Replay after simulation completes</p>
-      </div>
+    <div className="flex h-full items-center justify-center bg-[#07090d]">
+      <RunSimulationPrompt
+        className="px-4"
+        message="Run the shared simulation to generate a coverage failure path for replay."
+      />
     </div>
   );
 }
@@ -1016,7 +1015,7 @@ export function PathReplayView() {
         className="flex-1 min-h-0"
         style={{ background: "#0a0d13" }}
       >
-        <Suspense fallback={null}>
+        <Suspense fallback={<CanvasLoadingOverlay label="Loading replay scene" />}>
           <SceneView />
         </Suspense>
 

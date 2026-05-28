@@ -11,6 +11,7 @@ import type {
   WallNode,
   WindowNode,
 } from "@/schema/security-scene";
+import { DORI_THRESHOLDS } from "@/simulation/dori";
 import { useStudioStore } from "@/store/studio-store";
 
 // ── Environment themes ──
@@ -98,7 +99,7 @@ export function SceneFloor({
 
 // ── Walls (with glass richness) ──
 
-export function SceneWalls({ walls }: { walls: WallNode[] }) {
+export function SceneWalls({ walls, selectable = true }: { walls: WallNode[]; selectable?: boolean }) {
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
   return (
@@ -116,14 +117,14 @@ export function SceneWalls({ walls }: { walls: WallNode[] }) {
             key={wall.id}
             position={[cx, wall.heightM / 2, cz]}
           rotation={[0, -angle, 0]}
-          onClick={(e) => {
+          onClick={selectable ? (e) => {
             e.stopPropagation();
             if (e.shiftKey || e.metaKey || e.ctrlKey) {
               toggleSelectedNode(wall.id);
               return;
             }
             selectNode(wall.id);
-          }}
+          } : undefined}
         >
             <mesh>
             <boxGeometry args={[length, wall.heightM, 0.18]} />
@@ -144,7 +145,7 @@ export function SceneWalls({ walls }: { walls: WallNode[] }) {
 
 // ── Doors ──
 
-export function SceneDoors({ doors }: { doors: DoorNode[] }) {
+export function SceneDoors({ doors, selectable = true }: { doors: DoorNode[]; selectable?: boolean }) {
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
   return (
@@ -158,14 +159,14 @@ export function SceneDoors({ doors }: { doors: DoorNode[] }) {
           <group
             key={door.id}
           position={door.position}
-          onClick={(e) => {
+          onClick={selectable ? (e) => {
             e.stopPropagation();
             if (e.shiftKey || e.metaKey || e.ctrlKey) {
               toggleSelectedNode(door.id);
               return;
             }
             selectNode(door.id);
-          }}
+          } : undefined}
         >
             <mesh rotation={[0, 0, 0]} castShadow receiveShadow visible={!isOpen}>
               <boxGeometry args={[width, height, Math.max(thickness, 0.08)]} />
@@ -192,7 +193,7 @@ export function SceneDoors({ doors }: { doors: DoorNode[] }) {
 
 // ── Windows ──
 
-export function SceneWindows({ windows }: { windows: WindowNode[] }) {
+export function SceneWindows({ windows, selectable = true }: { windows: WindowNode[]; selectable?: boolean }) {
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
   return (
@@ -208,14 +209,14 @@ export function SceneWindows({ windows }: { windows: WindowNode[] }) {
           <group
             key={window.id}
           position={window.position}
-          onClick={(e) => {
+          onClick={selectable ? (e) => {
             e.stopPropagation();
             if (e.shiftKey || e.metaKey || e.ctrlKey) {
               toggleSelectedNode(window.id);
               return;
             }
             selectNode(window.id);
-          }}
+          } : undefined}
         >
             <mesh castShadow receiveShadow visible={!isOpen}>
             <boxGeometry args={[width, height, Math.max(thickness, 0.05)]} />
@@ -388,23 +389,47 @@ export function PathActor({ waypoints, currentIndex, progress }: {
 // NOTE: "none" cells are NOT rendered — the tan floor shows through uncovered areas.
 // Colors are explicit sRGB-correct values that render vividly with meshBasicMaterial.
 
-const HEATMAP_QUALITY_RGB: Record<string, [number, number, number]> = {
-  // Using setRGB with pre-computed linear values so they render vividly
-  // These are chosen to be bright and saturated
-  identification: [0.12, 0.35, 1.0],   // vivid blue
-  recognition:    [0.05, 0.80, 0.20],  // vivid green
-  observation:    [1.00, 0.75, 0.00],  // vivid amber/yellow
-  detection:      [1.00, 0.35, 0.00],  // vivid orange
-  none:           [0.85, 0.05, 0.05],  // vivid red (used only when explicitly shown)
-};
+const HEATMAP_COLOR_STOPS = [
+  { ppm: 0, color: new THREE.Color("#991b1b") },
+  { ppm: DORI_THRESHOLDS.detection, color: new THREE.Color("#f97316") },
+  { ppm: DORI_THRESHOLDS.observation, color: new THREE.Color("#facc15") },
+  { ppm: DORI_THRESHOLDS.recognition, color: new THREE.Color("#22c55e") },
+  { ppm: DORI_THRESHOLDS.identification, color: new THREE.Color("#3b82f6") },
+] as const;
 
 const TILE_FLOOR_RGB: Record<string, [number, number, number]> = {
-  identification: [0.11, 0.34, 0.94],
-  recognition: [0.08, 0.72, 0.26],
-  observation: [0.96, 0.73, 0.14],
-  detection: [0.98, 0.46, 0.12],
-  none: [0.89, 0.83, 0.74],
+  identification: [0.16, 0.44, 0.98],
+  recognition: [0.10, 0.78, 0.30],
+  observation: [0.98, 0.79, 0.16],
+  detection: [0.98, 0.47, 0.12],
+  none: [0.56, 0.19, 0.19],
 };
+
+function lerpColorRgb(a: THREE.Color, b: THREE.Color, t: number): [number, number, number] {
+  const clamped = Math.max(0, Math.min(1, t));
+  return [
+    a.r + (b.r - a.r) * clamped,
+    a.g + (b.g - a.g) * clamped,
+    a.b + (b.b - a.b) * clamped,
+  ];
+}
+
+function heatmapColorFromPpm(ppm: number): [number, number, number] {
+  if (!Number.isFinite(ppm) || ppm <= HEATMAP_COLOR_STOPS[0].ppm) {
+    return lerpColorRgb(HEATMAP_COLOR_STOPS[0].color, HEATMAP_COLOR_STOPS[1].color, Math.max(0, ppm / Math.max(1, HEATMAP_COLOR_STOPS[1].ppm)));
+  }
+
+  for (let index = 1; index < HEATMAP_COLOR_STOPS.length; index += 1) {
+    const prev = HEATMAP_COLOR_STOPS[index - 1];
+    const next = HEATMAP_COLOR_STOPS[index];
+    if (ppm <= next.ppm) {
+      const span = Math.max(1, next.ppm - prev.ppm);
+      return lerpColorRgb(prev.color, next.color, (ppm - prev.ppm) / span);
+    }
+  }
+
+  return lerpColorRgb(HEATMAP_COLOR_STOPS[HEATMAP_COLOR_STOPS.length - 2].color, HEATMAP_COLOR_STOPS[HEATMAP_COLOR_STOPS.length - 1].color, 1);
+}
 
 export function CoverageTileFloor({ cells }: { cells: CoverageCellResult[] }) {
   const meshRef = useRef<THREE.InstancedMesh>(null!);
@@ -418,7 +443,9 @@ export function CoverageTileFloor({ cells }: { cells: CoverageCellResult[] }) {
     cells.forEach((cell, index) => {
       mat.current.setPosition(cell.x, 0.01, cell.z);
       mesh.setMatrixAt(index, mat.current);
-      const rgb = TILE_FLOOR_RGB[cell.quality] ?? TILE_FLOOR_RGB.none;
+      const rgb = cell.quality === "none"
+        ? TILE_FLOOR_RGB.none
+        : heatmapColorFromPpm(cell.ppm);
       col.current.setRGB(rgb[0], rgb[1], rgb[2]);
       mesh.setColorAt(index, col.current);
     });
@@ -465,7 +492,7 @@ export function CoverageHeatmapInstanced({
     if (mode === "fragility") {
       return cells.filter((c) => c.fragility != null && c.quality !== "none");
     }
-    return cells.filter((c) => c.quality !== "none");
+    return cells;
   }, [cells, mode]);
 
   useEffect(() => {
@@ -480,7 +507,7 @@ export function CoverageHeatmapInstanced({
       if (mode === "fragility" && cell.fragility != null) {
         rgb = fragilityRGB(cell.fragility);
       } else {
-        rgb = HEATMAP_QUALITY_RGB[cell.quality] ?? HEATMAP_QUALITY_RGB.none;
+        rgb = cell.quality === "none" ? TILE_FLOOR_RGB.none : heatmapColorFromPpm(cell.ppm);
       }
 
       col.current.setRGB(rgb[0], rgb[1], rgb[2]);

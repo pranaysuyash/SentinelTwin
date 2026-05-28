@@ -4,10 +4,12 @@ import { Eye, ListRestart, Pause, Play, Route, SkipBack, SkipForward } from "luc
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { cn } from "@/lib/cn";
-import { QUALITY_BAR_COLOR, QUALITY_RANK } from "@/lib/quality-display";
+import { QUALITY_BAR_COLOR, QUALITY_LABEL, QUALITY_RANK, QUALITY_SHORT_LABEL } from "@/lib/quality-display";
 import { QualityBadge } from "@/components/shared/QualityBadge";
 import { distance2D, lerp2D } from "@/simulation/geometry";
+import { QUALITY_ORDER } from "@/simulation/dori";
 import { VisibilityTimeline } from "@/components/view/VisibilityTimeline";
+import { ExplainBadge } from "@/components/shared/ExplainBadge";
 import type { DoriQuality, ScenarioPath, SimulationResult } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 
@@ -120,7 +122,7 @@ export function TimelineTab() {
     return result.pathResults.find((entry) => entry.pathId === activePath.id) ?? null;
   }, [activePath, result]);
 
-  const [subTab, setSubTab] = useState<"timeline" | "events" | "quality">("timeline");
+  const [subTab, setSubTab] = useState<"timeline" | "events" | "quality" | "edits">("timeline");
   const playbackAnchorRef = useRef({ startWallTime: 0, startPlaybackTime: 0 });
   const totalDuration = activePathResult?.totalDurationS ?? 0;
   const currentTime = totalDuration > 0 ? pathReplay.progress * totalDuration : 0;
@@ -156,6 +158,23 @@ export function TimelineTab() {
   const cameraSummary = useMemo(() => buildCameraSummary(activePathResult), [activePathResult]);
   const qualityRibbon = useMemo(() => buildQualityRibbon(activePathResult, totalDuration), [activePathResult, totalDuration]);
   const camerasById = useMemo(() => Object.fromEntries(scene.cameras.map((camera) => [camera.id, camera.name])), [scene.cameras]);
+  const editDeltas = useMemo(() => {
+    const items = scene.snapshots.filter((snap) => snap.simulation);
+    const deltas: Array<{ label: string; coverageDelta: number; blindspotDelta: number; issuesDelta: number }> = [];
+    for (let index = 1; index < items.length; index += 1) {
+      const prev = items[index - 1]!;
+      const next = items[index]!;
+      const prevSim = prev.simulation!;
+      const nextSim = next.simulation!;
+      deltas.push({
+        label: `${prev.label} -> ${next.label}`,
+        coverageDelta: nextSim.totalCoveragePct - prevSim.totalCoveragePct,
+        blindspotDelta: nextSim.blindspotPct - prevSim.blindspotPct,
+        issuesDelta: nextSim.issues.length - prevSim.issues.length,
+      });
+    }
+    return deltas.reverse();
+  }, [scene.snapshots]);
 
   const bestCamera = cameraSummary[0];
   const visiblePct = activePathResult && activePathResult.totalDurationS > 0
@@ -336,6 +355,7 @@ export function TimelineTab() {
           { id: "timeline" as const, label: "TIMELINE" },
           { id: "events" as const, label: "EVENTS" },
           { id: "quality" as const, label: "QUALITY OVER TIME" },
+          { id: "edits" as const, label: "EDIT DELTAS" },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -355,8 +375,9 @@ export function TimelineTab() {
       <div className="min-h-0 flex-1 overflow-hidden bg-[#0b0f17]">
         {subTab === "timeline" && (
           <div className="flex h-full min-h-0 flex-col overflow-hidden">
-            <div className="border-b border-[#1e2130] px-3 py-1.5 text-[8px] font-semibold uppercase tracking-[0.14em] text-[#4a5568]">
+            <div className="flex items-center gap-2 border-b border-[#1e2130] px-3 py-1.5 text-[8px] font-semibold uppercase tracking-[0.14em] text-[#4a5568]">
               Coverage Failure Timeline
+              <ExplainBadge text="Timeline shows when visibility is gained, lost, or degraded along the selected path." />
             </div>
             <div className="min-h-0 flex-1 overflow-auto">
               <table className="w-full border-collapse text-[10px]">
@@ -425,6 +446,33 @@ export function TimelineTab() {
               onSeek={handleSeek}
             />
 
+            <div className="mt-3 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
+              <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.14em] text-[#6f7f9f]">
+                Quality Ladder
+                <ExplainBadge text="This ladder keeps the full DORI + IEC 62676-4:2025 OODPCVS order visible in the timeline so sort-based summaries do not flatten the newer standard." />
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4 xl:grid-cols-6">
+                {QUALITY_ORDER.map((quality) => (
+                  <div
+                    key={quality}
+                    className="rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className="h-1.5 w-1.5 rounded-full"
+                        style={{ backgroundColor: QUALITY_BAR_COLOR[quality] ?? QUALITY_BAR_COLOR.none }}
+                      />
+                      <span className="text-[8px] font-semibold uppercase tracking-[0.12em] text-[#8b96ab]">
+                        {QUALITY_SHORT_LABEL[quality]}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-[10px] font-medium text-[#d5e0f5]">{QUALITY_LABEL[quality]}</div>
+                    <div className="mt-0.5 text-[8px] text-[#5b667c]">Rank {QUALITY_RANK[quality]}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
               {cameraSummary.map((entry) => (
                 <div key={entry.cameraId} className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
@@ -436,6 +484,28 @@ export function TimelineTab() {
                   </div>
                   <div className="mt-1.5 text-[9px] text-[#5b667c]">
                     Visible {entry.visibleS.toFixed(1)}s
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {subTab === "edits" && (
+          <div className="h-full overflow-auto p-3">
+            <div className="mb-2 flex items-center gap-2 text-[10px] uppercase tracking-[0.14em] text-[#6f7f9f]">
+              Scene Diff Timeline
+              <ExplainBadge text="Shows coverage impact between consecutive saved snapshots so you can trace which edits helped or hurt." />
+            </div>
+            <div className="space-y-2">
+              {editDeltas.length === 0 ? <div className="text-[10px] text-[#7a89a8]">Save snapshots with simulation to populate edit deltas.</div> : null}
+              {editDeltas.map((delta) => (
+                <div key={delta.label} className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5 text-[10px]">
+                  <div className="font-medium text-[#d5e0f5]">{delta.label}</div>
+                  <div className="mt-1 text-[#8ea0bf]">
+                    Coverage: <span className={delta.coverageDelta >= 0 ? "text-emerald-300" : "text-red-300"}>{delta.coverageDelta >= 0 ? "+" : ""}{delta.coverageDelta.toFixed(1)}%</span> ·
+                    Blindspot: <span className={delta.blindspotDelta <= 0 ? "text-emerald-300" : "text-red-300"}>{delta.blindspotDelta >= 0 ? "+" : ""}{delta.blindspotDelta.toFixed(1)}%</span> ·
+                    Issues: <span className={delta.issuesDelta <= 0 ? "text-emerald-300" : "text-red-300"}>{delta.issuesDelta >= 0 ? "+" : ""}{delta.issuesDelta}</span>
                   </div>
                 </div>
               ))}

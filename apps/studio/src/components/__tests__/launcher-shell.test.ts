@@ -13,10 +13,16 @@ describe("Studio launcher shell", () => {
     expect(source).toContain("onOpenPathReplay={openPathReplay}");
     expect(source).toContain("onOpenCompareFixes={openCompareFixes}");
     expect(source).toContain("onOpenIssues={openIssues}");
+    expect(source).toContain('const openReport = () => launchWorkspace("report", "report", "report");');
     expect(source).toContain("onRunSimulation={runSimulation}");
     expect(source).toContain("onOpenScene={openScene}");
-    expect(source).toContain("setLaunchNotice(warning)");
-    expect(source).toContain("setAiDraftNotice(warning)");
+    expect(source).toContain("savedProjects={savedProjects}");
+    expect(source).toContain("onUpdateProjectMetadata={updateSavedSceneMetadata}");
+    expect(source).toContain("const provenanceNote =");
+    expect(source).toContain("setLaunchNotice(provenanceNote)");
+    expect(source).toContain("setAiDraftNotice(provenanceNote)");
     expect(source).toContain("AI draft status:");
+    expect(source).toContain("const resolvedSearchParams = use(searchParams ?? Promise.resolve<{ studio?: string | string[] }>({}));");
+    expect(source).toContain('const hasQueryBoot = resolvedSearchParams.studio === "1";');
   });
 });

@@ -1,18 +1,34 @@
 "use client";
 
-import { PerspectiveCamera } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/cn";
 
 import "@/lib/three-compat";
 import type { CameraNode, DoriQuality, SecurityScene } from "@/schema/security-scene";
 import { qualityToScore } from "@/simulation/dori";
-import { getYawPitchDirection } from "@/simulation/geometry";
 import { useStudioStore } from "@/store/studio-store";
 import { PathActor, CoverageSegmentPath } from "@/components/workspace/SharedScene";
+import { CameraRigLive, SceneFeedGeometry } from "@/components/view/SceneFeedCanvas";
 
 type FeedViewMode = "normal" | "ir" | "low_light" | "thermal";
+type FeedOverlayOptions = {
+  doriLabels: boolean;
+  pathActor: boolean;
+  zones: boolean;
+  timestamp: boolean;
+  boundingBox: boolean;
+  grid: boolean;
+};
+
+const DEFAULT_FEED_OVERLAY_OPTIONS: FeedOverlayOptions = {
+  doriLabels: true,
+  pathActor: false,
+  zones: true,
+  timestamp: true,
+  boundingBox: false,
+  grid: false,
+};
 
 const FEED_MODE_LABELS: Record<FeedViewMode, string> = {
   normal: "Normal",
@@ -46,108 +62,181 @@ function qualityRangeLabel(quality: DoriQuality, doriStandard: SecurityScene["as
   return DORI_2014_RANGES[quality as keyof typeof DORI_2014_RANGES] ?? "25+ PPM";
 }
 
-function CameraFeedScene({
+function getReplaySegmentState(points: [number, number][], progress: number) {
+  if (points.length < 2) {
+    return { currentIndex: 0, segmentProgress: 0 };
+  }
+
+  const clamped = Math.max(0, Math.min(1, progress));
+  const segmentLengths = points.slice(1).map((point, index) => {
+    const prev = points[index]!;
+    return Math.hypot(point[0] - prev[0], point[1] - prev[1]);
+  });
+  const totalLength = segmentLengths.reduce((sum, value) => sum + value, 0);
+  if (totalLength <= 0) return { currentIndex: 0, segmentProgress: 0 };
+
+  let remaining = totalLength * clamped;
+  for (let index = 0; index < segmentLengths.length; index += 1) {
+    const length = segmentLengths[index]!;
+    if (index === segmentLengths.length - 1 || remaining <= length) {
+      return {
+        currentIndex: index,
+        segmentProgress: length > 0 ? remaining / length : 0,
+      };
+    }
+    remaining -= length;
+  }
+
+  return { currentIndex: segmentLengths.length - 1, segmentProgress: 1 };
+}
+
+function FeedArtifacts({
   camera,
-  walls,
-  obstructions,
-  dimensions,
-  adversarialPath,
+  clarity,
+  pathState,
+  overlayOptions,
 }: {
   camera: CameraNode;
-  walls: SecurityScene["walls"];
-  obstructions: SecurityScene["obstructions"];
-  dimensions: SecurityScene["dimensions"];
-  adversarialPath?: {
-    waypoints: { position: [number, number]; detectionQuality: string }[];
-  };
+  clarity: CameraNode["clarity"];
+  pathState: { currentIndex: number; segmentProgress: number } | null;
+  overlayOptions: FeedOverlayOptions;
 }) {
-  const target = useMemo(() => {
-    const direction = getYawPitchDirection(camera.yawDeg, camera.pitchDeg);
+  const cameraStatus = String(camera.status);
+  const problematicStatuses = new Set(["dirty", "blocked", "malfunctioning"]);
+  const isProblematic = cameraStatus !== "on" || clarity === "poor" || problematicStatuses.has(cameraStatus);
 
-    return [
-      camera.position[0] + direction.x * 5,
-      camera.position[1] + direction.y * 5,
-      camera.position[2] + direction.z * 5,
-    ] as [number, number, number];
-  }, [camera.pitchDeg, camera.position, camera.yawDeg]);
+  const badgeLabel =
+    cameraStatus === "off"
+      ? "Offline"
+      : cameraStatus === "blocked"
+        ? "Blocked"
+        : cameraStatus === "malfunctioning"
+          ? "Malfunctioning"
+          : clarity === "poor" || cameraStatus === "dirty"
+            ? "Dirty Lens"
+            : null;
+
+  const overlayOpacity = clarity === "poor" || cameraStatus === "dirty"
+    ? 0.45
+    : clarity === "average"
+      ? 0.24
+      : 0.12;
+
+  const timestamp = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 
   return (
     <>
-      <PerspectiveCamera
-        makeDefault
-        position={camera.position}
-        fov={camera.fovHorizontalDeg}
-        near={0.1}
-        far={50}
-        ref={(cam) => {
-          if (cam) cam.lookAt(target[0], target[1], target[2]);
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(0deg, rgba(0,0,0,0.02), rgba(0,0,0,0.02) 2px, transparent 2px, transparent 4px)",
+          opacity: overlayOpacity,
+          mixBlendMode: "soft-light",
         }}
       />
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[5, 5, 5]} intensity={0.6} />
 
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[dimensions.width / 2, 0, dimensions.depth / 2]} receiveShadow>
-        <planeGeometry args={[dimensions.width, dimensions.depth]} />
-        <meshStandardMaterial color="#1a1f2e" />
-      </mesh>
+      {overlayOptions.grid ? (
+        <div
+          className="pointer-events-none absolute inset-0 opacity-20"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(96,165,250,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(96,165,250,0.15) 1px, transparent 1px)",
+            backgroundSize: "36px 36px",
+            mixBlendMode: "screen",
+          }}
+        />
+      ) : null}
 
-      {obstructions.map((obs) => {
-        const [width, depth, height] = obs.dimensions;
+      {isProblematic ? (
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/12 via-transparent to-red-950/10" />
+      ) : null}
 
-        return (
-          <mesh key={obs.id} position={obs.position} rotation={[0, (obs.rotationYDeg * Math.PI) / 180, 0]} castShadow receiveShadow>
-            <boxGeometry args={[width, height, depth]} />
-            <meshStandardMaterial color="#5a4030" />
-          </mesh>
-        );
-      })}
+      {overlayOptions.doriLabels && badgeLabel ? (
+        <div className="absolute left-3 top-20 z-10 rounded-lg border border-amber-400/25 bg-black/65 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.18em] text-amber-200 backdrop-blur-sm">
+          {badgeLabel}
+        </div>
+      ) : null}
 
-      {walls.map((wall) => {
-        const dx = wall.end[0] - wall.start[0];
-        const dz = wall.end[1] - wall.start[1];
-        const len = Math.sqrt(dx * dx + dz * dz);
-        const midX = (wall.start[0] + wall.end[0]) / 2;
-        const midZ = (wall.start[1] + wall.end[1]) / 2;
-        const angle = Math.atan2(dz, dx);
-        const isGlass = wall.material === "glass";
+      {overlayOptions.pathActor && pathState ? (
+        <div className="pointer-events-none absolute right-3 bottom-3 z-10 rounded-lg border border-sky-400/20 bg-black/60 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.14em] text-sky-200 backdrop-blur-sm">
+          Actor replay active
+        </div>
+      ) : null}
 
-        return (
-          <mesh key={wall.id} position={[midX, wall.heightM / 2, midZ]} rotation={[0, -angle, 0]} receiveShadow castShadow>
-            <boxGeometry args={[len, wall.heightM, wall.thicknessM]} />
-            <meshStandardMaterial
-              color={isGlass ? "#7fb4ff" : "#2a3040"}
-              transparent={isGlass}
-              opacity={isGlass ? 0.4 : 1}
-            />
-          </mesh>
-        );
-      })}
+      {overlayOptions.boundingBox ? (
+        <div
+          className="pointer-events-none absolute inset-[18%_22%] rounded-2xl border border-red-400/50 bg-red-500/8 shadow-[0_0_0_1px_rgba(248,113,113,0.14)]"
+          aria-hidden="true"
+        />
+      ) : null}
 
-      {adversarialPath && adversarialPath.waypoints.length > 0 && (
-        <>
-          <CoverageSegmentPath waypoints={adversarialPath.waypoints} />
-          <PathActor
-            waypoints={adversarialPath.waypoints.map((wp) => wp.position)}
-            currentIndex={0}
-            progress={0}
-          />
-        </>
-      )}
+      {overlayOptions.timestamp ? (
+        <div className="pointer-events-none absolute left-3 bottom-3 z-10 rounded-lg border border-[#2d3d56] bg-black/65 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.12em] text-[#c7d0e4] backdrop-blur-sm">
+          {timestamp}
+        </div>
+      ) : null}
     </>
   );
 }
 
-export function CameraFeedCanvas({ cameraId }: { cameraId: string }) {
+function CameraFeedScene({
+  camera,
+  pathState,
+  selectedPath,
+  overlayOptions,
+}: {
+  camera: CameraNode;
+  pathState: { currentIndex: number; segmentProgress: number } | null;
+  selectedPath: SecurityScene["paths"][number] | null;
+  overlayOptions: FeedOverlayOptions;
+}) {
+  return (
+    <>
+      <CameraRigLive camera={camera} />
+      <SceneFeedGeometry theme={undefined} showPrivacyZones={overlayOptions.zones} />
+
+      {selectedPath && pathState && overlayOptions.pathActor ? (
+        <>
+          <CoverageSegmentPath
+            waypoints={selectedPath.points.map((point) => ({
+              position: point.position,
+              detectionQuality: point.action ?? selectedPath.label,
+            }))}
+          />
+          <PathActor
+            waypoints={selectedPath.points.map((point) => point.position)}
+            currentIndex={pathState.currentIndex}
+            progress={pathState.segmentProgress}
+          />
+        </>
+      ) : null}
+    </>
+  );
+}
+
+export function CameraFeedCanvas({
+  cameraId,
+  overlayOptions = DEFAULT_FEED_OVERLAY_OPTIONS,
+}: {
+  cameraId: string;
+  overlayOptions?: Partial<FeedOverlayOptions>;
+}) {
   const scene = useStudioStore((s) => s.scene);
   const result = useStudioStore((s) => s.simulationResult);
   const selectedNodeId = useStudioStore((s) => s.selectedNodeId);
+  const pathReplay = useStudioStore((s) => s.pathReplay);
+  const activePathId = useStudioStore((s) => s.activePathId);
   const camera = scene.cameras.find((entry) => entry.id === cameraId);
   const [viewMode, setViewMode] = useState<FeedViewMode>("normal");
-  const adversarialPath = result?.adversarialPath ?? result?.coverageFailurePath ?? undefined;
+  const overlayFlags = { ...DEFAULT_FEED_OVERLAY_OPTIONS, ...overlayOptions };
 
   if (!camera) return null;
 
   const isNight = scene.assumptions.timeOfDay === "night";
+  const selectedPath = scene.paths.find((path) => path.id === activePathId) ?? scene.paths[0] ?? null;
+  const pathPoints = selectedPath?.points.map((point) => point.position) ?? [];
+  const pathState = selectedPath ? getReplaySegmentState(pathPoints, pathReplay.progress) : null;
   const targetZone = scene.criticalZones.find((zone) => zone.id === selectedNodeId) ?? scene.criticalZones[0] ?? null;
   const cameraResult = result?.cameraResults.find((entry) => entry.cameraId === camera.id) ?? null;
   const targetQuality = targetZone ? (cameraResult?.qualityByZone[targetZone.id] ?? "none") : "none";
@@ -188,13 +277,11 @@ export function CameraFeedCanvas({ cameraId }: { cameraId: string }) {
     ? (scene.cameras.find((entry) => entry.id === bestCameraForTarget.cameraId)?.name ?? bestCameraForTarget.cameraId)
     : camera.name;
 
-  const canvasFilterClass = viewMode === "normal"
-    ? ""
-    : viewMode === "ir"
-      ? "grayscale-[0.95] brightness-[0.85] contrast-[1.25]"
-      : viewMode === "low_light"
-        ? "brightness-[0.72] contrast-[1.18] saturate-[0.85]"
-        : "sepia-[0.8] saturate-[1.6] hue-rotate-[300deg] brightness-[0.82] contrast-[1.1]";
+  const canvasFilterClass = [
+    viewMode === "normal" ? "" : viewMode === "ir" ? "grayscale-[0.95] brightness-[0.85] contrast-[1.25]" : viewMode === "low_light" ? "brightness-[0.72] contrast-[1.18] saturate-[0.85]" : "sepia-[0.8] saturate-[1.6] hue-rotate-[300deg] brightness-[0.82] contrast-[1.1]",
+    camera.status === "dirty" || camera.clarity === "poor" ? "saturate-[0.78] contrast-[1.14]" : "",
+    camera.status === "blocked" || camera.status === "malfunctioning" || camera.status === "off" ? "grayscale-[0.7] brightness-[0.72]" : "",
+  ].join(" ");
 
   return (
     <div className="relative w-full overflow-hidden rounded-lg border border-[#1f2536]" style={{ aspectRatio: "16 / 9" }}>
@@ -204,9 +291,11 @@ export function CameraFeedCanvas({ cameraId }: { cameraId: string }) {
           shadows="percentage"
           gl={{ preserveDrawingBuffer: true }}
         >
-          <CameraFeedScene camera={camera} walls={scene.walls} obstructions={scene.obstructions} dimensions={scene.dimensions} adversarialPath={adversarialPath ?? undefined} />
+          <CameraFeedScene camera={camera} pathState={pathState} selectedPath={selectedPath} overlayOptions={overlayFlags} />
         </Canvas>
       </div>
+
+      <FeedArtifacts camera={camera} clarity={camera.clarity} pathState={pathState} overlayOptions={overlayFlags} />
 
       <div className="absolute left-2 top-2 z-10 flex items-center gap-1 rounded-lg border border-[#24304a] bg-black/50 p-1 backdrop-blur-sm">
         {(Object.keys(FEED_MODE_LABELS) as FeedViewMode[]).map((mode) => (
@@ -235,7 +324,7 @@ export function CameraFeedCanvas({ cameraId }: { cameraId: string }) {
         />
       )}
 
-      {targetZone ? (
+      {overlayFlags.doriLabels && targetZone ? (
         <div className="absolute right-2 top-2 z-10 rounded-xl border border-[#24304a] bg-black/70 px-2.5 py-2 backdrop-blur-sm">
           <div className="mb-1 text-[8px] font-semibold uppercase tracking-[0.18em] text-[#8ab4ff]">DORI Overlay</div>
           <div className="text-[11px] font-semibold text-white">

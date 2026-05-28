@@ -9,8 +9,8 @@
   --border:       #1e2130;
   --border-sub:   #181b26;
   --text:         #dde2ef;
-  --text-muted:   #68738a;
-  --text-dim:     #3a4158;
+  --text-muted:   #8795b0;
+  --text-dim:     #5f6c86;
   --green:        #22c55e;
   --green-dim:    #166534;
   --blue:         #3b82f6;
@@ -18,6 +18,23 @@
   --red:          #ef4444;
   --red-dim:      #7f1d1d;
 }
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg:           #f3f6fb;
+  --bg-panel:     #ffffff;
+  --bg-raised:    #ecf1f820;
+  --bg-input:     #eef3fb;
+  --border:       #cfd9ea;
+  --border-sub:   #dfe6f2;
+  --text:         #152238;
+  --text-muted:   #415473;
+  --text-dim:     #5e6f8c;
+}
+
+:root[data-density="compact"] { --ui-scale: 1; }
+:root[data-density="normal"] { --ui-scale: 1.07; }
+:root[data-density="comfortable"] { --ui-scale: 1.14; }
 
 * { box-sizing: border-box; }
 
@@ -31,6 +48,50 @@ html, body, #__next {
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;
 }
+
+body {
+  zoom: var(--ui-scale, 1);
+}
+
+/* ── Type scale ── */
+/* Product UI type scale: 5 steps + mono variant.
+   Step  Name        Size   Weight     Use
+   1     caption     10px   medium     Badge text, inline metadata, key hints
+   2     label       11px   medium     Section titles, button labels, tool names
+   3     body        13px   normal     Default body — the baseline
+   4     heading     15px   semibold   Panel headers, object names, stat values
+   5     display     18px   bold       Large numeric stats, title chrome
+*/
+:root {
+  --fs-caption:  10px;
+  --fs-label:    11px;
+  --fs-body:     13px;
+  --fs-heading:  15px;
+  --fs-display:  18px;
+  --lh-tight:    1.15;
+  --lh-body:     1.4;
+  --lh-loose:    1.55;
+  /* Tracking guidelines:
+     Body/normal text: 0.01em (set on body)
+     All-caps labels:  0.12-0.16em
+     Compact labels:   0.08em
+  */
+}
+/* Use data attributes for tracking presets */
+[data-ts="compact"] { letter-spacing: 0.08em; }
+[data-ts="label"]   { letter-spacing: 0.14em; }
+[data-ts="wide"]    { letter-spacing: 0.22em; }
+[data-ts="numeric"] { font-variant-numeric: tabular-nums; }
+
+/* ── Type scale utility classes ── */
+.ts-caption { font-size: var(--fs-caption); }
+.ts-label   { font-size: var(--fs-label); }
+.ts-body    { font-size: var(--fs-body); }
+.ts-heading { font-size: var(--fs-heading); }
+.ts-display { font-size: var(--fs-display); }
+
+/* Tabular numbers for any element marked with .tabular */
+.tabular { font-variant-numeric: tabular-nums; }
 
 ::-webkit-scrollbar         { width: 3px; height: 3px; }
 ::-webkit-scrollbar-track   { background: transparent; }

@@ -1,8 +1,23 @@
 import { create } from "zustand";
 
 import { createSmallRetailShopScene, smallRetailShopScene } from "@/demo-scenes/small-retail-shop";
+import { DEFAULT_AI_PROVIDER_SELECTION, normalizeAiProviderSelection, type AiProviderSelection } from "@/agents/provider-selection";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
+import { createCameraNode, createCriticalZoneNode, createObstructionNode, createSecurityLightNode, createWallNode } from "@/lib/node-factory";
 import { buildSceneIntelligenceGraph, type SceneIntelligenceGraph } from "@/lib/scene-intelligence-graph";
+import {
+  createDefaultEnabledAnalysisModules,
+  createDefaultVisibleComponents,
+  getPresetLayoutSnapshot,
+  isWorkspaceLayoutModified,
+  PRESET_VIEW_MODES,
+  PRESET_CANVAS_MODES,
+  PRESET_RIGHT_PANEL_MODES,
+  PRESET_BOTTOM_DRAWER_MODES,
+  PRESET_PINNED_MODULES,
+  PRESET_LAYOUT_SIZES,
+  type WorkspaceLayoutSnapshot,
+} from "@/lib/workspace-layouts";
 import {
   type AnyEditableNode,
   type CameraNode,
@@ -18,8 +33,30 @@ import { simulateStudio } from "@/simulation/simulate-studio";
 import { computeTemporalProfile } from "@/simulation/temporal";
 import type { TemporalSecurityProfile } from "@/schema/security-scene";
 
-export type ViewMode = "map" | "wall" | "replay" | "camera_view" | "compare";
+export type ViewMode = "map" | "wall" | "replay" | "camera_view" | "compare" | "report";
+export type CanvasMode = "orbit_3d" | "topdown_2d";
 export type DockSide = "left" | "right" | "bottom";
+export type RightPanelMode =
+  | "inspector"
+  | "security_status"
+  | "issues"
+  | "recommendations"
+  | "assumptions"
+  | "camera_controls";
+export type BottomDrawerMode = "tabs" | "single_module" | "hidden";
+export type WorkspaceComponentId =
+  | "coverage_legend"
+  | "north_compass"
+  | "viewport_controls"
+  | "control_hint_bar"
+  | "camera_preset_picker"
+  | "view_mode_bar"
+  | "command_bar"
+  | "status_bar"
+  | "left_dock"
+  | "right_dock"
+  | "bottom_dock"
+  | "minimap";
 export type WorkspacePreset =
   | "edit"
   | "coverage"
@@ -30,14 +67,16 @@ export type WorkspacePreset =
   | "debug"
   | "focus";
 
-type DockSnapshot = {
-  workspacePreset: WorkspacePreset;
-  leftDockCollapsed: boolean;
-  rightDockCollapsed: boolean;
-  bottomDockCollapsed: boolean;
-  leftDockSizePx: number;
-  rightDockSizePx: number;
-  bottomDockSizePx: number;
+type DockSnapshot = WorkspaceLayoutSnapshot;
+
+type WorkspaceLayoutRecord = WorkspaceLayoutSnapshot & {
+  id: string;
+  name: string;
+  createdAt: number;
+};
+
+type DemoSceneSnapshot = Omit<SceneSnapshot, "scene"> & {
+  scene: SecurityScene;
 };
 
 export type ActiveTool =
@@ -64,11 +103,13 @@ export type EditorDraft = {
   selectedHandle?: string;
 };
 
-export type BottomTab = "metrics" | "issues" | "timeline" | "beforeafter" | "report" | "debug" | "counterfactual" | "threat" | "redundancy" | "temporal" | "assumptions" | "provenance" | "novel";
+export type BottomTab = "outcome" | "metrics" | "issues" | "timeline" | "beforeafter" | "report" | "help" | "debug" | "counterfactual" | "threat" | "redundancy" | "temporal" | "assumptions" | "provenance" | "novel";
 
 export type InspectorTab = "properties" | "view" | "status" | "analytics" | "failures";
 
 export type OverlayDensity = "all" | "compact" | "minimal";
+export type UiDensity = "compact" | "normal" | "comfortable";
+export type UiTheme = "dark" | "light";
 export type OverlayFilterId = "cameraLabels" | "zoneLabels" | "obstructionWarnings" | "entryChips" | "pathLabels";
 export type OverlayFilters = Record<OverlayFilterId, boolean>;
 
@@ -108,49 +149,275 @@ export type FocusScenePointRequest = {
   source: MapViewportTarget;
 };
 
-const SCENE_STORAGE_KEY = "sentineltwin_saved_scenes";
+const PROJECT_STORAGE_KEY = "sentineltwin_saved_projects_v2";
+const LEGACY_SCENE_STORAGE_KEY = "sentineltwin_saved_scenes";
+const LAYOUT_STORAGE_KEY = "sentineltwin_workspace_layouts";
+const LEGACY_LAYOUT_STORAGE_KEY = "sentineltwin_saved_layouts_v1";
+const UI_THEME_STORAGE_KEY = "sentineltwin_ui_theme";
+const UI_DENSITY_STORAGE_KEY = "sentineltwin_ui_density";
+const AI_PROVIDER_STORAGE_KEY = "sentineltwin_ai_provider_selection";
 
-function loadSavedScenesFromStorage(): SecurityScene[] {
+export type SavedProjectRecord = {
+  scene: SecurityScene;
+  folder: string;
+  tags: string[];
+  pinned: boolean;
+  createdAt: number;
+  updatedAt: number;
+  lastOpenedAt: number | null;
+};
+
+function sanitizeTags(tags: unknown): string[] {
+  if (!Array.isArray(tags)) return [];
+  return [...new Set(tags.map((tag) => String(tag).trim()).filter(Boolean))].slice(0, 8);
+}
+
+function normalizeFolder(folder: unknown): string {
+  const value = typeof folder === "string" ? folder.trim() : "";
+  return value || "Unsorted";
+}
+
+function normalizeSavedProjectRecord(input: unknown): SavedProjectRecord | null {
+  if (!input || typeof input !== "object") return null;
+  const candidate = input as Partial<SavedProjectRecord> & { scene?: unknown };
+  const sceneResult = safeParseSecurityScene(candidate.scene ?? input);
+  if (!sceneResult.success) return null;
+
+  const now = Date.now();
+  return {
+    scene: cloneSecurityScene(sceneResult.data),
+    folder: normalizeFolder(candidate.folder),
+    tags: sanitizeTags(candidate.tags),
+    pinned: Boolean(candidate.pinned),
+    createdAt: typeof candidate.createdAt === "number" ? candidate.createdAt : now,
+    updatedAt: typeof candidate.updatedAt === "number" ? candidate.updatedAt : now,
+    lastOpenedAt: typeof candidate.lastOpenedAt === "number" ? candidate.lastOpenedAt : null,
+  };
+}
+
+function normalizeSavedProjectList(raw: unknown): SavedProjectRecord[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((item) => {
+    const record = normalizeSavedProjectRecord(item);
+    return record ? [record] : [];
+  });
+}
+
+function dedupeSavedProjectList(records: SavedProjectRecord[]): SavedProjectRecord[] {
+  const bySceneId = new Map<string, SavedProjectRecord>();
+  for (const record of records) {
+    bySceneId.set(record.scene.id, record);
+  }
+  return [...bySceneId.values()].sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+function loadSavedProjectsFromStorage(): SavedProjectRecord[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(SCENE_STORAGE_KEY);
-    if (!raw) return [];
-    const scenes = JSON.parse(raw);
-    if (!Array.isArray(scenes)) return [];
-    // Validate each scene — keep only valid ones
-    return scenes.filter((s: unknown) => {
-      const result = safeParseSecurityScene(s);
-      return result.success;
+    const modernRaw = localStorage.getItem(PROJECT_STORAGE_KEY);
+    if (modernRaw) {
+      return dedupeSavedProjectList(normalizeSavedProjectList(JSON.parse(modernRaw)));
+    }
+
+    const legacyRaw = localStorage.getItem(LEGACY_SCENE_STORAGE_KEY);
+    if (!legacyRaw) return [];
+    const legacyScenes = JSON.parse(legacyRaw);
+    if (!Array.isArray(legacyScenes)) return [];
+    return dedupeSavedProjectList(legacyScenes.flatMap((scene: unknown) => {
+      const parsed = safeParseSecurityScene(scene);
+      if (!parsed.success) return [];
+      return [{
+        scene: cloneSecurityScene(parsed.data),
+        folder: "Unsorted",
+        tags: [],
+        pinned: false,
+        createdAt: parsed.data.createdAt ?? Date.now(),
+        updatedAt: parsed.data.updatedAt ?? Date.now(),
+        lastOpenedAt: null,
+      }];
+    }));
+  } catch {
+    return [];
+  }
+}
+
+function loadSavedLayoutsFromStorage(): WorkspaceLayoutRecord[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(LAYOUT_STORAGE_KEY);
+    const source = raw ?? localStorage.getItem(LEGACY_LAYOUT_STORAGE_KEY);
+    if (!source) return [];
+    const parsed = JSON.parse(source);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.flatMap((item) => {
+      if (!item || typeof item !== "object") return [];
+      const candidate = item as Partial<WorkspaceLayoutRecord>;
+      if (
+        typeof candidate.id !== "string"
+        || typeof candidate.name !== "string"
+        || typeof candidate.workspacePreset !== "string"
+      ) {
+        return [];
+      }
+
+      const workspacePreset = candidate.workspacePreset as WorkspacePreset;
+      const presetLayout = buildPresetDockLayout(workspacePreset);
+      const layerVisibility = candidate.layerVisibility && typeof candidate.layerVisibility === "object"
+        ? { ...DEFAULT_LAYERS, ...(candidate.layerVisibility as Partial<LayerVisibility>) }
+        : { ...DEFAULT_LAYERS };
+      const visibleComponents = candidate.visibleComponents && typeof candidate.visibleComponents === "object"
+        ? { ...presetLayout.visibleComponents, ...(candidate.visibleComponents as Partial<Record<WorkspaceComponentId, boolean>>) }
+        : { ...presetLayout.visibleComponents };
+      const enabledAnalysisModules = candidate.enabledAnalysisModules && typeof candidate.enabledAnalysisModules === "object"
+        ? { ...presetLayout.enabledAnalysisModules, ...(candidate.enabledAnalysisModules as Partial<Record<BottomTab, boolean>>) }
+        : { ...presetLayout.enabledAnalysisModules };
+      const rightPanelMode = candidate.rightPanelMode === "inspector" || candidate.rightPanelMode === "security_status" || candidate.rightPanelMode === "issues" || candidate.rightPanelMode === "recommendations" || candidate.rightPanelMode === "assumptions" || candidate.rightPanelMode === "camera_controls"
+        ? candidate.rightPanelMode
+        : presetLayout.rightPanelMode;
+      const bottomDrawerMode = candidate.bottomDrawerMode === "tabs" || candidate.bottomDrawerMode === "single_module" || candidate.bottomDrawerMode === "hidden"
+        ? candidate.bottomDrawerMode
+        : presetLayout.bottomDrawerMode;
+      const pinnedAnalysisModule = candidate.pinnedAnalysisModule && typeof candidate.pinnedAnalysisModule === "string" && candidate.pinnedAnalysisModule in enabledAnalysisModules
+        ? candidate.pinnedAnalysisModule as BottomTab
+        : presetLayout.pinnedAnalysisModule;
+      const overlayDensity = candidate.overlayDensity === "minimal" || candidate.overlayDensity === "compact" ? candidate.overlayDensity : presetLayout.overlayDensity;
+      const showDebugOverlays = Boolean(candidate.showDebugOverlays ?? presetLayout.showDebugOverlays);
+      const viewMode = candidate.viewMode === "map" || candidate.viewMode === "wall" || candidate.viewMode === "replay" || candidate.viewMode === "camera_view" || candidate.viewMode === "compare" || candidate.viewMode === "report"
+        ? candidate.viewMode
+        : PRESET_VIEW_MODES[workspacePreset] ?? "map";
+      const canvasMode = candidate.canvasMode === "orbit_3d" || candidate.canvasMode === "topdown_2d"
+        ? candidate.canvasMode
+        : presetLayout.canvasMode;
+
+      return [{
+        id: candidate.id,
+        name: candidate.name,
+        viewMode,
+        canvasMode,
+        workspacePreset,
+        leftDockCollapsed: typeof candidate.leftDockCollapsed === "boolean" ? candidate.leftDockCollapsed : presetLayout.leftDockCollapsed,
+        rightDockCollapsed: typeof candidate.rightDockCollapsed === "boolean" ? candidate.rightDockCollapsed : presetLayout.rightDockCollapsed,
+        bottomDockCollapsed: typeof candidate.bottomDockCollapsed === "boolean" ? candidate.bottomDockCollapsed : presetLayout.bottomDockCollapsed,
+        leftDockSizePx: typeof candidate.leftDockSizePx === "number" ? candidate.leftDockSizePx : presetLayout.leftDockSizePx,
+        rightDockSizePx: typeof candidate.rightDockSizePx === "number" ? candidate.rightDockSizePx : presetLayout.rightDockSizePx,
+        bottomDockSizePx: typeof candidate.bottomDockSizePx === "number" ? candidate.bottomDockSizePx : presetLayout.bottomDockSizePx,
+        visibleComponents,
+        enabledAnalysisModules,
+        rightPanelMode,
+        bottomDrawerMode,
+        pinnedAnalysisModule,
+        layerVisibility,
+        clientDemoOptions: {
+          hideDebugModules: Boolean(candidate.clientDemoOptions && typeof candidate.clientDemoOptions === "object" && "hideDebugModules" in candidate.clientDemoOptions ? (candidate.clientDemoOptions as WorkspaceLayoutRecord["clientDemoOptions"]).hideDebugModules : presetLayout.clientDemoOptions.hideDebugModules),
+          simplifiedLabels: Boolean(candidate.clientDemoOptions && typeof candidate.clientDemoOptions === "object" && "simplifiedLabels" in candidate.clientDemoOptions ? (candidate.clientDemoOptions as WorkspaceLayoutRecord["clientDemoOptions"]).simplifiedLabels : presetLayout.clientDemoOptions.simplifiedLabels),
+          criticalIssuesOnly: Boolean(candidate.clientDemoOptions && typeof candidate.clientDemoOptions === "object" && "criticalIssuesOnly" in candidate.clientDemoOptions ? (candidate.clientDemoOptions as WorkspaceLayoutRecord["clientDemoOptions"]).criticalIssuesOnly : presetLayout.clientDemoOptions.criticalIssuesOnly),
+          lockLayout: Boolean(candidate.clientDemoOptions && typeof candidate.clientDemoOptions === "object" && "lockLayout" in candidate.clientDemoOptions ? (candidate.clientDemoOptions as WorkspaceLayoutRecord["clientDemoOptions"]).lockLayout : presetLayout.clientDemoOptions.lockLayout),
+        },
+        overlayDensity,
+        showDebugOverlays,
+        createdAt: typeof candidate.createdAt === "number" ? candidate.createdAt : Date.now(),
+      }];
     });
   } catch {
     return [];
   }
 }
 
-function appendSavedScene(scene: SecurityScene) {
-  const scenes = loadSavedScenesFromStorage();
-  // Replace if same id exists, else append
-  const idx = scenes.findIndex((s) => s.id === scene.id);
-  const cloned = cloneSecurityScene(scene);
-  if (idx >= 0) {
-    scenes[idx] = cloned;
-  } else {
-    scenes.push(cloned);
-  }
+function loadUiTheme(): UiTheme {
+  if (typeof window === "undefined") return "dark";
+  const raw = window.localStorage.getItem(UI_THEME_STORAGE_KEY);
+  return raw === "light" ? "light" : "dark";
+}
+
+function loadUiDensity(): UiDensity {
+  if (typeof window === "undefined") return "normal";
+  const raw = window.localStorage.getItem(UI_DENSITY_STORAGE_KEY);
+  if (raw === "compact" || raw === "comfortable") return raw;
+  return "normal";
+}
+
+function loadAiProviderSelection(): AiProviderSelection {
+  if (typeof window === "undefined") return { ...DEFAULT_AI_PROVIDER_SELECTION };
   try {
-    localStorage.setItem(SCENE_STORAGE_KEY, JSON.stringify(scenes));
+    const raw = window.localStorage.getItem(AI_PROVIDER_STORAGE_KEY);
+    if (!raw) return { ...DEFAULT_AI_PROVIDER_SELECTION };
+    return normalizeAiProviderSelection(JSON.parse(raw) as Partial<AiProviderSelection>);
+  } catch {
+    return { ...DEFAULT_AI_PROVIDER_SELECTION };
+  }
+}
+
+function persistSavedLayouts(layouts: WorkspaceLayoutRecord[]) {
+  try {
+    localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(layouts));
+  } catch {
+    // Storage full or unavailable — silently fail
+  }
+}
+
+function persistSavedProjects(projects: SavedProjectRecord[]) {
+  try {
+    localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(projects));
+  } catch {
+    // Storage full or unavailable — silently fail
+  }
+}
+
+function persistAiProviderSelection(selection: AiProviderSelection) {
+  try {
+    localStorage.setItem(AI_PROVIDER_STORAGE_KEY, JSON.stringify(selection));
   } catch {
     // Storage full or unavailable — silently fail
   }
 }
 
 function removeSavedScene(sceneId: string) {
-  const scenes = loadSavedScenesFromStorage().filter((s) => s.id !== sceneId);
-  try {
-    localStorage.setItem(SCENE_STORAGE_KEY, JSON.stringify(scenes));
-  } catch {
-    // silently fail
+  const projects = loadSavedProjectsFromStorage().filter((record) => record.scene.id !== sceneId);
+  persistSavedProjects(projects);
+}
+
+function upsertSavedScene(scene: SecurityScene) {
+  const projects = loadSavedProjectsFromStorage();
+  const idx = projects.findIndex((record) => record.scene.id === scene.id);
+  const cloned = cloneSecurityScene(scene);
+  const now = Date.now();
+  if (idx >= 0) {
+    const existing = projects[idx];
+    projects[idx] = {
+      ...existing,
+      scene: cloned,
+      updatedAt: now,
+      folder: normalizeFolder(existing.folder),
+      tags: sanitizeTags(existing.tags),
+    };
+  } else {
+    projects.push({
+      scene: cloned,
+      folder: "Unsorted",
+      tags: [scene.source === "demo" ? "demo" : scene.source === "manual" ? "manual" : "workspace"],
+      pinned: false,
+      createdAt: now,
+      updatedAt: now,
+      lastOpenedAt: null,
+    });
   }
+  persistSavedProjects(projects);
+}
+
+function updateSavedSceneMetadata(sceneId: string, patch: Partial<Pick<SavedProjectRecord, "folder" | "tags" | "pinned" | "lastOpenedAt">>) {
+  const projects = loadSavedProjectsFromStorage();
+  const idx = projects.findIndex((record) => record.scene.id === sceneId);
+  if (idx < 0) return;
+  const existing = projects[idx];
+  projects[idx] = {
+    ...existing,
+    folder: patch.folder !== undefined ? normalizeFolder(patch.folder) : existing.folder,
+    tags: patch.tags !== undefined ? sanitizeTags(patch.tags) : existing.tags,
+    pinned: patch.pinned !== undefined ? Boolean(patch.pinned) : existing.pinned,
+    lastOpenedAt: patch.lastOpenedAt !== undefined ? patch.lastOpenedAt : existing.lastOpenedAt,
+    updatedAt: Date.now(),
+  };
+  persistSavedProjects(projects);
 }
 
 export type StudioStoreState = {
@@ -161,7 +428,11 @@ export type StudioStoreState = {
   snapshots: SceneSnapshot[];
   lastRunMs: number | null;
   savedScenes: SecurityScene[];
+  savedProjects: SavedProjectRecord[];
   launchNotice: string | null;
+  simulationError?: string | null;
+  sceneModified?: boolean;
+  savedSceneName?: string | null;
   compareVisualEvidence: {
     snapshotAId: string;
     snapshotBId: string;
@@ -178,18 +449,31 @@ export type StudioStoreState = {
   bottomTab: BottomTab;
   inspectorTab: InspectorTab;
   workspacePreset: WorkspacePreset;
+  canvasMode: CanvasMode;
+  canvasViewResetTick: number;
   focusMode: boolean;
   leftDockCollapsed: boolean;
   rightDockCollapsed: boolean;
+  rightPanelMode: RightPanelMode;
   bottomDockCollapsed: boolean;
   leftDockSizePx: number;
   rightDockSizePx: number;
   bottomDockSizePx: number;
+  visibleComponents: Record<WorkspaceComponentId, boolean>;
+  enabledAnalysisModules: Record<BottomTab, boolean>;
+  bottomDrawerMode: BottomDrawerMode;
+  pinnedAnalysisModule: BottomTab | null;
   previousLayout: DockSnapshot | null;
   layerVisibility: LayerVisibility;
   heatmapMode: "quality" | "fragility";
   environmentMode: "day" | "night" | "dusk";
   showDebugOverlays: boolean;
+  clientDemoOptions: {
+    hideDebugModules: boolean;
+    simplifiedLabels: boolean;
+    criticalIssuesOnly: boolean;
+    lockLayout: boolean;
+  };
   autoRecompute: boolean;
   cameraFailures: string[];
   temporalProfile: TemporalSecurityProfile | null;
@@ -243,9 +527,14 @@ export type StudioStoreState = {
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
   setWorkspacePreset: (preset: WorkspacePreset) => void;
+  setCanvasMode: (mode: CanvasMode) => void;
+  resetCanvasView: () => void;
   toggleDock: (side: DockSide) => void;
   setDockCollapsed: (side: DockSide, collapsed: boolean) => void;
   setDockSize: (side: DockSide, sizePx: number) => void;
+  setRightPanelMode: (mode: RightPanelMode) => void;
+  setBottomDrawerMode: (mode: BottomDrawerMode) => void;
+  setPinnedAnalysisModule: (moduleId: BottomTab | null) => void;
   enterFocusMode: () => void;
   restorePreviousLayout: () => void;
 
@@ -256,10 +545,29 @@ export type StudioStoreState = {
   setLayerVisibility: (layer: LayerId, visible: boolean) => void;
   setHeatmapMode: (mode: "quality" | "fragility") => void;
   setEnvironmentMode: (mode: "day" | "night" | "dusk") => void;
+  setShowDebugOverlays: (enabled: boolean) => void;
+  setVisibleComponent: (component: WorkspaceComponentId, visible: boolean) => void;
+  toggleVisibleComponent: (component: WorkspaceComponentId) => void;
+  setAnalysisModuleEnabled: (moduleId: BottomTab, enabled: boolean) => void;
+  toggleAnalysisModule: (moduleId: BottomTab) => void;
   overlayDensity: OverlayDensity;
+  uiDensity: UiDensity;
+  uiTheme: UiTheme;
+  aiProviderSelection: AiProviderSelection;
   overlayFilters: OverlayFilters;
   setOverlayDensity: (density: OverlayDensity) => void;
+  setUiDensity: (density: UiDensity) => void;
+  setUiTheme: (theme: UiTheme) => void;
+  setAiProviderSelection: (selection: AiProviderSelection) => void;
   setOverlayFilter: (filter: OverlayFilterId, visible: boolean) => void;
+  viewSettingsOpen: boolean;
+  setViewSettingsOpen: (open: boolean) => void;
+  toggleViewSettingsOpen: () => void;
+  savedLayouts: WorkspaceLayoutRecord[];
+  refreshSavedLayoutsList: () => void;
+  saveCurrentLayoutAs: (name: string) => WorkspaceLayoutRecord | null;
+  applySavedLayout: (layoutId: string) => void;
+  deleteSavedLayout: (layoutId: string) => void;
   setAllZoneTargetTypes: (targetType: CriticalZoneNode["targetType"]) => void;
   toggleAutoRecompute: () => void;
   toggleCameraFailure: (cameraId: string) => void;
@@ -305,6 +613,7 @@ export type StudioStoreState = {
   loadScenesFromStorage: () => SecurityScene[];
   refreshSavedScenesList: () => void;
   deleteSavedScene: (sceneId: string) => void;
+  updateSavedSceneMetadata: (sceneId: string, patch: Partial<Pick<SavedProjectRecord, "folder" | "tags" | "pinned" | "lastOpenedAt">>) => void;
   getSceneStorageKey: () => string;
 
   getSelectedCamera: () => CameraNode | null;
@@ -583,86 +892,7 @@ const DEFAULT_LAYERS: LayerVisibility = {
   grid: true, walls_floors: true, labels: true,
 };
 
-const DEFAULT_DOCK_SIZES = {
-  left: 248,
-  right: 344,
-  bottom: 360,
-} as const;
-
-const PRESET_LAYOUTS: Record<WorkspacePreset, Omit<DockSnapshot, "workspacePreset">> = {
-  edit: {
-    leftDockCollapsed: false,
-    rightDockCollapsed: false,
-    bottomDockCollapsed: false,
-    leftDockSizePx: DEFAULT_DOCK_SIZES.left,
-    rightDockSizePx: DEFAULT_DOCK_SIZES.right,
-    bottomDockSizePx: 360,
-  },
-  coverage: {
-    leftDockCollapsed: true,
-    rightDockCollapsed: true,
-    bottomDockCollapsed: true,
-    leftDockSizePx: DEFAULT_DOCK_SIZES.left,
-    rightDockSizePx: 372,
-    bottomDockSizePx: 40,
-  },
-  camera_wall: {
-    leftDockCollapsed: true,
-    rightDockCollapsed: true,
-    bottomDockCollapsed: true,
-    leftDockSizePx: DEFAULT_DOCK_SIZES.left,
-    rightDockSizePx: DEFAULT_DOCK_SIZES.right,
-    bottomDockSizePx: 40,
-  },
-  replay: {
-    leftDockCollapsed: true,
-    rightDockCollapsed: false,
-    bottomDockCollapsed: false,
-    leftDockSizePx: DEFAULT_DOCK_SIZES.left,
-    rightDockSizePx: 360,
-    bottomDockSizePx: 360,
-  },
-  compare: {
-    leftDockCollapsed: true,
-    rightDockCollapsed: false,
-    bottomDockCollapsed: false,
-    leftDockSizePx: DEFAULT_DOCK_SIZES.left,
-    rightDockSizePx: 368,
-    bottomDockSizePx: 360,
-  },
-  report: {
-    leftDockCollapsed: false,
-    rightDockCollapsed: false,
-    bottomDockCollapsed: false,
-    leftDockSizePx: DEFAULT_DOCK_SIZES.left,
-    rightDockSizePx: 368,
-    bottomDockSizePx: 360,
-  },
-  debug: {
-    leftDockCollapsed: false,
-    rightDockCollapsed: false,
-    bottomDockCollapsed: false,
-    leftDockSizePx: DEFAULT_DOCK_SIZES.left,
-    rightDockSizePx: 368,
-    bottomDockSizePx: 360,
-  },
-  focus: {
-    leftDockCollapsed: true,
-    rightDockCollapsed: true,
-    bottomDockCollapsed: true,
-    leftDockSizePx: DEFAULT_DOCK_SIZES.left,
-    rightDockSizePx: DEFAULT_DOCK_SIZES.right,
-    bottomDockSizePx: 40,
-  },
-};
-
-const VIEW_MODE_PRESETS: Record<ViewMode, WorkspacePreset> = {
-  map: "edit",
-  wall: "camera_wall",
-  replay: "replay",
-  camera_view: "coverage",
-  compare: "compare",
-};
+const DEFAULT_DOCK_SIZES = PRESET_LAYOUT_SIZES.edit;
 
 const clampDockSize = (side: DockSide, sizePx: number) => {
   const min = side === "bottom" ? 160 : 180;
@@ -670,24 +900,53 @@ const clampDockSize = (side: DockSide, sizePx: number) => {
   return Math.max(min, Math.min(max, Math.round(sizePx)));
 };
 
+function buildPresetDockLayout(preset: WorkspacePreset): DockSnapshot {
+  const layout = getPresetLayoutSnapshot(preset, DEFAULT_LAYERS);
+  return {
+    ...layout,
+  };
+}
+
 function snapshotLayout(state: Pick<
   StudioStoreState,
+  | "viewMode"
   | "workspacePreset"
+  | "canvasMode"
   | "leftDockCollapsed"
   | "rightDockCollapsed"
   | "bottomDockCollapsed"
   | "leftDockSizePx"
   | "rightDockSizePx"
   | "bottomDockSizePx"
+  | "visibleComponents"
+  | "enabledAnalysisModules"
+  | "rightPanelMode"
+  | "bottomDrawerMode"
+  | "pinnedAnalysisModule"
+  | "layerVisibility"
+  | "overlayDensity"
+  | "showDebugOverlays"
+  | "clientDemoOptions"
 >): DockSnapshot {
   return {
+    viewMode: state.viewMode,
     workspacePreset: state.workspacePreset,
+    canvasMode: state.canvasMode,
     leftDockCollapsed: state.leftDockCollapsed,
     rightDockCollapsed: state.rightDockCollapsed,
     bottomDockCollapsed: state.bottomDockCollapsed,
     leftDockSizePx: state.leftDockSizePx,
     rightDockSizePx: state.rightDockSizePx,
     bottomDockSizePx: state.bottomDockSizePx,
+    visibleComponents: { ...state.visibleComponents },
+    enabledAnalysisModules: { ...state.enabledAnalysisModules },
+    layerVisibility: { ...state.layerVisibility },
+    rightPanelMode: state.rightPanelMode,
+    bottomDrawerMode: state.bottomDrawerMode,
+    pinnedAnalysisModule: state.pinnedAnalysisModule,
+    overlayDensity: state.overlayDensity,
+    showDebugOverlays: state.showDebugOverlays,
+    clientDemoOptions: { ...state.clientDemoOptions },
   };
 }
 
@@ -707,13 +966,36 @@ function dockCollapsedKey(side: DockSide) {
       : "bottomDockCollapsed";
 }
 
+const ANALYSIS_TAB_ORDER: BottomTab[] = [
+  "metrics",
+  "issues",
+  "timeline",
+  "temporal",
+  "beforeafter",
+  "assumptions",
+  "provenance",
+  "redundancy",
+  "counterfactual",
+  "threat",
+  "report",
+  "debug",
+  "novel",
+];
+
+function getFirstEnabledAnalysisTab(enabledAnalysisModules: Record<BottomTab, boolean>, preferred?: BottomTab | null): BottomTab {
+  if (preferred && enabledAnalysisModules[preferred]) return preferred;
+  return ANALYSIS_TAB_ORDER.find((tab) => enabledAnalysisModules[tab]) ?? "metrics";
+}
+
 const DEMO_SNAPSHOT_BASE_TS = smallRetailShopScene.createdAt + 18 * 60_000;
+const SEEDED_WORKSPACE_BASE_TS = smallRetailShopScene.createdAt + 24 * 60_000;
+const SEEDED_LAYOUT_BASE_TS = smallRetailShopScene.createdAt + 30 * 60_000;
 
 function createSnapshotVariant(
   label: string,
   minutesAgo: number,
   mutate?: (scene: SecurityScene) => void,
-): SceneSnapshot {
+): DemoSceneSnapshot {
   const scene = createSmallRetailShopScene();
   mutate?.(scene);
   const simulation = simulateStudio(scene);
@@ -762,42 +1044,37 @@ INITIAL_SCENE.snapshots = INITIAL_SNAPSHOTS.map((snapshot) => ({
   ...snapshot,
   scene: structuredClone(snapshot.scene),
 }));
-const INITIAL_SCENE_INTELLIGENCE_GRAPH = buildGraphState(INITIAL_SCENE, null, 0, INITIAL_SNAPSHOTS.length);
+const INITIAL_SIMULATION = simulateStudio(INITIAL_SCENE);
+INITIAL_SCENE.simulation = INITIAL_SIMULATION;
+const INITIAL_SCENE_INTELLIGENCE_GRAPH = buildGraphState(INITIAL_SCENE, INITIAL_SIMULATION, 0, INITIAL_SNAPSHOTS.length);
 
 function getInitialViewMode(): ViewMode {
   if (typeof window === "undefined") return "map";
   const mode = new URLSearchParams(window.location.search).get("mode");
-  if (mode === "wall" || mode === "replay" || mode === "camera_view" || mode === "compare" || mode === "map") {
+  if (mode === "wall" || mode === "replay" || mode === "camera_view" || mode === "compare" || mode === "report" || mode === "map") {
     return mode;
   }
   return "map";
 }
 
 function viewModeToPreset(mode: ViewMode): WorkspacePreset {
-  switch (mode) {
-    case "wall":
-      return "camera_wall";
-    case "replay":
-      return "replay";
-    case "camera_view":
-      return "coverage";
-    case "compare":
-      return "compare";
-    case "map":
-    default:
-      return "edit";
-  }
+  const match = (Object.entries(PRESET_VIEW_MODES) as [WorkspacePreset, ViewMode][])
+    .find(([, presetViewMode]) => presetViewMode === mode);
+  return match?.[0] ?? "edit";
 }
 
 function viewModeToBottomTab(mode: ViewMode): BottomTab {
   switch (mode) {
+    case "map":
+      return "metrics";
     case "replay":
     case "camera_view":
       return "timeline";
     case "compare":
       return "beforeafter";
+    case "report":
+      return "report";
     case "wall":
-    case "map":
     default:
       return "metrics";
   }
@@ -805,15 +1082,143 @@ function viewModeToBottomTab(mode: ViewMode): BottomTab {
 
 const INITIAL_VIEW_MODE = getInitialViewMode();
 const INITIAL_WORKSPACE_PRESET = viewModeToPreset(INITIAL_VIEW_MODE);
+const INITIAL_LAYOUT = buildPresetDockLayout(INITIAL_WORKSPACE_PRESET);
+const INITIAL_SAVED_PROJECTS = loadSavedProjectsFromStorage();
+const INITIAL_SAVED_LAYOUTS = loadSavedLayoutsFromStorage();
+const INITIAL_SEEDED_PROJECTS = buildSeededWorkspaceProjects();
+const INITIAL_SEEDED_LAYOUTS = buildSeededLayouts();
+
+function buildSeededDemoProjects(): SavedProjectRecord[] {
+  return INITIAL_SNAPSHOTS.map((snapshot, index) => {
+    const variantName = snapshot.label === "Baseline" ? "Open Studio" : snapshot.label;
+    const scene = cloneSecurityScene({
+      ...snapshot.scene,
+      snapshots: snapshot.scene.snapshots ?? [],
+      scenarios: snapshot.scene.scenarios ?? [],
+    });
+    scene.id = `${scene.id}_${snapshot.label.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`;
+    scene.name = `${scene.name} · ${variantName}`;
+    const baseTs = snapshot.createdAt ?? Date.now();
+    return {
+      scene,
+      folder: index === 0 ? "Featured" : "Recent",
+      tags: ["demo", "workspace", snapshot.label.toLowerCase().replace(/[^a-z0-9]+/g, "-")],
+      pinned: index === 0,
+      createdAt: baseTs,
+      updatedAt: baseTs,
+      lastOpenedAt: baseTs,
+    };
+  });
+}
+
+function buildSeededWorkspaceProjects(): SavedProjectRecord[] {
+  const blankWorkspace = createBlankSecurityScene();
+  const baseTs = SEEDED_WORKSPACE_BASE_TS;
+  blankWorkspace.name = "Shop Layout Draft";
+  blankWorkspace.walls = [
+    createWallNode([0, 0], [10, 0], { wallHeightM: 3, thicknessM: 0.18, material: "solid" }),
+    createWallNode([10, 0], [10, 8], { wallHeightM: 3, thicknessM: 0.18, material: "solid" }),
+    createWallNode([10, 8], [0, 8], { wallHeightM: 3, thicknessM: 0.18, material: "solid" }),
+    createWallNode([0, 8], [0, 0], { wallHeightM: 3, thicknessM: 0.18, material: "solid" }),
+  ];
+  blankWorkspace.cameras = [
+    createCameraNode([2.2, 2.8, 1.2]),
+  ];
+  blankWorkspace.securityLights = [
+    createSecurityLightNode([5.2, 2.8, 4.3]),
+  ];
+  blankWorkspace.obstructions = [
+    createObstructionNode([4.8, 0.4, 3.2], "counter"),
+  ];
+  blankWorkspace.criticalZones = [
+    createCriticalZoneNode([
+      [6.0, 2.0],
+      [8.4, 2.0],
+      [8.4, 4.0],
+      [6.0, 4.0],
+    ]),
+  ];
+  blankWorkspace.entryPoints = [
+    { id: "entry_manual_draft", nodeType: "entry_point", label: "Front Entry", position: [1.0, 0.5] },
+  ];
+  blankWorkspace.paths = [
+    {
+      id: "path_manual_draft",
+      nodeType: "path",
+      label: "Entry to Counter",
+      actorType: "person",
+      points: [
+        { position: [1.0, 0.5], timestamp: 0, action: "enter" },
+        { position: [3.5, 2.0], timestamp: 12 },
+        { position: [6.6, 3.0], timestamp: 24, action: "wait" },
+      ],
+      speedMps: 1.2,
+      heightM: 1.75,
+      timeOfDay: "day",
+      intent: "authorized",
+    },
+  ];
+  const seededDraftResult = simulateStudio(blankWorkspace);
+  blankWorkspace.simulation = seededDraftResult;
+  blankWorkspace.updatedAt = baseTs;
+  blankWorkspace.createdAt = baseTs;
+
+  return [
+    {
+      scene: cloneSecurityScene(blankWorkspace),
+      folder: "Drafts",
+      tags: ["manual", "draft", "workspace"],
+      pinned: true,
+      createdAt: baseTs,
+      updatedAt: baseTs,
+      lastOpenedAt: baseTs,
+    },
+    ...buildSeededDemoProjects(),
+  ];
+}
+
+function buildSeededLayouts(): WorkspaceLayoutRecord[] {
+  const coverage = buildPresetDockLayout("coverage");
+  const cameraWall = buildPresetDockLayout("camera_wall");
+  return [
+    {
+      id: "layout_coverage_focus",
+      name: "Coverage Focus",
+      ...coverage,
+      layerVisibility: { ...DEFAULT_LAYERS },
+      clientDemoOptions: {
+        hideDebugModules: false,
+        simplifiedLabels: false,
+        criticalIssuesOnly: false,
+        lockLayout: false,
+      },
+      createdAt: SEEDED_LAYOUT_BASE_TS,
+    },
+    {
+      id: "layout_camera_wall",
+      name: "Camera Wall Review",
+      ...cameraWall,
+      layerVisibility: { ...DEFAULT_LAYERS, heatmap: false, grid: false },
+      clientDemoOptions: {
+        hideDebugModules: true,
+        simplifiedLabels: true,
+        criticalIssuesOnly: false,
+        lockLayout: false,
+      },
+      createdAt: SEEDED_LAYOUT_BASE_TS + 60_000,
+    },
+  ];
+}
 
 export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   scene: INITIAL_SCENE,
-  simulationResult: null,
-  simulationDirty: true,
+  simulationResult: INITIAL_SIMULATION,
+  simulationDirty: false,
   simulationRunning: false,
   snapshots: INITIAL_SNAPSHOTS,
-  lastRunMs: null,
-  savedScenes: [],
+  lastRunMs: 0,
+  savedScenes: INITIAL_SAVED_PROJECTS.length > 0 ? INITIAL_SAVED_PROJECTS.map((record) => record.scene) : INITIAL_SEEDED_PROJECTS.map((record) => record.scene),
+  savedProjects: INITIAL_SAVED_PROJECTS.length > 0 ? INITIAL_SAVED_PROJECTS : INITIAL_SEEDED_PROJECTS,
   launchNotice: null,
   compareVisualEvidence: null,
   compareReportSelection: null,
@@ -832,22 +1237,25 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     gridSnapM: 0.5,
     selectedHandle: undefined,
   },
-  viewMode: INITIAL_VIEW_MODE,
-  bottomTab: viewModeToBottomTab(INITIAL_VIEW_MODE),
+  viewMode: INITIAL_LAYOUT.viewMode,
+  bottomTab: viewModeToBottomTab(INITIAL_LAYOUT.viewMode),
   inspectorTab: "properties",
-  workspacePreset: INITIAL_WORKSPACE_PRESET,
+  workspacePreset: INITIAL_LAYOUT.workspacePreset,
+  canvasMode: INITIAL_LAYOUT.canvasMode,
+  canvasViewResetTick: 0,
   focusMode: false,
-  leftDockCollapsed: false,
-  rightDockCollapsed: false,
-  bottomDockCollapsed: false,
-  leftDockSizePx: DEFAULT_DOCK_SIZES.left,
-  rightDockSizePx: DEFAULT_DOCK_SIZES.right,
-  bottomDockSizePx: DEFAULT_DOCK_SIZES.bottom,
+  leftDockCollapsed: INITIAL_LAYOUT.leftDockCollapsed,
+  rightDockCollapsed: INITIAL_LAYOUT.rightDockCollapsed,
+  rightPanelMode: INITIAL_LAYOUT.rightPanelMode,
+  bottomDockCollapsed: INITIAL_LAYOUT.bottomDockCollapsed,
+  leftDockSizePx: INITIAL_LAYOUT.leftDockSizePx,
+  rightDockSizePx: INITIAL_LAYOUT.rightDockSizePx,
+  bottomDockSizePx: INITIAL_LAYOUT.bottomDockSizePx,
   previousLayout: null,
   layerVisibility: { ...DEFAULT_LAYERS },
   heatmapMode: "quality",
   environmentMode: "day",
-  showDebugOverlays: false,
+  showDebugOverlays: INITIAL_LAYOUT.showDebugOverlays,
   autoRecompute: true,
   cameraFailures: [],
   temporalProfile: computeTemporalProfile(INITIAL_SCENE),
@@ -858,7 +1266,10 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   activePathId: INITIAL_SCENE.paths[0]?.id ?? null,
   mapState: cloneDefaultMapState(),
   hoveredMapNodeId: null,
-  overlayDensity: "all",
+  overlayDensity: INITIAL_LAYOUT.overlayDensity,
+  uiDensity: loadUiDensity(),
+  uiTheme: loadUiTheme(),
+  aiProviderSelection: loadAiProviderSelection(),
   overlayFilters: {
     cameraLabels: true,
     zoneLabels: true,
@@ -871,6 +1282,13 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   sceneIntelligenceGraph: INITIAL_SCENE_INTELLIGENCE_GRAPH,
   historyPast: [],
   historyFuture: [],
+  viewSettingsOpen: false,
+  savedLayouts: INITIAL_SAVED_LAYOUTS.length > 0 ? INITIAL_SAVED_LAYOUTS : INITIAL_SEEDED_LAYOUTS,
+  visibleComponents: INITIAL_LAYOUT.visibleComponents,
+  enabledAnalysisModules: INITIAL_LAYOUT.enabledAnalysisModules,
+  bottomDrawerMode: INITIAL_LAYOUT.bottomDrawerMode,
+  pinnedAnalysisModule: INITIAL_LAYOUT.pinnedAnalysisModule,
+  clientDemoOptions: INITIAL_LAYOUT.clientDemoOptions,
 
   pathReplay: { playing: false, progress: 0, speed: 1, followActor: true },
   setPathReplayPlaying: (playing) => set((s) => ({ pathReplay: { ...s.pathReplay, playing } })),
@@ -931,6 +1349,85 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   setGridSnapM: (value) => set((s) => ({ editor: { ...s.editor, gridSnapM: value } })),
   setSelectedHandle: (handle) => set((s) => ({ editor: { ...s.editor, selectedHandle: handle } })),
   setCameraPresetId: (presetId) => set({ cameraPresetId: presetId }),
+  setViewSettingsOpen: (open) => set({ viewSettingsOpen: open }),
+  toggleViewSettingsOpen: () => set((state) => ({ viewSettingsOpen: !state.viewSettingsOpen })),
+  refreshSavedLayoutsList: () => {
+    const savedLayouts = loadSavedLayoutsFromStorage();
+    if (savedLayouts.length === 0) {
+      const seededLayouts = buildSeededLayouts();
+      persistSavedLayouts(seededLayouts);
+      set({ savedLayouts: seededLayouts });
+      return;
+    }
+    set({ savedLayouts });
+  },
+  saveCurrentLayoutAs: (name) => {
+    const trimmed = name.trim();
+    if (!trimmed) return null;
+
+    const state = get();
+    const next: WorkspaceLayoutRecord = {
+      id: `layout_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+      name: trimmed,
+      viewMode: state.viewMode,
+      canvasMode: state.canvasMode,
+      workspacePreset: state.workspacePreset,
+      leftDockCollapsed: state.leftDockCollapsed,
+      rightDockCollapsed: state.rightDockCollapsed,
+      bottomDockCollapsed: state.bottomDockCollapsed,
+      leftDockSizePx: state.leftDockSizePx,
+      rightDockSizePx: state.rightDockSizePx,
+      bottomDockSizePx: state.bottomDockSizePx,
+      visibleComponents: { ...state.visibleComponents },
+      enabledAnalysisModules: { ...state.enabledAnalysisModules },
+      rightPanelMode: state.rightPanelMode,
+      bottomDrawerMode: state.bottomDrawerMode,
+      pinnedAnalysisModule: state.pinnedAnalysisModule,
+      layerVisibility: { ...state.layerVisibility },
+      overlayDensity: state.overlayDensity,
+      showDebugOverlays: state.showDebugOverlays,
+      clientDemoOptions: { ...state.clientDemoOptions },
+      createdAt: Date.now(),
+    };
+    const savedLayouts = [next, ...state.savedLayouts.filter((layout) => layout.id !== next.id)];
+    persistSavedLayouts(savedLayouts);
+    set({ savedLayouts });
+    return next;
+  },
+  applySavedLayout: (layoutId) => {
+    const layout = get().savedLayouts.find((entry) => entry.id === layoutId);
+    if (!layout) return;
+    set({
+      viewMode: layout.viewMode,
+      canvasMode: layout.canvasMode,
+      workspacePreset: layout.workspacePreset,
+      focusMode: layout.workspacePreset === "focus",
+      previousLayout: null,
+      leftDockCollapsed: layout.leftDockCollapsed,
+      rightDockCollapsed: layout.rightDockCollapsed,
+      bottomDockCollapsed: layout.bottomDockCollapsed,
+      leftDockSizePx: layout.leftDockSizePx,
+      rightDockSizePx: layout.rightDockSizePx,
+      bottomDockSizePx: layout.bottomDockSizePx,
+      visibleComponents: { ...layout.visibleComponents },
+      enabledAnalysisModules: { ...layout.enabledAnalysisModules },
+      rightPanelMode: layout.rightPanelMode,
+      bottomDrawerMode: layout.bottomDrawerMode,
+      pinnedAnalysisModule: layout.pinnedAnalysisModule,
+      layerVisibility: { ...layout.layerVisibility },
+      overlayDensity: layout.overlayDensity,
+      showDebugOverlays: layout.showDebugOverlays,
+      clientDemoOptions: { ...layout.clientDemoOptions },
+      bottomTab: layout.pinnedAnalysisModule && layout.enabledAnalysisModules[layout.pinnedAnalysisModule]
+        ? layout.pinnedAnalysisModule
+        : viewModeToBottomTab(layout.viewMode),
+    });
+  },
+  deleteSavedLayout: (layoutId) => {
+    const savedLayouts = get().savedLayouts.filter((layout) => layout.id !== layoutId);
+    persistSavedLayouts(savedLayouts);
+    set({ savedLayouts });
+  },
 
   commitSceneChange: (updater, label) =>
     set((s) => {
@@ -1025,19 +1522,13 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     },
   })),
   setViewMode: (mode) => {
-    const TAB_FOR_MODE: Partial<Record<ViewMode, BottomTab>> = {
-      replay: "timeline",
-      camera_view: "timeline",
-      compare: "beforeafter",
-      map: "metrics",
-      wall: "metrics",
-    };
-    const preset = VIEW_MODE_PRESETS[mode];
-    const layout = PRESET_LAYOUTS[preset];
-    const autoTab = TAB_FOR_MODE[mode];
+    const preset = viewModeToPreset(mode);
+    const layout = buildPresetDockLayout(preset);
+    const autoTab = getFirstEnabledAnalysisTab(layout.enabledAnalysisModules, viewModeToBottomTab(mode));
     set({
       viewMode: mode,
       workspacePreset: preset,
+      canvasMode: layout.canvasMode,
       focusMode: false,
       previousLayout: null,
       leftDockCollapsed: layout.leftDockCollapsed,
@@ -1046,26 +1537,50 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       leftDockSizePx: layout.leftDockSizePx,
       rightDockSizePx: layout.rightDockSizePx,
       bottomDockSizePx: layout.bottomDockSizePx,
-      ...(autoTab ? { bottomTab: autoTab } : {}),
+      visibleComponents: { ...layout.visibleComponents },
+      enabledAnalysisModules: { ...layout.enabledAnalysisModules },
+      rightPanelMode: layout.rightPanelMode,
+      bottomDrawerMode: layout.bottomDrawerMode,
+      pinnedAnalysisModule: layout.pinnedAnalysisModule,
+      overlayDensity: layout.overlayDensity,
+      showDebugOverlays: layout.showDebugOverlays,
+      clientDemoOptions: { ...layout.clientDemoOptions },
+      bottomTab: autoTab,
     });
   },
   setWorkspacePreset: (preset) =>
     set((state) => {
       if (preset === "focus") {
         if (state.focusMode) return state;
+        const layout = buildPresetDockLayout("focus");
         return {
           previousLayout: snapshotLayout(state),
           workspacePreset: preset,
+          viewMode: layout.viewMode,
           focusMode: true,
-          leftDockCollapsed: true,
-          rightDockCollapsed: true,
-          bottomDockCollapsed: true,
+          leftDockCollapsed: layout.leftDockCollapsed,
+          rightDockCollapsed: layout.rightDockCollapsed,
+          bottomDockCollapsed: layout.bottomDockCollapsed,
+          leftDockSizePx: layout.leftDockSizePx,
+          rightDockSizePx: layout.rightDockSizePx,
+          bottomDockSizePx: layout.bottomDockSizePx,
+          visibleComponents: { ...layout.visibleComponents },
+          enabledAnalysisModules: { ...layout.enabledAnalysisModules },
+          rightPanelMode: layout.rightPanelMode,
+          bottomDrawerMode: layout.bottomDrawerMode,
+          pinnedAnalysisModule: layout.pinnedAnalysisModule,
+          overlayDensity: layout.overlayDensity,
+          showDebugOverlays: layout.showDebugOverlays,
+          clientDemoOptions: { ...layout.clientDemoOptions },
+          bottomTab: getFirstEnabledAnalysisTab(layout.enabledAnalysisModules, state.bottomTab),
         };
       }
 
-      const layout = PRESET_LAYOUTS[preset];
+      const layout = buildPresetDockLayout(preset);
       return {
         workspacePreset: preset,
+        viewMode: layout.viewMode,
+        canvasMode: layout.canvasMode,
         focusMode: false,
         previousLayout: null,
         leftDockCollapsed: layout.leftDockCollapsed,
@@ -1074,8 +1589,19 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         leftDockSizePx: layout.leftDockSizePx,
         rightDockSizePx: layout.rightDockSizePx,
         bottomDockSizePx: layout.bottomDockSizePx,
+        visibleComponents: { ...layout.visibleComponents },
+        enabledAnalysisModules: { ...layout.enabledAnalysisModules },
+        rightPanelMode: layout.rightPanelMode,
+        bottomDrawerMode: layout.bottomDrawerMode,
+        pinnedAnalysisModule: layout.pinnedAnalysisModule,
+        overlayDensity: layout.overlayDensity,
+        showDebugOverlays: layout.showDebugOverlays,
+        clientDemoOptions: { ...layout.clientDemoOptions },
+        bottomTab: getFirstEnabledAnalysisTab(layout.enabledAnalysisModules, viewModeToBottomTab(layout.viewMode)),
       };
     }),
+  setCanvasMode: (mode) => set({ canvasMode: mode }),
+  resetCanvasView: () => set((state) => ({ canvasViewResetTick: state.canvasViewResetTick + 1 })),
   toggleDock: (side) =>
     set((state) => {
       if (state.focusMode) return state;
@@ -1094,16 +1620,33 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       const key = dockSizeKey(side);
       return { [key]: clampDockSize(side, sizePx) } as Pick<StudioStoreState, typeof key>;
     }),
+  setRightPanelMode: (mode) => set({ rightPanelMode: mode }),
+  setBottomDrawerMode: (mode) => set({ bottomDrawerMode: mode }),
+  setPinnedAnalysisModule: (moduleId) => set({ pinnedAnalysisModule: moduleId }),
   enterFocusMode: () =>
     set((state) => {
       if (state.focusMode) return state;
+      const layout = buildPresetDockLayout("focus");
       return {
         previousLayout: snapshotLayout(state),
         workspacePreset: "focus",
+        viewMode: layout.viewMode,
         focusMode: true,
-        leftDockCollapsed: true,
-        rightDockCollapsed: true,
-        bottomDockCollapsed: true,
+        leftDockCollapsed: layout.leftDockCollapsed,
+        rightDockCollapsed: layout.rightDockCollapsed,
+        bottomDockCollapsed: layout.bottomDockCollapsed,
+        leftDockSizePx: layout.leftDockSizePx,
+        rightDockSizePx: layout.rightDockSizePx,
+        bottomDockSizePx: layout.bottomDockSizePx,
+        visibleComponents: { ...layout.visibleComponents },
+        enabledAnalysisModules: { ...layout.enabledAnalysisModules },
+        rightPanelMode: layout.rightPanelMode,
+        bottomDrawerMode: layout.bottomDrawerMode,
+        pinnedAnalysisModule: layout.pinnedAnalysisModule,
+        overlayDensity: layout.overlayDensity,
+        showDebugOverlays: layout.showDebugOverlays,
+        clientDemoOptions: { ...layout.clientDemoOptions },
+        bottomTab: getFirstEnabledAnalysisTab(layout.enabledAnalysisModules, state.bottomTab),
       };
     }),
   restorePreviousLayout: () =>
@@ -1111,7 +1654,9 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       if (!state.previousLayout) return state;
       const layout = state.previousLayout;
       return {
+        viewMode: layout.viewMode,
         workspacePreset: layout.workspacePreset,
+        canvasMode: layout.canvasMode,
         focusMode: false,
         leftDockCollapsed: layout.leftDockCollapsed,
         rightDockCollapsed: layout.rightDockCollapsed,
@@ -1119,10 +1664,22 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         leftDockSizePx: layout.leftDockSizePx,
         rightDockSizePx: layout.rightDockSizePx,
         bottomDockSizePx: layout.bottomDockSizePx,
+        visibleComponents: { ...layout.visibleComponents },
+        enabledAnalysisModules: { ...layout.enabledAnalysisModules },
+        rightPanelMode: layout.rightPanelMode,
+        bottomDrawerMode: layout.bottomDrawerMode,
+        pinnedAnalysisModule: layout.pinnedAnalysisModule,
+        overlayDensity: layout.overlayDensity,
+        showDebugOverlays: layout.showDebugOverlays,
+        clientDemoOptions: { ...layout.clientDemoOptions },
+        bottomTab: getFirstEnabledAnalysisTab(layout.enabledAnalysisModules, layout.pinnedAnalysisModule),
         previousLayout: null,
       };
     }),
-  setBottomTab: (tab) => set({ bottomTab: tab }),
+  setBottomTab: (tab) => set((state) => ({
+    bottomTab: getFirstEnabledAnalysisTab(state.enabledAnalysisModules, tab),
+    pinnedAnalysisModule: state.bottomDrawerMode === "single_module" ? getFirstEnabledAnalysisTab(state.enabledAnalysisModules, tab) : state.pinnedAnalysisModule,
+  })),
   setInspectorTab: (tab) => set({ inspectorTab: tab }),
   toggleLayer: (layer) =>
     set((s) => ({ layerVisibility: { ...s.layerVisibility, [layer]: !s.layerVisibility[layer] } })),
@@ -1130,7 +1687,43 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     set((s) => ({ layerVisibility: { ...s.layerVisibility, [layer]: visible } })),
   setHeatmapMode: (mode) => set({ heatmapMode: mode }),
   setEnvironmentMode: (mode) => set({ environmentMode: mode }),
+  setShowDebugOverlays: (enabled) => set({ showDebugOverlays: enabled }),
+  setVisibleComponent: (component, visible) => set((state) => ({ visibleComponents: { ...state.visibleComponents, [component]: visible } })),
+  toggleVisibleComponent: (component) => set((state) => ({ visibleComponents: { ...state.visibleComponents, [component]: !state.visibleComponents[component] } })),
+  setAnalysisModuleEnabled: (moduleId, enabled) =>
+    set((state) => {
+      const enabledAnalysisModules = { ...state.enabledAnalysisModules, [moduleId]: enabled };
+      const bottomTab = enabledAnalysisModules[state.bottomTab] ? state.bottomTab : getFirstEnabledAnalysisTab(enabledAnalysisModules, state.pinnedAnalysisModule);
+      const pinnedAnalysisModule = state.bottomDrawerMode === "single_module"
+        ? getFirstEnabledAnalysisTab(enabledAnalysisModules, state.pinnedAnalysisModule)
+        : state.pinnedAnalysisModule;
+      return {
+        enabledAnalysisModules,
+        bottomTab,
+        pinnedAnalysisModule,
+      };
+    }),
+  toggleAnalysisModule: (moduleId) => set((state) => {
+    const enabled = !state.enabledAnalysisModules[moduleId];
+    const enabledAnalysisModules = { ...state.enabledAnalysisModules, [moduleId]: enabled };
+    const bottomTab = enabledAnalysisModules[state.bottomTab] ? state.bottomTab : getFirstEnabledAnalysisTab(enabledAnalysisModules, state.pinnedAnalysisModule);
+    const pinnedAnalysisModule = state.bottomDrawerMode === "single_module"
+      ? getFirstEnabledAnalysisTab(enabledAnalysisModules, state.pinnedAnalysisModule)
+      : state.pinnedAnalysisModule;
+    return {
+      enabledAnalysisModules,
+      bottomTab,
+      pinnedAnalysisModule,
+    };
+  }),
   setOverlayDensity: (density) => set({ overlayDensity: density }),
+  setUiDensity: (uiDensity) => set({ uiDensity }),
+  setUiTheme: (uiTheme) => set({ uiTheme }),
+  setAiProviderSelection: (selection) => {
+    const next = normalizeAiProviderSelection(selection);
+    persistAiProviderSelection(next);
+    set({ aiProviderSelection: next });
+  },
   setOverlayFilter: (filter, visible) => set((s) => ({ overlayFilters: { ...s.overlayFilters, [filter]: visible } })),
   setAllZoneTargetTypes: (targetType) =>
     useStudioStore.getState().commitSceneChange((scene) => ({
@@ -1343,6 +1936,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       return { success: false, error: result.error.issues.map((i) => i.message).join(", ") };
     }
     const scene = cloneSecurityScene(result.data);
+    const layout = buildPresetDockLayout("edit");
     set({
       scene,
       snapshots: scene.snapshots,
@@ -1366,6 +1960,26 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       activePathId: scene.paths[0]?.id ?? null,
       focusScenePointRequest: null,
       mapState: cloneDefaultMapState(),
+      focusMode: false,
+      previousLayout: null,
+      viewMode: layout.viewMode,
+      workspacePreset: layout.workspacePreset,
+      canvasMode: layout.canvasMode,
+      leftDockCollapsed: layout.leftDockCollapsed,
+      rightDockCollapsed: layout.rightDockCollapsed,
+      bottomDockCollapsed: layout.bottomDockCollapsed,
+      leftDockSizePx: layout.leftDockSizePx,
+      rightDockSizePx: layout.rightDockSizePx,
+      bottomDockSizePx: layout.bottomDockSizePx,
+      visibleComponents: { ...layout.visibleComponents },
+      enabledAnalysisModules: { ...layout.enabledAnalysisModules },
+      rightPanelMode: layout.rightPanelMode,
+      bottomDrawerMode: layout.bottomDrawerMode,
+      pinnedAnalysisModule: layout.pinnedAnalysisModule,
+      overlayDensity: layout.overlayDensity,
+      showDebugOverlays: layout.showDebugOverlays,
+      clientDemoOptions: { ...layout.clientDemoOptions },
+      bottomTab: getFirstEnabledAnalysisTab(layout.enabledAnalysisModules, viewModeToBottomTab(layout.viewMode)),
       sceneIntelligenceGraph: buildGraphState(scene, null, 0, scene.snapshots.length),
       compareVisualEvidence: null,
       compareReportSelection: null,
@@ -1387,7 +2001,9 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       activePathId: scene.paths[0]?.id ?? null,
       focusScenePointRequest: null,
       mapState: cloneDefaultMapState(),
-      viewMode: "map",
+      focusMode: false,
+      previousLayout: null,
+      ...buildPresetDockLayout("edit"),
       bottomTab: "metrics",
       inspectorTab: "properties",
       activeTool: "select",
@@ -1411,6 +2027,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
 
   createNewScene: () => {
     const blank = createBlankSecurityScene();
+    const layout = buildPresetDockLayout("edit");
     set({
       scene: blank,
       snapshots: [],
@@ -1421,7 +2038,25 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       activePathId: null,
       focusScenePointRequest: null,
       mapState: cloneDefaultMapState(),
-      viewMode: "map",
+      focusMode: false,
+      previousLayout: null,
+      viewMode: layout.viewMode,
+      workspacePreset: layout.workspacePreset,
+      canvasMode: layout.canvasMode,
+      leftDockCollapsed: layout.leftDockCollapsed,
+      rightDockCollapsed: layout.rightDockCollapsed,
+      bottomDockCollapsed: layout.bottomDockCollapsed,
+      leftDockSizePx: layout.leftDockSizePx,
+      rightDockSizePx: layout.rightDockSizePx,
+      bottomDockSizePx: layout.bottomDockSizePx,
+      visibleComponents: { ...layout.visibleComponents },
+      enabledAnalysisModules: { ...layout.enabledAnalysisModules },
+      rightPanelMode: layout.rightPanelMode,
+      bottomDrawerMode: layout.bottomDrawerMode,
+      pinnedAnalysisModule: layout.pinnedAnalysisModule,
+      overlayDensity: layout.overlayDensity,
+      showDebugOverlays: layout.showDebugOverlays,
+      clientDemoOptions: { ...layout.clientDemoOptions },
       bottomTab: "metrics",
       inspectorTab: "properties",
       activeTool: "select",
@@ -1446,16 +2081,24 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
 
   saveSceneToStorage: () => {
     const scene = get().scene;
-    appendSavedScene(scene);
+    upsertSavedScene(scene);
     get().refreshSavedScenesList();
   },
 
   loadScenesFromStorage: () => {
-    return loadSavedScenesFromStorage();
+    return loadSavedProjectsFromStorage().map((record) => record.scene);
   },
 
   refreshSavedScenesList: () => {
-    set({ savedScenes: loadSavedScenesFromStorage() });
+    const savedProjects = loadSavedProjectsFromStorage();
+    const nextProjects = savedProjects.length > 0 ? savedProjects : buildSeededWorkspaceProjects();
+    if (savedProjects.length === 0) {
+      persistSavedProjects(nextProjects);
+    }
+    set({
+      savedProjects: nextProjects,
+      savedScenes: nextProjects.map((record) => record.scene),
+    });
   },
 
   deleteSavedScene: (sceneId) => {
@@ -1463,7 +2106,13 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     get().refreshSavedScenesList();
   },
 
-  getSceneStorageKey: () => SCENE_STORAGE_KEY,
+  updateSavedSceneMetadata: (sceneId, patch) => {
+    updateSavedSceneMetadata(sceneId, patch);
+    get().refreshSavedScenesList();
+  },
+
+  getSceneStorageKey: () => PROJECT_STORAGE_KEY,
+
 
   getSelectedCamera: () => {
     const { scene, selectedNodeId } = get();

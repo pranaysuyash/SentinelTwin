@@ -432,6 +432,33 @@ export const simulationResultSchema = z.object({
   coverageFailurePath: adversarialPathResultSchema.optional(),
   adversarialPath: adversarialPathResultSchema.optional(),
   blindRegions: z.array(blindRegionSchema).optional(),
+  blindSpotFingerprint: z.object({
+    fingerprint: z.string(),
+    signature: z.string(),
+    regionCount: z.number().int().nonnegative(),
+    criticalRegionCount: z.number().int().nonnegative(),
+    entryConnectedRegionCount: z.number().int().nonnegative(),
+    isolatedRegionCount: z.number().int().nonnegative(),
+    totalBlindAreaSqM: z.number().min(0),
+    largestRegionAreaSqM: z.number().min(0),
+    affectedZoneCount: z.number().int().nonnegative(),
+    severityCounts: z.object({
+      critical: z.number().int().nonnegative(),
+      high: z.number().int().nonnegative(),
+      medium: z.number().int().nonnegative(),
+      low: z.number().int().nonnegative(),
+    }),
+    classificationCounts: z.object({
+      entry_corridor: z.number().int().nonnegative(),
+      entry_connected: z.number().int().nonnegative(),
+      isolated: z.number().int().nonnegative(),
+    }),
+  }).optional(),
+  reflectiveBounce: z.object({
+    reflectiveWindowCount: z.number().int().nonnegative(),
+    affectedCellCount: z.number().int().nonnegative(),
+    affectedCameraCount: z.number().int().nonnegative(),
+  }).optional(),
   occlusionBlame: z.array(z.object({
     zoneId: z.string(),
     zoneLabel: z.string(),

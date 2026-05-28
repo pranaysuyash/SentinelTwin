@@ -65,7 +65,7 @@ export type CameraEvaluation = {
 
 export type CoverageEvaluator = {
   evaluatePoint: (camera: CameraNode, point: [number, number], targetHeightM?: number) => CameraEvaluation;
-  computeCoverageCells: (cellsPerMeter?: number) => CellComputation[];
+  computeCoverageCells: (cellsPerMeter?: number, targetHeightM?: number) => CellComputation[];
 };
 
 function deriveResolutionWidth(camera: CameraNode) {
@@ -142,6 +142,16 @@ function getDetectionProbability(quality: DoriQuality): number {
     scrutinize: 0.99,
   };
   return table[quality];
+}
+
+function getYawPitchTowardTarget(origin: [number, number, number], target: THREE.Vector3) {
+  const direction = target.clone().sub(new THREE.Vector3(...origin)).normalize();
+  return {
+    yawDeg: THREE.MathUtils.radToDeg(Math.atan2(direction.x, -direction.z)),
+    pitchDeg: THREE.MathUtils.radToDeg(
+      Math.atan2(direction.y, Math.hypot(direction.x, direction.z)),
+    ),
+  };
 }
 
 function getReasonCodesForLighting(camera: CameraNode, lightingPenalty: number) {
@@ -293,50 +303,50 @@ function assessOcclusion(
   target: THREE.Vector3,
   raycaster: THREE.Raycaster,
   visionMesh: VisionMesh,
+  ignoredSourceIds: Set<string> = new Set<string>(),
 ) {
   const origin = new THREE.Vector3(...camera.position);
   const direction = target.clone().sub(origin).normalize();
   const distance = origin.distanceTo(target);
 
-  raycaster.firstHitOnly = true;
+  raycaster.firstHitOnly = ignoredSourceIds.size === 0;
   raycaster.set(origin, direction);
 
-  const hit = raycaster.intersectObject(visionMesh.mesh, false)[0];
+  const hits = raycaster.intersectObject(visionMesh.mesh, false);
 
-  if (!hit || hit.distance >= distance - 0.05) {
+  for (const hit of hits) {
+    if (hit.distance >= distance - 0.05) {
+      break;
+    }
+
+    const source = getSourceForIntersection(visionMesh.mesh, hit.faceIndex ?? undefined);
+
+    if (!source || ignoredSourceIds.has(source.id)) {
+      continue;
+    }
+
+    if (source.visionTransmission > 0.05) {
+      return {
+        blocked: false,
+        materialPenalty: source.visionTransmission,
+        glarePenalty: source.glarePenalty ? 0.86 : 0,
+        blockedBy: source.label,
+      };
+    }
+
     return {
-      blocked: false,
-      materialPenalty: 1,
-      blockedBy: undefined,
+      blocked: true,
+      materialPenalty: 0,
       glarePenalty: 0,
-    };
-  }
-
-  const source = getSourceForIntersection(visionMesh.mesh, hit.faceIndex ?? undefined);
-
-  if (!source) {
-    return {
-      blocked: false,
-      materialPenalty: 1,
-      blockedBy: undefined,
-      glarePenalty: 0,
-    };
-  }
-
-  if (source.visionTransmission > 0.05) {
-    return {
-      blocked: false,
-      materialPenalty: source.visionTransmission,
-      glarePenalty: source.glarePenalty ? 0.86 : 0,
       blockedBy: source.label,
     };
   }
 
   return {
-    blocked: true,
-    materialPenalty: 0,
+    blocked: false,
+    materialPenalty: 1,
+    blockedBy: undefined,
     glarePenalty: 0,
-    blockedBy: source.label,
   };
 }
 
@@ -347,6 +357,7 @@ function evaluateCameraAgainstCell(
   targetHeightM: number,
   raycaster: THREE.Raycaster,
   visionMesh: VisionMesh,
+  ignoredSourceIds: Set<string> = new Set<string>(),
 ): CameraEvaluation {
   if (camera.status !== "on") {
     return {
@@ -410,7 +421,7 @@ function evaluateCameraAgainstCell(
     };
   }
 
-  const occlusion = assessOcclusion(camera, target, raycaster, visionMesh);
+  const occlusion = assessOcclusion(camera, target, raycaster, visionMesh, ignoredSourceIds);
 
   if (occlusion.blocked) {
     return {
@@ -521,7 +532,96 @@ export function createCoverageEvaluator(scene: SecurityScene): CoverageEvaluator
     );
   };
 
-  const computeCoverageCells = (cellsPerMeter = 4) => {
+  const evaluateReflectiveBounce = (
+    camera: CameraNode,
+    cell: GridCell,
+    targetHeightM: number,
+    directEvaluation: CameraEvaluation,
+  ) => {
+    let bestCandidate: { evaluation: CameraEvaluation; windowLabel: string } | null = null;
+    const target = new THREE.Vector3(cell.x, targetHeightM, cell.z);
+
+    for (const window of scene.windows) {
+      if (window.state !== "reflective") continue;
+
+      const cameraSide = camera.position[2] - window.position[2];
+      const targetSide = target.z - window.position[2];
+      if (cameraSide === 0 || targetSide === 0 || Math.sign(cameraSide) === Math.sign(targetSide)) {
+        continue;
+      }
+
+      const windowVisibility = evaluatePoint(camera, [window.position[0], window.position[2]], window.position[1]);
+      if (!windowVisibility.visible) {
+        continue;
+      }
+
+      const virtualCamera: CameraNode = {
+        ...structuredClone(camera),
+        position: [
+          camera.position[0],
+          camera.position[1],
+          (2 * window.position[2]) - camera.position[2],
+        ],
+      };
+      const { yawDeg, pitchDeg } = getYawPitchTowardTarget(virtualCamera.position, target);
+      virtualCamera.yawDeg = yawDeg;
+      virtualCamera.pitchDeg = pitchDeg;
+
+      const bounced = evaluateCameraAgainstCell(
+        scene,
+        virtualCamera,
+        cell,
+        targetHeightM,
+        raycaster,
+        visionMesh,
+        new Set([window.id]),
+      );
+
+      if (bounced.quality === "none") {
+        continue;
+      }
+
+      const bounceMultiplier = Math.max(0.7, Math.min(0.95, 0.75 + (window.visionTransmission * 0.15)));
+      const reflectiveBoost = windowVisibility.ppm * Math.max(0.35, Math.min(0.6, 0.35 + (window.visionTransmission * 0.25)));
+      const bouncedPpm = Math.max(
+        bounced.ppm * bounceMultiplier,
+        directEvaluation.ppm + reflectiveBoost,
+      );
+      const isOodpcvs = scene.assumptions.doriStandard === "oodpcvs_2025";
+      const doriThresholds = isOodpcvs ? scene.assumptions.pixelsPerMeter : DORI_THRESHOLDS;
+      const bouncedQuality = isOodpcvs
+        ? ppmToOodpcvsQuality(bouncedPpm)
+        : ppmToDoriQuality(bouncedPpm, doriThresholds);
+
+      const candidate: CameraEvaluation = {
+        ...bounced,
+        quality: bouncedQuality,
+        ppm: bouncedPpm,
+        probability: getDetectionProbability(bouncedQuality),
+        visible: bouncedQuality !== "none",
+        reasonCodes: Array.from(new Set([
+          ...bounced.reasonCodes,
+          "REFLECTIVE_BOUNCE",
+          `REFLECTIVE_WINDOW:${window.label}`,
+        ])),
+      };
+
+      if (qualityToScore(candidate.quality) <= qualityToScore(directEvaluation.quality)) {
+        continue;
+      }
+
+      if (!bestCandidate || qualityToScore(candidate.quality) > qualityToScore(bestCandidate.evaluation.quality)) {
+        bestCandidate = {
+          evaluation: candidate,
+          windowLabel: window.label,
+        };
+      }
+    }
+
+    return bestCandidate;
+  };
+
+  const computeCoverageCells = (cellsPerMeter = 4, targetHeightM = scene.assumptions.personHeightM) => {
     const { cells } = buildCoverageGrid(scene, cellsPerMeter);
     const results: CellComputation[] = [];
 
@@ -536,7 +636,9 @@ export function createCoverageEvaluator(scene: SecurityScene): CoverageEvaluator
       const cameraEvaluations: Record<string, CameraEvaluation> = {};
 
       for (const camera of scene.cameras) {
-        const evaluation = evaluatePoint(camera, [cell.x, cell.z], scene.assumptions.personHeightM);
+        const directEvaluation = evaluatePoint(camera, [cell.x, cell.z], targetHeightM);
+        const bounceEvaluation = evaluateReflectiveBounce(camera, cell, targetHeightM, directEvaluation);
+        const evaluation = bounceEvaluation ? bounceEvaluation.evaluation : directEvaluation;
         cameraEvaluations[camera.id] = evaluation;
 
         if (evaluation.blockedBy) {

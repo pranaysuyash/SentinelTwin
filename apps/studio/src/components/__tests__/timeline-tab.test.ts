@@ -12,4 +12,12 @@ describe("TimelineTab", () => {
     expect(source).toContain('onClick={() => setPathReplayFollowActor(!pathReplayFollowActor)}');
     expect(source).toContain("Follow");
   });
+
+  test("surfaces the full quality ladder in the quality view", () => {
+    const source = readFileSync(timelineTabPath, "utf8");
+
+    expect(source).toContain("Quality Ladder");
+    expect(source).toContain("IEC 62676-4:2025 OODPCVS");
+    expect(source).toContain("QUALITY_ORDER.map");
+  });
 });

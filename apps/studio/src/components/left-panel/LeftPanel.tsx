@@ -22,6 +22,7 @@ import { useState } from "react";
 
 import { cn } from "@/lib/cn";
 import { MiniMap } from "@/components/map/MiniMap";
+import { ExplainBadge } from "@/components/shared/ExplainBadge";
 import { type ActiveTool, type LayerId, useStudioStore } from "@/store/studio-store";
 
 const TOOLS: { id: ActiveTool; label: string; icon: React.ReactNode; key: string }[] = [
@@ -57,18 +58,21 @@ function SectionTitle({
   collapsed,
   onToggle,
   summary,
+  helpText,
 }: {
   icon?: React.ReactNode;
   title: string;
   collapsed: boolean;
   onToggle: () => void;
   summary?: string;
+  helpText?: string;
 }) {
   return (
     <div className="mb-1.5 flex items-center gap-1 px-0.5 text-[8px] font-semibold uppercase tracking-[0.22em] text-[#4a556b]">
       {icon}
       <span>{title}</span>
-      {summary ? <span className="ml-1 text-[7px] normal-case tracking-[0.12em] text-[#657086]">{summary}</span> : null}
+      {summary ? <span className="ml-1 text-[9px] normal-case tracking-[0.12em] text-[#657086]">{summary}</span> : null}
+      {helpText ? <ExplainBadge text={helpText} /> : null}
       <button
         type="button"
         onClick={onToggle}
@@ -86,14 +90,36 @@ export function LeftPanel() {
   const setActiveTool = useStudioStore((s) => s.setActiveTool);
   const layerVis = useStudioStore((s) => s.layerVisibility);
   const toggleLayer = useStudioStore((s) => s.toggleLayer);
+  const visibleComponents = useStudioStore((s) => s.visibleComponents);
+  const editor = useStudioStore((s) => s.editor);
+  const setSnapEnabled = useStudioStore((s) => s.setSnapEnabled);
+  const setSnapDistanceM = useStudioStore((s) => s.setSnapDistanceM);
+  const setGridSnapM = useStudioStore((s) => s.setGridSnapM);
   const [collapsedSections, setCollapsedSections] = useState({
     tools: false,
     layers: false,
     minimap: false,
+    presets: false,
+  });
+  const [toolPresetName, setToolPresetName] = useState("");
+  const [toolPresets, setToolPresets] = useState<Array<{ name: string; tool: ActiveTool; snapEnabled: boolean; snapDistanceM: number; gridSnapM: number }>>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      return JSON.parse(window.localStorage.getItem("sentineltwin_tool_presets_v1") ?? "[]");
+    } catch {
+      return [];
+    }
   });
 
   const toggleSection = (section: keyof typeof collapsedSections) => {
     setCollapsedSections((current) => ({ ...current, [section]: !current[section] }));
+  };
+
+  const persistPresets = (next: typeof toolPresets) => {
+    setToolPresets(next);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("sentineltwin_tool_presets_v1", JSON.stringify(next));
+    }
   };
 
   return (
@@ -105,6 +131,7 @@ export function LeftPanel() {
             collapsed={collapsedSections.tools}
             onToggle={() => toggleSection("tools")}
             summary={`${TOOLS.length} tools`}
+            helpText="Choose the active authoring tool. Keyboard hints on the right speed up expert workflows."
           />
           {!collapsedSections.tools ? (
             <div className="space-y-1 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
@@ -137,11 +164,79 @@ export function LeftPanel() {
 
         <section>
           <SectionTitle
+            title="Tool Presets"
+            collapsed={collapsedSections.presets}
+            onToggle={() => toggleSection("presets")}
+            summary={`${toolPresets.length} saved`}
+            helpText="Save a reusable authoring configuration: active tool and snapping setup."
+          />
+          {!collapsedSections.presets ? (
+            <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-1.5">
+              <div className="flex gap-1">
+                <input
+                  value={toolPresetName}
+                  onChange={(e) => setToolPresetName(e.target.value)}
+                  placeholder="Preset name"
+                  className="h-7 flex-1 rounded border border-[#2a3248] bg-[#111521] px-2 text-[10px] text-[#d6deef]"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const name = toolPresetName.trim();
+                    if (!name) return;
+                    persistPresets([
+                      ...toolPresets.filter((p) => p.name !== name),
+                      { name, tool: activeTool, snapEnabled: editor.snapEnabled, snapDistanceM: editor.snapDistanceM, gridSnapM: editor.gridSnapM },
+                    ]);
+                    setToolPresetName("");
+                  }}
+                  className="rounded border border-emerald-500/35 px-2 text-[10px] text-emerald-300"
+                >
+                  Save
+                </button>
+              </div>
+              <div className="mt-1.5 space-y-1">
+                {toolPresets.length === 0 ? <div className="text-[9px] text-[#7384a5]">No presets saved.</div> : null}
+                {toolPresets.map((preset) => (
+                  <div key={preset.name} className="flex items-center gap-1 rounded border border-[#242a3a] bg-[#111521] px-1.5 py-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTool(preset.tool);
+                        setSnapEnabled(preset.snapEnabled);
+                        setSnapDistanceM(preset.snapDistanceM);
+                        setGridSnapM(preset.gridSnapM);
+                      }}
+                      className="flex-1 truncate text-left text-[10px] text-[#c6d2ea]"
+                    >
+                      {preset.name}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => persistPresets(toolPresets.filter((entry) => entry.name !== preset.name))}
+                      className="text-[9px] text-red-300"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[9px] text-[#72809a]">
+              Presets hidden. Expand to load saved tool setups.
+            </div>
+          )}
+        </section>
+
+        <section>
+          <SectionTitle
             icon={<Layers className="h-2.5 w-2.5" />}
             title="Scene Layers"
             collapsed={collapsedSections.layers}
             onToggle={() => toggleSection("layers")}
             summary={`${LAYERS.length} layers`}
+            helpText="Toggle visibility only; analysis still uses full scene geometry unless removed."
           />
           {!collapsedSections.layers ? (
             <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
@@ -183,8 +278,9 @@ export function LeftPanel() {
             collapsed={collapsedSections.minimap}
             onToggle={() => toggleSection("minimap")}
             summary="Live navigation"
+            helpText="Mini map supports quick orientation and navigation across large scenes."
           />
-          {!collapsedSections.minimap ? (
+          {!collapsedSections.minimap && visibleComponents.minimap ? (
             <MiniMap />
           ) : (
             <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[9px] text-[#72809a]">

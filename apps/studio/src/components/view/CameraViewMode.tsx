@@ -12,6 +12,7 @@ import { pointOnPathAtProgress } from "@/components/map/path-quality";
 import { QUALITY_RANK } from "@/lib/quality-display";
 import { CameraRigLive, nowTimestamp, SceneFeedGeometry } from "@/components/view/SceneFeedCanvas";
 import type { CameraNode, DoriQuality, SimulationAssumptions, SecurityScene } from "@/schema/security-scene";
+import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
 
 type CameraFeedMode = "normal" | "ir_bw" | "low_light" | "thermal";
 
@@ -639,6 +640,13 @@ function FootageVerificationOverlay({
   );
 }
 
+function alignmentQualityLabel(score: number) {
+  if (score >= 85) return "Excellent";
+  if (score >= 70) return "Good";
+  if (score >= 50) return "Fair";
+  return "Poor";
+}
+
 function VerificationPanel({
   enabled,
   mode,
@@ -647,6 +655,9 @@ function VerificationPanel({
   offsetX,
   offsetY,
   fileName,
+  alignmentScore,
+  alignmentLabel,
+  showHeatOverlay,
   onToggle,
   onUpload,
   onModeChange,
@@ -654,6 +665,7 @@ function VerificationPanel({
   onSplitChange,
   onOffsetXChange,
   onOffsetYChange,
+  onToggleHeatOverlay,
   onNudge,
   onResetAlign,
   onClear,
@@ -665,6 +677,9 @@ function VerificationPanel({
   offsetX: number;
   offsetY: number;
   fileName: string | null;
+  alignmentScore: number | null;
+  alignmentLabel: string | null;
+  showHeatOverlay: boolean;
   onToggle: (next: boolean) => void;
   onUpload: (file: File) => void;
   onModeChange: (mode: VerificationViewMode) => void;
@@ -672,6 +687,7 @@ function VerificationPanel({
   onSplitChange: (value: number) => void;
   onOffsetXChange: (value: number) => void;
   onOffsetYChange: (value: number) => void;
+  onToggleHeatOverlay: (next: boolean) => void;
   onNudge: (dx: number, dy: number) => void;
   onResetAlign: () => void;
   onClear: () => void;
@@ -707,6 +723,19 @@ function VerificationPanel({
           <button type="button" onClick={() => onModeChange("overlay")} className={`rounded px-2 py-1 ${mode === "overlay" ? "bg-cyan-500/30 text-cyan-200" : "bg-[#1a2233] text-[#8ea5cc]"}`}>Overlay</button>
           <button type="button" onClick={() => onModeChange("split")} className={`rounded px-2 py-1 ${mode === "split" ? "bg-cyan-500/30 text-cyan-200" : "bg-[#1a2233] text-[#8ea5cc]"}`}>Split</button>
           <button type="button" onClick={onClear} className="rounded bg-[#2b1a20] px-2 py-1 text-rose-200">Clear</button>
+        </div>
+        <div className="rounded-lg border border-[#2a3650] bg-[#0f1624] px-2 py-1.5">
+          <div className="flex items-center justify-between text-[#7a8fb6]">
+            <span>Alignment Quality</span>
+            <span className="font-mono text-[#d4e6ff]">{alignmentScore !== null ? `${Math.round(alignmentScore)}/100` : "N/A"}</span>
+          </div>
+          <div className="mt-0.5 text-[8px] text-[#9db7e1]">
+            {alignmentLabel ? `${alignmentLabel} match (planning aid only, non-forensic).` : "Upload a reference frame to compute mismatch quality."}
+          </div>
+          <label className="mt-1 inline-flex cursor-pointer items-center gap-1 text-[8px] text-[#9db7e1]">
+            <input type="checkbox" checked={showHeatOverlay} onChange={(event) => onToggleHeatOverlay(event.target.checked)} />
+            Difference heat overlay
+          </label>
         </div>
         <label className="block">
           <div className="flex justify-between text-[#7a8fb6]"><span>Opacity</span><span>{Math.round(opacity * 100)}%</span></div>
@@ -837,6 +866,10 @@ export function CameraViewMode() {
   const [verificationSplit, setVerificationSplit] = useState(50);
   const [verificationOffsetX, setVerificationOffsetX] = useState(0);
   const [verificationOffsetY, setVerificationOffsetY] = useState(0);
+  const [alignmentQualityScore, setAlignmentQualityScore] = useState<number | null>(null);
+  const [alignmentHeatmapUrl, setAlignmentHeatmapUrl] = useState<string | null>(null);
+  const [showDifferenceHeatOverlay, setShowDifferenceHeatOverlay] = useState(false);
+  const frameRootRef = useRef<HTMLDivElement | null>(null);
   const canvasFilter =
     feedMode === "normal"
       ? "brightness(0.82) contrast(1.08) saturate(0.92)"
@@ -923,6 +956,100 @@ export function CameraViewMode() {
     };
   }, [verificationImageUrl]);
 
+  useEffect(() => {
+    if (!verificationEnabled || !verificationImageUrl || !camera) {
+      setAlignmentQualityScore(null);
+      return;
+    }
+
+    const host = frameRootRef.current;
+    const canvas = host?.querySelector("canvas");
+    if (!canvas) return;
+
+    const sampleWidth = 96;
+    const sampleHeight = 54;
+    const renderCanvas = document.createElement("canvas");
+    renderCanvas.width = sampleWidth;
+    renderCanvas.height = sampleHeight;
+    const renderCtx = renderCanvas.getContext("2d", { willReadFrequently: true });
+    if (!renderCtx) return;
+
+    const referenceCanvas = document.createElement("canvas");
+    referenceCanvas.width = sampleWidth;
+    referenceCanvas.height = sampleHeight;
+    const refCtx = referenceCanvas.getContext("2d", { willReadFrequently: true });
+    if (!refCtx) return;
+
+    const overlayCanvas = document.createElement("canvas");
+    overlayCanvas.width = sampleWidth;
+    overlayCanvas.height = sampleHeight;
+    const overlayCtx = overlayCanvas.getContext("2d");
+    if (!overlayCtx) return;
+
+    let canceled = false;
+    const image = new Image();
+    image.decoding = "async";
+    image.onload = () => {
+      if (canceled) return;
+      renderCtx.clearRect(0, 0, sampleWidth, sampleHeight);
+      renderCtx.drawImage(canvas, 0, 0, sampleWidth, sampleHeight);
+
+      refCtx.clearRect(0, 0, sampleWidth, sampleHeight);
+      const dx = Math.round((verificationOffsetX / Math.max(1, canvas.clientWidth)) * sampleWidth);
+      const dy = Math.round((verificationOffsetY / Math.max(1, canvas.clientHeight)) * sampleHeight);
+      refCtx.drawImage(image, dx, dy, sampleWidth, sampleHeight);
+
+      if (verificationMode === "split") {
+        const splitX = Math.round((verificationSplit / 100) * sampleWidth);
+        refCtx.clearRect(splitX, 0, sampleWidth - splitX, sampleHeight);
+        renderCtx.clearRect(splitX, 0, sampleWidth - splitX, sampleHeight);
+      }
+
+      const renderPixels = renderCtx.getImageData(0, 0, sampleWidth, sampleHeight);
+      const refPixels = refCtx.getImageData(0, 0, sampleWidth, sampleHeight);
+      const heat = overlayCtx.createImageData(sampleWidth, sampleHeight);
+      let diffSum = 0;
+      let samples = 0;
+
+      for (let i = 0; i < renderPixels.data.length; i += 4) {
+        const dr = Math.abs(renderPixels.data[i] - refPixels.data[i]);
+        const dg = Math.abs(renderPixels.data[i + 1] - refPixels.data[i + 1]);
+        const db = Math.abs(renderPixels.data[i + 2] - refPixels.data[i + 2]);
+        const diff = (dr + dg + db) / (3 * 255);
+        diffSum += diff;
+        samples += 1;
+
+        const level = Math.min(255, Math.round(diff * 320));
+        heat.data[i] = level;
+        heat.data[i + 1] = 40;
+        heat.data[i + 2] = 255 - Math.round(level * 0.55);
+        heat.data[i + 3] = Math.round(diff * 190);
+      }
+
+      overlayCtx.putImageData(heat, 0, 0);
+      const mismatch = samples > 0 ? diffSum / samples : 1;
+      const opacityWeight = 0.6 + verificationOpacity * 0.4;
+      const adjustedMismatch = Math.min(1, mismatch * opacityWeight);
+      const score = Math.max(0, Math.min(100, (1 - adjustedMismatch) * 100));
+      setAlignmentQualityScore(score);
+      setAlignmentHeatmapUrl(overlayCanvas.toDataURL("image/png"));
+    };
+    image.src = verificationImageUrl;
+
+    return () => {
+      canceled = true;
+    };
+  }, [
+    camera?.id,
+    verificationEnabled,
+    verificationImageUrl,
+    verificationMode,
+    verificationOpacity,
+    verificationSplit,
+    verificationOffsetX,
+    verificationOffsetY,
+  ]);
+
   if (!camera) {
     return (
       <div className="flex h-full items-center justify-center bg-[#07090d]">
@@ -943,7 +1070,7 @@ export function CameraViewMode() {
   }
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-[#07090d]">
+    <div ref={frameRootRef} className="relative h-full w-full overflow-hidden bg-[#07090d]">
       {camera.status === "on" ? (
         <>
           <CameraHeader
@@ -979,7 +1106,7 @@ export function CameraViewMode() {
             style={{ width: "100%", height: "100%", filter: canvasFilter }}
           >
             <color attach="background" args={[theme.background]} />
-            <Suspense fallback={null}>
+            <Suspense fallback={<CanvasLoadingOverlay label="Loading camera view" />}>
               <SceneFeedGeometry theme={theme} showPrivacyZones />
             </Suspense>
             <CameraRigLive camera={camera} />
@@ -997,6 +1124,11 @@ export function CameraViewMode() {
               offsetX={verificationOffsetX}
               offsetY={verificationOffsetY}
             />
+          ) : null}
+          {verificationEnabled && showDifferenceHeatOverlay && alignmentHeatmapUrl ? (
+            <div className="pointer-events-none absolute inset-0">
+              <img src={alignmentHeatmapUrl} alt="Alignment mismatch heat overlay" className="h-full w-full object-cover opacity-65 mix-blend-screen" />
+            </div>
           ) : null}
           {modeFilter(feedMode)}
           <LiveFeedHUD camera={camera} mode={feedMode} flags={flags} ppm={scene.assumptions.pixelsPerMeter} targetType={firstCriticalZone?.targetType} />
@@ -1040,6 +1172,9 @@ export function CameraViewMode() {
             offsetX={verificationOffsetX}
             offsetY={verificationOffsetY}
             fileName={verificationFileName}
+            alignmentScore={alignmentQualityScore}
+            alignmentLabel={alignmentQualityScore !== null ? alignmentQualityLabel(alignmentQualityScore) : null}
+            showHeatOverlay={showDifferenceHeatOverlay}
             onToggle={setVerificationEnabled}
             onUpload={(file) => {
               if (verificationImageUrl && verificationImageUrl.startsWith("blob:")) {
@@ -1055,6 +1190,7 @@ export function CameraViewMode() {
             onSplitChange={setVerificationSplit}
             onOffsetXChange={setVerificationOffsetX}
             onOffsetYChange={setVerificationOffsetY}
+            onToggleHeatOverlay={setShowDifferenceHeatOverlay}
             onNudge={(dx, dy) => {
               setVerificationOffsetX((value) => value + dx);
               setVerificationOffsetY((value) => value + dy);

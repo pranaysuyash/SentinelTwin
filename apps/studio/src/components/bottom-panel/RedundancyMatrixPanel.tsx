@@ -1,19 +1,32 @@
 "use client";
 
-import { ShieldAlert } from "lucide-react";
+import { Loader2, ShieldAlert, Zap } from "lucide-react";
 
 import { useStudioStore } from "@/store/studio-store";
 import { cn } from "@/lib/cn";
 
 export function RedundancyMatrixPanel() {
   const result = useStudioStore((s) => s.simulationResult);
+  const simulationRunning = useStudioStore((s) => s.simulationRunning);
+  const runSimulation = useStudioStore((s) => s.runSimulation);
   const scene = useStudioStore((s) => s.scene);
   const selectNode = useStudioStore((s) => s.selectNode);
 
   if (!result) {
     return (
-      <div className="flex h-full items-center justify-center text-[11px] text-[#3a4158]">
-        Run simulation to see redundancy analysis
+      <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
+        <div className="text-[11px] text-[#3a4158]">
+          Run the shared simulation to compute redundancy analysis from the current scene.
+        </div>
+        <button
+          type="button"
+          onClick={runSimulation}
+          disabled={simulationRunning}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] px-3 py-2 text-[10px] font-medium text-emerald-300 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {simulationRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+          {simulationRunning ? "Running..." : "Run Simulation"}
+        </button>
       </div>
     );
   }

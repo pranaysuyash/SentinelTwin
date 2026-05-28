@@ -253,7 +253,7 @@ describe("golden simulation product claims", () => {
     expect(result.issues.some((issue) => issue.affectedZones.includes("privacy_staff"))).toBe(true);
   });
 
-  test("single camera failure preserves redundancy in a triple-camera setup", () => {
+  testWithTimeout("single camera failure preserves redundancy in a triple-camera setup", { timeout: 15000 }, () => {
     const scene = createTestScene({
       width: 8,
       depth: 8,

@@ -3,6 +3,7 @@
 import { useStudioStore } from "@/store/studio-store";
 import { DonutChart } from "@/components/shared/DonutChart";
 import { Badge } from "@/components/shared/Badge";
+import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { qualityToScore } from "@/simulation/dori";
 
 function MetricCard({ label, children, className = "" }: {
@@ -25,9 +26,10 @@ export function MetricsTab() {
 
   if (!result) {
     return (
-      <div className="flex items-center justify-center h-full text-[#3a4158] text-[11px]">
-        Run simulation to see metrics
-      </div>
+      <RunSimulationPrompt
+        className="h-full px-4"
+        message="Run the shared simulation to populate the live metrics for this scene."
+      />
     );
   }
 

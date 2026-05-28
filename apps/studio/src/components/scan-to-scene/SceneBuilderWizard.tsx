@@ -16,6 +16,7 @@ import { SCENE_TEMPLATES, type SceneTemplate } from "@/lib/scene-templates";
 import { createSmallRetailShopScene } from "@/demo-scenes/small-retail-shop";
 import { suggestCameraPlacements } from "@/lib/camera-suggestions";
 import { ImportReview } from "./ImportReview";
+import { getFloorPlanExtractionConfig } from "./floor-plan-extraction-config";
 
 type ImportMethod = "blank" | "template" | "floor_plan";
 
@@ -48,13 +49,6 @@ const initialState: WizardState = {
   isProcessing: false,
   importWarnings: [],
 };
-
-export function getFloorPlanExtractionConfig(state: Pick<WizardState, "heightM" | "floorPlanScalePixelsPerMeter">) {
-  return {
-    roomHeightM: state.heightM,
-    scalePixelsPerMeter: state.floorPlanScalePixelsPerMeter,
-  };
-}
 
 interface SceneBuilderWizardProps {
   onClose?: () => void;
@@ -102,10 +96,10 @@ export function SceneBuilderWizard({ onClose }: SceneBuilderWizardProps) {
     update({ isProcessing: true, floorPlanFile: file });
     try {
       const imageData = await loadImageToData(file);
-      const result = await extractFloorPlan(imageData, {
-        roomHeightM,
-        scalePixelsPerMeter: floorPlanScalePixelsPerMeter,
-      });
+      const result = await extractFloorPlan(imageData, getFloorPlanExtractionConfig({
+        heightM: roomHeightM,
+        floorPlanScalePixelsPerMeter,
+      }));
       const { warnings } = validateFloorPlan(result);
       update({
         floorPlanResult: result,
@@ -151,7 +145,28 @@ export function SceneBuilderWizard({ onClose }: SceneBuilderWizardProps) {
 
     if (scene) {
       setScene(scene);
+      // Capture scene source before onClose may reset state
+      const sceneSource = scene.source;
+      // Auto-run simulation so the user sees coverage immediately
+      setTimeout(() => {
+        const store = useStudioStore.getState();
+        store.runSimulation();
+      }, 100);
       onClose?.();
+      // Guide the user on what to do next
+      setTimeout(() => {
+        const store = useStudioStore.getState();
+        const suggestedCameras = store.scene.cameras.filter((c) => c.tags?.includes("suggested")).length;
+        if (suggestedCameras > 0) {
+          store.setLaunchNotice(
+            `Imported with ${suggestedCameras} suggested camera${suggestedCameras > 1 ? "s" : ""} at entry points. Adjust or confirm them, then add more cameras and critical zones.`
+          );
+        } else if (sceneSource === "manual") {
+          store.setLaunchNotice("Blank scene created. Add walls, doors, and cameras to get started.");
+        } else {
+          store.setLaunchNotice("Scene created. Add cameras and critical zones to see coverage.");
+        }
+      }, 200);
     }
   }, [state, setScene, onClose]);
 

@@ -41,7 +41,7 @@ const DEMO_STEPS = [
   {
     title: "AI Command Layer",
     description:
-      "Press ⌘K to open the AI Command bar. Type natural language instructions like 'Move Camera 1 toward the counter' or 'Switch to night mode'. The AI parses your intent, applies changes, and re-runs the simulation automatically.",
+      "Press ⌘K to open the AI Command bar. Recognized scene edits run offline first; cloud-backed parsing is available when configured. Type natural language instructions like 'Move Camera 1 toward the counter' or 'Switch to night mode'.",
     icon: Sparkles,
     highlight: "command",
   },

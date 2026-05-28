@@ -13,5 +13,8 @@ describe("IssuesTab", () => {
     expect(source).toContain("Preview Fix");
     expect(source).toContain("Apply Fix");
     expect(source).toContain("Revert Preview");
+    expect(source).toContain("Privacy Review");
+    expect(source).toContain("Restricted Cells");
+    expect(source).toContain("selectNode(zoneId)");
   });
 });

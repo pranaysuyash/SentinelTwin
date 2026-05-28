@@ -2,7 +2,9 @@
 
 import { MapPin } from "lucide-react";
 import { PathMap } from "@/components/map/PathMap";
+import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { QUALITY_RANK } from "@/lib/quality-display";
+import { pathLength } from "@/components/workspace/editing/editor-geometry";
 import { useStudioStore } from "@/store/studio-store";
 
 export function ScenarioPathPanel() {
@@ -21,6 +23,10 @@ export function ScenarioPathPanel() {
 
   const activePath = scene.paths.find((path) => path.id === activePathId) ?? null;
   const pathResult = activePath ? result?.pathResults.find((entry) => entry.pathId === activePath.id) : null;
+  const activePathLengthM = activePath ? pathLength(activePath.points.map((point) => point.position)) : 0;
+  const activePathEstimatedSeconds = activePath && activePath.speedMps > 0
+    ? activePathLengthM / activePath.speedMps
+    : 0;
   const visiblePct = pathResult && pathResult.totalDurationS > 0
     ? Math.round((pathResult.visibleDurationS / pathResult.totalDurationS) * 100)
     : null;
@@ -47,6 +53,12 @@ export function ScenarioPathPanel() {
     setActiveTool("path");
   };
 
+  const pathStartLabel = activePath?.points[0]?.action?.replace("_", " ") ?? "Start";
+  const pathEndLabel = activePath?.points.at(-1)?.action?.replace("_", " ") ?? activePath?.labelDetail ?? "End";
+  const activeIntent = activePath?.intent.replace("_", " ") ?? "Scenario";
+  const activeActor = activePath?.actorType.replace("_", " ") ?? "Unknown";
+  const activeTimeOfDay = activePath?.timeOfDay ?? "day";
+
   return (
     <div className="flex h-[208px] flex-shrink-0 flex-col border-t border-[#1e2130] bg-[#0d1017]">
       <div className="flex h-8 items-center justify-between border-b border-[#1e2130] px-3">
@@ -71,7 +83,7 @@ export function ScenarioPathPanel() {
               </div>
             ) : null}
 
-            <div className="mb-1 text-[9px] uppercase tracking-[0.18em] text-[#556076]">Active Path</div>
+            <div className="mb-1 text-[9px] uppercase tracking-[0.18em] text-[#556076]">Active Scenario</div>
             <select
               className="flex h-8 w-full items-center justify-between rounded-lg border border-[#24283a] bg-[#111521] px-2.5 text-[11px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
               value={activePathId ?? ""}
@@ -90,17 +102,76 @@ export function ScenarioPathPanel() {
                 </option>
               ))}
             </select>
-            {activePath ? (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[9px] text-[#9ea8bf]">
-                  {activePath.actorType}
-                </span>
-                <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[9px] text-[#9ea8bf]">
-                  {activePath.intent.replace("_", " ")}
-                </span>
-                <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[9px] text-[#9ea8bf]">
-                  {activePath.speedMps.toFixed(1)} m/s
-                </span>
+                {activePath ? (
+                  <div className="mt-2 space-y-2">
+                    <div className="rounded-xl border border-[#1f2536] bg-[#0a0d14] px-2.5 py-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="text-[8px] font-semibold uppercase tracking-[0.18em] text-[#556076]">Active Scenario</div>
+                          <div className="truncate text-[12px] font-semibold text-[#d7deed]">
+                            {activePath.label}
+                          </div>
+                          <div className="mt-0.5 text-[9px] text-[#8c9bb4]">
+                        {activePath.labelDetail ?? `${activeActor} · ${activeIntent}`}
+                          </div>
+                        </div>
+                        <div className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-right">
+                          <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Actor</div>
+                          <div className="text-[9px] font-medium text-[#c7d0e4]">{activeActor}</div>
+                        </div>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[9px] text-[#9ea8bf]">
+                          {activeIntent}
+                        </span>
+                        <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[9px] text-[#9ea8bf]">
+                          {activeActor}
+                        </span>
+                        <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[9px] text-[#9ea8bf]">
+                          {activePath.speedMps.toFixed(1)} m/s
+                        </span>
+                        <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[9px] text-[#9ea8bf]">
+                          {activeTimeOfDay}
+                        </span>
+                      </div>
+                      <div className="mt-2 grid grid-cols-3 gap-2 text-[9px]">
+                        <div className="rounded-lg border border-[#24283a] bg-[#111521] px-2 py-1.5">
+                          <div className="uppercase tracking-[0.16em] text-[#556076]">Path Length</div>
+                          <div className="mt-0.5 font-mono text-[#c7d0e4]">{activePathLengthM.toFixed(1)}m</div>
+                    </div>
+                    <div className="rounded-lg border border-[#24283a] bg-[#111521] px-2 py-1.5">
+                      <div className="uppercase tracking-[0.16em] text-[#556076]">Est. Time</div>
+                      <div className="mt-0.5 font-mono text-[#c7d0e4]">
+                        {activePathEstimatedSeconds > 0 ? `${activePathEstimatedSeconds.toFixed(1)}s` : "--"}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-[#24283a] bg-[#111521] px-2 py-1.5">
+                      <div className="uppercase tracking-[0.16em] text-[#556076]">Speed</div>
+                      <div className="mt-0.5 font-mono text-[#c7d0e4]">{activePath.speedMps.toFixed(1)} m/s</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2">
+                  <div className="mb-1.5 text-[8px] font-semibold uppercase tracking-[0.18em] text-[#556076]">Route Legend</div>
+                  <div className="flex items-center gap-2 text-[9px]">
+                    <span className="rounded-md border border-emerald-500/20 bg-emerald-500/8 px-1.5 py-0.5 text-emerald-200">
+                      {pathStartLabel}
+                    </span>
+                    <span className="text-[#4a5568]">— Path —</span>
+                    <span className="rounded-md border border-sky-500/20 bg-sky-500/8 px-1.5 py-0.5 text-sky-200">
+                      {pathEndLabel}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[9px] text-[#9ea8bf]">
+                      {activePath.points.length} waypoints
+                    </span>
+                    <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[9px] text-[#9ea8bf]">
+                      {activeTimeOfDay}
+                    </span>
+                  </div>
+                </div>
               </div>
             ) : null}
             {pathResult ? (
@@ -200,6 +271,12 @@ export function ScenarioPathPanel() {
                 <div className="text-[#72809a]">Run simulation to populate route visibility details.</div>
               )}
             </div>
+          )}
+          {!activePath && noSimulationYet && (
+            <RunSimulationPrompt
+              className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-3 py-3"
+              message="Run the shared simulation to populate route visibility details."
+            />
           )}
         </div>
 

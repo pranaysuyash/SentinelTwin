@@ -1,6 +1,7 @@
 "use client";
 
 import { QUALITY_ABBR, QUALITY_COLOR } from "@/lib/quality-display";
+import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { useStudioStore } from "@/store/studio-store";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -20,9 +21,10 @@ export function RedundancyTab() {
 
   if (!result) {
     return (
-      <div className="flex h-full items-center justify-center text-[#3a4158] text-[11px]">
-        Run simulation to see redundancy matrix
-      </div>
+      <RunSimulationPrompt
+        className="h-full px-4"
+        message="Run the shared simulation to compute the redundancy matrix for the current scene."
+      />
     );
   }
 

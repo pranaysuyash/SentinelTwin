@@ -29,6 +29,13 @@ describe("CameraViewMode", () => {
     expect(source).toContain("Reset align");
     expect(source).toContain("Overlay");
     expect(source).toContain("Split");
+    expect(source).toContain("Alignment Quality");
+    expect(source).toContain("Difference heat overlay");
+    expect(source).toContain("non-forensic");
+    expect(source).toContain("Excellent");
+    expect(source).toContain("Good");
+    expect(source).toContain("Fair");
+    expect(source).toContain("Poor");
   });
 
   test("derives target labels from the zone target type", () => {

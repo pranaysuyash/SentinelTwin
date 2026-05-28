@@ -1,7 +1,7 @@
 # Novel Algorithms and Original Ideas — SentinelTwin
 
-**Status:** Active exploration — append as ideas develop
-**Updated:** 2026-05-25
+**Status:** Partially implemented — append as ideas develop
+**Updated:** 2026-05-28
 **Purpose:** Document SentinelTwin's own original algorithmic and product ideas.
 Not references to other tools. Our work.
 
@@ -21,7 +21,7 @@ to compute — all are deterministic, geometric, and testable.
 
 ## Algorithm 1: Coverage Fragility Field
 
-**Status:** Unexplored. High value. Medium complexity.
+**Status:** Implemented in V0.1.4 studio simulation, live panel, and report handoff.
 
 **What it is:**
 The current heatmap shows what DORI quality each cell achieves. But it doesn't show
@@ -57,7 +57,7 @@ implementable version of that idea.
 
 ## Algorithm 2: Blind Spot Topology Analysis
 
-**Status:** Unexplored. Very high value. Medium complexity.
+**Status:** Implemented in V0.1.4 studio simulation and report surfaces.
 
 **What it is:**
 Currently we report blindspot % — "22% of the floor is blind." But this hides the critical
@@ -99,7 +99,7 @@ That is a finding that motivates action.
 
 ## Algorithm 3: Camera Placement Oracle (Marginal Coverage Map)
 
-**Status:** Unexplored. High value. Moderate complexity.
+**Status:** Implemented in V0.1.4 studio simulation and novel panel.
 
 **What it is:**
 Given the current camera setup, where should the NEXT camera go to maximize coverage
@@ -138,7 +138,7 @@ computed, verifiable recommendation. First tool that answers this question geome
 
 ## Algorithm 4: Adversarial K-Robustness
 
-**Status:** Partially designed. High novelty. Medium complexity.
+**Status:** Implemented in V0.1.4 studio simulation and report surfaces.
 **Builds on:** Existing adversarial path (adversarial-path.ts).
 
 **What it is:**
@@ -186,7 +186,7 @@ any single camera failure, but not two." That's a meaningful engineering specifi
 
 ## Algorithm 5: Coverage Time Budget
 
-**Status:** Unexplored. High novelty. Low-medium complexity.
+**Status:** Implemented in the live Novel Algorithms panel and simulation helper.
 
 **What it is:**
 Current path replay answers: "how long is the subject visible at each quality level?"
@@ -223,11 +223,16 @@ Changes the defender's mental model from "is this area covered?" to "how many se
 does a determined actor have to act in each zone?" Has direct applications in guard
 patrol design (Q-019 multi-sensor direction).
 
+**Current implementation:**
+The live Novel Algorithms tab now computes a thresholded path time budget from the
+active authored path, highlights visible bands, and flags when the current path speed
+misses the selected exposure budget.
+
 ---
 
 ## Algorithm 6: Occlusion Blame Attribution
 
-**Status:** Unexplored. High practical value. Low complexity.
+**Status:** Implemented in V0.1.4 studio simulation and report surfaces.
 
 **What it is:**
 When a critical zone fails its required quality, the system currently shows the failure.
@@ -266,13 +271,13 @@ For a typical scene with 3–8 obstructions, this is fast.
 
 ## Algorithm 7: Monte Carlo Coverage Uncertainty
 
-**Status:** Unexplored. Medium complexity. Important for professional use.
+**Status:** Implemented in the live Novel Algorithms panel and report handoff.
 
 **What it is:**
 The simulation uses fixed parameters. But real installations have uncertainty:
 - Camera mounting position: ±5–10cm
 - Camera yaw after installation: ±3–5°
-- Wall dimensions from floor plan: ±0.2–0.5m
+- Camera pitch and range tolerance
 - Camera specifications from manufacturer: real-world performance varies
 
 Monte Carlo: run N simulations (N=100–500) with parameters sampled from Gaussian
@@ -311,14 +316,19 @@ the FOV — reduces sensitivity to installation angle variation.
 **Why this matters:**
 Makes the product honest about what it's computing. A 78% coverage estimate is a
 model under assumptions. This shows users when coverage is genuinely robust vs when
-a 2-degree installation error changes the outcome. Critical for the evidence/compliance
+a small installation error changes the outcome. Critical for the evidence/compliance
 use case (Thread 24).
+
+**Current implementation:**
+The live panel and report handoff now sample perturbed camera installs, summarize the
+mean and 95% band, and show the most fragile zone pass rates as a practical preview
+of installation sensitivity.
 
 ---
 
 ## Algorithm 8: Coverage Under Posture Variation
 
-**Status:** Unexplored. Medium value. Low complexity. Differentiating.
+**Status:** Implemented in the live Novel Algorithms panel and report handoff.
 
 **What it is:**
 Current simulation uses a fixed 1.7m target height. But real people are:
@@ -335,6 +345,11 @@ upper body while seated). A camera aimed at 1.7m standing height may miss seated
 **Algorithm:**
 Parameterize existing coverage engine with `targetHeightM` (currently hardcoded to 1.2m
 in the raycast end point). Run at multiple heights and show the delta.
+
+**Current implementation:**
+The live panel and report handoff now compare crouching, seated, child, and standing
+target heights and surface the worst posture, biggest standing-to-posture coverage drop,
+and the weakest zone for each posture profile.
 
 **Output:**
 ```
@@ -356,7 +371,7 @@ Cost: ~3× more raycasts. Negligible for 40×40 grid.
 
 ## Algorithm 9: Blind Spot Fingerprinting
 
-**Status:** Idea. Exploratory.
+**Status:** Implemented in the live Novel Algorithms panel and report handoff; dataset clustering remains future work.
 
 **What it is:**
 Every camera configuration produces a unique "blind spot signature" — the spatial
@@ -369,7 +384,8 @@ This enables:
 - Pattern-based recommendations from a library of verified fixes
 
 This requires the camera dataset (CAMERA_DATASET.md) and multiple SecurityScene instances.
-Not buildable now, but worth designing for.
+The deterministic fingerprint/symmetry step is now live; the dataset clustering layer
+remains a future extension.
 
 **Related:** Camera dataset (CAMERA_DATASET.md exploration).
 
@@ -377,7 +393,7 @@ Not buildable now, but worth designing for.
 
 ## Algorithm 10: Reflective Bounce Vision
 
-**Status:** Speculative. Research-grade. Worth exploring seriously.
+**Status:** Implemented in the live novelty panel and report handoff.
 
 **What it is:**
 Glass walls, polished floors, and reflective surfaces create secondary virtual cameras.
@@ -398,8 +414,10 @@ Currently: reflective material = glare penalty (reduces quality).
 Extended: reflective material = glare penalty + potential bonus indirect coverage.
 This models how security professionals actually use mirrors and reflective surfaces.
 
-**Status:** Requires more research into realistic reflection coefficients and
-angle-of-incidence effects before implementing. Mark as V1+ research.
+**Status:** Implemented as a deterministic first-pass mirror proxy that uses the
+reflective window plane, visibility checks, and an ignored-surface bounce pass.
+Future work can refine the reflection coefficient model and angle-of-incidence
+math, but the live panel and report now already expose the effect.
 
 ---
 
@@ -409,14 +427,14 @@ angle-of-incidence effects before implementing. Mark as V1+ research.
 |---|---|---|---|---|
 | Coverage Fragility Field | High | Medium | High | Unexplored |
 | Blind Spot Topology | Very High | Medium | Very High | Unexplored |
-| Placement Oracle | High | Medium | High | Unexplored |
+| Placement Oracle | High | Medium | High | Implemented in live panel and report handoff |
 | Adversarial K-Robustness | Very High | Medium | High | Partially designed |
-| Coverage Time Budget | High | Low | High | Unexplored |
+| Coverage Time Budget | High | Low | High | Implemented in live panel |
+| Monte Carlo Coverage Uncertainty | High | Medium | High | Implemented in live panel |
 | Occlusion Blame Attribution | High | Low | Very High | Unexplored |
-| Monte Carlo Uncertainty | Medium | Medium | High | Unexplored |
-| Posture Variation | Medium | Low | Medium | Unexplored |
-| Blind Spot Fingerprinting | High | High | Medium | Long-term |
-| Reflective Bounce Vision | Very High | High | Medium | Research |
+| Coverage Under Posture Variation | Medium | Low | Medium | Implemented in live panel |
+| Blind Spot Fingerprinting | High | High | Medium | Implemented in live panel and report handoff |
+| Reflective Bounce Vision | Very High | High | Medium | Implemented in live panel and report handoff |
 
 **Build priority for maximum differentiation:**
 1. Occlusion Blame Attribution (low effort, high user value, directly answers "why failed")

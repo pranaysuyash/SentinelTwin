@@ -1,10 +1,16 @@
 "use client";
 
-import { AlertTriangle, BarChart3, MapPinned, Radar, ShieldAlert, Sigma, TriangleAlert } from "lucide-react";
+import { AlertTriangle, BarChart3, Clock3, Fingerprint, MapPinned, Radar, ShieldAlert, Sigma, Sparkles, TriangleAlert } from "lucide-react";
+import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/shared/Badge";
 import { StatCard } from "@/components/shared/StatCard";
+import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
+import { computeCoverageTimeBudget } from "@/simulation/coverage-time-budget";
+import { computeCoveragePostureVariation } from "@/simulation/coverage-posture";
+import { computeCoverageUncertainty } from "@/simulation/coverage-uncertainty";
 import { useStudioStore } from "@/store/studio-store";
+import type { DoriQuality } from "@/schema/security-scene";
 
 function Section({
   title,
@@ -35,32 +41,69 @@ function CandidateLine({ label, value }: { label: string; value: string }) {
   );
 }
 
+function formatSeconds(seconds: number | null | undefined) {
+  if (seconds == null || Number.isNaN(seconds)) return "—";
+  if (seconds >= 60) return `${(seconds / 60).toFixed(1)} min`;
+  return `${seconds.toFixed(1)} s`;
+}
+
+function formatSignedPercent(delta: number | null | undefined) {
+  if (delta == null || Number.isNaN(delta)) return "—";
+  return `${delta > 0 ? "+" : ""}${delta.toFixed(1)}%`;
+}
+
 export function NovelAlgorithmsTab() {
   const result = useStudioStore((s) => s.simulationResult);
+  const scene = useStudioStore((s) => s.scene);
+  const activePathId = useStudioStore((s) => s.activePathId);
   const temporalProfile = useStudioStore((s) => s.temporalProfile);
+  const [threshold, setThreshold] = useState<DoriQuality>("observation");
+  const [exposureBudgetS, setExposureBudgetS] = useState(2);
+  const [uncertaintySamples, setUncertaintySamples] = useState(12);
 
-  if (!result) {
-    return (
-      <div className="flex h-full items-center justify-center text-[11px] text-[#3a4158]">
-        Run simulation to populate the novel algorithm outputs.
-      </div>
-    );
-  }
-
-  const kRobustness = result.kRobustness;
-  const placementOracle = result.placementOracle;
-  const fragility = result.fragilitySummary;
-  const occlusion = result.occlusionBlame ?? [];
+  const kRobustness = result?.kRobustness;
+  const placementOracle = result?.placementOracle;
+  const fragility = result?.fragilitySummary;
+  const occlusion = result?.occlusionBlame ?? [];
   const anomalies = temporalProfile?.anomalyWindows ?? [];
-  const blindRegions = result.blindRegions ?? [];
+  const blindRegions = result?.blindRegions ?? [];
+  const blindSpotFingerprint = result?.blindSpotFingerprint;
+  const reflectiveBounce = result?.reflectiveBounce;
+  const coverageCells = result?.coverageCells;
+  const activePath = useMemo(
+    () => scene.paths.find((path) => path.id === activePathId) ?? scene.paths[0] ?? null,
+    [activePathId, scene.paths],
+  );
+  const timeBudget = useMemo(
+    () => (activePath && coverageCells ? computeCoverageTimeBudget(activePath, coverageCells, threshold, exposureBudgetS) : null),
+    [activePath, coverageCells, exposureBudgetS, threshold],
+  );
+  const uncertainty = useMemo(
+    () => computeCoverageUncertainty(scene, { sampleCount: uncertaintySamples }),
+    [scene, uncertaintySamples],
+  );
+  const postureVariation = useMemo(
+    () => computeCoveragePostureVariation(scene),
+    [scene],
+  );
 
   const fragilityPct = fragility ? Math.round(fragility.meanFragility * 100) : null;
   const kCriticalSet = kRobustness?.criticalSets[0];
   const bestCandidate = placementOracle?.bestCandidate;
+  const visibleBands = timeBudget?.segments.filter((segment) => segment.visible) ?? [];
+
+  if (!result) {
+    return (
+      <RunSimulationPrompt
+        className="h-full px-4"
+        message="Run the shared simulation to populate the novel algorithm outputs."
+      />
+    );
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2 overflow-y-auto p-2">
-      <div className="grid grid-cols-4 gap-1.5">
+      <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-5">
         <StatCard
           icon={<Sigma className="h-3.5 w-3.5" />}
           label="Coverage Fragility"
@@ -84,6 +127,42 @@ export function NovelAlgorithmsTab() {
           label="Temporal Anomalies"
           value={temporalProfile ? `${anomalies.length}` : "—"}
           color={anomalies.length > 0 ? "text-amber-300" : "text-emerald-400"}
+        />
+        <StatCard
+          icon={<Clock3 className="h-3.5 w-3.5" />}
+          label="Time Budget"
+          value={timeBudget ? formatSeconds(timeBudget.firstVisibleTimeS ?? timeBudget.totalDurationS) : "—"}
+          color={timeBudget?.budgetMet ? "text-emerald-400" : "text-amber-400"}
+        />
+        <StatCard
+          icon={<Sigma className="h-3.5 w-3.5" />}
+          label="Uncertainty"
+          value={uncertainty ? `${uncertainty.sampleCount} runs` : "—"}
+          color={uncertainty ? "text-violet-300" : "text-[#8090a8]"}
+        />
+        <StatCard
+          icon={<BarChart3 className="h-3.5 w-3.5" />}
+          label="Posture"
+          value={postureVariation ? `${postureVariation.worstProfileLabel ?? "—"} ${postureVariation.worstProfileCoveragePct != null ? `${postureVariation.worstProfileCoveragePct.toFixed(1)}%` : ""}` : "—"}
+          color={postureVariation ? "text-sky-300" : "text-[#8090a8]"}
+        />
+        <StatCard
+          icon={<Fingerprint className="h-3.5 w-3.5" />}
+          label="Fingerprint"
+          value={blindSpotFingerprint ? blindSpotFingerprint.fingerprint : "—"}
+          color={blindSpotFingerprint ? "text-fuchsia-300" : "text-[#8090a8]"}
+        />
+        <StatCard
+          icon={<AlertTriangle className="h-3.5 w-3.5" />}
+          label="Blind Regions"
+          value={blindRegions ? `${blindRegions.length}` : "—"}
+          color={blindRegions.length > 0 ? "text-red-300" : "text-[#8090a8]"}
+        />
+        <StatCard
+          icon={<Sparkles className="h-3.5 w-3.5" />}
+          label="Reflective Bounce"
+          value={reflectiveBounce ? `${reflectiveBounce.affectedCellCount}` : "—"}
+          color={reflectiveBounce?.affectedCellCount ? "text-cyan-300" : "text-[#8090a8]"}
         />
       </div>
 
@@ -110,6 +189,22 @@ export function NovelAlgorithmsTab() {
                   ? `Critical failure set: ${kCriticalSet.cameraNames.join(", ")} (exposure ${kCriticalSet.exposureScore.toFixed(1)})`
                   : "No single failure set opened a viable route in the tested range."}
               </div>
+              {kRobustness.criticalSets.length > 1 ? (
+                <div className="space-y-1">
+                  {kRobustness.criticalSets.slice(0, 3).map((set) => (
+                    <div key={`${set.k}-${set.cameraIds.join("-")}`} className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[9px] uppercase tracking-[0.08em] text-[#8b96ab]">K={set.k}</span>
+                        <Badge variant={set.exposureScore < 3 ? "green" : "gray"}>{set.exposureScore.toFixed(1)}</Badge>
+                      </div>
+                      <div className="mt-1 text-[9px] text-[#d2d9e8]">
+                        {set.cameraNames.join(", ")}
+                      </div>
+                      <div className="mt-0.5 text-[8px] text-[#5b667c]">{set.waypointCount} waypoints</div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="text-[9px] text-[#59637a]">K-robustness not computed yet.</div>
@@ -176,6 +271,319 @@ export function NovelAlgorithmsTab() {
         </Section>
       </div>
 
+      <Section title="Coverage Uncertainty" icon={<Sigma className="h-3 w-3 text-violet-400" />}>
+        {uncertainty ? (
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-4">
+              <CandidateLine label="Samples" value={`${uncertainty.sampleCount}`} />
+              <CandidateLine label="Mean coverage" value={`${uncertainty.meanCoveragePct.toFixed(1)}%`} />
+              <CandidateLine label="95% band" value={`${uncertainty.p5CoveragePct.toFixed(1)}–${uncertainty.p95CoveragePct.toFixed(1)}%`} />
+              <CandidateLine label="Worst zone" value={uncertainty.worstZoneLabel ? `${uncertainty.worstZoneLabel} (${Math.round((uncertainty.worstZonePassRate ?? 0) * 100)}%)` : "—"} />
+            </div>
+
+            <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-4">
+              {([8, 12, 16, 24] as const).map((count) => (
+                <button
+                  key={count}
+                  type="button"
+                  onClick={() => setUncertaintySamples(count)}
+                  className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
+                    uncertaintySamples === count
+                      ? "border-violet-500/40 bg-violet-500/10 text-violet-200"
+                      : "border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:text-[#d2d9e8]"
+                  }`}
+                >
+                  <div className="uppercase tracking-[0.08em]">{count} runs</div>
+                  <div className="mt-0.5 text-[8px] text-[#6a748b]">
+                    {count <= 8 ? "Fast preview" : count <= 16 ? "Balanced preview" : "Heavier preview"}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-1.5">
+              {uncertainty.zonePassRates.slice(0, 3).map((zone) => (
+                <div key={zone.zoneId} className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[9px] uppercase tracking-[0.08em] text-[#8b96ab]">{zone.label}</span>
+                    <Badge variant={zone.passRate >= 0.8 ? "green" : zone.passRate >= 0.5 ? "amber" : "red"}>
+                      {(zone.passRate * 100).toFixed(0)}%
+                    </Badge>
+                  </div>
+                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[#111521]">
+                    <div
+                      className="h-full rounded-full bg-violet-400"
+                      style={{ width: `${Math.max(4, zone.passRate * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="text-[9px] text-[#6a748b]">
+              Monte Carlo samples the current scene with camera installation and spec uncertainty, then reports the spread of coverage and critical-zone pass rates.
+            </div>
+          </div>
+        ) : (
+          <div className="text-[9px] text-[#59637a]">Add cameras and critical zones to compute uncertainty.</div>
+        )}
+      </Section>
+
+      <Section title="Coverage Under Posture Variation" icon={<BarChart3 className="h-3 w-3 text-sky-400" />}>
+        {postureVariation ? (
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-4">
+              <CandidateLine label="Baseline" value={postureVariation.baselineProfileLabel} />
+              <CandidateLine label="Worst profile" value={postureVariation.worstProfileLabel ?? "—"} />
+              <CandidateLine label="Largest drop" value={`${postureVariation.largestDropProfileLabel ?? "—"} ${formatSignedPercent(postureVariation.largestDropDeltaPct)}`} />
+              <CandidateLine label="Weakest zone" value={postureVariation.worstZoneLabel ? `${postureVariation.worstZoneLabel} (${postureVariation.worstZoneProfileLabel ?? "—"})` : "—"} />
+            </div>
+
+            <div className="space-y-1.5">
+              {postureVariation.profiles.map((profile) => (
+                <div key={profile.profileId} className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="text-[9px] uppercase tracking-[0.08em] text-[#8b96ab]">{profile.label}</div>
+                      <div className="mt-0.5 text-[9px] text-[#59637a]">{profile.description} · {profile.targetHeightM.toFixed(2)}m target</div>
+                    </div>
+                    <Badge variant={profile.label === postureVariation.worstProfileLabel ? "amber" : "gray"}>
+                      {profile.totalCoveragePct.toFixed(1)}%
+                    </Badge>
+                  </div>
+                  <div className="mt-1 grid grid-cols-2 gap-1.5 text-[9px] text-[#8b96ab] lg:grid-cols-4">
+                    <div>Zones: <span className="text-[#d2d9e8]">{profile.zonesPassing}/{profile.zonesTotal}</span></div>
+                    <div>Recognition: <span className="text-[#d2d9e8]">{profile.recognitionAreaPct.toFixed(1)}%</span></div>
+                    <div>Identification: <span className="text-[#d2d9e8]">{profile.identificationAreaPct.toFixed(1)}%</span></div>
+                    <div>Average: <span className="text-[#d2d9e8]">{profile.averageWalkableQuality.toFixed(2)}</span></div>
+                  </div>
+                  <div className="mt-1 text-[9px] text-[#8b96ab]">
+                    {profile.worstZoneLabel
+                      ? `Worst zone: ${profile.worstZoneLabel} (${profile.worstZoneStatus ?? "fail"}${profile.worstZoneActualQuality ? ` · ${profile.worstZoneActualQuality}` : ""})`
+                      : "No critical zones to compare."}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="text-[9px] text-[#6a748b]">
+              Posture variation compares the same scene at crouching, seated, child, and standing target heights to show where a setup only works for one body posture.
+            </div>
+          </div>
+        ) : (
+          <div className="text-[9px] text-[#59637a]">Add cameras and critical zones to compute posture variation.</div>
+        )}
+      </Section>
+
+      <Section title="Coverage Time Budget" icon={<Clock3 className="h-3 w-3 text-cyan-400" />}>
+        {timeBudget ? (
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-4">
+              <CandidateLine label="Threshold" value={threshold} />
+              <CandidateLine label="Exposure budget" value={formatSeconds(exposureBudgetS)} />
+              <CandidateLine label="First visible" value={formatSeconds(timeBudget.firstVisibleTimeS)} />
+              <CandidateLine label="Budget status" value={timeBudget.budgetMet ? "Met" : "Needs faster pass"} />
+            </div>
+
+            <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-5">
+              {(["detection", "observation", "recognition", "identification"] as DoriQuality[]).map((level) => (
+                <button
+                  key={level}
+                  type="button"
+                  onClick={() => setThreshold(level)}
+                  className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
+                    threshold === level
+                      ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-200"
+                      : "border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:text-[#d2d9e8]"
+                  }`}
+                >
+                  <div className="uppercase tracking-[0.08em]">{level}</div>
+                  <div className="mt-0.5 text-[8px] text-[#6a748b]">
+                    {level === "none" ? "No visibility threshold" : "Set analysis threshold"}
+                  </div>
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setExposureBudgetS(1)}
+                className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
+                  exposureBudgetS === 1
+                    ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
+                    : "border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:text-[#d2d9e8]"
+                }`}
+              >
+                <div className="uppercase tracking-[0.08em]">1s budget</div>
+                <div className="mt-0.5 text-[8px] text-[#6a748b]">Tight crossing window</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setExposureBudgetS(2)}
+                className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
+                  exposureBudgetS === 2
+                    ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
+                    : "border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:text-[#d2d9e8]"
+                }`}
+              >
+                <div className="uppercase tracking-[0.08em]">2s budget</div>
+                <div className="mt-0.5 text-[8px] text-[#6a748b]">Default planning pace</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setExposureBudgetS(3)}
+                className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
+                  exposureBudgetS === 3
+                    ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
+                    : "border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:text-[#d2d9e8]"
+                }`}
+              >
+                <div className="uppercase tracking-[0.08em]">3s budget</div>
+                <div className="mt-0.5 text-[8px] text-[#6a748b]">More permissive crossing window</div>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-4">
+              <CandidateLine label="Total path" value={`${timeBudget.totalDistanceM.toFixed(1)} m`} />
+              <CandidateLine label="Current duration" value={formatSeconds(timeBudget.totalDurationS)} />
+              <CandidateLine label="Visible stretch" value={formatSeconds(timeBudget.visibleDurationS)} />
+              <CandidateLine label="Hidden stretch" value={formatSeconds(timeBudget.hiddenDurationS)} />
+            </div>
+
+            <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-2">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <div className="text-[9px] uppercase tracking-[0.08em] text-[#8b96ab]">Selected path</div>
+                  <div className="mt-0.5 text-[10px] text-[#d2d9e8]">{activePath?.label ?? "—"}</div>
+                </div>
+                <Badge variant={timeBudget.budgetMet ? "green" : "amber"}>
+                  {timeBudget.budgetMet ? "Budget met" : "Budget missed"}
+                </Badge>
+              </div>
+              <div className="mt-2 space-y-1.5">
+                {visibleBands.length > 0 ? (
+                  visibleBands.slice(0, 3).map((segment, index) => (
+                    <div key={`${segment.startDistanceM}-${segment.endDistanceM}-${index}`} className="rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[9px] uppercase tracking-[0.08em] text-[#8b96ab]">
+                          Visible segment {index + 1}
+                        </span>
+                        <span className="font-mono text-[9px] text-[#d2d9e8]">
+                          {segment.startDistanceM.toFixed(1)}m → {segment.endDistanceM.toFixed(1)}m
+                        </span>
+                      </div>
+                      <div className="mt-1 grid grid-cols-2 gap-1.5 text-[9px] text-[#8b96ab]">
+                        <div>Quality: <span className="text-[#d2d9e8]">{segment.quality}</span></div>
+                        <div>Duration: <span className="text-[#d2d9e8]">{formatSeconds(segment.durationS)}</span></div>
+                        <div>Min speed: <span className="text-[#d2d9e8]">{segment.minSpeedMps != null ? `${segment.minSpeedMps.toFixed(1)} m/s` : "—"}</span></div>
+                        <div>Status: <span className="text-[#d2d9e8]">{segment.meetsBudget ? "Meets budget" : "Too slow"}</span></div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1.5 text-[9px] text-[#59637a]">
+                    No segments at or above the selected threshold were detected on the active path.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="text-[9px] text-[#6a748b]">
+              Coverage Time Budget answers the path question: how fast must the actor move to keep visible stretches inside the selected exposure budget while traversing the current scene?
+            </div>
+          </div>
+        ) : (
+          <div className="text-[9px] text-[#59637a]">Add a path and run simulation to compute a time budget.</div>
+        )}
+      </Section>
+
+      <Section title="Coverage Uncertainty" icon={<Sigma className="h-3 w-3 text-violet-400" />}>
+        {uncertainty ? (
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-4">
+              <CandidateLine label="Samples" value={`${uncertainty.sampleCount}`} />
+              <CandidateLine label="Mean coverage" value={`${uncertainty.meanCoveragePct.toFixed(1)}%`} />
+              <CandidateLine label="95% band" value={`${uncertainty.p5CoveragePct.toFixed(1)}–${uncertainty.p95CoveragePct.toFixed(1)}%`} />
+              <CandidateLine label="Worst zone" value={uncertainty.worstZoneLabel ? `${uncertainty.worstZoneLabel} (${Math.round((uncertainty.worstZonePassRate ?? 0) * 100)}%)` : "—"} />
+            </div>
+
+            <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-4">
+              <button
+                type="button"
+                onClick={() => setUncertaintySamples(8)}
+                className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
+                  uncertaintySamples === 8
+                    ? "border-violet-500/40 bg-violet-500/10 text-violet-200"
+                    : "border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:text-[#d2d9e8]"
+                }`}
+              >
+                <div className="uppercase tracking-[0.08em]">8 runs</div>
+                <div className="mt-0.5 text-[8px] text-[#6a748b]">Fast preview</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setUncertaintySamples(12)}
+                className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
+                  uncertaintySamples === 12
+                    ? "border-violet-500/40 bg-violet-500/10 text-violet-200"
+                    : "border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:text-[#d2d9e8]"
+                }`}
+              >
+                <div className="uppercase tracking-[0.08em]">12 runs</div>
+                <div className="mt-0.5 text-[8px] text-[#6a748b]">Balanced preview</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setUncertaintySamples(16)}
+                className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
+                  uncertaintySamples === 16
+                    ? "border-violet-500/40 bg-violet-500/10 text-violet-200"
+                    : "border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:text-[#d2d9e8]"
+                }`}
+              >
+                <div className="uppercase tracking-[0.08em]">16 runs</div>
+                <div className="mt-0.5 text-[8px] text-[#6a748b]">Sharper bounds</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setUncertaintySamples(24)}
+                className={`rounded-md border px-2 py-1 text-left text-[9px] transition-colors ${
+                  uncertaintySamples === 24
+                    ? "border-violet-500/40 bg-violet-500/10 text-violet-200"
+                    : "border-[#1a2030] bg-[#0f141f] text-[#8b96ab] hover:border-[#24304a] hover:text-[#d2d9e8]"
+                }`}
+              >
+                <div className="uppercase tracking-[0.08em]">24 runs</div>
+                <div className="mt-0.5 text-[8px] text-[#6a748b]">Heavier preview</div>
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              {uncertainty.zonePassRates.slice(0, 3).map((zone) => (
+                <div key={zone.zoneId} className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[9px] uppercase tracking-[0.08em] text-[#8b96ab]">{zone.label}</span>
+                    <Badge variant={zone.passRate >= 0.8 ? "green" : zone.passRate >= 0.5 ? "amber" : "red"}>
+                      {(zone.passRate * 100).toFixed(0)}%
+                    </Badge>
+                  </div>
+                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[#111521]">
+                    <div
+                      className="h-full rounded-full bg-violet-400"
+                      style={{ width: `${Math.max(4, zone.passRate * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="text-[9px] text-[#6a748b]">
+              Monte Carlo samples the current scene with camera mounting and spec uncertainty, then reports the spread of coverage and critical-zone pass rates.
+            </div>
+          </div>
+        ) : (
+          <div className="text-[9px] text-[#59637a]">Add cameras and critical zones to compute uncertainty.</div>
+        )}
+      </Section>
+
       <div className="grid grid-cols-2 gap-2">
         <Section title="Occlusion Blame" icon={<AlertTriangle className="h-3 w-3 text-amber-400" />}>
           {occlusion.length > 0 ? (
@@ -217,6 +625,48 @@ export function NovelAlgorithmsTab() {
           )}
         </Section>
       </div>
+
+      <Section title="Blind Spot Fingerprint" icon={<Fingerprint className="h-3 w-3 text-fuchsia-400" />}>
+        {blindSpotFingerprint ? (
+          <div className="space-y-1.5">
+            <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-4">
+              <CandidateLine label="Fingerprint" value={blindSpotFingerprint.fingerprint} />
+              <CandidateLine label="Regions" value={`${blindSpotFingerprint.regionCount}`} />
+              <CandidateLine label="Total blind area" value={`${blindSpotFingerprint.totalBlindAreaSqM.toFixed(1)} m²`} />
+              <CandidateLine label="Affected zones" value={`${blindSpotFingerprint.affectedZoneCount}`} />
+            </div>
+            <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-4">
+              <CandidateLine label="Critical regions" value={`${blindSpotFingerprint.criticalRegionCount}`} />
+              <CandidateLine label="Entry-linked" value={`${blindSpotFingerprint.entryConnectedRegionCount}`} />
+              <CandidateLine label="Isolated" value={`${blindSpotFingerprint.isolatedRegionCount}`} />
+              <CandidateLine label="Largest region" value={`${blindSpotFingerprint.largestRegionAreaSqM.toFixed(1)} m²`} />
+            </div>
+            <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-2 text-[9px] text-[#8b96ab]">
+              <div className="uppercase tracking-[0.08em] text-[#8b96ab]">Signature</div>
+              <div className="mt-1 text-[#d2d9e8]">{blindSpotFingerprint.signature}</div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-[9px] text-[#59637a]">Blind spot fingerprint not computed yet.</div>
+        )}
+      </Section>
+
+      <Section title="Reflective Bounce Vision" icon={<Sparkles className="h-3 w-3 text-cyan-400" />}>
+        {reflectiveBounce ? (
+          <div className="space-y-1.5">
+            <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-3">
+              <CandidateLine label="Reflective windows" value={`${reflectiveBounce.reflectiveWindowCount}`} />
+              <CandidateLine label="Affected cells" value={`${reflectiveBounce.affectedCellCount}`} />
+              <CandidateLine label="Affected cameras" value={`${reflectiveBounce.affectedCameraCount}`} />
+            </div>
+            <div className="text-[9px] text-[#6a748b]">
+              Reflective windows can act as deterministic mirror proxies when they improve quality on the far side of the reflective surface.
+            </div>
+          </div>
+        ) : (
+          <div className="text-[9px] text-[#59637a]">No reflective bounce candidates were generated.</div>
+        )}
+      </Section>
     </div>
   );
 }

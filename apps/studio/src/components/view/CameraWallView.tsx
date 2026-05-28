@@ -3,7 +3,7 @@
 import { OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { Camera, VideoOff } from "lucide-react";
-import { Suspense, useMemo, useState } from "react";
+import { memo, Suspense, useCallback, useMemo, useState } from "react";
 
 import "@/lib/three-compat";
 import { cn } from "@/lib/cn";
@@ -22,6 +22,7 @@ import { CameraRigFixed, nowTimestamp, SceneFeedGeometry } from "@/components/vi
 import { useStudioStore } from "@/store/studio-store";
 import type { CameraNode } from "@/schema/security-scene";
 import { QUALITY_RANK } from "@/lib/quality-display";
+import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
 
 const CAMERA_WALL_THEME = ENVIRONMENT_THEMES.day;
 
@@ -121,7 +122,7 @@ function LiveFeedOverlay({
 
       {pathVisibility ? (
         <div className="absolute bottom-1.5 right-2 rounded-md border border-[#27405f] bg-black/65 px-2 py-1">
-          <div className="text-[7px] uppercase tracking-[0.14em] text-[#7dd3fc]">
+          <div className="text-[9px] uppercase tracking-[0.14em] text-[#7dd3fc]">
             Route Visibility
           </div>
           <div className={`text-[8px] font-semibold ${visibilityStatus.className}`}>
@@ -136,7 +137,7 @@ function LiveFeedOverlay({
   );
 }
 
-function CameraFeedPanel({
+const CameraFeedPanel = memo(function CameraFeedPanel({
   camera: camData,
   isSelected,
   isBestCamera = false,
@@ -174,7 +175,7 @@ function CameraFeedPanel({
             frameloop="demand"
             style={{ width: "100%", height: "100%" }}
           >
-            <Suspense fallback={null}>
+            <Suspense fallback={<CanvasLoadingOverlay label="Loading wall feed" />}>
               <SceneFeedGeometry theme={CAMERA_WALL_THEME} showPrivacyZones />
             </Suspense>
             <CameraRigFixed camera={camData} />
@@ -190,7 +191,7 @@ function CameraFeedPanel({
           />
           <LiveFeedOverlay camera={camData} pathVisibility={pathVisibility} isBestCamera={isBestCamera} />
         </>
-      ) : (
+  ) : (
         <>
           {/* Offline state */}
           <div className="pointer-events-none absolute inset-0 bg-[#070a10]">
@@ -228,13 +229,13 @@ function CameraFeedPanel({
               </span>
             </div>
           </div>
-        </>
-      )}
-    </div>
+      </>
+    )}
+  </div>
   );
-}
+});
 
-function WallOverviewPanel() {
+const WallOverviewPanel = memo(function WallOverviewPanel() {
   const scene = useStudioStore((s) => s.scene);
   const result = useStudioStore((s) => s.simulationResult);
   const selectedId = useStudioStore((s) => s.selectedNodeId);
@@ -263,12 +264,12 @@ function WallOverviewPanel() {
       >
         <color attach="background" args={[theme.background]} />
         <SceneLighting theme={theme} />
-        <Suspense fallback={null}>
+        <Suspense fallback={<CanvasLoadingOverlay label="Loading coverage overview" />}>
           <SceneFloor width={width} depth={depth} showGrid={false} />
-          <SceneWalls walls={scene.walls} />
-          <SceneDoors doors={scene.doors} />
-          <SceneWindows windows={scene.windows} />
-          <SceneObstructions obstructions={scene.obstructions} selectedId={selectedId} />
+          <SceneWalls walls={scene.walls} selectable={false} />
+          <SceneDoors doors={scene.doors} selectable={false} />
+          <SceneWindows windows={scene.windows} selectable={false} />
+          <SceneObstructions obstructions={scene.obstructions} selectedId={selectedId} onSelect={() => {}} />
           {scene.privacyZones.length > 0 ? <ScenePrivacyZones zones={scene.privacyZones} /> : null}
           {result?.coverageCells?.length ? <CoverageHeatmapInstanced cells={result.coverageCells} /> : null}
         </Suspense>
@@ -285,7 +286,7 @@ function WallOverviewPanel() {
       </Canvas>
     </div>
   );
-}
+});
 
 function CameraGhost() {
   return (
@@ -338,18 +339,16 @@ function EmptySlot() {
   );
 }
 
-function CameraSlotButton({
+const CameraSlotButton = memo(function CameraSlotButton({
   camera: cam,
   isSelected,
   isBestCamera,
-  onSelect,
   pathVisibility,
   className = "",
 }: {
   camera: CameraNode;
   isSelected: boolean;
   isBestCamera?: boolean;
-  onSelect: () => void;
   pathVisibility?: {
     visibleS: number;
     totalDurationS: number;
@@ -357,24 +356,26 @@ function CameraSlotButton({
   } | null;
   className?: string;
 }) {
+  const selectNode = useStudioStore((s) => s.selectNode);
+  const handleSelect = useCallback(() => selectNode(cam.id), [cam.id, selectNode]);
+
   return (
     <button
       type="button"
-      onClick={onSelect}
+      onClick={handleSelect}
       className={`cursor-pointer overflow-hidden rounded-lg text-left ${className}`}
       style={{ display: "block" }}
     >
       <CameraFeedPanel camera={cam} isSelected={isSelected} isBestCamera={isBestCamera} pathVisibility={pathVisibility} />
     </button>
   );
-}
+});
 
 export function CameraWallView() {
   const scene = useStudioStore((s) => s.scene);
   const simulationResult = useStudioStore((s) => s.simulationResult);
   const activePathId = useStudioStore((s) => s.activePathId);
   const selectedId = useStudioStore((s) => s.selectedNodeId);
-  const selectNode = useStudioStore((s) => s.selectNode);
   const [layoutMode, setLayoutMode] = useState<"quad" | "overview">("quad");
 
   const cameras = useMemo(() => {
@@ -395,6 +396,21 @@ export function CameraWallView() {
     if (!activePath || !simulationResult) return null;
     return simulationResult.pathResults.find((entry) => entry.pathId === activePath.id) ?? null;
   }, [activePath, simulationResult]);
+  const pathVisibilityByCameraId = useMemo(() => {
+    const visibility = activePathResult?.visibilityByCamera ?? {};
+    return Object.fromEntries(
+      Object.entries(visibility).map(([cameraId, entry]) => [
+        cameraId,
+        entry
+          ? {
+              visibleS: entry.visibleS,
+              totalDurationS: activePathResult?.totalDurationS ?? 0,
+              maxQuality: entry.maxQuality,
+            }
+          : null,
+      ]),
+    ) as Record<string, { visibleS: number; totalDurationS: number; maxQuality: string } | null>;
+  }, [activePathResult]);
   const bestCameraId = useMemo(() => {
     if (!activePathResult) return null;
     const entries = Object.entries(activePathResult.visibilityByCamera);
@@ -492,16 +508,7 @@ export function CameraWallView() {
               camera={cam}
               isSelected={cam.id === selectedId}
               isBestCamera={cam.id === bestCameraId}
-              onSelect={() => selectNode(cam.id)}
-              pathVisibility={
-                activePathResult
-                  ? {
-                    visibleS: activePathResult.visibilityByCamera[cam.id]?.visibleS ?? 0,
-                    totalDurationS: activePathResult.totalDurationS,
-                    maxQuality: activePathResult.visibilityByCamera[cam.id]?.maxQuality ?? "none",
-                  }
-                  : null
-              }
+              pathVisibility={pathVisibilityByCameraId[cam.id] ?? null}
               className="h-full w-full"
             />
           ))}
@@ -514,16 +521,7 @@ export function CameraWallView() {
               camera={visible[0]}
               isSelected={visible[0].id === selectedId}
               isBestCamera={visible[0].id === bestCameraId}
-              onSelect={() => selectNode(visible[0].id)}
-              pathVisibility={
-                activePathResult
-                  ? {
-                    visibleS: activePathResult.visibilityByCamera[visible[0].id]?.visibleS ?? 0,
-                    totalDurationS: activePathResult.totalDurationS,
-                    maxQuality: activePathResult.visibilityByCamera[visible[0].id]?.maxQuality ?? "none",
-                  }
-                  : null
-              }
+              pathVisibility={pathVisibilityByCameraId[visible[0].id] ?? null}
               className="h-full w-full"
             />
           ) : (
@@ -534,16 +532,7 @@ export function CameraWallView() {
               camera={visible[1]}
               isSelected={visible[1].id === selectedId}
               isBestCamera={visible[1].id === bestCameraId}
-              onSelect={() => selectNode(visible[1].id)}
-              pathVisibility={
-                activePathResult
-                  ? {
-                    visibleS: activePathResult.visibilityByCamera[visible[1].id]?.visibleS ?? 0,
-                    totalDurationS: activePathResult.totalDurationS,
-                    maxQuality: activePathResult.visibilityByCamera[visible[1].id]?.maxQuality ?? "none",
-                  }
-                  : null
-              }
+              pathVisibility={pathVisibilityByCameraId[visible[1].id] ?? null}
               className="h-full w-full"
             />
           ) : (
@@ -554,16 +543,7 @@ export function CameraWallView() {
               camera={visible[2]}
               isSelected={visible[2].id === selectedId}
               isBestCamera={visible[2].id === bestCameraId}
-              onSelect={() => selectNode(visible[2].id)}
-              pathVisibility={
-                activePathResult
-                  ? {
-                    visibleS: activePathResult.visibilityByCamera[visible[2].id]?.visibleS ?? 0,
-                    totalDurationS: activePathResult.totalDurationS,
-                    maxQuality: activePathResult.visibilityByCamera[visible[2].id]?.maxQuality ?? "none",
-                  }
-                  : null
-              }
+              pathVisibility={pathVisibilityByCameraId[visible[2].id] ?? null}
               className="h-full w-full"
             />
           ) : (

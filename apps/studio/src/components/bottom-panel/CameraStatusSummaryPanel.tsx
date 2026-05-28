@@ -1,6 +1,7 @@
 "use client";
 
 import { DonutChart } from "@/components/shared/DonutChart";
+import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { cn } from "@/lib/cn";
 import { QUALITY_RANK, QUALITY_SHORT_LABEL, QUALITY_TEXT_COLOR } from "@/lib/quality-display";
 import { useStudioStore } from "@/store/studio-store";
@@ -33,7 +34,13 @@ export function CameraStatusSummaryPanel() {
           </span>
         </div>
         <div className="flex-1 overflow-y-auto">
-          <table className="w-full text-[10px] border-collapse">
+          {!result ? (
+            <RunSimulationPrompt
+              className="h-full px-4 py-6"
+              message="Run the shared simulation to populate the camera health table and coverage summary."
+            />
+          ) : (
+            <table className="w-full text-[10px] border-collapse">
             <thead className="sticky top-0 bg-[#0b0f17]">
               <tr>
                 {["Tag", "Status", "Quality", "Coverage", "FOV", "Mount"].map((h) => (
@@ -112,7 +119,8 @@ export function CameraStatusSummaryPanel() {
                 </tr>
               )}
             </tbody>
-          </table>
+            </table>
+          )}
         </div>
       </div>
 

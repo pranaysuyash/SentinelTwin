@@ -14,6 +14,8 @@ describe("CameraWallView", () => {
     expect(source).toContain("4-Panel Layout");
     expect(source).toContain("6-Panel Layout");
     expect(source).toContain("Layout");
+    expect(source).toContain("const CameraFeedPanel = memo(function CameraFeedPanel");
+    expect(source).toContain("const pathVisibilityByCameraId = useMemo(() =>");
   });
 
   test("surfaces defensive route visibility context per camera tile using path results", () => {

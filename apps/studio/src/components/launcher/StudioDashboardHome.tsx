@@ -23,7 +23,8 @@ import {
 
 import { cn } from "@/lib/cn";
 import { PRODUCT_FEATURE_STATUS_LAST_VERIFIED, type ProductFeatureEntry } from "@/lib/product-feature-status";
-import type { BottomTab, ViewMode, WorkspacePreset } from "@/store/studio-store";
+import { SecurityOutcomePanel } from "@/components/security-outcome/SecurityOutcomePanel";
+import type { BottomTab, SavedProjectRecord, ViewMode, WorkspacePreset } from "@/store/studio-store";
 import type { SecurityScene, SecurityIssue, SimulationResult, DoriQuality, ScenarioPath, CameraNode, ObstructionNode, SecurityLightNode } from "@/schema/security-scene";
 
 type LaunchMode = {
@@ -35,6 +36,7 @@ type LaunchMode = {
 };
 
 type ProjectSort = "recent" | "name" | "coverage";
+type StarterTone = "blank" | "import" | "scan" | "ai";
 
 const LAUNCH_MODES: LaunchMode[] = [
   { label: "Coverage", description: "Open the main analysis workspace.", viewMode: "camera_view", preset: "coverage", accent: "blue" },
@@ -42,7 +44,7 @@ const LAUNCH_MODES: LaunchMode[] = [
   { label: "Camera Wall", description: "Review live feeds and statuses.", viewMode: "wall", preset: "camera_wall", accent: "amber" },
   { label: "Path Replay", description: "Replay the active route over the scene.", viewMode: "replay", preset: "replay", accent: "violet" },
   { label: "Compare", description: "See baseline versus proposed fixes.", viewMode: "compare", preset: "compare", accent: "slate" },
-  { label: "Report Lite", description: "Open the evidence and export path.", viewMode: "map", preset: "report", accent: "blue" },
+  { label: "Report Lite", description: "Open the evidence and export path.", viewMode: "report", preset: "report", accent: "blue" },
 ];
 
 const NAV_ITEMS = [
@@ -55,7 +57,7 @@ const NAV_ITEMS = [
 ] as const;
 
 const SOURCE_LABELS: Record<SecurityScene["source"], string> = {
-  manual: "Manual",
+  manual: "Draft",
   ai_generated: "AI Draft",
   floor_plan_import: "Floor Plan",
   scan_import: "Scan",
@@ -92,11 +94,19 @@ const ACCENT_CLASS: Record<LaunchMode["accent"], string> = {
   slate: "from-slate-300/20 to-slate-500/5 text-slate-200 border-slate-300/20",
 };
 
+const STARTER_PREVIEW_CLASS: Record<StarterTone, string> = {
+  blank: "from-sky-500/18 via-sky-500/8 to-transparent",
+  import: "from-cyan-500/18 via-cyan-500/8 to-transparent",
+  scan: "from-emerald-500/18 via-emerald-500/8 to-transparent",
+  ai: "from-violet-500/18 via-violet-500/8 to-transparent",
+};
+
 type StudioDashboardHomeProps = {
   scene: SecurityScene;
   result: SimulationResult | null;
   simulationDirty: boolean;
   savedScenes: SecurityScene[];
+  savedProjects: SavedProjectRecord[];
   currentRunLabel: string | null;
   onOpenStudio: () => void;
   onOpenCoverageWorkspace: () => void;
@@ -111,6 +121,7 @@ type StudioDashboardHomeProps = {
   onAiDraft: () => void;
   onOpenReport: () => void;
   onOpenScene?: (scene: SecurityScene) => void;
+  onUpdateProjectMetadata: (sceneId: string, patch: Partial<Pick<SavedProjectRecord, "folder" | "tags" | "pinned" | "lastOpenedAt">>) => void;
   onOpenMode: (viewMode: ViewMode, preset: WorkspacePreset, bottomTab?: BottomTab) => void;
   featureStatus: ProductFeatureEntry[];
 };
@@ -120,13 +131,16 @@ type ScenePreviewProps = {
   result: SimulationResult | null;
   compact?: boolean;
   showLabels?: boolean;
+  hydrated?: boolean;
 };
 
 function formatTime(ts: number | null | undefined) {
   if (!ts) return "Never";
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat("en-US", {
+    hour12: true,
     hour: "numeric",
     minute: "2-digit",
+    timeZone: "UTC",
   }).format(new Date(ts));
 }
 
@@ -179,7 +193,7 @@ function anglePoint(origin: [number, number], angleDeg: number, distance: number
   return [origin[0] + Math.cos(radians) * distance, origin[1] + Math.sin(radians) * distance] as [number, number];
 }
 
-function ScenePreview({ scene, result, compact = false, showLabels = true }: ScenePreviewProps) {
+function ScenePreview({ scene, result, compact = false, showLabels = true, hydrated = true }: ScenePreviewProps) {
   const width = compact ? 860 : 1280;
   const height = compact ? 560 : 760;
   const padding = compact ? 34 : 46;
@@ -199,13 +213,31 @@ function ScenePreview({ scene, result, compact = false, showLabels = true }: Sce
   const cellSize = Math.max(2.6, scale * (compact ? 0.26 : 0.22));
   const activePathPoints = pathPolyline(activePath, toPoint);
 
+  if (!hydrated) {
+    return (
+      <div className={cn(
+        "relative overflow-hidden rounded-[28px] border border-[color:var(--st-border)] bg-[radial-gradient(circle_at_20%_0%,rgba(59,130,246,0.11),transparent_40%),radial-gradient(circle_at_85%_10%,rgba(16,185,129,0.09),transparent_30%),linear-gradient(180deg,rgba(11,14,21,0.98),rgba(11,14,21,0.86))]",
+        compact ? "min-h-[340px]" : "min-h-[520px]",
+      )}>
+        <div className="absolute inset-0 opacity-60 [background-image:linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)] [background-size:44px_44px]" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="rounded-2xl border border-white/8 bg-black/30 px-4 py-3 text-center">
+            <div className="text-xs uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Loading preview</div>
+            <div className="mt-1 text-sm font-medium text-white">{scene.name}</div>
+            <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">Hydrating scene geometry</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={cn(
       "relative overflow-hidden rounded-[28px] border border-[color:var(--st-border)] bg-[radial-gradient(circle_at_20%_0%,rgba(59,130,246,0.11),transparent_40%),radial-gradient(circle_at_85%_10%,rgba(16,185,129,0.09),transparent_30%),linear-gradient(180deg,rgba(11,14,21,0.98),rgba(11,14,21,0.86))]",
       compact ? "min-h-[340px]" : "min-h-[520px]",
     )}>
       <div className="absolute inset-0 opacity-60 [background-image:linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)] [background-size:44px_44px]" />
-      <svg viewBox={`0 0 ${width} ${height}`} className="absolute inset-0 h-full w-full">
+      <svg suppressHydrationWarning viewBox={`0 0 ${width} ${height}`} className="absolute inset-0 h-full w-full">
         <defs>
           <linearGradient id="coverageGlow" x1="0%" x2="100%" y1="0%" y2="100%">
             <stop offset="0%" stopColor="rgba(59,130,246,0.18)" />
@@ -365,6 +397,121 @@ function ScenePreview({ scene, result, compact = false, showLabels = true }: Sce
   );
 }
 
+function WorkspaceMiniPreview({ scene, result, hydrated = true }: ScenePreviewProps) {
+  const width = 320;
+  const height = 156;
+  const padding = 12;
+  const scale = Math.min((width - padding * 2) / scene.dimensions.width, (height - padding * 2) / scene.dimensions.depth);
+  const sceneWidth = scene.dimensions.width * scale;
+  const sceneHeight = scene.dimensions.depth * scale;
+  const offsetX = (width - sceneWidth) / 2;
+  const offsetY = (height - sceneHeight) / 2;
+  const toPoint = (point: [number, number]) => [offsetX + point[0] * scale, offsetY + point[1] * scale] as [number, number];
+  const zoneResults = criticalZoneStatusMap(result);
+
+  if (!hydrated) {
+    return (
+      <div className="relative h-[108px] overflow-hidden rounded-[16px] border border-white/8 bg-[radial-gradient(circle_at_20%_0%,rgba(59,130,248,0.12),transparent_40%),linear-gradient(180deg,rgba(8,12,18,0.92),rgba(8,12,18,0.7))]">
+        <div className="absolute inset-0 opacity-55 [background-image:linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)] [background-size:32px_32px]" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="rounded-full border border-white/8 bg-black/30 px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">
+            Preview loading
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative h-[108px] overflow-hidden rounded-[16px] border border-white/8 bg-[radial-gradient(circle_at_20%_0%,rgba(59,130,248,0.12),transparent_40%),linear-gradient(180deg,rgba(8,12,18,0.92),rgba(8,12,18,0.7))]">
+      {scene.source === "manual" ? (
+        <div className="absolute right-2 top-2 z-10 rounded-full border border-amber-400/20 bg-amber-500/14 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-amber-100">
+          Draft
+        </div>
+      ) : null}
+      <div className="absolute inset-0 opacity-55 [background-image:linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)] [background-size:32px_32px]" />
+      <svg suppressHydrationWarning viewBox={`0 0 ${width} ${height}`} className="absolute inset-0 h-full w-full">
+        <rect x={offsetX} y={offsetY} width={sceneWidth} height={sceneHeight} rx="16" fill="rgba(10,14,20,0.95)" stroke="rgba(148,163,184,0.14)" />
+
+        {scene.criticalZones.map((zone) => {
+          const zoneResult = zoneResults.get(zone.id);
+          const tone =
+            zoneResult?.status === "pass"
+              ? "rgba(34,197,94,0.15)"
+              : zoneResult?.status === "partial"
+                ? "rgba(245,158,11,0.15)"
+                : "rgba(239,68,68,0.15)";
+          const outline =
+            zoneResult?.status === "pass"
+              ? "rgba(74,222,128,0.62)"
+              : zoneResult?.status === "partial"
+                ? "rgba(251,191,36,0.62)"
+                : "rgba(248,113,113,0.68)";
+          const points = zone.polygon.map((point) => toPoint(point)).map(([x, y]) => `${x},${y}`).join(" ");
+          return <polygon key={zone.id} points={points} fill={tone} stroke={outline} strokeWidth="1.6" />;
+        })}
+
+        {scene.walls.map((wall) => {
+          const [x1, y1] = toPoint(wall.start);
+          const [x2, y2] = toPoint(wall.end);
+          return (
+            <line
+              key={wall.id}
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke={wall.material === "glass" ? "rgba(96,165,250,0.72)" : "rgba(226,232,240,0.88)"}
+              strokeWidth={2.4}
+              strokeLinecap="round"
+            />
+          );
+        })}
+
+        {scene.obstructions.slice(0, 6).map((obstruction) => {
+          const [x, y] = toPoint([obstruction.position[0], obstruction.position[2]]);
+          const w = Math.max(10, obstruction.dimensions[0] * scale);
+          const h = Math.max(9, obstruction.dimensions[2] * scale);
+          return (
+            <rect
+              key={obstruction.id}
+              x={x - w / 2}
+              y={y - h / 2}
+              width={w}
+              height={h}
+              rx="6"
+              fill="rgba(148,163,184,0.32)"
+              stroke={obstruction.movable ? "rgba(251,191,36,0.52)" : "rgba(226,232,240,0.18)"}
+              strokeWidth="1.2"
+            />
+          );
+        })}
+
+        {scene.cameras.map((camera) => {
+          const origin = toPoint([camera.position[0], camera.position[2]]);
+          const range = camera.rangeM * scale;
+          const left = anglePoint(origin, camera.yawDeg - camera.fovHorizontalDeg / 2, range);
+          const right = anglePoint(origin, camera.yawDeg + camera.fovHorizontalDeg / 2, range);
+          const poly = `${origin[0]},${origin[1]} ${left[0]},${left[1]} ${right[0]},${right[1]}`;
+          return (
+            <g key={camera.id}>
+              <polygon points={poly} fill="rgba(59,130,246,0.08)" stroke="rgba(59,130,246,0.4)" strokeWidth="1.1" />
+              <circle cx={origin[0]} cy={origin[1]} r={4.5} fill="rgba(59,130,246,0.95)" stroke="rgba(255,255,255,0.22)" strokeWidth="0.9" />
+            </g>
+          );
+        })}
+
+        <text x={offsetX + 10} y={offsetY + 18} fill="rgba(226,232,240,0.9)" fontSize="11" fontWeight="700">
+          {scene.name}
+        </text>
+        <text x={offsetX + 10} y={offsetY + 32} fill="rgba(148,163,184,0.88)" fontSize="9">
+          {scene.cameras.length} cameras · {scene.criticalZones.length} zones
+        </text>
+      </svg>
+    </div>
+  );
+}
+
 function ActionButton({
   icon,
   label,
@@ -406,6 +553,119 @@ function ActionButton({
   );
 }
 
+function SceneStarterCard({
+  icon,
+  title,
+  description,
+  hint,
+  badge,
+  tone,
+  onClick,
+  variant = "secondary",
+}: {
+  icon?: ReactNode;
+  title: string;
+  description: string;
+  hint: string;
+  badge: string;
+  tone: StarterTone;
+  onClick: () => void;
+  variant?: "primary" | "secondary";
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "group flex min-h-[136px] flex-col justify-between rounded-[24px] border p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(0,0,0,0.18)]",
+        variant === "primary"
+          ? "border-sky-400/30 bg-sky-500/12 text-sky-50 shadow-[0_12px_36px_rgba(14,165,233,0.12)] hover:border-sky-300/45 hover:bg-sky-500/16"
+          : "border-[color:var(--st-border)] bg-white/[0.03] text-[color:var(--st-text)] hover:border-[rgba(79,183,255,0.35)] hover:bg-[color:var(--st-panel-2)]",
+      )}
+    >
+      <div className={cn("mb-3 overflow-hidden rounded-[18px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-2", STARTER_PREVIEW_CLASS[tone])}>
+        <div className="flex h-[46px] items-end justify-between gap-2">
+          <div className="flex items-end gap-1">
+            <span className="h-3.5 w-8 rounded-md border border-white/12 bg-white/8" />
+            <span className="h-5 w-3 rounded-md border border-white/12 bg-white/8" />
+            <span className="h-2.5 w-5 rounded-md border border-white/12 bg-white/8" />
+          </div>
+          <div className="flex items-end gap-1.5">
+            {tone === "blank" ? <span className="h-7 w-7 rounded-full border border-dashed border-sky-300/40 bg-sky-500/10" /> : null}
+            {tone === "import" ? <span className="h-7 w-7 rounded-lg border border-cyan-300/30 bg-cyan-500/10" /> : null}
+            {tone === "scan" ? <span className="h-6 w-10 rounded-md border border-emerald-300/30 bg-emerald-500/10" /> : null}
+            {tone === "ai" ? <span className="h-7 w-7 rounded-full border border-violet-300/30 bg-violet-500/10" /> : null}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
+            <span className="text-[color:var(--st-accent)]">{icon}</span>
+            <span>{badge}</span>
+          </div>
+          <div className="mt-2 text-lg font-semibold tracking-tight">{title}</div>
+          <div className="mt-1 text-[11px] leading-4 text-[color:var(--st-muted)]">{description}</div>
+        </div>
+        <ArrowRight className="h-4 w-4 flex-none text-[color:var(--st-accent)] transition-transform duration-200 group-hover:translate-x-1" />
+      </div>
+      <div className="mt-5 flex items-center justify-between gap-3">
+        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+          {hint}
+        </span>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--st-muted)]">Start</span>
+      </div>
+    </button>
+  );
+}
+
+function WorkspaceSeedCard({
+  icon,
+  title,
+  description,
+  badge,
+  tone,
+  onClick,
+}: {
+  icon?: ReactNode;
+  title: string;
+  description: string;
+  badge: string;
+  tone: StarterTone;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group flex min-h-[92px] flex-col justify-between rounded-[20px] border border-[color:var(--st-border)] bg-white/[0.03] p-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(79,183,255,0.35)] hover:bg-[color:var(--st-panel-2)]"
+    >
+      <div className={cn("mb-2 overflow-hidden rounded-[14px] border border-white/8 p-2", STARTER_PREVIEW_CLASS[tone])}>
+        <div className="flex h-[34px] items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <span className="h-3 w-8 rounded-md border border-white/10 bg-white/8" />
+            <span className="h-5 w-5 rounded-md border border-white/10 bg-white/8" />
+          </div>
+          <span className="rounded-full border border-white/10 bg-black/12 px-2 py-0.5 text-[9px] text-[color:var(--st-text)]/80">
+            {badge}
+          </span>
+        </div>
+      </div>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">
+            <span className="text-[color:var(--st-accent)]">{icon}</span>
+            <span>{badge}</span>
+          </div>
+          <div className="mt-1 text-sm font-semibold text-white">{title}</div>
+        </div>
+        <ArrowRight className="h-4 w-4 flex-none text-[color:var(--st-accent)] transition-transform duration-200 group-hover:translate-x-1" />
+      </div>
+      <div className="mt-2 text-[11px] leading-4 text-[color:var(--st-muted)]">{description}</div>
+    </button>
+  );
+}
+
 function MiniStat({
   label,
   value,
@@ -420,7 +680,7 @@ function MiniStat({
   return (
     <div className="rounded-2xl border border-[color:var(--st-border)] bg-white/[0.025] p-3">
       <div className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--st-muted)]">{label}</div>
-      <div className={cn("mt-1 text-2xl font-semibold tracking-tight", accent)}>{value}</div>
+      <div suppressHydrationWarning className={cn("mt-1 text-2xl font-semibold tracking-tight", accent)}>{value}</div>
       {detail ? <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">{detail}</div> : null}
     </div>
   );
@@ -467,11 +727,29 @@ function sourceLabel(scene: SecurityScene) {
   return SOURCE_LABELS[scene.source];
 }
 
+function sourceBadgeTone(source: SecurityScene["source"]) {
+  switch (source) {
+    case "demo":
+      return "border-emerald-400/20 bg-emerald-500/10 text-emerald-200";
+    case "manual":
+      return "border-amber-400/20 bg-amber-500/10 text-amber-100";
+    case "scan_import":
+      return "border-cyan-400/20 bg-cyan-500/10 text-cyan-200";
+    case "floor_plan_import":
+      return "border-sky-400/20 bg-sky-500/10 text-sky-200";
+    case "ai_generated":
+      return "border-violet-400/20 bg-violet-500/10 text-violet-200";
+    default:
+      return "border-slate-400/20 bg-slate-500/10 text-slate-200";
+  }
+}
+
 export function StudioDashboardHome({
   scene,
   result,
   simulationDirty,
   savedScenes,
+  savedProjects,
   currentRunLabel,
   onOpenStudio,
   onOpenCoverageWorkspace,
@@ -486,9 +764,11 @@ export function StudioDashboardHome({
   onAiDraft,
   onOpenReport,
   onOpenScene,
+  onUpdateProjectMetadata,
   onOpenMode,
   featureStatus,
 }: StudioDashboardHomeProps) {
+  const [hydrated, setHydrated] = useState(false);
   const coverage = result?.totalCoveragePct ?? scene.simulation?.totalCoveragePct ?? null;
   const passCount = result?.criticalZoneResults.filter((zone) => zone.status === "pass").length ?? (scene.simulation?.criticalZoneResults ?? []).filter((zone) => zone.status === "pass").length;
   const totalZones = result?.criticalZoneResults.length ?? (scene.simulation?.criticalZoneResults ?? []).length ?? scene.criticalZones.length;
@@ -496,13 +776,17 @@ export function StudioDashboardHome({
   const worstIssue = issues[0] ?? null;
   const [projectQuery, setProjectQuery] = useState("");
   const [projectSort, setProjectSort] = useState<ProjectSort>("recent");
-  const browserScenes = useMemo(() => {
+  const browserProjects = useMemo(() => {
     const query = projectQuery.trim().toLowerCase();
-    const filtered = savedScenes.filter((nextScene) => {
+    const filtered = savedProjects.filter((project) => {
       if (!query) return true;
+      const nextScene = project.scene;
       const haystack = [
         nextScene.name,
         nextScene.source,
+        project.folder,
+        project.tags.join(" "),
+        project.pinned ? "pinned" : "",
         `${nextScene.dimensions.width} ${nextScene.dimensions.depth} ${nextScene.dimensions.height}`,
         `${nextScene.cameras.length} cameras`,
         `${nextScene.obstructions.length} obstructions`,
@@ -514,32 +798,101 @@ export function StudioDashboardHome({
     });
 
     return [...filtered].sort((a, b) => {
+      const aScene = a.scene;
+      const bScene = b.scene;
       switch (projectSort) {
         case "name":
-          return a.name.localeCompare(b.name);
+          return aScene.name.localeCompare(bScene.name);
         case "coverage":
-          return (b.simulation?.totalCoveragePct ?? -1) - (a.simulation?.totalCoveragePct ?? -1) || b.updatedAt - a.updatedAt;
+          return (bScene.simulation?.totalCoveragePct ?? -1) - (aScene.simulation?.totalCoveragePct ?? -1) || b.updatedAt - a.updatedAt;
         case "recent":
         default:
+          if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
           return b.updatedAt - a.updatedAt;
       }
     });
-  }, [projectQuery, projectSort, savedScenes]);
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(browserScenes[0]?.id ?? scene.id);
+  }, [projectQuery, projectSort, savedProjects]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(browserProjects[0]?.scene.id ?? scene.id);
+  const [folderDraft, setFolderDraft] = useState("Unsorted");
+  const [tagDraft, setTagDraft] = useState("");
   useEffect(() => {
-    const stillVisible = selectedProjectId ? browserScenes.some((nextScene) => nextScene.id === selectedProjectId) : false;
+    const stillVisible = selectedProjectId ? browserProjects.some((project) => project.scene.id === selectedProjectId) : false;
     if (!stillVisible) {
-      setSelectedProjectId(browserScenes[0]?.id ?? scene.id);
+      setSelectedProjectId(browserProjects[0]?.scene.id ?? scene.id);
     }
-  }, [browserScenes, scene.id, selectedProjectId]);
-  const selectedProject = browserScenes.find((nextScene) => nextScene.id === selectedProjectId) ?? scene;
-  const selectedProjectResult = selectedProject.simulation ?? null;
+  }, [browserProjects, scene.id, selectedProjectId]);
+  const selectedProjectRecord = browserProjects.find((project) => project.scene.id === selectedProjectId) ?? null;
+  const selectedProjectScene = selectedProjectRecord?.scene ?? scene;
+  const selectedProjectResult = selectedProjectScene.simulation ?? null;
   const selectedProjectCoverage = selectedProjectResult?.totalCoveragePct ?? null;
-  const selectedProjectIssues = [...(selectedProjectResult?.issues ?? selectedProject.simulation?.issues ?? [])].sort(
+  const selectedProjectIssues = [...(selectedProjectResult?.issues ?? selectedProjectScene.simulation?.issues ?? [])].sort(
     (a, b) => ISSUE_SEVERITY_ORDER[a.severity] - ISSUE_SEVERITY_ORDER[b.severity],
   );
+  useEffect(() => {
+    if (!selectedProjectRecord) {
+      setFolderDraft("Unsorted");
+      setTagDraft("");
+      return;
+    }
+
+    setFolderDraft(selectedProjectRecord.folder);
+    setTagDraft(selectedProjectRecord.tags.join(", "));
+  }, [selectedProjectRecord]);
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+  const folderCounts = useMemo(() => {
+    return browserProjects.reduce<Record<string, number>>((acc, project) => {
+      acc[project.folder] = (acc[project.folder] ?? 0) + 1;
+      return acc;
+    }, {});
+  }, [browserProjects]);
+  const tagCounts = useMemo(() => {
+    return browserProjects.reduce<Record<string, number>>((acc, project) => {
+      project.tags.forEach((tag) => {
+        acc[tag] = (acc[tag] ?? 0) + 1;
+      });
+      return acc;
+    }, {});
+  }, [browserProjects]);
+  const folderFilters = ["All", ...Object.keys(folderCounts).sort((a, b) => folderCounts[b] - folderCounts[a] || a.localeCompare(b))];
+  const tagFilters = Object.keys(tagCounts).sort((a, b) => tagCounts[b] - tagCounts[a] || a.localeCompare(b)).slice(0, 8);
+  const [activeFolder, setActiveFolder] = useState<string>("All");
+  const [activeTag, setActiveTag] = useState<string>("All");
+  const visibleProjects = browserProjects.filter((project) => {
+    const folderMatch = activeFolder === "All" || project.folder === activeFolder;
+    const tagMatch = activeTag === "All" || project.tags.includes(activeTag);
+    return folderMatch && tagMatch;
+  });
+  const userWorkspaceProjects = visibleProjects.filter((project) => project.scene.source !== "demo");
+  const referenceDemoProjects = visibleProjects.filter((project) => project.scene.source === "demo");
   const assumptions = scene.assumptions;
   const lastRun = result?.computedAt ?? scene.simulation?.computedAt ?? null;
+  const visibleProjectCount = visibleProjects.length;
+  const userWorkspaceCount = userWorkspaceProjects.length;
+  const referenceDemoCount = referenceDemoProjects.length;
+  const selectedFolder = selectedProjectRecord?.folder ?? "Unsorted";
+  const selectedTags = selectedProjectRecord?.tags ?? [];
+  const selectedPinned = selectedProjectRecord?.pinned ?? false;
+
+  const applyFolderDraft = () => {
+    if (!selectedProjectRecord) return;
+    onUpdateProjectMetadata(selectedProjectRecord.scene.id, { folder: folderDraft.trim() || "Unsorted" });
+  };
+
+  const applyTagDraft = () => {
+    if (!selectedProjectRecord) return;
+    const tags = tagDraft
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+    onUpdateProjectMetadata(selectedProjectRecord.scene.id, { tags });
+  };
+
+  const togglePinned = () => {
+    if (!selectedProjectRecord) return;
+    onUpdateProjectMetadata(selectedProjectRecord.scene.id, { pinned: !selectedProjectRecord.pinned });
+  };
 
   const rootStyle = {
     "--st-bg": "#080b11",
@@ -571,7 +924,7 @@ export function StudioDashboardHome({
               </div>
               <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Security Simulation Workspace</h1>
               <p className="mt-1 max-w-2xl text-sm text-[color:var(--st-muted)]">
-                Launch directly into the live workspace, inspect the current scene, and jump to coverage, replay, wall, compare, or report views without the launcher feeling like a setup form.
+                Launch directly into the live workspace, inspect the current scene, and jump to coverage, replay, wall, compare, or report views without the launcher feeling like a setup form. The demo scene is the baseline; create, import, or scan your own site from the scene-work entry points below.
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <span className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1.5 text-[11px] text-white">
@@ -590,7 +943,10 @@ export function StudioDashboardHome({
                   {assumptions.timeOfDay === "night" ? "Night Mode" : assumptions.timeOfDay === "custom" ? "Custom" : "Day Mode"}
                 </span>
                 {currentRunLabel ? (
-                  <span className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1.5 text-[11px] text-[color:var(--st-muted)]">
+                  <span
+                    suppressHydrationWarning
+                    className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1.5 text-[11px] text-[color:var(--st-muted)]"
+                  >
                     {currentRunLabel}
                   </span>
                 ) : null}
@@ -621,8 +977,42 @@ export function StudioDashboardHome({
           </div>
         </header>
 
-        <div className="grid flex-1 gap-4 xl:grid-cols-[228px_minmax(0,1fr)_352px]">
+        <div className="grid flex-1 gap-4 xl:grid-cols-[228px_minmax(0,1fr)_388px]">
           <aside className="flex flex-col gap-4 rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
+            <div>
+              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-[color:var(--st-muted)]">
+                <Plus className="h-3.5 w-3.5 text-emerald-300" />
+                Scene Work
+              </div>
+              <div className="mt-3 space-y-2">
+                <ActionButton
+                  icon={<Plus className="h-4 w-4" />}
+                  label="New Blank Scene"
+                  description="Start from an empty scene shell."
+                  onClick={onCreateScene}
+                  variant="primary"
+                />
+                <ActionButton
+                  icon={<FileUp className="h-4 w-4" />}
+                  label="Import SecurityScene JSON"
+                  description="Load a canonical scene file."
+                  onClick={onImportScene}
+                />
+                <ActionButton
+                  icon={<ScanSearch className="h-4 w-4" />}
+                  label="Scan Site Photo"
+                  description="Open the manual-assisted intake flow."
+                  onClick={onScanSite}
+                />
+                <ActionButton
+                  icon={<Sparkles className="h-4 w-4" />}
+                  label="AI Layout Draft"
+                  description="Generate a prompt-backed draft scene."
+                  onClick={onAiDraft}
+                />
+              </div>
+            </div>
+
             <div>
               <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-[color:var(--st-muted)]">
                 <LayoutDashboard className="h-3.5 w-3.5 text-sky-300" />
@@ -673,8 +1063,6 @@ export function StudioDashboardHome({
             </div>
 
             <div className="mt-auto space-y-2">
-              <ActionButton icon={<ScanSearch className="h-4 w-4" />} label="Scan a Site" description="Manual-assisted scene reconstruction." onClick={onScanSite} />
-              <ActionButton icon={<Sparkles className="h-4 w-4" />} label="AI Layout Draft" description="Generate a draft scene from a prompt." onClick={onAiDraft} />
               <ActionButton icon={<Monitor className="h-4 w-4" />} label="Open Report" description="Jump to the report/export surface." onClick={onOpenReport} />
             </div>
           </aside>
@@ -706,7 +1094,7 @@ export function StudioDashboardHome({
               </div>
 
               <div className="mt-4 overflow-hidden rounded-[24px] border border-white/[0.05] bg-black/[0.15]">
-                <ScenePreview scene={scene} result={result ?? scene.simulation ?? null} />
+                <ScenePreview scene={scene} result={result ?? scene.simulation ?? null} hydrated={hydrated} />
               </div>
 
               <div className="mt-4 grid gap-3 lg:grid-cols-4">
@@ -722,19 +1110,65 @@ export function StudioDashboardHome({
                 <ActionButton icon={<Play className="h-4 w-4" />} label="Open Path Replay" description="Inspect the replay actor and route." onClick={onOpenPathReplay} className="min-w-[210px] flex-1" />
                 <ActionButton icon={<LayoutDashboard className="h-4 w-4" />} label="Compare Fixes" description="Open the before/after comparison view." onClick={onOpenCompareFixes} className="min-w-[210px] flex-1" />
               </div>
+
+              <div className="mt-4 rounded-[24px] border border-sky-400/15 bg-sky-500/8 p-4">
+                <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
+                  <Sparkles className="h-3.5 w-3.5 text-sky-300" />
+                  Scene Starter Gallery
+                </div>
+                <div className="mt-3 grid gap-2 lg:grid-cols-2 xl:grid-cols-4">
+                      <SceneStarterCard
+                        icon={<Plus className="h-4 w-4" />}
+                        badge="Blank"
+                        tone="blank"
+                        title="New Blank Scene"
+                        description="Start from an empty scene shell and build your own shop, lobby, or corridor from scratch."
+                        hint="Blank canvas"
+                        onClick={onCreateScene}
+                        variant="primary"
+                  />
+                      <SceneStarterCard
+                        icon={<FileUp className="h-4 w-4" />}
+                        badge="Import"
+                        tone="import"
+                        title="Import SecurityScene JSON"
+                        description="Bring in an existing site definition and continue work from a real workspace file."
+                        hint="Import a scene"
+                        onClick={onImportScene}
+                      />
+                      <SceneStarterCard
+                        icon={<ScanSearch className="h-4 w-4" />}
+                        badge="Scan"
+                        tone="scan"
+                        title="Scan Site Photo"
+                        description="Reconstruct a scene from a site image and move toward a structured editable workspace."
+                        hint="Photo-assisted"
+                        onClick={onScanSite}
+                      />
+                      <SceneStarterCard
+                        icon={<Sparkles className="h-4 w-4" />}
+                        badge="AI"
+                        tone="ai"
+                        title="AI Layout Draft"
+                        description="Generate a draft scene from a prompt, then refine it in Studio."
+                        hint="Prompt draft"
+                        onClick={onAiDraft}
+                      />
+                </div>
+              </div>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_320px]">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_360px]">
               <div className="rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Project Browser</div>
                     <div className="mt-1 text-sm text-[color:var(--st-muted)]">
-                      Search and reopen local workspaces without leaving the launcher.
+                      Search, pin, and reopen your workspaces first. The demo remains available as the reference baseline below.
                     </div>
                   </div>
                   <div className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1.5 text-[11px] text-[color:var(--st-muted)]">
-                    {browserScenes.length} visible of {savedScenes.length} local workspaces
+                    {visibleProjectCount} visible of {savedScenes.length} local workspaces
                   </div>
                 </div>
 
@@ -744,7 +1178,7 @@ export function StudioDashboardHome({
                     <input
                       value={projectQuery}
                       onChange={(event) => setProjectQuery(event.target.value)}
-                      placeholder="Search projects, scene names, sources, or counts..."
+                      placeholder="Search projects, scene names, folders, tags, or counts..."
                       className="w-full rounded-2xl border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-[color:var(--st-muted)] focus:border-sky-400/35 focus:bg-white/[0.04]"
                     />
                   </label>
@@ -771,65 +1205,248 @@ export function StudioDashboardHome({
                   </div>
                 </div>
 
-                <div className="mt-4 grid gap-2">
-                  {browserScenes.length > 0 ? (
-                    browserScenes.map((saved) => {
-                      const savedCoverage = saved.simulation?.totalCoveragePct ?? null;
-                      const savedIssues = saved.simulation?.issues.length ?? 0;
-                      const savedZones = saved.simulation?.criticalZoneResults.length ?? saved.criticalZones.length;
-                      const selected = saved.id === selectedProject.id;
-                      return (
-                        <button
-                          key={saved.id}
-                          type="button"
-                          onClick={() => setSelectedProjectId(saved.id)}
-                          className={cn(
-                            "rounded-[22px] border px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5",
-                            selected
-                              ? "border-sky-400/30 bg-sky-500/10 shadow-[0_12px_28px_rgba(14,165,233,0.08)]"
-                              : "border-[color:var(--st-border)] bg-white/[0.025] hover:border-[rgba(79,183,255,0.28)] hover:bg-white/[0.04]",
-                          )}
-                        >
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <div className="truncate text-sm font-semibold text-white">{saved.name}</div>
-                                {saved.id === scene.id ? (
-                                  <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.16em] text-emerald-200">
-                                    Current
+                <div className="mt-4 space-y-3">
+                  <div className="flex flex-wrap gap-1.5">
+                    {folderFilters.slice(0, 10).map((folder) => (
+                      <button
+                        key={folder}
+                        type="button"
+                        onClick={() => setActiveFolder(folder)}
+                        className={cn(
+                          "rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
+                          activeFolder === folder
+                            ? "border-sky-400/30 bg-sky-500/12 text-sky-100"
+                            : "border-[color:var(--st-border)] bg-white/[0.03] text-[color:var(--st-muted)] hover:bg-white/[0.05]",
+                        )}
+                      >
+                        {folder} <span className="text-[10px] opacity-70">({folderCounts[folder] ?? browserProjects.length})</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTag("All")}
+                      className={cn(
+                        "rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
+                        activeTag === "All"
+                          ? "border-emerald-400/30 bg-emerald-500/12 text-emerald-100"
+                          : "border-[color:var(--st-border)] bg-white/[0.03] text-[color:var(--st-muted)] hover:bg-white/[0.05]",
+                      )}
+                    >
+                      All tags
+                    </button>
+                    {tagFilters.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => setActiveTag(tag)}
+                        className={cn(
+                          "rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
+                          activeTag === tag
+                            ? "border-emerald-400/30 bg-emerald-500/12 text-emerald-100"
+                            : "border-[color:var(--st-border)] bg-white/[0.03] text-[color:var(--st-muted)] hover:bg-white/[0.05]",
+                        )}
+                      >
+                        {tag} <span className="text-[10px] opacity-70">({tagCounts[tag] ?? 0})</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Your Workspaces</div>
+                      <div className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1 text-[10px] text-[color:var(--st-muted)]">
+                        {userWorkspaceCount} visible
+                      </div>
+                    </div>
+                    <div className="mt-3 grid gap-2 lg:grid-cols-2 xl:grid-cols-4">
+                      <WorkspaceSeedCard
+                        icon={<Plus className="h-3.5 w-3.5" />}
+                        badge="Blank"
+                        tone="blank"
+                        title="Blank Workspace"
+                        description="Create a new site from scratch and start placing walls, cameras, and zones."
+                        onClick={onCreateScene}
+                      />
+                      <WorkspaceSeedCard
+                        icon={<FileUp className="h-3.5 w-3.5" />}
+                        badge="Import"
+                        tone="import"
+                        title="Import Workspace"
+                        description="Bring in an existing SecurityScene JSON workspace and continue editing."
+                        onClick={onImportScene}
+                      />
+                      <WorkspaceSeedCard
+                        icon={<ScanSearch className="h-3.5 w-3.5" />}
+                        badge="Scan"
+                        tone="scan"
+                        title="Scan Workspace"
+                        description="Reconstruct a site from a photo and turn it into an editable scene."
+                        onClick={onScanSite}
+                      />
+                      <WorkspaceSeedCard
+                        icon={<Sparkles className="h-3.5 w-3.5" />}
+                        badge="AI"
+                        tone="ai"
+                        title="AI Draft Workspace"
+                        description="Generate a draft layout that you can refine inside Studio."
+                        onClick={onAiDraft}
+                      />
+                    </div>
+                    <div className="mt-3 grid gap-2">
+                      {userWorkspaceProjects.length > 0 ? (
+                        userWorkspaceProjects.map((project) => {
+                          const saved = project.scene;
+                          const savedCoverage = saved.simulation?.totalCoveragePct ?? null;
+                          const savedIssues = saved.simulation?.issues.length ?? 0;
+                          const savedZones = saved.simulation?.criticalZoneResults.length ?? saved.criticalZones.length;
+                          const selected = saved.id === selectedProjectRecord?.scene.id;
+                          const isDraftWorkspace = saved.source === "manual";
+                          return (
+                            <button
+                              key={saved.id}
+                              type="button"
+                              onClick={() => setSelectedProjectId(saved.id)}
+                              className={cn(
+                                "rounded-[22px] border px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5",
+                                selected
+                                  ? isDraftWorkspace
+                                    ? "border-amber-400/30 bg-amber-500/10 shadow-[0_12px_28px_rgba(245,158,11,0.08)]"
+                                    : "border-sky-400/30 bg-sky-500/10 shadow-[0_12px_28px_rgba(14,165,233,0.08)]"
+                                  : isDraftWorkspace
+                                    ? "border-amber-400/20 bg-amber-500/[0.045] hover:border-amber-400/35 hover:bg-amber-500/[0.065]"
+                                    : "border-[color:var(--st-border)] bg-white/[0.025] hover:border-[rgba(79,183,255,0.28)] hover:bg-white/[0.04]",
+                              )}
+                            >
+                              <WorkspaceMiniPreview scene={saved} result={saved.simulation ?? null} hydrated={hydrated} />
+                              <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <div className="truncate text-sm font-semibold text-white">{saved.name}</div>
+                                    {saved.id === scene.id ? (
+                                      <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.16em] text-emerald-200">
+                                        Current
+                                      </span>
+                                    ) : null}
+                                    {isDraftWorkspace ? (
+                                      <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.16em] text-amber-100">
+                                        Draft
+                                      </span>
+                                    ) : null}
+                                    {project.pinned ? (
+                                      <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.16em] text-amber-100">
+                                        Pinned
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                  <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
+                                    {sourceLabel(saved)} · Updated {formatTime(project.updatedAt)} · Folder {project.folder}
+                                  </div>
+                                </div>
+                                <div className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+                                  {savedCoverage != null ? `${Math.round(savedCoverage)}%` : "Pending"}
+                                </div>
+                              </div>
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-white">
+                                  {saved.cameras.length} cameras
+                                </span>
+                                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-white">
+                                  {saved.obstructions.length} obstructions
+                                </span>
+                                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-white">
+                                  {savedZones} zones
+                                </span>
+                                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-white">
+                                  {savedIssues} issues
+                                </span>
+                              </div>
+                              <div className="mt-3 flex flex-wrap gap-1.5">
+                                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+                                  Folder: {project.folder}
+                                </span>
+                                {project.tags.slice(0, 3).map((tag) => (
+                                  <span key={tag} className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+                                    #{tag}
+                                  </span>
+                                ))}
+                                {project.tags.length > 3 ? (
+                                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+                                    +{project.tags.length - 3} more
                                   </span>
                                 ) : null}
                               </div>
-                              <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
-                                {sourceLabel(saved)} · Updated {formatTime(saved.updatedAt)}
-                              </div>
-                            </div>
-                            <div className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
-                              {savedCoverage != null ? `${Math.round(savedCoverage)}%` : "Pending"}
-                            </div>
-                          </div>
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-white">
-                              {saved.cameras.length} cameras
-                            </span>
-                            <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-white">
-                              {saved.obstructions.length} obstructions
-                            </span>
-                            <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-white">
-                              {savedZones} zones
-                            </span>
-                            <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-white">
-                              {savedIssues} issues
-                            </span>
-                          </div>
-                        </button>
-                      );
-                    })
-                  ) : (
-                    <div className="rounded-[24px] border border-dashed border-[color:var(--st-border)] px-4 py-8 text-sm text-[color:var(--st-muted)]">
-                      {projectQuery.trim() ? "No saved workspaces match this search." : "Save a workspace in Studio to make it appear here."}
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <div className="rounded-[24px] border border-dashed border-[color:var(--st-border)] px-4 py-8 text-sm text-[color:var(--st-muted)]">
+                          {projectQuery.trim() ? "No saved user workspaces match this search." : "Create, import, or scan a scene to start your own workspace history."}
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
+
+                  <div className="rounded-[24px] border border-[#1e2536] bg-[#0a0e16] p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Reference Demo</div>
+                        <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
+                          The canonical retail demo stays available as a baseline, but it is no longer the main story.
+                        </div>
+                      </div>
+                      <div className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1 text-[10px] text-[color:var(--st-muted)]">
+                        {referenceDemoCount} visible
+                      </div>
+                    </div>
+                    <div className="mt-3 grid gap-2">
+                      {referenceDemoProjects.length > 0 ? (
+                        referenceDemoProjects.map((project) => {
+                          const saved = project.scene;
+                          const selected = saved.id === selectedProjectRecord?.scene.id;
+                          const savedCoverage = saved.simulation?.totalCoveragePct ?? null;
+                          return (
+                            <button
+                              key={saved.id}
+                              type="button"
+                              onClick={() => setSelectedProjectId(saved.id)}
+                              className={cn(
+                                "rounded-[22px] border px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5",
+                                selected
+                                  ? "border-emerald-400/30 bg-emerald-500/10 shadow-[0_12px_28px_rgba(16,185,129,0.08)]"
+                                  : "border-[#2a3244] bg-white/[0.02] hover:border-[rgba(79,183,255,0.24)] hover:bg-white/[0.035]",
+                              )}
+                            >
+                              <WorkspaceMiniPreview scene={saved} result={saved.simulation ?? null} hydrated={hydrated} />
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <div className="truncate text-sm font-semibold text-white">{saved.name}</div>
+                                    <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.16em] text-emerald-200">
+                                      Demo
+                                    </span>
+                                  </div>
+                                  <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
+                                    Baseline reference · Updated {formatTime(project.updatedAt)} · {sourceLabel(saved)}
+                                  </div>
+                                </div>
+                                <div className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+                                  {savedCoverage != null ? `${Math.round(savedCoverage)}%` : "Pending"}
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <div className="rounded-[20px] border border-dashed border-[#243047] px-3 py-4 text-sm text-[color:var(--st-muted)]">
+                          No demo baseline visible in the current filter set.
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -838,53 +1455,162 @@ export function StudioDashboardHome({
                   <Settings2 className="h-3.5 w-3.5 text-sky-300" />
                   Selected Workspace
                 </div>
-                <div className="mt-3 rounded-[22px] border border-[color:var(--st-border)] bg-white/[0.025] p-4">
-                  <div className="truncate text-base font-semibold text-white">{selectedProject.name}</div>
-                  <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
-                    {sourceLabel(selectedProject)} · Last updated {formatTime(selectedProject.updatedAt)}
+                {selectedProjectRecord ? (
+                  <>
+                    <div className="mt-3 rounded-[22px] border border-[color:var(--st-border)] bg-white/[0.025] p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-base font-semibold text-white">{selectedProjectScene.name}</div>
+                          <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
+                            {sourceLabel(selectedProjectScene)} · Last updated {formatTime(selectedProjectRecord.updatedAt)}
+                          </div>
+                          <div className="mt-2">
+                            <span className={cn(
+                              "rounded-full border px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.18em]",
+                              sourceBadgeTone(selectedProjectScene.source),
+                            )}>
+                              {selectedProjectScene.source === "demo"
+                                ? "Reference Demo"
+                                : selectedProjectScene.source === "manual"
+                                  ? "Draft Workspace"
+                                  : "Your Workspace"}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={togglePinned}
+                          className={cn(
+                            "rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
+                            selectedPinned
+                              ? "border-amber-400/30 bg-amber-500/12 text-amber-100"
+                              : "border-[color:var(--st-border)] bg-white/[0.03] text-[color:var(--st-muted)] hover:bg-white/[0.05]",
+                          )}
+                        >
+                          {selectedPinned ? "Unpin" : "Pin"}
+                        </button>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+                          Folder: {selectedFolder}
+                        </span>
+                        {selectedTags.length > 0 ? (
+                          selectedTags.map((tag) => (
+                            <span key={tag} className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+                              #{tag}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+                            No tags
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                        <MiniStat
+                          label="Coverage"
+                          value={selectedProjectCoverage != null ? `${Math.round(selectedProjectCoverage)}%` : "—"}
+                          accent={selectedProjectCoverage != null ? coverageTone(selectedProjectCoverage) : "text-white"}
+                          detail="Saved workspace snapshot"
+                        />
+                        <MiniStat
+                          label="Issues"
+                          value={`${selectedProjectIssues.length}`}
+                          accent={selectedProjectIssues.length > 0 ? "text-amber-300" : "text-emerald-300"}
+                          detail={selectedProjectIssues[0] ? selectedProjectIssues[0].description : "No saved issues"}
+                        />
+                      </div>
+                      <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                        <MiniStat label="Cameras" value={`${selectedProjectScene.cameras.length}`} accent="text-sky-200" detail="Saved scene cameras" />
+                        <MiniStat label="Zones" value={`${selectedProjectScene.criticalZones.length}`} accent="text-sky-200" detail="Critical zones tracked" />
+                      </div>
+                    </div>
+
+                    <div className="mt-4 rounded-[22px] border border-[color:var(--st-border)] bg-white/[0.025] p-4">
+                      <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Project metadata</div>
+                      <div className="mt-3 space-y-3">
+                        <label className="block">
+                          <span className="text-[11px] text-[color:var(--st-muted)]">Folder</span>
+                          <input
+                            value={folderDraft}
+                            onChange={(event) => setFolderDraft(event.target.value)}
+                            onBlur={applyFolderDraft}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") {
+                                event.preventDefault();
+                                applyFolderDraft();
+                              }
+                            }}
+                            className="mt-1 w-full rounded-2xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-[color:var(--st-muted)] focus:border-sky-400/35 focus:bg-white/[0.04]"
+                            placeholder="Unsorted"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="text-[11px] text-[color:var(--st-muted)]">Tags</span>
+                          <input
+                            value={tagDraft}
+                            onChange={(event) => setTagDraft(event.target.value)}
+                            onBlur={applyTagDraft}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") {
+                                event.preventDefault();
+                                applyTagDraft();
+                              }
+                            }}
+                            className="mt-1 w-full rounded-2xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-[color:var(--st-muted)] focus:border-sky-400/35 focus:bg-white/[0.04]"
+                            placeholder="retail, demo, client-alpha"
+                          />
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={applyFolderDraft}
+                            className="rounded-full border border-sky-400/25 bg-sky-500/12 px-3 py-1.5 text-[11px] font-medium text-sky-100 hover:border-sky-300/35 hover:bg-sky-500/16"
+                          >
+                            Save folder
+                          </button>
+                          <button
+                            type="button"
+                            onClick={applyTagDraft}
+                            className="rounded-full border border-emerald-400/25 bg-emerald-500/12 px-3 py-1.5 text-[11px] font-medium text-emerald-100 hover:border-emerald-300/35 hover:bg-emerald-500/16"
+                          >
+                            Save tags
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 space-y-2">
+                      <ActionButton
+                        icon={<FolderOpen className="h-4 w-4" />}
+                        label="Open Workspace"
+                        description="Load the selected project into Studio."
+                        onClick={() => onOpenScene?.(selectedProjectScene)}
+                        variant="primary"
+                      />
+                      <ActionButton
+                        icon={<MapIcon className="h-4 w-4" />}
+                        label="Open Coverage"
+                        description="Open the selected project in the analysis workspace."
+                        onClick={() => {
+                          onOpenScene?.(selectedProjectScene);
+                          onOpenCoverageWorkspace();
+                        }}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="mt-3 rounded-[22px] border border-dashed border-[color:var(--st-border)] bg-white/[0.02] p-4 text-sm text-[color:var(--st-muted)]">
+                    No saved workspace selected. Save the current scene in Studio to manage folders, tags, and pins here.
                   </div>
-                  <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                    <MiniStat
-                      label="Coverage"
-                      value={selectedProjectCoverage != null ? `${Math.round(selectedProjectCoverage)}%` : "—"}
-                      accent={selectedProjectCoverage != null ? coverageTone(selectedProjectCoverage) : "text-white"}
-                      detail="Saved workspace snapshot"
-                    />
-                    <MiniStat
-                      label="Issues"
-                      value={`${selectedProjectIssues.length}`}
-                      accent={selectedProjectIssues.length > 0 ? "text-amber-300" : "text-emerald-300"}
-                      detail={selectedProjectIssues[0] ? selectedProjectIssues[0].description : "No saved issues"}
-                    />
-                  </div>
-                  <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                    <MiniStat label="Cameras" value={`${selectedProject.cameras.length}`} accent="text-sky-200" detail="Saved scene cameras" />
-                    <MiniStat label="Zones" value={`${selectedProject.criticalZones.length}`} accent="text-sky-200" detail="Critical zones tracked" />
-                  </div>
-                  <div className="mt-4 space-y-2">
-                    <ActionButton
-                      icon={<FolderOpen className="h-4 w-4" />}
-                      label="Open Workspace"
-                      description="Load the selected project into Studio."
-                      onClick={() => onOpenScene?.(selectedProject)}
-                      variant="primary"
-                    />
-                    <ActionButton
-                      icon={<MapIcon className="h-4 w-4" />}
-                      label="Open Coverage"
-                      description="Open the selected project in the analysis workspace."
-                      onClick={() => {
-                        onOpenScene?.(selectedProject);
-                        onOpenCoverageWorkspace();
-                      }}
-                    />
-                  </div>
-                </div>
+                )}
 
                 <div className="mt-4">
                   <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
                     <Layers3 className="h-3.5 w-3.5 text-emerald-300" />
-                    Quick Start
+                    Scene Work
                   </div>
                   <div className="mt-4 space-y-2">
                     <ActionButton icon={<Plus className="h-4 w-4" />} label="New Blank Scene" description="Start from an empty scene shell." onClick={onCreateScene} />
@@ -903,69 +1629,9 @@ export function StudioDashboardHome({
                 <TriangleAlert className="h-3.5 w-3.5 text-amber-300" />
                 Security Outcome
               </div>
-              <div className="mt-3 space-y-2">
-                <div className="rounded-2xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-sm">
-                  <div className="text-[11px] uppercase tracking-[0.18em] text-red-200/70">Worst Issue</div>
-                  <div className="mt-1 font-medium text-red-100">
-                    {worstIssue ? worstIssue.description : "No critical issue detected"}
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <MiniStat label="Main Entry" value={result ? "Detection" : "Pending"} accent="text-sky-200" />
-                  <MiniStat label="Night Mode" value={assumptions.timeOfDay === "night" ? "Weak" : "Day"} accent={assumptions.timeOfDay === "night" ? "text-amber-300" : "text-emerald-300"} />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <MiniStat label="Redundancy" value={scene.cameras.length > 1 ? "Configured" : "At risk"} accent={scene.cameras.length > 1 ? "text-emerald-300" : "text-red-300"} />
-                  <MiniStat label="Assumptions" value={assumptions.doriStandard === "oodpcvs_2025" ? "OODPCVS" : "DORI"} accent="text-sky-200" />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Open Issues</div>
-                <div className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
-                  {issues.length} issues
-                </div>
-              </div>
-              <div className="mt-3 space-y-2">
-                {issues.length > 0 ? (
-                  issues.slice(0, 4).map((issue) => (
-                    <IssuePill
-                      key={`${issue.category}:${issue.description}`}
-                      issue={issue}
-                      onView={onOpenIssues}
-                      onTestFix={onOpenCoverageWorkspace}
-                    />
-                  ))
-                ) : (
-                  <div className="rounded-2xl border border-dashed border-[color:var(--st-border)] px-3 py-4 text-sm text-[color:var(--st-muted)]">
-                    No open issues in the current scene.
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Simulation Assumptions</div>
-              <div className="mt-3 grid gap-2">
-                <div className="rounded-2xl border border-[color:var(--st-border)] bg-white/[0.025] px-3 py-2 text-sm">
-                  <span className="text-[color:var(--st-muted)]">DORI</span>
-                  <span className="ml-2 font-medium">{assumptions.doriStandard === "oodpcvs_2025" ? "OODPCVS 2025" : "DORI 2014"}</span>
-                </div>
-                <div className="rounded-2xl border border-[color:var(--st-border)] bg-white/[0.025] px-3 py-2 text-sm">
-                  <span className="text-[color:var(--st-muted)]">Person</span>
-                  <span className="ml-2 font-medium">{assumptions.personHeightM}m</span>
-                </div>
-                <div className="rounded-2xl border border-[color:var(--st-border)] bg-white/[0.025] px-3 py-2 text-sm">
-                  <span className="text-[color:var(--st-muted)]">Grid</span>
-                  <span className="ml-2 font-medium">0.25m</span>
-                </div>
-                <div className="rounded-2xl border border-[color:var(--st-border)] bg-white/[0.025] px-3 py-2 text-sm">
-                  <span className="text-[color:var(--st-muted)]">Lighting</span>
-                  <span className="ml-2 font-medium">{assumptions.timeOfDay === "night" ? "Night" : assumptions.interiorLightLevel}</span>
-                </div>
-              </div>
+              <div className="mt-2 text-[11px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">Open Issues</div>
+              <div className="mt-1 text-[11px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">Simulation Assumptions</div>
+              <SecurityOutcomePanel compact />
               <button
                 type="button"
                 onClick={onOpenStudio}

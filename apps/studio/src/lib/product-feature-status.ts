@@ -6,13 +6,13 @@ export interface ProductFeatureEntry {
   detail: string;
 }
 
-export const PRODUCT_FEATURE_STATUS_LAST_VERIFIED = "2026-05-27";
+export const PRODUCT_FEATURE_STATUS_LAST_VERIFIED = "2026-05-28";
 
 export const PRODUCT_FEATURE_STATUS: ProductFeatureEntry[] = [
   {
     status: "Available",
     feature: "Launcher entry flows",
-    detail: "Create/import, resume current workspace, scan a site, and draft a scene from the front door.",
+    detail: "Create/import, resume current workspace, organize projects, scan a site, and draft a scene from the front door.",
   },
   {
     status: "Available",

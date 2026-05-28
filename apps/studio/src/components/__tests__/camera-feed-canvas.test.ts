@@ -4,10 +4,12 @@ import { readFileSync } from "node:fs";
 const cameraFeedCanvasPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/inspector/CameraFeedCanvas.tsx";
 
 describe("CameraFeedCanvas", () => {
-  test("exposes the inspector DORI overlay and local view modes", () => {
+  test("exposes the inspector DORI overlay, live rig, and actor/noise cues", () => {
     const source = readFileSync(cameraFeedCanvasPath, "utf8");
 
     expect(source).toContain("DORI Overlay");
+    expect(source).toContain("DEFAULT_FEED_OVERLAY_OPTIONS");
+    expect(source).toContain("overlayFlags");
     expect(source).toContain("Normal");
     expect(source).toContain("IR");
     expect(source).toContain("Low Light");
@@ -16,5 +18,12 @@ describe("CameraFeedCanvas", () => {
     expect(source).toContain("Best Camera");
     expect(source).toContain("qualityRangeLabel");
     expect(source).toContain("targetZoneResult?.status");
+    expect(source).toContain("CameraRigLive");
+    expect(source).toContain("SceneFeedGeometry");
+    expect(source).toContain("PathActor");
+    expect(source).toContain("Dirty Lens");
+    expect(source).toContain("Actor replay active");
+    expect(source).toContain("boundingBox");
+    expect(source).toContain("grid");
   });
 });

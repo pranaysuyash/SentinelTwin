@@ -37,6 +37,7 @@ import { TransformHandles } from "./editing/TransformHandles";
 import { getSceneSelectionIds, normalizeBounds } from "./editing/selection-geometry";
 import { WallDrawTool } from "./editing/WallDrawTool";
 import { applyShiftLock, clampToScene, pathLength, pointDistance } from "./editing/editor-geometry";
+import { cn } from "@/lib/cn";
 import { pointOnPathAtProgress } from "@/components/map/path-quality";
 import { CoverageLegend } from "./CoverageLegend";
 import {
@@ -53,6 +54,7 @@ import {
 import { CameraPresetPicker, applyCameraPreset, getCameraPreset } from "./CameraPresetPicker";
 import { getCameraColorForId } from "@/lib/camera-colors";
 import "@/lib/three-compat";
+import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
 
 function getMapFrame(width: number, depth: number) {
   const centerX = width / 2;
@@ -194,12 +196,14 @@ function SelectionHighlights() {
 }
 
 function CameraFrustum({ camera, selected }: { camera: CameraNode; selected: boolean }) {
+  const selectNode = useStudioStore((s) => s.selectNode);
+  const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
+  const [hovered, setHovered] = useState(false);
   const [px, py, pz] = camera.position;
   const forward = getYawPitchDirection(camera.yawDeg, camera.pitchDeg);
   const range = Math.min(camera.rangeM, 12);
 
   const quaternion = useMemo(() => {
-    // Flip: -Y (base/wide end) points in forward direction → tip at camera, base at far end
     const down = new THREE.Vector3(0, -1, 0);
     return new THREE.Quaternion().setFromUnitVectors(down, forward);
   }, [forward]);
@@ -213,25 +217,73 @@ function CameraFrustum({ camera, selected }: { camera: CameraNode; selected: boo
 
   const cameraColor = getCameraColorForId(camera.id);
   const color = camera.status === "on" ? cameraColor : "#6b7280";
+  const isSuggested = camera.tags?.includes("suggested");
+
+  // computeLineDistances is required for lineDashedMaterial to render dashes
+  const lineRef = useRef<THREE.LineSegments>(null);
+  useEffect(() => {
+    lineRef.current?.computeLineDistances();
+  }, [isSuggested]);
+
+  const handleSelect = (event: ThreeEvent<PointerEvent>) => {
+    event.stopPropagation();
+    if (event.shiftKey || event.metaKey || event.ctrlKey) {
+      toggleSelectedNode(camera.id);
+      return;
+    }
+    selectNode(camera.id);
+  };
+
+  const edgesGeom = useMemo(() => {
+    const geom = new THREE.ConeGeometry(radius, range, 24, 1, false);
+    return new THREE.EdgesGeometry(geom);
+  }, [radius, range]);
 
   return (
-    <group>
-      {/* Lateral surface — solid tri shape from above */}
+    <group
+      onPointerDown={handleSelect}
+      onPointerOver={() => {
+        setHovered(true);
+        document.body.style.cursor = "pointer";
+      }}
+      onPointerOut={() => {
+        setHovered(false);
+        document.body.style.cursor = "default";
+      }}
+      scale={hovered ? 1.04 : 1}
+    >
       <mesh position={centerPos} quaternion={quaternion}>
         <coneGeometry args={[radius, range, 24, 1, false]} />
         <meshBasicMaterial
-          color={color}
+          color={hovered ? "#bfdbfe" : color}
           transparent
-          opacity={selected ? 0.55 : 0.38}
+          opacity={isSuggested ? 0.15 : (selected ? 0.55 : hovered ? 0.48 : 0.38)}
           side={THREE.DoubleSide}
           depthWrite={false}
         />
       </mesh>
-      {/* Edge outline for the cone boundary */}
-      <lineSegments position={centerPos} quaternion={quaternion}>
-        <edgesGeometry args={[new THREE.ConeGeometry(radius, range, 24, 1, false)]} />
-        <lineBasicMaterial color={color} transparent opacity={selected ? 0.85 : 0.65} />
+      <lineSegments
+        ref={isSuggested ? lineRef : undefined}
+        position={centerPos}
+        quaternion={quaternion}
+        geometry={edgesGeom}
+      >
+        {isSuggested ? (
+          <lineDashedMaterial color={color} transparent opacity={0.45} dashSize={0.12} gapSize={0.08} />
+        ) : (
+          <lineBasicMaterial color={hovered ? "#dbeafe" : color} transparent opacity={selected ? 0.85 : hovered ? 0.82 : 0.65} />
+        )}
       </lineSegments>
+      {(selected || hovered) && (
+        <Html position={[centerPos.x, centerPos.y + range * 0.58, centerPos.z]} center distanceFactor={11} style={{ pointerEvents: "none" }}>
+          <div className={cn(
+            "rounded-full border px-2 py-0.5 text-[9px] font-semibold tracking-wide shadow-lg backdrop-blur-sm",
+            selected ? "border-sky-300/70 bg-sky-400/15 text-sky-100" : "border-white/15 bg-black/45 text-sky-100",
+          )}>
+            {selected ? "Selected" : "Click to select"}
+          </div>
+        </Html>
+      )}
     </group>
   );
 }
@@ -242,6 +294,7 @@ function CameraMarker({ camera, selected }: { camera: CameraNode; selected: bool
   const layers = useStudioStore((s) => s.layerVisibility);
   const overlayDensity = useStudioStore((s) => s.overlayDensity);
   const cameraLabelsVisible = useStudioStore((s) => s.overlayFilters.cameraLabels);
+  const [hovered, setHovered] = useState(false);
   const [px, py, pz] = camera.position;
   const isActive = camera.status === "on";
   const cameraColor = getCameraColorForId(camera.id);
@@ -251,36 +304,77 @@ function CameraMarker({ camera, selected }: { camera: CameraNode; selected: bool
   const labelCompact = overlayDensity === "compact";
   const showOnlyOnHover = overlayDensity === "minimal";
 
+  const handleSelect = (event: ThreeEvent<PointerEvent>) => {
+    event.stopPropagation();
+    if (event.shiftKey || event.metaKey || event.ctrlKey) {
+      toggleSelectedNode(camera.id);
+      return;
+    }
+    selectNode(camera.id);
+  };
+
   return (
-    <group position={[px, py, pz]}>
+    <group
+      position={[px, py, pz]}
+      scale={hovered ? 1.12 : selected ? 1.08 : 1}
+      onPointerEnter={() => {
+        setHovered(true);
+        document.body.style.cursor = "pointer";
+      }}
+      onPointerLeave={() => {
+        setHovered(false);
+        document.body.style.cursor = "default";
+      }}
+      onPointerOver={() => {
+        document.body.style.cursor = "pointer";
+      }}
+      onPointerOut={() => {
+        document.body.style.cursor = "default";
+      }}
+    >
       {selected && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.09, 0]}>
-          <ringGeometry args={[0.16, 0.22, 28]} />
+          <ringGeometry args={[0.16, hovered ? 0.28 : 0.22, 28]} />
           <meshBasicMaterial color={cameraColor} transparent opacity={0.9} />
         </mesh>
       )}
 
+      {(hovered || selected) && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]}>
+          <ringGeometry args={[0.22, hovered ? 0.36 : 0.3, 28]} />
+          <meshBasicMaterial
+            color={hovered ? "#e0e7ff" : cameraColor}
+            transparent
+            opacity={hovered ? 0.34 : 0.18}
+            depthWrite={false}
+          />
+        </mesh>
+      )}
+
       <group
-        onClick={(event) => {
-          event.stopPropagation();
-          if (event.shiftKey || event.metaKey || event.ctrlKey) {
-            toggleSelectedNode(camera.id);
-            return;
-          }
-          selectNode(camera.id);
-        }}
+        onPointerDown={handleSelect}
       >
+        <mesh position={[0, 0, 0]} onPointerDown={handleSelect}>
+          <sphereGeometry args={[0.32, 16, 16]} />
+          <meshBasicMaterial transparent opacity={0} />
+        </mesh>
         <mesh castShadow receiveShadow>
           <cylinderGeometry args={[0.12, 0.12, 0.08, 18]} />
-          <meshStandardMaterial color={selected ? cameraColor : cameraColor} emissive={cameraColor} emissiveIntensity={selected ? 0.6 : 0.3} roughness={0.34} metalness={0.65} />
+          <meshStandardMaterial
+            color={cameraColor}
+            emissive={hovered || selected ? "#bfdbfe" : cameraColor}
+            emissiveIntensity={selected ? 0.72 : hovered ? 0.56 : 0.3}
+            roughness={0.32}
+            metalness={0.68}
+          />
         </mesh>
         <mesh position={[0.06, 0, 0.07]} rotation={[0, Math.PI / 4, 0]} castShadow>
           <boxGeometry args={[0.09, 0.05, 0.11]} />
-          <meshStandardMaterial color="#dce6f7" roughness={0.26} metalness={0.55} />
+          <meshStandardMaterial color={hovered ? "#f8fbff" : "#dce6f7"} roughness={0.24} metalness={0.55} />
         </mesh>
       </group>
 
-      {showLabel && (selected || !showOnlyOnHover) && (
+      {showLabel && (selected || hovered || !showOnlyOnHover) && (
         <Html position={[0, 0.34, 0]} center distanceFactor={11} style={{ pointerEvents: "none", whiteSpace: "nowrap" }}>
           <CameraLabelCard
             name={camera.name}
@@ -289,7 +383,9 @@ function CameraMarker({ camera, selected }: { camera: CameraNode; selected: bool
             isActive={isActive}
             status={camera.status}
             selected={selected}
+            hovered={hovered}
             compact={labelCompact}
+            isSuggested={camera.tags?.includes("suggested")}
           />
         </Html>
       )}
@@ -1151,14 +1247,49 @@ function NorthCompass() {
 }
 
 function ViewControls() {
+  const canvasMode = useStudioStore((s) => s.canvasMode);
+  const setCanvasMode = useStudioStore((s) => s.setCanvasMode);
+  const resetCanvasView = useStudioStore((s) => s.resetCanvasView);
+  const toggleViewSettingsOpen = useStudioStore((s) => s.toggleViewSettingsOpen);
+
   return (
     <div className="absolute right-3 top-16 z-10 flex flex-col gap-1">
-      <button className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#2a3246] bg-[#0e1320]/90 text-[8px] font-bold text-white backdrop-blur-sm hover:bg-[#171e30]">3D</button>
-      <button className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#2a3246] bg-[#0e1320]/90 text-[8px] font-bold text-[#6b7280] backdrop-blur-sm hover:bg-[#171e30] hover:text-white">2D</button>
-      <button className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#2a3246] bg-[#0e1320]/90 backdrop-blur-sm hover:bg-[#171e30]">
+      <button
+        type="button"
+        onClick={() => setCanvasMode("orbit_3d")}
+        className={cn(
+          "flex h-7 w-7 items-center justify-center rounded-lg border text-[8px] font-bold backdrop-blur-sm transition-colors",
+          canvasMode === "orbit_3d"
+            ? "border-sky-400/35 bg-sky-500/16 text-sky-100"
+            : "border-[#2a3246] bg-[#0e1320]/90 text-[#6b7280] hover:bg-[#171e30] hover:text-white",
+        )}
+      >
+        3D
+      </button>
+      <button
+        type="button"
+        onClick={() => setCanvasMode("topdown_2d")}
+        className={cn(
+          "flex h-7 w-7 items-center justify-center rounded-lg border text-[8px] font-bold backdrop-blur-sm transition-colors",
+          canvasMode === "topdown_2d"
+            ? "border-emerald-400/35 bg-emerald-500/16 text-emerald-100"
+            : "border-[#2a3246] bg-[#0e1320]/90 text-[#6b7280] hover:bg-[#171e30] hover:text-white",
+        )}
+      >
+        2D
+      </button>
+      <button
+        type="button"
+        onClick={resetCanvasView}
+        className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#2a3246] bg-[#0e1320]/90 backdrop-blur-sm hover:bg-[#171e30]"
+      >
         <RefreshCcw className="h-3.5 w-3.5 text-[#6b7280] hover:text-white" />
       </button>
-      <button className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#2a3246] bg-[#0e1320]/90 backdrop-blur-sm hover:bg-[#171e30]">
+      <button
+        type="button"
+        onClick={() => toggleViewSettingsOpen()}
+        className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#2a3246] bg-[#0e1320]/90 backdrop-blur-sm hover:bg-[#171e30]"
+      >
         <Layers className="h-3.5 w-3.5 text-[#6b7280] hover:text-white" />
       </button>
     </div>
@@ -1211,6 +1342,9 @@ function ControlHintBar() {
 export function WorkspaceCanvas() {
   const envMode = useStudioStore((s) => s.environmentMode);
   const scene = useStudioStore((s) => s.scene);
+  const canvasMode = useStudioStore((s) => s.canvasMode);
+  const canvasViewResetTick = useStudioStore((s) => s.canvasViewResetTick);
+  const visibleComponents = useStudioStore((s) => s.visibleComponents);
   const setSelectedNodes = useStudioStore((s) => s.setSelectedNodes);
   const clearSelection = useStudioStore((s) => s.clearSelection);
   const editorMode = useStudioStore((s) => s.editor.editorMode);
@@ -1220,6 +1354,20 @@ export function WorkspaceCanvas() {
     () => getMapFrame(scene.dimensions.width, scene.dimensions.depth),
     [scene.dimensions.depth, scene.dimensions.width],
   );
+  const isTopDown = canvasMode === "topdown_2d";
+  const canvasCamera = useMemo(
+    () => ({
+      position: isTopDown
+        ? [frame.position.x, Math.max(frame.position.y * 2.2, 32), frame.position.z] as [number, number, number]
+        : [frame.position.x, frame.position.y, frame.position.z] as [number, number, number],
+      orthographic: isTopDown,
+      zoom: isTopDown ? 30 : 1,
+      fov: isTopDown ? 34 : 44,
+      near: 0.1,
+      far: 260,
+    }),
+    [frame.position.x, frame.position.y, frame.position.z, isTopDown],
+  );
 
   return (
     <div className="absolute inset-0 overflow-hidden bg-[#07090d]">
@@ -1227,19 +1375,22 @@ export function WorkspaceCanvas() {
       <div className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-16 bg-gradient-to-b from-black/18 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-24 bg-gradient-to-t from-black/28 to-transparent" />
 
-      <CoverageLegend />
-      <NorthCompass />
-      <ViewControls />
-      <ControlHintBar />
+      {visibleComponents.coverage_legend ? <CoverageLegend /> : null}
+      {visibleComponents.north_compass ? <NorthCompass /> : null}
+      {visibleComponents.viewport_controls ? <ViewControls /> : null}
+      {visibleComponents.control_hint_bar ? <ControlHintBar /> : null}
       <SelectionRectangleOverlay drag={selectionDrag} />
 
       {/* Camera preset picker — shown when camera tool is active */}
-      <div className="absolute left-1/2 top-12 z-10 -translate-x-1/2">
-        <CameraPresetPicker />
-      </div>
+      {visibleComponents.camera_preset_picker ? (
+        <div className="absolute left-1/2 top-12 z-10 -translate-x-1/2">
+          <CameraPresetPicker />
+        </div>
+      ) : null}
 
       <Canvas
-        camera={{ position: [frame.position.x, frame.position.y, frame.position.z], fov: 44, near: 0.1, far: 260 }}
+        key={`${canvasMode}:${canvasViewResetTick}`}
+        camera={canvasCamera}
         shadows="percentage"
         gl={{ antialias: true, alpha: false }}
         style={{ width: "100%", height: "100%", background: theme.background }}
@@ -1259,7 +1410,7 @@ export function WorkspaceCanvas() {
         <directionalLight position={[-5, 8, -8]} intensity={theme.fill} color="#a5c2ff" />
         <pointLight position={[5, 2.8, 3.5]} intensity={envMode === "night" ? 1.0 : 1.45} distance={10} color="#fff6d8" />
 
-        <Suspense fallback={null}>
+        <Suspense fallback={<CanvasLoadingOverlay label="Loading workspace scene" />}>
           <SceneGeometry />
         </Suspense>
 
@@ -1276,11 +1427,14 @@ export function WorkspaceCanvas() {
         <OrbitControls
           makeDefault
           enabled={editorMode !== "transforming"}
+          enableRotate={!isTopDown}
           target={[frame.target.x, frame.target.y, frame.target.z]}
           minDistance={5.5}
           maxDistance={40}
-          minPolarAngle={Math.PI / 4.2}
-          maxPolarAngle={Math.PI / 2.08}
+          minPolarAngle={isTopDown ? Math.PI / 2 : Math.PI / 4.2}
+          maxPolarAngle={isTopDown ? Math.PI / 2 : Math.PI / 2.08}
+          enableZoom={true}
+          enablePan={true}
           enableDamping
           dampingFactor={0.08}
         />

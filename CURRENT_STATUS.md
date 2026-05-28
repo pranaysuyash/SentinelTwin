@@ -1,12 +1,12 @@
 # SentinelTwin Current Status
 
-**As of:** 2026-05-27
+**As of:** 2026-05-28
 **Scope:** repo snapshot aligned to `goal2.md` execution checklist
 
 ## Implemented
 
 - Root launcher now gates entry into Studio with explicit `Create or Import Scene`, `Open Current Workspace`, and direct saved-scene resume shortcuts.
-- Root launcher now includes a searchable launcher-native project browser with selected-workspace actions for reopening local scenes.
+- Root launcher now includes a searchable launcher-native project browser with folder, tag, and pin metadata for reopening and organizing local scenes.
 - Root launcher includes `AI Layout Draft` prompt flow that generates editable `SecurityScene` JSON scenes.
 - Root launcher now includes explicit 5-step guided workflow actions (protect goal -> input -> build -> baseline sim -> next actions).
 - Guided workflow step-5 actions now include direct camera failure simulation and cheapest-fix counterfactual kickoff.
@@ -32,7 +32,7 @@
 - Right-panel assumptions are visible and directly editable (time-of-day and quality model), with link to full assumptions editor.
 - Camera wall feed rigs now track live camera transform edits (no one-time POV lock).
 - Camera View now shows per-camera path-visibility status overlays during replay context.
-- Camera View now includes first-cut footage verification UI (reference still upload, overlay/split comparison, opacity controls, alignment nudges) with defensive non-forensic disclaimer framing.
+- Camera View now includes metric-backed footage verification assist (reference still upload, overlay/split comparison, opacity/alignment controls, `Alignment Quality` score, and optional difference heat overlay) with defensive non-forensic disclaimer framing.
 - Camera Wall now shows per-camera route-visibility overlays and active route context badges.
 - Compare mode now renders each selected snapshot's own scene geometry (not only current live scene geometry).
 - Compare mode now supports snapshot-level simulation recovery (`Simulate Scenario B Now`) and changed-object delta summaries.
@@ -42,7 +42,7 @@
 
 ## Partial
 
-- Floor-plan conversion, calibration, and basic correction controls are wired, but extraction quality and advanced correction UX are not yet production-ready.
+- Floor-plan conversion, calibration, and correction controls are wired, including explicit structural auto-fix actions (merge near duplicates, snap openings toward nearest wall), but extraction quality and advanced correction depth are not yet production-ready.
 - Camera-view realism stack is present but still limited versus full product target.
 - Before/after experience is present but not yet full visual diff parity across all scenarios.
 - Assumptions/edit UX exists in part but still needs stronger end-to-end authoring flow.
@@ -72,3 +72,7 @@
 6. Ensure camera feed behavior always reflects live camera transform/state edits.
 7. Reduce remaining stub/static controls in panels and close current goal2 P1 gaps.
 8. Start goal2 P3 AI layout draft pipeline only after P0-P2 reliability gates are stable.
+
+- 2026-05-28: Implemented unified Security Outcome surface wiring (dashboard, right dock mode, bottom outcome tab, report/compare reuse) with shared outcome derivation layer and tests.
+- 2026-05-28: Applied UX hardening from design critique: non-blank canvas loading overlays, first-run onboarding guide, Help tab, safer saved-scene delete confirmation, Cmd/Ctrl+Enter simulation shortcut, and improved global muted/dim contrast tokens.
+- 2026-05-28: Added accessibility/onboarding expansion: UI density + light theme controls, bulk camera editor mode, tool setup presets, edit-delta timeline tab, and Explain-this-panel micro-help affordances.

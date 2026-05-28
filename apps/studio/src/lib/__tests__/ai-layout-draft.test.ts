@@ -6,7 +6,7 @@ import type { ModelProvider, ModelPrompt, ModelResponse } from "@/agents/provide
 describe("draftSceneFromPrompt", () => {
   test("parses dimensions and returns an AI-generated scene", () => {
     const prompt = "Create a 10m x 7m electronics shop with entry and two cameras";
-    const { scene, warnings } = draftSceneFromPrompt(prompt);
+    const { scene, warnings, provenance } = draftSceneFromPrompt(prompt);
 
     expect(scene.source).toBe("ai_generated");
     expect(scene.dimensions.width).toBe(10);

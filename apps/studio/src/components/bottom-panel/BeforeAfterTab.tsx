@@ -2,6 +2,7 @@
 
 import { GitCompare } from "lucide-react";
 import { DonutChart } from "@/components/shared/DonutChart";
+import { buildSecurityOutcomeDelta } from "@/lib/security-outcome/security-outcome-model";
 import { useStudioStore } from "@/store/studio-store";
 import type { SimulationResult } from "@/schema/security-scene";
 import { qualityToScore } from "@/simulation/dori";
@@ -134,6 +135,7 @@ export function BeforeAfterTab() {
   const after  = snapshots[snapshots.length - 1]!;
   const bSim   = before.simulation as SimulationResult | undefined;
   const aSim   = after.simulation  as SimulationResult | undefined;
+  const outcomeDelta = buildSecurityOutcomeDelta(bSim ?? null, aSim ?? null);
 
   const bCov    = bSim?.totalCoveragePct ?? 0;
   const aCov    = aSim?.totalCoveragePct ?? 0;
@@ -221,6 +223,12 @@ export function BeforeAfterTab() {
           isPercent={false}
         />
       </div>
+      {outcomeDelta ? (
+        <div className="border-b border-[#1e2130] px-3 py-1.5 text-[9px] text-[#8ea0bf]">
+          Outcome Delta: Blindspot {Math.round((bSim?.blindspotPct ?? 0))}% {"->"} {Math.round((aSim?.blindspotPct ?? 0))}% ·
+          Critical Zones {outcomeDelta.criticalZonesPassingBefore}/{outcomeDelta.criticalZonesTotal} {"->"} {outcomeDelta.criticalZonesPassingAfter}/{outcomeDelta.criticalZonesTotal}
+        </div>
+      ) : null}
 
       {/* Quality distribution bars */}
       <div className="flex-1 overflow-hidden px-3 py-2 flex gap-3 min-h-0">

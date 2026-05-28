@@ -92,29 +92,23 @@ function BottomSection({ title, action, children }: { title: string; action?: Re
 }
 
 function SnapshotThumb({ coverage, index = 0 }: { coverage?: number; index?: number }) {
-  // Different heatmap patterns for variety
-  const patterns = [
-    { bg: "#0d1219", blob1: "radial-gradient(ellipse at 28% 32%, #f97316 0%, #ef4444 45%, transparent 72%)", blob2: "radial-gradient(ellipse at 65% 65%, #22c55e 0%, #15803d 40%, transparent 68%)", blob3: "radial-gradient(ellipse at 75% 25%, #3b82f6 0%, #1e40af 45%, transparent 65%)" },
-    { bg: "#0d1219", blob1: "radial-gradient(ellipse at 50% 40%, #22c55e 0%, #16a34a 50%, transparent 75%)", blob2: "radial-gradient(ellipse at 25% 70%, #f97316 0%, #c2410c 40%, transparent 68%)", blob3: "radial-gradient(ellipse at 80% 55%, #eab308 0%, #a16207 45%, transparent 65%)" },
-    { bg: "#0d1219", blob1: "radial-gradient(ellipse at 35% 50%, #3b82f6 0%, #1d4ed8 50%, transparent 75%)", blob2: "radial-gradient(ellipse at 70% 35%, #22c55e 0%, #166534 40%, transparent 68%)", blob3: "radial-gradient(ellipse at 55% 75%, #f97316 0%, #9a3412 45%, transparent 65%)" },
-    { bg: "#111827", blob1: "radial-gradient(ellipse at 40% 45%, #60a5fa 0%, #1d4ed8 50%, transparent 75%)", blob2: "radial-gradient(ellipse at 20% 25%, #818cf8 0%, #4338ca 40%, transparent 68%)", blob3: "radial-gradient(ellipse at 75% 65%, #94a3b8 0%, #475569 45%, transparent 65%)" },
+  // Geometric coverage thumbnails — solid surfaces with camera dots and grid
+  const surfaces = [
+    { bg: "#0b101a", dotColor: "rgba(96,165,250,0.8)", dotColor2: "rgba(125,211,252,0.7)" },
+    { bg: "#0e0d14", dotColor: "rgba(52,211,153,0.8)", dotColor2: "rgba(74,222,128,0.7)" },
+    { bg: "#110b0f", dotColor: "rgba(251,191,36,0.8)", dotColor2: "rgba(250,204,21,0.7)" },
+    { bg: "#0a1118", dotColor: "rgba(56,189,248,0.8)", dotColor2: "rgba(34,211,238,0.7)" },
   ];
-  const p = patterns[index % patterns.length]!;
+  const p = surfaces[index % surfaces.length]!;
   return (
-    <div className="relative h-[52px] overflow-hidden rounded-lg border border-[#1f2536]" style={{ background: p.bg }}>
+    <div className="relative h-[52px] overflow-hidden rounded-lg border border-white/10" style={{ background: p.bg }}>
       {/* Floor grid */}
-      <div className="absolute inset-0 opacity-25 [background-image:linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:8px_8px]" />
-      {/* Heatmap blobs */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute inset-0 opacity-55" style={{ background: p.blob1 }} />
-        <div className="absolute inset-0 opacity-45" style={{ background: p.blob2 }} />
-        <div className="absolute inset-0 opacity-35" style={{ background: p.blob3 }} />
-      </div>
+      <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:8px_8px]" />
       {/* Room border suggestion */}
-      <div className="absolute inset-[3px] rounded border border-white/10" />
+      <div className="absolute inset-[3px] rounded border border-white/8" />
       {/* Camera dots */}
-      <div className="absolute left-[7px] top-[6px] h-[7px] w-[7px] rounded-full bg-blue-400 shadow-[0_0_5px_rgba(96,165,250,0.8)]" />
-      <div className="absolute bottom-[7px] right-[10px] h-[7px] w-[7px] rounded-full bg-blue-300 shadow-[0_0_5px_rgba(147,197,253,0.7)]" />
+      <div className="absolute left-[7px] top-[6px] h-[7px] w-[7px] rounded-full" style={{ background: p.dotColor, boxShadow: `0 0 5px ${p.dotColor}` }} />
+      <div className="absolute bottom-[7px] right-[10px] h-[7px] w-[7px] rounded-full" style={{ background: p.dotColor2, boxShadow: `0 0 5px ${p.dotColor2}` }} />
       {/* Coverage label */}
       {coverage !== undefined && (
         <div className="absolute right-1.5 top-1 text-[10px] font-bold text-white" style={{ textShadow: "0 0 6px rgba(0,0,0,0.9)" }}>

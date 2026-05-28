@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, Copy, Crosshair, Eye, Trash2 } from "lucide-react";
+import { Camera, Copy, Crosshair, Eye, Loader2, Trash2, Zap } from "lucide-react";
 import { useState } from "react";
 
 import { CameraFeedCanvas } from "@/components/inspector/CameraFeedCanvas";
@@ -16,6 +16,7 @@ import { Badge } from "@/components/shared/Badge";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { cn } from "@/lib/cn";
 import type { CameraNode, DoriQuality, SimulationAssumptions } from "@/schema/security-scene";
+import { qualityToScore } from "@/simulation/dori";
 import { type InspectorTab, useStudioStore } from "@/store/studio-store";
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -63,13 +64,14 @@ const VIEW_MODES: Array<{ value: CameraViewMode; label: string }> = [
   { value: "thermal", label: "Thermal" },
 ];
 
-type ViewToggleKey = "overlays" | "dori" | "path" | "zones" | "timestamp" | "grid";
+type ViewToggleKey = "overlays" | "dori" | "path" | "zones" | "timestamp" | "boundingBox" | "grid";
 const VIEW_TOGGLES: Array<{ key: ViewToggleKey; label: string }> = [
-  { key: "overlays", label: "Overlays" },
-  { key: "dori", label: "DORI" },
-  { key: "path", label: "Path" },
+  { key: "overlays", label: "Overlay Stack" },
+  { key: "dori", label: "DORI Labels" },
+  { key: "path", label: "Path Actor" },
   { key: "zones", label: "Zones" },
   { key: "timestamp", label: "Timestamp" },
+  { key: "boundingBox", label: "Bounding Box" },
   { key: "grid", label: "Grid" },
 ];
 type ViewToggleState = Record<ViewToggleKey, boolean>;
@@ -103,6 +105,29 @@ function computeDoriRanges(camera: CameraNode, scenePpm: SimulationAssumptions["
   return { det, obs, recog, ident };
 }
 
+function qualityRangeLabel(quality: DoriQuality, doriStandard: SimulationAssumptions["doriStandard"]) {
+  if (quality === "none") return "<25 PPM";
+  if (doriStandard === "oodpcvs_2025") {
+    const ranges: Partial<Record<DoriQuality, string>> = {
+      overview: "25-50 PPM",
+      outline: "50-62.5 PPM",
+      discern: "62.5-100 PPM",
+      perceive: "100-125 PPM",
+      characterize: "125-250 PPM",
+      validate: "250-500 PPM",
+      scrutinize: "500+ PPM",
+    };
+    return ranges[quality] ?? "25+ PPM";
+  }
+  const ranges: Partial<Record<DoriQuality, string>> = {
+    detection: "25-62.5 PPM",
+    observation: "62.5-125 PPM",
+    recognition: "125-250 PPM",
+    identification: "250+ PPM",
+  };
+  return ranges[quality] ?? "25+ PPM";
+}
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function CameraInspector() {
@@ -111,6 +136,9 @@ export function CameraInspector() {
   const inspectorTab = useStudioStore((s) => s.inspectorTab);
   const setTab = useStudioStore((s) => s.setInspectorTab);
   const result = useStudioStore((s) => s.simulationResult);
+  const simulationRunning = useStudioStore((s) => s.simulationRunning);
+  const runSimulation = useStudioStore((s) => s.runSimulation);
+  const selectedNodeId = useStudioStore((s) => s.selectedNodeId);
   const updateNode = useStudioStore((s) => s.updateNode);
   const removeNode = useStudioStore((s) => s.removeNode);
   const duplicateNode = useStudioStore((s) => s.duplicateNode);
@@ -120,7 +148,7 @@ export function CameraInspector() {
   const setViewMode = useStudioStore((s) => s.setViewMode);
   const [viewMode, setViewModeState] = useState<CameraViewMode>("normal");
   const [viewToggles, setViewToggles] = useState<ViewToggleState>({
-    overlays: true, dori: true, path: false, zones: true, timestamp: true, grid: false,
+    overlays: true, dori: true, path: false, zones: true, timestamp: true, boundingBox: false, grid: false,
   });
   const [snapshotNote, setSnapshotNote] = useState("");
 
@@ -139,10 +167,66 @@ export function CameraInspector() {
   ];
 
   const camResult = result?.cameraResults.find((entry) => entry.cameraId === camera.id);
+  const targetZone = scene.criticalZones.find((zone) => zone.id === selectedNodeId) ?? scene.criticalZones[0] ?? null;
+  const targetZoneResult = targetZone
+    ? result?.criticalZoneResults.find((entry) => entry.zoneId === targetZone.id) ?? null
+    : null;
+  const targetQuality = targetZone ? (camResult?.qualityByZone[targetZone.id] ?? "none") : "none";
+  const targetCentroid = targetZone
+    ? targetZone.polygon.reduce(
+      (acc, [x, z]) => {
+        acc[0] += x;
+        acc[1] += z;
+        return acc;
+      },
+      [0, 0] as [number, number],
+    )
+    : null;
+  const targetPoint = targetCentroid && targetZone
+    ? [targetCentroid[0] / targetZone.polygon.length, targetCentroid[1] / targetZone.polygon.length]
+    : null;
+  const targetDistanceM = targetPoint
+    ? Math.hypot(camera.position[0] - targetPoint[0], camera.position[2] - targetPoint[1])
+    : null;
+  const targetBearingDeg = targetPoint
+    ? ((Math.atan2(targetPoint[0] - camera.position[0], targetPoint[1] - camera.position[2]) * 180) / Math.PI)
+    : null;
+  const angleFromCenterDeg = targetBearingDeg == null
+    ? null
+    : Math.abs((((targetBearingDeg - camera.yawDeg) % 360) + 540) % 360 - 180);
+  const bestCameraForTarget = targetZone && result
+    ? result.cameraResults
+        .map((entry) => ({
+          cameraId: entry.cameraId,
+          quality: entry.qualityByZone[targetZone.id] ?? "none",
+        }))
+        .sort((a, b) => qualityToScore(b.quality) - qualityToScore(a.quality))[0]
+    : null;
+  const bestCameraName = bestCameraForTarget
+    ? (scene.cameras.find((entry) => entry.id === bestCameraForTarget.cameraId)?.name ?? bestCameraForTarget.cameraId)
+    : camera.name;
+  const targetDoriRanges = computeDoriRanges(camera, scene.assumptions.pixelsPerMeter);
+  const feedOverlayOptions = {
+    doriLabels: viewToggles.overlays && viewToggles.dori,
+    pathActor: viewToggles.overlays && viewToggles.path,
+    zones: viewToggles.overlays && viewToggles.zones,
+    timestamp: viewToggles.overlays && viewToggles.timestamp,
+    boundingBox: viewToggles.overlays && viewToggles.boundingBox,
+    grid: viewToggles.overlays && viewToggles.grid,
+  };
   const offlineImpact = camResult?.offlineImpact ?? [];
   const firstCriticalZone = scene.criticalZones[0];
   const resolutionKey = `${camera.resolutionMP}_${camera.resolutionWidth ?? 2688}x${camera.resolutionHeight ?? 1520}`;
   const typeKey = camera.mountType === "ceiling" ? `${camera.resolutionMP}mp_dome` : `${camera.resolutionMP}mp_bullet`;
+  const viewModeLabel =
+    viewMode === "normal" ? "Normal" : viewMode === "ir" ? "IR (B/W)" : viewMode === "low_light" ? "Low Light" : "Thermal";
+  const targetLightingLabel =
+    scene.assumptions.timeOfDay === "night"
+      ? "Night"
+      : scene.assumptions.timeOfDay === "custom"
+        ? "Custom"
+        : "Day";
+  const targetPpmEstimate = targetZone ? qualityRangeLabel(targetQuality, scene.assumptions.doriStandard) : "—";
 
   const updatePosition = (next: [number, number, number]) => updateNode(camera.id, { position: next });
 
@@ -449,56 +533,134 @@ export function CameraInspector() {
 
         {inspectorTab === "view" && (
           <div className="space-y-2.5">
+            <div className="grid gap-2 sm:grid-cols-2">
+              <SectionCard title="View Mode">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] text-[#6a748b]">Current Feed</span>
+                    <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-cyan-200">
+                      {viewModeLabel}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {VIEW_MODES.map((entry) => (
+                      <button
+                        key={entry.value}
+                        type="button"
+                        onClick={() => setViewModeState(entry.value)}
+                        className={cn(
+                          "rounded-md border px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] transition-colors",
+                          viewMode === entry.value
+                            ? "border-cyan-500/80 bg-cyan-500/10 text-cyan-200"
+                            : "border-[#293145] text-[#74829d] hover:text-[#c2cde3]",
+                        )}
+                      >
+                        {entry.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="text-[9px] leading-relaxed text-[#6a748b]">
+                    The live preview follows the selected camera, and the overlay stack below controls what gets drawn on top of the feed.
+                  </div>
+                </div>
+              </SectionCard>
+
+              <SectionCard title="Target Info">
+                <div className="space-y-1">
+                  <Field label="Target Type" value={targetZone?.targetType.replace(/_/g, " ") ?? "—"} />
+                  <Field label="Distance" value={targetDistanceM != null ? `${targetDistanceM.toFixed(1)}m` : "—"} />
+                  <Field label="PPM est." value={targetPpmEstimate} />
+                  <Field label="Angle from center" value={angleFromCenterDeg != null ? `${angleFromCenterDeg.toFixed(1)}°` : "—"} />
+                  <Field label="Lighting" value={targetLightingLabel} />
+                </div>
+              </SectionCard>
+            </div>
+
+            <SectionCard title="DORI Overlay (At Target)">
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <SummaryStat label="Target" value={targetZone?.label ?? "None"} accent="text-blue-300" />
+                  <SummaryStat
+                    label="Status"
+                    value={
+                      targetZoneResult?.status === "pass"
+                        ? "Pass"
+                        : targetZoneResult?.status === "partial"
+                          ? "Partial"
+                          : targetZoneResult?.status === "fail"
+                            ? "Fail"
+                            : "Unknown"
+                    }
+                    accent={targetZoneResult?.status === "pass" ? "text-emerald-300" : targetZoneResult?.status === "fail" ? "text-red-300" : "text-amber-300"}
+                  />
+                  <SummaryStat value={targetQuality.toUpperCase()} label={`Quality / ${targetZone ? "Required" : "Target"}`} accent="text-amber-300" />
+                  <SummaryStat label="Best Camera" value={bestCameraName} accent="text-cyan-300" />
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-[10px]">
+                  <div className="rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Target Type</div>
+                    <div className="mt-1 text-[#d2d9e8]">{targetZone?.targetType.replace(/_/g, " ") ?? "—"}</div>
+                  </div>
+                  <div className="rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Distance</div>
+                    <div className="mt-1 text-[#d2d9e8]">{targetDistanceM != null ? `${targetDistanceM.toFixed(1)}m` : "—"}</div>
+                  </div>
+                  <div className="rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Angle</div>
+                    <div className="mt-1 text-[#d2d9e8]">{angleFromCenterDeg != null ? `${angleFromCenterDeg.toFixed(1)}°` : "—"}</div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[9px] text-[#93a0bd]">
+                  <div className="rounded-lg border border-[#1f2536] bg-[#0b0f17] px-2 py-1.5">
+                    <div className="uppercase tracking-[0.16em] text-[#556076]">DORI band</div>
+                    <div className="mt-1 text-[#d2d9e8]">{targetZone ? qualityRangeLabel(targetQuality, scene.assumptions.doriStandard) : "No target selected"}</div>
+                  </div>
+                  <div className="rounded-lg border border-[#1f2536] bg-[#0b0f17] px-2 py-1.5">
+                    <div className="uppercase tracking-[0.16em] text-[#556076]">Lighting</div>
+                    <div className="mt-1 text-[#d2d9e8]">
+                      {scene.assumptions.timeOfDay === "night" ? "Night" : scene.assumptions.timeOfDay === "custom" ? "Custom" : "Day"}
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-[9px] font-semibold text-[#87a5cf]">Range checkpoints</div>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <SummaryStat label="Detect" value={`${targetDoriRanges.det.toFixed(1)}m`} accent="text-orange-300" />
+                    <SummaryStat label="Recog" value={`${targetDoriRanges.recog.toFixed(1)}m`} accent="text-yellow-300" />
+                    <SummaryStat label="Ident" value={`${targetDoriRanges.ident.toFixed(1)}m`} accent="text-emerald-300" />
+                    <SummaryStat label="Best" value={bestCameraName} accent="text-blue-300" />
+                  </div>
+                </div>
+              </div>
+            </SectionCard>
+
+            <SectionCard title="View Options">
+              <div className="space-y-1">
+                <ToggleField label="Overlay Stack" value={viewToggles.overlays} trueLabel="Show" falseLabel="Hide" onChange={(value) => setViewToggles((current) => ({ ...current, overlays: value }))} />
+                <ToggleField label="Show DORI Labels" value={viewToggles.dori} trueLabel="Show" falseLabel="Hide" onChange={() => setViewToggle("dori")} />
+                <ToggleField label="Show Path Actor" value={viewToggles.path} trueLabel="Show" falseLabel="Hide" onChange={() => setViewToggle("path")} />
+                <ToggleField label="Show Zones" value={viewToggles.zones} trueLabel="Show" falseLabel="Hide" onChange={() => setViewToggle("zones")} />
+                <ToggleField label="Show Timestamp" value={viewToggles.timestamp} trueLabel="Show" falseLabel="Hide" onChange={() => setViewToggle("timestamp")} />
+                <ToggleField label="Show Bounding Box" value={viewToggles.boundingBox} trueLabel="Show" falseLabel="Hide" onChange={() => setViewToggle("boundingBox")} />
+                <ToggleField label="Show Grid" value={viewToggles.grid} trueLabel="Show" falseLabel="Hide" onChange={() => setViewToggle("grid")} />
+              </div>
+            </SectionCard>
+
             <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
               <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">Live Camera Feed</div>
-              <CameraFeedCanvas cameraId={camera.id} />
-              <div className="mt-2 flex flex-wrap gap-1">
-                {VIEW_MODES.map((entry) => (
-                  <button
-                    key={entry.value}
-                    type="button"
-                    onClick={() => setViewModeState(entry.value)}
-                    className={cn(
-                      "rounded-md border px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] transition-colors",
-                      viewMode === entry.value
-                        ? "border-cyan-500/80 bg-cyan-500/10 text-cyan-200"
-                        : "border-[#293145] text-[#74829d] hover:text-[#c2cde3]",
-                    )}
-                  >
-                    {entry.label}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {VIEW_TOGGLES.map((toggle) => (
-                  <button
-                    key={toggle.key}
-                    type="button"
-                    onClick={() => setViewToggle(toggle.key)}
-                    className={cn(
-                      "inline-flex items-center rounded-full border px-2 py-1 text-[9px] transition-colors",
-                      viewToggles[toggle.key]
-                        ? "border-cyan-500/60 bg-cyan-500/10 text-cyan-200"
-                        : "border-[#293145] text-[#6a758e]",
-                    )}
-                  >
-                    <span className={cn("mr-1.5 inline-block h-1.5 w-1.5 rounded-full", viewToggles[toggle.key] ? "bg-cyan-300" : "bg-[#5b657a]")} />
-                    {toggle.label}
-                  </button>
-                ))}
-              </div>
+              <CameraFeedCanvas cameraId={camera.id} overlayOptions={feedOverlayOptions} />
             </div>
 
             <div className="grid gap-2 sm:grid-cols-2">
               <SectionCard title="View Metrics">
                 <div className="space-y-1">
-                  <Field label="Camera"     value={camera.name} />
-                  <Field label="Status"     value={camera.status === "on" ? "Online" : "Offline"} />
-                  <Field label="Mode"       value={viewMode === "normal" ? "Normal" : viewMode === "ir" ? "IR (B/W)" : viewMode === "low_light" ? "Low Light" : "Thermal"} />
-                  <Field label="FOV"        value={`${camera.fovHorizontalDeg}°`} />
+                  <Field label="Camera" value={camera.name} />
+                  <Field label="Status" value={camera.status === "on" ? "Online" : "Offline"} />
+                  <Field label="Mode" value={viewMode === "normal" ? "Normal" : viewMode === "ir" ? "IR (B/W)" : viewMode === "low_light" ? "Low Light" : "Thermal"} />
+                  <Field label="FOV" value={`${camera.fovHorizontalDeg}°`} />
                   <Field label="Resolution" value={`${camera.resolutionMP}MP`} />
-                  <Field label="Range"      value={`${camera.rangeM}m`} />
-                  {camResult ? <Field label="Coverage"              value={`${camResult.coveragePct.toFixed(1)}%`} /> : null}
+                  <Field label="Range" value={`${camera.rangeM}m`} />
+                  {camResult ? <Field label="Coverage" value={`${camResult.coveragePct.toFixed(1)}%`} /> : null}
                   {camResult ? <Field label="Critical zones passed" value={camResult.criticalZonesCovered.length} /> : null}
                   {camResult ? <Field label="Critical zones failed" value={camResult.criticalZonesFailed.length} /> : null}
                 </div>
@@ -506,7 +668,6 @@ export function CameraInspector() {
 
               <SectionCard title="DORI Profile">
                 {(() => {
-                  const ranges = computeDoriRanges(camera, scene.assumptions.pixelsPerMeter);
                   const sortedZoneEntries = (Object.entries(camResult?.qualityByZone ?? {}) as [string, DoriQuality][])
                     .map(([zoneId, quality]) => ({
                       name: scene.criticalZones.find((entry) => entry.id === zoneId)?.label ?? zoneId,
@@ -514,10 +675,10 @@ export function CameraInspector() {
                     }))
                     .filter((entry) => entry.quality !== undefined);
                   const doriRows = [
-                    ["identification", ranges.ident, "#60a5fa"],
-                    ["recognition",    ranges.recog, "#22c55e"],
-                    ["observation",    ranges.obs,   "#eab308"],
-                    ["detection",      ranges.det,   "#f97316"],
+                    ["identification", targetDoriRanges.ident, "#60a5fa"],
+                    ["recognition", targetDoriRanges.recog, "#22c55e"],
+                    ["observation", targetDoriRanges.obs, "#eab308"],
+                    ["detection", targetDoriRanges.det, "#f97316"],
                   ] as const;
                   return (
                     <div className="space-y-2">
@@ -716,7 +877,18 @@ export function CameraInspector() {
 
               {!camResult && (
                 <div className="rounded-lg border border-[#1f2536] bg-[#111521] p-3 text-[10px] leading-relaxed text-[#6a748b]">
-                  Run simulation to populate failure impact analysis for this camera.
+                  <div className="mb-2">
+                    Run the shared simulation to populate failure impact analysis for this camera.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={runSimulation}
+                    disabled={simulationRunning}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-[#24283a] bg-[#0b0f17] px-2.5 py-1.5 text-[9px] font-medium text-emerald-300 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {simulationRunning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
+                    {simulationRunning ? "Running..." : "Run Simulation"}
+                  </button>
                 </div>
               )}
             </div>

@@ -157,6 +157,8 @@ reflected in report/workspace surfaces so the model posture is always apparent.
 
 **[GAP-07] Dedicated launcher scene browser remains partial**
 TopBar already provides a canonical scene selector, and the launcher now adds a searchable project browser with selected-workspace actions, direct saved-scene resume shortcuts, launcher-side folder/tag/pin metadata management, and a source filter row.
+It now also exposes duplicate/rename actions on the selected workspace card, so the launcher is no longer read-only once a project is selected.
+The top-bar selector now mirrors duplicate/rename on each saved scene row, so the primary shell and launcher agree on workspace-management actions.
 **Spec ref:** Section 4 (Top bar — Scene selector), section 20 (Reports/exports)
 **Remaining:** Cross-device sync, shared project metadata, and multi-user project collaboration if the product grows beyond local storage.
 
@@ -237,15 +239,15 @@ and no coverage warnings fire for cameras that cover privacy zones.
 **[GAP-17] No mounting snap behavior**
 The spec describes snapping cameras to walls, ceiling, poles. Currently camera position
 is set via the inspector number inputs only.
-**Status:** Partially resolved in the live product. The camera inspector now includes a wall snap action that repositions the selected camera to the nearest wall and re-aims it toward the room interior.
+**Status:** Resolved in the live product. The camera inspector now includes wall, ceiling, and pole snap actions that reposition the selected camera to a mount target, raise it to a realistic mount height, and re-aim it toward the room interior.
 
 **[GAP-18] No camera comparison mode**
 No way to compare two specific cameras' individual coverage contributions side by side.
 **Status:** Resolved in the live compare workspace. CompareView now includes a camera comparison section that contrasts two cameras from the current scene using live simulation results, coverage, critical-zone counts, and DORI reach.
 
-**[GAP-19] No light inspector**
-SecurityLightNodes exist but clicking a light doesn't open a light inspector.
-The ObstructionInspector exists, CameraInspector exists, but no LightInspector.
+**[GAP-19] No light inspector** ✅ Resolved in the live product
+SecurityLightNodes now open a LightInspector with editable position, range, brightness, type, status, and night-coverage controls.
+The inspector also exposes the light's night-coverage contribution so the simulation impact is visible while editing.
 **Status:** Resolved in the live inspector. LightInspector is present, editable, and covered by the inspector regression test.
 **Status:** Resolved in the live inspector. LightInspector is present, editable, and covered by the inspector regression test.
 
@@ -309,8 +311,8 @@ Based on spec priority, demo script requirements, and dependency order:
 **Sprint 4 — Full Camera Suite**
 - GAP-09: Target-type switcher
 - GAP-11: Command bar (resolved — offline parser + AI command flow)
-- GAP-16: Privacy zone rendering + coverage warning
-- ~~GAP-19: Light inspector~~ ✅ **DONE** (verified 2026-05-27) — LightInspector component added; name, position, brightness, type, status, range, delete all functional
+- GAP-16: Privacy zone rendering + coverage warning (resolved in the live product)
+- ~~GAP-19: Light inspector~~ ✅ **DONE** (verified 2026-05-28) — LightInspector component added; name, position, brightness, type, status, range, delete all functional, plus a night-impact section for the light's simulation contribution
 
 ---
 
@@ -320,7 +322,7 @@ Based on spec priority, demo script requirements, and dependency order:
 |-----|--------|------|-------|
 | GAP-01 | ✅ Done | Prior session | ToolPlacementFloor click-to-place fully implemented |
 | GAP-13 | ✅ Done | 2026-05-27 | PathReplayActor added to WorkspaceCanvas; TimelineTab Play/Pause/SkipBack wired; progress bar live |
-| GAP-19 | ✅ Done | 2026-05-27 | LightInspector in InspectorPanel; all fields editable; delete button |
+| GAP-19 | ✅ Done | 2026-05-28 | LightInspector in InspectorPanel; all fields editable; delete button; night-impact toggle / summary |
 | GAP-21 | ✅ Done | 2026-05-27 | IssuesTab Apply Fix buttons; rotate_camera and move_object recommendations apply via updateNode; camera chips clickable for selectNode |
 
 ---
@@ -345,9 +347,9 @@ The following gaps have been resolved in this session:
 - **scrollable bottom tab strip**: 8 tabs now scroll instead of overflow
 
 ### What is still NOT resolved (updated 2026-05-27)
-- GAP-09: Target-type switcher (person/vehicle/face) not implemented globally (note: targetType IS editable per-zone in ZoneInspector, but not a global scene-level switcher)
+- ~~GAP-09: Target-type switcher~~ — **RESOLVED**: The top bar now exposes a global default target-type dropdown, applies the choice to all current critical zones, and the manual critical-zone placement tool uses that same default when creating new zones.
 - GAP-11: Command bar resolved to offline parser + AI flow
-- GAP-16: Privacy zone rendering not implemented
+- GAP-16: Privacy zone rendering resolved in the live product
 
 ### Previously listed as NOT resolved — now RESOLVED (2026-05-27)
 - ~~GAP-08: Camera preset library~~ — **RESOLVED**: CameraPresetPicker.tsx with 4 presets integrated into placement flow.
@@ -379,9 +381,9 @@ The following gaps have been resolved in this session:
 - Build: clean, no TypeScript errors
 
 ### What is still NOT resolved
-- GAP-09: Target-type switcher not implemented globally (per-zone IS editable in CriticalZoneInspector with 9 target types)
+- GAP-09: Target-type switcher resolved globally via top-bar default + manual placement tool
 - GAP-11: Command bar resolved to offline parser + AI flow
-- GAP-16: Privacy zone rendering not implemented
+- GAP-16: Privacy zone rendering resolved in the live product
 - Novel Algorithm 1: Coverage Fragility Field
 - Novel Algorithm 3: Adversarial K-Robustness
 - Novel Algorithm 4: Camera Placement Oracle

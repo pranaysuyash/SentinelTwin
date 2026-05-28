@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Filter, Layers } from "lucide-react";
-import { useStudioStore, type OverlayDensity, type OverlayFilterId } from "@/store/studio-store";
+import { ChevronDown, ChevronUp, Eye, EyeOff, Filter, Layers, Crosshair, Sigma, Grid3x3, Shield, Target } from "lucide-react";
+import { useStudioStore, type OverlayDensity, type OverlayFilterId, type HeatmapMode } from "@/store/studio-store";
 
 const QUALITY_LEVELS = [
   { label: "Identification", range: "250+", detail: "250+ PPM", color: "#3b82f6" },
@@ -16,6 +16,58 @@ const FRAGILITY_LEVELS = [
   { label: "Robust", range: "0-30%", detail: "Far from threshold", color: "#22c55e" },
   { label: "Moderate", range: "30-60%", detail: "Some margin", color: "#f5a623" },
   { label: "Fragile", range: "60-100%", detail: "Near DORI threshold", color: "#ef4444" },
+];
+
+const MODE_CONFIG: { mode: HeatmapMode; label: string; icon: React.ReactNode; description: string; levels: { label: string; range: string; detail: string; color: string }[]; legendNote?: string }[] = [
+  {
+    mode: "quality",
+    label: "Quality",
+    icon: <Target className="h-3 w-3" />,
+    description: "Coverage quality by PPM density",
+    levels: QUALITY_LEVELS,
+  },
+  {
+    mode: "fragility",
+    label: "Fragility",
+    icon: <Shield className="h-3 w-3" />,
+    description: "How close each cell is to a DORI threshold boundary",
+    levels: FRAGILITY_LEVELS,
+    legendNote: "Fragile cells may drop quality under minor camera adjustments.",
+  },
+  {
+    mode: "overlap",
+    label: "Overlap",
+    icon: <Layers className="h-3 w-3" />,
+    description: "Number of cameras covering each cell",
+    levels: [
+      { label: "3+ Cameras", range: "3+", detail: "High redundancy", color: "#3b82f6" },
+      { label: "2 Cameras", range: "2", detail: "Moderate redundancy", color: "#22c55e" },
+      { label: "1 Camera", range: "1", detail: "Single coverage", color: "#facc15" },
+      { label: "No Coverage", range: "0", detail: "Uncovered area", color: "#ef4444" },
+    ],
+  },
+  {
+    mode: "contribution",
+    label: "Contribution",
+    icon: <Sigma className="h-3 w-3" />,
+    description: "Each camera's coverage contribution to the area",
+    levels: [
+      { label: "High Contribution", range: ">75%", detail: "Primary coverage provider", color: "#3b82f6" },
+      { label: "Moderate", range: "50-75%", detail: "Secondary coverage", color: "#22c55e" },
+      { label: "Low", range: "25-50%", detail: "Marginal contribution", color: "#facc15" },
+      { label: "None", range: "<25%", detail: "Cell not covered by camera", color: "#6b7280" },
+    ],
+  },
+  {
+    mode: "blindspots",
+    label: "Blindspots",
+    icon: <EyeOff className="h-3 w-3" />,
+    description: "Areas with no camera coverage",
+    levels: [
+      { label: "Covered", range: "Any", detail: "Cell is covered by ≥1 camera", color: "#22c55e" },
+      { label: "Blindspot", range: "None", detail: "No camera coverage", color: "#991b1b" },
+    ],
+  },
 ];
 
 const DENSITY_OPTIONS: { value: OverlayDensity; label: string }[] = [
@@ -41,7 +93,7 @@ export function CoverageLegend() {
   const setOverlayFilter = useStudioStore((s) => s.setOverlayFilter);
   const hasResult = useStudioStore((s) => !!s.simulationResult);
 
-  const isFragility = heatmapMode === "fragility";
+  const activeConfig = MODE_CONFIG.find((c) => c.mode === heatmapMode) ?? MODE_CONFIG[0];
   const [collapsed, setCollapsed] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -54,7 +106,8 @@ export function CoverageLegend() {
           className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-[0.22em] text-[#5b667c] hover:text-[#93c5fd] transition-colors"
         >
           {collapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-          {isFragility ? "Coverage Fragility" : "Coverage Quality (PPM)"}
+          {activeConfig.icon}
+          <span className="ml-0.5">{activeConfig.label} View</span>
         </button>
 
         {/* Filter toggle button */}
@@ -70,35 +123,42 @@ export function CoverageLegend() {
       {/* Collapsible body */}
       {!collapsed && (
         <>
-          {/* Mode toggle — only when simulation data is present */}
+          {/* Mode toggle grid — only when simulation data is present */}
           {hasResult ? (
-            <div className="mb-2 flex rounded-md overflow-hidden border border-[#2a3246]">
-              <button
-                onClick={() => setHeatmapMode("quality")}
-                className="flex-1 py-0.5 text-[8px] font-semibold tracking-wide uppercase transition-colors"
-                style={{
-                  background: !isFragility ? "#1e2d4a" : "transparent",
-                  color: !isFragility ? "#93c5fd" : "#3a4158",
-                }}
-              >
-                Quality
-              </button>
-              <button
-                onClick={() => setHeatmapMode("fragility")}
-                className="flex-1 py-0.5 text-[8px] font-semibold tracking-wide uppercase transition-colors"
-                style={{
-                  background: isFragility ? "#2d1e1e" : "transparent",
-                  color: isFragility ? "#fca5a5" : "#3a4158",
-                }}
-              >
-                Fragility
-              </button>
+            <div className="mb-2 grid grid-cols-5 gap-0.5 rounded-md overflow-hidden border border-[#2a3246]">
+              {MODE_CONFIG.map((config) => {
+                const isActive = heatmapMode === config.mode;
+                const activeBg = config.mode === "fragility"
+                  ? "#2d1e1e"
+                  : config.mode === "overlap"
+                    ? "#1a2d3a"
+                    : config.mode === "contribution"
+                      ? "#1a2d1e"
+                      : config.mode === "blindspots"
+                        ? "#2d1a1a"
+                        : "#1e2d4a";
+                return (
+                  <button
+                    key={config.mode}
+                    onClick={() => setHeatmapMode(config.mode)}
+                    className="flex flex-col items-center gap-0.5 py-0.5 text-[7px] font-semibold tracking-wide transition-colors"
+                    title={config.description}
+                    style={{
+                      background: isActive ? activeBg : "transparent",
+                      color: isActive ? "#e2e8f0" : "#3a4158",
+                    }}
+                  >
+                    {config.icon}
+                    <span className="leading-none">{config.label}</span>
+                  </button>
+                );
+              })}
             </div>
           ) : null}
 
-          {/* Quality/fragility legend items */}
+          {/* Legend items */}
           <div className="space-y-1.5">
-            {(isFragility ? FRAGILITY_LEVELS : QUALITY_LEVELS).map(({ label, range, detail, color }) => (
+            {activeConfig.levels.map(({ label, range, detail, color }) => (
               <div key={label} className="flex items-start gap-2">
                 <span className="mt-0.5 h-3 w-3 flex-shrink-0 rounded-sm" style={{ backgroundColor: color, opacity: 0.9 }} />
                 <div className="min-w-0 flex-1 leading-none">
@@ -109,11 +169,11 @@ export function CoverageLegend() {
             ))}
           </div>
 
-          {isFragility ? (
+          {activeConfig.legendNote && (
             <div className="mt-2 border-t border-[#1f2536] pt-1.5 text-[8px] text-[#4a5568] leading-tight">
-              How close each cell is to a DORI threshold boundary. Fragile cells may drop quality under minor camera adjustments.
+              {activeConfig.legendNote}
             </div>
-          ) : null}
+          )}
         </>
       )}
 

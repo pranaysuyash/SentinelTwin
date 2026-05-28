@@ -18,5 +18,9 @@ describe("view settings entrypoints", () => {
     expect(canvasSource).toContain("resetCanvasView");
     expect(canvasSource).toContain("toggleViewSettingsOpen");
     expect(canvasSource).toContain("visibleComponents.coverage_legend");
+    expect(canvasSource).toContain('aria-label="Open View Settings"');
+    expect(canvasSource).toContain('aria-label="Reset canvas view"');
+    expect(canvasSource).toContain('aria-label="Switch to 3D orbit"');
+    expect(canvasSource).toContain('aria-label="Switch to 2D top-down"');
   });
 });

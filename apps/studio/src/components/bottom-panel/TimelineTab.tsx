@@ -180,6 +180,7 @@ export function TimelineTab() {
   const visiblePct = activePathResult && activePathResult.totalDurationS > 0
     ? Math.round((activePathResult.visibleDurationS / activePathResult.totalDurationS) * 100)
     : 0;
+  const visibleCameraSummary = cameraSummary.slice(0, 4);
 
   const handleSeek = useCallback((seconds: number) => {
     if (totalDuration <= 0) return;
@@ -321,14 +322,15 @@ export function TimelineTab() {
           ))}
           <button
             type="button"
-          onClick={() => setPathReplayFollowActor(!pathReplayFollowActor)}
-          className={cn(
-            "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-medium transition-colors",
-            pathReplayFollowActor ? "bg-[#1a2333] text-[#93c5fd]" : "text-[#4a5568] hover:bg-[#131a28] hover:text-[#8b96ab]",
-          )}
-        >
+            onClick={() => setPathReplayFollowActor(!pathReplayFollowActor)}
+            className={cn(
+              "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-medium transition-colors",
+              pathReplayFollowActor ? "bg-[#1a2333] text-[#93c5fd]" : "text-[#4a5568] hover:bg-[#131a28] hover:text-[#8b96ab]",
+            )}
+            title="Follow actor"
+          >
             <Eye className="h-3 w-3" />
-            Follow
+            Follow Actor
           </button>
         </div>
       </div>
@@ -378,6 +380,21 @@ export function TimelineTab() {
             <div className="flex items-center gap-2 border-b border-[#1e2130] px-3 py-1.5 text-[8px] font-semibold uppercase tracking-[0.14em] text-[#4a5568]">
               Coverage Failure Timeline
               <ExplainBadge text="Timeline shows when visibility is gained, lost, or degraded along the selected path." />
+            </div>
+            <div className="grid gap-2 border-b border-[#1e2130] px-3 py-2 sm:grid-cols-2 xl:grid-cols-4">
+              {visibleCameraSummary.length > 0 ? visibleCameraSummary.map((entry) => (
+                <div key={entry.cameraId} className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="truncate text-[10px] font-medium text-[#c7d0e4]">{camerasById[entry.cameraId] ?? entry.cameraId}</div>
+                    <QualityBadge quality={entry.maxQuality} />
+                  </div>
+                  <div className="mt-1 text-[9px] text-[#5b667c]">
+                    Visible {entry.visibleS.toFixed(1)}s · Best {entry.maxQuality}
+                  </div>
+                </div>
+              )) : (
+                <div className="px-3 py-2 text-[10px] text-[#5b667c]">No camera reach data available for this path.</div>
+              )}
             </div>
             <div className="min-h-0 flex-1 overflow-auto">
               <table className="w-full border-collapse text-[10px]">

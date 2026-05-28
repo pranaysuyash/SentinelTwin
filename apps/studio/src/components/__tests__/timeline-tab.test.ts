@@ -10,7 +10,9 @@ describe("TimelineTab", () => {
     expect(source).toContain('const pathReplayFollowActor = useStudioStore((s) => s.pathReplay.followActor);');
     expect(source).toContain('const setPathReplayFollowActor = useStudioStore((s) => s.setPathReplayFollowActor);');
     expect(source).toContain('onClick={() => setPathReplayFollowActor(!pathReplayFollowActor)}');
-    expect(source).toContain("Follow");
+    expect(source).toContain("Follow Actor");
+    expect(source).toContain("visibleCameraSummary");
+    expect(source).toContain("No camera reach data available for this path.");
   });
 
   test("surfaces the full quality ladder in the quality view", () => {

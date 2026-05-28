@@ -11,6 +11,7 @@ import { draftSceneFromPrompt, draftSceneFromPromptWithModel, summarizeDraftResu
 import { PRODUCT_FEATURE_STATUS } from "@/lib/product-feature-status";
 import { createModelProvider, describeAiProviderSelection, providerKeyAvailable } from "@/agents/provider-selection";
 import { simulateStudio } from "@/simulation/simulate-studio";
+import { safeParseSecurityScene, type SecurityScene } from "@/schema/security-scene";
 
 function formatClock(timestamp: number | null | undefined) {
   if (!timestamp) return null;
@@ -20,6 +21,17 @@ function formatClock(timestamp: number | null | undefined) {
     hour12: true,
     timeZone: "UTC",
   }).format(new Date(timestamp));
+}
+
+function countSceneEntities(scene: SecurityScene) {
+  return {
+    entryPoints: scene.entryPoints.length,
+    cameras: scene.cameras.length,
+    securityLights: scene.securityLights.length,
+    obstructions: scene.obstructions.length,
+    criticalZones: scene.criticalZones.length,
+    paths: scene.paths.length,
+  };
 }
 
 export default function StudioPage() {
@@ -38,6 +50,9 @@ export default function StudioPage() {
   const [aiDraftCopyNotice, setAiDraftCopyNotice] = useState<string | null>(null);
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiDraftJsonVisible, setAiDraftJsonVisible] = useState(false);
+  const [aiDraftJsonEditable, setAiDraftJsonEditable] = useState(false);
+  const [aiDraftJsonText, setAiDraftJsonText] = useState("");
+  const [aiDraftJsonError, setAiDraftJsonError] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -57,6 +72,8 @@ export default function StudioPage() {
   const setSimulationResult = useStudioStore((s) => s.setSimulationResult);
   const savedProjects = useStudioStore((s) => s.savedProjects);
   const updateSavedSceneMetadata = useStudioStore((s) => s.updateSavedSceneMetadata);
+  const duplicateSavedScene = useStudioStore((s) => s.duplicateSavedScene);
+  const renameSavedScene = useStudioStore((s) => s.renameSavedScene);
   const aiProviderSelection = useStudioStore((s) => s.aiProviderSelection);
 
   const currentResult = simulationResult ?? scene.simulation ?? null;
@@ -70,8 +87,35 @@ export default function StudioPage() {
     () => (aiDraftPreview ? summarizeDraftResult(aiDraftPreview) : null),
     [aiDraftPreview],
   );
+  const aiDraftScene = useMemo(() => {
+    if (!aiDraftPreview) return null;
+    if (!aiDraftJsonEditable) return aiDraftPreview.scene;
+    try {
+      const parsed = safeParseSecurityScene(JSON.parse(aiDraftJsonText));
+      return parsed.success ? parsed.data : null;
+    } catch {
+      return null;
+    }
+  }, [aiDraftJsonEditable, aiDraftJsonText, aiDraftPreview]);
+  const aiDraftJsonValidation = useMemo(() => {
+    if (!aiDraftPreview) return { valid: false, error: null as string | null };
+    if (!aiDraftJsonEditable) return { valid: true, error: null as string | null };
+    try {
+      const parsed = JSON.parse(aiDraftJsonText);
+      const result = safeParseSecurityScene(parsed);
+      return result.success
+        ? { valid: true, error: null as string | null }
+        : { valid: false, error: result.error.issues[0]?.message ?? "JSON must validate as a SecurityScene." };
+    } catch (error) {
+      return { valid: false, error: error instanceof Error ? error.message : "Draft JSON must be valid JSON." };
+    }
+  }, [aiDraftJsonEditable, aiDraftJsonText, aiDraftPreview]);
+  const aiDraftCounts = useMemo(() => {
+    if (!aiDraftScene) return null;
+    return countSceneEntities(aiDraftScene);
+  }, [aiDraftScene]);
   const aiDraftComparison = useMemo(() => {
-    if (!aiDraftSummary) return null;
+    if (!aiDraftSummary || !aiDraftCounts) return null;
     const current = {
       entryPoints: scene.entryPoints.length,
       cameras: scene.cameras.length,
@@ -81,19 +125,25 @@ export default function StudioPage() {
       paths: scene.paths.length,
     };
     const delta = {
-      entryPoints: aiDraftSummary.counts.entryPoints - current.entryPoints,
-      cameras: aiDraftSummary.counts.cameras - current.cameras,
-      securityLights: aiDraftSummary.counts.securityLights - current.securityLights,
-      obstructions: aiDraftSummary.counts.obstructions - current.obstructions,
-      criticalZones: aiDraftSummary.counts.criticalZones - current.criticalZones,
-      paths: aiDraftSummary.counts.paths - current.paths,
+      entryPoints: aiDraftCounts.entryPoints - current.entryPoints,
+      cameras: aiDraftCounts.cameras - current.cameras,
+      securityLights: aiDraftCounts.securityLights - current.securityLights,
+      obstructions: aiDraftCounts.obstructions - current.obstructions,
+      criticalZones: aiDraftCounts.criticalZones - current.criticalZones,
+      paths: aiDraftCounts.paths - current.paths,
     };
-    return { current, draft: aiDraftSummary.counts, delta };
-  }, [aiDraftSummary, scene]);
+    return { current, draft: aiDraftCounts, delta };
+  }, [aiDraftCounts, aiDraftSummary, scene]);
   const aiDraftSceneJson = useMemo(
-    () => (aiDraftPreview ? JSON.stringify(aiDraftPreview.scene, null, 2) : ""),
-    [aiDraftPreview],
+    () => {
+      if (aiDraftJsonEditable) return aiDraftJsonText;
+      if (!aiDraftScene) return "";
+      return JSON.stringify(aiDraftScene, null, 2);
+    },
+    [aiDraftJsonEditable, aiDraftJsonText, aiDraftScene],
   );
+  const aiDraftDisplayCounts = aiDraftCounts ?? aiDraftSummary?.counts ?? null;
+  const aiDraftJsonIssue = aiDraftJsonError ?? (aiDraftJsonEditable && !aiDraftJsonValidation.valid ? aiDraftJsonValidation.error : null);
   const confirmWorkspaceReplacement = (nextActionLabel: string) => {
     if (!simulationDirty) return true;
     return window.confirm(`Current workspace has unapplied changes. Continue to ${nextActionLabel}?`);
@@ -104,7 +154,18 @@ export default function StudioPage() {
     setAiDraftNotice(null);
     setAiDraftCopyNotice(null);
     setAiDraftJsonVisible(false);
+    setAiDraftJsonEditable(false);
+    setAiDraftJsonText("");
+    setAiDraftJsonError(null);
   };
+
+  useEffect(() => {
+    if (!aiDraftPreview) return;
+    setAiDraftJsonText(JSON.stringify(aiDraftPreview.scene, null, 2));
+    setAiDraftJsonError(null);
+    setAiDraftJsonEditable(false);
+    setAiDraftJsonVisible(false);
+  }, [aiDraftPreview]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -203,6 +264,8 @@ export default function StudioPage() {
         onOpenReport={openReport}
         onOpenScene={openScene}
         onUpdateProjectMetadata={updateSavedSceneMetadata}
+        onDuplicateProject={duplicateSavedScene}
+        onRenameProject={renameSavedScene}
         onOpenMode={(viewMode, preset, bottomTab) => launchWorkspace(viewMode, preset, bottomTab)}
         featureStatus={PRODUCT_FEATURE_STATUS}
       />
@@ -362,27 +425,27 @@ export default function StudioPage() {
                 <div className="mt-3 grid grid-cols-3 gap-2 text-[9px]">
                   <div className="rounded-lg border border-[#22314b] bg-[#101827] px-2 py-1.5 text-[#b6c6e6]">
                     <div className="text-[#7e8fb0]">Cameras</div>
-                    <div className="text-sm font-semibold text-white">{aiDraftSummary.counts.cameras}</div>
+                    <div className="text-sm font-semibold text-white">{aiDraftDisplayCounts?.cameras ?? 0}</div>
                   </div>
                   <div className="rounded-lg border border-[#22314b] bg-[#101827] px-2 py-1.5 text-[#b6c6e6]">
                     <div className="text-[#7e8fb0]">Lights</div>
-                    <div className="text-sm font-semibold text-white">{aiDraftSummary.counts.securityLights}</div>
+                    <div className="text-sm font-semibold text-white">{aiDraftDisplayCounts?.securityLights ?? 0}</div>
                   </div>
                   <div className="rounded-lg border border-[#22314b] bg-[#101827] px-2 py-1.5 text-[#b6c6e6]">
                     <div className="text-[#7e8fb0]">Obstructions</div>
-                    <div className="text-sm font-semibold text-white">{aiDraftSummary.counts.obstructions}</div>
+                    <div className="text-sm font-semibold text-white">{aiDraftDisplayCounts?.obstructions ?? 0}</div>
                   </div>
                   <div className="rounded-lg border border-[#22314b] bg-[#101827] px-2 py-1.5 text-[#b6c6e6]">
                     <div className="text-[#7e8fb0]">Zones</div>
-                    <div className="text-sm font-semibold text-white">{aiDraftSummary.counts.criticalZones}</div>
+                    <div className="text-sm font-semibold text-white">{aiDraftDisplayCounts?.criticalZones ?? 0}</div>
                   </div>
                   <div className="rounded-lg border border-[#22314b] bg-[#101827] px-2 py-1.5 text-[#b6c6e6]">
                     <div className="text-[#7e8fb0]">Paths</div>
-                    <div className="text-sm font-semibold text-white">{aiDraftSummary.counts.paths}</div>
+                    <div className="text-sm font-semibold text-white">{aiDraftDisplayCounts?.paths ?? 0}</div>
                   </div>
                   <div className="rounded-lg border border-[#22314b] bg-[#101827] px-2 py-1.5 text-[#b6c6e6]">
                     <div className="text-[#7e8fb0]">Entries</div>
-                    <div className="text-sm font-semibold text-white">{aiDraftSummary.counts.entryPoints}</div>
+                    <div className="text-sm font-semibold text-white">{aiDraftDisplayCounts?.entryPoints ?? 0}</div>
                   </div>
                 </div>
                 {aiDraftComparison ? (
@@ -440,6 +503,17 @@ export default function StudioPage() {
                     </button>
                     <button
                       type="button"
+                      onClick={() => {
+                        if (!aiDraftJsonVisible) setAiDraftJsonVisible(true);
+                        setAiDraftJsonEditable((editable) => !editable);
+                        setAiDraftJsonError(null);
+                      }}
+                      className="rounded-full border border-[#2a3347] bg-[#101827] px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] text-[#c4d5ff]"
+                    >
+                      {aiDraftJsonEditable ? "Lock JSON" : "Edit JSON"}
+                    </button>
+                    <button
+                      type="button"
                       onClick={async () => {
                         if (!aiDraftSceneJson) return;
                         await navigator.clipboard.writeText(aiDraftSceneJson);
@@ -453,9 +527,26 @@ export default function StudioPage() {
                   </div>
                 </div>
                 {aiDraftJsonVisible ? (
-                  <pre className="mt-2 max-h-52 overflow-auto rounded-xl border border-[#1e2a42] bg-[#08101b] p-3 text-[9px] leading-relaxed text-[#8ea2c5]">
-                    {aiDraftSceneJson}
-                  </pre>
+                  aiDraftJsonEditable ? (
+                    <textarea
+                      value={aiDraftJsonText}
+                      onChange={(event) => {
+                        setAiDraftJsonText(event.target.value);
+                        if (aiDraftJsonError) setAiDraftJsonError(null);
+                      }}
+                      spellCheck={false}
+                      className="mt-2 h-56 w-full rounded-xl border border-[#1e2a42] bg-[#08101b] p-3 font-mono text-[9px] leading-relaxed text-[#8ea2c5] outline-none focus:border-cyan-500/40"
+                    />
+                  ) : (
+                    <pre className="mt-2 max-h-52 overflow-auto rounded-xl border border-[#1e2a42] bg-[#08101b] p-3 text-[9px] leading-relaxed text-[#8ea2c5]">
+                      {aiDraftSceneJson}
+                    </pre>
+                  )
+                ) : null}
+                {aiDraftJsonIssue ? (
+                  <div className="mt-2 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-[10px] text-red-100">
+                    JSON must be valid SecurityScene data before apply: {aiDraftJsonIssue}
+                  </div>
                 ) : null}
                 {aiDraftCopyNotice ? (
                   <div className="mt-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-[10px] text-emerald-100">
@@ -525,9 +616,13 @@ export default function StudioPage() {
               <button
                 onClick={() => {
                   if (!aiDraftPreview) return;
+                  if (aiDraftJsonEditable && !aiDraftJsonValidation.valid) {
+                    setAiDraftJsonError(aiDraftJsonValidation.error ?? "Draft JSON must validate as a SecurityScene.");
+                    return;
+                  }
                   if (!confirmWorkspaceReplacement("apply this AI layout draft")) return;
                   const provenanceNote = `${aiDraftPreview.provenance.summary} (${aiDraftPreview.provenance.confidenceLevel} confidence)`;
-                  setScene(aiDraftPreview.scene);
+                  setScene(aiDraftScene ?? aiDraftPreview.scene);
                   setLaunchNotice(provenanceNote);
                   resetAiDraftPreview();
                   setShowAiDraft(false);
@@ -537,7 +632,7 @@ export default function StudioPage() {
                   }, 100);
                   openStudio();
                 }}
-                disabled={!aiDraftPreview || aiGenerating}
+                disabled={!aiDraftPreview || aiGenerating || (aiDraftJsonEditable && !aiDraftJsonValidation.valid)}
                 className="rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:bg-cyan-900/60"
               >
                 Use Draft Scene

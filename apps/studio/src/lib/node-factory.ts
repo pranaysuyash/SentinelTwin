@@ -182,6 +182,7 @@ export function createWindowNode(
 
 export function createCriticalZoneNode(
   polygon: [number, number][],
+  targetType: CriticalZoneNode["targetType"] = "person_detection",
 ): CriticalZoneNode {
   if (polygon.length < 3) {
     throw new Error("Critical zone requires at least 3 points.");
@@ -197,7 +198,7 @@ export function createCriticalZoneNode(
     heightM: 2,
     priority: "high",
     requiredQuality: "recognition",
-    targetType: "person_detection",
+    targetType,
     nightRequired: true,
     redundancyRequired: false,
     privacyZone: false,

@@ -111,6 +111,12 @@ describe("studio store", () => {
     expect(useStudioStore.getState().cameraPresetId).toBeNull();
   });
 
+  test("stores the global critical-zone target default for new zones", () => {
+    useStudioStore.getState().setCriticalZoneTargetType("license_plate");
+
+    expect(useStudioStore.getState().criticalZoneTargetType).toBe("license_plate");
+  });
+
   test("resets shared map viewport state when a new scene is loaded", () => {
     useStudioStore.setState({
       mapState: {

@@ -35,8 +35,9 @@ describe("WorkspaceCanvas obstruction selection", () => {
     expect(workspaceSource).toContain('const wall = createWallNode(draftWallStart, constrained, {');
     expect(workspaceSource).toContain('if (activeTool === "door_window")');
     expect(workspaceSource).toContain('const node = wantsWindow');
+    expect(workspaceSource).toContain('const criticalZoneTargetType = useStudioStore((s) => s.criticalZoneTargetType);');
     expect(workspaceSource).toContain('if (activeTool === "zone")');
-    expect(workspaceSource).toContain('setDraftPolygonPoints([...draftPolygonPoints, workingSnap]);');
+    expect(workspaceSource).toContain('const zone = createCriticalZoneNode(draftPolygonPoints, criticalZoneTargetType);');
     expect(workspaceSource).toContain('if (activeTool === "path")');
     expect(workspaceSource).toContain('setDraftPathPoints([...draftPathPoints, workingSnap]);');
   });

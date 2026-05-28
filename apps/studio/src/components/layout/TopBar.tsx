@@ -30,7 +30,7 @@ import { useStudioStore } from "@/store/studio-store";
 import { WorkspacePresetSwitcher } from "@/components/dock/WorkspacePresetSwitcher";
 import { SceneBuilderWizard } from "@/components/scan-to-scene/SceneBuilderWizard";
 import { ScanSiteWizard } from "@/components/scan-to-scene/ScanSiteWizard";
-import type { CriticalZoneNode } from "@/schema/security-scene";
+import type { CriticalZoneNode, SecurityScene } from "@/schema/security-scene";
 
 const TARGET_TYPE_OPTIONS: Array<{
   value: CriticalZoneNode["targetType"];
@@ -101,20 +101,24 @@ export function TopBar() {
   const saveSnapshot = useStudioStore((s) => s.saveSnapshot);
   const scene = useStudioStore((s) => s.scene);
   const zoneCount = scene.criticalZones.length;
+  const criticalZoneTargetType = useStudioStore((s) => s.criticalZoneTargetType);
   const savedScenes = useStudioStore((s) => s.savedScenes);
   const setScene = useStudioStore((s) => s.setScene);
   const importScene = useStudioStore((s) => s.importScene);
   const saveSceneToStorage = useStudioStore((s) => s.saveSceneToStorage);
   const deleteSavedScene = useStudioStore((s) => s.deleteSavedScene);
+  const duplicateSavedScene = useStudioStore((s) => s.duplicateSavedScene);
+  const renameSavedScene = useStudioStore((s) => s.renameSavedScene);
   const refreshSavedScenesList = useStudioStore((s) => s.refreshSavedScenesList);
   const exportScene = useStudioStore((s) => s.exportScene);
   const running = useStudioStore((s) => s.simulationRunning);
   const demoMode = useStudioStore((s) => s.demoMode);
   const setDemoMode = useStudioStore((s) => s.setDemoMode);
-  const currentTargetType = scene.criticalZones[0]?.targetType ?? null;
-  const currentTargetLabel = currentTargetType ? TARGET_TYPE_LABELS[currentTargetType] : "Target Type";
-  const targetTypeConsistent = scene.criticalZones.length > 0
-    && scene.criticalZones.every((zone) => zone.targetType === currentTargetType);
+  const sceneTargetType = scene.criticalZones[0]?.targetType ?? null;
+  const currentTargetType = scene.criticalZones.length > 0 && scene.criticalZones.every((zone) => zone.targetType === sceneTargetType)
+    ? sceneTargetType
+    : null;
+  const currentTargetLabel = currentTargetType ? TARGET_TYPE_LABELS[currentTargetType] : TARGET_TYPE_LABELS[criticalZoneTargetType];
 
   const [sceneOpen, setSceneOpen] = useState(false);
   const [targetOpen, setTargetOpen] = useState(false);
@@ -166,6 +170,22 @@ export function TopBar() {
     a.click();
     URL.revokeObjectURL(url);
   }, [exportScene]);
+
+  const handleDuplicateSavedScene = useCallback((sceneId: string) => {
+    const duplicate = duplicateSavedScene(sceneId);
+    if (!duplicate) return;
+    setScene(duplicate.scene);
+    setSceneOpen(false);
+  }, [duplicateSavedScene, setScene]);
+
+  const handleRenameSavedScene = useCallback((savedSceneId: string, currentName: string, source: SecurityScene["source"]) => {
+    if (source === "demo") return;
+    const nextName = window.prompt("Rename scene", currentName);
+    if (nextName == null) return;
+    renameSavedScene(savedSceneId, nextName);
+    refreshSavedScenesList();
+    setSceneOpen(false);
+  }, [refreshSavedScenesList, renameSavedScene]);
 
   return (
     <header className="relative z-[320] isolate flex h-12 items-center gap-2 overflow-visible border-b border-[#1e2130] bg-[#0c0f16]/96 px-2.5 backdrop-blur-md">
@@ -222,6 +242,24 @@ export function TopBar() {
                         title="Delete scene"
                       >
                         ✕
+                      </button>
+                      <button
+                        onClick={() => handleDuplicateSavedScene(saved.id)}
+                        className="hidden rounded-lg px-1.5 py-2 text-[10px] text-sky-300 opacity-60 transition-colors hover:opacity-100 group-hover:block"
+                        title="Duplicate scene"
+                      >
+                        ⧉
+                      </button>
+                      <button
+                        onClick={() => handleRenameSavedScene(saved.id, saved.name, saved.source)}
+                        disabled={saved.source === "demo"}
+                        className={cn(
+                          "hidden rounded-lg px-1.5 py-2 text-[10px] opacity-60 transition-colors hover:opacity-100 group-hover:block",
+                          saved.source === "demo" ? "cursor-not-allowed text-[#55617b]" : "text-amber-300",
+                        )}
+                        title={saved.source === "demo" ? "Duplicate the demo first to rename it" : "Rename scene"}
+                      >
+                        ✎
                       </button>
                     </div>
                   ))}
@@ -304,38 +342,41 @@ export function TopBar() {
           />
         </div>
 
-        {zoneCount > 0 && (
-          <div className="relative">
-            <button
-              onClick={() => setTargetOpen((open) => !open)}
-              className="flex h-7 min-w-[130px] items-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] px-2.5 text-[11px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
+        <div className="relative">
+          <button
+            onClick={() => setTargetOpen((open) => !open)}
+            className="flex h-7 min-w-[130px] items-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] px-2.5 text-[11px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
+          >
+            <Shield className="h-3 w-3 text-cyan-300" />
+            <span className="truncate">
+              {zoneCount > 0 && scene.criticalZones.every((zone) => zone.targetType === sceneTargetType)
+                ? `Target: ${currentTargetLabel}`
+                : `Default Target: ${currentTargetLabel}`}
+            </span>
+            <ChevronDown className="h-3 w-3 text-[#546078]" />
+          </button>
+          {targetOpen && (
+            <div
+              className="absolute left-0 top-full z-[420] mt-1 w-64 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
+              onMouseLeave={() => setTargetOpen(false)}
             >
-              <Shield className="h-3 w-3 text-cyan-300" />
-              <span className="truncate">{targetTypeConsistent ? `Target: ${currentTargetLabel}` : "Target: Mixed"}</span>
-              <ChevronDown className="h-3 w-3 text-[#546078]" />
-            </button>
-            {targetOpen && (
-              <div
-                className="absolute left-0 top-full z-[420] mt-1 w-64 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
-                onMouseLeave={() => setTargetOpen(false)}
-              >
-                {TARGET_TYPE_OPTIONS.map((entry) => (
-                  <button
-                    key={entry.value}
-                    className="w-full rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-[#171c2b]"
-                    onClick={() => {
-                      setAllZoneTargetTypes(entry.value);
-                      setTargetOpen(false);
-                    }}
-                  >
-                    <div className="text-[11px] font-medium text-[#c7d0e4]">{entry.label}</div>
-                    <div className="text-[9px] text-[#5b667c]">{entry.hint}</div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+              {TARGET_TYPE_OPTIONS.map((entry) => (
+                <button
+                  key={entry.value}
+                  className="w-full rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-[#171c2b]"
+                  onClick={() => {
+                    useStudioStore.getState().setCriticalZoneTargetType(entry.value);
+                    setAllZoneTargetTypes(entry.value);
+                    setTargetOpen(false);
+                  }}
+                >
+                  <div className="text-[11px] font-medium text-[#c7d0e4]">{entry.label}</div>
+                  <div className="text-[9px] text-[#5b667c]">{entry.hint}</div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
       </div>
 

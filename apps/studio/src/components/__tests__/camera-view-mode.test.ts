@@ -15,6 +15,7 @@ describe("CameraViewMode", () => {
     expect(source).toContain("REQUIRED ·");
     expect(source).toContain("PASSES");
     expect(source).toContain("FAILS");
+    expect(source).toContain("Actor:");
     expect(source).toContain("Back to Map View");
     expect(source).toContain("Show replay essentials");
     expect(source).toContain("Minimal camera feed");
@@ -23,6 +24,7 @@ describe("CameraViewMode", () => {
     expect(source).toContain("Why this quality:");
     expect(source).toContain("Quality:");
     expect(source).toContain("Segment:");
+    expect(source).toContain("Complete:");
     expect(source).toContain("Best Camera");
     expect(source).toContain("Footage Verification");
     expect(source).toContain("Planning aid only.");
@@ -54,8 +56,14 @@ describe("CameraViewMode", () => {
     expect(source).toContain("videoDurationS: verificationVideoDurationS");
     expect(source).toContain("bestCandidateId: verificationBestCandidateId");
     expect(source).toContain("selectedCandidateId: verificationSelectedCandidateId");
+    expect(source).toContain("alignmentMethod: verificationAlignmentMethod");
+    expect(source).toContain("autoAlignDelta: verificationAutoAlignDelta");
+    expect(source).toContain("setVerificationAlignmentMethod(snapshot.alignmentMethod ?? null)");
+    expect(source).toContain("setVerificationAutoAlignDelta(snapshot.autoAlignDelta ?? null)");
     expect(source).toContain("formatSnapshotEvidenceSummary");
     expect(source).toContain("Image upload");
+    expect(source).toContain("manual align");
+    expect(source).toContain("auto align");
     expect(source).toContain("frame set unavailable");
     expect(source).toContain("best frame selected");
     expect(source).toContain("manual frame selected");

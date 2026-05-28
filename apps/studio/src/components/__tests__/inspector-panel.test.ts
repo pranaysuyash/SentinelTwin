@@ -34,10 +34,15 @@ describe("InspectorPanel", () => {
     expect(panelSource).toContain('label="Pitch"');
     expect(panelSource).toContain("FOV (Horizontal)");
     expect(panelSource).toContain("const updateHeight = (nextHeight: number) => {");
-    expect(panelSource).toContain("Snap to Nearest Wall");
-    expect(panelSource).toContain("nearestPointOnWall");
+    expect(panelSource).toContain("Mount Snap");
+    expect(panelSource).toContain("Ceiling");
+    expect(panelSource).toContain("Pole");
+    expect(panelSource).toContain("snapCameraToMount");
     expect(panelSource).toContain("Aim at Zone");
     expect(panelSource).toContain("Duplicate");
+    expect(panelSource).toContain('SectionCard title="Night Impact"');
+    expect(panelSource).toContain('label="Illuminates Night Coverage"');
+    expect(panelSource).toContain("This light reduces night-mode penalty in the simulation");
     expect(panelSource).toContain("Privacy Impact");
     expect(panelSource).toContain("This camera does not currently trigger privacy-specific issues");
   });
@@ -48,6 +53,7 @@ describe("InspectorPanel", () => {
     expect(source).toContain("CameraFeedCanvas");
     expect(source).toContain('SectionCard title="View Mode"');
     expect(source).toContain('SectionCard title="Target Info"');
+    expect(source).toContain('SectionCard title="Mount Snap"');
     expect(source).toContain("DORI Overlay (At Target)");
     expect(source).toContain("View Options");
     expect(source).toContain("Show DORI Labels");
@@ -58,6 +64,7 @@ describe("InspectorPanel", () => {
     expect(source).toContain("Placement Presets");
     expect(source).toContain("Best fit");
     expect(source).toContain("Pick a placement preset for the next camera");
+    expect(source).toContain("snapCameraToMount");
     expect(source).toContain("<CameraFeedCanvas cameraId={camera.id} overlayOptions={feedOverlayOptions} />");
   });
 

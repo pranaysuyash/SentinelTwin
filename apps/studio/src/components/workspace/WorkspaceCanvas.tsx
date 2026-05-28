@@ -627,7 +627,9 @@ function SceneGeometry() {
         );
       })}
 
-      {layers.heatmap && result?.coverageCells ? <CoverageHeatmapInstanced cells={result.coverageCells} mode={heatmapMode} /> : null}
+      {layers.heatmap && result?.coverageCells ? (
+        <CoverageHeatmapInstanced cells={result.coverageCells} mode={heatmapMode === "fragility" ? "fragility" : "quality"} />
+      ) : null}
 
       {scene.criticalZones.map((zone) => (
         <CriticalZoneOverlay
@@ -822,6 +824,7 @@ function ToolPlacementFloor({
   const addNode = useStudioStore((s) => s.addNode);
   const selectNode = useStudioStore((s) => s.selectNode);
   const scene = useStudioStore((s) => s.scene);
+  const criticalZoneTargetType = useStudioStore((s) => s.criticalZoneTargetType);
   const editor = useStudioStore((s) => s.editor);
   const { draftWallStart, draftPolygonPoints, draftPathPoints, hoverPoint } = editor;
   const setEditorHoverPoint = useStudioStore((s) => s.setEditorHoverPoint);
@@ -916,12 +919,12 @@ function ToolPlacementFloor({
 
   const commitDraftPolygon = useCallback(() => {
     if (draftPolygonPoints.length < 3) return;
-    const zone = createCriticalZoneNode(draftPolygonPoints);
+    const zone = createCriticalZoneNode(draftPolygonPoints, criticalZoneTargetType);
     addNode(zone);
     selectNode(zone.id);
     setDraftPolygonPoints([]);
     setEditorMode("idle");
-  }, [addNode, draftPolygonPoints, selectNode, setDraftPolygonPoints, setEditorMode]);
+  }, [addNode, criticalZoneTargetType, draftPolygonPoints, selectNode, setDraftPolygonPoints, setEditorMode]);
 
   const commitDraftPath = useCallback(() => {
     if (draftPathPoints.length < 2) return;
@@ -1257,6 +1260,8 @@ function ViewControls() {
       <button
         type="button"
         onClick={() => setCanvasMode("orbit_3d")}
+        aria-label="Switch to 3D orbit"
+        title="Switch to 3D orbit"
         className={cn(
           "flex h-7 w-7 items-center justify-center rounded-lg border text-[8px] font-bold backdrop-blur-sm transition-colors",
           canvasMode === "orbit_3d"
@@ -1269,6 +1274,8 @@ function ViewControls() {
       <button
         type="button"
         onClick={() => setCanvasMode("topdown_2d")}
+        aria-label="Switch to 2D top-down"
+        title="Switch to 2D top-down"
         className={cn(
           "flex h-7 w-7 items-center justify-center rounded-lg border text-[8px] font-bold backdrop-blur-sm transition-colors",
           canvasMode === "topdown_2d"
@@ -1281,6 +1288,8 @@ function ViewControls() {
       <button
         type="button"
         onClick={resetCanvasView}
+        aria-label="Reset canvas view"
+        title="Reset canvas view"
         className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#2a3246] bg-[#0e1320]/90 backdrop-blur-sm hover:bg-[#171e30]"
       >
         <RefreshCcw className="h-3.5 w-3.5 text-[#6b7280] hover:text-white" />
@@ -1288,6 +1297,8 @@ function ViewControls() {
       <button
         type="button"
         onClick={() => toggleViewSettingsOpen()}
+        aria-label="Open View Settings"
+        title="Open View Settings"
         className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#2a3246] bg-[#0e1320]/90 backdrop-blur-sm hover:bg-[#171e30]"
       >
         <Layers className="h-3.5 w-3.5 text-[#6b7280] hover:text-white" />

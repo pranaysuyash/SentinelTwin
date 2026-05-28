@@ -42,6 +42,6 @@ export const PRODUCT_FEATURE_STATUS: ProductFeatureEntry[] = [
   {
     status: "Preview",
     feature: "Real footage verification",
-    detail: "Reference image/video ingest with multi-frame candidate extraction, auto best-frame scoring, saved snapshot evidence lineage, deterministic auto-align assist, overlay/split compare, alignment estimate, and difference heat overlay.",
+    detail: "Reference image/video ingest with multi-frame candidate extraction, auto best-frame scoring, saved snapshot evidence lineage, deterministic auto-align assist, alignment provenance tags, overlay/split compare, alignment estimate, and difference heat overlay.",
   },
 ];

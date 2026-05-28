@@ -107,6 +107,26 @@ export type BottomTab = "outcome" | "metrics" | "issues" | "timeline" | "beforea
 
 export type InspectorTab = "properties" | "view" | "status" | "analytics" | "failures";
 
+export type HeatmapMode = "quality" | "fragility" | "overlap" | "contribution" | "blindspots";
+
+export type HeatmapHoverState = {
+  cell: import("@/schema/security-scene").CoverageCellResult;
+  screenX: number;
+  screenY: number;
+};
+
+export type MeasurementToolState = {
+  active: boolean;
+  sourceCameraId: string | null;
+  targetPoint: [number, number, number] | null;
+  result: {
+    distanceM: number;
+    angleDeg: number;
+    ppm: number;
+    quality: import("@/schema/security-scene").DoriQuality;
+  } | null;
+};
+
 export type OverlayDensity = "all" | "compact" | "minimal";
 export type UiDensity = "compact" | "normal" | "comfortable";
 export type UiTheme = "dark" | "light";
@@ -420,6 +440,82 @@ function updateSavedSceneMetadata(sceneId: string, patch: Partial<Pick<SavedProj
   persistSavedProjects(projects);
 }
 
+function makeDuplicateSceneId(sceneId: string, existingIds: Set<string>) {
+  let candidate = `${sceneId}-copy`;
+  let suffix = 2;
+  while (existingIds.has(candidate)) {
+    candidate = `${sceneId}-copy-${suffix}`;
+    suffix += 1;
+  }
+  return candidate;
+}
+
+function makeDuplicateSceneName(name: string, existingNames: Set<string>) {
+  const base = name.trim() || "Untitled Scene";
+  let candidate = `${base} Copy`;
+  let suffix = 2;
+  while (existingNames.has(candidate)) {
+    candidate = `${base} Copy ${suffix}`;
+    suffix += 1;
+  }
+  return candidate;
+}
+
+function duplicateSavedSceneRecord(sceneId: string): SavedProjectRecord | null {
+  const projects = loadSavedProjectsFromStorage();
+  const source = projects.find((record) => record.scene.id === sceneId);
+  if (!source) return null;
+
+  const now = Date.now();
+  const existingIds = new Set(projects.map((record) => record.scene.id));
+  const existingNames = new Set(projects.map((record) => record.scene.name));
+  const duplicateScene = cloneSecurityScene(source.scene);
+  duplicateScene.id = makeDuplicateSceneId(source.scene.id, existingIds);
+  duplicateScene.name = makeDuplicateSceneName(source.scene.name, existingNames);
+  duplicateScene.source = "manual";
+  duplicateScene.createdAt = now;
+  duplicateScene.updatedAt = now;
+
+  const duplicateRecord: SavedProjectRecord = {
+    scene: duplicateScene,
+    folder: source.folder,
+    tags: sanitizeTags([...source.tags, "copy"]),
+    pinned: false,
+    createdAt: now,
+    updatedAt: now,
+    lastOpenedAt: null,
+  };
+
+  persistSavedProjects([duplicateRecord, ...projects]);
+  return duplicateRecord;
+}
+
+function renameSavedSceneRecord(sceneId: string, nextName: string): SavedProjectRecord | null {
+  const trimmed = nextName.trim();
+  if (!trimmed) return null;
+
+  const projects = loadSavedProjectsFromStorage();
+  const idx = projects.findIndex((record) => record.scene.id === sceneId);
+  if (idx < 0) return null;
+  if (projects[idx]?.scene.source === "demo") return null;
+
+  const existingNames = new Set(projects.filter((_, index) => index !== idx).map((record) => record.scene.name));
+  const record = projects[idx];
+  const scene = cloneSecurityScene(record.scene);
+  scene.name = existingNames.has(trimmed) ? makeDuplicateSceneName(trimmed, existingNames) : trimmed;
+  scene.updatedAt = Date.now();
+
+  const nextRecord: SavedProjectRecord = {
+    ...record,
+    scene,
+    updatedAt: Date.now(),
+  };
+
+  projects[idx] = nextRecord;
+  persistSavedProjects(projects);
+  return nextRecord;
+}
+
 export type StudioStoreState = {
   scene: SecurityScene;
   simulationResult: SimulationResult | null;
@@ -453,6 +549,8 @@ export type StudioStoreState = {
     candidateCount?: number;
     bestCandidateId?: string | null;
     selectedCandidateId?: string | null;
+    alignmentMethod?: "manual" | "auto" | null;
+    autoAlignDelta?: number | null;
     opacity: number;
     split: number;
     offsetX: number;
@@ -465,6 +563,10 @@ export type StudioStoreState = {
   selectedNodeIds: string[];
   selectedCameraId: string | null;
   activeTool: ActiveTool;
+  heatmapHover: HeatmapHoverState | null;
+  setHeatmapHover: (hover: HeatmapHoverState | null) => void;
+  measurementTool: MeasurementToolState;
+  setMeasurementTool: (tool: Partial<MeasurementToolState>) => void;
   editor: EditorDraft;
   bottomTab: BottomTab;
   inspectorTab: InspectorTab;
@@ -485,7 +587,7 @@ export type StudioStoreState = {
   pinnedAnalysisModule: BottomTab | null;
   previousLayout: DockSnapshot | null;
   layerVisibility: LayerVisibility;
-  heatmapMode: "quality" | "fragility";
+  heatmapMode: HeatmapMode;
   environmentMode: "day" | "night" | "dusk";
   showDebugOverlays: boolean;
   clientDemoOptions: {
@@ -570,7 +672,7 @@ export type StudioStoreState = {
   setInspectorTab: (tab: InspectorTab) => void;
   toggleLayer: (layer: LayerId) => void;
   setLayerVisibility: (layer: LayerId, visible: boolean) => void;
-  setHeatmapMode: (mode: "quality" | "fragility") => void;
+  setHeatmapMode: (mode: HeatmapMode) => void;
   setEnvironmentMode: (mode: "day" | "night" | "dusk") => void;
   setShowDebugOverlays: (enabled: boolean) => void;
   setVisibleComponent: (component: WorkspaceComponentId, visible: boolean) => void;
@@ -582,11 +684,13 @@ export type StudioStoreState = {
   uiTheme: UiTheme;
   aiProviderSelection: AiProviderSelection;
   overlayFilters: OverlayFilters;
+  criticalZoneTargetType: CriticalZoneNode["targetType"];
   setOverlayDensity: (density: OverlayDensity) => void;
   setUiDensity: (density: UiDensity) => void;
   setUiTheme: (theme: UiTheme) => void;
   setAiProviderSelection: (selection: AiProviderSelection) => void;
   setOverlayFilter: (filter: OverlayFilterId, visible: boolean) => void;
+  setCriticalZoneTargetType: (targetType: CriticalZoneNode["targetType"]) => void;
   viewSettingsOpen: boolean;
   setViewSettingsOpen: (open: boolean) => void;
   toggleViewSettingsOpen: () => void;
@@ -641,6 +745,8 @@ export type StudioStoreState = {
   refreshSavedScenesList: () => void;
   deleteSavedScene: (sceneId: string) => void;
   updateSavedSceneMetadata: (sceneId: string, patch: Partial<Pick<SavedProjectRecord, "folder" | "tags" | "pinned" | "lastOpenedAt">>) => void;
+  duplicateSavedScene: (sceneId: string) => SavedProjectRecord | null;
+  renameSavedScene: (sceneId: string, nextName: string) => SavedProjectRecord | null;
   getSceneStorageKey: () => string;
 
   getSelectedCamera: () => CameraNode | null;
@@ -1283,7 +1389,9 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   bottomDockSizePx: INITIAL_LAYOUT.bottomDockSizePx,
   previousLayout: null,
   layerVisibility: { ...DEFAULT_LAYERS },
-  heatmapMode: "quality",
+  heatmapMode: "quality" as HeatmapMode,
+  heatmapHover: null as HeatmapHoverState | null,
+  measurementTool: { active: false, sourceCameraId: null, targetPoint: null, result: null } as MeasurementToolState,
   environmentMode: "day",
   showDebugOverlays: INITIAL_LAYOUT.showDebugOverlays,
   autoRecompute: true,
@@ -1307,6 +1415,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     entryChips: true,
     pathLabels: true,
   },
+  criticalZoneTargetType: "person_detection",
   focusScenePointRequest: null,
   cameraPresetId: null,
   sceneIntelligenceGraph: INITIAL_SCENE_INTELLIGENCE_GRAPH,
@@ -1735,7 +1844,10 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     set((s) => ({ layerVisibility: { ...s.layerVisibility, [layer]: !s.layerVisibility[layer] } })),
   setLayerVisibility: (layer, visible) =>
     set((s) => ({ layerVisibility: { ...s.layerVisibility, [layer]: visible } })),
-  setHeatmapMode: (mode) => set({ heatmapMode: mode }),
+  setHeatmapMode: (mode) => set({ heatmapMode: mode as HeatmapMode }),
+  setHeatmapHover: (hover) => set({ heatmapHover: hover }),
+  setMeasurementTool: (patch) =>
+    set((s) => ({ measurementTool: { ...s.measurementTool, ...patch } })),
   setEnvironmentMode: (mode) => set({ environmentMode: mode }),
   setShowDebugOverlays: (enabled) => set({ showDebugOverlays: enabled }),
   setVisibleComponent: (component, visible) => set((state) => ({ visibleComponents: { ...state.visibleComponents, [component]: visible } })),
@@ -1775,11 +1887,14 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     set({ aiProviderSelection: next });
   },
   setOverlayFilter: (filter, visible) => set((s) => ({ overlayFilters: { ...s.overlayFilters, [filter]: visible } })),
-  setAllZoneTargetTypes: (targetType) =>
+  setCriticalZoneTargetType: (targetType) => set({ criticalZoneTargetType: targetType }),
+  setAllZoneTargetTypes: (targetType) => {
+    set({ criticalZoneTargetType: targetType });
     useStudioStore.getState().commitSceneChange((scene) => ({
       ...scene,
       criticalZones: scene.criticalZones.map((z) => ({ ...z, targetType })),
-    }), `Set all critical zones target type to ${targetType}`),
+    }), `Set all critical zones target type to ${targetType}`);
+  },
   toggleAutoRecompute: () => set((s) => ({ autoRecompute: !s.autoRecompute })),
 
   toggleCameraFailure: (cameraId) =>
@@ -2179,6 +2294,20 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   updateSavedSceneMetadata: (sceneId, patch) => {
     updateSavedSceneMetadata(sceneId, patch);
     get().refreshSavedScenesList();
+  },
+
+  duplicateSavedScene: (sceneId) => {
+    const duplicate = duplicateSavedSceneRecord(sceneId);
+    if (!duplicate) return null;
+    get().refreshSavedScenesList();
+    return duplicate;
+  },
+
+  renameSavedScene: (sceneId, nextName) => {
+    const renamed = renameSavedSceneRecord(sceneId, nextName);
+    if (!renamed) return null;
+    get().refreshSavedScenesList();
+    return renamed;
   },
 
   getSceneStorageKey: () => PROJECT_STORAGE_KEY,

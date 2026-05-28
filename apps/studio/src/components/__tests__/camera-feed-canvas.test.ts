@@ -23,6 +23,8 @@ describe("CameraFeedCanvas", () => {
     expect(source).toContain("PathActor");
     expect(source).toContain("Dirty Lens");
     expect(source).toContain("Actor replay active");
+    expect(source).toContain("pathLabel ?? \"Selected path\"");
+    expect(source).toContain("pathProgress ?? 0");
     expect(source).toContain("boundingBox");
     expect(source).toContain("grid");
   });

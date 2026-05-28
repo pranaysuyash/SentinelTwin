@@ -22,6 +22,8 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - The AI Layout Draft preview now also exposes the generated `SecurityScene` JSON behind an expandable disclosure with copy support, so users can inspect the exact structure before applying it ✅
 - The launcher project browser is now split into `Your Workspaces` and `Reference Demo`, so user-created/imported/scanned scenes are visually distinct from the canonical retail baseline ✅
 - The launcher project browser now also includes a source filter row (`All sources`, `Demo`, `Draft`, `Import`, `Scan`, `AI`, `Preset`) so scene origin can be filtered directly from the browser instead of only inferred from badges ✅
+- The selected-workspace launcher card now includes Duplicate Workspace and Rename Workspace actions, so local scenes can be copied or retitled from the launcher before entering Studio ✅
+- The canonical top-bar scene selector now mirrors those Duplicate/Rename actions on each saved scene row, so workspace management is available from the primary shell too ✅
 - The homepage center column now includes a `Scene Starter Gallery` of visual cards so scene creation/import/scan actions read like primary workflows instead of utility buttons ✅
 - The `Your Workspaces` region now includes starter tiles for blank/import/scan/AI workspace entry, making the section behave like a workspace hub instead of a passive saved-scene list ✅
 - The launcher left rail now includes a task-first `Security Jobs` surface with explicit `Available` / `Preview` / `Planned` status per workflow so users see product maturity before entering Studio ✅
@@ -47,6 +49,7 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - The `Debug` analysis tab now exposes live overlay density controls, debug overlay toggles, auto-recompute, scene-graph stats, camera-failure chips, and layer visibility from the store-backed diagnostics state ✅
 - Analysis and context chrome readability was raised in high-traffic surfaces (top bar subtitle, right dock headers/tabs, and bottom drawer headers/badges) so dense mode remains compact without relying on 8px text in primary navigation/status areas ✅
 - Bottom analysis drawer now includes an explicit `Explain this panel` action with per-tab intent copy, giving first-time users contextual guidance without leaving the active workflow ✅
+- The `Help` analysis tab now functions as a real workflow guide with a step-by-step map, shortcut groups derived from the live shell keymap, and recovery guidance instead of a minimal placeholder panel ✅
 - The AI command bar now surfaces an explicit offline-first residency banner and a cloud-backed availability chip so the local-vs-cloud behavior is visible in-product instead of implied by code ✅
 - The active AI provider is now store-backed and visible in View Settings, and the command layer / AI draft launcher read the same provider source of truth ✅
 - `ReportLiteTab` now exposes Copy, Export Markdown, Export HTML, and Print actions directly in the report toolbar, keeping the handoff surface self-contained ✅
@@ -377,7 +380,7 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 
 **Image 2: CameraView_TimelinePathReplay_Camera1InspectorViewtab.png**
 
-The reference is now largely matched in behavior. The remaining deltas are mostly visual polish and the actor-in-camera-feed overlay, not missing workspace modes.
+The reference is now largely matched in behavior. The remaining deltas are mostly visual polish, and the actor replay HUD in the camera feed / camera view now shows path name and completion progress instead of just a generic active badge, not missing workspace modes.
 
 ### [MISS-01] View mode tab bar above canvas ✅
 The reference shows: Map View | Camera View (active) | Camera Wall | Path Replay
@@ -439,6 +442,8 @@ pixel-level polish only.
 ## Current follow-up work
 
 The reference-image feature set is now fully built. The remaining work is now narrower: novel algorithms, deeper V0.2 work, and any future pixel-tight polish.
+- The path replay timeline now shows explicit `Follow Actor` labeling and a compact camera reach summary strip above the event table, making the replay HUD more reference-like without changing the underlying model ✅
+- The shell-level target-type switcher is now a true global default: the top bar always exposes the dropdown, it stores the current default target type, and the manual critical-zone placement tool uses that default when creating new zones ✅
 
 - The canonical demo scene now boots with a seeded simulation result, so the homepage shows real coverage and last-run state on first paint instead of a pending placeholder.
 - The default project list now also includes one manual draft workspace, so a fresh profile shows at least one real user-workspace object alongside the reference demos.
@@ -464,7 +469,9 @@ The reference-image feature set is now fully built. The remaining work is now na
 - The bottom-row report summary and Report Lite now share the same executive-summary helper, so the compact summary and handoff summary stay in sync ✅
 - The direct `?studio=1` boot path now resolves from page search params instead of `window.location`, which keeps the server and client launch path aligned.
 - The camera inspector's View tab now has a dedicated View Mode card, Target Info card, DORI Overlay summary card, and explicit show/hide view options for DORI labels, path actor, zones, timestamp, bounding box, and grid, and those toggles are wired into the live camera feed ✅
-- The camera inspector now also exposes a `Snap to Nearest Wall` action that repositions the selected camera to the closest wall and re-aims it toward the room interior, covering the remaining mount-snap interaction gap.
+- The camera inspector now exposes wall / ceiling / pole mount snap actions that reposition the selected camera to a mount target, raise it to a realistic mount height, and re-aim it toward the room interior, covering the remaining mount-snap interaction gap ✅
+- A direct helper test now covers the wall / ceiling / pole snap math so the mount behavior is protected by more than source assertions ✅
+- The light inspector now exposes brightness, type, status, range, and a live night-coverage toggle / impact summary, so security lights are editable and their simulation effect is visible in the inspector.
 - Compare mode now includes a live camera comparison section that compares two cameras from the current scene using per-camera simulation results, coverage, zone counts, and DORI reach alongside the existing snapshot compare workflow.
 - The camera inspector analytics tab now includes a per-camera privacy impact section that shows privacy issues, restricted cells, and affected zones for the selected camera, so privacy is actionable during camera tuning.
 - The Issues tab now includes a dedicated privacy review section with privacy issue counts, restricted-cell counts, and clickable affected cameras/zones so privacy enforcement is visible in the triage workflow too.

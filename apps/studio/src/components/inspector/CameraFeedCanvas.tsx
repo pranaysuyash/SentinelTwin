@@ -94,11 +94,15 @@ function FeedArtifacts({
   camera,
   clarity,
   pathState,
+  pathLabel,
+  pathProgress,
   overlayOptions,
 }: {
   camera: CameraNode;
   clarity: CameraNode["clarity"];
   pathState: { currentIndex: number; segmentProgress: number } | null;
+  pathLabel?: string | null;
+  pathProgress?: number;
   overlayOptions: FeedOverlayOptions;
 }) {
   const cameraStatus = String(camera.status);
@@ -159,8 +163,11 @@ function FeedArtifacts({
       ) : null}
 
       {overlayOptions.pathActor && pathState ? (
-        <div className="pointer-events-none absolute right-3 bottom-3 z-10 rounded-lg border border-sky-400/20 bg-black/60 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.14em] text-sky-200 backdrop-blur-sm">
-          Actor replay active
+        <div className="pointer-events-none absolute right-3 bottom-3 z-10 rounded-lg border border-sky-400/20 bg-black/60 px-2.5 py-1.5 text-[8px] font-semibold uppercase tracking-[0.14em] text-sky-200 backdrop-blur-sm">
+          <div>Actor replay active</div>
+          <div className="mt-0.5 max-w-[160px] truncate text-[7px] font-medium tracking-[0.1em] text-sky-100/80">
+            {pathLabel ?? "Selected path"} · {Math.round((pathProgress ?? 0) * 100)}% complete
+          </div>
         </div>
       ) : null}
 
@@ -295,7 +302,14 @@ export function CameraFeedCanvas({
         </Canvas>
       </div>
 
-      <FeedArtifacts camera={camera} clarity={camera.clarity} pathState={pathState} overlayOptions={overlayFlags} />
+      <FeedArtifacts
+        camera={camera}
+        clarity={camera.clarity}
+        pathState={pathState}
+        pathLabel={selectedPath?.label ?? null}
+        pathProgress={pathReplay.progress}
+        overlayOptions={overlayFlags}
+      />
 
       <div className="absolute left-2 top-2 z-10 flex items-center gap-1 rounded-lg border border-[#24304a] bg-black/50 p-1 backdrop-blur-sm">
         {(Object.keys(FEED_MODE_LABELS) as FeedViewMode[]).map((mode) => (

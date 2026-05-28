@@ -19,6 +19,7 @@ import type { CameraNode, DoriQuality, SimulationAssumptions } from "@/schema/se
 import { qualityToScore } from "@/simulation/dori";
 import { type InspectorTab, useStudioStore } from "@/store/studio-store";
 import { applyCameraPreset, CAMERA_PRESETS, describeCameraPreset, findBestCameraPreset, getCameraPreset } from "@/components/workspace/CameraPresetPicker";
+import { snapCameraToMount, type CameraMountSnapMode } from "./camera-mount-snap";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -231,6 +232,7 @@ export function CameraInspector() {
         ? "Custom"
         : "Day";
   const targetPpmEstimate = targetZone ? qualityRangeLabel(targetQuality, scene.assumptions.doriStandard) : "—";
+  const hasPoleTarget = scene.obstructions.some((obstruction) => obstruction.obstructionType === "pillar" || obstruction.label.toLowerCase().includes("pillar"));
 
   const updatePosition = (next: [number, number, number]) => updateNode(camera.id, { position: next });
 
@@ -264,6 +266,12 @@ export function CameraInspector() {
 
   const setViewToggle = (key: ViewToggleKey) => {
     setViewToggles((current) => ({ ...current, [key]: !current[key] }));
+  };
+
+  const snapToMount = (mode: CameraMountSnapMode) => {
+    const patch = snapCameraToMount(camera, scene, mode);
+    if (!patch) return;
+    updateNode(camera.id, patch);
   };
 
   const openInCameraWall = () => {
@@ -422,6 +430,50 @@ export function CameraInspector() {
               options={MOUNT_OPTIONS}
               onChange={(v) => updateNode(camera.id, { mountType: v as CameraNode["mountType"] })}
             />
+
+            <SectionCard title="Mount Snap">
+              <div className="space-y-2">
+                <div className="text-[10px] leading-relaxed text-[#6a748b]">
+                  Snap this camera to a wall, ceiling, or pole-like mount target, then re-aim it toward the room interior.
+                </div>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {([
+                    {
+                      mode: "wall" as const,
+                      label: "Wall",
+                      helper: scene.walls.length > 0 ? "Nearest wall" : "No walls",
+                      disabled: scene.walls.length === 0,
+                    },
+                    {
+                      mode: "ceiling" as const,
+                      label: "Ceiling",
+                      helper: "Ceiling plane",
+                      disabled: false,
+                    },
+                    {
+                      mode: "pole" as const,
+                      label: "Pole",
+                      helper: hasPoleTarget ? "Nearest pillar" : "No pillar",
+                      disabled: !hasPoleTarget,
+                    },
+                  ] satisfies Array<{ mode: CameraMountSnapMode; label: string; helper: string; disabled: boolean }>).map((item) => (
+                    <button
+                      key={item.mode}
+                      type="button"
+                      onClick={() => snapToMount(item.mode)}
+                      disabled={item.disabled}
+                      className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-left transition-colors hover:border-[#2d3750] hover:bg-[#111521] disabled:cursor-not-allowed disabled:opacity-45"
+                    >
+                      <div className="text-[11px] font-semibold text-[#e6ebf7]">{item.label}</div>
+                      <div className="mt-0.5 text-[9px] text-[#7b889f]">{item.helper}</div>
+                    </button>
+                  ))}
+                </div>
+                <div className="text-[9px] text-[#4a5568]">
+                  Wall snapping uses room walls, ceiling snapping uses the ceiling plane, and pole snapping prefers the nearest pillar-like obstruction.
+                </div>
+              </div>
+            </SectionCard>
 
             <div className="border-b border-[#181c27] py-1.5">
               <div className="mb-1.5 text-[10px] text-[#6a748b]">Position (m)</div>

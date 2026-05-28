@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore, type CSSProperties,
 import {
   ArrowRight,
   Camera,
+  ChevronDown,
   Compass,
   FileUp,
   FolderOpen,
@@ -18,6 +19,7 @@ import {
   Settings2,
   ShieldCheck,
   Sparkles,
+  Sun,
   TriangleAlert,
 } from "lucide-react";
 
@@ -143,6 +145,8 @@ type StudioDashboardHomeProps = {
   onOpenReport: () => void;
   onOpenScene?: (scene: SecurityScene) => void;
   onUpdateProjectMetadata: (sceneId: string, patch: Partial<Pick<SavedProjectRecord, "folder" | "tags" | "pinned" | "lastOpenedAt">>) => void;
+  onDuplicateProject: (sceneId: string) => SavedProjectRecord | null;
+  onRenameProject: (sceneId: string, nextName: string) => SavedProjectRecord | null;
   onOpenMode: (viewMode: ViewMode, preset: WorkspacePreset, bottomTab?: BottomTab) => void;
   featureStatus: ProductFeatureEntry[];
 };
@@ -711,9 +715,15 @@ function MiniStat({
 function ProjectMetadataEditor({
   project,
   onUpdateProjectMetadata,
+  onDuplicateProject,
+  onRenameProject,
+  onSelectProject,
 }: {
   project: SavedProjectRecord;
   onUpdateProjectMetadata: StudioDashboardHomeProps["onUpdateProjectMetadata"];
+  onDuplicateProject: StudioDashboardHomeProps["onDuplicateProject"];
+  onRenameProject: StudioDashboardHomeProps["onRenameProject"];
+  onSelectProject: (sceneId: string) => void;
 }) {
   const [folderDraft, setFolderDraft] = useState(project.folder);
   const [tagDraft, setTagDraft] = useState(project.tags.join(", "));
@@ -732,6 +742,20 @@ function ProjectMetadataEditor({
 
   const togglePinned = () => {
     onUpdateProjectMetadata(project.scene.id, { pinned: !project.pinned });
+  };
+
+  const duplicateWorkspace = () => {
+    const duplicate = onDuplicateProject(project.scene.id);
+    if (duplicate) {
+      onSelectProject(duplicate.scene.id);
+    }
+  };
+
+  const renameWorkspace = () => {
+    if (project.scene.source === "demo") return;
+    const nextName = window.prompt("Rename workspace", project.scene.name);
+    if (nextName == null) return;
+    onRenameProject(project.scene.id, nextName);
   };
 
   const selectedProjectScene = project.scene;
@@ -816,6 +840,29 @@ function ProjectMetadataEditor({
         <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
           <MiniStat label="Cameras" value={`${selectedProjectScene.cameras.length}`} accent="text-sky-200" detail="Saved scene cameras" />
           <MiniStat label="Zones" value={`${selectedProjectScene.criticalZones.length}`} accent="text-sky-200" detail="Critical zones tracked" />
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={duplicateWorkspace}
+            className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-[color:var(--st-muted)] transition-colors hover:bg-white/[0.05] hover:text-white"
+          >
+            Duplicate Workspace
+          </button>
+          <button
+            type="button"
+            onClick={renameWorkspace}
+            disabled={project.scene.source === "demo"}
+            title={project.scene.source === "demo" ? "Duplicate the reference demo first to rename it." : "Rename workspace"}
+            className={cn(
+              "rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
+              project.scene.source === "demo"
+                ? "border-[color:var(--st-border)] bg-white/[0.02] text-[color:var(--st-muted)] opacity-60"
+                : "border-[color:var(--st-border)] bg-white/[0.03] text-[color:var(--st-muted)] hover:bg-white/[0.05] hover:text-white",
+            )}
+          >
+            Rename Workspace
+          </button>
         </div>
       </div>
 
@@ -908,6 +955,8 @@ export function StudioDashboardHome({
   onOpenReport,
   onOpenScene,
   onUpdateProjectMetadata,
+  onDuplicateProject,
+  onRenameProject,
   onOpenMode,
   featureStatus,
 }: StudioDashboardHomeProps) {
@@ -1082,78 +1131,72 @@ export function StudioDashboardHome({
       <div className="pointer-events-none absolute inset-0 opacity-[0.18] [background-image:linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] [background-size:64px_64px]" />
 
       <div className="relative z-10 flex min-h-screen flex-col gap-4 p-4 lg:p-5">
-        <header className="grid gap-4 rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] px-4 py-4 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur-lg lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.9fr)_auto]">
-          <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-400/25 bg-emerald-500/12 text-emerald-200">
+        <header className="flex flex-wrap items-center gap-3 rounded-[24px] border border-[color:var(--st-border)] bg-[rgba(9,14,23,0.94)] px-4 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.34)] backdrop-blur-lg">
+          <div className="flex min-w-[240px] items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-emerald-400/25 bg-emerald-500/12 text-emerald-200">
               <ShieldCheck className="h-6 w-6" />
             </div>
             <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-[0.28em] text-[color:var(--st-muted)]">SentinelTwin Studio</span>
-                <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-200">
-                  Studio Dashboard Home
-                </span>
-              </div>
-              <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Security Simulation Workspace</h1>
-              <p className="mt-1 max-w-2xl text-sm text-[color:var(--st-muted)]">
-                Launch directly into the live workspace, inspect the current scene, and jump to coverage, replay, wall, compare, or report views without the launcher feeling like a setup form. The demo scene is the baseline; create, import, or scan your own site from the scene-work entry points below.
-              </p>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1.5 text-[11px] text-white">
-                  {scene.name}
-                </span>
-                <span className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1.5 text-[11px] text-[color:var(--st-muted)]">
-                  {SOURCE_LABELS[scene.source]}
-                </span>
-                <span className={cn(
-                  "rounded-full border px-3 py-1.5 text-[11px]",
-                  simulationDirty ? "border-amber-400/25 bg-amber-500/10 text-amber-200" : "border-emerald-400/25 bg-emerald-500/10 text-emerald-200",
-                )}>
-                  {coverage == null ? "Simulation pending" : simulationDirty ? "Needs recompute" : "Up to date"}
-                </span>
-                <span className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1.5 text-[11px] text-[color:var(--st-muted)]">
-                  {headerAssumptions.timeOfDay === "night" ? "Night Mode" : headerAssumptions.timeOfDay === "custom" ? "Custom" : "Day Mode"}
-                </span>
-                {currentRunLabel ? (
-                  <span
-                    suppressHydrationWarning
-                    className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1.5 text-[11px] text-[color:var(--st-muted)]"
-                  >
-                    {currentRunLabel}
-                  </span>
-                ) : null}
-              </div>
+              <div className="truncate text-base font-semibold tracking-tight text-white">SentinelTwin Studio</div>
+              <div className="truncate text-xs text-[color:var(--st-muted)]">Security Simulation Workspace</div>
             </div>
           </div>
 
-          <div className="grid gap-2 rounded-[22px] border border-white/[0.04] bg-white/[0.02] p-3">
-            <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
-              <Radar className="h-3.5 w-3.5 text-sky-300" />
-              Workspace status
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <MiniStat label="Coverage" value={coverage != null ? `${Math.round(coverage)}%` : "—"} accent={coverage != null ? coverageTone(coverage) : "text-white"} detail="Current scene baseline" />
-              <MiniStat label="Zones" value={`${passCount}/${totalZones}`} accent={passCount === totalZones ? "text-emerald-300" : "text-amber-300"} detail="Passing critical zones" />
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <MiniStat label="Issues" value={`${issues.length}`} accent={issues.length > 0 ? "text-amber-300" : "text-emerald-300"} detail={worstIssue ? worstIssue.description : "No current issues"} />
-              <MiniStat label="Last run" value={formatTime(lastRun)} accent="text-sky-200" detail="Simulation timestamp" />
-            </div>
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            <span className="inline-flex max-w-[260px] items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.04] px-3 py-2 text-xs font-medium text-white">
+              <span className="truncate">{scene.name}</span>
+              <ChevronDown className="h-3.5 w-3.5 flex-none text-[color:var(--st-muted)]" />
+            </span>
+            <span className={cn(
+              "inline-flex items-center rounded-xl border px-3 py-2 text-xs font-medium",
+              simulationDirty
+                ? "border-amber-400/25 bg-amber-500/10 text-amber-200"
+                : "border-emerald-400/25 bg-emerald-500/10 text-emerald-200",
+            )}>
+              {coverage == null ? "Simulation pending" : simulationDirty ? "Needs recompute" : "Up to date"}
+            </span>
+            <span suppressHydrationWarning className="inline-flex items-center rounded-xl border border-transparent px-2 py-2 text-xs text-[color:var(--st-muted)]">
+              {currentRunLabel ?? "Last run: Never"}
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-xs text-white">
+              <Sun className="h-4 w-4 text-amber-300" />
+              {headerAssumptions.timeOfDay === "night" ? "Night Mode" : headerAssumptions.timeOfDay === "custom" ? "Custom Mode" : "Day Mode"}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={onOpenIssues}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-3 py-2 text-[11px] font-medium text-amber-100 transition-colors hover:border-amber-300/30 hover:bg-amber-500/14"
+              onClick={onOpenStudio}
+              className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-xs font-medium text-white transition-colors hover:border-sky-400/30 hover:bg-white/[0.05]"
             >
-              <TriangleAlert className="h-3.5 w-3.5" />
-              Open Issues
+              <FolderOpen className="h-4 w-4 text-sky-200" />
+              Open Studio
             </button>
-          </div>
-
-          <div className="grid gap-2">
-            <ActionButton icon={<FolderOpen className="h-4 w-4" />} label="Open Studio" description="Enter the live workspace immediately." onClick={onOpenStudio} variant="primary" />
-            <ActionButton icon={<Play className="h-4 w-4" />} label="Run Simulation" description="Refresh coverage and issue results from the current scene." onClick={onRunSimulation} />
-            <ActionButton icon={<FileUp className="h-4 w-4" />} label="Import JSON" description="Load a SecurityScene file into the workspace." onClick={onImportScene} />
-            <ActionButton icon={<Plus className="h-4 w-4" />} label="New Scene" description="Create a blank scene or a guided template." onClick={onCreateScene} />
+            <button
+              type="button"
+              onClick={onRunSimulation}
+              className="inline-flex items-center gap-2 rounded-xl border border-emerald-300/30 bg-emerald-500 px-3 py-2 text-xs font-semibold text-[#03130d] transition-colors hover:bg-emerald-400"
+            >
+              <Play className="h-4 w-4" />
+              Run Simulation
+            </button>
+            <button
+              type="button"
+              onClick={onImportScene}
+              className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-xs font-medium text-white transition-colors hover:border-sky-400/30 hover:bg-white/[0.05]"
+            >
+              <FileUp className="h-4 w-4 text-sky-200" />
+              Import JSON
+            </button>
+            <button
+              type="button"
+              onClick={onCreateScene}
+              className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-xs font-medium text-white transition-colors hover:border-sky-400/30 hover:bg-white/[0.05]"
+            >
+              <Plus className="h-4 w-4 text-sky-200" />
+              New Scene
+            </button>
           </div>
         </header>
 
@@ -1690,7 +1733,14 @@ export function StudioDashboardHome({
                 </div>
                 {selectedProjectRecord ? (
                   <>
-                    <ProjectMetadataEditor key={selectedProjectRecord.scene.id} project={selectedProjectRecord} onUpdateProjectMetadata={onUpdateProjectMetadata} />
+                    <ProjectMetadataEditor
+                      key={selectedProjectRecord.scene.id}
+                      project={selectedProjectRecord}
+                      onUpdateProjectMetadata={onUpdateProjectMetadata}
+                      onDuplicateProject={onDuplicateProject}
+                      onRenameProject={onRenameProject}
+                      onSelectProject={setSelectedProjectId}
+                    />
                     <div className="mt-4 space-y-2">
                       <ActionButton
                         icon={<FolderOpen className="h-4 w-4" />}

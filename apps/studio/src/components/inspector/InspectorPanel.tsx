@@ -25,7 +25,8 @@ import {
 import { Badge } from "@/components/shared/Badge";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { cn } from "@/lib/cn";
-import { nearestPointOnWall, pathLength } from "@/components/workspace/editing/editor-geometry";
+import { pathLength } from "@/components/workspace/editing/editor-geometry";
+import { snapCameraToMount, type CameraMountSnapMode } from "@/components/inspector/camera-mount-snap";
 import type {
   CameraNode,
   CriticalZoneNode,
@@ -87,24 +88,6 @@ function computeDoriRanges(camera: CameraNode, scenePpm: SimulationAssumptions["
   const recog = Math.min(resW / (2 * scenePpm.recognition * tanHalfFov), cap);
   const ident = Math.min(resW / (2 * scenePpm.identification * tanHalfFov), cap);
   return { det, obs, recog, ident };
-}
-
-function snapCameraToNearestWall(camera: CameraNode, scene: SecurityScene) {
-  if (scene.walls.length === 0) return null;
-
-  const { wallPoint } = nearestPointOnWall([camera.position[0], camera.position[2]], scene.walls);
-  const snappedHeight = Math.max(2.4, scene.assumptions.wallHeightM - 0.25);
-  const centerX = scene.dimensions.width / 2;
-  const centerZ = scene.dimensions.depth / 2;
-  const yawDeg = Math.atan2(centerX - wallPoint[0], centerZ - wallPoint[1]) * (180 / Math.PI);
-
-  return {
-    mountType: "wall" as const,
-    mountHeightM: snappedHeight,
-    position: [wallPoint[0], snappedHeight, wallPoint[1]] as [number, number, number],
-    yawDeg: Math.round(yawDeg),
-    pitchDeg: Math.min(camera.pitchDeg, -20),
-  };
 }
 
 type CameraViewMode = "normal" | "ir" | "low_light" | "thermal";
@@ -255,7 +238,13 @@ function CameraInspector() {
   };
 
   const snapToWall = () => {
-    const patch = snapCameraToNearestWall(camera, scene);
+    const patch = snapCameraToMount(camera, scene, "wall");
+    if (!patch) return;
+    updateNode(camera.id, patch);
+  };
+
+  const snapToMount = (mode: CameraMountSnapMode) => {
+    const patch = snapCameraToMount(camera, scene, mode);
     if (!patch) return;
     updateNode(camera.id, patch);
   };
@@ -384,19 +373,45 @@ function CameraInspector() {
             <SectionCard title="Mount Snap">
               <div className="space-y-2">
                 <div className="text-[10px] leading-relaxed text-[#6a748b]">
-                  Snap this camera to the nearest wall, raise it to a realistic mount height, and re-aim it toward the room interior.
+                  Snap this camera to a wall, ceiling, or pole-like mount target, then re-aim it toward the room interior.
                 </div>
-                <button
-                  type="button"
-                  onClick={snapToWall}
-                  disabled={scene.walls.length === 0}
-                  className="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-cyan-500/25 bg-cyan-500/10 text-[10px] font-medium text-cyan-300 transition-colors hover:border-cyan-400/40 hover:bg-cyan-500/15 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <Crosshair className="h-3.5 w-3.5" />
-                  Snap to Nearest Wall
-                </button>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {([
+                    {
+                      mode: "wall" as const,
+                      label: "Wall",
+                      helper: scene.walls.length > 0 ? "Nearest wall" : "No walls",
+                      disabled: scene.walls.length === 0,
+                    },
+                    {
+                      mode: "ceiling" as const,
+                      label: "Ceiling",
+                      helper: "Ceiling plane",
+                      disabled: false,
+                    },
+                    {
+                      mode: "pole" as const,
+                      label: "Pole",
+                      helper: scene.obstructions.some((obstruction) => obstruction.obstructionType === "pillar" || obstruction.label.toLowerCase().includes("pillar"))
+                        ? "Nearest pillar"
+                        : "No pillar",
+                      disabled: !scene.obstructions.some((obstruction) => obstruction.obstructionType === "pillar" || obstruction.label.toLowerCase().includes("pillar")),
+                    },
+                  ] satisfies Array<{ mode: CameraMountSnapMode; label: string; helper: string; disabled: boolean }>).map((item) => (
+                    <button
+                      key={item.mode}
+                      type="button"
+                      onClick={() => snapToMount(item.mode)}
+                      disabled={item.disabled}
+                      className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-left transition-colors hover:border-[#2d3750] hover:bg-[#111521] disabled:cursor-not-allowed disabled:opacity-45"
+                    >
+                      <div className="text-[11px] font-semibold text-[#e6ebf7]">{item.label}</div>
+                      <div className="mt-0.5 text-[9px] text-[#7b889f]">{item.helper}</div>
+                    </button>
+                  ))}
+                </div>
                 <div className="text-[9px] text-[#4a5568]">
-                  Uses the current room walls as the snap target.
+                  Wall snapping uses room walls, ceiling snapping uses the ceiling plane, and pole snapping prefers the nearest pillar-like obstruction.
                 </div>
               </div>
             </SectionCard>
@@ -1576,6 +1591,7 @@ function LightInspector() {
   if (!light) return null;
 
   const statusColor = light.status === "on" ? "green" : light.status === "failed" ? "red" : "gray";
+  const nightCoverageActive = light.status === "on" && light.illuminatesNightCoverage;
 
   return (
     <>
@@ -1668,6 +1684,25 @@ function LightInspector() {
             ]}
             onChange={(value) => updateNode(light.id, { status: value as SecurityLightNode["status"] })}
           />
+        </SectionCard>
+
+        <SectionCard title="Night Impact">
+          <ToggleField
+            label="Illuminates Night Coverage"
+            value={light.illuminatesNightCoverage}
+            trueLabel="Yes"
+            falseLabel="No"
+            onChange={(value) => updateNode(light.id, { illuminatesNightCoverage: value })}
+          />
+          <Field
+            label="Night Contribution"
+            value={nightCoverageActive ? "Active" : "Inactive"}
+          />
+          <div className="rounded-lg border border-[#1f2536] bg-[#0b0f17] px-2 py-2 text-[10px] leading-relaxed text-[#8d98b0]">
+            {nightCoverageActive
+              ? "This light reduces night-mode penalty in the simulation and can improve low-light camera quality."
+              : "This light does not currently reduce night-mode penalty. Turn it on and enable night coverage to influence simulation results."}
+          </div>
         </SectionCard>
       </div>
 

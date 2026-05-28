@@ -25,6 +25,8 @@ describe("Studio launcher shell", () => {
     expect(source).toContain("onOpenScene={openScene}");
     expect(source).toContain("savedProjects={savedProjects}");
     expect(source).toContain("onUpdateProjectMetadata={updateSavedSceneMetadata}");
+    expect(source).toContain("onDuplicateProject={duplicateSavedScene}");
+    expect(source).toContain("onRenameProject={renameSavedScene}");
     expect(source).toContain("const [aiDraftPreview, setAiDraftPreview] = useState");
     expect(source).toContain("const aiDraftSummary = useMemo");
     expect(source).toContain("Draft Preview");

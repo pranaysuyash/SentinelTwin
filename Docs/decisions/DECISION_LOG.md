@@ -2103,6 +2103,20 @@ reference to the new path, then remove the old."
 - **Keep manual arrow/slider alignment only** — rejected because it is too slow for frequent verification loops.
 - **Use model-based alignment inference** — rejected for now because deterministic geometry-first behavior is preferred for this preview stage.
 
+### D-127: Verification snapshots should persist alignment provenance (manual vs auto)
+**Date:** 2026-05-28
+
+**Decision:** Persist `alignmentMethod` (`manual`/`auto`) and `autoAlignDelta` metadata with each camera verification snapshot, and surface this provenance in the saved snapshot evidence summary.
+
+**Rationale:**
+- Offset values alone do not explain whether alignment was operator-driven or assistant-driven.
+- Persisting provenance makes snapshot evidence more audit-friendly and helps operators trust restored comparisons.
+- Including score delta on auto-aligned snapshots gives a quick quality-improvement signal without opening a separate diagnostics surface.
+
+**Alternatives rejected:**
+- **Store only offsets + final score** — rejected because it hides workflow provenance.
+- **Keep provenance transient-only in session state** — rejected because restore/export paths would lose operator context.
+
 ### D-127: Heuristic AI drafts should enrich obvious scene prompts with entry, light, and path hints
 **Date:** 2026-05-28
 
@@ -2270,3 +2284,101 @@ reference to the new path, then remove the old."
 **Alternatives rejected:**
 - **Keep source only as a badge** — rejected because users should be able to filter by origin, not just read it.
 - **Add a separate browser page** — rejected because the existing launcher already owns the canonical workspace browsing surface.
+
+### D-140: Camera mount snap should support wall, ceiling, and pole targets
+**Date:** 2026-05-28
+
+**Decision:** Expand the camera inspector mount snap action from wall-only snapping to a three-way mount menu covering wall, ceiling, and pole targets.
+
+**Rationale:**
+- The spec describes snap behavior for multiple mount types, not just wall anchoring.
+- Wall-only snapping improved the workflow, but it still left the ceiling/pole cases as a visible product gap.
+- A shared helper keeps the same mount logic available from both camera-inspector entry points without duplicating the geometry math.
+
+**Alternatives rejected:**
+- **Keep wall-only snapping** — rejected because it leaves the spec gap partially open.
+- **Create a separate mount editor panel** — rejected because the inspector already owns the camera placement workflow.
+
+### D-139: Help tab should mirror the live workflow instead of a generic help stub
+**Date:** 2026-05-28
+
+**Decision:** Expand the `Help` analysis tab into a real workflow guide with a step-by-step map, live shortcut groups derived from the shell keymap, domain terms, and recovery guidance.
+
+**Rationale:**
+- The help panel should teach the actual Studio workflow, not repeat generic onboarding text.
+- Deriving the shortcut groups from the same live constants used by the shell keeps the guidance aligned with the real keymap.
+- A richer help surface is useful for first-run users and still valuable for power users who need a quick workflow reference.
+
+**Alternatives rejected:**
+- **Keep Help as a short text stub** — rejected because it undersells the analysis drawer and repeats information already available elsewhere.
+- **Move the workflow guide to a separate doc only** — rejected because the guidance should be available in-product where users are working.
+
+### D-141: Launcher workspace management should support duplicate and rename actions
+**Date:** 2026-05-28
+
+**Decision:** Add Duplicate Workspace and Rename Workspace actions to the selected-workspace launcher card so saved scenes can be copied or retitled from the launcher before entering Studio.
+
+**Rationale:**
+- The launcher already owns the browser and metadata-editing surface for local workspaces.
+- Duplicate/rename are the next obvious management actions after open, pin, folder, and tag editing.
+- Prompting from the launcher keeps workspace management lightweight and avoids forcing users into the editor just to create a copy or retitle a draft.
+
+**Alternatives rejected:**
+- **Leave duplicate/rename in the editor only** — rejected because the launcher is the primary workspace hub.
+- **Build a separate workspace management modal** — rejected because the selected workspace card already has the right context and layout for these actions.
+
+### D-142: Top-bar scene selector should mirror launcher workspace management
+**Date:** 2026-05-28
+
+**Decision:** Add Duplicate and Rename actions to each saved-scene row in the canonical top-bar scene selector so the primary shell exposes the same workspace-management operations as the launcher.
+
+**Rationale:**
+- The top bar is the canonical scene selector and should not lag behind the launcher on workspace management.
+- Keeping duplicate/rename in the same scene dropdown makes the primary shell more consistent and avoids hiding basic project operations in a secondary view.
+- The launcher already proved the pattern, so mirroring it in the top bar is a low-risk way to close the remaining visible gap.
+
+**Alternatives rejected:**
+- **Leave duplicate/rename launcher-only** — rejected because the top bar is the primary scene selector.
+- **Add a separate workspace actions menu** — rejected because the existing scene dropdown already has the right context.
+
+### D-143: Timeline replay should expose camera reach summary and explicit actor-follow mode
+**Date:** 2026-05-28
+
+**Decision:** Add a compact per-camera reach summary strip to the timeline tab and relabel the replay follow toggle as `Follow Actor` so the path replay HUD is more explicit without changing the simulation model.
+
+**Rationale:**
+- The timeline tab is the most reference-sensitive replay surface and benefits from a quick camera reach overview before the event table.
+- The existing follow behavior already follows the actor; the label should say that clearly.
+- This is a low-risk visual improvement that stays inside the existing replay model and does not require new simulation data.
+
+**Alternatives rejected:**
+- **Leave the timeline as a table-only surface** — rejected because the replay HUD still felt more streamlined than the reference.
+- **Add new replay data structures** — rejected because the current result model already contains the reach summary needed for a stronger HUD.
+
+### D-144: Critical-zone target type should be a shell-level default for new zones
+**Date:** 2026-05-28
+
+**Decision:** Promote the target-type switcher into a shell-level default: the top bar always shows the global target-type dropdown, the choice updates all existing critical zones, and the manual critical-zone placement tool uses the same default when creating new zones.
+
+**Rationale:**
+- The old zone-only bulk-edit behavior did not fully satisfy the product expectation of a global scene-level target switcher.
+- A shell-level default makes the control useful before any zones exist and keeps new manual zones aligned with the user’s chosen target type.
+- This keeps the scene-level workflow consistent without inventing a separate scene schema field.
+
+**Alternatives rejected:**
+- **Leave the switcher as a bulk-edit only control** — rejected because it still felt like a partial implementation.
+- **Add a new scene-schema field for target default** — rejected because the workspace store already provides a lightweight default without schema churn.
+
+### D-145: Light inspector should expose night-coverage contribution
+**Date:** 2026-05-28
+
+**Decision:** Add a night-impact section to the light inspector so each security light can explicitly toggle whether it contributes to night coverage and show a short simulation-impact summary inline.
+
+**Rationale:**
+- Security lights directly affect the lighting penalty and night-mode analysis, so the light inspector should expose that contribution where the light is edited.
+- A compact inline explanation is more actionable than forcing users to infer the effect from the metrics or report surfaces.
+- Keeping the control inside the existing inspector avoids inventing a separate analysis-only surface for a property that belongs to the light node itself.
+
+**Alternatives rejected:**
+- **Leave the light inspector as position/type/status only** — rejected because it hid a simulation-relevant property that already exists in the node model.
+- **Move the night-coverage control into a separate analysis tab** — rejected because it would split the editable property away from the object that owns it.

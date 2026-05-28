@@ -16,5 +16,6 @@ describe("product feature status", () => {
     expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Real footage verification" && entry.detail.includes("auto best-frame scoring"))).toBe(true);
     expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Real footage verification" && entry.detail.includes("saved snapshot evidence lineage"))).toBe(true);
     expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Real footage verification" && entry.detail.includes("deterministic auto-align assist"))).toBe(true);
+    expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Real footage verification" && entry.detail.includes("alignment provenance tags"))).toBe(true);
   });
 });

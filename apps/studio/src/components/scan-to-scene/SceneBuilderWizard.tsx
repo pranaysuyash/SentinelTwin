@@ -13,8 +13,8 @@ import {
   validateFloorPlan,
 } from "@/lib/floor-plan-import";
 import { SCENE_TEMPLATES, type SceneTemplate } from "@/lib/scene-templates";
-import { createSmallRetailShopScene } from "@/demo-scenes/small-retail-shop";
 import { suggestCameraPlacements } from "@/lib/camera-suggestions";
+import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 import { ImportReview } from "./ImportReview";
 import { getFloorPlanExtractionConfig } from "./floor-plan-extraction-config";
 
@@ -52,10 +52,21 @@ const initialState: WizardState = {
 
 interface SceneBuilderWizardProps {
   onClose?: () => void;
+  forceImportMethod?: ImportMethod | null;
 }
 
-export function SceneBuilderWizard({ onClose }: SceneBuilderWizardProps) {
-  const [state, setState] = useState<WizardState>(initialState);
+export function SceneBuilderWizard({ onClose, forceImportMethod = null }: SceneBuilderWizardProps) {
+  const seededState = useMemo<WizardState>(() => {
+    if (forceImportMethod === "floor_plan") {
+      return {
+        ...initialState,
+        importMethod: "floor_plan",
+        step: 2,
+      };
+    }
+    return initialState;
+  }, [forceImportMethod]);
+  const [state, setState] = useState<WizardState>(seededState);
   const setScene = useStudioStore((s) => s.setScene);
   const roomHeightM = state.heightM;
   const floorPlanScalePixelsPerMeter = state.floorPlanScalePixelsPerMeter;
@@ -131,15 +142,60 @@ export function SceneBuilderWizard({ onClose }: SceneBuilderWizardProps) {
       }
     } else {
       // Blank
-      scene = createSmallRetailShopScene();
+      scene = createBlankSecurityScene();
       scene.name = state.roomName;
       scene.dimensions = { width: state.widthM, depth: state.depthM, height: state.heightM };
-      scene.cameras = [];
-      scene.securityLights = [];
-      scene.obstructions = [];
-      scene.criticalZones = [];
-      scene.entryPoints = [];
-      scene.paths = [];
+      scene.assumptions.wallHeightM = state.heightM;
+      scene.walls = [
+        {
+          id: "wall_s",
+          nodeType: "wall",
+          label: "South Wall",
+          start: [0, 0],
+          end: [state.widthM, 0],
+          heightM: state.heightM,
+          thicknessM: 0.18,
+          material: "solid",
+          visionTransmission: 0,
+          source: "manual",
+        },
+        {
+          id: "wall_n",
+          nodeType: "wall",
+          label: "North Wall",
+          start: [0, state.depthM],
+          end: [state.widthM, state.depthM],
+          heightM: state.heightM,
+          thicknessM: 0.18,
+          material: "solid",
+          visionTransmission: 0,
+          source: "manual",
+        },
+        {
+          id: "wall_e",
+          nodeType: "wall",
+          label: "East Wall",
+          start: [state.widthM, 0],
+          end: [state.widthM, state.depthM],
+          heightM: state.heightM,
+          thicknessM: 0.18,
+          material: "solid",
+          visionTransmission: 0,
+          source: "manual",
+        },
+        {
+          id: "wall_w",
+          nodeType: "wall",
+          label: "West Wall",
+          start: [0, 0],
+          end: [0, state.depthM],
+          heightM: state.heightM,
+          thicknessM: 0.18,
+          material: "solid",
+          visionTransmission: 0,
+          source: "manual",
+        },
+      ];
       scene.source = "manual";
     }
 
@@ -171,8 +227,8 @@ export function SceneBuilderWizard({ onClose }: SceneBuilderWizardProps) {
   }, [state, setScene, onClose]);
 
   const handleReset = useCallback(() => {
-    setState(initialState);
-  }, []);
+    setState(seededState);
+  }, [seededState]);
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[#0b0f17]">
@@ -587,6 +643,32 @@ function ReviewStep({
           </div>
         ))}
       </div>
+
+      {value.importMethod === "floor_plan" && value.floorPlanResult ? (
+        <div className="rounded-lg border border-[#1e2130] bg-[#070a12] p-3">
+          <div className="text-[8px] font-medium uppercase tracking-wider text-[#59637a]">Floor Plan Commit Summary</div>
+          <div className="mt-2 grid grid-cols-2 gap-2 text-[9px] text-[#8090a8]">
+            <div>Detection confidence: <span className="text-[#c5ccdb]">{(value.floorPlanResult.confidence * 100).toFixed(0)}%</span></div>
+            <div>Unresolved warnings: <span className={value.importWarnings.length > 0 ? "text-amber-300" : "text-emerald-300"}>{value.importWarnings.length}</span></div>
+            <div>Doors: <span className="text-[#c5ccdb]">{value.floorPlanResult.doors.length}</span></div>
+            <div>Windows: <span className="text-[#c5ccdb]">{value.floorPlanResult.windows.length}</span></div>
+            <div>Walls: <span className="text-[#c5ccdb]">{value.floorPlanResult.walls.length}</span></div>
+            <div>Scale: <span className="text-[#c5ccdb]">{value.floorPlanResult.scalePixelsPerMeter} px/m</span></div>
+          </div>
+          {value.importWarnings.length > 0 ? (
+            <div className="mt-2 rounded border border-amber-500/20 bg-amber-500/10 px-2 py-1.5 text-[8px] text-amber-100">
+              {value.importWarnings.slice(0, 4).map((warning, index) => (
+                <div key={`${warning}_${index}`}>• {warning}</div>
+              ))}
+              {value.importWarnings.length > 4 ? <div>• ...and {value.importWarnings.length - 4} more warnings.</div> : null}
+            </div>
+          ) : (
+            <div className="mt-2 rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-1.5 text-[8px] text-emerald-200">
+              No unresolved import warnings.
+            </div>
+          )}
+        </div>
+      ) : null}
 
       {value.floorPlanResult && value.floorPlanResult.walls.length > 0 && (
         <div className="rounded-lg border border-[#1e2130] bg-[#070a12] p-3">

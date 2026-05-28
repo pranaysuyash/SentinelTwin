@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { createSceneFromFloorPlan, normalizeFloorPlanResult, recalibrateFloorPlanResult, type FloorPlanResult } from "@/lib/floor-plan-import";
+import { createSceneFromFloorPlan, getFloorPlanDiagnostics, normalizeFloorPlanResult, recalibrateFloorPlanResult, validateFloorPlan, type FloorPlanResult } from "@/lib/floor-plan-import";
 
 describe("createSceneFromFloorPlan", () => {
   test("materializes imported walls, doors, and windows into SecurityScene", () => {
@@ -21,7 +21,7 @@ describe("createSceneFromFloorPlan", () => {
     const scene = createSceneFromFloorPlan("Imported Floor Plan", floorPlan);
 
     expect(scene.name).toBe("Imported Floor Plan");
-    expect(scene.source).toBe("floor_plan_import");
+    expect(scene.source).toBe("import");
     expect(scene.dimensions).toEqual({ width: 8, depth: 6, height: 3 });
     expect(scene.walls.length).toBe(2);
     expect(scene.doors.length).toBe(1);
@@ -95,6 +95,37 @@ describe("normalizeFloorPlanResult", () => {
     expect(normalized.roomDimensions.depthM).toBeGreaterThan(1);
     expect(normalized.doors[0]?.position.y).toBe(120);
     expect(normalized.windows[0]?.position.x).toBe(900);
+  });
+});
+
+describe("floor-plan import diagnostics", () => {
+  test("flags duplicate walls and off-wall openings before scene creation", () => {
+    const result: FloorPlanResult = {
+      imageWidth: 1000,
+      imageHeight: 800,
+      scalePixelsPerMeter: 100,
+      confidence: 0.7,
+      roomDimensions: { widthM: 10, depthM: 8, heightM: 3 },
+      walls: [
+        { start: { x: 100, y: 100 }, end: { x: 900, y: 100 }, detected: true },
+        { start: { x: 102, y: 104 }, end: { x: 898, y: 104 }, detected: true },
+        { start: { x: 900, y: 100 }, end: { x: 900, y: 700 }, detected: true },
+        { start: { x: 100, y: 700 }, end: { x: 900, y: 700 }, detected: true },
+        { start: { x: 100, y: 100 }, end: { x: 100, y: 700 }, detected: true },
+      ],
+      doors: [{ position: { x: 500, y: 300 }, widthM: 0.9, orientation: "horizontal" }],
+      windows: [{ position: { x: 900, y: 400 }, widthM: 1.2, orientation: "vertical" }],
+    };
+
+    const diagnostics = getFloorPlanDiagnostics(result);
+    expect(diagnostics.duplicateWallPairs).toBe(1);
+    expect(diagnostics.unsnappedDoorCount).toBe(1);
+    expect(diagnostics.unsnappedWindowCount).toBe(0);
+
+    const validation = validateFloorPlan(result);
+    expect(validation.diagnostics).toEqual(diagnostics);
+    expect(validation.warnings.some((warning) => warning.includes("near-duplicate wall pair"))).toBe(true);
+    expect(validation.warnings.some((warning) => warning.includes("door/window marker"))).toBe(true);
   });
 });
 

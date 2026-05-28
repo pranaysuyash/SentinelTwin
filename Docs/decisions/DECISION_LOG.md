@@ -1959,3 +1959,45 @@ reference to the new path, then remove the old."
 **Alternatives rejected:**
 - **Leave provider choice code-only** — rejected because the shell would still hide the active model.
 - **Build a separate provider settings page** — rejected because View Settings already owns the layout and AI tool surface controls.
+
+### D-120: Export the redundancy matrix through the report workspace
+**Date:** 2026-05-28
+
+**Decision:** Promote the redundancy matrix into the report workspace and canonical exports so the handoff surface carries the same single-point-of-failure detail as the live matrix panel.
+
+**Rationale:**
+- The bottom-panel matrix already exposes the right camera-vs-zone redundancy detail, but that detail was still trapped in the analysis drawer.
+- Exporting the matrix into HTML, Markdown, and text keeps the report aligned with the live shell and makes the redundancy story visible in handoff artifacts.
+- The report workspace already owns the client-ready evidence surface, so it is the right place to mirror the matrix without introducing a duplicate report format.
+
+**Alternatives rejected:**
+- **Leave redundancy only in the bottom drawer** — rejected because the handoff report would remain weaker than the live analysis surface.
+- **Create a separate redundancy export artifact** — rejected because the existing report formats already cover the handoff use case and should remain canonical.
+
+### D-121: Reuse compare evidence in the Before/After drawer
+**Date:** 2026-05-28
+
+**Decision:** Reuse the same compare visual evidence state in the bottom-panel Before/After tab and provide a direct handoff into the full Compare workspace when the user wants a deeper visual diff.
+
+**Rationale:**
+- The compare workspace already captures before/after canvases and exposes them as report-ready evidence, so the bottom drawer should not duplicate that pipeline.
+- Keeping the drawer lightweight while still showing the visual diff makes the comparison story consistent across the shell and avoids a second evidence export path.
+- A direct `Open Compare View` handoff lets the user jump from metrics to the richer compare surface without losing the snapshot pair.
+
+**Alternatives rejected:**
+- **Leave Before/After as metrics-only** — rejected because it hides the visual compare story behind a separate workspace.
+- **Build a second thumbnail capture pipeline just for the drawer** — rejected because it would duplicate compare evidence and create drift with report exports.
+
+### D-122: Surface camera presets in View Settings
+**Date:** 2026-05-28
+
+**Decision:** Keep the existing in-canvas camera preset picker, but surface the camera preset library in View Settings so the preset options are visible before placement.
+
+**Rationale:**
+- The picker already applies camera spec defaults correctly when the camera tool is active.
+- View Settings is the right discoverability layer for users who want to know what presets exist before they start placing cameras.
+- Surfacing the preset library in the layout modal keeps the product consistent with the rest of the workspace configuration surfaces.
+
+**Alternatives rejected:**
+- **Leave presets hidden in the canvas only** — rejected because users have to switch tools before discovering the library.
+- **Create a separate preset management page** — rejected because the preset list is a placement aid, not a standalone settings domain.

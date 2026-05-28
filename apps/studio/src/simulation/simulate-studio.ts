@@ -8,7 +8,7 @@ import type {
   SimulationResult,
   ZoneResult,
 } from "@/schema/security-scene";
-import { computeCoverageFailurePath } from "@/simulation/adversarial-path";
+import { computeAdversarialPath } from "@/simulation/adversarial-path";
 import { analyseBlindSpotTopology } from "@/simulation/blind-spot-topology";
 import { computeBlindSpotFingerprint } from "@/simulation/blind-spot-fingerprint";
 import { computeCoverageFragility } from "@/simulation/coverage-fragility";
@@ -536,7 +536,7 @@ function simulateStudioInternal(
   issues.push(...collectPrivacyCoverageIssues(scene, coverageCells));
 
   const pathResults = computePathResults(scene, coverageCells);
-  const adversarialPath = computeCoverageFailurePath(scene, coverageCells);
+  const adversarialPath = computeAdversarialPath(scene, coverageCells);
   const kRobustness = includeNovelAnalytics ? computeKRobustness(scene) : undefined;
   const placementOracle = includeNovelAnalytics ? computePlacementOracle(scene, coverageCells, criticalZoneResults) : undefined;
   const occlusionBlame = includeNovelAnalytics ? analyzeOcclusionBlame(scene) : undefined;
@@ -697,7 +697,6 @@ function simulateStudioInternal(
     pathResults,
     issues,
     recommendations,
-    coverageFailurePath: adversarialPath,
     adversarialPath,
     coverageThresholds,
     blindRegions,

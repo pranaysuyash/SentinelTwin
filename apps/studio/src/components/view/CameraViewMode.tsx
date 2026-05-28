@@ -26,6 +26,18 @@ type OverlayFlags = {
 };
 
 type VerificationViewMode = "overlay" | "split";
+type CameraVerificationSnapshot = {
+  id: string;
+  fileName: string;
+  imageUrl: string;
+  mode: VerificationViewMode;
+  opacity: number;
+  split: number;
+  offsetX: number;
+  offsetY: number;
+  alignmentScore: number | null;
+  createdAt: number;
+};
 
 export function formatTargetTypeLabel(targetType: SecurityScene["criticalZones"][number]["targetType"]) {
   switch (targetType) {
@@ -658,8 +670,12 @@ function VerificationPanel({
   alignmentScore,
   alignmentLabel,
   showHeatOverlay,
+  snapshots,
   onToggle,
   onUpload,
+  onSaveSnapshot,
+  onLoadSnapshot,
+  onDeleteSnapshot,
   onModeChange,
   onOpacityChange,
   onSplitChange,
@@ -680,8 +696,12 @@ function VerificationPanel({
   alignmentScore: number | null;
   alignmentLabel: string | null;
   showHeatOverlay: boolean;
+  snapshots: CameraVerificationSnapshot[];
   onToggle: (next: boolean) => void;
   onUpload: (file: File) => void;
+  onSaveSnapshot: () => void;
+  onLoadSnapshot: (snapshotId: string) => void;
+  onDeleteSnapshot: (snapshotId: string) => void;
   onModeChange: (mode: VerificationViewMode) => void;
   onOpacityChange: (value: number) => void;
   onSplitChange: (value: number) => void;
@@ -722,8 +742,35 @@ function VerificationPanel({
         <div className="flex gap-1">
           <button type="button" onClick={() => onModeChange("overlay")} className={`rounded px-2 py-1 ${mode === "overlay" ? "bg-cyan-500/30 text-cyan-200" : "bg-[#1a2233] text-[#8ea5cc]"}`}>Overlay</button>
           <button type="button" onClick={() => onModeChange("split")} className={`rounded px-2 py-1 ${mode === "split" ? "bg-cyan-500/30 text-cyan-200" : "bg-[#1a2233] text-[#8ea5cc]"}`}>Split</button>
+          <button type="button" onClick={onSaveSnapshot} className="rounded bg-[#14304a] px-2 py-1 text-cyan-200">Save</button>
           <button type="button" onClick={onClear} className="rounded bg-[#2b1a20] px-2 py-1 text-rose-200">Clear</button>
         </div>
+        {snapshots.length ? (
+          <div className="rounded-lg border border-[#2a3650] bg-[#0f1624] p-2">
+            <div className="mb-1 text-[8px] uppercase tracking-[0.12em] text-[#7a8fb6]">Saved snapshots</div>
+            <div className="max-h-24 space-y-1 overflow-y-auto pr-1">
+              {snapshots.map((snapshot) => (
+                <div key={snapshot.id} className="flex items-center justify-between gap-1 rounded border border-[#243146] bg-[#0c1320] px-1.5 py-1">
+                  <button
+                    type="button"
+                    onClick={() => onLoadSnapshot(snapshot.id)}
+                    className="truncate text-left text-[8px] text-[#c9d8f3] hover:text-white"
+                    title={snapshot.fileName}
+                  >
+                    {snapshot.fileName}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDeleteSnapshot(snapshot.id)}
+                    className="rounded bg-[#2b1a20] px-1 py-0.5 text-[8px] text-rose-200"
+                  >
+                    Del
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
         <div className="rounded-lg border border-[#2a3650] bg-[#0f1624] px-2 py-1.5">
           <div className="flex items-center justify-between text-[#7a8fb6]">
             <span>Alignment Quality</span>
@@ -837,6 +884,8 @@ function CameraHeader({
 export function CameraViewMode() {
   const scene = useStudioStore((s) => s.scene);
   const selectedId = useStudioStore((s) => s.selectedNodeId);
+  const selectedCameraId = useStudioStore((s) => s.selectedCameraId);
+  const setSelectedCameraId = useStudioStore((s) => s.setSelectedCameraId);
   const selectNode = useStudioStore((s) => s.selectNode);
   const result = useStudioStore((s) => s.simulationResult);
   const pathReplay = useStudioStore((s) => s.pathReplay);
@@ -844,8 +893,15 @@ export function CameraViewMode() {
   const setViewMode = useStudioStore((s) => s.setViewMode);
   const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
   const envMode = useStudioStore((s) => s.environmentMode);
+  const cameraViewVerificationIntent = useStudioStore((s) => s.cameraViewVerificationIntent);
+  const setCameraViewVerificationIntent = useStudioStore((s) => s.setCameraViewVerificationIntent);
+  const cameraVerificationSnapshots = useStudioStore((s) => s.cameraVerificationSnapshots);
+  const upsertCameraVerificationSnapshot = useStudioStore((s) => s.upsertCameraVerificationSnapshot);
+  const removeCameraVerificationSnapshot = useStudioStore((s) => s.removeCameraVerificationSnapshot);
 
-  const camera = scene.cameras.find((c) => c.id === selectedId) ?? scene.cameras[0];
+  const camera = scene.cameras.find((c) => c.id === selectedId)
+    ?? scene.cameras.find((c) => c.id === selectedCameraId)
+    ?? scene.cameras[0];
   const cameraIndex = useMemo(() => scene.cameras.findIndex((c) => c.id === camera?.id), [camera?.id, scene.cameras]);
   const activePath = useMemo(() => {
     if (!scene.paths.length) return null;
@@ -870,6 +926,7 @@ export function CameraViewMode() {
   const [alignmentHeatmapUrl, setAlignmentHeatmapUrl] = useState<string | null>(null);
   const [showDifferenceHeatOverlay, setShowDifferenceHeatOverlay] = useState(false);
   const frameRootRef = useRef<HTMLDivElement | null>(null);
+  const snapshotsForCamera = camera ? (cameraVerificationSnapshots[camera.id] ?? []) : [];
   const canvasFilter =
     feedMode === "normal"
       ? "brightness(0.82) contrast(1.08) saturate(0.92)"
@@ -955,6 +1012,18 @@ export function CameraViewMode() {
       }
     };
   }, [verificationImageUrl]);
+
+  useEffect(() => {
+    if (camera?.id) {
+      setSelectedCameraId(camera.id);
+    }
+  }, [camera?.id, setSelectedCameraId]);
+
+  useEffect(() => {
+    if (!cameraViewVerificationIntent?.openPanel) return;
+    setVerificationEnabled(true);
+    setCameraViewVerificationIntent(null);
+  }, [cameraViewVerificationIntent, setCameraViewVerificationIntent]);
 
   useEffect(() => {
     if (!verificationEnabled || !verificationImageUrl || !camera) {
@@ -1082,6 +1151,7 @@ export function CameraViewMode() {
               const nextIndex = Math.max(0, (cameraIndex < 0 ? 0 : cameraIndex) - 1);
               const nextCamera = scene.cameras[nextIndex];
               if (nextCamera) {
+                setSelectedCameraId(nextCamera.id);
                 selectNode(nextCamera.id);
               }
             }}
@@ -1089,10 +1159,14 @@ export function CameraViewMode() {
               const nextIndex = Math.min(scene.cameras.length - 1, (cameraIndex < 0 ? 0 : cameraIndex) + 1);
               const nextCamera = scene.cameras[nextIndex];
               if (nextCamera) {
+                setSelectedCameraId(nextCamera.id);
                 selectNode(nextCamera.id);
               }
             }}
-            onSelect={(id) => selectNode(id)}
+            onSelect={(id) => {
+              setSelectedCameraId(id);
+              selectNode(id);
+            }}
           />
           <Canvas
             camera={{
@@ -1175,15 +1249,50 @@ export function CameraViewMode() {
             alignmentScore={alignmentQualityScore}
             alignmentLabel={alignmentQualityScore !== null ? alignmentQualityLabel(alignmentQualityScore) : null}
             showHeatOverlay={showDifferenceHeatOverlay}
+            snapshots={snapshotsForCamera}
             onToggle={setVerificationEnabled}
             onUpload={(file) => {
-              if (verificationImageUrl && verificationImageUrl.startsWith("blob:")) {
-                URL.revokeObjectURL(verificationImageUrl);
-              }
-              const url = URL.createObjectURL(file);
-              setVerificationImageUrl(url);
-              setVerificationFileName(file.name);
+              const reader = new FileReader();
+              reader.onload = () => {
+                if (typeof reader.result !== "string") return;
+                setVerificationImageUrl(reader.result);
+                setVerificationFileName(file.name);
+                setVerificationEnabled(true);
+              };
+              reader.readAsDataURL(file);
+            }}
+            onSaveSnapshot={() => {
+              if (!camera || !verificationImageUrl || !verificationFileName) return;
+              upsertCameraVerificationSnapshot(camera.id, {
+                id: `verification_snapshot_${Date.now()}`,
+                fileName: verificationFileName,
+                imageUrl: verificationImageUrl,
+                mode: verificationMode,
+                opacity: verificationOpacity,
+                split: verificationSplit,
+                offsetX: verificationOffsetX,
+                offsetY: verificationOffsetY,
+                alignmentScore: alignmentQualityScore,
+                createdAt: Date.now(),
+              });
+            }}
+            onLoadSnapshot={(snapshotId) => {
+              if (!camera) return;
+              const snapshot = (cameraVerificationSnapshots[camera.id] ?? []).find((entry) => entry.id === snapshotId);
+              if (!snapshot) return;
               setVerificationEnabled(true);
+              setVerificationImageUrl(snapshot.imageUrl);
+              setVerificationFileName(snapshot.fileName);
+              setVerificationMode(snapshot.mode);
+              setVerificationOpacity(snapshot.opacity);
+              setVerificationSplit(snapshot.split);
+              setVerificationOffsetX(snapshot.offsetX);
+              setVerificationOffsetY(snapshot.offsetY);
+              setAlignmentQualityScore(snapshot.alignmentScore);
+            }}
+            onDeleteSnapshot={(snapshotId) => {
+              if (!camera) return;
+              removeCameraVerificationSnapshot(camera.id, snapshotId);
             }}
             onModeChange={setVerificationMode}
             onOpacityChange={setVerificationOpacity}

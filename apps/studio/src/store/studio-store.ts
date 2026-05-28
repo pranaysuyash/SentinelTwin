@@ -441,9 +441,23 @@ export type StudioStoreState = {
     capturedAt: number;
   } | null;
   compareReportSelection: { snapshotAId: string; snapshotBId: string } | null;
+  cameraViewVerificationIntent: { source: "launcher_preview" | "other"; openPanel: boolean } | null;
+  cameraVerificationSnapshots: Record<string, Array<{
+    id: string;
+    fileName: string;
+    imageUrl: string;
+    mode: "overlay" | "split";
+    opacity: number;
+    split: number;
+    offsetX: number;
+    offsetY: number;
+    alignmentScore: number | null;
+    createdAt: number;
+  }>>;
 
   selectedNodeId: string | null;
   selectedNodeIds: string[];
+  selectedCameraId: string | null;
   activeTool: ActiveTool;
   editor: EditorDraft;
   bottomTab: BottomTab;
@@ -493,6 +507,12 @@ export type StudioStoreState = {
   setLaunchNotice: (launchNotice: string | null) => void;
   setCompareVisualEvidence: (evidence: StudioStoreState["compareVisualEvidence"]) => void;
   setCompareReportSelection: (selection: StudioStoreState["compareReportSelection"]) => void;
+  setCameraViewVerificationIntent: (intent: StudioStoreState["cameraViewVerificationIntent"]) => void;
+  upsertCameraVerificationSnapshot: (
+    cameraId: string,
+    snapshot: StudioStoreState["cameraVerificationSnapshots"][string][number],
+  ) => void;
+  removeCameraVerificationSnapshot: (cameraId: string, snapshotId: string) => void;
 
   pathReplay: { playing: boolean; progress: number; speed: number; followActor: boolean };
   setPathReplayPlaying: (playing: boolean) => void;
@@ -519,6 +539,7 @@ export type StudioStoreState = {
   setSelectedNodes: (ids: string[]) => void;
   addSelectedNode: (id: string) => void;
   toggleSelectedNode: (id: string) => void;
+  setSelectedCameraId: (id: string | null) => void;
   clearSelection: () => void;
   translateSelectedNodes: (delta: [number, number]) => void;
   removeSelectedNodes: (ids?: string[]) => void;
@@ -1222,9 +1243,12 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   launchNotice: null,
   compareVisualEvidence: null,
   compareReportSelection: null,
+  cameraViewVerificationIntent: null,
+  cameraVerificationSnapshots: {},
 
   selectedNodeId: "cam_entrance",
   selectedNodeIds: ["cam_entrance"],
+  selectedCameraId: "cam_entrance",
   activeTool: "select",
   editor: {
     editorMode: "idle",
@@ -1479,23 +1503,37 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     return get().historyFuture.length > 0;
   },
 
-  selectNode: (id) => set({
+  selectNode: (id) => set((state) => ({
     selectedNodeId: id,
     selectedNodeIds: id ? [id] : [],
-  }),
+    selectedCameraId:
+      id && state.scene.cameras.some((camera) => camera.id === id)
+        ? id
+        : state.selectedCameraId,
+  })),
   setSelectedNodes: (ids) => set((state) => {
     const next = purgeInvalidSelection(state.scene, ids);
+    const nextPrimary = primarySelection(next);
     return {
       selectedNodeIds: next,
-      selectedNodeId: primarySelection(next),
+      selectedNodeId: nextPrimary,
+      selectedCameraId:
+        nextPrimary && state.scene.cameras.some((camera) => camera.id === nextPrimary)
+          ? nextPrimary
+          : state.selectedCameraId,
     };
   }),
   addSelectedNode: (id) => set((state) => {
     if (state.selectedNodeIds.includes(id)) return state;
     const next = purgeInvalidSelection(state.scene, [...state.selectedNodeIds, id]);
+    const nextPrimary = primarySelection(next);
     return {
       selectedNodeIds: next,
-      selectedNodeId: primarySelection(next),
+      selectedNodeId: nextPrimary,
+      selectedCameraId:
+        nextPrimary && state.scene.cameras.some((camera) => camera.id === nextPrimary)
+          ? nextPrimary
+          : state.selectedCameraId,
     };
   }),
   toggleSelectedNode: (id) => set((state) => {
@@ -1503,11 +1541,17 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       ? state.selectedNodeIds.filter((entry) => entry !== id)
       : [...state.selectedNodeIds, id];
     const filtered = purgeInvalidSelection(state.scene, next);
+    const nextPrimary = primarySelection(filtered);
     return {
       selectedNodeIds: filtered,
-      selectedNodeId: primarySelection(filtered),
+      selectedNodeId: nextPrimary,
+      selectedCameraId:
+        nextPrimary && state.scene.cameras.some((camera) => camera.id === nextPrimary)
+          ? nextPrimary
+          : state.selectedCameraId,
     };
   }),
+  setSelectedCameraId: (id) => set({ selectedCameraId: id }),
   clearSelection: () => set({ selectedNodeId: null, selectedNodeIds: [] }),
   setActiveTool: (tool) => set((s) => ({
     activeTool: tool,
@@ -1758,6 +1802,26 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   setLaunchNotice: (launchNotice) => set({ launchNotice }),
   setCompareVisualEvidence: (compareVisualEvidence) => set({ compareVisualEvidence }),
   setCompareReportSelection: (compareReportSelection) => set({ compareReportSelection }),
+  setCameraViewVerificationIntent: (cameraViewVerificationIntent) => set({ cameraViewVerificationIntent }),
+  upsertCameraVerificationSnapshot: (cameraId, snapshot) =>
+    set((state) => {
+      const existing = state.cameraVerificationSnapshots[cameraId] ?? [];
+      const idx = existing.findIndex((entry) => entry.id === snapshot.id);
+      const next = idx >= 0
+        ? existing.map((entry, index) => (index === idx ? snapshot : entry))
+        : [snapshot, ...existing].slice(0, 20);
+      return { cameraVerificationSnapshots: { ...state.cameraVerificationSnapshots, [cameraId]: next } };
+    }),
+  removeCameraVerificationSnapshot: (cameraId, snapshotId) =>
+    set((state) => {
+      const existing = state.cameraVerificationSnapshots[cameraId] ?? [];
+      return {
+        cameraVerificationSnapshots: {
+          ...state.cameraVerificationSnapshots,
+          [cameraId]: existing.filter((entry) => entry.id !== snapshotId),
+        },
+      };
+    }),
 
   addNode: (node) => {
     useStudioStore.getState().commitSceneChange((scene) => insertNode(scene, node));

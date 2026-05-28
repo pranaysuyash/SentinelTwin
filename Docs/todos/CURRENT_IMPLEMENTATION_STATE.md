@@ -16,6 +16,15 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - The launcher project browser is now split into `Your Workspaces` and `Reference Demo`, so user-created/imported/scanned scenes are visually distinct from the canonical retail baseline ✅
 - The homepage center column now includes a `Scene Starter Gallery` of visual cards so scene creation/import/scan actions read like primary workflows instead of utility buttons ✅
 - The `Your Workspaces` region now includes starter tiles for blank/import/scan/AI workspace entry, making the section behave like a workspace hub instead of a passive saved-scene list ✅
+- The launcher left rail now includes a task-first `Security Jobs` surface with explicit `Available` / `Preview` / `Planned` status per workflow so users see product maturity before entering Studio ✅
+- Planned workflows (`Guided Scan Reconstruction`, `Verify Real Camera Footage`) now show explicit planned-state launch notices instead of silently routing into unrelated studio modes ✅
+- `SceneBuilderWizard` blank-scene creation now uses the canonical blank-scene factory (`createBlankSecurityScene`) and room-dimension wall generation, removing the previous demo-scene clone-and-strip path ✅
+- Floor-plan import now also has a dedicated launcher entry path (`forceImportMethod="floor_plan"`), so floor-plan users are not routed through the generic new-scene method picker ✅
+- SceneBuilderWizard review now includes a floor-plan commit summary card (confidence, unresolved warning count, detected counts, and warning preview) before scene creation ✅
+- Launcher now opens a dedicated `Verify Real Camera Footage (Preview)` modal with explicit capability/limitation framing and direct handoff to Camera View preview tools ✅
+- `ScanSiteWizard` now runs as a stronger manual-assisted product flow: photo upload + metadata, marker placement/drag/retype/delete, explicit review warnings, and compile-to-canonical `scan_import` scene output ✅
+- Scan compile mapping now includes deterministic conversion for doors/windows/entry points/cameras/lights/obstructions/critical zones/path points plus schema validation and explicit warning codes ✅
+- Scan handoff now sets launch notice counts and auto-runs baseline simulation when both camera and critical zone are present ✅
 - Saved workspace cards now include compact scene thumbnails so the workspace hub reads like a gallery of real site layouts rather than a text-only list ✅
 - Scene starter cards and workspace seed tiles now carry explicit origin badges (`Blank`, `Import`, `Scan`, `AI`) so users can differentiate scene entry paths at a glance ✅
 - The selected workspace detail panel now reuses the same origin badge language so demo/reference and user workspaces stay consistent across the launcher ✅
@@ -133,6 +142,8 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - SceneBuilderWizard (560 lines) was dead code — now wired into TopBar as modal overlay ✅
 - 5 scene templates accessible from wizard: retail-shop, open-office, warehouse, classroom, parking-garage ✅
 - Floor-plan import scale control now feeds the actual extractor config instead of acting as a dead UI field ✅
+- The target switcher now shows the current target label in-place, so the user sees `Target: Cash Counter` versus `Target: Mixed` without opening the dropdown ✅
+- The top bar now exposes a dedicated `Assumptions` shortcut that jumps the right panel and bottom drawer to the assumptions surface ✅
 - TopBar scene menu now also exposes `Scan a Site...`, which opens the dedicated manual-assisted scan intake flow and compiles into a canonical `scan_import` scene ✅
 
 ### Scan-to-scene intake — built and visible
@@ -270,9 +281,17 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 **CameraInspector / RedundancyMatrixPanel** ✅
 - Camera failure-impact placeholders now expose a real `Run Simulation` action in-place instead of only instructing the user to leave the panel and use the top bar ✅
 - The redundancy matrix empty state now also offers the shared simulation action so the analysis can be refreshed from the panel itself ✅
+- The full security outcome / report workspace now carries the redundancy matrix through the handoff, with per-camera criticality and vulnerable-zone summaries mirrored into HTML, Markdown, and text exports ✅
+
+**CameraPresetPicker / View Settings** ✅
+- The in-canvas camera preset picker is present when the camera tool is active, and View Settings now surfaces the preset library so common camera specs are discoverable before placement ✅
 
 **Shared analysis empty states** ✅
 - Metrics, issues, redundancy, novel algorithms, camera summary, replay, and security outcome empty states now use the shared simulation prompt instead of passive instructions ✅
+
+**BeforeAfterTab** ✅
+- Metric comparison still shows the before/after deltas, and the tab now also reuses the compare evidence pipeline to show a side-by-side visual diff when compare thumbnails are available ✅
+- A one-click `Open Compare View` handoff now jumps from the bottom drawer into the richer compare workspace while preserving the selected snapshot pair ✅
 
 **TimelineTab** ✅
 - Active authored path selector
@@ -320,6 +339,7 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 ### BottomRow ✅ (more complete than expected)
 - Snapshots panel with thumbnail cards + "New Snapshot" button
 - Assumptions panel now surfaces a concise model summary and an explicit "Edit Assumptions" button, with the full assumptions editor available in the bottom drawer ✅
+- The assumptions summary is now live and data-derived in the right inspector, showing the active standard, time of day, and lighting state ✅
 - Report Summary panel with 4 bullet points (dynamic from simulation result)
 - Environment panel now shows scene-derived mode, light state, window handling, door handling, and exterior lux instead of synthetic weather values ✅
 - AI command bar (`use-ai-command.ts`) handles: `/night`, `/dusk`, `/day`, `/report`, `/compare`, `/snapshot`, `/simulate`, `/run`, `/fail`, `/camera-failure`, `/fix`, `/improve`, `/target` and now falls back to an offline parser for common natural-language scene edits when no API key is present ✅
@@ -434,7 +454,7 @@ The reference-image feature set is now fully built. The remaining work is now na
 - Blind-spot topology is now surfaced in the report handoff with severity, classification, area, and affected-zone detail instead of a count-only summary ✅
 - Blind-spot fingerprinting now computes a deterministic signature for each blind-region pattern and surfaces the fingerprint in the live novel panel plus report handoff ✅
 - Reflective Bounce Vision now models reflective windows as a first-pass deterministic bounce proxy and surfaces the effect in the live novel panel plus report handoff ✅
-- K-Robustness now surfaces its critical failure sets in the live novel panel and report handoff, so the robustness analysis is actionable instead of scalar-only ✅
+- K-Robustness now surfaces its critical failure sets in the live novel panel, report workspace, and report handoff, so the robustness analysis is actionable instead of scalar-only ✅
 - Occlusion blame is now surfaced in the report handoff and report-lite export with per-obstruction blame fractions, quality-without values, and improvement deltas instead of a zone-count summary ✅
 - `temporal.ts` now carries anomaly windows and anomaly summary data into the temporal profile so the 24h profile and the novel tab share the same derived truth ✅
 - `ReportLiteTab.tsx` and the canonical `src/report/index.ts` both include the novel algorithm summaries so tab output and export output stay in sync ✅

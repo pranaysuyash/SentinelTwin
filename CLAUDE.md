@@ -11,6 +11,7 @@
 7. `Docs/todos/PHASE_0_SETUP.md` ← start here if no code exists yet
 8. `Docs/todos/PHASE_1_COVERAGE_ENGINE.md`
 9. `Docs/todos/PHASE_2_EDITOR_INTEGRATION.md`
+10. `sentineltwin_ui_design_pack/SentinelTwin_UI_Design_Pack.md` and the referenced images when the task involves UI, layout, motion, tokens, or screen composition
 
 ## What This Project Is
 
@@ -55,6 +56,20 @@ Pranay is actively adding more context from other chat sessions into this folder
 When new files appear in `Docs/context/origin/`, read them for new ideas or direction changes,
 then update the INDEX.md and propagate any meaningful changes to the architecture docs or
 open questions. Do not silently absorb context — surface anything that changes prior decisions.
+
+## UI Design Pack (Read for Screen Work)
+
+The repo also contains `sentineltwin_ui_design_pack/`, which holds the images and briefs for the
+current screen-by-screen UI direction.
+
+For any work that touches visible screens or interaction design:
+
+1. Read `sentineltwin_ui_design_pack/SentinelTwin_UI_Design_Pack.md`
+2. Inspect the referenced images in `sentineltwin_ui_design_pack/images/`
+3. Treat `Primary target` items as implementation references
+4. Treat `Deprecated` and `Rejected` items as negative references only
+5. Treat `DesignSystem_*` boards as canonical guidance for tokens and interaction states
+6. Note any deliberate divergence in `Docs/decisions/DECISION_LOG.md`
 
 ## Decisions Already Made (Do Not Re-Decide Without Logging)
 

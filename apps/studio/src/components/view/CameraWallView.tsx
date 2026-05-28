@@ -239,6 +239,8 @@ const WallOverviewPanel = memo(function WallOverviewPanel() {
   const scene = useStudioStore((s) => s.scene);
   const result = useStudioStore((s) => s.simulationResult);
   const selectedId = useStudioStore((s) => s.selectedNodeId);
+  const selectedCameraId = useStudioStore((s) => s.selectedCameraId);
+  const setSelectedCameraId = useStudioStore((s) => s.setSelectedCameraId);
   const theme = CAMERA_WALL_THEME;
   const { width, depth } = scene.dimensions;
 
@@ -357,7 +359,11 @@ const CameraSlotButton = memo(function CameraSlotButton({
   className?: string;
 }) {
   const selectNode = useStudioStore((s) => s.selectNode);
-  const handleSelect = useCallback(() => selectNode(cam.id), [cam.id, selectNode]);
+  const setSelectedCameraId = useStudioStore((s) => s.setSelectedCameraId);
+  const handleSelect = useCallback(() => {
+    setSelectedCameraId(cam.id);
+    selectNode(cam.id);
+  }, [cam.id, selectNode, setSelectedCameraId]);
 
   return (
     <button
@@ -381,13 +387,14 @@ export function CameraWallView() {
   const cameras = useMemo(() => {
     // Sort: selected first, then active, then offline
     return [...scene.cameras].sort((a, b) => {
-      if (a.id === selectedId) return -1;
-      if (b.id === selectedId) return 1;
+      const currentCamera = scene.cameras.some((cam) => cam.id === selectedId) ? selectedId : selectedCameraId;
+      if (a.id === currentCamera) return -1;
+      if (b.id === currentCamera) return 1;
       if (a.status === "on" && b.status !== "on") return -1;
       if (a.status !== "on" && b.status === "on") return 1;
       return 0;
     });
-  }, [scene.cameras, selectedId]);
+  }, [scene.cameras, selectedCameraId, selectedId]);
   const activePath = useMemo(() => {
     if (!scene.paths.length) return null;
     return scene.paths.find((path) => path.id === activePathId) ?? scene.paths[0] ?? null;
@@ -445,7 +452,9 @@ export function CameraWallView() {
   const viewCount = layoutMode === "quad" ? 4 : Math.min(visible.length + 1, 6);
   const activeCount = cameras.filter((cam) => cam.status === "on").length;
   const offlineCount = cameras.length - activeCount;
-  const selectedCamera = cameras.find((cam) => cam.id === selectedId) ?? null;
+  const selectedCamera = cameras.find((cam) => cam.id === selectedId)
+    ?? cameras.find((cam) => cam.id === selectedCameraId)
+    ?? null;
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[#07090d] p-2.5">

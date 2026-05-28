@@ -10,10 +10,10 @@ import {
   ScanSearch,
   Trash2,
 } from "lucide-react";
-import { useCallback, useMemo, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 
 import { SurfaceButton } from "@/components/shared/SurfaceButton";
-import { compileScanSessionToScene, createScanCandidate, createScanSession, SCAN_CANDIDATE_TYPES, summarizeScanProvenance, type ScanCandidate, type ScanCandidateKind, type ScanSession } from "@/lib/scan-to-scene";
+import { compileScanSessionToScene, createScanCandidate, createScanSession, SCAN_CANDIDATE_TYPES, summarizeScanProvenance, type ScanCandidate, type ScanCandidateKind, type ScanCompilationWarning, type ScanSession } from "@/lib/scan-to-scene";
 import { useStudioStore } from "@/store/studio-store";
 
 interface ScanSiteWizardProps {
@@ -67,6 +67,7 @@ function kindMeta(kind: ScanCandidateKind) {
     obstruction: { label: "Obstruction", accent: "text-slate-300", border: "border-slate-500/30", bg: "bg-slate-500/12" },
     entry_point: { label: "Entry Point", accent: "text-orange-300", border: "border-orange-500/30", bg: "bg-orange-500/12" },
     critical_zone: { label: "Critical Zone", accent: "text-fuchsia-300", border: "border-fuchsia-500/30", bg: "bg-fuchsia-500/12" },
+    path_point: { label: "Path Point", accent: "text-lime-300", border: "border-lime-500/30", bg: "bg-lime-500/12" },
   };
 
   return meta[kind];
@@ -124,6 +125,8 @@ function StepBadge({ step, current, label }: { step: number; current: number; la
 
 export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
   const setScene = useStudioStore((s) => s.setScene);
+  const runSimulation = useStudioStore((s) => s.runSimulation);
+  const setLaunchNotice = useStudioStore((s) => s.setLaunchNotice);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const [step, setStep] = useState<ScanStep>(0);
@@ -134,7 +137,14 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
   const [error, setError] = useState<string | null>(null);
   const [draggingCandidateId, setDraggingCandidateId] = useState<string | null>(null);
   const [compileLowConfidenceOverride, setCompileLowConfidenceOverride] = useState(false);
+  const [warningsReviewed, setWarningsReviewed] = useState(false);
+  const [autoCreatePath, setAutoCreatePath] = useState(false);
+  const [compileWarnings, setCompileWarnings] = useState<ScanCompilationWarning[]>([]);
   const [session, setSession] = useState<ScanSession>(() => createScanSession("Manual Assisted Scan", 10, 8, 3));
+  const activePhoto = useMemo(
+    () => session.photos.find((photo) => photo.id === session.activePhotoId) ?? null,
+    [session.activePhotoId, session.photos],
+  );
 
   const candidateStats = useMemo(() => {
     const accepted = session.candidates.filter((candidate) => candidate.status !== "rejected");
@@ -145,6 +155,11 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
       rejected: rejected.length,
       pending: pending.length,
       cameraCount: accepted.filter((candidate) => candidate.kind === "camera").length,
+      doorCount: accepted.filter((candidate) => candidate.kind === "door").length,
+      windowCount: accepted.filter((candidate) => candidate.kind === "window").length,
+      lightCount: accepted.filter((candidate) => candidate.kind === "light").length,
+      criticalZoneCount: accepted.filter((candidate) => candidate.kind === "critical_zone" || candidate.kind === "counter").length,
+      pathPointCount: accepted.filter((candidate) => candidate.kind === "path_point").length,
       obstructionCount: accepted.filter((candidate) => candidate.kind === "counter" || candidate.kind === "cupboard" || candidate.kind === "shelf" || candidate.kind === "obstruction").length,
     };
   }, [session.candidates]);
@@ -228,6 +243,27 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
     return issues;
   }, [acceptedCandidates, lowConfidenceAccepted.length]);
   const provenance = useMemo(() => summarizeScanProvenance(session), [session]);
+  const reviewWarnings = useMemo(() => {
+    try {
+      return compileScanSessionToScene(session, { autoCreateEntryToZonePath: autoCreatePath }).warnings;
+    } catch {
+      return [] as ScanCompilationWarning[];
+    }
+  }, [autoCreatePath, session]);
+
+  const compileBlockingErrors = useMemo(() => {
+    const errors: string[] = [];
+    if (candidateStats.cameraCount === 0) errors.push("Add at least one camera marker.");
+    if (candidateStats.criticalZoneCount === 0) errors.push("Add at least one critical zone or counter marker.");
+    return errors;
+  }, [candidateStats.cameraCount, candidateStats.criticalZoneCount]);
+  const unresolvedWarnings = useMemo(() => [...reviewWarnings, ...compileWarnings], [compileWarnings, reviewWarnings]);
+
+  useEffect(() => {
+    if (unresolvedWarnings.length === 0 && warningsReviewed) {
+      setWarningsReviewed(false);
+    }
+  }, [unresolvedWarnings.length, warningsReviewed]);
 
   const updateSession = useCallback((patch: Partial<ScanSession>) => {
     setSession((current) => ({ ...current, ...patch, updatedAt: Date.now() }));
@@ -243,11 +279,26 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
         reader.onerror = () => reject(new Error("Failed to read image file."));
         reader.readAsDataURL(file);
       });
+      const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
+        image.onerror = () => reject(new Error("Failed to load image dimensions."));
+        image.src = dataUrl;
+      });
 
+      const photoId = `photo_${Date.now().toString(36)}`;
       setSession((current) => ({
         ...current,
         imageDataUrl: dataUrl,
         imageName: file.name,
+        imageWidthPx: dimensions.width,
+        imageHeightPx: dimensions.height,
+        imageId: photoId,
+        activePhotoId: photoId,
+        photos: [
+          ...current.photos,
+          { id: photoId, name: file.name, dataUrl, widthPx: dimensions.width, heightPx: dimensions.height },
+        ],
         updatedAt: Date.now(),
       }));
       setStep(2);
@@ -264,9 +315,15 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
   }, []);
 
   const handleSampleSite = useCallback(() => {
+    const photoId = `photo_${Date.now().toString(36)}`;
     updateSession({
       imageDataUrl: SAMPLE_SITE_IMAGE,
       imageName: "sample-retail-site.svg",
+      imageWidthPx: 1200,
+      imageHeightPx: 900,
+      imageId: photoId,
+      activePhotoId: photoId,
+      photos: [{ id: photoId, name: "sample-retail-site.svg", dataUrl: SAMPLE_SITE_IMAGE, widthPx: 1200, heightPx: 900 }],
     });
     setStep(2);
     setSelectedCandidateId(null);
@@ -276,6 +333,7 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
     let nextCandidateId = "";
     setSession((current) => {
       const candidate = createScanCandidate(activeKind, point, current.candidates.length);
+      candidate.sourcePhotoId = current.imageId;
       nextCandidateId = candidate.id;
       return {
         ...current,
@@ -303,6 +361,25 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
       updatedAt: Date.now(),
     }));
     setSelectedCandidateId((current) => (current === candidateId ? null : current));
+  }, []);
+
+  const reorderPathCandidate = useCallback((candidateId: string, direction: -1 | 1) => {
+    setSession((current) => {
+      const pathCandidates = current.candidates
+        .map((candidate, index) => ({ candidate, index }))
+        .filter((entry) => entry.candidate.kind === "path_point");
+      const idx = pathCandidates.findIndex((entry) => entry.candidate.id === candidateId);
+      if (idx < 0) return current;
+      const swapWith = idx + direction;
+      if (swapWith < 0 || swapWith >= pathCandidates.length) return current;
+      const from = pathCandidates[idx]!.index;
+      const to = pathCandidates[swapWith]!.index;
+      const next = [...current.candidates];
+      const temp = next[from];
+      next[from] = next[to]!;
+      next[to] = temp!;
+      return { ...current, candidates: next, updatedAt: Date.now() };
+    });
   }, []);
 
   const handleImageClick = useCallback((event: MouseEvent<HTMLDivElement>) => {
@@ -342,6 +419,14 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
       setError("Upload a site image or choose the sample site before compiling.");
       return;
     }
+    if (compileBlockingErrors.length > 0) {
+      setError(`Cannot compile yet: ${compileBlockingErrors.join(" ")}`);
+      return;
+    }
+    if (unresolvedWarnings.length > 0 && !warningsReviewed) {
+      setError("Review warnings and explicitly acknowledge them before compiling.");
+      return;
+    }
     if (lowConfidenceAccepted.length > 0 && !compileLowConfidenceOverride) {
       setError("Low-confidence accepted candidates detected. Confirm override to compile anyway.");
       return;
@@ -350,15 +435,22 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
     setIsCompiling(true);
     setError(null);
     try {
-      const compiled = compileScanSessionToScene(session);
+      const compiled = compileScanSessionToScene(session, { autoCreateEntryToZonePath: autoCreatePath });
+      setCompileWarnings(compiled.warnings);
       setScene(compiled.scene);
+      if (compiled.scene.cameras.length > 0 && compiled.scene.criticalZones.length > 0) {
+        setTimeout(() => runSimulation(), 80);
+      }
+      setLaunchNotice(
+        `Manual-assisted scan compiled: ${compiled.scene.cameras.length} cameras, ${compiled.scene.obstructions.length} obstructions, ${compiled.scene.criticalZones.length} critical zones.`,
+      );
       onClose?.();
     } catch (compileError) {
       setError(compileError instanceof Error ? compileError.message : "Failed to compile scan session.");
     } finally {
       setIsCompiling(false);
     }
-  }, [compileLowConfidenceOverride, lowConfidenceAccepted.length, onClose, session, setScene]);
+  }, [autoCreatePath, compileBlockingErrors, compileLowConfidenceOverride, lowConfidenceAccepted.length, onClose, runSimulation, session, setLaunchNotice, setScene, unresolvedWarnings.length, warningsReviewed]);
 
   const handleMergeNearDuplicates = useCallback(() => {
     setSession((current) => {
@@ -642,16 +734,28 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
                 className="hidden"
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   if (file) {
+                    if (!file.type.startsWith("image/")) {
+                      setError("Unsupported file type. Use PNG, JPG, WEBP, or SVG.");
+                      return;
+                    }
                     void handleFile(file);
                   }
                   event.target.value = "";
                 }}
               />
+              {session.imageDataUrl ? (
+                <div className="mt-3 rounded-xl border border-[#243049] bg-[#09111b] px-3 py-2 text-[11px] text-[#9db0d0]">
+                  <div>File: <span className="text-white">{session.imageName ?? "unknown"}</span></div>
+                  <div>Dimensions: <span className="text-white">{session.imageWidthPx ?? "?"} × {session.imageHeightPx ?? "?"}</span></div>
+                  <div>Status: <span className="text-amber-200">Manual marking required</span></div>
+                  <div>Photos in session: <span className="text-white">{session.photos.length}</span></div>
+                </div>
+              ) : null}
             </div>
 
             <div className="rounded-2xl border border-[#1f2536] bg-[#0c111b] p-4">
@@ -717,7 +821,7 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
                       tabIndex={0}
                     >
                       <img
-                        src={session.imageDataUrl}
+                        src={activePhoto?.dataUrl ?? session.imageDataUrl}
                         alt={session.imageName ?? "Uploaded site"}
                         className="h-full w-full object-cover"
                         draggable={false}
@@ -726,6 +830,7 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
                       {session.candidates.map((candidate, index) => {
                         const meta = kindMeta(candidate.kind);
                         const isSelected = candidate.id === selectedCandidateId;
+                        const onActivePhoto = !candidate.sourcePhotoId || candidate.sourcePhotoId === session.activePhotoId;
                         return (
                           <button
                             key={candidate.id}
@@ -735,7 +840,7 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
                               meta.border,
                               meta.bg,
                               meta.accent,
-                              candidate.status === "rejected" ? "opacity-40" : "opacity-100",
+                              candidate.status === "rejected" ? "opacity-40" : onActivePhoto ? "opacity-100" : "opacity-45",
                               isSelected ? "ring-2 ring-white/70" : "",
                             ].join(" ")}
                             style={{ left: `${candidate.point[0] * 100}%`, top: `${candidate.point[1] * 100}%` }}
@@ -873,6 +978,24 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
                                 className="mt-2 w-full accent-cyan-400"
                               />
                             </label>
+                            {candidate.kind === "path_point" ? (
+                              <div className="mt-2 flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => reorderPathCandidate(candidate.id, -1)}
+                                  className="rounded border border-[#2a354d] bg-[#0a0f17] px-2 py-1 text-[10px] text-[#c7d0e4]"
+                                >
+                                  Path Order Up
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => reorderPathCandidate(candidate.id, 1)}
+                                  className="rounded border border-[#2a354d] bg-[#0a0f17] px-2 py-1 text-[10px] text-[#c7d0e4]"
+                                >
+                                  Path Order Down
+                                </button>
+                              </div>
+                            ) : null}
                           </div>
                           <button
                             type="button"
@@ -891,6 +1014,33 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
                   })
                 )}
               </div>
+              {session.photos.length > 1 ? (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {session.photos.map((photo) => (
+                    <button
+                      key={photo.id}
+                      type="button"
+                      onClick={() =>
+                        updateSession({
+                          imageDataUrl: photo.dataUrl,
+                          imageName: photo.name,
+                          imageWidthPx: photo.widthPx,
+                          imageHeightPx: photo.heightPx,
+                          imageId: photo.id,
+                          activePhotoId: photo.id,
+                        })
+                      }
+                      className={`rounded border px-2 py-1 text-[10px] ${
+                        session.activePhotoId === photo.id
+                          ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-100"
+                          : "border-[#2a354d] bg-[#0a0f17] text-[#8ea5cc]"
+                      }`}
+                    >
+                      {photo.name}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -922,13 +1072,31 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
                 </div>
                 <div className="flex items-center justify-between rounded-xl border border-[#243049] bg-[#09111b] px-3 py-2">
                   <span className="text-xs text-[#8292af]">Source</span>
-                  <span className="text-xs font-medium text-cyan-200">scan_import</span>
+                  <span className="text-xs font-medium text-cyan-200">scan</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 rounded-xl border border-[#243049] bg-[#09111b] px-3 py-2 text-[11px] text-[#9db0d0]">
+                  <div>Cameras: <span className="text-white">{candidateStats.cameraCount}</span></div>
+                  <div>Doors: <span className="text-white">{candidateStats.doorCount}</span></div>
+                  <div>Windows: <span className="text-white">{candidateStats.windowCount}</span></div>
+                  <div>Lights: <span className="text-white">{candidateStats.lightCount}</span></div>
+                  <div>Obstructions: <span className="text-white">{candidateStats.obstructionCount}</span></div>
+                  <div>Critical zones: <span className="text-white">{candidateStats.criticalZoneCount}</span></div>
+                  <div>Path points: <span className="text-white">{candidateStats.pathPointCount}</span></div>
+                  <div>Image: <span className="text-white">{session.imageName ?? "none"}</span></div>
                 </div>
               </div>
 
               <div className="mt-4 rounded-2xl border border-cyan-500/20 bg-cyan-500/8 p-3 text-xs text-cyan-100/90">
                 No AI perception is claimed here. The image is a manual-assisted intake that compiles directly into the existing simulation pipeline.
               </div>
+              <label className="mt-3 flex items-start gap-2 rounded-2xl border border-[#243049] bg-[#09111b] px-3 py-2 text-[11px] text-[#c6d3ea]">
+                <input
+                  type="checkbox"
+                  checked={autoCreatePath}
+                  onChange={(event) => setAutoCreatePath(event.target.checked)}
+                />
+                <span>Auto-create entry-to-critical-zone path when path points are not marked.</span>
+              </label>
               <div className="mt-3 rounded-2xl border border-[#243049] bg-[#09111b] p-3">
                 <h4 className="text-xs font-semibold text-white">Structural auto-fix assist (explicit)</h4>
                 <p className="mt-1 text-[11px] text-[#8aa1c4]">
@@ -985,6 +1153,33 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
                     />
                     <span>Compile anyway with low-confidence accepted candidates (explicit manual override).</span>
                   </label>
+                ) : null}
+                {(reviewWarnings.length > 0 || compileWarnings.length > 0) ? (
+                  <div className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-100">
+                    {unresolvedWarnings.map((warning, index) => (
+                      <p key={`${warning.code}_${index}`}>• {warning.message}</p>
+                    ))}
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {duplicateCandidateGroups.length > 0 ? (
+                        <SurfaceButton type="button" onClick={handleMergeNearDuplicates}>
+                          Fix duplicate clusters
+                        </SurfaceButton>
+                      ) : null}
+                      {openingWithoutWallNearbyCount > 0 ? (
+                        <SurfaceButton type="button" onClick={handleSnapOpeningsToWalls}>
+                          Snap openings to walls
+                        </SurfaceButton>
+                      ) : null}
+                    </div>
+                    <label className="mt-3 flex items-start gap-2 text-[11px] text-[#f5e7bf]">
+                      <input
+                        type="checkbox"
+                        checked={warningsReviewed}
+                        onChange={(event) => setWarningsReviewed(event.target.checked)}
+                      />
+                      <span>I reviewed unresolved warnings and want to continue with this manual-assisted compile.</span>
+                    </label>
+                  </div>
                 ) : null}
               </div>
             </div>
@@ -1057,7 +1252,7 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
         ) : (
           <SurfaceButton type="button" onClick={() => void handleCompile()} disabled={isCompiling}>
             {isCompiling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CirclePlus className="h-3.5 w-3.5" />}
-            Compile to Camera Studio
+            Compile Scene
           </SurfaceButton>
         )}
       </div>

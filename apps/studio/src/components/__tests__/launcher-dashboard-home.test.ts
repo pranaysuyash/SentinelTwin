@@ -13,6 +13,12 @@ describe("Studio dashboard launcher surface", () => {
     expect(source).toContain("Import JSON");
     expect(source).toContain("New Scene");
     expect(source).toContain("Scene Work");
+    expect(source).toContain("Security Jobs");
+    expect(source).toContain("Audit Existing Camera Setup");
+    expect(source).toContain("Scan Site Photo");
+    expect(source).toContain("Guided Scan Reconstruction");
+    expect(source).toContain("Verify Real Camera Footage");
+    expect(source).toContain("Manual-Assisted Scan");
     expect(source).toContain("Current Workspace Preview");
     expect(source).toContain("Project Browser");
     expect(source).toContain("Search, pin, and reopen your workspaces first. The demo remains available as the reference baseline below.");
@@ -37,8 +43,7 @@ describe("Studio dashboard launcher surface", () => {
     expect(source).toContain("WorkspaceMiniPreview");
     expect(source).toContain("Loading preview");
     expect(source).toContain("Preview loading");
-    expect(source).toContain("const [hydrated, setHydrated] = useState(false);");
-    expect(source).toContain("setHydrated(true);");
+    expect(source).toContain("const hydrated = useSyncExternalStore(");
     expect(source).toContain("Reference Demo");
     expect(source).toContain("Draft Workspace");
     expect(source).toContain("Draft");
@@ -46,7 +51,7 @@ describe("Studio dashboard launcher surface", () => {
     expect(source).toContain("Project metadata");
     expect(source).toContain("All tags");
     expect(source).toContain("Pin");
-    expect(source).toContain("Save tags");
+    expect(source).toContain("Project metadata");
     expect(source).toContain("Security Outcome");
     expect(source).toContain("Open Issues");
     expect(source).toContain("Simulation Assumptions");

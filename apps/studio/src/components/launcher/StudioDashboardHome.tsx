@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useMemo, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 
 import {
   ArrowRight,
@@ -23,6 +23,7 @@ import {
 
 import { cn } from "@/lib/cn";
 import { PRODUCT_FEATURE_STATUS_LAST_VERIFIED, type ProductFeatureEntry } from "@/lib/product-feature-status";
+import { getSceneSourceMeta } from "@/lib/scene-source";
 import { SecurityOutcomePanel } from "@/components/security-outcome/SecurityOutcomePanel";
 import type { BottomTab, SavedProjectRecord, ViewMode, WorkspacePreset } from "@/store/studio-store";
 import type { SecurityScene, SecurityIssue, SimulationResult, DoriQuality, ScenarioPath, CameraNode, ObstructionNode, SecurityLightNode } from "@/schema/security-scene";
@@ -37,6 +38,7 @@ type LaunchMode = {
 
 type ProjectSort = "recent" | "name" | "coverage";
 type StarterTone = "blank" | "import" | "scan" | "ai";
+type WorkflowStatus = "Available" | "Preview" | "Planned";
 
 const LAUNCH_MODES: LaunchMode[] = [
   { label: "Coverage", description: "Open the main analysis workspace.", viewMode: "camera_view", preset: "coverage", accent: "blue" },
@@ -58,9 +60,10 @@ const NAV_ITEMS = [
 
 const SOURCE_LABELS: Record<SecurityScene["source"], string> = {
   manual: "Draft",
-  ai_generated: "AI Draft",
-  floor_plan_import: "Floor Plan",
-  scan_import: "Scan",
+  ai: "AI Draft",
+  scan: "Scan",
+  import: "Import",
+  preset: "Preset",
   demo: "Demo",
 };
 
@@ -70,6 +73,20 @@ const ISSUE_SEVERITY_ORDER: Record<SecurityIssue["severity"], number> = {
   medium: 2,
   low: 3,
 };
+
+function issueSeverityLabel(severity: SecurityIssue["severity"]) {
+  switch (severity) {
+    case "critical":
+      return "Critical";
+    case "high":
+      return "High";
+    case "medium":
+      return "Medium";
+    case "low":
+    default:
+      return "Low";
+  }
+}
 
 const QUALITY_COLOR: Record<DoriQuality, string> = {
   none: "#7f1d1d",
@@ -116,9 +133,12 @@ type StudioDashboardHomeProps = {
   onOpenIssues: () => void;
   onRunSimulation: () => void;
   onCreateScene: () => void;
+  onImportFloorPlan: () => void;
   onImportScene: () => void;
   onScanSite: () => void;
   onAiDraft: () => void;
+  onVerifyFootagePlanned: () => void;
+  onGuidedScanPlanned: () => void;
   onOpenReport: () => void;
   onOpenScene?: (scene: SecurityScene) => void;
   onUpdateProjectMetadata: (sceneId: string, patch: Partial<Pick<SavedProjectRecord, "folder" | "tags" | "pinned" | "lastOpenedAt">>) => void;
@@ -148,32 +168,24 @@ function qualityToTone(quality: DoriQuality) {
   return QUALITY_COLOR[quality] ?? QUALITY_COLOR.none;
 }
 
-function severityTone(severity: SecurityIssue["severity"]) {
-  switch (severity) {
-    case "critical":
-      return "border-red-400/25 bg-red-500/10 text-red-200";
-    case "high":
-      return "border-orange-400/25 bg-orange-500/10 text-orange-200";
-    case "medium":
-      return "border-amber-400/25 bg-amber-500/10 text-amber-100";
-    case "low":
-    default:
-      return "border-slate-400/20 bg-slate-500/10 text-slate-200";
-  }
-}
-
 function coverageTone(pct: number) {
   if (pct >= 80) return "text-emerald-300";
   if (pct >= 60) return "text-amber-300";
   return "text-red-300";
 }
 
-function issueSeverityLabel(severity: SecurityIssue["severity"]) {
-  return severity.charAt(0).toUpperCase() + severity.slice(1);
+function sceneSummary(scene: SecurityScene) {
+  return [
+    `${scene.dimensions.width}m × ${scene.dimensions.depth}m`,
+    countLabel(scene.cameras.length, "camera"),
+    countLabel(scene.securityLights.length, "light"),
+    countLabel(scene.obstructions.length, "obstruction"),
+    countLabel(scene.criticalZones.length, "critical zone"),
+  ].join(" · ");
 }
 
-function sceneSummary(scene: SecurityScene) {
-  return `${scene.dimensions.width}m × ${scene.dimensions.depth}m · ${scene.cameras.length} cameras · ${scene.securityLights.length} lights · ${scene.obstructions.length} obstructions · ${scene.criticalZones.length} critical zones`;
+function countLabel(count: number, singular: string, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
 }
 
 function criticalZoneStatusMap(result: SimulationResult | null) {
@@ -505,7 +517,7 @@ function WorkspaceMiniPreview({ scene, result, hydrated = true }: ScenePreviewPr
           {scene.name}
         </text>
         <text x={offsetX + 10} y={offsetY + 32} fill="rgba(148,163,184,0.88)" fontSize="9">
-          {scene.cameras.length} cameras · {scene.criticalZones.length} zones
+          {countLabel(scene.cameras.length, "camera")} · {countLabel(scene.criticalZones.length, "zone")}
         </text>
       </svg>
     </div>
@@ -549,6 +561,40 @@ function ActionButton({
         {description ? <div className="mt-1 text-[11px] leading-4 text-[color:var(--st-muted)]">{description}</div> : null}
       </div>
       <ArrowRight className="h-4 w-4 flex-none text-[color:var(--st-accent)] transition-transform duration-200 group-hover:translate-x-1" />
+    </button>
+  );
+}
+
+function workflowStatusTone(status: WorkflowStatus) {
+  if (status === "Available") return "border-emerald-400/25 bg-emerald-500/10 text-emerald-200";
+  if (status === "Preview") return "border-amber-400/25 bg-amber-500/10 text-amber-200";
+  return "border-slate-400/20 bg-slate-500/10 text-slate-200";
+}
+
+function WorkflowCard({
+  title,
+  description,
+  status,
+  onClick,
+}: {
+  title: string;
+  description: string;
+  status: WorkflowStatus;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group rounded-2xl border border-[color:var(--st-border)] bg-white/[0.03] p-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(79,183,255,0.35)] hover:bg-[color:var(--st-panel-2)]"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-sm font-semibold text-white">{title}</div>
+        <span className={cn("rounded-full border px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em]", workflowStatusTone(status))}>
+          {status}
+        </span>
+      </div>
+      <div className="mt-1 text-[11px] leading-4 text-[color:var(--st-muted)]">{description}</div>
     </button>
   );
 }
@@ -686,45 +732,161 @@ function MiniStat({
   );
 }
 
-function IssuePill({
-  issue,
-  onView,
-  onTestFix,
+function ProjectMetadataEditor({
+  project,
+  onUpdateProjectMetadata,
 }: {
-  issue: SecurityIssue;
-  onView: () => void;
-  onTestFix: () => void;
+  project: SavedProjectRecord;
+  onUpdateProjectMetadata: StudioDashboardHomeProps["onUpdateProjectMetadata"];
 }) {
+  const [folderDraft, setFolderDraft] = useState(project.folder);
+  const [tagDraft, setTagDraft] = useState(project.tags.join(", "));
+
+  const applyFolderDraft = () => {
+    onUpdateProjectMetadata(project.scene.id, { folder: folderDraft.trim() || "Unsorted" });
+  };
+
+  const applyTagDraft = () => {
+    const tags = tagDraft
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+    onUpdateProjectMetadata(project.scene.id, { tags });
+  };
+
+  const togglePinned = () => {
+    onUpdateProjectMetadata(project.scene.id, { pinned: !project.pinned });
+  };
+
+  const selectedProjectScene = project.scene;
+  const selectedProjectCoverage = selectedProjectScene.simulation?.totalCoveragePct ?? null;
+  const selectedProjectIssues = [...(selectedProjectScene.simulation?.issues ?? [])].sort(
+    (a, b) => ISSUE_SEVERITY_ORDER[a.severity] - ISSUE_SEVERITY_ORDER[b.severity],
+  );
+
   return (
-    <div className={cn("rounded-2xl border p-3", severityTone(issue.severity))}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em]">
-              {issueSeverityLabel(issue.severity)}
-            </span>
-            <span className="text-[11px] text-[color:var(--st-muted)] uppercase tracking-[0.16em]">{issue.category.replace(/_/g, " ")}</span>
+    <div className="mt-4 rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
+      <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
+        <Settings2 className="h-3.5 w-3.5 text-sky-300" />
+        Selected Workspace
+      </div>
+      <div className="mt-3 rounded-[22px] border border-[color:var(--st-border)] bg-white/[0.025] p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="truncate text-base font-semibold text-white">{selectedProjectScene.name}</div>
+            <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
+              {sourceLabel(selectedProjectScene)} · Last updated {formatTime(project.updatedAt)}
+            </div>
+            <div className="mt-2">
+              <span
+                className={cn(
+                  "rounded-full border px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.18em]",
+                  sourceBadgeTone(selectedProjectScene.source),
+                )}
+              >
+                {selectedProjectScene.source === "demo"
+                  ? "Reference Demo"
+                  : selectedProjectScene.source === "manual"
+                    ? "Draft Workspace"
+                    : "Your Workspace"}
+              </span>
+            </div>
           </div>
-          <div className="mt-2 text-sm text-[color:var(--st-text)]">{issue.description}</div>
+          <button
+            type="button"
+            onClick={togglePinned}
+            className={cn(
+              "rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
+              project.pinned
+                ? "border-amber-400/30 bg-amber-500/12 text-amber-100"
+                : "border-[color:var(--st-border)] bg-white/[0.03] text-[color:var(--st-muted)] hover:bg-white/[0.05]",
+            )}
+          >
+            {project.pinned ? "Unpin" : "Pin"}
+          </button>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+            Folder: {folderDraft}
+          </span>
+          {project.tags.length > 0 ? (
+            project.tags.map((tag) => (
+              <span key={tag} className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+                #{tag}
+              </span>
+            ))
+          ) : (
+            <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+              No tags
+            </span>
+          )}
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+          <MiniStat
+            label="Coverage"
+            value={selectedProjectCoverage != null ? `${Math.round(selectedProjectCoverage)}%` : "—"}
+            accent={selectedProjectCoverage != null ? coverageTone(selectedProjectCoverage) : "text-white"}
+            detail="Saved workspace snapshot"
+          />
+          <MiniStat
+            label="Issues"
+            value={`${selectedProjectIssues.length}`}
+            accent={selectedProjectIssues.length > 0 ? "text-amber-300" : "text-emerald-300"}
+            detail={selectedProjectIssues[0] ? selectedProjectIssues[0].description : "No saved issues"}
+          />
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+          <MiniStat label="Cameras" value={`${selectedProjectScene.cameras.length}`} accent="text-sky-200" detail="Saved scene cameras" />
+          <MiniStat label="Zones" value={`${selectedProjectScene.criticalZones.length}`} accent="text-sky-200" detail="Critical zones tracked" />
         </div>
       </div>
-      <div className="mt-3 flex gap-2">
-        <button type="button" onClick={onView} className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium hover:bg-white/[0.08]">
-          View
-        </button>
-        <button type="button" onClick={onTestFix} className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium hover:bg-white/[0.08]">
-          Test Fix
-        </button>
-      </div>
-      <div className="mt-2 text-[11px] text-[color:var(--st-muted)]">
-        Zones: {issue.affectedZones.length || 0} · Cameras: {issue.affectedCameras.length || 0}
+
+      <div className="mt-4 rounded-[22px] border border-[color:var(--st-border)] bg-white/[0.025] p-4">
+        <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Project metadata</div>
+        <div className="mt-3 space-y-3">
+          <label className="block">
+            <span className="text-[11px] text-[color:var(--st-muted)]">Folder</span>
+            <input
+              value={folderDraft}
+              onChange={(event) => setFolderDraft(event.target.value)}
+              onBlur={applyFolderDraft}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  applyFolderDraft();
+                }
+              }}
+              className="mt-1 w-full rounded-2xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-[color:var(--st-muted)] focus:border-sky-400/35 focus:bg-white/[0.04]"
+              placeholder="Unsorted"
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-[11px] text-[color:var(--st-muted)]">Tags</span>
+            <input
+              value={tagDraft}
+              onChange={(event) => setTagDraft(event.target.value)}
+              onBlur={applyTagDraft}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  applyTagDraft();
+                }
+              }}
+              className="mt-1 w-full rounded-2xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-[color:var(--st-muted)] focus:border-sky-400/35 focus:bg-white/[0.04]"
+              placeholder="retail, client, north"
+            />
+          </label>
+        </div>
       </div>
     </div>
   );
 }
 
 function sourceLabel(scene: SecurityScene) {
-  return SOURCE_LABELS[scene.source];
+  return SOURCE_LABELS[scene.source] ?? getSceneSourceMeta(scene.source).shortLabel;
 }
 
 function sourceBadgeTone(source: SecurityScene["source"]) {
@@ -733,12 +895,14 @@ function sourceBadgeTone(source: SecurityScene["source"]) {
       return "border-emerald-400/20 bg-emerald-500/10 text-emerald-200";
     case "manual":
       return "border-amber-400/20 bg-amber-500/10 text-amber-100";
-    case "scan_import":
+    case "scan":
       return "border-cyan-400/20 bg-cyan-500/10 text-cyan-200";
-    case "floor_plan_import":
+    case "import":
       return "border-sky-400/20 bg-sky-500/10 text-sky-200";
-    case "ai_generated":
+    case "ai":
       return "border-violet-400/20 bg-violet-500/10 text-violet-200";
+    case "preset":
+      return "border-indigo-400/20 bg-indigo-500/10 text-indigo-200";
     default:
       return "border-slate-400/20 bg-slate-500/10 text-slate-200";
   }
@@ -759,16 +923,23 @@ export function StudioDashboardHome({
   onOpenIssues,
   onRunSimulation,
   onCreateScene,
+  onImportFloorPlan,
   onImportScene,
   onScanSite,
   onAiDraft,
+  onVerifyFootagePlanned,
+  onGuidedScanPlanned,
   onOpenReport,
   onOpenScene,
   onUpdateProjectMetadata,
   onOpenMode,
   featureStatus,
 }: StudioDashboardHomeProps) {
-  const [hydrated, setHydrated] = useState(false);
+  const hydrated = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
   const coverage = result?.totalCoveragePct ?? scene.simulation?.totalCoveragePct ?? null;
   const passCount = result?.criticalZoneResults.filter((zone) => zone.status === "pass").length ?? (scene.simulation?.criticalZoneResults ?? []).filter((zone) => zone.status === "pass").length;
   const totalZones = result?.criticalZoneResults.length ?? (scene.simulation?.criticalZoneResults ?? []).length ?? scene.criticalZones.length;
@@ -812,35 +983,15 @@ export function StudioDashboardHome({
       }
     });
   }, [projectQuery, projectSort, savedProjects]);
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(browserProjects[0]?.scene.id ?? scene.id);
-  const [folderDraft, setFolderDraft] = useState("Unsorted");
-  const [tagDraft, setTagDraft] = useState("");
-  useEffect(() => {
-    const stillVisible = selectedProjectId ? browserProjects.some((project) => project.scene.id === selectedProjectId) : false;
-    if (!stillVisible) {
-      setSelectedProjectId(browserProjects[0]?.scene.id ?? scene.id);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const selectedProjectRecord = useMemo(() => {
+    if (selectedProjectId) {
+      const selected = browserProjects.find((project) => project.scene.id === selectedProjectId);
+      if (selected) return selected;
     }
-  }, [browserProjects, scene.id, selectedProjectId]);
-  const selectedProjectRecord = browserProjects.find((project) => project.scene.id === selectedProjectId) ?? null;
+    return browserProjects[0] ?? null;
+  }, [browserProjects, selectedProjectId]);
   const selectedProjectScene = selectedProjectRecord?.scene ?? scene;
-  const selectedProjectResult = selectedProjectScene.simulation ?? null;
-  const selectedProjectCoverage = selectedProjectResult?.totalCoveragePct ?? null;
-  const selectedProjectIssues = [...(selectedProjectResult?.issues ?? selectedProjectScene.simulation?.issues ?? [])].sort(
-    (a, b) => ISSUE_SEVERITY_ORDER[a.severity] - ISSUE_SEVERITY_ORDER[b.severity],
-  );
-  useEffect(() => {
-    if (!selectedProjectRecord) {
-      setFolderDraft("Unsorted");
-      setTagDraft("");
-      return;
-    }
-
-    setFolderDraft(selectedProjectRecord.folder);
-    setTagDraft(selectedProjectRecord.tags.join(", "));
-  }, [selectedProjectRecord]);
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
   const folderCounts = useMemo(() => {
     return browserProjects.reduce<Record<string, number>>((acc, project) => {
       acc[project.folder] = (acc[project.folder] ?? 0) + 1;
@@ -871,29 +1022,6 @@ export function StudioDashboardHome({
   const visibleProjectCount = visibleProjects.length;
   const userWorkspaceCount = userWorkspaceProjects.length;
   const referenceDemoCount = referenceDemoProjects.length;
-  const selectedFolder = selectedProjectRecord?.folder ?? "Unsorted";
-  const selectedTags = selectedProjectRecord?.tags ?? [];
-  const selectedPinned = selectedProjectRecord?.pinned ?? false;
-
-  const applyFolderDraft = () => {
-    if (!selectedProjectRecord) return;
-    onUpdateProjectMetadata(selectedProjectRecord.scene.id, { folder: folderDraft.trim() || "Unsorted" });
-  };
-
-  const applyTagDraft = () => {
-    if (!selectedProjectRecord) return;
-    const tags = tagDraft
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter(Boolean);
-    onUpdateProjectMetadata(selectedProjectRecord.scene.id, { tags });
-  };
-
-  const togglePinned = () => {
-    if (!selectedProjectRecord) return;
-    onUpdateProjectMetadata(selectedProjectRecord.scene.id, { pinned: !selectedProjectRecord.pinned });
-  };
-
   const rootStyle = {
     "--st-bg": "#080b11",
     "--st-panel": "rgba(11, 16, 26, 0.94)",
@@ -967,6 +1095,14 @@ export function StudioDashboardHome({
               <MiniStat label="Issues" value={`${issues.length}`} accent={issues.length > 0 ? "text-amber-300" : "text-emerald-300"} detail={worstIssue ? worstIssue.description : "No current issues"} />
               <MiniStat label="Last run" value={formatTime(lastRun)} accent="text-sky-200" detail="Simulation timestamp" />
             </div>
+            <button
+              type="button"
+              onClick={onOpenIssues}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-3 py-2 text-[11px] font-medium text-amber-100 transition-colors hover:border-amber-300/30 hover:bg-amber-500/14"
+            >
+              <TriangleAlert className="h-3.5 w-3.5" />
+              Open Issues
+            </button>
           </div>
 
           <div className="grid gap-2">
@@ -979,6 +1115,23 @@ export function StudioDashboardHome({
 
         <div className="grid flex-1 gap-4 xl:grid-cols-[228px_minmax(0,1fr)_388px]">
           <aside className="flex flex-col gap-4 rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
+            <div>
+              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-[color:var(--st-muted)]">
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-300" />
+                Security Jobs
+              </div>
+              <div className="mt-3 space-y-2">
+                <WorkflowCard title="Audit Existing Camera Setup" description="Run coverage, inspect failures, and generate report evidence." status="Available" onClick={onOpenCoverageWorkspace} />
+                <WorkflowCard title="Design New Camera Layout" description="Create a scene, place cameras, and test before install." status="Available" onClick={onCreateScene} />
+                <WorkflowCard title="Import Floor Plan" description="Upload plan, calibrate detections, review warnings, build baseline scene." status="Available" onClick={onImportFloorPlan} />
+                <WorkflowCard title="Describe Layout With AI" description="Generate a draft scene from prompt and refine." status="Preview" onClick={onAiDraft} />
+                <WorkflowCard title="Manual-Assisted Scan" description="Capture site inputs and compile into scene draft." status="Preview" onClick={onScanSite} />
+                <WorkflowCard title="Guided Scan Reconstruction" description="Capture-driven reconstruction pipeline (not production-ready)." status="Planned" onClick={onGuidedScanPlanned} />
+                <WorkflowCard title="Verify Real Camera Footage" description="Expected-vs-actual CCTV validation pipeline." status="Planned" onClick={onVerifyFootagePlanned} />
+                <WorkflowCard title="Open Reference Demo" description="Use the retail baseline to demo the simulation loop." status="Available" onClick={onOpenStudio} />
+              </div>
+            </div>
+
             <div>
               <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-[color:var(--st-muted)]">
                 <Plus className="h-3.5 w-3.5 text-emerald-300" />
@@ -1001,7 +1154,7 @@ export function StudioDashboardHome({
                 <ActionButton
                   icon={<ScanSearch className="h-4 w-4" />}
                   label="Scan Site Photo"
-                  description="Open the manual-assisted intake flow."
+                  description="Preview: manual-assisted photo intake compiled into SecurityScene."
                   onClick={onScanSite}
                 />
                 <ActionButton
@@ -1116,7 +1269,7 @@ export function StudioDashboardHome({
                   <Sparkles className="h-3.5 w-3.5 text-sky-300" />
                   Scene Starter Gallery
                 </div>
-                <div className="mt-3 grid gap-2 lg:grid-cols-2 xl:grid-cols-4">
+                <div className="mt-3 grid gap-2 lg:grid-cols-2 xl:grid-cols-5">
                       <SceneStarterCard
                         icon={<Plus className="h-4 w-4" />}
                         badge="Blank"
@@ -1137,11 +1290,20 @@ export function StudioDashboardHome({
                         onClick={onImportScene}
                       />
                       <SceneStarterCard
+                        icon={<MapIcon className="h-4 w-4" />}
+                        badge="Floor Plan"
+                        tone="import"
+                        title="Import Floor Plan Workflow"
+                        description="Dedicated lane: upload floor plan, review extraction summary/warnings, then commit to scene."
+                        hint="Plan-first flow"
+                        onClick={onImportFloorPlan}
+                      />
+                      <SceneStarterCard
                         icon={<ScanSearch className="h-4 w-4" />}
                         badge="Scan"
                         tone="scan"
                         title="Scan Site Photo"
-                        description="Reconstruct a scene from a site image and move toward a structured editable workspace."
+                        description="Preview manual-assisted flow: mark walls/doors/cameras/objects on site photo, then compile into editable scene."
                         hint="Photo-assisted"
                         onClick={onScanSite}
                       />
@@ -1352,16 +1514,16 @@ export function StudioDashboardHome({
                               </div>
                               <div className="mt-3 flex flex-wrap gap-2">
                                 <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-white">
-                                  {saved.cameras.length} cameras
+                                  {countLabel(saved.cameras.length, "camera")}
                                 </span>
                                 <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-white">
-                                  {saved.obstructions.length} obstructions
+                                  {countLabel(saved.obstructions.length, "obstruction")}
                                 </span>
                                 <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-white">
-                                  {savedZones} zones
+                                  {countLabel(savedZones, "zone")}
                                 </span>
                                 <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-white">
-                                  {savedIssues} issues
+                                  {countLabel(savedIssues, "issue")}
                                 </span>
                               </div>
                               <div className="mt-3 flex flex-wrap gap-1.5">
@@ -1457,131 +1619,7 @@ export function StudioDashboardHome({
                 </div>
                 {selectedProjectRecord ? (
                   <>
-                    <div className="mt-3 rounded-[22px] border border-[color:var(--st-border)] bg-white/[0.025] p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="truncate text-base font-semibold text-white">{selectedProjectScene.name}</div>
-                          <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
-                            {sourceLabel(selectedProjectScene)} · Last updated {formatTime(selectedProjectRecord.updatedAt)}
-                          </div>
-                          <div className="mt-2">
-                            <span className={cn(
-                              "rounded-full border px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.18em]",
-                              sourceBadgeTone(selectedProjectScene.source),
-                            )}>
-                              {selectedProjectScene.source === "demo"
-                                ? "Reference Demo"
-                                : selectedProjectScene.source === "manual"
-                                  ? "Draft Workspace"
-                                  : "Your Workspace"}
-                            </span>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={togglePinned}
-                          className={cn(
-                            "rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
-                            selectedPinned
-                              ? "border-amber-400/30 bg-amber-500/12 text-amber-100"
-                              : "border-[color:var(--st-border)] bg-white/[0.03] text-[color:var(--st-muted)] hover:bg-white/[0.05]",
-                          )}
-                        >
-                          {selectedPinned ? "Unpin" : "Pin"}
-                        </button>
-                      </div>
-
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
-                          Folder: {selectedFolder}
-                        </span>
-                        {selectedTags.length > 0 ? (
-                          selectedTags.map((tag) => (
-                            <span key={tag} className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
-                              #{tag}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
-                            No tags
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-                        <MiniStat
-                          label="Coverage"
-                          value={selectedProjectCoverage != null ? `${Math.round(selectedProjectCoverage)}%` : "—"}
-                          accent={selectedProjectCoverage != null ? coverageTone(selectedProjectCoverage) : "text-white"}
-                          detail="Saved workspace snapshot"
-                        />
-                        <MiniStat
-                          label="Issues"
-                          value={`${selectedProjectIssues.length}`}
-                          accent={selectedProjectIssues.length > 0 ? "text-amber-300" : "text-emerald-300"}
-                          detail={selectedProjectIssues[0] ? selectedProjectIssues[0].description : "No saved issues"}
-                        />
-                      </div>
-                      <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                        <MiniStat label="Cameras" value={`${selectedProjectScene.cameras.length}`} accent="text-sky-200" detail="Saved scene cameras" />
-                        <MiniStat label="Zones" value={`${selectedProjectScene.criticalZones.length}`} accent="text-sky-200" detail="Critical zones tracked" />
-                      </div>
-                    </div>
-
-                    <div className="mt-4 rounded-[22px] border border-[color:var(--st-border)] bg-white/[0.025] p-4">
-                      <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Project metadata</div>
-                      <div className="mt-3 space-y-3">
-                        <label className="block">
-                          <span className="text-[11px] text-[color:var(--st-muted)]">Folder</span>
-                          <input
-                            value={folderDraft}
-                            onChange={(event) => setFolderDraft(event.target.value)}
-                            onBlur={applyFolderDraft}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter") {
-                                event.preventDefault();
-                                applyFolderDraft();
-                              }
-                            }}
-                            className="mt-1 w-full rounded-2xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-[color:var(--st-muted)] focus:border-sky-400/35 focus:bg-white/[0.04]"
-                            placeholder="Unsorted"
-                          />
-                        </label>
-                        <label className="block">
-                          <span className="text-[11px] text-[color:var(--st-muted)]">Tags</span>
-                          <input
-                            value={tagDraft}
-                            onChange={(event) => setTagDraft(event.target.value)}
-                            onBlur={applyTagDraft}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter") {
-                                event.preventDefault();
-                                applyTagDraft();
-                              }
-                            }}
-                            className="mt-1 w-full rounded-2xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-[color:var(--st-muted)] focus:border-sky-400/35 focus:bg-white/[0.04]"
-                            placeholder="retail, demo, client-alpha"
-                          />
-                        </label>
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={applyFolderDraft}
-                            className="rounded-full border border-sky-400/25 bg-sky-500/12 px-3 py-1.5 text-[11px] font-medium text-sky-100 hover:border-sky-300/35 hover:bg-sky-500/16"
-                          >
-                            Save folder
-                          </button>
-                          <button
-                            type="button"
-                            onClick={applyTagDraft}
-                            className="rounded-full border border-emerald-400/25 bg-emerald-500/12 px-3 py-1.5 text-[11px] font-medium text-emerald-100 hover:border-emerald-300/35 hover:bg-emerald-500/16"
-                          >
-                            Save tags
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
+                    <ProjectMetadataEditor key={selectedProjectRecord.scene.id} project={selectedProjectRecord} onUpdateProjectMetadata={onUpdateProjectMetadata} />
                     <div className="mt-4 space-y-2">
                       <ActionButton
                         icon={<FolderOpen className="h-4 w-4" />}
@@ -1615,7 +1653,7 @@ export function StudioDashboardHome({
                   <div className="mt-4 space-y-2">
                     <ActionButton icon={<Plus className="h-4 w-4" />} label="New Blank Scene" description="Start from an empty scene shell." onClick={onCreateScene} />
                     <ActionButton icon={<FileUp className="h-4 w-4" />} label="Import SecurityScene JSON" description="Load a canonical scene file." onClick={onImportScene} />
-                    <ActionButton icon={<ScanSearch className="h-4 w-4" />} label="Scan Site Photo" description="Open the manual-assisted intake flow." onClick={onScanSite} />
+                    <ActionButton icon={<ScanSearch className="h-4 w-4" />} label="Scan Site Photo" description="Preview: manual-assisted photo intake flow." onClick={onScanSite} />
                     <ActionButton icon={<Sparkles className="h-4 w-4" />} label="AI Layout Draft" description="Generate a prompt-backed draft scene." onClick={onAiDraft} />
                   </div>
                 </div>

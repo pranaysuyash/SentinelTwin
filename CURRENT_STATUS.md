@@ -22,7 +22,11 @@
 - Issues panel supports recommendation `Preview Fix`, `Apply Fix`, and `Revert Preview` loop.
 - Scene management exists: save/load, JSON import/export, snapshots, compare.
 - SceneBuilderWizard is wired from top bar (`New Scene...`) with blank/template/floor-plan options.
+- Launcher now has a dedicated floor-plan entry flow that opens SceneBuilderWizard directly in floor-plan mode (separate from generic new scene path).
 - Floor-plan import now converts detected geometry into an editable scene skeleton (walls/doors/windows + dimensions).
+- Manual-assisted `Scan a Site` flow now supports photo upload, marker placement/edit/reposition, candidate type switching (including path points), and review warnings before compile.
+- Scan compile now deterministically maps markers into canonical `scan_import` SecurityScene nodes (walls, doors, windows, entry points, cameras, lights, obstructions, critical zones, optional path) with schema validation and explicit warnings.
+- Scan handoff now emits launcher notice with compiled counts and auto-runs baseline simulation when camera + critical zone are present.
 - Floor-plan review now supports manual scale calibration (known width/depth/height) before scene creation.
 - Floor-plan review now supports correction controls to exclude false-positive walls/doors/windows before scene creation.
 - Floor-plan review now supports draggable door/window marker correction in the spatial preview before applying normalization.
@@ -33,6 +37,7 @@
 - Camera wall feed rigs now track live camera transform edits (no one-time POV lock).
 - Camera View now shows per-camera path-visibility status overlays during replay context.
 - Camera View now includes metric-backed footage verification assist (reference still upload, overlay/split comparison, opacity/alignment controls, `Alignment Quality` score, and optional difference heat overlay) with defensive non-forensic disclaimer framing.
+- Launcher now includes a dedicated `Verify Real Camera Footage (Preview)` modal that explicitly separates current overlay assist capabilities from not-yet-implemented forensic/video pipelines.
 - Camera Wall now shows per-camera route-visibility overlays and active route context badges.
 - Compare mode now renders each selected snapshot's own scene geometry (not only current live scene geometry).
 - Compare mode now supports snapshot-level simulation recovery (`Simulate Scenario B Now`) and changed-object delta summaries.

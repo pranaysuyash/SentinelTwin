@@ -19,7 +19,8 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+Studio is pinned to `http://localhost:3000` and will not fall back to another port.
+If `3000` is already in use, reuse the running instance instead of starting a second one.
 
 ## Build and Test
 
@@ -50,6 +51,7 @@ bun test src/simulation/__tests__/golden-simulation-claims.test.ts
 
 - Root launcher flow before Studio shell: `Create or Import Scene` / `Open Current Workspace` / JSON import.
 - Root launcher includes a 5-step guided security workflow with direct handoff actions into Studio.
+- Launcher includes task-first `Security Jobs` entry cards with explicit `Available` / `Preview` / `Planned` maturity badges.
 - Root launcher includes a visible `Product Feature Status` board (`Available`/`Preview`/`Planned`) to avoid demoware ambiguity.
 - Guided flow includes quick actions for baseline run, failure simulation, cheapest-fix counterfactual, replay, night mode, and report.
 - Guided flow uses outcome-focused CTA language and disables stress/fix actions when prerequisites are missing.
@@ -59,6 +61,7 @@ bun test src/simulation/__tests__/golden-simulation-claims.test.ts
 - Studio shell with view modes: `Map`, `Camera View`, `Camera Wall`, `Path Replay`, `Compare`.
 - Scene controls in top bar: new scene wizard, save/load, import/export JSON, simulation run, snapshots, compare, report.
 - Scene builder wizard paths: blank, template, floor-plan import prototype.
+- Blank path now uses the canonical `createBlankSecurityScene()` factory and room-dimension wall generation (no demo-scene cloning).
 - Floor-plan review supports manual scale calibration before creating the scene.
 - Floor-plan review also supports correction controls (drop false wall/door/window detections before scene creation).
 - Floor-plan review supports draggable door/window marker adjustments in preview before applying corrections.
@@ -69,6 +72,7 @@ bun test src/simulation/__tests__/golden-simulation-claims.test.ts
 ## What Works Well
 
 - Typed `SecurityScene` schema and validation.
+- Canonical scene-source lineage is normalized on parse (`manual`, `ai`, `scan`, `import`, `preset`, `demo`), with legacy aliases accepted for backward compatibility.
 - Deterministic simulation pipeline (coverage, occlusion, quality scoring, path visibility).
 - Recommendation preview/apply/revert loop in issues tab.
 - Counterfactual scene comparisons and snapshot flow.

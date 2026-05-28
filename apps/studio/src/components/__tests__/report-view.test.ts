@@ -15,6 +15,7 @@ describe("ReportView", () => {
     expect(source).toContain("ReportLiteTab");
     expect(source).toContain("Fragility");
     expect(source).toContain("K-Robustness");
+    expect(source).toContain("K-Robustness Critical Sets");
     expect(source).toContain("Blind Regions");
     expect(source).toContain("Uncertainty");
     expect(source).toContain("Posture");

@@ -25,7 +25,7 @@ describe("simulateStudio", () => {
     expect(result.criticalZoneResults[0]?.status).toBe("pass");
     expect(result.issues.length).toBeGreaterThanOrEqual(0);
     expect(result.recommendations).toHaveLength(0);
-    expect(result.adversarialPath?.targetReached).toBe(true);
+    expect(result.adversarialPath?.criticalZoneReachable).toBe(true);
     expect(result.blindSpotFingerprint).toBeDefined();
     expect(result.pathResults[0]?.timeline.length).toBeGreaterThan(0);
   });

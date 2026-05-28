@@ -68,7 +68,7 @@ export function draftSceneFromPrompt(prompt: string): DraftResult {
   scene.name = prompt.trim().length > 0
     ? `AI Draft — ${prompt.trim().slice(0, 52)}${prompt.trim().length > 52 ? "..." : ""}`
     : `AI Draft — ${template.name}`;
-  scene.source = "ai_generated";
+  scene.source = "ai";
   const provenance: DraftProvenance = {
     source: scene.source,
     mode: "heuristic",
@@ -109,7 +109,7 @@ export async function draftSceneFromPromptWithModel(
   enrichSceneFromPrompt(scene, prompt);
 
   scene.name = structured.sceneName;
-  scene.source = "ai_generated";
+  scene.source = "ai";
   const confidenceLevel: DraftProvenance["confidenceLevel"] = structured.assumptions.length === 0 ? "high" : "medium";
   const provenance: DraftProvenance = {
     source: scene.source,

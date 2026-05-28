@@ -38,6 +38,18 @@ export interface FloorPlanResult {
   confidence: number; // 0-1 estimate of detection quality
 }
 
+export interface FloorPlanDiagnostics {
+  wallCount: number;
+  horizontalWallCount: number;
+  verticalWallCount: number;
+  diagonalWallCount: number;
+  shortWallCount: number;
+  duplicateWallPairs: number;
+  unsnappedDoorCount: number;
+  unsnappedWindowCount: number;
+  boundsCoverageRatio: number;
+}
+
 export interface FloorPlanConfig {
   /** Pixels per meter scale factor. Auto-detected if not provided. */
   scalePixelsPerMeter?: number;
@@ -161,7 +173,6 @@ export function createSceneFromFloorPlan(
     nodeType: "entry_point" as const,
     label: `Entry ${index + 1}`,
     position: [shiftX(door.position.x), shiftZ(door.position.y)] as [number, number],
-    source: "import" as const,
   }));
 
   // Fallback entry point at room center-front if no doors detected
@@ -171,7 +182,6 @@ export function createSceneFromFloorPlan(
       nodeType: "entry_point" as const,
       label: "Main Entry",
       position: [normalized.roomDimensions.widthM / 2, 0.5] as [number, number],
-      source: "import" as const,
     });
   }
 
@@ -235,7 +245,7 @@ export function createSceneFromFloorPlan(
       pixelsPerMeter: { detection: 25, observation: 62.5, recognition: 125, identification: 250 },
       showAssumptionsPanel: false,
     },
-    source: "floor_plan_import",
+    source: "import",
     version: "0.1.0",
     snapshots: [],
     scenarios: [],
@@ -302,11 +312,22 @@ export function normalizeFloorPlanResult(result: FloorPlanResult): FloorPlanResu
 export function validateFloorPlan(result: FloorPlanResult): {
   valid: boolean;
   warnings: string[];
+  diagnostics: FloorPlanDiagnostics;
 } {
   const warnings: string[] = [];
+  const diagnostics = getFloorPlanDiagnostics(result);
 
   if (result.walls.length < 4) {
     warnings.push("Fewer than 4 walls detected — room may be incomplete.");
+  }
+  if (diagnostics.duplicateWallPairs > 0) {
+    warnings.push(`${diagnostics.duplicateWallPairs} near-duplicate wall pair${diagnostics.duplicateWallPairs === 1 ? "" : "s"} detected — run normalization or prune duplicates before creating the scene.`);
+  }
+  if (diagnostics.unsnappedDoorCount + diagnostics.unsnappedWindowCount > 0) {
+    warnings.push(`${diagnostics.unsnappedDoorCount + diagnostics.unsnappedWindowCount} door/window marker${diagnostics.unsnappedDoorCount + diagnostics.unsnappedWindowCount === 1 ? " is" : "s are"} not close enough to a matching wall — drag or exclude before import.`);
+  }
+  if (diagnostics.shortWallCount > Math.max(2, result.walls.length * 0.25)) {
+    warnings.push("Many short wall fragments detected — merge or exclude noisy fragments before import.");
   }
   if (result.roomDimensions.widthM < 1 || result.roomDimensions.depthM < 1) {
     warnings.push("Room dimensions are unreasonably small (< 1m).");
@@ -321,6 +342,32 @@ export function validateFloorPlan(result: FloorPlanResult): {
   return {
     valid: warnings.length === 0 || warnings.every((w) => !w.includes("incomplete")),
     warnings,
+    diagnostics,
+  };
+}
+
+export function getFloorPlanDiagnostics(result: FloorPlanResult): FloorPlanDiagnostics {
+  const horizontalWalls = result.walls.filter((wall) => Math.abs(wall.start.y - wall.end.y) < 3);
+  const verticalWalls = result.walls.filter((wall) => Math.abs(wall.start.x - wall.end.x) < 3);
+  const diagonalWallCount = result.walls.length - horizontalWalls.length - verticalWalls.length;
+  const shortWallCount = result.walls.filter((wall) => wallLengthPx(wall) < Math.max(12, result.scalePixelsPerMeter * 0.35)).length;
+  const duplicateWallPairs = countNearDuplicateWalls(result.walls);
+  const unsnappedDoorCount = result.doors.filter((door) => !isOpeningNearMatchingWall(door, result.walls)).length;
+  const unsnappedWindowCount = result.windows.filter((window) => !isOpeningNearMatchingWall(window, result.walls)).length;
+  const bounds = getWallBounds(result.walls);
+  const boundsArea = bounds ? Math.max(0, bounds.maxX - bounds.minX) * Math.max(0, bounds.maxY - bounds.minY) : 0;
+  const imageArea = Math.max(1, result.imageWidth * result.imageHeight);
+
+  return {
+    wallCount: result.walls.length,
+    horizontalWallCount: horizontalWalls.length,
+    verticalWallCount: verticalWalls.length,
+    diagonalWallCount,
+    shortWallCount,
+    duplicateWallPairs,
+    unsnappedDoorCount,
+    unsnappedWindowCount,
+    boundsCoverageRatio: Number(Math.min(1, boundsArea / imageArea).toFixed(2)),
   };
 }
 
@@ -606,6 +653,72 @@ function snapOpeningsToWalls<T extends DoorOpening | WindowOpening>(
     const y = clamp(opening.position.y, minY + halfWidthPx, maxY - halfWidthPx);
     return { ...opening, position: { x, y } };
   });
+}
+
+function isOpeningNearMatchingWall(opening: DoorOpening | WindowOpening, walls: WallSegment[]): boolean {
+  const candidates = walls.filter((wall) => opening.orientation === "horizontal"
+    ? Math.abs(wall.start.y - wall.end.y) < 3
+    : Math.abs(wall.start.x - wall.end.x) < 3);
+  if (candidates.length === 0) return false;
+
+  return candidates.some((wall) => {
+    if (opening.orientation === "horizontal") {
+      const anchor = (wall.start.y + wall.end.y) / 2;
+      const minX = Math.min(wall.start.x, wall.end.x);
+      const maxX = Math.max(wall.start.x, wall.end.x);
+      return Math.abs(opening.position.y - anchor) <= 40 && opening.position.x >= minX - 8 && opening.position.x <= maxX + 8;
+    }
+    const anchor = (wall.start.x + wall.end.x) / 2;
+    const minY = Math.min(wall.start.y, wall.end.y);
+    const maxY = Math.max(wall.start.y, wall.end.y);
+    return Math.abs(opening.position.x - anchor) <= 40 && opening.position.y >= minY - 8 && opening.position.y <= maxY + 8;
+  });
+}
+
+function countNearDuplicateWalls(walls: WallSegment[]): number {
+  let duplicatePairs = 0;
+  for (let i = 0; i < walls.length; i++) {
+    for (let j = i + 1; j < walls.length; j++) {
+      if (areNearDuplicateWalls(walls[i], walls[j])) duplicatePairs++;
+    }
+  }
+  return duplicatePairs;
+}
+
+function areNearDuplicateWalls(a: WallSegment, b: WallSegment): boolean {
+  const aHorizontal = Math.abs(a.start.y - a.end.y) < 3;
+  const bHorizontal = Math.abs(b.start.y - b.end.y) < 3;
+  const aVertical = Math.abs(a.start.x - a.end.x) < 3;
+  const bVertical = Math.abs(b.start.x - b.end.x) < 3;
+  if (aHorizontal !== bHorizontal || aVertical !== bVertical) return false;
+
+  if (aHorizontal && bHorizontal) {
+    const anchorDistance = Math.abs(a.start.y - b.start.y);
+    return anchorDistance <= 6 && intervalsOverlapRatio(
+      [Math.min(a.start.x, a.end.x), Math.max(a.start.x, a.end.x)],
+      [Math.min(b.start.x, b.end.x), Math.max(b.start.x, b.end.x)],
+    ) > 0.8;
+  }
+
+  if (aVertical && bVertical) {
+    const anchorDistance = Math.abs(a.start.x - b.start.x);
+    return anchorDistance <= 6 && intervalsOverlapRatio(
+      [Math.min(a.start.y, a.end.y), Math.max(a.start.y, a.end.y)],
+      [Math.min(b.start.y, b.end.y), Math.max(b.start.y, b.end.y)],
+    ) > 0.8;
+  }
+
+  return false;
+}
+
+function intervalsOverlapRatio(a: [number, number], b: [number, number]): number {
+  const overlap = Math.max(0, Math.min(a[1], b[1]) - Math.max(a[0], b[0]));
+  const shortest = Math.max(1, Math.min(a[1] - a[0], b[1] - b[0]));
+  return overlap / shortest;
+}
+
+function wallLengthPx(wall: WallSegment): number {
+  return Math.sqrt((wall.end.x - wall.start.x) ** 2 + (wall.end.y - wall.start.y) ** 2);
 }
 
 function clamp(value: number, min: number, max: number) {

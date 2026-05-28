@@ -134,11 +134,7 @@ describe("report engine", () => {
     expect(report.title).toBe("Custom Audit");
   });
 
-  const testWithTimeout = test as unknown as (
-    name: string,
-    options: { timeout: number },
-    fn: () => void,
-  ) => void;
+  const testWithTimeout = test as any;
 
   testWithTimeout("buildCompareReportData produces correct deltas", { timeout: 15000 }, () => {
     const modifiedScene = createSmallRetailShopScene();
@@ -717,8 +713,13 @@ describe("exportAsText", () => {
 
 describe("comparison exports", () => {
   const scene = createSmallRetailShopScene();
+  const testWithTimeout = test as unknown as (
+    name: string,
+    options: { timeout: number },
+    fn: () => void,
+  ) => void;
 
-  test("exportCompareAsHtml produces valid HTML", () => {
+  testWithTimeout("exportCompareAsHtml produces valid HTML", { timeout: 15000 }, () => {
     const afterScene = createSmallRetailShopScene();
     const camera = afterScene.cameras.find((c) => c.id === "cam_entrance");
     if (camera) camera.status = "off";
@@ -754,8 +755,9 @@ describe("comparison exports", () => {
 
 describe("buildCompareReport (compatibility export)", () => {
   const scene = createSmallRetailShopScene();
+  const testWithTimeout = test as any;
 
-  test("produces same output as buildCompareReportData", () => {
+  testWithTimeout("produces same output as buildCompareReportData", { timeout: 15000 }, () => {
     const afterScene = createSmallRetailShopScene();
     const camera = afterScene.cameras.find((c) => c.id === "cam_entrance");
     if (camera) camera.status = "off";

@@ -465,7 +465,7 @@ export function TemporalProfileView() {
               </div>
               <div className="grid grid-cols-3 gap-1.5 mb-2">
                 <div className="rounded-md border border-[#1e2130] bg-[#0b0f17] px-2 py-1">
-                  <div className="text-[7px] uppercase tracking-wide text-[#4a5568]">High</div>
+                  <div className="text-[9px] uppercase tracking-wide text-[#4a5568]">High</div>
                   <div className="text-[14px] font-bold text-red-400">{temporalProfile.anomalySummary?.highSeverityCount ?? 0}</div>
                 </div>
                 <div className="rounded-md border border-[#1e2130] bg-[#0b0f17] px-2 py-1">

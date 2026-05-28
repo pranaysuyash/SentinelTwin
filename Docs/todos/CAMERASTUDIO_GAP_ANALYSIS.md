@@ -165,8 +165,7 @@ TopBar already provides a canonical scene selector, and the launcher now adds a 
 **[GAP-08] No camera preset library**
 Camera placement currently creates a hardcoded camera. There's no preset picker.
 **Spec ref:** Section 14 (Camera preset library)
-**Needed:** When placing a camera, show a preset picker: "2MP Indoor Dome", "4MP Wide
-Dome", etc. Each preset fills in the camera spec fields automatically.
+**Status:** Resolved in the live shell. The camera tool exposes a preset picker in-canvas, and View Settings now surfaces the preset library before placement so users can choose common camera specs up front.
 
 ---
 
@@ -181,7 +180,7 @@ The requiredQuality in critical zones is fixed. There's no way to say
 **[GAP-10] Redundancy / failure matrix not implemented**
 No matrix view showing coverage outcome per zone per camera-failure scenario.
 **Spec ref:** Section 17 (Redundancy / failure matrix)
-**Needed:** Table: rows = critical zones, columns = normal/cam1-off/cam2-off/night/etc.
+**Status:** Resolved in the live shell and report exports. The matrix is present in the Redundancy drawer, the Security Outcome panel, and the report handoff/export surfaces, including per-camera criticality and vulnerable-zone summaries.
 
 ---
 
@@ -208,15 +207,14 @@ Path lines render but there's no play/pause/scrub animation.
 The actor doesn't animate along the path. The visibility timeline doesn't update
 as the path plays.
 **Spec ref:** Section 11.3 (Timeline tab), section 12.2 (Path Replay mode)
-**Needed:** GSAP or requestAnimationFrame timeline. Actor sphere moving along path.
-Per-camera quality updating as actor moves. Scrub bar in timeline tab.
+**Status:** Resolved in the live product. PathReplayView now includes a play/pause playhead, speed presets, an animating actor, legalised replay waypoints, camera cones, and a quality-over-time scrub timeline.
 
 ---
 
 **[GAP-14] Before/After comparison lacks visual diff**
 BeforeAfterTab exists but its implementation is unknown. Likely shows metrics only.
 **Spec ref:** Section 11.4, section 12.5 (Before/After Split View)
-**Needed:** Side-by-side canvas showing baseline vs fix. Delta metrics table.
+**Status:** Resolved in the live product. BeforeAfterTab now reuses the compare visual evidence pipeline for a side-by-side diff when available and includes a direct handoff into Compare View.
 
 ---
 
@@ -304,7 +302,7 @@ Based on spec priority, demo script requirements, and dependency order:
 **Sprint 3 — Professional tool surface**
 - GAP-07: Scene selector + import JSON
 - GAP-08: Camera preset library
-- GAP-10: Redundancy / failure matrix
+- ~~GAP-10: Redundancy / failure matrix~~ — resolved in the live shell and report exports
 - Novel Algorithm 4: Adversarial K-Robustness
 - Novel Algorithm 1: Coverage Fragility Field
 

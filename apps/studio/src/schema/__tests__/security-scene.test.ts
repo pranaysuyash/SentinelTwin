@@ -15,6 +15,15 @@ describe("SecurityScene schema", () => {
     expect(parsed.paths[0]?.intent).toBe("authorized");
   });
 
+  test("rejects legacy scene source aliases", () => {
+    expect(() =>
+      parseSecurityScene({
+        ...smallRetailShopScene,
+        source: "scan_import",
+      }),
+    ).toThrow(/source/i);
+  });
+
   test("rejects a camera without required operational fields", () => {
     const invalidScene = {
       ...smallRetailShopScene,

@@ -4,11 +4,11 @@ import { draftSceneFromPrompt, draftSceneFromPromptWithModel } from "@/lib/ai-la
 import type { ModelProvider, ModelPrompt, ModelResponse } from "@/agents/providers/ModelProvider";
 
 describe("draftSceneFromPrompt", () => {
-  test("parses dimensions and returns an AI-generated scene", () => {
+  test("parses dimensions and returns an AI scene", () => {
     const prompt = "Create a 10m x 7m electronics shop with entry and two cameras";
     const { scene, warnings, provenance } = draftSceneFromPrompt(prompt);
 
-    expect(scene.source).toBe("ai_generated");
+    expect(scene.source).toBe("ai");
     expect(scene.dimensions.width).toBe(10);
     expect(scene.dimensions.depth).toBe(7);
     expect(scene.name).toContain("AI Draft");
@@ -20,7 +20,7 @@ describe("draftSceneFromPrompt", () => {
 
   test("falls back to template defaults when dimensions missing", () => {
     const { scene, warnings } = draftSceneFromPrompt("Draft a warehouse layout with loading area");
-    expect(scene.source).toBe("ai_generated");
+    expect(scene.source).toBe("ai");
     expect(scene.cameras.length).toBeGreaterThan(0);
     expect(warnings.length).toBeGreaterThan(0);
     expect(scene.changeLog.some((entry) => entry.includes("Provenance confidence"))).toBe(true);
@@ -66,7 +66,7 @@ describe("draftSceneFromPromptWithModel", () => {
 
     const result = await draftSceneFromPromptWithModel("office with reception and exits", provider);
     expect(result.scene.name).toBe("AI Draft Office");
-    expect(result.scene.source).toBe("ai_generated");
+    expect(result.scene.source).toBe("ai");
     expect(result.scene.dimensions.width).toBe(18);
     expect(result.scene.dimensions.depth).toBe(12);
     expect(result.warnings[0]).toBe("Generated from prompt");

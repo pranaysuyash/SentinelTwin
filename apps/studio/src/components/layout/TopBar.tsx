@@ -168,7 +168,7 @@ export function TopBar() {
   }, [exportScene]);
 
   return (
-    <header className="relative z-[80] flex h-12 items-center gap-2 border-b border-[#1e2130] bg-[#0c0f16]/96 px-2.5 backdrop-blur-md">
+    <header className="relative z-[140] isolate flex h-12 items-center gap-2 overflow-visible border-b border-[#1e2130] bg-[#0c0f16]/96 px-2.5 backdrop-blur-md">
       <div className="flex min-w-0 items-center gap-2.5">
         <div className="flex min-w-0 items-center gap-2 pr-2.5">
           <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border border-emerald-500/25 bg-emerald-500/12 shadow-[0_0_18px_rgba(16,185,129,0.18)]">
@@ -192,7 +192,7 @@ export function TopBar() {
           </button>
           {sceneOpen && (
             <div
-              className="absolute left-0 top-full z-50 mt-1 w-56 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
+              className="absolute left-0 top-full z-[220] mt-1 w-56 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
               onMouseLeave={() => setSceneOpen(false)}
             >
               {/* Saved scenes from localStorage */}
@@ -316,7 +316,7 @@ export function TopBar() {
             </button>
             {targetOpen && (
               <div
-                className="absolute left-0 top-full z-50 mt-1 w-64 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
+                className="absolute left-0 top-full z-[220] mt-1 w-64 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
                 onMouseLeave={() => setTargetOpen(false)}
               >
                 {TARGET_TYPE_OPTIONS.map((entry) => (
@@ -350,7 +350,7 @@ export function TopBar() {
 
         <SurfaceButton onClick={() => toggleViewSettingsOpen()}>
           <SlidersHorizontal className="h-3 w-3" />
-          View Settings
+          <span className="hidden lg:inline">View Settings</span>
         </SurfaceButton>
 
         <button
@@ -364,73 +364,76 @@ export function TopBar() {
           )}
         >
           {running ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3 fill-current" />}
-          {running ? "Running" : "Run Simulation"}
+          {running ? "Running" : "Simulate"}
         </button>
 
-        <SurfaceButton onClick={() => setEnvMode(envMode === "night" ? "day" : "night")}>
-          <Moon className="h-3 w-3" />
-          Night Mode
-        </SurfaceButton>
+        {/* Secondary actions — collapse into more menu below xl */}
+        <div className="hidden items-center gap-1.5 xl:flex">
+          <SurfaceButton onClick={() => setEnvMode(envMode === "night" ? "day" : "night")}>
+            <Moon className="h-3 w-3" />
+            Night
+          </SurfaceButton>
 
-        <SurfaceButton
-          onClick={() => {
-            const { scene, updateNode, getSelectedCamera, selectNode } = useStudioStore.getState();
-            const selectedCamera = getSelectedCamera();
-            if (!selectedCamera) {
-              const fallback = scene.cameras.find((camera) => camera.status === "on") ?? scene.cameras[0];
-              if (!fallback) return;
-              updateNode(fallback.id, { status: "off" });
-              selectNode(fallback.id);
-              return;
+          <SurfaceButton
+            onClick={() => {
+              const { scene, updateNode, getSelectedCamera, selectNode } = useStudioStore.getState();
+              const selectedCamera = getSelectedCamera();
+              if (!selectedCamera) {
+                const fallback = scene.cameras.find((camera) => camera.status === "on") ?? scene.cameras[0];
+                if (!fallback) return;
+                updateNode(fallback.id, { status: "off" });
+                selectNode(fallback.id);
+                return;
+              }
+              updateNode(selectedCamera.id, { status: selectedCamera.status === "on" ? "off" : "on" });
+            }}
+          >
+            <Shield className="h-3 w-3" />
+            Failure
+          </SurfaceButton>
+
+          <SurfaceButton
+            onClick={() =>
+              saveSnapshot(
+                `Snapshot ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`,
+              )
             }
+          >
+            <Copy className="h-3 w-3" />
+            Snapshot
+          </SurfaceButton>
 
-            updateNode(selectedCamera.id, { status: selectedCamera.status === "on" ? "off" : "on" });
-          }}
-        >
-          <Shield className="h-3 w-3" />
-          Camera Failure
-        </SurfaceButton>
+          <SurfaceButton onClick={() => setBottomTab("beforeafter")}>
+            <Clapperboard className="h-3 w-3" />
+            Compare
+          </SurfaceButton>
 
-        <SurfaceButton
-          onClick={() =>
-            saveSnapshot(
-              `Snapshot ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`,
-            )
-          }
-        >
-          <Copy className="h-3 w-3" />
-          Save Snapshot
-        </SurfaceButton>
-
-        <SurfaceButton onClick={() => setBottomTab("beforeafter")}>
-          <Clapperboard className="h-3 w-3" />
-          Compare
-        </SurfaceButton>
-
-        <SurfaceButton onClick={() => setBottomTab("threat")}>
-          <Crosshair className="h-3 w-3" />
-          Threat Path
-        </SurfaceButton>
+          <SurfaceButton onClick={() => setBottomTab("threat")}>
+            <Crosshair className="h-3 w-3" />
+            Threat
+          </SurfaceButton>
 
           <SurfaceButton onClick={() => setBottomTab("report")}>
-          <FileText className="h-3 w-3" />
-          Generate Report
-        </SurfaceButton>
+            <FileText className="h-3 w-3" />
+            Report
+          </SurfaceButton>
 
-        <SurfaceButton onClick={() => setBottomTab("assumptions")}>
-          <Info className="h-3 w-3" />
-          Assumptions
-        </SurfaceButton>
+          <SurfaceButton onClick={() => setBottomTab("assumptions")}>
+            <Info className="h-3 w-3" />
+            Assumptions
+          </SurfaceButton>
 
-        {/* Visible keyboard shortcut toggle */}
-        <button
-          onClick={() => window.dispatchEvent(new CustomEvent("sentineltwin:toggle-shortcuts"))}
-          className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[#24283a] bg-[#111521] text-[#5d6880] transition-colors hover:border-[#32384d] hover:text-white"
-          title="Keyboard shortcuts (?)"
-        >
-          <Keyboard className="h-3.5 w-3.5" />
-        </button>
+          {/* Visible keyboard shortcut toggle */}
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent("sentineltwin:toggle-shortcuts"))}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[#24283a] bg-[#111521] text-[#5d6880] transition-colors hover:border-[#32384d] hover:text-white"
+            title="Keyboard shortcuts (?)"
+          >
+            <Keyboard className="h-3.5 w-3.5" />
+          </button>
+        </div>
 
+        {/* Overflow menu (always visible) — contains secondary actions on narrow viewports + extras */}
         <div className="relative">
           <button
             onClick={() => setMoreOpen((v) => !v)}
@@ -440,9 +443,62 @@ export function TopBar() {
           </button>
           {moreOpen && (
             <div
-              className="absolute right-0 top-full z-50 mt-1 w-44 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
+              className="absolute right-0 top-full z-[220] mt-1 w-44 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
               onMouseLeave={() => setMoreOpen(false)}
             >
+              {/* XL-only actions shown in menu for narrow widths */}
+              <div className="xl:hidden">
+                <button
+                  onClick={() => { setEnvMode(envMode === "night" ? "day" : "night"); setMoreOpen(false); }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
+                >
+                  <Moon className="h-3 w-3" />
+                  Night Mode
+                </button>
+                <button
+                  onClick={() => { const s = useStudioStore.getState(); const cam = s.getSelectedCamera() ?? s.scene.cameras.find(c => c.status === "on") ?? s.scene.cameras[0]; if (cam) s.updateNode(cam.id, { status: cam.status === "on" ? "off" : "on" }); setMoreOpen(false); }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
+                >
+                  <Shield className="h-3 w-3" />
+                  Camera Failure
+                </button>
+                <button
+                  onClick={() => { saveSnapshot(`Snapshot ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`); setMoreOpen(false); }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
+                >
+                  <Copy className="h-3 w-3" />
+                  Save Snapshot
+                </button>
+                <button
+                  onClick={() => { setBottomTab("beforeafter"); setMoreOpen(false); }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
+                >
+                  <Clapperboard className="h-3 w-3" />
+                  Compare
+                </button>
+                <button
+                  onClick={() => { setBottomTab("threat"); setMoreOpen(false); }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
+                >
+                  <Crosshair className="h-3 w-3" />
+                  Threat Path
+                </button>
+                <button
+                  onClick={() => { setBottomTab("report"); setMoreOpen(false); }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
+                >
+                  <FileText className="h-3 w-3" />
+                  Generate Report
+                </button>
+                <button
+                  onClick={() => { setBottomTab("assumptions"); setMoreOpen(false); }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
+                >
+                  <Info className="h-3 w-3" />
+                  Assumptions
+                </button>
+                <div className="my-1 border-t border-[#1e2130]" />
+              </div>
               <button
                 onClick={() => {
                   setDemoMode(!demoMode);
@@ -472,6 +528,15 @@ export function TopBar() {
                 <Download className="h-3 w-3" />
                 Export JSON
               </button>
+              <div className="xl:hidden">
+                <button
+                  onClick={() => { window.dispatchEvent(new CustomEvent("sentineltwin:toggle-shortcuts")); setMoreOpen(false); }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
+                >
+                  <Keyboard className="h-3 w-3" />
+                  Shortcuts
+                </button>
+              </div>
             </div>
           )}
         </div>

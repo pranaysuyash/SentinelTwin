@@ -4,7 +4,7 @@ import { AlertTriangle, CheckCircle2, ImageUp, RotateCcw } from "lucide-react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 
-import { normalizeFloorPlanResult, type FloorPlanResult } from "@/lib/floor-plan-import";
+import { getFloorPlanDiagnostics, normalizeFloorPlanResult, type FloorPlanResult } from "@/lib/floor-plan-import";
 
 interface ImportReviewProps {
   result: FloorPlanResult;
@@ -73,6 +73,7 @@ export function ImportReview({ result, warnings, onImageChange, onRecalibrate, o
     const windows = draftWindows.map((window, index) => ({ opening: window, kept: windowMask[index] ?? true }));
     return { walls, doors, windows };
   }, [result, draftWalls, wallMask, doorMask, windowMask, draftDoors, draftWindows]);
+  const diagnostics = useMemo(() => getFloorPlanDiagnostics(result), [result]);
 
   const updateDraggedOpening = (
     event: ReactPointerEvent<SVGSVGElement>,
@@ -147,6 +148,18 @@ export function ImportReview({ result, warnings, onImageChange, onRecalibrate, o
           <div className="flex justify-between text-[8px]">
             <span className="text-[#3a4158]">Windows Detected</span>
             <span className="text-[#68738a]">{result.windows.length}</span>
+          </div>
+          <div className="flex justify-between text-[8px]">
+            <span className="text-[#3a4158]">Wall Orientation</span>
+            <span className="text-[#68738a]">H {diagnostics.horizontalWallCount} / V {diagnostics.verticalWallCount} / D {diagnostics.diagonalWallCount}</span>
+          </div>
+          <div className="flex justify-between text-[8px]">
+            <span className="text-[#3a4158]">Review Flags</span>
+            <span className="text-[#68738a]">{diagnostics.duplicateWallPairs} dup · {diagnostics.unsnappedDoorCount + diagnostics.unsnappedWindowCount} off-wall · {diagnostics.shortWallCount} short</span>
+          </div>
+          <div className="flex justify-between text-[8px]">
+            <span className="text-[#3a4158]">Plan Coverage</span>
+            <span className="text-[#68738a]">{Math.round(diagnostics.boundsCoverageRatio * 100)}% of image bounds</span>
           </div>
         </div>
       </div>

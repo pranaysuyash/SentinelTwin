@@ -1,5 +1,6 @@
-import { createCameraNode, createCriticalZoneNode, createDoorNode, createEntryPointNode, createObstructionNode, createSecurityLightNode, createWallNode, createWindowNode } from "@/lib/node-factory";
+import { createCameraNode, createCriticalZoneNode, createDoorNode, createEntryPointNode, createObstructionNode, createScenarioPathNode, createSecurityLightNode, createWallNode, createWindowNode } from "@/lib/node-factory";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
+import { safeParseSecurityScene } from "@/schema/security-scene";
 import type {
   CameraNode,
   CriticalZoneNode,
@@ -23,7 +24,8 @@ export type ScanCandidateKind =
   | "shelf"
   | "obstruction"
   | "entry_point"
-  | "critical_zone";
+  | "critical_zone"
+  | "path_point";
 
 export type ScanCandidateStatus = "pending" | "accepted" | "edited" | "rejected";
 
@@ -33,10 +35,13 @@ export type ScanCandidate = {
   label: string;
   point: [number, number];
   confidence: number;
+  manual: boolean;
   status: ScanCandidateStatus;
+  sourcePhotoId: string;
   note?: string;
   widthHintM?: number;
   depthHintM?: number;
+  heightHintM?: number;
   source: "manual" | "scan";
 };
 
@@ -48,6 +53,17 @@ export type ScanSession = {
   heightM: number;
   imageDataUrl: string | null;
   imageName: string | null;
+  imageWidthPx: number | null;
+  imageHeightPx: number | null;
+  imageId: string;
+  photos: Array<{
+    id: string;
+    name: string;
+    dataUrl: string;
+    widthPx: number;
+    heightPx: number;
+  }>;
+  activePhotoId: string | null;
   scaleReferenceM: number;
   candidates: ScanCandidate[];
   createdAt: number;
@@ -55,7 +71,7 @@ export type ScanSession = {
 };
 
 export type ScanCompilationProvenance = {
-  source: "scan_import";
+  source: "scan";
   totalCandidates: number;
   acceptedCandidates: number;
   rejectedCandidates: number;
@@ -63,6 +79,22 @@ export type ScanCompilationProvenance = {
   confidenceLevel: "high" | "medium" | "low";
   sourceCounts: Record<ScanCandidate["source"], number>;
   summary: string;
+};
+
+export type ScanCompilationWarningCode =
+  | "NO_CAMERA"
+  | "NO_CRITICAL_ZONE"
+  | "NO_ENTRY"
+  | "NO_OBSTRUCTION"
+  | "NO_PATH";
+
+export type ScanCompilationWarning = {
+  code: ScanCompilationWarningCode;
+  message: string;
+};
+
+export type ScanCompileOptions = {
+  autoCreateEntryToZonePath?: boolean;
 };
 
 export const SCAN_CANDIDATE_TYPES: Array<{ kind: ScanCandidateKind; label: string; description: string }> = [
@@ -77,6 +109,7 @@ export const SCAN_CANDIDATE_TYPES: Array<{ kind: ScanCandidateKind; label: strin
   { kind: "obstruction", label: "Generic Obstruction", description: "Mark any other blocking object." },
   { kind: "entry_point", label: "Entry Point", description: "Mark the main access point." },
   { kind: "critical_zone", label: "Critical Zone", description: "Mark a zone that needs coverage." },
+  { kind: "path_point", label: "Path Point", description: "Mark ordered points for a replay path." },
 ];
 
 function makeId(prefix: string) {
@@ -164,7 +197,7 @@ export function summarizeScanProvenance(session: ScanSession): ScanCompilationPr
   const confidenceLevel = confidenceLevelFromAverage(averageConfidence, acceptanceRate);
 
   return {
-    source: "scan_import",
+    source: "scan",
     totalCandidates: session.candidates.length,
     acceptedCandidates: accepted.length,
     rejectedCandidates: rejected.length,
@@ -188,9 +221,20 @@ function createCandidateNode(
     case "camera": {
       const camera = createCameraNode([worldPoint[0], Math.max(2.4, session.heightM - 0.25), worldPoint[2]]);
       camera.name = scanCandidateLabel(candidate);
-      camera.pitchDeg = -25;
+      camera.pitchDeg = -15;
       camera.yawDeg = nearestWallSide(candidate.point) === "south" ? 180 : nearestWallSide(candidate.point) === "north" ? 0 : nearestWallSide(candidate.point) === "west" ? 90 : -90;
-      camera.mountHeightM = Math.max(2.4, session.heightM - 0.25);
+      camera.mountType = "wall";
+      camera.mountHeightM = 2.8;
+      camera.fovHorizontalDeg = 90;
+      camera.fovVerticalDeg = 60;
+      camera.rangeM = 20;
+      camera.resolutionMP = 4;
+      camera.lensType = "fixed";
+      camera.status = "on";
+      camera.nightMode = "ir";
+      camera.irRangeM = 15;
+      camera.thermalCapable = false;
+      camera.ptz = false;
       camera.source = "scan";
       camera.clarity = candidate.confidence > 0.8 ? "good" : "average";
       return camera;
@@ -219,12 +263,16 @@ function createCandidateNode(
     case "obstruction": {
       const obstruction = createObstructionNode(worldPoint, obstructionTypeFor(candidate));
       obstruction.label = scanCandidateLabel(candidate);
-      obstruction.dimensions = [
-        candidate.widthHintM ?? (candidate.kind === "counter" ? 2.2 : candidate.kind === "shelf" ? 1.4 : 1.1),
-        1.1,
-        candidate.depthHintM ?? (candidate.kind === "counter" ? 0.8 : candidate.kind === "cupboard" ? 0.65 : 0.5),
-      ];
-      obstruction.visionTransmission = candidate.kind === "obstruction" ? 0.15 : 0;
+      obstruction.dimensions = candidate.kind === "cupboard"
+        ? [1.2, 2.0, 0.5]
+        : candidate.kind === "shelf"
+          ? [2.0, 1.8, 0.45]
+          : candidate.kind === "counter"
+            ? [2.0, 1.1, 0.7]
+            : [candidate.widthHintM ?? 1.2, candidate.heightHintM ?? 1.2, candidate.depthHintM ?? 0.7];
+      obstruction.visionTransmission = 0;
+      obstruction.material = "solid";
+      obstruction.movable = candidate.kind !== "obstruction";
       obstruction.source = "scan";
       return obstruction;
     }
@@ -247,11 +295,15 @@ function createCandidateNode(
         [clamp(x - halfWidth, 0.15, session.widthM - 0.15), clamp(z + halfDepth, 0.15, session.depthM - 0.15)],
       ]);
       zone.label = scanCandidateLabel(candidate);
-      zone.requiredQuality = candidate.label.toLowerCase().includes("counter") ? "identification" : "recognition";
+      zone.requiredQuality = "recognition";
       zone.targetType = candidate.label.toLowerCase().includes("counter") ? "cash_counter_activity" : "person_detection";
+      zone.priority = "high";
       return zone;
     }
     case "wall": {
+      return null;
+    }
+    case "path_point": {
       return null;
     }
   }
@@ -267,6 +319,11 @@ export function createScanSession(roomName: string, widthM = 10, depthM = 8, hei
     heightM,
     imageDataUrl: null,
     imageName: null,
+    imageWidthPx: null,
+    imageHeightPx: null,
+    imageId: makeId("photo"),
+    photos: [],
+    activePhotoId: null,
     scaleReferenceM: 0.9,
     candidates: [],
     createdAt: now,
@@ -291,6 +348,7 @@ export function createScanCandidate(
     obstruction: "Obstruction",
     entry_point: "Entry Point",
     critical_zone: "Critical Zone",
+    path_point: "Path Point",
   };
 
   return {
@@ -299,7 +357,9 @@ export function createScanCandidate(
     label: `${labels[kind]} ${index + 1}`,
     point,
     confidence: 0.72,
+    manual: true,
     status: "accepted",
+    sourcePhotoId: "",
     source: "manual",
   };
 }
@@ -354,7 +414,27 @@ function applyWalls(scene: SecurityScene, session: ScanSession) {
   });
 }
 
-export function compileScanSessionToScene(session: ScanSession): { scene: SecurityScene; provenance: ScanCompilationProvenance } {
+function buildPathFromCandidates(session: ScanSession) {
+  const points = session.candidates
+    .filter((candidate) => (candidate.status === "accepted" || candidate.status === "edited") && candidate.kind === "path_point")
+    .map((candidate) => ({
+      position: [
+        clamp(candidate.point[0] * session.widthM, 0.2, Math.max(0.2, session.widthM - 0.2)),
+        clamp(candidate.point[1] * session.depthM, 0.2, Math.max(0.2, session.depthM - 0.2)),
+      ] as [number, number],
+    }));
+  if (points.length < 2) return null;
+  const path = createScenarioPathNode(points);
+  path.label = "Scan Path";
+  path.intent = "authorized";
+  path.timeOfDay = "day";
+  return path;
+}
+
+export function compileScanSessionToScene(
+  session: ScanSession,
+  options: ScanCompileOptions = {},
+): { scene: SecurityScene; provenance: ScanCompilationProvenance; warnings: ScanCompilationWarning[] } {
   const provenance = summarizeScanProvenance(session);
   const scene = createBlankSecurityScene();
   scene.name = session.roomName;
@@ -363,7 +443,7 @@ export function compileScanSessionToScene(session: ScanSession): { scene: Securi
     depth: session.depthM,
     height: session.heightM,
   };
-  scene.source = "scan_import";
+  scene.source = "scan";
   scene.updatedAt = Date.now();
   scene.walls = applyWalls(scene, session);
   scene.doors = [];
@@ -387,6 +467,7 @@ export function compileScanSessionToScene(session: ScanSession): { scene: Securi
     switch (node.nodeType) {
       case "door":
         scene.doors.push(node);
+        scene.entryPoints.push(createEntryPointNode([node.position[0], node.position[2]]));
         break;
       case "window":
         scene.windows.push(node);
@@ -412,5 +493,30 @@ export function compileScanSessionToScene(session: ScanSession): { scene: Securi
     }
   }
 
-  return { scene, provenance };
+  const pathFromCandidates = buildPathFromCandidates(session);
+  if (pathFromCandidates) {
+    scene.paths.push(pathFromCandidates);
+  } else if (options.autoCreateEntryToZonePath && scene.entryPoints.length > 0 && scene.criticalZones.length > 0) {
+    const entry = scene.entryPoints[0];
+    const zone = scene.criticalZones[0];
+    if (entry && zone) {
+      const centerX = zone.polygon.reduce((sum, p) => sum + p[0], 0) / zone.polygon.length;
+      const centerZ = zone.polygon.reduce((sum, p) => sum + p[1], 0) / zone.polygon.length;
+      scene.paths.push(createScenarioPathNode([{ position: entry.position }, { position: [centerX, centerZ] }]));
+    }
+  }
+
+  const warnings: ScanCompilationWarning[] = [];
+  if (scene.cameras.length === 0) warnings.push({ code: "NO_CAMERA", message: "No camera marker accepted; add at least one camera for coverage simulation." });
+  if (scene.criticalZones.length === 0) warnings.push({ code: "NO_CRITICAL_ZONE", message: "No high-value/critical zone marker accepted; add one to evaluate outcome quality." });
+  if (scene.entryPoints.length === 0) warnings.push({ code: "NO_ENTRY", message: "No door or entry marker accepted; path replay and entry risk analysis will be limited." });
+  if (scene.obstructions.length === 0) warnings.push({ code: "NO_OBSTRUCTION", message: "No obstruction marker accepted; blindspot exploration may be unrealistic." });
+  if (scene.paths.length === 0) warnings.push({ code: "NO_PATH", message: "No path points created; add path points or enable auto entry-to-zone path." });
+
+  const parsed = safeParseSecurityScene(scene);
+  if (!parsed.success) {
+    throw new Error(`Compiled scan scene failed schema validation: ${parsed.error.issues[0]?.message ?? "unknown error"}`);
+  }
+
+  return { scene: parsed.data, provenance, warnings };
 }

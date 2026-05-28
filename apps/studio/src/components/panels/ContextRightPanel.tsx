@@ -69,7 +69,7 @@ export function ContextRightPanel() {
   const assumptionsSummary = `${scene.assumptions.doriStandard === "oodpcvs_2025" ? "IEC 62676-4:2025" : "DORI 2014"} · ${scene.assumptions.timeOfDay} · ${scene.assumptions.interiorLightLevel}`;
 
   return (
-    <div className="flex h-full min-w-0 min-h-0 flex-col overflow-hidden bg-[#0c0f16]">
+    <div className="relative z-[120] flex h-full min-w-0 min-h-0 flex-col overflow-visible bg-[#0c0f16]">
       <div className="flex items-center gap-2 border-b border-[#1e2130] bg-[#0b0f17] px-2.5 py-1">
         <div className="flex h-5 w-5 items-center justify-center rounded-md border border-blue-500/20 bg-blue-500/12">
           <MonitorSmartphone className="h-3 w-3 text-blue-400" />

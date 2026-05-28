@@ -783,7 +783,7 @@ export function PathReplayView() {
   const result = useStudioStore((s) => s.simulationResult);
   const activePathId = useStudioStore((s) => s.activePathId);
   const followActor = useStudioStore((s) => s.pathReplay.followActor);
-  const coverageFailurePath = result?.coverageFailurePath ?? result?.adversarialPath;
+  const coverageFailurePath = result?.adversarialPath;
   const activePath = useMemo(() => {
     if (!scene.paths.length || !activePathId) return null;
     return scene.paths.find((path) => path.id === activePathId) ?? null;
@@ -860,9 +860,7 @@ export function PathReplayView() {
     [replaySamples],
   );
   const criticalZoneReachableAlongRoute =
-    coverageFailurePath?.criticalZonesReachableAlongRoute?.length
-      ? true
-      : (coverageFailurePath?.targetReached ?? false);
+    coverageFailurePath?.criticalZoneReachable ?? false;
   const currentTimelineEvent = useMemo(() => {
     if (!activePathResult?.timeline?.length) return null;
     const events = activePathResult.timeline.filter((event) => event.timeS <= currentTime);

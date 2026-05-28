@@ -52,7 +52,7 @@ function nearestNode(target: [number, number], nodes: NavNode[]) {
   }, null as { node: NavNode; distance: number } | null)?.node;
 }
 
-export function computeCoverageFailurePath(
+export function computeAdversarialPath(
   scene: SecurityScene,
   coverageCells: CoverageCellLookup[],
 ): AdversarialPathResult | undefined {
@@ -157,11 +157,6 @@ export function computeCoverageFailurePath(
       camerasWithoutCoverageOnRoute: [],
       criticalZonesReachableAlongRoute: [],
       criticalZoneReachable: false,
-      // Backward compatibility payload
-      blindspotsExploited: [],
-      camerasEvaded: [],
-      criticalZonesReached: [],
-      targetReached: false,
       failureReason: "Critical zone is unreachable through walkable space.",
     };
   }
@@ -201,7 +196,7 @@ export function computeCoverageFailurePath(
     };
   });
 
-  const blindspotsExploited = scene.obstructions
+  const coverageGapsUsed = scene.obstructions
     .filter((obstruction) => {
       if (obstruction.visionTransmission > 0) return false;
       return waypoints.some((waypoint) => {
@@ -215,11 +210,18 @@ export function computeCoverageFailurePath(
     })
     .map((obstruction) => obstruction.label);
 
-  const criticalZonesReached = scene.criticalZones
+  const criticalZonesReachableAlongRoute = scene.criticalZones
     .filter((zoneCandidate) =>
       waypoints.some((waypoint) => pointInPolygon(waypoint.position, zoneCandidate.polygon)),
     )
     .map((zoneCandidate) => zoneCandidate.label);
+
+  const camerasWithoutCoverageOnRoute = scene.cameras
+    .filter(
+      (camera) =>
+        !waypoints.some((waypoint) => waypoint.exposedToCamera === camera.id),
+    )
+    .map((camera) => camera.id);
 
   return {
     waypoints,
@@ -227,26 +229,9 @@ export function computeCoverageFailurePath(
     totalDurationS: Number((waypoints.length * cellSize).toFixed(2)),
     detectionQualityExposure,
     maxDetectionProbability: Math.max(...waypoints.map((waypoint) => waypoint.detectionProbability), 0),
-    coverageGapsUsed: blindspotsExploited,
-    camerasWithoutCoverageOnRoute: scene.cameras
-      .filter(
-        (camera) =>
-          !waypoints.some((waypoint) => waypoint.exposedToCamera === camera.id),
-      )
-      .map((camera) => camera.id),
-    criticalZonesReachableAlongRoute: criticalZonesReached,
-    criticalZoneReachable: criticalZonesReached.length > 0,
-    // Backward compatibility payload
-    blindspotsExploited,
-    camerasEvaded: scene.cameras
-      .filter(
-        (camera) =>
-          !waypoints.some((waypoint) => waypoint.exposedToCamera === camera.id),
-      )
-      .map((camera) => camera.id),
-    criticalZonesReached,
-    targetReached: criticalZonesReached.length > 0,
+    coverageGapsUsed,
+    camerasWithoutCoverageOnRoute,
+    criticalZonesReachableAlongRoute,
+    criticalZoneReachable: criticalZonesReachableAlongRoute.length > 0,
   };
 }
-
-export const computeAdversarialPath = computeCoverageFailurePath;

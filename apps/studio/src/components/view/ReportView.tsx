@@ -55,6 +55,7 @@ export function ReportView() {
     const uncertainty = computeCoverageUncertainty(scene, { sampleCount: 12 });
     const postureVariation = computeCoveragePostureVariation(scene);
     const redundancyMatrix = result ? buildRedundancyMatrixReport(scene, result) : null;
+    const kCriticalSets = result?.kRobustness?.criticalSets ?? [];
     const uncertaintySummary = uncertainty
       ? `${uncertainty.meanCoveragePct.toFixed(1)}% (${uncertainty.p5CoveragePct.toFixed(1)}–${uncertainty.p95CoveragePct.toFixed(1)})`
       : "--";
@@ -77,6 +78,7 @@ export function ReportView() {
       temporalWindows,
       temporalWorstDrop,
       redundancyMatrix,
+      kCriticalSets,
     };
   }, [result, scene]);
 
@@ -125,6 +127,34 @@ export function ReportView() {
         </div>
 
         <div className="mt-4 grid min-h-0 flex-1 gap-4 xl:grid-cols-[1fr_1.1fr]">
+          {summary.kCriticalSets.length > 0 ? (
+            <section className="mb-4 rounded-[28px] border border-[#1f2536] bg-[#0b0f17]/92 px-4 py-3 shadow-2xl shadow-black/20 xl:col-span-2">
+              <div className="flex items-center gap-2">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#7a86a0]">K-Robustness Critical Sets</div>
+                <span className="rounded-full border border-sky-400/20 bg-sky-500/12 px-2 py-0.5 text-[9px] font-semibold text-sky-200">
+                  {summary.kCriticalSets.length} sets
+                </span>
+              </div>
+              <div className="mt-3 grid gap-2 lg:grid-cols-3">
+                {summary.kCriticalSets.slice(0, 3).map((set) => (
+                  <div key={`${set.k}-${set.cameraIds.join("-")}`} className="rounded-2xl border border-[#1f2536] bg-[#0f141f] px-3 py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-[9px] uppercase tracking-[0.18em] text-[#7a86a0]">K={set.k}</div>
+                      <span className={cn("rounded-full border px-2 py-0.5 text-[9px] font-semibold", set.exposureScore < 3 ? "border-emerald-400/20 bg-emerald-500/10 text-emerald-200" : "border-amber-400/20 bg-amber-500/10 text-amber-200")}>
+                        {set.exposureScore.toFixed(1)}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-sm font-medium text-white">
+                      {set.cameraNames.join(", ")}
+                    </div>
+                    <div className="mt-1 text-[11px] text-[#8d98b0]">
+                      {set.waypointCount} waypoints · {result?.kRobustness?.isRobust ? "robust" : "critical"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
           <section className="min-h-0 overflow-hidden rounded-[28px] border border-[#1f2536] bg-[#0b0f17]/92 shadow-2xl shadow-black/20">
             <div className="flex items-center gap-2 border-b border-[#1e2130] px-4 py-3">
               <ShieldCheck className="h-4 w-4 text-emerald-300" />

@@ -6,9 +6,9 @@
     "node": ">=24.13.0"
   },
   "scripts": {
-    "dev": "next dev --webpack",
+    "dev": "node ./scripts/run-fixed-port.mjs dev",
     "build": "next build --webpack",
-    "start": "next start",
+    "start": "node ./scripts/run-fixed-port.mjs start",
     "lint": "eslint",
     "test": "bun test",
     "test:watch": "bun test --watch"

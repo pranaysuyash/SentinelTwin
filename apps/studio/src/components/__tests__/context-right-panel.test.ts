@@ -22,6 +22,8 @@ describe("ContextRightPanel", () => {
     expect(source).toContain("Object properties hidden. Expand when you need detailed editing controls.");
     expect(source).toContain("Assumptions stay tucked away until you need to tune the model.");
     expect(source).toContain("Path controls are hidden. Expand them for replay and scenario editing.");
+    expect(source).toContain("assumptionsSummary");
+    expect(source).toContain("IEC 62676-4:2025");
     expect(assumptionsSource).toContain("DORI Model");
     expect(assumptionsSource).toContain("Grid Resolution");
     expect(assumptionsSource).toContain("Edit Assumptions");

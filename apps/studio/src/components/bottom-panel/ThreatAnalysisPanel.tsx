@@ -77,22 +77,14 @@ export function ThreatAnalysisPanel() {
   const simulationRunning = useStudioStore((s) => s.simulationRunning);
   const runSimulation = useStudioStore((s) => s.runSimulation);
 
-  const coverageFailurePath = result?.coverageFailurePath ?? result?.adversarialPath;
-  const failurePath = coverageFailurePath && coverageFailurePath.waypoints.length > 0 ? coverageFailurePath : null;
+  const failurePath = result?.adversarialPath && result.adversarialPath.waypoints.length > 0
+    ? result.adversarialPath
+    : null;
 
-  const blindspotSegments =
-    failurePath?.coverageGapsUsed
-    ?? failurePath?.blindspotsExploited
-    ?? [];
-  const camerasWithoutCoverageOnRoute = failurePath?.camerasWithoutCoverageOnRoute ?? failurePath?.camerasEvaded ?? [];
-  const criticalZonesReachable =
-    failurePath?.criticalZonesReachableAlongRoute
-    ?? failurePath?.criticalZonesReached
-    ?? [];
-  const criticalZoneReachableAlongRoute =
-    failurePath?.criticalZoneReachable
-    ?? failurePath?.targetReached
-    ?? false;
+  const blindspotSegments = failurePath?.coverageGapsUsed ?? [];
+  const camerasWithoutCoverageOnRoute = failurePath?.camerasWithoutCoverageOnRoute ?? [];
+  const criticalZonesReachable = failurePath?.criticalZonesReachableAlongRoute ?? [];
+  const criticalZoneReachableAlongRoute = failurePath?.criticalZoneReachable ?? false;
 
   return (
     <motion.div

@@ -1,6 +1,6 @@
 import type { SecurityScene } from "@/schema/security-scene";
 import { computeCoverageCells } from "@/simulation/coverage";
-import { computeCoverageFailurePath } from "@/simulation/adversarial-path";
+import { computeAdversarialPath } from "@/simulation/adversarial-path";
 
 export interface CriticalFailureSet {
   k: number;
@@ -54,7 +54,7 @@ export function computeKRobustness(scene: SecurityScene, maxK = MAX_K): KRobustn
       }
 
       const cells = computeCoverageCells(modified);
-      const path = computeCoverageFailurePath(modified, cells);
+      const path = computeAdversarialPath(modified, cells);
 
       if (path && path.totalExposureScore < VIABLE_EXPOSURE_THRESHOLD) {
         criticalSets.push({

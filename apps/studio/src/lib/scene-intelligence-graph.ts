@@ -1,5 +1,7 @@
 import type { SecurityScene, SimulationResult } from "@/schema/security-scene";
 
+import { getSceneSourceMeta } from "@/lib/scene-source";
+
 export type SceneIntelligenceNodeKind = "scene" | "source" | "entity" | "assumption" | "simulation" | "snapshot";
 export type SceneIntelligenceEdgeKind = "contains" | "originates_from" | "assesses" | "covers" | "validated_by";
 
@@ -64,19 +66,8 @@ const ENTITY_COLLECTIONS = [
 ] as const;
 
 function normalizeSceneSource(source: SecurityScene["source"]) {
-  switch (source) {
-    case "ai_generated":
-      return { key: "ai", label: "AI Draft" };
-    case "floor_plan_import":
-      return { key: "import", label: "Floor Plan Import" };
-    case "scan_import":
-      return { key: "scan", label: "Scan Import" };
-    case "demo":
-      return { key: "demo", label: "Demo Scene" };
-    case "manual":
-    default:
-      return { key: "manual", label: "Manual Scene" };
-  }
+  const meta = getSceneSourceMeta(source);
+  return { key: source, label: meta.label };
 }
 
 function normalizeEntitySource(source: string | undefined) {

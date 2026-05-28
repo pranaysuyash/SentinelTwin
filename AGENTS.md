@@ -10,7 +10,8 @@ Read in order before any work:
 5. `Docs/decisions/DECISION_LOG.md`
 6. `Docs/decisions/OPEN_QUESTIONS.md`
 7. `Docs/context/origin/INDEX.md` — check for new context files Pranay has added
-8. `Docs/todos/PHASE_0_SETUP.md` (if no code exists yet)
+8. `sentineltwin_ui_design_pack/SentinelTwin_UI_Design_Pack.md` and its referenced images when the task touches UI, layout, motion, tokens, or screen composition
+9. `Docs/todos/PHASE_0_SETUP.md` (if no code exists yet)
 
 ## What SentinelTwin Is
 
@@ -134,6 +135,19 @@ Pranay actively adds raw context files from different chat sessions into `Docs/c
 
 **Conflict resolution:** Architecture docs and decision log win over origin files.
 
+## UI Design Pack Context
+
+Pranay also keeps a UI reference pack in `sentineltwin_ui_design_pack/` at the repo root.
+
+When the task involves any screen, layout, motion, interaction, or visual-system work:
+
+1. Read `sentineltwin_ui_design_pack/SentinelTwin_UI_Design_Pack.md`
+2. Inspect the referenced images in `sentineltwin_ui_design_pack/images/`
+3. Treat images marked `Primary target` as implementation references
+4. Treat images marked `Deprecated` or `Rejected` as negative references only
+5. Treat `DesignSystem_*` boards as canonical guidance for tokens, states, and interactions
+6. Update docs or decisions if implementation needs to diverge from the pack
+
 ---
 
 ## Canonical Rules
@@ -169,6 +183,9 @@ Never: "avoid cameras," "bypass security," "optimal evasion."
 ### Coverage Engine is deterministic geometry, not AI
 Raycasting, DORI/OODPCVS scoring, heatmap, path visibility = deterministic Three.js.
 AI explains results. AI does not compute them.
+
+### Browser QA preference
+For iterative browser QA on local web targets, check whether Webwright is installed and prefer it when the task benefits from a code-driven, rerunnable Playwright workspace with saved artifacts. Use Browser/Playwright/Computer Use as fallbacks when Webwright is unavailable or a direct browser interaction is a better fit.
 
 ---
 

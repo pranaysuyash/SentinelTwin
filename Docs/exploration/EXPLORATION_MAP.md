@@ -5024,3 +5024,23 @@ Add sensor specs (`sensorWidthMm`, `sensorHeightMm`, `sensorFormat`) when:
 - `CameraViewMode.tsx` now includes a reason line, replay quality/segment labels, and a clearer DORI overlay hierarchy.
 - `CameraWallView.tsx` now surfaces the current best camera and marks the best tile.
 - `PathReplayView.tsx` now includes a current-state card with time, segment, quality, best camera, and next event.
+
+---
+
+## Thread 25: Microsoft Webwright as a code-driven browser QA path
+
+**Status:** Discovered and installed locally as a Codex marketplace; not yet surfaced as callable tools in this live session until Codex reloads the marketplace.
+
+**Source signals:**
+- Official repo: `microsoft/Webwright`
+- Marketplace install path: `/Users/pranay/.codex/.tmp/marketplaces/webwright`
+- Codex install command from the repo README: `codex plugin marketplace add microsoft/Webwright`
+
+**Key findings:**
+- Webwright is a minimal SWE-style browser-agent framework built around a rerunnable Python workspace and Playwright browser sessions.
+- The repo ships a Codex plugin manifest at `.codex-plugin/plugin.json` and a shared skill at `skills/webwright/`.
+- The plugin is a better fit than ad-hoc browser clicking when the task benefits from repeatable, scriptable QA with saved artifacts and screenshots.
+
+**Operational note for SentinelTwin:**
+- Prefer Webwright for iterative browser QA on local web targets when it is installed and the task needs code-driven, rerunnable Playwright workflows.
+- If Webwright is unavailable in the current session, fall back to the most direct browser tool available and keep the install/marketplace path documented for the next run.

@@ -116,6 +116,9 @@ function MetricColumn({
 
 export function BeforeAfterTab() {
   const snapshots = useStudioStore((s) => s.snapshots);
+  const compareVisualEvidence = useStudioStore((s) => s.compareVisualEvidence);
+  const setCompareReportSelection = useStudioStore((s) => s.setCompareReportSelection);
+  const setViewMode = useStudioStore((s) => s.setViewMode);
 
   if (snapshots.length < 2) {
     return (
@@ -164,6 +167,16 @@ export function BeforeAfterTab() {
     (aSim?.coverageCells ?? []).length,
     1,
   );
+
+  const visuals = compareVisualEvidence &&
+    compareVisualEvidence.snapshotAId === before.id &&
+    compareVisualEvidence.snapshotBId === after.id &&
+    compareVisualEvidence.capturedAt >= Math.max(before.createdAt, after.createdAt)
+      ? {
+          beforeImageDataUrl: compareVisualEvidence.beforeImageDataUrl,
+          afterImageDataUrl: compareVisualEvidence.afterImageDataUrl,
+        }
+      : null;
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -229,6 +242,46 @@ export function BeforeAfterTab() {
           Critical Zones {outcomeDelta.criticalZonesPassingBefore}/{outcomeDelta.criticalZonesTotal} {"->"} {outcomeDelta.criticalZonesPassingAfter}/{outcomeDelta.criticalZonesTotal}
         </div>
       ) : null}
+
+      {/* Visual diff summary */}
+      <div className="border-b border-[#1e2130] px-3 py-2">
+        <div className="mb-2 flex items-center gap-2">
+          <div className="text-[8px] font-semibold uppercase tracking-[0.14em] text-[#4a5568]">
+            Visual Diff
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setCompareReportSelection({ snapshotAId: before.id, snapshotBId: after.id });
+              setViewMode("compare");
+            }}
+            className="ml-auto rounded border border-[#273246] bg-[#111521] px-2 py-1 text-[8px] font-semibold text-[#d7deed] transition-colors hover:border-sky-400/30 hover:text-white"
+          >
+            Open Compare View
+          </button>
+        </div>
+        {visuals ? (
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { label: before.label, src: visuals.beforeImageDataUrl, accent: "Before" },
+              { label: after.label, src: visuals.afterImageDataUrl, accent: "After" },
+            ].map((entry) => (
+              <div key={entry.accent} className="rounded-lg border border-[#1e2130] bg-[#0b0f17] p-2">
+                <div className="mb-1 text-[8px] uppercase tracking-[0.14em] text-[#4a5568]">{entry.accent}: {entry.label}</div>
+                <img
+                  src={entry.src}
+                  alt={`${entry.accent} comparison evidence`}
+                  className="aspect-[4/3] w-full rounded-md border border-[#232a3d] object-cover"
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-lg border border-dashed border-[#263048] bg-[#0b0f17] px-3 py-2 text-[9px] text-[#6b7894]">
+            Capture visual evidence in Compare View to show side-by-side scene thumbnails here. The metric diff is always available, and the visual diff reuses the same compare evidence pipeline.
+          </div>
+        )}
+      </div>
 
       {/* Quality distribution bars */}
       <div className="flex-1 overflow-hidden px-3 py-2 flex gap-3 min-h-0">

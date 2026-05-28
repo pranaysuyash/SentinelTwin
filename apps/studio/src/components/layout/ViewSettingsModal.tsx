@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { useStudioStore, type BottomTab, type ViewMode, type WorkspacePreset } from "@/store/studio-store";
 import { AI_PROVIDER_OPTIONS, describeAiProviderSelection, getProviderOption, normalizeAiProviderSelection } from "@/agents/provider-selection";
+import { CAMERA_PRESETS } from "@/components/workspace/CameraPresetPicker";
 
 type ViewOption = {
   id: string;
@@ -149,6 +150,8 @@ export function ViewSettingsModal() {
   const setUiTheme = useStudioStore((s) => s.setUiTheme);
   const aiProviderSelection = useStudioStore((s) => s.aiProviderSelection);
   const setAiProviderSelection = useStudioStore((s) => s.setAiProviderSelection);
+  const cameraPresetId = useStudioStore((s) => s.cameraPresetId);
+  const setCameraPresetId = useStudioStore((s) => s.setCameraPresetId);
   const bottomDrawerMode = useStudioStore((s) => s.bottomDrawerMode);
   const setBottomDrawerMode = useStudioStore((s) => s.setBottomDrawerMode);
   const pinnedAnalysisModule = useStudioStore((s) => s.pinnedAnalysisModule);
@@ -331,55 +334,51 @@ export function ViewSettingsModal() {
 
             <section className="rounded-[24px] border border-[#1f2536] bg-[#0d121c] p-4">
               <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[#6d7892]">
-                <Monitor className="h-3.5 w-3.5 text-emerald-300" />
-                AI Provider
+                <Monitor className="h-3.5 w-3.5 text-cyan-300" />
+                Camera Preset Library
               </div>
               <div className="mt-3 rounded-2xl border border-[#22314b] bg-[#0b0f17] px-4 py-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-white">{providerInfo.providerLabel}</div>
-                    <div className="mt-1 text-[11px] text-[#7e8aa4]">{providerInfo.description}</div>
+                    <div className="text-sm font-semibold text-white">Quick placement presets</div>
+                    <div className="mt-1 text-[11px] text-[#7e8aa4]">
+                      Choose a default camera spec before placing a node, or keep the current manual values.
+                    </div>
                   </div>
-                  <div
-                    className={cn(
-                      "rounded-full border px-2 py-0.5 text-[8px] uppercase tracking-[0.18em]",
-                      providerInfo.cloudAvailable
-                        ? "border-emerald-400/20 bg-emerald-500/10 text-emerald-300"
-                        : "border-amber-400/20 bg-amber-500/10 text-amber-300",
-                    )}
-                  >
-                    {providerInfo.cloudAvailable ? "Cloud-backed" : "Local-only"}
+                  <div className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2 py-0.5 text-[8px] uppercase tracking-[0.18em] text-cyan-300">
+                    {CAMERA_PRESETS.length} presets
                   </div>
                 </div>
-                <div className="mt-3 grid grid-cols-3 gap-2">
-                  {AI_PROVIDER_OPTIONS.map((option) => (
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {CAMERA_PRESETS.map((preset) => (
                     <button
-                      key={option.id}
+                      key={preset.id}
                       type="button"
-                      onClick={() => setAiProviderSelection(normalizeAiProviderSelection({ providerId: option.id, model: option.defaultModel }))}
+                      onClick={() => setCameraPresetId(cameraPresetId === preset.id ? null : preset.id)}
                       className={cn(
-                        "rounded-xl border px-2 py-2 text-left transition-colors",
-                        aiProviderSelection.providerId === option.id
-                          ? "border-emerald-400/30 bg-emerald-500/12 text-emerald-100"
-                          : "border-[#22314b] bg-[#0b0f17] text-[#d7deed] hover:border-[#31405a] hover:bg-[#101725]",
+                        "rounded-xl border px-3 py-3 text-left transition-colors",
+                        cameraPresetId === preset.id
+                          ? "border-cyan-400/30 bg-cyan-500/12 text-cyan-100"
+                          : "border-[#22314b] bg-[#0f1320] text-[#d7deed] hover:border-[#31405a] hover:bg-[#101725]",
                       )}
                     >
-                      <div className="text-sm font-semibold">{option.name}</div>
-                      <div className="mt-1 text-[9px] text-[#6f7c98]">{option.description}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full border border-[#26314a] bg-[#121829] p-1 text-cyan-300">
+                          {preset.icon}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-white">{preset.label}</div>
+                          <div className="truncate text-[9px] text-[#6f7c98]">{preset.description}</div>
+                        </div>
+                      </div>
                     </button>
                   ))}
                 </div>
-                <div className="mt-3">
-                  <div className="text-[10px] uppercase tracking-[0.16em] text-[#61708f]">Model</div>
-                  <select
-                    value={aiProviderSelection.model || providerOption.defaultModel}
-                    onChange={(event) => setAiProviderSelection({ providerId: aiProviderSelection.providerId, model: event.target.value })}
-                    className="mt-2 w-full rounded-xl border border-[#22314b] bg-[#0b0f17] px-3 py-2 text-[11px] text-white outline-none transition-colors focus:border-emerald-400/30"
-                  >
-                    {providerOption.models.map((model) => (
-                      <option key={model} value={model}>{model}</option>
-                    ))}
-                  </select>
+                <div className="mt-3 text-[11px] text-[#7e8aa4]">
+                  Current preset: <span className="text-[#d7deed]">{cameraPresetId ?? "none selected"}</span>
+                </div>
+                <div className="mt-3 rounded-xl border border-dashed border-[#24324c] bg-[#0a0e17] px-3 py-2 text-[11px] text-[#8d98b0]">
+                  The canvas picker appears automatically when the camera tool is active, but these presets are now visible here too so the library is discoverable before placement.
                 </div>
               </div>
             </section>

@@ -29,8 +29,10 @@ type StudioPageProps = {
 export default function StudioPage({ searchParams }: StudioPageProps) {
   const [enterStudio, setEnterStudio] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
+  const [showFloorPlanWizard, setShowFloorPlanWizard] = useState(false);
   const [showScanWizard, setShowScanWizard] = useState(false);
   const [showAiDraft, setShowAiDraft] = useState(false);
+  const [showVerifyFootagePreview, setShowVerifyFootagePreview] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("Create a 10m x 7m electronics shop with front entry, two shelves, right-side cash counter, back storage, and two cameras.");
   const [aiWarning, setAiWarning] = useState<string | null>(null);
   const [aiDraftNotice, setAiDraftNotice] = useState<string | null>(null);
@@ -49,6 +51,7 @@ export default function StudioPage({ searchParams }: StudioPageProps) {
   const setViewMode = useStudioStore((s) => s.setViewMode);
   const setBottomTab = useStudioStore((s) => s.setBottomTab);
   const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
+  const setCameraViewVerificationIntent = useStudioStore((s) => s.setCameraViewVerificationIntent);
   const setSimulationRunning = useStudioStore((s) => s.setSimulationRunning);
   const setSimulationResult = useStudioStore((s) => s.setSimulationResult);
   const savedProjects = useStudioStore((s) => s.savedProjects);
@@ -136,9 +139,12 @@ export default function StudioPage({ searchParams }: StudioPageProps) {
         onOpenIssues={openIssues}
         onRunSimulation={runSimulation}
         onCreateScene={() => setShowWizard(true)}
+        onImportFloorPlan={() => setShowFloorPlanWizard(true)}
         onImportScene={handleImportScene}
         onScanSite={() => setShowScanWizard(true)}
         onAiDraft={() => setShowAiDraft(true)}
+        onGuidedScanPlanned={() => setLaunchNotice("Guided scan reconstruction is planned and not product-implemented yet. Use Manual-Assisted Scan for now.")}
+        onVerifyFootagePlanned={() => setShowVerifyFootagePreview(true)}
         onOpenReport={openReport}
         onOpenScene={openScene}
         onUpdateProjectMetadata={updateSavedSceneMetadata}
@@ -180,6 +186,20 @@ export default function StudioPage({ searchParams }: StudioPageProps) {
             <SceneBuilderWizard
               onClose={() => {
                 setShowWizard(false);
+                setEnterStudio(true);
+              }}
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {showFloorPlanWizard ? (
+        <div className="fixed inset-0 z-50 bg-black/55 p-4">
+          <div className="mx-auto h-full max-w-6xl rounded-2xl border border-[#1f2637] bg-[#0b0f17] shadow-2xl">
+            <SceneBuilderWizard
+              forceImportMethod="floor_plan"
+              onClose={() => {
+                setShowFloorPlanWizard(false);
                 setEnterStudio(true);
               }}
             />
@@ -267,6 +287,55 @@ export default function StudioPage({ searchParams }: StudioPageProps) {
                 <span className="font-semibold text-cyan-200">AI draft status:</span> {aiDraftNotice}
               </div>
             ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {showVerifyFootagePreview ? (
+        <div className="fixed inset-0 z-50 bg-black/55 p-4">
+          <div className="mx-auto max-w-3xl rounded-2xl border border-[#1f2637] bg-[#0b0f17] p-4 shadow-2xl">
+            <h2 className="text-sm font-semibold text-white">Verify Real Camera Footage (Preview)</h2>
+            <p className="mt-1 text-xs text-[#91a4c5]">
+              Current support is a planning-assist overlay in Camera View, not a forensic verification pipeline.
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-[11px] text-emerald-100">
+                <div className="font-semibold uppercase tracking-[0.14em] text-emerald-200">Available now</div>
+                <div className="mt-1">Reference frame upload</div>
+                <div>Overlay/split comparison</div>
+                <div>Alignment quality estimate</div>
+                <div>Difference heat overlay</div>
+              </div>
+              <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-[11px] text-amber-100">
+                <div className="font-semibold uppercase tracking-[0.14em] text-amber-200">Not implemented yet</div>
+                <div>Video ingestion + frame sampling</div>
+                <div>Auto camera pose/FOV recovery</div>
+                <div>ONVIF/RTSP integration</div>
+                <div>Forensic-grade proof claims</div>
+              </div>
+            </div>
+            <div className="mt-3 rounded-lg border border-[#22314b] bg-[#101827] px-3 py-2 text-[10px] text-[#b6c6e6]">
+              Planning indicator only: modeled outcomes depend on assumptions and are not legal/forensic guarantees.
+            </div>
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                onClick={() => setShowVerifyFootagePreview(false)}
+                className="rounded-lg border border-[#2a3347] px-3 py-1.5 text-xs text-[#9bb0cf]"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  setShowVerifyFootagePreview(false);
+                  setCameraViewVerificationIntent({ source: "launcher_preview", openPanel: true });
+                  launchWorkspace("camera_view", "coverage", "metrics");
+                  setLaunchNotice("Use Camera View footage verification overlay as current preview path.");
+                }}
+                className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500"
+              >
+                Open Camera View Preview
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

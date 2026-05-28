@@ -5,7 +5,6 @@ import { computeCoverageUncertainty } from "@/simulation/coverage-uncertainty";
 import { buildRedundancyMatrixReport, type RedundancyMatrixReport } from "./redundancy-matrix";
 
 type ReportScene = SecurityScene;
-
 // ── Report Data Interface ──
 
 export interface ReportData {
@@ -479,8 +478,8 @@ export function buildCompareReportData(
   afterScene: ReportScene,
   afterResult: SimulationResult,
 ): CompareReportData {
-  const before = buildReportData(beforeScene, beforeResult);
-  const after = buildReportData(afterScene, afterResult);
+  const before = buildCompareReportSnapshot(beforeScene, beforeResult);
+  const after = buildCompareReportSnapshot(afterScene, afterResult);
 
   const zoneChanges = before.zones.map((z) => {
     const afterZone = after.zones.find((az) => az.label === z.label);
@@ -505,6 +504,97 @@ export function buildCompareReportData(
       recommendationsDelta: after.summary.recommendationsCount - before.summary.recommendationsCount,
     },
     zoneChanges,
+  };
+}
+
+function buildCompareReportSnapshot(scene: ReportScene, result: SimulationResult): ReportData {
+  const anyResult = result as any;
+  const zonesPassing = anyResult.criticalZoneResults.filter((z: any) => z.status === "pass").length;
+  const totalZones = anyResult.criticalZoneResults.length;
+  const verifiedRecs = anyResult.recommendations.filter((r: any) => r.verified).length;
+  const graph = buildSceneIntelligenceGraph(scene, {
+    simulationResult: result,
+    revisionDepth: scene.changeLog.length,
+    snapshotCount: scene.snapshots?.length ?? 0,
+  });
+  const provenanceNotes = (scene.changeLog ?? []).filter((entry) => entry.startsWith("Provenance:") || entry.startsWith("Provenance confidence:"));
+  const sourceNotes = provenanceNotes.filter((entry) => entry.startsWith("Provenance:"));
+  const confidenceNotes = provenanceNotes.filter((entry) => entry.startsWith("Provenance confidence:"));
+  if (sourceNotes.length === 0) {
+    sourceNotes.push(`Provenance: ${graph.summary.sceneSourceLabel} scene derived from the canonical SecurityScene.`);
+  }
+
+  const cameraMap = new Map(scene.cameras.map((camera) => [camera.id, camera]));
+
+  return {
+    title: "Security Coverage Audit Report",
+    siteName: scene.name,
+    generatedAt: Date.now(),
+    sceneName: scene.name,
+    dimensions: { width: scene.dimensions.width, depth: scene.dimensions.depth, height: scene.dimensions.height },
+    assumptions: {
+      doriStandard: scene.assumptions.doriStandard,
+      personHeightM: scene.assumptions.personHeightM,
+      vehicleHeightM: scene.assumptions.vehicleHeightM,
+      timeOfDay: scene.assumptions.timeOfDay,
+      ppm: { ...scene.assumptions.pixelsPerMeter },
+    },
+    summary: {
+      totalCoveragePct: result.totalCoveragePct,
+      blindspotPct: result.blindspotPct,
+      recognitionAreaPct: result.recognitionAreaPct,
+      identificationAreaPct: result.identificationAreaPct,
+      averageWalkableQuality: result.averageWalkableQuality,
+      worstAreaQuality: result.worstAreaQuality,
+      zonesPassing,
+      zonesTotal: totalZones,
+      issuesCount: result.issues.length,
+      recommendationsCount: result.recommendations.length,
+      verifiedRecommendationsCount: verifiedRecs,
+    },
+    zones: anyResult.criticalZoneResults.map((z: any) => ({
+      label: z.label,
+      requiredQuality: z.requiredQuality,
+      actualQuality: z.actualQuality,
+      status: z.status as "pass" | "fail" | "warning",
+      coveringCameras: (z.coveringCameras ?? []).map((id: string) => cameraMap.get(id)?.name ?? id),
+      coveragePct: 0,
+    })),
+    cameras: anyResult.cameraResults.map((c: any) => ({
+      id: c.cameraId,
+      name: cameraMap.get(c.cameraId)?.name ?? c.cameraId,
+      status: cameraMap.get(c.cameraId)?.status ?? "unknown",
+      coveragePct: c.coveragePct,
+      zonesCovered: c.criticalZonesCovered ?? [],
+      issues: [],
+    })),
+    issues: anyResult.issues.map((i: any) => ({
+      severity: i.severity,
+      description: i.description,
+      area: i.category,
+      recommendation: i.description,
+    })),
+    recommendations: anyResult.recommendations.map((r: any) => ({
+      description: r.description,
+      costCategory: r.costCategory,
+      verified: r.verified,
+      estimatedImpact: r.estimatedImpact,
+    })),
+    provenance: {
+      sceneSource: scene.source,
+      sceneSourceLabel: graph.summary.sceneSourceLabel,
+      sourceCounts: graph.summary.sourceCounts,
+      nodeCount: graph.summary.nodeCount,
+      edgeCount: graph.summary.edgeCount,
+      revisionDepth: graph.summary.revisionDepth,
+      snapshotCount: graph.summary.snapshotCount,
+      confidenceNotes,
+      sourceNotes,
+    },
+    novelAlgorithms: undefined,
+    meetsModeledZoneRequirements: zonesPassing === totalZones,
+    codeCompliant: zonesPassing === totalZones,
+    standardsRef: `${scene.assumptions.doriStandard === "oodpcvs_2025" ? "IEC 62676-4:2025 (OODPCVS)" : "DORI 2014"} planning estimate`,
   };
 }
 

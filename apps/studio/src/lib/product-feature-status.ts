@@ -26,6 +26,11 @@ export const PRODUCT_FEATURE_STATUS: ProductFeatureEntry[] = [
   },
   {
     status: "Preview",
+    feature: "Scan Site (manual-assisted)",
+    detail: "Photo marker workflow compiles walls, doors, cameras, obstructions, lights, zones, and optional path into canonical SecurityScene.",
+  },
+  {
+    status: "Preview",
     feature: "AI layout draft",
     detail: "Prompt-to-scene starter with model-backed output when configured.",
   },

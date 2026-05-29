@@ -12,6 +12,7 @@ describe("StatusBar", () => {
     expect(source).toContain("Selection:");
     expect(source).toContain("Coverage:");
     expect(source).toContain("Scene overview");
+    expect(source).toContain("Truth: Live");
     expect(source).toContain("describeSelection");
     expect(source).toContain("formatCoverageSummary");
     expect(source).toContain("Map / Edit");

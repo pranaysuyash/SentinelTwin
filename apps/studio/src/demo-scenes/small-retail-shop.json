@@ -560,6 +560,7 @@
     }
   ],
   "privacyZones": [],
+  "sensors": [],
   "entryPoints": [
     {
       "id": "entry_front_door",

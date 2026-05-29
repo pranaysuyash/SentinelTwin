@@ -1,20 +1,116 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const bottomPanelPath = "./src/components/bottom-panel/BottomPanel.tsx";
+const bottomPanelPath = join(import.meta.dir, "../bottom-panel/BottomPanel.tsx");
 
 describe("BottomPanel", () => {
-  test("surfaces the analysis tabs in the main tab strip", () => {
+  test("includes the sensor analysis tab", () => {
     const source = readFileSync(bottomPanelPath, "utf8");
 
-    expect(source).toContain('{ id: "redundancy", label: "REDUNDANCY" }');
-    expect(source).toContain('{ id: "counterfactual", label: "COUNTERFACTUAL" }');
-    expect(source).toContain('{ id: "threat", label: "THREAT REVIEW" }');
-    expect(source).toContain('bottomDrawerMode === "single_module"');
-    expect(source).toContain('bottomDrawerMode === "hidden"');
-    expect(source).toContain('Analysis Drawer Hidden');
-    expect(source).toContain('renderTab(activeTabSafe)');
-    expect(source).toContain('renderTab(singleModuleTab)');
-    expect(source).toContain('renderTab(compareActiveTab)');
+    expect(source).toContain("SensorsTab");
+    expect(source).toContain('{ id: "sensors", label: "SENSORS" }');
+    expect(source).toContain('sensors: "Sensor layer summary and live schema-backed sensor inventory."');
+    expect(source).toContain('case "sensors":');
+  });
+
+  test("includes the governance control-plane tab", () => {
+    const source = readFileSync(bottomPanelPath, "utf8");
+
+    expect(source).toContain("GovernanceTab");
+    expect(source).toContain('{ id: "governance", label: "GOVERNANCE" }');
+    expect(source).toContain('governance: "Role, approval, and publish policy controls for the scene control plane."');
+    expect(source).toContain('case "governance":');
+  });
+
+  test("exposes a support-ready diagnostic bundle action in debug mode", () => {
+    const source = readFileSync(join(import.meta.dir, "../bottom-panel/DebugTab.tsx"), "utf8");
+
+    expect(source).toContain("Download Bundle");
+    expect(source).toContain("Download Support Bundle");
+    expect(source).toContain("Publish Scene");
+    expect(source).toContain("Evidence Journal");
+    expect(source).toContain("Append-only journal");
+    expect(source).toContain("Runtime Health");
+    expect(source).toContain("Support Bundle");
+    expect(source).toContain("Incident snapshot");
+    expect(source).toContain("Latest incident");
+    expect(source).toContain("Latest performance trace");
+    expect(source).toContain("External logs");
+    expect(source).toContain("Latest external log");
+    expect(source).toContain("AI telemetry trend");
+    expect(source).toContain("Automated Alerting");
+    expect(source).toContain("Alert status");
+    expect(source).toContain("High priority");
+    expect(source).toContain("Latest alert");
+    expect(source).toContain("Remote Support Ingest");
+    expect(source).toContain("Send to Ingest");
+    expect(source).toContain("Ingest source");
+    expect(source).toContain("Received at");
+    expect(source).toContain("Telemetry events");
+    expect(source).toContain("Support Ingest History");
+    expect(source).toContain("Clear Ingest History");
+    expect(source).toContain("Refresh Archive");
+    expect(source).toContain("server archive");
+    expect(source).toContain("local cache");
+    expect(source).toContain("Remote Support Delivery");
+    expect(source).toContain("Dispatch Support");
+    expect(source).toContain("Refresh Delivery Archive");
+    expect(source).toContain("Paste a remote webhook URL");
+    expect(source).toContain("Remote webhook");
+    expect(source).toContain("Delivery status");
+    expect(source).toContain("Delivered");
+    expect(source).toContain("Queued");
+    expect(source).toContain("Failed");
+    expect(source).toContain("Journey Health");
+    expect(source).toContain("Runtime Trace");
+    expect(source).toContain("Incident Log");
+    expect(source).toContain("Performance Trace");
+    expect(source).toContain("Run Trust Audit");
+    expect(source).toContain("Trust Audit");
+    expect(source).toContain("Provider Governance");
+    expect(source).toContain("Active provider");
+    expect(source).toContain("Fallback order");
+    expect(source).toContain("Local-only policy");
+    expect(source).toContain("Cost / Latency Policy");
+    expect(source).toContain("Active cost");
+    expect(source).toContain("Active latency");
+    expect(source).toContain("Budget status");
+    expect(source).toContain("Policy note");
+    expect(source).toContain("max cost");
+    expect(source).toContain("max latency");
+    expect(source).toContain("AI Action Telemetry");
+    expect(source).toContain("Latest stage");
+    expect(source).toContain("Trend");
+    expect(source).toContain("Recent avg");
+    expect(source).toContain("Model Eval Suite");
+    expect(source).toContain("Budget Policy");
+    expect(source).toContain("Run Eval Suite");
+    expect(source).toContain("Clear Eval History");
+    expect(source).toContain("Capture External Log");
+    expect(source).toContain("Clear External Logs");
+    expect(source).toContain("Provider Health Dashboard");
+    expect(source).toContain("Prompt Registry");
+    expect(source).toContain("Heuristic Layout Baseline");
+    expect(source).toContain("Command Parse");
+    expect(source).toContain("Counterfactual Candidates");
+    expect(source).toContain("Report Generation");
+    expect(source).toContain("Model Layout Draft");
+    expect(source).toContain("Model Eval History");
+    expect(source).toContain("Historical comparison");
+    expect(source).toContain("Recent runs");
+    expect(source).toContain("Run Delta");
+    expect(source).toContain("Prompt count");
+    expect(source).toContain("Latest version");
+    expect(source).toContain("Canonical prompt definitions");
+    expect(source).toContain("Output preview");
+    expect(source).toContain("AI Provider");
+    expect(source).toContain("Provider Status");
+    expect(source).toContain("Simulation");
+    expect(source).toContain("Archive Branch");
+    expect(source).toContain("Merge Archive");
+    expect(source).toContain("Restore Latest Checkpoint");
+    expect(source).toContain("buildDiagnosticBundle");
+    expect(source).toContain("stringifyDiagnosticBundle");
   });
 });

@@ -9,6 +9,7 @@ import { BeforeAfterTab } from "./BeforeAfterTab";
 import { CameraStatusSummaryPanel } from "./CameraStatusSummaryPanel";
 import { CounterfactualPanel } from "./CounterfactualPanel";
 import { DebugTab } from "./DebugTab";
+import { GovernanceTab } from "./GovernanceTab";
 import { SceneIntelligenceTab } from "./SceneIntelligenceTab";
 import { ThreatAnalysisPanel } from "./ThreatAnalysisPanel";
 import { IssuesTab } from "./IssuesTab";
@@ -18,6 +19,7 @@ import { ReportLiteTab } from "./ReportLiteTab";
 import { HelpTab } from "./HelpTab";
 import { TimelineTab } from "./TimelineTab";
 import { RedundancyTab } from "./RedundancyTab";
+import { SensorsTab } from "./SensorsTab";
 import { TemporalProfileView } from "./TemporalProfileView";
 import { SecurityOutcomePanel } from "@/components/security-outcome/SecurityOutcomePanel";
 
@@ -25,11 +27,13 @@ const PANEL_EXPLAINERS: Record<BottomTab, string> = {
   outcome: "Security verdict, top failures, camera responsibility, redundancy, and recommended next actions.",
   metrics: "Coverage quality totals and health indicators for the current scene assumptions.",
   issues: "Prioritized issue stack with scene focus controls and fix handoff actions.",
+  sensors: "Sensor layer summary and live schema-backed sensor inventory.",
   timeline: "Path replay visibility over time, including where coverage is lost.",
   temporal: "24-hour environment profile showing vulnerable windows and safest periods.",
   beforeafter: "Baseline vs proposed snapshots with delta metrics and outcome changes.",
   assumptions: "Model assumptions that qualify all simulation claims and report language.",
   provenance: "Evidence graph: what data and operations produced the current result.",
+  governance: "Role, approval, and publish policy controls for the scene control plane.",
   redundancy: "Single-point-failure checks and camera-offline impact review.",
   counterfactual: "What-if simulation lane for proposed scene changes before applying them.",
   threat: "Defensive coverage-failure analysis for hardening, not attacker optimization.",
@@ -42,11 +46,13 @@ const PANEL_EXPLAINERS: Record<BottomTab, string> = {
 const TABS: { id: BottomTab; label: string; hasCount?: boolean }[] = [
   { id: "outcome", label: "SECURITY OUTCOME" },
   { id: "metrics", label: "METRICS" },
+  { id: "sensors", label: "SENSORS" },
   { id: "issues", label: "ISSUES", hasCount: true },
   { id: "timeline", label: "TIMELINE" },
   { id: "temporal", label: "24H PROFILE" },
   { id: "beforeafter", label: "BEFORE / AFTER" },
   { id: "assumptions", label: "ASSUMPTIONS" },
+  { id: "governance", label: "GOVERNANCE" },
   { id: "provenance", label: "PROVENANCE" },
   { id: "redundancy", label: "REDUNDANCY" },
   { id: "counterfactual", label: "COUNTERFACTUAL" },
@@ -71,7 +77,7 @@ function TabBadge({ children, tone = "slate" }: { children: React.ReactNode; ton
   }[tone];
 
   return (
-      <span className={`rounded-md border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] ${toneClass}`}>
+    <span className={`rounded-md border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] ${toneClass}`}>
       {children}
     </span>
   );
@@ -102,6 +108,8 @@ export function BottomPanel() {
         return <SecurityOutcomePanel />;
       case "metrics":
         return <MetricsTab />;
+      case "sensors":
+        return <SensorsTab />;
       case "issues":
         return <IssuesTab />;
       case "timeline":
@@ -112,6 +120,8 @@ export function BottomPanel() {
         return <BeforeAfterTab />;
       case "assumptions":
         return <AssumptionsTab />;
+      case "governance":
+        return <GovernanceTab />;
       case "provenance":
         return <SceneIntelligenceTab />;
       case "redundancy":

@@ -12,8 +12,11 @@
 - Guided workflow step-5 actions now include direct camera failure simulation and cheapest-fix counterfactual kickoff.
 - Guided workflow copy/CTA language is now outcome-oriented with disabled-state hints when prerequisites are missing.
 - Root dashboard now includes explicit preview parity controls (2D/3D toggle, north/compass indicator, PPM legend chips, obstruction callout) over the live workspace preview.
+- Root dashboard now uses a compact operator top bar and first-viewport current-workspace composition aligned to `StudioDashboardHome_CurrentWorkspacePreview_RiskStatusPanel` instead of a large explanatory hero.
+- Root dashboard preview hydration now waits for client mount without `useSyncExternalStore`, so the live scene preview renders actual geometry after hydration instead of remaining stuck on `Loading preview`.
 - Root dashboard now includes an explicit footer/status row (`Security Simulation Studio`, version marker, systems operational, feedback/help actions) to match studio-home target composition.
 - Root launcher now includes a visible `Product Feature Status` surface with `Available` / `Preview` / `Planned` labels and an entry-flow maturity row.
+- Root launcher now exposes a job-first `Start Project` chooser so users can launch by intent (audit, design, import, scan, draft, verify, report) instead of starting from a dense editor.
 - AI Layout Draft now clearly labels its model-backed generation path, warns about workspace replacement, and falls back deterministically when no public API key is present.
 - AI Layout Draft now leaves a visible launcher status banner so the generated/fallback draft result is not lost when the modal closes.
 - AI Layout Draft now applies prompt-aware enrichment (camera counts, shelves/counter hints, back-storage zone hints) to generated scenes.
@@ -26,6 +29,9 @@
 - SceneBuilderWizard is wired from top bar (`New Scene...`) with blank/template/floor-plan options.
 - Launcher now has a dedicated floor-plan entry flow that opens SceneBuilderWizard directly in floor-plan mode (separate from generic new scene path).
 - Floor-plan import now converts detected geometry into an editable scene skeleton (walls/doors/windows + dimensions).
+- Floor-plan generated scenes now include the required empty `sensors` collection, keeping imported scenes aligned with the current canonical `SecurityScene` schema.
+- Sensor nodes now have a canonical factory, selection bounds, transform support, and workspace rendering, so the schema extension is visible in Studio instead of being a dead field.
+- Root dashboard now includes a compact first-viewport `Recent Workspaces` + `Quick Start` dock; quick actions expose blank scene, JSON import, floor-plan import, manual-assisted scan, and AI layout draft without burying them behind Studio.
 - Manual-assisted `Scan a Site` flow now supports photo upload, marker placement/edit/reposition, candidate type switching (including path points), and review warnings before compile.
 - Scan Site now exposes explicit camera/light mount defaults and critical-zone night requirement controls, then compiles through a review step that summarizes what will be created before Studio handoff.
 - The launcher now shows `Scan a Site` as `Preview / Manual-assisted`, with a CTA that makes the scan-first entry path feel like a first-class product flow instead of a hidden tool.

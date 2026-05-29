@@ -1,5 +1,6 @@
 import { sceneOperationArraySchema } from "@/schema/SceneOperation";
 import type { SceneOperation } from "@/schema/SceneOperation";
+import { PROMPT_REGISTRY } from "@/agents/prompt-registry";
 import type { ModelProvider } from "./providers/ModelProvider";
 
 /**
@@ -17,25 +18,7 @@ export interface SceneContextSummary {
   dimensions: { width: number; depth: number; height: number };
 }
 
-const SYSTEM_PROMPT = `You are SentinelTwin's command interpreter. Convert the user's natural language request into structured scene operations.
-
-You can perform these operations:
-- move_camera: Change a camera's position (x, y, z)
-- rotate_camera: Change a camera's yaw (horizontal) and/or pitch (vertical) in degrees
-- change_camera_fov: Change a camera's horizontal field of view (1-180 degrees)
-- toggle_camera: Turn a camera on or off
-- move_obstruction: Move an obstruction/shelf to a new position (x, y, z)
-- resize_obstruction: Change an obstruction's dimensions (width, height, depth)
-- rotate_obstruction: Rotate an obstruction horizontally
-- add_light: Add a new security light at a position
-- toggle_light: Turn a light on or off
-- set_time_of_day: Switch between day, night, or dusk
-- save_snapshot: Save the current state with a label
-- generate_report: Generate a security audit report
-- run_coverage_failure_analysis: Run defensive coverage-failure route analysis
-- run_adversarial: Legacy alias for coverage-failure analysis
-
-Output ONLY valid JSON matching the schema. Do not explain, do not add commentary.`;
+const SYSTEM_PROMPT = PROMPT_REGISTRY.find((entry) => entry.id === "command_parse")?.systemPrompt ?? "";
 
 /**
  * Parse a natural language command into structured scene operations.

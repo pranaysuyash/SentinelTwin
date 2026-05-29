@@ -16,5 +16,8 @@ describe("ViewSettingsModal", () => {
     expect(source).toContain("providerInfo.cloudAvailable");
     expect(source).toContain("setAiProviderSelection(normalizeAiProviderSelection({ providerId: option.id, model: option.defaultModel }))");
     expect(source).toContain("setAiProviderSelection({ providerId: aiProviderSelection.providerId, model: event.target.value })");
+    expect(source).toContain("Local Only Mode");
+    expect(source).toContain("setLocalOnlyMode");
+    expect(source).toContain("Cloud-backed provider calls are disabled by policy.");
   });
 });

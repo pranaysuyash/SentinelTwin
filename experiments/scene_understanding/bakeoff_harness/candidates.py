@@ -30,6 +30,15 @@ CANDIDATE_REGISTRY: dict[str, CandidateConfig] = {
         expected_strengths=["explicit task control", "small model, fast inference"],
         known_risks=["weaker spatial consistency without tuning"],
     ),
+    "stack_d_gpt54_nano": CandidateConfig(
+        id="stack_d_gpt54_nano",
+        description="GPT-5.4 Nano floorplan parser",
+        components={
+            "vlm": {"model_id": "gpt-5.4-nano", "role": "primary_layout_parser"},
+        },
+        expected_strengths=["latest-gen spatial reasoning", "lower latency than GPT-4o", "improved structural element extraction"],
+        known_risks=["newer model may have different coordinate conventions", "parameter count may limit complex scene parsing"],
+    ),
 }
 
 

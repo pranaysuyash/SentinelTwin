@@ -218,6 +218,20 @@ wired to the same underlying feed state.
 **Alternatives rejected:**
 - Keep view mode controls only below the feed: too easy to miss and weaker screenshot parity
 - Merge target info into the DORI summary: collapses two distinct mental models into one block
+
+## D-102 | 2026-05-28 | Local-only mode should hard-disable cloud-backed AI flows
+
+**Decision:** SentinelTwin Studio exposes a persistent `Local Only Mode` toggle in View Settings. When enabled, cloud-backed AI parsing, fix proposals, counterfactuals, and report generation are disabled by policy even if a provider key is configured.
+
+**Rationale:**
+- The product serves security users who may not be able to upload site layouts or camera placements to a cloud provider
+- A visible policy toggle is clearer than relying on the absence of an API key to imply privacy
+- The local/offline helper paths already exist for common scene edits, so the boundary can be enforced without disabling core editing
+- Keeping the policy in the shell and AI surfaces makes the constraint obvious at the point of use
+
+**Alternatives rejected:**
+- Hide the behavior behind provider selection only: too ambiguous and too easy to overlook
+- Force all AI features off globally: too restrictive for users who can safely opt into cloud-backed assistance
 - Not a hackathon compromise. This is the correct engineering sequence regardless of timeline.
 
 **Alternative rejected — start with Pascal fork:**
@@ -278,7 +292,20 @@ before the lower edit/play controls.
 
 ---
 
-## D-105 | 2026-05-28 | Security outcomes should surface a dedicated privacy review section
+## D-105 | 2026-05-28 | Keep the studio editor camera-first while reserving a sensor schema boundary
+
+**Decision:** Add a canonical `sensors` array to `SecurityScene` and surface its count in report/header summaries, but keep the current editor tools and simulation workflow camera-first until the multi-sensor design is explicitly scoped.
+
+**Rationale:**
+- The product is still camera-centered today, but the data model needs a safe extension point so future motion/contact/access-control work does not require a parallel scene format
+- A zero-default `sensors` array makes the boundary explicit without forcing the editor to invent new sensor editing affordances before the product direction is settled
+- Surfacing the sensor count in reports keeps the handoff honest about what the scene model currently contains, even if the UI does not yet expose dedicated sensor tools
+
+**Alternatives rejected:**
+- Keep sensors out of the schema entirely: would make later extension more disruptive
+- Introduce full sensor editing tools now: too early for the current camera-first product scope
+
+## D-106 | 2026-05-28 | Security outcomes should surface a dedicated privacy review section
 
 **Decision:** Add an explicit privacy review section to the security outcome/report surfaces so privacy zones, restricted cells, and privacy-specific issues are visible instead of only being implicit in the generic issue list.
 
@@ -292,6 +319,19 @@ before the lower edit/play controls.
 - Put privacy only in the debug tab: would make an important modeled concept effectively invisible to users
 
 ---
+
+## D-107 | 2026-05-29 | Provenance tab should expose a visible evidence ledger
+
+**Decision:** Extend `SceneIntelligenceTab` with a concrete evidence ledger built from recent snapshots and scene change-log entries, so provenance reads like temporal operational history instead of only a node/edge graph.
+
+**Rationale:**
+- The product needs a visible answer to "what changed, when, and what evidence was saved?" without inventing a separate history system
+- The store already has snapshots and change-log strings, so the tab can expose real temporal evidence immediately
+- This creates a stronger bridge toward the full temporal operational twin without waiting for a new backend ledger architecture
+
+**Alternatives rejected:**
+- Keep provenance as graph-only: too static and less useful for operational review
+- Build a separate event-sourcing system before surfacing anything: too heavy for the current state of the product
 
 ## D-011 | 2026-05-25 | Adversarial path simulation is a core primitive, not a later phase
 
@@ -512,7 +552,7 @@ stable simulation output and per-jurisdiction regulatory research.
 | D-020 | Segmentation model for scan mode (V0.2)? | Run bakeoff in experiments/segmentation/ |
 | D-021 | Coverage entropy metric: surface in V0.1 or defer? | Show to target user for feedback first. |
 | D-022 | GSAP vs motion (Framer Motion)? | Decided — use motion (Framer Motion v11, MIT). See D-011 addendum. |
-| D-023 | Local-first vs server-side compute? | See Thread 23 in EXPLORATION_MAP.md. Must resolve before building any data persistence. |
+| D-023 | Local-first vs server-side compute? | Local-only mode is implemented in the studio shell; see D-102. Remaining deployment strategy questions are about cloud-backed opt-in, not whether the app can run with local-only policy. |
 | D-024 | Security Evidence Twin as product mode or primary frame? | See Thread 24 in EXPLORATION_MAP.md. Product decision, not technical. |
 | D-025 | Text-to-scene as primary input or secondary? | See Q-016 in OPEN_QUESTIONS.md. Experiment first. |
 | D-026 | Multi-sensor scope: camera-only or full physical security? | See Thread 25 in EXPLORATION_MAP.md. Affects data model. Decide before V1 design. |
@@ -2117,6 +2157,34 @@ reference to the new path, then remove the old."
 - **Store only offsets + final score** — rejected because it hides workflow provenance.
 - **Keep provenance transient-only in session state** — rejected because restore/export paths would lose operator context.
 
+### D-128: Verification panel should show active alignment assist state
+**Date:** 2026-05-28
+
+**Decision:** Surface an `Alignment Assist` status block in Camera View that shows whether the current reference frame is idle, manually aligned, or auto-aligned, and display the auto-align score delta when available.
+
+**Rationale:**
+- Provenance hidden only inside saved snapshots is too indirect for the live verification workflow.
+- Operators need immediate feedback on whether current offsets came from automation or manual adjustment.
+- Showing the auto-align delta makes the assistant measurable instead of feeling like a black-box button.
+
+**Alternatives rejected:**
+- **Keep provenance only in saved snapshot summaries** — rejected because it does not help before saving.
+- **Expose alignment method only via tooltip/microcopy** — rejected because it is too easy to miss in a dense verification panel.
+
+### D-129: Calibration Assist v1 should include reference scale controls and scale-aware auto-align
+**Date:** 2026-05-29
+
+**Decision:** Extend Camera View verification calibration with a reference scale slider (`70%–130%`), persist scale in saved snapshots, and include scale as a search dimension in deterministic auto-align.
+
+**Rationale:**
+- Offset-only calibration cannot handle common real-world framing differences where reference footage appears slightly zoomed compared to simulation.
+- A bounded scale range keeps interactions practical while preventing runaway distortions.
+- Persisting scale with snapshot evidence preserves calibration reproducibility when reloading or reviewing saved references.
+
+**Alternatives rejected:**
+- **Offset-only alignment forever** — rejected because it produces false confidence when scale mismatch exists.
+- **Full perspective warp calibration in this phase** — rejected as too complex for v1; scale + offset solves the majority of current mismatch cases with low UX overhead.
+
 ### D-127: Heuristic AI drafts should enrich obvious scene prompts with entry, light, and path hints
 **Date:** 2026-05-28
 
@@ -2325,6 +2393,90 @@ reference to the new path, then remove the old."
 
 **Alternatives rejected:**
 - **Leave duplicate/rename in the editor only** — rejected because the launcher is the primary workspace hub.
+
+### D-142: Sensors should have first-class editor and inventory surfaces before live fusion
+**Date:** 2026-05-29
+
+**Decision:** Expose sensors through a dedicated authoring tool, sensor inspector, and bottom-panel sensor inventory tab before attempting full live sensor-camera fusion.
+
+**Rationale:**
+- The schema already accepts sensors, so the next visible product gap is making them editable and inspectable in the same cockpit as cameras, lights, and zones.
+- A dedicated sensor UI keeps the product honest about the current state of the fusion layer while giving the editor a concrete non-camera workflow.
+- Keeping live fusion as a later step avoids conflating UI promotion with ONVIF/live-feed integration work.
+
+**Alternatives rejected:**
+- **Hide sensors until live fusion exists** — rejected because the schema boundary is already real and the product should surface it.
+- **Jump straight to live-feed ingestion** — rejected because that would leave the authoring experience under-specified and would not close the visible cockpit gap first.
+
+### D-164: Camera inspector should preview the nearest sensor before full live fusion
+**Date:** 2026-05-29
+
+**Decision:** Surface a nearest-sensor `Sensor Fusion` preview in the camera inspector analytics tab, showing the nearest sensor label, distance, state, and coverage mode while keeping the broader live sensor fusion workflow camera-first for now.
+
+**Rationale:**
+- The editor already has a canonical sensor schema and dedicated sensor tools, so the camera inspector should expose the current fusion boundary instead of hiding sensors entirely.
+- A nearest-sensor preview gives operators an immediate sense of which non-camera layer is closest to the current view, without pretending the product has full live ONVIF ingestion yet.
+- Keeping the preview scoped to the inspector avoids conflating a visible fusion hint with the larger live sensor-camera integration work.
+
+**Alternatives rejected:**
+- **Hide sensor information until full live fusion is complete** — rejected because the schema boundary and dedicated sensor UI already exist.
+- **Build a full live fusion panel first** — rejected because that would overreach the current product stage and delay a useful inspector cue.
+
+### D-165: Live camera feed should surface the nearest sensor alongside camera overlays
+**Date:** 2026-05-29
+
+**Decision:** Add a lightweight nearest-sensor `Sensor Fusion` overlay to the live camera feed and inspector feed, showing distance, state, coverage mode, and active sensor counts beside the existing camera overlays.
+
+**Rationale:**
+- The fusion boundary should be visible in the verification view, not only in a separate inspector analytics tab.
+- A compact overlay makes the live camera surface cross-sensor aware without pretending full ONVIF/live ingestion exists yet.
+- Showing active sensor counts and nearest-sensor state helps operators understand which non-camera layer is most relevant to the current view.
+
+**Alternatives rejected:**
+- **Keep sensors only in the inspector analytics tab** — rejected because the live feed itself should reflect the current fusion boundary.
+- **Build a full cross-sensor event timeline first** — rejected because the overlay is a smaller, truthful step that still moves the product forward.
+
+### D-166: Sensor edits should emit provenance events in the operational ledger
+**Date:** 2026-05-29
+
+**Decision:** Classify sensor-only scene mutations as sensor-specific operational evidence events so sensor add/update/remove actions create a visible audit trail alongside the broader scene history.
+
+**Rationale:**
+- The sensor layer is now a first-class scene object, so its edits should be traceable in the same ledger as camera and scene changes.
+- Reusing the existing operational evidence pipeline avoids inventing a parallel history system just for sensors.
+- A sensor-specific event kind keeps the provenance surface understandable instead of hiding the change under a generic scene update entry.
+
+**Alternatives rejected:**
+- **Log sensor edits only as generic scene updates** — rejected because it makes the sensor story harder to audit in the visible ledger.
+- **Wait for full ONVIF ingestion before logging sensor changes** — rejected because local sensor edits already represent meaningful evidence today.
+
+### D-167: Debug should expose a runtime health summary in-product
+**Date:** 2026-05-29
+
+**Decision:** Add a runtime health summary to the Debug panel that surfaces simulation state, AI policy/provider status, workspace access state, and sensor/camera health counts alongside the existing diagnostic bundle and evidence journal.
+
+**Rationale:**
+- The debug panel is the right place to answer the operator's first question: "is the studio healthy right now?"
+- Runtime truth should be visible in-product instead of forcing the user to infer it from several separate panels.
+- Reusing store-backed simulation, AI, and access state keeps the health summary aligned with the actual live truth instead of duplicating state.
+
+**Alternatives rejected:**
+- **Leave runtime truth only in the diagnostic bundle** — rejected because that is too hidden for day-to-day troubleshooting.
+- **Create a separate monitoring dashboard** — rejected because the existing Debug panel already owns the operator-health surface.
+
+### D-168: Debug should expose a runtime journey trace alongside health
+**Date:** 2026-05-29
+
+**Decision:** Extend the Debug panel and diagnostic bundle with a runtime journey trace and path health cards for import, scan, AI, render, save, and publish so the operator can see not just the current health state but also the recent path history that produced it.
+
+**Rationale:**
+- Runtime truth is more useful when it includes recent path history instead of only a static status snapshot.
+- The existing evidence ledger already captures the kinds of lifecycle events we need, so a trace view can be built without inventing a parallel telemetry store.
+- A compact journey-health surface makes the observability story closer to a real support workflow without waiting for backend telemetry infra.
+
+**Alternatives rejected:**
+- **Keep the bundle as state-only health** — rejected because it does not answer "what just happened?".
+- **Delay until a full backend telemetry stack exists** — rejected because the product already has enough evidence events to show a useful trace today.
 - **Build a separate workspace management modal** — rejected because the selected workspace card already has the right context and layout for these actions.
 
 ### D-142: Top-bar scene selector should mirror launcher workspace management
@@ -2382,3 +2534,550 @@ reference to the new path, then remove the old."
 **Alternatives rejected:**
 - **Leave the light inspector as position/type/status only** — rejected because it hid a simulation-relevant property that already exists in the node model.
 - **Move the night-coverage control into a separate analysis tab** — rejected because it would split the editable property away from the object that owns it.
+
+### D-146: AI Layout Draft should expose editable raw SecurityScene JSON
+**Date:** 2026-05-28
+
+**Decision:** Keep the AI Layout Draft flow preview-first, but expose an editable raw `SecurityScene` JSON view with schema validation before apply.
+
+**Rationale:**
+- Prompt-to-scene is stronger when users can inspect the exact generated structure rather than only a human-readable summary.
+- An editable JSON view lets advanced users correct a generated draft directly without leaving the preview-first flow.
+- Schema validation preserves safety so the preview can still reject invalid JSON before it replaces the workspace.
+
+**Alternatives rejected:**
+- **Only show read-only JSON** — rejected because it would not support hands-on correction of generated drafts.
+- **Skip JSON entirely and only keep summary cards** — rejected because it hides the actual structure that advanced users need to inspect.
+
+### D-147: Manual-assisted scan review should expose explicit queue actions
+**Date:** 2026-05-28
+
+**Decision:** Make the scan candidate review surface explicitly show a `Needs Review` queue summary and direct `Accept`, `Review`, and `Reject` actions per candidate.
+
+**Rationale:**
+- Manual-assisted extraction is only useful if the user can quickly see what still needs attention and mark objects accordingly.
+- A visible queue summary makes the correction burden legible before compile and keeps confidence issues from hiding in a status select.
+- Direct action buttons are faster and clearer than forcing the user to work through only a dropdown.
+
+**Alternatives rejected:**
+- **Leave the review flow as status-select only** — rejected because it was too easy to miss pending items.
+- **Add a separate review mode screen** — rejected because the existing candidate review panel already had the right context.
+
+### D-148: R3F canvas entry points should import the local three-compat shim
+**Date:** 2026-05-28
+
+**Decision:** Import the local `three-compat` shim before every R3F canvas entry point so the Three.js r184 `Clock` deprecation warning is mitigated consistently across the studio canvases.
+
+**Rationale:**
+- The warning originates in `@react-three/fiber` internals, not app-local scene code, so a local compatibility layer is the least invasive mitigation.
+- Importing the shim at each canvas entry point keeps the behavior explicit and avoids relying on a single hidden bootstrap.
+- A source-level regression test can prove the mitigation stays wired without needing to depend on a console warning in CI.
+
+**Alternatives rejected:**
+- **Patch R3F locally** — rejected because it increases maintenance burden and diverges from the package's normal update path.
+- **Ignore the warning** — rejected because the app already has a low-risk mitigation available and should use it consistently.
+
+### D-149: Operational evidence memory should be the next platform spine
+**Date:** 2026-05-29
+
+**Decision:** Make Operational Evidence Memory the next major platform layer after the provenance graph. The ledger should capture scene edits, scan sessions, AI draft proposals, human corrections, snapshots, simulation runs, report outputs, and future live sensor events.
+
+**Rationale:**
+- Provenance summarization is useful, but the full vision needs a durable event memory that can reconstruct site history over time.
+- A shared event/evidence spine makes every input mode feel like a compiler into one canonical history, instead of a separate silo.
+- Temporal twin, incident replay, live feed alignment, and evidence-backed reporting all become much easier once there is one append-only memory layer.
+
+**Alternatives rejected:**
+- **Add another view mode first** — rejected because it deepens the shell without creating the platform memory the shell should reveal.
+- **Invest in more importer polish first** — rejected because import alone does not create an auditable site history.
+- **Start live sensor fusion first** — rejected because live evidence needs a canonical ledger to land in before it can be useful.
+
+### D-150: Operational evidence ledger should show event kinds and before/after diffs in-product
+**Date:** 2026-05-29
+
+**Decision:** Expand the visible operational evidence ledger with explicit event-kind counts, before/after scene summaries, and reconstructable checkpoints so the temporal spine is readable in the UI before it becomes the canonical append-only store.
+
+**Rationale:**
+- The operational memory already existed as a visible ledger, but the temporal story is clearer when event types and scene deltas are visible at a glance.
+- Before/after summaries make the checkpoint history more trustworthy without forcing users into the raw event payload.
+- A richer visible ledger keeps the product aligned with the temporal vision while still allowing the underlying store design to evolve.
+
+**Alternatives rejected:**
+- **Leave the ledger as timestamp-only entries** — rejected because it hides the actual change semantics.
+- **Jump straight to a full append-only storage rewrite** — rejected because the UI can gain clarity now without locking the storage model too early.
+
+### D-151: Scan intake and AI draft proposals should emit lifecycle events into the operational ledger
+**Date:** 2026-05-29
+
+**Decision:** Record launcher-facing scan intake starts, scan session compiles, and AI draft proposals as explicit operational evidence events so the temporal ledger shows how the twin was requested, reviewed, and turned into a scene.
+
+**Rationale:**
+- The ledger is more useful when it captures the input-mode lifecycle, not only the finished scene-load event.
+- Scan intake and AI draft generation are both user-visible proposals before commit, so they belong in the evidence trail even when the scene itself has not changed yet.
+- Capturing these lifecycle events now keeps the visible ledger aligned with the full operational-memory direction without waiting for the append-only store rewrite.
+
+**Alternatives rejected:**
+- **Only record the final scene load** — rejected because it hides the proposal and review stages.
+- **Wait for the append-only store rewrite first** — rejected because the user-facing ledger can improve now without blocking on the deeper storage decision.
+
+### D-152: Operational evidence events should expose lifecycle branch labels and parent links
+**Date:** 2026-05-29
+
+**Decision:** Add lifecycle metadata to operational evidence events so the ledger can distinguish draft, imported, scanned, recovered, simulated, and published branches, and restore events can link back to their parent checkpoint.
+
+**Rationale:**
+- A flat event history is not enough once the ledger needs to represent recovery, publication, and review states.
+- Branch labels make the visible history easier to scan without asking users to parse raw event kinds.
+- Parent-event linkage keeps restored states explainable and supports future merge/replay semantics.
+
+**Alternatives rejected:**
+- **Keep only raw event kinds** — rejected because the ledger would still read like a linear log rather than a lifecycle model.
+- **Wait for the append-only store rewrite first** — rejected because branch metadata can be added safely now and will carry forward into the deeper store redesign.
+
+### D-153: Operational evidence ledger should support lifecycle and branch filters
+**Date:** 2026-05-29
+
+**Decision:** Add lifecycle-stage and branch-label filters to the visible operational evidence ledger so operators can navigate draft, imported, scanned, recovered, simulated, and published history without leaving the provenance surface.
+
+**Rationale:**
+- The ledger already exposes the branch metadata, so the next usability gain is to let the operator slice the history by that metadata directly.
+- Search alone still leaves too much manual scanning when the user wants to inspect a specific lifecycle phase.
+- Filter chips keep the navigation fast and lightweight while remaining consistent with the existing evidence surface.
+
+**Alternatives rejected:**
+- **Keep branch data read-only** — rejected because branch metadata is only half the value without navigation.
+- **Move branch navigation into a separate page** — rejected because the provenance surface already has the right context for this filtering.
+
+### D-154: SentinelTwin should expose a local governance control plane before multi-user RBAC arrives
+**Date:** 2026-05-29
+
+**Decision:** Add a local Governance tab with role selection, review-required vs open-publish policy, review request/approval/rejection actions, and review annotations, and log those control-plane actions into the operational evidence ledger.
+
+**Rationale:**
+- The product already has publish/recover provenance, but the control plane still needs a visible place where approval intent is explicit.
+- A local governance model makes the current single-user workflow auditable now without pretending backend auth or multi-user RBAC already exists.
+- Recording role and policy changes as evidence keeps the publish path explainable and prepares the app for future shared-workspace permission semantics.
+
+**Alternatives rejected:**
+- **Keep publish as a blind button** — rejected because the product would still hide the approval model.
+- **Pretend multi-user RBAC is already implemented** — rejected because the current codebase is local-first and single-user, so the honest step is a local governance spine first.
+
+### D-155: Branch restores should target explicit lifecycle states
+**Date:** 2026-05-29
+
+**Decision:** Allow evidence-backed checkpoint restores to reopen a scene as draft, recovered, or published instead of forcing every restore through a single anonymous recovery branch.
+
+**Rationale:**
+- The provenance UI already exposes lineage and compare paths, so the next improvement is to make restore target intent visible too.
+- Different restore outcomes are operationally meaningful: a rollback to draft is not the same as reopening a published state.
+- Explicit branch targets make the event ledger more useful for future merge/recover semantics and reduce ambiguity in the audit trail.
+
+**Alternatives rejected:**
+- **Keep one generic restore action** — rejected because it hides operator intent.
+- **Add a separate page for branch choice** — rejected because branch-target recovery belongs beside the existing lineage preview and checkpoint controls.
+
+### D-155: Branch lineage previews should live in the provenance tab before an append-only store rewrite
+**Date:** 2026-05-29
+
+**Decision:** Add branch-head lineage previews and point-in-time checkpoint ancestry to the provenance tab so operators can inspect parent chains before restoring or publishing, while leaving the deeper append-only event-store rewrite for a later platform slice.
+
+**Rationale:**
+- The ledger already has parent-event links and reconstructable snapshots, so a visible parent-chain preview is the highest-value next usability step.
+- Showing lineage in-product makes the temporal model more understandable now without prematurely freezing the storage architecture.
+- The deeper branch-merge and append-only persistence work is still important, but it should build on the live navigation/preview surface rather than block it.
+
+**Alternatives rejected:**
+- **Wait for the canonical event store first** — rejected because the user-facing lineage preview is useful now and does not depend on the store rewrite.
+- **Hide branch ancestry behind a separate page** — rejected because the provenance tab already has the right context for checkpoint navigation.
+
+### D-156: Branch comparison should expose merge-preflight deltas before any merge policy lands
+**Date:** 2026-05-29
+
+**Decision:** Add a branch-comparison panel in the provenance tab that lets operators choose left and right lineage heads, inspect their common ancestor, and review scene-count deltas before any future merge policy is designed.
+
+**Rationale:**
+- A merge policy is easier to design when the operator can already see how two branches diverge.
+- The current store already exposes reconstructable checkpoints, so a comparison view can provide immediate value without a storage rewrite.
+- Presenting deltas in the provenance tab keeps the branch workflow in the same context as publish, restore, and lineage preview.
+
+**Alternatives rejected:**
+- **Wait for branch merge semantics to be implemented first** — rejected because the UI can and should surface comparison value now.
+- **Hide branch comparison until the append-only store rewrite** — rejected because it would delay a useful preflight tool that already has enough data to be meaningful.
+
+### D-157: Restore-to-branch actions should be explicit in the provenance tab
+**Date:** 2026-05-29
+
+**Decision:** Add visible restore-to-branch actions from branch lineage and branch comparison views so operators can reconstitute a checkpoint into draft, recovered, or published targets instead of only restoring into one implicit branch.
+
+**Rationale:**
+- The store already accepts a target branch for restore operations, so the missing piece is exposing that capability in the lineage UI.
+- Explicit targets make the branch model discoverable and prepare the surface for future branch merge semantics.
+- Showing restore intent where the user inspects branch ancestry is clearer than hiding it in a generic button.
+
+**Alternatives rejected:**
+- **Keep a single implicit restore button** — rejected because it hides the branch target semantics that now matter to the workflow.
+- **Move restore-target selection into a separate workflow page** — rejected because it would fragment the provenance flow and dilute the lineage context.
+
+### D-158: Archive restore should allow explicit branch targets in the debug panel
+**Date:** 2026-05-29
+
+**Decision:** Add a branch target selector to the debug archive restore workflow so the latest archived checkpoint can be restored as draft, recovered, or published directly from the recovery panel.
+
+**Rationale:**
+- The archive already carries the full scene, evidence, and governance state, so the recovery UI should respect the same branch semantics used by provenance restore.
+- Explicit branch targets make the archive path useful for real recovery work, not just a generic support import.
+- Keeping the branch choice in the debug panel makes the backup / recovery workflow discoverable without hiding it in a separate settings page.
+
+**Alternatives rejected:**
+- **Restore only into recovered** — rejected because it would throw away the existing branch model and make archive restore less useful.
+- **Hide archive recovery behind the provenance tab only** — rejected because debug is the natural place for backup/restore actions and support workflows.
+
+### D-159: Operational evidence should be exportable as a recovery archive
+**Date:** 2026-05-29
+
+**Decision:** Add an explicit operational evidence archive export and restore path that packages the current scene, simulation result, operational evidence ledger, and governance state into a downloadable JSON archive that can be restored back into Studio.
+
+**Rationale:**
+- The evidence layer is only truly useful for recovery if it can survive beyond the current browser session.
+- A dedicated archive makes the recovery boundary explicit, instead of relying on ad hoc localStorage state.
+- Bundling scene, evidence, and governance together preserves the full operational context needed to reconstruct or continue a site state.
+
+**Alternatives rejected:**
+- **Leave recovery as raw localStorage only** — rejected because it is not portable, not inspectable, and not a real backup workflow.
+- **Split scene, evidence, and governance into separate archives** — rejected because it would make recovery harder and increase mismatch risk between the three states.
+
+### D-160: Archive restore should be gated by merge preflight
+**Date:** 2026-05-29
+
+**Decision:** Make the debug archive workflow load the archive first, then require a merge-preflight result before applying it to the workspace. Only same-state or fast-forward-compatible archives can be applied directly.
+
+**Rationale:**
+- A recovery archive is useful as a real-world support artifact only if it can be checked against the live ledger before it overwrites state.
+- Blindly restoring any archive into the workspace would hide divergence and make the branch model less trustworthy.
+- A merge-preflight step keeps the archive path aligned with the provenance branch model and surfaces real conflicts instead of silently discarding current work.
+
+**Alternatives rejected:**
+- **Keep direct restore-on-upload** — rejected because it would allow accidental rewinds or overwrites without showing divergence.
+- **Require a separate merge page** — rejected because the debug panel is already the recovery surface and should own the preflight.
+
+### D-161: Operational evidence persistence should be append-only journals
+**Date:** 2026-05-29
+
+**Decision:** Persist operational evidence as append-only journal batches in localStorage rather than as a single mutable array, while keeping the in-memory ledger API unchanged and preserving the journal payload in exportable archives.
+
+**Rationale:**
+- The provenance surface already needs reconstructable lineage and branch comparison, so the browser persistence should preserve a real history trail instead of rewriting the log in place.
+- Append-only journal batches make recovery and migration easier to reason about because every append, rebase, merge, clear, restore, or divergent rewrite becomes an explicit record, and carrying the journal itself through archive export keeps those records recoverable without flattening them away.
+- Keeping the store API unchanged lets the existing evidence UI continue to work while the storage model becomes more canonical underneath it.
+
+**Alternatives rejected:**
+- **Continue storing a single mutable array** — rejected because it preserves the old rewrite model and makes history reconstruction weaker.
+- **Move immediately to a remote event store** — rejected because the current slice should make the local browser history model truthful first, before introducing sync or multi-user infrastructure.
+
+### D-162: Diverged archive recovery should perform a conflict-free three-way merge
+**Date:** 2026-05-29
+
+**Decision:** When a loaded operational evidence archive diverges from the live workspace but shares a reconstructable ancestor, the debug recovery flow should perform a three-way scene merge and apply it only if the merge is conflict-free. Direct overwrite remains reserved for same-state and fast-forward-compatible archives.
+
+**Rationale:**
+- The recovery archive is more useful when it can recover not only identical states but also compatible diverged branches without discarding the live branch.
+- A three-way merge keeps the common ancestor explicit and makes the branch model visible instead of treating divergent recovery as a hidden overwrite.
+- Blocking only the true conflicts keeps the recovery path honest while still allowing useful local recovery workflows to proceed.
+
+**Alternatives rejected:**
+- **Always overwrite the workspace with the archive** — rejected because it would erase local changes and undermine trust in the branch model.
+- **Require manual branch comparison before any archive application** — rejected because the debug panel already has the necessary context and should own the merge preflight and application flow.
+
+### D-163: Shared-workspace access should be modeled as a local member-routing layer before backend auth arrives
+**Date:** 2026-05-29
+
+**Decision:** Add a local shared-workspace access model with active member selection, single-user vs shared mode, and routing summaries for reviewer roles so the product can expose multi-user-style governance before a backend identity system is wired.
+
+**Rationale:**
+- The current product still runs local-first, but the control plane should already reflect the multi-user mental model the platform needs.
+- Keeping member routing local first lets the app express who is acting, who can review, and which role is required for approval without pretending a remote auth system exists.
+- The access model gives diagnostics, provenance, and recovery a consistent identity layer to carry forward into future backend sync.
+
+**Alternatives rejected:**
+- **Wait for backend auth before modeling shared access** — rejected because it would keep the product single-user in practice and delay the shared-workspace UX.
+- **Bake the access logic directly into publish buttons only** — rejected because the routing model needs to be visible in the governance panel, archive, and diagnostics surfaces.
+
+### D-164: Runtime incidents and performance traces should be first-class diagnostic bundle data
+**Date:** 2026-05-29
+
+**Decision:** Record runtime failures, user-facing validation issues, and performance traces as explicit runtime incidents in the shared store, then surface the incident log and performance trace list in the debug diagnostic bundle instead of leaving them implicit in console output.
+
+**Rationale:**
+- The observability layer is more useful when it can explain both the recent path history and the recent runtime failures that produced it.
+- Capturing incident kinds and performance traces in the same bundle makes support artifacts more actionable without inventing a separate logging system.
+- Keeping the data in the existing store and debug surface preserves the local-first workflow while still making the runtime truth visible.
+
+**Alternatives rejected:**
+- **Keep incidents only in the console** — rejected because console-only trace data is not discoverable enough for support workflows.
+- **Build a separate telemetry sink first** — rejected because the current slice should make the local diagnostics truthful before introducing external observability infrastructure.
+
+### D-165: Claim-heavy summary surfaces should carry explicit truth labels and be covered by the in-product trust audit
+**Date:** 2026-05-29
+
+**Decision:** Add explicit truth labels to the high-visibility summary surfaces that users rely on for product truth, and make the trust-audit manifest verify those labels alongside the existing feature/governance/provenance surfaces.
+
+**Rationale:**
+- The product has enough live/computed/simulated/imported/placeholder states now that the UI should tell users what kind of truth each summary is presenting.
+- A visible truth label is more durable than relying on implementation context or hidden code comments.
+- The trust-audit route is already the right local-first gate for keeping claim-heavy surfaces aligned with the manifest, so it should cover the new labels too.
+
+**Alternatives rejected:**
+- **Leave truth labels implicit and rely on component naming** — rejected because component names do not tell users what kind of claim is being shown.
+- **Add a separate audit for truth labels later** — rejected because the existing trust-audit harness already owns visible-claim alignment and should remain the single gate.
+
+### D-166: Shared-workspace governance should expose per-action gates in the control plane
+**Date:** 2026-05-29
+
+**Decision:** Surface explicit allow/blocked gates for edit, annotate, request review, approve, reject, publish, and restore actions in the governance tab so workspace role, access mode, and scene posture are visible as actionable policy rather than only summary badges.
+
+**Rationale:**
+- Shared-workspace RBAC/ABAC is easier to trust when the operator can see per-action results instead of only a high-level role label.
+- The existing `canPerformWorkspaceAction(...)` helper already computes the relevant decisions, so the UI should show that policy instead of hiding it.
+- The governance tab becomes a better control plane when it explains why a member is allowed or blocked on each workflow step.
+
+**Alternatives rejected:**
+- **Keep governance as summary badges only** — rejected because summary badges do not explain which concrete actions are gated.
+- **Move action gating to a separate admin screen** — rejected because the current governance tab is already the local control plane for role and approval routing.
+
+### D-167: Provider governance should be visible as a fallback-order dashboard
+**Date:** 2026-05-29
+
+**Decision:** Surface provider selection, active model, local-only policy, cloud availability, and fallback order in the debug panel so AI behavior is explainable from the product shell rather than only from configuration state.
+
+**Rationale:**
+- Provider selection without visibility into availability or fallback order leaves the AI control plane opaque.
+- The debug surface is the right place to show provider health because it already carries runtime, incident, and truth-audit context.
+- A shared helper for provider governance keeps the command bar, AI draft launcher, and debug panel aligned on the same model truth.
+
+**Alternatives rejected:**
+- **Leave provider governance only in View Settings** — rejected because settings alone do not explain runtime fallback order.
+- **Build a separate provider dashboard route first** — rejected because the debug panel already functions as the local operability surface and should own the initial provider-governance view.
+
+### D-168: Provider/model evaluation should be visible as a debug-panel suite
+**Date:** 2026-05-29
+
+**Decision:** Add a product-visible model-eval suite in the Debug panel that runs the current provider/model against canonical structured-output fixtures for command parsing, counterfactuals, report generation, and AI layout drafting, while clearly showing pass/fail/skip outcomes.
+
+**Rationale:**
+- The provider/model control plane is only trustworthy if prompt changes and provider swaps can be exercised against the same structured-output tasks the app already depends on.
+- The Debug panel is the right local-operability surface because it already carries runtime health, incidents, trust audit, and provider governance.
+- A visible suite gives operators a stable benchmark without introducing a separate evaluation app or a hidden experiments-only workflow.
+
+**Alternatives rejected:**
+- **Leave evaluation only in experiments/** — rejected because the product shell would still lack a local gate for prompt/provider changes.
+- **Build a separate provider eval route first** — rejected because the Debug panel already owns local diagnostics and should present the first canonical suite.
+
+### D-169: Model-eval history should persist and compare across runs
+**Date:** 2026-05-29
+
+**Decision:** Persist the Debug-panel model-eval suite as a local browser history with a stage-budget summary and a visible comparison trend between recent runs.
+
+**Rationale:**
+- A visible eval gate is only useful if operators can see whether the current provider/model is improving or regressing over time.
+- The Debug panel already owns the provider-governance surface, so it should also own the persisted history and the immediate run delta.
+- A compact local history keeps the feature self-contained without creating a second provider dashboard or a separate telemetry backend.
+
+**Alternatives rejected:**
+- **Keep only the latest eval result** — rejected because it hides trend changes and makes provider swaps harder to judge.
+- **Push history to a separate analytics service first** — rejected because the operator needs the comparison in the product shell now, not later.
+
+### D-170: Provider health and prompt registry should be visible in the Debug panel
+**Date:** 2026-05-29
+
+**Decision:** Add a Debug-panel provider health dashboard plus a canonical prompt registry surface so operators can inspect provider readiness, prompt versions, and structured-output stage metadata in one place.
+
+**Rationale:**
+- The model-eval suite is more useful when operators can immediately see which providers are healthy and which prompts are canonical.
+- Prompt/version visibility belongs beside the provider-governance controls because the two are part of the same AI operating model.
+- Keeping the registry and health dashboard in the Debug panel avoids inventing another governance route while still exposing the missing operational truth.
+
+**Alternatives rejected:**
+- **Leave prompt metadata only in code** — rejected because the operator needs to see the registry in-product.
+- **Create a separate provider-health page first** — rejected because the Debug panel already owns the local AI diagnostics surface.
+
+### D-171: Provider health should also appear at point of use in the command bar and AI draft launcher
+**Date:** 2026-05-29
+
+**Decision:** Mirror the provider-health summary into the command bar and AI draft launcher so the current AI action surface shows the same provider readiness truth as the Debug panel.
+
+**Rationale:**
+- Operators should not have to leave the AI action surface to know whether the active provider is healthy, partial, or blocked.
+- The command bar and AI draft launcher are the two highest-frequency AI action points, so they should carry the same health summary as the Debug panel.
+- Reusing the shared provider-health helper keeps the visible truth aligned across surfaces without duplicating policy logic.
+
+**Alternatives rejected:**
+- **Keep provider health only in Debug** — rejected because that leaves point-of-use AI surfaces blind to provider readiness.
+- **Create a separate provider status page** — rejected because the product already has a cohesive AI control plane and should not fragment it.
+
+### D-172: Estimated cost and latency policy should be visible alongside provider health
+**Date:** 2026-05-29
+
+**Decision:** Surface an estimated cost/latency policy summary with stage readiness thresholds in the Debug panel, command bar, and AI draft launcher, while keeping the actual measured telemetry work open for a future slice.
+
+**Rationale:**
+- Operators need a quick budget class readout when selecting a provider or approving an AI draft.
+- Estimated policy classes are useful immediately, even before per-run measured telemetry is fully tracked.
+- Reusing the shared telemetry helper keeps the policy numbers aligned across the AI surfaces without introducing a second budget model.
+
+**Alternatives rejected:**
+- **Wait for measured telemetry before showing anything** — rejected because the product would stay opaque at the point of use.
+- **Hide cost/latency policy in Debug only** — rejected because the command bar and draft launcher are the surfaces where the budget choice matters most.
+
+### D-173: Measured AI action telemetry should be visible at point of use
+**Date:** 2026-05-29
+
+**Decision:** Record measured AI action telemetry for command parsing, counterfactuals, report generation, and AI layout drafting, and surface the latest measured action in the command bar, AI draft launcher, and Debug panel.
+
+**Rationale:**
+- A per-run trail makes the provider story more actionable than estimated budget classes alone.
+- Showing the latest action where operators already launch AI work keeps the telemetry useful instead of burying it in Debug.
+- Persisting the trail locally keeps the data available for debugging and trend comparison without introducing a separate backend.
+
+**Alternatives rejected:**
+- **Keep telemetry Debug-only** — rejected because the command bar and draft launcher need the latest run truth at point of use.
+- **Wait for a backend analytics pipeline first** — rejected because the local trail already provides useful measured history and can be expanded later.
+
+### D-174: Support handoff should be visible as a first-class Debug-panel summary
+**Date:** 2026-05-29
+
+**Decision:** Surface a support bundle summary card in Debug with the incident snapshot, latest incident, latest performance trace, and AI telemetry trend, and keep the export action labeled `Download Support Bundle`.
+
+**Rationale:**
+- Operators need to see what the support artifact contains before they export it.
+- A visible support summary reduces the chance that incident data exists only as an opaque download button.
+- Reusing the shared diagnostic/support bundle helper keeps the visible summary aligned with the exported payload.
+
+**Alternatives rejected:**
+- **Keep the support bundle only as a download button** — rejected because the operator should be able to inspect the artifact content inline.
+- **Split support data into a separate page** — rejected because the Debug panel already owns the runtime truth and incident surfaces.
+
+### D-175: External log capture should be first-class in the support bundle
+**Date:** 2026-05-29
+
+**Decision:** Add a paste-based external log capture lane in Debug and persist it alongside runtime incidents so the support bundle can export external logs together with the local incident snapshot.
+
+**Rationale:**
+- The remaining support gap was not the local incident log itself, but the ability to bring external logs into the same artifact.
+- A paste-first capture lane is the lightest way to get browser console, app server, or device logs into the bundle without inventing a backend pipeline first.
+- Persisting the capture locally keeps the support artifact useful across reloads and keeps the export aligned with what operators can inspect in Debug.
+
+**Alternatives rejected:**
+- **Leave external logs out of the support bundle** — rejected because the bundle would still stop short of the support-ready goal.
+- **Wait for remote log ingestion first** — rejected because the local capture path already makes the support bundle materially more useful.
+
+### D-176: Support handoff should include an automated alert summary
+**Date:** 2026-05-29
+
+**Decision:** Add an automated alerting summary in Debug and the support bundle that prioritizes runtime incidents and external logs into alert candidates, with a clear escalation recommendation.
+
+**Rationale:**
+- Raw incident logs are hard to act on without a prioritization layer.
+- A local alert summary gives operators a first pass at what needs escalation while keeping the logic in the same in-product support flow.
+- Reusing the same runtime incidents and external log captures keeps the alerting summary aligned with the exported support bundle.
+
+**Alternatives rejected:**
+- **Keep alerting as raw incidents only** — rejected because that still leaves the operator to manually infer priority.
+- **Wait for a backend alerting pipeline** — rejected because the local alert summary already improves the support flow and can later feed a real pipeline.
+
+### D-177: Persist support-ingest history in Debug
+**Date:** 2026-05-29
+
+**Decision:** Keep routed support-ingest submissions in a visible local history list in Debug so the backend-shaped handoff remains auditable across refreshes.
+
+**Rationale:**
+- A one-shot routed response is useful, but a support workflow is easier to trust when the operator can revisit prior submissions and see what was routed over time.
+- Persisting the ingest history locally keeps the feature aligned with the current browser-first support pipeline while the deeper remote transport remains open.
+- Reusing the Debug panel as the triage ledger avoids inventing another support-monitoring surface.
+
+**Alternatives rejected:**
+- **Only show the latest ingest response** — rejected because the operator loses the support trail after the next submission.
+- **Wait for a remote alerting backend before history** — rejected because the local history already improves the support flow and can later feed the real backend.
+
+### D-178: Support ingest archive should be server-backed with local fallback
+**Date:** 2026-05-29
+
+**Decision:** Keep routed support-ingest submissions in a canonical server-side archive behind `/api/support-ingest`, while the Debug panel keeps a local cache fallback for offline visibility.
+
+**Rationale:**
+- A one-shot response is not enough once the support flow is meant to be auditable over time.
+- The server archive makes the support handoff canonical without forcing a second external monitoring system yet.
+- The local cache fallback keeps the panel useful during transient route failures without hiding the fact that the server archive is authoritative.
+
+**Alternatives rejected:**
+- **Keep only local history** — rejected because it leaves the route itself stateless and less representative of the future transport model.
+- **Push directly to an external service first** — rejected because the project still needs a canonical local route and archive that can be verified inside the studio shell.
+
+### D-179: Support delivery should use a canonical queue before external fan-out
+**Date:** 2026-05-29
+
+**Decision:** Add a separate `/api/support-delivery` queue that consumes the canonical support-ingest archive and tracks dispatch attempts before any real external webhook or notification fan-out exists.
+
+**Rationale:**
+- Ingest and delivery are different concerns; the product needs a dispatch boundary so future webhook or alert transport does not get mixed into the ingest archive.
+- A canonical queue gives operators a visible delivery trail while keeping the implementation local and auditable.
+- Keeping the queue separate from ingest also leaves room for genuine remote destinations later without redesigning the support handoff again.
+
+**Alternatives rejected:**
+- **Fold delivery into the ingest route** — rejected because it would blur archival and dispatch concerns.
+- **Wait for a real external notification service first** — rejected because the project can already verify a delivery boundary locally.
+
+### D-180: Governance tab should expose a visible approval trail
+**Date:** 2026-05-29
+
+**Decision:** Add a governance trail section to the Governance tab that surfaces review requests, approvals, rejections, annotations, role changes, and policy changes from the operational evidence ledger.
+
+**Rationale:**
+- The control plane already mutates workspace state through evidence-backed actions, but the operator still needs a focused trail to review what happened and when.
+- Reusing the operational evidence ledger keeps governance auditability in one canonical history instead of inventing a second log.
+- A visible trail makes the local governance workflow easier to trust while backend identity and remote approval routing remain open.
+
+**Alternatives rejected:**
+- **Leave governance auditability inside the evidence rail only** — rejected because the operator would have to search the broader timeline to review approvals.
+- **Create a separate governance log store** — rejected because it would duplicate the existing evidence trail and create drift.
+
+### D-181: Governance handoff should use a canonical archive queue before remote approval fan-out
+**Date:** 2026-05-29
+
+**Decision:** Add a separate `/api/governance-archive` queue that consumes the visible governance trail and tracks dispatch attempts before any real remote approval service or webhook fan-out exists.
+
+**Rationale:**
+- Governance approvals are a real product boundary and should have their own archive path rather than piggybacking on support logs.
+- The queue gives operators a visible dispatch trail for review requests, approvals, rejections, annotations, and policy changes.
+- Keeping the queue separate from support delivery makes the remote-approval routing path explicit for future identity and service integration work.
+
+**Alternatives rejected:**
+- **Fold governance into the support queue** — rejected because it would blur incident support and approval routing concerns.
+- **Wait for a real identity service first** — rejected because the project can already verify a governance dispatch boundary locally.
+
+### D-182: Workspace membership should have a canonical archive queue before remote identity fan-out
+**Date:** 2026-05-29
+
+**Decision:** Add a separate `/api/workspace-membership-archive` queue that captures the current workspace roster, active member, and routing policy before any real remote identity or approval-routing service exists.
+
+**Rationale:**
+- Backend identity needs a canonical record of who is active, which members exist, and which route policy is in force.
+- Keeping this queue separate from governance approvals keeps identity capture distinct from approval history while still using the same archive/fan-out pattern.
+- A visible membership archive gives the Governance tab a backend-shaped identity handoff without waiting for cross-service auth infrastructure.
+
+**Alternatives rejected:**
+- **Fold membership capture into governance archive** — rejected because identity records and approval records are different product boundaries.
+- **Wait for shared backend identity services first** — rejected because the app can already validate a durable membership archive locally.
+
+### D-183: Workspace membership reconciliation should be a first-class sync action
+**Date:** 2026-05-29
+
+**Decision:** Add a `Sync Membership Snapshot` action in the Governance tab that reconciles the current workspace membership against the latest archived membership snapshot and records a `workspace_membership_synced` evidence event.
+
+**Rationale:**
+- A backend-identity record is only useful if operators can reconcile the live workspace against it.
+- Emitting a dedicated evidence event keeps sync and drift visible in the same audit trail as the rest of the governance history.
+- The sync action makes the archive a real operational control instead of a passive history list.
+
+**Alternatives rejected:**
+- **Only show drift without a sync action** — rejected because the archive would still be passive.
+- **Silently overwrite the live membership state** — rejected because the operator needs an auditable reconciliation step.

@@ -17,5 +17,9 @@ describe("TopBar target-type switcher", () => {
     expect(source).toContain("Assumptions");
     expect(source).toContain('<SurfaceButton onClick={() => setBottomTab("provenance")}>');
     expect(source).toContain("Provenance");
+    expect(source).toContain('data-testid="topbar-view-settings"');
+    expect(source).toContain('data-testid="more-view-settings"');
+    expect(source).toContain('aria-label="Open keyboard shortcuts"');
+    expect(source).toContain('aria-label="Open more actions"');
   });
 });

@@ -1,15 +1,20 @@
 # Current Implementation State — Camera Studio
 
-**Updated:** 2026-05-28 (session 15: Dashboard parity controls + camera-view selection persistence)
+**Updated:** 2026-05-29 (session 31: remote support delivery queue)
 **Source:** Direct code audit of apps/studio/src/
 **Purpose:** Accurate baseline of what is actually built, tested, and rendering.
 Use this instead of the earlier CAMERASTUDIO_GAP_ANALYSIS.md which was written
 before the Phase 2 audit. This doc supersedes the gap analysis for "what exists."
+For the full-vision gap inventory and next-slice sequencing, see
+`Docs/todos/FULL_VISION_GAP_INVENTORY.md`.
 
 ## Homepage / layout surface update (2026-05-28)
 
 - Root no longer uses the older centered form/checklist launcher; `/` now resolves to the Studio dashboard home surface (`StudioDashboardHome`) ✅
 - The implemented root target aligns with the `StudioDashboardHome_CurrentWorkspacePreview_RiskStatusPanel` direction for V0.1 Studio-first flow ✅
+- The root dashboard now uses a compact operator top bar, live current-workspace preview, risk/status right panel, metric/action rail, and first-viewport recent/quick-start dock instead of a large marketing-style hero ✅
+- The root launcher top bar now matches the reference more closely by keeping the primary actions to Open Studio / Run Simulation / Import JSON / New Scene, while `Start Project` lives in Quick Start instead of competing with the studio actions ✅
+- The live dashboard preview hydration path now uses an explicit mounted flag, avoiding the previous client-store shim that could leave the preview stuck on `Loading preview` after hydration ✅
 - `PlatformHome_CommandCenter_RecentWorkspaceRiskOverview` is retained as a future V1+ concept and is intentionally not the immediate root implementation ✅
 - The Studio homepage now auto-runs the demo simulation on first load when the canonical demo scene is present, so the dashboard does not start in a misleading `Simulation pending` state for the retail demo ✅
 - Demo workspaces and layouts are seeded when local storage is empty, so the homepage now has visible recent/demo surfaces instead of a blank shell ✅
@@ -17,6 +22,7 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - The workspace now treats report as a first-class view path and stores custom layouts separately from scenes so the site model and the shell composition stay independent ✅
 - The homepage now has a dedicated `Scene Work` surface that foregrounds `New Blank Scene`, `Import SecurityScene JSON`, `Scan a Site`, and `AI Layout Draft` so demo scenes are clearly the baseline rather than the end state ✅
 - The AI Layout Draft flow now compiles a direct scene blueprint from prompt output when a model provider is available, so prompt-to-scene is no longer just a template selector with a few prompt hints ✅
+- The AI Layout Draft modal now also exposes an editable raw `SecurityScene` JSON view with validation before apply, so users can inspect or hand-edit the generated scene without leaving the preview-first flow ✅
 - The AI Layout Draft launcher now generates a reviewable preview card first and only applies the draft to the workspace after explicit confirmation, matching the safer review-before-commit pattern used by the scan/import flows ✅
 - The AI Layout Draft preview now includes a compact current-vs-draft workspace comparison strip so users can see replacement impact before they apply the draft ✅
 - The AI Layout Draft preview now also exposes the generated `SecurityScene` JSON behind an expandable disclosure with copy support, so users can inspect the exact structure before applying it ✅
@@ -27,16 +33,20 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - The homepage center column now includes a `Scene Starter Gallery` of visual cards so scene creation/import/scan actions read like primary workflows instead of utility buttons ✅
 - The `Your Workspaces` region now includes starter tiles for blank/import/scan/AI workspace entry, making the section behave like a workspace hub instead of a passive saved-scene list ✅
 - The launcher left rail now includes a task-first `Security Jobs` surface with explicit `Available` / `Preview` / `Planned` status per workflow so users see product maturity before entering Studio ✅
+- The launcher now also exposes a job-first `Start Project` chooser modal, so users can pick their intent (audit, design, import, scan, draft, verify, report) before falling into the studio shell ✅
 - Planned workflows (`Guided Scan Reconstruction`, `Verify Real Camera Footage`) now show explicit planned-state launch notices instead of silently routing into unrelated studio modes ✅
 - Dashboard hero preview now includes explicit 2D/3D controls, compass/north indicator, canonical PPM legend chips, and obstruction warning callout so the root scene preview reads like a live simulation surface instead of a static banner ✅
+- The root dashboard first-viewport dock now pairs compact `Recent Workspaces` cards with direct quick-start actions for blank scenes, JSON import, floor-plan import, manual-assisted scan, and AI layout draft ✅
 - Root dashboard now includes an explicit footer/status row (`Security Simulation Studio`, version badge, systems operational, feedback/help affordances) matching the studio-home target structure ✅
 - Camera View selection persistence was hardened: entering camera view now preserves previously selected camera without forcibly overriding selection unless no valid camera selection exists ✅
 - `SceneBuilderWizard` blank-scene creation now uses the canonical blank-scene factory (`createBlankSecurityScene`) and room-dimension wall generation, removing the previous demo-scene clone-and-strip path ✅
 - Floor-plan import now also has a dedicated launcher entry path (`forceImportMethod="floor_plan"`), so floor-plan users are not routed through the generic new-scene method picker ✅
+- Floor-plan scene generation now emits the required `sensors: []` field so floor-plan output remains valid against the current `SecurityScene` schema ✅
 - SceneBuilderWizard review now includes a floor-plan commit summary card (confidence, unresolved warning count, detected counts, and warning preview) before scene creation ✅
 - Launcher now opens a dedicated `Verify Real Camera Footage (Preview)` modal with explicit capability/limitation framing and direct handoff to Camera View preview tools ✅
 - Root launcher query boot now initializes client-side (effect-driven) to avoid server/client render divergence that can trigger runtime hydration errors in production builds ✅
 - `ScanSiteWizard` now runs as a stronger manual-assisted product flow: photo upload + metadata, multiple local photos with per-photo previews/status, marker placement/drag/retype/delete, explicit review warnings, and compile-to-canonical `scan` scene output ✅
+- `ScanSiteWizard` now also surfaces a visible `Needs Review` queue summary plus direct `Accept` / `Review` / `Reject` actions per candidate, making correction of extracted objects more explicit before compile ✅
 - `ScanSiteWizard` now includes explicit camera/light mount defaults, critical-zone night requirement controls, and a review step that summarizes what will be created before handoff ✅
 - Scan compile mapping now includes deterministic conversion for doors/windows/entry points/cameras/lights/obstructions/critical zones/path points plus schema validation and explicit warning codes ✅
 - Scan handoff now sets launch notice counts and auto-runs baseline simulation when both camera and critical zone are present ✅
@@ -51,9 +61,19 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - Bottom analysis drawer now includes an explicit `Explain this panel` action with per-tab intent copy, giving first-time users contextual guidance without leaving the active workflow ✅
 - The `Help` analysis tab now functions as a real workflow guide with a step-by-step map, shortcut groups derived from the live shell keymap, and recovery guidance instead of a minimal placeholder panel ✅
 - The AI command bar now surfaces an explicit offline-first residency banner and a cloud-backed availability chip so the local-vs-cloud behavior is visible in-product instead of implied by code ✅
+- A store-backed `Local Only Mode` toggle now appears in View Settings and is enforced by the AI command bar, AI draft launcher, counterfactual proposals, and report generation so cloud-backed AI can be disabled by policy instead of only inferred from missing keys ✅
 - The active AI provider is now store-backed and visible in View Settings, and the command layer / AI draft launcher read the same provider source of truth ✅
+- The `Debug` analysis tab now exposes a `Provider Governance` surface with active provider, active model, local-only policy, cloud availability, and explicit fallback order so provider selection is visible as an operational control plane instead of a hidden setting ✅
+- The `Debug` analysis tab now also exposes a `Provider Health Dashboard` plus a canonical `Prompt Registry`, and it also exposes a `Model Eval Suite` that exercises the current provider/model against canonical structured-output fixtures for command parsing, counterfactuals, report generation, and AI layout drafting, with visible pass/fail/skip results, a budget-policy readout, and a persisted run history/comparison trail ✅
+- The command bar and AI draft launcher now mirror the provider-health summary so the same active-provider readiness truth appears at the point of use instead of only inside Debug ✅
+- The command bar, AI draft launcher, and Debug panel now also show an estimated cost/latency policy summary and stage readiness thresholds so provider governance is visible as a practical budget class instead of only as a raw provider label ✅
+- The command bar, AI draft launcher, and Debug panel now also record and display measured AI action telemetry (stage, duration, estimated token count, token source) plus a simple recent-vs-previous trend summary so the provider story includes a live per-run trail instead of only estimated budget classes ✅
+- The debug/provider-control surfaces now share canonical prompt definitions from a single registry file, so the command parser, counterfactual agent, report agent, and AI layout draft all read the same prompt truth instead of keeping duplicate strings in each implementation ✅
+- Every R3F canvas entry point now imports the local `three-compat` shim, so the current Three.js r184 `Clock` deprecation warning is consistently mitigated across the studio canvases.
 - `ReportLiteTab` now exposes Copy, Export Markdown, Export HTML, and Print actions directly in the report toolbar, keeping the handoff surface self-contained ✅
 - Placement Oracle now exports the best candidate position and score in the report handoff, matching the live novel panel's placement summary ✅
+- The live camera feed and inspector feed now surface a nearest-sensor `Sensor Fusion` overlay with distance, state, coverage, and active-count context, so the fusion boundary is visible in the actual verification view as well as the inspector analytics tab ✅
+- Sensor add/update/remove actions now emit sensor-specific operational evidence events, so the sensor layer has an auditable history in the same provenance ledger as other scene edits ✅
 
 ---
 
@@ -120,11 +140,14 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - HTML export: vulnerability windows, worst coverage, safest periods ✅
 - Markdown + JSON export: temporal profile section ✅
 - Report exports now include provenance sections with scene source, source counts, revision depth, snapshot counts, and source/confidence history for the canonical scene graph ✅
+- Report exports and the report workspace header now surface a Sensors count from the canonical scene model, and the editor now exposes a dedicated sensor tool, sensor inspector, and sensor inventory tab while the broader live fusion layer remains camera-first ✅
+- The camera inspector analytics tab now surfaces a live `Sensor Fusion` preview with the nearest sensor, distance, state, and coverage mode so the editor can show the current fusion boundary even before full ONVIF/live ingestion exists ✅
 
 ### Schema (src/schema/security-scene.ts) — complete
 - All Zod schemas + TypeScript types ✅
 - All node types: Camera, ObstructionNode, SecurityLightNode, WallNode, DoorNode, WindowNode,
   CriticalZoneNode, PrivacyZoneNode, EntryPointNode, ScenarioPath ✅
+- `sensors: SensorNode[]` exists as a zero-default schema boundary for future multi-sensor work, and dedicated sensor tools / inspector / inventory surfaces are now wired into the editor while live sensor-camera fusion remains open ✅
 - Full SimulationResult with coverageCells, criticalZoneResults, adversarialPath ✅
 - `CoverageCellResult.fragility?: number` (0=robust, 1=fragile) ✅
 - `SimulationResult.fragilitySummary?: { meanFragility, fragileCellCount, robustCellCount, totalCells }` ✅
@@ -162,6 +185,7 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - SceneBuilderWizard (560 lines) was dead code — now wired into TopBar as modal overlay ✅
 - 5 scene templates accessible from wizard: retail-shop, open-office, warehouse, classroom, parking-garage ✅
 - Floor-plan import scale control now feeds the actual extractor config instead of acting as a dead UI field ✅
+- Floor-plan import validation now emits structural diagnostics for duplicate wall pairs, short fragments, off-wall door/window markers, wall orientation mix, and image-bounds coverage; the review UI surfaces those flags before scene creation ✅
 - The target switcher now shows the current target label in-place, so the user sees `Target: Cash Counter` versus `Target: Mixed` without opening the dropdown ✅
 - The top bar now exposes a dedicated `Assumptions` shortcut that jumps the right panel and bottom drawer to the assumptions surface ✅
 - TopBar scene menu now also exposes `Scan a Site...`, which opens the dedicated manual-assisted scan intake flow and compiles into a canonical `scan` scene ✅
@@ -173,7 +197,9 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - `apps/studio/src/lib/scene-skeleton.ts` centralizes the blank-scene shell used by both new-scene creation and scan compilation ✅
 - `apps/studio/src/lib/scan-to-scene.ts` converts scan candidates into real `SecurityScene` nodes without introducing a parallel scene model ✅
 - Scan sessions remain separate from the final scene until compile, and the UI labels the flow as manual-assisted rather than claiming AI perception ✅
+- The guided capture backend is still intentionally open: RoomPlan is the native Apple reference for coached LiDAR capture, while SAM 2 / Depth Anything V2 / VGGT / SpatialLM remain the research anchors for future segmentation, depth, reconstruction, and structure extraction ✅
 - The launcher/home card now presents `Scan a Site` as `Preview / Manual-assisted`, so the scan-first path reads like a first-class product entry rather than a buried utility action ✅
+- Sensor nodes now have a canonical factory, selection bounds, transform support, and workspace rendering, so the schema extension is visible inside Studio instead of being a dead field ✅
 
 ### Launcher resume / status surface — now explicit
 - Root launcher now renders `StudioDashboardHome` as a full-screen dashboard with the current workspace preview, risk summary, mode entry points, searchable project browser, folder/tag/pin metadata management, selected-workspace actions, and secondary quick-start actions instead of the old centered setup card ✅
@@ -188,6 +214,33 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - `PROVENANCE` bottom-panel tab exposes the scene spine in-product so operators can inspect the canonical scene source, assumptions, snapshots, and source distribution without leaving the studio ✅
 - The provenance tab is now interactive: graph nodes and relations are selectable, and the inspector can jump between source and target nodes to trace scene lineage end to end ✅
 - Provenance selections are URL-backed and shareable via a deep link so a specific node/edge trace can be reopened directly ✅
+- Operational evidence memory now records scene edits, scene loads, snapshot saves, simulation runs, counterfactual runs, duplicate-node actions, scan-session compiles, and AI draft proposals as a visible event ledger in the provenance surface, with event-kind counts, before/after scene summaries, reconstructable checkpoints for snapshot-bearing events, lifecycle branch labels for draft / recovered / published history, branch-head filters/navigation, and append-only journal-backed persistence with merge batches, while exportable archives preserve the journal payload itself instead of flattening it away ✅
+- The provenance tab now also shows a visible evidence ledger with recent snapshots, change-log entries, and operational memory events, making the temporal history easier to audit from the UI ✅
+- The provenance tab now also exposes branch-head previews and a visible parent-chain lineage view, so point-in-time evidence can be inspected directly before restoring a checkpoint ✅
+- The provenance tab now also exposes a branch-comparison panel with common-ancestor and delta summaries, giving the operator a merge-preflight view before any future branch policy work lands ✅
+- The Governance tab now also exposes a visible approval trail backed by the operational evidence ledger, so review requests, approvals, rejections, annotations, role changes, and policy changes can be audited from the same control plane that issues them ✅
+- The Governance tab now also exposes a remote governance handoff queue backed by `/api/governance-archive`, so the approval trail can be dispatched into a canonical archive before any real remote approval service exists ✅
+- The Governance tab now also exposes a workspace membership handoff queue backed by `/api/workspace-membership-archive`, so the active member, team roster, routing policy, and drift against the latest archived snapshot can be archived as a canonical backend-identity record before shared identity services exist ✅
+- The Governance tab now also exposes a `Sync Membership Snapshot` action that reconciles the live workspace against the latest archived membership snapshot and logs the drift back into the operational evidence ledger ✅
+- The provenance tab now also exposes merge-readiness guidance for branch comparisons, including fast-forward versus diverged branch guidance before any future merge policy lands ✅
+- The provenance tab now also exposes explicit restore-to-branch actions from branch comparison, so operators can reconstitute a selected head as draft, recovered, or published state instead of only previewing lineage ✅
+- The provenance surface now exposes a `Publish current scene` action that promotes the active scene into the published branch and persists the branch label into saved workspace metadata ✅
+- The new `Governance` bottom-panel tab exposes a local role selector, review-required vs open-publish policy, request/approve/reject actions, and review annotations, all logged into the evidence ledger so publish policy is auditable in-product ✅
+- The `Governance` tab now also exposes a shared-workspace access surface with active member selection, single-user vs shared mode, and explicit routing labels so the current actor and review path are visible in-product ✅
+- The `Governance` tab now also exposes an action gate with allow/blocked status plus route reasons for edit, annotate, request review, approve, reject, publish, and restore so RBAC/ABAC is visible at the action level ✅
+- The `Governance` tab now also exposes a workspace membership archive queue so shared-workspace identity, routing policy, and snapshot drift can be archived and fanned out through a backend-shaped handoff instead of only living in local store state, and it can now sync the live state back to the latest archived snapshot when the operator chooses to reconcile ✅
+- The provenance surface now also supports branch-target checkpoint restore actions so a reconstructable event can be reopened as draft, recovered, or published instead of only a generic restore ✅
+- The debug diagnostics panel now exports a full operational evidence archive, loads uploaded archives into a merge-preflight preview, can restore the latest archived checkpoint with an explicit draft/recovered/published branch selector, and can apply a conflict-free divergent branch merge when the live ledger has forked, so recovery/backups travel with the scene, ledger, journal, and governance state instead of only a support bundle ✅
+- Trust-sensitive launcher and provenance surfaces now have a reusable `truth-audit` harness that checks the visible claim copy against the manifest so placeholder drift gets caught in tests instead of slipping back into the UI ✅
+- The provenance surface now includes ledger search/filtering so operators can narrow events and checkpoints by scene, node, note, event type, lifecycle stage, or branch label instead of scanning the full history manually ✅
+- The debug panel now exports a support-ready diagnostic bundle with scene, simulation, graph, evidence, governance, and runtime truth fields so failures can be handed off with context instead of just a screenshot ✅
+- The debug panel now also exposes a runtime health summary plus a runtime journey trace with import/scan/AI/render/save/publish path health cards, and it now surfaces a runtime incident log plus a performance trace list and a runnable truth-audit report so the operator can see both path health, failure/timing evidence, and trust-surface drift from inside the studio shell ✅
+- The debug panel now also exposes a support bundle summary card with incident snapshot, latest incident/performance trace, AI telemetry trend, and a dedicated `Download Support Bundle` action so the support handoff artifact is visible in-product instead of buried behind a single export button ✅
+- The debug panel now also exposes a paste-based `External Log Capture` lane, persists external log entries locally, and includes them in the support bundle so browser/app/device logs can be handed off with the incident snapshot instead of living only in ad hoc copy-paste notes ✅
+- The debug panel now also exposes an `Automated Alerting` summary that turns runtime incidents and captured external logs into prioritized alert candidates, with a high-priority recommendation to attach external logs before escalation ✅
+- The debug panel now also exposes a `Remote Support Ingest` action that routes the current runtime incidents, external logs, and AI telemetry through a canonical `/api/support-ingest` endpoint so the support handoff can be tested against a backend-shaped response before the deeper remote pipeline exists ✅
+- The debug panel now also persists a visible `Support Ingest History`, backed by the `/api/support-ingest` server archive, so routed submissions remain auditable across refreshes instead of disappearing after a single response ✅
+- The debug panel now also exposes a `Remote Support Delivery` action, a remote webhook URL input, and a delivery archive backed by `/api/support-delivery`, so the support handoff can be dispatched into a canonical queue before any real external fan-out exists ✅
 
 ### WorkspaceCanvas — good 3D foundation with view-mode shell wired
 - Instanced mesh heatmap with quality/fragility mode toggle ✅
@@ -215,6 +268,8 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 - MiniMap now uses the shared 2D map system with reusable projection/layers, zoom/fit controls, hover/selection sync, and replay actor visibility ✅
 - MiniMap now supports collapsed / compact / expanded / hover-preview states, shared map tokens, layer/display controls, legend, scale, north, and empty-map focus handoff to the 3D workspace ✅
 - PathMap now uses the shared 2D map system with quality-banded path rendering, current-state replay panel, path events list, segment details, and inline play/open-in-3D controls ✅
+- Shell/map controls now use explicit accessible labels and pressed/expanded states for the core mode toggles, viewport controls, legend filters, and overflow controls ✅
+- Canvas reset now re-centers the 3D workspace without forcing a full canvas remount, so view resets are cheaper and less disruptive ✅
 - Camera placement presets are now reactive and store-backed instead of hidden module state, so the camera tool picker reflects the current preset and placement reads one canonical source ✅
 - The scene workbench now supports a canonical duplicate-node action with keyboard shortcut support, so selected cameras/obstructions/walls/zones/paths can be copied and reselected instead of rebuilt manually ✅
 - The scene workbench now has shared grouped selection state, shift/meta multi-select, and drag-select bounds so the canvas can capture more than one object without losing the primary inspector selection ✅
@@ -540,3 +595,11 @@ The following issues were fixed to reach 0 typed errors (only pre-existing TS700
 - `StudioDashboardHome.tsx` — fixed 4 type errors: wrong `Map` constructor reference, invalid `"dusk"` value for `TimeOfDay`, missing `active` property on nav items, and `File` import path ✅
 - `launcher-dashboard-home.test.ts` — updated test expectations to match current component output, test passes reliably ✅
 - `ImportReview.tsx` — fixed type error on `selectedImage` (was typed `any`, sourced from a union with `null`) ✅
+
+## 11) Truth labeling and trust-audit coverage
+
+- The live `Metrics` surface now shows `Truth: Simulated` plus the shared-simulation provenance detail before the metric cards.
+- The `ReportLite` handoff surface now shows `Truth: Computed` plus the shared-simulation provenance detail before the report summary.
+- The footer `StatusBar` now shows `Truth: Live` so the workspace status strip explicitly labels its source of truth.
+- The in-product trust-audit route now checks those visible truth labels in addition to the existing launcher/governance/provenance/debug surfaces.
+- The next trust-hardening step is broader claim-label coverage across the remaining visible surfaces, not reworking the already labeled ones.

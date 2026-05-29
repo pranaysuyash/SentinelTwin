@@ -3,13 +3,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import StudioShell from "@/components/layout/StudioShell";
+import { ProjectStartLauncher } from "@/components/launcher/ProjectStartLauncher";
 import { SceneBuilderWizard } from "@/components/scan-to-scene/SceneBuilderWizard";
 import { ScanSiteWizard } from "@/components/scan-to-scene/ScanSiteWizard";
 import { StudioDashboardHome } from "@/components/launcher/StudioDashboardHome";
 import { useStudioStore, type BottomTab, type ViewMode, type WorkspacePreset } from "@/store/studio-store";
 import { draftSceneFromPrompt, draftSceneFromPromptWithModel, summarizeDraftResult } from "@/lib/ai-layout-draft";
+import { summarizeAiActionTelemetry } from "@/lib/ai-action-telemetry";
 import { PRODUCT_FEATURE_STATUS } from "@/lib/product-feature-status";
-import { createModelProvider, describeAiProviderSelection, providerKeyAvailable } from "@/agents/provider-selection";
+import {
+  createModelProvider,
+  describeAiProviderHealth,
+  describeAiProviderTelemetry,
+  describeAiProviderSelection,
+  providerKeyAvailable,
+} from "@/agents/provider-selection";
 import { simulateStudio } from "@/simulation/simulate-studio";
 import { safeParseSecurityScene, type SecurityScene } from "@/schema/security-scene";
 
@@ -34,12 +42,17 @@ function countSceneEntities(scene: SecurityScene) {
   };
 }
 
+function estimateTokensFromText(text: string) {
+  return Math.max(1, Math.ceil(text.length / 4));
+}
+
 export default function StudioPage() {
   const [enterStudio, setEnterStudio] = useState(false);
   const [queryBootEnabled, setQueryBootEnabled] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const [showFloorPlanWizard, setShowFloorPlanWizard] = useState(false);
   const [showScanWizard, setShowScanWizard] = useState(false);
+  const [showProjectLauncher, setShowProjectLauncher] = useState(false);
   const [showGuidedScanKickoff, setShowGuidedScanKickoff] = useState(false);
   const [showAiDraft, setShowAiDraft] = useState(false);
   const [showVerifyFootagePreview, setShowVerifyFootagePreview] = useState(false);
@@ -74,7 +87,15 @@ export default function StudioPage() {
   const updateSavedSceneMetadata = useStudioStore((s) => s.updateSavedSceneMetadata);
   const duplicateSavedScene = useStudioStore((s) => s.duplicateSavedScene);
   const renameSavedScene = useStudioStore((s) => s.renameSavedScene);
+  const recordRuntimeIncident = useStudioStore((s) => s.recordRuntimeIncident);
+  const recordOperationalEvidenceEvent = useStudioStore((s) => s.recordOperationalEvidenceEvent);
+  const recordAiActionTelemetry = useStudioStore((s) => s.recordAiActionTelemetry);
+  const aiActionTelemetry = useStudioStore((s) => s.aiActionTelemetry);
+  const latestAiActionTelemetry = useStudioStore((s) => s.aiActionTelemetry[0] ?? null);
+  const aiActionTelemetrySummary = useMemo(() => summarizeAiActionTelemetry(aiActionTelemetry), [aiActionTelemetry]);
+  const historyDepth = useStudioStore((s) => s.historyPast.length);
   const aiProviderSelection = useStudioStore((s) => s.aiProviderSelection);
+  const localOnlyMode = useStudioStore((s) => s.localOnlyMode);
 
   const currentResult = simulationResult ?? scene.simulation ?? null;
   const bootstrapRef = useRef(false);
@@ -83,6 +104,14 @@ export default function StudioPage() {
     return label ? `Last run ${label}` : null;
   }, [currentResult?.computedAt]);
   const currentAiProvider = useMemo(() => describeAiProviderSelection(aiProviderSelection), [aiProviderSelection]);
+  const currentAiProviderHealth = useMemo(
+    () => describeAiProviderHealth(aiProviderSelection, localOnlyMode),
+    [aiProviderSelection, localOnlyMode],
+  );
+  const currentAiProviderTelemetry = useMemo(
+    () => describeAiProviderTelemetry(aiProviderSelection, localOnlyMode),
+    [aiProviderSelection, localOnlyMode],
+  );
   const aiDraftSummary = useMemo(
     () => (aiDraftPreview ? summarizeDraftResult(aiDraftPreview) : null),
     [aiDraftPreview],
@@ -134,6 +163,24 @@ export default function StudioPage() {
     };
     return { current, draft: aiDraftCounts, delta };
   }, [aiDraftCounts, aiDraftSummary, scene]);
+  const openScanWizard = () => {
+    recordOperationalEvidenceEvent({
+      kind: "scan_session_started",
+      title: "Scan session started",
+      details: "Opened manual-assisted scan intake from the launcher.",
+      actor: "user",
+      source: scene.source,
+      sceneId: scene.id,
+      sceneName: scene.name,
+      revisionDepth: historyDepth,
+      affectedNodeIds: [],
+      confidence: 0.74,
+      beforeSummary: `${scene.name || "Current workspace"} · ${scene.cameras.length} cameras · ${scene.criticalZones.length} critical zones`,
+      afterSummary: "Manual-assisted scan intake opened.",
+      notes: ["Launcher-scoped scan intake event recorded in the evidence ledger."],
+    });
+    setShowScanWizard(true);
+  };
   const aiDraftSceneJson = useMemo(
     () => {
       if (aiDraftJsonEditable) return aiDraftJsonText;
@@ -171,6 +218,42 @@ export default function StudioPage() {
     if (typeof window === "undefined") return;
     setQueryBootEnabled(new URLSearchParams(window.location.search).get("studio") === "1");
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const onError = (event: ErrorEvent) => {
+      recordRuntimeIncident({
+        category: "runtime_failure",
+        severity: "error",
+        title: event.message || "Unhandled runtime error",
+        details: event.filename ? `${event.filename}:${event.lineno}:${event.colno}` : "Unhandled browser runtime error.",
+        stack: event.error instanceof Error ? event.error.stack : null,
+        action: "window_error",
+        path: window.location.pathname,
+      });
+    };
+
+    const onUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const reason = event.reason instanceof Error ? event.reason : new Error(typeof event.reason === "string" ? event.reason : "Unhandled promise rejection");
+      recordRuntimeIncident({
+        category: "runtime_failure",
+        severity: "error",
+        title: "Unhandled promise rejection",
+        details: reason.message,
+        stack: reason.stack,
+        action: "window_unhandledrejection",
+        path: window.location.pathname,
+      });
+    };
+
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onUnhandledRejection);
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onUnhandledRejection);
+    };
+  }, [recordRuntimeIncident]);
 
   useEffect(() => {
     refreshSavedScenesList();
@@ -217,6 +300,10 @@ export default function StudioPage() {
     openStudio();
   };
 
+  const openProjectLauncher = () => {
+    setShowProjectLauncher(true);
+  };
+
   const handleImportScene = () => {
     if (!confirmWorkspaceReplacement("import a scene JSON")) return;
     fileInputRef.current?.click();
@@ -242,6 +329,7 @@ export default function StudioPage() {
         onOpenCompareFixes={openCompareFixes}
         onOpenIssues={openIssues}
         onRunSimulation={runSimulation}
+        onStartProject={openProjectLauncher}
         onCreateScene={() => {
           if (!confirmWorkspaceReplacement("create a new scene")) return;
           setShowWizard(true);
@@ -253,7 +341,7 @@ export default function StudioPage() {
         onImportScene={handleImportScene}
         onScanSite={() => {
           if (!confirmWorkspaceReplacement("start scan intake")) return;
-          setShowScanWizard(true);
+          openScanWizard();
         }}
         onAiDraft={() => {
           if (!confirmWorkspaceReplacement("open AI layout draft")) return;
@@ -268,6 +356,45 @@ export default function StudioPage() {
         onRenameProject={renameSavedScene}
         onOpenMode={(viewMode, preset, bottomTab) => launchWorkspace(viewMode, preset, bottomTab)}
         featureStatus={PRODUCT_FEATURE_STATUS}
+      />
+
+      <ProjectStartLauncher
+        open={showProjectLauncher}
+        onClose={() => setShowProjectLauncher(false)}
+        onOpenCoverageWorkspace={openCoverageWorkspace}
+        onCreateScene={() => {
+          if (!confirmWorkspaceReplacement("create a new scene")) return;
+          setShowProjectLauncher(false);
+          setShowWizard(true);
+        }}
+        onImportFloorPlan={() => {
+          if (!confirmWorkspaceReplacement("import a floor plan")) return;
+          setShowProjectLauncher(false);
+          setShowFloorPlanWizard(true);
+        }}
+        onImportScene={() => {
+          if (!confirmWorkspaceReplacement("import a scene JSON")) return;
+          setShowProjectLauncher(false);
+          fileInputRef.current?.click();
+        }}
+        onScanSite={() => {
+          if (!confirmWorkspaceReplacement("start scan intake")) return;
+          setShowProjectLauncher(false);
+          openScanWizard();
+        }}
+        onAiDraft={() => {
+          if (!confirmWorkspaceReplacement("open AI layout draft")) return;
+          setShowProjectLauncher(false);
+          setShowAiDraft(true);
+        }}
+        onVerifyFootagePlanned={() => {
+          setShowProjectLauncher(false);
+          setShowVerifyFootagePreview(true);
+        }}
+        onOpenReport={() => {
+          setShowProjectLauncher(false);
+          openReport();
+        }}
       />
 
       <input
@@ -394,10 +521,68 @@ export default function StudioPage() {
               Prompt-to-scene draft. Output is a real editable `SecurityScene` JSON-backed scene.
             </p>
             <div className="mt-2 rounded-lg border border-[#22314b] bg-[#101a2b] px-3 py-2 text-[10px] text-[#97a8c9]">
-              Model-backed if <code className="text-[#c4d5ff]">{currentAiProvider.envKey}</code> is set, otherwise a heuristic fallback is used. The generated scene will replace the current workspace.
-              <span className="ml-2 rounded-full border border-[#2a3347] bg-[#0d1421] px-2 py-0.5 text-[9px] text-[#c4d5ff]">
-                {currentAiProvider.providerLabel}
-              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] ${localOnlyMode ? "border-amber-400/20 bg-amber-500/10 text-amber-200" : "border-emerald-400/20 bg-emerald-500/10 text-emerald-200"}`}>
+                  {localOnlyMode ? "Local-only mode" : "Cloud-backed available"}
+                </span>
+                <span className="rounded-full border border-[#2a3347] bg-[#0d1421] px-2 py-0.5 text-[9px] text-[#c4d5ff]">
+                  {currentAiProvider.providerLabel}
+                </span>
+                <span
+                  className={`rounded-full border px-2 py-0.5 text-[9px] ${
+                    currentAiProviderHealth.overallStatus === "healthy"
+                      ? "border-emerald-400/20 bg-emerald-500/10 text-emerald-200"
+                      : currentAiProviderHealth.overallStatus === "partial"
+                        ? "border-amber-400/20 bg-amber-500/10 text-amber-200"
+                        : "border-red-400/20 bg-red-500/10 text-red-200"
+                  }`}
+                >
+                  {currentAiProviderHealth.overallStatus === "healthy"
+                    ? "Provider healthy"
+                    : currentAiProviderHealth.overallStatus === "partial"
+                      ? "Provider partial"
+                      : "Provider blocked"}
+                </span>
+                <span
+                  className={`rounded-full border px-2 py-0.5 text-[9px] ${
+                    currentAiProviderTelemetry.overallStatus === "ready"
+                      ? "border-emerald-400/20 bg-emerald-500/10 text-emerald-200"
+                      : currentAiProviderTelemetry.overallStatus === "guarded"
+                        ? "border-amber-400/20 bg-amber-500/10 text-amber-200"
+                        : "border-red-400/20 bg-red-500/10 text-red-200"
+                  }`}
+                >
+                  {currentAiProviderTelemetry.overallStatus === "ready"
+                    ? "Budget ready"
+                    : currentAiProviderTelemetry.overallStatus === "guarded"
+                      ? "Budget guarded"
+                      : "Budget blocked"}
+                </span>
+              </div>
+              {localOnlyMode ? (
+                <p className="mt-2">
+                  Cloud-backed AI is disabled by policy. The launcher will keep using the heuristic draft path even if <code className="text-[#c4d5ff]">{currentAiProvider.envKey}</code> is configured.
+                </p>
+              ) : (
+                <p className="mt-2">
+                  Model-backed if <code className="text-[#c4d5ff]">{currentAiProvider.envKey}</code> is set, otherwise a heuristic fallback is used. The generated scene will replace the current workspace.
+                </p>
+              )}
+              <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">
+                Provider health: {currentAiProviderHealth.healthyProviders} healthy / {currentAiProviderHealth.partialProviders} partial / {currentAiProviderHealth.blockedProviders} blocked.
+              </p>
+              <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">
+                Cost / latency: {currentAiProviderTelemetry.activeCostLabel} · {currentAiProviderTelemetry.activeLatencyLabel}.
+              </p>
+              <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">
+                Stage policy: {currentAiProviderTelemetry.stagePolicies.map((stage) => `${stage.stage}:${stage.ready ? "ready" : "guarded"}`).join(" · ")}.
+              </p>
+              <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">
+                Latest measured action: {latestAiActionTelemetry ? `${latestAiActionTelemetry.stage} · ${latestAiActionTelemetry.durationMs} ms · ~${latestAiActionTelemetry.estimatedTotalTokens} tokens` : "none yet"}.
+              </p>
+              <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">
+                Telemetry trend: {aiActionTelemetrySummary.trendLabel} · {aiActionTelemetrySummary.trendNote}
+              </p>
             </div>
             <textarea
               value={aiPrompt}
@@ -585,22 +770,104 @@ export default function StudioPage() {
               <button
                 onClick={async () => {
                   setAiGenerating(true);
+                  const draftStartedAt = performance.now();
                   try {
                     const provider = createModelProvider(aiProviderSelection);
                     const hasProviderKey = providerKeyAvailable(aiProviderSelection.providerId);
-                    const draft = hasProviderKey
+                    const useModelDraft = hasProviderKey && !localOnlyMode;
+                    const draft = useModelDraft
                       ? await draftSceneFromPromptWithModel(aiPrompt, provider)
                       : draftSceneFromPrompt(aiPrompt);
                     setAiDraftPreview(draft);
+                    recordAiActionTelemetry({
+                      stage: "ai_draft",
+                      providerId: aiProviderSelection.providerId,
+                      providerLabel: currentAiProvider.providerLabel,
+                      model: aiProviderSelection.model,
+                      localOnlyMode,
+                      cloudAvailable: useModelDraft,
+                      durationMs: Math.max(0, Math.round(performance.now() - draftStartedAt)),
+                      estimatedPromptTokens: estimateTokensFromText(aiPrompt),
+                      estimatedCompletionTokens: estimateTokensFromText(JSON.stringify(draft.scene)),
+                      estimatedTotalTokens: estimateTokensFromText(aiPrompt) + estimateTokensFromText(JSON.stringify(draft.scene)),
+                      tokenSource: "estimated",
+                      status: "success",
+                      note: useModelDraft
+                        ? `Model-backed draft preview from ${currentAiProvider.providerLabel}.`
+                        : localOnlyMode
+                          ? "Heuristic draft preview enforced by local-only policy."
+                          : `Heuristic draft preview used because ${currentAiProvider.envKey} is not set.`,
+                    });
+                    recordOperationalEvidenceEvent({
+                      kind: "draft_proposed",
+                      title: "AI draft preview generated",
+                      details: `Preview generated from prompt: ${aiPrompt.trim().slice(0, 120) || "Untitled prompt"}`,
+                      actor: "ai",
+                      source: scene.source,
+                      sceneId: scene.id,
+                      sceneName: scene.name,
+                      revisionDepth: historyDepth,
+                      affectedNodeIds: [],
+                      confidence: draft.provenance.confidenceLevel === "high"
+                        ? 0.92
+                        : draft.provenance.confidenceLevel === "medium"
+                          ? 0.74
+                          : 0.55,
+                      beforeSummary: `${scene.name || "Current workspace"} · ${scene.cameras.length} cameras · ${scene.criticalZones.length} critical zones`,
+                      afterSummary: draft.provenance.summary,
+                      notes: [useModelDraft ? `Provider: ${currentAiProvider.providerLabel}` : "Heuristic preview generated locally."],
+                    });
                     const warning =
-                      draft.warnings[0] ?? (hasProviderKey ? `Model draft generated with ${currentAiProvider.providerLabel}.` : `Using heuristic draft because ${currentAiProvider.envKey} is not set.`);
+                      draft.warnings[0] ?? (localOnlyMode
+                        ? "Local-only mode is on, so heuristic draft generation is enforced."
+                        : useModelDraft
+                          ? `Model draft generated with ${currentAiProvider.providerLabel}.`
+                          : `Using heuristic draft because ${currentAiProvider.envKey} is not set.`);
                     const provenanceNote = `${draft.provenance.summary} (${draft.provenance.confidenceLevel} confidence)`;
                     setAiWarning(warning);
                     setAiDraftNotice(provenanceNote);
                   } catch (error) {
                     const fallback = draftSceneFromPrompt(aiPrompt);
                     setAiDraftPreview(fallback);
-                    const warning = `Model draft failed; fallback used. ${error instanceof Error ? error.message : ""}`.trim();
+                    recordAiActionTelemetry({
+                      stage: "ai_draft",
+                      providerId: aiProviderSelection.providerId,
+                      providerLabel: currentAiProvider.providerLabel,
+                      model: aiProviderSelection.model,
+                      localOnlyMode,
+                      cloudAvailable: false,
+                      durationMs: Math.max(0, Math.round(performance.now() - draftStartedAt)),
+                      estimatedPromptTokens: estimateTokensFromText(aiPrompt),
+                      estimatedCompletionTokens: estimateTokensFromText(JSON.stringify(fallback.scene)),
+                      estimatedTotalTokens: estimateTokensFromText(aiPrompt) + estimateTokensFromText(JSON.stringify(fallback.scene)),
+                      tokenSource: "estimated",
+                      status: "error",
+                      note: localOnlyMode
+                        ? "Heuristic fallback draft generated in local-only mode."
+                        : `Model draft failed; heuristic fallback used. ${error instanceof Error ? error.message : ""}`.trim(),
+                    });
+                    recordOperationalEvidenceEvent({
+                      kind: "draft_proposed",
+                      title: "AI draft preview generated",
+                      details: `Preview generated from prompt: ${aiPrompt.trim().slice(0, 120) || "Untitled prompt"}`,
+                      actor: "ai",
+                      source: scene.source,
+                      sceneId: scene.id,
+                      sceneName: scene.name,
+                      revisionDepth: historyDepth,
+                      affectedNodeIds: [],
+                      confidence: fallback.provenance.confidenceLevel === "high"
+                        ? 0.92
+                        : fallback.provenance.confidenceLevel === "medium"
+                          ? 0.74
+                          : 0.55,
+                      beforeSummary: `${scene.name || "Current workspace"} · ${scene.cameras.length} cameras · ${scene.criticalZones.length} critical zones`,
+                      afterSummary: fallback.provenance.summary,
+                      notes: [localOnlyMode ? "Heuristic preview generated in local-only mode." : "Heuristic fallback preview generated."],
+                    });
+                    const warning = localOnlyMode
+                      ? "Local-only mode is on, so heuristic fallback was used."
+                      : `Model draft failed; fallback used. ${error instanceof Error ? error.message : ""}`.trim();
                     const provenanceNote = `${fallback.provenance.summary} (${fallback.provenance.confidenceLevel} confidence)`;
                     setAiWarning(warning);
                     setAiDraftNotice(provenanceNote);

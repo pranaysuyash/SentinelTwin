@@ -1,0 +1,15 @@
+{
+  "candidate_id": "stack_d_gpt54_nano",
+  "run_id": "stack_d_gpt54_nano_dev_ca6a122c",
+  "schema_valid_rate": 1.0,
+  "wall_f1_mean": 0.9314285714285715,
+  "door_f1_mean": 0.4,
+  "window_f1_mean": 0.1,
+  "obstruction_f1_mean": 0.17777777777777778,
+  "critical_zone_recall_mean": 0.2,
+  "critical_zone_precision_mean": 0.2,
+  "wall_endpoint_error_mean": 0.24665190660099928,
+  "hard_fail_rate": 0.0,
+  "p50_latency_ms": 4853.1,
+  "p95_latency_ms": 6941.0
+}

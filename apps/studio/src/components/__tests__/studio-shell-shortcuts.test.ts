@@ -13,6 +13,7 @@ describe("Studio shell shortcuts", () => {
     expect(constantsSource).toContain('c: "camera"');
     expect(constantsSource).toContain('b: "obstruction"');
     expect(constantsSource).toContain('l: "light"');
+    expect(constantsSource).toContain('y: "sensor"');
     expect(constantsSource).toContain('p: "path"');
     expect(constantsSource).toContain('z: "zone"');
     expect(constantsSource).toContain('d: "door_window"');
@@ -23,6 +24,7 @@ describe("Studio shell shortcuts", () => {
     expect(shellSource).toContain('keys: "1 – 6"');
     expect(shellSource).toContain('keys: "V"');
     expect(shellSource).toContain('keys: "P"');
+    expect(shellSource).toContain('keys: "Y"');
     expect(shellSource).toContain('keys: "Z"');
     expect(shellSource).toContain('keys: "D"');
     expect(shellSource).toContain('keys: "W"');

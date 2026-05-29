@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 
 import {
   ArrowRight,
@@ -135,6 +135,7 @@ type StudioDashboardHomeProps = {
   onOpenCompareFixes: () => void;
   onOpenIssues: () => void;
   onRunSimulation: () => void;
+  onStartProject: () => void;
   onCreateScene: () => void;
   onImportFloorPlan: () => void;
   onImportScene: () => void;
@@ -234,7 +235,7 @@ function ScenePreview({ scene, result, compact = false, showLabels = true, hydra
     return (
       <div className={cn(
         "relative overflow-hidden rounded-[28px] border border-[color:var(--st-border)] bg-[radial-gradient(circle_at_20%_0%,rgba(59,130,246,0.11),transparent_40%),radial-gradient(circle_at_85%_10%,rgba(16,185,129,0.09),transparent_30%),linear-gradient(180deg,rgba(11,14,21,0.98),rgba(11,14,21,0.86))]",
-        compact ? "min-h-[340px]" : "min-h-[520px]",
+        compact ? "min-h-[340px]" : "min-h-[430px]",
       )}>
         <div className="absolute inset-0 opacity-60 [background-image:linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)] [background-size:44px_44px]" />
         <div className="absolute inset-0 flex items-center justify-center">
@@ -251,7 +252,7 @@ function ScenePreview({ scene, result, compact = false, showLabels = true, hydra
   return (
     <div className={cn(
       "relative overflow-hidden rounded-[28px] border border-[color:var(--st-border)] bg-[radial-gradient(circle_at_20%_0%,rgba(59,130,246,0.11),transparent_40%),radial-gradient(circle_at_85%_10%,rgba(16,185,129,0.09),transparent_30%),linear-gradient(180deg,rgba(11,14,21,0.98),rgba(11,14,21,0.86))]",
-      compact ? "min-h-[340px]" : "min-h-[520px]",
+      compact ? "min-h-[340px]" : "min-h-[430px]",
     )}>
       <div className="absolute inset-0 opacity-60 [background-image:linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)] [background-size:44px_44px]" />
       <svg suppressHydrationWarning viewBox={`0 0 ${width} ${height}`} className="absolute inset-0 h-full w-full">
@@ -945,6 +946,7 @@ export function StudioDashboardHome({
   onOpenCompareFixes,
   onOpenIssues,
   onRunSimulation,
+  onStartProject,
   onCreateScene,
   onImportFloorPlan,
   onImportScene,
@@ -960,13 +962,12 @@ export function StudioDashboardHome({
   onOpenMode,
   featureStatus,
 }: StudioDashboardHomeProps) {
-  const hydrated = useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false,
-  );
+  const [hydrated, setHydrated] = useState(false);
   const [browserReady, setBrowserReady] = useState(false);
   const [previewMode, setPreviewMode] = useState<"2d" | "3d">("2d");
+  useEffect(() => {
+    setBrowserReady(true);
+  }, []);
   const coverage = result?.totalCoveragePct ?? scene.simulation?.totalCoveragePct ?? null;
   const passCount = result?.criticalZoneResults.filter((zone) => zone.status === "pass").length ?? (scene.simulation?.criticalZoneResults ?? []).filter((zone) => zone.status === "pass").length;
   const totalZones = result?.criticalZoneResults.length ?? (scene.simulation?.criticalZoneResults ?? []).length ?? scene.criticalZones.length;
@@ -1068,7 +1069,7 @@ export function StudioDashboardHome({
   const aiLayoutDraftFeature = featureStatus.find((entry) => entry.feature === "AI layout draft") ?? null;
   const verifyFootageFeature = featureStatus.find((entry) => entry.feature === "Real footage verification") ?? null;
   useEffect(() => {
-    setBrowserReady(true);
+    setHydrated(true);
   }, []);
   const folderCounts = useMemo(() => {
     return browserProjects.reduce<Record<string, number>>((acc, project) => {
@@ -1115,6 +1116,18 @@ export function StudioDashboardHome({
   const visibleProjectCount = visibleProjects.length;
   const userWorkspaceCount = userWorkspaceProjects.length;
   const referenceDemoCount = referenceDemoProjects.length;
+  const compactRecentProjects =
+    visibleProjects.length > 0
+      ? visibleProjects.slice(0, 4)
+      : [{
+        scene,
+        folder: "Current",
+        tags: [],
+        pinned: true,
+        createdAt: scene.createdAt,
+        updatedAt: scene.updatedAt,
+        lastOpenedAt: null,
+      } satisfies SavedProjectRecord];
   const rootStyle = {
     "--st-bg": "#080b11",
     "--st-panel": "rgba(11, 16, 26, 0.94)",
@@ -1350,69 +1363,93 @@ export function StudioDashboardHome({
                 <ActionButton icon={<LayoutDashboard className="h-4 w-4" />} label="Compare Fixes" description="Open the before/after comparison view." onClick={onOpenCompareFixes} className="min-w-[210px] flex-1" />
               </div>
 
-              <div className="mt-4 rounded-[24px] border border-sky-400/15 bg-sky-500/8 p-4">
-                <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
-                  <Sparkles className="h-3.5 w-3.5 text-sky-300" />
-                  Quick Start
+              <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.8fr)]">
+                <div className="rounded-[24px] border border-[color:var(--st-border)] bg-[color:var(--st-panel-2)] p-3">
+                  <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Recent Workspaces</div>
+                  {hydrated ? (
+                    <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                      {compactRecentProjects.map((project) => {
+                        const recentScene = project.scene;
+                        const recentCoverage = recentScene.simulation?.totalCoveragePct ?? (recentScene.id === scene.id ? coverage : null);
+                        const recentIssues = recentScene.simulation?.issues.length ?? (recentScene.id === scene.id ? issues.length : 0);
+                        return (
+                          <button
+                            key={recentScene.id}
+                            type="button"
+                            onClick={() => onOpenScene?.(recentScene)}
+                            className="group min-h-[92px] rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.025] p-2 text-left transition-colors hover:border-emerald-400/25 hover:bg-white/[0.045]"
+                          >
+                            <div className="h-9 overflow-hidden rounded-xl border border-white/8 bg-[radial-gradient(circle_at_22%_35%,rgba(34,197,94,0.18),transparent_35%),radial-gradient(circle_at_78%_40%,rgba(56,189,248,0.16),transparent_35%),#08111d]">
+                              <ScenePreview scene={recentScene} result={recentScene.simulation ?? (recentScene.id === scene.id ? result : null)} compact showLabels={false} hydrated={hydrated} />
+                            </div>
+                            <div className="mt-2 truncate text-xs font-semibold text-white">{recentScene.name}</div>
+                            <div className="mt-0.5 text-[10px] leading-4 text-[color:var(--st-muted)]">
+                              {recentCoverage != null ? `${Math.round(recentCoverage)}% coverage` : "Coverage pending"} · {recentIssues} issues
+                            </div>
+                            <div suppressHydrationWarning className="text-[10px] text-[color:var(--st-muted)]">
+                              {formatTime(project.updatedAt)}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                      <div className="min-h-[92px] rounded-[18px] border border-dashed border-[color:var(--st-border)] bg-white/[0.02] p-3 text-xs text-[color:var(--st-muted)]">
+                        Loading recent workspaces...
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="mt-3 grid gap-2 lg:grid-cols-2 xl:grid-cols-5">
-                  <SceneStarterCard
-                    icon={<Plus className="h-4 w-4" />}
-                    badge="Blank"
-                    tone="blank"
-                    title="New Blank Scene"
-                    description="Start from an empty scene shell and build your own shop, lobby, or corridor from scratch."
-                    hint="Blank canvas"
-                    ctaLabel="Open"
-                    onClick={onCreateScene}
-                    variant="primary"
-                  />
-                  <SceneStarterCard
-                    icon={<FileUp className="h-4 w-4" />}
-                    badge="Import"
-                    tone="import"
-                    title="Import Scene JSON"
-                    description="Bring in an existing site definition and continue work from a real workspace file."
-                    hint="Import a scene"
-                    ctaLabel="Open"
-                    onClick={onImportScene}
-                  />
-                  <SceneStarterCard
-                    icon={<MapIcon className="h-4 w-4" />}
-                    badge="Floor Plan"
-                    tone="import"
-                    title="Import Floor Plan Workflow"
-                    description="Upload a floor plan, review extraction summary and warnings, then commit to a scene."
-                    hint="Plan-first flow"
-                    ctaLabel="Open"
-                    onClick={onImportFloorPlan}
-                  />
-                      <SceneStarterCard
-                        icon={<ScanSearch className="h-4 w-4" />}
-                        badge="Scan"
-                        status="Preview / Manual-assisted"
-                        tone="scan"
-                        title="Scan a Site"
-                        description="Build a security scene from site photos by marking walls, doors, cameras, obstructions, lights, and critical zones."
-                    hint="Photo-assisted"
-                    ctaLabel="Start Scan"
-                    onClick={onScanSite}
-                  />
-                  <SceneStarterCard
-                    icon={<Sparkles className="h-4 w-4" />}
-                    badge="AI"
-                    tone="ai"
-                    title="AI Layout Draft"
-                    description="Generate a draft scene from a prompt, then refine it in Studio."
-                    hint="Prompt draft"
-                    ctaLabel="Draft"
-                    onClick={onAiDraft}
-                  />
+
+                <div className="rounded-[24px] border border-sky-400/15 bg-sky-500/8 p-3">
+                  <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
+                    <Sparkles className="h-3.5 w-3.5 text-sky-300" />
+                    Quick Start
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    {[
+                      { icon: <Sparkles className="h-4 w-4" />, label: "Start Project", detail: "Open launcher chooser", onClick: onStartProject },
+                      { icon: <Plus className="h-4 w-4" />, label: "New Blank Scene", detail: "Start from scratch", onClick: onCreateScene },
+                      { icon: <FileUp className="h-4 w-4" />, label: "Import Scene JSON", detail: "From file", onClick: onImportScene },
+                      { icon: <MapIcon className="h-4 w-4" />, label: "Import Floor Plan", detail: "Review plan extraction", onClick: onImportFloorPlan },
+                      {
+                        icon: <ScanSearch className="h-4 w-4" />,
+                        label: "Scan a Site",
+                        detail: "Upload site photos",
+                        status: "Preview / Manual-assisted",
+                        description: "Build a security scene from site photos by marking walls, doors, cameras, obstructions, lights, and critical zones.",
+                        onClick: onScanSite,
+                      },
+                      { icon: <Sparkles className="h-4 w-4" />, label: "AI Layout Draft", detail: "Generate layout", onClick: onAiDraft },
+                    ].map((action) => (
+                      <button
+                        key={action.label}
+                        type="button"
+                        onClick={action.onClick}
+                        aria-label={action.description ?? action.label}
+                        className="group flex min-h-[74px] flex-col justify-between rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.035] p-3 text-left transition-colors hover:border-sky-400/30 hover:bg-white/[0.055]"
+                      >
+                        <span className="flex items-center justify-between gap-2 text-[color:var(--st-accent)]">
+                          {action.icon}
+                          {action.status ? (
+                            <span className="rounded-full border border-amber-400/25 bg-amber-500/10 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.12em] text-amber-200">
+                              {action.status}
+                            </span>
+                          ) : null}
+                        </span>
+                        <span>
+                          <span className="block text-xs font-semibold text-white">{action.label}</span>
+                          <span className="mt-0.5 block text-[10px] text-[color:var(--st-muted)]">{action.detail}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {browserReady ? (
+            {hydrated ? (
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_360px]">
               <div className="rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">

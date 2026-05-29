@@ -1,7 +1,7 @@
 # Exploration Map — SentinelTwin
 
 **This is a living document. Append findings. Never replace.**
-**Last updated:** 2026-05-27 (Digital twin simulation physics: PTZ movement, BRDF reflectivity, dynamic lighting, view distance, placement constraints, scene fidelity, occlusion culling, camera feed synthesis, real-time feedback) — previous: Camera deep-dive (spec DB, PTZ, gimbal, multi-sensor, analytics, cybersecurity, mounting, power, degradation, ecosystems)
+**Last updated:** 2026-05-29 (Sensor provenance + runtime health surfacing) — previous: Sensor fusion preview + workspace access policy surfacing; Digital twin simulation physics: PTZ movement, BRDF reflectivity, dynamic lighting, view distance, placement constraints, scene fidelity, occlusion culling, camera feed synthesis, real-time feedback
 
 ---
 
@@ -255,9 +255,28 @@ but haven't been turned into full exploration docs yet.
    Do NOT remove GSAP references from exploration docs — keep exploring. Make the decision
    at first-use time when the animation requirements are clearer.
 5. **Multi-agent Codex narrative** — For the hackathon, showing Codex/AI as a parallel
-   software engineering team is a stronger story than "AI helped me write code."
-   Each agent owns a defined deliverable with tests + docs. This pattern should be in
-   a hackathon-specific demo script doc.
+software engineering team is a stronger story than "AI helped me write code."
+Each agent owns a defined deliverable with tests + docs. This pattern should be in
+a hackathon-specific demo script doc.
+
+---
+
+### Thread 21: Sensor Fusion Preview and Workspace Access Policy
+**Status:** Live product boundary, partial implementation.
+**Key finding:** The editor now exposes a nearest-sensor `Sensor Fusion` preview in the camera inspector analytics tab and the live camera feed, sensor edits emit operational evidence events, governance/publish flows already route through a local shared-workspace access policy with explicit review requests when publish is blocked, and the debug panel now surfaces runtime health plus a path trace so operators can see simulation / AI / access status and the most recent journey history at a glance.
+**Open:** How much of the future live sensor-camera fusion detail should be visible in the inspector before ONVIF metadata lands, and how should backend sync preserve the local journal/access model without losing the current branch semantics?
+**Next:** Keep the visible sensor preview and access-routing model in sync with the schema and provenance layers while full live ingestion and backend auth remain open.
+
+---
+
+### Thread 21: Guided Capture / Reconstruction Stack
+**Status:** Research anchored. The capture and reconstruction stack now has clear primary-source references, but the product boundary is still intentionally open.
+**Key finding:** RoomPlan gives the strongest native capture pattern for guided interior scanning on Apple platforms, SAM 2 gives promptable tap-to-mask segmentation, Depth Anything V2 gives a depth prior, VGGT gives a fast sparse multi-view geometry candidate, SpatialLM gives a structured indoor modeling bridge, and ONVIF Profile M gives the live metadata/event ingestion standard for later-stage sensor fusion.
+**Open:**
+- Which capture stack should the guided scan flow target first: native RoomPlan on Apple devices, web/mobile manual-assisted capture, or a provider-agnostic abstraction with RoomPlan as one backend?
+- Where should scale anchors live in the flow so relative depth stays honest and user-correctable?
+- Which reconstruction result is considered draft versus publishable evidence?
+**Next:** Keep the capture UX, segmentation, depth, and point-cloud reconstruction explicitly separated from the canonical `SecurityScene` truth model. Add an implementation thread only when the branch-aware ledger can preserve the full correction chain.
 
 ---
 
@@ -5044,3 +5063,291 @@ Add sensor specs (`sensorWidthMm`, `sensorHeightMm`, `sensorFormat`) when:
 **Operational note for SentinelTwin:**
 - Prefer Webwright for iterative browser QA on local web targets when it is installed and the task needs code-driven, rerunnable Playwright workflows.
 - If Webwright is unavailable in the current session, fall back to the most direct browser tool available and keep the install/marketplace path documented for the next run.
+
+---
+
+## Thread 26: Trust Hardening and Placeholder Audit
+
+**Status:** Open. The product has moved past the most obvious fake affordances, but the trust layer still needs to be treated as a first-class subsystem.
+
+**Source signals:**
+- Repo code scan for `TODO`, `FIXME`, `placeholder`, `hardcoded`, `mock`, and `stub` across `apps/studio/src`
+- Code quality review and wide-open brainstorm docs in `Docs/decisions/`
+- Current implementation and full-vision inventory docs
+
+**Key findings:**
+- The biggest product risk is not missing simulation math anymore. It is a regression back into demo-like surfaces that look live but are not tied to source data.
+- The live app still needs a systematic way to label claims as computed, inferred, imported, simulated, or placeholder.
+- Several classes of trust regressions are now visible from the code search itself:
+  - hardcoded values that can drift from scene data
+  - placeholder or “coming soon” affordances that imply hidden functionality
+  - fallback UI that is acceptable for hydration but should never masquerade as product truth
+  - tests that need to assert visible claims remain sourced from the canonical data model
+
+**What should exist next:**
+- A placeholder audit checklist for every visible panel, label, badge, and CTA
+- A “truth label” convention for the UI so simulated/inferred/imported/placeholder content is obvious
+- Regression tests that fail if a visible metric or explanation becomes detached from the scene, simulation, or evidence ledger
+- A documented rule for deterministic placeholders so SSR/client hydration does not create fake product states
+
+**Why this matters for SentinelTwin:**
+- Full-vision SentinelTwin is not just a simulator. It is a security twin that must remain believable, auditable, and evidence-backed at every visible layer.
+- Trust erosion from one fake metric or dead button can undo the value of the whole platform faster than a missing feature does.
+
+**Next:** Build a placeholder/truth audit harness and use it as a gate before adding more visible surface area.
+
+---
+
+## Thread 27: Runtime incident log and performance-trace bundle
+
+**Status:** Implemented in current pass. The debug bundle now carries explicit runtime incidents and performance traces.
+
+**Source signals:**
+- `apps/studio/src/store/studio-store.ts`
+- `apps/studio/src/lib/diagnostic-bundle.ts`
+- `apps/studio/src/components/bottom-panel/DebugTab.tsx`
+
+**Key findings:**
+- Runtime health becomes much more actionable when the path history is paired with explicit incident records.
+- Validation failures, provider failures, runtime exceptions, and successful performance traces can all be captured as support-ready store events without building a separate telemetry sink first.
+- The debug panel can now show both the journey health cards and the incident/performance history in the same support surface.
+
+**Operational note for SentinelTwin:**
+- Prefer the in-product runtime incident log for support bundles and local debugging before introducing external telemetry infrastructure.
+- Keep the incident categories aligned with the existing local-first workflow so the support bundle stays readable and reconstructable from browser state.
+
+## Thread 28: Truth labels and trust-audit coverage
+
+**Status:** Implemented in current pass. Claim-heavy summary surfaces now carry explicit truth labels and the trust-audit manifest checks them.
+
+**Source signals:**
+- `src/components/bottom-panel/MetricsTab.tsx`
+- `src/components/bottom-panel/ReportLiteTab.tsx`
+- `src/components/layout/StatusBar.tsx`
+- `src/lib/truth-audit.ts`
+
+**Key findings:**
+- Visible summary surfaces become more trustworthy when they say whether they are simulated, computed, or live instead of implying it through layout.
+- Source-string trust audits are a useful local guardrail because they catch drift in the user-facing claim surfaces before it ships.
+- The simulated/computed/live labels should stay aligned with the same provenance helper so the UI, the manifest, and the tests do not diverge again.
+
+**Operational note for SentinelTwin:**
+- Keep explicit truth labels on the most claim-heavy summary surfaces and extend the trust-audit manifest whenever a new user-facing claim surface appears.
+
+## Thread 29: Shared-workspace RBAC/ABAC action gates
+
+**Status:** Implemented in current pass. The governance control plane now exposes per-action allow/blocked gates for the active member.
+
+**Source signals:**
+- `src/components/bottom-panel/GovernanceTab.tsx`
+- `src/lib/workspace-access.ts`
+- `src/lib/workspace-governance.ts`
+
+**Key findings:**
+- Role and approval badges are useful, but action gates are what make RBAC/ABAC understandable to operators.
+- The route helper already had enough information to show per-action reasons; the missing piece was surfacing that policy in the control plane.
+- Shared-workspace policy still needs a backend-safe persistence layer, but the local UI now reflects the intended routing model clearly.
+
+**Operational note for SentinelTwin:**
+- Keep action-level routing visible wherever publish/review/restore can be triggered, and preserve the reason text so reviewers can understand why a gate is open or closed.
+
+## Thread 30: Provider governance visibility
+
+**Status:** Implemented in current pass. The debug panel now exposes provider fallback order and cloud/local policy state.
+
+**Source signals:**
+- `src/agents/provider-selection.ts`
+- `src/components/bottom-panel/DebugTab.tsx`
+- `src/components/layout/ViewSettingsModal.tsx`
+- `src/components/command-bar/CommandBar.tsx`
+
+**Key findings:**
+- A provider picker is not enough; operators need to see which provider is active, what the fallback order is, and whether cloud calls are allowed by policy.
+- Keeping provider governance in the debug panel makes the control plane visible without duplicating the selection logic.
+- The product now also needs a visible model-eval suite so prompt and provider changes can be exercised against the same structured-output fixtures that power command parsing, counterfactuals, report generation, and AI layout drafting.
+- The model-eval suite now also persists a compact local run history with stage-budget and trend comparison, which makes the provider-control plane measurable across sessions instead of only at a single point in time.
+- The debug panel now also exposes a provider-health dashboard plus a canonical prompt registry, and the command bar plus AI draft launcher now mirror provider health, estimated budget classes, the latest measured AI action, and a simple recent-vs-previous trend summary at the point of use. The remaining open question is richer aggregation and whether that should live in a broader operational dashboard once the measured trail matures.
+
+**Operational note for SentinelTwin:**
+- Keep provider availability, fallback order, local-only policy, eval-suite visibility, and historical comparison synchronized across the debug surface and the launch/command surfaces, and gate any model-backed behavior against the same shared summary helper.
+
+## Thread 31: Support-ready incident bundle visibility
+
+**Status:** Implemented in current pass. The debug panel now shows a support bundle summary card and a dedicated `Download Support Bundle` action.
+
+**Source signals:**
+- `src/lib/diagnostic-bundle.ts`
+- `src/components/bottom-panel/DebugTab.tsx`
+- `src/lib/__tests__/support-bundle.test.ts`
+
+**Key findings:**
+- A support bundle is more useful when the operator can see the incident snapshot, latest incident, latest performance trace, and AI telemetry trend before exporting it.
+- Reusing the diagnostic/support bundle helper keeps the visible summary aligned with the JSON payload that gets downloaded.
+- The remaining observability gap is now narrower: external log capture and broader alerting still belong in a deeper support pipeline, but the local support bundle is already operator-visible and exportable.
+
+**Operational note for SentinelTwin:**
+- Keep the support summary in sync with the exported payload, and treat the support bundle as the handoff artifact for local incident triage until the deeper external log capture layer exists.
+
+## Thread 32: External log capture lane
+
+**Status:** Implemented in current pass. The debug panel now accepts pasted external logs and stores them in the support bundle.
+
+**Source signals:**
+- `src/store/studio-store.ts`
+- `src/components/bottom-panel/DebugTab.tsx`
+- `src/lib/diagnostic-bundle.ts`
+- `src/lib/__tests__/support-bundle.test.ts`
+
+**Key findings:**
+- A support bundle becomes materially more useful once operators can paste browser console, app server, or device logs into the same capture flow.
+- Persisting the external log entries in the store keeps them available for later export and makes the support artifact more faithful to the triage session.
+- This closes the local portion of the crash/incident bundle gap, but not the broader remote ingestion or automated alerting story.
+
+**Operational note for SentinelTwin:**
+- Keep the external log capture lane lightweight and paste-first until there is a real remote log ingestion backend to absorb device/server telemetry automatically.
+
+## Thread 33: Automated alerting summary
+
+**Status:** Implemented in current pass. The debug panel now summarizes runtime incidents and external logs into prioritized alert candidates.
+
+**Source signals:**
+- `src/lib/incident-alerts.ts`
+- `src/lib/diagnostic-bundle.ts`
+- `src/components/bottom-panel/DebugTab.tsx`
+- `src/lib/__tests__/incident-alerts.test.ts`
+
+**Key findings:**
+- A support bundle becomes more actionable when the raw incident and external-log feed is condensed into a smaller alert queue with a recommendation.
+- The alert summary is useful even before there is a backend alerting pipeline, because it helps the operator identify what to escalate and which logs to attach.
+- The remaining gap is no longer local prioritization; it is the backend remote-ingestion and broader automated alert routing story.
+
+**Operational note for SentinelTwin:**
+- Keep the local alert summary aligned with the support bundle, and treat the current recommendation as the operator-facing escalation hint until remote alert routing exists.
+
+## Thread 34: Remote support ingest route
+
+**Status:** Implemented in current pass. The debug panel now routes the support payload through a canonical `/api/support-ingest` endpoint and surfaces the returned alert-routing summary in-product.
+
+**Source signals:**
+- `src/app/api/support-ingest/route.ts`
+- `src/lib/support-ingest.ts`
+- `src/components/bottom-panel/DebugTab.tsx`
+- `src/app/api/support-ingest/__tests__/route.test.ts`
+
+**Key findings:**
+- The local support path now has a backend-shaped ingest endpoint that validates the payload and returns a routed summary, which gives the Debug panel a more realistic handoff target.
+- The route is still local and summary-only; the broader remote transport, durable ingestion, and alert fan-out pipeline remain open.
+- Showing the ingest result inline makes the operator-facing support flow easier to test without leaving the studio shell.
+
+**Operational note for SentinelTwin:**
+- Keep the ingest route aligned with the support bundle payload and treat the returned routing summary as a local stand-in for the future remote support backend.
+
+## Thread 35: Support ingest history
+
+**Status:** Implemented in current pass. The debug panel now mirrors the routed support-ingest archive from the canonical `/api/support-ingest` endpoint and keeps a local cache fallback for offline refreshes.
+
+**Source signals:**
+- `src/app/api/support-ingest/route.ts`
+- `src/lib/support-ingest-history.ts`
+- `src/components/bottom-panel/DebugTab.tsx`
+- `src/store/studio-store.ts`
+- `src/store/__tests__/studio-store-project-metadata.test.ts`
+
+**Key findings:**
+- A backend-shaped support handoff becomes more trustworthy when the operator can revisit previous routed submissions from a server-backed archive, not just the latest response.
+- Keeping a local cache fallback makes the archive readable even when the route is temporarily unavailable, but the server archive is now the canonical view.
+- The next gap is no longer simple history persistence; it is remote fan-out/delivery and alert routing beyond the local studio shell.
+
+**Operational note for SentinelTwin:**
+- Keep the support-ingest archive aligned with the support-bundle payload and the remote ingest response, and use the local cache only as a fallback when the server archive cannot be fetched.
+
+## Thread 36: Support delivery queue
+
+**Status:** Implemented in current pass. The debug panel now exposes a remote support delivery action that writes into a canonical `/api/support-delivery` queue and displays the archive with a local cache fallback.
+
+**Source signals:**
+- `src/app/api/support-delivery/route.ts`
+- `src/lib/support-delivery.ts`
+- `src/components/bottom-panel/DebugTab.tsx`
+- `src/app/api/support-delivery/__tests__/route.test.ts`
+
+**Key findings:**
+- The support handoff now has a separate delivery step from ingest, which is the right shape for a future alert fan-out or webhook destination pipeline.
+- The current queue is still local-first, but it finally represents the delivery boundary instead of only the archival boundary.
+- The Debug panel now also accepts a remote webhook URL so the delivery queue can exercise a real outbound destination when one is available.
+- The remaining open gap is broader remote delivery reliability and production alert fan-out, not the lack of a dispatch abstraction.
+
+**Operational note for SentinelTwin:**
+- Keep the delivery queue aligned with the support-ingest archive and expose failures clearly when a future destination endpoint is configured.
+
+## Thread 37: Governance approval trail
+
+**Status:** Implemented in current pass. The governance control plane now exposes an evidence-backed approval trail inside the Governance tab.
+
+**Source signals:**
+- `src/components/bottom-panel/GovernanceTab.tsx`
+- `src/lib/operational-evidence.ts`
+- `src/components/__tests__/governance-tab.test.ts`
+- `src/lib/__tests__/operational-evidence.test.ts`
+
+**Key findings:**
+- Governance actions already emitted operational evidence, but the operator could only see the current toggle state before this slice.
+- A compact local trail makes review requests, approvals, rejections, annotations, role changes, and policy changes auditable without duplicating the evidence model.
+- The remaining open question is backend identity and remote approval routing, not whether the product can present a trustworthy governance history locally.
+
+**Operational note for SentinelTwin:**
+- Keep governance state changes mirrored in the operational evidence ledger so the trail stays canonical even as backend approval routing evolves.
+
+## Thread 38: Governance handoff queue
+
+**Status:** Implemented in current pass. The governance control plane now has a separate archive queue for remote approval handoff.
+
+**Source signals:**
+- `src/app/api/governance-archive/route.ts`
+- `src/lib/governance-archive.ts`
+- `src/components/bottom-panel/GovernanceTab.tsx`
+- `src/app/api/governance-archive/__tests__/route.test.ts`
+
+**Key findings:**
+- Support delivery proved the local-first queue/fan-out pattern, and governance needed the same boundary but with approval-trail context.
+- A separate governance archive keeps approval routing distinct from incident support while still leaving room for future remote identity and reviewer services.
+- The remaining open gap is remote identity-backed approval routing, not the lack of an archive abstraction.
+
+**Operational note for SentinelTwin:**
+- Keep the governance archive aligned with the operational evidence ledger and surface failures clearly when future approval endpoints are configured.
+
+## Thread 39: Workspace membership handoff queue
+
+**Status:** Implemented in current pass. The Governance tab now also exposes a backend-shaped archive queue for workspace identity and membership routing.
+
+**Source signals:**
+- `src/app/api/workspace-membership-archive/route.ts`
+- `src/lib/workspace-membership-archive.ts`
+- `src/components/bottom-panel/GovernanceTab.tsx`
+- `src/app/api/workspace-membership-archive/__tests__/route.test.ts`
+
+**Key findings:**
+- Shared-workspace access already existed locally, but the product needed a canonical backend-identity record for active member, roster, and routing policy.
+- A separate membership archive keeps identity capture distinct from governance approval history while still using the same archive/fan-out pattern, and it now preserves the full normalized workspace access and governance snapshots for drift comparison.
+- The remaining open gap is remote identity-backed approval routing and cross-service membership sync, not the lack of a membership archive abstraction or a comparable snapshot record.
+
+**Operational note for SentinelTwin:**
+- Keep the membership archive aligned with the governance trail so future remote identity services can route approvals and membership changes from the same canonical record.
+
+## Thread 40: Workspace membership sync reconciliation
+
+**Status:** Implemented in current pass. The Governance tab can now reconcile the live workspace membership state against the latest archived snapshot.
+
+**Source signals:**
+- `src/components/bottom-panel/GovernanceTab.tsx`
+- `src/store/studio-store.ts`
+- `src/lib/workspace-membership-routing.ts`
+- `src/lib/operational-evidence.ts`
+
+**Key findings:**
+- The membership archive is more useful when it can drive an operator-visible reconciliation action, not just a history list.
+- Reconciliation needs to be audited as an evidence event so drift is visible and reversible.
+- The remaining open gap is remote identity-backed routing across services, not the lack of a local reconcile action.
+
+**Operational note for SentinelTwin:**
+- Keep future remote identity services aligned with the same reconciliation event kind so sync across services stays evidence-backed.

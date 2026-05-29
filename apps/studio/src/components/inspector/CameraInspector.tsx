@@ -233,6 +233,23 @@ export function CameraInspector() {
         : "Day";
   const targetPpmEstimate = targetZone ? qualityRangeLabel(targetQuality, scene.assumptions.doriStandard) : "—";
   const hasPoleTarget = scene.obstructions.some((obstruction) => obstruction.obstructionType === "pillar" || obstruction.label.toLowerCase().includes("pillar"));
+  const activeSensorCount = scene.sensors.filter((sensor) => sensor.state === "active").length;
+  const nearestSensor = scene.sensors.length > 0
+    ? scene.sensors.reduce<{ sensor: typeof scene.sensors[number] | null; distanceM: number | null }>((best, sensor) => {
+        const distanceM = Math.hypot(
+          camera.position[0] - sensor.position[0],
+          camera.position[1] - sensor.position[1],
+          camera.position[2] - sensor.position[2],
+        );
+        if (best.sensor === null || distanceM < (best.distanceM ?? Number.POSITIVE_INFINITY)) {
+          return { sensor, distanceM };
+        }
+        return best;
+      }, { sensor: null, distanceM: null })
+    : { sensor: null, distanceM: null };
+  const nearestSensorLabel = nearestSensor.sensor ? nearestSensor.sensor.label : "None";
+  const nearestSensorState = nearestSensor.sensor ? nearestSensor.sensor.state.replace(/_/g, " ") : "—";
+  const nearestSensorCoverage = nearestSensor.sensor ? nearestSensor.sensor.coverageMode.replace(/_/g, " ") : "—";
 
   const updatePosition = (next: [number, number, number]) => updateNode(camera.id, { position: next });
 
@@ -629,6 +646,31 @@ export function CameraInspector() {
                 <SummaryStat label="Coverage"   value={camResult ? `${camResult.coveragePct.toFixed(1)}%` : "--"} accent="text-emerald-300" />
                 <SummaryStat label="Zones Pass" value={camResult ? `${camResult.criticalZonesCovered.length}` : "--"} accent="text-blue-300" />
                 <SummaryStat label="Zones Fail" value={camResult ? `${camResult.criticalZonesFailed.length}` : "--"} accent="text-amber-300" />
+              </div>
+            </SectionCard>
+            <SectionCard title="Sensor Fusion">
+              <div className="grid grid-cols-2 gap-1.5">
+                <SummaryStat label="Sensors" value={`${scene.sensors.length}`} accent="text-cyan-300" />
+                <SummaryStat label="Active" value={`${activeSensorCount}`} accent="text-emerald-300" />
+                <SummaryStat label="Nearest" value={nearestSensorLabel} accent="text-blue-300" />
+                <SummaryStat
+                  label="Distance"
+                  value={nearestSensor.distanceM != null ? `${nearestSensor.distanceM.toFixed(1)}m` : "—"}
+                  accent="text-amber-300"
+                />
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-1.5 text-[9px] text-[#93a0bd]">
+                <div className="rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
+                  <div className="uppercase tracking-[0.16em] text-[#556076]">Nearest sensor state</div>
+                  <div className="mt-1 text-[#d2d9e8]">{nearestSensorState}</div>
+                </div>
+                <div className="rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
+                  <div className="uppercase tracking-[0.16em] text-[#556076]">Coverage mode</div>
+                  <div className="mt-1 text-[#d2d9e8]">{nearestSensorCoverage}</div>
+                </div>
+              </div>
+              <div className="mt-2 text-[10px] leading-relaxed text-[#6a748b]">
+                Sensors are schema-backed and live in the same scene graph as cameras. This preview makes the nearest sensor to the selected camera visible while full live fusion remains the next platform step.
               </div>
             </SectionCard>
             <SectionCard title="Verified Notes">

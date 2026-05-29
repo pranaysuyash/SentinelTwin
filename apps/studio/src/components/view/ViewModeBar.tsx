@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { Camera, FileText, GitCompare, LayoutDashboard, Monitor, Play } from "lucide-react";
 
+import { MAP_COLORS } from "@/components/map/map-colors";
 import { VIEW_MODE_PRESETS } from "@/lib/studio-constants";
 import type { ViewMode } from "@/store/studio-store";
 import { useStudioStore } from "@/store/studio-store";
@@ -41,7 +42,7 @@ function ContextChip() {
     return (
       <div className="flex items-center gap-1 rounded-md border border-[#2a3246] bg-[#111827] px-2 py-1 text-[8px]">
         <span className={`h-1.5 w-1.5 rounded-full ${cam.status === "on" ? "bg-emerald-400" : "bg-red-400"}`} />
-        <span className="text-[#93c5fd] font-medium">{cam.name}</span>
+        <span className="font-medium" style={{ color: MAP_COLORS.viewport }}>{cam.name}</span>
       </div>
     );
   }
@@ -51,7 +52,7 @@ function ContextChip() {
     return (
       <div className="flex items-center gap-1 rounded-md border border-[#2a3246] bg-[#111827] px-2 py-1 text-[8px]">
         <Play className="h-2.5 w-2.5 text-emerald-400" />
-        <span className="text-[#93c5fd] font-medium">
+        <span className="font-medium" style={{ color: MAP_COLORS.viewport }}>
           {activePath ? activePath.label : `${scene.paths.length} path${scene.paths.length !== 1 ? "s" : ""}`}
         </span>
       </div>
@@ -90,6 +91,7 @@ export function ViewModeBar() {
       {VIEW_OPTIONS.map(({ mode, label, icon }) => (
         <motion.button
           key={mode}
+          type="button"
           variants={tabVariants}
           initial="idle"
           whileHover="hover"
@@ -98,13 +100,16 @@ export function ViewModeBar() {
             setWorkspacePreset(VIEW_MODE_PRESETS[mode]);
             setViewMode(mode);
           }}
+          aria-pressed={viewMode === mode}
+          aria-label={`Switch to ${label} mode`}
           className="relative flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-medium"
           transition={{ type: "spring", stiffness: 400, damping: 24 }}
         >
           {viewMode === mode && (
             <motion.div
               layoutId="view-tab-bg"
-              className="absolute inset-0 rounded-lg bg-[#1a2333] shadow-sm"
+              className="absolute inset-0 rounded-lg shadow-sm"
+              style={{ backgroundColor: MAP_COLORS.panelFillAlt }}
               transition={{ type: "spring", stiffness: 400, damping: 30 }}
             />
           )}
@@ -114,8 +119,9 @@ export function ViewModeBar() {
             whileHover="hover"
             transition={{ duration: 0.4, ease: "easeInOut" }}
             className={`relative z-10 flex items-center gap-1.5 transition-colors duration-200 ${
-              viewMode === mode ? "text-[#93c5fd]" : "text-[#5b667c] hover:text-[#8b96ab]"
+              viewMode === mode ? "text-white" : "text-[#5b667c] hover:text-[#8b96ab]"
             }`}
+            style={viewMode === mode ? { color: MAP_COLORS.viewport } : undefined}
           >
             {icon}
             {label}

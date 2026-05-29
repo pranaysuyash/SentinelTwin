@@ -56,7 +56,7 @@ export function getNodeSelectionBounds(node: AnyEditableNode): Bounds2D | null {
     return boundsFromPoint([node.position[0], node.position[2]], 0.5);
   }
 
-  if (node.nodeType === "security_light") {
+  if (node.nodeType === "security_light" || node.nodeType === "sensor") {
     return boundsFromPoint([node.position[0], node.position[2]], 0.45);
   }
 
@@ -99,6 +99,7 @@ export function getSceneSelectionIds(scene: SecurityScene, bounds: Bounds2D): st
     ...scene.windows,
     ...scene.cameras,
     ...scene.securityLights,
+    ...scene.sensors,
     ...scene.obstructions,
     ...scene.criticalZones,
     ...scene.privacyZones,

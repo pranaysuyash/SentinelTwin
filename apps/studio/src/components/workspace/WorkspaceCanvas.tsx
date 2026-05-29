@@ -1,8 +1,8 @@
 "use client";
 
-import { Html, OrbitControls } from "@react-three/drei";
+import { Html, OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
-import { Camera, Layers, Lightbulb, MousePointer2, RefreshCcw, Shield, Square } from "lucide-react";
+import { Camera, Layers, Lightbulb, MousePointer2, RefreshCcw, ScanSearch, Shield, Square } from "lucide-react";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
@@ -10,6 +10,7 @@ import {
   type AnyEditableNode,
   type CameraNode,
   type SecurityIssue,
+  type SensorNode,
 } from "@/schema/security-scene";
 import { getYawPitchDirection } from "@/simulation/geometry";
 import { CameraLabelCard } from "@/components/workspace/overlays/CameraLabelCard";
@@ -39,6 +40,7 @@ import { WallDrawTool } from "./editing/WallDrawTool";
 import { applyShiftLock, clampToScene, pathLength, pointDistance } from "./editing/editor-geometry";
 import { cn } from "@/lib/cn";
 import { pointOnPathAtProgress } from "@/components/map/path-quality";
+import { MAP_COLORS } from "@/components/map/map-colors";
 import { CoverageLegend } from "./CoverageLegend";
 import {
   createCameraNode,
@@ -50,6 +52,7 @@ import {
   createCriticalZoneNode,
   createScenarioPathNode,
   createSecurityLightNode,
+  createSensorNode,
 } from "@/lib/node-factory";
 import { CameraPresetPicker, applyCameraPreset, getCameraPreset } from "./CameraPresetPicker";
 import { getCameraColorForId } from "@/lib/camera-colors";
@@ -105,7 +108,7 @@ function SelectionRectangleOverlay({ drag }: { drag: SelectionDragState | null }
 }
 
 function getSelectionAnchor(node: AnyEditableNode): [number, number, number] | null {
-  if (node.nodeType === "camera" || node.nodeType === "security_light" || node.nodeType === "obstruction" || node.nodeType === "door" || node.nodeType === "window") {
+  if (node.nodeType === "camera" || node.nodeType === "security_light" || node.nodeType === "sensor" || node.nodeType === "obstruction" || node.nodeType === "door" || node.nodeType === "window") {
     return [node.position[0], node.position[1], node.position[2]];
   }
 
@@ -159,6 +162,7 @@ function SelectionHighlights() {
   const nodesById = new Map<string, AnyEditableNode>([
     ...scene.cameras,
     ...scene.securityLights,
+    ...scene.sensors,
     ...scene.obstructions,
     ...scene.walls,
     ...scene.doors,
@@ -445,6 +449,76 @@ function CeilingLightMarkers() {
   );
 }
 
+function SensorMarkers() {
+  const scene = useStudioStore((s) => s.scene);
+  const selected = useStudioStore((s) => s.selectedNodeId);
+  const selectNode = useStudioStore((s) => s.selectNode);
+  const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+  const colorMap: Record<SensorNode["sensorType"], string> = {
+    motion: "#60a5fa",
+    door_contact: "#34d399",
+    access_reader: "#f59e0b",
+    audio: "#c084fc",
+    vibration: "#fb7185",
+    panic_button: "#f97316",
+    smoke_heat: "#fbbf24",
+  };
+
+  return (
+    <group>
+      {scene.sensors.map((sensor) => {
+        const color = colorMap[sensor.sensorType];
+        const isHovered = hoveredId === sensor.id;
+        const isSelected = selected === sensor.id;
+        return (
+          <group
+            key={sensor.id}
+            position={sensor.position}
+            onPointerDown={(event) => {
+              event.stopPropagation();
+              if (event.shiftKey || event.metaKey || event.ctrlKey) {
+                toggleSelectedNode(sensor.id);
+                return;
+              }
+              selectNode(sensor.id);
+            }}
+            onPointerOver={() => {
+              setHoveredId(sensor.id);
+              document.body.style.cursor = "pointer";
+            }}
+            onPointerOut={() => {
+              setHoveredId((current) => (current === sensor.id ? null : current));
+              document.body.style.cursor = "default";
+            }}
+            scale={isHovered ? 1.06 : 1}
+          >
+            <mesh castShadow>
+              <cylinderGeometry args={[0.1, 0.14, 0.08, 16]} />
+              <meshStandardMaterial
+                color={isSelected ? "#bfdbfe" : color}
+                emissive={isSelected ? "#1d4ed8" : color}
+                emissiveIntensity={isSelected ? 0.5 : 0.18}
+                roughness={0.35}
+                metalness={0.3}
+              />
+            </mesh>
+            <mesh position={[0, 0.12, 0]}>
+              <boxGeometry args={[0.08, 0.08, 0.04]} />
+              <meshStandardMaterial color={isSelected ? "#e0f2fe" : "#e5eefb"} roughness={0.18} metalness={0.08} />
+            </mesh>
+            <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <ringGeometry args={[0.18, 0.26, 20]} />
+              <meshBasicMaterial color={isSelected ? "#93c5fd" : color} transparent opacity={0.25} />
+            </mesh>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
 function CriticalZoneOverlay({
   zone,
   result,
@@ -608,6 +682,7 @@ function SceneGeometry() {
       {layers.obstructions ? (
         <SceneObstructions obstructions={scene.obstructions} selectedId={selected} />
       ) : null}
+      <SensorMarkers />
       {layers.lights ? <CeilingLightMarkers /> : null}
 
       {blockingIssues.map((issue) => {
@@ -723,6 +798,8 @@ function SceneFrameRig() {
   const camera = useThree((s) => s.camera);
   const controls = useThree((s) => s.controls);
   const scene = useStudioStore((s) => s.scene);
+  const canvasMode = useStudioStore((s) => s.canvasMode);
+  const canvasViewResetTick = useStudioStore((s) => s.canvasViewResetTick);
   const focusRequest = useStudioStore((s) => s.focusScenePointRequest);
   const clearFocusRequest = useStudioStore((s) => s.setFocusScenePointRequest);
   const { width: sceneWidth, depth: sceneDepth } = scene.dimensions;
@@ -742,7 +819,7 @@ function SceneFrameRig() {
       orbitControls.update();
       previousTarget.current = target.clone();
     }
-  }, [camera, controls, sceneDepth, sceneWidth]);
+  }, [camera, canvasMode, canvasViewResetTick, controls, sceneDepth, sceneWidth]);
 
   useEffect(() => {
     if (!focusRequest) return;
@@ -770,6 +847,7 @@ const TOOL_GHOST_COLORS: Record<string, string> = {
   camera: "#60a5fa",
   obstruction: "#f97316",
   light: "#eab308",
+  sensor: "#22d3ee",
   wall: "#22c55e",
   zone: "#86efac",
   door_window: "#c084fc",
@@ -784,6 +862,7 @@ const TOOL_ICONS: Record<string, React.ReactNode> = {
   camera: <Camera className="h-3 w-3" />,
   obstruction: <Square className="h-3 w-3" />,
   light: <Lightbulb className="h-3 w-3" />,
+  sensor: <ScanSearch className="h-3 w-3" />,
   wall: <Square className="h-3 w-3" />,
   zone: <Shield className="h-3 w-3" />,
   door_window: <Layers className="h-3 w-3" />,
@@ -797,12 +876,23 @@ const TOOL_LABELS: Record<string, string> = {
   camera: "Place Camera",
   obstruction: "Place Obstruction",
   light: "Place Light",
+  sensor: "Place Sensor",
   wall: "Draw Wall",
   zone: "Draw Zone",
   door_window: "Place Door / Window",
   path: "Draw Path",
   measure: "Measure",
   comment: "Comment",
+};
+
+const SENSOR_TYPE_LABELS: Record<string, string> = {
+  motion: "Motion",
+  door_contact: "Door Contact",
+  access_reader: "Access Reader",
+  audio: "Audio",
+  vibration: "Vibration",
+  panic_button: "Panic Button",
+  smoke_heat: "Smoke / Heat",
 };
 
 /**
@@ -825,6 +915,7 @@ function ToolPlacementFloor({
   const selectNode = useStudioStore((s) => s.selectNode);
   const scene = useStudioStore((s) => s.scene);
   const criticalZoneTargetType = useStudioStore((s) => s.criticalZoneTargetType);
+  const sensorPlacementType = useStudioStore((s) => s.sensorPlacementType);
   const editor = useStudioStore((s) => s.editor);
   const { draftWallStart, draftPolygonPoints, draftPathPoints, hoverPoint } = editor;
   const setEditorHoverPoint = useStudioStore((s) => s.setEditorHoverPoint);
@@ -999,6 +1090,10 @@ function ToolPlacementFloor({
         const node = createSecurityLightNode([pos[0], 2.8, pos[2]]);
         addNode(node);
         selectNode(node.id);
+      } else if (activeTool === "sensor") {
+        const node = createSensorNode([pos[0], 1.2, pos[2]], sensorPlacementType);
+        addNode(node);
+        selectNode(node.id);
       } else if (activeTool === "wall") {
         if (!draftWallStart) {
           setDraftWallStart(workingSnap);
@@ -1048,6 +1143,7 @@ function ToolPlacementFloor({
       hoverPoint,
       isPlacing,
       scene.assumptions.wallHeightM,
+      sensorPlacementType,
       selectNode,
       setDraftPathPoints,
       setDraftPolygonPoints,
@@ -1097,8 +1193,12 @@ function ToolPlacementFloor({
       return "Select and inspect objects";
     }
 
+    if (activeTool === "sensor") {
+      return `Sensor: ${SENSOR_TYPE_LABELS[sensorPlacementType] ?? "Motion"}`;
+    }
+
     return TOOL_LABELS[activeTool] ?? "Place";
-  }, [activeTool, wallLength, draftPolygonPoints.length, draftPathPoints, hoverPoint]);
+  }, [activeTool, draftPathPoints, draftPolygonPoints.length, hoverPoint, sensorPlacementType, wallLength]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1185,6 +1285,17 @@ function ToolPlacementFloor({
                 <meshBasicMaterial color={ghostColor} transparent opacity={0.35} />
               </mesh>
             </>
+          ) : activeTool === "sensor" ? (
+            <>
+              <mesh>
+                <cylinderGeometry args={[0.11, 0.14, 0.08, 16]} />
+                <meshBasicMaterial color={ghostColor} transparent opacity={0.35} />
+              </mesh>
+              <mesh position={[0, 0.12, 0]}>
+                <boxGeometry args={[0.08, 0.08, 0.04]} />
+                <meshBasicMaterial color={ghostColor} transparent opacity={0.35} />
+              </mesh>
+            </>
           ) : activeTool === "obstruction" ? (
             <mesh position={[0, 1, 0]}>
               <boxGeometry args={[1, 2, 0.5]} />
@@ -1265,9 +1376,15 @@ function ViewControls() {
         className={cn(
           "flex h-7 w-7 items-center justify-center rounded-lg border text-[8px] font-bold backdrop-blur-sm transition-colors",
           canvasMode === "orbit_3d"
-            ? "border-sky-400/35 bg-sky-500/16 text-sky-100"
+            ? "border-sky-400 text-sky-100"
             : "border-[#2a3246] bg-[#0e1320]/90 text-[#6b7280] hover:bg-[#171e30] hover:text-white",
         )}
+        style={canvasMode === "orbit_3d"
+          ? {
+              borderColor: MAP_COLORS.viewport,
+              backgroundColor: "rgba(59, 130, 246, 0.14)",
+            }
+          : undefined}
       >
         3D
       </button>
@@ -1279,9 +1396,15 @@ function ViewControls() {
         className={cn(
           "flex h-7 w-7 items-center justify-center rounded-lg border text-[8px] font-bold backdrop-blur-sm transition-colors",
           canvasMode === "topdown_2d"
-            ? "border-emerald-400/35 bg-emerald-500/16 text-emerald-100"
+            ? "border-emerald-400 text-emerald-100"
             : "border-[#2a3246] bg-[#0e1320]/90 text-[#6b7280] hover:bg-[#171e30] hover:text-white",
         )}
+        style={canvasMode === "topdown_2d"
+          ? {
+              borderColor: MAP_COLORS.viewport,
+              backgroundColor: "rgba(16, 185, 129, 0.14)",
+            }
+          : undefined}
       >
         2D
       </button>
@@ -1314,11 +1437,12 @@ function ControlHintBar() {
     const toolLabel = TOOL_LABELS[activeTool] ?? "Place";
     const color = TOOL_GHOST_COLORS[activeTool] ?? TOOL_GHOST_COLORS.default;
     const toolShortcut: Record<string, string> = {
-      camera: "C",
-      obstruction: "B",
-      light: "L",
-      wall: "W",
-      zone: "Z",
+    camera: "C",
+    obstruction: "B",
+    light: "L",
+    sensor: "Y",
+    wall: "W",
+    zone: "Z",
       door_window: "D",
       path: "P",
       measure: "M",
@@ -1354,7 +1478,6 @@ export function WorkspaceCanvas() {
   const envMode = useStudioStore((s) => s.environmentMode);
   const scene = useStudioStore((s) => s.scene);
   const canvasMode = useStudioStore((s) => s.canvasMode);
-  const canvasViewResetTick = useStudioStore((s) => s.canvasViewResetTick);
   const visibleComponents = useStudioStore((s) => s.visibleComponents);
   const setSelectedNodes = useStudioStore((s) => s.setSelectedNodes);
   const clearSelection = useStudioStore((s) => s.clearSelection);
@@ -1400,12 +1523,27 @@ export function WorkspaceCanvas() {
       ) : null}
 
       <Canvas
-        key={`${canvasMode}:${canvasViewResetTick}`}
-        camera={canvasCamera}
         shadows="percentage"
         gl={{ antialias: true, alpha: false }}
         style={{ width: "100%", height: "100%", background: theme.background }}
       >
+        {isTopDown ? (
+          <OrthographicCamera
+            makeDefault
+            position={canvasCamera.position}
+            zoom={canvasCamera.zoom}
+            near={canvasCamera.near}
+            far={canvasCamera.far}
+          />
+        ) : (
+          <PerspectiveCamera
+            makeDefault
+            position={canvasCamera.position}
+            fov={canvasCamera.fov}
+            near={canvasCamera.near}
+            far={canvasCamera.far}
+          />
+        )}
         <color attach="background" args={[theme.background]} />
         <fog attach="fog" args={[theme.background, 12, 24]} />
 

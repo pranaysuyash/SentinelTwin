@@ -19,12 +19,18 @@ describe("ScanSiteWizard", () => {
     expect(source).toContain("Camera mount default");
     expect(source).toContain("Light mount default");
     expect(source).toContain("Critical zone night requirement");
+    expect(source).toContain("scan_session_compiled");
     expect(source).toContain("What will be created");
     expect(source).toContain("multiple");
     expect(source).toContain("Unsupported file type. Use PNG, JPG, WEBP, or SVG images.");
     expect(source).toContain("ArrowLeft");
     expect(source).toContain("Geometry sanity checks");
     expect(source).toContain("Structural auto-fix assist (explicit)");
+    expect(source).toContain("Needs Review");
+    expect(source).toContain("Accept");
+    expect(source).toContain("Review");
+    expect(source).toContain("Reject");
+    expect(source).toContain("candidateStats.needsReview");
     expect(source).toContain("Merge near-duplicate candidates (same type, close points)");
     expect(source).toContain("Snap door/window candidates closer to nearest wall");
     expect(source).toContain("Duplicate groups (same type + close points):");

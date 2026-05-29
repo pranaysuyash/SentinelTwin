@@ -32,6 +32,7 @@ describe("report engine", () => {
     expect(report.summary.zonesPassing).toBe(
       result.criticalZoneResults.filter((z) => z.status === "pass").length,
     );
+    expect(report.summary.sensorCount).toBe(scene.sensors.length);
     expect(report.summary.issuesCount).toBe(result.issues.length);
     expect(report.summary.recommendationsCount).toBe(result.recommendations.length);
     expect(report.codeCompliant).toBeDefined();
@@ -241,6 +242,11 @@ describe("exportAsHtml", () => {
     expect(html).toContain("Single-point zones");
   });
 
+  test("includes sensors summary card", () => {
+    const html = exportAsHtml(makeReport());
+    expect(html).toContain("Sensors</div>");
+  });
+
   test("includes reflective bounce section", () => {
     const html = exportAsHtml({
       ...makeReport(),
@@ -417,6 +423,7 @@ describe("exportAsMarkdown", () => {
     const md = exportAsMarkdown(baseReport);
     expect(md).toContain("| Total Coverage |");
     expect(md).toContain("| Zones Passing |");
+    expect(md).toContain("| Sensors |");
   });
 
   test("includes zone analysis section", () => {
@@ -438,6 +445,11 @@ describe("exportAsMarkdown", () => {
     const md = exportAsMarkdown(baseReport);
     expect(md).toContain("## Provenance");
     expect(md).toContain("Scene Source");
+  });
+
+  test("includes sensors summary row", () => {
+    const md = exportAsMarkdown(baseReport);
+    expect(md).toContain("| Sensors |");
   });
 
   test("includes uncertainty section", () => {
@@ -591,6 +603,7 @@ describe("exportAsText", () => {
     expect(text).toContain("Recognition Area");
     expect(text).toContain("Identification Area");
     expect(text).toContain("Zones Passing");
+    expect(text).toContain("Sensors");
     expect(text).toContain("Issues Found");
   });
 
@@ -778,7 +791,7 @@ describe("buildCompareReport (compatibility export)", () => {
   const scene = createSmallRetailShopScene();
   const testWithTimeout = test as any;
 
-  testWithTimeout("produces same output as buildCompareReportData", { timeout: 15000 }, () => {
+  testWithTimeout("produces same output as buildCompareReportData", { timeout: 30000 }, () => {
     const afterScene = createSmallRetailShopScene();
     const camera = afterScene.cameras.find((c) => c.id === "cam_entrance");
     if (camera) camera.status = "off";

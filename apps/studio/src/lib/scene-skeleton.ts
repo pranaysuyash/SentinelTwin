@@ -67,6 +67,7 @@ export function createBlankSecurityScene(): SecurityScene {
     obstructions: [],
     criticalZones: [],
     privacyZones: [],
+    sensors: [],
     entryPoints: [],
     paths: [],
     assumptions: {

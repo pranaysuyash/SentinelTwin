@@ -31,6 +31,7 @@ export interface ReportData {
     worstAreaQuality: string;
     zonesPassing: number;
     zonesTotal: number;
+    sensorCount: number;
     issuesCount: number;
     recommendationsCount: number;
     verifiedRecommendationsCount: number;
@@ -222,6 +223,7 @@ export function buildReportData(
   const totalZones = result.criticalZoneResults.length;
   const verifiedRecs = result.recommendations.filter((r) => r.verified).length;
   const meetsModeledZoneRequirements = zonesPassing === totalZones;
+  const sensorCount = scene.sensors.length;
   const graph = buildSceneIntelligenceGraph(scene, {
     simulationResult: result,
     revisionDepth: scene.changeLog.length,
@@ -262,6 +264,7 @@ export function buildReportData(
       worstAreaQuality: result.worstAreaQuality,
       zonesPassing,
       zonesTotal: totalZones,
+      sensorCount,
       issuesCount: result.issues.length,
       recommendationsCount: result.recommendations.length,
       verifiedRecommendationsCount: verifiedRecs,
@@ -535,6 +538,7 @@ function buildCompareReportSnapshot(scene: ReportScene, result: SimulationResult
   const zonesPassing = anyResult.criticalZoneResults.filter((z: any) => z.status === "pass").length;
   const totalZones = anyResult.criticalZoneResults.length;
   const verifiedRecs = anyResult.recommendations.filter((r: any) => r.verified).length;
+  const sensorCount = scene.sensors.length;
   const graph = buildSceneIntelligenceGraph(scene, {
     simulationResult: result,
     revisionDepth: scene.changeLog.length,
@@ -571,6 +575,7 @@ function buildCompareReportSnapshot(scene: ReportScene, result: SimulationResult
       worstAreaQuality: result.worstAreaQuality,
       zonesPassing,
       zonesTotal: totalZones,
+      sensorCount,
       issuesCount: result.issues.length,
       recommendationsCount: result.recommendations.length,
       verifiedRecommendationsCount: verifiedRecs,
@@ -731,6 +736,12 @@ export function exportAsHtml(report: ReportData): string {
         ${report.summary.zonesPassing}/${report.summary.zonesTotal}
       </div>
       <div class="label">Zones Passing</div>
+    </div>
+    <div class="summary-card">
+      <div class="value" style="color:${report.summary.sensorCount > 0 ? "#f59e0b" : "#16a34a"}">
+        ${report.summary.sensorCount}
+      </div>
+      <div class="label">Sensors</div>
     </div>
   </div>
 
@@ -1059,6 +1070,7 @@ export function exportAsMarkdown(report: ReportData): string {
     `| Recognition Area | ${report.summary.recognitionAreaPct.toFixed(1)}% |`,
     `| Identification Area | ${report.summary.identificationAreaPct.toFixed(1)}% |`,
     `| Zones Passing | ${report.summary.zonesPassing}/${report.summary.zonesTotal} |`,
+    `| Sensors | ${report.summary.sensorCount} |`,
     `| Issues Found | ${report.summary.issuesCount} |`,
     `| Verified Recommendations | ${report.summary.verifiedRecommendationsCount}/${report.summary.recommendationsCount} |`,
     "",
@@ -1282,6 +1294,7 @@ export function exportAsText(report: ReportData): string {
     `  Identification Area:     ${report.summary.identificationAreaPct.toFixed(1)}%`,
     `  Average Quality:         ${report.summary.averageWalkableQuality.toFixed(2)}`,
     `  Zones Passing:           ${report.summary.zonesPassing}/${report.summary.zonesTotal}`,
+    `  Sensors:                 ${report.summary.sensorCount}`,
     `  Issues Found:            ${report.summary.issuesCount}`,
     `  Recommendations:         ${report.summary.recommendationsCount} (${report.summary.verifiedRecommendationsCount} verified)`,
     "",

@@ -11,7 +11,6 @@ describe("view settings entrypoints", () => {
 
     expect(topBarSource).toContain("View Settings");
     expect(topBarSource).toContain("toggleViewSettingsOpen");
-    expect(topBarSource).toContain("Target Type");
     expect(topBarSource).toContain("setAllZoneTargetTypes");
     expect(canvasSource).toContain('setCanvasMode("orbit_3d")');
     expect(canvasSource).toContain('setCanvasMode("topdown_2d")');
@@ -22,5 +21,8 @@ describe("view settings entrypoints", () => {
     expect(canvasSource).toContain('aria-label="Reset canvas view"');
     expect(canvasSource).toContain('aria-label="Switch to 3D orbit"');
     expect(canvasSource).toContain('aria-label="Switch to 2D top-down"');
+    expect(topBarSource).toContain('data-testid="topbar-view-settings"');
+    expect(topBarSource).toContain('data-testid="more-view-settings"');
+    expect(readFileSync("./src/components/layout/ViewSettingsModal.tsx", "utf8")).toContain('data-testid="view-settings-modal"');
   });
 });

@@ -29,13 +29,14 @@ Rules:
 - Doors are gaps in walls with a door symbol (arc or line)
 - Windows are thin blue/cyan lines on walls
 - Obstructions are furniture, shelves, racks, counters, desks
-- Critical zones are high-value areas marked with labels
+- Critical zones are high-value areas: cash registers/counter tops, safes, server rooms, or any area marked with a distinct color or shading
+- Pay special attention to colored rectangular regions — these are critical zones
 - If a section has no items, use an empty array []
 - Return ONLY the JSON object, no markdown, no explanation
 """
 
 
-def _run_gpt4o_extraction(image_path: str, openai_api_key: str) -> SecuritySceneSubset:
+def _run_openai_extraction(image_path: str, openai_api_key: str, model: str) -> SecuritySceneSubset:
     from openai import OpenAI
     import base64
 
@@ -48,9 +49,8 @@ def _run_gpt4o_extraction(image_path: str, openai_api_key: str) -> SecurityScene
     if image_path.endswith(".jpg") or image_path.endswith(".jpeg"):
         mime = "image/jpeg"
 
-    start = time.time()
-    response = client.chat.completions.create(
-        model="gpt-4o",
+    common_kwargs = dict(
+        model=model,
         messages=[
             {"role": "system", "content": "You extract structured spatial data from floor plan images."},
             {"role": "user", "content": [
@@ -60,8 +60,14 @@ def _run_gpt4o_extraction(image_path: str, openai_api_key: str) -> SecurityScene
         ],
         response_format={"type": "json_object"},
         temperature=0.0,
-        max_tokens=4096,
     )
+    if model == "gpt-5.4-nano":
+        common_kwargs["max_completion_tokens"] = 4096
+    else:
+        common_kwargs["max_tokens"] = 4096
+
+    start = time.time()
+    response = client.chat.completions.create(**common_kwargs)
     elapsed = (time.time() - start) * 1000
 
     raw = response.choices[0].message.content or "{}"
@@ -168,7 +174,9 @@ def run_candidate(config: RunConfig) -> RunManifest:
         print(f"  Processing {img_id}...")
 
         if candidate_id == "stack_b_gpt4o" and api_key:
-            pred = _run_gpt4o_extraction(str(img_path), api_key)
+            pred = _run_openai_extraction(str(img_path), api_key, model="gpt-4o")
+        elif candidate_id == "stack_d_gpt54_nano" and api_key:
+            pred = _run_openai_extraction(str(img_path), api_key, model="gpt-5.4-nano")
         else:
             pred = _run_local_transformer_extraction(str(img_path), candidate)
 

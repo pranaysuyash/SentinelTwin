@@ -138,6 +138,7 @@ export function StatusBar() {
         <span className="max-w-[22rem] truncate text-[#c7d0e4]" title={scene.name}>
           Scene: {scene.name}
         </span>
+        <span className="rounded border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-emerald-200">Truth: Live</span>
         <span className="whitespace-nowrap">View: {viewModeText}</span>
         <span className="max-w-[18rem] truncate text-[#8fa2c3]" title={selectionText}>
           {selectionText}

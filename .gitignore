@@ -35,13 +35,26 @@ tmp/
 .cache/
 .chrome-profile/
 .playwright-browsers/
+.playwright-mcp/
 *.zip
+
+# Generated QA artifact outputs
+outputs/webwright_view_settings_*/
+
+# Local snapshot captures
+sentineltwin-*.png
 
 # Agent-local docs/state (optional to version, excluded by default)
 .agent/
 
 # AI-generated screenshot artifacts
 .codex-studio-home-*.png
+
+# Studio local runtime archives/state
+apps/studio/.governance-archive/
+apps/studio/.support-delivery/
+apps/studio/.support-ingest/
+apps/studio/.workspace-membership-archive/
 
 # TypeScript build info
 *.tsbuildinfo

@@ -33,6 +33,7 @@ function makeScene(overrides: Partial<SecurityScene> = {}): SecurityScene {
     entryPoints: [],
     paths: [],
     privacyZones: [],
+    sensors: [],
     source: "manual",
     version: "0.1.0",
     snapshots: [],

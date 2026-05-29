@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { PROMPT_REGISTRY } from "@/agents/prompt-registry";
 import type { ModelProvider } from "./providers/ModelProvider";
 
 /**
@@ -32,16 +33,7 @@ const counterfactualResponseSchema = z.object({
   ),
 });
 
-const SYSTEM_PROMPT = `You are a security camera optimization expert. Given the current coverage analysis, propose 3–5 candidate fixes.
-
-Consider only practical, low-cost changes unless the problem is severe. 
-Each candidate must include:
-- description: What to change and why
-- operations: Array of scene operations (each operation matches the SceneOperation discriminated union)
-- costCategory: free (software/configuration change), low (minor physical adjustment), medium (moves equipment), high (adds equipment)
-
-Current problems will be provided as a list of issues from the simulation.
-Output ONLY valid JSON matching the schema. Do not explain, do not add commentary.`;
+const SYSTEM_PROMPT = PROMPT_REGISTRY.find((entry) => entry.id === "counterfactual_candidates")?.systemPrompt ?? "";
 
 /**
  * Propose counterfactual candidates based on current simulation results and constraints.

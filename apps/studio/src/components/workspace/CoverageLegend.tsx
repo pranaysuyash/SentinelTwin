@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown, ChevronUp, Eye, EyeOff, Filter, Layers, Crosshair, Sigma, Grid3x3, Shield, Target } from "lucide-react";
+import { MAP_COLORS } from "@/components/map/map-colors";
 import { useStudioStore, type OverlayDensity, type OverlayFilterId, type HeatmapMode } from "@/store/studio-store";
 
 const QUALITY_LEVELS = [
@@ -102,8 +103,13 @@ export function CoverageLegend() {
       {/* Header row with collapse toggle */}
       <div className="flex items-center justify-between mb-1.5">
         <button
+          type="button"
           onClick={() => setCollapsed(!collapsed)}
-          className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-[0.22em] text-[#5b667c] hover:text-[#93c5fd] transition-colors"
+          aria-expanded={!collapsed}
+          aria-controls="coverage-legend-body"
+          aria-label={`${collapsed ? "Expand" : "Collapse"} coverage legend`}
+          className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-[0.22em] text-[#5b667c] transition-colors hover:text-sky-300"
+          style={collapsed ? undefined : { color: MAP_COLORS.viewport }}
         >
           {collapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
           {activeConfig.icon}
@@ -112,8 +118,13 @@ export function CoverageLegend() {
 
         {/* Filter toggle button */}
         <button
+          type="button"
           onClick={() => setShowFilters(!showFilters)}
-          className={`p-0.5 rounded transition-colors ${showFilters ? "text-[#93c5fd]" : "text-[#3a4158] hover:text-[#647089]"}`}
+          aria-expanded={showFilters}
+          aria-controls="coverage-legend-filters"
+          aria-label={`${showFilters ? "Hide" : "Show"} overlay filters and density`}
+          className={`rounded p-0.5 transition-colors ${showFilters ? "text-sky-300" : "text-[#3a4158] hover:text-[#647089]"}`}
+          style={showFilters ? { color: MAP_COLORS.viewport } : undefined}
           title="Overlay filters & density"
         >
           <Filter className="h-3 w-3" />
@@ -122,31 +133,31 @@ export function CoverageLegend() {
 
       {/* Collapsible body */}
       {!collapsed && (
-        <>
+        <div id="coverage-legend-body">
           {/* Mode toggle grid — only when simulation data is present */}
           {hasResult ? (
             <div className="mb-2 grid grid-cols-5 gap-0.5 rounded-md overflow-hidden border border-[#2a3246]">
               {MODE_CONFIG.map((config) => {
                 const isActive = heatmapMode === config.mode;
                 const activeBg = config.mode === "fragility"
-                  ? "#2d1e1e"
+                  ? "rgba(127, 29, 29, 0.45)"
                   : config.mode === "overlap"
-                    ? "#1a2d3a"
+                    ? "rgba(30, 64, 175, 0.35)"
                     : config.mode === "contribution"
-                      ? "#1a2d1e"
+                      ? "rgba(21, 128, 61, 0.35)"
                       : config.mode === "blindspots"
-                        ? "#2d1a1a"
-                        : "#1e2d4a";
+                        ? "rgba(127, 29, 29, 0.35)"
+                        : "rgba(30, 41, 59, 0.85)";
                 return (
                   <button
                     key={config.mode}
+                    type="button"
                     onClick={() => setHeatmapMode(config.mode)}
+                    aria-pressed={isActive}
+                    aria-label={`${config.label} heatmap`}
                     className="flex flex-col items-center gap-0.5 py-0.5 text-[7px] font-semibold tracking-wide transition-colors"
                     title={config.description}
-                    style={{
-                      background: isActive ? activeBg : "transparent",
-                      color: isActive ? "#e2e8f0" : "#3a4158",
-                    }}
+                    style={isActive ? { background: activeBg, color: MAP_COLORS.panelText } : { color: "#3a4158" }}
                   >
                     {config.icon}
                     <span className="leading-none">{config.label}</span>
@@ -174,12 +185,12 @@ export function CoverageLegend() {
               {activeConfig.legendNote}
             </div>
           )}
-        </>
+        </div>
       )}
 
       {/* Expandable filter & density panel */}
       {showFilters && (
-        <div className="mt-2 border-t border-[#1f2536] pt-2 space-y-2">
+        <div id="coverage-legend-filters" className="mt-2 border-t border-[#1f2536] pt-2 space-y-2">
           {/* Density mode selector */}
           <div>
             <div className="flex items-center gap-1 mb-1.5 text-[8px] font-semibold uppercase tracking-wider text-[#5b667c]">
@@ -190,12 +201,15 @@ export function CoverageLegend() {
               {DENSITY_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
+                  type="button"
                   onClick={() => setOverlayDensity(opt.value)}
+                  aria-pressed={overlayDensity === opt.value}
                   className={`flex-1 py-0.5 text-[8px] font-medium rounded transition-colors ${
                     overlayDensity === opt.value
-                      ? "bg-[#1e2d4a] text-[#93c5fd]"
+                      ? "bg-[#1e2d4a] text-sky-300"
                       : "text-[#3a4158] hover:text-[#647089] hover:bg-[#1a1f2e]"
                   }`}
+                  style={overlayDensity === opt.value ? { backgroundColor: MAP_COLORS.panelFillAlt, color: MAP_COLORS.viewport } : undefined}
                 >
                   {opt.label}
                 </button>

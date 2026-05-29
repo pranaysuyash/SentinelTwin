@@ -2,10 +2,11 @@
 
 import { motion } from "framer-motion";
 import { ArrowUp, CheckCircle2, Loader2, Sparkles, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAiCommand } from "@/hooks/use-ai-command";
 import type { CounterfactualCandidate } from "@/agents/CounterfactualAgent";
+import { summarizeAiActionTelemetry } from "@/lib/ai-action-telemetry";
 import { useStudioStore } from "@/store/studio-store";
 
 const COST_COLORS: Record<string, string> = {
@@ -15,12 +16,26 @@ const COST_COLORS: Record<string, string> = {
   high: "text-red-400 bg-red-500/10 border-red-500/20",
 };
 
+const HEALTH_COLORS: Record<string, string> = {
+  healthy: "text-emerald-300 border-emerald-500/20 bg-emerald-500/10",
+  partial: "text-amber-200 border-amber-500/20 bg-amber-500/10",
+  blocked: "text-red-200 border-red-500/20 bg-red-500/10",
+};
+
+const TELEMETRY_COLORS: Record<string, string> = {
+  ready: "text-emerald-300 border-emerald-500/20 bg-emerald-500/10",
+  guarded: "text-amber-200 border-amber-500/20 bg-amber-500/10",
+  blocked: "text-red-200 border-red-500/20 bg-red-500/10",
+};
+
 export function CommandBar() {
   const [input, setInput] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { status, executeCommand, dismissError, applyCandidate, mode } = useAiCommand();
+  const { status, executeCommand, dismissError, applyCandidate, mode, providerHealth, providerTelemetry, latestAiActionTelemetry } = useAiCommand();
+  const aiActionTelemetry = useStudioStore((s) => s.aiActionTelemetry);
   const visible = useStudioStore((s) => s.visibleComponents.command_bar);
+  const aiActionTelemetrySummary = useMemo(() => summarizeAiActionTelemetry(aiActionTelemetry), [aiActionTelemetry]);
 
   if (!visible) return null;
 
@@ -65,10 +80,10 @@ export function CommandBar() {
 
   if (!isExpanded) {
     return (
-      <button
-        onClick={() => setIsExpanded(true)}
-        className="group absolute bottom-3 right-3 z-30 flex h-9 items-center gap-2 rounded-xl border border-[#1f2536] bg-[#0b0f17]/80 px-3 text-[10px] font-medium text-[#5b667c] shadow-[0_4px_16px_rgba(0,0,0,0.25)] backdrop-blur-sm transition-all hover:border-[#32384d] hover:text-white hover:shadow-[0_4px_20px_rgba(0,0,0,0.35)]"
-      >
+        <button
+          onClick={() => setIsExpanded(true)}
+          className="group absolute bottom-3 right-3 z-30 flex h-9 items-center gap-2 rounded-xl border border-[#1f2536] bg-[#0b0f17]/80 px-3 text-[10px] font-medium text-[#5b667c] shadow-[0_4px_16px_rgba(0,0,0,0.25)] backdrop-blur-sm transition-all hover:border-[#32384d] hover:text-white hover:shadow-[0_4px_20px_rgba(0,0,0,0.35)]"
+        >
         <Sparkles className="h-3.5 w-3.5 text-emerald-400/70 group-hover:text-emerald-400" />
         AI Command
         <span className="rounded-full border border-emerald-500/15 bg-emerald-500/10 px-1.5 py-0.5 text-[8px] text-emerald-300">
@@ -76,6 +91,12 @@ export function CommandBar() {
         </span>
         <span className="rounded-full border border-[#24283a] bg-[#111521] px-1.5 py-0.5 text-[8px] text-[#8b96ab]">
           {mode.providerLabel}
+        </span>
+        <span className={`rounded-full border px-1.5 py-0.5 text-[8px] ${HEALTH_COLORS[providerHealth.overallStatus] ?? HEALTH_COLORS.partial}`}>
+          {providerHealth.overallStatus === "healthy" ? "Healthy" : providerHealth.overallStatus === "partial" ? "Partial" : "Blocked"}
+        </span>
+        <span className={`rounded-full border px-1.5 py-0.5 text-[8px] ${TELEMETRY_COLORS[providerTelemetry.overallStatus] ?? TELEMETRY_COLORS.guarded}`}>
+          {providerTelemetry.overallStatus === "ready" ? "Budget ready" : providerTelemetry.overallStatus === "guarded" ? "Budget guarded" : "Budget blocked"}
         </span>
         <kbd className="ml-1 rounded border border-[#24283a] bg-[#111521] px-1 py-0.5 text-[8px] text-[#4d566b]">
           ⌘K
@@ -105,8 +126,29 @@ export function CommandBar() {
               <span className="rounded-full border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[8px] text-[#8b96ab]">
                 {mode.cloudAvailable ? "Cloud-backed available" : "Local-only"}
               </span>
+              <span className={`rounded-full border px-2 py-0.5 text-[8px] ${HEALTH_COLORS[providerHealth.overallStatus] ?? HEALTH_COLORS.partial}`}>
+                {providerHealth.overallStatus === "healthy" ? "Provider healthy" : providerHealth.overallStatus === "partial" ? "Provider partial" : "Provider blocked"}
+              </span>
+              <span className={`rounded-full border px-2 py-0.5 text-[8px] ${TELEMETRY_COLORS[providerTelemetry.overallStatus] ?? TELEMETRY_COLORS.guarded}`}>
+                {providerTelemetry.overallStatus === "ready" ? "Budget ready" : providerTelemetry.overallStatus === "guarded" ? "Budget guarded" : "Budget blocked"}
+              </span>
             </div>
             <p className="mt-1 text-[10px] leading-snug text-[#8b96ab]">{mode.detail}</p>
+            <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">
+              Provider health: {providerHealth.healthyProviders} healthy / {providerHealth.partialProviders} partial / {providerHealth.blockedProviders} blocked.
+            </p>
+            <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">
+              Cost / latency: {providerTelemetry.activeCostLabel} · {providerTelemetry.activeLatencyLabel}.
+            </p>
+            <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">
+              Stage policy: {providerTelemetry.stagePolicies.map((stage) => `${stage.stage}:${stage.ready ? "ready" : "guarded"}`).join(" · ")}.
+            </p>
+            <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">
+              Latest measured action: {latestAiActionTelemetry ? `${latestAiActionTelemetry.stage} · ${latestAiActionTelemetry.durationMs} ms · ~${latestAiActionTelemetry.estimatedTotalTokens} tokens` : "none yet"}.
+            </p>
+            <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">
+              Telemetry trend: {aiActionTelemetrySummary.trendLabel} · {aiActionTelemetrySummary.trendNote}
+            </p>
           </div>
           <button
             onClick={() => {
@@ -217,7 +259,7 @@ export function CommandBar() {
           ))}
         </div>
         <div className="mt-1.5 rounded-lg border border-[#1a2030] bg-[#07090f]/70 px-2.5 py-1.5 text-[9px] text-[#8090a8]">
-          Offline-first: recognized scene edits run locally. Cloud-backed parsing and fix proposals use a configured API key.
+          {mode.label}: recognized scene edits run locally. {mode.cloudAvailable ? "Cloud-backed parsing and fix proposals use a configured API key." : "Cloud-backed parsing and fix proposals are disabled by policy."}
         </div>
         {/* Slash commands */}
         <div className="mt-1.5 flex flex-wrap gap-1.5">

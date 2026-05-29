@@ -1,5 +1,6 @@
 import type { SecurityScene } from "@/schema/security-scene";
 import { SCENE_TEMPLATES } from "@/lib/scene-templates";
+import { PROMPT_REGISTRY } from "@/agents/prompt-registry";
 import type { ModelProvider } from "@/agents/providers/ModelProvider";
 import { z } from "zod";
 import { createCameraNode, createCriticalZoneNode, createEntryPointNode, createObstructionNode, createScenarioPathNode, createSecurityLightNode } from "@/lib/node-factory";
@@ -207,7 +208,7 @@ export async function draftSceneFromPromptWithModel(
   const structured = await provider.completeStructured(
     {
       system:
-        "You generate security planning scene drafts. Return concise structured values only. Prefer realistic template choice, dimensions, and explicit scene element placements where they are confidently inferable from the prompt. Keep placements inside the room and use the scene blueprint schema faithfully.",
+        PROMPT_REGISTRY.find((entry) => entry.id === "model_layout_draft")?.systemPrompt ?? "",
       messages: [
         {
           role: "user",

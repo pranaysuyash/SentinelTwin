@@ -26,6 +26,9 @@ describe("CameraViewMode", () => {
     expect(source).toContain("Segment:");
     expect(source).toContain("Complete:");
     expect(source).toContain("Best Camera");
+    expect(source).toContain("Sensor Fusion");
+    expect(source).toContain("Active:");
+    expect(source).toContain("nearestSensorLabel");
     expect(source).toContain("Footage Verification");
     expect(source).toContain("Planning aid only.");
     expect(source).toContain("Auto align");
@@ -35,6 +38,10 @@ describe("CameraViewMode", () => {
     expect(source).toContain("Overlay");
     expect(source).toContain("Split");
     expect(source).toContain("Alignment Quality");
+    expect(source).toContain("Alignment Assist");
+    expect(source).toContain("Auto align applied");
+    expect(source).toContain("Manual offset controls are active for the current reference frame.");
+    expect(source).toContain("Run auto align or use manual offsets after loading a reference frame.");
     expect(source).toContain("Difference heat overlay");
     expect(source).toContain("non-forensic");
     expect(source).toContain("accept=\"image/*,video/*\"");
@@ -58,8 +65,13 @@ describe("CameraViewMode", () => {
     expect(source).toContain("selectedCandidateId: verificationSelectedCandidateId");
     expect(source).toContain("alignmentMethod: verificationAlignmentMethod");
     expect(source).toContain("autoAlignDelta: verificationAutoAlignDelta");
+    expect(source).toContain("scale: verificationScale");
+    expect(source).toContain("setVerificationScale(snapshot.scale ?? 1)");
+    expect(source).toContain("Reference scale");
+    expect(source).toContain("Math.round(scale * 100)");
     expect(source).toContain("setVerificationAlignmentMethod(snapshot.alignmentMethod ?? null)");
     expect(source).toContain("setVerificationAutoAlignDelta(snapshot.autoAlignDelta ?? null)");
+    expect(source).toContain("canAutoAlign={Boolean(verificationEnabled && verificationImageUrl && !verificationExtracting)}");
     expect(source).toContain("formatSnapshotEvidenceSummary");
     expect(source).toContain("Image upload");
     expect(source).toContain("manual align");

@@ -4,16 +4,13 @@ import { readFileSync } from "node:fs";
 const leftPanelPath = "./src/components/left-panel/LeftPanel.tsx";
 
 describe("LeftPanel", () => {
-  test("uses a full-width dock shell with collapsible subpanels", () => {
+  test("exposes the sensor placement tool in the core authoring rail", () => {
     const source = readFileSync(leftPanelPath, "utf8");
 
-    expect(source).toContain("flex h-full min-w-0 flex-1 flex-col");
-    expect(source).toContain("const [collapsedSections, setCollapsedSections]");
+    expect(source).toContain('id: "sensor"');
+    expect(source).toContain('label: "Sensor"');
+    expect(source).toContain("ScanSearch");
+    expect(source).toContain('key: "Y"');
     expect(source).toContain("Scene Tools");
-    expect(source).toContain("Scene Layers");
-    expect(source).toContain("Mini-Map");
-    expect(source).toContain("Toolbar hidden to favor canvas space.");
-    expect(source).toContain("Layer visibility hidden. Selected layers still drive the canvas.");
-    expect(source).toContain("Minimap hidden. Expand only when navigating the scene.");
   });
 });

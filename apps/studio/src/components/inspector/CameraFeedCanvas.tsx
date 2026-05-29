@@ -6,6 +6,7 @@ import { cn } from "@/lib/cn";
 
 import "@/lib/three-compat";
 import type { CameraNode, DoriQuality, SecurityScene } from "@/schema/security-scene";
+import { computeSensorFusionSummary } from "@/lib/sensor-fusion";
 import { qualityToScore } from "@/simulation/dori";
 import { useStudioStore } from "@/store/studio-store";
 import { PathActor, CoverageSegmentPath } from "@/components/workspace/SharedScene";
@@ -96,6 +97,7 @@ function FeedArtifacts({
   pathState,
   pathLabel,
   pathProgress,
+  sensorFusion,
   overlayOptions,
 }: {
   camera: CameraNode;
@@ -103,6 +105,14 @@ function FeedArtifacts({
   pathState: { currentIndex: number; segmentProgress: number } | null;
   pathLabel?: string | null;
   pathProgress?: number;
+  sensorFusion: {
+    totalCount: number;
+    activeCount: number;
+    nearestSensorLabel: string;
+    nearestSensorState: string;
+    nearestSensorCoverage: string;
+    nearestDistanceM: number | null;
+  };
   overlayOptions: FeedOverlayOptions;
 }) {
   const cameraStatus = String(camera.status);
@@ -181,6 +191,21 @@ function FeedArtifacts({
       {overlayOptions.timestamp ? (
         <div className="pointer-events-none absolute left-3 bottom-3 z-10 rounded-lg border border-[#2d3d56] bg-black/65 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.12em] text-[#c7d0e4] backdrop-blur-sm">
           {timestamp}
+        </div>
+      ) : null}
+
+      {sensorFusion.totalCount > 0 ? (
+        <div className="pointer-events-none absolute right-3 bottom-3 z-10 rounded-lg border border-cyan-400/20 bg-black/68 px-2.5 py-2 text-[8px] font-semibold uppercase tracking-[0.14em] text-cyan-100 backdrop-blur-sm">
+          <div className="text-[8px] uppercase tracking-[0.18em] text-cyan-300/90">Sensor Fusion</div>
+          <div className="mt-1 text-[9px] font-semibold normal-case tracking-normal text-white">
+            {sensorFusion.nearestSensorLabel}
+          </div>
+          <div className="mt-1 space-y-0.5 text-[8px] font-medium uppercase tracking-[0.12em] text-cyan-100/75">
+            <div>Distance: {sensorFusion.nearestDistanceM == null ? "—" : `${sensorFusion.nearestDistanceM.toFixed(1)}m`}</div>
+            <div>State: {sensorFusion.nearestSensorState}</div>
+            <div>Coverage: {sensorFusion.nearestSensorCoverage}</div>
+            <div>Active sensors: {sensorFusion.activeCount} / {sensorFusion.totalCount}</div>
+          </div>
         </div>
       ) : null}
     </>
@@ -283,6 +308,10 @@ export function CameraFeedCanvas({
   const bestCameraName = bestCameraForTarget
     ? (scene.cameras.find((entry) => entry.id === bestCameraForTarget.cameraId)?.name ?? bestCameraForTarget.cameraId)
     : camera.name;
+  const sensorFusion = computeSensorFusionSummary(camera.position, scene.sensors);
+  const nearestSensorLabel = sensorFusion.nearestSensor ? sensorFusion.nearestSensor.label : "None";
+  const nearestSensorState = sensorFusion.nearestSensor ? sensorFusion.nearestSensor.state.replace(/_/g, " ") : "—";
+  const nearestSensorCoverage = sensorFusion.nearestSensor ? sensorFusion.nearestSensor.coverageMode.replace(/_/g, " ") : "—";
 
   const canvasFilterClass = [
     viewMode === "normal" ? "" : viewMode === "ir" ? "grayscale-[0.95] brightness-[0.85] contrast-[1.25]" : viewMode === "low_light" ? "brightness-[0.72] contrast-[1.18] saturate-[0.85]" : "sepia-[0.8] saturate-[1.6] hue-rotate-[300deg] brightness-[0.82] contrast-[1.1]",
@@ -308,6 +337,14 @@ export function CameraFeedCanvas({
         pathState={pathState}
         pathLabel={selectedPath?.label ?? null}
         pathProgress={pathReplay.progress}
+        sensorFusion={{
+          totalCount: sensorFusion.totalCount,
+          activeCount: sensorFusion.activeCount,
+          nearestSensorLabel,
+          nearestSensorState,
+          nearestSensorCoverage,
+          nearestDistanceM: sensorFusion.nearestDistanceM,
+        }}
         overlayOptions={overlayFlags}
       />
 

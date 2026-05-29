@@ -10,6 +10,7 @@ describe("Studio dashboard launcher surface", () => {
     const source = readFileSync(dashboardHomePath, "utf8");
 
     expect(source).toContain("Security Simulation Workspace");
+    expect(source).toContain("Start Project");
     expect(source).toContain("Open Studio");
     expect(source).toContain("Run Simulation");
     expect(source).toContain("Import JSON");
@@ -22,9 +23,10 @@ describe("Studio dashboard launcher surface", () => {
     expect(source).toContain("Route Analysis");
     expect(source).toContain('viewMode: "map" as const');
     expect(source).toContain("Scan a Site");
-    expect(source).toContain("status=\"Preview / Manual-assisted\"");
+    expect(source).toContain('status: "Preview / Manual-assisted"');
     expect(source).toContain("Build a security scene from site photos by marking walls, doors, cameras, obstructions, lights, and critical zones.");
-    expect(source).toContain("Start Scan");
+    expect(source).toContain("Upload site photos");
+    expect(source).toContain("Import Floor Plan");
     expect(source).toContain("manual-assisted");
     expect(source).toContain("Current Workspace Preview");
     expect(source).toContain("Coverage (PPM)");
@@ -57,7 +59,8 @@ describe("Studio dashboard launcher surface", () => {
     expect(source).toContain("WorkspaceMiniPreview");
     expect(source).toContain("Loading preview");
     expect(source).toContain("Preview loading");
-    expect(source).toContain("const hydrated = useSyncExternalStore(");
+    expect(source).toContain("const [hydrated, setHydrated] = useState(false);");
+    expect(source).toContain("setHydrated(true);");
     expect(source).toContain('const manualScanFeature = featureStatus.find((entry) => entry.feature === "Scan Site (manual-assisted)") ?? null;');
     expect(source).toContain('const guidedScanFeature = featureStatus.find((entry) => entry.feature === "Guided scan reconstruction") ?? null;');
     expect(source).toContain('const aiLayoutDraftFeature = featureStatus.find((entry) => entry.feature === "AI layout draft") ?? null;');

@@ -16,6 +16,7 @@ describe("InspectorPanel", () => {
     expect(source).toMatch(/zone\s*\?\s*<CriticalZoneInspector \/>/);
     expect(source).toMatch(/obstruction\s*\?\s*<ObstructionInspector \/>/);
     expect(source).toMatch(/light\s*\?\s*<LightInspector \/>/);
+    expect(source).toMatch(/sensor\s*\?\s*<SensorInspector \/>/);
     expect(source).toMatch(/:\s*<NoSelection \/>/);
   });
 
@@ -43,6 +44,11 @@ describe("InspectorPanel", () => {
     expect(panelSource).toContain('SectionCard title="Night Impact"');
     expect(panelSource).toContain('label="Illuminates Night Coverage"');
     expect(panelSource).toContain("This light reduces night-mode penalty in the simulation");
+    expect(panelSource).toContain("function SensorInspector()");
+    expect(panelSource).toContain("Sensor Type");
+    expect(panelSource).toContain("Coverage Mode");
+    expect(panelSource).toContain("Nearest Camera");
+    expect(panelSource).toContain("Delete Sensor");
     expect(panelSource).toContain("Privacy Impact");
     expect(panelSource).toContain("This camera does not currently trigger privacy-specific issues");
   });
@@ -59,6 +65,9 @@ describe("InspectorPanel", () => {
     expect(source).toContain("Show DORI Labels");
     expect(source).toContain("Show Path Actor");
     expect(source).toContain("Show Bounding Box");
+    expect(source).toContain('SectionCard title="Sensor Fusion"');
+    expect(source).toContain("Nearest sensor state");
+    expect(source).toContain("Coverage mode");
     expect(source).toContain("PPM est.");
     expect(source).toContain("Angle from center");
     expect(source).toContain("Placement Presets");

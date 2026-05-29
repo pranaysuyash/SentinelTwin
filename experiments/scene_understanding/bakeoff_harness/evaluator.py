@@ -2,7 +2,7 @@ import json
 import math
 from pathlib import Path
 from typing import Optional
-from .schema import SecuritySceneSubset, PerImageMetrics, MetricsSummary, WallPrediction, DoorPrediction, WindowPrediction, ObstructionPrediction
+from .schema import SecuritySceneSubset, PerImageMetrics, MetricsSummary
 
 
 def _load_annotations(split: str) -> dict[str, dict]:
@@ -16,27 +16,128 @@ def _load_annotations(split: str) -> dict[str, dict]:
     return result
 
 
-def _line_distance(ax1, ay1, ax2, ay2, bx1, by1, bx2, by2) -> float:
-    """Minimum distance between two line segments' endpoints (simple approx)."""
-    dx = min(abs(ax1 - bx1), abs(ax1 - bx2), abs(ax2 - bx1), abs(ax2 - bx2))
-    dy = min(abs(ay1 - by1), abs(ay1 - by2), abs(ay2 - by1), abs(ay2 - by2))
-    return math.sqrt(dx * dx + dy * dy)
+def _classify_segment(x1, y1, x2, y2) -> str:
+    dx = abs(x2 - x1)
+    dy = abs(y2 - y1)
+    if dx < 1e-9 and dy < 1e-9:
+        return "P"
+    if dx >= dy:
+        return "H"
+    return "V"
 
 
-def _match_walls(pred_walls: list[WallPrediction], gt_walls: list[dict], threshold: float = 0.03) -> tuple[int, int, int]:
+def _overlap_ratio(a1: float, a2: float, b1: float, b2: float) -> float:
+    lo = max(min(a1, a2), min(b1, b2))
+    hi = min(max(a1, a2), max(b1, b2))
+    if hi <= lo:
+        return 0.0
+    overlap = hi - lo
+    a_len = abs(a2 - a1)
+    b_len = abs(b2 - b1)
+    return overlap / (a_len + b_len - overlap) if (a_len + b_len - overlap) > 0 else 0.0
+
+
+def _segment_match_score(
+    px1, py1, px2, py2, gx1, gy1, gx2, gy2, pos_tol: float, overlap_min: float = 0.2
+) -> float:
+    pk = _classify_segment(px1, py1, px2, py2)
+    gk = _classify_segment(gx1, gy1, gx2, gy2)
+    if pk == "P" or gk == "P":
+        return 0.0
+    if pk != gk:
+        return 0.0
+    if pk == "H":
+        py_avg = (py1 + py2) / 2
+        gy_avg = (gy1 + gy2) / 2
+        if abs(py_avg - gy_avg) > pos_tol:
+            return 0.0
+        return _overlap_ratio(px1, px2, gx1, gx2)
+    else:
+        px_avg = (px1 + px2) / 2
+        gx_avg = (gx1 + gx2) / 2
+        if abs(px_avg - gx_avg) > pos_tol:
+            return 0.0
+        return _overlap_ratio(py1, py2, gy1, gy2)
+
+
+def _normalize_gt_box_to_line(g: dict) -> tuple[float, float, float, float]:
+    x1, y1, x2, y2 = g["x1"], g["y1"], g["x2"], g["y2"]
+    dx = abs(x2 - x1)
+    dy = abs(y2 - y1)
+    if dx >= dy:
+        y_mid = (y1 + y2) / 2
+        return (x1, y_mid, x2, y_mid)
+    else:
+        x_mid = (x1 + x2) / 2
+        return (x_mid, y1, x_mid, y2)
+
+
+def _match_walls(
+    pred_walls: list,
+    gt_walls: list[dict],
+    pos_tol: float = 0.08,
+    overlap_min: float = 0.20,
+) -> tuple[int, int, int]:
     tp = 0
+    matched_gt = set()
     for pw in pred_walls:
-        for gw in gt_walls:
-            d = _line_distance(pw.x1, pw.y1, pw.x2, pw.y2, gw["x1"], gw["y1"], gw["x2"], gw["y2"])
-            if d < threshold:
-                tp += 1
-                break
+        best = 0.0
+        best_gi = -1
+        for gi, gw in enumerate(gt_walls):
+            if gi in matched_gt:
+                continue
+            s = _segment_match_score(
+                pw.x1, pw.y1, pw.x2, pw.y2,
+                gw["x1"], gw["y1"], gw["x2"], gw["y2"],
+                pos_tol, overlap_min,
+            )
+            if s > best:
+                best = s
+                best_gi = gi
+        if best >= overlap_min:
+            tp += 1
+            matched_gt.add(best_gi)
     fp = max(0, len(pred_walls) - tp)
     fn = max(0, len(gt_walls) - tp)
     return tp, fp, fn
 
 
-def _match_boxes(pred_items: list, gt_items: list[dict], iou_threshold: float = 0.3) -> tuple[int, int, int]:
+def _match_doors_windows(
+    pred_items: list,
+    gt_items: list[dict],
+    pos_tol: float = 0.08,
+    overlap_min: float = 0.15,
+) -> tuple[int, int, int]:
+    tp = 0
+    matched_gt = set()
+    for p in pred_items:
+        best = 0.0
+        best_gi = -1
+        for gi, g in enumerate(gt_items):
+            if gi in matched_gt:
+                continue
+            gx1, gy1, gx2, gy2 = _normalize_gt_box_to_line(g)
+            s = _segment_match_score(
+                p.x1, p.y1, p.x2, p.y2,
+                gx1, gy1, gx2, gy2,
+                pos_tol, overlap_min,
+            )
+            if s > best:
+                best = s
+                best_gi = gi
+        if best >= overlap_min:
+            tp += 1
+            matched_gt.add(best_gi)
+    fp = max(0, len(pred_items) - tp)
+    fn = max(0, len(gt_items) - tp)
+    return tp, fp, fn
+
+
+def _match_boxes(
+    pred_items: list,
+    gt_items: list[dict],
+    iou_threshold: float = 0.15,
+) -> tuple[int, int, int]:
     def iou(p, g):
         x1 = max(p.x1, g["x1"])
         y1 = max(p.y1, g["y1"])
@@ -127,12 +228,18 @@ def evaluate_predictions(predictions: list[SecuritySceneSubset], split: str) -> 
         wall_err = 0.0
         for pw in pred.walls:
             for gw in gt_walls:
-                wall_err = max(wall_err, _line_distance(pw.x1, pw.y1, pw.x2, pw.y2, gw["x1"], gw["y1"], gw["x2"], gw["y2"]))
+                w = _segment_match_score(
+                    pw.x1, pw.y1, pw.x2, pw.y2,
+                    gw["x1"], gw["y1"], gw["x2"], gw["y2"],
+                    pos_tol=0.15,
+                )
+                if w > wall_err:
+                    wall_err = 1.0 - w
 
-        tp_d, fp_d, fn_d = _match_boxes(pred.doors, gt_doors)
+        tp_d, fp_d, fn_d = _match_doors_windows(pred.doors, gt_doors)
         door_f1 = _f1(tp_d, fp_d, fn_d)
 
-        tp_wi, fp_wi, fn_wi = _match_boxes(pred.windows, gt_windows)
+        tp_wi, fp_wi, fn_wi = _match_doors_windows(pred.windows, gt_windows)
         window_f1 = _f1(tp_wi, fp_wi, fn_wi)
 
         tp_o, fp_o, fn_o = _match_boxes(pred.obstructions, gt_obstructions)

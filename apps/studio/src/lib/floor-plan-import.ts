@@ -232,6 +232,7 @@ export function createSceneFromFloorPlan(
     obstructions: [],
     criticalZones,
     privacyZones: [],
+    sensors: [],
     entryPoints,
     paths: [],
     assumptions: {

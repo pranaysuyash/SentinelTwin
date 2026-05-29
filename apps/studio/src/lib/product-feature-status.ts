@@ -6,7 +6,7 @@ export interface ProductFeatureEntry {
   detail: string;
 }
 
-export const PRODUCT_FEATURE_STATUS_LAST_VERIFIED = "2026-05-28";
+export const PRODUCT_FEATURE_STATUS_LAST_VERIFIED = "2026-05-29";
 
 export const PRODUCT_FEATURE_STATUS: ProductFeatureEntry[] = [
   {
@@ -35,6 +35,11 @@ export const PRODUCT_FEATURE_STATUS: ProductFeatureEntry[] = [
     detail: "Prompt-to-scene starter with model-backed output when configured.",
   },
   {
+    status: "Preview",
+    feature: "Governance control plane",
+    detail: "Role-aware publish, review, approval, rejection, and annotation controls with evidence-logged audit trails.",
+  },
+  {
     status: "Planned",
     feature: "Guided scan reconstruction",
     detail: "Future: guided phone capture, segmentation, depth, and multi-photo reconstruction that can plug into the same editable SecurityScene pipeline.",
@@ -42,6 +47,6 @@ export const PRODUCT_FEATURE_STATUS: ProductFeatureEntry[] = [
   {
     status: "Preview",
     feature: "Real footage verification",
-    detail: "Reference image/video ingest with multi-frame candidate extraction, auto best-frame scoring, saved snapshot evidence lineage, deterministic auto-align assist, alignment provenance tags, overlay/split compare, alignment estimate, and difference heat overlay.",
+    detail: "Reference image/video ingest with multi-frame candidate extraction, auto best-frame scoring, saved snapshot evidence lineage, deterministic auto-align assist, reference scale calibration, alignment provenance tags, overlay/split compare, alignment estimate, and difference heat overlay.",
   },
 ];

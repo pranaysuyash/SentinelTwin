@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const tabPath = "./src/components/bottom-panel/SceneIntelligenceTab.tsx";
+const tabPath = join(import.meta.dir, "../bottom-panel/SceneIntelligenceTab.tsx");
 
 describe("SceneIntelligenceTab", () => {
   test("supports interactive provenance inspection and trace focus", () => {
@@ -16,7 +17,48 @@ describe("SceneIntelligenceTab", () => {
     expect(source).toContain("Copy deep link");
     expect(source).toContain("provenanceNode");
     expect(source).toContain("provenanceEdge");
+    expect(source).toContain("Evidence ledger");
+    expect(source).toContain("Append-only journal");
+    expect(source).toContain("Search evidence");
+    expect(source).toContain("Clear filters");
+    expect(source).toContain("Lifecycle stage");
+    expect(source).toContain("All stages");
+    expect(source).toContain("Branch filter");
+    expect(source).toContain("All branches");
+    expect(source).toContain("Branch heads");
+    expect(source).toContain("Preview lineage");
+    expect(source).toContain("Branch lineage");
+    expect(source).toContain("Preview lineage");
+    expect(source).toContain("point-in-time");
+    expect(source).toContain("Point-in-time reconstruction");
+    expect(source).toContain("Preview only");
+    expect(source).toContain("Reconstruct the scene state at this checkpoint without committing it yet.");
+    expect(source).toContain("No branch lineage selected.");
+    expect(source).toContain("Branch comparison");
+    expect(source).toContain("Merge readiness");
+    expect(source).toContain("Set as left branch");
+    expect(source).toContain("Set as right branch");
+    expect(source).toContain("common ancestor");
+    expect(source).toContain("Restore left as draft");
+    expect(source).toContain("Restore right as draft");
+    expect(source).toContain("Event kinds");
+    expect(source).toContain("branchCounts");
+    expect(source).toContain("branchLabel");
+    expect(source).toContain("No branch metadata yet.");
+    expect(source).toContain("Publish current scene");
+    expect(source).toContain("Recent snapshots");
+    expect(source).toContain("Change log");
     expect(source).toContain("Provenance notes");
+    expect(source).toContain("Operational memory");
+    expect(source).toContain("Point-in-time checkpoints");
+    expect(source).toContain("Restore checkpoint");
+    expect(source).toContain("Restore as draft");
+    expect(source).toContain("Restore as recovered");
+    expect(source).toContain("Restore as published");
+    expect(source).toContain("Before:");
+    expect(source).toContain("After:");
+    expect(source).toContain("Recent snapshots");
+    expect(source).toContain("change-log entries, and operational memory events");
     expect(source).toContain("selectedEdgeId");
   });
 });

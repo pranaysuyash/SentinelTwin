@@ -60,7 +60,8 @@ When the scene understanding agent extracts objects from a photo, it will make m
 The user must be able to: confirm, delete, move, or relabel each extracted object.
 **UI pattern:** Object-by-object review panel with confidence badge. Objects with confidence < 0.7
 are pre-highlighted for review. User clicks confirm or corrects.
-**Open:** What does this confirmation flow look like? Need UX design pass.
+**Update:** The manual-assisted scan flow now exposes a visible review queue, confidence badges, and direct Accept / Review / Reject actions per candidate, so the correction path is explicit rather than hidden behind a generic status dropdown.
+**Open:** What does the fuller confirmation flow look like for future AI-extracted scene modes beyond the current manual-assisted scan intake? Need UX design pass.
 
 ### Q-008: How does SAM 3 run in the browser or backend?
 SAM 3 is Meta's latest segmentation model. Is it available as a hosted API or must we self-host?
@@ -121,7 +122,7 @@ Build the feature to flag zones, not to guarantee compliance.
 Will it place a 2m shelf at a reasonable position, or hallucinate impossible geometry?
 **Experiment:** Test this in experiments/scene_generation/ before committing to the feature.
 **Update:** The current AI draft flow already generates editable `SecurityScene` drafts from prompt text and now enriches obvious shop prompts with entry points, lighting, and a basic entry-to-counter path. Direct prompt-to-final JSON generation remains the open next step.
-**Update 2:** The model-backed draft path now compiles an explicit scene blueprint with concrete camera, light, obstruction, zone, entry, and path placements when the provider supports structured output. What remains open is whether we should expose the full raw `SecurityScene` JSON surface directly to users, or keep the current blueprint abstraction as the final prompt-to-scene contract.
+**Update 2:** The model-backed draft path now compiles an explicit scene blueprint with concrete camera, light, obstruction, zone, entry, and path placements when the provider supports structured output. The launcher now also exposes an editable raw `SecurityScene` JSON preview with schema validation before apply. What remains open is whether we should promote that into a dedicated text-to-scene authoring mode, or keep the current preview-first blueprint contract as the primary UX.
 
 ---
 
@@ -167,8 +168,9 @@ cloud service. This is a real sales blocker for the professional market, not an 
 - What data leaves the device today under the current architecture? (AI model calls send
   SecurityScene JSON to OpenAI/Gemini — this is the site layout)
 - Can AI calls be made locally (local LLM) for users who require it?
-**This must be resolved before building any data persistence or AI call layer.**
+**This boundary is now enforced in-product via Local-only mode; the remaining decision is deployment strategy for cloud-backed AI, not whether local-only operation is possible.**
 **Related decision:** D-019. Thread 23 in EXPLORATION_MAP.md.
+**Update:** Local-only mode is now a store-backed, user-visible policy toggle in View Settings and is enforced by the AI command bar, AI draft launcher, counterfactual proposals, and report generation. The remaining decision is deployment strategy for cloud-backed AI, not whether the product can operate in a local-only posture.
 
 ### Q-019: Multi-sensor scope — where does SentinelTwin draw the boundary?
 Cameras are one sensor layer. Physical security also includes:
@@ -185,6 +187,7 @@ An access log entry for a door that Camera 3 should cover but doesn't is a verif
 - If yes: when, and what does their simulation model look like?
 - If no: is this an explicit product boundary, or something left open for later?
 **Related decision:** D-022. Thread 25 in EXPLORATION_MAP.md.
+**Update:** The studio now has a canonical `sensors` array on `SecurityScene`, reports its count in the report header, and surfaces a nearest-sensor `Sensor Fusion` preview in the camera inspector. The editor and simulation workflow remain camera-first, so the open question is now about product scope and editing UX for the future sensor toolset and live fusion layer, not about whether the schema can carry sensors at all.
 
 ### Q-020: India-first GTM — what does the product need to serve this market first?
 Thread 18 and PRODUCT_VALUE_POSITIONING.md identify India/Southeast Asia as the primary
@@ -210,3 +213,46 @@ The studio runtime warning still points into `@react-three/fiber` internals rath
 - If not, is there a safe local patch or fork strategy we should use until upstream catches up?
 - Should we suppress the warning temporarily in development, or keep it visible as a dependency-health signal?
 **Related finding:** Thread 75 in `Docs/exploration/EXPLORATION_MAP.md`.
+**Update:** The app now imports a local `three-compat` shim before every R3F canvas entry point, and the compatibility behavior is regression-tested at the source level. The runtime warning should be treated as mitigated in-product unless a future dependency upgrade changes the situation.
+
+### Q-022: What is the canonical event schema for Operational Evidence Memory?
+The new platform spine is a temporal ledger, but the exact event shape still needs to be nailed down before implementation.
+**Questions to answer:**
+- What are the canonical event types: scene edit, scan session step, AI draft proposal, human correction, snapshot, simulation run, report export, live sensor event?
+- Which fields are mandatory for every event: actor, source, timestamp, affected node IDs, before/after delta, confidence, provenance links?
+- Should event payloads store enough data to fully reconstruct state, or should they only reference immutable snapshots and derived nodes?
+- How do we map the event stream back into the timeline UI without mixing derived summaries into canonical history?
+**Related decision:** D-149 in `Docs/decisions/DECISION_LOG.md`.
+**Update:** The first operational memory pass now exists in-product as a visible event ledger for scene edits, scene loads, snapshots, simulation runs, counterfactuals, duplicate-node actions, scan-session compiles, and AI draft proposals. It now also shows event-kind counts, before/after scene summaries, reconstructable checkpoints for events with snapshots, lifecycle branch labels for draft / recovered / published history, branch-head filters/navigation, branch-lineage previews, a branch-comparison panel, merge-readiness guidance, explicit restore-to-branch actions, a selected-checkpoint point-in-time reconstruction preview, append-only journal-backed persistence with merge batches, a visible journal batch view in the debug panel, and an exportable recovery archive that preserves the journal payload itself while restoring the scene, ledger, governance state, and shared-workspace access state back into Studio. The remaining question is how to model point-in-time reconstruction, backend sync, and publication semantics without losing the simplicity of the current scene model.
+
+### Q-023: What role and approval model should govern draft, recovered, and published scenes?
+The product now has visible branch labels, branch-lineage previews, a branch-comparison panel, merge-readiness guidance, explicit restore-to-branch actions, a publish action, a local Governance tab, and an operational evidence archive restore path with local branch merge support plus a shared-workspace access surface, but the backend identity, sync, and conflict model are still undefined.
+**Questions to answer:**
+- Which backend identity model should own the active member selection and reviewer routing?
+- Should publication require explicit approval when a scene is shared or compliance-bound?
+- How should comments, annotations, approvals, and routing decisions be represented in the evidence ledger?
+- What is the minimal RBAC/ABAC model that supports operators, reviewers, auditors, installers, insurers, and privacy reviewers across backend services?
+**Related decisions:** D-149, D-150, D-151, D-152, D-154 in `Docs/decisions/DECISION_LOG.md`.
+**Update:** The Governance tab now also exposes a visible approval trail backed by the operational evidence ledger, so requests, approvals, rejections, annotations, role changes, and policy changes are auditable in-product. The open question now narrows to backend identity, remote approval routing, and cross-service conflict handling rather than basic auditability.
+**Update 2:** The Governance tab now also exposes a remote governance handoff queue backed by `/api/governance-archive`, so the approval trail can be dispatched into a canonical archive before any real remote approval service exists. The remaining open question is the identity model and cross-service approval routing semantics, not whether the product can queue and archive governance actions locally.
+**Update 3:** The Governance tab now also exposes a workspace membership handoff queue backed by `/api/workspace-membership-archive`, so the active member, team roster, routing policy, and drift against the latest archived snapshot can be archived in a canonical backend-identity record before any real shared identity service exists. The remaining open question is now the remote identity-backed approval routing and conflict model, not whether the app can capture shared membership locally.
+**Update 4:** The Governance tab now also exposes a `Sync Membership Snapshot` action that reconciles the live workspace against the latest archived membership snapshot and records the drift state in the operational evidence ledger, so the remaining open question narrows further to remote identity-backed routing across services rather than basic local reconciliation.
+
+### Q-024: What should the provider/model governance layer expose?
+The app has a provider selection and local-only policy, but the long-term AI control plane still needs a formal governance model.
+**Questions to answer:**
+- How do we record provider choice, prompt version, and output schema for each AI action?
+- What is the canonical fallback order when a provider fails or is unavailable?
+- How should we surface latency, cost, and confidence per model stage to the user?
+- How should richer measured cost/latency telemetry, thresholds, and trend history be surfaced now that provider health, estimated budget classes, and the first measured AI action trail are visible in the Debug panel, command bar, and AI draft launcher?
+**Related decisions:** D-058, D-059, D-127, D-128, D-168, D-169, D-170 in `Docs/decisions/DECISION_LOG.md`.
+**Update:** The Debug panel now exposes a visible Model Eval Suite that exercises the current provider/model against canonical structured-output fixtures for command parsing, counterfactuals, report generation, and AI layout drafting. It also persists a local eval history with stage-budget and trend comparison, and now adds a provider-health dashboard plus a canonical prompt registry. The command bar and AI draft launcher now mirror the provider-health summary, and all three surfaces now show estimated cost/latency policy classes plus a live measured AI action trail, so the remaining open design question is richer telemetry aggregation and broader threshold policy rather than basic provider visibility.
+
+### Q-025: What is the first-class guided capture backend for scan-first?
+RoomPlan, manual-assisted mobile capture, and later sparse reconstruction all point at the same product wedge, but the implementation path still needs an explicit backend choice.
+**Questions to answer:**
+- Should the first official guided capture path target RoomPlan on Apple devices, or should the product stay provider-agnostic with RoomPlan as one capture backend?
+- Where do we store and display scale anchors so relative depth and reconstruction stay honest?
+- Which outputs count as draft evidence versus publishable evidence in the branch-aware ledger?
+- Should sparse reconstruction results be written as separate candidate branches or as a derived snapshot on the same scene branch?
+**Related threads:** 21 in `Docs/exploration/EXPLORATION_MAP.md`, plus the operational evidence and branch-recovery work in `Docs/todos/FULL_VISION_GAP_INVENTORY.md`.

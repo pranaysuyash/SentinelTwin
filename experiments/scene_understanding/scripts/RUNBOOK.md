@@ -36,28 +36,53 @@ The harness is built and a GPT-4o pilot run has completed successfully.
 - **Annotations:** Ground truth JSON in `data/annotations/dev/`
 - **Splits:** Split manifests in `data/splits/`
 
-### Pilot results (GPT-4o, 5 images)
+### Pilot results
 
 File: `outputs/COMPARISON_REPORT.md`
 
+#### GPT-4o (improved prompt + smart matcher)
+
 | Metric | Value |
 |---|---|
-| Wall F1 | 0.436 (inset GT vs full-perimeter GPT — matching needs tuning) |
-| Door F1 | 0.000 (detected but polyline format mismatch with box matching) |
-| Window F1 | 0.000 (same format mismatch) |
-| Obstruction F1 | 0.467 |
-| Critical Zone Recall | 0.000 (not detected — needs prompt tuning) |
-| P50 Latency | 5,686ms |
+| Wall F1 | 0.964 |
+| Door F1 | 0.400 (2/5 doors matched; 3 are genuine model errors on wrong wall) |
+| Window F1 | 0.700 (4/5 windows matched) |
+| Obstruction F1 | 0.417 (corridor with 0/4 drags score down) |
+| Critical Zone Recall | 0.200 (1/5 detected — prompt improvement helped but still weak) |
+| P50 Latency | 5,058ms |
 | Schema valid rate | 100% |
 | Hard fail rate | 0% |
 
-### Recommendation
+#### GPT-5.4 Nano
 
-Scores are low due to matching algorithm strictness (GT uses inset walls with door gaps, GPT returns full perimeter). The pipeline is sound. Next steps:
-1. Tune the matching algorithm for better tolerance of coordinate conventions
-2. Add explicit critical zone prompting to the extraction prompt
-3. Run Florence-2 and Qwen candidates
-4. Source 5 more real-world floor plan images for the validation split
+| Metric | Value |
+|---|---|
+| Wall F1 | 0.931 (marginally behind GPT-4o) |
+| Door F1 | 0.400 (same 2/5 correct) |
+| Window F1 | 0.100 (weak — only 1/5) |
+| Obstruction F1 | 0.178 (misses most in crowded scenes) |
+| Critical Zone Recall | 0.200 (same as GPT-4o) |
+| P50 Latency | 4,853ms (faster than GPT-4o) |
+| Schema valid rate | 100% |
+| Hard fail rate | 0% |
+
+### Matching algorithm
+
+The evaluator uses collinearity + overlap matching (not endpoint distance). For each predicted wall/segment:
+1. Classify as horizontal or vertical
+2. Check position tolerance (pos_tol=0.08 for walls/doors/windows)
+3. Compute 1D overlap ratio along the shared axis
+4. Match if overlap ≥ threshold (0.20 for walls, 0.15 for doors/windows)
+
+This handles the GT-inset vs GPT-perimeter coordinate convention mismatch. GT doors (2D boxes) are projected to their longer axis for line-to-line matching.
+
+### Remaining gaps
+
+1. **Critical zones**: Only 1/5 detected by either model. Need better prompt engineering or visual markers
+2. **Obstructions in clutter**: Corridor scene (0/4 detected by either model) and gpt-5.4-nano's general weakness suggest the model needs scene-specific prompting for dense obstruction layouts
+3. **Window/Obstruction tradeoff**: GPT-4o's improved prompt (adding "colored rectangular regions" for CZs) slightly degraded window/obstruction accuracy — suggest decoupling into separate extraction passes
+4. **Run Florence-2 and Qwen candidates** for baseline comparison
+5. **Source 5+ real-world floor plan images** for validation split
 
 ### Required outputs per run
 

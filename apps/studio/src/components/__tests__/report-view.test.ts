@@ -25,6 +25,7 @@ describe("ReportView", () => {
     expect(source).toContain("Privacy Zones");
     expect(source).toContain("Restricted Cells");
     expect(source).toContain("Privacy Issues");
+    expect(source).toContain("Sensors");
     expect(source).toContain("Redundant Zones");
     expect(source).toContain("SPOF Zones");
     expect(source).toContain("Uncovered Zones");

@@ -5,6 +5,7 @@ import type {
   ObstructionNode,
   PathPoint,
   PrivacyZoneNode,
+  SensorNode,
   SecurityLightNode,
   ScenarioPath,
   WallNode,
@@ -22,6 +23,7 @@ let _criticalZoneCounter = 0;
 let _privacyZoneCounter = 0;
 let _entryCounter = 0;
 let _pathCounter = 0;
+let _sensorCounter = 0;
 
 function makeId(prefix: string, counter: number) {
   return `${prefix}_${Date.now().toString(36)}_${counter}`;
@@ -110,6 +112,34 @@ export function createSecurityLightNode(
     emergencyPower: false,
     illuminatesNightCoverage: true,
     glareRisk: "none",
+    source: "manual",
+  };
+}
+
+export function createSensorNode(
+  position: [number, number, number],
+  sensorType: SensorNode["sensorType"] = "motion",
+): SensorNode {
+  _sensorCounter += 1;
+
+  const labelMap: Record<SensorNode["sensorType"], string> = {
+    motion: "Motion Sensor",
+    door_contact: "Door Contact",
+    access_reader: "Access Reader",
+    audio: "Audio Sensor",
+    vibration: "Vibration Sensor",
+    panic_button: "Panic Button",
+    smoke_heat: "Smoke / Heat Sensor",
+  };
+
+  return {
+    id: makeId("sensor", _sensorCounter),
+    nodeType: "sensor",
+    label: `${labelMap[sensorType]} ${_sensorCounter}`,
+    sensorType,
+    position,
+    state: "active",
+    coverageMode: "detection",
     source: "manual",
   };
 }

@@ -191,6 +191,26 @@ export const privacyZoneNodeSchema = z.object({
   regulation: z.string(),
 });
 
+export const sensorNodeSchema = z.object({
+  id: z.string().startsWith("sensor_"),
+  nodeType: z.literal("sensor"),
+  label: z.string(),
+  sensorType: z.enum([
+    "motion",
+    "door_contact",
+    "access_reader",
+    "audio",
+    "vibration",
+    "panic_button",
+    "smoke_heat",
+  ]),
+  position: point3Schema,
+  state: z.enum(["active", "inactive", "faulted"]).default("active"),
+  coverageMode: z.enum(["detection", "trigger", "audit"]).default("detection"),
+  source: sceneSourceSchema,
+  notes: z.string().optional(),
+});
+
 export const entryPointNodeSchema = z.object({
   id: z.string().startsWith("entry_"),
   nodeType: z.literal("entry_point"),
@@ -643,6 +663,7 @@ const securitySceneBaseSchema = z.object({
   obstructions: z.array(obstructionNodeSchema).default([]),
   criticalZones: z.array(criticalZoneNodeSchema).default([]),
   privacyZones: z.array(privacyZoneNodeSchema).default([]),
+  sensors: z.array(sensorNodeSchema).default([]),
   entryPoints: z.array(entryPointNodeSchema).default([]),
   paths: z.array(scenarioPathSchema).default([]),
   assumptions: simulationAssumptionsSchema,
@@ -677,6 +698,7 @@ export type SecurityLightNode = z.infer<typeof securityLightNodeSchema>;
 export type ObstructionNode = z.infer<typeof obstructionNodeSchema>;
 export type CriticalZoneNode = z.infer<typeof criticalZoneNodeSchema>;
 export type PrivacyZoneNode = z.infer<typeof privacyZoneNodeSchema>;
+export type SensorNode = z.infer<typeof sensorNodeSchema>;
 export type EntryPointNode = z.infer<typeof entryPointNodeSchema>;
 export type PathPoint = z.infer<typeof pathPointSchema>;
 export type ScenarioPath = z.infer<typeof scenarioPathSchema>;
@@ -702,6 +724,7 @@ export type AnyEditableNode =
   | WindowNode
   | CameraNode
   | SecurityLightNode
+  | SensorNode
   | ObstructionNode
   | CriticalZoneNode
   | PrivacyZoneNode

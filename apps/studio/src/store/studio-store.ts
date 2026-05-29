@@ -2,8 +2,61 @@ import { create } from "zustand";
 
 import { createSmallRetailShopScene, smallRetailShopScene } from "@/demo-scenes/small-retail-shop";
 import { DEFAULT_AI_PROVIDER_SELECTION, normalizeAiProviderSelection, type AiProviderSelection } from "@/agents/provider-selection";
+import {
+  loadModelEvalHistoryFromRaw,
+  serializeModelEvalHistory,
+  summarizeModelEvalRun,
+  type ModelEvalRunRecord,
+  type ModelEvalSuiteResult,
+} from "@/agents/model-eval";
+import type { SupportIngestResponse } from "@/lib/support-ingest";
+import type { SupportIngestHistoryRecord } from "@/lib/support-ingest-history";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 import { createCameraNode, createCriticalZoneNode, createObstructionNode, createSecurityLightNode, createWallNode } from "@/lib/node-factory";
+import {
+  buildOperationalEvidenceEvent,
+  compareOperationalEvidenceBranches,
+  assessOperationalEvidenceMergeReadiness,
+  confidenceLabel,
+  kindToTitle,
+  normalizeOperationalEvidenceEvents,
+  mergeOperationalEvidenceBranchScenes,
+  reconstructSceneFromEvidence,
+  findLatestOperationalEvidenceEventForScene,
+  summarizeSceneEvidence,
+  summarizeSimulationEvidence,
+  type OperationalEvidenceEventInput,
+  type OperationalEvidenceEvent,
+} from "@/lib/operational-evidence";
+import {
+  loadOperationalEvidenceEventsFromRaw,
+  loadOperationalEvidenceJournalFromRaw,
+  serializeOperationalEvidenceJournal,
+} from "@/lib/operational-evidence-journal";
+import {
+  buildOperationalEvidenceArchive,
+  createArchiveRestoreEvent,
+  normalizeOperationalEvidenceArchive,
+  type OperationalEvidenceArchive,
+} from "@/lib/operational-evidence-archive";
+import {
+  canPublishWorkspaceScene,
+  createDefaultWorkspaceGovernance,
+  normalizeWorkspaceGovernance,
+  type WorkspaceApprovalMode,
+  type WorkspaceGovernanceState,
+  type WorkspaceRole,
+  type WorkspaceSceneStatus,
+} from "@/lib/workspace-governance";
+import {
+  canPerformWorkspaceAction,
+  createDefaultWorkspaceAccessState,
+  getActiveWorkspaceMember,
+  normalizeWorkspaceAccessState,
+  routeWorkspaceApproval,
+  type WorkspaceAccessState,
+} from "@/lib/workspace-access";
+import { summarizeWorkspaceMembershipDrift } from "@/lib/workspace-membership-routing";
 import { buildSceneIntelligenceGraph, type SceneIntelligenceGraph } from "@/lib/scene-intelligence-graph";
 import {
   createDefaultEnabledAnalysisModules,
@@ -25,6 +78,7 @@ import {
   type SecurityScene,
   type SimulationResult,
   type SceneSnapshot,
+  type SensorNode,
   cloneSecurityScene,
   parseSecurityScene,
   safeParseSecurityScene,
@@ -81,7 +135,7 @@ type DemoSceneSnapshot = Omit<SceneSnapshot, "scene"> & {
 
 export type ActiveTool =
   | "select" | "camera" | "obstruction" | "light"
-  | "path" | "zone" | "door_window" | "wall" | "measure" | "comment";
+  | "sensor" | "path" | "zone" | "door_window" | "wall" | "measure" | "comment";
 
 export type EditorMode =
   | "idle"
@@ -103,7 +157,7 @@ export type EditorDraft = {
   selectedHandle?: string;
 };
 
-export type BottomTab = "outcome" | "metrics" | "issues" | "timeline" | "beforeafter" | "report" | "help" | "debug" | "counterfactual" | "threat" | "redundancy" | "temporal" | "assumptions" | "provenance" | "novel";
+export type BottomTab = "outcome" | "metrics" | "issues" | "sensors" | "timeline" | "beforeafter" | "report" | "help" | "debug" | "counterfactual" | "threat" | "redundancy" | "temporal" | "assumptions" | "governance" | "provenance" | "novel";
 
 export type InspectorTab = "properties" | "view" | "status" | "analytics" | "failures";
 
@@ -164,9 +218,100 @@ function cloneDefaultMapState(): MapState {
   };
 }
 
+function cloneSceneWithChangeLog(scene: SecurityScene, changeLog: string[]) {
+  const next = cloneSecurityScene(scene);
+  next.changeLog = changeLog;
+  return next;
+}
+
+function cloneSceneWithAppendedChangeLog(scene: SecurityScene, entry: string) {
+  return cloneSceneWithChangeLog(scene, [...scene.changeLog, entry]);
+}
+
+function cloneSceneWithSnapshotsAndChangeLog(scene: SecurityScene, snapshots: SceneSnapshot[], entry: string) {
+  const next = cloneSecurityScene(scene);
+  next.snapshots = snapshots;
+  next.changeLog = [...next.changeLog, entry];
+  return next;
+}
+
+export function createRuntimeIncident(input: RuntimeIncidentInput): RuntimeIncident {
+  const timestamp = input.timestamp ?? Date.now();
+  return {
+    ...input,
+    id: `incident_${timestamp.toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+    timestamp,
+  };
+}
+
 export type FocusScenePointRequest = {
   point: [number, number];
   source: MapViewportTarget;
+};
+
+export type RuntimeIncidentCategory =
+  | "user_error"
+  | "data_validation_error"
+  | "provider_failure"
+  | "runtime_failure"
+  | "performance_trace";
+
+export type RuntimeIncidentSeverity = "info" | "warning" | "error";
+
+export type RuntimeIncident = {
+  id: string;
+  timestamp: number;
+  category: RuntimeIncidentCategory;
+  severity: RuntimeIncidentSeverity;
+  title: string;
+  details: string;
+  stack?: string | null;
+  durationMs?: number | null;
+  source?: string | null;
+  path?: string | null;
+  action?: string | null;
+};
+
+export type RuntimeIncidentInput = Omit<RuntimeIncident, "id" | "timestamp"> & {
+  timestamp?: number;
+};
+
+export type ExternalLogEntrySource = "paste" | "file";
+export type ExternalLogEntrySeverity = "info" | "warning" | "error";
+
+export type ExternalLogEntry = {
+  id: string;
+  timestamp: number;
+  source: ExternalLogEntrySource;
+  title: string;
+  details: string;
+  raw: string;
+  lineCount: number;
+  severity: ExternalLogEntrySeverity;
+};
+
+export type ExternalLogEntryInput = Omit<ExternalLogEntry, "id" | "timestamp"> & {
+  timestamp?: number;
+};
+
+export type AiActionTelemetryStage = "command_parse" | "counterfactual" | "report_generation" | "ai_draft";
+
+export type AiActionTelemetryRecord = {
+  id: string;
+  stage: AiActionTelemetryStage;
+  providerId: AiProviderSelection["providerId"];
+  providerLabel: string;
+  model: string;
+  localOnlyMode: boolean;
+  cloudAvailable: boolean;
+  timestamp: number;
+  durationMs: number;
+  estimatedPromptTokens: number;
+  estimatedCompletionTokens: number;
+  estimatedTotalTokens: number;
+  tokenSource: "estimated" | "usage";
+  status: "success" | "error";
+  note?: string | null;
 };
 
 const PROJECT_STORAGE_KEY = "sentineltwin_saved_projects_v2";
@@ -176,6 +321,14 @@ const LEGACY_LAYOUT_STORAGE_KEY = "sentineltwin_saved_layouts_v1";
 const UI_THEME_STORAGE_KEY = "sentineltwin_ui_theme";
 const UI_DENSITY_STORAGE_KEY = "sentineltwin_ui_density";
 const AI_PROVIDER_STORAGE_KEY = "sentineltwin_ai_provider_selection";
+const LOCAL_ONLY_STORAGE_KEY = "sentineltwin_local_only_mode";
+export const OPERATIONAL_EVIDENCE_STORAGE_KEY = "sentineltwin_operational_evidence_v1";
+const MODEL_EVAL_HISTORY_STORAGE_KEY = "sentineltwin_model_eval_history_v1";
+const AI_TELEMETRY_STORAGE_KEY = "sentineltwin_ai_action_telemetry_v1";
+const EXTERNAL_LOG_STORAGE_KEY = "sentineltwin_external_log_entries_v1";
+const SUPPORT_INGEST_HISTORY_STORAGE_KEY = "sentineltwin_support_ingest_history_v1";
+const WORKSPACE_GOVERNANCE_STORAGE_KEY = "sentineltwin_workspace_governance_v1";
+const WORKSPACE_ACCESS_STORAGE_KEY = "sentineltwin_workspace_access_v1";
 
 export type SavedProjectRecord = {
   scene: SecurityScene;
@@ -367,6 +520,204 @@ function loadAiProviderSelection(): AiProviderSelection {
   }
 }
 
+function loadLocalOnlyMode(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(LOCAL_ONLY_STORAGE_KEY) === "true";
+}
+
+function loadOperationalEvidenceEvents(): OperationalEvidenceEvent[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(OPERATIONAL_EVIDENCE_STORAGE_KEY);
+    return loadOperationalEvidenceEventsFromRaw(raw);
+  } catch {
+    return [];
+  }
+}
+
+function loadModelEvalHistory(): ModelEvalRunRecord[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(MODEL_EVAL_HISTORY_STORAGE_KEY);
+    return loadModelEvalHistoryFromRaw(raw);
+  } catch {
+    return [];
+  }
+}
+
+function loadSupportIngestHistory(): SupportIngestHistoryRecord[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(SUPPORT_INGEST_HISTORY_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.flatMap((item) => {
+      if (!item || typeof item !== "object") return [];
+      const candidate = item as Partial<SupportIngestHistoryRecord>;
+      if (
+        typeof candidate.source !== "string"
+        || typeof candidate.receivedAt !== "string"
+        || typeof candidate.summary !== "string"
+        || typeof candidate.submittedAt !== "number"
+        || typeof candidate.storedAt !== "number"
+        || typeof candidate.counts !== "object"
+        || typeof candidate.routing !== "object"
+      ) {
+        return [];
+      }
+      const routing = candidate.routing as SupportIngestResponse["routing"];
+      const counts = candidate.counts as SupportIngestResponse["counts"];
+      if (
+        typeof routing.alertCount !== "number"
+        || typeof routing.highPriorityCount !== "number"
+        || typeof routing.summary !== "string"
+        || typeof routing.statusLabel !== "string"
+        || !Array.isArray(routing.recentAlerts)
+        || typeof counts.runtimeIncidents !== "number"
+        || typeof counts.externalLogs !== "number"
+        || typeof counts.telemetryEvents !== "number"
+      ) {
+        return [];
+      }
+      return [{
+        ok: true as const,
+        source: candidate.source,
+        receivedAt: candidate.receivedAt,
+        sceneId: typeof candidate.sceneId === "string" ? candidate.sceneId : null,
+        sceneName: typeof candidate.sceneName === "string" ? candidate.sceneName : null,
+        summary: candidate.summary,
+        routing,
+        counts,
+        submittedAt: candidate.submittedAt,
+        storedAt: candidate.storedAt,
+      }];
+    }).slice(0, 12);
+  } catch {
+    return [];
+  }
+}
+
+function loadAiActionTelemetry(): AiActionTelemetryRecord[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(AI_TELEMETRY_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.flatMap((item) => {
+      if (!item || typeof item !== "object") return [];
+      const candidate = item as Partial<AiActionTelemetryRecord>;
+      if (
+        candidate.stage !== "command_parse"
+        && candidate.stage !== "counterfactual"
+        && candidate.stage !== "report_generation"
+        && candidate.stage !== "ai_draft"
+      ) {
+        return [];
+      }
+      if (
+        typeof candidate.id !== "string"
+        || typeof candidate.providerId !== "string"
+        || typeof candidate.providerLabel !== "string"
+        || typeof candidate.model !== "string"
+        || typeof candidate.timestamp !== "number"
+        || typeof candidate.durationMs !== "number"
+        || typeof candidate.estimatedPromptTokens !== "number"
+        || typeof candidate.estimatedCompletionTokens !== "number"
+        || typeof candidate.estimatedTotalTokens !== "number"
+        || typeof candidate.localOnlyMode !== "boolean"
+        || typeof candidate.cloudAvailable !== "boolean"
+        || candidate.tokenSource !== "estimated" && candidate.tokenSource !== "usage"
+        || candidate.status !== "success" && candidate.status !== "error"
+      ) {
+        return [];
+      }
+      return [{
+        id: candidate.id,
+        stage: candidate.stage,
+        providerId: candidate.providerId as AiProviderSelection["providerId"],
+        providerLabel: candidate.providerLabel,
+        model: candidate.model,
+        localOnlyMode: candidate.localOnlyMode,
+        cloudAvailable: candidate.cloudAvailable,
+        timestamp: candidate.timestamp,
+        durationMs: candidate.durationMs,
+        estimatedPromptTokens: candidate.estimatedPromptTokens,
+        estimatedCompletionTokens: candidate.estimatedCompletionTokens,
+        estimatedTotalTokens: candidate.estimatedTotalTokens,
+        tokenSource: candidate.tokenSource,
+        status: candidate.status,
+        note: typeof candidate.note === "string" ? candidate.note : null,
+      }];
+    }).slice(0, 50);
+  } catch {
+    return [];
+  }
+}
+
+function loadExternalLogEntries(): ExternalLogEntry[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(EXTERNAL_LOG_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.flatMap((item) => {
+      if (!item || typeof item !== "object") return [];
+      const candidate = item as Partial<ExternalLogEntry>;
+      if (
+        candidate.source !== "paste"
+        && candidate.source !== "file"
+      ) {
+        return [];
+      }
+      const rawText = typeof candidate.raw === "string" ? candidate.raw : "";
+      const lineCount = typeof candidate.lineCount === "number" ? candidate.lineCount : rawText.split(/\r?\n/).filter(Boolean).length;
+      const severity = candidate.severity === "warning" || candidate.severity === "error" ? candidate.severity : "info";
+      const timestamp = typeof candidate.timestamp === "number" ? candidate.timestamp : Date.now();
+      const title = typeof candidate.title === "string" && candidate.title.trim() ? candidate.title.trim() : "External log capture";
+      const details = typeof candidate.details === "string" && candidate.details.trim()
+        ? candidate.details.trim()
+        : `${lineCount} line${lineCount === 1 ? "" : "s"} captured from external logs.`;
+      return [{
+        id: typeof candidate.id === "string" && candidate.id ? candidate.id : `external_log_${timestamp.toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+        timestamp,
+        source: candidate.source,
+        title,
+        details,
+        raw: rawText,
+        lineCount,
+        severity,
+      }];
+    });
+  } catch {
+    return [];
+  }
+}
+
+function loadWorkspaceGovernance(): WorkspaceGovernanceState {
+  if (typeof window === "undefined") return createDefaultWorkspaceGovernance();
+  try {
+    const raw = window.localStorage.getItem(WORKSPACE_GOVERNANCE_STORAGE_KEY);
+    if (!raw) return createDefaultWorkspaceGovernance();
+    return normalizeWorkspaceGovernance(JSON.parse(raw));
+  } catch {
+    return createDefaultWorkspaceGovernance();
+  }
+}
+
+function loadWorkspaceAccess(): WorkspaceAccessState {
+  if (typeof window === "undefined") return createDefaultWorkspaceAccessState();
+  try {
+    const raw = window.localStorage.getItem(WORKSPACE_ACCESS_STORAGE_KEY);
+    if (!raw) return createDefaultWorkspaceAccessState();
+    return normalizeWorkspaceAccessState(JSON.parse(raw));
+  } catch {
+    return createDefaultWorkspaceAccessState();
+  }
+}
+
 function persistSavedLayouts(layouts: WorkspaceLayoutRecord[]) {
   try {
     localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(layouts));
@@ -389,6 +740,81 @@ function persistAiProviderSelection(selection: AiProviderSelection) {
   } catch {
     // Storage full or unavailable — silently fail
   }
+}
+
+function persistLocalOnlyMode(enabled: boolean) {
+  try {
+    localStorage.setItem(LOCAL_ONLY_STORAGE_KEY, enabled ? "true" : "false");
+  } catch {
+    // Storage full or unavailable — silently fail
+  }
+}
+
+function persistOperationalEvidenceEvents(events: OperationalEvidenceEvent[]) {
+  try {
+    const raw = localStorage.getItem(OPERATIONAL_EVIDENCE_STORAGE_KEY);
+    localStorage.setItem(OPERATIONAL_EVIDENCE_STORAGE_KEY, serializeOperationalEvidenceJournal(raw, events));
+  } catch {
+    // Storage full or unavailable — silently fail
+  }
+}
+
+function persistModelEvalHistory(history: ModelEvalRunRecord[]) {
+  try {
+    localStorage.setItem(MODEL_EVAL_HISTORY_STORAGE_KEY, serializeModelEvalHistory(history));
+  } catch {
+    // Storage full or unavailable — silently fail
+  }
+}
+
+function persistSupportIngestHistory(history: SupportIngestHistoryRecord[]) {
+  try {
+    localStorage.setItem(SUPPORT_INGEST_HISTORY_STORAGE_KEY, JSON.stringify(history.slice(0, 12)));
+  } catch {
+    // Storage full or unavailable — silently fail
+  }
+}
+
+function persistAiActionTelemetry(records: AiActionTelemetryRecord[]) {
+  try {
+    localStorage.setItem(AI_TELEMETRY_STORAGE_KEY, JSON.stringify(records.slice(0, 50)));
+  } catch {
+    // Storage full or unavailable — silently fail
+  }
+}
+
+function persistExternalLogEntries(entries: ExternalLogEntry[]) {
+  try {
+    localStorage.setItem(EXTERNAL_LOG_STORAGE_KEY, JSON.stringify(entries.slice(0, 20)));
+  } catch {
+    // Storage full or unavailable — silently fail
+  }
+}
+
+function persistWorkspaceGovernance(governance: WorkspaceGovernanceState) {
+  try {
+    localStorage.setItem(WORKSPACE_GOVERNANCE_STORAGE_KEY, JSON.stringify(governance));
+  } catch {
+    // Storage full or unavailable — silently fail
+  }
+}
+
+function persistWorkspaceAccess(access: WorkspaceAccessState) {
+  try {
+    localStorage.setItem(WORKSPACE_ACCESS_STORAGE_KEY, JSON.stringify(access));
+  } catch {
+    // Storage full or unavailable — silently fail
+  }
+}
+
+function combineOperationalEvidenceEventChains(...chains: OperationalEvidenceEvent[][]) {
+  const eventsById = new Map<string, OperationalEvidenceEvent>();
+  for (const chain of chains) {
+    for (const event of chain) {
+      eventsById.set(event.id, event);
+    }
+  }
+  return [...eventsById.values()];
 }
 
 function removeSavedScene(sceneId: string) {
@@ -490,6 +916,12 @@ function duplicateSavedSceneRecord(sceneId: string): SavedProjectRecord | null {
   return duplicateRecord;
 }
 
+const INITIAL_WORKSPACE_ACCESS = loadWorkspaceAccess();
+const INITIAL_WORKSPACE_GOVERNANCE = {
+  ...loadWorkspaceGovernance(),
+  activeRole: getActiveWorkspaceMember(INITIAL_WORKSPACE_ACCESS)?.role ?? loadWorkspaceGovernance().activeRole,
+};
+
 function renameSavedSceneRecord(sceneId: string, nextName: string): SavedProjectRecord | null {
   const trimmed = nextName.trim();
   if (!trimmed) return null;
@@ -521,7 +953,40 @@ export type StudioStoreState = {
   simulationResult: SimulationResult | null;
   simulationDirty: boolean;
   simulationRunning: boolean;
+  runtimeIncidents: RuntimeIncident[];
+  externalLogEntries: ExternalLogEntry[];
+  supportIngestHistory: SupportIngestHistoryRecord[];
+  modelEvalHistory: ModelEvalRunRecord[];
+  aiActionTelemetry: AiActionTelemetryRecord[];
   snapshots: SceneSnapshot[];
+  operationalEvidenceEvents: OperationalEvidenceEvent[];
+  recordOperationalEvidenceEvent: (event: OperationalEvidenceEventInput) => void;
+  recordRuntimeIncident: (incident: RuntimeIncidentInput) => void;
+  recordExternalLogEntry: (entry: ExternalLogEntryInput) => void;
+  clearExternalLogEntries: () => void;
+  recordSupportIngestResponse: (record: SupportIngestResponse & { submittedAt?: number }) => void;
+  clearSupportIngestHistory: () => void;
+  recordModelEvalRun: (report: ModelEvalSuiteResult) => void;
+  clearModelEvalHistory: () => void;
+  recordAiActionTelemetry: (record: Omit<AiActionTelemetryRecord, "id" | "timestamp"> & { timestamp?: number }) => void;
+  clearAiActionTelemetry: () => void;
+  clearRuntimeIncidents: () => void;
+  restoreSceneFromEvidence: (eventId: string, targetBranch?: "draft" | "recovered" | "published") => boolean;
+  publishCurrentScene: () => boolean;
+  workspaceAccess: WorkspaceAccessState;
+  setWorkspaceActiveMember: (memberId: string) => boolean;
+  setWorkspaceAccessMode: (mode: WorkspaceAccessState["policy"]["mode"]) => boolean;
+  syncWorkspaceMembershipSnapshot: (snapshot: {
+    workspaceAccessState: WorkspaceAccessState;
+    workspaceGovernanceState: WorkspaceGovernanceState;
+  }) => boolean;
+  workspaceGovernance: WorkspaceGovernanceState;
+  setWorkspaceRole: (role: WorkspaceRole) => void;
+  setWorkspaceApprovalMode: (mode: WorkspaceApprovalMode) => void;
+  requestSceneReview: (note?: string) => boolean;
+  approveSceneReview: (note?: string) => boolean;
+  rejectSceneReview: (note?: string) => boolean;
+  addSceneAnnotation: (note: string) => boolean;
   lastRunMs: number | null;
   savedScenes: SecurityScene[];
   savedProjects: SavedProjectRecord[];
@@ -555,6 +1020,7 @@ export type StudioStoreState = {
     split: number;
     offsetX: number;
     offsetY: number;
+    scale?: number;
     alignmentScore: number | null;
     createdAt: number;
   }>>;
@@ -563,6 +1029,7 @@ export type StudioStoreState = {
   selectedNodeIds: string[];
   selectedCameraId: string | null;
   activeTool: ActiveTool;
+  sensorPlacementType: SensorNode["sensorType"];
   heatmapHover: HeatmapHoverState | null;
   setHeatmapHover: (hover: HeatmapHoverState | null) => void;
   measurementTool: MeasurementToolState;
@@ -668,6 +1135,7 @@ export type StudioStoreState = {
   restorePreviousLayout: () => void;
 
   setActiveTool: (tool: ActiveTool) => void;
+  setSensorPlacementType: (sensorType: SensorNode["sensorType"]) => void;
   setBottomTab: (tab: BottomTab) => void;
   setInspectorTab: (tab: InspectorTab) => void;
   toggleLayer: (layer: LayerId) => void;
@@ -683,12 +1151,14 @@ export type StudioStoreState = {
   uiDensity: UiDensity;
   uiTheme: UiTheme;
   aiProviderSelection: AiProviderSelection;
+  localOnlyMode: boolean;
   overlayFilters: OverlayFilters;
   criticalZoneTargetType: CriticalZoneNode["targetType"];
   setOverlayDensity: (density: OverlayDensity) => void;
   setUiDensity: (density: UiDensity) => void;
   setUiTheme: (theme: UiTheme) => void;
   setAiProviderSelection: (selection: AiProviderSelection) => void;
+  setLocalOnlyMode: (enabled: boolean) => void;
   setOverlayFilter: (filter: OverlayFilterId, visible: boolean) => void;
   setCriticalZoneTargetType: (targetType: CriticalZoneNode["targetType"]) => void;
   viewSettingsOpen: boolean;
@@ -725,6 +1195,7 @@ export type StudioStoreState = {
   markDirty: () => void;
   logChange: (entry: string) => void;
   clearChangeLog: () => void;
+  clearOperationalEvidence: () => void;
 
   counterfactualResult: SimulationResult | null;
   counterfactualObsId: string | null;
@@ -736,6 +1207,8 @@ export type StudioStoreState = {
   saveSnapshot: (label: string) => void;
   importScene: (json: unknown) => { success: boolean; error?: string };
   exportScene: () => SecurityScene;
+  exportOperationalEvidenceArchive: () => OperationalEvidenceArchive;
+  importOperationalEvidenceArchive: (raw: unknown) => { success: boolean; error?: string };
 
   // Scene management
   setScene: (scene: SecurityScene) => void;
@@ -754,7 +1227,7 @@ export type StudioStoreState = {
 
 const collectionKeys = [
   "walls", "doors", "windows", "cameras", "securityLights",
-  "obstructions", "criticalZones", "privacyZones", "entryPoints", "paths",
+  "sensors", "obstructions", "criticalZones", "privacyZones", "entryPoints", "paths",
 ] as const;
 
 function patchNode(scene: SecurityScene, id: string, patch: Partial<AnyEditableNode>): SecurityScene {
@@ -788,6 +1261,7 @@ function insertNode(scene: SecurityScene, node: AnyEditableNode): SecurityScene 
     case "window":         next.windows.push(node);         break;
     case "camera":         next.cameras.push(node);         break;
     case "security_light": next.securityLights.push(node);  break;
+    case "sensor":         next.sensors.push(node);         break;
     case "obstruction":    next.obstructions.push(node);    break;
     case "critical_zone":  next.criticalZones.push(node);   break;
     case "privacy_zone":   next.privacyZones.push(node);    break;
@@ -805,6 +1279,7 @@ function duplicateNodeInScene(scene: SecurityScene, id: string): { scene: Securi
     camera: "cam",
     obstruction: "obs",
     security_light: "light",
+    sensor: "sensor",
     wall: "wall",
     door: "door",
     window: "window",
@@ -837,6 +1312,7 @@ function duplicateNodeInScene(scene: SecurityScene, id: string): { scene: Securi
     switch (duplicate.nodeType) {
       case "camera":
       case "security_light":
+      case "sensor":
       case "obstruction":
       case "door":
       case "window":
@@ -886,6 +1362,75 @@ function duplicateNodesInScene(scene: SecurityScene, ids: string[]): { scene: Se
   return { scene: next, duplicatedIds };
 }
 
+function compareSceneCollections<T extends { id: string }>(before: T[], after: T[]) {
+  const beforeById = new Map(before.map((item) => [item.id, item] as const));
+  const afterById = new Map(after.map((item) => [item.id, item] as const));
+  const added: string[] = [];
+  const updated: string[] = [];
+  const removed: string[] = [];
+
+  for (const [id, node] of afterById.entries()) {
+    const prev = beforeById.get(id);
+    if (!prev) {
+      added.push(id);
+      continue;
+    }
+    if (JSON.stringify(prev) !== JSON.stringify(node)) {
+      updated.push(id);
+    }
+  }
+
+  for (const id of beforeById.keys()) {
+    if (!afterById.has(id)) {
+      removed.push(id);
+    }
+  }
+
+  return { added, updated, removed };
+}
+
+function detectSensorMutation(before: SecurityScene, after: SecurityScene) {
+  const sensorDiff = compareSceneCollections(before.sensors, after.sensors);
+  const otherCollectionsChanged = [
+    before.walls,
+    before.doors,
+    before.windows,
+    before.cameras,
+    before.securityLights,
+    before.obstructions,
+    before.criticalZones,
+    before.privacyZones,
+    before.entryPoints,
+    before.paths,
+  ].some((collection, index) => {
+    const counterpart = [
+      after.walls,
+      after.doors,
+      after.windows,
+      after.cameras,
+      after.securityLights,
+      after.obstructions,
+      after.criticalZones,
+      after.privacyZones,
+      after.entryPoints,
+      after.paths,
+    ][index];
+    return JSON.stringify(collection) !== JSON.stringify(counterpart);
+  });
+
+  if (otherCollectionsChanged) return null;
+  if (sensorDiff.added.length > 0 && sensorDiff.updated.length === 0 && sensorDiff.removed.length === 0) {
+    return { kind: "sensor_added" as const, affectedNodeIds: sensorDiff.added };
+  }
+  if (sensorDiff.removed.length > 0 && sensorDiff.added.length === 0 && sensorDiff.updated.length === 0) {
+    return { kind: "sensor_removed" as const, affectedNodeIds: sensorDiff.removed };
+  }
+  if (sensorDiff.updated.length > 0 && sensorDiff.added.length === 0 && sensorDiff.removed.length === 0) {
+    return { kind: "sensor_updated" as const, affectedNodeIds: sensorDiff.updated };
+  }
+  return null;
+}
+
 function sceneNodeIds(scene: SecurityScene) {
   return [
     ...scene.walls,
@@ -893,6 +1438,7 @@ function sceneNodeIds(scene: SecurityScene) {
     ...scene.windows,
     ...scene.cameras,
     ...scene.securityLights,
+    ...scene.sensors,
     ...scene.obstructions,
     ...scene.criticalZones,
     ...scene.privacyZones,
@@ -923,6 +1469,11 @@ function translateNode(node: AnyEditableNode, delta: [number, number]): AnyEdita
   const next = structuredClone(node) as AnyEditableNode;
 
   if (next.nodeType === "camera" || next.nodeType === "security_light" || next.nodeType === "obstruction" || next.nodeType === "door" || next.nodeType === "window") {
+    next.position = [next.position[0] + dx, next.position[1], next.position[2] + dz] as typeof next.position;
+    return next;
+  }
+
+  if (next.nodeType === "sensor") {
     next.position = [next.position[0] + dx, next.position[1], next.position[2] + dz] as typeof next.position;
     return next;
   }
@@ -1006,6 +1557,42 @@ function buildSimulationState(
   };
 }
 
+function buildSimulationEvidenceEvent(
+  scene: SecurityScene,
+  result: SimulationResult,
+  durationMs: number,
+  revisionDepth: number,
+  previousResult?: SimulationResult | null,
+) {
+  const simulation = summarizeSimulationEvidence(result);
+  const previousCoverage = previousResult?.totalCoveragePct ?? null;
+  const deltaCoveragePct = previousCoverage === null ? null : Number((result.totalCoveragePct - previousCoverage).toFixed(2));
+
+  return buildOperationalEvidenceEvent({
+    kind: "simulation_completed",
+    title: previousCoverage === null ? "Simulation completed" : "Simulation recomputed",
+    details: `Coverage ${result.totalCoveragePct.toFixed(1)}% · ${result.issues.length} issue${result.issues.length === 1 ? "" : "s"} · ${durationMs} ms`,
+    actor: "system",
+    source: scene.source,
+    sceneId: scene.id,
+    sceneName: scene.name,
+    revisionDepth,
+    affectedNodeIds: scene.cameras.map((camera) => camera.id),
+    confidence: 0.99,
+    beforeSummary: previousResult
+      ? `Previous coverage ${previousResult.totalCoveragePct.toFixed(1)}%`
+      : undefined,
+    afterSummary: `Coverage ${result.totalCoveragePct.toFixed(1)}%`,
+    simulation: simulation
+      ? {
+          ...simulation,
+          deltaCoveragePct,
+        }
+      : undefined,
+    notes: [`Simulation duration ${durationMs} ms.`],
+  });
+}
+
 function buildGraphState(
   scene: SecurityScene,
   simulationResult: SimulationResult | null,
@@ -1017,6 +1604,30 @@ function buildGraphState(
     revisionDepth,
     snapshotCount,
   });
+}
+
+function evidenceLogLine(event: OperationalEvidenceEvent) {
+  const time = new Date(event.timestamp).toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const confidence = confidenceLabel(event.confidence);
+  return `Evidence: ${time} | ${event.title} | ${event.details} | ${confidence}`;
+}
+
+function resetWorkspaceGovernanceForDraft(governance: WorkspaceGovernanceState): WorkspaceGovernanceState {
+  return {
+    ...governance,
+    sceneStatus: "draft" as WorkspaceSceneStatus,
+    requestedAt: null,
+    requestedBy: null,
+    reviewedAt: null,
+    reviewedBy: null,
+    publishedAt: null,
+    publishedBy: null,
+  };
 }
 
 const DEFAULT_LAYERS: LayerVisibility = {
@@ -1102,10 +1713,12 @@ function dockCollapsedKey(side: DockSide) {
 const ANALYSIS_TAB_ORDER: BottomTab[] = [
   "metrics",
   "issues",
+  "sensors",
   "timeline",
   "temporal",
   "beforeafter",
   "assumptions",
+  "governance",
   "provenance",
   "redundancy",
   "counterfactual",
@@ -1180,6 +1793,41 @@ INITIAL_SCENE.snapshots = INITIAL_SNAPSHOTS.map((snapshot) => ({
 const INITIAL_SIMULATION = simulateStudio(INITIAL_SCENE);
 INITIAL_SCENE.simulation = INITIAL_SIMULATION;
 const INITIAL_SCENE_INTELLIGENCE_GRAPH = buildGraphState(INITIAL_SCENE, INITIAL_SIMULATION, 0, INITIAL_SNAPSHOTS.length);
+const INITIAL_OPERATIONAL_EVIDENCE_EVENTS = (() => {
+  const loaded = loadOperationalEvidenceEvents();
+  if (loaded.length > 0) return loaded;
+
+  const summary = summarizeSceneEvidence(INITIAL_SCENE);
+  const simulation = summarizeSimulationEvidence(INITIAL_SIMULATION);
+  const seededEvents = [
+    buildOperationalEvidenceEvent({
+      kind: "scene_initialized",
+      title: "Demo scene initialized",
+      details: `${summary.detail}.`,
+      actor: "system",
+      source: INITIAL_SCENE.source,
+      sceneId: INITIAL_SCENE.id,
+      sceneName: INITIAL_SCENE.name,
+      revisionDepth: 0,
+      affectedNodeIds: [],
+      confidence: 0.98,
+      afterSummary: summary.detail,
+      simulation: simulation
+        ? {
+            ...simulation,
+            deltaCoveragePct: null,
+          }
+        : undefined,
+      notes: ["Seeded on first load so the studio starts with an honest evidence baseline."],
+    }),
+  ];
+
+  if (typeof window !== "undefined") {
+    persistOperationalEvidenceEvents(seededEvents);
+  }
+
+  return seededEvents;
+})();
 
 function getInitialViewMode(): ViewMode {
   if (typeof window === "undefined") return "map";
@@ -1348,7 +1996,15 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   simulationResult: INITIAL_SIMULATION,
   simulationDirty: false,
   simulationRunning: false,
+  runtimeIncidents: [],
+  externalLogEntries: loadExternalLogEntries(),
+  supportIngestHistory: loadSupportIngestHistory(),
+  modelEvalHistory: loadModelEvalHistory(),
+  aiActionTelemetry: loadAiActionTelemetry(),
   snapshots: INITIAL_SNAPSHOTS,
+  operationalEvidenceEvents: INITIAL_OPERATIONAL_EVIDENCE_EVENTS,
+  workspaceAccess: INITIAL_WORKSPACE_ACCESS,
+  workspaceGovernance: INITIAL_WORKSPACE_GOVERNANCE,
   lastRunMs: 0,
   savedScenes: INITIAL_SAVED_PROJECTS.length > 0 ? INITIAL_SAVED_PROJECTS.map((record) => record.scene) : INITIAL_SEEDED_PROJECTS.map((record) => record.scene),
   savedProjects: INITIAL_SAVED_PROJECTS.length > 0 ? INITIAL_SAVED_PROJECTS : INITIAL_SEEDED_PROJECTS,
@@ -1362,6 +2018,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   selectedNodeIds: ["cam_entrance"],
   selectedCameraId: "cam_entrance",
   activeTool: "select",
+  sensorPlacementType: "motion",
   editor: {
     editorMode: "idle",
     draftWallStart: undefined,
@@ -1408,6 +2065,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   uiDensity: loadUiDensity(),
   uiTheme: loadUiTheme(),
   aiProviderSelection: loadAiProviderSelection(),
+  localOnlyMode: loadLocalOnlyMode(),
   overlayFilters: {
     cameraLabels: true,
     zoneLabels: true,
@@ -1550,10 +2208,10 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       bottomDockSizePx: layout.bottomDockSizePx,
       visibleComponents: { ...layout.visibleComponents },
       enabledAnalysisModules: { ...layout.enabledAnalysisModules },
+      layerVisibility: { ...layout.layerVisibility },
       rightPanelMode: layout.rightPanelMode,
       bottomDrawerMode: layout.bottomDrawerMode,
       pinnedAnalysisModule: layout.pinnedAnalysisModule,
-      layerVisibility: { ...layout.layerVisibility },
       overlayDensity: layout.overlayDensity,
       showDebugOverlays: layout.showDebugOverlays,
       clientDemoOptions: { ...layout.clientDemoOptions },
@@ -1571,15 +2229,43 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   commitSceneChange: (updater, label) =>
     set((s) => {
       void label;
+      const before = cloneSecurityScene(s.scene);
       const next = updater(cloneSecurityScene(s.scene));
+      const sensorMutation = detectSensorMutation(before, next);
+      const evidenceEvent = buildOperationalEvidenceEvent({
+        kind: sensorMutation?.kind ?? "scene_updated",
+        title: label ?? (sensorMutation ? kindToTitle(sensorMutation.kind) : "Scene updated"),
+        details: label ?? (sensorMutation ? "Sensor inventory changed" : "Scene structure changed"),
+        actor: "user",
+        source: next.source,
+        sceneId: next.id,
+        sceneName: next.name,
+        revisionDepth: s.historyPast.length + 1,
+        affectedNodeIds: sensorMutation?.affectedNodeIds ?? [],
+        confidence: sensorMutation ? 0.94 : 0.95,
+      beforeSummary: summarizeSceneEvidence(before).detail,
+      afterSummary: summarizeSceneEvidence(next).detail,
+      previousSceneSnapshot: cloneSecurityScene(before),
+      sceneSnapshot: cloneSecurityScene(next),
+      notes: label ? [label] : sensorMutation ? ["Sensor-only scene change captured as a dedicated evidence event."] : undefined,
+      });
+      const nextEvents = [...s.operationalEvidenceEvents, evidenceEvent];
+      persistOperationalEvidenceEvents(nextEvents);
+      const nextGovernance = resetWorkspaceGovernanceForDraft(s.workspaceGovernance);
+      persistWorkspaceGovernance(nextGovernance);
       return {
-        scene: next,
         simulationDirty: true,
         sceneIntelligenceGraph: buildGraphState(next, s.simulationResult, s.historyPast.length + 1, s.snapshots.length),
         ...setSelectionState(next, s.selectedNodeIds),
         activePathId: cloneAndSetActivePath(next, s.activePathId),
         historyPast: [...s.historyPast, cloneSecurityScene(s.scene)],
         historyFuture: [],
+        operationalEvidenceEvents: nextEvents,
+        workspaceGovernance: nextGovernance,
+        scene: {
+          ...next,
+          changeLog: [...next.changeLog, evidenceLogLine(evidenceEvent)],
+        },
       };
     }),
 
@@ -1587,28 +2273,80 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     if (s.historyPast.length === 0) return s;
     const previous = s.historyPast[s.historyPast.length - 1];
     if (!previous) return s;
+    const evidenceEvent = buildOperationalEvidenceEvent({
+      kind: "scene_reverted",
+      title: "Undo scene change",
+      details: "Returned to the previous scene state.",
+      actor: "user",
+      source: previous.source,
+      sceneId: previous.id,
+      sceneName: previous.name,
+      revisionDepth: Math.max(s.historyPast.length - 1, 0),
+      affectedNodeIds: [],
+      confidence: 0.9,
+      beforeSummary: summarizeSceneEvidence(s.scene).detail,
+      afterSummary: summarizeSceneEvidence(previous).detail,
+      previousSceneSnapshot: cloneSecurityScene(s.scene),
+      sceneSnapshot: cloneSecurityScene(previous),
+      notes: ["Undo surfaced as an evidence event so the site history remains legible."],
+    });
+    const nextEvents = [...s.operationalEvidenceEvents, evidenceEvent];
+    persistOperationalEvidenceEvents(nextEvents);
+    const nextGovernance = resetWorkspaceGovernanceForDraft(s.workspaceGovernance);
+    persistWorkspaceGovernance(nextGovernance);
     return {
-      scene: cloneSecurityScene(previous),
       activePathId: cloneAndSetActivePath(previous, s.activePathId),
       ...setSelectionState(previous, s.selectedNodeIds),
       simulationDirty: true,
       sceneIntelligenceGraph: buildGraphState(previous, s.simulationResult, s.historyPast.length - 1, s.snapshots.length),
       historyPast: s.historyPast.slice(0, -1),
       historyFuture: [cloneSecurityScene(s.scene), ...s.historyFuture],
+      operationalEvidenceEvents: nextEvents,
+      workspaceGovernance: nextGovernance,
+      scene: {
+        ...cloneSecurityScene(previous),
+        changeLog: [...previous.changeLog, evidenceLogLine(evidenceEvent)],
+      },
     };
   }),
   redo: () => set((s) => {
     if (s.historyFuture.length === 0) return s;
     const nextScene = s.historyFuture[0];
     if (!nextScene) return s;
+    const evidenceEvent = buildOperationalEvidenceEvent({
+      kind: "scene_reverted",
+      title: "Redo scene change",
+      details: "Restored the next scene state from history.",
+      actor: "user",
+      source: nextScene.source,
+      sceneId: nextScene.id,
+      sceneName: nextScene.name,
+      revisionDepth: s.historyPast.length + 1,
+      affectedNodeIds: [],
+      confidence: 0.9,
+      beforeSummary: summarizeSceneEvidence(s.scene).detail,
+      afterSummary: summarizeSceneEvidence(nextScene).detail,
+      previousSceneSnapshot: cloneSecurityScene(s.scene),
+      sceneSnapshot: cloneSecurityScene(nextScene),
+      notes: ["Redo surfaced as an evidence event so the site history remains legible."],
+    });
+    const nextEvents = [...s.operationalEvidenceEvents, evidenceEvent];
+    persistOperationalEvidenceEvents(nextEvents);
+    const nextGovernance = resetWorkspaceGovernanceForDraft(s.workspaceGovernance);
+    persistWorkspaceGovernance(nextGovernance);
     return {
-      scene: cloneSecurityScene(nextScene),
       activePathId: cloneAndSetActivePath(nextScene, s.activePathId),
       ...setSelectionState(nextScene, s.selectedNodeIds),
       simulationDirty: true,
       sceneIntelligenceGraph: buildGraphState(nextScene, s.simulationResult, s.historyPast.length + 1, s.snapshots.length),
       historyPast: [...s.historyPast, cloneSecurityScene(s.scene)],
       historyFuture: s.historyFuture.slice(1),
+      operationalEvidenceEvents: nextEvents,
+      workspaceGovernance: nextGovernance,
+      scene: {
+        ...cloneSecurityScene(nextScene),
+        changeLog: [...nextScene.changeLog, evidenceLogLine(evidenceEvent)],
+      },
     };
   }),
   canUndo: () => {
@@ -1616,6 +2354,621 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   },
   canRedo: () => {
     return get().historyFuture.length > 0;
+  },
+  clearOperationalEvidence: () => {
+    persistOperationalEvidenceEvents([]);
+    set((state) => ({
+      operationalEvidenceEvents: [],
+      scene: { ...state.scene, changeLog: [] },
+    }));
+  },
+
+  recordOperationalEvidenceEvent: (event) => {
+    set((state) => {
+      const evidenceEvent = buildOperationalEvidenceEvent({
+        ...event,
+        source: event.source,
+      });
+      const nextEvents = [...state.operationalEvidenceEvents, evidenceEvent];
+      persistOperationalEvidenceEvents(nextEvents);
+      return {
+        operationalEvidenceEvents: nextEvents,
+      };
+    });
+  },
+
+  restoreSceneFromEvidence: (eventId, targetBranch = "recovered") => {
+    const { operationalEvidenceEvents, scene, historyPast } = get();
+    const sourceEvent = operationalEvidenceEvents.find((event) => event.id === eventId) ?? null;
+    const restoredScene = sourceEvent?.sceneSnapshot
+      ? cloneSecurityScene(sourceEvent.previousSceneSnapshot ?? sourceEvent.sceneSnapshot)
+      : reconstructSceneFromEvidence(operationalEvidenceEvents, eventId);
+    if (!restoredScene) return false;
+
+    const evidenceEvent = buildOperationalEvidenceEvent({
+      kind: "scene_reverted",
+      title: sourceEvent ? `Restored checkpoint: ${sourceEvent.title}` : "Restored checkpoint",
+      details: sourceEvent
+        ? `Reopened scene state from checkpoint "${sourceEvent.title}".`
+        : "Reopened scene state from the selected checkpoint.",
+      actor: "user",
+      source: restoredScene.source,
+      sceneId: restoredScene.id,
+      sceneName: restoredScene.name,
+      revisionDepth: historyPast.length + 1,
+      affectedNodeIds: sourceEvent?.affectedNodeIds ?? [],
+      confidence: sourceEvent?.confidence ?? 0.9,
+      parentEventId: sourceEvent?.id,
+      branchLabel: targetBranch,
+      lifecycleStage: targetBranch,
+      beforeSummary: summarizeSceneEvidence(scene).detail,
+      afterSummary: summarizeSceneEvidence(restoredScene).detail,
+      sceneSnapshot: cloneSecurityScene(restoredScene),
+      notes: sourceEvent
+        ? [`Restored from checkpoint ${sourceEvent.id} into ${targetBranch} branch.`]
+        : [`Restored into ${targetBranch} branch.`],
+    });
+    const nextEvents = [...operationalEvidenceEvents, evidenceEvent];
+    persistOperationalEvidenceEvents(nextEvents);
+    const nextGovernance: WorkspaceGovernanceState = {
+      ...resetWorkspaceGovernanceForDraft(get().workspaceGovernance),
+      sceneStatus: targetBranch,
+    };
+    if (targetBranch === "published") {
+      nextGovernance.publishedAt = Date.now();
+      nextGovernance.publishedBy = get().workspaceGovernance.activeRole;
+    }
+    persistWorkspaceGovernance(nextGovernance);
+
+    const nextScene = cloneSceneWithAppendedChangeLog(restoredScene, evidenceLogLine(evidenceEvent));
+    set({
+      scene: nextScene,
+      snapshots: structuredClone(restoredScene.snapshots ?? []),
+      simulationResult: restoredScene.simulation ?? null,
+      simulationDirty: !restoredScene.simulation,
+      selectedNodeId: null,
+      selectedNodeIds: [],
+      activePathId: restoredScene.paths[0]?.id ?? null,
+      focusScenePointRequest: null,
+      mapState: cloneDefaultMapState(),
+      historyPast: [...historyPast, cloneSecurityScene(scene)],
+      historyFuture: [],
+      sceneIntelligenceGraph: buildGraphState(restoredScene, restoredScene.simulation ?? null, historyPast.length + 1, (restoredScene.snapshots ?? []).length),
+      operationalEvidenceEvents: nextEvents,
+      workspaceGovernance: nextGovernance,
+    });
+    return true;
+  },
+
+  publishCurrentScene: () => {
+    const { scene, historyPast, operationalEvidenceEvents, savedProjects, workspaceGovernance, workspaceAccess } = get();
+    const previousEvent = findLatestOperationalEvidenceEventForScene(operationalEvidenceEvents, scene.id) ?? operationalEvidenceEvents.at(-1) ?? null;
+    const now = Date.now();
+    const accessDecision = canPerformWorkspaceAction(workspaceAccess, scene, "publish");
+    const accessRoute = routeWorkspaceApproval(scene, workspaceAccess);
+    if (!accessDecision.allowed) {
+      if (workspaceGovernance.sceneStatus === "review_requested") {
+        return false;
+      }
+      const requestEvent = buildOperationalEvidenceEvent({
+        kind: "scene_review_requested",
+        title: "Publish blocked by access policy",
+        details: accessDecision.reason,
+        actor: "user",
+        source: scene.source,
+        sceneId: scene.id,
+        sceneName: scene.name,
+        revisionDepth: historyPast.length,
+        affectedNodeIds: scene.cameras.map((camera) => camera.id),
+        confidence: 0.88,
+        branchLabel: "review",
+        lifecycleStage: "review",
+        parentEventId: previousEvent?.id ?? undefined,
+        beforeSummary: summarizeSceneEvidence(scene).detail,
+        afterSummary: summarizeSceneEvidence(scene).detail,
+        notes: [
+          "Publish was gated by workspace access policy and converted into a review request.",
+          `Access route resolved to ${accessRoute.requiredReviewerRole.replace(/_/g, " ")}.`,
+        ],
+      });
+      const nextEvents = [...operationalEvidenceEvents, requestEvent];
+      persistOperationalEvidenceEvents(nextEvents);
+      const nextGovernance: WorkspaceGovernanceState = {
+        ...workspaceGovernance,
+        sceneStatus: "review_requested",
+        requestedAt: now,
+        requestedBy: workspaceGovernance.activeRole,
+        reviewedAt: null,
+        reviewedBy: null,
+        publishedAt: null,
+        publishedBy: null,
+      };
+      persistWorkspaceGovernance(nextGovernance);
+      set({
+        operationalEvidenceEvents: nextEvents,
+        workspaceGovernance: nextGovernance,
+        scene: cloneSceneWithAppendedChangeLog(scene, evidenceLogLine(requestEvent)),
+      });
+      return false;
+    }
+
+    if (!canPublishWorkspaceScene(workspaceGovernance)) {
+      if (workspaceGovernance.sceneStatus === "review_requested") {
+        return false;
+      }
+      const requestEvent = buildOperationalEvidenceEvent({
+        kind: "scene_review_requested",
+        title: "Publish review requested",
+        details: `Workspace role ${workspaceGovernance.activeRole} requested approval before publishing.`,
+        actor: "user",
+        source: scene.source,
+        sceneId: scene.id,
+        sceneName: scene.name,
+        revisionDepth: historyPast.length,
+        affectedNodeIds: scene.cameras.map((camera) => camera.id),
+        confidence: 0.88,
+        branchLabel: "review",
+        lifecycleStage: "review",
+        parentEventId: previousEvent?.id ?? undefined,
+        beforeSummary: summarizeSceneEvidence(scene).detail,
+        afterSummary: summarizeSceneEvidence(scene).detail,
+        notes: [
+          "Publish was gated by the governance policy and converted into a review request.",
+          `Approval route resolved to ${accessRoute.requiredReviewerRole.replace(/_/g, " ")}.`,
+        ],
+      });
+      const nextEvents = [...operationalEvidenceEvents, requestEvent];
+      persistOperationalEvidenceEvents(nextEvents);
+      const nextGovernance: WorkspaceGovernanceState = {
+        ...workspaceGovernance,
+        sceneStatus: "review_requested",
+        requestedAt: now,
+        requestedBy: workspaceGovernance.activeRole,
+        reviewedAt: null,
+        reviewedBy: null,
+        publishedAt: null,
+        publishedBy: null,
+      };
+      persistWorkspaceGovernance(nextGovernance);
+      set({
+        operationalEvidenceEvents: nextEvents,
+        workspaceGovernance: nextGovernance,
+        scene: cloneSceneWithAppendedChangeLog(scene, evidenceLogLine(requestEvent)),
+      });
+      return false;
+    }
+
+    const existingIndex = savedProjects.findIndex((record) => record.scene.id === scene.id);
+    const nextProjects = [...savedProjects];
+    if (existingIndex >= 0) {
+      const existing = nextProjects[existingIndex]!;
+      nextProjects[existingIndex] = {
+        ...existing,
+        scene: cloneSecurityScene(scene),
+        tags: sanitizeTags([...existing.tags, "published", workspaceGovernance.sceneStatus === "approved" ? "approved" : "published"]),
+        updatedAt: now,
+        lastOpenedAt: now,
+      };
+    } else {
+      nextProjects.unshift({
+        scene: cloneSecurityScene(scene),
+        folder: "Published",
+        tags: sanitizeTags([scene.source, "published", workspaceGovernance.sceneStatus === "approved" ? "approved" : undefined]),
+        pinned: false,
+        createdAt: now,
+        updatedAt: now,
+        lastOpenedAt: now,
+      });
+    }
+    persistSavedProjects(nextProjects);
+    const evidenceEvent = buildOperationalEvidenceEvent({
+      kind: "scene_published",
+      title: "Scene published",
+      details: "Promoted the current scene state to the published branch.",
+      actor: "user",
+      source: scene.source,
+      sceneId: scene.id,
+      sceneName: scene.name,
+      revisionDepth: historyPast.length,
+      affectedNodeIds: scene.cameras.map((camera) => camera.id),
+      confidence: 0.98,
+      branchLabel: "published",
+      lifecycleStage: "published",
+      parentEventId: previousEvent?.id ?? undefined,
+      published: true,
+      beforeSummary: summarizeSceneEvidence(scene).detail,
+      afterSummary: summarizeSceneEvidence(scene).detail,
+      sceneSnapshot: cloneSecurityScene(scene),
+      notes: [
+        "Published state stored as a reusable workspace checkpoint.",
+        `Workspace role at publish time: ${workspaceGovernance.activeRole}.`,
+        `Access route: ${accessRoute.requiredReviewerRole.replace(/_/g, " ")}.`,
+      ],
+    });
+    const nextEvents = [...operationalEvidenceEvents, evidenceEvent];
+    persistOperationalEvidenceEvents(nextEvents);
+    const nextGovernance: WorkspaceGovernanceState = {
+      ...workspaceGovernance,
+      sceneStatus: "published",
+      publishedAt: now,
+      publishedBy: workspaceGovernance.activeRole,
+    };
+    persistWorkspaceGovernance(nextGovernance);
+    set({
+      operationalEvidenceEvents: nextEvents,
+      scene: cloneSceneWithAppendedChangeLog(scene, evidenceLogLine(evidenceEvent)),
+      sceneModified: false,
+      savedSceneName: scene.name,
+      savedProjects: nextProjects,
+      workspaceGovernance: nextGovernance,
+      sceneIntelligenceGraph: buildSceneIntelligenceGraph(scene, {
+        simulationResult: get().simulationResult,
+        revisionDepth: historyPast.length,
+        snapshotCount: get().snapshots.length,
+      }),
+    });
+    return true;
+  },
+
+  setWorkspaceActiveMember: (memberId) => {
+    const { scene, operationalEvidenceEvents, workspaceAccess, workspaceGovernance, historyPast } = get();
+    const member = workspaceAccess.members.find((entry) => entry.id === memberId) ?? null;
+    if (!member || member.id === workspaceAccess.activeMemberId) return false;
+    const evidenceEvent = buildOperationalEvidenceEvent({
+      kind: "workspace_member_selected",
+      title: "Workspace member selected",
+      details: `Active workspace member changed to ${member.displayName} (${member.role}).`,
+      actor: "user",
+      source: scene.source,
+      sceneId: scene.id,
+      sceneName: scene.name,
+      revisionDepth: historyPast.length,
+      affectedNodeIds: [],
+      confidence: 0.9,
+      branchLabel: "review",
+      lifecycleStage: "review",
+      beforeSummary: summarizeSceneEvidence(scene).detail,
+      afterSummary: summarizeSceneEvidence(scene).detail,
+      notes: [`Active workspace member set to ${member.displayName}.`],
+    });
+    const nextEvents = [...operationalEvidenceEvents, evidenceEvent];
+    persistOperationalEvidenceEvents(nextEvents);
+    const nextAccess = {
+      ...workspaceAccess,
+      activeMemberId: member.id,
+    };
+    const nextGovernance = {
+      ...workspaceGovernance,
+      activeRole: member.role,
+    };
+    persistWorkspaceAccess(nextAccess);
+    persistWorkspaceGovernance(nextGovernance);
+    set({
+      operationalEvidenceEvents: nextEvents,
+      workspaceAccess: nextAccess,
+      workspaceGovernance: nextGovernance,
+      scene: cloneSceneWithAppendedChangeLog(scene, evidenceLogLine(evidenceEvent)),
+    });
+    return true;
+  },
+
+  setWorkspaceAccessMode: (mode) => {
+    const { scene, operationalEvidenceEvents, workspaceAccess, historyPast } = get();
+    if (workspaceAccess.policy.mode === mode) return false;
+    const evidenceEvent = buildOperationalEvidenceEvent({
+      kind: "workspace_access_policy_changed",
+      title: "Workspace access policy changed",
+      details: `Workspace access mode changed from ${workspaceAccess.policy.mode} to ${mode}.`,
+      actor: "user",
+      source: scene.source,
+      sceneId: scene.id,
+      sceneName: scene.name,
+      revisionDepth: historyPast.length,
+      affectedNodeIds: [],
+      confidence: 0.9,
+      branchLabel: "review",
+      lifecycleStage: "review",
+      beforeSummary: summarizeSceneEvidence(scene).detail,
+      afterSummary: summarizeSceneEvidence(scene).detail,
+      notes: [`Workspace access mode changed from ${workspaceAccess.policy.mode} to ${mode}.`],
+    });
+    const nextEvents = [...operationalEvidenceEvents, evidenceEvent];
+    persistOperationalEvidenceEvents(nextEvents);
+    const nextAccess = {
+      ...workspaceAccess,
+      policy: {
+        ...workspaceAccess.policy,
+        mode,
+      },
+    };
+    persistWorkspaceAccess(nextAccess);
+    set({
+      operationalEvidenceEvents: nextEvents,
+      workspaceAccess: nextAccess,
+      scene: cloneSceneWithAppendedChangeLog(scene, evidenceLogLine(evidenceEvent)),
+    });
+    return true;
+  },
+
+  syncWorkspaceMembershipSnapshot: ({ workspaceAccessState, workspaceGovernanceState }) => {
+    const { scene, operationalEvidenceEvents, workspaceAccess, workspaceGovernance, historyPast } = get();
+    const nextAccess = normalizeWorkspaceAccessState(workspaceAccessState);
+    const nextGovernance = normalizeWorkspaceGovernance(workspaceGovernanceState);
+    const drift = summarizeWorkspaceMembershipDrift(workspaceAccess, nextAccess);
+    if (!drift.activeMemberChanged && !drift.teamSizeChanged && !drift.policyChanged && workspaceGovernance.activeRole === nextGovernance.activeRole && workspaceGovernance.approvalMode === nextGovernance.approvalMode && workspaceGovernance.sceneStatus === nextGovernance.sceneStatus) {
+      return false;
+    }
+
+    const evidenceEvent = buildOperationalEvidenceEvent({
+      kind: "workspace_membership_synced",
+      title: "Workspace membership snapshot synced",
+      details: `Workspace identity reconciled against the latest archived snapshot. Active member ${drift.activeMemberChanged ? "changed" : "matched"}, team size ${drift.teamSizeChanged ? "changed" : "matched"}, policy ${drift.policyChanged ? "changed" : "matched"}.`,
+      actor: "user",
+      source: scene.source,
+      sceneId: scene.id,
+      sceneName: scene.name,
+      revisionDepth: historyPast.length,
+      affectedNodeIds: [],
+      confidence: 0.95,
+      branchLabel: "review",
+      lifecycleStage: "review",
+      beforeSummary: summarizeSceneEvidence(scene).detail,
+      afterSummary: summarizeSceneEvidence(scene).detail,
+      notes: [
+        `Workspace membership synced from archived snapshot.`,
+        `Active member: ${nextAccess.activeMemberId}.`,
+        `Policy mode: ${nextAccess.policy.mode}.`,
+      ],
+    });
+
+    const nextEvents = [...operationalEvidenceEvents, evidenceEvent];
+    persistOperationalEvidenceEvents(nextEvents);
+    const nextWorkspaceGovernance: WorkspaceGovernanceState = {
+      ...workspaceGovernance,
+      ...nextGovernance,
+      activeRole: nextGovernance.activeRole,
+    };
+    persistWorkspaceAccess(nextAccess);
+    persistWorkspaceGovernance(nextWorkspaceGovernance);
+    set({
+      operationalEvidenceEvents: nextEvents,
+      workspaceAccess: nextAccess,
+      workspaceGovernance: nextWorkspaceGovernance,
+      scene: cloneSceneWithAppendedChangeLog(scene, evidenceLogLine(evidenceEvent)),
+    });
+    return true;
+  },
+
+  setWorkspaceRole: (role) => {
+    const { scene, operationalEvidenceEvents, workspaceGovernance, workspaceAccess, historyPast } = get();
+    if (workspaceGovernance.activeRole === role) return;
+    const evidenceEvent = buildOperationalEvidenceEvent({
+      kind: "governance_role_changed",
+      title: "Workspace role changed",
+      details: `Role changed from ${workspaceGovernance.activeRole} to ${role}.`,
+      actor: "user",
+      source: scene.source,
+      sceneId: scene.id,
+      sceneName: scene.name,
+      revisionDepth: historyPast.length,
+      affectedNodeIds: [],
+      confidence: 0.9,
+      branchLabel: "review",
+      lifecycleStage: "review",
+      beforeSummary: summarizeSceneEvidence(scene).detail,
+      afterSummary: summarizeSceneEvidence(scene).detail,
+      notes: [`Active role changed from ${workspaceGovernance.activeRole} to ${role}.`],
+    });
+    const nextEvents = [...operationalEvidenceEvents, evidenceEvent];
+    persistOperationalEvidenceEvents(nextEvents);
+    const nextGovernance = {
+      ...workspaceGovernance,
+      activeRole: role,
+    };
+    const nextAccess = {
+      ...workspaceAccess,
+      members: workspaceAccess.members.map((member) => (
+        member.id === workspaceAccess.activeMemberId
+          ? { ...member, role }
+          : member
+      )),
+    };
+    persistWorkspaceAccess(nextAccess);
+    persistWorkspaceGovernance(nextGovernance);
+    set({
+      operationalEvidenceEvents: nextEvents,
+      workspaceAccess: nextAccess,
+      workspaceGovernance: nextGovernance,
+      scene: cloneSceneWithAppendedChangeLog(scene, evidenceLogLine(evidenceEvent)),
+    });
+  },
+
+  setWorkspaceApprovalMode: (mode) => {
+    const { scene, operationalEvidenceEvents, workspaceGovernance, historyPast } = get();
+    if (workspaceGovernance.approvalMode === mode) return;
+    const evidenceEvent = buildOperationalEvidenceEvent({
+      kind: "governance_policy_changed",
+      title: "Workspace approval policy changed",
+      details: `Approval mode changed from ${workspaceGovernance.approvalMode} to ${mode}.`,
+      actor: "user",
+      source: scene.source,
+      sceneId: scene.id,
+      sceneName: scene.name,
+      revisionDepth: historyPast.length,
+      affectedNodeIds: [],
+      confidence: 0.9,
+      branchLabel: "review",
+      lifecycleStage: "review",
+      beforeSummary: summarizeSceneEvidence(scene).detail,
+      afterSummary: summarizeSceneEvidence(scene).detail,
+      notes: [`Approval mode changed from ${workspaceGovernance.approvalMode} to ${mode}.`],
+    });
+    const nextEvents = [...operationalEvidenceEvents, evidenceEvent];
+    persistOperationalEvidenceEvents(nextEvents);
+    const nextGovernance = {
+      ...workspaceGovernance,
+      approvalMode: mode,
+    };
+    persistWorkspaceGovernance(nextGovernance);
+    set({
+      operationalEvidenceEvents: nextEvents,
+      workspaceGovernance: nextGovernance,
+      scene: cloneSceneWithAppendedChangeLog(scene, evidenceLogLine(evidenceEvent)),
+    });
+  },
+
+  requestSceneReview: (note = "") => {
+    const { scene, operationalEvidenceEvents, workspaceGovernance, workspaceAccess, historyPast } = get();
+    const trimmed = note.trim();
+    const accessRoute = routeWorkspaceApproval(scene, workspaceAccess);
+    const evidenceEvent = buildOperationalEvidenceEvent({
+      kind: "scene_review_requested",
+      title: "Review requested",
+      details: trimmed || `Requested scene review before publish. Routing to ${accessRoute.requiredReviewerRole.replace(/_/g, " ")}.`,
+      actor: "user",
+      source: scene.source,
+      sceneId: scene.id,
+      sceneName: scene.name,
+      revisionDepth: historyPast.length,
+      affectedNodeIds: scene.cameras.map((camera) => camera.id),
+      confidence: 0.9,
+      branchLabel: "review",
+      lifecycleStage: "review",
+      beforeSummary: summarizeSceneEvidence(scene).detail,
+      afterSummary: summarizeSceneEvidence(scene).detail,
+      notes: trimmed
+        ? [trimmed, `Review route: ${accessRoute.requiredReviewerRole.replace(/_/g, " ")}.`]
+        : [`Review route: ${accessRoute.requiredReviewerRole.replace(/_/g, " ")}.`],
+    });
+    const nextEvents = [...operationalEvidenceEvents, evidenceEvent];
+    persistOperationalEvidenceEvents(nextEvents);
+    const nextGovernance: WorkspaceGovernanceState = {
+      ...workspaceGovernance,
+      sceneStatus: "review_requested",
+      requestedAt: Date.now(),
+      requestedBy: workspaceGovernance.activeRole,
+      reviewedAt: null,
+      reviewedBy: null,
+    };
+    persistWorkspaceGovernance(nextGovernance);
+    set({
+      operationalEvidenceEvents: nextEvents,
+      workspaceGovernance: nextGovernance,
+      scene: cloneSceneWithAppendedChangeLog(scene, evidenceLogLine(evidenceEvent)),
+    });
+    return true;
+  },
+
+  approveSceneReview: (note = "") => {
+    const { scene, operationalEvidenceEvents, workspaceGovernance, workspaceAccess, historyPast } = get();
+    if (!canPerformWorkspaceAction(workspaceAccess, scene, "approve").allowed) return false;
+    const trimmed = note.trim();
+    const evidenceEvent = buildOperationalEvidenceEvent({
+      kind: "scene_review_approved",
+      title: "Review approved",
+      details: trimmed || "Scene review approved for publish.",
+      actor: "user",
+      source: scene.source,
+      sceneId: scene.id,
+      sceneName: scene.name,
+      revisionDepth: historyPast.length,
+      affectedNodeIds: scene.cameras.map((camera) => camera.id),
+      confidence: 0.95,
+      branchLabel: "review",
+      lifecycleStage: "review",
+      beforeSummary: summarizeSceneEvidence(scene).detail,
+      afterSummary: summarizeSceneEvidence(scene).detail,
+      notes: trimmed ? [trimmed] : undefined,
+    });
+    const nextEvents = [...operationalEvidenceEvents, evidenceEvent];
+    persistOperationalEvidenceEvents(nextEvents);
+    const nextGovernance: WorkspaceGovernanceState = {
+      ...workspaceGovernance,
+      sceneStatus: "approved",
+      reviewedAt: Date.now(),
+      reviewedBy: workspaceGovernance.activeRole,
+    };
+    persistWorkspaceGovernance(nextGovernance);
+    set({
+      operationalEvidenceEvents: nextEvents,
+      workspaceGovernance: nextGovernance,
+      scene: cloneSceneWithAppendedChangeLog(scene, evidenceLogLine(evidenceEvent)),
+    });
+    return true;
+  },
+
+  rejectSceneReview: (note = "") => {
+    const { scene, operationalEvidenceEvents, workspaceGovernance, workspaceAccess, historyPast } = get();
+    if (!canPerformWorkspaceAction(workspaceAccess, scene, "reject").allowed) return false;
+    const trimmed = note.trim();
+    const evidenceEvent = buildOperationalEvidenceEvent({
+      kind: "scene_review_rejected",
+      title: "Review rejected",
+      details: trimmed || "Scene review rejected and returned for revision.",
+      actor: "user",
+      source: scene.source,
+      sceneId: scene.id,
+      sceneName: scene.name,
+      revisionDepth: historyPast.length,
+      affectedNodeIds: scene.cameras.map((camera) => camera.id),
+      confidence: 0.95,
+      branchLabel: "review",
+      lifecycleStage: "review",
+      beforeSummary: summarizeSceneEvidence(scene).detail,
+      afterSummary: summarizeSceneEvidence(scene).detail,
+      notes: trimmed ? [trimmed] : undefined,
+    });
+    const nextEvents = [...operationalEvidenceEvents, evidenceEvent];
+    persistOperationalEvidenceEvents(nextEvents);
+    const nextGovernance: WorkspaceGovernanceState = {
+      ...workspaceGovernance,
+      sceneStatus: "rejected",
+      reviewedAt: Date.now(),
+      reviewedBy: workspaceGovernance.activeRole,
+    };
+    persistWorkspaceGovernance(nextGovernance);
+    set({
+      operationalEvidenceEvents: nextEvents,
+      workspaceGovernance: nextGovernance,
+      scene: cloneSceneWithAppendedChangeLog(scene, evidenceLogLine(evidenceEvent)),
+    });
+    return true;
+  },
+
+  addSceneAnnotation: (note) => {
+    const trimmed = note.trim();
+    if (!trimmed) return false;
+    const { scene, operationalEvidenceEvents, workspaceGovernance, historyPast } = get();
+    const evidenceEvent = buildOperationalEvidenceEvent({
+      kind: "scene_comment_added",
+      title: "Review annotation added",
+      details: trimmed,
+      actor: "user",
+      source: scene.source,
+      sceneId: scene.id,
+      sceneName: scene.name,
+      revisionDepth: historyPast.length,
+      affectedNodeIds: [],
+      confidence: 0.92,
+      branchLabel: "review",
+      lifecycleStage: "review",
+      beforeSummary: summarizeSceneEvidence(scene).detail,
+      afterSummary: summarizeSceneEvidence(scene).detail,
+      notes: [trimmed],
+    });
+    const nextEvents = [...operationalEvidenceEvents, evidenceEvent];
+    persistOperationalEvidenceEvents(nextEvents);
+    const nextGovernance = {
+      ...workspaceGovernance,
+      reviewNotes: [...workspaceGovernance.reviewNotes, trimmed].slice(-12),
+    };
+    persistWorkspaceGovernance(nextGovernance);
+    set({
+      operationalEvidenceEvents: nextEvents,
+      workspaceGovernance: nextGovernance,
+      scene: cloneSceneWithAppendedChangeLog(scene, evidenceLogLine(evidenceEvent)),
+    });
+    return true;
   },
 
   selectNode: (id) => set((state) => ({
@@ -1680,6 +3033,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       selectedHandle: undefined,
     },
   })),
+  setSensorPlacementType: (sensorPlacementType) => set({ sensorPlacementType }),
   setViewMode: (mode) => {
     const preset = viewModeToPreset(mode);
     const layout = buildPresetDockLayout(preset);
@@ -1886,6 +3240,10 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     persistAiProviderSelection(next);
     set({ aiProviderSelection: next });
   },
+  setLocalOnlyMode: (enabled) => {
+    persistLocalOnlyMode(enabled);
+    set({ localOnlyMode: enabled });
+  },
   setOverlayFilter: (filter, visible) => set((s) => ({ overlayFilters: { ...s.overlayFilters, [filter]: visible } })),
   setCriticalZoneTargetType: (targetType) => set({ criticalZoneTargetType: targetType }),
   setAllZoneTargetTypes: (targetType) => {
@@ -1921,6 +3279,87 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   setDemoMode: (active) => set({ demoMode: active }),
   setDemoStep: (step) => set({ demoStep: step }),
   setLaunchNotice: (launchNotice) => set({ launchNotice }),
+  recordRuntimeIncident: (incident) =>
+    set((state) => ({
+      runtimeIncidents: [...state.runtimeIncidents, createRuntimeIncident(incident)].slice(-100),
+    })),
+  recordExternalLogEntry: (entry) =>
+    set((state) => {
+      const nextEntry: ExternalLogEntry = {
+        id: `external_log_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+        timestamp: entry.timestamp ?? Date.now(),
+        source: entry.source,
+        title: entry.title.trim() || "External log capture",
+        details: entry.details.trim() || "External log capture recorded.",
+        raw: entry.raw,
+        lineCount: Math.max(0, Math.round(entry.lineCount)),
+        severity: entry.severity,
+      };
+      const nextEntries = [nextEntry, ...state.externalLogEntries].slice(0, 20);
+      persistExternalLogEntries(nextEntries);
+      return { externalLogEntries: nextEntries };
+    }),
+  clearExternalLogEntries: () =>
+    set(() => {
+      persistExternalLogEntries([]);
+      return { externalLogEntries: [] };
+    }),
+  recordSupportIngestResponse: (record) =>
+    set((state) => {
+      const nextRecord: SupportIngestHistoryRecord = {
+        ...record,
+        submittedAt: record.submittedAt ?? Date.now(),
+        storedAt: Date.now(),
+      };
+      const nextHistory = [nextRecord, ...state.supportIngestHistory].slice(0, 12);
+      persistSupportIngestHistory(nextHistory);
+      return { supportIngestHistory: nextHistory };
+    }),
+  clearSupportIngestHistory: () =>
+    set(() => {
+      persistSupportIngestHistory([]);
+      return { supportIngestHistory: [] };
+    }),
+  recordModelEvalRun: (report) =>
+    set((state) => {
+      const nextHistory = [summarizeModelEvalRun(report), ...state.modelEvalHistory].slice(0, 12);
+      persistModelEvalHistory(nextHistory);
+      return { modelEvalHistory: nextHistory };
+    }),
+  clearModelEvalHistory: () =>
+    set(() => {
+      persistModelEvalHistory([]);
+      return { modelEvalHistory: [] };
+    }),
+  recordAiActionTelemetry: (record) =>
+    set((state) => {
+      const nextRecord: AiActionTelemetryRecord = {
+        id: `ai_telemetry_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+        timestamp: record.timestamp ?? Date.now(),
+        stage: record.stage,
+        providerId: record.providerId,
+        providerLabel: record.providerLabel,
+        model: record.model,
+        localOnlyMode: record.localOnlyMode,
+        cloudAvailable: record.cloudAvailable,
+        durationMs: Math.max(0, Math.round(record.durationMs)),
+        estimatedPromptTokens: Math.max(0, Math.round(record.estimatedPromptTokens)),
+        estimatedCompletionTokens: Math.max(0, Math.round(record.estimatedCompletionTokens)),
+        estimatedTotalTokens: Math.max(0, Math.round(record.estimatedTotalTokens)),
+        tokenSource: record.tokenSource,
+        status: record.status,
+        note: record.note ?? null,
+      };
+      const nextTelemetry = [nextRecord, ...state.aiActionTelemetry].slice(0, 24);
+      persistAiActionTelemetry(nextTelemetry);
+      return { aiActionTelemetry: nextTelemetry };
+    }),
+  clearAiActionTelemetry: () =>
+    set(() => {
+      persistAiActionTelemetry([]);
+      return { aiActionTelemetry: [] };
+    }),
+  clearRuntimeIncidents: () => set({ runtimeIncidents: [] }),
   setCompareVisualEvidence: (compareVisualEvidence) => set({ compareVisualEvidence }),
   setCompareReportSelection: (compareReportSelection) => set({ compareReportSelection }),
   setCameraViewVerificationIntent: (cameraViewVerificationIntent) => set({ cameraViewVerificationIntent }),
@@ -1957,8 +3396,24 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       : [id];
     const { scene: next, duplicatedIds } = duplicateNodesInScene(currentScene, idsToDuplicate);
     if (duplicatedIds.length === 0) return;
+    const evidenceEvent = buildOperationalEvidenceEvent({
+      kind: "node_added",
+      title: "Node duplicated",
+      details: `${duplicatedIds.length} duplicate${duplicatedIds.length === 1 ? "" : "s"} created from the active selection.`,
+      actor: "user",
+      source: next.source,
+      sceneId: next.id,
+      sceneName: next.name,
+      revisionDepth: get().historyPast.length + 1,
+      affectedNodeIds: duplicatedIds,
+      confidence: 0.92,
+      beforeSummary: summarizeSceneEvidence(currentScene).detail,
+      afterSummary: summarizeSceneEvidence(next).detail,
+      sceneSnapshot: cloneSecurityScene(next),
+    });
+    const nextEvents = [...get().operationalEvidenceEvents, evidenceEvent];
+    persistOperationalEvidenceEvents(nextEvents);
     set((state) => ({
-      scene: next,
       simulationDirty: true,
       sceneIntelligenceGraph: buildGraphState(next, state.simulationResult, state.historyPast.length + 1, state.snapshots.length),
       selectedNodeId: duplicatedIds[0] ?? null,
@@ -1966,6 +3421,11 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       activePathId: cloneAndSetActivePath(next, state.activePathId),
       historyPast: [...state.historyPast, cloneSecurityScene(state.scene)],
       historyFuture: [],
+      operationalEvidenceEvents: nextEvents,
+      scene: {
+        ...next,
+        changeLog: [...next.changeLog, evidenceLogLine(evidenceEvent)],
+      },
     }));
   },
   removeNode: (id) => {
@@ -1999,7 +3459,21 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
 
   setSimulationRunning: (running) => set({ simulationRunning: running }),
   setSimulationResult: (result, durationMs) =>
-    set((s) => buildSimulationState(s.scene, result, durationMs, s.historyPast.length, s.snapshots.length)),
+    set((s) => {
+      const evidenceEvent = buildSimulationEvidenceEvent(s.scene, result, durationMs, s.historyPast.length, s.simulationResult);
+      const nextState = buildSimulationState(s.scene, result, durationMs, s.historyPast.length, s.snapshots.length);
+      const nextSceneSnapshot = cloneSecurityScene(nextState.scene);
+      const nextEvents = [...s.operationalEvidenceEvents, evidenceEvent];
+      persistOperationalEvidenceEvents(nextEvents);
+      return {
+        ...nextState,
+        operationalEvidenceEvents: nextEvents,
+        scene: {
+          ...nextSceneSnapshot,
+          changeLog: [...nextState.scene.changeLog, evidenceLogLine(evidenceEvent)],
+        },
+      };
+    }),
   runSimulation: () => {
     const state = get();
     if (state.simulationRunning) return;
@@ -2022,9 +3496,39 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         }
 
         const current = get();
-        set(buildSimulationState(current.scene, result, durationMs, current.historyPast.length, current.snapshots.length));
+        const evidenceEvent = buildSimulationEvidenceEvent(current.scene, result, durationMs, current.historyPast.length, current.simulationResult);
+        const nextState = buildSimulationState(current.scene, result, durationMs, current.historyPast.length, current.snapshots.length);
+        const nextSceneSnapshot = cloneSecurityScene(nextState.scene);
+        const nextEvents = [...current.operationalEvidenceEvents, evidenceEvent];
+        persistOperationalEvidenceEvents(nextEvents);
+        set({
+          ...nextState,
+          operationalEvidenceEvents: nextEvents,
+          scene: {
+            ...nextSceneSnapshot,
+            changeLog: [...nextState.scene.changeLog, evidenceLogLine(evidenceEvent)],
+          },
+        });
+        get().recordRuntimeIncident({
+          category: "performance_trace",
+          severity: durationMs >= 1000 ? "warning" : "info",
+          title: "Simulation run",
+          details: `Simulation completed in ${durationMs} ms with ${result.issues.length} issue${result.issues.length === 1 ? "" : "s"}.`,
+          durationMs,
+          action: "simulate",
+          path: "/studio",
+        });
       } catch (err) {
         console.error("[simulation] failed:", err);
+        get().recordRuntimeIncident({
+          category: "runtime_failure",
+          severity: "error",
+          title: "Simulation failed",
+          details: err instanceof Error ? err.message : "Simulation threw an unknown error.",
+          stack: err instanceof Error ? err.stack : undefined,
+          action: "simulate",
+          path: "/studio",
+        });
         set({ simulationRunning: false });
       }
     }, 30);
@@ -2033,6 +3537,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     const current = get();
     const index = current.snapshots.findIndex((snapshot) => snapshot.id === snapshotId);
     if (index === -1) return false;
+    const startedAt = performance.now();
     const target = current.snapshots[index];
     const fullScene = cloneSecurityScene(target.scene as unknown as SecurityScene);
     const result = simulateStudio(fullScene);
@@ -2041,15 +3546,46 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       const nextSnapshots = state.snapshots.map((snapshot, i) =>
         i === index
           ? {
-            ...snapshot,
+              ...snapshot,
             simulation: result,
           }
           : snapshot);
       const nextScene = cloneSecurityScene(state.scene);
       nextScene.snapshots = structuredClone(nextSnapshots);
+      const evidenceEvent = buildOperationalEvidenceEvent({
+        kind: "snapshot_saved",
+        title: "Snapshot replay simulated",
+        details: `Snapshot ${target.label} recomputed against the current simulation rules.`,
+        actor: "system",
+        source: nextScene.source,
+        sceneId: nextScene.id,
+        sceneName: nextScene.name,
+        revisionDepth: state.historyPast.length,
+        affectedNodeIds: [],
+        confidence: 0.9,
+        beforeSummary: summarizeSceneEvidence(state.scene).detail,
+        afterSummary: summarizeSceneEvidence(nextScene).detail,
+        notes: [`Snapshot ${target.label} re-simulated.`],
+      });
+      const nextEvents = [...state.operationalEvidenceEvents, evidenceEvent];
+      persistOperationalEvidenceEvents(nextEvents);
+      const durationMs = Math.round(performance.now() - startedAt);
+      get().recordRuntimeIncident({
+        category: "performance_trace",
+        severity: durationMs >= 500 ? "warning" : "info",
+        title: "Snapshot replay simulated",
+        details: `Snapshot "${target.label}" recomputed in ${durationMs} ms.`,
+        durationMs,
+        action: "simulate_snapshot",
+        path: "/studio",
+      });
       return {
         snapshots: nextSnapshots,
-        scene: nextScene,
+        operationalEvidenceEvents: nextEvents,
+        scene: {
+          ...nextScene,
+          changeLog: [...nextScene.changeLog, evidenceLogLine(evidenceEvent)],
+        },
       };
     });
 
@@ -2058,72 +3594,189 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   markDirty: () => set({ simulationDirty: true }),
   logChange: (entry) =>
     set((state) => ({
-      scene: { ...state.scene, changeLog: [...state.scene.changeLog, entry] },
+      scene: cloneSceneWithAppendedChangeLog(state.scene, entry),
     })),
   clearChangeLog: () =>
     set((state) => ({
-      scene: { ...state.scene, changeLog: [] },
+      scene: cloneSceneWithChangeLog(state.scene, []),
     })),
 
   counterfactualResult: null,
   counterfactualObsId: null,
   runCounterfactual: (obstructionId) => {
     const { scene } = get();
-    const patched: import("@/schema/security-scene").SecurityScene = {
-      ...cloneSecurityScene(scene),
-      obstructions: scene.obstructions.filter((o) => o.id !== obstructionId),
-    };
+    const patched = cloneSecurityScene(scene);
+    patched.obstructions = scene.obstructions.filter((o) => o.id !== obstructionId);
     const result = simulateStudio(patched);
-    set({ counterfactualResult: result, counterfactualObsId: obstructionId });
+    const evidenceEvent = buildOperationalEvidenceEvent({
+      kind: "counterfactual_completed",
+      title: "Counterfactual simulated",
+      details: `Recomputed coverage without obstruction ${obstructionId}.`,
+      actor: "system",
+      source: scene.source,
+      sceneId: scene.id,
+      sceneName: scene.name,
+      revisionDepth: get().historyPast.length,
+      affectedNodeIds: [obstructionId],
+      confidence: 0.9,
+      beforeSummary: summarizeSceneEvidence(scene).detail,
+      afterSummary: summarizeSceneEvidence(patched).detail,
+      simulation: summarizeSimulationEvidence(result)
+        ? {
+            ...summarizeSimulationEvidence(result)!,
+            deltaCoveragePct: null,
+          }
+        : undefined,
+    });
+    const nextEvents = [...get().operationalEvidenceEvents, evidenceEvent];
+    persistOperationalEvidenceEvents(nextEvents);
+    set({
+      counterfactualResult: result,
+      counterfactualObsId: obstructionId,
+      operationalEvidenceEvents: nextEvents,
+      scene: {
+        ...cloneSecurityScene(scene),
+        changeLog: [...scene.changeLog, evidenceLogLine(evidenceEvent)],
+      },
+    });
   },
   clearCounterfactual: () => set({ counterfactualResult: null, counterfactualObsId: null }),
 
   addSnapshot: (label: string, result) =>
     set((s) => {
       const parsed = parseSecurityScene(s.scene);
+      const nextScene = cloneSecurityScene(parsed);
       const snapshot: SceneSnapshot = {
         id: `snap_${Date.now().toString(36)}`,
         label,
         createdAt: Date.now(),
-        scene: cloneSecurityScene(parsed),
+        scene: cloneSecurityScene(nextScene),
         simulation: result,
       };
       const snapshots = [...s.snapshots, snapshot];
+      const evidenceEvent = buildOperationalEvidenceEvent({
+        kind: "snapshot_saved",
+        title: "Snapshot captured",
+        details: `Saved snapshot "${label}" for later comparison.`,
+        actor: "user",
+        source: parsed.source,
+        sceneId: parsed.id,
+        sceneName: parsed.name,
+        revisionDepth: s.historyPast.length,
+        affectedNodeIds: [],
+        confidence: 0.9,
+        beforeSummary: summarizeSceneEvidence(s.scene).detail,
+        afterSummary: summarizeSceneEvidence(nextScene).detail,
+        sceneSnapshot: cloneSecurityScene(nextScene),
+      });
+      const nextEvents = [...s.operationalEvidenceEvents, evidenceEvent];
+      persistOperationalEvidenceEvents(nextEvents);
+      nextScene.snapshots = snapshots;
       return {
         snapshots,
-        sceneIntelligenceGraph: buildGraphState(parsed, s.simulationResult, s.historyPast.length, snapshots.length),
+        sceneIntelligenceGraph: buildGraphState(nextScene, s.simulationResult, s.historyPast.length, snapshots.length),
+        operationalEvidenceEvents: nextEvents,
+        scene: cloneSceneWithAppendedChangeLog(nextScene, evidenceLogLine(evidenceEvent)),
       };
     }),
 
   saveSnapshot: (label) =>
     set((s) => {
+      const startedAt = performance.now();
       const parsed = parseSecurityScene(s.scene);
+      const scene = cloneSecurityScene(parsed);
       const snapshot: SceneSnapshot = {
         id: `snap_${Date.now().toString(36)}`,
         label,
         createdAt: Date.now(),
-        scene: cloneSecurityScene(parsed),
+        scene: cloneSecurityScene(scene),
         simulation: s.simulationResult ?? undefined,
       };
       const snapshots = [...s.snapshots, snapshot];
-      const scene = cloneSecurityScene(parsed);
       scene.snapshots = snapshots;
+      const evidenceEvent = buildOperationalEvidenceEvent({
+        kind: "snapshot_saved",
+        title: "Snapshot saved",
+        details: `Saved snapshot "${label}" for comparison and report handoff.`,
+        actor: "user",
+        source: scene.source,
+        sceneId: scene.id,
+        sceneName: scene.name,
+        revisionDepth: s.historyPast.length,
+        affectedNodeIds: [],
+        confidence: 0.9,
+        beforeSummary: summarizeSceneEvidence(s.scene).detail,
+        afterSummary: summarizeSceneEvidence(scene).detail,
+        sceneSnapshot: cloneSecurityScene(scene),
+      });
+      const nextEvents = [...s.operationalEvidenceEvents, evidenceEvent];
+      persistOperationalEvidenceEvents(nextEvents);
+      const durationMs = Math.round(performance.now() - startedAt);
+      get().recordRuntimeIncident({
+        category: "performance_trace",
+        severity: durationMs >= 500 ? "warning" : "info",
+        title: "Snapshot saved",
+        details: `Snapshot "${label}" saved in ${durationMs} ms.`,
+        durationMs,
+        action: "save_snapshot",
+        path: "/studio",
+      });
       return {
         snapshots,
-        scene,
         sceneIntelligenceGraph: buildGraphState(scene, s.simulationResult, s.historyPast.length, snapshots.length),
+        operationalEvidenceEvents: nextEvents,
+        scene: {
+          ...scene,
+          changeLog: [...scene.changeLog, evidenceLogLine(evidenceEvent)],
+        },
       };
     }),
 
   importScene: (json) => {
+    const startedAt = performance.now();
     const result = safeParseSecurityScene(json);
     if (!result.success) {
+      get().recordRuntimeIncident({
+        category: "data_validation_error",
+        severity: "warning",
+        title: "Scene import rejected",
+        details: result.error.issues.map((i) => i.message).join(", "),
+        action: "import_scene",
+        path: "/studio",
+      });
       return { success: false, error: result.error.issues.map((i) => i.message).join(", ") };
     }
     const scene = cloneSecurityScene(result.data);
     const layout = buildPresetDockLayout("edit");
-    set({
-      scene,
+    const evidenceEvent = buildOperationalEvidenceEvent({
+      kind: scene.source === "scan" ? "scan_compiled" : "scene_imported",
+      title: scene.source === "scan" ? "Scan compiled into scene" : "Scene imported",
+      details: `Loaded ${scene.name || "Untitled Scene"} from ${scene.source}.`,
+      actor: "system",
+      source: scene.source,
+      sceneId: scene.id,
+      sceneName: scene.name,
+      revisionDepth: 0,
+      affectedNodeIds: [],
+      confidence: 0.98,
+      afterSummary: summarizeSceneEvidence(scene).detail,
+      sceneSnapshot: cloneSecurityScene(scene),
+    });
+    const nextEvents = [evidenceEvent];
+    persistOperationalEvidenceEvents(nextEvents);
+    const durationMs = Math.round(performance.now() - startedAt);
+    get().recordRuntimeIncident({
+      category: "performance_trace",
+      severity: durationMs >= 500 ? "warning" : "info",
+      title: "Scene imported",
+      details: `Loaded ${scene.name || "Untitled Scene"} in ${durationMs} ms.`,
+      durationMs,
+      action: scene.source === "scan" ? "scan_compile" : "import_scene",
+      path: "/studio",
+    });
+    const nextGovernance = resetWorkspaceGovernanceForDraft(get().workspaceGovernance);
+    persistWorkspaceGovernance(nextGovernance);
+    set(() => ({
       snapshots: scene.snapshots,
       historyPast: [],
       historyFuture: [],
@@ -2168,53 +3821,444 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       sceneIntelligenceGraph: buildGraphState(scene, null, 0, scene.snapshots.length),
       compareVisualEvidence: null,
       compareReportSelection: null,
-    });
+      operationalEvidenceEvents: nextEvents,
+      workspaceGovernance: nextGovernance,
+      scene: cloneSceneWithAppendedChangeLog(scene, evidenceLogLine(evidenceEvent)),
+    }));
     return { success: true };
   },
 
   exportScene: () => cloneSecurityScene(get().scene),
+  exportOperationalEvidenceArchive: () => buildOperationalEvidenceArchive({
+    scene: get().scene,
+    simulationResult: get().simulationResult,
+    sceneIntelligenceGraph: get().sceneIntelligenceGraph,
+    operationalEvidenceEvents: get().operationalEvidenceEvents,
+    operationalEvidenceJournal: loadOperationalEvidenceJournalFromRaw(typeof window === "undefined"
+      ? null
+      : window.localStorage.getItem(OPERATIONAL_EVIDENCE_STORAGE_KEY)),
+    workspaceGovernance: get().workspaceGovernance,
+    workspaceAccess: get().workspaceAccess,
+  }),
 
-  // Scene management
-  setScene: (scene) =>
+  importOperationalEvidenceArchive: (raw) => {
+    const startedAt = performance.now();
+    const archive = normalizeOperationalEvidenceArchive(raw);
+    if (!archive) {
+      get().recordRuntimeIncident({
+        category: "data_validation_error",
+        severity: "warning",
+        title: "Archive import rejected",
+        details: "Invalid operational evidence archive.",
+        action: "import_archive",
+        path: "/studio",
+      });
+      return { success: false, error: "Invalid operational evidence archive" };
+    }
+
+    const currentState = get();
+    const currentHead = currentState.operationalEvidenceEvents.at(-1) ?? null;
+    const archiveHead = archive.operationalEvidenceEvents.at(-1) ?? null;
+      if (!currentHead || !archiveHead) {
+      const layout = buildPresetDockLayout("edit");
+      const restoredScene = cloneSecurityScene(archive.scene);
+      const priorEvents = normalizeOperationalEvidenceEvents(archive.operationalEvidenceEvents);
+      const previousEvent = priorEvents.at(-1) ?? null;
+      const restoreEvent = createArchiveRestoreEvent(archive, restoredScene, previousEvent?.id);
+      const nextEvents = [...priorEvents, restoreEvent];
+      persistOperationalEvidenceEvents(nextEvents);
+      if (archive.operationalEvidenceJournal && typeof window !== "undefined") {
+        window.localStorage.setItem(OPERATIONAL_EVIDENCE_STORAGE_KEY, JSON.stringify(archive.operationalEvidenceJournal));
+      }
+      const nextAccess = normalizeWorkspaceAccessState(archive.workspaceAccess);
+      const nextGovernance = {
+        ...normalizeWorkspaceGovernance(archive.workspaceGovernance),
+        activeRole: getActiveWorkspaceMember(nextAccess)?.role ?? normalizeWorkspaceGovernance(archive.workspaceGovernance).activeRole,
+      };
+      persistWorkspaceAccess(nextAccess);
+      persistWorkspaceGovernance(nextGovernance);
+      const sceneWithLog = cloneSceneWithAppendedChangeLog(restoredScene, evidenceLogLine(restoreEvent));
+      set({
+        simulationResult: archive.simulationResult ? structuredClone(archive.simulationResult) : restoredScene.simulation ?? null,
+        simulationDirty: !archive.simulationResult && !restoredScene.simulation,
+        snapshots: structuredClone(restoredScene.snapshots ?? []),
+        selectedNodeId: null,
+        selectedNodeIds: [],
+        activePathId: restoredScene.paths[0]?.id ?? null,
+        focusScenePointRequest: null,
+        mapState: cloneDefaultMapState(),
+        focusMode: false,
+        previousLayout: null,
+        viewMode: layout.viewMode,
+        workspacePreset: layout.workspacePreset,
+        canvasMode: layout.canvasMode,
+        leftDockCollapsed: layout.leftDockCollapsed,
+        rightDockCollapsed: layout.rightDockCollapsed,
+        bottomDockCollapsed: layout.bottomDockCollapsed,
+        leftDockSizePx: layout.leftDockSizePx,
+        rightDockSizePx: layout.rightDockSizePx,
+        bottomDockSizePx: layout.bottomDockSizePx,
+        visibleComponents: { ...layout.visibleComponents },
+        enabledAnalysisModules: { ...layout.enabledAnalysisModules },
+        layerVisibility: { ...layout.layerVisibility },
+        rightPanelMode: layout.rightPanelMode,
+        bottomDrawerMode: layout.bottomDrawerMode,
+        pinnedAnalysisModule: layout.pinnedAnalysisModule,
+        overlayDensity: layout.overlayDensity,
+        showDebugOverlays: layout.showDebugOverlays,
+        clientDemoOptions: { ...layout.clientDemoOptions },
+        bottomTab: "metrics",
+        inspectorTab: "properties",
+        activeTool: "select",
+        historyPast: [],
+        historyFuture: [],
+        sceneIntelligenceGraph: buildGraphState(restoredScene, archive.simulationResult ?? restoredScene.simulation ?? null, 0, restoredScene.snapshots.length),
+        compareVisualEvidence: null,
+        compareReportSelection: null,
+        operationalEvidenceEvents: nextEvents,
+        workspaceAccess: nextAccess,
+        workspaceGovernance: nextGovernance,
+        sceneModified: false,
+        savedSceneName: restoredScene.name,
+        scene: sceneWithLog,
+      });
+      get().recordRuntimeIncident({
+        category: "performance_trace",
+        severity: "info",
+        title: "Archive restored",
+        details: `Archive restored in ${Math.round(performance.now() - startedAt)} ms.`,
+        durationMs: Math.round(performance.now() - startedAt),
+        action: "import_archive",
+        path: "/studio",
+      });
+      return { success: true };
+    }
+
+    const combinedEvents = combineOperationalEvidenceEventChains(currentState.operationalEvidenceEvents, archive.operationalEvidenceEvents);
+    const comparison = compareOperationalEvidenceBranches(combinedEvents, currentHead.id, archiveHead.id);
+    const readiness = assessOperationalEvidenceMergeReadiness(comparison);
+    if (!comparison || !readiness) {
+      get().recordRuntimeIncident({
+        category: "data_validation_error",
+        severity: "warning",
+        title: "Archive merge preflight failed",
+        details: "Merge preflight could not compare the archive branch.",
+        action: "import_archive",
+        path: "/studio",
+      });
+      return { success: false, error: "Archive restore failed: merge preflight unavailable." };
+    }
+
+    if (readiness.status === "unrelated" || readiness.status === "fast_forward_right") {
+      get().recordRuntimeIncident({
+        category: "user_error",
+        severity: "warning",
+        title: "Archive restore blocked",
+        details: readiness.recommendation,
+        action: "import_archive",
+        path: "/studio",
+      });
+      return { success: false, error: `Archive restore failed: ${readiness.recommendation}` };
+    }
+
+    const layout = buildPresetDockLayout("edit");
+    if (readiness.status === "diverged") {
+      const mergeResult = mergeOperationalEvidenceBranchScenes(comparison);
+      if (!mergeResult) {
+        get().recordRuntimeIncident({
+          category: "runtime_failure",
+          severity: "error",
+          title: "Archive merge failed",
+          details: "No common ancestor could be reconstructed.",
+          action: "import_archive",
+          path: "/studio",
+        });
+        return { success: false, error: "Archive merge failed: no common ancestor could be reconstructed." };
+      }
+
+      if (mergeResult.conflicts.length > 0) {
+        get().recordRuntimeIncident({
+          category: "user_error",
+          severity: "warning",
+          title: "Archive merge conflicts",
+          details: `${mergeResult.conflicts.length} conflict${mergeResult.conflicts.length === 1 ? "" : "s"} must be resolved before applying.`,
+          action: "import_archive",
+          path: "/studio",
+        });
+        return {
+          success: false,
+          error: `Archive merge failed: ${mergeResult.conflicts.length} conflict${mergeResult.conflicts.length === 1 ? "" : "s"} must be resolved before applying.`,
+        };
+      }
+
+      const mergedScene = cloneSecurityScene(mergeResult.mergedScene);
+      const currentBranchId = currentHead.branchId ?? currentState.scene.id;
+      const archiveBranchId = archiveHead.branchId ?? archive.scene.id;
+      const nextAccess = normalizeWorkspaceAccessState(archive.workspaceAccess);
+      const mergeEvent = buildOperationalEvidenceEvent({
+        kind: "scene_merged",
+        title: "Operational archive merged",
+        details: `Merged divergent branches ${currentBranchId} and ${archiveBranchId} into the current workspace.`,
+        actor: "user",
+        source: currentState.scene.source,
+        sceneId: mergedScene.id,
+        sceneName: mergedScene.name,
+        revisionDepth: combinedEvents.length + 1,
+        affectedNodeIds: [],
+        confidence: 0.96,
+        branchId: `${mergedScene.id}:merged`,
+        branchLabel: "merged",
+        lifecycleStage: "review",
+        parentEventId: currentHead.id,
+        beforeSummary: summarizeSceneEvidence(currentState.scene).detail,
+        afterSummary: summarizeSceneEvidence(mergedScene).detail,
+        previousSceneSnapshot: cloneSecurityScene(currentState.scene),
+        sceneSnapshot: cloneSecurityScene(mergedScene),
+        notes: [
+          `Merged archive branch ${archiveBranchId} against current branch ${currentBranchId}.`,
+          `Common ancestor: ${comparison.commonAncestor?.event.id ?? "unknown"}.`,
+        ],
+      });
+
+      const nextEvents = combineOperationalEvidenceEventChains(currentState.operationalEvidenceEvents, archive.operationalEvidenceEvents, [mergeEvent]);
+      persistOperationalEvidenceEvents(nextEvents);
+      const nextGovernance = {
+        ...resetWorkspaceGovernanceForDraft(currentState.workspaceGovernance),
+        sceneStatus: "draft" as const,
+        activeRole: getActiveWorkspaceMember(nextAccess)?.role ?? currentState.workspaceGovernance.activeRole,
+      };
+      persistWorkspaceAccess(nextAccess);
+      persistWorkspaceGovernance(nextGovernance);
+      const mergedSceneWithLog = cloneSceneWithAppendedChangeLog(mergedScene, evidenceLogLine(mergeEvent));
+      set({
+        scene: mergedSceneWithLog,
+        simulationResult: null,
+        simulationDirty: true,
+        snapshots: structuredClone(mergedScene.snapshots ?? []),
+        selectedNodeId: null,
+        selectedNodeIds: [],
+        activePathId: mergedScene.paths[0]?.id ?? null,
+        focusScenePointRequest: null,
+        mapState: cloneDefaultMapState(),
+        focusMode: false,
+        previousLayout: null,
+        viewMode: layout.viewMode,
+        workspacePreset: layout.workspacePreset,
+        canvasMode: layout.canvasMode,
+        leftDockCollapsed: layout.leftDockCollapsed,
+        rightDockCollapsed: layout.rightDockCollapsed,
+        bottomDockCollapsed: layout.bottomDockCollapsed,
+        leftDockSizePx: layout.leftDockSizePx,
+        rightDockSizePx: layout.rightDockSizePx,
+        bottomDockSizePx: layout.bottomDockSizePx,
+        visibleComponents: { ...layout.visibleComponents },
+        enabledAnalysisModules: { ...layout.enabledAnalysisModules },
+        layerVisibility: { ...layout.layerVisibility },
+        rightPanelMode: layout.rightPanelMode,
+        bottomDrawerMode: layout.bottomDrawerMode,
+        pinnedAnalysisModule: layout.pinnedAnalysisModule,
+        overlayDensity: layout.overlayDensity,
+        showDebugOverlays: layout.showDebugOverlays,
+        clientDemoOptions: { ...layout.clientDemoOptions },
+        bottomTab: "metrics",
+        inspectorTab: "properties",
+        activeTool: "select",
+        historyPast: [],
+        historyFuture: [],
+        sceneIntelligenceGraph: buildGraphState(mergedScene, null, 0, mergedScene.snapshots.length),
+        compareVisualEvidence: null,
+        compareReportSelection: null,
+        operationalEvidenceEvents: nextEvents,
+        workspaceAccess: nextAccess,
+        workspaceGovernance: nextGovernance,
+        sceneModified: false,
+        savedSceneName: mergedScene.name,
+      });
+      get().recordRuntimeIncident({
+        category: "performance_trace",
+        severity: "info",
+        title: "Archive merged",
+        details: `Diverged archive merged in ${Math.round(performance.now() - startedAt)} ms.`,
+        durationMs: Math.round(performance.now() - startedAt),
+        action: "import_archive",
+        path: "/studio",
+      });
+      return { success: true };
+    }
+
+    const restoredScene = cloneSecurityScene(archive.scene);
+    const priorEvents = normalizeOperationalEvidenceEvents(archive.operationalEvidenceEvents);
+    const previousEvent = priorEvents.at(-1) ?? null;
+    const restoreEvent = createArchiveRestoreEvent(archive, restoredScene, previousEvent?.id);
+    const nextEvents = [...priorEvents, restoreEvent];
+    persistOperationalEvidenceEvents(nextEvents);
+    if (archive.operationalEvidenceJournal && typeof window !== "undefined" && (readiness.status === "same" || readiness.status === "fast_forward_left")) {
+      window.localStorage.setItem(OPERATIONAL_EVIDENCE_STORAGE_KEY, JSON.stringify(archive.operationalEvidenceJournal));
+    }
+    const nextAccess = normalizeWorkspaceAccessState(archive.workspaceAccess);
+    const nextGovernance = {
+      ...normalizeWorkspaceGovernance(archive.workspaceGovernance),
+      activeRole: getActiveWorkspaceMember(nextAccess)?.role ?? normalizeWorkspaceGovernance(archive.workspaceGovernance).activeRole,
+    };
+    persistWorkspaceAccess(nextAccess);
+    persistWorkspaceGovernance(nextGovernance);
+    const sceneWithLog = cloneSceneWithAppendedChangeLog(restoredScene, evidenceLogLine(restoreEvent));
     set({
-      scene: cloneSecurityScene(scene),
-      snapshots: structuredClone(scene.snapshots ?? []),
-      simulationDirty: true,
-      simulationResult: null,
+      simulationResult: archive.simulationResult ? structuredClone(archive.simulationResult) : restoredScene.simulation ?? null,
+      simulationDirty: !archive.simulationResult && !restoredScene.simulation,
+      snapshots: structuredClone(restoredScene.snapshots ?? []),
       selectedNodeId: null,
       selectedNodeIds: [],
-      activePathId: scene.paths[0]?.id ?? null,
+      activePathId: restoredScene.paths[0]?.id ?? null,
       focusScenePointRequest: null,
       mapState: cloneDefaultMapState(),
       focusMode: false,
       previousLayout: null,
-      ...buildPresetDockLayout("edit"),
+      viewMode: layout.viewMode,
+      workspacePreset: layout.workspacePreset,
+      canvasMode: layout.canvasMode,
+      leftDockCollapsed: layout.leftDockCollapsed,
+      rightDockCollapsed: layout.rightDockCollapsed,
+      bottomDockCollapsed: layout.bottomDockCollapsed,
+      leftDockSizePx: layout.leftDockSizePx,
+      rightDockSizePx: layout.rightDockSizePx,
+      bottomDockSizePx: layout.bottomDockSizePx,
+      visibleComponents: { ...layout.visibleComponents },
+      enabledAnalysisModules: { ...layout.enabledAnalysisModules },
+      layerVisibility: { ...layout.layerVisibility },
+      rightPanelMode: layout.rightPanelMode,
+      bottomDrawerMode: layout.bottomDrawerMode,
+      pinnedAnalysisModule: layout.pinnedAnalysisModule,
+      overlayDensity: layout.overlayDensity,
+      showDebugOverlays: layout.showDebugOverlays,
+      clientDemoOptions: { ...layout.clientDemoOptions },
       bottomTab: "metrics",
       inspectorTab: "properties",
       activeTool: "select",
       historyPast: [],
       historyFuture: [],
-      sceneIntelligenceGraph: buildGraphState(scene, null, 0, (scene.snapshots ?? []).length),
+      sceneIntelligenceGraph: buildGraphState(restoredScene, archive.simulationResult ?? restoredScene.simulation ?? null, 0, restoredScene.snapshots.length),
       compareVisualEvidence: null,
       compareReportSelection: null,
-      editor: {
-        editorMode: "idle",
-        draftWallStart: undefined,
-        draftPolygonPoints: [],
-        draftPathPoints: [],
-        hoverPoint: undefined,
-        snapEnabled: true,
-        snapDistanceM: 0.25,
-        gridSnapM: 0.5,
-        selectedHandle: undefined,
-      },
-    }),
+      operationalEvidenceEvents: nextEvents,
+      workspaceAccess: nextAccess,
+      workspaceGovernance: nextGovernance,
+      sceneModified: false,
+      savedSceneName: restoredScene.name,
+      scene: sceneWithLog,
+    });
+    get().recordRuntimeIncident({
+      category: "performance_trace",
+      severity: "info",
+      title: "Archive restored",
+      details: `Archive restored in ${Math.round(performance.now() - startedAt)} ms.`,
+      durationMs: Math.round(performance.now() - startedAt),
+      action: "import_archive",
+      path: "/studio",
+    });
+    return { success: true };
+  },
+
+  // Scene management
+  setScene: (scene) =>
+    {
+      const nextScene = cloneSecurityScene(scene);
+      const layout = buildPresetDockLayout("edit");
+      const evidenceEvent = buildOperationalEvidenceEvent({
+        kind: scene.source === "import" ? "scene_imported" : scene.source === "scan" ? "scan_compiled" : scene.source === "ai" ? "draft_applied" : scene.source === "manual" ? "scene_created" : "scene_initialized",
+        title: `Scene loaded: ${nextScene.name || "Untitled Scene"}`,
+        details: `Opened ${nextScene.name || "Untitled Scene"} from ${nextScene.source}.`,
+        actor: "system",
+        source: nextScene.source,
+        sceneId: nextScene.id,
+        sceneName: nextScene.name,
+        revisionDepth: 0,
+        affectedNodeIds: [],
+        confidence: 0.9,
+        afterSummary: summarizeSceneEvidence(nextScene).detail,
+        sceneSnapshot: cloneSecurityScene(nextScene),
+      });
+      const nextEvents = [evidenceEvent];
+      persistOperationalEvidenceEvents(nextEvents);
+      const nextGovernance = resetWorkspaceGovernanceForDraft(get().workspaceGovernance);
+      persistWorkspaceGovernance(nextGovernance);
+      set({
+        snapshots: structuredClone(scene.snapshots ?? []),
+        simulationDirty: true,
+        simulationResult: null,
+        selectedNodeId: null,
+        selectedNodeIds: [],
+        activePathId: scene.paths[0]?.id ?? null,
+        focusScenePointRequest: null,
+        mapState: cloneDefaultMapState(),
+        focusMode: false,
+        previousLayout: null,
+        viewMode: layout.viewMode,
+        workspacePreset: layout.workspacePreset,
+        canvasMode: layout.canvasMode,
+        leftDockCollapsed: layout.leftDockCollapsed,
+        rightDockCollapsed: layout.rightDockCollapsed,
+        bottomDockCollapsed: layout.bottomDockCollapsed,
+        leftDockSizePx: layout.leftDockSizePx,
+        rightDockSizePx: layout.rightDockSizePx,
+        bottomDockSizePx: layout.bottomDockSizePx,
+        visibleComponents: { ...layout.visibleComponents },
+        enabledAnalysisModules: { ...layout.enabledAnalysisModules },
+        layerVisibility: { ...layout.layerVisibility },
+        rightPanelMode: layout.rightPanelMode,
+        bottomDrawerMode: layout.bottomDrawerMode,
+        pinnedAnalysisModule: layout.pinnedAnalysisModule,
+        overlayDensity: layout.overlayDensity,
+        showDebugOverlays: layout.showDebugOverlays,
+        clientDemoOptions: { ...layout.clientDemoOptions },
+        bottomTab: "metrics",
+        inspectorTab: "properties",
+        activeTool: "select",
+        historyPast: [],
+        historyFuture: [],
+        sceneIntelligenceGraph: buildGraphState(nextScene, null, 0, (scene.snapshots ?? []).length),
+        compareVisualEvidence: null,
+        compareReportSelection: null,
+        operationalEvidenceEvents: nextEvents,
+        workspaceGovernance: nextGovernance,
+        editor: {
+          editorMode: "idle",
+          draftWallStart: undefined,
+          draftPolygonPoints: [],
+          draftPathPoints: [],
+          hoverPoint: undefined,
+          snapEnabled: true,
+          snapDistanceM: 0.25,
+          gridSnapM: 0.5,
+          selectedHandle: undefined,
+        },
+        scene: cloneSceneWithAppendedChangeLog(nextScene, evidenceLogLine(evidenceEvent)),
+      });
+    },
 
   createNewScene: () => {
     const blank = createBlankSecurityScene();
     const layout = buildPresetDockLayout("edit");
+    const evidenceEvent = buildOperationalEvidenceEvent({
+      kind: "scene_created",
+      title: "Blank scene created",
+      details: "Started a new blank SecurityScene in Studio.",
+      actor: "system",
+      source: blank.source,
+      sceneId: blank.id,
+      sceneName: blank.name,
+      revisionDepth: 0,
+      affectedNodeIds: [],
+      confidence: 0.95,
+      afterSummary: summarizeSceneEvidence(blank).detail,
+      sceneSnapshot: cloneSecurityScene(blank),
+    });
+    const nextEvents = [evidenceEvent];
+    persistOperationalEvidenceEvents(nextEvents);
+    const nextGovernance = resetWorkspaceGovernanceForDraft(get().workspaceGovernance);
+    persistWorkspaceGovernance(nextGovernance);
     set({
-      scene: blank,
+      scene: cloneSceneWithAppendedChangeLog(blank, evidenceLogLine(evidenceEvent)),
       snapshots: [],
       simulationResult: null,
       simulationDirty: true,
@@ -2236,6 +4280,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       bottomDockSizePx: layout.bottomDockSizePx,
       visibleComponents: { ...layout.visibleComponents },
       enabledAnalysisModules: { ...layout.enabledAnalysisModules },
+      layerVisibility: { ...layout.layerVisibility },
       rightPanelMode: layout.rightPanelMode,
       bottomDrawerMode: layout.bottomDrawerMode,
       pinnedAnalysisModule: layout.pinnedAnalysisModule,
@@ -2261,6 +4306,8 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       sceneIntelligenceGraph: buildGraphState(blank, null, 0, 0),
       compareVisualEvidence: null,
       compareReportSelection: null,
+      operationalEvidenceEvents: nextEvents,
+      workspaceGovernance: nextGovernance,
     });
   },
 
@@ -2318,7 +4365,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     if (!selectedNodeId) return null;
     return scene.cameras.find((c) => c.id === selectedNodeId) ?? null;
   },
-}));
+}) as StudioStoreState);
 
 declare global {
   interface Window {

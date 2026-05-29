@@ -10,6 +10,7 @@
     "build": "next build --webpack",
     "start": "node ./scripts/run-fixed-port.mjs start",
     "lint": "eslint",
+    "audit:truth": "bun ../../tools/truth-audit.ts",
     "test": "bun test",
     "test:watch": "bun test --watch"
   },

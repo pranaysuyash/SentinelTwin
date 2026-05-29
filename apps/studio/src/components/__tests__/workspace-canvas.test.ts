@@ -31,6 +31,8 @@ describe("WorkspaceCanvas obstruction selection", () => {
     expect(workspaceSource).toContain('const node = createObstructionNode([pos[0], 1, pos[2]]);');
     expect(workspaceSource).toContain('if (activeTool === "light")');
     expect(workspaceSource).toContain('const node = createSecurityLightNode([pos[0], 2.8, pos[2]]);');
+    expect(workspaceSource).toContain('if (activeTool === "sensor")');
+    expect(workspaceSource).toContain('const node = createSensorNode([pos[0], 1.2, pos[2]], sensorPlacementType);');
     expect(workspaceSource).toContain('if (activeTool === "wall")');
     expect(workspaceSource).toContain('const wall = createWallNode(draftWallStart, constrained, {');
     expect(workspaceSource).toContain('if (activeTool === "door_window")');
@@ -40,5 +42,13 @@ describe("WorkspaceCanvas obstruction selection", () => {
     expect(workspaceSource).toContain('const zone = createCriticalZoneNode(draftPolygonPoints, criticalZoneTargetType);');
     expect(workspaceSource).toContain('if (activeTool === "path")');
     expect(workspaceSource).toContain('setDraftPathPoints([...draftPathPoints, workingSnap]);');
+  });
+
+  test("keeps the canvas reset path imperative instead of remounting on reset", () => {
+    const workspaceSource = readFileSync(workspaceCanvasPath, "utf8");
+
+    expect(workspaceSource).toContain('const canvasViewResetTick = useStudioStore((s) => s.canvasViewResetTick);');
+    expect(workspaceSource).not.toContain('key={`${canvasMode}:${canvasViewResetTick}`}');
+    expect(workspaceSource).not.toContain('key={canvasMode}');
   });
 });

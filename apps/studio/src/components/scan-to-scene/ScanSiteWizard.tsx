@@ -194,6 +194,7 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
   const setViewMode = useStudioStore((s) => s.setViewMode);
   const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
   const setBottomTab = useStudioStore((s) => s.setBottomTab);
+  const recordOperationalEvidenceEvent = useStudioStore((s) => s.recordOperationalEvidenceEvent);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const [step, setStep] = useState<ScanStep>(0);
@@ -217,10 +218,12 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
     const accepted = session.candidates.filter((candidate) => candidate.status !== "rejected");
     const rejected = session.candidates.filter((candidate) => candidate.status === "rejected");
     const pending = session.candidates.filter((candidate) => candidate.status === "pending");
+    const needsReview = session.candidates.filter((candidate) => candidate.status !== "rejected" && (candidate.status === "pending" || candidate.confidence < 0.45));
     return {
       accepted: accepted.length,
       rejected: rejected.length,
       pending: pending.length,
+      needsReview: needsReview.length,
       cameraCount: accepted.filter((candidate) => candidate.kind === "camera").length,
       doorCount: accepted.filter((candidate) => candidate.kind === "door").length,
       windowCount: accepted.filter((candidate) => candidate.kind === "window").length,
@@ -530,6 +533,28 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
     try {
       const compiled = compileScanSessionToScene(session, { autoCreateEntryToZonePath: autoCreatePath });
       setCompileWarnings(compiled.warnings);
+      recordOperationalEvidenceEvent({
+        kind: "scan_session_compiled",
+        title: "Scan session compiled",
+        details: `Compiled ${session.roomName} into ${compiled.scene.name || "a scene"} with ${compiled.provenance.acceptedCandidates} accepted candidates.`,
+        actor: "user",
+        source: compiled.scene.source,
+        sceneId: compiled.scene.id,
+        sceneName: compiled.scene.name,
+        revisionDepth: 0,
+        affectedNodeIds: [],
+        confidence: compiled.provenance.confidenceLevel === "high"
+          ? 0.9
+          : compiled.provenance.confidenceLevel === "medium"
+            ? 0.72
+            : 0.55,
+        beforeSummary: `${session.roomName} · ${session.photos.length} photos · ${session.candidates.length} candidates`,
+        afterSummary: compiled.provenance.summary,
+        notes: [
+          `Accepted ${compiled.provenance.acceptedCandidates} of ${compiled.provenance.totalCandidates} candidates.`,
+          `Rejected ${compiled.provenance.rejectedCandidates} candidates during compile.`,
+        ],
+      });
       setScene(compiled.scene);
       setViewMode("map");
       setWorkspacePreset("coverage");
@@ -552,7 +577,7 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
     } finally {
       setIsCompiling(false);
     }
-  }, [autoCreatePath, compileBlockingErrors, compileLowConfidenceOverride, lowConfidenceAccepted.length, onClose, runSimulation, session, setBottomTab, setLaunchNotice, setScene, setViewMode, setWorkspacePreset, unresolvedWarnings.length, warningsReviewed]);
+  }, [autoCreatePath, compileBlockingErrors, compileLowConfidenceOverride, lowConfidenceAccepted.length, onClose, recordOperationalEvidenceEvent, runSimulation, session, setBottomTab, setLaunchNotice, setScene, setViewMode, setWorkspacePreset, unresolvedWarnings.length, warningsReviewed]);
 
   const handleMergeNearDuplicates = useCallback(() => {
     setSession((current) => {
@@ -1060,6 +1085,24 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
                 <div className="rounded-xl border border-[#243049] bg-[#09111b] px-3 py-2 text-[10px] text-[#89a0c2]">
                   Drag markers to reposition. Use keyboard arrow keys for fine nudges when the canvas is focused.
                 </div>
+                <div className="grid grid-cols-4 gap-2 rounded-xl border border-[#22314b] bg-[#0b1220] px-3 py-2 text-[10px] text-[#9db0d0]">
+                  <div>
+                    <div className="text-[#6f82a4]">Accepted</div>
+                    <div className="text-white">{candidateStats.accepted}</div>
+                  </div>
+                  <div>
+                    <div className="text-[#6f82a4]">Needs Review</div>
+                    <div className="text-amber-200">{candidateStats.needsReview}</div>
+                  </div>
+                  <div>
+                    <div className="text-[#6f82a4]">Pending</div>
+                    <div className="text-white">{candidateStats.pending}</div>
+                  </div>
+                  <div>
+                    <div className="text-[#6f82a4]">Rejected</div>
+                    <div className="text-white">{candidateStats.rejected}</div>
+                  </div>
+                </div>
                 {session.candidates.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-[#243049] bg-[#09111b] px-4 py-8 text-center text-xs text-[#73839f]">
                     Tap the image to add the first candidate. Use the kind chips above to switch what you are placing.
@@ -1124,6 +1167,49 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
                                   <option value="rejected">rejected</option>
                                 </select>
                               </label>
+                            </div>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() => updateCandidate(candidate.id, { status: "accepted" })}
+                                className={[
+                                  "rounded-full border px-2 py-1 text-[10px] transition-colors",
+                                  candidate.status === "accepted"
+                                    ? "border-emerald-400/30 bg-emerald-500/12 text-emerald-100"
+                                    : "border-[#243049] bg-[#0a0f17] text-[#93a5c7] hover:border-emerald-500/30 hover:text-white",
+                                ].join(" ")}
+                              >
+                                Accept
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => updateCandidate(candidate.id, { status: "pending" })}
+                                className={[
+                                  "rounded-full border px-2 py-1 text-[10px] transition-colors",
+                                  candidate.status === "pending"
+                                    ? "border-amber-400/30 bg-amber-500/12 text-amber-100"
+                                    : "border-[#243049] bg-[#0a0f17] text-[#93a5c7] hover:border-amber-500/30 hover:text-white",
+                                ].join(" ")}
+                              >
+                                Review
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => updateCandidate(candidate.id, { status: "rejected" })}
+                                className={[
+                                  "rounded-full border px-2 py-1 text-[10px] transition-colors",
+                                  candidate.status === "rejected"
+                                    ? "border-rose-400/30 bg-rose-500/12 text-rose-100"
+                                    : "border-[#243049] bg-[#0a0f17] text-[#93a5c7] hover:border-rose-500/30 hover:text-white",
+                                ].join(" ")}
+                              >
+                                Reject
+                              </button>
+                              {candidate.confidence < 0.45 ? (
+                                <span className="rounded-full border border-amber-500/25 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-100">
+                                  Needs review
+                                </span>
+                              ) : null}
                             </div>
                             <label className="mt-2 block">
                               <span className="text-[10px] text-[#73839f]">Label</span>

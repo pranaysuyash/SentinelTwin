@@ -25,6 +25,9 @@ describe("CameraFeedCanvas", () => {
     expect(source).toContain("Actor replay active");
     expect(source).toContain("pathLabel ?? \"Selected path\"");
     expect(source).toContain("pathProgress ?? 0");
+    expect(source).toContain("Sensor Fusion");
+    expect(source).toContain("Active sensors");
+    expect(source).toContain("nearestSensorLabel");
     expect(source).toContain("boundingBox");
     expect(source).toContain("grid");
   });

@@ -1,4 +1,0 @@
-step 0: using PLAYWRIGHT_BROWSERS_PATH=/Users/pranay/Projects/SentinelTwin/.playwright-browsers
-step 1: goto http://127.0.0.1:3000/?studio=1
-step 1: studio shell ready
-step 2: open View Settings from viewport layers icon

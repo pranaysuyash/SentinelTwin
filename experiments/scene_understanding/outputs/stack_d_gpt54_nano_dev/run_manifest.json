@@ -1,0 +1,10 @@
+{
+  "run_id": "stack_d_gpt54_nano_dev_ca6a122c",
+  "candidate_id": "stack_d_gpt54_nano",
+  "timestamp": "2026-05-28T18:46:25Z",
+  "split": "dev",
+  "images_processed": 5,
+  "images_succeeded": 5,
+  "images_failed": 0,
+  "total_timing_ms": 24805.609464645386
+}

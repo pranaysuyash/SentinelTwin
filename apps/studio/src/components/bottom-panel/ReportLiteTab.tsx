@@ -10,6 +10,7 @@ import { buildCompareReportData, exportCompareAsHtml, exportCompareAsMarkdown } 
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { useStudioStore } from "@/store/studio-store";
 import { buildReportSummaryLines } from "@/lib/report-summary";
+import { truthLabelDetail } from "@/lib/truth-labels";
 
 export function ReportLiteTab() {
   const result = useStudioStore((s) => s.simulationResult);
@@ -214,6 +215,17 @@ export function ReportLiteTab() {
         ) : null}
         {reportSummary ? (
           <div className="mb-3 rounded-xl border border-[#1e2130] bg-[#0b1018] p-3">
+            <div
+              className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-[#1e2130] bg-[#0f141f] px-2 py-1.5 text-[9px] text-[#8b96ab]"
+              aria-label="Truth: Computed"
+              title="Derived from the current scene and simulation state."
+            >
+              <div className="flex items-center gap-2">
+                <span className="font-semibold uppercase tracking-[0.14em] text-[#c7d0e4]">Truth:</span>
+                <span className="rounded border border-sky-500/20 bg-sky-500/10 px-1.5 py-0.5 text-sky-200">Computed</span>
+              </div>
+              <div className="max-w-[28rem] truncate text-right" title={truthLabelDetail("computed")}>{truthLabelDetail("computed")}</div>
+            </div>
             <div className="mb-2 flex items-center justify-between gap-2">
               <div>
                 <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#7f8da8]">Report Summary</div>

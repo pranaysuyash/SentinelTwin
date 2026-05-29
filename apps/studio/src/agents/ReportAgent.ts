@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { PROMPT_REGISTRY } from "@/agents/prompt-registry";
 import type { ModelProvider } from "./providers/ModelProvider";
 
 export interface ReportSection {
@@ -36,12 +37,7 @@ const reportSchema = z.object({
   limitations: z.array(z.string()),
 });
 
-const SYSTEM_PROMPT = `You are a professional security audit report writer. Write a clear, factual, non-alarmist security camera coverage audit report.
-
-Use the verified simulation data provided. Do not invent numbers. Do not claim more certainty than the data supports.
-Use phrases like "estimated recognition-quality coverage" not "guaranteed recognition."
-
-Output ONLY valid JSON matching the schema. Do not explain, do not add commentary.`;
+const SYSTEM_PROMPT = PROMPT_REGISTRY.find((entry) => entry.id === "report_generation")?.systemPrompt ?? "";
 
 /**
  * Generate a professional security audit report from simulation results.

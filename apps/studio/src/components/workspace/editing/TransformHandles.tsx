@@ -11,6 +11,7 @@ import type {
   CriticalZoneNode,
   ObstructionNode,
   PrivacyZoneNode,
+  SensorNode,
   ScenarioPath,
   SecurityLightNode,
   WallNode,
@@ -21,6 +22,7 @@ import { pathLength, type Point2 } from "./editor-geometry";
 export type TransformableNode =
   | CameraNode
   | SecurityLightNode
+  | SensorNode
   | ObstructionNode
   | WallNode
   | CriticalZoneNode
@@ -135,8 +137,8 @@ function updateDraft(
   const deltaZ = currentPoint[1] - startPoint[1];
 
   if (drag.handle === "move") {
-    if (next.nodeType === "camera" || next.nodeType === "security_light" || next.nodeType === "obstruction") {
-      const sn = drag.startNode as CameraNode | SecurityLightNode | ObstructionNode;
+    if (next.nodeType === "camera" || next.nodeType === "security_light" || next.nodeType === "sensor" || next.nodeType === "obstruction") {
+      const sn = drag.startNode as CameraNode | SecurityLightNode | SensorNode | ObstructionNode;
       next.position = [sn.position[0] + deltaX, sn.position[1], sn.position[2] + deltaZ];
     } else if (next.nodeType === "wall") {
       const sn = drag.startNode as WallNode;

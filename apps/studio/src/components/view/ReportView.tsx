@@ -48,6 +48,7 @@ export function ReportView() {
     const privacyZones = scene.privacyZones.length;
     const restrictedCells = result?.coverageCells.filter((cell) => cell.privacyRestricted).length ?? 0;
     const privacyIssues = result?.issues.filter((issue) => issue.category === "privacy").length ?? 0;
+    const sensorCount = scene.sensors.length;
     const fragility = result?.fragilitySummary ? `${Math.round(result.fragilitySummary.meanFragility * 100)}%` : "--";
     const kRobustness = result?.kRobustness ? `K=${result.kRobustness.kRobustness}` : "--";
     const blindRegions = result?.blindRegions?.length ?? 0;
@@ -75,6 +76,7 @@ export function ReportView() {
       privacyZones,
       restrictedCells,
       privacyIssues,
+      sensorCount,
       fragility,
       kRobustness,
       blindRegions,
@@ -111,7 +113,7 @@ export function ReportView() {
               The report view surfaces the verified simulation outcome, the strongest findings, and a concise handoff narrative without forcing the user back into the editing shell.
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
             <StatCard label="Coverage" value={summary.coverage} tone="sky" />
             <StatCard label="Open Issues" value={String(summary.issues)} tone={summary.issues > 0 ? "rose" : "emerald"} />
             <StatCard label="Recommendations" value={String(summary.recs)} tone="amber" />
@@ -127,6 +129,7 @@ export function ReportView() {
             <StatCard label="Privacy Zones" value={String(summary.privacyZones)} tone={summary.privacyZones > 0 ? "rose" : "emerald"} />
             <StatCard label="Restricted Cells" value={String(summary.restrictedCells)} tone={summary.restrictedCells > 0 ? "amber" : "emerald"} />
             <StatCard label="Privacy Issues" value={String(summary.privacyIssues)} tone={summary.privacyIssues > 0 ? "rose" : "emerald"} />
+            <StatCard label="Sensors" value={String(summary.sensorCount)} tone={summary.sensorCount > 0 ? "amber" : "emerald"} />
             <StatCard label="Redundant Zones" value={summary.redundancyMatrix ? String(summary.redundancyMatrix.redundantZoneCount) : "--"} tone={summary.redundancyMatrix && summary.redundancyMatrix.redundantZoneCount > 0 ? "emerald" : "amber"} />
             <StatCard label="SPOF Zones" value={summary.redundancyMatrix ? String(summary.redundancyMatrix.spofZoneCount) : "--"} tone={summary.redundancyMatrix && summary.redundancyMatrix.spofZoneCount > 0 ? "rose" : "emerald"} />
             <StatCard label="Uncovered Zones" value={summary.redundancyMatrix ? String(summary.redundancyMatrix.uncoveredZoneCount) : "--"} tone={summary.redundancyMatrix && summary.redundancyMatrix.uncoveredZoneCount > 0 ? "rose" : "emerald"} />

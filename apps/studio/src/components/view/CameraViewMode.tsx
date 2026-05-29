@@ -11,6 +11,7 @@ import { ENVIRONMENT_THEMES } from "@/components/workspace/SharedScene";
 import { pointOnPathAtProgress } from "@/components/map/path-quality";
 import { QUALITY_RANK } from "@/lib/quality-display";
 import { CameraRigLive, nowTimestamp, SceneFeedGeometry } from "@/components/view/SceneFeedCanvas";
+import { computeSensorFusionSummary } from "@/lib/sensor-fusion";
 import type { CameraNode, DoriQuality, SimulationAssumptions, SecurityScene } from "@/schema/security-scene";
 import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
 
@@ -45,6 +46,7 @@ type CameraVerificationSnapshot = {
   split: number;
   offsetX: number;
   offsetY: number;
+  scale?: number;
   alignmentScore: number | null;
   createdAt: number;
 };
@@ -215,7 +217,28 @@ function CameraNoise() {
   );
 }
 
-function LiveFeedHUD({ camera: cam, mode, flags, ppm, targetType }: { camera: CameraNode; mode: CameraFeedMode; flags: OverlayFlags; ppm: SimulationAssumptions["pixelsPerMeter"]; targetType?: SecurityScene["criticalZones"][number]["targetType"] }) {
+function LiveFeedHUD({
+  camera: cam,
+  mode,
+  flags,
+  ppm,
+  targetType,
+  sensorFusion,
+}: {
+  camera: CameraNode;
+  mode: CameraFeedMode;
+  flags: OverlayFlags;
+  ppm: SimulationAssumptions["pixelsPerMeter"];
+  targetType?: SecurityScene["criticalZones"][number]["targetType"];
+  sensorFusion: {
+    totalCount: number;
+    activeCount: number;
+    nearestSensorLabel: string;
+    nearestSensorState: string;
+    nearestSensorCoverage: string;
+    nearestDistanceM: number | null;
+  };
+}) {
   const isActive = cam.status === "on";
   const ranges = rangeMeters(cam, ppm);
 
@@ -271,6 +294,28 @@ function LiveFeedHUD({ camera: cam, mode, flags, ppm, targetType }: { camera: Ca
           {flags.path ? <span>• Path overlays</span> : null}
           {flags.zones ? <span>• Zone overlays</span> : null}
           {flags.grid ? <span>• Floor grid</span> : null}
+        </div>
+      ) : null}
+
+      {sensorFusion.totalCount > 0 ? (
+        <div className="absolute right-3 bottom-24 z-30 rounded-xl border border-cyan-400/20 bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)] backdrop-blur-sm">
+          <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Sensor Fusion</div>
+          <div className="mt-1 text-[10px] font-semibold text-white">{sensorFusion.nearestSensorLabel}</div>
+          <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] text-[#d2d9e8]">
+            <div>
+              <span className="text-[#6a748b]">Distance:</span>{" "}
+              {sensorFusion.nearestDistanceM == null ? "—" : `${sensorFusion.nearestDistanceM.toFixed(1)}m`}
+            </div>
+            <div>
+              <span className="text-[#6a748b]">State:</span> {sensorFusion.nearestSensorState}
+            </div>
+            <div>
+              <span className="text-[#6a748b]">Coverage:</span> {sensorFusion.nearestSensorCoverage}
+            </div>
+            <div>
+              <span className="text-[#6a748b]">Active:</span> {sensorFusion.activeCount} / {sensorFusion.totalCount}
+            </div>
+          </div>
         </div>
       ) : null}
 
@@ -637,6 +682,7 @@ function FootageVerificationOverlay({
   split,
   offsetX,
   offsetY,
+  scale,
 }: {
   imageUrl: string;
   mode: VerificationViewMode;
@@ -644,9 +690,11 @@ function FootageVerificationOverlay({
   split: number;
   offsetX: number;
   offsetY: number;
+  scale: number;
 }) {
   const commonStyle = {
-    transform: `translate(${offsetX}px, ${offsetY}px)`,
+    transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale})`,
+    transformOrigin: "center center",
   } as const;
 
   if (mode === "split") {
@@ -699,9 +747,12 @@ function formatSnapshotEvidenceSummary(snapshot: CameraVerificationSnapshot) {
     : snapshot.alignmentMethod === "manual"
       ? "manual align"
       : null;
+  const scaleTag = typeof snapshot.scale === "number" && Math.abs(snapshot.scale - 1) > 0.01
+    ? `scale ${Math.round(snapshot.scale * 100)}%`
+    : null;
 
   if (snapshot.sourceType !== "video") {
-    return `Image upload${alignTag ? ` · ${alignTag}` : ""}`;
+    return `Image upload${alignTag ? ` · ${alignTag}` : ""}${scaleTag ? ` · ${scaleTag}` : ""}`;
   }
 
   const sampled = snapshot.sampleTimeS !== null && snapshot.sampleTimeS !== undefined
@@ -719,7 +770,7 @@ function formatSnapshotEvidenceSummary(snapshot: CameraVerificationSnapshot) {
       : "manual frame selected"
     : "no frame selected";
 
-  return `Video ${sampled}/${duration} · ${frames} · ${picked}${alignTag ? ` · ${alignTag}` : ""}`;
+  return `Video ${sampled}/${duration} · ${frames} · ${picked}${alignTag ? ` · ${alignTag}` : ""}${scaleTag ? ` · ${scaleTag}` : ""}`;
 }
 
 function evaluateAlignmentSample({
@@ -727,6 +778,7 @@ function evaluateAlignmentSample({
   image,
   offsetX,
   offsetY,
+  scale,
   mode,
   split,
   opacity,
@@ -735,6 +787,7 @@ function evaluateAlignmentSample({
   image: HTMLImageElement;
   offsetX: number;
   offsetY: number;
+  scale: number;
   mode: VerificationViewMode;
   split: number;
   opacity: number;
@@ -766,7 +819,12 @@ function evaluateAlignmentSample({
   refCtx.clearRect(0, 0, sampleWidth, sampleHeight);
   const dx = Math.round((offsetX / Math.max(1, canvas.clientWidth)) * sampleWidth);
   const dy = Math.round((offsetY / Math.max(1, canvas.clientHeight)) * sampleHeight);
-  refCtx.drawImage(image, dx, dy, sampleWidth, sampleHeight);
+  const safeScale = Math.min(1.6, Math.max(0.5, scale));
+  const scaledWidth = sampleWidth * safeScale;
+  const scaledHeight = sampleHeight * safeScale;
+  const centeredX = dx + (sampleWidth - scaledWidth) / 2;
+  const centeredY = dy + (sampleHeight - scaledHeight) / 2;
+  refCtx.drawImage(image, centeredX, centeredY, scaledWidth, scaledHeight);
 
   if (mode === "split") {
     const splitX = Math.round((split / 100) * sampleWidth);
@@ -967,12 +1025,16 @@ function VerificationPanel({
   fileName,
   alignmentScore,
   alignmentLabel,
+  alignmentMethod,
+  autoAlignDelta,
+  scale,
   sourceType,
   videoDurationS,
   sampleTimeS,
   extractionInProgress,
   errorMessage,
   canResample,
+  canAutoAlign,
   videoCandidates,
   selectedCandidateId,
   bestCandidateId,
@@ -992,6 +1054,7 @@ function VerificationPanel({
   onSplitChange,
   onOffsetXChange,
   onOffsetYChange,
+  onScaleChange,
   onToggleHeatOverlay,
   onNudge,
   onAutoAlign,
@@ -1007,12 +1070,16 @@ function VerificationPanel({
   fileName: string | null;
   alignmentScore: number | null;
   alignmentLabel: string | null;
+  alignmentMethod: VerificationAlignmentMethod | null;
+  autoAlignDelta: number | null;
+  scale: number;
   sourceType: VerificationSourceType;
   videoDurationS: number | null;
   sampleTimeS: number | null;
   extractionInProgress: boolean;
   errorMessage: string | null;
   canResample: boolean;
+  canAutoAlign: boolean;
   videoCandidates: VideoFrameCandidate[];
   selectedCandidateId: string | null;
   bestCandidateId: string | null;
@@ -1032,6 +1099,7 @@ function VerificationPanel({
   onSplitChange: (value: number) => void;
   onOffsetXChange: (value: number) => void;
   onOffsetYChange: (value: number) => void;
+  onScaleChange: (value: number) => void;
   onToggleHeatOverlay: (next: boolean) => void;
   onNudge: (dx: number, dy: number) => void;
   onAutoAlign: () => void;
@@ -1178,6 +1246,19 @@ function VerificationPanel({
             Difference heat overlay
           </label>
         </div>
+        <div className="rounded-lg border border-[#2a3650] bg-[#0f1624] px-2 py-1.5">
+          <div className="flex items-center justify-between text-[#7a8fb6]">
+            <span>Alignment Assist</span>
+            <span className="font-mono text-[#d4e6ff]">{alignmentMethod === "auto" ? "AUTO" : alignmentMethod === "manual" ? "MANUAL" : "IDLE"}</span>
+          </div>
+          <div className="mt-0.5 text-[8px] text-[#9db7e1]">
+            {alignmentMethod === "auto"
+              ? `Auto align applied${typeof autoAlignDelta === "number" ? ` with ${autoAlignDelta >= 0 ? "+" : ""}${autoAlignDelta.toFixed(1)} score delta.` : "."}`
+              : alignmentMethod === "manual"
+                ? "Manual offset controls are active for the current reference frame."
+                : "Run auto align or use manual offsets after loading a reference frame."}
+          </div>
+        </div>
         <label className="block">
           <div className="flex justify-between text-[#7a8fb6]"><span>Opacity</span><span>{Math.round(opacity * 100)}%</span></div>
           <input type="range" min={0.15} max={0.95} step={0.01} value={opacity} onChange={(event) => onOpacityChange(Number(event.target.value))} className="mt-1 w-full accent-cyan-400" />
@@ -1196,6 +1277,10 @@ function VerificationPanel({
           <div className="flex justify-between text-[#7a8fb6]"><span>Offset Y</span><span>{offsetY}px</span></div>
           <input type="range" min={-120} max={120} step={1} value={offsetY} onChange={(event) => onOffsetYChange(Number(event.target.value))} className="mt-1 w-full accent-cyan-400" />
         </label>
+        <label className="block">
+          <div className="flex justify-between text-[#7a8fb6]"><span>Reference scale</span><span>{Math.round(scale * 100)}%</span></div>
+          <input type="range" min={0.7} max={1.3} step={0.01} value={scale} onChange={(event) => onScaleChange(Number(event.target.value))} className="mt-1 w-full accent-cyan-400" />
+        </label>
         <div className="flex items-center justify-between gap-1">
           <div className="flex gap-1">
             <button type="button" onClick={() => onNudge(-4, 0)} className="rounded bg-[#1a2233] px-1.5 py-1 text-[#c7d0e4]">◀</button>
@@ -1204,7 +1289,7 @@ function VerificationPanel({
             <button type="button" onClick={() => onNudge(0, 4)} className="rounded bg-[#1a2233] px-1.5 py-1 text-[#c7d0e4]">▼</button>
           </div>
           <div className="flex gap-1">
-            <button type="button" onClick={onAutoAlign} className="rounded bg-[#13354a] px-2 py-1 text-[#8ce3ff]">Auto align</button>
+            <button type="button" disabled={!canAutoAlign} onClick={onAutoAlign} className="rounded bg-[#13354a] px-2 py-1 text-[#8ce3ff] disabled:cursor-not-allowed disabled:opacity-50">Auto align</button>
             <button type="button" onClick={onResetAlign} className="rounded bg-[#1d2b3f] px-2 py-1 text-[#9dd6ff]">Reset align</button>
           </div>
         </div>
@@ -1319,6 +1404,7 @@ export function CameraViewMode() {
   const [verificationSplit, setVerificationSplit] = useState(50);
   const [verificationOffsetX, setVerificationOffsetX] = useState(0);
   const [verificationOffsetY, setVerificationOffsetY] = useState(0);
+  const [verificationScale, setVerificationScale] = useState(1);
   const [verificationAlignmentMethod, setVerificationAlignmentMethod] = useState<VerificationAlignmentMethod | null>(null);
   const [verificationAutoAlignDelta, setVerificationAutoAlignDelta] = useState<number | null>(null);
   const [alignmentQualityScore, setAlignmentQualityScore] = useState<number | null>(null);
@@ -1403,6 +1489,13 @@ export function CameraViewMode() {
     const events = activePathResult.timeline.filter((event) => event.timeS <= pathTimeS);
     return events[events.length - 1] ?? activePathResult.timeline[0] ?? null;
   }, [activePathResult, pathTimeS]);
+  const sensorFusion = useMemo(
+    () => computeSensorFusionSummary(camera.position, scene.sensors),
+    [camera.position, scene.sensors],
+  );
+  const nearestSensorLabel = sensorFusion.nearestSensor ? sensorFusion.nearestSensor.label : "None";
+  const nearestSensorState = sensorFusion.nearestSensor ? sensorFusion.nearestSensor.state.replace(/_/g, " ") : "—";
+  const nearestSensorCoverage = sensorFusion.nearestSensor ? sensorFusion.nearestSensor.coverageMode.replace(/_/g, " ") : "—";
 
   const replayQualityLabel = activeTimelineEvent?.quality
     ? activeTimelineEvent.quality.toUpperCase()
@@ -1424,6 +1517,7 @@ export function CameraViewMode() {
         setVerificationSampleTimeS(frame.sampleTimeS);
         setVerificationImageUrl(frame.dataUrl);
         setVerificationFileName(`${verificationVideoFile.name} @ ${formatSecondsShort(frame.sampleTimeS)}`);
+        setVerificationScale(1);
         setVerificationAlignmentMethod(null);
         setVerificationAutoAlignDelta(null);
         setVerificationSelectedCandidateId(null);
@@ -1442,6 +1536,7 @@ export function CameraViewMode() {
     setVerificationSampleTimeS(candidate.timeS);
     setVerificationImageUrl(candidate.dataUrl);
     setVerificationFileName(`${fileName} @ ${formatSecondsShort(candidate.timeS)}`);
+    setVerificationScale(1);
     setVerificationAlignmentMethod(null);
     setVerificationAutoAlignDelta(null);
     setVerificationEnabled(true);
@@ -1463,36 +1558,43 @@ export function CameraViewMode() {
     image.onload = () => {
       let bestX = verificationOffsetX;
       let bestY = verificationOffsetY;
+      let bestScale = verificationScale;
       let bestScore = -1;
       const startScore = alignmentQualityScore;
 
       const phases = [
-        { step: 16, radius: 96 },
-        { step: 6, radius: 24 },
-        { step: 2, radius: 8 },
+        { step: 16, radius: 96, scaleStep: 0.06, scaleRadius: 0.18 },
+        { step: 6, radius: 24, scaleStep: 0.03, scaleRadius: 0.08 },
+        { step: 2, radius: 8, scaleStep: 0.01, scaleRadius: 0.03 },
       ];
 
       for (const phase of phases) {
         const centerX = bestX;
         const centerY = bestY;
+        const centerScale = bestScale;
         for (let dx = -phase.radius; dx <= phase.radius; dx += phase.step) {
           for (let dy = -phase.radius; dy <= phase.radius; dy += phase.step) {
-            const candidateX = centerX + dx;
-            const candidateY = centerY + dy;
-            const sample = evaluateAlignmentSample({
-              canvas,
-              image,
-              offsetX: candidateX,
-              offsetY: candidateY,
-              mode: verificationMode,
-              split: verificationSplit,
-              opacity: verificationOpacity,
-            });
-            if (!sample) continue;
-            if (sample.score > bestScore) {
-              bestScore = sample.score;
-              bestX = candidateX;
-              bestY = candidateY;
+            for (let ds = -phase.scaleRadius; ds <= phase.scaleRadius; ds += phase.scaleStep) {
+              const candidateX = centerX + dx;
+              const candidateY = centerY + dy;
+              const candidateScale = Math.min(1.3, Math.max(0.7, centerScale + ds));
+              const sample = evaluateAlignmentSample({
+                canvas,
+                image,
+                offsetX: candidateX,
+                offsetY: candidateY,
+                scale: candidateScale,
+                mode: verificationMode,
+                split: verificationSplit,
+                opacity: verificationOpacity,
+              });
+              if (!sample) continue;
+              if (sample.score > bestScore) {
+                bestScore = sample.score;
+                bestX = candidateX;
+                bestY = candidateY;
+                bestScale = candidateScale;
+              }
             }
           }
         }
@@ -1500,12 +1602,14 @@ export function CameraViewMode() {
 
       setVerificationOffsetX(bestX);
       setVerificationOffsetY(bestY);
+      setVerificationScale(bestScale);
 
       const finalSample = evaluateAlignmentSample({
         canvas,
         image,
         offsetX: bestX,
         offsetY: bestY,
+        scale: bestScale,
         mode: verificationMode,
         split: verificationSplit,
         opacity: verificationOpacity,
@@ -1533,6 +1637,7 @@ export function CameraViewMode() {
     verificationMode,
     verificationOffsetX,
     verificationOffsetY,
+    verificationScale,
     verificationOpacity,
     verificationSplit,
   ]);
@@ -1577,6 +1682,7 @@ export function CameraViewMode() {
         image,
         offsetX: verificationOffsetX,
         offsetY: verificationOffsetY,
+        scale: verificationScale,
         mode: verificationMode,
         split: verificationSplit,
         opacity: verificationOpacity,
@@ -1599,6 +1705,7 @@ export function CameraViewMode() {
     verificationSplit,
     verificationOffsetX,
     verificationOffsetY,
+    verificationScale,
   ]);
 
   if (!camera) {
@@ -1679,6 +1786,7 @@ export function CameraViewMode() {
               split={verificationSplit}
               offsetX={verificationOffsetX}
               offsetY={verificationOffsetY}
+              scale={verificationScale}
             />
           ) : null}
           {verificationEnabled && showDifferenceHeatOverlay && alignmentHeatmapUrl ? (
@@ -1687,7 +1795,21 @@ export function CameraViewMode() {
             </div>
           ) : null}
           {modeFilter(feedMode)}
-          <LiveFeedHUD camera={camera} mode={feedMode} flags={flags} ppm={scene.assumptions.pixelsPerMeter} targetType={firstCriticalZone?.targetType} />
+          <LiveFeedHUD
+            camera={camera}
+            mode={feedMode}
+            flags={flags}
+            ppm={scene.assumptions.pixelsPerMeter}
+            targetType={firstCriticalZone?.targetType}
+            sensorFusion={{
+              totalCount: sensorFusion.totalCount,
+              activeCount: sensorFusion.activeCount,
+              nearestSensorLabel,
+              nearestSensorState,
+              nearestSensorCoverage,
+              nearestDistanceM: sensorFusion.nearestDistanceM,
+            }}
+          />
           {activePath && activePathResult ? (
             <ReplayStatusOverlay
               pathLabel={activePath.label}
@@ -1731,12 +1853,16 @@ export function CameraViewMode() {
             fileName={verificationFileName}
             alignmentScore={alignmentQualityScore}
             alignmentLabel={alignmentQualityScore !== null ? alignmentQualityLabel(alignmentQualityScore) : null}
+            alignmentMethod={verificationAlignmentMethod}
+            autoAlignDelta={verificationAutoAlignDelta}
+            scale={verificationScale}
             sourceType={verificationSourceType}
             videoDurationS={verificationVideoDurationS}
             sampleTimeS={verificationSampleTimeS}
             extractionInProgress={verificationExtracting}
             errorMessage={verificationError}
             canResample={verificationSourceType === "video" && verificationVideoFile !== null}
+            canAutoAlign={Boolean(verificationEnabled && verificationImageUrl && !verificationExtracting)}
             videoCandidates={verificationVideoCandidates}
             selectedCandidateId={verificationSelectedCandidateId}
             bestCandidateId={verificationBestCandidateId}
@@ -1768,6 +1894,7 @@ export function CameraViewMode() {
               if (file.type.startsWith("video/")) {
                 setVerificationVideoFile(file);
                 setVerificationSampleTimeS(null);
+                setVerificationScale(1);
                 setVerificationAlignmentMethod(null);
                 setVerificationAutoAlignDelta(null);
                 setVerificationExtracting(true);
@@ -1806,6 +1933,7 @@ export function CameraViewMode() {
                 setVerificationVideoCandidates([]);
                 setVerificationBestCandidateId(null);
                 setVerificationSelectedCandidateId(null);
+                setVerificationScale(1);
                 setVerificationAlignmentMethod(null);
                 setVerificationAutoAlignDelta(null);
                 setVerificationImageUrl(reader.result);
@@ -1836,6 +1964,7 @@ export function CameraViewMode() {
                 split: verificationSplit,
                 offsetX: verificationOffsetX,
                 offsetY: verificationOffsetY,
+                scale: verificationScale,
                 alignmentScore: alignmentQualityScore,
                 createdAt: Date.now(),
               });
@@ -1861,6 +1990,7 @@ export function CameraViewMode() {
               setVerificationSplit(snapshot.split);
               setVerificationOffsetX(snapshot.offsetX);
               setVerificationOffsetY(snapshot.offsetY);
+              setVerificationScale(snapshot.scale ?? 1);
               setAlignmentQualityScore(snapshot.alignmentScore);
             }}
             onDeleteSnapshot={(snapshotId) => {
@@ -1880,6 +2010,11 @@ export function CameraViewMode() {
               setVerificationAutoAlignDelta(null);
               setVerificationOffsetY(value);
             }}
+            onScaleChange={(value) => {
+              setVerificationAlignmentMethod("manual");
+              setVerificationAutoAlignDelta(null);
+              setVerificationScale(value);
+            }}
             onToggleHeatOverlay={setShowDifferenceHeatOverlay}
             onNudge={(dx, dy) => {
               setVerificationAlignmentMethod("manual");
@@ -1893,6 +2028,7 @@ export function CameraViewMode() {
               setVerificationAutoAlignDelta(null);
               setVerificationOffsetX(0);
               setVerificationOffsetY(0);
+              setVerificationScale(1);
             }}
             onClear={() => {
               if (verificationImageUrl && verificationImageUrl.startsWith("blob:")) {
@@ -1910,6 +2046,7 @@ export function CameraViewMode() {
               setVerificationSelectedCandidateId(null);
               setVerificationAlignmentMethod(null);
               setVerificationAutoAlignDelta(null);
+              setVerificationScale(1);
               setVerificationError(null);
             }}
           />

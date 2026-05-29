@@ -59,6 +59,7 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
     { keys: "C", action: "Place Camera tool" },
     { keys: "B", action: "Place Obstruction tool" },
     { keys: "L", action: "Place Light tool" },
+    { keys: "Y", action: "Place Sensor tool" },
     { keys: "P", action: "Place Path tool" },
     { keys: "Z", action: "Place Zone tool" },
     { keys: "D", action: "Place Door/Window tool" },

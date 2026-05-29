@@ -4,6 +4,19 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/shared/Badge";
 import { cn } from "@/lib/cn";
+import {
+  assessOperationalEvidenceMergeReadiness,
+  confidenceLabel,
+  compareOperationalEvidenceBranches,
+  filterOperationalEvidenceEvents,
+  getOperationalEvidenceCheckpoints,
+  reconstructSceneFromEvidence,
+  summarizeOperationalEvidenceBranchHeads,
+  summarizeOperationalEvidenceLifecycle,
+  summarizeSceneEvidence,
+  traceOperationalEvidenceLineage,
+  type OperationalEvidenceLifecycleStage,
+} from "@/lib/operational-evidence";
 import { useStudioStore } from "@/store/studio-store";
 
 const SOURCE_STYLES: Record<string, { label: string; className: string; variant: "green" | "blue" | "amber" | "gray" }> = {
@@ -125,10 +138,24 @@ function sourceLabel(source?: string) {
   return SOURCE_STYLES[source]?.label ?? source;
 }
 
+function formatLedgerTime(timestamp: number) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "UTC",
+  }).format(new Date(timestamp));
+}
+
 export function SceneIntelligenceTab() {
   const scene = useStudioStore((s) => s.scene);
   const graph = useStudioStore((s) => s.sceneIntelligenceGraph);
   const simulationResult = useStudioStore((s) => s.simulationResult);
+  const operationalEvidenceEvents = useStudioStore((s) => s.operationalEvidenceEvents);
+  const restoreSceneFromEvidence = useStudioStore((s) => s.restoreSceneFromEvidence);
+  const publishCurrentScene = useStudioStore((s) => s.publishCurrentScene);
   const provenanceNotes = useMemo(
     () => (scene.changeLog ?? []).filter((entry) => entry.startsWith("Provenance:") || entry.startsWith("Provenance confidence:")),
     [scene.changeLog],
@@ -136,6 +163,12 @@ export function SceneIntelligenceTab() {
 
   const [selectedNodeId, setSelectedNodeId] = useState(graph.rootId);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  const [selectedEvidenceEventId, setSelectedEvidenceEventId] = useState<string | null>(null);
+  const [comparisonLeftEventId, setComparisonLeftEventId] = useState<string | null>(null);
+  const [comparisonRightEventId, setComparisonRightEventId] = useState<string | null>(null);
+  const [evidenceQuery, setEvidenceQuery] = useState("");
+  const [evidenceStageFilter, setEvidenceStageFilter] = useState<OperationalEvidenceLifecycleStage | "all">("all");
+  const [evidenceBranchFilter, setEvidenceBranchFilter] = useState<string | "all">("all");
 
   const nodeById = useMemo(() => new Map(graph.nodes.map((node) => [node.id, node] as const)), [graph.nodes]);
   const edgeById = useMemo(() => new Map(graph.edges.map((edge) => [edge.id, edge] as const)), [graph.edges]);
@@ -186,6 +219,80 @@ export function SceneIntelligenceTab() {
     () => Object.entries(graph.summary.sourceCounts).sort((a, b) => b[1] - a[1]),
     [graph.summary.sourceCounts],
   );
+  const recentSnapshots = useMemo(() => [...scene.snapshots].slice(-5).reverse(), [scene.snapshots]);
+  const recentChangeEntries = useMemo(() => [...scene.changeLog].slice(-8).reverse(), [scene.changeLog]);
+  const filteredOperationalEvidenceEvents = useMemo(
+    () => filterOperationalEvidenceEvents(operationalEvidenceEvents, evidenceQuery, {
+      lifecycleStage: evidenceStageFilter,
+      branchLabel: evidenceBranchFilter,
+    }),
+    [evidenceBranchFilter, evidenceQuery, evidenceStageFilter, operationalEvidenceEvents],
+  );
+  const recentEvidenceEvents = useMemo(
+    () => [...filteredOperationalEvidenceEvents].slice(-6).reverse(),
+    [filteredOperationalEvidenceEvents],
+  );
+  const checkpointEvents = useMemo(
+    () => getOperationalEvidenceCheckpoints(filteredOperationalEvidenceEvents).slice(-4).reverse(),
+    [filteredOperationalEvidenceEvents],
+  );
+  const evidenceKindCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const event of filteredOperationalEvidenceEvents) {
+      counts.set(event.kind, (counts.get(event.kind) ?? 0) + 1);
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  }, [filteredOperationalEvidenceEvents]);
+  const evidenceLifecycleSummary = useMemo(
+    () => summarizeOperationalEvidenceLifecycle(operationalEvidenceEvents),
+    [operationalEvidenceEvents],
+  );
+  const evidenceBranchHeads = useMemo(
+    () => summarizeOperationalEvidenceBranchHeads(filteredOperationalEvidenceEvents),
+    [filteredOperationalEvidenceEvents],
+  );
+  const selectedEvidenceEvent = useMemo(
+    () => filteredOperationalEvidenceEvents.find((event) => event.id === selectedEvidenceEventId) ?? filteredOperationalEvidenceEvents.at(-1) ?? null,
+    [filteredOperationalEvidenceEvents, selectedEvidenceEventId],
+  );
+  const selectedEvidenceLineage = useMemo(
+    () => (selectedEvidenceEvent ? traceOperationalEvidenceLineage(filteredOperationalEvidenceEvents, selectedEvidenceEvent.id) : []),
+    [filteredOperationalEvidenceEvents, selectedEvidenceEvent],
+  );
+  const selectedEvidenceReconstruction = useMemo(
+    () => (selectedEvidenceEvent ? reconstructSceneFromEvidence(filteredOperationalEvidenceEvents, selectedEvidenceEvent.id) : null),
+    [filteredOperationalEvidenceEvents, selectedEvidenceEvent],
+  );
+  const selectedEvidenceReconstructionSummary = useMemo(
+    () => (selectedEvidenceReconstruction ? summarizeSceneEvidence(selectedEvidenceReconstruction) : null),
+    [selectedEvidenceReconstruction],
+  );
+  const selectedEvidenceReconstructionCounts = useMemo(
+    () => (selectedEvidenceReconstruction
+      ? [
+          { label: "Cameras", current: scene.cameras.length, value: selectedEvidenceReconstruction.cameras.length },
+          { label: "Lights", current: scene.securityLights.length, value: selectedEvidenceReconstruction.securityLights.length },
+          { label: "Obstructions", current: scene.obstructions.length, value: selectedEvidenceReconstruction.obstructions.length },
+          { label: "Zones", current: scene.criticalZones.length + scene.privacyZones.length, value: selectedEvidenceReconstruction.criticalZones.length + selectedEvidenceReconstruction.privacyZones.length },
+          { label: "Paths", current: scene.paths.length, value: selectedEvidenceReconstruction.paths.length },
+          { label: "Sensors", current: scene.sensors.length, value: selectedEvidenceReconstruction.sensors.length },
+          { label: "Snapshots", current: scene.snapshots.length, value: selectedEvidenceReconstruction.snapshots.length },
+        ]
+      : []),
+    [scene, selectedEvidenceReconstruction],
+  );
+  const branchComparison = useMemo(
+    () => {
+      if (!comparisonLeftEventId || !comparisonRightEventId) return null;
+      return compareOperationalEvidenceBranches(filteredOperationalEvidenceEvents, comparisonLeftEventId, comparisonRightEventId);
+    },
+    [comparisonLeftEventId, comparisonRightEventId, filteredOperationalEvidenceEvents],
+  );
+  const mergeReadiness = useMemo(
+    () => assessOperationalEvidenceMergeReadiness(branchComparison),
+    [branchComparison],
+  );
+  const lifecycleStageOrder: Array<OperationalEvidenceLifecycleStage> = ["draft", "review", "published", "recovered", "imported", "scanned", "simulated", "manual"];
 
   const entityRows = useMemo(
     () => [
@@ -284,6 +391,10 @@ export function SceneIntelligenceTab() {
     setSelectedEdgeId(edgeId);
   };
 
+  const handleRestoreCheckpoint = (eventId: string, targetBranch: "draft" | "recovered" | "published") => {
+    restoreSceneFromEvidence(eventId, targetBranch);
+  };
+
   const copyDeepLink = async () => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
@@ -295,6 +406,20 @@ export function SceneIntelligenceTab() {
     }
     const deepLink = `${window.location.origin}${window.location.pathname}?${params.toString()}${window.location.hash}`;
     await navigator.clipboard.writeText(deepLink);
+  };
+
+  const showBranchHead = (stage: OperationalEvidenceLifecycleStage, branchLabel: string | undefined, eventId: string) => {
+    setEvidenceStageFilter(stage);
+    setEvidenceBranchFilter(branchLabel ?? "all");
+    setSelectedEvidenceEventId(eventId);
+  };
+
+  const labelComparisonButton = (side: "left" | "right", eventId: string) => {
+    if (side === "left") {
+      setComparisonLeftEventId(eventId);
+    } else {
+      setComparisonRightEventId(eventId);
+    }
   };
 
   return (
@@ -586,6 +711,15 @@ export function SceneIntelligenceTab() {
                   </div>
                 ))}
               </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => publishCurrentScene()}
+                  className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-[11px] font-medium text-emerald-100 hover:bg-emerald-500/15"
+                >
+                  Publish current scene
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -624,6 +758,590 @@ export function SceneIntelligenceTab() {
                   <div className="mt-1 text-[18px] font-semibold text-[#edf2ff]">{item.value}</div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-2 rounded-lg border border-[#1c2130] bg-[#0f1320] px-3 py-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Evidence ledger</div>
+              <div className="mt-1 text-[11px] text-[#aeb8cd]">Recent snapshots, scene change-log entries, and operational memory events show how the twin evolved over time.</div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="gray">{recentSnapshots.length + recentChangeEntries.length + recentEvidenceEvents.length} visible entries</Badge>
+              <Badge variant="blue">Append-only journal</Badge>
+            </div>
+          </div>
+
+          <div className="mt-3 rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Search evidence</div>
+                <div className="mt-1 text-[10px] text-[#74809a]">Filter the ledger by event type, scene name, node id, or note text.</div>
+              </div>
+              <Badge variant={evidenceQuery.trim() ? "blue" : "gray"}>
+                {evidenceQuery.trim() ? `${filteredOperationalEvidenceEvents.length} matches` : `${operationalEvidenceEvents.length} total`}
+              </Badge>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <input
+                type="search"
+                value={evidenceQuery}
+                onChange={(event) => setEvidenceQuery(event.target.value)}
+                placeholder="Search evidence, checkpoints, or notes"
+                className="min-w-0 flex-1 rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2 text-[11px] text-[#edf2ff] outline-none placeholder:text-[#74809a] focus:border-sky-400/40"
+              />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEvidenceQuery("");
+                        setEvidenceStageFilter("all");
+                        setEvidenceBranchFilter("all");
+                        setSelectedEvidenceEventId(null);
+                      }}
+                      className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] font-medium hover:bg-white/[0.08]"
+                    >
+                      Clear filters
+              </button>
+            </div>
+            <div className="mt-3 grid gap-2 md:grid-cols-2">
+              <div className="rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+                <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Lifecycle stage</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEvidenceStageFilter("all")}
+                    className={[
+                      "rounded-full border px-2.5 py-1 text-[10px] font-medium",
+                      evidenceStageFilter === "all"
+                        ? "border-sky-400/40 bg-sky-500/15 text-sky-100"
+                        : "border-white/10 bg-white/[0.03] text-[#9bb0cf] hover:bg-white/[0.06]",
+                    ].join(" ")}
+                  >
+                    All stages
+                  </button>
+                  {lifecycleStageOrder.map((stage) => {
+                    const count = evidenceLifecycleSummary.counts[stage];
+                    return (
+                      <button
+                        key={stage}
+                        type="button"
+                        onClick={() => setEvidenceStageFilter(stage)}
+                        className={[
+                          "rounded-full border px-2.5 py-1 text-[10px] font-medium capitalize",
+                          evidenceStageFilter === stage
+                            ? "border-emerald-400/40 bg-emerald-500/15 text-emerald-100"
+                            : "border-white/10 bg-white/[0.03] text-[#9bb0cf] hover:bg-white/[0.06]",
+                        ].join(" ")}
+                      >
+                        {stage} · {count}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+                <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Branch filter</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEvidenceBranchFilter("all")}
+                    className={[
+                      "rounded-full border px-2.5 py-1 text-[10px] font-medium",
+                      evidenceBranchFilter === "all"
+                        ? "border-sky-400/40 bg-sky-500/15 text-sky-100"
+                        : "border-white/10 bg-white/[0.03] text-[#9bb0cf] hover:bg-white/[0.06]",
+                    ].join(" ")}
+                  >
+                    All branches
+                  </button>
+                  {evidenceLifecycleSummary.branchCounts.length > 0 ? (
+                    evidenceLifecycleSummary.branchCounts.map(([branch, count]) => (
+                      <button
+                        key={branch}
+                        type="button"
+                        onClick={() => setEvidenceBranchFilter(branch)}
+                        className={[
+                          "rounded-full border px-2.5 py-1 text-[10px] font-medium capitalize",
+                          evidenceBranchFilter === branch
+                            ? "border-amber-400/40 bg-amber-500/15 text-amber-100"
+                            : "border-white/10 bg-white/[0.03] text-[#9bb0cf] hover:bg-white/[0.06]",
+                        ].join(" ")}
+                      >
+                        {branch} · {count}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="text-[10px] text-[#74809a]">No branch metadata yet.</div>
+                  )}
+                </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Branch heads</div>
+                  <div className="mt-1 text-[10px] text-[#74809a]">Latest visible checkpoint for each lifecycle branch.</div>
+                </div>
+                <Badge variant="gray">{filteredOperationalEvidenceEvents.length} filtered events</Badge>
+              </div>
+              <div className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                {evidenceBranchHeads.map(({ stage, event }) => (
+                  <div key={stage} className="rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">{stage}</div>
+                      <Badge variant={event ? "blue" : "gray"}>{event ? "head" : "empty"}</Badge>
+                    </div>
+                    <div className="mt-1 text-[11px] font-semibold text-[#edf2ff]">{event?.title ?? "No event yet"}</div>
+                    <div className="mt-1 text-[9px] text-[#74809a]">{event ? event.branchLabel ?? stage : "No branch metadata visible for this stage."}</div>
+                    {event ? (
+                      <button
+                        type="button"
+                        onClick={() => showBranchHead(stage, event.branchLabel, event.id)}
+                        className="mt-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08]"
+                      >
+                        Preview lineage
+                      </button>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-3 rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Branch lineage</div>
+                  <div className="mt-1 text-[10px] text-[#74809a]">Trace a selected branch head back through its parent checkpoints.</div>
+                </div>
+                <Badge variant={selectedEvidenceLineage.length > 0 ? "blue" : "gray"}>
+                  {selectedEvidenceLineage.length > 0 ? `${selectedEvidenceLineage.length} steps` : "No lineage selected"}
+                </Badge>
+              </div>
+              <div className="mt-2">
+                {selectedEvidenceEvent ? (
+                  <div className="rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-[11px] font-semibold text-[#edf2ff]">{selectedEvidenceEvent.title}</div>
+                      <Badge variant="gray">{formatLedgerTime(selectedEvidenceEvent.timestamp)}</Badge>
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      <Badge variant="blue">{selectedEvidenceEvent.lifecycleStage ?? "manual"}</Badge>
+                      {selectedEvidenceEvent.branchLabel ? <Badge variant="gray">{selectedEvidenceEvent.branchLabel}</Badge> : null}
+                      {selectedEvidenceEvent.affectedNodeIds.length > 0 ? <Badge variant="gray">{selectedEvidenceEvent.affectedNodeIds.length} nodes</Badge> : null}
+                      {selectedEvidenceEvent.sceneSnapshot ? <Badge variant="green">Snapshot available</Badge> : <Badge variant="gray">No snapshot</Badge>}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => labelComparisonButton("left", selectedEvidenceEvent.id)}
+                        className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08]"
+                      >
+                        Set as left branch
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => labelComparisonButton("right", selectedEvidenceEvent.id)}
+                        className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08]"
+                      >
+                        Set as right branch
+                      </button>
+                    </div>
+                    <div className="mt-2 space-y-1.5">
+                      {selectedEvidenceLineage.length > 0 ? (
+                        selectedEvidenceLineage.map((step) => (
+                          <div key={step.event.id} className="rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#74809a]">
+                                Step {step.depth + 1}
+                              </div>
+                              <Badge variant={step.event.sceneSnapshot ? "green" : "gray"}>
+                                {step.event.sceneSnapshot ? "point-in-time" : "derived"}
+                              </Badge>
+                            </div>
+                            <div className="mt-1 text-[11px] font-semibold text-[#edf2ff]">{step.event.title}</div>
+                            <div className="mt-1 flex flex-wrap gap-1.5">
+                              <Badge variant="gray">{step.event.kind.replace(/_/g, " ")}</Badge>
+                              <Badge variant="gray">{step.event.branchLabel ?? step.event.lifecycleStage ?? "manual"}</Badge>
+                              {step.event.affectedNodeIds.length > 0 ? <Badge variant="gray">{step.event.affectedNodeIds.length} nodes</Badge> : null}
+                            </div>
+                            <div className="mt-1 text-[9px] text-[#8aa1c4]">{step.event.beforeSummary ? `Before: ${step.event.beforeSummary}` : "No before summary available."}</div>
+                            <div className="mt-0.5 text-[9px] text-[#8aa1c4]">{step.event.afterSummary ? `After: ${step.event.afterSummary}` : step.event.details}</div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                          Select a branch head to preview its parent chain and point-in-time reconstruction.
+                        </div>
+                      )}
+                    </div>
+                    {selectedEvidenceReconstruction ? (
+                      <div className="mt-3 rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Point-in-time reconstruction</div>
+                            <div className="mt-1 text-[10px] text-[#74809a]">Reconstruct the scene state at this checkpoint without committing it yet.</div>
+                          </div>
+                          <Badge variant="green">Preview only</Badge>
+                        </div>
+                        <div className="mt-2 text-[11px] font-semibold text-[#edf2ff]">{selectedEvidenceReconstructionSummary?.label ?? "Reconstructed scene"}</div>
+                        <div className="mt-1 text-[10px] text-[#74809a]">{selectedEvidenceReconstructionSummary?.detail ?? "A reconstructed scene snapshot is available for this event."}</div>
+                        <div className="mt-2 grid gap-2 sm:grid-cols-3 xl:grid-cols-4">
+                          {selectedEvidenceReconstructionCounts.map((item) => (
+                            <div key={item.label} className="rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+                              <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">{item.label}</div>
+                              <div className="mt-1 text-[14px] font-semibold text-[#edf2ff]">{item.current} → {item.value}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                    No branch lineage selected.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-3 rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Branch comparison</div>
+                  <div className="mt-1 text-[10px] text-[#74809a]">Compare two branch heads to preview their common ancestor and divergence before any merge or publish action.</div>
+                </div>
+                <Badge variant={branchComparison ? "blue" : "gray"}>
+                  {branchComparison ? "Comparison ready" : "Select two branch heads"}
+                </Badge>
+              </div>
+            {branchComparison ? (
+                <div className="mt-2 grid gap-2 xl:grid-cols-3">
+                  <div className="rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+                    <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Left branch</div>
+                    <div className="mt-1 text-[11px] font-semibold text-[#edf2ff]">{branchComparison.left.event.title}</div>
+                    <div className="mt-1 text-[10px] text-[#74809a]">{branchComparison.leftSceneSummary?.detail ?? "No scene summary available."}</div>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      <Badge variant="gray">{branchComparison.left.event.branchLabel ?? branchComparison.left.event.lifecycleStage ?? "manual"}</Badge>
+                      {branchComparison.left.event.sceneSnapshot ? <Badge variant="green">Snapshot</Badge> : <Badge variant="gray">Derived</Badge>}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => restoreSceneFromEvidence(branchComparison.left.event.id, "draft")}
+                        className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08]"
+                      >
+                        Restore left as draft
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => restoreSceneFromEvidence(branchComparison.left.event.id, "recovered")}
+                        className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08]"
+                      >
+                        Restore left as recovered
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => restoreSceneFromEvidence(branchComparison.left.event.id, "published")}
+                        className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-medium text-emerald-100 hover:bg-emerald-500/15"
+                      >
+                        Restore left as published
+                      </button>
+                    </div>
+                  </div>
+                  <div className="rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+                    <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Common ancestor</div>
+                    <div className="mt-1 text-[11px] font-semibold text-[#edf2ff]">{branchComparison.commonAncestor?.event.title ?? "No shared ancestor"}</div>
+                    <div className="mt-1 text-[10px] text-[#74809a]">{branchComparison.ancestorSummary?.detail ?? "The branches diverged before a reconstructable checkpoint."}</div>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {branchComparison.commonAncestor ? <Badge variant="blue">Lineage depth {branchComparison.commonAncestor.depth + 1}</Badge> : <Badge variant="gray">No common head</Badge>}
+                      {branchComparison.ancestorScene ? <Badge variant="green">Point-in-time scene</Badge> : <Badge variant="gray">No ancestor snapshot</Badge>}
+                    </div>
+                  </div>
+                  <div className="rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+                    <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Right branch</div>
+                    <div className="mt-1 text-[11px] font-semibold text-[#edf2ff]">{branchComparison.right.event.title}</div>
+                    <div className="mt-1 text-[10px] text-[#74809a]">{branchComparison.rightSceneSummary?.detail ?? "No scene summary available."}</div>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      <Badge variant="gray">{branchComparison.right.event.branchLabel ?? branchComparison.right.event.lifecycleStage ?? "manual"}</Badge>
+                      {branchComparison.right.event.sceneSnapshot ? <Badge variant="green">Snapshot</Badge> : <Badge variant="gray">Derived</Badge>}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => restoreSceneFromEvidence(branchComparison.right.event.id, "draft")}
+                        className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08]"
+                      >
+                        Restore right as draft
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => restoreSceneFromEvidence(branchComparison.right.event.id, "recovered")}
+                        className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08]"
+                      >
+                        Restore right as recovered
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => restoreSceneFromEvidence(branchComparison.right.event.id, "published")}
+                        className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-medium text-emerald-100 hover:bg-emerald-500/15"
+                      >
+                        Restore right as published
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-2 rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                  Use <span className="font-medium text-[#c9d5e9]">Set as left branch</span> and <span className="font-medium text-[#c9d5e9]">Set as right branch</span> on two lineage checkpoints to preview divergence.
+                </div>
+              )}
+              {mergeReadiness ? (
+                <div className="mt-2 rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Merge readiness</div>
+                      <div className="mt-1 text-[10px] text-[#74809a]">A branch-policy preview for the selected heads before any future merge semantics land.</div>
+                    </div>
+                    <Badge variant={mergeReadiness.status === "diverged" ? "amber" : mergeReadiness.status === "unrelated" ? "gray" : "green"}>
+                      {mergeReadiness.status.replace(/_/g, " ")}
+                    </Badge>
+                  </div>
+                  <div className="mt-2 text-[11px] text-[#e5ecfb]">{mergeReadiness.recommendation}</div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {mergeReadiness.leftDistance != null ? <Badge variant="gray">Left distance {mergeReadiness.leftDistance}</Badge> : null}
+                    {mergeReadiness.rightDistance != null ? <Badge variant="gray">Right distance {mergeReadiness.rightDistance}</Badge> : null}
+                    {mergeReadiness.commonAncestor ? <Badge variant="blue">Ancestor {mergeReadiness.commonAncestor.event.title}</Badge> : <Badge variant="gray">No common ancestor</Badge>}
+                  </div>
+                </div>
+              ) : null}
+              {branchComparison ? (
+                <div className="mt-2 grid gap-2 md:grid-cols-3 xl:grid-cols-6">
+                  {[
+                    { label: "Cameras", value: branchComparison.delta.cameras },
+                    { label: "Lights", value: branchComparison.delta.lights },
+                    { label: "Obstructions", value: branchComparison.delta.obstructions },
+                    { label: "Zones", value: branchComparison.delta.zones },
+                    { label: "Paths", value: branchComparison.delta.paths },
+                    { label: "Sensors", value: branchComparison.delta.sensors },
+                  ].map((item) => (
+                    <div key={item.label} className="rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+                      <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">{item.label}</div>
+                      <div className="mt-1 text-[14px] font-semibold text-[#edf2ff]">{item.value >= 0 ? `+${item.value}` : item.value}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+          <div className="mt-3 rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Event kinds</div>
+                <div className="mt-1 text-[10px] text-[#74809a]">Event types currently visible after search and ledger filters.</div>
+              </div>
+              <Badge variant="blue">{filteredOperationalEvidenceEvents.length} visible events</Badge>
+            </div>
+            <div className="mt-3 grid gap-2 md:grid-cols-3 xl:grid-cols-7">
+              {(Object.entries(evidenceLifecycleSummary.counts) as Array<[keyof typeof evidenceLifecycleSummary.counts, number]>).map(([stage, count]) => (
+                <div key={stage} className="rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+                  <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">{stage}</div>
+                  <div className="mt-1 text-[14px] font-semibold text-[#edf2ff]">{count}</div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {evidenceKindCounts.length > 0 ? (
+                evidenceKindCounts.map(([kind, count]) => (
+                  <Badge key={kind} variant="gray">
+                    {kind.replace(/_/g, " ")} · {count}
+                  </Badge>
+                ))
+              ) : (
+                <div className="text-[10px] text-[#74809a]">No event kinds yet.</div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-3 grid gap-2 xl:grid-cols-4">
+            <div className="rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+              <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Operational memory</div>
+              <div className="mt-2 space-y-2">
+                {recentEvidenceEvents.length > 0 ? (
+                  recentEvidenceEvents.map((event) => (
+                    <div key={event.id} className="rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="text-[11px] font-semibold text-[#edf2ff]">{event.title}</div>
+                        <Badge variant="gray">{formatLedgerTime(event.timestamp)}</Badge>
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        <Badge variant="blue">{event.kind.replace(/_/g, " ")}</Badge>
+                        <Badge variant="gray">{event.actor}</Badge>
+                        <Badge variant="gray">{confidenceLabel(event.confidence)}</Badge>
+                        {event.affectedNodeIds.length > 0 ? <Badge variant="gray">{event.affectedNodeIds.length} nodes</Badge> : null}
+                        {event.branchLabel ? <Badge variant="gray">{event.branchLabel}</Badge> : null}
+                      </div>
+                      <div className="mt-1 text-[10px] text-[#74809a]">{event.details}</div>
+                      {event.beforeSummary ? (
+                        <div className="mt-1 text-[9px] text-[#8aa1c4]">
+                          <span className="font-medium text-[#c9d5e9]">Before:</span> {event.beforeSummary}
+                        </div>
+                      ) : null}
+                      {event.afterSummary ? (
+                        <div className="mt-0.5 text-[9px] text-[#8aa1c4]">
+                          <span className="font-medium text-[#c9d5e9]">After:</span> {event.afterSummary}
+                        </div>
+                      ) : null}
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedEvidenceEventId(event.id)}
+                          className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08]"
+                        >
+                          Preview lineage
+                        </button>
+                        {event.sceneSnapshot ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleRestoreCheckpoint(event.id, "draft")}
+                              className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-medium text-emerald-100 hover:bg-emerald-500/15"
+                            >
+                              Restore as draft
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRestoreCheckpoint(event.id, "recovered")}
+                              className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08]"
+                            >
+                              Restore as recovered
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRestoreCheckpoint(event.id, "published")}
+                              className="rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1.5 text-[10px] font-medium text-sky-100 hover:bg-sky-500/15"
+                            >
+                              Restore as published
+                            </button>
+                          </>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                    {evidenceQuery.trim() ? "No matching operational evidence." : "No operational evidence yet."}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+              <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Point-in-time checkpoints</div>
+              <div className="mt-2 space-y-2">
+                {checkpointEvents.length > 0 ? (
+                  checkpointEvents.map((event) => (
+                    <div key={event.id} className="rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="text-[11px] font-semibold text-[#edf2ff]">{event.title}</div>
+                        <Badge variant="gray">{formatLedgerTime(event.timestamp)}</Badge>
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        <Badge variant="blue">checkpoint</Badge>
+                        <Badge variant="gray">{confidenceLabel(event.confidence)}</Badge>
+                        {event.affectedNodeIds.length > 0 ? <Badge variant="gray">{event.affectedNodeIds.length} nodes</Badge> : null}
+                        {event.branchLabel ? <Badge variant="gray">{event.branchLabel}</Badge> : null}
+                      </div>
+                      {event.beforeSummary ? (
+                        <div className="mt-1 text-[9px] text-[#8aa1c4]">
+                          <span className="font-medium text-[#c9d5e9]">Before:</span> {event.beforeSummary}
+                        </div>
+                      ) : null}
+                      <div className="mt-0.5 text-[10px] text-[#74809a]">{event.afterSummary ?? event.details}</div>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleRestoreCheckpoint(event.id, "recovered")}
+                          className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium hover:bg-white/[0.08]"
+                        >
+                          Restore checkpoint
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRestoreCheckpoint(event.id, "draft")}
+                          className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-[11px] font-medium text-emerald-100 hover:bg-emerald-500/15"
+                        >
+                          Restore as draft
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                    {evidenceQuery.trim() ? "No reconstructable checkpoints match your search." : "No reconstructable checkpoints yet."}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+              <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Recent snapshots</div>
+              <div className="mt-2 space-y-2">
+                {recentSnapshots.length > 0 ? (
+                  recentSnapshots.map((snapshot) => {
+                    const coverage = snapshot.simulation?.totalCoveragePct;
+                    const issues = snapshot.simulation?.issues.length;
+                    return (
+                      <div key={snapshot.id} className="rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="text-[11px] font-semibold text-[#edf2ff]">{snapshot.label}</div>
+                          <Badge variant="gray">{formatLedgerTime(snapshot.createdAt)}</Badge>
+                        </div>
+                    <div className="mt-1 text-[10px] text-[#74809a]">
+                      {coverage != null ? `${coverage.toFixed(1)}% coverage` : "Coverage pending"} · {issues != null ? `${issues} issues` : "No simulation"}
+                    </div>
+                    <div className="mt-1 text-[9px] text-[#8aa1c4]">
+                      {snapshot.notes ?? "Saved scene evidence snapshot."}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedEvidenceEventId(snapshot.id)}
+                        className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08]"
+                      >
+                        Preview lineage
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+                ) : (
+                  <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                    No snapshots saved yet.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+              <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Change log</div>
+              <div className="mt-2 space-y-2">
+                {recentChangeEntries.length > 0 ? (
+                  recentChangeEntries.map((entry, index) => (
+                    <div key={`${entry}-${index}`} className="rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+                      <div className="text-[10px] text-[#dbe2f0]">{entry}</div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                    No change log entries yet.
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

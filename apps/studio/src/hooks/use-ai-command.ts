@@ -4,7 +4,13 @@ import { useCallback, useRef, useState } from "react";
 
 import { parseCommand, type SceneContextSummary } from "@/agents/CommandAgent";
 import { proposeCounterfactuals, type CounterfactualCandidate } from "@/agents/CounterfactualAgent";
-import { createModelProvider, describeAiProviderSelection, providerKeyAvailable } from "@/agents/provider-selection";
+import {
+  createModelProvider,
+  describeAiProviderHealth,
+  describeAiProviderTelemetry,
+  describeAiProviderSelection,
+  providerKeyAvailable,
+} from "@/agents/provider-selection";
 import { generateReport, buildSimulationSummary } from "@/agents/ReportAgent";
 import type { SceneOperation } from "@/schema/SceneOperation";
 import { applySceneOperation } from "@/lib/applySceneOperation";
@@ -13,6 +19,7 @@ import { parseOfflineCommand, type OfflineCommandAction } from "@/lib/offline-co
 import { useStudioStore } from "@/store/studio-store";
 import { simulateStudio } from "@/simulation/simulate-studio";
 import type { CameraNode, CriticalZoneNode } from "@/schema/security-scene";
+import type { AiActionTelemetryStage } from "@/store/studio-store";
 
 export type AiCommandStatus =
   | { state: "idle" }
@@ -49,26 +56,66 @@ function buildSceneContext(): SceneContextSummary {
 
 export function useAiCommand() {
   const aiProviderSelection = useStudioStore((s) => s.aiProviderSelection);
+  const localOnlyMode = useStudioStore((s) => s.localOnlyMode);
+  const recordAiActionTelemetry = useStudioStore((s) => s.recordAiActionTelemetry);
+  const latestAiActionTelemetry = useStudioStore((s) => s.aiActionTelemetry[0] ?? null);
+  const recordRuntimeIncident = useStudioStore((s) => s.recordRuntimeIncident);
   const [status, setStatus] = useState<AiCommandStatus>({ state: "idle" });
   const dismissRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const providerSummary = describeAiProviderSelection(aiProviderSelection);
+  const providerHealth = describeAiProviderHealth(aiProviderSelection, localOnlyMode);
+  const providerTelemetry = describeAiProviderTelemetry(aiProviderSelection, localOnlyMode);
   const provider = createModelProvider(aiProviderSelection);
   const apiKeyAvailable = providerKeyAvailable(aiProviderSelection.providerId);
-  const mode: AiCommandMode = apiKeyAvailable
+  const cloudAvailable = apiKeyAvailable && !localOnlyMode;
+  const mode: AiCommandMode = localOnlyMode
     ? {
-        label: "Offline-first",
-        detail: `Recognized scene edits run locally. ${providerSummary.providerName} is available for open-ended prompts and fix proposals.`,
-        cloudAvailable: true,
-        providerLabel: providerSummary.providerLabel,
-        providerName: providerSummary.providerName,
-      }
-    : {
-        label: "Offline-first",
-        detail: `Recognized scene edits run locally. Open-ended prompts and fix proposals stay offline until ${providerSummary.envKey} is set.`,
+        label: "Local-only",
+        detail: `Recognized scene edits still run locally. Cloud-backed parsing, fix proposals, and report generation are disabled by policy, even if ${providerSummary.providerName} is configured.`,
         cloudAvailable: false,
         providerLabel: providerSummary.providerLabel,
         providerName: providerSummary.providerName,
-      };
+      }
+    : cloudAvailable
+      ? {
+          label: "Offline-first",
+          detail: `Recognized scene edits run locally. ${providerSummary.providerName} is available for open-ended prompts and fix proposals.`,
+          cloudAvailable: true,
+          providerLabel: providerSummary.providerLabel,
+          providerName: providerSummary.providerName,
+        }
+      : {
+          label: "Offline-first",
+          detail: `Recognized scene edits run locally. Open-ended prompts and fix proposals stay offline until ${providerSummary.envKey} is set.`,
+          cloudAvailable: false,
+          providerLabel: providerSummary.providerLabel,
+          providerName: providerSummary.providerName,
+        };
+
+  const recordTelemetry = useCallback((
+    stage: AiActionTelemetryStage,
+    startedAt: number,
+    promptTokens: number,
+    completionTokens: number,
+    status: "success" | "error",
+    note?: string | null,
+  ) => {
+    recordAiActionTelemetry({
+      stage,
+      providerId: aiProviderSelection.providerId,
+      providerLabel: providerSummary.providerLabel,
+      model: aiProviderSelection.model,
+      localOnlyMode,
+      cloudAvailable: apiKeyAvailable && !localOnlyMode,
+      durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
+      estimatedPromptTokens: Math.max(0, Math.round(promptTokens)),
+      estimatedCompletionTokens: Math.max(0, Math.round(completionTokens)),
+      estimatedTotalTokens: Math.max(0, Math.round(promptTokens + completionTokens)),
+      tokenSource: "estimated",
+      status,
+      note: note ?? null,
+    });
+  }, [aiProviderSelection.model, aiProviderSelection.providerId, apiKeyAvailable, localOnlyMode, providerSummary.providerLabel, recordAiActionTelemetry]);
 
   const setStatusSafe = useCallback((newStatus: AiCommandStatus) => {
     // Clear any pending auto-dismiss when status changes
@@ -88,6 +135,7 @@ export function useAiCommand() {
 
   const executeCommand = useCallback(async (userText: string) => {
     if (!userText.trim()) return;
+    const parseStartedAt = performance.now();
 
     // Check for special internal commands first
     if (userText.startsWith("/")) {
@@ -238,6 +286,12 @@ export function useAiCommand() {
           // Parse constraints from remaining text after the command
           const constraints = userText.replace(/^\/fix\s*/i, "").replace(/^\/improve\s*/i, "").split(",").map((s) => s.trim()).filter(Boolean);
 
+          if (localOnlyMode) {
+            setStatusSafe({ state: "error", message: `Local-only mode blocks cloud-backed fix proposals. Turn it off in View Settings to use ${providerSummary.providerName}.` });
+            autoDismiss();
+            return;
+          }
+
           const hasKey = providerKeyAvailable(aiProviderSelection.providerId);
           if (!hasKey) {
             setStatusSafe({ state: "error", message: `${providerSummary.providerName} API key not configured. Set ${providerSummary.envKey}.` });
@@ -343,17 +397,54 @@ export function useAiCommand() {
       return;
     }
 
-          const hasProviderKey = providerKeyAvailable(aiProviderSelection.providerId);
-          if (!hasProviderKey) {
-            setStatusSafe({ state: "error", message: `${providerSummary.providerName} API key not configured. Try commands like /night, /privacy on, /simulate, /report, or /target license_plate.` });
-            return;
-          }
+    if (localOnlyMode) {
+      recordRuntimeIncident({
+        category: "user_error",
+        severity: "warning",
+        title: "Cloud-backed parsing blocked",
+        details: "Local-only mode prevented a cloud-backed AI command.",
+        action: "ai_command",
+        path: "/studio",
+      });
+      setStatusSafe({
+        state: "error",
+        message: "Local-only mode blocks cloud-backed parsing. Try /night, /privacy on, /simulate, /report, or turn off Local-only mode in View Settings.",
+      });
+      autoDismiss();
+      return;
+    }
+
+    const hasProviderKey = providerKeyAvailable(aiProviderSelection.providerId);
+    if (!hasProviderKey) {
+      recordRuntimeIncident({
+        category: "provider_failure",
+        severity: "warning",
+        title: "AI provider unavailable",
+        details: `${providerSummary.providerName} API key not configured.`,
+        action: "ai_command",
+        path: "/studio",
+      });
+      setStatusSafe({ state: "error", message: `${providerSummary.providerName} API key not configured. Try commands like /night, /privacy on, /simulate, /report, or /target license_plate.` });
+      return;
+    }
 
     setStatusSafe({ state: "parsing" });
 
     try {
       const context = buildSceneContext();
       const operations = await parseCommand(userText, context, provider);
+      const parsePromptTokens = estimateTokensFromText(`${userText}\n${JSON.stringify(context)}`);
+      const parseCompletionTokens = estimateTokensFromText(JSON.stringify(operations));
+      recordTelemetry(
+        "command_parse",
+        parseStartedAt,
+        parsePromptTokens,
+        parseCompletionTokens,
+        "success",
+        operations.length === 0
+          ? "Parsed command produced no scene operations; counterfactual fallback considered."
+          : `Parsed ${operations.length} scene operation${operations.length === 1 ? "" : "s"}.`,
+      );
 
       if (operations.length === 0) {
         // Couldn't parse as a scene operation — try counterfactual agent instead
@@ -366,6 +457,7 @@ export function useAiCommand() {
 
         setStatusSafe({ state: "parsing" });
 
+        const counterfactualStartedAt = performance.now();
         try {
           const scene = storeState.scene;
           const issuesSummary = sim.issues.map((i) => `[${i.severity}] ${i.description}`).join("\n");
@@ -411,6 +503,17 @@ export function useAiCommand() {
             .sort((a, b) => (b.verifiedDelta?.totalCoveragePctDelta ?? 0) - (a.verifiedDelta?.totalCoveragePctDelta ?? 0))
             .map((c, i) => ({ ...c, rank: i + 1 }));
 
+          recordTelemetry(
+            "counterfactual",
+            counterfactualStartedAt,
+            estimateTokensFromText(`${issuesSummary}\n${sceneSummary}\n${userText}`),
+            estimateTokensFromText(JSON.stringify(ranked)),
+            ranked.length > 0 ? "success" : "error",
+            ranked.length > 0
+              ? `Generated ${ranked.length} verified counterfactual candidate${ranked.length === 1 ? "" : "s"}.`
+              : "No verified counterfactual candidates found.",
+          );
+
           if (ranked.length === 0) {
             setStatusSafe({ state: "error", message: "No fixes found for that query." });
             return;
@@ -422,6 +525,14 @@ export function useAiCommand() {
             description: `Found ${ranked.length} potential fix${ranked.length !== 1 ? "es" : ""}`,
           });
         } catch (err) {
+          recordTelemetry(
+            "counterfactual",
+            counterfactualStartedAt,
+            estimateTokensFromText(`${userText}`),
+            0,
+            "error",
+            err instanceof Error ? err.message : "Unknown error",
+          );
           const message = err instanceof Error ? err.message : "Unknown error";
           setStatusSafe({ state: "error", message });
         }
@@ -539,19 +650,71 @@ export function useAiCommand() {
 
       autoDismiss();
     } catch (err) {
+      recordTelemetry(
+        "command_parse",
+        parseStartedAt,
+        estimateTokensFromText(userText),
+        0,
+        "error",
+        err instanceof Error ? err.message : "Unknown error",
+      );
       const message = err instanceof Error ? err.message : "Unknown error";
+      recordRuntimeIncident({
+        category: "runtime_failure",
+        severity: "error",
+        title: "AI command failed",
+        details: message,
+        stack: err instanceof Error ? err.stack : null,
+        action: "ai_command",
+        path: "/studio",
+      });
       setStatusSafe({ state: "error", message });
     }
-  }, [setStatusSafe, autoDismiss, aiProviderSelection.providerId, providerSummary.envKey, providerSummary.providerName, provider]);
+  }, [
+    setStatusSafe,
+    autoDismiss,
+    aiProviderSelection.providerId,
+    aiProviderSelection.model,
+    providerSummary.envKey,
+    providerSummary.providerName,
+    providerSummary.providerLabel,
+    provider,
+    localOnlyMode,
+    recordRuntimeIncident,
+    recordTelemetry,
+    apiKeyAvailable,
+  ]);
 
   const runCounterfactuals = useCallback(async (constraints: string[], onCandidates: (candidates: CounterfactualCandidate[]) => void) => {
+    if (localOnlyMode) {
+      recordRuntimeIncident({
+        category: "user_error",
+        severity: "warning",
+        title: "Counterfactual proposals blocked",
+        details: "Local-only mode prevented cloud-backed counterfactual proposals.",
+        action: "counterfactuals",
+        path: "/studio",
+      });
+      setStatus({ state: "error", message: `Local-only mode blocks cloud-backed counterfactual proposals. Turn it off in View Settings to use ${providerSummary.providerName}.` });
+      return;
+    }
+
     const apiKeyAvailable = providerKeyAvailable(aiProviderSelection.providerId);
     if (!apiKeyAvailable) {
+      recordRuntimeIncident({
+        category: "provider_failure",
+        severity: "warning",
+        title: "Counterfactual provider unavailable",
+        details: `${providerSummary.providerName} API key not configured.`,
+        action: "counterfactuals",
+        path: "/studio",
+      });
       setStatus({ state: "error", message: `${providerSummary.providerName} API key not configured.` });
       return;
     }
 
     setStatus({ state: "parsing" });
+    const startedAt = performance.now();
 
     try {
       const store = useStudioStore.getState();
@@ -610,6 +773,17 @@ export function useAiCommand() {
         .sort((a, b) => (b.verifiedDelta?.totalCoveragePctDelta ?? 0) - (a.verifiedDelta?.totalCoveragePctDelta ?? 0))
         .map((c, i) => ({ ...c, rank: i + 1 }));
 
+      recordTelemetry(
+        "counterfactual",
+        startedAt,
+        estimateTokensFromText(`${issuesSummary}\n${sceneSummary}\n${constraints.join(", ")}`),
+        estimateTokensFromText(JSON.stringify(ranked)),
+        "success",
+        ranked.length > 0
+          ? `Generated ${ranked.length} verified counterfactual candidate${ranked.length === 1 ? "" : "s"}.`
+          : "No verified counterfactual candidates found.",
+      );
+
       onCandidates(ranked);
       setStatus({
         state: "success",
@@ -618,14 +792,61 @@ export function useAiCommand() {
 
       setTimeout(() => setStatus({ state: "idle" }), 4000);
     } catch (err) {
+      recordTelemetry(
+        "counterfactual",
+        startedAt,
+        estimateTokensFromText(constraints.join(", ")),
+        0,
+        "error",
+        err instanceof Error ? err.message : "Unknown error",
+      );
       const message = err instanceof Error ? err.message : "Unknown error";
+      recordRuntimeIncident({
+        category: "runtime_failure",
+        severity: "error",
+        title: "Counterfactual analysis failed",
+        details: message,
+        stack: err instanceof Error ? err.stack : null,
+        action: "counterfactuals",
+        path: "/studio",
+      });
       setStatus({ state: "error", message });
     }
-  }, [aiProviderSelection.providerId, provider, providerSummary.providerName]);
+  }, [
+    aiProviderSelection.providerId,
+    provider,
+    providerSummary.providerName,
+    providerSummary.providerLabel,
+    localOnlyMode,
+    recordRuntimeIncident,
+    recordTelemetry,
+  ]);
 
   const runReportGeneration = useCallback(async () => {
+    const startedAt = performance.now();
+    if (localOnlyMode) {
+      recordRuntimeIncident({
+        category: "user_error",
+        severity: "warning",
+        title: "Report generation blocked",
+        details: "Local-only mode prevented cloud-backed report generation.",
+        action: "report_generation",
+        path: "/studio",
+      });
+      setStatus({ state: "error", message: `Local-only mode blocks cloud-backed report generation. Turn it off in View Settings to use ${providerSummary.providerName}.` });
+      return null;
+    }
+
     const apiKeyAvailable = providerKeyAvailable(aiProviderSelection.providerId);
     if (!apiKeyAvailable) {
+      recordRuntimeIncident({
+        category: "provider_failure",
+        severity: "warning",
+        title: "Report provider unavailable",
+        details: `${providerSummary.providerName} API key not configured.`,
+        action: "report_generation",
+        path: "/studio",
+      });
       setStatus({ state: "error", message: `${providerSummary.providerName} API key not configured.` });
       return null;
     }
@@ -644,15 +865,49 @@ export function useAiCommand() {
       const sceneSummary = `Site: ${store.scene.name}, ${store.scene.dimensions.width}m × ${store.scene.dimensions.depth}m, ${store.scene.cameras.length} cameras`;
 
       const report = await generateReport(simData, sceneSummary, provider);
+      const elapsedMs = Math.round(performance.now() - startedAt);
+      recordAiActionTelemetry({
+        stage: "report_generation",
+        providerId: aiProviderSelection.providerId,
+        providerLabel: providerSummary.providerLabel,
+        model: aiProviderSelection.model,
+        localOnlyMode,
+        cloudAvailable: apiKeyAvailable,
+        durationMs: elapsedMs,
+        estimatedPromptTokens: estimateTokensFromText(simData + sceneSummary),
+        estimatedCompletionTokens: estimateTokensFromText(report.executiveSummary + report.sections.map((section) => section.content).join(" ")),
+        estimatedTotalTokens: estimateTokensFromText(simData + sceneSummary) + estimateTokensFromText(report.executiveSummary + report.sections.map((section) => section.content).join(" ")),
+        tokenSource: "estimated",
+        status: "success",
+        note: "Report generation timing recorded from the AI command surface.",
+      });
+      recordRuntimeIncident({
+        category: "performance_trace",
+        severity: "info",
+        title: "Report generated",
+        details: `Report generated in ${elapsedMs} ms.`,
+        durationMs: elapsedMs,
+        action: "report_generation",
+        path: "/studio",
+      });
       setStatus({ state: "success", message: "Report generated" });
       setTimeout(() => setStatus({ state: "idle" }), 4000);
       return report;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
+      recordRuntimeIncident({
+        category: "runtime_failure",
+        severity: "error",
+        title: "Report generation failed",
+        details: message,
+        stack: err instanceof Error ? err.stack : null,
+        action: "report_generation",
+        path: "/studio",
+      });
       setStatus({ state: "error", message });
       return null;
     }
-  }, [aiProviderSelection.providerId, providerSummary.providerName]);
+  }, [aiProviderSelection.providerId, providerSummary.providerName, localOnlyMode, recordRuntimeIncident, provider]);
 
   const dismissError = useCallback(() => setStatusSafe({ state: "idle" }), [setStatusSafe]);
 
@@ -722,7 +977,7 @@ export function useAiCommand() {
     setStatusSafe({ state: "idle" });
   }, [setStatusSafe]);
 
-  return { status, executeCommand, runCounterfactuals, runReportGeneration, dismissError, applyCandidate, mode };
+  return { status, executeCommand, runCounterfactuals, runReportGeneration, dismissError, applyCandidate, mode, providerHealth, providerTelemetry, latestAiActionTelemetry };
 }
 
 function applyOfflineAction(action: OfflineCommandAction) {
@@ -749,6 +1004,10 @@ function applyOfflineAction(action: OfflineCommandAction) {
     default:
       break;
   }
+}
+
+function estimateTokensFromText(text: string) {
+  return Math.max(1, Math.ceil(text.length / 4));
 }
 
 function applySceneOperations(operations: SceneOperation[]) {

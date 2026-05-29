@@ -6,6 +6,7 @@ import { Badge } from "@/components/shared/Badge";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { qualityToScore } from "@/simulation/dori";
 import { computeCoverageEntropy } from "@/simulation/coverage-entropy";
+import { truthLabelDetail } from "@/lib/truth-labels";
 
 function MetricCard({ label, children, className = "" }: {
   label: string; children: React.ReactNode; className?: string;
@@ -136,6 +137,17 @@ export function MetricsTab() {
 
   return (
     <div className="h-full">
+      <div
+        className="flex items-center justify-between border-b border-[#1e2130] px-3 py-2 text-[9px] text-[#8090a8]"
+        aria-label="Truth: Simulated"
+        title="Derived from the current scene and simulation state."
+      >
+        <div className="flex items-center gap-2">
+          <span className="font-semibold uppercase tracking-[0.14em] text-[#c7d0e4]">Truth:</span>
+          <span className="rounded border border-sky-500/20 bg-sky-500/10 px-1.5 py-0.5 text-sky-200">Simulated</span>
+        </div>
+        <div className="max-w-[32rem] truncate text-right" title={truthLabelDetail("simulated")}>{truthLabelDetail("simulated")}</div>
+      </div>
       <div className="grid gap-2" style={{gridTemplateColumns: `repeat(${baseColCount}, minmax(0, 1fr))`}}>
       {/* 1: Overall Coverage */}
       <MetricCard label="Overall Coverage (Detection)">

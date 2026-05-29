@@ -26,6 +26,7 @@ export const TOOL_SHORTCUTS: Record<string, ActiveTool> = {
   c: "camera",
   b: "obstruction",
   l: "light",
+  y: "sensor",
   p: "path",
   z: "zone",
   d: "door_window",

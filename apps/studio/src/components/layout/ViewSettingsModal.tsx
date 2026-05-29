@@ -95,6 +95,7 @@ const ANALYSIS_MODULES: Array<{ id: BottomTab; label: string; description: strin
   { id: "temporal", label: "24H Profile", description: "Time-of-day profile" },
   { id: "beforeafter", label: "Before / After", description: "Comparison module" },
   { id: "assumptions", label: "Assumptions", description: "Simulation assumptions" },
+  { id: "governance", label: "Governance", description: "Role and approval control plane" },
   { id: "provenance", label: "Provenance", description: "Model and traceability" },
   { id: "redundancy", label: "Redundancy", description: "Coverage resilience" },
   { id: "counterfactual", label: "Counterfactual", description: "What-if analysis" },
@@ -150,6 +151,8 @@ export function ViewSettingsModal() {
   const setUiTheme = useStudioStore((s) => s.setUiTheme);
   const aiProviderSelection = useStudioStore((s) => s.aiProviderSelection);
   const setAiProviderSelection = useStudioStore((s) => s.setAiProviderSelection);
+  const localOnlyMode = useStudioStore((s) => s.localOnlyMode);
+  const setLocalOnlyMode = useStudioStore((s) => s.setLocalOnlyMode);
   const cameraPresetId = useStudioStore((s) => s.cameraPresetId);
   const setCameraPresetId = useStudioStore((s) => s.setCameraPresetId);
   const bottomDrawerMode = useStudioStore((s) => s.bottomDrawerMode);
@@ -196,6 +199,7 @@ export function ViewSettingsModal() {
 
   return (
     <div
+      data-testid="view-settings-modal"
       className="fixed inset-0 z-[120] flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-md"
       onClick={() => setOpen(false)}
     >
@@ -329,6 +333,20 @@ export function ViewSettingsModal() {
                     </select>
                   </label>
                 </div>
+                <label className="mt-3 flex items-start gap-3 rounded-xl border border-[#22314b] bg-[#101827] px-3 py-3">
+                  <input
+                    type="checkbox"
+                    checked={localOnlyMode}
+                    onChange={(event) => setLocalOnlyMode(event.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-[#31405a] bg-[#0b0f17] text-cyan-500 focus:ring-cyan-500"
+                  />
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-white">Local Only Mode</div>
+                    <div className="mt-1 text-[11px] text-[#7e8aa4]">
+                      Keep AI parsing, counterfactuals, and report generation on-device. Cloud-backed provider calls are disabled by policy.
+                    </div>
+                  </div>
+                </label>
               </div>
             </section>
 

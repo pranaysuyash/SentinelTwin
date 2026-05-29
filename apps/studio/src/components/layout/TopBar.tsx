@@ -389,7 +389,7 @@ export function TopBar() {
 
         <WorkspacePresetSwitcher />
 
-        <SurfaceButton onClick={() => toggleViewSettingsOpen()}>
+        <SurfaceButton onClick={() => toggleViewSettingsOpen()} data-testid="topbar-view-settings">
           <SlidersHorizontal className="h-3 w-3" />
           <span className="hidden lg:inline">View Settings</span>
         </SurfaceButton>
@@ -471,7 +471,9 @@ export function TopBar() {
 
           {/* Visible keyboard shortcut toggle */}
           <button
+            type="button"
             onClick={() => window.dispatchEvent(new CustomEvent("sentineltwin:toggle-shortcuts"))}
+            aria-label="Open keyboard shortcuts"
             className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[#24283a] bg-[#111521] text-[#5d6880] transition-colors hover:border-[#32384d] hover:text-white"
             title="Keyboard shortcuts (?)"
           >
@@ -482,13 +484,19 @@ export function TopBar() {
         {/* Overflow menu (always visible) — contains secondary actions on narrow viewports + extras */}
         <div className="relative">
           <button
+            type="button"
             onClick={() => setMoreOpen((v) => !v)}
+            aria-label="Open more actions"
+            aria-haspopup="menu"
+            aria-expanded={moreOpen}
+            aria-controls="topbar-more-menu"
             className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[#24283a] bg-[#111521] text-[#5d6880] transition-colors hover:border-[#32384d] hover:text-white"
           >
             <MoreHorizontal className="h-4 w-4" />
           </button>
           {moreOpen && (
             <div
+              id="topbar-more-menu"
               className="absolute right-0 top-full z-[420] mt-1 w-44 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
               onMouseLeave={() => setMoreOpen(false)}
             >
@@ -566,6 +574,7 @@ export function TopBar() {
                   toggleViewSettingsOpen();
                   setMoreOpen(false);
                 }}
+                data-testid="more-view-settings"
                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
               >
                 <SlidersHorizontal className="h-3 w-3" />

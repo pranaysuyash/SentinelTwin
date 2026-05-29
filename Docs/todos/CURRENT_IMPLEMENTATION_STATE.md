@@ -19,15 +19,21 @@ For the full-vision gap inventory and next-slice sequencing, see
 
 - Path Replay now writes its play/pause, seek, reset, and path-change state back into the shared replay store, so Camera View and Camera Wall stay synchronized with the active replay progress instead of reading a local-only loop ✅
 
+## Guided scan assistant (2026-05-29)
+
+- The launcher’s guided scan path now opens a real guided assistant over the existing scan wizard, so capture prep gets structured guidance and auto-path hints without forking the manual-assisted compile pipeline ✅
+- The assistant still compiles into the canonical `SecurityScene` through the same candidate-review, warning-acknowledgement, and evidence-logging flow as the manual scan path ✅
+
 ## Homepage / layout surface update (2026-05-28)
 
 - Root no longer uses the older centered form/checklist launcher; `/` now resolves to the Studio dashboard home surface (`StudioDashboardHome`) ✅
 - The implemented root target aligns with the `StudioDashboardHome_CurrentWorkspacePreview_RiskStatusPanel` direction for V0.1 Studio-first flow ✅
 - The root dashboard now uses a compact operator top bar, live current-workspace preview, risk/status right panel, metric/action rail, and first-viewport recent/quick-start dock instead of a large marketing-style hero ✅
-- The root launcher top bar now matches the reference more closely by keeping the primary actions to Open Studio / Run Simulation / Import JSON / New Scene, while `Start Project` lives in Quick Start instead of competing with the studio actions ✅
+- The root launcher top bar now matches the reference more closely by keeping the primary actions to Open Studio / Run Simulation / Import JSON / New Scene, while full entry-goal selection is available through the Project Start Launcher ✅
 - The live dashboard preview hydration path now uses an explicit mounted flag, avoiding the previous client-store shim that could leave the preview stuck on `Loading preview` after hydration ✅
 - `PlatformHome_CommandCenter_RecentWorkspaceRiskOverview` is retained as a future V1+ concept and is intentionally not the immediate root implementation ✅
 - The Studio homepage now auto-runs the demo simulation on first load when the canonical demo scene is present, so the dashboard does not start in a misleading `Simulation pending` state for the retail demo ✅
+- Demo bootstrap and manual `Run Simulation` now both call the store-backed `runSimulation()` action (instead of direct engine calls in the page component), preserving async guardrails like in-flight dedupe and stale-scene checks ✅
 - Demo workspaces and layouts are seeded when local storage is empty, so the homepage now has visible recent/demo surfaces instead of a blank shell ✅
 - A full `View Settings` / layout manager is wired into the shell, top bar, and viewport controls, covering main view, canvas mode, scene layers, dock visibility, component visibility, analysis modules, right-panel mode, bottom drawer mode, workspace presets, and saved layouts ✅
 - The workspace now treats report as a first-class view path and stores custom layouts separately from scenes so the site model and the shell composition stay independent ✅
@@ -172,6 +178,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - Report exports now include provenance sections with scene source, source counts, revision depth, snapshot counts, and source/confidence history for the canonical scene graph ✅
 - Report exports now also include an operational evidence appendix with change-log counts, evidence counts, sensor-related evidence, and recent evidence entries, so stakeholder handoff artifacts carry the same ledger story as the in-app provenance surface ✅
 - The Report Lite preview now mirrors that operational evidence appendix, so the live handoff view and the exported artifacts stay aligned ✅
+- The Report Lite handoff now also carries a Temporal Operational Twin section with scene-event counts, reconstructable checkpoints, branch heads, checkpoint age, and current-vs-checkpoint deltas ✅
 - Compare exports now also carry the same evidence counts and before/after evidence trail, so the side-by-side artifact remains ledger-aware instead of reporting only simulation deltas ✅
 - The compact report summary strip now includes an `Evidence Trail` line so the first-glance report card shows the ledger story before the user opens the full handoff view ✅
 - The report and compare surfaces now also export a dedicated JSON evidence bundle, carrying the scene, report data, compare context, and evidence trail as a reusable handoff artifact ✅
@@ -180,6 +187,9 @@ For the full-vision gap inventory and next-slice sequencing, see
 - The camera inspector now also exposes a live camera binding section plus a camera metadata ingest bridge that can paste JSON/NDJSON or pull an external feed URL, archive the submission, and apply matched camera status/clarity/night-mode and live session fields through the canonical store while the live connection probe/archive boundary now understands JSON, NDJSON, and ONVIF-style XML responses, tries SOAP-first for ONVIF binds, supports session refreshes while connected, and surfaces an active session lease registry with expiry timestamps plus a transport-session handle so the remaining device-protocol seam stays honest ✅
 - The debug/support bundle now carries both the sensor ingest archive and the camera live connection archive, including the live session snapshot fields, transport-session metadata, and refresh history, while the inspector also shows the active lease registry, expiry, and transport handle, so the operator handoff package keeps the live metadata story together with the rest of the evidence trail ✅
 - Scene Intelligence now has an explicit temporal replay scrubber with point-in-time reconstruction and restore actions, so the operational evidence trail can be scrubbed and previewed instead of only listed as recent events ✅
+- Scene Intelligence now also surfaces a temporal operational twin summary with scene-event counts, reconstructable checkpoints, branch heads, checkpoint age, and current-vs-checkpoint deltas so the operator can answer “what did we know, and when?” without leaving the evidence surface ✅
+- The operational evidence layer now also has a canonical event-centered timeline builder plus a state-at-time-T resolver, so the temporal story is backed by a reusable temporal object model instead of only UI-side sorting and checkpoint lookup ✅
+- The canonical scene graph now carries node-level evidence history metadata for selected entities, so the graph node inspector can show evidence count and latest change directly on the selected node ✅
 - Camera metadata ingest now also writes a durable live metadata event stream that shows up in the camera feed overlays and Scene Intelligence provenance surface alongside the existing sensor evidence trail ✅
 
 ### Schema (src/schema/security-scene.ts) — complete
@@ -243,7 +253,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 ### Launcher resume / status surface — now explicit
 - Root launcher now renders `StudioDashboardHome` as a full-screen dashboard with the current workspace preview, risk summary, mode entry points, searchable project browser, folder/tag/pin metadata management, selected-workspace actions, and secondary quick-start actions instead of the old centered setup card ✅
 - Launcher page now exposes a workspace-resume card with direct resume, coverage entry, and saved-scene shortcuts pulled from local storage ✅
-- Product feature status is visible on the launcher with an entry-flow row and explicit available/preview/planned maturity labels ✅
+- Product feature maturity remains tracked in docs and launch flows, but the root dashboard itself now prioritizes the workspace preview, security status, and quick-start actions instead of an in-surface maturity panel ✅
 - AI layout draft launcher modal now warns that the generated scene replaces the current workspace and discloses the model-backed vs heuristic fallback path ✅
 - AI layout draft now records provenance on the scene change log and forwards provenance-backed notices into the launcher/status surface instead of passing opaque warning text alone ✅
 - AI layout draft results now leave a launcher status banner so the fallback/model outcome stays visible after the modal closes ✅
@@ -269,7 +279,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - The `Governance` tab now also exposes an action gate with allow/blocked status plus route reasons for edit, annotate, request review, approve, reject, publish, and restore so RBAC/ABAC is visible at the action level ✅
 - The `Governance` tab now also exposes a workspace membership archive queue so shared-workspace identity, routing policy, and snapshot drift can be archived and fanned out through a backend-shaped handoff instead of only living in local store state, and it can now sync the live state back to the latest archived snapshot when the operator chooses to reconcile ✅
 - The `Governance` tab now also exposes a `Resolve Approval Route` action that archives the resolved approval route through `/api/workspace-approval-route`, records a `workspace_approval_routed` evidence event, and surfaces the route status and target reviewer in the control plane ✅
-- The `Governance` tab now also exposes a workspace identity conflict resolution/archive backed by `/api/workspace-identity-conflict`, so drift against the latest archived membership snapshot can be captured and turned into a canonical remote-shared-identity policy recommendation before a real backend identity service exists ✅
+- The `Governance` tab now also exposes a workspace identity conflict resolution/archive backed by `/api/workspace-identity-conflict`, plus a selectable conflict diff view and replay result that recomputes the selected archived conflict against the current live workspace state, so drift can be captured, replayed, and turned into a canonical remote-shared-identity policy recommendation before a real backend identity service exists ✅
 - The trust-audit manifest now covers the shared-identity conflict surface copy, so the Governance tab's conflict-resolution lane is verified alongside the approval and membership handoff surfaces ✅
 - The Governance tab now records identity conflict resolution itself as a first-class `workspace_identity_conflict_resolved` evidence event, so the governance trail distinguishes the conflict resolution from the generic membership-sync action that accompanied it ✅
 - The sensor panel now also exposes an external feed bridge that can pull JSON/NDJSON from a live URL through `/api/sensor-ingest`, so live metadata can enter the canonical evidence trail without paste-only intake ✅
@@ -308,7 +318,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - Full-canvas view modes are wired for the canvas shell ✅
 - Camera View mode is a dedicated full-canvas single-camera POV with a live HUD, DORI overlay card, mode filters, overlay toggles, camera header navigation, and a back-to-map control ✅
 - Camera View mode now also renders the replay actor in the POV with a screen-space detection box and tighter CCTV-style exposure tuning so the subject reads in-frame like the reference footage ✅
-- Camera Wall mode now uses an adaptive live feed grid (selected-first, active-first) with 1-6 camera feeds plus a 3D map overview slot and active/offline counters ✅
+- Camera Wall mode now uses an adaptive live feed grid (selected-first, active-first) with 1-6 camera feeds plus a 3D map overview slot, active/offline counters, and per-camera zone-quality summaries sourced from the current simulation result ✅
 - Compare mode now renders side-by-side baseline/proposed 3D panels with delta cards, issue/recommendation notes, a quality-over-time trend, and scenario notes ✅
 - Compare mode now exposes explicit Scenario A / Scenario B selectors so comparison pairs do not drift silently when new snapshots are saved ✅
 - Compare mode now exports JSON, Markdown, and HTML compare artifacts, can open the active replay view directly, and still supports captured visual evidence for report export ✅
@@ -575,6 +585,7 @@ The reference-image feature set is now fully built. The remaining work is now na
 - A direct helper test now covers the wall / ceiling / pole snap math so the mount behavior is protected by more than source assertions ✅
 - The light inspector now exposes brightness, type, status, range, and a live night-coverage toggle / impact summary, so security lights are editable and their simulation effect is visible in the inspector.
 - Compare mode now includes a live camera comparison section that compares two cameras from the current scene using per-camera simulation results, coverage, zone counts, and DORI reach alongside the existing snapshot compare workflow.
+- Compare and report exports now surface per-camera best zone quality and failed-zone counts alongside coverage, so the handoff artifacts read the same per-camera truth as the live wall and compare views.
 - The camera inspector analytics tab now includes a per-camera privacy impact section that shows privacy issues, restricted cells, and affected zones for the selected camera, so privacy is actionable during camera tuning.
 - The Issues tab now includes a dedicated privacy review section with privacy issue counts, restricted-cell counts, and clickable affected cameras/zones so privacy enforcement is visible in the triage workflow too.
 

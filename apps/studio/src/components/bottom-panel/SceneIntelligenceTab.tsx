@@ -4,13 +4,15 @@ import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/shared/Badge";
 import { cn } from "@/lib/cn";
+import { buildSceneIntelligenceGraph } from "@/lib/scene-intelligence-graph";
 import {
+  buildOperationalEvidenceTimeline,
   assessOperationalEvidenceMergeReadiness,
   confidenceLabel,
   compareOperationalEvidenceBranches,
   filterOperationalEvidenceEvents,
-  getOperationalEvidenceCheckpoints,
-  reconstructSceneFromEvidence,
+  resolveOperationalEvidenceSceneAtTime,
+  summarizeOperationalEvidenceTemporalTwin,
   summarizeOperationalEvidenceBranchHeads,
   summarizeOperationalEvidenceLifecycle,
   summarizeSceneEvidence,
@@ -152,17 +154,39 @@ function formatLedgerTime(timestamp: number) {
 
 export function SceneIntelligenceTab() {
   const scene = useStudioStore((s) => s.scene);
-  const graph = useStudioStore((s) => s.sceneIntelligenceGraph);
+  const graphFromStore = useStudioStore((s) => s.sceneIntelligenceGraph);
   const simulationResult = useStudioStore((s) => s.simulationResult);
   const operationalEvidenceEvents = useStudioStore((s) => s.operationalEvidenceEvents);
-  const sensorEvents = useStudioStore((s) => s.sensorEvents.filter((event) => event.sceneId === s.scene.id));
-  const cameraMetadataEvents = useStudioStore((s) => s.cameraMetadataEvents.filter((event) => event.sceneId === s.scene.id));
-  const cameraLiveConnectionEvents = useStudioStore((s) => s.cameraLiveConnectionEvents.filter((event) => event.sceneId === s.scene.id));
+  const sceneId = useStudioStore((s) => s.scene.id);
+  const allSensorEvents = useStudioStore((s) => s.sensorEvents);
+  const allCameraMetadataEvents = useStudioStore((s) => s.cameraMetadataEvents);
+  const allCameraLiveConnectionEvents = useStudioStore((s) => s.cameraLiveConnectionEvents);
+  const sensorEvents = useMemo(
+    () => allSensorEvents.filter((event) => event.sceneId === sceneId),
+    [allSensorEvents, sceneId],
+  );
+  const cameraMetadataEvents = useMemo(
+    () => allCameraMetadataEvents.filter((event) => event.sceneId === sceneId),
+    [allCameraMetadataEvents, sceneId],
+  );
+  const cameraLiveConnectionEvents = useMemo(
+    () => allCameraLiveConnectionEvents.filter((event) => event.sceneId === sceneId),
+    [allCameraLiveConnectionEvents, sceneId],
+  );
   const restoreSceneFromEvidence = useStudioStore((s) => s.restoreSceneFromEvidence);
   const publishCurrentScene = useStudioStore((s) => s.publishCurrentScene);
   const provenanceNotes = useMemo(
     () => (scene.changeLog ?? []).filter((entry) => entry.startsWith("Provenance:") || entry.startsWith("Provenance confidence:")),
     [scene.changeLog],
+  );
+  const graph = useMemo(
+    () => buildSceneIntelligenceGraph(scene, {
+      simulationResult,
+      revisionDepth: graphFromStore.summary.revisionDepth,
+      snapshotCount: graphFromStore.summary.snapshotCount,
+      operationalEvidenceEvents,
+    }),
+    [graphFromStore.summary.revisionDepth, graphFromStore.summary.snapshotCount, operationalEvidenceEvents, scene, simulationResult],
   );
 
   const [selectedNodeId, setSelectedNodeId] = useState(graph.rootId);
@@ -233,9 +257,13 @@ export function SceneIntelligenceTab() {
     external: 0,
     manual: 0,
   }), [cameraLiveConnectionEvents]);
+  const operationalTimeline = useMemo(
+    () => buildOperationalEvidenceTimeline(filteredOperationalEvidenceEvents, scene),
+    [filteredOperationalEvidenceEvents, scene],
+  );
   const checkpointEvents = useMemo(
-    () => getOperationalEvidenceCheckpoints(filteredOperationalEvidenceEvents).slice(-4).reverse(),
-    [filteredOperationalEvidenceEvents],
+    () => operationalTimeline.checkpoints.slice(-4).reverse().map((entry) => entry.event),
+    [operationalTimeline],
   );
   const evidenceKindCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -252,21 +280,29 @@ export function SceneIntelligenceTab() {
     () => summarizeOperationalEvidenceBranchHeads(filteredOperationalEvidenceEvents),
     [filteredOperationalEvidenceEvents],
   );
+  const temporalTwin = useMemo(
+    () => summarizeOperationalEvidenceTemporalTwin(filteredOperationalEvidenceEvents, scene),
+    [filteredOperationalEvidenceEvents, scene],
+  );
   const selectedEvidenceEvent = useMemo(
-    () => filteredOperationalEvidenceEvents.find((event) => event.id === selectedEvidenceEventId) ?? filteredOperationalEvidenceEvents.at(-1) ?? null,
-    [filteredOperationalEvidenceEvents, selectedEvidenceEventId],
+    () => operationalTimeline.entries.find((entry) => entry.event.id === selectedEvidenceEventId)?.event ?? operationalTimeline.entries.at(-1)?.event ?? null,
+    [operationalTimeline.entries, selectedEvidenceEventId],
+  );
+  const selectedEvidenceTimelineEntry = useMemo(
+    () => operationalTimeline.entries.find((entry) => entry.event.id === selectedEvidenceEvent?.id) ?? null,
+    [operationalTimeline.entries, selectedEvidenceEvent],
   );
   const selectedEvidenceLineage = useMemo(
     () => (selectedEvidenceEvent ? traceOperationalEvidenceLineage(filteredOperationalEvidenceEvents, selectedEvidenceEvent.id) : []),
     [filteredOperationalEvidenceEvents, selectedEvidenceEvent],
   );
   const selectedEvidenceReconstruction = useMemo(
-    () => (selectedEvidenceEvent ? reconstructSceneFromEvidence(filteredOperationalEvidenceEvents, selectedEvidenceEvent.id) : null),
-    [filteredOperationalEvidenceEvents, selectedEvidenceEvent],
+    () => (selectedEvidenceEvent ? resolveOperationalEvidenceSceneAtTime(filteredOperationalEvidenceEvents, selectedEvidenceEvent.timestamp, scene) : null),
+    [filteredOperationalEvidenceEvents, scene, selectedEvidenceEvent],
   );
   const evidenceTimeline = useMemo(
-    () => [...filteredOperationalEvidenceEvents].sort((a, b) => a.timestamp - b.timestamp),
-    [filteredOperationalEvidenceEvents],
+    () => operationalTimeline.entries.map((entry) => entry.event),
+    [operationalTimeline.entries],
   );
   const selectedTimelineIndex = useMemo(() => {
     if (!selectedEvidenceEvent || evidenceTimeline.length === 0) return -1;
@@ -373,7 +409,7 @@ export function SceneIntelligenceTab() {
     }));
 
     return { width, height, nodes, edges };
-  }, [graph.edges, graph.nodes]);
+  }, [graph]);
 
   const connectedEdges = useMemo(() => {
     if (!selectedNode) return [];
@@ -469,6 +505,55 @@ export function SceneIntelligenceTab() {
         ].map((item) => (
           <StatCard key={item.label} label={item.label} value={item.value} detail={item.detail} />
         ))}
+      </div>
+      <div className="mt-3 rounded-lg border border-[#1c2130] bg-[#0f1320] px-3 py-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Temporal operational twin</div>
+            <div className="mt-1 text-[11px] text-[#aeb8cd]">What did we know, and when? Compare the current scene against the latest reconstructable checkpoint.</div>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Badge variant="gray">{temporalTwin.totalEvents} scene events</Badge>
+            <Badge variant="blue">{temporalTwin.checkpointCount} checkpoints</Badge>
+            <Badge variant="gray">{temporalTwin.branchHeadCount} branch heads</Badge>
+          </div>
+        </div>
+        <div className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            label="Current scene"
+            value={temporalTwin.currentSceneSummary?.label ?? "—"}
+            detail={temporalTwin.currentSceneSummary?.detail ?? "No current scene summary available."}
+          />
+          <StatCard
+            label="Latest checkpoint"
+            value={temporalTwin.latestCheckpoint?.title ?? "—"}
+            detail={temporalTwin.latestCheckpoint ? `${temporalTwin.latestCheckpoint.branchLabel} · ${formatLedgerTime(temporalTwin.latestCheckpoint.timestamp)}` : "No reconstructable checkpoint available."}
+          />
+          <StatCard
+            label="Checkpoint delta"
+            value={temporalTwin.currentVsLatestCheckpointDelta ? `${temporalTwin.currentVsLatestCheckpointDelta.cameras >= 0 ? "+" : ""}${temporalTwin.currentVsLatestCheckpointDelta.cameras} cams` : "—"}
+            detail={temporalTwin.currentVsLatestCheckpointDelta ? `zones ${temporalTwin.currentVsLatestCheckpointDelta.zones >= 0 ? "+" : ""}${temporalTwin.currentVsLatestCheckpointDelta.zones}, sensors ${temporalTwin.currentVsLatestCheckpointDelta.sensors >= 0 ? "+" : ""}${temporalTwin.currentVsLatestCheckpointDelta.sensors}` : "No delta available yet."}
+          />
+          <StatCard
+            label="Checkpoint age"
+            value={temporalTwin.latestCheckpointAgeMs != null ? `${Math.max(1, Math.round(temporalTwin.latestCheckpointAgeMs / 60000))}m` : "—"}
+            detail={temporalTwin.latestCheckpoint?.hasSnapshot ? "point-in-time snapshot available" : "derived from reconstructed lineage"}
+          />
+        </div>
+        {temporalTwin.latestCheckpoint ? (
+          <div className="mt-3 rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Latest reconstructable checkpoint</div>
+                <div className="mt-1 text-[11px] font-semibold text-[#edf2ff]">{temporalTwin.latestCheckpoint.title}</div>
+                <div className="mt-1 text-[10px] text-[#74809a]">{temporalTwin.latestCheckpoint.summary.detail}</div>
+              </div>
+              <Badge variant={temporalTwin.latestCheckpoint.hasSnapshot ? "green" : "gray"}>
+                {temporalTwin.latestCheckpoint.hasSnapshot ? "point-in-time" : "derived"}
+              </Badge>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
 
@@ -679,6 +764,14 @@ export function SceneIntelligenceTab() {
                   <>
                     <div className="mt-2 text-[11px] font-semibold text-[#edf2fb]">{selectedEvidenceReconstructionSummary?.label ?? "Reconstructed scene"}</div>
                     <div className="mt-1 text-[10px] text-[#74809a]">{selectedEvidenceReconstructionSummary?.detail ?? "A reconstructed scene snapshot is available for this checkpoint."}</div>
+                    {selectedEvidenceTimelineEntry ? (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        <Badge variant={selectedEvidenceTimelineEntry.isCheckpoint ? "green" : "gray"}>
+                          {selectedEvidenceTimelineEntry.isCheckpoint ? "point-in-time checkpoint" : "state at time T"}
+                        </Badge>
+                        {selectedEvidenceTimelineEntry.isBranchHead ? <Badge variant="blue">branch head</Badge> : null}
+                      </div>
+                    ) : null}
                     <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                       {selectedEvidenceReconstructionCounts.map((item) => (
                         <div key={item.label} className="rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
@@ -750,6 +843,17 @@ export function SceneIntelligenceTab() {
                     >
                       Reset trace
                     </button>
+                  </div>
+                </div>
+
+                <div className="rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+                  <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Version history</div>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <StatCard label="Evidence events" value={selectedNode.historyCount ?? 0} detail="Node-affecting evidence records" />
+                    <StatCard label="Latest change" value={selectedNode.latestEvidenceKind ?? "—"} detail={selectedNode.latestEvidenceAt ? formatLedgerTime(selectedNode.latestEvidenceAt) : "No change recorded"} />
+                  </div>
+                  <div className="mt-2 text-[10px] text-[#74809a]">
+                    {selectedNode.latestEvidenceSummary ?? "This graph node does not yet have node-specific evidence attached."}
                   </div>
                 </div>
               </div>

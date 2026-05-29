@@ -12,6 +12,11 @@ type ReportCriticalZoneResult = SimulationResult["criticalZoneResults"][number];
 type ReportCameraResult = SimulationResult["cameraResults"][number];
 type ReportIssue = SimulationResult["issues"][number];
 type ReportRecommendation = SimulationResult["recommendations"][number];
+type ReportCameraQuality = "none" | "detection" | "observation" | "recognition" | "identification" | "overview" | "outline" | "discern" | "perceive" | "characterize" | "validate" | "scrutinize";
+
+function qualityRank(quality: ReportCameraQuality) {
+  return QUALITY_ORDER.indexOf(quality as typeof QUALITY_ORDER[number]);
+}
 // ── Report Data Interface ──
 
 export interface ReportData {
@@ -55,6 +60,8 @@ export interface ReportData {
     status: string;
     coveragePct: number;
     zonesCovered: string[];
+    bestZoneQuality: string;
+    zonesFailed: number;
     issues: string[];
   }[];
   redundancyMatrix?: RedundancyMatrixReport;
@@ -304,6 +311,10 @@ export function buildReportData(
       status: cameraMap.get(c.cameraId)?.status ?? "unknown",
       coveragePct: c.coveragePct,
       zonesCovered: c.criticalZonesCovered ?? [],
+      bestZoneQuality: Object.values(c.qualityByZone ?? {}).reduce((best, quality) => (
+        qualityRank(quality as ReportCameraQuality) > qualityRank(best as ReportCameraQuality) ? quality : best
+      ), "none" as ReportCameraQuality),
+      zonesFailed: c.criticalZonesFailed?.length ?? 0,
       issues: [],
     })),
     redundancyMatrix: redundancyMatrix ?? undefined,
@@ -617,6 +628,10 @@ function buildCompareReportSnapshot(scene: ReportScene, result: SimulationResult
       name: cameraMap.get(c.cameraId)?.name ?? c.cameraId,
       status: cameraMap.get(c.cameraId)?.status ?? "unknown",
       coveragePct: c.coveragePct,
+      bestZoneQuality: Object.values(c.qualityByZone ?? {}).reduce((best, quality) => (
+        qualityRank(quality as ReportCameraQuality) > qualityRank(best as ReportCameraQuality) ? quality : best
+      ), "none"),
+      zonesFailed: c.criticalZonesFailed?.length ?? 0,
       zonesCovered: c.criticalZonesCovered ?? [],
       issues: [],
     })),
@@ -872,12 +887,14 @@ export function exportAsHtml(report: ReportData): string {
   <h2>Camera Analysis</h2>
   ${report.cameras.length > 0 ? `
   <table>
-    <thead><tr><th>Camera</th><th>Coverage</th><th>Zones Covered</th></tr></thead>
+    <thead><tr><th>Camera</th><th>Coverage</th><th>Best Zone Quality</th><th>Zones Failed</th><th>Zones Covered</th></tr></thead>
     <tbody>
       ${report.cameras.map((c) => `
         <tr>
           <td>${escapeHtml(c.name)}</td>
           <td>${c.coveragePct.toFixed(1)}%</td>
+          <td>${escapeHtml(c.bestZoneQuality)}</td>
+          <td>${c.zonesFailed}</td>
           <td>${c.zonesCovered.join(", ") || "none"}</td>
         </tr>
       `).join("")}
@@ -1187,6 +1204,16 @@ export function exportAsMarkdown(report: ReportData): string {
            `| ${z.label} | ${z.requiredQuality} | ${z.actualQuality} | ${z.status} | ${z.coveringCameras.join(", ") || "none"} |`,
          )]
       : ["No critical zones defined."]),
+    "",
+    "## Camera Analysis",
+    "",
+    ...(report.cameras.length > 0
+      ? ["| Camera | Coverage | Best Zone Quality | Zones Failed | Zones Covered |",
+         "|--------|----------|-------------------|--------------|---------------|",
+         ...report.cameras.map((c) =>
+           `| ${c.name} | ${c.coveragePct.toFixed(1)}% | ${c.bestZoneQuality} | ${c.zonesFailed} | ${c.zonesCovered.join(", ") || "none"} |`,
+         )]
+      : ["No cameras configured."]),
     "",
     "## Issues",
     "",

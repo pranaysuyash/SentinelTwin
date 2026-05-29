@@ -111,6 +111,8 @@ describe("report engine", () => {
       expect(cam.id).toBeTruthy();
       expect(cam.coveragePct).toBeGreaterThanOrEqual(0);
       expect(Array.isArray(cam.zonesCovered)).toBe(true);
+      expect(cam.bestZoneQuality).toBeTruthy();
+      expect(cam.zonesFailed).toBeGreaterThanOrEqual(0);
     }
   });
 
@@ -133,7 +135,7 @@ describe("report engine", () => {
     }
   });
 
-  test("buildReportData accepts adversarial path options", { timeout: 15000 }, () => {
+  test("buildReportData accepts adversarial path options", () => {
     const report = buildReportData(scene, result, {
       adversarialPath: {
         exposureScore: 8.5,
@@ -153,7 +155,7 @@ describe("report engine", () => {
     expect(report.adversarialPath?.waypoints).toHaveLength(2);
   });
 
-  test("buildReportData accepts temporal profile options", { timeout: 15000 }, () => {
+  test("buildReportData accepts temporal profile options", () => {
     const report = buildReportData(scene, result, {
       temporalProfile: {
         vulnerabilityWindowCount: 3,
@@ -170,7 +172,7 @@ describe("report engine", () => {
     expect(report.temporalProfile?.worstCoverage).toBe(45.2);
   });
 
-  test("buildReportData with custom title", { timeout: 15000 }, () => {
+  test("buildReportData with custom title", () => {
     const report = buildReportData(scene, result, { title: "Custom Audit" });
     expect(report.title).toBe("Custom Audit");
   });
@@ -197,7 +199,7 @@ describe("report engine", () => {
     expect(report.truthLadder.summary).toContain("verified");
   });
 
-  test("buildCompareReportData produces correct deltas", { timeout: 15000 }, () => {
+  test("buildCompareReportData produces correct deltas", () => {
     const modifiedScene = createSmallRetailShopScene();
     const camera = modifiedScene.cameras.find((c) => c.id === "cam_entrance");
     if (camera) camera.status = "off";
@@ -218,7 +220,7 @@ describe("report engine", () => {
     expect(compare.zoneChanges.length).toBe(beforeResult.criticalZoneResults.length);
   });
 
-  test("buildCompareReportData identifies zone status changes", { timeout: 15000 }, () => {
+  test("buildCompareReportData identifies zone status changes", () => {
     const modifiedScene = createSmallRetailShopScene();
     const camera = modifiedScene.cameras.find((c) => c.id === "cam_entrance");
     if (camera) camera.status = "off";
@@ -316,6 +318,12 @@ describe("exportAsHtml", () => {
   test("includes sensors summary card", () => {
     const html = exportAsHtml(makeReport());
     expect(html).toContain("Sensors</div>");
+  });
+
+  test("includes camera analysis columns", () => {
+    const html = exportAsHtml(makeReport());
+    expect(html).toContain("Best Zone Quality");
+    expect(html).toContain("Zones Failed");
   });
 
   test("includes reflective bounce section", () => {
@@ -536,6 +544,13 @@ describe("exportAsMarkdown", () => {
     expect(md).toContain("| Sensors |");
   });
 
+  test("includes camera analysis table", () => {
+    const md = exportAsMarkdown(baseReport);
+    expect(md).toContain("## Camera Analysis");
+    expect(md).toContain("Best Zone Quality");
+    expect(md).toContain("Zones Failed");
+  });
+
   test("includes uncertainty section", () => {
     const md = exportAsMarkdown(baseReport);
     expect(md).toContain("Coverage Uncertainty");
@@ -641,7 +656,7 @@ describe("exportAsMarkdown", () => {
     expect(md).toContain("Blame");
   });
 
-  test("includes adverse path when provided", { timeout: 15000 }, () => {
+  test("includes adverse path when provided", () => {
     const report = buildReportData(scene, result, {
       adversarialPath: {
         exposureScore: 5,
@@ -655,7 +670,7 @@ describe("exportAsMarkdown", () => {
     expect(md).toContain("5.0");
   });
 
-  test("includes temporal profile when provided", { timeout: 15000 }, () => {
+  test("includes temporal profile when provided", () => {
     const report = buildReportData(scene, result, {
       temporalProfile: {
         vulnerabilityWindowCount: 1,
@@ -808,7 +823,7 @@ describe("exportAsText", () => {
     expect(text).toContain("Reviewed Nodes");
   });
 
-  test("includes operational evidence section", { timeout: 15000 }, () => {
+  test("includes operational evidence section", () => {
     const text = exportAsText(makeEvidenceReport(scene));
     expect(text).toContain("OPERATIONAL EVIDENCE");
     expect(text).toContain("Sensor-related Evidence");
@@ -844,13 +859,8 @@ describe("exportAsText", () => {
 
 describe("comparison exports", () => {
   const scene = createSmallRetailShopScene();
-  const testWithTimeout = test as unknown as (
-    name: string,
-    options: { timeout: number },
-    fn: () => void,
-  ) => void;
 
-  testWithTimeout("exportCompareAsHtml produces valid HTML", { timeout: 15000 }, () => {
+  test("exportCompareAsHtml produces valid HTML", () => {
     const afterScene = createSmallRetailShopScene();
     const camera = afterScene.cameras.find((c) => c.id === "cam_entrance");
     if (camera) camera.status = "off";
@@ -893,7 +903,7 @@ describe("comparison exports", () => {
 describe("buildCompareReport (compatibility export)", () => {
   const scene = createSmallRetailShopScene();
 
-  test("produces same output as buildCompareReportData", { timeout: 30000 }, () => {
+  test("produces same output as buildCompareReportData", () => {
     const afterScene = createSmallRetailShopScene();
     const camera = afterScene.cameras.find((c) => c.id === "cam_entrance");
     if (camera) camera.status = "off";

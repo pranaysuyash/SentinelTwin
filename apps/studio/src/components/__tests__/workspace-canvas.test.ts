@@ -1,15 +1,21 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 
-const workspaceCanvasPath = "./src/components/workspace/WorkspaceCanvas.tsx";
-const sharedScenePath = "./src/components/workspace/SharedScene.tsx";
+const workspaceCanvasPath = resolve(
+  fileURLToPath(new URL(".", import.meta.url)),
+  "../",
+  "workspace/WorkspaceCanvas.tsx",
+);
+const sharedScenePath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../", "workspace/SharedScene.tsx");
 
 describe("WorkspaceCanvas obstruction selection", () => {
   test("makes obstruction boxes selectable and visually highlighted", () => {
     const workspaceSource = readFileSync(workspaceCanvasPath, "utf8");
     const sharedSceneSource = readFileSync(sharedScenePath, "utf8");
 
-    expect(workspaceSource).toContain('const selected = useStudioStore((s) => s.selectedNodeId);');
+    expect(workspaceSource).toContain('const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);');
     expect(workspaceSource).toContain('const visibleComponents = useStudioStore((s) => s.visibleComponents);');
     expect(workspaceSource).toContain('<SceneObstructions obstructions={scene.obstructions} selectedId={selected} />');
     expect(workspaceSource).toContain('{visibleComponents.coverage_legend ? <CoverageLegend /> : null}');

@@ -23,7 +23,7 @@ import {
   summarizeWorkspaceApprovalRouting,
   summarizeWorkspaceMembershipDrift,
 } from "@/lib/workspace-membership-routing";
-import type { WorkspaceIdentityConflictArchiveRecord } from "@/lib/workspace-identity-conflict";
+import { replayWorkspaceIdentityConflict, type WorkspaceIdentityConflictArchiveRecord, type WorkspaceIdentityConflictArchiveResponse } from "@/lib/workspace-identity-conflict-client";
 import type { WorkspaceMembershipArchiveRecord } from "@/lib/workspace-membership-types";
 import { useStudioStore } from "@/store/studio-store";
 
@@ -139,7 +139,6 @@ export function GovernanceTab() {
     storedAt: number;
   }>>([]);
   const [remoteApprovalRouteHistoryLoading, setRemoteApprovalRouteHistoryLoading] = useState(false);
-  const [remoteApprovalRouteHistoryError, setRemoteApprovalRouteHistoryError] = useState<string | null>(null);
   const [approvalRouteEndpointDraft, setApprovalRouteEndpointDraft] = useState("");
   const [identityConflictArchiveReport, setIdentityConflictArchiveReport] = useState<(WorkspaceIdentityConflictArchiveRecord & { historyCount: number }) | null>(null);
   const [identityConflictArchiveLoading, setIdentityConflictArchiveLoading] = useState(false);
@@ -149,6 +148,9 @@ export function GovernanceTab() {
   const [remoteIdentityConflictHistoryError, setRemoteIdentityConflictHistoryError] = useState<string | null>(null);
   const [identityConflictEndpointDraft, setIdentityConflictEndpointDraft] = useState("");
   const [selectedIdentityConflictStoredAt, setSelectedIdentityConflictStoredAt] = useState<number | null>(null);
+  const [identityConflictReplayReport, setIdentityConflictReplayReport] = useState<WorkspaceIdentityConflictArchiveResponse | null>(null);
+  const [identityConflictReplayLoading, setIdentityConflictReplayLoading] = useState(false);
+  const [identityConflictReplayError, setIdentityConflictReplayError] = useState<string | null>(null);
   const [annotation, setAnnotation] = useState("");
 
   const summary = useMemo(() => summarizeWorkspaceGovernance(workspaceGovernance), [workspaceGovernance]);
@@ -207,7 +209,6 @@ export function GovernanceTab() {
 
   const refreshApprovalRouteArchive = async () => {
     setRemoteApprovalRouteHistoryLoading(true);
-    setRemoteApprovalRouteHistoryError(null);
     try {
       const response = await fetch("/api/workspace-approval-route");
       if (!response.ok) {
@@ -226,9 +227,7 @@ export function GovernanceTab() {
         historyCount: number;
       };
       setRemoteApprovalRouteHistory(payload.history);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Workspace approval route archive failed.";
-      setRemoteApprovalRouteHistoryError(message);
+    } catch {
     } finally {
       setRemoteApprovalRouteHistoryLoading(false);
     }
@@ -309,6 +308,31 @@ export function GovernanceTab() {
     }
     return identityConflictArchiveReport ?? remoteIdentityConflictHistory[0] ?? null;
   }, [identityConflictArchiveReport, remoteIdentityConflictHistory, selectedIdentityConflictStoredAt]);
+  const replaySelectedConflict = async () => {
+    if (!selectedIdentityConflictRecord) {
+      setIdentityConflictReplayError("Select a conflict to replay.");
+      return;
+    }
+
+    setIdentityConflictReplayLoading(true);
+    setIdentityConflictReplayError(null);
+    try {
+      const replay = await replayWorkspaceIdentityConflict(selectedIdentityConflictRecord, {
+        sceneId: scene.id,
+        sceneName: scene.name || "Untitled Scene",
+        hasPrivacyExposure: approvalRoute.hasPrivacyExposure,
+        workspaceAccessState: workspaceAccess,
+        workspaceGovernanceState: workspaceGovernance,
+        archivedWorkspaceAccessState: selectedIdentityConflictRecord.archivedWorkspaceAccessState,
+      });
+      setIdentityConflictReplayReport(replay);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Workspace identity conflict replay failed.";
+      setIdentityConflictReplayError(message);
+    } finally {
+      setIdentityConflictReplayLoading(false);
+    }
+  };
   const membershipDrift = latestWorkspaceMembershipArchive
     ? summarizeWorkspaceMembershipDrift(workspaceAccess, latestWorkspaceMembershipArchive.workspaceAccessState)
     : null;
@@ -1461,13 +1485,16 @@ export function GovernanceTab() {
               <div className="space-y-1.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">{selectedIdentityConflictRecord.conflictDiff.title}</div>
+                    <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">Conflict Diff</div>
                     <div className="text-[9px] text-[#8b96ab]">{selectedIdentityConflictRecord.sceneName}</div>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     <button
                       type="button"
-                      onClick={() => setSelectedIdentityConflictStoredAt(null)}
+                      onClick={() => {
+                        setSelectedIdentityConflictStoredAt(null);
+                        setIdentityConflictReplayReport(null);
+                      }}
                       className="rounded-md border border-[#1e2538] bg-[#111521] px-2 py-1 text-[9px] text-[#c7d0e4] hover:border-[#2a3245] hover:text-white"
                     >
                       View latest diff
@@ -1475,12 +1502,28 @@ export function GovernanceTab() {
                     {selectedIdentityConflictStoredAt !== null ? (
                       <button
                         type="button"
-                        onClick={() => setSelectedIdentityConflictStoredAt(null)}
+                        onClick={() => {
+                          setSelectedIdentityConflictStoredAt(null);
+                          setIdentityConflictReplayReport(null);
+                        }}
                         className="rounded-md border border-[#1e2538] bg-[#111521] px-2 py-1 text-[9px] text-[#c7d0e4] hover:border-[#2a3245] hover:text-white"
                       >
                         Clear diff selection
                       </button>
                     ) : null}
+                    <button
+                      type="button"
+                      onClick={() => void replaySelectedConflict()}
+                      disabled={identityConflictReplayLoading}
+                      className={cn(
+                        "rounded-md border px-2 py-1 text-[9px] transition-colors",
+                        identityConflictReplayLoading
+                          ? "cursor-not-allowed border-sky-500/10 bg-sky-500/5 text-sky-200/60"
+                          : "border-sky-500/20 bg-sky-500/10 text-sky-100 hover:border-sky-400/30 hover:bg-sky-500/20",
+                      )}
+                    >
+                      {identityConflictReplayLoading ? "Replaying..." : "Replay selected conflict"}
+                    </button>
                   </div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1.5 text-[9px] text-[#8b96ab]">
@@ -1519,7 +1562,7 @@ export function GovernanceTab() {
                   </div>
                 </div>
                 <div className="space-y-1">
-                  {selectedIdentityConflictRecord.conflictDiff.rows.map((row) => (
+                  {selectedIdentityConflictRecord.conflictDiff.rows.map((row: { label: string; currentValue: string; archivedValue: string; changed: boolean }) => (
                     <div key={row.label} className={cn(
                       "grid grid-cols-[1fr_1fr_auto] gap-1.5 rounded-md border px-2 py-1.5 text-[9px]",
                       row.changed ? "border-amber-500/20 bg-amber-500/5" : "border-[#1a2030] bg-[#0f141f]",
@@ -1541,6 +1584,45 @@ export function GovernanceTab() {
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5 text-[9px] text-[#8b96ab]">
                   {selectedIdentityConflictRecord.conflictDiff.recommendedAction}
                 </div>
+                {identityConflictReplayError ? (
+                  <div className="rounded-md border border-rose-500/20 bg-rose-500/10 px-2 py-1 text-[9px] text-rose-200">
+                    {identityConflictReplayError}
+                  </div>
+                ) : null}
+                {identityConflictReplayReport ? (
+                  <div className="space-y-1.5 rounded-md border border-sky-500/20 bg-sky-500/5 px-2 py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-sky-100">Replay result</div>
+                      <Badge variant={identityConflictReplayReport.conflictStatus === "reconcile_needed" ? "amber" : identityConflictReplayReport.conflictStatus === "archive_pending" ? "gray" : "green"}>
+                        {identityConflictReplayReport.conflictStatus.replace(/_/g, " ")}
+                      </Badge>
+                    </div>
+                    <div className="rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1 text-[9px] text-[#d2d9e8]">
+                      {identityConflictReplayReport.summary}
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5 md:grid-cols-4">
+                      <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                        <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Route</div>
+                        <div className="mt-0.5 font-semibold text-[#d2d9e8]">{identityConflictReplayReport.approvalRoute.routeLabel}</div>
+                      </div>
+                      <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                        <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Resolution</div>
+                        <div className="mt-0.5 font-semibold text-[#d2d9e8]">{identityConflictReplayReport.resolutionLabel}</div>
+                      </div>
+                      <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                        <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Delivered</div>
+                        <div className="mt-0.5 font-semibold text-[#d2d9e8]">{identityConflictReplayReport.deliveredCount}</div>
+                      </div>
+                      <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                        <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Queued / failed</div>
+                        <div className="mt-0.5 font-semibold text-[#d2d9e8]">{identityConflictReplayReport.queuedCount} / {identityConflictReplayReport.failedCount}</div>
+                      </div>
+                    </div>
+                    <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1 text-[9px] text-[#8b96ab]">
+                      Replayed against the current workspace state using the archived snapshot from the selected conflict.
+                    </div>
+                  </div>
+                ) : null}
               </div>
             ) : null}
             {remoteIdentityConflictHistoryError ? (
@@ -1559,7 +1641,10 @@ export function GovernanceTab() {
                   <div className="mt-1">
                     <button
                       type="button"
-                      onClick={() => setSelectedIdentityConflictStoredAt(record.storedAt)}
+                      onClick={() => {
+                        setSelectedIdentityConflictStoredAt(record.storedAt);
+                        setIdentityConflictReplayReport(null);
+                      }}
                       className={cn(
                         "rounded-md border px-2 py-1 text-[9px] transition-colors",
                         selectedIdentityConflictStoredAt === record.storedAt

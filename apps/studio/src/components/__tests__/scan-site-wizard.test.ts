@@ -19,6 +19,9 @@ describe("ScanSiteWizard", () => {
     expect(source).toContain("Camera mount default");
     expect(source).toContain("Light mount default");
     expect(source).toContain("Critical zone night requirement");
+    expect(source).toContain("Guided assistant");
+    expect(source).toContain("Capture checklist");
+    expect(source).toContain("Auto-path hints are enabled for guided assistant runs.");
     expect(source).toContain("scan_session_compiled");
     expect(source).toContain("What will be created");
     expect(source).toContain("multiple");
@@ -38,5 +41,15 @@ describe("ScanSiteWizard", () => {
     expect(source).toContain("Pending candidate count:");
     expect(source).toContain("Low-confidence accepted candidates");
     expect(source).toContain("Compile anyway with low-confidence accepted candidates (explicit manual override).");
+    expect(source).toContain("fixWarning");
+    expect(source).toContain("Fix now");
+    expect(source).toContain("Compiling replaces your current workspace scene.");
+    expect(source).toContain("Compile preview");
+    expect(source).toContain("widthHintM");
+    expect(source).toContain("depthHintM");
+    expect(source).toContain("heightHintM");
+    expect(source).toContain("Zone width");
+    expect(source).toContain("Zone depth");
+    expect(source).toContain("Missing prerequisites");
   });
 });

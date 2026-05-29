@@ -107,4 +107,52 @@ describe("scan-to-scene", () => {
     expect(scene.walls).toHaveLength(4);
     expect(warnings.some((warning) => warning.code === "NO_WALL")).toBe(true);
   });
+
+  test("uses dimension hints for obstruction candidates", () => {
+    const session = createScanSession("Dim Hints", 10, 8, 3);
+    session.imageDataUrl = "data:image/png;base64,AA==";
+    session.imageName = "dimhints.png";
+    session.candidates = [
+      { ...createScanCandidate("obstruction", [0.5, 0.5], 0), widthHintM: 2.5, depthHintM: 0.9, heightHintM: 1.8 },
+      { ...createScanCandidate("camera", [0.2, 0.2], 1) },
+      { ...createScanCandidate("critical_zone", [0.7, 0.7], 2) },
+    ];
+
+    const { scene } = compileScanSessionToScene(session);
+    expect(scene.obstructions).toHaveLength(1);
+    expect(scene.obstructions[0]?.dimensions).toEqual([2.5, 1.8, 0.9]);
+  });
+
+  test("uses dimension hints for critical zone candidates", () => {
+    const session = createScanSession("Zone Dims", 10, 8, 3);
+    session.imageDataUrl = "data:image/png;base64,AA==";
+    session.imageName = "zonedims.png";
+    session.candidates = [
+      { ...createScanCandidate("critical_zone", [0.5, 0.5], 0), widthHintM: 3.0, depthHintM: 2.0 },
+      { ...createScanCandidate("camera", [0.2, 0.2], 1) },
+    ];
+
+    const { scene } = compileScanSessionToScene(session);
+    expect(scene.criticalZones).toHaveLength(1);
+    const zone = scene.criticalZones[0]!;
+    const polygonWidth = Math.abs(zone.polygon[1]![0] - zone.polygon[0]![0]);
+    const polygonDepth = Math.abs(zone.polygon[2]![1] - zone.polygon[0]![1]);
+    expect(polygonWidth).toBeCloseTo(3.0, 1);
+    expect(polygonDepth).toBeCloseTo(2.0, 1);
+  });
+
+  test("defaults obstruction dimensions when hints are not provided", () => {
+    const session = createScanSession("Default Dims", 10, 8, 3);
+    session.imageDataUrl = "data:image/png;base64,AA==";
+    session.imageName = "defaultdims.png";
+    session.candidates = [
+      createScanCandidate("obstruction", [0.5, 0.5], 0),
+      createScanCandidate("camera", [0.2, 0.2], 1),
+      createScanCandidate("critical_zone", [0.7, 0.7], 2),
+    ];
+
+    const { scene } = compileScanSessionToScene(session);
+    expect(scene.obstructions).toHaveLength(1);
+    expect(scene.obstructions[0]?.dimensions).toEqual([1.2, 1.2, 0.7]);
+  });
 });

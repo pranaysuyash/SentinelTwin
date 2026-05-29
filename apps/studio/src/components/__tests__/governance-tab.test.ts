@@ -44,6 +44,13 @@ describe("GovernanceTab", () => {
     expect(source).toContain("Resolve Approval Route");
     expect(source).toContain("Resolve Identity Conflict");
     expect(source).toContain("Conflict status");
+    expect(source).toContain("Conflict Diff");
+    expect(source).toContain("View diff");
+    expect(source).toContain("View latest diff");
+    expect(source).toContain("Replay selected conflict");
+    expect(source).toContain("Replay result");
+    expect(source).toContain("Current member");
+    expect(source).toContain("Archived member");
     expect(source).toContain("Membership reconciliation is needed");
     expect(source).toContain("Membership snapshot is aligned");
     expect(source).toContain("Single-user access");

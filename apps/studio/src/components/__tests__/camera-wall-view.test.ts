@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 
-const cameraWallPath = "./src/components/view/CameraWallView.tsx";
+const cameraWallPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../", "view/CameraWallView.tsx");
 
 describe("CameraWallView", () => {
   test("surfaces live/offline counts, a layout selector, and the selected camera in the wall header", () => {
@@ -11,6 +13,7 @@ describe("CameraWallView", () => {
     expect(source).toContain("Offline {offlineCount}");
     expect(source).toContain("Selected {selectedCamera?.name ?? \"None\"}");
     expect(source).toContain("Best camera now");
+    expect(source).toContain("Zone Quality");
     expect(source).toContain("4 Views");
     expect(source).toContain("6 Views");
     expect(source).toContain("16 Views");
@@ -28,9 +31,11 @@ describe("CameraWallView", () => {
     expect(source).toContain("Partial Route Visibility");
     expect(source).toContain("Weak Route Visibility");
     expect(source).toContain("max {pathVisibility.maxQuality.toUpperCase()}");
+    expect(source).toContain("covered •");
     expect(source).toContain("Route Context {activePath.label}");
     expect(source).toContain("Best feed");
     expect(source).toContain("simulationResult.pathResults.find");
+    expect(source).toContain("cameraResultById");
     expect(source).toContain("visibilityByCamera");
   });
 });

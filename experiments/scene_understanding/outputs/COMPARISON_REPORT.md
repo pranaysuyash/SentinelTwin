@@ -27,17 +27,17 @@ The semantic sidecar evaluates non-geometry floor-plan tasks on the same dev spl
 | Task | Model | Metric | Avg Latency |
 |---|---|---|---|
 | classification | minicpm | accuracy=0.000 | 0ms |
-| classification | gpt4o | accuracy=0.200 | 1318ms |
+| classification | gpt4o | accuracy=0.400 | 1718ms |
 | classification | gemini | accuracy=0.000 | 0ms |
 | rooms | minicpm | non_empty_rate=1.000 | 0ms |
-| rooms | gpt4o | non_empty_rate=1.000 | 2628ms |
+| rooms | gpt4o | non_empty_rate=1.000 | 1902ms |
 | rooms | gemini | non_empty_rate=1.000 | 0ms |
 | ocr | minicpm | non_empty_rate=1.000 | 0ms |
-| ocr | gpt4o | non_empty_rate=1.000 | 1279ms |
+| ocr | gpt4o | non_empty_rate=1.000 | 1249ms |
 | ocr | gemini | non_empty_rate=1.000 | 0ms |
 | adjacency | minicpm | non_empty_rate=1.000 | 0ms |
-| adjacency | gpt4o | non_empty_rate=1.000 | 2469ms |
+| adjacency | gpt4o | non_empty_rate=1.000 | 2221ms |
 | adjacency | gemini | non_empty_rate=1.000 | 0ms |
 | description | minicpm | non_empty_rate=1.000 | 0ms |
-| description | gpt4o | non_empty_rate=1.000 | 2028ms |
+| description | gpt4o | non_empty_rate=1.000 | 1858ms |
 | description | gemini | non_empty_rate=1.000 | 0ms |

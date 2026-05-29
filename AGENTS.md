@@ -205,6 +205,7 @@ compatibility reason requires a separate environment.
 
 - Think from first principles. Root cause over surface patch.
 - No hacks. No workarounds into production paths.
+- If current work exposes a failure in the touched file, module, dependency chain, caller path, test surface, docs surface, or behavioral path, fix it in the same pass unless it is clearly outside the blast radius and explicitly approved to defer.
 - Pascal-forked code: document every divergence in `Docs/decisions/DECISION_LOG.md`.
 - Every coverage engine change must include a test that exercises the relevant scenario.
 - Schema changes to SecurityScene require updating ALL layers: TypeScript types, Zod schemas, simulation engine, AI agent system prompts, report templates.

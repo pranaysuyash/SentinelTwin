@@ -214,12 +214,21 @@ function MiniMapHoverPreview({
   const selectedNodeId = useStudioStore((s) => s.selectedNodeId);
   const hoveredNodeId = useStudioStore((s) => s.hoveredMapNodeId);
   const activePathId = useStudioStore((s) => s.activePathId);
-  const mapState = useStudioStore((s) => s.mapState.minimap);
+  const mapZoom = useStudioStore((s) => s.mapState.minimap.zoom);
+  const mapPanX = useStudioStore((s) => s.mapState.minimap.pan[0]);
+  const mapPanY = useStudioStore((s) => s.mapState.minimap.pan[1]);
   const setZoom = useStudioStore((s) => s.setMapZoom);
   const setPan = useStudioStore((s) => s.setMapPan);
   const fitMap = useStudioStore((s) => s.fitMap);
   const layerVis = useStudioStore((s) => s.layerVisibility);
   const focusPoint = useStudioStore((s) => s.focusScenePointHighlight?.point ?? null);
+  const mapState = useMemo(
+    () => ({
+      zoom: mapZoom,
+      pan: [mapPanX, mapPanY] as [number, number],
+    }),
+    [mapPanX, mapPanY, mapZoom],
+  );
   return (
     <div className="mb-2 rounded-xl border border-[#243146] bg-[#0b1220] p-2 shadow-[0_10px_24px_rgba(0,0,0,0.24)]">
       <div className="mb-2 flex items-center justify-between">
@@ -709,7 +718,9 @@ export function MiniMap({
   const setZoom = useStudioStore((s) => s.setMapZoom);
   const setPan = useStudioStore((s) => s.setMapPan);
   const fitMap = useStudioStore((s) => s.fitMap);
-  const mapState = useStudioStore((s) => s.mapState.minimap);
+  const mapZoom = useStudioStore((s) => s.mapState.minimap.zoom);
+  const mapPanX = useStudioStore((s) => s.mapState.minimap.pan[0]);
+  const mapPanY = useStudioStore((s) => s.mapState.minimap.pan[1]);
   const hovered = useStudioStore((s) => s.hoveredMapNodeId);
   const setHovered = useStudioStore((s) => s.setHoveredMapNodeId);
   const activePathId = useStudioStore((s) => s.activePathId);
@@ -717,7 +728,6 @@ export function MiniMap({
   const setReplayProgress = useStudioStore((s) => s.setPathReplayProgress);
   const pathReplay = useStudioStore((s) => s.pathReplay);
   const setFocusScenePointRequest = useStudioStore((s) => s.setFocusScenePointRequest);
-  const focusPoint = useStudioStore((s) => s.focusScenePointHighlight?.point ?? null);
   const leftDockSizePx = useStudioStore((s) => s.leftDockSizePx);
   const setDockSize = useStudioStore((s) => s.setDockSize);
 
@@ -733,6 +743,13 @@ export function MiniMap({
     if (!activePath) return null;
     return pointOnPathAtProgress(activePath, pathReplay.progress);
   }, [activePath, pathReplay.progress]);
+  const mapState = useMemo(
+    () => ({
+      zoom: mapZoom,
+      pan: [mapPanX, mapPanY] as [number, number],
+    }),
+    [mapPanX, mapPanY, mapZoom],
+  );
 
   const isReplayActive = pathReplay.playing || pathReplay.progress > 0;
   const totalCritical = result?.criticalZoneResults.length ?? 0;

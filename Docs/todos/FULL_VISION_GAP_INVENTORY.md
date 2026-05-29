@@ -174,11 +174,15 @@ Every input mode should compile into the same truth model. Every report should r
 - Replay exists for path and camera interaction.
 - Compare exists.
 - Scene Intelligence now provides a temporal replay scrubber with point-in-time reconstruction and restore actions over the operational evidence trail.
+- Scene Intelligence now also shows a temporal operational twin summary with current-scene vs latest-checkpoint deltas, checkpoint age, and reconstructable branch heads.
+- The operational evidence layer now also exposes a canonical event-centered timeline builder plus a state-at-time-T resolver, so the point-in-time story is backed by a reusable temporal object rather than only ad hoc UI sorting.
+- The canonical scene graph now carries node-level evidence history metadata for selected entities, so version history is visible on the graph node itself instead of only in the ledger.
+- The report handoff now also carries the same temporal operational twin summary, so the exported artifact can describe what the system knew at the latest checkpoint instead of only the current simulation snapshot.
 
 **What is still missing**
-- A true temporal object model that lets you ask, “what did we know, and when?”
-- An event-centered timeline of the site’s operational life.
-- A consistent “state at time T” reconstruction path.
+- A deeper node-level temporal object model that persists version history for every scene entity, not just the selected graph nodes currently annotated from evidence.
+- A fully event-sourced operational timeline for the site’s life, including richer causal annotations and branch semantics.
+- A consistent node-by-node “state at time T” reconstruction path that can replay more than checkpoint-backed scene snapshots.
 
 ### 4.7 Live Sensor and Camera Fusion
 

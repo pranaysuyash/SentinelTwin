@@ -23,6 +23,16 @@ describe("SceneIntelligenceTab", () => {
     expect(source).toContain("review status coverage");
     expect(source).toContain("nodes with trace evidence");
     expect(source).toContain("must be corrected");
+    expect(source).toContain("Temporal operational twin");
+    expect(source).toContain("What did we know, and when?");
+    expect(source).toContain("Current scene");
+    expect(source).toContain("Latest checkpoint");
+    expect(source).toContain("Checkpoint delta");
+    expect(source).toContain("Checkpoint age");
+    expect(source).toContain("state at time T");
+    expect(source).toContain("Version history");
+    expect(source).toContain("Evidence events");
+    expect(source).toContain("Latest change");
     expect(source).toContain("Temporal replay");
     expect(source).toContain("Checkpoint scrubber");
     expect(source).toContain("cameraMetadataEvents");

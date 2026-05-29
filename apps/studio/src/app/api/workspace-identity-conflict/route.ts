@@ -3,12 +3,16 @@ import { NextResponse } from "next/server";
 import {
   appendWorkspaceIdentityConflictHistory,
   loadWorkspaceIdentityConflictHistory,
+} from "@/lib/workspace-identity-conflict-storage";
+import {
   summarizeWorkspaceIdentityConflict,
   WorkspaceIdentityConflictRequestSchema,
 } from "@/lib/workspace-identity-conflict";
+import { normalizeWorkspaceAccessState } from "@/lib/workspace-access";
+import { normalizeWorkspaceGovernance } from "@/lib/workspace-governance";
 
 export async function GET() {
-  const history = loadWorkspaceIdentityConflictHistory();
+  const history = await loadWorkspaceIdentityConflictHistory();
   return NextResponse.json({
     ok: true,
     history,
@@ -36,9 +40,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const summary = await summarizeWorkspaceIdentityConflict(parsed.data);
+    const summary = await summarizeWorkspaceIdentityConflict({
+      ...parsed.data,
+      workspaceAccessState: normalizeWorkspaceAccessState(parsed.data.workspaceAccessState),
+      workspaceGovernanceState: normalizeWorkspaceGovernance(parsed.data.workspaceGovernanceState),
+      archivedWorkspaceAccessState: parsed.data.archivedWorkspaceAccessState
+        ? normalizeWorkspaceAccessState(parsed.data.archivedWorkspaceAccessState)
+        : parsed.data.archivedWorkspaceAccessState,
+    });
     const storedAt = Date.now();
-    const history = appendWorkspaceIdentityConflictHistory({
+    const history = await appendWorkspaceIdentityConflictHistory({
       ...summary,
       submittedAt: parsed.data.submittedAt ?? storedAt,
       storedAt,

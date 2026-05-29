@@ -121,6 +121,9 @@ describe("studio store editor mutations", () => {
     expect(operationalEvidenceEvent?.kind).toBe("camera_metadata_updated");
     expect(operationalEvidenceEvent?.beforeSummary).toContain("status dirty");
     expect(operationalEvidenceEvent?.afterSummary).toContain("status dirty");
+    expect(
+      useStudioStore.getState().sceneIntelligenceGraph.nodes.find((node) => node.id === `camera:${camera.id}`)?.historyCount,
+    ).toBe(1);
   });
 
   test("camera live connection events update the canonical evidence trail", () => {
@@ -138,16 +141,24 @@ describe("studio store editor mutations", () => {
     const ok = useStudioStore.getState().recordCameraLiveConnectionEvent({
       cameraId: camera.id,
       cameraName: camera.name,
+      previousLiveSessionId: null,
+      previousLiveSessionState: null,
+      previousLiveSessionStartedAt: null,
+      previousLiveSessionConfirmedAt: null,
+      previousLiveSessionExpiresAt: cameraBeforeUpdate?.liveSessionExpiresAt ?? null,
       previousLiveFeedUrl: cameraBeforeUpdate?.liveFeedUrl ?? null,
       previousLiveFeedLabel: cameraBeforeUpdate?.liveFeedLabel ?? null,
       previousLiveConnectionMode: cameraBeforeUpdate?.liveConnectionMode ?? null,
       previousLiveConnectionStatus: cameraBeforeUpdate?.liveConnectionStatus ?? "disconnected",
-      previousLiveSessionExpiresAt: cameraBeforeUpdate?.liveSessionExpiresAt ?? null,
+      liveSessionId: "session_" + camera.id,
+      liveSessionState: "connected",
+      liveSessionStartedAt: Date.now(),
+      liveSessionConfirmedAt: Date.now(),
+      liveSessionExpiresAt: Date.now() + 120_000,
       liveFeedUrl: "rtsp://example.com/live",
       liveFeedLabel: "Front entrance live feed",
       liveConnectionMode: "rtsp",
       liveConnectionStatus: "connected",
-      liveSessionExpiresAt: Date.now() + 120_000,
       transportSessionId: "transport_session_cam_front_test",
       transportSessionState: "active",
       lastHeartbeatAt: Date.now(),

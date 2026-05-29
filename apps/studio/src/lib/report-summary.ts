@@ -1,8 +1,9 @@
+import type { OperationalEvidenceTemporalTwinSummary } from "@/lib/operational-evidence";
 import type { SecurityOutcomeModel } from "@/lib/security-outcome/security-outcome-model";
 import type { SecurityScene, SimulationResult } from "@/schema/security-scene";
 
 export type ReportSummaryLine = {
-  label: "Critical Issue" | "Primary Cause" | "Impact" | "Recommendation" | "Evidence Trail";
+  label: "Critical Issue" | "Primary Cause" | "Impact" | "Recommendation" | "Evidence Trail" | "Temporal Twin";
   text: string;
 };
 
@@ -10,6 +11,7 @@ export function buildReportSummaryLines(
   outcome: SecurityOutcomeModel,
   result: SimulationResult | null,
   scene?: Pick<SecurityScene, "changeLog">,
+  temporalTwin?: Pick<OperationalEvidenceTemporalTwinSummary, "totalEvents" | "checkpointCount" | "latestCheckpointAgeMs" | "currentVsLatestCheckpointDelta"> | null,
 ): ReportSummaryLine[] | null {
   if (!result) return null;
 
@@ -40,12 +42,21 @@ export function buildReportSummaryLines(
   const evidenceTrail = scene
     ? `${scene.changeLog.length} change-log entries, ${evidenceEntries} evidence entries, ${sensorEvidenceEntries} sensor-related evidence`
     : "Scene evidence trail unavailable.";
+  const temporalTwinLine = temporalTwin
+    ? `${temporalTwin.totalEvents} scene events, ${temporalTwin.checkpointCount} reconstructable checkpoints${temporalTwin.latestCheckpointAgeMs != null ? `, latest checkpoint ${Math.max(1, Math.round(temporalTwin.latestCheckpointAgeMs / 60000))}m old` : ""}${temporalTwin.currentVsLatestCheckpointDelta ? `, checkpoint delta cams ${temporalTwin.currentVsLatestCheckpointDelta.cameras >= 0 ? "+" : ""}${temporalTwin.currentVsLatestCheckpointDelta.cameras}` : ""}`
+    : null;
 
-  return [
+  const lines: ReportSummaryLine[] = [
     { label: "Critical Issue", text: criticalIssue },
     { label: "Primary Cause", text: primaryCause },
     { label: "Impact", text: impact },
     { label: "Recommendation", text: recommendation },
     { label: "Evidence Trail", text: evidenceTrail },
   ];
+
+  if (temporalTwinLine) {
+    lines.push({ label: "Temporal Twin", text: temporalTwinLine });
+  }
+
+  return lines;
 }

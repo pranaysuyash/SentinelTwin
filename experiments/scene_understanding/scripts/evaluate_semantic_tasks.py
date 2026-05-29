@@ -202,7 +202,7 @@ def infer_scene_label_from_outputs(raw_prediction: str, room_text: str, descript
         "corridor" in combined
         or "hallway" in combined
         or "lobby" in combined
-        or ("two entrances" in combined and "distinct zones" in combined and "shelf" not in combined and "counter" not in combined)
+        or ("entrances" in combined and ("distinct zones" in combined or "areas" in combined) and "shelf" not in combined and "counter" not in combined)
         or (
             "distinct zones" in combined
             and "open with no visible obstructions" in combined
@@ -221,8 +221,24 @@ def infer_scene_label_from_outputs(raw_prediction: str, room_text: str, descript
     ):
         return "warehouse"
 
-    if "small commercial area" in combined or ("two entrances" in combined and "storage or workstations" in combined):
+    if (
+        "small commercial area" in combined
+        or (
+            "two entrances" in combined
+            and (
+                "storage or workstations" in combined
+                or "storage area" in combined
+                or "separate room" in combined
+                or "green-shaded area" in combined
+            )
+        )
+    ):
         return "retail_pharmacy"
+
+    if (
+        "retail or exhibition area" in combined and ("aligned horizontally" in combined or "display" in combined or "central" in combined)
+    ):
+        return "retail_grocery"
 
     if (
         "open workspace" in combined

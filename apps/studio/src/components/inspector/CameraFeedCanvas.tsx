@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { cn } from "@/lib/cn";
 
 import "@/lib/three-compat";
@@ -259,12 +259,25 @@ export function CameraFeedCanvas({
   const selectedNodeId = useStudioStore((s) => s.selectedNodeId);
   const pathReplay = useStudioStore((s) => s.pathReplay);
   const activePathId = useStudioStore((s) => s.activePathId);
-  const sensorEvents = useStudioStore((s) => s.sensorEvents.filter((event) => event.sceneId === s.scene.id));
-  const cameraMetadataEvents = useStudioStore((s) => s.cameraMetadataEvents.filter((event) => event.sceneId === s.scene.id));
-  const cameraLiveConnectionEvents = useStudioStore((s) => s.cameraLiveConnectionEvents.filter((event) => event.sceneId === s.scene.id));
+  const sceneId = useStudioStore((s) => s.scene.id);
+  const allSensorEvents = useStudioStore((s) => s.sensorEvents);
+  const allCameraMetadataEvents = useStudioStore((s) => s.cameraMetadataEvents);
+  const allCameraLiveConnectionEvents = useStudioStore((s) => s.cameraLiveConnectionEvents);
   const camera = scene.cameras.find((entry) => entry.id === cameraId);
   const [viewMode, setViewMode] = useState<FeedViewMode>("normal");
   const overlayFlags = { ...DEFAULT_FEED_OVERLAY_OPTIONS, ...overlayOptions };
+  const sensorEvents = useMemo(
+    () => allSensorEvents.filter((event) => event.sceneId === sceneId),
+    [allSensorEvents, sceneId],
+  );
+  const cameraMetadataEvents = useMemo(
+    () => allCameraMetadataEvents.filter((event) => event.sceneId === sceneId),
+    [allCameraMetadataEvents, sceneId],
+  );
+  const cameraLiveConnectionEvents = useMemo(
+    () => allCameraLiveConnectionEvents.filter((event) => event.sceneId === sceneId),
+    [allCameraLiveConnectionEvents, sceneId],
+  );
 
   if (!camera) return null;
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { Camera, Copy, Crosshair, Eye, Loader2, Trash2, Zap } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { CameraFeedCanvas } from "@/components/inspector/CameraFeedCanvas";
 import {
@@ -203,7 +203,12 @@ export function CameraInspector() {
     protocolProfile: "onvif_device" | "rtsp_session" | "mjpeg_stream" | "http_poll" | "proxy" | null;
     lastAction: "bind" | "refresh" | "disconnect";
   }>>([]);
-  const cameraLiveConnectionEvents = useStudioStore((s) => s.cameraLiveConnectionEvents.filter((event) => event.sceneId === s.scene.id));
+  const sceneId = useStudioStore((s) => s.scene.id);
+  const allCameraLiveConnectionEvents = useStudioStore((s) => s.cameraLiveConnectionEvents);
+  const cameraLiveConnectionEvents = useMemo(
+    () => allCameraLiveConnectionEvents.filter((event) => event.sceneId === sceneId),
+    [allCameraLiveConnectionEvents, sceneId],
+  );
   const [liveConnectionUrl, setLiveConnectionUrl] = useState(camera?.liveFeedUrl ?? "");
   const [liveConnectionLabel, setLiveConnectionLabel] = useState(camera?.liveFeedLabel ?? "Primary live feed");
   const [liveConnectionMode, setLiveConnectionMode] = useState<CameraNode["liveConnectionMode"]>(camera?.liveConnectionMode ?? "onvif");
@@ -672,6 +677,7 @@ export function CameraInspector() {
       <div className="flex gap-1 border-b border-[#1e2130] px-2 pt-1.5">
         {tabs.map((tab) => (
           <button
+            type="button"
             key={tab.id}
             onClick={() => setTab(tab.id)}
             className={cn(
@@ -704,6 +710,7 @@ export function CameraInspector() {
                   <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
                     <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Live feed URL</div>
                     <input
+                      aria-label="Live feed URL"
                       value={liveConnectionUrl}
                       onChange={(event) => setLiveConnectionUrl(event.target.value)}
                       placeholder="rtsp://camera.example.com/live"
@@ -713,6 +720,7 @@ export function CameraInspector() {
                   <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
                     <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Feed label</div>
                     <input
+                      aria-label="Live feed label"
                       value={liveConnectionLabel}
                       onChange={(event) => setLiveConnectionLabel(event.target.value)}
                       placeholder="Front entrance live stream"
@@ -722,6 +730,7 @@ export function CameraInspector() {
                   <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
                     <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Connection mode</div>
                     <select
+                      aria-label="Connection mode"
                       value={liveConnectionMode ?? "onvif"}
                       onChange={(event) => setLiveConnectionMode(event.target.value as CameraNode["liveConnectionMode"])}
                       className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
@@ -734,6 +743,7 @@ export function CameraInspector() {
                   <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
                     <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Connection status</div>
                     <select
+                      aria-label="Connection status"
                       value={liveConnectionStatus ?? "disconnected"}
                       onChange={(event) => setLiveConnectionStatus(event.target.value as CameraNode["liveConnectionStatus"])}
                       className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
@@ -756,6 +766,7 @@ export function CameraInspector() {
                     <div className="text-[9px] text-[#556076]">{cameraLiveConnectionEvents.length} records</div>
                   </div>
                   <textarea
+                    aria-label="Connection notes"
                     value={liveConnectionNotes}
                     onChange={(event) => setLiveConnectionNotes(event.target.value)}
                     placeholder="Notes about the remote camera, relay, or ONVIF proxy."
@@ -1589,6 +1600,7 @@ export function CameraInspector() {
               <div className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">Report Snapshot</div>
               <div className="grid gap-2 md:grid-cols-[1fr_auto]">
                 <input
+                  aria-label="Snapshot note"
                   value={snapshotNote}
                   onChange={(event) => setSnapshotNote(event.target.value)}
                   placeholder="e.g. before wall shift"
@@ -1738,7 +1750,7 @@ export function CameraInspector() {
                   <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">Impact Notes</div>
                   <div className="space-y-1.5">
                     {offlineImpact.map((message, index) => (
-                      <div key={index} className="rounded-lg border border-amber-500/20 bg-amber-500/8 px-2 py-1.5 text-[9px] text-amber-200">{message}</div>
+                      <div key={`${index}-${message}`} className="rounded-lg border border-amber-500/20 bg-amber-500/8 px-2 py-1.5 text-[9px] text-amber-200">{message}</div>
                     ))}
                   </div>
                 </div>
@@ -1784,7 +1796,7 @@ export function CameraInspector() {
           </button>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => removeNode(camera.id)} className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-red-900/45 bg-red-950/15 text-[10px] font-medium text-red-300 transition-colors hover:border-red-700 hover:bg-red-950/30">
+          <button type="button" onClick={() => removeNode(camera.id)} className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-red-900/45 bg-red-950/15 text-[10px] font-medium text-red-300 transition-colors hover:border-red-700 hover:bg-red-950/30">
             <Trash2 className="h-3 w-3" />
             Delete Camera
           </button>

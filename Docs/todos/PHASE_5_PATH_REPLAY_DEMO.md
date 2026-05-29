@@ -30,14 +30,12 @@ The path replay view has been enhanced with a visibility timeline, colored cover
 - Semi-transparent for subtle visual layering
 - Coverage mini legend (ID/REC/OBS/DET/NONE) below the scrub bar
 
-### Demo Mode Overlay (`apps/studio/src/components/demo/DemoModeOverlay.tsx`)
-- 5-step guided tour: Welcome → View Modes → Coverage Analysis → AI Command → Threat Analysis
-- Animated step transitions (spring-based)
-- Progress dots with click-to-jump navigation
-- Back/Next/Skip controls
-- Progress bar
+### Demo Walkthrough Panel (`apps/studio/src/components/demo/DemoWalkthroughPanel.tsx`)
+- Supersedes the earlier `DemoModeOverlay.tsx` (deleted 2026-05-29)
+- 7-step guided walkthrough: baseline → camera wall → path replay → failure identification → apply fix → before/after comparison → report
+- Orchestrates real simulation state through store actions (not hardcoded demo data)
 - Conditionally rendered via `demoMode` state in store
-- Escapable (Skip button + X close)
+- CompareView auto-selects baseline vs latest snapshot at step ≥ 5
 
 ### Path Replay Enhancements (`apps/studio/src/components/view/PathReplayView.tsx`)
 - Integrated `CoverageSegmentPath` for colored quality segments

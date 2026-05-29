@@ -76,7 +76,7 @@ describe("sensor live ingest", () => {
     ]), {
       status: 200,
       headers: { "content-type": "application/json" },
-    })) as typeof fetch;
+    })) as unknown as typeof fetch;
 
     try {
       const summary = await summarizeSensorLiveFeed({

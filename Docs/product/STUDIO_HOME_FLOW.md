@@ -23,9 +23,9 @@ This is intentional for the current stage: SentinelTwin is still Studio-first, w
 - Quick-start flows:
   - New scene
   - Import JSON
-  - Import Floor Plan workflow
   - Manual-assisted Scan Site
   - AI Layout Draft
+  - Import Floor Plan workflow (advanced path via Project Start Launcher)
 
 ## Full Workspace
 

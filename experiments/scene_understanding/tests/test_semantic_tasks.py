@@ -30,9 +30,27 @@ def test_infer_scene_label_from_outputs_uses_semantic_hints():
         semantic_tasks.infer_scene_label_from_outputs(
             "retail_small_shop",
             '{"name": "Room 1", "type": "unknown"}',
-            "The floor plan depicts a rectangular space with four distinct zones and two entrances on the left.",
+            "The floor plan depicts a rectangular space with three entrances and distinct zones.",
         )
         == "corridor_lobby"
+    )
+
+    assert (
+        semantic_tasks.infer_scene_label_from_outputs(
+            "retail_small_shop",
+            '{"name": "Shelf 1", "type": "Shelf"}',
+            "The floor plan depicts a retail or exhibition area with display zones aligned horizontally and a central display area.",
+        )
+        == "retail_grocery"
+    )
+
+    assert (
+        semantic_tasks.infer_scene_label_from_outputs(
+            "retail_small_shop",
+            '{"name": "Room 1", "type": "unknown"}',
+            "The floor plan depicts a rectangular space with two entrances and a smaller rectangular storage area plus a larger green-shaded area.",
+        )
+        == "retail_pharmacy"
     )
 
 

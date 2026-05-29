@@ -565,6 +565,8 @@ export function CompareView() {
   const setViewMode = useStudioStore((s) => s.setViewMode);
   const compareVisualEvidence = useStudioStore((s) => s.compareVisualEvidence);
   const activePathId = useStudioStore((s) => s.activePathId);
+  const demoMode = useStudioStore((s) => s.demoMode);
+  const demoStep = useStudioStore((s) => s.demoStep);
   const [comparisonAId, setComparisonAId] = useState<string | null>(null);
   const [comparisonBId, setComparisonBId] = useState<string | null>(null);
   const [cameraComparisonAId, setCameraComparisonAId] = useState<string | null>(null);
@@ -748,6 +750,17 @@ export function CompareView() {
     }, 300);
     return () => window.clearTimeout(timer);
   }, [setCompareVisualEvidence, snapshotA, snapshotB, cellsA, cellsB]);
+
+  useEffect(() => {
+    if (!demoMode || demoStep < 5) return;
+    if (snapshots.length < 2) return;
+    if (comparisonAId && comparisonBId) return;
+    const baselineSnap = snapshots.find((s) => s.label === "Baseline") ?? snapshots[0];
+    const proposedSnap = snapshots[snapshots.length - 1];
+    if (!baselineSnap || !proposedSnap || baselineSnap.id === proposedSnap.id) return;
+    setComparisonAId(baselineSnap.id);
+    setComparisonBId(proposedSnap.id);
+  }, [demoMode, demoStep, snapshots, comparisonAId, comparisonBId]);
 
   if (snapshots.length === 0) {
     return (
@@ -1053,20 +1066,24 @@ export function CompareView() {
 
                   <div className="mt-2 grid grid-cols-2 gap-2 text-[9px]">
                     <div className="rounded border border-[#1d2330] bg-[#0b1018] px-2 py-1.5">
-                      <div className="text-[#556076]">Critical zones passed</div>
-                      <div className="mt-0.5 font-semibold text-emerald-300">{result.criticalZonesCovered.length}</div>
+                      <div className="text-[#556076]">Best zone quality</div>
+                      <div className={cn("mt-0.5 font-semibold", tone === "baseline" ? "text-red-300" : "text-emerald-300")}>
+                        {Object.values(result.qualityByZone).reduce((best, quality) => (
+                          QUALITY_RANK[quality as keyof typeof QUALITY_RANK] > QUALITY_RANK[best as keyof typeof QUALITY_RANK] ? quality : best
+                        ), "none" as keyof typeof QUALITY_RANK)}
+                      </div>
                     </div>
                     <div className="rounded border border-[#1d2330] bg-[#0b1018] px-2 py-1.5">
                       <div className="text-[#556076]">Critical zones failed</div>
                       <div className="mt-0.5 font-semibold text-rose-300">{result.criticalZonesFailed.length}</div>
                     </div>
                     <div className="rounded border border-[#1d2330] bg-[#0b1018] px-2 py-1.5">
-                      <div className="text-[#556076]">Detection range</div>
-                      <div className="mt-0.5 font-mono font-semibold text-[#f97316]">{dori.detection.toFixed(1)}m</div>
+                      <div className="text-[#556076]">Critical zones passed</div>
+                      <div className="mt-0.5 font-semibold text-emerald-300">{result.criticalZonesCovered.length}</div>
                     </div>
                     <div className="rounded border border-[#1d2330] bg-[#0b1018] px-2 py-1.5">
-                      <div className="text-[#556076]">Recognition range</div>
-                      <div className="mt-0.5 font-mono font-semibold text-[#22c55e]">{dori.recognition.toFixed(1)}m</div>
+                      <div className="text-[#556076]">Detection range</div>
+                      <div className="mt-0.5 font-mono font-semibold text-[#f97316]">{dori.detection.toFixed(1)}m</div>
                     </div>
                   </div>
 

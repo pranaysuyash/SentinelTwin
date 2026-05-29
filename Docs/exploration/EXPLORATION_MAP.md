@@ -5520,7 +5520,7 @@ Add sensor specs (`sensorWidthMm`, `sensorHeightMm`, `sensorFormat`) when:
 - **Evaluator hardening:** classification scoring now extracts exact labels before scoring, and MiniCPM model-load failures are cached so the sidecar does not retry the same unsupported checkpoint on every prompt.
 - **Prompt hardening:** the classification prompt now spells out the exact label semantics and tells GPT-4o not to default to `retail_small_shop` when uncertain.
 - **Selective rerun:** the semantic sidecar now accepts `--models gpt4o`-style subsets, which makes targeted prompt-tuning passes possible without burning time on known-bad loaders.
-- **Latest GPT-4o semantic result:** after prompt tightening, the synthetic classification lane moved to 0.2 accuracy on the 5-image dev split; room/ocr/adjacency/description stayed non-empty on all images.
+- **Latest GPT-4o semantic result:** after prompt tightening plus the evidence-based consensus classifier, raw classification reached 0.4 accuracy and consensus classification reached 1.0 accuracy on the 5-image dev split; room/ocr/adjacency/description stayed non-empty on all images. This is a strong signal on the synthetic pilot, but it is still only a 5-image set and should be treated as a pilot ceiling rather than a production conclusion.
 
 **Files added:**
 - `experiments/scene_understanding/scripts/evaluate_semantic_tasks.py`
@@ -5828,11 +5828,12 @@ The Governance tab now distinguishes membership sync from identity conflict reso
 
 - The shared-identity archive currently records the live workspace membership state, the latest archived snapshot, route recommendations, and fan-out attempts.
 - The ledger now has a dedicated `workspace_identity_conflict_resolved` evidence kind so governance history can separate a conflict-resolution action from the generic membership-sync action.
+- The Governance tab now also exposes a selectable conflict diff/replay view, so operators can compare the live workspace against the archived snapshot, recompute the selected conflict against the current workspace state, and inspect older archived conflicts without leaving the control plane.
 - This makes the governance trail more semantically honest and reduces the chance that reconciliation is mistaken for routine synchronization.
 
 ### Follow-up question
 
-- Should remote identity replay/history eventually expose a dedicated conflict diff view alongside the current approval route and membership archive history, or is the combined conflict archive enough for V0.2?
+- Should remote identity replay/history eventually fan the replay result out to a separate backend audit stream, or is the local selectable replay view enough for V0.2?
 
 ## Thread: 3D Contextual Object Manipulation UI
 
@@ -5899,6 +5900,32 @@ Prototype a contextual 3D interaction model that reduces friction for object man
 - A shortlist of actions that should remain inspector-only.
 - A set of editor scenarios to validate the interaction choice in real scenes.
 
+### First-pass action matrix
+
+| Object | Contextual actions worth testing | Inspector-only or secondary |
+|---|---|---|
+| Camera | rotate, raise/lower, snap to wall/ceiling, duplicate, delete, aim at zone | exact lens, sensor, preset, FOV, exposure assumptions |
+| Door | move along wall, open/closed state, flip, duplicate, delete | exact dimensions, lock state, material, height |
+| Window | move along wall, flip, duplicate, delete | glass/material, transmission, dimensions, sill height |
+| Obstruction | move, rotate, raise/lower, duplicate, delete, swap subtype | exact dimensions, transmission, material presets |
+| Wall | add point, split, delete, align, duplicate segment | thickness, height, material, transmission |
+| Zone | edit vertices, add/remove vertex, duplicate, delete | required quality, target type, priority, coverage rules |
+| Path | edit points, add/remove point, reverse, duplicate, delete | actor type, speed, intent, timing profile |
+
+### Recommended default direction
+
+- Desktop primary: right-click object menu with a short action list.
+- High-frequency edit mode: direct gizmo/handles for move and rotate.
+- Precision mode: inspector fields and snapping actions.
+- Touch fallback: long-press action sheet with the same object actions.
+
+### Guardrails
+
+- Do not make the menu the only way to edit.
+- Do not duplicate every inspector field into the context menu.
+- Do not add game-like styling that conflicts with the operator-workspace feel.
+- Keep all actions routed through the existing store-backed scene model.
+
 ## Thread: React diagnostics and element-grab tooling for `apps/studio`
 
 ### Why this matters
@@ -5921,3 +5948,15 @@ The studio app is a large React surface with motion-heavy panels and several lon
 - Use `react-scan` against the live `apps/studio` UI once the app is running locally to capture render hotspots in the workspace views.
 - Continue fixing the high-signal doctor errors in the shared workspace components, starting with cleanup in `WorkspaceCanvas.tsx` and the Fast Refresh export warnings in the main component files.
 - If the lockfile is refreshed, revisit pnpm hardening with a policy that preserves installability instead of locking the repo out of its own toolchain.
+
+## Thread: Guided scan assistant over the manual-assisted scan pipeline
+
+### Current finding
+
+- The launcher’s guided scan path is now implemented as a guided assistant that routes into the existing scan wizard, so it can improve capture prep and auto-path hints without duplicating the canonical manual-assisted compile pipeline.
+- The assistant keeps the same candidate review, warning acknowledgement, and evidence-logging behavior as the manual flow, which preserves the single source of truth for scene compilation.
+
+### Follow-up
+
+- Keep the assistant copy honest: it should describe capture guidance and review handoff, not autonomous reconstruction.
+- If a later product sprint adds real auto-segmentation or depth-based reconstruction, revisit the assistant wording and the compile handoff flow together so the launcher and scan wizard stay aligned.

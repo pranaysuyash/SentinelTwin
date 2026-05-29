@@ -1873,6 +1873,7 @@ function buildSimulationState(
   durationMs: number,
   revisionDepth: number,
   snapshotCount: number,
+  operationalEvidenceEvents: OperationalEvidenceEvent[],
 ) {
   const nextScene = cloneSecurityScene(scene);
   nextScene.simulation = result;
@@ -1886,7 +1887,7 @@ function buildSimulationState(
     simulationDirty: false,
     simulationRunning: false,
     lastRunMs: durationMs,
-    sceneIntelligenceGraph: buildGraphState(nextScene, result, revisionDepth, snapshotCount),
+    sceneIntelligenceGraph: buildGraphState(nextScene, result, revisionDepth, snapshotCount, operationalEvidenceEvents),
   };
 }
 
@@ -1931,11 +1932,13 @@ function buildGraphState(
   simulationResult: SimulationResult | null,
   revisionDepth = 0,
   snapshotCount = scene.snapshots.length,
+  operationalEvidenceEvents: OperationalEvidenceEvent[] = [],
 ): SceneIntelligenceGraph {
   return buildSceneIntelligenceGraph(scene, {
     simulationResult,
     revisionDepth,
     snapshotCount,
+    operationalEvidenceEvents,
   });
 }
 
@@ -2599,7 +2602,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       persistWorkspaceGovernance(nextGovernance);
       return {
         simulationDirty: true,
-        sceneIntelligenceGraph: buildGraphState(next, s.simulationResult, s.historyPast.length + 1, s.snapshots.length),
+        sceneIntelligenceGraph: buildGraphState(next, s.simulationResult, s.historyPast.length + 1, s.snapshots.length, s.operationalEvidenceEvents),
         ...setSelectionState(next, s.selectedNodeIds),
         activePathId: cloneAndSetActivePath(next, s.activePathId),
         historyPast: [...s.historyPast, cloneSecurityScene(s.scene)],
@@ -2642,7 +2645,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       activePathId: cloneAndSetActivePath(previous, s.activePathId),
       ...setSelectionState(previous, s.selectedNodeIds),
       simulationDirty: true,
-      sceneIntelligenceGraph: buildGraphState(previous, s.simulationResult, s.historyPast.length - 1, s.snapshots.length),
+      sceneIntelligenceGraph: buildGraphState(previous, s.simulationResult, s.historyPast.length - 1, s.snapshots.length, s.operationalEvidenceEvents),
       historyPast: s.historyPast.slice(0, -1),
       historyFuture: [cloneSecurityScene(s.scene), ...s.historyFuture],
       operationalEvidenceEvents: nextEvents,
@@ -2682,7 +2685,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       activePathId: cloneAndSetActivePath(nextScene, s.activePathId),
       ...setSelectionState(nextScene, s.selectedNodeIds),
       simulationDirty: true,
-      sceneIntelligenceGraph: buildGraphState(nextScene, s.simulationResult, s.historyPast.length + 1, s.snapshots.length),
+      sceneIntelligenceGraph: buildGraphState(nextScene, s.simulationResult, s.historyPast.length + 1, s.snapshots.length, s.operationalEvidenceEvents),
       historyPast: [...s.historyPast, cloneSecurityScene(s.scene)],
       historyFuture: s.historyFuture.slice(1),
       operationalEvidenceEvents: nextEvents,
@@ -2822,6 +2825,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     set({
       operationalEvidenceEvents: nextEvents,
       sensorEvents: nextSensorEvents,
+      sceneIntelligenceGraph: buildGraphState(nextScene, state.simulationResult, state.historyPast.length, state.snapshots.length, nextEvents),
       scene: cloneSceneWithAppendedChangeLog(nextScene, evidenceLogLine(evidenceEvent)),
     });
     return true;
@@ -2901,6 +2905,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     set({
       operationalEvidenceEvents: nextEvents,
       cameraMetadataEvents: nextCameraMetadataEvents,
+      sceneIntelligenceGraph: buildGraphState(state.scene, state.simulationResult, state.historyPast.length, state.snapshots.length, nextEvents),
       scene: cloneSceneWithAppendedChangeLog(state.scene, evidenceLogLine(evidenceEvent)),
     });
     return true;
@@ -2990,6 +2995,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     set({
       operationalEvidenceEvents: nextEvents,
       cameraLiveConnectionEvents: nextCameraLiveConnectionEvents,
+      sceneIntelligenceGraph: buildGraphState(state.scene, state.simulationResult, state.historyPast.length, state.snapshots.length, nextEvents),
       scene: cloneSceneWithAppendedChangeLog(state.scene, evidenceLogLine(evidenceEvent)),
     });
     return true;
@@ -3060,6 +3066,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     persistWorkspaceGovernance(nextGovernance);
 
     const nextScene = cloneSceneWithAppendedChangeLog(restoredScene, evidenceLogLine(evidenceEvent));
+    const nextCameraId = restoredScene.cameras[0]?.id ?? null;
     set({
       scene: nextScene,
       snapshots: structuredClone(restoredScene.snapshots ?? []),
@@ -3067,13 +3074,14 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       simulationDirty: !restoredScene.simulation,
       selectedNodeId: null,
       selectedNodeIds: [],
+      selectedCameraId: nextCameraId,
       activePathId: null,
       focusScenePointRequest: null,
       focusScenePointHighlight: null,
       mapState: cloneDefaultMapState(),
       historyPast: [...historyPast, cloneSecurityScene(scene)],
       historyFuture: [],
-      sceneIntelligenceGraph: buildGraphState(restoredScene, restoredScene.simulation ?? null, historyPast.length + 1, (restoredScene.snapshots ?? []).length),
+      sceneIntelligenceGraph: buildGraphState(restoredScene, restoredScene.simulation ?? null, historyPast.length + 1, (restoredScene.snapshots ?? []).length, nextEvents),
       operationalEvidenceEvents: nextEvents,
       workspaceGovernance: nextGovernance,
     });
@@ -3659,7 +3667,14 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
           : state.selectedCameraId,
     };
   }),
-  setSelectedCameraId: (id) => set({ selectedCameraId: id }),
+  setSelectedCameraId: (id) => {
+    set((state) => {
+      const isValid = !!id && state.scene.cameras.some((camera) => camera.id === id);
+      return {
+        selectedCameraId: isValid ? id : null,
+      };
+    });
+  },
   clearSelection: () => set({ selectedNodeId: null, selectedNodeIds: [] }),
   setActiveTool: (tool) => set((s) => ({
     activeTool: tool,
@@ -4056,7 +4071,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     persistOperationalEvidenceEvents(nextEvents);
     set((state) => ({
       simulationDirty: true,
-      sceneIntelligenceGraph: buildGraphState(next, state.simulationResult, state.historyPast.length + 1, state.snapshots.length),
+      sceneIntelligenceGraph: buildGraphState(next, state.simulationResult, state.historyPast.length + 1, state.snapshots.length, state.operationalEvidenceEvents),
       selectedNodeId: duplicatedIds[0] ?? null,
       selectedNodeIds: duplicatedIds,
       activePathId: cloneAndSetActivePath(next, state.activePathId),
@@ -4102,7 +4117,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   setSimulationResult: (result, durationMs) =>
     set((s) => {
       const evidenceEvent = buildSimulationEvidenceEvent(s.scene, result, durationMs, s.historyPast.length, s.simulationResult);
-      const nextState = buildSimulationState(s.scene, result, durationMs, s.historyPast.length, s.snapshots.length);
+      const nextState = buildSimulationState(s.scene, result, durationMs, s.historyPast.length, s.snapshots.length, s.operationalEvidenceEvents);
       const nextSceneSnapshot = cloneSecurityScene(nextState.scene);
       const nextEvents = [...s.operationalEvidenceEvents, evidenceEvent];
       persistOperationalEvidenceEvents(nextEvents);
@@ -4138,7 +4153,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
 
         const current = get();
         const evidenceEvent = buildSimulationEvidenceEvent(current.scene, result, durationMs, current.historyPast.length, current.simulationResult);
-        const nextState = buildSimulationState(current.scene, result, durationMs, current.historyPast.length, current.snapshots.length);
+        const nextState = buildSimulationState(current.scene, result, durationMs, current.historyPast.length, current.snapshots.length, current.operationalEvidenceEvents);
         const nextSceneSnapshot = cloneSecurityScene(nextState.scene);
         const nextEvents = [...current.operationalEvidenceEvents, evidenceEvent];
         persistOperationalEvidenceEvents(nextEvents);
@@ -4315,7 +4330,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       nextScene.snapshots = snapshots;
       return {
         snapshots,
-        sceneIntelligenceGraph: buildGraphState(nextScene, s.simulationResult, s.historyPast.length, snapshots.length),
+        sceneIntelligenceGraph: buildGraphState(nextScene, s.simulationResult, s.historyPast.length, snapshots.length, s.operationalEvidenceEvents),
         operationalEvidenceEvents: nextEvents,
         scene: cloneSceneWithAppendedChangeLog(nextScene, evidenceLogLine(evidenceEvent)),
       };
@@ -4364,7 +4379,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       });
       return {
         snapshots,
-        sceneIntelligenceGraph: buildGraphState(scene, s.simulationResult, s.historyPast.length, snapshots.length),
+        sceneIntelligenceGraph: buildGraphState(scene, s.simulationResult, s.historyPast.length, snapshots.length, s.operationalEvidenceEvents),
         operationalEvidenceEvents: nextEvents,
         scene: {
           ...scene,
@@ -4417,12 +4432,14 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     });
     const nextGovernance = resetWorkspaceGovernanceForDraft(get().workspaceGovernance);
     persistWorkspaceGovernance(nextGovernance);
+    const nextCameraId = scene.cameras[0]?.id ?? null;
     set(() => ({
       snapshots: scene.snapshots,
       historyPast: [],
       historyFuture: [],
       selectedNodeId: null,
       selectedNodeIds: [],
+      selectedCameraId: nextCameraId,
       editor: {
         editorMode: "idle",
         draftWallStart: undefined,
@@ -4461,7 +4478,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       showDebugOverlays: layout.showDebugOverlays,
       clientDemoOptions: { ...layout.clientDemoOptions },
       bottomTab: getFirstEnabledAnalysisTab(layout.enabledAnalysisModules, viewModeToBottomTab(layout.viewMode)),
-      sceneIntelligenceGraph: buildGraphState(scene, null, 0, scene.snapshots.length),
+      sceneIntelligenceGraph: buildGraphState(scene, null, 0, scene.snapshots.length, nextEvents),
       compareVisualEvidence: null,
       compareReportSelection: null,
       operationalEvidenceEvents: nextEvents,
@@ -4509,6 +4526,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       const previousEvent = priorEvents.at(-1) ?? null;
       const restoreEvent = createArchiveRestoreEvent(archive, restoredScene, previousEvent?.id);
       const nextEvents = [...priorEvents, restoreEvent];
+      const nextCameraId = restoredScene.cameras[0]?.id ?? null;
       persistOperationalEvidenceEvents(nextEvents);
       if (archive.operationalEvidenceJournal && typeof window !== "undefined") {
         window.localStorage.setItem(OPERATIONAL_EVIDENCE_STORAGE_KEY, JSON.stringify(archive.operationalEvidenceJournal));
@@ -4527,6 +4545,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         snapshots: structuredClone(restoredScene.snapshots ?? []),
         selectedNodeId: null,
         selectedNodeIds: [],
+        selectedCameraId: nextCameraId,
         activePathId: null,
         focusScenePointRequest: null,
         focusScenePointHighlight: null,
@@ -4556,7 +4575,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         activeTool: "select",
         historyPast: [],
         historyFuture: [],
-        sceneIntelligenceGraph: buildGraphState(restoredScene, archive.simulationResult ?? restoredScene.simulation ?? null, 0, restoredScene.snapshots.length),
+        sceneIntelligenceGraph: buildGraphState(restoredScene, archive.simulationResult ?? restoredScene.simulation ?? null, 0, restoredScene.snapshots.length, nextEvents),
         compareVisualEvidence: null,
         compareReportSelection: null,
         operationalEvidenceEvents: nextEvents,
@@ -4675,6 +4694,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       persistWorkspaceGovernance(nextGovernance);
       const mergedSceneWithLog = cloneSceneWithAppendedChangeLog(mergedScene, evidenceLogLine(mergeEvent));
       set({
+        selectedCameraId: mergedScene.cameras[0]?.id ?? null,
         scene: mergedSceneWithLog,
         simulationResult: null,
         simulationDirty: true,
@@ -4710,7 +4730,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         activeTool: "select",
         historyPast: [],
         historyFuture: [],
-        sceneIntelligenceGraph: buildGraphState(mergedScene, null, 0, mergedScene.snapshots.length),
+        sceneIntelligenceGraph: buildGraphState(mergedScene, null, 0, mergedScene.snapshots.length, nextEvents),
         compareVisualEvidence: null,
         compareReportSelection: null,
         operationalEvidenceEvents: nextEvents,
@@ -4732,6 +4752,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     }
 
     const restoredScene = cloneSecurityScene(archive.scene);
+    const nextCameraId = restoredScene.cameras[0]?.id ?? null;
     const priorEvents = normalizeOperationalEvidenceEvents(archive.operationalEvidenceEvents);
     const previousEvent = priorEvents.at(-1) ?? null;
     const restoreEvent = createArchiveRestoreEvent(archive, restoredScene, previousEvent?.id);
@@ -4748,13 +4769,14 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     persistWorkspaceAccess(nextAccess);
     persistWorkspaceGovernance(nextGovernance);
     const sceneWithLog = cloneSceneWithAppendedChangeLog(restoredScene, evidenceLogLine(restoreEvent));
-    set({
-      simulationResult: archive.simulationResult ? structuredClone(archive.simulationResult) : restoredScene.simulation ?? null,
-      simulationDirty: !archive.simulationResult && !restoredScene.simulation,
-      snapshots: structuredClone(restoredScene.snapshots ?? []),
-      selectedNodeId: null,
-      selectedNodeIds: [],
-      activePathId: null,
+      set({
+        simulationResult: archive.simulationResult ? structuredClone(archive.simulationResult) : restoredScene.simulation ?? null,
+        simulationDirty: !archive.simulationResult && !restoredScene.simulation,
+        snapshots: structuredClone(restoredScene.snapshots ?? []),
+        selectedNodeId: null,
+        selectedNodeIds: [],
+        selectedCameraId: nextCameraId,
+        activePathId: null,
       focusScenePointRequest: null,
       focusScenePointHighlight: null,
       mapState: cloneDefaultMapState(),
@@ -4783,7 +4805,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       activeTool: "select",
       historyPast: [],
       historyFuture: [],
-      sceneIntelligenceGraph: buildGraphState(restoredScene, archive.simulationResult ?? restoredScene.simulation ?? null, 0, restoredScene.snapshots.length),
+      sceneIntelligenceGraph: buildGraphState(restoredScene, archive.simulationResult ?? restoredScene.simulation ?? null, 0, restoredScene.snapshots.length, nextEvents),
       compareVisualEvidence: null,
       compareReportSelection: null,
       operationalEvidenceEvents: nextEvents,
@@ -4809,6 +4831,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   setScene: (scene) =>
     {
       const nextScene = cloneSecurityScene(scene);
+      const nextCameraId = nextScene.cameras[0]?.id ?? null;
       const layout = buildPresetDockLayout("edit");
       const evidenceEvent = buildOperationalEvidenceEvent({
         kind: scene.source === "import" ? "scene_imported" : scene.source === "scan" ? "scan_compiled" : scene.source === "ai" ? "draft_applied" : scene.source === "manual" ? "scene_created" : "scene_initialized",
@@ -4834,6 +4857,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         simulationResult: null,
         selectedNodeId: null,
         selectedNodeIds: [],
+        selectedCameraId: nextCameraId,
         activePathId: null,
         focusScenePointRequest: null,
         focusScenePointHighlight: null,
@@ -4863,7 +4887,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         activeTool: "select",
         historyPast: [],
         historyFuture: [],
-        sceneIntelligenceGraph: buildGraphState(nextScene, null, 0, (scene.snapshots ?? []).length),
+        sceneIntelligenceGraph: buildGraphState(nextScene, null, 0, (scene.snapshots ?? []).length, nextEvents),
         compareVisualEvidence: null,
         compareReportSelection: null,
         operationalEvidenceEvents: nextEvents,
@@ -4886,6 +4910,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
 
   createNewScene: () => {
     const blank = createBlankSecurityScene();
+    const nextCameraId = blank.cameras[0]?.id ?? null;
     const layout = buildPresetDockLayout("edit");
     const evidenceEvent = buildOperationalEvidenceEvent({
       kind: "scene_created",
@@ -4912,6 +4937,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       simulationDirty: true,
       selectedNodeId: null,
       selectedNodeIds: [],
+      selectedCameraId: nextCameraId,
       activePathId: null,
       focusScenePointRequest: null,
       focusScenePointHighlight: null,
@@ -4953,7 +4979,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       },
       historyPast: [],
       historyFuture: [],
-      sceneIntelligenceGraph: buildGraphState(blank, null, 0, 0),
+      sceneIntelligenceGraph: buildGraphState(blank, null, 0, 0, nextEvents),
       compareVisualEvidence: null,
       compareReportSelection: null,
       operationalEvidenceEvents: nextEvents,
@@ -5009,11 +5035,18 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
 
   getSceneStorageKey: () => PROJECT_STORAGE_KEY,
 
-
+  
   getSelectedCamera: () => {
-    const { scene, selectedNodeId } = get();
-    if (!selectedNodeId) return null;
-    return scene.cameras.find((c) => c.id === selectedNodeId) ?? null;
+    const { scene, selectedNodeId, selectedCameraId } = get();
+    if (selectedNodeId) {
+      const selectedNodeCamera = scene.cameras.find((c) => c.id === selectedNodeId);
+      if (selectedNodeCamera) return selectedNodeCamera;
+    }
+    if (selectedCameraId) {
+      const selectedById = scene.cameras.find((c) => c.id === selectedCameraId);
+      if (selectedById) return selectedById;
+    }
+    return scene.cameras[0] ?? null;
   },
 }) as StudioStoreState);
 

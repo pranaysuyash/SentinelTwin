@@ -67,9 +67,9 @@ The semantic-task sidecar is documented in `experiments/scene_understanding/scri
 - `experiments/scene_understanding/outputs/semantic_tasks/SEMANTIC_TASKS_REPORT.md`
 - `experiments/scene_understanding/outputs/semantic_tasks/SEMANTIC_TASKS_SUMMARY.json`
 
-It exercises classification, room detection, OCR, adjacency, and description prompts on the same 5-image dev split. The summary path now uses exact label extraction for classification scoring and caches MiniCPM load failures so unsupported checkpoints do not get reloaded on every task.
+It exercises classification, room detection, OCR, adjacency, and description prompts on the same 5-image dev split. The summary path now uses exact label extraction for raw classification, an evidence-based consensus classifier for semantic accuracy, and caches MiniCPM load failures so unsupported checkpoints do not get reloaded on every task.
 The combined geometry report at `experiments/scene_understanding/outputs/COMPARISON_REPORT.md` now includes the semantic sidecar summary section as well.
-When you need to tune one lane, use `--models gpt4o` instead of re-running the broken local loaders.
+When you need to tune one lane, use `--models gpt4o` instead of re-running the broken local loaders. The current GPT-4o semantic result is `0.4` raw classification accuracy and `1.0` consensus classification accuracy on the 5-image dev split. Treat that as a pilot ceiling until we have a larger eval set.
 
 ## Matching Algorithm
 

@@ -1,6 +1,8 @@
-import { z } from "zod";
-
-import { summarizeWorkspaceApprovalRouting, summarizeWorkspaceMembershipDrift, type WorkspaceApprovalRouteSummary } from "@/lib/workspace-membership-routing";
+import {
+  summarizeWorkspaceApprovalRouting,
+  summarizeWorkspaceMembershipDrift,
+  type WorkspaceApprovalRouteSummary,
+} from "@/lib/workspace-membership-routing";
 import type { WorkspaceAccessState } from "@/lib/workspace-access";
 import type { WorkspaceGovernanceState } from "@/lib/workspace-governance";
 import type {
@@ -8,126 +10,15 @@ import type {
   WorkspaceIdentityConflictArchiveResponse,
   WorkspaceIdentityConflictDiffRow,
   WorkspaceIdentityConflictDiffSummary,
-  WorkspaceIdentityConflictDispatchAttempt,
-  WorkspaceIdentityConflictRequest,
-  WorkspaceIdentityConflictResolutionStatus,
   WorkspaceIdentityConflictReplayRequest,
+  WorkspaceIdentityConflictResolutionStatus,
   WorkspaceIdentityConflictStatus,
-  WorkspaceIdentityConflictTarget,
 } from "@/lib/workspace-identity-conflict-types";
-
-const WorkspaceIdentityConflictTargetSchema = z.object({
-  label: z.string().min(1),
-  endpoint: z.string().url().nullable().optional(),
-  mode: z.enum(["webhook", "archive", "manual"]).default("webhook"),
-});
-
-const WorkspaceAccessStateSchema = z.object({
-  activeMemberId: z.string().min(1),
-  members: z.array(z.unknown()),
-  policy: z.object({
-    mode: z.enum(["single_user", "shared"]),
-    publishRequiresApproval: z.boolean(),
-    privacySensitiveRequiresReviewer: z.boolean(),
-    requiredReviewerRoles: z.array(z.string()),
-  }),
-});
-
-const WorkspaceGovernanceStateSchema = z.object({
-  activeRole: z.string().min(1),
-  approvalMode: z.enum(["open", "review_required"]),
-  sceneStatus: z.string().min(1),
-  requestedAt: z.number().int().nonnegative().nullable(),
-  requestedBy: z.string().nullable(),
-  reviewedAt: z.number().int().nonnegative().nullable(),
-  reviewedBy: z.string().nullable(),
-  publishedAt: z.number().int().nonnegative().nullable(),
-  publishedBy: z.string().nullable(),
-  reviewNotes: z.array(z.string()),
-});
-
-export const WorkspaceIdentityConflictRequestSchema = z.object({
-  source: z.string().min(1).default("governance-panel"),
-  submittedAt: z.number().int().nonnegative().optional(),
-  sceneId: z.string().min(1),
-  sceneName: z.string().min(1),
-  hasPrivacyExposure: z.boolean().default(false),
-  workspaceAccessState: WorkspaceAccessStateSchema,
-  workspaceGovernanceState: WorkspaceGovernanceStateSchema,
-  archivedWorkspaceAccessState: WorkspaceAccessStateSchema.nullable().optional(),
-  destinations: z.array(WorkspaceIdentityConflictTargetSchema).default([]),
-});
 
 export type {
   WorkspaceIdentityConflictArchiveRecord,
   WorkspaceIdentityConflictArchiveResponse,
-  WorkspaceIdentityConflictDiffRow,
-  WorkspaceIdentityConflictDiffSummary,
-  WorkspaceIdentityConflictDispatchAttempt,
-  WorkspaceIdentityConflictRequest,
-  WorkspaceIdentityConflictResolutionStatus,
-  WorkspaceIdentityConflictReplayRequest,
-  WorkspaceIdentityConflictStatus,
-  WorkspaceIdentityConflictTarget,
 } from "@/lib/workspace-identity-conflict-types";
-
-const WORKSPACE_IDENTITY_CONFLICT_HISTORY_FILE = "workspace-identity-conflict-history.json";
-
-export function resolveWorkspaceIdentityConflictStoreRoot() {
-  const overrideRoot = process.env.SENTINELTWIN_WORKSPACE_IDENTITY_CONFLICT_STORE_DIR?.trim();
-  if (overrideRoot) return overrideRoot;
-
-  const cwd = process.cwd().replace(/\/$/, "");
-  if (cwd.endsWith("/apps/studio")) return cwd;
-  if (cwd.endsWith("/SentinelTwin")) return `${cwd}/apps/studio`;
-  return cwd;
-}
-
-export function resolveWorkspaceIdentityConflictHistoryPath(rootDir = resolveWorkspaceIdentityConflictStoreRoot()) {
-  const normalizedRoot = rootDir.replace(/\/$/, "");
-  return `${normalizedRoot}/.workspace-identity-conflict/${WORKSPACE_IDENTITY_CONFLICT_HISTORY_FILE}`;
-}
-
-export function deriveWorkspaceIdentityConflictResolution(
-  conflictStatus: WorkspaceIdentityConflictStatus,
-  approvalRoute: WorkspaceApprovalRouteSummary,
-): {
-  resolutionStatus: WorkspaceIdentityConflictResolutionStatus;
-  resolutionLabel: string;
-  resolutionReason: string;
-  recommendedAction: string;
-} {
-  const resolutionStatus: WorkspaceIdentityConflictResolutionStatus = conflictStatus === "archive_pending"
-    ? "archive_pending"
-    : conflictStatus === "reconcile_needed"
-      ? "reconcile_before_route"
-      : approvalRoute.routeStatus === "review_required"
-        ? "route_for_review"
-        : "ready_for_publish";
-  const resolutionLabel = resolutionStatus === "archive_pending"
-    ? "Archive membership snapshot before resolving shared identity"
-    : resolutionStatus === "reconcile_before_route"
-      ? "Reconcile membership before routing approval"
-      : resolutionStatus === "route_for_review"
-        ? "Route through reviewer before publish"
-        : "Shared identity is aligned for publish";
-  const resolutionReason = resolutionStatus === "archive_pending"
-    ? "No archived membership snapshot exists yet, so the identity service cannot compute a trustworthy conflict resolution."
-    : resolutionStatus === "reconcile_before_route"
-      ? "The live workspace drifted from the archived identity snapshot, so the workspace should reconcile before approval routing can be trusted."
-      : resolutionStatus === "route_for_review"
-        ? `Approval should route through ${approvalRoute.targetReviewerLabel} before publish.`
-        : "The live workspace matches the archived identity record and can proceed without reconciliation.";
-  const recommendedAction = resolutionStatus === "archive_pending"
-    ? "Create an archived membership snapshot."
-    : resolutionStatus === "reconcile_before_route"
-      ? "Sync the live workspace to the latest archived identity snapshot."
-      : resolutionStatus === "route_for_review"
-        ? `Send the decision to ${approvalRoute.targetReviewerLabel}.`
-        : "Publish or hand off the aligned workspace identity record.";
-
-  return { resolutionStatus, resolutionLabel, resolutionReason, recommendedAction };
-}
 
 function formatWorkspaceMembershipCount(membershipCount: number) {
   return `${membershipCount} member${membershipCount === 1 ? "" : "s"}`;
@@ -147,7 +38,51 @@ function formatPrivacyReviewerLabel(privacySensitiveRequiresReviewer: boolean) {
   return privacySensitiveRequiresReviewer ? "Required" : "Not required";
 }
 
-export function summarizeWorkspaceIdentityConflictDiff(
+function deriveWorkspaceIdentityConflictResolution(
+  conflictStatus: WorkspaceIdentityConflictStatus,
+  approvalRoute: WorkspaceApprovalRouteSummary,
+): {
+  resolutionStatus: WorkspaceIdentityConflictResolutionStatus;
+  resolutionLabel: string;
+  resolutionReason: string;
+  recommendedAction: string;
+} {
+  const resolutionStatus: WorkspaceIdentityConflictResolutionStatus = conflictStatus === "archive_pending"
+    ? "archive_pending"
+    : conflictStatus === "reconcile_needed"
+      ? "reconcile_before_route"
+      : approvalRoute.routeStatus === "review_required"
+        ? "route_for_review"
+        : "ready_for_publish";
+
+  const resolutionLabel = resolutionStatus === "archive_pending"
+    ? "Archive membership snapshot before resolving shared identity"
+    : resolutionStatus === "reconcile_before_route"
+      ? "Reconcile membership before routing approval"
+      : resolutionStatus === "route_for_review"
+        ? "Route through reviewer before publish"
+        : "Shared identity is aligned for publish";
+
+  const resolutionReason = resolutionStatus === "archive_pending"
+    ? "No archived membership snapshot exists yet, so the identity service cannot compute a trustworthy conflict resolution."
+    : resolutionStatus === "reconcile_before_route"
+      ? "The live workspace drifted from the archived identity snapshot, so the workspace should reconcile before approval routing can be trusted."
+      : resolutionStatus === "route_for_review"
+        ? `Approval should route through ${approvalRoute.targetReviewerLabel} before publish.`
+        : "The live workspace matches the archived identity record and can proceed without reconciliation.";
+
+  const recommendedAction = resolutionStatus === "archive_pending"
+    ? "Create an archived membership snapshot."
+    : resolutionStatus === "reconcile_before_route"
+      ? "Sync the live workspace to the latest archived identity snapshot."
+      : resolutionStatus === "route_for_review"
+        ? `Send the decision to ${approvalRoute.targetReviewerLabel}.`
+        : "Publish or hand off the aligned workspace identity record.";
+
+  return { resolutionStatus, resolutionLabel, resolutionReason, recommendedAction };
+}
+
+function summarizeWorkspaceIdentityConflictDiff(
   request: Pick<
     WorkspaceIdentityConflictArchiveResponse,
     "approvalRoute" | "hasPrivacyExposure" | "workspaceAccessState" | "archivedWorkspaceAccessState" | "resolutionLabel" | "resolutionReason" | "recommendedAction"
@@ -216,24 +151,10 @@ export function summarizeWorkspaceIdentityConflictDiff(
 export async function replayWorkspaceIdentityConflict(
   record: WorkspaceIdentityConflictArchiveRecord,
   request: WorkspaceIdentityConflictReplayRequest,
-) {
-  return summarizeWorkspaceIdentityConflict({
-    source: request.source ?? "governance-panel",
-    submittedAt: request.submittedAt ?? Date.now(),
-    sceneId: request.sceneId,
-    sceneName: request.sceneName,
-    hasPrivacyExposure: request.hasPrivacyExposure,
-    workspaceAccessState: request.workspaceAccessState,
-    workspaceGovernanceState: request.workspaceGovernanceState,
-    archivedWorkspaceAccessState: record.archivedWorkspaceAccessState ?? request.archivedWorkspaceAccessState,
-    destinations: [{ label: "Local replay", mode: "archive" }],
-  });
-}
-
-export async function summarizeWorkspaceIdentityConflict(request: WorkspaceIdentityConflictRequest): Promise<WorkspaceIdentityConflictArchiveResponse> {
+): Promise<WorkspaceIdentityConflictArchiveResponse> {
   const workspaceAccess = request.workspaceAccessState as WorkspaceAccessState;
   const workspaceGovernance = request.workspaceGovernanceState as WorkspaceGovernanceState;
-  const archivedWorkspaceAccess = request.archivedWorkspaceAccessState ? request.archivedWorkspaceAccessState as WorkspaceAccessState : null;
+  const archivedWorkspaceAccess = record.archivedWorkspaceAccessState ?? request.archivedWorkspaceAccessState ?? null;
   const membershipDrift = archivedWorkspaceAccess ? summarizeWorkspaceMembershipDrift(workspaceAccess, archivedWorkspaceAccess) : null;
   const approvalRoute = summarizeWorkspaceApprovalRouting(
     {
@@ -245,21 +166,20 @@ export async function summarizeWorkspaceIdentityConflict(request: WorkspaceIdent
     workspaceGovernance,
     archivedWorkspaceAccess,
   );
-  const destinations = request.destinations.length > 0
-    ? request.destinations
-    : [{ label: "Local relay", endpoint: null, mode: "archive" as const }];
 
   const conflictStatus: WorkspaceIdentityConflictStatus = !archivedWorkspaceAccess
     ? "archive_pending"
     : membershipDrift && (membershipDrift.activeMemberChanged || membershipDrift.teamSizeChanged || membershipDrift.policyChanged)
       ? "reconcile_needed"
       : "aligned";
+
   const {
     resolutionStatus,
     resolutionLabel,
     resolutionReason,
     recommendedAction,
   } = deriveWorkspaceIdentityConflictResolution(conflictStatus, approvalRoute);
+
   const conflictDiff = summarizeWorkspaceIdentityConflictDiff({
     approvalRoute,
     hasPrivacyExposure: request.hasPrivacyExposure,
@@ -270,83 +190,15 @@ export async function summarizeWorkspaceIdentityConflict(request: WorkspaceIdent
     recommendedAction,
   });
 
-  const attempts: WorkspaceIdentityConflictDispatchAttempt[] = [];
-  for (const destination of destinations) {
-    const deliveredAt = Date.now();
-    if (destination.endpoint) {
-      try {
-        const response = await fetch(destination.endpoint, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            source: request.source,
-            sceneId: request.sceneId,
-            sceneName: request.sceneName,
-            conflictStatus,
-            resolutionStatus,
-            resolutionLabel,
-            resolutionReason,
-            recommendedAction,
-            approvalRoute,
-            membershipDrift,
-            hasPrivacyExposure: request.hasPrivacyExposure,
-            workspaceAccessState: workspaceAccess,
-            workspaceGovernanceState: workspaceGovernance,
-            archivedWorkspaceAccessState: archivedWorkspaceAccess,
-            deliveredAt,
-          }),
-        });
-        attempts.push({
-          label: destination.label,
-          endpoint: destination.endpoint,
-          mode: destination.mode,
-          status: response.ok ? "delivered" : "failed",
-          message: response.ok
-            ? `Delivered to ${destination.label}.`
-            : `Delivery failed with HTTP ${response.status}.`,
-          responseStatus: response.status,
-          deliveredAt,
-        });
-      } catch (error) {
-        attempts.push({
-          label: destination.label,
-          endpoint: destination.endpoint,
-          mode: destination.mode,
-          status: "failed",
-          message: error instanceof Error ? error.message : `Delivery failed for ${destination.label}.`,
-          responseStatus: null,
-          deliveredAt,
-        });
-      }
-    } else {
-      attempts.push({
-        label: destination.label,
-        endpoint: null,
-        mode: destination.mode,
-        status: "queued",
-        message: `Queued for ${destination.label} because no delivery endpoint is configured.`,
-        responseStatus: null,
-        deliveredAt,
-      });
-    }
-  }
-
-  const deliveredCount = attempts.filter((attempt) => attempt.status === "delivered").length;
-  const queuedCount = attempts.filter((attempt) => attempt.status === "queued").length;
-  const failedCount = attempts.filter((attempt) => attempt.status === "failed").length;
-  const archiveStatus: WorkspaceIdentityConflictArchiveResponse["archiveStatus"] = attempts.some((attempt) => attempt.status === "delivered")
-    ? "server archive"
-    : "local cache";
-
   return {
     ok: true,
-    source: request.source ?? "governance-panel",
+    source: request.source ?? record.source,
     receivedAt: new Date(request.submittedAt ?? Date.now()).toISOString(),
     sceneId: request.sceneId,
     sceneName: request.sceneName,
     summary: `${resolutionLabel} for ${request.sceneName}.`,
-    archiveStatus,
-    historyId: `${request.sceneId}:${request.submittedAt ?? Date.now()}:conflict`,
+    archiveStatus: record.archiveStatus,
+    historyId: record.historyId,
     conflictStatus,
     resolutionStatus,
     resolutionLabel,
@@ -354,15 +206,14 @@ export async function summarizeWorkspaceIdentityConflict(request: WorkspaceIdent
     recommendedAction,
     hasPrivacyExposure: request.hasPrivacyExposure,
     approvalRoute,
-    // Shared diff summary keeps the live vs archived identity comparison in one canonical shape.
     conflictDiff,
     membershipDrift,
     workspaceAccessState: workspaceAccess,
     workspaceGovernanceState: workspaceGovernance,
     archivedWorkspaceAccessState: archivedWorkspaceAccess,
-    deliveredCount,
-    queuedCount,
-    failedCount,
-    destinations: attempts,
+    deliveredCount: record.deliveredCount,
+    queuedCount: record.queuedCount,
+    failedCount: record.failedCount,
+    destinations: record.destinations,
   };
 }

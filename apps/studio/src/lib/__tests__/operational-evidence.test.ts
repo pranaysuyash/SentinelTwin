@@ -5,10 +5,13 @@ import {
   createObstructionNode,
   createPathNode,
   createSecurityLightNode,
+  createSensorNode,
 } from "@/lib/node-factory";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 import type { OperationalEvidenceEvent } from "@/lib/operational-evidence";
 import {
+  buildOperationalEvidenceEvent,
+  buildOperationalEvidenceTimeline,
   assessOperationalEvidenceMergeReadiness,
   compareOperationalEvidenceBranches,
   findLatestOperationalEvidenceEventForScene,
@@ -18,6 +21,8 @@ import {
   summarizeOperationalEvidenceBranchHeads,
   summarizeOperationalGovernanceTrail,
   summarizeOperationalEvidenceLifecycle,
+  summarizeOperationalEvidenceTemporalTwin,
+  resolveOperationalEvidenceSceneAtTime,
   traceOperationalEvidenceLineage,
 } from "@/lib/operational-evidence";
 
@@ -210,6 +215,134 @@ describe("operational evidence helpers", () => {
     expect(heads.find((entry) => entry.stage === "draft")?.event?.id).toBe("scene_created:scene_1:abc123");
     expect(heads.find((entry) => entry.stage === "published")?.event?.id).toBe("scene_published:scene_1:def456");
     expect(heads.find((entry) => entry.stage === "recovered")?.event).toBeNull();
+  });
+
+  test("summarizes the temporal operational twin and current-vs-checkpoint delta", () => {
+    const checkpointScene = createBlankSecurityScene();
+    checkpointScene.name = "Temporal Draft";
+    checkpointScene.cameras.push(createCameraNode([2, 2, 2]));
+
+    const currentScene = createBlankSecurityScene();
+    currentScene.name = "Temporal Draft";
+    currentScene.cameras.push(createCameraNode([2, 2, 2]));
+    currentScene.cameras.push(createCameraNode([4, 2, 2]));
+    currentScene.sensors.push(createSensorNode([3, 0, 3]));
+
+    const first = buildOperationalEvidenceEvent({
+      kind: "scene_created",
+      title: "Scene created",
+      details: "Created the temporal baseline checkpoint.",
+      actor: "user",
+      source: "manual",
+      sceneId: currentScene.id,
+      sceneName: currentScene.name,
+      revisionDepth: 1,
+      affectedNodeIds: [],
+      confidence: 0.95,
+      sceneSnapshot: structuredClone(checkpointScene),
+      branchLabel: "draft",
+      lifecycleStage: "draft",
+    });
+    const second = buildOperationalEvidenceEvent({
+      kind: "snapshot_saved",
+      title: "Snapshot saved",
+      details: "Captured a reconstructable checkpoint.",
+      actor: "system",
+      source: "manual",
+      sceneId: currentScene.id,
+      sceneName: currentScene.name,
+      revisionDepth: 2,
+      affectedNodeIds: [],
+      confidence: 0.95,
+      sceneSnapshot: structuredClone(checkpointScene),
+      branchLabel: "published",
+      lifecycleStage: "published",
+      timestamp: first.timestamp + 1,
+    });
+
+    const summary = summarizeOperationalEvidenceTemporalTwin([first, second], currentScene);
+
+    expect(summary.totalEvents).toBe(2);
+    expect(summary.checkpointCount).toBe(2);
+    expect(summary.branchHeadCount).toBeGreaterThan(0);
+    expect(summary.latestCheckpoint?.title).toBe("Snapshot saved");
+    expect(summary.latestCheckpoint?.summary.detail).toContain("cameras");
+    expect(summary.currentSceneSummary?.detail).toContain("cameras");
+    expect(summary.currentVsLatestCheckpointDelta?.cameras).toBe(1);
+    expect(summary.currentVsLatestCheckpointDelta?.sensors).toBe(1);
+  });
+
+  test("builds an event-centered timeline and resolves state at time T", () => {
+    const initialScene = createBlankSecurityScene();
+    initialScene.name = "Temporal Draft";
+    initialScene.cameras.push(createCameraNode([2, 2, 2]));
+
+    const midScene = createBlankSecurityScene();
+    midScene.name = "Temporal Draft";
+    midScene.id = initialScene.id;
+    midScene.cameras.push(createCameraNode([2, 2, 2]));
+    midScene.cameras.push(createCameraNode([4, 2, 2]));
+
+    const first = buildOperationalEvidenceEvent({
+      kind: "scene_created",
+      title: "Scene created",
+      details: "Created the temporal baseline checkpoint.",
+      actor: "user",
+      source: "manual",
+      sceneId: initialScene.id,
+      sceneName: initialScene.name,
+      revisionDepth: 1,
+      affectedNodeIds: [],
+      confidence: 0.95,
+      sceneSnapshot: structuredClone(initialScene),
+      branchLabel: "draft",
+      lifecycleStage: "draft",
+    });
+    const second = buildOperationalEvidenceEvent({
+      kind: "snapshot_saved",
+      title: "Snapshot saved",
+      details: "Captured the mid-point checkpoint.",
+      actor: "system",
+      source: "manual",
+      sceneId: initialScene.id,
+      sceneName: initialScene.name,
+      revisionDepth: 2,
+      affectedNodeIds: [],
+      confidence: 0.95,
+      sceneSnapshot: structuredClone(midScene),
+      branchLabel: "published",
+      lifecycleStage: "published",
+      timestamp: first.timestamp + 1000,
+    });
+    const third = buildOperationalEvidenceEvent({
+      kind: "scene_updated",
+      title: "Scene updated",
+      details: "Continued after the checkpoint.",
+      actor: "user",
+      source: "manual",
+      sceneId: initialScene.id,
+      sceneName: initialScene.name,
+      revisionDepth: 3,
+      affectedNodeIds: [],
+      confidence: 0.9,
+      branchLabel: "manual",
+      lifecycleStage: "manual",
+      timestamp: second.timestamp + 1000,
+    });
+
+    const timeline = buildOperationalEvidenceTimeline([third, first, second], midScene);
+
+    expect(timeline.totalEvents).toBe(3);
+    expect(timeline.checkpoints).toHaveLength(2);
+    expect(timeline.entries[0]?.event.id).toBe(first.id);
+    expect(timeline.entries[1]?.isCheckpoint).toBe(true);
+    expect(timeline.latestCheckpoint?.event.id).toBe(second.id);
+    expect(timeline.latestCheckpoint?.reconstructedSceneSummary?.detail).toContain("cameras");
+    expect(timeline.currentSceneSummary?.detail).toContain("cameras");
+
+    const stateAtT = resolveOperationalEvidenceSceneAtTime([third, first, second], third.timestamp, midScene);
+    expect(stateAtT?.cameras.length).toBe(2);
+    expect(resolveOperationalEvidenceSceneAtTime([third, first, second], first.timestamp - 1, midScene)).toBeNull();
   });
 
   test("summarizes governance trail events for a scene", () => {

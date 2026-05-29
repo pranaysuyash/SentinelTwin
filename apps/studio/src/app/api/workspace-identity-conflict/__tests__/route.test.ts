@@ -95,12 +95,15 @@ describe("workspace-identity-conflict route", () => {
     expect(body.conflictStatus).toBe("reconcile_needed");
     expect(body.resolutionStatus).toBe("reconcile_before_route");
     expect(body.summary).toContain("Reconcile membership before routing approval");
+    expect(body.conflictDiff.title).toBe("Conflict Diff");
+    expect(body.conflictDiff.rows.some((row: { label: string }) => row.label === "Active member")).toBe(true);
 
     const history = await GET();
     const payload = await history.json();
     expect(payload.historyCount).toBe(1);
     expect(payload.latestSubmission.conflictStatus).toBe("reconcile_needed");
     expect(payload.latestSubmission.resolutionStatus).toBe("reconcile_before_route");
+    expect(payload.latestSubmission.conflictDiff.title).toBe("Conflict Diff");
   });
 
   test("delivers conflict archives to a configured webhook endpoint", async () => {

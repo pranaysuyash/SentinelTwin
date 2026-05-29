@@ -1,10 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { Html, OrbitControls } from "@react-three/drei";
-import { Canvas } from "@react-three/fiber";
+import { Html, PerspectiveCamera } from "@react-three/drei";
+import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber";
 import { ArrowLeft, Camera, ChevronLeft, ChevronRight, CircleSmall, VideoOff } from "lucide-react";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import * as THREE from "three";
 
 import { useStudioStore } from "@/store/studio-store";
 import "@/lib/three-compat";
@@ -13,9 +14,17 @@ import { pointOnPathAtProgress } from "@/components/map/path-quality";
 import { QUALITY_RANK } from "@/lib/quality-display";
 import { CameraRigLive, SceneFeedGeometry } from "@/components/view/SceneFeedCanvas";
 import { nowTimestamp } from "@/components/view/scene-feed-canvas-utils";
+import { CameraControlStrip } from "@/components/view/CameraControlStrip";
+import {
+  alignmentQualityLabel,
+  formatSecondsShort,
+  VerificationPanel as SharedVerificationPanel,
+} from "@/components/view/camera-verification-panel";
 import { computeSensorFusionSummary } from "@/lib/sensor-fusion";
+import { getYawPitchDirection } from "@/simulation/geometry";
 import type { CameraNode, DoriQuality, SimulationAssumptions, SecurityScene } from "@/schema/security-scene";
 import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
+import { formatTargetTypeLabel } from "@/components/view/camera-view-utils";
 
 type CameraFeedMode = "normal" | "ir_bw" | "low_light" | "thermal";
 
@@ -27,63 +36,6 @@ type OverlayFlags = {
   timestamp: boolean;
   grid: boolean;
 };
-
-type VerificationViewMode = "overlay" | "split";
-type VerificationSourceType = "image" | "video";
-type VerificationAlignmentMethod = "manual" | "auto";
-type CameraVerificationSnapshot = {
-  id: string;
-  fileName: string;
-  imageUrl: string;
-  mode: VerificationViewMode;
-  sourceType?: VerificationSourceType;
-  sampleTimeS?: number | null;
-  videoDurationS?: number | null;
-  candidateCount?: number;
-  bestCandidateId?: string | null;
-  selectedCandidateId?: string | null;
-  alignmentMethod?: VerificationAlignmentMethod | null;
-  autoAlignDelta?: number | null;
-  opacity: number;
-  split: number;
-  offsetX: number;
-  offsetY: number;
-  scale?: number;
-  alignmentScore: number | null;
-  createdAt: number;
-};
-
-type VideoFrameCandidate = {
-  id: string;
-  timeS: number;
-  dataUrl: string;
-  qualityScore: number;
-};
-
-export function formatTargetTypeLabel(targetType: SecurityScene["criticalZones"][number]["targetType"]) {
-  switch (targetType) {
-    case "person_detection":
-      return "Person";
-    case "face_recognition":
-    case "face_identification":
-      return "Face";
-    case "vehicle_detection":
-      return "Vehicle";
-    case "license_plate":
-      return "License Plate";
-    case "package_detection":
-      return "Package";
-    case "cash_counter_activity":
-      return "Cash Counter";
-    case "door_entry_exit":
-      return "Entry / Exit";
-    case "perimeter_breach":
-      return "Perimeter";
-    default:
-      return `${targetType}`.replace(/_/g, " ");
-  }
-}
-
 
 function formatCameraTag(name: string) {
   const match = name.match(/(\d+)/);
@@ -467,7 +419,7 @@ function LiveFeedHUD({
   );
 }
 
-export function ReplayStatusOverlay({
+function ReplayStatusOverlay({
   pathLabel,
   timeS,
   speed,
@@ -544,7 +496,7 @@ function CameraPathVisibilityOverlay({
   );
 }
 
-export function DoriInsightCard({
+function DoriInsightCard({
   camera,
   zoneLabel,
   targetType,
@@ -876,52 +828,6 @@ function FootageVerificationOverlay({
   );
 }
 
-function alignmentQualityLabel(score: number) {
-  if (score >= 85) return "Excellent";
-  if (score >= 70) return "Good";
-  if (score >= 50) return "Fair";
-  return "Poor";
-}
-
-function formatSecondsShort(seconds: number) {
-  const clamped = Math.max(0, Math.floor(seconds));
-  const mins = Math.floor(clamped / 60);
-  const secs = clamped % 60;
-  return `${mins}:${secs.toString().padStart(2, "0")}`;
-}
-
-function formatSnapshotEvidenceSummary(snapshot: CameraVerificationSnapshot) {
-  const alignTag = snapshot.alignmentMethod === "auto"
-    ? `auto align${typeof snapshot.autoAlignDelta === "number" ? ` (${snapshot.autoAlignDelta >= 0 ? "+" : ""}${snapshot.autoAlignDelta.toFixed(1)})` : ""}`
-    : snapshot.alignmentMethod === "manual"
-      ? "manual align"
-      : null;
-  const scaleTag = typeof snapshot.scale === "number" && Math.abs(snapshot.scale - 1) > 0.01
-    ? `scale ${Math.round(snapshot.scale * 100)}%`
-    : null;
-
-  if (snapshot.sourceType !== "video") {
-    return `Image upload${alignTag ? ` · ${alignTag}` : ""}${scaleTag ? ` · ${scaleTag}` : ""}`;
-  }
-
-  const sampled = snapshot.sampleTimeS !== null && snapshot.sampleTimeS !== undefined
-    ? formatSecondsShort(snapshot.sampleTimeS)
-    : "0:00";
-  const duration = snapshot.videoDurationS !== null && snapshot.videoDurationS !== undefined
-    ? formatSecondsShort(snapshot.videoDurationS)
-    : "--:--";
-  const frames = typeof snapshot.candidateCount === "number" && snapshot.candidateCount > 0
-    ? `${snapshot.candidateCount} frame${snapshot.candidateCount === 1 ? "" : "s"}`
-    : "frame set unavailable";
-  const picked = snapshot.selectedCandidateId
-    ? snapshot.selectedCandidateId === snapshot.bestCandidateId
-      ? "best frame selected"
-      : "manual frame selected"
-    : "no frame selected";
-
-  return `Video ${sampled}/${duration} · ${frames} · ${picked}${alignTag ? ` · ${alignTag}` : ""}${scaleTag ? ` · ${scaleTag}` : ""}`;
-}
-
 function evaluateAlignmentSample({
   canvas,
   image,
@@ -1164,289 +1070,6 @@ async function extractVideoFrameCandidates(file: File, candidateCount = 5) {
   }
 }
 
-function VerificationPanel({
-  enabled,
-  mode,
-  opacity,
-  split,
-  offsetX,
-  offsetY,
-  fileName,
-  alignmentScore,
-  alignmentLabel,
-  alignmentMethod,
-  autoAlignDelta,
-  scale,
-  sourceType,
-  videoDurationS,
-  sampleTimeS,
-  extractionInProgress,
-  errorMessage,
-  canResample,
-  canAutoAlign,
-  videoCandidates,
-  selectedCandidateId,
-  bestCandidateId,
-  onSelectVideoCandidate,
-  onAutoPickBestFrame,
-  onSampleTimeChange,
-  onResampleVideoFrame,
-  showHeatOverlay,
-  snapshots,
-  onToggle,
-  onUpload,
-  onSaveSnapshot,
-  onLoadSnapshot,
-  onDeleteSnapshot,
-  onModeChange,
-  onOpacityChange,
-  onSplitChange,
-  onOffsetXChange,
-  onOffsetYChange,
-  onScaleChange,
-  onToggleHeatOverlay,
-  onNudge,
-  onAutoAlign,
-  onResetAlign,
-  onClear,
-}: {
-  enabled: boolean;
-  mode: VerificationViewMode;
-  opacity: number;
-  split: number;
-  offsetX: number;
-  offsetY: number;
-  fileName: string | null;
-  alignmentScore: number | null;
-  alignmentLabel: string | null;
-  alignmentMethod: VerificationAlignmentMethod | null;
-  autoAlignDelta: number | null;
-  scale: number;
-  sourceType: VerificationSourceType;
-  videoDurationS: number | null;
-  sampleTimeS: number | null;
-  extractionInProgress: boolean;
-  errorMessage: string | null;
-  canResample: boolean;
-  canAutoAlign: boolean;
-  videoCandidates: VideoFrameCandidate[];
-  selectedCandidateId: string | null;
-  bestCandidateId: string | null;
-  onSelectVideoCandidate: (candidateId: string) => void;
-  onAutoPickBestFrame: () => void;
-  onSampleTimeChange: (value: number) => void;
-  onResampleVideoFrame: () => void;
-  showHeatOverlay: boolean;
-  snapshots: CameraVerificationSnapshot[];
-  onToggle: (next: boolean) => void;
-  onUpload: (file: File) => void;
-  onSaveSnapshot: () => void;
-  onLoadSnapshot: (snapshotId: string) => void;
-  onDeleteSnapshot: (snapshotId: string) => void;
-  onModeChange: (mode: VerificationViewMode) => void;
-  onOpacityChange: (value: number) => void;
-  onSplitChange: (value: number) => void;
-  onOffsetXChange: (value: number) => void;
-  onOffsetYChange: (value: number) => void;
-  onScaleChange: (value: number) => void;
-  onToggleHeatOverlay: (next: boolean) => void;
-  onNudge: (dx: number, dy: number) => void;
-  onAutoAlign: () => void;
-  onResetAlign: () => void;
-  onClear: () => void;
-}) {
-  return (
-    <div className="absolute right-3 top-[330px] z-30 w-64 rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)] backdrop-blur-sm">
-      <div className="flex items-center justify-between gap-2">
-        <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-[#7dd3fc]">Footage Verification</div>
-        <label className="inline-flex cursor-pointer items-center gap-1 text-[9px] text-[#c5d4ef]">
-          <input type="checkbox" checked={enabled} onChange={(event) => onToggle(event.target.checked)} />
-          Enable
-        </label>
-      </div>
-      <p className="mt-1 text-[9px] leading-4 text-[#8b96ab]">
-        Planning aid only. This compares a reference frame with simulated view and does not prove forensic identification.
-      </p>
-      <div className="mt-2 space-y-2 text-[9px] text-[#b8c5df]">
-        <label className="block">
-          <span className="text-[#7a8fb6]">Reference frame</span>
-          <input
-            type="file"
-            accept="image/*,video/*"
-            className="mt-1 block w-full rounded border border-[#2a3650] bg-[#0f1624] px-2 py-1 text-[9px] text-[#cdd8ee]"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) onUpload(file);
-              event.currentTarget.value = "";
-            }}
-          />
-          {fileName ? <span className="mt-1 block truncate text-[8px] text-[#8aa0c8]">{fileName}</span> : null}
-          {sourceType === "video" && videoDurationS !== null ? (
-            <div className="mt-1 space-y-1.5 rounded border border-[#2a3650] bg-[#0d1523] p-1.5">
-              <span className="block text-[8px] text-[#9db7e1]">
-                Video frame sampled at {sampleTimeS !== null ? formatSecondsShort(sampleTimeS) : "0:00"} / {formatSecondsShort(videoDurationS)}
-              </span>
-              <label className="block text-[8px] text-[#8aa0c8]">
-                <div className="flex justify-between"><span>Sample time</span><span>{formatSecondsShort(sampleTimeS ?? 0)}</span></div>
-                <input
-                  type="range"
-                  min={0}
-                  max={Math.max(0, videoDurationS)}
-                  step={0.25}
-                  value={sampleTimeS ?? 0}
-                  disabled={!canResample || extractionInProgress}
-                  onChange={(event) => onSampleTimeChange(Number(event.target.value))}
-                  className="mt-1 w-full accent-cyan-400"
-                />
-              </label>
-              <button
-                type="button"
-                disabled={!canResample || extractionInProgress}
-                onClick={onResampleVideoFrame}
-                className="rounded bg-[#14304a] px-2 py-1 text-[8px] text-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Extract frame at selected time
-              </button>
-
-              {videoCandidates.length ? (
-                <div className="rounded border border-[#2a3650] bg-[#0b1220] p-1.5">
-                  <div className="mb-1 flex items-center justify-between text-[8px] text-[#9db7e1]">
-                    <span className="uppercase tracking-[0.12em]">Extracted frames</span>
-                    <button
-                      type="button"
-                      disabled={!bestCandidateId}
-                      onClick={onAutoPickBestFrame}
-                      className="rounded bg-[#1b3a5a] px-1.5 py-0.5 text-[8px] text-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Auto-pick best extracted frame
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {videoCandidates.map((candidate) => {
-                      const selected = selectedCandidateId === candidate.id;
-                      const isBest = bestCandidateId === candidate.id;
-                      return (
-                        <button
-                          key={candidate.id}
-                          type="button"
-                          onClick={() => onSelectVideoCandidate(candidate.id)}
-                          className={`rounded border px-1.5 py-0.5 text-[8px] ${selected ? "border-cyan-300 bg-cyan-500/20 text-cyan-100" : "border-[#2a3650] bg-[#111b2c] text-[#9db7e1]"}`}
-                          title={`Sharpness score ${candidate.qualityScore.toFixed(1)}`}
-                        >
-                          {formatSecondsShort(candidate.timeS)}{isBest ? " · Best" : ""}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-          {extractionInProgress ? <span className="mt-1 block text-[8px] text-cyan-300">Extracting video frame…</span> : null}
-          {errorMessage ? <span className="mt-1 block text-[8px] text-rose-300">{errorMessage}</span> : null}
-        </label>
-        <div className="flex gap-1">
-          <button type="button" onClick={() => onModeChange("overlay")} className={`rounded px-2 py-1 ${mode === "overlay" ? "bg-cyan-500/30 text-cyan-200" : "bg-[#1a2233] text-[#8ea5cc]"}`}>Overlay</button>
-          <button type="button" onClick={() => onModeChange("split")} className={`rounded px-2 py-1 ${mode === "split" ? "bg-cyan-500/30 text-cyan-200" : "bg-[#1a2233] text-[#8ea5cc]"}`}>Split</button>
-          <button type="button" onClick={onSaveSnapshot} className="rounded bg-[#14304a] px-2 py-1 text-cyan-200">Save</button>
-          <button type="button" onClick={onClear} className="rounded bg-[#2b1a20] px-2 py-1 text-rose-200">Clear</button>
-        </div>
-        {snapshots.length ? (
-          <div className="rounded-lg border border-[#2a3650] bg-[#0f1624] p-2">
-            <div className="mb-1 text-[8px] uppercase tracking-[0.12em] text-[#7a8fb6]">Saved snapshots</div>
-            <div className="max-h-24 space-y-1 overflow-y-auto pr-1">
-              {snapshots.map((snapshot) => (
-                <div key={snapshot.id} className="rounded border border-[#243146] bg-[#0c1320] px-1.5 py-1">
-                  <div className="flex items-center justify-between gap-1">
-                    <button
-                      type="button"
-                      onClick={() => onLoadSnapshot(snapshot.id)}
-                      className="truncate text-left text-[8px] text-[#c9d8f3] hover:text-white"
-                      title={snapshot.fileName}
-                    >
-                      {snapshot.fileName}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onDeleteSnapshot(snapshot.id)}
-                      className="rounded bg-[#2b1a20] px-1 py-0.5 text-[8px] text-rose-200"
-                    >
-                      Del
-                    </button>
-                  </div>
-                  <div className="mt-0.5 truncate text-[8px] text-[#8aa0c8]" title={formatSnapshotEvidenceSummary(snapshot)}>
-                    {formatSnapshotEvidenceSummary(snapshot)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
-        <div className="rounded-lg border border-[#2a3650] bg-[#0f1624] px-2 py-1.5">
-          <div className="flex items-center justify-between text-[#7a8fb6]">
-            <span>Alignment Quality</span>
-            <span className="font-mono text-[#d4e6ff]">{alignmentScore !== null ? `${Math.round(alignmentScore)}/100` : "N/A"}</span>
-          </div>
-          <div className="mt-0.5 text-[8px] text-[#9db7e1]">
-            {alignmentLabel ? `${alignmentLabel} match (planning aid only, non-forensic).` : "Upload a reference frame to compute mismatch quality."}
-          </div>
-          <label className="mt-1 inline-flex cursor-pointer items-center gap-1 text-[8px] text-[#9db7e1]">
-            <input type="checkbox" checked={showHeatOverlay} onChange={(event) => onToggleHeatOverlay(event.target.checked)} />
-            Difference heat overlay
-          </label>
-        </div>
-        <div className="rounded-lg border border-[#2a3650] bg-[#0f1624] px-2 py-1.5">
-          <div className="flex items-center justify-between text-[#7a8fb6]">
-            <span>Alignment Assist</span>
-            <span className="font-mono text-[#d4e6ff]">{alignmentMethod === "auto" ? "AUTO" : alignmentMethod === "manual" ? "MANUAL" : "IDLE"}</span>
-          </div>
-          <div className="mt-0.5 text-[8px] text-[#9db7e1]">
-            {alignmentMethod === "auto"
-              ? `Auto align applied${typeof autoAlignDelta === "number" ? ` with ${autoAlignDelta >= 0 ? "+" : ""}${autoAlignDelta.toFixed(1)} score delta.` : "."}`
-              : alignmentMethod === "manual"
-                ? "Manual offset controls are active for the current reference frame."
-                : "Run auto align or use manual offsets after loading a reference frame."}
-          </div>
-        </div>
-        <label className="block">
-          <div className="flex justify-between text-[#7a8fb6]"><span>Opacity</span><span>{Math.round(opacity * 100)}%</span></div>
-          <input type="range" min={0.15} max={0.95} step={0.01} value={opacity} onChange={(event) => onOpacityChange(Number(event.target.value))} className="mt-1 w-full accent-cyan-400" />
-        </label>
-        {mode === "split" ? (
-          <label className="block">
-            <div className="flex justify-between text-[#7a8fb6]"><span>Split</span><span>{Math.round(split)}%</span></div>
-            <input type="range" min={15} max={85} step={1} value={split} onChange={(event) => onSplitChange(Number(event.target.value))} className="mt-1 w-full accent-cyan-400" />
-          </label>
-        ) : null}
-        <label className="block">
-          <div className="flex justify-between text-[#7a8fb6]"><span>Offset X</span><span>{offsetX}px</span></div>
-          <input type="range" min={-120} max={120} step={1} value={offsetX} onChange={(event) => onOffsetXChange(Number(event.target.value))} className="mt-1 w-full accent-cyan-400" />
-        </label>
-        <label className="block">
-          <div className="flex justify-between text-[#7a8fb6]"><span>Offset Y</span><span>{offsetY}px</span></div>
-          <input type="range" min={-120} max={120} step={1} value={offsetY} onChange={(event) => onOffsetYChange(Number(event.target.value))} className="mt-1 w-full accent-cyan-400" />
-        </label>
-        <label className="block">
-          <div className="flex justify-between text-[#7a8fb6]"><span>Reference scale</span><span>{Math.round(scale * 100)}%</span></div>
-          <input type="range" min={0.7} max={1.3} step={0.01} value={scale} onChange={(event) => onScaleChange(Number(event.target.value))} className="mt-1 w-full accent-cyan-400" />
-        </label>
-        <div className="flex items-center justify-between gap-1">
-          <div className="flex gap-1">
-            <button type="button" onClick={() => onNudge(-4, 0)} className="rounded bg-[#1a2233] px-1.5 py-1 text-[#c7d0e4]">◀</button>
-            <button type="button" onClick={() => onNudge(4, 0)} className="rounded bg-[#1a2233] px-1.5 py-1 text-[#c7d0e4]">▶</button>
-            <button type="button" onClick={() => onNudge(0, -4)} className="rounded bg-[#1a2233] px-1.5 py-1 text-[#c7d0e4]">▲</button>
-            <button type="button" onClick={() => onNudge(0, 4)} className="rounded bg-[#1a2233] px-1.5 py-1 text-[#c7d0e4]">▼</button>
-          </div>
-          <div className="flex gap-1">
-            <button type="button" disabled={!canAutoAlign} onClick={onAutoAlign} className="rounded bg-[#13354a] px-2 py-1 text-[#8ce3ff] disabled:cursor-not-allowed disabled:opacity-50">Auto align</button>
-            <button type="button" onClick={onResetAlign} className="rounded bg-[#1d2b3f] px-2 py-1 text-[#9dd6ff]">Reset align</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function CameraHeader({
   camera,
   index,
@@ -1509,6 +1132,89 @@ function CameraHeader({
         </button>
       </div>
     </div>
+  );
+}
+
+/**
+ * Small minimap-style marker showing the camera's position and look direction
+ * within the scene. Rendered as a 2D circle + direction indicator on the floor.
+ */
+function CameraPositionIndicator({ camera }: { camera: CameraNode }) {
+  const forward = useMemo(() => getYawPitchDirection(camera.yawDeg, camera.pitchDeg), [camera.yawDeg, camera.pitchDeg]);
+  const targetPos = useMemo(
+    () => new THREE.Vector3(...camera.position).add(forward.clone().multiplyScalar(2)),
+    [camera.position, forward],
+  );
+
+  return (
+    <group>
+      <mesh position={[camera.position[0], 0.01, camera.position[2]]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.12, 0.22, 24]} />
+        <meshBasicMaterial color="#60a5fa" transparent opacity={0.8} depthWrite={false} />
+      </mesh>
+      <mesh position={[targetPos.x, 0.01, targetPos.z]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.06, 12]} />
+        <meshBasicMaterial color="#60a5fa" transparent opacity={0.5} depthWrite={false} />
+      </mesh>
+      <mesh position={[camera.position[0], 0.005, camera.position[2]]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.04, 12]} />
+        <meshBasicMaterial color="#93c5fd" depthWrite={false} />
+      </mesh>
+    </group>
+  );
+}
+
+/**
+ * Floor-plane click aim for camera view. Renders an invisible plane
+ * that catches click events and re-aims the camera at the hit point.
+ */
+function CameraViewFloorAim({ camera }: { camera: CameraNode }) {
+  const updateNode = useStudioStore((s) => s.updateNode);
+  const markDirty = useStudioStore((s) => s.markDirty);
+  const scene = useStudioStore((s) => s.scene);
+  const { camera: threeCam, size } = useThree();
+  const raycaster = useMemo(() => new THREE.Raycaster(), []);
+  const floorPlane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), []);
+
+  const handleClick = useCallback(
+    (event: ThreeEvent<PointerEvent>) => {
+      event.stopPropagation();
+      const ndc = new THREE.Vector2(
+        (event.nativeEvent.clientX / size.width) * 2 - 1,
+        -(event.nativeEvent.clientY / size.height) * 2 + 1,
+      );
+      raycaster.setFromCamera(ndc, threeCam);
+      const point = new THREE.Vector3();
+      const hit = raycaster.ray.intersectPlane(floorPlane, point);
+      if (!hit) return;
+      const dx = point.x - camera.position[0];
+      const dz = point.z - camera.position[2];
+      const distance = Math.sqrt(dx * dx + dz * dz);
+      if (distance < 0.5) return;
+      const yaw = Math.atan2(dx, dz) * (180 / Math.PI);
+      const heightDelta = point.y - camera.position[1];
+      const pitch = -Math.atan2(heightDelta, distance) * (180 / Math.PI);
+      updateNode(camera.id, {
+        yawDeg: Math.round(yaw),
+        pitchDeg: Math.max(-90, Math.min(0, Math.round(pitch))),
+      });
+      markDirty();
+    },
+    [camera, floorPlane, markDirty, raycaster, threeCam, size, updateNode],
+  );
+
+  const { width, depth } = scene.dimensions;
+
+  return (
+    <mesh
+      rotation={[-Math.PI / 2, 0, 0]}
+      position={[width / 2, 0, depth / 2]}
+      onPointerDown={handleClick}
+      visible={false}
+    >
+      <planeGeometry args={[width * 2, depth * 2]} />
+      <meshBasicMaterial transparent opacity={0} side={THREE.DoubleSide} depthWrite={false} />
+    </mesh>
   );
 }
 
@@ -1646,9 +1352,22 @@ export function CameraViewMode() {
     () => (camera ? [camera.position[0], camera.position[1], camera.position[2]] : [0, 0, 0]),
     [camera],
   );
-  const sensorEvents = useStudioStore((s) => s.sensorEvents.filter((event) => event.sceneId === s.scene.id));
-  const cameraMetadataEvents = useStudioStore((s) => s.cameraMetadataEvents.filter((event) => event.sceneId === s.scene.id));
-  const cameraLiveConnectionEvents = useStudioStore((s) => s.cameraLiveConnectionEvents.filter((event) => event.sceneId === s.scene.id));
+  const sceneId = useStudioStore((s) => s.scene.id);
+  const allSensorEvents = useStudioStore((s) => s.sensorEvents);
+  const allCameraMetadataEvents = useStudioStore((s) => s.cameraMetadataEvents);
+  const allCameraLiveConnectionEvents = useStudioStore((s) => s.cameraLiveConnectionEvents);
+  const sensorEvents = useMemo(
+    () => allSensorEvents.filter((event) => event.sceneId === sceneId),
+    [allSensorEvents, sceneId],
+  );
+  const cameraMetadataEvents = useMemo(
+    () => allCameraMetadataEvents.filter((event) => event.sceneId === sceneId),
+    [allCameraMetadataEvents, sceneId],
+  );
+  const cameraLiveConnectionEvents = useMemo(
+    () => allCameraLiveConnectionEvents.filter((event) => event.sceneId === sceneId),
+    [allCameraLiveConnectionEvents, sceneId],
+  );
   const sensorFusion = useMemo(
     () => computeSensorFusionSummary(cameraPosition, scene.sensors),
     [cameraPosition, scene.sensors],
@@ -1721,7 +1440,7 @@ export function CameraViewMode() {
     setVerificationExtracting(true);
     setVerificationError(null);
 
-    const image = new Image();
+    const image = new window.Image();
     image.decoding = "async";
 
     image.onload = () => {
@@ -1841,7 +1560,7 @@ export function CameraViewMode() {
     if (!canvas) return;
 
     let canceled = false;
-    const image = new Image();
+    const image = new window.Image();
     image.decoding = "async";
     image.onload = () => {
       if (canceled) return;
@@ -1936,15 +1655,23 @@ export function CameraViewMode() {
             gl={{ antialias: true, alpha: false }}
             style={{ width: "100%", height: "100%", filter: canvasFilter }}
           >
+            <PerspectiveCamera
+              makeDefault
+              position={camera.position}
+              fov={Math.min(camera.fovHorizontalDeg, 100)}
+              near={0.1}
+              far={60}
+            />
             <color attach="background" args={[theme.background]} />
             <Suspense fallback={<CanvasLoadingOverlay label="Loading camera view" />}>
               <SceneFeedGeometry theme={theme} showPrivacyZones />
             </Suspense>
             <CameraRigLive camera={camera} />
+            <CameraViewFloorAim camera={camera} />
+            <CameraPositionIndicator camera={camera} />
             {replayActorVisible && activePath ? (
               <ReplayActor path={activePath} progress={pathReplay.progress} />
             ) : null}
-            <OrbitControls enablePan={false} enableZoom={false} enableRotate={false} />
           </Canvas>
           {verificationEnabled && verificationImageUrl ? (
             <FootageVerificationOverlay
@@ -1970,6 +1697,7 @@ export function CameraViewMode() {
             </div>
           ) : null}
           {modeFilter(feedMode)}
+          <CameraControlStrip camera={camera} zones={scene.criticalZones} />
           <LiveFeedHUD
             camera={camera}
             mode={feedMode}
@@ -2031,7 +1759,7 @@ export function CameraViewMode() {
               </div>
             </div>
           )}
-          <VerificationPanel
+          <SharedVerificationPanel
             enabled={verificationEnabled}
             mode={verificationMode}
             opacity={verificationOpacity}

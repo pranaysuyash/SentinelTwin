@@ -3776,3 +3776,63 @@ geometryValidity: z.enum(["valid", "suspect", "invalid"]).default("valid")
 - **Keep using `workspace_membership_synced`** — rejected because it hides the actual conflict-resolution action behind a generic sync label.
 - **Skip a ledger event and rely on the archive only** — rejected because the governance trail would then miss the operator-visible resolution step.
 - **Add a separate conflict history not tied to the evidence ledger** — rejected because it duplicates history and weakens the single operational trail.
+
+### D-220: Shared identity conflict history should be replayable as a diff view
+**Date:** 2026-05-29
+
+**Decision:** Surface the latest workspace identity conflict as a selectable diff/replay view in the Governance tab, showing live-vs-archived membership, policy, route, and resolution details from the canonical conflict archive.
+
+**Rationale:**
+- The conflict archive already stores the live snapshot, archived snapshot, route recommendation, and delivery attempts, but operators still need a readable comparison surface rather than only a list of archived records.
+- A dedicated diff view keeps the current/live workspace and the archived snapshot visible side by side, which makes the remaining identity-handling question easier to reason about.
+- Replaying a selected conflict from history gives the Governance tab a concrete review workflow without introducing a second archive model.
+
+**Alternatives rejected:**
+- **Keep the conflict history as a plain list only** — rejected because a list does not explain what changed or which snapshot is being compared.
+- **Create a separate conflict replay route** — rejected because it would duplicate the existing archive and add another persistence path.
+- **Hide the archived snapshot behind the summary card** — rejected because the whole point of the archive is to make the live-vs-archived boundary inspectable.
+
+### D-221: Guided scan should remain a guided assistant over the manual-assisted compile path
+**Date:** 2026-05-29
+
+**Decision:** The guided scan launcher path is implemented as a guided assistant that helps the user capture and prepare photos, then hands off to the same manual-assisted review and compile pipeline used by Scan Site.
+
+**Rationale:**
+- The current scan-to-scene system already compiles a canonical `SecurityScene` from user-reviewed candidates. The new assistant should improve capture prep and auto-path hints without inventing a parallel reconstruction engine.
+- Keeping the compile path shared avoids duplicating validation, provenance, and operational evidence behavior.
+- The product remains honest: the assistant shortens setup and guidance, but the user still confirms, edits, and compiles the scene.
+
+**Alternatives rejected:**
+- **Advertise the guided assistant as autonomous reconstruction** — rejected because the code does not perform automatic segmentation/depth solve yet and that would overstate capability.
+- **Create a second guided scan compiler** — rejected because it would duplicate the canonical scan pipeline and drift from the manual-assisted flow.
+- **Leave the guided path as a planned banner only** — rejected because the launcher now has a concrete guided-assistant experience that should be reflected in the decision log.
+
+### D-221: Temporal evidence should be backed by a canonical timeline object
+**Date:** 2026-05-29
+
+**Decision:** Represent operational evidence history through a canonical event-centered timeline builder and a state-at-time-T resolver, rather than relying only on UI-side sorting, checkpoint lookup, or ad hoc reconstruction helpers.
+
+**Rationale:**
+- Scene Intelligence already needed a replay scrubber, checkpoint preview, and branch comparison surface, and the report handoff needed the same time-aware story.
+- A reusable timeline object makes the temporal model available to multiple surfaces without duplicating sort/reconstruction logic.
+- The state-at-time-T resolver keeps point-in-time reconstruction honest by deriving it from the same ordered evidence stream that powers the UI.
+
+**Alternatives rejected:**
+- **Keep reconstruction in each UI surface** — rejected because it duplicates ordering and checkpoint logic, which will drift.
+- **Store a separate temporal history model parallel to the evidence ledger** — rejected because it would create another source of truth.
+- **Treat checkpoint snapshots as the only temporal source** — rejected because the operator needs event-centered history and not just snapshot inspection.
+
+### D-222: Selected graph nodes should carry node-level evidence history
+**Date:** 2026-05-29
+
+**Decision:** Annotate Scene Intelligence graph nodes with node-affecting evidence history metadata so the selected-node inspector can show evidence count, latest evidence kind, and latest evidence time directly on the canonical graph representation.
+
+**Rationale:**
+- The scene graph is already the primary provenance navigation surface, so node history belongs on the node model itself instead of in a separate inspector-only lookup.
+- The operational evidence stream already records the affected node ids, timestamps, and before/after summaries required to derive this metadata.
+- Exposing the latest evidence directly on the selected graph node helps operators see version history without jumping to another panel.
+
+**Alternatives rejected:**
+- **Keep node history in a separate detail panel only** — rejected because the graph would still lack its own version semantics.
+- **Create a separate node-history store** — rejected because it duplicates the evidence stream and invites drift.
+- **Hide the node version metadata behind event search** — rejected because operators need the latest version signal immediately in the selected node inspector.

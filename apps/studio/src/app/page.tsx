@@ -10,7 +10,6 @@ import { StudioDashboardHome } from "@/components/launcher/StudioDashboardHome";
 import { useStudioStore, type BottomTab, type ViewMode, type WorkspacePreset } from "@/store/studio-store";
 import { draftSceneFromPrompt, draftSceneFromPromptWithModel, summarizeDraftResult } from "@/lib/ai-layout-draft";
 import { summarizeAiActionTelemetry } from "@/lib/ai-action-telemetry";
-import { PRODUCT_FEATURE_STATUS } from "@/lib/product-feature-status";
 import {
   createModelProvider,
   describeAiProviderHealth,
@@ -18,7 +17,6 @@ import {
   describeAiProviderSelection,
   providerKeyAvailable,
 } from "@/agents/provider-selection";
-import { simulateStudio } from "@/simulation/simulate-studio";
 import { safeParseSecurityScene, type SecurityScene } from "@/schema/security-scene";
 
 function formatClock(timestamp: number | null | undefined) {
@@ -53,6 +51,7 @@ export default function StudioPage() {
   const [showWizard, setShowWizard] = useState(false);
   const [showFloorPlanWizard, setShowFloorPlanWizard] = useState(false);
   const [showScanWizard, setShowScanWizard] = useState(false);
+  const [scanWizardMode, setScanWizardMode] = useState<"manual" | "guided">("manual");
   const [showProjectLauncher, setShowProjectLauncher] = useState(false);
   const [showGuidedScanKickoff, setShowGuidedScanKickoff] = useState(false);
   const [showAiDraft, setShowAiDraft] = useState(false);
@@ -81,9 +80,10 @@ export default function StudioPage() {
   const setViewMode = useStudioStore((s) => s.setViewMode);
   const setBottomTab = useStudioStore((s) => s.setBottomTab);
   const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
+  const setDemoMode = useStudioStore((s) => s.setDemoMode);
+  const setDemoStep = useStudioStore((s) => s.setDemoStep);
   const setCameraViewVerificationIntent = useStudioStore((s) => s.setCameraViewVerificationIntent);
-  const setSimulationRunning = useStudioStore((s) => s.setSimulationRunning);
-  const setSimulationResult = useStudioStore((s) => s.setSimulationResult);
+  const runSimulationFromStore = useStudioStore((s) => s.runSimulation);
   const savedProjects = useStudioStore((s) => s.savedProjects);
   const updateSavedSceneMetadata = useStudioStore((s) => s.updateSavedSceneMetadata);
   const duplicateSavedScene = useStudioStore((s) => s.duplicateSavedScene);
@@ -100,6 +100,7 @@ export default function StudioPage() {
 
   const currentResult = simulationResult ?? scene.simulation ?? null;
   const bootstrapRef = useRef(false);
+  const simulationRunning = useStudioStore((s) => s.simulationRunning);
   const currentRunLabel = useMemo(() => {
     const label = formatClock(currentResult?.computedAt);
     return label ? `Last run ${label}` : null;
@@ -180,6 +181,26 @@ export default function StudioPage() {
       afterSummary: "Manual-assisted scan intake opened.",
       notes: ["Launcher-scoped scan intake event recorded in the evidence ledger."],
     });
+    setScanWizardMode("manual");
+    setShowScanWizard(true);
+  };
+  const openGuidedScanAssistant = () => {
+    recordOperationalEvidenceEvent({
+      kind: "scan_session_started",
+      title: "Guided scan assistant started",
+      details: "Opened guided scan assistant from the launcher.",
+      actor: "user",
+      source: scene.source,
+      sceneId: scene.id,
+      sceneName: scene.name,
+      revisionDepth: historyDepth,
+      affectedNodeIds: [],
+      confidence: 0.76,
+      beforeSummary: `${scene.name || "Current workspace"} · ${scene.cameras.length} cameras · ${scene.criticalZones.length} critical zones`,
+      afterSummary: "Guided scan assistant opened.",
+      notes: ["Launcher-scoped guided scan assistant event recorded in the evidence ledger."],
+    });
+    setScanWizardMode("guided");
     setShowScanWizard(true);
   };
   const aiDraftSceneJson = useMemo(
@@ -270,11 +291,8 @@ export default function StudioPage() {
     if (bootstrapRef.current) return;
     if (currentResult || !simulationDirty || scene.source !== "demo") return;
     bootstrapRef.current = true;
-    setSimulationRunning(true);
-    const start = performance.now();
-    const result = simulateStudio(scene);
-    setSimulationResult(result, performance.now() - start);
-  }, [currentResult, scene, scene.source, setSimulationResult, setSimulationRunning, simulationDirty]);
+    runSimulationFromStore();
+  }, [currentResult, scene, scene.source, runSimulationFromStore, simulationDirty]);
 
   const launchWorkspace = (viewMode: ViewMode, preset: WorkspacePreset, bottomTab?: BottomTab) => {
     setWorkspacePreset(preset);
@@ -292,10 +310,7 @@ export default function StudioPage() {
   const openIssues = () => launchWorkspace("map", "edit", "issues");
 
   const runSimulation = () => {
-    setSimulationRunning(true);
-    const start = performance.now();
-    const result = simulateStudio(scene);
-    setSimulationResult(result, performance.now() - start);
+    runSimulationFromStore();
     setWorkspacePreset("coverage");
     setViewMode("map");
     setBottomTab("metrics");
@@ -330,6 +345,7 @@ export default function StudioPage() {
         scene={scene}
         result={currentResult}
         simulationDirty={simulationDirty}
+        simulationRunning={simulationRunning}
         savedScenes={savedScenes}
         savedProjects={savedProjects}
         currentRunLabel={currentRunLabel}
@@ -354,19 +370,22 @@ export default function StudioPage() {
           if (!confirmWorkspaceReplacement("start scan intake")) return;
           openScanWizard();
         }}
+        onOpenGuidedScanAssistant={() => setShowGuidedScanKickoff(true)}
         onAiDraft={() => {
           if (!confirmWorkspaceReplacement("open AI layout draft")) return;
           setShowAiDraft(true);
         }}
-        onGuidedScanPlanned={() => setShowGuidedScanKickoff(true)}
-        onVerifyFootagePlanned={() => setShowVerifyFootagePreview(true)}
         onOpenReport={openReport}
         onOpenScene={openScene}
         onUpdateProjectMetadata={updateSavedSceneMetadata}
         onDuplicateProject={duplicateSavedScene}
         onRenameProject={renameSavedScene}
         onOpenMode={(viewMode, preset, bottomTab) => launchWorkspace(viewMode, preset, bottomTab)}
-        featureStatus={PRODUCT_FEATURE_STATUS}
+        onOpenDemoWalkthrough={() => {
+          setDemoMode(true);
+          setDemoStep(0);
+          launchWorkspace("map", "coverage", "metrics");
+        }}
       />
 
       <ProjectStartLauncher
@@ -463,10 +482,11 @@ export default function StudioPage() {
         </div>
       ) : null}
 
-      {showScanWizard ? (
+        {showScanWizard ? (
         <div className="fixed inset-0 z-50 bg-black/55 p-4">
           <div className="mx-auto h-full max-w-6xl rounded-2xl border border-[#1f2637] bg-[#0b0f17] shadow-2xl">
             <ScanSiteWizard
+              mode={scanWizardMode}
               onClose={() => {
                 setShowScanWizard(false);
                 setEnterStudio(true);
@@ -479,28 +499,26 @@ export default function StudioPage() {
       {showGuidedScanKickoff ? (
         <div className="fixed inset-0 z-50 bg-black/55 p-4">
           <div className="mx-auto max-w-3xl rounded-2xl border border-[#1f2637] bg-[#0b0f17] p-4 shadow-2xl">
-            <h2 className="text-sm font-semibold text-white">Guided Scan Reconstruction (Planned)</h2>
+            <h2 className="text-sm font-semibold text-white">Guided Scan Assistant</h2>
             <p className="mt-1 text-xs text-[#91a4c5]">
-              This future flow will guide capture, segmentation, and multi-photo reconstruction. Today, the manual-assisted scan flow is the product entry point.
+              This assistant guides photo capture, then hands off to the same manual review and compile flow used by Scan Site.
             </p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-[11px] text-emerald-100">
-                <div className="font-semibold uppercase tracking-[0.14em] text-emerald-200">Manual-assisted flow available now</div>
-                <div className="mt-1">Upload site photos and mark walls, doors, cameras, objects, lights, and zones</div>
-                <div>Compile directly into an editable SecurityScene</div>
-                <div>Run baseline simulation in Studio when camera and critical zone are present</div>
+                <div className="font-semibold uppercase tracking-[0.14em] text-emerald-200">What the assistant does</div>
+                <div className="mt-1">Suggests a practical capture order for overview, entry, counter, and close-ups</div>
+                <div>Enables auto-path hints while keeping manual review in the loop</div>
+                <div>Compiles to the same editable SecurityScene used by the manual flow</div>
               </div>
               <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-[11px] text-amber-100">
-                <div className="font-semibold uppercase tracking-[0.14em] text-amber-200">Planned upgrades</div>
+                <div className="font-semibold uppercase tracking-[0.14em] text-amber-200">Still manual by design</div>
                 <div>No automatic segmentation or depth solve yet</div>
-                <div>Auto structure inference from multiple images</div>
-                <div>Multi-photo correspondence + confidence surfacing</div>
-                <div>Pose/FOV auto-assist suggestions</div>
-                <div>Semi-automated reconstruction QA checks</div>
+                <div>The user still confirms, edits, and rejects candidates before compile</div>
+                <div>Advanced multi-photo correspondence remains a later upgrade</div>
               </div>
             </div>
             <div className="mt-3 rounded-lg border border-[#22314b] bg-[#101827] px-3 py-2 text-[10px] text-[#b6c6e6]">
-              Planning mode only: guided capture is not implemented yet, so the manual-assisted scan flow remains the supported entry point.
+              Guided assistant preview: the assistant shortens capture setup, but the scene still compiles through the manual-assisted review path.
             </div>
             <div className="mt-3 flex justify-end gap-2">
               <button
@@ -512,12 +530,12 @@ export default function StudioPage() {
               <button
                 onClick={() => {
                   setShowGuidedScanKickoff(false);
-                  setShowScanWizard(true);
-                  setLaunchNotice("Guided scan is planned. Opening the manual-assisted Scan Site flow instead.");
+                  openGuidedScanAssistant();
+                  setLaunchNotice("Guided scan assistant opened. The manual-assisted review and compile flow remains in control.");
                 }}
                 className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500"
               >
-                Open Manual-Assisted Scan
+                Open Guided Assistant
               </button>
             </div>
           </div>

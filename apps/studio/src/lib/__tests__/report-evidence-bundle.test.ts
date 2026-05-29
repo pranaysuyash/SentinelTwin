@@ -6,7 +6,7 @@ import { buildCompareReportData, buildReportData } from "@/report";
 import { buildReportEvidenceBundle, stringifyReportEvidenceBundle } from "@/lib/report-evidence-bundle";
 
 describe("report evidence bundle", () => {
-  test("packages a single report with its evidence trail", { timeout: 15000 }, () => {
+  test("packages a single report with its evidence trail", () => {
     const scene = createSmallRetailShopScene();
     const result = simulateStudio(scene);
     const report = buildReportData(scene, result);

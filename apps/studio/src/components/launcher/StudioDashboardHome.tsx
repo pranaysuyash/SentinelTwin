@@ -24,7 +24,6 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/cn";
-import { PRODUCT_FEATURE_STATUS_LAST_VERIFIED, type ProductFeatureEntry } from "@/lib/product-feature-status";
 import { getSceneSourceMeta } from "@/lib/scene-source";
 import type { BottomTab, SavedProjectRecord, ViewMode, WorkspacePreset } from "@/store/studio-store";
 import { useStudioStore } from "@/store/studio-store";
@@ -111,8 +110,48 @@ const QUALITY_COLOR: Record<DoriQuality, string> = {
   scrutinize: "#1d4ed8",
 };
 
+const QUALITY_TEXT_CLASS: Record<DoriQuality, string> = {
+  none: "text-red-300",
+  detection: "text-amber-400",
+  observation: "text-amber-300",
+  recognition: "text-emerald-300",
+  identification: "text-sky-300",
+  overview: "text-sky-300",
+  outline: "text-sky-300",
+  discern: "text-emerald-300",
+  perceive: "text-emerald-300",
+  characterize: "text-sky-300",
+  validate: "text-blue-300",
+  scrutinize: "text-blue-300",
+};
+
+const DORI_QUALITY_ORDER: Record<DoriQuality, number> = {
+  none: 0,
+  detection: 1,
+  observation: 2,
+  recognition: 3,
+  identification: 4,
+  overview: 5,
+  outline: 6,
+  discern: 7,
+  perceive: 8,
+  characterize: 9,
+  validate: 10,
+  scrutinize: 11,
+};
+
 function formatDoriStandard(standard: "dori_2014" | "oodpcvs_2025" | (string & {})) {
   return standard === "oodpcvs_2025" ? "OODPCVS (7-level)" : "Simplified PPM";
+}
+
+function qualityToLabel(quality: DoriQuality) {
+  if (quality === "identification") return "Identification";
+  if (quality === "recognition") return "Recognition";
+  return quality === "observation"
+    ? "Observation"
+    : quality === "detection"
+      ? "Detection"
+      : quality[0]!.toUpperCase() + quality.slice(1);
 }
 
 const STARTER_PREVIEW_CLASS: Record<StarterTone, string> = {
@@ -126,6 +165,7 @@ type StudioDashboardHomeProps = {
   scene: SecurityScene;
   result: SimulationResult | null;
   simulationDirty: boolean;
+  simulationRunning: boolean;
   savedScenes: SecurityScene[];
   savedProjects: SavedProjectRecord[];
   currentRunLabel: string | null;
@@ -142,15 +182,13 @@ type StudioDashboardHomeProps = {
   onImportScene: () => void;
   onScanSite: () => void;
   onAiDraft: () => void;
-  onVerifyFootagePlanned: () => void;
-  onGuidedScanPlanned: () => void;
   onOpenReport: () => void;
   onOpenScene?: (scene: SecurityScene) => void;
   onUpdateProjectMetadata: (sceneId: string, patch: Partial<Pick<SavedProjectRecord, "folder" | "tags" | "pinned" | "lastOpenedAt">>) => void;
   onDuplicateProject: (sceneId: string) => SavedProjectRecord | null;
   onRenameProject: (sceneId: string, nextName: string) => SavedProjectRecord | null;
   onOpenMode: (viewMode: ViewMode, preset: WorkspacePreset, bottomTab?: BottomTab) => void;
-  featureStatus: ProductFeatureEntry[];
+  onOpenDemoWalkthrough?: () => void;
 };
 
 type ScenePreviewProps = {
@@ -944,6 +982,7 @@ export function StudioDashboardHome({
   scene,
   result,
   simulationDirty,
+  simulationRunning,
   savedScenes,
   savedProjects,
   currentRunLabel,
@@ -954,27 +993,65 @@ export function StudioDashboardHome({
   onOpenCompareFixes,
   onOpenIssues,
   onRunSimulation,
-  onStartProject,
+  onStartProject: _onStartProject,
   onCreateScene,
-  onImportFloorPlan,
+  onImportFloorPlan: _onImportFloorPlan,
   onImportScene,
   onScanSite,
   onAiDraft,
-  onVerifyFootagePlanned,
-  onGuidedScanPlanned,
   onOpenReport,
   onOpenScene,
   onUpdateProjectMetadata,
   onDuplicateProject,
   onRenameProject,
   onOpenMode,
-  featureStatus,
+  onOpenDemoWalkthrough,
 }: StudioDashboardHomeProps) {
   const [hydrated, setHydrated] = useState(false);
+  void _onStartProject;
   const [previewMode, setPreviewMode] = useState<"2d" | "3d">("2d");
   const coverage = result?.totalCoveragePct ?? scene.simulation?.totalCoveragePct ?? null;
-  const passCount = result?.criticalZoneResults.filter((zone) => zone.status === "pass").length ?? (scene.simulation?.criticalZoneResults ?? []).filter((zone) => zone.status === "pass").length;
-  const totalZones = result?.criticalZoneResults.length ?? (scene.simulation?.criticalZoneResults ?? []).length ?? scene.criticalZones.length;
+  const criticalZoneResults = result?.criticalZoneResults ?? scene.simulation?.criticalZoneResults ?? [];
+  const criticalZoneResultMap = criticalZoneStatusMap(result ?? scene.simulation ?? null);
+  const hasZoneResults = criticalZoneResults.length > 0;
+  const passCount = criticalZoneResults.filter((zone) => zone.status === "pass").length;
+  const totalZones = criticalZoneResults.length || scene.criticalZones.length;
+  const topCriticalZone = criticalZoneResults.length > 0 ? criticalZoneResults.reduce((acc, zone) => {
+    if (!acc) return zone;
+    return DORI_QUALITY_ORDER[zone.actualQuality] < DORI_QUALITY_ORDER[acc.actualQuality] ? zone : acc;
+  }, criticalZoneResults[0]) ?? null : null;
+  const worstQualityLabel = topCriticalZone ? qualityToLabel(topCriticalZone.actualQuality) : null;
+  const worstQualityValue = topCriticalZone?.actualQuality ?? null;
+  const cameraFailureZones = scene.criticalZones
+    .map((zone) => ({
+      zone,
+      result: criticalZoneResultMap.get(zone.id),
+    }))
+    .filter((entry) => {
+      const mapResult = entry.result;
+      return Boolean(
+        mapResult
+        && entry.zone.redundancyRequired
+        && mapResult.redundancyCameraCount < 2,
+      );
+    });
+  const redundancyRequiredZones = scene.criticalZones.filter((zone) => zone.redundancyRequired);
+  const redundancyCount = redundancyRequiredZones.length;
+  const redundancyFailCount = cameraFailureZones.length;
+  const redundancyValue = !hasZoneResults
+    ? "Needs check"
+    : redundancyCount === 0
+      ? "Not set"
+      : redundancyFailCount > 0
+        ? `${redundancyCount - redundancyFailCount}/${redundancyCount}`
+        : `${redundancyCount}`;
+  const redundancyDetail = !hasZoneResults
+    ? "Run simulation to evaluate redundancy"
+    : redundancyCount === 0
+      ? "No redundancy-required zones"
+      : redundancyFailCount > 0
+        ? "Some redundancy paths fail if a camera drops"
+        : "Redundancy coverage intact";
   const issues = [...(result?.issues ?? scene.simulation?.issues ?? [])].sort((a, b) => ISSUE_SEVERITY_ORDER[a.severity] - ISSUE_SEVERITY_ORDER[b.severity]);
   const worstIssue = issues[0] ?? null;
   const issuesBySeverity: Record<IssueSeverity, SecurityIssue[]> = {
@@ -1069,10 +1146,6 @@ export function StudioDashboardHome({
     return browserProjects[0] ?? null;
   }, [browserProjects, selectedProjectId]);
   const selectedProjectScene = selectedProjectRecord?.scene ?? scene;
-  const manualScanFeature = featureStatus.find((entry) => entry.feature === "Scan Site (manual-assisted)") ?? null;
-  const guidedScanFeature = featureStatus.find((entry) => entry.feature === "Guided scan reconstruction") ?? null;
-  const aiLayoutDraftFeature = featureStatus.find((entry) => entry.feature === "AI layout draft") ?? null;
-  const verifyFootageFeature = featureStatus.find((entry) => entry.feature === "Real footage verification") ?? null;
   useEffect(() => {
     queueMicrotask(() => {
       setHydrated(true);
@@ -1116,13 +1189,20 @@ export function StudioDashboardHome({
   const featuredProjects = useMemo(() => {
     return filteredProjects.slice(0, 8);
   }, [filteredProjects]);
-  const featureSummary = useMemo(() => {
-    return featureStatus.reduce((acc, feature) => {
-      acc[feature.status] = (acc[feature.status] ?? 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-  }, [featureStatus]);
   const tagFilters = Object.keys(tagCounts).sort((a, b) => tagCounts[b] - tagCounts[a] || a.localeCompare(b)).slice(0, 8);
+  void _onImportFloorPlan;
+  const statusLabel = simulationRunning
+    ? "Running"
+    : coverage == null
+      ? "Simulation pending"
+      : simulationDirty
+        ? "Needs recompute"
+        : "Up to date";
+  const statusTone = simulationRunning
+    ? "border-cyan-400/25 bg-cyan-500/10 text-cyan-200"
+    : simulationDirty
+      ? "border-amber-400/25 bg-amber-500/10 text-amber-200"
+      : "border-emerald-400/25 bg-emerald-500/10 text-emerald-200";
   const [activeFolder, setActiveFolder] = useState<string>("All");
   const [activeTag, setActiveTag] = useState<string>("All");
   const visibleProjects = browserProjects.filter((project) => {
@@ -1159,7 +1239,6 @@ export function StudioDashboardHome({
     "--st-muted": "#8a96ab",
     "--st-accent": "#5bb6ff",
   } as CSSProperties;
-
   return (
     <main className="relative min-h-screen overflow-hidden bg-[color:var(--st-bg)] text-[color:var(--st-text)]" style={rootStyle}>
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(56,189,248,0.12),transparent_30%),radial-gradient(circle_at_80%_8%,rgba(16,185,129,0.08),transparent_28%),radial-gradient(circle_at_50%_100%,rgba(245,158,11,0.06),transparent_26%)]" />
@@ -1184,11 +1263,9 @@ export function StudioDashboardHome({
             </span>
             <span className={cn(
               "inline-flex items-center rounded-xl border px-3 py-2 text-xs font-medium",
-              simulationDirty
-                ? "border-amber-400/25 bg-amber-500/10 text-amber-200"
-                : "border-emerald-400/25 bg-emerald-500/10 text-emerald-200",
+              statusTone,
             )}>
-              {coverage == null ? "Simulation pending" : simulationDirty ? "Needs recompute" : "Up to date"}
+              {statusLabel}
             </span>
             <span suppressHydrationWarning className="inline-flex items-center rounded-xl border border-transparent px-2 py-2 text-xs text-[color:var(--st-muted)]">
               {currentRunLabel ?? "Last run: Never"}
@@ -1371,10 +1448,37 @@ export function StudioDashboardHome({
                 </div>
               </div>
 
-              <div className="mt-4 grid gap-3 lg:grid-cols-4">
-                <MiniStat label="Coverage" value={coverage != null ? `${Math.round(coverage)}%` : "—"} accent={coverage != null ? coverageTone(coverage) : "text-white"} detail="Walkable scene score" />
-                <MiniStat label="Critical Zones" value={`${passCount}/${totalZones}`} accent={passCount === totalZones ? "text-emerald-300" : "text-amber-300"} detail="Passing zones" />
-                <MiniStat label="Worst Issue" value={worstIssue ? issueSeverityLabel(worstIssue.severity) : "None"} accent={worstIssue ? "text-red-300" : "text-emerald-300"} detail={worstIssue ? worstIssue.description : "No failures detected"} />
+              <div className="mt-4 grid gap-3 lg:grid-cols-6">
+                <MiniStat
+                  label="Coverage"
+                  value={coverage != null ? `${Math.round(coverage)}%` : "—"}
+                  accent={coverage != null ? coverageTone(coverage) : "text-white"}
+                  detail="Walkable scene score"
+                />
+                <MiniStat
+                  label="Critical Zones"
+                  value={`${passCount}/${totalZones}`}
+                  accent={totalZones > 0 && passCount === totalZones ? "text-emerald-300" : "text-amber-300"}
+                  detail="Passing zones"
+                />
+                <MiniStat
+                  label="Worst Quality"
+                  value={worstQualityLabel ?? "—"}
+                  accent={worstQualityValue ? QUALITY_TEXT_CLASS[worstQualityValue] : "text-white"}
+                  detail={worstIssue ? `Top issue: ${worstIssue.description}` : "Coverage quality floor"}
+                />
+                <MiniStat
+                  label="Issues"
+                  value={`${issues.length}`}
+                  accent={issues.length > 0 ? "text-amber-300" : "text-emerald-300"}
+                  detail={issues[0] ? issues[0].description : "No open issues detected"}
+                />
+                <MiniStat
+                  label="Redundancy"
+                  value={redundancyValue}
+                  accent={redundancyFailCount > 0 ? "text-amber-300" : redundancyCount === 0 ? "text-sky-200" : "text-emerald-300"}
+                  detail={redundancyDetail}
+                />
                 <MiniStat label="Last Run" value={formatTime(lastRun)} accent="text-sky-200" detail="Computed simulation" />
               </div>
 
@@ -1384,6 +1488,24 @@ export function StudioDashboardHome({
                 <ActionButton icon={<Play className="h-4 w-4" />} label="Open Path Replay" description="Inspect the replay actor and route." onClick={onOpenPathReplay} className="min-w-[210px] flex-1" />
                 <ActionButton icon={<LayoutDashboard className="h-4 w-4" />} label="Compare Fixes" description="Open the before/after comparison view." onClick={onOpenCompareFixes} className="min-w-[210px] flex-1" />
               </div>
+              {onOpenDemoWalkthrough ? (
+                <div className="mt-4">
+                  <button
+                    type="button"
+                    onClick={onOpenDemoWalkthrough}
+                    className="group flex w-full items-center gap-3 rounded-2xl border border-emerald-400/25 bg-emerald-500/8 px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-300/45 hover:bg-emerald-500/14"
+                  >
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-400/25 bg-emerald-500/12">
+                      <Sparkles className="h-5 w-5 text-emerald-300" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold text-emerald-100">Run Demo Walkthrough</div>
+                      <div className="mt-0.5 text-[11px] text-emerald-200/60">Guided 7-step walkthrough: baseline, camera wall, path replay, identify failures, apply a fix, compare, report.</div>
+                    </div>
+                    <ArrowRight className="h-4 w-4 flex-none text-emerald-300 transition-transform duration-200 group-hover:translate-x-1" />
+                  </button>
+                </div>
+              ) : null}
 
               <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.8fr)]">
                 <div className="rounded-[24px] border border-[color:var(--st-border)] bg-[color:var(--st-panel-2)] p-3">
@@ -1431,10 +1553,8 @@ export function StudioDashboardHome({
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     {[
-                      { icon: <Sparkles className="h-4 w-4" />, label: "Start Project", detail: "Open launcher chooser", onClick: onStartProject },
                       { icon: <Plus className="h-4 w-4" />, label: "New Blank Scene", detail: "Start from scratch", onClick: onCreateScene },
                       { icon: <FileUp className="h-4 w-4" />, label: "Import Scene JSON", detail: "From file", onClick: onImportScene },
-                      { icon: <MapIcon className="h-4 w-4" />, label: "Import Floor Plan", detail: "Review plan extraction", onClick: onImportFloorPlan },
                       {
                         icon: <ScanSearch className="h-4 w-4" />,
                         label: "Scan a Site",
@@ -1830,88 +1950,6 @@ export function StudioDashboardHome({
                     <Layers3 className="h-3.5 w-3.5 text-emerald-300" />
                     Quick Start
                   </div>
-                  <div className="mt-3 rounded-[20px] border border-[color:var(--st-border)] bg-white/[0.025] p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Entry flow maturity</div>
-                      <div className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
-                        Manual-assisted now
-                      </div>
-                    </div>
-                    <div className="mt-3 space-y-2">
-                      {manualScanFeature ? (
-                        <div className="flex items-start gap-2 rounded-2xl border border-cyan-400/15 bg-cyan-500/8 px-3 py-2">
-                          <span className={cn(
-                            "rounded-full border px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em]",
-                            manualScanFeature.status === "Available"
-                              ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-200"
-                              : manualScanFeature.status === "Preview"
-                                ? "border-amber-400/25 bg-amber-500/10 text-amber-200"
-                                : "border-slate-400/20 bg-slate-500/10 text-slate-200",
-                          )}>
-                            {manualScanFeature.status}
-                          </span>
-                          <div className="min-w-0">
-                            <div className="text-[11px] font-medium text-white">Scan Site (manual-assisted)</div>
-                            <div className="text-[10px] text-[color:var(--st-muted)]">{manualScanFeature.detail}</div>
-                          </div>
-                        </div>
-                      ) : null}
-                      {guidedScanFeature ? (
-                        <div className="flex items-start gap-2 rounded-2xl border border-slate-400/15 bg-slate-500/8 px-3 py-2">
-                          <span className={cn(
-                            "rounded-full border px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em]",
-                            guidedScanFeature.status === "Available"
-                              ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-200"
-                              : guidedScanFeature.status === "Preview"
-                                ? "border-amber-400/25 bg-amber-500/10 text-amber-200"
-                                : "border-slate-400/20 bg-slate-500/10 text-slate-200",
-                          )}>
-                            {guidedScanFeature.status}
-                          </span>
-                          <div className="min-w-0">
-                            <div className="text-[11px] font-medium text-white">Guided scan reconstruction</div>
-                            <div className="text-[10px] text-[color:var(--st-muted)]">{guidedScanFeature.detail}</div>
-                          </div>
-                        </div>
-                      ) : null}
-                      {aiLayoutDraftFeature ? (
-                        <div className="flex items-start gap-2 rounded-2xl border border-violet-400/15 bg-violet-500/8 px-3 py-2">
-                          <span className={cn(
-                            "rounded-full border px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em]",
-                            aiLayoutDraftFeature.status === "Available"
-                              ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-200"
-                              : aiLayoutDraftFeature.status === "Preview"
-                                ? "border-amber-400/25 bg-amber-500/10 text-amber-200"
-                                : "border-slate-400/20 bg-slate-500/10 text-slate-200",
-                          )}>
-                            {aiLayoutDraftFeature.status}
-                          </span>
-                          <div className="min-w-0">
-                            <div className="text-[11px] font-medium text-white">AI layout draft</div>
-                            <div className="text-[10px] text-[color:var(--st-muted)]">{aiLayoutDraftFeature.detail}</div>
-                          </div>
-                        </div>
-                      ) : null}
-                      {verifyFootageFeature ? (
-                        <div className="flex items-start gap-2 rounded-2xl border border-amber-400/15 bg-amber-500/8 px-3 py-2">
-                          <span className={cn(
-                            "rounded-full border px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em]",
-                            verifyFootageFeature.status === "Available"
-                              ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-200"
-                              : verifyFootageFeature.status === "Preview"
-                                ? "border-amber-400/25 bg-amber-500/10 text-amber-200"
-                                : "border-slate-400/20 bg-slate-500/10 text-slate-200",
-                          )}>
-                            {verifyFootageFeature.status}
-                          </span>
-                          <div className="min-w-0">
-                            <div className="text-[11px] font-medium text-white">Real footage verification</div>
-                            <div className="text-[10px] text-[color:var(--st-muted)]">{verifyFootageFeature.detail}</div>
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
                   <div className="mt-4 space-y-2">
                     <ActionButton icon={<Plus className="h-4 w-4" />} label="New Blank Scene" description="Start from an empty scene shell." onClick={onCreateScene} />
                     <ActionButton icon={<FileUp className="h-4 w-4" />} label="Import Scene JSON" description="Load a canonical scene file." onClick={onImportScene} />
@@ -1941,7 +1979,7 @@ export function StudioDashboardHome({
 
           <aside className="flex flex-col gap-4 rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
             <div>
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
+              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]"> 
                 <TriangleAlert className="h-3.5 w-3.5 text-amber-300" />
                 Security Status
               </div>
@@ -2026,51 +2064,6 @@ export function StudioDashboardHome({
                 Edit in Studio
               </button>
             </div>
-
-            <details className="rounded-2xl border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2">
-              <summary className="cursor-pointer list-none text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
-                Product feature status
-              </summary>
-              <div className="mt-3 space-y-2">
-                <div className="text-[11px] text-[color:var(--st-muted)]">Last verified {PRODUCT_FEATURE_STATUS_LAST_VERIFIED}</div>
-                {featureStatus.slice(0, 4).map((entry) => (
-                  <div key={entry.feature} className="flex items-start gap-2 rounded-2xl border border-white/[0.05] bg-white/[0.03] px-3 py-2">
-                    <span className={cn(
-                      "rounded-full border px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em]",
-                      entry.status === "Available"
-                        ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-200"
-                        : entry.status === "Preview"
-                          ? "border-amber-400/25 bg-amber-500/10 text-amber-200"
-                          : "border-slate-400/20 bg-slate-500/10 text-slate-200",
-                    )}>
-                      {entry.status}
-                    </span>
-                    <div className="min-w-0">
-                      <div className="text-sm">{entry.feature}</div>
-                      <div className="text-[11px] text-[color:var(--st-muted)]">{entry.detail}</div>
-                    </div>
-                    {entry.feature === "Real footage verification" ? (
-                      <button
-                        type="button"
-                        className="rounded-md border border-white/10 px-2 py-1 text-[10px] font-medium hover:bg-white/[0.04]"
-                        onClick={onVerifyFootagePlanned}
-                      >
-                        Open
-                      </button>
-                    ) : null}
-                    {entry.feature === "Guided scan reconstruction" ? (
-                      <button
-                        type="button"
-                        className="rounded-md border border-white/10 px-2 py-1 text-[10px] font-medium hover:bg-white/[0.04]"
-                        onClick={onGuidedScanPlanned}
-                      >
-                        Preview
-                      </button>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            </details>
           </aside>
         </div>
         <footer className="mt-auto flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[color:var(--st-border)] bg-[color:var(--st-panel)] px-4 py-2.5 text-[11px] text-[color:var(--st-muted)]">

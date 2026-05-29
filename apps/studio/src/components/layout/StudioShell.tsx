@@ -10,7 +10,7 @@ import { StatusBar } from "./StatusBar";
 import { LeftPanel } from "@/components/left-panel/LeftPanel";
 import { ViewModeBar } from "@/components/view/ViewModeBar";
 import { CommandBar } from "@/components/command-bar/CommandBar";
-import { DemoModeOverlay } from "@/components/demo/DemoModeOverlay";
+import { DemoWalkthroughPanel } from "@/components/demo/DemoWalkthroughPanel";
 import { DockLayout } from "@/components/dock/DockLayout";
 import { DockPanel } from "@/components/dock/DockPanel";
 import { ContextBottomPanel } from "@/components/panels/ContextBottomPanel";
@@ -152,6 +152,7 @@ export default function StudioShell() {
   const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
   const selectedCameraId = useStudioStore((s) => s.selectedCameraId);
   const selectNode = useStudioStore((s) => s.selectNode);
+  const setSelectedCameraId = useStudioStore((s) => s.setSelectedCameraId);
   const translateSelectedNodes = useStudioStore((s) => s.translateSelectedNodes);
   const scene = useStudioStore((s) => s.scene);
   const rightPanelMode = useStudioStore((s) => s.rightPanelMode);
@@ -393,11 +394,20 @@ export default function StudioShell() {
   useEffect(() => {
     if (viewMode !== "camera_view") return;
     if (scene.cameras.length === 0) return;
+    const firstCameraId = scene.cameras[0]?.id;
+    if (!firstCameraId) return;
     const selectedIsCamera = !!selectedNodeId && scene.cameras.some((camera) => camera.id === selectedNodeId);
-    if (selectedIsCamera) return;
-    const selectedCameraExists = !!selectedCameraId && scene.cameras.some((camera) => camera.id === selectedCameraId);
-    if (selectedCameraExists) return;
-  }, [scene.cameras, selectedCameraId, selectedNodeId, viewMode]);
+    if (!selectedIsCamera) {
+      const nextCameraId = selectedCameraId && scene.cameras.some((camera) => camera.id === selectedCameraId)
+        ? selectedCameraId
+        : firstCameraId;
+      selectNode(nextCameraId);
+      return;
+    }
+    if (selectedCameraId !== selectedNodeId) {
+      setSelectedCameraId(selectedNodeId);
+    }
+  }, [scene.cameras, selectedCameraId, selectedNodeId, setSelectedCameraId, selectNode, viewMode]);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[#0b0c10] text-[#dde2ef]">
@@ -425,7 +435,7 @@ export default function StudioShell() {
           {visibleComponents.view_mode_bar ? <ViewModeBar /> : null}
           <WorkspaceArea />
           {visibleComponents.command_bar ? <CommandBar /> : null}
-          {demoMode ? <DemoModeOverlay /> : null}
+          {demoMode ? <DemoWalkthroughPanel onFinish={() => {}} /> : null}
         </div>
       ) : (
         <DockLayout
@@ -484,7 +494,7 @@ export default function StudioShell() {
             {visibleComponents.view_mode_bar ? <ViewModeBar /> : null}
             <WorkspaceArea />
             {visibleComponents.command_bar ? <CommandBar /> : null}
-            {demoMode ? <DemoModeOverlay /> : null}
+            {demoMode ? <DemoWalkthroughPanel onFinish={() => {}} /> : null}
           </div>
         </DockLayout>
       )}

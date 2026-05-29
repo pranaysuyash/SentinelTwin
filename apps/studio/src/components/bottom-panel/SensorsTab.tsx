@@ -65,7 +65,12 @@ export function SensorsTab() {
   const setSensorPlacementType = useStudioStore((s) => s.setSensorPlacementType);
   const selectNode = useStudioStore((s) => s.selectNode);
   const selectedNodeId = useStudioStore((s) => s.selectedNodeId);
-  const sensorEvents = useStudioStore((s) => s.sensorEvents.filter((event) => event.sceneId === s.scene.id));
+  const sceneId = useStudioStore((s) => s.scene.id);
+  const allSensorEvents = useStudioStore((s) => s.sensorEvents);
+  const sensorEvents = useMemo(
+    () => allSensorEvents.filter((event) => event.sceneId === sceneId),
+    [allSensorEvents, sceneId],
+  );
   const recordSensorEvent = useStudioStore((s) => s.recordSensorEvent);
   const clearSensorEvents = useStudioStore((s) => s.clearSensorEvents);
   const updateNode = useStudioStore((s) => s.updateNode);

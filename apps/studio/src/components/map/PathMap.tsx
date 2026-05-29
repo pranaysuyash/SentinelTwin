@@ -67,7 +67,9 @@ export function PathMap({
   const setHovered = useStudioStore((s) => s.setHoveredMapNodeId);
   const activePathId = useStudioStore((s) => s.activePathId);
   const setActivePathId = useStudioStore((s) => s.setActivePathId);
-  const mapState = useStudioStore((s) => s.mapState.pathMap);
+  const mapZoom = useStudioStore((s) => s.mapState.pathMap.zoom);
+  const mapPanX = useStudioStore((s) => s.mapState.pathMap.pan[0]);
+  const mapPanY = useStudioStore((s) => s.mapState.pathMap.pan[1]);
   const setMapZoom = useStudioStore((s) => s.setMapZoom);
   const setMapPan = useStudioStore((s) => s.setMapPan);
   const fitMap = useStudioStore((s) => s.fitMap);
@@ -101,6 +103,13 @@ export function PathMap({
   }, [activePath, result?.coverageCells]);
 
   const pathBands = useMemo(() => groupPathQualitySamples(pathSamples), [pathSamples]);
+  const mapState = useMemo(
+    () => ({
+      zoom: mapZoom,
+      pan: [mapPanX, mapPanY] as [number, number],
+    }),
+    [mapPanX, mapPanY, mapZoom],
+  );
 
   const currentTime = pathResult ? pathResult.totalDurationS * pathReplay.progress : 0;
   const currentSampleIndex = useMemo(() => {

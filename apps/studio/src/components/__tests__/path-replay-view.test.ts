@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const pathReplayPath = "./src/components/view/PathReplayView.tsx";
+const pathReplayPath = join(import.meta.dir, "../view/PathReplayView.tsx");
 
 describe("PathReplayView", () => {
   test("follows the shared replay-follow state when enabled", () => {

@@ -1,9 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-import { formatTargetTypeLabel } from "@/components/view/CameraViewMode";
+import { formatTargetTypeLabel } from "@/components/view/camera-view-utils";
 
-const cameraViewModePath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/view/CameraViewMode.tsx";
+const cameraViewModePath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../view/CameraViewMode.tsx");
 
 describe("CameraViewMode", () => {
   test("exposes the live overlay strip and replay presets", () => {

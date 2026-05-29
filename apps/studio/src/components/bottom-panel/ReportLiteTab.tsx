@@ -8,9 +8,11 @@ import { useAiCommand } from "@/hooks/use-ai-command";
 import { buildSecurityOutcomeModel } from "@/lib/security-outcome/security-outcome-model";
 import { exportTextAsPdf } from "@/lib/pdf-export";
 import { buildReportEvidenceBundle, stringifyReportEvidenceBundle } from "@/lib/report-evidence-bundle";
+import { summarizeOperationalEvidenceTemporalTwin } from "@/lib/operational-evidence";
 import { buildCompareReportData, exportCompareAsHtml, exportCompareAsMarkdown } from "@/report";
 import { buildReportData } from "@/report";
 import { summarizeSceneTruthLadder } from "@/lib/truth-ladder";
+import { QUALITY_RANK } from "@/lib/quality-display";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { useStudioStore } from "@/store/studio-store";
 import { buildReportSummaryLines } from "@/lib/report-summary";
@@ -22,6 +24,7 @@ export function ReportLiteTab() {
   const scene = useStudioStore((s) => s.scene);
   const snapshots = useStudioStore((s) => s.snapshots);
   const temporalProfile = useStudioStore((s) => s.temporalProfile);
+  const operationalEvidenceEvents = useStudioStore((s) => s.operationalEvidenceEvents);
   const compareVisualEvidence = useStudioStore((s) => s.compareVisualEvidence);
   const compareReportSelection = useStudioStore((s) => s.compareReportSelection);
   const activePathId = useStudioStore((s) => s.activePathId);
@@ -33,12 +36,16 @@ export function ReportLiteTab() {
   const [snapshotBId, setSnapshotBId] = useState<string | null>(null);
   const activePath = scene.paths.find((path) => path.id === activePathId) ?? null;
   const outcome = buildSecurityOutcomeModel(scene, result, activePath);
-  const reportSummary = buildReportSummaryLines(outcome, result, scene);
   const truthLadder = useMemo(() => summarizeSceneTruthLadder(scene), [scene]);
+  const temporalTwin = useMemo(
+    () => summarizeOperationalEvidenceTemporalTwin(operationalEvidenceEvents, scene),
+    [operationalEvidenceEvents, scene],
+  );
+  const reportSummary = buildReportSummaryLines(outcome, result, scene, temporalTwin);
 
   // Build markdown from either AI report or simulation data
   const markdown = result
-    ? (aiReport ? buildAiReportMarkdown(aiReport) : defaultMarkdown(result, scene, temporalProfile))
+    ? (aiReport ? buildAiReportMarkdown(aiReport) : defaultMarkdown(result, scene, temporalProfile, operationalEvidenceEvents))
     : "";
 
   const copy = () => navigator.clipboard.writeText(markdown);
@@ -84,7 +91,7 @@ export function ReportLiteTab() {
       return;
     }
     if (!result) return;
-    const html = buildHtmlReport(scene, result, aiReport, temporalProfile);
+    const html = buildHtmlReport(scene, result, aiReport, temporalProfile, operationalEvidenceEvents);
     const blob = new Blob([html], { type: "text/html;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -199,7 +206,7 @@ export function ReportLiteTab() {
       return;
     }
     if (!result) return;
-    const html = buildHtmlReport(scene, result, aiReport, temporalProfile);
+    const html = buildHtmlReport(scene, result, aiReport, temporalProfile, operationalEvidenceEvents);
     const win = window.open("", "_blank");
     if (win) {
       win.document.write(html);
@@ -487,6 +494,7 @@ function defaultMarkdown(
   result: NonNullable<ReturnType<typeof useStudioStore.getState>["simulationResult"]>,
   scene: ReturnType<typeof useStudioStore.getState>["scene"],
   temporalProfile: ReturnType<typeof useStudioStore.getState>["temporalProfile"],
+  operationalEvidenceEvents: ReturnType<typeof useStudioStore.getState>["operationalEvidenceEvents"],
 ): string {
   const failingZones = result.criticalZoneResults.filter((zone) => zone.status !== "pass");
   const verifiedRecommendations = result.recommendations.filter((rec) => rec.verified);
@@ -501,6 +509,7 @@ function defaultMarkdown(
     .map((entry) => parseEvidenceEntry(entry))
     .filter((entry): entry is { when: string; title: string; details: string; confidence: string } => entry !== null);
   const sensorEvidenceCount = evidenceEntries.filter((entry) => /sensor/i.test(`${entry.title} ${entry.details}`)).length;
+  const temporalTwin = summarizeOperationalEvidenceTemporalTwin(operationalEvidenceEvents, scene);
   const truthLadder = summarizeSceneTruthLadder(scene);
   const lines = [
     "# SentinelTwin Coverage Report",
@@ -563,6 +572,17 @@ function defaultMarkdown(
         ]
       : ["- Recent Evidence Entries: none"]),
     "",
+    "### Temporal Operational Twin",
+    `- Scene Events: ${temporalTwin.totalEvents}`,
+    `- Reconstructable Checkpoints: ${temporalTwin.checkpointCount}`,
+    `- Branch Heads: ${temporalTwin.branchHeadCount}`,
+    `- Current Scene: ${temporalTwin.currentSceneSummary?.detail ?? "Unavailable."}`,
+    `- Latest Checkpoint: ${temporalTwin.latestCheckpoint ? `${temporalTwin.latestCheckpoint.title} (${temporalTwin.latestCheckpoint.branchLabel})` : "Unavailable."}`,
+    `- Checkpoint Age: ${temporalTwin.latestCheckpointAgeMs != null ? `${Math.max(1, Math.round(temporalTwin.latestCheckpointAgeMs / 60000))}m` : "Unavailable."}`,
+    `- Checkpoint Delta: ${temporalTwin.currentVsLatestCheckpointDelta
+      ? `cameras ${temporalTwin.currentVsLatestCheckpointDelta.cameras >= 0 ? "+" : ""}${temporalTwin.currentVsLatestCheckpointDelta.cameras}, zones ${temporalTwin.currentVsLatestCheckpointDelta.zones >= 0 ? "+" : ""}${temporalTwin.currentVsLatestCheckpointDelta.zones}, sensors ${temporalTwin.currentVsLatestCheckpointDelta.sensors >= 0 ? "+" : ""}${temporalTwin.currentVsLatestCheckpointDelta.sensors}`
+      : "Unavailable."}`,
+    "",
     "### Recommendations",
     ...result.recommendations.map((r) => "- [" + (r.verified ? "verified" : "unverified") + "] " + r.description + " :: " + r.estimatedImpact),
     "",
@@ -614,11 +634,13 @@ function buildHtmlReport(
   result: NonNullable<ReturnType<typeof useStudioStore.getState>["simulationResult"]>,
   aiReport: SecurityReport | null,
   temporalProfile: ReturnType<typeof useStudioStore.getState>["temporalProfile"],
+  operationalEvidenceEvents: ReturnType<typeof useStudioStore.getState>["operationalEvidenceEvents"],
 ): string {
   const isAi = aiReport != null;
   const title = isAi ? aiReport!.title : "SentinelTwin Coverage Report";
   const passing = result.criticalZoneResults.filter((z) => z.status === "pass").length;
   const totalZones = result.criticalZoneResults.length;
+  const temporalTwin = summarizeOperationalEvidenceTemporalTwin(operationalEvidenceEvents, scene);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -674,6 +696,20 @@ function buildHtmlReport(
   </div>
 
   ${isAi ? buildAiReportHtml(aiReport!) : buildDefaultHtml(result)}
+
+  <h2>Temporal Operational Twin</h2>
+  <table>
+    <thead><tr><th>Field</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Scene Events</td><td>${temporalTwin.totalEvents}</td></tr>
+      <tr><td>Reconstructable Checkpoints</td><td>${temporalTwin.checkpointCount}</td></tr>
+      <tr><td>Branch Heads</td><td>${temporalTwin.branchHeadCount}</td></tr>
+      <tr><td>Current Scene</td><td>${escapeHtml(temporalTwin.currentSceneSummary?.detail ?? "Unavailable.")}</td></tr>
+      <tr><td>Latest Checkpoint</td><td>${escapeHtml(temporalTwin.latestCheckpoint ? `${temporalTwin.latestCheckpoint.title} (${temporalTwin.latestCheckpoint.branchLabel})` : "Unavailable.")}</td></tr>
+      <tr><td>Checkpoint Age</td><td>${temporalTwin.latestCheckpointAgeMs != null ? `${Math.max(1, Math.round(temporalTwin.latestCheckpointAgeMs / 60000))}m` : "Unavailable."}</td></tr>
+      <tr><td>Checkpoint Delta</td><td>${escapeHtml(temporalTwin.currentVsLatestCheckpointDelta ? `cameras ${temporalTwin.currentVsLatestCheckpointDelta.cameras >= 0 ? "+" : ""}${temporalTwin.currentVsLatestCheckpointDelta.cameras}, zones ${temporalTwin.currentVsLatestCheckpointDelta.zones >= 0 ? "+" : ""}${temporalTwin.currentVsLatestCheckpointDelta.zones}, sensors ${temporalTwin.currentVsLatestCheckpointDelta.sensors >= 0 ? "+" : ""}${temporalTwin.currentVsLatestCheckpointDelta.sensors}` : "Unavailable.")}</td></tr>
+    </tbody>
+  </table>
 
   <h2>Novel Algorithms</h2>
   <table>
@@ -762,12 +798,16 @@ function buildDefaultHtml(result: NonNullable<ReturnType<typeof useStudioStore.g
   
   <h2>Cameras</h2>
   <table>
-    <thead><tr><th>Camera</th><th>Coverage</th><th>Zones Covered</th></tr></thead>
+    <thead><tr><th>Camera</th><th>Coverage</th><th>Best Zone Quality</th><th>Zones Failed</th><th>Zones Covered</th></tr></thead>
     <tbody>
       ${result.cameraResults.map((c) => `
         <tr>
           <td>${escapeHtml(c.cameraId)}</td>
           <td>${c.coveragePct.toFixed(1)}%</td>
+          <td>${escapeHtml(Object.values(c.qualityByZone ?? {}).reduce((best, quality) => (
+            QUALITY_RANK[quality as keyof typeof QUALITY_RANK] > QUALITY_RANK[best as keyof typeof QUALITY_RANK] ? quality : best
+          ), "none"))}</td>
+          <td>${c.criticalZonesFailed.length}</td>
           <td>${c.criticalZonesCovered.join(", ")}</td>
         </tr>
       `).join("")}

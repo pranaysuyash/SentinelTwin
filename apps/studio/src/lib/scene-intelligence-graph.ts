@@ -1,6 +1,7 @@
 import type { SecurityScene, SimulationResult } from "@/schema/security-scene";
 
 import { getSceneSourceMeta } from "@/lib/scene-source";
+import type { OperationalEvidenceEvent } from "@/lib/operational-evidence";
 
 export type SceneIntelligenceNodeKind = "scene" | "source" | "entity" | "assumption" | "simulation" | "snapshot";
 export type SceneIntelligenceEdgeKind = "contains" | "originates_from" | "assesses" | "covers" | "validated_by";
@@ -12,6 +13,10 @@ export type SceneIntelligenceNode = {
   subtitle?: string;
   source?: string;
   count?: number;
+  historyCount?: number;
+  latestEvidenceKind?: string;
+  latestEvidenceAt?: number;
+  latestEvidenceSummary?: string;
 };
 
 export type SceneIntelligenceEdge = {
@@ -50,6 +55,7 @@ export type SceneIntelligenceGraphOptions = {
   simulationResult?: SimulationResult | null;
   revisionDepth?: number;
   snapshotCount?: number;
+  operationalEvidenceEvents?: OperationalEvidenceEvent[];
 };
 
 const ENTITY_COLLECTIONS = [
@@ -99,6 +105,23 @@ export function buildSceneIntelligenceGraph(
 ): SceneIntelligenceGraph {
   const now = Date.now();
   const rootId = `scene:${scene.id}`;
+  const orderedEvidenceEvents = [...(options.operationalEvidenceEvents?.filter((event) => event.sceneId === scene.id) ?? [])]
+    .sort((left, right) => left.timestamp - right.timestamp || left.id.localeCompare(right.id));
+  const nodeHistoryById = new Map<string, {
+    count: number;
+    latestEvent: OperationalEvidenceEvent | null;
+  }>();
+  for (const event of orderedEvidenceEvents) {
+    if (event.affectedNodeIds.length === 0) continue;
+    for (const nodeId of event.affectedNodeIds) {
+      const existing = nodeHistoryById.get(nodeId) ?? { count: 0, latestEvent: null };
+      existing.count += 1;
+      if (!existing.latestEvent || event.timestamp >= existing.latestEvent.timestamp) {
+        existing.latestEvent = event;
+      }
+      nodeHistoryById.set(nodeId, existing);
+    }
+  }
   const nodes: SceneIntelligenceNode[] = [
     {
       id: rootId,
@@ -106,6 +129,10 @@ export function buildSceneIntelligenceGraph(
       label: scene.name || "Untitled Scene",
       subtitle: `${scene.dimensions.width}m × ${scene.dimensions.depth}m × ${scene.dimensions.height}m`,
       source: normalizeSceneSource(scene.source).key,
+      historyCount: orderedEvidenceEvents.length,
+      latestEvidenceKind: orderedEvidenceEvents.at(-1)?.kind,
+      latestEvidenceAt: orderedEvidenceEvents.at(-1)?.timestamp,
+      latestEvidenceSummary: orderedEvidenceEvents.at(-1)?.afterSummary ?? orderedEvidenceEvents.at(-1)?.details,
     },
   ];
   const edges: SceneIntelligenceEdge[] = [];
@@ -160,12 +187,17 @@ export function buildSceneIntelligenceGraph(
       addSourceNode(source.key, source.label, sourceCounts[source.key]);
 
       const nodeId = `${entry.kind}:${item.id}`;
+      const nodeHistory = nodeHistoryById.get(item.id) ?? null;
       nodes.push({
         id: nodeId,
         kind: "entity",
         label: getLabel(item as { label?: unknown; name?: unknown }, item.id),
         subtitle: entry.kind.replace(/_/g, " "),
         source: source.key,
+        historyCount: nodeHistory?.count,
+        latestEvidenceKind: nodeHistory?.latestEvent?.kind,
+        latestEvidenceAt: nodeHistory?.latestEvent?.timestamp,
+        latestEvidenceSummary: nodeHistory?.latestEvent?.afterSummary ?? nodeHistory?.latestEvent?.details,
       });
 
       addEdge(rootId, nodeId, "contains", entry.kind);

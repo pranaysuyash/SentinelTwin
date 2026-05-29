@@ -24,7 +24,7 @@ describe("Studio launcher shell", () => {
     expect(source).toContain('if (!confirmWorkspaceReplacement("start scan intake")) return;');
     expect(source).toContain('if (!confirmWorkspaceReplacement("create a new scene")) return;');
     expect(source).toContain('if (!confirmWorkspaceReplacement("open AI layout draft")) return;');
-    expect(source).toContain("onGuidedScanPlanned={() => setShowGuidedScanKickoff(true)}");
+    expect(source).toContain("onOpenGuidedScanAssistant={() => setShowGuidedScanKickoff(true)}");
     expect(source).toContain("onOpenScene={openScene}");
     expect(source).toContain("savedProjects={savedProjects}");
     expect(source).toContain("onUpdateProjectMetadata={updateSavedSceneMetadata}");
@@ -79,11 +79,11 @@ describe("Studio launcher shell", () => {
     expect(source).toContain("AI draft status:");
     expect(source).toContain("Verify Real Camera Footage (Preview)");
     expect(source).toContain("Open Camera View Preview");
-    expect(source).toContain("Manual-assisted flow available now");
-    expect(source).toContain("Guided Scan Reconstruction (Planned)");
-    expect(source).toContain("Open Manual-Assisted Scan");
-    expect(source).toContain("Planning mode only: guided capture is not implemented yet, so the manual-assisted scan flow remains the supported entry point.");
-    expect(source).toContain("Guided scan is planned. Opening the manual-assisted Scan Site flow instead.");
+    expect(source).toContain("What the assistant does");
+    expect(source).toContain("Guided Scan Assistant");
+    expect(source).toContain("Open Guided Assistant");
+    expect(source).toContain("Guided assistant preview: the assistant shortens capture setup, but the scene still compiles through the manual-assisted review path.");
+    expect(source).toContain("Guided scan assistant opened. The manual-assisted review and compile flow remains in control.");
     expect(source).toContain("const [queryBootEnabled, setQueryBootEnabled] = useState(false);");
     expect(source).toContain('setQueryBootEnabled(new URLSearchParams(window.location.search).get("studio") === "1");');
   });

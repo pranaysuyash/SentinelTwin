@@ -1,8 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 
-const topBarPath = "./src/components/layout/TopBar.tsx";
-const workspaceCanvasPath = "./src/components/workspace/WorkspaceCanvas.tsx";
+const workspaceCanvasPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../", "workspace/WorkspaceCanvas.tsx");
+const topBarPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../", "layout/TopBar.tsx");
+const viewSettingsModalPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../", "layout/ViewSettingsModal.tsx");
 
 describe("view settings entrypoints", () => {
   test("wires the top bar and canvas chrome to the view settings modal", () => {
@@ -23,6 +26,6 @@ describe("view settings entrypoints", () => {
     expect(canvasSource).toContain('aria-label="Switch to 2D top-down"');
     expect(topBarSource).toContain('data-testid="topbar-view-settings"');
     expect(topBarSource).toContain('data-testid="more-view-settings"');
-    expect(readFileSync("./src/components/layout/ViewSettingsModal.tsx", "utf8")).toContain('data-testid="view-settings-modal"');
+    expect(readFileSync(viewSettingsModalPath, "utf8")).toContain('data-testid="view-settings-modal"');
   });
 });

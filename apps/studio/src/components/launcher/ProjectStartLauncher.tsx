@@ -109,7 +109,7 @@ export function ProjectStartLauncher({
       icon: <ScanSearch className="h-3.5 w-3.5" />,
       badge: "Preview / Manual-assisted",
       title: "Scan site with phone photos",
-      description: "Manual-assisted photo marking compiles into a canonical SecurityScene. Guided scan is still planned.",
+      description: "Manual-assisted photo marking compiles into a canonical SecurityScene. A guided assistant now helps capture prep before review and compile.",
       tone: "emerald",
       onClick: onScanSite,
     },
@@ -171,7 +171,7 @@ export function ProjectStartLauncher({
             <div className="flex items-start gap-2 text-[11px] text-[color:var(--st-muted)]">
               <TriangleAlert className="mt-0.5 h-3.5 w-3.5 flex-none text-amber-300" />
               <span>
-                Manual-assisted scan and floor-plan import are available now. Guided scan reconstruction is planned, not implemented yet.
+                Manual-assisted scan and floor-plan import are available now. The guided scan assistant is available from the dashboard entry path.
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-2">

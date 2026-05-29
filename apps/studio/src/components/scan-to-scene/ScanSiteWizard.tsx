@@ -18,6 +18,7 @@ import { useStudioStore } from "@/store/studio-store";
 
 interface ScanSiteWizardProps {
   onClose?: () => void;
+  mode?: "manual" | "guided";
 }
 
 type ScanStep = 0 | 1 | 2 | 3;
@@ -187,7 +188,8 @@ function StepBadge({ step, current, label }: { step: number; current: number; la
   );
 }
 
-export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
+export function ScanSiteWizard({ onClose, mode = "manual" }: ScanSiteWizardProps) {
+  const isGuided = mode === "guided";
   const setScene = useStudioStore((s) => s.setScene);
   const runSimulation = useStudioStore((s) => s.runSimulation);
   const setLaunchNotice = useStudioStore((s) => s.setLaunchNotice);
@@ -206,13 +208,19 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
   const [draggingCandidateId, setDraggingCandidateId] = useState<string | null>(null);
   const [compileLowConfidenceOverride, setCompileLowConfidenceOverride] = useState(false);
   const [warningsReviewed, setWarningsReviewed] = useState(false);
-  const [autoCreatePath, setAutoCreatePath] = useState(false);
+  const [autoCreatePath, setAutoCreatePath] = useState(isGuided);
   const [compileWarnings, setCompileWarnings] = useState<ScanCompilationWarning[]>([]);
-  const [session, setSession] = useState<ScanSession>(() => createScanSession("Manual Assisted Scan", 10, 8, 3));
+  const [session, setSession] = useState<ScanSession>(() => createScanSession(isGuided ? "Guided Scan Assistant" : "Manual Assisted Scan", 10, 8, 3));
   const activePhoto = useMemo(
     () => session.photos.find((photo) => photo.id === session.activePhotoId) ?? null,
     [session.activePhotoId, session.photos],
   );
+
+  useEffect(() => {
+    if (isGuided) {
+      setAutoCreatePath(true);
+    }
+  }, [isGuided]);
 
   const candidateStats = useMemo(() => {
     const accepted = session.candidates.filter((candidate) => candidate.status !== "rejected");
@@ -530,8 +538,8 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
       setCompileWarnings(compiled.warnings);
       recordOperationalEvidenceEvent({
         kind: "scan_session_compiled",
-        title: "Scan session compiled",
-        details: `Compiled ${session.roomName} into ${compiled.scene.name || "a scene"} with ${compiled.provenance.acceptedCandidates} accepted candidates.`,
+        title: isGuided ? "Guided scan assistant compiled" : "Scan session compiled",
+        details: `${isGuided ? "Guided assistant" : "Manual-assisted scan"} compiled ${session.roomName} into ${compiled.scene.name || "a scene"} with ${compiled.provenance.acceptedCandidates} accepted candidates.`,
         actor: "user",
         source: compiled.scene.source,
         sceneId: compiled.scene.id,
@@ -559,12 +567,17 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
       } else {
         setBottomTab("assumptions");
       }
+      const missingPrerequisites: string[] = [];
+      if (compiled.scene.cameras.length === 0) missingPrerequisites.push("at least 1 camera");
+      if (compiled.scene.criticalZones.length === 0) missingPrerequisites.push("at least 1 critical zone");
+      if (compiled.scene.entryPoints.length === 0) missingPrerequisites.push("at least 1 entry point (add a door)");
+      if (compiled.scene.paths.length === 0) missingPrerequisites.push("at least 1 path (add path points or enable auto-path)");
       const simulationNotice =
         compiled.scene.cameras.length > 0 && compiled.scene.criticalZones.length > 0
           ? "Baseline simulation will run in Studio."
-          : "Add at least one camera and one critical zone to run simulation.";
+          : `Simulation not run. Missing prerequisites: ${missingPrerequisites.join(", ")}.`;
       setLaunchNotice(
-        `Manual-assisted scan compiled: ${compiled.scene.cameras.length} cameras, ${compiled.scene.obstructions.length} obstructions, ${compiled.scene.criticalZones.length} critical zones. ${simulationNotice}`,
+        `${isGuided ? "Guided scan assistant" : "Manual-assisted scan"} compiled: ${compiled.scene.cameras.length} cameras, ${compiled.scene.obstructions.length} obstructions, ${compiled.scene.criticalZones.length} critical zones. ${simulationNotice}`,
       );
       onClose?.();
     } catch (compileError) {
@@ -572,7 +585,7 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
     } finally {
       setIsCompiling(false);
     }
-  }, [autoCreatePath, compileBlockingErrors, compileLowConfidenceOverride, lowConfidenceAccepted.length, onClose, recordOperationalEvidenceEvent, runSimulation, session, setBottomTab, setLaunchNotice, setScene, setViewMode, setWorkspacePreset, warningsAcknowledged]);
+  }, [autoCreatePath, compileBlockingErrors, compileLowConfidenceOverride, isGuided, lowConfidenceAccepted.length, onClose, recordOperationalEvidenceEvent, runSimulation, session, setBottomTab, setLaunchNotice, setScene, setViewMode, setWorkspacePreset, warningsAcknowledged]);
 
   const handleMergeNearDuplicates = useCallback(() => {
     setSession((current) => {
@@ -642,6 +655,34 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
     });
   }, []);
 
+  const fixWarning = useCallback((code: ScanCompilationWarning["code"]) => {
+    switch (code) {
+      case "NO_CAMERA":
+        setActiveKind("camera");
+        setStep(2);
+        break;
+      case "NO_CRITICAL_ZONE":
+        setActiveKind("critical_zone");
+        setStep(2);
+        break;
+      case "NO_ENTRY":
+        setActiveKind("door");
+        setStep(2);
+        break;
+      case "NO_OBSTRUCTION":
+        setActiveKind("obstruction");
+        setStep(2);
+        break;
+      case "NO_WALL":
+        setActiveKind("wall");
+        setStep(2);
+        break;
+      case "NO_PATH":
+        setAutoCreatePath(true);
+        break;
+    }
+  }, []);
+
   const handleSnapOpeningsToWalls = useCallback(() => {
     setSession((current) => {
       const walls = current.candidates.filter((candidate) => candidate.status !== "rejected" && candidate.kind === "wall");
@@ -688,11 +729,13 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
             <ScanSearch className="h-4 w-4 text-cyan-300" />
             <h2 className="text-sm font-semibold">Scan a Site</h2>
             <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.18em] text-cyan-200">
-              Manual-assisted
+              {isGuided ? "Guided assistant" : "Manual-assisted"}
             </span>
           </div>
           <p className="mt-1 text-[11px] text-[#7e8da9]">
-            Upload a site photo, tap objects on the image, classify them, and compile the result into the live Studio scene.
+            {isGuided
+              ? "Follow the capture checklist, upload one or more site photos, then review the same manual-assisted annotations before compiling."
+              : "Upload a site photo, tap objects on the image, classify them, and compile the result into the live Studio scene."}
           </p>
         </div>
         <SurfaceButton onClick={onClose}>Close</SurfaceButton>
@@ -812,7 +855,23 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
                 </div>
 
                 <div className="rounded-xl border border-cyan-500/15 bg-cyan-500/8 p-3 text-xs text-cyan-100/90">
-                  This flow is intentionally manual-assisted. Tap the image to place candidates, then classify each object before compiling.
+                  {isGuided
+                    ? "Guided scan assistant: capture an overview first, then entry, counter, cameras, lights, and obstructions. The same manual review and compile path still applies."
+                    : "This flow is intentionally manual-assisted. Tap the image to place candidates, then classify each object before compiling."}
+                </div>
+                {isGuided ? (
+                  <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/8 p-3 text-xs text-emerald-100">
+                    <div className="font-semibold uppercase tracking-[0.14em] text-emerald-200">Capture checklist</div>
+                    <ul className="mt-2 space-y-1.5">
+                      <li>1. Capture a wide overview of the scene.</li>
+                      <li>2. Capture the entry, counter, and main aisles.</li>
+                      <li>3. Add close-ups for cameras, lights, and obstructions.</li>
+                      <li>4. Review the auto-path preview before compiling.</li>
+                    </ul>
+                  </div>
+                ) : null}
+                <div className="rounded-xl border border-[#243049] bg-[#0a0f17] px-3 py-2 text-[11px] text-[#9db0d0]">
+                  {isGuided ? "Auto-path hints are enabled for guided assistant runs." : "Manual marking remains the supported entry point."}
                 </div>
               </div>
             </div>
@@ -1247,6 +1306,74 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
                                 </button>
                               </div>
                             ) : null}
+                            {candidate.kind === "obstruction" || candidate.kind === "counter" || candidate.kind === "cupboard" || candidate.kind === "shelf" ? (
+                              <div className="mt-2 grid grid-cols-3 gap-2">
+                                <label className="block">
+                                  <span className="text-[10px] text-[#73839f]">Width (m)</span>
+                                  <input
+                                    type="number"
+                                    min={0.1}
+                                    max={20}
+                                    step={0.1}
+                                    value={candidate.widthHintM ?? 1.2}
+                                    onChange={(event) => updateCandidate(candidate.id, { widthHintM: Math.max(0.1, Number(event.target.value) || 0.1) })}
+                                    className="mt-1 w-full rounded-xl border border-[#243049] bg-[#0a0f17] px-2 py-1.5 text-xs text-[#e3ebf8] outline-none focus:border-cyan-500/50"
+                                  />
+                                </label>
+                                <label className="block">
+                                  <span className="text-[10px] text-[#73839f]">Depth (m)</span>
+                                  <input
+                                    type="number"
+                                    min={0.1}
+                                    max={20}
+                                    step={0.1}
+                                    value={candidate.depthHintM ?? 0.7}
+                                    onChange={(event) => updateCandidate(candidate.id, { depthHintM: Math.max(0.1, Number(event.target.value) || 0.1) })}
+                                    className="mt-1 w-full rounded-xl border border-[#243049] bg-[#0a0f17] px-2 py-1.5 text-xs text-[#e3ebf8] outline-none focus:border-cyan-500/50"
+                                  />
+                                </label>
+                                <label className="block">
+                                  <span className="text-[10px] text-[#73839f]">Height (m)</span>
+                                  <input
+                                    type="number"
+                                    min={0.1}
+                                    max={10}
+                                    step={0.1}
+                                    value={candidate.heightHintM ?? 1.2}
+                                    onChange={(event) => updateCandidate(candidate.id, { heightHintM: Math.max(0.1, Number(event.target.value) || 0.1) })}
+                                    className="mt-1 w-full rounded-xl border border-[#243049] bg-[#0a0f17] px-2 py-1.5 text-xs text-[#e3ebf8] outline-none focus:border-cyan-500/50"
+                                  />
+                                </label>
+                              </div>
+                            ) : null}
+                            {candidate.kind === "critical_zone" ? (
+                              <div className="mt-2 grid grid-cols-2 gap-2">
+                                <label className="block">
+                                  <span className="text-[10px] text-[#73839f]">Zone width (m)</span>
+                                  <input
+                                    type="number"
+                                    min={0.5}
+                                    max={20}
+                                    step={0.1}
+                                    value={candidate.widthHintM ?? Math.max(1.6, session.widthM * 0.18)}
+                                    onChange={(event) => updateCandidate(candidate.id, { widthHintM: Math.max(0.5, Number(event.target.value) || 0.5) })}
+                                    className="mt-1 w-full rounded-xl border border-[#243049] bg-[#0a0f17] px-2 py-1.5 text-xs text-[#e3ebf8] outline-none focus:border-cyan-500/50"
+                                  />
+                                </label>
+                                <label className="block">
+                                  <span className="text-[10px] text-[#73839f]">Zone depth (m)</span>
+                                  <input
+                                    type="number"
+                                    min={0.5}
+                                    max={20}
+                                    step={0.1}
+                                    value={candidate.depthHintM ?? Math.max(1.2, session.depthM * 0.16)}
+                                    onChange={(event) => updateCandidate(candidate.id, { depthHintM: Math.max(0.5, Number(event.target.value) || 0.5) })}
+                                    className="mt-1 w-full rounded-xl border border-[#243049] bg-[#0a0f17] px-2 py-1.5 text-xs text-[#e3ebf8] outline-none focus:border-cyan-500/50"
+                                  />
+                                </label>
+                              </div>
+                            ) : null}
                           </div>
                           <button
                             type="button"
@@ -1344,6 +1471,40 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
               <div className="mt-4 rounded-2xl border border-cyan-500/20 bg-cyan-500/8 p-3 text-xs text-cyan-100/90">
                 No AI perception is claimed here. The image is a manual-assisted intake that compiles directly into the existing simulation pipeline.
               </div>
+              <div className="mt-3 rounded-2xl border border-rose-500/20 bg-rose-500/8 p-3 text-xs text-rose-100/90">
+                <strong>Compiling replaces your current workspace scene.</strong> The compiled scan will become the active SecurityScene. Export or snapshot your current scene first if you want to preserve it.
+              </div>
+              <div className="mt-3 rounded-2xl border border-[#243049] bg-[#09111b] p-3">
+                <h4 className="text-xs font-semibold text-white">Compile preview</h4>
+                <p className="mt-1 text-[11px] text-[#8aa1c4]">What will be created in the output SecurityScene:</p>
+                <div className="mt-3 grid grid-cols-4 gap-2">
+                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/8 p-2 text-center">
+                    <div className="text-lg font-bold text-emerald-200">{candidateStats.cameraCount}</div>
+                    <div className="text-[9px] uppercase tracking-wider text-emerald-300/70">Cameras</div>
+                  </div>
+                  <div className="rounded-xl border border-fuchsia-500/20 bg-fuchsia-500/8 p-2 text-center">
+                    <div className="text-lg font-bold text-fuchsia-200">{candidateStats.criticalZoneCount}</div>
+                    <div className="text-[9px] uppercase tracking-wider text-fuchsia-300/70">Zones</div>
+                  </div>
+                  <div className="rounded-xl border border-slate-500/20 bg-slate-500/8 p-2 text-center">
+                    <div className="text-lg font-bold text-slate-200">{candidateStats.obstructionCount}</div>
+                    <div className="text-[9px] uppercase tracking-wider text-slate-300/70">Obstructions</div>
+                  </div>
+                  <div className="rounded-xl border border-lime-500/20 bg-lime-500/8 p-2 text-center">
+                    <div className="text-lg font-bold text-lime-200">{candidateStats.pathPointCount > 1 ? 1 : autoCreatePath ? 1 : 0}</div>
+                    <div className="text-[9px] uppercase tracking-wider text-lime-300/70">Paths</div>
+                  </div>
+                </div>
+                {unresolvedWarnings.length > 0 ? (
+                  <div className="mt-2 text-[11px] text-amber-200">
+                    {unresolvedWarnings.length} warning{unresolvedWarnings.length > 1 ? "s" : ""} — review before compiling.
+                  </div>
+                ) : (
+                  <div className="mt-2 text-[11px] text-emerald-200">
+                    No warnings. Scene is ready to compile.
+                  </div>
+                )}
+              </div>
               <label className="mt-3 flex items-start gap-2 rounded-2xl border border-[#243049] bg-[#09111b] px-3 py-2 text-[11px] text-[#c6d3ea]">
                 <input
                   type="checkbox"
@@ -1412,7 +1573,16 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
                 {(reviewWarnings.length > 0 || compileWarnings.length > 0) ? (
                   <div className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-100">
                     {unresolvedWarnings.map((warning, index) => (
-                      <p key={`${warning.code}_${index}`}>• {warning.message}</p>
+                      <div key={`${warning.code}_${index}`} className="flex items-start justify-between gap-2">
+                        <p>• {warning.message}</p>
+                        <button
+                          type="button"
+                          onClick={() => fixWarning(warning.code)}
+                          className="flex-shrink-0 rounded-full border border-amber-400/30 bg-amber-500/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-100 transition-colors hover:bg-amber-500/25"
+                        >
+                          Fix now
+                        </button>
+                      </div>
                     ))}
                     <div className="mt-2 flex flex-wrap gap-2">
                       {duplicateCandidateGroups.length > 0 ? (

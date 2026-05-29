@@ -157,6 +157,53 @@ export type OperationalGovernanceTrailSummary = {
   recentEvents: OperationalEvidenceEvent[];
 };
 
+export type OperationalEvidenceTemporalTwinSummary = {
+  totalEvents: number;
+  checkpointCount: number;
+  branchHeadCount: number;
+  latestCheckpoint: {
+    eventId: string;
+    title: string;
+    timestamp: number;
+    branchLabel: string;
+    lifecycleStage: OperationalEvidenceLifecycleStage;
+    hasSnapshot: boolean;
+    summary: SceneEvidenceSummary;
+  } | null;
+  currentSceneSummary: SceneEvidenceSummary | null;
+  currentVsLatestCheckpointDelta: {
+    cameras: number;
+    lights: number;
+    obstructions: number;
+    zones: number;
+    paths: number;
+    sensors: number;
+    snapshots: number;
+  } | null;
+  latestCheckpointAgeMs: number | null;
+};
+
+export type OperationalEvidenceTimelineEntry = {
+  event: OperationalEvidenceEvent;
+  index: number;
+  isCheckpoint: boolean;
+  isBranchHead: boolean;
+  reconstructedScene: SecurityScene | null;
+  reconstructedSceneSummary: SceneEvidenceSummary | null;
+};
+
+export type OperationalEvidenceTimelineSummary = {
+  sceneId: string | null;
+  totalEvents: number;
+  firstEventAt: number | null;
+  lastEventAt: number | null;
+  currentSceneSummary: SceneEvidenceSummary | null;
+  latestCheckpoint: OperationalEvidenceTimelineEntry | null;
+  checkpoints: OperationalEvidenceTimelineEntry[];
+  branchHeads: OperationalEvidenceBranchHead[];
+  entries: OperationalEvidenceTimelineEntry[];
+};
+
 const GOVERNANCE_TRAIL_KINDS: OperationalEvidenceEventKind[] = [
   "scene_review_requested",
   "scene_review_approved",
@@ -430,6 +477,100 @@ export function summarizeOperationalGovernanceTrail(
     latestEvent: trail[0] ?? null,
     recentEvents: trail.slice(0, 5),
   };
+}
+
+export function summarizeOperationalEvidenceTemporalTwin(
+  events: OperationalEvidenceEvent[],
+  scene?: SecurityScene,
+): OperationalEvidenceTemporalTwinSummary {
+  const timeline = buildOperationalEvidenceTimeline(events, scene);
+  const latestCheckpointScene = timeline.latestCheckpoint?.reconstructedScene ?? null;
+
+  const currentVsLatestCheckpointDelta = scene && latestCheckpointScene
+    ? {
+        cameras: scene.cameras.length - latestCheckpointScene.cameras.length,
+        lights: scene.securityLights.length - latestCheckpointScene.securityLights.length,
+        obstructions: scene.obstructions.length - latestCheckpointScene.obstructions.length,
+        zones: (scene.criticalZones.length + scene.privacyZones.length) - (latestCheckpointScene.criticalZones.length + latestCheckpointScene.privacyZones.length),
+        paths: scene.paths.length - latestCheckpointScene.paths.length,
+        sensors: scene.sensors.length - latestCheckpointScene.sensors.length,
+        snapshots: scene.snapshots.length - latestCheckpointScene.snapshots.length,
+      }
+    : null;
+
+  return {
+    totalEvents: timeline.totalEvents,
+    checkpointCount: timeline.checkpoints.length,
+    branchHeadCount: timeline.branchHeads.filter((entry) => entry.event != null).length,
+    latestCheckpoint: timeline.latestCheckpoint && timeline.latestCheckpoint.reconstructedSceneSummary
+      ? {
+          eventId: timeline.latestCheckpoint.event.id,
+          title: timeline.latestCheckpoint.event.title,
+          timestamp: timeline.latestCheckpoint.event.timestamp,
+          branchLabel: timeline.latestCheckpoint.event.branchLabel ?? timeline.latestCheckpoint.event.lifecycleStage ?? "manual",
+          lifecycleStage: timeline.latestCheckpoint.event.lifecycleStage ?? deriveOperationalEvidenceLifecycleStage(timeline.latestCheckpoint.event.kind, timeline.latestCheckpoint.event.source),
+          hasSnapshot: Boolean(timeline.latestCheckpoint.event.sceneSnapshot),
+          summary: timeline.latestCheckpoint.reconstructedSceneSummary,
+        }
+      : null,
+    currentSceneSummary: timeline.currentSceneSummary,
+    currentVsLatestCheckpointDelta,
+    latestCheckpointAgeMs: timeline.latestCheckpoint ? Date.now() - timeline.latestCheckpoint.event.timestamp : null,
+  };
+}
+
+function sortOperationalEvidenceEventsChronologically(events: OperationalEvidenceEvent[]) {
+  return [...events].sort((left, right) => {
+    if (left.timestamp !== right.timestamp) {
+      return left.timestamp - right.timestamp;
+    }
+    return left.id.localeCompare(right.id);
+  });
+}
+
+export function buildOperationalEvidenceTimeline(
+  events: OperationalEvidenceEvent[],
+  scene?: SecurityScene,
+): OperationalEvidenceTimelineSummary {
+  const sceneEvents = scene ? events.filter((event) => event.sceneId === scene.id) : events;
+  const orderedEvents = sortOperationalEvidenceEventsChronologically(sceneEvents);
+  const branchHeadIds = new Set(
+    summarizeOperationalEvidenceBranchHeads(orderedEvents)
+      .flatMap((entry) => (entry.event ? [entry.event.id] : [])),
+  );
+  const entries = orderedEvents.map((event, index) => {
+    const reconstructedScene = reconstructSceneFromEvidence(orderedEvents, event.id);
+    return {
+      event,
+      index,
+      isCheckpoint: Boolean(event.sceneSnapshot || event.previousSceneSnapshot),
+      isBranchHead: branchHeadIds.has(event.id),
+      reconstructedScene,
+      reconstructedSceneSummary: reconstructedScene ? summarizeSceneEvidence(reconstructedScene) : null,
+    };
+  });
+  const checkpoints = entries.filter((entry) => entry.isCheckpoint);
+  return {
+    sceneId: scene?.id ?? null,
+    totalEvents: orderedEvents.length,
+    firstEventAt: orderedEvents[0]?.timestamp ?? null,
+    lastEventAt: orderedEvents.at(-1)?.timestamp ?? null,
+    currentSceneSummary: scene ? summarizeSceneEvidence(scene) : null,
+    latestCheckpoint: checkpoints.at(-1) ?? null,
+    checkpoints,
+    branchHeads: summarizeOperationalEvidenceBranchHeads(orderedEvents),
+    entries,
+  };
+}
+
+export function resolveOperationalEvidenceSceneAtTime(
+  events: OperationalEvidenceEvent[],
+  timestamp: number,
+  scene?: SecurityScene,
+): SecurityScene | null {
+  const timeline = buildOperationalEvidenceTimeline(events, scene);
+  const selectedEntry = [...timeline.entries].reverse().find((entry) => entry.event.timestamp <= timestamp) ?? null;
+  return selectedEntry?.reconstructedScene ? structuredClone(selectedEntry.reconstructedScene) : null;
 }
 
 export function findLatestOperationalEvidenceEventForScene(

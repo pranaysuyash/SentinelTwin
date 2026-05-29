@@ -52,6 +52,7 @@ sentinel-novel-*.png
 novel-*.png
 *-open-studio.png
 studio-wait-*.png
+studio-build-error.png
 
 # Agent-local docs/state (optional to version, excluded by default)
 .agent/

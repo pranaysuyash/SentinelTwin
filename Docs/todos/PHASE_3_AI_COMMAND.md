@@ -98,9 +98,9 @@ before surfacing to the user.
 
 ## Remaining / Future
 
-- [ ] Integrate with adversarial path simulation when available
-- [ ] Add `/improve` command that runs counterfactuals + auto-applies best candidate
-- [ ] Add batch counterfactual comparison view
-- [ ] Add PDF export for reports
+- [x] Integrate with adversarial path simulation when available
+- [x] Add `/improve` command that runs counterfactuals + auto-applies best candidate
+- [x] Add batch counterfactual comparison view
+- [x] Add PDF export for reports
 - [ ] Integrate with `@sentineltwin/agents` package when monorepo restructured
-- [ ] Add rate limiting / token budget management
+- [x] Add rate limiting / token budget management

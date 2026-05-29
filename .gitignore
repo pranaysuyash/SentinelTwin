@@ -40,9 +40,16 @@ tmp/
 
 # Generated QA artifact outputs
 outputs/webwright_view_settings_*/
+qa-output/
+
+# Scene-understanding generated bakeoff runs
+experiments/scene_understanding/outputs/stack_*/
 
 # Local snapshot captures
 sentineltwin-*.png
+sentinel-novel-*.png
+*-open-studio.png
+studio-wait-*.png
 
 # Agent-local docs/state (optional to version, excluded by default)
 .agent/

@@ -1,99 +1,104 @@
-# Harness Runbook
+# Scene Understanding Bakeoff — RUNBOOK
 
-## Objective
+## Quick Start
 
-Implement a reproducible, config-driven bakeoff harness with no hidden manual steps.
+```bash
+# Activate venv (Python 3.13)
+source .venv/bin/activate
 
-## Status: IMPLEMENTED (2026-05-28)
+# Run a candidate on the dev split:
+python scripts/run_candidate.py --candidate stack_b_gpt4o --split dev
 
-The harness is built and a GPT-4o pilot run has completed successfully.
+# Evaluate a completed run:
+python scripts/evaluate_run.py --candidate stack_b_gpt4o --split dev
 
-### Script entrypoints
+# Regenerate comparison report:
+python scripts/summarize_runs.py
+```
 
-| Script | Purpose | Status |
-|---|---|---|
-| `run_candidate.py` | Run a model stack against floor plan images | ✅ Implemented |
-| `evaluate_run.py` | Evaluate predictions against ground truth | ✅ Implemented |
-| `summarize_runs.py` | Compare all runs into a report | ✅ Implemented |
+## Candidates
 
-### Execution flow
-
-1. `run_candidate.py --candidate <id> --split <dev|validation|test>` → runs model, writes predictions
-2. `evaluate_run.py --candidate <id> --split <dev>` → compares predictions to annotations, emits metrics
-3. `summarize_runs.py` → generates comparison table across all runs
-
-### Supported candidates
-
-| ID | Model | Access | Status |
+| ID | Model | Pipeline | Description |
 |---|---|---|---|
-| `stack_b_gpt4o` | GPT-4o (OpenAI) | `OPENAI_API_KEY` env var | ✅ Pilot complete |
-| `stack_a_qwen_ocr` | Qwen2.5-VL-7B + GOT-OCR2_0 | Local transformers (GPU recommended) | 🔲 Not yet run |
-| `stack_c_florence` | Florence-2-base | Local transformers | 🔲 Not yet run |
+| `stack_a_qwen_ocr` | Qwen2.5-VL-7B + GOT-OCR2_0 | local (transformers) | Qwen VL parser with OCR assist |
+| `stack_b_gpt4o` | GPT-4o | cloud (OpenAI) | GPT-4o direct floorplan parser |
+| `stack_c_florence` | Florence-2-base | local (transformers) | Florence-2 prompt-task parser |
+| `stack_d_gpt54_nano` | GPT-5.4-nano | cloud (OpenAI) | GPT-5.4 Nano floorplan parser |
+| `stack_e_gpt41_structured` | GPT-4.1 | cloud (OpenAI) | GPT-4.1 structured-output fallback |
+| `stack_f_gemini25_flash` | Gemini 2.5 Flash | cloud (Gemini) | Gemini 2.5 Flash fast cloud fallback |
+| `stack_g_gemini25_pro` | Gemini 2.5 Pro | cloud (Gemini) | Gemini 2.5 Pro high-ceiling cloud fallback |
 
-### Data
+## Prerequisites
 
-- **Images:** 5 synthetic floor plans in `data/images/dev/` (retail shop, grocery, pharmacy, warehouse, corridor lobby)
-- **Annotations:** Ground truth JSON in `data/annotations/dev/`
-- **Splits:** Split manifests in `data/splits/`
+- Python 3.13
+- API keys in environment: `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GOOGLE_API_KEY`)
+- For local models: PyTorch 2.12+, transformers 4.49.0
 
-### Pilot results
+## Results (dev split, 5 images, smart matcher)
 
-File: `outputs/COMPARISON_REPORT.md`
+| Candidate | Wall F1 | Door F1 | Window F1 | Obs F1 | CZ Recall | CZ Prec | P50 | P95 |
+|---|---|---|---|---|---|---|---|---|
+| GPT-4o | **0.964** | 0.400 | **0.700** | 0.417 | **0.200** | **0.200** | 5s | 8s |
+| GPT-4.1 | 0.948 | 0.400 | 0.400 | **0.893** | 0.000 | 0.000 | 5s | 17s |
+| Gemini 2.5 Flash | 0.948 | 0.200 | 0.600 | **0.893** | 0.000 | 0.000 | 6s | 8s |
+| Gemini 2.5 Pro | 0.933 | 0.400 | 0.500 | 0.680 | 0.000 | 0.000 | 6s | 9s |
+| GPT-5.4-nano | 0.931 | 0.400 | 0.100 | 0.178 | 0.200 | 0.200 | 5s | 7s |
+| Qwen2.5-VL-7B | 0.661 | 0.000 | 0.000 | 0.100 | 0.000 | 0.000 | 86s | 258s |
+| Florence-2-base | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 5s | 5s |
 
-#### GPT-4o (improved prompt + smart matcher)
+## Matching Algorithm
 
-| Metric | Value |
-|---|---|
-| Wall F1 | 0.964 |
-| Door F1 | 0.400 (2/5 doors matched; 3 are genuine model errors on wrong wall) |
-| Window F1 | 0.700 (4/5 windows matched) |
-| Obstruction F1 | 0.417 (corridor with 0/4 drags score down) |
-| Critical Zone Recall | 0.200 (1/5 detected — prompt improvement helped but still weak) |
-| P50 Latency | 5,058ms |
-| Schema valid rate | 100% |
-| Hard fail rate | 0% |
+The evaluator uses collinearity + 1D overlap matching (not endpoint-distance):
 
-#### GPT-5.4 Nano
+1. **Classify orientation** — each segment is classified as horizontal or vertical
+2. **Position tolerance** — segments must be within 0.08 (walls) or 0.05 (doors/windows) in the non-varying axis
+3. **1D overlap threshold** — overlapping interval must exceed 0.20 (horizontal walls) or 0.15 (other elements)
+4. **GT normalization** — ground-truth doors (2D boxes) are projected to their longer axis for line-to-line matching
+5. **No penalty for GT-inset vs perimeter convention** — handles the margin mismatch between inset annotations and full-perimeter predictions
 
-| Metric | Value |
-|---|---|
-| Wall F1 | 0.931 (marginally behind GPT-4o) |
-| Door F1 | 0.400 (same 2/5 correct) |
-| Window F1 | 0.100 (weak — only 1/5) |
-| Obstruction F1 | 0.178 (misses most in crowded scenes) |
-| Critical Zone Recall | 0.200 (same as GPT-4o) |
-| P50 Latency | 4,853ms (faster than GPT-4o) |
-| Schema valid rate | 100% |
-| Hard fail rate | 0% |
+This replaced the original endpoint-distance matcher which produced wall F1 = 0.436.
 
-### Matching algorithm
+## Extraction Prompt
 
-The evaluator uses collinearity + overlap matching (not endpoint distance). For each predicted wall/segment:
-1. Classify as horizontal or vertical
-2. Check position tolerance (pos_tol=0.08 for walls/doors/windows)
-3. Compute 1D overlap ratio along the shared axis
-4. Match if overlap ≥ threshold (0.20 for walls, 0.15 for doors/windows)
+The prompt includes:
+- Strict JSON schema with x1/y1/x2/y2 normalized coordinates
+- Confidence and source metadata per element
+- Ambiguity reporting instead of invented precision
+- Critical zone visual cue: "Pay special attention to colored rectangular regions"
 
-This handles the GT-inset vs GPT-perimeter coordinate convention mismatch. GT doors (2D boxes) are projected to their longer axis for line-to-line matching.
+## Architecture
 
-### Remaining gaps
+```
+scripts/
+  run_candidate.py     — CLI entry point for running a candidate
+  evaluate_run.py      — CLI entry point for evaluating completed runs
+  summarize_runs.py    — aggregate comparison report
 
-1. **Critical zones**: Only 1/5 detected by either model. Need better prompt engineering or visual markers
-2. **Obstructions in clutter**: Corridor scene (0/4 detected by either model) and gpt-5.4-nano's general weakness suggest the model needs scene-specific prompting for dense obstruction layouts
-3. **Window/Obstruction tradeoff**: GPT-4o's improved prompt (adding "colored rectangular regions" for CZs) slightly degraded window/obstruction accuracy — suggest decoupling into separate extraction passes
-4. **Run Florence-2 and Qwen candidates** for baseline comparison
-5. **Source 5+ real-world floor plan images** for validation split
+bakeoff_harness/
+  __init__.py          — exports for CLI scripts
+  schema.py            — dataclass definitions (WallPrediction, etc.)
+  candidates.py        — candidate registry (model IDs, providers, metadata)
+  runner.py            — extraction pipeline (OpenAI, Gemini, local transformers)
+  evaluator.py         — smart matcher + metrics computation
 
-### Required outputs per run
+data/
+  images/dev/          — 5 synthetic floor plan images
+  annotations/dev/     — ground-truth JSON annotations
 
-- `metrics_summary.json` ✅ (written by evaluate_run.py)
-- `per_image_metrics.jsonl` ✅
-- `failure_cases.md` ✅
-- `run_manifest.json` ✅
-- `predictions.jsonl` ✅ (written by run_candidate.py)
+outputs/
+  <candidate>_<split>/ — per-candidate run outputs
+  COMPARISON_REPORT.md — latest comparison report
+```
 
-### Reproducibility
+## Hardware
 
-- Exact model ID, temperature, max_tokens persisted in run_manifest.json
-- Timing per image stored in per_image_metrics.jsonl
-- Hard failures logged with error taxonomy in failure_cases.md
+Apple M3 Max (40-core GPU via MPS), 103GB unified memory.
+Model inference for local models uses `torch.bfloat16` on MPS where available.
+
+## Remaining Gaps
+
+1. **CZ recall < 0.2 for all candidates** — decoupled CZ extraction pass needed
+2. **Only synthetic images** — no real-world validation
+3. **No temporal/simulation evaluation** — only static scene understanding measured
+4. **No GOT-OCR2_0 integration** — OCR assist component for Qwen not wired in
+5. **Door symbol detection weak** — thin arc symbols are hard for all models

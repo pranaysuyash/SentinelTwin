@@ -395,8 +395,8 @@ export function CameraWallView() {
     });
   }, [scene.cameras, selectedCameraId, selectedId]);
   const activePath = useMemo(() => {
-    if (!scene.paths.length) return null;
-    return scene.paths.find((path) => path.id === activePathId) ?? scene.paths[0] ?? null;
+    if (!scene.paths.length || !activePathId) return null;
+    return scene.paths.find((path) => path.id === activePathId) ?? null;
   }, [activePathId, scene.paths]);
   const activePathResult = useMemo(() => {
     if (!activePath || !simulationResult) return null;

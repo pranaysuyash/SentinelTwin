@@ -419,13 +419,7 @@ export function TopBar() {
             onClick={() => {
               const { scene, updateNode, getSelectedCamera, selectNode } = useStudioStore.getState();
               const selectedCamera = getSelectedCamera();
-              if (!selectedCamera) {
-                const fallback = scene.cameras.find((camera) => camera.status === "on") ?? scene.cameras[0];
-                if (!fallback) return;
-                updateNode(fallback.id, { status: "off" });
-                selectNode(fallback.id);
-                return;
-              }
+              if (!selectedCamera) return;
               updateNode(selectedCamera.id, { status: selectedCamera.status === "on" ? "off" : "on" });
             }}
           >
@@ -510,7 +504,7 @@ export function TopBar() {
                   Night Mode
                 </button>
                 <button
-                  onClick={() => { const s = useStudioStore.getState(); const cam = s.getSelectedCamera() ?? s.scene.cameras.find(c => c.status === "on") ?? s.scene.cameras[0]; if (cam) s.updateNode(cam.id, { status: cam.status === "on" ? "off" : "on" }); setMoreOpen(false); }}
+                  onClick={() => { const s = useStudioStore.getState(); const cam = s.getSelectedCamera(); if (cam) s.updateNode(cam.id, { status: cam.status === "on" ? "off" : "on" }); setMoreOpen(false); }}
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
                 >
                   <Shield className="h-3 w-3" />

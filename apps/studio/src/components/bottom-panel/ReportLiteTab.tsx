@@ -6,6 +6,7 @@ import { useState } from "react";
 import type { SecurityReport } from "@/agents/ReportAgent";
 import { useAiCommand } from "@/hooks/use-ai-command";
 import { buildSecurityOutcomeModel } from "@/lib/security-outcome/security-outcome-model";
+import { exportTextAsPdf } from "@/lib/pdf-export";
 import { buildCompareReportData, exportCompareAsHtml, exportCompareAsMarkdown } from "@/report";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { useStudioStore } from "@/store/studio-store";
@@ -107,6 +108,26 @@ export function ReportLiteTab() {
     URL.revokeObjectURL(url);
   };
 
+  const handleExportPdf = async () => {
+    const filenameBase = `sentineltwin-report-${scene.name.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+    const text = reportMode === "compare" && snapshotA?.simulation && snapshotB?.simulation
+      ? exportCompareAsMarkdown(
+          buildCompareReportData(
+            { ...snapshotA.scene, snapshots: [], scenarios: [] } as never,
+            snapshotA.simulation,
+            { ...snapshotB.scene, snapshots: [], scenarios: [] } as never,
+            snapshotB.simulation,
+          ),
+        )
+      : markdown;
+    if (!text) return;
+    await exportTextAsPdf({
+      text,
+      filename: `${filenameBase}.pdf`,
+      title: reportMode === "compare" ? "SentinelTwin Compare Report" : "SentinelTwin Coverage Report",
+    });
+  };
+
   const handlePrint = () => {
     if (reportMode === "compare" && snapshotA?.simulation && snapshotB?.simulation) {
       const compare = buildCompareReportData(
@@ -190,6 +211,14 @@ export function ReportLiteTab() {
               <Globe className="h-3 w-3" /> Export HTML
             </button>
             <button
+              onClick={() => {
+                void handleExportPdf();
+              }}
+              className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
+            >
+              <FileText className="h-3 w-3" /> Export PDF
+            </button>
+            <button
               onClick={handlePrint}
               className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
             >
@@ -261,6 +290,15 @@ export function ReportLiteTab() {
             </div>
           </div>
         ) : null}
+        {activePathId ? (
+          <div className="mb-3 rounded-lg border border-[#1e2130] bg-[#0b1018] px-3 py-2 text-[10px] text-[#8090a8]">
+            Route evidence is tied to the selected active path.
+          </div>
+        ) : (
+          <div className="mb-3 rounded-lg border border-dashed border-[#1e2130] bg-[#0b1018] px-3 py-2 text-[10px] text-[#8090a8]">
+            Select a path in Scenario / Path to include route evidence in report summaries and exports.
+          </div>
+        )}
         <div className="mb-3 rounded-lg border border-[#1e2130] bg-[#0b1018] p-3 text-[10px] text-[#b9c7df]">
           Security Outcome: {outcome.summary.status.replace(/_/g, " ")} · Coverage {outcome.summary.coveragePct == null ? "n/a" : `${Math.round(outcome.summary.coveragePct)}%`} · Critical Zones {outcome.summary.criticalZonesPassing}/{outcome.summary.criticalZonesTotal} · Issues {outcome.summary.issueCount}
         </div>

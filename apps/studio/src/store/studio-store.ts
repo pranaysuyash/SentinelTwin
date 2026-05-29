@@ -151,6 +151,7 @@ export type EditorDraft = {
   draftPolygonPoints: [number, number][];
   draftPathPoints: [number, number][];
   hoverPoint?: [number, number];
+  feedbackMessage: string | null;
   snapEnabled: boolean;
   snapDistanceM: number;
   gridSnapM: number;
@@ -1105,6 +1106,7 @@ export type StudioStoreState = {
   setDraftPolygonPoints: (points: [number, number][]) => void;
   setDraftPathPoints: (points: [number, number][]) => void;
   setEditorHoverPoint: (point?: [number, number]) => void;
+  setEditorFeedbackMessage: (message: string | null) => void;
   setSnapEnabled: (enabled: boolean) => void;
   setSnapDistanceM: (value: number) => void;
   setGridSnapM: (value: number) => void;
@@ -2025,6 +2027,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     draftPolygonPoints: [],
     draftPathPoints: [],
     hoverPoint: undefined,
+    feedbackMessage: null,
     snapEnabled: true,
     snapDistanceM: 0.25,
     gridSnapM: 0.5,
@@ -2058,7 +2061,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   temporalScrubMinute: 0,
   demoMode: false,
   demoStep: 0,
-  activePathId: INITIAL_SCENE.paths[0]?.id ?? null,
+  activePathId: null,
   mapState: cloneDefaultMapState(),
   hoveredMapNodeId: null,
   overlayDensity: INITIAL_LAYOUT.overlayDensity,
@@ -2141,6 +2144,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     editor: { ...s.editor, editorMode: points.length ? "drawing_path" : s.editor.editorMode, draftPathPoints: points },
   })),
   setEditorHoverPoint: (point) => set((s) => ({ editor: { ...s.editor, hoverPoint: point } })),
+  setEditorFeedbackMessage: (message) => set((s) => ({ editor: { ...s.editor, feedbackMessage: message } })),
   setSnapEnabled: (enabled) => set((s) => ({ editor: { ...s.editor, snapEnabled: enabled } })),
   setSnapDistanceM: (value) => set((s) => ({ editor: { ...s.editor, snapDistanceM: value } })),
   setGridSnapM: (value) => set((s) => ({ editor: { ...s.editor, gridSnapM: value } })),
@@ -2428,7 +2432,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       simulationDirty: !restoredScene.simulation,
       selectedNodeId: null,
       selectedNodeIds: [],
-      activePathId: restoredScene.paths[0]?.id ?? null,
+      activePathId: null,
       focusScenePointRequest: null,
       mapState: cloneDefaultMapState(),
       historyPast: [...historyPast, cloneSecurityScene(scene)],
@@ -3030,6 +3034,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       draftPolygonPoints: [],
       draftPathPoints: [],
       hoverPoint: undefined,
+      feedbackMessage: null,
       selectedHandle: undefined,
     },
   })),
@@ -3788,6 +3793,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         draftPolygonPoints: [],
         draftPathPoints: [],
         hoverPoint: undefined,
+        feedbackMessage: null,
         snapEnabled: true,
         snapDistanceM: 0.25,
         gridSnapM: 0.5,
@@ -3795,7 +3801,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       },
       simulationDirty: true,
       simulationResult: null,
-      activePathId: scene.paths[0]?.id ?? null,
+      activePathId: null,
       focusScenePointRequest: null,
       mapState: cloneDefaultMapState(),
       focusMode: false,
@@ -3884,7 +3890,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         snapshots: structuredClone(restoredScene.snapshots ?? []),
         selectedNodeId: null,
         selectedNodeIds: [],
-        activePathId: restoredScene.paths[0]?.id ?? null,
+        activePathId: null,
         focusScenePointRequest: null,
         mapState: cloneDefaultMapState(),
         focusMode: false,
@@ -4037,7 +4043,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         snapshots: structuredClone(mergedScene.snapshots ?? []),
         selectedNodeId: null,
         selectedNodeIds: [],
-        activePathId: mergedScene.paths[0]?.id ?? null,
+        activePathId: null,
         focusScenePointRequest: null,
         mapState: cloneDefaultMapState(),
         focusMode: false,
@@ -4109,7 +4115,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       snapshots: structuredClone(restoredScene.snapshots ?? []),
       selectedNodeId: null,
       selectedNodeIds: [],
-      activePathId: restoredScene.paths[0]?.id ?? null,
+      activePathId: null,
       focusScenePointRequest: null,
       mapState: cloneDefaultMapState(),
       focusMode: false,
@@ -4188,7 +4194,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         simulationResult: null,
         selectedNodeId: null,
         selectedNodeIds: [],
-        activePathId: scene.paths[0]?.id ?? null,
+        activePathId: null,
         focusScenePointRequest: null,
         mapState: cloneDefaultMapState(),
         focusMode: false,
@@ -4227,6 +4233,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
           draftPolygonPoints: [],
           draftPathPoints: [],
           hoverPoint: undefined,
+          feedbackMessage: null,
           snapEnabled: true,
           snapDistanceM: 0.25,
           gridSnapM: 0.5,
@@ -4296,6 +4303,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         draftPolygonPoints: [],
         draftPathPoints: [],
         hoverPoint: undefined,
+        feedbackMessage: null,
         snapEnabled: true,
         snapDistanceM: 0.25,
         gridSnapM: 0.5,

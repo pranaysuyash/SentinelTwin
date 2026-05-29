@@ -24,3 +24,18 @@ The audit currently covers:
 - product feature status manifest
 - provenance and operational memory surface
 - bottom-panel sensor wiring
+
+## Git Ignore Audit
+
+Use this before `git add -A` / commit to catch generated artifacts that should be ignored.
+
+Run from repo root:
+
+```bash
+bun tools/git-ignore-audit.ts
+```
+
+Behavior:
+- exits `0` when clean (no suspicious untracked artifacts)
+- exits `1` when known generated artifacts are detected and prints suggested `.gitignore` entries
+- exits `2` when run outside a git repository

@@ -87,7 +87,7 @@ def main():
         print(f"Error: Run directory not found: {run_dir}")
         sys.exit(1)
 
-    print(f"Evaluating run: {args.run_id}")
+    print(f"Evaluating run: {run_id}")
     predictions, split = _load_predictions(run_dir)
     print(f"  Loaded {len(predictions)} predictions, split={split}\n")
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, BarChart3, Clock3, Fingerprint, MapPinned, Radar, ShieldAlert, Sigma, Sparkles, TriangleAlert } from "lucide-react";
+import { AlertTriangle, ArrowRight, BarChart3, Clock3, Fingerprint, MapPinned, Play, Radar, ShieldAlert, Sigma, Sparkles, TriangleAlert } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/shared/Badge";
@@ -16,10 +16,12 @@ import type { DoriQuality } from "@/schema/security-scene";
 function Section({
   title,
   icon,
+  actions,
   children,
 }: {
   title: string;
   icon: React.ReactNode;
+  actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -27,6 +29,7 @@ function Section({
       <div className="mb-2 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">
         {icon}
         {title}
+        {actions ? <div className="ml-auto flex items-center gap-1">{actions}</div> : null}
       </div>
       {children}
     </div>
@@ -53,11 +56,53 @@ function formatSignedPercent(delta: number | null | undefined) {
   return `${delta > 0 ? "+" : ""}${delta.toFixed(1)}%`;
 }
 
+type ActionTone = "blue" | "amber" | "emerald" | "violet";
+
+function ActionButton({
+  label,
+  icon,
+  onClick,
+  disabled = false,
+  tone = "blue",
+}: {
+  label: string;
+  icon?: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  tone?: ActionTone;
+}) {
+  const toneClass: Record<ActionTone, string> = {
+    blue: "border-blue-500/20 bg-blue-500/10 text-blue-200 hover:border-blue-400/35 hover:bg-blue-500/15",
+    amber: "border-amber-500/20 bg-amber-500/10 text-amber-200 hover:border-amber-400/35 hover:bg-amber-500/15",
+    emerald: "border-emerald-500/20 bg-emerald-500/10 text-emerald-200 hover:border-emerald-400/35 hover:bg-emerald-500/15",
+    violet: "border-violet-500/20 bg-violet-500/10 text-violet-200 hover:border-violet-400/35 hover:bg-violet-500/15",
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${toneClass[tone]}`}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
 export function NovelAlgorithmsTab() {
   const result = useStudioStore((s) => s.simulationResult);
   const scene = useStudioStore((s) => s.scene);
   const activePathId = useStudioStore((s) => s.activePathId);
   const temporalProfile = useStudioStore((s) => s.temporalProfile);
+  const setViewMode = useStudioStore((s) => s.setViewMode);
+  const setBottomTab = useStudioStore((s) => s.setBottomTab);
+  const setFocusScenePointRequest = useStudioStore((s) => s.setFocusScenePointRequest);
+  const selectNode = useStudioStore((s) => s.selectNode);
+  const setActivePathId = useStudioStore((s) => s.setActivePathId);
+  const setPathReplayPlaying = useStudioStore((s) => s.setPathReplayPlaying);
+  const setPathReplayProgress = useStudioStore((s) => s.setPathReplayProgress);
   const [threshold, setThreshold] = useState<DoriQuality>("observation");
   const [exposureBudgetS, setExposureBudgetS] = useState(2);
   const [uncertaintySamples, setUncertaintySamples] = useState(12);
@@ -73,7 +118,7 @@ export function NovelAlgorithmsTab() {
   const reflectiveBounce = result?.reflectiveBounce;
   const coverageCells = result?.coverageCells;
   const activePath = useMemo(
-    () => scene.paths.find((path) => path.id === activePathId) ?? scene.paths[0] ?? null,
+    () => (activePathId ? (scene.paths.find((path) => path.id === activePathId) ?? null) : null),
     [activePathId, scene.paths],
   );
   const timeBudget = useMemo(
@@ -93,6 +138,40 @@ export function NovelAlgorithmsTab() {
   const kCriticalSet = kRobustness?.criticalSets[0];
   const bestCandidate = placementOracle?.bestCandidate;
   const visibleBands = timeBudget?.segments.filter((segment) => segment.visible) ?? [];
+  const largestBlindRegion = useMemo(
+    () => [...blindRegions].sort((a, b) => b.areaSqM - a.areaSqM)[0] ?? null,
+    [blindRegions],
+  );
+  const largestBlindRegionPoint = useMemo(() => {
+    if (!largestBlindRegion || largestBlindRegion.cells.length === 0) return null;
+    const sums = largestBlindRegion.cells.reduce(
+      (acc, cell) => ({ x: acc.x + cell.x, z: acc.z + cell.z }),
+      { x: 0, z: 0 },
+    );
+    return [
+      sums.x / largestBlindRegion.cells.length,
+      sums.z / largestBlindRegion.cells.length,
+    ] as [number, number];
+  }, [largestBlindRegion]);
+  const bestCandidatePoint = bestCandidate ? ([bestCandidate.position[0], bestCandidate.position[2]] as [number, number]) : null;
+
+  const openMapFocus = (point: [number, number], selectionId?: string | null) => {
+    setViewMode("map");
+    setBottomTab("novel");
+    if (selectionId) {
+      selectNode(selectionId);
+    }
+    setFocusScenePointRequest({ point, source: "minimap" });
+  };
+
+  const openReplay = () => {
+    if (!activePath) return;
+    setActivePathId(activePath.id);
+    setPathReplayPlaying(false);
+    setPathReplayProgress(0);
+    setViewMode("replay");
+    setBottomTab("timeline");
+  };
 
   if (!result) {
     return (
@@ -174,6 +253,138 @@ export function NovelAlgorithmsTab() {
         />
       </div>
 
+      <Section title="Navigator" icon={<MapPinned className="h-3 w-3 text-blue-300" />}>
+        <div className="grid grid-cols-1 gap-1.5 lg:grid-cols-2">
+          <div className="rounded-lg border border-[#1a2030] bg-[#0f141f] p-2">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="text-[9px] uppercase tracking-[0.08em] text-[#8b96ab]">Best placement</div>
+                <div className="mt-0.5 text-[10px] text-[#d2d9e8]">
+                  {bestCandidate ? `${bestCandidate.mountType} at ${bestCandidate.position[0].toFixed(1)}, ${bestCandidate.position[2].toFixed(1)}` : "No ranked candidate"}
+                </div>
+              </div>
+              <Badge variant={bestCandidate ? "blue" : "gray"}>
+                {bestCandidate ? bestCandidate.score.toFixed(1) : "—"}
+              </Badge>
+            </div>
+            <div className="mt-1 text-[9px] text-[#6a748b]">
+              {bestCandidate
+                ? `${bestCandidate.estimatedCoverageDeltaPct.toFixed(1)}% coverage gain · ${bestCandidate.estimatedCriticalZoneGain.toFixed(1)} critical-zone gain`
+                : "Run simulation with novel analytics enabled to generate ranked placement candidates."}
+            </div>
+            <div className="mt-2">
+              <ActionButton
+                label="Inspect on Map"
+                icon={<ArrowRight className="h-3 w-3" />}
+                tone="blue"
+                disabled={!bestCandidatePoint}
+                onClick={() => {
+                  if (!bestCandidatePoint) return;
+                  openMapFocus(bestCandidatePoint);
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-[#1a2030] bg-[#0f141f] p-2">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="text-[9px] uppercase tracking-[0.08em] text-[#8b96ab]">Largest blind region</div>
+                <div className="mt-0.5 text-[10px] text-[#d2d9e8]">
+                  {largestBlindRegion ? `${largestBlindRegion.severity} · ${largestBlindRegion.areaSqM.toFixed(1)} m²` : "No blind regions"}
+                </div>
+              </div>
+              <Badge
+                variant={
+                  largestBlindRegion
+                    ? largestBlindRegion.severity === "critical"
+                      ? "red"
+                      : largestBlindRegion.severity === "high"
+                        ? "amber"
+                        : "gray"
+                    : "gray"
+                }
+              >
+                {largestBlindRegion ? largestBlindRegion.classification : "—"}
+              </Badge>
+            </div>
+            <div className="mt-1 text-[9px] text-[#6a748b]">
+              {largestBlindRegion
+                ? largestBlindRegion.description
+                : "The topology view will populate here once the scene produces blind spot regions."}
+            </div>
+            <div className="mt-2">
+              <ActionButton
+                label="Focus Region"
+                icon={<ArrowRight className="h-3 w-3" />}
+                tone="amber"
+                disabled={!largestBlindRegionPoint}
+                onClick={() => {
+                  if (!largestBlindRegionPoint || !largestBlindRegion) return;
+                  openMapFocus(largestBlindRegionPoint, largestBlindRegion.affectedZoneIds[0] ?? null);
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-[#1a2030] bg-[#0f141f] p-2">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="text-[9px] uppercase tracking-[0.08em] text-[#8b96ab]">Path replay</div>
+                <div className="mt-0.5 text-[10px] text-[#d2d9e8]">
+                  {activePath ? activePath.label : "No active path"}
+                </div>
+              </div>
+              <Badge variant={timeBudget?.budgetMet ? "green" : "amber"}>
+                {timeBudget ? (timeBudget.budgetMet ? "Budget met" : "Budget missed") : "—"}
+              </Badge>
+            </div>
+            <div className="mt-1 text-[9px] text-[#6a748b]">
+              {timeBudget
+                ? `${formatSeconds(timeBudget.firstVisibleTimeS)} to first visible segment · ${formatSeconds(timeBudget.totalDurationS)} total path time`
+                : "Select a path and run simulation to compute an exposure budget."}
+            </div>
+            <div className="mt-2">
+              <ActionButton
+                label="Open Replay"
+                icon={<Play className="h-3 w-3" />}
+                tone="emerald"
+                disabled={!activePath}
+                onClick={openReplay}
+              />
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-[#1a2030] bg-[#0f141f] p-2">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="text-[9px] uppercase tracking-[0.08em] text-[#8b96ab]">Temporal profile</div>
+                <div className="mt-0.5 text-[10px] text-[#d2d9e8]">
+                  {temporalProfile ? `${anomalies.length} anomaly windows` : "No temporal profile yet"}
+                </div>
+              </div>
+              <Badge variant={anomalies.length > 0 ? "amber" : "gray"}>
+                {temporalProfile ? `${temporalProfile.hoursAnalyzed}h` : "—"}
+              </Badge>
+            </div>
+            <div className="mt-1 text-[9px] text-[#6a748b]">
+              {temporalProfile
+                ? `Worst coverage drop ${Math.abs(temporalProfile.anomalySummary?.worstCoverageDropPct ?? 0).toFixed(1)}% and worst exposure jump ${(temporalProfile.anomalySummary?.worstExposureJump ?? 0).toFixed(1)}.`
+                : "Open the 24-hour profile to inspect schedule-driven vulnerability windows."}
+            </div>
+            <div className="mt-2">
+              <ActionButton
+                label="Open 24H Profile"
+                icon={<ArrowRight className="h-3 w-3" />}
+                tone="violet"
+                disabled={!temporalProfile}
+                onClick={() => setBottomTab("temporal")}
+              />
+            </div>
+          </div>
+        </div>
+      </Section>
+
       <div className="grid grid-cols-2 gap-2">
         <Section title="Coverage Fragility" icon={<BarChart3 className="h-3 w-3 text-emerald-400" />}>
           {fragility ? (
@@ -238,7 +449,18 @@ export function NovelAlgorithmsTab() {
           )}
         </Section>
 
-        <Section title="Placement Oracle" icon={<Radar className="h-3 w-3 text-blue-300" />}>
+        <Section
+          title="Placement Oracle"
+          icon={<Radar className="h-3 w-3 text-blue-300" />}
+          actions={bestCandidatePoint ? (
+            <ActionButton
+              label="Inspect"
+              icon={<ArrowRight className="h-3 w-3" />}
+              tone="blue"
+              onClick={() => openMapFocus(bestCandidatePoint)}
+            />
+          ) : null}
+        >
           {bestCandidate ? (
             <div className="space-y-1.5">
               <CandidateLine
@@ -271,7 +493,18 @@ export function NovelAlgorithmsTab() {
           )}
         </Section>
 
-        <Section title="Temporal Anomalies" icon={<TriangleAlert className="h-3 w-3 text-amber-400" />}>
+        <Section
+          title="Temporal Anomalies"
+          icon={<TriangleAlert className="h-3 w-3 text-amber-400" />}
+          actions={temporalProfile ? (
+            <ActionButton
+              label="Open Profile"
+              icon={<ArrowRight className="h-3 w-3" />}
+              tone="amber"
+              onClick={() => setBottomTab("temporal")}
+            />
+          ) : null}
+        >
           {temporalProfile ? (
             <div className="space-y-1.5">
               <CandidateLine label="Anomaly windows" value={`${anomalies.length}`} />
@@ -402,7 +635,18 @@ export function NovelAlgorithmsTab() {
         )}
       </Section>
 
-      <Section title="Coverage Time Budget" icon={<Clock3 className="h-3 w-3 text-cyan-400" />}>
+      <Section
+        title="Coverage Time Budget"
+        icon={<Clock3 className="h-3 w-3 text-cyan-400" />}
+        actions={activePath ? (
+          <ActionButton
+            label="Open Replay"
+            icon={<Play className="h-3 w-3" />}
+            tone="emerald"
+            onClick={openReplay}
+          />
+        ) : null}
+      >
         {timeBudget ? (
           <div className="space-y-2">
             <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-4">
@@ -634,7 +878,21 @@ export function NovelAlgorithmsTab() {
           )}
         </Section>
 
-        <Section title="Blind Spot Topology" icon={<AlertTriangle className="h-3 w-3 text-red-400" />}>
+        <Section
+          title="Blind Spot Topology"
+          icon={<AlertTriangle className="h-3 w-3 text-red-400" />}
+          actions={largestBlindRegionPoint ? (
+            <ActionButton
+              label="Focus"
+              icon={<ArrowRight className="h-3 w-3" />}
+              tone="amber"
+              onClick={() => {
+                if (!largestBlindRegion || !largestBlindRegionPoint) return;
+                openMapFocus(largestBlindRegionPoint, largestBlindRegion.affectedZoneIds[0] ?? null);
+              }}
+            />
+          ) : null}
+        >
           {blindRegions.length > 0 ? (
             <div className="space-y-1.5">
               {blindRegions.slice(0, 3).map((region) => (

@@ -1,9 +1,10 @@
 # V0.2 Floorplan Understanding Bakeoff Plan
 
-Status: Draft for immediate execution
+Status: Draft for immediate execution; harness upgraded with hybrid/cloud traces
 Owner: Next implementation agent
-Date: 2026-05-26
+Date: 2026-05-29
 Related: D-015, D-021, Q-006, Q-007, Q-009
+Model matrix companion: `Docs/exploration/FLOORPLAN_UNDERSTANDING_MODEL_MATRIX.md`
 
 ## 1) Why this bakeoff exists
 
@@ -56,6 +57,13 @@ Why shortlisted:
 Why shortlisted:
 - Direct polygon-sequence floorplan reconstruction is highly aligned with SecurityScene geometry extraction.
 - Useful as an "accuracy ceiling" candidate on clean floorplans.
+
+## 3b) Stage-by-stage model matrix
+
+The full stage breakdown, four-plus candidates per stage, and cloud fallback policy now live in:
+- [Docs/exploration/FLOORPLAN_UNDERSTANDING_MODEL_MATRIX.md](/Users/pranay/Projects/SentinelTwin/Docs/exploration/FLOORPLAN_UNDERSTANDING_MODEL_MATRIX.md)
+
+Use that document as the authoritative model matrix when implementing the harness. This bakeoff plan keeps the execution gate and acceptance criteria; the companion matrix keeps the per-stage candidate list fresh.
 
 ## 4) Candidates explicitly deprioritized for V0.2 harness
 
@@ -141,6 +149,7 @@ For each candidate stack:
 - aggregate metrics
 - failure taxonomy
 - latency/cost profile
+- per-image `trace.json` artifacts documenting OCR, grounding, and fallback choices
 
 Required output files per run:
 - `outputs/<run_id>/metrics_summary.json`
@@ -161,8 +170,7 @@ If no stack passes:
 
 ## 10) Immediate next implementation tasks
 
-1. Implement config-driven harness skeleton in `experiments/scene_understanding/scripts/`.
+1. Extend the config-driven harness in `experiments/scene_understanding/scripts/` with stage traces and cloud/local fallback dispatch.
 2. Implement `SecuritySceneSubset` schema + mapper.
 3. Add deterministic evaluator for geometry + semantics metrics.
 4. Run pilot on 5 images to validate pipeline reliability before full 60-image bakeoff.
-

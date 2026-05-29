@@ -8,6 +8,12 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 For the full-vision gap inventory and next-slice sequencing, see
 `Docs/todos/FULL_VISION_GAP_INVENTORY.md`.
 
+## Scene editor workbench hardening (2026-05-29)
+
+- The editor now uses a shared store-backed feedback channel for placement and transform validation, so wall/zone/path/selection warnings are visible in the same place instead of being split between local and store state ✅
+- Keyboard delete/backspace now removes selected scene nodes or trims the active wall/zone/path draft, and Cmd/Ctrl+D duplicates the active selection through the canonical store actions ✅
+- Zone polygons now support edge insertion and vertex deletion, and path polylines now support midpoint insertion and point deletion, so the workbench can actually shape authored geometry instead of only moving whole objects ✅
+
 ## Homepage / layout surface update (2026-05-28)
 
 - Root no longer uses the older centered form/checklist launcher; `/` now resolves to the Studio dashboard home surface (`StudioDashboardHome`) ✅
@@ -603,3 +609,10 @@ The following issues were fixed to reach 0 typed errors (only pre-existing TS700
 - The footer `StatusBar` now shows `Truth: Live` so the workspace status strip explicitly labels its source of truth.
 - The in-product trust-audit route now checks those visible truth labels in addition to the existing launcher/governance/provenance/debug surfaces.
 - The next trust-hardening step is broader claim-label coverage across the remaining visible surfaces, not reworking the already labeled ones.
+
+## Sprint 14: Scene Editing Feedback + Snap-Aware Transforms (2026-05-29)
+
+- `WorkspaceCanvas.tsx` now gives live placement feedback for wall length, door-on-wall validation, and zone/path minimum-point checks instead of silently ignoring invalid edits.
+- `TransformHandles.tsx` now reuses the editor snap engine for transform updates so direct manipulation stays aligned with placement snapping instead of drifting freely.
+- The workbench still has legacy sensor/selection support in the canvas file, but the primary editor flow is now centered on the current scene-editing tools and warnings.
+- Next hardening step: wire per-handle validation messaging into transform edits and add editor fixture coverage for the placement and snap behaviors.

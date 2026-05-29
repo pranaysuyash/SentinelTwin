@@ -37,7 +37,7 @@ function ContextChip() {
   const result = useStudioStore((s) => s.simulationResult);
 
   if (viewMode === "camera_view") {
-    const cam = scene.cameras.find((c) => c.id === selectedId) ?? scene.cameras[0];
+    const cam = scene.cameras.find((c) => c.id === selectedId) ?? null;
     if (!cam) return null;
     return (
       <div className="flex items-center gap-1 rounded-md border border-[#2a3246] bg-[#111827] px-2 py-1 text-[8px]">
@@ -53,7 +53,7 @@ function ContextChip() {
       <div className="flex items-center gap-1 rounded-md border border-[#2a3246] bg-[#111827] px-2 py-1 text-[8px]">
         <Play className="h-2.5 w-2.5 text-emerald-400" />
         <span className="font-medium" style={{ color: MAP_COLORS.viewport }}>
-          {activePath ? activePath.label : `${scene.paths.length} path${scene.paths.length !== 1 ? "s" : ""}`}
+          {activePath ? activePath.label : "No path selected"}
         </span>
       </div>
     );

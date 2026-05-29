@@ -1,8 +1,8 @@
 # AI Model Pipeline — Deep Dive
 
 **Thread:** Exploration Map Thread 4
-**Status:** Candidates identified, bakeoff not yet run
-**Last updated:** 2026-05-25
+**Status:** Candidates identified; floorplan bakeoff harness now wired for hybrid/cloud traces
+**Last updated:** 2026-05-29
 
 ---
 
@@ -70,6 +70,8 @@ Objects: wall, door, window, shelf, cupboard, counter, pillar, camera, light, ga
 
 Test images: 10 floor plan photos (3 retail, 2 warehouse, 2 lobby, 2 corridor, 1 outdoor)
 Prompt: "Find all security-relevant objects in this image. Return JSON with label, bounding box [x1,y1,x2,y2], confidence, and security role (wall/door/window/obstruction/camera/light/entry)."
+
+For the V0.2 floorplan-specific harness, use the companion model matrix in `Docs/exploration/FLOORPLAN_UNDERSTANDING_MODEL_MATRIX.md` and the run traces emitted under `experiments/scene_understanding/outputs/<run_id>/artifacts/<image_id>/trace.json`.
 
 Score:
 - Object recall: how many real objects detected / total
@@ -374,7 +376,7 @@ If adding voice for demo: OpenAI Realtime API with tool calling for SceneOperati
 
 | Stage | V0.1 | V0.2+ | Bakeoff needed? |
 |---|---|---|---|
-| Scene understanding | Manual only | Qwen2.5-VL / Gemini Flash | Yes — experiments/scene_understanding/ |
+| Scene understanding | Manual only | Qwen2.5-VL / Gemini Flash / local OCR+grounding stack | Yes — experiments/scene_understanding/ and `Docs/exploration/FLOORPLAN_UNDERSTANDING_MODEL_MATRIX.md` |
 | Segmentation | Manual only | SAM 2 / SAM 3 | Yes — experiments/segmentation/ |
 | Depth | Not used | Depth Anything V2 | No — clear winner |
 | Multi-photo 3D | Not used | VGGT / DUSt3R | Yes — experiments/multi_photo_3d/ |

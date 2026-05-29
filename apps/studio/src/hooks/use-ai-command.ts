@@ -16,9 +16,10 @@ import type { SceneOperation } from "@/schema/SceneOperation";
 import { applySceneOperation } from "@/lib/applySceneOperation";
 import { createSecurityLightNode } from "@/lib/node-factory";
 import { parseOfflineCommand, type OfflineCommandAction } from "@/lib/offline-command-parser";
+import { evaluateAiRateLimit, formatRetryHint, recordAiRateLimitUsage } from "@/lib/ai-rate-limit";
 import { useStudioStore } from "@/store/studio-store";
 import { simulateStudio } from "@/simulation/simulate-studio";
-import type { CameraNode, CriticalZoneNode } from "@/schema/security-scene";
+import type { CameraNode, CriticalZoneNode, SecurityScene, SimulationResult } from "@/schema/security-scene";
 import type { AiActionTelemetryStage } from "@/store/studio-store";
 
 export type AiCommandStatus =
@@ -283,6 +284,7 @@ export function useAiCommand() {
         }
         case "/fix":
         case "/improve": {
+          const isAutoApply = rootCommand === "/improve";
           // Parse constraints from remaining text after the command
           const constraints = userText.replace(/^\/fix\s*/i, "").replace(/^\/improve\s*/i, "").split(",").map((s) => s.trim()).filter(Boolean);
 
@@ -319,41 +321,20 @@ export function useAiCommand() {
               `Time: ${scene.assumptions.timeOfDay}`,
             ].join(" | ");
 
+            const estimatedCounterfactualTokens = estimateTokensFromText(`${issuesSummary}\n${sceneSummary}\n${constraints.join(",")}`);
+            const budgetDecision = evaluateAiRateLimit("counterfactual", estimatedCounterfactualTokens);
+            if (!budgetDecision.allowed) {
+              setStatusSafe({
+                state: "error",
+                message: `${budgetDecision.reason ?? "Counterfactual budget limit reached."} ${formatRetryHint(budgetDecision.retryInMs)}`,
+              });
+              autoDismiss();
+              return;
+            }
+            recordAiRateLimitUsage("counterfactual", estimatedCounterfactualTokens);
+
             const rawCandidates = await proposeCounterfactuals(issuesSummary, sceneSummary, constraints, provider);
-
-            // Verify each candidate by simulating
-            const verified = rawCandidates.map((candidate) => {
-              try {
-                const testScene = structuredClone(scene);
-                const ops = candidate.operations as unknown as SceneOperation[];
-                for (const op of ops) {
-                  applySceneOperation(testScene, op);
-                }
-                const testResult = simulateStudio(testScene);
-
-                const delta = {
-                  totalCoveragePctDelta: Number((testResult.totalCoveragePct - sim.totalCoveragePct).toFixed(1)),
-                  blindspotPctDelta: Number((testResult.blindspotPct - sim.blindspotPct).toFixed(1)),
-                  criticalZoneStatusChanges: testResult.criticalZoneResults
-                    .map((z, i) => {
-                      const prev = sim.criticalZoneResults[i];
-                      if (prev && prev.status !== z.status) return `${z.label}: ${prev.status} → ${z.status}`;
-                      return null;
-                    })
-                    .filter((s): s is string => s !== null),
-                  worstIssueResolved: testResult.issues.filter((i) => i.severity === "critical").length < sim.issues.filter((i) => i.severity === "critical").length,
-                };
-
-                return { ...candidate, verifiedDelta: delta };
-              } catch {
-                return { ...candidate, verifiedDelta: undefined };
-              }
-            });
-
-            const ranked = verified
-              .filter((c) => c.verifiedDelta)
-              .sort((a, b) => (b.verifiedDelta?.totalCoveragePctDelta ?? 0) - (a.verifiedDelta?.totalCoveragePctDelta ?? 0))
-              .map((c, i) => ({ ...c, rank: i + 1 }));
+            const ranked = verifyAndRankCounterfactualCandidates(rawCandidates, scene, sim);
 
             setStatusSafe({
               state: "candidates",
@@ -363,6 +344,16 @@ export function useAiCommand() {
 
             if (ranked.length === 0) {
               setStatusSafe({ state: "error", message: "No verified fixes found. Try different constraints." });
+              autoDismiss();
+              return;
+            }
+
+            if (isAutoApply) {
+              applyCounterfactualCandidateOperations(ranked[0].operations);
+              setStatusSafe({
+                state: "success",
+                message: `Auto-applied best fix (#${ranked[0].rank ?? 1}): ${ranked[0].description}`,
+              });
               autoDismiss();
             }
           } catch (err) {
@@ -432,6 +423,17 @@ export function useAiCommand() {
 
     try {
       const context = buildSceneContext();
+      const estimatedParseTokens = estimateTokensFromText(`${userText}\n${JSON.stringify(context)}`);
+      const parseBudgetDecision = evaluateAiRateLimit("command_parse", estimatedParseTokens);
+      if (!parseBudgetDecision.allowed) {
+        setStatusSafe({
+          state: "error",
+          message: `${parseBudgetDecision.reason ?? "Command parsing budget limit reached."} ${formatRetryHint(parseBudgetDecision.retryInMs)}`,
+        });
+        autoDismiss();
+        return;
+      }
+      recordAiRateLimitUsage("command_parse", estimatedParseTokens);
       const operations = await parseCommand(userText, context, provider);
       const parsePromptTokens = estimateTokensFromText(`${userText}\n${JSON.stringify(context)}`);
       const parseCompletionTokens = estimateTokensFromText(JSON.stringify(operations));
@@ -468,40 +470,20 @@ export function useAiCommand() {
             `Time: ${scene.assumptions.timeOfDay}`,
           ].join(" | ");
 
+          const estimatedCounterfactualTokens = estimateTokensFromText(`${issuesSummary}\n${sceneSummary}\n${userText}`);
+          const fallbackBudgetDecision = evaluateAiRateLimit("counterfactual", estimatedCounterfactualTokens);
+          if (!fallbackBudgetDecision.allowed) {
+            setStatusSafe({
+              state: "error",
+              message: `${fallbackBudgetDecision.reason ?? "Counterfactual budget limit reached."} ${formatRetryHint(fallbackBudgetDecision.retryInMs)}`,
+            });
+            autoDismiss();
+            return;
+          }
+          recordAiRateLimitUsage("counterfactual", estimatedCounterfactualTokens);
+
           const rawCandidates = await proposeCounterfactuals(issuesSummary, sceneSummary, [userText], provider);
-
-          const verified = rawCandidates.map((candidate) => {
-            try {
-              const testScene = structuredClone(scene);
-              const ops = candidate.operations as unknown as SceneOperation[];
-              for (const op of ops) {
-                applySceneOperation(testScene, op);
-              }
-              const testResult = simulateStudio(testScene);
-              return {
-                ...candidate,
-                verifiedDelta: {
-                  totalCoveragePctDelta: Number((testResult.totalCoveragePct - sim.totalCoveragePct).toFixed(1)),
-                  blindspotPctDelta: Number((testResult.blindspotPct - sim.blindspotPct).toFixed(1)),
-                  criticalZoneStatusChanges: testResult.criticalZoneResults
-                    .map((z, i) => {
-                      const prev = sim.criticalZoneResults[i];
-                      if (prev && prev.status !== z.status) return `${z.label}: ${prev.status} → ${z.status}`;
-                      return null;
-                    })
-                    .filter((s): s is string => s !== null),
-                  worstIssueResolved: testResult.issues.filter((i) => i.severity === "critical").length < sim.issues.filter((i) => i.severity === "critical").length,
-                },
-              };
-            } catch {
-              return { ...candidate, verifiedDelta: undefined };
-            }
-          });
-
-          const ranked = verified
-            .filter((c) => c.verifiedDelta)
-            .sort((a, b) => (b.verifiedDelta?.totalCoveragePctDelta ?? 0) - (a.verifiedDelta?.totalCoveragePctDelta ?? 0))
-            .map((c, i) => ({ ...c, rank: i + 1 }));
+          const ranked = verifyAndRankCounterfactualCandidates(rawCandidates, scene, sim);
 
           recordTelemetry(
             "counterfactual",
@@ -734,44 +716,19 @@ export function useAiCommand() {
         `Time: ${scene.assumptions.timeOfDay}`,
       ].join(" | ");
 
+      const estimatedCounterfactualTokens = estimateTokensFromText(`${issuesSummary}\n${sceneSummary}\n${constraints.join(",")}`);
+      const budgetDecision = evaluateAiRateLimit("counterfactual", estimatedCounterfactualTokens);
+      if (!budgetDecision.allowed) {
+        setStatus({
+          state: "error",
+          message: `${budgetDecision.reason ?? "Counterfactual budget limit reached."} ${formatRetryHint(budgetDecision.retryInMs)}`,
+        });
+        return;
+      }
+      recordAiRateLimitUsage("counterfactual", estimatedCounterfactualTokens);
+
       const candidates = await proposeCounterfactuals(issuesSummary, sceneSummary, constraints, provider);
-
-      // Verify each candidate by simulating
-      const verified = candidates.map((candidate) => {
-        try {
-          const testScene = structuredClone(scene);
-          const ops = candidate.operations as unknown as SceneOperation[];
-          for (const op of ops) {
-            applySceneOperation(testScene, op);
-          }
-          const testResult = simulateStudio(testScene);
-
-          const delta = {
-            totalCoveragePctDelta: Number((testResult.totalCoveragePct - sim.totalCoveragePct).toFixed(1)),
-            blindspotPctDelta: Number((testResult.blindspotPct - sim.blindspotPct).toFixed(1)),
-            criticalZoneStatusChanges: testResult.criticalZoneResults
-              .map((z, i) => {
-                const prev = sim.criticalZoneResults[i];
-                if (prev && prev.status !== z.status) return `${z.label}: ${prev.status} → ${z.status}`;
-                return null;
-              })
-              .filter((s): s is string => s !== null),
-            worstIssueResolved: testResult.issues.filter((i) => i.severity === "critical").length < sim.issues.filter((i) => i.severity === "critical").length,
-          };
-
-          return {
-            ...candidate,
-            verifiedDelta: delta,
-          };
-        } catch {
-          return { ...candidate, verifiedDelta: undefined };
-        }
-      });
-
-      const ranked = verified
-        .filter((c) => c.verifiedDelta)
-        .sort((a, b) => (b.verifiedDelta?.totalCoveragePctDelta ?? 0) - (a.verifiedDelta?.totalCoveragePctDelta ?? 0))
-        .map((c, i) => ({ ...c, rank: i + 1 }));
+      const ranked = verifyAndRankCounterfactualCandidates(candidates, scene, sim);
 
       recordTelemetry(
         "counterfactual",
@@ -864,6 +821,17 @@ export function useAiCommand() {
       const simData = buildSimulationSummary(sim);
       const sceneSummary = `Site: ${store.scene.name}, ${store.scene.dimensions.width}m × ${store.scene.dimensions.depth}m, ${store.scene.cameras.length} cameras`;
 
+      const estimatedReportTokens = estimateTokensFromText(simData + sceneSummary);
+      const reportBudgetDecision = evaluateAiRateLimit("report_generation", estimatedReportTokens);
+      if (!reportBudgetDecision.allowed) {
+        setStatus({
+          state: "error",
+          message: `${reportBudgetDecision.reason ?? "Report generation budget limit reached."} ${formatRetryHint(reportBudgetDecision.retryInMs)}`,
+        });
+        return null;
+      }
+      recordAiRateLimitUsage("report_generation", estimatedReportTokens);
+
       const report = await generateReport(simData, sceneSummary, provider);
       const elapsedMs = Math.round(performance.now() - startedAt);
       recordAiActionTelemetry({
@@ -874,9 +842,9 @@ export function useAiCommand() {
         localOnlyMode,
         cloudAvailable: apiKeyAvailable,
         durationMs: elapsedMs,
-        estimatedPromptTokens: estimateTokensFromText(simData + sceneSummary),
+        estimatedPromptTokens: estimatedReportTokens,
         estimatedCompletionTokens: estimateTokensFromText(report.executiveSummary + report.sections.map((section) => section.content).join(" ")),
-        estimatedTotalTokens: estimateTokensFromText(simData + sceneSummary) + estimateTokensFromText(report.executiveSummary + report.sections.map((section) => section.content).join(" ")),
+        estimatedTotalTokens: estimatedReportTokens + estimateTokensFromText(report.executiveSummary + report.sections.map((section) => section.content).join(" ")),
         tokenSource: "estimated",
         status: "success",
         note: "Report generation timing recorded from the AI command surface.",
@@ -912,68 +880,7 @@ export function useAiCommand() {
   const dismissError = useCallback(() => setStatusSafe({ state: "idle" }), [setStatusSafe]);
 
   const applyCandidate = useCallback((ops: CounterfactualCandidate["operations"]) => {
-    const storeState = useStudioStore.getState();
-    const logEntries: string[] = [];
-
-    // Snapshot the current state for before/after comparison
-    storeState.saveSnapshot("Before fix  " + new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
-
-    for (const op of ops) {
-      const typedOp = op as { type: string };
-      switch (typedOp.type) {
-        case "move_obstruction": {
-          const o = op as { obstructionId: string; newPosition: [number, number, number] };
-          const obs = storeState.scene.obstructions.find((x) => x.id === o.obstructionId);
-          if (obs) { obs.position = o.newPosition; storeState.markDirty(); logEntries.push(`Moved ${obs.label} to (${o.newPosition.map((n) => n.toFixed(1)).join(", ")})`); }
-          break;
-        }
-        case "rotate_camera": {
-          const o = op as { cameraId: string; yawDeg: number; pitchDeg?: number };
-          const cam = storeState.scene.cameras.find((x) => x.id === o.cameraId);
-          if (cam) { cam.yawDeg = o.yawDeg; if (o.pitchDeg !== undefined) cam.pitchDeg = o.pitchDeg; storeState.markDirty(); logEntries.push(`Rotated ${cam.name} ${o.pitchDeg !== undefined ? `${o.yawDeg}° yaw, ${o.pitchDeg}° pitch` : `${o.yawDeg}° yaw`}`); }
-          break;
-        }
-        case "toggle_camera": {
-          const o = op as { cameraId: string; status: "on" | "off" };
-          const cam = storeState.scene.cameras.find((x) => x.id === o.cameraId);
-          if (cam) { cam.status = o.status; storeState.markDirty(); logEntries.push(`Turned ${o.status === "on" ? "on" : "off"} ${cam.name}`); }
-          break;
-        }
-        case "add_light": {
-          const o = op as { position: [number, number, number] };
-          const light = createSecurityLightNode(o.position);
-          storeState.scene.securityLights.push(light);
-          storeState.markDirty();
-          logEntries.push(`Added light at (${o.position.map((n) => n.toFixed(1)).join(", ")})`);
-          break;
-        }
-        case "move_camera": {
-          const o = op as { cameraId: string; newPosition: [number, number, number] };
-          const cam = storeState.scene.cameras.find((x) => x.id === o.cameraId);
-          if (cam) { cam.position = o.newPosition; storeState.markDirty(); logEntries.push(`Moved ${cam.name} to (${o.newPosition.map((n) => n.toFixed(1)).join(", ")})`); }
-          break;
-        }
-        case "resize_obstruction": {
-          const o = op as { obstructionId: string; newDimensions: [number, number, number] };
-          const obs = storeState.scene.obstructions.find((x) => x.id === o.obstructionId);
-          if (obs) { obs.dimensions = o.newDimensions; storeState.markDirty(); logEntries.push(`Resized ${obs.label} to ${o.newDimensions.join("×")}m`); }
-          break;
-        }
-        default:
-          break;
-      }
-    }
-    // Log the changes
-    for (const entry of logEntries) {
-      storeState.logChange(entry);
-    }
-    storeState.runSimulation();
-    // Queue an "after" snapshot once simulation completes
-    setTimeout(() => {
-      const current = useStudioStore.getState();
-      current.saveSnapshot("After fix " + new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
-      current.setBottomTab("beforeafter");
-    }, 200);
+    applyCounterfactualCandidateOperations(ops);
     setStatusSafe({ state: "idle" });
   }, [setStatusSafe]);
 
@@ -1008,6 +915,134 @@ function applyOfflineAction(action: OfflineCommandAction) {
 
 function estimateTokensFromText(text: string) {
   return Math.max(1, Math.ceil(text.length / 4));
+}
+
+function verifyAndRankCounterfactualCandidates(
+  candidates: CounterfactualCandidate[],
+  scene: SecurityScene,
+  baseline: SimulationResult,
+) {
+  const verified = candidates.map((candidate) => {
+    try {
+      const testScene = structuredClone(scene);
+      const ops = candidate.operations as unknown as SceneOperation[];
+      for (const op of ops) {
+        applySceneOperation(testScene, op);
+      }
+      const testResult = simulateStudio(testScene);
+
+      const baselineExposure = baseline.adversarialPath?.totalExposureScore;
+      const nextExposure = testResult.adversarialPath?.totalExposureScore;
+
+      return {
+        ...candidate,
+        verifiedDelta: {
+          totalCoveragePctDelta: Number((testResult.totalCoveragePct - baseline.totalCoveragePct).toFixed(1)),
+          blindspotPctDelta: Number((testResult.blindspotPct - baseline.blindspotPct).toFixed(1)),
+          criticalZoneStatusChanges: testResult.criticalZoneResults
+            .map((zone, index) => {
+              const prev = baseline.criticalZoneResults[index];
+              if (prev && prev.status !== zone.status) return `${zone.label}: ${prev.status} → ${zone.status}`;
+              return null;
+            })
+            .filter((line): line is string => line !== null),
+          worstIssueResolved:
+            testResult.issues.filter((issue) => issue.severity === "critical").length
+            < baseline.issues.filter((issue) => issue.severity === "critical").length,
+          adversarialPathExposureDelta:
+            typeof baselineExposure === "number" && typeof nextExposure === "number"
+              ? Number((nextExposure - baselineExposure).toFixed(2))
+              : undefined,
+        },
+      };
+    } catch {
+      return { ...candidate, verifiedDelta: undefined };
+    }
+  });
+
+  return verified
+    .filter((candidate) => candidate.verifiedDelta)
+    .sort((a, b) => {
+      const aCritical = a.verifiedDelta?.worstIssueResolved ? 1 : 0;
+      const bCritical = b.verifiedDelta?.worstIssueResolved ? 1 : 0;
+      if (aCritical !== bCritical) return bCritical - aCritical;
+
+      const aCoverage = a.verifiedDelta?.totalCoveragePctDelta ?? 0;
+      const bCoverage = b.verifiedDelta?.totalCoveragePctDelta ?? 0;
+      if (aCoverage !== bCoverage) return bCoverage - aCoverage;
+
+      const aExposure = a.verifiedDelta?.adversarialPathExposureDelta ?? Number.POSITIVE_INFINITY;
+      const bExposure = b.verifiedDelta?.adversarialPathExposureDelta ?? Number.POSITIVE_INFINITY;
+      if (aExposure !== bExposure) return aExposure - bExposure;
+
+      const aBlindspot = a.verifiedDelta?.blindspotPctDelta ?? Number.POSITIVE_INFINITY;
+      const bBlindspot = b.verifiedDelta?.blindspotPctDelta ?? Number.POSITIVE_INFINITY;
+      return aBlindspot - bBlindspot;
+    })
+    .map((candidate, index) => ({ ...candidate, rank: index + 1 }));
+}
+
+function applyCounterfactualCandidateOperations(ops: CounterfactualCandidate["operations"]) {
+  const storeState = useStudioStore.getState();
+  const logEntries: string[] = [];
+
+  storeState.saveSnapshot("Before fix  " + new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
+
+  for (const op of ops) {
+    const typedOp = op as { type: string };
+    switch (typedOp.type) {
+      case "move_obstruction": {
+        const o = op as { obstructionId: string; newPosition: [number, number, number] };
+        const obs = storeState.scene.obstructions.find((x) => x.id === o.obstructionId);
+        if (obs) { obs.position = o.newPosition; storeState.markDirty(); logEntries.push(`Moved ${obs.label} to (${o.newPosition.map((n) => n.toFixed(1)).join(", ")})`); }
+        break;
+      }
+      case "rotate_camera": {
+        const o = op as { cameraId: string; yawDeg: number; pitchDeg?: number };
+        const cam = storeState.scene.cameras.find((x) => x.id === o.cameraId);
+        if (cam) { cam.yawDeg = o.yawDeg; if (o.pitchDeg !== undefined) cam.pitchDeg = o.pitchDeg; storeState.markDirty(); logEntries.push(`Rotated ${cam.name} ${o.pitchDeg !== undefined ? `${o.yawDeg}° yaw, ${o.pitchDeg}° pitch` : `${o.yawDeg}° yaw`}`); }
+        break;
+      }
+      case "toggle_camera": {
+        const o = op as { cameraId: string; status: "on" | "off" };
+        const cam = storeState.scene.cameras.find((x) => x.id === o.cameraId);
+        if (cam) { cam.status = o.status; storeState.markDirty(); logEntries.push(`Turned ${o.status === "on" ? "on" : "off"} ${cam.name}`); }
+        break;
+      }
+      case "add_light": {
+        const o = op as { position: [number, number, number] };
+        const light = createSecurityLightNode(o.position);
+        storeState.scene.securityLights.push(light);
+        storeState.markDirty();
+        logEntries.push(`Added light at (${o.position.map((n) => n.toFixed(1)).join(", ")})`);
+        break;
+      }
+      case "move_camera": {
+        const o = op as { cameraId: string; newPosition: [number, number, number] };
+        const cam = storeState.scene.cameras.find((x) => x.id === o.cameraId);
+        if (cam) { cam.position = o.newPosition; storeState.markDirty(); logEntries.push(`Moved ${cam.name} to (${o.newPosition.map((n) => n.toFixed(1)).join(", ")})`); }
+        break;
+      }
+      case "resize_obstruction": {
+        const o = op as { obstructionId: string; newDimensions: [number, number, number] };
+        const obs = storeState.scene.obstructions.find((x) => x.id === o.obstructionId);
+        if (obs) { obs.dimensions = o.newDimensions; storeState.markDirty(); logEntries.push(`Resized ${obs.label} to ${o.newDimensions.join("×")}m`); }
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  for (const entry of logEntries) {
+    storeState.logChange(entry);
+  }
+  storeState.runSimulation();
+  setTimeout(() => {
+    const current = useStudioStore.getState();
+    current.saveSnapshot("After fix " + new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
+    current.setBottomTab("beforeafter");
+  }, 200);
 }
 
 function applySceneOperations(operations: SceneOperation[]) {

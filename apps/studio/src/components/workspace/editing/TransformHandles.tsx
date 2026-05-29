@@ -17,7 +17,8 @@ import type {
   WallNode,
 } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
-import { pathLength, type Point2 } from "./editor-geometry";
+import { makeSnapEngine } from "./SnapEngine";
+import { insertPointAtIndex, insertPolygonVertex, pathLength, removePathPoint, removePolygonVertex, type Point2 } from "./editor-geometry";
 
 export type TransformableNode =
   | CameraNode
@@ -29,7 +30,7 @@ export type TransformableNode =
   | PrivacyZoneNode
   | ScenarioPath;
 
-type HandleKind = "move" | "rotate" | "height" | "pitch" | "scale_x" | "scale_z" | "wall_start" | "wall_end" | "vertex" | "path_point" | "path_insert";
+type HandleKind = "move" | "rotate" | "height" | "pitch" | "scale_x" | "scale_z" | "wall_start" | "wall_end" | "vertex" | "path_point" | "path_insert" | "polygon_insert";
 
 type DragState = {
   handle: HandleKind;
@@ -39,6 +40,8 @@ type DragState = {
   currentWorld: Point2;
   startNode: TransformableNode;
 };
+
+type SnapEngine = ReturnType<typeof makeSnapEngine>;
 
 function cloneNode(node: TransformableNode): TransformableNode {
   return structuredClone(node);
@@ -112,16 +115,6 @@ function getObstructionAxis(rotationYDeg: number) {
   };
 }
 
-function insertPathPoint(path: ScenarioPath, insertIndex: number, position: Point2): ScenarioPath {
-  const next = structuredClone(path) as ScenarioPath;
-  const points = [...next.points];
-  points.splice(insertIndex, 0, {
-    position,
-  });
-  next.points = points;
-  return next;
-}
-
 function updateDraft(
   node: TransformableNode,
   drag: DragState,
@@ -129,12 +122,16 @@ function updateDraft(
   camera: THREE.Camera,
   size: { width: number; height: number },
   raycaster: THREE.Raycaster,
+  snapEngine: SnapEngine,
 ): TransformableNode {
   const next = cloneNode(node);
   const startPoint = drag.startWorld;
   const currentPoint = getPointFromEvent(event, camera, size, raycaster, 0) ?? startPoint;
-  const deltaX = currentPoint[0] - startPoint[0];
-  const deltaZ = currentPoint[1] - startPoint[1];
+  const snappedPoint = snapEngine.snapForPlacement(currentPoint, false).point;
+  const wallPoint = snapEngine.snapForPlacement(currentPoint, true).point;
+  const gridPoint = snapEngine.snapToGrid(currentPoint);
+  const deltaX = snappedPoint[0] - startPoint[0];
+  const deltaZ = snappedPoint[1] - startPoint[1];
 
   if (drag.handle === "move") {
     if (next.nodeType === "camera" || next.nodeType === "security_light" || next.nodeType === "sensor" || next.nodeType === "obstruction") {
@@ -217,12 +214,12 @@ function updateDraft(
   }
 
   if (drag.handle === "wall_start" && next.nodeType === "wall") {
-    next.start = currentPoint;
+    next.start = wallPoint;
     return next;
   }
 
   if (drag.handle === "wall_end" && next.nodeType === "wall") {
-    next.end = currentPoint;
+    next.end = wallPoint;
     return next;
   }
 
@@ -231,14 +228,14 @@ function updateDraft(
       const snZone = drag.startNode as CriticalZoneNode | PrivacyZoneNode;
       const nextPolygon = [...snZone.polygon];
       if (drag.index !== undefined && nextPolygon[drag.index]) {
-        nextPolygon[drag.index] = currentPoint;
+        nextPolygon[drag.index] = gridPoint;
       }
       next.polygon = nextPolygon;
     } else if (next.nodeType === "path") {
       const snPath = drag.startNode as ScenarioPath;
       const nextPoints = [...snPath.points];
       if (drag.index !== undefined && nextPoints[drag.index]) {
-        nextPoints[drag.index] = { ...nextPoints[drag.index]!, position: currentPoint };
+        nextPoints[drag.index] = { ...nextPoints[drag.index]!, position: gridPoint };
       }
       next.points = nextPoints;
     }
@@ -249,7 +246,7 @@ function updateDraft(
     const snPath = drag.startNode as ScenarioPath;
     const nextPoints = [...snPath.points];
     if (drag.index !== undefined && nextPoints[drag.index]) {
-      nextPoints[drag.index] = { ...nextPoints[drag.index]!, position: currentPoint };
+      nextPoints[drag.index] = { ...nextPoints[drag.index]!, position: gridPoint };
     }
     next.points = nextPoints;
     return next;
@@ -298,10 +295,12 @@ export function TransformHandles() {
   const scene = useStudioStore((s) => s.scene);
   const selectedNodeId = useStudioStore((s) => s.selectedNodeId);
   const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
+  const editor = useStudioStore((s) => s.editor);
   const updateNode = useStudioStore((s) => s.updateNode);
   const translateSelectedNodes = useStudioStore((s) => s.translateSelectedNodes);
   const setEditorMode = useStudioStore((s) => s.setEditorMode);
   const setSelectedHandle = useStudioStore((s) => s.setSelectedHandle);
+  const setEditorFeedbackMessage = useStudioStore((s) => s.setEditorFeedbackMessage);
   const selected = useMemo<TransformableNode | null>(() => {
     const collections: TransformableNode[] = [
       ...scene.cameras,
@@ -317,6 +316,11 @@ export function TransformHandles() {
 
   const { camera, size } = useThree();
   const raycaster = useMemo(() => new THREE.Raycaster(), []);
+  const snapEngine = useMemo(() => makeSnapEngine(scene, {
+    snapEnabled: editor.snapEnabled,
+    snapDistanceM: editor.snapDistanceM,
+    gridSnapM: editor.gridSnapM,
+  }), [editor.gridSnapM, editor.snapDistanceM, editor.snapEnabled, scene]);
   const [preview, setPreview] = useState<TransformableNode | null>(null);
   const previewRef = useRef<TransformableNode | null>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -373,10 +377,11 @@ export function TransformHandles() {
       if (!dragRef.current || !selected) return;
       if (isGroupSelection && dragRef.current.handle === "move") {
         const currentPoint = getPointFromEvent(event, camera, size, raycaster, 0) ?? dragRef.current.startWorld;
-        dragRef.current.currentWorld = currentPoint;
+        const snappedPoint = snapEngine.snapForPlacement(currentPoint, false).point;
+        dragRef.current.currentWorld = snappedPoint;
         return;
       }
-      const next = updateDraft(selected, dragRef.current, event, camera, size, raycaster);
+      const next = updateDraft(selected, dragRef.current, event, camera, size, raycaster, snapEngine);
       previewRef.current = next;
       setPreview(next);
     };
@@ -412,7 +417,7 @@ export function TransformHandles() {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
     };
-  }, [camera, isGroupSelection, preview, raycaster, selected, setEditorMode, setSelectedHandle, size, translateSelectedNodes, updateNode]);
+  }, [camera, isGroupSelection, preview, raycaster, selected, setEditorMode, setSelectedHandle, size, snapEngine, translateSelectedNodes, updateNode]);
 
   if (!selected) return null;
 
@@ -427,7 +432,10 @@ export function TransformHandles() {
     let nextIndex = index;
 
     if (handle === "path_insert" && selected.nodeType === "path" && index !== undefined) {
-      const inserted = insertPathPoint(selected, index + 1, startWorld);
+      const inserted = {
+        ...selected,
+        points: insertPointAtIndex(selected.points, index + 1, { position: startWorld }),
+      } as ScenarioPath;
       baseNode = inserted;
       nextHandle = "path_point";
       nextIndex = index + 1;
@@ -444,6 +452,32 @@ export function TransformHandles() {
       };
       setEditorMode("transforming");
       setSelectedHandle(`path_insert:${index}`);
+      setEditorFeedbackMessage(null);
+      return;
+    }
+
+    if (handle === "polygon_insert" && (selected.nodeType === "critical_zone" || selected.nodeType === "privacy_zone") && index !== undefined) {
+      const inserted = {
+        ...selected,
+        polygon: insertPolygonVertex(selected.polygon, index, startWorld),
+      } as CriticalZoneNode | PrivacyZoneNode;
+      baseNode = inserted;
+      nextHandle = "vertex";
+      nextIndex = index + 1;
+      const initialPreview = cloneNode(inserted);
+      previewRef.current = initialPreview;
+      setPreview(initialPreview);
+      dragRef.current = {
+        handle: nextHandle,
+        index: nextIndex,
+        startClient: { x: event.clientX, y: event.clientY },
+        startWorld,
+        currentWorld: startWorld,
+        startNode: baseNode,
+      };
+      setEditorMode("transforming");
+      setSelectedHandle(`polygon_insert:${index}`);
+      setEditorFeedbackMessage(null);
       return;
     }
 
@@ -460,6 +494,36 @@ export function TransformHandles() {
     setPreview(initialPreview);
     setEditorMode("transforming");
     setSelectedHandle(`${handle}${index !== undefined ? `:${index}` : ""}`);
+    setEditorFeedbackMessage(null);
+  };
+
+  const removeVertexPoint = (nodeType: TransformableNode["nodeType"], index: number) => {
+    if (!selected || index < 0) return;
+
+    if (nodeType === "critical_zone" || nodeType === "privacy_zone") {
+      const current = selected as CriticalZoneNode | PrivacyZoneNode;
+      const nextPolygon = removePolygonVertex(current.polygon, index);
+      if (!nextPolygon) {
+        setEditorFeedbackMessage("Zone needs at least 3 points");
+        return;
+      }
+      updateNode(current.id, { polygon: nextPolygon } as Partial<AnyEditableNode>);
+      setEditorFeedbackMessage(null);
+      return;
+    }
+
+    if (nodeType === "path") {
+      const current = selected as ScenarioPath;
+      const nextPoints = removePathPoint(current.points.map((point) => point.position), index);
+      if (!nextPoints) {
+        setEditorFeedbackMessage("Path needs at least 2 points");
+        return;
+      }
+      updateNode(current.id, {
+        points: nextPoints.map((position) => ({ position })),
+      } as Partial<AnyEditableNode>);
+      setEditorFeedbackMessage(null);
+    }
   };
 
   if (node.nodeType === "camera") {
@@ -537,7 +601,12 @@ export function TransformHandles() {
     if (isGroupSelection) {
       return (
         <group>
-          <HandleSphere position={[groupAnchor[0], 0.1, groupAnchor[1]]} color="#22c55e" onPointerDown={beginDrag("move")} label={`Move ${groupSelection.length}`} />
+          <HandleSphere
+            position={[groupAnchor[0], 0.1, groupAnchor[1]]}
+            color="#22c55e"
+            onPointerDown={beginDrag("move")}
+            label={`Move ${groupSelection.length}`}
+          />
         </group>
       );
     }
@@ -555,7 +624,12 @@ export function TransformHandles() {
     if (isGroupSelection) {
       return (
         <group>
-          <HandleSphere position={[groupAnchor[0], 0.08, groupAnchor[1]]} color={node.nodeType === "critical_zone" ? "#22c55e" : "#8b5cf6"} onPointerDown={beginDrag("move")} label={`Move ${groupSelection.length}`} />
+          <HandleSphere
+            position={[groupAnchor[0], 0.08, groupAnchor[1]]}
+            color={node.nodeType === "critical_zone" ? "#22c55e" : "#8b5cf6"}
+            onPointerDown={beginDrag("move")}
+            label={`Move ${groupSelection.length}`}
+          />
         </group>
       );
     }
@@ -572,10 +646,35 @@ export function TransformHandles() {
             key={`${node.id}-${index}`}
             position={[point[0], 0.06, point[1]]}
             color={index === 0 ? "#bef264" : "#22c55e"}
-            onPointerDown={beginDrag("vertex", index)}
+            onPointerDown={(event) => {
+              if (event.altKey || event.metaKey || event.ctrlKey) {
+                event.stopPropagation();
+                removeVertexPoint(node.nodeType, index);
+                return;
+              }
+              beginDrag("vertex", index)(event);
+            }}
             label={`V${index + 1}`}
           />
         ))}
+        {node.polygon.map((point, index) => {
+          const nextPoint = node.polygon[(index + 1) % node.polygon.length];
+          if (!nextPoint) return null;
+          const midpoint: [number, number, number] = [
+            (point[0] + nextPoint[0]) / 2,
+            0.06,
+            (point[1] + nextPoint[1]) / 2,
+          ];
+          return (
+            <HandleSphere
+              key={`insert-${node.id}-${index}`}
+              position={midpoint}
+              color="#38bdf8"
+              onPointerDown={beginDrag("polygon_insert", index)}
+              label="+"
+            />
+          );
+        })}
       </group>
     );
   }
@@ -615,7 +714,22 @@ export function TransformHandles() {
             key={`${node.id}-${index}`}
             position={[point[0], 0.06, point[1]]}
             color={index === 0 ? "#fde68a" : "#fb923c"}
-            onPointerDown={beginDrag("path_point", index)}
+            onPointerDown={(event) => {
+              if (event.altKey || event.metaKey || event.ctrlKey) {
+                event.stopPropagation();
+                const nextPoints = removePathPoint(points, index);
+                if (!nextPoints) {
+                  setEditorFeedbackMessage("Path needs at least 2 points");
+                  return;
+                }
+                updateNode(node.id, {
+                  points: nextPoints.map((position) => ({ position })),
+                } as Partial<AnyEditableNode>);
+                setEditorFeedbackMessage(null);
+                return;
+              }
+              beginDrag("path_point", index)(event);
+            }}
             label={`P${index + 1}`}
           />
         ))}

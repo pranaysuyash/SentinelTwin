@@ -42,6 +42,14 @@ node store pattern are exactly what SentinelTwin needs.
 
 ---
 
+### Thread 4b: Autoresearch Loop Discipline for Bakeoffs
+**Status:** Applied as operating pattern.
+**Key finding:** Karpathy's autoresearch loop is useful here as a research-control pattern: one mutable experiment surface, strict keep/discard logging, a single evaluator, and a clear baseline before iteration. It does not replace SentinelTwin's harness, but it is a good protocol for stage-by-stage model comparison.
+**Open:** Decide whether to add a lightweight experiment ledger script or keep the current docs + outputs workflow as the source of truth.
+**Next:** Reuse the same keep/discard discipline while extending the floorplan harness and cloud fallback candidates.
+
+---
+
 ### Thread 5: Physics Layer (Rapier)
 **Status:** Decision made — optional, not in V0.1. Details in PHYSICS_OPTIONS.md.
 **Open:** Should we use simple AABB collision for V0.1 or is Rapier lightweight enough to add now?
@@ -1952,6 +1960,7 @@ Bundled monthly fee per site or per device — includes hardware, software, moni
 **Status:** Active. Execution artifacts created locally.
 **Date:** 2026-05-26
 **Canonical plan doc:** `Docs/experiments/V0_2_FLOORPLAN_UNDERSTANDING_BAKEOFF_PLAN.md`
+**Model matrix:** `Docs/exploration/FLOORPLAN_UNDERSTANDING_MODEL_MATRIX.md`
 **Harness workspace:** `experiments/scene_understanding/`
 
 **Fresh evidence snapshot (Hugging Face):**
@@ -1972,6 +1981,20 @@ Bundled monthly fee per site or per device — includes hardware, software, moni
 - security-relevant semantic fidelity,
 - latency/failure constraints,
 - confidence/provenance output for review flow.
+
+**Expanded stage coverage (new pass):**
+- OCR / label reading: LightOnOCR-2-1B-base, PaddleOCR-VL, TrOCR, Donut
+- Layout understanding: Qwen2.5-VL, MiniCPM-V 4.6, Pixtral-12B-2409, InternVL3-8B
+- Grounding / detection: Florence-2, Grounding DINO, OWLv2, MM Grounding DINO
+- Segmentation: SAM3, SAM2, Mask2Former, OneFormer
+- Structured repair: PP-DocLayoutV3, LayoutLMv3, Table Transformer, Pix2Struct, Donut
+- Cloud fallbacks: OpenAI GPT-4.1 / GPT-4o and Gemini 2.5 Flash / Pro
+
+**Evaluation plan added:**
+- stage-level metrics for OCR, grounding, segmentation, layout, and repair,
+- end-to-end SecurityScene subset validation,
+- local vs cloud control comparison on the same eval split,
+- noisy-scan pilot before full 60-image bakeoff.
 
 **Open risk:** data licensing boundaries for some datasets used for evaluation must be validated before any productized data reuse.
 
@@ -5351,3 +5374,83 @@ Add sensor specs (`sensorWidthMm`, `sensorHeightMm`, `sensorFormat`) when:
 
 **Operational note for SentinelTwin:**
 - Keep future remote identity services aligned with the same reconciliation event kind so sync across services stays evidence-backed.
+
+## Thread 41: Explicit path selection and planned launch modals
+
+**Status:** Implemented in current pass. Path selection now stays explicit instead of auto-falling back to the first authored route, and the launcher's guided-scan / footage-verification surfaces are real planning modals rather than dead buttons.
+
+**Source signals:**
+- `src/store/studio-store.ts`
+- `src/lib/security-outcome/security-outcome-selectors.ts`
+- `src/components/bottom-panel/ScenarioPathPanel.tsx`
+- `src/components/launcher/StudioDashboardHome.tsx`
+- `src/app/page.tsx`
+
+**Key findings:**
+- Treating `activePathId` as nullable makes empty-selection state visible instead of silently selecting the first path.
+- The guided-scan and footage-verification launch actions are legitimate planning surfaces, so the UI should describe them as preview/plan states rather than broken placeholders.
+
+**Operational note for SentinelTwin:**
+- Keep future path-based summaries, replay, and launcher copy aligned with explicit path selection and planned-vs-available feature states.
+- Keep compare timeline, report summaries, and replay visuals tied to the same explicit active path instead of falling back to the first authored route.
+
+## Thread 42: Explicit camera selection in Camera View
+
+**Status:** Implemented in current pass. Camera View no longer auto-selects the first camera when entering the mode, and the header chip now reflects the empty-selection state instead of implying a hidden target.
+
+**Source signals:**
+- `src/components/layout/StudioShell.tsx`
+- `src/components/view/CameraViewMode.tsx`
+- `src/components/view/ViewModeBar.tsx`
+
+**Key findings:**
+- Camera View is stronger when it reflects explicit operator selection instead of substituting the first camera in the scene.
+- The empty state is part of the product model, not just an edge case.
+
+**Operational note for SentinelTwin:**
+- Keep future camera-centric analysis surfaces aligned with explicit camera selection and visible empty states rather than hidden defaults.
+- Keep camera failure actions explicit as well; if no camera is selected, the action should not silently choose one.
+
+## Thread 43: Explicit camera selection in Compare View
+
+**Status:** Implemented in current pass. Compare View camera pickers now start empty and require an explicit camera choice before the camera comparison panel populates.
+
+**Source signals:**
+- `src/components/view/CompareView.tsx`
+
+**Key findings:**
+- Compare is more trustworthy when it does not silently pick the first available cameras.
+- Empty camera pickers make the comparison intent visible and prevent a misleading default pair.
+
+**Operational note for SentinelTwin:**
+- Keep the compare workspace aligned with explicit operator intent for both camera pickers and any future comparison presets.
+
+## Thread 44: Offline command parser target matching
+
+**Status:** Implemented in current pass. Offline commands now require an explicit camera or light match instead of silently defaulting to the first scene object.
+
+**Source signals:**
+- `src/lib/offline-command-parser.ts`
+- `src/hooks/use-ai-command.ts`
+
+**Key findings:**
+- Command parsing is safer when it fails closed on ambiguous or missing targets.
+- The hook already handles the null/no-match path, so removing the fallback does not break the command pipeline.
+
+**Operational note for SentinelTwin:**
+- Keep AI command actions target-explicit and prefer no-op/no-match outcomes over silent first-object defaults.
+
+## Thread 45: Placement oracle template selection
+
+**Status:** Implemented in current pass. The placement oracle now chooses an active camera or its own template camera, rather than falling back to the first scene camera when no active cameras exist.
+
+**Source signals:**
+- `src/simulation/placement-oracle.ts`
+- `src/simulation/simulate-studio.ts`
+
+**Key findings:**
+- Heuristic ranking is more stable when it uses explicit active cameras or a built-in template instead of scene order.
+- The template camera already exists to represent the oracle baseline, so the first-camera fallback was unnecessary.
+
+**Operational note for SentinelTwin:**
+- Keep oracle scoring deterministic and scene-order agnostic when a real active camera is unavailable.

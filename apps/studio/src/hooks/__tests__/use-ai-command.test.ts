@@ -31,6 +31,12 @@ describe("useAiCommand", () => {
     expect(source).toContain('label: "Local-only"');
     expect(source).toContain('Cloud-backed parsing, fix proposals, and report generation are disabled by policy');
     expect(source).toContain('Local-only mode blocks cloud-backed parsing.');
+    expect(source).toContain('evaluateAiRateLimit');
+    expect(source).toContain('recordAiRateLimitUsage');
+    expect(source).toContain('formatRetryHint');
+    expect(source).toContain('Auto-applied best fix');
+    expect(source).toContain('verifyAndRankCounterfactualCandidates');
+    expect(source).toContain('adversarialPathExposureDelta');
     expect(source).toContain('providerLabel: providerSummary.providerLabel');
     expect(source).toContain("return { status, executeCommand, runCounterfactuals, runReportGeneration, dismissError, applyCandidate, mode, providerHealth, providerTelemetry, latestAiActionTelemetry };");
   });

@@ -1,20 +1,29 @@
 version: 0.2
-updated_at: 2026-05-26
+updated_at: 2026-05-29
 
 candidates:
-  - id: stack_a_qwen_gotocr_groundingdino
+  - id: stack_a_qwen_ocr
     status: active
-    description: Qwen VL parser with OCR assist and optional open-vocab detection pass.
+    pipeline_kind: hybrid
+    provider: local
+    description: Qwen2.5-VL floorplan parser with OCR assist and optional grounding pass.
     components:
-      vlm:
-        model_id: Qwen/Qwen2.5-VL-7B-Instruct
-        role: primary_layout_parser
       ocr:
         model_id: stepfun-ai/GOT-OCR2_0
         role: symbol_and_label_extraction
+      vlm:
+        model_id: Qwen/Qwen2.5-VL-7B-Instruct
+        role: primary_layout_parser
       detector:
         model_id: IDEA-Research/grounding-dino-base
         role: optional_symbol_grounding
+    stage_roles:
+      ocr: stepfun-ai/GOT-OCR2_0
+      layout: Qwen/Qwen2.5-VL-7B-Instruct
+      grounding: IDEA-Research/grounding-dino-base
+    cloud_fallbacks:
+      - gpt-4.1
+      - gemini-2.5-flash
     expected_strengths:
       - strong multimodal reasoning for mixed floorplan styles
       - robust fallback when symbol legend is sparse
@@ -24,14 +33,22 @@ candidates:
 
   - id: stack_b_florence_gotocr
     status: active
-    description: Florence prompt-task parser with OCR assist.
+    pipeline_kind: hybrid
+    provider: local
+    description: Florence-2 prompt-task parser with OCR assist.
     components:
-      vlm:
-        model_id: microsoft/Florence-2-base
-        role: task_prompted_detection_and_region_parsing
       ocr:
         model_id: stepfun-ai/GOT-OCR2_0
         role: text_and_symbol_reading
+      vlm:
+        model_id: microsoft/Florence-2-base
+        role: task_prompted_detection_and_region_parsing
+    stage_roles:
+      ocr: stepfun-ai/GOT-OCR2_0
+      layout: microsoft/Florence-2-base
+    cloud_fallbacks:
+      - gpt-4o
+      - gemini-2.5-pro
     expected_strengths:
       - explicit task control via Florence prompts
       - easier parse normalization using processor post-processing
@@ -40,6 +57,8 @@ candidates:
 
   - id: stack_c_raster2seq_plus_qwen_repair
     status: active
+    pipeline_kind: hybrid
+    provider: local
     description: Floorplan-native polygon reconstruction with semantic repair pass.
     components:
       vectorizer:
@@ -48,11 +67,159 @@ candidates:
       semantic_repair:
         model_id: Qwen/Qwen2.5-VL-7B-Instruct
         role: class_label_cleanup_and_security_mapping
+    stage_roles:
+      layout: haopt/Raster2Seq
+      repair: Qwen/Qwen2.5-VL-7B-Instruct
+    cloud_fallbacks:
+      - gpt-4.1
+      - gemini-2.5-pro
     expected_strengths:
       - potentially strongest wall/room geometry extraction on clean plans
       - output shape aligned with downstream vector mapping
     known_risks:
       - may degrade sharply on low-quality scans or non-standard notation
+
+  - id: stack_d_gpt54_nano
+    status: active
+    pipeline_kind: cloud
+    provider: openai
+    description: GPT-5.4 Nano direct floorplan parser for latency-sensitive cloud fallback.
+    components:
+      vlm:
+        model_id: gpt-5.4-nano
+        role: primary_layout_parser
+    cloud_fallbacks:
+      - gpt-4o
+      - gpt-4.1
+    expected_strengths:
+      - lower latency than GPT-4o
+      - useful speed baseline for ambiguous scans
+    known_risks:
+      - narrower context window than larger cloud models
+      - may under-extract tiny symbols and dense obstructions
+
+  - id: stack_e_gpt41_structured
+    status: active
+    pipeline_kind: cloud
+    provider: openai
+    description: GPT-4.1 structured-output fallback for hard or ambiguous scans.
+    components:
+      vlm:
+        model_id: gpt-4.1
+        role: structured_layout_and_repair
+    cloud_fallbacks:
+      - gpt-4o
+      - gemini-2.5-pro
+    expected_strengths:
+      - strong instruction following
+      - good schema obedience
+    known_risks:
+      - still needs prompt discipline for line geometry
+
+  - id: stack_f_gemini25_flash
+    status: active
+    pipeline_kind: cloud
+    provider: gemini
+    description: Gemini 2.5 Flash fast cloud fallback.
+    components:
+      vlm:
+        model_id: gemini-2.5-flash
+        role: fast_multimodal_fallback
+    cloud_fallbacks:
+      - gemini-2.5-pro
+      - gpt-4.1
+    expected_strengths:
+      - fast multimodal pass
+      - cheap ambiguity triage
+    known_risks:
+      - may prefer summary over precise geometry unless prompted tightly
+
+  - id: stack_g_gemini25_pro
+    status: active
+    pipeline_kind: cloud
+    provider: gemini
+    description: Gemini 2.5 Pro high-ceiling cloud fallback.
+    components:
+      vlm:
+        model_id: gemini-2.5-pro
+        role: high_accuracy_multimodal_fallback
+    cloud_fallbacks:
+      - gemini-2.5-flash
+      - gpt-4o
+    expected_strengths:
+      - strongest cloud ceiling for hard scans
+      - good multimodal reasoning
+    known_risks:
+      - higher cost than Flash
+      - still requires strict extraction prompt
+
+  - id: stack_h_minicpmv46
+    status: active
+    pipeline_kind: end_to_end
+    provider: local
+    description: MiniCPM-V 4.6 edge VLM (1.3B params, Apache 2.0).
+    components:
+      vlm:
+        model_id: openbmb/MiniCPM-V-4.6
+        role: primary_layout_parser
+    expected_strengths:
+      - ultra-efficient (1.3B params, 4x/16x token compression)
+      - phone-deployable (iOS/Android/HarmonyOS)
+      - strong for its size on OCR, RefCOCO, OCRBench
+    known_risks:
+      - small param count may miss fine details on dense floor plans
+      - requires transformers>=5.7.0
+
+  - id: stack_i_qwen35_4b
+    status: active
+    pipeline_kind: end_to_end
+    provider: local
+    description: Qwen3.5-4B natively multimodal (4B params, Apache 2.0).
+    components:
+      vlm:
+        model_id: Qwen/Qwen3.5-4B
+        role: primary_layout_parser
+    expected_strengths:
+      - natively multimodal (no separate VL variant needed)
+      - strong benchmark scores for 4B class
+      - Apache 2.0 license
+    known_risks:
+      - larger than MiniCPM-V 4.6, slower inference on MPS
+      - untested on floor plan extraction
+
+  - id: stack_j_minicpmo45
+    status: active
+    pipeline_kind: end_to_end
+    provider: local
+    description: MiniCPM-o 4.5 omnimodal VLM (9B params, Apache 2.0).
+    components:
+      vlm:
+        model_id: openbmb/MiniCPM-o-4.5
+        role: primary_layout_parser
+    expected_strengths:
+      - strongest open-source VLM near 9B
+      - approaches Gemini 2.5 Flash quality on benchmarks
+      - Apache 2.0 license
+    known_risks:
+      - 9B params may require GPU with >=8GB VRAM
+      - slower inference on MPS vs dedicated GPU
+
+  - id: stack_k_gemma4_e4b
+    status: active
+    pipeline_kind: end_to_end
+    provider: local
+    description: Gemma 4 E4B MoE VLM (4B active / ~30B total, 128K context).
+    components:
+      vlm:
+        model_id: google/gemma-4-e4b-it
+        role: primary_layout_parser
+    expected_strengths:
+      - MoE efficiency (4B active params, uses only what it needs)
+      - natively multimodal (SigLIP2 vision encoder)
+      - 128K context window
+    known_risks:
+      - ~30B total params needs quantization for consumer GPUs
+      - Gemma license (ok for Apache 2.0 projects)
 
 deprioritized:
   - reason: license_unclear_or_restrictive

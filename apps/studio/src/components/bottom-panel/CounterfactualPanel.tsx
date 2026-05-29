@@ -16,7 +16,7 @@ const COST_COLORS: Record<string, string> = {
   high: "text-red-400 bg-red-500/10 border-red-500/20",
 };
 
-function DeltaBadge({ value, label, positive }: { value: number; label: string; positive?: "up" | "down" }) {
+function DeltaBadge({ value, label, positive, suffix = "%" }: { value: number; label: string; positive?: "up" | "down"; suffix?: string }) {
   const isGood = positive === "up" ? value > 0 : positive === "down" ? value < 0 : false;
   const isBad = positive === "up" ? value < 0 : positive === "down" ? value > 0 : false;
 
@@ -24,7 +24,7 @@ function DeltaBadge({ value, label, positive }: { value: number; label: string; 
     <div className="flex items-center gap-1 text-[9px]">
       <span className="text-[#647089]">{label}</span>
       <span className={cn("font-mono font-medium", isGood ? "text-emerald-400" : isBad ? "text-red-400" : "text-[#9da8c0]")}>
-        {value > 0 ? "+" : ""}{value}%
+        {value > 0 ? "+" : ""}{value}{suffix}
       </span>
     </div>
   );
@@ -71,6 +71,14 @@ function CandidateCard({ candidate, onApply }: CandidateCardProps) {
         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 rounded-lg border border-[#1a2030] bg-[#07090f]/60 px-2 py-1.5">
           <DeltaBadge value={candidate.verifiedDelta.totalCoveragePctDelta} label="Coverage" positive="up" />
           <DeltaBadge value={candidate.verifiedDelta.blindspotPctDelta} label="Blindspot" positive="down" />
+          {typeof candidate.verifiedDelta.adversarialPathExposureDelta === "number" && (
+            <DeltaBadge
+              value={candidate.verifiedDelta.adversarialPathExposureDelta}
+              label="Adversarial exposure"
+              positive="down"
+              suffix=""
+            />
+          )}
           {candidate.verifiedDelta.worstIssueResolved && (
             <span className="flex items-center gap-1 text-[9px] text-emerald-400">
               <CheckCircle2 className="h-3 w-3" />
@@ -101,6 +109,7 @@ export function CounterfactualPanel() {
   const [constraints, setConstraints] = useState("");
   const [candidates, setCandidates] = useState<CounterfactualCandidate[]>([]);
   const [showInput, setShowInput] = useState(false);
+  const [showBatchCompare, setShowBatchCompare] = useState(false);
   const { status, runCounterfactuals, applyCandidate } = useAiCommand();
   const store = useStudioStore();
 
@@ -169,6 +178,7 @@ export function CounterfactualPanel() {
           onClick={() => {
             setShowInput(false);
             setCandidates([]);
+            setShowBatchCompare(false);
           }}
           className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border border-[#24283a] bg-[#111521] text-[#5d6880] hover:text-white"
         >
@@ -178,6 +188,16 @@ export function CounterfactualPanel() {
 
       {/* Candidates list */}
       <div className="mt-2 flex-1 space-y-2 overflow-y-auto">
+        {candidates.length > 0 && (
+          <div className="flex items-center justify-end">
+            <button
+              onClick={() => setShowBatchCompare((prev) => !prev)}
+              className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] font-medium text-[#9da8c0] transition-colors hover:border-[#3a4158] hover:text-white"
+            >
+              {showBatchCompare ? "Card View" : "Batch Compare"}
+            </button>
+          </div>
+        )}
         {candidates.length === 0 && status.state !== "parsing" && (
           <p className="py-4 text-center text-[10px] text-[#4d566b]">Click the arrow to search for fixes.</p>
         )}
@@ -187,9 +207,49 @@ export function CounterfactualPanel() {
             Searching for fixes...
           </div>
         )}
-        {candidates.map((candidate) => (
-          <CandidateCard key={candidate.id} candidate={candidate} onApply={handleApply} />
-        ))}
+        {showBatchCompare && candidates.length > 0 ? (
+          <div className="overflow-x-auto rounded-xl border border-[#1f2536] bg-[#0b0f17]">
+            <table className="min-w-full text-[10px]">
+              <thead className="border-b border-[#1f2536] bg-[#111521] text-[#7a859d]">
+                <tr>
+                  <th className="px-2 py-1.5 text-left">Rank</th>
+                  <th className="px-2 py-1.5 text-left">Candidate</th>
+                  <th className="px-2 py-1.5 text-left">Cost</th>
+                  <th className="px-2 py-1.5 text-left">Coverage</th>
+                  <th className="px-2 py-1.5 text-left">Blindspot</th>
+                  <th className="px-2 py-1.5 text-left">Adversarial</th>
+                  <th className="px-2 py-1.5 text-left">Zone changes</th>
+                  <th className="px-2 py-1.5 text-left">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {candidates.map((candidate) => (
+                  <tr key={candidate.id} className="border-b border-[#131a28] text-[#c7cfdf]">
+                    <td className="px-2 py-1.5 font-mono text-[#9da8c0]">#{candidate.rank ?? "-"}</td>
+                    <td className="max-w-[220px] px-2 py-1.5 text-[9px] leading-snug text-[#d7deed]">{candidate.description}</td>
+                    <td className="px-2 py-1.5 uppercase text-[#9da8c0]">{candidate.costCategory}</td>
+                    <td className="px-2 py-1.5 font-mono">{candidate.verifiedDelta?.totalCoveragePctDelta ?? 0}%</td>
+                    <td className="px-2 py-1.5 font-mono">{candidate.verifiedDelta?.blindspotPctDelta ?? 0}%</td>
+                    <td className="px-2 py-1.5 font-mono">{candidate.verifiedDelta?.adversarialPathExposureDelta ?? "—"}</td>
+                    <td className="px-2 py-1.5">{candidate.verifiedDelta?.criticalZoneStatusChanges.length ?? 0}</td>
+                    <td className="px-2 py-1.5">
+                      <button
+                        onClick={() => handleApply(candidate.operations)}
+                        className="rounded-md border border-[#2a3550] bg-[#131a28] px-1.5 py-1 text-[9px] text-emerald-300 hover:border-emerald-500/30 hover:bg-emerald-500/10"
+                      >
+                        Apply
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          candidates.map((candidate) => (
+            <CandidateCard key={candidate.id} candidate={candidate} onApply={handleApply} />
+          ))
+        )}
       </div>
     </div>
   );

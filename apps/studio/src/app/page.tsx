@@ -49,6 +49,7 @@ function estimateTokensFromText(text: string) {
 export default function StudioPage() {
   const [enterStudio, setEnterStudio] = useState(false);
   const [queryBootEnabled, setQueryBootEnabled] = useState(false);
+  const [bootResolved, setBootResolved] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const [showFloorPlanWizard, setShowFloorPlanWizard] = useState(false);
   const [showScanWizard, setShowScanWizard] = useState(false);
@@ -217,6 +218,7 @@ export default function StudioPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     setQueryBootEnabled(new URLSearchParams(window.location.search).get("studio") === "1");
+    setBootResolved(true);
   }, []);
 
   useEffect(() => {
@@ -308,6 +310,10 @@ export default function StudioPage() {
     if (!confirmWorkspaceReplacement("import a scene JSON")) return;
     fileInputRef.current?.click();
   };
+
+  if (!bootResolved) {
+    return null;
+  }
 
   if (enterStudio || queryBootEnabled) {
     return <StudioShell />;

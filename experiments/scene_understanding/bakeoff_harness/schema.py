@@ -10,6 +10,8 @@ class WallPrediction:
     y1: float
     x2: float
     y2: float
+    confidence: float = 0.0
+    source: str = "ai"
 
 
 @dataclass
@@ -19,6 +21,8 @@ class DoorPrediction:
     x2: float
     y2: float
     class_: str = "door"
+    confidence: float = 0.0
+    source: str = "ai"
 
 
 @dataclass
@@ -28,6 +32,8 @@ class WindowPrediction:
     x2: float
     y2: float
     class_: str = "window"
+    confidence: float = 0.0
+    source: str = "ai"
 
 
 @dataclass
@@ -37,12 +43,16 @@ class ObstructionPrediction:
     x2: float
     y2: float
     class_: str = "obstruction"
+    confidence: float = 0.0
+    source: str = "ai"
 
 
 @dataclass
 class CriticalZonePrediction:
     polygon: list[float]
     zone_type: str = "general"
+    confidence: float = 0.0
+    source: str = "ai"
 
 
 @dataclass
@@ -53,6 +63,7 @@ class SecuritySceneSubset:
     windows: list[WindowPrediction] = field(default_factory=list)
     obstructions: list[ObstructionPrediction] = field(default_factory=list)
     critical_zones: list[CriticalZonePrediction] = field(default_factory=list)
+    ambiguities: list[str] = field(default_factory=list)
     raw_response: str = ""
     parse_error: Optional[str] = None
     timing_ms: float = 0.0
@@ -65,6 +76,7 @@ class SecuritySceneSubset:
             "windows": [asdict(w) for w in self.windows],
             "obstructions": [asdict(o) for o in self.obstructions],
             "critical_zones": [asdict(z) for z in self.critical_zones],
+            "ambiguities": self.ambiguities,
             "raw_response": self.raw_response[:500] if self.raw_response else "",
             "parse_error": self.parse_error,
             "timing_ms": round(self.timing_ms, 1),
@@ -78,6 +90,10 @@ class CandidateConfig:
     components: dict
     expected_strengths: list[str] = field(default_factory=list)
     known_risks: list[str] = field(default_factory=list)
+    pipeline_kind: str = "end_to_end"
+    provider: str = "local"
+    stage_roles: dict = field(default_factory=dict)
+    cloud_fallbacks: list[str] = field(default_factory=list)
 
 
 @dataclass

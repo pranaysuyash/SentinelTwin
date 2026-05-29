@@ -23,6 +23,29 @@ export function snapPoint(point: Point2, grid = 0.5): Point2 {
   return [snapValue(point[0], grid), snapValue(point[1], grid)];
 }
 
+export function insertPointAtIndex(points: Point2[], insertIndex: number, point: Point2): Point2[] {
+  const next = [...points];
+  next.splice(Math.max(0, Math.min(insertIndex, next.length)), 0, point);
+  return next;
+}
+
+export function removePointAtIndex(points: Point2[], removeIndex: number, minPoints: number): Point2[] | null {
+  if (points.length <= minPoints) return null;
+  return points.filter((_, index) => index !== removeIndex);
+}
+
+export function insertPolygonVertex(points: Point2[], edgeIndex: number, point: Point2): Point2[] {
+  return insertPointAtIndex(points, edgeIndex + 1, point);
+}
+
+export function removePolygonVertex(points: Point2[], removeIndex: number): Point2[] | null {
+  return removePointAtIndex(points, removeIndex, 3);
+}
+
+export function removePathPoint(points: Point2[], removeIndex: number): Point2[] | null {
+  return removePointAtIndex(points, removeIndex, 2);
+}
+
 export function angleDegBetween(a: Point2, b: Point2): number {
   return Math.atan2(b[1] - a[1], b[0] - a[0]) * (180 / Math.PI);
 }

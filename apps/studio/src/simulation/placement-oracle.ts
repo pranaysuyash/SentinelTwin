@@ -61,7 +61,7 @@ function getTemplateCamera(scene: SecurityScene) {
     const rangeDelta = b.rangeM - a.rangeM;
     if (rangeDelta !== 0) return rangeDelta;
     return a.id.localeCompare(b.id);
-  })[0] ?? scene.cameras[0];
+  })[0];
 
   if (camera) {
     return camera;

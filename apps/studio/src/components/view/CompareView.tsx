@@ -114,17 +114,12 @@ function timelineSeries(pathResult: SimulationResult["pathResults"][number] | nu
   }));
 }
 
-function pickPrimaryPathResult(snapshot: SceneSnapshot | null) {
+function pickActivePathResult(snapshot: SceneSnapshot | null, activePathId: string | null) {
   const simulation = snapshot?.simulation;
   if (!simulation) return null;
-  const authoredPaths = snapshot.scene.paths.map((path) => path.id);
-
-  for (const pathId of authoredPaths) {
-    const match = simulation.pathResults.find((entry) => entry.pathId === pathId);
-    if (match) return match;
-  }
-
-  return simulation.pathResults[0] ?? null;
+  if (!activePathId) return null;
+  if (!snapshot.scene.paths.some((path) => path.id === activePathId)) return null;
+  return simulation.pathResults.find((entry) => entry.pathId === activePathId) ?? null;
 }
 
 function buildTrendPath(points: Array<{ x: number; y: number }>) {
@@ -246,9 +241,17 @@ function MetricCard({
   );
 }
 
-function QualityTrend({ snapshotA, snapshotB }: { snapshotA: SceneSnapshot | null; snapshotB: SceneSnapshot | null; }) {
-  const resultA = pickPrimaryPathResult(snapshotA);
-  const resultB = pickPrimaryPathResult(snapshotB);
+function QualityTrend({
+  snapshotA,
+  snapshotB,
+  activePathId,
+}: {
+  snapshotA: SceneSnapshot | null;
+  snapshotB: SceneSnapshot | null;
+  activePathId: string | null;
+}) {
+  const resultA = pickActivePathResult(snapshotA, activePathId);
+  const resultB = pickActivePathResult(snapshotB, activePathId);
   const seriesA = timelineSeries(resultA);
   const seriesB = timelineSeries(resultB);
   const width = 420;
@@ -272,54 +275,67 @@ function QualityTrend({ snapshotA, snapshotB }: { snapshotA: SceneSnapshot | nul
       <div className="mb-2 flex items-center justify-between">
         <div>
           <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Quality Over Time</div>
-          <div className="text-[9px] text-[#556076]">Best camera quality along the active replay path</div>
+          <div className="text-[9px] text-[#556076]">
+            {activePathId ? "Camera quality along the selected replay path" : "Select a path in Scenario Path to show route quality"}
+          </div>
         </div>
         <div className="flex items-center gap-3 text-[9px]">
           <span className="flex items-center gap-1 text-[#9aa6bf]"><span className="h-1.5 w-1.5 rounded-full bg-red-400" />Baseline</span>
           <span className="flex items-center gap-1 text-[#9aa6bf]"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />Proposed</span>
         </div>
       </div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="h-[160px] w-full overflow-visible rounded-lg bg-[#090d14]">
-        <defs>
-          <linearGradient id="compare-trend-a" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#ef4444" stopOpacity="0.28" />
-            <stop offset="100%" stopColor="#ef4444" stopOpacity="0.02" />
-          </linearGradient>
-          <linearGradient id="compare-trend-b" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#22c55e" stopOpacity="0.28" />
-            <stop offset="100%" stopColor="#22c55e" stopOpacity="0.02" />
-          </linearGradient>
-        </defs>
-        {[0, 1, 2, 3, 4].map((line) => (
-          <line
-            key={line}
-            x1={paddingX}
-            x2={width - paddingX}
-            y1={paddingY + ((height - paddingY * 2) / 4) * line}
-            y2={paddingY + ((height - paddingY * 2) / 4) * line}
-            stroke="#1f2737"
-            strokeWidth="1"
-          />
-        ))}
-        {pathA ? (
-          <>
-            <path d={`${pathA} L ${width - paddingX} ${height - paddingY} L ${paddingX} ${height - paddingY} Z`} fill="url(#compare-trend-a)" />
-            <path d={pathA} fill="none" stroke="#ef4444" strokeWidth="2.2" strokeDasharray="5 4" />
-          </>
-        ) : null}
-        {pathB ? (
-          <>
-            <path d={`${pathB} L ${width - paddingX} ${height - paddingY} L ${paddingX} ${height - paddingY} Z`} fill="url(#compare-trend-b)" />
-            <path d={pathB} fill="none" stroke="#22c55e" strokeWidth="2.4" />
-          </>
-        ) : null}
-        {[seriesA, seriesB].flat().slice(-1).map((pt, index) => {
-          const x = paddingX + ((pt.index / Math.max((seriesB.length || seriesA.length) - 1, 1)) * (width - paddingX * 2));
-          const y = height - paddingY - ((pt.score / 4) * (height - paddingY * 2));
-          const color = index === 0 ? "#ef4444" : "#22c55e";
-          return <circle key={`${pt.index}-${index}`} cx={x} cy={y} r="3.5" fill={color} />;
-        })}
-      </svg>
+      {activePathId ? (
+        <svg viewBox={`0 0 ${width} ${height}`} className="h-[160px] w-full overflow-visible rounded-lg bg-[#090d14]">
+          <defs>
+            <linearGradient id="compare-trend-a" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="#ef4444" stopOpacity="0.28" />
+              <stop offset="100%" stopColor="#ef4444" stopOpacity="0.02" />
+            </linearGradient>
+            <linearGradient id="compare-trend-b" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="#22c55e" stopOpacity="0.28" />
+              <stop offset="100%" stopColor="#22c55e" stopOpacity="0.02" />
+            </linearGradient>
+          </defs>
+          {[0, 1, 2, 3, 4].map((line) => (
+            <line
+              key={line}
+              x1={paddingX}
+              x2={width - paddingX}
+              y1={paddingY + ((height - paddingY * 2) / 4) * line}
+              y2={paddingY + ((height - paddingY * 2) / 4) * line}
+              stroke="#1f2737"
+              strokeWidth="1"
+            />
+          ))}
+          {pathA ? (
+            <>
+              <path d={`${pathA} L ${width - paddingX} ${height - paddingY} L ${paddingX} ${height - paddingY} Z`} fill="url(#compare-trend-a)" />
+              <path d={pathA} fill="none" stroke="#ef4444" strokeWidth="2.2" strokeDasharray="5 4" />
+            </>
+          ) : null}
+          {pathB ? (
+            <>
+              <path d={`${pathB} L ${width - paddingX} ${height - paddingY} L ${paddingX} ${height - paddingY} Z`} fill="url(#compare-trend-b)" />
+              <path d={pathB} fill="none" stroke="#22c55e" strokeWidth="2.4" />
+            </>
+          ) : null}
+          {[seriesA, seriesB].flat().slice(-1).map((pt, index) => {
+            const x = paddingX + ((pt.index / Math.max((seriesB.length || seriesA.length) - 1, 1)) * (width - paddingX * 2));
+            const y = height - paddingY - ((pt.score / 4) * (height - paddingY * 2));
+            const color = index === 0 ? "#ef4444" : "#22c55e";
+            return <circle key={`${pt.index}-${index}`} cx={x} cy={y} r="3.5" fill={color} />;
+          })}
+        </svg>
+      ) : (
+        <div className="flex h-[160px] items-center justify-center rounded-lg border border-dashed border-[#1f2737] bg-[#090d14] px-4 text-center">
+          <div>
+            <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">No path selected</div>
+            <div className="mt-1 text-[9px] text-[#7f8ca6]">
+              Pick a scenario path in the Path panel to compare route quality over time.
+            </div>
+          </div>
+        </div>
+      )}
         <div className="mt-2 grid grid-cols-3 gap-2 text-[9px] text-[#91a0bc]">
         <div className="rounded-lg border border-[#1d2330] bg-[#090d14] px-2 py-1.5">
           <div className="text-[#556076]">Baseline quality</div>
@@ -532,6 +548,7 @@ export function CompareView() {
   const setBottomTab = useStudioStore((s) => s.setBottomTab);
   const setViewMode = useStudioStore((s) => s.setViewMode);
   const compareVisualEvidence = useStudioStore((s) => s.compareVisualEvidence);
+  const activePathId = useStudioStore((s) => s.activePathId);
   const [comparisonAId, setComparisonAId] = useState<string | null>(null);
   const [comparisonBId, setComparisonBId] = useState<string | null>(null);
   const [cameraComparisonAId, setCameraComparisonAId] = useState<string | null>(null);
@@ -556,8 +573,8 @@ export function CompareView() {
 
   const mA = useMemo(() => computeMetrics(snapshotA?.simulation, cellsA), [snapshotA, cellsA]);
   const mB = useMemo(() => computeMetrics(snapshotB?.simulation, cellsB), [snapshotB, cellsB]);
-  const defaultCameraAId = scene.cameras[0]?.id ?? null;
-  const defaultCameraBId = scene.cameras[1]?.id ?? scene.cameras[0]?.id ?? null;
+  const defaultCameraAId = null;
+  const defaultCameraBId = null;
   const validCameraAId = cameraComparisonAId && scene.cameras.some((camera) => camera.id === cameraComparisonAId)
     ? cameraComparisonAId
     : defaultCameraAId;
@@ -922,6 +939,7 @@ export function CompareView() {
                   onChange={(event) => setCameraComparisonAId(event.target.value)}
                   className="rounded border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none"
                 >
+                  <option value="">Select camera</option>
                   {scene.cameras.map((camera) => (
                     <option key={camera.id} value={camera.id}>
                       {camera.name}
@@ -936,6 +954,7 @@ export function CompareView() {
                   onChange={(event) => setCameraComparisonBId(event.target.value)}
                   className="rounded border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none"
                 >
+                  <option value="">Select camera</option>
                   {scene.cameras.map((camera) => (
                     <option key={camera.id} value={camera.id}>
                       {camera.name}
@@ -948,7 +967,7 @@ export function CompareView() {
 
           {!cameraA || !cameraB || !cameraResultA || !cameraResultB || !cameraDeltas ? (
             <div className="rounded-lg border border-dashed border-[#1d2330] bg-[#090d14] px-3 py-4 text-[10px] text-[#556076]">
-              Run simulation to compare two cameras. Once results exist, this card will compare their coverage, zone performance, and DORI reach side by side.
+              Select two cameras and run simulation to compare their coverage, zone performance, and DORI reach side by side.
             </div>
           ) : (
             <div className="grid gap-2 lg:grid-cols-2">
@@ -1007,7 +1026,7 @@ export function CompareView() {
 
       <div className="grid min-h-[220px] grid-cols-[1.1fr_1.2fr_1fr] gap-2 px-2 pb-2">
         <NotesPanel snapshotA={snapshotA} snapshotB={snapshotB} />
-        <QualityTrend snapshotA={snapshotA} snapshotB={snapshotB} />
+        <QualityTrend snapshotA={snapshotA} snapshotB={snapshotB} activePathId={activePathId} />
         <ChangedObjectsPanel snapshotA={snapshotA} snapshotB={snapshotB} />
       </div>
     </div>

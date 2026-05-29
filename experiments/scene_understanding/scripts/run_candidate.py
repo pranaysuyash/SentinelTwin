@@ -3,7 +3,7 @@
 Run a candidate model stack against a split of floor plan images.
 
 Usage:
-  python run_candidate.py --candidate stack_b_gpt4o --split dev [--max-images 2]
+  python run_candidate.py --candidate stack_d_gpt54_nano --split dev [--max-images 2]
 """
 import sys
 import os
@@ -34,7 +34,13 @@ def main():
 
     print(f"Candidate: {cfg.id}")
     print(f"  {cfg.description}")
+    print(f"  Provider: {cfg.provider}")
+    print(f"  Pipeline: {cfg.pipeline_kind}")
     print(f"  Components: {list(cfg.components.keys())}")
+    if cfg.stage_roles:
+        print(f"  Stage roles: {cfg.stage_roles}")
+    if cfg.cloud_fallbacks:
+        print(f"  Cloud fallbacks: {cfg.cloud_fallbacks}")
     print(f"  Split: {args.split}")
     print()
 

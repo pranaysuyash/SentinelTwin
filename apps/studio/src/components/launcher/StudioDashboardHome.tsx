@@ -27,6 +27,7 @@ import { cn } from "@/lib/cn";
 import { PRODUCT_FEATURE_STATUS_LAST_VERIFIED, type ProductFeatureEntry } from "@/lib/product-feature-status";
 import { getSceneSourceMeta } from "@/lib/scene-source";
 import type { BottomTab, SavedProjectRecord, ViewMode, WorkspacePreset } from "@/store/studio-store";
+import { useStudioStore } from "@/store/studio-store";
 import type { SecurityScene, SecurityIssue, SimulationResult, DoriQuality, ScenarioPath, CameraNode, ObstructionNode, SecurityLightNode } from "@/schema/security-scene";
 
 type ProjectSort = "recent" | "name" | "coverage";
@@ -225,11 +226,12 @@ function ScenePreview({ scene, result, compact = false, showLabels = true, hydra
   const offsetY = (height - sceneHeight) / 2;
   const toPoint = (point: [number, number]) => [offsetX + point[0] * scale, offsetY + point[1] * scale] as [number, number];
   const zoneResults = criticalZoneStatusMap(result);
-  const activePath = scene.paths[0];
+  const activePathId = useStudioStore((s) => s.activePathId);
+  const activePath = activePathId ? (scene.paths.find((path) => path.id === activePathId) ?? null) : null;
   const heatmapCells = result?.coverageCells ?? [];
   const heatmapStep = Math.max(1, Math.ceil(heatmapCells.length / (compact ? 150 : 240)));
   const cellSize = Math.max(2.6, scale * (compact ? 0.26 : 0.22));
-  const activePathPoints = pathPolyline(activePath, toPoint);
+  const activePathPoints = pathPolyline(activePath ?? undefined, toPoint);
 
   if (!hydrated) {
     return (
@@ -2042,7 +2044,7 @@ export function StudioDashboardHome({
                         className="rounded-md border border-white/10 px-2 py-1 text-[10px] font-medium hover:bg-white/[0.04]"
                         onClick={onGuidedScanPlanned}
                       >
-                        Start
+                        Preview
                       </button>
                     ) : null}
                   </div>

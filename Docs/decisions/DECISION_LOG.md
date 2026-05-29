@@ -219,6 +219,21 @@ wired to the same underlying feed state.
 - Keep view mode controls only below the feed: too easy to miss and weaker screenshot parity
 - Merge target info into the DORI summary: collapses two distinct mental models into one block
 
+---
+
+## D-102 | 2026-05-29 | Novel algorithms panel should act as a navigation hub, not a read-only stats wall
+
+**Decision:** The `NovelAlgorithmsTab` should expose direct jump actions for the strongest placement candidate, the largest blind region, the active path replay, and the 24-hour temporal profile.
+
+**Rationale:**
+- The panel already computes actionable analysis outputs, so keeping it read-only forces the operator to manually translate findings into map/replay navigation
+- Reusing the existing store actions (`setViewMode`, `setBottomTab`, `setFocusScenePointRequest`, path replay controls) keeps the feature additive and avoids a separate navigation system
+- The navigator strip makes the experimental algorithms useful in the same turn they are computed instead of relegating them to diagnostics-only output
+
+**Alternatives rejected:**
+- Keep the panel informational only: slower workflow and weaker product value
+- Add a new navigation subsystem: unnecessary duplication because the store already has the right actions
+
 ## D-102 | 2026-05-28 | Local-only mode should hard-disable cloud-backed AI flows
 
 **Decision:** SentinelTwin Studio exposes a persistent `Local Only Mode` toggle in View Settings. When enabled, cloud-backed AI parsing, fix proposals, counterfactuals, and report generation are disabled by policy even if a provider key is configured.
@@ -3081,3 +3096,101 @@ reference to the new path, then remove the old."
 **Alternatives rejected:**
 - **Only show drift without a sync action** — rejected because the archive would still be passive.
 - **Silently overwrite the live membership state** — rejected because the operator needs an auditable reconciliation step.
+
+### D-184: Scene editing should surface validation feedback instead of silently rejecting edits
+**Date:** 2026-05-29
+
+**Decision:** The Studio workbench now surfaces immediate placement feedback for invalid wall, door/window, zone, and path edits, and direct manipulation reuses the same snapping rules as placement.
+
+**Rationale:**
+- Silent rejection makes the editor feel broken and hides the difference between a valid edit and a near-miss.
+- A shared snap path keeps placement and transform behavior aligned instead of drifting into separate interaction models.
+- Validation feedback is now part of the product loop, not just an internal implementation detail.
+
+**Alternatives rejected:**
+- **Keep silent rejection** — rejected because users cannot tell whether the editor accepted the edit.
+- **Create a second transform-specific snap system** — rejected because it would fork the scene-editing rules and create drift.
+
+### D-184: Active path selection should not auto-fall back to the first path
+**Date:** 2026-05-29
+
+**Decision:** Keep `activePathId` explicit and allow it to remain `null` after scene loads, restores, and merges unless the user chooses a path.
+
+**Rationale:**
+- The map, replay, and outcome surfaces should reflect the operator's actual selection rather than implicitly promoting the first authored path.
+- Automatic fallback made the UI look selected even when no explicit path was chosen, which blurred the distinction between default state and user intent.
+- Keeping `activePathId` nullable makes the selection model consistent with the shared map stack and future multi-path workflows.
+
+**Alternatives rejected:**
+- **Auto-select the first path on every scene load** — rejected because it hides the empty-selection state and reintroduces implicit behavior.
+
+### D-185: Scene editing should keep keyboard deletion, duplication, and vertex editing in the canonical editor surface
+**Date:** 2026-05-29
+
+**Decision:** The Studio workbench should treat delete/backspace, Cmd/Ctrl+D, and polygon/path vertex insertion/removal as first-class editor interactions routed through the shared store-backed editor state and canonical mutation actions.
+
+**Rationale:**
+- The editor is only credible if authors can remove, duplicate, and reshape geometry without leaving the workbench or editing JSON directly.
+- Keeping these interactions in the canonical store path preserves undo/redo and keeps visual truth aligned with simulation truth.
+- Shared validation feedback needs to be visible even when the tool mode is select, otherwise deletion failures become silent again.
+
+**Alternatives rejected:**
+- **Leave deletion/duplication to inspector-only actions** — rejected because the canvas would remain too limited for real scene editing.
+- **Implement a separate editing state for keyboard flows** — rejected because it would fork the interaction model and risk drift from the scene source of truth.
+- **Keep fallback only in the selector layer** — rejected because that still forces a hidden choice into reports and replay state.
+
+### D-185: Camera view selection should not auto-fall back to the first camera
+**Date:** 2026-05-29
+
+**Decision:** Keep camera selection explicit in Camera View and let the empty state appear when no camera has been chosen.
+
+**Rationale:**
+- Camera View should show what the operator explicitly selected, not silently substitute the first camera in the scene.
+- The empty state is useful because it tells the operator the view has no active target yet, instead of implying a choice that was never made.
+- This keeps camera selection aligned with the explicit-path behavior already adopted for replay and analysis surfaces.
+
+**Alternatives rejected:**
+- **Auto-select the first camera when entering Camera View** — rejected because it hides the empty-selection state and weakens operator intent.
+- **Keep the fallback only in the view header** — rejected because the main content would still be driven by an implicit selection.
+
+### D-186: Compare camera pickers should not auto-fall back to the first available cameras
+**Date:** 2026-05-29
+
+**Decision:** Leave Compare View camera A/B empty until the operator selects them, instead of defaulting to the first and second cameras in the scene.
+
+**Rationale:**
+- Compare is a deliberate inspection workflow, so it should not guess which cameras the operator wants to compare.
+- Empty selectors make the explicit choice visible and prevent the view from implying a comparison that was never asked for.
+- This keeps Compare aligned with the same selection discipline used in path and camera view surfaces.
+
+**Alternatives rejected:**
+- **Auto-fill camera A/B from the first two cameras** — rejected because it hides operator intent and can mislead the initial comparison.
+- **Only leave one side empty** — rejected because the comparison needs both sides to be explicit to stay trustworthy.
+
+### D-187: Offline command parsing should not auto-fall back to the first camera or light
+**Date:** 2026-05-29
+
+**Decision:** Require an explicit camera or light match in the offline command parser instead of quietly choosing the first scene object.
+
+**Rationale:**
+- Command parsing should only act on a target the parser can identify clearly.
+- Returning the first camera/light for ambiguous or empty targets hides errors and can change the wrong object without operator intent.
+- Null is the safer outcome because the caller already knows how to surface a no-match path.
+
+**Alternatives rejected:**
+- **Keep the first-object fallback for ambiguous commands** — rejected because it can mutate the wrong target.
+- **Guess based on scene order or status** — rejected because it still invents an implicit choice.
+
+### D-188: Placement oracle should not auto-fall back to the first scene camera
+**Date:** 2026-05-29
+
+**Decision:** Let the placement oracle use an active camera candidate or its own template camera instead of borrowing the first camera in the scene.
+
+**Rationale:**
+- The oracle is a scoring heuristic, so it should not inherit arbitrary scene ordering when no active camera exists.
+- The template camera already captures the oracle's baseline assumptions, so the first-scene fallback was unnecessary.
+- Removing the fallback keeps placement recommendations tied to actual active cameras or an explicit template.
+
+**Alternatives rejected:**
+- **Keep the first camera fallback for inactive scenes** — rejected because it introduces arbitrary scene-order bias.
+- **Return null immediately when no active camera exists** — rejected because the template camera still provides a useful baseline.

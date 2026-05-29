@@ -107,6 +107,12 @@ function SelectionRectangleOverlay({ drag }: { drag: SelectionDragState | null }
   );
 }
 
+function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  const tagName = target.tagName.toLowerCase();
+  return target.isContentEditable || tagName === "input" || tagName === "textarea" || tagName === "select";
+}
+
 function getSelectionAnchor(node: AnyEditableNode): [number, number, number] | null {
   if (node.nodeType === "camera" || node.nodeType === "security_light" || node.nodeType === "sensor" || node.nodeType === "obstruction" || node.nodeType === "door" || node.nodeType === "window") {
     return [node.position[0], node.position[1], node.position[2]];
@@ -912,13 +918,17 @@ function ToolPlacementFloor({
 }) {
   const activeTool = useStudioStore((s) => s.activeTool);
   const addNode = useStudioStore((s) => s.addNode);
+  const duplicateNode = useStudioStore((s) => s.duplicateNode);
+  const removeSelectedNodes = useStudioStore((s) => s.removeSelectedNodes);
   const selectNode = useStudioStore((s) => s.selectNode);
+  const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
   const scene = useStudioStore((s) => s.scene);
   const criticalZoneTargetType = useStudioStore((s) => s.criticalZoneTargetType);
   const sensorPlacementType = useStudioStore((s) => s.sensorPlacementType);
   const editor = useStudioStore((s) => s.editor);
   const { draftWallStart, draftPolygonPoints, draftPathPoints, hoverPoint } = editor;
   const setEditorHoverPoint = useStudioStore((s) => s.setEditorHoverPoint);
+  const setEditorFeedbackMessage = useStudioStore((s) => s.setEditorFeedbackMessage);
   const setDraftWallStart = useStudioStore((s) => s.setDraftWallStart);
   const setDraftPolygonPoints = useStudioStore((s) => s.setDraftPolygonPoints);
   const setDraftPathPoints = useStudioStore((s) => s.setDraftPathPoints);
@@ -941,6 +951,10 @@ function ToolPlacementFloor({
   useEffect(() => {
     hasEntryPointsRef.current = scene.entryPoints.length > 0;
   }, [scene.entryPoints.length]);
+
+  useEffect(() => {
+    setEditorFeedbackMessage(null);
+  }, [activeTool, setEditorFeedbackMessage]);
 
   const isPlacing = activeTool !== "select";
 
@@ -989,42 +1003,57 @@ function ToolPlacementFloor({
       if (!point) return;
 
       const basePoint = snapEngine.snapToGrid([point.x, point.z]);
+      const generalProfile = snapEngine.snapForPlacement(basePoint, false);
       let snapped = basePoint;
+      let nextMessage: string | null = generalProfile.message ?? null;
 
       if (activeTool === "wall" && draftWallStart) {
         const constrained = applyShiftLock(draftWallStart, basePoint, event.nativeEvent.shiftKey);
         const profile = snapEngine.snapForPlacement(constrained, false);
         snapped = profile.point;
+        nextMessage = profile.message ?? null;
       } else if (activeTool === "door_window") {
         const profile = snapEngine.snapToWall(basePoint);
         if (profile.snappedToWall) {
           snapped = profile.point;
+          nextMessage = profile.message ?? null;
+        } else {
+          nextMessage = "Door must be placed on wall";
         }
       }
 
+      setEditorFeedbackMessage(nextMessage);
       setEditorHoverPoint(snapped);
       setHoverPos(new THREE.Vector3(snapped[0], 0.02, snapped[1]));
     },
-    [activeTool, draftWallStart, getFloorPoint, isPlacing, selectionDrag, setEditorHoverPoint, setSelectionDrag, snapEngine],
+    [activeTool, draftWallStart, getFloorPoint, isPlacing, selectionDrag, setEditorFeedbackMessage, setEditorHoverPoint, setSelectionDrag, snapEngine],
   );
 
   const commitDraftPolygon = useCallback(() => {
-    if (draftPolygonPoints.length < 3) return;
+    if (draftPolygonPoints.length < 3) {
+      setEditorFeedbackMessage("Zone needs at least 3 points");
+      return;
+    }
     const zone = createCriticalZoneNode(draftPolygonPoints, criticalZoneTargetType);
     addNode(zone);
     selectNode(zone.id);
     setDraftPolygonPoints([]);
+    setEditorFeedbackMessage(null);
     setEditorMode("idle");
-  }, [addNode, criticalZoneTargetType, draftPolygonPoints, selectNode, setDraftPolygonPoints, setEditorMode]);
+  }, [addNode, criticalZoneTargetType, draftPolygonPoints, selectNode, setDraftPolygonPoints, setEditorFeedbackMessage, setEditorMode]);
 
   const commitDraftPath = useCallback(() => {
-    if (draftPathPoints.length < 2) return;
+    if (draftPathPoints.length < 2) {
+      setEditorFeedbackMessage("Path needs at least 2 points");
+      return;
+    }
     const path = createScenarioPathNode(
       draftPathPoints.map((point) => ({ position: point })),
     );
     addNode(path);
     selectNode(path.id);
     setDraftPathPoints([]);
+    setEditorFeedbackMessage(null);
     setEditorMode("idle");
 
     if (!hasEntryPointsRef.current) {
@@ -1033,7 +1062,7 @@ function ToolPlacementFloor({
         addNode(createEntryPointNode(first));
       }
     }
-  }, [addNode, draftPathPoints, selectNode, setDraftPathPoints, setEditorMode]);
+  }, [addNode, draftPathPoints, selectNode, setDraftPathPoints, setEditorFeedbackMessage, setEditorMode]);
 
   const handlePointerDown = useCallback(
     (event: ThreeEvent<PointerEvent>) => {
@@ -1081,29 +1110,37 @@ function ToolPlacementFloor({
           Object.assign(node, presetOverrides);
         }
         addNode(node);
+        setEditorFeedbackMessage(null);
         selectNode(node.id);
       } else if (activeTool === "obstruction") {
         const node = createObstructionNode([pos[0], 1, pos[2]]);
         addNode(node);
+        setEditorFeedbackMessage(null);
         selectNode(node.id);
       } else if (activeTool === "light") {
         const node = createSecurityLightNode([pos[0], 2.8, pos[2]]);
         addNode(node);
+        setEditorFeedbackMessage(null);
         selectNode(node.id);
       } else if (activeTool === "sensor") {
         const node = createSensorNode([pos[0], 1.2, pos[2]], sensorPlacementType);
         addNode(node);
+        setEditorFeedbackMessage(null);
         selectNode(node.id);
       } else if (activeTool === "wall") {
         if (!draftWallStart) {
           setDraftWallStart(workingSnap);
           setEditorMode("drawing_wall");
+          setEditorFeedbackMessage(null);
           return;
         }
 
         const constrained = applyShiftLock(draftWallStart, workingSnap, event.nativeEvent.shiftKey);
         const segmentLength = pointDistance(draftWallStart, constrained);
-        if (segmentLength < 0.2) return;
+        if (segmentLength < 0.2) {
+          setEditorFeedbackMessage("Wall needs at least 0.20m");
+          return;
+        }
         const wall = createWallNode(draftWallStart, constrained, {
           wallHeightM: scene.assumptions.wallHeightM,
           thicknessM: 0.18,
@@ -1111,15 +1148,21 @@ function ToolPlacementFloor({
           visionTransmission: 0,
         });
         addNode(wall);
+        setEditorFeedbackMessage(null);
         setDraftWallStart(constrained);
         selectNode(wall.id);
       } else if (activeTool === "zone") {
         setDraftPolygonPoints([...draftPolygonPoints, workingSnap]);
+        setEditorFeedbackMessage(null);
       } else if (activeTool === "path") {
         setDraftPathPoints([...draftPathPoints, workingSnap]);
+        setEditorFeedbackMessage(null);
       } else if (activeTool === "door_window") {
         const wallProfile = snapEngine.snapToWall(workingSnap);
-        if (!wallProfile.snappedToWall) return;
+        if (!wallProfile.snappedToWall) {
+          setEditorFeedbackMessage("Door must be placed on wall");
+          return;
+        }
 
         const wantsWindow = event.nativeEvent.ctrlKey || event.nativeEvent.altKey;
         const node = wantsWindow
@@ -1127,6 +1170,7 @@ function ToolPlacementFloor({
           : createDoorNode([wallProfile.point[0], 0, wallProfile.point[1]]);
 
         addNode(node);
+        setEditorFeedbackMessage(null);
         selectNode(node.id);
       }
     },
@@ -1149,6 +1193,7 @@ function ToolPlacementFloor({
       setDraftPolygonPoints,
       setDraftWallStart,
       setEditorMode,
+      setEditorFeedbackMessage,
       setSelectionDrag,
       snapEngine,
     ],
@@ -1199,9 +1244,50 @@ function ToolPlacementFloor({
 
     return TOOL_LABELS[activeTool] ?? "Place";
   }, [activeTool, draftPathPoints, draftPolygonPoints.length, hoverPoint, sensorPlacementType, wallLength]);
+  const tooltipDisplay = editor.feedbackMessage ?? tooltipText;
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (isTypingTarget(event.target)) return;
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "d") {
+        event.preventDefault();
+        if (activeTool === "select" && selectedNodeIds.length > 0) {
+          duplicateNode(selectedNodeIds[0]!);
+          setEditorFeedbackMessage(null);
+        }
+        return;
+      }
+
+      if (event.key === "Backspace" || event.key === "Delete") {
+        event.preventDefault();
+        if (activeTool === "select" && selectedNodeIds.length > 0) {
+          removeSelectedNodes();
+          clearSelection();
+          setEditorFeedbackMessage(null);
+          return;
+        }
+
+        if (activeTool === "zone" && draftPolygonPoints.length > 0) {
+          setDraftPolygonPoints(draftPolygonPoints.slice(0, -1));
+          setEditorFeedbackMessage(null);
+          return;
+        }
+
+        if (activeTool === "path" && draftPathPoints.length > 0) {
+          setDraftPathPoints(draftPathPoints.slice(0, -1));
+          setEditorFeedbackMessage(null);
+          return;
+        }
+
+        if (activeTool === "wall" && draftWallStart) {
+          setDraftWallStart(undefined);
+          setEditorMode("idle");
+          setEditorFeedbackMessage(null);
+          return;
+        }
+      }
+
       if (event.key === "Enter") {
         if (activeTool === "zone") {
           commitDraftPolygon();
@@ -1219,6 +1305,8 @@ function ToolPlacementFloor({
         setDraftPolygonPoints([]);
         setDraftPathPoints([]);
         setEditorMode("idle");
+        setSelectionDrag(null);
+        setEditorFeedbackMessage(null);
         selectNode(null);
       }
     };
@@ -1231,12 +1319,21 @@ function ToolPlacementFloor({
     activeTool,
     commitDraftPath,
     commitDraftPolygon,
+    clearSelection,
+    draftPathPoints,
+    draftPolygonPoints,
+    draftWallStart,
+    duplicateNode,
+    removeSelectedNodes,
     selectNode,
     setActiveTool,
+    setEditorFeedbackMessage,
     setDraftPathPoints,
     setDraftPolygonPoints,
     setDraftWallStart,
     setEditorMode,
+    selectedNodeIds,
+    setSelectionDrag,
   ]);
 
   const ghostColor = TOOL_GHOST_COLORS[activeTool] ?? TOOL_GHOST_COLORS.default;
@@ -1256,6 +1353,7 @@ function ToolPlacementFloor({
           setIsHovering(false);
           setHoverPos(null);
           setEditorHoverPoint(undefined);
+          setEditorFeedbackMessage(null);
         }}
       >
         <planeGeometry args={[sceneWidth * 2, sceneDepth * 2]} />
@@ -1327,18 +1425,18 @@ function ToolPlacementFloor({
                 padding: "3px 8px",
                 fontSize: 9,
                 fontWeight: 600,
-              color: ghostColor,
-              whiteSpace: "nowrap",
-              backdropFilter: "blur(4px)",
-            }}
-          >
-            <span className="inline-flex items-center gap-1">
-              {TOOL_ICONS[activeTool] ?? <MousePointer2 className="h-3 w-3" />}
-              {tooltipText}
-            </span>
-          </div>
-        </Html>
-      </group>
+                color: ghostColor,
+                whiteSpace: "nowrap",
+                backdropFilter: "blur(4px)",
+              }}
+            >
+              <span className="inline-flex items-center gap-1">
+                {TOOL_ICONS[activeTool] ?? <MousePointer2 className="h-3 w-3" />}
+                {tooltipDisplay}
+              </span>
+            </div>
+          </Html>
+        </group>
       )}
 
       {activeTool === "measure" && isHovering && hoverPoint ? (
@@ -1474,6 +1572,21 @@ function ControlHintBar() {
   );
 }
 
+function EditorStatusBanner() {
+  const message = useStudioStore((s) => s.editor.feedbackMessage);
+
+  if (!message) return null;
+
+  return (
+    <div className="pointer-events-none absolute bottom-14 left-3 z-10 max-w-[min(32rem,calc(100%-1.5rem))] rounded-lg border border-[#2a3246] bg-[#0b0f17]/92 px-3 py-2 text-[10px] font-medium text-[#d2d9e8] shadow-xl backdrop-blur-sm">
+      <span className="inline-flex items-center gap-2">
+        <span className="h-2 w-2 rounded-full bg-sky-400" />
+        {message}
+      </span>
+    </div>
+  );
+}
+
 export function WorkspaceCanvas() {
   const envMode = useStudioStore((s) => s.environmentMode);
   const scene = useStudioStore((s) => s.scene);
@@ -1513,6 +1626,7 @@ export function WorkspaceCanvas() {
       {visibleComponents.north_compass ? <NorthCompass /> : null}
       {visibleComponents.viewport_controls ? <ViewControls /> : null}
       {visibleComponents.control_hint_bar ? <ControlHintBar /> : null}
+      <EditorStatusBanner />
       <SelectionRectangleOverlay drag={selectionDrag} />
 
       {/* Camera preset picker — shown when camera tool is active */}

@@ -18,7 +18,7 @@ export type OfflineCommandPlan = {
 
 function cameraTarget(scene: SecurityScene, token?: string | null) {
   const normalized = token?.trim().toLowerCase() ?? "";
-  if (!normalized) return scene.cameras[0] ?? null;
+  if (!normalized) return null;
 
   const byName = scene.cameras.find((camera) => camera.name.toLowerCase() === normalized);
   if (byName) return byName;
@@ -29,12 +29,12 @@ function cameraTarget(scene: SecurityScene, token?: string | null) {
     return scene.cameras[index] ?? null;
   }
 
-  return scene.cameras.find((camera) => camera.name.toLowerCase().includes(normalized)) ?? scene.cameras[0] ?? null;
+  return scene.cameras.find((camera) => camera.name.toLowerCase().includes(normalized)) ?? null;
 }
 
 function lightTarget(scene: SecurityScene, token?: string | null) {
   const normalized = token?.trim().toLowerCase() ?? "";
-  if (!normalized) return scene.securityLights[0] ?? null;
+  if (!normalized) return null;
 
   const byName = scene.securityLights.find((light) => light.name.toLowerCase() === normalized);
   if (byName) return byName;
@@ -45,7 +45,7 @@ function lightTarget(scene: SecurityScene, token?: string | null) {
     return scene.securityLights[index] ?? null;
   }
 
-  return scene.securityLights.find((light) => light.name.toLowerCase().includes(normalized)) ?? scene.securityLights[0] ?? null;
+  return scene.securityLights.find((light) => light.name.toLowerCase().includes(normalized)) ?? null;
 }
 
 function roomCenter(scene: SecurityScene): [number, number, number] {

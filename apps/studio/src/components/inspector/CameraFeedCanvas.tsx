@@ -266,7 +266,7 @@ export function CameraFeedCanvas({
   if (!camera) return null;
 
   const isNight = scene.assumptions.timeOfDay === "night";
-  const selectedPath = scene.paths.find((path) => path.id === activePathId) ?? scene.paths[0] ?? null;
+  const selectedPath = activePathId ? (scene.paths.find((path) => path.id === activePathId) ?? null) : null;
   const pathPoints = selectedPath?.points.map((point) => point.position) ?? [];
   const pathState = selectedPath ? getReplaySegmentState(pathPoints, pathReplay.progress) : null;
   const targetZone = scene.criticalZones.find((zone) => zone.id === selectedNodeId) ?? scene.criticalZones[0] ?? null;

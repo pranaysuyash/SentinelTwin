@@ -14,6 +14,11 @@ describe("NovelAlgorithmsTab", () => {
     expect(source).toContain("Blind Spot Topology");
     expect(source).toContain("Blind Spot Fingerprint");
     expect(source).toContain("Reflective Bounce Vision");
+    expect(source).toContain("Navigator");
+    expect(source).toContain("Inspect on Map");
+    expect(source).toContain("Focus Region");
+    expect(source).toContain("Open Replay");
+    expect(source).toContain("Open 24H Profile");
     expect(source).toContain("Blind Regions");
     expect(source).toContain("Budget status");
     expect(source).toContain("1s budget");
@@ -25,5 +30,8 @@ describe("NovelAlgorithmsTab", () => {
     expect(source).toContain("computeCoveragePostureVariation");
     expect(source).toContain("reflectiveBounce");
     expect(source).toContain("firstVisibleTimeS");
+    expect(source).toContain("setFocusScenePointRequest");
+    expect(source).toContain("setViewMode(\"map\")");
+    expect(source).toContain("setBottomTab(\"timeline\")");
   });
 });

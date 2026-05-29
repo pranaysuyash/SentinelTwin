@@ -375,10 +375,7 @@ export default function StudioShell() {
     if (selectedIsCamera) return;
     const selectedCameraExists = !!selectedCameraId && scene.cameras.some((camera) => camera.id === selectedCameraId);
     if (selectedCameraExists) return;
-    const fallbackCamera = scene.cameras[0];
-    if (!fallbackCamera) return;
-    selectNode(fallbackCamera.id);
-  }, [scene.cameras, selectNode, selectedCameraId, selectedNodeId, viewMode]);
+  }, [scene.cameras, selectedCameraId, selectedNodeId, viewMode]);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[#0b0c10] text-[#dde2ef]">

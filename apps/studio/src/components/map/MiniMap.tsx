@@ -208,6 +208,17 @@ function MiniMapHoverPreview({
   totalCritical: number;
   passedCritical: number;
 }) {
+  const setFocusScenePointRequest = useStudioStore((s) => s.setFocusScenePointRequest);
+  const selectNode = useStudioStore((s) => s.selectNode);
+  const setHovered = useStudioStore((s) => s.setHoveredMapNodeId);
+  const selectedNodeId = useStudioStore((s) => s.selectedNodeId);
+  const hoveredNodeId = useStudioStore((s) => s.hoveredMapNodeId);
+  const activePathId = useStudioStore((s) => s.activePathId);
+  const mapState = useStudioStore((s) => s.mapState.minimap);
+  const setZoom = useStudioStore((s) => s.setMapZoom);
+  const setPan = useStudioStore((s) => s.setMapPan);
+  const fitMap = useStudioStore((s) => s.fitMap);
+  const layerVis = useStudioStore((s) => s.layerVisibility);
   return (
     <div className="mb-2 rounded-xl border border-[#243146] bg-[#0b1220] p-2 shadow-[0_10px_24px_rgba(0,0,0,0.24)]">
       <div className="mb-2 flex items-center justify-between">
@@ -228,27 +239,27 @@ function MiniMapHoverPreview({
             mode="mini"
             width={100}
             height={72}
-            layers={mapLayerFlagsFromStore(useStudioStore.getState().layerVisibility)}
-            selectedNodeId={useStudioStore.getState().selectedNodeId}
-            hoveredNodeId={useStudioStore.getState().hoveredMapNodeId}
-            activePathId={useStudioStore.getState().activePathId}
+            layers={mapLayerFlagsFromStore(layerVis)}
+            selectedNodeId={selectedNodeId}
+            hoveredNodeId={hoveredNodeId}
+            activePathId={activePathId}
             paths={scene.paths}
-            onNodeSelect={useStudioStore.getState().selectNode}
-            onNodeHover={useStudioStore.getState().setHoveredMapNodeId}
+            onNodeSelect={selectNode}
+            onNodeHover={setHovered}
             onMapClick={(point) => {
-              useStudioStore.getState().selectNode(null);
-              useStudioStore.getState().setFocusScenePointRequest({ point, source: "minimap" });
+              selectNode(null);
+              setFocusScenePointRequest({ point, source: "minimap" });
             }}
             onMapDoubleClick={(point) => {
-              useStudioStore.getState().fitMap("minimap");
-              useStudioStore.getState().setFocusScenePointRequest({ point, source: "minimap" });
+              fitMap("minimap");
+              setFocusScenePointRequest({ point, source: "minimap" });
             }}
             mapTarget="minimap"
-            zoom={useStudioStore.getState().mapState.minimap.zoom}
-            pan={useStudioStore.getState().mapState.minimap.pan}
-            onSetZoom={useStudioStore.getState().setMapZoom}
-            onSetPan={useStudioStore.getState().setMapPan}
-            onFit={useStudioStore.getState().fitMap}
+            zoom={mapState.zoom}
+            pan={mapState.pan}
+            onSetZoom={setZoom}
+            onSetPan={setPan}
+            onFit={fitMap}
             replayActor={null}
           />
         </div>

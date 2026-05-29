@@ -18,13 +18,14 @@ import {
   SceneWindows,
   ScenePrivacyZones,
 } from "@/components/workspace/SharedScene";
-import { CameraRigFixed, nowTimestamp, SceneFeedGeometry } from "@/components/view/SceneFeedCanvas";
+import { CameraRigFixed, SceneFeedGeometry } from "@/components/view/SceneFeedCanvas";
 import { useStudioStore } from "@/store/studio-store";
 import type { CameraNode } from "@/schema/security-scene";
 import { QUALITY_RANK } from "@/lib/quality-display";
 import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
 
 const CAMERA_WALL_THEME = ENVIRONMENT_THEMES.day;
+type CameraWallLayoutMode = "auto" | "quad" | "overview" | "dense";
 
 /** Short label like "CAM 1" from camera name */
 function shortTag(name: string) {
@@ -51,10 +52,27 @@ function coverageStatusFromRatio(ratio: number) {
   };
 }
 
+function formatWallTimestamp(timestampMs: number | null | undefined) {
+  const source = timestampMs ?? Date.now();
+  const d = new Date(source);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
+}
+
+function getEffectiveCameraWallLayout(
+  layoutMode: CameraWallLayoutMode,
+  cameraCount: number,
+) {
+  if (layoutMode !== "auto") return layoutMode;
+  if (cameraCount >= 12) return "dense";
+  if (cameraCount >= 5) return "overview";
+  return "quad";
+}
+
 function LiveFeedOverlay({
   camera: camData,
   pathVisibility,
   isBestCamera = false,
+  timestampLabel,
 }: {
   camera: CameraNode;
   pathVisibility?: {
@@ -63,9 +81,9 @@ function LiveFeedOverlay({
     maxQuality: string;
   } | null;
   isBestCamera?: boolean;
+  timestampLabel: string;
 }) {
   const isActive = camData.status === "on";
-  const timestamp = nowTimestamp();
   const ratio = pathVisibility && pathVisibility.totalDurationS > 0
     ? pathVisibility.visibleS / pathVisibility.totalDurationS
     : 0;
@@ -107,7 +125,7 @@ function LiveFeedOverlay({
           {camData.resolutionMP}MP
         </span>
         <span className="font-mono text-[8px] text-white/60 [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]">
-          {timestamp}
+          {timestampLabel}
         </span>
       </div>
 
@@ -142,6 +160,7 @@ const CameraFeedPanel = memo(function CameraFeedPanel({
   isSelected,
   isBestCamera = false,
   pathVisibility,
+  timestampLabel,
 }: {
   camera: CameraNode;
   isSelected: boolean;
@@ -151,6 +170,7 @@ const CameraFeedPanel = memo(function CameraFeedPanel({
     totalDurationS: number;
     maxQuality: string;
   } | null;
+  timestampLabel: string;
 }) {
   const isActive = camData.status === "on";
 
@@ -189,7 +209,7 @@ const CameraFeedPanel = memo(function CameraFeedPanel({
                 "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 4px)",
             }}
           />
-          <LiveFeedOverlay camera={camData} pathVisibility={pathVisibility} isBestCamera={isBestCamera} />
+          <LiveFeedOverlay camera={camData} pathVisibility={pathVisibility} isBestCamera={isBestCamera} timestampLabel={timestampLabel} />
         </>
   ) : (
         <>
@@ -345,6 +365,7 @@ const CameraSlotButton = memo(function CameraSlotButton({
   isBestCamera,
   pathVisibility,
   className = "",
+  timestampLabel,
 }: {
   camera: CameraNode;
   isSelected: boolean;
@@ -355,6 +376,7 @@ const CameraSlotButton = memo(function CameraSlotButton({
     maxQuality: string;
   } | null;
   className?: string;
+  timestampLabel: string;
 }) {
   const selectNode = useStudioStore((s) => s.selectNode);
   const setSelectedCameraId = useStudioStore((s) => s.setSelectedCameraId);
@@ -370,7 +392,7 @@ const CameraSlotButton = memo(function CameraSlotButton({
       className={`cursor-pointer overflow-hidden rounded-lg text-left ${className}`}
       style={{ display: "block" }}
     >
-      <CameraFeedPanel camera={cam} isSelected={isSelected} isBestCamera={isBestCamera} pathVisibility={pathVisibility} />
+      <CameraFeedPanel camera={cam} isSelected={isSelected} isBestCamera={isBestCamera} pathVisibility={pathVisibility} timestampLabel={timestampLabel} />
     </button>
   );
 });
@@ -381,7 +403,8 @@ export function CameraWallView() {
   const activePathId = useStudioStore((s) => s.activePathId);
   const selectedId = useStudioStore((s) => s.selectedNodeId);
   const selectedCameraId = useStudioStore((s) => s.selectedCameraId);
-  const [layoutMode, setLayoutMode] = useState<"quad" | "overview">("quad");
+  const [layoutMode, setLayoutMode] = useState<CameraWallLayoutMode>("auto");
+  const [syncTime, setSyncTime] = useState(true);
 
   const cameras = useMemo(() => {
     // Sort: selected first, then active, then offline
@@ -428,6 +451,12 @@ export function CameraWallView() {
     })[0];
     return best?.[0] ?? null;
   }, [activePathResult]);
+  const effectiveLayout = getEffectiveCameraWallLayout(layoutMode, cameras.length);
+  const visibleCount = effectiveLayout === "quad" ? 4 : effectiveLayout === "overview" ? 5 : 15;
+  const visible = cameras.slice(0, visibleCount);
+  const hiddenCount = Math.max(0, cameras.length - visible.length);
+  const viewCount = effectiveLayout === "quad" ? 4 : effectiveLayout === "overview" ? 6 : 16;
+  const timestampLabel = syncTime ? formatWallTimestamp(simulationResult?.computedAt) : formatWallTimestamp(Date.now());
 
   if (cameras.length === 0) {
     return (
@@ -445,10 +474,6 @@ export function CameraWallView() {
     );
   }
 
-  const visibleCount = layoutMode === "quad" ? 4 : 5;
-  const visible = cameras.slice(0, visibleCount);
-  const hiddenCount = Math.max(0, cameras.length - visible.length);
-  const viewCount = layoutMode === "quad" ? 4 : Math.min(visible.length + 1, 6);
   const activeCount = cameras.filter((cam) => cam.status === "on").length;
   const offlineCount = cameras.length - activeCount;
   const selectedCamera = cameras.find((cam) => cam.id === selectedId)
@@ -461,8 +486,8 @@ export function CameraWallView() {
         <div>
           <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">Camera Wall</div>
           <div className="mt-0.5 text-[11px] text-[#94a3b8]">
-            {visible.length} camera feed{visible.length === 1 ? "" : "s"} + map overview
-            {hiddenCount > 0 ? ` + ${hiddenCount} more` : ""}
+            {viewCount} view layout
+            {hiddenCount > 0 ? ` · ${hiddenCount} more camera${hiddenCount === 1 ? "" : "s"}` : ""}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[9px] text-[#6b7c95]">
             <span className="rounded-md border border-emerald-500/15 bg-emerald-500/8 px-2 py-0.5 text-emerald-300">
@@ -488,27 +513,75 @@ export function CameraWallView() {
                 Best camera now {scene.cameras.find((cam) => cam.id === bestCameraId)?.name ?? bestCameraId}
               </span>
             ) : null}
+            <button
+              type="button"
+              onClick={() => setSyncTime((prev) => !prev)}
+              className={`rounded-md border px-2 py-0.5 transition-colors ${
+                syncTime
+                  ? "border-sky-400/20 bg-sky-500/10 text-sky-200"
+                  : "border-[#27364e] bg-black/30 text-[#9ca3af]"
+              }`}
+            >
+              {syncTime ? "Synchronized Time" : "Free Running Time"}
+            </button>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <label className="flex items-center gap-1.5 rounded-lg border border-[#27364e] bg-black/40 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#c7d0e4]">
-            <span>Layout</span>
-            <select
-              value={layoutMode}
-              onChange={(event) => setLayoutMode(event.target.value as "quad" | "overview")}
-              className="bg-transparent text-[9px] font-semibold uppercase tracking-[0.16em] text-[#c7d0e4] outline-none"
+          <div className="flex items-center gap-1 rounded-lg border border-[#27364e] bg-black/40 p-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#c7d0e4]">
+            <button
+              type="button"
+              onClick={() => setLayoutMode("quad")}
+              className={`rounded-md px-2 py-1 transition-colors ${effectiveLayout === "quad" ? "bg-[#1d2b40] text-white" : "text-[#9ca3af]"}`}
             >
-              <option value="quad">4-Panel Layout</option>
-              <option value="overview">6-Panel Layout</option>
-            </select>
-          </label>
+              4 Views
+            </button>
+            <button
+              type="button"
+              onClick={() => setLayoutMode("overview")}
+              className={`rounded-md px-2 py-1 transition-colors ${effectiveLayout === "overview" ? "bg-[#1d2b40] text-white" : "text-[#9ca3af]"}`}
+            >
+              6 Views
+            </button>
+            <button
+              type="button"
+              onClick={() => setLayoutMode("dense")}
+              className={`rounded-md px-2 py-1 transition-colors ${effectiveLayout === "dense" ? "bg-[#1d2b40] text-white" : "text-[#9ca3af]"}`}
+            >
+              16 Views
+            </button>
+            <button
+              type="button"
+              onClick={() => setLayoutMode("auto")}
+              className={`rounded-md px-2 py-1 transition-colors ${layoutMode === "auto" ? "bg-emerald-500/20 text-emerald-200" : "text-[#9ca3af]"}`}
+            >
+              Auto Layout
+            </button>
+          </div>
           <div className="rounded-lg border border-[#27364e] bg-black/40 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#c7d0e4]">
             {viewCount} Views
           </div>
         </div>
       </div>
 
-      {layoutMode === "overview" && visible.length >= 5 ? (
+      {effectiveLayout === "dense" ? (
+        <div className="grid flex-1 grid-cols-4 grid-rows-4 gap-2.5">
+          {visible.map((cam) => (
+            <CameraSlotButton
+              key={cam.id}
+              camera={cam}
+              isSelected={cam.id === selectedId}
+              isBestCamera={cam.id === bestCameraId}
+              pathVisibility={pathVisibilityByCameraId[cam.id] ?? null}
+              timestampLabel={timestampLabel}
+              className="h-full w-full"
+            />
+          ))}
+          {Array.from({ length: Math.max(0, visibleCount - visible.length) }).map((_, index) => (
+            <EmptySlot key={`dense-empty-${index}`} />
+          ))}
+          <WallOverviewPanel />
+        </div>
+      ) : effectiveLayout === "overview" && visible.length >= 5 ? (
         <div className="grid flex-1 grid-cols-3 grid-rows-2 gap-2.5">
           {visible.slice(0, 5).map((cam) => (
             <CameraSlotButton
@@ -517,6 +590,7 @@ export function CameraWallView() {
               isSelected={cam.id === selectedId}
               isBestCamera={cam.id === bestCameraId}
               pathVisibility={pathVisibilityByCameraId[cam.id] ?? null}
+              timestampLabel={timestampLabel}
               className="h-full w-full"
             />
           ))}
@@ -530,6 +604,7 @@ export function CameraWallView() {
               isSelected={visible[0].id === selectedId}
               isBestCamera={visible[0].id === bestCameraId}
               pathVisibility={pathVisibilityByCameraId[visible[0].id] ?? null}
+              timestampLabel={timestampLabel}
               className="h-full w-full"
             />
           ) : (
@@ -541,6 +616,7 @@ export function CameraWallView() {
               isSelected={visible[1].id === selectedId}
               isBestCamera={visible[1].id === bestCameraId}
               pathVisibility={pathVisibilityByCameraId[visible[1].id] ?? null}
+              timestampLabel={timestampLabel}
               className="h-full w-full"
             />
           ) : (
@@ -552,6 +628,7 @@ export function CameraWallView() {
               isSelected={visible[2].id === selectedId}
               isBestCamera={visible[2].id === bestCameraId}
               pathVisibility={pathVisibilityByCameraId[visible[2].id] ?? null}
+              timestampLabel={timestampLabel}
               className="h-full w-full"
             />
           ) : (

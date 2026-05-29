@@ -173,6 +173,7 @@ Every input mode should compile into the same truth model. Every report should r
 - Snapshotting exists.
 - Replay exists for path and camera interaction.
 - Compare exists.
+- Scene Intelligence now provides a temporal replay scrubber with point-in-time reconstruction and restore actions over the operational evidence trail.
 
 **What is still missing**
 - A true temporal object model that lets you ask, “what did we know, and when?”
@@ -192,13 +193,15 @@ Every input mode should compile into the same truth model. Every report should r
 **Current state**
 - Future live-camera verification is documented.
 - The schema can carry sensors.
-- The editor now exposes a dedicated sensor tool, sensor inspector, and sensor inventory tab, and both the camera inspector analytics tab and live camera feed now show a nearest-sensor `Sensor Fusion` preview, but the broader live fusion workflow remains camera-first.
+- The editor now exposes a dedicated sensor tool, sensor inspector, and sensor inventory tab, and both the camera inspector analytics tab and live camera feed now show a nearest-sensor `Sensor Fusion` preview; sensor live triggers, heartbeats, faults, restores, pasted metadata intake, an external feed bridge, a camera live binding stream, and a camera metadata ingest bridge now all flow into the canonical evidence trail, Scene Intelligence now shows that sensor evidence in the provenance surface, the debug panel reuses the same parser for pasted live metadata, and `/api/sensor-ingest` now gives that intake a history-backed backend-shaped boundary, while the camera live-connection probe/archive route now gives live binding a canonical backend round-trip, understands JSON/NDJSON plus ONVIF-style XML responses, tries SOAP-first for ONVIF binds, and the remaining open seam is true device-protocol session management rather than the probe boundary itself.
+- Camera live binding now also emits a durable event stream that appears in the live camera overlays and Scene Intelligence timeline, so the camera connection state is no longer hidden inside the inspector alone.
+- Camera metadata ingest now also emits a durable event stream that appears in the live camera overlays and Scene Intelligence timeline, so camera health state is no longer hidden inside the inspector alone.
 - Sensor edits now also write sensor-specific provenance events into the operational ledger, so the visible sensor layer has an audit trail even before ONVIF/live ingestion exists.
 - The debug panel now exposes a runtime health summary plus a runtime journey trace with import/scan/AI/render/save/publish path health cards, and it now surfaces a runtime incident log, a performance trace list, a support bundle summary card, a paste-based external log capture lane, and an automated alerting summary so runtime truth, failure evidence, timing evidence, support handoff context, local log capture, and alert candidates are visible without leaving the studio shell.
 
 **What is still missing**
-- Real live-feed binding to simulated cameras.
-- ONVIF metadata ingestion and mapping to scene events.
+- Real device-protocol session management for live cameras, beyond the current probe/archive and operator-bound live connection layers.
+- ONVIF metadata ingestion and mapping to scene events, beyond the current URL-based sensor, camera metadata, camera connection, and live-connection probe bridges.
 - A trustworthy operating model for multi-sensor evidence and a deeper incident bundle that combines runtime logs, live metadata, and automated alerting.
 
 ### 4.8 Human Review, Collaboration, and Governance
@@ -356,13 +359,15 @@ Every input mode should compile into the same truth model. Every report should r
 
 **Current state**
 - The app now supports a local governance control plane with role selection, review requests, approval/rejection actions, annotation notes, a review-required/open-publish policy, a shared-workspace access surface with active member routing and single-user/shared mode toggles, and a visible per-member routing matrix that shows publish/review/restore posture for every workspace member.
-- The Governance tab now also exposes a workspace membership handoff queue backed by `/api/workspace-membership-archive`, so the active member, team roster, routing policy, and drift against the latest archived snapshot can be archived as a canonical backend-identity record before shared identity services exist.
+- The Governance tab now also exposes a workspace membership handoff queue backed by `/api/workspace-membership-archive`, so the active member, team roster, routing policy, approval route, and drift against the latest archived snapshot can be archived as a canonical backend-identity record before shared identity services exist.
 - The Governance tab now also exposes a `Sync Membership Snapshot` action that can reconcile the live workspace against the latest archived membership snapshot and emit a reconciliation event into the evidence ledger.
+- The Governance tab now also exposes a `Resolve Approval Route` action backed by `/api/workspace-approval-route`, so the resolved route, fan-out status, and approval context can be archived alongside the workspace identity snapshot before any real remote approval service exists.
+- The Governance tab now also exposes a workspace identity conflict resolution/archive backed by `/api/workspace-identity-conflict`, so drift against the latest archived membership snapshot can be archived and translated into a canonical remote-shared-identity policy recommendation before a real backend identity service exists.
 - The provenance and evidence layers already provide a foundation for auditability.
 
 **What is still missing**
 - Actual backend RBAC/ABAC semantics across users and services.
-- Shared-workspace sync/conflict semantics and remote approval routing, beyond the now-visible local approval trail in the Governance tab, the remote governance handoff queue, the workspace membership handoff queue, the sync action, and their evidence-backed snapshot/diff history.
+- Shared-workspace sync/conflict semantics and remote approval routing, beyond the now-visible local approval trail in the Governance tab, the remote governance handoff queue, the workspace membership handoff queue, the sync action, the explicit approval-route archive, the workspace identity conflict resolution/archive, and their evidence-backed snapshot/diff history.
 - Multi-user collaboration with permissions, accountability, and durable cross-service identity.
 
 ### 4.16 Integrations and External Interfaces
@@ -375,7 +380,14 @@ Every input mode should compile into the same truth model. Every report should r
 - Plugin or SDK surface for partners and integrators
 
 **Current state**
-- Import/export is present for scenes and reports.
+- Import/export is present for scenes and reports, and report exports now include an operational evidence appendix so the handoff artifact can carry the ledger counts and recent evidence trail.
+- The Report Lite preview now mirrors the same operational evidence appendix, so the on-screen handoff story and exported artifacts are aligned.
+- Compare exports now also carry the evidence trail and before/after evidence counts, so the comparison artifact is ledger-aware instead of simulation-only.
+- The compact report summary strip now includes an evidence-trail line, so the first glance report card surfaces ledger state before the full handoff view opens.
+- The report and compare surfaces now also export a dedicated JSON evidence bundle, carrying the scene, report data, compare context, and evidence trail as a reusable handoff artifact.
+- The support bundle now also includes the canonical report evidence bundle and the live approval route summary, so support exports carry the same scene/report/evidence package and current governance routing context as the operator-facing report export.
+- The support bundle now also carries the recent sensor ingest archive, so live metadata handoff travels with the diagnostic/report evidence package instead of living only behind the sensor ingest route.
+- The debug panel now exposes a dedicated `Download Evidence Bundle` action, so the canonical report evidence package can be exported directly from the support/control plane.
 - Integration targets are well researched in exploration docs.
 
 **What is still missing**
@@ -478,11 +490,11 @@ Why this first:
 
 What it should do next:
 - Extend the backend identity record into remote approval routing semantics and cross-service conflict handling
-- Route publish/review/restore actions by role, clearance, and scene attributes instead of a single active-role toggle
+- Route publish/review/restore actions by role, clearance, scene attributes, and archived membership drift instead of a single active-role toggle
 - Persist shared-workspace permissions and approvals in the same evidence chain as scene edits and recovery
 - Add remote sync/conflict semantics for shared branches without losing the local recovery model
 - Keep draft/recovered/published state transitions explicit across users, not just locally
-- Expose approval routing and member selection in a backend-safe control plane instead of only the local panel
+- Expose approval routing and member selection in a backend-safe control plane instead of only the local panel, with the approval route visible as its own audited action
 - Add deeper append-only persistence and conflict resolution for shared-workspace branch history
 
 Why this remains the right next slice after the research pass:

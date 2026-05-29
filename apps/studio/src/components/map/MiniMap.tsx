@@ -219,6 +219,7 @@ function MiniMapHoverPreview({
   const setPan = useStudioStore((s) => s.setMapPan);
   const fitMap = useStudioStore((s) => s.fitMap);
   const layerVis = useStudioStore((s) => s.layerVisibility);
+  const focusPoint = useStudioStore((s) => s.focusScenePointHighlight?.point ?? null);
   return (
     <div className="mb-2 rounded-xl border border-[#243146] bg-[#0b1220] p-2 shadow-[0_10px_24px_rgba(0,0,0,0.24)]">
       <div className="mb-2 flex items-center justify-between">
@@ -261,6 +262,7 @@ function MiniMapHoverPreview({
             onSetPan={setPan}
             onFit={fitMap}
             replayActor={null}
+            focusPoint={focusPoint}
           />
         </div>
 
@@ -356,6 +358,7 @@ function MiniMapCompact({
   void onNodeHover;
   void onMapClick;
   void onMapDoubleClick;
+  const focusPoint = useStudioStore((s) => s.focusScenePointHighlight?.point ?? null);
   return (
     <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
       <div className="mb-2 flex items-start justify-between gap-2">
@@ -400,6 +403,7 @@ function MiniMapCompact({
         onSetPan={onSetPan}
         onFit={onFit}
         replayActor={isReplayActive ? replayActor : null}
+        focusPoint={focusPoint}
       />
 
       <div className="grid grid-cols-3 gap-2">
@@ -507,6 +511,7 @@ function MiniMapExpanded({
   void onNodeHover;
   void onMapClick;
   void onMapDoubleClick;
+  const focusPoint = useStudioStore((s) => s.focusScenePointHighlight?.point ?? null);
   const labelMode = labelDensity !== "off";
   return (
     <div className="rounded-2xl border border-[#1f2536] bg-[#0b0f17] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
@@ -562,6 +567,7 @@ function MiniMapExpanded({
         onFit={onFit}
         replayActor={isReplayActive ? replayActor : null}
         showNodeLabels={labelMode}
+        focusPoint={focusPoint}
       />
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_140px]">
@@ -711,6 +717,7 @@ export function MiniMap({
   const setReplayProgress = useStudioStore((s) => s.setPathReplayProgress);
   const pathReplay = useStudioStore((s) => s.pathReplay);
   const setFocusScenePointRequest = useStudioStore((s) => s.setFocusScenePointRequest);
+  const focusPoint = useStudioStore((s) => s.focusScenePointHighlight?.point ?? null);
   const leftDockSizePx = useStudioStore((s) => s.leftDockSizePx);
   const setDockSize = useStudioStore((s) => s.setDockSize);
 

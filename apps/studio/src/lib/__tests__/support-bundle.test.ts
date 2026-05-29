@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { buildSupportBundle } from "@/lib/diagnostic-bundle";
+import { buildSupportBundle, stringifySupportBundle } from "@/lib/diagnostic-bundle";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 import type { AiActionTelemetryRecord, ExternalLogEntry, RuntimeIncident } from "@/store/studio-store";
 import type { SceneIntelligenceGraph } from "@/lib/scene-intelligence-graph";
@@ -146,10 +146,62 @@ describe("buildSupportBundle", () => {
       launchNotice: "Support bundle ready",
       pathname: "/",
       userAgent: "test-agent",
+      sensorIngestHistory: [
+        {
+          source: "debug-panel",
+          receivedAt: "2024-03-09T16:00:00.000Z",
+          sceneId: "scene-1",
+          sceneName: "Sensor Scene",
+          summary: "Imported 1 sensor event from 1 record.",
+          sourceCount: 1,
+          storedAt: 1710000003000,
+        },
+      ],
+      cameraLiveConnectionHistory: [
+        {
+          ok: true,
+          source: "camera-inspector",
+          action: "bind",
+          protocol: "onvif",
+          receivedAt: "2024-03-09T16:05:00.000Z",
+          sceneId: "scene-1",
+          sceneName: "Support Scene",
+          endpointUrl: "http://camera.example.com/probe",
+          liveFeedUrl: "rtsp://camera.example.com/live",
+          feedLabel: "Front entrance",
+          summary: "Probed Front Entrance via ONVIF and archived the live connection.",
+          record: {
+            cameraId: "cam_front",
+            cameraName: "Front Entrance",
+            liveSessionId: "live_session_cam_front_test",
+            liveSessionState: "connected",
+            liveSessionStartedAt: 1710000003500,
+            liveSessionConfirmedAt: 1710000003800,
+            liveFeedUrl: "rtsp://camera.example.com/live",
+            liveFeedLabel: "Front entrance",
+            liveConnectionMode: "onvif",
+            liveConnectionStatus: "connected",
+            notes: "Connection healthy",
+            timestamp: 1710000004000,
+          },
+          errors: [],
+          sourceCount: 1,
+          submittedAt: 1710000004000,
+          storedAt: 1710000005000,
+          raw: "<ProbeResponse />",
+        },
+      ],
     });
 
     expect(bundle.title).toContain("Support Bundle");
     expect(bundle.diagnostic.scene.name).toBe("Support Scene");
+    expect(bundle.diagnostic.governance.approvalRoute.routeStatus).toBe("open_publish");
+    expect(bundle.reportEvidence?.mode).toBe("single");
+    expect(bundle.reportEvidence?.scene.name).toBe("Support Scene");
+    expect(bundle.sensorIngestArchive.historyCount).toBe(1);
+    expect(bundle.sensorIngestArchive.latestSubmission?.sceneName).toBe("Sensor Scene");
+    expect(bundle.cameraLiveConnectionArchive.historyCount).toBe(1);
+    expect(bundle.cameraLiveConnectionArchive.latestSubmission?.sceneName).toBe("Support Scene");
     expect(bundle.incidents.incidentCount).toBe(2);
     expect(bundle.incidents.performanceTraceCount).toBe(1);
     expect(bundle.incidents.stackTraceCount).toBe(1);
@@ -164,5 +216,9 @@ describe("buildSupportBundle", () => {
     expect(bundle.alerts.statusLabel).toBe("attention");
     expect(bundle.alerts.latestAlert?.title).toBe("Browser console error");
     expect(bundle.alerts.recommendation).toContain("attach external logs");
+    expect(stringifySupportBundle(bundle)).toContain("\"reportEvidence\"");
+    expect(stringifySupportBundle(bundle)).toContain("\"sensorIngestArchive\"");
+    expect(stringifySupportBundle(bundle)).toContain("\"cameraLiveConnectionArchive\"");
+    expect(stringifySupportBundle(bundle)).toContain("\"approvalRoute\"");
   });
 });

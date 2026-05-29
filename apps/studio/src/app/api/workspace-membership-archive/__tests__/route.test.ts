@@ -75,6 +75,18 @@ describe("workspace-membership-archive route", () => {
           publishedBy: null,
           reviewNotes: ["Membership routed for approval."],
         },
+        approvalRoute: {
+          routeStatus: "review_required",
+          routeLabel: "Route approval to reviewer",
+          routeReason: "Approval should route through reviewer before publish.",
+          targetReviewerLabel: "reviewer",
+          activeMemberLabel: "Reviewer · reviewer",
+          archivedMemberLabel: "Reviewer · reviewer",
+          currentPolicyLabel: "Shared workspace",
+          archivedPolicyLabel: "Shared workspace",
+          drift: null,
+          hasPrivacyExposure: false,
+        },
         destinations: [{ label: "Local relay", mode: "archive" }],
       }),
     }));
@@ -88,11 +100,13 @@ describe("workspace-membership-archive route", () => {
     expect(body.summary).toContain("shared workspace membership");
     expect(body.workspaceAccessState.members).toHaveLength(2);
     expect(body.workspaceGovernanceState.activeRole).toBe("reviewer");
+    expect(body.approvalRoute.routeStatus).toBe("review_required");
 
     const archive = await GET();
     const archiveBody = await archive.json();
     expect(archiveBody.historyCount).toBe(1);
     expect(archiveBody.latestSubmission.sceneId).toBe("scene-membership");
+    expect(archiveBody.latestSubmission.approvalRoute.routeStatus).toBe("review_required");
     expect(readFileSync(join(tempRoot, ".workspace-membership-archive", "workspace-membership-archive-history.json"), "utf8")).toContain("scene-membership");
   });
 
@@ -148,6 +162,18 @@ describe("workspace-membership-archive route", () => {
             publishedBy: "admin",
             reviewNotes: [],
           },
+          approvalRoute: {
+            routeStatus: "open_publish",
+            routeLabel: "Open publish route",
+            routeReason: "Publish can route directly because the workspace is open and aligned.",
+            targetReviewerLabel: "admin",
+            activeMemberLabel: "Admin · admin",
+            archivedMemberLabel: "Admin · admin",
+            currentPolicyLabel: "Single-user workspace",
+            archivedPolicyLabel: "Single-user workspace",
+            drift: null,
+            hasPrivacyExposure: false,
+          },
           destinations: [{ label: "Remote membership webhook", endpoint: `http://127.0.0.1:${server.port}`, mode: "webhook" }],
         }),
       }));
@@ -157,8 +183,10 @@ describe("workspace-membership-archive route", () => {
       expect(body.archiveStatus).toBe("server archive");
       expect(body.deliveredCount).toBe(1);
       expect(body.queuedCount).toBe(0);
+      expect(body.approvalRoute.routeStatus).toBe("open_publish");
       expect(received).toHaveLength(1);
-      expect((received[0] as { workspaceAccess?: { activeMemberId?: string } }).workspaceAccess?.activeMemberId).toBe("member_admin");
+      expect((received[0] as { workspaceAccess?: { activeMemberId?: string }; approvalRoute?: { routeStatus?: string } }).workspaceAccess?.activeMemberId).toBe("member_admin");
+      expect((received[0] as { approvalRoute?: { routeStatus?: string } }).approvalRoute?.routeStatus).toBe("open_publish");
     } finally {
       server.stop(true);
     }

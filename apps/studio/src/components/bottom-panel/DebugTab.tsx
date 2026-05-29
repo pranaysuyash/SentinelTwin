@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
-import { BadgeInfo, Layers3, RefreshCw, ShieldAlert, Sparkles, TimerReset, TriangleAlert, Waves } from "lucide-react";
+import { BadgeInfo, Database, Layers3, RefreshCw, ShieldAlert, Sparkles, TimerReset, TriangleAlert, Upload, Video, Waves } from "lucide-react";
 
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { Badge } from "@/components/shared/Badge";
 import { buildDiagnosticBundle, buildSupportBundle, stringifyDiagnosticBundle, stringifySupportBundle } from "@/lib/diagnostic-bundle";
+import type { CameraLiveConnectionArchiveRecord } from "@/lib/camera-live-connection-history";
+import { stringifyReportEvidenceBundle } from "@/lib/report-evidence-bundle";
 import {
   normalizeOperationalEvidenceArchive,
   stringifyOperationalEvidenceArchive,
@@ -34,6 +36,7 @@ import {
 } from "@/agents/model-eval";
 import { PROMPT_REGISTRY, summarizePromptRegistry } from "@/agents/prompt-registry";
 import { summarizeAiActionTelemetry } from "@/lib/ai-action-telemetry";
+import { parseSensorLiveFeed } from "@/lib/sensor-live-ingest";
 import type { SupportDeliveryArchiveRecord, SupportDeliveryResponse } from "@/lib/support-delivery";
 import type { SupportIngestResponse } from "@/lib/support-ingest";
 import type { SupportIngestHistoryRecord } from "@/lib/support-ingest-history";
@@ -149,11 +152,29 @@ export function DebugTab() {
   const [remoteSupportDeliveryHistoryLoading, setRemoteSupportDeliveryHistoryLoading] = useState(false);
   const [remoteSupportDeliveryHistoryError, setRemoteSupportDeliveryHistoryError] = useState<string | null>(null);
   const [supportDeliveryEndpointDraft, setSupportDeliveryEndpointDraft] = useState("");
+  const [sensorMetadataDraft, setSensorMetadataDraft] = useState("");
+  const [sensorMetadataStatus, setSensorMetadataStatus] = useState<string | null>(null);
+  const [sensorMetadataError, setSensorMetadataError] = useState<string | null>(null);
+  const [sensorIngestHistory, setSensorIngestHistory] = useState<Array<{
+    source: string;
+    receivedAt: string;
+    sceneId: string | null;
+    sceneName: string | null;
+    summary: string;
+    sourceCount: number;
+    storedAt: number;
+  }>>([]);
+  const [sensorIngestHistoryLoading, setSensorIngestHistoryLoading] = useState(false);
+  const [sensorIngestHistoryError, setSensorIngestHistoryError] = useState<string | null>(null);
+  const [cameraLiveConnectionHistory, setCameraLiveConnectionHistory] = useState<CameraLiveConnectionArchiveRecord[]>([]);
+  const [cameraLiveConnectionHistoryLoading, setCameraLiveConnectionHistoryLoading] = useState(false);
+  const [cameraLiveConnectionHistoryError, setCameraLiveConnectionHistoryError] = useState<string | null>(null);
   const modelEvalHistory = useStudioStore((s) => s.modelEvalHistory);
   const recordModelEvalRun = useStudioStore((s) => s.recordModelEvalRun);
   const clearModelEvalHistory = useStudioStore((s) => s.clearModelEvalHistory);
   const recordExternalLogEntry = useStudioStore((s) => s.recordExternalLogEntry);
   const clearExternalLogEntries = useStudioStore((s) => s.clearExternalLogEntries);
+  const recordSensorEvent = useStudioStore((s) => s.recordSensorEvent);
   const providerSummary = describeAiProviderSelection(aiProviderSelection);
   const providerGovernance = describeAiProviderGovernance(aiProviderSelection, localOnlyMode);
   const providerHealth = describeAiProviderHealth(aiProviderSelection, localOnlyMode);
@@ -206,9 +227,104 @@ export function DebugTab() {
     }
   };
 
+  const refreshCameraLiveConnectionArchive = async () => {
+    setCameraLiveConnectionHistoryLoading(true);
+    setCameraLiveConnectionHistoryError(null);
+    try {
+      const response = await fetch("/api/camera-live-connection");
+      if (!response.ok) {
+        throw new Error(`Camera live connection archive failed with HTTP ${response.status}.`);
+      }
+      const payload = (await response.json()) as {
+        ok: true;
+        history: CameraLiveConnectionArchiveRecord[];
+        historyCount: number;
+      };
+      setCameraLiveConnectionHistory(payload.history);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Camera live connection archive failed.";
+      setCameraLiveConnectionHistoryError(message);
+    } finally {
+      setCameraLiveConnectionHistoryLoading(false);
+    }
+  };
+
   useEffect(() => {
     void refreshSupportIngestArchive();
     void refreshSupportDeliveryArchive();
+    void refreshCameraLiveConnectionArchive();
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    setSensorIngestHistoryLoading(true);
+    setSensorIngestHistoryError(null);
+    void fetch("/api/sensor-ingest")
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Sensor ingest archive failed with HTTP ${response.status}.`);
+        }
+        return response.json() as Promise<{
+          ok: true;
+          history: Array<{
+            source: string;
+            receivedAt: string;
+            sceneId: string | null;
+            sceneName: string | null;
+            summary: string;
+            sourceCount: number;
+            storedAt: number;
+          }>;
+          historyCount: number;
+        }>;
+      })
+      .then((payload) => {
+        if (!active) return;
+        setSensorIngestHistory(payload.history);
+      })
+      .catch((error) => {
+        if (!active) return;
+        const message = error instanceof Error ? error.message : "Sensor ingest archive failed.";
+        setSensorIngestHistoryError(message);
+      })
+      .finally(() => {
+        if (active) setSensorIngestHistoryLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    setCameraLiveConnectionHistoryLoading(true);
+    setCameraLiveConnectionHistoryError(null);
+    void fetch("/api/camera-live-connection")
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Camera live connection archive failed with HTTP ${response.status}.`);
+        }
+        return response.json() as Promise<{
+          ok: true;
+          history: CameraLiveConnectionArchiveRecord[];
+          historyCount: number;
+        }>;
+      })
+      .then((payload) => {
+        if (!active) return;
+        setCameraLiveConnectionHistory(payload.history);
+      })
+      .catch((error) => {
+        if (!active) return;
+        const message = error instanceof Error ? error.message : "Camera live connection archive failed.";
+        setCameraLiveConnectionHistoryError(message);
+      })
+      .finally(() => {
+        if (active) setCameraLiveConnectionHistoryLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const dispatchSupportDelivery = async () => {
@@ -347,6 +463,8 @@ export function DebugTab() {
         userAgent: typeof window === "undefined" ? undefined : window.navigator.userAgent,
         aiActionTelemetry,
         externalLogEntries,
+        sensorIngestHistory,
+        cameraLiveConnectionHistory,
       }),
     [
       aiActionTelemetry,
@@ -365,6 +483,8 @@ export function DebugTab() {
       simulationDirty,
       simulationRunning,
       externalLogEntries,
+      sensorIngestHistory,
+      cameraLiveConnectionHistory,
       workspaceAccess,
       workspaceGovernance,
       providerSummary.providerLabel,
@@ -396,6 +516,23 @@ export function DebugTab() {
     setLaunchNotice("Support bundle downloaded.");
   };
 
+  const downloadReportEvidenceBundle = () => {
+    if (!supportBundle.reportEvidence) {
+      setLaunchNotice("No report evidence bundle is available yet.");
+      return;
+    }
+    const blob = new Blob([stringifyReportEvidenceBundle(supportBundle.reportEvidence)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `sentineltwin-report-evidence-${scene.id}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setLaunchNotice("Report evidence bundle downloaded.");
+  };
+
   const captureExternalLog = () => {
     const raw = externalLogDraft.trim();
     if (!raw) {
@@ -421,6 +558,81 @@ export function DebugTab() {
     });
     setExternalLogDraft("");
     setLaunchNotice(`Captured ${lines.length} external log line${lines.length === 1 ? "" : "s"}.`);
+  };
+
+  const ingestSensorMetadata = () => {
+    const raw = sensorMetadataDraft.trim();
+    if (!raw) {
+      setSensorMetadataError("Paste sensor metadata as JSON or NDJSON first.");
+      setSensorMetadataStatus(null);
+      return;
+    }
+
+    void fetch("/api/sensor-ingest", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        source: "debug-panel",
+        sceneId: scene.id,
+        sceneName: scene.name,
+        submittedAt: Date.now(),
+        raw,
+        sensors: scene.sensors,
+      }),
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Sensor ingest failed with HTTP ${response.status}.`);
+        }
+        return response.json() as Promise<{
+          ok: true;
+          source: string;
+          receivedAt: string;
+          sceneId: string | null;
+          sceneName: string | null;
+          summary: string;
+          events: Array<Parameters<typeof recordSensorEvent>[0]>;
+          errors: string[];
+          sourceCount: number;
+          storedAt: number;
+          historyCount: number;
+        }>;
+      })
+      .catch(async () => {
+        const parsed = parseSensorLiveFeed(raw, scene.sensors);
+        if (parsed.events.length === 0) {
+          throw new Error(parsed.errors[0] ?? "Paste sensor metadata as JSON or NDJSON first.");
+        }
+        return {
+          ok: true as const,
+          source: "debug-panel",
+          receivedAt: new Date().toISOString(),
+          sceneId: scene.id,
+          sceneName: scene.name,
+          summary: `Imported ${parsed.events.length} sensor event${parsed.events.length === 1 ? "" : "s"} from ${parsed.sourceCount} record${parsed.sourceCount === 1 ? "" : "s"}.`,
+          ...parsed,
+          storedAt: Date.now(),
+          historyCount: 0,
+        };
+      })
+      .then((payload) => {
+        if (payload.events.length === 0) {
+          throw new Error(payload.errors[0] ?? "No matching sensor events found.");
+        }
+        for (const event of payload.events) {
+          recordSensorEvent(event);
+        }
+        setSensorMetadataError(payload.errors[0] ?? null);
+        setSensorMetadataStatus(`${payload.summary} Archived ${payload.historyCount} sensor ingest record${payload.historyCount === 1 ? "" : "s"}.`);
+        setSensorMetadataDraft("");
+        setLaunchNotice(`Imported ${payload.events.length} live sensor event${payload.events.length === 1 ? "" : "s"} and archived the ingest record.`);
+      })
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : "Sensor ingest failed.";
+        setSensorMetadataError(message);
+        setSensorMetadataStatus(null);
+        setLaunchNotice(message);
+      });
   };
 
   const sendSupportBundleToIngest = async () => {
@@ -665,6 +877,9 @@ export function DebugTab() {
             </PillButton>
             <PillButton active={false} onClick={downloadSupportBundle}>
               Download Support Bundle
+            </PillButton>
+            <PillButton active={false} onClick={downloadReportEvidenceBundle}>
+              Download Evidence Bundle
             </PillButton>
             <PillButton active={false} onClick={downloadOperationalEvidenceArchive}>
               Download Archive
@@ -1019,6 +1234,99 @@ export function DebugTab() {
             </div>
           </Section>
 
+          <Section title="Sensor Ingest Archive" icon={<Waves className="h-3 w-3 text-cyan-400" />}>
+            <div className="space-y-1.5 text-[9px] text-[#8b96ab]">
+              <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
+                The sensor ingest archive now ships inside the support bundle so live metadata handoff can be reviewed with the rest of the operational evidence.
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Archived records</div>
+                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{supportBundle.sensorIngestArchive.historyCount}</div>
+                </div>
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Latest scene</div>
+                  <div className="mt-0.5 truncate font-semibold text-[#d2d9e8]">{supportBundle.sensorIngestArchive.latestSubmission?.sceneName ?? "No archive yet"}</div>
+                </div>
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Loading</div>
+                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{sensorIngestHistoryLoading ? "Yes" : "No"}</div>
+                </div>
+              </div>
+              {sensorIngestHistoryError ? (
+                <div className="rounded-md border border-rose-500/20 bg-rose-500/10 px-2 py-1 text-rose-200">
+                  {sensorIngestHistoryError}
+                </div>
+              ) : null}
+              <div className="space-y-1.5">
+                {supportBundle.sensorIngestArchive.recentSubmissions.length > 0 ? supportBundle.sensorIngestArchive.recentSubmissions.map((record) => (
+                  <div key={`${record.receivedAt}-${record.storedAt}`} className="rounded-md border border-[#1a2030] bg-[#0f141f] px-3 py-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-[10px] font-semibold text-[#edf2ff]">{record.sceneName ?? "Untitled scene"}</div>
+                      <Badge variant="gray">{record.sourceCount} record{record.sourceCount === 1 ? "" : "s"}</Badge>
+                    </div>
+                    <div className="mt-1 text-[9px] text-[#8b96ab]">{record.summary}</div>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      <Badge variant="gray">{record.source}</Badge>
+                      <Badge variant="gray">{new Date(record.receivedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Badge>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                    No sensor ingest archive yet. Paste metadata or pull an external feed in the sensor panel to create the first record.
+                  </div>
+                )}
+              </div>
+            </div>
+          </Section>
+
+          <Section title="Camera Live Connection Archive" icon={<Video className="h-3 w-3 text-cyan-400" />}>
+            <div className="space-y-1.5 text-[9px] text-[#8b96ab]">
+              <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
+                The live camera connection archive now ships inside the support bundle so ONVIF-style binds and disconnects can be reviewed with the rest of the operational evidence.
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Archived records</div>
+                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{supportBundle.cameraLiveConnectionArchive.historyCount}</div>
+                </div>
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Latest scene</div>
+                  <div className="mt-0.5 truncate font-semibold text-[#d2d9e8]">{supportBundle.cameraLiveConnectionArchive.latestSubmission?.sceneName ?? "No archive yet"}</div>
+                </div>
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Loading</div>
+                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{cameraLiveConnectionHistoryLoading ? "Yes" : "No"}</div>
+                </div>
+              </div>
+              {cameraLiveConnectionHistoryError ? (
+                <div className="rounded-md border border-rose-500/20 bg-rose-500/10 px-2 py-1 text-rose-200">
+                  {cameraLiveConnectionHistoryError}
+                </div>
+              ) : null}
+              <div className="space-y-1.5">
+                {supportBundle.cameraLiveConnectionArchive.recentSubmissions.length > 0 ? supportBundle.cameraLiveConnectionArchive.recentSubmissions.map((record) => (
+                  <div key={`${record.receivedAt}-${record.storedAt}`} className="rounded-md border border-[#1a2030] bg-[#0f141f] px-3 py-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-[10px] font-semibold text-[#edf2ff]">{record.sceneName ?? "Untitled scene"}</div>
+                      <Badge variant="gray">{record.protocol.toUpperCase()}</Badge>
+                    </div>
+                    <div className="mt-1 text-[9px] text-[#8b96ab]">{record.summary}</div>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      <Badge variant="gray">{record.action}</Badge>
+                      <Badge variant="gray">{record.record.liveConnectionStatus}</Badge>
+                      <Badge variant="gray">{new Date(record.receivedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Badge>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                    No camera live connection archive yet. Bind or disconnect a camera in the inspector to create the first record.
+                  </div>
+                )}
+              </div>
+            </div>
+          </Section>
+
           <Section title="External Log Capture" icon={<BadgeInfo className="h-3 w-3 text-sky-400" />}>
             <div className="space-y-1.5 text-[9px] text-[#8b96ab]">
               <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
@@ -1073,6 +1381,59 @@ export function DebugTab() {
                   </div>
                 )) : null}
               </div>
+            </div>
+          </Section>
+
+          <Section title="Sensor Metadata Intake" icon={<Upload className="h-3 w-3 text-cyan-400" />}>
+            <div className="space-y-1.5 text-[9px] text-[#8b96ab]">
+              <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
+                Paste JSON arrays or newline-delimited JSON sensor records here to convert live metadata into canonical sensor evidence.
+              </div>
+              <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
+                Matching sensor ids or labels are resolved against the current scene before the event trail is updated.
+              </div>
+              <textarea
+                value={sensorMetadataDraft}
+                onChange={(event) => {
+                  setSensorMetadataDraft(event.target.value);
+                  setSensorMetadataError(null);
+                  setSensorMetadataStatus(null);
+                }}
+                rows={5}
+                placeholder={`[
+  {"sensorId":"sensor_1","kind":"triggered","details":"Door motion detected"},
+  {"sensorLabel":"Front Door","kind":"heartbeat"}
+]`}
+                className="w-full rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1 text-[9px] text-[#d2d9e8] outline-none placeholder:text-[#556076] focus:border-cyan-400/40"
+              />
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={ingestSensorMetadata}
+                  className="rounded-md border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-[9px] text-cyan-100 hover:border-cyan-400/30 hover:bg-cyan-500/20"
+                >
+                  Import Sensor Metadata
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSensorMetadataDraft("");
+                    setSensorMetadataError(null);
+                    setSensorMetadataStatus(null);
+                  }}
+                  className="rounded-md border border-[#1e2538] bg-[#111521] px-2 py-1 text-[9px] text-[#c7d0e4] hover:border-[#2a3245] hover:text-white"
+                >
+                  Clear Draft
+                </button>
+              </div>
+              <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
+                {sensorMetadataStatus ?? "No live sensor metadata imported yet."}
+              </div>
+              {sensorMetadataError ? (
+                <div className="rounded-md border border-rose-500/20 bg-rose-500/10 px-2 py-1 text-rose-200">
+                  {sensorMetadataError}
+                </div>
+              ) : null}
             </div>
           </Section>
 

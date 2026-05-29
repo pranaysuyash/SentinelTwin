@@ -5,9 +5,7 @@ import { Canvas } from "@react-three/fiber";
 import { motion } from "framer-motion";
 import { ListRestart, Pause, Play, SkipBack, SkipForward } from "lucide-react";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Ref } from "react";
 import * as THREE from "three";
-import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 
 import { QUALITY_ABBR, QUALITY_COLOR, QUALITY_RANK } from "@/lib/quality-display";
 import { useStudioStore } from "@/store/studio-store";
@@ -26,6 +24,7 @@ import {
   CoverageSegmentPath,
   PathActor,
 } from "@/components/workspace/SharedScene";
+import { pathLength } from "@/components/workspace/editing/editor-geometry";
 import { samplePathQuality } from "@/components/map/path-quality";
 import { VisibilityTimeline } from "@/components/view/VisibilityTimeline";
 import type { DoriQuality, ScenarioPath } from "@/schema/security-scene";
@@ -260,6 +259,14 @@ function buildLegalizedReplayWaypoints(
   }
 
   return legalized;
+}
+
+function formatSecondsShort(seconds: number) {
+  if (!Number.isFinite(seconds) || seconds < 0) return "--";
+  if (seconds < 60) return `${seconds.toFixed(1)}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remaining = Math.round(seconds % 60);
+  return `${minutes}:${remaining.toString().padStart(2, "0")}`;
 }
 
 
@@ -636,6 +643,7 @@ type QualityExposure = {
 const EXPOSURE_KEYS: DoriQuality[] = ["identification", "recognition", "observation", "detection"];
 
 function InfoOverlay({
+  pathLabel,
   waypointCount,
   exposureScore,
   criticalZoneReachableAlongRoute,
@@ -649,6 +657,7 @@ function InfoOverlay({
   bestCameraLabel,
   nextEventLabel,
 }: {
+  pathLabel: string;
   waypointCount: number;
   exposureScore: number;
   criticalZoneReachableAlongRoute: boolean;
@@ -672,7 +681,7 @@ function InfoOverlay({
       className="absolute left-3 top-12 z-10 rounded-xl border border-[#1f2536] bg-[#0b0f17]/90 px-3.5 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.32)] backdrop-blur-sm"
     >
       <div className="mb-2.5 flex items-center gap-3">
-        <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#5b667c]">Coverage Failure Path</div>
+        <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#5b667c]">{pathLabel}</div>
         {criticalZoneReachableAlongRoute && (
           <span className="rounded-md bg-red-500/15 px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-[0.12em] text-red-400">
             Critical Zone Reachable
@@ -782,6 +791,13 @@ export function PathReplayView() {
   const scene = useStudioStore((s) => s.scene);
   const result = useStudioStore((s) => s.simulationResult);
   const activePathId = useStudioStore((s) => s.activePathId);
+  const setActivePathId = useStudioStore((s) => s.setActivePathId);
+  const setViewMode = useStudioStore((s) => s.setViewMode);
+  const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
+  const setBottomTab = useStudioStore((s) => s.setBottomTab);
+  const setActiveTool = useStudioStore((s) => s.setActiveTool);
+  const setPathReplayPlaying = useStudioStore((s) => s.setPathReplayPlaying);
+  const setPathReplayProgress = useStudioStore((s) => s.setPathReplayProgress);
   const followActor = useStudioStore((s) => s.pathReplay.followActor);
   const coverageFailurePath = result?.adversarialPath;
   const activePath = useMemo(() => {
@@ -818,6 +834,15 @@ export function PathReplayView() {
     [replaySamples],
   );
   const controlsRef = useRef<{ target: THREE.Vector3; update?: () => void } | null>(null);
+  const pathLengthM = useMemo(() => {
+    if (!activePath) return 0;
+    return pathLength(activePath.points.map((point) => point.position));
+  }, [activePath]);
+  const estimatedTimeS = useMemo(() => {
+    if (!activePath || activePath.speedMps <= 0) return 0;
+    return pathLengthM / activePath.speedMps;
+  }, [activePath, pathLengthM]);
+  const selectedPathLabel = activePath?.label ?? "Coverage Failure Path";
 
   // Coverage bands data for the scrub bar (full waypoint objects with quality)
   const coverageBands = useMemo(() => {
@@ -983,14 +1008,84 @@ export function PathReplayView() {
     });
   }, [totalDuration]);
 
+  const handlePathChange = useCallback((nextPathId: string | null) => {
+    setActivePathId(nextPathId);
+    setPlaying(false);
+    setCurrentTime(0);
+    setPathReplayProgress(0);
+  }, [setActivePathId, setPathReplayProgress]);
+
+  const handleEditPath = useCallback(() => {
+    if (!activePath) return;
+    setPathReplayPlaying(false);
+    setPathReplayProgress(0);
+    setWorkspacePreset("edit");
+    setViewMode("map");
+    setBottomTab("timeline");
+    setActiveTool("path");
+  }, [activePath, setActiveTool, setBottomTab, setPathReplayPlaying, setPathReplayProgress, setViewMode, setWorkspacePreset]);
+
   if (!coverageFailurePath || waypoints.length < 2) {
     return <EmptyReplayState />;
   }
 
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#07090d]">
+      <div className="flex items-center justify-between gap-4 border-b border-[#1f2536] bg-[#0b0f17] px-4 py-3">
+        <div className="min-w-0">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">
+            Active Path Replay
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <select
+              className="min-w-[220px] rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5 text-[11px] font-medium text-[#d7deed] outline-none transition-colors hover:border-[#32384d]"
+              value={activePathId ?? ""}
+              onChange={(event) => handlePathChange(event.target.value || null)}
+              aria-label="Select active replay path"
+            >
+              <option value="">Coverage Failure Path</option>
+              {scene.paths.map((path) => (
+                <option key={path.id} value={path.id}>
+                  {path.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={handleEditPath}
+              disabled={!activePath}
+              className="rounded-lg border border-[#24283a] bg-[#111521] px-3 py-1.5 text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Edit Path
+            </button>
+            <button
+              type="button"
+              onClick={handlePlayPause}
+              className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-medium text-emerald-200 transition-colors hover:bg-emerald-500/20"
+            >
+              {playing ? "Pause" : "Play"} Path
+            </button>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-right text-[9px]">
+          <div className="rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5">
+            <div className="uppercase tracking-[0.16em] text-[#556076]">Path Length</div>
+            <div className="mt-0.5 font-mono text-[#c7d0e4]">{pathLengthM.toFixed(1)}m</div>
+          </div>
+          <div className="rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5">
+            <div className="uppercase tracking-[0.16em] text-[#556076]">Est. Time</div>
+            <div className="mt-0.5 font-mono text-[#c7d0e4]">{estimatedTimeS > 0 ? formatSecondsShort(estimatedTimeS) : "--"}</div>
+          </div>
+          <div className="rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5">
+            <div className="uppercase tracking-[0.16em] text-[#556076]">Start Time</div>
+            <div className="mt-0.5 font-mono text-[#c7d0e4]">{formatSecondsShort(playbackWaypoints[0]?.timeS ?? 0)}</div>
+          </div>
+        </div>
+      </div>
+
       {coverageFailurePath && (
         <InfoOverlay
+          pathLabel={selectedPathLabel}
           waypointCount={waypoints.length}
           exposureScore={coverageFailurePath.totalExposureScore}
           criticalZoneReachableAlongRoute={criticalZoneReachableAlongRoute}
@@ -1036,7 +1131,7 @@ export function PathReplayView() {
         <CameraMarkers />
 
         <OrbitControls
-          ref={controlsRef as unknown as Ref<OrbitControlsImpl>}
+          ref={controlsRef as any}
           makeDefault
           target={[5.05, 0.6, 3.8]}
           minDistance={5.5}

@@ -3111,6 +3111,20 @@ reference to the new path, then remove the old."
 - **Keep silent rejection** — rejected because users cannot tell whether the editor accepted the edit.
 - **Create a second transform-specific snap system** — rejected because it would fork the scene-editing rules and create drift.
 
+### D-190: Workspace approval routing should be a first-class evidence action
+**Date:** 2026-05-29
+
+**Decision:** Add a visible `Resolve Approval Route` action in the Governance tab that compares the live workspace against the latest archived membership snapshot, records a `workspace_approval_routed` evidence event, and surfaces the route status, target reviewer, and drift state in the control plane.
+
+**Rationale:**
+- Remote approval routing only becomes trustworthy when the operator can see how the live workspace compares to the archived membership record before route resolution.
+- Emitting a dedicated evidence event keeps routing distinct from membership sync while still keeping both in the same audit trail.
+- Surfacing route status, target reviewer, and drift state makes the governance control plane explain the actual approval path rather than just the current toggle state.
+
+**Alternatives rejected:**
+- **Leave routing implicit inside the publish action** — rejected because the operator would still not see the route decision as its own auditable step.
+- **Overwrite membership state instead of recording a route event** — rejected because routing should be visible before reconciliation, not hidden by it.
+
 ### D-184: Active path selection should not auto-fall back to the first path
 **Date:** 2026-05-29
 
@@ -3137,6 +3151,20 @@ reference to the new path, then remove the old."
 **Alternatives rejected:**
 - **Leave deletion/duplication to inspector-only actions** — rejected because the canvas would remain too limited for real scene editing.
 - **Implement a separate editing state for keyboard flows** — rejected because it would fork the interaction model and risk drift from the scene source of truth.
+
+### D-186: Door and window editing should include a canonical wall-snap action
+**Date:** 2026-05-29
+
+**Decision:** The inspector should expose a shared `Snap to Nearest Wall` action for doors and windows so openings can be corrected back onto the closest wall segment without manual coordinate entry.
+
+**Rationale:**
+- Openings are easiest to place approximately and then correct precisely.
+- A shared wall-snap action keeps placement and inspector correction aligned with the same geometry helper.
+- This reduces accidental floating doors/windows while preserving the underlying scene schema.
+
+**Alternatives rejected:**
+- **Leave wall correction to numeric fields only** — rejected because it is too brittle for routine editor work.
+- **Add separate snap logic per inspector panel** — rejected because it would create drift and duplicate geometry rules.
 - **Keep fallback only in the selector layer** — rejected because that still forces a hidden choice into reports and replay state.
 
 ### D-185: Camera view selection should not auto-fall back to the first camera
@@ -3194,3 +3222,458 @@ reference to the new path, then remove the old."
 **Alternatives rejected:**
 - **Keep the first camera fallback for inactive scenes** — rejected because it introduces arbitrary scene-order bias.
 - **Return null immediately when no active camera exists** — rejected because the template camera still provides a useful baseline.
+
+### D-189: MiniCPM-V 4.6 needs a specialized extraction handler (different HF API pattern)
+**Date:** 2026-05-29
+
+**Decision:** Add `_run_minicpm_extraction()` in `runner.py` instead of trying to make `_run_transformers_vlm_extraction()` handle MiniCPM's unique `processor.apply_chat_template(tokenize=True, ...)` pattern.
+
+**Rationale:**
+- MiniCPM-V 4.6 uses a non-standard API where `apply_chat_template` with `tokenize=True` does both tokenization and image processing in one call (returns `input_ids`, `pixel_values`, `image_grid_thw`)
+- The standard `_run_transformers_vlm_extraction` uses `tokenize=False` then a separate `processor(images=image, text=text)` call, which fails for MiniCPM
+- MiniCPM-V 4.6 requires `downsample_mode` passed to both `apply_chat_template` AND `generate`
+- Images must be passed via `{"type": "image", "url": path}` not PIL objects in the messages
+
+**Alternatives rejected:**
+- **Generalize `_run_transformers_vlm_extraction`** — rejected because it would make the existing code more fragile and harder to reason about. The MiniCPM pattern is fundamentally different (one-step vs two-step processing).
+- **Add `downsample_mode` to every local model call** — rejected because only MiniCPM uses it; it would add noise to other models.
+
+### D-190: Floor plan VLM bakeoff — cloud APIs dominate local MPS models
+**Date:** 2026-05-29
+
+**Decision:** Accept that practical floor plan VLM inference requires either cloud APIs or GGUF-quantized local models. Models >=4B params cannot run on Apple Silicon via transformers.
+
+**Rationale:**
+- MiniCPM-V 4.6 (1.3B, smallest candidate): wall F1=0.094, P50=96s — too small, too slow
+- Qwen3.5-4B: failed to complete 1 image in 15 minutes on MPS
+- Qwen2.5-VL-7B: wall F1=0.661 but P50=86s — barely feasible
+- GPT-4o: wall F1=0.964, P50=5s — 20x faster AND better
+- Four new candidates configured but all require CUDA or GGUF to evaluate
+
+**Alternatives rejected:**
+- **Continue evaluating larger local models on MPS** — rejected as impractical. Qwen3.5-4B alone would take >1 hour for 5 images.
+- **Downgrade to CPU inference** — would be even slower than MPS.
+
+### D-191: Novel algorithm map focus should leave a transient visual highlight
+**Date:** 2026-05-29
+
+**Decision:** When the Novel Algorithms navigator focuses a scene point, keep the existing camera/map focus behavior and also emit a short-lived highlight marker in the map views.
+
+**Rationale:**
+- The action already changes viewport state through `focusScenePointRequest`, but that alone is easy to miss visually.
+- A transient marker makes the interaction legible in the minimap and path map without introducing a second navigation model.
+- Keeping the highlight derived from the same focus request preserves one source of truth and avoids a parallel focus system.
+
+**Alternatives rejected:**
+- **Only move the camera and clear the request immediately** — rejected because the action reads as a silent state mutation.
+- **Add a permanent selected-node state for the focus point** — rejected because the focus target is not always a real scene node and the marker should be transient.
+- **Create a separate highlight store unrelated to focus requests** — rejected because it would duplicate the navigation contract and invite drift.
+
+### D-192: Compare and report snapshot selection should stay explicit
+**Date:** 2026-05-29
+
+**Decision:** Compare View and Report Lite should require an explicit snapshot selection and should not silently fall back to the newest saved snapshots when the selection is empty.
+
+**Rationale:**
+- Hidden snapshot defaults create the same class of drift we already removed from path and camera selection.
+- Compare/report exports are evidence surfaces, so implicit baseline/proposed choices can misrepresent what the user actually selected.
+- Empty-state prompts make the selection intent visible and keep the before/after workflow honest.
+
+**Alternatives rejected:**
+- **Auto-fill the newest snapshots for convenience** — rejected because it hides state and makes compare/report output look selected when it is not.
+- **Auto-fill the two latest snapshots after a refresh** — rejected for the same reason and because it reintroduces ordering bias.
+
+### D-193: Before / After tab should not auto-pick the latest snapshots
+**Date:** 2026-05-29
+
+**Decision:** The Before/After analysis tab should require explicit before/after snapshot selection and should not auto-bind to the newest two saves.
+
+**Rationale:**
+- Before/After is an evidence comparison surface, so the chosen pair must be visible and intentional.
+- Reusing the newest saved snapshots creates the same hidden-default problem we removed from the compare and report surfaces.
+- Explicit selectors make the comparison state clearer when the panel is opened from the bottom drawer.
+
+**Alternatives rejected:**
+- **Use the latest two snapshots as the default** — rejected because it hides state and can misrepresent the pair under review.
+- **Infer the pair from compare report selection only** — rejected because the bottom-panel tab should remain directly usable on its own.
+
+### D-194: Camera View DORI insight should require an explicit critical zone
+**Date:** 2026-05-29
+
+**Decision:** Camera View should only render the DORI insight card when a critical zone is explicitly selected, instead of falling back to the first critical zone in the scene.
+
+**Rationale:**
+- The zone insight is a direct analysis surface, so it should reflect the user’s chosen zone rather than scene ordering.
+- Auto-picking the first zone hides intent and makes the panel feel like it knows more than it does.
+- An empty-state prompt is more honest and matches the explicit selection pattern used across the compare/report surfaces.
+
+**Alternatives rejected:**
+- **Keep the first critical zone fallback** — rejected because it introduces implicit ordering bias.
+- **Auto-select the most important zone** — rejected because it still hides user intent and creates another ranking heuristic.
+
+### D-195: Metrics target quality should follow explicit zone selection
+**Date:** 2026-05-29
+
+**Decision:** The Metrics tab should display target quality requirements only when a critical zone is explicitly selected, instead of showing the first zone in the scene.
+
+**Rationale:**
+- Metrics still need to be honest about what they are summarizing.
+- Showing the first zone implied a default target that the user never chose.
+- An explicit prompt keeps the target-quality metric aligned with the selected node model used elsewhere in Studio.
+
+**Alternatives rejected:**
+- **Keep the first critical zone as the target sample** — rejected because it hides intent and creates arbitrary ordering bias.
+- **Choose the zone with highest risk automatically** — rejected because it adds a new heuristic instead of fixing the hidden default.
+
+### D-196: Shared critical-zone selectors should prefer intent or priority over scene order
+**Date:** 2026-05-29
+
+**Decision:** Shared helpers that need a critical zone without an explicit user selection should prefer label intent or a deterministic priority ranking over raw scene order.
+
+**Rationale:**
+- Offline commands, auto path generation, and adversarial-path scoring all need a fallback target when the user has not selected a zone.
+- Choosing the first zone creates arbitrary scene-order bias.
+- A shared priority helper keeps the heuristics consistent and easier to audit.
+
+**Alternatives rejected:**
+- **Keep using the first critical zone** — rejected because it ties behavior to array order.
+- **Duplicate the selection heuristic in each caller** — rejected because it would drift across features and become harder to reason about.
+
+### D-194: Sensor live signals should flow through the operational evidence trail
+**Date:** 2026-05-29
+
+**Decision:** Treat sensor triggers, heartbeats, faults, and restores as first-class operational evidence events and surface them in the sensor tab and camera overlays, while keeping real ONVIF/external ingest as the next integration step.
+
+**Rationale:**
+- The schema already models sensors, but without live event evidence the sensor layer still reads like static inventory.
+- Writing the live signals into the same operational trail as other scene actions keeps the temporal story canonical and makes Scene Intelligence able to reason about them immediately.
+- Surface-level overlays in the camera and sensor tabs make the live evidence legible without creating a second, disconnected monitoring surface.
+
+**Alternatives rejected:**
+- **Keep sensor activity as a local-only UI feed** — rejected because it would hide the evidence trail from provenance and report surfaces.
+- **Jump straight to ONVIF ingestion before local signal handling** — rejected because the repo still needs a canonical local event model for future external metadata.
+
+### D-195: Pasted sensor metadata should resolve into canonical sensor evidence
+**Date:** 2026-05-29
+
+**Decision:** Accept pasted JSON or NDJSON sensor metadata in the sensor panel, resolve it against the current scene sensors, and convert the matched records into canonical live sensor evidence events.
+
+**Rationale:**
+- The app needs a concrete intake seam before any real external feed integration can be trusted.
+- A pasted batch preserves a deterministic, local-first workflow that can be exercised immediately without depending on hardware or network availability.
+- Matching by sensor id or label keeps the intake path useful for real metadata samples while still requiring the scene to provide canonical sensor identity.
+
+**Alternatives rejected:**
+- **Freeform text parsing only** — rejected because it would be too ambiguous to map reliably into evidence records.
+- **Make the intake write raw logs only** — rejected because the point is to advance the canonical evidence graph, not create a separate log bucket.
+
+### D-196: Scene Intelligence should surface sensor live evidence
+**Date:** 2026-05-29
+
+**Decision:** Show sensor live events inside the Scene Intelligence / provenance surface so sensor activity is part of the temporal story alongside snapshots, change-log entries, and operational memory events.
+
+**Rationale:**
+- The provenance surface is the canonical place where the app explains what changed and why.
+- If sensor evidence only appears in the sensor tab, the temporal story stays fragmented and operators have to hop across panels to understand live activity.
+- Surfacing the events here keeps the operational timeline coherent without introducing a separate live-monitoring subsystem.
+
+**Alternatives rejected:**
+- **Keep sensor events isolated in the Sensors tab** — rejected because it would make the evidence trail harder to follow.
+- **Build a duplicate live monitoring dashboard** — rejected because it would create a parallel truth source for the same evidence.
+
+### D-197: Debug should reuse the same sensor metadata parser
+**Date:** 2026-05-29
+
+**Decision:** Let the Debug panel reuse the same pasted sensor metadata parser and sensor event writer as the Sensors panel instead of creating a second ingest implementation.
+
+**Rationale:**
+- The parser and event writer are the canonical contract for local live metadata.
+- Reusing the same intake path keeps support/debug, sensor operations, and provenance aligned.
+- A single parser avoids drift between the operator-focused sensor workflow and the diagnostic/support workflow.
+
+**Alternatives rejected:**
+- **Build a separate debug-only ingest parser** — rejected because it would duplicate the canonical intake contract.
+- **Keep Debug limited to external logs only** — rejected because the repo already has enough structure to route sensor metadata into the same evidence trail.
+
+### D-198: Sensor metadata intake should also exist behind an API boundary
+**Date:** 2026-05-29
+
+**Decision:** Expose a dedicated `/api/sensor-ingest` route that accepts pasted sensor metadata and returns canonical live sensor events so the intake path has a backend-shaped boundary in addition to the local parser.
+
+**Rationale:**
+- The repo needs a reusable seam for future external integrations, not only a client-only helper.
+- A route makes the metadata intake path testable as an API contract and keeps the UI code from becoming the only implementation.
+- Returning normalized sensor events keeps the backend-shaped contract focused on canonical evidence rather than raw logs.
+
+**Alternatives rejected:**
+- **Keep sensor ingest client-only** — rejected because it would weaken the boundary needed for future external feed binding.
+- **Make the route persist sensor state independently** — rejected because the canonical store should remain the place that mutates the live scene and event trail.
+
+### D-199: Exported reports should include an operational evidence appendix
+**Date:** 2026-05-29
+
+**Decision:** Include a first-class operational evidence appendix in single-scene and compare report exports so the handoff artifact carries change-log counts, evidence counts, sensor-related evidence, and recent evidence entries alongside the simulation summary.
+
+**Rationale:**
+- The report is the product-facing artifact that stakeholders keep, so it should carry the same ledger story as the in-app provenance surface.
+- Evidence counts and recent entries make the exported artifact more auditable without forcing the user back into the studio shell.
+- Keeping the appendix derived from the scene change log preserves a single canonical source instead of inventing a parallel report-only ledger.
+
+**Alternatives rejected:**
+- **Leave evidence only in the in-app provenance tab** — rejected because exported reports would remain too thin for handoff.
+- **Create a separate evidence export format first** — rejected because the report artifact is the highest-leverage place to surface the evidence trail immediately.
+
+### D-200: Compact report summaries should expose the evidence trail
+**Date:** 2026-05-29
+
+**Decision:** Add an `Evidence Trail` line to the compact report summary strip so the first-glance report card shows change-log and evidence counts before the user opens the full report or export artifact.
+
+**Rationale:**
+- The compact summary is the operator’s first read on what happened, so evidence presence should be visible there too.
+- Showing evidence counts in the summary keeps the summary, preview, and exported artifacts aligned around the same canonical ledger.
+- It gives the bottom-row/report-card surfaces a concrete bridge to the provenance and report handoff flows.
+
+**Alternatives rejected:**
+- **Keep evidence only in the detailed report view** — rejected because the compact summary would still feel disconnected from the rest of the evidence-led flow.
+- **Add a separate evidence-only panel** — rejected because the evidence trail already belongs in the existing report summary contract.
+
+### D-200: Camera Wall and Path Replay should carry their own high-signal summary strips
+**Date:** 2026-05-29
+
+**Decision:** Keep the Camera Wall mode controls and the Path Replay selection/metrics strip inside their respective view components so the design-pack targets remain visible in the workspace, rather than forcing the user to reconstruct the mode state from lower panels alone.
+
+**Rationale:**
+- The reference screens present these mode-specific controls at the top of the active surface, not only in the surrounding panels.
+- Putting the summary strip in the view itself makes the active mode feel intentional and reduces the gap between the screenshot targets and the live shell.
+- The controls remain thin wrappers around existing store state, so the view stays authoritative without creating a duplicate state model.
+
+**Alternatives rejected:**
+- **Leave all path and layout controls only in the bottom panel** — rejected because the mode surfaces would feel flatter and less like the reference product.
+- **Create a separate control system just for these views** — rejected because that would duplicate state and drift from the canonical store-backed selection model.
+
+### D-201: Report and compare surfaces should export a reusable evidence bundle
+**Date:** 2026-05-29
+
+**Decision:** Add a versioned JSON evidence bundle export from the report and compare surfaces that packages the scene, report data, compare context, and evidence trail as a reusable handoff artifact.
+
+**Rationale:**
+- The operator needs a durable artifact that travels with the evidence trail, not only rendered prose or HTML.
+- JSON keeps the bundle structured enough to be re-imported, archived, or post-processed by support and future integrations.
+- Reusing the canonical report and compare objects avoids inventing another parallel summary schema.
+
+**Alternatives rejected:**
+- **Expose only HTML/Markdown/PDF** — rejected because those are presentation formats, not a reusable evidence package.
+- **Create a separate evidence-only schema with no report context** — rejected because the report and compare objects already carry the canonical scene story.
+
+### D-202: Support bundles should include the canonical report evidence bundle
+**Date:** 2026-05-29
+
+**Decision:** Include the versioned report evidence bundle inside the support bundle so the support handoff carries the same canonical report/evidence artifact alongside the diagnostic bundle.
+
+**Rationale:**
+- Support handoffs often need the diagnostic bundle and the user-facing report context together.
+- Reusing the same canonical report evidence bundle avoids splitting the exported truth into two parallel JSON shapes.
+- It makes the support path a superset of the report handoff instead of a separate artifact family.
+
+**Alternatives rejected:**
+- **Keep support bundles diagnostic-only** — rejected because the report/evidence context is part of the real support story.
+- **Create a second support-specific evidence schema** — rejected because it would duplicate the same canonical scene/report story in another shape.
+
+### D-203: Camera Wall synchronized timestamps should follow the simulation clock
+**Date:** 2026-05-29
+
+**Decision:** Drive the Camera Wall tile timestamps from the shared simulation timestamp when synchronized mode is enabled, and only fall back to live wall-clock time when the user explicitly disables synchronization.
+
+**Rationale:**
+- The design target shows all visible camera tiles carrying the same shared time, which is only honest if the mode is tied to a common simulation timestamp.
+- A real synchronized-time toggle should affect the rendered timestamp, not just the label on the control.
+- Using the simulation timestamp preserves a consistent route/scene story across feeds and makes the wall more readable.
+
+**Alternatives rejected:**
+- **Leave the timestamp as wall-clock only** — rejected because it makes the synchronized-time control decorative instead of functional.
+- **Introduce a separate wall clock state per tile** — rejected because that would fragment the wall into unrelated times and drift from the reference.
+
+### D-204: Sensor ingest should persist a history-backed archive boundary
+**Date:** 2026-05-29
+
+**Decision:** Treat `/api/sensor-ingest` as a history-backed ingest boundary that stores each parsed sensor metadata submission alongside its derived live events, summary, and scene context.
+
+**Rationale:**
+- The sensor lane already has a canonical local event model, so the next leverage point is persistence and replay rather than another parser variant.
+- A history-backed ingest boundary makes the live evidence path auditable and replayable without inventing a parallel storage mechanism.
+- Reusing the route pattern from support and governance keeps the live sensor seam aligned with the rest of the operational handoff architecture.
+
+**Alternatives rejected:**
+- **Keep sensor ingest client-only** — rejected because it would weaken the boundary needed for future external feed binding.
+- **Create a separate sensor-specific evidence schema with no history** — rejected because it would duplicate the same live-evidence story without making it replayable.
+
+### D-205: Support bundles should carry the sensor ingest archive
+**Date:** 2026-05-29
+
+**Decision:** Include the recent sensor ingest archive summary inside the support bundle so live metadata handoff travels with the diagnostic and report evidence package.
+
+**Rationale:**
+- The sensor archive is part of the operational evidence trail, so leaving it out of the support bundle would split the same handoff story across multiple exports.
+- The support bundle already carries the canonical report evidence and diagnostic state, so the sensor archive belongs in the same transport shape.
+- Surfacing the archive in the debug panel makes the evidence chain visible instead of hidden in local storage or a route response.
+
+**Alternatives rejected:**
+- **Keep sensor ingest archive separate from support bundle** — rejected because operators would need to piece together evidence from multiple exports.
+- **Duplicate the archive in another export format only** — rejected because the support bundle should remain the canonical handoff payload.
+
+### D-206: Workspace membership archives should carry the approval route summary
+**Date:** 2026-05-29
+
+**Decision:** Include the computed workspace approval route summary in the workspace membership archive payload and history so approval routing travels with the canonical identity snapshot.
+
+**Rationale:**
+- The archive already stores the identity snapshot that approval routing depends on, so carrying the route summary keeps the decision and its evidence together.
+- Approval routing depends on the current scene and workspace state, which are available at dispatch time in the Governance tab but not recoverable from the archive alone.
+- Persisting the route summary in the same queue avoids splitting membership evidence from the route that membership implies.
+
+**Alternatives rejected:**
+- **Recompute the approval route later from the archived workspace alone** — rejected because the route depends on scene context that the archive does not reconstruct perfectly.
+- **Keep the route only in the visible Governance tab** — rejected because the archive would then lose the actual routing decision that operators acted on.
+
+### D-207: Support bundles should include the live approval route summary
+**Date:** 2026-05-29
+
+**Decision:** Include the current workspace approval route summary in the diagnostic/support bundle so governance routing travels with the broader support handoff.
+
+**Rationale:**
+- The support bundle already carries governance and access state, so carrying the resolved approval route keeps the support artifact aligned with what the operator sees.
+- The current approval route is a derived truth from scene, workspace access, and governance state, so it belongs in the diagnostic bundle rather than being recomputed by a remote consumer.
+- Including it makes the support payload more actionable for routing-related incidents and escalation reviews.
+
+**Alternatives rejected:**
+- **Leave approval routing out of the support bundle** — rejected because the support artifact would be missing a key governance decision.
+- **Expose approval routing only in the UI** — rejected because support handoffs need the same routing context as the operator-facing control plane.
+
+### D-208: Approval routing should be archived through a canonical route endpoint
+**Date:** 2026-05-29
+
+**Decision:** Add a dedicated `/api/workspace-approval-route` endpoint that archives the resolved approval route, fan-out status, and current governance context so approval routing can be dispatched and replayed as its own canonical control-plane artifact.
+
+**Rationale:**
+- Approval routing is a distinct handoff from membership archival, so it deserves its own archive boundary rather than being folded into the membership record alone.
+- The route endpoint makes the operator action auditable with the resolved route, delivery attempts, and route history in one place.
+- Keeping the route archive separate preserves the membership archive as the identity snapshot while still letting the route travel alongside it.
+
+**Alternatives rejected:**
+- **Keep approval routing only in the local Governance tab** — rejected because the route would not be replayable or fan-out capable.
+- **Fold approval routing into the membership archive only** — rejected because the route is a separate control-plane action with its own delivery semantics.
+
+### D-209: Workspace identity conflicts should have their own archive boundary
+**Date:** 2026-05-29
+
+**Decision:** Add a dedicated `/api/workspace-identity-conflict` endpoint that archives drift against the latest membership snapshot, the resolved approval route context, and fan-out attempts so shared-identity conflict handling has a canonical record before real backend identity services exist.
+
+**Rationale:**
+- Membership archival captures the canonical identity snapshot, but conflict handling needs its own artifact because reconciliation and fan-out semantics are distinct from the snapshot itself.
+- The conflict archive keeps the current/live access state, archived access state, route context, and delivery attempts together so remote shared-identity workflows can reason about reconciliation without re-deriving the drift later.
+- Separating the conflict record from both the membership archive and the approval-route archive preserves each control-plane boundary while still letting them travel together in the Governance tab.
+
+**Alternatives rejected:**
+- **Fold conflict handling into the membership archive only** — rejected because the snapshot and the conflict decision are different product boundaries.
+- **Wait for a real backend identity service first** — rejected because the app can already model the conflict boundary locally and should not leave that workflow implicit.
+
+### D-210: Workspace identity conflicts should resolve to an explicit policy recommendation
+**Date:** 2026-05-29
+
+**Decision:** Make the `/api/workspace-identity-conflict` response return a concrete resolution status, resolution label, reason, and recommended action so the identity-conflict boundary behaves like a real policy service rather than only a historical archive.
+
+**Rationale:**
+- Shared-identity conflict handling needs an actionable policy outcome, not just a snapshot of drift.
+- Returning a resolution from the same boundary keeps the policy decision aligned with the archived evidence and avoids a second derivation step in the UI.
+- The explicit recommendation makes the Governance tab useful as a control plane for reconciliation, review routing, and publish readiness.
+
+**Alternatives rejected:**
+- **Keep the conflict boundary archival-only** — rejected because the product needs a concrete policy recommendation for the operator.
+- **Derive the resolution only in the UI** — rejected because the policy boundary should remain canonical and reusable by future services.
+
+### D-211: Sensor ingest should accept external feed URLs through the canonical ingest route
+**Date:** 2026-05-29
+
+**Decision:** Extend `/api/sensor-ingest` so it can pull JSON or NDJSON from a live feed URL, archive that source metadata, and route the resulting sensor evidence through the same canonical ingest path as pasted metadata.
+
+**Rationale:**
+- Live evidence fusion should not fork into a separate feed pipeline before the scene model learns about the evidence.
+- Reusing the canonical ingest route keeps pasted metadata and external pulls in one archive/history model, which makes provenance, support handoff, and future ONVIF binding easier to reason about.
+- The sensor panel can now operate as a real bridge from remote metadata into the operational evidence trail instead of only being a paste box.
+
+**Alternatives rejected:**
+- **Create a separate external-feed API** — rejected because it would duplicate the ingest boundary and drift from the canonical sensor history.
+- **Keep external feeds client-only** — rejected because external feed binding belongs in the same server-side ingest boundary that archives the evidence.
+
+### D-212: Camera metadata should ingest through the canonical camera-metadata route
+**Date:** 2026-05-29
+
+**Decision:** Add a dedicated `/api/camera-metadata-ingest` boundary that accepts pasted JSON/NDJSON or an external feed URL, archives the source metadata, and applies matched camera state deltas through the canonical store.
+
+**Rationale:**
+- Camera health metadata is part of the same operational evidence story as sensor ingress, so it should travel through a single canonical ingest boundary rather than a UI-only shortcut.
+- Resolving camera metadata against the live scene cameras lets the inspector update camera status, clarity, and night-mode state through the existing store/evidence path instead of inventing a parallel camera history.
+- The archive/history boundary keeps the operator-facing bridge, support bundle, and future ONVIF binding aligned around the same evidence model.
+
+**Alternatives rejected:**
+- **Keep camera metadata client-only** — rejected because the evidence would not be replayable or archive-backed.
+- **Fold camera metadata into sensor ingest** — rejected because camera health metadata is distinct from sensor evidence and deserves its own archive boundary.
+
+### D-213: Camera metadata ingest should persist as a store-backed event stream
+**Date:** 2026-05-29
+
+**Decision:** Persist camera metadata ingest as its own scene-scoped event stream in the studio store and surface the latest events in the live camera overlays and provenance timeline.
+
+**Rationale:**
+- A camera-metadata route without a durable event stream would still leave the operator story fragmented between the inspector, camera glass, and provenance trail.
+- Keeping the event stream in the store makes the latest camera health state immediately reusable by live camera views, Scene Intelligence, and future ONVIF bindings without re-fetching the archive endpoint.
+- The event stream complements the canonical ingest route: one boundary archives the submission, the store preserves the operational event record, and the UI can reuse the same truth in multiple places.
+
+**Alternatives rejected:**
+- **Keep the camera metadata event local to the inspector** — rejected because the state would vanish from the rest of the operator experience.
+- **Store only the archived raw feed without an event stream** — rejected because the product needs a live, queryable event trail for the camera glass and provenance surfaces.
+
+### D-214: Live camera binding should persist as a canonical camera connection event stream
+**Date:** 2026-05-29
+
+**Decision:** Persist live camera bindings as a scene-scoped camera connection event stream in the studio store, back them with the camera node’s live-feed fields, and surface the latest bindings in the camera glass and Scene Intelligence provenance trail.
+
+**Rationale:**
+- Live camera binding is a separate operational action from camera-health metadata, so it needs its own canonical event trail.
+- Keeping the binding on the scene graph lets the camera inspector, camera glass, and provenance surface read the same truth without inventing parallel connection state.
+- A live binding event stream creates the right seam for the eventual ONVIF/RTSP/device-protocol integration without waiting for that integration to exist first.
+
+**Alternatives rejected:**
+- **Store live binding only in component state** — rejected because the live connection would disappear from the camera glass and evidence trail.
+- **Fold live binding into the metadata archive** — rejected because metadata health and device connection are distinct actions with different operational meanings.
+
+### D-215: Live camera binding should probe through a canonical backend route before updating the scene graph
+**Date:** 2026-05-29
+
+**Decision:** Route live camera binds and disconnects through a dedicated camera-live-connection probe/archive boundary so the operator UI receives an observed connection result before updating the scene graph.
+
+**Rationale:**
+- A backend round-trip gives the live connection seam a real protocol-shaped boundary instead of only trusting local form state.
+- The probe/archive route preserves the same evidence pattern as the sensor and camera metadata ingest boundaries, which keeps the operator story and the archived artifact aligned.
+- Returning the observed connection state from the route lets the camera scene node, camera glass, and Scene Intelligence reflect the same result the backend archived.
+
+**Alternatives rejected:**
+- **Keep live camera binding client-only** — rejected because the UI would still be the only place that knows whether the bind was actually archived.
+- **Skip a probe/archive boundary and mutate the scene directly** — rejected because the live connection would remain a local-only affordance with no canonical backend evidence trail.
+
+### D-216: Floor plan understanding pipeline — two-tier local-first triage → cloud API
+**Date:** 2026-05-29
+
+**Decision:** Design the floor plan understanding pipeline as two tiers: (1) always-run local MiniCPM-V 4.6 for semantic triage (classification, OCR, quality, coarse zones), then (2) gated cloud API call (GPT-4o / Gemini 2.5 Flash) for precise geometry extraction only when Tier 1 passes quality checks.
+
+**Rationale:**
+- Geometry extraction and scene understanding are fundamentally different capability curves. Small VLMs (1.3B) are useless for geometry (wall F1=0.094) but genuinely useful for classification (~2s), OCR (~8s), and coarse zone detection (~16s).
+- Cloud APIs dominate geometry (GPT-4o wall F1=0.964, P50=5s) but cost $0.01-0.02 per image. Gating with local triage saves money on blurry/noisy inputs.
+- Tier 1 provides OCR context for Tier 2 prompts (room labels, dimensions), improving cloud geometry accuracy.
+- Pipeline is fully feasible on a MacBook Pro — Tier 1 runs entirely on-device in ~5-15s.
+
+**Alternatives rejected:**
+- **Cloud-only pipeline** — rejected because it costs $0.01-0.02 for every image including garbage input, and provides no offline fallback.
+- **Local-only pipeline with a larger model** — rejected because no local model >=4B can run practically on MPS. Only 1.3B models are feasible locally.
+- **Single model for all tasks** — rejected because no model excels at both geometry and semantic understanding in our eval set. MiniCPM-V 4.6 is weak at geometry; GPT-4o is weak at fine-grained scene classification (1/5).
+- **Parallel local + cloud with result merge** — rejected as over-engineering for V0. The sequential gate pattern is simpler and provides natural cloud cost savings.

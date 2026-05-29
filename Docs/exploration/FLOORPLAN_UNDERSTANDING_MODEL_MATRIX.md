@@ -56,8 +56,11 @@ The goal is not to crown a universal winner. The goal is to produce an implement
 **Job:** interpret the full image as a spatial scene, infer walls, room boundaries, doors, windows, and candidate block objects.
 
 **Best-fit local/open candidates:**
-- `Qwen/Qwen2.5-VL-7B-Instruct`
-- `openbmb/MiniCPM-V-4_6`
+- `Qwen/Qwen2.5-VL-7B-Instruct` — evaluated (wall F1=0.661, very slow on MPS at 86s/image)
+- `openbmb/MiniCPM-V-4.6` — evaluated (wall F1=0.094, too small for floor plans)
+- `Qwen/Qwen3.5-4B` — natively multimodal (4B, Apache 2.0), MPS-infeasible (>15min/image)
+- `openbmb/MiniCPM-o-4.5` — strongest open-source near 9B (Apache 2.0), needs CUDA
+- `google/gemma-4-e4b-it` — MoE (4B active, ~30B total), needs quantization
 - `mistralai/Pixtral-12B-2409`
 - `OpenGVLab/InternVL3-8B`
 
@@ -234,6 +237,17 @@ Hybrid examples worth testing:
 - `mistralai/Pixtral-12B-2409` + `google/owlv2-base-patch16-ensemble` + `microsoft/layoutlmv3-base`
 
 ## 9) Practical Recommendation
+
+## 2026-05-29 Update: MPS Hardware Constraint
+
+Local models >=4B params cannot run practically on Apple Silicon (MPS):
+- Qwen2.5-VL-7B: 86s/image P50 — barely feasible
+- MiniCPM-V 4.6 (1.3B): 96s/image P50 — surprisingly slow for its size  
+- Qwen3.5-4B: >15min/image — not feasible
+- MiniCPM-o 4.5 (9B): estimated >20min/image — not feasible
+- Gemma 4 E4B (~30B): requires 4-bit quantization
+
+**Recommendation:** Evaluate MPS-infeasible models via GGUF quantization (ollama/llama.cpp) or cloud API only.
 
 For the first pilot, start with two local baselines and one cloud control:
 - OCR: `lightonai/LightOnOCR-2-1B-base` and `PaddlePaddle/PaddleOCR-VL`

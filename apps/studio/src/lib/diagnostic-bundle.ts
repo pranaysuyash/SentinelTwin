@@ -4,8 +4,12 @@ import type { ExternalLogEntry, RuntimeIncident } from "@/store/studio-store";
 import type { AiActionTelemetryRecord } from "@/store/studio-store";
 import type { WorkspaceAccessState } from "@/lib/workspace-access";
 import type { WorkspaceGovernanceState } from "@/lib/workspace-governance";
+import { summarizeWorkspaceApprovalRouting } from "@/lib/workspace-membership-routing";
 import { summarizeAiActionTelemetry } from "@/lib/ai-action-telemetry";
 import { summarizeIncidentAlerts } from "@/lib/incident-alerts";
+import { buildReportData } from "@/report";
+import { buildReportEvidenceBundle, type ReportEvidenceBundle } from "@/lib/report-evidence-bundle";
+import type { CameraLiveConnectionArchiveRecord } from "@/lib/camera-live-connection-history";
 import { getSceneSourceMeta } from "@/lib/scene-source";
 import type { SecurityScene, SimulationResult } from "@/schema/security-scene";
 
@@ -56,6 +60,7 @@ export type DiagnosticBundle = {
     requestedAt: number | null;
     reviewedAt: number | null;
     publishedAt: number | null;
+    approvalRoute: ReturnType<typeof summarizeWorkspaceApprovalRouting>;
   };
   access: {
     activeMemberId: string;
@@ -97,6 +102,33 @@ export type SupportBundle = {
   generatedAt: string;
   title: string;
   diagnostic: DiagnosticBundle;
+  reportEvidence: ReportEvidenceBundle | null;
+  sensorIngestArchive: {
+    historyCount: number;
+    latestSubmission: {
+      source: string;
+      receivedAt: string;
+      sceneId: string | null;
+      sceneName: string | null;
+      summary: string;
+      sourceCount: number;
+      storedAt: number;
+    } | null;
+    recentSubmissions: Array<{
+      source: string;
+      receivedAt: string;
+      sceneId: string | null;
+      sceneName: string | null;
+      summary: string;
+      sourceCount: number;
+      storedAt: number;
+    }>;
+  };
+  cameraLiveConnectionArchive: {
+    historyCount: number;
+    latestSubmission: Pick<CameraLiveConnectionArchiveRecord, "source" | "action" | "protocol" | "receivedAt" | "sceneId" | "sceneName" | "summary" | "storedAt" | "endpointUrl" | "liveFeedUrl" | "feedLabel" | "record" | "sourceCount"> | null;
+    recentSubmissions: Array<Pick<CameraLiveConnectionArchiveRecord, "source" | "action" | "protocol" | "receivedAt" | "sceneId" | "sceneName" | "summary" | "storedAt" | "endpointUrl" | "liveFeedUrl" | "feedLabel" | "record" | "sourceCount">>;
+  };
   incidents: {
     title: string;
     summary: string;
@@ -139,6 +171,16 @@ export type DiagnosticBundleInput = {
 export type SupportBundleInput = DiagnosticBundleInput & {
   aiActionTelemetry: AiActionTelemetryRecord[];
   externalLogEntries: ExternalLogEntry[];
+  sensorIngestHistory?: Array<{
+    source: string;
+    receivedAt: string;
+    sceneId: string | null;
+    sceneName: string | null;
+    summary: string;
+    sourceCount: number;
+    storedAt: number;
+  }>;
+  cameraLiveConnectionHistory?: CameraLiveConnectionArchiveRecord[];
 };
 
 function latestEvent(events: OperationalEvidenceEvent[], kinds: OperationalEvidenceEvent["kind"][]) {
@@ -334,6 +376,7 @@ export function buildDiagnosticBundle(input: DiagnosticBundleInput): DiagnosticB
       aiProviderLabel: input.aiProviderLabel,
     },
   );
+  const approvalRoute = summarizeWorkspaceApprovalRouting(input.scene, input.workspaceAccess, input.workspaceGovernance, null);
 
   return {
     version: "1",
@@ -392,6 +435,7 @@ export function buildDiagnosticBundle(input: DiagnosticBundleInput): DiagnosticB
       requestedAt: input.workspaceGovernance.requestedAt,
       reviewedAt: input.workspaceGovernance.reviewedAt,
       publishedAt: input.workspaceGovernance.publishedAt,
+      approvalRoute,
     },
     access: {
       activeMemberId: input.workspaceAccess.activeMemberId,
@@ -427,6 +471,15 @@ export function stringifyDiagnosticBundle(bundle: DiagnosticBundle) {
 
 export function buildSupportBundle(input: SupportBundleInput): SupportBundle {
   const diagnostic = buildDiagnosticBundle(input);
+  const report = input.simulationResult ? buildReportData(input.scene, input.simulationResult) : null;
+  const reportEvidence = report
+    ? buildReportEvidenceBundle({
+        scene: input.scene,
+        report,
+        simulationResult: input.simulationResult,
+        notes: ["Support bundle export includes the canonical report evidence artifact."],
+      })
+    : null;
   const aiTelemetry = summarizeAiActionTelemetry(input.aiActionTelemetry);
   const alerts = summarizeIncidentAlerts({
     runtimeIncidents: input.runtimeIncidents,
@@ -437,12 +490,25 @@ export function buildSupportBundle(input: SupportBundleInput): SupportBundle {
   const stackTraceCount = diagnostic.runtime.recentIncidents.filter((incident) => Boolean(incident.stack)).length;
   const normalizedExternalLogs = [...input.externalLogEntries].sort((left, right) => right.timestamp - left.timestamp);
   const latestExternalLog = normalizedExternalLogs.at(0) ?? null;
+  const sensorIngestArchive = [...(input.sensorIngestHistory ?? [])].sort((left, right) => right.storedAt - left.storedAt);
+  const cameraLiveConnectionArchive = [...(input.cameraLiveConnectionHistory ?? [])].sort((left, right) => right.storedAt - left.storedAt);
 
   return {
     version: "1",
     generatedAt: diagnostic.generatedAt,
     title: `SentinelTwin Support Bundle · ${diagnostic.scene.name}`,
     diagnostic,
+    reportEvidence,
+    sensorIngestArchive: {
+      historyCount: sensorIngestArchive.length,
+      latestSubmission: sensorIngestArchive.at(0) ?? null,
+      recentSubmissions: sensorIngestArchive.slice(0, 3),
+    },
+    cameraLiveConnectionArchive: {
+      historyCount: cameraLiveConnectionArchive.length,
+      latestSubmission: cameraLiveConnectionArchive.at(0) ?? null,
+      recentSubmissions: cameraLiveConnectionArchive.slice(0, 3),
+    },
     incidents: {
       title: "Incident snapshot",
       summary: `${diagnostic.runtime.incidentCount} incidents, ${diagnostic.runtime.performanceTraces.length} performance traces, ${stackTraceCount} stack traces, ${normalizedExternalLogs.length} external logs.`,

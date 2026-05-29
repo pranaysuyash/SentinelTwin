@@ -40,13 +40,20 @@ describe("buildReportSummaryLines", () => {
       ],
       criticalZoneResults: [],
     } as never;
+    const scene = {
+      changeLog: [
+        "Scene created",
+        "Evidence: May 29, 10:00 AM | Sensor Triggered | Front door contact triggered near Camera 1 | high",
+      ],
+    };
 
-    const lines = buildReportSummaryLines(outcome, result);
+    const lines = buildReportSummaryLines(outcome, result, scene);
     expect(lines).toEqual([
       { label: "Critical Issue", text: "Cash counter has a blind spot." },
       { label: "Primary Cause", text: "Main entry is not fully covered." },
       { label: "Impact", text: "Current simulated coverage is 71% with 1/2 critical zones passing." },
       { label: "Recommendation", text: "Add a camera. (verified)" },
+      { label: "Evidence Trail", text: "2 change-log entries, 1 evidence entries, 1 sensor-related evidence" },
     ]);
   });
 });

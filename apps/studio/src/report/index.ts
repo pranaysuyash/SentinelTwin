@@ -66,6 +66,12 @@ export interface ReportData {
     confidenceNotes: string[];
     sourceNotes: string[];
   };
+  evidenceTrail: {
+    changeLogEntryCount: number;
+    evidenceEntryCount: number;
+    sensorEvidenceCount: number;
+    recentEntries: ReportEvidenceEntry[];
+  };
   adversarialPath?: {
     exposureScore: number;
     detectionProbability: number;
@@ -208,6 +214,13 @@ export interface ReportData {
   standardsRef: string;
 }
 
+interface ReportEvidenceEntry {
+  when: string;
+  title: string;
+  details: string;
+  confidence: string;
+}
+
 // ── Build Report Data ──
 
 export function buildReportData(
@@ -229,6 +242,7 @@ export function buildReportData(
     revisionDepth: scene.changeLog.length,
     snapshotCount: scene.snapshots?.length ?? 0,
   });
+  const evidenceTrail = buildEvidenceTrail(scene);
   const provenanceNotes = (scene.changeLog ?? []).filter((entry) => entry.startsWith("Provenance:") || entry.startsWith("Provenance confidence:"));
   const sourceNotes = provenanceNotes.filter((entry) => entry.startsWith("Provenance:"));
   const confidenceNotes = provenanceNotes.filter((entry) => entry.startsWith("Provenance confidence:"));
@@ -309,6 +323,7 @@ export function buildReportData(
       confidenceNotes,
       sourceNotes,
     },
+    evidenceTrail,
     adversarialPath: options?.adversarialPath
       ? {
           exposureScore: options.adversarialPath.exposureScore,
@@ -544,6 +559,7 @@ function buildCompareReportSnapshot(scene: ReportScene, result: SimulationResult
     revisionDepth: scene.changeLog.length,
     snapshotCount: scene.snapshots?.length ?? 0,
   });
+  const evidenceTrail = buildEvidenceTrail(scene);
   const provenanceNotes = (scene.changeLog ?? []).filter((entry) => entry.startsWith("Provenance:") || entry.startsWith("Provenance confidence:"));
   const sourceNotes = provenanceNotes.filter((entry) => entry.startsWith("Provenance:"));
   const confidenceNotes = provenanceNotes.filter((entry) => entry.startsWith("Provenance confidence:"));
@@ -619,6 +635,7 @@ function buildCompareReportSnapshot(scene: ReportScene, result: SimulationResult
       confidenceNotes,
       sourceNotes,
     },
+    evidenceTrail,
     novelAlgorithms: undefined,
     meetsModeledZoneRequirements: zonesPassing === totalZones,
     codeCompliant: zonesPassing === totalZones,
@@ -789,6 +806,23 @@ export function exportAsHtml(report: ReportData): string {
       </ul>
     </div>
     ` : ""}
+  </div>
+
+  <h2>Operational Evidence</h2>
+  <div class="assumptions-box">
+    <table>
+      <tr><th>Change log entries</th><td>${report.evidenceTrail.changeLogEntryCount}</td></tr>
+      <tr><th>Evidence entries</th><td>${report.evidenceTrail.evidenceEntryCount}</td></tr>
+      <tr><th>Sensor-related evidence</th><td>${report.evidenceTrail.sensorEvidenceCount}</td></tr>
+    </table>
+    ${report.evidenceTrail.recentEntries.length > 0 ? `
+    <div style="margin-top:10px;">
+      <strong>Recent evidence entries</strong>
+      <ul style="margin-left:18px;">
+        ${report.evidenceTrail.recentEntries.map((entry) => `<li><strong>${escapeHtml(entry.when)}</strong> · ${escapeHtml(entry.title)} · ${escapeHtml(entry.details)} · ${escapeHtml(entry.confidence)}</li>`).join("")}
+      </ul>
+    </div>
+    ` : "<p style=\"margin-top:10px; color:#64748b;\">No evidence entries are recorded in the scene ledger yet.</p>"}
   </div>
 
   <h2>Zone Analysis</h2>
@@ -1099,6 +1133,17 @@ export function exportAsMarkdown(report: ReportData): string {
       ...report.provenance.confidenceNotes.map((note) => `  - ${note}`),
     ] : []),
     "",
+    "## Operational Evidence",
+    `- Change Log Entries: ${report.evidenceTrail.changeLogEntryCount}`,
+    `- Evidence Entries: ${report.evidenceTrail.evidenceEntryCount}`,
+    `- Sensor-related Evidence: ${report.evidenceTrail.sensorEvidenceCount}`,
+    ...(report.evidenceTrail.recentEntries.length > 0
+      ? [
+          "- Recent Evidence Entries:",
+          ...report.evidenceTrail.recentEntries.map((entry) => `  - ${entry.when} · ${entry.title} · ${entry.details} · ${entry.confidence}`),
+        ]
+      : ["- Recent Evidence Entries: none"]),
+    "",
     "## Zone Analysis",
     "",
     ...(report.zones.length > 0
@@ -1285,6 +1330,18 @@ export function exportAsText(report: ReportData): string {
       "  Confidence History:",
       ...report.provenance.confidenceNotes.map((note) => `    - ${note}`),
     ] : []),
+    "",
+    "OPERATIONAL EVIDENCE",
+    `${"-".repeat(30)}`,
+    `  Change Log Entries:      ${report.evidenceTrail.changeLogEntryCount}`,
+    `  Evidence Entries:        ${report.evidenceTrail.evidenceEntryCount}`,
+    `  Sensor-related Evidence: ${report.evidenceTrail.sensorEvidenceCount}`,
+    ...(report.evidenceTrail.recentEntries.length > 0
+      ? [
+          "  Recent Evidence Entries:",
+          ...report.evidenceTrail.recentEntries.map((entry) => `    - ${entry.when} · ${entry.title} · ${entry.details} · ${entry.confidence}`),
+        ]
+      : ["  Recent Evidence Entries: none"]),
     "",
     "SUMMARY",
     `${"-".repeat(30)}`,
@@ -1511,8 +1568,40 @@ export function exportCompareAsHtml(
       <tr><td>Graph Edges</td><td>${compare.before.provenance.edgeCount}</td><td>${compare.after.provenance.edgeCount}</td></tr>
       <tr><td>Revision Depth</td><td>${compare.before.provenance.revisionDepth}</td><td>${compare.after.provenance.revisionDepth}</td></tr>
       <tr><td>Snapshots Tracked</td><td>${compare.before.provenance.snapshotCount}</td><td>${compare.after.provenance.snapshotCount}</td></tr>
+      <tr><td>Evidence Entries</td><td>${compare.before.evidenceTrail.evidenceEntryCount}</td><td>${compare.after.evidenceTrail.evidenceEntryCount}</td></tr>
+      <tr><td>Sensor-related Evidence</td><td>${compare.before.evidenceTrail.sensorEvidenceCount}</td><td>${compare.after.evidenceTrail.sensorEvidenceCount}</td></tr>
     </tbody>
   </table>
+
+  <h2>Operational Evidence</h2>
+  <div class="grid-2">
+    <div class="before-card">
+      <h3>Before evidence trail</h3>
+      <table>
+        <tr><td>Change log entries</td><td>${compare.before.evidenceTrail.changeLogEntryCount}</td></tr>
+        <tr><td>Evidence entries</td><td>${compare.before.evidenceTrail.evidenceEntryCount}</td></tr>
+        <tr><td>Sensor-related evidence</td><td>${compare.before.evidenceTrail.sensorEvidenceCount}</td></tr>
+      </table>
+      ${compare.before.evidenceTrail.recentEntries.length > 0 ? `
+      <ul style="margin-top:10px; margin-left:18px; font-size:9pt;">
+        ${compare.before.evidenceTrail.recentEntries.map((entry) => `<li><strong>${escapeHtml(entry.when)}</strong> · ${escapeHtml(entry.title)} · ${escapeHtml(entry.details)} · ${escapeHtml(entry.confidence)}</li>`).join("")}
+      </ul>
+      ` : "<p style=\"margin-top:10px; font-size:9pt; color:#64748b;\">No evidence entries recorded.</p>"}
+    </div>
+    <div class="after-card">
+      <h3>After evidence trail</h3>
+      <table>
+        <tr><td>Change log entries</td><td>${compare.after.evidenceTrail.changeLogEntryCount}</td></tr>
+        <tr><td>Evidence entries</td><td>${compare.after.evidenceTrail.evidenceEntryCount}</td></tr>
+        <tr><td>Sensor-related evidence</td><td>${compare.after.evidenceTrail.sensorEvidenceCount}</td></tr>
+      </table>
+      ${compare.after.evidenceTrail.recentEntries.length > 0 ? `
+      <ul style="margin-top:10px; margin-left:18px; font-size:9pt;">
+        ${compare.after.evidenceTrail.recentEntries.map((entry) => `<li><strong>${escapeHtml(entry.when)}</strong> · ${escapeHtml(entry.title)} · ${escapeHtml(entry.details)} · ${escapeHtml(entry.confidence)}</li>`).join("")}
+      </ul>
+      ` : "<p style=\"margin-top:10px; font-size:9pt; color:#64748b;\">No evidence entries recorded.</p>"}
+    </div>
+  </div>
 
   ${compare.zoneChanges.some((z) => z.changed) ? `
   <h2>Zone Status Changes</h2>
@@ -1575,6 +1664,24 @@ export function exportCompareAsMarkdown(compare: CompareReportData): string {
     `| Graph Edges | ${compare.before.provenance.edgeCount} | ${compare.after.provenance.edgeCount} |`,
     `| Revision Depth | ${compare.before.provenance.revisionDepth} | ${compare.after.provenance.revisionDepth} |`,
     `| Snapshots Tracked | ${compare.before.provenance.snapshotCount} | ${compare.after.provenance.snapshotCount} |`,
+    `| Evidence Entries | ${compare.before.evidenceTrail.evidenceEntryCount} | ${compare.after.evidenceTrail.evidenceEntryCount} |`,
+    `| Sensor-related Evidence | ${compare.before.evidenceTrail.sensorEvidenceCount} | ${compare.after.evidenceTrail.sensorEvidenceCount} |`,
+    "",
+    "## Operational Evidence",
+    `- Before Change Log Entries: ${compare.before.evidenceTrail.changeLogEntryCount}`,
+    `- After Change Log Entries: ${compare.after.evidenceTrail.changeLogEntryCount}`,
+    `- Before Evidence Entries: ${compare.before.evidenceTrail.evidenceEntryCount}`,
+    `- After Evidence Entries: ${compare.after.evidenceTrail.evidenceEntryCount}`,
+    `- Before Sensor-related Evidence: ${compare.before.evidenceTrail.sensorEvidenceCount}`,
+    `- After Sensor-related Evidence: ${compare.after.evidenceTrail.sensorEvidenceCount}`,
+    ...(compare.before.evidenceTrail.recentEntries.length > 0 || compare.after.evidenceTrail.recentEntries.length > 0
+      ? [
+          "- Before Recent Evidence:",
+          ...compare.before.evidenceTrail.recentEntries.map((entry) => `  - ${entry.when} · ${entry.title} · ${entry.details} · ${entry.confidence}`),
+          "- After Recent Evidence:",
+          ...compare.after.evidenceTrail.recentEntries.map((entry) => `  - ${entry.when} · ${entry.title} · ${entry.details} · ${entry.confidence}`),
+        ]
+      : ["- Recent Evidence: none"]),
     "",
     `--- *Generated by SentinelTwin Studio*`,
   ];
@@ -1612,6 +1719,31 @@ function formatHour(hour: number): string {
 function formatSignedDelta(delta: number | null | undefined) {
   if (delta == null || Number.isNaN(delta)) return "—";
   return `${delta > 0 ? "+" : ""}${delta.toFixed(1)}%`;
+}
+
+function buildEvidenceTrail(scene: SecurityScene): ReportData["evidenceTrail"] {
+  const evidenceEntries = (scene.changeLog ?? [])
+    .filter((entry) => entry.startsWith("Evidence: "))
+    .map((entry) => parseEvidenceEntry(entry))
+    .filter((entry): entry is ReportEvidenceEntry => entry !== null);
+  const sensorEvidenceCount = evidenceEntries.filter((entry) => /sensor/i.test(`${entry.title} ${entry.details}`)).length;
+  return {
+    changeLogEntryCount: scene.changeLog.length,
+    evidenceEntryCount: evidenceEntries.length,
+    sensorEvidenceCount,
+    recentEntries: evidenceEntries.slice(-5).reverse(),
+  };
+}
+
+function parseEvidenceEntry(entry: string): ReportEvidenceEntry | null {
+  const payload = entry.slice("Evidence: ".length);
+  const parts = payload.split(" | ");
+  if (parts.length < 4) return null;
+  const [when, title, ...rest] = parts;
+  const confidence = rest.pop();
+  if (!confidence) return null;
+  const details = rest.join(" | ");
+  return { when, title, details, confidence };
 }
 
 function scenarioEvidenceDataUri(input: {

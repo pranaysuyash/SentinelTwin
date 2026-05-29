@@ -52,6 +52,8 @@ export function createCameraNode(position: [number, number, number]): CameraNode
     thermalCapable: false,
     ptz: false,
     clarity: "good",
+    liveConnectionStatus: "disconnected",
+    liveSessionState: "idle",
     source: "manual",
     tags: [],
   };

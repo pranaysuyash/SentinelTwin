@@ -49,6 +49,7 @@ export type MapCanvasProps = {
   showGrid?: boolean;
   activePathForReplay?: ScenarioPath | null;
   showNodeLabels?: boolean;
+  focusPoint?: [number, number] | null;
 };
 
 function extractProjectionPoints(scene: SecurityScene, paths?: ScenarioPath[]): Array<[number, number]> {
@@ -149,6 +150,7 @@ export function MapCanvas({
   showGrid,
   activePathForReplay,
   showNodeLabels,
+  focusPoint,
 }: MapCanvasProps) {
   const mapLayers = layers ? { ...createLayerFlags(), ...layers } : createLayerFlags();
   void onFit;
@@ -294,7 +296,32 @@ export function MapCanvas({
           coverageOpacity={coverageOpacity}
           showNodeLabels={showNodeLabels ?? mapLayers.labels}
         />
-      </svg>
+
+      {focusPoint ? (
+        <g pointerEvents="none">
+          {(() => {
+            const { x, y } = projection.sceneToSvg(focusPoint);
+            const baseRadius = Math.max(8, projection.lengthToSvg(0.42));
+              return (
+                <g transform={`translate(${x} ${y})`}>
+                  <circle r={baseRadius * 1.5} fill="none" stroke="rgba(56,189,248,0.35)" strokeWidth={1.5} />
+                  <circle r={baseRadius} fill="rgba(56,189,248,0.16)" stroke="rgba(125,211,252,0.95)" strokeWidth={2} />
+                  <circle r={baseRadius * 0.24} fill="rgba(224,242,254,0.98)" />
+                </g>
+            );
+          })()}
+        </g>
+      ) : null}
+    </svg>
+
+      {focusPoint ? (
+        <div className="pointer-events-none absolute left-2 top-2 rounded-md border border-sky-400/35 bg-sky-500/15 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-sky-100 shadow-[0_0_18px_rgba(56,189,248,0.18)]">
+          Focus target
+          <span className="ml-1 font-mono normal-case tracking-normal text-sky-200/90">
+            {focusPoint[0].toFixed(1)}, {focusPoint[1].toFixed(1)}
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }

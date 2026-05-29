@@ -28,6 +28,10 @@ describe("CameraFeedCanvas", () => {
     expect(source).toContain("Sensor Fusion");
     expect(source).toContain("Active sensors");
     expect(source).toContain("nearestSensorLabel");
+    expect(source).toContain("Latest Camera Metadata");
+    expect(source).toContain("latestCameraMetadataEvent");
+    expect(source).toContain("Live Camera Connection");
+    expect(source).toContain("latestCameraLiveConnectionEvent");
     expect(source).toContain("boundingBox");
     expect(source).toContain("grid");
   });

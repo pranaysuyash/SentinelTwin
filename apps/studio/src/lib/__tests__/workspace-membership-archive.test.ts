@@ -59,10 +59,12 @@ describe("workspace membership archive helpers", () => {
     });
 
     expect(summary.summary).toContain("shared workspace membership");
+    expect(summary.summary).toContain("approval routing");
     expect(summary.activeMemberLabel).toContain("Reviewer");
     expect(summary.policyMode).toBe("shared");
     expect(summary.teamSize).toBe(2);
     expect(summary.archiveStatus).toBe("local cache");
+    expect(summary.approvalRoute.routeStatus).toBe("review_required");
   });
 
   test("summarizes drift between the current access policy and an archived record", () => {

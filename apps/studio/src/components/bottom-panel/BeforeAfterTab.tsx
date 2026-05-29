@@ -1,6 +1,7 @@
 "use client";
 
 import { GitCompare } from "lucide-react";
+import { useState } from "react";
 import { DonutChart } from "@/components/shared/DonutChart";
 import { buildSecurityOutcomeDelta } from "@/lib/security-outcome/security-outcome-model";
 import { useStudioStore } from "@/store/studio-store";
@@ -119,6 +120,8 @@ export function BeforeAfterTab() {
   const compareVisualEvidence = useStudioStore((s) => s.compareVisualEvidence);
   const setCompareReportSelection = useStudioStore((s) => s.setCompareReportSelection);
   const setViewMode = useStudioStore((s) => s.setViewMode);
+  const [beforeSnapshotId, setBeforeSnapshotId] = useState<string | null>(null);
+  const [afterSnapshotId, setAfterSnapshotId] = useState<string | null>(null);
 
   if (snapshots.length < 2) {
     return (
@@ -134,10 +137,13 @@ export function BeforeAfterTab() {
     );
   }
 
-  const before = snapshots[snapshots.length - 2]!;
-  const after  = snapshots[snapshots.length - 1]!;
-  const bSim   = before.simulation as SimulationResult | undefined;
-  const aSim   = after.simulation  as SimulationResult | undefined;
+  const validBeforeId = beforeSnapshotId && snapshots.some((snapshot) => snapshot.id === beforeSnapshotId) ? beforeSnapshotId : null;
+  const validAfterId = afterSnapshotId && snapshots.some((snapshot) => snapshot.id === afterSnapshotId) ? afterSnapshotId : null;
+
+  const before = validBeforeId ? snapshots.find((snapshot) => snapshot.id === validBeforeId) ?? null : null;
+  const after = validAfterId ? snapshots.find((snapshot) => snapshot.id === validAfterId) ?? null : null;
+  const bSim = before?.simulation as SimulationResult | undefined;
+  const aSim = after?.simulation as SimulationResult | undefined;
   const outcomeDelta = buildSecurityOutcomeDelta(bSim ?? null, aSim ?? null);
 
   const bCov    = bSim?.totalCoveragePct ?? 0;
@@ -169,9 +175,9 @@ export function BeforeAfterTab() {
   );
 
   const visuals = compareVisualEvidence &&
-    compareVisualEvidence.snapshotAId === before.id &&
-    compareVisualEvidence.snapshotBId === after.id &&
-    compareVisualEvidence.capturedAt >= Math.max(before.createdAt, after.createdAt)
+    compareVisualEvidence.snapshotAId === (before?.id ?? "") &&
+    compareVisualEvidence.snapshotBId === (after?.id ?? "") &&
+    compareVisualEvidence.capturedAt >= Math.max(before?.createdAt ?? 0, after?.createdAt ?? 0)
       ? {
           beforeImageDataUrl: compareVisualEvidence.beforeImageDataUrl,
           afterImageDataUrl: compareVisualEvidence.afterImageDataUrl,
@@ -188,14 +194,57 @@ export function BeforeAfterTab() {
         <div className="flex gap-2 ml-auto">
           <span className="text-[8px] text-[#5a6478] flex items-center gap-1">
             <span className="w-2 h-0.5 bg-[#4a5568] rounded inline-block" />
-            {before.label}
+            {before?.label ?? "Before"}
           </span>
           <span className="text-[8px] text-blue-400 flex items-center gap-1">
             <span className="w-2 h-0.5 bg-blue-400 rounded inline-block" />
-            {after.label}
+            {after?.label ?? "After"}
           </span>
         </div>
       </div>
+
+      <div className="grid grid-cols-2 gap-2 border-b border-[#1e2130] bg-[#0a0d14] px-3 py-2">
+        <label className="flex items-center gap-2 text-[9px] uppercase tracking-[0.16em] text-[#556076]">
+          <span className="min-w-[48px] text-[#9aa6bf]">Before</span>
+          <select
+            value={validBeforeId ?? ""}
+            onChange={(event) => setBeforeSnapshotId(event.target.value)}
+            className="min-w-0 flex-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none"
+          >
+            <option value="" disabled>
+              Select snapshot
+            </option>
+            {snapshots.map((snapshot) => (
+              <option key={snapshot.id} value={snapshot.id}>
+                {snapshot.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex items-center gap-2 text-[9px] uppercase tracking-[0.16em] text-[#556076]">
+          <span className="min-w-[48px] text-[#d2f5db]">After</span>
+          <select
+            value={validAfterId ?? ""}
+            onChange={(event) => setAfterSnapshotId(event.target.value)}
+            className="min-w-0 flex-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none"
+          >
+            <option value="" disabled>
+              Select snapshot
+            </option>
+            {snapshots.map((snapshot) => (
+              <option key={snapshot.id} value={snapshot.id}>
+                {snapshot.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {!before || !after ? (
+        <div className="border-b border-[#1e2130] px-3 py-2 text-[9px] text-[#6b7894]">
+          Select both snapshots to populate the before/after comparison. The panel will no longer guess the newest saves for you.
+        </div>
+      ) : null}
 
       {/* Metric donuts row */}
       <div className="flex items-start justify-around px-4 py-2 border-b border-[#1e2130] flex-shrink-0">
@@ -252,9 +301,11 @@ export function BeforeAfterTab() {
           <button
             type="button"
             onClick={() => {
+              if (!before || !after) return;
               setCompareReportSelection({ snapshotAId: before.id, snapshotBId: after.id });
               setViewMode("compare");
             }}
+            disabled={!before || !after}
             className="ml-auto rounded border border-[#273246] bg-[#111521] px-2 py-1 text-[8px] font-semibold text-[#d7deed] transition-colors hover:border-sky-400/30 hover:text-white"
           >
             Open Compare View
@@ -263,8 +314,8 @@ export function BeforeAfterTab() {
         {visuals ? (
           <div className="grid grid-cols-2 gap-2">
             {[
-              { label: before.label, src: visuals.beforeImageDataUrl, accent: "Before" },
-              { label: after.label, src: visuals.afterImageDataUrl, accent: "After" },
+              { label: before?.label ?? "Before", src: visuals.beforeImageDataUrl, accent: "Before" },
+              { label: after?.label ?? "After", src: visuals.afterImageDataUrl, accent: "After" },
             ].map((entry) => (
               <div key={entry.accent} className="rounded-lg border border-[#1e2130] bg-[#0b0f17] p-2">
                 <div className="mb-1 text-[8px] uppercase tracking-[0.14em] text-[#4a5568]">{entry.accent}: {entry.label}</div>
@@ -288,7 +339,7 @@ export function BeforeAfterTab() {
         {/* Before */}
         <div className="flex-1 flex flex-col gap-1.5 min-w-0">
           <span className="text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">
-            {before.label} — Quality Distribution
+            {before?.label ?? "Before"} — Quality Distribution
           </span>
           <QualityBar result={bSim} />
           <div className="flex gap-2 flex-wrap">
@@ -323,7 +374,7 @@ export function BeforeAfterTab() {
         {/* After */}
         <div className="flex-1 flex flex-col gap-1.5 min-w-0">
           <span className="text-[8px] font-medium uppercase tracking-wider text-blue-400/70">
-            {after.label} — Quality Distribution
+            {after?.label ?? "After"} — Quality Distribution
           </span>
           <QualityBar result={aSim} />
           <div className="flex gap-2 flex-wrap">

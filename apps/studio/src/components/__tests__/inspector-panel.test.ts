@@ -71,6 +71,15 @@ describe("InspectorPanel", () => {
     expect(source).toContain("PPM est.");
     expect(source).toContain("Angle from center");
     expect(source).toContain("Placement Presets");
+    expect(source).toContain("Camera Metadata Bridge");
+    expect(source).toContain("Live Camera Binding");
+    expect(source).toContain("Apply Pasted Metadata");
+    expect(source).toContain("Pull External Feed");
+    expect(source).toContain("Ingest archive");
+    expect(source).toContain("Connection archive");
+    expect(source).toContain("Backend archive records for live camera probe and disconnect actions.");
+    expect(source).toContain("Bind Live Camera");
+    expect(source).toContain("Clear Binding");
     expect(source).toContain("Best fit");
     expect(source).toContain("Pick a placement preset for the next camera");
     expect(source).toContain("snapCameraToMount");

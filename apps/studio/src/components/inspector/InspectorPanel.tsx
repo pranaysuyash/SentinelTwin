@@ -14,6 +14,7 @@ import {
 import { useState } from "react";
 
 import { CameraFeedCanvas } from "@/components/inspector/CameraFeedCanvas";
+import { snapDoorWindowToWall } from "@/components/inspector/door-window-snap";
 import {
   Field,
   NumberInput,
@@ -184,6 +185,7 @@ const OBSTRUCTION_TYPE_CONFIG: Partial<Record<
 function CameraInspector() {
   const camera = useStudioStore((s) => s.getSelectedCamera());
   const scene = useStudioStore((s) => s.scene);
+  const selectedNodeId = useStudioStore((s) => s.selectedNodeId);
   const inspectorTab = useStudioStore((s) => s.inspectorTab);
   const setTab = useStudioStore((s) => s.setInspectorTab);
   const result = useStudioStore((s) => s.simulationResult);
@@ -222,7 +224,7 @@ function CameraInspector() {
 
   const camResult = result?.cameraResults.find((entry) => entry.cameraId === camera.id);
   const offlineImpact = camResult?.offlineImpact ?? [];
-  const firstCriticalZone = scene.criticalZones[0];
+  const selectedCriticalZone = scene.criticalZones.find((zone) => zone.id === selectedNodeId) ?? null;
   // Derive resolution key for select
   const resolutionKey = `${camera.resolutionMP}_${camera.resolutionWidth ?? 2688}x${camera.resolutionHeight ?? 1520}`;
   // Derive type key
@@ -252,9 +254,9 @@ function CameraInspector() {
   };
 
   const aimAtZone = () => {
-    if (!firstCriticalZone) return;
+    if (!selectedCriticalZone) return;
 
-    const centroid = firstCriticalZone.polygon.reduce(
+    const centroid = selectedCriticalZone.polygon.reduce(
       (acc, [x, z]) => {
         acc.x += x;
         acc.z += z;
@@ -263,7 +265,7 @@ function CameraInspector() {
       { x: 0, z: 0 },
     );
 
-    const pointCount = firstCriticalZone.polygon.length || 1;
+    const pointCount = selectedCriticalZone.polygon.length || 1;
     const centroidX = centroid.x / pointCount;
     const centroidZ = centroid.z / pointCount;
     const dx = centroidX - camera.position[0];
@@ -1137,7 +1139,7 @@ function CameraInspector() {
           <button
             type="button"
             onClick={aimAtZone}
-            disabled={!firstCriticalZone}
+            disabled={!selectedCriticalZone}
             className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Crosshair className="h-3 w-3" />
@@ -1755,6 +1757,7 @@ function SensorInspector() {
   const scene = useStudioStore((s) => s.scene);
   const updateNode = useStudioStore((s) => s.updateNode);
   const removeNode = useStudioStore((s) => s.removeNode);
+  const recordSensorEvent = useStudioStore((s) => s.recordSensorEvent);
 
   const sensor = scene.sensors.find((entry) => entry.id === selectedId);
   if (!sensor) return null;
@@ -1846,7 +1849,74 @@ function SensorInspector() {
           <Field label="Camera Distance" value={nearestCamera ? `${nearestDistance.toFixed(1)}m` : "—"} />
           <Field label="Coverage Mode" value={SENSOR_COVERAGE_LABELS[sensor.coverageMode]} />
           <div className="rounded-lg border border-[#1f2536] bg-[#0b0f17] px-2 py-2 text-[10px] leading-relaxed text-[#8d98b0]">
-            Sensors already participate in the canonical scene graph and report summary. Live event binding and multi-sensor fusion are the next platform step.
+            Sensors already participate in the canonical scene graph and report summary. Live event binding now records sensor triggers, heartbeats, faults, and restores into the evidence trail.
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Live Event Controls">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => recordSensorEvent({
+                sensorId: sensor.id,
+                sensorLabel: sensor.label,
+                sensorType: sensor.sensorType,
+                kind: "triggered",
+                details: `${sensor.label} observed a live trigger.`,
+                resultingState: sensor.state,
+              })}
+              className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-2 py-2 text-[10px] font-medium text-cyan-100 transition-colors hover:border-cyan-400/40 hover:bg-cyan-500/14"
+            >
+              Trigger
+            </button>
+            <button
+              type="button"
+              onClick={() => recordSensorEvent({
+                sensorId: sensor.id,
+                sensorLabel: sensor.label,
+                sensorType: sensor.sensorType,
+                kind: "heartbeat",
+                details: `${sensor.label} sent a heartbeat.`,
+                resultingState: sensor.state,
+              })}
+              className="rounded-lg border border-[#24304a] bg-[#111521] px-2 py-2 text-[10px] font-medium text-[#d2d9e8] transition-colors hover:border-[#32506a] hover:bg-[#172235]"
+            >
+              Heartbeat
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                updateNode(sensor.id, { state: "faulted" });
+                recordSensorEvent({
+                  sensorId: sensor.id,
+                  sensorLabel: sensor.label,
+                  sensorType: sensor.sensorType,
+                  kind: "faulted",
+                  details: `${sensor.label} reported a fault.`,
+                  resultingState: "faulted",
+                });
+              }}
+              className="rounded-lg border border-red-900/35 bg-red-950/15 px-2 py-2 text-[10px] font-medium text-red-300 transition-colors hover:border-red-700 hover:bg-red-950/28"
+            >
+              Mark Faulted
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                updateNode(sensor.id, { state: "active" });
+                recordSensorEvent({
+                  sensorId: sensor.id,
+                  sensorLabel: sensor.label,
+                  sensorType: sensor.sensorType,
+                  kind: "restored",
+                  details: `${sensor.label} restored to active service.`,
+                  resultingState: "active",
+                });
+              }}
+              className="rounded-lg border border-emerald-900/35 bg-emerald-950/15 px-2 py-2 text-[10px] font-medium text-emerald-200 transition-colors hover:border-emerald-700 hover:bg-emerald-950/28"
+            >
+              Restore
+            </button>
           </div>
         </SectionCard>
 
@@ -1933,6 +2003,7 @@ function WallInspector() {
 }
 
 function DoorWindowInspector({ node }: { node: DoorNode | WindowNode }) {
+  const scene = useStudioStore((s) => s.scene);
   const updateNode = useStudioStore((s) => s.updateNode);
   const removeNode = useStudioStore((s) => s.removeNode);
   const isWindow = node.nodeType === "window";
@@ -1973,6 +2044,18 @@ function DoorWindowInspector({ node }: { node: DoorNode | WindowNode }) {
             <NumberInput label="H" value={node.dimensions[1]} min={0.1} step={0.05} unit="m" onChange={(value) => updateNode(node.id, { dimensions: [node.dimensions[0], value, node.dimensions[2]] })} />
             <NumberInput label="D" value={node.dimensions[2]} min={0.01} step={0.01} unit="m" onChange={(value) => updateNode(node.id, { dimensions: [node.dimensions[0], node.dimensions[1], value] })} />
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              const patch = snapDoorWindowToWall(node, scene);
+              if (!patch) return;
+              updateNode(node.id, patch);
+            }}
+            className="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-sky-900/30 bg-sky-950/15 text-[10px] font-medium text-sky-300 transition-colors hover:border-sky-700 hover:bg-sky-950/30"
+          >
+            <Crosshair className="h-3 w-3" />
+            Snap to Nearest Wall
+          </button>
         </SectionCard>
       </div>
       <div className="border-t border-[#1e2130] px-3 py-3">

@@ -1,6 +1,7 @@
 import type { ViewMode, BottomTab } from "@/store/studio-store";
 import type { SceneOperation } from "@/schema/SceneOperation";
 import type { SecurityScene } from "@/schema/security-scene";
+import { selectCounterCriticalZone } from "@/lib/critical-zone-selection";
 
 export type OfflineCommandAction =
   | { type: "set_environment_mode"; mode: "day" | "night" | "dusk" }
@@ -59,7 +60,7 @@ function entryFocus(scene: SecurityScene): [number, number, number] {
 }
 
 function counterFocus(scene: SecurityScene): [number, number, number] {
-  const zone = scene.criticalZones[0];
+  const zone = selectCounterCriticalZone(scene);
   if (!zone) return roomCenter(scene);
   const centroid = zone.polygon.reduce(
     (acc, [x, z]) => {

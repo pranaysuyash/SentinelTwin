@@ -24,7 +24,9 @@ describe("editor geometry", () => {
 
   test("inserts and removes path and polygon vertices", () => {
     expect(insertPointAtIndex([[0, 0], [2, 2]], 1, [1, 1])).toEqual([[0, 0], [1, 1], [2, 2]]);
+    expect(insertPointAtIndex([[0, 0], [2, 2]], 99, [4, 4])).toEqual([[0, 0], [2, 2], [4, 4]]);
     expect(insertPolygonVertex([[0, 0], [4, 0], [4, 4]], 1, [4, 2])).toEqual([[0, 0], [4, 0], [4, 2], [4, 4]]);
+    expect(removePolygonVertex([[0, 0], [4, 0], [4, 4], [0, 4]], 1)).toEqual([[0, 0], [4, 4], [0, 4]]);
     expect(removePolygonVertex([[0, 0], [4, 0], [4, 4]], 1)).toEqual(null);
     expect(removePathPoint([[0, 0], [2, 2]], 0)).toEqual(null);
     expect(removePathPoint([[0, 0], [2, 2], [4, 4]], 1)).toEqual([[0, 0], [4, 4]]);

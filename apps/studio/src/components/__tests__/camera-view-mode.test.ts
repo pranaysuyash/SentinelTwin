@@ -29,6 +29,12 @@ describe("CameraViewMode", () => {
     expect(source).toContain("Sensor Fusion");
     expect(source).toContain("Active:");
     expect(source).toContain("nearestSensorLabel");
+    expect(source).toContain("Live Sensor Event");
+    expect(source).toContain("sensorEvent={latestSensorEvent}");
+    expect(source).toContain("Live Camera Metadata");
+    expect(source).toContain("cameraMetadataEvent={latestCameraMetadataEvent}");
+    expect(source).toContain("Live Camera Connection");
+    expect(source).toContain("cameraLiveConnectionEvent={latestCameraLiveConnectionEvent}");
     expect(source).toContain("Footage Verification");
     expect(source).toContain("Planning aid only.");
     expect(source).toContain("Auto align");

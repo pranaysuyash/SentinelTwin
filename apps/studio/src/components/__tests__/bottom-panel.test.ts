@@ -28,6 +28,7 @@ describe("BottomPanel", () => {
 
     expect(source).toContain("Download Bundle");
     expect(source).toContain("Download Support Bundle");
+    expect(source).toContain("Download Evidence Bundle");
     expect(source).toContain("Publish Scene");
     expect(source).toContain("Evidence Journal");
     expect(source).toContain("Append-only journal");
@@ -89,6 +90,10 @@ describe("BottomPanel", () => {
     expect(source).toContain("Clear Eval History");
     expect(source).toContain("Capture External Log");
     expect(source).toContain("Clear External Logs");
+    expect(source).toContain("Sensor Metadata Intake");
+    expect(source).toContain("Import Sensor Metadata");
+    expect(source).toContain("Camera Live Connection Archive");
+    expect(source).toContain("The live camera connection archive now ships inside the support bundle");
     expect(source).toContain("Provider Health Dashboard");
     expect(source).toContain("Prompt Registry");
     expect(source).toContain("Heuristic Layout Baseline");

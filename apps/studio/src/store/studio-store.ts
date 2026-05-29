@@ -277,6 +277,94 @@ export type RuntimeIncidentInput = Omit<RuntimeIncident, "id" | "timestamp"> & {
   timestamp?: number;
 };
 
+export type SensorLiveEventKind = "triggered" | "heartbeat" | "faulted" | "restored";
+
+export type SensorLiveEventRecord = {
+  id: string;
+  sceneId: string;
+  sceneName: string;
+  sensorId: string;
+  sensorLabel: string;
+  sensorType: SensorNode["sensorType"];
+  kind: SensorLiveEventKind;
+  details: string;
+  timestamp: number;
+  resultingState: SensorNode["state"] | null;
+  nearestCameraId: string | null;
+  nearestCameraName: string | null;
+  nearestDistanceM: number | null;
+};
+
+export type SensorLiveEventInput = Omit<
+  SensorLiveEventRecord,
+  "id" | "timestamp" | "resultingState" | "nearestCameraId" | "nearestCameraName" | "nearestDistanceM" | "sceneId" | "sceneName"
+> & {
+  timestamp?: number;
+  resultingState?: SensorLiveEventRecord["resultingState"];
+  nearestCameraId?: string | null;
+  nearestCameraName?: string | null;
+  nearestDistanceM?: number | null;
+};
+
+export type CameraMetadataEventRecord = {
+  id: string;
+  sceneId: string;
+  sceneName: string;
+  cameraId: string;
+  cameraName: string;
+  previousStatus: CameraNode["status"] | null;
+  previousClarity: CameraNode["clarity"] | null;
+  previousNightMode: CameraNode["nightMode"] | null;
+  previousFeedMode: "normal" | "ir" | "low_light" | "thermal" | null;
+  previousNotes: string | null;
+  status: CameraNode["status"] | null;
+  clarity: CameraNode["clarity"] | null;
+  nightMode: CameraNode["nightMode"] | null;
+  feedMode: "normal" | "ir" | "low_light" | "thermal" | null;
+  ingestMode: "paste" | "external";
+  feedUrl: string | null;
+  feedLabel: string | null;
+  summary: string;
+  notes: string | null;
+  timestamp: number;
+};
+
+export type CameraMetadataEventInput = Omit<CameraMetadataEventRecord, "id" | "timestamp" | "sceneId" | "sceneName"> & {
+  timestamp?: number;
+};
+
+export type CameraLiveConnectionEventRecord = {
+  id: string;
+  sceneId: string;
+  sceneName: string;
+  cameraId: string;
+  cameraName: string;
+  previousLiveSessionId: string | null;
+  previousLiveSessionState: "idle" | "probing" | "connected" | "error" | null;
+  previousLiveSessionStartedAt: number | null;
+  previousLiveSessionConfirmedAt: number | null;
+  previousLiveFeedUrl: string | null;
+  previousLiveFeedLabel: string | null;
+  previousLiveConnectionMode: "rtsp" | "mjpeg" | "http" | "onvif" | "proxy" | null;
+  previousLiveConnectionStatus: "disconnected" | "connecting" | "connected" | "error" | null;
+  liveSessionId: string | null;
+  liveSessionState: "idle" | "probing" | "connected" | "error" | null;
+  liveSessionStartedAt: number | null;
+  liveSessionConfirmedAt: number | null;
+  liveFeedUrl: string | null;
+  liveFeedLabel: string | null;
+  liveConnectionMode: "rtsp" | "mjpeg" | "http" | "onvif" | "proxy" | null;
+  liveConnectionStatus: "disconnected" | "connecting" | "connected" | "error" | null;
+  ingestMode: "manual" | "external";
+  summary: string;
+  notes: string | null;
+  timestamp: number;
+};
+
+export type CameraLiveConnectionEventInput = Omit<CameraLiveConnectionEventRecord, "id" | "timestamp" | "sceneId" | "sceneName"> & {
+  timestamp?: number;
+};
+
 export type ExternalLogEntrySource = "paste" | "file";
 export type ExternalLogEntrySeverity = "info" | "warning" | "error";
 
@@ -327,6 +415,9 @@ export const OPERATIONAL_EVIDENCE_STORAGE_KEY = "sentineltwin_operational_eviden
 const MODEL_EVAL_HISTORY_STORAGE_KEY = "sentineltwin_model_eval_history_v1";
 const AI_TELEMETRY_STORAGE_KEY = "sentineltwin_ai_action_telemetry_v1";
 const EXTERNAL_LOG_STORAGE_KEY = "sentineltwin_external_log_entries_v1";
+const SENSOR_EVENT_STORAGE_KEY = "sentineltwin_sensor_live_events_v1";
+const CAMERA_METADATA_EVENT_STORAGE_KEY = "sentineltwin_camera_metadata_events_v1";
+const CAMERA_CONNECTION_EVENT_STORAGE_KEY = "sentineltwin_camera_connection_events_v1";
 const SUPPORT_INGEST_HISTORY_STORAGE_KEY = "sentineltwin_support_ingest_history_v1";
 const WORKSPACE_GOVERNANCE_STORAGE_KEY = "sentineltwin_workspace_governance_v1";
 const WORKSPACE_ACCESS_STORAGE_KEY = "sentineltwin_workspace_access_v1";
@@ -531,6 +622,183 @@ function loadOperationalEvidenceEvents(): OperationalEvidenceEvent[] {
   try {
     const raw = window.localStorage.getItem(OPERATIONAL_EVIDENCE_STORAGE_KEY);
     return loadOperationalEvidenceEventsFromRaw(raw);
+  } catch {
+    return [];
+  }
+}
+
+function loadSensorLiveEvents(): SensorLiveEventRecord[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(SENSOR_EVENT_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.flatMap((item) => {
+      if (!item || typeof item !== "object") return [];
+      const candidate = item as Partial<SensorLiveEventRecord>;
+      if (
+        typeof candidate.id !== "string"
+        || typeof candidate.sceneId !== "string"
+        || typeof candidate.sceneName !== "string"
+        || typeof candidate.sensorId !== "string"
+        || typeof candidate.sensorLabel !== "string"
+        || typeof candidate.sensorType !== "string"
+        || typeof candidate.kind !== "string"
+        || typeof candidate.details !== "string"
+        || typeof candidate.timestamp !== "number"
+      ) {
+        return [];
+      }
+      return [{
+        id: candidate.id,
+        sceneId: candidate.sceneId,
+        sceneName: candidate.sceneName,
+        sensorId: candidate.sensorId,
+        sensorLabel: candidate.sensorLabel,
+        sensorType: candidate.sensorType as SensorLiveEventRecord["sensorType"],
+        kind: candidate.kind as SensorLiveEventKind,
+        details: candidate.details,
+        timestamp: candidate.timestamp,
+        resultingState: candidate.resultingState === "active" || candidate.resultingState === "inactive" || candidate.resultingState === "faulted"
+          ? candidate.resultingState
+          : null,
+        nearestCameraId: typeof candidate.nearestCameraId === "string" ? candidate.nearestCameraId : null,
+        nearestCameraName: typeof candidate.nearestCameraName === "string" ? candidate.nearestCameraName : null,
+        nearestDistanceM: typeof candidate.nearestDistanceM === "number" ? candidate.nearestDistanceM : null,
+      }];
+    });
+  } catch {
+    return [];
+  }
+}
+
+function loadCameraMetadataEvents(): CameraMetadataEventRecord[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(CAMERA_METADATA_EVENT_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.flatMap((item) => {
+      if (!item || typeof item !== "object") return [];
+      const candidate = item as Partial<CameraMetadataEventRecord>;
+      if (
+        typeof candidate.id !== "string"
+        || typeof candidate.sceneId !== "string"
+        || typeof candidate.sceneName !== "string"
+        || typeof candidate.cameraId !== "string"
+        || typeof candidate.cameraName !== "string"
+        || typeof candidate.summary !== "string"
+        || typeof candidate.timestamp !== "number"
+      ) {
+        return [];
+      }
+      return [{
+        id: candidate.id,
+        sceneId: candidate.sceneId,
+        sceneName: candidate.sceneName,
+        cameraId: candidate.cameraId,
+        cameraName: candidate.cameraName,
+        previousStatus: candidate.previousStatus === "on" || candidate.previousStatus === "off" || candidate.previousStatus === "blocked" || candidate.previousStatus === "dirty" || candidate.previousStatus === "malfunctioning"
+          ? candidate.previousStatus
+          : null,
+        previousClarity: candidate.previousClarity === "poor" || candidate.previousClarity === "average" || candidate.previousClarity === "good" || candidate.previousClarity === "excellent"
+          ? candidate.previousClarity
+          : null,
+        previousNightMode: candidate.previousNightMode === "none" || candidate.previousNightMode === "ir" || candidate.previousNightMode === "low_light" || candidate.previousNightMode === "thermal"
+          ? candidate.previousNightMode
+          : null,
+        previousFeedMode: candidate.previousFeedMode === "normal" || candidate.previousFeedMode === "ir" || candidate.previousFeedMode === "low_light" || candidate.previousFeedMode === "thermal"
+          ? candidate.previousFeedMode
+          : null,
+        previousNotes: typeof candidate.previousNotes === "string" ? candidate.previousNotes : null,
+        status: candidate.status === "on" || candidate.status === "off" || candidate.status === "blocked" || candidate.status === "dirty" || candidate.status === "malfunctioning"
+          ? candidate.status
+          : null,
+        clarity: candidate.clarity === "poor" || candidate.clarity === "average" || candidate.clarity === "good" || candidate.clarity === "excellent"
+          ? candidate.clarity
+          : null,
+        nightMode: candidate.nightMode === "none" || candidate.nightMode === "ir" || candidate.nightMode === "low_light" || candidate.nightMode === "thermal"
+          ? candidate.nightMode
+          : null,
+        feedMode: candidate.feedMode === "normal" || candidate.feedMode === "ir" || candidate.feedMode === "low_light" || candidate.feedMode === "thermal"
+          ? candidate.feedMode
+          : null,
+        ingestMode: candidate.ingestMode === "external" ? "external" : "paste",
+        feedUrl: typeof candidate.feedUrl === "string" ? candidate.feedUrl : null,
+        feedLabel: typeof candidate.feedLabel === "string" ? candidate.feedLabel : null,
+        summary: candidate.summary,
+        notes: typeof candidate.notes === "string" ? candidate.notes : null,
+        timestamp: candidate.timestamp,
+      }];
+    });
+  } catch {
+    return [];
+  }
+}
+
+function loadCameraLiveConnectionEvents(): CameraLiveConnectionEventRecord[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(CAMERA_CONNECTION_EVENT_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.flatMap((item) => {
+      if (!item || typeof item !== "object") return [];
+      const candidate = item as Partial<CameraLiveConnectionEventRecord>;
+      if (
+        typeof candidate.id !== "string"
+        || typeof candidate.sceneId !== "string"
+        || typeof candidate.sceneName !== "string"
+        || typeof candidate.cameraId !== "string"
+        || typeof candidate.cameraName !== "string"
+        || typeof candidate.summary !== "string"
+        || typeof candidate.timestamp !== "number"
+      ) {
+        return [];
+      }
+      return [{
+        id: candidate.id,
+        sceneId: candidate.sceneId,
+        sceneName: candidate.sceneName,
+        cameraId: candidate.cameraId,
+        cameraName: candidate.cameraName,
+        previousLiveFeedUrl: typeof candidate.previousLiveFeedUrl === "string" ? candidate.previousLiveFeedUrl : null,
+        previousLiveFeedLabel: typeof candidate.previousLiveFeedLabel === "string" ? candidate.previousLiveFeedLabel : null,
+        previousLiveSessionId: typeof candidate.previousLiveSessionId === "string" ? candidate.previousLiveSessionId : null,
+        previousLiveSessionState: candidate.previousLiveSessionState === "idle" || candidate.previousLiveSessionState === "probing" || candidate.previousLiveSessionState === "connected" || candidate.previousLiveSessionState === "error"
+          ? candidate.previousLiveSessionState
+          : null,
+        previousLiveSessionStartedAt: typeof candidate.previousLiveSessionStartedAt === "number" ? candidate.previousLiveSessionStartedAt : null,
+        previousLiveSessionConfirmedAt: typeof candidate.previousLiveSessionConfirmedAt === "number" ? candidate.previousLiveSessionConfirmedAt : null,
+        previousLiveConnectionMode: candidate.previousLiveConnectionMode === "rtsp" || candidate.previousLiveConnectionMode === "mjpeg" || candidate.previousLiveConnectionMode === "http" || candidate.previousLiveConnectionMode === "onvif" || candidate.previousLiveConnectionMode === "proxy"
+          ? candidate.previousLiveConnectionMode
+          : null,
+        previousLiveConnectionStatus: candidate.previousLiveConnectionStatus === "disconnected" || candidate.previousLiveConnectionStatus === "connecting" || candidate.previousLiveConnectionStatus === "connected" || candidate.previousLiveConnectionStatus === "error"
+          ? candidate.previousLiveConnectionStatus
+          : null,
+        liveSessionId: typeof candidate.liveSessionId === "string" ? candidate.liveSessionId : null,
+        liveSessionState: candidate.liveSessionState === "idle" || candidate.liveSessionState === "probing" || candidate.liveSessionState === "connected" || candidate.liveSessionState === "error"
+          ? candidate.liveSessionState
+          : null,
+        liveSessionStartedAt: typeof candidate.liveSessionStartedAt === "number" ? candidate.liveSessionStartedAt : null,
+        liveSessionConfirmedAt: typeof candidate.liveSessionConfirmedAt === "number" ? candidate.liveSessionConfirmedAt : null,
+        liveFeedUrl: typeof candidate.liveFeedUrl === "string" ? candidate.liveFeedUrl : null,
+        liveFeedLabel: typeof candidate.liveFeedLabel === "string" ? candidate.liveFeedLabel : null,
+        liveConnectionMode: candidate.liveConnectionMode === "rtsp" || candidate.liveConnectionMode === "mjpeg" || candidate.liveConnectionMode === "http" || candidate.liveConnectionMode === "onvif" || candidate.liveConnectionMode === "proxy"
+          ? candidate.liveConnectionMode
+          : null,
+        liveConnectionStatus: candidate.liveConnectionStatus === "disconnected" || candidate.liveConnectionStatus === "connecting" || candidate.liveConnectionStatus === "connected" || candidate.liveConnectionStatus === "error"
+          ? candidate.liveConnectionStatus
+          : null,
+        ingestMode: candidate.ingestMode === "external" ? "external" : "manual",
+        summary: candidate.summary,
+        notes: typeof candidate.notes === "string" ? candidate.notes : null,
+        timestamp: candidate.timestamp,
+      }];
+    });
   } catch {
     return [];
   }
@@ -760,6 +1028,30 @@ function persistOperationalEvidenceEvents(events: OperationalEvidenceEvent[]) {
   }
 }
 
+function persistSensorLiveEvents(events: SensorLiveEventRecord[]) {
+  try {
+    localStorage.setItem(SENSOR_EVENT_STORAGE_KEY, JSON.stringify(events.slice(0, 60)));
+  } catch {
+    // Storage full or unavailable — silently fail
+  }
+}
+
+function persistCameraMetadataEvents(events: CameraMetadataEventRecord[]) {
+  try {
+    localStorage.setItem(CAMERA_METADATA_EVENT_STORAGE_KEY, JSON.stringify(events.slice(0, 60)));
+  } catch {
+    // Storage full or unavailable — silently fail
+  }
+}
+
+function persistCameraLiveConnectionEvents(events: CameraLiveConnectionEventRecord[]) {
+  try {
+    localStorage.setItem(CAMERA_CONNECTION_EVENT_STORAGE_KEY, JSON.stringify(events.slice(0, 60)));
+  } catch {
+    // Storage full or unavailable — silently fail
+  }
+}
+
 function persistModelEvalHistory(history: ModelEvalRunRecord[]) {
   try {
     localStorage.setItem(MODEL_EVAL_HISTORY_STORAGE_KEY, serializeModelEvalHistory(history));
@@ -961,7 +1253,16 @@ export type StudioStoreState = {
   aiActionTelemetry: AiActionTelemetryRecord[];
   snapshots: SceneSnapshot[];
   operationalEvidenceEvents: OperationalEvidenceEvent[];
+  sensorEvents: SensorLiveEventRecord[];
+  cameraMetadataEvents: CameraMetadataEventRecord[];
+  cameraLiveConnectionEvents: CameraLiveConnectionEventRecord[];
   recordOperationalEvidenceEvent: (event: OperationalEvidenceEventInput) => void;
+  recordSensorEvent: (event: SensorLiveEventInput) => boolean;
+  recordCameraMetadataEvent: (event: CameraMetadataEventInput) => boolean;
+  recordCameraLiveConnectionEvent: (event: CameraLiveConnectionEventInput) => boolean;
+  clearSensorEvents: () => void;
+  clearCameraMetadataEvents: () => void;
+  clearCameraLiveConnectionEvents: () => void;
   recordRuntimeIncident: (incident: RuntimeIncidentInput) => void;
   recordExternalLogEntry: (entry: ExternalLogEntryInput) => void;
   clearExternalLogEntries: () => void;
@@ -1073,6 +1374,7 @@ export type StudioStoreState = {
   mapState: MapState;
   hoveredMapNodeId: string | null;
   focusScenePointRequest: FocusScenePointRequest | null;
+  focusScenePointHighlight: FocusScenePointRequest | null;
   setTemporalProfile: (profile: TemporalSecurityProfile | null) => void;
   setTemporalScrub: (hour: number, minute: number) => void;
   computeTemporalProfile: () => void;
@@ -1101,6 +1403,7 @@ export type StudioStoreState = {
   fitMap: (target: MapViewportTarget) => void;
   setHoveredMapNodeId: (id: string | null) => void;
   setFocusScenePointRequest: (request: FocusScenePointRequest | null) => void;
+  setFocusScenePointHighlight: (request: FocusScenePointRequest | null) => void;
   setEditorMode: (mode: EditorMode) => void;
   setDraftWallStart: (start?: [number, number]) => void;
   setDraftPolygonPoints: (points: [number, number][]) => void;
@@ -2005,6 +2308,9 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   aiActionTelemetry: loadAiActionTelemetry(),
   snapshots: INITIAL_SNAPSHOTS,
   operationalEvidenceEvents: INITIAL_OPERATIONAL_EVIDENCE_EVENTS,
+  sensorEvents: loadSensorLiveEvents(),
+  cameraMetadataEvents: loadCameraMetadataEvents(),
+  cameraLiveConnectionEvents: loadCameraLiveConnectionEvents(),
   workspaceAccess: INITIAL_WORKSPACE_ACCESS,
   workspaceGovernance: INITIAL_WORKSPACE_GOVERNANCE,
   lastRunMs: 0,
@@ -2078,6 +2384,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   },
   criticalZoneTargetType: "person_detection",
   focusScenePointRequest: null,
+  focusScenePointHighlight: null,
   cameraPresetId: null,
   sceneIntelligenceGraph: INITIAL_SCENE_INTELLIGENCE_GRAPH,
   historyPast: [],
@@ -2124,6 +2431,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   },
   setHoveredMapNodeId: (id) => set({ hoveredMapNodeId: id }),
   setFocusScenePointRequest: (request) => set({ focusScenePointRequest: request }),
+  setFocusScenePointHighlight: (request) => set({ focusScenePointHighlight: request }),
 
   setEditorMode: (mode) => set((s) => ({
     editor: {
@@ -2381,6 +2689,294 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     });
   },
 
+  recordSensorEvent: (event) => {
+    const state = get();
+    const sensor = state.scene.sensors.find((entry) => entry.id === event.sensorId) ?? null;
+    if (!sensor) return false;
+
+    let nearestCameraId: string | null = null;
+    let nearestCameraName: string | null = null;
+    let nearestDistanceM: number | null = null;
+    for (const camera of state.scene.cameras) {
+      const distanceM = Math.hypot(
+        camera.position[0] - sensor.position[0],
+        camera.position[1] - sensor.position[1],
+        camera.position[2] - sensor.position[2],
+      );
+      if (nearestDistanceM === null || distanceM < nearestDistanceM) {
+        nearestDistanceM = distanceM;
+        nearestCameraId = camera.id;
+        nearestCameraName = camera.name;
+      }
+    }
+
+    const resultingState = event.resultingState ?? (
+      event.kind === "faulted"
+        ? "faulted"
+        : event.kind === "restored"
+          ? "active"
+          : sensor.state
+    );
+    const nextScene = event.resultingState || event.kind === "faulted" || event.kind === "restored"
+      ? cloneSecurityScene(state.scene)
+      : state.scene;
+    if (nextScene !== state.scene) {
+      nextScene.sensors = nextScene.sensors.map((entry) => (
+        entry.id === sensor.id
+          ? { ...entry, state: resultingState ?? entry.state }
+          : entry
+      ));
+    }
+    const timestamp = event.timestamp ?? Date.now();
+    const nextRecord: SensorLiveEventRecord = {
+      id: `sensor_live_${timestamp.toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+      sceneId: state.scene.id,
+      sceneName: state.scene.name,
+      sensorId: sensor.id,
+      sensorLabel: sensor.label,
+      sensorType: sensor.sensorType,
+      kind: event.kind,
+      details: event.details.trim() || (event.kind === "triggered"
+        ? "Sensor trigger observed."
+        : event.kind === "heartbeat"
+          ? "Sensor heartbeat received."
+          : event.kind === "faulted"
+            ? "Sensor fault reported."
+            : "Sensor restored."),
+      timestamp,
+      resultingState,
+      nearestCameraId,
+      nearestCameraName,
+      nearestDistanceM,
+    };
+    const nextSensorEvents = [nextRecord, ...state.sensorEvents].slice(0, 60);
+    persistSensorLiveEvents(nextSensorEvents);
+
+    const evidenceKindMap: Record<SensorLiveEventKind, OperationalEvidenceEvent["kind"]> = {
+      triggered: "sensor_triggered",
+      heartbeat: "sensor_heartbeat",
+      faulted: "sensor_faulted",
+      restored: "sensor_restored",
+    };
+
+    const evidenceEvent = buildOperationalEvidenceEvent({
+      kind: evidenceKindMap[event.kind],
+      title: event.kind === "triggered"
+        ? "Sensor trigger observed"
+        : event.kind === "heartbeat"
+          ? "Sensor heartbeat received"
+          : event.kind === "faulted"
+            ? "Sensor fault reported"
+            : "Sensor restored",
+      details: nextRecord.details,
+      actor: "user",
+      source: state.scene.source,
+      sceneId: state.scene.id,
+      sceneName: state.scene.name,
+      revisionDepth: state.historyPast.length,
+      affectedNodeIds: nearestCameraId ? [sensor.id, nearestCameraId] : [sensor.id],
+      confidence: event.kind === "heartbeat" ? 0.7 : 0.92,
+      branchLabel: "simulated",
+      lifecycleStage: "simulated",
+      beforeSummary: summarizeSceneEvidence(state.scene).detail,
+      afterSummary: summarizeSceneEvidence(state.scene).detail,
+      notes: [
+        `Sensor ${sensor.label} (${sensor.sensorType}) recorded a ${event.kind} event.`,
+        nearestCameraName ? `Nearest camera: ${nearestCameraName}.` : "No camera nearby.",
+      ],
+    });
+    const nextEvents = [...state.operationalEvidenceEvents, evidenceEvent];
+    persistOperationalEvidenceEvents(nextEvents);
+    set({
+      operationalEvidenceEvents: nextEvents,
+      sensorEvents: nextSensorEvents,
+      scene: cloneSceneWithAppendedChangeLog(nextScene, evidenceLogLine(evidenceEvent)),
+    });
+    return true;
+  },
+
+  recordCameraMetadataEvent: (event) => {
+    const state = get();
+    const camera = state.scene.cameras.find((entry) => entry.id === event.cameraId) ?? null;
+    if (!camera) return false;
+
+    const timestamp = event.timestamp ?? Date.now();
+    const formatCameraSnapshot = (
+      status: CameraNode["status"] | null,
+      clarity: CameraNode["clarity"] | null,
+      nightMode: CameraNode["nightMode"] | null,
+      feedMode: "normal" | "ir" | "low_light" | "thermal" | null,
+    ) => `status ${status ?? "unknown"}, clarity ${clarity ?? "unknown"}, night mode ${nightMode ?? "unknown"}, feed mode ${feedMode ?? "unknown"}`;
+    const nextRecord: CameraMetadataEventRecord = {
+      id: `camera_metadata_${timestamp.toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+      sceneId: state.scene.id,
+      sceneName: state.scene.name,
+      cameraId: camera.id,
+      cameraName: camera.name,
+      previousStatus: event.previousStatus ?? null,
+      previousClarity: event.previousClarity ?? null,
+      previousNightMode: event.previousNightMode ?? null,
+      previousFeedMode: event.previousFeedMode ?? null,
+      previousNotes: event.previousNotes?.trim() || null,
+      status: event.status ?? null,
+      clarity: event.clarity ?? null,
+      nightMode: event.nightMode ?? null,
+      feedMode: event.feedMode ?? null,
+      ingestMode: event.ingestMode,
+      feedUrl: event.feedUrl ?? null,
+      feedLabel: event.feedLabel ?? null,
+      summary: event.summary.trim() || `Camera metadata updated for ${camera.name}.`,
+      notes: event.notes?.trim() || null,
+      timestamp,
+    };
+    const nextCameraMetadataEvents = [nextRecord, ...state.cameraMetadataEvents].slice(0, 60);
+    persistCameraMetadataEvents(nextCameraMetadataEvents);
+
+    const evidenceEvent = buildOperationalEvidenceEvent({
+      kind: "camera_metadata_updated",
+      title: `Camera metadata updated: ${camera.name}`,
+      details: nextRecord.summary,
+      actor: "user",
+      source: state.scene.source,
+      sceneId: state.scene.id,
+      sceneName: state.scene.name,
+      revisionDepth: state.historyPast.length,
+      affectedNodeIds: [camera.id],
+      confidence: event.ingestMode === "external" ? 0.88 : 0.92,
+      branchLabel: event.ingestMode === "external" ? "external-feed" : "paste",
+      lifecycleStage: event.ingestMode === "external" ? "imported" : "manual",
+      beforeSummary: `Before: ${formatCameraSnapshot(
+        nextRecord.previousStatus ?? camera.status,
+        nextRecord.previousClarity ?? camera.clarity,
+        nextRecord.previousNightMode ?? camera.nightMode,
+        nextRecord.previousFeedMode,
+      )}.`,
+      afterSummary: `After: ${formatCameraSnapshot(
+        nextRecord.status ?? camera.status,
+        nextRecord.clarity ?? camera.clarity,
+        nextRecord.nightMode ?? camera.nightMode,
+        nextRecord.feedMode,
+      )}.`,
+      notes: [
+        `Camera metadata ingested via ${event.ingestMode}.`,
+        nextRecord.feedLabel ? `Feed label: ${nextRecord.feedLabel}.` : null,
+        nextRecord.feedUrl ? `Feed URL: ${nextRecord.feedUrl}.` : null,
+        nextRecord.notes ? `Notes: ${nextRecord.notes}` : null,
+      ].filter((value): value is string => Boolean(value)),
+    });
+    const nextEvents = [...state.operationalEvidenceEvents, evidenceEvent];
+    persistOperationalEvidenceEvents(nextEvents);
+    set({
+      operationalEvidenceEvents: nextEvents,
+      cameraMetadataEvents: nextCameraMetadataEvents,
+      scene: cloneSceneWithAppendedChangeLog(state.scene, evidenceLogLine(evidenceEvent)),
+    });
+    return true;
+  },
+
+  recordCameraLiveConnectionEvent: (event) => {
+    const state = get();
+    const camera = state.scene.cameras.find((entry) => entry.id === event.cameraId) ?? null;
+    if (!camera) return false;
+
+    const timestamp = event.timestamp ?? Date.now();
+    const formatConnectionSnapshot = (
+      liveFeedUrl: string | null,
+      liveFeedLabel: string | null,
+      liveConnectionMode: "rtsp" | "mjpeg" | "http" | "onvif" | "proxy" | null,
+      liveConnectionStatus: "disconnected" | "connecting" | "connected" | "error" | null,
+    ) => `status ${liveConnectionStatus ?? "unknown"}, mode ${liveConnectionMode ?? "unknown"}, feed ${liveFeedUrl ?? "none"}${liveFeedLabel ? ` (${liveFeedLabel})` : ""}`;
+    const nextRecord: CameraLiveConnectionEventRecord = {
+      id: `camera_live_connection_${timestamp.toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+      sceneId: state.scene.id,
+      sceneName: state.scene.name,
+      cameraId: camera.id,
+      cameraName: camera.name,
+      previousLiveSessionId: event.previousLiveSessionId ?? null,
+      previousLiveSessionState: event.previousLiveSessionState ?? null,
+      previousLiveSessionStartedAt: event.previousLiveSessionStartedAt ?? null,
+      previousLiveSessionConfirmedAt: event.previousLiveSessionConfirmedAt ?? null,
+      previousLiveFeedUrl: event.previousLiveFeedUrl ?? null,
+      previousLiveFeedLabel: event.previousLiveFeedLabel ?? null,
+      previousLiveConnectionMode: event.previousLiveConnectionMode ?? null,
+      previousLiveConnectionStatus: event.previousLiveConnectionStatus ?? null,
+      liveSessionId: event.liveSessionId ?? null,
+      liveSessionState: event.liveSessionState ?? null,
+      liveSessionStartedAt: event.liveSessionStartedAt ?? null,
+      liveSessionConfirmedAt: event.liveSessionConfirmedAt ?? null,
+      liveFeedUrl: event.liveFeedUrl ?? null,
+      liveFeedLabel: event.liveFeedLabel ?? null,
+      liveConnectionMode: event.liveConnectionMode ?? null,
+      liveConnectionStatus: event.liveConnectionStatus ?? null,
+      ingestMode: event.ingestMode,
+      summary: event.summary.trim() || `Live camera connection updated for ${camera.name}.`,
+      notes: event.notes?.trim() || null,
+      timestamp,
+    };
+    const nextCameraLiveConnectionEvents = [nextRecord, ...state.cameraLiveConnectionEvents].slice(0, 60);
+    persistCameraLiveConnectionEvents(nextCameraLiveConnectionEvents);
+
+    const evidenceEvent = buildOperationalEvidenceEvent({
+      kind: "camera_live_connection_updated",
+      title: `Camera live connection updated: ${camera.name}`,
+      details: nextRecord.summary,
+      actor: "user",
+      source: state.scene.source,
+      sceneId: state.scene.id,
+      sceneName: state.scene.name,
+      revisionDepth: state.historyPast.length,
+      affectedNodeIds: [camera.id],
+      confidence: event.ingestMode === "external" ? 0.84 : 0.91,
+      branchLabel: event.ingestMode === "external" ? "external-feed" : "manual-bind",
+      lifecycleStage: event.ingestMode === "external" ? "imported" : "manual",
+      beforeSummary: `Before: ${formatConnectionSnapshot(
+        nextRecord.previousLiveFeedUrl,
+        nextRecord.previousLiveFeedLabel,
+        nextRecord.previousLiveConnectionMode,
+        nextRecord.previousLiveConnectionStatus,
+      )}.`,
+      afterSummary: `After: ${formatConnectionSnapshot(
+        nextRecord.liveFeedUrl,
+        nextRecord.liveFeedLabel,
+        nextRecord.liveConnectionMode,
+        nextRecord.liveConnectionStatus,
+      )}.`,
+      notes: [
+        `Live camera binding updated via ${event.ingestMode}.`,
+        nextRecord.notes ? `Notes: ${nextRecord.notes}` : null,
+      ].filter((value): value is string => Boolean(value)),
+    });
+    const nextEvents = [...state.operationalEvidenceEvents, evidenceEvent];
+    persistOperationalEvidenceEvents(nextEvents);
+    set({
+      operationalEvidenceEvents: nextEvents,
+      cameraLiveConnectionEvents: nextCameraLiveConnectionEvents,
+      scene: cloneSceneWithAppendedChangeLog(state.scene, evidenceLogLine(evidenceEvent)),
+    });
+    return true;
+  },
+
+  clearSensorEvents: () => {
+    const { scene, sensorEvents } = get();
+    const nextSensorEvents = sensorEvents.filter((event) => event.sceneId !== scene.id);
+    persistSensorLiveEvents(nextSensorEvents);
+    set({ sensorEvents: nextSensorEvents });
+  },
+
+  clearCameraMetadataEvents: () => {
+    const { scene, cameraMetadataEvents } = get();
+    const nextCameraMetadataEvents = cameraMetadataEvents.filter((event) => event.sceneId !== scene.id);
+    persistCameraMetadataEvents(nextCameraMetadataEvents);
+    set({ cameraMetadataEvents: nextCameraMetadataEvents });
+  },
+
+  clearCameraLiveConnectionEvents: () => {
+    const { scene, cameraLiveConnectionEvents } = get();
+    const nextCameraLiveConnectionEvents = cameraLiveConnectionEvents.filter((event) => event.sceneId !== scene.id);
+    persistCameraLiveConnectionEvents(nextCameraLiveConnectionEvents);
+    set({ cameraLiveConnectionEvents: nextCameraLiveConnectionEvents });
+  },
+
   restoreSceneFromEvidence: (eventId, targetBranch = "recovered") => {
     const { operationalEvidenceEvents, scene, historyPast } = get();
     const sourceEvent = operationalEvidenceEvents.find((event) => event.id === eventId) ?? null;
@@ -2434,6 +3030,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       selectedNodeIds: [],
       activePathId: null,
       focusScenePointRequest: null,
+      focusScenePointHighlight: null,
       mapState: cloneDefaultMapState(),
       historyPast: [...historyPast, cloneSecurityScene(scene)],
       historyFuture: [],
@@ -3803,6 +4400,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       simulationResult: null,
       activePathId: null,
       focusScenePointRequest: null,
+      focusScenePointHighlight: null,
       mapState: cloneDefaultMapState(),
       focusMode: false,
       previousLayout: null,
@@ -3892,6 +4490,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         selectedNodeIds: [],
         activePathId: null,
         focusScenePointRequest: null,
+        focusScenePointHighlight: null,
         mapState: cloneDefaultMapState(),
         focusMode: false,
         previousLayout: null,
@@ -4045,6 +4644,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         selectedNodeIds: [],
         activePathId: null,
         focusScenePointRequest: null,
+        focusScenePointHighlight: null,
         mapState: cloneDefaultMapState(),
         focusMode: false,
         previousLayout: null,
@@ -4117,6 +4717,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       selectedNodeIds: [],
       activePathId: null,
       focusScenePointRequest: null,
+      focusScenePointHighlight: null,
       mapState: cloneDefaultMapState(),
       focusMode: false,
       previousLayout: null,
@@ -4196,6 +4797,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         selectedNodeIds: [],
         activePathId: null,
         focusScenePointRequest: null,
+        focusScenePointHighlight: null,
         mapState: cloneDefaultMapState(),
         focusMode: false,
         previousLayout: null,
@@ -4273,6 +4875,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       selectedNodeIds: [],
       activePathId: null,
       focusScenePointRequest: null,
+      focusScenePointHighlight: null,
       mapState: cloneDefaultMapState(),
       focusMode: false,
       previousLayout: null,

@@ -1,7 +1,7 @@
 "use client";
 
 import { Camera, Copy, Crosshair, Eye, Loader2, Trash2, Zap } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { CameraFeedCanvas } from "@/components/inspector/CameraFeedCanvas";
 import {
@@ -15,6 +15,9 @@ import {
 import { Badge } from "@/components/shared/Badge";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { cn } from "@/lib/cn";
+import type { CameraLiveConnectionProbeResponse } from "@/lib/camera-live-connection";
+import type { CameraLiveConnectionArchiveRecord } from "@/lib/camera-live-connection-history";
+import type { CameraMetadataIngestResponse } from "@/lib/camera-metadata-live-ingest";
 import type { CameraNode, DoriQuality, SimulationAssumptions } from "@/schema/security-scene";
 import { qualityToScore } from "@/simulation/dori";
 import { type InspectorTab, useStudioStore } from "@/store/studio-store";
@@ -57,6 +60,21 @@ const LENS_OPTIONS = [
   { value: "8", label: "Fixed 8mm" },
 ] as const;
 
+const LIVE_CONNECTION_MODE_OPTIONS = [
+  { value: "rtsp", label: "RTSP" },
+  { value: "mjpeg", label: "MJPEG" },
+  { value: "http", label: "HTTP" },
+  { value: "onvif", label: "ONVIF" },
+  { value: "proxy", label: "Proxy" },
+] as const;
+
+const LIVE_CONNECTION_STATUS_OPTIONS = [
+  { value: "connected", label: "Connected" },
+  { value: "connecting", label: "Connecting" },
+  { value: "disconnected", label: "Disconnected" },
+  { value: "error", label: "Error" },
+] as const;
+
 type CameraViewMode = "normal" | "ir" | "low_light" | "thermal";
 
 const VIEW_MODES: Array<{ value: CameraViewMode; label: string }> = [
@@ -77,6 +95,15 @@ const VIEW_TOGGLES: Array<{ key: ViewToggleKey; label: string }> = [
   { key: "grid", label: "Grid" },
 ];
 type ViewToggleState = Record<ViewToggleKey, boolean>;
+
+type CameraMetadataArchiveRecord = CameraMetadataIngestResponse & {
+  storedAt: number;
+  submittedAt: number;
+  raw: string;
+  cameras: Array<Pick<CameraNode, "id" | "name" | "status" | "clarity" | "nightMode">>;
+  sceneId: string | null;
+  sceneName: string | null;
+};
 
 const QUALITY_LABEL: Record<DoriQuality, string> = {
   none: "No Signal",
@@ -149,11 +176,87 @@ export function CameraInspector() {
   const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
   const setViewMode = useStudioStore((s) => s.setViewMode);
   const setCameraPresetId = useStudioStore((s) => s.setCameraPresetId);
+  const recordCameraMetadataEvent = useStudioStore((s) => s.recordCameraMetadataEvent);
+  const recordCameraLiveConnectionEvent = useStudioStore((s) => s.recordCameraLiveConnectionEvent);
   const [viewMode, setViewModeState] = useState<CameraViewMode>("normal");
   const [viewToggles, setViewToggles] = useState<ViewToggleState>({
     overlays: true, dori: true, path: false, zones: true, timestamp: true, boundingBox: false, grid: false,
   });
   const [snapshotNote, setSnapshotNote] = useState("");
+  const [cameraMetadataUrl, setCameraMetadataUrl] = useState("");
+  const [cameraMetadataLabel, setCameraMetadataLabel] = useState("ONVIF relay");
+  const [cameraMetadataRaw, setCameraMetadataRaw] = useState("");
+  const [cameraMetadataStatus, setCameraMetadataStatus] = useState<string | null>(null);
+  const [cameraMetadataError, setCameraMetadataError] = useState<string | null>(null);
+  const [cameraMetadataLoading, setCameraMetadataLoading] = useState(false);
+  const [cameraMetadataHistory, setCameraMetadataHistory] = useState<CameraMetadataArchiveRecord[]>([]);
+  const [cameraLiveConnectionHistory, setCameraLiveConnectionHistory] = useState<CameraLiveConnectionArchiveRecord[]>([]);
+  const cameraLiveConnectionEvents = useStudioStore((s) => s.cameraLiveConnectionEvents.filter((event) => event.sceneId === s.scene.id));
+  const [liveConnectionUrl, setLiveConnectionUrl] = useState(camera?.liveFeedUrl ?? "");
+  const [liveConnectionLabel, setLiveConnectionLabel] = useState(camera?.liveFeedLabel ?? "Primary live feed");
+  const [liveConnectionMode, setLiveConnectionMode] = useState<CameraNode["liveConnectionMode"]>(camera?.liveConnectionMode ?? "onvif");
+  const [liveConnectionStatus, setLiveConnectionStatus] = useState<CameraNode["liveConnectionStatus"]>(camera?.liveConnectionStatus ?? "disconnected");
+  const [liveConnectionNotes, setLiveConnectionNotes] = useState("");
+  const [liveConnectionStatusMessage, setLiveConnectionStatusMessage] = useState<string | null>(null);
+  const [liveConnectionError, setLiveConnectionError] = useState<string | null>(null);
+  const [liveConnectionLoading, setLiveConnectionLoading] = useState(false);
+
+  useEffect(() => {
+    const refreshCameraMetadataHistory = async () => {
+      try {
+        const response = await fetch("/api/camera-metadata-ingest", { cache: "no-store" });
+        if (!response.ok) return;
+        const payload = await response.json() as { history?: CameraMetadataArchiveRecord[] };
+        if (Array.isArray(payload.history)) {
+          setCameraMetadataHistory(payload.history);
+        }
+      } catch {
+        // Ignore history refresh failures; the ingest bridge still works.
+      }
+    };
+
+    void refreshCameraMetadataHistory();
+    // Intentional: refresh when the operator switches cameras so the archive stays in view.
+  }, [camera?.id]);
+
+  useEffect(() => {
+    if (!camera || camera.liveConnectionStatus !== "connected" || !liveConnectionUrl.trim()) return undefined;
+
+    const heartbeat = window.setInterval(() => {
+      if (liveConnectionLoading) return;
+      void refreshLiveConnection();
+    }, 45_000);
+
+    return () => window.clearInterval(heartbeat);
+    // Intentional: keep the live connection as a lease that renews while the operator is watching it.
+  }, [camera, liveConnectionLoading, liveConnectionUrl]);
+
+  const refreshCameraLiveConnectionHistory = useCallback(async () => {
+    try {
+      const response = await fetch("/api/camera-live-connection", { cache: "no-store" });
+      if (!response.ok) return;
+      const payload = await response.json() as { history?: CameraLiveConnectionArchiveRecord[] };
+      if (Array.isArray(payload.history)) {
+        setCameraLiveConnectionHistory(payload.history.filter((entry) => entry.record.cameraId === camera?.id));
+      }
+    } catch {
+      // Ignore history refresh failures; the bind/probe route still works.
+    }
+  }, [camera?.id]);
+
+  useEffect(() => {
+    void refreshCameraLiveConnectionHistory();
+  }, [refreshCameraLiveConnectionHistory]);
+
+  useEffect(() => {
+    setLiveConnectionUrl(camera?.liveFeedUrl ?? "");
+    setLiveConnectionLabel(camera?.liveFeedLabel ?? "Primary live feed");
+    setLiveConnectionMode(camera?.liveConnectionMode ?? "onvif");
+    setLiveConnectionStatus(camera?.liveConnectionStatus ?? "disconnected");
+    setLiveConnectionNotes("");
+    setLiveConnectionStatusMessage(null);
+    setLiveConnectionError(null);
+  }, [camera?.id, camera?.liveFeedLabel, camera?.liveFeedUrl, camera?.liveConnectionMode, camera?.liveConnectionStatus, camera?.notes]);
 
   if (!camera) return null;
 
@@ -172,7 +275,7 @@ export function CameraInspector() {
   ];
 
   const camResult = result?.cameraResults.find((entry) => entry.cameraId === camera.id);
-  const targetZone = scene.criticalZones.find((zone) => zone.id === selectedNodeId) ?? scene.criticalZones[0] ?? null;
+  const targetZone = scene.criticalZones.find((zone) => zone.id === selectedNodeId) ?? null;
   const targetZoneResult = targetZone
     ? result?.criticalZoneResults.find((entry) => entry.zoneId === targetZone.id) ?? null
     : null;
@@ -220,7 +323,6 @@ export function CameraInspector() {
     grid: viewToggles.overlays && viewToggles.grid,
   };
   const offlineImpact = camResult?.offlineImpact ?? [];
-  const firstCriticalZone = scene.criticalZones[0];
   const resolutionKey = `${camera.resolutionMP}_${camera.resolutionWidth ?? 2688}x${camera.resolutionHeight ?? 1520}`;
   const typeKey = camera.mountType === "ceiling" ? `${camera.resolutionMP}mp_dome` : `${camera.resolutionMP}mp_bullet`;
   const viewModeLabel =
@@ -261,12 +363,12 @@ export function CameraInspector() {
   };
 
   const aimAtZone = () => {
-    if (!firstCriticalZone) return;
-    const centroid = firstCriticalZone.polygon.reduce(
+    if (!targetZone) return;
+    const centroid = targetZone.polygon.reduce(
       (acc, [x, z]) => { acc.x += x; acc.z += z; return acc; },
       { x: 0, z: 0 },
     );
-    const n = firstCriticalZone.polygon.length || 1;
+    const n = targetZone.polygon.length || 1;
     const dx = centroid.x / n - camera.position[0];
     const dz = centroid.z / n - camera.position[2];
     updateNode(camera.id, { yawDeg: Math.round(Math.atan2(dx, dz) * (180 / Math.PI)), pitchDeg: -30 });
@@ -295,6 +397,211 @@ export function CameraInspector() {
     setWorkspacePreset("camera_wall");
     setViewMode("wall");
   };
+
+  const ingestCameraMetadata = async (mode: "paste" | "external") => {
+    const trimmedRaw = cameraMetadataRaw.trim();
+    const trimmedUrl = cameraMetadataUrl.trim();
+
+    if (mode === "paste" && trimmedRaw.length === 0) {
+      setCameraMetadataError("Paste JSON or NDJSON camera metadata before applying it.");
+      return;
+    }
+
+    if (mode === "external" && trimmedUrl.length === 0) {
+      setCameraMetadataError("Provide an external feed URL before pulling camera metadata.");
+      return;
+    }
+
+    setCameraMetadataLoading(true);
+    setCameraMetadataError(null);
+    setCameraMetadataStatus(null);
+
+    try {
+      const response = await fetch("/api/camera-metadata-ingest", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          source: "camera-inspector",
+          ingestMode: mode,
+          feedUrl: mode === "external" ? trimmedUrl : undefined,
+          feedLabel: cameraMetadataLabel.trim() || undefined,
+          sceneName: scene.name,
+          submittedAt: Date.now(),
+          raw: mode === "paste" ? trimmedRaw : "",
+          cameras: scene.cameras.map((entry) => ({
+            id: entry.id,
+            name: entry.name,
+            status: entry.status,
+            clarity: entry.clarity,
+            nightMode: entry.nightMode,
+          })),
+        }),
+      });
+
+      const body = await response.json() as {
+        ok?: boolean;
+        summary?: string;
+        records?: CameraMetadataIngestResponse["records"];
+        error?: string;
+        issues?: Array<{ path: string; message: string }>;
+      };
+
+      if (!response.ok || body.ok === false) {
+        const issueSummary = body.issues?.map((issue) => issue.message).join(" ");
+        throw new Error(body.error ?? issueSummary ?? "Failed to ingest camera metadata.");
+      }
+
+      body.records?.forEach((record) => {
+        const cameraBeforeUpdate = useStudioStore.getState().scene.cameras.find((entry) => entry.id === record.cameraId) ?? null;
+        const patch: Partial<CameraNode> = {};
+        if (record.status) patch.status = record.status;
+        if (record.clarity) patch.clarity = record.clarity;
+        if (record.nightMode) patch.nightMode = record.nightMode;
+        if (record.notes) patch.notes = record.notes;
+        if (Object.keys(patch).length > 0) {
+          updateNode(record.cameraId, patch);
+        }
+        recordCameraMetadataEvent({
+          cameraId: record.cameraId,
+          cameraName: record.cameraName,
+          previousStatus: cameraBeforeUpdate?.status ?? null,
+          previousClarity: cameraBeforeUpdate?.clarity ?? null,
+          previousNightMode: cameraBeforeUpdate?.nightMode ?? null,
+          previousFeedMode: null,
+          previousNotes: cameraBeforeUpdate?.notes ?? null,
+          status: record.status,
+          clarity: record.clarity,
+          nightMode: record.nightMode,
+          feedMode: record.feedMode,
+          ingestMode: mode,
+          feedUrl: mode === "external" ? trimmedUrl : null,
+          feedLabel: cameraMetadataLabel.trim() || null,
+          summary: body.summary ?? `Camera metadata archived for ${record.cameraName}.`,
+          notes: record.notes,
+        });
+      });
+
+      const preferredRecord = body.records?.find((record) => record.cameraId === camera.id) ?? body.records?.[0] ?? null;
+      if (preferredRecord?.feedMode) {
+        setViewModeState(preferredRecord.feedMode);
+      }
+
+      setCameraMetadataStatus(body.summary ?? "Camera metadata archived.");
+      setCameraMetadataRaw("");
+      await refreshCameraMetadataHistory();
+    } catch (error) {
+      setCameraMetadataError(error instanceof Error ? error.message : "Failed to ingest camera metadata.");
+    } finally {
+      setCameraMetadataLoading(false);
+    }
+  };
+
+  const submitLiveConnection = async (action: "bind" | "refresh" | "disconnect") => {
+    if (!camera) return;
+    if ((action === "bind" || action === "refresh") && !liveConnectionUrl.trim()) {
+      setLiveConnectionError("Enter a live feed URL before binding the camera.");
+      return;
+    }
+
+    setLiveConnectionLoading(true);
+    try {
+      const cameraBeforeUpdate = useStudioStore.getState().scene.cameras.find((entry) => entry.id === camera.id) ?? camera;
+      const response = await fetch("/api/camera-live-connection", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          source: "camera-inspector",
+          action,
+          protocol: liveConnectionMode ?? "onvif",
+          endpointUrl: action === "disconnect" ? (liveConnectionUrl.trim() || undefined) : liveConnectionUrl.trim(),
+          liveFeedUrl: liveConnectionUrl.trim() || undefined,
+          feedLabel: liveConnectionLabel.trim() || undefined,
+          cameraId: camera.id,
+          cameraName: camera.name,
+          sceneId: scene.id,
+          sceneName: scene.name,
+          submittedAt: Date.now(),
+          liveSessionId: cameraBeforeUpdate?.liveSessionId ?? undefined,
+          liveSessionStartedAt: cameraBeforeUpdate?.liveSessionStartedAt ?? undefined,
+          liveSessionConfirmedAt: cameraBeforeUpdate?.liveSessionConfirmedAt ?? undefined,
+          raw: action === "disconnect" ? "" : "",
+          notes: liveConnectionNotes.trim() || undefined,
+        }),
+      });
+      const body = await response.json() as CameraLiveConnectionProbeResponse & { ok?: boolean; error?: string; issues?: Array<{ path: string; message: string }> };
+      if (!response.ok || body.ok === false) {
+        const issueSummary = body.issues?.map((issue) => issue.message).join(" ");
+        throw new Error(body.error ?? issueSummary ?? `Failed to ${action} live camera.`);
+      }
+
+      updateNode(camera.id, {
+        liveFeedUrl: body.record.liveFeedUrl ?? undefined,
+        liveFeedLabel: body.record.liveFeedLabel ?? undefined,
+        liveConnectionMode: body.record.liveConnectionMode ?? undefined,
+        liveConnectionStatus: body.record.liveConnectionStatus,
+        liveConnectionUpdatedAt: body.record.timestamp,
+        liveSessionId: body.record.liveSessionId ?? undefined,
+        liveSessionState: body.record.liveSessionState ?? undefined,
+        liveSessionStartedAt: body.record.liveSessionStartedAt ?? undefined,
+        liveSessionConfirmedAt: body.record.liveSessionConfirmedAt ?? undefined,
+      });
+      recordCameraLiveConnectionEvent({
+        cameraId: camera.id,
+        cameraName: camera.name,
+        previousLiveFeedUrl: cameraBeforeUpdate?.liveFeedUrl ?? null,
+        previousLiveFeedLabel: cameraBeforeUpdate?.liveFeedLabel ?? null,
+        previousLiveConnectionMode: cameraBeforeUpdate?.liveConnectionMode ?? null,
+        previousLiveConnectionStatus: cameraBeforeUpdate?.liveConnectionStatus ?? null,
+        previousLiveSessionId: cameraBeforeUpdate?.liveSessionId ?? null,
+        previousLiveSessionState: cameraBeforeUpdate?.liveSessionState ?? null,
+        previousLiveSessionStartedAt: cameraBeforeUpdate?.liveSessionStartedAt ?? null,
+        previousLiveSessionConfirmedAt: cameraBeforeUpdate?.liveSessionConfirmedAt ?? null,
+        liveFeedUrl: body.record.liveFeedUrl,
+        liveFeedLabel: body.record.liveFeedLabel,
+        liveConnectionMode: body.record.liveConnectionMode,
+        liveConnectionStatus: body.record.liveConnectionStatus,
+        liveSessionId: body.record.liveSessionId,
+        liveSessionState: body.record.liveSessionState,
+        liveSessionStartedAt: body.record.liveSessionStartedAt,
+        liveSessionConfirmedAt: body.record.liveSessionConfirmedAt,
+        ingestMode: action === "disconnect" ? "manual" : "external",
+        summary: body.summary ?? (action === "disconnect"
+          ? `Live camera connection cleared for ${camera.name}.`
+          : action === "refresh"
+            ? `Live camera session refreshed for ${camera.name}.`
+            : `Live camera connection bound for ${camera.name}.`),
+        notes: body.record.notes ?? (liveConnectionNotes.trim() || null),
+      });
+      setLiveConnectionMode(body.record.liveConnectionMode ?? (liveConnectionMode ?? "onvif"));
+      if (body.record.liveFeedUrl) setLiveConnectionUrl(body.record.liveFeedUrl);
+      if (body.record.liveFeedLabel) setLiveConnectionLabel(body.record.liveFeedLabel);
+      setLiveConnectionStatus(body.record.liveConnectionStatus);
+      if (body.record.liveConnectionStatus === "connected") {
+        setLiveConnectionStatusMessage(body.summary ?? (action === "refresh" ? "Live camera session refreshed." : "Live camera binding archived."));
+        setLiveConnectionError(null);
+      } else {
+        setLiveConnectionStatusMessage(null);
+        setLiveConnectionError(body.summary ?? "The live camera probe did not confirm a usable connection.");
+      }
+      if (action === "disconnect") {
+        setLiveConnectionUrl("");
+        setLiveConnectionLabel("Primary live feed");
+        setLiveConnectionMode("onvif");
+        setLiveConnectionNotes("");
+      } else {
+        setLiveConnectionNotes(body.record.notes ?? liveConnectionNotes);
+      }
+      void refreshCameraLiveConnectionHistory();
+    } catch (error) {
+      setLiveConnectionError(error instanceof Error ? error.message : `Failed to ${action} live camera.`);
+    } finally {
+      setLiveConnectionLoading(false);
+    }
+  };
+
+  const bindLiveConnection = async () => submitLiveConnection("bind");
+  const refreshLiveConnection = async () => submitLiveConnection("refresh");
+  const disconnectLiveConnection = async () => submitLiveConnection("disconnect");
 
   return (
     <>
@@ -343,6 +650,283 @@ export function CameraInspector() {
             <div className="mb-2.5">
               <CameraFeedCanvas cameraId={camera.id} />
             </div>
+
+            <SectionCard title="Live Camera Binding">
+              <div className="space-y-2">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
+                    <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Live feed URL</div>
+                    <input
+                      value={liveConnectionUrl}
+                      onChange={(event) => setLiveConnectionUrl(event.target.value)}
+                      placeholder="rtsp://camera.example.com/live"
+                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+                    />
+                  </div>
+                  <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
+                    <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Feed label</div>
+                    <input
+                      value={liveConnectionLabel}
+                      onChange={(event) => setLiveConnectionLabel(event.target.value)}
+                      placeholder="Front entrance live stream"
+                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+                    />
+                  </div>
+                  <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
+                    <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Connection mode</div>
+                    <select
+                      value={liveConnectionMode ?? "onvif"}
+                      onChange={(event) => setLiveConnectionMode(event.target.value as CameraNode["liveConnectionMode"])}
+                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+                    >
+                      {LIVE_CONNECTION_MODE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
+                    <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Connection status</div>
+                    <select
+                      value={liveConnectionStatus ?? "disconnected"}
+                      onChange={(event) => setLiveConnectionStatus(event.target.value as CameraNode["liveConnectionStatus"])}
+                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+                    >
+                      {LIVE_CONNECTION_STATUS_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Connection notes</div>
+                      <div className="mt-0.5 text-[9px] text-[#7b889f]">
+                        Bind the live camera connection through the canonical store so the camera glass, Scene Intelligence, and evidence trail stay aligned.
+                      </div>
+                    </div>
+                    <div className="text-[9px] text-[#556076]">{cameraLiveConnectionEvents.length} records</div>
+                  </div>
+                  <textarea
+                    value={liveConnectionNotes}
+                    onChange={(event) => setLiveConnectionNotes(event.target.value)}
+                    placeholder="Notes about the remote camera, relay, or ONVIF proxy."
+                    rows={3}
+                    className="mt-2 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={bindLiveConnection}
+                    disabled={liveConnectionLoading}
+                    className="rounded-xl border border-cyan-500/20 bg-cyan-500/10 px-3 py-1.5 text-[10px] font-medium text-cyan-200 transition-colors hover:border-cyan-400/40 hover:bg-cyan-500/15 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {liveConnectionLoading ? "Binding..." : "Bind Live Camera"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={disconnectLiveConnection}
+                    disabled={liveConnectionLoading}
+                    className="rounded-xl border border-[#2a2f40] bg-[#0b0f17] px-3 py-1.5 text-[10px] font-medium text-[#c9d2e5] transition-colors hover:border-[#39425a] hover:bg-[#111521] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {liveConnectionLoading ? "Clearing..." : "Clear Binding"}
+                  </button>
+                </div>
+
+                {liveConnectionStatusMessage ? (
+                  <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-2 py-1.5 text-[9px] text-emerald-200">
+                    {liveConnectionStatusMessage}
+                  </div>
+                ) : null}
+                {liveConnectionError ? (
+                  <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-2 py-1.5 text-[9px] text-red-200">
+                    {liveConnectionError}
+                  </div>
+                ) : null}
+
+                <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Connection archive</div>
+                      <div className="mt-0.5 text-[9px] text-[#7b889f]">
+                        Backend archive records for live camera probe and disconnect actions.
+                      </div>
+                    </div>
+                    <div className="text-[9px] text-[#556076]">{cameraLiveConnectionHistory.length} records</div>
+                  </div>
+                  {cameraLiveConnectionHistory.length > 0 ? (
+                    <div className="mt-2 space-y-2">
+                      {cameraLiveConnectionHistory.slice(0, 3).map((entry) => (
+                        <div key={`${entry.storedAt}-${entry.record.cameraId}-${entry.action}`} className="rounded-lg border border-[#1f2536] bg-[#111521] p-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="truncate text-[11px] font-semibold text-[#e6ebf7]">
+                                {entry.record.liveFeedLabel ?? entry.record.cameraName}
+                              </div>
+                              <div className="mt-0.5 text-[8px] uppercase tracking-[0.16em] text-[#556076]">
+                                {entry.action === "bind" ? "Bind probe" : "Disconnect"} · {entry.protocol.toUpperCase()}
+                              </div>
+                            </div>
+                            <div className="rounded-full border border-[#1f2536] bg-[#0b0f17] px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] text-[#7d8aa4]">
+                              {entry.record.liveConnectionStatus}
+                            </div>
+                          </div>
+                          <div className="mt-1 text-[9px] leading-relaxed text-[#7b889f]">
+                            {entry.summary}
+                          </div>
+                          <div className="mt-1 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+                            Session {entry.record.liveSessionState ?? "unknown"}{entry.record.liveSessionId ? ` · ${entry.record.liveSessionId}` : ""}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mt-2 text-[9px] text-[#6a748b]">No connection archive records yet. Bind or disconnect a camera to create the first backend probe record.</div>
+                  )}
+                </div>
+
+                {cameraLiveConnectionEvents.length > 0 ? (
+                  <div className="space-y-2">
+                    {cameraLiveConnectionEvents.slice(0, 3).map((entry) => (
+                      <div key={entry.id} className="rounded-lg border border-[#1f2536] bg-[#0b0f17] p-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="truncate text-[11px] font-semibold text-[#e6ebf7]">
+                              {entry.liveFeedLabel ?? entry.cameraName}
+                            </div>
+                            <div className="mt-0.5 text-[8px] uppercase tracking-[0.16em] text-[#556076]">
+                              {entry.liveConnectionStatus ?? "disconnected"} · {entry.liveConnectionMode ?? "unknown"} · {entry.ingestMode === "external" ? "External" : "Manual"}
+                            </div>
+                          </div>
+                          <div className="rounded-full border border-[#1f2536] bg-[#111521] px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] text-[#7d8aa4]">
+                            {new Date(entry.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </div>
+                        </div>
+                        <div className="mt-1 text-[9px] leading-relaxed text-[#7b889f]">
+                          {entry.summary}
+                        </div>
+                        <div className="mt-1 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+                          Session {entry.liveSessionState ?? "unknown"}{entry.liveSessionId ? ` · ${entry.liveSessionId}` : ""}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-[9px] text-[#6a748b]">No live camera binding has been archived yet.</div>
+                )}
+              </div>
+            </SectionCard>
+
+            <SectionCard title="Camera Metadata Bridge">
+              <div className="space-y-2">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
+                    <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">External feed URL</div>
+                    <input
+                      value={cameraMetadataUrl}
+                      onChange={(event) => setCameraMetadataUrl(event.target.value)}
+                      placeholder="https://camera-feed.example.com/metadata"
+                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+                    />
+                  </div>
+                  <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
+                    <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Feed label</div>
+                    <input
+                      value={cameraMetadataLabel}
+                      onChange={(event) => setCameraMetadataLabel(event.target.value)}
+                      placeholder="ONVIF relay"
+                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Paste metadata</div>
+                      <div className="mt-0.5 text-[9px] text-[#7b889f]">
+                        Paste JSON or NDJSON camera records. Matching scene cameras update through the canonical store.
+                      </div>
+                    </div>
+                    <div className="text-[9px] text-[#556076]">{scene.cameras.length} cameras in scene</div>
+                  </div>
+                  <textarea
+                    value={cameraMetadataRaw}
+                    onChange={(event) => setCameraMetadataRaw(event.target.value)}
+                    placeholder='[{"cameraName":"Front Entrance","status":"malfunctioning","clarity":"poor"}]'
+                    rows={5}
+                    className="mt-2 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void ingestCameraMetadata("paste")}
+                    disabled={cameraMetadataLoading}
+                    className="rounded-xl border border-blue-500/20 bg-blue-500/10 px-3 py-1.5 text-[10px] font-medium text-blue-200 transition-colors hover:border-blue-400/40 hover:bg-blue-500/15 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {cameraMetadataLoading ? "Applying..." : "Apply Pasted Metadata"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void ingestCameraMetadata("external")}
+                    disabled={cameraMetadataLoading}
+                    className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-3 py-1.5 text-[10px] font-medium text-[#d2d9e8] transition-colors hover:border-[#2d3750] hover:bg-[#111521] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {cameraMetadataLoading ? "Pulling..." : "Pull External Feed"}
+                  </button>
+                </div>
+
+                {cameraMetadataStatus ? (
+                  <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/8 px-2.5 py-2 text-[9px] text-emerald-200">
+                    {cameraMetadataStatus}
+                  </div>
+                ) : null}
+
+                {cameraMetadataError ? (
+                  <div className="rounded-lg border border-red-500/20 bg-red-500/8 px-2.5 py-2 text-[9px] text-red-200">
+                    {cameraMetadataError}
+                  </div>
+                ) : null}
+
+                <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">Ingest archive</div>
+                    <div className="text-[9px] text-[#556076]">{cameraMetadataHistory.length} records</div>
+                  </div>
+                  {cameraMetadataHistory.length > 0 ? (
+                    <div className="space-y-2">
+                      {cameraMetadataHistory.slice(0, 3).map((entry) => (
+                        <div key={`${entry.storedAt}-${entry.receivedAt}-${entry.feedUrl ?? entry.source}`} className="rounded-lg border border-[#1f2536] bg-[#111521] p-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="truncate text-[11px] font-semibold text-[#e6ebf7]">
+                                {entry.feedLabel ?? entry.source}
+                              </div>
+                              <div className="mt-0.5 text-[8px] uppercase tracking-[0.16em] text-[#556076]">
+                                {entry.ingestMode === "external" ? "External feed" : "Pasted metadata"} · {entry.sceneName ?? "Scene"}
+                              </div>
+                            </div>
+                            <div className="rounded-full border border-[#1f2536] bg-[#0b0f17] px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] text-[#7d8aa4]">
+                              {entry.records.length} matched
+                            </div>
+                          </div>
+                          <div className="mt-1 text-[9px] leading-relaxed text-[#7b889f]">
+                            {entry.summary}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-[9px] text-[#6a748b]">No camera metadata has been archived yet.</div>
+                  )}
+                </div>
+              </div>
+            </SectionCard>
 
             <SectionCard title="Placement Presets">
               <div className="space-y-2">
@@ -1073,7 +1657,7 @@ export function CameraInspector() {
       <div className="space-y-2 border-t border-[#1e2130] px-3 py-3">
         <div className="flex gap-2">
           <button
-            type="button" onClick={aimAtZone} disabled={!firstCriticalZone}
+            type="button" onClick={aimAtZone} disabled={!targetZone}
             className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Crosshair className="h-3 w-3" />

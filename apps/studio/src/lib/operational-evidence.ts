@@ -38,6 +38,12 @@ export type OperationalEvidenceEventKind =
   | "sensor_added"
   | "sensor_updated"
   | "sensor_removed"
+  | "sensor_triggered"
+  | "sensor_heartbeat"
+  | "sensor_faulted"
+  | "sensor_restored"
+  | "camera_metadata_updated"
+  | "camera_live_connection_updated"
   | "snapshot_saved"
   | "scene_published"
   | "simulation_completed"
@@ -269,6 +275,18 @@ export function kindToTitle(kind: OperationalEvidenceEventKind) {
       return "Sensor updated";
     case "sensor_removed":
       return "Sensor removed";
+    case "sensor_triggered":
+      return "Sensor triggered";
+    case "sensor_heartbeat":
+      return "Sensor heartbeat";
+    case "sensor_faulted":
+      return "Sensor faulted";
+    case "sensor_restored":
+      return "Sensor restored";
+    case "camera_metadata_updated":
+      return "Camera metadata updated";
+    case "camera_live_connection_updated":
+      return "Camera live connection updated";
     case "snapshot_saved":
       return "Snapshot saved";
     case "scene_published":
@@ -324,6 +342,11 @@ export function deriveOperationalEvidenceLifecycleStage(
       return "published";
     case "simulation_completed":
     case "counterfactual_completed":
+    case "sensor_triggered":
+    case "sensor_heartbeat":
+    case "sensor_faulted":
+    case "sensor_restored":
+    case "camera_metadata_updated":
       return "simulated";
     case "scene_created":
       return source === "manual" ? "draft" : "published";

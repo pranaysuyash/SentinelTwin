@@ -259,6 +259,9 @@ export function CameraFeedCanvas({
   const selectedNodeId = useStudioStore((s) => s.selectedNodeId);
   const pathReplay = useStudioStore((s) => s.pathReplay);
   const activePathId = useStudioStore((s) => s.activePathId);
+  const sensorEvents = useStudioStore((s) => s.sensorEvents.filter((event) => event.sceneId === s.scene.id));
+  const cameraMetadataEvents = useStudioStore((s) => s.cameraMetadataEvents.filter((event) => event.sceneId === s.scene.id));
+  const cameraLiveConnectionEvents = useStudioStore((s) => s.cameraLiveConnectionEvents.filter((event) => event.sceneId === s.scene.id));
   const camera = scene.cameras.find((entry) => entry.id === cameraId);
   const [viewMode, setViewMode] = useState<FeedViewMode>("normal");
   const overlayFlags = { ...DEFAULT_FEED_OVERLAY_OPTIONS, ...overlayOptions };
@@ -269,7 +272,7 @@ export function CameraFeedCanvas({
   const selectedPath = activePathId ? (scene.paths.find((path) => path.id === activePathId) ?? null) : null;
   const pathPoints = selectedPath?.points.map((point) => point.position) ?? [];
   const pathState = selectedPath ? getReplaySegmentState(pathPoints, pathReplay.progress) : null;
-  const targetZone = scene.criticalZones.find((zone) => zone.id === selectedNodeId) ?? scene.criticalZones[0] ?? null;
+  const targetZone = scene.criticalZones.find((zone) => zone.id === selectedNodeId) ?? null;
   const cameraResult = result?.cameraResults.find((entry) => entry.cameraId === camera.id) ?? null;
   const targetQuality = targetZone ? (cameraResult?.qualityByZone[targetZone.id] ?? "none") : "none";
   const targetZoneResult = targetZone
@@ -312,6 +315,11 @@ export function CameraFeedCanvas({
   const nearestSensorLabel = sensorFusion.nearestSensor ? sensorFusion.nearestSensor.label : "None";
   const nearestSensorState = sensorFusion.nearestSensor ? sensorFusion.nearestSensor.state.replace(/_/g, " ") : "—";
   const nearestSensorCoverage = sensorFusion.nearestSensor ? sensorFusion.nearestSensor.coverageMode.replace(/_/g, " ") : "—";
+  const latestSensorEvent = sensorFusion.nearestSensor
+    ? sensorEvents.find((event) => event.sensorId === sensorFusion.nearestSensor?.id) ?? sensorEvents[0] ?? null
+    : sensorEvents[0] ?? null;
+  const latestCameraMetadataEvent = cameraMetadataEvents.find((event) => event.cameraId === camera.id) ?? null;
+  const latestCameraLiveConnectionEvent = cameraLiveConnectionEvents.find((event) => event.cameraId === camera.id) ?? null;
 
   const canvasFilterClass = [
     viewMode === "normal" ? "" : viewMode === "ir" ? "grayscale-[0.95] brightness-[0.85] contrast-[1.25]" : viewMode === "low_light" ? "brightness-[0.72] contrast-[1.18] saturate-[0.85]" : "sepia-[0.8] saturate-[1.6] hue-rotate-[300deg] brightness-[0.82] contrast-[1.1]",
@@ -347,6 +355,36 @@ export function CameraFeedCanvas({
         }}
         overlayOptions={overlayFlags}
       />
+
+      {latestSensorEvent ? (
+        <div className="absolute left-2 bottom-16 z-10 rounded-lg border border-cyan-400/20 bg-black/72 px-2 py-1.5 backdrop-blur-sm">
+          <div className="text-[8px] uppercase tracking-[0.18em] text-cyan-300/90">Latest Sensor Event</div>
+          <div className="mt-0.5 text-[10px] font-semibold text-white">{latestSensorEvent.sensorLabel}</div>
+          <div className="mt-0.5 text-[8px] uppercase tracking-[0.12em] text-cyan-100/75">
+            {latestSensorEvent.kind} · {latestSensorEvent.resultingState ?? "—"} · {latestSensorEvent.nearestCameraName ?? "No camera"} · {latestSensorEvent.nearestDistanceM == null ? "—" : `${latestSensorEvent.nearestDistanceM.toFixed(1)}m`}
+          </div>
+        </div>
+      ) : null}
+
+      {latestCameraMetadataEvent ? (
+        <div className="absolute left-2 bottom-32 z-10 rounded-lg border border-emerald-400/20 bg-black/72 px-2 py-1.5 backdrop-blur-sm">
+          <div className="text-[8px] uppercase tracking-[0.18em] text-emerald-300/90">Latest Camera Metadata</div>
+          <div className="mt-0.5 text-[10px] font-semibold text-white">{latestCameraMetadataEvent.cameraName}</div>
+          <div className="mt-0.5 text-[8px] uppercase tracking-[0.12em] text-emerald-100/75">
+            {latestCameraMetadataEvent.status ?? "—"} · {latestCameraMetadataEvent.clarity ?? "—"} · {latestCameraMetadataEvent.nightMode ?? "—"} · {latestCameraMetadataEvent.feedMode ?? latestCameraMetadataEvent.ingestMode}
+          </div>
+        </div>
+      ) : null}
+
+      {latestCameraLiveConnectionEvent ? (
+        <div className="absolute left-2 bottom-48 z-10 rounded-lg border border-cyan-400/20 bg-black/72 px-2 py-1.5 backdrop-blur-sm">
+          <div className="text-[8px] uppercase tracking-[0.18em] text-cyan-300/90">Live Camera Connection</div>
+          <div className="mt-0.5 text-[10px] font-semibold text-white">{latestCameraLiveConnectionEvent.cameraName}</div>
+          <div className="mt-0.5 text-[8px] uppercase tracking-[0.12em] text-cyan-100/75">
+            {latestCameraLiveConnectionEvent.liveConnectionStatus ?? "—"} · {latestCameraLiveConnectionEvent.liveConnectionMode ?? "—"} · {latestCameraLiveConnectionEvent.liveFeedLabel ?? latestCameraLiveConnectionEvent.liveFeedUrl ?? "—"}
+          </div>
+        </div>
+      ) : null}
 
       <div className="absolute left-2 top-2 z-10 flex items-center gap-1 rounded-lg border border-[#24304a] bg-black/50 p-1 backdrop-blur-sm">
         {(Object.keys(FEED_MODE_LABELS) as FeedViewMode[]).map((mode) => (

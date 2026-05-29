@@ -4,7 +4,9 @@ import { join } from "node:path";
 import { z } from "zod";
 
 import { normalizeWorkspaceAccessState, type WorkspaceAccessState } from "@/lib/workspace-access";
+import { summarizeWorkspaceApprovalRouting } from "@/lib/workspace-membership-routing";
 import { WORKSPACE_ROLES, normalizeWorkspaceGovernance, type WorkspaceRole } from "@/lib/workspace-governance";
+import type { SecurityScene } from "@/schema/security-scene";
 import type {
   WorkspaceMembershipArchiveRecord,
   WorkspaceMembershipArchiveResponse,
@@ -50,6 +52,25 @@ const WorkspaceGovernanceStateSchema = z.object({
   reviewNotes: z.array(z.string()),
 });
 
+const WorkspaceMembershipDriftSchema = z.object({
+  activeMemberChanged: z.boolean(),
+  teamSizeChanged: z.boolean(),
+  policyChanged: z.boolean(),
+});
+
+const WorkspaceApprovalRouteSummarySchema = z.object({
+  routeStatus: z.enum(["ready", "reconcile_before_route", "review_required", "open_publish"]),
+  routeLabel: z.string().min(1),
+  routeReason: z.string().min(1),
+  targetReviewerLabel: z.string().min(1),
+  activeMemberLabel: z.string().min(1),
+  archivedMemberLabel: z.string().min(1),
+  currentPolicyLabel: z.string().min(1),
+  archivedPolicyLabel: z.string().min(1),
+  drift: WorkspaceMembershipDriftSchema.nullable(),
+  hasPrivacyExposure: z.boolean(),
+});
+
 export const WorkspaceMembershipArchiveTargetSchema = z.object({
   label: z.string().min(1),
   endpoint: z.string().url().nullable().optional(),
@@ -63,6 +84,7 @@ export const WorkspaceMembershipArchiveRequestSchema = z.object({
   sceneName: z.string().min(1),
   workspaceAccessState: WorkspaceAccessStateSchema,
   workspaceGovernanceState: WorkspaceGovernanceStateSchema,
+  approvalRoute: WorkspaceApprovalRouteSummarySchema.optional(),
   destinations: z.array(WorkspaceMembershipArchiveTargetSchema).default([]),
 });
 
@@ -136,6 +158,18 @@ export function loadWorkspaceMembershipArchiveHistory(rootDir = resolveWorkspace
         teamSize: candidate.teamSize,
         workspaceAccessState: normalizeWorkspaceAccessState(candidate.workspaceAccessState),
         workspaceGovernanceState: normalizeWorkspaceGovernance(candidate.workspaceGovernanceState),
+        approvalRoute: candidate.approvalRoute
+          ? candidate.approvalRoute as WorkspaceMembershipArchiveRecord["approvalRoute"]
+          : summarizeWorkspaceApprovalRouting(
+            {
+              id: candidate.sceneId,
+              name: candidate.sceneName,
+              privacyZones: [],
+            } as SecurityScene,
+            normalizeWorkspaceAccessState(candidate.workspaceAccessState),
+            normalizeWorkspaceGovernance(candidate.workspaceGovernanceState),
+            null,
+          ),
         deliveredCount: candidate.deliveredCount,
         queuedCount: candidate.queuedCount,
         failedCount: candidate.failedCount,
@@ -164,6 +198,16 @@ export function appendWorkspaceMembershipArchiveHistory(record: WorkspaceMembers
 export async function summarizeWorkspaceMembershipArchive(request: WorkspaceMembershipArchiveRequest): Promise<WorkspaceMembershipArchiveResponse> {
   const workspaceAccess = normalizeWorkspaceAccessState(request.workspaceAccessState);
   const workspaceGovernance = normalizeWorkspaceGovernance(request.workspaceGovernanceState);
+  const approvalRoute = request.approvalRoute ?? summarizeWorkspaceApprovalRouting(
+    {
+      id: request.sceneId,
+      name: request.sceneName,
+      privacyZones: [],
+    } as SecurityScene,
+    workspaceAccess,
+    workspaceGovernance,
+    null,
+  );
   const destinations = request.destinations.length > 0
     ? request.destinations
     : [{ label: "Local relay", endpoint: null, mode: "archive" as const }];
@@ -183,6 +227,7 @@ export async function summarizeWorkspaceMembershipArchive(request: WorkspaceMemb
             sceneName: request.sceneName,
             workspaceAccess,
             workspaceGovernance,
+            approvalRoute,
             deliveredAt,
           }),
         });
@@ -235,7 +280,7 @@ export async function summarizeWorkspaceMembershipArchive(request: WorkspaceMemb
     receivedAt: new Date(request.submittedAt ?? Date.now()).toISOString(),
     sceneId: request.sceneId,
     sceneName: request.sceneName,
-    summary: `${workspaceAccess.members.length} member${workspaceAccess.members.length === 1 ? "" : "s"} captured for ${workspaceAccess.policy.mode === "shared" ? "shared" : "single-user"} workspace membership on ${request.sceneName}.`,
+    summary: `${workspaceAccess.members.length} member${workspaceAccess.members.length === 1 ? "" : "s"} captured for ${workspaceAccess.policy.mode === "shared" ? "shared" : "single-user"} workspace membership on ${request.sceneName} with ${approvalRoute.routeStatus.replace(/_/g, " ")} approval routing.`,
     archiveStatus,
     historyId,
     activeMemberId: workspaceAccess.activeMemberId,
@@ -244,6 +289,7 @@ export async function summarizeWorkspaceMembershipArchive(request: WorkspaceMemb
     teamSize: workspaceAccess.members.length,
     workspaceAccessState: workspaceAccess,
     workspaceGovernanceState: workspaceGovernance,
+    approvalRoute,
     deliveredCount,
     queuedCount,
     failedCount,

@@ -118,6 +118,63 @@ export function GovernanceTab() {
   const [remoteWorkspaceMembershipArchiveHistoryError, setRemoteWorkspaceMembershipArchiveHistoryError] = useState<string | null>(null);
   const [workspaceMembershipArchiveEndpointDraft, setWorkspaceMembershipArchiveEndpointDraft] = useState("");
   const [workspaceMembershipSyncNotice, setWorkspaceMembershipSyncNotice] = useState<string | null>(null);
+  const [approvalRouteArchiveReport, setApprovalRouteArchiveReport] = useState<{
+    approvalRoute: ReturnType<typeof summarizeWorkspaceApprovalRouting>;
+    archiveStatus: "server archive" | "local cache";
+    deliveredCount: number;
+    queuedCount: number;
+    failedCount: number;
+    historyCount: number;
+    summary: string;
+  } | null>(null);
+  const [approvalRouteArchiveLoading, setApprovalRouteArchiveLoading] = useState(false);
+  const [approvalRouteArchiveError, setApprovalRouteArchiveError] = useState<string | null>(null);
+  const [remoteApprovalRouteHistory, setRemoteApprovalRouteHistory] = useState<Array<{
+    approvalRoute: ReturnType<typeof summarizeWorkspaceApprovalRouting>;
+    archiveStatus: "server archive" | "local cache";
+    sceneName: string;
+    summary: string;
+    submittedAt: number;
+    storedAt: number;
+  }>>([]);
+  const [remoteApprovalRouteHistoryLoading, setRemoteApprovalRouteHistoryLoading] = useState(false);
+  const [remoteApprovalRouteHistoryError, setRemoteApprovalRouteHistoryError] = useState<string | null>(null);
+  const [approvalRouteEndpointDraft, setApprovalRouteEndpointDraft] = useState("");
+  const [identityConflictArchiveReport, setIdentityConflictArchiveReport] = useState<{
+    approvalRoute: ReturnType<typeof summarizeWorkspaceApprovalRouting>;
+    archiveStatus: "server archive" | "local cache";
+    conflictStatus: "aligned" | "reconcile_needed" | "archive_pending";
+    resolutionStatus: "ready_for_publish" | "route_for_review" | "reconcile_before_route" | "archive_pending";
+    resolutionLabel: string;
+    resolutionReason: string;
+    recommendedAction: string;
+    hasPrivacyExposure: boolean;
+    membershipDrift: ReturnType<typeof summarizeWorkspaceMembershipDrift> | null;
+    deliveredCount: number;
+    queuedCount: number;
+    failedCount: number;
+    historyCount: number;
+    summary: string;
+  } | null>(null);
+  const [identityConflictArchiveLoading, setIdentityConflictArchiveLoading] = useState(false);
+  const [identityConflictArchiveError, setIdentityConflictArchiveError] = useState<string | null>(null);
+  const [remoteIdentityConflictHistory, setRemoteIdentityConflictHistory] = useState<Array<{
+    approvalRoute: ReturnType<typeof summarizeWorkspaceApprovalRouting>;
+    archiveStatus: "server archive" | "local cache";
+    conflictStatus: "aligned" | "reconcile_needed" | "archive_pending";
+    resolutionStatus: "ready_for_publish" | "route_for_review" | "reconcile_before_route" | "archive_pending";
+    resolutionLabel: string;
+    resolutionReason: string;
+    recommendedAction: string;
+    membershipDrift: ReturnType<typeof summarizeWorkspaceMembershipDrift> | null;
+    sceneName: string;
+    summary: string;
+    submittedAt: number;
+    storedAt: number;
+  }>>([]);
+  const [remoteIdentityConflictHistoryLoading, setRemoteIdentityConflictHistoryLoading] = useState(false);
+  const [remoteIdentityConflictHistoryError, setRemoteIdentityConflictHistoryError] = useState<string | null>(null);
+  const [identityConflictEndpointDraft, setIdentityConflictEndpointDraft] = useState("");
   const [annotation, setAnnotation] = useState("");
 
   const summary = useMemo(() => summarizeWorkspaceGovernance(workspaceGovernance), [workspaceGovernance]);
@@ -174,9 +231,75 @@ export function GovernanceTab() {
     }
   };
 
+  const refreshApprovalRouteArchive = async () => {
+    setRemoteApprovalRouteHistoryLoading(true);
+    setRemoteApprovalRouteHistoryError(null);
+    try {
+      const response = await fetch("/api/workspace-approval-route");
+      if (!response.ok) {
+        throw new Error(`Workspace approval route archive failed with HTTP ${response.status}.`);
+      }
+      const payload = (await response.json()) as {
+        ok: true;
+        history: Array<{
+          approvalRoute: ReturnType<typeof summarizeWorkspaceApprovalRouting>;
+          archiveStatus: "server archive" | "local cache";
+          sceneName: string;
+          summary: string;
+          submittedAt: number;
+          storedAt: number;
+        }>;
+        historyCount: number;
+      };
+      setRemoteApprovalRouteHistory(payload.history);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Workspace approval route archive failed.";
+      setRemoteApprovalRouteHistoryError(message);
+    } finally {
+      setRemoteApprovalRouteHistoryLoading(false);
+    }
+  };
+
+  const refreshIdentityConflictArchive = async () => {
+    setRemoteIdentityConflictHistoryLoading(true);
+    setRemoteIdentityConflictHistoryError(null);
+    try {
+      const response = await fetch("/api/workspace-identity-conflict");
+      if (!response.ok) {
+        throw new Error(`Workspace identity conflict archive failed with HTTP ${response.status}.`);
+      }
+      const payload = (await response.json()) as {
+        ok: true;
+        history: Array<{
+          approvalRoute: ReturnType<typeof summarizeWorkspaceApprovalRouting>;
+          archiveStatus: "server archive" | "local cache";
+          conflictStatus: "aligned" | "reconcile_needed" | "archive_pending";
+          resolutionStatus: "ready_for_publish" | "route_for_review" | "reconcile_before_route" | "archive_pending";
+          resolutionLabel: string;
+          resolutionReason: string;
+          recommendedAction: string;
+          membershipDrift: ReturnType<typeof summarizeWorkspaceMembershipDrift> | null;
+          sceneName: string;
+          summary: string;
+          submittedAt: number;
+          storedAt: number;
+        }>;
+        historyCount: number;
+      };
+      setRemoteIdentityConflictHistory(payload.history);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Workspace identity conflict archive failed.";
+      setRemoteIdentityConflictHistoryError(message);
+    } finally {
+      setRemoteIdentityConflictHistoryLoading(false);
+    }
+  };
+
   useEffect(() => {
     void refreshGovernanceArchive();
     void refreshWorkspaceMembershipArchive();
+    void refreshApprovalRouteArchive();
+    void refreshIdentityConflictArchive();
   }, []);
 
   const actionGates = useMemo(() => {
@@ -305,6 +428,7 @@ export function GovernanceTab() {
           sceneName: scene.name || "Untitled Scene",
           workspaceAccessState: workspaceAccess,
           workspaceGovernanceState: workspaceGovernance,
+          approvalRoute,
           destinations,
         }),
       });
@@ -344,6 +468,23 @@ export function GovernanceTab() {
   };
 
   const resolveWorkspaceApprovalRoute = () => {
+    const trimmedEndpoint = approvalRouteEndpointDraft.trim();
+    if (trimmedEndpoint) {
+      try {
+        new URL(trimmedEndpoint);
+      } catch {
+        setApprovalRouteArchiveError("Workspace approval route endpoint must be a valid URL.");
+        return;
+      }
+    }
+
+    const destinations = [
+      { label: "Local relay", mode: "archive" as const },
+      ...(trimmedEndpoint
+        ? [{ label: "Remote approval webhook", endpoint: trimmedEndpoint, mode: "webhook" as const }]
+        : []),
+    ];
+
     const route = summarizeWorkspaceApprovalRouting(
       scene,
       workspaceAccess,
@@ -351,33 +492,177 @@ export function GovernanceTab() {
       latestWorkspaceMembershipArchive?.workspaceAccessState ?? null,
     );
 
-    recordOperationalEvidenceEvent({
-      kind: "workspace_approval_routed",
-      title: "Workspace approval route resolved",
-      details: route.routeReason,
-      actor: "user",
-      source: scene.source,
-      sceneId: scene.id,
-      sceneName: scene.name,
-      revisionDepth: operationalEvidenceEvents.length,
-      affectedNodeIds: [],
-      confidence: route.routeStatus === "reconcile_before_route" ? 0.86 : 0.94,
-      branchLabel: "review",
-      lifecycleStage: "review",
-      beforeSummary: `${scene.name || "Untitled Scene"} · ${route.activeMemberLabel}`,
-      afterSummary: `${scene.name || "Untitled Scene"} · ${route.targetReviewerLabel}`,
-      notes: [
-        `Route status: ${route.routeStatus}.`,
-        `Current policy: ${route.currentPolicyLabel}.`,
-        `Archived policy: ${route.archivedPolicyLabel}.`,
-        route.drift
-          ? `Membership drift: active member ${route.drift.activeMemberChanged ? "changed" : "matched"}, team size ${route.drift.teamSizeChanged ? "changed" : "matched"}, policy ${route.drift.policyChanged ? "changed" : "matched"}.`
-          : "No archived membership snapshot was available for comparison.",
-        route.hasPrivacyExposure
-          ? "Privacy-sensitive scene detected during approval routing."
-          : "Standard scene routed through the approval control plane.",
-      ],
-    });
+    setApprovalRouteArchiveLoading(true);
+    setApprovalRouteArchiveError(null);
+    void fetch("/api/workspace-approval-route", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        source: "governance-panel",
+        submittedAt: Date.now(),
+        sceneId: scene.id,
+        sceneName: scene.name || "Untitled Scene",
+        hasPrivacyExposure: route.hasPrivacyExposure,
+        workspaceAccessState: workspaceAccess,
+        workspaceGovernanceState: workspaceGovernance,
+        archivedWorkspaceAccessState: latestWorkspaceMembershipArchive?.workspaceAccessState ?? null,
+        destinations,
+      }),
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Workspace approval route failed with HTTP ${response.status}.`);
+        }
+        return response.json() as Promise<{
+          ok: true;
+          approvalRoute: ReturnType<typeof summarizeWorkspaceApprovalRouting>;
+          archiveStatus: "server archive" | "local cache";
+          deliveredCount: number;
+          queuedCount: number;
+          failedCount: number;
+          historyCount: number;
+          summary: string;
+        }>;
+      })
+      .then((payload) => {
+        setApprovalRouteArchiveReport(payload);
+        recordOperationalEvidenceEvent({
+          kind: "workspace_approval_routed",
+          title: "Workspace approval route resolved",
+          details: payload.approvalRoute.routeReason,
+          actor: "user",
+          source: scene.source,
+          sceneId: scene.id,
+          sceneName: scene.name,
+          revisionDepth: operationalEvidenceEvents.length,
+          affectedNodeIds: [],
+          confidence: payload.approvalRoute.routeStatus === "reconcile_before_route" ? 0.86 : 0.94,
+          branchLabel: "review",
+          lifecycleStage: "review",
+          beforeSummary: `${scene.name || "Untitled Scene"} · ${payload.approvalRoute.activeMemberLabel}`,
+          afterSummary: `${scene.name || "Untitled Scene"} · ${payload.approvalRoute.targetReviewerLabel}`,
+          notes: [
+            `Route status: ${payload.approvalRoute.routeStatus}.`,
+            `Current policy: ${payload.approvalRoute.currentPolicyLabel}.`,
+            `Archived policy: ${payload.approvalRoute.archivedPolicyLabel}.`,
+            payload.approvalRoute.drift
+              ? `Membership drift: active member ${payload.approvalRoute.drift.activeMemberChanged ? "changed" : "matched"}, team size ${payload.approvalRoute.drift.teamSizeChanged ? "changed" : "matched"}, policy ${payload.approvalRoute.drift.policyChanged ? "changed" : "matched"}.`
+              : "No archived membership snapshot was available for comparison.",
+            payload.approvalRoute.hasPrivacyExposure
+              ? "Privacy-sensitive scene detected during approval routing."
+              : "Standard scene routed through the approval control plane.",
+            `Approval route archive: ${payload.archiveStatus}, delivered ${payload.deliveredCount}, queued ${payload.queuedCount}, failed ${payload.failedCount}.`,
+          ],
+        });
+        void refreshApprovalRouteArchive();
+      })
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : "Workspace approval route failed.";
+        setApprovalRouteArchiveError(message);
+      })
+      .finally(() => {
+        setApprovalRouteArchiveLoading(false);
+      });
+  };
+
+  const archiveWorkspaceIdentityConflict = () => {
+    const trimmedEndpoint = identityConflictEndpointDraft.trim();
+    if (trimmedEndpoint) {
+      try {
+        new URL(trimmedEndpoint);
+      } catch {
+        setIdentityConflictArchiveError("Workspace identity conflict endpoint must be a valid URL.");
+        return;
+      }
+    }
+
+    const destinations = [
+      { label: "Local relay", mode: "archive" as const },
+      ...(trimmedEndpoint
+        ? [{ label: "Remote identity webhook", endpoint: trimmedEndpoint, mode: "webhook" as const }]
+        : []),
+    ];
+
+    setIdentityConflictArchiveLoading(true);
+    setIdentityConflictArchiveError(null);
+    void fetch("/api/workspace-identity-conflict", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        source: "governance-panel",
+        submittedAt: Date.now(),
+        sceneId: scene.id,
+        sceneName: scene.name || "Untitled Scene",
+        hasPrivacyExposure: approvalRoute.hasPrivacyExposure,
+        workspaceAccessState: workspaceAccess,
+        workspaceGovernanceState: workspaceGovernance,
+        archivedWorkspaceAccessState: latestWorkspaceMembershipArchive?.workspaceAccessState ?? null,
+        destinations,
+      }),
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Workspace identity conflict archive failed with HTTP ${response.status}.`);
+        }
+        return response.json() as Promise<{
+          ok: true;
+          approvalRoute: ReturnType<typeof summarizeWorkspaceApprovalRouting>;
+          archiveStatus: "server archive" | "local cache";
+          conflictStatus: "aligned" | "reconcile_needed" | "archive_pending";
+          resolutionStatus: "ready_for_publish" | "route_for_review" | "reconcile_before_route" | "archive_pending";
+          resolutionLabel: string;
+          resolutionReason: string;
+          recommendedAction: string;
+          hasPrivacyExposure: boolean;
+          membershipDrift: ReturnType<typeof summarizeWorkspaceMembershipDrift> | null;
+          deliveredCount: number;
+          queuedCount: number;
+          failedCount: number;
+          historyCount: number;
+          summary: string;
+        }>;
+      })
+      .then((payload) => {
+        setIdentityConflictArchiveReport(payload);
+        recordOperationalEvidenceEvent({
+          kind: "workspace_membership_synced",
+          title: "Workspace identity conflict archived",
+          details: payload.summary,
+          actor: "user",
+          source: scene.source,
+          sceneId: scene.id,
+          sceneName: scene.name,
+          revisionDepth: operationalEvidenceEvents.length,
+          affectedNodeIds: [],
+          confidence: payload.conflictStatus === "reconcile_needed" ? 0.87 : 0.95,
+          branchLabel: "review",
+          lifecycleStage: "review",
+          beforeSummary: `${scene.name || "Untitled Scene"} · ${payload.approvalRoute.activeMemberLabel}`,
+          afterSummary: `${scene.name || "Untitled Scene"} · ${payload.resolutionLabel}`,
+          notes: [
+            `Conflict status: ${payload.conflictStatus}.`,
+            `Resolution status: ${payload.resolutionStatus}.`,
+            payload.resolutionReason,
+            `Route status: ${payload.approvalRoute.routeStatus}.`,
+            payload.membershipDrift
+              ? `Membership drift: active member ${payload.membershipDrift.activeMemberChanged ? "changed" : "matched"}, team size ${payload.membershipDrift.teamSizeChanged ? "changed" : "matched"}, policy ${payload.membershipDrift.policyChanged ? "changed" : "matched"}.`
+              : "No archived membership snapshot was available for comparison.",
+            payload.hasPrivacyExposure
+              ? "Privacy-sensitive scene detected during identity conflict archival."
+              : "Standard scene archived through the identity conflict control plane.",
+            `Recommended action: ${payload.recommendedAction}.`,
+            `Identity conflict archive: ${payload.archiveStatus}, delivered ${payload.deliveredCount}, queued ${payload.queuedCount}, failed ${payload.failedCount}.`,
+          ],
+        });
+        void refreshIdentityConflictArchive();
+      })
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : "Workspace identity conflict archive failed.";
+        setIdentityConflictArchiveError(message);
+      })
+      .finally(() => {
+        setIdentityConflictArchiveLoading(false);
+      });
   };
 
   return (
@@ -679,15 +964,44 @@ export function GovernanceTab() {
             <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
               Resolve publish routing against the live workspace and the latest archived membership snapshot before approval crosses the control plane.
             </div>
+            <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
+              Paste a remote approval webhook URL to fan out the resolved route. Leave it blank to keep the route local and archived.
+            </div>
+            <input
+              type="url"
+              value={approvalRouteEndpointDraft}
+              onChange={(event) => setApprovalRouteEndpointDraft(event.target.value)}
+              placeholder="https://example.com/approval-webhook"
+              className="w-full rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1 text-[9px] text-[#d2d9e8] outline-none placeholder:text-[#556076] focus:border-sky-400/40"
+            />
             <div className="flex flex-wrap gap-1.5">
               <button
                 type="button"
                 onClick={resolveWorkspaceApprovalRoute}
                 className="rounded-md border border-sky-500/20 bg-sky-500/10 px-2 py-1 text-[9px] text-sky-100 hover:border-sky-400/30 hover:bg-sky-500/20"
               >
-                Resolve Approval Route
+                {approvalRouteArchiveLoading ? "Routing..." : "Resolve Approval Route"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setApprovalRouteArchiveReport(null)}
+                className="rounded-md border border-[#1e2538] bg-[#111521] px-2 py-1 text-[9px] text-[#c7d0e4] hover:border-[#2a3245] hover:text-white"
+              >
+                Clear Route Result
+              </button>
+              <button
+                type="button"
+                onClick={() => void refreshApprovalRouteArchive()}
+                className="rounded-md border border-[#1e2538] bg-[#111521] px-2 py-1 text-[9px] text-[#c7d0e4] hover:border-[#2a3245] hover:text-white"
+              >
+                {remoteApprovalRouteHistoryLoading ? "Refreshing..." : "Refresh Route Archive"}
               </button>
             </div>
+            {approvalRouteArchiveError ? (
+              <div className="rounded-md border border-rose-500/20 bg-rose-500/10 px-2 py-1 text-rose-200">
+                {approvalRouteArchiveError}
+              </div>
+            ) : null}
             <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5 text-[9px] text-[#d2d9e8]">
               <div className="flex items-center justify-between">
                 <span className="text-[#556076] uppercase tracking-[0.18em]">Route status</span>
@@ -701,6 +1015,31 @@ export function GovernanceTab() {
                 <div className="mt-0.5 text-[#8b96ab]">{approvalRoute.routeReason}</div>
               </div>
             </div>
+            {approvalRouteArchiveReport ? (
+              <div className="space-y-1.5">
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
+                  {approvalRouteArchiveReport.summary}
+                </div>
+                <div className="grid grid-cols-4 gap-1.5">
+                  <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Archive status</div>
+                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">{approvalRouteArchiveReport.archiveStatus}</div>
+                  </div>
+                  <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Delivered</div>
+                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">{approvalRouteArchiveReport.deliveredCount}</div>
+                  </div>
+                  <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Queued</div>
+                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">{approvalRouteArchiveReport.queuedCount}</div>
+                  </div>
+                  <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Failed</div>
+                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">{approvalRouteArchiveReport.failedCount}</div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
             <div className="grid grid-cols-2 gap-1.5">
               <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                 <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Target reviewer</div>
@@ -720,6 +1059,25 @@ export function GovernanceTab() {
                 <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Archived policy</div>
                 <div className="mt-0.5 font-semibold text-[#d2d9e8]">{approvalRoute.archivedPolicyLabel}</div>
               </div>
+            </div>
+            <div className="space-y-1.5">
+              {remoteApprovalRouteHistory.length > 0 ? remoteApprovalRouteHistory.slice(0, 3).map((record) => (
+                <div key={`${record.sceneName}-${record.storedAt}`} className="rounded-md border border-[#1a2030] bg-[#0f141f] px-3 py-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-[10px] font-semibold text-[#edf2ff]">{record.sceneName}</div>
+                    <Badge variant={record.archiveStatus === "server archive" ? "green" : "amber"}>{record.archiveStatus}</Badge>
+                  </div>
+                  <div className="mt-1 text-[9px] text-[#8b96ab]">{record.summary}</div>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    <Badge variant="gray">{record.approvalRoute.routeStatus.replace(/_/g, " ")}</Badge>
+                    <Badge variant="gray">{new Date(record.submittedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Badge>
+                  </div>
+                </div>
+              )) : (
+                <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                  No approval route archive yet. Resolve a route to create the first record.
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-1.5">
               <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
@@ -922,7 +1280,7 @@ export function GovernanceTab() {
                     <div className="mt-0.5 font-semibold text-[#d2d9e8]">{workspaceMembershipArchiveReport.policyMode === "shared" ? "Shared workspace" : "Single-user workspace"}</div>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-1.5">
+                <div className="grid grid-cols-4 gap-1.5">
                   <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                     <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Archived active member</div>
                     <div className="mt-0.5 font-semibold text-[#d2d9e8]">{workspaceMembershipArchiveReport.activeMemberLabel}</div>
@@ -934,6 +1292,10 @@ export function GovernanceTab() {
                   <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                     <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Archived policy</div>
                     <div className="mt-0.5 font-semibold text-[#d2d9e8]">{workspaceMembershipArchiveReport.workspaceAccessState.policy.mode === "shared" ? "Shared workspace" : "Single-user workspace"}</div>
+                  </div>
+                  <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Archived route</div>
+                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">{workspaceMembershipArchiveReport.approvalRoute.routeStatus.replace(/_/g, " ")}</div>
                   </div>
                 </div>
               </div>
@@ -951,12 +1313,18 @@ export function GovernanceTab() {
                     <Badge variant={latestWorkspaceMembershipArchive.archiveStatus === "server archive" ? "green" : "amber"}>{latestWorkspaceMembershipArchive.archiveStatus}</Badge>
                   </div>
                   <div className="mt-1 text-[9px] text-[#8b96ab]">{latestWorkspaceMembershipArchive.summary}</div>
-                  <div className="mt-1 flex flex-wrap gap-1.5">
-                    <Badge variant="gray">{latestWorkspaceMembershipArchive.activeMemberLabel}</Badge>
-                    <Badge variant="gray">{latestWorkspaceMembershipArchive.workspaceAccessState.members.length} members</Badge>
-                    <Badge variant="gray">{latestWorkspaceMembershipArchive.workspaceAccessState.policy.mode === "shared" ? "shared" : "single-user"}</Badge>
-                    <Badge variant="gray">{new Date(latestWorkspaceMembershipArchive.submittedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Badge>
-                  </div>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  <Badge variant="gray">{latestWorkspaceMembershipArchive.activeMemberLabel}</Badge>
+                  <Badge variant="gray">{latestWorkspaceMembershipArchive.workspaceAccessState.members.length} members</Badge>
+                  <Badge variant="gray">{latestWorkspaceMembershipArchive.workspaceAccessState.policy.mode === "shared" ? "shared" : "single-user"}</Badge>
+                  <Badge variant={latestWorkspaceMembershipArchive.approvalRoute.routeStatus === "reconcile_before_route" ? "amber" : latestWorkspaceMembershipArchive.approvalRoute.routeStatus === "review_required" ? "blue" : "green"}>
+                    {latestWorkspaceMembershipArchive.approvalRoute.routeStatus.replace(/_/g, " ")}
+                  </Badge>
+                  <Badge variant="gray">{new Date(latestWorkspaceMembershipArchive.submittedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Badge>
+                </div>
+                <div className="mt-2 rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1 text-[9px] text-[#8b96ab]">
+                  Approval route: {latestWorkspaceMembershipArchive.approvalRoute.routeLabel} · {latestWorkspaceMembershipArchive.approvalRoute.routeReason}
+                </div>
 	                  {membershipDrift ? (
 	                    <div className="mt-2 grid grid-cols-3 gap-1.5">
                       <div className="rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1">
@@ -997,6 +1365,152 @@ export function GovernanceTab() {
               )) : (
                 <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
                   No membership archive yet. Dispatch a workspace roster to create the backend identity record.
+                </div>
+              )}
+            </div>
+          </div>
+        </Section>
+
+        <Section title="Identity Conflict Resolution">
+          <div className="space-y-1.5 text-[9px] text-[#8b96ab]">
+            <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
+              Resolve the live workspace identity drift against the latest membership snapshot so remote shared-identity conflict handling has a canonical control-plane record.
+            </div>
+            <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
+              Paste a remote webhook URL to exercise actual identity-conflict fan-out. Leave it blank to keep the run local and queued.
+            </div>
+            <input
+              type="url"
+              value={identityConflictEndpointDraft}
+              onChange={(event) => setIdentityConflictEndpointDraft(event.target.value)}
+              placeholder="https://example.com/identity-conflict-webhook"
+              className="w-full rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1 text-[9px] text-[#d2d9e8] outline-none placeholder:text-[#556076] focus:border-sky-400/40"
+            />
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={archiveWorkspaceIdentityConflict}
+                className="rounded-md border border-sky-500/20 bg-sky-500/10 px-2 py-1 text-[9px] text-sky-100 hover:border-sky-400/30 hover:bg-sky-500/20"
+              >
+                {identityConflictArchiveLoading ? "Resolving..." : "Resolve Identity Conflict"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIdentityConflictArchiveReport(null)}
+                className="rounded-md border border-[#1e2538] bg-[#111521] px-2 py-1 text-[9px] text-[#c7d0e4] hover:border-[#2a3245] hover:text-white"
+              >
+                Clear Conflict Result
+              </button>
+              <button
+                type="button"
+                onClick={() => void refreshIdentityConflictArchive()}
+                className="rounded-md border border-[#1e2538] bg-[#111521] px-2 py-1 text-[9px] text-[#c7d0e4] hover:border-[#2a3245] hover:text-white"
+              >
+                {remoteIdentityConflictHistoryLoading ? "Refreshing..." : "Refresh Conflict Archive"}
+              </button>
+            </div>
+            {identityConflictArchiveError ? (
+              <div className="rounded-md border border-rose-500/20 bg-rose-500/10 px-2 py-1 text-rose-200">
+                {identityConflictArchiveError}
+              </div>
+            ) : null}
+            {identityConflictArchiveReport ? (
+              <div className="space-y-1.5">
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
+                  {identityConflictArchiveReport.summary}
+                </div>
+                <div className="grid grid-cols-4 gap-1.5">
+                  <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Archive status</div>
+                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">{identityConflictArchiveReport.archiveStatus}</div>
+                  </div>
+                  <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Conflict status</div>
+                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">{identityConflictArchiveReport.conflictStatus.replace(/_/g, " ")}</div>
+                  </div>
+                  <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Route</div>
+                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">{identityConflictArchiveReport.approvalRoute.routeStatus.replace(/_/g, " ")}</div>
+                  </div>
+                  <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Privacy</div>
+                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">{identityConflictArchiveReport.hasPrivacyExposure ? "Sensitive" : "Standard"}</div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <div className="rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Resolution</div>
+                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">{identityConflictArchiveReport.resolutionLabel}</div>
+                  </div>
+                  <div className="rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Recommended action</div>
+                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">{identityConflictArchiveReport.recommendedAction}</div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 gap-1.5">
+                  <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Active member</div>
+                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">{identityConflictArchiveReport.approvalRoute.activeMemberLabel}</div>
+                  </div>
+                  <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Target reviewer</div>
+                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">{identityConflictArchiveReport.approvalRoute.targetReviewerLabel}</div>
+                  </div>
+                  <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Delivered</div>
+                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">{identityConflictArchiveReport.deliveredCount}</div>
+                  </div>
+                  <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Queued / failed</div>
+                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">{identityConflictArchiveReport.queuedCount} / {identityConflictArchiveReport.failedCount}</div>
+                  </div>
+                </div>
+                {identityConflictArchiveReport.membershipDrift ? (
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <div className="rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1">
+                      <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Active member drift</div>
+                      <div className="mt-0.5 font-semibold text-[#d2d9e8]">{identityConflictArchiveReport.membershipDrift.activeMemberChanged ? "Changed" : "Matched"}</div>
+                    </div>
+                    <div className="rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1">
+                      <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Team size drift</div>
+                      <div className="mt-0.5 font-semibold text-[#d2d9e8]">{identityConflictArchiveReport.membershipDrift.teamSizeChanged ? "Changed" : "Matched"}</div>
+                    </div>
+                    <div className="rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1">
+                      <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Policy drift</div>
+                      <div className="mt-0.5 font-semibold text-[#d2d9e8]">{identityConflictArchiveReport.membershipDrift.policyChanged ? "Changed" : "Matched"}</div>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+            {remoteIdentityConflictHistoryError ? (
+              <div className="rounded-md border border-rose-500/20 bg-rose-500/10 px-2 py-1 text-rose-200">
+                {remoteIdentityConflictHistoryError}
+              </div>
+            ) : null}
+            <div className="space-y-1.5">
+              {remoteIdentityConflictHistory.length > 0 ? remoteIdentityConflictHistory.slice(0, 3).map((record) => (
+                <div key={`${record.receivedAt}-${record.sceneName}-${record.storedAt}`} className="rounded-md border border-[#1a2030] bg-[#0f141f] px-3 py-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-[10px] font-semibold text-[#edf2ff]">{record.sceneName ?? "Untitled scene"}</div>
+                    <Badge variant={record.archiveStatus === "server archive" ? "green" : "amber"}>{record.archiveStatus}</Badge>
+                  </div>
+                  <div className="mt-1 text-[9px] text-[#8b96ab]">{record.summary}</div>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    <Badge variant={record.conflictStatus === "reconcile_needed" ? "amber" : record.conflictStatus === "archive_pending" ? "gray" : "green"}>
+                      {record.conflictStatus.replace(/_/g, " ")}
+                    </Badge>
+                    <Badge variant={record.resolutionStatus === "reconcile_before_route" ? "amber" : record.resolutionStatus === "archive_pending" ? "gray" : "green"}>
+                      {record.resolutionStatus.replace(/_/g, " ")}
+                    </Badge>
+                    <Badge variant="gray">{record.approvalRoute.routeStatus.replace(/_/g, " ")}</Badge>
+                    <Badge variant="gray">{record.membershipDrift ? (record.membershipDrift.activeMemberChanged ? "drift" : "aligned") : "no archive"}</Badge>
+                    <Badge variant="gray">{new Date(record.submittedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Badge>
+                  </div>
+                </div>
+              )) : (
+                <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                  No identity conflict resolution yet. Resolve one to create the remote shared-identity record.
                 </div>
               )}
             </div>

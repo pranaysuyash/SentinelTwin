@@ -114,10 +114,8 @@ export function TopBar() {
   const running = useStudioStore((s) => s.simulationRunning);
   const demoMode = useStudioStore((s) => s.demoMode);
   const setDemoMode = useStudioStore((s) => s.setDemoMode);
-  const sceneTargetType = scene.criticalZones[0]?.targetType ?? null;
-  const currentTargetType = scene.criticalZones.length > 0 && scene.criticalZones.every((zone) => zone.targetType === sceneTargetType)
-    ? sceneTargetType
-    : null;
+  const targetTypes = new Set(scene.criticalZones.map((zone) => zone.targetType));
+  const currentTargetType = targetTypes.size === 1 ? [...targetTypes][0] ?? null : null;
   const currentTargetLabel = currentTargetType ? TARGET_TYPE_LABELS[currentTargetType] : TARGET_TYPE_LABELS[criticalZoneTargetType];
 
   const [sceneOpen, setSceneOpen] = useState(false);
@@ -349,7 +347,7 @@ export function TopBar() {
           >
             <Shield className="h-3 w-3 text-cyan-300" />
             <span className="truncate">
-              {zoneCount > 0 && scene.criticalZones.every((zone) => zone.targetType === sceneTargetType)
+              {zoneCount > 0 && scene.criticalZones.every((zone) => zone.targetType === criticalZoneTargetType)
                 ? `Target: ${currentTargetLabel}`
                 : `Default Target: ${currentTargetLabel}`}
             </span>

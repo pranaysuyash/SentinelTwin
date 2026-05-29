@@ -11,6 +11,7 @@ describe("ReportLiteTab", () => {
     expect(source).toContain("handleExportMarkdown");
     expect(source).toContain("exportCompareAsMarkdown");
     expect(source).toContain("Export HTML");
+    expect(source).toContain("Export Evidence Bundle");
     expect(source).toContain("Export PDF");
     expect(source).toContain("handleExportPdf");
     expect(source).toContain("exportTextAsPdf");
@@ -22,5 +23,6 @@ describe("ReportLiteTab", () => {
     expect(source).toContain("Latest Run");
     expect(source).toContain("Occlusion Blame");
     expect(source).toContain("Quality Without");
+    expect(source).toContain("Operational Evidence");
   });
 });

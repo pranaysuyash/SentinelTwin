@@ -13,6 +13,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - The editor now uses a shared store-backed feedback channel for placement and transform validation, so wall/zone/path/selection warnings are visible in the same place instead of being split between local and store state ✅
 - Keyboard delete/backspace now removes selected scene nodes or trims the active wall/zone/path draft, and Cmd/Ctrl+D duplicates the active selection through the canonical store actions ✅
 - Zone polygons now support edge insertion and vertex deletion, and path polylines now support midpoint insertion and point deletion, so the workbench can actually shape authored geometry instead of only moving whole objects ✅
+- Door and window inspector panels now expose a one-click `Snap to Nearest Wall` action that projects openings back onto the closest wall segment using the same editor geometry helpers as placement ✅
 
 ## Homepage / layout surface update (2026-05-28)
 
@@ -80,6 +81,22 @@ For the full-vision gap inventory and next-slice sequencing, see
 - Placement Oracle now exports the best candidate position and score in the report handoff, matching the live novel panel's placement summary ✅
 - The live camera feed and inspector feed now surface a nearest-sensor `Sensor Fusion` overlay with distance, state, coverage, and active-count context, so the fusion boundary is visible in the actual verification view as well as the inspector analytics tab ✅
 - Sensor add/update/remove actions now emit sensor-specific operational evidence events, so the sensor layer has an auditable history in the same provenance ledger as other scene edits ✅
+- Sensor triggers, heartbeats, faults, and restores now record a live event feed in the sensors tab and camera overlays, so the operator can stage live evidence without leaving the twin ✅
+- Scene Intelligence now surfaces sensor live evidence alongside the provenance ledger, making the sensor trail visible in the temporal/operator story instead of only in the sensor panel ✅
+- The debug panel now reuses the same sensor metadata parser for pasted live metadata, so support/debug workflows can feed the canonical sensor evidence trail without a separate ingest path ✅
+- A dedicated `/api/sensor-ingest` route now accepts pasted sensor metadata as a history-backed backend-shaped intake seam and resolves it into canonical sensor live events ✅
+
+## QA infra state (2026-05-29)
+
+- Webwright QA bootstrap exists and is wired through `tools/webwright/run-sentineltwin-qa.sh`.
+- Shared venv contract is:
+  - Python: `python3.13`
+  - Package manager: `uv`
+  - Venv: `/tmp/webwright-sentinel`
+  - UV cache: `/private/tmp/uv-cache`
+  - Playwright cache: `/private/tmp/ms-playwright`
+- Current environment cannot reach `pypi.org` (DNS/network blocked), so dependency resolution for editable `webwright` install fails until network is restored.
+- `--dry-run` and route check artefacts still run and write to `qa-output/manifest.json`, `qa-output/routes.txt`, `qa-output/route_urls.txt`.
 
 ---
 
@@ -146,14 +163,23 @@ For the full-vision gap inventory and next-slice sequencing, see
 - HTML export: vulnerability windows, worst coverage, safest periods ✅
 - Markdown + JSON export: temporal profile section ✅
 - Report exports now include provenance sections with scene source, source counts, revision depth, snapshot counts, and source/confidence history for the canonical scene graph ✅
+- Report exports now also include an operational evidence appendix with change-log counts, evidence counts, sensor-related evidence, and recent evidence entries, so stakeholder handoff artifacts carry the same ledger story as the in-app provenance surface ✅
+- The Report Lite preview now mirrors that operational evidence appendix, so the live handoff view and the exported artifacts stay aligned ✅
+- Compare exports now also carry the same evidence counts and before/after evidence trail, so the side-by-side artifact remains ledger-aware instead of reporting only simulation deltas ✅
+- The compact report summary strip now includes an `Evidence Trail` line so the first-glance report card shows the ledger story before the user opens the full handoff view ✅
+- The report and compare surfaces now also export a dedicated JSON evidence bundle, carrying the scene, report data, compare context, and evidence trail as a reusable handoff artifact ✅
 - Report exports and the report workspace header now surface a Sensors count from the canonical scene model, and the editor now exposes a dedicated sensor tool, sensor inspector, and sensor inventory tab while the broader live fusion layer remains camera-first ✅
 - The camera inspector analytics tab now surfaces a live `Sensor Fusion` preview with the nearest sensor, distance, state, and coverage mode so the editor can show the current fusion boundary even before full ONVIF/live ingestion exists ✅
+- The camera inspector now also exposes a live camera binding section plus a camera metadata ingest bridge that can paste JSON/NDJSON or pull an external feed URL, archive the submission, and apply matched camera status/clarity/night-mode and live session fields through the canonical store while the live connection probe/archive boundary now understands JSON, NDJSON, and ONVIF-style XML responses, tries SOAP-first for ONVIF binds, and keeps the remaining device-protocol seam honest ✅
+- The debug/support bundle now carries both the sensor ingest archive and the camera live connection archive, including the live session snapshot fields, so the operator handoff package keeps the live metadata story together with the rest of the evidence trail ✅
+- Scene Intelligence now has an explicit temporal replay scrubber with point-in-time reconstruction and restore actions, so the operational evidence trail can be scrubbed and previewed instead of only listed as recent events ✅
+- Camera metadata ingest now also writes a durable live metadata event stream that shows up in the camera feed overlays and Scene Intelligence provenance surface alongside the existing sensor evidence trail ✅
 
 ### Schema (src/schema/security-scene.ts) — complete
 - All Zod schemas + TypeScript types ✅
 - All node types: Camera, ObstructionNode, SecurityLightNode, WallNode, DoorNode, WindowNode,
   CriticalZoneNode, PrivacyZoneNode, EntryPointNode, ScenarioPath ✅
-- `sensors: SensorNode[]` exists as a zero-default schema boundary for future multi-sensor work, and dedicated sensor tools / inspector / inventory surfaces are now wired into the editor while live sensor-camera fusion remains open ✅
+- `sensors: SensorNode[]` exists as a zero-default schema boundary for future multi-sensor work, and dedicated sensor tools / inspector / inventory surfaces are now wired into the editor while live sensor events, pasted metadata intake, the external feed bridge, the camera live binding stream, the camera live-connection probe/archive route, the camera metadata ingest bridge, the temporal replay surface, the camera metadata event stream, and the sensor ingest history archive now feed the canonical evidence trail even though true device-protocol session management still remains open ✅
 - Full SimulationResult with coverageCells, criticalZoneResults, adversarialPath ✅
 - `CoverageCellResult.fragility?: number` (0=robust, 1=fragile) ✅
 - `SimulationResult.fragilitySummary?: { meanFragility, fragileCellCount, robustCellCount, totalCells }` ✅
@@ -226,7 +252,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - The provenance tab now also exposes a branch-comparison panel with common-ancestor and delta summaries, giving the operator a merge-preflight view before any future branch policy work lands ✅
 - The Governance tab now also exposes a visible approval trail backed by the operational evidence ledger, so review requests, approvals, rejections, annotations, role changes, and policy changes can be audited from the same control plane that issues them ✅
 - The Governance tab now also exposes a remote governance handoff queue backed by `/api/governance-archive`, so the approval trail can be dispatched into a canonical archive before any real remote approval service exists ✅
-- The Governance tab now also exposes a workspace membership handoff queue backed by `/api/workspace-membership-archive`, so the active member, team roster, routing policy, and drift against the latest archived snapshot can be archived as a canonical backend-identity record before shared identity services exist ✅
+- The Governance tab now also exposes a workspace membership handoff queue backed by `/api/workspace-membership-archive`, so the active member, team roster, routing policy, approval route, and drift against the latest archived snapshot can be archived as a canonical backend-identity record before shared identity services exist ✅
 - The Governance tab now also exposes a `Sync Membership Snapshot` action that reconciles the live workspace against the latest archived membership snapshot and logs the drift back into the operational evidence ledger ✅
 - The provenance tab now also exposes merge-readiness guidance for branch comparisons, including fast-forward versus diverged branch guidance before any future merge policy lands ✅
 - The provenance tab now also exposes explicit restore-to-branch actions from branch comparison, so operators can reconstitute a selected head as draft, recovered, or published state instead of only previewing lineage ✅
@@ -235,11 +261,17 @@ For the full-vision gap inventory and next-slice sequencing, see
 - The `Governance` tab now also exposes a shared-workspace access surface with active member selection, single-user vs shared mode, and explicit routing labels so the current actor and review path are visible in-product ✅
 - The `Governance` tab now also exposes an action gate with allow/blocked status plus route reasons for edit, annotate, request review, approve, reject, publish, and restore so RBAC/ABAC is visible at the action level ✅
 - The `Governance` tab now also exposes a workspace membership archive queue so shared-workspace identity, routing policy, and snapshot drift can be archived and fanned out through a backend-shaped handoff instead of only living in local store state, and it can now sync the live state back to the latest archived snapshot when the operator chooses to reconcile ✅
+- The `Governance` tab now also exposes a `Resolve Approval Route` action that archives the resolved approval route through `/api/workspace-approval-route`, records a `workspace_approval_routed` evidence event, and surfaces the route status and target reviewer in the control plane ✅
+- The `Governance` tab now also exposes a workspace identity conflict resolution/archive backed by `/api/workspace-identity-conflict`, so drift against the latest archived membership snapshot can be captured and turned into a canonical remote-shared-identity policy recommendation before a real backend identity service exists ✅
+- The sensor panel now also exposes an external feed bridge that can pull JSON/NDJSON from a live URL through `/api/sensor-ingest`, so live metadata can enter the canonical evidence trail without paste-only intake ✅
 - The provenance surface now also supports branch-target checkpoint restore actions so a reconstructable event can be reopened as draft, recovered, or published instead of only a generic restore ✅
 - The debug diagnostics panel now exports a full operational evidence archive, loads uploaded archives into a merge-preflight preview, can restore the latest archived checkpoint with an explicit draft/recovered/published branch selector, and can apply a conflict-free divergent branch merge when the live ledger has forked, so recovery/backups travel with the scene, ledger, journal, and governance state instead of only a support bundle ✅
 - Trust-sensitive launcher and provenance surfaces now have a reusable `truth-audit` harness that checks the visible claim copy against the manifest so placeholder drift gets caught in tests instead of slipping back into the UI ✅
 - The provenance surface now includes ledger search/filtering so operators can narrow events and checkpoints by scene, node, note, event type, lifecycle stage, or branch label instead of scanning the full history manually ✅
-- The debug panel now exports a support-ready diagnostic bundle with scene, simulation, graph, evidence, governance, and runtime truth fields so failures can be handed off with context instead of just a screenshot ✅
+- The debug panel now exports a support-ready diagnostic bundle with scene, simulation, graph, evidence, governance, approval-route, and runtime truth fields so failures can be handed off with context instead of just a screenshot ✅
+- The support bundle now also includes the canonical report evidence bundle, so the support handoff carries the same scene/report/evidence package as the operator-facing report export ✅
+- The support bundle now also carries the recent sensor ingest archive, so live metadata handoff travels with the diagnostic/report evidence package instead of living only behind the sensor ingest route ✅
+- The debug panel now also exposes a dedicated `Download Evidence Bundle` action so the canonical report evidence package can be exported directly from the support/control plane ✅
 - The debug panel now also exposes a runtime health summary plus a runtime journey trace with import/scan/AI/render/save/publish path health cards, and it now surfaces a runtime incident log plus a performance trace list and a runnable truth-audit report so the operator can see both path health, failure/timing evidence, and trust-surface drift from inside the studio shell ✅
 - The debug panel now also exposes a support bundle summary card with incident snapshot, latest incident/performance trace, AI telemetry trend, and a dedicated `Download Support Bundle` action so the support handoff artifact is visible in-product instead of buried behind a single export button ✅
 - The debug panel now also exposes a paste-based `External Log Capture` lane, persists external log entries locally, and includes them in the support bundle so browser/app/device logs can be handed off with the incident snapshot instead of living only in ad hoc copy-paste notes ✅

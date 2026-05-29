@@ -371,7 +371,7 @@ function ReportSummaryPanel() {
   const result = useStudioStore((s) => s.simulationResult);
   const setBottomTab = useStudioStore((s) => s.setBottomTab);
   const outcome = buildSecurityOutcomeModel(scene, result, null);
-  const reportSummary = buildReportSummaryLines(outcome, result);
+  const reportSummary = buildReportSummaryLines(outcome, result, scene);
 
   return (
     <BottomSection

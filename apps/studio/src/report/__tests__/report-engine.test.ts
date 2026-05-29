@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { createSmallRetailShopScene } from "@/demo-scenes/small-retail-shop";
 import { simulateStudio } from "@/simulation/simulate-studio";
+import { cloneSecurityScene, type SecurityScene } from "@/schema/security-scene";
 import {
   buildReportData,
   buildCompareReportData,
@@ -13,6 +14,16 @@ import {
   buildCompareReport,
   type ReportData,
 } from "@/report/index";
+
+function makeEvidenceReport(baseScene: SecurityScene) {
+  const evidenceScene = cloneSecurityScene(baseScene);
+  evidenceScene.changeLog = [
+    ...evidenceScene.changeLog,
+    "Evidence: May 29, 10:00 AM | Sensor Triggered | Front door contact triggered near Camera 1 | high",
+    "Evidence: May 29, 10:05 AM | Simulation Run | Coverage recomputed after scene edit | medium",
+  ];
+  return buildReportData(evidenceScene, simulateStudio(evidenceScene));
+}
 
 describe("report engine", () => {
   const scene = createSmallRetailShopScene();
@@ -41,6 +52,7 @@ describe("report engine", () => {
     expect(report.standardsRef).toContain("IEC 62676");
     expect(report.provenance.sceneSourceLabel).toBe("Demo Scene");
     expect(report.provenance.nodeCount).toBeGreaterThan(0);
+    expect(report.evidenceTrail.changeLogEntryCount).toBeGreaterThan(0);
     expect(report.novelAlgorithms?.coverageEntropy).toBeDefined();
     expect(report.novelAlgorithms?.coverageEntropy?.cellCount).toBeGreaterThan(0);
     expect(report.novelAlgorithms?.coverageUncertainty).toBeDefined();
@@ -137,6 +149,15 @@ describe("report engine", () => {
     expect(report.title).toBe("Custom Audit");
   });
 
+  test("buildReportData extracts an operational evidence trail", () => {
+    const report = makeEvidenceReport(scene);
+
+    expect(report.evidenceTrail.evidenceEntryCount).toBeGreaterThanOrEqual(2);
+    expect(report.evidenceTrail.sensorEvidenceCount).toBeGreaterThanOrEqual(1);
+    expect(report.evidenceTrail.recentEntries.length).toBeGreaterThan(0);
+    expect(report.evidenceTrail.recentEntries[0].title).toBe("Simulation Run");
+  });
+
   const testWithTimeout = test as any;
 
   testWithTimeout("buildCompareReportData produces correct deltas", { timeout: 15000 }, () => {
@@ -202,6 +223,13 @@ describe("exportAsHtml", () => {
     const html = exportAsHtml(makeReport());
     expect(html).toContain("Provenance");
     expect(html).toContain("Source history");
+  });
+
+  test("includes operational evidence section", () => {
+    const html = exportAsHtml(makeEvidenceReport(scene));
+    expect(html).toContain("Operational Evidence");
+    expect(html).toContain("Sensor-related evidence");
+    expect(html).toContain("Recent evidence entries");
   });
 
   test("includes uncertainty section", () => {
@@ -445,6 +473,13 @@ describe("exportAsMarkdown", () => {
     const md = exportAsMarkdown(baseReport);
     expect(md).toContain("## Provenance");
     expect(md).toContain("Scene Source");
+  });
+
+  test("includes operational evidence section", () => {
+    const md = exportAsMarkdown(makeEvidenceReport(scene));
+    expect(md).toContain("## Operational Evidence");
+    expect(md).toContain("Sensor-related Evidence");
+    expect(md).toContain("Recent Evidence Entries");
   });
 
   test("includes sensors summary row", () => {
@@ -718,6 +753,13 @@ describe("exportAsText", () => {
     expect(text).toContain("Source Counts");
   });
 
+  test("includes operational evidence section", () => {
+    const text = exportAsText(makeEvidenceReport(scene));
+    expect(text).toContain("OPERATIONAL EVIDENCE");
+    expect(text).toContain("Sensor-related Evidence");
+    expect(text).toContain("Recent Evidence Entries");
+  });
+
   test("omits issues section when no issues are present", () => {
     const text = exportAsText(baseReport);
     expect(text).not.toContain("ISSUES");
@@ -768,6 +810,8 @@ describe("comparison exports", () => {
     expect(html).toContain("Delta Summary");
     expect(html).toContain("Before scenario visual evidence");
     expect(html).toContain("data:image/svg+xml");
+    expect(html).toContain("Evidence Entries");
+    expect(html).toContain("Operational Evidence");
   });
 
   test("exportCompareAsMarkdown produces valid markdown", () => {
@@ -784,6 +828,8 @@ describe("comparison exports", () => {
     expect(md).toContain("## Deltas");
     expect(md).toContain("## Before");
     expect(md).toContain("## After");
+    expect(md).toContain("Evidence Entries");
+    expect(md).toContain("## Operational Evidence");
   });
 });
 

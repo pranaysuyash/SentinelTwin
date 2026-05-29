@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle, ArrowRight, BarChart3, Clock3, Fingerprint, MapPinned, Play, Radar, ShieldAlert, Sigma, Sparkles, TriangleAlert } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Badge } from "@/components/shared/Badge";
 import { StatCard } from "@/components/shared/StatCard";
@@ -99,6 +99,7 @@ export function NovelAlgorithmsTab() {
   const setViewMode = useStudioStore((s) => s.setViewMode);
   const setBottomTab = useStudioStore((s) => s.setBottomTab);
   const setFocusScenePointRequest = useStudioStore((s) => s.setFocusScenePointRequest);
+  const setFocusScenePointHighlight = useStudioStore((s) => s.setFocusScenePointHighlight);
   const selectNode = useStudioStore((s) => s.selectNode);
   const setActivePathId = useStudioStore((s) => s.setActivePathId);
   const setPathReplayPlaying = useStudioStore((s) => s.setPathReplayPlaying);
@@ -106,6 +107,13 @@ export function NovelAlgorithmsTab() {
   const [threshold, setThreshold] = useState<DoriQuality>("observation");
   const [exposureBudgetS, setExposureBudgetS] = useState(2);
   const [uncertaintySamples, setUncertaintySamples] = useState(12);
+  const focusClearTimerRef = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (focusClearTimerRef.current != null) {
+      window.clearTimeout(focusClearTimerRef.current);
+    }
+  }, []);
 
   const kRobustness = result?.kRobustness;
   const placementOracle = result?.placementOracle;
@@ -157,11 +165,19 @@ export function NovelAlgorithmsTab() {
 
   const openMapFocus = (point: [number, number], selectionId?: string | null) => {
     setViewMode("map");
-    setBottomTab("novel");
+    queueMicrotask(() => setBottomTab("novel"));
     if (selectionId) {
       selectNode(selectionId);
     }
+    setFocusScenePointHighlight({ point, source: "minimap" });
     setFocusScenePointRequest({ point, source: "minimap" });
+    if (focusClearTimerRef.current != null) {
+      window.clearTimeout(focusClearTimerRef.current);
+    }
+    focusClearTimerRef.current = window.setTimeout(() => {
+      setFocusScenePointHighlight(null);
+      focusClearTimerRef.current = null;
+    }, 1400);
   };
 
   const openReplay = () => {
@@ -170,7 +186,7 @@ export function NovelAlgorithmsTab() {
     setPathReplayPlaying(false);
     setPathReplayProgress(0);
     setViewMode("replay");
-    setBottomTab("timeline");
+    queueMicrotask(() => setBottomTab("timeline"));
   };
 
   if (!result) {

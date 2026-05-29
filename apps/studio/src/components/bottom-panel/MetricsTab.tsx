@@ -25,6 +25,8 @@ export function MetricsTab() {
   const result = useStudioStore((s) => s.simulationResult);
   const scene  = useStudioStore((s) => s.scene);
   const snapshots = useStudioStore((s) => s.snapshots);
+  const selectedNodeId = useStudioStore((s) => s.selectedNodeId);
+  const selectedCriticalZone = scene.criticalZones.find((zone) => zone.id === selectedNodeId) ?? null;
 
   if (!result) {
     return (
@@ -211,11 +213,15 @@ export function MetricsTab() {
           label={qualityScore.toFixed(1)}
           sublabel={qualityLabel}
         />
-        {scene.criticalZones[0] && (
+        {selectedCriticalZone ? (
           <div className="mt-1 text-[9px] text-[#68738a]">
             Target: <span className="text-[#c0c8da] font-semibold">
-              {scene.criticalZones[0].requiredQuality.toUpperCase()}
+              {selectedCriticalZone.requiredQuality.toUpperCase()}
             </span>
+          </div>
+        ) : (
+          <div className="mt-1 text-[9px] text-[#68738a]">
+            Select a critical zone to show the target quality requirement.
           </div>
         )}
       </MetricCard>

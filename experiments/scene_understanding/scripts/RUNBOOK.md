@@ -14,12 +14,15 @@ python scripts/evaluate_run.py --candidate stack_b_gpt4o --split dev
 
 # Regenerate comparison report:
 python scripts/summarize_runs.py
+
+# Run the regression test for the visual critical-zone repair helper:
+python -m pytest -q experiments/scene_understanding/tests/test_visual_critical_zone.py
 ```
 
 ## Candidates
 
 | ID | Model | Pipeline | Description |
-|---|---|---|---|
+|---|---|---|---|---|
 | `stack_a_qwen_ocr` | Qwen2.5-VL-7B + GOT-OCR2_0 | local (transformers) | Qwen VL parser with OCR assist |
 | `stack_b_gpt4o` | GPT-4o | cloud (OpenAI) | GPT-4o direct floorplan parser |
 | `stack_c_florence` | Florence-2-base | local (transformers) | Florence-2 prompt-task parser |
@@ -27,23 +30,28 @@ python scripts/summarize_runs.py
 | `stack_e_gpt41_structured` | GPT-4.1 | cloud (OpenAI) | GPT-4.1 structured-output fallback |
 | `stack_f_gemini25_flash` | Gemini 2.5 Flash | cloud (Gemini) | Gemini 2.5 Flash fast cloud fallback |
 | `stack_g_gemini25_pro` | Gemini 2.5 Pro | cloud (Gemini) | Gemini 2.5 Pro high-ceiling cloud fallback |
+| `stack_h_minicpmv46` | MiniCPM-V 4.6 (1.3B) | local (transformers) | Edge VLM, Apache 2.0, phone-deployable |
+| `stack_i_qwen35_4b` | Qwen3.5-4B | local (transformers) | Natively multimodal, Apache 2.0 |
+| `stack_j_minicpmo45` | MiniCPM-o 4.5 (9B) | local (transformers) | Strongest open-source VLM near 9B |
+| `stack_k_gemma4_e4b` | Gemma 4 E4B (4B active) | local (transformers) | MoE VLM, 128K context, requires quantization |
 
 ## Prerequisites
 
 - Python 3.13
 - API keys in environment: `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GOOGLE_API_KEY`)
-- For local models: PyTorch 2.12+, transformers 4.49.0
+- For local models: PyTorch 2.12+, transformers >=5.7.0 (upgraded 2026-05-29 for MiniCPM-V 4.6 support)
 
 ## Results (dev split, 5 images, smart matcher)
 
 | Candidate | Wall F1 | Door F1 | Window F1 | Obs F1 | CZ Recall | CZ Prec | P50 | P95 |
-|---|---|---|---|---|---|---|---|---|
+|---|---|---|---|---|---|---|---|---|---|
 | GPT-4o | **0.964** | 0.400 | **0.700** | 0.417 | **0.200** | **0.200** | 5s | 8s |
 | GPT-4.1 | 0.948 | 0.400 | 0.400 | **0.893** | 0.000 | 0.000 | 5s | 17s |
 | Gemini 2.5 Flash | 0.948 | 0.200 | 0.600 | **0.893** | 0.000 | 0.000 | 6s | 8s |
 | Gemini 2.5 Pro | 0.933 | 0.400 | 0.500 | 0.680 | 0.000 | 0.000 | 6s | 9s |
 | GPT-5.4-nano | 0.931 | 0.400 | 0.100 | 0.178 | 0.200 | 0.200 | 5s | 7s |
 | Qwen2.5-VL-7B | 0.661 | 0.000 | 0.000 | 0.100 | 0.000 | 0.000 | 86s | 258s |
+| MiniCPM-V 4.6 (1.3B) | 0.094 | 0.000 | 0.000 | 0.147 | 0.000 | 0.000 | 96s | 132s |
 | Florence-2-base | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 5s | 5s |
 
 ## Matching Algorithm
@@ -95,6 +103,20 @@ outputs/
 Apple M3 Max (40-core GPU via MPS), 103GB unified memory.
 Model inference for local models uses `torch.bfloat16` on MPS where available.
 
+## MPS Hardware Constraint
+
+Models >=4B params cannot run practically on Apple MPS (Metal Performance Shaders):
+
+| Model | Params | Result |
+|---|---|---|
+| Qwen2.5-VL-7B | 7B | P50=86s/image — barely feasible |
+| MiniCPM-V 4.6 | 1.3B | P50=96s/image — surprisingly slow despite small size |
+| **Qwen3.5-4B** | 4B | **Failed to complete 1 image in 15 minutes** |
+| MiniCPM-o 4.5 | 9B | Not attempted — estimated >20 min/image on MPS |
+| Gemma 4 E4B | 30B total | Not attempted — requires 4-bit quantization |
+
+All MPS-infeasible models require CUDA GPU (>=8GB VRAM) or GGUF quantized inference via llama.cpp/ollama.
+
 ## Remaining Gaps
 
 1. **CZ recall < 0.2 for all candidates** — decoupled CZ extraction pass needed
@@ -102,3 +124,4 @@ Model inference for local models uses `torch.bfloat16` on MPS where available.
 3. **No temporal/simulation evaluation** — only static scene understanding measured
 4. **No GOT-OCR2_0 integration** — OCR assist component for Qwen not wired in
 5. **Door symbol detection weak** — thin arc symbols are hard for all models
+6. **Qwen3.5-4B, MiniCPM-o 4.5, Gemma 4 E4B untested** — require CUDA or GGUF for practical inference

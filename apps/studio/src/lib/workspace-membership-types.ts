@@ -1,4 +1,5 @@
 import type { WorkspaceAccessState } from "@/lib/workspace-access";
+import type { WorkspaceApprovalRouteSummary } from "@/lib/workspace-membership-routing";
 import type { WorkspaceGovernanceState } from "@/lib/workspace-governance";
 
 export type WorkspaceMembershipDispatchAttempt = {
@@ -26,6 +27,7 @@ export type WorkspaceMembershipArchiveResponse = {
   teamSize: number;
   workspaceAccessState: WorkspaceAccessState;
   workspaceGovernanceState: WorkspaceGovernanceState;
+  approvalRoute: WorkspaceApprovalRouteSummary;
   deliveredCount: number;
   queuedCount: number;
   failedCount: number;

@@ -187,6 +187,18 @@ AI explains results. AI does not compute them.
 ### Browser QA preference
 For iterative browser QA on local web targets, check whether Webwright is installed and prefer it when the task benefits from a code-driven, rerunnable Playwright workspace with saved artifacts. Use Browser/Playwright/Computer Use as fallbacks when Webwright is unavailable or a direct browser interaction is a better fit.
 
+Shared QA contract for this repo:
+- Python runtime: `python3.13`
+- Python package manager: `uv` (avoid ad-hoc local `pip` installs)
+- Shared venv: `/tmp/webwright-sentinel` (used by `tools/webwright/run-sentineltwin-qa.sh`)
+- Shared UV cache: `/private/tmp/uv-cache`
+- Shared Playwright cache: `/private/tmp/ms-playwright`
+- Reuse this contract for all Python work in this repo:
+  `source tools/webwright/venv.env`
+
+Any agent or helper run that needs Python packages should reuse this shared venv path unless a strong
+compatibility reason requires a separate environment.
+
 ---
 
 ## Development Standards

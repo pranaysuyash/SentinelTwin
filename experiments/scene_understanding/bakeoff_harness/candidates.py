@@ -27,6 +27,32 @@ CANDIDATE_REGISTRY: dict[str, CandidateConfig] = {
         known_risks=["cost per image", "latency on large images"],
         cloud_fallbacks=["gpt-4.1", "gemini-2.5-flash"],
     ),
+    "stack_b_florence_gotocr": CandidateConfig(
+        id="stack_b_florence_gotocr",
+        description="Florence-2 prompt-task parser with OCR assist",
+        pipeline_kind="hybrid",
+        provider="local",
+        components={
+            "ocr": {"model_id": "stepfun-ai/GOT-OCR2_0", "role": "text_and_symbol_reading"},
+            "vlm": {"model_id": "microsoft/Florence-2-base", "role": "task_prompted_detection_and_region_parsing"},
+        },
+        expected_strengths=["explicit task control", "small model, fast inference"],
+        known_risks=["weaker spatial consistency without tuned prompting"],
+        stage_roles={"ocr": "stepfun-ai/GOT-OCR2_0", "layout": "microsoft/Florence-2-base"},
+    ),
+    "stack_c_raster2seq_plus_qwen_repair": CandidateConfig(
+        id="stack_c_raster2seq_plus_qwen_repair",
+        description="Raster2Seq polygon reconstruction with Qwen semantic repair",
+        pipeline_kind="hybrid",
+        provider="local",
+        components={
+            "vectorizer": {"model_id": "haopt/Raster2Seq", "role": "polygon_sequence_reconstruction"},
+            "semantic_repair": {"model_id": "Qwen/Qwen2.5-VL-7B-Instruct", "role": "class_label_cleanup_and_security_mapping"},
+        },
+        expected_strengths=["strong wall/room geometry on clean plans", "aligned with downstream vector mapping"],
+        known_risks=["can degrade on low-quality scans or non-standard notation"],
+        stage_roles={"layout": "haopt/Raster2Seq", "repair": "Qwen/Qwen2.5-VL-7B-Instruct"},
+    ),
     "stack_c_florence": CandidateConfig(
         id="stack_c_florence",
         description="Florence-2 prompt-task parser",
@@ -86,6 +112,19 @@ CANDIDATE_REGISTRY: dict[str, CandidateConfig] = {
         expected_strengths=["strongest cloud ceiling for hard scans", "good multimodal reasoning"],
         known_risks=["higher cost than Flash", "still requires strict extraction prompt"],
         cloud_fallbacks=["gemini-2.5-flash", "gpt-4o"],
+    ),
+    "stack_h_minicpm_ocr": CandidateConfig(
+        id="stack_h_minicpm_ocr",
+        description="MiniCPM-V 4.6 floorplan parser with OCR assist",
+        pipeline_kind="hybrid",
+        provider="local",
+        components={
+            "ocr": {"model_id": "stepfun-ai/GOT-OCR2_0", "role": "symbol_and_label_extraction"},
+            "vlm": {"model_id": "openbmb/MiniCPM-V-4_6", "role": "primary_layout_parser"},
+        },
+        expected_strengths=["compact local multimodal baseline", "fast iteration on smaller hardware"],
+        known_risks=["may need tighter prompting for exact geometry", "processor quirks can affect output formatting"],
+        stage_roles={"ocr": "stepfun-ai/GOT-OCR2_0", "layout": "openbmb/MiniCPM-V-4_6"},
     ),
     "stack_h_minicpmv46": CandidateConfig(
         id="stack_h_minicpmv46",

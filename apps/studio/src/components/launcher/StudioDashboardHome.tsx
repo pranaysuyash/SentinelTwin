@@ -228,6 +228,8 @@ function ScenePreview({ scene, result, compact = false, showLabels = true, hydra
   const zoneResults = criticalZoneStatusMap(result);
   const activePathId = useStudioStore((s) => s.activePathId);
   const activePath = activePathId ? (scene.paths.find((path) => path.id === activePathId) ?? null) : null;
+  const activePathStart = activePath ? toPoint(activePath.points[0].position) : null;
+  const activePathEnd = activePath ? toPoint(activePath.points[activePath.points.length - 1].position) : null;
   const heatmapCells = result?.coverageCells ?? [];
   const heatmapStep = Math.max(1, Math.ceil(heatmapCells.length / (compact ? 150 : 240)));
   const cellSize = Math.max(2.6, scale * (compact ? 0.26 : 0.22));
@@ -394,8 +396,12 @@ function ScenePreview({ scene, result, compact = false, showLabels = true, hydra
         {activePathPoints ? (
           <>
             <polyline points={activePathPoints} fill="none" stroke="rgba(34,197,94,0.9)" strokeWidth="3" strokeDasharray="6 6" />
-            <circle cx={toPoint(activePath.points[0].position)[0]} cy={toPoint(activePath.points[0].position)[1]} r="6.5" fill="rgba(34,197,94,0.95)" />
-            <circle cx={toPoint(activePath.points[activePath.points.length - 1].position)[0]} cy={toPoint(activePath.points[activePath.points.length - 1].position)[1]} r="6.5" fill="rgba(248,113,113,0.95)" />
+            {activePathStart ? (
+              <circle cx={activePathStart[0]} cy={activePathStart[1]} r="6.5" fill="rgba(34,197,94,0.95)" />
+            ) : null}
+            {activePathEnd ? (
+              <circle cx={activePathEnd[0]} cy={activePathEnd[1]} r="6.5" fill="rgba(248,113,113,0.95)" />
+            ) : null}
           </>
         ) : null}
 

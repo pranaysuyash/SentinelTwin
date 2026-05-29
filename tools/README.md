@@ -25,6 +25,41 @@ The audit currently covers:
 - provenance and operational memory surface
 - bottom-panel sensor wiring
 
+## Webwright QA
+
+Use the shared Webwright bootstrap for screenshot + browser-flow checks:
+
+```bash
+source tools/webwright/venv.env
+./tools/webwright/run-sentineltwin-qa.sh --bootstrap
+./tools/webwright/run-sentineltwin-qa.sh --dry-run
+
+# if model keys are available
+./tools/webwright/run-sentineltwin-qa.sh --run
+```
+
+Contract:
+
+- Use Python `3.13` for Python-based QA work in this repo.
+- Use `uv` for venv + install operations (no one-off `pip` installs).
+- Shared venv for all automation: `/tmp/webwright-sentinel`.
+- Shared UV cache: `/private/tmp/uv-cache`.
+- Shared Playwright cache: `/private/tmp/ms-playwright`.
+
+```bash
+source tools/webwright/venv.env
+```
+
+All agents should reuse this venv and avoid creating a new local Python env unless a new
+Python runtime is required for non-webwright work.
+
+For direct Playwright-only setup from the same venv:
+
+```bash
+source tools/webwright/venv.env
+"${WEBWRIGHT_VENV_PATH}/bin/python" -m playwright install chromium
+```
+
 ## Git Ignore Audit
 
 Use this before `git add -A` / commit to catch generated artifacts that should be ignored.

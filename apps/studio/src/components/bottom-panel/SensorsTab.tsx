@@ -1,10 +1,12 @@
 "use client";
 
-import { ScanSearch, LocateFixed } from "lucide-react";
+import { LocateFixed, ScanSearch, Upload } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/shared/Badge";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { cn } from "@/lib/cn";
+import { parseSensorLiveFeed } from "@/lib/sensor-live-ingest";
 import type { SensorNode } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 
@@ -63,10 +65,43 @@ export function SensorsTab() {
   const setSensorPlacementType = useStudioStore((s) => s.setSensorPlacementType);
   const selectNode = useStudioStore((s) => s.selectNode);
   const selectedNodeId = useStudioStore((s) => s.selectedNodeId);
+  const sensorEvents = useStudioStore((s) => s.sensorEvents.filter((event) => event.sceneId === s.scene.id));
+  const recordSensorEvent = useStudioStore((s) => s.recordSensorEvent);
+  const clearSensorEvents = useStudioStore((s) => s.clearSensorEvents);
+  const updateNode = useStudioStore((s) => s.updateNode);
+  const [liveFeedDraft, setLiveFeedDraft] = useState("");
+  const [liveFeedStatus, setLiveFeedStatus] = useState<string | null>(null);
+  const [liveFeedError, setLiveFeedError] = useState<string | null>(null);
+  const [externalFeedUrl, setExternalFeedUrl] = useState("");
+  const [externalFeedLabel, setExternalFeedLabel] = useState("");
+  const [externalFeedStatus, setExternalFeedStatus] = useState<string | null>(null);
+  const [externalFeedError, setExternalFeedError] = useState<string | null>(null);
+  const [externalFeedLoading, setExternalFeedLoading] = useState(false);
+  const [sensorIngestHistory, setSensorIngestHistory] = useState<Array<{
+    ingestMode: "paste" | "external";
+    feedUrl: string | null;
+    feedLabel: string | null;
+    receivedAt: string;
+    summary: string;
+    sceneName: string | null;
+    sourceCount: number;
+  }>>([]);
+  const [sensorIngestHistoryLoading, setSensorIngestHistoryLoading] = useState(false);
 
   const activeCount = scene.sensors.filter((sensor) => sensor.state === "active").length;
   const faultedCount = scene.sensors.filter((sensor) => sensor.state === "faulted").length;
   const inactiveCount = scene.sensors.filter((sensor) => sensor.state === "inactive").length;
+  const selectedSensor = scene.sensors.find((sensor) => sensor.id === selectedNodeId) ?? scene.sensors[0] ?? null;
+  const recentEvents = sensorEvents.slice(0, 8);
+  const eventCounts = sensorEvents.reduce<Record<"triggered" | "heartbeat" | "faulted" | "restored", number>>((acc, event) => {
+    acc[event.kind] += 1;
+    return acc;
+  }, {
+    triggered: 0,
+    heartbeat: 0,
+    faulted: 0,
+    restored: 0,
+  });
 
   const typeCounts = scene.sensors.reduce<Record<SensorNode["sensorType"], number>>((acc, sensor) => {
     acc[sensor.sensorType] += 1;
@@ -80,6 +115,138 @@ export function SensorsTab() {
     panic_button: 0,
     smoke_heat: 0,
   });
+  const liveFeedPreview = useMemo(
+    () => parseSensorLiveFeed(liveFeedDraft, scene.sensors),
+    [liveFeedDraft, scene.sensors],
+  );
+
+  useEffect(() => {
+    let active = true;
+    setSensorIngestHistoryLoading(true);
+    void fetch("/api/sensor-ingest")
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return response.json() as Promise<{
+          ok: true;
+          history: Array<{
+            ingestMode: "paste" | "external";
+            feedUrl: string | null;
+            feedLabel: string | null;
+            receivedAt: string;
+            summary: string;
+            sceneName: string | null;
+            sourceCount: number;
+          }>;
+        }>;
+      })
+      .then((payload) => {
+        if (!active || !payload?.history) return;
+        setSensorIngestHistory(payload.history.slice(0, 3));
+      })
+      .catch(() => {
+        if (active) setSensorIngestHistory([]);
+      })
+      .finally(() => {
+        if (active) setSensorIngestHistoryLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const importLiveFeed = () => {
+    const parsed = parseSensorLiveFeed(liveFeedDraft, scene.sensors);
+    if (parsed.events.length === 0) {
+      setLiveFeedError(parsed.errors[0] ?? "Paste live sensor metadata as JSON or NDJSON first.");
+      setLiveFeedStatus(null);
+      return;
+    }
+
+    for (const event of parsed.events) {
+      recordSensorEvent(event);
+    }
+    setLiveFeedError(parsed.errors[0] ?? null);
+    setLiveFeedStatus(`Imported ${parsed.events.length} live sensor event${parsed.events.length === 1 ? "" : "s"} from ${parsed.sourceCount} record${parsed.sourceCount === 1 ? "" : "s"}.`);
+  };
+
+  const importExternalFeed = async () => {
+    const trimmedUrl = externalFeedUrl.trim();
+    if (!trimmedUrl) {
+      setExternalFeedError("Paste an external feed URL first.");
+      setExternalFeedStatus(null);
+      return;
+    }
+
+    try {
+      new URL(trimmedUrl);
+    } catch {
+      setExternalFeedError("External feed URL must be a valid URL.");
+      setExternalFeedStatus(null);
+      return;
+    }
+
+    setExternalFeedLoading(true);
+    setExternalFeedError(null);
+    setExternalFeedStatus(null);
+    try {
+      const response = await fetch("/api/sensor-ingest", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          source: "sensors-tab",
+          ingestMode: "external",
+          feedUrl: trimmedUrl,
+          ...(externalFeedLabel.trim() ? { feedLabel: externalFeedLabel.trim() } : {}),
+          sceneId: scene.id,
+          sceneName: scene.name,
+          submittedAt: Date.now(),
+          raw: "",
+          sensors: scene.sensors,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Sensor ingest failed with HTTP ${response.status}.`);
+      }
+
+      const payload = (await response.json()) as {
+        ok: true;
+        source: string;
+        ingestMode: "paste" | "external";
+        receivedAt: string;
+        sceneId: string | null;
+        sceneName: string | null;
+        feedUrl: string | null;
+        feedLabel: string | null;
+        summary: string;
+        events: Array<Parameters<typeof recordSensorEvent>[0]>;
+        errors: string[];
+        sourceCount: number;
+        storedAt: number;
+        historyCount: number;
+      };
+
+      if (payload.events.length === 0) {
+        throw new Error(payload.errors[0] ?? "No matching sensor events found.");
+      }
+
+      for (const event of payload.events) {
+        recordSensorEvent(event);
+      }
+      setExternalFeedError(payload.errors[0] ?? null);
+      setExternalFeedStatus(
+        `${payload.summary} Archived ${payload.historyCount} sensor ingest record${payload.historyCount === 1 ? "" : "s"} from ${payload.feedLabel ?? payload.feedUrl ?? "external feed"}.`,
+      );
+      setExternalFeedUrl("");
+      setExternalFeedLabel("");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "External sensor feed import failed.";
+      setExternalFeedError(message);
+      setExternalFeedStatus(null);
+    } finally {
+      setExternalFeedLoading(false);
+    }
+  };
 
   return (
     <div className="h-full overflow-y-auto">
@@ -137,6 +304,313 @@ export function SensorsTab() {
               <LocateFixed className="h-3 w-3" />
               Place {SENSOR_TYPE_LABELS[sensorPlacementType]}
             </button>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Live Signals">
+          {selectedSensor ? (
+            <div className="space-y-2">
+              <div className="rounded-lg border border-cyan-500/15 bg-cyan-500/8 px-3 py-2">
+                <div className="text-[10px] font-semibold text-white">{selectedSensor.label}</div>
+                <div className="mt-0.5 text-[9px] uppercase tracking-[0.14em] text-cyan-100/60">
+                  {SENSOR_TYPE_LABELS[selectedSensor.sensorType]} · {SENSOR_COVERAGE_LABELS[selectedSensor.coverageMode]}
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-[9px] text-[#8ea0bf]">
+                  <div className="rounded-md bg-[#0b0f17] px-2 py-1.5">
+                    <div className="uppercase tracking-[0.14em] text-[#546078]">State</div>
+                    <div className="mt-0.5 font-medium text-[#d8def0]">{selectedSensor.state}</div>
+                  </div>
+                  <div className="rounded-md bg-[#0b0f17] px-2 py-1.5">
+                    <div className="uppercase tracking-[0.14em] text-[#546078]">Live feed</div>
+                    <div className="mt-0.5 font-medium text-[#d8def0]">{sensorEvents.length} events</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => recordSensorEvent({
+                    sensorId: selectedSensor.id,
+                    sensorLabel: selectedSensor.label,
+                    sensorType: selectedSensor.sensorType,
+                    kind: "triggered",
+                    details: `${selectedSensor.label} observed a live trigger.`,
+                    resultingState: selectedSensor.state,
+                  })}
+                  className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-2 py-2 text-[10px] font-medium text-cyan-100 transition-colors hover:border-cyan-400/40 hover:bg-cyan-500/14"
+                >
+                  Trigger
+                </button>
+                <button
+                  type="button"
+                  onClick={() => recordSensorEvent({
+                    sensorId: selectedSensor.id,
+                    sensorLabel: selectedSensor.label,
+                    sensorType: selectedSensor.sensorType,
+                    kind: "heartbeat",
+                    details: `${selectedSensor.label} sent a heartbeat.`,
+                    resultingState: selectedSensor.state,
+                  })}
+                  className="rounded-lg border border-[#24304a] bg-[#111521] px-2 py-2 text-[10px] font-medium text-[#d2d9e8] transition-colors hover:border-[#32506a] hover:bg-[#172235]"
+                >
+                  Heartbeat
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateNode(selectedSensor.id, { state: "faulted" });
+                    recordSensorEvent({
+                      sensorId: selectedSensor.id,
+                      sensorLabel: selectedSensor.label,
+                      sensorType: selectedSensor.sensorType,
+                      kind: "faulted",
+                      details: `${selectedSensor.label} reported a fault.`,
+                      resultingState: "faulted",
+                    });
+                  }}
+                  className="rounded-lg border border-red-900/35 bg-red-950/15 px-2 py-2 text-[10px] font-medium text-red-300 transition-colors hover:border-red-700 hover:bg-red-950/28"
+                >
+                  Mark Faulted
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateNode(selectedSensor.id, { state: "active" });
+                    recordSensorEvent({
+                      sensorId: selectedSensor.id,
+                      sensorLabel: selectedSensor.label,
+                      sensorType: selectedSensor.sensorType,
+                      kind: "restored",
+                      details: `${selectedSensor.label} restored to active service.`,
+                      resultingState: "active",
+                    });
+                  }}
+                  className="rounded-lg border border-emerald-900/35 bg-emerald-950/15 px-2 py-2 text-[10px] font-medium text-emerald-200 transition-colors hover:border-emerald-700 hover:bg-emerald-950/28"
+                >
+                  Restore
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed border-[#24304a] bg-[#0f1320] px-3 py-3 text-[10px] leading-relaxed text-[#7a869f]">
+              Select a sensor to stage a live signal, heartbeat, or fault event.
+            </div>
+          )}
+        </SectionCard>
+
+        <SectionCard title="Live Event Feed">
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+            <div className="rounded-lg border border-[#1f2536] bg-[#0b0f17] px-2 py-2">
+              <div className="text-[9px] uppercase tracking-[0.14em] text-[#546078]">Triggers</div>
+              <div className="mt-1 text-[18px] font-semibold text-cyan-200">{eventCounts.triggered}</div>
+            </div>
+            <div className="rounded-lg border border-[#1f2536] bg-[#0b0f17] px-2 py-2">
+              <div className="text-[9px] uppercase tracking-[0.14em] text-[#546078]">Heartbeats</div>
+              <div className="mt-1 text-[18px] font-semibold text-blue-200">{eventCounts.heartbeat}</div>
+            </div>
+            <div className="rounded-lg border border-[#1f2536] bg-[#0b0f17] px-2 py-2">
+              <div className="text-[9px] uppercase tracking-[0.14em] text-[#546078]">Faults</div>
+              <div className="mt-1 text-[18px] font-semibold text-red-300">{eventCounts.faulted}</div>
+            </div>
+            <div className="rounded-lg border border-[#1f2536] bg-[#0b0f17] px-2 py-2">
+              <div className="text-[9px] uppercase tracking-[0.14em] text-[#546078]">Restores</div>
+              <div className="mt-1 text-[18px] font-semibold text-emerald-300">{eventCounts.restored}</div>
+            </div>
+          </div>
+
+          <div className="mt-2 space-y-1.5">
+            {recentEvents.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-[#24304a] bg-[#0f1320] px-3 py-3 text-[10px] leading-relaxed text-[#7a869f]">
+                No live sensor events yet. Use the live controls above to create the first evidence record.
+              </div>
+            ) : (
+              recentEvents.map((event) => (
+                <div
+                  key={event.id}
+                  className={cn(
+                    "rounded-lg border bg-[#0f1320] px-3 py-2",
+                    event.kind === "faulted"
+                      ? "border-red-900/35"
+                      : event.kind === "restored"
+                        ? "border-emerald-900/35"
+                        : event.kind === "triggered"
+                          ? "border-cyan-900/35"
+                          : "border-[#1f2536]",
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-[10px] font-semibold text-[#e5ecfb]">{event.sensorLabel}</div>
+                      <div className="text-[8px] uppercase tracking-[0.14em] text-[#64708a]">
+                        {event.kind} · {SENSOR_TYPE_LABELS[event.sensorType]}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[8px] uppercase tracking-[0.14em] text-[#546078]">
+                        {new Date(event.timestamp).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                      </div>
+                      <div className="text-[9px] font-medium text-[#d2d9e8]">{event.resultingState ?? "—"}</div>
+                    </div>
+                  </div>
+                  <div className="mt-1 grid grid-cols-3 gap-1.5 text-[9px] text-[#90a0bf]">
+                    <div className="rounded-md bg-[#0b0f17] px-1.5 py-1">
+                      <div className="text-[8px] uppercase tracking-[0.14em] text-[#546078]">Nearest Cam</div>
+                      <div className="mt-0.5 truncate font-mono">{event.nearestCameraName ?? "None"}</div>
+                    </div>
+                    <div className="rounded-md bg-[#0b0f17] px-1.5 py-1">
+                      <div className="text-[8px] uppercase tracking-[0.14em] text-[#546078]">Distance</div>
+                      <div className="mt-0.5 font-mono">{formatDistance(event.nearestDistanceM)}</div>
+                    </div>
+                    <div className="rounded-md bg-[#0b0f17] px-1.5 py-1">
+                      <div className="text-[8px] uppercase tracking-[0.14em] text-[#546078]">Signal</div>
+                      <div className="mt-0.5 truncate">{event.details}</div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {sensorEvents.length > 0 ? (
+            <div className="mt-2 flex items-center justify-between gap-2 text-[9px] text-[#7a869f]">
+              <span>Live evidence is now logged into the canonical operational trail.</span>
+              <button
+                type="button"
+                onClick={clearSensorEvents}
+                className="rounded-md border border-[#24304a] px-2 py-1 text-[9px] font-medium text-[#d2d9e8] transition-colors hover:border-[#32506a] hover:text-white"
+              >
+                Clear current scene feed
+              </button>
+            </div>
+          ) : null}
+        </SectionCard>
+
+        <SectionCard title="Live Metadata Intake">
+          <div className="space-y-2">
+            <div className="rounded-lg border border-[#24304a] bg-[#0f1320] px-3 py-2 text-[10px] leading-relaxed text-[#7a869f]">
+              Paste JSON arrays or newline-delimited JSON sensor records here. Matching sensor ids or labels are resolved into the canonical live evidence trail.
+            </div>
+            <textarea
+              value={liveFeedDraft}
+              onChange={(event) => {
+                setLiveFeedDraft(event.target.value);
+                setLiveFeedError(null);
+                setLiveFeedStatus(null);
+              }}
+              rows={5}
+              placeholder={`[
+  {"sensorId":"sensor_1","kind":"triggered","details":"Motion detected"},
+  {"sensorLabel":"Front Door","kind":"heartbeat"}
+]`}
+              className="w-full rounded-lg border border-[#24304a] bg-[#111521] px-3 py-2 text-[10px] leading-relaxed text-[#d2d9e8] outline-none placeholder:text-[#556076] focus:border-cyan-400/40"
+            />
+            <div className="grid gap-2 md:grid-cols-[auto_1fr]">
+              <button
+                type="button"
+                onClick={importLiveFeed}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-[10px] font-medium text-cyan-100 transition-colors hover:border-cyan-400/40 hover:bg-cyan-500/14"
+              >
+                <Upload className="h-3 w-3" />
+                Import Metadata Feed
+              </button>
+              <div className="rounded-lg border border-[#24304a] bg-[#0f1320] px-3 py-2 text-[9px] leading-relaxed text-[#8ea0bf]">
+                {liveFeedStatus ?? `Preview: ${liveFeedPreview.events.length} event${liveFeedPreview.events.length === 1 ? "" : "s"} ready, ${liveFeedPreview.errors.length} issue${liveFeedPreview.errors.length === 1 ? "" : "s"}.`}
+              </div>
+            </div>
+            {liveFeedError ? (
+              <div className="rounded-lg border border-red-900/30 bg-red-950/15 px-3 py-2 text-[9px] text-red-300">
+                {liveFeedError}
+              </div>
+            ) : liveFeedPreview.errors.length > 0 ? (
+              <div className="rounded-lg border border-amber-900/30 bg-amber-950/15 px-3 py-2 text-[9px] text-amber-200">
+                {liveFeedPreview.errors[0]}
+              </div>
+            ) : null}
+          </div>
+        </SectionCard>
+
+        <SectionCard title="External Feed Bridge">
+          <div className="space-y-2">
+            <div className="rounded-lg border border-[#24304a] bg-[#0f1320] px-3 py-2 text-[10px] leading-relaxed text-[#7a869f]">
+              Pull JSON or NDJSON from a live feed URL through the same ingest boundary. This is the bridge toward ONVIF, webhook, or BMS metadata without changing the scene model.
+            </div>
+            <div className="grid gap-2">
+              <input
+                type="url"
+                value={externalFeedUrl}
+                onChange={(event) => {
+                  setExternalFeedUrl(event.target.value);
+                  setExternalFeedError(null);
+                  setExternalFeedStatus(null);
+                }}
+                placeholder="https://example.com/live-sensor-feed"
+                className="w-full rounded-lg border border-[#24304a] bg-[#111521] px-3 py-2 text-[10px] text-[#d2d9e8] outline-none placeholder:text-[#556076] focus:border-cyan-400/40"
+              />
+              <input
+                type="text"
+                value={externalFeedLabel}
+                onChange={(event) => {
+                  setExternalFeedLabel(event.target.value);
+                  setExternalFeedError(null);
+                  setExternalFeedStatus(null);
+                }}
+                placeholder="Optional feed label, like ONVIF relay"
+                className="w-full rounded-lg border border-[#24304a] bg-[#111521] px-3 py-2 text-[10px] text-[#d2d9e8] outline-none placeholder:text-[#556076] focus:border-cyan-400/40"
+              />
+            </div>
+            <div className="grid gap-2 md:grid-cols-[auto_1fr]">
+              <button
+                type="button"
+                onClick={() => void importExternalFeed()}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-[10px] font-medium text-cyan-100 transition-colors hover:border-cyan-400/40 hover:bg-cyan-500/14"
+              >
+                <Upload className="h-3 w-3" />
+                {externalFeedLoading ? "Pulling Feed..." : "Pull External Feed"}
+              </button>
+              <div className="rounded-lg border border-[#24304a] bg-[#0f1320] px-3 py-2 text-[9px] leading-relaxed text-[#8ea0bf]">
+                {externalFeedStatus ?? "Ready to pull a live feed through the ingest route and archive the resulting evidence."}
+              </div>
+            </div>
+            {externalFeedError ? (
+              <div className="rounded-lg border border-red-900/30 bg-red-950/15 px-3 py-2 text-[9px] text-red-300">
+                {externalFeedError}
+              </div>
+            ) : null}
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Ingest History">
+          <div className="space-y-2 text-[10px] text-[#9aa7c2]">
+            <div className="flex items-center justify-between">
+              <span className="uppercase tracking-[0.16em] text-[#64708a]">Sensor ingest archive</span>
+              <span className="text-[#7e8ca8]">
+                {sensorIngestHistoryLoading ? "Loading..." : `${sensorIngestHistory.length} recent`}
+              </span>
+            </div>
+            {sensorIngestHistory.length > 0 ? (
+              <div className="space-y-1.5">
+                {sensorIngestHistory.map((entry, index) => (
+                  <div key={`${entry.receivedAt}:${index}`} className="rounded-lg border border-[#1f2536] bg-[#0c1119] px-2.5 py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="font-medium text-[#d7ddef]">{entry.sceneName ?? "Scene ingest"}</div>
+                      <div className="text-[9px] text-[#7684a2]">{entry.sourceCount} record{entry.sourceCount === 1 ? "" : "s"}</div>
+                    </div>
+                    <div className="mt-0.5 text-[#8ea0bf]">{entry.summary}</div>
+                    <div className="mt-0.5 text-[9px] uppercase tracking-[0.12em] text-[#60708c]">
+                      {entry.ingestMode === "external"
+                        ? `External feed ${entry.feedLabel ?? entry.feedUrl ?? "source"}`
+                        : "Pasted metadata feed"}
+                    </div>
+                    <div className="mt-0.5 text-[9px] uppercase tracking-[0.12em] text-[#60708c]">{entry.receivedAt}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-[#1f2536] bg-[#0c1119] px-2.5 py-2 text-[#7684a2]">
+                No sensor ingest archive yet.
+              </div>
+            )}
           </div>
         </SectionCard>
 
@@ -233,7 +707,7 @@ export function SensorsTab() {
 
         {result ? (
           <div className="rounded-lg border border-[#1f2536] bg-[#0f1320] px-3 py-2 text-[10px] leading-relaxed text-[#8d98b0]">
-            Sensors are included in the canonical report summary today, while live sensor-camera fusion remains the next platform step.
+            Sensor live events now feed the operational evidence trail, and the external feed bridge can pull live JSON/NDJSON through the same ingest path before real ONVIF integration lands.
           </div>
         ) : null}
       </div>

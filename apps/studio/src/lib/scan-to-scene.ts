@@ -1,4 +1,5 @@
 import { createCameraNode, createCriticalZoneNode, createDoorNode, createEntryPointNode, createObstructionNode, createScenarioPathNode, createSecurityLightNode, createWallNode, createWindowNode } from "@/lib/node-factory";
+import { selectHighestPriorityCriticalZone } from "@/lib/critical-zone-selection";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 import { safeParseSecurityScene } from "@/schema/security-scene";
 import type {
@@ -542,7 +543,7 @@ export function compileScanSessionToScene(
     scene.paths.push(pathFromCandidates);
   } else if (options.autoCreateEntryToZonePath && scene.entryPoints.length > 0 && scene.criticalZones.length > 0) {
     const entry = scene.entryPoints[0];
-    const zone = scene.criticalZones[0];
+    const zone = selectHighestPriorityCriticalZone(scene);
     if (entry && zone) {
       const centerX = zone.polygon.reduce((sum, p) => sum + p[0], 0) / zone.polygon.length;
       const centerZ = zone.polygon.reduce((sum, p) => sum + p[1], 0) / zone.polygon.length;

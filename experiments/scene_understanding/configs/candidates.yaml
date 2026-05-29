@@ -153,6 +153,28 @@ candidates:
       - higher cost than Flash
       - still requires strict extraction prompt
 
+  - id: stack_h_minicpm_ocr
+    status: active
+    pipeline_kind: hybrid
+    provider: local
+    description: MiniCPM-V 4.6 floorplan parser with OCR assist.
+    components:
+      ocr:
+        model_id: stepfun-ai/GOT-OCR2_0
+        role: symbol_and_label_extraction
+      vlm:
+        model_id: openbmb/MiniCPM-V-4_6
+        role: primary_layout_parser
+    stage_roles:
+      ocr: stepfun-ai/GOT-OCR2_0
+      layout: openbmb/MiniCPM-V-4_6
+    expected_strengths:
+      - compact local multimodal baseline
+      - fast iteration on smaller hardware
+    known_risks:
+      - may need tighter prompting for exact geometry
+      - processor quirks can affect output formatting
+
   - id: stack_h_minicpmv46
     status: active
     pipeline_kind: end_to_end

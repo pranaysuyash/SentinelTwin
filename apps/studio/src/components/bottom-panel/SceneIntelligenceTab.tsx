@@ -154,6 +154,9 @@ export function SceneIntelligenceTab() {
   const graph = useStudioStore((s) => s.sceneIntelligenceGraph);
   const simulationResult = useStudioStore((s) => s.simulationResult);
   const operationalEvidenceEvents = useStudioStore((s) => s.operationalEvidenceEvents);
+  const sensorEvents = useStudioStore((s) => s.sensorEvents.filter((event) => event.sceneId === s.scene.id));
+  const cameraMetadataEvents = useStudioStore((s) => s.cameraMetadataEvents.filter((event) => event.sceneId === s.scene.id));
+  const cameraLiveConnectionEvents = useStudioStore((s) => s.cameraLiveConnectionEvents.filter((event) => event.sceneId === s.scene.id));
   const restoreSceneFromEvidence = useStudioStore((s) => s.restoreSceneFromEvidence);
   const publishCurrentScene = useStudioStore((s) => s.publishCurrentScene);
   const provenanceNotes = useMemo(
@@ -232,6 +235,41 @@ export function SceneIntelligenceTab() {
     () => [...filteredOperationalEvidenceEvents].slice(-6).reverse(),
     [filteredOperationalEvidenceEvents],
   );
+  const recentSensorEvents = useMemo(
+    () => [...sensorEvents].slice(-5).reverse(),
+    [sensorEvents],
+  );
+  const recentCameraMetadataEvents = useMemo(
+    () => [...cameraMetadataEvents].slice(-5).reverse(),
+    [cameraMetadataEvents],
+  );
+  const recentCameraLiveConnectionEvents = useMemo(
+    () => [...cameraLiveConnectionEvents].slice(-5).reverse(),
+    [cameraLiveConnectionEvents],
+  );
+  const sensorEventCounts = useMemo(() => sensorEvents.reduce<Record<"triggered" | "heartbeat" | "faulted" | "restored", number>>((acc, event) => {
+    acc[event.kind] += 1;
+    return acc;
+  }, {
+    triggered: 0,
+    heartbeat: 0,
+    faulted: 0,
+    restored: 0,
+  }), [sensorEvents]);
+  const cameraMetadataCounts = useMemo(() => cameraMetadataEvents.reduce<Record<"external" | "paste", number>>((acc, event) => {
+    acc[event.ingestMode] += 1;
+    return acc;
+  }, {
+    external: 0,
+    paste: 0,
+  }), [cameraMetadataEvents]);
+  const cameraLiveConnectionCounts = useMemo(() => cameraLiveConnectionEvents.reduce<Record<"external" | "manual", number>>((acc, event) => {
+    acc[event.ingestMode] += 1;
+    return acc;
+  }, {
+    external: 0,
+    manual: 0,
+  }), [cameraLiveConnectionEvents]);
   const checkpointEvents = useMemo(
     () => getOperationalEvidenceCheckpoints(filteredOperationalEvidenceEvents).slice(-4).reverse(),
     [filteredOperationalEvidenceEvents],
@@ -263,6 +301,17 @@ export function SceneIntelligenceTab() {
     () => (selectedEvidenceEvent ? reconstructSceneFromEvidence(filteredOperationalEvidenceEvents, selectedEvidenceEvent.id) : null),
     [filteredOperationalEvidenceEvents, selectedEvidenceEvent],
   );
+  const evidenceTimeline = useMemo(
+    () => [...filteredOperationalEvidenceEvents].sort((a, b) => a.timestamp - b.timestamp),
+    [filteredOperationalEvidenceEvents],
+  );
+  const selectedTimelineIndex = useMemo(() => {
+    if (!selectedEvidenceEvent || evidenceTimeline.length === 0) return -1;
+    return evidenceTimeline.findIndex((event) => event.id === selectedEvidenceEvent.id);
+  }, [evidenceTimeline, selectedEvidenceEvent]);
+  const selectedTimelineProgress = selectedTimelineIndex >= 0 && evidenceTimeline.length > 1
+    ? selectedTimelineIndex / (evidenceTimeline.length - 1)
+    : 0;
   const selectedEvidenceReconstructionSummary = useMemo(
     () => (selectedEvidenceReconstruction ? summarizeSceneEvidence(selectedEvidenceReconstruction) : null),
     [selectedEvidenceReconstruction],
@@ -393,6 +442,12 @@ export function SceneIntelligenceTab() {
 
   const handleRestoreCheckpoint = (eventId: string, targetBranch: "draft" | "recovered" | "published") => {
     restoreSceneFromEvidence(eventId, targetBranch);
+  };
+
+  const handleTimelineScrub = (index: number) => {
+    const event = evidenceTimeline[index];
+    if (!event) return;
+    setSelectedEvidenceEventId(event.id);
   };
 
   const copyDeepLink = async () => {
@@ -544,6 +599,124 @@ export function SceneIntelligenceTab() {
           <StatCard label="Edges" value={graph.summary.edgeCount} detail={`${graph.summary.coverageLinkCount} coverage links`} />
           <StatCard label="Revisions" value={graph.summary.revisionDepth} detail={`${graph.summary.snapshotCount} snapshots tracked`} />
           <StatCard label="Failures" value={graph.summary.failedZoneCount} detail={simulationResult ? "zones below target" : "awaiting simulation"} />
+        </div>
+
+        <div className="mt-2 rounded-lg border border-[#1c2130] bg-[#0f1320] px-3 py-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Temporal replay</div>
+              <div className="mt-1 text-[11px] text-[#aeb8cd]">Scrub the operational evidence trail and preview the scene at any reconstructable checkpoint.</div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant={selectedEvidenceEvent ? "blue" : "gray"}>
+                {selectedEvidenceEvent ? `${Math.max(selectedTimelineIndex, 0) + 1}/${Math.max(evidenceTimeline.length, 1)}` : "No checkpoint selected"}
+              </Badge>
+              <Badge variant="gray">{evidenceTimeline.length} timeline events</Badge>
+            </div>
+          </div>
+
+          <div className="mt-3 rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Checkpoint scrubber</div>
+              <div className="text-[9px] text-[#74809a]">
+                {selectedEvidenceEvent ? formatLedgerTime(selectedEvidenceEvent.timestamp) : "No checkpoint"}
+              </div>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={Math.max(evidenceTimeline.length - 1, 0)}
+              step={1}
+              value={Math.max(selectedTimelineIndex, 0)}
+              onChange={(event) => handleTimelineScrub(Number(event.target.value))}
+              disabled={evidenceTimeline.length === 0}
+              className="mt-2 w-full accent-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
+            />
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-[9px] text-[#74809a]">
+              <span>Start</span>
+              <div className="h-1 flex-1 rounded-full bg-[#1e2130]">
+                <div className="h-1 rounded-full bg-sky-400" style={{ width: `${selectedTimelineProgress * 100}%` }} />
+              </div>
+              <span>Latest</span>
+            </div>
+          </div>
+
+          {selectedEvidenceEvent ? (
+            <div className="mt-3 grid gap-2 xl:grid-cols-[1.15fr_0.85fr]">
+              <div className="rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-[11px] font-semibold text-[#edf2fb]">{selectedEvidenceEvent.title}</div>
+                  <Badge variant="gray">{formatLedgerTime(selectedEvidenceEvent.timestamp)}</Badge>
+                </div>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  <Badge variant="blue">{selectedEvidenceEvent.kind.replace(/_/g, " ")}</Badge>
+                  <Badge variant="gray">{selectedEvidenceEvent.actor}</Badge>
+                  <Badge variant="gray">{confidenceLabel(selectedEvidenceEvent.confidence)}</Badge>
+                  {selectedEvidenceEvent.branchLabel ? <Badge variant="gray">{selectedEvidenceEvent.branchLabel}</Badge> : null}
+                  {selectedEvidenceEvent.affectedNodeIds.length > 0 ? <Badge variant="gray">{selectedEvidenceEvent.affectedNodeIds.length} nodes</Badge> : null}
+                </div>
+                <div className="mt-2 text-[10px] text-[#74809a]">{selectedEvidenceEvent.details}</div>
+                <div className="mt-2 grid gap-2 md:grid-cols-3">
+                  {[
+                    { label: "Before", value: selectedEvidenceEvent.beforeSummary ?? "—" },
+                    { label: "After", value: selectedEvidenceEvent.afterSummary ?? selectedEvidenceEvent.details },
+                    { label: "Branch", value: selectedEvidenceEvent.branchLabel ?? selectedEvidenceEvent.lifecycleStage ?? "manual" },
+                  ].map((item) => (
+                    <div key={item.label} className="rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+                      <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">{item.label}</div>
+                      <div className="mt-1 text-[10px] leading-relaxed text-[#cfd7e7]">{item.value}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleRestoreCheckpoint(selectedEvidenceEvent.id, "draft")}
+                    className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08]"
+                  >
+                    Restore as draft
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRestoreCheckpoint(selectedEvidenceEvent.id, "recovered")}
+                    className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08]"
+                  >
+                    Restore as recovered
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRestoreCheckpoint(selectedEvidenceEvent.id, "published")}
+                    className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-medium text-emerald-100 hover:bg-emerald-500/15"
+                  >
+                    Restore as published
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+                <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Point-in-time reconstruction</div>
+                <div className="mt-1 text-[10px] text-[#74809a]">Compare the reconstructed scene against the current working scene without mutating the current state.</div>
+                {selectedEvidenceReconstruction ? (
+                  <>
+                    <div className="mt-2 text-[11px] font-semibold text-[#edf2fb]">{selectedEvidenceReconstructionSummary?.label ?? "Reconstructed scene"}</div>
+                    <div className="mt-1 text-[10px] text-[#74809a]">{selectedEvidenceReconstructionSummary?.detail ?? "A reconstructed scene snapshot is available for this checkpoint."}</div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                      {selectedEvidenceReconstructionCounts.map((item) => (
+                        <div key={item.label} className="rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+                          <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">{item.label}</div>
+                          <div className="mt-1 text-[14px] font-semibold text-[#edf2fb]">{item.current} → {item.value}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="mt-3 rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                    This checkpoint does not reconstruct a complete scene snapshot yet.
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="mt-2 grid gap-2 xl:grid-cols-2">
@@ -771,6 +944,125 @@ export function SceneIntelligenceTab() {
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="gray">{recentSnapshots.length + recentChangeEntries.length + recentEvidenceEvents.length} visible entries</Badge>
               <Badge variant="blue">Append-only journal</Badge>
+            </div>
+          </div>
+
+          <div className="mt-3 rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Sensor live evidence</div>
+                <div className="mt-1 text-[10px] text-[#74809a]">Sensor triggers, heartbeats, faults, and restores are recorded alongside scene provenance.</div>
+              </div>
+              <Badge variant={sensorEvents.length > 0 ? "blue" : "gray"}>{sensorEvents.length} events</Badge>
+            </div>
+            <div className="mt-2 grid gap-2 md:grid-cols-4">
+              <Badge variant="gray">Trigger {sensorEventCounts.triggered}</Badge>
+              <Badge variant="gray">Heartbeat {sensorEventCounts.heartbeat}</Badge>
+              <Badge variant="gray">Fault {sensorEventCounts.faulted}</Badge>
+              <Badge variant="gray">Restore {sensorEventCounts.restored}</Badge>
+            </div>
+            <div className="mt-3 space-y-1.5">
+              {recentSensorEvents.length > 0 ? (
+                recentSensorEvents.map((event) => (
+                  <div key={event.id} className="rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-[11px] font-semibold text-[#edf2ff]">{event.sensorLabel}</div>
+                      <Badge variant={event.kind === "faulted" ? "red" : event.kind === "restored" ? "green" : event.kind === "triggered" ? "blue" : "gray"}>{event.kind}</Badge>
+                    </div>
+                    <div className="mt-1 text-[9px] text-[#74809a]">
+                      {event.details} {event.nearestCameraName ? `Nearest camera: ${event.nearestCameraName}.` : "No nearby camera recorded."}
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      <Badge variant="gray">{new Date(event.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Badge>
+                      <Badge variant="gray">{event.resultingState ?? "—"}</Badge>
+                      <Badge variant="gray">{event.nearestDistanceM == null ? "—" : `${event.nearestDistanceM.toFixed(1)}m`}</Badge>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                  No sensor evidence yet. Use the Sensors panel or paste live metadata to create the first event.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-3 rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Camera metadata evidence</div>
+                <div className="mt-1 text-[10px] text-[#74809a]">Camera metadata ingest events keep the live-camera health state visible in the same evidence trail.</div>
+              </div>
+              <Badge variant={cameraMetadataEvents.length > 0 ? "green" : "gray"}>{cameraMetadataEvents.length} events</Badge>
+            </div>
+            <div className="mt-2 grid gap-2 md:grid-cols-2">
+              <Badge variant="gray">Paste {cameraMetadataCounts.paste}</Badge>
+              <Badge variant="gray">External {cameraMetadataCounts.external}</Badge>
+            </div>
+            <div className="mt-3 space-y-1.5">
+              {recentCameraMetadataEvents.length > 0 ? (
+                recentCameraMetadataEvents.map((event) => (
+                  <div key={event.id} className="rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-[11px] font-semibold text-[#edf2ff]">{event.cameraName}</div>
+                      <Badge variant={event.ingestMode === "external" ? "green" : "blue"}>{event.ingestMode}</Badge>
+                    </div>
+                    <div className="mt-1 text-[9px] text-[#74809a]">
+                      {event.summary}
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      <Badge variant="gray">{event.status ?? "—"}</Badge>
+                      <Badge variant="gray">{event.clarity ?? "—"}</Badge>
+                      <Badge variant="gray">{event.nightMode ?? "—"}</Badge>
+                      <Badge variant="gray">{event.feedMode ?? "—"}</Badge>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                  No camera metadata evidence yet. Use the camera inspector to archive metadata and surface it here.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-3 rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Live camera binding evidence</div>
+                <div className="mt-1 text-[10px] text-[#74809a]">Live feed bindings, relay URLs, and disconnects are written into the same evidence trail as the camera metadata events.</div>
+              </div>
+              <Badge variant={cameraLiveConnectionEvents.length > 0 ? "blue" : "gray"}>{cameraLiveConnectionEvents.length} events</Badge>
+            </div>
+            <div className="mt-2 grid gap-2 md:grid-cols-2">
+              <Badge variant="gray">External {cameraLiveConnectionCounts.external}</Badge>
+              <Badge variant="gray">Manual {cameraLiveConnectionCounts.manual}</Badge>
+            </div>
+            <div className="mt-3 space-y-1.5">
+              {recentCameraLiveConnectionEvents.length > 0 ? (
+                recentCameraLiveConnectionEvents.map((event) => (
+                  <div key={event.id} className="rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-[11px] font-semibold text-[#edf2ff]">{event.cameraName}</div>
+                      <Badge variant={event.liveConnectionStatus === "connected" ? "green" : event.liveConnectionStatus === "connecting" ? "blue" : event.liveConnectionStatus === "error" ? "red" : "gray"}>
+                        {event.liveConnectionStatus ?? "disconnected"}
+                      </Badge>
+                    </div>
+                    <div className="mt-1 text-[9px] text-[#74809a]">
+                      {event.summary}
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      <Badge variant="gray">{event.liveConnectionMode ?? "—"}</Badge>
+                      <Badge variant="gray">{event.liveFeedLabel ?? event.liveFeedUrl ?? "—"}</Badge>
+                      <Badge variant="gray">{new Date(event.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Badge>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                  No live camera binding evidence yet. Use the camera inspector to bind a live feed and surface it here.
+                </div>
+              )}
             </div>
           </div>
 

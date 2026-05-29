@@ -173,4 +173,10 @@ If no stack passes:
 1. Extend the config-driven harness in `experiments/scene_understanding/scripts/` with stage traces and cloud/local fallback dispatch.
 2. Implement `SecuritySceneSubset` schema + mapper.
 3. Add deterministic evaluator for geometry + semantics metrics.
-4. Run pilot on 5 images to validate pipeline reliability before full 60-image bakeoff.
+4. Harden the visual critical-zone repair stage so the extracted polygons survive into saved predictions and metric evaluation.
+5. Run pilot on 5 images to validate pipeline reliability before full 60-image bakeoff.
+
+Completed in the current run:
+- The visual repair stage is now implemented in `runner.py`.
+- The repair path is regression-tested in `experiments/scene_understanding/tests/test_visual_critical_zone.py`.
+- The 5-image dev pilot has been executed and the comparison report was regenerated from real runs.

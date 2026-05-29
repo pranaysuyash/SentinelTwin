@@ -5,6 +5,7 @@ import type {
 } from "@/schema/security-scene";
 import { pointInPolygon, polygonCenter } from "@/simulation/geometry";
 import { buildCoverageGrid } from "@/simulation/grid";
+import { selectHighestPriorityCriticalZone } from "@/lib/critical-zone-selection";
 
 type CoverageCellLookup = {
   x: number;
@@ -83,7 +84,7 @@ export function computeAdversarialPath(
   });
 
   const start = nearestNode(scene.entryPoints[0]?.position ?? [scene.dimensions.width / 2, scene.dimensions.depth], nodes.filter((node) => node.walkable));
-  const zone = scene.criticalZones[0];
+  const zone = selectHighestPriorityCriticalZone(scene);
   const goal = zone
     ? nearestNode(polygonCenter(zone.polygon), nodes.filter((node) => node.walkable))
     : undefined;

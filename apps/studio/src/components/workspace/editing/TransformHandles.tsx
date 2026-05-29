@@ -18,7 +18,7 @@ import type {
 } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 import { makeSnapEngine } from "./SnapEngine";
-import { insertPointAtIndex, insertPolygonVertex, pathLength, removePathPoint, removePolygonVertex, type Point2 } from "./editor-geometry";
+import { insertPolygonVertex, pathLength, removePathPoint, removePolygonVertex, type Point2 } from "./editor-geometry";
 
 export type TransformableNode =
   | CameraNode
@@ -432,9 +432,11 @@ export function TransformHandles() {
     let nextIndex = index;
 
     if (handle === "path_insert" && selected.nodeType === "path" && index !== undefined) {
+      const insertedPoints = [...selected.points];
+      insertedPoints.splice(index + 1, 0, { position: startWorld });
       const inserted = {
         ...selected,
-        points: insertPointAtIndex(selected.points, index + 1, { position: startWorld }),
+        points: insertedPoints,
       } as ScenarioPath;
       baseNode = inserted;
       nextHandle = "path_point";

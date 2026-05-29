@@ -28,6 +28,7 @@ VENV_PATH="${WEBWRIGHT_VENV_PATH:-/tmp/webwright-sentinel}"
 WEBWRIGHT_SRC="${WEBWRIGHT_SOURCE:-/Users/pranay/.codex/.tmp/marketplaces/webwright}"
 UV_CACHE_DIR="${WEBWRIGHT_UV_CACHE_DIR:-/private/tmp/uv-cache}"
 PYTHON_BIN="${WEBWRIGHT_PYTHON_BIN:-python3.13}"
+WEBWRIGHT_BOOTSTRAP_ERROR=""
 OUT_ROOT="${WEBWRIGHT_QA_OUTPUT:-$BASE_DIR/qa-output}"
 BASE_URL="${SENTINELTWIN_BASE_URL:-http://localhost:3010}"
 PLAYWRIGHT_CACHE="${PLAYWRIGHT_CACHE_DIR:-/private/tmp/ms-playwright}"
@@ -158,19 +159,25 @@ bootstrap_venv() {
 
   if UV_CACHE_DIR="$UV_CACHE_DIR" uv pip install --python "$venv_py" -e "$WEBWRIGHT_SRC"; then
     WEBWRIGHT_READY=1
+    WEBWRIGHT_BOOTSTRAP_ERROR=""
     return 0
   fi
+  WEBWRIGHT_BOOTSTRAP_ERROR="Install blocked: uv could not fetch build dependencies (offline index/seed)."
 
   # fallback without dependency resolution when build-system deps are unavailable
   if UV_CACHE_DIR="$UV_CACHE_DIR" uv pip install --python "$venv_py" --no-deps -e "$WEBWRIGHT_SRC"; then
     WEBWRIGHT_READY=1
+    WEBWRIGHT_BOOTSTRAP_ERROR=""
     return 0
   fi
+  WEBWRIGHT_BOOTSTRAP_ERROR="Install blocked: uv editable install failed without dependency resolution."
 
   if "$venv_py" -m pip install --no-deps -e "$WEBWRIGHT_SRC"; then
     WEBWRIGHT_READY=1
+    WEBWRIGHT_BOOTSTRAP_ERROR=""
     return 0
   fi
+  WEBWRIGHT_BOOTSTRAP_ERROR="Install blocked: pip editable install failed (missing setuptools.build_meta or cached build backend)."
 
   cat <<EOFERR
 ERROR: Webwright install blocked (offline index/seed). To complete bootstrap:
@@ -313,8 +320,22 @@ run_webwright_smoke() {
 
 record_manifest() {
   local manifest_path="$OUT_ROOT/manifest.json"
-  MANIFEST_PATH="$manifest_path" WEBWRIGHT_READY="$WEBWRIGHT_READY" PLAYWRIGHT_READY="$PLAYWRIGHT_READY" RUN_WEBWRIGHT="$RUN_WEBWRIGHT" DRY_RUN="$DRY_RUN" BOOTSTRAP_ONLY="$BOOTSTRAP_ONLY" ROUTES="$ROUTES" PYTHON_BIN="$PYTHON_BIN" VENV_PATH="$VENV_PATH" WEBWRIGHT_SRC="$WEBWRIGHT_SRC" OUT_ROOT="$OUT_ROOT" BASE_DIR="$BASE_DIR" BASE_URL="$BASE_URL" UV_CACHE_DIR="$UV_CACHE_DIR" PLAYWRIGHT_CACHE="$PLAYWRIGHT_CACHE" \
-  python3.13 - <<'PY'
+  MANIFEST_PATH="$manifest_path" \
+  WEBWRIGHT_READY="$WEBWRIGHT_READY" \
+  PLAYWRIGHT_READY="$PLAYWRIGHT_READY" \
+  RUN_WEBWRIGHT="$RUN_WEBWRIGHT" \
+  DRY_RUN="$DRY_RUN" \
+  BOOTSTRAP_ONLY="$BOOTSTRAP_ONLY" \
+  ROUTES="$ROUTES" \
+  VENV_PATH="$VENV_PATH" \
+  WEBWRIGHT_SRC="$WEBWRIGHT_SRC" \
+  OUT_ROOT="$OUT_ROOT" \
+  BASE_DIR="$BASE_DIR" \
+  BASE_URL="$BASE_URL" \
+  UV_CACHE_DIR="$UV_CACHE_DIR" \
+  PLAYWRIGHT_CACHE="$PLAYWRIGHT_CACHE" \
+  BOOTSTRAP_ERROR="$WEBWRIGHT_BOOTSTRAP_ERROR" \
+  "$PYTHON_BIN" - <<'PY'
 import json
 import os
 from pathlib import Path
@@ -330,10 +351,11 @@ manifest_data = {
     "dry_run": os.environ.get("DRY_RUN") == "1",
     "webwright_ready": os.environ.get("WEBWRIGHT_READY") == "1",
     "playwright_ready": os.environ.get("PLAYWRIGHT_READY") == "1",
+    "bootstrap_error": os.environ.get("BOOTSTRAP_ERROR", ""),
     "routes": os.environ.get("ROUTES", "").split(","),
     "route_status_file": "routes.txt",
     "notes": [
-        "Set WEBWRIGHT_PYTHON_BIN=python3.13 and use uv for environment management.",
+        "Set WEBWRIGHT_PYTHON_BIN=python3.13 (or configured interpreter) and use uv for environment management.",
         "Webwright still needs Playwright/browser binaries at runtime.",
         "Set UV cache and Playwright cache at: " + os.environ.get("UV_CACHE_DIR", "") + ", " + os.environ.get("PLAYWRIGHT_CACHE", ""),
         "No model key means --run is skipped even when Webwright is installed.",

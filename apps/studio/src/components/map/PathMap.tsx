@@ -117,6 +117,7 @@ export function PathMap({
   const setPathReplayProgress = useStudioStore((s) => s.setPathReplayProgress);
   const setViewMode = useStudioStore((s) => s.setViewMode);
   const setFocusScenePointRequest = useStudioStore((s) => s.setFocusScenePointRequest);
+  const focusPoint = useStudioStore((s) => s.focusScenePointHighlight?.point ?? null);
 
   const activePath = useMemo(() => scene.paths.find((path) => path.id === activePathId) ?? null, [scene.paths, activePathId]);
 
@@ -254,6 +255,7 @@ export function PathMap({
         replayActor={replayActor}
         activePathForReplay={activePath}
         showGrid
+        focusPoint={focusPoint}
       />
 
       <CurrentPathStatePanel

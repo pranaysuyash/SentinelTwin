@@ -36,9 +36,10 @@ node store pattern are exactly what SentinelTwin needs.
 ---
 
 ### Thread 4: AI Model Pipeline
-**Status:** Candidates identified. Bakeoff not yet run. Details in AI_MODEL_PIPELINE.md.
-**Open:** All stage selections for V0.2+ are pending bakeoff results.
-**Next:** Build bakeoff harness at experiments/ before V0.2 starts.
+**Status:** Bakeoff complete for 8 models (7 original + MiniCPM-V 4.6). 4 more configured but MPS-constrained.
+**Key finding:** Cloud APIs dominate — GPT-4o leads (wall F1=0.964). Local MPS models >=4B are impractically slow. MiniCPM-V 4.6 (1.3B) wall F1=0.094 — too small for floor plans.
+**Open:** Qwen3.5-4B, MiniCPM-o 4.5, Gemma 4 E4B need CUDA or GGUF to evaluate.
+**Next:** Evaluate larger local models via ollama/llama.cpp GGUF quantization.
 
 ---
 
@@ -1958,7 +1959,7 @@ Bundled monthly fee per site or per device — includes hardware, software, moni
 
 ### Thread 26: V0.2 Floorplan Understanding Bakeoff (HF-Backed Shortlist)
 **Status:** Active. Execution artifacts created locally.
-**Date:** 2026-05-26
+**Date:** 2026-05-29
 **Canonical plan doc:** `Docs/experiments/V0_2_FLOORPLAN_UNDERSTANDING_BAKEOFF_PLAN.md`
 **Model matrix:** `Docs/exploration/FLOORPLAN_UNDERSTANDING_MODEL_MATRIX.md`
 **Harness workspace:** `experiments/scene_understanding/`
@@ -1995,6 +1996,21 @@ Bundled monthly fee per site or per device — includes hardware, software, moni
 - end-to-end SecurityScene subset validation,
 - local vs cloud control comparison on the same eval split,
 - noisy-scan pilot before full 60-image bakeoff.
+
+**Executed pilot results (dev split, 5 images, after visual critical-zone repair):**
+- `stack_b_florence_gotocr`: wall F1 0.912, door F1 0.200, window F1 0.300, obstruction F1 0.536, CZ recall 0.600, p50 6822ms
+- `stack_f_gemini25_flash`: wall F1 0.948, door F1 0.200, window F1 0.400, obstruction F1 0.643, CZ recall 0.600, p50 4309ms
+- `stack_e_gpt41_structured`: wall F1 0.948, door F1 0.200, window F1 0.400, obstruction F1 0.687, CZ recall 0.600, p50 4640ms
+- `stack_h_minicpm_ocr`: failed on all 5 images in this environment due checkpoint/model-class mismatch
+- `stack_a_qwen_ocr`: cold-started very slowly and was aborted before completion; treat as a deployment bottleneck, not a model score
+
+**Current interpretation:**
+- Gemini 2.5 Flash remains the strongest practical cloud fallback in this dev split because it is fastest while holding geometry near the top tier.
+- GPT-4.1 is still competitive on geometry and now matches the visual critical-zone repair behavior.
+- Florence-2 is a viable local hybrid baseline, but it lags the cloud control on door/window and obstruction quality.
+- The visual fill repair stage moved critical-zone recall from 0.0 to 0.6 on the synthetic dev split; that is good enough for the pilot gate but still not universal enough for final acceptance.
+- MiniCPM-V local paths need a different loader or a different quantized checkpoint before they are production-useful here.
+- Regression coverage now exists for the visual repair helper in `experiments/scene_understanding/tests/test_visual_critical_zone.py`, so the colored-zone detector is pinned against the synthetic dev fixtures instead of being left as an untested heuristic.
 
 **Open risk:** data licensing boundaries for some datasets used for evaluation must be validated before any productized data reuse.
 
@@ -5370,10 +5386,11 @@ Add sensor specs (`sensorWidthMm`, `sensorHeightMm`, `sensorFormat`) when:
 **Key findings:**
 - The membership archive is more useful when it can drive an operator-visible reconciliation action, not just a history list.
 - Reconciliation needs to be audited as an evidence event so drift is visible and reversible.
+- Approval routing also needs to be an explicit operator-visible action so the live workspace can be compared against the archived membership snapshot before a route is resolved.
 - The remaining open gap is remote identity-backed routing across services, not the lack of a local reconcile action.
 
 **Operational note for SentinelTwin:**
-- Keep future remote identity services aligned with the same reconciliation event kind so sync across services stays evidence-backed.
+- Keep future remote identity services aligned with the same reconciliation and approval-route event kinds so sync across services stays evidence-backed.
 
 ## Thread 41: Explicit path selection and planned launch modals
 
@@ -5454,3 +5471,375 @@ Add sensor specs (`sensorWidthMm`, `sensorHeightMm`, `sensorFormat`) when:
 
 **Operational note for SentinelTwin:**
 - Keep oracle scoring deterministic and scene-order agnostic when a real active camera is unavailable.
+
+## Thread 46: Floorplan VLM Bakeoff — New Generation Models (2026-05-29)
+
+**Status:** Configured 4 new candidates. MiniCPM-V 4.6 evaluated (wall F1=0.094 — too small). Qwen3.5-4B, MiniCPM-o 4.5, Gemma 4 E4B MPS-constrained.
+
+**Source signals:**
+- `experiments/scene_understanding/bakeoff_harness/candidates.py` — 4 new configs (`stack_h` through `stack_k`)
+- `experiments/scene_understanding/configs/candidates.yaml` — YAML mirror
+- `experiments/scene_understanding/bakeoff_harness/runner.py` — MiniCPM-V 4.6 specialized handler (`_run_minicpm_extraction`)
+- `experiments/scene_understanding/outputs/COMPARISON_REPORT.md` — updated with MiniCPM-V 4.6 results
+- `experiments/scene_understanding/scripts/RUNBOOK.md` — updated with new candidate table + MPS notes
+
+**Key findings:**
+- **MiniCPM-V 4.6 (1.3B, Apache 2.0):** Wall F1=0.094, P50=96s. The model is too small for floor plan understanding — it outputs single bounding rectangles instead of individual wall segments. Better than Florence-2 (F1=0.000) but nowhere near production use. Surprisingly slow on MPS despite being only 1.3B — the slice-based processing (max_slice_nums=1 with downsample_mode=16x) may be inefficient on Apple Silicon.
+- **Qwen3.5-4B (4B, Apache 2.0):** Failed to complete 1 image in 15 minutes on MPS. Confirmed vision-capable (Qwen3VLProcessor), but 4B param inference on MPS is not viable.
+- **MiniCPM-o 4.5 (9B, Apache 2.0):** Not attempted. Estimated >20 min/image on MPS.
+- **Gemma 4 E4B (4B active, ~30B total):** Not attempted. Requires 4-bit quantization for consumer GPUs.
+- **MPS is a hard constraint:** Models >=4B params cannot run practically on Apple Silicon. The bakeoff should either use cloud APIs or GGUF quantized models via ollama/llama.cpp.
+- **transformers upgraded to 5.9.0:** Required for MiniCPM-V 4.6 support (was 4.49.0). API changes in v5: `processor_kwargs` dict for processor params, `temperature` ignored in `generate`, `dtype` replaces `torch_dtype`.
+- **MiniCPM-specific handler added:** `_run_minicpm_extraction()` handles the unique `processor.apply_chat_template(tokenize=True, ...)` + `downsample_mode` pattern that differs from other HF VLMs.
+- **JSON escaping fix:** MiniCPM-V 4.6 outputs `\"` escaped JSON. Added repair pass in `_parse_response()`.
+
+**Pipeline changes:**
+- `_parse_response()`: Now tries `raw.replace('\\"', '"')` repair when initial JSON parse fails
+- `_run_local_transformer_extraction()`: Dispatches MiniCPM models to `_run_minicpm_extraction`
+- `_run_minicpm_extraction()`: New function using `processor.apply_chat_template` with `tokenize=True` and `processor_kwargs`
+
+**Semantic task evaluation (added 2026-05-29):**
+- Multi-task eval script: `experiments/scene_understanding/scripts/evaluate_semantic_tasks.py`
+- Full report: `experiments/scene_understanding/outputs/semantic_tasks/SEMANTIC_TASKS_REPORT.md`
+- 5 images × 5 task types (classification, room detection, OCR, adjacency, description) × 3 models (MiniCPM, GPT-4o, Gemini)
+- **MiniCPM-V 4.6 is USEFUL for non-geometry tasks** despite wall F1=0.094:
+  - Scene classification: ~2.3s avg. Coarse (warehouse vs retail vs corridor) shows consistent bias (everything → "office") but fast. Fine-grained 1/5.
+  - Room detection: ~16.5s avg. Identified 9 zones in warehouse — matches actual functional zones. Conservative but consistent.
+  - OCR: ~7.6s avg. Correctly identified no text in synthetic images. No hallucination. With real labeled plans would read room names.
+  - Adjacency: ~5.3s avg. Sparse graphs (1-3 edges) but directionally correct. GPT-4o produces 10-20 structured edges.
+  - Description: ~9.7s avg. Reasonable high-level geometric summaries.
+- **GPT-4o:** Faster per task (1-4s), more detailed room/adjacency output, same 1/5 fine-grained classification.
+- **Gemini 2.5 Flash:** API key issue — env var name may be `GOOGLE_API_KEY` not `GEMINI_API_KEY`. Not evaluated.
+- **Coarse classification follow-up (3 categories):** MiniCPM 0/5 (all "office"), GPT-4o 1/5 (all "warehouse" except actual warehouse). Synthetic images lack distinguishing visual features for sub-type discrimination.
+- **Pipeline implication (see Thread 54):** Two-tier design — local MiniCPM for triage (classify, OCR, quality check, coarse zones) → gated cloud API call for precise geometry. Saves $0.01-0.02 per blurry/noisy image.
+
+**Files added:**
+- `experiments/scene_understanding/scripts/evaluate_semantic_tasks.py`
+- `experiments/scene_understanding/outputs/semantic_tasks/SEMANTIC_TASKS_REPORT.md`
+- `Docs/architecture/09_FLOORPLAN_PIPELINE.md`
+
+**Next:**
+- Evaluate Qwen3.5-4B, MiniCPM-o 4.5 via `ollama run` with GGUF quantization
+- Try Gemma 4 E4B with `transformers` + 4-bit bitsandbytes quantization
+- Evaluate SmolVLM2 2.2B as another edge-sized candidate
+- Check if Phi-4-vision (4.2B) can run via GGUF on MPS
+- Fix Gemini API key env var and re-run 2.5 Flash evaluation
+- Train MiniCPM on CubiCasa5K for better room-type classification
+
+## Thread 47: Compare and report snapshot selection stays explicit
+
+**Status:** Implemented in current pass. Compare View and Report Lite now require an explicit snapshot selection instead of silently auto-filling the newest snapshots.
+
+**Source signals:**
+- `src/components/view/CompareView.tsx`
+- `src/components/bottom-panel/ReportLiteTab.tsx`
+
+**Key findings:**
+- Compare/report surfaces are evidence exports, so implicit snapshot selection can misrepresent what the user intended to compare.
+- Empty-state prompts are clearer than hidden defaults and match the explicit path/camera selection model already adopted elsewhere in Studio.
+
+**Operational note for SentinelTwin:**
+- Keep comparison/report baselines explicit and fail closed on empty selections rather than inferring the newest snapshots.
+
+## Thread 48: Before / After tab uses explicit snapshot selection
+
+**Status:** Implemented in current pass. The Before/After bottom-panel tab now requires explicit before/after snapshot selection instead of auto-binding to the newest two snapshots.
+
+**Source signals:**
+- `src/components/bottom-panel/BeforeAfterTab.tsx`
+- `src/components/view/CompareView.tsx`
+- `src/components/bottom-panel/ReportLiteTab.tsx`
+
+**Key findings:**
+- The compare workflow is easier to trust when each surface visibly asks for the two snapshots it is comparing.
+- Reusing the newest two saves creates hidden-default drift across the drawer, compare view, and report export surfaces.
+
+**Operational note for SentinelTwin:**
+- Keep before/after evidence selection explicit everywhere, including the bottom-panel summary tab.
+
+## Thread 49: Camera View critical-zone insight stays explicit
+
+**Status:** Implemented in current pass. Camera View now waits for an explicitly selected critical zone before showing the DORI insight card.
+
+**Source signals:**
+- `src/components/view/CameraViewMode.tsx`
+
+**Key findings:**
+- The DORI card is clearer when it is tied to the selected zone rather than the first zone in the scene.
+- Empty-state prompting is preferable to implicit scene-order defaults in analysis panels.
+
+**Operational note for SentinelTwin:**
+- Keep camera-specific zone analysis explicit, and prefer a prompt over a hidden default selection.
+
+## Thread 50: Metrics target quality also stays explicit
+
+**Status:** Implemented in current pass. The Metrics tab now only shows the target quality requirement when a critical zone is explicitly selected.
+
+**Source signals:**
+- `src/components/bottom-panel/MetricsTab.tsx`
+
+**Key findings:**
+- Summary panels should not silently borrow the first zone in the scene as a representative target.
+- Explicit selection or a clear prompt keeps the target-quality metric honest.
+
+**Operational note for SentinelTwin:**
+- Keep target-quality summaries selection-aware rather than ordering-aware.
+
+## Thread 51: Shared critical-zone selectors use priority rather than scene order
+
+**Status:** Implemented in current pass. Shared helpers now prefer a matching label or priority ranking instead of the first critical zone in the scene.
+
+**Source signals:**
+- `src/lib/critical-zone-selection.ts`
+- `src/lib/offline-command-parser.ts`
+- `src/simulation/adversarial-path.ts`
+- `src/lib/scan-to-scene.ts`
+
+**Key findings:**
+- A shared selector is better than duplicating the same scene-order bias in multiple places.
+- Prioritizing by intent or required quality makes offline commands, auto-path creation, and adversarial-path generation more consistent.
+
+**Operational note for SentinelTwin:**
+- When a helper needs a zone but the user has not explicitly chosen one, use a deterministic priority helper instead of the raw first zone.
+
+## Thread 52: Camera Wall and Path Replay should expose their own mode summaries
+
+**Status:** Implemented in current pass. Camera Wall now exposes mode chips for 4 / 6 / 16 views plus auto layout, and Path Replay now has an in-view path selector plus path metrics strip.
+
+**Source signals:**
+- `src/components/view/CameraWallView.tsx`
+- `src/components/view/PathReplayView.tsx`
+
+**Key findings:**
+- The design-pack targets expect the active mode to be obvious from the surface itself, not only from the surrounding panels.
+- Putting the path selector and path metrics inside Path Replay makes the replay surface easier to read at a glance.
+- Camera Wall benefits from explicit layout chips because the reference screen shows the mode as an active control strip, not only a dropdown.
+
+**Operational note for SentinelTwin:**
+- Keep mode-specific summaries in the active surface when the design pack treats them as part of the core workflow, but continue to source the state from the canonical store.
+
+## Thread 53: Camera Wall synchronized timestamps should follow the simulation clock
+
+**Status:** Implemented in current pass. Camera Wall timestamps now use the shared simulation timestamp when synchronized mode is enabled.
+
+**Source signals:**
+- `src/components/view/CameraWallView.tsx`
+- `src/components/view/SceneFeedCanvas.tsx`
+
+**Key findings:**
+- The synchronized wall timestamp is part of the feed story, not just decoration.
+- The mode toggle needs to influence the visible feed metadata to feel real.
+- A shared timestamp is consistent with the reference wall layout and easier for operators to parse at a glance.
+
+**Operational note for SentinelTwin:**
+- Keep feed timestamps anchored to shared simulation context when the mode implies synchronization; reserve wall-clock timestamps for explicit free-running views.
+## Thread 54: Floor Plan Pipeline Architecture — Two-Tier Design (2026-05-29)
+
+**Status:** Proposed. Pipeline design documented in `Docs/architecture/09_FLOORPLAN_PIPELINE.md`.
+
+**Source signals:**
+- `Docs/architecture/09_FLOORPLAN_PIPELINE.md` — full pipeline architecture
+- `experiments/scene_understanding/outputs/COMPARISON_REPORT.md` — bakeoff results (8 models)
+- `experiments/scene_understanding/outputs/semantic_tasks/SEMANTIC_TASKS_REPORT.md` — semantic eval (3 models)
+- Thread 46 above
+
+**Core insight:** Geometry extraction and scene understanding are different capability curves. Small VLMs (1.3B) are useless for geometry (wall F1=0.094) but genuinely useful for semantic tasks. Cloud VLMs dominate geometry but cost money.
+
+**Design:**
+```
+Tier 1 (Local, always): MiniCPM-V 4.6
+  ├── Quality assessment (blurry? → skip cloud)
+  ├── Scene classification (retail/warehouse/corridor)
+  ├── OCR text extraction (room labels, dimensions)
+  ├── Coarse zone detection (room count + layout)
+  └── Confidence flag → SemanticContext
+
+  Gate decision:
+  ├── blurry → reject, no cloud cost
+  ├── low confidence → force cloud geometry pass
+  └── normal → pass SemanticContext to Tier 2
+
+Tier 2 (Cloud, gated): GPT-4o / Gemini 2.5 Flash
+  ├── Precise wall extraction (F1~0.95)
+  ├── Door/window detection (F1 0.2-0.7)
+  ├── Obstruction detection (F1 0.4-0.9)
+  ├── Detailed adjacency graph (10-20 edges)
+  └── Critical zone identification
+
+Post-processing: Validate cloud output against Tier 1 coarse room count
+```
+
+**Performance budget:** Total pipeline ~15-30s, ~$0.015/image. Without Tier 1 gating: every image costs $0.01-0.02.
+
+**Fallback chain:** MiniCPM → GPT-4o → Gemini 2.5 Flash → Gemini 2.5 Pro → SemanticContext only (no geometry if all fail)
+
+**Open questions:**
+- Should Tier 2 prompt include Tier 1 OCR results as context?
+- How should confidence thresholds for the gate decision be calibrated?
+- Can Tier 1 zone detections be coupled with SAM3 for zone-level segmentation?
+
+## Thread 55: Architectural Model Strategy — System-Level Architecture Audit (2026-05-29)
+
+**Status:** Analysis complete. Comprehensive audit of repo vs recommended multi-layer CV/AI pipeline reveals the system already has most of the architecture in place. The recommendation describes a system more like Phase 0 than the current state.
+
+**Source signals:**
+- Full repo audit: `Docs/exploration/EXPLORATION_MAP.md` (this thread)
+- Schema: `apps/studio/src/schema/security-scene.ts` — `source` field on every node, `sceneSourceSchema`
+- Scan compilation: `apps/studio/src/lib/scan-to-scene.ts` — `ScanCompilationProvenance` with confidence
+- AI draft: `apps/studio/src/lib/ai-layout-draft.ts` — `DraftProvenance` with review-before-commit
+- Floor plan import review: `apps/studio/src/components/scan-to-scene/ImportReview.tsx`
+- Scene builder wizard: `apps/studio/src/components/scan-to-scene/SceneBuilderWizard.tsx`
+- Scan site wizard: `apps/studio/src/components/scan-to-scene/ScanSiteWizard.tsx`
+- Project launcher: `apps/studio/src/components/launcher/ProjectStartLauncher.tsx`
+- Operational evidence: `apps/studio/src/lib/operational-evidence.ts` — 40+ event kinds, branching, merge
+- Verification overlay: `apps/studio/src/components/view/CameraViewMode.tsx` — image/video overlay + auto-align
+- Target profiles: `apps/studio/src/simulation/simulate-studio.ts:44-99` — 9 detection types
+- Placement oracle: `apps/studio/src/simulation/placement-oracle.ts`
+- Adversarial path: `apps/studio/src/simulation/adversarial-path.ts`
+- Privacy zones: perimeter surfaces, coverage enforcement, compliance
+
+### What the recommendation gets right
+
+The analysis of "what SentinelTwin should be" is directionally correct:
+
+1. **"Don't claim AI understands buildings"** — Core thesis aligned. The system already has deterministic CV for floor plan import, not VLM-based geometry.
+2. **"Editable scene graph before AI layer"** — Already exists via `SecurityScene` schema + compile/review UI + ImportReview component with drag-correctable walls.
+3. **"Simulation owns truth, AI assists"** — Already the architecture. Coverage engine is pure Three.js raycasting. Adversarial path is Dijkstra. Placement oracle scores deterministic candidates.
+4. **"Truth ladder for every object"** — Partially exists (`source` enum on all nodes, `confidence` on evidence events) but needs a formal `reviewStatus` + `sourceTrace` field.
+5. **"Security jobs as entry point"** — Already built. 7 modes in `ProjectStartLauncher.tsx` (Audit, Design, Import, Scan, AI, Preview, Report).
+6. **"Real-feed verification"** — Already built. Full image/video overlay + multi-phase auto-alignment + per-camera snapshot system.
+7. **"Camera recommendations as scoring engine, not LLM"** — Already built. `computePlacementOracle()` samples wall/ceiling candidates, scores against coverage evaluator, returns top 5.
+
+### What the recommendation gets wrong (assumes doesn't exist)
+
+| Recommendation | Actual State |
+|---|---|
+| "Start with CubiCasa-style model for wall detection" | Already using heuristic CV with ImportReview correction UI. Works for V0. CubiCasa is a future Phase 2. |
+| "YOLO11 for door/window symbols" | Detection exists via import heuristic + bakeoff explores VLMs. No YOLO integration needed yet. |
+| "SAM 2 for correction, not understanding" | ImportReview already lets users drag wall endpoints, exclude false detections, merge/split walls. SAM 2 would be over-engineering for V0. |
+| "PaddleOCR for dimensions" | Identified as a gap. Experiments use GOT-OCR2. Not in production yet. OCR integration is a valid next step. |
+| "Vectorization layer → structured output" | Already exists: `scan-to-scene.ts:compileScanSessionToScene()` converts photo markers to walls/doors/windows/cameras. Floor plan import converts raster to wall geometry. |
+| "Scene graph as core data model" | Already `SecurityScene` — the documented single source of truth with 40+ fields, full Zod validation, provenance, and simulation results inline. |
+| "Coverage simulation as ray casting, not ML" | Already pure Three.js ray casting with BVH. Never uses ML for coverage. |
+| "Add target model library" | Already 9 detection types with per-type sampling profiles, DORI scoring, and `/target` command. |
+| "Add camera spec presets" | 4 generic presets exist. Real camera database (IPVM) is planned but not built. |
+| "Add privacy/compliance overlays" | Fully implemented. Privacy zone schema, rendering, coverage enforcement, compliance reporting. |
+
+### Actual Gaps
+
+These are the real missing pieces that would add value:
+
+1. **Formal truth ladder per-node** (HIGH):
+   - Currently: `source: "manual"|"ai"|"scan"|"import"|"preset"|"demo"` on every node + `confidence` on evidence events
+   - Missing: `reviewStatus: "unreviewed"|"confirmed"|"corrected"|"calibrated"|"verified"`, `sourceTrace: string` (which model/version/pipeline), `geometryValidity: "valid"|"suspect"|"invalid"`
+   - Value: Reports can state "wall F12: level 2 (user-confirmed)" instead of "AI generated"
+   - Implementation: Add to `baseNodeSchema` in `security-scene.ts`
+
+2. **OCR dimension extraction in floor plan import** (MEDIUM):
+   - Currently: Heuristic wall detection + scale calibration input. No OCR.
+   - Missing: PaddleOCR pass over uploaded floor plan to extract room labels + dimensions + scale text
+   - Value: Auto-extracts room names (Office, Storage, Server Room), dimension text ("12' x 10'"), scale references
+   - Implementation: Add as optional enrichment pass after wall detection
+
+3. **Camera spec intelligence** (MEDIUM):
+   - Currently: 4 generic presets (Indoor Dome, Bullet, PTZ, Fisheye).
+   - Missing: LLM-driven spec extraction from camera model names + search query + structured spec output
+   - Value: "Hikvision DS-2CD2T47G2-L" → `{ resolutionMP: 4, fovH: 83°, irRangeM: 60, ... }`
+   - Implementation: LLM extraction function + local preset library lookup
+
+4. **Automated live-feed drift detection** (LOW — V2):
+   - Currently: Manual image/video overlay verification with auto-alignment.
+   - Missing: Automated frame comparison against simulation expected view + alerting
+   - Value: "Camera 4 has drifted 12° since calibration" — operational alerting
+
+### Corrected Phase Roadmap
+
+The recommendation's 5-phase plan was written for a system at Phase 0. The actual SentinelTwin is already past Phase 2.
+
+**Corrected Phase Roadmap:**
+
+```
+Phase 0-2 (COMPLETE):
+  ✔ Simulation engine (coverage, DORI, adversarial path, placement oracle)
+  ✔ SecurityScene schema (40+ fields, full Zod)
+  ✔ Core UI (3D canvas, camera placement, inspector, view modes)
+  ✔ Floor plan import (heuristic CV + ImportReview correction)
+  ✔ Photo scan wizard (ScanSiteWizard + compile pipeline)
+  ✔ AI draft (heuristic + model paths, review-before-commit)
+  ✔ Privacy zones (schema → rendering → coverage enforcement → compliance)
+  ✔ Real-feed verification UI (image/video overlay + auto-alignment)
+  ✔ Security jobs launcher (7 modes)
+  ✔ Operational evidence (40+ event kinds, branching, three-way merge)
+  ✔ Target model library (9 detection types)
+
+Phase 3 — Production hardening (NOW):
+  [ ] Truth ladder: reviewStatus + sourceTrace per node
+  [ ] OCR integration: PaddleOCR for dimension + room label extraction
+  [ ] Camera spec intelligence: LLM extraction + preset library
+  [ ] Import pipelines share common compiler pattern
+  [ ] Bakeoff results distilled into production architecture doc
+
+Phase 4 — AI-assisted floor plan compiler:
+  [ ] CubiCasa5K/FloorTrans segmentation model
+  [ ] YOLO11-obb for symbol detection
+  [ ] SAM 2.1 correction integration
+  [ ] Deterministic geometry compiler
+
+Phase 5 — Recommendation engine:
+  [ ] Multi-camera optimization (OR-Tools / greedy + local search)
+  [ ] Verified counterfactual simulation
+  [ ] LLM explanation layer on verified results
+
+Phase 6 — Scan-to-scene:
+  [ ] Depth Anything V2 / VGGT
+  [ ] SpatialLM / Open3D
+  [ ] SecurityScene compiler
+
+Phase 7 — Real-feed verification:
+  [ ] Live frame comparison pipeline
+  [ ] Drift/blocked detection
+  [ ] Continuous alerting
+```
+
+### Key Decision
+
+The highest-leverage build target right now is **truth ladder** (reviewStatus + sourceTrace). It's a small schema change that unlocks the product's core credibility claim: "every element in this report has a known confidence level." Without it, every node is treated as equally authoritative regardless of source.
+
+### References
+- `Docs/decisions/DECISION_LOG.md` — D-217 (truth ladder), D-218 (corrected roadmap)
+- `Docs/architecture/09_FLOORPLAN_PIPELINE.md` — Pipeline architecture (needs update with Phase 3 findings)
+
+## Thread: 3D Contextual Object Manipulation UI
+
+### Why this matters
+
+SentinelTwin already supports selection, transform handles, inspectors, and object-specific editing. The next UI question is whether object operations should be surfaced through a contextual 3D action UI, such as a right-click or long-press menu, rather than only through the inspector.
+
+### Core idea
+
+When a user selects or right-clicks an object like a camera, door, window, wall, obstruction, or zone, the editor can open a focused action surface with object-specific options such as:
+
+- move
+- rotate
+- raise / lower
+- flip / mirror where supported
+- snap to nearest wall or surface
+- duplicate
+- delete
+- align to camera / wall / zone
+- convert or retarget subtype where valid
+
+### Design hypothesis
+
+This should feel like a professional spatial editor, not a game HUD. The interaction may borrow the speed of game tooling, but the visual language should stay aligned with SentinelTwin's operator-workspace and security-audit framing.
+
+### Open questions
+
+- Should the primary pattern be a right-click context menu, a radial menu, or a compact floating action sheet?
+- Which actions belong in the contextual UI versus the inspector?
+- Which object classes deserve special actions, such as wall-attached openings for doors and windows?
+- How do we keep keyboard, mouse, and touch interaction coherent across desktop workflows?
+
+### Exploration goal
+
+Prototype a contextual 3D interaction model that reduces friction for object manipulation without creating a second control system alongside the inspector and transform handles.

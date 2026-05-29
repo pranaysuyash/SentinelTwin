@@ -19,6 +19,16 @@ describe("SceneIntelligenceTab", () => {
     expect(source).toContain("provenanceEdge");
     expect(source).toContain("Evidence ledger");
     expect(source).toContain("Append-only journal");
+    expect(source).toContain("Temporal replay");
+    expect(source).toContain("Checkpoint scrubber");
+    expect(source).toContain("cameraMetadataEvents");
+    expect(source).toContain("Camera metadata evidence");
+    expect(source).toContain("cameraLiveConnectionEvents");
+    expect(source).toContain("Live camera binding evidence");
+    expect(source).toContain("Backend archive records for live camera probe and disconnect actions.");
+    expect(source).toContain("Sensor live evidence");
+    expect(source).toContain("Sensor triggers, heartbeats, faults, and restores are recorded alongside scene provenance.");
+    expect(source).toContain("No sensor evidence yet. Use the Sensors panel or paste live metadata to create the first event.");
     expect(source).toContain("Search evidence");
     expect(source).toContain("Clear filters");
     expect(source).toContain("Lifecycle stage");

@@ -224,6 +224,8 @@ function LiveFeedHUD({
   ppm,
   targetType,
   sensorFusion,
+  sensorEvent,
+  cameraMetadataEvent,
 }: {
   camera: CameraNode;
   mode: CameraFeedMode;
@@ -238,6 +240,43 @@ function LiveFeedHUD({
     nearestSensorCoverage: string;
     nearestDistanceM: number | null;
   };
+  sensorEvent?: {
+    sensorLabel: string;
+    kind: string;
+    resultingState: string | null;
+    nearestCameraName: string | null;
+    nearestDistanceM: number | null;
+    timestamp: number;
+    details: string;
+  } | null;
+  cameraMetadataEvent?: {
+    cameraName: string;
+    status: string | null;
+    clarity: string | null;
+    nightMode: string | null;
+    feedMode: string | null;
+    ingestMode: "paste" | "external";
+    feedLabel: string | null;
+    feedUrl: string | null;
+    summary: string;
+    notes: string | null;
+    timestamp: number;
+  } | null;
+  cameraLiveConnectionEvent?: {
+    cameraName: string;
+    liveFeedUrl: string | null;
+    liveFeedLabel: string | null;
+    liveSessionId: string | null;
+    liveSessionState: "idle" | "probing" | "connected" | "error" | null;
+    liveSessionStartedAt: number | null;
+    liveSessionConfirmedAt: number | null;
+    liveConnectionMode: "rtsp" | "mjpeg" | "http" | "onvif" | "proxy" | null;
+    liveConnectionStatus: "disconnected" | "connecting" | "connected" | "error" | null;
+    ingestMode: "manual" | "external";
+    summary: string;
+    notes: string | null;
+    timestamp: number;
+  } | null;
 }) {
   const isActive = cam.status === "on";
   const ranges = rangeMeters(cam, ppm);
@@ -315,6 +354,89 @@ function LiveFeedHUD({
             <div>
               <span className="text-[#6a748b]">Active:</span> {sensorFusion.activeCount} / {sensorFusion.totalCount}
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {sensorEvent ? (
+        <div className="absolute left-3 top-20 z-30 rounded-xl border border-cyan-400/18 bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)] backdrop-blur-sm">
+          <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Live Sensor Event</div>
+          <div className="mt-1 text-[10px] font-semibold text-white">{sensorEvent.sensorLabel}</div>
+          <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] text-[#d2d9e8]">
+            <div>
+              <span className="text-[#6a748b]">Type:</span> {sensorEvent.kind}
+            </div>
+            <div>
+              <span className="text-[#6a748b]">State:</span> {sensorEvent.resultingState ?? "—"}
+            </div>
+            <div>
+              <span className="text-[#6a748b]">Camera:</span> {sensorEvent.nearestCameraName ?? "None"}
+            </div>
+            <div>
+              <span className="text-[#6a748b]">Distance:</span>{" "}
+              {sensorEvent.nearestDistanceM == null ? "—" : `${sensorEvent.nearestDistanceM.toFixed(1)}m`}
+            </div>
+          </div>
+          <div className="mt-1 text-[8px] text-[#8ea6cc]">{sensorEvent.details}</div>
+        </div>
+      ) : null}
+
+      {cameraMetadataEvent ? (
+        <div className="absolute right-3 bottom-52 z-30 rounded-xl border border-emerald-400/18 bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)] backdrop-blur-sm">
+          <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-emerald-300">Live Camera Metadata</div>
+          <div className="mt-1 text-[10px] font-semibold text-white">{cameraMetadataEvent.cameraName}</div>
+          <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] text-[#d2d9e8]">
+            <div>
+              <span className="text-[#6a748b]">Status:</span> {cameraMetadataEvent.status ?? "—"}
+            </div>
+            <div>
+              <span className="text-[#6a748b]">Clarity:</span> {cameraMetadataEvent.clarity ?? "—"}
+            </div>
+            <div>
+              <span className="text-[#6a748b]">Night:</span> {cameraMetadataEvent.nightMode ?? "—"}
+            </div>
+            <div>
+              <span className="text-[#6a748b]">Mode:</span> {cameraMetadataEvent.feedMode ?? cameraMetadataEvent.ingestMode}
+            </div>
+          </div>
+          <div className="mt-1 text-[8px] text-[#8ea6cc]">
+            {cameraMetadataEvent.feedLabel ? `${cameraMetadataEvent.feedLabel} · ` : ""}
+            {cameraMetadataEvent.summary}
+          </div>
+        </div>
+      ) : null}
+
+      {cameraLiveConnectionEvent ? (
+        <div className="absolute right-3 bottom-80 z-30 rounded-xl border border-cyan-400/18 bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)] backdrop-blur-sm">
+          <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Live Camera Connection</div>
+          <div className="mt-1 text-[10px] font-semibold text-white">{cameraLiveConnectionEvent.cameraName}</div>
+          <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] text-[#d2d9e8]">
+            <div>
+              <span className="text-[#6a748b]">Status:</span> {cameraLiveConnectionEvent.liveConnectionStatus ?? "—"}
+            </div>
+            <div>
+              <span className="text-[#6a748b]">Mode:</span> {cameraLiveConnectionEvent.liveConnectionMode ?? "—"}
+            </div>
+            <div>
+              <span className="text-[#6a748b]">Session:</span> {cameraLiveConnectionEvent.liveSessionState ?? "—"}
+            </div>
+            <div>
+              <span className="text-[#6a748b]">Session ID:</span> {cameraLiveConnectionEvent.liveSessionId ?? "—"}
+            </div>
+            <div className="col-span-2">
+              <span className="text-[#6a748b]">Feed:</span> {cameraLiveConnectionEvent.liveFeedLabel ?? cameraLiveConnectionEvent.liveFeedUrl ?? "—"}
+            </div>
+          </div>
+          <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-[8px] text-[#8ea6cc]">
+            <div>
+              <span className="text-[#6a748b]">Started:</span> {cameraLiveConnectionEvent.liveSessionStartedAt == null ? "—" : new Date(cameraLiveConnectionEvent.liveSessionStartedAt).toLocaleTimeString()}
+            </div>
+            <div>
+              <span className="text-[#6a748b]">Confirmed:</span> {cameraLiveConnectionEvent.liveSessionConfirmedAt == null ? "—" : new Date(cameraLiveConnectionEvent.liveSessionConfirmedAt).toLocaleTimeString()}
+            </div>
+          </div>
+          <div className="mt-1 text-[8px] text-[#8ea6cc]">
+            {cameraLiveConnectionEvent.ingestMode === "external" ? "External bind" : "Manual bind"} · {cameraLiveConnectionEvent.summary}
           </div>
         </div>
       ) : null}
@@ -1437,14 +1559,17 @@ export function CameraViewMode() {
     if (!activePathResult || !camera) return null;
     return activePathResult.visibilityByCamera[camera.id] ?? null;
   }, [activePathResult, camera]);
-  const firstCriticalZone = scene.criticalZones[0] ?? null;
+  const selectedCriticalZone = useMemo(
+    () => scene.criticalZones.find((zone) => zone.id === selectedId) ?? null,
+    [scene.criticalZones, selectedId],
+  );
   const camResult = result?.cameraResults.find((entry) => entry.cameraId === camera?.id) ?? null;
-  const zoneResult = firstCriticalZone ? result?.criticalZoneResults.find((entry) => entry.zoneId === firstCriticalZone.id) ?? null : null;
+  const zoneResult = selectedCriticalZone ? result?.criticalZoneResults.find((entry) => entry.zoneId === selectedCriticalZone.id) ?? null : null;
 
   const zoneAnalysis = useMemo(() => {
-    if (!camera || !firstCriticalZone || !camResult) return null;
+    if (!camera || !selectedCriticalZone || !camResult) return null;
 
-    const centroid = firstCriticalZone.polygon.reduce(
+    const centroid = selectedCriticalZone.polygon.reduce(
       (acc, [x, z]) => {
         acc.x += x;
         acc.z += z;
@@ -1452,7 +1577,7 @@ export function CameraViewMode() {
       },
       { x: 0, z: 0 },
     );
-    const count = Math.max(firstCriticalZone.polygon.length, 1);
+    const count = Math.max(selectedCriticalZone.polygon.length, 1);
     const centroidX = centroid.x / count;
     const centroidZ = centroid.z / count;
     const dx = centroidX - camera.position[0];
@@ -1460,11 +1585,11 @@ export function CameraViewMode() {
     const distanceM = Math.hypot(dx, dz);
     const bearing = (Math.atan2(dx, dz) * 180) / Math.PI;
     const angleDeg = Math.abs((((bearing - camera.yawDeg) % 360) + 540) % 360 - 180);
-    const currentQuality = camResult.qualityByZone[firstCriticalZone.id] ?? "none";
+    const currentQuality = camResult.qualityByZone[selectedCriticalZone.id] ?? "none";
     const bestCameraName = result?.cameraResults
       .map((entry) => ({
         cameraId: entry.cameraId,
-        quality: entry.qualityByZone[firstCriticalZone.id] ?? "none",
+        quality: entry.qualityByZone[selectedCriticalZone.id] ?? "none",
       }))
       .sort((a, b) => QUALITY_RANK[b.quality as DoriQuality] - QUALITY_RANK[a.quality as DoriQuality])[0];
 
@@ -1482,20 +1607,29 @@ export function CameraViewMode() {
       reasonLine,
       bestCameraName: bestCameraName ? (scene.cameras.find((entry) => entry.id === bestCameraName.cameraId)?.name ?? bestCameraName.cameraId) : camera.name,
     };
-  }, [camera, camResult, firstCriticalZone, result, scene.cameras]);
+  }, [camera, camResult, result, scene.cameras, selectedCriticalZone, zoneResult?.status]);
 
   const activeTimelineEvent = useMemo(() => {
     if (!activePathResult?.timeline?.length) return null;
     const events = activePathResult.timeline.filter((event) => event.timeS <= pathTimeS);
     return events[events.length - 1] ?? activePathResult.timeline[0] ?? null;
   }, [activePathResult, pathTimeS]);
+  const cameraPosition = camera?.position ?? [0, 0, 0];
+  const sensorEvents = useStudioStore((s) => s.sensorEvents.filter((event) => event.sceneId === s.scene.id));
+  const cameraMetadataEvents = useStudioStore((s) => s.cameraMetadataEvents.filter((event) => event.sceneId === s.scene.id));
+  const cameraLiveConnectionEvents = useStudioStore((s) => s.cameraLiveConnectionEvents.filter((event) => event.sceneId === s.scene.id));
   const sensorFusion = useMemo(
-    () => computeSensorFusionSummary(camera.position, scene.sensors),
-    [camera.position, scene.sensors],
+    () => computeSensorFusionSummary(cameraPosition, scene.sensors),
+    [cameraPosition, scene.sensors],
   );
   const nearestSensorLabel = sensorFusion.nearestSensor ? sensorFusion.nearestSensor.label : "None";
   const nearestSensorState = sensorFusion.nearestSensor ? sensorFusion.nearestSensor.state.replace(/_/g, " ") : "—";
   const nearestSensorCoverage = sensorFusion.nearestSensor ? sensorFusion.nearestSensor.coverageMode.replace(/_/g, " ") : "—";
+  const latestSensorEvent = sensorFusion.nearestSensor
+    ? sensorEvents.find((event) => event.sensorId === sensorFusion.nearestSensor?.id) ?? sensorEvents[0] ?? null
+    : sensorEvents[0] ?? null;
+  const latestCameraMetadataEvent = cameraMetadataEvents.find((event) => event.cameraId === camera.id) ?? null;
+  const latestCameraLiveConnectionEvent = cameraLiveConnectionEvents.find((event) => event.cameraId === camera.id) ?? null;
 
   const replayQualityLabel = activeTimelineEvent?.quality
     ? activeTimelineEvent.quality.toUpperCase()
@@ -1800,7 +1934,7 @@ export function CameraViewMode() {
             mode={feedMode}
             flags={flags}
             ppm={scene.assumptions.pixelsPerMeter}
-            targetType={firstCriticalZone?.targetType}
+            targetType={selectedCriticalZone?.targetType}
             sensorFusion={{
               totalCount: sensorFusion.totalCount,
               activeCount: sensorFusion.activeCount,
@@ -1809,6 +1943,9 @@ export function CameraViewMode() {
               nearestSensorCoverage,
               nearestDistanceM: sensorFusion.nearestDistanceM,
             }}
+            sensorEvent={latestSensorEvent}
+            cameraMetadataEvent={latestCameraMetadataEvent}
+            cameraLiveConnectionEvent={latestCameraLiveConnectionEvent}
           />
           {activePath && activePathResult ? (
             <ReplayStatusOverlay
@@ -1828,21 +1965,31 @@ export function CameraViewMode() {
               maxQuality={visibilityForCurrentCamera.maxQuality}
             />
           ) : null}
-          {zoneAnalysis && firstCriticalZone ? (
-            <DoriInsightCard
-              camera={camera}
-              zoneLabel={firstCriticalZone.label}
-              targetType={firstCriticalZone.targetType}
-              currentQuality={zoneAnalysis.currentQuality}
-              requiredQuality={zoneResult?.requiredQuality ?? firstCriticalZone.requiredQuality}
-              zoneStatus={zoneResult?.status ?? "unknown"}
-              bestCameraName={zoneAnalysis.bestCameraName}
-              distanceM={zoneAnalysis.distanceM}
-              angleDeg={zoneAnalysis.angleDeg}
-              lightingLabel={envMode === "night" ? "Night" : envMode === "dusk" ? "Dusk" : "Day"}
-              reasonLine={zoneAnalysis.reasonLine}
-            />
-          ) : null}
+          {selectedCriticalZone ? (
+            zoneAnalysis ? (
+              <DoriInsightCard
+                camera={camera}
+                zoneLabel={selectedCriticalZone.label}
+                targetType={selectedCriticalZone.targetType}
+                currentQuality={zoneAnalysis.currentQuality}
+                requiredQuality={zoneResult?.requiredQuality ?? selectedCriticalZone.requiredQuality}
+                zoneStatus={zoneResult?.status ?? "unknown"}
+                bestCameraName={zoneAnalysis.bestCameraName}
+                distanceM={zoneAnalysis.distanceM}
+                angleDeg={zoneAnalysis.angleDeg}
+                lightingLabel={envMode === "night" ? "Night" : envMode === "dusk" ? "Dusk" : "Day"}
+                reasonLine={zoneAnalysis.reasonLine}
+              />
+            ) : null
+          ) : (
+            <div className="absolute right-3 top-24 z-30 w-56 rounded-xl border border-dashed border-[#243146] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)] backdrop-blur-sm">
+              <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-[#7dd3fc]">DORI OVERLAY</div>
+              <div className="mt-1 text-[10px] font-semibold text-white">Select a critical zone</div>
+              <div className="mt-1 text-[9px] text-[#9ab0ce]">
+                Click a zone on the map to inspect its distance, angle, and required quality for the current camera.
+              </div>
+            </div>
+          )}
           <VerificationPanel
             enabled={verificationEnabled}
             mode={verificationMode}

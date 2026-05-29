@@ -9,9 +9,17 @@ describe("SensorsTab", () => {
 
     expect(source).toContain("Sensor Fusion Entry Point");
     expect(source).toContain("Sensor Inventory");
+    expect(source).toContain("Live Signals");
+    expect(source).toContain("Live Event Feed");
+    expect(source).toContain("Live Metadata Intake");
     expect(source).toContain('setActiveTool("sensor")');
+    expect(source).toContain("Trigger");
+    expect(source).toContain("Heartbeat");
+    expect(source).toContain("Mark Faulted");
+    expect(source).toContain("Restore");
+    expect(source).toContain("Import Metadata Feed");
     expect(source).toContain("Nearest Cam");
-    expect(source).toContain("Sensors are included in the canonical report summary today");
+    expect(source).toContain("Live evidence is now logged into the canonical operational trail.");
     expect(source).toContain("setSensorPlacementType");
     expect(source).toContain("sensorPlacementType");
   });

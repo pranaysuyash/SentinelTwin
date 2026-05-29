@@ -44,10 +44,12 @@ qa-output/
 
 # Scene-understanding generated bakeoff runs
 experiments/scene_understanding/outputs/stack_*/
+experiments/scene_understanding/outputs/semantic_tasks/
 
 # Local snapshot captures
 sentineltwin-*.png
 sentinel-novel-*.png
+novel-*.png
 *-open-studio.png
 studio-wait-*.png
 

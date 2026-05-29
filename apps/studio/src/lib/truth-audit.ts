@@ -100,6 +100,7 @@ export const TRUST_AUDIT_SURFACES: TrustAuditSurface[] = [
       "Route status",
       "Route reason",
       "Resolve Approval Route",
+      "Latest route",
       "Latest action",
       "Review requests",
       "Approvals",

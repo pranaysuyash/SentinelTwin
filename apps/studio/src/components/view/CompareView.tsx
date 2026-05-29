@@ -2,7 +2,7 @@
 
 import { OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { ArrowLeftRight, GitCompare, Globe, Plus, AlertTriangle, Sparkles } from "lucide-react";
+import { ArrowLeftRight, Database, GitCompare, Globe, Plus, AlertTriangle, Sparkles } from "lucide-react";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
@@ -10,6 +10,7 @@ import { useStudioStore } from "@/store/studio-store";
 import { qualityToScore } from "@/simulation/dori";
 import "@/lib/three-compat";
 import { buildCompareReportData, exportCompareAsHtml, exportCompareAsMarkdown } from "@/report";
+import { buildReportEvidenceBundle, stringifyReportEvidenceBundle } from "@/lib/report-evidence-bundle";
 import {
   ENVIRONMENT_THEMES,
   SceneLighting,
@@ -537,6 +538,21 @@ function ChangedObjectsPanel({ snapshotA, snapshotB }: { snapshotA: SceneSnapsho
   );
 }
 
+function SnapshotPlaceholder({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex h-full min-h-[360px] flex-col items-center justify-center rounded-xl border border-dashed border-[#1f2737] bg-[#090d14] px-4 text-center">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#556076]">{title}</div>
+      <div className="mt-2 max-w-[280px] text-[10px] text-[#7f8ca6]">{description}</div>
+    </div>
+  );
+}
+
 export function CompareView() {
   const snapshots = useStudioStore((s) => s.snapshots);
   const scene = useStudioStore((s) => s.scene);
@@ -558,13 +574,11 @@ export function CompareView() {
   const panelBRef = useRef<HTMLDivElement | null>(null);
   const sceneName = scene.name;
 
-  const defaultA = snapshots[Math.max(snapshots.length - 2, 0)]?.id ?? null;
-  const defaultB = snapshots[snapshots.length - 1]?.id ?? null;
-  const validComparisonAId = comparisonAId && snapshots.some((snapshot) => snapshot.id === comparisonAId) ? comparisonAId : defaultA;
-  const validComparisonBId = comparisonBId && snapshots.some((snapshot) => snapshot.id === comparisonBId) ? comparisonBId : defaultB;
+  const validComparisonAId = comparisonAId && snapshots.some((snapshot) => snapshot.id === comparisonAId) ? comparisonAId : null;
+  const validComparisonBId = comparisonBId && snapshots.some((snapshot) => snapshot.id === comparisonBId) ? comparisonBId : null;
 
-  const snapshotA = snapshots.find((snapshot) => snapshot.id === validComparisonAId) ?? snapshots[Math.max(snapshots.length - 2, 0)] ?? snapshots[0] ?? null;
-  const snapshotB = snapshots.find((snapshot) => snapshot.id === validComparisonBId) ?? snapshots[snapshots.length - 1] ?? null;
+  const snapshotA = validComparisonAId ? snapshots.find((snapshot) => snapshot.id === validComparisonAId) ?? null : null;
+  const snapshotB = validComparisonBId ? snapshots.find((snapshot) => snapshot.id === validComparisonBId) ?? null : null;
   const latestSimulatedSnapshot = [...snapshots].reverse().find((snapshot) => Boolean(snapshot.simulation)) ?? null;
 
   const cellsA = useMemo(() => snapshotA?.simulation?.coverageCells ?? [], [snapshotA]);
@@ -626,6 +640,27 @@ export function CompareView() {
     setExportToast("Comparison JSON exported");
     window.setTimeout(() => setExportToast(null), 2500);
   }, [comparisonExport]);
+  const handleExportEvidenceBundle = useCallback(() => {
+    if (!compareReportData?.compare || !snapshotB?.simulation) return;
+    const afterScene = { ...snapshotB.scene, snapshots: [], scenarios: [] } as never;
+    const bundle = buildReportEvidenceBundle({
+      scene: afterScene,
+      report: compareReportData.compare.after,
+      simulationResult: snapshotB.simulation,
+      compare: compareReportData.compare,
+      visualEvidence: compareReportData.visuals,
+      notes: ["Compare-mode evidence bundle exported from the compare surface."],
+    });
+    const blob = new Blob([stringifyReportEvidenceBundle(bundle)], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `sentineltwin-evidence-bundle-${sceneName.replace(/[^a-zA-Z0-9_-]/g, "_")}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setExportToast("Evidence bundle exported");
+    window.setTimeout(() => setExportToast(null), 2500);
+  }, [compareReportData, sceneName, snapshotB]);
   const handleExportMarkdown = useCallback(() => {
     if (!compareReportData) return;
     const markdown = exportCompareAsMarkdown(compareReportData.compare);
@@ -771,6 +806,14 @@ export function CompareView() {
           </button>
           <button
             type="button"
+            onClick={handleExportEvidenceBundle}
+            className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white"
+          >
+            <Database className="h-2.5 w-2.5" />
+            Evidence Bundle
+          </button>
+          <button
+            type="button"
             onClick={handleExportMarkdown}
             className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white"
           >
@@ -831,6 +874,9 @@ export function CompareView() {
             onChange={(event) => setComparisonAId(event.target.value)}
             className="min-w-0 flex-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none"
           >
+            <option value="" disabled>
+              Select snapshot
+            </option>
             {snapshots.map((snapshot) => (
               <option key={snapshot.id} value={snapshot.id}>
                 {snapshot.label}
@@ -845,6 +891,9 @@ export function CompareView() {
             onChange={(event) => setComparisonBId(event.target.value)}
             className="min-w-0 flex-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none"
           >
+            <option value="" disabled>
+              Select snapshot
+            </option>
             {snapshots.map((snapshot) => (
               <option key={snapshot.id} value={snapshot.id}>
                 {snapshot.label}
@@ -887,26 +936,36 @@ export function CompareView() {
       ) : null}
 
       <div className="grid flex-1 min-h-0 grid-cols-2 gap-2 p-2">
-        {snapshotA ? (
-          <div ref={panelARef} className="min-h-0">
+        <div ref={panelARef} className="min-h-0">
+          {snapshotA ? (
             <ScenePanel
               label={`Scenario A — ${snapshotA.label ?? "Baseline"}`}
               accent="baseline"
               scene={snapshotA.scene}
               coverageCells={cellsA}
             />
-          </div>
-        ) : null}
-        {snapshotB ? (
-          <div ref={panelBRef} className="min-h-0">
+          ) : (
+            <SnapshotPlaceholder
+              title="Select Scenario A"
+              description="Choose the baseline snapshot you want to compare against. Until then, this side stays empty on purpose."
+            />
+          )}
+        </div>
+        <div ref={panelBRef} className="min-h-0">
+          {snapshotB ? (
             <ScenePanel
               label={`Scenario B — ${snapshotB.label ?? "Proposed Fix"}`}
               accent="proposed"
               scene={snapshotB.scene}
               coverageCells={cellsB}
             />
-          </div>
-        ) : null}
+          ) : (
+            <SnapshotPlaceholder
+              title="Select Scenario B"
+              description="Choose the proposed or after snapshot to compare. This avoids silently defaulting to the newest save."
+            />
+          )}
+        </div>
       </div>
 
       <div className="px-2 pb-2">

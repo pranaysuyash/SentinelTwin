@@ -1,13 +1,15 @@
 "use client";
 
-import { Copy, FileText, Globe, Loader2, Printer, Sparkles } from "lucide-react";
+import { Copy, Database, FileText, Globe, Loader2, Printer, Sparkles } from "lucide-react";
 import { useState } from "react";
 
 import type { SecurityReport } from "@/agents/ReportAgent";
 import { useAiCommand } from "@/hooks/use-ai-command";
 import { buildSecurityOutcomeModel } from "@/lib/security-outcome/security-outcome-model";
 import { exportTextAsPdf } from "@/lib/pdf-export";
+import { buildReportEvidenceBundle, stringifyReportEvidenceBundle } from "@/lib/report-evidence-bundle";
 import { buildCompareReportData, exportCompareAsHtml, exportCompareAsMarkdown } from "@/report";
+import { buildReportData } from "@/report";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { useStudioStore } from "@/store/studio-store";
 import { buildReportSummaryLines } from "@/lib/report-summary";
@@ -29,7 +31,7 @@ export function ReportLiteTab() {
   const [snapshotBId, setSnapshotBId] = useState<string | null>(null);
   const activePath = scene.paths.find((path) => path.id === activePathId) ?? null;
   const outcome = buildSecurityOutcomeModel(scene, result, activePath);
-  const reportSummary = buildReportSummaryLines(outcome, result);
+  const reportSummary = buildReportSummaryLines(outcome, result, scene);
 
   // Build markdown from either AI report or simulation data
   const markdown = result
@@ -45,8 +47,11 @@ export function ReportLiteTab() {
     setIsGenerating(false);
   };
 
-  const snapshotA = snapshots.find((snapshot) => snapshot.id === (snapshotAId ?? compareReportSelection?.snapshotAId)) ?? snapshots[Math.max(snapshots.length - 2, 0)] ?? null;
-  const snapshotB = snapshots.find((snapshot) => snapshot.id === (snapshotBId ?? compareReportSelection?.snapshotBId)) ?? snapshots[snapshots.length - 1] ?? null;
+  const selectedSnapshotAId = snapshotAId ?? compareReportSelection?.snapshotAId ?? null;
+  const selectedSnapshotBId = snapshotBId ?? compareReportSelection?.snapshotBId ?? null;
+  const snapshotA = selectedSnapshotAId ? snapshots.find((snapshot) => snapshot.id === selectedSnapshotAId) ?? null : null;
+  const snapshotB = selectedSnapshotBId ? snapshots.find((snapshot) => snapshot.id === selectedSnapshotBId) ?? null : null;
+  const compareSelectionMissing = reportMode === "compare" && (!snapshotA || !snapshotB);
   const visuals = compareVisualEvidence &&
     compareVisualEvidence.snapshotAId === (snapshotA?.id ?? "") &&
     compareVisualEvidence.snapshotBId === (snapshotB?.id ?? "") &&
@@ -82,6 +87,50 @@ export function ReportLiteTab() {
     const a = document.createElement("a");
     a.href = url;
     a.download = `sentineltwin-report-${scene.name.replace(/[^a-zA-Z0-9_-]/g, "_")}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportEvidenceBundle = () => {
+    if (reportMode === "compare" && snapshotA?.simulation && snapshotB?.simulation) {
+      const beforeScene = { ...snapshotA.scene, snapshots: [], scenarios: [] } as never;
+      const afterScene = { ...snapshotB.scene, snapshots: [], scenarios: [] } as never;
+      const compare = buildCompareReportData(
+        beforeScene,
+        snapshotA.simulation,
+        afterScene,
+        snapshotB.simulation,
+      );
+      const bundle = buildReportEvidenceBundle({
+        scene: afterScene,
+        report: compare.after,
+        simulationResult: snapshotB.simulation,
+        compare,
+        visualEvidence: visuals,
+        notes: ["Compare-mode report evidence bundle exported from the report handoff surface."],
+      });
+      const blob = new Blob([stringifyReportEvidenceBundle(bundle)], { type: "application/json;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `sentineltwin-report-evidence-${scene.name.replace(/[^a-zA-Z0-9_-]/g, "_")}-compare.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
+    if (!result) return;
+    const report = buildReportData(scene, result);
+    const bundle = buildReportEvidenceBundle({
+      scene,
+      report,
+      simulationResult: result,
+      notes: ["Single-scene report evidence bundle exported from the report handoff surface."],
+    });
+    const blob = new Blob([stringifyReportEvidenceBundle(bundle)], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `sentineltwin-report-evidence-${scene.name.replace(/[^a-zA-Z0-9_-]/g, "_")}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -211,6 +260,12 @@ export function ReportLiteTab() {
               <Globe className="h-3 w-3" /> Export HTML
             </button>
             <button
+              onClick={handleExportEvidenceBundle}
+              className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
+            >
+              <Database className="h-3 w-3" /> Export Evidence Bundle
+            </button>
+            <button
               onClick={() => {
                 void handleExportPdf();
               }}
@@ -305,31 +360,42 @@ export function ReportLiteTab() {
         {reportMode === "compare" ? (
           <div className="mb-3 rounded-lg border border-[#1e2130] bg-[#0b1018] p-3">
             <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#7f8da8]">Compare Export Context</div>
+            {compareSelectionMissing ? (
+              <div className="mb-2 rounded-lg border border-dashed border-[#243048] bg-[#091018] px-3 py-2 text-[10px] text-[#8a97af]">
+                Select both snapshots to generate compare exports. The report keeps the comparison explicit instead of auto-picking the newest saves.
+              </div>
+            ) : null}
             <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-              <label className="text-[9px] text-[#9aa6bf]">
-                Snapshot A
-                <select
-                  value={snapshotA?.id ?? ""}
-                  onChange={(event) => setSnapshotAId(event.target.value)}
-                  className="mt-1 w-full rounded border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] text-[#d2d9e8]"
-                >
-                  {snapshots.map((snapshot) => (
-                    <option key={snapshot.id} value={snapshot.id}>{snapshot.label}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-[9px] text-[#9aa6bf]">
-                Snapshot B
-                <select
-                  value={snapshotB?.id ?? ""}
-                  onChange={(event) => setSnapshotBId(event.target.value)}
-                  className="mt-1 w-full rounded border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] text-[#d2d9e8]"
-                >
-                  {snapshots.map((snapshot) => (
-                    <option key={snapshot.id} value={snapshot.id}>{snapshot.label}</option>
-                  ))}
-                </select>
-              </label>
+                <label className="text-[9px] text-[#9aa6bf]">
+                  Snapshot A
+                  <select
+                    value={snapshotA?.id ?? ""}
+                    onChange={(event) => setSnapshotAId(event.target.value)}
+                    className="mt-1 w-full rounded border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] text-[#d2d9e8]"
+                  >
+                    <option value="" disabled>
+                      Select snapshot
+                    </option>
+                    {snapshots.map((snapshot) => (
+                      <option key={snapshot.id} value={snapshot.id}>{snapshot.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-[9px] text-[#9aa6bf]">
+                  Snapshot B
+                  <select
+                    value={snapshotB?.id ?? ""}
+                    onChange={(event) => setSnapshotBId(event.target.value)}
+                    className="mt-1 w-full rounded border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] text-[#d2d9e8]"
+                  >
+                    <option value="" disabled>
+                      Select snapshot
+                    </option>
+                    {snapshots.map((snapshot) => (
+                      <option key={snapshot.id} value={snapshot.id}>{snapshot.label}</option>
+                    ))}
+                  </select>
+                </label>
             </div>
             <div className="mt-2 text-[9px] text-[#8090a8]">
               {snapshotA?.simulation && snapshotB?.simulation
@@ -402,6 +468,11 @@ function defaultMarkdown(
   const anomalies = temporalProfile?.anomalyWindows ?? [];
   const occlusion = result.occlusionBlame ?? [];
   const blindRegions = result.blindRegions ?? [];
+  const evidenceEntries = (scene.changeLog ?? [])
+    .filter((entry) => entry.startsWith("Evidence: "))
+    .map((entry) => parseEvidenceEntry(entry))
+    .filter((entry): entry is { when: string; title: string; details: string; confidence: string } => entry !== null);
+  const sensorEvidenceCount = evidenceEntries.filter((entry) => /sensor/i.test(`${entry.title} ${entry.details}`)).length;
   const lines = [
     "# SentinelTwin Coverage Report",
     "## Scene: " + scene.name,
@@ -443,6 +514,17 @@ function defaultMarkdown(
     ...(scene.changeLog?.length ? scene.changeLog.map((entry, index) => `${index + 1}. ${entry}`)
       : ["No changes have been applied to this scene."]),
     "",
+    "### Operational Evidence",
+    `- Change Log Entries: ${scene.changeLog.length}`,
+    `- Evidence Entries: ${evidenceEntries.length}`,
+    `- Sensor-related Evidence: ${sensorEvidenceCount}`,
+    ...(evidenceEntries.length > 0
+      ? [
+          "- Recent Evidence Entries:",
+          ...evidenceEntries.slice(-5).reverse().map((entry) => `  - ${entry.when} · ${entry.title} · ${entry.details} · ${entry.confidence}`),
+        ]
+      : ["- Recent Evidence Entries: none"]),
+    "",
     "### Recommendations",
     ...result.recommendations.map((r) => "- [" + (r.verified ? "verified" : "unverified") + "] " + r.description + " :: " + r.estimatedImpact),
     "",
@@ -472,6 +554,21 @@ function defaultMarkdown(
     "_Planning indicator only: modeled outcomes depend on assumptions and are not legal/forensic guarantees._",
   ];
   return lines.join("\n");
+}
+
+function parseEvidenceEntry(entry: string) {
+  const payload = entry.slice("Evidence: ".length);
+  const parts = payload.split(" | ");
+  if (parts.length < 4) return null;
+  const [when, title, ...rest] = parts;
+  const confidence = rest.pop();
+  if (!confidence) return null;
+  return {
+    when,
+    title,
+    details: rest.join(" | "),
+    confidence,
+  };
 }
 
 function buildHtmlReport(

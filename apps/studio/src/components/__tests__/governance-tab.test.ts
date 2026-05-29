@@ -25,7 +25,9 @@ describe("GovernanceTab", () => {
     expect(source).toContain("Annotations");
     expect(source).toContain("Policy changes");
     expect(source).toContain("Approval routes");
+    expect(source).toContain("Identity conflict resolutions");
     expect(source).toContain("Latest route");
+    expect(source).toContain("Latest conflict");
     expect(source).toContain("Dispatch Governance");
     expect(source).toContain("Refresh Governance Archive");
     expect(source).toContain("Remote governance webhook");

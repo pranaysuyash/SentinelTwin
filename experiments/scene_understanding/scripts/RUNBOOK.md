@@ -20,6 +20,9 @@ python -m pytest -q experiments/scene_understanding/tests/test_visual_critical_z
 
 # Run the semantic floor-plan sidecar and regenerate its report/summary:
 python experiments/scene_understanding/scripts/evaluate_semantic_tasks.py
+
+# Target a subset of semantic models when you only want a prompt-tuning rerun:
+python experiments/scene_understanding/scripts/evaluate_semantic_tasks.py --models gpt4o
 ```
 
 ## Candidates
@@ -65,6 +68,8 @@ The semantic-task sidecar is documented in `experiments/scene_understanding/scri
 - `experiments/scene_understanding/outputs/semantic_tasks/SEMANTIC_TASKS_SUMMARY.json`
 
 It exercises classification, room detection, OCR, adjacency, and description prompts on the same 5-image dev split. The summary path now uses exact label extraction for classification scoring and caches MiniCPM load failures so unsupported checkpoints do not get reloaded on every task.
+The combined geometry report at `experiments/scene_understanding/outputs/COMPARISON_REPORT.md` now includes the semantic sidecar summary section as well.
+When you need to tune one lane, use `--models gpt4o` instead of re-running the broken local loaders.
 
 ## Matching Algorithm
 

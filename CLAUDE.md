@@ -114,6 +114,14 @@ When Pranay adds a new file to `Docs/context/origin/`:
 7. Update `Docs/context/origin/INDEX.md` with the new file entry
 8. Only then proceed with coding work
 
+## Health Stack
+
+- typecheck: bun tsc --noEmit
+- lint: eslint .
+- test: bun test
+- deadcode: knip (not installed)
+- shell: shellcheck (not installed)
+
 ## Key Commands (After Fork Setup)
 
 ```bash

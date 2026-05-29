@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { useStudioStore, type BottomTab, type ViewMode, type WorkspacePreset } from "@/store/studio-store";
 import { AI_PROVIDER_OPTIONS, describeAiProviderSelection, getProviderOption, normalizeAiProviderSelection } from "@/agents/provider-selection";
-import { CAMERA_PRESETS } from "@/components/workspace/CameraPresetPicker";
+import { CAMERA_PRESETS } from "@/components/workspace/camera-preset-utils";
 
 type ViewOption = {
   id: string;

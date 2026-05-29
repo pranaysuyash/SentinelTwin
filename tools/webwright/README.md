@@ -63,6 +63,17 @@ From repo root:
 ./tools/webwright/run-sentineltwin-qa.sh --run
 ```
 
+### Run mode meaning
+
+`run-sentineltwin-qa.sh` reports `webwright_run_mode` in `qa-output/manifest.json`:
+
+- `venv_cli`: `WEBWRIGHT_VENV_PATH/bin/webwright` is available.
+- `source_module`: Python source is importable through the local Webwright checkout with `-m webwright.run.cli` and can be executed without a package install.
+- `venv_module`: installed module available but no dedicated `webwright` CLI binary.
+- `absent`: no executable module path discovered.
+
+If DNS/network prevents package install, you may still see `source_module` and keep running `--dry-run` checks; runtime route execution still requires model keys and browser availability.
+
 ## Troubleshooting (offline-first)
 
 If package installs fail with DNS errors for `pypi.org`, this host cannot fetch dependencies.

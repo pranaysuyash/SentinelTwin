@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { LazyMotion, domAnimation, m, useReducedMotion } from "framer-motion";
 import { ArrowUpDown, CheckCircle2, Lightbulb, Loader2, Sparkles, X } from "lucide-react";
 import { useCallback, useState } from "react";
 
@@ -36,19 +36,22 @@ interface CandidateCardProps {
 }
 
 function CandidateCard({ candidate, onApply }: CandidateCardProps) {
+  const reduceMotion = useReducedMotion();
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
-      className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-3"
-    >
+    <LazyMotion features={domAnimation}>
+      <m.div
+        initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={reduceMotion ? { duration: 0 } : { duration: 0.2 }}
+        className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-3"
+      >
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-2">
           <span
             className={cn(
-              "mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border text-[9px] font-bold",
+              "mt-0.5 flex size-5 flex-shrink-0 items-center justify-center rounded-md border text-[9px] font-bold",
               COST_COLORS[candidate.costCategory] ?? "text-[#647089] border-[#24283a]",
             )}
           >
@@ -81,7 +84,7 @@ function CandidateCard({ candidate, onApply }: CandidateCardProps) {
           )}
           {candidate.verifiedDelta.worstIssueResolved && (
             <span className="flex items-center gap-1 text-[9px] text-emerald-400">
-              <CheckCircle2 className="h-3 w-3" />
+              <CheckCircle2 className="size-3" />
               Critical issues resolved
             </span>
           )}
@@ -95,13 +98,15 @@ function CandidateCard({ candidate, onApply }: CandidateCardProps) {
 
       {/* Apply button */}
       <button
+        type="button"
         onClick={() => onApply(candidate.operations)}
         className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5 text-[10px] font-medium text-emerald-300 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10"
       >
-        <Sparkles className="h-3 w-3" />
+        <Sparkles className="size-3" />
         Apply This Fix
       </button>
-    </motion.div>
+      </m.div>
+    </LazyMotion>
   );
 }
 
@@ -138,11 +143,12 @@ export function CounterfactualPanel() {
           Find AI-suggested fixes for coverage issues in the current scene.
         </p>
         <button
+          type="button"
           onClick={() => setShowInput(true)}
           disabled={!hasResult}
           className="inline-flex items-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] px-3 py-2 text-[10px] font-medium text-emerald-300 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10 disabled:opacity-40 disabled:hover:bg-[#111521] disabled:hover:border-[#24283a]"
         >
-          <Sparkles className="h-3.5 w-3.5" />
+          <Sparkles className="size-3.5" />
           Find Fixes
         </button>
         {!hasResult && (
@@ -164,25 +170,29 @@ export function CounterfactualPanel() {
           className="min-w-0 flex-1 rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5 text-[10px] text-white placeholder-[#4d566b] outline-none transition-colors focus:border-[#3a4158]"
         />
         <button
+          type="button"
           onClick={handlePropose}
           disabled={status.state === "parsing"}
-          className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white transition-colors hover:bg-emerald-500 disabled:opacity-40"
+          aria-label="Search for counterfactual fixes"
+          className="flex size-7 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white transition-colors hover:bg-emerald-500 disabled:opacity-40"
         >
           {status.state === "parsing" ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            <Loader2 className="size-3.5 animate-spin" />
           ) : (
-            <ArrowUpDown className="h-3.5 w-3.5" />
+            <ArrowUpDown className="size-3.5" />
           )}
         </button>
         <button
+          type="button"
+          aria-label="Close counterfactual panel"
           onClick={() => {
             setShowInput(false);
             setCandidates([]);
             setShowBatchCompare(false);
           }}
-          className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border border-[#24283a] bg-[#111521] text-[#5d6880] hover:text-white"
+          className="flex size-7 flex-shrink-0 items-center justify-center rounded-lg border border-[#24283a] bg-[#111521] text-[#5d6880] hover:text-white"
         >
-          <X className="h-3 w-3" />
+          <X className="size-3" />
         </button>
       </div>
 
@@ -191,6 +201,7 @@ export function CounterfactualPanel() {
         {candidates.length > 0 && (
           <div className="flex items-center justify-end">
             <button
+              type="button"
               onClick={() => setShowBatchCompare((prev) => !prev)}
               className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] font-medium text-[#9da8c0] transition-colors hover:border-[#3a4158] hover:text-white"
             >
@@ -203,8 +214,8 @@ export function CounterfactualPanel() {
         )}
         {status.state === "parsing" && (
           <div className="flex items-center justify-center gap-2 py-6 text-[11px] text-amber-300">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Searching for fixes...
+            <Loader2 className="size-4 animate-spin" />
+            Searching for fixes…
           </div>
         )}
         {showBatchCompare && candidates.length > 0 ? (
@@ -234,6 +245,7 @@ export function CounterfactualPanel() {
                     <td className="px-2 py-1.5">{candidate.verifiedDelta?.criticalZoneStatusChanges.length ?? 0}</td>
                     <td className="px-2 py-1.5">
                       <button
+                        type="button"
                         onClick={() => handleApply(candidate.operations)}
                         className="rounded-md border border-[#2a3550] bg-[#131a28] px-1.5 py-1 text-[9px] text-emerald-300 hover:border-emerald-500/30 hover:bg-emerald-500/10"
                       >

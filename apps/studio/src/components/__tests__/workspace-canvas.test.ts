@@ -42,6 +42,8 @@ describe("WorkspaceCanvas obstruction selection", () => {
     expect(workspaceSource).toContain('const zone = createCriticalZoneNode(draftPolygonPoints, criticalZoneTargetType);');
     expect(workspaceSource).toContain('if (activeTool === "path")');
     expect(workspaceSource).toContain('setDraftPathPoints([...draftPathPoints, workingSnap]);');
+    expect(workspaceSource).toContain('if (activeTool === "wall") {');
+    expect(workspaceSource).toContain('commitDraftWall();');
   });
 
   test("keeps the canvas reset path imperative instead of remounting on reset", () => {

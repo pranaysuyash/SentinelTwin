@@ -353,6 +353,11 @@ export type CameraLiveConnectionEventRecord = {
   liveSessionStartedAt: number | null;
   liveSessionConfirmedAt: number | null;
   liveSessionExpiresAt: number | null;
+  transportSessionId: string | null;
+  transportSessionState: "idle" | "negotiating" | "active" | "closing" | "error" | null;
+  lastHeartbeatAt: number | null;
+  probeCount: number;
+  protocolProfile: "onvif_device" | "rtsp_session" | "mjpeg_stream" | "http_poll" | "proxy" | null;
   liveFeedUrl: string | null;
   liveFeedLabel: string | null;
   liveConnectionMode: "rtsp" | "mjpeg" | "http" | "onvif" | "proxy" | null;
@@ -789,6 +794,25 @@ function loadCameraLiveConnectionEvents(): CameraLiveConnectionEventRecord[] {
         liveSessionStartedAt: typeof candidate.liveSessionStartedAt === "number" ? candidate.liveSessionStartedAt : null,
         liveSessionConfirmedAt: typeof candidate.liveSessionConfirmedAt === "number" ? candidate.liveSessionConfirmedAt : null,
         liveSessionExpiresAt: typeof candidate.liveSessionExpiresAt === "number" ? candidate.liveSessionExpiresAt : null,
+        transportSessionId: typeof candidate.transportSessionId === "string" ? candidate.transportSessionId : null,
+        transportSessionState:
+          candidate.transportSessionState === "idle"
+          || candidate.transportSessionState === "negotiating"
+          || candidate.transportSessionState === "active"
+          || candidate.transportSessionState === "closing"
+          || candidate.transportSessionState === "error"
+            ? candidate.transportSessionState
+            : null,
+        lastHeartbeatAt: typeof candidate.lastHeartbeatAt === "number" ? candidate.lastHeartbeatAt : null,
+        probeCount: typeof candidate.probeCount === "number" ? candidate.probeCount : 0,
+        protocolProfile:
+          candidate.protocolProfile === "onvif_device"
+          || candidate.protocolProfile === "rtsp_session"
+          || candidate.protocolProfile === "mjpeg_stream"
+          || candidate.protocolProfile === "http_poll"
+          || candidate.protocolProfile === "proxy"
+            ? candidate.protocolProfile
+            : null,
         liveFeedUrl: typeof candidate.liveFeedUrl === "string" ? candidate.liveFeedUrl : null,
         liveFeedLabel: typeof candidate.liveFeedLabel === "string" ? candidate.liveFeedLabel : null,
         liveConnectionMode: candidate.liveConnectionMode === "rtsp" || candidate.liveConnectionMode === "mjpeg" || candidate.liveConnectionMode === "http" || candidate.liveConnectionMode === "onvif" || candidate.liveConnectionMode === "proxy"
@@ -2914,6 +2938,11 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       liveSessionStartedAt: event.liveSessionStartedAt ?? null,
       liveSessionConfirmedAt: event.liveSessionConfirmedAt ?? null,
       liveSessionExpiresAt: event.liveSessionExpiresAt ?? null,
+      transportSessionId: event.transportSessionId ?? null,
+      transportSessionState: event.transportSessionState ?? null,
+      lastHeartbeatAt: event.lastHeartbeatAt ?? null,
+      probeCount: event.probeCount ?? 0,
+      protocolProfile: event.protocolProfile ?? null,
       liveFeedUrl: event.liveFeedUrl ?? null,
       liveFeedLabel: event.liveFeedLabel ?? null,
       liveConnectionMode: event.liveConnectionMode ?? null,

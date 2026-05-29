@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 
 import { appendCameraLiveConnectionHistory, loadCameraLiveConnectionHistory } from "@/lib/camera-live-connection-history";
-import { appendCameraLiveSessionRecord, closeCameraLiveSessionRecord, loadCameraLiveSessionRegistry } from "@/lib/camera-live-session-registry";
+import { appendCameraLiveSessionRecord, closeCameraLiveSessionRecord, pruneExpiredCameraLiveSessionRegistry } from "@/lib/camera-live-session-registry";
 import { CameraLiveConnectionProbeRequestSchema, probeCameraLiveConnection } from "@/lib/camera-live-connection";
 
 export async function GET() {
   const history = loadCameraLiveConnectionHistory();
-  const sessions = loadCameraLiveSessionRegistry().filter((record) => record.status === "active");
+  const sessions = pruneExpiredCameraLiveSessionRegistry().filter((record) => record.status === "active");
   return NextResponse.json({
     ok: true,
     history,
@@ -38,12 +38,19 @@ export async function POST(request: Request) {
 
     const summary = await probeCameraLiveConnection(parsed.data);
     const storedAt = Date.now();
-    if (summary.record.liveSessionId) {
+    const sessionRegistry = pruneExpiredCameraLiveSessionRegistry();
+    const sessionId = summary.record.liveSessionId
+      ?? parsed.data.liveSessionId
+      ?? (parsed.data.action === "disconnect"
+        ? sessionRegistry.find((record) => record.cameraId === parsed.data.cameraId && record.status === "active")?.sessionId ?? null
+        : null);
+    if (sessionId) {
       if (parsed.data.action === "disconnect") {
-        closeCameraLiveSessionRecord(summary.record.liveSessionId, summary.summary);
+        closeCameraLiveSessionRecord(sessionId, summary.summary);
       } else {
         appendCameraLiveSessionRecord({
-          sessionId: summary.record.liveSessionId,
+          sessionId,
+          status: summary.record.liveConnectionStatus === "connected" ? "active" : "expired",
           cameraId: summary.record.cameraId,
           cameraName: summary.record.cameraName,
           sceneId: parsed.data.sceneId ?? null,
@@ -56,9 +63,15 @@ export async function POST(request: Request) {
           liveSessionStartedAt: summary.record.liveSessionStartedAt,
           liveSessionConfirmedAt: summary.record.liveSessionConfirmedAt,
           liveSessionExpiresAt: summary.record.liveSessionExpiresAt,
+          transportSessionId: summary.record.transportSessionId,
+          transportSessionState: summary.record.transportSessionState,
+          lastHeartbeatAt: summary.record.lastHeartbeatAt,
+          probeCount: summary.record.probeCount,
+          protocolProfile: summary.record.protocolProfile,
+          sessionExpiresAt: summary.record.liveSessionExpiresAt,
           lastAction: parsed.data.action,
           summary: summary.summary,
-        });
+        } as Parameters<typeof appendCameraLiveSessionRecord>[0]);
       }
     }
     const history = appendCameraLiveConnectionHistory({

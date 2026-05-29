@@ -10,7 +10,8 @@ import "@/lib/three-compat";
 import { ENVIRONMENT_THEMES } from "@/components/workspace/SharedScene";
 import { pointOnPathAtProgress } from "@/components/map/path-quality";
 import { QUALITY_RANK } from "@/lib/quality-display";
-import { CameraRigLive, nowTimestamp, SceneFeedGeometry } from "@/components/view/SceneFeedCanvas";
+import { CameraRigLive, SceneFeedGeometry } from "@/components/view/SceneFeedCanvas";
+import { nowTimestamp } from "@/components/view/scene-feed-canvas-utils";
 import { computeSensorFusionSummary } from "@/lib/sensor-fusion";
 import type { CameraNode, DoriQuality, SimulationAssumptions, SecurityScene } from "@/schema/security-scene";
 import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
@@ -226,6 +227,7 @@ function LiveFeedHUD({
   sensorFusion,
   sensorEvent,
   cameraMetadataEvent,
+  cameraLiveConnectionEvent,
 }: {
   camera: CameraNode;
   mode: CameraFeedMode;
@@ -271,6 +273,11 @@ function LiveFeedHUD({
     liveSessionStartedAt: number | null;
     liveSessionConfirmedAt: number | null;
     liveSessionExpiresAt: number | null;
+    transportSessionId: string | null;
+    transportSessionState: "idle" | "negotiating" | "active" | "closing" | "error" | null;
+    lastHeartbeatAt: number | null;
+    probeCount: number;
+    protocolProfile: "onvif_device" | "rtsp_session" | "mjpeg_stream" | "http_poll" | "proxy" | null;
     liveConnectionMode: "rtsp" | "mjpeg" | "http" | "onvif" | "proxy" | null;
     liveConnectionStatus: "disconnected" | "connecting" | "connected" | "error" | null;
     ingestMode: "manual" | "external";
@@ -424,6 +431,12 @@ function LiveFeedHUD({
             <div>
               <span className="text-[#6a748b]">Session ID:</span> {cameraLiveConnectionEvent.liveSessionId ?? "—"}
             </div>
+            <div>
+              <span className="text-[#6a748b]">Transport:</span> {cameraLiveConnectionEvent.transportSessionState ?? "—"}
+            </div>
+            <div>
+              <span className="text-[#6a748b]">Protocol:</span> {cameraLiveConnectionEvent.protocolProfile ?? "—"}
+            </div>
             <div className="col-span-2">
               <span className="text-[#6a748b]">Feed:</span> {cameraLiveConnectionEvent.liveFeedLabel ?? cameraLiveConnectionEvent.liveFeedUrl ?? "—"}
             </div>
@@ -437,6 +450,9 @@ function LiveFeedHUD({
             </div>
             <div className="col-span-2">
               <span className="text-[#6a748b]">Expires:</span> {cameraLiveConnectionEvent.liveSessionExpiresAt == null ? "—" : new Date(cameraLiveConnectionEvent.liveSessionExpiresAt).toLocaleTimeString()}
+            </div>
+            <div className="col-span-2">
+              <span className="text-[#6a748b]">Heartbeat:</span> {cameraLiveConnectionEvent.lastHeartbeatAt == null ? "—" : new Date(cameraLiveConnectionEvent.lastHeartbeatAt).toLocaleTimeString()} · probes {cameraLiveConnectionEvent.probeCount}
             </div>
           </div>
           <div className="mt-1 text-[8px] text-[#8ea6cc]">
@@ -1510,6 +1526,7 @@ export function CameraViewMode() {
   const camera = scene.cameras.find((c) => c.id === selectedId)
     ?? scene.cameras.find((c) => c.id === selectedCameraId)
     ?? null;
+  const cameraId = camera?.id ?? null;
   const cameraIndex = useMemo(() => scene.cameras.findIndex((c) => c.id === camera?.id), [camera?.id, scene.cameras]);
   const activePath = useMemo(() => {
     if (!scene.paths.length || !activePathId) return null;
@@ -1632,8 +1649,12 @@ export function CameraViewMode() {
   const latestSensorEvent = sensorFusion.nearestSensor
     ? sensorEvents.find((event) => event.sensorId === sensorFusion.nearestSensor?.id) ?? sensorEvents[0] ?? null
     : sensorEvents[0] ?? null;
-  const latestCameraMetadataEvent = cameraMetadataEvents.find((event) => event.cameraId === camera.id) ?? null;
-  const latestCameraLiveConnectionEvent = cameraLiveConnectionEvents.find((event) => event.cameraId === camera.id) ?? null;
+  const latestCameraMetadataEvent = cameraId
+    ? cameraMetadataEvents.find((event) => event.cameraId === cameraId) ?? null
+    : null;
+  const latestCameraLiveConnectionEvent = cameraId
+    ? cameraLiveConnectionEvents.find((event) => event.cameraId === cameraId) ?? null
+    : null;
 
   const replayQualityLabel = activeTimelineEvent?.quality
     ? activeTimelineEvent.quality.toUpperCase()

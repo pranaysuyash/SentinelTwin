@@ -132,8 +132,8 @@ export type SupportBundle = {
   };
   cameraLiveSessionRegistry: {
     activeSessionCount: number;
-    latestSession: Pick<CameraLiveSessionRecord, "sessionId" | "status" | "cameraId" | "cameraName" | "sceneId" | "sceneName" | "liveFeedUrl" | "feedLabel" | "liveConnectionMode" | "liveConnectionStatus" | "liveSessionState" | "liveSessionStartedAt" | "liveSessionConfirmedAt" | "liveSessionExpiresAt" | "lastObservedAt" | "sessionExpiresAt" | "lastAction" | "summary"> | null;
-    activeSessions: Array<Pick<CameraLiveSessionRecord, "sessionId" | "status" | "cameraId" | "cameraName" | "sceneId" | "sceneName" | "liveFeedUrl" | "feedLabel" | "liveConnectionMode" | "liveConnectionStatus" | "liveSessionState" | "liveSessionStartedAt" | "liveSessionConfirmedAt" | "liveSessionExpiresAt" | "lastObservedAt" | "sessionExpiresAt" | "lastAction" | "summary">>;
+    latestSession: Pick<CameraLiveSessionRecord, "sessionId" | "status" | "cameraId" | "cameraName" | "sceneId" | "sceneName" | "liveFeedUrl" | "feedLabel" | "liveConnectionMode" | "liveConnectionStatus" | "liveSessionState" | "liveSessionStartedAt" | "liveSessionConfirmedAt" | "liveSessionExpiresAt" | "transportSessionId" | "transportSessionState" | "lastHeartbeatAt" | "probeCount" | "protocolProfile" | "lastObservedAt" | "sessionExpiresAt" | "lastAction" | "summary"> | null;
+    activeSessions: Array<Pick<CameraLiveSessionRecord, "sessionId" | "status" | "cameraId" | "cameraName" | "sceneId" | "sceneName" | "liveFeedUrl" | "feedLabel" | "liveConnectionMode" | "liveConnectionStatus" | "liveSessionState" | "liveSessionStartedAt" | "liveSessionConfirmedAt" | "liveSessionExpiresAt" | "transportSessionId" | "transportSessionState" | "lastHeartbeatAt" | "probeCount" | "protocolProfile" | "lastObservedAt" | "sessionExpiresAt" | "lastAction" | "summary">>;
   };
   incidents: {
     title: string;

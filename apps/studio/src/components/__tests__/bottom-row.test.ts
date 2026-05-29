@@ -4,7 +4,7 @@ import {
   buildEnvironmentRows,
   summarizeDoorStates,
   summarizeWindowStates,
-} from "@/components/bottom-row/BottomRow";
+} from "@/components/bottom-row/bottom-row-utils";
 
 describe("BottomRow helpers", () => {
   const scene = {

@@ -19,3 +19,25 @@
 - **Obs F1**: F1 for obstruction detection (shelves, racks, counters)
 - **CZ Recall**: Critical zone detection rate
 - **P50 Latency**: Median processing time per image
+
+## Semantic Sidecar Summary
+
+The semantic sidecar evaluates non-geometry floor-plan tasks on the same dev split.
+
+| Task | Model | Metric | Avg Latency |
+|---|---|---|---|
+| classification | minicpm | accuracy=0.000 | 0ms |
+| classification | gpt4o | accuracy=0.200 | 1318ms |
+| classification | gemini | accuracy=0.000 | 0ms |
+| rooms | minicpm | non_empty_rate=1.000 | 0ms |
+| rooms | gpt4o | non_empty_rate=1.000 | 2628ms |
+| rooms | gemini | non_empty_rate=1.000 | 0ms |
+| ocr | minicpm | non_empty_rate=1.000 | 0ms |
+| ocr | gpt4o | non_empty_rate=1.000 | 1279ms |
+| ocr | gemini | non_empty_rate=1.000 | 0ms |
+| adjacency | minicpm | non_empty_rate=1.000 | 0ms |
+| adjacency | gpt4o | non_empty_rate=1.000 | 2469ms |
+| adjacency | gemini | non_empty_rate=1.000 | 0ms |
+| description | minicpm | non_empty_rate=1.000 | 0ms |
+| description | gpt4o | non_empty_rate=1.000 | 2028ms |
+| description | gemini | non_empty_rate=1.000 | 0ms |

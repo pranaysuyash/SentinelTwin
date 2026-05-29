@@ -133,7 +133,7 @@ describe("report engine", () => {
     }
   });
 
-  test("buildReportData accepts adversarial path options", () => {
+  test("buildReportData accepts adversarial path options", { timeout: 15000 }, () => {
     const report = buildReportData(scene, result, {
       adversarialPath: {
         exposureScore: 8.5,

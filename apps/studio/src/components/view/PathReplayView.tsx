@@ -798,6 +798,7 @@ export function PathReplayView() {
   const setActiveTool = useStudioStore((s) => s.setActiveTool);
   const setPathReplayPlaying = useStudioStore((s) => s.setPathReplayPlaying);
   const setPathReplayProgress = useStudioStore((s) => s.setPathReplayProgress);
+  const setPathReplaySpeed = useStudioStore((s) => s.setPathReplaySpeed);
   const followActor = useStudioStore((s) => s.pathReplay.followActor);
   const coverageFailurePath = result?.adversarialPath;
   const activePath = useMemo(() => {
@@ -964,9 +965,11 @@ export function PathReplayView() {
         totalDuration,
       );
       setCurrentTime(nextTime);
+      setPathReplayProgress(totalDuration > 0 ? Math.min(nextTime / totalDuration, 1) : 0);
 
       if (nextTime >= totalDuration) {
         setPlaying(false);
+        setPathReplayPlaying(false);
       } else {
         rafId = requestAnimationFrame(tick);
       }
@@ -975,7 +978,7 @@ export function PathReplayView() {
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playing, speed, totalDuration]);
+  }, [playing, setPathReplayPlaying, setPathReplayProgress, speed, totalDuration]);
 
   useEffect(() => {
     if (!followActor || !actorPosition || !controlsRef.current) return;
@@ -987,6 +990,8 @@ export function PathReplayView() {
   const handleReset = useCallback(() => {
     setPlaying(false);
     setCurrentTime(0);
+    setPathReplayPlaying(false);
+    setPathReplayProgress(0);
   }, []);
 
   // Play/pause toggle
@@ -994,14 +999,23 @@ export function PathReplayView() {
     if (currentTime >= totalDuration && totalDuration > 0) {
       // At end, reset first
       setCurrentTime(0);
+      setPathReplayProgress(0);
     }
-    setPlaying((p) => !p);
-  }, [currentTime, totalDuration]);
+    setPlaying((prev) => {
+      const next = !prev;
+      setPathReplayPlaying(next);
+      if (!next) {
+        setPathReplayProgress(totalDuration > 0 ? Math.min(currentTime / totalDuration, 1) : 0);
+      }
+      return next;
+    });
+  }, [currentTime, setPathReplayPlaying, setPathReplayProgress, totalDuration]);
 
   // Seek
   const handleSeek = useCallback((t: number) => {
     const clamped = Math.min(t, totalDuration);
     setCurrentTime(clamped);
+    setPathReplayProgress(totalDuration > 0 ? Math.min(clamped / totalDuration, 1) : 0);
     setPlaying((prev) => {
       // Re-anchor RAF if currently playing (seek-while-playing edge case)
       if (prev) {
@@ -1009,14 +1023,15 @@ export function PathReplayView() {
       }
       return prev; // don't change playing state
     });
-  }, [totalDuration]);
+  }, [setPathReplayProgress, totalDuration]);
 
   const handlePathChange = useCallback((nextPathId: string | null) => {
     setActivePathId(nextPathId);
     setPlaying(false);
     setCurrentTime(0);
+    setPathReplayPlaying(false);
     setPathReplayProgress(0);
-  }, [setActivePathId, setPathReplayProgress]);
+  }, [setActivePathId, setPathReplayPlaying, setPathReplayProgress]);
 
   const handleEditPath = useCallback(() => {
     if (!activePath) return;
@@ -1027,6 +1042,11 @@ export function PathReplayView() {
     setBottomTab("timeline");
     setActiveTool("path");
   }, [activePath, setActiveTool, setBottomTab, setPathReplayPlaying, setPathReplayProgress, setViewMode, setWorkspacePreset]);
+
+  const handleSpeedChange = useCallback((nextSpeed: number) => {
+    setSpeed(nextSpeed);
+    setPathReplaySpeed(nextSpeed);
+  }, [setPathReplaySpeed]);
 
   if (!coverageFailurePath || waypoints.length < 2) {
     return <EmptyReplayState />;
@@ -1154,7 +1174,7 @@ export function PathReplayView() {
         onSeek={handleSeek}
         onReset={handleReset}
         speed={speed}
-        onSpeedChange={setSpeed}
+        onSpeedChange={handleSpeedChange}
         coverageBands={coverageBands}
       />
 

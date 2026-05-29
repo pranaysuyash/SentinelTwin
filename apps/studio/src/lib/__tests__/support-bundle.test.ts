@@ -178,6 +178,11 @@ describe("buildSupportBundle", () => {
             liveSessionStartedAt: 1710000003500,
             liveSessionConfirmedAt: 1710000003800,
             liveSessionExpiresAt: 1710000123800,
+            transportSessionId: "transport_session_cam_front_test",
+            transportSessionState: "active",
+            lastHeartbeatAt: 1710000003900,
+            probeCount: 2,
+            protocolProfile: "onvif_device",
             liveFeedUrl: "rtsp://camera.example.com/live",
             liveFeedLabel: "Front entrance",
             liveConnectionMode: "onvif",
@@ -192,6 +197,28 @@ describe("buildSupportBundle", () => {
           raw: "<ProbeResponse />",
         },
       ],
+      cameraLiveSessionRegistry: [
+        {
+          sessionId: "live_session_cam_front_test",
+          status: "active",
+          cameraId: "cam_front",
+          cameraName: "Front Entrance",
+          sceneId: "scene-1",
+          sceneName: "Support Scene",
+          liveFeedUrl: "rtsp://camera.example.com/live",
+          feedLabel: "Front entrance",
+          liveConnectionMode: "onvif",
+          liveConnectionStatus: "connected",
+          liveSessionState: "connected",
+          liveSessionStartedAt: 1710000003500,
+          liveSessionConfirmedAt: 1710000003800,
+          liveSessionExpiresAt: 1710000123800,
+          lastObservedAt: 1710000005000,
+          sessionExpiresAt: 1710000125000,
+          lastAction: "bind",
+          summary: "Probed Front Entrance via ONVIF and archived the live connection.",
+        },
+      ],
     });
 
     expect(bundle.title).toContain("Support Bundle");
@@ -203,6 +230,8 @@ describe("buildSupportBundle", () => {
     expect(bundle.sensorIngestArchive.latestSubmission?.sceneName).toBe("Sensor Scene");
     expect(bundle.cameraLiveConnectionArchive.historyCount).toBe(1);
     expect(bundle.cameraLiveConnectionArchive.latestSubmission?.sceneName).toBe("Support Scene");
+    expect(bundle.cameraLiveSessionRegistry.activeSessionCount).toBe(1);
+    expect(bundle.cameraLiveSessionRegistry.latestSession?.sessionId).toBe("live_session_cam_front_test");
     expect(bundle.incidents.incidentCount).toBe(2);
     expect(bundle.incidents.performanceTraceCount).toBe(1);
     expect(bundle.incidents.stackTraceCount).toBe(1);
@@ -220,6 +249,7 @@ describe("buildSupportBundle", () => {
     expect(stringifySupportBundle(bundle)).toContain("\"reportEvidence\"");
     expect(stringifySupportBundle(bundle)).toContain("\"sensorIngestArchive\"");
     expect(stringifySupportBundle(bundle)).toContain("\"cameraLiveConnectionArchive\"");
+    expect(stringifySupportBundle(bundle)).toContain("\"cameraLiveSessionRegistry\"");
     expect(stringifySupportBundle(bundle)).toContain("\"approvalRoute\"");
   });
 });

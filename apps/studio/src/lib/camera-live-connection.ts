@@ -40,6 +40,7 @@ export const CameraLiveConnectionProbeRequestSchema = z.object({
   liveSessionId: z.string().min(1).optional(),
   liveSessionStartedAt: z.number().int().nonnegative().optional(),
   liveSessionConfirmedAt: z.number().int().nonnegative().optional(),
+  transportSessionId: z.string().min(1).optional(),
   raw: z.string().default(""),
   notes: z.string().optional(),
 }).refine((value) => value.action === "disconnect" || value.raw.trim().length > 0 || Boolean(value.endpointUrl) || Boolean(value.liveFeedUrl), {
@@ -69,6 +70,11 @@ export type CameraLiveConnectionProbeResponse = {
     liveSessionStartedAt: number | null;
     liveSessionConfirmedAt: number | null;
     liveSessionExpiresAt: number | null;
+    transportSessionId: string | null;
+    transportSessionState: "idle" | "negotiating" | "active" | "closing" | "error" | null;
+    lastHeartbeatAt: number | null;
+    probeCount: number;
+    protocolProfile: "onvif_device" | "rtsp_session" | "mjpeg_stream" | "http_poll" | "proxy" | null;
     liveFeedUrl: string | null;
     liveFeedLabel: string | null;
     liveConnectionMode: CameraLiveConnectionMode | null;
@@ -277,7 +283,7 @@ export async function probeCameraLiveConnection(request: CameraLiveConnectionPro
     cameraId: request.cameraId,
     cameraName: request.cameraName,
     liveSessionId: request.action === "disconnect"
-      ? null
+      ? request.liveSessionId ?? null
       : request.liveSessionId ?? `live_session_${request.cameraId}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
     liveSessionState: request.action === "disconnect"
       ? "idle"
@@ -285,10 +291,10 @@ export async function probeCameraLiveConnection(request: CameraLiveConnectionPro
         ? "connected"
         : "error",
     liveSessionStartedAt: request.action === "disconnect"
-      ? null
+      ? request.liveSessionStartedAt ?? request.submittedAt ?? Date.now()
       : request.liveSessionStartedAt ?? request.submittedAt ?? Date.now(),
     liveSessionConfirmedAt: request.action === "disconnect"
-      ? null
+      ? request.liveSessionConfirmedAt ?? null
       : status === "connected"
         ? (request.liveSessionConfirmedAt ?? Date.now())
         : null,
@@ -297,6 +303,26 @@ export async function probeCameraLiveConnection(request: CameraLiveConnectionPro
       : status === "connected"
         ? ((request.liveSessionConfirmedAt ?? Date.now()) + LIVE_SESSION_TTL_MS)
         : null,
+    transportSessionId: request.action === "disconnect"
+      ? request.transportSessionId ?? request.liveSessionId ?? null
+      : request.transportSessionId ?? request.liveSessionId ?? `transport_session_${request.cameraId}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+    transportSessionState: request.action === "disconnect"
+      ? "closing"
+      : status === "connected"
+        ? "active"
+        : "error",
+    lastHeartbeatAt: status === "connected" ? Date.now() : null,
+    probeCount: request.action === "disconnect" ? 0 : 1,
+    protocolProfile:
+      protocol === "onvif"
+        ? "onvif_device"
+        : protocol === "rtsp"
+          ? "rtsp_session"
+          : protocol === "mjpeg"
+            ? "mjpeg_stream"
+            : protocol === "http"
+              ? "http_poll"
+              : "proxy",
     liveFeedUrl,
     liveFeedLabel: feedLabel,
     liveConnectionMode: request.action === "disconnect" ? null : protocol,

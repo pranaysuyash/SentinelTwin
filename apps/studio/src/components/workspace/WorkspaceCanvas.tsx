@@ -54,7 +54,8 @@ import {
   createSecurityLightNode,
   createSensorNode,
 } from "@/lib/node-factory";
-import { CameraPresetPicker, applyCameraPreset, getCameraPreset } from "./CameraPresetPicker";
+import { CameraPresetPicker } from "./CameraPresetPicker";
+import { applyCameraPreset, getCameraPreset } from "./camera-preset-utils";
 import { getCameraColorForId } from "@/lib/camera-colors";
 import "@/lib/three-compat";
 import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
@@ -844,7 +845,7 @@ function SceneFrameRig() {
     const priorTarget = previousTarget.current ?? new THREE.Vector3(sceneWidth / 2, 0.5, sceneDepth / 2);
 
     if (orbitControls) {
-      const delta = target.clone().sub(priorTarget);
+      const delta = new THREE.Vector3().subVectors(target, priorTarget);
       camera.position.add(delta);
       orbitControls.target.copy(target);
       orbitControls.update();
@@ -852,6 +853,9 @@ function SceneFrameRig() {
     }
 
     clearFocusRequest(null);
+    return () => {
+      clearFocusRequest(null);
+    };
   }, [camera, clearFocusRequest, controls, focusRequest, sceneDepth, sceneWidth]);
 
   return null;

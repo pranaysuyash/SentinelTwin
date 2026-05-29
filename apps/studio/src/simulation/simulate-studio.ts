@@ -148,18 +148,27 @@ function createOfflineImpactForCamera(
   scene: SecurityScene,
   camera: SecurityScene["cameras"][number],
   baselineZoneEvaluations: Record<string, EvaluatedZone>,
-  evaluator: ReturnType<typeof createCoverageEvaluator>,
-  coverageCells: CellComputation[],
 ): CameraOfflineImpactEntry[] {
   if (!scene.cameras.some((candidate) => candidate.id === camera.id && candidate.status !== "off")) {
     return [];
   }
 
+  const degradedScene = structuredClone(scene);
+  const degradedCamera = degradedScene.cameras.find((candidate) => candidate.id === camera.id);
+  if (!degradedCamera) return [];
+  degradedCamera.status = "off";
+
+  const degradedResult = simulateStudioInternal(degradedScene, false, false, false);
+  const degradedZoneById = Object.fromEntries(
+    degradedResult.criticalZoneResults.map((zone) => [zone.zoneId, zone]),
+  ) as Record<string, ZoneResult>;
+
   return scene.criticalZones
-    .map((zone) => evaluateZone(scene, evaluator, coverageCells, zone, camera.id))
-    .map((zoneAfter) => {
-      const zoneBefore = baselineZoneEvaluations[zoneAfter.zoneId];
+    .map((zone) => {
+      const zoneBefore = baselineZoneEvaluations[zone.id];
+      const zoneAfter = degradedZoneById[zone.id];
       if (!zoneBefore) return null;
+      if (!zoneAfter) return null;
 
       const downgradedQuality =
         qualityToScore(zoneAfter.actualQuality) < qualityToScore(zoneBefore.actualQuality);
@@ -184,9 +193,9 @@ function createOfflineImpactForCamera(
         beforeQuality: zoneBefore.actualQuality,
         afterQuality: zoneAfter.actualQuality,
         beforeStatus: zoneBefore.status,
-        afterStatus: zoneAfter.status,
-        reason,
-      } as CameraOfflineImpactEntry;
+          afterStatus: zoneAfter.status,
+          reason,
+        } as CameraOfflineImpactEntry;
     })
     .filter((item): item is CameraOfflineImpactEntry => Boolean(item));
 }
@@ -402,6 +411,7 @@ function simulateStudioInternal(
   scene: SecurityScene,
   includeRecommendations: boolean,
   includeNovelAnalytics = true,
+  includeFailureAnalysis = true,
 ): SimulationResult {
   const evaluator = createCoverageEvaluator(scene);
   const coverageThresholds = getQualityThresholds(scene);
@@ -466,7 +476,9 @@ function simulateStudioInternal(
     const qualityByZone = Object.fromEntries(
       zoneEvaluations.map((zone) => [zone.label, zone.cameraQualityById[camera.id] ?? "none"]),
     ) as Record<string, DoriQuality>;
-    const offlineImpactDetail = createOfflineImpactForCamera(scene, camera, baselineZoneById, evaluator, coverageCells);
+    const offlineImpactDetail = includeFailureAnalysis
+      ? createOfflineImpactForCamera(scene, camera, baselineZoneById)
+      : [];
 
     return {
       cameraId: camera.id,
@@ -607,7 +619,7 @@ function simulateStudioInternal(
       if (zone && obstructionLabel) {
         const patchedScene = moveObstructionAwayFromZone(scene, zone, obstructionLabel);
         if (patchedScene) {
-          const patchedResult = simulateStudioInternal(patchedScene, false, false);
+          const patchedResult = simulateStudioInternal(patchedScene, false, false, false);
           const patchedZone = patchedResult.criticalZoneResults.find((entry) => entry.zoneId === zone.id);
           const improved =
             patchedZone &&
@@ -637,7 +649,7 @@ function simulateStudioInternal(
       if (zone && cameraId) {
         const patchedScene = rotateCameraTowardZone(scene, zone, cameraId);
         if (patchedScene) {
-          const patchedResult = simulateStudioInternal(patchedScene, false, false);
+          const patchedResult = simulateStudioInternal(patchedScene, false, false, false);
           const patchedZone = patchedResult.criticalZoneResults.find((entry) => entry.zoneId === zone.id);
           const improved =
             patchedZone &&

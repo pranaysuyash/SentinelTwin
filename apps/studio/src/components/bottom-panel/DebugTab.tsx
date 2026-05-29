@@ -7,6 +7,7 @@ import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { Badge } from "@/components/shared/Badge";
 import { buildDiagnosticBundle, buildSupportBundle, stringifyDiagnosticBundle, stringifySupportBundle } from "@/lib/diagnostic-bundle";
 import type { CameraLiveConnectionArchiveRecord } from "@/lib/camera-live-connection-history";
+import type { CameraLiveSessionRecord } from "@/lib/camera-live-session-registry";
 import { stringifyReportEvidenceBundle } from "@/lib/report-evidence-bundle";
 import {
   normalizeOperationalEvidenceArchive,
@@ -167,6 +168,7 @@ export function DebugTab() {
   const [sensorIngestHistoryLoading, setSensorIngestHistoryLoading] = useState(false);
   const [sensorIngestHistoryError, setSensorIngestHistoryError] = useState<string | null>(null);
   const [cameraLiveConnectionHistory, setCameraLiveConnectionHistory] = useState<CameraLiveConnectionArchiveRecord[]>([]);
+  const [cameraLiveSessionRegistry, setCameraLiveSessionRegistry] = useState<CameraLiveSessionRecord[]>([]);
   const [cameraLiveConnectionHistoryLoading, setCameraLiveConnectionHistoryLoading] = useState(false);
   const [cameraLiveConnectionHistoryError, setCameraLiveConnectionHistoryError] = useState<string | null>(null);
   const modelEvalHistory = useStudioStore((s) => s.modelEvalHistory);
@@ -239,8 +241,12 @@ export function DebugTab() {
         ok: true;
         history: CameraLiveConnectionArchiveRecord[];
         historyCount: number;
+        activeSessions?: CameraLiveSessionRecord[];
       };
       setCameraLiveConnectionHistory(payload.history);
+      if (Array.isArray(payload.activeSessions)) {
+        setCameraLiveSessionRegistry(payload.activeSessions);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Camera live connection archive failed.";
       setCameraLiveConnectionHistoryError(message);
@@ -309,9 +315,13 @@ export function DebugTab() {
           ok: true;
           history: CameraLiveConnectionArchiveRecord[];
           historyCount: number;
+          activeSessions?: CameraLiveSessionRecord[];
         };
         if (!active) return;
         setCameraLiveConnectionHistory(payload.history);
+        if (Array.isArray(payload.activeSessions)) {
+          setCameraLiveSessionRegistry(payload.activeSessions);
+        }
       } catch (error) {
         if (!active) return;
         const message = error instanceof Error ? error.message : "Camera live connection archive failed.";
@@ -463,6 +473,7 @@ export function DebugTab() {
         externalLogEntries,
         sensorIngestHistory,
         cameraLiveConnectionHistory,
+        cameraLiveSessionRegistry,
       }),
     [
       aiActionTelemetry,
@@ -483,6 +494,7 @@ export function DebugTab() {
       externalLogEntries,
       sensorIngestHistory,
       cameraLiveConnectionHistory,
+      cameraLiveSessionRegistry,
       workspaceAccess,
       workspaceGovernance,
       providerSummary.providerLabel,
@@ -1319,6 +1331,46 @@ export function DebugTab() {
                 )) : (
                   <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
                     No camera live connection archive yet. Bind or disconnect a camera in the inspector to create the first record.
+                  </div>
+                )}
+              </div>
+              <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
+                The active session registry keeps the current live lease visible so refreshes and expiry are auditable alongside the archive.
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Active leases</div>
+                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{supportBundle.cameraLiveSessionRegistry.activeSessionCount}</div>
+                </div>
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Latest lease</div>
+                  <div className="mt-0.5 truncate font-semibold text-[#d2d9e8]">{supportBundle.cameraLiveSessionRegistry.latestSession?.cameraName ?? "No active lease"}</div>
+                </div>
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Loading</div>
+                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{cameraLiveConnectionHistoryLoading ? "Yes" : "No"}</div>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                {supportBundle.cameraLiveSessionRegistry.activeSessions.length > 0 ? supportBundle.cameraLiveSessionRegistry.activeSessions.map((record) => (
+                  <div key={record.sessionId} className="rounded-md border border-[#1a2030] bg-[#0f141f] px-3 py-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-[10px] font-semibold text-[#edf2ff]">{record.cameraName}</div>
+                      <Badge variant={record.status === "active" ? "green" : record.status === "expired" ? "red" : "gray"}>{record.status}</Badge>
+                    </div>
+                    <div className="mt-1 text-[9px] text-[#8b96ab]">{record.summary}</div>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      <Badge variant="gray">{record.lastAction}</Badge>
+                      <Badge variant="gray">{record.liveSessionState ?? "unknown"}</Badge>
+                      <Badge variant="gray">{record.sessionId.slice(-8)}</Badge>
+                    </div>
+                    <div className="mt-1 text-[9px] text-[#8b96ab]">
+                      Registry expiry: {record.sessionExpiresAt == null ? "—" : new Date(record.sessionExpiresAt).toLocaleTimeString()}
+                    </div>
+                  </div>
+                )) : (
+                  <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                    No active live session lease yet. Bind or refresh a camera in the inspector to create the first lease.
                   </div>
                 )}
               </div>

@@ -74,6 +74,7 @@ describe("InspectorPanel", () => {
     expect(source).toContain("Camera Metadata Bridge");
     expect(source).toContain("Live Camera Binding");
     expect(source).toContain("Current session lease");
+    expect(source).toContain("Transport ");
     expect(source).toContain("Apply Pasted Metadata");
     expect(source).toContain("Pull External Feed");
     expect(source).toContain("Ingest archive");

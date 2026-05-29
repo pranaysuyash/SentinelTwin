@@ -33,6 +33,7 @@ The current app is functionally coherent and the trust-audit surface passes, but
 - Symptom: `ok` is specified more than once in the object passed to `appendCameraLiveConnectionHistory(...)`.
 - Why it matters: `next build --webpack` fails during typecheck, so this blocks a production deploy.
 - Fastest fix path: remove the duplicate property or reorder the spread so the archive record is formed from one canonical `ok` field.
+- Follow-up: the current live `route.ts` source no longer shows the duplicate `ok` property, so this item should be treated as resolved unless a fresh typecheck reproduces it.
 
 ### 2. Lint blockers: React hook purity / set-state-in-effect
 

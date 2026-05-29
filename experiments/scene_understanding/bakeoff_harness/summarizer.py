@@ -36,6 +36,14 @@ def _load_run_metrics(run_dir: Path) -> tuple[dict, list[PerImageMetrics], list[
     return manifest, summary, per_image, failure_cases
 
 
+def _load_semantic_summary() -> dict | None:
+    summary_path = Path(__file__).resolve().parent.parent / "outputs" / "semantic_tasks" / "SEMANTIC_TASKS_SUMMARY.json"
+    if not summary_path.exists():
+        return None
+    with open(summary_path) as f:
+        return json.load(f)
+
+
 def summarize_runs(glob_pattern: str) -> str:
     output_dir = Path(__file__).resolve().parent.parent / "outputs"
     run_dirs = sorted(output_dir.glob(f"{glob_pattern}")) if output_dir.exists() else []
@@ -73,5 +81,21 @@ def summarize_runs(glob_pattern: str) -> str:
     rows.append("- **Obs F1**: F1 for obstruction detection (shelves, racks, counters)\n")
     rows.append("- **CZ Recall**: Critical zone detection rate\n")
     rows.append("- **P50 Latency**: Median processing time per image\n")
+
+    semantic_summary = _load_semantic_summary()
+    if semantic_summary:
+        rows.append("\n## Semantic Sidecar Summary\n\n")
+        rows.append("The semantic sidecar evaluates non-geometry floor-plan tasks on the same dev split.\n\n")
+        rows.append("| Task | Model | Metric | Avg Latency |\n")
+        rows.append("|---|---|---|---|\n")
+        for task_name in ["classification", "rooms", "ocr", "adjacency", "description"]:
+            for model_key in ["minicpm", "gpt4o", "gemini"]:
+                task_stats = semantic_summary.get(task_name, {}).get(model_key, {})
+                if task_name == "classification":
+                    metric = f"accuracy={task_stats.get('accuracy', 0.0):.3f}"
+                else:
+                    metric = f"non_empty_rate={task_stats.get('non_empty_rate', 0.0):.3f}"
+                latency = f"{task_stats.get('avg_latency_ms', 0.0):.0f}ms"
+                rows.append(f"| {task_name} | {model_key} | {metric} | {latency} |\n")
 
     return "".join(rows)

@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 
 import { formatTargetTypeLabel } from "@/components/view/CameraViewMode";
 
-const cameraViewModePath = "./src/components/view/CameraViewMode.tsx";
+const cameraViewModePath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/view/CameraViewMode.tsx";
 
 describe("CameraViewMode", () => {
   test("exposes the live overlay strip and replay presets", () => {
@@ -40,6 +40,9 @@ describe("CameraViewMode", () => {
     expect(source).toContain("Started:");
     expect(source).toContain("Confirmed:");
     expect(source).toContain("Expires:");
+    expect(source).toContain("Transport:");
+    expect(source).toContain("Protocol:");
+    expect(source).toContain("Heartbeat:");
     expect(source).toContain("Footage Verification");
     expect(source).toContain("Planning aid only.");
     expect(source).toContain("Auto align");

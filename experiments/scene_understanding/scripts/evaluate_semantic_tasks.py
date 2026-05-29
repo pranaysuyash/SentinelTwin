@@ -34,7 +34,15 @@ GROUND_TRUTH_SCENE = {
 
 TASKS = {
     "classification": {
-        "prompt": "What type of commercial space is this floor plan? Return a single category: retail_small_shop, retail_grocery, retail_pharmacy, warehouse, corridor_lobby, or other. Return ONLY the category name, no explanation.",
+        "prompt": (
+            "Classify this floor plan into exactly one of these labels: "
+            "retail_small_shop, retail_grocery, retail_pharmacy, warehouse, corridor_lobby, other. "
+            "Use the visual layout, not the text label. "
+            "Choose retail_small_shop for compact general retail stores, retail_grocery for larger grocery layouts, "
+            "retail_pharmacy for compact retail plans with counter + shelving emphasis, warehouse for rack/storage-heavy plans, "
+            "corridor_lobby for long circulation / lobby / hallway-dominant plans, and other only if none fit. "
+            "Return ONLY the single label."
+        ),
         "eval": "exact_match",
     },
     "rooms": {
@@ -128,7 +136,7 @@ def run_gpt4o_task(image_path: str, prompt: str) -> tuple[str, float]:
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
-            {"role": "system", "content": "You are a floor plan analyst."},
+            {"role": "system", "content": "You are a floor plan analyst. Follow the user's output format exactly and do not default to retail_small_shop when uncertain."},
             {"role": "user", "content": [
                 {"type": "text", "text": prompt},
                 {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64}", "detail": "high"}},
@@ -215,7 +223,23 @@ def summarize_results(results: dict, timings: dict) -> dict:
     return summary
 
 
+def is_selected_model(selected_models: set[str] | None, model_key: str) -> bool:
+    return selected_models is None or model_key in selected_models
+
+
 def main():
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Evaluate semantic floor-plan tasks")
+    parser.add_argument(
+        "--models",
+        nargs="+",
+        choices=["minicpm", "gpt4o", "gemini"],
+        help="Subset of models to run. Defaults to all models.",
+    )
+    args = parser.parse_args()
+    selected_models = set(args.models) if args.models else None
+
     results = {task: {} for task in TASKS}
     timings = {}  # {(img_id, model_key, task_name): ms}
 
@@ -229,37 +253,46 @@ def main():
             print(f"\n  --- {task_name} ---")
 
             # MiniCPM
-            print(f"  MiniCPM-V 4.6...", end=" ", flush=True)
-            try:
-                text, ms = run_minicpm_task(img_path, task_info["prompt"])
-                print(f"{ms:.0f}ms")
-                results[task_name][f"{img_id}_minicpm_{task_name}"] = text
-                timings[(img_id, "minicpm", task_name)] = ms
-            except Exception as e:
-                print(f"ERROR: {e}")
-                results[task_name][f"{img_id}_minicpm_{task_name}"] = f"[ERROR: {e}]"
+            if is_selected_model(selected_models, "minicpm"):
+                print(f"  MiniCPM-V 4.6...", end=" ", flush=True)
+                try:
+                    text, ms = run_minicpm_task(img_path, task_info["prompt"])
+                    print(f"{ms:.0f}ms")
+                    results[task_name][f"{img_id}_minicpm_{task_name}"] = text
+                    timings[(img_id, "minicpm", task_name)] = ms
+                except Exception as e:
+                    print(f"ERROR: {e}")
+                    results[task_name][f"{img_id}_minicpm_{task_name}"] = f"[ERROR: {e}]"
+            else:
+                results[task_name][f"{img_id}_minicpm_{task_name}"] = "[SKIPPED]"
 
             # GPT-4o
-            print(f"  GPT-4o...", end=" ", flush=True)
-            try:
-                text, ms = run_gpt4o_task(img_path, task_info["prompt"])
-                print(f"{ms:.0f}ms")
-                results[task_name][f"{img_id}_gpt4o_{task_name}"] = text
-                timings[(img_id, "gpt4o", task_name)] = ms
-            except Exception as e:
-                print(f"ERROR: {e}")
-                results[task_name][f"{img_id}_gpt4o_{task_name}"] = f"[ERROR: {e}]"
+            if is_selected_model(selected_models, "gpt4o"):
+                print(f"  GPT-4o...", end=" ", flush=True)
+                try:
+                    text, ms = run_gpt4o_task(img_path, task_info["prompt"])
+                    print(f"{ms:.0f}ms")
+                    results[task_name][f"{img_id}_gpt4o_{task_name}"] = text
+                    timings[(img_id, "gpt4o", task_name)] = ms
+                except Exception as e:
+                    print(f"ERROR: {e}")
+                    results[task_name][f"{img_id}_gpt4o_{task_name}"] = f"[ERROR: {e}]"
+            else:
+                results[task_name][f"{img_id}_gpt4o_{task_name}"] = "[SKIPPED]"
             
             # Gemini Flash
-            print(f"  Gemini 2.5 Flash...", end=" ", flush=True)
-            try:
-                text, ms = run_gemini_task(img_path, task_info["prompt"])
-                print(f"{ms:.0f}ms")
-                results[task_name][f"{img_id}_gemini_{task_name}"] = text
-                timings[(img_id, "gemini", task_name)] = ms
-            except Exception as e:
-                print(f"ERROR: {e}")
-                results[task_name][f"{img_id}_gemini_{task_name}"] = f"[ERROR: {e}]"
+            if is_selected_model(selected_models, "gemini"):
+                print(f"  Gemini 2.5 Flash...", end=" ", flush=True)
+                try:
+                    text, ms = run_gemini_task(img_path, task_info["prompt"])
+                    print(f"{ms:.0f}ms")
+                    results[task_name][f"{img_id}_gemini_{task_name}"] = text
+                    timings[(img_id, "gemini", task_name)] = ms
+                except Exception as e:
+                    print(f"ERROR: {e}")
+                    results[task_name][f"{img_id}_gemini_{task_name}"] = f"[ERROR: {e}]"
+            else:
+                results[task_name][f"{img_id}_gemini_{task_name}"] = "[SKIPPED]"
 
     # Generate report
     report_path = OUTPUT_DIR / "SEMANTIC_TASKS_REPORT.md"

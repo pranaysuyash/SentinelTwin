@@ -188,7 +188,7 @@ export function loadWorkspaceIdentityConflictHistory(rootDir = resolveWorkspaceI
       ) {
         return [];
       }
-      return [{
+      const record: WorkspaceIdentityConflictArchiveRecord = {
         approvalRoute: candidate.approvalRoute as WorkspaceApprovalRouteSummary,
         ...deriveWorkspaceIdentityConflictResolution(
           (candidate.conflictStatus === "reconcile_needed" ? "reconcile_needed" : candidate.conflictStatus === "archive_pending" ? "archive_pending" : "aligned") as WorkspaceIdentityConflictStatus,
@@ -208,13 +208,14 @@ export function loadWorkspaceIdentityConflictHistory(rootDir = resolveWorkspaceI
         workspaceAccessState: candidate.workspaceAccessState as WorkspaceAccessState,
         workspaceGovernanceState: candidate.workspaceGovernanceState as WorkspaceGovernanceState,
         archivedWorkspaceAccessState: candidate.archivedWorkspaceAccessState ? candidate.archivedWorkspaceAccessState as WorkspaceAccessState : null,
-        deliveredCount: candidate.deliveredCount,
-        queuedCount: candidate.queuedCount,
-        failedCount: candidate.failedCount,
+        deliveredCount: candidate.deliveredCount ?? 0,
+        queuedCount: candidate.queuedCount ?? 0,
+        failedCount: candidate.failedCount ?? 0,
         destinations: candidate.destinations as WorkspaceIdentityConflictDispatchAttempt[],
         submittedAt: candidate.submittedAt,
         storedAt: candidate.storedAt,
-      }];
+      };
+      return [record];
     }).sort((a, b) => b.storedAt - a.storedAt).slice(0, 12);
   } catch {
     return [];

@@ -12,5 +12,9 @@ describe("LeftPanel", () => {
     expect(source).toContain("ScanSearch");
     expect(source).toContain('key: "Y"');
     expect(source).toContain("Scene Tools");
+    expect(source).toContain('collapsed={collapsedSections.snapping}');
+    expect(source).toContain('summary={editor.snapEnabled ? "On" : "Off"}');
+    expect(source).toContain('Enable snapping');
+    expect(source).toContain('Grid size');
   });
 });

@@ -51,10 +51,11 @@ export function loadCameraMetadataHistory(rootDir = resolveCameraMetadataStoreRo
     return parsed.flatMap((item) => {
       if (!item || typeof item !== "object") return [];
       const candidate = item as Partial<CameraMetadataArchiveRecord>;
+      const ingestMode = candidate.ingestMode === "paste" || candidate.ingestMode === "external" ? candidate.ingestMode : null;
       if (
         candidate.ok !== true
         || typeof candidate.source !== "string"
-        || typeof candidate.ingestMode !== "string"
+        || ingestMode == null
         || typeof candidate.receivedAt !== "string"
         || typeof candidate.summary !== "string"
         || typeof candidate.sceneId !== "string" && candidate.sceneId !== null
@@ -74,7 +75,7 @@ export function loadCameraMetadataHistory(rootDir = resolveCameraMetadataStoreRo
       return [{
         ok: true as const,
         source: candidate.source,
-        ingestMode: candidate.ingestMode === "external" ? "external" : "paste",
+        ingestMode,
         receivedAt: candidate.receivedAt,
         sceneId: candidate.sceneId,
         sceneName: candidate.sceneName,

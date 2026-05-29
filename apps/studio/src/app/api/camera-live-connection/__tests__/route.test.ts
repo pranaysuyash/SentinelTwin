@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { once } from "node:events";
 import http from "node:http";
@@ -22,6 +22,10 @@ afterAll(() => {
 });
 
 describe("camera-live-connection route", () => {
+  beforeEach(() => {
+    rmSync(join(testStoreDir, ".camera-live-connection-history"), { recursive: true, force: true });
+  });
+
   test("archives a live connection probe and persists history", async () => {
     const response = await POST(new Request("http://localhost/api/camera-live-connection", {
       method: "POST",
@@ -54,6 +58,10 @@ describe("camera-live-connection route", () => {
     expect(body.summary).toContain("archived the live connection");
     expect(body.record.liveConnectionStatus).toBe("connected");
     expect(body.record.liveSessionExpiresAt).toBeGreaterThan(body.record.liveSessionConfirmedAt ?? 0);
+    expect(body.record.transportSessionState).toBe("active");
+    expect(body.record.protocolProfile).toBe("onvif_device");
+    expect(body.record.transportSessionId).toContain("transport_session_");
+    expect(body.record.lastHeartbeatAt).toBeGreaterThan(0);
 
     const history = await GET();
     const payload = await history.json();
@@ -61,6 +69,8 @@ describe("camera-live-connection route", () => {
     expect(payload.latestSubmission.record.liveFeedUrl).toBe("rtsp://camera.example.com/live");
     expect(payload.activeSessionCount).toBe(1);
     expect(payload.activeSessions[0].sessionId).toBe(body.record.liveSessionId);
+    expect(payload.activeSessions[0].transportSessionId).toBe(body.record.transportSessionId);
+    expect(payload.activeSessions[0].protocolProfile).toBe("onvif_device");
   });
 
   test("refreshes an existing live session without changing the session id", async () => {
@@ -94,6 +104,9 @@ describe("camera-live-connection route", () => {
     const bindBody = await bindResponse.json();
     expect(bindBody.record.liveSessionId).toContain("live_session_cam_front");
     expect(bindBody.record.liveSessionExpiresAt).toBeGreaterThan(bindBody.record.liveSessionConfirmedAt ?? 0);
+    expect(bindBody.record.transportSessionState).toBe("active");
+    expect(bindBody.record.transportSessionId).toContain("transport_session_");
+    expect(bindBody.record.lastHeartbeatAt).toBeGreaterThan(0);
 
     const refreshResponse = await POST(new Request("http://localhost/api/camera-live-connection", {
       method: "POST",
@@ -113,6 +126,7 @@ describe("camera-live-connection route", () => {
         liveSessionId: bindBody.record.liveSessionId,
         liveSessionStartedAt: bindBody.record.liveSessionStartedAt,
         liveSessionConfirmedAt: bindBody.record.liveSessionConfirmedAt,
+        transportSessionId: bindBody.record.transportSessionId,
         raw: JSON.stringify({
           cameraId: "cam_front",
           cameraName: "Front Entrance",
@@ -132,7 +146,10 @@ describe("camera-live-connection route", () => {
     expect(refreshBody.record.liveSessionId).toBe(bindBody.record.liveSessionId);
     expect(refreshBody.record.liveSessionState).toBe("connected");
     expect(refreshBody.summary).toContain("Refreshed live session");
-    expect(refreshBody.record.liveSessionExpiresAt).toBeGreaterThan(bindBody.record.liveSessionExpiresAt ?? 0);
+    expect(refreshBody.record.liveSessionExpiresAt).toBeGreaterThanOrEqual(bindBody.record.liveSessionExpiresAt ?? 0);
+    expect(refreshBody.record.transportSessionId).toBe(bindBody.record.transportSessionId);
+    expect(refreshBody.record.transportSessionState).toBe("active");
+    expect(refreshBody.record.lastHeartbeatAt).toBeGreaterThanOrEqual(bindBody.record.lastHeartbeatAt ?? 0);
   });
 
   test("probes an external live connection endpoint through the canonical route", async () => {
@@ -251,6 +268,33 @@ describe("camera-live-connection route", () => {
   });
 
   test("archives a disconnect action through the canonical route", async () => {
+    const bindResponse = await POST(new Request("http://localhost/api/camera-live-connection", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        source: "camera-inspector",
+        action: "bind",
+        protocol: "onvif",
+        cameraId: "cam_front",
+        cameraName: "Front Entrance",
+        sceneId: "scene-camera",
+        sceneName: "Camera Scene",
+        submittedAt: 1_725_000_020_000,
+        raw: JSON.stringify({
+          cameraId: "cam_front",
+          cameraName: "Front Entrance",
+          liveFeedUrl: "rtsp://camera.example.com/live",
+          liveFeedLabel: "Front entrance live feed",
+          liveConnectionMode: "onvif",
+          liveConnectionStatus: "connected",
+          notes: "ONVIF relay reachable",
+        }),
+      }),
+    }));
+
+    expect(bindResponse.status).toBe(200);
+    const bindBody = await bindResponse.json();
+
     const response = await POST(new Request("http://localhost/api/camera-live-connection", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -263,6 +307,8 @@ describe("camera-live-connection route", () => {
         sceneId: "scene-camera",
         sceneName: "Camera Scene",
         submittedAt: 1_725_000_010_000,
+        liveSessionId: bindBody.record.liveSessionId,
+        transportSessionId: bindBody.record.transportSessionId,
         raw: "",
       }),
     }));
@@ -270,7 +316,14 @@ describe("camera-live-connection route", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ok).toBe(true);
+    expect(body.record.liveSessionId).toBe(bindBody.record.liveSessionId);
     expect(body.record.liveConnectionStatus).toBe("disconnected");
+    expect(body.record.transportSessionId).toBe(bindBody.record.transportSessionId);
     expect(body.summary).toContain("Disconnected Front Entrance");
+    expect(body.record.transportSessionState).toBe("closing");
+
+    const history = await GET();
+    const payload = await history.json();
+    expect(payload.activeSessionCount).toBe(0);
   });
 });

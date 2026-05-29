@@ -54,6 +54,8 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
     { keys: "⌘ + S", action: "Save Scene" },
     { keys: "⌘ + O", action: "Open / Import Scene" },
     { keys: "⌘ + Enter", action: "Run Simulation" },
+    { keys: "Enter", action: "Complete wall / path / zone" },
+    { keys: "Delete", action: "Remove selected objects" },
     { keys: "← → ↑ ↓", action: "Nudge selected objects" },
     { keys: "1 – 6", action: "Switch View Mode (Map, Camera, Wall, Replay, Compare, Report)" },
     { keys: "V", action: "Select tool" },

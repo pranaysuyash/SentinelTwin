@@ -1,6 +1,6 @@
 # Session Context
 
-- Generated: 2026-05-29T11:25:31Z
+- Generated: 2026-05-29T12:04:08Z
 - Project: `SentinelTwin`
 - Provider: `local`
 - Model: `BAAI/bge-m3`
@@ -19,3 +19,8 @@
 ### Architecture Decisions
 - Collection: `projects_proj_sentineltwin`
 - Query: `architecture decisions for SentinelTwin`
+_Search timed out. Retry when the retrieval store is less busy._
+
+### Project Management Workflow
+- Collection: `projects_proj_sentineltwin`
+- Query: `project management workflow for SentinelTwin`

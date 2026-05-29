@@ -337,6 +337,12 @@ export function GovernanceTab() {
       .sort((left, right) => right.timestamp - left.timestamp)[0] ?? null,
     [operationalEvidenceEvents, scene.id],
   );
+  const latestIdentityConflictEvent = useMemo(
+    () => operationalEvidenceEvents
+      .filter((event) => event.sceneId === scene.id && event.kind === "workspace_identity_conflict_resolved")
+      .sort((left, right) => right.timestamp - left.timestamp)[0] ?? null,
+    [operationalEvidenceEvents, scene.id],
+  );
   const membershipDrift = latestWorkspaceMembershipArchive
     ? summarizeWorkspaceMembershipDrift(workspaceAccess, latestWorkspaceMembershipArchive.workspaceAccessState)
     : null;
@@ -629,8 +635,8 @@ export function GovernanceTab() {
       .then((payload) => {
         setIdentityConflictArchiveReport(payload);
         recordOperationalEvidenceEvent({
-          kind: "workspace_membership_synced",
-          title: "Workspace identity conflict archived",
+          kind: "workspace_identity_conflict_resolved",
+          title: "Workspace identity conflict resolved",
           details: payload.summary,
           actor: "user",
           source: scene.source,
@@ -934,8 +940,18 @@ export function GovernanceTab() {
                 <div className="mt-0.5 font-semibold text-[#d2d9e8]">{governanceTrail.routeCount}</div>
               </div>
               <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Identity conflict resolutions</div>
+                <div className="mt-0.5 font-semibold text-[#d2d9e8]">{governanceTrail.conflictResolutionCount}</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                 <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Latest route</div>
                 <div className="mt-0.5 font-semibold text-[#d2d9e8]">{latestApprovalRouteEvent?.title ?? "None"}</div>
+              </div>
+              <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Latest conflict</div>
+                <div className="mt-0.5 font-semibold text-[#d2d9e8]">{latestIdentityConflictEvent?.title ?? "None"}</div>
               </div>
             </div>
             <div className="space-y-1.5">

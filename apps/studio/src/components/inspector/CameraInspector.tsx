@@ -21,7 +21,13 @@ import type { CameraMetadataIngestResponse } from "@/lib/camera-metadata-live-in
 import type { CameraNode, DoriQuality, SimulationAssumptions } from "@/schema/security-scene";
 import { qualityToScore } from "@/simulation/dori";
 import { type InspectorTab, useStudioStore } from "@/store/studio-store";
-import { applyCameraPreset, CAMERA_PRESETS, describeCameraPreset, findBestCameraPreset, getCameraPreset } from "@/components/workspace/CameraPresetPicker";
+import {
+  applyCameraPreset,
+  CAMERA_PRESETS,
+  describeCameraPreset,
+  findBestCameraPreset,
+  getCameraPreset,
+} from "@/components/workspace/camera-preset-utils";
 import { snapCameraToMount, type CameraMountSnapMode } from "./camera-mount-snap";
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -199,6 +205,12 @@ export function CameraInspector() {
     cameraName: string;
     liveSessionState: "idle" | "probing" | "connected" | "error" | null;
     liveSessionExpiresAt: number | null;
+    sessionExpiresAt: number | null;
+    transportSessionId: string | null;
+    transportSessionState: "idle" | "negotiating" | "active" | "closing" | "error" | null;
+    lastHeartbeatAt: number | null;
+    probeCount: number;
+    protocolProfile: "onvif_device" | "rtsp_session" | "mjpeg_stream" | "http_poll" | "proxy" | null;
     lastAction: "bind" | "refresh" | "disconnect";
   }>>([]);
   const cameraLiveConnectionEvents = useStudioStore((s) => s.cameraLiveConnectionEvents.filter((event) => event.sceneId === s.scene.id));
@@ -211,23 +223,25 @@ export function CameraInspector() {
   const [liveConnectionError, setLiveConnectionError] = useState<string | null>(null);
   const [liveConnectionLoading, setLiveConnectionLoading] = useState(false);
 
-  useEffect(() => {
-    const refreshCameraMetadataHistory = async () => {
-      try {
-        const response = await fetch("/api/camera-metadata-ingest", { cache: "no-store" });
-        if (!response.ok) return;
-        const payload = await response.json() as { history?: CameraMetadataArchiveRecord[] };
-        if (Array.isArray(payload.history)) {
-          setCameraMetadataHistory(payload.history);
-        }
-      } catch {
-        // Ignore history refresh failures; the ingest bridge still works.
+  const refreshCameraMetadataHistory = useCallback(async () => {
+    try {
+      const response = await fetch("/api/camera-metadata-ingest", { cache: "no-store" });
+      if (!response.ok) return;
+      const payload = await response.json() as { history?: CameraMetadataArchiveRecord[] };
+      if (Array.isArray(payload.history)) {
+        setCameraMetadataHistory(payload.history);
       }
-    };
+    } catch {
+      // Ignore history refresh failures; the ingest bridge still works.
+    }
+  }, []);
 
-    void refreshCameraMetadataHistory();
+  useEffect(() => {
+    queueMicrotask(() => {
+      void refreshCameraMetadataHistory();
+    });
     // Intentional: refresh when the operator switches cameras so the archive stays in view.
-  }, [cameraId]);
+  }, [refreshCameraMetadataHistory]);
 
   const refreshCameraLiveConnectionHistory = useCallback(async () => {
     try {
@@ -263,13 +277,11 @@ export function CameraInspector() {
     });
   }, [cameraId, camera?.liveFeedLabel, camera?.liveFeedUrl, camera?.liveConnectionMode, camera?.liveConnectionStatus, camera?.notes]);
 
-  if (!camera) return null;
-
   const placementPreset = getCameraPreset();
-  const bestPreset = findBestCameraPreset(camera);
-  const recCount = (result?.recommendations ?? []).filter(
+  const bestPreset = camera ? findBestCameraPreset(camera) : null;
+  const recCount = camera ? (result?.recommendations ?? []).filter(
     (r) => !r.affectedNodeId || r.affectedNodeId === camera.id,
-  ).length;
+  ).length : 0;
 
   const tabs: { id: InspectorTab; label: string; badge?: number }[] = [
     { id: "properties", label: "Properties", badge: recCount > 0 ? recCount : undefined },
@@ -279,7 +291,7 @@ export function CameraInspector() {
     { id: "failures", label: "Failures" },
   ];
 
-  const camResult = result?.cameraResults.find((entry) => entry.cameraId === camera.id);
+  const camResult = camera ? result?.cameraResults.find((entry) => entry.cameraId === camera.id) : null;
   const targetZone = scene.criticalZones.find((zone) => zone.id === selectedNodeId) ?? null;
   const targetZoneResult = targetZone
     ? result?.criticalZoneResults.find((entry) => entry.zoneId === targetZone.id) ?? null
@@ -298,15 +310,15 @@ export function CameraInspector() {
   const targetPoint = targetCentroid && targetZone
     ? [targetCentroid[0] / targetZone.polygon.length, targetCentroid[1] / targetZone.polygon.length]
     : null;
-  const targetDistanceM = targetPoint
+  const targetDistanceM = camera && targetPoint
     ? Math.hypot(camera.position[0] - targetPoint[0], camera.position[2] - targetPoint[1])
     : null;
-  const targetBearingDeg = targetPoint
+  const targetBearingDeg = camera && targetPoint
     ? ((Math.atan2(targetPoint[0] - camera.position[0], targetPoint[1] - camera.position[2]) * 180) / Math.PI)
     : null;
-  const angleFromCenterDeg = targetBearingDeg == null
-    ? null
-    : Math.abs((((targetBearingDeg - camera.yawDeg) % 360) + 540) % 360 - 180);
+  const angleFromCenterDeg = camera && targetBearingDeg !== null
+    ? Math.abs((((targetBearingDeg - camera.yawDeg) % 360) + 540) % 360 - 180)
+    : null;
   const bestCameraForTarget = targetZone && result
     ? result.cameraResults
         .map((entry) => ({
@@ -317,8 +329,9 @@ export function CameraInspector() {
     : null;
   const bestCameraName = bestCameraForTarget
     ? (scene.cameras.find((entry) => entry.id === bestCameraForTarget.cameraId)?.name ?? bestCameraForTarget.cameraId)
-    : camera.name;
-  const targetDoriRanges = computeDoriRanges(camera, scene.assumptions.pixelsPerMeter);
+    : (camera?.name ?? "Camera");
+  const targetDoriRanges = camera ? computeDoriRanges(camera, scene.assumptions.pixelsPerMeter) : null;
+  const safeTargetDoriRanges = targetDoriRanges ?? { det: 0, obs: 0, recog: 0, ident: 0 };
   const feedOverlayOptions = {
     doriLabels: viewToggles.overlays && viewToggles.dori,
     pathActor: viewToggles.overlays && viewToggles.path,
@@ -328,8 +341,8 @@ export function CameraInspector() {
     grid: viewToggles.overlays && viewToggles.grid,
   };
   const offlineImpact = camResult?.offlineImpact ?? [];
-  const resolutionKey = `${camera.resolutionMP}_${camera.resolutionWidth ?? 2688}x${camera.resolutionHeight ?? 1520}`;
-  const typeKey = camera.mountType === "ceiling" ? `${camera.resolutionMP}mp_dome` : `${camera.resolutionMP}mp_bullet`;
+  const resolutionKey = camera ? `${camera.resolutionMP}_${camera.resolutionWidth ?? 2688}x${camera.resolutionHeight ?? 1520}` : "";
+  const typeKey = camera ? (camera.mountType === "ceiling" ? `${camera.resolutionMP}mp_dome` : `${camera.resolutionMP}mp_bullet`) : "";
   const viewModeLabel =
     viewMode === "normal" ? "Normal" : viewMode === "ir" ? "IR (B/W)" : viewMode === "low_light" ? "Low Light" : "Thermal";
   const targetLightingLabel =
@@ -341,7 +354,7 @@ export function CameraInspector() {
   const targetPpmEstimate = targetZone ? qualityRangeLabel(targetQuality, scene.assumptions.doriStandard) : "—";
   const hasPoleTarget = scene.obstructions.some((obstruction) => obstruction.obstructionType === "pillar" || obstruction.label.toLowerCase().includes("pillar"));
   const activeSensorCount = scene.sensors.filter((sensor) => sensor.state === "active").length;
-  const nearestSensor = scene.sensors.length > 0
+  const nearestSensor = camera && scene.sensors.length > 0
     ? scene.sensors.reduce<{ sensor: typeof scene.sensors[number] | null; distanceM: number | null }>((best, sensor) => {
         const distanceM = Math.hypot(
           camera.position[0] - sensor.position[0],
@@ -358,12 +371,12 @@ export function CameraInspector() {
   const nearestSensorState = nearestSensor.sensor ? nearestSensor.sensor.state.replace(/_/g, " ") : "—";
   const nearestSensorCoverage = nearestSensor.sensor ? nearestSensor.sensor.coverageMode.replace(/_/g, " ") : "—";
 
-  const updatePosition = (next: [number, number, number]) => updateNode(camera.id, { position: next });
+  const updatePosition = (next: [number, number, number]) => updateNode(camera!.id, { position: next });
 
   const updateHeight = (nextHeight: number) => {
-    updateNode(camera.id, {
+    updateNode(camera!.id, {
       mountHeightM: nextHeight,
-      position: [camera.position[0], nextHeight, camera.position[2]] as [number, number, number],
+      position: [camera!.position[0], nextHeight, camera!.position[2]] as [number, number, number],
     });
   };
 
@@ -374,9 +387,9 @@ export function CameraInspector() {
       { x: 0, z: 0 },
     );
     const n = targetZone.polygon.length || 1;
-    const dx = centroid.x / n - camera.position[0];
-    const dz = centroid.z / n - camera.position[2];
-    updateNode(camera.id, { yawDeg: Math.round(Math.atan2(dx, dz) * (180 / Math.PI)), pitchDeg: -30 });
+    const dx = centroid.x / n - camera!.position[0];
+    const dz = centroid.z / n - camera!.position[2];
+    updateNode(camera!.id, { yawDeg: Math.round(Math.atan2(dx, dz) * (180 / Math.PI)), pitchDeg: -30 });
   };
 
   const saveInspectionSnapshot = () => {
@@ -393,9 +406,9 @@ export function CameraInspector() {
   };
 
   const snapToMount = (mode: CameraMountSnapMode) => {
-    const patch = snapCameraToMount(camera, scene, mode);
+    const patch = snapCameraToMount(camera!, scene, mode);
     if (!patch) return;
-    updateNode(camera.id, patch);
+    updateNode(camera!.id, patch);
   };
 
   const openInCameraWall = () => {
@@ -486,7 +499,7 @@ export function CameraInspector() {
         });
       });
 
-      const preferredRecord = body.records?.find((record) => record.cameraId === camera.id) ?? body.records?.[0] ?? null;
+      const preferredRecord = body.records?.find((record) => record.cameraId === camera!.id) ?? body.records?.[0] ?? null;
       if (preferredRecord?.feedMode) {
         setViewModeState(preferredRecord.feedMode);
       }
@@ -510,7 +523,7 @@ export function CameraInspector() {
 
     setLiveConnectionLoading(true);
     try {
-      const cameraBeforeUpdate = useStudioStore.getState().scene.cameras.find((entry) => entry.id === camera.id) ?? camera;
+      const cameraBeforeUpdate = useStudioStore.getState().scene.cameras.find((entry) => entry.id === camera!.id) ?? camera!;
       const response = await fetch("/api/camera-live-connection", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -521,25 +534,26 @@ export function CameraInspector() {
           endpointUrl: action === "disconnect" ? (liveConnectionUrl.trim() || undefined) : liveConnectionUrl.trim(),
           liveFeedUrl: liveConnectionUrl.trim() || undefined,
           feedLabel: liveConnectionLabel.trim() || undefined,
-          cameraId: camera.id,
-          cameraName: camera.name,
+          cameraId: camera!.id,
+          cameraName: camera!.name,
           sceneId: scene.id,
           sceneName: scene.name,
           submittedAt: Date.now(),
           liveSessionId: cameraBeforeUpdate?.liveSessionId ?? undefined,
           liveSessionStartedAt: cameraBeforeUpdate?.liveSessionStartedAt ?? undefined,
           liveSessionConfirmedAt: cameraBeforeUpdate?.liveSessionConfirmedAt ?? undefined,
+          transportSessionId: cameraBeforeUpdate?.transportSessionId ?? undefined,
           raw: action === "disconnect" ? "" : "",
           notes: liveConnectionNotes.trim() || undefined,
         }),
       });
       const body = await response.json() as CameraLiveConnectionProbeResponse & { ok?: boolean; error?: string; issues?: Array<{ path: string; message: string }> };
-      if (!response.ok || body.ok === false) {
+      if (!response.ok) {
         const issueSummary = body.issues?.map((issue) => issue.message).join(" ");
         throw new Error(body.error ?? issueSummary ?? `Failed to ${action} live camera.`);
       }
 
-      updateNode(camera.id, {
+      updateNode(camera!.id, {
         liveFeedUrl: body.record.liveFeedUrl ?? undefined,
         liveFeedLabel: body.record.liveFeedLabel ?? undefined,
         liveConnectionMode: body.record.liveConnectionMode ?? undefined,
@@ -550,10 +564,15 @@ export function CameraInspector() {
         liveSessionStartedAt: body.record.liveSessionStartedAt ?? undefined,
         liveSessionConfirmedAt: body.record.liveSessionConfirmedAt ?? undefined,
         liveSessionExpiresAt: body.record.liveSessionExpiresAt ?? undefined,
+        transportSessionId: body.record.transportSessionId ?? undefined,
+        transportSessionState: body.record.transportSessionState ?? undefined,
+        lastHeartbeatAt: body.record.lastHeartbeatAt ?? undefined,
+        probeCount: body.record.probeCount ?? undefined,
+        protocolProfile: body.record.protocolProfile ?? undefined,
       });
       recordCameraLiveConnectionEvent({
-        cameraId: camera.id,
-        cameraName: camera.name,
+        cameraId: camera!.id,
+        cameraName: camera!.name,
         previousLiveFeedUrl: cameraBeforeUpdate?.liveFeedUrl ?? null,
         previousLiveFeedLabel: cameraBeforeUpdate?.liveFeedLabel ?? null,
         previousLiveConnectionMode: cameraBeforeUpdate?.liveConnectionMode ?? null,
@@ -572,12 +591,17 @@ export function CameraInspector() {
         liveSessionStartedAt: body.record.liveSessionStartedAt,
         liveSessionConfirmedAt: body.record.liveSessionConfirmedAt,
         liveSessionExpiresAt: body.record.liveSessionExpiresAt,
+        transportSessionId: body.record.transportSessionId,
+        transportSessionState: body.record.transportSessionState,
+        lastHeartbeatAt: body.record.lastHeartbeatAt,
+        probeCount: body.record.probeCount,
+        protocolProfile: body.record.protocolProfile,
         ingestMode: action === "disconnect" ? "manual" : "external",
         summary: body.summary ?? (action === "disconnect"
-          ? `Live camera connection cleared for ${camera.name}.`
+          ? `Live camera connection cleared for ${camera!.name}.`
           : action === "refresh"
-            ? `Live camera session refreshed for ${camera.name}.`
-            : `Live camera connection bound for ${camera.name}.`),
+            ? `Live camera session refreshed for ${camera!.name}.`
+            : `Live camera connection bound for ${camera!.name}.`),
         notes: body.record.notes ?? (liveConnectionNotes.trim() || null),
       });
       setLiveConnectionMode(body.record.liveConnectionMode ?? (liveConnectionMode ?? "onvif"));
@@ -634,6 +658,8 @@ export function CameraInspector() {
     return () => window.clearInterval(heartbeat);
     // Intentional: keep the live connection as a lease that renews while the operator is watching it.
   }, [camera, liveConnectionLoading, liveConnectionUrl, refreshLiveConnection]);
+
+  if (!camera) return null;
 
   return (
     <>
@@ -807,7 +833,7 @@ export function CameraInspector() {
                                 {entry.cameraName}
                               </div>
                               <div className="mt-0.5 text-[8px] uppercase tracking-[0.16em] text-[#556076]">
-                                {entry.status} · {entry.lastAction} · {entry.liveSessionState ?? "unknown"}
+                                {entry.status} · {entry.lastAction} · {entry.liveSessionState ?? "unknown"} · {entry.transportSessionState ?? "transport?"}
                               </div>
                             </div>
                             <div className="rounded-full border border-[#1f2536] bg-[#0b0f17] px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] text-[#7d8aa4]">
@@ -816,6 +842,12 @@ export function CameraInspector() {
                           </div>
                           <div className="mt-1 text-[9px] leading-relaxed text-[#7b889f]">
                             Expires {entry.liveSessionExpiresAt == null ? "—" : new Date(entry.liveSessionExpiresAt).toLocaleTimeString()}
+                          </div>
+                          <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+                            Registry {entry.sessionExpiresAt == null ? "—" : new Date(entry.sessionExpiresAt).toLocaleTimeString()}
+                          </div>
+                          <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+                            Transport {entry.transportSessionId ? entry.transportSessionId.slice(-8) : "—"} · {entry.protocolProfile ?? "unknown"} · probes {entry.probeCount}
                           </div>
                         </div>
                       ))}
@@ -861,6 +893,9 @@ export function CameraInspector() {
                           <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
                             Expires {entry.record.liveSessionExpiresAt == null ? "—" : new Date(entry.record.liveSessionExpiresAt).toLocaleTimeString()}
                           </div>
+                          <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+                            Transport {entry.record.transportSessionId ? entry.record.transportSessionId.slice(-8) : "—"} · {entry.record.protocolProfile ?? "unknown"} · {entry.record.lastHeartbeatAt == null ? "no heartbeat" : new Date(entry.record.lastHeartbeatAt).toLocaleTimeString()}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -879,7 +914,7 @@ export function CameraInspector() {
                               {entry.liveFeedLabel ?? entry.cameraName}
                             </div>
                             <div className="mt-0.5 text-[8px] uppercase tracking-[0.16em] text-[#556076]">
-                              {entry.liveConnectionStatus ?? "disconnected"} · {entry.liveConnectionMode ?? "unknown"} · {entry.ingestMode === "external" ? "External" : "Manual"}
+                              {entry.liveConnectionStatus ?? "disconnected"} · {entry.liveConnectionMode ?? "unknown"} · {entry.ingestMode === "external" ? "External" : "Manual"} · {entry.transportSessionState ?? "transport?"}
                             </div>
                           </div>
                           <div className="rounded-full border border-[#1f2536] bg-[#111521] px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] text-[#7d8aa4]">
@@ -894,6 +929,9 @@ export function CameraInspector() {
                         </div>
                         <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
                           Expires {entry.liveSessionExpiresAt == null ? "—" : new Date(entry.liveSessionExpiresAt).toLocaleTimeString()}
+                        </div>
+                        <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+                          Transport {entry.transportSessionId ? entry.transportSessionId.slice(-8) : "—"} · {entry.protocolProfile ?? "unknown"} · {entry.lastHeartbeatAt == null ? "no heartbeat" : new Date(entry.lastHeartbeatAt).toLocaleTimeString()}
                         </div>
                       </div>
                     ))}
@@ -1467,9 +1505,9 @@ export function CameraInspector() {
                 <div className="space-y-1">
                   <div className="text-[9px] font-semibold text-[#87a5cf]">Range checkpoints</div>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    <SummaryStat label="Detect" value={`${targetDoriRanges.det.toFixed(1)}m`} accent="text-orange-300" />
-                    <SummaryStat label="Recog" value={`${targetDoriRanges.recog.toFixed(1)}m`} accent="text-yellow-300" />
-                    <SummaryStat label="Ident" value={`${targetDoriRanges.ident.toFixed(1)}m`} accent="text-emerald-300" />
+                    <SummaryStat label="Detect" value={`${targetDoriRanges!.det.toFixed(1)}m`} accent="text-orange-300" />
+                    <SummaryStat label="Recog" value={`${targetDoriRanges!.recog.toFixed(1)}m`} accent="text-yellow-300" />
+                    <SummaryStat label="Ident" value={`${targetDoriRanges!.ident.toFixed(1)}m`} accent="text-emerald-300" />
                     <SummaryStat label="Best" value={bestCameraName} accent="text-blue-300" />
                   </div>
                 </div>
@@ -1517,10 +1555,10 @@ export function CameraInspector() {
                     }))
                     .filter((entry) => entry.quality !== undefined);
                   const doriRows = [
-                    ["identification", targetDoriRanges.ident, "#60a5fa"],
-                    ["recognition", targetDoriRanges.recog, "#22c55e"],
-                    ["observation", targetDoriRanges.obs, "#eab308"],
-                    ["detection", targetDoriRanges.det, "#f97316"],
+                    ["identification", safeTargetDoriRanges.ident, "#60a5fa"],
+                    ["recognition", safeTargetDoriRanges.recog, "#22c55e"],
+                    ["observation", safeTargetDoriRanges.obs, "#eab308"],
+                    ["detection", safeTargetDoriRanges.det, "#f97316"],
                   ] as const;
                   return (
                     <div className="space-y-2">

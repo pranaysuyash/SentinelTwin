@@ -38,11 +38,13 @@ export function loadCameraLiveConnectionHistory(rootDir = resolveCameraLiveConne
     return parsed.flatMap((item) => {
       if (!item || typeof item !== "object") return [];
       const candidate = item as Partial<CameraLiveConnectionArchiveRecord>;
+      const action = candidate.action === "bind" || candidate.action === "refresh" || candidate.action === "disconnect" ? candidate.action : null;
+      const protocol = candidate.protocol === "rtsp" || candidate.protocol === "mjpeg" || candidate.protocol === "http" || candidate.protocol === "proxy" || candidate.protocol === "onvif" ? candidate.protocol : null;
       if (
         candidate.ok !== true
         || typeof candidate.source !== "string"
-        || typeof candidate.action !== "string"
-        || typeof candidate.protocol !== "string"
+        || action == null
+        || protocol == null
         || typeof candidate.receivedAt !== "string"
         || typeof candidate.summary !== "string"
         || typeof candidate.sceneId !== "string" && candidate.sceneId !== null
@@ -60,8 +62,8 @@ export function loadCameraLiveConnectionHistory(rootDir = resolveCameraLiveConne
       return [{
         ok: true as const,
         source: candidate.source,
-        action: candidate.action === "disconnect" || candidate.action === "refresh" ? candidate.action : "bind",
-        protocol: candidate.protocol === "rtsp" || candidate.protocol === "mjpeg" || candidate.protocol === "http" || candidate.protocol === "proxy" ? candidate.protocol : "onvif",
+        action,
+        protocol,
         receivedAt: candidate.receivedAt,
         sceneId: candidate.sceneId,
         sceneName: candidate.sceneName,

@@ -5171,6 +5171,7 @@ Add sensor specs (`sensorWidthMm`, `sensorHeightMm`, `sensorFormat`) when:
 - The simulated/computed/live labels should stay aligned with the same provenance helper so the UI, the manifest, and the tests do not diverge again.
 - The project launcher scan card now uses `Preview / Manual-assisted`, keeping the launcher aligned with the dashboard-facing scan copy and the planned guided-scan status.
 - The per-node truth ladder now surfaces review status, source trace coverage, and geometry validity in Report Lite, Scene Intelligence, and report exports, so credibility is visible alongside coverage.
+- Path Replay now keeps its playback state in the shared store, which lets Camera View and Camera Wall follow the same replay progress instead of diverging on a local timer.
 
 **Operational note for SentinelTwin:**
 - Keep explicit truth labels on the most claim-heavy summary surfaces and extend the trust-audit manifest whenever a new user-facing claim surface appears.
@@ -5504,6 +5505,7 @@ Add sensor specs (`sensorWidthMm`, `sensorHeightMm`, `sensorFormat`) when:
 - Multi-task eval script: `experiments/scene_understanding/scripts/evaluate_semantic_tasks.py`
 - Full report: `experiments/scene_understanding/outputs/semantic_tasks/SEMANTIC_TASKS_REPORT.md`
 - Structured summary: `experiments/scene_understanding/outputs/semantic_tasks/SEMANTIC_TASKS_SUMMARY.json`
+- Main comparison report now includes a semantic sidecar summary section, so geometry and non-geometry results are visible in one first-pass report.
 - 5 images × 5 task types (classification, room detection, OCR, adjacency, description) × 3 models (MiniCPM, GPT-4o, Gemini)
 - **MiniCPM-V 4.6 is USEFUL for non-geometry tasks** despite wall F1=0.094:
   - Scene classification: ~2.3s avg. Coarse (warehouse vs retail vs corridor) shows consistent bias (everything → "office") but fast. Fine-grained 1/5.
@@ -5516,6 +5518,9 @@ Add sensor specs (`sensorWidthMm`, `sensorHeightMm`, `sensorFormat`) when:
 - **Coarse classification follow-up (3 categories):** MiniCPM 0/5 (all "office"), GPT-4o 1/5 (all "warehouse" except actual warehouse). Synthetic images lack distinguishing visual features for sub-type discrimination.
 - **Pipeline implication (see Thread 54):** Two-tier design — local MiniCPM for triage (classify, OCR, quality check, coarse zones) → gated cloud API call for precise geometry. Saves $0.01-0.02 per blurry/noisy image.
 - **Evaluator hardening:** classification scoring now extracts exact labels before scoring, and MiniCPM model-load failures are cached so the sidecar does not retry the same unsupported checkpoint on every prompt.
+- **Prompt hardening:** the classification prompt now spells out the exact label semantics and tells GPT-4o not to default to `retail_small_shop` when uncertain.
+- **Selective rerun:** the semantic sidecar now accepts `--models gpt4o`-style subsets, which makes targeted prompt-tuning passes possible without burning time on known-bad loaders.
+- **Latest GPT-4o semantic result:** after prompt tightening, the synthetic classification lane moved to 0.2 accuracy on the 5-image dev split; room/ocr/adjacency/description stayed non-empty on all images.
 
 **Files added:**
 - `experiments/scene_understanding/scripts/evaluate_semantic_tasks.py`
@@ -5813,6 +5818,22 @@ The highest-leverage build target right now is **truth ladder** (reviewStatus + 
 - `Docs/decisions/DECISION_LOG.md` — D-217 (truth ladder), D-218 (corrected roadmap)
 - `Docs/architecture/09_FLOORPLAN_PIPELINE.md` — Pipeline architecture (needs update with Phase 3 findings)
 
+## Thread: Shared identity conflict evidence
+
+### Why this matters
+
+The Governance tab now distinguishes membership sync from identity conflict resolution. That means the product can explain not just that workspace identity data changed, but *why* it changed and whether the operator resolved a drift boundary or merely synchronized records.
+
+### Current finding
+
+- The shared-identity archive currently records the live workspace membership state, the latest archived snapshot, route recommendations, and fan-out attempts.
+- The ledger now has a dedicated `workspace_identity_conflict_resolved` evidence kind so governance history can separate a conflict-resolution action from the generic membership-sync action.
+- This makes the governance trail more semantically honest and reduces the chance that reconciliation is mistaken for routine synchronization.
+
+### Follow-up question
+
+- Should remote identity replay/history eventually expose a dedicated conflict diff view alongside the current approval route and membership archive history, or is the combined conflict archive enough for V0.2?
+
 ## Thread: 3D Contextual Object Manipulation UI
 
 ### Why this matters
@@ -5847,3 +5868,26 @@ This should feel like a professional spatial editor, not a game HUD. The interac
 ### Exploration goal
 
 Prototype a contextual 3D interaction model that reduces friction for object manipulation without creating a second control system alongside the inspector and transform handles.
+
+## Thread: React diagnostics and element-grab tooling for `apps/studio`
+
+### Why this matters
+
+The studio app is a large React surface with motion-heavy panels and several long-lived workspace views. Aiden Bai's ecosystem gives us three complementary tools:
+
+- `react-doctor` for static diagnosis and ranking
+- `react-scan` for live render profiling
+- `react-grab` for element-level handoff during UI debugging
+
+### Current finding
+
+- The app shell now loads `react-scan` and `react-grab` only in development, so local debugging gets better without affecting production.
+- The counterfactual panel now respects reduced motion, uses `LazyMotion`, and fixes a few accessibility issues the doctor flagged.
+- The current `react-doctor` snapshot improved from `56` to `60` after these changes, with the error count still dominated by pre-existing architecture issues in shared workspace components.
+- The stricter pnpm trust policy recommendation was evaluated and intentionally not kept because it blocked normal installs against the current lockfile.
+
+### Follow-up
+
+- Use `react-scan` against the live `apps/studio` UI once the app is running locally to capture render hotspots in the workspace views.
+- Continue fixing the high-signal doctor errors in the shared workspace components, starting with cleanup in `WorkspaceCanvas.tsx` and the Fast Refresh export warnings in the main component files.
+- If the lockfile is refreshed, revisit pnpm hardening with a policy that preserves installability instead of locking the repo out of its own toolchain.

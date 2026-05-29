@@ -294,17 +294,34 @@ describe("operational evidence helpers", () => {
         lifecycleStage: "review",
         branchLabel: "review",
       },
+      {
+        id: "workspace_identity_conflict_resolved:scene_1:pqr678",
+        kind: "workspace_identity_conflict_resolved",
+        title: "Workspace identity conflict resolved",
+        details: "Resolved the shared identity archive against the live workspace",
+        actor: "user",
+        source: "manual",
+        sceneId: "scene_1",
+        sceneName: "Retail Draft",
+        timestamp: 1_678,
+        revisionDepth: 1,
+        affectedNodeIds: [],
+        confidence: 0.94,
+        lifecycleStage: "review",
+        branchLabel: "review",
+      },
     ];
 
     const trail = summarizeOperationalGovernanceTrail(events, "scene_1");
 
-    expect(trail.totalEvents).toBe(5);
+    expect(trail.totalEvents).toBe(6);
     expect(trail.requestCount).toBe(1);
     expect(trail.approvalCount).toBe(1);
     expect(trail.annotationCount).toBe(1);
     expect(trail.roleChangeCount).toBe(1);
     expect(trail.routeCount).toBe(1);
-    expect(trail.latestEvent?.kind).toBe("workspace_approval_routed");
+    expect(trail.conflictResolutionCount).toBe(1);
+    expect(trail.latestEvent?.kind).toBe("workspace_identity_conflict_resolved");
     expect(trail.recentEvents).toHaveLength(5);
   });
 

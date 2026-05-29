@@ -94,6 +94,8 @@ describe("BottomPanel", () => {
     expect(source).toContain("Import Sensor Metadata");
     expect(source).toContain("Camera Live Connection Archive");
     expect(source).toContain("The live camera connection archive now ships inside the support bundle");
+    expect(source).toContain("Active leases");
+    expect(source).toContain("The active session registry keeps the current live lease visible");
     expect(source).toContain("Provider Health Dashboard");
     expect(source).toContain("Prompt Registry");
     expect(source).toContain("Heuristic Layout Baseline");

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 
-import { createCameraNode, createSensorNode } from "@/lib/node-factory";
+import { createCameraNode, createObstructionNode, createSensorNode } from "@/lib/node-factory";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 import { useStudioStore } from "@/store/studio-store";
 
@@ -35,17 +35,30 @@ describe("studio store editor mutations", () => {
 
   test("translates a multi-selection as a single nudge unit", () => {
     const camera = createCameraNode([2, 2.8, 3]);
-    const obstruction = createSensorNode([4, 1.2, 5], "motion");
+    const obstruction = createObstructionNode([4, 1, 5], "shelf");
     useStudioStore.getState().addNode(camera);
     useStudioStore.getState().addNode(obstruction);
     useStudioStore.getState().setSelectedNodes([camera.id, obstruction.id]);
 
+    const initialCamera = useStudioStore.getState().scene.cameras.find((entry) => entry.id === camera.id);
+    const initialObstruction = useStudioStore.getState().scene.obstructions.find((entry) => entry.id === obstruction.id);
+
     useStudioStore.getState().translateSelectedNodes([0.5, -0.25]);
 
     const nextCamera = useStudioStore.getState().scene.cameras.find((entry) => entry.id === camera.id);
-    const nextSensor = useStudioStore.getState().scene.sensors.find((entry) => entry.id === obstruction.id);
-    expect(nextCamera?.position).toEqual([2.5, 2.8, 2.75]);
-    expect(nextSensor?.position).toEqual([4.5, 1.2, 4.75]);
+    const nextObstruction = useStudioStore.getState().scene.obstructions.find((entry) => entry.id === obstruction.id);
+    expect(initialCamera).toBeDefined();
+    expect(initialObstruction).toBeDefined();
+    expect(nextCamera?.position).toEqual([
+      (initialCamera?.position[0] ?? 0) + 0.5,
+      initialCamera?.position[1] ?? 0,
+      (initialCamera?.position[2] ?? 0) - 0.25,
+    ]);
+    expect(nextObstruction?.position).toEqual([
+      (initialObstruction?.position[0] ?? 0) + 0.5,
+      initialObstruction?.position[1] ?? 0,
+      (initialObstruction?.position[2] ?? 0) - 0.25,
+    ]);
     expect(useStudioStore.getState().selectedNodeIds).toEqual([camera.id, obstruction.id]);
     expect(useStudioStore.getState().simulationDirty).toBe(true);
   });
@@ -73,9 +86,9 @@ describe("studio store editor mutations", () => {
     const camera = createCameraNode([2, 2.8, 3]);
     useStudioStore.getState().addNode(camera);
     useStudioStore.getState().updateNode(camera.id, {
-      status: "clean",
+      status: "dirty",
       clarity: "good",
-      nightMode: "normal",
+      nightMode: "none",
     });
 
     const ok = useStudioStore.getState().recordCameraMetadataEvent({
@@ -90,9 +103,9 @@ describe("studio store editor mutations", () => {
       feedLabel: "ONVIF relay",
       summary: "Camera metadata ingested from live feed.",
       notes: "Thermal drift reported.",
-      previousStatus: "clean",
+      previousStatus: "dirty",
       previousClarity: "good",
-      previousNightMode: "normal",
+      previousNightMode: "none",
       previousFeedMode: "normal",
       previousNotes: "Baseline metadata.",
     });
@@ -100,13 +113,13 @@ describe("studio store editor mutations", () => {
     expect(ok).toBe(true);
     const cameraMetadataEvent = useStudioStore.getState().cameraMetadataEvents.find((event) => event.cameraId === camera.id);
     expect(cameraMetadataEvent?.ingestMode).toBe("external");
-    expect(cameraMetadataEvent?.previousStatus).toBe("clean");
+    expect(cameraMetadataEvent?.previousStatus).toBe("dirty");
     expect(cameraMetadataEvent?.previousClarity).toBe("good");
-    expect(cameraMetadataEvent?.previousNightMode).toBe("normal");
+    expect(cameraMetadataEvent?.previousNightMode).toBe("none");
     expect(cameraMetadataEvent?.summary).toContain("live feed");
     const operationalEvidenceEvent = useStudioStore.getState().operationalEvidenceEvents.at(-1);
     expect(operationalEvidenceEvent?.kind).toBe("camera_metadata_updated");
-    expect(operationalEvidenceEvent?.beforeSummary).toContain("status clean");
+    expect(operationalEvidenceEvent?.beforeSummary).toContain("status dirty");
     expect(operationalEvidenceEvent?.afterSummary).toContain("status dirty");
   });
 
@@ -135,6 +148,11 @@ describe("studio store editor mutations", () => {
       liveConnectionMode: "rtsp",
       liveConnectionStatus: "connected",
       liveSessionExpiresAt: Date.now() + 120_000,
+      transportSessionId: "transport_session_cam_front_test",
+      transportSessionState: "active",
+      lastHeartbeatAt: Date.now(),
+      probeCount: 1,
+      protocolProfile: "rtsp_session",
       ingestMode: "external",
       summary: "Camera bound to the external live feed relay.",
       notes: "ONVIF proxy connected successfully.",
@@ -146,6 +164,8 @@ describe("studio store editor mutations", () => {
     const cameraLiveConnectionEvent = useStudioStore.getState().cameraLiveConnectionEvents.find((event) => event.cameraId === camera.id);
     expect(cameraLiveConnectionEvent?.liveConnectionStatus).toBe("connected");
     expect(cameraLiveConnectionEvent?.liveFeedUrl).toContain("rtsp://");
+    expect(cameraLiveConnectionEvent?.transportSessionState).toBe("active");
+    expect(cameraLiveConnectionEvent?.protocolProfile).toBe("rtsp_session");
     const operationalEvidenceEvent = useStudioStore.getState().operationalEvidenceEvents.at(-1);
     expect(operationalEvidenceEvent?.kind).toBe("camera_live_connection_updated");
     expect(operationalEvidenceEvent?.beforeSummary).toContain("disconnected");

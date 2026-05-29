@@ -15,6 +15,10 @@ For the full-vision gap inventory and next-slice sequencing, see
 - Zone polygons now support edge insertion and vertex deletion, and path polylines now support midpoint insertion and point deletion, so the workbench can actually shape authored geometry instead of only moving whole objects ✅
 - Door and window inspector panels now expose a one-click `Snap to Nearest Wall` action that projects openings back onto the closest wall segment using the same editor geometry helpers as placement ✅
 
+## Path replay / camera-view sync (2026-05-29)
+
+- Path Replay now writes its play/pause, seek, reset, and path-change state back into the shared replay store, so Camera View and Camera Wall stay synchronized with the active replay progress instead of reading a local-only loop ✅
+
 ## Homepage / layout surface update (2026-05-28)
 
 - Root no longer uses the older centered form/checklist launcher; `/` now resolves to the Studio dashboard home surface (`StudioDashboardHome`) ✅
@@ -116,6 +120,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - `geometry.ts` — yaw/pitch direction vectors, polygon helpers ✅
 - `path-analysis.ts` — path visibility over time ✅
 - `simulate-studio.ts` — orchestrates full simulation run ✅
+- `simulate-studio.ts` — camera failure offline-impact analysis now recomputes a degraded scene with the selected camera disabled, so redundancy and downstream zone loss come from a fresh scenario comparison instead of baseline inference ✅
 - `coverage-fragility.ts` — Coverage Fragility Field: per-cell distance-to-DORI-threshold score (0=robust, 1=fragile), `computeCoverageFragility()` pure function with `FragilitySummary` output ✅
 - `simulate-studio.ts` — Coverage Fragility wired: per-cell `fragility` field + `fragilitySummary` attached to every `SimulationResult` ✅
 - `simulate-studio.ts` — zone quality uses target-height profiles, privacy coverage issues are surfaced, and all aggregate metrics are computed over non-privacy walkable cells for canonical coverage denominators ✅
@@ -171,8 +176,8 @@ For the full-vision gap inventory and next-slice sequencing, see
 - The report and compare surfaces now also export a dedicated JSON evidence bundle, carrying the scene, report data, compare context, and evidence trail as a reusable handoff artifact ✅
 - Report exports and the report workspace header now surface a Sensors count from the canonical scene model, and the editor now exposes a dedicated sensor tool, sensor inspector, and sensor inventory tab while the broader live fusion layer remains camera-first ✅
 - The camera inspector analytics tab now surfaces a live `Sensor Fusion` preview with the nearest sensor, distance, state, and coverage mode so the editor can show the current fusion boundary even before full ONVIF/live ingestion exists ✅
-- The camera inspector now also exposes a live camera binding section plus a camera metadata ingest bridge that can paste JSON/NDJSON or pull an external feed URL, archive the submission, and apply matched camera status/clarity/night-mode and live session fields through the canonical store while the live connection probe/archive boundary now understands JSON, NDJSON, and ONVIF-style XML responses, tries SOAP-first for ONVIF binds, supports session refreshes while connected, and surfaces an active session lease registry with expiry timestamps so the remaining device-protocol seam stays honest ✅
-- The debug/support bundle now carries both the sensor ingest archive and the camera live connection archive, including the live session snapshot fields and refresh history, while the inspector also shows the active lease registry and expiry, so the operator handoff package keeps the live metadata story together with the rest of the evidence trail ✅
+- The camera inspector now also exposes a live camera binding section plus a camera metadata ingest bridge that can paste JSON/NDJSON or pull an external feed URL, archive the submission, and apply matched camera status/clarity/night-mode and live session fields through the canonical store while the live connection probe/archive boundary now understands JSON, NDJSON, and ONVIF-style XML responses, tries SOAP-first for ONVIF binds, supports session refreshes while connected, and surfaces an active session lease registry with expiry timestamps plus a transport-session handle so the remaining device-protocol seam stays honest ✅
+- The debug/support bundle now carries both the sensor ingest archive and the camera live connection archive, including the live session snapshot fields, transport-session metadata, and refresh history, while the inspector also shows the active lease registry, expiry, and transport handle, so the operator handoff package keeps the live metadata story together with the rest of the evidence trail ✅
 - Scene Intelligence now has an explicit temporal replay scrubber with point-in-time reconstruction and restore actions, so the operational evidence trail can be scrubbed and previewed instead of only listed as recent events ✅
 - Camera metadata ingest now also writes a durable live metadata event stream that shows up in the camera feed overlays and Scene Intelligence provenance surface alongside the existing sensor evidence trail ✅
 
@@ -265,6 +270,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - The `Governance` tab now also exposes a `Resolve Approval Route` action that archives the resolved approval route through `/api/workspace-approval-route`, records a `workspace_approval_routed` evidence event, and surfaces the route status and target reviewer in the control plane ✅
 - The `Governance` tab now also exposes a workspace identity conflict resolution/archive backed by `/api/workspace-identity-conflict`, so drift against the latest archived membership snapshot can be captured and turned into a canonical remote-shared-identity policy recommendation before a real backend identity service exists ✅
 - The trust-audit manifest now covers the shared-identity conflict surface copy, so the Governance tab's conflict-resolution lane is verified alongside the approval and membership handoff surfaces ✅
+- The Governance tab now records identity conflict resolution itself as a first-class `workspace_identity_conflict_resolved` evidence event, so the governance trail distinguishes the conflict resolution from the generic membership-sync action that accompanied it ✅
 - The sensor panel now also exposes an external feed bridge that can pull JSON/NDJSON from a live URL through `/api/sensor-ingest`, so live metadata can enter the canonical evidence trail without paste-only intake ✅
 - The provenance surface now also supports branch-target checkpoint restore actions so a reconstructable event can be reopened as draft, recovered, or published instead of only a generic restore ✅
 - The debug diagnostics panel now exports a full operational evidence archive, loads uploaded archives into a merge-preflight preview, can restore the latest archived checkpoint with an explicit draft/recovered/published branch selector, and can apply a conflict-free divergent branch merge when the live ledger has forked, so recovery/backups travel with the scene, ledger, journal, and governance state instead of only a support bundle ✅

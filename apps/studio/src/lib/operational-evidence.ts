@@ -30,6 +30,7 @@ export type OperationalEvidenceEventKind =
   | "workspace_access_policy_changed"
   | "workspace_membership_synced"
   | "workspace_approval_routed"
+  | "workspace_identity_conflict_resolved"
   | "scan_session_started"
   | "scan_session_compiled"
   | "node_added"
@@ -151,6 +152,7 @@ export type OperationalGovernanceTrailSummary = {
   roleChangeCount: number;
   policyChangeCount: number;
   routeCount: number;
+  conflictResolutionCount: number;
   latestEvent: OperationalEvidenceEvent | null;
   recentEvents: OperationalEvidenceEvent[];
 };
@@ -166,6 +168,7 @@ const GOVERNANCE_TRAIL_KINDS: OperationalEvidenceEventKind[] = [
   "workspace_access_policy_changed",
   "workspace_membership_synced",
   "workspace_approval_routed",
+  "workspace_identity_conflict_resolved",
   "scene_published",
   "scene_reverted",
 ];
@@ -259,6 +262,8 @@ export function kindToTitle(kind: OperationalEvidenceEventKind) {
       return "Workspace membership synced";
     case "workspace_approval_routed":
       return "Workspace approval route resolved";
+    case "workspace_identity_conflict_resolved":
+      return "Workspace identity conflict resolved";
     case "scan_session_started":
       return "Scan session started";
     case "scan_session_compiled":
@@ -329,6 +334,7 @@ export function deriveOperationalEvidenceLifecycleStage(
     case "workspace_access_policy_changed":
     case "workspace_membership_synced":
     case "workspace_approval_routed":
+    case "workspace_identity_conflict_resolved":
       return "review";
     case "scene_imported":
       return "imported";
@@ -420,6 +426,7 @@ export function summarizeOperationalGovernanceTrail(
     roleChangeCount: trail.filter((event) => event.kind === "governance_role_changed" || event.kind === "workspace_member_selected" || event.kind === "workspace_membership_synced").length,
     policyChangeCount: trail.filter((event) => event.kind === "governance_policy_changed" || event.kind === "workspace_access_policy_changed").length,
     routeCount: trail.filter((event) => event.kind === "workspace_approval_routed").length,
+    conflictResolutionCount: trail.filter((event) => event.kind === "workspace_identity_conflict_resolved").length,
     latestEvent: trail[0] ?? null,
     recentEvents: trail.slice(0, 5),
   };

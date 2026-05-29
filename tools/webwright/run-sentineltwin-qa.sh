@@ -39,6 +39,7 @@ BOOTSTRAP_ONLY=0
 ROUTES="/,/?mode=camera_view,/?mode=wall,/?mode=replay,/?mode=compare"
 
 WEBWRIGHT_READY=0
+WEBWRIGHT_RUN_MODE="absent"
 PLAYWRIGHT_READY=0
 
 action_count=0
@@ -199,21 +200,47 @@ check_webwright_install() {
   if [ -x "$VENV_PATH/bin/webwright" ]; then
     action "Webwright CLI found in venv"
     WEBWRIGHT_READY=1
+    WEBWRIGHT_RUN_MODE="venv_cli"
     return 0
   fi
 
-  if "${venv_py}" - <<'PY' >/dev/null 2>&1
-import importlib.util
+  if WEBWRIGHT_SOURCE="$WEBWRIGHT_SRC" "${venv_py}" - <<'PY' >/dev/null 2>&1
+import os
 import sys
-sys.exit(0 if importlib.util.find_spec("webwright") else 1)
+
+sys.path.insert(0, os.path.join(os.environ.get("WEBWRIGHT_SOURCE", ""), "src"))
+
+import webwright
+from webwright.run import cli  # noqa: F401
+
+sys.exit(0)
 PY
   then
-    action "Webwright module importable from venv"
+    action "Webwright module importable from venv/runtime source path"
     WEBWRIGHT_READY=1
+    WEBWRIGHT_RUN_MODE="source_module"
     return 0
+  fi
+
+  if [ -f "$WEBWRIGHT_SRC/src/webwright/__init__.py" ]; then
+    if WEBWRIGHT_SOURCE="$WEBWRIGHT_SRC" MSWEBA_GLOBAL_CONFIG_DIR="$MSWEBA_GLOBAL_CONFIG_DIR" "${venv_py}" - <<'PY' >/dev/null 2>&1
+import os
+import sys
+sys.path.insert(0, os.path.join(os.environ["WEBWRIGHT_SOURCE"], "src"))
+import webwright
+from webwright.run import cli  # noqa: F401
+sys.exit(0)
+PY
+    then
+      action "Using local Webwright source in fallback mode"
+      WEBWRIGHT_READY=1
+      WEBWRIGHT_RUN_MODE="source_module"
+      return 0
+    fi
   fi
 
   WEBWRIGHT_READY=0
+  WEBWRIGHT_RUN_MODE="absent"
   return 1
 }
 
@@ -276,7 +303,7 @@ run_webwright_smoke() {
   fi
 
   if [[ "$RUN_WEBWRIGHT" == "1" ]] && [[ "$WEBWRIGHT_READY" != "1" ]]; then
-    echo "SKIP webwright run: Webwright not installed. Re-run with --bootstrap." >&2
+    echo "SKIP webwright run: Webwright runtime unavailable. Re-run with --bootstrap." >&2
     return 0
   fi
 
@@ -292,12 +319,20 @@ run_webwright_smoke() {
 
   local cmd
   local command_type
-  if [[ -x "$VENV_PATH/bin/webwright" ]]; then
+  local pythonpath_override=""
+  if [[ "$WEBWRIGHT_RUN_MODE" == "venv_cli" ]]; then
     cmd=("$VENV_PATH/bin/webwright")
     command_type='cli'
-  else
+  elif [[ "$WEBWRIGHT_RUN_MODE" == "venv_module" ]]; then
     cmd=("$VENV_PATH/bin/python" "-m" "webwright.run.cli")
     command_type='module'
+  elif [[ "$WEBWRIGHT_RUN_MODE" == "source_module" ]]; then
+    cmd=("$VENV_PATH/bin/python" "-m" "webwright.run.cli")
+    command_type='source-module'
+    pythonpath_override="$WEBWRIGHT_SRC/src"
+  else
+    echo "SKIP webwright run: no runnable webwright mode selected." >&2
+    return 0
   fi
 
   local route_idx=0
@@ -310,6 +345,16 @@ run_webwright_smoke() {
     ((route_idx+=1))
 
     action "Running webwright ($command_type) for $route_url"
+    if [[ -n "$pythonpath_override" ]]; then
+      MSWEBA_GLOBAL_CONFIG_DIR="$MSWEBA_GLOBAL_CONFIG_DIR" PYTHONPATH="$pythonpath_override:${PYTHONPATH-}" "${cmd[@]}" \
+        -c base.yaml -c model_openai.yaml \
+        -t "$task" \
+        --start-url "$route_url" \
+        --task-id "$task_id" \
+        -o "$OUT_ROOT/webwright" || true
+      continue
+    fi
+
     MSWEBA_GLOBAL_CONFIG_DIR="$MSWEBA_GLOBAL_CONFIG_DIR" "${cmd[@]}" \
       -c base.yaml -c model_openai.yaml \
       -t "$task" \
@@ -329,6 +374,7 @@ record_manifest() {
   BOOTSTRAP_ONLY="$BOOTSTRAP_ONLY" \
   ROUTES="$ROUTES" \
   VENV_PATH="$VENV_PATH" \
+  WEBWRIGHT_RUN_MODE="$WEBWRIGHT_RUN_MODE" \
   WEBWRIGHT_SRC="$WEBWRIGHT_SRC" \
   OUT_ROOT="$OUT_ROOT" \
   BASE_DIR="$BASE_DIR" \
@@ -352,6 +398,7 @@ manifest_data = {
     "bootstrap_only": os.environ.get("BOOTSTRAP_ONLY") == "1",
     "dry_run": os.environ.get("DRY_RUN") == "1",
     "webwright_ready": os.environ.get("WEBWRIGHT_READY") == "1",
+    "webwright_run_mode": os.environ.get("WEBWRIGHT_RUN_MODE"),
     "playwright_ready": os.environ.get("PLAYWRIGHT_READY") == "1",
     "bootstrap_error": os.environ.get("BOOTSTRAP_ERROR", ""),
     "routes": os.environ.get("ROUTES", "").split(","),
@@ -368,7 +415,7 @@ Path(os.environ["MANIFEST_PATH"]).write_text(json.dumps(manifest_data, indent=2)
 PY
 }
 
-export BASE_DIR VENV_PATH WEBWRIGHT_SRC PYTHON_BIN OUT_ROOT BASE_URL ROUTES PLAYWRIGHT_CACHE RUN_WEBWRIGHT DRY_RUN
+export BASE_DIR VENV_PATH WEBWRIGHT_SRC WEBWRIGHT_RUN_MODE PYTHON_BIN OUT_ROOT BASE_URL ROUTES PLAYWRIGHT_CACHE RUN_WEBWRIGHT DRY_RUN
 mkdir -p "$OUT_ROOT"
 : > "$OUT_ROOT/routes.txt"
 : > "$OUT_ROOT/route_urls.txt"
@@ -379,6 +426,7 @@ prepare_venv
 
 if [[ "$BOOTSTRAP_ONLY" == "1" ]]; then
   bootstrap_venv
+  check_webwright_install || true
   check_playwright_browser || true
   record_manifest
   action "Bootstrap run complete. Artifacts in $OUT_ROOT"

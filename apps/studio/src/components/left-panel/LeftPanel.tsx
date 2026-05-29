@@ -264,7 +264,10 @@ export function LeftPanel() {
                 min={0.05}
                 step={0.05}
                 value={editor.snapDistanceM}
-                onChange={(event) => setSnapDistanceM(Number(event.target.value))}
+                onChange={(event) => {
+                  const next = Number(event.target.value);
+                  if (Number.isFinite(next)) setSnapDistanceM(next);
+                }}
                 className="h-7 w-full rounded border border-[#2a3248] bg-[#0d111a] px-2 text-[10px] text-[#d6deef]"
               />
               <span className="text-[9px] text-[#647187]">m</span>
@@ -276,7 +279,10 @@ export function LeftPanel() {
                 min={0.1}
                 step={0.1}
                 value={editor.gridSnapM}
-                onChange={(event) => setGridSnapM(Number(event.target.value))}
+                onChange={(event) => {
+                  const next = Number(event.target.value);
+                  if (Number.isFinite(next)) setGridSnapM(next);
+                }}
                 className="h-7 w-full rounded border border-[#2a3248] bg-[#0d111a] px-2 text-[10px] text-[#d6deef]"
               />
               <span className="text-[9px] text-[#647187]">m</span>

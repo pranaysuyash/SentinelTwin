@@ -3689,7 +3689,21 @@ reference to the new path, then remove the old."
 - **Keep the session as a one-shot bind only** — rejected because the connection would still read like a single probe rather than a maintained live session.
 - **Move refresh handling into component state only** — rejected because the session lifecycle would disappear from the canonical archive and support handoff.
 
-### D-217: Floor plan understanding pipeline — two-tier local-first triage → cloud API
+### D-222: Live camera transport sessions should remain distinct from the operator lease registry
+**Date:** 2026-05-29
+
+**Decision:** Model the device/protocol-side session identity separately from the operator-facing live-session lease by recording a transport session handle, transport state, heartbeat, probe count, and protocol profile alongside the lease registry and scene graph fields.
+
+**Rationale:**
+- The operator lease answers "is this camera session alive and when does it expire?" while the transport handle answers "what protocol-side session did the probe or refresh negotiate?"
+- Keeping both surfaces distinct lets the inspector, camera glass, archive, and support bundle explain the full lifecycle without collapsing transport negotiation into the lease timer.
+- This is a cleaner stepping stone toward real ONVIF/RTSP session management because the data model now reserves room for a true device-side handle and heartbeat loop.
+
+**Alternatives rejected:**
+- **Collapse transport details into the lease registry only** — rejected because the transport-side identity would be lost and the model would still look like a single lease.
+- **Keep transport details only in the backend response** — rejected because the scene graph, support bundle, and operator surfaces would still not share the same transport truth.
+
+### D-221: Floor plan understanding pipeline — two-tier local-first triage → cloud API
 **Date:** 2026-05-29
 
 **Decision:** Design the floor plan understanding pipeline as two tiers: (1) always-run local MiniCPM-V 4.6 for semantic triage (classification, OCR, quality, coarse zones), then (2) gated cloud API call (GPT-4o / Gemini 2.5 Flash) for precise geometry extraction only when Tier 1 passes quality checks.
@@ -3706,7 +3720,7 @@ reference to the new path, then remove the old."
 - **Single model for all tasks** — rejected because no model excels at both geometry and semantic understanding in our eval set. MiniCPM-V 4.6 is weak at geometry; GPT-4o is weak at fine-grained scene classification (1/5).
 - **Parallel local + cloud with result merge** — rejected as over-engineering for V0. The sequential gate pattern is simpler and provides natural cloud cost savings.
 
-### D-217: Formal truth ladder per node (reviewStatus + sourceTrace)
+### D-220: Formal truth ladder per node (reviewStatus + sourceTrace)
 **Date:** 2026-05-29
 
 **Decision:** Add `reviewStatus`, `sourceTrace`, and `geometryValidity` fields to the base node schema in SecurityScene, representing a formal "truth ladder" from unreviewed AI output to verified/certified ground truth.
@@ -3747,3 +3761,18 @@ geometryValidity: z.enum(["valid", "suspect", "invalid"]).default("valid")
 - **Follow the recommended 12-layer plan literally** — rejected because it would rebuild systems that already work, deferring the actual gaps.
 - **Invest in CubiCasa5K model training this sprint** — rejected because the current heuristic import handles the majority case. CubiCasa belongs in Phase 4 when production data justifies it.
 - **Delay truth ladder for larger AI pipeline work** — rejected because the truth ladder is the single highest-leverage credibility feature, costs ~50 lines of schema, and unlocks report quality.
+
+### D-219: Shared identity conflict should be logged as its own evidence kind
+**Date:** 2026-05-29
+
+**Decision:** Record the Governance-tab conflict result as a first-class `workspace_identity_conflict_resolved` operational evidence event instead of collapsing it into the generic membership-sync bucket.
+
+**Rationale:**
+- The workspace identity archive already captures the live-vs-archived drift and the route recommendation, but the ledger should still distinguish between a membership sync and a conflict-resolution action.
+- Operators need to see when the shared identity boundary itself was resolved, not just that the underlying roster data was synchronized.
+- This keeps the governance trail semantically richer without adding a new parallel history source.
+
+**Alternatives rejected:**
+- **Keep using `workspace_membership_synced`** — rejected because it hides the actual conflict-resolution action behind a generic sync label.
+- **Skip a ledger event and rely on the archive only** — rejected because the governance trail would then miss the operator-visible resolution step.
+- **Add a separate conflict history not tied to the evidence ledger** — rejected because it duplicates history and weakens the single operational trail.

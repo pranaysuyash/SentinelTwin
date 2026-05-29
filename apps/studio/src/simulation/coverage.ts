@@ -15,7 +15,7 @@ import type {
   SecurityScene,
   WallNode,
 } from "@/schema/security-scene";
-import { DORI_THRESHOLDS, maxQuality, ppmToDoriQuality, ppmToOodpcvsQuality, qualityToScore } from "@/simulation/dori";
+import { DORI_THRESHOLDS, maxQuality, ppmToOodpcvsQuality, ppmToQuality, qualityToScore } from "@/simulation/dori";
 import { getYawPitchDirection, normalizeAngle } from "@/simulation/geometry";
 import { buildCoverageGrid, type GridCell } from "@/simulation/grid";
 
@@ -480,10 +480,9 @@ function evaluateCameraAgainstCell(
 
   // Determine cell quality based on the active standard.
   const isOodpcvs = scene.assumptions.doriStandard === "oodpcvs_2025";
-  const doriThresholds = isOodpcvs ? scene.assumptions.pixelsPerMeter : DORI_THRESHOLDS;
   const quality = isOodpcvs
     ? ppmToOodpcvsQuality(ppm)
-    : ppmToDoriQuality(ppm, doriThresholds);
+    : ppmToQuality(ppm, scene.assumptions.pixelsPerMeter);
 
   if (quality === "none") {
     reasonCodes.add("LOW_PPM");
@@ -588,10 +587,9 @@ export function createCoverageEvaluator(scene: SecurityScene): CoverageEvaluator
         directEvaluation.ppm + reflectiveBoost,
       );
       const isOodpcvs = scene.assumptions.doriStandard === "oodpcvs_2025";
-      const doriThresholds = isOodpcvs ? scene.assumptions.pixelsPerMeter : DORI_THRESHOLDS;
       const bouncedQuality = isOodpcvs
         ? ppmToOodpcvsQuality(bouncedPpm)
-        : ppmToDoriQuality(bouncedPpm, doriThresholds);
+        : ppmToQuality(bouncedPpm, scene.assumptions.pixelsPerMeter);
 
       const candidate: CameraEvaluation = {
         ...bounced,

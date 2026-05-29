@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
-import { computeCoverageCells } from "@/simulation/coverage";
+import { createCoverageEvaluator, computeCoverageCells } from "@/simulation/coverage";
 import { getQualityShare } from "@/simulation/coverage";
+import { qualityToScore } from "@/simulation/dori";
 import {
   createTestCamera,
   createTestObstruction,
@@ -85,6 +86,51 @@ describe("computeCoverageCells occlusion handling", () => {
       vAngleDeg: expect.any(Number),
       reasonCodes: expect.any(Array),
     });
+  });
+
+  test("applies the scene PPM thresholds to live camera quality scoring", () => {
+    const scene = createTestScene({
+      cameras: [
+        createTestCamera({
+          position: [2, 2.5, 2],
+          yawDeg: 0,
+          pitchDeg: -35,
+          fovHorizontalDeg: 90,
+          fovVerticalDeg: 80,
+          rangeM: 12,
+          resolutionWidth: 320,
+          resolutionHeight: 180,
+        }),
+      ],
+    });
+    const point: [number, number] = [2.875, 1.125];
+
+    scene.assumptions.pixelsPerMeter = {
+      detection: 25,
+      observation: 62.5,
+      recognition: 125,
+      identification: 250,
+    };
+    const baseline = createCoverageEvaluator(scene).evaluatePoint(scene.cameras[0], point);
+
+    scene.assumptions.pixelsPerMeter = {
+      detection: 100,
+      observation: 200,
+      recognition: 400,
+      identification: 800,
+    };
+    const stricter = createCoverageEvaluator(scene).evaluatePoint(scene.cameras[0], point);
+
+    scene.assumptions.pixelsPerMeter = {
+      detection: 10,
+      observation: 20,
+      recognition: 40,
+      identification: 80,
+    };
+    const looser = createCoverageEvaluator(scene).evaluatePoint(scene.cameras[0], point);
+
+    expect(qualityToScore(stricter.quality)).toBeLessThan(qualityToScore(baseline.quality));
+    expect(qualityToScore(looser.quality)).toBeGreaterThan(qualityToScore(baseline.quality));
   });
 
   test("supports coverage denominator filtering to only included cells", () => {

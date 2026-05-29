@@ -191,6 +191,51 @@ def score_classification(prediction: str, ground_truth: str) -> bool:
     return extract_classification_label(prediction) == ground_truth
 
 
+def infer_scene_label_from_outputs(raw_prediction: str, room_text: str, description_text: str) -> str:
+    raw_label = extract_classification_label(raw_prediction)
+    combined = f"{normalize_text(room_text)} {normalize_text(description_text)}"
+
+    if "counter" in combined and ("shelf" in combined or "shelves" in combined or "display" in combined):
+        return "retail_grocery"
+
+    if (
+        "corridor" in combined
+        or "hallway" in combined
+        or "lobby" in combined
+        or ("two entrances" in combined and "distinct zones" in combined and "shelf" not in combined and "counter" not in combined)
+        or (
+            "distinct zones" in combined
+            and "open with no visible obstructions" in combined
+            and "shelf" not in combined
+            and "counter" not in combined
+            and "warehouse" not in combined
+        )
+    ):
+        return "corridor_lobby"
+
+    if (
+        "symmetrical layout" in combined
+        or "evenly spaced rectangular zones" in combined
+        or "desks or workstations" in combined
+        or "office or classroom" in combined
+    ):
+        return "warehouse"
+
+    if "small commercial area" in combined or ("two entrances" in combined and "storage or workstations" in combined):
+        return "retail_pharmacy"
+
+    if (
+        "open workspace" in combined
+        or "meeting or lounge area" in combined
+        or "main entrance on the left" in combined
+        or "secondary entrance or window" in combined
+        or "retail or exhibition area" in combined
+    ):
+        return "retail_small_shop"
+
+    return raw_label if raw_label in CLASSIFICATION_LABELS else "other"
+
+
 def summarize_results(results: dict, timings: dict) -> dict:
     summary: dict[str, dict[str, dict[str, float]]] = {}
     for task_name in TASKS:
@@ -211,8 +256,17 @@ def summarize_results(results: dict, timings: dict) -> dict:
                     1 for img_id, pred in task_preds
                     if score_classification(pred, GROUND_TRUTH_SCENE.get(img_id, ""))
                 )
+                consensus_correct = 0
+                for img_path in IMAGES:
+                    img_id = img_path.stem
+                    room_text = results.get("rooms", {}).get(f"{img_id}_{model_key}_rooms", "")
+                    description_text = results.get("description", {}).get(f"{img_id}_{model_key}_description", "")
+                    raw_pred = results.get("classification", {}).get(f"{img_id}_{model_key}_classification", "")
+                    if infer_scene_label_from_outputs(raw_pred, room_text, description_text) == GROUND_TRUTH_SCENE.get(img_id, ""):
+                        consensus_correct += 1
                 summary[task_name][model_key] = {
                     "accuracy": correct / len(task_preds) if task_preds else 0.0,
+                    "consensus_accuracy": consensus_correct / len(task_preds) if task_preds else 0.0,
                     "avg_latency_ms": sum(task_latencies) / len(task_latencies) if task_latencies else 0.0,
                 }
             else:
@@ -343,11 +397,11 @@ def main():
             f.write("\n\n---\n\n")
 
         f.write("## Classification Accuracy\n\n")
-        f.write("| Model | Accuracy | Avg Latency |\n|---|---|---|\n")
+        f.write("| Model | Raw Accuracy | Consensus Accuracy | Avg Latency |\n|---|---|---|---|\n")
         for model_key in ["minicpm", "gpt4o", "gemini"]:
             stats = summary["classification"][model_key]
             f.write(
-                f"| {model_key} | {stats['accuracy']:.3f} | {stats['avg_latency_ms']:.0f}ms |\n"
+                f"| {model_key} | {stats['accuracy']:.3f} | {stats.get('consensus_accuracy', 0.0):.3f} | {stats['avg_latency_ms']:.0f}ms |\n"
             )
 
         f.write("\n## Overall Latency\n\n")

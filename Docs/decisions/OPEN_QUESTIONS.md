@@ -262,3 +262,8 @@ RoomPlan, manual-assisted mobile capture, and later sparse reconstruction all po
 - Which outputs count as draft evidence versus publishable evidence in the branch-aware ledger?
 - Should sparse reconstruction results be written as separate candidate branches or as a derived snapshot on the same scene branch?
 **Related threads:** 21 in `Docs/exploration/EXPLORATION_MAP.md`, plus the operational evidence and branch-recovery work in `Docs/todos/FULL_VISION_GAP_INVENTORY.md`.
+## Contextual 3D interaction UI
+
+- **Priority:** Medium
+- **Question:** Should SentinelTwin surface object-specific actions through a right-click context menu, a radial menu, or a compact floating action sheet in the 3D workspace?
+- **Needed to answer:** A quick interaction prototype or wireframe that compares discoverability, speed, and visual fit against the existing inspector and transform handles.

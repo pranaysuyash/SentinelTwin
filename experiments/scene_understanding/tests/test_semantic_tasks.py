@@ -17,6 +17,25 @@ def test_score_classification_requires_exact_category_match():
     assert not semantic_tasks.score_classification("retail_small_shop", "warehouse")
 
 
+def test_infer_scene_label_from_outputs_uses_semantic_hints():
+    assert (
+        semantic_tasks.infer_scene_label_from_outputs(
+            "warehouse",
+            '{"name": "Shelf 1", "type": "Shelf"}, {"name": "Counter", "type": "Counter"}',
+            "The floor plan depicts a retail or exhibition area with shelves and a counter.",
+        )
+        == "retail_grocery"
+    )
+    assert (
+        semantic_tasks.infer_scene_label_from_outputs(
+            "retail_small_shop",
+            '{"name": "Room 1", "type": "unknown"}',
+            "The floor plan depicts a rectangular space with four distinct zones and two entrances on the left.",
+        )
+        == "corridor_lobby"
+    )
+
+
 def test_summarize_results_aggregates_classification_accuracy(monkeypatch):
     monkeypatch.setattr(
         semantic_tasks,
@@ -44,5 +63,6 @@ def test_summarize_results_aggregates_classification_accuracy(monkeypatch):
     summary = semantic_tasks.summarize_results(results, timings)
 
     assert summary["classification"]["minicpm"]["accuracy"] == 1.0
+    assert summary["classification"]["minicpm"]["consensus_accuracy"] == 1.0
     assert summary["classification"]["minicpm"]["avg_latency_ms"] == 150.0
     assert summary["ocr"]["minicpm"]["non_empty_rate"] == 0.0

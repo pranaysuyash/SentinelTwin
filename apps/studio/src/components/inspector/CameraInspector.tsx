@@ -91,15 +91,6 @@ const VIEW_MODES: Array<{ value: CameraViewMode; label: string }> = [
 ];
 
 type ViewToggleKey = "overlays" | "dori" | "path" | "zones" | "timestamp" | "boundingBox" | "grid";
-const VIEW_TOGGLES: Array<{ key: ViewToggleKey; label: string }> = [
-  { key: "overlays", label: "Overlay Stack" },
-  { key: "dori", label: "DORI Labels" },
-  { key: "path", label: "Path Actor" },
-  { key: "zones", label: "Zones" },
-  { key: "timestamp", label: "Timestamp" },
-  { key: "boundingBox", label: "Bounding Box" },
-  { key: "grid", label: "Grid" },
-];
 type ViewToggleState = Record<ViewToggleKey, boolean>;
 
 type CameraMetadataArchiveRecord = CameraMetadataIngestResponse & {
@@ -178,7 +169,6 @@ export function CameraInspector() {
   const updateNode = useStudioStore((s) => s.updateNode);
   const removeNode = useStudioStore((s) => s.removeNode);
   const duplicateNode = useStudioStore((s) => s.duplicateNode);
-  const selectNode = useStudioStore((s) => s.selectNode);
   const addSnapshot = useStudioStore((s) => s.addSnapshot);
   const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
   const setViewMode = useStudioStore((s) => s.setViewMode);
@@ -634,7 +624,6 @@ export function CameraInspector() {
     scene.id,
     scene.name,
     liveConnectionLabel,
-    liveConnectionLoading,
     liveConnectionMode,
     liveConnectionNotes,
     liveConnectionUrl,

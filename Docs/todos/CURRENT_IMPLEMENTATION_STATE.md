@@ -110,6 +110,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 ### Simulation engine (src/simulation/) — complete, tested
 - `coverage.ts` — BVH-accelerated raycasting, DORI scoring, material penalties, lighting model ✅
 - `coverage.ts` — trust-hardening updates now enforce camera `rangeM` gates before scoring, wire scene `pixelsPerMeter` assumptions into quality mapping, emit per-camera evaluation metadata (`cameraEvaluations`) and mark privacy/coverage-denominator cells for traceable KPIs ✅
+- `coverage.ts` — live cell-quality scoring now uses the scene's active PPM thresholds in DORI mode, so stricter/looser assumptions change the actual evaluation path instead of only downstream summary metrics ✅
 - `coverage.ts` — camera evaluations now include `visible` plus machine-readable `reasonCodes`, and the debug/report surfaces show active PPM thresholds ✅
 - `coverage.ts` / coverage tests — door and window states now participate in deterministic vision occlusion with regression coverage for closed/open doors plus glass, grill, curtain, and reflective window behavior ✅
 - `simulation/__tests__/golden-simulation-claims.test.ts` — golden product-claim suite verifies door/window behavior, night+IR recovery, obstruction counterfactual improvement, privacy flagging, and redundancy preservation under single-camera failure ✅

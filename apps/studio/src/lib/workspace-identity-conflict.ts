@@ -85,6 +85,7 @@ export type WorkspaceIdentityConflictArchiveResponse = {
   recommendedAction: string;
   hasPrivacyExposure: boolean;
   approvalRoute: WorkspaceApprovalRouteSummary;
+  conflictDiff: WorkspaceIdentityConflictDiffSummary;
   membershipDrift: ReturnType<typeof summarizeWorkspaceMembershipDrift> | null;
   workspaceAccessState: WorkspaceAccessState;
   workspaceGovernanceState: WorkspaceGovernanceState;
@@ -98,6 +99,30 @@ export type WorkspaceIdentityConflictArchiveResponse = {
 export type WorkspaceIdentityConflictArchiveRecord = WorkspaceIdentityConflictArchiveResponse & {
   submittedAt: number;
   storedAt: number;
+};
+
+export type WorkspaceIdentityConflictDiffRow = {
+  label: string;
+  currentValue: string;
+  archivedValue: string;
+  changed: boolean;
+};
+
+export type WorkspaceIdentityConflictDiffSummary = {
+  title: string;
+  subtitle: string;
+  changedCount: number;
+  currentMemberLabel: string;
+  archivedMemberLabel: string;
+  currentPolicyLabel: string;
+  archivedPolicyLabel: string;
+  routeLabel: string;
+  routeReason: string;
+  resolutionLabel: string;
+  resolutionReason: string;
+  recommendedAction: string;
+  hasPrivacyExposure: boolean;
+  rows: WorkspaceIdentityConflictDiffRow[];
 };
 
 const WORKSPACE_IDENTITY_CONFLICT_HISTORY_FILE = "workspace-identity-conflict-history.json";
@@ -160,6 +185,90 @@ function deriveWorkspaceIdentityConflictResolution(
   return { resolutionStatus, resolutionLabel, resolutionReason, recommendedAction };
 }
 
+function formatWorkspaceMembershipCount(membershipCount: number) {
+  return `${membershipCount} member${membershipCount === 1 ? "" : "s"}`;
+}
+
+function formatReviewerRolesLabel(requiredReviewerRoles: string[]) {
+  return requiredReviewerRoles.length > 0
+    ? requiredReviewerRoles.map((role) => role.replace(/_/g, " ")).join(", ")
+    : "None";
+}
+
+function formatPublishApprovalLabel(publishRequiresApproval: boolean) {
+  return publishRequiresApproval ? "Required" : "Open";
+}
+
+function formatPrivacyReviewerLabel(privacySensitiveRequiresReviewer: boolean) {
+  return privacySensitiveRequiresReviewer ? "Required" : "Not required";
+}
+
+export function summarizeWorkspaceIdentityConflictDiff(
+  request: Pick<
+    WorkspaceIdentityConflictArchiveResponse,
+    "approvalRoute" | "hasPrivacyExposure" | "workspaceAccessState" | "archivedWorkspaceAccessState" | "resolutionLabel" | "resolutionReason" | "recommendedAction"
+  >,
+): WorkspaceIdentityConflictDiffSummary {
+  const archivedAccess = request.archivedWorkspaceAccessState;
+  const rows: WorkspaceIdentityConflictDiffRow[] = [
+    {
+      label: "Active member",
+      currentValue: request.approvalRoute.activeMemberLabel,
+      archivedValue: request.approvalRoute.archivedMemberLabel,
+      changed: request.approvalRoute.activeMemberLabel !== request.approvalRoute.archivedMemberLabel,
+    },
+    {
+      label: "Team size",
+      currentValue: formatWorkspaceMembershipCount(request.workspaceAccessState.members.length),
+      archivedValue: archivedAccess ? formatWorkspaceMembershipCount(archivedAccess.members.length) : "No archived snapshot",
+      changed: archivedAccess ? request.workspaceAccessState.members.length !== archivedAccess.members.length : true,
+    },
+    {
+      label: "Workspace mode",
+      currentValue: request.approvalRoute.currentPolicyLabel,
+      archivedValue: request.approvalRoute.archivedPolicyLabel,
+      changed: request.approvalRoute.currentPolicyLabel !== request.approvalRoute.archivedPolicyLabel,
+    },
+    {
+      label: "Publish approval",
+      currentValue: formatPublishApprovalLabel(request.workspaceAccessState.policy.publishRequiresApproval),
+      archivedValue: archivedAccess ? formatPublishApprovalLabel(archivedAccess.policy.publishRequiresApproval) : "No archived snapshot",
+      changed: archivedAccess ? request.workspaceAccessState.policy.publishRequiresApproval !== archivedAccess.policy.publishRequiresApproval : true,
+    },
+    {
+      label: "Privacy reviewer",
+      currentValue: formatPrivacyReviewerLabel(request.workspaceAccessState.policy.privacySensitiveRequiresReviewer),
+      archivedValue: archivedAccess ? formatPrivacyReviewerLabel(archivedAccess.policy.privacySensitiveRequiresReviewer) : "No archived snapshot",
+      changed: archivedAccess ? request.workspaceAccessState.policy.privacySensitiveRequiresReviewer !== archivedAccess.policy.privacySensitiveRequiresReviewer : true,
+    },
+    {
+      label: "Required reviewer roles",
+      currentValue: formatReviewerRolesLabel(request.workspaceAccessState.policy.requiredReviewerRoles),
+      archivedValue: archivedAccess ? formatReviewerRolesLabel(archivedAccess.policy.requiredReviewerRoles) : "No archived snapshot",
+      changed: archivedAccess
+        ? request.workspaceAccessState.policy.requiredReviewerRoles.join(",") !== archivedAccess.policy.requiredReviewerRoles.join(",")
+        : true,
+    },
+  ];
+
+  return {
+    title: "Identity conflict diff",
+    subtitle: request.approvalRoute.routeLabel,
+    changedCount: rows.filter((row) => row.changed).length,
+    currentMemberLabel: request.approvalRoute.activeMemberLabel,
+    archivedMemberLabel: request.approvalRoute.archivedMemberLabel,
+    currentPolicyLabel: request.approvalRoute.currentPolicyLabel,
+    archivedPolicyLabel: request.approvalRoute.archivedPolicyLabel,
+    routeLabel: request.approvalRoute.routeLabel,
+    routeReason: request.approvalRoute.routeReason,
+    resolutionLabel: request.resolutionLabel,
+    resolutionReason: request.resolutionReason,
+    recommendedAction: request.recommendedAction,
+    hasPrivacyExposure: request.hasPrivacyExposure,
+    rows,
+  };
+}
+
 export function loadWorkspaceIdentityConflictHistory(rootDir = resolveWorkspaceIdentityConflictStoreRoot()): WorkspaceIdentityConflictArchiveRecord[] {
   try {
     const filePath = resolveWorkspaceIdentityConflictHistoryPath(rootDir);
@@ -169,7 +278,9 @@ export function loadWorkspaceIdentityConflictHistory(rootDir = resolveWorkspaceI
     if (!Array.isArray(parsed)) return [];
     return parsed.flatMap((item) => {
       if (!item || typeof item !== "object") return [];
-      const candidate = item as Partial<WorkspaceIdentityConflictArchiveRecord>;
+      const candidate = item as Partial<WorkspaceIdentityConflictArchiveRecord> & {
+        conflictDiff?: WorkspaceIdentityConflictDiffSummary;
+      };
       if (
         candidate.ok !== true
         || typeof candidate.source !== "string"
@@ -190,6 +301,15 @@ export function loadWorkspaceIdentityConflictHistory(rootDir = resolveWorkspaceI
       }
       const record: WorkspaceIdentityConflictArchiveRecord = {
         approvalRoute: candidate.approvalRoute as WorkspaceApprovalRouteSummary,
+        conflictDiff: candidate.conflictDiff ?? summarizeWorkspaceIdentityConflictDiff({
+          approvalRoute: candidate.approvalRoute as WorkspaceApprovalRouteSummary,
+          hasPrivacyExposure: candidate.hasPrivacyExposure,
+          workspaceAccessState: candidate.workspaceAccessState as WorkspaceAccessState,
+          archivedWorkspaceAccessState: candidate.archivedWorkspaceAccessState ? candidate.archivedWorkspaceAccessState as WorkspaceAccessState : null,
+          resolutionLabel: candidate.resolutionLabel as string,
+          resolutionReason: candidate.resolutionReason as string,
+          recommendedAction: candidate.recommendedAction as string,
+        }),
         ...deriveWorkspaceIdentityConflictResolution(
           (candidate.conflictStatus === "reconcile_needed" ? "reconcile_needed" : candidate.conflictStatus === "archive_pending" ? "archive_pending" : "aligned") as WorkspaceIdentityConflictStatus,
           candidate.approvalRoute as WorkspaceApprovalRouteSummary,
@@ -264,6 +384,15 @@ export async function summarizeWorkspaceIdentityConflict(request: WorkspaceIdent
     resolutionReason,
     recommendedAction,
   } = deriveWorkspaceIdentityConflictResolution(conflictStatus, approvalRoute);
+  const conflictDiff = summarizeWorkspaceIdentityConflictDiff({
+    approvalRoute,
+    hasPrivacyExposure: request.hasPrivacyExposure,
+    workspaceAccessState: workspaceAccess,
+    archivedWorkspaceAccessState: archivedWorkspaceAccess,
+    resolutionLabel,
+    resolutionReason,
+    recommendedAction,
+  });
 
   const attempts: WorkspaceIdentityConflictDispatchAttempt[] = [];
   for (const destination of destinations) {
@@ -349,6 +478,8 @@ export async function summarizeWorkspaceIdentityConflict(request: WorkspaceIdent
     recommendedAction,
     hasPrivacyExposure: request.hasPrivacyExposure,
     approvalRoute,
+    // Shared diff summary keeps the live vs archived identity comparison in one canonical shape.
+    conflictDiff,
     membershipDrift,
     workspaceAccessState: workspaceAccess,
     workspaceGovernanceState: workspaceGovernance,

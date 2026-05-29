@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Html, OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { ArrowLeft, Camera, ChevronLeft, ChevronRight, CircleSmall, VideoOff } from "lucide-react";
@@ -843,10 +844,13 @@ function FootageVerificationOverlay({
     return (
       <>
         <div className="pointer-events-none absolute inset-0" style={{ clipPath: `inset(0 ${100 - split}% 0 0)` }}>
-          <img
+          <Image
             src={imageUrl}
             alt="Reference footage frame"
-            className="h-full w-full object-cover"
+            fill
+            unoptimized
+            sizes="100vw"
+            className="object-cover"
             style={{ ...commonStyle, opacity: Math.min(0.95, Math.max(0.15, opacity + 0.05)) }}
           />
         </div>
@@ -859,10 +863,13 @@ function FootageVerificationOverlay({
 
   return (
     <div className="pointer-events-none absolute inset-0">
-      <img
+      <Image
         src={imageUrl}
         alt="Reference footage frame"
-        className="h-full w-full object-cover"
+        fill
+        unoptimized
+        sizes="100vw"
+        className="object-cover"
         style={{ ...commonStyle, opacity }}
       />
     </div>
@@ -1635,7 +1642,10 @@ export function CameraViewMode() {
     const events = activePathResult.timeline.filter((event) => event.timeS <= pathTimeS);
     return events[events.length - 1] ?? activePathResult.timeline[0] ?? null;
   }, [activePathResult, pathTimeS]);
-  const cameraPosition = camera?.position ?? [0, 0, 0];
+  const cameraPosition = useMemo<[number, number, number]>(
+    () => (camera ? [camera.position[0], camera.position[1], camera.position[2]] : [0, 0, 0]),
+    [camera],
+  );
   const sensorEvents = useStudioStore((s) => s.sensorEvents.filter((event) => event.sceneId === s.scene.id));
   const cameraMetadataEvents = useStudioStore((s) => s.cameraMetadataEvents.filter((event) => event.sceneId === s.scene.id));
   const cameraLiveConnectionEvents = useStudioStore((s) => s.cameraLiveConnectionEvents.filter((event) => event.sceneId === s.scene.id));
@@ -1855,7 +1865,7 @@ export function CameraViewMode() {
       canceled = true;
     };
   }, [
-    camera?.id,
+    camera,
     verificationEnabled,
     verificationImageUrl,
     verificationMode,
@@ -1949,7 +1959,14 @@ export function CameraViewMode() {
           ) : null}
           {verificationEnabled && showDifferenceHeatOverlay && alignmentHeatmapUrl ? (
             <div className="pointer-events-none absolute inset-0">
-              <img src={alignmentHeatmapUrl} alt="Alignment mismatch heat overlay" className="h-full w-full object-cover opacity-65 mix-blend-screen" />
+              <Image
+                src={alignmentHeatmapUrl}
+                alt="Alignment mismatch heat overlay"
+                fill
+                unoptimized
+                sizes="100vw"
+                className="object-cover opacity-65 mix-blend-screen"
+              />
             </div>
           ) : null}
           {modeFilter(feedMode)}

@@ -5869,6 +5869,36 @@ This should feel like a professional spatial editor, not a game HUD. The interac
 
 Prototype a contextual 3D interaction model that reduces friction for object manipulation without creating a second control system alongside the inspector and transform handles.
 
+### Prototype directions to compare
+
+- Right-click context menu anchored to the selected object.
+- Small floating action sheet with the most common actions.
+- Radial menu for high-frequency spatial operations.
+- Hybrid flow: contextual menu for discovery, inspector for precision.
+
+### Interaction rules to test
+
+- Contextual actions must respect object type and selection state.
+- Camera and obstruction actions should stay faster than inspector-only edits.
+- Door and window actions should stay wall-aware rather than free-floating.
+- The interaction layer must not hide or duplicate canonical store actions.
+- Keyboard and pointer workflows should remain consistent with the existing transform handles.
+
+### Evaluation criteria
+
+- Does the UI make common edits faster than the inspector alone?
+- Does it feel like a security editor instead of a game overlay?
+- Can a new user discover the right action without confusion?
+- Does the interaction remain usable on dense scenes with many objects?
+- Does it preserve undoable, store-backed edits with no alternate scene state?
+
+### Immediate follow-up artifacts
+
+- A small interaction matrix for each object type and action.
+- A wireframe or mock for the contextual menu / radial menu.
+- A shortlist of actions that should remain inspector-only.
+- A set of editor scenarios to validate the interaction choice in real scenes.
+
 ## Thread: React diagnostics and element-grab tooling for `apps/studio`
 
 ### Why this matters

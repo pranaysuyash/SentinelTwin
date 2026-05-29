@@ -20,7 +20,7 @@ import {
 } from "@/components/workspace/SharedScene";
 import { CameraRigFixed, SceneFeedGeometry } from "@/components/view/SceneFeedCanvas";
 import { useStudioStore } from "@/store/studio-store";
-import type { CameraNode } from "@/schema/security-scene";
+import type { CameraNode, DoriQuality, SimulationResult } from "@/schema/security-scene";
 import { QUALITY_RANK } from "@/lib/quality-display";
 import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
 
@@ -52,6 +52,14 @@ function coverageStatusFromRatio(ratio: number) {
   };
 }
 
+function getBestZoneQuality(cameraResult?: SimulationResult["cameraResults"][number] | null) {
+  if (!cameraResult) return "none" as DoriQuality;
+
+  return Object.values(cameraResult.qualityByZone).reduce((best, quality) => (
+    QUALITY_RANK[quality] > QUALITY_RANK[best] ? quality : best
+  ), "none" as DoriQuality);
+}
+
 function formatWallTimestamp(timestampMs: number | null | undefined) {
   const source = timestampMs ?? Date.now();
   const d = new Date(source);
@@ -70,11 +78,13 @@ function getEffectiveCameraWallLayout(
 
 function LiveFeedOverlay({
   camera: camData,
+  cameraResult,
   pathVisibility,
   isBestCamera = false,
   timestampLabel,
 }: {
   camera: CameraNode;
+  cameraResult?: SimulationResult["cameraResults"][number] | null;
   pathVisibility?: {
     visibleS: number;
     totalDurationS: number;
@@ -89,6 +99,9 @@ function LiveFeedOverlay({
     : 0;
   const visiblePct = Math.round(ratio * 100);
   const visibilityStatus = coverageStatusFromRatio(ratio);
+  const bestZoneQuality = getBestZoneQuality(cameraResult);
+  const coveredZones = cameraResult?.criticalZonesCovered.length ?? 0;
+  const failedZones = cameraResult?.criticalZonesFailed.length ?? 0;
 
   return (
     <>
@@ -138,19 +151,34 @@ function LiveFeedOverlay({
         <span className="text-[8px] text-white/50">{camData.rangeM}m range</span>
       </div>
 
-      {pathVisibility ? (
-        <div className="absolute bottom-1.5 right-2 rounded-md border border-[#27405f] bg-black/65 px-2 py-1">
-          <div className="text-[9px] uppercase tracking-[0.14em] text-[#7dd3fc]">
-            Route Visibility
+      <div className="absolute bottom-1.5 right-2 flex flex-col gap-1">
+        {cameraResult ? (
+          <div className="rounded-md border border-emerald-500/25 bg-black/65 px-2 py-1">
+            <div className="text-[9px] uppercase tracking-[0.14em] text-[#86efac]">
+              Zone Quality
+            </div>
+            <div className="text-[8px] font-semibold text-emerald-200">
+              {bestZoneQuality.toUpperCase()}
+            </div>
+            <div className="text-[8px] text-[#b6c2db]">
+              {coveredZones} covered • {failedZones} failed
+            </div>
           </div>
-          <div className={`text-[8px] font-semibold ${visibilityStatus.className}`}>
-            {visibilityStatus.label}
+        ) : null}
+        {pathVisibility ? (
+          <div className="rounded-md border border-[#27405f] bg-black/65 px-2 py-1">
+            <div className="text-[9px] uppercase tracking-[0.14em] text-[#7dd3fc]">
+              Route Visibility
+            </div>
+            <div className={`text-[8px] font-semibold ${visibilityStatus.className}`}>
+              {visibilityStatus.label}
+            </div>
+            <div className="text-[8px] text-[#b6c2db]">
+              {visiblePct}% visible • max {pathVisibility.maxQuality.toUpperCase()}
+            </div>
           </div>
-          <div className="text-[8px] text-[#b6c2db]">
-            {visiblePct}% visible • max {pathVisibility.maxQuality.toUpperCase()}
-          </div>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </>
   );
 }
@@ -159,12 +187,14 @@ const CameraFeedPanel = memo(function CameraFeedPanel({
   camera: camData,
   isSelected,
   isBestCamera = false,
+  cameraResult,
   pathVisibility,
   timestampLabel,
 }: {
   camera: CameraNode;
   isSelected: boolean;
   isBestCamera?: boolean;
+  cameraResult?: SimulationResult["cameraResults"][number] | null;
   pathVisibility?: {
     visibleS: number;
     totalDurationS: number;
@@ -209,7 +239,13 @@ const CameraFeedPanel = memo(function CameraFeedPanel({
                 "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 4px)",
             }}
           />
-          <LiveFeedOverlay camera={camData} pathVisibility={pathVisibility} isBestCamera={isBestCamera} timestampLabel={timestampLabel} />
+          <LiveFeedOverlay
+            camera={camData}
+            cameraResult={cameraResult}
+            pathVisibility={pathVisibility}
+            isBestCamera={isBestCamera}
+            timestampLabel={timestampLabel}
+          />
         </>
   ) : (
         <>
@@ -363,6 +399,7 @@ const CameraSlotButton = memo(function CameraSlotButton({
   camera: cam,
   isSelected,
   isBestCamera,
+  cameraResult,
   pathVisibility,
   className = "",
   timestampLabel,
@@ -370,6 +407,7 @@ const CameraSlotButton = memo(function CameraSlotButton({
   camera: CameraNode;
   isSelected: boolean;
   isBestCamera?: boolean;
+  cameraResult?: SimulationResult["cameraResults"][number] | null;
   pathVisibility?: {
     visibleS: number;
     totalDurationS: number;
@@ -392,7 +430,14 @@ const CameraSlotButton = memo(function CameraSlotButton({
       className={`cursor-pointer overflow-hidden rounded-lg text-left ${className}`}
       style={{ display: "block" }}
     >
-      <CameraFeedPanel camera={cam} isSelected={isSelected} isBestCamera={isBestCamera} pathVisibility={pathVisibility} timestampLabel={timestampLabel} />
+      <CameraFeedPanel
+        camera={cam}
+        isSelected={isSelected}
+        isBestCamera={isBestCamera}
+        cameraResult={cameraResult}
+        pathVisibility={pathVisibility}
+        timestampLabel={timestampLabel}
+      />
     </button>
   );
 });
@@ -426,6 +471,10 @@ export function CameraWallView() {
     if (!activePath || !simulationResult) return null;
     return simulationResult.pathResults.find((entry) => entry.pathId === activePath.id) ?? null;
   }, [activePath, simulationResult]);
+  const cameraResultById = useMemo(
+    () => Object.fromEntries((simulationResult?.cameraResults ?? []).map((entry) => [entry.cameraId, entry])),
+    [simulationResult],
+  );
   const pathVisibilityByCameraId = useMemo(() => {
     const visibility = activePathResult?.visibilityByCamera ?? {};
     return Object.fromEntries(
@@ -583,6 +632,7 @@ export function CameraWallView() {
               camera={cam}
               isSelected={cam.id === selectedId}
               isBestCamera={cam.id === bestCameraId}
+              cameraResult={cameraResultById[cam.id] ?? null}
               pathVisibility={pathVisibilityByCameraId[cam.id] ?? null}
               timestampLabel={timestampLabel}
               className="h-full w-full"
@@ -601,6 +651,7 @@ export function CameraWallView() {
               camera={cam}
               isSelected={cam.id === selectedId}
               isBestCamera={cam.id === bestCameraId}
+              cameraResult={cameraResultById[cam.id] ?? null}
               pathVisibility={pathVisibilityByCameraId[cam.id] ?? null}
               timestampLabel={timestampLabel}
               className="h-full w-full"
@@ -615,6 +666,7 @@ export function CameraWallView() {
               camera={visible[0]}
               isSelected={visible[0].id === selectedId}
               isBestCamera={visible[0].id === bestCameraId}
+              cameraResult={cameraResultById[visible[0].id] ?? null}
               pathVisibility={pathVisibilityByCameraId[visible[0].id] ?? null}
               timestampLabel={timestampLabel}
               className="h-full w-full"
@@ -627,6 +679,7 @@ export function CameraWallView() {
               camera={visible[1]}
               isSelected={visible[1].id === selectedId}
               isBestCamera={visible[1].id === bestCameraId}
+              cameraResult={cameraResultById[visible[1].id] ?? null}
               pathVisibility={pathVisibilityByCameraId[visible[1].id] ?? null}
               timestampLabel={timestampLabel}
               className="h-full w-full"
@@ -639,6 +692,7 @@ export function CameraWallView() {
               camera={visible[2]}
               isSelected={visible[2].id === selectedId}
               isBestCamera={visible[2].id === bestCameraId}
+              cameraResult={cameraResultById[visible[2].id] ?? null}
               pathVisibility={pathVisibilityByCameraId[visible[2].id] ?? null}
               timestampLabel={timestampLabel}
               className="h-full w-full"

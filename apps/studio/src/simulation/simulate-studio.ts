@@ -174,10 +174,8 @@ function createOfflineImpactForCamera(
         qualityToScore(zoneAfter.actualQuality) < qualityToScore(zoneBefore.actualQuality);
       const beforeRedundant = zoneBefore.redundancyRequired
         && zoneBefore.redundancyCameraCount >= 2;
-      const afterRedundant = zoneAfter.redundancyRequired
-        && zoneAfter.redundancyCameraCount >= 2;
       const losesRedundancy =
-        zoneAfter.redundancyRequired && beforeRedundant && !afterRedundant;
+        zoneBefore.redundancyRequired && beforeRedundant && zoneAfter.redundancyCameraCount < 2;
 
       if (!downgradedQuality && !losesRedundancy) {
         return null;
@@ -193,9 +191,9 @@ function createOfflineImpactForCamera(
         beforeQuality: zoneBefore.actualQuality,
         afterQuality: zoneAfter.actualQuality,
         beforeStatus: zoneBefore.status,
-          afterStatus: zoneAfter.status,
-          reason,
-        } as CameraOfflineImpactEntry;
+        afterStatus: zoneAfter.status,
+        reason,
+      } as CameraOfflineImpactEntry;
     })
     .filter((item): item is CameraOfflineImpactEntry => Boolean(item));
 }

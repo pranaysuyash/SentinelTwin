@@ -23,6 +23,7 @@ import {
   summarizeWorkspaceApprovalRouting,
   summarizeWorkspaceMembershipDrift,
 } from "@/lib/workspace-membership-routing";
+import type { WorkspaceIdentityConflictArchiveRecord } from "@/lib/workspace-identity-conflict";
 import type { WorkspaceMembershipArchiveRecord } from "@/lib/workspace-membership-types";
 import { useStudioStore } from "@/store/studio-store";
 
@@ -140,42 +141,14 @@ export function GovernanceTab() {
   const [remoteApprovalRouteHistoryLoading, setRemoteApprovalRouteHistoryLoading] = useState(false);
   const [remoteApprovalRouteHistoryError, setRemoteApprovalRouteHistoryError] = useState<string | null>(null);
   const [approvalRouteEndpointDraft, setApprovalRouteEndpointDraft] = useState("");
-  const [identityConflictArchiveReport, setIdentityConflictArchiveReport] = useState<{
-    approvalRoute: ReturnType<typeof summarizeWorkspaceApprovalRouting>;
-    archiveStatus: "server archive" | "local cache";
-    conflictStatus: "aligned" | "reconcile_needed" | "archive_pending";
-    resolutionStatus: "ready_for_publish" | "route_for_review" | "reconcile_before_route" | "archive_pending";
-    resolutionLabel: string;
-    resolutionReason: string;
-    recommendedAction: string;
-    hasPrivacyExposure: boolean;
-    membershipDrift: ReturnType<typeof summarizeWorkspaceMembershipDrift> | null;
-    deliveredCount: number;
-    queuedCount: number;
-    failedCount: number;
-    historyCount: number;
-    summary: string;
-  } | null>(null);
+  const [identityConflictArchiveReport, setIdentityConflictArchiveReport] = useState<(WorkspaceIdentityConflictArchiveRecord & { historyCount: number }) | null>(null);
   const [identityConflictArchiveLoading, setIdentityConflictArchiveLoading] = useState(false);
   const [identityConflictArchiveError, setIdentityConflictArchiveError] = useState<string | null>(null);
-  const [remoteIdentityConflictHistory, setRemoteIdentityConflictHistory] = useState<Array<{
-    approvalRoute: ReturnType<typeof summarizeWorkspaceApprovalRouting>;
-    archiveStatus: "server archive" | "local cache";
-    conflictStatus: "aligned" | "reconcile_needed" | "archive_pending";
-    resolutionStatus: "ready_for_publish" | "route_for_review" | "reconcile_before_route" | "archive_pending";
-    resolutionLabel: string;
-    resolutionReason: string;
-    recommendedAction: string;
-    membershipDrift: ReturnType<typeof summarizeWorkspaceMembershipDrift> | null;
-    sceneName: string;
-    summary: string;
-    receivedAt: string;
-    submittedAt: number;
-    storedAt: number;
-  }>>([]);
+  const [remoteIdentityConflictHistory, setRemoteIdentityConflictHistory] = useState<WorkspaceIdentityConflictArchiveRecord[]>([]);
   const [remoteIdentityConflictHistoryLoading, setRemoteIdentityConflictHistoryLoading] = useState(false);
   const [remoteIdentityConflictHistoryError, setRemoteIdentityConflictHistoryError] = useState<string | null>(null);
   const [identityConflictEndpointDraft, setIdentityConflictEndpointDraft] = useState("");
+  const [selectedIdentityConflictStoredAt, setSelectedIdentityConflictStoredAt] = useState<number | null>(null);
   const [annotation, setAnnotation] = useState("");
 
   const summary = useMemo(() => summarizeWorkspaceGovernance(workspaceGovernance), [workspaceGovernance]);
@@ -271,21 +244,7 @@ export function GovernanceTab() {
       }
       const payload = (await response.json()) as {
         ok: true;
-        history: Array<{
-          approvalRoute: ReturnType<typeof summarizeWorkspaceApprovalRouting>;
-          archiveStatus: "server archive" | "local cache";
-          conflictStatus: "aligned" | "reconcile_needed" | "archive_pending";
-          resolutionStatus: "ready_for_publish" | "route_for_review" | "reconcile_before_route" | "archive_pending";
-          resolutionLabel: string;
-          resolutionReason: string;
-          recommendedAction: string;
-          membershipDrift: ReturnType<typeof summarizeWorkspaceMembershipDrift> | null;
-          sceneName: string;
-          summary: string;
-          receivedAt: string;
-          submittedAt: number;
-          storedAt: number;
-        }>;
+        history: WorkspaceIdentityConflictArchiveRecord[];
         historyCount: number;
       };
       setRemoteIdentityConflictHistory(payload.history);
@@ -343,6 +302,13 @@ export function GovernanceTab() {
       .sort((left, right) => right.timestamp - left.timestamp)[0] ?? null,
     [operationalEvidenceEvents, scene.id],
   );
+  const selectedIdentityConflictRecord = useMemo(() => {
+    if (selectedIdentityConflictStoredAt !== null) {
+      return remoteIdentityConflictHistory.find((record) => record.storedAt === selectedIdentityConflictStoredAt)
+        ?? (identityConflictArchiveReport?.storedAt === selectedIdentityConflictStoredAt ? identityConflictArchiveReport : null);
+    }
+    return identityConflictArchiveReport ?? remoteIdentityConflictHistory[0] ?? null;
+  }, [identityConflictArchiveReport, remoteIdentityConflictHistory, selectedIdentityConflictStoredAt]);
   const membershipDrift = latestWorkspaceMembershipArchive
     ? summarizeWorkspaceMembershipDrift(workspaceAccess, latestWorkspaceMembershipArchive.workspaceAccessState)
     : null;
@@ -614,26 +580,11 @@ export function GovernanceTab() {
         if (!response.ok) {
           throw new Error(`Workspace identity conflict archive failed with HTTP ${response.status}.`);
         }
-        return response.json() as Promise<{
-          ok: true;
-          approvalRoute: ReturnType<typeof summarizeWorkspaceApprovalRouting>;
-          archiveStatus: "server archive" | "local cache";
-          conflictStatus: "aligned" | "reconcile_needed" | "archive_pending";
-          resolutionStatus: "ready_for_publish" | "route_for_review" | "reconcile_before_route" | "archive_pending";
-          resolutionLabel: string;
-          resolutionReason: string;
-          recommendedAction: string;
-          hasPrivacyExposure: boolean;
-          membershipDrift: ReturnType<typeof summarizeWorkspaceMembershipDrift> | null;
-          deliveredCount: number;
-          queuedCount: number;
-          failedCount: number;
-          historyCount: number;
-          summary: string;
-        }>;
+        return response.json() as Promise<WorkspaceIdentityConflictArchiveRecord & { historyCount: number }>;
       })
       .then((payload) => {
         setIdentityConflictArchiveReport(payload);
+        setSelectedIdentityConflictStoredAt(payload.storedAt);
         recordOperationalEvidenceEvent({
           kind: "workspace_identity_conflict_resolved",
           title: "Workspace identity conflict resolved",
@@ -1416,7 +1367,10 @@ export function GovernanceTab() {
               </button>
               <button
                 type="button"
-                onClick={() => setIdentityConflictArchiveReport(null)}
+                onClick={() => {
+                  setIdentityConflictArchiveReport(null);
+                  setSelectedIdentityConflictStoredAt(null);
+                }}
                 className="rounded-md border border-[#1e2538] bg-[#111521] px-2 py-1 text-[9px] text-[#c7d0e4] hover:border-[#2a3245] hover:text-white"
               >
                 Clear Conflict Result
@@ -1503,6 +1457,92 @@ export function GovernanceTab() {
                 ) : null}
               </div>
             ) : null}
+            {selectedIdentityConflictRecord?.conflictDiff ? (
+              <div className="space-y-1.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">{selectedIdentityConflictRecord.conflictDiff.title}</div>
+                    <div className="text-[9px] text-[#8b96ab]">{selectedIdentityConflictRecord.sceneName}</div>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedIdentityConflictStoredAt(null)}
+                      className="rounded-md border border-[#1e2538] bg-[#111521] px-2 py-1 text-[9px] text-[#c7d0e4] hover:border-[#2a3245] hover:text-white"
+                    >
+                      View latest diff
+                    </button>
+                    {selectedIdentityConflictStoredAt !== null ? (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedIdentityConflictStoredAt(null)}
+                        className="rounded-md border border-[#1e2538] bg-[#111521] px-2 py-1 text-[9px] text-[#c7d0e4] hover:border-[#2a3245] hover:text-white"
+                      >
+                        Clear diff selection
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1.5 text-[9px] text-[#8b96ab]">
+                  {selectedIdentityConflictRecord.conflictDiff.changedCount > 0
+                    ? `${selectedIdentityConflictRecord.conflictDiff.changedCount} field${selectedIdentityConflictRecord.conflictDiff.changedCount === 1 ? "" : "s"} differ between the live workspace and the archived identity snapshot.`
+                    : "The live workspace matches the selected archived identity snapshot."}
+                </div>
+                <div className="grid grid-cols-2 gap-1.5 md:grid-cols-4">
+                  <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Current member</div>
+                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">{selectedIdentityConflictRecord.conflictDiff.currentMemberLabel}</div>
+                  </div>
+                  <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Archived member</div>
+                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">{selectedIdentityConflictRecord.conflictDiff.archivedMemberLabel}</div>
+                  </div>
+                  <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Current policy</div>
+                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">{selectedIdentityConflictRecord.conflictDiff.currentPolicyLabel}</div>
+                  </div>
+                  <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Archived policy</div>
+                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">{selectedIdentityConflictRecord.conflictDiff.archivedPolicyLabel}</div>
+                  </div>
+                </div>
+                <div className="grid gap-1.5 md:grid-cols-2">
+                  <div className="rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Route</div>
+                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">{selectedIdentityConflictRecord.conflictDiff.routeLabel}</div>
+                    <div className="mt-0.5 text-[9px] text-[#8b96ab]">{selectedIdentityConflictRecord.conflictDiff.routeReason}</div>
+                  </div>
+                  <div className="rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Resolution</div>
+                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">{selectedIdentityConflictRecord.conflictDiff.resolutionLabel}</div>
+                    <div className="mt-0.5 text-[9px] text-[#8b96ab]">{selectedIdentityConflictRecord.conflictDiff.resolutionReason}</div>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  {selectedIdentityConflictRecord.conflictDiff.rows.map((row) => (
+                    <div key={row.label} className={cn(
+                      "grid grid-cols-[1fr_1fr_auto] gap-1.5 rounded-md border px-2 py-1.5 text-[9px]",
+                      row.changed ? "border-amber-500/20 bg-amber-500/5" : "border-[#1a2030] bg-[#0f141f]",
+                    )}>
+                      <div>
+                        <div className="uppercase tracking-[0.18em] text-[#556076]">{row.label}</div>
+                        <div className="mt-0.5 font-semibold text-[#d2d9e8]">{row.currentValue}</div>
+                      </div>
+                      <div>
+                        <div className="uppercase tracking-[0.18em] text-[#556076]">Archived</div>
+                        <div className="mt-0.5 font-semibold text-[#d2d9e8]">{row.archivedValue}</div>
+                      </div>
+                      <div className="flex items-start justify-end">
+                        <Badge variant={row.changed ? "amber" : "green"}>{row.changed ? "Changed" : "Matched"}</Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5 text-[9px] text-[#8b96ab]">
+                  {selectedIdentityConflictRecord.conflictDiff.recommendedAction}
+                </div>
+              </div>
+            ) : null}
             {remoteIdentityConflictHistoryError ? (
               <div className="rounded-md border border-rose-500/20 bg-rose-500/10 px-2 py-1 text-rose-200">
                 {remoteIdentityConflictHistoryError}
@@ -1516,6 +1556,20 @@ export function GovernanceTab() {
                     <Badge variant={record.archiveStatus === "server archive" ? "green" : "amber"}>{record.archiveStatus}</Badge>
                   </div>
                   <div className="mt-1 text-[9px] text-[#8b96ab]">{record.summary}</div>
+                  <div className="mt-1">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedIdentityConflictStoredAt(record.storedAt)}
+                      className={cn(
+                        "rounded-md border px-2 py-1 text-[9px] transition-colors",
+                        selectedIdentityConflictStoredAt === record.storedAt
+                          ? "border-sky-500/30 bg-sky-500/10 text-sky-100"
+                          : "border-[#1e2538] bg-[#111521] text-[#c7d0e4] hover:border-[#2a3245] hover:text-white",
+                      )}
+                    >
+                      View diff
+                    </button>
+                  </div>
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     <Badge variant={record.conflictStatus === "reconcile_needed" ? "amber" : record.conflictStatus === "archive_pending" ? "gray" : "green"}>
                       {record.conflictStatus.replace(/_/g, " ")}

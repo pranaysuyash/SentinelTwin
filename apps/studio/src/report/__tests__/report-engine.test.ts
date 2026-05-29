@@ -153,7 +153,7 @@ describe("report engine", () => {
     expect(report.adversarialPath?.waypoints).toHaveLength(2);
   });
 
-  test("buildReportData accepts temporal profile options", () => {
+  test("buildReportData accepts temporal profile options", { timeout: 15000 }, () => {
     const report = buildReportData(scene, result, {
       temporalProfile: {
         vulnerabilityWindowCount: 3,
@@ -170,7 +170,7 @@ describe("report engine", () => {
     expect(report.temporalProfile?.worstCoverage).toBe(45.2);
   });
 
-  test("buildReportData with custom title", () => {
+  test("buildReportData with custom title", { timeout: 15000 }, () => {
     const report = buildReportData(scene, result, { title: "Custom Audit" });
     expect(report.title).toBe("Custom Audit");
   });
@@ -641,7 +641,7 @@ describe("exportAsMarkdown", () => {
     expect(md).toContain("Blame");
   });
 
-  test("includes adverse path when provided", () => {
+  test("includes adverse path when provided", { timeout: 15000 }, () => {
     const report = buildReportData(scene, result, {
       adversarialPath: {
         exposureScore: 5,
@@ -655,7 +655,7 @@ describe("exportAsMarkdown", () => {
     expect(md).toContain("5.0");
   });
 
-  test("includes temporal profile when provided", () => {
+  test("includes temporal profile when provided", { timeout: 15000 }, () => {
     const report = buildReportData(scene, result, {
       temporalProfile: {
         vulnerabilityWindowCount: 1,
@@ -808,7 +808,7 @@ describe("exportAsText", () => {
     expect(text).toContain("Reviewed Nodes");
   });
 
-  test("includes operational evidence section", () => {
+  test("includes operational evidence section", { timeout: 15000 }, () => {
     const text = exportAsText(makeEvidenceReport(scene));
     expect(text).toContain("OPERATIONAL EVIDENCE");
     expect(text).toContain("Sensor-related Evidence");

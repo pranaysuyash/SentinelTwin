@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { createSmallRetailShopScene } from "@/demo-scenes/small-retail-shop";
+import { createOperationalEvidenceArchiveHistoryRecord } from "@/lib/operational-evidence-archive-history";
 import { searchWorkspaceMemory } from "@/lib/workspace-search";
 import type { GovernanceArchiveRecord } from "@/lib/governance-archive";
 import type { SimulationResult } from "@/schema/security-scene";
@@ -45,6 +46,9 @@ describe("workspace search", () => {
       savedProjects: [
         {
           scene,
+          workspaceOrganization: "Personal Workspace",
+          workspaceOwner: "You",
+          workspaceVisibility: "private",
           folder: "Retail",
           tags: ["audit"],
           pinned: false,
@@ -91,6 +95,38 @@ describe("workspace search", () => {
             storedAt: 1_725_000_000_500,
           } as GovernanceArchiveRecord,
         ],
+        operationalEvidenceArchiveHistory: [
+          createOperationalEvidenceArchiveHistoryRecord({
+            exportedAt: "2026-05-29T00:10:00.000Z",
+            source: "studio",
+            scene,
+            simulationResult: result,
+            sceneIntelligenceGraphSummary: {} as never,
+            operationalEvidenceEvents: [
+              {
+                id: "evidence_event_2",
+                kind: "scene_reverted",
+                title: "Operational archive restored",
+                details: "Restored the workspace from an exported operational evidence archive.",
+                actor: "user",
+                source: scene.source,
+                sceneId: scene.id,
+                sceneName: scene.name,
+                timestamp: 1_725_000_200_000,
+                revisionDepth: 2,
+                affectedNodeIds: [],
+                confidence: 0.98,
+                branchLabel: "recovered",
+                lifecycleStage: "recovered",
+                published: false,
+                sceneSnapshot: scene,
+              },
+            ],
+            workspaceGovernance: {} as never,
+            workspaceAccess: {} as never,
+            notes: ["Recovered evidence archive"],
+          } as never, "recovered", 1_725_000_200_500),
+        ],
       },
       maxResults: 10,
     });
@@ -99,6 +135,63 @@ describe("workspace search", () => {
     expect(hits.some((hit) => hit.kind === "workspace" && hit.title === scene.name)).toBe(true);
     expect(hits.some((hit) => hit.kind === "evidence" && hit.title.includes("Camera 1"))).toBe(true);
     expect(hits.some((hit) => hit.kind === "report" && hit.summary.includes("Coverage"))).toBe(true);
-    expect(hits.some((hit) => hit.kind === "archive" && hit.branchLabel === "published" && hit.routeTab === "timeline")).toBe(true);
+    expect(hits.some((hit) => hit.kind === "archive" && hit.branchLabel === "published" && hit.routeTab === "timeline" && hit.timelineEventId === "governance_event_1" && hit.targetSummary === "Timeline branch + exact checkpoint")).toBe(true);
+  });
+
+  test("finds operational evidence archive hits with exact checkpoint routing", () => {
+    const scene = createSmallRetailShopScene();
+    const result = {
+      totalCoveragePct: 82,
+      blindspotPct: 18,
+      recognitionAreaPct: 61,
+      identificationAreaPct: 39,
+      worstAreaQuality: "observation",
+      criticalZoneResults: [],
+      issues: [],
+      recommendations: [],
+      pathResults: [],
+    } as unknown as SimulationResult;
+    const archive = createOperationalEvidenceArchiveHistoryRecord({
+      exportedAt: "2026-05-29T00:10:00.000Z",
+      source: "studio",
+      scene,
+      simulationResult: result,
+      sceneIntelligenceGraphSummary: {} as never,
+      operationalEvidenceEvents: [
+        {
+          id: "evidence_event_2",
+          kind: "scene_reverted",
+          title: "Operational archive restored",
+          details: "Restored the workspace from an exported operational evidence archive.",
+          actor: "user",
+          source: scene.source,
+          sceneId: scene.id,
+          sceneName: scene.name,
+          timestamp: 1_725_000_200_000,
+          revisionDepth: 2,
+          affectedNodeIds: [],
+          confidence: 0.98,
+          branchLabel: "recovered",
+          lifecycleStage: "recovered",
+          published: false,
+          sceneSnapshot: scene,
+        },
+      ],
+      workspaceGovernance: {} as never,
+      workspaceAccess: {} as never,
+      notes: ["Recovered evidence archive"],
+    } as never, "recovered", 1_725_000_200_500);
+
+    const hits = searchWorkspaceMemory("recovered checkpoint", {
+      currentScene: scene,
+      currentResult: result,
+      savedProjects: [],
+      archives: {
+        operationalEvidenceArchiveHistory: [archive],
+      },
+      maxResults: 10,
+    });
+
+    expect(hits.some((hit) => hit.kind === "archive" && hit.sourceLabel === "Operational evidence archive" && hit.branchLabel === "recovered" && hit.routeTab === "timeline" && hit.timelineEventId === "evidence_event_2")).toBe(true);
   });
 });

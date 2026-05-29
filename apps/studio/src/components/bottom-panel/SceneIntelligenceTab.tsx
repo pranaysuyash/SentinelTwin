@@ -22,7 +22,11 @@ import {
   type OperationalEvidenceLifecycleStage,
 } from "@/lib/operational-evidence";
 import { summarizeSceneTruthLadder } from "@/lib/truth-ladder";
+import { buildCompareShareLink } from "@/lib/compare-share-link";
+import { buildArchiveHandoffLink, type ArchiveRestoreBranch } from "@/lib/archive-handoff-link";
+import { buildTimelineShareLink } from "@/lib/timeline-share-link";
 import { useStudioStore } from "@/store/studio-store";
+import type { SceneSnapshot } from "@/schema/security-scene";
 
 const SOURCE_STYLES: Record<string, { label: string; className: string; variant: "green" | "blue" | "amber" | "gray" }> = {
   manual: { label: "Manual", className: "border-l-[#22c55e]", variant: "green" },
@@ -154,17 +158,48 @@ function formatLedgerTime(timestamp: number) {
   }).format(new Date(timestamp));
 }
 
+function resolvePivotSnapshots(event: OperationalEvidenceEvent | null, snapshots: SceneSnapshot[]) {
+  const orderedSnapshots = [...snapshots].sort((left, right) => left.createdAt - right.createdAt || left.id.localeCompare(right.id));
+  if (orderedSnapshots.length < 2) return null;
+
+  if (!event) {
+    return {
+      before: orderedSnapshots[0]!,
+      after: orderedSnapshots[orderedSnapshots.length - 1]!,
+    };
+  }
+
+  const before = [...orderedSnapshots].reverse().find((snapshot) => snapshot.createdAt <= event.timestamp) ?? orderedSnapshots[0]!;
+  const after = orderedSnapshots.find((snapshot) => snapshot.createdAt >= event.timestamp) ?? orderedSnapshots[orderedSnapshots.length - 1]!;
+
+  if (before.id !== after.id) {
+    return { before, after };
+  }
+
+  const index = orderedSnapshots.findIndex((snapshot) => snapshot.id === before.id);
+  const fallbackBefore = orderedSnapshots[Math.max(0, index - 1)] ?? before;
+  const fallbackAfter = orderedSnapshots[Math.min(orderedSnapshots.length - 1, index + 1)] ?? after;
+  if (fallbackBefore.id === fallbackAfter.id) return null;
+  return { before: fallbackBefore, after: fallbackAfter };
+}
+
 export function SceneIntelligenceTab() {
   const scene = useStudioStore((s) => s.scene);
+  const snapshots = useStudioStore((s) => s.snapshots);
   const graphFromStore = useStudioStore((s) => s.sceneIntelligenceGraph);
   const simulationResult = useStudioStore((s) => s.simulationResult);
   const operationalEvidenceEvents = useStudioStore((s) => s.operationalEvidenceEvents);
+  const operationalEvidenceArchiveHistory = useStudioStore((s) => s.operationalEvidenceArchiveHistory);
   const sceneId = useStudioStore((s) => s.scene.id);
   const allSensorEvents = useStudioStore((s) => s.sensorEvents);
   const allCameraMetadataEvents = useStudioStore((s) => s.cameraMetadataEvents);
   const allCameraLiveConnectionEvents = useStudioStore((s) => s.cameraLiveConnectionEvents);
   const timelineFocusRequest = useStudioStore((s) => s.timelineFocusRequest);
   const setTimelineFocusRequest = useStudioStore((s) => s.setTimelineFocusRequest);
+  const setCompareReportSelection = useStudioStore((s) => s.setCompareReportSelection);
+  const setViewMode = useStudioStore((s) => s.setViewMode);
+  const setBottomTab = useStudioStore((s) => s.setBottomTab);
+  const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
   const sensorEvents = useMemo(
     () => allSensorEvents.filter((event) => event.sceneId === sceneId),
     [allSensorEvents, sceneId],
@@ -178,6 +213,7 @@ export function SceneIntelligenceTab() {
     [allCameraLiveConnectionEvents, sceneId],
   );
   const restoreSceneFromEvidence = useStudioStore((s) => s.restoreSceneFromEvidence);
+  const importOperationalEvidenceArchive = useStudioStore((s) => s.importOperationalEvidenceArchive);
   const publishCurrentScene = useStudioStore((s) => s.publishCurrentScene);
   const provenanceNotes = useMemo(
     () => (scene.changeLog ?? []).filter((entry) => entry.startsWith("Provenance:") || entry.startsWith("Provenance confidence:")),
@@ -353,9 +389,13 @@ export function SceneIntelligenceTab() {
 
     if (targetEvent) {
       setSelectedEvidenceEventId(targetEvent.id);
+      setTimelineFocusRequest(null);
+      return;
     }
 
-    setTimelineFocusRequest(null);
+    if (operationalEvidenceEvents.length > 0) {
+      setTimelineFocusRequest(null);
+    }
   }, [operationalEvidenceEvents, setTimelineFocusRequest, timelineFocusRequest]);
   const selectedEvidenceReconstructionSummary = useMemo(
     () => (selectedEvidenceReconstruction ? summarizeSceneEvidence(selectedEvidenceReconstruction) : null),
@@ -385,6 +425,23 @@ export function SceneIntelligenceTab() {
   const mergeReadiness = useMemo(
     () => assessOperationalEvidenceMergeReadiness(branchComparison),
     [branchComparison],
+  );
+  const publishedComparisonAnchorEvent = useMemo(
+    () => selectedEvidenceEvent ?? operationalTimeline.latestCheckpoint?.event ?? operationalTimeline.entries.at(-1)?.event ?? null,
+    [operationalTimeline.entries, operationalTimeline.latestCheckpoint?.event, selectedEvidenceEvent],
+  );
+  const publishedComparison = useMemo(() => {
+    if (!temporalTwin.latestPublishedCheckpoint || !publishedComparisonAnchorEvent) return null;
+    if (publishedComparisonAnchorEvent.id === temporalTwin.latestPublishedCheckpoint.eventId) return null;
+    return compareOperationalEvidenceBranches(
+      filteredOperationalEvidenceEvents,
+      publishedComparisonAnchorEvent.id,
+      temporalTwin.latestPublishedCheckpoint.eventId,
+    );
+  }, [filteredOperationalEvidenceEvents, publishedComparisonAnchorEvent, temporalTwin.latestPublishedCheckpoint]);
+  const publishedComparisonReadiness = useMemo(
+    () => assessOperationalEvidenceMergeReadiness(publishedComparison),
+    [publishedComparison],
   );
   const selectedNodeComparison = useMemo(() => {
     if (!selectedNode) return null;
@@ -520,40 +577,118 @@ export function SceneIntelligenceTab() {
     restoreSceneFromEvidence(eventId, targetBranch);
   };
 
+  const pivotToCompareOrReport = (target: "beforeafter" | "report") => {
+    const pivot = resolvePivotSnapshots(selectedEvidenceEvent, snapshots);
+    if (!pivot) return;
+    setCompareReportSelection({ snapshotAId: pivot.before.id, snapshotBId: pivot.after.id });
+    if (target === "beforeafter") {
+      setWorkspacePreset("compare");
+      setViewMode("compare");
+      setBottomTab("beforeafter");
+      return;
+    }
+    setWorkspacePreset("report");
+    setViewMode("report");
+    setBottomTab("report");
+  };
+
   const handleTimelineScrub = (index: number) => {
     const event = evidenceTimeline[index];
     if (!event) return;
     setSelectedEvidenceEventId(event.id);
   };
 
+  const buildDeepLink = (event?: OperationalEvidenceEvent | null): string => {
+    if (typeof window === "undefined") return "";
+    const timelineEvent = event ?? selectedEvidenceEvent;
+    const timelineBranch = timelineEvent ? timelineEvent.branchLabel ?? timelineEvent.lifecycleStage ?? null : null;
+    return buildTimelineShareLink(
+      `${window.location.origin}${window.location.pathname}`,
+      window.location.search,
+      {
+        provenanceNodeId: selectedNodeId,
+        provenanceEdgeId: selectedEdgeId,
+        timelineEventId: timelineEvent?.id ?? null,
+        timelineTimestamp: timelineEvent?.timestamp ?? null,
+        timelineQuery: evidenceQuery.trim(),
+        timelineBranch,
+      },
+      window.location.hash,
+    );
+  };
+
+  const buildCompareDeepLink = (target: "beforeafter" | "report"): string => {
+    if (typeof window === "undefined") return "";
+    const pivot = resolvePivotSnapshots(selectedEvidenceEvent, snapshots);
+    if (!pivot) return "";
+    const baseLink = buildDeepLink(selectedEvidenceEvent);
+    if (!baseLink) return "";
+    const url = new URL(baseLink);
+    return buildCompareShareLink(`${url.origin}${url.pathname}`, url.search, {
+      compareSnapshotAId: pivot.before.id,
+      compareSnapshotBId: pivot.after.id,
+      compareMode: target,
+    }, url.hash);
+  };
+
   const copyDeepLink = async (event?: OperationalEvidenceEvent | null) => {
     if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    params.set("provenanceNode", selectedNodeId);
-    if (selectedEdgeId) {
-      params.set("provenanceEdge", selectedEdgeId);
-    } else {
-      params.delete("provenanceEdge");
-    }
-    const timelineEvent = event ?? selectedEvidenceEvent;
-    if (timelineEvent) {
-      params.set("timelineEventId", timelineEvent.id);
-      params.set("timelineTimestamp", String(timelineEvent.timestamp));
-      params.set("timelineQuery", evidenceQuery.trim());
-      const timelineBranch = timelineEvent.branchLabel ?? timelineEvent.lifecycleStage ?? null;
-      if (timelineBranch) {
-        params.set("timelineBranch", timelineBranch);
-      } else {
-        params.delete("timelineBranch");
-      }
-    } else {
-      params.delete("timelineEventId");
-      params.delete("timelineTimestamp");
-      params.delete("timelineQuery");
-      params.delete("timelineBranch");
-    }
-    const deepLink = `${window.location.origin}${window.location.pathname}?${params.toString()}${window.location.hash}`;
+    const deepLink = buildDeepLink(event) ?? "";
     await navigator.clipboard.writeText(deepLink);
+  };
+
+  const copyCompareDeepLink = async (target: "beforeafter" | "report") => {
+    if (typeof window === "undefined") return;
+    const deepLink = buildCompareDeepLink(target);
+    if (!deepLink) return;
+    await navigator.clipboard.writeText(deepLink);
+  };
+
+  const openDeepLink = (event?: OperationalEvidenceEvent | null) => {
+    if (typeof window === "undefined") return;
+    const deepLink = buildDeepLink(event) ?? "";
+    window.open(deepLink, "_blank", "noopener,noreferrer");
+  };
+
+  const buildArchiveDeepLink = (archiveHistoryId: string) => {
+    if (typeof window === "undefined") return "";
+    const archiveRecord = operationalEvidenceArchiveHistory.find((record) => record.historyId === archiveHistoryId) ?? null;
+    if (!archiveRecord) return "";
+    return buildArchiveHandoffLink(
+      `${window.location.origin}${window.location.pathname}`,
+      window.location.search,
+      {
+        archive: archiveRecord.archive,
+        restoreBranch: archiveRecord.restoreBranch,
+      },
+      window.location.hash,
+    );
+  };
+
+  const copyArchiveDeepLink = async (archiveHistoryId: string) => {
+    if (typeof window === "undefined") return;
+    const deepLink = buildArchiveDeepLink(archiveHistoryId);
+    if (!deepLink) return;
+    await navigator.clipboard.writeText(deepLink);
+  };
+
+  const openArchiveDeepLink = (archiveHistoryId: string) => {
+    if (typeof window === "undefined") return;
+    const deepLink = buildArchiveDeepLink(archiveHistoryId);
+    if (!deepLink) return;
+    window.open(deepLink, "_blank", "noopener,noreferrer");
+  };
+
+  const restoreOperationalArchive = (archiveHistoryId: string) => {
+    const archiveRecord = operationalEvidenceArchiveHistory.find((record) => record.historyId === archiveHistoryId) ?? null;
+    if (!archiveRecord) return;
+    const result = importOperationalEvidenceArchive(archiveRecord.archive);
+    if (result.success) {
+      const eventId = archiveRecord.archive.operationalEvidenceEvents.at(-1)?.id ?? null;
+      if (eventId) {
+        setSelectedEvidenceEventId(eventId);
+      }
+    }
   };
 
   const showBranchHead = (stage: OperationalEvidenceLifecycleStage, branchLabel: string | undefined, eventId: string) => {
@@ -580,6 +715,7 @@ export function SceneIntelligenceTab() {
           <Badge variant="gray">{graph.summary.sceneSourceLabel}</Badge>
           <span className="text-[10px] text-[#68738a]">Updated {updatedLabel}</span>
         </div>
+      </div>
       <div className="mt-2 flex flex-wrap items-baseline gap-2">
         <div className="text-[15px] font-semibold text-[#edf2ff]">{scene.name}</div>
         <div className="text-[10px] text-[#73809b]">{sceneSubtitle}</div>
@@ -684,10 +820,149 @@ export function SceneIntelligenceTab() {
                 {temporalTwin.latestPublishedCheckpoint.hasSnapshot ? "published snapshot" : "published lineage"}
               </Badge>
             </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setComparisonLeftEventId(publishedComparisonAnchorEvent?.id ?? temporalTwin.latestPublishedCheckpoint?.eventId ?? null);
+                  setComparisonRightEventId(temporalTwin.latestPublishedCheckpoint?.eventId ?? null);
+                }}
+                className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08]"
+              >
+                Compare current to published
+              </button>
+              <button
+                type="button"
+                onClick={() => restoreSceneFromEvidence(temporalTwin.latestPublishedCheckpoint!.eventId, "published")}
+                className="rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1.5 text-[10px] font-medium text-sky-100 hover:bg-sky-500/15"
+              >
+                Restore latest published
+              </button>
+            </div>
+            {publishedComparison ? (
+              <div className="mt-3 rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Published comparison</div>
+                    <div className="mt-1 text-[10px] text-[#74809a]">
+                      Compare the current selection against the latest published checkpoint without leaving the temporal twin.
+                    </div>
+                  </div>
+                  <Badge variant={publishedComparisonReadiness?.status === "diverged" ? "amber" : publishedComparisonReadiness?.status === "same" ? "gray" : "blue"}>
+                    {publishedComparisonReadiness?.status.replace(/_/g, " ") ?? "comparison ready"}
+                  </Badge>
+                </div>
+                <div className="mt-2 grid gap-2 md:grid-cols-3">
+                  <div className="rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+                    <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">Current anchor</div>
+                    <div className="mt-1 text-[11px] font-semibold text-[#edf2fb]">{publishedComparison.left.event.title}</div>
+                    <div className="mt-1 text-[10px] text-[#74809a]">{publishedComparison.leftSceneSummary?.detail ?? "No current summary available."}</div>
+                  </div>
+                  <div className="rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+                    <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">Published checkpoint</div>
+                    <div className="mt-1 text-[11px] font-semibold text-[#edf2fb]">{publishedComparison.right.event.title}</div>
+                    <div className="mt-1 text-[10px] text-[#74809a]">{publishedComparison.rightSceneSummary?.detail ?? "No published summary available."}</div>
+                  </div>
+                  <div className="rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+                    <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">Common ancestor</div>
+                    <div className="mt-1 text-[11px] font-semibold text-[#edf2fb]">{publishedComparison.commonAncestor?.event.title ?? "No shared ancestor"}</div>
+                    <div className="mt-1 text-[10px] text-[#74809a]">{publishedComparison.ancestorSummary?.detail ?? "The published branch diverged before a reconstructable checkpoint."}</div>
+                  </div>
+                </div>
+                <div className="mt-2 grid gap-2 md:grid-cols-3 xl:grid-cols-6">
+                  {[
+                    { label: "Cameras", value: publishedComparison.delta.cameras },
+                    { label: "Lights", value: publishedComparison.delta.lights },
+                    { label: "Obstructions", value: publishedComparison.delta.obstructions },
+                    { label: "Zones", value: publishedComparison.delta.zones },
+                    { label: "Paths", value: publishedComparison.delta.paths },
+                    { label: "Sensors", value: publishedComparison.delta.sensors },
+                  ].map((item) => (
+                    <div key={item.label} className="rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+                      <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">{item.label}</div>
+                      <div className="mt-1 text-[14px] font-semibold text-[#edf2fb]">{item.value >= 0 ? `+${item.value}` : item.value}</div>
+                    </div>
+                  ))}
+                </div>
+                {publishedComparisonReadiness ? (
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Badge variant={publishedComparisonReadiness.status === "diverged" ? "amber" : publishedComparisonReadiness.status === "same" ? "gray" : "green"}>
+                      {publishedComparisonReadiness.status.replace(/_/g, " ")}
+                    </Badge>
+                    <span className="text-[10px] text-[#8aa1c4]">{publishedComparisonReadiness.recommendation}</span>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>
-    </div>
+
+      <div className="mt-3 rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Operational evidence archives</div>
+            <div className="mt-1 text-[11px] text-[#74809a]">Recovered archive handoffs with a latest event can reopen the same checkpoint from Scene Intelligence.</div>
+          </div>
+          <Badge variant="gray">{operationalEvidenceArchiveHistory.length} archives</Badge>
+        </div>
+        <div className="mt-2 space-y-2">
+          {operationalEvidenceArchiveHistory.length > 0 ? (
+            operationalEvidenceArchiveHistory.map((record) => {
+              const latestEvent = record.archive.operationalEvidenceEvents.at(-1) ?? null;
+              return (
+                <div key={`${record.historyId}-${record.storedAt}`} className="rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <div className="text-[11px] font-semibold text-[#edf2ff]">{record.archive.scene.name}</div>
+                      <div className="mt-1 text-[10px] text-[#74809a]">
+                        {record.restoreBranch} · exported {formatLedgerTime(record.storedAt)} · {record.archive.operationalEvidenceEvents.length} events
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      <Badge variant={record.restoreBranch === "published" ? "blue" : record.restoreBranch === "recovered" ? "green" : "gray"}>
+                        {record.restoreBranch}
+                      </Badge>
+                      {latestEvent?.branchLabel ? <Badge variant="gray">{latestEvent.branchLabel}</Badge> : null}
+                      {latestEvent?.id ? <Badge variant="green">checkpoint</Badge> : <Badge variant="gray">archive</Badge>}
+                    </div>
+                  </div>
+                  <div className="mt-1 text-[10px] text-[#74809a]">
+                    {latestEvent ? latestEvent.details : "No reconstructable checkpoint event is attached to this archive yet."}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => copyArchiveDeepLink(record.historyId)}
+                      className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08]"
+                    >
+                      Copy archive link
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openArchiveDeepLink(record.historyId)}
+                      className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08]"
+                    >
+                      Open archive link
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => restoreOperationalArchive(record.historyId)}
+                      className="rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1.5 text-[10px] font-medium text-sky-100 hover:bg-sky-500/15"
+                    >
+                      Restore archive
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+              No operational evidence archives have been exported or restored yet.
+            </div>
+          )}
+        </div>
+      </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto px-3 py-2">
         <div className="rounded-lg border border-[#1c2130] bg-[#0f1320] px-3 py-2">
@@ -911,6 +1186,32 @@ export function SceneIntelligenceTab() {
                           <div className="mt-1 text-[14px] font-semibold text-[#edf2fb]">{item.current} → {item.value}</div>
                         </div>
                       ))}
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => pivotToCompareOrReport("beforeafter")}
+                        disabled={snapshots.length < 2}
+                        className="rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1.5 text-[10px] font-medium text-sky-100 hover:bg-sky-500/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.04] disabled:text-[#74809a]"
+                      >
+                        Open Before/After
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => pivotToCompareOrReport("report")}
+                        disabled={snapshots.length < 2}
+                        className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-medium text-emerald-100 hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.04] disabled:text-[#74809a]"
+                      >
+                        Open Report Compare
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void copyCompareDeepLink("beforeafter")}
+                        disabled={snapshots.length < 2}
+                        className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:border-white/10 disabled:text-[#74809a]"
+                      >
+                        Copy compare link
+                      </button>
                     </div>
                   </>
                 ) : (
@@ -1859,6 +2160,13 @@ export function SceneIntelligenceTab() {
                         className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08]"
                       >
                         Copy checkpoint link
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openDeepLink(event)}
+                        className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08]"
+                      >
+                        Open checkpoint link
                       </button>
                       {event.sceneSnapshot ? (
                         <>

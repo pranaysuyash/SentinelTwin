@@ -15,7 +15,9 @@ describe("ReportLiteTab", () => {
     expect(source).toContain("Export PDF");
     expect(source).toContain("handleExportPdf");
     expect(source).toContain("exportTextAsPdf");
+    expect(source).toContain("compareReportSelection ? \"compare\" : \"single\"");
     expect(source).toContain("Copy");
+    expect(source).toContain("Copy compare link");
     expect(source).toContain("Print");
     expect(source).toContain("Report Summary");
     expect(source).toContain("Truth: Computed");

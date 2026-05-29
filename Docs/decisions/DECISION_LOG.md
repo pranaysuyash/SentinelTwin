@@ -219,6 +219,19 @@ wired to the same underlying feed state.
 - Keep view mode controls only below the feed: too easy to miss and weaker screenshot parity
 - Merge target info into the DORI summary: collapses two distinct mental models into one block
 
+## D-243 | 2026-05-29 | Launcher memory hits should visibly expose exact checkpoint routing when available
+
+**Decision:** Workspace memory search results in the launcher should surface an explicit `Exact checkpoint` badge whenever a hit carries a resolved timeline event id, so deep-link precision is visible to the user instead of hidden in routing state.
+
+**Rationale:**
+- The launcher memory flow now preserves exact checkpoint identity for branch-bearing archive hits when the archive record provides a stable event id
+- Showing that precision in the result row makes the behavior legible and helps distinguish exact checkpoint jumps from broader branch or timestamp jumps
+- The badge makes the launcher contract easier to test and harder to regress silently
+
+**Alternatives rejected:**
+- Keep exact checkpoint routing as a hidden field only: works technically, but users cannot tell when a hit is precise versus approximate
+- Add a separate visual style for every archive family: unnecessary; the checkpoint badge is enough to communicate precision without making the UI noisy
+
 ---
 
 ## D-102 | 2026-05-29 | Demo scene is the default launch flow and all other workflows are advanced
@@ -2820,6 +2833,34 @@ reference to the new path, then remove the old."
 
 **Alternatives rejected:**
 - **Keep direct restore-on-upload** — rejected because it would allow accidental rewinds or overwrites without showing divergence.
+
+### D-161: Saved workspaces should carry org-aware metadata before the full org model exists
+**Date:** 2026-05-29
+
+**Decision:** Store `workspaceOrganization`, `workspaceOwner`, and `workspaceVisibility` on saved workspace records and surface those fields in the launcher/editor so the catalog can express ownership and visibility now, even though the canonical org/account model is still open.
+
+**Rationale:**
+- The launcher needed an honest way to distinguish personal, shared, and published workspaces without waiting for a full org/account backend.
+- Keeping these fields on the saved-project record makes the workspace catalog richer without introducing a parallel catalog schema.
+- The visible catalog metadata now matches the current product boundary better than folder/tags alone.
+
+**Alternatives rejected:**
+- **Wait for the canonical org/account backend first** — rejected because the launcher and workspace browser still need to communicate ownership state now.
+- **Use folder and tags as the only catalog metadata** — rejected because they cannot express org, owner, or visibility semantics.
+
+### D-162: Timeline share links should use one canonical builder/parser across the page and provenance surface
+**Date:** 2026-05-29
+
+**Decision:** Introduce a shared timeline share-link helper that builds, parses, and restores checkpoint URLs carrying provenance node/edge focus plus timeline event, branch, and query state, and use it from both the Scene Intelligence provenance surface and the app bootstrap.
+
+**Rationale:**
+- The checkpoint link contract should live in one place so copy/open/restore all speak the same URL format.
+- The provenance tab and the page bootstrap already represent both ends of the timeline link flow, so they should share the same helper instead of duplicating URLSearchParams logic.
+- An openable link is more durable than a clipboard-only flow and makes the branch/time timeline contract easier to reuse later for deeper cross-device handoff.
+
+**Alternatives rejected:**
+- **Keep the URL logic inline in the component** — rejected because it duplicates the contract and increases drift risk.
+- **Leave share links as clipboard-only strings** — rejected because the product needs a reusable and openable checkpoint contract, not just a copied URL.
 - **Require a separate merge page** — rejected because the debug panel is already the recovery surface and should own the preflight.
 
 ### D-161: Operational evidence persistence should be append-only journals
@@ -4089,3 +4130,84 @@ geometryValidity: z.enum(["valid", "suspect", "invalid"]).default("valid")
 - Decision: Carry branch metadata on workspace memory hits, and when a hit has a meaningful branch target, route the launcher into Scene Intelligence with a branch/time query and timeline focus instead of only opening the archive tab.
 - Rationale: Branch-aware retrieval should respect the same temporal ledger users inspect in provenance, so archive hits that already know their branch target should land near that checkpoint instead of forcing a second navigation step.
 - Consequence: Branch-bearing governance, membership, and identity-conflict hits now jump into the timeline with branch/time focus, while non-branch archives continue to open their owning tab.
+
+## D-242 - Timeline deep links should preserve checkpoint identity and provenance focus
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: Scene Intelligence already supported copyable deep links, but the URL contract only carried the timestamp, query, and branch label, which was not enough to restore the exact checkpoint and provenance trace context on reload.
+- Decision: Extend the timeline focus request and deep-link contract to carry exact checkpoint identity plus provenance node/edge ids, then restore them when Scene Intelligence loads.
+- Rationale: Shareable links should reopen the precise checkpoint or trace the user was inspecting, not merely a nearby timestamp that happens to resolve to the same branch.
+- Consequence: Timeline links can now round-trip exact checkpoint selection and trace focus, making branch and checkpoint sharing more trustworthy across reloads and handoffs.
+
+## D-244 - Scene Intelligence should pivot reconstructable checkpoints into compare/report snapshot pairs
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: Scene Intelligence could already reconstruct checkpoints and show branch comparison data, but the compare/report surfaces still required users to manually seed snapshot pairs from elsewhere.
+- Decision: Add explicit pivot actions from the checkpoint reconstruction card into Before/After and Report Lite, seeding the shared compare-report selection with a trusted snapshot pair resolved from the current checkpoint context.
+- Rationale: The evidence surface should not only explain a checkpoint; it should hand that checkpoint off to the next analysis surface so cross-view auditing feels like one continuous workflow.
+- Consequence: Scene Intelligence can now jump the operator into compare/report analysis with a seeded pair, and the Before/After tab can treat that seed as a real default instead of forcing a second manual selection.
+
+## D-245 - Compare/report share links should round-trip seeded checkpoint pairs through the studio bootstrap
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: Scene Intelligence and the compare/report tabs could seed selection in-memory, but those compare selections still could not survive a shareable URL round-trip.
+- Decision: Add compare snapshot ids and compare mode to the studio share-link contract, parse them during app bootstrap, and auto-enter the correct workspace mode when the link is opened.
+- Rationale: The shared compare selection is only truly useful if a copied link can reopen the exact comparison state, not just the timeline checkpoint that produced it.
+- Consequence: Compare and report share links can now reopen seeded snapshot pairs through the launcher/bootstrap path, and the report tab will come up in compare mode when that state is present.
+
+## D-246 - Compare surfaces should expose the share-link contract at the point of use
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: The compare/report share-link contract existed in the bootstrap path, but the main comparison surfaces still required users to rely on upstream handoff flows to discover or copy the link.
+- Decision: Add explicit compare-link copy actions to Before/After, Report Lite, and Compare View so the seeded pair can be shared from the surface where the comparison is already selected.
+- Rationale: The share contract is only truly useful when it is visible at the point of comparison, not only in the reconstruction panel that seeded it.
+- Consequence: Operators can now copy the exact comparison link from the compare/report surfaces themselves, and each surface clearly advertises whether it is sharing the before/after or report compare mode.
+
+## D-243 - Bakeoff predictions should map to SecurityScene through a TypeScript bridge
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: The V0.2 floorplan bakeoff produced validated Python `SecuritySceneSubset` artifacts (normalized [0,1] line segments), but the studio editor could not consume them. The existing `floor-plan-import.ts` pipeline consumed a `FloorPlanResult` (pixel-origin edge detection), not model predictions. Closing this gap required a TypeScript bridge that converts bakeoff predictions to a Zod-valid `SecurityScene` with 3D meter-scaled nodes.
+- Decision: Add a `bakeoffToSecurityScene()` function in `apps/studio/src/lib/bakeoff-bridge.ts` that accepts a `BakeoffPrediction` (matching the Python `SecuritySceneSubset` shape) and a `ScaleReference` (known dimension + axis hint per Q-009), and produces a complete `SecurityScene` with wall nodes, door/entry-point pairs, window nodes, obstruction nodes, and critical zone nodes. Scale defaults to `knownDimensionM: 8` when user input is not provided. The import flow in both the launcher (`page.tsx`) and the studio shell (`TopBar.tsx`) auto-detects bakeoff predictions by `image_id` + `walls` and routes them through the bridge.
+- Rationale: Without the bridge, bakeoff results were siloed in the Python experiment harness and invisible to the product. The bridge closes the end-to-end flow: floorplan image → bakeoff → editor → simulate → iterate. The auto-detection approach avoids breaking the existing SecurityScene JSON import contract.
+- Consequence: Bakeoff prediction JSON files can be dragged/imported into the studio and produce editable scenes. The hardcoded default scale (8m) should be replaced with a user-visible scale input in a follow-up. 6 unit tests validate the bridge at `apps/studio/src/lib/__tests__/bakeoff-bridge.test.ts`.
+
+## D-244 - Root home should lead with the security job, not the demo sample
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: The root dashboard was still reading as a demo-first studio surface, even though the app now has a real product front door, launcher, and multiple job-based entry paths.
+- Decision: Keep the existing Studio workspace and launcher infrastructure, but make the top of `/` present a product-home hero that leads with `Start Security Audit`, `Continue Current Workspace`, and `Advanced Workflows`, while demoting the seeded retail scene to an explicitly optional reference demo.
+- Rationale: Users should understand the product job before they understand the workspace mechanics. The demo remains valuable, but it should be framed as a sample baseline rather than the identity of the app.
+- Consequence: The app now reads as a security audit product with a workspace underneath it, rather than a demo shell with a few extra entry points.
+
+## D-245 - Workspace-memory result cards should expose explicit target metadata
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: The launcher already knew how to route archive, report, evidence, and workspace hits, but the cards themselves still read like generic search snippets even when they pointed at a timeline branch or exact checkpoint.
+- Decision: Add explicit target metadata to workspace-memory result cards so the launcher can show what each hit will open before the user clicks it, including whether the hit routes to a timeline branch, exact checkpoint, report snapshot, debug surface, or workspace view.
+- Rationale: The search engine should not hide its routing intent. Showing the destination in the card itself turns results into understandable navigation actions and creates a reusable contract for future cross-view handoff.
+- Consequence: Workspace-memory hits now expose target/route badges in the launcher, and branch-aware archive hits read as direct navigation routes rather than opaque snippets.
+
+## D-247 - Operational evidence archives should have a browser-openable handoff link
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: The archive recovery flow already supported local file import and merge preflight, and timeline links already had a browser-openable share contract, but exported operational evidence archives still could not be reopened from a URL into the debug/recovery UI.
+- Decision: Add a canonical archive handoff link helper that serializes the operational evidence archive plus the target restore branch into the studio URL, and teach the page bootstrap and debug panel to restore that request back into the merge-preflight flow.
+- Rationale: Recovery artifacts should be shareable through the same browser-native link contract as timeline checkpoints, so an archive can be opened directly into the recovery cockpit instead of only via a downloaded file.
+- Consequence: The debug recovery panel can now copy or open a browser-link handoff for the current archive, and the app can rehydrate that archive into merge preflight on load.
+
+## D-248 - Launcher search should surface recent operational evidence archives as timeline checkpoints
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: Operational evidence archives could be exported and restored, but they were not visible in launcher search as a recoverable archive family even though each archive carries a reconstructable latest event chain.
+- Decision: Persist a short local recent-history list of exported/restored operational evidence archives and include it in workspace-memory search, routing hits to the latest reconstructable checkpoint when a latest event id is available.
+- Rationale: Operational memory becomes more useful when the launcher can find a recent recovered archive by query and jump directly to the checkpoint embodied by that archive.
+- Consequence: Launcher search can now surface operational evidence archive hits with exact-checkpoint routing, and the recent archive history is preserved locally for short-term retrieval.

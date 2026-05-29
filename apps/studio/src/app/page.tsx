@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import StudioShell from "@/components/layout/StudioShell";
 import { ProjectStartLauncher } from "@/components/launcher/ProjectStartLauncher";
 import { SceneBuilderWizard } from "@/components/scan-to-scene/SceneBuilderWizard";
 import { ScanSiteWizard } from "@/components/scan-to-scene/ScanSiteWizard";
 import { StudioDashboardHome } from "@/components/launcher/StudioDashboardHome";
-import { useStudioStore, type BottomTab, type ViewMode, type WorkspacePreset } from "@/store/studio-store";
+import { useStudioStore, type ActiveWorkflowId, type BottomTab, type ViewMode, type WorkspacePreset } from "@/store/studio-store";
 import { draftSceneFromPrompt, draftSceneFromPromptWithModel, summarizeDraftResult } from "@/lib/ai-layout-draft";
 import { summarizeAiActionTelemetry } from "@/lib/ai-action-telemetry";
+import { parseArchiveHandoffLink } from "@/lib/archive-handoff-link";
+import { parseCompareShareLink } from "@/lib/compare-share-link";
+import { parseTimelineShareLink } from "@/lib/timeline-share-link";
 import {
   createModelProvider,
   describeAiProviderHealth,
@@ -46,23 +50,13 @@ function estimateTokensFromText(text: string) {
 }
 
 function parseTimelineFocusFromUrl(search: string) {
-  const params = new URLSearchParams(search);
-  const timestampParam = params.get("timelineTimestamp");
-  const timestamp = timestampParam ? Number(timestampParam) : null;
-  if (!timestamp || Number.isNaN(timestamp)) return null;
-  return {
-    timestamp,
-    query: params.get("timelineQuery"),
-    branchLabel: params.get("timelineBranch"),
-    eventId: params.get("timelineEventId"),
-    provenanceNodeId: params.get("provenanceNode"),
-    provenanceEdgeId: params.get("provenanceEdge"),
-    source: "launcher" as const,
-  };
+  return parseTimelineShareLink(search);
 }
 
-export default function StudioPage() {
-  const [enterStudio, setEnterStudio] = useState(false);
+function StudioPageContent() {
+  const searchParams = useSearchParams();
+  const shouldBypassLauncher = searchParams.get("studio") === "1";
+  const [enterStudio, setEnterStudio] = useState(shouldBypassLauncher);
   const [showWizard, setShowWizard] = useState(false);
   const [showFloorPlanWizard, setShowFloorPlanWizard] = useState(false);
   const [showScanWizard, setShowScanWizard] = useState(false);
@@ -85,7 +79,9 @@ export default function StudioPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scene = useStudioStore((s) => s.scene);
+  const setArchiveHandoffRequest = useStudioStore((s) => s.setArchiveHandoffRequest);
   const setTimelineFocusRequest = useStudioStore((s) => s.setTimelineFocusRequest);
+  const setCompareReportSelection = useStudioStore((s) => s.setCompareReportSelection);
   const setLaunchNotice = useStudioStore((s) => s.setLaunchNotice);
   const simulationResult = useStudioStore((s) => s.simulationResult);
   const simulationDirty = useStudioStore((s) => s.simulationDirty);
@@ -98,6 +94,9 @@ export default function StudioPage() {
   const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
   const setDemoMode = useStudioStore((s) => s.setDemoMode);
   const setDemoStep = useStudioStore((s) => s.setDemoStep);
+  const setActiveWorkflow = useStudioStore((s) => s.setActiveWorkflow);
+  const setActiveWorkflowStep = useStudioStore((s) => s.setActiveWorkflowStep);
+  const activeWorkflowId = useStudioStore((s) => s.activeWorkflowId);
   const setCameraViewVerificationIntent = useStudioStore((s) => s.setCameraViewVerificationIntent);
   const runSimulationFromStore = useStudioStore((s) => s.runSimulation);
   const savedProjects = useStudioStore((s) => s.savedProjects);
@@ -192,6 +191,8 @@ export default function StudioPage() {
     return { current, draft: aiDraftCounts, delta };
   }, [aiDraftCounts, aiDraftSummary, scene]);
   const openScanWizard = () => {
+    setActiveWorkflow("scan");
+    setActiveWorkflowStep(0);
     recordOperationalEvidenceEvent({
       kind: "scan_session_started",
       title: "Scan session started",
@@ -211,6 +212,8 @@ export default function StudioPage() {
     setShowScanWizard(true);
   };
   const openGuidedScanAssistant = () => {
+    setActiveWorkflow("scan");
+    setActiveWorkflowStep(0);
     recordOperationalEvidenceEvent({
       kind: "scan_session_started",
       title: "Guided scan assistant started",
@@ -255,6 +258,8 @@ export default function StudioPage() {
   };
 
   const openDemoWorkspace = () => {
+    setActiveWorkflow("demo");
+    setActiveWorkflowStep(0);
     const demoRecord =
       savedProjects.find((project) => project.scene.source === "demo" && project.scene.name.toLowerCase().includes("open studio"))
       ?? savedProjects.find((project) => project.scene.source === "demo" && project.folder === "Featured")
@@ -333,11 +338,61 @@ export default function StudioPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const focusRequest = parseTimelineFocusFromUrl(window.location.search);
+    const search = window.location.search;
+    const archiveRequest = parseArchiveHandoffLink(search);
+    const focusRequest = parseTimelineFocusFromUrl(search);
+    const compareRequest = parseCompareShareLink(search);
+
+    if (archiveRequest) {
+      setArchiveHandoffRequest(archiveRequest);
+      setEnterStudio(true);
+      setWorkspacePreset("debug");
+      setViewMode("map");
+      setBottomTab("debug");
+      setLaunchNotice(
+        `Archive handoff opened for ${archiveRequest.archive.scene.name || "Untitled Scene"} in ${archiveRequest.restoreBranch} branch preflight.`,
+      );
+      return;
+    }
+
     if (focusRequest) {
       setTimelineFocusRequest(focusRequest);
     }
-  }, [setTimelineFocusRequest]);
+
+    if (compareRequest) {
+      setCompareReportSelection({
+        snapshotAId: compareRequest.snapshotAId,
+        snapshotBId: compareRequest.snapshotBId,
+      });
+      setEnterStudio(true);
+      if (compareRequest.mode === "report") {
+        setWorkspacePreset("report");
+        setViewMode("report");
+        setBottomTab("report");
+      } else {
+        setWorkspacePreset("compare");
+        setViewMode("compare");
+        setBottomTab("beforeafter");
+      }
+      return;
+    }
+
+    if (focusRequest) {
+      setEnterStudio(true);
+      setWorkspacePreset("coverage");
+      setViewMode("map");
+      setBottomTab("timeline");
+    }
+  }, [
+    setArchiveHandoffRequest,
+    setBottomTab,
+    setCompareReportSelection,
+    setEnterStudio,
+    setLaunchNotice,
+    setTimelineFocusRequest,
+    setViewMode,
+    setWorkspacePreset,
+  ]);
 
   const launchWorkspace = (viewMode: ViewMode, preset: WorkspacePreset, bottomTab?: BottomTab) => {
     setWorkspacePreset(preset);
@@ -349,13 +404,31 @@ export default function StudioPage() {
   const openStudio = () => launchWorkspace("map", "edit", "metrics");
   const openCoverageWorkspace = () => launchWorkspace("map", "coverage", "metrics");
   const openCameraWall = () => launchWorkspace("wall", "camera_wall", "metrics");
-  const openPathReplay = () => launchWorkspace("replay", "replay", "timeline");
-  const openCompareFixes = () => launchWorkspace("compare", "compare", "beforeafter");
-  const openReport = () => launchWorkspace("report", "report", "report");
+  const openPathReplay = () => {
+    launchWorkspace("replay", "replay", "timeline");
+    if (activeWorkflowId === "audit") {
+      setActiveWorkflowStep(2);
+    }
+  };
+  const openCompareFixes = () => {
+    launchWorkspace("compare", "compare", "beforeafter");
+    if (activeWorkflowId === "audit") {
+      setActiveWorkflowStep(4);
+    }
+  };
+  const openReport = () => {
+    launchWorkspace("report", "report", "report");
+    if (activeWorkflowId === "audit") {
+      setActiveWorkflowStep(5);
+    }
+  };
   const openIssues = () => launchWorkspace("map", "edit", "issues");
 
   const runSimulation = () => {
     runSimulationFromStore();
+    if (activeWorkflowId !== "idle") {
+      setActiveWorkflowStep(activeWorkflowId === "scan" ? 4 : 1);
+    }
     setWorkspacePreset("coverage");
     setViewMode("map");
     setBottomTab("metrics");
@@ -367,9 +440,27 @@ export default function StudioPage() {
     openStudio();
   };
 
+  const startSecurityAudit = () => {
+    setActiveWorkflow("audit");
+    setActiveWorkflowStep(0);
+    const coverageState = scene.simulation?.totalCoveragePct;
+    setLaunchNotice(
+      coverageState == null || simulationDirty
+        ? "Opened current workspace for audit. Run simulation to refresh the latest security coverage before review."
+        : `Opened ${scene.name} for audit (${Math.round(coverageState)}% coverage).`,
+    );
+    openCoverageWorkspace();
+  };
+
   const openProjectLauncher = () => {
     setShowProjectLauncher(true);
   };
+
+  useEffect(() => {
+    if (shouldBypassLauncher) {
+      setEnterStudio(true);
+    }
+  }, [shouldBypassLauncher]);
 
   const handleImportScene = () => {
     if (!confirmWorkspaceReplacement("import a scene JSON")) return;
@@ -397,7 +488,12 @@ export default function StudioPage() {
         onOpenCompareFixes={openCompareFixes}
         onOpenIssues={openIssues}
         onRunSimulation={runSimulation}
-        onStartProject={openProjectLauncher}
+        onStartProject={() => {
+          startSecurityAudit();
+        }}
+        onOpenAdvancedWorkflows={() => {
+          openProjectLauncher();
+        }}
         onCreateScene={() => {
           if (!confirmWorkspaceReplacement("create a new scene")) return;
           setShowWizard(true);
@@ -1087,5 +1183,13 @@ export default function StudioPage() {
         </div>
       ) : null}
     </>
+  );
+}
+
+export default function StudioPage() {
+  return (
+    <Suspense fallback={null}>
+      <StudioPageContent />
+    </Suspense>
   );
 }

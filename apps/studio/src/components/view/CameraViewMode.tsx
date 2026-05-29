@@ -216,12 +216,6 @@ export function CameraViewMode() {
   const replaySegmentLabel = activeTimelineEvent?.reason
     ?? (activePath ? `${activePath.label} active replay` : undefined);
 
-  useEffect(() => {
-    if (camera?.id) {
-      setSelectedCameraId(camera.id);
-    }
-  }, [camera?.id, setSelectedCameraId]);
-
   if (!camera) {
     return (
       <div className="flex h-full items-center justify-center bg-[#07090d]">

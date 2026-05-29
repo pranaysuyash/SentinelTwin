@@ -209,7 +209,6 @@ export async function POST(request: Request) {
           authChallengeScheme: summary.record.authChallengeScheme,
           authChallengeRealm: summary.record.authChallengeRealm,
           sessionExpiresAt: summary.record.liveSessionExpiresAt,
-          lastAction: parsed.data.action,
           summary: summary.summary,
         } as Parameters<typeof appendCameraLiveSessionRecord>[0]);
       }

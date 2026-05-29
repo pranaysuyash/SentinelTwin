@@ -9,6 +9,7 @@ import * as THREE from "three";
 import { useStudioStore } from "@/store/studio-store";
 import { qualityToScore } from "@/simulation/dori";
 import "@/lib/three-compat";
+import { buildCompareShareLink } from "@/lib/compare-share-link";
 import { buildCompareReportData, exportCompareAsHtml, exportCompareAsMarkdown } from "@/report";
 import { buildReportEvidenceBundle, stringifyReportEvidenceBundle } from "@/lib/report-evidence-bundle";
 import {
@@ -703,6 +704,22 @@ export function CompareView() {
     setExportToast("Summary copied");
     window.setTimeout(() => setExportToast(null), 2500);
   }, [mA, mB, snapshotA, snapshotB]);
+  const handleCopyCompareLink = useCallback(async () => {
+    if (!snapshotA || !snapshotB) return;
+    const link = buildCompareShareLink(
+      window.location.origin + window.location.pathname,
+      window.location.search,
+      {
+        compareSnapshotAId: snapshotA.id,
+        compareSnapshotBId: snapshotB.id,
+        compareMode: "beforeafter",
+      },
+      window.location.hash,
+    );
+    await navigator.clipboard.writeText(link);
+    setExportToast("Compare link copied");
+    window.setTimeout(() => setExportToast(null), 2500);
+  }, [snapshotA, snapshotB]);
 
   const handleCaptureVisualEvidence = useCallback(() => {
     if (!snapshotA || !snapshotB) return;
@@ -809,6 +826,14 @@ export function CompareView() {
             className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white"
           >
             Copy Summary
+          </button>
+          <button
+            type="button"
+            onClick={handleCopyCompareLink}
+            disabled={!snapshotA || !snapshotB}
+            className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white disabled:opacity-40"
+          >
+            Copy compare link
           </button>
           <button
             type="button"

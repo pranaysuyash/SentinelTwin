@@ -40,6 +40,13 @@ import {
   type OperationalEvidenceArchive,
 } from "@/lib/operational-evidence-archive";
 import {
+  createOperationalEvidenceArchiveHistoryRecord,
+  normalizeOperationalEvidenceArchiveHistory,
+  serializeOperationalEvidenceArchiveHistory,
+  type OperationalEvidenceArchiveHistoryRecord,
+} from "@/lib/operational-evidence-archive-history";
+import type { ArchiveHandoffRequest } from "@/lib/archive-handoff-link";
+import {
   createDefaultWorkspaceGovernance,
   normalizeWorkspaceGovernance,
   type WorkspaceApprovalMode,
@@ -159,6 +166,74 @@ export type EditorDraft = {
 
 export type BottomTab = "outcome" | "metrics" | "issues" | "sensors" | "timeline" | "beforeafter" | "report" | "help" | "debug" | "counterfactual" | "threat" | "redundancy" | "temporal" | "assumptions" | "governance" | "provenance" | "novel";
 
+export type ActiveWorkflowId = "idle" | "audit" | "design" | "scan" | "floor_plan" | "ai_draft" | "verify_footage" | "report" | "demo";
+
+export const WORKFLOW_STEPS: Record<ActiveWorkflowId, string[]> = {
+  idle: [],
+  audit: [
+    "Run baseline coverage",
+    "Review failures and risks",
+    "Replay evidence path",
+    "Apply adjustments",
+    "Compare before/after",
+    "Generate report",
+  ],
+  design: [
+    "Create baseline scene",
+    "Place geometry and devices",
+    "Add critical zones",
+    "Set assumptions",
+    "Run baseline coverage",
+    "Review and refine",
+    "Export final scene",
+  ],
+  scan: [
+    "Collect site photos",
+    "Mark walls and entry",
+    "Mark cameras, obstructions, zones",
+    "Review marker quality",
+    "Compile SecurityScene",
+    "Run coverage simulation",
+    "Export or continue",
+  ],
+  floor_plan: [
+    "Upload floor plan",
+    "Review extracted layout",
+    "Place corrections",
+    "Apply corrections",
+    "Run coverage simulation",
+    "Review and export",
+  ],
+  ai_draft: [
+    "Draft scene from prompt",
+    "Review candidate scene",
+    "Compare with current scene",
+    "Apply draft intentionally",
+    "Run coverage simulation",
+    "Continue with edits",
+  ],
+  verify_footage: [
+    "Open footage validation",
+    "Attach evidence",
+    "Align frame overlays",
+    "Mark confidence",
+    "Save validation findings",
+  ],
+  report: [
+    "Select scope and assumptions",
+    "Review outcomes",
+    "Capture recommended actions",
+    "Generate final report",
+    "Add assumption and limitation notes",
+  ],
+  demo: [
+    "Load reference baseline",
+    "Review scenario summary",
+    "Run and compare modes",
+    "Apply suggested fix sequence",
+  ],
+};
+
 export type InspectorTab = "properties" | "view" | "status" | "analytics" | "failures";
 
 export type HeatmapMode = "quality" | "fragility" | "overlap" | "contribution" | "blindspots";
@@ -258,6 +333,8 @@ export type TimelineFocusRequest = {
   provenanceEdgeId?: string | null;
   source?: "launcher" | "scene" | "debug" | "report";
 };
+
+export type ArchiveHandoffState = ArchiveHandoffRequest | null;
 
 export type RuntimeIncidentCategory =
   | "user_error"
@@ -491,6 +568,7 @@ const SENSOR_EVENT_STORAGE_KEY = "sentineltwin_sensor_live_events_v1";
 const CAMERA_METADATA_EVENT_STORAGE_KEY = "sentineltwin_camera_metadata_events_v1";
 const CAMERA_CONNECTION_EVENT_STORAGE_KEY = "sentineltwin_camera_connection_events_v1";
 const SUPPORT_INGEST_HISTORY_STORAGE_KEY = "sentineltwin_support_ingest_history_v1";
+const OPERATIONAL_EVIDENCE_ARCHIVE_HISTORY_STORAGE_KEY = "sentineltwin_operational_evidence_archive_history_v1";
 const WORKSPACE_GOVERNANCE_STORAGE_KEY = "sentineltwin_workspace_governance_v1";
 const WORKSPACE_ACCESS_STORAGE_KEY = "sentineltwin_workspace_access_v1";
 
@@ -499,10 +577,33 @@ export type SavedProjectRecord = {
   folder: string;
   tags: string[];
   pinned: boolean;
+  workspaceOrganization: string;
+  workspaceOwner: string;
+  workspaceVisibility: "private" | "shared" | "published";
   createdAt: number;
   updatedAt: number;
   lastOpenedAt: number | null;
 };
+
+function normalizeWorkspaceOrganization(value: unknown, sceneSource?: SecurityScene["source"]): string {
+  const trimmed = typeof value === "string" ? value.trim() : "";
+  if (trimmed) return trimmed;
+  if (sceneSource === "demo") return "SentinelTwin Reference";
+  if (sceneSource === "preset") return "Template Library";
+  return "Personal Workspace";
+}
+
+function normalizeWorkspaceOwner(value: unknown, sceneSource?: SecurityScene["source"]): string {
+  const trimmed = typeof value === "string" ? value.trim() : "";
+  if (trimmed) return trimmed;
+  if (sceneSource === "demo") return "SentinelTwin";
+  return "You";
+}
+
+function normalizeWorkspaceVisibility(value: unknown, sceneSource?: SecurityScene["source"]): SavedProjectRecord["workspaceVisibility"] {
+  if (value === "private" || value === "shared" || value === "published") return value;
+  return sceneSource === "demo" ? "published" : "private";
+}
 
 function sanitizeTags(tags: unknown): string[] {
   if (!Array.isArray(tags)) return [];
@@ -521,11 +622,15 @@ function normalizeSavedProjectRecord(input: unknown): SavedProjectRecord | null 
   if (!sceneResult.success) return null;
 
   const now = Date.now();
+  const sceneSource = sceneResult.data.source;
   return {
     scene: cloneSecurityScene(sceneResult.data),
     folder: normalizeFolder(candidate.folder),
     tags: sanitizeTags(candidate.tags),
     pinned: Boolean(candidate.pinned),
+    workspaceOrganization: normalizeWorkspaceOrganization(candidate.workspaceOrganization, sceneSource),
+    workspaceOwner: normalizeWorkspaceOwner(candidate.workspaceOwner, sceneSource),
+    workspaceVisibility: normalizeWorkspaceVisibility(candidate.workspaceVisibility, sceneSource),
     createdAt: typeof candidate.createdAt === "number" ? candidate.createdAt : now,
     updatedAt: typeof candidate.updatedAt === "number" ? candidate.updatedAt : now,
     lastOpenedAt: typeof candidate.lastOpenedAt === "number" ? candidate.lastOpenedAt : null,
@@ -563,11 +668,14 @@ function loadSavedProjectsFromStorage(): SavedProjectRecord[] {
     return dedupeSavedProjectList(legacyScenes.flatMap((scene: unknown) => {
       const parsed = safeParseSecurityScene(scene);
       if (!parsed.success) return [];
-      return [{
+    return [{
         scene: cloneSecurityScene(parsed.data),
         folder: "Unsorted",
         tags: [],
         pinned: false,
+        workspaceOrganization: normalizeWorkspaceOrganization(undefined, parsed.data.source),
+        workspaceOwner: normalizeWorkspaceOwner(undefined, parsed.data.source),
+        workspaceVisibility: normalizeWorkspaceVisibility(undefined, parsed.data.source),
         createdAt: parsed.data.createdAt ?? Date.now(),
         updatedAt: parsed.data.updatedAt ?? Date.now(),
         lastOpenedAt: null,
@@ -1000,6 +1108,16 @@ function loadSupportIngestHistory(): SupportIngestHistoryRecord[] {
   }
 }
 
+function loadOperationalEvidenceArchiveHistory(): OperationalEvidenceArchiveHistoryRecord[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(OPERATIONAL_EVIDENCE_ARCHIVE_HISTORY_STORAGE_KEY);
+    return normalizeOperationalEvidenceArchiveHistory(raw ? JSON.parse(raw) : null);
+  } catch {
+    return [];
+  }
+}
+
 function loadAiActionTelemetry(): AiActionTelemetryRecord[] {
   if (typeof window === "undefined") return [];
   try {
@@ -1201,6 +1319,14 @@ function persistSupportIngestHistory(history: SupportIngestHistoryRecord[]) {
   }
 }
 
+function persistOperationalEvidenceArchiveHistory(history: OperationalEvidenceArchiveHistoryRecord[]) {
+  try {
+    localStorage.setItem(OPERATIONAL_EVIDENCE_ARCHIVE_HISTORY_STORAGE_KEY, serializeOperationalEvidenceArchiveHistory(history));
+  } catch {
+    // Storage full or unavailable — silently fail
+  }
+}
+
 function persistAiActionTelemetry(records: AiActionTelemetryRecord[]) {
   try {
     localStorage.setItem(AI_TELEMETRY_STORAGE_KEY, JSON.stringify(records.slice(0, 50)));
@@ -1261,6 +1387,9 @@ function upsertSavedScene(scene: SecurityScene) {
       updatedAt: now,
       folder: normalizeFolder(existing.folder),
       tags: sanitizeTags(existing.tags),
+      workspaceOrganization: normalizeWorkspaceOrganization(existing.workspaceOrganization, cloned.source),
+      workspaceOwner: normalizeWorkspaceOwner(existing.workspaceOwner, cloned.source),
+      workspaceVisibility: normalizeWorkspaceVisibility(existing.workspaceVisibility, cloned.source),
     };
   } else {
     projects.push({
@@ -1268,6 +1397,9 @@ function upsertSavedScene(scene: SecurityScene) {
       folder: "Unsorted",
       tags: [scene.source === "demo" ? "demo" : scene.source === "manual" ? "manual" : "workspace"],
       pinned: false,
+      workspaceOrganization: normalizeWorkspaceOrganization(undefined, scene.source),
+      workspaceOwner: normalizeWorkspaceOwner(undefined, scene.source),
+      workspaceVisibility: normalizeWorkspaceVisibility(undefined, scene.source),
       createdAt: now,
       updatedAt: now,
       lastOpenedAt: null,
@@ -1276,7 +1408,7 @@ function upsertSavedScene(scene: SecurityScene) {
   persistSavedProjects(projects);
 }
 
-function updateSavedSceneMetadata(sceneId: string, patch: Partial<Pick<SavedProjectRecord, "folder" | "tags" | "pinned" | "lastOpenedAt">>) {
+function updateSavedSceneMetadata(sceneId: string, patch: Partial<Pick<SavedProjectRecord, "folder" | "tags" | "pinned" | "workspaceOrganization" | "workspaceOwner" | "workspaceVisibility" | "lastOpenedAt">>) {
   const projects = loadSavedProjectsFromStorage();
   const idx = projects.findIndex((record) => record.scene.id === sceneId);
   if (idx < 0) return;
@@ -1286,6 +1418,15 @@ function updateSavedSceneMetadata(sceneId: string, patch: Partial<Pick<SavedProj
     folder: patch.folder !== undefined ? normalizeFolder(patch.folder) : existing.folder,
     tags: patch.tags !== undefined ? sanitizeTags(patch.tags) : existing.tags,
     pinned: patch.pinned !== undefined ? Boolean(patch.pinned) : existing.pinned,
+    workspaceOrganization: patch.workspaceOrganization !== undefined
+      ? normalizeWorkspaceOrganization(patch.workspaceOrganization, existing.scene.source)
+      : existing.workspaceOrganization,
+    workspaceOwner: patch.workspaceOwner !== undefined
+      ? normalizeWorkspaceOwner(patch.workspaceOwner, existing.scene.source)
+      : existing.workspaceOwner,
+    workspaceVisibility: patch.workspaceVisibility !== undefined
+      ? normalizeWorkspaceVisibility(patch.workspaceVisibility, existing.scene.source)
+      : existing.workspaceVisibility,
     lastOpenedAt: patch.lastOpenedAt !== undefined ? patch.lastOpenedAt : existing.lastOpenedAt,
     updatedAt: Date.now(),
   };
@@ -1333,6 +1474,9 @@ function duplicateSavedSceneRecord(sceneId: string): SavedProjectRecord | null {
     folder: source.folder,
     tags: sanitizeTags([...source.tags, "copy"]),
     pinned: false,
+    workspaceOrganization: source.workspaceOrganization,
+    workspaceOwner: source.workspaceOwner,
+    workspaceVisibility: source.workspaceVisibility,
     createdAt: now,
     updatedAt: now,
     lastOpenedAt: null,
@@ -1382,6 +1526,7 @@ export type StudioStoreState = {
   runtimeIncidents: RuntimeIncident[];
   externalLogEntries: ExternalLogEntry[];
   supportIngestHistory: SupportIngestHistoryRecord[];
+  operationalEvidenceArchiveHistory: OperationalEvidenceArchiveHistoryRecord[];
   modelEvalHistory: ModelEvalRunRecord[];
   aiActionTelemetry: AiActionTelemetryRecord[];
   snapshots: SceneSnapshot[];
@@ -1427,6 +1572,7 @@ export type StudioStoreState = {
   savedProjects: SavedProjectRecord[];
   launchNotice: string | null;
   timelineFocusRequest: TimelineFocusRequest | null;
+  archiveHandoffRequest: ArchiveHandoffState;
   simulationError?: string | null;
   sceneModified?: boolean;
   savedSceneName?: string | null;
@@ -1509,6 +1655,9 @@ export type StudioStoreState = {
   hoveredMapNodeId: string | null;
   focusScenePointRequest: FocusScenePointRequest | null;
   focusScenePointHighlight: FocusScenePointRequest | null;
+  activeWorkflowId: ActiveWorkflowId;
+  activeWorkflowStep: number;
+  activeWorkflowSteps: string[];
   setTemporalProfile: (profile: TemporalSecurityProfile | null) => void;
   setTemporalScrub: (hour: number, minute: number) => void;
   computeTemporalProfile: () => void;
@@ -1518,8 +1667,12 @@ export type StudioStoreState = {
   setDemoStep: (step: number) => void;
   setLaunchNotice: (launchNotice: string | null) => void;
   setTimelineFocusRequest: (request: TimelineFocusRequest | null) => void;
+  setArchiveHandoffRequest: (request: ArchiveHandoffState) => void;
   setCompareVisualEvidence: (evidence: StudioStoreState["compareVisualEvidence"]) => void;
   setCompareReportSelection: (selection: StudioStoreState["compareReportSelection"]) => void;
+  setActiveWorkflow: (workflowId: ActiveWorkflowId, steps?: string[]) => void;
+  setActiveWorkflowStep: (stepIndex: number) => void;
+  clearActiveWorkflow: () => void;
   setCameraViewVerificationIntent: (intent: StudioStoreState["cameraViewVerificationIntent"]) => void;
   upsertCameraVerificationSnapshot: (
     cameraId: string,
@@ -1657,7 +1810,10 @@ export type StudioStoreState = {
   loadScenesFromStorage: () => SecurityScene[];
   refreshSavedScenesList: () => void;
   deleteSavedScene: (sceneId: string) => void;
-  updateSavedSceneMetadata: (sceneId: string, patch: Partial<Pick<SavedProjectRecord, "folder" | "tags" | "pinned" | "lastOpenedAt">>) => void;
+  updateSavedSceneMetadata: (
+    sceneId: string,
+    patch: Partial<Pick<SavedProjectRecord, "folder" | "tags" | "pinned" | "workspaceOrganization" | "workspaceOwner" | "workspaceVisibility" | "lastOpenedAt">>,
+  ) => void;
   duplicateSavedScene: (sceneId: string) => SavedProjectRecord | null;
   renameSavedScene: (sceneId: string, nextName: string) => SavedProjectRecord | null;
   getSceneStorageKey: () => string;
@@ -2328,6 +2484,9 @@ function buildSeededDemoProjects(): SavedProjectRecord[] {
       folder: index === 0 ? "Featured" : "Recent",
       tags: ["demo", "workspace", snapshot.label.toLowerCase().replace(/[^a-z0-9]+/g, "-")],
       pinned: index === 0,
+      workspaceOrganization: "SentinelTwin Reference",
+      workspaceOwner: "SentinelTwin",
+      workspaceVisibility: "published",
       createdAt: baseTs,
       updatedAt: baseTs,
       lastOpenedAt: baseTs,
@@ -2397,6 +2556,9 @@ function buildSeededWorkspaceProjects(): SavedProjectRecord[] {
       folder: "Drafts",
       tags: ["manual", "draft", "workspace"],
       pinned: true,
+      workspaceOrganization: "Personal Workspace",
+      workspaceOwner: "You",
+      workspaceVisibility: "private",
       createdAt: baseTs,
       updatedAt: baseTs,
       lastOpenedAt: baseTs,
@@ -2446,6 +2608,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   runtimeIncidents: [],
   externalLogEntries: loadExternalLogEntries(),
   supportIngestHistory: loadSupportIngestHistory(),
+  operationalEvidenceArchiveHistory: loadOperationalEvidenceArchiveHistory(),
   modelEvalHistory: loadModelEvalHistory(),
   aiActionTelemetry: loadAiActionTelemetry(),
   snapshots: INITIAL_SNAPSHOTS,
@@ -2460,6 +2623,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   savedProjects: INITIAL_SAVED_PROJECTS.length > 0 ? INITIAL_SAVED_PROJECTS : INITIAL_SEEDED_PROJECTS,
   launchNotice: null,
   timelineFocusRequest: null,
+  archiveHandoffRequest: null,
   compareVisualEvidence: null,
   compareReportSelection: null,
   cameraViewVerificationIntent: null,
@@ -2510,6 +2674,9 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   temporalScrubMinute: 0,
   demoMode: false,
   demoStep: 0,
+  activeWorkflowId: "idle",
+  activeWorkflowStep: 0,
+  activeWorkflowSteps: [...WORKFLOW_STEPS.idle],
   activePathId: null,
   mapState: cloneDefaultMapState(),
   hoveredMapNodeId: null,
@@ -3290,7 +3457,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     }
 
     const existingIndex = savedProjects.findIndex((record) => record.scene.id === scene.id);
-    const nextProjects = [...savedProjects];
+    const nextProjects: SavedProjectRecord[] = [...savedProjects];
     if (existingIndex >= 0) {
       const existing = nextProjects[existingIndex]!;
       nextProjects[existingIndex] = {
@@ -3299,6 +3466,9 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         tags: sanitizeTags([...existing.tags, "published", workspaceGovernance.sceneStatus === "approved" ? "approved" : "published"]),
         updatedAt: now,
         lastOpenedAt: now,
+        workspaceOrganization: existing.workspaceOrganization,
+        workspaceOwner: existing.workspaceOwner,
+        workspaceVisibility: existing.workspaceVisibility,
       };
     } else {
       nextProjects.unshift({
@@ -3309,6 +3479,9 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         createdAt: now,
         updatedAt: now,
         lastOpenedAt: now,
+        workspaceOrganization: normalizeWorkspaceOrganization(undefined, scene.source),
+        workspaceOwner: normalizeWorkspaceOwner(undefined, scene.source),
+        workspaceVisibility: normalizeWorkspaceVisibility(undefined, scene.source),
       });
     }
     persistSavedProjects(nextProjects);
@@ -4037,8 +4210,22 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
 
   setDemoMode: (active) => set({ demoMode: active }),
   setDemoStep: (step) => set({ demoStep: step }),
+  setActiveWorkflow: (workflowId, steps) => set({
+    activeWorkflowId: workflowId,
+    activeWorkflowStep: 0,
+    activeWorkflowSteps: [...(steps ?? WORKFLOW_STEPS[workflowId] ?? WORKFLOW_STEPS.idle)],
+  }),
+  setActiveWorkflowStep: (stepIndex) => set((state) => ({
+    activeWorkflowStep: Math.max(0, Math.min(stepIndex, Math.max(0, state.activeWorkflowSteps.length - 1))),
+  })),
+  clearActiveWorkflow: () => set({
+    activeWorkflowId: "idle",
+    activeWorkflowStep: 0,
+    activeWorkflowSteps: [...WORKFLOW_STEPS.idle],
+  }),
   setLaunchNotice: (launchNotice) => set({ launchNotice }),
   setTimelineFocusRequest: (timelineFocusRequest) => set({ timelineFocusRequest }),
+  setArchiveHandoffRequest: (archiveHandoffRequest) => set({ archiveHandoffRequest }),
   recordRuntimeIncident: (incident) =>
     set((state) => ({
       runtimeIncidents: [...state.runtimeIncidents, createRuntimeIncident(incident)].slice(-100),
@@ -4593,17 +4780,31 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   },
 
   exportScene: () => cloneSecurityScene(get().scene),
-  exportOperationalEvidenceArchive: () => buildOperationalEvidenceArchive({
-    scene: get().scene,
-    simulationResult: get().simulationResult,
-    sceneIntelligenceGraph: get().sceneIntelligenceGraph,
-    operationalEvidenceEvents: get().operationalEvidenceEvents,
-    operationalEvidenceJournal: loadOperationalEvidenceJournalFromRaw(typeof window === "undefined"
-      ? null
-      : window.localStorage.getItem(OPERATIONAL_EVIDENCE_STORAGE_KEY)),
-    workspaceGovernance: get().workspaceGovernance,
-    workspaceAccess: get().workspaceAccess,
-  }),
+  exportOperationalEvidenceArchive: () => {
+    const archive = buildOperationalEvidenceArchive({
+      scene: get().scene,
+      simulationResult: get().simulationResult,
+      sceneIntelligenceGraph: get().sceneIntelligenceGraph,
+      operationalEvidenceEvents: get().operationalEvidenceEvents,
+      operationalEvidenceJournal: loadOperationalEvidenceJournalFromRaw(typeof window === "undefined"
+        ? null
+        : window.localStorage.getItem(OPERATIONAL_EVIDENCE_STORAGE_KEY)),
+      workspaceGovernance: get().workspaceGovernance,
+      workspaceAccess: get().workspaceAccess,
+    });
+
+    if (typeof window !== "undefined") {
+      const historyId = archive.operationalEvidenceEvents.at(-1)?.id ?? `${archive.scene.id}:${archive.exportedAt}`;
+      const nextHistory = [
+        createOperationalEvidenceArchiveHistoryRecord(archive, "draft"),
+        ...get().operationalEvidenceArchiveHistory.filter((record) => record.historyId !== historyId),
+      ].slice(0, 8);
+      persistOperationalEvidenceArchiveHistory(nextHistory);
+      set({ operationalEvidenceArchiveHistory: nextHistory });
+    }
+
+    return archive;
+  },
 
   importOperationalEvidenceArchive: (raw) => {
     const startedAt = performance.now();
@@ -4642,6 +4843,15 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       };
       persistWorkspaceAccess(nextAccess);
       persistWorkspaceGovernance(nextGovernance);
+      if (typeof window !== "undefined") {
+        const archiveHistoryKey = archiveHead?.id ?? archive.scene.id;
+        const nextArchiveHistory = [
+          createOperationalEvidenceArchiveHistoryRecord(archive, "recovered"),
+          ...get().operationalEvidenceArchiveHistory.filter((record) => record.historyId !== archiveHistoryKey),
+        ].slice(0, 8);
+        persistOperationalEvidenceArchiveHistory(nextArchiveHistory);
+        set({ operationalEvidenceArchiveHistory: nextArchiveHistory });
+      }
       const sceneWithLog = cloneSceneWithAppendedChangeLog(restoredScene, evidenceLogLine(restoreEvent));
       set({
         simulationResult: archive.simulationResult ? structuredClone(archive.simulationResult) : restoredScene.simulation ?? null,
@@ -4796,6 +5006,14 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       };
       persistWorkspaceAccess(nextAccess);
       persistWorkspaceGovernance(nextGovernance);
+      if (typeof window !== "undefined") {
+        const nextArchiveHistory = [
+          createOperationalEvidenceArchiveHistoryRecord(archive, "draft"),
+          ...get().operationalEvidenceArchiveHistory.filter((record) => record.historyId !== archiveHead.id),
+        ].slice(0, 8);
+        persistOperationalEvidenceArchiveHistory(nextArchiveHistory);
+        set({ operationalEvidenceArchiveHistory: nextArchiveHistory });
+      }
       const mergedSceneWithLog = cloneSceneWithAppendedChangeLog(mergedScene, evidenceLogLine(mergeEvent));
       set({
         selectedCameraId: mergedScene.cameras[0]?.id ?? null,

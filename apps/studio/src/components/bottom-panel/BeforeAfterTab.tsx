@@ -1,9 +1,10 @@
 "use client";
 
-import { GitCompare } from "lucide-react";
-import { useState } from "react";
+import { Copy, GitCompare } from "lucide-react";
+import { useCallback, useState } from "react";
 import { DonutChart } from "@/components/shared/DonutChart";
 import { buildSecurityOutcomeDelta } from "@/lib/security-outcome/security-outcome-model";
+import { buildCompareShareLink } from "@/lib/compare-share-link";
 import { useStudioStore } from "@/store/studio-store";
 import type { SimulationResult } from "@/schema/security-scene";
 import { qualityToScore } from "@/simulation/dori";
@@ -118,6 +119,7 @@ function MetricColumn({
 export function BeforeAfterTab() {
   const snapshots = useStudioStore((s) => s.snapshots);
   const compareVisualEvidence = useStudioStore((s) => s.compareVisualEvidence);
+  const compareReportSelection = useStudioStore((s) => s.compareReportSelection);
   const setCompareReportSelection = useStudioStore((s) => s.setCompareReportSelection);
   const setViewMode = useStudioStore((s) => s.setViewMode);
   const [beforeSnapshotId, setBeforeSnapshotId] = useState<string | null>(null);
@@ -137,8 +139,16 @@ export function BeforeAfterTab() {
     );
   }
 
-  const validBeforeId = beforeSnapshotId && snapshots.some((snapshot) => snapshot.id === beforeSnapshotId) ? beforeSnapshotId : null;
-  const validAfterId = afterSnapshotId && snapshots.some((snapshot) => snapshot.id === afterSnapshotId) ? afterSnapshotId : null;
+  const validBeforeId = beforeSnapshotId && snapshots.some((snapshot) => snapshot.id === beforeSnapshotId)
+    ? beforeSnapshotId
+    : compareReportSelection?.snapshotAId && snapshots.some((snapshot) => snapshot.id === compareReportSelection.snapshotAId)
+      ? compareReportSelection.snapshotAId
+      : null;
+  const validAfterId = afterSnapshotId && snapshots.some((snapshot) => snapshot.id === afterSnapshotId)
+    ? afterSnapshotId
+    : compareReportSelection?.snapshotBId && snapshots.some((snapshot) => snapshot.id === compareReportSelection.snapshotBId)
+      ? compareReportSelection.snapshotBId
+      : null;
 
   const before = validBeforeId ? snapshots.find((snapshot) => snapshot.id === validBeforeId) ?? null : null;
   const after = validAfterId ? snapshots.find((snapshot) => snapshot.id === validAfterId) ?? null : null;
@@ -178,11 +188,25 @@ export function BeforeAfterTab() {
     compareVisualEvidence.snapshotAId === (before?.id ?? "") &&
     compareVisualEvidence.snapshotBId === (after?.id ?? "") &&
     compareVisualEvidence.capturedAt >= Math.max(before?.createdAt ?? 0, after?.createdAt ?? 0)
-      ? {
+    ? {
           beforeImageDataUrl: compareVisualEvidence.beforeImageDataUrl,
           afterImageDataUrl: compareVisualEvidence.afterImageDataUrl,
         }
-      : null;
+    : null;
+  const handleCopyCompareLink = useCallback(async () => {
+    if (!before || !after) return;
+    const link = buildCompareShareLink(
+      window.location.origin + window.location.pathname,
+      window.location.search,
+      {
+        compareSnapshotAId: before.id,
+        compareSnapshotBId: after.id,
+        compareMode: "beforeafter",
+      },
+      window.location.hash,
+    );
+    await navigator.clipboard.writeText(link);
+  }, [before, after]);
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -239,10 +263,24 @@ export function BeforeAfterTab() {
           </select>
         </label>
       </div>
+      <div className="flex items-center justify-between gap-2 border-b border-[#1e2130] px-3 py-1.5 text-[9px] text-[#6b7894]">
+        <span>
+          Seeded by Scene Intelligence or the compare picker. Copy the link to share this exact before/after pair.
+        </span>
+        <button
+          type="button"
+          onClick={handleCopyCompareLink}
+          disabled={!before || !after}
+          className="inline-flex items-center gap-1 rounded border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] font-medium text-[#8090a8] transition-colors hover:border-[#32384d] hover:text-white disabled:opacity-40"
+        >
+          <Copy className="h-3 w-3" />
+          Copy compare link
+        </button>
+      </div>
 
       {!before || !after ? (
         <div className="border-b border-[#1e2130] px-3 py-2 text-[9px] text-[#6b7894]">
-          Select both snapshots to populate the before/after comparison. The panel will no longer guess the newest saves for you.
+          Select both snapshots to populate the before/after comparison. Scene Intelligence can seed this panel with a checkpoint pair now.
         </div>
       ) : null}
 

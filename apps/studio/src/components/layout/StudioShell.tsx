@@ -400,20 +400,14 @@ export default function StudioShell() {
   useEffect(() => {
     if (viewMode !== "camera_view") return;
     if (scene.cameras.length === 0) return;
-    const firstCameraId = scene.cameras[0]?.id;
-    if (!firstCameraId) return;
+    
     const selectedIsCamera = !!selectedNodeId && scene.cameras.some((camera) => camera.id === selectedNodeId);
-    if (!selectedIsCamera) {
-      const nextCameraId = selectedCameraId && scene.cameras.some((camera) => camera.id === selectedCameraId)
-        ? selectedCameraId
-        : firstCameraId;
-      selectNode(nextCameraId);
-      return;
-    }
-    if (selectedCameraId !== selectedNodeId) {
+    if (selectedIsCamera && selectedCameraId !== selectedNodeId) {
       setSelectedCameraId(selectedNodeId);
+    } else if (!selectedCameraId || !scene.cameras.some((camera) => camera.id === selectedCameraId)) {
+      setSelectedCameraId(scene.cameras[0]?.id ?? null);
     }
-  }, [scene.cameras, selectedCameraId, selectedNodeId, setSelectedCameraId, selectNode, viewMode]);
+  }, [scene.cameras, selectedCameraId, selectedNodeId, setSelectedCameraId, viewMode]);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[#0b0c10] text-[#dde2ef]">

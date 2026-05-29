@@ -6,6 +6,7 @@ import { BadgeInfo, Database, Layers3, RefreshCw, ShieldAlert, Sparkles, TimerRe
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { Badge } from "@/components/shared/Badge";
 import { buildDiagnosticBundle, buildIncidentBundle, buildSupportBundle, stringifyDiagnosticBundle, stringifyIncidentBundle, stringifySupportBundle } from "@/lib/diagnostic-bundle";
+import { buildArchiveHandoffLink, type ArchiveHandoffRequest } from "@/lib/archive-handoff-link";
 import type { CameraLiveConnectionArchiveRecord } from "@/lib/camera-live-connection-history";
 import type { CameraLiveSessionRecord } from "@/lib/camera-live-session-registry";
 import { stringifyReportEvidenceBundle } from "@/lib/report-evidence-bundle";
@@ -133,6 +134,7 @@ export function DebugTab() {
   const toggleLayer = useStudioStore((s) => s.toggleLayer);
   const layers = useStudioStore((s) => s.layerVisibility);
   const operationalEvidenceEvents = useStudioStore((s) => s.operationalEvidenceEvents);
+  const archiveHandoffRequest = useStudioStore((s) => s.archiveHandoffRequest);
   const runtimeIncidents = useStudioStore((s) => s.runtimeIncidents);
   const externalLogEntries = useStudioStore((s) => s.externalLogEntries);
   const supportIngestHistory = useStudioStore((s) => s.supportIngestHistory);
@@ -143,6 +145,7 @@ export function DebugTab() {
   const exportOperationalEvidenceArchive = useStudioStore((s) => s.exportOperationalEvidenceArchive);
   const importOperationalEvidenceArchive = useStudioStore((s) => s.importOperationalEvidenceArchive);
   const setLaunchNotice = useStudioStore((s) => s.setLaunchNotice);
+  const setArchiveHandoffRequest = useStudioStore((s) => s.setArchiveHandoffRequest);
   const recordSupportIngestResponse = useStudioStore((s) => s.recordSupportIngestResponse);
   const clearSupportIngestHistory = useStudioStore((s) => s.clearSupportIngestHistory);
   const archiveInputRef = useRef<HTMLInputElement | null>(null);
@@ -748,6 +751,75 @@ export function DebugTab() {
     setLaunchNotice("Operational evidence archive downloaded.");
   };
 
+  const buildArchiveHandoffDeepLink = (archive: ArchiveHandoffRequest["archive"], restoreBranch: ArchiveHandoffRequest["restoreBranch"]) => {
+    if (typeof window === "undefined") return "";
+    return buildArchiveHandoffLink(
+      `${window.location.origin}${window.location.pathname}`,
+      window.location.search,
+      {
+        archive,
+        restoreBranch,
+      },
+      window.location.hash,
+    );
+  };
+
+  const copyArchiveHandoffLink = async () => {
+    if (typeof window === "undefined") return;
+    const archive = exportOperationalEvidenceArchive();
+    const deepLink = buildArchiveHandoffDeepLink(archive, archiveRestoreBranch);
+    if (!deepLink) return;
+    await window.navigator.clipboard.writeText(deepLink);
+    setLaunchNotice("Archive handoff link copied.");
+  };
+
+  const shareArchiveHandoffLink = async () => {
+    if (typeof window === "undefined") return;
+    const archive = exportOperationalEvidenceArchive();
+    const deepLink = buildArchiveHandoffDeepLink(archive, archiveRestoreBranch);
+    if (!deepLink) return;
+
+    const shareData = {
+      title: "SentinelTwin archive handoff",
+      text: `Open ${archive.scene.name || "Untitled Scene"} in SentinelTwin recovery preflight.`,
+      url: deepLink,
+    };
+
+    try {
+      const shareNavigator = window.navigator as Navigator & {
+          canShare?: (data: typeof shareData) => boolean;
+          share: (data: typeof shareData) => Promise<void>;
+      };
+      if (typeof shareNavigator.share === "function") {
+        if (typeof shareNavigator.canShare === "function" && !shareNavigator.canShare(shareData)) {
+          await window.navigator.clipboard.writeText(deepLink);
+          setLaunchNotice("Archive handoff copied. Sharing was unavailable for this payload.");
+          return;
+        }
+
+        await shareNavigator.share(shareData);
+        setLaunchNotice("Archive handoff shared.");
+        return;
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Archive handoff sharing failed.";
+      setLaunchNotice(message);
+      return;
+    }
+
+    await window.navigator.clipboard.writeText(deepLink);
+    setLaunchNotice("Archive handoff link copied.");
+  };
+
+  const openArchiveHandoffLink = () => {
+    if (typeof window === "undefined") return;
+    const archive = exportOperationalEvidenceArchive();
+    const deepLink = buildArchiveHandoffDeepLink(archive, archiveRestoreBranch);
+    if (!deepLink) return;
+    window.open(deepLink, "_blank", "noopener,noreferrer");
+    setLaunchNotice("Archive handoff link opened in a new tab.");
+  };
+
   const runTrustAudit = async () => {
     setTrustAuditLoading(true);
     setTrustAuditError(null);
@@ -829,6 +901,15 @@ export function DebugTab() {
       setLaunchNotice("Archive restore failed: invalid JSON.");
     }
   };
+
+  useEffect(() => {
+    if (!archiveHandoffRequest) return;
+    setPendingArchive(archiveHandoffRequest.archive);
+    setArchiveRestoreBranch(archiveHandoffRequest.restoreBranch);
+    setPendingArchiveError(null);
+    setLaunchNotice(`Archive handoff loaded for merge preflight: ${archiveHandoffRequest.archive.scene.name || "Untitled Scene"}.`);
+    setArchiveHandoffRequest(null);
+  }, [archiveHandoffRequest, setArchiveHandoffRequest, setLaunchNotice]);
 
   const pendingArchiveComparison = useMemo(() => {
     if (!pendingArchive) return null;
@@ -957,6 +1038,15 @@ export function DebugTab() {
             </PillButton>
             <PillButton active={false} onClick={downloadOperationalEvidenceArchive}>
               Download Archive
+            </PillButton>
+            <PillButton active={false} onClick={shareArchiveHandoffLink}>
+              Share Archive
+            </PillButton>
+            <PillButton active={false} onClick={copyArchiveHandoffLink}>
+              Copy Archive Link
+            </PillButton>
+            <PillButton active={false} onClick={openArchiveHandoffLink}>
+              Open Archive Link
             </PillButton>
             <PillButton active={false} onClick={() => archiveInputRef.current?.click()}>
               Restore Archive

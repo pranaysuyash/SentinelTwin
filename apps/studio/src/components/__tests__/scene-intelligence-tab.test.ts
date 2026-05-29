@@ -16,8 +16,10 @@ describe("SceneIntelligenceTab", () => {
     expect(source).toContain("Focus target");
     expect(source).toContain("Copy deep link");
     expect(source).toContain("Copy checkpoint link");
+    expect(source).toContain("Open checkpoint link");
     expect(source).toContain("provenanceNode");
     expect(source).toContain("provenanceEdge");
+    expect(source).toContain("timelineEventId");
     expect(source).toContain("timelineTimestamp");
     expect(source).toContain("timelineQuery");
     expect(source).toContain("timelineBranch");
@@ -32,6 +34,9 @@ describe("SceneIntelligenceTab", () => {
     expect(source).toContain("Current scene");
     expect(source).toContain("Latest checkpoint");
     expect(source).toContain("Published checkpoint");
+    expect(source).toContain("Compare current to published");
+    expect(source).toContain("Restore latest published");
+    expect(source).toContain("Published comparison");
     expect(source).toContain("Checkpoint delta");
     expect(source).toContain("Checkpoint age");
     expect(source).toContain("Published delta");
@@ -66,6 +71,9 @@ describe("SceneIntelligenceTab", () => {
     expect(source).toContain("Point-in-time reconstruction");
     expect(source).toContain("Preview only");
     expect(source).toContain("Reconstruct the scene state at this checkpoint without committing it yet.");
+    expect(source).toContain("Open Before/After");
+    expect(source).toContain("Open Report Compare");
+    expect(source).toContain("Copy compare link");
     expect(source).toContain("No branch lineage selected.");
     expect(source).toContain("Branch comparison");
     expect(source).toContain("Merge readiness");

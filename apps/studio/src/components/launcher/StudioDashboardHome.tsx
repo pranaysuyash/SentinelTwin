@@ -195,7 +195,7 @@ type StudioDashboardHomeProps = {
   onOpenDemoScene?: () => void;
   onOpenReport: () => void;
   onOpenScene?: (scene: SecurityScene) => void;
-  onUpdateProjectMetadata: (sceneId: string, patch: Partial<Pick<SavedProjectRecord, "folder" | "tags" | "pinned" | "lastOpenedAt">>) => void;
+  onUpdateProjectMetadata: (sceneId: string, patch: Partial<Pick<SavedProjectRecord, "folder" | "tags" | "pinned" | "workspaceOrganization" | "workspaceOwner" | "workspaceVisibility" | "lastOpenedAt">>) => void;
   onDuplicateProject: (sceneId: string) => SavedProjectRecord | null;
   onRenameProject: (sceneId: string, nextName: string) => SavedProjectRecord | null;
   onOpenMode: (viewMode: ViewMode, preset: WorkspacePreset, bottomTab?: BottomTab) => void;
@@ -828,6 +828,9 @@ function ProjectMetadataEditor({
 }) {
   const [folderDraft, setFolderDraft] = useState(project.folder);
   const [tagDraft, setTagDraft] = useState(project.tags.join(", "));
+  const [organizationDraft, setOrganizationDraft] = useState(project.workspaceOrganization);
+  const [ownerDraft, setOwnerDraft] = useState(project.workspaceOwner);
+  const [visibilityDraft, setVisibilityDraft] = useState<SavedProjectRecord["workspaceVisibility"]>(project.workspaceVisibility);
 
   const applyFolderDraft = () => {
     onUpdateProjectMetadata(project.scene.id, { folder: folderDraft.trim() || "Unsorted" });
@@ -843,6 +846,19 @@ function ProjectMetadataEditor({
 
   const togglePinned = () => {
     onUpdateProjectMetadata(project.scene.id, { pinned: !project.pinned });
+  };
+
+  const applyOrganizationDraft = () => {
+    onUpdateProjectMetadata(project.scene.id, { workspaceOrganization: organizationDraft.trim() || "Personal Workspace" });
+  };
+
+  const applyOwnerDraft = () => {
+    onUpdateProjectMetadata(project.scene.id, { workspaceOwner: ownerDraft.trim() || "You" });
+  };
+
+  const applyVisibilityDraft = (nextVisibility: SavedProjectRecord["workspaceVisibility"]) => {
+    setVisibilityDraft(nextVisibility);
+    onUpdateProjectMetadata(project.scene.id, { workspaceVisibility: nextVisibility });
   };
 
   const duplicateWorkspace = () => {
@@ -911,6 +927,15 @@ function ProjectMetadataEditor({
           <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
             Folder: {folderDraft}
           </span>
+          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+            Org: {organizationDraft}
+          </span>
+          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+            Owner: {ownerDraft}
+          </span>
+          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+            {visibilityDraft}
+          </span>
           {project.tags.length > 0 ? (
             project.tags.map((tag) => (
               <span key={tag} className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
@@ -954,7 +979,7 @@ function ProjectMetadataEditor({
             type="button"
             onClick={renameWorkspace}
             disabled={project.scene.source === "demo"}
-            title={project.scene.source === "demo" ? "Duplicate the reference demo first to rename it." : "Rename workspace"}
+            title={project.scene.source === "demo" ? "Duplicate the reference baseline first to rename it." : "Rename workspace"}
             className={cn(
               "rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
               project.scene.source === "demo"
@@ -1003,6 +1028,53 @@ function ProjectMetadataEditor({
               placeholder="retail, client, north"
             />
           </label>
+
+          <label className="block">
+            <span className="text-[11px] text-[color:var(--st-muted)]">Organization</span>
+            <input
+              value={organizationDraft}
+              onChange={(event) => setOrganizationDraft(event.target.value)}
+              onBlur={applyOrganizationDraft}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  applyOrganizationDraft();
+                }
+              }}
+              className="mt-1 w-full rounded-2xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-[color:var(--st-muted)] focus:border-sky-400/35 focus:bg-white/[0.04]"
+              placeholder="Personal Workspace"
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-[11px] text-[color:var(--st-muted)]">Owner</span>
+            <input
+              value={ownerDraft}
+              onChange={(event) => setOwnerDraft(event.target.value)}
+              onBlur={applyOwnerDraft}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  applyOwnerDraft();
+                }
+              }}
+              className="mt-1 w-full rounded-2xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-[color:var(--st-muted)] focus:border-sky-400/35 focus:bg-white/[0.04]"
+              placeholder="You"
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-[11px] text-[color:var(--st-muted)]">Visibility</span>
+            <select
+              value={visibilityDraft}
+              onChange={(event) => applyVisibilityDraft(event.target.value as SavedProjectRecord["workspaceVisibility"])}
+              className="mt-1 w-full rounded-2xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-sm text-white outline-none transition-colors focus:border-sky-400/35 focus:bg-white/[0.04]"
+            >
+              <option value="private">Private</option>
+              <option value="shared">Shared</option>
+              <option value="published">Published</option>
+            </select>
+          </label>
         </div>
       </div>
     </div>
@@ -1047,7 +1119,8 @@ export function StudioDashboardHome({
   onOpenCompareFixes,
   onOpenIssues,
   onRunSimulation,
-  onStartProject: _onStartProject,
+  onStartProject,
+  onOpenAdvancedWorkflows,
   onCreateScene,
   onImportFloorPlan,
   onImportScene,
@@ -1065,7 +1138,7 @@ export function StudioDashboardHome({
 }: StudioDashboardHomeProps) {
   const [hydrated, setHydrated] = useState(false);
   const [showAdvancedStarterActions, setShowAdvancedStarterActions] = useState(false);
-  void _onStartProject;
+  const launchAdvancedWorkflows = onOpenAdvancedWorkflows ?? onOpenStudio;
   const [previewMode, setPreviewMode] = useState<"2d" | "3d">("2d");
   const coverage = result?.totalCoveragePct ?? scene.simulation?.totalCoveragePct ?? null;
   const criticalZoneResults = result?.criticalZoneResults ?? scene.simulation?.criticalZoneResults ?? [];
@@ -1211,6 +1284,7 @@ export function StudioDashboardHome({
   const [sensorIngestHistory, setSensorIngestHistory] = useState<SensorIngestArchiveRecord[]>([]);
   const [cameraMetadataHistory, setCameraMetadataHistory] = useState<CameraMetadataArchiveRecord[]>([]);
   const [cameraLiveConnectionHistory, setCameraLiveConnectionHistory] = useState<CameraLiveConnectionArchiveRecord[]>([]);
+  const operationalEvidenceArchiveHistory = useStudioStore((s) => s.operationalEvidenceArchiveHistory);
   const browserProjects = useMemo(() => {
     const query = projectQuery.trim().toLowerCase();
     const filtered = savedProjects.filter((project) => {
@@ -1266,6 +1340,7 @@ export function StudioDashboardHome({
         workspaceMembershipArchiveHistory,
         workspaceIdentityConflictHistory,
         supportDeliveryHistory,
+        operationalEvidenceArchiveHistory,
         sensorIngestHistory,
         cameraMetadataHistory,
         cameraLiveConnectionHistory,
@@ -1276,6 +1351,7 @@ export function StudioDashboardHome({
       cameraLiveConnectionHistory,
       cameraMetadataHistory,
       governanceArchiveHistory,
+      operationalEvidenceArchiveHistory,
       result,
       scene,
       savedProjects,
@@ -1421,9 +1497,43 @@ export function StudioDashboardHome({
   const referenceDemoProjects = visibleProjects.filter((project) => project.scene.source === "demo");
   const headerAssumptions = scene.assumptions;
   const lastRun = result?.computedAt ?? scene.simulation?.computedAt ?? null;
+  const lastRunLabel = hydrated ? formatTime(lastRun) : "Loading...";
+  const lastRunDetail = hydrated ? "Computed simulation" : "Hydrating workspace state...";
   const visibleProjectCount = visibleProjects.length;
   const userWorkspaceCount = userWorkspaceProjects.length;
   const referenceDemoCount = referenceDemoProjects.length;
+  const launchStatusRows = [
+    {
+      label: "Status",
+      value: statusLabel,
+      detail: simulationRunning
+        ? "Live simulation is running."
+        : simulationDirty
+          ? "Scene changed since the last run."
+          : coverage == null
+            ? "No simulation has been computed yet."
+            : "Workspace is current.",
+      tone: simulationRunning ? "sky" : simulationDirty ? "amber" : "emerald",
+    },
+    {
+      label: "Coverage",
+      value: coverage != null ? `${Math.round(coverage)}%` : "Pending",
+      detail: coverage != null ? "Latest coverage result." : "Run a simulation to populate coverage.",
+      tone: coverage != null && coverage >= 80 ? "emerald" : coverage != null && coverage >= 60 ? "amber" : "sky",
+    },
+    {
+      label: "Visible workspaces",
+      value: String(visibleProjectCount),
+      detail: `${userWorkspaceCount} user workspaces · ${referenceDemoCount} reference baselines`,
+      tone: "violet",
+    },
+    {
+      label: "Last run",
+      value: lastRunLabel,
+      detail: lastRunDetail,
+      tone: "sky",
+    },
+  ] as const;
   const compactRecentProjects =
     visibleProjects.length > 0
       ? visibleProjects.slice(0, 4)
@@ -1432,6 +1542,9 @@ export function StudioDashboardHome({
         folder: "Current",
         tags: [],
         pinned: true,
+        workspaceOrganization: "Personal Workspace",
+        workspaceOwner: "You",
+        workspaceVisibility: "private",
         createdAt: scene.createdAt,
         updatedAt: scene.updatedAt,
         lastOpenedAt: null,
@@ -1463,14 +1576,14 @@ export function StudioDashboardHome({
               Audit CCTV coverage before blind spots become incidents.
             </div>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-[color:var(--st-muted)]">
-              Start from the job you need to do, then drop into Studio when you want map edits, camera views,
-              camera wall review, replay, compare, or the report. The seeded retail scene is a sample, not the identity.
+              Start with the security job you need to finish. Use the seeded reference baseline if you want a sample scene,
+              then move into Studio for map edits, camera views, camera wall review, replay, compare, and the report.
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <ActionButton
-                icon={<ShieldCheck className="h-4 w-4" />}
-                label="Start Security Audit"
-                description="Choose a job-first flow and open the launcher for audit, design, scan, import, AI draft, verify, or report."
+                icon={<Sparkles className="h-4 w-4" />}
+                label="Start a security audit"
+                description="Open the current workspace and run the core audit path first."
                 onClick={onStartProject}
                 variant="primary"
                 className="min-w-[260px] flex-1"
@@ -1482,20 +1595,11 @@ export function StudioDashboardHome({
                 onClick={onOpenStudio}
                 className="min-w-[260px] flex-1"
               />
-              {onOpenDemoScene ? (
-                <ActionButton
-                  icon={<Sparkles className="h-4 w-4" />}
-                  label="Open Seeded Retail Baseline"
-                  description="Open the reference baseline as a sample workflow, not the default product identity."
-                  onClick={onOpenDemoScene}
-                  className="min-w-[260px] flex-1"
-                />
-              ) : null}
               <ActionButton
-                icon={<ScanSearch className="h-4 w-4" />}
-                label="Scan Site"
-                description="Use the manual-assisted photo intake flow to compile an editable SecurityScene."
-                onClick={onScanSite}
+                icon={<Compass className="h-4 w-4" />}
+                label="Advanced Workflows"
+                description="Open optional flows for scan, import, floor plan, AI draft, and report."
+                onClick={launchAdvancedWorkflows}
                 className="min-w-[260px] flex-1"
               />
             </div>
@@ -1518,7 +1622,7 @@ export function StudioDashboardHome({
               </div>
             </div>
             <div className="mt-4 overflow-hidden rounded-[24px] border border-white/[0.05] bg-black/[0.15]">
-              <ScenePreview scene={scene} result={result ?? scene.simulation ?? null} hydrated={true} />
+              <ScenePreview scene={scene} result={result ?? scene.simulation ?? null} hydrated={hydrated} />
             </div>
             <div className="mt-4 grid gap-2">
               <div className="flex flex-wrap gap-2">
@@ -1536,7 +1640,7 @@ export function StudioDashboardHome({
                 </span>
               </div>
               <div className="rounded-2xl border border-[color:var(--st-border)] bg-white/[0.025] px-3 py-2 text-[11px] text-[color:var(--st-muted)]">
-                The seeded baseline is the reference scene. The product path starts with the job you need to finish.
+                The seeded baseline is available as a reference baseline. Your workspace continues from the current scene.
               </div>
             </div>
           </div>
@@ -1786,7 +1890,7 @@ export function StudioDashboardHome({
                   accent={redundancyFailCount > 0 ? "text-amber-300" : redundancyCount === 0 ? "text-sky-200" : "text-emerald-300"}
                   detail={redundancyDetail}
                 />
-                <MiniStat label="Last Run" value={formatTime(lastRun)} accent="text-sky-200" detail="Computed simulation" />
+                <MiniStat label="Last Run" value={lastRunLabel} accent="text-sky-200" detail={lastRunDetail} />
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
@@ -1794,7 +1898,7 @@ export function StudioDashboardHome({
                   <ActionButton
                     icon={<Sparkles className="h-4 w-4" />}
                     label="Open Seeded Retail Baseline"
-                    description="Start from the seeded retail baseline as a sample workflow."
+                    description="Start from the seeded retail scene as the reference workflow."
                     onClick={onOpenDemoScene}
                     className="min-w-[210px] flex-1"
                   />
@@ -1847,7 +1951,7 @@ export function StudioDashboardHome({
                   <div>
                     <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Workspace Memory Search</div>
                     <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
-                      Search the current scene, saved workspaces, evidence trail, and report snapshot from one query.
+                      Search the current scene, saved workspaces, evidence trail, report snapshot, and operational evidence archives from one query.
                     </div>
                   </div>
                   <div className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1 text-[10px] text-[color:var(--st-muted)]">
@@ -1874,6 +1978,7 @@ export function StudioDashboardHome({
                               timestamp: hit.timestamp,
                               query: formatWorkspaceMemoryFocusQuery(hit.timestamp, hit.branchLabel ?? null),
                               branchLabel: hit.branchLabel ?? null,
+                              eventId: hit.timelineEventId ?? null,
                               source: "launcher",
                             });
                             if (hit.kind === "report") {
@@ -1911,12 +2016,27 @@ export function StudioDashboardHome({
                                     Branch: {formatWorkspaceBranchLabel(hit.branchLabel)}
                                   </span>
                                 ) : null}
+                                {hit.timelineEventId ? (
+                                  <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] text-emerald-100">
+                                    Exact checkpoint
+                                  </span>
+                                ) : null}
                               </div>
                               <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
                                 {hit.summary}
                               </div>
                               <div className="mt-1 text-[10px] text-[color:var(--st-muted)]">
                                 {hit.details}
+                              </div>
+                              <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[9px] uppercase tracking-[0.14em] text-[color:var(--st-muted)]">
+                                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5">
+                                  Target: {hit.targetSummary}
+                                </span>
+                                {hit.routeTab ? (
+                                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5">
+                                    Route: {hit.routeTab}
+                                  </span>
+                                ) : null}
                               </div>
                             </div>
                             <ArrowRight className="h-4 w-4 flex-none text-[color:var(--st-accent)] transition-transform duration-200 group-hover:translate-x-1" />
@@ -1981,13 +2101,13 @@ export function StudioDashboardHome({
                     Quick Start
                   </div>
                   <div className="mt-2 rounded border border-sky-400/20 bg-sky-500/10 px-3 py-2 text-[11px] text-[color:var(--st-muted)]">
-                    Job-first entry points are the primary path. The seeded retail scene stays available as a reference sample.
+                    The audit flow is the primary path. The seeded retail scene stays available as the reference baseline.
                   </div>
                   <div className="mt-3 space-y-2">
                     <ActionButton
                       icon={<Sparkles className="h-4 w-4" />}
                       label="Open Seeded Retail Baseline"
-                      description="Canonical baseline sample. Open the seeded retail scene and compare against your own work."
+                      description="Open the seeded retail scene as the reference baseline for comparison."
                       onClick={onOpenDemoScene ?? onOpenCoverageWorkspace}
                         className="min-w-[280px] border-sky-300/35 bg-sky-500/12 shadow-[0_12px_42px_rgba(14,165,233,0.14)]"
                         variant="primary"
@@ -2041,7 +2161,7 @@ export function StudioDashboardHome({
                   <div>
                     <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Recent Workspaces</div>
                     <div className="mt-1 text-sm text-[color:var(--st-muted)]">
-                      Search, pin, and reopen your workspaces first. The demo remains available as a reference baseline below.
+                      Search, pin, and reopen your workspaces first. The seeded baseline remains available as a reference baseline below.
                     </div>
                   </div>
                   <div className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1.5 text-[11px] text-[color:var(--st-muted)]">
@@ -2266,6 +2386,15 @@ export function StudioDashboardHome({
                                 <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
                                   Folder: {project.folder}
                                 </span>
+                                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+                                  Org: {project.workspaceOrganization}
+                                </span>
+                                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+                                  Owner: {project.workspaceOwner}
+                                </span>
+                                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+                                  {project.workspaceVisibility}
+                                </span>
                                 {project.tags.slice(0, 3).map((tag) => (
                                   <span key={tag} className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
                                     #{tag}
@@ -2293,7 +2422,7 @@ export function StudioDashboardHome({
                     <div>
                     <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Reference Baseline</div>
                       <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
-                      The canonical retail scene is the default baseline for first-run analysis and replay comparisons.
+                      The canonical retail scene is available for first-run analysis and replay comparisons.
                         </div>
                       </div>
                       <div className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1 text-[10px] text-[color:var(--st-muted)]">
@@ -2327,7 +2456,7 @@ export function StudioDashboardHome({
                                       Reference
                                     </span>
                                   </div>
-                                  <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
+                                <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
                                     Baseline reference · Updated {formatTime(project.updatedAt)} · {sourceLabel(saved)}
                                   </div>
                                 </div>
@@ -2505,7 +2634,7 @@ export function StudioDashboardHome({
                 onClick={onOpenStudio}
                 className="mt-3 w-full rounded-2xl border border-sky-400/25 bg-sky-500/12 px-4 py-3 text-sm font-medium text-sky-100 transition-colors hover:border-sky-300/35 hover:bg-sky-500/16"
               >
-                Edit in Studio
+                Open Workspace
               </button>
             </div>
           </aside>

@@ -30,6 +30,9 @@ describe("BottomPanel", () => {
     expect(source).toContain("Download Support Bundle");
     expect(source).toContain("Download Evidence Bundle");
     expect(source).toContain("Publish Scene");
+    expect(source).toContain("Share Archive");
+    expect(source).toContain("Copy Archive Link");
+    expect(source).toContain("Open Archive Link");
     expect(source).toContain("Evidence Journal");
     expect(source).toContain("Append-only journal");
     expect(source).toContain("Runtime Health");

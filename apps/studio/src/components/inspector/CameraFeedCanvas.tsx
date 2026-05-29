@@ -226,12 +226,14 @@ function FeedArtifacts({
 function CameraFeedScene({
   camera,
   pathState,
-  selectedPath,
+  selectedPathWaypoints,
+  selectedPathPositions,
   overlayOptions,
 }: {
   camera: CameraNode;
   pathState: { currentIndex: number; segmentProgress: number } | null;
-  selectedPath: SecurityScene["paths"][number] | null;
+  selectedPathWaypoints: Array<{ position: [number, number]; detectionQuality: string }>;
+  selectedPathPositions: [number, number][];
   overlayOptions: FeedOverlayOptions;
 }) {
   return (
@@ -239,16 +241,11 @@ function CameraFeedScene({
       <CameraRigLive camera={camera} />
       <SceneFeedGeometry theme={undefined} showPrivacyZones={overlayOptions.zones} />
 
-      {selectedPath && pathState && overlayOptions.pathActor ? (
+      {selectedPathPositions.length > 0 && pathState && overlayOptions.pathActor ? (
         <>
-          <CoverageSegmentPath
-            waypoints={selectedPath.points.map((point) => ({
-              position: point.position,
-              detectionQuality: point.action ?? selectedPath.label,
-            }))}
-          />
+          <CoverageSegmentPath waypoints={selectedPathWaypoints} />
           <PathActor
-            waypoints={selectedPath.points.map((point) => point.position)}
+            waypoints={selectedPathPositions}
             currentIndex={pathState.currentIndex}
             progress={pathState.segmentProgress}
           />
@@ -305,7 +302,17 @@ export function CameraFeedCanvas({
 
   const isNight = scene.assumptions.timeOfDay === "night";
   const selectedPath = activePathId ? (scene.paths.find((path) => path.id === activePathId) ?? null) : null;
-  const pathPoints = selectedPath?.points.map((point) => point.position) ?? [];
+  const pathPoints = useMemo(
+    () => selectedPath?.points.map((point) => point.position) ?? [],
+    [selectedPath],
+  );
+  const pathWaypoints = useMemo(
+    () => selectedPath?.points.map((point) => ({
+      position: point.position,
+      detectionQuality: point.action ?? selectedPath.label,
+    })) ?? [],
+    [selectedPath],
+  );
   const pathState = selectedPath ? getReplaySegmentState(pathPoints, pathReplay.progress) : null;
   const targetZone = scene.criticalZones.find((zone) => zone.id === selectedNodeId) ?? null;
   const cameraResult = result?.cameraResults.find((entry) => entry.cameraId === camera.id) ?? null;
@@ -370,7 +377,13 @@ export function CameraFeedCanvas({
           shadows="percentage"
           gl={{ preserveDrawingBuffer: true }}
         >
-          <CameraFeedScene camera={camera} pathState={pathState} selectedPath={selectedPath} overlayOptions={overlayFlags} />
+          <CameraFeedScene
+            camera={camera}
+            pathState={pathState}
+            selectedPathWaypoints={pathWaypoints}
+            selectedPathPositions={pathPoints}
+            overlayOptions={overlayFlags}
+          />
         </Canvas>
       </div>
 

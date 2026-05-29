@@ -270,6 +270,7 @@ RoomPlan, manual-assisted mobile capture, and later sparse reconstruction all po
 
 ### Q-026: What is the canonical organization, account, and billing model?
 The app now has local shared-workspace routing and archive-backed membership state, but the product still lacks a canonical org/account boundary.
+Update: saved workspaces now also carry local organization, owner, and visibility metadata in the launcher and metadata editor, but this is still a launcher-level bridge rather than the canonical org/account model.
 **Questions to answer:**
 - Is the primary top-level unit an organization, a team, or a workspace?
 - How do plan, quota, and entitlements map onto workspaces and users?
@@ -279,13 +280,16 @@ The app now has local shared-workspace routing and archive-backed membership sta
 
 ### Q-027: How should search-by-time and search-by-branch navigation work?
 The launcher can already search current workspace, evidence, reports, and archive histories, but the user still needs a time-aware way to move through the ledger.
+Update: the timeline can now carry a canonical checkpoint share link with provenance node/edge focus plus branch/time query tokens, so the remaining question is the remote/cross-device contract rather than the basic in-app link format.
+Update: launcher search cards now show explicit target metadata for archive/report hits, so the remaining product question is how that same branch-aware routing contract should extend beyond the launcher shell.
+Update: the debug recovery panel now also exposes a browser-openable operational evidence archive handoff link, so the remaining question is the durable public cross-device archive contract rather than whether an archive can be reopened in the app at all.
 **Questions to answer:**
 - What does a branch-aware result card need to show to be trustworthy?
 - Should the default timeline search prioritize recent evidence, latest checkpoints, or branch heads?
 - How should shareable deep links identify a checkpoint, branch, or time window?
 - Should timeline navigation be inside Scene Intelligence, the launcher, or both?
 **Related threads:** 4.18 and 4.19 in `Docs/todos/FULL_VISION_GAP_INVENTORY.md`.
-**Update:** The evidence timeline now understands `branch:`, `after:`, `before:`, and `time:` query tokens, and launcher hits can seed a checkpoint timestamp, so the remaining question is the share-link contract and richer cross-view pivot behavior rather than basic time/branch filtering itself.
+**Update:** The evidence timeline now understands `branch:`, `after:`, `before:`, and `time:` query tokens, launcher hits can seed a checkpoint timestamp, Scene Intelligence deep links preserve exact checkpoint identity plus provenance node/edge focus, and compare/report share links can round-trip seeded snapshot pairs through the bootstrap, so the remaining question is richer cross-view pivot behavior for other surfaces rather than basic time/branch filtering or checkpoint restoration semantics itself.
 
 ### Q-028: What should the partner SDK / plugin surface expose?
 The platform now has multiple canonical archive and delivery seams, but there is no formal extension model yet.
@@ -295,8 +299,47 @@ The platform now has multiple canonical archive and delivery seams, but there is
 - Should plugins embed into the launcher, the report workflow, or an admin console?
 - What is the minimum stable extension surface for integrations without opening the core model to drift?
 **Related threads:** 4.16 and 4.21 in `Docs/todos/FULL_VISION_GAP_INVENTORY.md`.
+
+### Q-030: How should public handoff and cross-device distribution work?
+The app can already copy and open timeline links, and the debug panel can now open an archive handoff URL into merge preflight, but the product still lacks a public share-target contract for different devices and consumers.
+Update: the archive recovery controls now also offer a browser share-sheet action with copy/open fallbacks, so the remaining question is the durable public share policy and cross-device distribution model rather than whether the app can invoke a share target at all.
+**Questions to answer:**
+- Should the default public handoff use browser-native share targets when available, or should it stay copy/open only?
+- Which artifacts are safe to publish as links, files, or both?
+- How should the product distinguish local-only recovery archives from shareable recovery artifacts?
+- What is the minimal public handoff policy for reports, checkpoints, and recovery bundles?
+**Related threads:** 4.19, 4.21, and 4.22 in `Docs/todos/FULL_VISION_GAP_INVENTORY.md`.
+
+### Q-031: What is the canonical observability and crash-response model?
+The app already has local runtime health, support bundles, incident bundles, external log capture, and alert summaries, but it still lacks a system-level observability backbone.
+**Questions to answer:**
+- Which signals are canonical: logs, traces, metrics, alerts, or all of them?
+- Should the first external observability backend be OpenTelemetry-compatible, Sentry-like, or a custom local-first pipeline?
+- What is the minimum correlation contract between runtime incidents, support bundles, and scene/evidence state?
+- How much of the observability stack should stay local-first versus remote-backed?
+**Related threads:** 4.12 and 4.14 in `Docs/todos/FULL_VISION_GAP_INVENTORY.md`.
+
+### Q-032: Which compliance reporting modes should be first-class?
+The report exports already carry provenance and evidence summaries, but the product still lacks audience-specific compliance modes.
+**Questions to answer:**
+- Which audiences need dedicated report modes first: operator, auditor, insurer, installer, privacy reviewer, or regulator?
+- What redaction or visibility controls are required for each audience?
+- Should compliance exports preserve the same provenance link contract as the general report export?
+- How should standards references and evidence lineage be shown in each mode?
+**Related threads:** 4.9, 4.24, and 4.10 in `Docs/todos/FULL_VISION_GAP_INVENTORY.md`.
 ## Contextual 3D interaction UI
 
 - **Priority:** Medium
 - **Question:** Should SentinelTwin surface object-specific actions through a right-click context menu, a radial menu, or a compact floating action sheet in the 3D workspace?
 - **Needed to answer:** A quick interaction prototype or wireframe that compares discoverability, speed, and visual fit against the existing inspector and transform handles.
+
+### Q-029: How do we keep rendering architecture docs in lockstep with runtime stack reality?
+
+The current rendering architecture doc still references older stack details (for example `Next.js 15`, `Three r168+`, and `GSAP`) while runtime package truth has moved to `next@16.2.6`, `three@0.184.x`, and `framer-motion`-centric replay surfaces.
+
+**Questions to answer:**
+- What is the canonical source of truth for runtime rendering stack (package manifests, lockfile, or generated snapshot)?
+- Should we add a lightweight doc-health check that flags architecture docs when declared versions/libs diverge from runtime manifests?
+- Which owner is responsible for updating `Docs/architecture/07_RENDERING_PIPELINE.md` during rendering-stack changes?
+
+**Related evidence:** `Docs/decisions/R3F_DREI_FULL_AUDIT_2026-05-29.md`.

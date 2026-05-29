@@ -6,16 +6,18 @@ import { resolve } from "node:path";
 const dashboardHomePath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../launcher/StudioDashboardHome.tsx");
 
 describe("Studio dashboard launcher surface", () => {
-  test("surfaces the V0.1 command-center dashboard surface", () => {
+  test("surfaces the product-home and workspace dashboard surface", () => {
     const source = readFileSync(dashboardHomePath, "utf8");
 
+    expect(source).toContain("Product home");
+    expect(source).toContain("Advanced Workflows");
+    expect(source).toContain("Current workspace");
     expect(source).toContain("SentinelTwin Studio");
     expect(source).toContain("Security Audit Workspace");
     expect(source).toContain("Open Workspace");
     expect(source).toContain("Run Simulation");
-    expect(source).toContain("Import JSON");
-    expect(source).toContain("New Scene");
-    expect(source).toContain("Current Workspace Preview");
+    expect(source).toContain("Import Scene JSON");
+    expect(source).toContain("New Blank Scene");
     expect(source).toContain("Open Coverage Workspace");
     expect(source).toContain("Open Camera Wall");
     expect(source).toContain("Open Path Replay");
@@ -30,10 +32,7 @@ describe("Studio dashboard launcher surface", () => {
     expect(source).toContain("OPEN ISSUES");
     expect(source).toContain("SIMULATION ASSUMPTIONS");
     expect(source).toContain("See all issues & recommendations");
-    expect(source).toContain("Open Report");
-    expect(source).toContain("Edit in Studio");
-    expect(source).toContain("New Blank Scene");
-    expect(source).toContain("Import Scene JSON");
+    expect(source).toContain("Open Report Lite");
     expect(source).toContain("Scan a Site");
     expect(source).toContain("Guided Scan Assistant");
     expect(source).toContain("AI Layout Draft");
@@ -43,6 +42,11 @@ describe("Studio dashboard launcher surface", () => {
     expect(source).toContain("Recent Workspaces");
     expect(source).toContain("Project metadata");
     expect(source).toContain("All systems operational");
-    expect(source).toContain("Security Simulation Studio");
+    expect(source).toContain("Reference Baseline");
+    expect(source).toContain("Organization");
+    expect(source).toContain("Owner");
+    expect(source).toContain("Visibility");
+    expect(source).toContain("Target:");
+    expect(source).toContain("Route:");
   });
 });

@@ -33,6 +33,8 @@ export const GovernanceTrailSummarySchema = z.object({
   recentEvents: z.array(GovernanceTrailEventSchema),
 });
 
+export type GovernanceTrailSummary = z.infer<typeof GovernanceTrailSummarySchema>;
+
 export const GovernanceArchiveRequestSchema = z.object({
   source: z.string().min(1).default("debug-panel"),
   submittedAt: z.number().int().nonnegative().optional(),
@@ -77,6 +79,7 @@ export type GovernanceArchiveResponse = {
   sceneId: string;
   sceneName: string;
   summary: string;
+  governanceTrail?: GovernanceTrailSummary;
   archiveStatus: "server archive" | "local cache";
   historyId: string;
   deliveredCount: number;
@@ -144,6 +147,9 @@ export function loadGovernanceArchiveHistory(rootDir = resolveGovernanceArchiveS
         sceneId: candidate.sceneId,
         sceneName: candidate.sceneName,
         summary: candidate.summary,
+        governanceTrail: candidate.governanceTrail && typeof candidate.governanceTrail === "object"
+          ? candidate.governanceTrail as GovernanceTrailSummary
+          : undefined,
         archiveStatus: (candidate.archiveStatus === "server archive" ? "server archive" : "local cache") as "server archive" | "local cache",
         historyId: candidate.historyId,
         deliveredCount: candidate.deliveredCount,
@@ -244,6 +250,7 @@ export async function summarizeGovernanceArchive(request: GovernanceArchiveReque
     sceneId: request.sceneId,
     sceneName: request.sceneName,
     summary: `${attempts.length} governance target${attempts.length === 1 ? "" : "s"} processed from ${request.workspaceGovernanceSummary.sceneStatusLabel.toLowerCase()} trail for ${request.sceneName}.`,
+    governanceTrail: request.governanceTrail,
     archiveStatus,
     historyId,
     deliveredCount,

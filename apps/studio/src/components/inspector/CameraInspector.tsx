@@ -269,13 +269,13 @@ export function CameraInspector() {
 
   useEffect(() => {
     queueMicrotask(() => {
-      setLiveConnectionUrl(camera?.liveFeedUrl ?? "");
-      setLiveConnectionLabel(camera?.liveFeedLabel ?? "Primary live feed");
-      setLiveConnectionMode(camera?.liveConnectionMode ?? "onvif");
-      setLiveConnectionStatus(camera?.liveConnectionStatus ?? "disconnected");
-      setLiveConnectionNotes("");
-      setLiveConnectionStatusMessage(null);
-      setLiveConnectionError(null);
+      setLiveConnectionUrl((prev) => prev !== (camera?.liveFeedUrl ?? "") ? (camera?.liveFeedUrl ?? "") : prev);
+      setLiveConnectionLabel((prev) => prev !== (camera?.liveFeedLabel ?? "Primary live feed") ? (camera?.liveFeedLabel ?? "Primary live feed") : prev);
+      setLiveConnectionMode((prev) => prev !== (camera?.liveConnectionMode ?? "onvif") ? (camera?.liveConnectionMode ?? "onvif") : prev);
+      setLiveConnectionStatus((prev) => prev !== (camera?.liveConnectionStatus ?? "disconnected") ? (camera?.liveConnectionStatus ?? "disconnected") : prev);
+      setLiveConnectionNotes((prev) => prev !== "" ? "" : prev);
+      setLiveConnectionStatusMessage((prev) => prev !== null ? null : prev);
+      setLiveConnectionError((prev) => prev !== null ? null : prev);
     });
   }, [cameraId, camera?.liveFeedLabel, camera?.liveFeedUrl, camera?.liveConnectionMode, camera?.liveConnectionStatus, camera?.notes]);
 

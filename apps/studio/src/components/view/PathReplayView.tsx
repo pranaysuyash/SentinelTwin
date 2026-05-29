@@ -270,35 +270,63 @@ function formatSecondsShort(seconds: number) {
 }
 
 
+function ReplayCameraConeItem({
+  camera,
+}: {
+  camera: ReturnType<typeof useStudioStore.getState>["scene"]["cameras"][number];
+}) {
+  const {
+    range,
+    radius,
+    centerPos,
+    quaternion,
+    color,
+    coneEdgeSource,
+  } = useMemo(() => {
+    const direction = getYawPitchDirection(camera.yawDeg, camera.pitchDeg);
+    const forward = new THREE.Vector3(direction.x, direction.y, direction.z).normalize();
+    const nextRange = Math.min(camera.rangeM, 12);
+    const nextRadius = Math.tan((camera.fovHorizontalDeg / 2) * (Math.PI / 180)) * nextRange;
+    const nextCenterPos = new THREE.Vector3(...camera.position).add(forward.clone().multiplyScalar(nextRange / 2));
+    const nextQuaternion = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, -1, 0), forward);
+    const cameraColor = getCameraColorForId(camera.id);
+    const nextColor = camera.status === "on" ? cameraColor : "#64748b";
+    const nextConeEdgeSource = new THREE.ConeGeometry(nextRadius, nextRange, 24, 1, false);
+
+    return {
+      range: nextRange,
+      radius: nextRadius,
+      centerPos: nextCenterPos,
+      quaternion: nextQuaternion,
+      color: nextColor,
+      coneEdgeSource: nextConeEdgeSource,
+    };
+  }, [camera.fovHorizontalDeg, camera.id, camera.pitchDeg, camera.position, camera.rangeM, camera.status, camera.yawDeg]);
+
+  return (
+    <group>
+      <mesh position={centerPos} quaternion={quaternion}>
+        <coneGeometry args={[radius, range, 24, 1, false]} />
+        <meshBasicMaterial color={color} transparent opacity={0.18} side={THREE.DoubleSide} depthWrite={false} />
+      </mesh>
+      <lineSegments position={centerPos} quaternion={quaternion}>
+        <edgesGeometry args={[coneEdgeSource]} />
+        <lineBasicMaterial color={color} transparent opacity={0.6} />
+      </lineSegments>
+    </group>
+  );
+}
+
+
 
 function ReplayCameraCones() {
   const scene = useStudioStore((s) => s.scene);
 
   return (
     <group>
-      {scene.cameras.map((camera) => {
-        const direction = getYawPitchDirection(camera.yawDeg, camera.pitchDeg);
-        const forward = new THREE.Vector3(direction.x, direction.y, direction.z).normalize();
-        const range = Math.min(camera.rangeM, 12);
-        const radius = Math.tan((camera.fovHorizontalDeg / 2) * (Math.PI / 180)) * range;
-        const centerPos = new THREE.Vector3(...camera.position).add(forward.clone().multiplyScalar(range / 2));
-        const quaternion = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, -1, 0), forward);
-        const cameraColor = getCameraColorForId(camera.id);
-        const color = camera.status === "on" ? cameraColor : "#64748b";
-
-        return (
-          <group key={camera.id}>
-            <mesh position={centerPos} quaternion={quaternion}>
-              <coneGeometry args={[radius, range, 24, 1, false]} />
-              <meshBasicMaterial color={color} transparent opacity={0.18} side={THREE.DoubleSide} depthWrite={false} />
-            </mesh>
-            <lineSegments position={centerPos} quaternion={quaternion}>
-              <edgesGeometry args={[new THREE.ConeGeometry(radius, range, 24, 1, false)]} />
-              <lineBasicMaterial color={color} transparent opacity={0.6} />
-            </lineSegments>
-          </group>
-        );
-      })}
+      {scene.cameras.map((camera) => (
+        <ReplayCameraConeItem key={camera.id} camera={camera} />
+      ))}
     </group>
   );
 }
@@ -400,7 +428,7 @@ function PlaybackControls({
       initial={{ y: 40, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ type: "spring", stiffness: 260, damping: 22, delay: 0.15 }}
-      className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/90 via-black/70 to-transparent px-4 pb-3 pt-10"
+      className="absolute bottom-0 left-0 right-0 z-10 bg-linear-to-t from-black/90 via-black/70 to-transparent px-4 pb-3 pt-10"
     >
       {/* Progress bar with coverage quality bands */}
       <div className="group relative mb-1.5">
@@ -748,7 +776,7 @@ function InfoOverlay({
               <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: QUALITY_COLOR[key] }} />
               <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-[7px] uppercase tracking-[0.05em] text-[#5b667c]">{key}</span>
+                  <span className="text-[7px] uppercase tracking-wider text-[#5b667c]">{key}</span>
                   <span className="text-[7px] font-mono text-[#8b96ab]">
                     {(qualityBands[key] ?? 0).toFixed(0)}s
                   </span>
@@ -1061,7 +1089,7 @@ export function PathReplayView() {
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <select
-              className="min-w-[220px] rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5 text-[11px] font-medium text-[#d7deed] outline-none transition-colors hover:border-[#32384d]"
+              className="min-w-55 rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5 text-[11px] font-medium text-[#d7deed] outline-none transition-colors hover:border-[#32384d]"
               value={activePathId ?? ""}
               onChange={(event) => handlePathChange(event.target.value || null)}
               aria-label="Select active replay path"
@@ -1179,7 +1207,7 @@ export function PathReplayView() {
       />
 
       {/* Visibility Timeline — shown below the canvas */}
-      <div className="absolute bottom-[100px] left-3 right-3 z-10">
+      <div className="absolute bottom-25 left-3 right-3 z-10">
         <VisibilityTimeline
           pathResult={activePathResult}
           currentTime={currentTime}

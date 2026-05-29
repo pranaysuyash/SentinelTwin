@@ -5,6 +5,7 @@ import type { CameraMetadataArchiveRecord } from "@/lib/camera-metadata-ingest-h
 import type { GovernanceArchiveRecord } from "@/lib/governance-archive";
 import type { SensorIngestArchiveRecord } from "@/lib/sensor-ingest-history";
 import type { SupportDeliveryArchiveRecord } from "@/lib/support-delivery";
+import type { OperationalEvidenceArchiveHistoryRecord } from "@/lib/operational-evidence-archive-history";
 import type { WorkspaceIdentityConflictArchiveRecord } from "@/lib/workspace-identity-conflict-types";
 import type { WorkspaceMembershipArchiveRecord } from "@/lib/workspace-membership-types";
 
@@ -20,17 +21,20 @@ export type WorkspaceSearchHit = {
   sceneName: string;
   sourceLabel: string;
   actionLabel: string;
+  targetSummary: string;
   branchLabel?: string | null;
+  timelineEventId?: string | null;
   routeTab?: BottomTab;
   score: number;
   timestamp: number;
 };
 
 type ArchiveSearchInput = {
-  governanceArchiveHistory?: GovernanceArchiveRecord[];
+  governanceArchiveHistory?: GovernanceArchiveSearchRecord[];
   workspaceMembershipArchiveHistory?: WorkspaceMembershipArchiveRecord[];
   workspaceIdentityConflictHistory?: WorkspaceIdentityConflictArchiveRecord[];
   supportDeliveryHistory?: SupportDeliveryArchiveRecord[];
+  operationalEvidenceArchiveHistory?: OperationalEvidenceArchiveHistoryRecord[];
   sensorIngestHistory?: SensorIngestArchiveRecord[];
   cameraMetadataHistory?: CameraMetadataArchiveRecord[];
   cameraLiveConnectionHistory?: CameraLiveConnectionArchiveRecord[];
@@ -42,6 +46,23 @@ export type WorkspaceSearchInput = {
   savedProjects: SavedProjectRecord[];
   archives?: ArchiveSearchInput;
   maxResults?: number;
+};
+
+type GovernanceTrailSummarySearchRecord = {
+  latestEvent?: {
+    id?: string;
+    branchLabel?: string | null;
+    lifecycleStage?: string | null;
+  } | null;
+  recentEvents?: Array<{
+    id?: string;
+    branchLabel?: string | null;
+    lifecycleStage?: string | null;
+  }>;
+};
+
+type GovernanceArchiveSearchRecord = GovernanceArchiveRecord & {
+  governanceTrail?: GovernanceTrailSummarySearchRecord | null;
 };
 
 function normalize(text: string) {
@@ -155,7 +176,9 @@ function addArchiveHit(
     sceneName: string;
     sourceLabel: string;
     actionLabel: string;
+    targetSummary: string;
     branchLabel?: string | null;
+    timelineEventId?: string | null;
     routeTab?: BottomTab;
     score: number;
     timestamp: number;
@@ -165,6 +188,24 @@ function addArchiveHit(
     ...input,
     kind: "archive",
   });
+}
+
+function targetSummaryForHit(input: {
+  kind: WorkspaceSearchHitKind;
+  branchLabel?: string | null;
+  timelineEventId?: string | null;
+  routeTab?: BottomTab;
+}) {
+  if (input.kind === "workspace") return "Open workspace";
+  if (input.kind === "report") return "Open report snapshot";
+  if (input.kind === "evidence") return input.timelineEventId ? "Timeline checkpoint" : "Timeline evidence";
+  if (input.routeTab === "timeline" && input.branchLabel && input.timelineEventId) return "Timeline branch + exact checkpoint";
+  if (input.routeTab === "timeline" && input.branchLabel) return "Timeline branch";
+  if (input.routeTab === "timeline") return "Timeline history";
+  if (input.routeTab === "governance") return "Governance review";
+  if (input.routeTab === "debug") return "Recovery / debug";
+  if (input.routeTab === "sensors") return "Sensor observability";
+  return "Open workspace";
 }
 
 export function searchWorkspaceMemory(query: string, input: WorkspaceSearchInput): WorkspaceSearchHit[] {
@@ -189,20 +230,22 @@ export function searchWorkspaceMemory(query: string, input: WorkspaceSearchInput
     const score = scoreText(haystack, normalizedQuery);
     if (score <= 0) return;
 
-    hits.push({
-      id: `workspace:${scene.id}`,
-      kind: "workspace",
-      title: scene.name,
-      summary: `${sourceLabel} workspace · ${scene.cameras.length} cameras · ${scene.criticalZones.length} zones`,
-      details: `${scene.dimensions.width}m × ${scene.dimensions.depth}m · ${scene.obstructions.length} obstructions · ${scene.changeLog.length} events`,
-      sceneId: scene.id,
-      sceneName: scene.name,
-      sourceLabel,
-      actionLabel: "Open workspace",
-      branchLabel: null,
-      score,
-      timestamp,
-    });
+      hits.push({
+        id: `workspace:${scene.id}`,
+        kind: "workspace",
+        title: scene.name,
+        summary: `${sourceLabel} workspace · ${scene.cameras.length} cameras · ${scene.criticalZones.length} zones`,
+        details: `${scene.dimensions.width}m × ${scene.dimensions.depth}m · ${scene.obstructions.length} obstructions · ${scene.changeLog.length} events`,
+        sceneId: scene.id,
+        sceneName: scene.name,
+        sourceLabel,
+        actionLabel: "Open workspace",
+        targetSummary: targetSummaryForHit({ kind: "workspace" }),
+        branchLabel: null,
+        timelineEventId: null,
+        score,
+        timestamp,
+      });
   };
 
   searchScene(input.currentScene, sceneSourceLabel(input.currentScene), input.currentScene.updatedAt ?? input.currentScene.createdAt ?? Date.now());
@@ -213,20 +256,22 @@ export function searchWorkspaceMemory(query: string, input: WorkspaceSearchInput
   for (const entry of input.currentScene.changeLog.slice(-24)) {
     const score = scoreText(entry, normalizedQuery);
     if (score <= 0) continue;
-    hits.push({
-      id: `evidence:${entry}`,
-      kind: "evidence",
-      title: entry,
-      summary: "Scene change evidence",
-      details: "Matches the current operational evidence trail.",
-      sceneId: input.currentScene.id,
-      sceneName: input.currentScene.name,
-      sourceLabel: "Operational evidence",
-      actionLabel: "Open timeline",
-      branchLabel: null,
-      score: score + 1,
-      timestamp: input.currentScene.updatedAt ?? input.currentScene.createdAt ?? Date.now(),
-    });
+      hits.push({
+        id: `evidence:${entry}`,
+        kind: "evidence",
+        title: entry,
+        summary: "Scene change evidence",
+        details: "Matches the current operational evidence trail.",
+        sceneId: input.currentScene.id,
+        sceneName: input.currentScene.name,
+        sourceLabel: "Operational evidence",
+        actionLabel: "Open timeline",
+        targetSummary: targetSummaryForHit({ kind: "evidence", timelineEventId: null }),
+        branchLabel: null,
+        timelineEventId: null,
+        score: score + 1,
+        timestamp: input.currentScene.updatedAt ?? input.currentScene.createdAt ?? Date.now(),
+      });
   }
 
   if (input.currentResult) {
@@ -261,6 +306,7 @@ export function searchWorkspaceMemory(query: string, input: WorkspaceSearchInput
         sceneName: input.currentScene.name,
         sourceLabel: "Simulation report",
         actionLabel: "Open report",
+        targetSummary: targetSummaryForHit({ kind: "report" }),
         branchLabel: null,
         score: score + 1,
         timestamp: input.currentScene.updatedAt ?? input.currentScene.createdAt ?? Date.now(),
@@ -291,7 +337,14 @@ export function searchWorkspaceMemory(query: string, input: WorkspaceSearchInput
           sceneName: record.sceneName,
           sourceLabel: "Governance archive",
           actionLabel: branchLabel ? "Jump to branch" : "Open governance",
+          targetSummary: targetSummaryForHit({
+            kind: "archive",
+            branchLabel,
+            timelineEventId: record.governanceTrail?.latestEvent?.id ?? null,
+            routeTab: branchLabel ? "timeline" : "governance",
+          }),
           branchLabel,
+          timelineEventId: record.governanceTrail?.latestEvent?.id ?? null,
           routeTab: branchLabel ? "timeline" : "governance",
           score: score + 1,
           timestamp: archiveTimestamp(record),
@@ -323,7 +376,13 @@ export function searchWorkspaceMemory(query: string, input: WorkspaceSearchInput
           sceneName: record.sceneName,
           sourceLabel: "Workspace membership archive",
           actionLabel: "Jump to branch",
+          targetSummary: targetSummaryForHit({
+            kind: "archive",
+            branchLabel,
+            routeTab: "timeline",
+          }),
           branchLabel,
+          timelineEventId: null,
           routeTab: "timeline",
           score: score + 1,
           timestamp: archiveTimestamp(record),
@@ -356,7 +415,13 @@ export function searchWorkspaceMemory(query: string, input: WorkspaceSearchInput
           sceneName: record.sceneName,
           sourceLabel: "Identity conflict archive",
           actionLabel: "Jump to branch",
+          targetSummary: targetSummaryForHit({
+            kind: "archive",
+            branchLabel,
+            routeTab: "timeline",
+          }),
           branchLabel,
+          timelineEventId: null,
           routeTab: "timeline",
           score: score + 1,
           timestamp: archiveTimestamp(record),
@@ -384,10 +449,54 @@ export function searchWorkspaceMemory(query: string, input: WorkspaceSearchInput
           sceneName: record.sceneName ?? input.currentScene.name,
           sourceLabel: "Support archive",
           actionLabel: "Open debug",
+          targetSummary: targetSummaryForHit({ kind: "archive", routeTab: "debug" }),
           branchLabel: null,
+          timelineEventId: null,
           routeTab: "debug",
           score: score + 1,
           timestamp: archiveTimestamp(record),
+        });
+      }
+    }
+
+    for (const record of archives.operationalEvidenceArchiveHistory ?? []) {
+      const archive = record.archive;
+      const latestEvent = archive.operationalEvidenceEvents.at(-1) ?? null;
+      const branchLabel = latestEvent?.branchLabel ?? latestEvent?.lifecycleStage ?? null;
+      const haystack = [
+        archive.scene.name,
+        archive.scene.id,
+        archive.scene.source,
+        record.historyId,
+        latestEvent?.title,
+        latestEvent?.details,
+        latestEvent?.kind,
+        latestEvent?.branchLabel,
+        latestEvent?.lifecycleStage,
+        ...(archive.notes ?? []),
+      ].filter(Boolean).join(" ");
+      const score = scoreText(haystack, normalizedQuery);
+      if (score > 0) {
+        addArchiveHit(hits, {
+          id: `archive:operational:${record.historyId}`,
+          title: archive.scene.name,
+          summary: `${record.restoreBranch} · ${archive.operationalEvidenceEvents.length} evidence events`,
+          details: latestEvent ? latestEvent.details : "Operational evidence archive restored from a recovered scene snapshot.",
+          sceneId: archive.scene.id,
+          sceneName: archive.scene.name,
+          sourceLabel: "Operational evidence archive",
+          actionLabel: "Jump to checkpoint",
+          targetSummary: targetSummaryForHit({
+            kind: "archive",
+            branchLabel,
+            timelineEventId: latestEvent?.id ?? null,
+            routeTab: "timeline",
+          }),
+          branchLabel,
+          timelineEventId: latestEvent?.id ?? null,
+          routeTab: "timeline",
+          score: score + 1,
+          timestamp: record.storedAt,
         });
       }
     }
@@ -413,7 +522,9 @@ export function searchWorkspaceMemory(query: string, input: WorkspaceSearchInput
           sceneName: record.sceneName ?? input.currentScene.name,
           sourceLabel: "Sensor archive",
           actionLabel: "Open sensors",
+          targetSummary: targetSummaryForHit({ kind: "archive", routeTab: "sensors" }),
           branchLabel: null,
+          timelineEventId: null,
           routeTab: "sensors",
           score: score + 1,
           timestamp: archiveTimestamp(record),
@@ -442,7 +553,9 @@ export function searchWorkspaceMemory(query: string, input: WorkspaceSearchInput
           sceneName: record.sceneName ?? input.currentScene.name,
           sourceLabel: "Camera metadata archive",
           actionLabel: "Open debug",
+          targetSummary: targetSummaryForHit({ kind: "archive", routeTab: "debug" }),
           branchLabel: null,
+          timelineEventId: null,
           routeTab: "debug",
           score: score + 1,
           timestamp: archiveTimestamp(record),
@@ -476,7 +589,9 @@ export function searchWorkspaceMemory(query: string, input: WorkspaceSearchInput
           sceneName: record.sceneName ?? input.currentScene.name,
           sourceLabel: "Camera live archive",
           actionLabel: "Open debug",
+          targetSummary: targetSummaryForHit({ kind: "archive", routeTab: "debug" }),
           branchLabel: null,
+          timelineEventId: null,
           routeTab: "debug",
           score: score + 1,
           timestamp: archiveTimestamp(record),

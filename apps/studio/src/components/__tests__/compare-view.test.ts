@@ -9,6 +9,7 @@ describe("CompareView", () => {
     const source = readFileSync(compareViewPath, "utf8");
 
     expect(source).toContain("Export JSON");
+    expect(source).toContain("Copy compare link");
     expect(source).toContain("Export MD");
     expect(source).toContain("Export HTML");
     expect(source).toContain("Evidence Bundle");

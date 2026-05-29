@@ -1,9 +1,10 @@
 "use client";
 
 import { Copy, Database, FileText, Globe, Loader2, Printer, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { SecurityReport } from "@/agents/ReportAgent";
+import { buildCompareShareLink } from "@/lib/compare-share-link";
 import { useAiCommand } from "@/hooks/use-ai-command";
 import { buildSecurityOutcomeModel } from "@/lib/security-outcome/security-outcome-model";
 import { exportTextAsPdf } from "@/lib/pdf-export";
@@ -17,7 +18,6 @@ import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { useStudioStore } from "@/store/studio-store";
 import { buildReportSummaryLines } from "@/lib/report-summary";
 import { truthLabelDetail } from "@/lib/truth-labels";
-import { useMemo } from "react";
 
 export function ReportLiteTab() {
   const result = useStudioStore((s) => s.simulationResult);
@@ -31,7 +31,7 @@ export function ReportLiteTab() {
   const { runReportGeneration } = useAiCommand();
   const [aiReport, setAiReport] = useState<SecurityReport | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [reportMode, setReportMode] = useState<"single" | "compare">("single");
+  const [reportMode, setReportMode] = useState<"single" | "compare">(compareReportSelection ? "compare" : "single");
   const [snapshotAId, setSnapshotAId] = useState<string | null>(null);
   const [snapshotBId, setSnapshotBId] = useState<string | null>(null);
   const activePath = scene.paths.find((path) => path.id === activePathId) ?? null;
@@ -75,7 +75,27 @@ export function ReportLiteTab() {
     ? (hasCompareSimulation ? compareMarkdown : "Select two simulated snapshots to preview compare markdown.")
     : singleSceneMarkdown;
 
+  useEffect(() => {
+    if (compareReportSelection) {
+      setReportMode("compare");
+    }
+  }, [compareReportSelection]);
+
   const copy = () => navigator.clipboard.writeText(currentReportMarkdown);
+  const copyCompareLink = async () => {
+    if (reportMode !== "compare" || !snapshotA || !snapshotB) return;
+    const link = buildCompareShareLink(
+      window.location.origin + window.location.pathname,
+      window.location.search,
+      {
+        compareSnapshotAId: snapshotA.id,
+        compareSnapshotBId: snapshotB.id,
+        compareMode: "report",
+      },
+      window.location.hash,
+    );
+    await navigator.clipboard.writeText(link);
+  };
   const visuals = compareVisualEvidence &&
     compareVisualEvidence.snapshotAId === (snapshotA?.id ?? "") &&
     compareVisualEvidence.snapshotBId === (snapshotB?.id ?? "") &&
@@ -312,6 +332,15 @@ export function ReportLiteTab() {
               className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
             >
               <Copy className="h-3 w-3" /> Copy
+            </button>
+            <button
+              onClick={() => {
+                void copyCompareLink();
+              }}
+              disabled={reportMode !== "compare" || !snapshotA || !snapshotB}
+              className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white disabled:opacity-40"
+            >
+              <Copy className="h-3 w-3" /> Copy compare link
             </button>
           </div>
         </div>

@@ -1,6 +1,6 @@
 # Current Implementation State — Camera Studio
 
-**Updated:** 2026-05-29 (session 32: shared-workspace access routing)
+**Updated:** 2026-05-29 (session 33: org-aware workspace catalog metadata)
 **Source:** Direct code audit of apps/studio/src/
 **Purpose:** Accurate baseline of what is actually built, tested, and rendering.
 Use this instead of the earlier CAMERASTUDIO_GAP_ANALYSIS.md which was written
@@ -29,8 +29,12 @@ For the full-vision gap inventory and next-slice sequencing, see
 
 - The launcher now exposes a workspace memory search surface that can query the current scene, saved workspaces, evidence trail, report snapshot, and archive histories from one query, so the product begins to behave like a retrieval workspace instead of only a workspace list ✅
 - Workspace search hits now seed a timeline focus target and open the checkpoint view near the selected timestamp, with branch-bearing archive hits jumping straight into the timeline and carrying `branch:`, `after:`, `before:`, and `time:` query tokens for direct branch/time jumps ✅
-- Scene Intelligence can now copy a checkpoint deep link that preserves the selected checkpoint timestamp plus branch/time query tokens for clipboard handoff ✅
+- Scene Intelligence now uses a canonical share-link helper so checkpoint links can be copied or opened with the same provenance node/edge plus timeline branch/time state, and the page bootstrap restores that link state back into the timeline view ✅
+- The debug recovery panel now exposes a browser-openable operational evidence archive handoff link, so an exported archive can rehydrate the merge-preflight flow directly from a URL instead of only from a local file picker ✅
+- The debug recovery panel now also offers a browser share-sheet archive handoff action when the device/browser supports the Web Share API, with copy/open fallbacks so the recovery flow remains usable everywhere ✅
+- Launcher workspace-memory results now expose explicit destination metadata (`Target`, `Route`) so archive and report hits read like concrete navigation actions instead of opaque snippets ✅
 - The launcher’s start-project cards now show explicit maturity labels (`Complete`, `Available`, `Preview`, `Planned`) so the visible entry flows stay honest about what is actually ready versus still aspirational ✅
+- Saved workspaces now carry local `workspaceOrganization`, `workspaceOwner`, and `workspaceVisibility` metadata, and the launcher editor/browser surfaces those fields so the workspace catalog reads like an org-aware boundary instead of a flat local list ✅
 
 ## Guided scan assistant (2026-05-29)
 
@@ -203,6 +207,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - The debug/support bundle now carries both the sensor ingest archive and the camera live connection archive, including the live session snapshot fields, transport-session metadata, and refresh history, while the inspector also shows the active lease registry, expiry, and transport handle, so the operator handoff package keeps the live metadata story together with the rest of the evidence trail ✅
 - Scene Intelligence now has an explicit temporal replay scrubber with point-in-time reconstruction and restore actions, so the operational evidence trail can be scrubbed and previewed instead of only listed as recent events ✅
 - Scene Intelligence now also surfaces a temporal operational twin summary with scene-event counts, reconstructable checkpoints, published checkpoints, branch heads, checkpoint age, published age, and current-vs-checkpoint / current-vs-published deltas so the operator can answer “what did we know, and when?” without leaving the evidence surface ✅
+- The latest published checkpoint now also has an explicit compare-and-restore surface in Scene Intelligence, so the published branch can be promoted back into the active compare workflow instead of staying a summary-only card ✅
 - The operational evidence layer now also has a canonical event-centered timeline builder plus a state-at-time-T resolver, so the temporal story is backed by a reusable temporal object model instead of only UI-side sorting and checkpoint lookup, and published checkpoints stay explicit instead of collapsing into generic snapshots ✅
 - The canonical scene graph now carries node-level evidence history metadata for selected entities, so the graph node inspector can show evidence count and latest change directly on the selected node ✅
 - Scene Intelligence now also exposes a real node-specific evidence trail for the selected scene/entity node, with recent ledger events and preview/restore actions instead of only counter-style history metadata ✅
@@ -610,6 +615,7 @@ The reference-image feature set is now fully built. The remaining work is now na
 1. Novel algorithms: Coverage Fragility Field, K-Robustness, Placement Oracle, Temporal Anomaly Detection.
 2. V0.2 feature expansion and any later model-integration work.
 3. Future pixel-level polish only if a new reference introduces a new mismatch.
+4. [ ] End-to-end post-processing pipeline for camera surfaces (Camera Feed + Camera View + Camera Wall + Replay) with deterministic visual policy, performance budgets, and verification rules — planned as a full rendering pipeline task (not a feature-flag task).
 
 ### Novel algorithms bundle (2026-05-27)
 - `coverage-fragility.ts`, `k-robustness.ts`, `placement-oracle.ts`, `occlusion-blame.ts`, and `temporal-anomaly.ts` are now wired into `simulate-studio.ts` and surface in the live `NOVEL ALGORITHMS` bottom-panel tab ✅
@@ -710,3 +716,9 @@ The following issues were fixed to reach 0 typed errors (only pre-existing TS700
 - Camera metadata live ingest now accepts XML feeds in addition to JSON and NDJSON, which lets the Debug panel import ONVIF-style metadata streams and map them to scene cameras without forcing a JSON wrapper first.
 - Live camera connection probes now also accept XML payloads without first reporting false JSON parse errors, so auth-challenge and transport metadata survive the probe path cleanly.
 - Operational evidence imports now validate through a canonical runtime schema, including nested scene snapshots, so malformed ledger records are rejected before they can pollute the recovery/archive timeline.
+- Scene Intelligence deep links now preserve exact checkpoint identity plus provenance node/edge focus, so copied links can reopen the same ledger selection rather than only a nearby branch timestamp.
+- Launcher memory hits now visibly mark exact checkpoint routing when a hit carries a resolved timeline event id, so precise timeline jumps are legible in the launcher rather than hidden in the click handler.
+- Scene Intelligence can now pivot a selected checkpoint into seeded Before/After or Report compare selections, so the evidence surface hands users directly into the next analysis view instead of stopping at reconstruction.
+- Compare/report share links now round-trip those seeded snapshot pairs through the studio bootstrap, so a copied compare link can reopen the comparison state instead of only the timeline anchor.
+- Before/After, Report Lite, and Compare View now expose a copyable compare-link action directly in the comparison surface, so the shareable snapshot pair is visible at the point of use instead of only in Scene Intelligence.
+- The launcher now also persists a short recent-history of exported/restored operational evidence archives and can search those archives as timeline checkpoints when a latest event id exists, so recovered archives are retrievable through the same workspace memory surface as governance and report hits.

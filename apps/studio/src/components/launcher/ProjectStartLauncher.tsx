@@ -165,8 +165,8 @@ export function ProjectStartLauncher({
     {
       icon: <Sparkles className="h-3.5 w-3.5" />,
       badge: "Reference",
-      title: "Open sample retail demo",
-      description: "Use the seeded retail baseline as a reference sample, not the default identity.",
+      title: "Open seeded retail baseline",
+      description: "The seeded baseline is the reference baseline.",
       tone: "slate",
       status: "Complete",
       onClick: onOpenDemoScene,
@@ -180,13 +180,13 @@ export function ProjectStartLauncher({
           <div className="flex items-start justify-between gap-4 border-b border-[color:var(--st-border)] px-5 py-4">
             <div className="min-w-0">
               <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Project launcher</div>
-              <h2 className="mt-1 text-xl font-semibold tracking-tight text-white">Start a security audit</h2>
+              <h2 className="mt-1 text-xl font-semibold tracking-tight text-white">Job-first starting path</h2>
               <p className="mt-1 text-sm text-[color:var(--st-muted)]">
-                Job-first entry points are primary. The seeded retail scene is available as a reference sample,
-                and advanced workflows are still clearly labeled.
+                The audit, design, and scan jobs are the primary entry points. The seeded retail scene is available as
+                a reference baseline, while the other flows are optional and clearly labeled.
               </p>
               <p className="mt-1 text-xs text-[color:var(--st-muted)]">
-                Working now: <span className="font-semibold">audit</span>, <span className="font-semibold">design</span>, <span className="font-semibold">scan</span>. Optional: <span className="font-semibold">import</span>, <span className="font-semibold">AI draft</span>, <span className="font-semibold">verify</span>, <span className="font-semibold">report</span>.
+                Primary: <span className="font-semibold">audit</span>, <span className="font-semibold">design</span>, <span className="font-semibold">scan</span>. Optional: <span className="font-semibold">import</span>, <span className="font-semibold">AI draft</span>, <span className="font-semibold">verify</span>, <span className="font-semibold">report</span>.
               </p>
             </div>
             <button
@@ -235,8 +235,8 @@ export function ProjectStartLauncher({
               <div className="flex items-start gap-2 text-[11px] text-[color:var(--st-muted)]">
                 <TriangleAlert className="mt-0.5 h-3.5 w-3.5 flex-none text-amber-300" />
                 <span>
-                The seeded baseline is a reference sample. The product path starts with the job you want to finish.
-              </span>
+                The seeded baseline remains available as a reference. The product path starts with the security job and then optional workflows.
+                </span>
               </div>
             <div className="flex flex-wrap items-center gap-2">
               <button

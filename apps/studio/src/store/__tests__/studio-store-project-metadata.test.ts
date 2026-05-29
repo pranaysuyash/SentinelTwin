@@ -59,6 +59,9 @@ describe("studio store project metadata", () => {
       folder: "Retail",
       tags: ["client-alpha", "retail", "retail"],
       pinned: true,
+      workspaceOrganization: "North Region Security",
+      workspaceOwner: "Pranay",
+      workspaceVisibility: "shared",
       lastOpenedAt: 1234567890,
     });
     refreshSavedScenesList();
@@ -71,6 +74,9 @@ describe("studio store project metadata", () => {
     expect(saved?.folder).toBe("Retail");
     expect(saved?.tags).toEqual(["client-alpha", "retail"]);
     expect(saved?.pinned).toBe(true);
+    expect(saved?.workspaceOrganization).toBe("North Region Security");
+    expect(saved?.workspaceOwner).toBe("Pranay");
+    expect(saved?.workspaceVisibility).toBe("shared");
     expect(saved?.lastOpenedAt).toBe(1234567890);
     expect(storage.getItem("sentineltwin_saved_projects_v2")).toContain("\"folder\":\"Retail\"");
   });

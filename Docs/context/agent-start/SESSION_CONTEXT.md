@@ -1,6 +1,6 @@
 # Session Context
 
-- Generated: 2026-05-29T16:25:38Z
+- Generated: 2026-05-29T18:32:55Z
 - Project: `SentinelTwin`
 - Provider: `local`
 - Model: `BAAI/bge-m3`
@@ -16,30 +16,7 @@
 
 ## Project-Focused Retrieval
 
-### Architecture Decisions
-- Collection: `projects_proj_sentineltwin`
-- Query: `architecture decisions for SentinelTwin`
-_Search timed out. Retry when the retrieval store is less busy._
-
-### Project Management Workflow
-- Collection: `projects_proj_sentineltwin`
-- Query: `project management workflow for SentinelTwin`
-_Search timed out. Retry when the retrieval store is less busy._
-
-### Known Issues and Worklogs
-- Collection: `projects_proj_sentineltwin`
-- Query: `known issues and worklog for SentinelTwin`
-_Search timed out. Retry when the retrieval store is less busy._
-
-### Prompts and Guidelines
-- Collection: `projects_proj_sentineltwin`
-- Query: `prompts and guidelines for SentinelTwin`
-_Search timed out. Retry when the retrieval store is less busy._
-
-### System Learning Graph
-- Collection: `projects_proj_sentineltwin`
-- Query: `knowledge graph memory learning feedback loops autoresearch semantic taste graph for SentinelTwin`
-_Search timed out. Retry when the retrieval store is less busy._
+> NOTE: Project collection check timed out; using shared workspace context for this run.
 
 ## Shared Cross-Project Retrieval
 
@@ -51,17 +28,17 @@ _Collection check timed out. Retry shortly._
 ### Process Templates
 - Collection: `projects_workspace_shared`
 - Query: `project management templates and workflows`
-_Search timed out. Retry when the retrieval store is less busy._
+_Collection check timed out. Retry shortly._
 
 ### Common Failure Modes
 - Collection: `projects_workspace_shared`
 - Query: `lessons learned mistakes retrospectives postmortems`
-_Search timed out. Retry when the retrieval store is less busy._
+_Collection check timed out. Retry shortly._
 
 ### System Learning Graph
 - Collection: `projects_workspace_shared`
 - Query: `knowledge graph memory learning feedback loops autoresearch semantic taste graph`
-_Search timed out. Retry when the retrieval store is less busy._
+_Collection check timed out. Retry shortly._
 
 
 ---

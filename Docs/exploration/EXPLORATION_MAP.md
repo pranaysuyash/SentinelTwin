@@ -1,7 +1,7 @@
 # Exploration Map — SentinelTwin
 
 **This is a living document. Append findings. Never replace.**
-**Last updated:** 2026-05-29 (Sensor provenance + runtime health surfacing) — previous: Sensor fusion preview + workspace access policy surfacing; Digital twin simulation physics: PTZ movement, BRDF reflectivity, dynamic lighting, view distance, placement constraints, scene fidelity, occlusion culling, camera feed synthesis, real-time feedback
+**Last updated:** 2026-05-29 (Physics engine audit — zero implementation across entire codebase, deferred to V0.2, no new action needed) — previous: Checkpoint compare/report pivots + launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Sensor provenance + runtime health surfacing; Sensor fusion preview + workspace access policy surfacing; Digital twin simulation physics: PTZ movement, BRDF reflectivity, dynamic lighting, view distance, placement constraints, scene fidelity, occlusion culling, camera feed synthesis, real-time feedback
 
 ---
 
@@ -218,6 +218,12 @@ Most installations are Hikvision/Dahua with no simulation or coverage planning.
 **Source:** https://kasothaphie.github.io/GenRecon/ | arXiv 2605.23888 (TU Munich + Huawei, May 2026)
 **What it does:** Takes casual smartphone video OR ~8 sparse RGB images → complete, PBR-ready, editable
 indoor mesh. Outperforms 2DGS, DA3, FineRecon, MonoSDF, Murre by ~16% on indoor reconstruction benchmarks.
+
+### Thread 20: Operational Evidence Memory
+**Status:** In progress.
+**Key finding:** Canonical runtime evidence events now normalize through a validated schema, launcher memory search can carry exact checkpoint ids through to Scene Intelligence when a branch-bearing archive hit resolves to a real event, Scene Intelligence can now pivot a checkpoint into seeded Before/After and Report compare selections, and the compare/report share-link contract can round-trip that seeded selection through the studio bootstrap.
+**Open:** Should other archive families gain comparable checkpoint ids, or should they remain timestamp/branch routed only?
+**Next:** Extend exact-checkpoint provenance to any additional launcher memory hit families that can resolve to stable evidence ids, and consider whether the report surface should auto-enter compare mode when seeded from a checkpoint pivot and whether more archive families should get stable event ids.
 Uses Trellis.2 (Microsoft) as the underlying generative 3D prior, lifted to scene scale via chunked
 conditioned generation. Produces relightable, editable PBR geometry.
 **Why it matters for SentinelTwin:** This is the Stage 4 (Multi-Photo 3D Reconstruction) candidate that
@@ -1443,6 +1449,38 @@ Physical security is a cost center. Standard ROI models fail because "losses avo
 4. Successful grants require compliance reporting on how funds were used
 5. Equipment purchases (cameras) typically need documented justification
 
+---
+
+### Thread 51: Rendering Audit Actionability (Post-processing + Shaders)
+**Status:** New. Converts rendering-skill audit findings into explicit build decisions.
+**Source:** `Docs/decisions/R3F_DREI_FULL_AUDIT_2026-05-29.md` + Three.js skill runs (`threejs-postprocessing`, `threejs-shaders`, `threejs-geometry`).
+
+**Observed state (2026-05-29):**
+- No explicit `EffectComposer`/post-processing stack detected in `apps/studio/src/**`.
+- No explicit custom shader pipeline (`ShaderMaterial`/`onBeforeCompile`/custom GLSL) detected in `apps/studio/src/**`.
+- Geometry usage is broad and active; optimization opportunities are incremental, not architectural rewrites.
+
+**Decision guidance (current):**
+1. **Post-processing:** not required for correctness now; defer until a concrete visual requirement + perf budget + trust-boundary verification rule exists.
+2. **Shaders:** defer custom GLSL until a specific effect is impossible via built-in material controls and has deterministic acceptance criteria.
+3. **Geometry:** continue targeted perf hygiene in hot render paths (memoization/reuse, avoid repeated transient allocations where safe).
+
+**Where to start when activated:**
+- First surface: `CameraViewMode`.
+- Expansion order: `CameraFeedCanvas` → `CameraWallView` → replay surfaces.
+
+**Activation criteria (must all be true):**
+- User-visible requirement is explicit and approved.
+- Budget defined (GPU/frame-time target per surface).
+- Test/verification contract defined (visual effect cannot alter simulation metrics/labels).
+
+**Protocol for all future audits (new standard):**
+Every "not found" result must answer:
+1) Should this be used now? 2) Where first? 3) At what implementation level? 4) When to trigger?
+
+**Next:**
+- Add the same actionability block pattern to future rendering/AI/runtime audits so outputs are execution-ready instead of descriptive-only.
+
 **What SentinelTwin provides that aligns with grant requirements:**
 - Documented needs assessment (why cameras are needed, where gaps exist)
 - Quantified coverage analysis ("before: 60% coverage, after: 85% coverage")
@@ -2543,6 +2581,8 @@ Six reference screenshots were used as the source of truth for a pixel-accurate 
 - `BottomPanel.tsx` — Made tab strip scrollable (`overflow-x-auto flex-shrink-0`), wall mode uses CameraStatusSummaryPanel, camera_view/replay auto-switch to timeline, compare auto-switches to beforeafter
 - `InspectorPanel.tsx` — Properties tab gets recommendation count badge, "Recommended Next Steps" section surfaces sim recommendations per camera, View tab had DORI legend + layer toggles
 - `studio-store.ts` — `setViewMode()` now auto-switches `bottomTab` (replay/camera_view→timeline, compare→beforeafter, map→metrics)
+- `BeforeAfterTab.tsx` / `ReportLiteTab.tsx` / `CompareView.tsx` — surfaced copyable compare links at the point of comparison, so the seeded snapshot pair can be shared from the exact surface where it is being reviewed
+- `operational-evidence-archive-history.ts` / `workspace-search.ts` — persisted a short recent-history of exported/restored operational evidence archives so launcher search can route directly to an archive's latest reconstructable checkpoint when one exists
 - `CameraWallView.tsx` — Adaptive grid (1 cam=full, 2=side-by-side, 3=2+1, 4=2×2, 5-6=3×2)
 
 ### Design principles applied (from design-review skill App UI rules)
@@ -6030,8 +6070,92 @@ The studio app is a large React surface with motion-heavy panels and several lon
 - The operational evidence ledger now has a canonical runtime schema for imported events, so malformed records and invalid nested snapshots are rejected before they reach the timeline or archive path.
 - The temporal history surface is already able to show checkpoints, lineage, branch comparison, recovery, and search-by-time/branch navigation, but the deeper point-in-time semantics still depend on snapshot-backed evidence.
 - Launcher search now carries branch metadata on branch-bearing archive hits, so those results can jump straight into the timeline instead of only opening the surrounding archive tab.
+- Scene Intelligence now preserves exact checkpoint identity plus provenance node/edge focus in its shareable deep-link contract, so a copied link can reopen both the ledger checkpoint and the trace context around it.
 
 ### Follow-up
 
 - Keep ledger normalization schema-driven so archive import and live writes stay aligned.
 - If point-in-time reconstruction becomes richer, extend the same evidence model rather than creating a second history store.
+
+## Thread: Public handoff and cross-device distribution
+
+### Current finding
+
+- The browser share path can already be built from `URLSearchParams`, and MDN’s Web Share API documents `navigator.share()` plus `navigator.canShare()` for links, text, and files, which makes a browser-native share target viable for public handoff on supported devices.
+- The archive and timeline surfaces already have local copy/open URL contracts, so the remaining gap is policy and distribution semantics rather than link construction.
+- The archive recovery flow now exposes a browser share-sheet action with copy/open fallback behavior, which means the remaining problem is the public policy layer and cross-device distribution contract rather than the share invocation itself.
+
+### Follow-up
+
+- Keep the public share contract conservative and explicit about what can be published.
+- Prefer browser-native share targets where available, but preserve copy/open fallback behavior so the contract remains usable everywhere.
+- Treat public handoff as a separate policy layer from local archive recovery so internal recovery artifacts do not accidentally become public distribution artifacts.
+
+## Thread: Observability and crash response
+
+### Current finding
+
+- The app already has explicit runtime journey cards, support bundles, incident bundles, external log capture, and alert summaries, but these are still local-first surfaces rather than a full observability backbone.
+- OpenTelemetry is the strongest generic reference for a vendor-neutral traces/metrics/logs pipeline, while Sentry remains a useful reference for app-level crash and performance capture.
+
+### Follow-up
+
+- Keep local runtime truth visible in the Debug panel, but define a clear export/ingest contract for external observability later.
+- Preserve correlation between runtime incidents, support bundles, and the exact scene/evidence state that failed.
+- Treat crash/incident bundles as the operator handoff artifact, not as the only observability layer.
+
+## Thread: Physics engine — zero implementation, deferred to V0.2
+
+### Current finding
+
+A comprehensive search of the entire codebase found:
+
+- **Zero physics library imports** in any source file. No `cannon-es`, `@react-three/rapier`, `@dimforge/rapier3d-compat`, `ammo.js`, `jolt-physics`, or any other physics engine is imported or used anywhere in `apps/studio/src/`.
+- **Zero physics dependencies** in `apps/studio/package.json`. The only appearance of `@dimforge/rapier3d-compat` is as a transitive dependency of `@types/three` (for TypeScript type declarations only — never used at runtime).
+- **Zero files or directories** with physics-related names.
+- **Zero TODO/FIXME comments** mentioning physics.
+- **Zero usage** of rigidbody, collider, mass, velocity, force, gravity, friction, torque, inertia, kinematic, or physics-engine-related terms in source code.
+
+### Domain-adjacent concepts found (NOT physics engine)
+
+| Concept | Where | What it actually is |
+|---|---|---|
+| `collided` / `collisionCount` | `PathReplayView.tsx` | Geometric 2D point-correction markers when a path sample is adjusted away from an obstruction — no rigidbody involvement |
+| `visionTransmission` | `coverage.ts` | Optical material property (e.g. glass=0.9, solid=0) for raycast visibility — not a physics collider |
+| AABB overlap checks | `blind-spot-topology.ts` | Simple bounding-box geometry overlap for zone detection — no physics engine |
+| `bounceMultiplier` / `reflectiveBounce` | `coverage.ts` | Optical ray bounce model for camera vision through reflective surfaces |
+| `damping` / `stiffness` | Various | Framer Motion spring animation configs — no physics simulation |
+
+### Documentation position
+
+All relevant decisions and analysis are already captured in:
+
+| File | Content |
+|---|---|
+| `Docs/exploration/PHYSICS_OPTIONS.md` | Library comparison (Rapier recommended), V0.1 vs V0.2 scope, physics vs vision collider distinction |
+| `Docs/decisions/DECISION_LOG.md` (D-008) | Rapier deferred to V0.2; V0.1 uses AABB drag |
+| `Docs/architecture/01_DATA_MODEL_SECURITY_SCENE.md` | Three-layer entity principle (visual mesh, physics collider, vision collider) |
+| `Docs/context/origin/chatgpt_raw_conversations.md` | Original Rapier evaluation and V0.1 scope discussion |
+
+### Verdict
+
+**No new action needed.** The decision to defer physics to V0.2 is confirmed by code. The docs already accurately reflect this decision. If physics is added later, the intended library is `@react-three/rapier` (MIT license). The AABB-based approach in V0.1 (`isPositionValid` pattern from `PHYSICS_OPTIONS.md`) has not been implemented either — the codebase uses no drag validation at all.
+
+### Follow-up
+
+- If drag-and-drop UX needs collision validation before V0.2, implement the simple AABB function from `PHYSICS_OPTIONS.md` rather than pulling in a full physics engine.
+- Before adding Rapier in V0.2, benchmark the WASM bundle overhead against the AABB baseline.
+- Ensure physics collider shapes stay separate from vision collider shapes — they serve different purposes (physics: constrain movement; vision: determine optical coverage).
+
+---
+
+## Thread: Compliance-specific reporting
+
+### Current finding
+
+- Reports already carry provenance, evidence summaries, and standards references, which makes audience-specific compliance modes a natural next layer instead of a new data model.
+
+### Follow-up
+
+- Keep the general report export authoritative, then layer audience-specific compliance modes on top.
+- Preserve the same evidence and checkpoint lineage in every compliance variant, even when redaction or audience-specific framing changes the presentation.

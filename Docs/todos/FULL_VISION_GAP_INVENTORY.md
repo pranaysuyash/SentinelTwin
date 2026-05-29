@@ -428,11 +428,13 @@ Every input mode should compile into the same truth model. Every report should r
 - The launcher now exposes a workspace memory search surface that can query the current scene, saved workspaces, evidence trail, report snapshot, and archive histories from one query.
 - The launcher now also labels start-project cards with explicit maturity states, so the user can distinguish complete, available, preview, and planned flows before entering Studio.
 - Launcher hits now seed a timeline focus target, and branch-bearing archive results can jump into the Scene Intelligence checkpoint view instead of only opening the surrounding tab.
+- Workspace-memory result cards now expose explicit target metadata in the launcher, so branch-aware archive hits and report snapshots read like concrete navigation routes instead of opaque search snippets.
 
 **What is still missing**
 - Federated search across archived workspaces, reports, and recovery archives beyond the current workspace scope.
 - Cross-referenced memory search across governance archives, identity-conflict archives, and operational evidence archives, including richer time/branch pivots for every hit type.
 - Search-by-time and search-by-branch navigation that can jump directly into a historical branch or recovered archive state across the full archive set.
+- A richer public handoff model for the branch-aware result cards, so the same target metadata can be consumed outside the current launcher shell and across devices or org boundaries.
 
 ### 4.19 Temporal Query and Branch Navigation
 
@@ -447,12 +449,13 @@ Every input mode should compile into the same truth model. Every report should r
 - The launcher memory search can already route archive hits into the right tab for the current workspace and archive histories, and branch-bearing archive hits can now jump into the timeline with branch/time focus.
 - The evidence search box now understands `branch:`, `after:`, `before:`, and `time:` tokens, so operators can jump through time and branch history from the same timeline surface.
 - Launcher search hits can seed a checkpoint timestamp so the timeline opens near the selected evidence point instead of only showing the ledger list.
-- Timeline entries can now copy a shareable checkpoint link that carries the selected checkpoint timestamp plus branch/time query tokens.
+- Timeline entries now use a canonical share-link helper so the selected checkpoint timestamp, provenance node/edge, and branch/time query tokens can be copied or opened through the same link contract, and the app bootstrap can restore that state from the URL.
+- Launcher workspace-memory hits now expose explicit target metadata in the card itself, so branch-aware routes are visible before the user opens the timeline or report surface.
 
 **What is still missing**
-- A richer public share-link contract for external consumers, cross-device handoff, and branch/time embeds.
-- Branch-aware result cards that can carry richer target metadata into the timeline or report view.
-- A remote/openable archive link model beyond the current in-app clipboard flow.
+- A richer public share-link contract for external consumers, cross-device handoff, and branch/time embeds outside the current app shell.
+- Branch-aware result cards that can carry richer target metadata into the timeline or report view outside the launcher shell.
+- A durable cross-device archive link and publish contract for external consumers beyond the current in-app archive handoff bootstrap.
 
 ### 4.20 Organizations, Accounts, and Workspace Catalog
 
@@ -466,6 +469,7 @@ Every input mode should compile into the same truth model. Every report should r
 **Current state**
 - Local shared-workspace access, routing, and identity conflict handling exist.
 - The launcher can browse local workspaces and reference demos, and the workspace search surface can query archives within the current workspace.
+- Saved workspaces now also carry local organization, owner, and visibility metadata, and the launcher/editor surfaces those fields so the workspace catalog starts to read like an org-aware boundary instead of only a flat scene list.
 
 **What is still missing**
 - A canonical org/account model rather than only a local workspace membership model.
@@ -492,6 +496,69 @@ Every input mode should compile into the same truth model. Every report should r
 - Partner-facing surfaces for embedding reports, archives, or review workflows.
 - An explicit extension policy for third-party integrations and workflow hooks.
 
+### 4.22 Public Handoff, Distribution, and Cross-Device Continuity
+
+**Should exist**
+- Browser-native share targets for timeline checkpoints, compare states, and archive handoffs
+- Shareable links that can reopen a scene, branch, checkpoint, or archive on another device
+- Optional file-based and URL-based publish flows for reports and recovery archives
+- Clear visibility into what is safe to share publicly versus what remains local-only
+- Recovery handoff contracts that survive outside the current browser session
+- A consistent `Share`, `Open`, and `Copy` behavior across timeline, report, and archive surfaces
+
+**Current state**
+- Scene Intelligence already has a canonical checkpoint share-link contract, and the app bootstrap can restore the same branch/time/provenance state from the URL.
+- The debug recovery panel now also exposes a browser-openable operational evidence archive handoff link, so an exported archive can rehydrate the merge-preflight flow directly from a URL instead of only from a local file picker.
+- The archive recovery controls now also support a browser share-sheet action when the device/browser supports the Web Share API, with copy/open fallback behavior for unsupported targets.
+- The launcher memory surface already shows explicit destination metadata for archive and report hits, which makes the local navigation intent visible before the user clicks.
+
+**What is still missing**
+- A first-class public share-target contract that can use browser-native share surfaces when available and fall back to copy/open behavior when not.
+- Stable share policies for public vs internal vs local-only artifacts.
+- Cross-device archive publish/reopen semantics that do not depend on a manually pasted URL.
+- A remote distribution story for recovery bundles and report artifacts that goes beyond the current browser-local handoff loop.
+
+### 4.23 Observability, Crash Bundles, and Runtime Truth
+
+**Should exist**
+- Structured traces, metrics, and logs for import, scan, AI, render, save, publish, and recovery paths
+- Explicit runtime journey health for the end-to-end operator flow
+- A crash/incident bundle with stack traces, performance slices, and correlated external logs
+- Alert routing and escalation summaries that show what happened, what was captured, and what should happen next
+- A canonical support export for QA, support, and incident response
+- Correlation across scene state, evidence state, and runtime failures
+
+**Current state**
+- The debug panel already exposes runtime journey cards, incident logs, performance traces, a support bundle summary card, external log capture, automated alerting summaries, and support/incident exports.
+- The diagnostic bundle already carries scene, simulation, graph, evidence, and runtime truth fields, while the support bundle carries the broader handoff payload used by support and QA.
+- The in-product trust-audit route now checks the visible trust surfaces so the local shell can detect drift against the manifest.
+
+**What is still missing**
+- A true system-level observability backbone instead of just local summary cards and exportable bundles.
+- Distributed trace and log correlation across the app’s asynchronous paths.
+- Durable alert routing and incident correlation beyond the current support-delivery and local ingest surfaces.
+- A stricter crash-reproduction flow that can pair the support artifact with the exact runtime path that failed.
+
+### 4.24 Compliance-Specific Reporting Modes
+
+**Should exist**
+- Audience-specific reporting surfaces for operators, auditors, insurers, installers, and privacy reviewers
+- Compliance overlays and standards-specific framing per export
+- Report variants that emphasize evidence lineage, policy posture, and risk explanation for the chosen audience
+- Redaction or visibility policies for sensitive evidence when the report is shared externally
+- Exportable artifacts that preserve the standard and audience context
+
+**Current state**
+- Reports and compare exports already carry provenance and evidence summaries.
+- The report surface already includes standards-oriented reporting language and the current product can surface evidence-backed narrative content.
+- The trust and evidence layers now make it possible to cite the exact checkpoint and branch state behind a report.
+
+**What is still missing**
+- Dedicated compliance report modes for different audiences.
+- Policy-driven redaction and visibility controls for external sharing.
+- A report catalog that makes standards, audience, and evidence posture explicit before export.
+- Compliance-specific export templates that are separate from the general-purpose handoff report.
+
 ## 5) What Is Still Demo / Placeholder / Planned
 
 These are the remaining places where the product is honest but not yet fully complete:
@@ -506,6 +573,7 @@ These are the remaining places where the product is honest but not yet fully com
 - Compliance modes are not yet separate product surfaces.
 - The product still explains itself mostly as simulation, not as an operational memory system.
 - Recovery is now exportable and restorable as an operational archive, and the debug panel can also preflight an uploaded archive before applying it, restore the latest archived checkpoint with explicit branch targeting, preserve the journal payload through archive round-trips, or merge a conflict-free divergent branch, but shared-workspace sync and conflict resolution are still future work.
+- Browser-native public handoff and cross-device distribution are still future work, even though the app can now copy/open archive and timeline links locally.
 
 ## 6) Research Anchors Worth Trusting
 

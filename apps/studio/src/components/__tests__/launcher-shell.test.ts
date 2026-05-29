@@ -19,7 +19,9 @@ describe("Studio launcher shell", () => {
     expect(source).toContain("onOpenIssues={openIssues}");
     expect(source).toContain('const openReport = () => launchWorkspace("report", "report", "report");');
     expect(source).toContain("onRunSimulation={runSimulation}");
-    expect(source).toContain("onStartProject={openProjectLauncher}");
+    expect(source).toContain("onStartProject={() => {");
+    expect(source).toContain("openDemoWorkspace();");
+    expect(source).toContain("onOpenAdvancedWorkflows");
     expect(source).toContain('if (!confirmWorkspaceReplacement("import a floor plan")) return;');
     expect(source).toContain('if (!confirmWorkspaceReplacement("start scan intake")) return;');
     expect(source).toContain('if (!confirmWorkspaceReplacement("create a new scene")) return;');

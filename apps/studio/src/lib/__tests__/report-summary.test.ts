@@ -96,8 +96,11 @@ describe("buildReportSummaryLines", () => {
     const lines = buildReportSummaryLines(outcome, result, scene, {
       totalEvents: 4,
       checkpointCount: 2,
+      publishedCheckpointCount: 1,
       latestCheckpointAgeMs: 120000,
+      latestPublishedCheckpointAgeMs: 60000,
       currentVsLatestCheckpointDelta: { cameras: 1, lights: 0, obstructions: 0, zones: 0, paths: 0, sensors: 1, snapshots: 0 },
+      currentVsLatestPublishedCheckpointDelta: { cameras: 2, lights: 0, obstructions: 0, zones: 0, paths: 0, sensors: 1, snapshots: 0 },
     });
 
     expect(lines).toEqual([
@@ -106,7 +109,7 @@ describe("buildReportSummaryLines", () => {
       { label: "Impact", text: "Current simulated coverage is 71% with 1/2 critical zones passing." },
       { label: "Recommendation", text: "No verified recommendation is available yet." },
       { label: "Evidence Trail", text: "1 change-log entries, 0 evidence entries, 0 sensor-related evidence" },
-      { label: "Temporal Twin", text: "4 scene events, 2 reconstructable checkpoints, latest checkpoint 2m old, checkpoint delta cams +1" },
+      { label: "Temporal Twin", text: "4 scene events, 2 reconstructable checkpoints, 1 published checkpoint, latest checkpoint 2m old, latest published 1m old, checkpoint delta cams +1, published delta cams +2" },
     ]);
   });
 });

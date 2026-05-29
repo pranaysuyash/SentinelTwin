@@ -100,4 +100,56 @@ describe("sensor live ingest", () => {
       globalThis.fetch = originalFetch;
     }
   });
+
+  test("summarizes XML sensor metadata fetched from a live URL", async () => {
+    const scene = createBlankSecurityScene();
+    scene.name = "XML Feed Scene";
+    const sensor = createSensorNode([1, 1.2, 1], "motion");
+    scene.sensors = [sensor];
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () => new Response([
+      "<SensorStream>",
+      `  <SensorEvent sensorId="${sensor.id}" sensorLabel="${sensor.label}" timestamp="1710000006000">`,
+      "    <SensorType>motion</SensorType>",
+      "    <Kind>alert</Kind>",
+      "    <Details>Entrance motion detected</Details>",
+      "    <ResultingState>active</ResultingState>",
+      `    <NearestCameraId>${sensor.id}</NearestCameraId>`,
+      `    <NearestCameraName>${sensor.label}</NearestCameraName>`,
+      "    <NearestDistanceM>1.8</NearestDistanceM>",
+      "  </SensorEvent>",
+      "</SensorStream>",
+    ].join("\n"), {
+      status: 200,
+      headers: { "content-type": "application/xml" },
+    })) as unknown as typeof fetch;
+
+    try {
+      const summary = await summarizeSensorLiveFeed({
+        source: "sensors-tab",
+        sceneId: scene.id,
+        sceneName: scene.name,
+        submittedAt: 1710000007000,
+        ingestMode: "external",
+        feedUrl: "https://example.com/live-sensor-feed.xml",
+        feedLabel: "ONVIF sensor relay",
+        raw: "",
+        sensors: scene.sensors,
+      });
+
+      expect(summary.ok).toBe(true);
+      expect(summary.ingestMode).toBe("external");
+      expect(summary.feedUrl).toBe("https://example.com/live-sensor-feed.xml");
+      expect(summary.summary).toContain("Imported 1 sensor event");
+      expect(summary.events).toHaveLength(1);
+      expect(summary.events[0]?.sensorId).toBe(sensor.id);
+      expect(summary.events[0]?.kind).toBe("triggered");
+      expect(summary.events[0]?.details).toBe("Entrance motion detected");
+      expect(summary.events[0]?.resultingState).toBe("active");
+      expect(summary.events[0]?.nearestDistanceM).toBe(1.8);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });

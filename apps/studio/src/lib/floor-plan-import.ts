@@ -202,38 +202,6 @@ export function createSceneFromFloorPlan(
     });
   }
 
-  // Critical zone at the far end of the room (opposite from first entry)
-  const firstEntry = entryPoints[0]!.position;
-  const farX = normalized.roomDimensions.widthM - firstEntry[0] > firstEntry[0]
-    ? normalized.roomDimensions.widthM - 2
-    : 2;
-  const farZ = normalized.roomDimensions.depthM - firstEntry[1] > firstEntry[1]
-    ? normalized.roomDimensions.depthM - 2
-    : 2;
-  const zoneSize = Math.min(normalized.roomDimensions.widthM, normalized.roomDimensions.depthM) * 0.2;
-  const criticalZones = [{
-    id: uid("zone"),
-    nodeType: "critical_zone" as const,
-    label: "High Value Zone",
-    polygon: [
-      [farX - zoneSize / 2, farZ - zoneSize / 2],
-      [farX + zoneSize / 2, farZ - zoneSize / 2],
-      [farX + zoneSize / 2, farZ + zoneSize / 2],
-      [farX - zoneSize / 2, farZ + zoneSize / 2],
-    ] as [[number, number], [number, number], [number, number], [number, number]],
-    heightM: 2,
-    priority: "high" as const,
-    requiredQuality: "recognition" as const,
-    targetType: "person_detection" as const,
-    nightRequired: false,
-    redundancyRequired: false,
-    privacyZone: false,
-    source: "manual" as const,
-    reviewStatus: "unreviewed" as const,
-    sourceTrace: "",
-    geometryValidity: "valid" as const,
-  }];
-
   return {
     id: uid("scene"),
     name,
@@ -251,7 +219,7 @@ export function createSceneFromFloorPlan(
     cameras: [],
     securityLights: [],
     obstructions: [],
-    criticalZones,
+    criticalZones: [],
     privacyZones: [],
     sensors: [],
     entryPoints,

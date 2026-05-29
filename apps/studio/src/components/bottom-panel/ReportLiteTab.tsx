@@ -44,11 +44,9 @@ export function ReportLiteTab() {
   const reportSummary = buildReportSummaryLines(outcome, result, scene, temporalTwin);
 
   // Build markdown from either AI report or simulation data
-  const markdown = result
+  const singleSceneMarkdown = result
     ? (aiReport ? buildAiReportMarkdown(aiReport) : defaultMarkdown(result, scene, temporalProfile, operationalEvidenceEvents))
     : "";
-
-  const copy = () => navigator.clipboard.writeText(markdown);
 
   const handleGenerateAI = async () => {
     setIsGenerating(true);
@@ -62,6 +60,22 @@ export function ReportLiteTab() {
   const snapshotA = selectedSnapshotAId ? snapshots.find((snapshot) => snapshot.id === selectedSnapshotAId) ?? null : null;
   const snapshotB = selectedSnapshotBId ? snapshots.find((snapshot) => snapshot.id === selectedSnapshotBId) ?? null : null;
   const compareSelectionMissing = reportMode === "compare" && (!snapshotA || !snapshotB);
+  const hasCompareSimulation = Boolean(snapshotA?.simulation && snapshotB?.simulation);
+  const compareMarkdown = hasCompareSimulation
+    ? exportCompareAsMarkdown(
+        buildCompareReportData(
+          { ...snapshotA!.scene, snapshots: [], scenarios: [] } as never,
+          snapshotA!.simulation!,
+          { ...snapshotB!.scene, snapshots: [], scenarios: [] } as never,
+          snapshotB!.simulation!,
+        ),
+      )
+    : "";
+  const currentReportMarkdown = reportMode === "compare"
+    ? (hasCompareSimulation ? compareMarkdown : "Select two simulated snapshots to preview compare markdown.")
+    : singleSceneMarkdown;
+
+  const copy = () => navigator.clipboard.writeText(currentReportMarkdown);
   const visuals = compareVisualEvidence &&
     compareVisualEvidence.snapshotAId === (snapshotA?.id ?? "") &&
     compareVisualEvidence.snapshotBId === (snapshotB?.id ?? "") &&
@@ -129,7 +143,7 @@ export function ReportLiteTab() {
       return;
     }
     if (!result) return;
-    const report = buildReportData(scene, result);
+    const report = buildReportData(scene, result, { operationalEvidenceEvents });
     const bundle = buildReportEvidenceBundle({
       scene,
       report,
@@ -146,7 +160,9 @@ export function ReportLiteTab() {
   };
 
   const handleExportMarkdown = () => {
-    const filenameBase = `sentineltwin-report-${scene.name.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+    const filenameBase = reportMode === "compare"
+      ? `sentineltwin-compare-report-${scene.name.replace(/[^a-zA-Z0-9_-]/g, "_")}`
+      : `sentineltwin-report-${scene.name.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
     const text = reportMode === "compare" && snapshotA?.simulation && snapshotB?.simulation
       ? exportCompareAsMarkdown(
           buildCompareReportData(
@@ -156,7 +172,7 @@ export function ReportLiteTab() {
             snapshotB.simulation,
           ),
         )
-      : markdown;
+      : currentReportMarkdown;
     if (!text) return;
     const blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -168,7 +184,9 @@ export function ReportLiteTab() {
   };
 
   const handleExportPdf = async () => {
-    const filenameBase = `sentineltwin-report-${scene.name.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+    const filenameBase = reportMode === "compare"
+      ? `sentineltwin-compare-report-${scene.name.replace(/[^a-zA-Z0-9_-]/g, "_")}`
+      : `sentineltwin-report-${scene.name.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
     const text = reportMode === "compare" && snapshotA?.simulation && snapshotB?.simulation
       ? exportCompareAsMarkdown(
           buildCompareReportData(
@@ -178,7 +196,7 @@ export function ReportLiteTab() {
             snapshotB.simulation,
           ),
         )
-      : markdown;
+      : currentReportMarkdown;
     if (!text) return;
     await exportTextAsPdf({
       text,
@@ -433,7 +451,7 @@ export function ReportLiteTab() {
                 </label>
             </div>
             <div className="mt-2 text-[9px] text-[#8090a8]">
-              {snapshotA?.simulation && snapshotB?.simulation
+              {hasCompareSimulation
                 ? "Compare report includes before/after deltas and zone-level change table."
                 : "Selected snapshots must both have simulation results for compare export."}
             </div>
@@ -451,7 +469,7 @@ export function ReportLiteTab() {
           </div>
         ) : (
           <pre className="whitespace-pre-wrap font-mono text-[9px] leading-relaxed text-[#8090a8]">
-            {markdown || "Run simulation to generate report."}
+            {currentReportMarkdown || "Run simulation to generate report."}
           </pre>
         )}
       </div>
@@ -511,6 +529,18 @@ function defaultMarkdown(
   const sensorEvidenceCount = evidenceEntries.filter((entry) => /sensor/i.test(`${entry.title} ${entry.details}`)).length;
   const temporalTwin = summarizeOperationalEvidenceTemporalTwin(operationalEvidenceEvents, scene);
   const truthLadder = summarizeSceneTruthLadder(scene);
+  const averagePathVisibility = result.pathResults.length > 0
+    ? result.pathResults.reduce((acc, path) => {
+        const total = Math.max(path.totalDurationS, 1);
+        return acc + ((path.visibleDurationS / total) * 100);
+      }, 0) / result.pathResults.length
+    : 0;
+  const averagePathLost = result.pathResults.length > 0
+    ? result.pathResults.reduce((acc, path) => {
+        const total = Math.max(path.totalDurationS, 1);
+        return acc + ((path.lostDurationS / total) * 100);
+      }, 0) / result.pathResults.length
+    : 0;
   const lines = [
     "# SentinelTwin Coverage Report",
     "## Scene: " + scene.name,
@@ -527,6 +557,13 @@ function defaultMarkdown(
       scene.assumptions.pixelsPerMeter.identification,
     ].join(" / "),
     "",
+    "### Camera Setup",
+    `- Cameras Modeled: ${scene.cameras.length}`,
+    ...scene.cameras.slice(0, 6).map((camera) => (
+      `- ${camera.name}: ${camera.mountType} mount, ${camera.fovHorizontalDeg}° FOV, ${camera.rangeM}m range, status ${camera.status}`
+    )),
+    ...(scene.cameras.length > 6 ? [`- ...${scene.cameras.length - 6} additional cameras not shown in this summary.`] : []),
+    "",
     "### Summary",
     "- Total Coverage: " + result.totalCoveragePct.toFixed(1) + "%",
     "- Recognition Area: " + result.recognitionAreaPct.toFixed(1) + "%",
@@ -534,6 +571,31 @@ function defaultMarkdown(
     "- Critical Zones: " + result.criticalZoneResults.filter((z) => z.status === "pass").length + "/" + result.criticalZoneResults.length + " passing",
     "- Issues Found: " + result.issues.length,
     "- Verified Recommendations: " + result.recommendations.filter((r) => r.verified).length + "/" + result.recommendations.length,
+    "",
+    "### Coverage Analysis",
+    `- Worst Area Quality: ${result.worstAreaQuality}`,
+    `- Average Walkable Quality Score: ${result.averageWalkableQuality.toFixed(2)}`,
+    "",
+    "### Blindspot Summary",
+    `- Blindspot Area: ${result.blindspotPct.toFixed(1)}% of modeled walkable cells`,
+    `- Blind Regions Detected: ${blindRegions.length}`,
+    ...(result.blindSpotFingerprint
+      ? [
+          `- Blind Spot Fingerprint: ${result.blindSpotFingerprint.fingerprint}`,
+          `- Largest Blind Region: ${result.blindSpotFingerprint.largestRegionAreaSqM.toFixed(1)} m²`,
+        ]
+      : []),
+    "",
+    "### Path Replay Coverage",
+    `- Paths Modeled: ${result.pathResults.length}`,
+    `- Average Path Visibility: ${averagePathVisibility.toFixed(1)}%`,
+    `- Average Path Lost Time: ${averagePathLost.toFixed(1)}%`,
+    ...(result.pathResults.slice(0, 4).map((path) => {
+      const total = Math.max(path.totalDurationS, 1);
+      const visiblePct = (path.visibleDurationS / total) * 100;
+      const lostPct = (path.lostDurationS / total) * 100;
+      return `- ${path.pathId}: visible ${visiblePct.toFixed(1)}%, lost ${lostPct.toFixed(1)}%`;
+    })),
     "",
     "### Truth Ladder",
     "- Nodes: " + truthLadder.nodeCount,
@@ -557,6 +619,10 @@ function defaultMarkdown(
       ? topRecommendations.map((r, index) => `${index + 1}. ${r.description} (${r.estimatedImpact})`)
       : ["1. No recommendations generated yet. Review assumptions and rerun simulation."]),
     "",
+    "### Before / After Compare Guidance",
+    "- Use the Report tab Compare mode to export before/after deltas for baseline vs proposed scenarios.",
+    "- Recommended baseline sequence: Baseline -> Moved Obstruction -> Cam 2 Rotated -> Night Mode.",
+    "",
     "### Changes Applied",
     ...(scene.changeLog?.length ? scene.changeLog.map((entry, index) => `${index + 1}. ${entry}`)
       : ["No changes have been applied to this scene."]),
@@ -575,12 +641,18 @@ function defaultMarkdown(
     "### Temporal Operational Twin",
     `- Scene Events: ${temporalTwin.totalEvents}`,
     `- Reconstructable Checkpoints: ${temporalTwin.checkpointCount}`,
+    `- Published Checkpoints: ${temporalTwin.publishedCheckpointCount}`,
     `- Branch Heads: ${temporalTwin.branchHeadCount}`,
     `- Current Scene: ${temporalTwin.currentSceneSummary?.detail ?? "Unavailable."}`,
     `- Latest Checkpoint: ${temporalTwin.latestCheckpoint ? `${temporalTwin.latestCheckpoint.title} (${temporalTwin.latestCheckpoint.branchLabel})` : "Unavailable."}`,
     `- Checkpoint Age: ${temporalTwin.latestCheckpointAgeMs != null ? `${Math.max(1, Math.round(temporalTwin.latestCheckpointAgeMs / 60000))}m` : "Unavailable."}`,
     `- Checkpoint Delta: ${temporalTwin.currentVsLatestCheckpointDelta
       ? `cameras ${temporalTwin.currentVsLatestCheckpointDelta.cameras >= 0 ? "+" : ""}${temporalTwin.currentVsLatestCheckpointDelta.cameras}, zones ${temporalTwin.currentVsLatestCheckpointDelta.zones >= 0 ? "+" : ""}${temporalTwin.currentVsLatestCheckpointDelta.zones}, sensors ${temporalTwin.currentVsLatestCheckpointDelta.sensors >= 0 ? "+" : ""}${temporalTwin.currentVsLatestCheckpointDelta.sensors}`
+      : "Unavailable."}`,
+    `- Latest Published Checkpoint: ${temporalTwin.latestPublishedCheckpoint ? `${temporalTwin.latestPublishedCheckpoint.title} (${temporalTwin.latestPublishedCheckpoint.branchLabel})` : "Unavailable."}`,
+    `- Published Age: ${temporalTwin.latestPublishedCheckpointAgeMs != null ? `${Math.max(1, Math.round(temporalTwin.latestPublishedCheckpointAgeMs / 60000))}m` : "Unavailable."}`,
+    `- Published Delta: ${temporalTwin.currentVsLatestPublishedCheckpointDelta
+      ? `cameras ${temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras >= 0 ? "+" : ""}${temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras}, zones ${temporalTwin.currentVsLatestPublishedCheckpointDelta.zones >= 0 ? "+" : ""}${temporalTwin.currentVsLatestPublishedCheckpointDelta.zones}, sensors ${temporalTwin.currentVsLatestPublishedCheckpointDelta.sensors >= 0 ? "+" : ""}${temporalTwin.currentVsLatestPublishedCheckpointDelta.sensors}`
       : "Unavailable."}`,
     "",
     "### Recommendations",
@@ -609,6 +681,11 @@ function defaultMarkdown(
           "",
         ]
       : []),
+    "### Limitations",
+    "- This output is a deterministic simulation estimate based on current scene assumptions.",
+    "- It is not a legal, forensic, or certified compliance determination.",
+    "- Real-world operations can differ due to lighting, motion, environment changes, and hardware behavior.",
+    "",
     "_Planning indicator only: modeled outcomes depend on assumptions and are not legal/forensic guarantees._",
   ];
   return lines.join("\n");
@@ -703,11 +780,15 @@ function buildHtmlReport(
     <tbody>
       <tr><td>Scene Events</td><td>${temporalTwin.totalEvents}</td></tr>
       <tr><td>Reconstructable Checkpoints</td><td>${temporalTwin.checkpointCount}</td></tr>
+      <tr><td>Published Checkpoints</td><td>${temporalTwin.publishedCheckpointCount}</td></tr>
       <tr><td>Branch Heads</td><td>${temporalTwin.branchHeadCount}</td></tr>
       <tr><td>Current Scene</td><td>${escapeHtml(temporalTwin.currentSceneSummary?.detail ?? "Unavailable.")}</td></tr>
       <tr><td>Latest Checkpoint</td><td>${escapeHtml(temporalTwin.latestCheckpoint ? `${temporalTwin.latestCheckpoint.title} (${temporalTwin.latestCheckpoint.branchLabel})` : "Unavailable.")}</td></tr>
       <tr><td>Checkpoint Age</td><td>${temporalTwin.latestCheckpointAgeMs != null ? `${Math.max(1, Math.round(temporalTwin.latestCheckpointAgeMs / 60000))}m` : "Unavailable."}</td></tr>
       <tr><td>Checkpoint Delta</td><td>${escapeHtml(temporalTwin.currentVsLatestCheckpointDelta ? `cameras ${temporalTwin.currentVsLatestCheckpointDelta.cameras >= 0 ? "+" : ""}${temporalTwin.currentVsLatestCheckpointDelta.cameras}, zones ${temporalTwin.currentVsLatestCheckpointDelta.zones >= 0 ? "+" : ""}${temporalTwin.currentVsLatestCheckpointDelta.zones}, sensors ${temporalTwin.currentVsLatestCheckpointDelta.sensors >= 0 ? "+" : ""}${temporalTwin.currentVsLatestCheckpointDelta.sensors}` : "Unavailable.")}</td></tr>
+      <tr><td>Latest Published Checkpoint</td><td>${escapeHtml(temporalTwin.latestPublishedCheckpoint ? `${temporalTwin.latestPublishedCheckpoint.title} (${temporalTwin.latestPublishedCheckpoint.branchLabel})` : "Unavailable.")}</td></tr>
+      <tr><td>Published Age</td><td>${temporalTwin.latestPublishedCheckpointAgeMs != null ? `${Math.max(1, Math.round(temporalTwin.latestPublishedCheckpointAgeMs / 60000))}m` : "Unavailable."}</td></tr>
+      <tr><td>Published Delta</td><td>${escapeHtml(temporalTwin.currentVsLatestPublishedCheckpointDelta ? `cameras ${temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras >= 0 ? "+" : ""}${temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras}, zones ${temporalTwin.currentVsLatestPublishedCheckpointDelta.zones >= 0 ? "+" : ""}${temporalTwin.currentVsLatestPublishedCheckpointDelta.zones}, sensors ${temporalTwin.currentVsLatestPublishedCheckpointDelta.sensors >= 0 ? "+" : ""}${temporalTwin.currentVsLatestPublishedCheckpointDelta.sensors}` : "Unavailable.")}</td></tr>
     </tbody>
   </table>
 

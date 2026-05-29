@@ -28,6 +28,9 @@ describe("CameraFeedCanvas", () => {
     expect(source).toContain("Operational Fusion");
     expect(source).toContain("Metadata:");
     expect(source).toContain("Connection:");
+    expect(source).toContain("Auth:");
+    expect(source).toContain("Auth session:");
+    expect(source).toContain("Challenge:");
     expect(source).toContain("Sensors:");
     expect(source).toContain("Nearest:");
     expect(source).toContain("operationalFusion");

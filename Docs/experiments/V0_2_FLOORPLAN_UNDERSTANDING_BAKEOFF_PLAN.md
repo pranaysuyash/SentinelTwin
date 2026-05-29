@@ -176,7 +176,16 @@ If no stack passes:
 4. Harden the visual critical-zone repair stage so the extracted polygons survive into saved predictions and metric evaluation.
 5. Run pilot on 5 images to validate pipeline reliability before full 60-image bakeoff.
 
-Completed in the current run:
-- The visual repair stage is now implemented in `runner.py`.
-- The repair path is regression-tested in `experiments/scene_understanding/tests/test_visual_critical_zone.py`.
+Completed:
+- The config-driven harness, stage traces, and cloud/local fallback dispatch are implemented in `runner.py` (lines 443-566).
+- The Python `SecuritySceneSubset` dataclass exists at `bakeoff_harness/schema.py` (lines 59-83) with `_parse_response()` mapper at `runner.py` (lines 118-186).
+- The **TypeScript bridge** `bakeoffToSecurityScene()` now exists at `apps/studio/src/lib/bakeoff-bridge.ts`. It converts bakeoff predictions to a Zod-valid `SecurityScene` (3D wall nodes in meters) for direct studio import. Tests at `apps/studio/src/lib/__tests__/bakeoff-bridge.test.ts` (6 tests, all passing). The bakeoff JSON import is auto-detected and routed through the bridge in both the launcher (`page.tsx`) and the studio shell (`TopBar.tsx`) import handlers.
+- The deterministic evaluator is at `bakeoff_harness/evaluator.py` (291 lines).
+- The visual repair stage is implemented in `runner.py` and regression-tested in `experiments/scene_understanding/tests/test_visual_critical_zone.py`.
 - The 5-image dev pilot has been executed and the comparison report was regenerated from real runs.
+
+Remaining for V0.2 productization:
+- **Scale reference:** The bridge hardcodes `knownDimensionM: 8` as a default. The bakeoff annotations carry per-image `scale_reference.known_dimension_m` — the import UI should expose a scale input (see Q-009).
+- **60-image dataset:** Only 5 synthetic dev images exist. No validation/test splits. No real-world images.
+- **eval_rubric.yaml:** Defined in config but not loaded by the evaluator (acceptance thresholds are hardcoded).
+- **Candidate registry drift:** The hardcoded Python dict in `candidates.py` and the YAML in `configs/candidates.yaml` have inconsistent stack-to-ID mappings (stack_b, stack_c point to different models).

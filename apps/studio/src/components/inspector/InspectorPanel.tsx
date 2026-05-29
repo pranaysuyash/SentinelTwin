@@ -27,6 +27,7 @@ import {
 import { Badge } from "@/components/shared/Badge";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { cn } from "@/lib/cn";
+import { QUALITY_LABEL } from "@/lib/quality-display";
 import { pathLength } from "@/components/workspace/editing/editor-geometry";
 import { snapCameraToMount, type CameraMountSnapMode } from "@/components/inspector/camera-mount-snap";
 import type {
@@ -112,21 +113,6 @@ const VIEW_TOGGLES: Array<{ key: ViewToggleKey; label: string }> = [
   { key: "grid", label: "Grid" },
 ];
 type ViewToggleState = Record<ViewToggleKey, boolean>;
-
-const QUALITY_LABEL: Record<DoriQuality, string> = {
-  none: "No Signal",
-  detection: "Detection",
-  overview: "Overview",
-  outline: "Outline",
-  observation: "Observation",
-  discern: "Discern",
-  perceive: "Perceive",
-  recognition: "Recognition",
-  characterize: "Characterize",
-  validate: "Validate",
-  identification: "Identification",
-  scrutinize: "Scrutinize",
-};
 
 const OBSTRUCTION_MATERIALS = [
   { value: "solid", label: "Solid" },

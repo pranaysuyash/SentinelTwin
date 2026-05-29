@@ -26,7 +26,10 @@ describe("ReportLiteTab", () => {
     expect(source).toContain("Zones Failed");
     expect(source).toContain("Temporal Operational Twin");
     expect(source).toContain("Reconstructable Checkpoints");
+    expect(source).toContain("Published Checkpoints");
     expect(source).toContain("Checkpoint Age");
+    expect(source).toContain("Latest Published Checkpoint");
+    expect(source).toContain("Published Age");
     expect(source).toContain("summarizeSceneTruthLadder");
     expect(source).toContain("Occlusion Blame");
     expect(source).toContain("Quality Without");

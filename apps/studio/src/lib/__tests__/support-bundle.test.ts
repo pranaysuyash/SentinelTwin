@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { buildSupportBundle, stringifySupportBundle } from "@/lib/diagnostic-bundle";
+import { buildOperationalEvidenceEvent } from "@/lib/operational-evidence";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 import type { AiActionTelemetryRecord, ExternalLogEntry, RuntimeIncident } from "@/store/studio-store";
 import type { SceneIntelligenceGraph } from "@/lib/scene-intelligence-graph";
@@ -119,7 +120,26 @@ describe("buildSupportBundle", () => {
       scene,
       simulationResult,
       sceneIntelligenceGraph,
-      operationalEvidenceEvents: [],
+      operationalEvidenceEvents: [
+        buildOperationalEvidenceEvent({
+          kind: "scene_published",
+          title: "Scene published",
+          details: "Promoted the current scene state to the published branch.",
+          actor: "user",
+          source: scene.source,
+          sceneId: scene.id,
+          sceneName: scene.name,
+          revisionDepth: 0,
+          affectedNodeIds: [],
+          confidence: 0.98,
+          branchLabel: "published",
+          lifecycleStage: "published",
+          published: true,
+          beforeSummary: "Before publish",
+          afterSummary: "After publish",
+          sceneSnapshot: scene,
+        }),
+      ],
       workspaceGovernance,
       workspaceAccess,
       lastRunMs: 42,
@@ -183,6 +203,16 @@ describe("buildSupportBundle", () => {
             lastHeartbeatAt: 1710000003900,
             probeCount: 2,
             protocolProfile: "onvif_device",
+            authMode: "onvif_digest",
+            authState: "authenticated",
+            authRealm: "camera.example.com",
+            authSessionId: "auth_session_cam_front_test",
+            authSessionExpiresAt: 1710000123800,
+            transportResponseStatus: 401,
+            transportResponseStatusText: "Unauthorized",
+            authChallengeHeader: 'Digest realm="camera.example.com", nonce="abc123"',
+            authChallengeScheme: "digest",
+            authChallengeRealm: "camera.example.com",
             liveFeedUrl: "rtsp://camera.example.com/live",
             liveFeedLabel: "Front entrance",
             liveConnectionMode: "onvif",
@@ -218,6 +248,16 @@ describe("buildSupportBundle", () => {
           lastHeartbeatAt: 1710000004800,
           probeCount: 2,
           protocolProfile: "onvif_device",
+          authMode: "onvif_digest",
+          authState: "authenticated",
+          authRealm: "camera.example.com",
+          authSessionId: "auth_session_cam_front_test",
+          authSessionExpiresAt: 1710000123800,
+          transportResponseStatus: 401,
+          transportResponseStatusText: "Unauthorized",
+          authChallengeHeader: 'Digest realm="camera.example.com", nonce="abc123"',
+          authChallengeScheme: "digest",
+          authChallengeRealm: "camera.example.com",
           lastObservedAt: 1710000005000,
           sessionExpiresAt: 1710000125000,
           lastAction: "bind",
@@ -231,18 +271,31 @@ describe("buildSupportBundle", () => {
     expect(bundle.diagnostic.governance.approvalRoute.routeStatus).toBe("open_publish");
     expect(bundle.reportEvidence?.mode).toBe("single");
     expect(bundle.reportEvidence?.scene.name).toBe("Support Scene");
+    expect(bundle.reportEvidence?.report.temporalTwin?.publishedCheckpointCount).toBe(1);
     expect(bundle.sensorIngestArchive.historyCount).toBe(1);
     expect(bundle.sensorIngestArchive.latestSubmission?.sceneName).toBe("Sensor Scene");
     expect(bundle.cameraLiveConnectionArchive.historyCount).toBe(1);
     expect(bundle.cameraLiveConnectionArchive.latestSubmission?.sceneName).toBe("Support Scene");
+    expect(bundle.cameraLiveConnectionArchive.latestSubmission?.record.authMode).toBe("onvif_digest");
+    expect(bundle.cameraLiveConnectionArchive.latestSubmission?.record.authState).toBe("authenticated");
+    expect(bundle.cameraLiveConnectionArchive.latestSubmission?.record.authSessionId).toBe("auth_session_cam_front_test");
+    expect(bundle.cameraLiveConnectionArchive.latestSubmission?.record.authSessionExpiresAt).toBe(1710000123800);
+    expect(bundle.cameraLiveConnectionArchive.latestSubmission?.record.transportResponseStatus).toBe(401);
+    expect(bundle.cameraLiveConnectionArchive.latestSubmission?.record.authChallengeScheme).toBe("digest");
     expect(bundle.cameraLiveSessionRegistry.activeSessionCount).toBe(1);
     expect(bundle.cameraLiveSessionRegistry.latestSession?.sessionId).toBe("live_session_cam_front_test");
+    expect(bundle.cameraLiveSessionRegistry.latestSession?.authMode).toBe("onvif_digest");
+    expect(bundle.cameraLiveSessionRegistry.latestSession?.authState).toBe("authenticated");
+    expect(bundle.cameraLiveSessionRegistry.latestSession?.authSessionId).toBe("auth_session_cam_front_test");
+    expect(bundle.cameraLiveSessionRegistry.latestSession?.authSessionExpiresAt).toBe(1710000123800);
     expect(bundle.incidents.incidentCount).toBe(2);
     expect(bundle.incidents.performanceTraceCount).toBe(1);
     expect(bundle.incidents.stackTraceCount).toBe(1);
     expect(bundle.incidents.latestIncident?.title).toBe("Render");
     expect(bundle.incidents.externalLogCount).toBe(2);
     expect(bundle.incidents.latestExternalLog?.title).toBe("Browser console error");
+    expect(bundle.diagnostic.runtime.alerts.alertCount).toBe(4);
+    expect(bundle.diagnostic.runtime.alerts.statusLabel).toBe("attention");
     expect(bundle.incidents.aiTelemetry.totalEvents).toBe(2);
     expect(bundle.incidents.aiTelemetry.trendLabel).toBe("insufficient-data");
     expect(bundle.incidents.summary).toContain("incidents");

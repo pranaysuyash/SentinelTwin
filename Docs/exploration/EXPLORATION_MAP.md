@@ -5964,3 +5964,74 @@ The studio app is a large React surface with motion-heavy panels and several lon
 
 - Keep the assistant copy honest: it should describe capture guidance and review handoff, not autonomous reconstruction.
 - If a later product sprint adds real auto-segmentation or depth-based reconstruction, revisit the assistant wording and the compile handoff flow together so the launcher and scan wizard stay aligned.
+
+## Thread: Shared-workspace RBAC/ABAC and approval routing
+
+### Current finding
+
+- The governance panel already exposes a full local review/publish/restore control plane, but the underlying workspace access gate needed to combine access policy and governance state in one decision path.
+- Privacy-sensitive approval routing is now explicit: privacy-heavy scenes route to the privacy reviewer role, and generic reviewer eligibility no longer overrides that route by accident.
+
+### Follow-up
+
+- Keep the access and governance helpers as the canonical source of truth for publish/approve/reject decisions.
+- If remote/shared membership comes online later, preserve the same role-and-policy semantics so local and remote approvals do not diverge.
+
+## Thread: Provider/model governance and eval harnesses
+
+### Current finding
+
+- The Debug panel already exposes provider health, telemetry budgets, and a canonical prompt registry, but the registry itself was still just a static definition list.
+- Model-eval runs now persist the prompt-registry snapshot they used, which makes the eval history a durable audit trail instead of a one-off report.
+
+### Follow-up
+
+- Keep the registry snapshot attached to model-eval records so future prompt changes can be compared against prior runs.
+- If prompt versioning expands beyond the four canonical stages, the same snapshot pattern can carry the new stages without changing the audit model.
+
+## Thread: Runtime diagnostics and support bundles
+
+### Current finding
+
+- The diagnostic bundle now carries alert routing alongside incidents, performance traces, and external logs, so the runtime view can explain why support escalation is needed instead of only showing raw failures.
+- Live camera probes preserve transport response and auth-challenge metadata, so the runtime truth can tell the difference between a clean connection, an auth challenge, and a failed negotiation.
+
+### Follow-up
+
+- Keep the diagnostic bundle the canonical runtime export for support and QA.
+- Preserve the camera probe negotiation metadata as it flows through the inspector, session registry, and bundle exports so device diagnosis remains truthful end to end.
+
+### Current finding
+
+- The Debug panel now exposes a dedicated incident bundle download, giving crash triage a narrower artifact that centers alerts, incidents, and external logs rather than the full support archive payload.
+
+### Follow-up
+
+- Keep the incident bundle focused on failure evidence and alert routing.
+- Preserve the broader support bundle for handoff cases that need sensor, camera, and report evidence in the same export.
+
+## Thread: Live sensor and camera fusion
+
+### Current finding
+
+- Camera metadata ingest now accepts XML in addition to JSON and NDJSON, so ONVIF-style feeds can land directly in the Debug panel and still match scene cameras by id or name.
+- The live fusion path can now preserve metadata freshness and connection posture without requiring a pre-normalized JSON adapter for external camera feeds.
+- Live camera connection probes now also preserve XML negotiation payloads without polluting the error channel with JSON-only parse failures.
+
+### Follow-up
+
+- Keep the XML parser conservative and map only the fields that have canonical scene equivalents.
+- If the live feed vocabulary expands, extend the same parser rather than adding a parallel ingest format.
+
+## Thread: Operational evidence memory
+
+### Current finding
+
+- The operational evidence ledger now has a canonical runtime schema for imported events, so malformed records and invalid nested snapshots are rejected before they reach the timeline or archive path.
+- The temporal history surface is already able to show checkpoints, lineage, branch comparison, recovery, and search-by-time/branch navigation, but the deeper point-in-time semantics still depend on snapshot-backed evidence.
+- Launcher search now carries branch metadata on branch-bearing archive hits, so those results can jump straight into the timeline instead of only opening the surrounding archive tab.
+
+### Follow-up
+
+- Keep ledger normalization schema-driven so archive import and live writes stay aligned.
+- If point-in-time reconstruction becomes richer, extend the same evidence model rather than creating a second history store.

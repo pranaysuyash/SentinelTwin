@@ -10,8 +10,8 @@ describe("Studio dashboard launcher surface", () => {
     const source = readFileSync(dashboardHomePath, "utf8");
 
     expect(source).toContain("SentinelTwin Studio");
-    expect(source).toContain("Security Simulation Workspace");
-    expect(source).toContain("Open Studio");
+    expect(source).toContain("Security Audit Workspace");
+    expect(source).toContain("Open Workspace");
     expect(source).toContain("Run Simulation");
     expect(source).toContain("Import JSON");
     expect(source).toContain("New Scene");
@@ -20,7 +20,7 @@ describe("Studio dashboard launcher surface", () => {
     expect(source).toContain("Open Camera Wall");
     expect(source).toContain("Open Path Replay");
     expect(source).toContain("Compare Fixes");
-    expect(source).toContain("Run Demo Walkthrough");
+    expect(source).toContain("Run Guided Walkthrough");
     expect(source).toContain("Worst Quality");
     expect(source).toContain("Redundancy");
     expect(source).toContain("Running");
@@ -37,6 +37,9 @@ describe("Studio dashboard launcher surface", () => {
     expect(source).toContain("Scan a Site");
     expect(source).toContain("Guided Scan Assistant");
     expect(source).toContain("AI Layout Draft");
+    expect(source).toContain("setTimelineFocusRequest");
+    expect(source).toContain("branch:");
+    expect(source).toContain("after:");
     expect(source).toContain("Recent Workspaces");
     expect(source).toContain("Project metadata");
     expect(source).toContain("All systems operational");

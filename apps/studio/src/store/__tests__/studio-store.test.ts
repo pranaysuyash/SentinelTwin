@@ -150,6 +150,16 @@ describe("studio store editor mutations", () => {
       previousLiveFeedLabel: cameraBeforeUpdate?.liveFeedLabel ?? null,
       previousLiveConnectionMode: cameraBeforeUpdate?.liveConnectionMode ?? null,
       previousLiveConnectionStatus: cameraBeforeUpdate?.liveConnectionStatus ?? "disconnected",
+      previousAuthMode: cameraBeforeUpdate?.authMode ?? null,
+      previousAuthState: cameraBeforeUpdate?.authState ?? null,
+      previousAuthRealm: cameraBeforeUpdate?.authRealm ?? null,
+      previousAuthSessionId: cameraBeforeUpdate?.authSessionId ?? null,
+      previousAuthSessionExpiresAt: cameraBeforeUpdate?.authSessionExpiresAt ?? null,
+      previousTransportResponseStatus: cameraBeforeUpdate?.transportResponseStatus ?? null,
+      previousTransportResponseStatusText: cameraBeforeUpdate?.transportResponseStatusText ?? null,
+      previousAuthChallengeHeader: cameraBeforeUpdate?.authChallengeHeader ?? null,
+      previousAuthChallengeScheme: cameraBeforeUpdate?.authChallengeScheme ?? null,
+      previousAuthChallengeRealm: cameraBeforeUpdate?.authChallengeRealm ?? null,
       liveSessionId: "session_" + camera.id,
       liveSessionState: "connected",
       liveSessionStartedAt: Date.now(),
@@ -161,9 +171,19 @@ describe("studio store editor mutations", () => {
       liveConnectionStatus: "connected",
       transportSessionId: "transport_session_cam_front_test",
       transportSessionState: "active",
+      transportResponseStatus: 401,
+      transportResponseStatusText: "Unauthorized",
       lastHeartbeatAt: Date.now(),
       probeCount: 1,
       protocolProfile: "rtsp_session",
+      authMode: "digest",
+      authState: "authenticated",
+      authRealm: "front-entrance",
+      authSessionId: "auth_session_cam_front_test",
+      authSessionExpiresAt: Date.now() + 120_000,
+      authChallengeHeader: "Digest realm=\"front-entrance\", nonce=\"abc123\"",
+      authChallengeScheme: "digest",
+      authChallengeRealm: "front-entrance",
       ingestMode: "external",
       summary: "Camera bound to the external live feed relay.",
       notes: "ONVIF proxy connected successfully.",
@@ -177,9 +197,93 @@ describe("studio store editor mutations", () => {
     expect(cameraLiveConnectionEvent?.liveFeedUrl).toContain("rtsp://");
     expect(cameraLiveConnectionEvent?.transportSessionState).toBe("active");
     expect(cameraLiveConnectionEvent?.protocolProfile).toBe("rtsp_session");
+    expect(cameraLiveConnectionEvent?.authState).toBe("authenticated");
+    expect(cameraLiveConnectionEvent?.authMode).toBe("digest");
     const operationalEvidenceEvent = useStudioStore.getState().operationalEvidenceEvents.at(-1);
     expect(operationalEvidenceEvent?.kind).toBe("camera_live_connection_updated");
     expect(operationalEvidenceEvent?.beforeSummary).toContain("disconnected");
     expect(operationalEvidenceEvent?.afterSummary).toContain("connected");
+    expect(operationalEvidenceEvent?.afterSummary).toContain("auth authenticated via digest");
+  });
+
+  test("camera live connection challenges persist transport response metadata", () => {
+    const camera = createCameraNode([3, 2.8, 4]);
+    useStudioStore.getState().addNode(camera);
+    const cameraBeforeUpdate = useStudioStore.getState().scene.cameras.find((entry) => entry.id === camera.id) ?? null;
+    useStudioStore.getState().updateNode(camera.id, {
+      liveFeedUrl: "http://example.com/probe",
+      liveFeedLabel: "Challenge relay",
+      liveConnectionMode: "onvif",
+      liveConnectionStatus: "connecting",
+      liveConnectionUpdatedAt: Date.now(),
+      liveSessionState: "probing",
+      transportSessionState: "negotiating",
+      authState: "authenticating",
+      transportResponseStatus: 401,
+      transportResponseStatusText: "Unauthorized",
+      authChallengeHeader: "Digest realm=\"front-entrance\", nonce=\"abc123\"",
+      authChallengeScheme: "digest",
+      authChallengeRealm: "front-entrance",
+    });
+
+    const ok = useStudioStore.getState().recordCameraLiveConnectionEvent({
+      cameraId: camera.id,
+      cameraName: camera.name,
+      previousLiveSessionId: null,
+      previousLiveSessionState: null,
+      previousLiveSessionStartedAt: null,
+      previousLiveSessionConfirmedAt: null,
+      previousLiveSessionExpiresAt: cameraBeforeUpdate?.liveSessionExpiresAt ?? null,
+      previousLiveFeedUrl: cameraBeforeUpdate?.liveFeedUrl ?? null,
+      previousLiveFeedLabel: cameraBeforeUpdate?.liveFeedLabel ?? null,
+      previousLiveConnectionMode: cameraBeforeUpdate?.liveConnectionMode ?? null,
+      previousLiveConnectionStatus: cameraBeforeUpdate?.liveConnectionStatus ?? "disconnected",
+      previousAuthMode: cameraBeforeUpdate?.authMode ?? null,
+      previousAuthState: cameraBeforeUpdate?.authState ?? null,
+      previousAuthRealm: cameraBeforeUpdate?.authRealm ?? null,
+      previousAuthSessionId: cameraBeforeUpdate?.authSessionId ?? null,
+      previousAuthSessionExpiresAt: cameraBeforeUpdate?.authSessionExpiresAt ?? null,
+      previousTransportResponseStatus: cameraBeforeUpdate?.transportResponseStatus ?? null,
+      previousTransportResponseStatusText: cameraBeforeUpdate?.transportResponseStatusText ?? null,
+      previousAuthChallengeHeader: cameraBeforeUpdate?.authChallengeHeader ?? null,
+      previousAuthChallengeScheme: cameraBeforeUpdate?.authChallengeScheme ?? null,
+      previousAuthChallengeRealm: cameraBeforeUpdate?.authChallengeRealm ?? null,
+      liveSessionId: "session_" + camera.id,
+      liveSessionState: "probing",
+      liveSessionStartedAt: Date.now(),
+      liveSessionConfirmedAt: null,
+      liveSessionExpiresAt: null,
+      liveFeedUrl: "http://example.com/probe",
+      liveFeedLabel: "Challenge relay",
+      liveConnectionMode: "onvif",
+      liveConnectionStatus: "connecting",
+      transportSessionId: "transport_session_cam_front_test",
+      transportSessionState: "negotiating",
+      transportResponseStatus: 401,
+      transportResponseStatusText: "Unauthorized",
+      lastHeartbeatAt: null,
+      probeCount: 1,
+      protocolProfile: "onvif_device",
+      authMode: "onvif_digest",
+      authState: "authenticating",
+      authRealm: "front-entrance",
+      authSessionId: null,
+      authSessionExpiresAt: null,
+      authChallengeHeader: "Digest realm=\"front-entrance\", nonce=\"abc123\"",
+      authChallengeScheme: "digest",
+      authChallengeRealm: "front-entrance",
+      ingestMode: "external",
+      summary: "Camera probe returned a digest challenge.",
+      notes: "Probe requires credentials.",
+    });
+
+    expect(ok).toBe(true);
+    const cameraLiveConnectionEvent = useStudioStore.getState().cameraLiveConnectionEvents.find((event) => event.cameraId === camera.id);
+    expect(cameraLiveConnectionEvent?.transportResponseStatus).toBe(401);
+    expect(cameraLiveConnectionEvent?.authChallengeScheme).toBe("digest");
+    expect(cameraLiveConnectionEvent?.authChallengeRealm).toBe("front-entrance");
+    const operationalEvidenceEvent = useStudioStore.getState().operationalEvidenceEvents.at(-1);
+    expect(operationalEvidenceEvent?.afterSummary).toContain("challenge");
+    expect(operationalEvidenceEvent?.afterSummary).toContain("transport 401 Unauthorized");
   });
 });

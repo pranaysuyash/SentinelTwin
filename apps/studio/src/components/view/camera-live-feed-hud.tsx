@@ -53,6 +53,16 @@ type CameraLiveConnectionEvent = {
   lastHeartbeatAt: number | null;
   probeCount: number;
   protocolProfile: "onvif_device" | "rtsp_session" | "mjpeg_stream" | "http_poll" | "proxy" | null;
+  authMode: "none" | "basic" | "digest" | "token" | "cookie" | "onvif_digest" | "proxy_passthrough" | null;
+  authState: "unauthenticated" | "authenticating" | "authenticated" | "failed" | null;
+  authRealm: string | null;
+  authSessionId: string | null;
+  authSessionExpiresAt: number | null;
+  transportResponseStatus: number | null;
+  transportResponseStatusText: string | null;
+  authChallengeHeader: string | null;
+  authChallengeScheme: "basic" | "digest" | "bearer" | "token" | null;
+  authChallengeRealm: string | null;
   liveConnectionMode: "rtsp" | "mjpeg" | "http" | "onvif" | "proxy" | null;
   liveConnectionStatus: "disconnected" | "connecting" | "connected" | "error" | null;
   ingestMode: "manual" | "external";
@@ -236,12 +246,18 @@ export function LiveFeedHUD({
             <div><span className="text-[#6a748b]">Session ID:</span> {cameraLiveConnectionEvent.liveSessionId ?? "—"}</div>
             <div><span className="text-[#6a748b]">Transport:</span> {cameraLiveConnectionEvent.transportSessionState ?? "—"}</div>
             <div><span className="text-[#6a748b]">Protocol:</span> {cameraLiveConnectionEvent.protocolProfile ?? "—"}</div>
+            <div><span className="text-[#6a748b]">Auth:</span> {cameraLiveConnectionEvent.authState ?? "—"} · {cameraLiveConnectionEvent.authMode ?? "—"}</div>
+            <div><span className="text-[#6a748b]">Auth session:</span> {cameraLiveConnectionEvent.authSessionId ?? "—"}</div>
             <div className="col-span-2"><span className="text-[#6a748b]">Feed:</span> {cameraLiveConnectionEvent.liveFeedLabel ?? cameraLiveConnectionEvent.liveFeedUrl ?? "—"}</div>
           </div>
           <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-[8px] text-[#8ea6cc]">
             <div><span className="text-[#6a748b]">Started:</span> {cameraLiveConnectionEvent.liveSessionStartedAt == null ? "—" : new Date(cameraLiveConnectionEvent.liveSessionStartedAt).toLocaleTimeString()}</div>
             <div><span className="text-[#6a748b]">Confirmed:</span> {cameraLiveConnectionEvent.liveSessionConfirmedAt == null ? "—" : new Date(cameraLiveConnectionEvent.liveSessionConfirmedAt).toLocaleTimeString()}</div>
             <div className="col-span-2"><span className="text-[#6a748b]">Expires:</span> {cameraLiveConnectionEvent.liveSessionExpiresAt == null ? "—" : new Date(cameraLiveConnectionEvent.liveSessionExpiresAt).toLocaleTimeString()}</div>
+            <div className="col-span-2"><span className="text-[#6a748b]">Auth expires:</span> {cameraLiveConnectionEvent.authSessionExpiresAt == null ? "—" : new Date(cameraLiveConnectionEvent.authSessionExpiresAt).toLocaleTimeString()}</div>
+            <div className="col-span-2"><span className="text-[#6a748b]">Challenge:</span> {cameraLiveConnectionEvent.authChallengeHeader ?? "—"}</div>
+            <div><span className="text-[#6a748b]">Transport response:</span> {cameraLiveConnectionEvent.transportResponseStatus == null ? "—" : `${cameraLiveConnectionEvent.transportResponseStatus}${cameraLiveConnectionEvent.transportResponseStatusText ? ` ${cameraLiveConnectionEvent.transportResponseStatusText}` : ""}`}</div>
+            <div><span className="text-[#6a748b]">Challenge scheme:</span> {cameraLiveConnectionEvent.authChallengeScheme ?? "—"}</div>
             <div className="col-span-2"><span className="text-[#6a748b]">Heartbeat:</span> {cameraLiveConnectionEvent.lastHeartbeatAt == null ? "—" : new Date(cameraLiveConnectionEvent.lastHeartbeatAt).toLocaleTimeString()} · probes {cameraLiveConnectionEvent.probeCount}</div>
           </div>
           <div className="mt-1 text-[8px] text-[#8ea6cc]">

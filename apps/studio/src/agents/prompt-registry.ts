@@ -15,6 +15,11 @@ export type PromptRegistrySummary = {
   total: number;
   stages: Record<PromptRegistryStage, number>;
   latestVersion: string;
+  registryDigest: string;
+};
+
+export type PromptRegistrySnapshot = PromptRegistrySummary & {
+  observedAt: number;
 };
 
 export const PROMPT_REGISTRY: PromptRegistryEntry[] = [
@@ -97,17 +102,31 @@ Output ONLY valid JSON matching the schema. Do not explain, do not add commentar
   },
 ];
 
+function buildRegistryDigest(registry: PromptRegistryEntry[]) {
+  return registry
+    .map((entry) => [entry.id, entry.version, entry.stage, entry.title, entry.agent, entry.outputSchema].join("@"))
+    .join("|");
+}
+
 export function getPromptRegistryEntry(id: string) {
   return PROMPT_REGISTRY.find((entry) => entry.id === id) ?? null;
 }
 
-export function summarizePromptRegistry(): PromptRegistrySummary {
+export function summarizePromptRegistry(registry: PromptRegistryEntry[] = PROMPT_REGISTRY): PromptRegistrySummary {
   return {
-    total: PROMPT_REGISTRY.length,
-    stages: PROMPT_REGISTRY.reduce<Record<PromptRegistryStage, number>>((acc, entry) => {
+    total: registry.length,
+    stages: registry.reduce<Record<PromptRegistryStage, number>>((acc, entry) => {
       acc[entry.stage] += 1;
       return acc;
     }, { command: 0, counterfactual: 0, report: 0, draft: 0 }),
-    latestVersion: PROMPT_REGISTRY.reduce((latest, entry) => (entry.version > latest ? entry.version : latest), "v1"),
+    latestVersion: registry.reduce((latest, entry) => (entry.version > latest ? entry.version : latest), "v1"),
+    registryDigest: buildRegistryDigest(registry),
+  };
+}
+
+export function buildPromptRegistrySnapshot(registry: PromptRegistryEntry[] = PROMPT_REGISTRY): PromptRegistrySnapshot {
+  return {
+    ...summarizePromptRegistry(registry),
+    observedAt: Date.now(),
   };
 }

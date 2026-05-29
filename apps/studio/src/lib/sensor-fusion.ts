@@ -31,6 +31,16 @@ export type CameraLiveConnectionFusionEvent = {
   transportSessionId: string | null;
   lastHeartbeatAt: number | null;
   protocolProfile: "onvif_device" | "rtsp_session" | "mjpeg_stream" | "http_poll" | "proxy" | null;
+  authMode: "none" | "basic" | "digest" | "token" | "cookie" | "onvif_digest" | "proxy_passthrough" | null;
+  authState: "unauthenticated" | "authenticating" | "authenticated" | "failed" | null;
+  authRealm: string | null;
+  authSessionId: string | null;
+  authSessionExpiresAt: number | null;
+  transportResponseStatus: number | null;
+  transportResponseStatusText: string | null;
+  authChallengeHeader: string | null;
+  authChallengeScheme: "basic" | "digest" | "bearer" | "token" | null;
+  authChallengeRealm: string | null;
   liveFeedUrl: string | null;
   liveFeedLabel: string | null;
   ingestMode: "manual" | "external";
@@ -119,8 +129,15 @@ export function computeOperationalEvidenceFusionSummary(
   const operationalHealthDetail = [
     `Metadata ${metadataStatus ?? "unknown"}`,
     `Connection ${connectionStatus ?? "unknown"}`,
+    `Auth ${cameraLiveConnectionEvent?.authState ?? "unknown"}/${cameraLiveConnectionEvent?.authMode ?? "unknown"}`,
+    cameraLiveConnectionEvent?.transportResponseStatus != null
+      ? `Transport ${cameraLiveConnectionEvent.transportResponseStatus}${cameraLiveConnectionEvent.transportResponseStatusText ? ` ${cameraLiveConnectionEvent.transportResponseStatusText}` : ""}`
+      : null,
+    cameraLiveConnectionEvent?.authChallengeHeader
+      ? `Challenge ${cameraLiveConnectionEvent.authChallengeHeader}`
+      : null,
     `Sensors ${sensorFusion.totalCount}`,
-  ].join(" · ");
+  ].filter((part): part is string => Boolean(part)).join(" · ");
 
   return {
     sensorFusion,

@@ -18,6 +18,7 @@ import {
   providerKeyAvailable,
 } from "@/agents/provider-selection";
 import { safeParseSecurityScene, type SecurityScene } from "@/schema/security-scene";
+import { bakeoffToSecurityScene } from "@/lib/bakeoff-bridge";
 
 function formatClock(timestamp: number | null | undefined) {
   if (!timestamp) return null;
@@ -44,10 +45,24 @@ function estimateTokensFromText(text: string) {
   return Math.max(1, Math.ceil(text.length / 4));
 }
 
+function parseTimelineFocusFromUrl(search: string) {
+  const params = new URLSearchParams(search);
+  const timestampParam = params.get("timelineTimestamp");
+  const timestamp = timestampParam ? Number(timestampParam) : null;
+  if (!timestamp || Number.isNaN(timestamp)) return null;
+  return {
+    timestamp,
+    query: params.get("timelineQuery"),
+    branchLabel: params.get("timelineBranch"),
+    eventId: params.get("timelineEventId"),
+    provenanceNodeId: params.get("provenanceNode"),
+    provenanceEdgeId: params.get("provenanceEdge"),
+    source: "launcher" as const,
+  };
+}
+
 export default function StudioPage() {
   const [enterStudio, setEnterStudio] = useState(false);
-  const [queryBootEnabled, setQueryBootEnabled] = useState(false);
-  const [bootResolved, setBootResolved] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const [showFloorPlanWizard, setShowFloorPlanWizard] = useState(false);
   const [showScanWizard, setShowScanWizard] = useState(false);
@@ -70,6 +85,7 @@ export default function StudioPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scene = useStudioStore((s) => s.scene);
+  const setTimelineFocusRequest = useStudioStore((s) => s.setTimelineFocusRequest);
   const setLaunchNotice = useStudioStore((s) => s.setLaunchNotice);
   const simulationResult = useStudioStore((s) => s.simulationResult);
   const simulationDirty = useStudioStore((s) => s.simulationDirty);
@@ -238,6 +254,25 @@ export default function StudioPage() {
     setAiDraftJsonError(null);
   };
 
+  const openDemoWorkspace = () => {
+    const demoRecord =
+      savedProjects.find((project) => project.scene.source === "demo" && project.scene.name.toLowerCase().includes("open studio"))
+      ?? savedProjects.find((project) => project.scene.source === "demo" && project.folder === "Featured")
+      ?? savedProjects.find((project) => project.scene.source === "demo");
+
+    if (demoRecord) {
+      setScene(demoRecord.scene);
+      setLaunchNotice(`Loaded reference scene: ${demoRecord.scene.name}`);
+      setDemoMode(false);
+      setDemoStep(0);
+      openCoverageWorkspace();
+      return;
+    }
+
+    setLaunchNotice("No seeded reference workspace is available. Continue with current scene.");
+    openCoverageWorkspace();
+  };
+
   useEffect(() => {
     if (!aiDraftPreview) return;
     queueMicrotask(() => {
@@ -248,14 +283,6 @@ export default function StudioPage() {
       setAiDraftJsonVisible(false);
     });
   }, [aiDraftPreview]);
-
-  useEffect(() => {
-    queueMicrotask(() => {
-      if (typeof window === "undefined") return;
-      setQueryBootEnabled(new URLSearchParams(window.location.search).get("studio") === "1");
-      setBootResolved(true);
-    });
-  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -304,6 +331,14 @@ export default function StudioPage() {
     runSimulationFromStore();
   }, [currentResult, scene, scene.source, runSimulationFromStore, simulationDirty]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const focusRequest = parseTimelineFocusFromUrl(window.location.search);
+    if (focusRequest) {
+      setTimelineFocusRequest(focusRequest);
+    }
+  }, [setTimelineFocusRequest]);
+
   const launchWorkspace = (viewMode: ViewMode, preset: WorkspacePreset, bottomTab?: BottomTab) => {
     setWorkspacePreset(preset);
     setViewMode(viewMode);
@@ -341,11 +376,7 @@ export default function StudioPage() {
     fileInputRef.current?.click();
   };
 
-  if (!bootResolved) {
-    return null;
-  }
-
-  if (enterStudio || queryBootEnabled) {
+  if (enterStudio) {
     return <StudioShell />;
   }
 
@@ -388,6 +419,7 @@ export default function StudioPage() {
           if (!confirmWorkspaceReplacement("open AI layout draft")) return;
           setShowAiDraft(true);
         }}
+        onOpenDemoScene={openDemoWorkspace}
         onOpenReport={openReport}
         onOpenScene={openScene}
         onUpdateProjectMetadata={updateSavedSceneMetadata}
@@ -405,6 +437,10 @@ export default function StudioPage() {
         open={showProjectLauncher}
         onClose={() => setShowProjectLauncher(false)}
         onOpenCoverageWorkspace={openCoverageWorkspace}
+        onOpenDemoScene={() => {
+          setShowProjectLauncher(false);
+          openDemoWorkspace();
+        }}
         onCreateScene={() => {
           if (!confirmWorkspaceReplacement("create a new scene")) return;
           setShowProjectLauncher(false);
@@ -452,6 +488,20 @@ export default function StudioPage() {
           reader.onload = (e) => {
             try {
               const json = JSON.parse((e.target?.result as string) || "");
+              if (json && typeof json.image_id === "string" && Array.isArray(json.walls)) {
+                const scene = bakeoffToSecurityScene(json, {
+                  knownDimensionM: 8,
+                  axisHint: "width",
+                }, json.image_id);
+                const result = importScene(scene);
+                if (!result.success) {
+                  setImportError(result.error ?? "Bakeoff scene import failed");
+                  return;
+                }
+                setImportError(null);
+                openStudio();
+                return;
+              }
               const result = importScene(json);
               if (!result.success) {
                 setImportError(result.error ?? "Scene import failed");
@@ -838,7 +888,7 @@ export default function StudioPage() {
                       tokenSource: "estimated",
                       status: "success",
                       note: useModelDraft
-                        ? `Model-backed draft preview from ${currentAiProvider.providerLabel}.`
+                        ? `Model-backed if the provider is configured and local-only mode is off. Draft preview from ${currentAiProvider.providerLabel}.`
                         : localOnlyMode
                           ? "Heuristic draft preview enforced by local-only policy."
                           : `Heuristic draft preview used because ${currentAiProvider.envKey} is not set.`,

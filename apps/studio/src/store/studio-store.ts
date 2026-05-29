@@ -40,7 +40,6 @@ import {
   type OperationalEvidenceArchive,
 } from "@/lib/operational-evidence-archive";
 import {
-  canPublishWorkspaceScene,
   createDefaultWorkspaceGovernance,
   normalizeWorkspaceGovernance,
   type WorkspaceApprovalMode,
@@ -250,6 +249,16 @@ export type FocusScenePointRequest = {
   source: MapViewportTarget;
 };
 
+export type TimelineFocusRequest = {
+  timestamp: number;
+  query?: string | null;
+  branchLabel?: string | null;
+  eventId?: string | null;
+  provenanceNodeId?: string | null;
+  provenanceEdgeId?: string | null;
+  source?: "launcher" | "scene" | "debug" | "report";
+};
+
 export type RuntimeIncidentCategory =
   | "user_error"
   | "data_validation_error"
@@ -348,6 +357,16 @@ export type CameraLiveConnectionEventRecord = {
   previousLiveFeedLabel: string | null;
   previousLiveConnectionMode: "rtsp" | "mjpeg" | "http" | "onvif" | "proxy" | null;
   previousLiveConnectionStatus: "disconnected" | "connecting" | "connected" | "error" | null;
+  previousAuthMode: "none" | "basic" | "digest" | "token" | "cookie" | "onvif_digest" | "proxy_passthrough" | null;
+  previousAuthState: "unauthenticated" | "authenticating" | "authenticated" | "failed" | null;
+  previousAuthRealm: string | null;
+  previousAuthSessionId: string | null;
+  previousAuthSessionExpiresAt: number | null;
+  previousTransportResponseStatus: number | null;
+  previousTransportResponseStatusText: string | null;
+  previousAuthChallengeHeader: string | null;
+  previousAuthChallengeScheme: "basic" | "digest" | "bearer" | "token" | null;
+  previousAuthChallengeRealm: string | null;
   liveSessionId: string | null;
   liveSessionState: "idle" | "probing" | "connected" | "error" | null;
   liveSessionStartedAt: number | null;
@@ -355,9 +374,19 @@ export type CameraLiveConnectionEventRecord = {
   liveSessionExpiresAt: number | null;
   transportSessionId: string | null;
   transportSessionState: "idle" | "negotiating" | "active" | "closing" | "error" | null;
+  transportResponseStatus: number | null;
+  transportResponseStatusText: string | null;
   lastHeartbeatAt: number | null;
   probeCount: number;
   protocolProfile: "onvif_device" | "rtsp_session" | "mjpeg_stream" | "http_poll" | "proxy" | null;
+  authMode: "none" | "basic" | "digest" | "token" | "cookie" | "onvif_digest" | "proxy_passthrough" | null;
+  authState: "unauthenticated" | "authenticating" | "authenticated" | "failed" | null;
+  authRealm: string | null;
+  authSessionId: string | null;
+  authSessionExpiresAt: number | null;
+  authChallengeHeader: string | null;
+  authChallengeScheme: "basic" | "digest" | "bearer" | "token" | null;
+  authChallengeRealm: string | null;
   liveFeedUrl: string | null;
   liveFeedLabel: string | null;
   liveConnectionMode: "rtsp" | "mjpeg" | "http" | "onvif" | "proxy" | null;
@@ -370,6 +399,42 @@ export type CameraLiveConnectionEventRecord = {
 
 export type CameraLiveConnectionEventInput = Omit<CameraLiveConnectionEventRecord, "id" | "timestamp" | "sceneId" | "sceneName"> & {
   timestamp?: number;
+  previousLiveSessionId?: CameraLiveConnectionEventRecord["previousLiveSessionId"];
+  previousLiveSessionState?: CameraLiveConnectionEventRecord["previousLiveSessionState"];
+  previousLiveSessionStartedAt?: CameraLiveConnectionEventRecord["previousLiveSessionStartedAt"];
+  previousLiveSessionConfirmedAt?: CameraLiveConnectionEventRecord["previousLiveSessionConfirmedAt"];
+  previousLiveSessionExpiresAt?: CameraLiveConnectionEventRecord["previousLiveSessionExpiresAt"];
+  previousLiveFeedUrl?: CameraLiveConnectionEventRecord["previousLiveFeedUrl"];
+  previousLiveFeedLabel?: CameraLiveConnectionEventRecord["previousLiveFeedLabel"];
+  previousLiveConnectionMode?: CameraLiveConnectionEventRecord["previousLiveConnectionMode"];
+  previousLiveConnectionStatus?: CameraLiveConnectionEventRecord["previousLiveConnectionStatus"];
+  previousAuthMode?: CameraLiveConnectionEventRecord["previousAuthMode"];
+  previousAuthState?: CameraLiveConnectionEventRecord["previousAuthState"];
+  previousAuthRealm?: CameraLiveConnectionEventRecord["previousAuthRealm"];
+  previousAuthSessionId?: CameraLiveConnectionEventRecord["previousAuthSessionId"];
+  previousAuthSessionExpiresAt?: CameraLiveConnectionEventRecord["previousAuthSessionExpiresAt"];
+  previousTransportResponseStatus?: CameraLiveConnectionEventRecord["previousTransportResponseStatus"];
+  previousTransportResponseStatusText?: CameraLiveConnectionEventRecord["previousTransportResponseStatusText"];
+  previousAuthChallengeHeader?: CameraLiveConnectionEventRecord["previousAuthChallengeHeader"];
+  previousAuthChallengeScheme?: CameraLiveConnectionEventRecord["previousAuthChallengeScheme"];
+  previousAuthChallengeRealm?: CameraLiveConnectionEventRecord["previousAuthChallengeRealm"];
+  liveSessionId?: CameraLiveConnectionEventRecord["liveSessionId"];
+  liveSessionState?: CameraLiveConnectionEventRecord["liveSessionState"];
+  liveSessionStartedAt?: CameraLiveConnectionEventRecord["liveSessionStartedAt"];
+  liveSessionConfirmedAt?: CameraLiveConnectionEventRecord["liveSessionConfirmedAt"];
+  liveSessionExpiresAt?: CameraLiveConnectionEventRecord["liveSessionExpiresAt"];
+  transportSessionId?: CameraLiveConnectionEventRecord["transportSessionId"];
+  transportSessionState?: CameraLiveConnectionEventRecord["transportSessionState"];
+  transportResponseStatus?: CameraLiveConnectionEventRecord["transportResponseStatus"];
+  transportResponseStatusText?: CameraLiveConnectionEventRecord["transportResponseStatusText"];
+  authChallengeHeader?: CameraLiveConnectionEventRecord["authChallengeHeader"];
+  authChallengeScheme?: CameraLiveConnectionEventRecord["authChallengeScheme"];
+  authChallengeRealm?: CameraLiveConnectionEventRecord["authChallengeRealm"];
+  authMode?: CameraLiveConnectionEventRecord["authMode"];
+  authState?: CameraLiveConnectionEventRecord["authState"];
+  authRealm?: CameraLiveConnectionEventRecord["authRealm"];
+  authSessionId?: CameraLiveConnectionEventRecord["authSessionId"];
+  authSessionExpiresAt?: CameraLiveConnectionEventRecord["authSessionExpiresAt"];
 };
 
 export type ExternalLogEntrySource = "paste" | "file";
@@ -787,6 +852,26 @@ function loadCameraLiveConnectionEvents(): CameraLiveConnectionEventRecord[] {
         previousLiveConnectionStatus: candidate.previousLiveConnectionStatus === "disconnected" || candidate.previousLiveConnectionStatus === "connecting" || candidate.previousLiveConnectionStatus === "connected" || candidate.previousLiveConnectionStatus === "error"
           ? candidate.previousLiveConnectionStatus
           : null,
+        previousAuthMode: candidate.previousAuthMode === "none" || candidate.previousAuthMode === "basic" || candidate.previousAuthMode === "digest" || candidate.previousAuthMode === "token" || candidate.previousAuthMode === "cookie" || candidate.previousAuthMode === "onvif_digest" || candidate.previousAuthMode === "proxy_passthrough"
+          ? candidate.previousAuthMode
+          : null,
+        previousAuthState: candidate.previousAuthState === "unauthenticated" || candidate.previousAuthState === "authenticating" || candidate.previousAuthState === "authenticated" || candidate.previousAuthState === "failed"
+          ? candidate.previousAuthState
+          : null,
+        previousAuthRealm: typeof candidate.previousAuthRealm === "string" ? candidate.previousAuthRealm : null,
+        previousAuthSessionId: typeof candidate.previousAuthSessionId === "string" ? candidate.previousAuthSessionId : null,
+        previousAuthSessionExpiresAt: typeof candidate.previousAuthSessionExpiresAt === "number" ? candidate.previousAuthSessionExpiresAt : null,
+        previousTransportResponseStatus: typeof candidate.previousTransportResponseStatus === "number" ? candidate.previousTransportResponseStatus : null,
+        previousTransportResponseStatusText: typeof candidate.previousTransportResponseStatusText === "string" ? candidate.previousTransportResponseStatusText : null,
+        previousAuthChallengeHeader: typeof candidate.previousAuthChallengeHeader === "string" ? candidate.previousAuthChallengeHeader : null,
+        previousAuthChallengeScheme:
+          candidate.previousAuthChallengeScheme === "basic"
+          || candidate.previousAuthChallengeScheme === "digest"
+          || candidate.previousAuthChallengeScheme === "bearer"
+          || candidate.previousAuthChallengeScheme === "token"
+            ? candidate.previousAuthChallengeScheme
+            : null,
+        previousAuthChallengeRealm: typeof candidate.previousAuthChallengeRealm === "string" ? candidate.previousAuthChallengeRealm : null,
         liveSessionId: typeof candidate.liveSessionId === "string" ? candidate.liveSessionId : null,
         liveSessionState: candidate.liveSessionState === "idle" || candidate.liveSessionState === "probing" || candidate.liveSessionState === "connected" || candidate.liveSessionState === "error"
           ? candidate.liveSessionState
@@ -803,6 +888,8 @@ function loadCameraLiveConnectionEvents(): CameraLiveConnectionEventRecord[] {
           || candidate.transportSessionState === "error"
             ? candidate.transportSessionState
             : null,
+        transportResponseStatus: typeof candidate.transportResponseStatus === "number" ? candidate.transportResponseStatus : null,
+        transportResponseStatusText: typeof candidate.transportResponseStatusText === "string" ? candidate.transportResponseStatusText : null,
         lastHeartbeatAt: typeof candidate.lastHeartbeatAt === "number" ? candidate.lastHeartbeatAt : null,
         probeCount: typeof candidate.probeCount === "number" ? candidate.probeCount : 0,
         protocolProfile:
@@ -813,6 +900,24 @@ function loadCameraLiveConnectionEvents(): CameraLiveConnectionEventRecord[] {
           || candidate.protocolProfile === "proxy"
             ? candidate.protocolProfile
             : null,
+        authMode: candidate.authMode === "none" || candidate.authMode === "basic" || candidate.authMode === "digest" || candidate.authMode === "token" || candidate.authMode === "cookie" || candidate.authMode === "onvif_digest" || candidate.authMode === "proxy_passthrough"
+          ? candidate.authMode
+          : null,
+        authState: candidate.authState === "unauthenticated" || candidate.authState === "authenticating" || candidate.authState === "authenticated" || candidate.authState === "failed"
+          ? candidate.authState
+          : null,
+        authRealm: typeof candidate.authRealm === "string" ? candidate.authRealm : null,
+        authSessionId: typeof candidate.authSessionId === "string" ? candidate.authSessionId : null,
+        authSessionExpiresAt: typeof candidate.authSessionExpiresAt === "number" ? candidate.authSessionExpiresAt : null,
+        authChallengeHeader: typeof candidate.authChallengeHeader === "string" ? candidate.authChallengeHeader : null,
+        authChallengeScheme:
+          candidate.authChallengeScheme === "basic"
+          || candidate.authChallengeScheme === "digest"
+          || candidate.authChallengeScheme === "bearer"
+          || candidate.authChallengeScheme === "token"
+            ? candidate.authChallengeScheme
+            : null,
+        authChallengeRealm: typeof candidate.authChallengeRealm === "string" ? candidate.authChallengeRealm : null,
         liveFeedUrl: typeof candidate.liveFeedUrl === "string" ? candidate.liveFeedUrl : null,
         liveFeedLabel: typeof candidate.liveFeedLabel === "string" ? candidate.liveFeedLabel : null,
         liveConnectionMode: candidate.liveConnectionMode === "rtsp" || candidate.liveConnectionMode === "mjpeg" || candidate.liveConnectionMode === "http" || candidate.liveConnectionMode === "onvif" || candidate.liveConnectionMode === "proxy"
@@ -1321,6 +1426,7 @@ export type StudioStoreState = {
   savedScenes: SecurityScene[];
   savedProjects: SavedProjectRecord[];
   launchNotice: string | null;
+  timelineFocusRequest: TimelineFocusRequest | null;
   simulationError?: string | null;
   sceneModified?: boolean;
   savedSceneName?: string | null;
@@ -1411,6 +1517,7 @@ export type StudioStoreState = {
   setDemoMode: (active: boolean) => void;
   setDemoStep: (step: number) => void;
   setLaunchNotice: (launchNotice: string | null) => void;
+  setTimelineFocusRequest: (request: TimelineFocusRequest | null) => void;
   setCompareVisualEvidence: (evidence: StudioStoreState["compareVisualEvidence"]) => void;
   setCompareReportSelection: (selection: StudioStoreState["compareReportSelection"]) => void;
   setCameraViewVerificationIntent: (intent: StudioStoreState["cameraViewVerificationIntent"]) => void;
@@ -2352,6 +2459,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   savedScenes: INITIAL_SAVED_PROJECTS.length > 0 ? INITIAL_SAVED_PROJECTS.map((record) => record.scene) : INITIAL_SEEDED_PROJECTS.map((record) => record.scene),
   savedProjects: INITIAL_SAVED_PROJECTS.length > 0 ? INITIAL_SAVED_PROJECTS : INITIAL_SEEDED_PROJECTS,
   launchNotice: null,
+  timelineFocusRequest: null,
   compareVisualEvidence: null,
   compareReportSelection: null,
   cameraViewVerificationIntent: null,
@@ -2922,7 +3030,14 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       liveFeedLabel: string | null,
       liveConnectionMode: "rtsp" | "mjpeg" | "http" | "onvif" | "proxy" | null,
       liveConnectionStatus: "disconnected" | "connecting" | "connected" | "error" | null,
-    ) => `status ${liveConnectionStatus ?? "unknown"}, mode ${liveConnectionMode ?? "unknown"}, feed ${liveFeedUrl ?? "none"}${liveFeedLabel ? ` (${liveFeedLabel})` : ""}`;
+      authState: "unauthenticated" | "authenticating" | "authenticated" | "failed" | null,
+      authMode: "none" | "basic" | "digest" | "token" | "cookie" | "onvif_digest" | "proxy_passthrough" | null,
+      transportResponseStatus: number | null,
+      transportResponseStatusText: string | null,
+      authChallengeHeader: string | null,
+      authChallengeScheme: "basic" | "digest" | "bearer" | "token" | null,
+      authChallengeRealm: string | null,
+    ) => `status ${liveConnectionStatus ?? "unknown"}, mode ${liveConnectionMode ?? "unknown"}, auth ${authState ?? "unknown"} via ${authMode ?? "unknown"}, feed ${liveFeedUrl ?? "none"}${liveFeedLabel ? ` (${liveFeedLabel})` : ""}${transportResponseStatus != null ? `, transport ${transportResponseStatus}${transportResponseStatusText ? ` ${transportResponseStatusText}` : ""}` : ""}${authChallengeHeader ? `, challenge ${authChallengeHeader}` : ""}${authChallengeScheme ? `, scheme ${authChallengeScheme}` : ""}${authChallengeRealm ? `, realm ${authChallengeRealm}` : ""}`;
     const nextRecord: CameraLiveConnectionEventRecord = {
       id: `camera_live_connection_${timestamp.toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
       sceneId: state.scene.id,
@@ -2938,6 +3053,16 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       previousLiveFeedLabel: event.previousLiveFeedLabel ?? null,
       previousLiveConnectionMode: event.previousLiveConnectionMode ?? null,
       previousLiveConnectionStatus: event.previousLiveConnectionStatus ?? null,
+      previousAuthMode: event.previousAuthMode ?? null,
+      previousAuthState: event.previousAuthState ?? null,
+      previousAuthRealm: event.previousAuthRealm ?? null,
+      previousAuthSessionId: event.previousAuthSessionId ?? null,
+      previousAuthSessionExpiresAt: event.previousAuthSessionExpiresAt ?? null,
+      previousTransportResponseStatus: event.previousTransportResponseStatus ?? null,
+      previousTransportResponseStatusText: event.previousTransportResponseStatusText ?? null,
+      previousAuthChallengeHeader: event.previousAuthChallengeHeader ?? null,
+      previousAuthChallengeScheme: event.previousAuthChallengeScheme ?? null,
+      previousAuthChallengeRealm: event.previousAuthChallengeRealm ?? null,
       liveSessionId: event.liveSessionId ?? null,
       liveSessionState: event.liveSessionState ?? null,
       liveSessionStartedAt: event.liveSessionStartedAt ?? null,
@@ -2945,9 +3070,19 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       liveSessionExpiresAt: event.liveSessionExpiresAt ?? null,
       transportSessionId: event.transportSessionId ?? null,
       transportSessionState: event.transportSessionState ?? null,
+      transportResponseStatus: event.transportResponseStatus ?? null,
+      transportResponseStatusText: event.transportResponseStatusText ?? null,
       lastHeartbeatAt: event.lastHeartbeatAt ?? null,
       probeCount: event.probeCount ?? 0,
       protocolProfile: event.protocolProfile ?? null,
+      authMode: event.authMode ?? null,
+      authState: event.authState ?? null,
+      authRealm: event.authRealm ?? null,
+      authSessionId: event.authSessionId ?? null,
+      authSessionExpiresAt: event.authSessionExpiresAt ?? null,
+      authChallengeHeader: event.authChallengeHeader ?? null,
+      authChallengeScheme: event.authChallengeScheme ?? null,
+      authChallengeRealm: event.authChallengeRealm ?? null,
       liveFeedUrl: event.liveFeedUrl ?? null,
       liveFeedLabel: event.liveFeedLabel ?? null,
       liveConnectionMode: event.liveConnectionMode ?? null,
@@ -2978,12 +3113,26 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         nextRecord.previousLiveFeedLabel,
         nextRecord.previousLiveConnectionMode,
         nextRecord.previousLiveConnectionStatus,
+        nextRecord.previousAuthState,
+        nextRecord.previousAuthMode,
+        nextRecord.previousTransportResponseStatus,
+        nextRecord.previousTransportResponseStatusText,
+        nextRecord.previousAuthChallengeHeader,
+        nextRecord.previousAuthChallengeScheme,
+        nextRecord.previousAuthChallengeRealm,
       )}.`,
       afterSummary: `After: ${formatConnectionSnapshot(
         nextRecord.liveFeedUrl,
         nextRecord.liveFeedLabel,
         nextRecord.liveConnectionMode,
         nextRecord.liveConnectionStatus,
+        nextRecord.authState,
+        nextRecord.authMode,
+        nextRecord.transportResponseStatus,
+        nextRecord.transportResponseStatusText,
+        nextRecord.authChallengeHeader,
+        nextRecord.authChallengeScheme,
+        nextRecord.authChallengeRealm,
       )}.`,
       notes: [
         `Live camera binding updated via ${event.ingestMode}.`,
@@ -3092,7 +3241,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     const { scene, historyPast, operationalEvidenceEvents, savedProjects, workspaceGovernance, workspaceAccess } = get();
     const previousEvent = findLatestOperationalEvidenceEventForScene(operationalEvidenceEvents, scene.id) ?? operationalEvidenceEvents.at(-1) ?? null;
     const now = Date.now();
-    const accessDecision = canPerformWorkspaceAction(workspaceAccess, scene, "publish");
+    const accessDecision = canPerformWorkspaceAction(workspaceAccess, scene, "publish", workspaceGovernance);
     const accessRoute = routeWorkspaceApproval(scene, workspaceAccess);
     if (!accessDecision.allowed) {
       if (workspaceGovernance.sceneStatus === "review_requested") {
@@ -3117,52 +3266,6 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         notes: [
           "Publish was gated by workspace access policy and converted into a review request.",
           `Access route resolved to ${accessRoute.requiredReviewerRole.replace(/_/g, " ")}.`,
-        ],
-      });
-      const nextEvents = [...operationalEvidenceEvents, requestEvent];
-      persistOperationalEvidenceEvents(nextEvents);
-      const nextGovernance: WorkspaceGovernanceState = {
-        ...workspaceGovernance,
-        sceneStatus: "review_requested",
-        requestedAt: now,
-        requestedBy: workspaceGovernance.activeRole,
-        reviewedAt: null,
-        reviewedBy: null,
-        publishedAt: null,
-        publishedBy: null,
-      };
-      persistWorkspaceGovernance(nextGovernance);
-      set({
-        operationalEvidenceEvents: nextEvents,
-        workspaceGovernance: nextGovernance,
-        scene: cloneSceneWithAppendedChangeLog(scene, evidenceLogLine(requestEvent)),
-      });
-      return false;
-    }
-
-    if (!canPublishWorkspaceScene(workspaceGovernance)) {
-      if (workspaceGovernance.sceneStatus === "review_requested") {
-        return false;
-      }
-      const requestEvent = buildOperationalEvidenceEvent({
-        kind: "scene_review_requested",
-        title: "Publish review requested",
-        details: `Workspace role ${workspaceGovernance.activeRole} requested approval before publishing.`,
-        actor: "user",
-        source: scene.source,
-        sceneId: scene.id,
-        sceneName: scene.name,
-        revisionDepth: historyPast.length,
-        affectedNodeIds: scene.cameras.map((camera) => camera.id),
-        confidence: 0.88,
-        branchLabel: "review",
-        lifecycleStage: "review",
-        parentEventId: previousEvent?.id ?? undefined,
-        beforeSummary: summarizeSceneEvidence(scene).detail,
-        afterSummary: summarizeSceneEvidence(scene).detail,
-        notes: [
-          "Publish was gated by the governance policy and converted into a review request.",
-          `Approval route resolved to ${accessRoute.requiredReviewerRole.replace(/_/g, " ")}.`,
         ],
       });
       const nextEvents = [...operationalEvidenceEvents, requestEvent];
@@ -3509,7 +3612,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
 
   approveSceneReview: (note = "") => {
     const { scene, operationalEvidenceEvents, workspaceGovernance, workspaceAccess, historyPast } = get();
-    if (!canPerformWorkspaceAction(workspaceAccess, scene, "approve").allowed) return false;
+    if (!canPerformWorkspaceAction(workspaceAccess, scene, "approve", workspaceGovernance).allowed) return false;
     const trimmed = note.trim();
     const evidenceEvent = buildOperationalEvidenceEvent({
       kind: "scene_review_approved",
@@ -3547,7 +3650,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
 
   rejectSceneReview: (note = "") => {
     const { scene, operationalEvidenceEvents, workspaceGovernance, workspaceAccess, historyPast } = get();
-    if (!canPerformWorkspaceAction(workspaceAccess, scene, "reject").allowed) return false;
+    if (!canPerformWorkspaceAction(workspaceAccess, scene, "reject", workspaceGovernance).allowed) return false;
     const trimmed = note.trim();
     const evidenceEvent = buildOperationalEvidenceEvent({
       kind: "scene_review_rejected",
@@ -3935,6 +4038,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   setDemoMode: (active) => set({ demoMode: active }),
   setDemoStep: (step) => set({ demoStep: step }),
   setLaunchNotice: (launchNotice) => set({ launchNotice }),
+  setTimelineFocusRequest: (timelineFocusRequest) => set({ timelineFocusRequest }),
   recordRuntimeIncident: (incident) =>
     set((state) => ({
       runtimeIncidents: [...state.runtimeIncidents, createRuntimeIncident(incident)].slice(-100),

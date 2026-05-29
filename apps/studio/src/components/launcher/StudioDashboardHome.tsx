@@ -25,6 +25,14 @@ import {
 
 import { cn } from "@/lib/cn";
 import { getSceneSourceMeta } from "@/lib/scene-source";
+import { formatWorkspaceBranchLabel, searchWorkspaceMemory } from "@/lib/workspace-search";
+import type { GovernanceArchiveRecord } from "@/lib/governance-archive";
+import type { WorkspaceMembershipArchiveRecord } from "@/lib/workspace-membership-types";
+import type { WorkspaceIdentityConflictArchiveRecord } from "@/lib/workspace-identity-conflict-types";
+import type { SupportDeliveryArchiveRecord } from "@/lib/support-delivery";
+import type { SensorIngestArchiveRecord } from "@/lib/sensor-ingest-history";
+import type { CameraMetadataArchiveRecord } from "@/lib/camera-metadata-ingest-history";
+import type { CameraLiveConnectionArchiveRecord } from "@/lib/camera-live-connection-history";
 import type { BottomTab, SavedProjectRecord, ViewMode, WorkspacePreset } from "@/store/studio-store";
 import { useStudioStore } from "@/store/studio-store";
 import type { SecurityScene, SecurityIssue, SimulationResult, DoriQuality, ScenarioPath, CameraNode, ObstructionNode, SecurityLightNode } from "@/schema/security-scene";
@@ -35,7 +43,7 @@ type StarterTone = "blank" | "import" | "scan" | "ai";
 const NAV_ITEMS = [
   { label: "Home", detail: "Studio dashboard", active: true as const },
   { label: "Projects", detail: "Local workspaces", active: false as const },
-  { label: "Demo Sites", detail: "Retail / Office / Warehouse", active: false as const },
+  { label: "Reference Sites", detail: "Retail / Office / Warehouse", active: false as const },
   { label: "Reports", detail: "Evidence exports", active: false as const },
   { label: "Docs", detail: "Architecture notes", active: false as const },
   { label: "Settings", detail: "Studio preferences", active: false as const },
@@ -56,7 +64,7 @@ const SOURCE_LABELS: Record<SecurityScene["source"], string> = {
   scan: "Scan",
   import: "Import",
   preset: "Preset",
-  demo: "Demo",
+  demo: "Reference",
 };
 
 const ISSUE_SEVERITY_ORDER: Record<SecurityIssue["severity"], number> = {
@@ -177,12 +185,14 @@ type StudioDashboardHomeProps = {
   onOpenIssues: () => void;
   onRunSimulation: () => void;
   onStartProject: () => void;
+  onOpenAdvancedWorkflows?: () => void;
   onCreateScene: () => void;
   onImportFloorPlan: () => void;
   onImportScene: () => void;
   onScanSite: () => void;
   onGuidedScanAssistant?: () => void;
   onAiDraft: () => void;
+  onOpenDemoScene?: () => void;
   onOpenReport: () => void;
   onOpenScene?: (scene: SecurityScene) => void;
   onUpdateProjectMetadata: (sceneId: string, patch: Partial<Pick<SavedProjectRecord, "folder" | "tags" | "pinned" | "lastOpenedAt">>) => void;
@@ -208,6 +218,20 @@ function formatTime(ts: number | null | undefined) {
     minute: "2-digit",
     timeZone: "UTC",
   }).format(new Date(ts));
+}
+
+function formatTimelineQueryDate(ts: number) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "UTC",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(ts));
+}
+
+function formatWorkspaceMemoryFocusQuery(ts: number, branchLabel?: string | null) {
+  const after = `after:${formatTimelineQueryDate(ts)}`;
+  return branchLabel ? `branch:${branchLabel} ${after}` : after;
 }
 
 function qualityToTone(quality: DoriQuality) {
@@ -618,6 +642,35 @@ function ActionButton({
   );
 }
 
+function LaunchStatusRow({
+  label,
+  value,
+  detail,
+  tone,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  tone: "emerald" | "amber" | "sky" | "violet";
+}) {
+  const toneClasses: Record<typeof tone, string> = {
+    emerald: "border-emerald-400/18 bg-emerald-500/10 text-emerald-100",
+    amber: "border-amber-400/18 bg-amber-500/10 text-amber-100",
+    sky: "border-sky-400/18 bg-sky-500/10 text-sky-100",
+    violet: "border-violet-400/18 bg-violet-500/10 text-violet-100",
+  };
+
+  return (
+    <div className={cn("rounded-2xl border px-3 py-2", toneClasses[tone])}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-[10px] uppercase tracking-[0.18em] text-white/60">{label}</div>
+        <div className="text-[11px] font-semibold text-white">{value}</div>
+      </div>
+      <div className="mt-1 text-[11px] leading-4 text-white/75">{detail}</div>
+    </div>
+  );
+}
+
 function SceneStarterCard({
   icon,
   title,
@@ -833,7 +886,7 @@ function ProjectMetadataEditor({
                 )}
               >
                 {selectedProjectScene.source === "demo"
-                  ? "Reference Demo"
+                  ? "Reference baseline"
                   : selectedProjectScene.source === "manual"
                     ? "Draft Workspace"
                     : "Your Workspace"}
@@ -1002,6 +1055,7 @@ export function StudioDashboardHome({
   onGuidedScanAssistant,
   onAiDraft,
   onOpenReport,
+  onOpenDemoScene,
   onOpenScene,
   onUpdateProjectMetadata,
   onDuplicateProject,
@@ -1010,6 +1064,7 @@ export function StudioDashboardHome({
   onOpenDemoWalkthrough,
 }: StudioDashboardHomeProps) {
   const [hydrated, setHydrated] = useState(false);
+  const [showAdvancedStarterActions, setShowAdvancedStarterActions] = useState(false);
   void _onStartProject;
   const [previewMode, setPreviewMode] = useState<"2d" | "3d">("2d");
   const coverage = result?.totalCoveragePct ?? scene.simulation?.totalCoveragePct ?? null;
@@ -1037,6 +1092,51 @@ export function StudioDashboardHome({
         && mapResult.redundancyCameraCount < 2,
       );
     });
+  const setTimelineFocusRequest = useStudioStore((s) => s.setTimelineFocusRequest);
+  const advancedStarterActions = [
+    {
+      icon: <Plus className="h-4 w-4" />,
+      label: "New Blank Scene",
+      detail: "Available",
+      description: "Start from an empty scene shell.",
+      onClick: onCreateScene,
+    },
+    {
+      icon: <FileUp className="h-4 w-4" />,
+      label: "Import Scene JSON",
+      detail: "Available",
+      description: "Load a canonical SecurityScene file.",
+      onClick: onImportScene,
+    },
+    {
+      icon: <ScanSearch className="h-4 w-4" />,
+      label: "Scan a Site",
+      detail: "Preview / Manual-assisted",
+      description: "Manual photo marking compiles to an editable SecurityScene.",
+      onClick: onScanSite,
+    },
+    {
+      icon: <MapIcon className="h-4 w-4" />,
+      label: "Import Floor Plan",
+      detail: "Preview",
+      description: "Upload plan image/PDF to generate editable scene geometry.",
+      onClick: onImportFloorPlan,
+    },
+    {
+      icon: <Sparkles className="h-4 w-4" />,
+      label: "Guided Scan Assistant",
+      detail: "Preview / Manual-assisted",
+      description: "Use guided capture with review checkpoints before compile.",
+      onClick: onGuidedScanAssistant ?? onScanSite,
+    },
+    {
+      icon: <Sparkles className="h-4 w-4" />,
+      label: "AI Layout Draft",
+      detail: "Preview",
+      description: "Generate a draft scene from text prompts, then review before use.",
+      onClick: onAiDraft,
+    },
+  ];
   const redundancyRequiredZones = scene.criticalZones.filter((zone) => zone.redundancyRequired);
   const redundancyCount = redundancyRequiredZones.length;
   const redundancyFailCount = cameraFailureZones.length;
@@ -1103,6 +1203,14 @@ export function StudioDashboardHome({
   const [projectQuery, setProjectQuery] = useState("");
   const [projectSort, setProjectSort] = useState<ProjectSort>("recent");
   const [activeSource, setActiveSource] = useState<ProjectSourceFilter>("All");
+  const [workspaceMemoryQuery, setWorkspaceMemoryQuery] = useState("");
+  const [governanceArchiveHistory, setGovernanceArchiveHistory] = useState<GovernanceArchiveRecord[]>([]);
+  const [workspaceMembershipArchiveHistory, setWorkspaceMembershipArchiveHistory] = useState<WorkspaceMembershipArchiveRecord[]>([]);
+  const [workspaceIdentityConflictHistory, setWorkspaceIdentityConflictHistory] = useState<WorkspaceIdentityConflictArchiveRecord[]>([]);
+  const [supportDeliveryHistory, setSupportDeliveryHistory] = useState<SupportDeliveryArchiveRecord[]>([]);
+  const [sensorIngestHistory, setSensorIngestHistory] = useState<SensorIngestArchiveRecord[]>([]);
+  const [cameraMetadataHistory, setCameraMetadataHistory] = useState<CameraMetadataArchiveRecord[]>([]);
+  const [cameraLiveConnectionHistory, setCameraLiveConnectionHistory] = useState<CameraLiveConnectionArchiveRecord[]>([]);
   const browserProjects = useMemo(() => {
     const query = projectQuery.trim().toLowerCase();
     const filtered = savedProjects.filter((project) => {
@@ -1148,6 +1256,103 @@ export function StudioDashboardHome({
     return browserProjects[0] ?? null;
   }, [browserProjects, selectedProjectId]);
   const selectedProjectScene = selectedProjectRecord?.scene ?? scene;
+  const workspaceMemoryResults = useMemo(
+    () => searchWorkspaceMemory(workspaceMemoryQuery, {
+      currentScene: scene,
+      currentResult: result,
+      savedProjects,
+      archives: {
+        governanceArchiveHistory,
+        workspaceMembershipArchiveHistory,
+        workspaceIdentityConflictHistory,
+        supportDeliveryHistory,
+        sensorIngestHistory,
+        cameraMetadataHistory,
+        cameraLiveConnectionHistory,
+      },
+      maxResults: 8,
+    }),
+    [
+      cameraLiveConnectionHistory,
+      cameraMetadataHistory,
+      governanceArchiveHistory,
+      result,
+      scene,
+      savedProjects,
+      sensorIngestHistory,
+      supportDeliveryHistory,
+      workspaceIdentityConflictHistory,
+      workspaceMembershipArchiveHistory,
+      workspaceMemoryQuery,
+    ],
+  );
+  useEffect(() => {
+    void (async () => {
+      try {
+        const response = await fetch("/api/governance-archive");
+        if (response.ok) {
+          const payload = await response.json() as { history?: GovernanceArchiveRecord[] };
+          setGovernanceArchiveHistory(payload.history ?? []);
+        }
+      } catch {
+        setGovernanceArchiveHistory([]);
+      }
+      try {
+        const response = await fetch("/api/workspace-membership-archive");
+        if (response.ok) {
+          const payload = await response.json() as { history?: WorkspaceMembershipArchiveRecord[] };
+          setWorkspaceMembershipArchiveHistory(payload.history ?? []);
+        }
+      } catch {
+        setWorkspaceMembershipArchiveHistory([]);
+      }
+      try {
+        const response = await fetch("/api/workspace-identity-conflict");
+        if (response.ok) {
+          const payload = await response.json() as { history?: WorkspaceIdentityConflictArchiveRecord[] };
+          setWorkspaceIdentityConflictHistory(payload.history ?? []);
+        }
+      } catch {
+        setWorkspaceIdentityConflictHistory([]);
+      }
+      try {
+        const response = await fetch("/api/support-delivery");
+        if (response.ok) {
+          const payload = await response.json() as { history?: SupportDeliveryArchiveRecord[] };
+          setSupportDeliveryHistory(payload.history ?? []);
+        }
+      } catch {
+        setSupportDeliveryHistory([]);
+      }
+      try {
+        const response = await fetch("/api/sensor-ingest");
+        if (response.ok) {
+          const payload = await response.json() as { history?: SensorIngestArchiveRecord[] };
+          setSensorIngestHistory(payload.history ?? []);
+        }
+      } catch {
+        setSensorIngestHistory([]);
+      }
+      try {
+        const response = await fetch("/api/camera-metadata-ingest");
+        if (response.ok) {
+          const payload = await response.json() as { history?: CameraMetadataArchiveRecord[] };
+          setCameraMetadataHistory(payload.history ?? []);
+        }
+      } catch {
+        setCameraMetadataHistory([]);
+      }
+      try {
+        const response = await fetch("/api/camera-live-connection");
+        if (response.ok) {
+          const payload = await response.json() as { history?: CameraLiveConnectionArchiveRecord[] };
+          setCameraLiveConnectionHistory(payload.history ?? []);
+        }
+      } catch {
+        setCameraLiveConnectionHistory([]);
+      }
+    })();
+  }, []);
   useEffect(() => {
     queueMicrotask(() => {
       setHydrated(true);
@@ -1246,6 +1451,97 @@ export function StudioDashboardHome({
       <div className="pointer-events-none absolute inset-0 opacity-[0.18] [background-image:linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] [background-size:64px_64px]" />
 
       <div className="relative z-10 flex min-h-screen flex-col gap-4 p-4 lg:p-5">
+        <section className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(340px,0.7fr)]">
+          <div className="overflow-hidden rounded-[32px] border border-[color:var(--st-border)] bg-[linear-gradient(180deg,rgba(10,15,25,0.96),rgba(9,13,21,0.9))] px-5 py-5 shadow-[0_20px_64px_rgba(0,0,0,0.34)]">
+            <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.24em] text-[color:var(--st-muted)]">
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-300" />
+              <span>Product home</span>
+              <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2 py-0.5 text-emerald-200">Job-first</span>
+              <span className="rounded-full border border-sky-400/20 bg-sky-500/10 px-2 py-0.5 text-sky-200">Baseline optional</span>
+            </div>
+            <div className="mt-3 max-w-3xl text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+              Audit CCTV coverage before blind spots become incidents.
+            </div>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-[color:var(--st-muted)]">
+              Start from the job you need to do, then drop into Studio when you want map edits, camera views,
+              camera wall review, replay, compare, or the report. The seeded retail scene is a sample, not the identity.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <ActionButton
+                icon={<ShieldCheck className="h-4 w-4" />}
+                label="Start Security Audit"
+                description="Choose a job-first flow and open the launcher for audit, design, scan, import, AI draft, verify, or report."
+                onClick={onStartProject}
+                variant="primary"
+                className="min-w-[260px] flex-1"
+              />
+              <ActionButton
+                icon={<FolderOpen className="h-4 w-4" />}
+                label="Continue Current Workspace"
+                description="Jump back into the active scene and keep editing or simulating."
+                onClick={onOpenStudio}
+                className="min-w-[260px] flex-1"
+              />
+              {onOpenDemoScene ? (
+                <ActionButton
+                  icon={<Sparkles className="h-4 w-4" />}
+                  label="Open Seeded Retail Baseline"
+                  description="Open the reference baseline as a sample workflow, not the default product identity."
+                  onClick={onOpenDemoScene}
+                  className="min-w-[260px] flex-1"
+                />
+              ) : null}
+              <ActionButton
+                icon={<ScanSearch className="h-4 w-4" />}
+                label="Scan Site"
+                description="Use the manual-assisted photo intake flow to compile an editable SecurityScene."
+                onClick={onScanSite}
+                className="min-w-[260px] flex-1"
+              />
+            </div>
+            <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              {launchStatusRows.map((row) => (
+                <LaunchStatusRow key={row.label} {...row} />
+              ))}
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-[32px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4 shadow-[0_20px_64px_rgba(0,0,0,0.24)]">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Current workspace</div>
+                <div className="mt-1 text-lg font-semibold text-white">{scene.name}</div>
+                <div className="mt-1 text-sm text-[color:var(--st-muted)]">The workspace underneath the product home.</div>
+              </div>
+              <div className={cn("rounded-full border px-3 py-1.5 text-[11px] font-medium", statusTone)}>
+                {statusLabel}
+              </div>
+            </div>
+            <div className="mt-4 overflow-hidden rounded-[24px] border border-white/[0.05] bg-black/[0.15]">
+              <ScenePreview scene={scene} result={result ?? scene.simulation ?? null} hydrated={true} />
+            </div>
+            <div className="mt-4 grid gap-2">
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1.5 text-[11px] text-[color:var(--st-muted)]">
+                  {coverage != null ? `Coverage ${Math.round(coverage)}%` : "Simulation pending"}
+                </span>
+                <span className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1.5 text-[11px] text-[color:var(--st-muted)]">
+                  {scene.cameras.length} cameras
+                </span>
+                <span className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1.5 text-[11px] text-[color:var(--st-muted)]">
+                  {scene.criticalZones.length} zones
+                </span>
+                <span className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1.5 text-[11px] text-[color:var(--st-muted)]">
+                  {currentRunLabel ?? "No run yet"}
+                </span>
+              </div>
+              <div className="rounded-2xl border border-[color:var(--st-border)] bg-white/[0.025] px-3 py-2 text-[11px] text-[color:var(--st-muted)]">
+                The seeded baseline is the reference scene. The product path starts with the job you need to finish.
+              </div>
+            </div>
+          </div>
+        </section>
+
         <header className="flex flex-wrap items-center gap-3 rounded-[24px] border border-[color:var(--st-border)] bg-[rgba(9,14,23,0.94)] px-4 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.34)] backdrop-blur-lg">
           <div className="flex min-w-[240px] items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-emerald-400/25 bg-emerald-500/12 text-emerald-200">
@@ -1253,7 +1549,7 @@ export function StudioDashboardHome({
             </div>
             <div className="min-w-0">
               <div className="truncate text-base font-semibold tracking-tight text-white">SentinelTwin Studio</div>
-              <div className="truncate text-xs text-[color:var(--st-muted)]">Security Simulation Workspace</div>
+              <div className="truncate text-xs text-[color:var(--st-muted)]">Security Audit Workspace</div>
             </div>
           </div>
 
@@ -1278,13 +1574,23 @@ export function StudioDashboardHome({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {onOpenDemoScene ? (
+              <button
+                type="button"
+                onClick={onOpenDemoScene}
+                className="inline-flex items-center gap-2 rounded-xl border border-sky-400/40 bg-sky-500/20 px-3 py-2 text-xs font-semibold text-white transition-colors hover:border-sky-300/55 hover:bg-sky-400/25"
+              >
+                <Sparkles className="h-4 w-4 text-sky-100" />
+                Open Seeded Retail Baseline
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={onOpenStudio}
               className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-xs font-medium text-white transition-colors hover:border-sky-400/30 hover:bg-white/[0.05]"
             >
               <FolderOpen className="h-4 w-4 text-sky-200" />
-              Open Studio
+              Open Workspace
             </button>
             <button
               type="button"
@@ -1318,7 +1624,7 @@ export function StudioDashboardHome({
             <div>
               <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-[color:var(--st-muted)]">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-300" />
-                Studio
+                Workspace
               </div>
               <div className="mt-3 space-y-1.5">
                 {NAV_ITEMS.map((item) => (
@@ -1373,7 +1679,7 @@ export function StudioDashboardHome({
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
                     <Radar className="h-3.5 w-3.5 text-sky-300" />
-                    Current Workspace Preview
+                    Current Workspace
                   </div>
                   <div className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">{scene.name}</div>
                   <div className="mt-1 text-sm text-[color:var(--st-muted)]">
@@ -1484,6 +1790,15 @@ export function StudioDashboardHome({
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
+                {onOpenDemoScene ? (
+                  <ActionButton
+                    icon={<Sparkles className="h-4 w-4" />}
+                    label="Open Seeded Retail Baseline"
+                    description="Start from the seeded retail baseline as a sample workflow."
+                    onClick={onOpenDemoScene}
+                    className="min-w-[210px] flex-1"
+                  />
+                ) : null}
                 <ActionButton icon={<MapIcon className="h-4 w-4" />} label="Open Coverage Workspace" description="Enter the analysis workspace directly." onClick={onOpenCoverageWorkspace} className="min-w-[210px] flex-1" />
                 <ActionButton icon={<Camera className="h-4 w-4" />} label="Open Camera Wall" description="Review the live feed grid." onClick={onOpenCameraWall} className="min-w-[210px] flex-1" />
                 <ActionButton icon={<Play className="h-4 w-4" />} label="Open Path Replay" description="Inspect the replay actor and route." onClick={onOpenPathReplay} className="min-w-[210px] flex-1" />
@@ -1519,13 +1834,107 @@ export function StudioDashboardHome({
                       <Sparkles className="h-5 w-5 text-emerald-300" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="text-sm font-semibold text-emerald-100">Run Demo Walkthrough</div>
+                      <div className="text-sm font-semibold text-emerald-100">Run Guided Walkthrough</div>
                       <div className="mt-0.5 text-[11px] text-emerald-200/60">Guided 7-step walkthrough: baseline, camera wall, path replay, identify failures, apply a fix, compare, report.</div>
                     </div>
                     <ArrowRight className="h-4 w-4 flex-none text-emerald-300 transition-transform duration-200 group-hover:translate-x-1" />
                   </button>
                 </div>
               ) : null}
+
+              <div className="mt-4 rounded-[24px] border border-[#1f2637] bg-[#0b0f17] p-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Workspace Memory Search</div>
+                    <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
+                      Search the current scene, saved workspaces, evidence trail, and report snapshot from one query.
+                    </div>
+                  </div>
+                  <div className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1 text-[10px] text-[color:var(--st-muted)]">
+                    {workspaceMemoryResults.length} hits
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <input
+                    value={workspaceMemoryQuery}
+                    onChange={(event) => setWorkspaceMemoryQuery(event.target.value)}
+                    placeholder="Search scenes, evidence, reports, and drafts..."
+                    className="w-full rounded-2xl border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-[color:var(--st-muted)] focus:border-sky-400/35 focus:bg-white/[0.04]"
+                  />
+                </div>
+                <div className="mt-3 grid gap-2">
+                  {workspaceMemoryQuery.trim() ? (
+                    workspaceMemoryResults.length > 0 ? (
+                      workspaceMemoryResults.map((hit) => (
+                        <button
+                          key={hit.id}
+                          type="button"
+                          onClick={() => {
+                            setTimelineFocusRequest({
+                              timestamp: hit.timestamp,
+                              query: formatWorkspaceMemoryFocusQuery(hit.timestamp, hit.branchLabel ?? null),
+                              branchLabel: hit.branchLabel ?? null,
+                              source: "launcher",
+                            });
+                            if (hit.kind === "report") {
+                              onOpenReport();
+                              return;
+                            }
+                            if (hit.kind === "evidence" || (hit.kind === "archive" && (hit.branchLabel || hit.routeTab === "timeline"))) {
+                              onOpenMode("map", "coverage", "timeline");
+                              return;
+                            }
+                            if (hit.kind === "archive" && hit.routeTab) {
+                              onOpenMode("map", "coverage", hit.routeTab);
+                              return;
+                            }
+                            const matchedProject = savedProjects.find((project) => project.scene.id === hit.sceneId);
+                            if (matchedProject) {
+                              onOpenScene?.(matchedProject.scene);
+                              return;
+                            }
+                            if (hit.sceneId === scene.id) {
+                              onOpenStudio();
+                            }
+                          }}
+                          className="group rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.025] p-3 text-left transition-colors hover:border-sky-400/30 hover:bg-white/[0.045]"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <div className="truncate text-sm font-semibold text-white">{hit.title}</div>
+                                <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] text-[color:var(--st-muted)]">
+                                  {hit.kind}
+                                </span>
+                                {hit.branchLabel ? (
+                                  <span className="rounded-full border border-sky-400/20 bg-sky-500/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] text-sky-100">
+                                    Branch: {formatWorkspaceBranchLabel(hit.branchLabel)}
+                                  </span>
+                                ) : null}
+                              </div>
+                              <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
+                                {hit.summary}
+                              </div>
+                              <div className="mt-1 text-[10px] text-[color:var(--st-muted)]">
+                                {hit.details}
+                              </div>
+                            </div>
+                            <ArrowRight className="h-4 w-4 flex-none text-[color:var(--st-accent)] transition-transform duration-200 group-hover:translate-x-1" />
+                          </div>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="rounded-[18px] border border-dashed border-[color:var(--st-border)] bg-white/[0.02] px-4 py-5 text-sm text-[color:var(--st-muted)]">
+                        No workspace memory hits matched this query.
+                      </div>
+                    )
+                  ) : (
+                    <div className="rounded-[18px] border border-dashed border-[color:var(--st-border)] bg-white/[0.02] px-4 py-5 text-sm text-[color:var(--st-muted)]">
+                      Search the current scene, saved workspaces, evidence trail, and report snapshot from one box.
+                    </div>
+                  )}
+                </div>
+              </div>
 
               <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.8fr)]">
                 <div className="rounded-[24px] border border-[color:var(--st-border)] bg-[color:var(--st-panel-2)] p-3">
@@ -1566,58 +1975,63 @@ export function StudioDashboardHome({
                   )}
                 </div>
 
-                <div className="rounded-[24px] border border-sky-400/15 bg-sky-500/8 p-3">
+                  <div className="rounded-[24px] border border-sky-400/15 bg-sky-500/8 p-3">
                   <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
                     <Sparkles className="h-3.5 w-3.5 text-sky-300" />
                     Quick Start
                   </div>
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    {[
-                      { icon: <Plus className="h-4 w-4" />, label: "New Blank Scene", detail: "Start from scratch", onClick: onCreateScene },
-                      { icon: <FileUp className="h-4 w-4" />, label: "Import Scene JSON", detail: "From file", onClick: onImportScene },
-                      {
-                        icon: <ScanSearch className="h-4 w-4" />,
-                        label: "Scan a Site",
-                        detail: "Upload site photos",
-                        status: "Preview / Manual-assisted",
-                        description: "Build a security scene from site photos by marking walls, doors, cameras, obstructions, lights, and critical zones.",
-                        onClick: onScanSite,
-                      },
-                      { icon: <MapIcon className="h-4 w-4" />, label: "Import Floor Plan", detail: "Image/PDF to sketch", onClick: onImportFloorPlan },
-                      {
-                        icon: <Sparkles className="h-4 w-4" />,
-                        label: "Guided Scan Assistant",
-                        detail: "Step-by-step",
-                        status: "Preview / Manual-assisted",
-                        description: "Open the guided walkthrough for phone-photo capture and scene compilation.",
-                        onClick: onGuidedScanAssistant ?? onScanSite,
-                      },
-                      { icon: <Sparkles className="h-4 w-4" />, label: "AI Layout Draft", detail: "Generate layout", onClick: onAiDraft },
-                    ].map((action) => (
+                  <div className="mt-2 rounded border border-sky-400/20 bg-sky-500/10 px-3 py-2 text-[11px] text-[color:var(--st-muted)]">
+                    Job-first entry points are the primary path. The seeded retail scene stays available as a reference sample.
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    <ActionButton
+                      icon={<Sparkles className="h-4 w-4" />}
+                      label="Open Seeded Retail Baseline"
+                      description="Canonical baseline sample. Open the seeded retail scene and compare against your own work."
+                      onClick={onOpenDemoScene ?? onOpenCoverageWorkspace}
+                        className="min-w-[280px] border-sky-300/35 bg-sky-500/12 shadow-[0_12px_42px_rgba(14,165,233,0.14)]"
+                        variant="primary"
+                      />
                       <button
-                        key={action.label}
                         type="button"
-                        onClick={action.onClick}
-                        aria-label={action.description ?? action.label}
-                        className="group flex min-h-[74px] flex-col justify-between rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.035] p-3 text-left transition-colors hover:border-sky-400/30 hover:bg-white/[0.055]"
+                        onClick={() => setShowAdvancedStarterActions((current) => !current)}
+                        className="group flex w-full items-center justify-between rounded-2xl border border-[color:var(--st-border)] bg-[color:var(--st-panel)] px-3 py-2 text-left text-sm transition-colors hover:border-sky-300/25 hover:bg-[color:var(--st-panel-2)]"
+                        aria-expanded={showAdvancedStarterActions}
+                        aria-controls="advanced-starter-actions"
                       >
-                        <span className="flex items-center justify-between gap-2 text-[color:var(--st-accent)]">
-                          {action.icon}
-                          {action.status ? (
-                            <span className="rounded-full border border-amber-400/25 bg-amber-500/10 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.12em] text-amber-200">
-                              {action.status}
-                            </span>
-                          ) : null}
+                        <span className="flex items-center gap-2 text-[color:var(--st-muted)]">
+                          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showAdvancedStarterActions ? "rotate-180" : "rotate-0")} />
+                          Explore advanced workflows
                         </span>
-                        <span>
-                          <span className="block text-xs font-semibold text-white">{action.label}</span>
-                          <span className="mt-0.5 block text-[10px] text-[color:var(--st-muted)]">{action.detail}</span>
-                        </span>
+                        <span className="text-[10px] uppercase tracking-[0.16em] text-[color:var(--st-muted)]">{showAdvancedStarterActions ? "Hide" : "Show"}</span>
                       </button>
-                    ))}
+                      {showAdvancedStarterActions ? (
+                        <div id="advanced-starter-actions" className="mt-3 grid grid-cols-2 gap-2">
+                          {advancedStarterActions.map((action) => (
+                            <button
+                              key={action.label}
+                              type="button"
+                              onClick={action.onClick}
+                              aria-label={action.description}
+                              className="group flex min-h-[86px] flex-col justify-between rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.035] p-3 text-left transition-colors hover:border-sky-400/30 hover:bg-white/[0.055]"
+                            >
+                              <span className="flex items-center justify-between gap-2 text-[color:var(--st-accent)]">
+                                {action.icon}
+                                <span className="rounded-full border border-amber-400/25 bg-amber-500/10 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.12em] text-amber-200">
+                                  {action.detail}
+                                </span>
+                              </span>
+                              <span>
+                                <span className="block text-xs font-semibold text-white">{action.label}</span>
+                                <span className="mt-0.5 block text-[10px] leading-4 text-[color:var(--st-muted)]">{action.description}</span>
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
-              </div>
             </div>
 
             {hydrated ? (
@@ -1627,7 +2041,7 @@ export function StudioDashboardHome({
                   <div>
                     <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Recent Workspaces</div>
                     <div className="mt-1 text-sm text-[color:var(--st-muted)]">
-                      Search, pin, and reopen your workspaces first. The demo remains available as the reference baseline below.
+                      Search, pin, and reopen your workspaces first. The demo remains available as a reference baseline below.
                     </div>
                   </div>
                   <div className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1.5 text-[11px] text-[color:var(--st-muted)]">
@@ -1875,11 +2289,11 @@ export function StudioDashboardHome({
                   </div>
 
                   <div className="rounded-[24px] border border-[#1e2536] bg-[#0a0e16] p-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Reference Demo</div>
-                        <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
-                          The canonical retail demo stays available as a baseline, but it is no longer the main story.
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                    <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Reference Baseline</div>
+                      <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
+                      The canonical retail scene is the default baseline for first-run analysis and replay comparisons.
                         </div>
                       </div>
                       <div className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1 text-[10px] text-[color:var(--st-muted)]">
@@ -1910,7 +2324,7 @@ export function StudioDashboardHome({
                                   <div className="flex items-center gap-2">
                                     <div className="truncate text-sm font-semibold text-white">{saved.name}</div>
                                     <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.16em] text-emerald-200">
-                                      Demo
+                                      Reference
                                     </span>
                                   </div>
                                   <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
@@ -1926,7 +2340,7 @@ export function StudioDashboardHome({
                         })
                       ) : (
                         <div className="rounded-[20px] border border-dashed border-[#243047] px-3 py-4 text-sm text-[color:var(--st-muted)]">
-                          No demo baseline visible in the current filter set.
+                          No reference baseline visible in the current filter set.
                         </div>
                       )}
                     </div>

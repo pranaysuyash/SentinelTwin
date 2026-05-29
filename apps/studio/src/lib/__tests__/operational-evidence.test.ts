@@ -14,6 +14,7 @@ import {
   buildOperationalEvidenceTimeline,
   assessOperationalEvidenceMergeReadiness,
   compareOperationalEvidenceBranches,
+  findOperationalEvidenceEventsForNode,
   findLatestOperationalEvidenceEventForScene,
   filterOperationalEvidenceEvents,
   mergeOperationalEvidenceBranchScenes,
@@ -22,11 +23,67 @@ import {
   summarizeOperationalGovernanceTrail,
   summarizeOperationalEvidenceLifecycle,
   summarizeOperationalEvidenceTemporalTwin,
+  normalizeOperationalEvidenceEvents,
+  safeParseOperationalEvidenceEvent,
   resolveOperationalEvidenceSceneAtTime,
   traceOperationalEvidenceLineage,
 } from "@/lib/operational-evidence";
 
 describe("operational evidence helpers", () => {
+  test("normalizes event schemas and preserves validated scene snapshots", () => {
+    const scene = createBlankSecurityScene();
+    scene.name = "Evidence Scene";
+    const event = buildOperationalEvidenceEvent({
+      kind: "snapshot_saved",
+      title: "Snapshot saved",
+      details: "Captured a point-in-time checkpoint.",
+      actor: "system",
+      source: "manual",
+      sceneId: scene.id,
+      sceneName: scene.name,
+      revisionDepth: 2,
+      affectedNodeIds: [scene.cameras[0]?.id ?? "camera_1"],
+      confidence: 0.99,
+      previousSceneSnapshot: structuredClone(scene),
+      sceneSnapshot: structuredClone(scene),
+      simulation: {
+        totalCoveragePct: 82.5,
+        issueCount: 1,
+        failedZoneCount: 1,
+        deltaCoveragePct: -3.1,
+      },
+      notes: ["Recovered from branch head."],
+    });
+
+    const normalized = safeParseOperationalEvidenceEvent(event);
+
+    expect(normalized?.sceneSnapshot?.id).toBe(scene.id);
+    expect(normalized?.previousSceneSnapshot?.id).toBe(scene.id);
+    expect(normalized?.simulation?.issueCount).toBe(1);
+    expect(normalized?.notes).toContain("Recovered from branch head.");
+  });
+
+  test("drops malformed operational evidence records", () => {
+    const malformed = normalizeOperationalEvidenceEvents([
+      {
+        id: "broken-event",
+        kind: "scene_updated",
+        title: "Broken event",
+        actor: "user",
+        source: "manual",
+        sceneId: "scene_1",
+        sceneName: "Broken",
+        timestamp: 123,
+        revisionDepth: 1,
+        affectedNodeIds: ["camera_1"],
+        confidence: 0.9,
+        sceneSnapshot: { not: "a security scene" },
+      },
+    ]);
+
+    expect(malformed).toHaveLength(0);
+  });
+
   test("matches events by title, notes, scene name, and node ids", () => {
     const event: OperationalEvidenceEvent = {
       id: "scene_updated:scene_1:abc123",
@@ -92,6 +149,48 @@ describe("operational evidence helpers", () => {
 
     expect(findLatestOperationalEvidenceEventForScene(events, "scene_1")?.kind).toBe("snapshot_saved");
     expect(findLatestOperationalEvidenceEventForScene(events, "scene_1", "draft")).toBeNull();
+  });
+
+  test("supports branch and time query tokens in evidence search", () => {
+    const events: OperationalEvidenceEvent[] = [
+      {
+        id: "scene_created:scene_1:abc123",
+        kind: "scene_created",
+        title: "Scene created",
+        details: "Draft scene created",
+        actor: "user",
+        source: "manual",
+        sceneId: "scene_1",
+        sceneName: "Retail Draft",
+        timestamp: Date.parse("2026-05-28T08:00:00.000Z"),
+        revisionDepth: 1,
+        affectedNodeIds: [],
+        confidence: 0.9,
+        lifecycleStage: "draft",
+        branchLabel: "draft",
+      },
+      {
+        id: "scene_published:scene_1:def456",
+        kind: "scene_published",
+        title: "Scene published",
+        details: "Published checkpoint",
+        actor: "user",
+        source: "manual",
+        sceneId: "scene_1",
+        sceneName: "Retail Draft",
+        timestamp: Date.parse("2026-05-29T08:00:00.000Z"),
+        revisionDepth: 2,
+        affectedNodeIds: [],
+        confidence: 0.95,
+        lifecycleStage: "published",
+        branchLabel: "published",
+      },
+    ];
+
+    expect(filterOperationalEvidenceEvents(events, "branch:published")).toHaveLength(1);
+    expect(filterOperationalEvidenceEvents(events, "time:2026-05-29")).toHaveLength(1);
+    expect(filterOperationalEvidenceEvents(events, "after:2026-05-29T00:00:00.000Z before:2026-05-29T23:59:59.999Z branch:published")).toHaveLength(1);
+    expect(matchesOperationalEvidenceEvent(events[0]!, "branch:published")).toBe(false);
   });
 
   test("summarizes lifecycle branches for draft, review, recovered, and published states", () => {
@@ -343,6 +442,67 @@ describe("operational evidence helpers", () => {
     const stateAtT = resolveOperationalEvidenceSceneAtTime([third, first, second], third.timestamp, midScene);
     expect(stateAtT?.cameras.length).toBe(2);
     expect(resolveOperationalEvidenceSceneAtTime([third, first, second], first.timestamp - 1, midScene)).toBeNull();
+  });
+
+  test("finds node-specific evidence trails for entity and scene nodes", () => {
+    const scene = createBlankSecurityScene();
+    scene.name = "Node History";
+    const camera = createCameraNode([2, 2, 2]);
+    scene.cameras.push(camera);
+
+    const sceneEvent = buildOperationalEvidenceEvent({
+      kind: "scene_created",
+      title: "Scene created",
+      details: "Seeded the scene baseline.",
+      actor: "user",
+      source: "manual",
+      sceneId: scene.id,
+      sceneName: scene.name,
+      revisionDepth: 1,
+      affectedNodeIds: [],
+      confidence: 0.95,
+      sceneSnapshot: structuredClone(scene),
+      branchLabel: "draft",
+      lifecycleStage: "draft",
+      timestamp: 1000,
+    });
+    const cameraEvent = buildOperationalEvidenceEvent({
+      kind: "camera_metadata_updated",
+      title: "Camera metadata updated",
+      details: "Camera lens cleaned and recalibrated.",
+      actor: "user",
+      source: "manual",
+      sceneId: scene.id,
+      sceneName: scene.name,
+      revisionDepth: 2,
+      affectedNodeIds: [camera.id],
+      confidence: 0.9,
+      beforeSummary: "Before: status dirty.",
+      afterSummary: "After: status on.",
+      timestamp: 2000,
+    });
+    const unrelatedEvent = buildOperationalEvidenceEvent({
+      kind: "sensor_added",
+      title: "Sensor added",
+      details: "Nearby sensor added.",
+      actor: "user",
+      source: "manual",
+      sceneId: scene.id,
+      sceneName: scene.name,
+      revisionDepth: 3,
+      affectedNodeIds: ["sensor_1"],
+      confidence: 0.9,
+      timestamp: 3000,
+    });
+
+    const sceneTrail = findOperationalEvidenceEventsForNode([unrelatedEvent, cameraEvent, sceneEvent], scene.id, `scene:${scene.id}`);
+    const cameraTrail = findOperationalEvidenceEventsForNode([unrelatedEvent, cameraEvent, sceneEvent], scene.id, `camera:${camera.id}`);
+    const sourceTrail = findOperationalEvidenceEventsForNode([unrelatedEvent, cameraEvent, sceneEvent], scene.id, "source:manual");
+
+    expect(sceneTrail.map((event) => event.id)).toEqual([unrelatedEvent.id, cameraEvent.id, sceneEvent.id]);
+    expect(cameraTrail).toHaveLength(1);
+    expect(cameraTrail[0]?.id).toBe(cameraEvent.id);
+    expect(sourceTrail).toHaveLength(0);
   });
 
   test("summarizes governance trail events for a scene", () => {

@@ -174,13 +174,12 @@ Every input mode should compile into the same truth model. Every report should r
 - Replay exists for path and camera interaction.
 - Compare exists.
 - Scene Intelligence now provides a temporal replay scrubber with point-in-time reconstruction and restore actions over the operational evidence trail.
-- Scene Intelligence now also shows a temporal operational twin summary with current-scene vs latest-checkpoint deltas, checkpoint age, and reconstructable branch heads.
-- The operational evidence layer now also exposes a canonical event-centered timeline builder plus a state-at-time-T resolver, so the point-in-time story is backed by a reusable temporal object rather than only ad hoc UI sorting.
+- Scene Intelligence now also shows a temporal operational twin summary with current-scene vs latest-checkpoint and latest-published-checkpoint deltas, checkpoint age, published age, and reconstructable branch heads.
+- The operational evidence layer now also exposes a canonical event-centered timeline builder plus a state-at-time-T resolver, so the point-in-time story is backed by a reusable temporal object rather than only ad hoc UI sorting, and publish checkpoints remain explicit rather than flattened into generic snapshots.
 - The canonical scene graph now carries node-level evidence history metadata for selected entities, so version history is visible on the graph node itself instead of only in the ledger.
-- The report handoff now also carries the same temporal operational twin summary, so the exported artifact can describe what the system knew at the latest checkpoint instead of only the current simulation snapshot.
+- The report handoff now also carries the same temporal operational twin summary, so the exported artifact can describe what the system knew at the latest checkpoint and latest published checkpoint instead of only the current simulation snapshot.
 
 **What is still missing**
-- A deeper node-level temporal object model that persists version history for every scene entity, not just the selected graph nodes currently annotated from evidence.
 - A fully event-sourced operational timeline for the site’s life, including richer causal annotations and branch semantics.
 - A consistent node-by-node “state at time T” reconstruction path that can replay more than checkpoint-backed scene snapshots.
 
@@ -197,7 +196,7 @@ Every input mode should compile into the same truth model. Every report should r
 **Current state**
 - Future live-camera verification is documented.
 - The schema can carry sensors.
-- The editor now exposes a dedicated sensor tool, sensor inspector, and sensor inventory tab, and both the camera inspector analytics tab and live camera feed now show a nearest-sensor `Sensor Fusion` preview; sensor live triggers, heartbeats, faults, restores, pasted metadata intake, an external feed bridge, a camera live binding stream, and a camera metadata ingest bridge now all flow into the canonical evidence trail, Scene Intelligence now shows that sensor evidence in the provenance surface, the debug panel reuses the same parser for pasted live metadata, and `/api/sensor-ingest` now gives that intake a history-backed backend-shaped boundary, while the camera live-connection probe/archive route now gives live binding a canonical backend round-trip, understands JSON/NDJSON plus ONVIF-style XML responses, tries SOAP-first for ONVIF binds, supports session refreshes, and now also exposes an active session lease registry with expiry timestamps and a transport-session handle, with the remaining open seam still being true device-protocol session management rather than the probe boundary itself.
+- The editor now exposes a dedicated sensor tool, sensor inspector, and sensor inventory tab, and both the camera inspector analytics tab and live camera feed now show a nearest-sensor `Sensor Fusion` preview; sensor live triggers, heartbeats, faults, restores, pasted metadata intake, an external feed bridge, a camera live binding stream, and a camera metadata ingest bridge now all flow into the canonical evidence trail, Scene Intelligence now shows that sensor evidence in the provenance surface, the debug panel reuses the same parser for pasted live metadata, and `/api/sensor-ingest` now gives that intake a history-backed backend-shaped boundary, while the camera live-connection probe/archive route now gives live binding a canonical backend round-trip, understands JSON/NDJSON plus ONVIF-style XML responses, tries SOAP-first for ONVIF binds, supports session refreshes, and now also exposes an active session lease registry with expiry timestamps, a transport-session handle, and captured auth challenge/transport response metadata, with the remaining open seam still being true device-protocol session management rather than the probe boundary itself.
 - Camera live binding now also emits a durable event stream that appears in the live camera overlays and Scene Intelligence timeline, so the camera connection state is no longer hidden inside the inspector alone.
 - Camera metadata ingest now also emits a durable event stream that appears in the live camera overlays and Scene Intelligence timeline, so camera health state is no longer hidden inside the inspector alone.
 - Sensor edits now also write sensor-specific provenance events into the operational ledger, so the visible sensor layer has an audit trail even before ONVIF/live ingestion exists.
@@ -418,6 +417,81 @@ Every input mode should compile into the same truth model. Every report should r
 - Sync/conflict semantics for archived or collaborative branches.
 - Shared-workspace conflict resolution and merge policy for future collaborative workflows.
 
+### 4.18 Workspace Retrieval and Memory Search
+
+**Should exist**
+- Search across the current scene, saved workspaces, evidence trail, report snapshots, drafts, and recovery archives from one canonical query surface
+- Result cards that route into the right workspace, timeline, report, or recovery branch
+- Search ranking that understands scene source, evidence recency, and report state
+
+**Current state**
+- The launcher now exposes a workspace memory search surface that can query the current scene, saved workspaces, evidence trail, report snapshot, and archive histories from one query.
+- The launcher now also labels start-project cards with explicit maturity states, so the user can distinguish complete, available, preview, and planned flows before entering Studio.
+- Launcher hits now seed a timeline focus target, and branch-bearing archive results can jump into the Scene Intelligence checkpoint view instead of only opening the surrounding tab.
+
+**What is still missing**
+- Federated search across archived workspaces, reports, and recovery archives beyond the current workspace scope.
+- Cross-referenced memory search across governance archives, identity-conflict archives, and operational evidence archives, including richer time/branch pivots for every hit type.
+- Search-by-time and search-by-branch navigation that can jump directly into a historical branch or recovered archive state across the full archive set.
+
+### 4.19 Temporal Query and Branch Navigation
+
+**Should exist**
+- Search and navigation that can jump to an exact checkpoint, branch head, or time window
+- Timeline filters for event kind, actor, source, confidence, and affected node
+- Shareable deep links for `scene`, `branch`, `checkpoint`, and `evidence` states
+- Cross-view pivots from the timeline into the report, simulation, and governance surfaces
+
+**Current state**
+- The provenance surface can already inspect selected nodes, selected edges, branch lineage, checkpoint previews, and restore targets.
+- The launcher memory search can already route archive hits into the right tab for the current workspace and archive histories, and branch-bearing archive hits can now jump into the timeline with branch/time focus.
+- The evidence search box now understands `branch:`, `after:`, `before:`, and `time:` tokens, so operators can jump through time and branch history from the same timeline surface.
+- Launcher search hits can seed a checkpoint timestamp so the timeline opens near the selected evidence point instead of only showing the ledger list.
+- Timeline entries can now copy a shareable checkpoint link that carries the selected checkpoint timestamp plus branch/time query tokens.
+
+**What is still missing**
+- A richer public share-link contract for external consumers, cross-device handoff, and branch/time embeds.
+- Branch-aware result cards that can carry richer target metadata into the timeline or report view.
+- A remote/openable archive link model beyond the current in-app clipboard flow.
+
+### 4.20 Organizations, Accounts, and Workspace Catalog
+
+**Should exist**
+- Organization accounts and teams
+- Workspace catalog across projects, templates, archives, and shared workspaces
+- Role inheritance and membership management across an org boundary
+- Billing, plan, quota, and plan-to-feature mapping
+- Workspace sharing, invites, and ownership transfer
+
+**Current state**
+- Local shared-workspace access, routing, and identity conflict handling exist.
+- The launcher can browse local workspaces and reference demos, and the workspace search surface can query archives within the current workspace.
+
+**What is still missing**
+- A canonical org/account model rather than only a local workspace membership model.
+- Plan, billing, quota, and entitlement semantics.
+- Invite, transfer, and ownership workflows for shared workspaces.
+- A remote workspace directory or catalog that can unify local, shared, and archived projects.
+
+### 4.21 Extensibility, SDK, and Partner Integrations
+
+**Should exist**
+- A versioned SDK or plugin surface for partners and integrators
+- Stable extension points for report exports, archives, imports, and workflow hooks
+- Webhooks, event callbacks, and embed-friendly outputs
+- Public contracts for archive bundles, scene exports, and report packages
+- Permission scopes for partner apps and external workflows
+
+**Current state**
+- The repo already has canonical archive routes and support/governance delivery queues that expose several integration seams.
+- Integration targets are researched in the docs, and the system already has stable internal flows for support, governance, sensor ingest, camera metadata ingest, and archive export.
+
+**What is still missing**
+- A formal public SDK or plugin manifest.
+- Versioned extension contracts with capability/scopes.
+- Partner-facing surfaces for embedding reports, archives, or review workflows.
+- An explicit extension policy for third-party integrations and workflow hooks.
+
 ## 5) What Is Still Demo / Placeholder / Planned
 
 These are the remaining places where the product is honest but not yet fully complete:
@@ -526,3 +600,5 @@ The rule remains:
 - The in-product trust-audit route now checks those labels alongside the launcher/governance/provenance/debug surfaces.
 - The remaining placeholder/truth work is broader claim-label coverage across the rest of the visible shell, not these already-labeled surfaces.
 - Remaining gap: the operational-fusion card is shared and canonical, but the next macro step is still deeper device-side truth, meaning protocol-backed live session state instead of the modeled session/transport posture we are summarizing today.
+- Remaining gap: heartbeat renewal is now explicit, but the deeper device-side truth is still protocol-native session negotiation and authorization, not just a modeled lease with keepalive semantics.
+- Remaining gap: auth metadata is now canonical in the live record, but the next step is still real device-side session negotiation and credential handling rather than inferred auth posture from the probe/archive path.

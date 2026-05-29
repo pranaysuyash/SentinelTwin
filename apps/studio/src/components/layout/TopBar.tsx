@@ -31,6 +31,7 @@ import { WorkspacePresetSwitcher } from "@/components/dock/WorkspacePresetSwitch
 import { SceneBuilderWizard } from "@/components/scan-to-scene/SceneBuilderWizard";
 import { ScanSiteWizard } from "@/components/scan-to-scene/ScanSiteWizard";
 import type { CriticalZoneNode, SecurityScene } from "@/schema/security-scene";
+import { bakeoffToSecurityScene } from "@/lib/bakeoff-bridge";
 
 const TARGET_TYPE_OPTIONS: Array<{
   value: CriticalZoneNode["targetType"];
@@ -134,13 +135,27 @@ export function TopBar() {
     fileInputRef.current?.click();
   }, []);
 
-  const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const json = JSON.parse(e.target?.result as string);
+        if (json && typeof json.image_id === "string" && Array.isArray(json.walls)) {
+          const scene = bakeoffToSecurityScene(json, {
+            knownDimensionM: 8,
+            axisHint: "width",
+          }, json.image_id);
+          const result = importScene(scene);
+          if (!result.success) {
+            setImportError(result.error ?? "Bakeoff scene import failed");
+            setTimeout(() => setImportError(null), 4000);
+          } else {
+            setImportError(null);
+          }
+          return;
+        }
         const result = importScene(json);
         if (!result.success) {
           setImportError(result.error ?? "Invalid scene file");
@@ -154,7 +169,6 @@ export function TopBar() {
       }
     };
     reader.readAsText(file);
-    // Reset so the same file can be re-imported
     event.target.value = "";
   }, [importScene]);
 
@@ -193,8 +207,8 @@ export function TopBar() {
             <Shield className="h-3.5 w-3.5 text-emerald-400" />
           </div>
           <div className="min-w-0 leading-tight">
-            <div className="truncate text-[12px] font-semibold tracking-[0.01em] text-white">SentinelTwin Studio</div>
-            <div className="truncate text-[10px] uppercase tracking-[0.18em] text-[#5a6882]">Camera Coverage Testbed</div>
+            <div className="truncate text-[12px] font-semibold tracking-[0.01em] text-white">SentinelTwin</div>
+            <div className="truncate text-[10px] uppercase tracking-[0.18em] text-[#5a6882]">AI Security Audit Studio</div>
           </div>
         </div>
 

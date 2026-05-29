@@ -7,6 +7,7 @@ import type { WorkspaceGovernanceState } from "@/lib/workspace-governance";
 import { summarizeWorkspaceApprovalRouting } from "@/lib/workspace-membership-routing";
 import { summarizeAiActionTelemetry } from "@/lib/ai-action-telemetry";
 import { summarizeIncidentAlerts } from "@/lib/incident-alerts";
+import type { IncidentAlertSummary } from "@/lib/incident-alerts";
 import { buildReportData } from "@/report";
 import { buildReportEvidenceBundle, type ReportEvidenceBundle } from "@/lib/report-evidence-bundle";
 import type { CameraLiveConnectionArchiveRecord } from "@/lib/camera-live-connection-history";
@@ -95,6 +96,7 @@ export type DiagnosticBundle = {
     recentIncidents: Array<Pick<RuntimeIncident, "id" | "timestamp" | "category" | "severity" | "title" | "details" | "stack" | "durationMs" | "action" | "path">>;
     performanceTraces: Array<Pick<RuntimeIncident, "id" | "timestamp" | "title" | "details" | "durationMs" | "action" | "path">>;
     recentTrace: Array<Pick<OperationalEvidenceEvent, "id" | "kind" | "title" | "timestamp" | "branchLabel" | "lifecycleStage" | "confidence">>;
+    alerts: IncidentAlertSummary;
   };
 };
 
@@ -132,8 +134,8 @@ export type SupportBundle = {
   };
   cameraLiveSessionRegistry: {
     activeSessionCount: number;
-    latestSession: Pick<CameraLiveSessionRecord, "sessionId" | "status" | "cameraId" | "cameraName" | "sceneId" | "sceneName" | "liveFeedUrl" | "feedLabel" | "liveConnectionMode" | "liveConnectionStatus" | "liveSessionState" | "liveSessionStartedAt" | "liveSessionConfirmedAt" | "liveSessionExpiresAt" | "transportSessionId" | "transportSessionState" | "lastHeartbeatAt" | "probeCount" | "protocolProfile" | "lastObservedAt" | "sessionExpiresAt" | "lastAction" | "summary"> | null;
-    activeSessions: Array<Pick<CameraLiveSessionRecord, "sessionId" | "status" | "cameraId" | "cameraName" | "sceneId" | "sceneName" | "liveFeedUrl" | "feedLabel" | "liveConnectionMode" | "liveConnectionStatus" | "liveSessionState" | "liveSessionStartedAt" | "liveSessionConfirmedAt" | "liveSessionExpiresAt" | "transportSessionId" | "transportSessionState" | "lastHeartbeatAt" | "probeCount" | "protocolProfile" | "lastObservedAt" | "sessionExpiresAt" | "lastAction" | "summary">>;
+    latestSession: Pick<CameraLiveSessionRecord, "sessionId" | "status" | "cameraId" | "cameraName" | "sceneId" | "sceneName" | "liveFeedUrl" | "feedLabel" | "liveConnectionMode" | "liveConnectionStatus" | "liveSessionState" | "liveSessionStartedAt" | "liveSessionConfirmedAt" | "liveSessionExpiresAt" | "transportSessionId" | "transportSessionState" | "lastHeartbeatAt" | "probeCount" | "protocolProfile" | "authMode" | "authState" | "authRealm" | "authSessionId" | "authSessionExpiresAt" | "lastObservedAt" | "sessionExpiresAt" | "lastAction" | "summary"> | null;
+    activeSessions: Array<Pick<CameraLiveSessionRecord, "sessionId" | "status" | "cameraId" | "cameraName" | "sceneId" | "sceneName" | "liveFeedUrl" | "feedLabel" | "liveConnectionMode" | "liveConnectionStatus" | "liveSessionState" | "liveSessionStartedAt" | "liveSessionConfirmedAt" | "liveSessionExpiresAt" | "transportSessionId" | "transportSessionState" | "lastHeartbeatAt" | "probeCount" | "protocolProfile" | "authMode" | "authState" | "authRealm" | "authSessionId" | "authSessionExpiresAt" | "lastObservedAt" | "sessionExpiresAt" | "lastAction" | "summary">>;
   };
   incidents: {
     title: string;
@@ -152,6 +154,28 @@ export type SupportBundle = {
   alerts: ReturnType<typeof summarizeIncidentAlerts>;
 };
 
+export type IncidentBundle = {
+  version: "1";
+  generatedAt: string;
+  title: string;
+  diagnostic: DiagnosticBundle;
+  incidents: {
+    title: string;
+    summary: string;
+    incidentCount: number;
+    performanceTraceCount: number;
+    stackTraceCount: number;
+    externalLogCount: number;
+    latestIncident: DiagnosticBundle["runtime"]["recentIncidents"][number] | null;
+    latestPerformanceTrace: DiagnosticBundle["runtime"]["performanceTraces"][number] | null;
+    latestExternalLog: Pick<ExternalLogEntry, "id" | "timestamp" | "source" | "title" | "details" | "lineCount" | "severity"> | null;
+    alertSummary: IncidentAlertSummary;
+    recentIncidents: DiagnosticBundle["runtime"]["recentIncidents"];
+    recentPerformanceTraces: DiagnosticBundle["runtime"]["performanceTraces"];
+    recentExternalLogs: Array<Pick<ExternalLogEntry, "id" | "timestamp" | "source" | "title" | "details" | "lineCount" | "severity">>;
+  };
+};
+
 export type DiagnosticBundleInput = {
   scene: SecurityScene;
   simulationResult: SimulationResult | null;
@@ -165,6 +189,7 @@ export type DiagnosticBundleInput = {
   autoRecompute: boolean;
   cameraFailures: string[];
   runtimeIncidents: RuntimeIncident[];
+  externalLogEntries?: ExternalLogEntry[];
   localOnlyMode: boolean;
   aiProviderLabel: string;
   simulationDirty: boolean;
@@ -383,6 +408,10 @@ export function buildDiagnosticBundle(input: DiagnosticBundleInput): DiagnosticB
       aiProviderLabel: input.aiProviderLabel,
     },
   );
+  const alerts = summarizeIncidentAlerts({
+    runtimeIncidents: input.runtimeIncidents,
+    externalLogEntries: input.externalLogEntries ?? [],
+  });
   const approvalRoute = summarizeWorkspaceApprovalRouting(input.scene, input.workspaceAccess, input.workspaceGovernance, null);
 
   return {
@@ -468,6 +497,7 @@ export function buildDiagnosticBundle(input: DiagnosticBundleInput): DiagnosticB
       recentIncidents: runtime.recentIncidents,
       performanceTraces: runtime.performanceTraces,
       recentTrace: runtime.recentTrace,
+      alerts,
     },
   };
 }
@@ -478,7 +508,7 @@ export function stringifyDiagnosticBundle(bundle: DiagnosticBundle) {
 
 export function buildSupportBundle(input: SupportBundleInput): SupportBundle {
   const diagnostic = buildDiagnosticBundle(input);
-  const report = input.simulationResult ? buildReportData(input.scene, input.simulationResult) : null;
+  const report = input.simulationResult ? buildReportData(input.scene, input.simulationResult, { operationalEvidenceEvents: input.operationalEvidenceEvents }) : null;
   const reportEvidence = report
     ? buildReportEvidenceBundle({
         scene: input.scene,
@@ -488,10 +518,7 @@ export function buildSupportBundle(input: SupportBundleInput): SupportBundle {
       })
     : null;
   const aiTelemetry = summarizeAiActionTelemetry(input.aiActionTelemetry);
-  const alerts = summarizeIncidentAlerts({
-    runtimeIncidents: input.runtimeIncidents,
-    externalLogEntries: input.externalLogEntries,
-  });
+  const alerts = diagnostic.runtime.alerts;
   const latestIncident = [...diagnostic.runtime.recentIncidents].at(0) ?? null;
   const latestPerformanceTrace = [...diagnostic.runtime.performanceTraces].at(0) ?? null;
   const stackTraceCount = diagnostic.runtime.recentIncidents.filter((incident) => Boolean(incident.stack)).length;
@@ -542,4 +569,47 @@ export function buildSupportBundle(input: SupportBundleInput): SupportBundle {
 
 export function stringifySupportBundle(bundle: SupportBundle) {
   return JSON.stringify(bundle, null, 2);
+}
+
+export function stringifyIncidentBundle(bundle: IncidentBundle) {
+  return JSON.stringify(bundle, null, 2);
+}
+
+export function buildIncidentBundle(input: DiagnosticBundleInput & { externalLogEntries?: ExternalLogEntry[] }): IncidentBundle {
+  const diagnostic = buildDiagnosticBundle(input);
+  const alertSummary = diagnostic.runtime.alerts;
+  const recentExternalLogs = [...(input.externalLogEntries ?? [])]
+    .sort((left, right) => right.timestamp - left.timestamp)
+    .slice(0, 5)
+    .map((entry) => ({
+      id: entry.id,
+      timestamp: entry.timestamp,
+      source: entry.source,
+      title: entry.title,
+      details: entry.details,
+      lineCount: entry.lineCount,
+      severity: entry.severity,
+    }));
+
+  return {
+    version: "1",
+    generatedAt: diagnostic.generatedAt,
+    title: `SentinelTwin Incident Bundle · ${diagnostic.scene.name}`,
+    diagnostic,
+    incidents: {
+      title: "Incident snapshot",
+      summary: `${diagnostic.runtime.incidentCount} incidents, ${diagnostic.runtime.performanceTraces.length} performance traces, ${diagnostic.runtime.alerts.highPriorityCount} high priority alerts.`,
+      incidentCount: diagnostic.runtime.incidentCount,
+      performanceTraceCount: diagnostic.runtime.performanceTraces.length,
+      stackTraceCount: diagnostic.runtime.recentIncidents.filter((incident) => Boolean(incident.stack)).length,
+      externalLogCount: recentExternalLogs.length,
+      latestIncident: diagnostic.runtime.recentIncidents.at(0) ?? null,
+      latestPerformanceTrace: diagnostic.runtime.performanceTraces.at(0) ?? null,
+      latestExternalLog: recentExternalLogs.at(0) ?? null,
+      alertSummary,
+      recentIncidents: diagnostic.runtime.recentIncidents,
+      recentPerformanceTraces: diagnostic.runtime.performanceTraces,
+      recentExternalLogs,
+    },
+  };
 }

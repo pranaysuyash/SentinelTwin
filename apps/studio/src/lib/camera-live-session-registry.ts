@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import type { CameraLiveConnectionProbeResponse } from "@/lib/camera-live-connection";
+import type { CameraLiveAuthChallengeScheme, CameraLiveAuthMode, CameraLiveAuthState, CameraLiveConnectionProbeResponse } from "@/lib/camera-live-connection";
 
 export type CameraLiveSessionStatus = "active" | "closed" | "expired";
 
@@ -25,6 +25,16 @@ export type CameraLiveSessionRecord = {
   lastHeartbeatAt: number | null;
   probeCount: number;
   protocolProfile: "onvif_device" | "rtsp_session" | "mjpeg_stream" | "http_poll" | "proxy" | null;
+  authMode: CameraLiveAuthMode;
+  authState: CameraLiveAuthState;
+  authRealm: string | null;
+  authSessionId: string | null;
+  authSessionExpiresAt: number | null;
+  transportResponseStatus: number | null;
+  transportResponseStatusText: string | null;
+  authChallengeHeader: string | null;
+  authChallengeScheme: CameraLiveAuthChallengeScheme;
+  authChallengeRealm: string | null;
   lastObservedAt: number;
   sessionExpiresAt: number | null;
   lastAction: CameraLiveConnectionProbeResponse["action"];
@@ -128,6 +138,37 @@ export function loadCameraLiveSessionRegistry(rootDir = resolveCameraLiveSession
           || candidate.protocolProfile === "proxy"
             ? candidate.protocolProfile
             : null,
+        authMode:
+          candidate.authMode === "none"
+          || candidate.authMode === "basic"
+          || candidate.authMode === "digest"
+          || candidate.authMode === "token"
+          || candidate.authMode === "cookie"
+          || candidate.authMode === "onvif_digest"
+          || candidate.authMode === "proxy_passthrough"
+            ? candidate.authMode
+            : "none",
+        authState:
+          candidate.authState === "unauthenticated"
+          || candidate.authState === "authenticating"
+          || candidate.authState === "authenticated"
+          || candidate.authState === "failed"
+            ? candidate.authState
+            : "unauthenticated",
+        authRealm: typeof candidate.authRealm === "string" ? candidate.authRealm : null,
+        authSessionId: typeof candidate.authSessionId === "string" ? candidate.authSessionId : null,
+        authSessionExpiresAt: typeof candidate.authSessionExpiresAt === "number" ? candidate.authSessionExpiresAt : null,
+        transportResponseStatus: typeof candidate.transportResponseStatus === "number" ? candidate.transportResponseStatus : null,
+        transportResponseStatusText: typeof candidate.transportResponseStatusText === "string" ? candidate.transportResponseStatusText : null,
+        authChallengeHeader: typeof candidate.authChallengeHeader === "string" ? candidate.authChallengeHeader : null,
+        authChallengeScheme:
+          candidate.authChallengeScheme === "basic"
+          || candidate.authChallengeScheme === "digest"
+          || candidate.authChallengeScheme === "bearer"
+          || candidate.authChallengeScheme === "token"
+            ? candidate.authChallengeScheme
+            : null,
+        authChallengeRealm: typeof candidate.authChallengeRealm === "string" ? candidate.authChallengeRealm : null,
         lastObservedAt: candidate.lastObservedAt,
         sessionExpiresAt,
         lastAction: candidate.lastAction === "bind" || candidate.lastAction === "refresh" || candidate.lastAction === "heartbeat" || candidate.lastAction === "disconnect"
@@ -153,6 +194,13 @@ export function pruneExpiredCameraLiveSessionRegistry(rootDir = resolveCameraLiv
           liveConnectionStatus: "disconnected" as const,
           liveSessionState: "idle" as const,
           transportSessionState: "idle" as const,
+          authState: "unauthenticated" as const,
+          authSessionExpiresAt: null,
+          transportResponseStatus: record.transportResponseStatus,
+          transportResponseStatusText: record.transportResponseStatusText,
+          authChallengeHeader: record.authChallengeHeader,
+          authChallengeScheme: record.authChallengeScheme,
+          authChallengeRealm: record.authChallengeRealm,
           summary: `${record.summary} Lease expired.`,
         }
       : record
@@ -208,6 +256,13 @@ export function closeCameraLiveSessionRecord(
         liveConnectionStatus: "disconnected",
         liveSessionState: "idle",
         transportSessionState: "idle",
+        authState: "unauthenticated",
+        authSessionExpiresAt: null,
+        transportResponseStatus: record.transportResponseStatus,
+        transportResponseStatusText: record.transportResponseStatusText,
+        authChallengeHeader: record.authChallengeHeader,
+        authChallengeScheme: record.authChallengeScheme,
+        authChallengeRealm: record.authChallengeRealm,
         summary,
       }
       : record

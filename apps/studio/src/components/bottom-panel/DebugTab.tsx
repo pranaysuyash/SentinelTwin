@@ -5,7 +5,7 @@ import { BadgeInfo, Database, Layers3, RefreshCw, ShieldAlert, Sparkles, TimerRe
 
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { Badge } from "@/components/shared/Badge";
-import { buildDiagnosticBundle, buildSupportBundle, stringifyDiagnosticBundle, stringifySupportBundle } from "@/lib/diagnostic-bundle";
+import { buildDiagnosticBundle, buildIncidentBundle, buildSupportBundle, stringifyDiagnosticBundle, stringifyIncidentBundle, stringifySupportBundle } from "@/lib/diagnostic-bundle";
 import type { CameraLiveConnectionArchiveRecord } from "@/lib/camera-live-connection-history";
 import type { CameraLiveSessionRecord } from "@/lib/camera-live-session-registry";
 import { stringifyReportEvidenceBundle } from "@/lib/report-evidence-bundle";
@@ -18,6 +18,7 @@ import {
   normalizeOperationalEvidenceJournal,
   type OperationalEvidenceJournal,
 } from "@/lib/operational-evidence-journal";
+import { getTrustQualityLabel } from "@/lib/quality-display";
 import {
   assessOperationalEvidenceMergeReadiness,
   compareOperationalEvidenceBranches,
@@ -49,6 +50,19 @@ const OVERLAY_DENSITY_OPTIONS = [
   { value: "compact", label: "Compact" },
   { value: "minimal", label: "Minimal" },
 ] as const;
+
+function formatReasonCode(reasonCode: string): string {
+  if (reasonCode.startsWith("REFLECTIVE_WINDOW:")) {
+    const [, label] = reasonCode.split(":");
+    return `Reflective window: ${label ?? "unknown"}`;
+  }
+  return reasonCode.toLowerCase().replaceAll("_", " ");
+}
+
+function formatMultiplier(value: number | undefined): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "—";
+  return `${(value * 100).toFixed(0)}%`;
+}
 
 function Section({
   title,
@@ -110,6 +124,8 @@ export function DebugTab() {
   const localOnlyMode = useStudioStore((s) => s.localOnlyMode);
   const aiProviderSelection = useStudioStore((s) => s.aiProviderSelection);
   const launchNotice = useStudioStore((s) => s.launchNotice);
+  const heatmapMode = useStudioStore((s) => s.heatmapMode);
+  const heatmapHover = useStudioStore((s) => s.heatmapHover);
   const clearAllCameraFailures = useStudioStore((s) => s.clearAllCameraFailures);
   const clearRuntimeIncidents = useStudioStore((s) => s.clearRuntimeIncidents);
   const sceneIntelligenceGraph = useStudioStore((s) => s.sceneIntelligenceGraph);
@@ -413,6 +429,7 @@ export function DebugTab() {
         sceneIntelligenceGraph,
         operationalEvidenceEvents,
         runtimeIncidents,
+        externalLogEntries,
         workspaceAccess,
         workspaceGovernance,
         lastRunMs,
@@ -445,6 +462,7 @@ export function DebugTab() {
         localOnlyMode,
         sceneIntelligenceGraph,
         showDebugOverlays,
+        externalLogEntries,
       ],
   );
   const supportBundle = useMemo(
@@ -524,6 +542,40 @@ export function DebugTab() {
     link.remove();
     URL.revokeObjectURL(url);
     setLaunchNotice("Support bundle downloaded.");
+  };
+
+  const downloadIncidentBundle = () => {
+    const blob = new Blob([stringifyIncidentBundle(buildIncidentBundle({
+      scene,
+      simulationResult: result,
+      sceneIntelligenceGraph,
+      operationalEvidenceEvents,
+      runtimeIncidents,
+      externalLogEntries,
+      workspaceAccess,
+      workspaceGovernance,
+      lastRunMs,
+      showDebugOverlays,
+      overlayDensity,
+      autoRecompute,
+      cameraFailures,
+      localOnlyMode,
+      aiProviderLabel: providerSummary.providerLabel,
+      simulationDirty,
+      simulationRunning,
+      launchNotice,
+      pathname: typeof window === "undefined" ? undefined : window.location.pathname,
+      userAgent: typeof window === "undefined" ? undefined : window.navigator.userAgent,
+    }))], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `sentineltwin-incident-${scene.id}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setLaunchNotice("Incident bundle downloaded.");
   };
 
   const downloadReportEvidenceBundle = () => {
@@ -861,6 +913,15 @@ export function DebugTab() {
     () => (latestModelEvalRun && previousModelEvalRun ? compareModelEvalRuns(previousModelEvalRun, latestModelEvalRun) : null),
     [latestModelEvalRun, previousModelEvalRun],
   );
+  const hoverCellEvaluations = useMemo(
+    () => Object.entries(heatmapHover?.cell.cameraEvaluations ?? {}).sort(([, a], [, b]) => {
+      const probabilityDelta = (b.probability ?? 0) - (a.probability ?? 0);
+      if (probabilityDelta !== 0) return probabilityDelta;
+      return (b.ppm ?? 0) - (a.ppm ?? 0);
+    }),
+    [heatmapHover],
+  );
+  const topHoverEvaluations = hoverCellEvaluations.slice(0, 3);
 
   if (!result) {
     return (
@@ -884,6 +945,9 @@ export function DebugTab() {
             </PillButton>
             <PillButton active={false} onClick={downloadDiagnosticBundle}>
               Download Bundle
+            </PillButton>
+            <PillButton active={false} onClick={downloadIncidentBundle}>
+              Download Incident Bundle
             </PillButton>
             <PillButton active={false} onClick={downloadSupportBundle}>
               Download Support Bundle
@@ -1154,6 +1218,72 @@ export function DebugTab() {
             </div>
           </Section>
 
+          <Section title="Heatmap Explainability" icon={<BadgeInfo className="h-3 w-3 text-cyan-400" />}>
+            {heatmapHover ? (
+              <div className="space-y-1.5 text-[9px] text-[#8b96ab]">
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
+                  Hovering {heatmapMode} cell @ x:{heatmapHover.cell.x.toFixed(2)} z:{heatmapHover.cell.z.toFixed(2)}
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Quality</div>
+                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">
+                      {getTrustQualityLabel(heatmapHover.cell.quality, scene.assumptions.doriStandard)}
+                    </div>
+                  </div>
+                  <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">PPM</div>
+                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">{heatmapHover.cell.ppm.toFixed(1)}</div>
+                  </div>
+                  <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                    <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Covering cams</div>
+                    <div className="mt-0.5 font-semibold text-[#d2d9e8]">{heatmapHover.cell.coveringCameras.length}</div>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  {topHoverEvaluations.length > 0 ? topHoverEvaluations.map(([cameraId, evaluation]) => (
+                    <div key={cameraId} className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-[10px] font-semibold text-[#edf2ff]">{cameraId}</div>
+                        <Badge variant="gray">
+                          {getTrustQualityLabel(evaluation.quality, scene.assumptions.doriStandard)} · {evaluation.ppm.toFixed(1)} PPM
+                        </Badge>
+                      </div>
+                      <div className="mt-1 grid grid-cols-3 gap-x-2 gap-y-1 text-[8px] text-[#8ea2c4]">
+                        <span>FOV: {evaluation.inFov ? "yes" : "no"}</span>
+                        <span>Range: {evaluation.withinRange ? "yes" : "no"}</span>
+                        <span>Dist: {evaluation.distanceM.toFixed(1)}m</span>
+                        <span>Edge: {formatMultiplier(evaluation.edgePenaltyMultiplier)}</span>
+                        <span>Clarity: {formatMultiplier(evaluation.clarityMultiplier)}</span>
+                        <span>Material: {formatMultiplier(evaluation.materialTransmission)}</span>
+                        <span>Glare: {typeof evaluation.glarePenalty === "number" ? `${(evaluation.glarePenalty * 100).toFixed(0)}%` : "—"}</span>
+                        <span>Lighting: {typeof evaluation.lightingPenalty === "number" ? `${(evaluation.lightingPenalty * 100).toFixed(0)}%` : "—"}</span>
+                        <span>Final: {formatMultiplier(evaluation.finalPpmMultiplier)}</span>
+                      </div>
+                      {evaluation.reasonCodes.length > 0 ? (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {evaluation.reasonCodes.slice(0, 3).map((reasonCode) => (
+                            <span key={reasonCode} className="rounded border border-[#314267] bg-[#13203a] px-1 py-0.5 text-[8px] text-[#9dc3ff]">
+                              {formatReasonCode(reasonCode)}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  )) : (
+                    <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                      No per-camera evaluation details found for this hovered cell.
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                Hover a heatmap cell in Map View to inspect per-camera trust factors here.
+              </div>
+            )}
+          </Section>
+
           <Section title="Runtime Health" icon={<TriangleAlert className="h-3 w-3 text-emerald-400" />}>
             <div className="grid grid-cols-2 gap-1.5 text-[9px]">
               <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
@@ -1198,6 +1328,12 @@ export function DebugTab() {
               </div>
               <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
                 {runtime.launchNotice ? runtime.launchNotice : "No launch notices yet. Use the shell or workspace controls to surface an action here."}
+              </div>
+              <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
+                Alert routing: {runtime.alerts.summary}
+                <div className="mt-1 text-[#74809a]">
+                  {runtime.alerts.statusLabel} · {runtime.alerts.recommendation}
+                </div>
               </div>
             </div>
           </Section>
@@ -1984,12 +2120,40 @@ export function DebugTab() {
                   <div className="mt-0.5 font-semibold text-[#d2d9e8]">{promptRegistrySummary.latestVersion}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
-                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Stages</div>
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Registry digest</div>
+                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">
+                    {promptRegistrySummary.registryDigest.slice(0, 18)}…
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Stage map</div>
                   <div className="mt-0.5 font-semibold text-[#d2d9e8]">
                     {Object.entries(promptRegistrySummary.stages).map(([stage, count]) => `${stage}:${count}`).join(" · ")}
                   </div>
                 </div>
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Last observed</div>
+                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">
+                    {latestModelEvalRun?.promptRegistry
+                      ? new Date(latestModelEvalRun.promptRegistry.observedAt).toLocaleString([], {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : "No eval snapshot yet"}
+                  </div>
+                </div>
               </div>
+              {latestModelEvalRun?.promptRegistry ? (
+                <div className={`rounded-md border px-2 py-1 ${latestModelEvalRun.promptRegistry.registryDigest === promptRegistrySummary.registryDigest ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-100" : "border-amber-500/30 bg-amber-500/10 text-amber-100"}`}>
+                  {latestModelEvalRun.promptRegistry.registryDigest === promptRegistrySummary.registryDigest
+                    ? "Live code matches the most recently recorded prompt-registry snapshot."
+                    : "Live code differs from the most recently recorded prompt-registry snapshot."}
+                </div>
+              ) : null}
               <div className="space-y-1.5">
                 {PROMPT_REGISTRY.map((entry) => (
                   <div key={entry.id} className="rounded-md border border-[#1a2030] bg-[#0f141f] px-3 py-2">
@@ -2215,6 +2379,7 @@ export function DebugTab() {
                       </div>
                       <div className="mt-1 flex flex-wrap gap-1.5">
                         <Badge variant="gray">{run.model}</Badge>
+                        <Badge variant="gray">{run.promptRegistry.latestVersion}</Badge>
                         <Badge variant="gray">{run.localOnlyMode ? "Local-only" : "Cloud-backed"}</Badge>
                         <Badge variant="gray">{run.summary.passed} pass</Badge>
                         <Badge variant="gray">{run.summary.failed} fail</Badge>
@@ -2222,6 +2387,9 @@ export function DebugTab() {
                       </div>
                       <div className="mt-1 text-[9px] text-[#8b96ab]">
                         {run.stageBudget.modeLabel}: {run.stageBudget.expectedPasses} expected pass(es), {run.stageBudget.expectedSkips} expected skip(s).
+                      </div>
+                      <div className="mt-1 text-[9px] text-[#8b96ab]">
+                        Prompt registry snapshot {run.promptRegistry.latestVersion} · {run.promptRegistry.total} prompt(s) · {run.promptRegistry.registryDigest.slice(0, 12)}…
                       </div>
                       {runComparison ? (
                         <div className="mt-1 text-[9px] text-[#8b96ab]">

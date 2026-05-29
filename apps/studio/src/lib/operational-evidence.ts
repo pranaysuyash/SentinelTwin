@@ -1,4 +1,6 @@
-import type { SecurityScene, SimulationResult } from "@/schema/security-scene";
+import { z } from "zod";
+
+import { safeParseSecurityScene, type SecurityScene, type SimulationResult, sceneSourceSchema } from "@/schema/security-scene";
 import { getSceneSourceMeta } from "@/lib/scene-source";
 
 export type OperationalEvidenceActor = "system" | "user" | "ai";
@@ -88,6 +90,123 @@ export type OperationalEvidenceEventInput = Omit<OperationalEvidenceEvent, "id" 
   timestamp?: number;
 };
 
+const OPERATIONAL_EVIDENCE_EVENT_KINDS = [
+  "scene_initialized",
+  "scene_imported",
+  "scene_created",
+  "scene_updated",
+  "scene_reverted",
+  "draft_proposed",
+  "scene_review_requested",
+  "scene_review_approved",
+  "scene_review_rejected",
+  "scene_comment_added",
+  "governance_role_changed",
+  "governance_policy_changed",
+  "workspace_member_selected",
+  "workspace_access_policy_changed",
+  "workspace_membership_synced",
+  "workspace_approval_routed",
+  "workspace_identity_conflict_resolved",
+  "scan_session_started",
+  "scan_session_compiled",
+  "node_added",
+  "node_updated",
+  "node_removed",
+  "sensor_added",
+  "sensor_updated",
+  "sensor_removed",
+  "sensor_triggered",
+  "sensor_heartbeat",
+  "sensor_faulted",
+  "sensor_restored",
+  "camera_metadata_updated",
+  "camera_live_connection_updated",
+  "snapshot_saved",
+  "scene_published",
+  "simulation_completed",
+  "counterfactual_completed",
+  "draft_applied",
+  "scene_merged",
+  "scan_compiled",
+] as const;
+
+const OPERATIONAL_EVIDENCE_LIFECYCLE_STAGES = [
+  "draft",
+  "review",
+  "published",
+  "recovered",
+  "imported",
+  "scanned",
+  "simulated",
+  "manual",
+] as const;
+
+const OperationalEvidenceEventKindSchema = z.enum(OPERATIONAL_EVIDENCE_EVENT_KINDS);
+const OperationalEvidenceActorSchema = z.enum(["system", "user", "ai"]);
+const OperationalEvidenceLifecycleStageSchema = z.enum(OPERATIONAL_EVIDENCE_LIFECYCLE_STAGES);
+const OperationalEvidenceSourceSchema = z.union([sceneSourceSchema, z.literal("system")]);
+const OperationalEvidenceSimulationSchema = z.object({
+  totalCoveragePct: z.number(),
+  issueCount: z.number().int(),
+  failedZoneCount: z.number().int(),
+  deltaCoveragePct: z.number().nullable().optional(),
+});
+
+const OperationalEvidenceEventSchema = z.object({
+  id: z.string().min(1),
+  kind: OperationalEvidenceEventKindSchema,
+  title: z.string().min(1),
+  details: z.string().min(1),
+  actor: OperationalEvidenceActorSchema,
+  source: OperationalEvidenceSourceSchema,
+  sceneId: z.string().min(1),
+  sceneName: z.string().min(1),
+  timestamp: z.number().int(),
+  revisionDepth: z.number().int().nonnegative(),
+  affectedNodeIds: z.array(z.string()),
+  confidence: z.number().min(0).max(1),
+  branchId: z.string().min(1).optional(),
+  branchLabel: z.string().min(1).optional(),
+  lifecycleStage: OperationalEvidenceLifecycleStageSchema.optional(),
+  parentEventId: z.string().min(1).optional(),
+  published: z.boolean().optional(),
+  beforeSummary: z.string().optional(),
+  afterSummary: z.string().optional(),
+  previousSceneSnapshot: z.unknown().optional(),
+  sceneSnapshot: z.unknown().optional(),
+  simulation: OperationalEvidenceSimulationSchema.optional(),
+  notes: z.array(z.string()).optional(),
+});
+
+function normalizeSceneSnapshot(value: unknown) {
+  const parsed = safeParseSecurityScene(value);
+  return parsed.success ? structuredClone(parsed.data) : undefined;
+}
+
+export function safeParseOperationalEvidenceEvent(input: unknown): OperationalEvidenceEvent | null {
+  const parsed = OperationalEvidenceEventSchema.safeParse(input);
+  if (!parsed.success) return null;
+
+  const previousSceneSnapshot = parsed.data.previousSceneSnapshot == null
+    ? undefined
+    : normalizeSceneSnapshot(parsed.data.previousSceneSnapshot);
+  if (parsed.data.previousSceneSnapshot != null && !previousSceneSnapshot) return null;
+
+  const sceneSnapshot = parsed.data.sceneSnapshot == null
+    ? undefined
+    : normalizeSceneSnapshot(parsed.data.sceneSnapshot);
+  if (parsed.data.sceneSnapshot != null && !sceneSnapshot) return null;
+
+  return {
+    ...parsed.data,
+    previousSceneSnapshot,
+    sceneSnapshot,
+    simulation: parsed.data.simulation ? structuredClone(parsed.data.simulation) : undefined,
+    notes: parsed.data.notes?.filter((note): note is string => typeof note === "string"),
+  };
+}
+
 export type SceneEvidenceSummary = {
   label: string;
   detail: string;
@@ -160,8 +279,18 @@ export type OperationalGovernanceTrailSummary = {
 export type OperationalEvidenceTemporalTwinSummary = {
   totalEvents: number;
   checkpointCount: number;
+  publishedCheckpointCount: number;
   branchHeadCount: number;
   latestCheckpoint: {
+    eventId: string;
+    title: string;
+    timestamp: number;
+    branchLabel: string;
+    lifecycleStage: OperationalEvidenceLifecycleStage;
+    hasSnapshot: boolean;
+    summary: SceneEvidenceSummary;
+  } | null;
+  latestPublishedCheckpoint: {
     eventId: string;
     title: string;
     timestamp: number;
@@ -180,7 +309,17 @@ export type OperationalEvidenceTemporalTwinSummary = {
     sensors: number;
     snapshots: number;
   } | null;
+  currentVsLatestPublishedCheckpointDelta: {
+    cameras: number;
+    lights: number;
+    obstructions: number;
+    zones: number;
+    paths: number;
+    sensors: number;
+    snapshots: number;
+  } | null;
   latestCheckpointAgeMs: number | null;
+  latestPublishedCheckpointAgeMs: number | null;
 };
 
 export type OperationalEvidenceTimelineEntry = {
@@ -230,6 +369,80 @@ export type OperationalEvidenceEventFilters = {
   lifecycleStage?: OperationalEvidenceLifecycleStage | "all";
   branchLabel?: string | "all" | null;
 };
+
+type ParsedOperationalEvidenceQuery = {
+  freeText: string;
+  branchLabel: string | null;
+  timestampAfter: number | null;
+  timestampBefore: number | null;
+};
+
+function parseOperationalEvidenceQueryToken(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const parsed = Date.parse(trimmed);
+  if (!Number.isNaN(parsed)) return parsed;
+
+  const asNumber = Number(trimmed);
+  return Number.isFinite(asNumber) ? asNumber : null;
+}
+
+function parseOperationalEvidenceQuery(query: string): ParsedOperationalEvidenceQuery {
+  const tokens: string[] = [];
+  let branchLabel: string | null = null;
+  let timestampAfter: number | null = null;
+  let timestampBefore: number | null = null;
+
+  for (const token of query.trim().split(/\s+/).filter(Boolean)) {
+    const match = token.match(/^(branch|after|before|time):(.+)$/i);
+    if (!match) {
+      tokens.push(token);
+      continue;
+    }
+
+    const key = match[1]?.toLowerCase();
+    const rawValue = match[2]?.trim();
+    if (!rawValue) continue;
+
+    if (key === "branch") {
+      branchLabel = rawValue.toLowerCase();
+      continue;
+    }
+
+    const parsedValue = parseOperationalEvidenceQueryToken(rawValue);
+    if (parsedValue == null) continue;
+
+    if (key === "after") {
+      timestampAfter = parsedValue;
+      continue;
+    }
+
+    if (key === "before") {
+      timestampBefore = parsedValue;
+      continue;
+    }
+
+    if (key === "time") {
+      const valueDate = new Date(parsedValue);
+      if (rawValue.length <= 10) {
+        const startOfDay = Date.UTC(valueDate.getUTCFullYear(), valueDate.getUTCMonth(), valueDate.getUTCDate());
+        timestampAfter = startOfDay;
+        timestampBefore = startOfDay + 24 * 60 * 60 * 1000 - 1;
+      } else {
+        timestampAfter = parsedValue - 60_000;
+        timestampBefore = parsedValue + 60_000;
+      }
+    }
+  }
+
+  return {
+    freeText: tokens.join(" ").trim(),
+    branchLabel,
+    timestampAfter,
+    timestampBefore,
+  };
+}
 
 export function summarizeSceneEvidence(scene: SecurityScene): SceneEvidenceSummary {
   const sourceMeta = getSceneSourceMeta(scene.source);
@@ -485,22 +698,30 @@ export function summarizeOperationalEvidenceTemporalTwin(
 ): OperationalEvidenceTemporalTwinSummary {
   const timeline = buildOperationalEvidenceTimeline(events, scene);
   const latestCheckpointScene = timeline.latestCheckpoint?.reconstructedScene ?? null;
+  const latestPublishedCheckpoint = [...timeline.entries].reverse().find((entry) => entry.event.kind === "scene_published" || entry.event.published) ?? null;
+  const latestPublishedCheckpointScene = latestPublishedCheckpoint?.reconstructedScene ?? null;
 
-  const currentVsLatestCheckpointDelta = scene && latestCheckpointScene
-    ? {
-        cameras: scene.cameras.length - latestCheckpointScene.cameras.length,
-        lights: scene.securityLights.length - latestCheckpointScene.securityLights.length,
-        obstructions: scene.obstructions.length - latestCheckpointScene.obstructions.length,
-        zones: (scene.criticalZones.length + scene.privacyZones.length) - (latestCheckpointScene.criticalZones.length + latestCheckpointScene.privacyZones.length),
-        paths: scene.paths.length - latestCheckpointScene.paths.length,
-        sensors: scene.sensors.length - latestCheckpointScene.sensors.length,
-        snapshots: scene.snapshots.length - latestCheckpointScene.snapshots.length,
-      }
-    : null;
+  const sceneDelta = (currentScene: SecurityScene | null | undefined, comparisonScene: SecurityScene | null | undefined) => (
+    currentScene && comparisonScene
+      ? {
+          cameras: currentScene.cameras.length - comparisonScene.cameras.length,
+          lights: currentScene.securityLights.length - comparisonScene.securityLights.length,
+          obstructions: currentScene.obstructions.length - comparisonScene.obstructions.length,
+          zones: (currentScene.criticalZones.length + currentScene.privacyZones.length) - (comparisonScene.criticalZones.length + comparisonScene.privacyZones.length),
+          paths: currentScene.paths.length - comparisonScene.paths.length,
+          sensors: currentScene.sensors.length - comparisonScene.sensors.length,
+          snapshots: currentScene.snapshots.length - comparisonScene.snapshots.length,
+        }
+      : null
+  );
+
+  const currentVsLatestCheckpointDelta = sceneDelta(scene, latestCheckpointScene);
+  const currentVsLatestPublishedCheckpointDelta = sceneDelta(scene, latestPublishedCheckpointScene);
 
   return {
     totalEvents: timeline.totalEvents,
     checkpointCount: timeline.checkpoints.length,
+    publishedCheckpointCount: timeline.entries.filter((entry) => entry.event.kind === "scene_published" || entry.event.published).length,
     branchHeadCount: timeline.branchHeads.filter((entry) => entry.event != null).length,
     latestCheckpoint: timeline.latestCheckpoint && timeline.latestCheckpoint.reconstructedSceneSummary
       ? {
@@ -513,9 +734,22 @@ export function summarizeOperationalEvidenceTemporalTwin(
           summary: timeline.latestCheckpoint.reconstructedSceneSummary,
         }
       : null,
+    latestPublishedCheckpoint: latestPublishedCheckpoint && latestPublishedCheckpoint.reconstructedSceneSummary
+      ? {
+          eventId: latestPublishedCheckpoint.event.id,
+          title: latestPublishedCheckpoint.event.title,
+          timestamp: latestPublishedCheckpoint.event.timestamp,
+          branchLabel: latestPublishedCheckpoint.event.branchLabel ?? latestPublishedCheckpoint.event.lifecycleStage ?? "published",
+          lifecycleStage: latestPublishedCheckpoint.event.lifecycleStage ?? deriveOperationalEvidenceLifecycleStage(latestPublishedCheckpoint.event.kind, latestPublishedCheckpoint.event.source),
+          hasSnapshot: Boolean(latestPublishedCheckpoint.event.sceneSnapshot),
+          summary: latestPublishedCheckpoint.reconstructedSceneSummary,
+        }
+      : null,
     currentSceneSummary: timeline.currentSceneSummary,
     currentVsLatestCheckpointDelta,
+    currentVsLatestPublishedCheckpointDelta,
     latestCheckpointAgeMs: timeline.latestCheckpoint ? Date.now() - timeline.latestCheckpoint.event.timestamp : null,
+    latestPublishedCheckpointAgeMs: latestPublishedCheckpoint ? Date.now() - latestPublishedCheckpoint.event.timestamp : null,
   };
 }
 
@@ -526,6 +760,54 @@ function sortOperationalEvidenceEventsChronologically(events: OperationalEvidenc
     }
     return left.id.localeCompare(right.id);
   });
+}
+
+function resolveOperationalEvidenceNodeId(sceneId: string, nodeId: string) {
+  if (nodeId === `scene:${sceneId}`) return sceneId;
+
+  const separatorIndex = nodeId.indexOf(":");
+  if (separatorIndex === -1) return null;
+
+  const kind = nodeId.slice(0, separatorIndex);
+  const rawNodeId = nodeId.slice(separatorIndex + 1);
+  if (!rawNodeId) return null;
+
+  switch (kind) {
+    case "camera":
+    case "wall":
+    case "door":
+    case "window":
+    case "obstruction":
+    case "critical_zone":
+    case "privacy_zone":
+    case "entry_point":
+    case "path":
+    case "sensor":
+    case "security_light":
+      return rawNodeId;
+    default:
+      return null;
+  }
+}
+
+export function findOperationalEvidenceEventsForNode(
+  events: OperationalEvidenceEvent[],
+  sceneId: string,
+  nodeId: string,
+  limit = 5,
+): OperationalEvidenceEvent[] {
+  const resolvedNodeId = resolveOperationalEvidenceNodeId(sceneId, nodeId);
+  if (!resolvedNodeId) return [];
+
+  const matchingEvents = events.filter((event) => {
+    if (event.sceneId !== sceneId) return false;
+    if (resolvedNodeId === sceneId) return true;
+    return event.affectedNodeIds.includes(resolvedNodeId);
+  });
+
+  return sortOperationalEvidenceEventsChronologically(matchingEvents)
+    .slice(-Math.max(0, limit))
+    .reverse();
 }
 
 export function buildOperationalEvidenceTimeline(
@@ -1009,63 +1291,8 @@ export function mergeOperationalEvidenceBranchScenes(
 export function normalizeOperationalEvidenceEvents(raw: unknown): OperationalEvidenceEvent[] {
   if (!Array.isArray(raw)) return [];
   return raw.flatMap((item) => {
-    if (!item || typeof item !== "object") return [];
-    const candidate = item as Partial<OperationalEvidenceEvent>;
-    if (
-      typeof candidate.id !== "string"
-      || typeof candidate.kind !== "string"
-      || typeof candidate.title !== "string"
-      || typeof candidate.details !== "string"
-      || typeof candidate.actor !== "string"
-      || typeof candidate.source !== "string"
-      || typeof candidate.sceneId !== "string"
-      || typeof candidate.sceneName !== "string"
-      || typeof candidate.timestamp !== "number"
-      || typeof candidate.revisionDepth !== "number"
-      || !Array.isArray(candidate.affectedNodeIds)
-      || typeof candidate.confidence !== "number"
-    ) {
-      return [];
-    }
-
-    const kind = candidate.kind as OperationalEvidenceEventKind;
-    const actor = candidate.actor as OperationalEvidenceActor;
-    return [{
-      id: candidate.id,
-      kind,
-      title: candidate.title,
-      details: candidate.details,
-      actor,
-      source: candidate.source as OperationalEvidenceEvent["source"],
-      sceneId: candidate.sceneId,
-      sceneName: candidate.sceneName,
-      timestamp: candidate.timestamp,
-      revisionDepth: candidate.revisionDepth,
-      affectedNodeIds: candidate.affectedNodeIds.filter((id): id is string => typeof id === "string"),
-      confidence: candidate.confidence,
-      branchId: typeof candidate.branchId === "string" ? candidate.branchId : undefined,
-      branchLabel: typeof candidate.branchLabel === "string" ? candidate.branchLabel : undefined,
-      lifecycleStage: typeof candidate.lifecycleStage === "string" ? (candidate.lifecycleStage as OperationalEvidenceLifecycleStage) : undefined,
-      parentEventId: typeof candidate.parentEventId === "string" ? candidate.parentEventId : undefined,
-      published: typeof candidate.published === "boolean" ? candidate.published : undefined,
-      beforeSummary: typeof candidate.beforeSummary === "string" ? candidate.beforeSummary : undefined,
-      afterSummary: typeof candidate.afterSummary === "string" ? candidate.afterSummary : undefined,
-      previousSceneSnapshot: candidate.previousSceneSnapshot && typeof candidate.previousSceneSnapshot === "object"
-        ? structuredClone(candidate.previousSceneSnapshot as SecurityScene)
-        : undefined,
-      sceneSnapshot: candidate.sceneSnapshot && typeof candidate.sceneSnapshot === "object"
-        ? structuredClone(candidate.sceneSnapshot as SecurityScene)
-        : undefined,
-      simulation: candidate.simulation && typeof candidate.simulation === "object"
-        ? {
-            totalCoveragePct: typeof candidate.simulation.totalCoveragePct === "number" ? candidate.simulation.totalCoveragePct : 0,
-            issueCount: typeof candidate.simulation.issueCount === "number" ? candidate.simulation.issueCount : 0,
-            failedZoneCount: typeof candidate.simulation.failedZoneCount === "number" ? candidate.simulation.failedZoneCount : 0,
-            deltaCoveragePct: typeof candidate.simulation.deltaCoveragePct === "number" ? candidate.simulation.deltaCoveragePct : null,
-          }
-        : undefined,
-      notes: Array.isArray(candidate.notes) ? candidate.notes.filter((note): note is string => typeof note === "string") : undefined,
-    }];
+    const normalized = safeParseOperationalEvidenceEvent(item);
+    return normalized ? [normalized] : [];
   });
 }
 
@@ -1078,13 +1305,16 @@ export function matchesOperationalEvidenceEvent(
   query: string,
   filters?: OperationalEvidenceEventFilters,
 ) {
-  const trimmed = query.trim().toLowerCase();
+  const parsedQuery = parseOperationalEvidenceQuery(query);
+  const trimmed = parsedQuery.freeText.trim().toLowerCase();
   const lifecycleStage = filters?.lifecycleStage ?? "all";
-  const branchLabel = filters?.branchLabel ?? "all";
+  const branchLabel = filters?.branchLabel ?? parsedQuery.branchLabel ?? "all";
   const eventLifecycleStage = event.lifecycleStage ?? deriveOperationalEvidenceLifecycleStage(event.kind, event.source);
   const eventBranchLabel = event.branchLabel ?? eventLifecycleStage;
   if (lifecycleStage !== "all" && eventLifecycleStage !== lifecycleStage) return false;
   if (branchLabel !== "all" && branchLabel !== null && eventBranchLabel !== branchLabel) return false;
+  if (parsedQuery.timestampAfter != null && event.timestamp < parsedQuery.timestampAfter) return false;
+  if (parsedQuery.timestampBefore != null && event.timestamp > parsedQuery.timestampBefore) return false;
   if (!trimmed) return true;
 
   const haystacks = [

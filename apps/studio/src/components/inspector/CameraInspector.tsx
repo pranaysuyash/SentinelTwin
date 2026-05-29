@@ -18,6 +18,7 @@ import { cn } from "@/lib/cn";
 import type { CameraLiveConnectionProbeResponse } from "@/lib/camera-live-connection";
 import type { CameraLiveConnectionArchiveRecord } from "@/lib/camera-live-connection-history";
 import type { CameraMetadataIngestResponse } from "@/lib/camera-metadata-live-ingest";
+import { QUALITY_LABEL } from "@/lib/quality-display";
 import type { CameraNode, DoriQuality, SimulationAssumptions } from "@/schema/security-scene";
 import { qualityToScore } from "@/simulation/dori";
 import { type InspectorTab, useStudioStore } from "@/store/studio-store";
@@ -103,21 +104,6 @@ type CameraMetadataArchiveRecord = CameraMetadataIngestResponse & {
   sceneName: string | null;
 };
 
-const QUALITY_LABEL: Record<DoriQuality, string> = {
-  none: "No Signal",
-  detection: "Detection",
-  overview: "Overview",
-  outline: "Outline",
-  observation: "Observation",
-  discern: "Discern",
-  perceive: "Perceive",
-  recognition: "Recognition",
-  characterize: "Characterize",
-  validate: "Validate",
-  identification: "Identification",
-  scrutinize: "Scrutinize",
-};
-
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Compute DORI effective ranges in metres for a camera, using the scene's PPM thresholds. */
@@ -200,10 +186,20 @@ export function CameraInspector() {
     sessionExpiresAt: number | null;
     transportSessionId: string | null;
     transportSessionState: "idle" | "negotiating" | "active" | "closing" | "error" | null;
+    transportResponseStatus: number | null;
+    transportResponseStatusText: string | null;
     lastHeartbeatAt: number | null;
     probeCount: number;
     protocolProfile: "onvif_device" | "rtsp_session" | "mjpeg_stream" | "http_poll" | "proxy" | null;
-    lastAction: "bind" | "refresh" | "disconnect";
+    authMode: "none" | "basic" | "digest" | "token" | "cookie" | "onvif_digest" | "proxy_passthrough";
+    authState: "unauthenticated" | "authenticating" | "authenticated" | "failed";
+    authRealm: string | null;
+    authSessionId: string | null;
+    authSessionExpiresAt: number | null;
+    authChallengeHeader: string | null;
+    authChallengeScheme: "basic" | "digest" | "bearer" | "token" | null;
+    authChallengeRealm: string | null;
+    lastAction: "bind" | "refresh" | "heartbeat" | "disconnect";
   }>>([]);
   const sceneId = useStudioStore((s) => s.scene.id);
   const cameraMetadataEvents = useMemo(
@@ -550,6 +546,11 @@ export function CameraInspector() {
           liveSessionStartedAt: cameraBeforeUpdate?.liveSessionStartedAt ?? undefined,
           liveSessionConfirmedAt: cameraBeforeUpdate?.liveSessionConfirmedAt ?? undefined,
           transportSessionId: cameraBeforeUpdate?.transportSessionId ?? undefined,
+          authMode: cameraBeforeUpdate?.authMode ?? undefined,
+          authState: cameraBeforeUpdate?.authState ?? undefined,
+          authRealm: cameraBeforeUpdate?.authRealm ?? undefined,
+          authSessionId: cameraBeforeUpdate?.authSessionId ?? undefined,
+          authSessionExpiresAt: cameraBeforeUpdate?.authSessionExpiresAt ?? undefined,
           raw: action === "disconnect" || action === "heartbeat" ? "" : "",
           notes: liveConnectionNotes.trim() || undefined,
         }),
@@ -576,6 +577,16 @@ export function CameraInspector() {
         lastHeartbeatAt: body.record.lastHeartbeatAt ?? undefined,
         probeCount: body.record.probeCount ?? undefined,
         protocolProfile: body.record.protocolProfile ?? undefined,
+        authMode: body.record.authMode ?? undefined,
+        authState: body.record.authState ?? undefined,
+        authRealm: body.record.authRealm ?? undefined,
+        authSessionId: body.record.authSessionId ?? undefined,
+        authSessionExpiresAt: body.record.authSessionExpiresAt ?? undefined,
+        transportResponseStatus: body.record.transportResponseStatus ?? undefined,
+        transportResponseStatusText: body.record.transportResponseStatusText ?? undefined,
+        authChallengeHeader: body.record.authChallengeHeader ?? undefined,
+        authChallengeScheme: body.record.authChallengeScheme ?? undefined,
+        authChallengeRealm: body.record.authChallengeRealm ?? undefined,
       });
       recordCameraLiveConnectionEvent({
         cameraId: camera!.id,
@@ -584,6 +595,16 @@ export function CameraInspector() {
         previousLiveFeedLabel: cameraBeforeUpdate?.liveFeedLabel ?? null,
         previousLiveConnectionMode: cameraBeforeUpdate?.liveConnectionMode ?? null,
         previousLiveConnectionStatus: cameraBeforeUpdate?.liveConnectionStatus ?? null,
+        previousAuthMode: cameraBeforeUpdate?.authMode ?? null,
+        previousAuthState: cameraBeforeUpdate?.authState ?? null,
+        previousAuthRealm: cameraBeforeUpdate?.authRealm ?? null,
+        previousAuthSessionId: cameraBeforeUpdate?.authSessionId ?? null,
+        previousAuthSessionExpiresAt: cameraBeforeUpdate?.authSessionExpiresAt ?? null,
+        previousTransportResponseStatus: cameraBeforeUpdate?.transportResponseStatus ?? null,
+        previousTransportResponseStatusText: cameraBeforeUpdate?.transportResponseStatusText ?? null,
+        previousAuthChallengeHeader: cameraBeforeUpdate?.authChallengeHeader ?? null,
+        previousAuthChallengeScheme: cameraBeforeUpdate?.authChallengeScheme ?? null,
+        previousAuthChallengeRealm: cameraBeforeUpdate?.authChallengeRealm ?? null,
         previousLiveSessionId: cameraBeforeUpdate?.liveSessionId ?? null,
         previousLiveSessionState: cameraBeforeUpdate?.liveSessionState ?? null,
         previousLiveSessionStartedAt: cameraBeforeUpdate?.liveSessionStartedAt ?? null,
@@ -603,6 +624,16 @@ export function CameraInspector() {
         lastHeartbeatAt: body.record.lastHeartbeatAt,
         probeCount: body.record.probeCount,
         protocolProfile: body.record.protocolProfile,
+        authMode: body.record.authMode,
+        authState: body.record.authState,
+        authRealm: body.record.authRealm,
+        authSessionId: body.record.authSessionId,
+        authSessionExpiresAt: body.record.authSessionExpiresAt,
+        transportResponseStatus: body.record.transportResponseStatus ?? null,
+        transportResponseStatusText: body.record.transportResponseStatusText ?? null,
+        authChallengeHeader: body.record.authChallengeHeader ?? null,
+        authChallengeScheme: body.record.authChallengeScheme ?? null,
+        authChallengeRealm: body.record.authChallengeRealm ?? null,
         ingestMode: action === "disconnect" ? "manual" : "external",
         summary: body.summary ?? (action === "disconnect"
           ? `Live camera connection cleared for ${camera!.name}.`
@@ -619,6 +650,9 @@ export function CameraInspector() {
       setLiveConnectionStatus(body.record.liveConnectionStatus);
       if (body.record.liveConnectionStatus === "connected") {
         setLiveConnectionStatusMessage(body.summary ?? (action === "refresh" || action === "heartbeat" ? "Live camera session refreshed." : "Live camera binding archived."));
+        setLiveConnectionError(null);
+      } else if (body.record.liveConnectionStatus === "connecting") {
+        setLiveConnectionStatusMessage(body.summary ?? "The live camera probe is negotiating authentication.");
         setLiveConnectionError(null);
       } else {
         setLiveConnectionStatusMessage(null);
@@ -841,7 +875,7 @@ export function CameraInspector() {
                     <div>
                       <div className="text-[8px] uppercase tracking-[0.16em] text-cyan-200">Current session lease</div>
                       <div className="mt-0.5 text-[9px] text-[#7b889f]">
-                        The active registry entry shows the current lease, its state, and when it expires.
+                        The active registry entry shows the current lease, its auth profile, its state, and when it expires.
                       </div>
                     </div>
                     <div className="text-[9px] text-cyan-100">{cameraLiveSessionRegistry.length} active</div>
@@ -856,7 +890,7 @@ export function CameraInspector() {
                                 {entry.cameraName}
                               </div>
                               <div className="mt-0.5 text-[8px] uppercase tracking-[0.16em] text-[#556076]">
-                                {entry.status} · {entry.lastAction} · {entry.liveSessionState ?? "unknown"} · {entry.transportSessionState ?? "transport?"}
+                                {entry.status} · {entry.lastAction} · {entry.liveSessionState ?? "unknown"} · {entry.transportSessionState ?? "transport?"}{entry.transportResponseStatus == null ? "" : ` · ${entry.transportResponseStatus}${entry.transportResponseStatusText ? ` ${entry.transportResponseStatusText}` : ""}`}
                               </div>
                             </div>
                             <div className="rounded-full border border-[#1f2536] bg-[#0b0f17] px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] text-[#7d8aa4]">
@@ -868,6 +902,9 @@ export function CameraInspector() {
                           </div>
                           <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
                             Registry {entry.sessionExpiresAt == null ? "—" : new Date(entry.sessionExpiresAt).toLocaleTimeString()}
+                          </div>
+                          <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+                            Auth {entry.authState ?? "unauthenticated"} · {entry.authMode ?? "none"}{entry.authRealm ? ` · realm ${entry.authRealm}` : ""}{entry.authSessionId ? ` · session ${entry.authSessionId.slice(-8)}` : ""}{entry.authSessionExpiresAt == null ? "" : ` · expires ${new Date(entry.authSessionExpiresAt).toLocaleTimeString()}`}{entry.authChallengeHeader ? ` · challenge ${entry.authChallengeHeader}` : ""}{entry.transportResponseStatus == null ? "" : ` · response ${entry.transportResponseStatus}${entry.transportResponseStatusText ? ` ${entry.transportResponseStatusText}` : ""}`}
                           </div>
                           <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
                             Transport {entry.transportSessionId ? entry.transportSessionId.slice(-8) : "—"} · {entry.protocolProfile ?? "unknown"} · probes {entry.probeCount}
@@ -885,7 +922,7 @@ export function CameraInspector() {
                     <div>
                       <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Connection archive</div>
                       <div className="mt-0.5 text-[9px] text-[#7b889f]">
-                        Backend archive records for live camera probe, refresh, and disconnect actions.
+                        Backend archive records for live camera probe, refresh, heartbeat, and disconnect actions.
                       </div>
                     </div>
                     <div className="text-[9px] text-[#556076]">{cameraLiveConnectionHistory.length} records</div>
@@ -912,6 +949,9 @@ export function CameraInspector() {
                           </div>
                           <div className="mt-1 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
                             Session {entry.record.liveSessionState ?? "unknown"}{entry.record.liveSessionId ? ` · ${entry.record.liveSessionId}` : ""}
+                          </div>
+                          <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+                            Auth {entry.record.authState ?? "unauthenticated"} · {entry.record.authMode ?? "none"}{entry.record.authSessionId ? ` · ${entry.record.authSessionId.slice(-8)}` : ""}{entry.record.authSessionExpiresAt == null ? "" : ` · expires ${new Date(entry.record.authSessionExpiresAt).toLocaleTimeString()}`}
                           </div>
                           <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
                             Expires {entry.record.liveSessionExpiresAt == null ? "—" : new Date(entry.record.liveSessionExpiresAt).toLocaleTimeString()}
@@ -954,7 +994,7 @@ export function CameraInspector() {
                           Expires {entry.liveSessionExpiresAt == null ? "—" : new Date(entry.liveSessionExpiresAt).toLocaleTimeString()}
                         </div>
                         <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
-                          Transport {entry.transportSessionId ? entry.transportSessionId.slice(-8) : "—"} · {entry.protocolProfile ?? "unknown"} · {entry.lastHeartbeatAt == null ? "no heartbeat" : new Date(entry.lastHeartbeatAt).toLocaleTimeString()}
+                          Transport {entry.transportSessionId ? entry.transportSessionId.slice(-8) : "—"} · {entry.protocolProfile ?? "unknown"} · {entry.lastHeartbeatAt == null ? "no heartbeat" : new Date(entry.lastHeartbeatAt).toLocaleTimeString()}{entry.transportResponseStatus == null ? "" : ` · ${entry.transportResponseStatus}${entry.transportResponseStatusText ? ` ${entry.transportResponseStatusText}` : ""}`}
                         </div>
                       </div>
                     ))}

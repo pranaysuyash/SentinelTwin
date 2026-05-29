@@ -48,6 +48,6 @@ export const PRODUCT_FEATURE_STATUS: ProductFeatureEntry[] = [
     status: "Preview",
     feature: "Real footage verification",
     detail:
-      "Camera View preview workflow with reference-frame upload and manual comparison. No auto pose/FOV recovery, no auto best-frame ranking, and no forensic-grade proof claims. Use results as planning-grade estimates only.",
+      "Camera View preview workflow with reference-frame upload, overlay alignment, and manual comparison only. No auto pose/FOV recovery, no forensic-grade proof claims, and no auto best-frame ranking. Use results as planning-grade estimates only.",
   },
 ];

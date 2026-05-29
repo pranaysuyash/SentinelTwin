@@ -135,7 +135,7 @@ describe("workspace membership routing helpers", () => {
       reviewNotes: [],
     };
 
-    const route = summarizeWorkspaceApprovalRouting(scene, currentAccess, governance);
+    const route = summarizeWorkspaceApprovalRouting(scene, currentAccess, governance, null);
 
     expect(route.routeStatus).toBe("open_publish");
     expect(route.routeLabel).toBe("Open publish route");

@@ -56,6 +56,11 @@ type CameraNode = {
   thermalCapable: boolean;
   ptz: boolean;
   clarity: "poor" | "average" | "good" | "excellent";
+  transportResponseStatus?: number;   // HTTP/transport status from probe or bind
+  transportResponseStatusText?: string;
+  authChallengeHeader?: string;       // WWW-Authenticate or equivalent challenge header
+  authChallengeScheme?: "basic" | "digest" | "bearer" | "token";
+  authChallengeRealm?: string;
 
   // Presets
   presetId?: string;             // references camera preset library

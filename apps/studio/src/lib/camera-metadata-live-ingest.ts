@@ -66,6 +66,7 @@ export type CameraMetadataIngestResponse = CameraMetadataLiveParseResult & {
 function parseJsonCandidates(raw: string): { items: unknown[]; errors: string[] } {
   const trimmed = raw.trim();
   if (!trimmed) return { items: [], errors: [] };
+  if (trimmed.startsWith("<")) return { items: [], errors: [] };
 
   try {
     const parsed = JSON.parse(trimmed);
@@ -93,6 +94,127 @@ function parseJsonCandidates(raw: string): { items: unknown[]; errors: string[] 
       });
     return { items, errors };
   }
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function findXmlTagText(block: string, tagNames: string[]) {
+  for (const tagName of tagNames) {
+    const pattern = new RegExp(`<(?:[A-Za-z0-9_.-]+:)?${escapeRegExp(tagName)}\\b[^>]*>([\\s\\S]*?)</(?:[A-Za-z0-9_.-]+:)?${escapeRegExp(tagName)}>`, "i");
+    const match = block.match(pattern);
+    const value = match?.[1]?.trim();
+    if (value) return value;
+  }
+  return null;
+}
+
+function findXmlAttribute(block: string, attributeNames: string[]) {
+  for (const attributeName of attributeNames) {
+    const doubleQuoted = new RegExp(`\\b${escapeRegExp(attributeName)}="([^"]+)"`, "i");
+    const singleQuoted = new RegExp(`\\b${escapeRegExp(attributeName)}='([^']+)'`, "i");
+    const doubleMatch = block.match(doubleQuoted)?.[1]?.trim();
+    if (doubleMatch) return doubleMatch;
+    const singleMatch = block.match(singleQuoted)?.[1]?.trim();
+    if (singleMatch) return singleMatch;
+  }
+  return null;
+}
+
+function normalizeCameraStatus(value: string | null): CameraNode["status"] | null {
+  if (!value) return null;
+  const normalized = value.toLowerCase().replace(/[\s-]+/g, "_");
+  if (normalized === "on" || normalized === "online" || normalized === "healthy" || normalized === "ok") return "on";
+  if (normalized === "off" || normalized === "offline" || normalized === "disconnected") return "off";
+  if (normalized === "blocked" || normalized === "restricted" || normalized === "denied") return "blocked";
+  if (normalized === "dirty" || normalized === "obscured" || normalized === "dirty_lens") return "dirty";
+  if (normalized === "malfunctioning" || normalized === "faulted" || normalized === "error" || normalized === "fault") return "malfunctioning";
+  return null;
+}
+
+function normalizeClarity(value: string | null): CameraNode["clarity"] | null {
+  if (!value) return null;
+  const normalized = value.toLowerCase().replace(/[\s-]+/g, "_");
+  if (normalized === "poor" || normalized === "low") return "poor";
+  if (normalized === "average" || normalized === "medium") return "average";
+  if (normalized === "good") return "good";
+  if (normalized === "excellent" || normalized === "best") return "excellent";
+  return null;
+}
+
+function normalizeNightMode(value: string | null): CameraNode["nightMode"] | null {
+  if (!value) return null;
+  const normalized = value.toLowerCase().replace(/[\s-]+/g, "_");
+  if (normalized === "none" || normalized === "off") return "none";
+  if (normalized === "ir" || normalized === "infrared") return "ir";
+  if (normalized === "low_light" || normalized === "lowlight" || normalized === "night") return "low_light";
+  if (normalized === "thermal") return "thermal";
+  return null;
+}
+
+function normalizeFeedMode(value: string | null): "normal" | "ir" | "low_light" | "thermal" | null {
+  if (!value) return null;
+  const normalized = value.toLowerCase().replace(/[\s-]+/g, "_");
+  if (normalized === "normal" || normalized === "day") return "normal";
+  if (normalized === "ir" || normalized === "infrared") return "ir";
+  if (normalized === "low_light" || normalized === "lowlight" || normalized === "night") return "low_light";
+  if (normalized === "thermal") return "thermal";
+  return null;
+}
+
+function parseTimestampValue(value: string | null): number | undefined {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (/^\d+$/.test(trimmed)) {
+    const numeric = Number(trimmed);
+    return Number.isFinite(numeric) ? numeric : undefined;
+  }
+  const parsed = Date.parse(trimmed);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function parseXmlCandidates(raw: string): { items: unknown[]; errors: string[] } {
+  const trimmed = raw.trim();
+  if (!trimmed.startsWith("<")) return { items: [], errors: [] };
+
+  const taggedBlocks = trimmed.match(/<(?:[A-Za-z0-9_.-]+:)?(?:CameraMetadata|CameraStatus|CameraEvent|Metadata|Record|Event)\b[^>]*>[\s\S]*?<\/(?:[A-Za-z0-9_.-]+:)?(?:CameraMetadata|CameraStatus|CameraEvent|Metadata|Record|Event)>/gi);
+  const blocks = taggedBlocks && taggedBlocks.length > 0 ? taggedBlocks : [trimmed];
+  const items: unknown[] = [];
+  const errors: string[] = [];
+
+  for (const block of blocks) {
+    const cameraId = findXmlTagText(block, ["CameraId", "Token", "SourceId", "Id"]) ?? findXmlAttribute(block, ["cameraId", "camera-id", "id", "token", "sourceId"]);
+    const cameraName = findXmlTagText(block, ["CameraName", "DeviceName", "Name", "Label", "Title"]) ?? findXmlAttribute(block, ["cameraName", "deviceName", "name", "label", "title"]);
+    const status = normalizeCameraStatus(findXmlTagText(block, ["Status", "ConnectionStatus", "HealthStatus", "State"]));
+    const clarity = normalizeClarity(findXmlTagText(block, ["Clarity", "ImageClarity", "Quality"]));
+    const nightMode = normalizeNightMode(findXmlTagText(block, ["NightMode", "NightVision", "LowLightMode", "Mode"]));
+    const feedMode = normalizeFeedMode(findXmlTagText(block, ["FeedMode", "StreamMode", "VideoMode", "Mode"]));
+    const notes = findXmlTagText(block, ["Notes", "Message", "Description", "Detail", "Summary"]);
+    const timestamp = parseTimestampValue(
+      findXmlTagText(block, ["Timestamp", "Time", "UtcTime", "DateTime", "ObservedAt", "LastSeen"])
+      ?? findXmlAttribute(block, ["timestamp", "time", "utcTime", "dateTime", "observedAt", "lastSeen"]),
+    );
+
+    if (!cameraId && !cameraName && !status && !clarity && !nightMode && !feedMode && !notes && timestamp === undefined) {
+      errors.push("The XML payload did not expose a usable camera metadata record.");
+      continue;
+    }
+
+    items.push({
+      cameraId: cameraId ?? undefined,
+      cameraName: cameraName ?? undefined,
+      status: status ?? undefined,
+      clarity: clarity ?? undefined,
+      nightMode: nightMode ?? undefined,
+      feedMode: feedMode ?? undefined,
+      notes: notes ?? undefined,
+      timestamp,
+    });
+  }
+
+  return { items, errors };
 }
 
 function resolveCamera(candidate: z.infer<typeof CameraMetadataRecordSchema>, cameras: CameraMetadataIngestRequest["cameras"]) {
@@ -128,7 +250,7 @@ async function resolveCameraMetadataPayload(request: CameraMetadataIngestRequest
   const response = await fetch(request.feedUrl, {
     method: "GET",
     headers: {
-      accept: "application/json, application/x-ndjson, text/plain;q=0.9, */*;q=0.1",
+      accept: "application/json, application/x-ndjson, application/xml, text/xml, text/plain;q=0.9, */*;q=0.1",
     },
   });
 
@@ -145,7 +267,10 @@ async function resolveCameraMetadataPayload(request: CameraMetadataIngestRequest
 
 export async function summarizeCameraMetadataLiveFeed(request: CameraMetadataIngestRequest): Promise<CameraMetadataIngestResponse> {
   const payload = await resolveCameraMetadataPayload(request);
-  const { items: candidates, errors: parseErrors } = parseJsonCandidates(payload.raw);
+  const jsonResult = parseJsonCandidates(payload.raw);
+  const xmlResult = jsonResult.items.length > 0 ? { items: [] as unknown[], errors: [] as string[] } : parseXmlCandidates(payload.raw);
+  const candidates = jsonResult.items.length > 0 ? jsonResult.items : xmlResult.items;
+  const parseErrors = [...jsonResult.errors, ...xmlResult.errors];
   const records: CameraMetadataLiveParseResult["records"] = [];
   const errors: string[] = [...parseErrors];
 

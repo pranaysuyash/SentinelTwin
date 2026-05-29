@@ -9,7 +9,7 @@ describe("ProjectStartLauncher", () => {
   test("surfaces a job-first launcher with honest preview labels", () => {
     const source = readFileSync(launcherPath, "utf8");
 
-    expect(source).toContain("What are you trying to do?");
+    expect(source).toContain("V0.1 Reference-Baseline Launcher");
     expect(source).toContain("Audit existing CCTV setup");
     expect(source).toContain("Design a new camera layout");
     expect(source).toContain("Import a floor plan");
@@ -18,9 +18,7 @@ describe("ProjectStartLauncher", () => {
     expect(source).toContain("Draft from text prompt");
     expect(source).toContain("Verify real footage");
     expect(source).toContain("Generate client report");
-    expect(source).toContain("Manual-assisted scan and floor-plan import are available now.");
-    expect(source).toContain("guided scan assistant is available from the dashboard entry path");
-    expect(source).toContain("Start Blank Scene");
+    expect(source).toContain("The seeded baseline is the primary product surface.");
     expect(source).toContain("Import JSON");
   });
 });

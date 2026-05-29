@@ -1,5 +1,6 @@
 import { draftSceneFromPrompt, draftSceneFromPromptWithModel, summarizeDraftResult } from "@/lib/ai-layout-draft";
 import { describeAiProviderGovernance, type AiProviderGovernanceSummary, type AiProviderSelection } from "@/agents/provider-selection";
+import { buildPromptRegistrySnapshot, type PromptRegistrySnapshot } from "@/agents/prompt-registry";
 import { parseCommand, type SceneContextSummary } from "@/agents/CommandAgent";
 import { proposeCounterfactuals } from "@/agents/CounterfactualAgent";
 import { buildSimulationSummary, generateReport } from "@/agents/ReportAgent";
@@ -45,6 +46,7 @@ export type ModelEvalSuiteResult = {
     cloudAvailable: boolean;
   };
   governance: AiProviderGovernanceSummary;
+  promptRegistry: PromptRegistrySnapshot;
   summary: ModelEvalSuiteSummary;
   fixtures: ModelEvalFixtureResult[];
 };
@@ -74,6 +76,7 @@ export type ModelEvalRunRecord = {
   model: string;
   localOnlyMode: boolean;
   cloudAvailable: boolean;
+  promptRegistry: PromptRegistrySnapshot;
   summary: ModelEvalSuiteSummary;
   stageBudget: ModelEvalStageBudget;
   fixtureSummaries: ModelEvalFixtureSummary[];
@@ -194,6 +197,7 @@ export function summarizeModelEvalRun(report: ModelEvalSuiteResult): ModelEvalRu
     model: report.provider.model,
     localOnlyMode: report.provider.localOnlyMode,
     cloudAvailable: report.provider.cloudAvailable,
+    promptRegistry: report.promptRegistry ?? buildPromptRegistrySnapshot(),
     summary: report.summary,
     stageBudget: summarizeStageBudget(report),
     fixtureSummaries: report.fixtures.map((fixture) => ({
@@ -236,6 +240,7 @@ export function normalizeModelEvalRunRecord(input: unknown): ModelEvalRunRecord 
     stageBudget?: Partial<ModelEvalStageBudget>;
     summary?: Partial<ModelEvalSuiteSummary>;
     fixtureSummaries?: unknown;
+    promptRegistry?: Partial<PromptRegistrySnapshot>;
   };
   const providerId = candidate.providerId === "openai" || candidate.providerId === "gemini" || candidate.providerId === "qwen"
     ? candidate.providerId
@@ -244,6 +249,22 @@ export function normalizeModelEvalRunRecord(input: unknown): ModelEvalRunRecord 
   if (typeof candidate.providerLabel !== "string" || typeof candidate.model !== "string") return null;
   if (typeof candidate.generatedAt !== "number") return null;
   if (typeof candidate.localOnlyMode !== "boolean" || typeof candidate.cloudAvailable !== "boolean") return null;
+
+  const promptRegistry = candidate.promptRegistry;
+  const normalizedPromptRegistry: PromptRegistrySnapshot = promptRegistry && typeof promptRegistry === "object"
+    ? {
+        observedAt: typeof promptRegistry.observedAt === "number" ? promptRegistry.observedAt : candidate.generatedAt,
+        total: typeof promptRegistry.total === "number" ? promptRegistry.total : 0,
+        latestVersion: typeof promptRegistry.latestVersion === "string" ? promptRegistry.latestVersion : "v1",
+        registryDigest: typeof promptRegistry.registryDigest === "string" ? promptRegistry.registryDigest : "unknown",
+        stages: {
+          command: typeof promptRegistry.stages?.command === "number" ? promptRegistry.stages.command : 0,
+          counterfactual: typeof promptRegistry.stages?.counterfactual === "number" ? promptRegistry.stages.counterfactual : 0,
+          report: typeof promptRegistry.stages?.report === "number" ? promptRegistry.stages.report : 0,
+          draft: typeof promptRegistry.stages?.draft === "number" ? promptRegistry.stages.draft : 0,
+        },
+      }
+    : buildPromptRegistrySnapshot();
 
   const summary = candidate.summary;
   if (!summary || typeof summary.total !== "number" || typeof summary.passed !== "number" || typeof summary.failed !== "number" || typeof summary.skipped !== "number") {
@@ -293,6 +314,7 @@ export function normalizeModelEvalRunRecord(input: unknown): ModelEvalRunRecord 
     model: candidate.model,
     localOnlyMode: candidate.localOnlyMode,
     cloudAvailable: candidate.cloudAvailable,
+    promptRegistry: normalizedPromptRegistry,
     summary: {
       total: summary.total,
       passed: summary.passed,
@@ -564,6 +586,7 @@ export async function runModelEvalSuite(
       cloudAvailable,
     },
     governance: governanceSummary,
+    promptRegistry: buildPromptRegistrySnapshot(),
     summary,
     fixtures,
   };

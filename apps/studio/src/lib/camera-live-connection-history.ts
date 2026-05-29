@@ -38,7 +38,7 @@ export function loadCameraLiveConnectionHistory(rootDir = resolveCameraLiveConne
     return parsed.flatMap((item) => {
       if (!item || typeof item !== "object") return [];
       const candidate = item as Partial<CameraLiveConnectionArchiveRecord>;
-      const action = candidate.action === "bind" || candidate.action === "refresh" || candidate.action === "disconnect" ? candidate.action : null;
+      const action = candidate.action === "bind" || candidate.action === "refresh" || candidate.action === "heartbeat" || candidate.action === "disconnect" ? candidate.action : null;
       const protocol = candidate.protocol === "rtsp" || candidate.protocol === "mjpeg" || candidate.protocol === "http" || candidate.protocol === "proxy" || candidate.protocol === "onvif" ? candidate.protocol : null;
       if (
         candidate.ok !== true

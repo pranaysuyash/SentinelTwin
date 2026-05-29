@@ -46,7 +46,8 @@ describe("Studio launcher shell", () => {
     expect(source).toContain("Telemetry trend:");
     expect(source).toContain("stage: \"ai_draft\"");
     expect(source).toContain("Heuristic draft preview enforced by local-only policy.");
-    expect(source).toContain("Model-backed draft preview from");
+    expect(source).toContain("Model-backed if the provider is configured and local-only mode is off.");
+    expect(source).toContain("Draft preview from ${currentAiProvider.providerLabel}");
     expect(source).toContain("kind: \"draft_proposed\"");
     expect(source).toContain("kind: \"scan_session_started\"");
     expect(source).toContain("Draft Preview");
@@ -89,7 +90,7 @@ describe("Studio launcher shell", () => {
     expect(source).toContain("Open Guided Assistant");
     expect(source).toContain("Guided assistant preview: the assistant shortens capture setup, but the scene still compiles through the manual-assisted review path.");
     expect(source).toContain("Guided scan assistant opened. The manual-assisted review and compile flow remains in control.");
-    expect(source).toContain("const [queryBootEnabled, setQueryBootEnabled] = useState(false);");
-    expect(source).toContain('setQueryBootEnabled(new URLSearchParams(window.location.search).get("studio") === "1");');
+    expect(source).not.toContain("queryBootEnabled");
+    expect(source).not.toContain('new URLSearchParams(window.location.search).get("studio") === "1"');
   });
 });

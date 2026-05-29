@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/shared/Badge";
 import { cn } from "@/lib/cn";
 import {
-  canPublishWorkspaceScene,
   summarizeWorkspaceGovernance,
   WORKSPACE_ROLES,
 } from "@/lib/workspace-governance";
@@ -160,9 +159,9 @@ export function GovernanceTab() {
     () => summarizeOperationalGovernanceTrail(operationalEvidenceEvents, scene.id),
     [operationalEvidenceEvents, scene.id],
   );
-  const canPublish = canPublishWorkspaceScene(workspaceGovernance);
-  const publishDecision = canPerformWorkspaceAction(workspaceAccess, scene, "publish");
-  const approveDecision = canPerformWorkspaceAction(workspaceAccess, scene, "approve");
+  const publishDecision = canPerformWorkspaceAction(workspaceAccess, scene, "publish", workspaceGovernance);
+  const approveDecision = canPerformWorkspaceAction(workspaceAccess, scene, "approve", workspaceGovernance);
+  const canPublish = publishDecision.allowed;
   const refreshGovernanceArchive = async () => {
     setRemoteGovernanceArchiveHistoryLoading(true);
     setRemoteGovernanceArchiveHistoryError(null);
@@ -276,9 +275,9 @@ export function GovernanceTab() {
     ];
     return actions.map((entry) => ({
       ...entry,
-      decision: canPerformWorkspaceAction(workspaceAccess, scene, entry.action),
+      decision: canPerformWorkspaceAction(workspaceAccess, scene, entry.action, workspaceGovernance),
     }));
-  }, [scene, workspaceAccess]);
+  }, [scene, workspaceAccess, workspaceGovernance]);
   const latestWorkspaceMembershipArchive = remoteWorkspaceMembershipArchiveHistory[0] ?? null;
   const approvalRoute = useMemo(
     () => summarizeWorkspaceApprovalRouting(

@@ -39,6 +39,44 @@ describe("scan-to-scene", () => {
     expect(safeParseSecurityScene(scene).success).toBe(true);
   });
 
+  test("maps a camera candidate to a scan camera node", () => {
+    const session = createScanSession("Camera Only", 10, 8, 3);
+    session.imageDataUrl = "data:image/png;base64,AA==";
+    session.imageName = "camera.png";
+    session.candidates = [
+      createScanCandidate("camera", [0.2, 0.2], 0),
+    ];
+
+    const { scene } = compileScanSessionToScene(session);
+
+    expect(scene.cameras).toHaveLength(1);
+    expect(scene.cameras[0]?.source).toBe("scan");
+    expect(scene.cameras[0]?.nodeType).toBe("camera");
+  });
+
+  test("maps counter and door candidates to obstruction and entry nodes", () => {
+    const session = createScanSession("Counter + Door", 12, 9, 3.2);
+    session.imageDataUrl = "data:image/png;base64,AA==";
+    session.imageName = "counter-door.png";
+    const counterZone = createScanCandidate("critical_zone", [0.61, 0.66], 2);
+    counterZone.label = "Cash Counter Zone";
+    session.candidates = [
+      createScanCandidate("counter", [0.58, 0.62], 0),
+      createScanCandidate("door", [0.5, 0.05], 1),
+      counterZone,
+    ];
+
+    const { scene } = compileScanSessionToScene(session);
+
+    expect(scene.obstructions).toHaveLength(1);
+    expect(scene.obstructions[0]?.obstructionType).toBe("counter");
+    expect(scene.criticalZones).toHaveLength(1);
+    expect(scene.criticalZones[0]?.targetType).toBe("cash_counter_activity");
+    expect(scene.doors).toHaveLength(1);
+    expect(scene.entryPoints).toHaveLength(1);
+    expect(scene.entryPoints[0]?.label).toContain("Entry");
+  });
+
   test("creates fallback rectangular room when no wall markers exist", () => {
     const session = createScanSession("No Walls", 8, 6, 3);
     session.imageDataUrl = "data:image/png;base64,AA==";

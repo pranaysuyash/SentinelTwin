@@ -80,7 +80,7 @@ async function resolveSensorLiveFeedPayload(request: SensorLiveIngestRequest) {
   const response = await fetch(request.feedUrl, {
     method: "GET",
     headers: {
-      accept: "application/json, application/x-ndjson, text/plain;q=0.9, */*;q=0.1",
+      accept: "application/json, application/x-ndjson, application/xml, text/xml, text/plain;q=0.9, */*;q=0.1",
     },
   });
 
@@ -98,6 +98,7 @@ async function resolveSensorLiveFeedPayload(request: SensorLiveIngestRequest) {
 function parseJsonCandidates(raw: string): { items: unknown[]; errors: string[] } {
   const trimmed = raw.trim();
   if (!trimmed) return { items: [], errors: [] };
+  if (trimmed.startsWith("<")) return { items: [], errors: [] };
 
   try {
     const parsed = JSON.parse(trimmed);
@@ -127,6 +128,133 @@ function parseJsonCandidates(raw: string): { items: unknown[]; errors: string[] 
   }
 }
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function findXmlTagText(block: string, tagNames: string[]) {
+  for (const tagName of tagNames) {
+    const pattern = new RegExp(`<(?:[A-Za-z0-9_.-]+:)?${escapeRegExp(tagName)}\\b[^>]*>([\\s\\S]*?)</(?:[A-Za-z0-9_.-]+:)?${escapeRegExp(tagName)}>`, "i");
+    const match = block.match(pattern);
+    const value = match?.[1]?.trim();
+    if (value) return value;
+  }
+  return null;
+}
+
+function findXmlAttribute(block: string, attributeNames: string[]) {
+  for (const attributeName of attributeNames) {
+    const doubleQuoted = new RegExp(`\\b${escapeRegExp(attributeName)}="([^"]+)"`, "i");
+    const singleQuoted = new RegExp(`\\b${escapeRegExp(attributeName)}='([^']+)'`, "i");
+    const doubleMatch = block.match(doubleQuoted)?.[1]?.trim();
+    if (doubleMatch) return doubleMatch;
+    const singleMatch = block.match(singleQuoted)?.[1]?.trim();
+    if (singleMatch) return singleMatch;
+  }
+  return null;
+}
+
+function normalizeSensorType(value: string | null): z.infer<typeof LiveEventSchema>["sensorType"] | null {
+  if (!value) return null;
+  const normalized = value.toLowerCase().replace(/[\s-]+/g, "_");
+  if (normalized === "motion") return "motion";
+  if (normalized === "door_contact" || normalized === "door" || normalized === "contact") return "door_contact";
+  if (normalized === "access_reader" || normalized === "reader" || normalized === "badge") return "access_reader";
+  if (normalized === "audio") return "audio";
+  if (normalized === "vibration" || normalized === "shake") return "vibration";
+  if (normalized === "panic_button" || normalized === "panic" || normalized === "duress") return "panic_button";
+  if (normalized === "smoke_heat" || normalized === "smoke" || normalized === "heat") return "smoke_heat";
+  return null;
+}
+
+function normalizeEventKind(value: string | null): z.infer<typeof LiveEventSchema>["kind"] | null {
+  if (!value) return null;
+  const normalized = value.toLowerCase().replace(/[\s-]+/g, "_");
+  if (normalized === "triggered" || normalized === "alert" || normalized === "active") return "triggered";
+  if (normalized === "heartbeat" || normalized === "alive" || normalized === "ping") return "heartbeat";
+  if (normalized === "faulted" || normalized === "fault" || normalized === "error") return "faulted";
+  if (normalized === "restored" || normalized === "recovered" || normalized === "clear") return "restored";
+  return null;
+}
+
+function normalizeResultingState(value: string | null): z.infer<typeof LiveEventSchema>["resultingState"] | null {
+  if (!value) return null;
+  const normalized = value.toLowerCase().replace(/[\s-]+/g, "_");
+  if (normalized === "active") return "active";
+  if (normalized === "inactive" || normalized === "idle" || normalized === "restored") return "inactive";
+  if (normalized === "faulted" || normalized === "fault" || normalized === "error") return "faulted";
+  return null;
+}
+
+function parseTimestampValue(value: string | null): number | undefined {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (/^\d+$/.test(trimmed)) {
+    const numeric = Number(trimmed);
+    return Number.isFinite(numeric) ? numeric : undefined;
+  }
+  const parsed = Date.parse(trimmed);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function parseNumberValue(value: string | null): number | undefined {
+  if (!value) return undefined;
+  const numeric = Number(value.trim());
+  return Number.isFinite(numeric) ? numeric : undefined;
+}
+
+function parseXmlCandidates(raw: string): { items: unknown[]; errors: string[] } {
+  const trimmed = raw.trim();
+  if (!trimmed.startsWith("<")) return { items: [], errors: [] };
+
+  const taggedBlocks = trimmed.match(/<(?:[A-Za-z0-9_.-]+:)?(?:SensorEvent|Event|Record|Sensor|Item)\b[^>]*>[\s\S]*?<\/(?:[A-Za-z0-9_.-]+:)?(?:SensorEvent|Event|Record|Sensor|Item)>/gi);
+  const blocks = taggedBlocks && taggedBlocks.length > 0 ? taggedBlocks : [trimmed];
+  const items: unknown[] = [];
+  const errors: string[] = [];
+
+  for (const block of blocks) {
+    const sensorId = findXmlTagText(block, ["SensorId", "SensorToken", "Token", "Id"]) ?? findXmlAttribute(block, ["sensorId", "sensor-id", "id", "token"]);
+    const sensorLabel = findXmlTagText(block, ["SensorLabel", "SensorName", "Label", "Name", "Title"]) ?? findXmlAttribute(block, ["sensorLabel", "sensor-label", "name", "label", "title"]);
+    const sensorType = normalizeSensorType(findXmlTagText(block, ["SensorType", "Type", "Category", "Kind"]) ?? findXmlAttribute(block, ["sensorType", "type", "category", "kind"]));
+    const kind = normalizeEventKind(findXmlTagText(block, ["Kind", "EventKind", "Status", "EventType"]) ?? findXmlAttribute(block, ["kind", "eventKind", "status", "eventType"]));
+    const details = findXmlTagText(block, ["Details", "Message", "Description", "Note"]) ?? findXmlAttribute(block, ["details", "message", "description", "note"]);
+    const timestamp = parseTimestampValue(
+      findXmlTagText(block, ["Timestamp", "Time", "ObservedAt", "DateTime", "UtcTime"])
+      ?? findXmlAttribute(block, ["timestamp", "time", "observedAt", "dateTime", "utcTime"]),
+    );
+    const resultingState = normalizeResultingState(findXmlTagText(block, ["ResultingState", "State", "SensorState"]) ?? findXmlAttribute(block, ["resultingState", "state", "sensorState"]));
+    const nearestCameraId = findXmlTagText(block, ["NearestCameraId", "CameraId", "CameraToken"]) ?? findXmlAttribute(block, ["nearestCameraId", "cameraId", "camera-id", "cameraToken"]);
+    const nearestCameraName = findXmlTagText(block, ["NearestCameraName", "CameraName", "Name"]) ?? findXmlAttribute(block, ["nearestCameraName", "cameraName", "camera-name", "name"]);
+    const nearestDistanceM = parseNumberValue(findXmlTagText(block, ["NearestDistanceM", "DistanceM", "DistanceMeters"]) ?? findXmlAttribute(block, ["nearestDistanceM", "distanceM", "distanceMeters"]));
+
+    if (!sensorId && !sensorLabel && !sensorType && !kind && !details && timestamp === undefined && !resultingState && nearestCameraId === null && nearestCameraName === null && nearestDistanceM === undefined) {
+      errors.push("The XML payload did not expose a usable sensor event record.");
+      continue;
+    }
+
+    if (!kind) {
+      errors.push("An XML sensor event could not be mapped to a supported event kind.");
+      continue;
+    }
+
+    items.push({
+      sensorId: sensorId ?? undefined,
+      sensorLabel: sensorLabel ?? undefined,
+      sensorType: sensorType ?? undefined,
+      kind,
+      details: details ?? undefined,
+      timestamp,
+      resultingState: resultingState ?? undefined,
+      nearestCameraId: nearestCameraId ?? undefined,
+      nearestCameraName: nearestCameraName ?? undefined,
+      nearestDistanceM,
+    });
+  }
+
+  return { items, errors };
+}
+
 function resolveSensor(
   candidate: z.infer<typeof LiveEventSchema>,
   sensors: SensorNode[],
@@ -146,7 +274,10 @@ export function parseSensorLiveFeed(
   raw: string,
   sensors: SensorNode[],
 ): SensorLiveFeedParseResult {
-  const { items: candidates, errors: parseErrors } = parseJsonCandidates(raw);
+  const jsonResult = parseJsonCandidates(raw);
+  const xmlResult = jsonResult.items.length > 0 ? { items: [] as unknown[], errors: [] as string[] } : parseXmlCandidates(raw);
+  const candidates = jsonResult.items.length > 0 ? jsonResult.items : xmlResult.items;
+  const parseErrors = [...jsonResult.errors, ...xmlResult.errors];
   const events: SensorLiveEventInput[] = [];
   const errors: string[] = [...parseErrors];
 

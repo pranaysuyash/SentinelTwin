@@ -225,6 +225,9 @@ The new platform spine is a temporal ledger, but the exact event shape still nee
 - How do we map the event stream back into the timeline UI without mixing derived summaries into canonical history?
 **Related decision:** D-149 in `Docs/decisions/DECISION_LOG.md`.
 **Update:** The first operational memory pass now exists in-product as a visible event ledger for scene edits, scene loads, snapshots, simulation runs, counterfactuals, duplicate-node actions, scan-session compiles, and AI draft proposals. It now also shows event-kind counts, before/after scene summaries, reconstructable checkpoints for events with snapshots, lifecycle branch labels for draft / recovered / published history, branch-head filters/navigation, branch-lineage previews, a branch-comparison panel, merge-readiness guidance, explicit restore-to-branch actions, a selected-checkpoint point-in-time reconstruction preview, append-only journal-backed persistence with merge batches, a visible journal batch view in the debug panel, and an exportable recovery archive that preserves the journal payload itself while restoring the scene, ledger, governance state, and shared-workspace access state back into Studio. The remaining question is how to model point-in-time reconstruction, backend sync, and publication semantics without losing the simplicity of the current scene model.
+**Update 2:** The same ledger now also preserves live-camera negotiation metadata, including transport response status/text and auth challenge header/scheme/realm, so the event schema is already carrying richer device-session evidence even though the canonical point-in-time/publication model still needs to be fully settled.
+**Update 3:** The temporal twin now also distinguishes published checkpoints from reconstructable checkpoints, including current-vs-published deltas and published age in the live/report surfaces, so publication semantics are becoming explicit in-product rather than remaining implied by generic snapshots.
+**Update 4:** Operational evidence imports now validate through a canonical runtime schema, including nested scene snapshots, so the remaining question is no longer whether the ledger can validate imported history but how much deeper the point-in-time semantics should go beyond snapshot-backed reconstruction.
 
 ### Q-023: What role and approval model should govern draft, recovered, and published scenes?
 The product now has visible branch labels, branch-lineage previews, a branch-comparison panel, merge-readiness guidance, explicit restore-to-branch actions, a publish action, a local Governance tab, and an operational evidence archive restore path with local branch merge support plus a shared-workspace access surface, but the backend identity, sync, and conflict model are still undefined.
@@ -241,6 +244,7 @@ The product now has visible branch labels, branch-lineage previews, a branch-com
 **Update 5:** The Governance tab now also exposes a `Resolve Approval Route` action that compares the live workspace against the latest archived membership snapshot and records a `workspace_approval_routed` evidence event, so the remaining open question narrows further to how remote identity-backed approval routing should fan out across services rather than whether the product can model the route itself.
 **Update 6:** The Governance tab now also exposes a `/api/workspace-approval-route` archive boundary that persists the resolved route, fan-out attempts, and route history, so the remaining open question is now the remote identity/conflict model around that route rather than whether the route can be archived or replayed locally.
 **Update 7:** The Governance tab now also exposes a `/api/workspace-identity-conflict` archive boundary that persists the live vs archived membership drift, approval-route context, and delivery attempts, so the remaining open question is now the true backend shared-identity service and cross-service conflict policy rather than whether the product can model the conflict boundary locally.
+**Update 8:** The same evidence ledger now also preserves live-camera negotiation metadata, including transport response status/text and auth challenge header/scheme/realm, so the canonical event stream is carrying device-session evidence alongside scene and governance history. The remaining question is still the backend publication and point-in-time semantics, not whether the ledger can record the negotiation detail locally.
 **Update 8:** The same boundary now returns an explicit resolution status, resolution label, reason, and recommended action, so the remaining question shifts further toward how that policy recommendation should fan out across future backend services rather than whether the product can compute one locally.
 **Update 9:** The Governance tab now records identity conflict resolution itself as a first-class evidence event, so the remaining question is now purely about remote backend identity and cross-service replay rather than whether the local governance trail can distinguish resolution from generic membership sync.
 **Update 10:** The Governance tab now also exposes a selectable conflict diff/replay view that compares the live workspace against the latest archived membership snapshot, recomputes the selected conflict against current workspace state, and lets the operator inspect older archived conflicts in place, so the remaining question is now specifically about remote replay/fan-out semantics rather than whether the local archive can be inspected as a diff.
@@ -263,6 +267,34 @@ RoomPlan, manual-assisted mobile capture, and later sparse reconstruction all po
 - Which outputs count as draft evidence versus publishable evidence in the branch-aware ledger?
 - Should sparse reconstruction results be written as separate candidate branches or as a derived snapshot on the same scene branch?
 **Related threads:** 21 in `Docs/exploration/EXPLORATION_MAP.md`, plus the operational evidence and branch-recovery work in `Docs/todos/FULL_VISION_GAP_INVENTORY.md`.
+
+### Q-026: What is the canonical organization, account, and billing model?
+The app now has local shared-workspace routing and archive-backed membership state, but the product still lacks a canonical org/account boundary.
+**Questions to answer:**
+- Is the primary top-level unit an organization, a team, or a workspace?
+- How do plan, quota, and entitlements map onto workspaces and users?
+- What is the ownership-transfer model for shared workspaces and archived projects?
+- How do invites and role inheritance work across local and remote collaborators?
+**Related threads:** shared-workspace access, governance, and retrieval work in `Docs/todos/FULL_VISION_GAP_INVENTORY.md`.
+
+### Q-027: How should search-by-time and search-by-branch navigation work?
+The launcher can already search current workspace, evidence, reports, and archive histories, but the user still needs a time-aware way to move through the ledger.
+**Questions to answer:**
+- What does a branch-aware result card need to show to be trustworthy?
+- Should the default timeline search prioritize recent evidence, latest checkpoints, or branch heads?
+- How should shareable deep links identify a checkpoint, branch, or time window?
+- Should timeline navigation be inside Scene Intelligence, the launcher, or both?
+**Related threads:** 4.18 and 4.19 in `Docs/todos/FULL_VISION_GAP_INVENTORY.md`.
+**Update:** The evidence timeline now understands `branch:`, `after:`, `before:`, and `time:` query tokens, and launcher hits can seed a checkpoint timestamp, so the remaining question is the share-link contract and richer cross-view pivot behavior rather than basic time/branch filtering itself.
+
+### Q-028: What should the partner SDK / plugin surface expose?
+The platform now has multiple canonical archive and delivery seams, but there is no formal extension model yet.
+**Questions to answer:**
+- Which public contracts are versioned: scene JSON, archive bundles, report exports, webhook payloads, or all of them?
+- What capability scopes should partner apps request?
+- Should plugins embed into the launcher, the report workflow, or an admin console?
+- What is the minimum stable extension surface for integrations without opening the core model to drift?
+**Related threads:** 4.16 and 4.21 in `Docs/todos/FULL_VISION_GAP_INVENTORY.md`.
 ## Contextual 3D interaction UI
 
 - **Priority:** Medium

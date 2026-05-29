@@ -11,7 +11,16 @@ export function buildReportSummaryLines(
   outcome: SecurityOutcomeModel,
   result: SimulationResult | null,
   scene?: Pick<SecurityScene, "changeLog">,
-  temporalTwin?: Pick<OperationalEvidenceTemporalTwinSummary, "totalEvents" | "checkpointCount" | "latestCheckpointAgeMs" | "currentVsLatestCheckpointDelta"> | null,
+  temporalTwin?: Pick<
+    OperationalEvidenceTemporalTwinSummary,
+    | "totalEvents"
+    | "checkpointCount"
+    | "publishedCheckpointCount"
+    | "latestCheckpointAgeMs"
+    | "latestPublishedCheckpointAgeMs"
+    | "currentVsLatestCheckpointDelta"
+    | "currentVsLatestPublishedCheckpointDelta"
+  > | null,
 ): ReportSummaryLine[] | null {
   if (!result) return null;
 
@@ -42,8 +51,9 @@ export function buildReportSummaryLines(
   const evidenceTrail = scene
     ? `${scene.changeLog.length} change-log entries, ${evidenceEntries} evidence entries, ${sensorEvidenceEntries} sensor-related evidence`
     : "Scene evidence trail unavailable.";
+  const publishedCheckpointLabel = temporalTwin?.publishedCheckpointCount === 1 ? "published checkpoint" : "published checkpoints";
   const temporalTwinLine = temporalTwin
-    ? `${temporalTwin.totalEvents} scene events, ${temporalTwin.checkpointCount} reconstructable checkpoints${temporalTwin.latestCheckpointAgeMs != null ? `, latest checkpoint ${Math.max(1, Math.round(temporalTwin.latestCheckpointAgeMs / 60000))}m old` : ""}${temporalTwin.currentVsLatestCheckpointDelta ? `, checkpoint delta cams ${temporalTwin.currentVsLatestCheckpointDelta.cameras >= 0 ? "+" : ""}${temporalTwin.currentVsLatestCheckpointDelta.cameras}` : ""}`
+    ? `${temporalTwin.totalEvents} scene events, ${temporalTwin.checkpointCount} reconstructable checkpoints, ${temporalTwin.publishedCheckpointCount} ${publishedCheckpointLabel}${temporalTwin.latestCheckpointAgeMs != null ? `, latest checkpoint ${Math.max(1, Math.round(temporalTwin.latestCheckpointAgeMs / 60000))}m old` : ""}${temporalTwin.latestPublishedCheckpointAgeMs != null ? `, latest published ${Math.max(1, Math.round(temporalTwin.latestPublishedCheckpointAgeMs / 60000))}m old` : ""}${temporalTwin.currentVsLatestCheckpointDelta ? `, checkpoint delta cams ${temporalTwin.currentVsLatestCheckpointDelta.cameras >= 0 ? "+" : ""}${temporalTwin.currentVsLatestCheckpointDelta.cameras}` : ""}${temporalTwin.currentVsLatestPublishedCheckpointDelta ? `, published delta cams ${temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras >= 0 ? "+" : ""}${temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras}` : ""}`
     : null;
 
   const lines: ReportSummaryLine[] = [

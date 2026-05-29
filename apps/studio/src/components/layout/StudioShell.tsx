@@ -126,6 +126,7 @@ function FirstRunGuide({ onClose, onOpenHelp }: { onClose: () => void; onOpenHel
 
 export default function StudioShell() {
   useSimulation();
+  const [studioBypassMode, setStudioBypassMode] = useState(false);
   const demoMode = useStudioStore((s) => s.demoMode);
   const launchNotice = useStudioStore((s) => s.launchNotice);
   const setLaunchNotice = useStudioStore((s) => s.setLaunchNotice);
@@ -359,6 +360,11 @@ export default function StudioShell() {
   }, [launchNotice, setLaunchNotice]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    setStudioBypassMode(new URLSearchParams(window.location.search).get("studio") === "1");
+  }, []);
+
+  useEffect(() => {
     const key = "sentineltwin_first_run_guide_seen_v1";
     if (typeof window === "undefined") return;
     if (!window.localStorage.getItem(key)) {
@@ -412,6 +418,11 @@ export default function StudioShell() {
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[#0b0c10] text-[#dde2ef]">
       <TopBar />
+      {studioBypassMode ? (
+        <div className="border-b border-amber-500/15 bg-amber-500/8 px-3 py-1.5 text-[10px] uppercase tracking-[0.18em] text-amber-100">
+          Studio bypass mode - root product launcher skipped
+        </div>
+      ) : null}
       {launchNotice ? (
         <div className="flex items-center justify-between gap-3 border-b border-cyan-500/15 bg-cyan-500/8 px-3 py-2 text-[11px] text-cyan-100">
           <div className="min-w-0">

@@ -1,5 +1,6 @@
 import type { SecurityScene, SimulationResult } from "@/schema/security-scene";
 import { buildSceneIntelligenceGraph } from "@/lib/scene-intelligence-graph";
+import { summarizeOperationalEvidenceTemporalTwin, type OperationalEvidenceEvent, type OperationalEvidenceTemporalTwinSummary } from "@/lib/operational-evidence";
 import { summarizeSceneTruthLadder, type SceneTruthLadderSummary } from "@/lib/truth-ladder";
 import { QUALITY_ORDER } from "@/simulation/dori";
 import { computeCoverageEntropy } from "@/simulation/coverage-entropy";
@@ -85,6 +86,20 @@ export interface ReportData {
     sensorEvidenceCount: number;
     recentEntries: ReportEvidenceEntry[];
   };
+  temporalTwin?: {
+    totalEvents: number;
+    checkpointCount: number;
+    publishedCheckpointCount: number;
+    branchHeadCount: number;
+  } & Pick<OperationalEvidenceTemporalTwinSummary,
+    | "latestCheckpoint"
+    | "latestPublishedCheckpoint"
+    | "currentSceneSummary"
+    | "currentVsLatestCheckpointDelta"
+    | "currentVsLatestPublishedCheckpointDelta"
+    | "latestCheckpointAgeMs"
+    | "latestPublishedCheckpointAgeMs"
+  >;
   adversarialPath?: {
     exposureScore: number;
     detectionProbability: number;
@@ -243,6 +258,7 @@ export function buildReportData(
     title?: string;
     temporalProfile?: TemporalProfileSummary;
     adversarialPath?: AdversarialPathSummary;
+    operationalEvidenceEvents?: OperationalEvidenceEvent[];
   },
 ): ReportData {
   const zonesPassing = result.criticalZoneResults.filter((z) => z.status === "pass").length;
@@ -267,6 +283,9 @@ export function buildReportData(
   if (sourceNotes.length === 0) {
     sourceNotes.push(`Provenance: ${graph.summary.sceneSourceLabel} scene derived from the canonical SecurityScene.`);
   }
+  const temporalTwin = options?.operationalEvidenceEvents
+    ? summarizeOperationalEvidenceTemporalTwin(options.operationalEvidenceEvents, scene)
+    : null;
 
   const cameraMap = new Map(scene.cameras.map((camera) => [camera.id, camera]));
 
@@ -343,6 +362,7 @@ export function buildReportData(
     },
     truthLadder,
     evidenceTrail,
+    temporalTwin: temporalTwin ?? undefined,
     adversarialPath: options?.adversarialPath
       ? {
           exposureScore: options.adversarialPath.exposureScore,
@@ -526,6 +546,7 @@ export interface CompareReportData {
     recognitionAreaPctDelta: number;
     identificationAreaPctDelta: number;
     zonesPassedDelta: number;
+    zonesFailingDelta: number;
     issuesDelta: number;
     recommendationsDelta: number;
   };
@@ -560,6 +581,9 @@ export function buildCompareReportData(
       recognitionAreaPctDelta: Number((after.summary.recognitionAreaPct - before.summary.recognitionAreaPct).toFixed(1)),
       identificationAreaPctDelta: Number((after.summary.identificationAreaPct - before.summary.identificationAreaPct).toFixed(1)),
       zonesPassedDelta: after.summary.zonesPassing - before.summary.zonesPassing,
+      zonesFailingDelta:
+        (after.summary.zonesTotal - after.summary.zonesPassing)
+        - (before.summary.zonesTotal - before.summary.zonesPassing),
       issuesDelta: after.summary.issuesCount - before.summary.issuesCount,
       recommendationsDelta: after.summary.recommendationsCount - before.summary.recommendationsCount,
     },
@@ -864,6 +888,25 @@ export function exportAsHtml(report: ReportData): string {
     </div>
     ` : "<p style=\"margin-top:10px; color:#64748b;\">No evidence entries are recorded in the scene ledger yet.</p>"}
   </div>
+
+  ${report.temporalTwin ? `
+  <h2>Temporal Operational Twin</h2>
+  <div class="assumptions-box">
+    <table>
+      <tr><th>Scene Events</th><td>${report.temporalTwin.totalEvents}</td></tr>
+      <tr><th>Reconstructable Checkpoints</th><td>${report.temporalTwin.checkpointCount}</td></tr>
+      <tr><th>Published Checkpoints</th><td>${report.temporalTwin.publishedCheckpointCount}</td></tr>
+      <tr><th>Branch Heads</th><td>${report.temporalTwin.branchHeadCount}</td></tr>
+      <tr><th>Current Scene</th><td>${escapeHtml(report.temporalTwin.currentSceneSummary?.detail ?? "Unavailable.")}</td></tr>
+      <tr><th>Latest Checkpoint</th><td>${escapeHtml(report.temporalTwin.latestCheckpoint ? `${report.temporalTwin.latestCheckpoint.title} (${report.temporalTwin.latestCheckpoint.branchLabel})` : "Unavailable.")}</td></tr>
+      <tr><th>Checkpoint Age</th><td>${report.temporalTwin.latestCheckpointAgeMs != null ? `${Math.max(1, Math.round(report.temporalTwin.latestCheckpointAgeMs / 60000))}m` : "Unavailable."}</td></tr>
+      <tr><th>Checkpoint Delta</th><td>${escapeHtml(report.temporalTwin.currentVsLatestCheckpointDelta ? `cameras ${report.temporalTwin.currentVsLatestCheckpointDelta.cameras >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestCheckpointDelta.cameras}, zones ${report.temporalTwin.currentVsLatestCheckpointDelta.zones >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestCheckpointDelta.zones}, sensors ${report.temporalTwin.currentVsLatestCheckpointDelta.sensors >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestCheckpointDelta.sensors}` : "Unavailable.")}</td></tr>
+      <tr><th>Latest Published Checkpoint</th><td>${escapeHtml(report.temporalTwin.latestPublishedCheckpoint ? `${report.temporalTwin.latestPublishedCheckpoint.title} (${report.temporalTwin.latestPublishedCheckpoint.branchLabel})` : "Unavailable.")}</td></tr>
+      <tr><th>Published Age</th><td>${report.temporalTwin.latestPublishedCheckpointAgeMs != null ? `${Math.max(1, Math.round(report.temporalTwin.latestPublishedCheckpointAgeMs / 60000))}m` : "Unavailable."}</td></tr>
+      <tr><th>Published Delta</th><td>${escapeHtml(report.temporalTwin.currentVsLatestPublishedCheckpointDelta ? `cameras ${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras}, zones ${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.zones >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.zones}, sensors ${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.sensors >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.sensors}` : "Unavailable.")}</td></tr>
+    </table>
+  </div>
+  ` : ""}
 
   <h2>Zone Analysis</h2>
   ${report.zones.length > 0 ? `
@@ -1195,6 +1238,23 @@ export function exportAsMarkdown(report: ReportData): string {
         ]
       : ["- Recent Evidence Entries: none"]),
     "",
+    ...(report.temporalTwin
+      ? [
+          "## Temporal Operational Twin",
+          `- Scene events: ${report.temporalTwin.totalEvents}`,
+          `- Reconstructable checkpoints: ${report.temporalTwin.checkpointCount}`,
+          `- Published checkpoints: ${report.temporalTwin.publishedCheckpointCount}`,
+          `- Branch heads: ${report.temporalTwin.branchHeadCount}`,
+          `- Current scene: ${report.temporalTwin.currentSceneSummary?.detail ?? "Unavailable."}`,
+          `- Latest checkpoint: ${report.temporalTwin.latestCheckpoint ? `${report.temporalTwin.latestCheckpoint.title} (${report.temporalTwin.latestCheckpoint.branchLabel})` : "Unavailable."}`,
+          `- Checkpoint age: ${report.temporalTwin.latestCheckpointAgeMs != null ? `${Math.max(1, Math.round(report.temporalTwin.latestCheckpointAgeMs / 60000))}m` : "Unavailable."}`,
+          `- Checkpoint delta: ${report.temporalTwin.currentVsLatestCheckpointDelta ? `cameras ${report.temporalTwin.currentVsLatestCheckpointDelta.cameras >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestCheckpointDelta.cameras}, zones ${report.temporalTwin.currentVsLatestCheckpointDelta.zones >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestCheckpointDelta.zones}, sensors ${report.temporalTwin.currentVsLatestCheckpointDelta.sensors >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestCheckpointDelta.sensors}` : "Unavailable."}`,
+          `- Latest published checkpoint: ${report.temporalTwin.latestPublishedCheckpoint ? `${report.temporalTwin.latestPublishedCheckpoint.title} (${report.temporalTwin.latestPublishedCheckpoint.branchLabel})` : "Unavailable."}`,
+          `- Published age: ${report.temporalTwin.latestPublishedCheckpointAgeMs != null ? `${Math.max(1, Math.round(report.temporalTwin.latestPublishedCheckpointAgeMs / 60000))}m` : "Unavailable."}`,
+          `- Published delta: ${report.temporalTwin.currentVsLatestPublishedCheckpointDelta ? `cameras ${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras}, zones ${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.zones >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.zones}, sensors ${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.sensors >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.sensors}` : "Unavailable."}`,
+          "",
+        ]
+      : []),
     "## Zone Analysis",
     "",
     ...(report.zones.length > 0
@@ -1414,6 +1474,24 @@ export function exportAsText(report: ReportData): string {
         ]
       : ["  Recent Evidence Entries: none"]),
     "",
+    ...(report.temporalTwin
+      ? [
+          "TEMPORAL OPERATIONAL TWIN",
+          `${"-".repeat(30)}`,
+          `  Scene Events:            ${report.temporalTwin.totalEvents}`,
+          `  Reconstructable Checkpoints: ${report.temporalTwin.checkpointCount}`,
+          `  Published Checkpoints:   ${report.temporalTwin.publishedCheckpointCount}`,
+          `  Branch Heads:            ${report.temporalTwin.branchHeadCount}`,
+          `  Current Scene:           ${report.temporalTwin.currentSceneSummary?.detail ?? "Unavailable."}`,
+          `  Latest Checkpoint:       ${report.temporalTwin.latestCheckpoint ? `${report.temporalTwin.latestCheckpoint.title} (${report.temporalTwin.latestCheckpoint.branchLabel})` : "Unavailable."}`,
+          `  Checkpoint Age:          ${report.temporalTwin.latestCheckpointAgeMs != null ? `${Math.max(1, Math.round(report.temporalTwin.latestCheckpointAgeMs / 60000))}m` : "Unavailable."}`,
+          `  Checkpoint Delta:        ${report.temporalTwin.currentVsLatestCheckpointDelta ? `cameras ${report.temporalTwin.currentVsLatestCheckpointDelta.cameras >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestCheckpointDelta.cameras}, zones ${report.temporalTwin.currentVsLatestCheckpointDelta.zones >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestCheckpointDelta.zones}, sensors ${report.temporalTwin.currentVsLatestCheckpointDelta.sensors >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestCheckpointDelta.sensors}` : "Unavailable."}`,
+          `  Latest Published Checkpoint: ${report.temporalTwin.latestPublishedCheckpoint ? `${report.temporalTwin.latestPublishedCheckpoint.title} (${report.temporalTwin.latestPublishedCheckpoint.branchLabel})` : "Unavailable."}`,
+          `  Published Age:           ${report.temporalTwin.latestPublishedCheckpointAgeMs != null ? `${Math.max(1, Math.round(report.temporalTwin.latestPublishedCheckpointAgeMs / 60000))}m` : "Unavailable."}`,
+          `  Published Delta:         ${report.temporalTwin.currentVsLatestPublishedCheckpointDelta ? `cameras ${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras}, zones ${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.zones >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.zones}, sensors ${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.sensors >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.sensors}` : "Unavailable."}`,
+          "",
+        ]
+      : []),
     "SUMMARY",
     `${"-".repeat(30)}`,
     `  Total Coverage:          ${report.summary.totalCoveragePct.toFixed(1)}%`,
@@ -1611,9 +1689,48 @@ export function exportCompareAsHtml(
   <div class="delta-summary">
     <div class="delta-card"><div class="value ${deltaClass(compare.deltas.totalCoveragePctDelta)}">${deltaSign(compare.deltas.totalCoveragePctDelta)}%</div><div class="label">Coverage Delta</div></div>
     <div class="delta-card"><div class="value ${deltaClass(-compare.deltas.blindspotPctDelta)}">${deltaSign(-compare.deltas.blindspotPctDelta)}%</div><div class="label">Blindspot Reduction</div></div>
+    <div class="delta-card"><div class="value ${deltaClass(compare.deltas.identificationAreaPctDelta)}">${deltaSign(compare.deltas.identificationAreaPctDelta)}%</div><div class="label">Identification Delta</div></div>
     <div class="delta-card"><div class="value ${deltaClass(compare.deltas.zonesPassedDelta)}">${deltaSign(compare.deltas.zonesPassedDelta)}</div><div class="label">Zones Added</div></div>
+    <div class="delta-card"><div class="value ${deltaClass(-compare.deltas.zonesFailingDelta)}">${deltaSign(-compare.deltas.zonesFailingDelta)}</div><div class="label">Failures Resolved</div></div>
     <div class="delta-card"><div class="value ${deltaClass(-compare.deltas.issuesDelta)}">${deltaSign(-compare.deltas.issuesDelta)}</div><div class="label">Issues Resolved</div></div>
   </div>
+
+  <h2>Requirement Deltas</h2>
+  <table>
+    <thead><tr><th>Metric</th><th>Before</th><th>After</th><th>Delta</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Recognition Area</td>
+        <td>${compare.before.summary.recognitionAreaPct.toFixed(1)}%</td>
+        <td>${compare.after.summary.recognitionAreaPct.toFixed(1)}%</td>
+        <td class="${deltaClass(compare.deltas.recognitionAreaPctDelta)}">${deltaSign(compare.deltas.recognitionAreaPctDelta)}%</td>
+      </tr>
+      <tr>
+        <td>Identification Area</td>
+        <td>${compare.before.summary.identificationAreaPct.toFixed(1)}%</td>
+        <td>${compare.after.summary.identificationAreaPct.toFixed(1)}%</td>
+        <td class="${deltaClass(compare.deltas.identificationAreaPctDelta)}">${deltaSign(compare.deltas.identificationAreaPctDelta)}%</td>
+      </tr>
+      <tr>
+        <td>Zones Passing</td>
+        <td>${compare.before.summary.zonesPassing}/${compare.before.summary.zonesTotal}</td>
+        <td>${compare.after.summary.zonesPassing}/${compare.after.summary.zonesTotal}</td>
+        <td class="${deltaClass(compare.deltas.zonesPassedDelta)}">${deltaSign(compare.deltas.zonesPassedDelta)}</td>
+      </tr>
+      <tr>
+        <td>Zones Failing</td>
+        <td>${compare.before.summary.zonesTotal - compare.before.summary.zonesPassing}</td>
+        <td>${compare.after.summary.zonesTotal - compare.after.summary.zonesPassing}</td>
+        <td class="${deltaClass(-compare.deltas.zonesFailingDelta)}">${deltaSign(-compare.deltas.zonesFailingDelta)}</td>
+      </tr>
+      <tr>
+        <td>Issues</td>
+        <td>${compare.before.summary.issuesCount}</td>
+        <td>${compare.after.summary.issuesCount}</td>
+        <td class="${deltaClass(-compare.deltas.issuesDelta)}">${deltaSign(-compare.deltas.issuesDelta)}</td>
+      </tr>
+    </tbody>
+  </table>
 
   <h2>Side-by-Side</h2>
   <div class="grid-2">
@@ -1623,7 +1740,9 @@ export function exportCompareAsHtml(
       <table>
         <tr><td>Coverage</td><td>${compare.before.summary.totalCoveragePct.toFixed(1)}%</td></tr>
         <tr><td>Recognition</td><td>${compare.before.summary.recognitionAreaPct.toFixed(1)}%</td></tr>
+        <tr><td>Identification</td><td>${compare.before.summary.identificationAreaPct.toFixed(1)}%</td></tr>
         <tr><td>Zones Passing</td><td>${compare.before.summary.zonesPassing}/${compare.before.summary.zonesTotal}</td></tr>
+        <tr><td>Zones Failing</td><td>${compare.before.summary.zonesTotal - compare.before.summary.zonesPassing}</td></tr>
         <tr><td>Issues</td><td>${compare.before.summary.issuesCount}</td></tr>
       </table>
     </div>
@@ -1633,7 +1752,9 @@ export function exportCompareAsHtml(
       <table>
         <tr><td>Coverage</td><td>${compare.after.summary.totalCoveragePct.toFixed(1)}%</td></tr>
         <tr><td>Recognition</td><td>${compare.after.summary.recognitionAreaPct.toFixed(1)}%</td></tr>
+        <tr><td>Identification</td><td>${compare.after.summary.identificationAreaPct.toFixed(1)}%</td></tr>
         <tr><td>Zones Passing</td><td>${compare.after.summary.zonesPassing}/${compare.after.summary.zonesTotal}</td></tr>
+        <tr><td>Zones Failing</td><td>${compare.after.summary.zonesTotal - compare.after.summary.zonesPassing}</td></tr>
         <tr><td>Issues</td><td>${compare.after.summary.issuesCount}</td></tr>
       </table>
     </div>
@@ -1737,7 +1858,9 @@ export function exportCompareAsMarkdown(compare: CompareReportData): string {
     `| Total Coverage | ${compare.deltas.totalCoveragePctDelta > 0 ? "+" : ""}${compare.deltas.totalCoveragePctDelta.toFixed(1)}% |`,
     `| Blindspot | ${compare.deltas.blindspotPctDelta > 0 ? "+" : ""}${compare.deltas.blindspotPctDelta.toFixed(1)}% |`,
     `| Recognition Area | ${compare.deltas.recognitionAreaPctDelta > 0 ? "+" : ""}${compare.deltas.recognitionAreaPctDelta.toFixed(1)}% |`,
+    `| Identification Area | ${compare.deltas.identificationAreaPctDelta > 0 ? "+" : ""}${compare.deltas.identificationAreaPctDelta.toFixed(1)}% |`,
     `| Zones Passing | ${compare.deltas.zonesPassedDelta > 0 ? "+" : ""}${compare.deltas.zonesPassedDelta} |`,
+    `| Zones Failing | ${compare.deltas.zonesFailingDelta > 0 ? "+" : ""}${compare.deltas.zonesFailingDelta} |`,
     `| Issues | ${compare.deltas.issuesDelta > 0 ? "+" : ""}${compare.deltas.issuesDelta} |`,
     "",
     "## Zone Changes",
@@ -1748,13 +1871,17 @@ export function exportCompareAsMarkdown(compare: CompareReportData): string {
     "## Before",
     `- Coverage: ${compare.before.summary.totalCoveragePct.toFixed(1)}%`,
     `- Recognition: ${compare.before.summary.recognitionAreaPct.toFixed(1)}%`,
+    `- Identification: ${compare.before.summary.identificationAreaPct.toFixed(1)}%`,
     `- Zones Passing: ${compare.before.summary.zonesPassing}/${compare.before.summary.zonesTotal}`,
+    `- Zones Failing: ${compare.before.summary.zonesTotal - compare.before.summary.zonesPassing}`,
     `- Issues: ${compare.before.summary.issuesCount}`,
     "",
     "## After",
     `- Coverage: ${compare.after.summary.totalCoveragePct.toFixed(1)}%`,
     `- Recognition: ${compare.after.summary.recognitionAreaPct.toFixed(1)}%`,
+    `- Identification: ${compare.after.summary.identificationAreaPct.toFixed(1)}%`,
     `- Zones Passing: ${compare.after.summary.zonesPassing}/${compare.after.summary.zonesTotal}`,
+    `- Zones Failing: ${compare.after.summary.zonesTotal - compare.after.summary.zonesPassing}`,
     `- Issues: ${compare.after.summary.issuesCount}`,
     "",
     "## Provenance",

@@ -17,7 +17,7 @@ describe("WorkspaceCanvas obstruction selection", () => {
 
     expect(workspaceSource).toContain('const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);');
     expect(workspaceSource).toContain('const visibleComponents = useStudioStore((s) => s.visibleComponents);');
-    expect(workspaceSource).toContain('<SceneObstructions obstructions={scene.obstructions} selectedId={selected} />');
+    expect(workspaceSource).toContain('<SceneObstructions obstructions={scene.obstructions} selectedId={selected} onContextMenu={onObjectContextMenu} />');
     expect(workspaceSource).toContain('{visibleComponents.coverage_legend ? <CoverageLegend /> : null}');
     expect(workspaceSource).toContain('{visibleComponents.viewport_controls ? <ViewControls /> : null}');
     expect(workspaceSource).toContain('{visibleComponents.camera_preset_picker ? (');

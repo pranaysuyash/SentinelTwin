@@ -1,4 +1,5 @@
 import type { SecurityScene } from "@/schema/security-scene";
+import type { WorkspaceGovernanceState } from "@/lib/workspace-governance";
 import type { WorkspaceRole } from "@/lib/workspace-governance";
 
 export type WorkspaceClearance = "standard" | "restricted" | "privacy_sensitive";
@@ -294,6 +295,7 @@ export function canPerformWorkspaceAction(
   access: WorkspaceAccessState,
   scene: SecurityScene,
   action: WorkspaceAction,
+  governance: WorkspaceGovernanceState,
 ): WorkspaceAccessDecision {
   const activeMember = getActiveWorkspaceMember(access);
   if (!activeMember) {
@@ -307,7 +309,16 @@ export function canPerformWorkspaceAction(
   }
 
   const route = routeWorkspaceApproval(scene, access);
-  const canReview = activeMember.canReview && access.policy.requiredReviewerRoles.includes(activeMember.role);
+  const hasPrivacyExposure = scene.privacyZones.length > 0;
+  const requiresPrivacyReviewer = hasPrivacyExposure && access.policy.privacySensitiveRequiresReviewer;
+  const requiresPublishReview = access.policy.publishRequiresApproval || governance.approvalMode === "review_required";
+  const publishIsApproved = governance.sceneStatus === "approved" || governance.sceneStatus === "published";
+  const canReview = activeMember.canReview && (
+    activeMember.role === "admin"
+    || (requiresPrivacyReviewer
+      ? activeMember.role === route.requiredReviewerRole
+      : access.policy.requiredReviewerRoles.includes(activeMember.role))
+  );
   const canPublish = activeMember.canPublish || activeMember.role === "admin";
   const canRestore = activeMember.canRestore || activeMember.role === "admin";
 
@@ -334,8 +345,12 @@ export function canPerformWorkspaceAction(
       return {
         allowed: canReview,
         reason: canReview
-          ? `The active member can process approvals as ${activeMember.role}.`
-          : `Approval routing requires a reviewer role, and ${activeMember.role} is not eligible.`,
+          ? requiresPrivacyReviewer && activeMember.role !== "admin"
+            ? `Privacy-sensitive approval routing is assigned to ${route.requiredReviewerRole.replace(/_/g, " ")}, and ${activeMember.role} matches the required role.`
+            : `The active member can process approvals as ${activeMember.role}.`
+          : requiresPrivacyReviewer
+            ? `Privacy-sensitive approval routing requires ${route.requiredReviewerRole.replace(/_/g, " ")}, and ${activeMember.role} is not eligible.`
+            : `Approval routing requires a reviewer role, and ${activeMember.role} is not eligible.`,
         member: activeMember,
         requiredReviewerRole: route.requiredReviewerRole,
         matchedAttributes: route.matchedAttributes,
@@ -352,12 +367,14 @@ export function canPerformWorkspaceAction(
       };
     case "publish":
       return {
-        allowed: canPublish,
-        reason: canPublish
-          ? access.policy.publishRequiresApproval && activeMember.role !== "admin"
-            ? `Publish requires approval routed through ${route.requiredReviewerRole.replace(/_/g, " ")}.`
-            : "The active member can publish this scene."
-          : `Publish routing requires a publishing-capable member, and ${activeMember.role} is not eligible.`,
+        allowed: canPublish && (!requiresPublishReview || publishIsApproved || activeMember.role === "admin"),
+        reason: !canPublish
+          ? `Publish routing requires a publishing-capable member, and ${activeMember.role} is not eligible.`
+          : requiresPublishReview && !publishIsApproved && activeMember.role !== "admin"
+            ? `Publish requires approval routed through ${route.requiredReviewerRole.replace(/_/g, " ")} before the scene can be published.`
+            : requiresPublishReview && publishIsApproved
+              ? `Publish approval is complete and can proceed through ${route.requiredReviewerRole.replace(/_/g, " ")}.`
+              : "The active member can publish this scene.",
         member: activeMember,
         requiredReviewerRole: route.requiredReviewerRole,
         matchedAttributes: route.matchedAttributes,

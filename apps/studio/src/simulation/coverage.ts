@@ -60,6 +60,12 @@ export type CameraEvaluation = {
   distanceM: number;
   hAngleDeg: number;
   vAngleDeg: number;
+  edgePenaltyMultiplier: number;
+  clarityMultiplier: number;
+  materialTransmission: number;
+  glarePenalty: number;
+  lightingPenalty: number;
+  finalPpmMultiplier: number;
   reasonCodes: string[];
 };
 
@@ -371,6 +377,12 @@ function evaluateCameraAgainstCell(
       distanceM: Number.MAX_VALUE,
       hAngleDeg: 0,
       vAngleDeg: 0,
+      edgePenaltyMultiplier: 0,
+      clarityMultiplier: 1,
+      materialTransmission: 1,
+      glarePenalty: 0,
+      lightingPenalty: 0,
+      finalPpmMultiplier: 0,
       reasonCodes: ["CAMERA_OFF"],
     };
   }
@@ -390,6 +402,12 @@ function evaluateCameraAgainstCell(
       distanceM: distance,
       hAngleDeg: 0,
       vAngleDeg: 0,
+      edgePenaltyMultiplier: 0,
+      clarityMultiplier: 1,
+      materialTransmission: 1,
+      glarePenalty: 0,
+      lightingPenalty: 0,
+      finalPpmMultiplier: 0,
       reasonCodes: ["OUT_OF_RANGE"],
     };
   }
@@ -417,6 +435,12 @@ function evaluateCameraAgainstCell(
       distanceM: distance,
       hAngleDeg: hAngle,
       vAngleDeg: vAngle,
+      edgePenaltyMultiplier: 0,
+      clarityMultiplier: 1,
+      materialTransmission: 1,
+      glarePenalty: 0,
+      lightingPenalty: 0,
+      finalPpmMultiplier: 0,
       reasonCodes: ["OUT_OF_FOV"],
     };
   }
@@ -435,24 +459,33 @@ function evaluateCameraAgainstCell(
       distanceM: distance,
       hAngleDeg: hAngle,
       vAngleDeg: vAngle,
+      edgePenaltyMultiplier: 0,
+      clarityMultiplier: 1,
+      materialTransmission: 0,
+      glarePenalty: 0,
+      lightingPenalty: 0,
+      finalPpmMultiplier: 0,
       reasonCodes: ["BLOCKED_BY_SOLID"],
     };
   }
 
-  let ppm = computePixelDensity(camera, distance);
+  const basePpm = computePixelDensity(camera, distance);
+  let ppm = basePpm;
   const edgeAngle = Math.max(Math.abs(hAngle), Math.abs(vAngle));
   const reasonCodes = new Set<string>();
+  let edgePenaltyMultiplier = 1;
 
   if (edgeAngle > 55) {
-    ppm *= 0.42;
+    edgePenaltyMultiplier = 0.42;
     reasonCodes.add("EDGE_OF_FOV");
   } else if (edgeAngle > 42) {
-    ppm *= 0.58;
+    edgePenaltyMultiplier = 0.58;
     reasonCodes.add("EDGE_OF_FOV");
   } else if (edgeAngle > 28) {
-    ppm *= 0.76;
+    edgePenaltyMultiplier = 0.76;
     reasonCodes.add("EDGE_OF_FOV");
   }
+  ppm *= edgePenaltyMultiplier;
 
   const clarityMultiplier = getClarityMultiplier(camera);
   if (clarityMultiplier < 1) {
@@ -460,16 +493,18 @@ function evaluateCameraAgainstCell(
   }
   ppm *= clarityMultiplier;
 
-  ppm *= occlusion.materialPenalty;
-  if (occlusion.materialPenalty < 1) {
+  const materialTransmission = occlusion.materialPenalty;
+  ppm *= materialTransmission;
+  if (materialTransmission < 1) {
     reasonCodes.add("PARTIAL_MATERIAL");
   }
 
-  if (occlusion.glarePenalty > 0) {
+  const glarePenalty = occlusion.glarePenalty;
+  if (glarePenalty > 0) {
     reasonCodes.add("GLARE_RISK");
   }
 
-  ppm *= 1 - occlusion.glarePenalty;
+  ppm *= 1 - glarePenalty;
 
   const lightingPenalty = getLightingPenalty(camera, cell, scene.securityLights, scene);
   if (lightingPenalty > 0) {
@@ -477,6 +512,7 @@ function evaluateCameraAgainstCell(
   }
 
   ppm *= 1 - lightingPenalty;
+  const finalPpmMultiplier = basePpm > 0 ? ppm / basePpm : 0;
 
   // Determine cell quality based on the active standard.
   const isOodpcvs = scene.assumptions.doriStandard === "oodpcvs_2025";
@@ -499,6 +535,12 @@ function evaluateCameraAgainstCell(
     distanceM: distance,
     hAngleDeg: hAngle,
     vAngleDeg: vAngle,
+    edgePenaltyMultiplier,
+    clarityMultiplier,
+    materialTransmission,
+    glarePenalty,
+    lightingPenalty,
+    finalPpmMultiplier,
     reasonCodes: [...reasonCodes],
   };
 }

@@ -124,6 +124,16 @@ describe("computeSensorFusionSummary", () => {
           transportSessionId: "transport_1",
           lastHeartbeatAt: Date.now(),
           protocolProfile: "rtsp_session",
+          authMode: "onvif_digest",
+          authState: "authenticated",
+          authRealm: "camera.example.com",
+          authSessionId: "auth_session_1",
+          authSessionExpiresAt: Date.now() + 60_000,
+          transportResponseStatus: 401,
+          transportResponseStatusText: "Unauthorized",
+          authChallengeHeader: "Digest realm=\"camera.example.com\", nonce=\"abc123\"",
+          authChallengeScheme: "digest",
+          authChallengeRealm: "camera.example.com",
           liveFeedUrl: "rtsp://example.com/live",
           liveFeedLabel: "Entrance relay",
           ingestMode: "external",
@@ -139,5 +149,8 @@ describe("computeSensorFusionSummary", () => {
     expect(summary.operationalHealth).toBe("attention");
     expect(summary.operationalHealthLabel).toBe("Attention");
     expect(summary.operationalHealthDetail).toContain("Metadata dirty");
+    expect(summary.operationalHealthDetail).toContain("Auth authenticated/onvif_digest");
+    expect(summary.operationalHealthDetail).toContain("Transport 401 Unauthorized");
+    expect(summary.operationalHealthDetail).toContain("Challenge Digest realm=\"camera.example.com\", nonce=\"abc123\"");
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/shared/Badge";
 import { cn } from "@/lib/cn";
@@ -11,12 +11,14 @@ import {
   confidenceLabel,
   compareOperationalEvidenceBranches,
   filterOperationalEvidenceEvents,
+  findOperationalEvidenceEventsForNode,
   resolveOperationalEvidenceSceneAtTime,
   summarizeOperationalEvidenceTemporalTwin,
   summarizeOperationalEvidenceBranchHeads,
   summarizeOperationalEvidenceLifecycle,
   summarizeSceneEvidence,
   traceOperationalEvidenceLineage,
+  type OperationalEvidenceEvent,
   type OperationalEvidenceLifecycleStage,
 } from "@/lib/operational-evidence";
 import { summarizeSceneTruthLadder } from "@/lib/truth-ladder";
@@ -161,6 +163,8 @@ export function SceneIntelligenceTab() {
   const allSensorEvents = useStudioStore((s) => s.sensorEvents);
   const allCameraMetadataEvents = useStudioStore((s) => s.cameraMetadataEvents);
   const allCameraLiveConnectionEvents = useStudioStore((s) => s.cameraLiveConnectionEvents);
+  const timelineFocusRequest = useStudioStore((s) => s.timelineFocusRequest);
+  const setTimelineFocusRequest = useStudioStore((s) => s.setTimelineFocusRequest);
   const sensorEvents = useMemo(
     () => allSensorEvents.filter((event) => event.sceneId === sceneId),
     [allSensorEvents, sceneId],
@@ -203,6 +207,11 @@ export function SceneIntelligenceTab() {
 
   const selectedNode = nodeById.get(selectedNodeId) ?? nodeById.get(graph.rootId) ?? graph.nodes[0] ?? null;
   const selectedEdge = selectedEdgeId ? edgeById.get(selectedEdgeId) ?? null : null;
+  const selectedNodeEvidenceTrail = useMemo(() => {
+    if (!selectedNode) return [];
+    if (selectedNode.kind !== "scene" && selectedNode.kind !== "entity") return [];
+    return findOperationalEvidenceEventsForNode(operationalEvidenceEvents, scene.id, selectedNode.id, 4);
+  }, [operationalEvidenceEvents, scene.id, selectedNode]);
 
   const sourceRows = useMemo(
     () => Object.entries(graph.summary.sourceCounts).sort((a, b) => b[1] - a[1]),
@@ -311,6 +320,43 @@ export function SceneIntelligenceTab() {
   const selectedTimelineProgress = selectedTimelineIndex >= 0 && evidenceTimeline.length > 1
     ? selectedTimelineIndex / (evidenceTimeline.length - 1)
     : 0;
+  useEffect(() => {
+    if (!timelineFocusRequest) return;
+    if (timelineFocusRequest.query) {
+      setEvidenceQuery(timelineFocusRequest.query);
+    }
+    if (timelineFocusRequest.branchLabel) {
+      setEvidenceBranchFilter(timelineFocusRequest.branchLabel);
+    }
+    if (timelineFocusRequest.provenanceNodeId) {
+      setSelectedNodeId(timelineFocusRequest.provenanceNodeId);
+    }
+    if (timelineFocusRequest.provenanceEdgeId) {
+      setSelectedEdgeId(timelineFocusRequest.provenanceEdgeId);
+    } else {
+      setSelectedEdgeId(null);
+    }
+
+    const targetEvent = timelineFocusRequest.eventId
+      ? operationalEvidenceEvents.find((candidate) => candidate.id === timelineFocusRequest.eventId) ?? null
+      : [...operationalEvidenceEvents].reduce<OperationalEvidenceEvent | null>((closest, candidate) => {
+          const targetBranch = timelineFocusRequest.branchLabel?.trim().toLowerCase() ?? null;
+          const targetTimestamp = timelineFocusRequest.timestamp;
+          if (targetBranch) {
+            const candidateBranch = (candidate.branchLabel ?? candidate.lifecycleStage ?? "manual").toLowerCase();
+            if (candidateBranch !== targetBranch) return closest;
+          }
+
+          if (!closest) return candidate;
+          return Math.abs(candidate.timestamp - targetTimestamp) < Math.abs(closest.timestamp - targetTimestamp) ? candidate : closest;
+        }, null);
+
+    if (targetEvent) {
+      setSelectedEvidenceEventId(targetEvent.id);
+    }
+
+    setTimelineFocusRequest(null);
+  }, [operationalEvidenceEvents, setTimelineFocusRequest, timelineFocusRequest]);
   const selectedEvidenceReconstructionSummary = useMemo(
     () => (selectedEvidenceReconstruction ? summarizeSceneEvidence(selectedEvidenceReconstruction) : null),
     [selectedEvidenceReconstruction],
@@ -340,6 +386,37 @@ export function SceneIntelligenceTab() {
     () => assessOperationalEvidenceMergeReadiness(branchComparison),
     [branchComparison],
   );
+  const selectedNodeComparison = useMemo(() => {
+    if (!selectedNode) return null;
+
+    const leftEvent = comparisonLeftEventId
+      ? selectedNodeEvidenceTrail.find((event) => event.id === comparisonLeftEventId)
+        ?? operationalTimeline.entries.find((entry) => entry.event.id === comparisonLeftEventId)?.event
+        ?? null
+      : null;
+    const rightEvent = comparisonRightEventId
+      ? selectedNodeEvidenceTrail.find((event) => event.id === comparisonRightEventId)
+        ?? operationalTimeline.entries.find((entry) => entry.event.id === comparisonRightEventId)?.event
+        ?? null
+      : null;
+
+    if (!leftEvent && !rightEvent) return null;
+
+    return {
+      leftEvent,
+      rightEvent,
+      branchComparison,
+      mergeReadiness,
+    };
+  }, [
+    branchComparison,
+    comparisonLeftEventId,
+    comparisonRightEventId,
+    mergeReadiness,
+    operationalTimeline.entries,
+    selectedNode,
+    selectedNodeEvidenceTrail,
+  ]);
   const lifecycleStageOrder: Array<OperationalEvidenceLifecycleStage> = ["draft", "review", "published", "recovered", "imported", "scanned", "simulated", "manual"];
 
   const entityRows = useMemo(
@@ -449,7 +526,7 @@ export function SceneIntelligenceTab() {
     setSelectedEvidenceEventId(event.id);
   };
 
-  const copyDeepLink = async () => {
+  const copyDeepLink = async (event?: OperationalEvidenceEvent | null) => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     params.set("provenanceNode", selectedNodeId);
@@ -457,6 +534,23 @@ export function SceneIntelligenceTab() {
       params.set("provenanceEdge", selectedEdgeId);
     } else {
       params.delete("provenanceEdge");
+    }
+    const timelineEvent = event ?? selectedEvidenceEvent;
+    if (timelineEvent) {
+      params.set("timelineEventId", timelineEvent.id);
+      params.set("timelineTimestamp", String(timelineEvent.timestamp));
+      params.set("timelineQuery", evidenceQuery.trim());
+      const timelineBranch = timelineEvent.branchLabel ?? timelineEvent.lifecycleStage ?? null;
+      if (timelineBranch) {
+        params.set("timelineBranch", timelineBranch);
+      } else {
+        params.delete("timelineBranch");
+      }
+    } else {
+      params.delete("timelineEventId");
+      params.delete("timelineTimestamp");
+      params.delete("timelineQuery");
+      params.delete("timelineBranch");
     }
     const deepLink = `${window.location.origin}${window.location.pathname}?${params.toString()}${window.location.hash}`;
     await navigator.clipboard.writeText(deepLink);
@@ -540,6 +634,30 @@ export function SceneIntelligenceTab() {
             detail={temporalTwin.latestCheckpoint?.hasSnapshot ? "point-in-time snapshot available" : "derived from reconstructed lineage"}
           />
         </div>
+        <div className="mt-2 grid gap-2 md:grid-cols-2">
+          <StatCard
+            label="Published checkpoint"
+            value={temporalTwin.latestPublishedCheckpoint?.title ?? "—"}
+            detail={temporalTwin.latestPublishedCheckpoint ? `${temporalTwin.latestPublishedCheckpoint.branchLabel} · ${formatLedgerTime(temporalTwin.latestPublishedCheckpoint.timestamp)}` : "No published checkpoint available."}
+          />
+          <StatCard
+            label="Published delta"
+            value={temporalTwin.currentVsLatestPublishedCheckpointDelta ? `${temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras >= 0 ? "+" : ""}${temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras} cams` : "—"}
+            detail={temporalTwin.currentVsLatestPublishedCheckpointDelta ? `zones ${temporalTwin.currentVsLatestPublishedCheckpointDelta.zones >= 0 ? "+" : ""}${temporalTwin.currentVsLatestPublishedCheckpointDelta.zones}, sensors ${temporalTwin.currentVsLatestPublishedCheckpointDelta.sensors >= 0 ? "+" : ""}${temporalTwin.currentVsLatestPublishedCheckpointDelta.sensors}` : "No published delta available yet."}
+          />
+        </div>
+        <div className="mt-2 grid gap-2 md:grid-cols-2">
+          <StatCard
+            label="Published age"
+            value={temporalTwin.latestPublishedCheckpointAgeMs != null ? `${Math.max(1, Math.round(temporalTwin.latestPublishedCheckpointAgeMs / 60000))}m` : "—"}
+            detail={temporalTwin.latestPublishedCheckpoint?.hasSnapshot ? "published point-in-time snapshot" : "published state reconstructed from lineage"}
+          />
+          <StatCard
+            label="Published checkpoints"
+            value={temporalTwin.publishedCheckpointCount}
+            detail="Events explicitly promoted to the published branch."
+          />
+        </div>
         {temporalTwin.latestCheckpoint ? (
           <div className="mt-3 rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -550,6 +668,20 @@ export function SceneIntelligenceTab() {
               </div>
               <Badge variant={temporalTwin.latestCheckpoint.hasSnapshot ? "green" : "gray"}>
                 {temporalTwin.latestCheckpoint.hasSnapshot ? "point-in-time" : "derived"}
+              </Badge>
+            </div>
+          </div>
+        ) : null}
+        {temporalTwin.latestPublishedCheckpoint ? (
+          <div className="mt-2 rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Latest published checkpoint</div>
+                <div className="mt-1 text-[11px] font-semibold text-[#edf2ff]">{temporalTwin.latestPublishedCheckpoint.title}</div>
+                <div className="mt-1 text-[10px] text-[#74809a]">{temporalTwin.latestPublishedCheckpoint.summary.detail}</div>
+              </div>
+              <Badge variant={temporalTwin.latestPublishedCheckpoint.hasSnapshot ? "green" : "gray"}>
+                {temporalTwin.latestPublishedCheckpoint.hasSnapshot ? "published snapshot" : "published lineage"}
               </Badge>
             </div>
           </div>
@@ -828,7 +960,7 @@ export function SceneIntelligenceTab() {
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={copyDeepLink}
+                      onClick={() => void copyDeepLink()}
                       className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium hover:bg-white/[0.08]"
                     >
                       Copy deep link
@@ -855,6 +987,148 @@ export function SceneIntelligenceTab() {
                   <div className="mt-2 text-[10px] text-[#74809a]">
                     {selectedNode.latestEvidenceSummary ?? "This graph node does not yet have node-specific evidence attached."}
                   </div>
+                </div>
+                <div className="rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Node evidence trail</div>
+                    <Badge variant={selectedNodeEvidenceTrail.length > 0 ? "blue" : "gray"}>
+                      {selectedNodeEvidenceTrail.length > 0 ? `${selectedNodeEvidenceTrail.length} recent` : "No direct trail"}
+                    </Badge>
+                  </div>
+                  <div className="mt-1 text-[10px] text-[#74809a]">
+                    {selectedNode.kind === "scene"
+                      ? "Scene-scoped events that define the current branch."
+                      : selectedNode.kind === "entity"
+                        ? "Directly affected events for this node."
+                        : "This node kind does not currently participate in the node evidence trail."}
+                  </div>
+                  <div className="mt-2 space-y-2">
+                    {selectedNodeEvidenceTrail.length > 0 ? (
+                      selectedNodeEvidenceTrail.map((event) => (
+                        <div key={event.id} className="rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="text-[11px] font-semibold text-[#edf2fb]">{event.title}</div>
+                            <Badge variant="gray">{formatLedgerTime(event.timestamp)}</Badge>
+                          </div>
+                          <div className="mt-1 flex flex-wrap gap-1.5">
+                            <Badge variant="blue">{event.kind.replace(/_/g, " ")}</Badge>
+                            <Badge variant="gray">{confidenceLabel(event.confidence)}</Badge>
+                            {event.branchLabel ? <Badge variant="gray">{event.branchLabel}</Badge> : null}
+                            {event.id === comparisonLeftEventId ? <Badge variant="blue">left selection</Badge> : null}
+                            {event.id === comparisonRightEventId ? <Badge variant="blue">right selection</Badge> : null}
+                            {event.affectedNodeIds.length > 0 ? <Badge variant="gray">{event.affectedNodeIds.length} nodes</Badge> : null}
+                          </div>
+                          <div className="mt-1 text-[10px] text-[#74809a]">{event.details}</div>
+                          <div className="mt-1 text-[9px] text-[#8aa1c4]">
+                            {event.beforeSummary ? <span className="font-medium text-[#c9d5e9]">Before:</span> : null} {event.beforeSummary ?? "—"}
+                          </div>
+                          <div className="mt-0.5 text-[9px] text-[#8aa1c4]">
+                            {event.afterSummary ? <span className="font-medium text-[#c9d5e9]">After:</span> : null} {event.afterSummary ?? event.details}
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => labelComparisonButton("left", event.id)}
+                              className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08]"
+                            >
+                              Set as left branch
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => labelComparisonButton("right", event.id)}
+                              className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08]"
+                            >
+                              Set as right branch
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRestoreCheckpoint(event.id, "draft")}
+                              className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-medium text-emerald-100 hover:bg-emerald-500/15"
+                            >
+                              Restore as draft
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRestoreCheckpoint(event.id, "recovered")}
+                              className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08]"
+                            >
+                              Restore as recovered
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRestoreCheckpoint(event.id, "published")}
+                              className="rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1.5 text-[10px] font-medium text-sky-100 hover:bg-sky-500/15"
+                            >
+                              Restore as published
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                        {selectedNode.kind === "scene"
+                          ? "No scene-level evidence trail yet."
+                          : selectedNode.kind === "entity"
+                            ? "No direct evidence trail found for this node."
+                            : "Node evidence is only exposed for scene and entity nodes right now."}
+                      </div>
+                    )}
+                  </div>
+                  {selectedNodeComparison ? (
+                    <div className="mt-3 rounded-md border border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Active comparison</div>
+                          <div className="mt-1 text-[10px] text-[#74809a]">
+                            This node-local comparison drives the branch comparison panel below.
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedNodeComparison.branchComparison ? (
+                            <Badge variant="blue">Comparison ready</Badge>
+                          ) : (
+                            <Badge variant="gray">Select another trail entry</Badge>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setComparisonLeftEventId(null);
+                              setComparisonRightEventId(null);
+                            }}
+                            className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08]"
+                          >
+                            Clear comparison
+                          </button>
+                        </div>
+                      </div>
+                      <div className="mt-2 grid gap-2 md:grid-cols-2">
+                        <div className="rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+                          <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">Left branch</div>
+                          <div className="mt-1 text-[11px] font-semibold text-[#edf2fb]">{selectedNodeComparison.leftEvent?.title ?? "No left selection"}</div>
+                          <div className="mt-1 text-[10px] text-[#74809a]">
+                            {selectedNodeComparison.leftEvent
+                              ? `${selectedNodeComparison.leftEvent.branchLabel ?? selectedNodeComparison.leftEvent.lifecycleStage ?? "manual"} · ${formatLedgerTime(selectedNodeComparison.leftEvent.timestamp)}`
+                              : "Pick a trail event with Set as left branch."}
+                          </div>
+                        </div>
+                        <div className="rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+                          <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#5f6a82]">Right branch</div>
+                          <div className="mt-1 text-[11px] font-semibold text-[#edf2fb]">{selectedNodeComparison.rightEvent?.title ?? "No right selection"}</div>
+                          <div className="mt-1 text-[10px] text-[#74809a]">
+                            {selectedNodeComparison.rightEvent
+                              ? `${selectedNodeComparison.rightEvent.branchLabel ?? selectedNodeComparison.rightEvent.lifecycleStage ?? "manual"} · ${formatLedgerTime(selectedNodeComparison.rightEvent.timestamp)}`
+                              : "Pick a trail event with Set as right branch."}
+                          </div>
+                        </div>
+                      </div>
+                      {selectedNodeComparison.branchComparison ? (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <Badge variant="gray">{selectedNodeComparison.mergeReadiness?.status ?? "comparison"}</Badge>
+                          {selectedNodeComparison.mergeReadiness?.recommendation ? <span className="text-[10px] text-[#8aa1c4]">{selectedNodeComparison.mergeReadiness.recommendation}</span> : null}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               </div>
             ) : (
@@ -1153,20 +1427,20 @@ export function SceneIntelligenceTab() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Search evidence</div>
-                <div className="mt-1 text-[10px] text-[#74809a]">Filter the ledger by event type, scene name, node id, or note text.</div>
+                <div className="mt-1 text-[10px] text-[#74809a]">Filter the ledger by event type, scene name, node id, note text, or use `branch:` / `after:` / `before:` to jump through time.</div>
               </div>
               <Badge variant={evidenceQuery.trim() ? "blue" : "gray"}>
                 {evidenceQuery.trim() ? `${filteredOperationalEvidenceEvents.length} matches` : `${operationalEvidenceEvents.length} total`}
               </Badge>
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <input
-                type="search"
-                value={evidenceQuery}
-                onChange={(event) => setEvidenceQuery(event.target.value)}
-                placeholder="Search evidence, checkpoints, or notes"
-                className="min-w-0 flex-1 rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2 text-[11px] text-[#edf2ff] outline-none placeholder:text-[#74809a] focus:border-sky-400/40"
-              />
+                <input
+                  type="search"
+                  value={evidenceQuery}
+                  onChange={(event) => setEvidenceQuery(event.target.value)}
+                  placeholder="Search evidence, checkpoints, notes, branch:published, after:2026-05-29"
+                  className="min-w-0 flex-1 rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2 text-[11px] text-[#edf2ff] outline-none placeholder:text-[#74809a] focus:border-sky-400/40"
+                />
                     <button
                       type="button"
                       onClick={() => {
@@ -1572,15 +1846,22 @@ export function SceneIntelligenceTab() {
                         </div>
                       ) : null}
                       <div className="mt-2 flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedEvidenceEventId(event.id)}
-                          className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08]"
-                        >
-                          Preview lineage
-                        </button>
-                        {event.sceneSnapshot ? (
-                          <>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedEvidenceEventId(event.id)}
+                        className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08]"
+                      >
+                        Preview lineage
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => copyDeepLink(event)}
+                        className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08]"
+                      >
+                        Copy checkpoint link
+                      </button>
+                      {event.sceneSnapshot ? (
+                        <>
                             <button
                               type="button"
                               onClick={() => handleRestoreCheckpoint(event.id, "draft")}

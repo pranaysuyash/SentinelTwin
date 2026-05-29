@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { createSmallRetailShopScene } from "@/demo-scenes/small-retail-shop";
+import { buildOperationalEvidenceEvent } from "@/lib/operational-evidence";
 import { simulateStudio } from "@/simulation/simulate-studio";
 import { buildCompareReportData, buildReportData } from "@/report";
 import { buildReportEvidenceBundle, stringifyReportEvidenceBundle } from "@/lib/report-evidence-bundle";
@@ -9,7 +10,28 @@ describe("report evidence bundle", () => {
   test("packages a single report with its evidence trail", () => {
     const scene = createSmallRetailShopScene();
     const result = simulateStudio(scene);
-    const report = buildReportData(scene, result);
+    const report = buildReportData(scene, result, {
+      operationalEvidenceEvents: [
+        buildOperationalEvidenceEvent({
+          kind: "scene_published",
+          title: "Scene published",
+          details: "Promoted the current scene state to the published branch.",
+          actor: "user",
+          source: scene.source,
+          sceneId: scene.id,
+          sceneName: scene.name,
+          revisionDepth: scene.changeLog.length,
+          affectedNodeIds: [],
+          confidence: 0.98,
+          branchLabel: "published",
+          lifecycleStage: "published",
+          published: true,
+          beforeSummary: "Before publish",
+          afterSummary: "After publish",
+          sceneSnapshot: scene,
+        }),
+      ],
+    });
     const bundle = buildReportEvidenceBundle({
       scene,
       report,
@@ -20,6 +42,7 @@ describe("report evidence bundle", () => {
     expect(bundle.mode).toBe("single");
     expect(bundle.scene.id).toBe(scene.id);
     expect(bundle.report.siteName).toBe(scene.name);
+    expect(bundle.report.temporalTwin?.publishedCheckpointCount).toBe(1);
     expect(bundle.evidenceTrail.evidenceEntryCount).toBeGreaterThanOrEqual(0);
     expect(stringifyReportEvidenceBundle(bundle)).toContain("\"mode\": \"single\"");
   });

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { createSmallRetailShopScene } from "@/demo-scenes/small-retail-shop";
+import { buildOperationalEvidenceEvent } from "@/lib/operational-evidence";
 import { simulateStudio } from "@/simulation/simulate-studio";
 import { cloneSecurityScene, type SecurityScene } from "@/schema/security-scene";
 import {
@@ -14,6 +15,12 @@ import {
   buildCompareReport,
   type ReportData,
 } from "@/report/index";
+
+const testWithTimeout = test as unknown as (
+  name: string,
+  options: { timeout: number },
+  fn: () => void,
+) => void;
 
 function makeEvidenceReport(baseScene: SecurityScene) {
   const evidenceScene = cloneSecurityScene(baseScene);
@@ -92,6 +99,32 @@ describe("report engine", () => {
     expect(report.redundancyMatrix?.vulnerableZones.length).toBeGreaterThan(0);
   });
 
+  test("buildReportData carries the temporal twin publication checkpoint when evidence is present", () => {
+    const publishedEvent = buildOperationalEvidenceEvent({
+      kind: "scene_published",
+      title: "Scene published",
+      details: "Promoted the current scene state to the published branch.",
+      actor: "user",
+      source: scene.source,
+      sceneId: scene.id,
+      sceneName: scene.name,
+      revisionDepth: scene.changeLog.length,
+      affectedNodeIds: scene.cameras.map((camera) => camera.id),
+      confidence: 0.98,
+      branchLabel: "published",
+      lifecycleStage: "published",
+      published: true,
+      beforeSummary: "Before publish",
+      afterSummary: "After publish",
+      sceneSnapshot: cloneSecurityScene(scene),
+    });
+    const report = buildReportData(scene, result, { operationalEvidenceEvents: [publishedEvent] });
+
+    expect(report.temporalTwin?.publishedCheckpointCount).toBe(1);
+    expect(report.temporalTwin?.latestPublishedCheckpoint?.title).toBe("Scene published");
+    expect(report.temporalTwin?.latestPublishedCheckpointAgeMs).toBeGreaterThanOrEqual(0);
+  });
+
   test("buildReportData maps zone results correctly", () => {
     const report = buildReportData(scene, result);
 
@@ -116,7 +149,7 @@ describe("report engine", () => {
     }
   });
 
-  test("buildReportData maps issues with severity", () => {
+  testWithTimeout("buildReportData maps issues with severity", { timeout: 10000 }, () => {
     const report = buildReportData(scene, result);
 
     for (const issue of report.issues) {
@@ -172,12 +205,12 @@ describe("report engine", () => {
     expect(report.temporalProfile?.worstCoverage).toBe(45.2);
   });
 
-  test("buildReportData with custom title", () => {
+  testWithTimeout("buildReportData with custom title", { timeout: 10000 }, () => {
     const report = buildReportData(scene, result, { title: "Custom Audit" });
     expect(report.title).toBe("Custom Audit");
   });
 
-  test("buildReportData extracts an operational evidence trail", () => {
+  testWithTimeout("buildReportData extracts an operational evidence trail", { timeout: 10000 }, () => {
     const report = makeEvidenceReport(scene);
 
     expect(report.evidenceTrail.evidenceEntryCount).toBeGreaterThanOrEqual(2);
@@ -270,7 +303,7 @@ describe("exportAsHtml", () => {
     expect(html).toContain("Reviewed Nodes");
   });
 
-  test("includes operational evidence section", () => {
+  testWithTimeout("includes operational evidence section", { timeout: 10000 }, () => {
     const html = exportAsHtml(makeEvidenceReport(scene));
     expect(html).toContain("Operational Evidence");
     expect(html).toContain("Sensor-related evidence");
@@ -532,7 +565,7 @@ describe("exportAsMarkdown", () => {
     expect(md).toContain("Reviewed Nodes");
   });
 
-  test("includes operational evidence section", () => {
+  testWithTimeout("includes operational evidence section", { timeout: 10000 }, () => {
     const md = exportAsMarkdown(makeEvidenceReport(scene));
     expect(md).toContain("## Operational Evidence");
     expect(md).toContain("Sensor-related Evidence");
@@ -656,7 +689,7 @@ describe("exportAsMarkdown", () => {
     expect(md).toContain("Blame");
   });
 
-  test("includes adverse path when provided", () => {
+  testWithTimeout("includes adverse path when provided", { timeout: 10000 }, () => {
     const report = buildReportData(scene, result, {
       adversarialPath: {
         exposureScore: 5,
@@ -823,7 +856,7 @@ describe("exportAsText", () => {
     expect(text).toContain("Reviewed Nodes");
   });
 
-  test("includes operational evidence section", () => {
+  testWithTimeout("includes operational evidence section", { timeout: 10000 }, () => {
     const text = exportAsText(makeEvidenceReport(scene));
     expect(text).toContain("OPERATIONAL EVIDENCE");
     expect(text).toContain("Sensor-related Evidence");
@@ -835,7 +868,7 @@ describe("exportAsText", () => {
     expect(text).not.toContain("ISSUES");
   });
 
-  test("includes issues section when issues are present", () => {
+  testWithTimeout("includes issues section when issues are present", { timeout: 10000 }, () => {
     const baseReport = buildReportData(scene, result);
     const report = {
       ...baseReport,

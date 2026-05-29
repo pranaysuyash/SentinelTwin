@@ -2,6 +2,16 @@ import { z } from "zod";
 
 type CameraLiveConnectionMode = "rtsp" | "mjpeg" | "http" | "onvif" | "proxy";
 type CameraLiveConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
+export type CameraLiveAuthMode =
+  | "none"
+  | "basic"
+  | "digest"
+  | "token"
+  | "cookie"
+  | "onvif_digest"
+  | "proxy_passthrough";
+export type CameraLiveAuthState = "unauthenticated" | "authenticating" | "authenticated" | "failed";
+export type CameraLiveAuthChallengeScheme = "basic" | "digest" | "bearer" | "token" | null;
 const LIVE_SESSION_TTL_MS = 120_000;
 
 const CameraLiveConnectionRecordSchema = z.object({
@@ -11,6 +21,16 @@ const CameraLiveConnectionRecordSchema = z.object({
   liveFeedLabel: z.string().min(1).optional().nullable(),
   liveConnectionMode: z.enum(["rtsp", "mjpeg", "http", "onvif", "proxy"]).optional(),
   liveConnectionStatus: z.enum(["disconnected", "connecting", "connected", "error"]).optional(),
+  authMode: z.enum(["none", "basic", "digest", "token", "cookie", "onvif_digest", "proxy_passthrough"]).optional(),
+  authState: z.enum(["unauthenticated", "authenticating", "authenticated", "failed"]).optional(),
+  authRealm: z.string().min(1).optional().nullable(),
+  authSessionId: z.string().min(1).optional().nullable(),
+  authSessionExpiresAt: z.number().int().nonnegative().optional().nullable(),
+  transportResponseStatus: z.number().int().optional().nullable(),
+  transportResponseStatusText: z.string().min(1).optional().nullable(),
+  authChallengeHeader: z.string().min(1).optional().nullable(),
+  authChallengeScheme: z.enum(["basic", "digest", "bearer", "token"]).optional().nullable(),
+  authChallengeRealm: z.string().min(1).optional().nullable(),
   notes: z.string().min(1).optional().nullable(),
   timestamp: z.number().int().nonnegative().optional(),
 }).refine((value) => Boolean(
@@ -20,6 +40,16 @@ const CameraLiveConnectionRecordSchema = z.object({
   || value.liveFeedLabel
   || value.liveConnectionMode
   || value.liveConnectionStatus
+  || value.authMode
+  || value.authState
+  || value.authRealm
+  || value.authSessionId
+  || value.authSessionExpiresAt !== undefined
+  || value.transportResponseStatus !== undefined
+  || value.transportResponseStatusText
+  || value.authChallengeHeader
+  || value.authChallengeScheme
+  || value.authChallengeRealm
   || value.notes
 ), {
   message: "Provide at least one camera connection field.",
@@ -41,6 +71,16 @@ export const CameraLiveConnectionProbeRequestSchema = z.object({
   liveSessionStartedAt: z.number().int().nonnegative().optional(),
   liveSessionConfirmedAt: z.number().int().nonnegative().optional(),
   transportSessionId: z.string().min(1).optional(),
+  authMode: z.enum(["none", "basic", "digest", "token", "cookie", "onvif_digest", "proxy_passthrough"]).optional(),
+  authState: z.enum(["unauthenticated", "authenticating", "authenticated", "failed"]).optional(),
+  authRealm: z.string().min(1).nullable().optional(),
+  authSessionId: z.string().min(1).optional(),
+  authSessionExpiresAt: z.number().int().nonnegative().nullable().optional(),
+  transportResponseStatus: z.number().int().nullable().optional(),
+  transportResponseStatusText: z.string().min(1).nullable().optional(),
+  authChallengeHeader: z.string().min(1).nullable().optional(),
+  authChallengeScheme: z.enum(["basic", "digest", "bearer", "token"]).nullable().optional(),
+  authChallengeRealm: z.string().min(1).nullable().optional(),
   raw: z.string().default(""),
   notes: z.string().optional(),
 }).refine((value) => value.action === "disconnect" || value.action === "heartbeat" || value.raw.trim().length > 0 || Boolean(value.endpointUrl) || Boolean(value.liveFeedUrl), {
@@ -75,9 +115,19 @@ export type CameraLiveConnectionProbeResponse = {
     lastHeartbeatAt: number | null;
     probeCount: number;
     protocolProfile: "onvif_device" | "rtsp_session" | "mjpeg_stream" | "http_poll" | "proxy" | null;
-    liveFeedUrl: string | null;
-    liveFeedLabel: string | null;
-    liveConnectionMode: CameraLiveConnectionMode | null;
+    authMode: CameraLiveAuthMode;
+    authState: CameraLiveAuthState;
+  authRealm: string | null;
+  authSessionId: string | null;
+  authSessionExpiresAt: number | null;
+  transportResponseStatus: number | null;
+  transportResponseStatusText: string | null;
+  authChallengeHeader: string | null;
+  authChallengeScheme: CameraLiveAuthChallengeScheme;
+  authChallengeRealm: string | null;
+  liveFeedUrl: string | null;
+  liveFeedLabel: string | null;
+  liveConnectionMode: CameraLiveConnectionMode | null;
     liveConnectionStatus: CameraLiveConnectionStatus;
     notes: string | null;
     timestamp: number;
@@ -89,6 +139,7 @@ export type CameraLiveConnectionProbeResponse = {
 function parseJsonCandidates(raw: string): { items: unknown[]; errors: string[] } {
   const trimmed = raw.trim();
   if (!trimmed) return { items: [], errors: [] };
+  if (trimmed.startsWith("<")) return { items: [], errors: [] };
 
   try {
     const parsed = JSON.parse(trimmed);
@@ -137,9 +188,19 @@ function parseXmlCandidates(raw: string): { items: unknown[]; errors: string[] }
     const cameraName = tagText(/<(?:[A-Za-z0-9_.-]+:)?(?:CameraName|DeviceName|Name)>([^<]+)<\/(?:[A-Za-z0-9_.-]+:)?(?:CameraName|DeviceName|Name)>/i);
     const mode = tagText(/<(?:[A-Za-z0-9_.-]+:)?(?:Mode|Protocol|ConnectionMode)>([^<]+)<\/(?:[A-Za-z0-9_.-]+:)?(?:Mode|Protocol|ConnectionMode)>/i)?.toLowerCase();
     const status = tagText(/<(?:[A-Za-z0-9_.-]+:)?(?:Status|ConnectionStatus)>([^<]+)<\/(?:[A-Za-z0-9_.-]+:)?(?:Status|ConnectionStatus)>/i)?.toLowerCase();
+    const authMode = tagText(/<(?:[A-Za-z0-9_.-]+:)?(?:AuthMode|AuthenticationMode|SecurityMode)>([^<]+)<\/(?:[A-Za-z0-9_.-]+:)?(?:AuthMode|AuthenticationMode|SecurityMode)>/i)?.toLowerCase();
+    const authState = tagText(/<(?:[A-Za-z0-9_.-]+:)?(?:AuthState|AuthenticationState|AuthStatus)>([^<]+)<\/(?:[A-Za-z0-9_.-]+:)?(?:AuthState|AuthenticationState|AuthStatus)>/i)?.toLowerCase();
+    const authRealm = tagText(/<(?:[A-Za-z0-9_.-]+:)?(?:AuthRealm|AuthenticationRealm|Realm)>([^<]+)<\/(?:[A-Za-z0-9_.-]+:)?(?:AuthRealm|AuthenticationRealm|Realm)>/i);
+    const authSessionId = tagText(/<(?:[A-Za-z0-9_.-]+:)?(?:AuthSessionId|SessionId|Token)>([^<]+)<\/(?:[A-Za-z0-9_.-]+:)?(?:AuthSessionId|SessionId|Token)>/i);
+    const authSessionExpiresAtText = tagText(/<(?:[A-Za-z0-9_.-]+:)?(?:AuthSessionExpiresAt|SessionExpiresAt|ExpiresAt)>([^<]+)<\/(?:[A-Za-z0-9_.-]+:)?(?:AuthSessionExpiresAt|SessionExpiresAt|ExpiresAt)>/i);
+    const transportResponseStatusText = tagText(/<(?:[A-Za-z0-9_.-]+:)?(?:TransportResponseStatus|ResponseStatus|StatusCode)>([^<]+)<\/(?:[A-Za-z0-9_.-]+:)?(?:TransportResponseStatus|ResponseStatus|StatusCode)>/i);
+    const transportResponseStatusMessage = tagText(/<(?:[A-Za-z0-9_.-]+:)?(?:TransportResponseStatusText|ResponseStatusText|StatusText)>([^<]+)<\/(?:[A-Za-z0-9_.-]+:)?(?:TransportResponseStatusText|ResponseStatusText|StatusText)>/i);
+    const authChallengeHeader = tagText(/<(?:[A-Za-z0-9_.-]+:)?(?:AuthChallengeHeader|WWWAuthenticate|WwwAuthenticate)>([^<]+)<\/(?:[A-Za-z0-9_.-]+:)?(?:AuthChallengeHeader|WWWAuthenticate|WwwAuthenticate)>/i);
+    const authChallengeScheme = tagText(/<(?:[A-Za-z0-9_.-]+:)?(?:AuthChallengeScheme|ChallengeScheme)>([^<]+)<\/(?:[A-Za-z0-9_.-]+:)?(?:AuthChallengeScheme|ChallengeScheme)>/i)?.toLowerCase();
+    const authChallengeRealm = tagText(/<(?:[A-Za-z0-9_.-]+:)?(?:AuthChallengeRealm|ChallengeRealm)>([^<]+)<\/(?:[A-Za-z0-9_.-]+:)?(?:AuthChallengeRealm|ChallengeRealm)>/i);
     const notes = tagText(/<(?:[A-Za-z0-9_.-]+:)?(?:Notes|Message|Description)>([^<]+)<\/(?:[A-Za-z0-9_.-]+:)?(?:Notes|Message|Description)>/i);
 
-    if (!liveFeedUrl && !feedLabel && !cameraId && !cameraName && !mode && !status && !notes) {
+    if (!liveFeedUrl && !feedLabel && !cameraId && !cameraName && !mode && !status && !authMode && !authState && !authRealm && !authSessionId && !authSessionExpiresAtText && !transportResponseStatusText && !transportResponseStatusMessage && !authChallengeHeader && !authChallengeScheme && !authChallengeRealm && !notes) {
       errors.push("The XML payload did not expose a usable live connection record.");
       continue;
     }
@@ -151,6 +212,41 @@ function parseXmlCandidates(raw: string): { items: unknown[]; errors: string[] }
       liveFeedLabel: feedLabel ?? undefined,
       liveConnectionMode: mode === "rtsp" || mode === "mjpeg" || mode === "http" || mode === "onvif" || mode === "proxy" ? mode : undefined,
       liveConnectionStatus: status === "connected" || status === "connecting" || status === "disconnected" || status === "error" ? status : undefined,
+      authMode:
+        authMode === "none"
+        || authMode === "basic"
+        || authMode === "digest"
+        || authMode === "token"
+        || authMode === "cookie"
+        || authMode === "onvif_digest"
+        || authMode === "proxy_passthrough"
+          ? authMode
+          : undefined,
+      authState:
+        authState === "unauthenticated"
+        || authState === "authenticating"
+        || authState === "authenticated"
+        || authState === "failed"
+          ? authState
+          : undefined,
+      authRealm: authRealm ?? undefined,
+      authSessionId: authSessionId ?? undefined,
+      authSessionExpiresAt: authSessionExpiresAtText && Number.isFinite(Number(authSessionExpiresAtText))
+        ? Number(authSessionExpiresAtText)
+        : undefined,
+      transportResponseStatus: transportResponseStatusText && Number.isFinite(Number(transportResponseStatusText))
+        ? Number(transportResponseStatusText)
+        : undefined,
+      transportResponseStatusText: transportResponseStatusMessage ?? undefined,
+      authChallengeHeader: authChallengeHeader ?? undefined,
+      authChallengeScheme:
+        authChallengeScheme === "basic"
+        || authChallengeScheme === "digest"
+        || authChallengeScheme === "bearer"
+        || authChallengeScheme === "token"
+          ? authChallengeScheme
+          : undefined,
+      authChallengeRealm: authChallengeRealm ?? undefined,
       notes: notes ?? undefined,
     });
   }
@@ -158,13 +254,26 @@ function parseXmlCandidates(raw: string): { items: unknown[]; errors: string[] }
   return { items, errors };
 }
 
-async function resolveLiveConnectionPayload(request: CameraLiveConnectionProbeRequest) {
+type ResolvedLiveConnectionPayload = {
+  raw: string;
+  endpointUrl: string | null;
+  liveFeedUrl: string | null;
+  feedLabel: string | null;
+  responseStatus: number | null;
+  responseStatusText: string | null;
+  authChallengeHeader: string | null;
+};
+
+async function resolveLiveConnectionPayload(request: CameraLiveConnectionProbeRequest): Promise<ResolvedLiveConnectionPayload> {
   if (request.action === "disconnect") {
     return {
       raw: "",
       endpointUrl: request.endpointUrl ?? null,
       liveFeedUrl: request.liveFeedUrl ?? null,
       feedLabel: request.feedLabel ?? null,
+      responseStatus: null,
+      responseStatusText: null,
+      authChallengeHeader: null,
     };
   }
 
@@ -175,6 +284,9 @@ async function resolveLiveConnectionPayload(request: CameraLiveConnectionProbeRe
       endpointUrl: request.endpointUrl ?? null,
       liveFeedUrl: request.liveFeedUrl ?? null,
       feedLabel: request.feedLabel ?? null,
+      responseStatus: null,
+      responseStatusText: null,
+      authChallengeHeader: null,
     };
   }
 
@@ -185,6 +297,9 @@ async function resolveLiveConnectionPayload(request: CameraLiveConnectionProbeRe
       endpointUrl: null,
       liveFeedUrl: request.liveFeedUrl ?? null,
       feedLabel: request.feedLabel ?? null,
+      responseStatus: null,
+      responseStatusText: null,
+      authChallengeHeader: null,
     };
   }
 
@@ -193,12 +308,12 @@ async function resolveLiveConnectionPayload(request: CameraLiveConnectionProbeRe
   const endpointUrl = request.endpointUrl ?? probeUrl;
   const liveFeedUrl = request.liveFeedUrl ?? probeUrl;
 
-  const readResponseText = async (response: Response) => {
-    if (!response.ok) {
-      throw new Error(`Live camera connection probe failed with HTTP ${response.status}.`);
-    }
-    return (await response.text()).trim();
-  };
+  const readResponse = async (response: Response) => ({
+    raw: (await response.text()).trim(),
+    responseStatus: response.status,
+    responseStatusText: response.statusText || null,
+    authChallengeHeader: response.headers.get("www-authenticate"),
+  });
 
   if (request.protocol === "onvif") {
     try {
@@ -217,13 +332,16 @@ async function resolveLiveConnectionPayload(request: CameraLiveConnectionProbeRe
         },
         body: soapEnvelope,
       });
-      const raw = await readResponseText(soapResponse);
-      if (raw.length > 0) {
+      const response = await readResponse(soapResponse);
+      if (response.raw.length > 0 || !soapResponse.ok) {
         return {
-          raw,
+          raw: response.raw,
           endpointUrl,
           liveFeedUrl,
           feedLabel: request.feedLabel ?? null,
+          responseStatus: response.responseStatus,
+          responseStatusText: response.responseStatusText,
+          authChallengeHeader: response.authChallengeHeader,
         };
       }
     } catch {
@@ -236,11 +354,33 @@ async function resolveLiveConnectionPayload(request: CameraLiveConnectionProbeRe
     headers,
   });
 
+  const resolved = await readResponse(response);
   return {
-    raw: await readResponseText(response),
+    raw: resolved.raw,
     endpointUrl,
     liveFeedUrl,
     feedLabel: request.feedLabel ?? null,
+    responseStatus: resolved.responseStatus,
+    responseStatusText: resolved.responseStatusText,
+    authChallengeHeader: resolved.authChallengeHeader,
+  };
+}
+
+function parseAuthChallengeHeader(header: string | null | undefined): { scheme: CameraLiveAuthChallengeScheme; realm: string | null } {
+  if (!header) {
+    return { scheme: null, realm: null };
+  }
+
+  const trimmed = header.trim();
+  const schemeText = (trimmed.match(/^(\S+)/)?.[1] ?? "").toLowerCase();
+  const scheme: CameraLiveAuthChallengeScheme =
+    schemeText === "basic" || schemeText === "digest" || schemeText === "bearer" || schemeText === "token"
+      ? schemeText
+      : null;
+  const realmMatch = trimmed.match(/realm="?([^",]+)"?/i);
+  return {
+    scheme,
+    realm: realmMatch?.[1]?.trim() || null,
   };
 }
 
@@ -251,6 +391,7 @@ export async function probeCameraLiveConnection(request: CameraLiveConnectionPro
   const candidates = [...jsonCandidates.items, ...xmlCandidates.items];
   const errors: string[] = [...jsonCandidates.errors, ...xmlCandidates.errors];
   const sourceCount = candidates.length;
+  const challengeFromHeader = parseAuthChallengeHeader(payload.authChallengeHeader);
 
   const parsedCandidate = candidates
     .map((candidate) => CameraLiveConnectionRecordSchema.safeParse(candidate))
@@ -265,16 +406,75 @@ export async function probeCameraLiveConnection(request: CameraLiveConnectionPro
   const protocol = parsedCandidate?.success && parsedCandidate.data.liveConnectionMode
     ? parsedCandidate.data.liveConnectionMode
     : request.protocol;
+  const parsedTransportResponseStatus = parsedCandidate?.success ? parsedCandidate.data.transportResponseStatus : undefined;
+  const parsedTransportResponseStatusText = parsedCandidate?.success ? parsedCandidate.data.transportResponseStatusText : undefined;
+  const parsedAuthChallengeHeader = parsedCandidate?.success ? parsedCandidate.data.authChallengeHeader : undefined;
+  const responseStatus = payload.responseStatus ?? (parsedTransportResponseStatus !== undefined ? parsedTransportResponseStatus ?? null : null);
+  const responseStatusText = payload.responseStatusText ?? (parsedTransportResponseStatusText ?? null);
+  const authChallengeHeader = payload.authChallengeHeader ?? (parsedAuthChallengeHeader ?? null);
+  const authChallengeScheme = parsedCandidate?.success && parsedCandidate.data.authChallengeScheme
+    ? parsedCandidate.data.authChallengeScheme
+    : challengeFromHeader.scheme;
+  const authChallengeRealm = parsedCandidate?.success && parsedCandidate.data.authChallengeRealm
+    ? parsedCandidate.data.authChallengeRealm
+    : challengeFromHeader.realm;
+  const receivedAuthChallenge = request.action !== "disconnect" && (responseStatus === 401 || responseStatus === 403 || Boolean(authChallengeHeader));
   const status = request.action === "disconnect"
     ? "disconnected"
     : parsedCandidate?.success
       ? parsedCandidate.data.liveConnectionStatus ?? "connected"
-      : "error";
+      : receivedAuthChallenge
+        ? "connecting"
+        : "error";
   const notes = request.action === "disconnect"
     ? (request.notes?.trim() || null)
     : parsedCandidate?.success && parsedCandidate.data.notes
       ? parsedCandidate.data.notes.trim()
       : request.notes?.trim() || null;
+  const parsedAuthMode = parsedCandidate?.success ? parsedCandidate.data.authMode : undefined;
+  const parsedAuthState = parsedCandidate?.success ? parsedCandidate.data.authState : undefined;
+  const parsedAuthRealm = parsedCandidate?.success ? parsedCandidate.data.authRealm : undefined;
+  const parsedAuthSessionId = parsedCandidate?.success ? parsedCandidate.data.authSessionId : undefined;
+  const parsedAuthSessionExpiresAt = parsedCandidate?.success ? parsedCandidate.data.authSessionExpiresAt : undefined;
+  const authMode: CameraLiveAuthMode = request.authMode
+    ?? parsedAuthMode
+    ?? (protocol === "onvif"
+      ? "onvif_digest"
+      : protocol === "rtsp"
+        ? "digest"
+        : protocol === "mjpeg" || protocol === "http"
+          ? "basic"
+          : protocol === "proxy"
+            ? "proxy_passthrough"
+            : "none");
+  const authState: CameraLiveAuthState = request.authState
+    ?? parsedAuthState
+    ?? (request.action === "disconnect"
+      ? "unauthenticated"
+      : status === "connected"
+        ? "authenticated"
+        : status === "error"
+          ? "failed"
+          : "authenticating");
+  const authRealm = request.authRealm ?? parsedAuthRealm ?? null;
+  const authSessionId = request.authSessionId ?? parsedAuthSessionId ?? request.transportSessionId ?? request.liveSessionId ?? null;
+  const authSessionExpiresAt = request.authSessionExpiresAt
+    ?? parsedAuthSessionExpiresAt
+    ?? (authState === "authenticated" && request.action !== "disconnect"
+      ? ((request.liveSessionConfirmedAt ?? Date.now()) + LIVE_SESSION_TTL_MS)
+      : null);
+  const transportSessionState = request.action === "disconnect"
+    ? "closing"
+    : status === "connected"
+      ? "active"
+      : receivedAuthChallenge
+        ? "negotiating"
+        : "error";
+  const transportNegotiationSummary = receivedAuthChallenge
+    ? `Auth challenge ${authChallengeScheme ?? "unknown"}${authChallengeRealm ? ` realm ${authChallengeRealm}` : ""}${responseStatus ? ` (${responseStatus})` : ""}`
+    : responseStatus
+      ? `Transport response ${responseStatus}${responseStatusText ? ` ${responseStatusText}` : ""}`
+      : null;
   if (request.action !== "disconnect" && candidates.length > 0 && !parsedCandidate?.success) {
     errors.push("The live connection probe payload did not match the expected connection schema.");
   }
@@ -289,7 +489,9 @@ export async function probeCameraLiveConnection(request: CameraLiveConnectionPro
       ? "idle"
       : status === "connected"
         ? "connected"
-        : "error",
+        : receivedAuthChallenge
+          ? "probing"
+          : "error",
     liveSessionStartedAt: request.action === "disconnect"
       ? request.liveSessionStartedAt ?? request.submittedAt ?? Date.now()
       : request.liveSessionStartedAt ?? request.submittedAt ?? Date.now(),
@@ -306,11 +508,7 @@ export async function probeCameraLiveConnection(request: CameraLiveConnectionPro
     transportSessionId: request.action === "disconnect"
       ? request.transportSessionId ?? request.liveSessionId ?? null
       : request.transportSessionId ?? request.liveSessionId ?? `transport_session_${request.cameraId}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
-    transportSessionState: request.action === "disconnect"
-      ? "closing"
-      : status === "connected"
-        ? "active"
-        : "error",
+    transportSessionState,
     lastHeartbeatAt: status === "connected" ? Date.now() : null,
     probeCount: request.action === "disconnect" ? 0 : 1,
     protocolProfile:
@@ -327,17 +525,36 @@ export async function probeCameraLiveConnection(request: CameraLiveConnectionPro
     liveFeedLabel: feedLabel,
     liveConnectionMode: request.action === "disconnect" ? null : protocol,
     liveConnectionStatus: status,
+    authMode,
+    authState,
+    authRealm,
+    authSessionId,
+    authSessionExpiresAt,
+    transportResponseStatus: responseStatus,
+    transportResponseStatusText: responseStatusText,
+    authChallengeHeader,
+    authChallengeScheme,
+    authChallengeRealm,
     notes,
     timestamp: parsedCandidate?.success && parsedCandidate.data.timestamp ? parsedCandidate.data.timestamp : Date.now(),
   } as const;
 
   const receivedAt = new Date(request.submittedAt ?? Date.now()).toISOString();
+  const authSummary = authState === "authenticated"
+    ? `Authenticated via ${authMode.replaceAll("_", " ")}`
+    : authState === "unauthenticated"
+      ? "Unauthenticated"
+      : authState === "failed"
+        ? "Authentication failed"
+        : `Authenticating via ${authMode.replaceAll("_", " ")}`;
   const summary = request.action === "disconnect"
-    ? `Disconnected ${request.cameraName} from the live camera binding.`
+    ? `Disconnected ${request.cameraName} from the live camera binding. ${authSummary}.`
     : request.action === "refresh" && status === "connected"
-      ? `Refreshed live session for ${request.cameraName} via ${protocol.toUpperCase()} and confirmed the connection.`
+      ? `Refreshed live session for ${request.cameraName} via ${protocol.toUpperCase()} and confirmed the connection. ${authSummary}.`
+      : receivedAuthChallenge
+        ? `Live camera connection challenge for ${request.cameraName} returned ${responseStatus ?? "an auth challenge"}. ${authSummary}. ${transportNegotiationSummary ?? ""}`.trim()
       : status === "connected"
-      ? `Probed ${request.cameraName} via ${protocol.toUpperCase()} and archived the live connection.`
+      ? `Probed ${request.cameraName} via ${protocol.toUpperCase()} and archived the live connection. ${authSummary}.`
       : `Live camera connection probe did not confirm a usable connection for ${request.cameraName}.`;
 
   return {

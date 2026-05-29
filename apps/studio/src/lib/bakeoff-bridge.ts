@@ -14,6 +14,7 @@ export interface BakeoffLineSegment {
   y1: number;
   x2: number;
   y2: number;
+  z?: number;
   class_?: string;
   confidence?: number;
 }
@@ -148,7 +149,7 @@ export function bakeoffToSecurityScene(
     const mx = shiftX((clamp01(d.x1) + clamp01(d.x2)) / 2);
     const mz = shiftZ((clamp01(d.y1) + clamp01(d.y2)) / 2);
     const dx = Math.abs(clamp01(d.x2) - clamp01(d.x1));
-    const dz = Math.abs(clamp01(d.z ?? d.y2) - clamp01(d.y1));
+    const dz = Math.abs(clamp01(d.y2) - clamp01(d.y1));
     const widthM = Math.max(0.5, Math.sqrt(dx * dx + dz * dz) * scaleRef.knownDimensionM);
     return {
       id: makeId("door"),
@@ -168,7 +169,7 @@ export function bakeoffToSecurityScene(
     const mx = shiftX((clamp01(w.x1) + clamp01(w.x2)) / 2);
     const mz = shiftZ((clamp01(w.y1) + clamp01(w.y2)) / 2);
     const dx = Math.abs(clamp01(w.x2) - clamp01(w.x1));
-    const dz = Math.abs(clamp01(w.z ?? w.y2) - clamp01(w.y1));
+    const dz = Math.abs(clamp01(w.y2) - clamp01(w.y1));
     const widthM = Math.max(0.3, Math.sqrt(dx * dx + dz * dz) * scaleRef.knownDimensionM);
     return {
       id: makeId("window"),

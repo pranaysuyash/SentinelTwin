@@ -204,7 +204,15 @@ function FeedArtifacts({
           <div className="mt-1 text-[9px] font-semibold normal-case tracking-normal text-white">{operationalFusion?.operationalHealthLabel}</div>
           <div className="mt-1 space-y-0.5 text-[8px] font-medium uppercase tracking-[0.12em] text-cyan-100/75">
             <div>Metadata: {operationalFusion?.cameraMetadataEvent ? `${operationalFusion.cameraMetadataEvent.status ?? "unknown"} · ${operationalFusion.cameraMetadataEvent.clarity ?? "unknown"}` : "none"}</div>
-            <div>Connection: {operationalFusion?.cameraLiveConnectionEvent ? `${operationalFusion.cameraLiveConnectionEvent.liveConnectionStatus ?? "unknown"} · ${operationalFusion.cameraLiveConnectionEvent.transportSessionState ?? "transport?"}` : "none"}</div>
+            <div>Connection: {operationalFusion?.cameraLiveConnectionEvent ? `${operationalFusion.cameraLiveConnectionEvent.liveConnectionStatus ?? "unknown"} · ${operationalFusion.cameraLiveConnectionEvent.transportSessionState ?? "transport?"}${operationalFusion.cameraLiveConnectionEvent.transportResponseStatus == null ? "" : ` · ${operationalFusion.cameraLiveConnectionEvent.transportResponseStatus}${operationalFusion.cameraLiveConnectionEvent.transportResponseStatusText ? ` ${operationalFusion.cameraLiveConnectionEvent.transportResponseStatusText}` : ""}`}` : "none"}</div>
+            <div>Auth: {operationalFusion?.cameraLiveConnectionEvent ? `${operationalFusion.cameraLiveConnectionEvent.authState ?? "unknown"} · ${operationalFusion.cameraLiveConnectionEvent.authMode ?? "unknown"}${operationalFusion.cameraLiveConnectionEvent.authChallengeScheme ? ` · ${operationalFusion.cameraLiveConnectionEvent.authChallengeScheme}` : ""}` : "none"}</div>
+            <div>
+              Auth session: {operationalFusion?.cameraLiveConnectionEvent?.authSessionId ?? "none"}
+              {operationalFusion?.cameraLiveConnectionEvent?.authSessionExpiresAt == null
+                ? ""
+                : ` · expires ${new Date(operationalFusion?.cameraLiveConnectionEvent?.authSessionExpiresAt ?? 0).toLocaleTimeString()}`}
+            </div>
+            <div>Challenge: {operationalFusion?.cameraLiveConnectionEvent?.authChallengeHeader ?? "none"}</div>
             <div>Sensors: {sensorFusion.activeCount} / {sensorFusion.totalCount}</div>
             <div>Nearest: {sensorFusion.nearestSensorLabel}</div>
           </div>

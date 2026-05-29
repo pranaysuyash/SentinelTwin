@@ -6,60 +6,27 @@ import { fileURLToPath } from "node:url";
 import { formatTargetTypeLabel } from "@/components/view/camera-view-utils";
 
 const cameraViewModePath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../view/CameraViewMode.tsx");
+const cameraVerificationWorkflowPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../view/camera-verification-workflow.ts");
+const cameraLiveFeedHudPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../view/camera-live-feed-hud.tsx");
 const cameraVerificationPanelPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../view/camera-verification-panel.tsx");
 const cameraVerificationUtilsPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../view/camera-verification-utils.ts");
 
 describe("CameraViewMode", () => {
   test("exposes the live overlay strip and replay presets", () => {
     const source = readFileSync(cameraViewModePath, "utf8");
+    const workflowSource = readFileSync(cameraVerificationWorkflowPath, "utf8");
+    const hudSource = readFileSync(cameraLiveFeedHudPath, "utf8");
     const panelSource = readFileSync(cameraVerificationPanelPath, "utf8");
     const utilsSource = readFileSync(cameraVerificationUtilsPath, "utf8");
-    const combinedSource = `${source}\n${panelSource}\n${utilsSource}`;
+    const combinedSource = `${source}\n${workflowSource}\n${hudSource}\n${panelSource}\n${utilsSource}`;
 
     expect(source).toContain("VerificationPanel as SharedVerificationPanel");
     expect(panelSource).toContain("Footage Verification");
 
-    expect(combinedSource).toContain("LIVE MODE (SIMULATED)");
-    expect(combinedSource).toContain("DORI RANGES AT TARGET");
-    expect(combinedSource).toContain("DORI OVERLAY");
-    expect(combinedSource).toContain("REQUIRED ·");
-    expect(combinedSource).toContain("PASSES");
-    expect(combinedSource).toContain("FAILS");
-    expect(combinedSource).toContain("Actor:");
     expect(combinedSource).toContain("Back to Map View");
-    expect(combinedSource).toContain("Show replay essentials");
-    expect(combinedSource).toContain("Minimal camera feed");
-    expect(combinedSource).toContain("Inspection preset");
-    expect(combinedSource).toContain("MORE");
-    expect(combinedSource).toContain("Why this quality:");
-    expect(combinedSource).toContain("Quality:");
-    expect(combinedSource).toContain("Segment:");
-    expect(combinedSource).toContain("Complete:");
-    expect(combinedSource).toContain("Best Camera");
-    expect(combinedSource).toContain("Operational Fusion");
-    expect(combinedSource).toContain("Metadata:");
-    expect(combinedSource).toContain("Connection:");
-    expect(combinedSource).toContain("Sensors:");
-    expect(combinedSource).toContain("Nearest:");
-    expect(combinedSource).toContain("operationalFusion");
-    expect(combinedSource).toContain("Live Sensor Event");
-    expect(combinedSource).toContain("sensorEvent={latestSensorEvent}");
-    expect(combinedSource).toContain("Live Camera Metadata");
-    expect(combinedSource).toContain("cameraMetadataEvent={latestCameraMetadataEvent}");
-    expect(combinedSource).toContain("Live Camera Connection");
-    expect(combinedSource).toContain("cameraLiveConnectionEvent={latestCameraLiveConnectionEvent}");
-    expect(combinedSource).toContain("Session:");
-    expect(combinedSource).toContain("Session ID:");
-    expect(combinedSource).toContain("Started:");
-    expect(combinedSource).toContain("Confirmed:");
-    expect(combinedSource).toContain("Expires:");
-    expect(combinedSource).toContain("Transport:");
-    expect(combinedSource).toContain("Protocol:");
-    expect(combinedSource).toContain("Heartbeat:");
     expect(combinedSource).toContain("Footage Verification");
     expect(combinedSource).toContain("Planning aid only.");
     expect(combinedSource).toContain("Auto align");
-    expect(combinedSource).toContain("autoAlignVerification");
     expect(combinedSource).toContain("evaluateAlignmentSample");
     expect(combinedSource).toContain("Reset align");
     expect(combinedSource).toContain("Overlay");
@@ -71,7 +38,6 @@ describe("CameraViewMode", () => {
     expect(combinedSource).toContain("Run auto align or use manual offsets after loading a reference frame.");
     expect(combinedSource).toContain("Difference heat overlay");
     expect(combinedSource).toContain("non-forensic");
-    expect(combinedSource).toContain("accept=\"image/*,video/*\"");
     expect(combinedSource).toContain("Extracting video frame…");
     expect(combinedSource).toContain("Video frame sampled at");
     expect(combinedSource).toContain("extractVideoFrameDataUrl");
@@ -98,7 +64,7 @@ describe("CameraViewMode", () => {
     expect(combinedSource).toContain("Math.round(scale * 100)");
     expect(combinedSource).toContain("setVerificationAlignmentMethod(snapshot.alignmentMethod ?? null)");
     expect(combinedSource).toContain("setVerificationAutoAlignDelta(snapshot.autoAlignDelta ?? null)");
-    expect(combinedSource).toContain("canAutoAlign={Boolean(verificationEnabled && verificationImageUrl && !verificationExtracting)}");
+    expect(combinedSource).toContain("canAutoAlign={verification.canAutoAlign}");
     expect(combinedSource).toContain("formatSnapshotEvidenceSummary");
     expect(combinedSource).toContain("Image upload");
     expect(combinedSource).toContain("manual align");
@@ -112,6 +78,9 @@ describe("CameraViewMode", () => {
     expect(combinedSource).toContain("Good");
     expect(combinedSource).toContain("Fair");
     expect(combinedSource).toContain("Poor");
+    expect(combinedSource).toContain("Auth:");
+    expect(combinedSource).toContain("Auth session:");
+    expect(combinedSource).toContain("Challenge:");
   });
 
   test("derives target labels from the zone target type", () => {

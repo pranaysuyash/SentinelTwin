@@ -1,10 +1,13 @@
 import { describe, expect, test } from "bun:test";
 
+import { createSmallRetailShopScene } from "@/demo-scenes/small-retail-shop";
+import { buildSecurityOutcomeModel } from "@/lib/security-outcome/security-outcome-model";
 import { simulateStudio } from "@/simulation/simulate-studio";
 import { qualityToScore } from "@/simulation/dori";
 import { computeCoverageCells } from "@/simulation/coverage";
 import {
   createTestCamera,
+  createTestLight,
   createTestObstruction,
   createTestScene,
   findCellNear,
@@ -83,7 +86,193 @@ function buildWindowStateScene(state: "closed_glass" | "curtain", visionTransmis
   return scene;
 }
 
+function makeNightRetailScene(withLight: boolean) {
+  const scene = createSmallRetailShopScene();
+  scene.assumptions.timeOfDay = "night";
+  scene.securityLights = withLight
+    ? [createTestLight({ position: [5.2, 2.8, 4.8], brightness: "very_high", rangeM: 8, illuminatesNightCoverage: true })]
+    : [];
+
+  for (const camera of scene.cameras) {
+    camera.nightMode = "none";
+    camera.irRangeM = 0;
+  }
+
+  return scene;
+}
+
+function makeRedundancyScene() {
+  const scene = createTestScene({
+    width: 8,
+    depth: 8,
+    cameras: [
+      createTestCamera({
+        id: "cam_left",
+        name: "Left Camera",
+        position: [2.2, 2.5, 3],
+        yawDeg: 180,
+        pitchDeg: -20,
+        fovHorizontalDeg: 160,
+        rangeM: 12,
+      }),
+      createTestCamera({
+        id: "cam_right",
+        name: "Right Camera",
+        position: [5.8, 2.5, 3],
+        yawDeg: 180,
+        pitchDeg: -20,
+        fovHorizontalDeg: 160,
+        rangeM: 12,
+      }),
+      createTestCamera({
+        id: "cam_center",
+        name: "Center Camera",
+        position: [4, 2.5, 3],
+        yawDeg: 180,
+        pitchDeg: -20,
+        fovHorizontalDeg: 160,
+        rangeM: 12,
+      }),
+    ],
+    assumptions: {
+      showAssumptionsPanel: true,
+    },
+  });
+
+  scene.criticalZones = [
+    {
+      id: "zone_redundant",
+      nodeType: "critical_zone",
+      label: "Redundant Zone",
+      polygon: [
+        [3.5, 4],
+        [4.5, 4],
+        [4.5, 5],
+        [3.5, 5],
+      ],
+      heightM: 2,
+      priority: "high",
+      requiredQuality: "detection",
+      targetType: "person_detection",
+      nightRequired: false,
+      redundancyRequired: true,
+      privacyZone: false,
+      source: "manual",
+      reviewStatus: "unreviewed",
+      sourceTrace: "",
+      geometryValidity: "valid",
+    },
+  ];
+
+  return scene;
+}
+
 describe("golden simulation product claims", () => {
+  test("baseline small retail shop still simulates the expected counter workflow", () => {
+    const scene = createSmallRetailShopScene();
+    const result = simulateStudio(scene);
+
+    expect(result.totalCoveragePct).toBeGreaterThan(0);
+    expect(result.cameraResults).toHaveLength(scene.cameras.length);
+    expect(result.criticalZoneResults).toHaveLength(1);
+    expect(result.criticalZoneResults[0]?.label).toBe("Cash Counter");
+    expect(result.pathResults[0]?.timeline.length).toBeGreaterThan(0);
+    expect(result.blindSpotFingerprint).toBeDefined();
+  });
+
+  test("turning off the entrance camera lowers coverage on the small retail shop baseline", () => {
+    const baseline = simulateStudio(createSmallRetailShopScene());
+    const scene = createSmallRetailShopScene();
+    const camera = scene.cameras.find((entry) => entry.id === "cam_entrance");
+
+    if (!camera) {
+      throw new Error("Expected the entrance camera in the demo scene");
+    }
+
+    camera.status = "off";
+
+    const result = simulateStudio(scene);
+
+    expect(result.totalCoveragePct).toBeLessThan(baseline.totalCoveragePct);
+    expect(result.cameraResults.find((entry) => entry.cameraId === "cam_entrance")?.offlineImpact).toBeDefined();
+  });
+
+  test("moving the cupboard away from the aisle improves the small retail shop coverage", () => {
+    const baseline = simulateStudio(createSmallRetailShopScene());
+    const scene = createSmallRetailShopScene();
+    const cupboard = scene.obstructions.find((entry) => entry.id === "obs_cupboard_blocker");
+
+    if (!cupboard) {
+      throw new Error("Expected the cupboard blocker in the demo scene");
+    }
+
+    cupboard.position = [0.5, 0.5, 0.5];
+    cupboard.dimensions = [0.5, 0.5, 0.5];
+
+    const result = simulateStudio(scene);
+
+    expect(result.totalCoveragePct).toBeGreaterThanOrEqual(baseline.totalCoveragePct);
+    expect(result.criticalZoneResults[0]?.actualQuality).toBeDefined();
+  });
+
+  test("night mode recovers when a light is added to the retail scene", () => {
+    const darkScene = makeNightRetailScene(false);
+    const litScene = makeNightRetailScene(true);
+
+    const darkResult = simulateStudio(darkScene);
+    const litResult = simulateStudio(litScene);
+
+    expect(litResult.averageWalkableQuality).toBeGreaterThan(darkResult.averageWalkableQuality);
+    expect(litResult.identificationAreaPct).toBeGreaterThanOrEqual(darkResult.identificationAreaPct);
+  });
+
+  test("privacy zones visible in the retail scene emit a privacy issue", () => {
+    const scene = createSmallRetailShopScene();
+    scene.privacyZones = [
+      {
+        id: "privacy_front_counter",
+        nodeType: "privacy_zone",
+        label: "Front Counter Privacy",
+        polygon: [
+          [3.7, 4.5],
+          [5.2, 4.5],
+          [5.2, 6.2],
+          [3.7, 6.2],
+        ],
+        restriction: "no_video",
+        regulation: "GDPR",
+        source: "manual",
+        reviewStatus: "unreviewed",
+        sourceTrace: "",
+        geometryValidity: "valid",
+      },
+    ];
+
+    const result = simulateStudio(scene);
+
+    expect(result.coverageCells.some((cell) => cell.privacyRestricted)).toBe(true);
+    expect(result.issues.some((issue) => issue.category === "privacy")).toBe(true);
+  });
+
+  testWithTimeout("redundancy is preserved with one camera offline and degrades to single-point failure", { timeout: 15000 }, () => {
+    const scene = makeRedundancyScene();
+    const baseline = simulateStudio(scene);
+    const baselineOutcome = buildSecurityOutcomeModel(scene, baseline, null);
+
+    const oneOffline = makeRedundancyScene();
+    const oneOfflineCamera = oneOffline.cameras.find((camera) => camera.id === "cam_right");
+    if (!oneOfflineCamera) {
+      throw new Error("Expected right redundancy camera");
+    }
+    oneOfflineCamera.status = "off";
+    const preservedResult = simulateStudio(oneOffline);
+    const preservedOutcome = buildSecurityOutcomeModel(oneOffline, preservedResult, null);
+
+    expect(baselineOutcome.summary.redundancyStatus).not.toBe("fails");
+    expect(preservedResult.criticalZoneResults[0]?.status).toBe("pass");
+    expect(preservedOutcome.summary.redundancyStatus).toBe("single_point_failure");
+  });
+
   test("door open improves line-of-sight outcome versus closed door", () => {
     const closedCells = computeCoverageCells(buildDoorStateScene("closed"), 4);
     const openCells = computeCoverageCells(buildDoorStateScene("open"), 4);

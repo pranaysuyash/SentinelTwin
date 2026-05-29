@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 
 import { describeAiProviderGovernance, normalizeAiProviderSelection } from "@/agents/provider-selection";
 import type { ModelEvalSuiteResult } from "@/agents/model-eval";
+import { buildPromptRegistrySnapshot } from "@/agents/prompt-registry";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 import { createSmallRetailShopScene } from "@/demo-scenes/small-retail-shop";
 import { useStudioStore } from "@/store/studio-store";
@@ -177,6 +178,7 @@ describe("studio store project metadata", () => {
         cloudAvailable: true,
       },
       governance,
+      promptRegistry: buildPromptRegistrySnapshot(),
       summary: {
         total: 5,
         passed: 4,

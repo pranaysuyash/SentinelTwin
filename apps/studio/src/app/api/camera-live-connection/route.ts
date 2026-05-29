@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { appendCameraLiveConnectionHistory, loadCameraLiveConnectionHistory } from "@/lib/camera-live-connection-history";
 import { appendCameraLiveSessionRecord, closeCameraLiveSessionRecord, pruneExpiredCameraLiveSessionRegistry, renewCameraLiveSessionRecord } from "@/lib/camera-live-session-registry";
-import { CameraLiveConnectionProbeRequestSchema, probeCameraLiveConnection } from "@/lib/camera-live-connection";
+import { CameraLiveConnectionProbeRequestSchema, probeCameraLiveConnection, type CameraLiveConnectionProbeRequest } from "@/lib/camera-live-connection";
 
 export async function GET() {
   const history = loadCameraLiveConnectionHistory();
@@ -43,6 +43,23 @@ export async function POST(request: Request) {
     if (parsed.data.action === "heartbeat") {
       const sessionId = parsed.data.liveSessionId ?? activeSession?.sessionId ?? `live_session_${parsed.data.cameraId}_${storedAt}`;
       const transportSessionId = parsed.data.transportSessionId ?? activeSession?.transportSessionId ?? `transport_session_${parsed.data.cameraId}_${storedAt}`;
+      const authMode = parsed.data.authMode ?? activeSession?.authMode ?? "onvif_digest";
+      const authState = parsed.data.authState ?? activeSession?.authState ?? "authenticated";
+      const authRealm = parsed.data.authRealm ?? activeSession?.authRealm ?? null;
+      const authSessionId = parsed.data.authSessionId ?? activeSession?.authSessionId ?? transportSessionId ?? sessionId;
+      const authSessionExpiresAt = parsed.data.authSessionExpiresAt ?? activeSession?.authSessionExpiresAt ?? storedAt + 120_000;
+      const transportResponseStatus = parsed.data.transportResponseStatus ?? activeSession?.transportResponseStatus ?? null;
+      const transportResponseStatusText = parsed.data.transportResponseStatusText ?? activeSession?.transportResponseStatusText ?? null;
+      const authChallengeHeader = parsed.data.authChallengeHeader ?? activeSession?.authChallengeHeader ?? null;
+      const authChallengeScheme = parsed.data.authChallengeScheme ?? activeSession?.authChallengeScheme ?? null;
+      const authChallengeRealm = parsed.data.authChallengeRealm ?? activeSession?.authChallengeRealm ?? null;
+      const authSummary = authState === "authenticated"
+        ? `Authenticated via ${authMode.replaceAll("_", " ")}`
+        : authState === "unauthenticated"
+          ? "Unauthenticated"
+          : authState === "failed"
+            ? "Authentication failed"
+            : `Authenticating via ${authMode.replaceAll("_", " ")}`;
       const heartbeatRecord = {
         ok: true as const,
         source: parsed.data.source,
@@ -54,7 +71,7 @@ export async function POST(request: Request) {
         endpointUrl: parsed.data.endpointUrl ?? parsed.data.liveFeedUrl ?? null,
         liveFeedUrl: parsed.data.liveFeedUrl ?? parsed.data.endpointUrl ?? null,
         feedLabel: parsed.data.feedLabel ?? activeSession?.feedLabel ?? null,
-        summary: `Heartbeat renewed the live session for ${parsed.data.cameraName}.`,
+        summary: `Heartbeat renewed the live session for ${parsed.data.cameraName}. ${authSummary}.`,
         record: {
           cameraId: parsed.data.cameraId,
           cameraName: parsed.data.cameraName,
@@ -68,6 +85,16 @@ export async function POST(request: Request) {
           lastHeartbeatAt: storedAt,
           probeCount: (activeSession?.probeCount ?? 0) + 1,
           protocolProfile: activeSession?.protocolProfile ?? (parsed.data.protocol === "onvif" ? "onvif_device" : parsed.data.protocol === "rtsp" ? "rtsp_session" : parsed.data.protocol === "mjpeg" ? "mjpeg_stream" : parsed.data.protocol === "http" ? "http_poll" : "proxy"),
+          authMode,
+          authState,
+          authRealm,
+          authSessionId,
+          authSessionExpiresAt,
+          transportResponseStatus,
+          transportResponseStatusText,
+          authChallengeHeader,
+          authChallengeScheme,
+          authChallengeRealm,
           liveFeedUrl: parsed.data.liveFeedUrl ?? activeSession?.liveFeedUrl ?? null,
           liveFeedLabel: parsed.data.feedLabel ?? activeSession?.feedLabel ?? null,
           liveConnectionMode: parsed.data.protocol,
@@ -98,8 +125,17 @@ export async function POST(request: Request) {
         lastHeartbeatAt: storedAt,
         probeCount: heartbeatRecord.record.probeCount,
         protocolProfile: heartbeatRecord.record.protocolProfile,
+        authMode,
+        authState,
+        authRealm,
+        authSessionId,
+        authSessionExpiresAt,
+        transportResponseStatus,
+        transportResponseStatusText,
+        authChallengeHeader,
+        authChallengeScheme,
+        authChallengeRealm,
         sessionExpiresAt: heartbeatRecord.record.liveSessionExpiresAt,
-        lastAction: "heartbeat",
         summary: heartbeatRecord.summary,
       });
 
@@ -117,7 +153,22 @@ export async function POST(request: Request) {
       });
     }
 
-    const summary = await probeCameraLiveConnection(parsed.data);
+    const probeRequest: CameraLiveConnectionProbeRequest = parsed.data.action === "disconnect"
+      ? {
+          ...parsed.data,
+          authMode: parsed.data.authMode ?? activeSession?.authMode ?? "none",
+          authState: parsed.data.authState ?? "unauthenticated",
+          authRealm: parsed.data.authRealm ?? activeSession?.authRealm ?? null,
+          authSessionId: parsed.data.authSessionId ?? activeSession?.authSessionId ?? activeSession?.transportSessionId ?? activeSession?.sessionId ?? undefined,
+          authSessionExpiresAt: null,
+          transportResponseStatus: parsed.data.transportResponseStatus ?? activeSession?.transportResponseStatus ?? null,
+          transportResponseStatusText: parsed.data.transportResponseStatusText ?? activeSession?.transportResponseStatusText ?? null,
+          authChallengeHeader: parsed.data.authChallengeHeader ?? activeSession?.authChallengeHeader ?? null,
+          authChallengeScheme: parsed.data.authChallengeScheme ?? activeSession?.authChallengeScheme ?? null,
+          authChallengeRealm: parsed.data.authChallengeRealm ?? activeSession?.authChallengeRealm ?? null,
+        }
+      : parsed.data;
+    const summary = await probeCameraLiveConnection(probeRequest);
     const sessionId = summary.record.liveSessionId
       ?? parsed.data.liveSessionId
       ?? (parsed.data.action === "disconnect"
@@ -129,7 +180,7 @@ export async function POST(request: Request) {
       } else {
         appendCameraLiveSessionRecord({
           sessionId,
-          status: summary.record.liveConnectionStatus === "connected" ? "active" : "expired",
+          status: summary.record.liveConnectionStatus === "connected" || summary.record.liveConnectionStatus === "connecting" ? "active" : "expired",
           cameraId: summary.record.cameraId,
           cameraName: summary.record.cameraName,
           sceneId: parsed.data.sceneId ?? null,
@@ -147,6 +198,16 @@ export async function POST(request: Request) {
           lastHeartbeatAt: summary.record.lastHeartbeatAt,
           probeCount: summary.record.probeCount,
           protocolProfile: summary.record.protocolProfile,
+          authMode: summary.record.authMode,
+          authState: summary.record.authState,
+          authRealm: summary.record.authRealm,
+          authSessionId: summary.record.authSessionId,
+          authSessionExpiresAt: summary.record.authSessionExpiresAt,
+          transportResponseStatus: summary.record.transportResponseStatus,
+          transportResponseStatusText: summary.record.transportResponseStatusText,
+          authChallengeHeader: summary.record.authChallengeHeader,
+          authChallengeScheme: summary.record.authChallengeScheme,
+          authChallengeRealm: summary.record.authChallengeRealm,
           sessionExpiresAt: summary.record.liveSessionExpiresAt,
           lastAction: parsed.data.action,
           summary: summary.summary,

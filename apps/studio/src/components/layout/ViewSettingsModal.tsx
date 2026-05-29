@@ -34,7 +34,7 @@ const PRESET_OPTIONS: Array<{ id: WorkspacePreset; label: string; description: s
   { id: "compare", label: "Compare", description: "Before/after inspection" },
   { id: "report", label: "Report", description: "Client handoff and evidence summary" },
   { id: "debug", label: "Debug", description: "Dense diagnostics and overlays" },
-  { id: "focus", label: "Focus", description: "Minimal chrome demo mode" },
+  { id: "focus", label: "Focus", description: "Minimal chrome workspace mode" },
 ];
 
 const CANVAS_MODES = [

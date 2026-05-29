@@ -84,8 +84,38 @@ describe("computeCoverageCells occlusion handling", () => {
       distanceM: expect.any(Number),
       hAngleDeg: expect.any(Number),
       vAngleDeg: expect.any(Number),
+      edgePenaltyMultiplier: expect.any(Number),
+      clarityMultiplier: expect.any(Number),
+      materialTransmission: expect.any(Number),
+      glarePenalty: expect.any(Number),
+      lightingPenalty: expect.any(Number),
+      finalPpmMultiplier: expect.any(Number),
       reasonCodes: expect.any(Array),
     });
+  });
+
+  test("exposes numeric penalty telemetry for low-light and poor-clarity cameras", () => {
+    const scene = createTestScene({
+      cameras: [
+        createTestCamera({
+          id: "cam_penalties",
+          position: [2, 2.5, 2],
+          yawDeg: 0,
+          pitchDeg: -30,
+          rangeM: 12,
+          clarity: "poor",
+          nightMode: "none",
+        }),
+      ],
+    });
+    scene.assumptions.timeOfDay = "night";
+    scene.assumptions.interiorLightLevel = "dark";
+
+    const evaluation = createCoverageEvaluator(scene).evaluatePoint(scene.cameras[0], [2.875, 1.125]);
+
+    expect(evaluation.clarityMultiplier).toBeLessThan(1);
+    expect(evaluation.lightingPenalty).toBeGreaterThan(0);
+    expect(evaluation.finalPpmMultiplier).toBeLessThan(1);
   });
 
   test("applies the scene PPM thresholds to live camera quality scoring", () => {

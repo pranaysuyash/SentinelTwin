@@ -1,6 +1,6 @@
 # Current Implementation State — Camera Studio
 
-**Updated:** 2026-05-29 (session 31: remote support delivery queue)
+**Updated:** 2026-05-29 (session 32: shared-workspace access routing)
 **Source:** Direct code audit of apps/studio/src/
 **Purpose:** Accurate baseline of what is actually built, tested, and rendering.
 Use this instead of the earlier CAMERASTUDIO_GAP_ANALYSIS.md which was written
@@ -20,6 +20,18 @@ For the full-vision gap inventory and next-slice sequencing, see
 
 - Path Replay now writes its play/pause, seek, reset, and path-change state back into the shared replay store, so Camera View and Camera Wall stay synchronized with the active replay progress instead of reading a local-only loop ✅
 
+## Shared-workspace access / identity conflict (2026-05-29)
+
+- The Governance tab now exposes a local shared-workspace access surface with active member routing, single-user/shared mode toggles, and per-member approval posture so the current actor and reviewer path are visible in-product ✅
+- Workspace access changes now flow through the canonical store, evidence ledger, support bundle, and `/api/workspace-identity-conflict` archive boundary, so local membership drift, approval routing, and shared-identity conflict replay are all represented as canonical product state instead of ad-hoc test fixtures ✅
+
+## Workspace memory retrieval (2026-05-29)
+
+- The launcher now exposes a workspace memory search surface that can query the current scene, saved workspaces, evidence trail, report snapshot, and archive histories from one query, so the product begins to behave like a retrieval workspace instead of only a workspace list ✅
+- Workspace search hits now seed a timeline focus target and open the checkpoint view near the selected timestamp, with branch-bearing archive hits jumping straight into the timeline and carrying `branch:`, `after:`, `before:`, and `time:` query tokens for direct branch/time jumps ✅
+- Scene Intelligence can now copy a checkpoint deep link that preserves the selected checkpoint timestamp plus branch/time query tokens for clipboard handoff ✅
+- The launcher’s start-project cards now show explicit maturity labels (`Complete`, `Available`, `Preview`, `Planned`) so the visible entry flows stay honest about what is actually ready versus still aspirational ✅
+
 ## Guided scan assistant (2026-05-29)
 
 - The launcher’s guided scan path now opens a real guided assistant over the existing scan wizard, so capture prep gets structured guidance and auto-path hints without forking the manual-assisted compile pipeline ✅
@@ -31,7 +43,9 @@ For the full-vision gap inventory and next-slice sequencing, see
 - The implemented root target aligns with the `StudioDashboardHome_CurrentWorkspacePreview_RiskStatusPanel` direction for V0.1 Studio-first flow ✅
 - The root dashboard now uses a compact operator top bar, live current-workspace preview, risk/status right panel, metric/action rail, and first-viewport recent/quick-start dock instead of a large marketing-style hero ✅
 - The root launcher top bar now matches the reference more closely by keeping the primary actions to Open Studio / Run Simulation / Import JSON / New Scene, while full entry-goal selection is available through the Project Start Launcher ✅
+- The Project Start Launcher now treats the seeded retail scene as the reference baseline while surfacing blank-scene, import, scan, AI draft, and report entry points as real workflows with maturity labels instead of implying the demo is the only complete path ✅
 - The live dashboard preview hydration path now uses an explicit mounted flag, avoiding the previous client-store shim that could leave the preview stuck on `Loading preview` after hydration ✅
+- The fixed-port Studio bootstrap now seeds the dev prerender manifest and uses a non-mutating document shim, so clean dev boots can render the root shell and API routes instead of throwing first-load 500s ✅
 - `PlatformHome_CommandCenter_RecentWorkspaceRiskOverview` is retained as a future V1+ concept and is intentionally not the immediate root implementation ✅
 - The Studio homepage now auto-runs the demo simulation on first load when the canonical demo scene is present, so the dashboard does not start in a misleading `Simulation pending` state for the retail demo ✅
 - Demo bootstrap and manual `Run Simulation` now both call the store-backed `runSimulation()` action (instead of direct engine calls in the page component), preserving async guardrails like in-flight dedupe and stale-scene checks ✅
@@ -185,12 +199,15 @@ For the full-vision gap inventory and next-slice sequencing, see
 - The report and compare surfaces now also export a dedicated JSON evidence bundle, carrying the scene, report data, compare context, and evidence trail as a reusable handoff artifact ✅
 - Report exports and the report workspace header now surface a Sensors count from the canonical scene model, and the editor now exposes a dedicated sensor tool, sensor inspector, and sensor inventory tab while the broader live fusion layer remains camera-first ✅
 - The camera inspector analytics tab now surfaces a live `Sensor Fusion` preview with the nearest sensor, distance, state, and coverage mode so the editor can show the current fusion boundary even before full ONVIF/live ingestion exists ✅
-- The camera inspector now also exposes a live camera binding section plus a camera metadata ingest bridge that can paste JSON/NDJSON or pull an external feed URL, archive the submission, and apply matched camera status/clarity/night-mode and live session fields through the canonical store while the live connection probe/archive boundary now understands JSON, NDJSON, and ONVIF-style XML responses, tries SOAP-first for ONVIF binds, supports session refreshes while connected, and surfaces an active session lease registry with expiry timestamps plus a transport-session handle so the remaining device-protocol seam stays honest ✅
+- The camera inspector now also exposes a live camera binding section plus a camera metadata ingest bridge that can paste JSON/NDJSON or pull an external feed URL, archive the submission, and apply matched camera status/clarity/night-mode and live session fields through the canonical store while the live connection probe/archive boundary now understands JSON, NDJSON, and ONVIF-style XML responses, tries SOAP-first for ONVIF binds, supports session refreshes while connected, captures transport response and auth challenge metadata on real negotiation steps, and surfaces an active session lease registry with expiry timestamps plus a transport-session handle so the remaining device-protocol seam stays honest ✅
 - The debug/support bundle now carries both the sensor ingest archive and the camera live connection archive, including the live session snapshot fields, transport-session metadata, and refresh history, while the inspector also shows the active lease registry, expiry, and transport handle, so the operator handoff package keeps the live metadata story together with the rest of the evidence trail ✅
 - Scene Intelligence now has an explicit temporal replay scrubber with point-in-time reconstruction and restore actions, so the operational evidence trail can be scrubbed and previewed instead of only listed as recent events ✅
-- Scene Intelligence now also surfaces a temporal operational twin summary with scene-event counts, reconstructable checkpoints, branch heads, checkpoint age, and current-vs-checkpoint deltas so the operator can answer “what did we know, and when?” without leaving the evidence surface ✅
-- The operational evidence layer now also has a canonical event-centered timeline builder plus a state-at-time-T resolver, so the temporal story is backed by a reusable temporal object model instead of only UI-side sorting and checkpoint lookup ✅
+- Scene Intelligence now also surfaces a temporal operational twin summary with scene-event counts, reconstructable checkpoints, published checkpoints, branch heads, checkpoint age, published age, and current-vs-checkpoint / current-vs-published deltas so the operator can answer “what did we know, and when?” without leaving the evidence surface ✅
+- The operational evidence layer now also has a canonical event-centered timeline builder plus a state-at-time-T resolver, so the temporal story is backed by a reusable temporal object model instead of only UI-side sorting and checkpoint lookup, and published checkpoints stay explicit instead of collapsing into generic snapshots ✅
 - The canonical scene graph now carries node-level evidence history metadata for selected entities, so the graph node inspector can show evidence count and latest change directly on the selected node ✅
+- Scene Intelligence now also exposes a real node-specific evidence trail for the selected scene/entity node, with recent ledger events and preview/restore actions instead of only counter-style history metadata ✅
+- Scene Intelligence now also lets selected node trail entries drive the existing branch comparison and restore workflow, so the node evidence view can set left/right branches or restore directly from the trail ✅
+- The selected node evidence trail now also shows active left/right comparison markers plus a node-local comparison summary, so the branch state is visible directly in the provenance surface instead of only in the global compare panel ✅
 - Camera metadata ingest now also writes a durable live metadata event stream that shows up in the camera feed overlays and Scene Intelligence provenance surface alongside the existing sensor evidence trail ✅
 
 ### Schema (src/schema/security-scene.ts) — complete
@@ -687,3 +704,9 @@ The following issues were fixed to reach 0 typed errors (only pre-existing TS700
 - The workbench still has legacy sensor/selection support in the canvas file, but the primary editor flow is now centered on the current scene-editing tools and warnings.
 - Next hardening step: wire per-handle validation messaging into transform edits and add editor fixture coverage for the placement and snap behaviors.
 - Camera-facing surfaces now expose a canonical operational-fusion health card that combines sensor proximity, camera metadata freshness, and live-connection/session posture.
+- Live camera sessions now support explicit heartbeat renewal, so the operator can keep an active connection alive without forcing a new upstream probe every time.
+- Live camera sessions now also carry auth metadata end to end (`authMode`, `authState`, `authRealm`, `authSessionId`, `authSessionExpiresAt`) plus transport response/challenge metadata (`transportResponseStatus`, `transportResponseStatusText`, `authChallengeHeader`, `authChallengeScheme`, `authChallengeRealm`), and the inspector/archive/fusion surfaces show that protocol posture alongside the lease, transport state, and negotiation step.
+- Debug now exposes a dedicated incident bundle download in addition to the broader support bundle, and the diagnostic bundle carries the canonical alert summary used by the runtime health card so crash triage can stay focused on incidents, traces, and external logs.
+- Camera metadata live ingest now accepts XML feeds in addition to JSON and NDJSON, which lets the Debug panel import ONVIF-style metadata streams and map them to scene cameras without forcing a JSON wrapper first.
+- Live camera connection probes now also accept XML payloads without first reporting false JSON parse errors, so auth-challenge and transport metadata survive the probe path cleanly.
+- Operational evidence imports now validate through a canonical runtime schema, including nested scene snapshots, so malformed ledger records are rejected before they can pollute the recovery/archive timeline.

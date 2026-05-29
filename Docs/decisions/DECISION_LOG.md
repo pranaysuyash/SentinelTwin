@@ -221,6 +221,35 @@ wired to the same underlying feed state.
 
 ---
 
+## D-102 | 2026-05-29 | Demo scene is the default launch flow and all other workflows are advanced
+
+**Decision:** The launcher and in-dashboard start surface should present the seeded retail demo as the
+single primary path on first render. Floor-plan, scan, AI draft, and video-verify workflows remain
+available from an explicit “advanced” expansion path.
+
+**Rationale:**
+- Deterministic seeded demo is the only workflow that is fully end-to-end and produces predictable
+  onboarding and simulation behavior for first-run users.
+- A visible primary demo path reduces first-run ambiguity and prevents users from entering partially
+  implemented flows without explicit intent.
+- Advanced workflows are still discoverable, but clearly labeled as preview/prototype stages and opt-in.
+- This aligns with the product thesis where the loop is `load baseline → run simulation → verify impact →
+  replay → recommend` while advanced flows expand input method selection, not replace the baseline.
+
+**Alternative rejected — show all flows equally at startup:**
+- Encourages users to start in incomplete pipelines and assume parity across all modalities.
+- Dilutes onboarding clarity for operators who need one trustworthy entry path before using tools.
+- Increases false expectations because several workflows (guided scan, floor-plan reconstruction, AI draft,
+  footage verification) are still explicitly preview/partial by implementation status.
+
+**Implementation:** 
+- `StudioDashboardHome` now renders a primary demo action and collapses all non-demo entry routes
+  behind an explicit "Explore advanced workflows" control.
+- `ProjectStartLauncher` now shows the demo action as the default card and moves all other options
+  behind an "Advanced workflows" toggle.
+
+---
+
 ## D-102 | 2026-05-29 | Novel algorithms panel should act as a navigation hub, not a read-only stats wall
 
 **Decision:** The `NovelAlgorithmsTab` should expose direct jump actions for the strongest placement candidate, the largest blind region, the active path replay, and the 24-hour temporal profile.
@@ -257,6 +286,24 @@ wired to the same underlying feed state.
 ---
 
 ## D-102 | 2026-05-28 | Assumptions panel should surface a concise model summary before the detailed editor
+
+## D-103 | 2026-05-29 | Camera view coordinator should delegate chrome, scene helpers, and verification overlays to dedicated modules
+
+**Decision:** `CameraViewMode.tsx` should own orchestration and state plumbing only. The view chrome, scene interaction helpers, and verification overlay rendering now live in separate modules:
+- `apps/studio/src/components/view/camera-view-chrome.tsx`
+- `apps/studio/src/components/view/camera-view-scene.tsx`
+- `apps/studio/src/components/view/camera-verification-overlay.tsx`
+- `apps/studio/src/components/view/camera-verification-panel.tsx`
+- `apps/studio/src/components/view/camera-verification-workflow.ts`
+
+**Rationale:**
+- The camera view had grown into a mixed coordinator/leaf-component file, which made further changes risky and obscured the actual render flow
+- Splitting by responsibility keeps the camera view readable while preserving the same runtime behavior and shared store state
+- Dedicated modules make it easier to evolve the live feed chrome, scene interaction, and verification UI independently without reintroducing a monolith
+
+**Alternatives rejected:**
+- Keep the camera view monolithic and continue shaving warnings: that would preserve the same structural coupling
+- Split only one component at a time: slower and leaves the same coordination/leaf-component boundary problem in place
 
 **Decision:** The right-rail assumptions surface should start with a compact summary of the core model inputs
 (DORI model, person height, grid resolution, lighting) and then provide the full editable assumptions form
@@ -3247,7 +3294,7 @@ reference to the new path, then remove the old."
 - The standard `_run_transformers_vlm_extraction` uses `tokenize=False` then a separate `processor(images=image, text=text)` call, which fails for MiniCPM
 - MiniCPM-V 4.6 requires `downsample_mode` passed to both `apply_chat_template` AND `generate`
 
-### D-190: SentinelTwin should use a hybrid contextual object-action menu in the 3D workbench
+### D-226: SentinelTwin should use a hybrid contextual object-action menu in the 3D workbench
 **Date:** 2026-05-29
 
 **Decision:** Surface object-specific 3D actions through a right-click context menu anchored to the selected object, while keeping transform handles and inspectors as the canonical precision surfaces.
@@ -3889,3 +3936,156 @@ geometryValidity: z.enum(["valid", "suspect", "invalid"]).default("valid")
 - Decision: Derive one canonical operational-fusion summary in the shared sensor-fusion layer and render it as the primary health card on camera surfaces, while keeping the lower-level evidence cards as drill-down context.
 - Rationale: Operators need one consistent health signal that combines the three evidence streams, and the shared helper keeps the view, feed, and inspector surfaces aligned.
 - Consequence: Camera-facing surfaces now share the same operational-health label/detail, while preserving the source evidence cards for investigation.
+
+## D-224 - Live camera sessions should support explicit heartbeat renewal
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: The live camera path already supported bind, refresh, and disconnect, but the current lease model still renewed by re-probing instead of by an explicit keepalive.
+- Decision: Add a first-class `heartbeat` action to the live-camera route and registry so a connected session can be renewed without re-fetching the upstream device payload.
+- Rationale: Real live device sessions need an explicit keepalive/heartbeat loop, and the operator UI should renew the lease without forcing a new probe every time.
+- Consequence: The route, archive, registry, and inspector now distinguish probe refresh from session heartbeat, making the live connection model closer to a real device session lifecycle.
+
+## D-225: Launcher-first root boot removed hidden `?studio=1` bypass
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: The root page had a hidden query-string shortcut that bypassed the visible launcher/dashboard and mounted `StudioShell` directly when `studio=1` was present.
+- Decision: Remove the hidden boot flag and keep the root app flow launcher-first, with `StudioDashboardHome` as the default entry and explicit in-app actions as the only path into `StudioShell`.
+- Rationale: The product already exposes a canonical launcher/dashboard flow with explicit workspace entry actions. A hidden query bootstrap created a second boot path, obscured actual app behavior, and encouraged patchwork debugging instead of matching the user-facing flow.
+- Consequence: The app now reflects the real product flow on first load, tests no longer encode the hidden bypass, and any direct workspace entry happens through visible launcher actions instead of an undocumented query flag.
+
+## D-226 - Live camera sessions should carry protocol auth metadata through the canonical record
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: The live camera lease path already tracked bind/refresh/heartbeat/disconnect, but the session record still collapsed authorization into the transport/session state and hid it from the canonical archive.
+- Decision: Add explicit auth mode/state/session fields to the live connection request, probe response, session registry, scene camera node, inspector archive, and operational-fusion summary.
+- Rationale: Operators need to see whether a live camera is merely connected or actually authenticated, and the support/archive trail should preserve that distinction for later review.
+- Consequence: The live session model now carries `authMode`, `authState`, `authRealm`, `authSessionId`, and `authSessionExpiresAt` across the main record path, while the camera view and inspector surfaces can explain the auth posture alongside the lease and transport metadata.
+
+## D-227 - Workspace publish approval must combine access policy with governance state
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: The shared-workspace access helpers and governance state both described publish and review posture, but the effective gate was split across helpers and the UI could drift from the actual approval route.
+- Decision: Treat publish as allowed only when the active member is publish-capable and the combined workspace policy/governance state permits it, and treat privacy-sensitive approval routes as requiring the privacy reviewer role rather than any generic reviewer.
+- Rationale: Shared-workspace RBAC/ABAC needs one canonical decision path so the governance panel, store actions, and review routing all explain the same approval truth.
+- Consequence: `canPerformWorkspaceAction` now uses the governance state for publish decisions, the governance panel reflects the same gate, and privacy-sensitive approval decisions no longer accept the wrong reviewer role.
+
+## D-228 - Model eval runs should persist the prompt-registry snapshot they used
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: The prompt registry was visible in Debug, but the model-eval history only stored pass/fail outcomes and could not explain which prompt catalog version produced a given run.
+- Decision: Attach a prompt-registry snapshot, digest, and version metadata to every model-eval run record and surface that snapshot in Debug alongside the current registry summary.
+- Rationale: Provider/model governance needs traceability from prompt definitions to eval results so prompt changes, provider swaps, and stage budgets can be audited together.
+- Consequence: Model-eval history now persists the registry snapshot it used, and Debug can compare the live registry against the most recently recorded snapshot.
+
+## D-229 - Workspace retrieval should be a canonical launcher surface
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: The launcher already surfaced workspaces, scan entry points, and report/report-history flows, but there was no canonical retrieval surface for searching the current scene, saved workspaces, evidence, and report snapshot from one query.
+- Decision: Add a workspace memory search surface to the launcher that retrieves current-scene, saved-workspace, evidence, and report hits from one canonical query and labels the entry flows with explicit maturity states.
+- Rationale: SentinelTwin should feel like a retrieval workspace, not just a list of recent scenes, and the launcher is the right place to expose that user-facing memory spine.
+- Consequence: The launcher now exposes workspace memory search, the start-project cards carry honest maturity labels, and the gap inventory can treat retrieval as a distinct platform layer instead of leaving it implicit.
+
+## D-230 - Launcher should present the seeded retail scene as the reference baseline, not the only complete path
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: The launcher copy still described the seeded retail scene as the only fully complete workflow even after the import, blank-scene, scan, AI draft, and report entry points had been wired as real end-to-end paths.
+
+## D-231 - Live camera probes should preserve auth challenges and transport response metadata
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: A real camera often answers with a 401/403 challenge or a non-OK transport response before a session is authenticated, but the live connection trail was flattening that negotiation into a generic failure.
+- Decision: Capture the transport response status/text plus the auth challenge header/scheme/realm in the live connection probe, session registry, inspector archive, and operational-fusion summary.
+- Rationale: The operator and support trail should show whether a connection failed, was challenged, or was still negotiating, because those are materially different states when diagnosing a live device.
+- Consequence: The live camera path can now preserve a challenge-response negotiation step as part of the canonical session record instead of collapsing it into a single error state.
+- Decision: Reframe the launcher and dashboard start surfaces so the seeded retail scene is the canonical reference baseline, while the import, scan, blank-scene, AI draft, and report flows are described as real entry points with explicit maturity labels.
+- Rationale: The product no longer needs to pretend that only the demo path is real. Keeping the launcher truthful reduces trust drift and matches the actual execution paths now available in the Studio shell.
+- Consequence: The launcher wording now treats the retail scene as baseline/reference, the other entry paths are described as real workflows, and the product story is less demo-centric without removing the seeded scene itself.
+
+## D-231 - Fixed-port Studio bootstrap should seed the dev prerender manifest and use a non-mutating document shim
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: Fresh `next dev` boots under the fixed-port wrapper were failing with missing `.next/dev/prerender-manifest.json` errors and a generated `_document.js` shim that tried to assign to a getter-only `default` property.
+- Decision: Have `apps/studio/scripts/run-fixed-port.mjs` seed the minimal dev prerender manifest before starting Next and emit a `_document` shim that exports the resolved module without mutating its `default` property.
+- Rationale: The Studio should be able to boot from a clean `.next` directory without a manual warmup or ad-hoc file restoration, and the fixed-port wrapper is the right place to enforce that bootstrap contract.
+- Consequence: Fresh dev boots now have the manifest files Next expects, the root shell and API routes render instead of 500ing on first load, and the fixed-port launcher remains the canonical way to start the app on port 3000.
+
+## D-232 - Diagnostic bundles should carry alert routing and registry snapshots
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: The support bundle already carried incidents and external logs, but the diagnostic export and Debug runtime card did not expose a canonical alert-routing summary, and model-eval history did not preserve the prompt-registry snapshot it used.
+- Decision: Attach alert routing to the diagnostic bundle, surface it in the runtime health card, and persist prompt-registry snapshots with each model-eval run.
+- Rationale: Runtime truth needs one support-ready export that explains incidents, traces, external logs, and alert routing together, while provider/model governance needs a durable registry trail to explain eval results across prompt changes.
+- Consequence: The Debug panel can show alert routing directly from the diagnostic bundle, and model-eval history becomes an auditable trace of the prompt catalog used for each run.
+
+## D-233 - Incident bundles should be a focused crash/export artifact
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: The general support bundle is intentionally broad, but operators also need a failure-focused export that centers incidents, performance traces, external logs, and alert routing without the extra archive payloads.
+- Decision: Add a first-class incident bundle built from the diagnostic bundle plus alert summary and failure-oriented slices, and expose it as a dedicated Debug download action.
+- Rationale: Crash/incident handoff should have a narrower artifact that is easy to reason about during triage while still preserving the canonical runtime evidence.
+- Consequence: Debug now offers a dedicated incident bundle download alongside the broader support bundle, and the failure-focused export can evolve independently without duplicating the support artifact.
+
+## D-234 - Camera metadata ingest should accept XML as a first-class feed format
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: The Debug panel already supported JSON and NDJSON camera metadata imports, but many live camera feeds and ONVIF-style metadata streams arrive as XML.
+- Decision: Extend camera metadata ingest to parse XML feeds directly while mapping only canonical scene fields such as camera identity, status, clarity, night mode, feed mode, notes, and timestamp.
+- Rationale: The operator should be able to paste or fetch a live XML metadata feed without a lossy pre-conversion step, while keeping the ingest surface strict enough to avoid inventing unsupported fields.
+- Consequence: Camera metadata ingest can now consume XML as a first-class input format, and future feed vocabulary changes should extend the same parser instead of adding a parallel ingest path.
+
+## D-235 - Live camera probes should accept XML as a first-class wire format
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: The live camera probe already understood JSON/NDJSON and could parse XML-ish payloads, but XML feeds were still being penalized by the JSON parser with false error noise.
+- Decision: Treat XML payloads as a first-class live probe input and suppress JSON-only parse errors when the payload is clearly XML.
+- Rationale: Operators need truthful probe diagnostics, especially when the camera replies in XML or SOAP, and the error channel should only report real parse failures.
+- Consequence: XML probe responses now flow through the live connection path cleanly, and the diagnostic trail reflects actual negotiation issues rather than parser artifacts.
+
+## D-238 - Temporal evidence should distinguish published checkpoints from reconstructable checkpoints
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: The operational evidence ledger already supported point-in-time reconstruction, but published scene states were still implicitly treated as generic checkpoints in the live surfaces and report exports.
+- Decision: Track published checkpoints as a separate temporal concept from reconstructable checkpoints, including separate counts, ages, and current-vs-published deltas in the evidence summary, Scene Intelligence, and report exports.
+- Rationale: Publication is a user-visible semantic boundary, not just another snapshot. Keeping it explicit makes the evidence model honest about what is reconstructed from history versus what was intentionally promoted to a published branch.
+- Consequence: The temporal twin can now answer both “what was reconstructable?” and “what was published?” without flattening the publish step into a generic point-in-time checkpoint.
+
+## D-239 - Timeline search should accept branch and time query tokens, with launcher hits seeding checkpoint focus
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: The launcher could already search workspaces and archives, and Scene Intelligence already had branch filters and checkpoint previews, but there was no canonical way to jump from a search hit to a specific place in the temporal ledger.
+- Decision: Teach the evidence timeline to accept `branch:`, `after:`, `before:`, and `time:` query tokens, and have launcher hits seed a checkpoint focus target that opens Scene Intelligence near the selected timestamp.
+- Rationale: Time/branch navigation should use the same evidence trail and search language everywhere, so the launcher can route into the timeline without inventing a second navigation system.
+- Consequence: The launcher can now seed a timeline checkpoint target from search hits, Scene Intelligence can honor branch/time query tokens on the same ledger, and the remaining gap is the share-link contract rather than the basic navigation syntax.
+
+## D-240 - Operational evidence events should normalize through a canonical runtime schema
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: The operational evidence ledger already powered timeline, recovery, and archive flows, but its import path still relied on manual shape checks instead of a canonical runtime schema.
+- Decision: Add a canonical runtime schema for operational evidence events and use it during ledger normalization, including validation of nested scene snapshots before they are accepted into archives or recovery flows.
+- Rationale: The memory layer is only trustworthy if imported history is validated the same way everywhere, and invalid checkpoints should not slip into the time-travel surface or archive import path.
+- Consequence: Archive and journal normalization now reject malformed evidence records up front, while the visible evidence ledger keeps using the same canonical event shape across timeline, branch, and recovery surfaces.
+
+## D-241 - Launcher memory search should surface branch-bearing archive hits as timeline jumps
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: Workspace search already returned archive hits, but branch-bearing archive records were still opening the surrounding tab instead of jumping directly into the timeline branch they described.
+- Decision: Carry branch metadata on workspace memory hits, and when a hit has a meaningful branch target, route the launcher into Scene Intelligence with a branch/time query and timeline focus instead of only opening the archive tab.
+- Rationale: Branch-aware retrieval should respect the same temporal ledger users inspect in provenance, so archive hits that already know their branch target should land near that checkpoint instead of forcing a second navigation step.
+- Consequence: Branch-bearing governance, membership, and identity-conflict hits now jump into the timeline with branch/time focus, while non-branch archives continue to open their owning tab.

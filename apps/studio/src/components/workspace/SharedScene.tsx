@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useEffect } from "react";
+import { useMemo, useRef, useEffect, useCallback } from "react";
 import { Html } from "@react-three/drei";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
@@ -107,7 +107,7 @@ export function SceneWalls({
 }: {
   walls: WallNode[];
   selectable?: boolean;
-  onContextMenu?: (id: string, event: ThreeEvent<PointerEvent>) => void;
+  onContextMenu?: (id: string, event: ThreeEvent<any>) => void;
 }) {
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
@@ -176,7 +176,7 @@ export function SceneDoors({
 }: {
   doors: DoorNode[];
   selectable?: boolean;
-  onContextMenu?: (id: string, event: ThreeEvent<PointerEvent>) => void;
+  onContextMenu?: (id: string, event: ThreeEvent<any>) => void;
 }) {
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
@@ -247,7 +247,7 @@ export function SceneWindows({
 }: {
   windows: WindowNode[];
   selectable?: boolean;
-  onContextMenu?: (id: string, event: ThreeEvent<PointerEvent>) => void;
+  onContextMenu?: (id: string, event: ThreeEvent<any>) => void;
 }) {
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
@@ -325,7 +325,7 @@ export function SceneObstructions({
   selectedId?: string | null;
   /** Optional click handler. If not provided, uses store's selectNode. */
   onSelect?: (id: string) => void;
-  onContextMenu?: (id: string, event: ThreeEvent<PointerEvent>) => void;
+  onContextMenu?: (id: string, event: ThreeEvent<any>) => void;
 }) {
   const storeSelect = useStudioStore((s) => s.selectNode);
   const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
@@ -558,9 +558,13 @@ function fragilityRGB(fragility: number): [number, number, number] {
 export function CoverageHeatmapInstanced({
   cells,
   mode = "quality",
+  onHoverCell,
+  onClearHover,
 }: {
   cells: CoverageCellResult[];
-  mode?: "quality" | "fragility";
+  mode?: "quality" | "fragility" | "overlap" | "contribution" | "blindspots";
+  onHoverCell?: (cell: CoverageCellResult, event: ThreeEvent<PointerEvent>) => void;
+  onClearHover?: () => void;
 }) {
   const meshRef = useRef<THREE.InstancedMesh>(null!);
   const mat = useRef(new THREE.Matrix4());
@@ -573,6 +577,38 @@ export function CoverageHeatmapInstanced({
     return cells;
   }, [cells, mode]);
 
+  const overlapRGB = useCallback((coveringCount: number): [number, number, number] => {
+    if (coveringCount >= 3) return [0.23, 0.51, 0.96]; // blue
+    if (coveringCount === 2) return [0.13, 0.78, 0.30]; // green
+    if (coveringCount === 1) return [0.98, 0.79, 0.16]; // yellow
+    return [0.94, 0.27, 0.27]; // red
+  }, []);
+
+  const contributionRGB = useCallback((cell: CoverageCellResult): [number, number, number] => {
+    const evaluations = Object.values(cell.cameraEvaluations ?? {}).filter((evaluation) => evaluation.visible && evaluation.ppm > 0);
+    if (evaluations.length === 0) return [0.42, 0.45, 0.51];
+
+    const totalPpm = evaluations.reduce((sum, evaluation) => sum + evaluation.ppm, 0);
+    if (totalPpm <= 0) return [0.42, 0.45, 0.51];
+
+    const topPpm = evaluations.reduce((best, evaluation) => Math.max(best, evaluation.ppm), 0);
+    const contribution = topPpm / totalPpm;
+
+    if (contribution > 0.75) return [0.23, 0.51, 0.96];
+    if (contribution >= 0.5) return [0.13, 0.78, 0.30];
+    if (contribution >= 0.25) return [0.98, 0.79, 0.16];
+    return [0.42, 0.45, 0.51];
+  }, []);
+
+  const blindspotRGB = useCallback((cell: CoverageCellResult): [number, number, number] => {
+    if (cell.quality === "none") {
+      return [0.60, 0.10, 0.10];
+    }
+    return [0.13, 0.78, 0.30];
+  }, []);
+
+  const heatmapOpacity = mode === "blindspots" ? 0.62 : 0.88;
+
   useEffect(() => {
     const mesh = meshRef.current;
     if (!mesh || visibleCells.length === 0) return;
@@ -584,6 +620,12 @@ export function CoverageHeatmapInstanced({
       let rgb: [number, number, number];
       if (mode === "fragility" && cell.fragility != null) {
         rgb = fragilityRGB(cell.fragility);
+      } else if (mode === "overlap") {
+        rgb = overlapRGB(cell.coveringCameras.length);
+      } else if (mode === "contribution") {
+        rgb = contributionRGB(cell);
+      } else if (mode === "blindspots") {
+        rgb = blindspotRGB(cell);
       } else {
         rgb = cell.quality === "none" ? TILE_FLOOR_RGB.none : heatmapColorFromPpm(cell.ppm);
       }
@@ -594,14 +636,33 @@ export function CoverageHeatmapInstanced({
 
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [visibleCells, mode]);
+  }, [visibleCells, mode, blindspotRGB, contributionRGB, overlapRGB]);
+
+  const handlePointerMove = useCallback((event: ThreeEvent<PointerEvent>) => {
+    if (!onHoverCell) return;
+    if (typeof event.instanceId !== "number") return;
+    const cell = visibleCells[event.instanceId];
+    if (!cell) return;
+    onHoverCell(cell, event);
+  }, [onHoverCell, visibleCells]);
+
+  const clearHover = useCallback(() => {
+    onClearHover?.();
+  }, [onClearHover]);
 
   if (visibleCells.length === 0) return null;
 
   return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, visibleCells.length]} renderOrder={2}>
+    <instancedMesh
+      ref={meshRef}
+      args={[undefined, undefined, visibleCells.length]}
+      renderOrder={2}
+      onPointerMove={handlePointerMove}
+      onPointerOut={clearHover}
+      onPointerMissed={clearHover}
+    >
       <boxGeometry args={[0.28, 0.018, 0.28]} />
-      <meshBasicMaterial vertexColors transparent opacity={0.88} depthWrite={false} />
+      <meshBasicMaterial vertexColors transparent opacity={heatmapOpacity} depthWrite={false} />
     </instancedMesh>
   );
 }
@@ -724,7 +785,7 @@ export function ScenePrivacyZones({
 }: {
   zones: { id: string; label: string; polygon: [number, number][]; restriction: string }[];
   onSelect?: (id: string) => void;
-  onContextMenu?: (id: string, event: ThreeEvent<PointerEvent>) => void;
+  onContextMenu?: (id: string, event: ThreeEvent<any>) => void;
 }) {
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
   const selectNode = useStudioStore((s) => s.selectNode);
@@ -770,7 +831,7 @@ export function ScenePathLine({
   showMarkers?: boolean;
   id?: string;
   onSelect?: (id: string) => void;
-  onContextMenu?: (id: string, event: ThreeEvent<PointerEvent>) => void;
+  onContextMenu?: (id: string, event: ThreeEvent<any>) => void;
 }) {
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
   const selectNode = useStudioStore((s) => s.selectNode);

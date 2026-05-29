@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
 
-import { buildDiagnosticBundle, stringifyDiagnosticBundle } from "@/lib/diagnostic-bundle";
+import { buildDiagnosticBundle, buildIncidentBundle, stringifyDiagnosticBundle, stringifyIncidentBundle } from "@/lib/diagnostic-bundle";
 import { smallRetailShopScene } from "@/demo-scenes/small-retail-shop";
 import { buildSceneIntelligenceGraph } from "@/lib/scene-intelligence-graph";
 import { buildOperationalEvidenceEvent } from "@/lib/operational-evidence";
 import { createDefaultWorkspaceAccessState } from "@/lib/workspace-access";
 import { createDefaultWorkspaceGovernance } from "@/lib/workspace-governance";
 import { simulateStudio } from "@/simulation/simulate-studio";
-import { createRuntimeIncident } from "@/store/studio-store";
+import { createRuntimeIncident, type ExternalLogEntry } from "@/store/studio-store";
 
 describe("diagnostic bundle", () => {
   test("captures a support-ready scene, simulation, graph, and evidence snapshot", () => {
@@ -66,6 +66,18 @@ describe("diagnostic bundle", () => {
         path: "/studio",
       }),
     ];
+    const externalLogEntries: ExternalLogEntry[] = [
+      {
+        id: "external-log-1",
+        timestamp: 1710000000200,
+        source: "paste",
+        title: "Browser console error",
+        details: "TypeError: boom",
+        raw: "TypeError: boom",
+        lineCount: 1,
+        severity: "error",
+      },
+    ];
 
     const bundle = buildDiagnosticBundle({
       scene: smallRetailShopScene,
@@ -80,6 +92,7 @@ describe("diagnostic bundle", () => {
       autoRecompute: false,
       cameraFailures: ["cam_counter"],
       runtimeIncidents,
+      externalLogEntries,
       localOnlyMode: false,
       aiProviderLabel: "OpenAI GPT-5",
       simulationDirty: false,
@@ -106,9 +119,37 @@ describe("diagnostic bundle", () => {
     expect(bundle.runtime.incidentCount).toBe(2);
     expect(bundle.runtime.recentIncidents[0]?.category).toBe("runtime_failure");
     expect(bundle.runtime.performanceTraces[0]?.title).toBe("Simulation completed");
+    expect(bundle.runtime.alerts.alertCount).toBe(3);
+    expect(bundle.runtime.alerts.statusLabel).toBe("attention");
     expect(bundle.runtime.journeyHealth[0]?.kind).toBe("import");
     expect(bundle.runtime.journeyHealth[3]?.label).toBe("Render");
     expect(bundle.runtime.recentTrace[0]?.title).toBe("Scene published");
+    const incidentBundle = buildIncidentBundle({
+      scene: smallRetailShopScene,
+      simulationResult,
+      sceneIntelligenceGraph: graph,
+      operationalEvidenceEvents: events,
+      workspaceAccess: createDefaultWorkspaceAccessState(),
+      workspaceGovernance: { ...createDefaultWorkspaceGovernance(), approvalMode: "open", sceneStatus: "published" },
+      lastRunMs: 123,
+      showDebugOverlays: true,
+      overlayDensity: "compact",
+      autoRecompute: false,
+      cameraFailures: ["cam_counter"],
+      runtimeIncidents,
+      externalLogEntries,
+      localOnlyMode: false,
+      aiProviderLabel: "OpenAI GPT-5",
+      simulationDirty: false,
+      simulationRunning: false,
+      launchNotice: "Scene opened successfully.",
+      pathname: "/studio",
+      userAgent: "bun-test",
+    });
+    expect(incidentBundle.title).toContain("Incident Bundle");
+    expect(incidentBundle.incidents.alertSummary.alertCount).toBe(3);
+    expect(incidentBundle.incidents.latestExternalLog?.title).toBe("Browser console error");
+    expect(stringifyIncidentBundle(incidentBundle)).toContain("\"alertSummary\"");
     expect(stringifyDiagnosticBundle(bundle)).toContain("\"version\": \"1\"");
   });
 });

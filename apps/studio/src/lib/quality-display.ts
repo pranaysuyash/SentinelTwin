@@ -1,5 +1,7 @@
 import type { DoriQuality } from "@/schema/security-scene";
 
+export type QualityStandard = "dori_2014" | "oodpcvs_2025";
+
 /**
  * Canonical quality display mappings.
  * All UI components should import from here instead of defining their own.
@@ -140,3 +142,43 @@ export const QUALITY_RANK: Record<DoriQuality, number> = {
   identification: 10,
   scrutinize: 11,
 };
+
+/**
+ * Core trust-facing label set used in explainability UI.
+ * OODPCVS levels are collapsed into the core DORI-style user language.
+ */
+export const CORE_QUALITY_LABEL: Record<DoriQuality, string> = {
+  none: "No view",
+  detection: "Detection",
+  overview: "Detection",
+  outline: "Detection",
+  observation: "Observation",
+  discern: "Observation",
+  perceive: "Recognition",
+  recognition: "Recognition",
+  characterize: "Recognition",
+  validate: "Identification",
+  identification: "Identification",
+  scrutinize: "Identification",
+};
+
+export function getTrustQualityLabel(
+  quality: DoriQuality,
+  standard: QualityStandard,
+): string {
+  const core = CORE_QUALITY_LABEL[quality] ?? "No view";
+  if (standard !== "oodpcvs_2025") {
+    return core;
+  }
+
+  const detailed = QUALITY_LABEL[quality] ?? quality;
+  if (quality === "none") {
+    return core;
+  }
+
+  if (core === detailed) {
+    return core;
+  }
+
+  return `${core} (${detailed})`;
+}

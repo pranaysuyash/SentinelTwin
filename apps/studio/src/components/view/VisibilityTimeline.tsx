@@ -2,39 +2,11 @@
 
 import { useMemo } from "react";
 
+import { QUALITY_ABBR, QUALITY_COLOR } from "@/lib/quality-display";
+import type { DoriQuality } from "@/schema/security-scene";
 import type { PathVisibilityResult } from "@/schema/security-scene";
 
 // ── Quality colors ──
-
-const QUALITY_COLORS: Record<string, string> = {
-  scrutinize: "#0ea5e9",
-  validate: "#3b82f6",
-  identification: "#3b82f6",
-  characterize: "#22c55e",
-  recognition: "#22c55e",
-  perceive: "#84cc16",
-  observation: "#eab308",
-  discern: "#eab308",
-  outline: "#f97316",
-  overview: "#fb923c",
-  detection: "#f97316",
-  none: "#ef4444",
-};
-
-const QUALITY_LABELS: Record<string, string> = {
-  scrutinize: "SC",
-  validate: "VA",
-  identification: "ID",
-  characterize: "CH",
-  recognition: "REC",
-  perceive: "PE",
-  observation: "OBS",
-  discern: "DI",
-  outline: "OU",
-  overview: "OV",
-  detection: "DET",
-  none: "NONE",
-};
 
 // ── Props ──
 
@@ -170,10 +142,10 @@ export function VisibilityTimeline({ pathResult, currentTime, onSeek }: Visibili
                         width: `${Math.max(seg.widthPct, 0.5)}%`,
                         backgroundColor: seg.quality === "none" || !seg.quality
                           ? "#ef4444"
-                          : QUALITY_COLORS[seg.quality] ?? "#ef4444",
+                          : QUALITY_COLOR[seg.quality as DoriQuality] ?? "#ef4444",
                         opacity: seg.quality === "none" || !seg.quality ? 0.35 : 0.7,
                       }}
-                      title={`${seg.quality ? QUALITY_LABELS[seg.quality] ?? seg.quality : "none"} at ${seg.timeS.toFixed(1)}s`}
+                      title={`${seg.quality ? QUALITY_ABBR[seg.quality as DoriQuality] ?? seg.quality : "none"} at ${seg.timeS.toFixed(1)}s`}
                     />
                   ))}
                 </div>

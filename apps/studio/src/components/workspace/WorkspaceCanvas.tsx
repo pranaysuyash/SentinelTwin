@@ -9,6 +9,7 @@ import * as THREE from "three";
 import {
   type AnyEditableNode,
   type CameraNode,
+  type CoverageCellResult,
   type SecurityIssue,
   type SensorNode,
 } from "@/schema/security-scene";
@@ -46,6 +47,7 @@ import { getSceneSelectionIds, normalizeBounds } from "./editing/selection-geome
 import { WallDrawTool } from "./editing/WallDrawTool";
 import { applyShiftLock, clampToScene, pathLength, pointDistance } from "./editing/editor-geometry";
 import { cn } from "@/lib/cn";
+import { getTrustQualityLabel } from "@/lib/quality-display";
 import { pointOnPathAtProgress } from "@/components/map/path-quality";
 import { MAP_COLORS } from "@/components/map/map-colors";
 import { CoverageLegend } from "./CoverageLegend";
@@ -236,7 +238,7 @@ function CameraFrustum({
 }: {
   camera: CameraNode;
   selected: boolean;
-  onContextMenu?: (id: string, event: any) => void;
+  onContextMenu?: (id: string, event: ThreeEvent<MouseEvent>) => void;
 }) {
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
@@ -357,7 +359,7 @@ function CameraMarker({
 }: {
   camera: CameraNode;
   selected: boolean;
-  onContextMenu?: (id: string, event: any) => void;
+  onContextMenu?: (id: string, event: ThreeEvent<any>) => void;
 }) {
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
@@ -506,7 +508,7 @@ function AccentSurface({
 function CeilingLightMarkers({
   onContextMenu,
 }: {
-  onContextMenu?: (id: string, event: any) => void;
+  onContextMenu?: (id: string, event: ThreeEvent<any>) => void;
 }) {
   const scene = useStudioStore((s) => s.scene);
 
@@ -535,7 +537,7 @@ function CeilingLightMarkers({
 function SensorMarkers({
   onContextMenu,
 }: {
-  onContextMenu?: (id: string, event: any) => void;
+  onContextMenu?: (id: string, event: ThreeEvent<any>) => void;
 }) {
   const scene = useStudioStore((s) => s.scene);
   const selected = useStudioStore((s) => s.selectedNodeId);
@@ -574,7 +576,7 @@ function SensorMarkers({
             onContextMenu={onContextMenu ? (event) => {
               event.stopPropagation();
               event.nativeEvent.preventDefault();
-              onContextMenu(sensor.id, event);
+        onContextMenu(sensor.id, event);
             } : undefined}
             onPointerOver={() => {
               setHoveredId(sensor.id);
@@ -622,7 +624,7 @@ function CriticalZoneOverlay({
   result?: { status: string; actualQuality: string };
   selected?: boolean;
   onSelect?: (id: string) => void;
-  onContextMenu?: (id: string, event: any) => void;
+  onContextMenu?: (id: string, event: ThreeEvent<any>) => void;
 }) {
   const layers = useStudioStore((s) => s.layerVisibility);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
@@ -731,8 +733,12 @@ function EntryDoorLabel({ position }: { position: [number, number] }) {
 
 function SceneGeometry({
   onObjectContextMenu,
+  onHeatmapHover,
+  onHeatmapHoverClear,
 }: {
-  onObjectContextMenu: (nodeId: string, event: any) => void;
+  onObjectContextMenu: (nodeId: string, event: ThreeEvent<any>) => void;
+  onHeatmapHover: (cell: CoverageCellResult, event: ThreeEvent<PointerEvent>) => void;
+  onHeatmapHoverClear: () => void;
 }) {
   const scene = useStudioStore((s) => s.scene);
   const result = useStudioStore((s) => s.simulationResult);
@@ -806,7 +812,12 @@ function SceneGeometry({
       })}
 
       {layers.heatmap && result?.coverageCells ? (
-        <CoverageHeatmapInstanced cells={result.coverageCells} mode={heatmapMode === "fragility" ? "fragility" : "quality"} />
+        <CoverageHeatmapInstanced
+          cells={result.coverageCells}
+          mode={heatmapMode}
+          onHoverCell={onHeatmapHover}
+          onClearHover={onHeatmapHoverClear}
+        />
       ) : null}
 
       {scene.criticalZones.map((zone) => (
@@ -1708,6 +1719,101 @@ function EditorStatusBanner() {
   );
 }
 
+function formatReasonCode(reasonCode: string): string {
+  if (reasonCode.startsWith("REFLECTIVE_WINDOW:")) {
+    const [, label] = reasonCode.split(":");
+    return `Reflective window: ${label ?? "unknown"}`;
+  }
+  return reasonCode.toLowerCase().replaceAll("_", " ");
+}
+
+function formatMultiplier(value: number | undefined): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "—";
+  return `${(value * 100).toFixed(0)}%`;
+}
+
+function HeatmapCellExplainabilityCard() {
+  const hover = useStudioStore((s) => s.heatmapHover);
+  const scene = useStudioStore((s) => s.scene);
+
+  if (!hover) return null;
+
+  const cameraEvaluations = Object.entries(hover.cell.cameraEvaluations ?? {}).sort(([, a], [, b]) => {
+    const qualityDelta = (b.probability ?? 0) - (a.probability ?? 0);
+    if (qualityDelta !== 0) return qualityDelta;
+    return (b.ppm ?? 0) - (a.ppm ?? 0);
+  });
+
+  const topEvaluations = cameraEvaluations.slice(0, 4);
+  const left = hover.screenX + 14;
+  const top = hover.screenY + 14;
+
+  return (
+    <div
+      className="pointer-events-none absolute z-20 w-85 rounded-xl border border-[#25304a] bg-[#0a0f1a]/95 p-3 text-[10px] text-[#d2d9e8] shadow-[0_16px_40px_rgba(0,0,0,0.38)] backdrop-blur-sm"
+      style={{ left, top }}
+    >
+      <div className="mb-1 flex items-center justify-between">
+        <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-sky-300">Cell explainability</span>
+        <span className="font-mono text-[9px] text-[#8ea2c4]">x:{hover.cell.x.toFixed(2)} z:{hover.cell.z.toFixed(2)}</span>
+      </div>
+      <div className="grid grid-cols-3 gap-2 rounded-lg border border-[#1f2a40] bg-[#0d1421] p-2 text-[9px]">
+        <div>
+          <div className="text-[#6c7e9f]">Quality</div>
+          <div className="font-semibold text-[#e3ebfb]">{getTrustQualityLabel(hover.cell.quality, scene.assumptions.doriStandard)}</div>
+        </div>
+        <div>
+          <div className="text-[#6c7e9f]">PPM</div>
+          <div className="font-semibold text-[#e3ebfb]">{hover.cell.ppm.toFixed(1)}</div>
+        </div>
+        <div>
+          <div className="text-[#6c7e9f]">Covering cams</div>
+          <div className="font-semibold text-[#e3ebfb]">{hover.cell.coveringCameras.length}</div>
+        </div>
+      </div>
+
+      <div className="mt-2 space-y-1.5">
+        {topEvaluations.length === 0 ? (
+          <div className="rounded-md border border-[#1f2a40] bg-[#0d1421] px-2 py-1 text-[9px] text-[#7f91b3]">
+            No per-camera evaluations available for this cell.
+          </div>
+        ) : (
+          topEvaluations.map(([cameraId, evaluation]) => (
+            <div key={cameraId} className="rounded-md border border-[#1f2a40] bg-[#0d1421] px-2 py-1.5">
+              <div className="flex items-center justify-between text-[9px]">
+                <span className="font-semibold text-[#dbe7ff]">{cameraId}</span>
+                <span className="text-[#8ea2c4]">
+                  {getTrustQualityLabel(evaluation.quality, scene.assumptions.doriStandard)} · {evaluation.ppm.toFixed(1)} PPM
+                </span>
+              </div>
+              <div className="mt-1 grid grid-cols-3 gap-x-2 gap-y-1 text-[8px] text-[#8ea2c4]">
+                <span>FOV: {evaluation.inFov ? "yes" : "no"}</span>
+                <span>Range: {evaluation.withinRange ? "yes" : "no"}</span>
+                <span>Dist: {evaluation.distanceM.toFixed(1)}m</span>
+                <span>Edge: {formatMultiplier(evaluation.edgePenaltyMultiplier)}</span>
+                <span>Clarity: {formatMultiplier(evaluation.clarityMultiplier)}</span>
+                <span>Material: {formatMultiplier(evaluation.materialTransmission)}</span>
+                <span>Glare: {typeof evaluation.glarePenalty === "number" ? `${(evaluation.glarePenalty * 100).toFixed(0)}%` : "—"}</span>
+                <span>Lighting: {typeof evaluation.lightingPenalty === "number" ? `${(evaluation.lightingPenalty * 100).toFixed(0)}%` : "—"}</span>
+                <span>Final factor: {formatMultiplier(evaluation.finalPpmMultiplier)}</span>
+              </div>
+              {evaluation.reasonCodes.length > 0 ? (
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {evaluation.reasonCodes.slice(0, 4).map((reasonCode) => (
+                    <span key={reasonCode} className="rounded border border-[#314267] bg-[#13203a] px-1 py-0.5 text-[8px] text-[#9dc3ff]">
+                      {formatReasonCode(reasonCode)}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function WorkspaceCanvas() {
   const envMode = useStudioStore((s) => s.environmentMode);
   const scene = useStudioStore((s) => s.scene);
@@ -1725,6 +1831,9 @@ export function WorkspaceCanvas() {
   const setSelectedCameraId = useStudioStore((s) => s.setSelectedCameraId);
   const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
   const setViewMode = useStudioStore((s) => s.setViewMode);
+  const setHeatmapHover = useStudioStore((s) => s.setHeatmapHover);
+  const layerVisibility = useStudioStore((s) => s.layerVisibility);
+  const simulationResult = useStudioStore((s) => s.simulationResult);
   const editorMode = useStudioStore((s) => s.editor.editorMode);
   const theme = ENVIRONMENT_THEMES[envMode] ?? ENVIRONMENT_THEMES.day;
   const [selectionDrag, setSelectionDrag] = useState<SelectionDragState | null>(null);
@@ -1748,7 +1857,7 @@ export function WorkspaceCanvas() {
     [frame.position.x, frame.position.y, frame.position.z, isTopDown],
   );
 
-  const openObjectContextMenu = useCallback((nodeId: string, event: any) => {
+  const openObjectContextMenu = useCallback((nodeId: string, event: ThreeEvent<any>) => {
     event.stopPropagation();
     event.nativeEvent.preventDefault();
     const snapshot = selectedNodeIds.length > 0 ? [...selectedNodeIds] : [];
@@ -1839,6 +1948,24 @@ export function WorkspaceCanvas() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [contextMenu]);
 
+  useEffect(() => {
+    if (!layerVisibility.heatmap || !simulationResult?.coverageCells?.length) {
+      setHeatmapHover(null);
+    }
+  }, [layerVisibility.heatmap, setHeatmapHover, simulationResult?.coverageCells?.length]);
+
+  const handleHeatmapHover = useCallback((cell: CoverageCellResult, event: ThreeEvent<PointerEvent>) => {
+    setHeatmapHover({
+      cell,
+      screenX: event.nativeEvent.clientX,
+      screenY: event.nativeEvent.clientY,
+    });
+  }, [setHeatmapHover]);
+
+  const clearHeatmapHover = useCallback(() => {
+    setHeatmapHover(null);
+  }, [setHeatmapHover]);
+
   return (
     <div className="absolute inset-0 overflow-hidden bg-[#07090d]">
       <div className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(circle_at_50%_36%,rgba(255,255,255,0.06),transparent_46%),linear-gradient(180deg,rgba(6,9,14,0.1),rgba(6,9,14,0.48)_100%)]" />
@@ -1849,6 +1976,7 @@ export function WorkspaceCanvas() {
       {visibleComponents.north_compass ? <NorthCompass /> : null}
       {visibleComponents.viewport_controls ? <ViewControls /> : null}
       {visibleComponents.control_hint_bar ? <ControlHintBar /> : null}
+      <HeatmapCellExplainabilityCard />
       <EditorStatusBanner />
       <ObjectContextMenu
         model={contextMenuModel}
@@ -1903,7 +2031,11 @@ export function WorkspaceCanvas() {
         <pointLight position={[5, 2.8, 3.5]} intensity={envMode === "night" ? 1.0 : 1.45} distance={10} color="#fff6d8" />
 
         <Suspense fallback={<CanvasLoadingOverlay label="Loading workspace scene" />}>
-          <SceneGeometry onObjectContextMenu={openObjectContextMenu} />
+          <SceneGeometry
+            onObjectContextMenu={openObjectContextMenu}
+            onHeatmapHover={handleHeatmapHover}
+            onHeatmapHoverClear={clearHeatmapHover}
+          />
         </Suspense>
 
         <SelectionHighlights />

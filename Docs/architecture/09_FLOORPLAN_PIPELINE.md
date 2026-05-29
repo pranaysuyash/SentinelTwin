@@ -123,12 +123,33 @@ Gemini 2.5 Pro (highest ceiling)
 Return SemanticContext only (coarse understanding, no geometry)
 ```
 
+## ⚠ Important Correction
+
+**This pipeline document describes an experimental two-tier VLM pipeline for scenes without existing structured data.**
+
+It is NOT the primary way SentinelTwin processes floor plans. The production system already has:
+
+- **Heuristic CV floor plan import** with interactive correction (no VLM dependency)
+- **Manual photo scan wizard** with 12 candidate types and compile-to-SecurityScene pipeline
+- **AI draft from text prompt** with review-before-commit
+- **Deterministic coverage engine** (Three.js ray casting — never uses ML)
+
+This VLM pipeline would be used for **auto-import** when the user uploads a floor plan image without manual correction, or for **scan-to-scene** reconstruction from photos. It is supplementary to the existing manual and heuristic pipelines, not a replacement.
+
+See `Docs/exploration/EXPLORATION_MAP.md` Thread 55 for the full architectural audit and corrected roadmap.
+
 ## Future Work
 
 1. **GGUF quantization of Qwen3.5-4B** — could replace MiniCPM for Tier 1 with better accuracy at similar speed
 2. **Couple MiniCPM's zone detection with SAM3** for zone-level segmentation masks
 3. **Fine-tune MiniCPM on CubiCasa5K** for better room-type classification
 4. **Add real-world training images** to replace synthetic-only evaluation
+5. **Phase 3: Truth ladder** — `reviewStatus` + `sourceTrace` per-node for report credibility
+6. **Phase 3: OCR integration** — PaddleOCR for dimension/room label extraction
+7. **Phase 3: Camera spec intelligence** — LLM-driven extraction from model names
+8. **Phase 4: CubiCasa5K/FloorTrans** for dedicated floor plan segmentation
+9. **Phase 4: YOLO11-obb** for architectural symbol detection
+10. **Phase 4: SAM 2.1** for interactive mask correction
 
 ## References
 

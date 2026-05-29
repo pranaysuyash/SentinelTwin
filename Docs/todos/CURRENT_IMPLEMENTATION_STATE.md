@@ -95,8 +95,9 @@ For the full-vision gap inventory and next-slice sequencing, see
   - Venv: `/tmp/webwright-sentinel`
   - UV cache: `/private/tmp/uv-cache`
   - Playwright cache: `/private/tmp/ms-playwright`
-- Current environment cannot reach `pypi.org` (DNS/network blocked), so dependency resolution for editable `webwright` install fails until network is restored.
-- `--dry-run` and route check artefacts still run and write to `qa-output/manifest.json`, `qa-output/routes.txt`, `qa-output/route_urls.txt`.
+- Webwright QA is now bootstrapped into `/tmp/webwright-sentinel` using Python `3.13` + `uv`.
+- `--bootstrap` succeeds with network-permitted runs; in DNS/network-restricted shells it may still fail unless run with an allowed network path.
+- `--dry-run` (route checks + manifest) and `--run` smoke routes still produce `qa-output/manifest.json`, `qa-output/routes.txt`, and `qa-output/route_urls.txt` without mutation.
 
 ---
 
@@ -170,8 +171,8 @@ For the full-vision gap inventory and next-slice sequencing, see
 - The report and compare surfaces now also export a dedicated JSON evidence bundle, carrying the scene, report data, compare context, and evidence trail as a reusable handoff artifact ✅
 - Report exports and the report workspace header now surface a Sensors count from the canonical scene model, and the editor now exposes a dedicated sensor tool, sensor inspector, and sensor inventory tab while the broader live fusion layer remains camera-first ✅
 - The camera inspector analytics tab now surfaces a live `Sensor Fusion` preview with the nearest sensor, distance, state, and coverage mode so the editor can show the current fusion boundary even before full ONVIF/live ingestion exists ✅
-- The camera inspector now also exposes a live camera binding section plus a camera metadata ingest bridge that can paste JSON/NDJSON or pull an external feed URL, archive the submission, and apply matched camera status/clarity/night-mode and live session fields through the canonical store while the live connection probe/archive boundary now understands JSON, NDJSON, and ONVIF-style XML responses, tries SOAP-first for ONVIF binds, and keeps the remaining device-protocol seam honest ✅
-- The debug/support bundle now carries both the sensor ingest archive and the camera live connection archive, including the live session snapshot fields, so the operator handoff package keeps the live metadata story together with the rest of the evidence trail ✅
+- The camera inspector now also exposes a live camera binding section plus a camera metadata ingest bridge that can paste JSON/NDJSON or pull an external feed URL, archive the submission, and apply matched camera status/clarity/night-mode and live session fields through the canonical store while the live connection probe/archive boundary now understands JSON, NDJSON, and ONVIF-style XML responses, tries SOAP-first for ONVIF binds, supports session refreshes while connected, and surfaces an active session lease registry with expiry timestamps so the remaining device-protocol seam stays honest ✅
+- The debug/support bundle now carries both the sensor ingest archive and the camera live connection archive, including the live session snapshot fields and refresh history, while the inspector also shows the active lease registry and expiry, so the operator handoff package keeps the live metadata story together with the rest of the evidence trail ✅
 - Scene Intelligence now has an explicit temporal replay scrubber with point-in-time reconstruction and restore actions, so the operational evidence trail can be scrubbed and previewed instead of only listed as recent events ✅
 - Camera metadata ingest now also writes a durable live metadata event stream that shows up in the camera feed overlays and Scene Intelligence provenance surface alongside the existing sensor evidence trail ✅
 
@@ -263,6 +264,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - The `Governance` tab now also exposes a workspace membership archive queue so shared-workspace identity, routing policy, and snapshot drift can be archived and fanned out through a backend-shaped handoff instead of only living in local store state, and it can now sync the live state back to the latest archived snapshot when the operator chooses to reconcile ✅
 - The `Governance` tab now also exposes a `Resolve Approval Route` action that archives the resolved approval route through `/api/workspace-approval-route`, records a `workspace_approval_routed` evidence event, and surfaces the route status and target reviewer in the control plane ✅
 - The `Governance` tab now also exposes a workspace identity conflict resolution/archive backed by `/api/workspace-identity-conflict`, so drift against the latest archived membership snapshot can be captured and turned into a canonical remote-shared-identity policy recommendation before a real backend identity service exists ✅
+- The trust-audit manifest now covers the shared-identity conflict surface copy, so the Governance tab's conflict-resolution lane is verified alongside the approval and membership handoff surfaces ✅
 - The sensor panel now also exposes an external feed bridge that can pull JSON/NDJSON from a live URL through `/api/sensor-ingest`, so live metadata can enter the canonical evidence trail without paste-only intake ✅
 - The provenance surface now also supports branch-target checkpoint restore actions so a reconstructable event can be reopened as draft, recovered, or published instead of only a generic restore ✅
 - The debug diagnostics panel now exports a full operational evidence archive, loads uploaded archives into a merge-preflight preview, can restore the latest archived checkpoint with an explicit draft/recovered/published branch selector, and can apply a conflict-free divergent branch merge when the live ledger has forked, so recovery/backups travel with the scene, ledger, journal, and governance state instead of only a support bundle ✅

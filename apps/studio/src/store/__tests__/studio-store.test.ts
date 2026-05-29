@@ -33,6 +33,23 @@ describe("studio store editor mutations", () => {
     expect(useStudioStore.getState().scene.cameras.some((entry) => entry.id === camera.id)).toBe(false);
   });
 
+  test("translates a multi-selection as a single nudge unit", () => {
+    const camera = createCameraNode([2, 2.8, 3]);
+    const obstruction = createSensorNode([4, 1.2, 5], "motion");
+    useStudioStore.getState().addNode(camera);
+    useStudioStore.getState().addNode(obstruction);
+    useStudioStore.getState().setSelectedNodes([camera.id, obstruction.id]);
+
+    useStudioStore.getState().translateSelectedNodes([0.5, -0.25]);
+
+    const nextCamera = useStudioStore.getState().scene.cameras.find((entry) => entry.id === camera.id);
+    const nextSensor = useStudioStore.getState().scene.sensors.find((entry) => entry.id === obstruction.id);
+    expect(nextCamera?.position).toEqual([2.5, 2.8, 2.75]);
+    expect(nextSensor?.position).toEqual([4.5, 1.2, 4.75]);
+    expect(useStudioStore.getState().selectedNodeIds).toEqual([camera.id, obstruction.id]);
+    expect(useStudioStore.getState().simulationDirty).toBe(true);
+  });
+
   test("sensor live events update the scene state and append operational evidence", () => {
     const sensor = createSensorNode([1, 1.2, 1], "motion");
     useStudioStore.getState().addNode(sensor);
@@ -112,10 +129,12 @@ describe("studio store editor mutations", () => {
       previousLiveFeedLabel: cameraBeforeUpdate?.liveFeedLabel ?? null,
       previousLiveConnectionMode: cameraBeforeUpdate?.liveConnectionMode ?? null,
       previousLiveConnectionStatus: cameraBeforeUpdate?.liveConnectionStatus ?? "disconnected",
+      previousLiveSessionExpiresAt: cameraBeforeUpdate?.liveSessionExpiresAt ?? null,
       liveFeedUrl: "rtsp://example.com/live",
       liveFeedLabel: "Front entrance live feed",
       liveConnectionMode: "rtsp",
       liveConnectionStatus: "connected",
+      liveSessionExpiresAt: Date.now() + 120_000,
       ingestMode: "external",
       summary: "Camera bound to the external live feed relay.",
       notes: "ONVIF proxy connected successfully.",

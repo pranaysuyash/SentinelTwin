@@ -1,5 +1,6 @@
 import type { SecurityScene, SimulationResult } from "@/schema/security-scene";
 import { buildSceneIntelligenceGraph } from "@/lib/scene-intelligence-graph";
+import { summarizeSceneTruthLadder, type SceneTruthLadderSummary } from "@/lib/truth-ladder";
 import { QUALITY_ORDER } from "@/simulation/dori";
 import { computeCoverageEntropy } from "@/simulation/coverage-entropy";
 import { computeCoveragePostureVariation } from "@/simulation/coverage-posture";
@@ -7,6 +8,10 @@ import { computeCoverageUncertainty } from "@/simulation/coverage-uncertainty";
 import { buildRedundancyMatrixReport, type RedundancyMatrixReport } from "./redundancy-matrix";
 
 type ReportScene = SecurityScene;
+type ReportCriticalZoneResult = SimulationResult["criticalZoneResults"][number];
+type ReportCameraResult = SimulationResult["cameraResults"][number];
+type ReportIssue = SimulationResult["issues"][number];
+type ReportRecommendation = SimulationResult["recommendations"][number];
 // ── Report Data Interface ──
 
 export interface ReportData {
@@ -66,6 +71,7 @@ export interface ReportData {
     confidenceNotes: string[];
     sourceNotes: string[];
   };
+  truthLadder: SceneTruthLadderSummary;
   evidenceTrail: {
     changeLogEntryCount: number;
     evidenceEntryCount: number;
@@ -243,6 +249,7 @@ export function buildReportData(
     snapshotCount: scene.snapshots?.length ?? 0,
   });
   const evidenceTrail = buildEvidenceTrail(scene);
+  const truthLadder = summarizeSceneTruthLadder(scene);
   const provenanceNotes = (scene.changeLog ?? []).filter((entry) => entry.startsWith("Provenance:") || entry.startsWith("Provenance confidence:"));
   const sourceNotes = provenanceNotes.filter((entry) => entry.startsWith("Provenance:"));
   const confidenceNotes = provenanceNotes.filter((entry) => entry.startsWith("Provenance confidence:"));
@@ -323,6 +330,7 @@ export function buildReportData(
       confidenceNotes,
       sourceNotes,
     },
+    truthLadder,
     evidenceTrail,
     adversarialPath: options?.adversarialPath
       ? {
@@ -549,10 +557,9 @@ export function buildCompareReportData(
 }
 
 function buildCompareReportSnapshot(scene: ReportScene, result: SimulationResult): ReportData {
-  const anyResult = result as any;
-  const zonesPassing = anyResult.criticalZoneResults.filter((z: any) => z.status === "pass").length;
-  const totalZones = anyResult.criticalZoneResults.length;
-  const verifiedRecs = anyResult.recommendations.filter((r: any) => r.verified).length;
+  const zonesPassing = result.criticalZoneResults.filter((zone) => zone.status === "pass").length;
+  const totalZones = result.criticalZoneResults.length;
+  const verifiedRecs = result.recommendations.filter((rec) => rec.verified).length;
   const sensorCount = scene.sensors.length;
   const graph = buildSceneIntelligenceGraph(scene, {
     simulationResult: result,
@@ -560,6 +567,7 @@ function buildCompareReportSnapshot(scene: ReportScene, result: SimulationResult
     snapshotCount: scene.snapshots?.length ?? 0,
   });
   const evidenceTrail = buildEvidenceTrail(scene);
+  const truthLadder = summarizeSceneTruthLadder(scene);
   const provenanceNotes = (scene.changeLog ?? []).filter((entry) => entry.startsWith("Provenance:") || entry.startsWith("Provenance confidence:"));
   const sourceNotes = provenanceNotes.filter((entry) => entry.startsWith("Provenance:"));
   const confidenceNotes = provenanceNotes.filter((entry) => entry.startsWith("Provenance confidence:"));
@@ -596,7 +604,7 @@ function buildCompareReportSnapshot(scene: ReportScene, result: SimulationResult
       recommendationsCount: result.recommendations.length,
       verifiedRecommendationsCount: verifiedRecs,
     },
-    zones: anyResult.criticalZoneResults.map((z: any) => ({
+    zones: result.criticalZoneResults.map((z: ReportCriticalZoneResult) => ({
       label: z.label,
       requiredQuality: z.requiredQuality,
       actualQuality: z.actualQuality,
@@ -604,7 +612,7 @@ function buildCompareReportSnapshot(scene: ReportScene, result: SimulationResult
       coveringCameras: (z.coveringCameras ?? []).map((id: string) => cameraMap.get(id)?.name ?? id),
       coveragePct: 0,
     })),
-    cameras: anyResult.cameraResults.map((c: any) => ({
+    cameras: result.cameraResults.map((c: ReportCameraResult) => ({
       id: c.cameraId,
       name: cameraMap.get(c.cameraId)?.name ?? c.cameraId,
       status: cameraMap.get(c.cameraId)?.status ?? "unknown",
@@ -612,13 +620,13 @@ function buildCompareReportSnapshot(scene: ReportScene, result: SimulationResult
       zonesCovered: c.criticalZonesCovered ?? [],
       issues: [],
     })),
-    issues: anyResult.issues.map((i: any) => ({
+    issues: result.issues.map((i: ReportIssue) => ({
       severity: i.severity,
       description: i.description,
       area: i.category,
       recommendation: i.description,
     })),
-    recommendations: anyResult.recommendations.map((r: any) => ({
+    recommendations: result.recommendations.map((r: ReportRecommendation) => ({
       description: r.description,
       costCategory: r.costCategory,
       verified: r.verified,
@@ -635,6 +643,7 @@ function buildCompareReportSnapshot(scene: ReportScene, result: SimulationResult
       confidenceNotes,
       sourceNotes,
     },
+    truthLadder,
     evidenceTrail,
     novelAlgorithms: undefined,
     meetsModeledZoneRequirements: zonesPassing === totalZones,
@@ -806,6 +815,22 @@ export function exportAsHtml(report: ReportData): string {
       </ul>
     </div>
     ` : ""}
+  </div>
+
+  <h2>Truth Ladder</h2>
+  <div class="assumptions-box">
+    <table>
+      <tr><th>Nodes</th><td>${report.truthLadder.nodeCount}</td></tr>
+      <tr><th>Reviewed Nodes</th><td>${report.truthLadder.reviewedNodeCount} (${report.truthLadder.reviewedCoveragePct.toFixed(1)}%)</td></tr>
+      <tr><th>Verified Nodes</th><td>${report.truthLadder.verifiedNodeCount}</td></tr>
+      <tr><th>Source Traces</th><td>${report.truthLadder.sourceTraceCount} (${report.truthLadder.sourceTraceCoveragePct.toFixed(1)}%)</td></tr>
+      <tr><th>Suspect Geometry</th><td>${report.truthLadder.suspectGeometryCount}</td></tr>
+      <tr><th>Invalid Geometry</th><td>${report.truthLadder.invalidGeometryCount}</td></tr>
+    </table>
+    <div style="margin-top:10px;">
+      <strong>Truth ladder summary</strong>
+      <p>${escapeHtml(report.truthLadder.summary)}</p>
+    </div>
   </div>
 
   <h2>Operational Evidence</h2>
@@ -1133,6 +1158,15 @@ export function exportAsMarkdown(report: ReportData): string {
       ...report.provenance.confidenceNotes.map((note) => `  - ${note}`),
     ] : []),
     "",
+    "## Truth Ladder",
+    `- Nodes: ${report.truthLadder.nodeCount}`,
+    `- Reviewed Nodes: ${report.truthLadder.reviewedNodeCount} (${report.truthLadder.reviewedCoveragePct.toFixed(1)}%)`,
+    `- Verified Nodes: ${report.truthLadder.verifiedNodeCount}`,
+    `- Source Traces: ${report.truthLadder.sourceTraceCount} (${report.truthLadder.sourceTraceCoveragePct.toFixed(1)}%)`,
+    `- Suspect Geometry: ${report.truthLadder.suspectGeometryCount}`,
+    `- Invalid Geometry: ${report.truthLadder.invalidGeometryCount}`,
+    `- Summary: ${report.truthLadder.summary}`,
+    "",
     "## Operational Evidence",
     `- Change Log Entries: ${report.evidenceTrail.changeLogEntryCount}`,
     `- Evidence Entries: ${report.evidenceTrail.evidenceEntryCount}`,
@@ -1331,6 +1365,16 @@ export function exportAsText(report: ReportData): string {
       ...report.provenance.confidenceNotes.map((note) => `    - ${note}`),
     ] : []),
     "",
+    "TRUTH LADDER",
+    `${"-".repeat(30)}`,
+    `  Nodes:                   ${report.truthLadder.nodeCount}`,
+    `  Reviewed Nodes:          ${report.truthLadder.reviewedNodeCount} (${report.truthLadder.reviewedCoveragePct.toFixed(1)}%)`,
+    `  Verified Nodes:          ${report.truthLadder.verifiedNodeCount}`,
+    `  Source Traces:           ${report.truthLadder.sourceTraceCount} (${report.truthLadder.sourceTraceCoveragePct.toFixed(1)}%)`,
+    `  Suspect Geometry:        ${report.truthLadder.suspectGeometryCount}`,
+    `  Invalid Geometry:        ${report.truthLadder.invalidGeometryCount}`,
+    `  Summary:                 ${report.truthLadder.summary}`,
+    "",
     "OPERATIONAL EVIDENCE",
     `${"-".repeat(30)}`,
     `  Change Log Entries:      ${report.evidenceTrail.changeLogEntryCount}`,
@@ -1477,6 +1521,15 @@ export function exportCompareAsHtml(
     issues: compare.after.summary.issuesCount,
     accent: "#16a34a",
   });
+  const renderTruthLadderRows = (truthLadder: SceneTruthLadderSummary) => `
+      <tr><td>Nodes</td><td>${truthLadder.nodeCount}</td></tr>
+      <tr><td>Reviewed Nodes</td><td>${truthLadder.reviewedNodeCount} (${truthLadder.reviewedCoveragePct.toFixed(1)}%)</td></tr>
+      <tr><td>Verified Nodes</td><td>${truthLadder.verifiedNodeCount}</td></tr>
+      <tr><td>Source Traces</td><td>${truthLadder.sourceTraceCount} (${truthLadder.sourceTraceCoveragePct.toFixed(1)}%)</td></tr>
+      <tr><td>Suspect Geometry</td><td>${truthLadder.suspectGeometryCount}</td></tr>
+      <tr><td>Invalid Geometry</td><td>${truthLadder.invalidGeometryCount}</td></tr>
+      <tr><td>Summary</td><td>${escapeHtml(truthLadder.summary)}</td></tr>
+  `;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -1568,10 +1621,31 @@ export function exportCompareAsHtml(
       <tr><td>Graph Edges</td><td>${compare.before.provenance.edgeCount}</td><td>${compare.after.provenance.edgeCount}</td></tr>
       <tr><td>Revision Depth</td><td>${compare.before.provenance.revisionDepth}</td><td>${compare.after.provenance.revisionDepth}</td></tr>
       <tr><td>Snapshots Tracked</td><td>${compare.before.provenance.snapshotCount}</td><td>${compare.after.provenance.snapshotCount}</td></tr>
+      <tr><td>Reviewed Nodes</td><td>${compare.before.truthLadder.reviewedNodeCount} (${compare.before.truthLadder.reviewedCoveragePct.toFixed(1)}%)</td><td>${compare.after.truthLadder.reviewedNodeCount} (${compare.after.truthLadder.reviewedCoveragePct.toFixed(1)}%)</td></tr>
+      <tr><td>Verified Nodes</td><td>${compare.before.truthLadder.verifiedNodeCount}</td><td>${compare.after.truthLadder.verifiedNodeCount}</td></tr>
+      <tr><td>Source Traces</td><td>${compare.before.truthLadder.sourceTraceCount} (${compare.before.truthLadder.sourceTraceCoveragePct.toFixed(1)}%)</td><td>${compare.after.truthLadder.sourceTraceCount} (${compare.after.truthLadder.sourceTraceCoveragePct.toFixed(1)}%)</td></tr>
+      <tr><td>Suspect Geometry</td><td>${compare.before.truthLadder.suspectGeometryCount}</td><td>${compare.after.truthLadder.suspectGeometryCount}</td></tr>
+      <tr><td>Invalid Geometry</td><td>${compare.before.truthLadder.invalidGeometryCount}</td><td>${compare.after.truthLadder.invalidGeometryCount}</td></tr>
       <tr><td>Evidence Entries</td><td>${compare.before.evidenceTrail.evidenceEntryCount}</td><td>${compare.after.evidenceTrail.evidenceEntryCount}</td></tr>
       <tr><td>Sensor-related Evidence</td><td>${compare.before.evidenceTrail.sensorEvidenceCount}</td><td>${compare.after.evidenceTrail.sensorEvidenceCount}</td></tr>
     </tbody>
   </table>
+
+  <h2>Truth Ladder</h2>
+  <div class="grid-2">
+    <div class="before-card">
+      <h3>Before truth ladder</h3>
+      <table>
+        ${renderTruthLadderRows(compare.before.truthLadder)}
+      </table>
+    </div>
+    <div class="after-card">
+      <h3>After truth ladder</h3>
+      <table>
+        ${renderTruthLadderRows(compare.after.truthLadder)}
+      </table>
+    </div>
+  </div>
 
   <h2>Operational Evidence</h2>
   <div class="grid-2">
@@ -1664,8 +1738,27 @@ export function exportCompareAsMarkdown(compare: CompareReportData): string {
     `| Graph Edges | ${compare.before.provenance.edgeCount} | ${compare.after.provenance.edgeCount} |`,
     `| Revision Depth | ${compare.before.provenance.revisionDepth} | ${compare.after.provenance.revisionDepth} |`,
     `| Snapshots Tracked | ${compare.before.provenance.snapshotCount} | ${compare.after.provenance.snapshotCount} |`,
+    `| Reviewed Nodes | ${compare.before.truthLadder.reviewedNodeCount} (${compare.before.truthLadder.reviewedCoveragePct.toFixed(1)}%) | ${compare.after.truthLadder.reviewedNodeCount} (${compare.after.truthLadder.reviewedCoveragePct.toFixed(1)}%) |`,
+    `| Verified Nodes | ${compare.before.truthLadder.verifiedNodeCount} | ${compare.after.truthLadder.verifiedNodeCount} |`,
+    `| Source Traces | ${compare.before.truthLadder.sourceTraceCount} (${compare.before.truthLadder.sourceTraceCoveragePct.toFixed(1)}%) | ${compare.after.truthLadder.sourceTraceCount} (${compare.after.truthLadder.sourceTraceCoveragePct.toFixed(1)}%) |`,
+    `| Suspect Geometry | ${compare.before.truthLadder.suspectGeometryCount} | ${compare.after.truthLadder.suspectGeometryCount} |`,
+    `| Invalid Geometry | ${compare.before.truthLadder.invalidGeometryCount} | ${compare.after.truthLadder.invalidGeometryCount} |`,
     `| Evidence Entries | ${compare.before.evidenceTrail.evidenceEntryCount} | ${compare.after.evidenceTrail.evidenceEntryCount} |`,
     `| Sensor-related Evidence | ${compare.before.evidenceTrail.sensorEvidenceCount} | ${compare.after.evidenceTrail.sensorEvidenceCount} |`,
+    "",
+    "## Truth Ladder",
+    `- **Before:** ${compare.before.truthLadder.summary}`,
+    `- **After:** ${compare.after.truthLadder.summary}`,
+    `- Before Reviewed Nodes: ${compare.before.truthLadder.reviewedNodeCount} (${compare.before.truthLadder.reviewedCoveragePct.toFixed(1)}%)`,
+    `- After Reviewed Nodes: ${compare.after.truthLadder.reviewedNodeCount} (${compare.after.truthLadder.reviewedCoveragePct.toFixed(1)}%)`,
+    `- Before Verified Nodes: ${compare.before.truthLadder.verifiedNodeCount}`,
+    `- After Verified Nodes: ${compare.after.truthLadder.verifiedNodeCount}`,
+    `- Before Source Traces: ${compare.before.truthLadder.sourceTraceCount} (${compare.before.truthLadder.sourceTraceCoveragePct.toFixed(1)}%)`,
+    `- After Source Traces: ${compare.after.truthLadder.sourceTraceCount} (${compare.after.truthLadder.sourceTraceCoveragePct.toFixed(1)}%)`,
+    `- Before Suspect Geometry: ${compare.before.truthLadder.suspectGeometryCount}`,
+    `- After Suspect Geometry: ${compare.after.truthLadder.suspectGeometryCount}`,
+    `- Before Invalid Geometry: ${compare.before.truthLadder.invalidGeometryCount}`,
+    `- After Invalid Geometry: ${compare.after.truthLadder.invalidGeometryCount}`,
     "",
     "## Operational Evidence",
     `- Before Change Log Entries: ${compare.before.evidenceTrail.changeLogEntryCount}`,
@@ -1674,6 +1767,8 @@ export function exportCompareAsMarkdown(compare: CompareReportData): string {
     `- After Evidence Entries: ${compare.after.evidenceTrail.evidenceEntryCount}`,
     `- Before Sensor-related Evidence: ${compare.before.evidenceTrail.sensorEvidenceCount}`,
     `- After Sensor-related Evidence: ${compare.after.evidenceTrail.sensorEvidenceCount}`,
+    `- Before Truth Ladder: ${compare.before.truthLadder.summary}`,
+    `- After Truth Ladder: ${compare.after.truthLadder.summary}`,
     ...(compare.before.evidenceTrail.recentEntries.length > 0 || compare.after.evidenceTrail.recentEntries.length > 0
       ? [
           "- Before Recent Evidence:",

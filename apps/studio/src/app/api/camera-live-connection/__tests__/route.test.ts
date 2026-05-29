@@ -53,11 +53,86 @@ describe("camera-live-connection route", () => {
     expect(body.historyCount).toBe(1);
     expect(body.summary).toContain("archived the live connection");
     expect(body.record.liveConnectionStatus).toBe("connected");
+    expect(body.record.liveSessionExpiresAt).toBeGreaterThan(body.record.liveSessionConfirmedAt ?? 0);
 
     const history = await GET();
     const payload = await history.json();
     expect(payload.historyCount).toBe(1);
     expect(payload.latestSubmission.record.liveFeedUrl).toBe("rtsp://camera.example.com/live");
+    expect(payload.activeSessionCount).toBe(1);
+    expect(payload.activeSessions[0].sessionId).toBe(body.record.liveSessionId);
+  });
+
+  test("refreshes an existing live session without changing the session id", async () => {
+    const baseRequest = {
+      source: "camera-inspector",
+      action: "bind",
+      protocol: "onvif" as const,
+      cameraId: "cam_front",
+      cameraName: "Front Entrance",
+      sceneId: "scene-camera-refresh",
+      sceneName: "Camera Scene Refresh",
+      submittedAt: 1_725_000_018_000,
+      raw: JSON.stringify({
+        cameraId: "cam_front",
+        cameraName: "Front Entrance",
+        liveFeedUrl: "rtsp://camera.example.com/live",
+        liveFeedLabel: "Front entrance live feed",
+        liveConnectionMode: "onvif",
+        liveConnectionStatus: "connected",
+        notes: "ONVIF relay reachable",
+      }),
+    };
+
+    const bindResponse = await POST(new Request("http://localhost/api/camera-live-connection", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(baseRequest),
+    }));
+
+    expect(bindResponse.status).toBe(200);
+    const bindBody = await bindResponse.json();
+    expect(bindBody.record.liveSessionId).toContain("live_session_cam_front");
+    expect(bindBody.record.liveSessionExpiresAt).toBeGreaterThan(bindBody.record.liveSessionConfirmedAt ?? 0);
+
+    const refreshResponse = await POST(new Request("http://localhost/api/camera-live-connection", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        source: "camera-inspector",
+        action: "refresh",
+        protocol: "onvif",
+        endpointUrl: "http://camera.example.com/probe",
+        liveFeedUrl: "rtsp://camera.example.com/live",
+        feedLabel: "Front entrance live feed",
+        cameraId: "cam_front",
+        cameraName: "Front Entrance",
+        sceneId: "scene-camera-refresh",
+        sceneName: "Camera Scene Refresh",
+        submittedAt: 1_725_000_019_000,
+        liveSessionId: bindBody.record.liveSessionId,
+        liveSessionStartedAt: bindBody.record.liveSessionStartedAt,
+        liveSessionConfirmedAt: bindBody.record.liveSessionConfirmedAt,
+        raw: JSON.stringify({
+          cameraId: "cam_front",
+          cameraName: "Front Entrance",
+          liveFeedUrl: "rtsp://camera.example.com/live",
+          liveFeedLabel: "Front entrance live feed",
+          liveConnectionMode: "onvif",
+          liveConnectionStatus: "connected",
+          notes: "ONVIF relay reachable",
+        }),
+      }),
+    }));
+
+    expect(refreshResponse.status).toBe(200);
+    const refreshBody = await refreshResponse.json();
+    expect(refreshBody.ok).toBe(true);
+    expect(refreshBody.action).toBe("refresh");
+    expect(refreshBody.record.liveSessionId).toBe(bindBody.record.liveSessionId);
+    expect(refreshBody.record.liveSessionState).toBe("connected");
+    expect(refreshBody.summary).toContain("Refreshed live session");
+    expect(refreshBody.record.liveSessionExpiresAt).toBeGreaterThan(bindBody.record.liveSessionExpiresAt ?? 0);
   });
 
   test("probes an external live connection endpoint through the canonical route", async () => {

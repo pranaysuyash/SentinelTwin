@@ -165,6 +165,10 @@ describe("computeCoverageCells occlusion handling", () => {
         ],
         restriction: "no_video",
         regulation: "GDPR",
+        source: "manual",
+        reviewStatus: "unreviewed",
+        sourceTrace: "",
+        geometryValidity: "valid",
       },
     ];
 

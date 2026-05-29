@@ -31,13 +31,15 @@ export function ImportReview({ result, warnings, onImageChange, onRecalibrate, o
   >(null);
 
   useEffect(() => {
-    setDraftWalls(result.walls);
-    setDraftDoors(result.doors);
-    setDraftWindows(result.windows);
-    setWallMask(result.walls.map(() => true));
-    setDoorMask(result.doors.map(() => true));
-    setWindowMask(result.windows.map(() => true));
-    setDragging(null);
+    queueMicrotask(() => {
+      setDraftWalls(result.walls);
+      setDraftDoors(result.doors);
+      setDraftWindows(result.windows);
+      setWallMask(result.walls.map(() => true));
+      setDoorMask(result.doors.map(() => true));
+      setWindowMask(result.windows.map(() => true));
+      setDragging(null);
+    });
   }, [result]);
 
   const hasCalibrationChange = useMemo(

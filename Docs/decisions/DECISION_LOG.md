@@ -3125,6 +3125,20 @@ reference to the new path, then remove the old."
 - **Leave routing implicit inside the publish action** — rejected because the operator would still not see the route decision as its own auditable step.
 - **Overwrite membership state instead of recording a route event** — rejected because routing should be visible before reconciliation, not hidden by it.
 
+### D-191: Shared-identity conflict handling should be trust-audited in the Governance tab
+**Date:** 2026-05-29
+
+**Decision:** Keep the `Identity Conflict Resolution` surface, the `Resolve Identity Conflict` action, and the remote identity-conflict archive boundary in the Governance tab, and cover the visible copy in the trust-audit manifest so the shared-identity conflict path is treated as a first-class claim surface.
+
+**Rationale:**
+- The identity-conflict flow is now a user-facing governance control, so it should be part of the same visible-claim audit as the approval and membership flows.
+- Trust-auditing the visible text helps prevent the conflict boundary from drifting out of sync with the actual route/archive implementation.
+- The conflict surface remains separate from approval routing and membership sync, which keeps each control-plane boundary understandable.
+
+**Alternatives rejected:**
+- **Leave conflict handling only in route code and tests** — rejected because the visible control plane would remain unaudited.
+- **Merge conflict handling back into the approval route** — rejected because conflict resolution is its own decision surface and should stay explicit.
+
 ### D-184: Active path selection should not auto-fall back to the first path
 **Date:** 2026-05-29
 
@@ -3661,7 +3675,21 @@ reference to the new path, then remove the old."
 - **Keep live camera binding client-only** — rejected because the UI would still be the only place that knows whether the bind was actually archived.
 - **Skip a probe/archive boundary and mutate the scene directly** — rejected because the live connection would remain a local-only affordance with no canonical backend evidence trail.
 
-### D-216: Floor plan understanding pipeline — two-tier local-first triage → cloud API
+### D-216: Live camera bindings should refresh as a canonical session lease while connected
+**Date:** 2026-05-29
+
+**Decision:** Treat connected live camera bindings as renewable session leases by allowing the inspector to refresh the canonical live-connection route with the existing session id, start time, and confirmation time while the camera remains connected.
+
+**Rationale:**
+- A bind-only model still treats the connection as a one-shot probe, which is not enough to represent a long-running camera session.
+- Preserving the same session id across refreshes makes the archive, support bundle, and camera glass read like a real operational lease instead of a sequence of unrelated binds.
+- A refresh action keeps the route canonical while giving the operator a visible way to renew the session without inventing a parallel management path.
+
+**Alternatives rejected:**
+- **Keep the session as a one-shot bind only** — rejected because the connection would still read like a single probe rather than a maintained live session.
+- **Move refresh handling into component state only** — rejected because the session lifecycle would disappear from the canonical archive and support handoff.
+
+### D-217: Floor plan understanding pipeline — two-tier local-first triage → cloud API
 **Date:** 2026-05-29
 
 **Decision:** Design the floor plan understanding pipeline as two tiers: (1) always-run local MiniCPM-V 4.6 for semantic triage (classification, OCR, quality, coarse zones), then (2) gated cloud API call (GPT-4o / Gemini 2.5 Flash) for precise geometry extraction only when Tier 1 passes quality checks.
@@ -3677,3 +3705,45 @@ reference to the new path, then remove the old."
 - **Local-only pipeline with a larger model** — rejected because no local model >=4B can run practically on MPS. Only 1.3B models are feasible locally.
 - **Single model for all tasks** — rejected because no model excels at both geometry and semantic understanding in our eval set. MiniCPM-V 4.6 is weak at geometry; GPT-4o is weak at fine-grained scene classification (1/5).
 - **Parallel local + cloud with result merge** — rejected as over-engineering for V0. The sequential gate pattern is simpler and provides natural cloud cost savings.
+
+### D-217: Formal truth ladder per node (reviewStatus + sourceTrace)
+**Date:** 2026-05-29
+
+**Decision:** Add `reviewStatus`, `sourceTrace`, and `geometryValidity` fields to the base node schema in SecurityScene, representing a formal "truth ladder" from unreviewed AI output to verified/certified ground truth.
+
+**Schema addition:**
+
+```ts
+reviewStatus: z.enum(["unreviewed", "accepted", "corrected", "calibrated", "verified"]).default("unreviewed")
+sourceTrace: z.string().default("")  // model/pipeline/version identifier
+geometryValidity: z.enum(["valid", "suspect", "invalid"]).default("valid")
+```
+
+**Rationale:**
+- Currently every node has a `source` enum (manual/ai/scan/import/preset/demo) but no review/workflow state. The same node could be AI-generated and user-confirmed, but the schema only records the origin, not the trust level.
+- Reports need to express "wall 12: level 2 (user-confirmed)" rather than "wall 12: unknown trust."
+- The concept already works at the system level (OperationalEvidenceEvent confidence, scene review/approve/reject governance) but doesn't exist at the individual node level.
+- Adding to the base schema makes every node type uniformly trustworthy-aware.
+
+**Alternatives rejected:**
+- **Keep trust only at the event level** — rejected because individual nodes in a scene compiled from multiple sources need per-node trust indicators. A scene can have 3 AI-generated walls, 5 user-confirmed walls, and 10 scan-sourced walls — the event level can't represent this granularity.
+- **Use a separate trust store outside the schema** — rejected because it duplicates the schema and invites drift. The SecurityScene is the single source of truth.
+- **Skip geometryValidity** — rejected because even a reviewed node could have invalid geometry (duplicate, zero-length, degenerate polygon). Geometry validity is a separate concern from review status.
+
+**Implementation note:** The per-node truth ladder is now surfaced in Report Lite, Scene Intelligence, and report exports so the credibility state remains visible in the same surfaces that explain coverage and provenance.
+
+### D-218: Corrected model roadmap — most "recommended" architecture already exists
+**Date:** 2026-05-29
+
+**Decision:** Accept the corrected roadmap derived from the comprehensive codebase audit. The system is past Phase 2 (simulation engine, schema, core UI, floor plan import, photo scan, AI draft, privacy zones, verification UI, jobs launcher, operational evidence, target profiles). Current Phase is 3 (production hardening).
+
+**Rationale:**
+- An external architectural review (ChatGPT) recommended a 12-layer CV/AI pipeline starting with "CubiCasa5K segmentation + YOLO11 + PaddleOCR + SAM 2" as the first step. This assumes a Phase 0 codebase.
+- The actual codebase already has heuristic CV import with review UI, full scene compilation wizard, multi-source provenance tracking, deterministic coverage with placement oracle, manual verification overlay, and 7-mode launcher.
+- The actual gaps are smaller and more specific: truth ladder per-node, OCR integration in production pipeline, and camera spec intelligence.
+- Investing in CubiCasa5K/YOLO11/SAM 2 now would be premature — the current heuristic + review pipeline works, and the bakeoff is exploring future options in parallel.
+
+**Alternatives rejected:**
+- **Follow the recommended 12-layer plan literally** — rejected because it would rebuild systems that already work, deferring the actual gaps.
+- **Invest in CubiCasa5K model training this sprint** — rejected because the current heuristic import handles the majority case. CubiCasa belongs in Phase 4 when production data justifies it.
+- **Delay truth ladder for larger AI pipeline work** — rejected because the truth ladder is the single highest-leverage credibility feature, costs ~50 lines of schema, and unlocks report quality.

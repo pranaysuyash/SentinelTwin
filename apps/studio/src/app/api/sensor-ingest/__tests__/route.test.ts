@@ -111,15 +111,11 @@ describe("sensor-ingest route", () => {
           submittedAt: 1_725_000_001_000,
           raw: "",
           sensors: [
-            {
-              id: "sensor_front_door",
-              label: "Front Door",
-              sensorType: "motion",
-              coverageMode: "detection",
-              position: [1, 0, 1],
-              rotation: 0,
-              state: "active",
-            },
+            (() => {
+              const sensor = createSensorNode([1, 1.2, 1], "motion");
+              sensor.label = "Front Door";
+              return sensor;
+            })(),
           ],
         }),
       }));

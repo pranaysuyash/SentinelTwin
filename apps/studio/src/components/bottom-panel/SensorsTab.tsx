@@ -122,7 +122,9 @@ export function SensorsTab() {
 
   useEffect(() => {
     let active = true;
-    setSensorIngestHistoryLoading(true);
+    queueMicrotask(() => {
+      if (active) setSensorIngestHistoryLoading(true);
+    });
     void fetch("/api/sensor-ingest")
       .then(async (response) => {
         if (!response.ok) return null;

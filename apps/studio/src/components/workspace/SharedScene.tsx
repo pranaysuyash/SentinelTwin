@@ -102,6 +102,7 @@ export function SceneFloor({
 export function SceneWalls({ walls, selectable = true }: { walls: WallNode[]; selectable?: boolean }) {
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
+  const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
   return (
     <>
       {walls.map((wall) => {
@@ -112,6 +113,7 @@ export function SceneWalls({ walls, selectable = true }: { walls: WallNode[]; se
         const cx = (wall.start[0] + wall.end[0]) / 2;
         const cz = (wall.start[1] + wall.end[1]) / 2;
         const isGlass = wall.material === "glass";
+        const isSelected = selectedNodeIds.includes(wall.id);
         return (
           <group
             key={wall.id}
@@ -129,13 +131,21 @@ export function SceneWalls({ walls, selectable = true }: { walls: WallNode[]; se
             <mesh>
             <boxGeometry args={[length, wall.heightM, 0.18]} />
             <meshStandardMaterial
-              color={isGlass ? "#dceeff" : "#f0f2f6"}
+              color={isSelected ? "#93c5fd" : isGlass ? "#dceeff" : "#f0f2f6"}
               transparent={isGlass}
-              opacity={isGlass ? 0.22 : 1}
+              opacity={isGlass ? 0.22 : isSelected ? 0.96 : 1}
               roughness={isGlass ? 0.08 : 0.65}
               metalness={isGlass ? 0.28 : 0.0}
+              emissive={isSelected ? "#1d4ed8" : "#000000"}
+              emissiveIntensity={isSelected ? 0.18 : 0}
             />
             </mesh>
+            {isSelected && (
+              <lineSegments>
+                <edgesGeometry args={[new THREE.BoxGeometry(length * 1.03, wall.heightM * 1.03, 0.22)]} />
+                <lineBasicMaterial color="#93c5fd" transparent opacity={0.9} />
+              </lineSegments>
+            )}
           </group>
         );
       })}
@@ -148,12 +158,14 @@ export function SceneWalls({ walls, selectable = true }: { walls: WallNode[]; se
 export function SceneDoors({ doors, selectable = true }: { doors: DoorNode[]; selectable?: boolean }) {
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
+  const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
   return (
     <>
       {doors.map((door) => {
         const [width, height, thickness] = door.dimensions;
         const isOpen = door.state === "open";
         const isLocked = door.state === "locked";
+        const isSelected = selectedNodeIds.includes(door.id);
 
         return (
           <group
@@ -171,13 +183,21 @@ export function SceneDoors({ doors, selectable = true }: { doors: DoorNode[]; se
             <mesh rotation={[0, 0, 0]} castShadow receiveShadow visible={!isOpen}>
               <boxGeometry args={[width, height, Math.max(thickness, 0.08)]} />
               <meshStandardMaterial
-                color={isLocked ? "#b45309" : "#8b5e34"}
+                color={isSelected ? "#60a5fa" : isLocked ? "#b45309" : "#8b5e34"}
                 roughness={0.72}
                 metalness={0.08}
                 transparent
-                opacity={0.92}
+                opacity={isSelected ? 0.98 : 0.92}
+                emissive={isSelected ? "#1d4ed8" : "#000000"}
+                emissiveIntensity={isSelected ? 0.16 : 0}
               />
             </mesh>
+            {isSelected && (
+              <lineSegments>
+                <edgesGeometry args={[new THREE.BoxGeometry(width * 1.04, height * 1.04, Math.max(thickness, 0.08) * 1.2)]} />
+                <lineBasicMaterial color="#93c5fd" transparent opacity={0.88} />
+              </lineSegments>
+            )}
             {isOpen && (
               <mesh position={[width * 0.12, 0, 0]} rotation={[0, Math.PI / 2, 0]} castShadow>
                 <boxGeometry args={[thickness, height, width]} />
@@ -196,6 +216,7 @@ export function SceneDoors({ doors, selectable = true }: { doors: DoorNode[]; se
 export function SceneWindows({ windows, selectable = true }: { windows: WindowNode[]; selectable?: boolean }) {
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
+  const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
   return (
     <>
       {windows.map((window) => {
@@ -204,6 +225,7 @@ export function SceneWindows({ windows, selectable = true }: { windows: WindowNo
         const isCurtain = window.state === "curtain";
         const isReflective = window.state === "reflective";
         const opacity = isOpen ? 0.1 : isCurtain ? 0.22 : isReflective ? 0.38 : 0.24;
+        const isSelected = selectedNodeIds.includes(window.id);
 
         return (
           <group
@@ -221,13 +243,21 @@ export function SceneWindows({ windows, selectable = true }: { windows: WindowNo
             <mesh castShadow receiveShadow visible={!isOpen}>
             <boxGeometry args={[width, height, Math.max(thickness, 0.05)]} />
             <meshStandardMaterial
-              color={isReflective ? "#e5f0ff" : "#cfe5ff"}
+              color={isSelected ? "#93c5fd" : isReflective ? "#e5f0ff" : "#cfe5ff"}
               transparent
-              opacity={opacity}
+              opacity={isSelected ? Math.min(0.45, opacity + 0.1) : opacity}
               roughness={isReflective ? 0.05 : 0.15}
               metalness={isReflective ? 0.4 : 0.12}
+              emissive={isSelected ? "#1d4ed8" : "#000000"}
+              emissiveIntensity={isSelected ? 0.12 : 0}
             />
             </mesh>
+            {isSelected && (
+              <lineSegments>
+                <edgesGeometry args={[new THREE.BoxGeometry(width * 1.04, height * 1.04, Math.max(thickness, 0.05) * 1.2)]} />
+                <lineBasicMaterial color="#93c5fd" transparent opacity={0.88} />
+              </lineSegments>
+            )}
           </group>
         );
       })}
@@ -256,13 +286,14 @@ export function SceneObstructions({
   onSelect?: (id: string) => void;
 }) {
   const storeSelect = useStudioStore((s) => s.selectNode);
+  const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
   const handleSelect = onSelect ?? storeSelect;
 
   return (
     <>
       {obstructions.map((obs) => {
         const [w, d, h] = obs.dimensions;
-        const isSelected = selectedId === obs.id;
+        const isSelected = selectedId === obs.id || selectedNodeIds.includes(obs.id);
         const isShelf = obs.obstructionType === "shelf";
         const color = OBSTRUCTION_COLORS[obs.obstructionType] ?? OBSTRUCTION_COLORS.other;
         const highlightBox = new THREE.BoxGeometry(w * 1.02, h * 1.02, d * 1.02);
@@ -574,6 +605,8 @@ export function CoverageSegmentPath({ waypoints }: { waypoints: { position: [num
 // ── Privacy Zones ──
 
 function PrivacyZoneMesh({ zone }: { zone: { id: string; label: string; polygon: [number, number][]; restriction: string } }) {
+  const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
+  const isSelected = selectedNodeIds.includes(zone.id);
   const shape = useMemo(() => {
     const s = new THREE.Shape();
     const pts = zone.polygon;
@@ -600,12 +633,12 @@ function PrivacyZoneMesh({ zone }: { zone: { id: string; label: string; polygon:
       {/* Base fill */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
         <shapeGeometry args={[shape]} />
-        <meshBasicMaterial color={restrictionColor} transparent opacity={0.15} depthWrite={false} side={THREE.DoubleSide} />
+        <meshBasicMaterial color={isSelected ? "#93c5fd" : restrictionColor} transparent opacity={isSelected ? 0.24 : 0.15} depthWrite={false} side={THREE.DoubleSide} />
       </mesh>
       {/* Outline */}
       <lineSegments rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, 0]}>
         <edgesGeometry args={[new THREE.ShapeGeometry(shape)]} />
-        <lineBasicMaterial color={restrictionColor} transparent opacity={0.5} />
+        <lineBasicMaterial color={isSelected ? "#93c5fd" : restrictionColor} transparent opacity={isSelected ? 0.88 : 0.5} />
       </lineSegments>
       {/* Label sprite */}
       <PrivacyZoneLabel position={[cx, 0.5, cz]} text={zone.label} color={restrictionColor} />
@@ -685,6 +718,8 @@ export function ScenePathLine({
 }) {
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
   const selectNode = useStudioStore((s) => s.selectNode);
+  const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
+  const isSelected = Boolean(id && selectedNodeIds.includes(id));
   const geometry = useMemo(() => {
     const arr = new Float32Array(points.length * 3);
     points.forEach(([x, z], index) => {
@@ -700,11 +735,11 @@ export function ScenePathLine({
   const line = useMemo(() => {
     const dashedLine = new THREE.Line(
       geometry,
-      new THREE.LineDashedMaterial({ color, dashSize: 0.14, gapSize: 0.08, scale: 1 }),
+      new THREE.LineDashedMaterial({ color: isSelected ? "#f59e0b" : color, dashSize: isSelected ? 0.18 : 0.14, gapSize: isSelected ? 0.06 : 0.08, scale: 1 }),
     );
     dashedLine.computeLineDistances();
     return dashedLine;
-  }, [color, geometry]);
+  }, [color, geometry, isSelected]);
 
   const start = points[0];
   const end = points[points.length - 1];
@@ -730,16 +765,23 @@ export function ScenePathLine({
     >
       <primitive object={line} />
       {showMarkers && start && (
-        <mesh position={[start[0], 0.065, start[1]]}>
+        <mesh position={[start[0], 0.065, start[1]]} scale={isSelected ? 1.18 : 1}>
           <sphereGeometry args={[0.08, 12, 12]} />
-          <meshBasicMaterial color="#22c55e" />
+          <meshBasicMaterial color={isSelected ? "#fde68a" : "#22c55e"} />
         </mesh>
       )}
       {showMarkers && end && (
-        <mesh position={[end[0], 0.065, end[1]]}>
+        <mesh position={[end[0], 0.065, end[1]]} scale={isSelected ? 1.18 : 1}>
           <sphereGeometry args={[0.08, 12, 12]} />
           <meshBasicMaterial color="#f59e0b" />
         </mesh>
+      )}
+      {isSelected && start && end && (
+        <Html position={[(start[0] + end[0]) / 2, 0.16, (start[1] + end[1]) / 2]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
+          <div className="rounded border border-[#f59e0b]/40 bg-[#1b1205]/88 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em] text-[#fdba74]">
+            Selected path
+          </div>
+        </Html>
       )}
     </group>
   );

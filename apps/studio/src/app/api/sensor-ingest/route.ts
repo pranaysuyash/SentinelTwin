@@ -35,7 +35,6 @@ export async function POST(request: Request) {
     const summary = await summarizeSensorLiveFeed(parsed.data);
     const storedAt = Date.now();
     const history = appendSensorIngestHistory({
-      ok: true,
       ...parsed.data,
       ...summary,
       submittedAt: parsed.data.submittedAt ?? storedAt,

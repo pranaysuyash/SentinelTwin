@@ -102,6 +102,7 @@ export function LeftPanel() {
     layers: false,
     minimap: false,
     presets: false,
+    snapping: false,
   });
   const [toolPresetName, setToolPresetName] = useState("");
   const [toolPresets, setToolPresets] = useState<Array<{ name: string; tool: ActiveTool; snapEnabled: boolean; snapDistanceM: number; gridSnapM: number }>>(() => {
@@ -227,6 +228,66 @@ export function LeftPanel() {
           ) : (
             <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[9px] text-[#72809a]">
               Presets hidden. Expand to load saved tool setups.
+            </div>
+          )}
+        </section>
+
+        <section>
+          <SectionTitle
+            title="Snapping"
+            collapsed={collapsedSections.snapping}
+            onToggle={() => toggleSection("snapping")}
+            summary={editor.snapEnabled ? "On" : "Off"}
+            helpText="Grid and wall snapping control how new points, walls, and transforms resolve while you edit."
+          />
+          {!collapsedSections.snapping ? (
+            <div className="space-y-1 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+            <button
+              type="button"
+              onClick={() => setSnapEnabled(!editor.snapEnabled)}
+              className={cn(
+                "flex h-7 w-full items-center justify-between rounded-lg px-2 text-[10px] font-medium transition-colors",
+                editor.snapEnabled
+                  ? "bg-emerald-500/14 text-emerald-200 ring-1 ring-inset ring-emerald-500/25"
+                  : "bg-[#111521] text-[#8b96ae] hover:bg-[#141926] hover:text-[#d6deef]",
+              )}
+            >
+              <span>Enable snapping</span>
+              <span className="rounded bg-[#111521] px-1.5 py-0.5 font-mono text-[8px] text-[#647187]">
+                {editor.snapEnabled ? "On" : "Off"}
+              </span>
+            </button>
+            <label className="flex items-center gap-2 rounded-lg bg-[#111521] px-2 py-1.5 text-[10px] text-[#8b96ae]">
+              <span className="w-24 flex-shrink-0">Snap distance</span>
+              <input
+                type="number"
+                min={0.05}
+                step={0.05}
+                value={editor.snapDistanceM}
+                onChange={(event) => setSnapDistanceM(Number(event.target.value))}
+                className="h-7 w-full rounded border border-[#2a3248] bg-[#0d111a] px-2 text-[10px] text-[#d6deef]"
+              />
+              <span className="text-[9px] text-[#647187]">m</span>
+            </label>
+            <label className="flex items-center gap-2 rounded-lg bg-[#111521] px-2 py-1.5 text-[10px] text-[#8b96ae]">
+              <span className="w-24 flex-shrink-0">Grid size</span>
+              <input
+                type="number"
+                min={0.1}
+                step={0.1}
+                value={editor.gridSnapM}
+                onChange={(event) => setGridSnapM(Number(event.target.value))}
+                className="h-7 w-full rounded border border-[#2a3248] bg-[#0d111a] px-2 text-[10px] text-[#d6deef]"
+              />
+              <span className="text-[9px] text-[#647187]">m</span>
+            </label>
+            <div className="px-0.5 text-[9px] leading-relaxed text-[#6d7891]">
+              Grid visibility lives in Scene Layers, while these settings control edit snapping.
+            </div>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[9px] text-[#72809a]">
+              Snapping settings hidden. Expand to tune grid and wall resolution.
             </div>
           )}
         </section>

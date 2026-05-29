@@ -177,6 +177,7 @@ describe("buildSupportBundle", () => {
             liveSessionState: "connected",
             liveSessionStartedAt: 1710000003500,
             liveSessionConfirmedAt: 1710000003800,
+            liveSessionExpiresAt: 1710000123800,
             liveFeedUrl: "rtsp://camera.example.com/live",
             liveFeedLabel: "Front entrance",
             liveConnectionMode: "onvif",

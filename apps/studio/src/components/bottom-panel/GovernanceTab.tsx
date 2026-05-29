@@ -169,6 +169,7 @@ export function GovernanceTab() {
     membershipDrift: ReturnType<typeof summarizeWorkspaceMembershipDrift> | null;
     sceneName: string;
     summary: string;
+    receivedAt: string;
     submittedAt: number;
     storedAt: number;
   }>>([]);
@@ -281,6 +282,7 @@ export function GovernanceTab() {
           membershipDrift: ReturnType<typeof summarizeWorkspaceMembershipDrift> | null;
           sceneName: string;
           summary: string;
+          receivedAt: string;
           submittedAt: number;
           storedAt: number;
         }>;
@@ -296,10 +298,12 @@ export function GovernanceTab() {
   };
 
   useEffect(() => {
-    void refreshGovernanceArchive();
-    void refreshWorkspaceMembershipArchive();
-    void refreshApprovalRouteArchive();
-    void refreshIdentityConflictArchive();
+    void (async () => {
+      await refreshGovernanceArchive();
+      await refreshWorkspaceMembershipArchive();
+      await refreshApprovalRouteArchive();
+      await refreshIdentityConflictArchive();
+    })();
   }, []);
 
   const actionGates = useMemo(() => {
@@ -1179,7 +1183,7 @@ export function GovernanceTab() {
             ) : null}
             <div className="space-y-1.5">
               {remoteGovernanceArchiveHistory.length > 0 ? remoteGovernanceArchiveHistory.slice(0, 3).map((record) => (
-                <div key={`${record.receivedAt}-${record.historyId}-${record.storedAt}`} className="rounded-md border border-[#1a2030] bg-[#0f141f] px-3 py-2">
+                <div key={`${record.storedAt}-${record.historyId}-${record.storedAt}`} className="rounded-md border border-[#1a2030] bg-[#0f141f] px-3 py-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="text-[10px] font-semibold text-[#edf2ff]">{record.sceneName ?? "Untitled scene"}</div>
                     <Badge variant={record.archiveStatus === "server archive" ? "green" : "amber"}>{record.archiveStatus}</Badge>
@@ -1349,7 +1353,7 @@ export function GovernanceTab() {
 	                </div>
 	              ) : null}
               {remoteWorkspaceMembershipArchiveHistory.length > 0 ? remoteWorkspaceMembershipArchiveHistory.slice(0, 3).map((record) => (
-                <div key={`${record.receivedAt}-${record.historyId}-${record.storedAt}`} className="rounded-md border border-[#1a2030] bg-[#0f141f] px-3 py-2">
+                <div key={`${record.storedAt}-${record.historyId}-${record.storedAt}`} className="rounded-md border border-[#1a2030] bg-[#0f141f] px-3 py-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="text-[10px] font-semibold text-[#edf2ff]">{record.sceneName ?? "Untitled scene"}</div>
                     <Badge variant={record.archiveStatus === "server archive" ? "green" : "amber"}>{record.archiveStatus}</Badge>
@@ -1490,7 +1494,7 @@ export function GovernanceTab() {
             ) : null}
             <div className="space-y-1.5">
               {remoteIdentityConflictHistory.length > 0 ? remoteIdentityConflictHistory.slice(0, 3).map((record) => (
-                <div key={`${record.receivedAt}-${record.sceneName}-${record.storedAt}`} className="rounded-md border border-[#1a2030] bg-[#0f141f] px-3 py-2">
+                <div key={`${record.storedAt}-${record.sceneName}-${record.storedAt}`} className="rounded-md border border-[#1a2030] bg-[#0f141f] px-3 py-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="text-[10px] font-semibold text-[#edf2ff]">{record.sceneName ?? "Untitled scene"}</div>
                     <Badge variant={record.archiveStatus === "server archive" ? "green" : "amber"}>{record.archiveStatus}</Badge>
@@ -1505,6 +1509,7 @@ export function GovernanceTab() {
                     </Badge>
                     <Badge variant="gray">{record.approvalRoute.routeStatus.replace(/_/g, " ")}</Badge>
                     <Badge variant="gray">{record.membershipDrift ? (record.membershipDrift.activeMemberChanged ? "drift" : "aligned") : "no archive"}</Badge>
+                    <Badge variant="gray">{new Date(record.receivedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Badge>
                     <Badge variant="gray">{new Date(record.submittedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Badge>
                   </div>
                 </div>

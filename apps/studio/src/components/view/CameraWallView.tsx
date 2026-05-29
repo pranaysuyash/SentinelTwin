@@ -3,7 +3,7 @@
 import { OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { Camera, VideoOff } from "lucide-react";
-import { memo, Suspense, useCallback, useMemo, useState } from "react";
+import { memo, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 import "@/lib/three-compat";
 import { cn } from "@/lib/cn";
@@ -405,6 +405,7 @@ export function CameraWallView() {
   const selectedCameraId = useStudioStore((s) => s.selectedCameraId);
   const [layoutMode, setLayoutMode] = useState<CameraWallLayoutMode>("auto");
   const [syncTime, setSyncTime] = useState(true);
+  const [freeRunningTimestamp, setFreeRunningTimestamp] = useState(() => Date.now());
 
   const cameras = useMemo(() => {
     // Sort: selected first, then active, then offline
@@ -456,7 +457,18 @@ export function CameraWallView() {
   const visible = cameras.slice(0, visibleCount);
   const hiddenCount = Math.max(0, cameras.length - visible.length);
   const viewCount = effectiveLayout === "quad" ? 4 : effectiveLayout === "overview" ? 6 : 16;
-  const timestampLabel = syncTime ? formatWallTimestamp(simulationResult?.computedAt) : formatWallTimestamp(Date.now());
+  const timestampLabel = syncTime ? formatWallTimestamp(simulationResult?.computedAt) : formatWallTimestamp(freeRunningTimestamp);
+
+  useEffect(() => {
+    if (syncTime) return;
+    queueMicrotask(() => {
+      setFreeRunningTimestamp(Date.now());
+    });
+    const timer = window.setInterval(() => {
+      setFreeRunningTimestamp(Date.now());
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [syncTime]);
 
   if (cameras.length === 0) {
     return (

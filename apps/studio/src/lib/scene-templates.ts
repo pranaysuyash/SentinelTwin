@@ -35,6 +35,9 @@ function makeBase(name: string, w: number, d: number, h: number): Partial<Securi
       showAssumptionsPanel: false,
     },
     source: "manual",
+    reviewStatus: "unreviewed",
+    sourceTrace: "",
+    geometryValidity: "valid",
     version: "0.1.0",
     snapshots: [],
     scenarios: [],
@@ -44,10 +47,10 @@ function makeBase(name: string, w: number, d: number, h: number): Partial<Securi
 
 function rectWalls(w: number, d: number, h: number) {
   return [
-    { id: uid("w"), nodeType: "wall" as const, label: "South Wall", start: [0, 0] as [number, number], end: [w, 0] as [number, number], heightM: h, thicknessM: 0.18, material: "solid" as const, visionTransmission: 0, source: "manual" as const },
-    { id: uid("w"), nodeType: "wall" as const, label: "North Wall", start: [0, d] as [number, number], end: [w, d] as [number, number], heightM: h, thicknessM: 0.18, material: "solid" as const, visionTransmission: 0, source: "manual" as const },
-    { id: uid("w"), nodeType: "wall" as const, label: "East Wall", start: [w, 0] as [number, number], end: [w, d] as [number, number], heightM: h, thicknessM: 0.18, material: "solid" as const, visionTransmission: 0, source: "manual" as const },
-    { id: uid("w"), nodeType: "wall" as const, label: "West Wall", start: [0, 0] as [number, number], end: [0, d] as [number, number], heightM: h, thicknessM: 0.18, material: "solid" as const, visionTransmission: 0, source: "manual" as const },
+    { id: uid("w"), nodeType: "wall" as const, label: "South Wall", start: [0, 0] as [number, number], end: [w, 0] as [number, number], heightM: h, thicknessM: 0.18, material: "solid" as const, visionTransmission: 0, source: "manual" as const, reviewStatus: "unreviewed" as const, sourceTrace: "", geometryValidity: "valid" as const },
+    { id: uid("w"), nodeType: "wall" as const, label: "North Wall", start: [0, d] as [number, number], end: [w, d] as [number, number], heightM: h, thicknessM: 0.18, material: "solid" as const, visionTransmission: 0, source: "manual" as const, reviewStatus: "unreviewed" as const, sourceTrace: "", geometryValidity: "valid" as const },
+    { id: uid("w"), nodeType: "wall" as const, label: "East Wall", start: [w, 0] as [number, number], end: [w, d] as [number, number], heightM: h, thicknessM: 0.18, material: "solid" as const, visionTransmission: 0, source: "manual" as const, reviewStatus: "unreviewed" as const, sourceTrace: "", geometryValidity: "valid" as const },
+    { id: uid("w"), nodeType: "wall" as const, label: "West Wall", start: [0, 0] as [number, number], end: [0, d] as [number, number], heightM: h, thicknessM: 0.18, material: "solid" as const, visionTransmission: 0, source: "manual" as const, reviewStatus: "unreviewed" as const, sourceTrace: "", geometryValidity: "valid" as const },
   ];
 }
 
@@ -83,6 +86,9 @@ function cam(
     ptz: false,
     clarity: "good" as const,
     source: "preset" as const,
+    reviewStatus: "unreviewed" as const,
+    sourceTrace: "",
+    geometryValidity: "valid" as const,
     tags: [] as string[],
   };
 }
@@ -102,6 +108,9 @@ function light(name: string, position: [number, number, number], rangeM: number)
     illuminatesNightCoverage: true,
     glareRisk: "none" as const,
     source: "preset" as const,
+    reviewStatus: "unreviewed" as const,
+    sourceTrace: "",
+    geometryValidity: "valid" as const,
   };
 }
 
@@ -128,6 +137,9 @@ function obs(
     movableByAI: true,
     obstructionType,
     source: "preset" as const,
+    reviewStatus: "unreviewed" as const,
+    sourceTrace: "",
+    geometryValidity: "valid" as const,
   };
 }
 
@@ -151,6 +163,10 @@ function zone(
     nightRequired: false,
     redundancyRequired: false,
     privacyZone: false,
+    source: "manual" as const,
+    reviewStatus: "unreviewed" as const,
+    sourceTrace: "",
+    geometryValidity: "valid" as const,
   };
 }
 
@@ -164,6 +180,9 @@ function door(label: string, position: [number, number, number], w = 0.9) {
     dimensions: [w, 2.1, 0.1] as [number, number, number],
     state: "closed" as const,
     source: "preset" as const,
+    reviewStatus: "unreviewed" as const,
+    sourceTrace: "",
+    geometryValidity: "valid" as const,
   };
 }
 
@@ -178,6 +197,9 @@ function win(label: string, position: [number, number, number], dimensions: [num
     state: "closed_glass" as const,
     visionTransmission: 0.9,
     source: "preset" as const,
+    reviewStatus: "unreviewed" as const,
+    sourceTrace: "",
+    geometryValidity: "valid" as const,
   };
 }
 
@@ -215,7 +237,7 @@ export const SCENE_TEMPLATES: SceneTemplate[] = [
           zone("Back Room", [[w / 2 - 2, d - 2], [w / 2 + 2, d - 2], [w / 2 + 2, d - 0.5], [w / 2 - 2, d - 0.5]], "detection", "medium", "person_detection"),
         ],
         entryPoints: [
-          { id: uid("entry"), nodeType: "entry_point" as const, label: "Front Door", position: [w / 2, 0] as [number, number] },
+          { id: uid("entry"), nodeType: "entry_point" as const, label: "Front Door", position: [w / 2, 0] as [number, number], source: "manual" as const, reviewStatus: "unreviewed" as const, sourceTrace: "", geometryValidity: "valid" as const },
         ],
         paths: [],
         privacyZones: [],
@@ -257,8 +279,8 @@ export const SCENE_TEMPLATES: SceneTemplate[] = [
           zone("Server Room", [[w - 3, d - 3], [w - 1, d - 3], [w - 1, d - 1], [w - 3, d - 1]], "identification", "critical", "person_detection"),
         ],
         entryPoints: [
-          { id: uid("entry"), nodeType: "entry_point" as const, label: "Main Entry", position: [w / 2, 0] as [number, number] },
-          { id: uid("entry"), nodeType: "entry_point" as const, label: "Rear Exit", position: [w / 2, d] as [number, number] },
+          { id: uid("entry"), nodeType: "entry_point" as const, label: "Main Entry", position: [w / 2, 0] as [number, number], source: "manual" as const, reviewStatus: "unreviewed" as const, sourceTrace: "", geometryValidity: "valid" as const },
+          { id: uid("entry"), nodeType: "entry_point" as const, label: "Rear Exit", position: [w / 2, d] as [number, number], source: "manual" as const, reviewStatus: "unreviewed" as const, sourceTrace: "", geometryValidity: "valid" as const },
         ],
         paths: [],
         privacyZones: [],
@@ -305,8 +327,8 @@ export const SCENE_TEMPLATES: SceneTemplate[] = [
           zone("Entry", [[0, 0], [3, 0], [3, 3], [0, 3]], "recognition", "high", "person_detection"),
         ],
         entryPoints: [
-          { id: uid("entry"), nodeType: "entry_point" as const, label: "Main Entry", position: [1.5, 0] as [number, number] },
-          { id: uid("entry"), nodeType: "entry_point" as const, label: "Loading Bay", position: [w / 2, d] as [number, number] },
+          { id: uid("entry"), nodeType: "entry_point" as const, label: "Main Entry", position: [1.5, 0] as [number, number], source: "manual" as const, reviewStatus: "unreviewed" as const, sourceTrace: "", geometryValidity: "valid" as const },
+          { id: uid("entry"), nodeType: "entry_point" as const, label: "Loading Bay", position: [w / 2, d] as [number, number], source: "manual" as const, reviewStatus: "unreviewed" as const, sourceTrace: "", geometryValidity: "valid" as const },
         ],
         paths: [],
         privacyZones: [],
@@ -341,7 +363,7 @@ export const SCENE_TEMPLATES: SceneTemplate[] = [
           zone("Front", [[w / 4, d - 2], [3 * w / 4, d - 2], [3 * w / 4, d], [w / 4, d]], "detection", "medium", "person_detection"),
         ],
         entryPoints: [
-          { id: uid("entry"), nodeType: "entry_point" as const, label: "Entry", position: [0, d / 2] as [number, number] },
+          { id: uid("entry"), nodeType: "entry_point" as const, label: "Entry", position: [0, d / 2] as [number, number], source: "manual" as const, reviewStatus: "unreviewed" as const, sourceTrace: "", geometryValidity: "valid" as const },
         ],
         paths: [],
         privacyZones: [],
@@ -385,8 +407,8 @@ export const SCENE_TEMPLATES: SceneTemplate[] = [
           zone("Pedestrian Exit", [[w / 2 - 1, d - 1], [w / 2 + 1, d - 1], [w / 2 + 1, d], [w / 2 - 1, d]], "recognition", "high", "door_entry_exit"),
         ],
         entryPoints: [
-          { id: uid("entry"), nodeType: "entry_point" as const, label: "Vehicle Entry", position: [w / 2 - 3, 0] as [number, number] },
-          { id: uid("entry"), nodeType: "entry_point" as const, label: "Pedestrian Exit", position: [w / 2, d] as [number, number] },
+          { id: uid("entry"), nodeType: "entry_point" as const, label: "Vehicle Entry", position: [w / 2 - 3, 0] as [number, number], source: "manual" as const, reviewStatus: "unreviewed" as const, sourceTrace: "", geometryValidity: "valid" as const },
+          { id: uid("entry"), nodeType: "entry_point" as const, label: "Pedestrian Exit", position: [w / 2, d] as [number, number], source: "manual" as const, reviewStatus: "unreviewed" as const, sourceTrace: "", geometryValidity: "valid" as const },
         ],
         paths: [],
         privacyZones: [],
@@ -410,9 +432,9 @@ export const SCENE_TEMPLATES: SceneTemplate[] = [
         walls: [
           ...rectWalls(w, d, h),
           // Interior partitions
-          { id: uid("w"), nodeType: "wall" as const, label: "Hallway-Living", start: [0, 8] as [number, number], end: [12, 8] as [number, number], heightM: h, thicknessM: 0.12, material: "solid" as const, visionTransmission: 0, source: "manual" as const },
-          { id: uid("w"), nodeType: "wall" as const, label: "Living-Dining", start: [12, 8] as [number, number], end: [12, 16] as [number, number], heightM: h, thicknessM: 0.12, material: "solid" as const, visionTransmission: 0, source: "manual" as const },
-          { id: uid("w"), nodeType: "wall" as const, label: "Bedroom Divider", start: [0, 14] as [number, number], end: [10, 14] as [number, number], heightM: h, thicknessM: 0.12, material: "solid" as const, visionTransmission: 0, source: "manual" as const },
+          { id: uid("w"), nodeType: "wall" as const, label: "Hallway-Living", start: [0, 8] as [number, number], end: [12, 8] as [number, number], heightM: h, thicknessM: 0.12, material: "solid" as const, visionTransmission: 0, source: "manual" as const, reviewStatus: "unreviewed" as const, sourceTrace: "", geometryValidity: "valid" as const },
+          { id: uid("w"), nodeType: "wall" as const, label: "Living-Dining", start: [12, 8] as [number, number], end: [12, 16] as [number, number], heightM: h, thicknessM: 0.12, material: "solid" as const, visionTransmission: 0, source: "manual" as const, reviewStatus: "unreviewed" as const, sourceTrace: "", geometryValidity: "valid" as const },
+          { id: uid("w"), nodeType: "wall" as const, label: "Bedroom Divider", start: [0, 14] as [number, number], end: [10, 14] as [number, number], heightM: h, thicknessM: 0.12, material: "solid" as const, visionTransmission: 0, source: "manual" as const, reviewStatus: "unreviewed" as const, sourceTrace: "", geometryValidity: "valid" as const },
         ],
         doors: [
           door("Front Door", [w / 2, 0, 0], 1.2),
@@ -446,9 +468,9 @@ export const SCENE_TEMPLATES: SceneTemplate[] = [
           zone("Main Hallway", [[0, 8], [2, 8], [2, 14], [0, 14]], "detection", "medium", "person_detection"),
         ],
         entryPoints: [
-          { id: uid("entry"), nodeType: "entry_point" as const, label: "Front Door", position: [w / 2, 0] as [number, number] },
-          { id: uid("entry"), nodeType: "entry_point" as const, label: "Back Door", position: [w / 2, d] as [number, number] },
-          { id: uid("entry"), nodeType: "entry_point" as const, label: "Garage Door", position: [0, 3] as [number, number] },
+          { id: uid("entry"), nodeType: "entry_point" as const, label: "Front Door", position: [w / 2, 0] as [number, number], source: "manual" as const, reviewStatus: "unreviewed" as const, sourceTrace: "", geometryValidity: "valid" as const },
+          { id: uid("entry"), nodeType: "entry_point" as const, label: "Back Door", position: [w / 2, d] as [number, number], source: "manual" as const, reviewStatus: "unreviewed" as const, sourceTrace: "", geometryValidity: "valid" as const },
+          { id: uid("entry"), nodeType: "entry_point" as const, label: "Garage Door", position: [0, 3] as [number, number], source: "manual" as const, reviewStatus: "unreviewed" as const, sourceTrace: "", geometryValidity: "valid" as const },
         ],
         paths: [],
         privacyZones: [],

@@ -21,6 +21,8 @@ describe("ReportLiteTab", () => {
     expect(source).toContain("Truth: Computed");
     expect(source).toContain("buildReportSummaryLines");
     expect(source).toContain("Latest Run");
+    expect(source).toContain("Truth Ladder");
+    expect(source).toContain("summarizeSceneTruthLadder");
     expect(source).toContain("Occlusion Blame");
     expect(source).toContain("Quality Without");
     expect(source).toContain("Operational Evidence");

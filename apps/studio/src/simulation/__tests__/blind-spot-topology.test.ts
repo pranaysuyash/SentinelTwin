@@ -35,6 +35,9 @@ function makeScene(overrides: Partial<SecurityScene> = {}): SecurityScene {
     privacyZones: [],
     sensors: [],
     source: "manual",
+    reviewStatus: "unreviewed",
+    sourceTrace: "",
+    geometryValidity: "valid",
     version: "0.1.0",
     snapshots: [],
     scenarios: [],
@@ -88,7 +91,7 @@ describe("analyseBlindSpotTopology", () => {
   it("classifies blind region near entry point as entry_connected", () => {
     const scene = makeScene({
       entryPoints: [
-        { id: "entry_1", nodeType: "entry_point", label: "Front Door", position: [5, 0] },
+        { id: "entry_1", nodeType: "entry_point", label: "Front Door", position: [5, 0], source: "manual", reviewStatus: "unreviewed", sourceTrace: "", geometryValidity: "valid" },
       ],
     });
     // Blind cells 0.5m from entry
@@ -107,7 +110,7 @@ describe("analyseBlindSpotTopology", () => {
   it("classifies blind corridor connecting entry to critical zone as entry_corridor", () => {
     const scene = makeScene({
       entryPoints: [
-        { id: "entry_1", nodeType: "entry_point", label: "Front Door", position: [0, 0] },
+        { id: "entry_1", nodeType: "entry_point", label: "Front Door", position: [0, 0], source: "manual", reviewStatus: "unreviewed", sourceTrace: "", geometryValidity: "valid" },
       ],
       criticalZones: [
         {
@@ -122,6 +125,10 @@ describe("analyseBlindSpotTopology", () => {
           nightRequired: false,
           redundancyRequired: false,
           privacyZone: false,
+          source: "manual",
+          reviewStatus: "unreviewed",
+          sourceTrace: "",
+          geometryValidity: "valid",
         },
       ],
     });
@@ -171,7 +178,7 @@ describe("analyseBlindSpotTopology", () => {
   it("sorts results with critical severity first", () => {
     const scene = makeScene({
       entryPoints: [
-        { id: "entry_1", nodeType: "entry_point", label: "Front Door", position: [0, 0] },
+        { id: "entry_1", nodeType: "entry_point", label: "Front Door", position: [0, 0], source: "manual", reviewStatus: "unreviewed", sourceTrace: "", geometryValidity: "valid" },
       ],
       criticalZones: [
         {
@@ -186,6 +193,10 @@ describe("analyseBlindSpotTopology", () => {
           nightRequired: false,
           redundancyRequired: false,
           privacyZone: false,
+          source: "manual",
+          reviewStatus: "unreviewed",
+          sourceTrace: "",
+          geometryValidity: "valid",
         },
       ],
     });

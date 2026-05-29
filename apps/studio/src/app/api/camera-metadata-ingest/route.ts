@@ -35,7 +35,6 @@ export async function POST(request: Request) {
     const summary = await summarizeCameraMetadataLiveFeed(parsed.data);
     const storedAt = Date.now();
     const history = appendCameraMetadataHistory({
-      ok: true,
       ...parsed.data,
       ...summary,
       submittedAt: parsed.data.submittedAt ?? storedAt,

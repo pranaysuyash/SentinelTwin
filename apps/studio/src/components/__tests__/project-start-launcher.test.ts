@@ -14,6 +14,7 @@ describe("ProjectStartLauncher", () => {
     expect(source).toContain("Design a new camera layout");
     expect(source).toContain("Import a floor plan");
     expect(source).toContain("Scan site with phone photos");
+    expect(source).toContain("Preview / Manual-assisted");
     expect(source).toContain("Draft from text prompt");
     expect(source).toContain("Verify real footage");
     expect(source).toContain("Generate client report");

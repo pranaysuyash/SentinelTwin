@@ -28,6 +28,7 @@ VENV_PATH="${WEBWRIGHT_VENV_PATH:-/tmp/webwright-sentinel}"
 WEBWRIGHT_SRC="${WEBWRIGHT_SOURCE:-/Users/pranay/.codex/.tmp/marketplaces/webwright}"
 UV_CACHE_DIR="${WEBWRIGHT_UV_CACHE_DIR:-/private/tmp/uv-cache}"
 PYTHON_BIN="${WEBWRIGHT_PYTHON_BIN:-python3.13}"
+MSWEBA_GLOBAL_CONFIG_DIR="${MSWEBA_GLOBAL_CONFIG_DIR:-/private/tmp/webwright-config}"
 WEBWRIGHT_BOOTSTRAP_ERROR=""
 OUT_ROOT="${WEBWRIGHT_QA_OUTPUT:-$BASE_DIR/qa-output}"
 BASE_URL="${SENTINELTWIN_BASE_URL:-http://localhost:3010}"
@@ -309,7 +310,7 @@ run_webwright_smoke() {
     ((route_idx+=1))
 
     action "Running webwright ($command_type) for $route_url"
-    "${cmd[@]}" \
+    MSWEBA_GLOBAL_CONFIG_DIR="$MSWEBA_GLOBAL_CONFIG_DIR" "${cmd[@]}" \
       -c base.yaml -c model_openai.yaml \
       -t "$task" \
       --start-url "$route_url" \
@@ -334,6 +335,7 @@ record_manifest() {
   BASE_URL="$BASE_URL" \
   UV_CACHE_DIR="$UV_CACHE_DIR" \
   PLAYWRIGHT_CACHE="$PLAYWRIGHT_CACHE" \
+  MSWEBA_GLOBAL_CONFIG_DIR="$MSWEBA_GLOBAL_CONFIG_DIR" \
   BOOTSTRAP_ERROR="$WEBWRIGHT_BOOTSTRAP_ERROR" \
   "$PYTHON_BIN" - <<'PY'
 import json
@@ -358,6 +360,7 @@ manifest_data = {
         "Set WEBWRIGHT_PYTHON_BIN=python3.13 (or configured interpreter) and use uv for environment management.",
         "Webwright still needs Playwright/browser binaries at runtime.",
         "Set UV cache and Playwright cache at: " + os.environ.get("UV_CACHE_DIR", "") + ", " + os.environ.get("PLAYWRIGHT_CACHE", ""),
+        "Set config dir at: " + os.environ.get("MSWEBA_GLOBAL_CONFIG_DIR", "/private/tmp/webwright-config"),
         "No model key means --run is skipped even when Webwright is installed.",
     ],
 }

@@ -270,6 +270,7 @@ function LiveFeedHUD({
     liveSessionState: "idle" | "probing" | "connected" | "error" | null;
     liveSessionStartedAt: number | null;
     liveSessionConfirmedAt: number | null;
+    liveSessionExpiresAt: number | null;
     liveConnectionMode: "rtsp" | "mjpeg" | "http" | "onvif" | "proxy" | null;
     liveConnectionStatus: "disconnected" | "connecting" | "connected" | "error" | null;
     ingestMode: "manual" | "external";
@@ -433,6 +434,9 @@ function LiveFeedHUD({
             </div>
             <div>
               <span className="text-[#6a748b]">Confirmed:</span> {cameraLiveConnectionEvent.liveSessionConfirmedAt == null ? "—" : new Date(cameraLiveConnectionEvent.liveSessionConfirmedAt).toLocaleTimeString()}
+            </div>
+            <div className="col-span-2">
+              <span className="text-[#6a748b]">Expires:</span> {cameraLiveConnectionEvent.liveSessionExpiresAt == null ? "—" : new Date(cameraLiveConnectionEvent.liveSessionExpiresAt).toLocaleTimeString()}
             </div>
           </div>
           <div className="mt-1 text-[8px] text-[#8ea6cc]">
@@ -1792,15 +1796,14 @@ export function CameraViewMode() {
 
   useEffect(() => {
     if (!cameraViewVerificationIntent?.openPanel) return;
-    setVerificationEnabled(true);
-    setCameraViewVerificationIntent(null);
+    queueMicrotask(() => {
+      setVerificationEnabled(true);
+      setCameraViewVerificationIntent(null);
+    });
   }, [cameraViewVerificationIntent, setCameraViewVerificationIntent]);
 
   useEffect(() => {
-    if (!verificationEnabled || !verificationImageUrl || !camera) {
-      setAlignmentQualityScore(null);
-      return;
-    }
+    if (!verificationEnabled || !verificationImageUrl || !camera) return;
 
     const host = frameRootRef.current;
     const canvas = host?.querySelector("canvas");

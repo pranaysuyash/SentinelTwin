@@ -22,6 +22,7 @@ describe("Studio shell shortcuts", () => {
     expect(constantsSource).toContain('t: "comment"');
 
     expect(shellSource).toContain('keys: "1 – 6"');
+    expect(shellSource).toContain('keys: "← → ↑ ↓"');
     expect(shellSource).toContain('keys: "V"');
     expect(shellSource).toContain('keys: "P"');
     expect(shellSource).toContain('keys: "Y"');

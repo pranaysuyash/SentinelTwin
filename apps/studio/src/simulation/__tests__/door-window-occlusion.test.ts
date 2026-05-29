@@ -31,6 +31,9 @@ function buildDoorScene(state: "open" | "closed" | "locked" | "restricted") {
       dimensions: [0.9, 2, 0.12],
       state,
       source: "manual",
+      reviewStatus: "unreviewed",
+      sourceTrace: "",
+      geometryValidity: "valid",
     },
   ];
 
@@ -64,6 +67,9 @@ function buildWindowScene(
       state,
       visionTransmission,
       source: "manual",
+      reviewStatus: "unreviewed",
+      sourceTrace: "",
+      geometryValidity: "valid",
     },
   ];
 
@@ -127,6 +133,9 @@ describe("door and window occlusion", () => {
         state: "reflective",
         visionTransmission: 0.4,
         source: "manual",
+        reviewStatus: "unreviewed",
+        sourceTrace: "",
+        geometryValidity: "valid",
       },
     ];
     const reflectiveCells = computeCoverageCells(scene, 4);

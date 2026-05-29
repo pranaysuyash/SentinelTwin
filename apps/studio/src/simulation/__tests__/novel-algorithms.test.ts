@@ -128,6 +128,9 @@ describe("novel algorithms", () => {
         state: "reflective",
         visionTransmission: 0.4,
         source: "manual",
+        reviewStatus: "unreviewed",
+        sourceTrace: "",
+        geometryValidity: "valid",
       },
     ];
 

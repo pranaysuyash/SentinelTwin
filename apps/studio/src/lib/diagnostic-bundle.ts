@@ -10,6 +10,7 @@ import { summarizeIncidentAlerts } from "@/lib/incident-alerts";
 import { buildReportData } from "@/report";
 import { buildReportEvidenceBundle, type ReportEvidenceBundle } from "@/lib/report-evidence-bundle";
 import type { CameraLiveConnectionArchiveRecord } from "@/lib/camera-live-connection-history";
+import type { CameraLiveSessionRecord } from "@/lib/camera-live-session-registry";
 import { getSceneSourceMeta } from "@/lib/scene-source";
 import type { SecurityScene, SimulationResult } from "@/schema/security-scene";
 
@@ -129,6 +130,11 @@ export type SupportBundle = {
     latestSubmission: Pick<CameraLiveConnectionArchiveRecord, "source" | "action" | "protocol" | "receivedAt" | "sceneId" | "sceneName" | "summary" | "storedAt" | "endpointUrl" | "liveFeedUrl" | "feedLabel" | "record" | "sourceCount"> | null;
     recentSubmissions: Array<Pick<CameraLiveConnectionArchiveRecord, "source" | "action" | "protocol" | "receivedAt" | "sceneId" | "sceneName" | "summary" | "storedAt" | "endpointUrl" | "liveFeedUrl" | "feedLabel" | "record" | "sourceCount">>;
   };
+  cameraLiveSessionRegistry: {
+    activeSessionCount: number;
+    latestSession: Pick<CameraLiveSessionRecord, "sessionId" | "status" | "cameraId" | "cameraName" | "sceneId" | "sceneName" | "liveFeedUrl" | "feedLabel" | "liveConnectionMode" | "liveConnectionStatus" | "liveSessionState" | "liveSessionStartedAt" | "liveSessionConfirmedAt" | "liveSessionExpiresAt" | "lastObservedAt" | "sessionExpiresAt" | "lastAction" | "summary"> | null;
+    activeSessions: Array<Pick<CameraLiveSessionRecord, "sessionId" | "status" | "cameraId" | "cameraName" | "sceneId" | "sceneName" | "liveFeedUrl" | "feedLabel" | "liveConnectionMode" | "liveConnectionStatus" | "liveSessionState" | "liveSessionStartedAt" | "liveSessionConfirmedAt" | "liveSessionExpiresAt" | "lastObservedAt" | "sessionExpiresAt" | "lastAction" | "summary">>;
+  };
   incidents: {
     title: string;
     summary: string;
@@ -181,6 +187,7 @@ export type SupportBundleInput = DiagnosticBundleInput & {
     storedAt: number;
   }>;
   cameraLiveConnectionHistory?: CameraLiveConnectionArchiveRecord[];
+  cameraLiveSessionRegistry?: CameraLiveSessionRecord[];
 };
 
 function latestEvent(events: OperationalEvidenceEvent[], kinds: OperationalEvidenceEvent["kind"][]) {
@@ -492,6 +499,7 @@ export function buildSupportBundle(input: SupportBundleInput): SupportBundle {
   const latestExternalLog = normalizedExternalLogs.at(0) ?? null;
   const sensorIngestArchive = [...(input.sensorIngestHistory ?? [])].sort((left, right) => right.storedAt - left.storedAt);
   const cameraLiveConnectionArchive = [...(input.cameraLiveConnectionHistory ?? [])].sort((left, right) => right.storedAt - left.storedAt);
+  const cameraLiveSessionRegistry = [...(input.cameraLiveSessionRegistry ?? [])].sort((left, right) => right.lastObservedAt - left.lastObservedAt);
 
   return {
     version: "1",
@@ -508,6 +516,11 @@ export function buildSupportBundle(input: SupportBundleInput): SupportBundle {
       historyCount: cameraLiveConnectionArchive.length,
       latestSubmission: cameraLiveConnectionArchive.at(0) ?? null,
       recentSubmissions: cameraLiveConnectionArchive.slice(0, 3),
+    },
+    cameraLiveSessionRegistry: {
+      activeSessionCount: cameraLiveSessionRegistry.length,
+      latestSession: cameraLiveSessionRegistry.at(0) ?? null,
+      activeSessions: cameraLiveSessionRegistry.slice(0, 3),
     },
     incidents: {
       title: "Incident snapshot",

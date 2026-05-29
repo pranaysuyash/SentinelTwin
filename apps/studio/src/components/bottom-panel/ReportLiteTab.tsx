@@ -10,10 +10,12 @@ import { exportTextAsPdf } from "@/lib/pdf-export";
 import { buildReportEvidenceBundle, stringifyReportEvidenceBundle } from "@/lib/report-evidence-bundle";
 import { buildCompareReportData, exportCompareAsHtml, exportCompareAsMarkdown } from "@/report";
 import { buildReportData } from "@/report";
+import { summarizeSceneTruthLadder } from "@/lib/truth-ladder";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { useStudioStore } from "@/store/studio-store";
 import { buildReportSummaryLines } from "@/lib/report-summary";
 import { truthLabelDetail } from "@/lib/truth-labels";
+import { useMemo } from "react";
 
 export function ReportLiteTab() {
   const result = useStudioStore((s) => s.simulationResult);
@@ -32,6 +34,7 @@ export function ReportLiteTab() {
   const activePath = scene.paths.find((path) => path.id === activePathId) ?? null;
   const outcome = buildSecurityOutcomeModel(scene, result, activePath);
   const reportSummary = buildReportSummaryLines(outcome, result, scene);
+  const truthLadder = useMemo(() => summarizeSceneTruthLadder(scene), [scene]);
 
   // Build markdown from either AI report or simulation data
   const markdown = result
@@ -345,6 +348,31 @@ export function ReportLiteTab() {
             </div>
           </div>
         ) : null}
+        <div className="mb-3 rounded-xl border border-[#1e2130] bg-[#0b1018] p-3">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <div>
+              <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#7f8da8]">Truth Ladder</div>
+              <div className="text-[9px] text-[#6f7f9d]">Node review, source trace, and geometry validity status for the current scene.</div>
+            </div>
+            <div className="rounded border border-sky-500/20 bg-sky-500/10 px-2 py-1 text-[9px] text-sky-200">
+              {truthLadder.summary}
+            </div>
+          </div>
+          <div className="grid gap-1.5 text-[10px] text-[#b9c7df] md:grid-cols-2 xl:grid-cols-3">
+            {[
+              { label: "Nodes", value: truthLadder.nodeCount },
+              { label: "Reviewed Nodes", value: `${truthLadder.reviewedNodeCount} (${truthLadder.reviewedCoveragePct.toFixed(1)}%)` },
+              { label: "Verified Nodes", value: truthLadder.verifiedNodeCount },
+              { label: "Source Traces", value: `${truthLadder.sourceTraceCount} (${truthLadder.sourceTraceCoveragePct.toFixed(1)}%)` },
+              { label: "Suspect Geometry", value: truthLadder.suspectGeometryCount },
+              { label: "Invalid Geometry", value: truthLadder.invalidGeometryCount },
+            ].map((item) => (
+              <div key={item.label} className="rounded-lg border border-[#1e2130] bg-[#101521] px-2.5 py-2">
+                <span className="font-semibold text-sky-300">{item.label}:</span> {item.value}
+              </div>
+            ))}
+          </div>
+        </div>
         {activePathId ? (
           <div className="mb-3 rounded-lg border border-[#1e2130] bg-[#0b1018] px-3 py-2 text-[10px] text-[#8090a8]">
             Route evidence is tied to the selected active path.
@@ -473,6 +501,7 @@ function defaultMarkdown(
     .map((entry) => parseEvidenceEntry(entry))
     .filter((entry): entry is { when: string; title: string; details: string; confidence: string } => entry !== null);
   const sensorEvidenceCount = evidenceEntries.filter((entry) => /sensor/i.test(`${entry.title} ${entry.details}`)).length;
+  const truthLadder = summarizeSceneTruthLadder(scene);
   const lines = [
     "# SentinelTwin Coverage Report",
     "## Scene: " + scene.name,
@@ -496,6 +525,15 @@ function defaultMarkdown(
     "- Critical Zones: " + result.criticalZoneResults.filter((z) => z.status === "pass").length + "/" + result.criticalZoneResults.length + " passing",
     "- Issues Found: " + result.issues.length,
     "- Verified Recommendations: " + result.recommendations.filter((r) => r.verified).length + "/" + result.recommendations.length,
+    "",
+    "### Truth Ladder",
+    "- Nodes: " + truthLadder.nodeCount,
+    "- Reviewed Nodes: " + truthLadder.reviewedNodeCount + ` (${truthLadder.reviewedCoveragePct.toFixed(1)}%)`,
+    "- Verified Nodes: " + truthLadder.verifiedNodeCount,
+    "- Source Traces: " + truthLadder.sourceTraceCount + ` (${truthLadder.sourceTraceCoveragePct.toFixed(1)}%)`,
+    "- Suspect Geometry: " + truthLadder.suspectGeometryCount,
+    "- Invalid Geometry: " + truthLadder.invalidGeometryCount,
+    "- Summary: " + truthLadder.summary,
     "",
     "### Issues",
     ...result.issues.map((i) => "- [" + i.severity + "] " + i.description),

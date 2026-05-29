@@ -11,6 +11,7 @@ Outputs per-task, per-image results as markdown.
 """
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -20,6 +21,7 @@ from bakeoff_harness.runner import BASE_DIR, IMAGES_DIR, _load_image, _clear_tor
 
 OUTPUT_DIR = BASE_DIR / "outputs" / "semantic_tasks"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+SUMMARY_PATH = OUTPUT_DIR / "SEMANTIC_TASKS_SUMMARY.json"
 
 IMAGES = sorted((IMAGES_DIR / "dev").glob("*.png"))
 GROUND_TRUTH_SCENE = {
@@ -53,6 +55,15 @@ TASKS = {
     },
 }
 
+CLASSIFICATION_LABELS = (
+    "retail_small_shop",
+    "retail_grocery",
+    "retail_pharmacy",
+    "warehouse",
+    "corridor_lobby",
+    "other",
+)
+
 
 def run_minicpm_task(image_path: str, prompt: str) -> tuple[str, float]:
     from transformers import AutoProcessor, AutoModelForImageTextToText
@@ -63,13 +74,19 @@ def run_minicpm_task(image_path: str, prompt: str) -> tuple[str, float]:
     _clear_torch_cache()
 
     cache = run_minicpm_task.__dict__.get("model_data")
+    if cache is not None and "error" in cache:
+        raise RuntimeError(cache["error"])
     if cache is None:
         model_id = "openbmb/MiniCPM-V-4.6"
-        processor = AutoProcessor.from_pretrained(model_id, trust_remote_code=True)
-        model = AutoModelForImageTextToText.from_pretrained(model_id, trust_remote_code=True, torch_dtype=dtype).to(device)
-        model.eval()
-        run_minicpm_task.model_data = {"processor": processor, "model": model}
-        cache = run_minicpm_task.model_data
+        try:
+            processor = AutoProcessor.from_pretrained(model_id, trust_remote_code=True)
+            model = AutoModelForImageTextToText.from_pretrained(model_id, trust_remote_code=True, torch_dtype=dtype).to(device)
+            model.eval()
+            run_minicpm_task.model_data = {"processor": processor, "model": model}
+            cache = run_minicpm_task.model_data
+        except Exception as e:
+            run_minicpm_task.model_data = {"error": str(e)}
+            raise RuntimeError(str(e)) from e
 
     processor, model = cache["processor"], cache["model"]
 
@@ -125,7 +142,10 @@ def run_gpt4o_task(image_path: str, prompt: str) -> tuple[str, float]:
 
 
 def run_gemini_task(image_path: str, prompt: str) -> tuple[str, float]:
-    from google import genai
+    try:
+        from google import genai
+    except Exception as e:
+        return f"(gemini unavailable: {e})", 0.0
 
     api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY", "")
     if not api_key:
@@ -144,6 +164,55 @@ def run_gemini_task(image_path: str, prompt: str) -> tuple[str, float]:
         except Exception:
             raw = ""
     return raw.strip(), elapsed
+
+
+def normalize_text(text: str) -> str:
+    return re.sub(r"\s+", " ", text.strip().lower())
+
+
+def extract_classification_label(text: str) -> str:
+    normalized = normalize_text(text)
+    match = re.search(r"\b(retail_small_shop|retail_grocery|retail_pharmacy|warehouse|corridor_lobby|other)\b", normalized)
+    if match:
+        return match.group(1)
+    token = normalized.split(" ", 1)[0].strip(".,;:()[]{}")
+    return token
+
+
+def score_classification(prediction: str, ground_truth: str) -> bool:
+    return extract_classification_label(prediction) == ground_truth
+
+
+def summarize_results(results: dict, timings: dict) -> dict:
+    summary: dict[str, dict[str, dict[str, float]]] = {}
+    for task_name in TASKS:
+        summary[task_name] = {}
+        for model_key in ["minicpm", "gpt4o", "gemini"]:
+            task_preds = []
+            task_latencies = []
+            for img_path in IMAGES:
+                img_id = img_path.stem
+                pred = results.get(task_name, {}).get(f"{img_id}_{model_key}_{task_name}", "")
+                task_preds.append((img_id, pred))
+                ms = timings.get((img_id, model_key, task_name), 0)
+                if ms:
+                    task_latencies.append(ms)
+
+            if task_name == "classification":
+                correct = sum(
+                    1 for img_id, pred in task_preds
+                    if score_classification(pred, GROUND_TRUTH_SCENE.get(img_id, ""))
+                )
+                summary[task_name][model_key] = {
+                    "accuracy": correct / len(task_preds) if task_preds else 0.0,
+                    "avg_latency_ms": sum(task_latencies) / len(task_latencies) if task_latencies else 0.0,
+                }
+            else:
+                summary[task_name][model_key] = {
+                    "non_empty_rate": sum(1 for _, pred in task_preds if normalize_text(pred) not in {"", "(no api key)"}) / len(task_preds) if task_preds else 0.0,
+                    "avg_latency_ms": sum(task_latencies) / len(task_latencies) if task_latencies else 0.0,
+                }
+    return summary
 
 
 def main():
@@ -195,6 +264,8 @@ def main():
     # Generate report
     report_path = OUTPUT_DIR / "SEMANTIC_TASKS_REPORT.md"
 
+    summary = summarize_results(results, timings)
+
     with open(report_path, "w") as f:
         f.write("# Semantic Floor Plan Tasks — Bakeoff\n\n")
         f.write(f"Evaluated {len(IMAGES)} images across {len(TASKS)} task types.\n")
@@ -225,8 +296,8 @@ def main():
                     gt = GROUND_TRUTH_SCENE.get(img_id, "?")
                     for model_key in ["minicpm", "gpt4o", "gemini"]:
                         key = f"{img_id}_{model_key}_{task_name}"
-                        pred = results[task_name].get(key, "").strip().lower()
-                        correct = "✓" if gt in pred or pred in gt else "✗"
+                        pred = results[task_name].get(key, "")
+                        correct = "✓" if score_classification(pred, gt) else "✗"
                         f.write(f"- **{model_key}** vs GT ({gt}): {correct}\n")
                     f.write("\n")
 
@@ -238,35 +309,28 @@ def main():
                     f.write(f"{mk}={sum(vals)/len(vals):.0f}ms ")
             f.write("\n\n---\n\n")
 
-        # Classification summary
         f.write("## Classification Accuracy\n\n")
-        if results["classification"]:
-            for model_key in ["minicpm", "gpt4o", "gemini"]:
-                correct = 0
-                for img_path in IMAGES:
-                    img_id = img_path.stem
-                    gt = GROUND_TRUTH_SCENE.get(img_id, "")
-                    pred = results["classification"].get(f"{img_id}_{model_key}_classification", "").strip().lower()
-                    if gt and (gt in pred or pred in gt):
-                        correct += 1
-                total = len(list(IMAGES))
-                f.write(f"- **{model_key}:** {correct}/{total}\n")
+        f.write("| Model | Accuracy | Avg Latency |\n|---|---|---|\n")
+        for model_key in ["minicpm", "gpt4o", "gemini"]:
+            stats = summary["classification"][model_key]
+            f.write(
+                f"| {model_key} | {stats['accuracy']:.3f} | {stats['avg_latency_ms']:.0f}ms |\n"
+            )
 
-        # Overall latency summary
         f.write("\n## Overall Latency\n\n")
         f.write("| Task | MiniCPM-V 4.6 | GPT-4o | Gemini 2.5 Flash |\n|---|---|---|---|\n")
         for task_name in TASKS:
             line = [task_name]
             for mk in ["minicpm", "gpt4o", "gemini"]:
                 vals = [timings[(i.stem, mk, task_name)] for i in IMAGES if (i.stem, mk, task_name) in timings]
-                if vals:
-                    line.append(f"{sum(vals)/len(vals):.0f}ms")
-                else:
-                    line.append("-")
+                line.append(f"{sum(vals)/len(vals):.0f}ms" if vals else "-")
             f.write("| " + " | ".join(line) + " |\n")
 
-    print(f"\n\nReport saved to {report_path}")
+    with open(SUMMARY_PATH, "w") as f:
+        json.dump(summary, f, indent=2)
+        f.write("\n")
 
+    print(f"Summary saved to {SUMMARY_PATH}")
     print(f"\n\nReport saved to {report_path}")
 
 

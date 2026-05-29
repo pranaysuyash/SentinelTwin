@@ -143,6 +143,9 @@ export function createSceneFromFloorPlan(
       material: "solid",
       visionTransmission: 0,
       source: "import",
+      reviewStatus: "unreviewed",
+      sourceTrace: "heuristic-import-v1",
+      geometryValidity: "valid",
     }))
     : createFallbackRectWalls(uid, normalized.roomDimensions.widthM, normalized.roomDimensions.depthM, roomHeight);
 
@@ -154,6 +157,9 @@ export function createSceneFromFloorPlan(
     dimensions: [door.widthM, 2.1, 0.1],
     state: "closed",
     source: "import",
+    reviewStatus: "unreviewed",
+    sourceTrace: "heuristic-import-v1",
+    geometryValidity: "valid",
   }));
 
   const windows: WindowNode[] = normalized.windows.map((window, index) => ({
@@ -165,6 +171,9 @@ export function createSceneFromFloorPlan(
     state: "closed_glass",
     visionTransmission: 0.85,
     source: "import",
+    reviewStatus: "unreviewed",
+    sourceTrace: "heuristic-import-v1",
+    geometryValidity: "valid",
   }));
 
   // Entry points at each detected door
@@ -173,6 +182,10 @@ export function createSceneFromFloorPlan(
     nodeType: "entry_point" as const,
     label: `Entry ${index + 1}`,
     position: [shiftX(door.position.x), shiftZ(door.position.y)] as [number, number],
+    source: "manual" as const,
+    reviewStatus: "unreviewed" as const,
+    sourceTrace: "",
+    geometryValidity: "valid" as const,
   }));
 
   // Fallback entry point at room center-front if no doors detected
@@ -182,6 +195,10 @@ export function createSceneFromFloorPlan(
       nodeType: "entry_point" as const,
       label: "Main Entry",
       position: [normalized.roomDimensions.widthM / 2, 0.5] as [number, number],
+      source: "manual" as const,
+      reviewStatus: "unreviewed" as const,
+      sourceTrace: "",
+      geometryValidity: "valid" as const,
     });
   }
 
@@ -211,6 +228,10 @@ export function createSceneFromFloorPlan(
     nightRequired: false,
     redundancyRequired: false,
     privacyZone: false,
+    source: "manual" as const,
+    reviewStatus: "unreviewed" as const,
+    sourceTrace: "",
+    geometryValidity: "valid" as const,
   }];
 
   return {
@@ -247,6 +268,9 @@ export function createSceneFromFloorPlan(
       showAssumptionsPanel: false,
     },
     source: "import",
+    reviewStatus: "unreviewed",
+    sourceTrace: "heuristic-import-v1",
+    geometryValidity: "valid",
     version: "0.1.0",
     snapshots: [],
     scenarios: [],
@@ -748,10 +772,10 @@ function createFallbackRectWalls(
   heightM: number,
 ): WallNode[] {
   return [
-    { id: uid("wall"), nodeType: "wall", label: "South Wall", start: [0, 0], end: [widthM, 0], heightM, thicknessM: 0.18, material: "solid", visionTransmission: 0, source: "import" },
-    { id: uid("wall"), nodeType: "wall", label: "North Wall", start: [0, depthM], end: [widthM, depthM], heightM, thicknessM: 0.18, material: "solid", visionTransmission: 0, source: "import" },
-    { id: uid("wall"), nodeType: "wall", label: "East Wall", start: [widthM, 0], end: [widthM, depthM], heightM, thicknessM: 0.18, material: "solid", visionTransmission: 0, source: "import" },
-    { id: uid("wall"), nodeType: "wall", label: "West Wall", start: [0, 0], end: [0, depthM], heightM, thicknessM: 0.18, material: "solid", visionTransmission: 0, source: "import" },
+    { id: uid("wall"), nodeType: "wall", label: "South Wall", start: [0, 0], end: [widthM, 0], heightM, thicknessM: 0.18, material: "solid", visionTransmission: 0, source: "import", reviewStatus: "unreviewed", sourceTrace: "heuristic-import-v1", geometryValidity: "valid" },
+    { id: uid("wall"), nodeType: "wall", label: "North Wall", start: [0, depthM], end: [widthM, depthM], heightM, thicknessM: 0.18, material: "solid", visionTransmission: 0, source: "import", reviewStatus: "unreviewed", sourceTrace: "heuristic-import-v1", geometryValidity: "valid" },
+    { id: uid("wall"), nodeType: "wall", label: "East Wall", start: [widthM, 0], end: [widthM, depthM], heightM, thicknessM: 0.18, material: "solid", visionTransmission: 0, source: "import", reviewStatus: "unreviewed", sourceTrace: "heuristic-import-v1", geometryValidity: "valid" },
+    { id: uid("wall"), nodeType: "wall", label: "West Wall", start: [0, 0], end: [0, depthM], heightM, thicknessM: 0.18, material: "solid", visionTransmission: 0, source: "import", reviewStatus: "unreviewed", sourceTrace: "heuristic-import-v1", geometryValidity: "valid" },
   ];
 }
 

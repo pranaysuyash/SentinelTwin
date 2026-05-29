@@ -54,6 +54,7 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
     { keys: "⌘ + S", action: "Save Scene" },
     { keys: "⌘ + O", action: "Open / Import Scene" },
     { keys: "⌘ + Enter", action: "Run Simulation" },
+    { keys: "← → ↑ ↓", action: "Nudge selected objects" },
     { keys: "1 – 6", action: "Switch View Mode (Map, Camera, Wall, Replay, Compare, Report)" },
     { keys: "V", action: "Select tool" },
     { keys: "C", action: "Place Camera tool" },
@@ -149,6 +150,7 @@ export default function StudioShell() {
   const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
   const selectedCameraId = useStudioStore((s) => s.selectedCameraId);
   const selectNode = useStudioStore((s) => s.selectNode);
+  const translateSelectedNodes = useStudioStore((s) => s.translateSelectedNodes);
   const scene = useStudioStore((s) => s.scene);
   const rightPanelMode = useStudioStore((s) => s.rightPanelMode);
   const setRightPanelMode = useStudioStore((s) => s.setRightPanelMode);
@@ -160,6 +162,7 @@ export default function StudioShell() {
   const saveSceneToStorage = useStudioStore((s) => s.saveSceneToStorage);
   const saveSnapshot = useStudioStore((s) => s.saveSnapshot);
   const runSimulation = useStudioStore((s) => s.runSimulation);
+  const editor = useStudioStore((s) => s.editor);
   const setBottomTab = useStudioStore((s) => s.setBottomTab);
   const uiDensity = useStudioStore((s) => s.uiDensity);
   const uiTheme = useStudioStore((s) => s.uiTheme);
@@ -252,6 +255,21 @@ export default function StudioShell() {
       return;
     }
 
+    if (activeTool === "select" && (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight") && (selectedNodeId || selectedNodeIds.length > 0)) {
+      e.preventDefault();
+      const baseStep = editor.snapEnabled ? editor.gridSnapM : 0.1;
+      const step = e.shiftKey ? baseStep * 4 : e.altKey ? baseStep / 4 : baseStep;
+      const delta: [number, number] = e.key === "ArrowUp"
+        ? [0, -step]
+        : e.key === "ArrowDown"
+          ? [0, step]
+          : e.key === "ArrowLeft"
+            ? [-step, 0]
+            : [step, 0];
+      translateSelectedNodes(delta);
+      return;
+    }
+
     // Delete selected node
     if ((e.key === "Backspace" || e.key === "Delete") && (selectedNodeId || selectedNodeIds.length > 0)) {
       e.preventDefault();
@@ -317,7 +335,7 @@ export default function StudioShell() {
       }
       return;
     }
-  }, [activeTool, createNewScene, duplicateNode, enterFocusMode, focusMode, redo, removeSelectedNodes, restorePreviousLayout, runSimulation, saveSceneToStorage, saveSnapshot, selectedNodeId, selectedNodeIds, setActiveTool, setBottomTab, setViewMode, setWorkspacePreset, undo, viewMode]);
+  }, [activeTool, createNewScene, duplicateNode, editor.gridSnapM, editor.snapEnabled, enterFocusMode, focusMode, redo, removeSelectedNodes, restorePreviousLayout, runSimulation, saveSceneToStorage, saveSnapshot, selectedNodeId, selectedNodeIds, setActiveTool, setBottomTab, setViewMode, setWorkspacePreset, translateSelectedNodes, undo, viewMode]);
 
   useEffect(() => {
     window.addEventListener("keydown", handleKeyDown);
@@ -341,8 +359,10 @@ export default function StudioShell() {
     const key = "sentineltwin_first_run_guide_seen_v1";
     if (typeof window === "undefined") return;
     if (!window.localStorage.getItem(key)) {
-      setShowFirstRunGuide(true);
-      window.localStorage.setItem(key, "1");
+      queueMicrotask(() => {
+        setShowFirstRunGuide(true);
+        window.localStorage.setItem(key, "1");
+      });
     }
   }, []);
 

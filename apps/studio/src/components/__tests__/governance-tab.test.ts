@@ -17,6 +17,7 @@ describe("GovernanceTab", () => {
     expect(source).toContain("Governance Handoff");
     expect(source).toContain("Workspace Membership Handoff");
     expect(source).toContain("Approval Routing");
+    expect(source).toContain("Identity Conflict Resolution");
     expect(source).toContain("Latest action");
     expect(source).toContain("Review requests");
     expect(source).toContain("Approvals");
@@ -39,6 +40,8 @@ describe("GovernanceTab", () => {
     expect(source).toContain("Route status");
     expect(source).toContain("Route reason");
     expect(source).toContain("Resolve Approval Route");
+    expect(source).toContain("Resolve Identity Conflict");
+    expect(source).toContain("Conflict status");
     expect(source).toContain("Membership reconciliation is needed");
     expect(source).toContain("Membership snapshot is aligned");
     expect(source).toContain("Single-user access");
@@ -52,5 +55,6 @@ describe("GovernanceTab", () => {
     expect(source).toContain("Scene posture");
     expect(source).toContain("Allowed");
     expect(source).toContain("Blocked");
+    expect(source).toContain("Remote identity webhook");
   });
 });

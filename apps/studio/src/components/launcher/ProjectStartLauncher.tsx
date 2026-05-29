@@ -107,7 +107,7 @@ export function ProjectStartLauncher({
     },
     {
       icon: <ScanSearch className="h-3.5 w-3.5" />,
-      badge: "Scan",
+      badge: "Preview / Manual-assisted",
       title: "Scan site with phone photos",
       description: "Manual-assisted photo marking compiles into a canonical SecurityScene. Guided scan is still planned.",
       tone: "emerald",

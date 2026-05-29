@@ -8,7 +8,7 @@ describe("camera-mount-snap", () => {
   test("snaps cameras to wall, ceiling, and pole targets", () => {
     const scene = createBlankSecurityScene();
     scene.walls.push(
-      { id: "wall_extra", nodeType: "wall", label: "Display Wall", start: [2, 0], end: [2, 8], heightM: 3, thicknessM: 0.18, material: "solid", visionTransmission: 0, source: "manual" },
+      { id: "wall_extra", nodeType: "wall", label: "Display Wall", start: [2, 0], end: [2, 8], heightM: 3, thicknessM: 0.18, material: "solid", visionTransmission: 0, source: "manual", reviewStatus: "unreviewed", sourceTrace: "", geometryValidity: "valid" },
     );
     const pillar = createObstructionNode([6, 0, 4], "pillar");
     pillar.dimensions = [0.6, 0.6, 2.6];

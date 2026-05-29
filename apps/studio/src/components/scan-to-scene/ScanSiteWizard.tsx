@@ -328,12 +328,7 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
     return errors;
   }, [candidateStats.cameraCount, candidateStats.criticalZoneCount]);
   const unresolvedWarnings = useMemo(() => [...reviewWarnings, ...compileWarnings], [compileWarnings, reviewWarnings]);
-
-  useEffect(() => {
-    if (unresolvedWarnings.length === 0 && warningsReviewed) {
-      setWarningsReviewed(false);
-    }
-  }, [unresolvedWarnings.length, warningsReviewed]);
+  const warningsAcknowledged = unresolvedWarnings.length === 0 || warningsReviewed;
 
   const updateSession = useCallback((patch: Partial<ScanSession>) => {
     setSession((current) => ({ ...current, ...patch, updatedAt: Date.now() }));
@@ -519,7 +514,7 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
       setError(`Cannot compile yet: ${compileBlockingErrors.join(" ")}`);
       return;
     }
-    if (unresolvedWarnings.length > 0 && !warningsReviewed) {
+    if (!warningsAcknowledged) {
       setError("Review warnings and explicitly acknowledge them before compiling.");
       return;
     }
@@ -577,7 +572,7 @@ export function ScanSiteWizard({ onClose }: ScanSiteWizardProps) {
     } finally {
       setIsCompiling(false);
     }
-  }, [autoCreatePath, compileBlockingErrors, compileLowConfidenceOverride, lowConfidenceAccepted.length, onClose, recordOperationalEvidenceEvent, runSimulation, session, setBottomTab, setLaunchNotice, setScene, setViewMode, setWorkspacePreset, unresolvedWarnings.length, warningsReviewed]);
+  }, [autoCreatePath, compileBlockingErrors, compileLowConfidenceOverride, lowConfidenceAccepted.length, onClose, recordOperationalEvidenceEvent, runSimulation, session, setBottomTab, setLaunchNotice, setScene, setViewMode, setWorkspacePreset, warningsAcknowledged]);
 
   const handleMergeNearDuplicates = useCallback(() => {
     setSession((current) => {

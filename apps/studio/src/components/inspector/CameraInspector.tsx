@@ -161,6 +161,7 @@ function qualityRangeLabel(quality: DoriQuality, doriStandard: SimulationAssumpt
 
 export function CameraInspector() {
   const camera = useStudioStore((s) => s.getSelectedCamera());
+  const cameraId = camera?.id ?? null;
   const scene = useStudioStore((s) => s.scene);
   const inspectorTab = useStudioStore((s) => s.inspectorTab);
   const setTab = useStudioStore((s) => s.setInspectorTab);
@@ -191,6 +192,15 @@ export function CameraInspector() {
   const [cameraMetadataLoading, setCameraMetadataLoading] = useState(false);
   const [cameraMetadataHistory, setCameraMetadataHistory] = useState<CameraMetadataArchiveRecord[]>([]);
   const [cameraLiveConnectionHistory, setCameraLiveConnectionHistory] = useState<CameraLiveConnectionArchiveRecord[]>([]);
+  const [cameraLiveSessionRegistry, setCameraLiveSessionRegistry] = useState<Array<{
+    sessionId: string;
+    status: "active" | "closed" | "expired";
+    cameraId: string;
+    cameraName: string;
+    liveSessionState: "idle" | "probing" | "connected" | "error" | null;
+    liveSessionExpiresAt: number | null;
+    lastAction: "bind" | "refresh" | "disconnect";
+  }>>([]);
   const cameraLiveConnectionEvents = useStudioStore((s) => s.cameraLiveConnectionEvents.filter((event) => event.sceneId === s.scene.id));
   const [liveConnectionUrl, setLiveConnectionUrl] = useState(camera?.liveFeedUrl ?? "");
   const [liveConnectionLabel, setLiveConnectionLabel] = useState(camera?.liveFeedLabel ?? "Primary live feed");
@@ -217,46 +227,41 @@ export function CameraInspector() {
 
     void refreshCameraMetadataHistory();
     // Intentional: refresh when the operator switches cameras so the archive stays in view.
-  }, [camera?.id]);
-
-  useEffect(() => {
-    if (!camera || camera.liveConnectionStatus !== "connected" || !liveConnectionUrl.trim()) return undefined;
-
-    const heartbeat = window.setInterval(() => {
-      if (liveConnectionLoading) return;
-      void refreshLiveConnection();
-    }, 45_000);
-
-    return () => window.clearInterval(heartbeat);
-    // Intentional: keep the live connection as a lease that renews while the operator is watching it.
-  }, [camera, liveConnectionLoading, liveConnectionUrl]);
+  }, [cameraId]);
 
   const refreshCameraLiveConnectionHistory = useCallback(async () => {
     try {
       const response = await fetch("/api/camera-live-connection", { cache: "no-store" });
       if (!response.ok) return;
-      const payload = await response.json() as { history?: CameraLiveConnectionArchiveRecord[] };
+      const payload = await response.json() as { history?: CameraLiveConnectionArchiveRecord[]; activeSessions?: typeof cameraLiveSessionRegistry };
       if (Array.isArray(payload.history)) {
-        setCameraLiveConnectionHistory(payload.history.filter((entry) => entry.record.cameraId === camera?.id));
+        setCameraLiveConnectionHistory(payload.history.filter((entry) => entry.record.cameraId === cameraId));
+      }
+      if (Array.isArray(payload.activeSessions)) {
+        setCameraLiveSessionRegistry(payload.activeSessions.filter((entry) => entry.cameraId === cameraId));
       }
     } catch {
       // Ignore history refresh failures; the bind/probe route still works.
     }
-  }, [camera?.id]);
+  }, [cameraId]);
 
   useEffect(() => {
-    void refreshCameraLiveConnectionHistory();
+    queueMicrotask(() => {
+      void refreshCameraLiveConnectionHistory();
+    });
   }, [refreshCameraLiveConnectionHistory]);
 
   useEffect(() => {
-    setLiveConnectionUrl(camera?.liveFeedUrl ?? "");
-    setLiveConnectionLabel(camera?.liveFeedLabel ?? "Primary live feed");
-    setLiveConnectionMode(camera?.liveConnectionMode ?? "onvif");
-    setLiveConnectionStatus(camera?.liveConnectionStatus ?? "disconnected");
-    setLiveConnectionNotes("");
-    setLiveConnectionStatusMessage(null);
-    setLiveConnectionError(null);
-  }, [camera?.id, camera?.liveFeedLabel, camera?.liveFeedUrl, camera?.liveConnectionMode, camera?.liveConnectionStatus, camera?.notes]);
+    queueMicrotask(() => {
+      setLiveConnectionUrl(camera?.liveFeedUrl ?? "");
+      setLiveConnectionLabel(camera?.liveFeedLabel ?? "Primary live feed");
+      setLiveConnectionMode(camera?.liveConnectionMode ?? "onvif");
+      setLiveConnectionStatus(camera?.liveConnectionStatus ?? "disconnected");
+      setLiveConnectionNotes("");
+      setLiveConnectionStatusMessage(null);
+      setLiveConnectionError(null);
+    });
+  }, [cameraId, camera?.liveFeedLabel, camera?.liveFeedUrl, camera?.liveConnectionMode, camera?.liveConnectionStatus, camera?.notes]);
 
   if (!camera) return null;
 
@@ -496,7 +501,7 @@ export function CameraInspector() {
     }
   };
 
-  const submitLiveConnection = async (action: "bind" | "refresh" | "disconnect") => {
+  const submitLiveConnection = useCallback(async (action: "bind" | "refresh" | "disconnect") => {
     if (!camera) return;
     if ((action === "bind" || action === "refresh") && !liveConnectionUrl.trim()) {
       setLiveConnectionError("Enter a live feed URL before binding the camera.");
@@ -544,6 +549,7 @@ export function CameraInspector() {
         liveSessionState: body.record.liveSessionState ?? undefined,
         liveSessionStartedAt: body.record.liveSessionStartedAt ?? undefined,
         liveSessionConfirmedAt: body.record.liveSessionConfirmedAt ?? undefined,
+        liveSessionExpiresAt: body.record.liveSessionExpiresAt ?? undefined,
       });
       recordCameraLiveConnectionEvent({
         cameraId: camera.id,
@@ -556,6 +562,7 @@ export function CameraInspector() {
         previousLiveSessionState: cameraBeforeUpdate?.liveSessionState ?? null,
         previousLiveSessionStartedAt: cameraBeforeUpdate?.liveSessionStartedAt ?? null,
         previousLiveSessionConfirmedAt: cameraBeforeUpdate?.liveSessionConfirmedAt ?? null,
+        previousLiveSessionExpiresAt: cameraBeforeUpdate?.liveSessionExpiresAt ?? null,
         liveFeedUrl: body.record.liveFeedUrl,
         liveFeedLabel: body.record.liveFeedLabel,
         liveConnectionMode: body.record.liveConnectionMode,
@@ -564,6 +571,7 @@ export function CameraInspector() {
         liveSessionState: body.record.liveSessionState,
         liveSessionStartedAt: body.record.liveSessionStartedAt,
         liveSessionConfirmedAt: body.record.liveSessionConfirmedAt,
+        liveSessionExpiresAt: body.record.liveSessionExpiresAt,
         ingestMode: action === "disconnect" ? "manual" : "external",
         summary: body.summary ?? (action === "disconnect"
           ? `Live camera connection cleared for ${camera.name}.`
@@ -597,11 +605,35 @@ export function CameraInspector() {
     } finally {
       setLiveConnectionLoading(false);
     }
-  };
+  }, [
+    camera,
+    scene.id,
+    scene.name,
+    liveConnectionLabel,
+    liveConnectionLoading,
+    liveConnectionMode,
+    liveConnectionNotes,
+    liveConnectionUrl,
+    recordCameraLiveConnectionEvent,
+    refreshCameraLiveConnectionHistory,
+    updateNode,
+  ]);
 
-  const bindLiveConnection = async () => submitLiveConnection("bind");
-  const refreshLiveConnection = async () => submitLiveConnection("refresh");
-  const disconnectLiveConnection = async () => submitLiveConnection("disconnect");
+  const bindLiveConnection = useCallback(() => submitLiveConnection("bind"), [submitLiveConnection]);
+  const refreshLiveConnection = useCallback(() => submitLiveConnection("refresh"), [submitLiveConnection]);
+  const disconnectLiveConnection = useCallback(() => submitLiveConnection("disconnect"), [submitLiveConnection]);
+
+  useEffect(() => {
+    if (!camera || camera.liveConnectionStatus !== "connected" || !liveConnectionUrl.trim()) return undefined;
+
+    const heartbeat = window.setInterval(() => {
+      if (liveConnectionLoading) return;
+      void refreshLiveConnection();
+    }, 45_000);
+
+    return () => window.clearInterval(heartbeat);
+    // Intentional: keep the live connection as a lease that renews while the operator is watching it.
+  }, [camera, liveConnectionLoading, liveConnectionUrl, refreshLiveConnection]);
 
   return (
     <>
@@ -728,6 +760,14 @@ export function CameraInspector() {
                   </button>
                   <button
                     type="button"
+                    onClick={refreshLiveConnection}
+                    disabled={liveConnectionLoading || !liveConnectionUrl.trim()}
+                    className="rounded-xl border border-[#24485e] bg-cyan-500/8 px-3 py-1.5 text-[10px] font-medium text-cyan-100 transition-colors hover:border-cyan-400/40 hover:bg-cyan-500/12 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {liveConnectionLoading ? "Refreshing..." : "Refresh Session"}
+                  </button>
+                  <button
+                    type="button"
                     onClick={disconnectLiveConnection}
                     disabled={liveConnectionLoading}
                     className="rounded-xl border border-[#2a2f40] bg-[#0b0f17] px-3 py-1.5 text-[10px] font-medium text-[#c9d2e5] transition-colors hover:border-[#39425a] hover:bg-[#111521] disabled:cursor-not-allowed disabled:opacity-50"
@@ -747,12 +787,50 @@ export function CameraInspector() {
                   </div>
                 ) : null}
 
+                <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/8 p-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="text-[8px] uppercase tracking-[0.16em] text-cyan-200">Current session lease</div>
+                      <div className="mt-0.5 text-[9px] text-[#7b889f]">
+                        The active registry entry shows the current lease, its state, and when it expires.
+                      </div>
+                    </div>
+                    <div className="text-[9px] text-cyan-100">{cameraLiveSessionRegistry.length} active</div>
+                  </div>
+                  {cameraLiveSessionRegistry.length > 0 ? (
+                    <div className="mt-2 space-y-2">
+                      {cameraLiveSessionRegistry.slice(0, 2).map((entry) => (
+                        <div key={entry.sessionId} className="rounded-lg border border-[#1f2536] bg-[#111521] p-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="truncate text-[11px] font-semibold text-[#e6ebf7]">
+                                {entry.cameraName}
+                              </div>
+                              <div className="mt-0.5 text-[8px] uppercase tracking-[0.16em] text-[#556076]">
+                                {entry.status} · {entry.lastAction} · {entry.liveSessionState ?? "unknown"}
+                              </div>
+                            </div>
+                            <div className="rounded-full border border-[#1f2536] bg-[#0b0f17] px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] text-[#7d8aa4]">
+                              {entry.sessionId.slice(-8)}
+                            </div>
+                          </div>
+                          <div className="mt-1 text-[9px] leading-relaxed text-[#7b889f]">
+                            Expires {entry.liveSessionExpiresAt == null ? "—" : new Date(entry.liveSessionExpiresAt).toLocaleTimeString()}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mt-2 text-[9px] text-[#6a748b]">No active live session lease is currently registered.</div>
+                  )}
+                </div>
+
                 <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2">
                   <div className="flex items-center justify-between gap-2">
                     <div>
                       <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Connection archive</div>
                       <div className="mt-0.5 text-[9px] text-[#7b889f]">
-                        Backend archive records for live camera probe and disconnect actions.
+                        Backend archive records for live camera probe, refresh, and disconnect actions.
                       </div>
                     </div>
                     <div className="text-[9px] text-[#556076]">{cameraLiveConnectionHistory.length} records</div>
@@ -767,7 +845,7 @@ export function CameraInspector() {
                                 {entry.record.liveFeedLabel ?? entry.record.cameraName}
                               </div>
                               <div className="mt-0.5 text-[8px] uppercase tracking-[0.16em] text-[#556076]">
-                                {entry.action === "bind" ? "Bind probe" : "Disconnect"} · {entry.protocol.toUpperCase()}
+                                {entry.action === "bind" ? "Bind probe" : entry.action === "refresh" ? "Refresh session" : "Disconnect"} · {entry.protocol.toUpperCase()}
                               </div>
                             </div>
                             <div className="rounded-full border border-[#1f2536] bg-[#0b0f17] px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] text-[#7d8aa4]">
@@ -780,11 +858,14 @@ export function CameraInspector() {
                           <div className="mt-1 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
                             Session {entry.record.liveSessionState ?? "unknown"}{entry.record.liveSessionId ? ` · ${entry.record.liveSessionId}` : ""}
                           </div>
+                          <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+                            Expires {entry.record.liveSessionExpiresAt == null ? "—" : new Date(entry.record.liveSessionExpiresAt).toLocaleTimeString()}
+                          </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="mt-2 text-[9px] text-[#6a748b]">No connection archive records yet. Bind or disconnect a camera to create the first backend probe record.</div>
+                    <div className="mt-2 text-[9px] text-[#6a748b]">No connection archive records yet. Bind, refresh, or disconnect a camera to create the first backend probe record.</div>
                   )}
                 </div>
 
@@ -810,6 +891,9 @@ export function CameraInspector() {
                         </div>
                         <div className="mt-1 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
                           Session {entry.liveSessionState ?? "unknown"}{entry.liveSessionId ? ` · ${entry.liveSessionId}` : ""}
+                        </div>
+                        <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+                          Expires {entry.liveSessionExpiresAt == null ? "—" : new Date(entry.liveSessionExpiresAt).toLocaleTimeString()}
                         </div>
                       </div>
                     ))}

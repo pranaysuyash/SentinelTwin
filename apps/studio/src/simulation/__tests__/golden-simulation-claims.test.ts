@@ -40,6 +40,9 @@ function buildDoorStateScene(state: "open" | "closed") {
       dimensions: [0.9, 2, 0.12],
       state,
       source: "manual",
+      reviewStatus: "unreviewed",
+      sourceTrace: "",
+      geometryValidity: "valid",
     },
   ];
 
@@ -71,6 +74,9 @@ function buildWindowStateScene(state: "closed_glass" | "curtain", visionTransmis
       state,
       visionTransmission,
       source: "manual",
+      reviewStatus: "unreviewed",
+      sourceTrace: "",
+      geometryValidity: "valid",
     },
   ];
 
@@ -190,6 +196,10 @@ describe("golden simulation product claims", () => {
         nightRequired: false,
         redundancyRequired: false,
         privacyZone: false,
+        source: "manual",
+        reviewStatus: "unreviewed",
+        sourceTrace: "",
+        geometryValidity: "valid",
       },
     ];
 
@@ -244,6 +254,10 @@ describe("golden simulation product claims", () => {
         ],
         restriction: "no_video",
         regulation: "GDPR",
+        source: "manual",
+        reviewStatus: "unreviewed",
+        sourceTrace: "",
+        geometryValidity: "valid",
       },
     ];
 
@@ -303,6 +317,10 @@ describe("golden simulation product claims", () => {
         nightRequired: false,
         redundancyRequired: true,
         privacyZone: false,
+        source: "manual",
+        reviewStatus: "unreviewed",
+        sourceTrace: "",
+        geometryValidity: "valid",
       },
     ];
 

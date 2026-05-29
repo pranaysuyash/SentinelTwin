@@ -27,6 +27,10 @@ describe("coverage-time-budget", () => {
         heightM: 1.7,
         timeOfDay: "day",
         intent: "incident_replay",
+        source: "manual",
+        reviewStatus: "unreviewed",
+        sourceTrace: "",
+        geometryValidity: "valid",
       },
     ];
 

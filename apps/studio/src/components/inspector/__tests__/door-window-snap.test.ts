@@ -18,6 +18,9 @@ describe("door/window wall snap", () => {
       material: "solid",
       visionTransmission: 0,
       source: "manual",
+      reviewStatus: "unreviewed",
+      sourceTrace: "",
+      geometryValidity: "valid",
     });
 
     const door = createDoorNode([3.4, 0.9, 2.8]);

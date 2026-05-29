@@ -54,6 +54,9 @@ export function suggestCameraPlacements(scene: SecurityScene): CameraNode[] {
       ptz: false,
       clarity: "average",
       source: "import",
+      reviewStatus: "unreviewed",
+      sourceTrace: "heuristic-suggestion-v1",
+      geometryValidity: "valid",
       notes: "Suggested placement — adjust as needed",
       tags: ["suggested"],
     });
@@ -86,6 +89,9 @@ export function suggestCameraPlacements(scene: SecurityScene): CameraNode[] {
       ptz: false,
       clarity: "average",
       source: "import",
+      reviewStatus: "unreviewed",
+      sourceTrace: "heuristic-suggestion-v1",
+      geometryValidity: "valid",
       notes: "Suggested placement — adjust as needed",
       tags: ["suggested"],
     });

@@ -343,6 +343,7 @@ export type CameraLiveConnectionEventRecord = {
   previousLiveSessionState: "idle" | "probing" | "connected" | "error" | null;
   previousLiveSessionStartedAt: number | null;
   previousLiveSessionConfirmedAt: number | null;
+  previousLiveSessionExpiresAt: number | null;
   previousLiveFeedUrl: string | null;
   previousLiveFeedLabel: string | null;
   previousLiveConnectionMode: "rtsp" | "mjpeg" | "http" | "onvif" | "proxy" | null;
@@ -351,6 +352,7 @@ export type CameraLiveConnectionEventRecord = {
   liveSessionState: "idle" | "probing" | "connected" | "error" | null;
   liveSessionStartedAt: number | null;
   liveSessionConfirmedAt: number | null;
+  liveSessionExpiresAt: number | null;
   liveFeedUrl: string | null;
   liveFeedLabel: string | null;
   liveConnectionMode: "rtsp" | "mjpeg" | "http" | "onvif" | "proxy" | null;
@@ -773,6 +775,7 @@ function loadCameraLiveConnectionEvents(): CameraLiveConnectionEventRecord[] {
           : null,
         previousLiveSessionStartedAt: typeof candidate.previousLiveSessionStartedAt === "number" ? candidate.previousLiveSessionStartedAt : null,
         previousLiveSessionConfirmedAt: typeof candidate.previousLiveSessionConfirmedAt === "number" ? candidate.previousLiveSessionConfirmedAt : null,
+        previousLiveSessionExpiresAt: typeof candidate.previousLiveSessionExpiresAt === "number" ? candidate.previousLiveSessionExpiresAt : null,
         previousLiveConnectionMode: candidate.previousLiveConnectionMode === "rtsp" || candidate.previousLiveConnectionMode === "mjpeg" || candidate.previousLiveConnectionMode === "http" || candidate.previousLiveConnectionMode === "onvif" || candidate.previousLiveConnectionMode === "proxy"
           ? candidate.previousLiveConnectionMode
           : null,
@@ -785,6 +788,7 @@ function loadCameraLiveConnectionEvents(): CameraLiveConnectionEventRecord[] {
           : null,
         liveSessionStartedAt: typeof candidate.liveSessionStartedAt === "number" ? candidate.liveSessionStartedAt : null,
         liveSessionConfirmedAt: typeof candidate.liveSessionConfirmedAt === "number" ? candidate.liveSessionConfirmedAt : null,
+        liveSessionExpiresAt: typeof candidate.liveSessionExpiresAt === "number" ? candidate.liveSessionExpiresAt : null,
         liveFeedUrl: typeof candidate.liveFeedUrl === "string" ? candidate.liveFeedUrl : null,
         liveFeedLabel: typeof candidate.liveFeedLabel === "string" ? candidate.liveFeedLabel : null,
         liveConnectionMode: candidate.liveConnectionMode === "rtsp" || candidate.liveConnectionMode === "mjpeg" || candidate.liveConnectionMode === "http" || candidate.liveConnectionMode === "onvif" || candidate.liveConnectionMode === "proxy"
@@ -2225,7 +2229,7 @@ function buildSeededWorkspaceProjects(): SavedProjectRecord[] {
     ]),
   ];
   blankWorkspace.entryPoints = [
-    { id: "entry_manual_draft", nodeType: "entry_point", label: "Front Entry", position: [1.0, 0.5] },
+    { id: "entry_manual_draft", nodeType: "entry_point", label: "Front Entry", position: [1.0, 0.5], source: "manual", reviewStatus: "unreviewed", sourceTrace: "", geometryValidity: "valid" },
   ];
   blankWorkspace.paths = [
     {
@@ -2242,6 +2246,10 @@ function buildSeededWorkspaceProjects(): SavedProjectRecord[] {
       heightM: 1.75,
       timeOfDay: "day",
       intent: "authorized",
+      source: "manual",
+      reviewStatus: "unreviewed",
+      sourceTrace: "",
+      geometryValidity: "valid",
     },
   ];
   const seededDraftResult = simulateStudio(blankWorkspace);
@@ -2896,6 +2904,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       previousLiveSessionState: event.previousLiveSessionState ?? null,
       previousLiveSessionStartedAt: event.previousLiveSessionStartedAt ?? null,
       previousLiveSessionConfirmedAt: event.previousLiveSessionConfirmedAt ?? null,
+      previousLiveSessionExpiresAt: event.previousLiveSessionExpiresAt ?? null,
       previousLiveFeedUrl: event.previousLiveFeedUrl ?? null,
       previousLiveFeedLabel: event.previousLiveFeedLabel ?? null,
       previousLiveConnectionMode: event.previousLiveConnectionMode ?? null,
@@ -2904,6 +2913,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       liveSessionState: event.liveSessionState ?? null,
       liveSessionStartedAt: event.liveSessionStartedAt ?? null,
       liveSessionConfirmedAt: event.liveSessionConfirmedAt ?? null,
+      liveSessionExpiresAt: event.liveSessionExpiresAt ?? null,
       liveFeedUrl: event.liveFeedUrl ?? null,
       liveFeedLabel: event.liveFeedLabel ?? null,
       liveConnectionMode: event.liveConnectionMode ?? null,

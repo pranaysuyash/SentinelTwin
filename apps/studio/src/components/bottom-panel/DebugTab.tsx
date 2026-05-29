@@ -250,21 +250,24 @@ export function DebugTab() {
   };
 
   useEffect(() => {
-    void refreshSupportIngestArchive();
-    void refreshSupportDeliveryArchive();
-    void refreshCameraLiveConnectionArchive();
+    void (async () => {
+      await refreshSupportIngestArchive();
+      await refreshSupportDeliveryArchive();
+      await refreshCameraLiveConnectionArchive();
+    })();
   }, []);
 
   useEffect(() => {
     let active = true;
-    setSensorIngestHistoryLoading(true);
-    setSensorIngestHistoryError(null);
-    void fetch("/api/sensor-ingest")
-      .then(async (response) => {
+    void (async () => {
+      setSensorIngestHistoryLoading(true);
+      setSensorIngestHistoryError(null);
+      try {
+        const response = await fetch("/api/sensor-ingest");
         if (!response.ok) {
           throw new Error(`Sensor ingest archive failed with HTTP ${response.status}.`);
         }
-        return response.json() as Promise<{
+        const payload = (await response.json()) as {
           ok: true;
           history: Array<{
             source: string;
@@ -276,20 +279,17 @@ export function DebugTab() {
             storedAt: number;
           }>;
           historyCount: number;
-        }>;
-      })
-      .then((payload) => {
+        };
         if (!active) return;
         setSensorIngestHistory(payload.history);
-      })
-      .catch((error) => {
+      } catch (error) {
         if (!active) return;
         const message = error instanceof Error ? error.message : "Sensor ingest archive failed.";
         setSensorIngestHistoryError(message);
-      })
-      .finally(() => {
+      } finally {
         if (active) setSensorIngestHistoryLoading(false);
-      });
+      }
+    })();
     return () => {
       active = false;
     };
@@ -297,31 +297,29 @@ export function DebugTab() {
 
   useEffect(() => {
     let active = true;
-    setCameraLiveConnectionHistoryLoading(true);
-    setCameraLiveConnectionHistoryError(null);
-    void fetch("/api/camera-live-connection")
-      .then(async (response) => {
+    void (async () => {
+      setCameraLiveConnectionHistoryLoading(true);
+      setCameraLiveConnectionHistoryError(null);
+      try {
+        const response = await fetch("/api/camera-live-connection");
         if (!response.ok) {
           throw new Error(`Camera live connection archive failed with HTTP ${response.status}.`);
         }
-        return response.json() as Promise<{
+        const payload = (await response.json()) as {
           ok: true;
           history: CameraLiveConnectionArchiveRecord[];
           historyCount: number;
-        }>;
-      })
-      .then((payload) => {
+        };
         if (!active) return;
         setCameraLiveConnectionHistory(payload.history);
-      })
-      .catch((error) => {
+      } catch (error) {
         if (!active) return;
         const message = error instanceof Error ? error.message : "Camera live connection archive failed.";
         setCameraLiveConnectionHistoryError(message);
-      })
-      .finally(() => {
+      } finally {
         if (active) setCameraLiveConnectionHistoryLoading(false);
-      });
+      }
+    })();
     return () => {
       active = false;
     };
@@ -837,15 +835,6 @@ export function DebugTab() {
     );
   };
 
-  if (!result) {
-    return (
-      <RunSimulationPrompt
-        className="h-full px-4"
-        message="Run the shared simulation to populate the debug overlays and graph stats."
-      />
-    );
-  }
-
   const summary = sceneIntelligenceGraph.summary;
   const sourceEntries = Object.entries(summary.sourceCounts).filter(([, count]) => count > 0);
   const journalEntries = operationalEvidenceJournal?.entries ?? [];
@@ -860,6 +849,15 @@ export function DebugTab() {
     () => (latestModelEvalRun && previousModelEvalRun ? compareModelEvalRuns(previousModelEvalRun, latestModelEvalRun) : null),
     [latestModelEvalRun, previousModelEvalRun],
   );
+
+  if (!result) {
+    return (
+      <RunSimulationPrompt
+        className="h-full px-4"
+        message="Run the shared simulation to populate the debug overlays and graph stats."
+      />
+    );
+  }
 
   return (
     <div className="flex h-full gap-4 overflow-y-auto px-3 py-2">

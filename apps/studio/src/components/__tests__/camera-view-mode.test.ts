@@ -35,6 +35,11 @@ describe("CameraViewMode", () => {
     expect(source).toContain("cameraMetadataEvent={latestCameraMetadataEvent}");
     expect(source).toContain("Live Camera Connection");
     expect(source).toContain("cameraLiveConnectionEvent={latestCameraLiveConnectionEvent}");
+    expect(source).toContain("Session:");
+    expect(source).toContain("Session ID:");
+    expect(source).toContain("Started:");
+    expect(source).toContain("Confirmed:");
+    expect(source).toContain("Expires:");
     expect(source).toContain("Footage Verification");
     expect(source).toContain("Planning aid only.");
     expect(source).toContain("Auto align");

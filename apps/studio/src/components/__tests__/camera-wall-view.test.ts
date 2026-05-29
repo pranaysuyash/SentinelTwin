@@ -11,9 +11,11 @@ describe("CameraWallView", () => {
     expect(source).toContain("Offline {offlineCount}");
     expect(source).toContain("Selected {selectedCamera?.name ?? \"None\"}");
     expect(source).toContain("Best camera now");
-    expect(source).toContain("4-Panel Layout");
-    expect(source).toContain("6-Panel Layout");
-    expect(source).toContain("Layout");
+    expect(source).toContain("4 Views");
+    expect(source).toContain("6 Views");
+    expect(source).toContain("16 Views");
+    expect(source).toContain("Auto Layout");
+    expect(source).toContain("Synchronized Time");
     expect(source).toContain("const CameraFeedPanel = memo(function CameraFeedPanel");
     expect(source).toContain("const pathVisibilityByCameraId = useMemo(() =>");
   });

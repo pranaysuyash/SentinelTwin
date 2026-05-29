@@ -971,28 +971,25 @@ export function StudioDashboardHome({
   featureStatus,
 }: StudioDashboardHomeProps) {
   const [hydrated, setHydrated] = useState(false);
-  const [browserReady, setBrowserReady] = useState(false);
   const [previewMode, setPreviewMode] = useState<"2d" | "3d">("2d");
-  useEffect(() => {
-    setBrowserReady(true);
-  }, []);
   const coverage = result?.totalCoveragePct ?? scene.simulation?.totalCoveragePct ?? null;
   const passCount = result?.criticalZoneResults.filter((zone) => zone.status === "pass").length ?? (scene.simulation?.criticalZoneResults ?? []).filter((zone) => zone.status === "pass").length;
   const totalZones = result?.criticalZoneResults.length ?? (scene.simulation?.criticalZoneResults ?? []).length ?? scene.criticalZones.length;
   const issues = [...(result?.issues ?? scene.simulation?.issues ?? [])].sort((a, b) => ISSUE_SEVERITY_ORDER[a.severity] - ISSUE_SEVERITY_ORDER[b.severity]);
   const worstIssue = issues[0] ?? null;
-  const issuesBySeverity = useMemo(() => {
-    const grouped: Record<IssueSeverity, SecurityIssue[]> = { critical: [], high: [], medium: [], low: [] };
-    for (const issue of issues) {
-      grouped[issue.severity].push(issue);
-    }
-    return grouped;
-  }, [issues]);
-  const topObstructionIssue = useMemo(
-    () => issues.find((issue) => issue.description.toLowerCase().includes("block")
-      || issue.description.toLowerCase().includes("obstruct")
-      || issue.description.toLowerCase().includes("blind spot")),
-    [issues],
+  const issuesBySeverity: Record<IssueSeverity, SecurityIssue[]> = {
+    critical: [],
+    high: [],
+    medium: [],
+    low: [],
+  };
+  for (const issue of issues) {
+    issuesBySeverity[issue.severity].push(issue);
+  }
+  const topObstructionIssue = issues.find((issue) =>
+    issue.description.toLowerCase().includes("block")
+    || issue.description.toLowerCase().includes("obstruct")
+    || issue.description.toLowerCase().includes("blind spot"),
   );
   const outcomeSummary = useMemo(() => {
     const zoneMap = criticalZoneStatusMap(result ?? scene.simulation ?? null);
@@ -1077,7 +1074,9 @@ export function StudioDashboardHome({
   const aiLayoutDraftFeature = featureStatus.find((entry) => entry.feature === "AI layout draft") ?? null;
   const verifyFootageFeature = featureStatus.find((entry) => entry.feature === "Real footage verification") ?? null;
   useEffect(() => {
-    setHydrated(true);
+    queueMicrotask(() => {
+      setHydrated(true);
+    });
   }, []);
   const folderCounts = useMemo(() => {
     return browserProjects.reduce<Record<string, number>>((acc, project) => {
@@ -1108,6 +1107,21 @@ export function StudioDashboardHome({
     [sourceCounts],
   );
   const folderFilters = ["All", ...Object.keys(folderCounts).sort((a, b) => folderCounts[b] - folderCounts[a] || a.localeCompare(b))];
+  const filteredProjects = useMemo(
+    () => {
+      return browserProjects.filter((project) => activeSource === "All" || project.scene.source === activeSource);
+    },
+    [activeSource, browserProjects],
+  );
+  const featuredProjects = useMemo(() => {
+    return filteredProjects.slice(0, 8);
+  }, [filteredProjects]);
+  const featureSummary = useMemo(() => {
+    return featureStatus.reduce((acc, feature) => {
+      acc[feature.status] = (acc[feature.status] ?? 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+  }, [featureStatus]);
   const tagFilters = Object.keys(tagCounts).sort((a, b) => tagCounts[b] - tagCounts[a] || a.localeCompare(b)).slice(0, 8);
   const [activeFolder, setActiveFolder] = useState<string>("All");
   const [activeTag, setActiveTag] = useState<string>("All");

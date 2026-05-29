@@ -1,7 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
-import { once } from "node:events";
-import http from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -106,25 +104,28 @@ describe("workspace-identity-conflict route", () => {
   });
 
   test("delivers conflict archives to a configured webhook endpoint", async () => {
-    const receivedBodies: unknown[] = [];
-    const server = http.createServer((request, response) => {
-      const chunks: Buffer[] = [];
-      request.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
-      request.on("end", () => {
-        receivedBodies.push(JSON.parse(Buffer.concat(chunks).toString("utf8")));
-        response.writeHead(200, { "content-type": "application/json" });
-        response.end(JSON.stringify({ ok: true }));
+    const receivedRequests: Array<{ url: string; method: string; body: unknown }> = [];
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+      const method = init?.method ?? (input instanceof Request ? input.method : "GET");
+      const bodyText = typeof init?.body === "string"
+        ? init.body
+        : input instanceof Request
+          ? await input.clone().text()
+          : "";
+      receivedRequests.push({
+        url,
+        method,
+        body: bodyText ? JSON.parse(bodyText) : null,
       });
-    });
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as typeof fetch;
 
     try {
-      server.listen(0, "127.0.0.1");
-      await once(server, "listening");
-      const address = server.address();
-      if (!address || typeof address === "string") {
-        throw new Error("Webhook test server did not expose a numeric port.");
-      }
-
       const response = await POST(new Request("http://localhost/api/workspace-identity-conflict", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -167,7 +168,7 @@ describe("workspace-identity-conflict route", () => {
             publishedBy: "admin",
             reviewNotes: [],
           },
-          destinations: [{ label: "Remote identity webhook", endpoint: `http://127.0.0.1:${address.port}/webhook`, mode: "webhook" }],
+          destinations: [{ label: "Remote identity webhook", endpoint: "http://example.com/webhook", mode: "webhook" }],
         }),
       }));
 
@@ -177,12 +178,14 @@ describe("workspace-identity-conflict route", () => {
       expect(body.deliveredCount).toBe(1);
       expect(body.conflictStatus).toBe("archive_pending");
       expect(body.resolutionStatus).toBe("archive_pending");
-      expect(receivedBodies).toHaveLength(1);
-      expect((receivedBodies[0] as { conflictStatus?: string }).conflictStatus).toBe("archive_pending");
-      expect((receivedBodies[0] as { resolutionStatus?: string }).resolutionStatus).toBe("archive_pending");
-      expect((receivedBodies[0] as { recommendedAction?: string }).recommendedAction).toBe("Create an archived membership snapshot.");
+      expect(receivedRequests).toHaveLength(1);
+      expect(receivedRequests[0]?.url).toBe("http://example.com/webhook");
+      expect(receivedRequests[0]?.method).toBe("POST");
+      expect((receivedRequests[0]?.body as { conflictStatus?: string } | null)?.conflictStatus).toBe("archive_pending");
+      expect((receivedRequests[0]?.body as { resolutionStatus?: string } | null)?.resolutionStatus).toBe("archive_pending");
+      expect((receivedRequests[0]?.body as { recommendedAction?: string } | null)?.recommendedAction).toBe("Create an archived membership snapshot.");
     } finally {
-      server.close();
+      globalThis.fetch = originalFetch;
     }
   });
 });

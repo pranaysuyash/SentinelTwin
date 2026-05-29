@@ -26,6 +26,20 @@ export const sceneSourceSchema = z.enum([
   "demo",
 ]);
 
+export const reviewStatusSchema = z.enum([
+  "unreviewed",
+  "accepted",
+  "corrected",
+  "calibrated",
+  "verified",
+]);
+
+export const geometryValiditySchema = z.enum([
+  "valid",
+  "suspect",
+  "invalid",
+]);
+
 const point3Schema = z.tuple([z.number(), z.number(), z.number()]);
 const point2Schema = z.tuple([z.number(), z.number()]);
 
@@ -40,6 +54,9 @@ export const wallNodeSchema = z.object({
   material: z.enum(["solid", "glass", "grill", "partial"]),
   visionTransmission: z.number().min(0).max(1).default(0),
   source: sceneSourceSchema,
+  reviewStatus: reviewStatusSchema.default("unreviewed"),
+  sourceTrace: z.string().default(""),
+  geometryValidity: geometryValiditySchema.default("valid"),
 });
 
 export const doorNodeSchema = z.object({
@@ -50,6 +67,9 @@ export const doorNodeSchema = z.object({
   dimensions: point3Schema,
   state: z.enum(["open", "closed", "locked", "restricted"]),
   source: sceneSourceSchema,
+  reviewStatus: reviewStatusSchema.default("unreviewed"),
+  sourceTrace: z.string().default(""),
+  geometryValidity: geometryValiditySchema.default("valid"),
 });
 
 export const windowNodeSchema = z.object({
@@ -61,6 +81,9 @@ export const windowNodeSchema = z.object({
   state: z.enum(["closed_glass", "open", "grill", "curtain", "reflective"]),
   visionTransmission: z.number().min(0).max(1),
   source: sceneSourceSchema,
+  reviewStatus: reviewStatusSchema.default("unreviewed"),
+  sourceTrace: z.string().default(""),
+  geometryValidity: geometryValiditySchema.default("valid"),
 });
 
 export const cameraNodeSchema = z.object({
@@ -96,9 +119,13 @@ export const cameraNodeSchema = z.object({
   liveSessionState: z.enum(["idle", "probing", "connected", "error"]).optional(),
   liveSessionStartedAt: z.number().int().nonnegative().optional(),
   liveSessionConfirmedAt: z.number().int().nonnegative().optional(),
+  liveSessionExpiresAt: z.number().int().nonnegative().optional(),
   source: sceneSourceSchema,
   notes: z.string().optional(),
   tags: z.array(z.string()).default([]),
+  reviewStatus: reviewStatusSchema.default("unreviewed"),
+  sourceTrace: z.string().default(""),
+  geometryValidity: geometryValiditySchema.default("valid"),
 });
 
 export const securityLightNodeSchema = z.object({
@@ -125,6 +152,9 @@ export const securityLightNodeSchema = z.object({
   illuminatesNightCoverage: z.boolean(),
   glareRisk: z.enum(["none", "low", "medium", "high"]),
   source: sceneSourceSchema,
+  reviewStatus: reviewStatusSchema.default("unreviewed"),
+  sourceTrace: z.string().default(""),
+  geometryValidity: geometryValiditySchema.default("valid"),
 });
 
 export const obstructionNodeSchema = z.object({
@@ -165,6 +195,9 @@ export const obstructionNodeSchema = z.object({
     "other",
   ]),
   source: sceneSourceSchema,
+  reviewStatus: reviewStatusSchema.default("unreviewed"),
+  sourceTrace: z.string().default(""),
+  geometryValidity: geometryValiditySchema.default("valid"),
 });
 
 export const criticalZoneNodeSchema = z.object({
@@ -189,6 +222,10 @@ export const criticalZoneNodeSchema = z.object({
   nightRequired: z.boolean(),
   redundancyRequired: z.boolean(),
   privacyZone: z.boolean().default(false),
+  source: sceneSourceSchema.default("manual"),
+  reviewStatus: reviewStatusSchema.default("unreviewed"),
+  sourceTrace: z.string().default(""),
+  geometryValidity: geometryValiditySchema.default("valid"),
 });
 
 export const privacyZoneNodeSchema = z.object({
@@ -198,6 +235,10 @@ export const privacyZoneNodeSchema = z.object({
   polygon: z.array(point2Schema).min(3),
   restriction: z.enum(["no_video", "restricted_view", "blindspot_required"]),
   regulation: z.string(),
+  source: sceneSourceSchema.default("manual"),
+  reviewStatus: reviewStatusSchema.default("unreviewed"),
+  sourceTrace: z.string().default(""),
+  geometryValidity: geometryValiditySchema.default("valid"),
 });
 
 export const sensorNodeSchema = z.object({
@@ -217,6 +258,9 @@ export const sensorNodeSchema = z.object({
   state: z.enum(["active", "inactive", "faulted"]).default("active"),
   coverageMode: z.enum(["detection", "trigger", "audit"]).default("detection"),
   source: sceneSourceSchema,
+  reviewStatus: reviewStatusSchema.default("unreviewed"),
+  sourceTrace: z.string().default(""),
+  geometryValidity: geometryValiditySchema.default("valid"),
   notes: z.string().optional(),
 });
 
@@ -225,6 +269,10 @@ export const entryPointNodeSchema = z.object({
   nodeType: z.literal("entry_point"),
   label: z.string(),
   position: point2Schema,
+  source: sceneSourceSchema.default("manual"),
+  reviewStatus: reviewStatusSchema.default("unreviewed"),
+  sourceTrace: z.string().default(""),
+  geometryValidity: geometryValiditySchema.default("valid"),
 });
 
 export const pathPointSchema = z.object({
@@ -245,6 +293,10 @@ export const scenarioPathSchema = z.object({
   timeOfDay: z.enum(["day", "night", "dusk", "dawn"]),
   intent: z.enum(["authorized", "suspicious", "incident_replay"]),
   labelDetail: z.string().optional(),
+  source: sceneSourceSchema.default("manual"),
+  reviewStatus: reviewStatusSchema.default("unreviewed"),
+  sourceTrace: z.string().default(""),
+  geometryValidity: geometryValiditySchema.default("valid"),
 });
 
 export const simulationAssumptionsSchema = z.object({
@@ -681,6 +733,9 @@ const securitySceneBaseSchema = z.object({
   temporalProfile: temporalSecurityProfileSchema.optional(),
   changeLog: z.array(z.string()).default([]),
   source: sceneSourceSchema,
+  reviewStatus: reviewStatusSchema.default("unreviewed"),
+  sourceTrace: z.string().default(""),
+  geometryValidity: geometryValiditySchema.default("valid"),
   version: z.string(),
 });
 

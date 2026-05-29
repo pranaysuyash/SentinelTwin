@@ -54,7 +54,11 @@ export function createCameraNode(position: [number, number, number]): CameraNode
     clarity: "good",
     liveConnectionStatus: "disconnected",
     liveSessionState: "idle",
+    liveSessionExpiresAt: undefined,
     source: "manual",
+    reviewStatus: "unreviewed",
+    sourceTrace: "",
+    geometryValidity: "valid",
     tags: [],
   };
 }
@@ -95,6 +99,9 @@ export function createObstructionNode(
     movableByAI: true,
     obstructionType,
     source: "manual",
+    reviewStatus: "unreviewed",
+    sourceTrace: "",
+    geometryValidity: "valid",
   };
 }
 
@@ -115,6 +122,9 @@ export function createSecurityLightNode(
     illuminatesNightCoverage: true,
     glareRisk: "none",
     source: "manual",
+    reviewStatus: "unreviewed",
+    sourceTrace: "",
+    geometryValidity: "valid",
   };
 }
 
@@ -143,6 +153,9 @@ export function createSensorNode(
     state: "active",
     coverageMode: "detection",
     source: "manual",
+    reviewStatus: "unreviewed",
+    sourceTrace: "",
+    geometryValidity: "valid",
   };
 }
 
@@ -172,6 +185,9 @@ export function createWallNode(
     material,
     visionTransmission: options?.visionTransmission ?? 0,
     source: "manual",
+    reviewStatus: "unreviewed",
+    sourceTrace: "",
+    geometryValidity: "valid",
   };
 }
 
@@ -190,6 +206,9 @@ export function createDoorNode(
     dimensions: [0.9, 2.1, 0.08],
     state: "closed",
     source: "manual",
+    reviewStatus: "unreviewed",
+    sourceTrace: "",
+    geometryValidity: "valid",
   };
 }
 
@@ -209,6 +228,9 @@ export function createWindowNode(
     state: "closed_glass",
     visionTransmission: 0.65,
     source: "manual",
+    reviewStatus: "unreviewed",
+    sourceTrace: "",
+    geometryValidity: "valid",
   };
 }
 
@@ -234,6 +256,10 @@ export function createCriticalZoneNode(
     nightRequired: true,
     redundancyRequired: false,
     privacyZone: false,
+    source: "manual",
+    reviewStatus: "unreviewed",
+    sourceTrace: "",
+    geometryValidity: "valid",
   };
 }
 
@@ -253,6 +279,10 @@ export function createPrivacyZoneNode(
     polygon,
     restriction: "restricted_view",
     regulation: "manual",
+    source: "manual",
+    reviewStatus: "unreviewed",
+    sourceTrace: "",
+    geometryValidity: "valid",
   };
 }
 
@@ -264,6 +294,10 @@ export function createEntryPointNode(position: [number, number]): EntryPointNode
     nodeType: "entry_point",
     label: `Entry ${_entryCounter}`,
     position,
+    source: "manual",
+    reviewStatus: "unreviewed",
+    sourceTrace: "",
+    geometryValidity: "valid",
   };
 }
 
@@ -284,6 +318,10 @@ export function createScenarioPathNode(points: PathPoint[]): ScenarioPath {
     heightM: 1.75,
     timeOfDay: "day",
     intent: "authorized",
+    source: "manual",
+    reviewStatus: "unreviewed",
+    sourceTrace: "",
+    geometryValidity: "valid",
   };
 }
 

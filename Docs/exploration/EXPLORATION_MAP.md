@@ -5169,6 +5169,8 @@ Add sensor specs (`sensorWidthMm`, `sensorHeightMm`, `sensorFormat`) when:
 - Visible summary surfaces become more trustworthy when they say whether they are simulated, computed, or live instead of implying it through layout.
 - Source-string trust audits are a useful local guardrail because they catch drift in the user-facing claim surfaces before it ships.
 - The simulated/computed/live labels should stay aligned with the same provenance helper so the UI, the manifest, and the tests do not diverge again.
+- The project launcher scan card now uses `Preview / Manual-assisted`, keeping the launcher aligned with the dashboard-facing scan copy and the planned guided-scan status.
+- The per-node truth ladder now surfaces review status, source trace coverage, and geometry validity in Report Lite, Scene Intelligence, and report exports, so credibility is visible alongside coverage.
 
 **Operational note for SentinelTwin:**
 - Keep explicit truth labels on the most claim-heavy summary surfaces and extend the trust-audit manifest whenever a new user-facing claim surface appears.
@@ -5501,6 +5503,7 @@ Add sensor specs (`sensorWidthMm`, `sensorHeightMm`, `sensorFormat`) when:
 **Semantic task evaluation (added 2026-05-29):**
 - Multi-task eval script: `experiments/scene_understanding/scripts/evaluate_semantic_tasks.py`
 - Full report: `experiments/scene_understanding/outputs/semantic_tasks/SEMANTIC_TASKS_REPORT.md`
+- Structured summary: `experiments/scene_understanding/outputs/semantic_tasks/SEMANTIC_TASKS_SUMMARY.json`
 - 5 images × 5 task types (classification, room detection, OCR, adjacency, description) × 3 models (MiniCPM, GPT-4o, Gemini)
 - **MiniCPM-V 4.6 is USEFUL for non-geometry tasks** despite wall F1=0.094:
   - Scene classification: ~2.3s avg. Coarse (warehouse vs retail vs corridor) shows consistent bias (everything → "office") but fast. Fine-grained 1/5.
@@ -5509,9 +5512,10 @@ Add sensor specs (`sensorWidthMm`, `sensorHeightMm`, `sensorFormat`) when:
   - Adjacency: ~5.3s avg. Sparse graphs (1-3 edges) but directionally correct. GPT-4o produces 10-20 structured edges.
   - Description: ~9.7s avg. Reasonable high-level geometric summaries.
 - **GPT-4o:** Faster per task (1-4s), more detailed room/adjacency output, same 1/5 fine-grained classification.
-- **Gemini 2.5 Flash:** API key issue — env var name may be `GOOGLE_API_KEY` not `GEMINI_API_KEY`. Not evaluated.
+- **Gemini 2.5 Flash:** API key issue in some shells — env var name may be `GOOGLE_API_KEY` not `GEMINI_API_KEY`. When the client import is missing, the script now reports it cleanly instead of retrying.
 - **Coarse classification follow-up (3 categories):** MiniCPM 0/5 (all "office"), GPT-4o 1/5 (all "warehouse" except actual warehouse). Synthetic images lack distinguishing visual features for sub-type discrimination.
 - **Pipeline implication (see Thread 54):** Two-tier design — local MiniCPM for triage (classify, OCR, quality check, coarse zones) → gated cloud API call for precise geometry. Saves $0.01-0.02 per blurry/noisy image.
+- **Evaluator hardening:** classification scoring now extracts exact labels before scoring, and MiniCPM model-load failures are cached so the sidecar does not retry the same unsupported checkpoint on every prompt.
 
 **Files added:**
 - `experiments/scene_understanding/scripts/evaluate_semantic_tasks.py`

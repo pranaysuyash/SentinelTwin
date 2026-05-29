@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/shared/Badge";
 import { cn } from "@/lib/cn";
@@ -17,6 +17,7 @@ import {
   traceOperationalEvidenceLineage,
   type OperationalEvidenceLifecycleStage,
 } from "@/lib/operational-evidence";
+import { summarizeSceneTruthLadder } from "@/lib/truth-ladder";
 import { useStudioStore } from "@/store/studio-store";
 
 const SOURCE_STYLES: Record<string, { label: string; className: string; variant: "green" | "blue" | "amber" | "gray" }> = {
@@ -176,45 +177,6 @@ export function SceneIntelligenceTab() {
   const nodeById = useMemo(() => new Map(graph.nodes.map((node) => [node.id, node] as const)), [graph.nodes]);
   const edgeById = useMemo(() => new Map(graph.edges.map((edge) => [edge.id, edge] as const)), [graph.edges]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    const nodeParam = params.get("provenanceNode");
-    const edgeParam = params.get("provenanceEdge");
-    if (nodeParam && nodeById.has(nodeParam)) {
-      setSelectedNodeId(nodeParam);
-    }
-    if (edgeParam && edgeById.has(edgeParam)) {
-      setSelectedEdgeId(edgeParam);
-    }
-  }, [edgeById, nodeById]);
-
-  useEffect(() => {
-    if (!graph.nodes.some((node) => node.id === selectedNodeId)) {
-      setSelectedNodeId(graph.rootId);
-    }
-  }, [graph.nodes, graph.rootId, selectedNodeId]);
-
-  useEffect(() => {
-    if (selectedEdgeId && !graph.edges.some((edge) => edge.id === selectedEdgeId)) {
-      setSelectedEdgeId(null);
-    }
-  }, [graph.edges, selectedEdgeId]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    params.set("provenanceNode", selectedNodeId);
-    if (selectedEdgeId) {
-      params.set("provenanceEdge", selectedEdgeId);
-    } else {
-      params.delete("provenanceEdge");
-    }
-
-    const nextUrl = `${window.location.pathname}?${params.toString()}${window.location.hash}`;
-    window.history.replaceState(null, "", nextUrl);
-  }, [selectedEdgeId, selectedNodeId]);
-
   const selectedNode = nodeById.get(selectedNodeId) ?? nodeById.get(graph.rootId) ?? graph.nodes[0] ?? null;
   const selectedEdge = selectedEdgeId ? edgeById.get(selectedEdgeId) ?? null : null;
 
@@ -222,6 +184,7 @@ export function SceneIntelligenceTab() {
     () => Object.entries(graph.summary.sourceCounts).sort((a, b) => b[1] - a[1]),
     [graph.summary.sourceCounts],
   );
+  const truthLadder = useMemo(() => summarizeSceneTruthLadder(scene), [scene]);
   const recentSnapshots = useMemo(() => [...scene.snapshots].slice(-5).reverse(), [scene.snapshots]);
   const recentChangeEntries = useMemo(() => [...scene.changeLog].slice(-8).reverse(), [scene.changeLog]);
   const filteredOperationalEvidenceEvents = useMemo(
@@ -487,11 +450,27 @@ export function SceneIntelligenceTab() {
           <Badge variant="gray">{graph.summary.sceneSourceLabel}</Badge>
           <span className="text-[10px] text-[#68738a]">Updated {updatedLabel}</span>
         </div>
-        <div className="mt-2 flex flex-wrap items-baseline gap-2">
-          <div className="text-[15px] font-semibold text-[#edf2ff]">{scene.name}</div>
-          <div className="text-[10px] text-[#73809b]">{sceneSubtitle}</div>
-        </div>
+      <div className="mt-2 flex flex-wrap items-baseline gap-2">
+        <div className="text-[15px] font-semibold text-[#edf2ff]">{scene.name}</div>
+        <div className="text-[10px] text-[#73809b]">{sceneSubtitle}</div>
       </div>
+      <div className="mt-2 flex items-center gap-2">
+        <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#7f8da8]">Truth Ladder</div>
+        <div className="text-[9px] text-[#6f7f9d]">Review status, source traces, and geometry validity across the current scene.</div>
+      </div>
+      <div className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-6">
+        {[
+          { label: "Nodes", value: truthLadder.nodeCount, detail: truthLadder.summary },
+          { label: "Reviewed", value: `${truthLadder.reviewedNodeCount} (${truthLadder.reviewedCoveragePct.toFixed(1)}%)`, detail: "review status coverage" },
+          { label: "Verified", value: truthLadder.verifiedNodeCount, detail: "highest trust nodes" },
+          { label: "Source traces", value: `${truthLadder.sourceTraceCount} (${truthLadder.sourceTraceCoveragePct.toFixed(1)}%)`, detail: "nodes with trace evidence" },
+          { label: "Suspect geometry", value: truthLadder.suspectGeometryCount, detail: "requires inspection" },
+          { label: "Invalid geometry", value: truthLadder.invalidGeometryCount, detail: "must be corrected" },
+        ].map((item) => (
+          <StatCard key={item.label} label={item.label} value={item.value} detail={item.detail} />
+        ))}
+      </div>
+    </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto px-3 py-2">
         <div className="rounded-lg border border-[#1c2130] bg-[#0f1320] px-3 py-2">
@@ -1030,7 +1009,7 @@ export function SceneIntelligenceTab() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Live camera binding evidence</div>
-                <div className="mt-1 text-[10px] text-[#74809a]">Live feed bindings, relay URLs, and disconnects are written into the same evidence trail as the camera metadata events.</div>
+                <div className="mt-1 text-[10px] text-[#74809a]">Live feed bindings, refreshes, relay URLs, and disconnects are written into the same evidence trail as the camera metadata events.</div>
               </div>
               <Badge variant={cameraLiveConnectionEvents.length > 0 ? "blue" : "gray"}>{cameraLiveConnectionEvents.length} events</Badge>
             </div>

@@ -209,16 +209,21 @@ export default function StudioPage() {
 
   useEffect(() => {
     if (!aiDraftPreview) return;
-    setAiDraftJsonText(JSON.stringify(aiDraftPreview.scene, null, 2));
-    setAiDraftJsonError(null);
-    setAiDraftJsonEditable(false);
-    setAiDraftJsonVisible(false);
+    queueMicrotask(() => {
+      const nextText = JSON.stringify(aiDraftPreview.scene, null, 2);
+      setAiDraftJsonText(nextText);
+      setAiDraftJsonError(null);
+      setAiDraftJsonEditable(false);
+      setAiDraftJsonVisible(false);
+    });
   }, [aiDraftPreview]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    setQueryBootEnabled(new URLSearchParams(window.location.search).get("studio") === "1");
-    setBootResolved(true);
+    queueMicrotask(() => {
+      if (typeof window === "undefined") return;
+      setQueryBootEnabled(new URLSearchParams(window.location.search).get("studio") === "1");
+      setBootResolved(true);
+    });
   }, []);
 
   useEffect(() => {

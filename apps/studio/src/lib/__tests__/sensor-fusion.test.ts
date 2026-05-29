@@ -15,6 +15,9 @@ describe("computeSensorFusionSummary", () => {
         state: "active",
         coverageMode: "detection",
         source: "manual",
+        reviewStatus: "unreviewed",
+        sourceTrace: "",
+        geometryValidity: "valid",
       },
       {
         id: "sensor_2",
@@ -25,6 +28,9 @@ describe("computeSensorFusionSummary", () => {
         state: "faulted",
         coverageMode: "audit",
         source: "manual",
+        reviewStatus: "unreviewed",
+        sourceTrace: "",
+        geometryValidity: "valid",
       },
     ];
 

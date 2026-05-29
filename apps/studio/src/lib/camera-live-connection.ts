@@ -2,6 +2,7 @@ import { z } from "zod";
 
 type CameraLiveConnectionMode = "rtsp" | "mjpeg" | "http" | "onvif" | "proxy";
 type CameraLiveConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
+const LIVE_SESSION_TTL_MS = 120_000;
 
 const CameraLiveConnectionRecordSchema = z.object({
   cameraId: z.string().min(1).optional(),
@@ -67,6 +68,7 @@ export type CameraLiveConnectionProbeResponse = {
     liveSessionState: "idle" | "probing" | "connected" | "error" | null;
     liveSessionStartedAt: number | null;
     liveSessionConfirmedAt: number | null;
+    liveSessionExpiresAt: number | null;
     liveFeedUrl: string | null;
     liveFeedLabel: string | null;
     liveConnectionMode: CameraLiveConnectionMode | null;
@@ -289,6 +291,11 @@ export async function probeCameraLiveConnection(request: CameraLiveConnectionPro
       ? null
       : status === "connected"
         ? (request.liveSessionConfirmedAt ?? Date.now())
+        : null,
+    liveSessionExpiresAt: request.action === "disconnect"
+      ? null
+      : status === "connected"
+        ? ((request.liveSessionConfirmedAt ?? Date.now()) + LIVE_SESSION_TTL_MS)
         : null,
     liveFeedUrl,
     liveFeedLabel: feedLabel,

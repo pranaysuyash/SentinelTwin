@@ -46,6 +46,10 @@ describe("map utility geometry and sampling", () => {
       heightM: 1.75,
       timeOfDay: "day",
       intent: "incident_replay",
+      source: "manual",
+      reviewStatus: "unreviewed",
+      sourceTrace: "",
+      geometryValidity: "valid",
     };
 
     const coverageCells: CoverageCellLike[] = [

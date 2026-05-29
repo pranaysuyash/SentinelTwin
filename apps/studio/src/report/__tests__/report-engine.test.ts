@@ -25,6 +25,31 @@ function makeEvidenceReport(baseScene: SecurityScene) {
   return buildReportData(evidenceScene, simulateStudio(evidenceScene));
 }
 
+function makeTruthLadderScene(baseScene: SecurityScene) {
+  const truthScene = cloneSecurityScene(baseScene);
+  truthScene.walls[0] = {
+    ...truthScene.walls[0],
+    reviewStatus: "verified",
+    sourceTrace: "wall-spec-review",
+  };
+  truthScene.cameras[0] = {
+    ...truthScene.cameras[0],
+    reviewStatus: "calibrated",
+    sourceTrace: "camera-calibration-note",
+  };
+  truthScene.obstructions[0] = {
+    ...truthScene.obstructions[0],
+    geometryValidity: "suspect",
+    sourceTrace: "obstruction-field-note",
+  };
+  truthScene.criticalZones[0] = {
+    ...truthScene.criticalZones[0],
+    geometryValidity: "invalid",
+    sourceTrace: "zone-audit-note",
+  };
+  return truthScene;
+}
+
 describe("report engine", () => {
   const scene = createSmallRetailShopScene();
   const result = simulateStudio(scene);
@@ -52,7 +77,8 @@ describe("report engine", () => {
     expect(report.standardsRef).toContain("IEC 62676");
     expect(report.provenance.sceneSourceLabel).toBe("Demo Scene");
     expect(report.provenance.nodeCount).toBeGreaterThan(0);
-    expect(report.evidenceTrail.changeLogEntryCount).toBeGreaterThan(0);
+    expect(report.evidenceTrail.changeLogEntryCount).toBe(scene.changeLog.length);
+    expect(report.evidenceTrail.evidenceEntryCount).toBeGreaterThanOrEqual(0);
     expect(report.novelAlgorithms?.coverageEntropy).toBeDefined();
     expect(report.novelAlgorithms?.coverageEntropy?.cellCount).toBeGreaterThan(0);
     expect(report.novelAlgorithms?.coverageUncertainty).toBeDefined();
@@ -158,9 +184,20 @@ describe("report engine", () => {
     expect(report.evidenceTrail.recentEntries[0].title).toBe("Simulation Run");
   });
 
-  const testWithTimeout = test as any;
+  test("buildReportData summarizes the truth ladder", () => {
+    const truthScene = makeTruthLadderScene(scene);
+    const report = buildReportData(truthScene, simulateStudio(truthScene));
 
-  testWithTimeout("buildCompareReportData produces correct deltas", { timeout: 15000 }, () => {
+    expect(report.truthLadder.nodeCount).toBeGreaterThan(0);
+    expect(report.truthLadder.reviewedNodeCount).toBeGreaterThan(0);
+    expect(report.truthLadder.verifiedNodeCount).toBeGreaterThan(0);
+    expect(report.truthLadder.sourceTraceCount).toBeGreaterThan(0);
+    expect(report.truthLadder.suspectGeometryCount).toBeGreaterThan(0);
+    expect(report.truthLadder.invalidGeometryCount).toBeGreaterThan(0);
+    expect(report.truthLadder.summary).toContain("verified");
+  });
+
+  test("buildCompareReportData produces correct deltas", { timeout: 15000 }, () => {
     const modifiedScene = createSmallRetailShopScene();
     const camera = modifiedScene.cameras.find((c) => c.id === "cam_entrance");
     if (camera) camera.status = "off";
@@ -181,7 +218,7 @@ describe("report engine", () => {
     expect(compare.zoneChanges.length).toBe(beforeResult.criticalZoneResults.length);
   });
 
-  testWithTimeout("buildCompareReportData identifies zone status changes", { timeout: 15000 }, () => {
+  test("buildCompareReportData identifies zone status changes", { timeout: 15000 }, () => {
     const modifiedScene = createSmallRetailShopScene();
     const camera = modifiedScene.cameras.find((c) => c.id === "cam_entrance");
     if (camera) camera.status = "off";
@@ -223,6 +260,12 @@ describe("exportAsHtml", () => {
     const html = exportAsHtml(makeReport());
     expect(html).toContain("Provenance");
     expect(html).toContain("Source history");
+  });
+
+  test("includes truth ladder section", () => {
+    const html = exportAsHtml(makeReport());
+    expect(html).toContain("Truth Ladder");
+    expect(html).toContain("Reviewed Nodes");
   });
 
   test("includes operational evidence section", () => {
@@ -473,6 +516,12 @@ describe("exportAsMarkdown", () => {
     const md = exportAsMarkdown(baseReport);
     expect(md).toContain("## Provenance");
     expect(md).toContain("Scene Source");
+  });
+
+  test("includes truth ladder section", () => {
+    const md = exportAsMarkdown(baseReport);
+    expect(md).toContain("## Truth Ladder");
+    expect(md).toContain("Reviewed Nodes");
   });
 
   test("includes operational evidence section", () => {
@@ -753,6 +802,12 @@ describe("exportAsText", () => {
     expect(text).toContain("Source Counts");
   });
 
+  test("includes truth ladder section", () => {
+    const text = exportAsText(baseReport);
+    expect(text).toContain("TRUTH LADDER");
+    expect(text).toContain("Reviewed Nodes");
+  });
+
   test("includes operational evidence section", () => {
     const text = exportAsText(makeEvidenceReport(scene));
     expect(text).toContain("OPERATIONAL EVIDENCE");
@@ -809,6 +864,7 @@ describe("comparison exports", () => {
     expect(html).toContain("Before/After Comparison");
     expect(html).toContain("Delta Summary");
     expect(html).toContain("Before scenario visual evidence");
+    expect(html).toContain("Truth Ladder");
     expect(html).toContain("data:image/svg+xml");
     expect(html).toContain("Evidence Entries");
     expect(html).toContain("Operational Evidence");
@@ -828,6 +884,7 @@ describe("comparison exports", () => {
     expect(md).toContain("## Deltas");
     expect(md).toContain("## Before");
     expect(md).toContain("## After");
+    expect(md).toContain("## Truth Ladder");
     expect(md).toContain("Evidence Entries");
     expect(md).toContain("## Operational Evidence");
   });
@@ -835,9 +892,8 @@ describe("comparison exports", () => {
 
 describe("buildCompareReport (compatibility export)", () => {
   const scene = createSmallRetailShopScene();
-  const testWithTimeout = test as any;
 
-  testWithTimeout("produces same output as buildCompareReportData", { timeout: 30000 }, () => {
+  test("produces same output as buildCompareReportData", { timeout: 30000 }, () => {
     const afterScene = createSmallRetailShopScene();
     const camera = afterScene.cameras.find((c) => c.id === "cam_entrance");
     if (camera) camera.status = "off";

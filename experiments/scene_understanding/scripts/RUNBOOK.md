@@ -17,6 +17,9 @@ python scripts/summarize_runs.py
 
 # Run the regression test for the visual critical-zone repair helper:
 python -m pytest -q experiments/scene_understanding/tests/test_visual_critical_zone.py
+
+# Run the semantic floor-plan sidecar and regenerate its report/summary:
+python experiments/scene_understanding/scripts/evaluate_semantic_tasks.py
 ```
 
 ## Candidates
@@ -53,6 +56,15 @@ python -m pytest -q experiments/scene_understanding/tests/test_visual_critical_z
 | Qwen2.5-VL-7B | 0.661 | 0.000 | 0.000 | 0.100 | 0.000 | 0.000 | 86s | 258s |
 | MiniCPM-V 4.6 (1.3B) | 0.094 | 0.000 | 0.000 | 0.147 | 0.000 | 0.000 | 96s | 132s |
 | Florence-2-base | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 5s | 5s |
+
+## Semantic Sidecar
+
+The semantic-task sidecar is documented in `experiments/scene_understanding/scripts/evaluate_semantic_tasks.py` and writes:
+
+- `experiments/scene_understanding/outputs/semantic_tasks/SEMANTIC_TASKS_REPORT.md`
+- `experiments/scene_understanding/outputs/semantic_tasks/SEMANTIC_TASKS_SUMMARY.json`
+
+It exercises classification, room detection, OCR, adjacency, and description prompts on the same 5-image dev split. The summary path now uses exact label extraction for classification scoring and caches MiniCPM load failures so unsupported checkpoints do not get reloaded on every task.
 
 ## Matching Algorithm
 

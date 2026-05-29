@@ -178,9 +178,18 @@ function SelectionHighlights() {
     ...scene.entryPoints,
     ...scene.paths,
   ].map((node) => [node.id, node] as const));
+  const firstSelectedNode = selectedNodeIds.length > 0 ? nodesById.get(selectedNodeIds[0]!) : undefined;
+  const firstSelectionAnchor = selectedNodeIds.length > 1 && firstSelectedNode ? getSelectionAnchor(firstSelectedNode) : null;
 
   return (
     <>
+      {selectedNodeIds.length > 1 && firstSelectionAnchor ? (
+        <Html position={[firstSelectionAnchor[0], firstSelectionAnchor[1] + 0.55, firstSelectionAnchor[2]]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
+          <div className="rounded-full border border-sky-300/35 bg-[#08111e]/92 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-sky-200 shadow-[0_10px_24px_rgba(0,0,0,0.25)]">
+            {selectedNodeIds.length} selected
+          </div>
+        </Html>
+      ) : null}
       {selectedNodeIds.map((id, index) => {
         const node = nodesById.get(id);
         if (!node) return null;
@@ -918,8 +927,6 @@ function ToolPlacementFloor({
 }) {
   const activeTool = useStudioStore((s) => s.activeTool);
   const addNode = useStudioStore((s) => s.addNode);
-  const duplicateNode = useStudioStore((s) => s.duplicateNode);
-  const removeSelectedNodes = useStudioStore((s) => s.removeSelectedNodes);
   const selectNode = useStudioStore((s) => s.selectNode);
   const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
   const scene = useStudioStore((s) => s.scene);
@@ -1063,6 +1070,33 @@ function ToolPlacementFloor({
       }
     }
   }, [addNode, draftPathPoints, selectNode, setDraftPathPoints, setEditorFeedbackMessage, setEditorMode]);
+
+  const commitDraftWall = useCallback(() => {
+    if (!draftWallStart || !hoverPoint) {
+      setEditorFeedbackMessage("Wall needs a second point");
+      return;
+    }
+
+    const constrained = applyShiftLock(draftWallStart, hoverPoint, false);
+    const segmentLength = pointDistance(draftWallStart, constrained);
+    if (segmentLength < 0.2) {
+      setEditorFeedbackMessage("Wall needs at least 0.20m");
+      return;
+    }
+
+    const wall = createWallNode(draftWallStart, constrained, {
+      wallHeightM: scene.assumptions.wallHeightM,
+      thicknessM: 0.18,
+      material: "solid",
+      visionTransmission: 0,
+    });
+    addNode(wall);
+    selectNode(wall.id);
+    setDraftWallStart(undefined);
+    setEditorFeedbackMessage(null);
+    setEditorMode("idle");
+    setActiveTool("select");
+  }, [addNode, draftWallStart, hoverPoint, scene.assumptions.wallHeightM, selectNode, setActiveTool, setDraftWallStart, setEditorFeedbackMessage, setEditorMode]);
 
   const handlePointerDown = useCallback(
     (event: ThreeEvent<PointerEvent>) => {
@@ -1250,24 +1284,8 @@ function ToolPlacementFloor({
     const onKeyDown = (event: KeyboardEvent) => {
       if (isTypingTarget(event.target)) return;
 
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "d") {
-        event.preventDefault();
-        if (activeTool === "select" && selectedNodeIds.length > 0) {
-          duplicateNode(selectedNodeIds[0]!);
-          setEditorFeedbackMessage(null);
-        }
-        return;
-      }
-
       if (event.key === "Backspace" || event.key === "Delete") {
         event.preventDefault();
-        if (activeTool === "select" && selectedNodeIds.length > 0) {
-          removeSelectedNodes();
-          clearSelection();
-          setEditorFeedbackMessage(null);
-          return;
-        }
-
         if (activeTool === "zone" && draftPolygonPoints.length > 0) {
           setDraftPolygonPoints(draftPolygonPoints.slice(0, -1));
           setEditorFeedbackMessage(null);
@@ -1286,6 +1304,11 @@ function ToolPlacementFloor({
           setEditorFeedbackMessage(null);
           return;
         }
+
+        if (activeTool === "select" && selectedNodeIds.length > 0) {
+          setEditorFeedbackMessage(null);
+          return;
+        }
       }
 
       if (event.key === "Enter") {
@@ -1295,6 +1318,10 @@ function ToolPlacementFloor({
         }
         if (activeTool === "path") {
           commitDraftPath();
+          return;
+        }
+        if (activeTool === "wall") {
+          commitDraftWall();
           return;
         }
       }
@@ -1319,12 +1346,11 @@ function ToolPlacementFloor({
     activeTool,
     commitDraftPath,
     commitDraftPolygon,
+    commitDraftWall,
     clearSelection,
     draftPathPoints,
     draftPolygonPoints,
     draftWallStart,
-    duplicateNode,
-    removeSelectedNodes,
     selectNode,
     setActiveTool,
     setEditorFeedbackMessage,

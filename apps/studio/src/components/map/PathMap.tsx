@@ -16,21 +16,6 @@ type PathMapProps = {
   height?: number;
 };
 
-const QUALITY_ORDER: DoriQuality[] = [
-  "none",
-  "detection",
-  "overview",
-  "outline",
-  "observation",
-  "discern",
-  "perceive",
-  "recognition",
-  "characterize",
-  "validate",
-  "identification",
-  "scrutinize",
-];
-
 function mapLayerFlagsFromStore(layerVis: Record<string, boolean>) {
   return {
     walls: layerVis.walls_floors,
@@ -61,38 +46,12 @@ function findNextAfter<T extends { timeS: number }>(items: T[], timeS: number) {
   return items.find((item) => item.timeS > timeS) ?? null;
 }
 
-function selectCurrentBestCamera(
-  sample: ReturnType<typeof samplePathQuality>[number] | null,
-  visibilityByCamera: Record<string, { visibleS: number }> | undefined,
-) {
-  if (sample?.coveringCameras.length) {
-    return sample.coveringCameras[0] ?? null;
-  }
-
-  if (!visibilityByCamera) return null;
-
-  const [cameraId] = Object.entries(visibilityByCamera)
-    .sort((left, right) => right[1].visibleS - left[1].visibleS)[0] ?? [];
-
-  return cameraId ?? null;
-}
-
 function bandForSample(
   bands: ReturnType<typeof groupPathQualitySamples>,
   sample: ReturnType<typeof samplePathQuality>[number] | null,
 ) {
   if (!sample) return null;
   return bands.find((band) => sample.distanceM >= band.startDistanceM && sample.distanceM <= band.endDistanceM) ?? null;
-}
-
-function nextBandAfter(
-  bands: ReturnType<typeof groupPathQualitySamples>,
-  currentBand: ReturnType<typeof groupPathQualitySamples>[number] | null,
-) {
-  if (!currentBand) return bands[0] ?? null;
-  const index = bands.findIndex((band) => band.startDistanceM === currentBand.startDistanceM && band.endDistanceM === currentBand.endDistanceM && band.quality === currentBand.quality);
-  if (index < 0) return null;
-  return bands[index + 1] ?? null;
 }
 
 export function PathMap({
@@ -117,7 +76,6 @@ export function PathMap({
   const setPathReplayProgress = useStudioStore((s) => s.setPathReplayProgress);
   const setViewMode = useStudioStore((s) => s.setViewMode);
   const setFocusScenePointRequest = useStudioStore((s) => s.setFocusScenePointRequest);
-  const focusPoint = useStudioStore((s) => s.focusScenePointHighlight?.point ?? null);
 
   const activePath = useMemo(() => scene.paths.find((path) => path.id === activePathId) ?? null, [scene.paths, activePathId]);
 
@@ -162,19 +120,20 @@ export function PathMap({
   const detailIndex = selectedSegmentIndex ?? currentSampleIndex;
   const detailSample = detailIndex >= 0 ? pathSamples[Math.min(detailIndex, Math.max(pathSamples.length - 1, 0))] ?? null : null;
   const currentBand = bandForSample(pathBands, detailSample);
-  const nextBand = nextBandAfter(pathBands, currentBand);
   const currentEvent = pathResult ? findLastAtOrBefore(pathResult.timeline, currentTime) : null;
   const nextEvent = pathResult ? findNextAfter(pathResult.timeline, currentTime) : null;
-  const currentBestCamera = selectCurrentBestCamera(detailSample ?? null, pathResult?.visibilityByCamera);
   const currentQualityLabel = detailSample ? QUALITY_LABEL[detailSample.quality] : "No path";
   const currentQualityColor = detailSample ? qualityColor(detailSample.quality) : MAP_COLORS.quality.none;
-  const distanceToNextChange = detailSample && nextBand ? Math.max(0, nextBand.startDistanceM - detailSample.distanceM) : null;
-  const timeToNextChange = detailSample && nextBand ? Math.max(0, nextBand.startTimeS - detailSample.timeS) : null;
 
   return (
     <div className="w-[194px] flex-shrink-0 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
-      <div className="mb-1.5 flex items-center justify-between">
+      <div className="mb-1.5 flex items-center justify-between gap-2">
         <span className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">Path Map</span>
+        {activePath ? (
+          <span className="max-w-[104px] truncate rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-0.5 text-[8px] text-[#9ea8bf]">
+            {activePath.label}
+          </span>
+        ) : null}
       </div>
 
       <div className="flex items-center justify-between gap-1 text-[10px]">
@@ -255,22 +214,17 @@ export function PathMap({
         replayActor={replayActor}
         activePathForReplay={activePath}
         showGrid
-        focusPoint={focusPoint}
       />
 
       <CurrentPathStatePanel
         activePath={activePath}
         currentSample={detailSample}
         currentBand={currentBand}
-        nextBand={nextBand}
         currentEvent={currentEvent}
         nextEvent={nextEvent}
-        currentBestCamera={currentBestCamera}
         currentTime={currentTime}
         currentQualityLabel={currentQualityLabel}
         currentQualityColor={currentQualityColor}
-        distanceToNextChange={distanceToNextChange}
-        timeToNextChange={timeToNextChange}
       />
 
       <div className="mt-2 grid grid-cols-3 gap-2">
@@ -305,16 +259,6 @@ export function PathMap({
         </div>
 
         <CoverageRibbon path={activePath} coverageCells={result?.coverageCells ?? []} stepM={0.25} />
-
-        {pathResult ? (
-          <div className="mt-1.5 flex flex-wrap gap-1.5 text-[8px] text-[#7f8ca6]">
-            {pathResult.timeline.slice(0, 3).map((event, index) => (
-              <span key={`${event.event}-${index}`} className="rounded border border-[#2c3347] px-1 py-0.5">
-                {event.event}: {event.quality ?? "none"}
-              </span>
-            ))}
-          </div>
-        ) : null}
       </div>
 
       <PathEventsList
@@ -360,44 +304,6 @@ export function PathMap({
           Open in 3D Replay
         </button>
       </div>
-
-      <div className="mt-1.5 flex flex-wrap gap-3 text-[8px] text-[#7f7ca6]">
-        <div className="flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-green-500" />
-          <span>Start</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="h-px w-4 border-t border-dashed border-violet-400" />
-          <span>Path</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="h-2.5 w-2.5 rounded-full border border-amber-400" />
-          <span>End</span>
-        </div>
-      </div>
-
-      <div className="mt-2 text-[8px] text-[#6f7b94]">
-        {activePath ? (
-          <div className="space-y-0.5">
-            <p>Coverage quality legend</p>
-            <div className="flex flex-wrap gap-2">
-              {QUALITY_ORDER.map((quality) => (
-                <span
-                  key={quality}
-                  className="inline-flex items-center gap-1"
-                  title={quality}
-                >
-                  <span
-                    className="inline-block h-2 w-2 rounded-sm"
-                    style={{ backgroundColor: MAP_COLORS.quality[quality] }}
-                  />
-                  {quality}
-                </span>
-              ))}
-            </div>
-          </div>
-        ) : null}
-      </div>
     </div>
   );
 }
@@ -406,34 +312,26 @@ function CurrentPathStatePanel({
   activePath,
   currentSample,
   currentBand,
-  nextBand,
   currentEvent,
   nextEvent,
-  currentBestCamera,
   currentTime,
   currentQualityLabel,
   currentQualityColor,
-  distanceToNextChange,
-  timeToNextChange,
 }: {
   activePath: ScenarioPath | null;
   currentSample: ReturnType<typeof samplePathQuality>[number] | null;
   currentBand: ReturnType<typeof groupPathQualitySamples>[number] | null;
-  nextBand: ReturnType<typeof groupPathQualitySamples>[number] | null;
   currentEvent: { timeS: number; event: string; quality?: DoriQuality; cameraId?: string; reason?: string } | null;
   nextEvent: { timeS: number; event: string; quality?: DoriQuality; cameraId?: string; reason?: string } | null;
-  currentBestCamera: string | null;
   currentTime: number;
   currentQualityLabel: string;
   currentQualityColor: string;
-  distanceToNextChange: number | null;
-  timeToNextChange: number | null;
 }) {
   return (
     <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">Current State</div>
+          <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">Now</div>
           <div className="mt-0.5 text-[10px] text-[#9aa6bf]">
             {activePath ? activePath.label : "No path selected"}
           </div>
@@ -443,33 +341,27 @@ function CurrentPathStatePanel({
         </div>
       </div>
 
-      <div className="mt-2 grid grid-cols-2 gap-2">
+      <div className="mt-2 grid grid-cols-2 gap-2 text-[9px]">
         <div className="rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
           <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Time</div>
           <div className="text-[11px] font-semibold text-[#dfe5f2]">{currentTime.toFixed(1)}s</div>
         </div>
         <div className="rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
-          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Best Camera</div>
-          <div className="text-[11px] font-semibold text-[#dfe5f2]">{currentBestCamera ?? "None"}</div>
-        </div>
-        <div className="rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
-          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Next State</div>
+          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Sample</div>
           <div className="text-[11px] font-semibold text-[#dfe5f2]">
-            {nextBand ? `${QUALITY_LABEL[nextBand.quality]} @ ${nextBand.startDistanceM.toFixed(1)}m` : "End"}
+            {currentSample ? `${currentSample.distanceM.toFixed(1)}m` : "None"}
           </div>
         </div>
         <div className="rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
-          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Segment</div>
+          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Next</div>
           <div className="text-[11px] font-semibold text-[#dfe5f2]">
-            {currentBand ? `${QUALITY_LABEL[currentBand.quality]} (${currentBand.startDistanceM.toFixed(1)}m)` : "None"}
+            {currentBand ? `${QUALITY_LABEL[currentBand.quality]}` : "End"}
           </div>
         </div>
         <div className="rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
-          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Next Change</div>
+          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Cameras</div>
           <div className="text-[11px] font-semibold text-[#dfe5f2]">
-            {distanceToNextChange === null || timeToNextChange === null
-              ? "End"
-              : `${distanceToNextChange.toFixed(1)}m / ${timeToNextChange.toFixed(1)}s`}
+            {currentSample?.coveringCameras.length ? currentSample.coveringCameras.join(", ") : "None"}
           </div>
         </div>
       </div>
@@ -493,13 +385,10 @@ function CurrentPathStatePanel({
       {currentSample ? (
         <div className="mt-2 flex flex-wrap gap-1.5 text-[8px] text-[#7f8ca6]">
           <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[#9ea8bf]">
-            {currentSample.coveringCameras.length > 0 ? currentSample.coveringCameras.join(", ") : "No cameras"}
-          </span>
-          <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[#9ea8bf]">
-            {currentSample.distanceM.toFixed(1)}m
-          </span>
-          <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[#9ea8bf]">
             {currentSample.quality}
+          </span>
+          <span className="rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-1 text-[#9ea8bf]">
+            {currentSample.coveringCameras.length > 0 ? currentSample.coveringCameras.length : 0} cams
           </span>
         </div>
       ) : null}

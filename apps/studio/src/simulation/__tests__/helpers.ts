@@ -22,6 +22,9 @@ export function createRoomWalls(width: number, depth: number, height = 3): WallN
       material: "solid",
       visionTransmission: 0,
       source: "manual",
+      reviewStatus: "unreviewed",
+      sourceTrace: "",
+      geometryValidity: "valid",
     },
     {
       id: "wall_east",
@@ -34,6 +37,9 @@ export function createRoomWalls(width: number, depth: number, height = 3): WallN
       material: "solid",
       visionTransmission: 0,
       source: "manual",
+      reviewStatus: "unreviewed",
+      sourceTrace: "",
+      geometryValidity: "valid",
     },
     {
       id: "wall_south",
@@ -46,6 +52,9 @@ export function createRoomWalls(width: number, depth: number, height = 3): WallN
       material: "solid",
       visionTransmission: 0,
       source: "manual",
+      reviewStatus: "unreviewed",
+      sourceTrace: "",
+      geometryValidity: "valid",
     },
     {
       id: "wall_west",
@@ -58,6 +67,9 @@ export function createRoomWalls(width: number, depth: number, height = 3): WallN
       material: "solid",
       visionTransmission: 0,
       source: "manual",
+      reviewStatus: "unreviewed",
+      sourceTrace: "",
+      geometryValidity: "valid",
     },
   ];
 }
@@ -88,6 +100,9 @@ export function createTestCamera(overrides: Partial<CameraNode> = {}): CameraNod
     ptz: overrides.ptz ?? false,
     clarity: overrides.clarity ?? "excellent",
     source: overrides.source ?? "manual",
+    reviewStatus: overrides.reviewStatus ?? "unreviewed",
+    sourceTrace: overrides.sourceTrace ?? "",
+    geometryValidity: overrides.geometryValidity ?? "valid",
     notes: overrides.notes,
     tags: overrides.tags ?? [],
   };
@@ -111,6 +126,9 @@ export function createTestObstruction(
     movableByAI: overrides.movableByAI ?? false,
     obstructionType: overrides.obstructionType ?? "partition",
     source: overrides.source ?? "manual",
+    reviewStatus: overrides.reviewStatus ?? "unreviewed",
+    sourceTrace: overrides.sourceTrace ?? "",
+    geometryValidity: overrides.geometryValidity ?? "valid",
     weightKg: overrides.weightKg,
   };
 }
@@ -133,6 +151,9 @@ export function createTestLight(overrides: Partial<SecurityLightNode> = {}): Sec
     illuminatesNightCoverage: overrides.illuminatesNightCoverage ?? true,
     glareRisk: overrides.glareRisk ?? "low",
     source: overrides.source ?? "manual",
+    reviewStatus: overrides.reviewStatus ?? "unreviewed",
+    sourceTrace: overrides.sourceTrace ?? "",
+    geometryValidity: overrides.geometryValidity ?? "valid",
   };
 }
 

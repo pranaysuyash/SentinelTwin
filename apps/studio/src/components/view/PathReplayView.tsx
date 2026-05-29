@@ -834,6 +834,9 @@ export function PathReplayView() {
     [replaySamples],
   );
   const controlsRef = useRef<{ target: THREE.Vector3; update?: () => void } | null>(null);
+  const handleControlsRef = useCallback((instance: unknown) => {
+    controlsRef.current = instance as { target: THREE.Vector3; update?: () => void } | null;
+  }, []);
   const pathLengthM = useMemo(() => {
     if (!activePath) return 0;
     return pathLength(activePath.points.map((point) => point.position));
@@ -1131,7 +1134,7 @@ export function PathReplayView() {
         <CameraMarkers />
 
         <OrbitControls
-          ref={controlsRef as any}
+          ref={handleControlsRef}
           makeDefault
           target={[5.05, 0.6, 3.8]}
           minDistance={5.5}

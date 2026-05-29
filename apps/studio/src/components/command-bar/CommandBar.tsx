@@ -37,8 +37,6 @@ export function CommandBar() {
   const visible = useStudioStore((s) => s.visibleComponents.command_bar);
   const aiActionTelemetrySummary = useMemo(() => summarizeAiActionTelemetry(aiActionTelemetry), [aiActionTelemetry]);
 
-  if (!visible) return null;
-
   const handleSubmit = useCallback(() => {
     const trimmed = input.trim();
     if (!trimmed) return;
@@ -77,6 +75,8 @@ export function CommandBar() {
       inputRef.current?.focus();
     }
   }, [isExpanded]);
+
+  if (!visible) return null;
 
   if (!isExpanded) {
     return (

@@ -158,6 +158,9 @@ export function SceneBuilderWizard({ onClose, forceImportMethod = null }: SceneB
           material: "solid",
           visionTransmission: 0,
           source: "manual",
+          reviewStatus: "unreviewed",
+          sourceTrace: "",
+          geometryValidity: "valid",
         },
         {
           id: "wall_n",
@@ -170,6 +173,9 @@ export function SceneBuilderWizard({ onClose, forceImportMethod = null }: SceneB
           material: "solid",
           visionTransmission: 0,
           source: "manual",
+          reviewStatus: "unreviewed",
+          sourceTrace: "",
+          geometryValidity: "valid",
         },
         {
           id: "wall_e",
@@ -182,6 +188,9 @@ export function SceneBuilderWizard({ onClose, forceImportMethod = null }: SceneB
           material: "solid",
           visionTransmission: 0,
           source: "manual",
+          reviewStatus: "unreviewed",
+          sourceTrace: "",
+          geometryValidity: "valid",
         },
         {
           id: "wall_w",
@@ -194,6 +203,9 @@ export function SceneBuilderWizard({ onClose, forceImportMethod = null }: SceneB
           material: "solid",
           visionTransmission: 0,
           source: "manual",
+          reviewStatus: "unreviewed",
+          sourceTrace: "",
+          geometryValidity: "valid",
         },
       ];
       scene.source = "manual";

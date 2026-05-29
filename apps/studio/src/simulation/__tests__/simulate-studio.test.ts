@@ -110,6 +110,10 @@ describe("simulateStudio", () => {
         nightRequired: false,
         redundancyRequired: false,
         privacyZone: false,
+        source: "manual",
+        reviewStatus: "unreviewed",
+        sourceTrace: "",
+        geometryValidity: "valid",
       },
     ];
 
@@ -153,6 +157,10 @@ describe("simulateStudio", () => {
         ],
         restriction: "restricted_view",
         regulation: "GDPR",
+        source: "manual",
+        reviewStatus: "unreviewed",
+        sourceTrace: "",
+        geometryValidity: "valid",
       },
     ];
 
@@ -212,6 +220,10 @@ describe("simulateStudio", () => {
         ],
         restriction: "no_video",
         regulation: "GDPR",
+        source: "manual",
+        reviewStatus: "unreviewed",
+        sourceTrace: "",
+        geometryValidity: "valid",
       },
     ];
 
@@ -277,6 +289,10 @@ describe("simulateStudio", () => {
         nightRequired: false,
         redundancyRequired: true,
         privacyZone: false,
+        source: "manual",
+        reviewStatus: "unreviewed",
+        sourceTrace: "",
+        geometryValidity: "valid",
       },
     ];
 
@@ -330,6 +346,10 @@ describe("simulateStudio", () => {
         nightRequired: false,
         redundancyRequired: false,
         privacyZone: false,
+        source: "manual",
+        reviewStatus: "unreviewed",
+        sourceTrace: "",
+        geometryValidity: "valid",
       },
     ];
 

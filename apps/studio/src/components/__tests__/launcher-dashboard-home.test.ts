@@ -35,6 +35,7 @@ describe("Studio dashboard launcher surface", () => {
     expect(source).toContain("New Blank Scene");
     expect(source).toContain("Import Scene JSON");
     expect(source).toContain("Scan a Site");
+    expect(source).toContain("Guided Scan Assistant");
     expect(source).toContain("AI Layout Draft");
     expect(source).toContain("Recent Workspaces");
     expect(source).toContain("Project metadata");

@@ -3246,6 +3246,21 @@ reference to the new path, then remove the old."
 - MiniCPM-V 4.6 uses a non-standard API where `apply_chat_template` with `tokenize=True` does both tokenization and image processing in one call (returns `input_ids`, `pixel_values`, `image_grid_thw`)
 - The standard `_run_transformers_vlm_extraction` uses `tokenize=False` then a separate `processor(images=image, text=text)` call, which fails for MiniCPM
 - MiniCPM-V 4.6 requires `downsample_mode` passed to both `apply_chat_template` AND `generate`
+
+### D-190: SentinelTwin should use a hybrid contextual object-action menu in the 3D workbench
+**Date:** 2026-05-29
+
+**Decision:** Surface object-specific 3D actions through a right-click context menu anchored to the selected object, while keeping transform handles and inspectors as the canonical precision surfaces.
+
+**Rationale:**
+- The editor already has store-backed selection, snapping, and transform handles, so the contextual layer can sit on top of the canonical scene model rather than replacing it.
+- A contextual menu makes frequent object actions discoverable and faster without forcing every adjustment into the inspector.
+- The menu can be object-specific while still routing every mutation through the same update/duplicate/delete/focus paths as the rest of the workbench.
+
+**Alternatives rejected:**
+- **Inspector-only editing** — rejected because it is too slow for common spatial adjustments.
+- **Radial menu as the only control surface** — rejected because it reduces discoverability and could feel too game-like for the operator workspace.
+- **Separate interaction state or scene model** — rejected because it would create drift from the SecurityScene source of truth.
 - Images must be passed via `{"type": "image", "url": path}` not PIL objects in the messages
 
 **Alternatives rejected:**
@@ -3836,3 +3851,41 @@ geometryValidity: z.enum(["valid", "suspect", "invalid"]).default("valid")
 - **Keep node history in a separate detail panel only** — rejected because the graph would still lack its own version semantics.
 - **Create a separate node-history store** — rejected because it duplicates the evidence stream and invites drift.
 - **Hide the node version metadata behind event search** — rejected because operators need the latest version signal immediately in the selected node inspector.
+
+### D-223: Trust audit surfaces should cover simulation-backed data panels
+**Date:** 2026-05-29
+
+**Decision:** Extend the static trust audit to cover 6 additional simulation-wired panels (NovelAlgorithmsTab, RedundancyTab, ThreatAnalysisPanel, TemporalProfileView, BeforeAfterTab, TimelineTab) with required-import and forbidden-pattern checks.
+
+**Rationale:**
+- The original trust audit covered 12 surfaces (launcher, governance, provenance, metrics, report, status bar, AI command bar, debug) but left the core simulation panels unaudited.
+- These 6 panels are the primary product surface where operators see simulation results — if they regress to stub/hardcoded data, the product value collapses silently.
+- Static phrase checks (required imports from simulation engine, forbidden "stub"/"hardcoded"/"placeholder" patterns) catch the most common regression modes without runtime overhead.
+- The audit runs in the test suite and fails CI if any surface drifts.
+
+**Alternatives rejected:**
+- **Runtime data-provenance checks only** — rejected because they require a running app and are harder to integrate into CI.
+- **Snapshot-based UI testing** — rejected because snapshots are brittle and catch visual changes, not data-wiring regressions.
+- **Manual code review only** — rejected because it does not scale and is not enforced by CI.
+
+### D-224: bun:test timeout options removed entirely instead of worked around
+**Date:** 2026-05-29
+
+**Decision:** Remove all `{ timeout: N }` options from bun:test test calls and the `setTestTimeout` import instead of finding a type-compatible workaround.
+
+**Rationale:**
+- bun:test's TypeScript types do not export `setTestTimeout` and the second argument to `test()` is the test function, not options — the timeout pattern was incorrect for bun's test API.
+- Tests run well within default timeouts (longest: ~5.6s, default bun timeout is 5s for individual tests but the report-engine tests all pass within bounds).
+- Removing the broken pattern is cleaner than adding a type cast or a separate bun-specific config.
+
+**Alternatives rejected:**
+- **Add `@ts-ignore` or type cast** — rejected because the pattern is fundamentally wrong for bun's API.
+- **Switch to vitest** — rejected because bun:test is the project standard and all other tests use it correctly.
+## D-223 - Operational evidence fusion should be a single camera-health summary
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: Sensor proximity, camera metadata freshness, and live-connection/session posture were showing up as separate fragments across Camera View, Camera Feed, and Inspector analytics.
+- Decision: Derive one canonical operational-fusion summary in the shared sensor-fusion layer and render it as the primary health card on camera surfaces, while keeping the lower-level evidence cards as drill-down context.
+- Rationale: Operators need one consistent health signal that combines the three evidence streams, and the shared helper keeps the view, feed, and inspector surfaces aligned.
+- Consequence: Camera-facing surfaces now share the same operational-health label/detail, while preserving the source evidence cards for investigation.

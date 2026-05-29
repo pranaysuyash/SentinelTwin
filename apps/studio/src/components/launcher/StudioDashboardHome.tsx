@@ -181,6 +181,7 @@ type StudioDashboardHomeProps = {
   onImportFloorPlan: () => void;
   onImportScene: () => void;
   onScanSite: () => void;
+  onGuidedScanAssistant?: () => void;
   onAiDraft: () => void;
   onOpenReport: () => void;
   onOpenScene?: (scene: SecurityScene) => void;
@@ -995,9 +996,10 @@ export function StudioDashboardHome({
   onRunSimulation,
   onStartProject: _onStartProject,
   onCreateScene,
-  onImportFloorPlan: _onImportFloorPlan,
+  onImportFloorPlan,
   onImportScene,
   onScanSite,
+  onGuidedScanAssistant,
   onAiDraft,
   onOpenReport,
   onOpenScene,
@@ -1190,7 +1192,6 @@ export function StudioDashboardHome({
     return filteredProjects.slice(0, 8);
   }, [filteredProjects]);
   const tagFilters = Object.keys(tagCounts).sort((a, b) => tagCounts[b] - tagCounts[a] || a.localeCompare(b)).slice(0, 8);
-  void _onImportFloorPlan;
   const statusLabel = simulationRunning
     ? "Running"
     : coverage == null
@@ -1487,7 +1488,26 @@ export function StudioDashboardHome({
                 <ActionButton icon={<Camera className="h-4 w-4" />} label="Open Camera Wall" description="Review the live feed grid." onClick={onOpenCameraWall} className="min-w-[210px] flex-1" />
                 <ActionButton icon={<Play className="h-4 w-4" />} label="Open Path Replay" description="Inspect the replay actor and route." onClick={onOpenPathReplay} className="min-w-[210px] flex-1" />
                 <ActionButton icon={<LayoutDashboard className="h-4 w-4" />} label="Compare Fixes" description="Open the before/after comparison view." onClick={onOpenCompareFixes} className="min-w-[210px] flex-1" />
+                <ActionButton icon={<Radar className="h-4 w-4" />} label="Open Report Lite" description="Open the report summary view." onClick={onOpenReport} className="min-w-[210px] flex-1" />
               </div>
+              {onGuidedScanAssistant ? (
+                <div className="mt-4">
+                  <button
+                    type="button"
+                    onClick={onGuidedScanAssistant}
+                    className="group flex w-full items-center gap-3 rounded-2xl border border-sky-400/25 bg-sky-500/8 px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-sky-300/45 hover:bg-sky-500/14"
+                  >
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-sky-400/25 bg-sky-500/12">
+                      <ScanSearch className="h-5 w-5 text-sky-300" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold text-sky-100">Open Guided Scan Assistant</div>
+                      <div className="mt-0.5 text-[11px] text-sky-200/60">Manual-assisted intake with a guided capture and review loop.</div>
+                    </div>
+                    <ArrowRight className="h-4 w-4 flex-none text-sky-300 transition-transform duration-200 group-hover:translate-x-1" />
+                  </button>
+                </div>
+              ) : null}
               {onOpenDemoWalkthrough ? (
                 <div className="mt-4">
                   <button
@@ -1562,6 +1582,15 @@ export function StudioDashboardHome({
                         status: "Preview / Manual-assisted",
                         description: "Build a security scene from site photos by marking walls, doors, cameras, obstructions, lights, and critical zones.",
                         onClick: onScanSite,
+                      },
+                      { icon: <MapIcon className="h-4 w-4" />, label: "Import Floor Plan", detail: "Image/PDF to sketch", onClick: onImportFloorPlan },
+                      {
+                        icon: <Sparkles className="h-4 w-4" />,
+                        label: "Guided Scan Assistant",
+                        detail: "Step-by-step",
+                        status: "Preview / Manual-assisted",
+                        description: "Open the guided walkthrough for phone-photo capture and scene compilation.",
+                        onClick: onGuidedScanAssistant ?? onScanSite,
                       },
                       { icon: <Sparkles className="h-4 w-4" />, label: "AI Layout Draft", detail: "Generate layout", onClick: onAiDraft },
                     ].map((action) => (
@@ -1954,6 +1983,7 @@ export function StudioDashboardHome({
                     <ActionButton icon={<Plus className="h-4 w-4" />} label="New Blank Scene" description="Start from an empty scene shell." onClick={onCreateScene} />
                     <ActionButton icon={<FileUp className="h-4 w-4" />} label="Import Scene JSON" description="Load a canonical scene file." onClick={onImportScene} />
                     <ActionButton icon={<ScanSearch className="h-4 w-4" />} label="Scan a Site" description="Preview: manual-assisted photo marking compiles to editable SecurityScene." onClick={onScanSite} />
+                    <ActionButton icon={<MapIcon className="h-4 w-4" />} label="Import Floor Plan" description="Upload plan image/PDF to generate scene geometry." onClick={onImportFloorPlan} />
                     <ActionButton icon={<Sparkles className="h-4 w-4" />} label="AI Layout Draft" description="Generate a prompt-backed draft scene." onClick={onAiDraft} />
                   </div>
                 </div>

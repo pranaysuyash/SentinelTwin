@@ -5926,6 +5926,10 @@ Prototype a contextual 3D interaction model that reduces friction for object man
 - Do not add game-like styling that conflicts with the operator-workspace feel.
 - Keep all actions routed through the existing store-backed scene model.
 
+### Current implementation note
+
+- A first-pass right-click contextual menu is now wired into the workspace canvas and shared scene renderers, so the exploration thread has crossed into an active prototype rather than remaining only a design discussion.
+
 ## Thread: React diagnostics and element-grab tooling for `apps/studio`
 
 ### Why this matters

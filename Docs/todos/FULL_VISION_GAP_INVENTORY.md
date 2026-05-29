@@ -525,3 +525,4 @@ The rule remains:
 - The highest-visibility summary surfaces now carry explicit truth labels: `Metrics` shows `Truth: Simulated`, `ReportLite` shows `Truth: Computed`, and the footer `StatusBar` shows `Truth: Live`.
 - The in-product trust-audit route now checks those labels alongside the launcher/governance/provenance/debug surfaces.
 - The remaining placeholder/truth work is broader claim-label coverage across the rest of the visible shell, not these already-labeled surfaces.
+- Remaining gap: the operational-fusion card is shared and canonical, but the next macro step is still deeper device-side truth, meaning protocol-backed live session state instead of the modeled session/transport posture we are summarizing today.

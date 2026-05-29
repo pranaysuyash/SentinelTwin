@@ -33,6 +33,13 @@ import {
 import { makeSnapEngine } from "./editing/SnapEngine";
 import { PathDrawTool } from "./editing/PathDrawTool";
 import { PolygonDrawTool } from "./editing/PolygonDrawTool";
+import { ObjectContextMenu } from "./editing/ObjectContextMenu";
+import {
+  buildContextualMenuModel,
+  findContextualNode,
+  planContextualAction,
+  type ContextActionId,
+} from "./editing/object-context-actions";
 import { SelectionOverlay } from "./editing/SelectionOverlay";
 import { TransformHandles } from "./editing/TransformHandles";
 import { getSceneSelectionIds, normalizeBounds } from "./editing/selection-geometry";
@@ -82,6 +89,13 @@ type SelectionDragState = {
   currentClient: [number, number];
   startWorld: [number, number];
   currentWorld: [number, number];
+};
+
+type ObjectContextMenuState = {
+  nodeId: string;
+  clientX: number;
+  clientY: number;
+  selectionSnapshot: string[];
 };
 
 function SelectionRectangleOverlay({ drag }: { drag: SelectionDragState | null }) {
@@ -215,10 +229,27 @@ function SelectionHighlights() {
   );
 }
 
-function CameraFrustum({ camera, selected }: { camera: CameraNode; selected: boolean }) {
+function CameraFrustum({
+  camera,
+  selected,
+  onContextMenu,
+}: {
+  camera: CameraNode;
+  selected: boolean;
+  onContextMenu?: (id: string, event: any) => void;
+}) {
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
+  const setSelectedCameraId = useStudioStore((s) => s.setSelectedCameraId);
+  const studioViewMode = useStudioStore((s) => s.setViewMode);
   const [hovered, setHovered] = useState(false);
+  const lastClickTime = useRef(0);
+
+  const handleDoubleClick = useCallback(() => {
+    setSelectedCameraId(camera.id);
+    selectNode(camera.id);
+    studioViewMode("camera_view");
+  }, [camera.id, selectNode, setSelectedCameraId, studioViewMode]);
   const [px, py, pz] = camera.position;
   const forward = getYawPitchDirection(camera.yawDeg, camera.pitchDeg);
   const range = Math.min(camera.rangeM, 12);
@@ -245,13 +276,19 @@ function CameraFrustum({ camera, selected }: { camera: CameraNode; selected: boo
     lineRef.current?.computeLineDistances();
   }, [isSuggested]);
 
-  const handleSelect = (event: ThreeEvent<PointerEvent>) => {
+  const handleSelect = (event: ThreeEvent<MouseEvent>) => {
     event.stopPropagation();
     if (event.shiftKey || event.metaKey || event.ctrlKey) {
       toggleSelectedNode(camera.id);
       return;
     }
     selectNode(camera.id);
+
+    const now = Date.now();
+    if (now - lastClickTime.current < 350) {
+      handleDoubleClick();
+    }
+    lastClickTime.current = now;
   };
 
   const edgesGeom = useMemo(() => {
@@ -262,6 +299,11 @@ function CameraFrustum({ camera, selected }: { camera: CameraNode; selected: boo
   return (
     <group
       onPointerDown={handleSelect}
+      onContextMenu={onContextMenu ? (event) => {
+        event.stopPropagation();
+        event.nativeEvent.preventDefault();
+        onContextMenu(camera.id, event);
+      } : undefined}
       onPointerOver={() => {
         setHovered(true);
         document.body.style.cursor = "pointer";
@@ -308,7 +350,15 @@ function CameraFrustum({ camera, selected }: { camera: CameraNode; selected: boo
   );
 }
 
-function CameraMarker({ camera, selected }: { camera: CameraNode; selected: boolean }) {
+function CameraMarker({
+  camera,
+  selected,
+  onContextMenu,
+}: {
+  camera: CameraNode;
+  selected: boolean;
+  onContextMenu?: (id: string, event: any) => void;
+}) {
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
   const layers = useStudioStore((s) => s.layerVisibility);
@@ -324,7 +374,7 @@ function CameraMarker({ camera, selected }: { camera: CameraNode; selected: bool
   const labelCompact = overlayDensity === "compact";
   const showOnlyOnHover = overlayDensity === "minimal";
 
-  const handleSelect = (event: ThreeEvent<PointerEvent>) => {
+  const handleSelect = (event: ThreeEvent<MouseEvent>) => {
     event.stopPropagation();
     if (event.shiftKey || event.metaKey || event.ctrlKey) {
       toggleSelectedNode(camera.id);
@@ -337,6 +387,11 @@ function CameraMarker({ camera, selected }: { camera: CameraNode; selected: bool
     <group
       position={[px, py, pz]}
       scale={hovered ? 1.12 : selected ? 1.08 : 1}
+      onContextMenu={onContextMenu ? (event) => {
+        event.stopPropagation();
+        event.nativeEvent.preventDefault();
+        onContextMenu(camera.id, event);
+      } : undefined}
       onPointerEnter={() => {
         setHovered(true);
         document.body.style.cursor = "pointer";
@@ -448,13 +503,25 @@ function AccentSurface({
   );
 }
 
-function CeilingLightMarkers() {
+function CeilingLightMarkers({
+  onContextMenu,
+}: {
+  onContextMenu?: (id: string, event: any) => void;
+}) {
   const scene = useStudioStore((s) => s.scene);
 
   return (
     <group>
       {scene.securityLights.map((light) => (
-        <group key={light.id} position={light.position}>
+        <group
+          key={light.id}
+          position={light.position}
+          onContextMenu={onContextMenu ? (event) => {
+            event.stopPropagation();
+            event.nativeEvent.preventDefault();
+            onContextMenu(light.id, event);
+          } : undefined}
+        >
           <mesh>
             <cylinderGeometry args={[0.18, 0.18, 0.05, 22]} />
             <meshStandardMaterial color="#eceff7" emissive="#f8f2c0" emissiveIntensity={0.45} roughness={0.2} metalness={0.3} />
@@ -465,7 +532,11 @@ function CeilingLightMarkers() {
   );
 }
 
-function SensorMarkers() {
+function SensorMarkers({
+  onContextMenu,
+}: {
+  onContextMenu?: (id: string, event: any) => void;
+}) {
   const scene = useStudioStore((s) => s.scene);
   const selected = useStudioStore((s) => s.selectedNodeId);
   const selectNode = useStudioStore((s) => s.selectNode);
@@ -500,6 +571,11 @@ function SensorMarkers() {
               }
               selectNode(sensor.id);
             }}
+            onContextMenu={onContextMenu ? (event) => {
+              event.stopPropagation();
+              event.nativeEvent.preventDefault();
+              onContextMenu(sensor.id, event);
+            } : undefined}
             onPointerOver={() => {
               setHoveredId(sensor.id);
               document.body.style.cursor = "pointer";
@@ -540,11 +616,13 @@ function CriticalZoneOverlay({
   result,
   selected,
   onSelect,
+  onContextMenu,
 }: {
   zone: { id: string; label: string; polygon: [number, number][]; heightM: number; requiredQuality: string };
   result?: { status: string; actualQuality: string };
   selected?: boolean;
   onSelect?: (id: string) => void;
+  onContextMenu?: (id: string, event: any) => void;
 }) {
   const layers = useStudioStore((s) => s.layerVisibility);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
@@ -582,6 +660,11 @@ function CriticalZoneOverlay({
           selectNode(zone.id);
         }
       }}
+      onContextMenu={onContextMenu ? (event) => {
+        event.stopPropagation();
+        event.nativeEvent.preventDefault();
+        onContextMenu(zone.id, event);
+      } : undefined}
     >
       <mesh position={[cx, 0.012, cz]}>
         <boxGeometry args={[w, 0.01, d]} />
@@ -646,7 +729,11 @@ function EntryDoorLabel({ position }: { position: [number, number] }) {
   );
 }
 
-function SceneGeometry() {
+function SceneGeometry({
+  onObjectContextMenu,
+}: {
+  onObjectContextMenu: (nodeId: string, event: any) => void;
+}) {
   const scene = useStudioStore((s) => s.scene);
   const result = useStudioStore((s) => s.simulationResult);
   const selected = useStudioStore((s) => s.selectedNodeId);
@@ -689,17 +776,17 @@ function SceneGeometry() {
       )}
 
       {layers.walls_floors ? (
-        <SceneWalls walls={scene.walls} />
+        <SceneWalls walls={scene.walls} onContextMenu={onObjectContextMenu} />
       ) : null}
 
-      <SceneDoors doors={scene.doors} />
-      <SceneWindows windows={scene.windows} />
+      <SceneDoors doors={scene.doors} onContextMenu={onObjectContextMenu} />
+      <SceneWindows windows={scene.windows} onContextMenu={onObjectContextMenu} />
 
       {layers.obstructions ? (
-        <SceneObstructions obstructions={scene.obstructions} selectedId={selected} />
+        <SceneObstructions obstructions={scene.obstructions} selectedId={selected} onContextMenu={onObjectContextMenu} />
       ) : null}
-      <SensorMarkers />
-      {layers.lights ? <CeilingLightMarkers /> : null}
+      <SensorMarkers onContextMenu={onObjectContextMenu} />
+      {layers.lights ? <CeilingLightMarkers onContextMenu={onObjectContextMenu} /> : null}
 
       {blockingIssues.map((issue) => {
         const obsLabel = issue.description.split(" is obstructing")[0] ?? "";
@@ -728,14 +815,15 @@ function SceneGeometry() {
           zone={zone}
           selected={selected === zone.id}
           onSelect={selectNode}
+          onContextMenu={onObjectContextMenu}
           result={result?.criticalZoneResults.find((entry) => entry.zoneId === zone.id)}
         />
       ))}
 
       {entryDoor ? <EntryDoorLabel position={entryDoor.position} /> : null}
 
-      {layers.cameras ? scene.cameras.map((cam) => <CameraMarker key={cam.id} camera={cam} selected={selected === cam.id} />) : null}
-      {layers.camera_cones ? scene.cameras.map((cam) => <CameraFrustum key={`frust_${cam.id}`} camera={cam} selected={selected === cam.id} />) : null}
+      {layers.cameras ? scene.cameras.map((cam) => <CameraMarker key={cam.id} camera={cam} selected={selected === cam.id} onContextMenu={onObjectContextMenu} />) : null}
+      {layers.camera_cones ? scene.cameras.map((cam) => <CameraFrustum key={`frust_${cam.id}`} camera={cam} selected={selected === cam.id} onContextMenu={onObjectContextMenu} />) : null}
 
       {layers.paths && pathLabelsVisible
         ? scene.paths.map((path) => (
@@ -744,6 +832,7 @@ function SceneGeometry() {
             id={path.id}
             points={path.points.map((point) => point.position)}
             onSelect={selectNode}
+            onContextMenu={onObjectContextMenu}
             color={selected === path.id ? "#f59e0b" : undefined}
           />
         ))
@@ -754,7 +843,7 @@ function SceneGeometry() {
       ) : null}
 
       {layers.privacy_zones && scene.privacyZones.length > 0 ? (
-        <ScenePrivacyZones zones={scene.privacyZones} onSelect={selectNode} />
+        <ScenePrivacyZones zones={scene.privacyZones} onSelect={selectNode} onContextMenu={onObjectContextMenu} />
       ) : null}
 
       {layers.paths ? <PathReplayActor /> : null}
@@ -976,7 +1065,7 @@ function ToolPlacementFloor({
   const wallLength = wallDraft ? wallDraft.length : 0;
 
   const getFloorPoint = useCallback(
-    (event: ThreeEvent<PointerEvent>): THREE.Vector3 | null => {
+    (event: ThreeEvent<MouseEvent>): THREE.Vector3 | null => {
       const ndc = new THREE.Vector2(
         (event.nativeEvent.clientX / size.width) * 2 - 1,
         -(event.nativeEvent.clientY / size.height) * 2 + 1,
@@ -995,7 +1084,7 @@ function ToolPlacementFloor({
   );
 
   const handlePointerMove = useCallback(
-    (event: ThreeEvent<PointerEvent>) => {
+    (event: ThreeEvent<MouseEvent>) => {
       if (selectionDrag) {
         const point = getFloorPoint(event);
         if (point) {
@@ -1103,7 +1192,7 @@ function ToolPlacementFloor({
   }, [addNode, draftWallStart, hoverPoint, scene.assumptions.wallHeightM, selectNode, setActiveTool, setDraftWallStart, setEditorFeedbackMessage, setEditorMode]);
 
   const handlePointerDown = useCallback(
-    (event: ThreeEvent<PointerEvent>) => {
+    (event: ThreeEvent<MouseEvent>) => {
       if (activeTool === "select") {
         if (event.nativeEvent.shiftKey || event.nativeEvent.metaKey || event.nativeEvent.ctrlKey) {
           const point = getFloorPoint(event);
@@ -1595,6 +1684,8 @@ function ControlHintBar() {
       <span className="text-[8px] text-[#2a3246]">•</span>
       <span className="text-[8px] text-[#4a5568]">Right: Zoom</span>
       <span className="text-[8px] text-[#2a3246]">•</span>
+      <span className="text-[8px] text-[#4a5568]">Right-click: Object actions</span>
+      <span className="text-[8px] text-[#2a3246]">•</span>
       <span className="text-[8px] text-[#4a5568]">Scroll: Zoom</span>
       <span className="text-[8px] text-[#2a3246]">•</span>
       <span className="text-[8px] text-[#4a5568]">Shift+drag: Box select</span>
@@ -1622,11 +1713,22 @@ export function WorkspaceCanvas() {
   const scene = useStudioStore((s) => s.scene);
   const canvasMode = useStudioStore((s) => s.canvasMode);
   const visibleComponents = useStudioStore((s) => s.visibleComponents);
+  const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
   const setSelectedNodes = useStudioStore((s) => s.setSelectedNodes);
+  const selectNode = useStudioStore((s) => s.selectNode);
   const clearSelection = useStudioStore((s) => s.clearSelection);
+  const setEditorFeedbackMessage = useStudioStore((s) => s.setEditorFeedbackMessage);
+  const updateNode = useStudioStore((s) => s.updateNode);
+  const duplicateNode = useStudioStore((s) => s.duplicateNode);
+  const removeNode = useStudioStore((s) => s.removeNode);
+  const setFocusScenePointRequest = useStudioStore((s) => s.setFocusScenePointRequest);
+  const setSelectedCameraId = useStudioStore((s) => s.setSelectedCameraId);
+  const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
+  const setViewMode = useStudioStore((s) => s.setViewMode);
   const editorMode = useStudioStore((s) => s.editor.editorMode);
   const theme = ENVIRONMENT_THEMES[envMode] ?? ENVIRONMENT_THEMES.day;
   const [selectionDrag, setSelectionDrag] = useState<SelectionDragState | null>(null);
+  const [contextMenu, setContextMenu] = useState<ObjectContextMenuState | null>(null);
   const frame = useMemo(
     () => getMapFrame(scene.dimensions.width, scene.dimensions.depth),
     [scene.dimensions.depth, scene.dimensions.width],
@@ -1646,6 +1748,97 @@ export function WorkspaceCanvas() {
     [frame.position.x, frame.position.y, frame.position.z, isTopDown],
   );
 
+  const openObjectContextMenu = useCallback((nodeId: string, event: any) => {
+    event.stopPropagation();
+    event.nativeEvent.preventDefault();
+    const snapshot = selectedNodeIds.length > 0 ? [...selectedNodeIds] : [];
+    selectNode(nodeId);
+    setContextMenu({
+      nodeId,
+      clientX: event.nativeEvent.clientX,
+      clientY: event.nativeEvent.clientY,
+      selectionSnapshot: snapshot,
+    });
+  }, [selectNode, selectedNodeIds]);
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  const executeContextAction = useCallback((actionId: ContextActionId) => {
+    if (!contextMenu) return;
+    const node = findContextualNode(scene, contextMenu.nodeId);
+    if (!node) {
+      setContextMenu(null);
+      return;
+    }
+
+    const plan = planContextualAction(scene, node, actionId, contextMenu.selectionSnapshot);
+
+    switch (plan.kind) {
+      case "patch":
+        updateNode(node.id, plan.patch);
+        if (plan.message) setEditorFeedbackMessage(plan.message);
+        break;
+      case "duplicate":
+        duplicateNode(node.id);
+        if (plan.message) setEditorFeedbackMessage(plan.message);
+        break;
+      case "delete":
+        removeNode(node.id);
+        if (plan.message) setEditorFeedbackMessage(plan.message);
+        break;
+      case "focus":
+        setFocusScenePointRequest({ point: plan.point, source: "minimap" });
+        if (plan.message) setEditorFeedbackMessage(plan.message);
+        break;
+      case "camera_view":
+        setSelectedCameraId(plan.cameraId);
+        setWorkspacePreset("coverage");
+        setViewMode("camera_view");
+        if (plan.message) setEditorFeedbackMessage(plan.message);
+        break;
+      case "none":
+        if (plan.message) setEditorFeedbackMessage(plan.message);
+        break;
+      default:
+        break;
+    }
+
+    setContextMenu(null);
+  }, [
+    contextMenu,
+    duplicateNode,
+    removeNode,
+    scene,
+    setEditorFeedbackMessage,
+    setFocusScenePointRequest,
+    setSelectedCameraId,
+    setViewMode,
+    setWorkspacePreset,
+    updateNode,
+  ]);
+
+  const contextMenuModel = useMemo(() => {
+    if (!contextMenu) return null;
+    const node = findContextualNode(scene, contextMenu.nodeId);
+    if (!node) return null;
+    return buildContextualMenuModel(scene, node, contextMenu.selectionSnapshot);
+  }, [contextMenu, scene]);
+
+  useEffect(() => {
+    if (!contextMenu) return undefined;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setContextMenu(null);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [contextMenu]);
+
   return (
     <div className="absolute inset-0 overflow-hidden bg-[#07090d]">
       <div className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(circle_at_50%_36%,rgba(255,255,255,0.06),transparent_46%),linear-gradient(180deg,rgba(6,9,14,0.1),rgba(6,9,14,0.48)_100%)]" />
@@ -1657,6 +1850,12 @@ export function WorkspaceCanvas() {
       {visibleComponents.viewport_controls ? <ViewControls /> : null}
       {visibleComponents.control_hint_bar ? <ControlHintBar /> : null}
       <EditorStatusBanner />
+      <ObjectContextMenu
+        model={contextMenuModel}
+        position={contextMenu ? { x: contextMenu.clientX, y: contextMenu.clientY } : { x: 0, y: 0 }}
+        onAction={executeContextAction}
+        onClose={closeContextMenu}
+      />
       <SelectionRectangleOverlay drag={selectionDrag} />
 
       {/* Camera preset picker — shown when camera tool is active */}
@@ -1704,7 +1903,7 @@ export function WorkspaceCanvas() {
         <pointLight position={[5, 2.8, 3.5]} intensity={envMode === "night" ? 1.0 : 1.45} distance={10} color="#fff6d8" />
 
         <Suspense fallback={<CanvasLoadingOverlay label="Loading workspace scene" />}>
-          <SceneGeometry />
+          <SceneGeometry onObjectContextMenu={openObjectContextMenu} />
         </Suspense>
 
         <SelectionHighlights />

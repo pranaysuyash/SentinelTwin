@@ -25,9 +25,12 @@ describe("CameraFeedCanvas", () => {
     expect(source).toContain("Actor replay active");
     expect(source).toContain("pathLabel ?? \"Selected path\"");
     expect(source).toContain("pathProgress ?? 0");
-    expect(source).toContain("Sensor Fusion");
-    expect(source).toContain("Active sensors");
-    expect(source).toContain("nearestSensorLabel");
+    expect(source).toContain("Operational Fusion");
+    expect(source).toContain("Metadata:");
+    expect(source).toContain("Connection:");
+    expect(source).toContain("Sensors:");
+    expect(source).toContain("Nearest:");
+    expect(source).toContain("operationalFusion");
     expect(source).toContain("Latest Camera Metadata");
     expect(source).toContain("latestCameraMetadataEvent");
     expect(source).toContain("Live Camera Connection");

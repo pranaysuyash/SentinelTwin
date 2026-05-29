@@ -1,5 +1,10 @@
 import type { SecurityScene } from "@/schema/security-scene";
 
+export function formatCameraTag(name: string) {
+  const match = name.match(/(\d+)/);
+  return `CAM ${match ? match[0] : "01"}`;
+}
+
 export function formatTargetTypeLabel(targetType: SecurityScene["criticalZones"][number]["targetType"]) {
   switch (targetType) {
     case "person_detection":

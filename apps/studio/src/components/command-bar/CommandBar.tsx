@@ -32,7 +32,7 @@ export function CommandBar() {
   const [input, setInput] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { status, executeCommand, dismissError, applyCandidate, mode, providerHealth, providerTelemetry, latestAiActionTelemetry } = useAiCommand();
+  const { status, executeCommand, dismissError, applyCandidate, confirmPreview, cancelPreview, mode, providerHealth, providerTelemetry, latestAiActionTelemetry } = useAiCommand();
   const aiActionTelemetry = useStudioStore((s) => s.aiActionTelemetry);
   const visible = useStudioStore((s) => s.visibleComponents.command_bar);
   const aiActionTelemetrySummary = useMemo(() => summarizeAiActionTelemetry(aiActionTelemetry), [aiActionTelemetry]);
@@ -176,6 +176,48 @@ export function CommandBar() {
                 Applying {status.descriptions.length} operation{status.descriptions.length > 1 ? "s" : ""}...
               </div>
             )}
+            {status.state === "preview" && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-[11px] text-cyan-300">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {status.message}
+                </div>
+                {status.descriptions.length > 0 ? (
+                  <ul className="space-y-1 rounded-md border border-[#1f2d45] bg-[#08101b] px-2.5 py-2 text-[10px] text-[#b8c9e8]">
+                    {status.descriptions.map((description, index) => (
+                      <li key={`${description}_${index}`} className="flex items-center gap-2">
+                        <span className="inline-flex h-4 min-w-4 items-center justify-center rounded bg-[#14233a] px-1 text-[8px] text-cyan-200">{index + 1}</span>
+                        <span>{description}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                {status.requiresTargetSelection ? (
+                  <div className="rounded-md border border-amber-400/30 bg-amber-500/10 px-2.5 py-2 text-[10px] text-amber-100">
+                    <div className="font-semibold uppercase tracking-[0.12em] text-amber-200">Target selection required</div>
+                    <div className="mt-1">Select <span className="font-semibold">{status.unresolvedTarget ?? "the target"}</span> in the scene and run the command again.</div>
+                    {status.candidateTargets && status.candidateTargets.length > 0 ? (
+                      <div className="mt-1 text-[9px] text-amber-200/90">Matches: {status.candidateTargets.join(" • ")}</div>
+                    ) : null}
+                  </div>
+                ) : null}
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={cancelPreview}
+                    className="rounded border border-[#2a3347] bg-[#101827] px-2.5 py-1 text-[10px] text-[#aab8d2] hover:border-[#3a4967] hover:text-white"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmPreview}
+                    disabled={status.requiresTargetSelection}
+                    className="rounded border border-cyan-400/30 bg-cyan-500/10 px-2.5 py-1 text-[10px] text-cyan-100 hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+            )}
             {status.state === "success" && (
               <div className="flex items-center gap-2 text-[11px] text-emerald-300">
                 <Sparkles className="h-3.5 w-3.5" />
@@ -197,7 +239,7 @@ export function CommandBar() {
                   <Sparkles className="h-3.5 w-3.5" />
                   {status.description}
                 </div>
-                <div className="max-h-[240px] space-y-2 overflow-y-auto">
+                <div className="max-h-60 space-y-2 overflow-y-auto">
                   {status.candidates.map((candidate) => (
                     <CandidateCard
                       key={candidate.id}
@@ -216,7 +258,7 @@ export function CommandBar() {
 
         {/* Input row */}
         <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 flex-shrink-0 text-emerald-400/60" />
+          <Sparkles className="h-4 w-4 shrink-0 text-emerald-400/60" />
           <input
             ref={inputRef}
             type="text"
@@ -288,7 +330,7 @@ function CandidateCard({ candidate, onApply }: { candidate: CounterfactualCandid
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-1.5">
           <span
-            className={`mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded text-[7px] font-bold ${
+            className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded text-[7px] font-bold ${
               COST_COLORS[candidate.costCategory] ?? "text-[#647089] border border-[#24283a]"
             }`}
           >
@@ -297,7 +339,7 @@ function CandidateCard({ candidate, onApply }: { candidate: CounterfactualCandid
           <p className="text-[10px] leading-snug text-[#c7d0e4]">{candidate.description}</p>
         </div>
         <span
-          className={`flex-shrink-0 rounded px-1 py-0.5 text-[7px] font-medium uppercase tracking-wider ${
+          className={`shrink-0 rounded px-1 py-0.5 text-[7px] font-medium uppercase tracking-wider ${
             COST_COLORS[candidate.costCategory] ?? "text-[#647089]"
           }`}
         >

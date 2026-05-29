@@ -65,9 +65,10 @@ describe("InspectorPanel", () => {
     expect(source).toContain("Show DORI Labels");
     expect(source).toContain("Show Path Actor");
     expect(source).toContain("Show Bounding Box");
+    expect(source).toContain('SectionCard title="Operational Fusion"');
     expect(source).toContain('SectionCard title="Sensor Fusion"');
-    expect(source).toContain("Nearest sensor state");
-    expect(source).toContain("Coverage mode");
+    expect(source).toContain("Nearest sensor");
+    expect(source).toContain("Health detail");
     expect(source).toContain("PPM est.");
     expect(source).toContain("Angle from center");
     expect(source).toContain("Placement Presets");

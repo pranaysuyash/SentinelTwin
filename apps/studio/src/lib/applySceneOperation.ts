@@ -1,6 +1,6 @@
 import type { SceneOperation } from "@/schema/SceneOperation";
 import type { SecurityScene } from "@/schema/security-scene";
-import { createSecurityLightNode } from "./node-factory";
+import { createObstructionNode, createSecurityLightNode } from "./node-factory";
 
 export interface ApplyResult {
   success: boolean;
@@ -62,6 +62,17 @@ export function applySceneOperation(scene: SecurityScene, op: SceneOperation): A
       if (!obs) return { success: false, description: "", error: `Obstruction "${op.obstructionId}" not found` };
       obs.rotationYDeg = op.rotationYDeg;
       return { success: true, description: `Rotated "${obs.label}" to ${op.rotationYDeg}°` };
+    }
+
+    case "add_obstruction": {
+      const obstruction = createObstructionNode(op.position, op.obstructionType);
+      if (op.label) obstruction.label = op.label;
+      if (op.dimensions) obstruction.dimensions = op.dimensions;
+      if (op.rotationYDeg !== undefined) obstruction.rotationYDeg = op.rotationYDeg;
+      if (op.material) obstruction.material = op.material;
+      if (op.visionTransmission !== undefined) obstruction.visionTransmission = op.visionTransmission;
+      scene.obstructions.push(obstruction);
+      return { success: true, description: `Added obstruction "${obstruction.label}" at (${op.position.join(", ")})` };
     }
 
     case "add_light": {

@@ -24,7 +24,9 @@ describe("Studio launcher shell", () => {
     expect(source).toContain('if (!confirmWorkspaceReplacement("start scan intake")) return;');
     expect(source).toContain('if (!confirmWorkspaceReplacement("create a new scene")) return;');
     expect(source).toContain('if (!confirmWorkspaceReplacement("open AI layout draft")) return;');
-    expect(source).toContain("onOpenGuidedScanAssistant={() => setShowGuidedScanKickoff(true)}");
+    expect(source).toContain("onGuidedScanAssistant={() => {");
+    expect(source).toContain('if (!confirmWorkspaceReplacement("open the guided scan assistant")) return;');
+    expect(source).toContain("setShowGuidedScanKickoff(true);");
     expect(source).toContain("onOpenScene={openScene}");
     expect(source).toContain("savedProjects={savedProjects}");
     expect(source).toContain("onUpdateProjectMetadata={updateSavedSceneMetadata}");
@@ -69,7 +71,10 @@ describe("Studio launcher shell", () => {
     expect(source).toContain("JSON must be valid SecurityScene data before apply:");
     expect(source).toContain("Local-only mode");
     expect(source).toContain("Cloud-backed AI is disabled by policy.");
-    expect(source).toContain("const useModelDraft = hasProviderKey && !localOnlyMode;");
+    expect(source).toContain("const aiDraftModelAvailable = useMemo");
+    expect(source).toContain("const aiDraftModeLabel = aiDraftModelAvailable ? \"Model mode active\" : \"Heuristic fallback active\";");
+    expect(source).toContain("const aiDraftModeDescription = localOnlyMode");
+    expect(source).toContain("const useModelDraft = aiDraftModelAvailable;");
     expect(source).toContain("Generate Preview");
     expect(source).toContain("Regenerate Preview");
     expect(source).toContain("Use Draft Scene");

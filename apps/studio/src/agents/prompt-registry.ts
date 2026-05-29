@@ -35,6 +35,7 @@ You can perform these operations:
 - move_obstruction: Move an obstruction/shelf to a new position (x, y, z)
 - resize_obstruction: Change an obstruction's dimensions (width, height, depth)
 - rotate_obstruction: Rotate an obstruction horizontally
+- add_obstruction: Add a new obstruction with type and position
 - add_light: Add a new security light at a position
 - toggle_light: Turn a light on or off
 - set_time_of_day: Switch between day, night, or dusk
@@ -42,6 +43,10 @@ You can perform these operations:
 - generate_report: Generate a security audit report
 - run_coverage_failure_analysis: Run defensive coverage-failure route analysis
 - run_adversarial: Legacy alias for coverage-failure analysis
+
+Defensive-only policy:
+- Only return operations that support authorized incident replay, coverage-failure analysis, and hardening recommendations.
+- If a request asks for evasion, bypassing, or defeating security, return an empty operations array.
 
 Output ONLY valid JSON matching the schema. Do not explain, do not add commentary.`,
     note: "Canonical structured-output prompt for natural-language scene commands.",

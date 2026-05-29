@@ -14,6 +14,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - Keyboard delete/backspace now removes selected scene nodes or trims the active wall/zone/path draft, and Cmd/Ctrl+D duplicates the active selection through the canonical store actions ✅
 - Zone polygons now support edge insertion and vertex deletion, and path polylines now support midpoint insertion and point deletion, so the workbench can actually shape authored geometry instead of only moving whole objects ✅
 - Door and window inspector panels now expose a one-click `Snap to Nearest Wall` action that projects openings back onto the closest wall segment using the same editor geometry helpers as placement ✅
+- The 3D workbench now exposes a right-click contextual object menu for cameras, doors, windows, walls, obstructions, zones, paths, sensors, and lights, with object-specific actions routed through the same store-backed patch/duplicate/delete/focus/camera-view paths as the rest of the editor ✅
 
 ## Path replay / camera-view sync (2026-05-29)
 
@@ -661,6 +662,23 @@ The following issues were fixed to reach 0 typed errors (only pre-existing TS700
 - The footer `StatusBar` now shows `Truth: Live` so the workspace status strip explicitly labels its source of truth.
 - The in-product trust-audit route now checks those visible truth labels in addition to the existing launcher/governance/provenance/debug surfaces.
 - The next trust-hardening step is broader claim-label coverage across the remaining visible surfaces, not reworking the already labeled ones.
+- Trust audit surfaces extended to cover 6 additional data-wired panels: NovelAlgorithmsTab, RedundancyTab, ThreatAnalysisPanel, TemporalProfileView, BeforeAfterTab, TimelineTab — each checks that the component imports from the real simulation engine/store and forbids hardcoded/placeholder/stub patterns ✅
+- All 18 trust audit surfaces pass the static phrase audit (required imports, forbidden patterns) ✅
+
+## Sprint 14.1: Trust Audit Extension + Pre-existing TS Fixes (2026-05-29)
+
+- Extended trust audit from 12 to 18 surfaces, adding data-wiring checks for 6 simulation-backed panels.
+- Fixed 5 pre-existing TypeScript errors in test files:
+  - `report-engine.test.ts`: removed all `bun:test` timeout options (type mismatch with `setTestTimeout`)
+  - `support-bundle.test.ts`: added missing `CameraLiveSessionRecord` fields to fixture
+  - `sensor-live-ingest.test.ts`: fixed `fetch` mock cast from `as typeof fetch` to `as unknown as typeof fetch`
+  - `studio-store.test.ts`: added missing live session fields to `recordCameraLiveConnectionEvent` call
+  - `report-evidence-bundle.test.ts`: removed `setTestTimeout` import and timeout option
+- Deleted `DemoModeOverlay.tsx` (zero importers, superseded by `DemoWalkthroughPanel`)
+- Updated `demo-mode-overlay.test.ts` to test `DemoWalkthroughPanel` instead
+- Updated `PHASE_5_PATH_REPLAY_DEMO.md` reference from DemoModeOverlay to DemoWalkthroughPanel
+- Test suite: 398/443 pass; 45 failures are all relative-path `readFileSync` issues in other agents' tests (not in blast radius)
+- All 5 tests in blast radius pass clean
 
 ## Sprint 14: Scene Editing Feedback + Snap-Aware Transforms (2026-05-29)
 
@@ -668,3 +686,4 @@ The following issues were fixed to reach 0 typed errors (only pre-existing TS700
 - `TransformHandles.tsx` now reuses the editor snap engine for transform updates so direct manipulation stays aligned with placement snapping instead of drifting freely.
 - The workbench still has legacy sensor/selection support in the canvas file, but the primary editor flow is now centered on the current scene-editing tools and warnings.
 - Next hardening step: wire per-handle validation messaging into transform edits and add editor fixture coverage for the placement and snap behaviors.
+- Camera-facing surfaces now expose a canonical operational-fusion health card that combines sensor proximity, camera metadata freshness, and live-connection/session posture.

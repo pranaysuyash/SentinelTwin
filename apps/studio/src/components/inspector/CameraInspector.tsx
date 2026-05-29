@@ -21,6 +21,7 @@ import type { CameraMetadataIngestResponse } from "@/lib/camera-metadata-live-in
 import type { CameraNode, DoriQuality, SimulationAssumptions } from "@/schema/security-scene";
 import { qualityToScore } from "@/simulation/dori";
 import { type InspectorTab, useStudioStore } from "@/store/studio-store";
+import { computeOperationalEvidenceFusionSummary } from "@/lib/sensor-fusion";
 import {
   applyCameraPreset,
   CAMERA_PRESETS,
@@ -173,6 +174,7 @@ export function CameraInspector() {
   const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
   const setViewMode = useStudioStore((s) => s.setViewMode);
   const setCameraPresetId = useStudioStore((s) => s.setCameraPresetId);
+  const allCameraMetadataEvents = useStudioStore((s) => s.cameraMetadataEvents);
   const recordCameraMetadataEvent = useStudioStore((s) => s.recordCameraMetadataEvent);
   const recordCameraLiveConnectionEvent = useStudioStore((s) => s.recordCameraLiveConnectionEvent);
   const [viewMode, setViewModeState] = useState<CameraViewMode>("normal");
@@ -204,11 +206,20 @@ export function CameraInspector() {
     lastAction: "bind" | "refresh" | "disconnect";
   }>>([]);
   const sceneId = useStudioStore((s) => s.scene.id);
+  const cameraMetadataEvents = useMemo(
+    () => allCameraMetadataEvents.filter((event) => event.sceneId === sceneId),
+    [allCameraMetadataEvents, sceneId],
+  );
   const allCameraLiveConnectionEvents = useStudioStore((s) => s.cameraLiveConnectionEvents);
   const cameraLiveConnectionEvents = useMemo(
     () => allCameraLiveConnectionEvents.filter((event) => event.sceneId === sceneId),
     [allCameraLiveConnectionEvents, sceneId],
   );
+  const inspectionFusionSummary = useMemo(
+    () => (camera ? computeOperationalEvidenceFusionSummary(camera, scene.sensors, cameraMetadataEvents, cameraLiveConnectionEvents) : null),
+    [camera, cameraLiveConnectionEvents, cameraMetadataEvents, scene.sensors],
+  );
+  const fusionSummary = inspectionFusionSummary;
   const [liveConnectionUrl, setLiveConnectionUrl] = useState(camera?.liveFeedUrl ?? "");
   const [liveConnectionLabel, setLiveConnectionLabel] = useState(camera?.liveFeedLabel ?? "Primary live feed");
   const [liveConnectionMode, setLiveConnectionMode] = useState<CameraNode["liveConnectionMode"]>(camera?.liveConnectionMode ?? "onvif");
@@ -509,7 +520,7 @@ export function CameraInspector() {
     }
   };
 
-  const submitLiveConnection = useCallback(async (action: "bind" | "refresh" | "disconnect") => {
+  const submitLiveConnection = useCallback(async (action: "bind" | "refresh" | "heartbeat" | "disconnect") => {
     if (!camera) return;
     if ((action === "bind" || action === "refresh") && !liveConnectionUrl.trim()) {
       setLiveConnectionError("Enter a live feed URL before binding the camera.");
@@ -519,6 +530,7 @@ export function CameraInspector() {
     setLiveConnectionLoading(true);
     try {
       const cameraBeforeUpdate = useStudioStore.getState().scene.cameras.find((entry) => entry.id === camera!.id) ?? camera!;
+      const effectiveLiveFeedUrl = liveConnectionUrl.trim() || cameraBeforeUpdate?.liveFeedUrl || undefined;
       const response = await fetch("/api/camera-live-connection", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -526,8 +538,8 @@ export function CameraInspector() {
           source: "camera-inspector",
           action,
           protocol: liveConnectionMode ?? "onvif",
-          endpointUrl: action === "disconnect" ? (liveConnectionUrl.trim() || undefined) : liveConnectionUrl.trim(),
-          liveFeedUrl: liveConnectionUrl.trim() || undefined,
+          endpointUrl: action === "disconnect" ? effectiveLiveFeedUrl : effectiveLiveFeedUrl,
+          liveFeedUrl: effectiveLiveFeedUrl,
           feedLabel: liveConnectionLabel.trim() || undefined,
           cameraId: camera!.id,
           cameraName: camera!.name,
@@ -538,7 +550,7 @@ export function CameraInspector() {
           liveSessionStartedAt: cameraBeforeUpdate?.liveSessionStartedAt ?? undefined,
           liveSessionConfirmedAt: cameraBeforeUpdate?.liveSessionConfirmedAt ?? undefined,
           transportSessionId: cameraBeforeUpdate?.transportSessionId ?? undefined,
-          raw: action === "disconnect" ? "" : "",
+          raw: action === "disconnect" || action === "heartbeat" ? "" : "",
           notes: liveConnectionNotes.trim() || undefined,
         }),
       });
@@ -594,6 +606,8 @@ export function CameraInspector() {
         ingestMode: action === "disconnect" ? "manual" : "external",
         summary: body.summary ?? (action === "disconnect"
           ? `Live camera connection cleared for ${camera!.name}.`
+          : action === "heartbeat"
+            ? `Live camera heartbeat renewed for ${camera!.name}.`
           : action === "refresh"
             ? `Live camera session refreshed for ${camera!.name}.`
             : `Live camera connection bound for ${camera!.name}.`),
@@ -604,7 +618,7 @@ export function CameraInspector() {
       if (body.record.liveFeedLabel) setLiveConnectionLabel(body.record.liveFeedLabel);
       setLiveConnectionStatus(body.record.liveConnectionStatus);
       if (body.record.liveConnectionStatus === "connected") {
-        setLiveConnectionStatusMessage(body.summary ?? (action === "refresh" ? "Live camera session refreshed." : "Live camera binding archived."));
+        setLiveConnectionStatusMessage(body.summary ?? (action === "refresh" || action === "heartbeat" ? "Live camera session refreshed." : "Live camera binding archived."));
         setLiveConnectionError(null);
       } else {
         setLiveConnectionStatusMessage(null);
@@ -639,19 +653,20 @@ export function CameraInspector() {
 
   const bindLiveConnection = useCallback(() => submitLiveConnection("bind"), [submitLiveConnection]);
   const refreshLiveConnection = useCallback(() => submitLiveConnection("refresh"), [submitLiveConnection]);
+  const heartbeatLiveConnection = useCallback(() => submitLiveConnection("heartbeat"), [submitLiveConnection]);
   const disconnectLiveConnection = useCallback(() => submitLiveConnection("disconnect"), [submitLiveConnection]);
 
   useEffect(() => {
-    if (!camera || camera.liveConnectionStatus !== "connected" || !liveConnectionUrl.trim()) return undefined;
+    if (!camera || camera.liveConnectionStatus !== "connected") return undefined;
 
     const heartbeat = window.setInterval(() => {
       if (liveConnectionLoading) return;
-      void refreshLiveConnection();
+      void heartbeatLiveConnection();
     }, 45_000);
 
     return () => window.clearInterval(heartbeat);
     // Intentional: keep the live connection as a lease that renews while the operator is watching it.
-  }, [camera, liveConnectionLoading, liveConnectionUrl, refreshLiveConnection]);
+  }, [camera, liveConnectionLoading, heartbeatLiveConnection]);
 
   if (!camera) return null;
 
@@ -791,6 +806,14 @@ export function CameraInspector() {
                     className="rounded-xl border border-[#24485e] bg-cyan-500/8 px-3 py-1.5 text-[10px] font-medium text-cyan-100 transition-colors hover:border-cyan-400/40 hover:bg-cyan-500/12 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {liveConnectionLoading ? "Refreshing..." : "Refresh Session"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={heartbeatLiveConnection}
+                    disabled={liveConnectionLoading}
+                    className="rounded-xl border border-[#24485e] bg-cyan-500/8 px-3 py-1.5 text-[10px] font-medium text-cyan-100 transition-colors hover:border-cyan-400/40 hover:bg-cyan-500/12 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {liveConnectionLoading ? "Renewing..." : "Heartbeat Session"}
                   </button>
                   <button
                     type="button"
@@ -1352,6 +1375,24 @@ export function CameraInspector() {
                 <SummaryStat label="Coverage"   value={camResult ? `${camResult.coveragePct.toFixed(1)}%` : "--"} accent="text-emerald-300" />
                 <SummaryStat label="Zones Pass" value={camResult ? `${camResult.criticalZonesCovered.length}` : "--"} accent="text-blue-300" />
                 <SummaryStat label="Zones Fail" value={camResult ? `${camResult.criticalZonesFailed.length}` : "--"} accent="text-amber-300" />
+              </div>
+            </SectionCard>
+            <SectionCard title="Operational Fusion">
+              <div className="grid grid-cols-2 gap-1.5">
+                <SummaryStat label="Health" value={fusionSummary?.operationalHealthLabel ?? "Unknown"} accent="text-cyan-300" />
+                <SummaryStat label="Metadata" value={fusionSummary?.cameraMetadataEvent ? `${fusionSummary.cameraMetadataEvent.status ?? "unknown"} · ${fusionSummary.cameraMetadataEvent.clarity ?? "unknown"}` : "none"} accent="text-emerald-300" />
+                <SummaryStat label="Connection" value={fusionSummary?.cameraLiveConnectionEvent ? `${fusionSummary.cameraLiveConnectionEvent.liveConnectionStatus ?? "unknown"} · ${fusionSummary.cameraLiveConnectionEvent.transportSessionState ?? "transport?"}` : "none"} accent="text-blue-300" />
+                <SummaryStat label="Sensors" value={fusionSummary ? `${fusionSummary.sensorFusion.activeCount} / ${fusionSummary.sensorFusion.totalCount}` : "--"} accent="text-amber-300" />
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-1.5 text-[9px] text-[#93a0bd]">
+                <div className="rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
+                  <div className="uppercase tracking-[0.16em] text-[#556076]">Nearest sensor</div>
+                  <div className="mt-1 text-[#d2d9e8]">{fusionSummary?.sensorFusion.nearestSensor?.label ?? "None"}</div>
+                </div>
+                <div className="rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
+                  <div className="uppercase tracking-[0.16em] text-[#556076]">Health detail</div>
+                  <div className="mt-1 text-[#d2d9e8]">{fusionSummary?.operationalHealthDetail ?? "Unavailable"}</div>
+                </div>
               </div>
             </SectionCard>
             <SectionCard title="Sensor Fusion">

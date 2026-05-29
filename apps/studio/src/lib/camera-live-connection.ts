@@ -27,7 +27,7 @@ const CameraLiveConnectionRecordSchema = z.object({
 
 export const CameraLiveConnectionProbeRequestSchema = z.object({
   source: z.string().min(1).default("camera-inspector"),
-  action: z.enum(["bind", "refresh", "disconnect"]).default("bind"),
+  action: z.enum(["bind", "refresh", "heartbeat", "disconnect"]).default("bind"),
   protocol: z.enum(["rtsp", "mjpeg", "http", "onvif", "proxy"]).default("onvif"),
   endpointUrl: z.string().url().nullable().optional(),
   liveFeedUrl: z.string().url().nullable().optional(),
@@ -43,7 +43,7 @@ export const CameraLiveConnectionProbeRequestSchema = z.object({
   transportSessionId: z.string().min(1).optional(),
   raw: z.string().default(""),
   notes: z.string().optional(),
-}).refine((value) => value.action === "disconnect" || value.raw.trim().length > 0 || Boolean(value.endpointUrl) || Boolean(value.liveFeedUrl), {
+}).refine((value) => value.action === "disconnect" || value.action === "heartbeat" || value.raw.trim().length > 0 || Boolean(value.endpointUrl) || Boolean(value.liveFeedUrl), {
   message: "Provide a probe payload or endpoint URL for live camera binding.",
   path: ["raw"],
 });
@@ -53,7 +53,7 @@ export type CameraLiveConnectionProbeRequest = z.infer<typeof CameraLiveConnecti
 export type CameraLiveConnectionProbeResponse = {
   ok: true;
   source: string;
-  action: "bind" | "refresh" | "disconnect";
+  action: "bind" | "refresh" | "heartbeat" | "disconnect";
   protocol: CameraLiveConnectionMode;
   receivedAt: string;
   sceneId: string | null;

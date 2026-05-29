@@ -22,8 +22,8 @@ describe("useAiCommand", () => {
     expect(source).toContain('const cloudAvailable = apiKeyAvailable && !localOnlyMode;');
     expect(source).toContain('const recordTelemetry = useCallback(');
     expect(source).toContain("const offlinePlan = parseOfflineCommand(userText, storeState.scene);");
-    expect(source).toContain("if (offlinePlan.operations.length > 0) {");
-    expect(source).toContain('setStatusSafe({ state: "success", message: offlinePlan.message });');
+    expect(source).toContain("stageCommandPreview({");
+    expect(source).toContain('state: "preview"');
     expect(source).toContain("providerSummary.providerName");
     expect(source).toContain("providerKeyAvailable(aiProviderSelection.providerId)");
     expect(source).toContain("Try commands like /night, /privacy on, /simulate, /report, or /target license_plate.");
@@ -38,6 +38,10 @@ describe("useAiCommand", () => {
     expect(source).toContain('verifyAndRankCounterfactualCandidates');
     expect(source).toContain('adversarialPathExposureDelta');
     expect(source).toContain('providerLabel: providerSummary.providerLabel');
-    expect(source).toContain("return { status, executeCommand, runCounterfactuals, runReportGeneration, dismissError, applyCandidate, mode, providerHealth, providerTelemetry, latestAiActionTelemetry };");
+    expect(source).toContain('containsDisallowedSecurityIntent');
+    expect(source).toContain('confirmPreview');
+    expect(source).toContain('cancelPreview');
+    expect(source).toContain('confirmPreview,');
+    expect(source).toContain('cancelPreview,');
   });
 });

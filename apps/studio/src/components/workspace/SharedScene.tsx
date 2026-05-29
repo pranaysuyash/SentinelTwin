@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useEffect } from "react";
 import { Html } from "@react-three/drei";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 
 import type {
@@ -100,7 +100,15 @@ export function SceneFloor({
 
 // ── Walls (with glass richness) ──
 
-export function SceneWalls({ walls, selectable = true }: { walls: WallNode[]; selectable?: boolean }) {
+export function SceneWalls({
+  walls,
+  selectable = true,
+  onContextMenu,
+}: {
+  walls: WallNode[];
+  selectable?: boolean;
+  onContextMenu?: (id: string, event: ThreeEvent<PointerEvent>) => void;
+}) {
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
   const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
@@ -127,6 +135,11 @@ export function SceneWalls({ walls, selectable = true }: { walls: WallNode[]; se
               return;
             }
             selectNode(wall.id);
+          } : undefined}
+          onContextMenu={onContextMenu ? (event) => {
+            event.stopPropagation();
+            event.nativeEvent.preventDefault();
+            onContextMenu(wall.id, event);
           } : undefined}
         >
             <mesh>
@@ -156,7 +169,15 @@ export function SceneWalls({ walls, selectable = true }: { walls: WallNode[]; se
 
 // ── Doors ──
 
-export function SceneDoors({ doors, selectable = true }: { doors: DoorNode[]; selectable?: boolean }) {
+export function SceneDoors({
+  doors,
+  selectable = true,
+  onContextMenu,
+}: {
+  doors: DoorNode[];
+  selectable?: boolean;
+  onContextMenu?: (id: string, event: ThreeEvent<PointerEvent>) => void;
+}) {
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
   const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
@@ -169,7 +190,7 @@ export function SceneDoors({ doors, selectable = true }: { doors: DoorNode[]; se
         const isSelected = selectedNodeIds.includes(door.id);
 
         return (
-          <group
+        <group
             key={door.id}
           position={door.position}
           onClick={selectable ? (e) => {
@@ -179,6 +200,11 @@ export function SceneDoors({ doors, selectable = true }: { doors: DoorNode[]; se
               return;
             }
             selectNode(door.id);
+          } : undefined}
+          onContextMenu={onContextMenu ? (event) => {
+            event.stopPropagation();
+            event.nativeEvent.preventDefault();
+            onContextMenu(door.id, event);
           } : undefined}
         >
             <mesh rotation={[0, 0, 0]} castShadow receiveShadow visible={!isOpen}>
@@ -214,7 +240,15 @@ export function SceneDoors({ doors, selectable = true }: { doors: DoorNode[]; se
 
 // ── Windows ──
 
-export function SceneWindows({ windows, selectable = true }: { windows: WindowNode[]; selectable?: boolean }) {
+export function SceneWindows({
+  windows,
+  selectable = true,
+  onContextMenu,
+}: {
+  windows: WindowNode[];
+  selectable?: boolean;
+  onContextMenu?: (id: string, event: ThreeEvent<PointerEvent>) => void;
+}) {
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
   const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
@@ -229,7 +263,7 @@ export function SceneWindows({ windows, selectable = true }: { windows: WindowNo
         const isSelected = selectedNodeIds.includes(window.id);
 
         return (
-          <group
+        <group
             key={window.id}
           position={window.position}
           onClick={selectable ? (e) => {
@@ -239,6 +273,11 @@ export function SceneWindows({ windows, selectable = true }: { windows: WindowNo
               return;
             }
             selectNode(window.id);
+          } : undefined}
+          onContextMenu={onContextMenu ? (event) => {
+            event.stopPropagation();
+            event.nativeEvent.preventDefault();
+            onContextMenu(window.id, event);
           } : undefined}
         >
             <mesh castShadow receiveShadow visible={!isOpen}>
@@ -280,11 +319,13 @@ export function SceneObstructions({
   obstructions,
   selectedId,
   onSelect,
+  onContextMenu,
 }: {
   obstructions: ObstructionNode[];
   selectedId?: string | null;
   /** Optional click handler. If not provided, uses store's selectNode. */
   onSelect?: (id: string) => void;
+  onContextMenu?: (id: string, event: ThreeEvent<PointerEvent>) => void;
 }) {
   const storeSelect = useStudioStore((s) => s.selectNode);
   const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
@@ -305,6 +346,11 @@ export function SceneObstructions({
             position={obs.position}
             rotation={[0, (obs.rotationYDeg * Math.PI) / 180, 0]}
             onClick={(e) => { e.stopPropagation(); handleSelect(obs.id); }}
+            onContextMenu={onContextMenu ? (event) => {
+              event.stopPropagation();
+              event.nativeEvent.preventDefault();
+              onContextMenu(obs.id, event);
+            } : undefined}
           >
             <mesh castShadow receiveShadow>
               <boxGeometry args={[w, h, d]} />
@@ -674,9 +720,11 @@ function PrivacyZoneLabel({ position, text, color }: { position: [number, number
 export function ScenePrivacyZones({
   zones,
   onSelect,
+  onContextMenu,
 }: {
   zones: { id: string; label: string; polygon: [number, number][]; restriction: string }[];
   onSelect?: (id: string) => void;
+  onContextMenu?: (id: string, event: ThreeEvent<PointerEvent>) => void;
 }) {
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
   const selectNode = useStudioStore((s) => s.selectNode);
@@ -694,6 +742,11 @@ export function ScenePrivacyZones({
             onSelect?.(zone.id);
             if (!onSelect) selectNode(zone.id);
           }}
+          onContextMenu={onContextMenu ? (event) => {
+            event.stopPropagation();
+            event.nativeEvent.preventDefault();
+            onContextMenu(zone.id, event);
+          } : undefined}
         >
           <PrivacyZoneMesh zone={zone} />
         </group>
@@ -710,12 +763,14 @@ export function ScenePathLine({
   showMarkers = true,
   id,
   onSelect,
+  onContextMenu,
 }: {
   points: [number, number][];
   color?: string;
   showMarkers?: boolean;
   id?: string;
   onSelect?: (id: string) => void;
+  onContextMenu?: (id: string, event: ThreeEvent<PointerEvent>) => void;
 }) {
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
   const selectNode = useStudioStore((s) => s.selectNode);
@@ -763,6 +818,11 @@ export function ScenePathLine({
           }
         }
       }}
+      onContextMenu={id && onContextMenu ? (event) => {
+        event.stopPropagation();
+        event.nativeEvent.preventDefault();
+        onContextMenu(id, event);
+      } : undefined}
     >
       <primitive object={line} />
       {showMarkers && start && (

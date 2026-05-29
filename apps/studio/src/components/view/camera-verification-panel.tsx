@@ -1,85 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-
-export type VerificationViewMode = "overlay" | "split";
-export type VerificationSourceType = "image" | "video";
-export type VerificationAlignmentMethod = "manual" | "auto";
-
-export type CameraVerificationSnapshot = {
-  id: string;
-  fileName: string;
-  imageUrl: string;
-  mode: VerificationViewMode;
-  sourceType?: VerificationSourceType;
-  sampleTimeS?: number | null;
-  videoDurationS?: number | null;
-  candidateCount?: number;
-  bestCandidateId?: string | null;
-  selectedCandidateId?: string | null;
-  alignmentMethod?: VerificationAlignmentMethod | null;
-  autoAlignDelta?: number | null;
-  opacity: number;
-  split: number;
-  offsetX: number;
-  offsetY: number;
-  scale?: number;
-  alignmentScore: number | null;
-  createdAt: number;
-};
-
-export type VideoFrameCandidate = {
-  id: string;
-  timeS: number;
-  dataUrl: string;
-  qualityScore: number;
-};
-
-export function formatSecondsShort(seconds: number) {
-  const clamped = Math.max(0, Math.floor(seconds));
-  const mins = Math.floor(clamped / 60);
-  const secs = clamped % 60;
-  return `${mins}:${secs.toString().padStart(2, "0")}`;
-}
-
-export function alignmentQualityLabel(score: number) {
-  if (score >= 85) return "Excellent";
-  if (score >= 70) return "Good";
-  if (score >= 50) return "Fair";
-  return "Poor";
-}
-
-export function formatSnapshotEvidenceSummary(snapshot: CameraVerificationSnapshot) {
-  const alignTag = snapshot.alignmentMethod === "auto"
-    ? `auto align${typeof snapshot.autoAlignDelta === "number" ? ` (${snapshot.autoAlignDelta >= 0 ? "+" : ""}${snapshot.autoAlignDelta.toFixed(1)})` : ""}`
-    : snapshot.alignmentMethod === "manual"
-      ? "manual align"
-      : null;
-  const scaleTag = typeof snapshot.scale === "number" && Math.abs(snapshot.scale - 1) > 0.01
-    ? `scale ${Math.round(snapshot.scale * 100)}%`
-    : null;
-
-  if (snapshot.sourceType !== "video") {
-    return `Image upload${alignTag ? ` · ${alignTag}` : ""}${scaleTag ? ` · ${scaleTag}` : ""}`;
-  }
-
-  const sampled = snapshot.sampleTimeS !== null && snapshot.sampleTimeS !== undefined
-    ? formatSecondsShort(snapshot.sampleTimeS)
-    : "0:00";
-  const duration = snapshot.videoDurationS !== null && snapshot.videoDurationS !== undefined
-    ? formatSecondsShort(snapshot.videoDurationS)
-    : "--:--";
-  const frames = typeof snapshot.candidateCount === "number" && snapshot.candidateCount > 0
-    ? `${snapshot.candidateCount} frame${snapshot.candidateCount === 1 ? "" : "s"}`
-    : "frame set unavailable";
-  const picked = snapshot.selectedCandidateId
-    ? snapshot.selectedCandidateId === snapshot.bestCandidateId
-      ? "best frame selected"
-      : "manual frame selected"
-    : "no frame selected";
-
-  return `Video ${sampled}/${duration} · ${frames} · ${picked}${alignTag ? ` · ${alignTag}` : ""}${scaleTag ? ` · ${scaleTag}` : ""}`;
-}
+import { type CameraVerificationSnapshot, type VerificationAlignmentMethod, type VerificationSourceType, type VerificationViewMode, type VideoFrameCandidate, formatSecondsShort, formatSnapshotEvidenceSummary } from "@/components/view/camera-verification-utils";
 
 export function VerificationPanel({
   enabled,
@@ -172,23 +93,8 @@ export function VerificationPanel({
   onResetAlign: () => void;
   onClear: () => void;
 }) {
-  const moreRef = useRef<HTMLDivElement | null>(null);
-  const [moreOpen, setMoreOpen] = useState(false);
-
-  useEffect(() => {
-    const onPointerDown = (event: PointerEvent) => {
-      if (!moreRef.current) return;
-      if (event.target instanceof Node && !moreRef.current.contains(event.target)) {
-        setMoreOpen(false);
-      }
-    };
-
-    window.addEventListener("pointerdown", onPointerDown);
-    return () => window.removeEventListener("pointerdown", onPointerDown);
-  }, []);
-
   return (
-    <div className="absolute right-3 top-[330px] z-30 w-64 rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)] backdrop-blur-sm">
+    <div className="absolute right-3 top-82.5 z-30 w-64 rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)] backdrop-blur-sm">
       <div className="flex items-center justify-between gap-2">
         <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-[#7dd3fc]">Footage Verification</div>
         <label className="inline-flex cursor-pointer items-center gap-1 text-[9px] text-[#c5d4ef]">

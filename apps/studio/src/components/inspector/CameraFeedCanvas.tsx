@@ -6,7 +6,7 @@ import { cn } from "@/lib/cn";
 
 import "@/lib/three-compat";
 import type { CameraNode, DoriQuality, SecurityScene } from "@/schema/security-scene";
-import { computeSensorFusionSummary } from "@/lib/sensor-fusion";
+import { computeOperationalEvidenceFusionSummary, computeSensorFusionSummary } from "@/lib/sensor-fusion";
 import { qualityToScore } from "@/simulation/dori";
 import { useStudioStore } from "@/store/studio-store";
 import { PathActor, CoverageSegmentPath } from "@/components/workspace/SharedScene";
@@ -98,6 +98,8 @@ function FeedArtifacts({
   pathLabel,
   pathProgress,
   sensorFusion,
+  operationalFusion,
+  showOperationalFusionSummary: showOperationalFusionSummaryFlag,
   overlayOptions,
 }: {
   camera: CameraNode;
@@ -113,6 +115,8 @@ function FeedArtifacts({
     nearestSensorCoverage: string;
     nearestDistanceM: number | null;
   };
+  operationalFusion?: ReturnType<typeof computeOperationalEvidenceFusionSummary> | null;
+  showOperationalFusionSummary: boolean;
   overlayOptions: FeedOverlayOptions;
 }) {
   const cameraStatus = String(camera.status);
@@ -194,20 +198,19 @@ function FeedArtifacts({
         </div>
       ) : null}
 
-      {sensorFusion.totalCount > 0 ? (
+      {showOperationalFusionSummaryFlag && operationalFusion ? (
         <div className="pointer-events-none absolute right-3 bottom-3 z-10 rounded-lg border border-cyan-400/20 bg-black/68 px-2.5 py-2 text-[8px] font-semibold uppercase tracking-[0.14em] text-cyan-100 backdrop-blur-sm">
-          <div className="text-[8px] uppercase tracking-[0.18em] text-cyan-300/90">Sensor Fusion</div>
-          <div className="mt-1 text-[9px] font-semibold normal-case tracking-normal text-white">
-            {sensorFusion.nearestSensorLabel}
-          </div>
+          <div className="text-[8px] uppercase tracking-[0.18em] text-cyan-300/90">Operational Fusion</div>
+          <div className="mt-1 text-[9px] font-semibold normal-case tracking-normal text-white">{operationalFusion?.operationalHealthLabel}</div>
           <div className="mt-1 space-y-0.5 text-[8px] font-medium uppercase tracking-[0.12em] text-cyan-100/75">
-            <div>Distance: {sensorFusion.nearestDistanceM == null ? "—" : `${sensorFusion.nearestDistanceM.toFixed(1)}m`}</div>
-            <div>State: {sensorFusion.nearestSensorState}</div>
-            <div>Coverage: {sensorFusion.nearestSensorCoverage}</div>
-            <div>Active sensors: {sensorFusion.activeCount} / {sensorFusion.totalCount}</div>
+            <div>Metadata: {operationalFusion?.cameraMetadataEvent ? `${operationalFusion.cameraMetadataEvent.status ?? "unknown"} · ${operationalFusion.cameraMetadataEvent.clarity ?? "unknown"}` : "none"}</div>
+            <div>Connection: {operationalFusion?.cameraLiveConnectionEvent ? `${operationalFusion.cameraLiveConnectionEvent.liveConnectionStatus ?? "unknown"} · ${operationalFusion.cameraLiveConnectionEvent.transportSessionState ?? "transport?"}` : "none"}</div>
+            <div>Sensors: {sensorFusion.activeCount} / {sensorFusion.totalCount}</div>
+            <div>Nearest: {sensorFusion.nearestSensorLabel}</div>
           </div>
         </div>
       ) : null}
+
     </>
   );
 }
@@ -277,6 +280,17 @@ export function CameraFeedCanvas({
   const cameraLiveConnectionEvents = useMemo(
     () => allCameraLiveConnectionEvents.filter((event) => event.sceneId === sceneId),
     [allCameraLiveConnectionEvents, sceneId],
+  );
+  const operationalFusion = useMemo(
+    () => (camera ? computeOperationalEvidenceFusionSummary(camera, scene.sensors, cameraMetadataEvents, cameraLiveConnectionEvents) : null),
+    [camera, cameraLiveConnectionEvents, cameraMetadataEvents, scene.sensors],
+  );
+  const showOperationalFusionSummary = Boolean(
+    operationalFusion
+      && (operationalFusion.operationalHealth !== "unknown"
+        || operationalFusion.sensorFusion.totalCount > 0
+        || operationalFusion.cameraMetadataEvent
+        || operationalFusion.cameraLiveConnectionEvent),
   );
 
   if (!camera) return null;
@@ -366,6 +380,8 @@ export function CameraFeedCanvas({
           nearestSensorCoverage,
           nearestDistanceM: sensorFusion.nearestDistanceM,
         }}
+        operationalFusion={operationalFusion}
+        showOperationalFusionSummary={showOperationalFusionSummary}
         overlayOptions={overlayFlags}
       />
 

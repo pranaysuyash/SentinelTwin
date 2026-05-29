@@ -8,7 +8,10 @@ describe("CommandBar", () => {
   test("surfaces the offline-first residency banner and mode chip", () => {
     const source = readFileSync(commandBarPath, "utf8");
 
-    expect(source).toContain('const { status, executeCommand, dismissError, applyCandidate, mode, providerHealth, providerTelemetry, latestAiActionTelemetry } = useAiCommand();');
+    expect(source).toContain('const { status, executeCommand, dismissError, applyCandidate, confirmPreview, cancelPreview, mode, providerHealth, providerTelemetry, latestAiActionTelemetry } = useAiCommand();');
+    expect(source).toContain('status.state === "preview"');
+    expect(source).toContain('onClick={confirmPreview}');
+    expect(source).toContain('onClick={cancelPreview}');
     expect(source).toContain('{mode.label}');
     expect(source).toContain('{mode.providerLabel}');
     expect(source).toContain('{mode.cloudAvailable ? "Cloud-backed available" : "Local-only"}');

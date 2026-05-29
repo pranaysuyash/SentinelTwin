@@ -14,7 +14,7 @@ import {
 import { generateReport, buildSimulationSummary } from "@/agents/ReportAgent";
 import type { SceneOperation } from "@/schema/SceneOperation";
 import { applySceneOperation } from "@/lib/applySceneOperation";
-import { createSecurityLightNode } from "@/lib/node-factory";
+import { createObstructionNode, createSecurityLightNode } from "@/lib/node-factory";
 import { parseOfflineCommand, type OfflineCommandAction } from "@/lib/offline-command-parser";
 import { evaluateAiRateLimit, formatRetryHint, recordAiRateLimitUsage } from "@/lib/ai-rate-limit";
 import { useStudioStore } from "@/store/studio-store";
@@ -26,6 +26,14 @@ export type AiCommandStatus =
   | { state: "idle" }
   | { state: "parsing" }
   | { state: "applying"; descriptions: string[] }
+  | {
+      state: "preview";
+      message: string;
+      descriptions: string[];
+      requiresTargetSelection?: boolean;
+      unresolvedTarget?: string;
+      candidateTargets?: string[];
+    }
   | { state: "error"; message: string }
   | { state: "success"; message: string }
   | { state: "candidates"; candidates: CounterfactualCandidate[]; description: string };
@@ -36,6 +44,15 @@ export type AiCommandMode = {
   cloudAvailable: boolean;
   providerLabel: string;
   providerName: string;
+};
+
+type PendingCommandPreview = {
+  message: string;
+  operations: SceneOperation[];
+  action?: OfflineCommandAction;
+  requiresTargetSelection?: boolean;
+  unresolvedTarget?: string;
+  candidateTargets?: string[];
 };
 
 function buildSceneContext(): SceneContextSummary {
@@ -62,6 +79,7 @@ export function useAiCommand() {
   const latestAiActionTelemetry = useStudioStore((s) => s.aiActionTelemetry[0] ?? null);
   const recordRuntimeIncident = useStudioStore((s) => s.recordRuntimeIncident);
   const [status, setStatus] = useState<AiCommandStatus>({ state: "idle" });
+  const [pendingPreview, setPendingPreview] = useState<PendingCommandPreview | null>(null);
   const dismissRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const providerSummary = describeAiProviderSelection(aiProviderSelection);
   const providerHealth = describeAiProviderHealth(aiProviderSelection, localOnlyMode);
@@ -124,6 +142,9 @@ export function useAiCommand() {
       clearTimeout(dismissRef.current);
       dismissRef.current = null;
     }
+    if (newStatus.state !== "preview") {
+      setPendingPreview(null);
+    }
     setStatus(newStatus);
   }, [aiProviderSelection.providerId, provider, providerSummary.providerName]);
 
@@ -134,8 +155,29 @@ export function useAiCommand() {
     }, 4000);
   }, [setStatus]);
 
+  const stageCommandPreview = useCallback((preview: PendingCommandPreview) => {
+    setPendingPreview(preview);
+    const descriptions = preview.operations.map(describeSceneOperation);
+    setStatus({
+      state: "preview",
+      message: preview.message,
+      descriptions,
+      requiresTargetSelection: preview.requiresTargetSelection,
+      unresolvedTarget: preview.unresolvedTarget,
+      candidateTargets: preview.candidateTargets,
+    });
+  }, []);
+
   const executeCommand = useCallback(async (userText: string) => {
     if (!userText.trim()) return;
+    if (containsDisallowedSecurityIntent(userText)) {
+      setStatusSafe({
+        state: "error",
+        message: "I can help with authorized incident replay, coverage-failure analysis, and hardening recommendations only.",
+      });
+      autoDismiss();
+      return;
+    }
     const parseStartedAt = performance.now();
 
     // Check for special internal commands first
@@ -373,18 +415,14 @@ export function useAiCommand() {
     const storeState = useStudioStore.getState();
     const offlinePlan = parseOfflineCommand(userText, storeState.scene);
     if (offlinePlan) {
-      if (offlinePlan.action) {
-        applyOfflineAction(offlinePlan.action);
-      }
-      if (offlinePlan.operations.length > 0) {
-        setStatusSafe({ state: "applying", descriptions: offlinePlan.operations.map((op) => op.type) });
-        applySceneOperations(offlinePlan.operations);
-        setStatusSafe({ state: "success", message: offlinePlan.message });
-        autoDismiss();
-      } else {
-        setStatusSafe({ state: "success", message: offlinePlan.message });
-        autoDismiss();
-      }
+      stageCommandPreview({
+        message: offlinePlan.message,
+        operations: offlinePlan.operations,
+        action: offlinePlan.action,
+        requiresTargetSelection: offlinePlan.requiresTargetSelection,
+        unresolvedTarget: offlinePlan.unresolvedTarget,
+        candidateTargets: offlinePlan.candidateTargets,
+      });
       return;
     }
 
@@ -521,116 +559,10 @@ export function useAiCommand() {
         return;
       }
 
-      setStatusSafe({ state: "applying", descriptions: operations.map((op) => op.type) });
-
-      // Apply operations by mutating the scene directly through the store
-      const store = useStudioStore.getState();
-      const scene = store.scene;
-
-      for (const op of operations) {
-        switch (op.type) {
-          case "move_camera": {
-            const cam = scene.cameras.find((c) => c.id === op.cameraId);
-            if (cam) cam.position = op.newPosition;
-            break;
-          }
-          case "rotate_camera": {
-            const cam = scene.cameras.find((c) => c.id === op.cameraId);
-            if (cam) {
-              cam.yawDeg = op.yawDeg;
-              if (op.pitchDeg !== undefined) cam.pitchDeg = op.pitchDeg;
-            }
-            break;
-          }
-          case "change_camera_fov": {
-            const cam = scene.cameras.find((c) => c.id === op.cameraId);
-            if (cam) cam.fovHorizontalDeg = op.fovHorizontalDeg;
-            break;
-          }
-          case "toggle_camera": {
-            const cam = scene.cameras.find((c) => c.id === op.cameraId);
-            if (cam) cam.status = op.status;
-            break;
-          }
-          case "move_obstruction": {
-            const obs = scene.obstructions.find((o) => o.id === op.obstructionId);
-            if (obs) obs.position = op.newPosition;
-            break;
-          }
-          case "resize_obstruction": {
-            const obs = scene.obstructions.find((o) => o.id === op.obstructionId);
-            if (obs) obs.dimensions = op.newDimensions;
-            break;
-          }
-          case "rotate_obstruction": {
-            const obs = scene.obstructions.find((o) => o.id === op.obstructionId);
-            if (obs) obs.rotationYDeg = op.rotationYDeg;
-            break;
-          }
-          case "add_light": {
-            const light = createSecurityLightNode(op.position);
-            if (op.name) light.name = op.name;
-            if (op.lightType) light.lightType = op.lightType;
-            if (op.brightness) light.brightness = op.brightness;
-            scene.securityLights.push(light);
-            break;
-          }
-          case "toggle_light": {
-            const light = scene.securityLights.find((l) => l.id === op.lightId);
-            if (light) light.status = op.status;
-            break;
-          }
-          case "set_time_of_day":
-            store.setEnvironmentMode(op.timeOfDay);
-            // assumptions.timeOfDay uses "custom" instead of "dusk"
-            scene.assumptions.timeOfDay = op.timeOfDay === "dusk" ? "custom" : op.timeOfDay;
-            break;
-          case "save_snapshot":
-            store.saveSnapshot(op.label);
-            break;
-          case "generate_report":
-            store.setBottomTab("report");
-            break;
-          case "run_adversarial":
-          case "run_coverage_failure_analysis":
-            store.setActiveTool("path");
-            break;
-          default:
-            break;
-        }
-      }
-
-      // Mark scene dirty and trigger recompute
-      scene.updatedAt = Date.now();
-      store.markDirty();
-
-      const descriptions = operations.map((op) => {
-        switch (op.type) {
-          case "move_camera": return `Moved camera`;
-          case "rotate_camera": return `Rotated camera`;
-          case "change_camera_fov": return `Changed FOV`;
-          case "toggle_camera": return op.status === "on" ? `Turned on camera` : `Turned off camera`;
-          case "move_obstruction": return `Moved obstruction`;
-          case "resize_obstruction": return `Resized obstruction`;
-          case "rotate_obstruction": return `Rotated obstruction`;
-          case "add_light": return `Added light`;
-          case "toggle_light": return `Toggled light`;
-          case "set_time_of_day": return `Set to ${op.timeOfDay}`;
-          case "save_snapshot": return `Saved "${op.label}"`;
-          case "generate_report": return `Generated report`;
-          case "run_adversarial":
-          case "run_coverage_failure_analysis":
-            return "Running coverage-failure analysis";
-          default: return op.type;
-        }
+      stageCommandPreview({
+        message: `Preview ready: ${operations.length} operation${operations.length === 1 ? "" : "s"} parsed.`,
+        operations,
       });
-
-      setStatusSafe({
-        state: "success",
-        message: descriptions.join(" • "),
-      });
-
-      autoDismiss();
     } catch (err) {
       recordTelemetry(
         "command_parse",
@@ -665,6 +597,7 @@ export function useAiCommand() {
     recordRuntimeIncident,
     recordTelemetry,
     apiKeyAvailable,
+    stageCommandPreview,
   ]);
 
   const runCounterfactuals = useCallback(async (constraints: string[], onCandidates: (candidates: CounterfactualCandidate[]) => void) => {
@@ -877,6 +810,40 @@ export function useAiCommand() {
     }
   }, [aiProviderSelection.providerId, providerSummary.providerName, localOnlyMode, recordRuntimeIncident, provider]);
 
+  const confirmPreview = useCallback(() => {
+    if (!pendingPreview) {
+      setStatusSafe({ state: "idle" });
+      return;
+    }
+    if (pendingPreview.requiresTargetSelection) {
+      setStatusSafe({
+        state: "error",
+        message: `Select a specific ${pendingPreview.unresolvedTarget ?? "target"} in the scene, then run the command again.`,
+      });
+      autoDismiss();
+      return;
+    }
+
+    if (pendingPreview.action) {
+      applyOfflineAction(pendingPreview.action);
+    }
+
+    if (pendingPreview.operations.length > 0) {
+      const descriptions = applySceneOperations(pendingPreview.operations);
+      setStatusSafe({ state: "success", message: descriptions.join(" • ") });
+      autoDismiss();
+      return;
+    }
+
+    setStatusSafe({ state: "success", message: pendingPreview.message });
+    autoDismiss();
+  }, [autoDismiss, pendingPreview, setStatusSafe]);
+
+  const cancelPreview = useCallback(() => {
+    setPendingPreview(null);
+    setStatusSafe({ state: "idle" });
+  }, [setStatusSafe]);
+
   const dismissError = useCallback(() => setStatusSafe({ state: "idle" }), [setStatusSafe]);
 
   const applyCandidate = useCallback((ops: CounterfactualCandidate["operations"]) => {
@@ -884,7 +851,20 @@ export function useAiCommand() {
     setStatusSafe({ state: "idle" });
   }, [setStatusSafe]);
 
-  return { status, executeCommand, runCounterfactuals, runReportGeneration, dismissError, applyCandidate, mode, providerHealth, providerTelemetry, latestAiActionTelemetry };
+  return {
+    status,
+    executeCommand,
+    runCounterfactuals,
+    runReportGeneration,
+    dismissError,
+    applyCandidate,
+    confirmPreview,
+    cancelPreview,
+    mode,
+    providerHealth,
+    providerTelemetry,
+    latestAiActionTelemetry,
+  };
 }
 
 function applyOfflineAction(action: OfflineCommandAction) {
@@ -915,6 +895,38 @@ function applyOfflineAction(action: OfflineCommandAction) {
 
 function estimateTokensFromText(text: string) {
   return Math.max(1, Math.ceil(text.length / 4));
+}
+
+function containsDisallowedSecurityIntent(userText: string) {
+  return /(bypass|evade|avoid\s+cameras?|disable\s+security|blind\s*spot\s+for\s+intruders?|sneak\s+past|break\s+in)/i.test(userText);
+}
+
+function describeSceneOperation(op: SceneOperation) {
+  switch (op.type) {
+    case "move_camera": return `Move camera`;
+    case "rotate_camera": return op.pitchDeg !== undefined ? `Rotate/tilt camera` : `Rotate camera`;
+    case "change_camera_fov": return `Change camera FOV`;
+    case "toggle_camera": return op.status === "on" ? `Turn on camera` : `Turn off camera`;
+    case "move_obstruction": return `Move obstruction`;
+    case "resize_obstruction": return `Resize obstruction`;
+    case "rotate_obstruction": return `Rotate obstruction`;
+    case "add_obstruction": return `Add obstruction`;
+    case "add_light": return `Add light`;
+    case "toggle_light": return op.status === "on" ? `Turn on light` : `Turn off light`;
+    case "set_time_of_day": return `Set ${op.timeOfDay} mode`;
+    case "save_snapshot": return `Save snapshot`;
+    case "generate_report": return `Open report`;
+    case "run_adversarial":
+    case "run_coverage_failure_analysis":
+      return "Run coverage-failure analysis";
+    case "replay_path":
+      return "Replay path";
+    default:
+      return (() => {
+        const exhaustive: never = op;
+        return exhaustive;
+      })();
+  }
 }
 
 function verifyAndRankCounterfactualCandidates(
@@ -1029,6 +1041,19 @@ function applyCounterfactualCandidateOperations(ops: CounterfactualCandidate["op
         if (obs) { obs.dimensions = o.newDimensions; storeState.markDirty(); logEntries.push(`Resized ${obs.label} to ${o.newDimensions.join("×")}m`); }
         break;
       }
+      case "add_obstruction": {
+        const o = op as {
+          position: [number, number, number];
+          obstructionType: "shelf" | "cupboard" | "counter" | "pillar" | "partition" | "vehicle" | "tree" | "gate" | "signboard" | "storage_boxes" | "glass_display" | "curtain" | "other";
+          label?: string;
+        };
+        const obstruction = createObstructionNode(o.position, o.obstructionType);
+        if (o.label) obstruction.label = o.label;
+        storeState.scene.obstructions.push(obstruction);
+        storeState.markDirty();
+        logEntries.push(`Added obstruction ${obstruction.label}`);
+        break;
+      }
       default:
         break;
     }
@@ -1048,7 +1073,9 @@ function applyCounterfactualCandidateOperations(ops: CounterfactualCandidate["op
 function applySceneOperations(operations: SceneOperation[]) {
   const store = useStudioStore.getState();
   const scene = store.scene;
+  const descriptions: string[] = [];
   for (const op of operations) {
+    descriptions.push(describeSceneOperation(op));
     switch (op.type) {
       case "move_camera": {
         const cam = scene.cameras.find((c) => c.id === op.cameraId);
@@ -1086,6 +1113,16 @@ function applySceneOperations(operations: SceneOperation[]) {
       case "rotate_obstruction": {
         const obs = scene.obstructions.find((o) => o.id === op.obstructionId);
         if (obs) obs.rotationYDeg = op.rotationYDeg;
+        break;
+      }
+      case "add_obstruction": {
+        const obstruction = createObstructionNode(op.position, op.obstructionType);
+        if (op.label) obstruction.label = op.label;
+        if (op.dimensions) obstruction.dimensions = op.dimensions;
+        if (op.rotationYDeg !== undefined) obstruction.rotationYDeg = op.rotationYDeg;
+        if (op.material) obstruction.material = op.material;
+        if (op.visionTransmission !== undefined) obstruction.visionTransmission = op.visionTransmission;
+        scene.obstructions.push(obstruction);
         break;
       }
       case "add_light": {
@@ -1126,4 +1163,5 @@ function applySceneOperations(operations: SceneOperation[]) {
   scene.updatedAt = Date.now();
   store.markDirty();
   store.runSimulation();
+  return descriptions;
 }

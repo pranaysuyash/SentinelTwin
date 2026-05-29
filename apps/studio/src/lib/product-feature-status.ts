@@ -47,6 +47,7 @@ export const PRODUCT_FEATURE_STATUS: ProductFeatureEntry[] = [
   {
     status: "Preview",
     feature: "Real footage verification",
-    detail: "Reference image/video ingest with multi-frame candidate extraction, auto best-frame scoring, saved snapshot evidence lineage, deterministic auto-align assist, reference scale calibration, alignment provenance tags, overlay/split compare, alignment estimate, and difference heat overlay.",
+    detail:
+      "Camera View preview workflow with reference-frame upload and manual comparison. No auto pose/FOV recovery, no auto best-frame ranking, and no forensic-grade proof claims. Use results as planning-grade estimates only.",
   },
 ];

@@ -15,38 +15,76 @@ export type OfflineCommandPlan = {
   message: string;
   operations: SceneOperation[];
   action?: OfflineCommandAction;
+  requiresTargetSelection?: boolean;
+  unresolvedTarget?: string;
+  candidateTargets?: string[];
 };
 
-function cameraTarget(scene: SecurityScene, token?: string | null) {
-  const normalized = token?.trim().toLowerCase() ?? "";
-  if (!normalized) return null;
+type TargetMatch<T extends { id: string; name?: string; label?: string }> = {
+  node: T | null;
+  ambiguous: boolean;
+  candidates: T[];
+};
 
-  const byName = scene.cameras.find((camera) => camera.name.toLowerCase() === normalized);
-  if (byName) return byName;
+function formatTargetList(candidates: Array<{ name?: string; label?: string }>, fallbackPrefix: string) {
+  return candidates.map((candidate, index) => candidate.name ?? candidate.label ?? `${fallbackPrefix} ${index + 1}`);
+}
+
+function cameraTarget(scene: SecurityScene, token?: string | null): TargetMatch<(typeof scene.cameras)[number]> {
+  const normalized = token?.trim().toLowerCase() ?? "";
+  if (!normalized) return { node: null, ambiguous: false, candidates: [] };
+
+  const exactMatches = scene.cameras.filter((camera) => camera.name.toLowerCase() === normalized);
+  if (exactMatches.length === 1) return { node: exactMatches[0] ?? null, ambiguous: false, candidates: exactMatches };
+  if (exactMatches.length > 1) return { node: null, ambiguous: true, candidates: exactMatches };
 
   const match = normalized.match(/^camera\s*(\d+)$/);
   if (match) {
     const index = Number(match[1]) - 1;
-    return scene.cameras[index] ?? null;
+    const candidate = scene.cameras[index] ?? null;
+    return { node: candidate, ambiguous: false, candidates: candidate ? [candidate] : [] };
   }
 
-  return scene.cameras.find((camera) => camera.name.toLowerCase().includes(normalized)) ?? null;
+  const partial = scene.cameras.filter((camera) => camera.name.toLowerCase().includes(normalized));
+  if (partial.length === 1) return { node: partial[0] ?? null, ambiguous: false, candidates: partial };
+  if (partial.length > 1) return { node: null, ambiguous: true, candidates: partial };
+  return { node: null, ambiguous: false, candidates: [] };
 }
 
-function lightTarget(scene: SecurityScene, token?: string | null) {
+function lightTarget(scene: SecurityScene, token?: string | null): TargetMatch<(typeof scene.securityLights)[number]> {
   const normalized = token?.trim().toLowerCase() ?? "";
-  if (!normalized) return null;
+  if (!normalized) return { node: null, ambiguous: false, candidates: [] };
 
-  const byName = scene.securityLights.find((light) => light.name.toLowerCase() === normalized);
-  if (byName) return byName;
+  const exactMatches = scene.securityLights.filter((light) => light.name.toLowerCase() === normalized);
+  if (exactMatches.length === 1) return { node: exactMatches[0] ?? null, ambiguous: false, candidates: exactMatches };
+  if (exactMatches.length > 1) return { node: null, ambiguous: true, candidates: exactMatches };
 
   const match = normalized.match(/^light\s*(\d+)$/);
   if (match) {
     const index = Number(match[1]) - 1;
-    return scene.securityLights[index] ?? null;
+    const candidate = scene.securityLights[index] ?? null;
+    return { node: candidate, ambiguous: false, candidates: candidate ? [candidate] : [] };
   }
 
-  return scene.securityLights.find((light) => light.name.toLowerCase().includes(normalized)) ?? null;
+  const partial = scene.securityLights.filter((light) => light.name.toLowerCase().includes(normalized));
+  if (partial.length === 1) return { node: partial[0] ?? null, ambiguous: false, candidates: partial };
+  if (partial.length > 1) return { node: null, ambiguous: true, candidates: partial };
+  return { node: null, ambiguous: false, candidates: [] };
+}
+
+function obstructionTarget(scene: SecurityScene, token?: string | null): TargetMatch<(typeof scene.obstructions)[number]> {
+  const normalized = token?.trim().toLowerCase() ?? "";
+  if (!normalized) return { node: null, ambiguous: false, candidates: [] };
+
+  const exactMatches = scene.obstructions.filter((obstruction) => obstruction.label.toLowerCase() === normalized);
+  if (exactMatches.length === 1) return { node: exactMatches[0] ?? null, ambiguous: false, candidates: exactMatches };
+  if (exactMatches.length > 1) return { node: null, ambiguous: true, candidates: exactMatches };
+
+  const partial = scene.obstructions.filter((obstruction) => obstruction.label.toLowerCase().includes(normalized));
+  if (partial.length === 1) return { node: partial[0] ?? null, ambiguous: false, candidates: partial };
+  if (partial.length > 1) return { node: null, ambiguous: true, candidates: partial };
+
+  return { node: null, ambiguous: false, candidates: [] };
 }
 
 function roomCenter(scene: SecurityScene): [number, number, number] {
@@ -80,6 +118,53 @@ function yawToward(from: [number, number, number], target: [number, number, numb
   return Math.round(Math.atan2(dx, dz) * (180 / Math.PI));
 }
 
+function defaultObstructionPosition(scene: SecurityScene) {
+  const center = roomCenter(scene);
+  return [center[0], 0.5, center[2]] as [number, number, number];
+}
+
+function parseAnchorPosition(scene: SecurityScene, anchor?: string) {
+  if (anchor === "entry") {
+    const entry = entryFocus(scene);
+    return [entry[0], 0.5, entry[2]] as [number, number, number];
+  }
+  if (anchor === "counter") {
+    const counter = counterFocus(scene);
+    return [counter[0], 0.5, counter[2]] as [number, number, number];
+  }
+  if (anchor === "center") {
+    return defaultObstructionPosition(scene);
+  }
+  return defaultObstructionPosition(scene);
+}
+
+function parseObstructionType(rawType?: string) {
+  const normalized = rawType?.trim().toLowerCase();
+  if (!normalized) return "partition" as const;
+  if (normalized.includes("shelf")) return "shelf" as const;
+  if (normalized.includes("cupboard")) return "cupboard" as const;
+  if (normalized.includes("counter")) return "counter" as const;
+  if (normalized.includes("pillar")) return "pillar" as const;
+  if (normalized.includes("vehicle")) return "vehicle" as const;
+  if (normalized.includes("tree")) return "tree" as const;
+  if (normalized.includes("gate")) return "gate" as const;
+  if (normalized.includes("sign")) return "signboard" as const;
+  if (normalized.includes("storage") || normalized.includes("box")) return "storage_boxes" as const;
+  if (normalized.includes("glass")) return "glass_display" as const;
+  if (normalized.includes("curtain")) return "curtain" as const;
+  if (normalized.includes("partition") || normalized.includes("divider") || normalized.includes("obstruction") || normalized.includes("block")) {
+    return "partition" as const;
+  }
+  return "other" as const;
+}
+
+function parsePositionCoordinates(match: RegExpMatchArray, startIndex = 1) {
+  const x = Number(match[startIndex]);
+  const y = Number(match[startIndex + 1]);
+  const z = Number(match[startIndex + 2]);
+  return [x, y, z] as [number, number, number];
+}
+
 export function parseOfflineCommand(userText: string, scene: SecurityScene): OfflineCommandPlan | null {
   const normalized = userText.trim().toLowerCase();
   if (!normalized) return null;
@@ -90,6 +175,14 @@ export function parseOfflineCommand(userText: string, scene: SecurityScene): Off
 
   if (/(^|\b)(generate report|open report|report lite)(\b|$)/.test(normalized)) {
     return { message: "Opened report panel", operations: [], action: { type: "set_bottom_tab", tab: "report" } };
+  }
+
+  if (/(^|\b)(show|open|focus)\s+(the\s+)?(worst\s+)?blind\s*spot(s)?(\b|$)/.test(normalized)) {
+    return {
+      message: "Opened issue panel to review the worst blind spot.",
+      operations: [],
+      action: { type: "set_bottom_tab", tab: "issues" },
+    };
   }
 
   if (/(^|\b)(night mode|set to night|switch to night|turn on night)(\b|$)/.test(normalized)) {
@@ -126,11 +219,21 @@ export function parseOfflineCommand(userText: string, scene: SecurityScene): Off
     const statusToken = cameraTargetMatch[1] ?? cameraTargetMatch[0];
     const isOn = /on|enable/.test(statusToken);
     const targetToken = cameraTargetMatch[2] ?? cameraTargetMatch[1];
-    const camera = cameraTarget(scene, targetToken);
-    if (camera) {
+    const cameraMatch = cameraTarget(scene, targetToken);
+    if (cameraMatch.ambiguous) {
       return {
-        message: `${isOn ? "Turned on" : "Turned off"} ${camera.name}`,
-        operations: [{ type: "toggle_camera", cameraId: camera.id, status: isOn ? "on" : "off" }],
+        message: `Multiple cameras match "${targetToken?.trim() ?? "camera"}". Select one in the scene and retry.`,
+        operations: [],
+        action: { type: "set_view_mode", mode: "map" },
+        requiresTargetSelection: true,
+        unresolvedTarget: targetToken?.trim() ?? "camera",
+        candidateTargets: formatTargetList(cameraMatch.candidates, "Camera"),
+      };
+    }
+    if (cameraMatch.node) {
+      return {
+        message: `${isOn ? "Turned on" : "Turned off"} ${cameraMatch.node.name}`,
+        operations: [{ type: "toggle_camera", cameraId: cameraMatch.node.id, status: isOn ? "on" : "off" }],
       };
     }
   }
@@ -141,24 +244,44 @@ export function parseOfflineCommand(userText: string, scene: SecurityScene): Off
     const statusToken = lightTargetMatch[1] ?? lightTargetMatch[0];
     const isOn = /on|enable/.test(statusToken);
     const targetToken = lightTargetMatch[2] ?? lightTargetMatch[1];
-    const light = lightTarget(scene, targetToken);
-    if (light) {
+    const lightMatch = lightTarget(scene, targetToken);
+    if (lightMatch.ambiguous) {
       return {
-        message: `${isOn ? "Turned on" : "Turned off"} ${light.name}`,
-        operations: [{ type: "toggle_light", lightId: light.id, status: isOn ? "on" : "off" }],
+        message: `Multiple lights match "${targetToken?.trim() ?? "light"}". Select one in the scene and retry.`,
+        operations: [],
+        action: { type: "set_view_mode", mode: "map" },
+        requiresTargetSelection: true,
+        unresolvedTarget: targetToken?.trim() ?? "light",
+        candidateTargets: formatTargetList(lightMatch.candidates, "Light"),
+      };
+    }
+    if (lightMatch.node) {
+      return {
+        message: `${isOn ? "Turned on" : "Turned off"} ${lightMatch.node.name}`,
+        operations: [{ type: "toggle_light", lightId: lightMatch.node.id, status: isOn ? "on" : "off" }],
       };
     }
   }
 
   const moveCameraTo = normalized.match(/move\s+camera\s+(.+?)\s+to\s+(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)/);
   if (moveCameraTo) {
-    const camera = cameraTarget(scene, moveCameraTo[1]);
-    if (camera) {
+    const cameraMatch = cameraTarget(scene, moveCameraTo[1]);
+    if (cameraMatch.ambiguous) {
       return {
-        message: `Moved ${camera.name}`,
+        message: `Multiple cameras match "${moveCameraTo[1]}". Select one in the scene and retry.`,
+        operations: [],
+        action: { type: "set_view_mode", mode: "map" },
+        requiresTargetSelection: true,
+        unresolvedTarget: moveCameraTo[1],
+        candidateTargets: formatTargetList(cameraMatch.candidates, "Camera"),
+      };
+    }
+    if (cameraMatch.node) {
+      return {
+        message: `Moved ${cameraMatch.node.name}`,
         operations: [{
           type: "move_camera",
-          cameraId: camera.id,
+          cameraId: cameraMatch.node.id,
           newPosition: [Number(moveCameraTo[2]), Number(moveCameraTo[3]), Number(moveCameraTo[4])] as [number, number, number],
         }],
       };
@@ -167,13 +290,23 @@ export function parseOfflineCommand(userText: string, scene: SecurityScene): Off
 
   const rotateCamera = normalized.match(/rotate\s+camera\s+(.+?)\s+(?:to\s+)?(-?\d+(?:\.\d+)?)(?:\s*(?:deg|°))?(?:\s+pitch\s+(-?\d+(?:\.\d+)?))?/);
   if (rotateCamera) {
-    const camera = cameraTarget(scene, rotateCamera[1]);
-    if (camera) {
+    const cameraMatch = cameraTarget(scene, rotateCamera[1]);
+    if (cameraMatch.ambiguous) {
       return {
-        message: `Rotated ${camera.name}`,
+        message: `Multiple cameras match "${rotateCamera[1]}". Select one in the scene and retry.`,
+        operations: [],
+        action: { type: "set_view_mode", mode: "map" },
+        requiresTargetSelection: true,
+        unresolvedTarget: rotateCamera[1],
+        candidateTargets: formatTargetList(cameraMatch.candidates, "Camera"),
+      };
+    }
+    if (cameraMatch.node) {
+      return {
+        message: `Rotated ${cameraMatch.node.name}`,
         operations: [{
           type: "rotate_camera",
-          cameraId: camera.id,
+          cameraId: cameraMatch.node.id,
           yawDeg: Number(rotateCamera[2]),
           ...(rotateCamera[3] != null ? { pitchDeg: Number(rotateCamera[3]) } : {}),
         }],
@@ -181,10 +314,47 @@ export function parseOfflineCommand(userText: string, scene: SecurityScene): Off
     }
   }
 
+  const tiltCamera = normalized.match(/tilt\s+camera\s+(.+?)\s+(?:to\s+)?(-?\d+(?:\.\d+)?)(?:\s*(?:deg|°))?/)
+    ?? normalized.match(/camera\s+(.+?)\s+tilt\s+(?:to\s+)?(-?\d+(?:\.\d+)?)(?:\s*(?:deg|°))?/);
+  if (tiltCamera) {
+    const cameraMatch = cameraTarget(scene, tiltCamera[1]);
+    if (cameraMatch.ambiguous) {
+      return {
+        message: `Multiple cameras match "${tiltCamera[1]}". Select one in the scene and retry.`,
+        operations: [],
+        action: { type: "set_view_mode", mode: "map" },
+        requiresTargetSelection: true,
+        unresolvedTarget: tiltCamera[1],
+        candidateTargets: formatTargetList(cameraMatch.candidates, "Camera"),
+      };
+    }
+    if (cameraMatch.node) {
+      return {
+        message: `Tilted ${cameraMatch.node.name} to ${Number(tiltCamera[2])}°`,
+        operations: [{
+          type: "rotate_camera",
+          cameraId: cameraMatch.node.id,
+          yawDeg: cameraMatch.node.yawDeg,
+          pitchDeg: Number(tiltCamera[2]),
+        }],
+      };
+    }
+  }
+
   const aimCamera = normalized.match(/(?:aim|point|turn|rotate|move)\s+camera\s+(.+?)\s+(?:toward|towards|at)\s+(?:the\s+)?(entry|counter|center)/);
   if (aimCamera) {
-    const camera = cameraTarget(scene, aimCamera[1]);
-    if (camera) {
+    const cameraMatch = cameraTarget(scene, aimCamera[1]);
+    if (cameraMatch.ambiguous) {
+      return {
+        message: `Multiple cameras match "${aimCamera[1]}". Select one in the scene and retry.`,
+        operations: [],
+        action: { type: "set_view_mode", mode: "map" },
+        requiresTargetSelection: true,
+        unresolvedTarget: aimCamera[1],
+        candidateTargets: formatTargetList(cameraMatch.candidates, "Camera"),
+      };
+    }
+    if (cameraMatch.node) {
       const target =
         aimCamera[2] === "entry"
           ? entryFocus(scene)
@@ -192,11 +362,11 @@ export function parseOfflineCommand(userText: string, scene: SecurityScene): Off
             ? counterFocus(scene)
             : roomCenter(scene);
       return {
-        message: `Aimed ${camera.name} at ${aimCamera[2]}`,
+        message: `Aimed ${cameraMatch.node.name} at ${aimCamera[2]}`,
         operations: [{
           type: "rotate_camera",
-          cameraId: camera.id,
-          yawDeg: yawToward(camera.position, target),
+          cameraId: cameraMatch.node.id,
+          yawDeg: yawToward(cameraMatch.node.position, target),
         }],
       };
     }
@@ -205,12 +375,109 @@ export function parseOfflineCommand(userText: string, scene: SecurityScene): Off
   const changeFov = normalized.match(/(?:change|set)\s+fov\s+camera\s+(.+?)\s+to\s+(-?\d+(?:\.\d+)?)/)
     ?? normalized.match(/camera\s+(.+?)\s+fov\s+to\s+(-?\d+(?:\.\d+)?)/);
   if (changeFov) {
-    const camera = cameraTarget(scene, changeFov[1]);
-    if (camera) {
+    const cameraMatch = cameraTarget(scene, changeFov[1]);
+    if (cameraMatch.ambiguous) {
+      return {
+        message: `Multiple cameras match "${changeFov[1]}". Select one in the scene and retry.`,
+        operations: [],
+        action: { type: "set_view_mode", mode: "map" },
+        requiresTargetSelection: true,
+        unresolvedTarget: changeFov[1],
+        candidateTargets: formatTargetList(cameraMatch.candidates, "Camera"),
+      };
+    }
+    if (cameraMatch.node) {
       const fov = Math.max(15, Math.min(180, Number(changeFov[2])));
       return {
-        message: `Changed FOV on ${camera.name}`,
-        operations: [{ type: "change_camera_fov", cameraId: camera.id, fovHorizontalDeg: fov }],
+        message: `Changed FOV on ${cameraMatch.node.name}`,
+        operations: [{ type: "change_camera_fov", cameraId: cameraMatch.node.id, fovHorizontalDeg: fov }],
+      };
+    }
+  }
+
+  const addObstructionAtPosition = normalized.match(/add\s+(.+?)\s+obstruction\s+(?:at|to)\s+(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)/)
+    ?? normalized.match(/add\s+obstruction\s+(?:at|to)\s+(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)/);
+  if (addObstructionAtPosition) {
+    const hasType = addObstructionAtPosition.length === 5;
+    const rawType = hasType ? addObstructionAtPosition[1] : undefined;
+    const coordinateStart = hasType ? 2 : 1;
+    const position = parsePositionCoordinates(addObstructionAtPosition, coordinateStart);
+    const obstructionType = parseObstructionType(rawType);
+    return {
+      message: `Added ${obstructionType.replace(/_/g, " ")} obstruction`,
+      operations: [{
+        type: "add_obstruction",
+        obstructionType,
+        position,
+        label: `AI ${obstructionType.replace(/_/g, " ")} obstruction`,
+      }],
+    };
+  }
+
+  const addObstructionNear = normalized.match(/add\s+(.+?)\s+obstruction(?:\s+near\s+(entry|counter|center))?/)
+    ?? normalized.match(/add\s+obstruction(?:\s+near\s+(entry|counter|center))?/);
+  if (addObstructionNear && normalized.includes("add") && normalized.includes("obstruction")) {
+    const rawType = addObstructionNear.length === 3 ? addObstructionNear[1] : undefined;
+    const anchor = addObstructionNear[addObstructionNear.length - 1];
+    const obstructionType = parseObstructionType(rawType);
+    const position = parseAnchorPosition(scene, anchor);
+    return {
+      message: `Added ${obstructionType.replace(/_/g, " ")} obstruction${anchor ? ` near ${anchor}` : ""}`,
+      operations: [{
+        type: "add_obstruction",
+        obstructionType,
+        position,
+        label: `AI ${obstructionType.replace(/_/g, " ")} obstruction`,
+      }],
+    };
+  }
+
+  const moveObstructionTo = normalized.match(/move\s+obstruction\s+(.+?)\s+to\s+(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)/);
+  if (moveObstructionTo) {
+    const match = obstructionTarget(scene, moveObstructionTo[1]);
+    if (match.ambiguous) {
+      return {
+        message: `Multiple obstructions match "${moveObstructionTo[1]}". Select one in the scene and retry.`,
+        operations: [],
+        action: { type: "set_view_mode", mode: "map" },
+        requiresTargetSelection: true,
+        unresolvedTarget: moveObstructionTo[1],
+        candidateTargets: formatTargetList(match.candidates, "Obstruction"),
+      };
+    }
+    if (match.node) {
+      return {
+        message: `Moved obstruction ${match.node.label}`,
+        operations: [{
+          type: "move_obstruction",
+          obstructionId: match.node.id,
+          newPosition: parsePositionCoordinates(moveObstructionTo),
+        }],
+      };
+    }
+  }
+
+  const moveObstructionNear = normalized.match(/move\s+obstruction\s+(.+?)\s+near\s+(entry|counter|center)/);
+  if (moveObstructionNear) {
+    const match = obstructionTarget(scene, moveObstructionNear[1]);
+    if (match.ambiguous) {
+      return {
+        message: `Multiple obstructions match "${moveObstructionNear[1]}". Select one in the scene and retry.`,
+        operations: [],
+        action: { type: "set_view_mode", mode: "map" },
+        requiresTargetSelection: true,
+        unresolvedTarget: moveObstructionNear[1],
+        candidateTargets: formatTargetList(match.candidates, "Obstruction"),
+      };
+    }
+    if (match.node) {
+      return {
+        message: `Moved obstruction ${match.node.label} near ${moveObstructionNear[2]}`,
+        operations: [{
+          type: "move_obstruction",
+          obstructionId: match.node.id,
+          newPosition: parseAnchorPosition(scene, moveObstructionNear[2]),
+        }],
       };
     }
   }

@@ -114,6 +114,16 @@ export default function StudioPage() {
     () => describeAiProviderTelemetry(aiProviderSelection, localOnlyMode),
     [aiProviderSelection, localOnlyMode],
   );
+  const aiDraftModelAvailable = useMemo(
+    () => providerKeyAvailable(aiProviderSelection.providerId) && !localOnlyMode,
+    [aiProviderSelection.providerId, localOnlyMode],
+  );
+  const aiDraftModeLabel = aiDraftModelAvailable ? "Model mode active" : "Heuristic fallback active";
+  const aiDraftModeDescription = localOnlyMode
+    ? `Cloud-backed AI is disabled by policy. ${currentAiProvider.envKey} is ignored while local-only mode is enabled.`
+    : aiDraftModelAvailable
+      ? `${currentAiProvider.providerLabel} is active for draft generation.`
+      : `${currentAiProvider.envKey} is missing, so draft generation runs in deterministic heuristic mode.`;
   const aiDraftSummary = useMemo(
     () => (aiDraftPreview ? summarizeDraftResult(aiDraftPreview) : null),
     [aiDraftPreview],
@@ -370,7 +380,10 @@ export default function StudioPage() {
           if (!confirmWorkspaceReplacement("start scan intake")) return;
           openScanWizard();
         }}
-        onOpenGuidedScanAssistant={() => setShowGuidedScanKickoff(true)}
+        onGuidedScanAssistant={() => {
+          if (!confirmWorkspaceReplacement("open the guided scan assistant")) return;
+          setShowGuidedScanKickoff(true);
+        }}
         onAiDraft={() => {
           if (!confirmWorkspaceReplacement("open AI layout draft")) return;
           setShowAiDraft(true);
@@ -551,8 +564,8 @@ export default function StudioPage() {
             </p>
             <div className="mt-2 rounded-lg border border-[#22314b] bg-[#101a2b] px-3 py-2 text-[10px] text-[#97a8c9]">
               <div className="flex flex-wrap items-center gap-2">
-                <span className={`rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] ${localOnlyMode ? "border-amber-400/20 bg-amber-500/10 text-amber-200" : "border-emerald-400/20 bg-emerald-500/10 text-emerald-200"}`}>
-                  {localOnlyMode ? "Local-only mode" : "Cloud-backed available"}
+                <span className={`rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] ${aiDraftModelAvailable ? "border-emerald-400/20 bg-emerald-500/10 text-emerald-200" : "border-amber-400/20 bg-amber-500/10 text-amber-200"}`}>
+                  {aiDraftModeLabel}
                 </span>
                 <span className="rounded-full border border-[#2a3347] bg-[#0d1421] px-2 py-0.5 text-[9px] text-[#c4d5ff]">
                   {currentAiProvider.providerLabel}
@@ -594,7 +607,7 @@ export default function StudioPage() {
                 </p>
               ) : (
                 <p className="mt-2">
-                  Model-backed if <code className="text-[#c4d5ff]">{currentAiProvider.envKey}</code> is set, otherwise a heuristic fallback is used. The generated scene will replace the current workspace.
+                  {aiDraftModeDescription} The generated scene is validated as a <code className="text-[#c4d5ff]">SecurityScene</code> before apply.
                 </p>
               )}
               <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">
@@ -802,11 +815,14 @@ export default function StudioPage() {
                   const draftStartedAt = performance.now();
                   try {
                     const provider = createModelProvider(aiProviderSelection);
-                    const hasProviderKey = providerKeyAvailable(aiProviderSelection.providerId);
-                    const useModelDraft = hasProviderKey && !localOnlyMode;
+                    const useModelDraft = aiDraftModelAvailable;
                     const draft = useModelDraft
                       ? await draftSceneFromPromptWithModel(aiPrompt, provider)
                       : draftSceneFromPrompt(aiPrompt);
+                    const draftValidation = safeParseSecurityScene(draft.scene);
+                    if (!draftValidation.success) {
+                      throw new Error(`Generated draft is invalid SecurityScene data: ${draftValidation.error.issues[0]?.message ?? "validation failed"}`);
+                    }
                     setAiDraftPreview(draft);
                     recordAiActionTelemetry({
                       stage: "ai_draft",
@@ -857,6 +873,28 @@ export default function StudioPage() {
                     setAiDraftNotice(provenanceNote);
                   } catch (error) {
                     const fallback = draftSceneFromPrompt(aiPrompt);
+                    const fallbackValidation = safeParseSecurityScene(fallback.scene);
+                    if (!fallbackValidation.success) {
+                      setAiWarning(`Draft failed validation and fallback was invalid: ${fallbackValidation.error.issues[0]?.message ?? "validation failed"}`);
+                      setAiDraftNotice("Draft preview blocked until a valid SecurityScene can be generated.");
+                      setAiDraftPreview(null);
+                      recordAiActionTelemetry({
+                        stage: "ai_draft",
+                        providerId: aiProviderSelection.providerId,
+                        providerLabel: currentAiProvider.providerLabel,
+                        model: aiProviderSelection.model,
+                        localOnlyMode,
+                        cloudAvailable: false,
+                        durationMs: Math.max(0, Math.round(performance.now() - draftStartedAt)),
+                        estimatedPromptTokens: estimateTokensFromText(aiPrompt),
+                        estimatedCompletionTokens: 0,
+                        estimatedTotalTokens: estimateTokensFromText(aiPrompt),
+                        tokenSource: "estimated",
+                        status: "error",
+                        note: `Draft validation failed and fallback invalid. ${error instanceof Error ? error.message : ""}`.trim(),
+                      });
+                      return;
+                    }
                     setAiDraftPreview(fallback);
                     recordAiActionTelemetry({
                       stage: "ai_draft",
@@ -948,27 +986,27 @@ export default function StudioPage() {
           <div className="mx-auto max-w-3xl rounded-2xl border border-[#1f2637] bg-[#0b0f17] p-4 shadow-2xl">
             <h2 className="text-sm font-semibold text-white">Verify Real Camera Footage (Preview)</h2>
             <p className="mt-1 text-xs text-[#91a4c5]">
-              Current support is a planning-assist overlay in Camera View, not a forensic verification pipeline.
+              Current support is a planning-assist workflow in Camera View, not a forensic verification pipeline.
             </p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-[11px] text-emerald-100">
                 <div className="font-semibold uppercase tracking-[0.14em] text-emerald-200">Available now</div>
                 <div className="mt-1">Reference frame upload</div>
-                <div>Local video ingest + frame extraction</div>
-                <div>Multi-frame candidate strip + auto best-frame scoring</div>
                 <div>Overlay/split comparison</div>
-                <div>Alignment quality estimate</div>
-                <div>Difference heat overlay</div>
+                <div>Manual candidate frame review</div>
+                <div>Planning impact annotation</div>
+                <div>Optional frame-by-frame inspection workflow</div>
               </div>
               <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-[11px] text-amber-100">
                 <div className="font-semibold uppercase tracking-[0.14em] text-amber-200">Not implemented yet</div>
                 <div>Auto camera pose/FOV recovery</div>
+                <div>Auto scoring and best-frame ranking</div>
                 <div>ONVIF/RTSP integration</div>
                 <div>Forensic-grade proof claims</div>
               </div>
             </div>
             <div className="mt-3 rounded-lg border border-[#22314b] bg-[#101827] px-3 py-2 text-[10px] text-[#b6c6e6]">
-              Planning indicator only: modeled outcomes depend on assumptions and are not legal/forensic guarantees.
+              Planning indicator only: modeled outcomes are deterministic simulation estimates and are not legal or forensic guarantees.
             </div>
             <div className="mt-3 flex justify-end gap-2">
               <button

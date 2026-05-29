@@ -130,7 +130,7 @@ export function loadCameraLiveSessionRegistry(rootDir = resolveCameraLiveSession
             : null,
         lastObservedAt: candidate.lastObservedAt,
         sessionExpiresAt,
-        lastAction: candidate.lastAction === "bind" || candidate.lastAction === "refresh" || candidate.lastAction === "disconnect"
+        lastAction: candidate.lastAction === "bind" || candidate.lastAction === "refresh" || candidate.lastAction === "heartbeat" || candidate.lastAction === "disconnect"
           ? candidate.lastAction
           : "bind",
         summary: candidate.summary,
@@ -212,6 +212,37 @@ export function closeCameraLiveSessionRecord(
       }
       : record
   ));
+  const filePath = resolveCameraLiveSessionRegistryPath(rootDir);
+  mkdirSync(join(rootDir, ".camera-live-connection-history"), { recursive: true });
+  writeFileSync(filePath, JSON.stringify(nextRegistry, null, 2));
+  return nextRegistry;
+}
+
+export function renewCameraLiveSessionRecord(
+  input: Omit<CameraLiveSessionRecord, "status" | "lastObservedAt" | "sessionExpiresAt" | "lastAction" | "summary"> & {
+    summary: string;
+    lastObservedAt?: number;
+    sessionExpiresAt?: number | null;
+  },
+  rootDir = resolveCameraLiveSessionStoreRoot(),
+) {
+  const now = input.lastObservedAt ?? Date.now();
+  const nextSessionExpiresAt = typeof input.sessionExpiresAt === "number"
+    ? input.sessionExpiresAt
+    : now + DEFAULT_SESSION_TTL_MS;
+  const baseRecord: CameraLiveSessionRecord = {
+    ...input,
+    status: "active",
+    lastObservedAt: now,
+    sessionExpiresAt: nextSessionExpiresAt,
+    lastAction: "heartbeat",
+    summary: input.summary,
+  };
+  const currentRegistry = loadCameraLiveSessionRegistry(rootDir);
+  const nextRegistry = [
+    baseRecord,
+    ...currentRegistry.filter((record) => record.sessionId !== baseRecord.sessionId),
+  ].slice(0, 40);
   const filePath = resolveCameraLiveSessionRegistryPath(rootDir);
   mkdirSync(join(rootDir, ".camera-live-connection-history"), { recursive: true });
   writeFileSync(filePath, JSON.stringify(nextRegistry, null, 2));

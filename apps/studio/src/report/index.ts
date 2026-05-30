@@ -527,25 +527,12 @@ export function buildReportData(
       edgeCount: graph.summary.edgeCount,
       revisionDepth: graph.summary.revisionDepth,
       snapshotCount: graph.summary.snapshotCount,
-      confidenceNotes: visibility === "privacy_safe" ? [] : confidenceNotes,
-      sourceNotes: visibility === "privacy_safe" ? [] : sourceNotes,
+      confidenceNotes,
+      sourceNotes,
     },
-    truthLadder: visibility === "privacy_safe" ? {
-      labels: [],
-      highestConfidence: 0,
-      lowestConfidence: 0,
-      overallConfidenceLabel: "Redacted for privacy",
-    } : truthLadder,
-    evidenceTrail: visibility === "privacy_safe" ? {
-      changeLogEntryCount: 0,
-      evidenceEntryCount: 0,
-      sensorEvidenceCount: 0,
-      recentEntries: [],
-    } : (visibility === "shared" ? {
-      ...evidenceTrail,
-      recentEntries: evidenceTrail.recentEntries.slice(0, 3),
-    } : evidenceTrail),
-    temporalTwin: visibility === "privacy_safe" ? undefined : temporalTwin ?? undefined,
+    truthLadder,
+    evidenceTrail,
+    temporalTwin: temporalTwin ?? undefined,
     adversarialPath: options?.adversarialPath
       ? {
           exposureScore: options.adversarialPath.exposureScore,
@@ -2219,7 +2206,7 @@ function redactReportDataForVisibility(report: ReportData, visibility: ReportVis
     redacted.evidenceTrail.recentEntries = redacted.evidenceTrail.recentEntries.map((entry) => ({
       ...entry,
       confidence: "withheld",
-    }));
+    })).slice(0, 3);
     return redacted;
   }
 
@@ -2228,20 +2215,28 @@ function redactReportDataForVisibility(report: ReportData, visibility: ReportVis
   redacted.visibilityFraming = getReportVisibilityProfile(visibility).framing;
   redacted.provenance.sourceNotes = [];
   redacted.provenance.confidenceNotes = [];
-  redacted.evidenceTrail.recentEntries = redacted.evidenceTrail.recentEntries.map((entry) => ({
-    ...entry,
-    details: "Redacted for privacy-safe export.",
-    confidence: "withheld",
-  }));
-  if (redacted.temporalTwin?.currentSceneSummary) {
-    redacted.temporalTwin = {
-      ...redacted.temporalTwin,
-      currentSceneSummary: {
-        ...redacted.temporalTwin.currentSceneSummary,
-        detail: "Redacted for privacy-safe export.",
-      },
-    };
-  }
+  redacted.evidenceTrail = {
+    changeLogEntryCount: 0,
+    evidenceEntryCount: 0,
+    sensorEvidenceCount: 0,
+    recentEntries: [],
+  };
+  redacted.truthLadder = {
+    labels: [],
+    highestConfidence: 0,
+    lowestConfidence: 0,
+    overallConfidenceLabel: "Redacted for privacy",
+    nodeCount: 0,
+    reviewedNodeCount: 0,
+    reviewedCoveragePct: 0,
+    verifiedNodeCount: 0,
+    sourceTraceCount: 0,
+    sourceTraceCoveragePct: 0,
+    suspectGeometryCount: 0,
+    invalidGeometryCount: 0,
+    summary: "Redacted",
+  };
+  redacted.temporalTwin = undefined;
   return redacted;
 }
 

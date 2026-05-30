@@ -1,6 +1,6 @@
 # Session Context
 
-- Generated: 2026-05-30T04:41:02Z
+- Generated: 2026-05-30T05:59:21Z
 - Project: `SentinelTwin`
 - Provider: `local`
 - Model: `BAAI/bge-m3`
@@ -16,39 +16,11 @@
 
 ## Project-Focused Retrieval
 
-> NOTE: Project collection check timed out; using shared workspace context for this run.
-
-## Shared Cross-Project Retrieval
-
-### Reusable Patterns
-- Collection: `projects_workspace_shared`
-- Query: `similar architecture patterns for SentinelTwin`
-_Collection check timed out. Retry shortly._
-
-### Process Templates
-- Collection: `projects_workspace_shared`
-- Query: `project management templates and workflows`
-_Collection check timed out. Retry shortly._
-
-### Common Failure Modes
-- Collection: `projects_workspace_shared`
-- Query: `lessons learned mistakes retrospectives postmortems`
+### Architecture Decisions
+- Collection: `projects_proj_sentineltwin`
+- Query: `architecture decisions for SentinelTwin`
 _Search timed out. Retry when the retrieval store is less busy._
 
-### System Learning Graph
-- Collection: `projects_workspace_shared`
-- Query: `knowledge graph memory learning feedback loops autoresearch semantic taste graph`
-_Search timed out. Retry when the retrieval store is less busy._
-
-
----
-## Agent Collaboration Style
-
-Pranay expects the agent to act as a genuine technical collaborator, not an instruction executor:
-- Have and express opinions on design, naming, logic, test quality
-- Push back when something is wrong - don't just flag it, fix it with a rationale
-- Catch bugs proactively without waiting to be asked
-- Discuss tradeoffs directly: here is why X is wrong and Y is better
-- The goal is two engineers reviewing each other's work, not a contractor following a spec
-
-This applies to code review, test quality, naming, architecture boundaries, commit grouping strategy, and anything that would affect the project long-term.
+### Project Management Workflow
+- Collection: `projects_proj_sentineltwin`
+- Query: `project management workflow for SentinelTwin`

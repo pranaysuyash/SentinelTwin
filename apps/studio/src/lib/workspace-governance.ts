@@ -122,17 +122,47 @@ export function canApproveWorkspaceScene(role: WorkspaceRole) {
   return role === "reviewer" || role === "admin";
 }
 
-export function canPublishWorkspaceScene(governance: WorkspaceGovernanceState) {
-  if (governance.approvalMode === "open") return true;
-  if (governance.sceneStatus === "approved") return true;
-  return governance.activeRole === "admin";
+export function resolveApprovalRoute(governance: WorkspaceGovernanceState, scene: any): WorkspaceRole[] {
+  const requiredRoles: WorkspaceRole[] = [];
+  
+  if (governance.approvalMode === "open") return ["operator", "reviewer", "admin"];
+  
+  // ABAC logic: check scene attributes
+  let needsAdmin = false;
+  let needsPrivacyReview = false;
+  
+  if (scene) {
+    if (scene.criticalZones && scene.criticalZones.length > 0) {
+      // Any critical zone requires at least a reviewer, but if they are high/critical priority, maybe admin
+      const hasCriticalPriority = scene.criticalZones.some((z: any) => z.priority === "critical" || z.priority === "high");
+      if (hasCriticalPriority) needsAdmin = true;
+    }
+    if (scene.privacyZones && scene.privacyZones.length > 0) {
+      needsPrivacyReview = true;
+    }
+  }
+
+  if (needsAdmin) requiredRoles.push("admin");
+  else requiredRoles.push("reviewer", "admin");
+
+  if (needsPrivacyReview) requiredRoles.push("privacy_reviewer");
+
+  return requiredRoles;
 }
 
-export function isPublishReviewRequired(governance: WorkspaceGovernanceState) {
+export function canPublishWorkspaceScene(governance: WorkspaceGovernanceState, scene?: any) {
+  if (governance.approvalMode === "open") return true;
+  if (governance.sceneStatus === "approved") return true;
+  
+  const allowedRoles = resolveApprovalRoute(governance, scene);
+  return allowedRoles.includes(governance.activeRole);
+}
+
+export function isPublishReviewRequired(governance: WorkspaceGovernanceState, scene?: any) {
   return governance.approvalMode === "review_required" && governance.sceneStatus !== "approved";
 }
 
-export function summarizeWorkspaceGovernance(governance: WorkspaceGovernanceState): WorkspaceGovernanceSummary {
+export function summarizeWorkspaceGovernance(governance: WorkspaceGovernanceState, scene?: any): WorkspaceGovernanceSummary {
   const reviewAgeLabel = governance.requestedAt
     ? `${Math.max(0, Math.round((Date.now() - governance.requestedAt) / 60000))} min ago`
     : null;
@@ -141,8 +171,8 @@ export function summarizeWorkspaceGovernance(governance: WorkspaceGovernanceStat
     roleLabel: capitalizeLabel(governance.activeRole),
     approvalModeLabel: governance.approvalMode === "open" ? "Open publish" : "Review required",
     sceneStatusLabel: capitalizeLabel(governance.sceneStatus),
-    canPublish: canPublishWorkspaceScene(governance),
-    needsApproval: isPublishReviewRequired(governance),
+    canPublish: canPublishWorkspaceScene(governance, scene),
+    needsApproval: isPublishReviewRequired(governance, scene),
     reviewAgeLabel,
     reviewerLabel: governance.reviewedBy ? capitalizeLabel(governance.reviewedBy) : governance.requestedBy ? capitalizeLabel(governance.requestedBy) : null,
   };

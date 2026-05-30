@@ -848,7 +848,7 @@ describe("operational evidence helpers", () => {
       securityLights: [createSecurityLightNode([4, 2.5, 2])],
       obstructions: [],
       paths: [
-        createPathNode([
+        createScenarioPathNode([
           { position: [0.5, 0.5] },
           { position: [5.5, 1] },
           { position: [8, 3.5] },

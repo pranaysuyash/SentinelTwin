@@ -201,6 +201,48 @@ export function AssumptionsTab() {
           </div>
         </div>
 
+        {/* Environmental Effects */}
+        <div>
+          <div className="text-[9px] font-semibold text-[#3a4158] uppercase tracking-widest mb-1.5">Environmental Effects</div>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="flex flex-col gap-0.5">
+              <span className="text-[8px] text-[#4a5568]">Backlight</span>
+              <select
+                value={assumptions.backlightIntensity ?? "none"}
+                onChange={(e) => update("backlightIntensity", e.target.value as typeof assumptions.backlightIntensity)}
+                className="w-full rounded border border-[#1e2130] bg-[#0d0f17] px-1.5 py-0.5 text-[10px] capitalize text-[#c0c8da] outline-none focus:border-blue-500/40"
+              >
+                <option value="none">None</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-0.5">
+              <span className="text-[8px] text-[#4a5568]">Glare</span>
+              <select
+                value={assumptions.glareIntensity ?? "none"}
+                onChange={(e) => update("glareIntensity", e.target.value as typeof assumptions.glareIntensity)}
+                className="w-full rounded border border-[#1e2130] bg-[#0d0f17] px-1.5 py-0.5 text-[10px] capitalize text-[#c0c8da] outline-none focus:border-blue-500/40"
+              >
+                <option value="none">None</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </label>
+            <label className="flex items-center gap-2 col-span-2 rounded border border-[#1e2130] bg-[#0d0f17] px-2 py-1.5">
+              <span className="text-[8px] text-[#4a5568]">Overexposed Zones</span>
+              <input
+                type="checkbox"
+                checked={assumptions.overexposedZones ?? false}
+                onChange={(e) => update("overexposedZones", e.target.checked)}
+                className="ml-auto h-3.5 w-3.5 accent-blue-500"
+              />
+            </label>
+          </div>
+        </div>
+
       </div>
     </div>
   );

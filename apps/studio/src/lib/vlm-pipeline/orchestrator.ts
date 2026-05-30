@@ -45,8 +45,8 @@ export async function runVlmPipeline(
       heightPx: 0,
       fileName,
     },
-    tier1: null as any,
-    gateDecision: null as any,
+    tier1: null as unknown as PipelineContext["tier1"],
+    gateDecision: null as unknown as PipelineContext["gateDecision"],
     pipelineMetadata,
   };
 
@@ -92,7 +92,7 @@ export async function runVlmPipeline(
     return {
       semanticContext: {
         ...ctx,
-        tier1: null as any,
+        tier1: null as unknown as PipelineContext["tier1"],
         gateDecision: {
           action: "human_review",
           reason: `Tier 1 processing failed: ${err}`,

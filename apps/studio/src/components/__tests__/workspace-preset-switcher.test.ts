@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 
-const switcherPath = "./src/components/dock/WorkspacePresetSwitcher.tsx";
+const switcherPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../dock/WorkspacePresetSwitcher.tsx");
 
 describe("WorkspacePresetSwitcher", () => {
   test("uses stable selectors instead of an object-literal snapshot", () => {
@@ -11,6 +13,7 @@ describe("WorkspacePresetSwitcher", () => {
     expect(source).toContain('const rightPanelMode = useStudioStore((s) => s.rightPanelMode);');
     expect(source).toContain('const current = useMemo(() => ({');
     expect(source).toContain('const active = PRESETS.find((entry) => entry.id === workspacePreset) ?? PRESETS[0]!');
+    expect(source).toContain("Focused workspace with all docks hidden");
     expect(source).not.toContain('const current = useStudioStore((s) => ({');
   });
 });

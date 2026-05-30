@@ -176,6 +176,27 @@ export type IncidentBundle = {
   };
 };
 
+export type RuntimeTruthBundle = {
+  version: "1";
+  generatedAt: string;
+  title: string;
+  diagnostic: DiagnosticBundle;
+  runtime: {
+    title: string;
+    summary: string;
+    incidentCount: number;
+    performanceTraceCount: number;
+    alertCount: number;
+    highPriorityCount: number;
+    latestIncident: DiagnosticBundle["runtime"]["recentIncidents"][number] | null;
+    latestPerformanceTrace: DiagnosticBundle["runtime"]["performanceTraces"][number] | null;
+    latestExternalLog: Pick<ExternalLogEntry, "id" | "timestamp" | "source" | "title" | "details" | "lineCount" | "severity"> | null;
+    journeyHealth: DiagnosticBundle["runtime"]["journeyHealth"];
+    recentTrace: DiagnosticBundle["runtime"]["recentTrace"];
+    alerts: IncidentAlertSummary;
+  };
+};
+
 export type DiagnosticBundleInput = {
   scene: SecurityScene;
   simulationResult: SimulationResult | null;
@@ -612,4 +633,37 @@ export function buildIncidentBundle(input: DiagnosticBundleInput & { externalLog
       recentExternalLogs,
     },
   };
+}
+
+export function buildRuntimeTruthBundle(input: DiagnosticBundleInput & { externalLogEntries?: ExternalLogEntry[] }): RuntimeTruthBundle {
+  const diagnostic = buildDiagnosticBundle(input);
+  const latestIncident = [...diagnostic.runtime.recentIncidents].at(0) ?? null;
+  const latestPerformanceTrace = [...diagnostic.runtime.performanceTraces].at(0) ?? null;
+  const normalizedExternalLogs = [...(input.externalLogEntries ?? [])].sort((left, right) => right.timestamp - left.timestamp);
+  const latestExternalLog = normalizedExternalLogs.at(0) ?? null;
+
+  return {
+    version: "1",
+    generatedAt: diagnostic.generatedAt,
+    title: `SentinelTwin Runtime Truth · ${diagnostic.scene.name}`,
+    diagnostic,
+    runtime: {
+      title: "Runtime truth snapshot",
+      summary: `${diagnostic.runtime.incidentCount} incidents, ${diagnostic.runtime.performanceTraces.length} performance traces, ${diagnostic.runtime.alerts.highPriorityCount} high priority alerts, ${normalizedExternalLogs.length} external logs.`,
+      incidentCount: diagnostic.runtime.incidentCount,
+      performanceTraceCount: diagnostic.runtime.performanceTraces.length,
+      alertCount: diagnostic.runtime.alerts.alertCount,
+      highPriorityCount: diagnostic.runtime.alerts.highPriorityCount,
+      latestIncident,
+      latestPerformanceTrace,
+      latestExternalLog,
+      journeyHealth: diagnostic.runtime.journeyHealth,
+      recentTrace: diagnostic.runtime.recentTrace,
+      alerts: diagnostic.runtime.alerts,
+    },
+  };
+}
+
+export function stringifyRuntimeTruthBundle(bundle: RuntimeTruthBundle) {
+  return JSON.stringify(bundle, null, 2);
 }

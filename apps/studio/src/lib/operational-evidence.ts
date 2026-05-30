@@ -281,6 +281,8 @@ export type OperationalEvidenceTemporalTwinSummary = {
   checkpointCount: number;
   publishedCheckpointCount: number;
   branchHeadCount: number;
+  latestCheckpointProvenance: OperationalEvidenceCheckpointProvenance | null;
+  latestPublishedCheckpointProvenance: OperationalEvidenceCheckpointProvenance | null;
   latestCheckpoint: {
     eventId: string;
     title: string;
@@ -320,6 +322,16 @@ export type OperationalEvidenceTemporalTwinSummary = {
   } | null;
   latestCheckpointAgeMs: number | null;
   latestPublishedCheckpointAgeMs: number | null;
+};
+
+export type OperationalEvidenceCheckpointProvenance = {
+  sourceEventId: string;
+  sourceEventTitle: string;
+  sourceEventTimestamp: number;
+  isExactSnapshot: boolean;
+  derivedFromEarlierSnapshot: boolean;
+  sourceSnapshotDistance: number | null;
+  sourceSnapshotAgeMs: number | null;
 };
 
 export type OperationalEvidenceTimelineEntry = {
@@ -701,6 +713,28 @@ export function summarizeOperationalEvidenceTemporalTwin(
   const latestPublishedCheckpoint = [...timeline.entries].reverse().find((entry) => entry.event.kind === "scene_published" || entry.event.published) ?? null;
   const latestPublishedCheckpointScene = latestPublishedCheckpoint?.reconstructedScene ?? null;
 
+  const checkpointProvenance = (entry: OperationalEvidenceTimelineEntry | null): OperationalEvidenceCheckpointProvenance | null => {
+    if (!entry) return null;
+    let sourceEntry: OperationalEvidenceTimelineEntry | null = null;
+    for (let index = entry.index; index >= 0; index -= 1) {
+      const candidate = timeline.entries[index];
+      if (candidate?.event.sceneSnapshot) {
+        sourceEntry = candidate;
+        break;
+      }
+    }
+    if (!sourceEntry) return null;
+    return {
+      sourceEventId: sourceEntry.event.id,
+      sourceEventTitle: sourceEntry.event.title,
+      sourceEventTimestamp: sourceEntry.event.timestamp,
+      isExactSnapshot: sourceEntry.index === entry.index,
+      derivedFromEarlierSnapshot: sourceEntry.index !== entry.index,
+      sourceSnapshotDistance: sourceEntry.index === entry.index ? 0 : entry.index - sourceEntry.index,
+      sourceSnapshotAgeMs: sourceEntry.index === entry.index ? 0 : Math.max(0, entry.event.timestamp - sourceEntry.event.timestamp),
+    };
+  };
+
   const sceneDelta = (currentScene: SecurityScene | null | undefined, comparisonScene: SecurityScene | null | undefined) => (
     currentScene && comparisonScene
       ? {
@@ -723,6 +757,8 @@ export function summarizeOperationalEvidenceTemporalTwin(
     checkpointCount: timeline.checkpoints.length,
     publishedCheckpointCount: timeline.entries.filter((entry) => entry.event.kind === "scene_published" || entry.event.published).length,
     branchHeadCount: timeline.branchHeads.filter((entry) => entry.event != null).length,
+    latestCheckpointProvenance: checkpointProvenance(timeline.latestCheckpoint),
+    latestPublishedCheckpointProvenance: checkpointProvenance(latestPublishedCheckpoint),
     latestCheckpoint: timeline.latestCheckpoint && timeline.latestCheckpoint.reconstructedSceneSummary
       ? {
           eventId: timeline.latestCheckpoint.event.id,
@@ -850,9 +886,62 @@ export function resolveOperationalEvidenceSceneAtTime(
   timestamp: number,
   scene?: SecurityScene,
 ): SecurityScene | null {
+  return resolveOperationalEvidenceSceneAtTimeWithContext(events, timestamp, scene).scene;
+}
+
+export type OperationalEvidenceSceneAtTimeResolution = {
+  scene: SecurityScene | null;
+  selectedEvent: OperationalEvidenceEvent | null;
+  sourceEvent: OperationalEvidenceEvent | null;
+  selectedEventIndex: number | null;
+  sourceEventIndex: number | null;
+  isExactSnapshot: boolean;
+  derivedFromEarlierSnapshot: boolean;
+  sourceSnapshotDistance: number | null;
+  sourceSnapshotAgeMs: number | null;
+};
+
+export function resolveOperationalEvidenceSceneAtTimeWithContext(
+  events: OperationalEvidenceEvent[],
+  timestamp: number,
+  scene?: SecurityScene,
+): OperationalEvidenceSceneAtTimeResolution {
   const timeline = buildOperationalEvidenceTimeline(events, scene);
   const selectedEntry = [...timeline.entries].reverse().find((entry) => entry.event.timestamp <= timestamp) ?? null;
-  return selectedEntry?.reconstructedScene ? structuredClone(selectedEntry.reconstructedScene) : null;
+  if (!selectedEntry) {
+    return {
+      scene: null,
+      selectedEvent: null,
+      sourceEvent: null,
+      selectedEventIndex: null,
+      sourceEventIndex: null,
+      isExactSnapshot: false,
+      derivedFromEarlierSnapshot: false,
+      sourceSnapshotDistance: null,
+      sourceSnapshotAgeMs: null,
+    };
+  }
+
+  let sourceEntry: typeof selectedEntry | null = null;
+  for (let index = selectedEntry.index; index >= 0; index -= 1) {
+    const candidate = timeline.entries[index];
+    if (candidate?.event.sceneSnapshot) {
+      sourceEntry = candidate;
+      break;
+    }
+  }
+
+  return {
+    scene: sourceEntry?.event.sceneSnapshot ? structuredClone(sourceEntry.event.sceneSnapshot) : null,
+    selectedEvent: selectedEntry.event,
+    sourceEvent: sourceEntry?.event ?? null,
+    selectedEventIndex: selectedEntry.index,
+    sourceEventIndex: sourceEntry?.index ?? null,
+    isExactSnapshot: Boolean(selectedEntry.event.sceneSnapshot),
+    derivedFromEarlierSnapshot: Boolean(sourceEntry && sourceEntry.index !== selectedEntry.index),
+    sourceSnapshotDistance: sourceEntry ? selectedEntry.index - sourceEntry.index : null,
+    sourceSnapshotAgeMs: sourceEntry ? Math.max(0, selectedEntry.event.timestamp - sourceEntry.event.timestamp) : null,
+  };
 }
 
 export function findLatestOperationalEvidenceEventForScene(

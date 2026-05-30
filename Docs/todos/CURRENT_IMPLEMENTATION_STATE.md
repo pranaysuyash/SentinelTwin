@@ -1,6 +1,6 @@
 # Current Implementation State — Camera Studio
 
-**Updated:** 2026-05-29 (session 33: org-aware workspace catalog metadata)
+**Updated:** 2026-05-30 (session 34: workflow progress surfaced in live footer status)
 **Source:** Direct code audit of apps/studio/src/
 **Purpose:** Accurate baseline of what is actually built, tested, and rendering.
 Use this instead of the earlier CAMERASTUDIO_GAP_ANALYSIS.md which was written
@@ -32,9 +32,11 @@ For the full-vision gap inventory and next-slice sequencing, see
 - Scene Intelligence now uses a canonical share-link helper so checkpoint links can be copied or opened with the same provenance node/edge plus timeline branch/time state, and the page bootstrap restores that link state back into the timeline view ✅
 - The debug recovery panel now exposes a browser-openable operational evidence archive handoff link, so an exported archive can rehydrate the merge-preflight flow directly from a URL instead of only from a local file picker ✅
 - The debug recovery panel now also offers a browser share-sheet archive handoff action when the device/browser supports the Web Share API, with copy/open fallbacks so the recovery flow remains usable everywhere ✅
+- The debug panel now also offers a focused `Runtime Truth` download alongside the broader diagnostic and support bundles, so runtime incidents, traces, alerts, and journey-health evidence can be exported as a dedicated observability artifact ✅
 - Launcher workspace-memory results now expose explicit destination metadata (`Target`, `Route`) so archive and report hits read like concrete navigation actions instead of opaque snippets ✅
 - The launcher’s start-project cards now show explicit maturity labels (`Complete`, `Available`, `Preview`, `Planned`) so the visible entry flows stay honest about what is actually ready versus still aspirational ✅
 - Saved workspaces now carry local `workspaceOrganization`, `workspaceOwner`, and `workspaceVisibility` metadata, and the launcher editor/browser surfaces those fields so the workspace catalog reads like an org-aware boundary instead of a flat local list ✅
+- The visible walkthrough and focus preset labels now use guided-workflow language (`Guided Walkthrough`, `Enter/Exit Guided Walkthrough`, `Focused workspace with all docks hidden`) instead of demo-first copy, while the underlying walkthrough and focus behavior remain the same ✅
 
 ## Guided scan assistant (2026-05-29)
 
@@ -219,7 +221,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - All Zod schemas + TypeScript types ✅
 - All node types: Camera, ObstructionNode, SecurityLightNode, WallNode, DoorNode, WindowNode,
   CriticalZoneNode, PrivacyZoneNode, EntryPointNode, ScenarioPath ✅
-- `sensors: SensorNode[]` exists as a zero-default schema boundary for future multi-sensor work, and dedicated sensor tools / inspector / inventory surfaces are now wired into the editor while live sensor events, pasted metadata intake, the external feed bridge, the camera live binding stream, the camera live-connection probe/archive route, the camera metadata ingest bridge, the temporal replay surface, the camera metadata event stream, and the sensor ingest history archive now feed the canonical evidence trail even though true device-protocol session management still remains open ✅
+- `sensors: SensorNode[]` exists as a zero-default schema boundary for future multi-sensor work, and dedicated sensor tools / inspector / inventory surfaces are now wired into the editor while live sensor events, pasted metadata intake, the external feed bridge, the camera live binding stream, the camera live-connection probe/archive route, the camera metadata ingest bridge, the temporal replay surface, the camera metadata event stream, and the sensor ingest history archive now feed the canonical evidence trail, while the ONVIF probe now runs through a real SOAP client that parses device information instead of a mock session manager ✅
 - Full SimulationResult with coverageCells, criticalZoneResults, adversarialPath ✅
 - `CoverageCellResult.fragility?: number` (0=robust, 1=fragile) ✅
 - `SimulationResult.fragilitySummary?: { meanFragility, fragileCellCount, robustCellCount, totalCells }` ✅
@@ -276,6 +278,8 @@ For the full-vision gap inventory and next-slice sequencing, see
 ### Launcher resume / status surface — now explicit
 - Root launcher now renders `StudioDashboardHome` as a full-screen dashboard with the current workspace preview, risk summary, mode entry points, searchable project browser, folder/tag/pin metadata management, selected-workspace actions, and secondary quick-start actions instead of the old centered setup card ✅
 - Launcher page now exposes a workspace-resume card with direct resume, coverage entry, and saved-scene shortcuts pulled from local storage ✅
+- Workspace footer status now surfaces active workflow progress (`Workflow: <flow> step/total`) from `activeWorkflowId`, `activeWorkflowStep`, and `activeWorkflowSteps`, so users can see guided flow state directly while operating the shell ✅
+- Root dashboard labels now explicitly match operator-control semantics (`Workspace selector`, `Status`, `Last run`, `Environment mode`) and section headings (`CURRENT WORKSPACE`, `SECURITY STATUS`) for closer design-pack parity ✅
 - Product feature maturity remains tracked in docs and launch flows, but the root dashboard itself now prioritizes the workspace preview, security status, and quick-start actions instead of an in-surface maturity panel ✅
 - AI layout draft launcher modal now warns that the generated scene replaces the current workspace and discloses the model-backed vs heuristic fallback path ✅
 - AI layout draft now records provenance on the scene change log and forwards provenance-backed notices into the launcher/status surface instead of passing opaque warning text alone ✅
@@ -475,6 +479,8 @@ For the full-vision gap inventory and next-slice sequencing, see
 - Generates markdown report
 - Copy to clipboard button
 - Shows all issues and recommendations
+- Audience selector now frames exports for operator, auditor, insurer, installer, or privacy reviewer, and the same audience mode flows through single-scene and compare exports ✅
+- Report catalog presets and visibility selectors now let exports choose internal/shared/privacy-safe framing before the user exports or copies the artifact ✅
 
 **DebugTab** ✅
 - Toggle switches for all 11 layers
@@ -722,3 +728,6 @@ The following issues were fixed to reach 0 typed errors (only pre-existing TS700
 - Compare/report share links now round-trip those seeded snapshot pairs through the studio bootstrap, so a copied compare link can reopen the comparison state instead of only the timeline anchor.
 - Before/After, Report Lite, and Compare View now expose a copyable compare-link action directly in the comparison surface, so the shareable snapshot pair is visible at the point of use instead of only in Scene Intelligence.
 - The launcher now also persists a short recent-history of exported/restored operational evidence archives and can search those archives as timeline checkpoints when a latest event id exists, so recovered archives are retrievable through the same workspace memory surface as governance and report hits.
+- Scene Intelligence now also shows that recent operational evidence archive history directly in the provenance surface, with browser handoff copy/open and canonical restore actions for each archive.
+- The point-in-time reconstruction card now exposes exact-versus-derived provenance for the selected checkpoint, so users can see whether the resolved scene came from the selected event itself or from an earlier snapshot source.
+- Report exports now include the same exact-versus-derived checkpoint provenance for the latest checkpoint and latest published checkpoint in the temporal twin summary, so HTML/markdown/text exports match the interactive reconstruction surface.

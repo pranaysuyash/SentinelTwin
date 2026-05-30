@@ -4211,3 +4211,66 @@ geometryValidity: z.enum(["valid", "suspect", "invalid"]).default("valid")
 - Decision: Persist a short local recent-history list of exported/restored operational evidence archives and include it in workspace-memory search, routing hits to the latest reconstructable checkpoint when a latest event id is available.
 - Rationale: Operational memory becomes more useful when the launcher can find a recent recovered archive by query and jump directly to the checkpoint embodied by that archive.
 - Consequence: Launcher search can now surface operational evidence archive hits with exact-checkpoint routing, and the recent archive history is preserved locally for short-term retrieval.
+
+## D-249 - Guided walkthrough and focus preset should use product language, not demo wording
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: The guided walkthrough and focus preset were real product flows, but the visible shell still labeled them with demo-first copy (`Demo Mode`, `Demo Walkthrough`, `Client demo mode with all docks hidden`).
+- Decision: Keep the underlying walkthrough and focus preset implementation intact, but rename the visible labels to guided-workflow language (`Guided Walkthrough`, `Enter/Exit Guided Walkthrough`, `Focused workspace with all docks hidden`).
+- Rationale: The user-facing shell should describe the actual workflow intent instead of reinforcing demo framing for functionality that is already implemented and exercised in-product.
+- Consequence: The launcher and top-bar affordances now read as real guided/focus workflows, and the last obvious demo-first labels in the shell are removed without changing the underlying store/state model.
+
+## D-249 - Scene Intelligence should expose recent operational evidence archives as recovery cards
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: Launcher search could now find recent operational evidence archives, but the provenance surface itself still only showed the current evidence timeline and reconstructable checkpoints.
+- Decision: Add a recent operational evidence archive panel to Scene Intelligence that can copy/open the browser handoff link and restore an archive through the canonical importer.
+- Rationale: Recovery should not require leaving the provenance surface when the archive is already part of the current workspace history.
+- Consequence: Scene Intelligence now shows the recent archive history alongside the checkpoint timeline, and each archive can be reopened or restored from the same panel.
+
+## D-250 - Compliance reporting modes should be audience-aware within the canonical report spine
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: The report pipeline already carried provenance, evidence, and temporal history, but compliance-specific reporting still read like a future gap because the app lacked an explicit audience contract.
+- Decision: Add a canonical report-audience mode to the existing report engine and report tab, with audience-aware framing for operator, auditor, insurer, installer, and privacy reviewer exports, and thread the selected audience through both single-scene and compare report generation.
+- Rationale: Compliance reporting should remain a single canonical spine with audience-aware framing, not a separate reporting system. The report tab is already the product surface where export intent is chosen, so it is the right place to select the audience mode.
+- Consequence: Report exports now preserve explicit audience context in the same report contract, while the remaining compliance work is narrowed to policy-driven redaction, visibility control, and report catalog design.
+
+## D-251 - ONVIF probes should use a real SOAP session client, not a simulated session manager
+
+- Date: 2026-05-29
+- Status: Accepted
+- Context: The live camera probe route already handled JSON, NDJSON, and XML responses, but the reusable ONVIF helper was still a mock session manager that only simulated probe timing and device negotiation.
+- Decision: Replace the mock ONVIF client with a real fetch-based SOAP probe that can parse device information, event subscription URIs, media URIs, auth challenge headers, and connection state, and let the canonical camera-live-connection probe route reuse that helper for ONVIF bindings.
+- Rationale: ONVIF support should be built on a real transport/client primitive even if full authenticated multi-step subscription renewal is still a future seam. The shared helper keeps the ONVIF path canonical instead of pretending a simulated session is enough.
+- Consequence: The ONVIF probe path now returns real device information from SOAP responses, camera live probe tests can exercise the client directly, and the remaining gap narrows to authenticated multi-step ONVIF session management rather than the initial probe itself.
+
+## D-252 - Point-in-time reconstruction should expose source provenance, not just the reconstructed scene
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: Scene Intelligence already resolved a reconstructed scene at a selected checkpoint, but the UI only knew whether a snapshot existed. It did not say whether the resolved scene was exact or derived from an earlier snapshot source.
+- Decision: Add a richer time-slice resolver that returns the reconstructed scene plus the source snapshot event, distance from the selected checkpoint, and exact-versus-derived provenance, then surface that provenance directly in Scene Intelligence.
+- Rationale: Operational memory is more useful when users can see where the reconstructed state came from. Exact/derived provenance makes checkpoint restoration and archive review more trustworthy without changing the canonical reconstruction path.
+- Consequence: Scene Intelligence can now explain whether a checkpoint is an exact scene snapshot or a derived reconstruction from an earlier snapshot, and the same provenance metadata is available for future timeline/report surfaces.
+
+## D-253 - Report exports should expose policy presets, not just audience labels
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: Audience-aware reporting existed, but the export surface still needed a visible policy layer so operators could choose internal/shared/privacy-safe handling before copying or exporting a report.
+- Decision: Add a report catalog to Report Lite with explicit export presets plus a visibility selector for internal, shared, and privacy-safe export policies, and apply the selected policy to the canonical report output before export.
+- Rationale: The product should make export intent explicit before the artifact is generated. A catalog of presets is more trustworthy than a single generic export button because it makes the sharing posture visible in the same workflow where the export is created.
+- Consequence: Report Lite now shows preset cards and visibility controls in-product, and the remaining compliance work narrows to deeper redaction semantics, regulator-specific policy, and template differentiation beyond the current shared/privacy-safe presets.
+
+## D-254 - Report temporal twin summaries should carry checkpoint provenance
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: The temporal twin summary already showed event counts, checkpoint counts, ages, and deltas, but it did not tell report readers whether the latest checkpoint was an exact snapshot or a reconstruction derived from an earlier snapshot event.
+- Decision: Extend the temporal twin summary with explicit checkpoint provenance fields and surface them in report summaries, HTML exports, markdown exports, and plain-text exports.
+- Rationale: Report exports should preserve the same checkpoint lineage trust signal that Scene Intelligence now shows in the interactive reconstruction view. Provenance text makes the exported report less ambiguous without changing the underlying reconstruction model.
+- Consequence: Reports now say when the latest checkpoint is exact versus derived, and the same provenance metadata is available to any future export or comparison surface built on the temporal twin summary.

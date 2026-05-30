@@ -12,6 +12,8 @@ import { computeCoverageUncertainty } from "@/simulation/coverage-uncertainty";
 import { buildRedundancyMatrixReport } from "@/report/redundancy-matrix";
 import { useStudioStore } from "@/store/studio-store";
 
+const REPORT_VIEW_UNCERTAINTY_SAMPLE_COUNT = 3;
+
 function StatCard({
   label,
   value,
@@ -58,7 +60,7 @@ export function ReportView() {
     const coverageEntropySummary = coverageEntropy
       ? `${coverageEntropy.normalizedEntropy.toFixed(2)} norm`
       : "--";
-    const uncertainty = computeCoverageUncertainty(scene, { sampleCount: 12 });
+    const uncertainty = computeCoverageUncertainty(scene, { sampleCount: REPORT_VIEW_UNCERTAINTY_SAMPLE_COUNT });
     const postureVariation = computeCoveragePostureVariation(scene);
     const redundancyMatrix = result ? buildRedundancyMatrixReport(scene, result) : null;
     const kCriticalSets = result?.kRobustness?.criticalSets ?? [];

@@ -196,14 +196,14 @@ Every input mode should compile into the same truth model. Every report should r
 **Current state**
 - Future live-camera verification is documented.
 - The schema can carry sensors.
-- The editor now exposes a dedicated sensor tool, sensor inspector, and sensor inventory tab, and both the camera inspector analytics tab and live camera feed now show a nearest-sensor `Sensor Fusion` preview; sensor live triggers, heartbeats, faults, restores, pasted metadata intake, an external feed bridge, a camera live binding stream, and a camera metadata ingest bridge now all flow into the canonical evidence trail, Scene Intelligence now shows that sensor evidence in the provenance surface, the debug panel reuses the same parser for pasted live metadata, and `/api/sensor-ingest` now gives that intake a history-backed backend-shaped boundary, while the camera live-connection probe/archive route now gives live binding a canonical backend round-trip, understands JSON/NDJSON plus ONVIF-style XML responses, tries SOAP-first for ONVIF binds, supports session refreshes, and now also exposes an active session lease registry with expiry timestamps, a transport-session handle, and captured auth challenge/transport response metadata, with the remaining open seam still being true device-protocol session management rather than the probe boundary itself.
+- The editor now exposes a dedicated sensor tool, sensor inspector, and sensor inventory tab, and both the camera inspector analytics tab and live camera feed now show a nearest-sensor `Sensor Fusion` preview; sensor live triggers, heartbeats, faults, restores, pasted metadata intake, an external feed bridge, a camera live binding stream, and a camera metadata ingest bridge now all flow into the canonical evidence trail, Scene Intelligence now shows that sensor evidence in the provenance surface, the debug panel reuses the same parser for pasted live metadata, and `/api/sensor-ingest` now gives that intake a history-backed backend-shaped boundary, while the camera live-connection probe/archive route now gives live binding a canonical backend round-trip, understands JSON/NDJSON plus ONVIF-style XML responses, and the ONVIF probe now runs through a real SOAP client that parses device information, with the remaining open seam narrowed to authenticated multi-step subscription/renewal behavior rather than the probe boundary itself.
 - Camera live binding now also emits a durable event stream that appears in the live camera overlays and Scene Intelligence timeline, so the camera connection state is no longer hidden inside the inspector alone.
 - Camera metadata ingest now also emits a durable event stream that appears in the live camera overlays and Scene Intelligence timeline, so camera health state is no longer hidden inside the inspector alone.
 - Sensor edits now also write sensor-specific provenance events into the operational ledger, so the visible sensor layer has an audit trail even before ONVIF/live ingestion exists.
 - The debug panel now exposes a runtime health summary plus a runtime journey trace with import/scan/AI/render/save/publish path health cards, and it now surfaces a runtime incident log, a performance trace list, a support bundle summary card, a paste-based external log capture lane, and an automated alerting summary so runtime truth, failure evidence, timing evidence, support handoff context, local log capture, and alert candidates are visible without leaving the studio shell.
 
 **What is still missing**
-- Real device-protocol session management for live cameras, beyond the current probe/archive, operator-bound live connection, session-refresh, and active-lease registry layers.
+- Authenticated multi-step device-protocol session management for live cameras beyond the current probe/archive, operator-bound live connection, session-refresh, and active-lease registry layers.
 - ONVIF metadata ingestion and mapping to scene events, beyond the current URL-based sensor, camera metadata, camera connection, and live-connection probe bridges.
 - A trustworthy operating model for multi-sensor evidence and a deeper incident bundle that combines runtime logs, live metadata, and automated alerting.
 
@@ -531,6 +531,7 @@ Every input mode should compile into the same truth model. Every report should r
 **Current state**
 - The debug panel already exposes runtime journey cards, incident logs, performance traces, a support bundle summary card, external log capture, automated alerting summaries, and support/incident exports.
 - The diagnostic bundle already carries scene, simulation, graph, evidence, and runtime truth fields, while the support bundle carries the broader handoff payload used by support and QA.
+- The debug panel now also exposes a dedicated `Runtime Truth` download so the journey-health and alert story can be exported as a focused observability artifact.
 - The in-product trust-audit route now checks the visible trust surfaces so the local shell can detect drift against the manifest.
 
 **What is still missing**
@@ -552,11 +553,12 @@ Every input mode should compile into the same truth model. Every report should r
 - Reports and compare exports already carry provenance and evidence summaries.
 - The report surface already includes standards-oriented reporting language and the current product can surface evidence-backed narrative content.
 - The trust and evidence layers now make it possible to cite the exact checkpoint and branch state behind a report.
+- Report Lite now exposes explicit audience modes for operator, auditor, insurer, installer, and privacy reviewer, and those modes flow through single-scene and compare exports.
+- Report Lite now also exposes report catalog presets plus internal/shared/privacy-safe visibility selectors, so export intent is explicit before the artifact is generated.
 
 **What is still missing**
-- Dedicated compliance report modes for different audiences.
 - Policy-driven redaction and visibility controls for external sharing.
-- A report catalog that makes standards, audience, and evidence posture explicit before export.
+- A richer report catalog with standards-specific templates, audience defaults, and share-policy annotations for each export preset.
 - Compliance-specific export templates that are separate from the general-purpose handoff report.
 
 ## 5) What Is Still Demo / Placeholder / Planned
@@ -570,7 +572,7 @@ These are the remaining places where the product is honest but not yet fully com
 - Live camera verification is not yet a true real-feed verification system.
 - Multi-sensor editing is not yet a real editor workflow, even though the schema can hold sensors.
 - Multi-user collaboration, approvals, and branch merge semantics are not yet platform-grade.
-- Compliance modes are not yet separate product surfaces.
+- Compliance mode policy is not yet fully complete: redaction, visibility, and catalog behavior still need a first-class control layer, even though audience-mode report framing now exists in Report Lite.
 - The product still explains itself mostly as simulation, not as an operational memory system.
 - Recovery is now exportable and restorable as an operational archive, and the debug panel can also preflight an uploaded archive before applying it, restore the latest archived checkpoint with explicit branch targeting, preserve the journal payload through archive round-trips, or merge a conflict-free divergent branch, but shared-workspace sync and conflict resolution are still future work.
 - Browser-native public handoff and cross-device distribution are still future work, even though the app can now copy/open archive and timeline links locally.

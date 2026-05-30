@@ -2583,6 +2583,7 @@ Six reference screenshots were used as the source of truth for a pixel-accurate 
 - `studio-store.ts` — `setViewMode()` now auto-switches `bottomTab` (replay/camera_view→timeline, compare→beforeafter, map→metrics)
 - `BeforeAfterTab.tsx` / `ReportLiteTab.tsx` / `CompareView.tsx` — surfaced copyable compare links at the point of comparison, so the seeded snapshot pair can be shared from the exact surface where it is being reviewed
 - `operational-evidence-archive-history.ts` / `workspace-search.ts` — persisted a short recent-history of exported/restored operational evidence archives so launcher search can route directly to an archive's latest reconstructable checkpoint when one exists
+- `SceneIntelligenceTab.tsx` — added a recent operational evidence archive panel with browser handoff copy/open and canonical restore actions, keeping the recovery story visible inside the provenance surface itself
 - `CameraWallView.tsx` — Adaptive grid (1 cam=full, 2=side-by-side, 3=2+1, 4=2×2, 5-6=3×2)
 
 ### Design principles applied (from design-review skill App UI rules)
@@ -6057,6 +6058,7 @@ The studio app is a large React surface with motion-heavy panels and several lon
 - Camera metadata ingest now accepts XML in addition to JSON and NDJSON, so ONVIF-style feeds can land directly in the Debug panel and still match scene cameras by id or name.
 - The live fusion path can now preserve metadata freshness and connection posture without requiring a pre-normalized JSON adapter for external camera feeds.
 - Live camera connection probes now also preserve XML negotiation payloads without polluting the error channel with JSON-only parse failures.
+- The reusable ONVIF probe helper now performs a real SOAP session probe and parses device information instead of simulating a session manager, so the live camera boundary has a concrete transport/client primitive rather than a mock implementation.
 
 ### Follow-up
 
@@ -6159,3 +6161,5 @@ All relevant decisions and analysis are already captured in:
 
 - Keep the general report export authoritative, then layer audience-specific compliance modes on top.
 - Preserve the same evidence and checkpoint lineage in every compliance variant, even when redaction or audience-specific framing changes the presentation.
+- Scene Intelligence point-in-time reconstruction now also records source provenance, so the resolved state can explain whether it is an exact snapshot or a derived reconstruction from an earlier checkpoint event.
+- Report exports now carry the same exact-versus-derived checkpoint provenance for the latest temporal twin checkpoint and latest published checkpoint, so the exported report explains where its temporal summary came from instead of only reporting age and delta.

@@ -92,6 +92,7 @@ import {
 import { simulateStudio } from "@/simulation/simulate-studio";
 import { computeTemporalProfile } from "@/simulation/temporal";
 import type { TemporalSecurityProfile } from "@/schema/security-scene";
+import type { SiteIntakeSession } from "@/lib/site-compiler";
 
 export type ViewMode = "map" | "wall" | "replay" | "camera_view" | "compare" | "report";
 export type CanvasMode = "orbit_3d" | "topdown_2d";
@@ -1819,6 +1820,9 @@ export type StudioStoreState = {
   getSceneStorageKey: () => string;
 
   getSelectedCamera: () => CameraNode | null;
+
+  siteIntakeSession: SiteIntakeSession | null;
+  setSiteIntakeSession: (session: SiteIntakeSession | null) => void;
 };
 
 const collectionKeys = [
@@ -2696,6 +2700,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   focusScenePointRequest: null,
   focusScenePointHighlight: null,
   cameraPresetId: null,
+  siteIntakeSession: null,
   sceneIntelligenceGraph: INITIAL_SCENE_INTELLIGENCE_GRAPH,
   historyPast: [],
   historyFuture: [],
@@ -2768,6 +2773,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   setGridSnapM: (value) => set((s) => ({ editor: { ...s.editor, gridSnapM: value } })),
   setSelectedHandle: (handle) => set((s) => ({ editor: { ...s.editor, selectedHandle: handle } })),
   setCameraPresetId: (presetId) => set({ cameraPresetId: presetId }),
+  setSiteIntakeSession: (session) => set({ siteIntakeSession: session }),
   setViewSettingsOpen: (open) => set({ viewSettingsOpen: open }),
   toggleViewSettingsOpen: () => set((state) => ({ viewSettingsOpen: !state.viewSettingsOpen })),
   refreshSavedLayoutsList: () => {

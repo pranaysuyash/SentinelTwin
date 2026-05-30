@@ -97,6 +97,24 @@ describe("buildReportSummaryLines", () => {
       totalEvents: 4,
       checkpointCount: 2,
       publishedCheckpointCount: 1,
+      latestCheckpointProvenance: {
+        sourceEventId: "event_latest",
+        sourceEventTitle: "Initial checkpoint",
+        sourceEventTimestamp: 1000,
+        isExactSnapshot: false,
+        derivedFromEarlierSnapshot: true,
+        sourceSnapshotDistance: 2,
+        sourceSnapshotAgeMs: 120000,
+      },
+      latestPublishedCheckpointProvenance: {
+        sourceEventId: "event_published",
+        sourceEventTitle: "Published checkpoint",
+        sourceEventTimestamp: 3000,
+        isExactSnapshot: true,
+        derivedFromEarlierSnapshot: false,
+        sourceSnapshotDistance: 0,
+        sourceSnapshotAgeMs: 60000,
+      },
       latestCheckpointAgeMs: 120000,
       latestPublishedCheckpointAgeMs: 60000,
       currentVsLatestCheckpointDelta: { cameras: 1, lights: 0, obstructions: 0, zones: 0, paths: 0, sensors: 1, snapshots: 0 },
@@ -109,7 +127,7 @@ describe("buildReportSummaryLines", () => {
       { label: "Impact", text: "Current simulated coverage is 71% with 1/2 critical zones passing." },
       { label: "Recommendation", text: "No verified recommendation is available yet." },
       { label: "Evidence Trail", text: "1 change-log entries, 0 evidence entries, 0 sensor-related evidence" },
-      { label: "Temporal Twin", text: "4 scene events, 2 reconstructable checkpoints, 1 published checkpoint, latest checkpoint 2m old, latest published 1m old, checkpoint delta cams +1, published delta cams +2" },
+      { label: "Temporal Twin", text: "4 scene events, 2 reconstructable checkpoints, 1 published checkpoint, latest checkpoint 2m old, latest checkpoint derived from \"Initial checkpoint\", latest published 1m old, latest published exact snapshot from \"Published checkpoint\", checkpoint delta cams +1, published delta cams +2" },
     ]);
   });
 });

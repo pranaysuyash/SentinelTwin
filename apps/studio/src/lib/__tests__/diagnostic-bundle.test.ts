@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { buildDiagnosticBundle, buildIncidentBundle, stringifyDiagnosticBundle, stringifyIncidentBundle } from "@/lib/diagnostic-bundle";
+import { buildDiagnosticBundle, buildIncidentBundle, buildRuntimeTruthBundle, stringifyDiagnosticBundle, stringifyIncidentBundle, stringifyRuntimeTruthBundle } from "@/lib/diagnostic-bundle";
 import { smallRetailShopScene } from "@/demo-scenes/small-retail-shop";
 import { buildSceneIntelligenceGraph } from "@/lib/scene-intelligence-graph";
 import { buildOperationalEvidenceEvent } from "@/lib/operational-evidence";
@@ -151,5 +151,32 @@ describe("diagnostic bundle", () => {
     expect(incidentBundle.incidents.latestExternalLog?.title).toBe("Browser console error");
     expect(stringifyIncidentBundle(incidentBundle)).toContain("\"alertSummary\"");
     expect(stringifyDiagnosticBundle(bundle)).toContain("\"version\": \"1\"");
+
+    const runtimeTruthBundle = buildRuntimeTruthBundle({
+      scene: smallRetailShopScene,
+      simulationResult,
+      sceneIntelligenceGraph: graph,
+      operationalEvidenceEvents: events,
+      workspaceAccess: createDefaultWorkspaceAccessState(),
+      workspaceGovernance: { ...createDefaultWorkspaceGovernance(), approvalMode: "open", sceneStatus: "published" },
+      lastRunMs: 123,
+      showDebugOverlays: true,
+      overlayDensity: "compact",
+      autoRecompute: false,
+      cameraFailures: ["cam_counter"],
+      runtimeIncidents,
+      externalLogEntries,
+      localOnlyMode: false,
+      aiProviderLabel: "OpenAI GPT-5",
+      simulationDirty: false,
+      simulationRunning: false,
+      launchNotice: "Scene opened successfully.",
+      pathname: "/studio",
+      userAgent: "bun-test",
+    });
+    expect(runtimeTruthBundle.title).toContain("Runtime Truth");
+    expect(runtimeTruthBundle.runtime.summary).toContain("high priority alerts");
+    expect(runtimeTruthBundle.runtime.journeyHealth[1]?.kind).toBe("scan");
+    expect(stringifyRuntimeTruthBundle(runtimeTruthBundle)).toContain("Runtime truth snapshot");
   });
 });

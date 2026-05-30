@@ -4,6 +4,7 @@ import { Camera, Copy, Crosshair, Eye, Loader2, Trash2, Zap } from "lucide-react
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { CameraFeedCanvas } from "@/components/inspector/CameraFeedCanvas";
+import { CameraSpecImport } from "@/components/inspector/CameraSpecImport";
 import {
   Field,
   NumberInput,
@@ -1336,6 +1337,22 @@ export function CameraInspector() {
             <Field label="IR Range" value={camera.irRangeM > 0 ? camera.irRangeM : "None"} unit={camera.irRangeM > 0 ? "m" : undefined} />
             <Field label="PTZ" value={camera.ptz ? "Yes" : "No"} />
             <Field label="Thermal" value={camera.thermalCapable ? "Yes" : "No"} />
+            
+            <div className="border-b border-[#181c27] py-1.5">
+              <div className="mb-1.5 text-[10px] text-[#6a748b]">Compliance & Privacy</div>
+              <div className="space-y-1.5">
+                <ToggleField
+                  label="NDAA Compliant"
+                  checked={camera.ndaaCompliant ?? true}
+                  onChange={(v) => updateNode(camera.id, { ndaaCompliant: v })}
+                />
+                <ToggleField
+                  label="Privacy Masking Active"
+                  checked={camera.privacyMaskingEnabled ?? false}
+                  onChange={(v) => updateNode(camera.id, { privacyMaskingEnabled: v })}
+                />
+              </div>
+            </div>
 
             {(() => {
               const dori = computeDoriRanges(camera, scene.assumptions.pixelsPerMeter);

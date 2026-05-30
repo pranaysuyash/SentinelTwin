@@ -100,6 +100,29 @@ function formatViewModeLabel(viewMode: string) {
   return VIEW_MODE_LABELS[viewMode] ?? viewMode.replace(/_/g, " ");
 }
 
+function formatWorkflowLabel(workflowId: string) {
+  switch (workflowId) {
+    case "audit":
+      return "Audit";
+    case "design":
+      return "Design";
+    case "scan":
+      return "Scan";
+    case "floor_plan":
+      return "Floor Plan";
+    case "ai_draft":
+      return "AI Draft";
+    case "verify_footage":
+      return "Verify Footage";
+    case "report":
+      return "Report";
+    case "demo":
+      return "Demo";
+    default:
+      return "Idle";
+  }
+}
+
 export function StatusBar() {
   const running = useStudioStore((s) => s.simulationRunning);
   const result = useStudioStore((s) => s.simulationResult);
@@ -112,6 +135,9 @@ export function StatusBar() {
   const selectedNodeId = useStudioStore((s) => s.selectedNodeId);
   const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
   const selectedCameraId = useStudioStore((s) => s.selectedCameraId);
+  const activeWorkflowId = useStudioStore((s) => s.activeWorkflowId);
+  const activeWorkflowStep = useStudioStore((s) => s.activeWorkflowStep);
+  const activeWorkflowSteps = useStudioStore((s) => s.activeWorkflowSteps);
   const setSimulationRunning = useStudioStore((s) => s.setSimulationRunning);
   const setSimulationResult = useStudioStore((s) => s.setSimulationResult);
   const simulationDirty = useStudioStore((s) => s.simulationDirty);
@@ -123,6 +149,12 @@ export function StatusBar() {
   const selectionText = describeSelection(scene, selectedNodeId, selectedCameraId, selectedNodeIds);
   const viewModeText = formatViewModeLabel(viewMode);
   const coverageText = formatCoverageSummary(result);
+  const workflowTotalSteps = activeWorkflowSteps.length;
+  const workflowStepNumber = workflowTotalSteps > 0 ? Math.min(workflowTotalSteps, activeWorkflowStep + 1) : 0;
+  const workflowStepLabel = workflowTotalSteps > 0 ? activeWorkflowSteps[workflowStepNumber - 1] : null;
+  const workflowText = activeWorkflowId === "idle" || workflowTotalSteps === 0
+    ? "Workflow: Idle"
+    : `Workflow: ${formatWorkflowLabel(activeWorkflowId)} ${workflowStepNumber}/${workflowTotalSteps}`;
 
   return (
     <footer className="flex h-6 flex-shrink-0 select-none items-center gap-4 border-t border-[#1e2130] bg-[#0b0c10] px-3">
@@ -140,6 +172,9 @@ export function StatusBar() {
         </span>
         <span className="rounded border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-emerald-200">Truth: Live</span>
         <span className="whitespace-nowrap">View: {viewModeText}</span>
+        <span className="whitespace-nowrap" title={workflowStepLabel ?? undefined}>
+          {workflowText}
+        </span>
         <span className="max-w-[18rem] truncate text-[#8fa2c3]" title={selectionText}>
           {selectionText}
         </span>

@@ -1119,7 +1119,6 @@ export function StudioDashboardHome({
   onOpenCompareFixes,
   onOpenIssues,
   onRunSimulation,
-  onStartProject,
   onOpenAdvancedWorkflows,
   onCreateScene,
   onImportFloorPlan,
@@ -1137,8 +1136,6 @@ export function StudioDashboardHome({
   onOpenDemoWalkthrough,
 }: StudioDashboardHomeProps) {
   const [hydrated, setHydrated] = useState(false);
-  const [showAdvancedStarterActions, setShowAdvancedStarterActions] = useState(false);
-  const launchAdvancedWorkflows = onOpenAdvancedWorkflows ?? onOpenStudio;
   const [previewMode, setPreviewMode] = useState<"2d" | "3d">("2d");
   const coverage = result?.totalCoveragePct ?? scene.simulation?.totalCoveragePct ?? null;
   const criticalZoneResults = result?.criticalZoneResults ?? scene.simulation?.criticalZoneResults ?? [];
@@ -1502,38 +1499,6 @@ export function StudioDashboardHome({
   const visibleProjectCount = visibleProjects.length;
   const userWorkspaceCount = userWorkspaceProjects.length;
   const referenceDemoCount = referenceDemoProjects.length;
-  const launchStatusRows = [
-    {
-      label: "Status",
-      value: statusLabel,
-      detail: simulationRunning
-        ? "Live simulation is running."
-        : simulationDirty
-          ? "Scene changed since the last run."
-          : coverage == null
-            ? "No simulation has been computed yet."
-            : "Workspace is current.",
-      tone: simulationRunning ? "sky" : simulationDirty ? "amber" : "emerald",
-    },
-    {
-      label: "Coverage",
-      value: coverage != null ? `${Math.round(coverage)}%` : "Pending",
-      detail: coverage != null ? "Latest coverage result." : "Run a simulation to populate coverage.",
-      tone: coverage != null && coverage >= 80 ? "emerald" : coverage != null && coverage >= 60 ? "amber" : "sky",
-    },
-    {
-      label: "Visible workspaces",
-      value: String(visibleProjectCount),
-      detail: `${userWorkspaceCount} user workspaces · ${referenceDemoCount} reference baselines`,
-      tone: "violet",
-    },
-    {
-      label: "Last run",
-      value: lastRunLabel,
-      detail: lastRunDetail,
-      tone: "sky",
-    },
-  ] as const;
   const compactRecentProjects =
     visibleProjects.length > 0
       ? visibleProjects.slice(0, 4)
@@ -1564,88 +1529,6 @@ export function StudioDashboardHome({
       <div className="pointer-events-none absolute inset-0 opacity-[0.18] [background-image:linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] [background-size:64px_64px]" />
 
       <div className="relative z-10 flex min-h-screen flex-col gap-4 p-4 lg:p-5">
-        <section className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(340px,0.7fr)]">
-          <div className="overflow-hidden rounded-[32px] border border-[color:var(--st-border)] bg-[linear-gradient(180deg,rgba(10,15,25,0.96),rgba(9,13,21,0.9))] px-5 py-5 shadow-[0_20px_64px_rgba(0,0,0,0.34)]">
-            <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.24em] text-[color:var(--st-muted)]">
-              <ShieldCheck className="h-3.5 w-3.5 text-emerald-300" />
-              <span>Product home</span>
-              <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2 py-0.5 text-emerald-200">Job-first</span>
-              <span className="rounded-full border border-sky-400/20 bg-sky-500/10 px-2 py-0.5 text-sky-200">Baseline optional</span>
-            </div>
-            <div className="mt-3 max-w-3xl text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-              Audit CCTV coverage before blind spots become incidents.
-            </div>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-[color:var(--st-muted)]">
-              Start with the security job you need to finish. Use the seeded reference baseline if you want a sample scene,
-              then move into Studio for map edits, camera views, camera wall review, replay, compare, and the report.
-            </p>
-            <div className="mt-5 flex flex-wrap gap-3">
-              <ActionButton
-                icon={<Sparkles className="h-4 w-4" />}
-                label="Start a security audit"
-                description="Open the current workspace and run the core audit path first."
-                onClick={onStartProject}
-                variant="primary"
-                className="min-w-[260px] flex-1"
-              />
-              <ActionButton
-                icon={<FolderOpen className="h-4 w-4" />}
-                label="Continue Current Workspace"
-                description="Jump back into the active scene and keep editing or simulating."
-                onClick={onOpenStudio}
-                className="min-w-[260px] flex-1"
-              />
-              <ActionButton
-                icon={<Compass className="h-4 w-4" />}
-                label="Advanced Workflows"
-                description="Open optional flows for scan, import, floor plan, AI draft, and report."
-                onClick={launchAdvancedWorkflows}
-                className="min-w-[260px] flex-1"
-              />
-            </div>
-            <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-              {launchStatusRows.map((row) => (
-                <LaunchStatusRow key={row.label} {...row} />
-              ))}
-            </div>
-          </div>
-
-          <div className="overflow-hidden rounded-[32px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4 shadow-[0_20px_64px_rgba(0,0,0,0.24)]">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Current workspace</div>
-                <div className="mt-1 text-lg font-semibold text-white">{scene.name}</div>
-                <div className="mt-1 text-sm text-[color:var(--st-muted)]">The workspace underneath the product home.</div>
-              </div>
-              <div className={cn("rounded-full border px-3 py-1.5 text-[11px] font-medium", statusTone)}>
-                {statusLabel}
-              </div>
-            </div>
-            <div className="mt-4 overflow-hidden rounded-[24px] border border-white/[0.05] bg-black/[0.15]">
-              <ScenePreview scene={scene} result={result ?? scene.simulation ?? null} hydrated={hydrated} />
-            </div>
-            <div className="mt-4 grid gap-2">
-              <div className="flex flex-wrap gap-2">
-                <span className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1.5 text-[11px] text-[color:var(--st-muted)]">
-                  {coverage != null ? `Coverage ${Math.round(coverage)}%` : "Simulation pending"}
-                </span>
-                <span className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1.5 text-[11px] text-[color:var(--st-muted)]">
-                  {scene.cameras.length} cameras
-                </span>
-                <span className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1.5 text-[11px] text-[color:var(--st-muted)]">
-                  {scene.criticalZones.length} zones
-                </span>
-                <span className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1.5 text-[11px] text-[color:var(--st-muted)]">
-                  {currentRunLabel ?? "No run yet"}
-                </span>
-              </div>
-              <div className="rounded-2xl border border-[color:var(--st-border)] bg-white/[0.025] px-3 py-2 text-[11px] text-[color:var(--st-muted)]">
-                The seeded baseline is available as a reference baseline. Your workspace continues from the current scene.
-              </div>
-            </div>
-          </div>
-        </section>
-
         <header className="flex flex-wrap items-center gap-3 rounded-[24px] border border-[color:var(--st-border)] bg-[rgba(9,14,23,0.94)] px-4 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.34)] backdrop-blur-lg">
           <div className="flex min-w-[240px] items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-emerald-400/25 bg-emerald-500/12 text-emerald-200">
@@ -1653,19 +1536,21 @@ export function StudioDashboardHome({
             </div>
             <div className="min-w-0">
               <div className="truncate text-base font-semibold tracking-tight text-white">SentinelTwin Studio</div>
-              <div className="truncate text-xs text-[color:var(--st-muted)]">Security Audit Workspace</div>
+              <div className="truncate text-xs text-[color:var(--st-muted)]">Security Simulation Workspace</div>
             </div>
           </div>
 
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-            <span className="inline-flex max-w-[260px] items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.04] px-3 py-2 text-xs font-medium text-white">
+            <span className="inline-flex max-w-[320px] items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.04] px-3 py-2 text-xs font-medium text-white">
+              <span className="text-[10px] uppercase tracking-[0.14em] text-[color:var(--st-muted)]">Workspace selector:</span>
               <span className="truncate">{scene.name}</span>
               <ChevronDown className="h-3.5 w-3.5 flex-none text-[color:var(--st-muted)]" />
             </span>
             <span className={cn(
-              "inline-flex items-center rounded-xl border px-3 py-2 text-xs font-medium",
+              "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium",
               statusTone,
             )}>
+              <span className="text-[10px] uppercase tracking-[0.14em]">Status:</span>
               {statusLabel}
             </span>
             <span suppressHydrationWarning className="inline-flex items-center rounded-xl border border-transparent px-2 py-2 text-xs text-[color:var(--st-muted)]">
@@ -1673,28 +1558,19 @@ export function StudioDashboardHome({
             </span>
             <span className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-xs text-white">
               <Sun className="h-4 w-4 text-amber-300" />
+              <span className="text-[10px] uppercase tracking-[0.14em] text-[color:var(--st-muted)]">Environment mode:</span>
               {headerAssumptions.timeOfDay === "night" ? "Night Mode" : headerAssumptions.timeOfDay === "custom" ? "Custom Mode" : "Day Mode"}
             </span>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {onOpenDemoScene ? (
-              <button
-                type="button"
-                onClick={onOpenDemoScene}
-                className="inline-flex items-center gap-2 rounded-xl border border-sky-400/40 bg-sky-500/20 px-3 py-2 text-xs font-semibold text-white transition-colors hover:border-sky-300/55 hover:bg-sky-400/25"
-              >
-                <Sparkles className="h-4 w-4 text-sky-100" />
-                Open Seeded Retail Baseline
-              </button>
-            ) : null}
             <button
               type="button"
               onClick={onOpenStudio}
               className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-xs font-medium text-white transition-colors hover:border-sky-400/30 hover:bg-white/[0.05]"
             >
               <FolderOpen className="h-4 w-4 text-sky-200" />
-              Open Workspace
+              Open Studio
             </button>
             <button
               type="button"
@@ -1723,7 +1599,7 @@ export function StudioDashboardHome({
           </div>
         </header>
 
-        <div className="grid flex-1 gap-4 xl:grid-cols-[228px_minmax(0,1fr)_388px]">
+        <div className="grid flex-1 gap-4 lg:grid-cols-[228px_minmax(0,1fr)_388px]">
           <aside className="flex flex-col gap-4 rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
             <div>
               <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-[color:var(--st-muted)]">
@@ -1783,7 +1659,7 @@ export function StudioDashboardHome({
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
                     <Radar className="h-3.5 w-3.5 text-sky-300" />
-                    Current Workspace
+                    CURRENT WORKSPACE
                   </div>
                   <div className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">{scene.name}</div>
                   <div className="mt-1 text-sm text-[color:var(--st-muted)]">
@@ -2058,7 +1934,7 @@ export function StudioDashboardHome({
 
               <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.8fr)]">
                 <div className="rounded-[24px] border border-[color:var(--st-border)] bg-[color:var(--st-panel-2)] p-3">
-                  <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Recent Workspaces</div>
+                  <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">RECENT WORKSPACES</div>
                   {hydrated ? (
                     <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
                       {compactRecentProjects.map((project) => {
@@ -2098,10 +1974,10 @@ export function StudioDashboardHome({
                   <div className="rounded-[24px] border border-sky-400/15 bg-sky-500/8 p-3">
                   <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
                     <Sparkles className="h-3.5 w-3.5 text-sky-300" />
-                    Quick Start
+                    QUICK START
                   </div>
                   <div className="mt-2 rounded border border-sky-400/20 bg-sky-500/10 px-3 py-2 text-[11px] text-[color:var(--st-muted)]">
-                    The audit flow is the primary path. The seeded retail scene stays available as the reference baseline.
+                    Start from scratch, import existing scene data, run manual-assisted site intake, or generate an AI draft.
                   </div>
                   <div className="mt-3 space-y-2">
                     <ActionButton
@@ -2109,47 +1985,32 @@ export function StudioDashboardHome({
                       label="Open Seeded Retail Baseline"
                       description="Open the seeded retail scene as the reference baseline for comparison."
                       onClick={onOpenDemoScene ?? onOpenCoverageWorkspace}
-                        className="min-w-[280px] border-sky-300/35 bg-sky-500/12 shadow-[0_12px_42px_rgba(14,165,233,0.14)]"
-                        variant="primary"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowAdvancedStarterActions((current) => !current)}
-                        className="group flex w-full items-center justify-between rounded-2xl border border-[color:var(--st-border)] bg-[color:var(--st-panel)] px-3 py-2 text-left text-sm transition-colors hover:border-sky-300/25 hover:bg-[color:var(--st-panel-2)]"
-                        aria-expanded={showAdvancedStarterActions}
-                        aria-controls="advanced-starter-actions"
-                      >
-                        <span className="flex items-center gap-2 text-[color:var(--st-muted)]">
-                          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showAdvancedStarterActions ? "rotate-180" : "rotate-0")} />
-                          Explore advanced workflows
-                        </span>
-                        <span className="text-[10px] uppercase tracking-[0.16em] text-[color:var(--st-muted)]">{showAdvancedStarterActions ? "Hide" : "Show"}</span>
-                      </button>
-                      {showAdvancedStarterActions ? (
-                        <div id="advanced-starter-actions" className="mt-3 grid grid-cols-2 gap-2">
-                          {advancedStarterActions.map((action) => (
-                            <button
-                              key={action.label}
-                              type="button"
-                              onClick={action.onClick}
-                              aria-label={action.description}
-                              className="group flex min-h-[86px] flex-col justify-between rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.035] p-3 text-left transition-colors hover:border-sky-400/30 hover:bg-white/[0.055]"
-                            >
-                              <span className="flex items-center justify-between gap-2 text-[color:var(--st-accent)]">
-                                {action.icon}
-                                <span className="rounded-full border border-amber-400/25 bg-amber-500/10 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.12em] text-amber-200">
-                                  {action.detail}
-                                </span>
-                              </span>
-                              <span>
-                                <span className="block text-xs font-semibold text-white">{action.label}</span>
-                                <span className="mt-0.5 block text-[10px] leading-4 text-[color:var(--st-muted)]">{action.description}</span>
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-                      ) : null}
+                      className="min-w-[280px] border-sky-300/35 bg-sky-500/12 shadow-[0_12px_42px_rgba(14,165,233,0.14)]"
+                      variant="primary"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      {advancedStarterActions.map((action) => (
+                        <button
+                          key={action.label}
+                          type="button"
+                          onClick={action.onClick}
+                          aria-label={action.description}
+                          className="group flex min-h-[86px] flex-col justify-between rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.035] p-3 text-left transition-colors hover:border-sky-400/30 hover:bg-white/[0.055]"
+                        >
+                          <span className="flex items-center justify-between gap-2 text-[color:var(--st-accent)]">
+                            {action.icon}
+                            <span className="rounded-full border border-amber-400/25 bg-amber-500/10 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.12em] text-amber-200">
+                              {action.detail}
+                            </span>
+                          </span>
+                          <span>
+                            <span className="block text-xs font-semibold text-white">{action.label}</span>
+                            <span className="mt-0.5 block text-[10px] leading-4 text-[color:var(--st-muted)]">{action.description}</span>
+                          </span>
+                        </button>
+                      ))}
                     </div>
+                  </div>
                   </div>
                 </div>
             </div>
@@ -2554,7 +2415,7 @@ export function StudioDashboardHome({
             <div>
               <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]"> 
                 <TriangleAlert className="h-3.5 w-3.5 text-amber-300" />
-                Security Status
+                SECURITY STATUS
               </div>
               <div className="mt-2 text-[11px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">OUTCOME SUMMARY</div>
               <div className="mt-2 space-y-2">

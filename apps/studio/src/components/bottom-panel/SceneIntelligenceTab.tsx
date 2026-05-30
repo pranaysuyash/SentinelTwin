@@ -13,6 +13,7 @@ import {
   filterOperationalEvidenceEvents,
   findOperationalEvidenceEventsForNode,
   resolveOperationalEvidenceSceneAtTime,
+  resolveOperationalEvidenceSceneAtTimeWithContext,
   summarizeOperationalEvidenceTemporalTwin,
   summarizeOperationalEvidenceBranchHeads,
   summarizeOperationalEvidenceLifecycle,
@@ -23,7 +24,7 @@ import {
 } from "@/lib/operational-evidence";
 import { summarizeSceneTruthLadder } from "@/lib/truth-ladder";
 import { buildCompareShareLink } from "@/lib/compare-share-link";
-import { buildArchiveHandoffLink, type ArchiveRestoreBranch } from "@/lib/archive-handoff-link";
+import { buildArchiveHandoffLink } from "@/lib/archive-handoff-link";
 import { buildTimelineShareLink } from "@/lib/timeline-share-link";
 import { useStudioStore } from "@/store/studio-store";
 import type { SceneSnapshot } from "@/schema/security-scene";
@@ -342,9 +343,10 @@ export function SceneIntelligenceTab() {
     [filteredOperationalEvidenceEvents, selectedEvidenceEvent],
   );
   const selectedEvidenceReconstruction = useMemo(
-    () => (selectedEvidenceEvent ? resolveOperationalEvidenceSceneAtTime(filteredOperationalEvidenceEvents, selectedEvidenceEvent.timestamp, scene) : null),
+    () => (selectedEvidenceEvent ? resolveOperationalEvidenceSceneAtTimeWithContext(filteredOperationalEvidenceEvents, selectedEvidenceEvent.timestamp, scene) : null),
     [filteredOperationalEvidenceEvents, scene, selectedEvidenceEvent],
   );
+  const selectedEvidenceReconstructionScene = selectedEvidenceReconstruction?.scene ?? null;
   const evidenceTimeline = useMemo(
     () => operationalTimeline.entries.map((entry) => entry.event),
     [operationalTimeline.entries],
@@ -398,22 +400,35 @@ export function SceneIntelligenceTab() {
     }
   }, [operationalEvidenceEvents, setTimelineFocusRequest, timelineFocusRequest]);
   const selectedEvidenceReconstructionSummary = useMemo(
-    () => (selectedEvidenceReconstruction ? summarizeSceneEvidence(selectedEvidenceReconstruction) : null),
-    [selectedEvidenceReconstruction],
+    () => (selectedEvidenceReconstructionScene ? summarizeSceneEvidence(selectedEvidenceReconstructionScene) : null),
+    [selectedEvidenceReconstructionScene],
   );
+  const selectedEvidenceReconstructionSourceNote = useMemo(() => {
+    if (!selectedEvidenceReconstruction?.sourceEvent) return null;
+    if (selectedEvidenceReconstruction.isExactSnapshot) {
+      return `Exact snapshot captured in "${selectedEvidenceReconstruction.sourceEvent.title}".`;
+    }
+    const distanceText = selectedEvidenceReconstruction.sourceSnapshotDistance != null
+      ? `${selectedEvidenceReconstruction.sourceSnapshotDistance} event${selectedEvidenceReconstruction.sourceSnapshotDistance === 1 ? "" : "s"} earlier`
+      : "an earlier checkpoint";
+    const ageText = selectedEvidenceReconstruction.sourceSnapshotAgeMs != null
+      ? ` · ${Math.max(1, Math.round(selectedEvidenceReconstruction.sourceSnapshotAgeMs / 60000))}m earlier`
+      : "";
+    return `Derived from "${selectedEvidenceReconstruction.sourceEvent.title}" ${distanceText}${ageText}.`;
+  }, [selectedEvidenceReconstruction]);
   const selectedEvidenceReconstructionCounts = useMemo(
-    () => (selectedEvidenceReconstruction
+    () => (selectedEvidenceReconstructionScene
       ? [
-          { label: "Cameras", current: scene.cameras.length, value: selectedEvidenceReconstruction.cameras.length },
-          { label: "Lights", current: scene.securityLights.length, value: selectedEvidenceReconstruction.securityLights.length },
-          { label: "Obstructions", current: scene.obstructions.length, value: selectedEvidenceReconstruction.obstructions.length },
-          { label: "Zones", current: scene.criticalZones.length + scene.privacyZones.length, value: selectedEvidenceReconstruction.criticalZones.length + selectedEvidenceReconstruction.privacyZones.length },
-          { label: "Paths", current: scene.paths.length, value: selectedEvidenceReconstruction.paths.length },
-          { label: "Sensors", current: scene.sensors.length, value: selectedEvidenceReconstruction.sensors.length },
-          { label: "Snapshots", current: scene.snapshots.length, value: selectedEvidenceReconstruction.snapshots.length },
+          { label: "Cameras", current: scene.cameras.length, value: selectedEvidenceReconstructionScene.cameras.length },
+          { label: "Lights", current: scene.securityLights.length, value: selectedEvidenceReconstructionScene.securityLights.length },
+          { label: "Obstructions", current: scene.obstructions.length, value: selectedEvidenceReconstructionScene.obstructions.length },
+          { label: "Zones", current: scene.criticalZones.length + scene.privacyZones.length, value: selectedEvidenceReconstructionScene.criticalZones.length + selectedEvidenceReconstructionScene.privacyZones.length },
+          { label: "Paths", current: scene.paths.length, value: selectedEvidenceReconstructionScene.paths.length },
+          { label: "Sensors", current: scene.sensors.length, value: selectedEvidenceReconstructionScene.sensors.length },
+          { label: "Snapshots", current: scene.snapshots.length, value: selectedEvidenceReconstructionScene.snapshots.length },
         ]
       : []),
-    [scene, selectedEvidenceReconstruction],
+    [scene, selectedEvidenceReconstructionScene],
   );
   const branchComparison = useMemo(
     () => {
@@ -1171,6 +1186,19 @@ export function SceneIntelligenceTab() {
                   <>
                     <div className="mt-2 text-[11px] font-semibold text-[#edf2fb]">{selectedEvidenceReconstructionSummary?.label ?? "Reconstructed scene"}</div>
                     <div className="mt-1 text-[10px] text-[#74809a]">{selectedEvidenceReconstructionSummary?.detail ?? "A reconstructed scene snapshot is available for this checkpoint."}</div>
+                    {selectedEvidenceReconstruction ? (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        <Badge variant={selectedEvidenceReconstruction.isExactSnapshot ? "green" : "amber"}>
+                          {selectedEvidenceReconstruction.isExactSnapshot ? "exact snapshot" : "derived state"}
+                        </Badge>
+                        {selectedEvidenceReconstruction.sourceSnapshotDistance != null && selectedEvidenceReconstruction.sourceSnapshotDistance > 0 ? (
+                          <Badge variant="gray">{selectedEvidenceReconstruction.sourceSnapshotDistance} events back</Badge>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    {selectedEvidenceReconstructionSourceNote ? (
+                      <div className="mt-1 text-[10px] text-[#74809a]">{selectedEvidenceReconstructionSourceNote}</div>
+                    ) : null}
                     {selectedEvidenceTimelineEntry ? (
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         <Badge variant={selectedEvidenceTimelineEntry.isCheckpoint ? "green" : "gray"}>
@@ -1188,6 +1216,13 @@ export function SceneIntelligenceTab() {
                       ))}
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleRestoreCheckpoint(selectedEvidenceEvent.id, "recovered")}
+                        className="rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1.5 text-[10px] font-medium text-sky-100 hover:bg-sky-500/15"
+                      >
+                        Restore state at T
+                      </button>
                       <button
                         type="button"
                         onClick={() => pivotToCompareOrReport("beforeafter")}
@@ -1940,6 +1975,19 @@ export function SceneIntelligenceTab() {
                         </div>
                         <div className="mt-2 text-[11px] font-semibold text-[#edf2ff]">{selectedEvidenceReconstructionSummary?.label ?? "Reconstructed scene"}</div>
                         <div className="mt-1 text-[10px] text-[#74809a]">{selectedEvidenceReconstructionSummary?.detail ?? "A reconstructed scene snapshot is available for this event."}</div>
+                        {selectedEvidenceReconstruction ? (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            <Badge variant={selectedEvidenceReconstruction.isExactSnapshot ? "green" : "amber"}>
+                              {selectedEvidenceReconstruction.isExactSnapshot ? "exact snapshot" : "derived state"}
+                            </Badge>
+                            {selectedEvidenceReconstruction.sourceSnapshotDistance != null && selectedEvidenceReconstruction.sourceSnapshotDistance > 0 ? (
+                              <Badge variant="gray">{selectedEvidenceReconstruction.sourceSnapshotDistance} events back</Badge>
+                            ) : null}
+                          </div>
+                        ) : null}
+                        {selectedEvidenceReconstructionSourceNote ? (
+                          <div className="mt-1 text-[10px] text-[#74809a]">{selectedEvidenceReconstructionSourceNote}</div>
+                        ) : null}
                         <div className="mt-2 grid gap-2 sm:grid-cols-3 xl:grid-cols-4">
                           {selectedEvidenceReconstructionCounts.map((item) => (
                             <div key={item.label} className="rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">

@@ -17,7 +17,8 @@ describe("Studio launcher shell", () => {
     expect(source).toContain("onOpenPathReplay={openPathReplay}");
     expect(source).toContain("onOpenCompareFixes={openCompareFixes}");
     expect(source).toContain("onOpenIssues={openIssues}");
-    expect(source).toContain('const openReport = () => launchWorkspace("report", "report", "report");');
+    expect(source).toContain('const openReport = () => {');
+    expect(source).toContain('launchWorkspace("report", "report", "report");');
     expect(source).toContain("onRunSimulation={runSimulation}");
     expect(source).toContain("onStartProject={() => {");
     expect(source).toContain("openDemoWorkspace();");

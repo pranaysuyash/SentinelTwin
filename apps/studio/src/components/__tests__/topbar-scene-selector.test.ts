@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 
-const topBarPath = "./src/components/layout/TopBar.tsx";
+const topBarPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../layout/TopBar.tsx");
 
 describe("TopBar scene selector", () => {
   test("supports duplicate, rename, import, export, and delete scene actions", () => {
@@ -17,6 +19,6 @@ describe("TopBar scene selector", () => {
     expect(source).toContain("Delete scene");
     expect(source).toContain("Duplicate scene");
     expect(source).toContain("Rename scene");
-    expect(source).toContain("Duplicate the demo first to rename it");
+    expect(source).toContain("Duplicate the reference baseline first to rename it");
   });
 });

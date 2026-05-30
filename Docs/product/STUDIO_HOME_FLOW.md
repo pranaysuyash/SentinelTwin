@@ -1,6 +1,6 @@
 # Studio Home Flow (V0.1)
 
-Updated: 2026-05-29
+Updated: 2026-05-30
 
 ## Current Root Hierarchy
 
@@ -18,6 +18,8 @@ This is now positioned as a product-first root: users arrive at a job-oriented h
 `StudioDashboardHome` is the launch surface for:
 
 - Current workspace preview and risk/status summary
+- Top identity copy aligned to `SentinelTwin Studio` + `Security Simulation Workspace`
+- Root top controls explicitly expose `Workspace selector`, `Status`, `Last run`, and `Environment mode` labels for operator clarity
 - Primary workspace actions:
   - Coverage
   - Camera View / Camera Wall

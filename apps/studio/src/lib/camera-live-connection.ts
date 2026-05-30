@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { OnvifClient, summarizeOnvifDeviceInformation, type OnvifDeviceInformation } from "@/lib/onvif-client";
+
 type CameraLiveConnectionMode = "rtsp" | "mjpeg" | "http" | "onvif" | "proxy";
 type CameraLiveConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
 export type CameraLiveAuthMode =
@@ -262,6 +264,7 @@ type ResolvedLiveConnectionPayload = {
   responseStatus: number | null;
   responseStatusText: string | null;
   authChallengeHeader: string | null;
+  onvifDeviceInformation: OnvifDeviceInformation | null;
 };
 
 async function resolveLiveConnectionPayload(request: CameraLiveConnectionProbeRequest): Promise<ResolvedLiveConnectionPayload> {
@@ -274,6 +277,7 @@ async function resolveLiveConnectionPayload(request: CameraLiveConnectionProbeRe
       responseStatus: null,
       responseStatusText: null,
       authChallengeHeader: null,
+      onvifDeviceInformation: null,
     };
   }
 
@@ -287,6 +291,7 @@ async function resolveLiveConnectionPayload(request: CameraLiveConnectionProbeRe
       responseStatus: null,
       responseStatusText: null,
       authChallengeHeader: null,
+      onvifDeviceInformation: null,
     };
   }
 
@@ -300,6 +305,7 @@ async function resolveLiveConnectionPayload(request: CameraLiveConnectionProbeRe
       responseStatus: null,
       responseStatusText: null,
       authChallengeHeader: null,
+      onvifDeviceInformation: null,
     };
   }
 
@@ -317,31 +323,18 @@ async function resolveLiveConnectionPayload(request: CameraLiveConnectionProbeRe
 
   if (request.protocol === "onvif") {
     try {
-      const soapEnvelope = `<?xml version="1.0" encoding="utf-8"?>
-        <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope">
-          <s:Body>
-            <GetDeviceInformation xmlns="http://www.onvif.org/ver10/device/wsdl" />
-          </s:Body>
-        </s:Envelope>`;
-      const soapResponse = await fetch(probeUrl, {
-        method: "POST",
-        headers: {
-          ...headers,
-          "content-type": "application/soap+xml; charset=utf-8",
-          soapaction: "http://www.onvif.org/ver10/device/wsdl/GetDeviceInformation",
-        },
-        body: soapEnvelope,
-      });
-      const response = await readResponse(soapResponse);
-      if (response.raw.length > 0 || !soapResponse.ok) {
+      const onvifClient = new OnvifClient({ address: probeUrl });
+      const onvifProbe = await onvifClient.connect();
+      if (onvifProbe.raw.length > 0 || onvifProbe.responseStatus !== null) {
         return {
-          raw: response.raw,
+          raw: onvifProbe.raw,
           endpointUrl,
           liveFeedUrl,
           feedLabel: request.feedLabel ?? null,
-          responseStatus: response.responseStatus,
-          responseStatusText: response.responseStatusText,
-          authChallengeHeader: response.authChallengeHeader,
+          responseStatus: onvifProbe.responseStatus,
+          responseStatusText: onvifProbe.responseStatusText,
+          authChallengeHeader: onvifProbe.authChallengeHeader,
+          onvifDeviceInformation: onvifProbe.session.deviceInformation ?? null,
         };
       }
     } catch {
@@ -363,6 +356,7 @@ async function resolveLiveConnectionPayload(request: CameraLiveConnectionProbeRe
     responseStatus: resolved.responseStatus,
     responseStatusText: resolved.responseStatusText,
     authChallengeHeader: resolved.authChallengeHeader,
+    onvifDeviceInformation: null,
   };
 }
 
@@ -392,6 +386,7 @@ export async function probeCameraLiveConnection(request: CameraLiveConnectionPro
   const errors: string[] = [...jsonCandidates.errors, ...xmlCandidates.errors];
   const sourceCount = candidates.length;
   const challengeFromHeader = parseAuthChallengeHeader(payload.authChallengeHeader);
+  const onvifDeviceSummary = summarizeOnvifDeviceInformation(payload.onvifDeviceInformation);
 
   const parsedCandidate = candidates
     .map((candidate) => CameraLiveConnectionRecordSchema.safeParse(candidate))
@@ -419,18 +414,21 @@ export async function probeCameraLiveConnection(request: CameraLiveConnectionPro
     ? parsedCandidate.data.authChallengeRealm
     : challengeFromHeader.realm;
   const receivedAuthChallenge = request.action !== "disconnect" && (responseStatus === 401 || responseStatus === 403 || Boolean(authChallengeHeader));
+  const onvifDeviceProbeSucceeded = request.action !== "disconnect" && request.protocol === "onvif" && (responseStatus === 200 || Boolean(payload.onvifDeviceInformation));
   const status = request.action === "disconnect"
     ? "disconnected"
     : parsedCandidate?.success
       ? parsedCandidate.data.liveConnectionStatus ?? "connected"
       : receivedAuthChallenge
         ? "connecting"
+        : onvifDeviceProbeSucceeded
+          ? "connected"
         : "error";
   const notes = request.action === "disconnect"
     ? (request.notes?.trim() || null)
     : parsedCandidate?.success && parsedCandidate.data.notes
       ? parsedCandidate.data.notes.trim()
-      : request.notes?.trim() || null;
+      : request.notes?.trim() || (onvifDeviceSummary ? `ONVIF device information: ${onvifDeviceSummary}.` : null);
   const parsedAuthMode = parsedCandidate?.success ? parsedCandidate.data.authMode : undefined;
   const parsedAuthState = parsedCandidate?.success ? parsedCandidate.data.authState : undefined;
   const parsedAuthRealm = parsedCandidate?.success ? parsedCandidate.data.authRealm : undefined;
@@ -451,6 +449,8 @@ export async function probeCameraLiveConnection(request: CameraLiveConnectionPro
     ?? parsedAuthState
     ?? (request.action === "disconnect"
       ? "unauthenticated"
+      : onvifDeviceProbeSucceeded
+        ? "authenticated"
       : status === "connected"
         ? "authenticated"
         : status === "error"

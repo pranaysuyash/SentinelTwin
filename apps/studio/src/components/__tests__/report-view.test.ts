@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const reportViewPath = "./src/components/view/ReportView.tsx";
+const reportViewPath = new URL("../view/ReportView.tsx", import.meta.url);
 
 describe("ReportView", () => {
   test("renders the report workspace with outcome and report-lite panels", () => {

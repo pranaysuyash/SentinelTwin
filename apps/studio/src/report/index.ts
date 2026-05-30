@@ -15,8 +15,154 @@ type ReportIssue = SimulationResult["issues"][number];
 type ReportRecommendation = SimulationResult["recommendations"][number];
 type ReportCameraQuality = "none" | "detection" | "observation" | "recognition" | "identification" | "overview" | "outline" | "discern" | "perceive" | "characterize" | "validate" | "scrutinize";
 
+export type ReportAudience = "operator" | "auditor" | "insurer" | "installer" | "privacy_reviewer";
+export type ReportVisibility = "internal" | "shared" | "privacy_safe";
+
 function qualityRank(quality: ReportCameraQuality) {
   return QUALITY_ORDER.indexOf(quality as typeof QUALITY_ORDER[number]);
+}
+
+interface ReportAudienceProfile {
+  label: string;
+  defaultTitle: string;
+  framing: string;
+  planningNote: string;
+}
+
+interface ReportVisibilityProfile {
+  label: string;
+  framing: string;
+  summary: string;
+}
+
+export interface ReportExportPreset {
+  id: string;
+  title: string;
+  audience: ReportAudience;
+  visibility: ReportVisibility;
+  summary: string;
+}
+
+const REPORT_AUDIENCE_PROFILES: Record<ReportAudience, ReportAudienceProfile> = {
+  operator: {
+    label: "Operator",
+    defaultTitle: "Security Coverage Audit Report",
+    framing: "Operational coverage review for site operators and security leads.",
+    planningNote: "Operator-facing planning summary with actionable hardening context.",
+  },
+  auditor: {
+    label: "Auditor",
+    defaultTitle: "Security Audit Evidence Report",
+    framing: "Evidence-oriented review for auditors and control owners.",
+    planningNote: "Audit-facing evidence pack with provenance, truth ladder, and temporal history.",
+  },
+  insurer: {
+    label: "Insurer",
+    defaultTitle: "Security Risk Exposure Brief",
+    framing: "Risk, resilience, and recovery framing for underwriting or exposure review.",
+    planningNote: "Exposure-oriented brief for underwriting, loss prevention, or risk review.",
+  },
+  installer: {
+    label: "Installer",
+    defaultTitle: "Installation Acceptance Report",
+    framing: "Installation, calibration, and acceptance framing for implementation teams.",
+    planningNote: "Acceptance-oriented summary for installers, integrators, and commissioning teams.",
+  },
+  privacy_reviewer: {
+    label: "Privacy Reviewer",
+    defaultTitle: "Privacy Review Brief",
+    framing: "Visibility, retention, and overcollection framing for privacy review.",
+    planningNote: "Privacy-facing brief that highlights visibility boundaries and evidence traceability.",
+  },
+};
+
+const REPORT_VISIBILITY_PROFILES: Record<ReportVisibility, ReportVisibilityProfile> = {
+  internal: {
+    label: "Internal",
+    framing: "Full-detail export for the current workspace and trusted collaborators.",
+    summary: "No redaction. Keeps the full evidence trail and provenance detail.",
+  },
+  shared: {
+    label: "Shared",
+    framing: "Stakeholder-friendly export with the most sensitive helper notes reduced.",
+    summary: "Trims confidence history and softens evidence detail while preserving the audit spine.",
+  },
+  privacy_safe: {
+    label: "Privacy Safe",
+    framing: "Minimized export for privacy review or external distribution.",
+    summary: "Redacts evidence detail and provenance notes while preserving headline metrics and audience framing.",
+  },
+};
+
+const REPORT_EXPORT_PRESETS: ReportExportPreset[] = [
+  {
+    id: "operator-internal",
+    title: "Operator Internal",
+    audience: "operator",
+    visibility: "internal",
+    summary: "Full-detail operational export for the active workspace owner.",
+  },
+  {
+    id: "auditor-shared",
+    title: "Auditor Shared",
+    audience: "auditor",
+    visibility: "shared",
+    summary: "Evidence-oriented export with a narrower helper-note footprint.",
+  },
+  {
+    id: "insurer-shared",
+    title: "Insurer Brief",
+    audience: "insurer",
+    visibility: "shared",
+    summary: "Risk and resilience framing for underwriting or exposure review.",
+  },
+  {
+    id: "installer-shared",
+    title: "Installer Handoff",
+    audience: "installer",
+    visibility: "shared",
+    summary: "Commissioning-friendly export with reduced internal commentary.",
+  },
+  {
+    id: "privacy-safe",
+    title: "Privacy Safe",
+    audience: "privacy_reviewer",
+    visibility: "privacy_safe",
+    summary: "Minimized export for privacy review or public sharing.",
+  },
+];
+
+const REPORT_UNCERTAINTY_SAMPLE_COUNT = 3;
+
+export function getReportAudienceProfile(audience: ReportAudience): ReportAudienceProfile {
+  return REPORT_AUDIENCE_PROFILES[audience];
+}
+
+export function getReportVisibilityProfile(visibility: ReportVisibility): ReportVisibilityProfile {
+  return REPORT_VISIBILITY_PROFILES[visibility];
+}
+
+export function getReportExportPresets(): ReportExportPreset[] {
+  return REPORT_EXPORT_PRESETS.map((preset) => ({ ...preset }));
+}
+
+export function getReportExportPresetById(presetId: string): ReportExportPreset | undefined {
+  return REPORT_EXPORT_PRESETS.find((preset) => preset.id === presetId);
+}
+
+function resolveReportAudience(audience?: ReportAudience): ReportAudience {
+  return audience ?? "operator";
+}
+
+function resolveReportVisibility(visibility?: ReportVisibility): ReportVisibility {
+  return visibility ?? "internal";
+}
+
+function formatCheckpointProvenance(provenance: OperationalEvidenceTemporalTwinSummary["latestCheckpointProvenance"] | null | undefined) {
+  if (!provenance) return "Unavailable.";
+  const origin = provenance.isExactSnapshot ? "Exact snapshot" : "Derived reconstruction";
+  const distance = provenance.sourceSnapshotDistance != null ? `, ${provenance.sourceSnapshotDistance} events back` : "";
+  return `${origin} from ${provenance.sourceEventTitle}${distance}`;
 }
 // ── Report Data Interface ──
 
@@ -25,6 +171,12 @@ export interface ReportData {
   siteName: string;
   generatedAt: number;
   sceneName: string;
+  audience: ReportAudience;
+  audienceLabel: string;
+  audienceFraming: string;
+  visibility: ReportVisibility;
+  visibilityLabel: string;
+  visibilityFraming: string;
   dimensions: { width: number; depth: number; height: number };
   assumptions: {
     doriStandard: string;
@@ -64,6 +216,8 @@ export interface ReportData {
     bestZoneQuality: string;
     zonesFailed: number;
     issues: string[];
+    ndaaCompliant: boolean;
+    privacyMaskingEnabled: boolean;
   }[];
   redundancyMatrix?: RedundancyMatrixReport;
   issues: { severity: string; description: string; area: string; recommendation: string }[];
@@ -94,6 +248,8 @@ export interface ReportData {
   } & Pick<OperationalEvidenceTemporalTwinSummary,
     | "latestCheckpoint"
     | "latestPublishedCheckpoint"
+    | "latestCheckpointProvenance"
+    | "latestPublishedCheckpointProvenance"
     | "currentSceneSummary"
     | "currentVsLatestCheckpointDelta"
     | "currentVsLatestPublishedCheckpointDelta"
@@ -256,11 +412,17 @@ export function buildReportData(
   result: SimulationResult,
   options?: {
     title?: string;
+    audience?: ReportAudience;
+    visibility?: ReportVisibility;
     temporalProfile?: TemporalProfileSummary;
     adversarialPath?: AdversarialPathSummary;
     operationalEvidenceEvents?: OperationalEvidenceEvent[];
   },
 ): ReportData {
+  const audience = resolveReportAudience(options?.audience);
+  const audienceProfile = getReportAudienceProfile(audience);
+  const visibility = resolveReportVisibility(options?.visibility);
+  const visibilityProfile = getReportVisibilityProfile(visibility);
   const zonesPassing = result.criticalZoneResults.filter((z) => z.status === "pass").length;
   const totalZones = result.criticalZoneResults.length;
   const verifiedRecs = result.recommendations.filter((r) => r.verified).length;
@@ -276,7 +438,7 @@ export function buildReportData(
   const provenanceNotes = (scene.changeLog ?? []).filter((entry) => entry.startsWith("Provenance:") || entry.startsWith("Provenance confidence:"));
   const sourceNotes = provenanceNotes.filter((entry) => entry.startsWith("Provenance:"));
   const confidenceNotes = provenanceNotes.filter((entry) => entry.startsWith("Provenance confidence:"));
-  const coverageUncertainty = computeCoverageUncertainty(scene, { sampleCount: 12 });
+  const coverageUncertainty = computeCoverageUncertainty(scene, { sampleCount: REPORT_UNCERTAINTY_SAMPLE_COUNT });
   const coverageEntropy = computeCoverageEntropy(result.coverageCells);
   const postureVariation = computeCoveragePostureVariation(scene);
   const redundancyMatrix = buildRedundancyMatrixReport(scene, result);
@@ -290,10 +452,16 @@ export function buildReportData(
   const cameraMap = new Map(scene.cameras.map((camera) => [camera.id, camera]));
 
   return {
-    title: options?.title ?? "Security Coverage Audit Report",
+    title: options?.title ?? audienceProfile.defaultTitle,
     siteName: scene.name,
     generatedAt: Date.now(),
     sceneName: scene.name,
+    audience,
+    audienceLabel: audienceProfile.label,
+    audienceFraming: audienceProfile.framing,
+    visibility,
+    visibilityLabel: visibilityProfile.label,
+    visibilityFraming: visibilityProfile.framing,
     dimensions: { width: scene.dimensions.width, depth: scene.dimensions.depth, height: scene.dimensions.height },
     assumptions: {
       doriStandard: scene.assumptions.doriStandard,
@@ -335,6 +503,8 @@ export function buildReportData(
       ), "none" as ReportCameraQuality),
       zonesFailed: c.criticalZonesFailed?.length ?? 0,
       issues: [],
+      ndaaCompliant: cameraMap.get(c.cameraId)?.ndaaCompliant ?? true,
+      privacyMaskingEnabled: cameraMap.get(c.cameraId)?.privacyMaskingEnabled ?? false,
     })),
     redundancyMatrix: redundancyMatrix ?? undefined,
     issues: result.issues.map((i) => ({
@@ -558,9 +728,15 @@ export function buildCompareReportData(
   beforeResult: SimulationResult,
   afterScene: ReportScene,
   afterResult: SimulationResult,
+  options?: {
+    audience?: ReportAudience;
+    visibility?: ReportVisibility;
+  },
 ): CompareReportData {
-  const before = buildCompareReportSnapshot(beforeScene, beforeResult);
-  const after = buildCompareReportSnapshot(afterScene, afterResult);
+  const audience = resolveReportAudience(options?.audience);
+  const visibility = resolveReportVisibility(options?.visibility);
+  const before = buildCompareReportSnapshot(beforeScene, beforeResult, audience, visibility);
+  const after = buildCompareReportSnapshot(afterScene, afterResult, audience, visibility);
 
   const zoneChanges = before.zones.map((z) => {
     const afterZone = after.zones.find((az) => az.label === z.label);
@@ -591,7 +767,14 @@ export function buildCompareReportData(
   };
 }
 
-function buildCompareReportSnapshot(scene: ReportScene, result: SimulationResult): ReportData {
+function buildCompareReportSnapshot(
+  scene: ReportScene,
+  result: SimulationResult,
+  audience: ReportAudience,
+  visibility: ReportVisibility,
+): ReportData {
+  const audienceProfile = getReportAudienceProfile(audience);
+  const visibilityProfile = getReportVisibilityProfile(visibility);
   const zonesPassing = result.criticalZoneResults.filter((zone) => zone.status === "pass").length;
   const totalZones = result.criticalZoneResults.length;
   const verifiedRecs = result.recommendations.filter((rec) => rec.verified).length;
@@ -613,10 +796,16 @@ function buildCompareReportSnapshot(scene: ReportScene, result: SimulationResult
   const cameraMap = new Map(scene.cameras.map((camera) => [camera.id, camera]));
 
   return {
-    title: "Security Coverage Audit Report",
+    title: audienceProfile.defaultTitle,
     siteName: scene.name,
     generatedAt: Date.now(),
     sceneName: scene.name,
+    audience,
+    audienceLabel: audienceProfile.label,
+    audienceFraming: audienceProfile.framing,
+    visibility,
+    visibilityLabel: visibilityProfile.label,
+    visibilityFraming: visibilityProfile.framing,
     dimensions: { width: scene.dimensions.width, depth: scene.dimensions.depth, height: scene.dimensions.height },
     assumptions: {
       doriStandard: scene.assumptions.doriStandard,
@@ -765,6 +954,8 @@ export function exportAsHtml(report: ReportData): string {
   <div class="cover">
     <h1>${escapeHtml(report.title)}</h1>
     <div class="subtitle">${escapeHtml(report.siteName)}</div>
+    <div class="meta">${escapeHtml(report.audienceLabel)} audience · ${escapeHtml(report.audienceFraming)}</div>
+    <div class="meta">${escapeHtml(report.visibilityLabel)} visibility · ${escapeHtml(report.visibilityFraming)}</div>
     <div class="meta">
       Generated: ${new Date(report.generatedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
       &middot; ${report.dimensions.width}m × ${report.dimensions.depth}m × ${report.dimensions.height}m
@@ -776,6 +967,8 @@ export function exportAsHtml(report: ReportData): string {
   <p>This report evaluates the security camera coverage for <strong>${escapeHtml(report.siteName)}</strong>
   (${report.dimensions.width}m × ${report.dimensions.depth}m, ${report.cameras.length} cameras)
   using ${escapeHtml(report.standardsRef)} as a planning-oriented configuration reference.</p>
+  <p><strong>Audience framing:</strong> ${escapeHtml(report.audienceFraming)}</p>
+  <p><strong>Visibility framing:</strong> ${escapeHtml(report.visibilityFraming)}</p>
 
   <div class="summary-grid">
     <div class="summary-card">
@@ -899,9 +1092,11 @@ export function exportAsHtml(report: ReportData): string {
       <tr><th>Branch Heads</th><td>${report.temporalTwin.branchHeadCount}</td></tr>
       <tr><th>Current Scene</th><td>${escapeHtml(report.temporalTwin.currentSceneSummary?.detail ?? "Unavailable.")}</td></tr>
       <tr><th>Latest Checkpoint</th><td>${escapeHtml(report.temporalTwin.latestCheckpoint ? `${report.temporalTwin.latestCheckpoint.title} (${report.temporalTwin.latestCheckpoint.branchLabel})` : "Unavailable.")}</td></tr>
+      <tr><th>Latest Checkpoint Provenance</th><td>${escapeHtml(formatCheckpointProvenance(report.temporalTwin.latestCheckpointProvenance))}</td></tr>
       <tr><th>Checkpoint Age</th><td>${report.temporalTwin.latestCheckpointAgeMs != null ? `${Math.max(1, Math.round(report.temporalTwin.latestCheckpointAgeMs / 60000))}m` : "Unavailable."}</td></tr>
       <tr><th>Checkpoint Delta</th><td>${escapeHtml(report.temporalTwin.currentVsLatestCheckpointDelta ? `cameras ${report.temporalTwin.currentVsLatestCheckpointDelta.cameras >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestCheckpointDelta.cameras}, zones ${report.temporalTwin.currentVsLatestCheckpointDelta.zones >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestCheckpointDelta.zones}, sensors ${report.temporalTwin.currentVsLatestCheckpointDelta.sensors >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestCheckpointDelta.sensors}` : "Unavailable.")}</td></tr>
       <tr><th>Latest Published Checkpoint</th><td>${escapeHtml(report.temporalTwin.latestPublishedCheckpoint ? `${report.temporalTwin.latestPublishedCheckpoint.title} (${report.temporalTwin.latestPublishedCheckpoint.branchLabel})` : "Unavailable.")}</td></tr>
+      <tr><th>Published Checkpoint Provenance</th><td>${escapeHtml(formatCheckpointProvenance(report.temporalTwin.latestPublishedCheckpointProvenance))}</td></tr>
       <tr><th>Published Age</th><td>${report.temporalTwin.latestPublishedCheckpointAgeMs != null ? `${Math.max(1, Math.round(report.temporalTwin.latestPublishedCheckpointAgeMs / 60000))}m` : "Unavailable."}</td></tr>
       <tr><th>Published Delta</th><td>${escapeHtml(report.temporalTwin.currentVsLatestPublishedCheckpointDelta ? `cameras ${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras}, zones ${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.zones >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.zones}, sensors ${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.sensors >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.sensors}` : "Unavailable.")}</td></tr>
     </table>
@@ -1178,6 +1373,10 @@ export function exportAsMarkdown(report: ReportData): string {
     `# ${report.title}`,
     "",
     `**Site:** ${report.siteName}`,
+    `**Audience:** ${report.audienceLabel}`,
+    `**Framing:** ${report.audienceFraming}`,
+    `**Visibility:** ${report.visibilityLabel}`,
+    `**Visibility Framing:** ${report.visibilityFraming}`,
     `**Date:** ${new Date(report.generatedAt).toLocaleDateString()}`,
     `**Dimensions:** ${report.dimensions.width}m × ${report.dimensions.depth}m × ${report.dimensions.height}m`,
     `**Standard:** ${report.standardsRef}`,
@@ -1200,7 +1399,7 @@ export function exportAsMarkdown(report: ReportData): string {
     `- Time of Day: ${report.assumptions.timeOfDay}`,
     `- PPM Thresholds: ${report.assumptions.ppm.detection} / ${report.assumptions.ppm.observation} / ${report.assumptions.ppm.recognition} / ${report.assumptions.ppm.identification}`,
     "",
-    "_These outputs are estimated planning indicators under current assumptions, not legal or forensic guarantees._",
+    `_${report.audienceFraming} These outputs are estimated planning indicators under current assumptions, not legal or forensic guarantees._`,
     "",
     "## Provenance",
     `- Scene Source: ${report.provenance.sceneSourceLabel} (${report.provenance.sceneSource})`,
@@ -1247,9 +1446,11 @@ export function exportAsMarkdown(report: ReportData): string {
           `- Branch heads: ${report.temporalTwin.branchHeadCount}`,
           `- Current scene: ${report.temporalTwin.currentSceneSummary?.detail ?? "Unavailable."}`,
           `- Latest checkpoint: ${report.temporalTwin.latestCheckpoint ? `${report.temporalTwin.latestCheckpoint.title} (${report.temporalTwin.latestCheckpoint.branchLabel})` : "Unavailable."}`,
+          `- Latest checkpoint provenance: ${formatCheckpointProvenance(report.temporalTwin.latestCheckpointProvenance)}`,
           `- Checkpoint age: ${report.temporalTwin.latestCheckpointAgeMs != null ? `${Math.max(1, Math.round(report.temporalTwin.latestCheckpointAgeMs / 60000))}m` : "Unavailable."}`,
           `- Checkpoint delta: ${report.temporalTwin.currentVsLatestCheckpointDelta ? `cameras ${report.temporalTwin.currentVsLatestCheckpointDelta.cameras >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestCheckpointDelta.cameras}, zones ${report.temporalTwin.currentVsLatestCheckpointDelta.zones >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestCheckpointDelta.zones}, sensors ${report.temporalTwin.currentVsLatestCheckpointDelta.sensors >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestCheckpointDelta.sensors}` : "Unavailable."}`,
           `- Latest published checkpoint: ${report.temporalTwin.latestPublishedCheckpoint ? `${report.temporalTwin.latestPublishedCheckpoint.title} (${report.temporalTwin.latestPublishedCheckpoint.branchLabel})` : "Unavailable."}`,
+          `- Published checkpoint provenance: ${formatCheckpointProvenance(report.temporalTwin.latestPublishedCheckpointProvenance)}`,
           `- Published age: ${report.temporalTwin.latestPublishedCheckpointAgeMs != null ? `${Math.max(1, Math.round(report.temporalTwin.latestPublishedCheckpointAgeMs / 60000))}m` : "Unavailable."}`,
           `- Published delta: ${report.temporalTwin.currentVsLatestPublishedCheckpointDelta ? `cameras ${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras}, zones ${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.zones >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.zones}, sensors ${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.sensors >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.sensors}` : "Unavailable."}`,
           "",
@@ -1268,10 +1469,10 @@ export function exportAsMarkdown(report: ReportData): string {
     "## Camera Analysis",
     "",
     ...(report.cameras.length > 0
-      ? ["| Camera | Coverage | Best Zone Quality | Zones Failed | Zones Covered |",
-         "|--------|----------|-------------------|--------------|---------------|",
+      ? ["| Camera | Coverage | Best Zone Quality | Zones Failed | NDAA | Privacy Mask |",
+         "|--------|----------|-------------------|--------------|------|--------------|",
          ...report.cameras.map((c) =>
-           `| ${c.name} | ${c.coveragePct.toFixed(1)}% | ${c.bestZoneQuality} | ${c.zonesFailed} | ${c.zonesCovered.join(", ") || "none"} |`,
+           `| ${c.name} | ${c.coveragePct.toFixed(1)}% | ${c.bestZoneQuality} | ${c.zonesFailed} | ${c.ndaaCompliant ? "Yes" : "No"} | ${c.privacyMaskingEnabled ? "Active" : "Off"} |`,
          )]
       : ["No cameras configured."]),
     "",
@@ -1424,6 +1625,10 @@ export function exportAsText(report: ReportData): string {
     `${"=".repeat(report.title.length)}`,
     "",
     `Site: ${report.siteName}`,
+    `Audience: ${report.audienceLabel}`,
+    `Framing: ${report.audienceFraming}`,
+    `Visibility: ${report.visibilityLabel}`,
+    `Visibility Framing: ${report.visibilityFraming}`,
     `Date: ${new Date(report.generatedAt).toLocaleDateString()}`,
     `Dimensions: ${report.dimensions.width}m x ${report.dimensions.depth}m x ${report.dimensions.height}m`,
     `Standard: ${report.standardsRef}`,
@@ -1484,9 +1689,11 @@ export function exportAsText(report: ReportData): string {
           `  Branch Heads:            ${report.temporalTwin.branchHeadCount}`,
           `  Current Scene:           ${report.temporalTwin.currentSceneSummary?.detail ?? "Unavailable."}`,
           `  Latest Checkpoint:       ${report.temporalTwin.latestCheckpoint ? `${report.temporalTwin.latestCheckpoint.title} (${report.temporalTwin.latestCheckpoint.branchLabel})` : "Unavailable."}`,
+          `  Latest Checkpoint Provenance: ${formatCheckpointProvenance(report.temporalTwin.latestCheckpointProvenance)}`,
           `  Checkpoint Age:          ${report.temporalTwin.latestCheckpointAgeMs != null ? `${Math.max(1, Math.round(report.temporalTwin.latestCheckpointAgeMs / 60000))}m` : "Unavailable."}`,
           `  Checkpoint Delta:        ${report.temporalTwin.currentVsLatestCheckpointDelta ? `cameras ${report.temporalTwin.currentVsLatestCheckpointDelta.cameras >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestCheckpointDelta.cameras}, zones ${report.temporalTwin.currentVsLatestCheckpointDelta.zones >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestCheckpointDelta.zones}, sensors ${report.temporalTwin.currentVsLatestCheckpointDelta.sensors >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestCheckpointDelta.sensors}` : "Unavailable."}`,
           `  Latest Published Checkpoint: ${report.temporalTwin.latestPublishedCheckpoint ? `${report.temporalTwin.latestPublishedCheckpoint.title} (${report.temporalTwin.latestPublishedCheckpoint.branchLabel})` : "Unavailable."}`,
+          `  Published Checkpoint Provenance: ${formatCheckpointProvenance(report.temporalTwin.latestPublishedCheckpointProvenance)}`,
           `  Published Age:           ${report.temporalTwin.latestPublishedCheckpointAgeMs != null ? `${Math.max(1, Math.round(report.temporalTwin.latestPublishedCheckpointAgeMs / 60000))}m` : "Unavailable."}`,
           `  Published Delta:         ${report.temporalTwin.currentVsLatestPublishedCheckpointDelta ? `cameras ${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras}, zones ${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.zones >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.zones}, sensors ${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.sensors >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.sensors}` : "Unavailable."}`,
           "",
@@ -1593,7 +1800,7 @@ export function exportAsText(report: ReportData): string {
       : []),
     "",
     `Modeled requirements: ${report.meetsModeledZoneRequirements ? "MET" : "NOT MET"}`,
-    "Planning estimate only; not a compliance certification.",
+    `Planning estimate only; not a compliance certification. ${report.audienceFraming}`,
     `--- Generated by SentinelTwin Studio ---`,
   ];
   return lines.join("\n");
@@ -1684,6 +1891,8 @@ export function exportCompareAsHtml(
 <body>
   <h1>Before/After Comparison</h1>
   <p>${escapeHtml(compare.before.siteName)} &middot; ${new Date().toLocaleDateString()}</p>
+  <p><strong>Audience:</strong> ${escapeHtml(compare.before.audienceLabel)} · ${escapeHtml(compare.before.audienceFraming)}</p>
+  <p><strong>Visibility:</strong> ${escapeHtml(compare.before.visibilityLabel)} · ${escapeHtml(compare.before.visibilityFraming)}</p>
 
   <h2>Delta Summary</h2>
   <div class="delta-summary">
@@ -1851,6 +2060,10 @@ export function exportCompareAsMarkdown(compare: CompareReportData): string {
     "# Before/After Comparison",
     "",
     `**Site:** ${compare.before.siteName}`,
+    `**Audience:** ${compare.before.audienceLabel}`,
+    `**Framing:** ${compare.before.audienceFraming}`,
+    `**Visibility:** ${compare.before.visibilityLabel}`,
+    `**Visibility Framing:** ${compare.before.visibilityFraming}`,
     "",
     "## Deltas",
     `| Metric | Delta |`,
@@ -1944,8 +2157,64 @@ export function buildCompareReport(
   beforeResult: SimulationResult,
   afterScene: SecurityScene,
   afterResult: SimulationResult,
+  options?: {
+    audience?: ReportAudience;
+  },
 ): CompareReportData {
-  return buildCompareReportData(beforeScene, beforeResult, afterScene, afterResult);
+  return buildCompareReportData(beforeScene, beforeResult, afterScene, afterResult, options);
+}
+
+export function applyReportVisibility<T extends ReportData | CompareReportData>(
+  input: T,
+  visibility: ReportVisibility,
+): T {
+  if (visibility === "internal") {
+    return input;
+  }
+  if ("before" in input) {
+    return {
+      ...input,
+      before: redactReportDataForVisibility(input.before, visibility),
+      after: redactReportDataForVisibility(input.after, visibility),
+    } as T;
+  }
+  return redactReportDataForVisibility(input, visibility) as T;
+}
+
+function redactReportDataForVisibility(report: ReportData, visibility: ReportVisibility): ReportData {
+  const redacted = structuredClone(report);
+  if (visibility === "shared") {
+    redacted.visibility = visibility;
+    redacted.visibilityLabel = getReportVisibilityProfile(visibility).label;
+    redacted.visibilityFraming = getReportVisibilityProfile(visibility).framing;
+    redacted.provenance.confidenceNotes = [];
+    redacted.evidenceTrail.recentEntries = redacted.evidenceTrail.recentEntries.map((entry) => ({
+      ...entry,
+      confidence: "withheld",
+    }));
+    return redacted;
+  }
+
+  redacted.visibility = visibility;
+  redacted.visibilityLabel = getReportVisibilityProfile(visibility).label;
+  redacted.visibilityFraming = getReportVisibilityProfile(visibility).framing;
+  redacted.provenance.sourceNotes = [];
+  redacted.provenance.confidenceNotes = [];
+  redacted.evidenceTrail.recentEntries = redacted.evidenceTrail.recentEntries.map((entry) => ({
+    ...entry,
+    details: "Redacted for privacy-safe export.",
+    confidence: "withheld",
+  }));
+  if (redacted.temporalTwin?.currentSceneSummary) {
+    redacted.temporalTwin = {
+      ...redacted.temporalTwin,
+      currentSceneSummary: {
+        ...redacted.temporalTwin.currentSceneSummary,
+        detail: "Redacted for privacy-safe export.",
+      },
+    };
+  }
+  return redacted;
 }
 
 // ── Helpers ──

@@ -327,6 +327,7 @@ The report exports already carry provenance and evidence summaries, but the prod
 - Should compliance exports preserve the same provenance link contract as the general report export?
 - How should standards references and evidence lineage be shown in each mode?
 **Related threads:** 4.9, 4.24, and 4.10 in `Docs/todos/FULL_VISION_GAP_INVENTORY.md`.
+**Update:** Report Lite now exposes explicit audience modes for operator, auditor, insurer, installer, and privacy reviewer, and it also offers report catalog presets plus internal/shared/privacy-safe visibility selectors. The remaining question is the redaction/visibility policy depth and whether a regulator-facing mode should be distinct from privacy review.
 ## Contextual 3D interaction UI
 
 - **Priority:** Medium

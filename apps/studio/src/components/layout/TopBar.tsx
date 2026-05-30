@@ -269,7 +269,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                           "hidden rounded-lg px-1.5 py-2 text-[10px] opacity-60 transition-colors hover:opacity-100 group-hover:block",
                           saved.source === "demo" ? "cursor-not-allowed text-[#55617b]" : "text-amber-300",
                         )}
-                        title={saved.source === "demo" ? "Duplicate the demo first to rename it" : "Rename scene"}
+                        title={saved.source === "demo" ? "Duplicate the reference baseline first to rename it" : "Rename scene"}
                       >
                         ✎
                       </button>
@@ -573,7 +573,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                 }}
                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
               >
-                {demoMode ? "Exit Demo Mode" : "Enter Demo Mode"}
+                {demoMode ? "Exit Guided Walkthrough" : "Enter Guided Walkthrough"}
               </button>
               <button
                 onClick={() => {

@@ -34,7 +34,7 @@ const PRESETS: Array<{
   { id: "compare", label: "Compare", icon: <Columns3 className="h-3.5 w-3.5" />, hint: "Before/after scenario comparison" },
   { id: "report", label: "Report", icon: <FileText className="h-3.5 w-3.5" />, hint: "Reporting and handoff layout" },
   { id: "debug", label: "Debug", icon: <Sparkles className="h-3.5 w-3.5" />, hint: "Dense diagnostic workspace" },
-  { id: "focus", label: "Focus", icon: <Shield className="h-3.5 w-3.5" />, hint: "Client demo mode with all docks hidden" },
+  { id: "focus", label: "Focus", icon: <Shield className="h-3.5 w-3.5" />, hint: "Focused workspace with all docks hidden" },
 ];
 
 export function WorkspacePresetSwitcher() {

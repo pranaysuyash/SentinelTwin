@@ -10,8 +10,19 @@ import { buildSecurityOutcomeModel } from "@/lib/security-outcome/security-outco
 import { exportTextAsPdf } from "@/lib/pdf-export";
 import { buildReportEvidenceBundle, stringifyReportEvidenceBundle } from "@/lib/report-evidence-bundle";
 import { summarizeOperationalEvidenceTemporalTwin } from "@/lib/operational-evidence";
-import { buildCompareReportData, exportCompareAsHtml, exportCompareAsMarkdown } from "@/report";
-import { buildReportData } from "@/report";
+import {
+  applyReportVisibility,
+  buildCompareReportData,
+  buildReportData,
+  exportCompareAsHtml,
+  exportCompareAsMarkdown,
+  exportAsMarkdown,
+  getReportAudienceProfile,
+  getReportExportPresets,
+  getReportVisibilityProfile,
+  type ReportAudience,
+  type ReportVisibility,
+} from "@/report";
 import { summarizeSceneTruthLadder } from "@/lib/truth-ladder";
 import { QUALITY_RANK } from "@/lib/quality-display";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
@@ -32,11 +43,31 @@ export function ReportLiteTab() {
   const [aiReport, setAiReport] = useState<SecurityReport | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [reportMode, setReportMode] = useState<"single" | "compare">(compareReportSelection ? "compare" : "single");
+  const [reportAudience, setReportAudience] = useState<ReportAudience>("operator");
+  const [reportVisibility, setReportVisibility] = useState<ReportVisibility>("internal");
   const [snapshotAId, setSnapshotAId] = useState<string | null>(null);
   const [snapshotBId, setSnapshotBId] = useState<string | null>(null);
   const activePath = scene.paths.find((path) => path.id === activePathId) ?? null;
   const outcome = buildSecurityOutcomeModel(scene, result, activePath);
   const truthLadder = useMemo(() => summarizeSceneTruthLadder(scene), [scene]);
+  const audienceProfile = useMemo(() => getReportAudienceProfile(reportAudience), [reportAudience]);
+  const visibilityProfile = useMemo(() => getReportVisibilityProfile(reportVisibility), [reportVisibility]);
+  const reportCatalog = useMemo(() => getReportExportPresets(), []);
+  const singleReport = useMemo(
+    () =>
+      (result
+        ? buildReportData(scene, result, {
+            operationalEvidenceEvents,
+            audience: reportAudience,
+            visibility: reportVisibility,
+          })
+        : null),
+    [operationalEvidenceEvents, reportAudience, reportVisibility, result, scene],
+  );
+  const singleExportReport = useMemo(
+    () => (singleReport ? applyReportVisibility(singleReport, reportVisibility) : null),
+    [reportVisibility, singleReport],
+  );
   const temporalTwin = useMemo(
     () => summarizeOperationalEvidenceTemporalTwin(operationalEvidenceEvents, scene),
     [operationalEvidenceEvents, scene],
@@ -45,7 +76,7 @@ export function ReportLiteTab() {
 
   // Build markdown from either AI report or simulation data
   const singleSceneMarkdown = result
-    ? (aiReport ? buildAiReportMarkdown(aiReport) : defaultMarkdown(result, scene, temporalProfile, operationalEvidenceEvents))
+    ? (aiReport ? buildAiReportMarkdown(aiReport) : defaultMarkdown(result, scene, temporalProfile, operationalEvidenceEvents, audienceProfile))
     : "";
 
   const handleGenerateAI = async () => {
@@ -61,19 +92,29 @@ export function ReportLiteTab() {
   const snapshotB = selectedSnapshotBId ? snapshots.find((snapshot) => snapshot.id === selectedSnapshotBId) ?? null : null;
   const compareSelectionMissing = reportMode === "compare" && (!snapshotA || !snapshotB);
   const hasCompareSimulation = Boolean(snapshotA?.simulation && snapshotB?.simulation);
-  const compareMarkdown = hasCompareSimulation
-    ? exportCompareAsMarkdown(
-        buildCompareReportData(
-          { ...snapshotA!.scene, snapshots: [], scenarios: [] } as never,
-          snapshotA!.simulation!,
-          { ...snapshotB!.scene, snapshots: [], scenarios: [] } as never,
-          snapshotB!.simulation!,
-        ),
-      )
-    : "";
+  const compareReport = useMemo(
+    () => {
+      if (!hasCompareSimulation || !snapshotA?.simulation || !snapshotB?.simulation) {
+        return null;
+      }
+      return buildCompareReportData(
+        { ...snapshotA.scene, snapshots: [], scenarios: [] } as never,
+        snapshotA.simulation,
+        { ...snapshotB.scene, snapshots: [], scenarios: [] } as never,
+        snapshotB.simulation,
+        { audience: reportAudience, visibility: reportVisibility },
+      );
+    },
+    [hasCompareSimulation, reportAudience, reportVisibility, snapshotA, snapshotB],
+  );
+  const compareExportReport = useMemo(
+    () => (compareReport ? applyReportVisibility(compareReport, reportVisibility) : null),
+    [compareReport, reportVisibility],
+  );
+  const compareMarkdown = compareExportReport ? exportCompareAsMarkdown(compareExportReport) : "";
   const currentReportMarkdown = reportMode === "compare"
     ? (hasCompareSimulation ? compareMarkdown : "Select two simulated snapshots to preview compare markdown.")
-    : singleSceneMarkdown;
+    : (singleExportReport ? exportAsMarkdown(singleExportReport) : singleSceneMarkdown);
 
   useEffect(() => {
     if (compareReportSelection) {
@@ -107,14 +148,8 @@ export function ReportLiteTab() {
     : undefined;
 
   const handleExportHtml = () => {
-    if (reportMode === "compare" && snapshotA?.simulation && snapshotB?.simulation) {
-      const compare = buildCompareReportData(
-        { ...snapshotA.scene, snapshots: [], scenarios: [] } as never,
-        snapshotA.simulation,
-        { ...snapshotB.scene, snapshots: [], scenarios: [] } as never,
-        snapshotB.simulation,
-      );
-      const html = exportCompareAsHtml(compare, visuals);
+    if (reportMode === "compare" && compareExportReport) {
+      const html = exportCompareAsHtml(compareExportReport, visuals);
       const blob = new Blob([html], { type: "text/html;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -124,8 +159,8 @@ export function ReportLiteTab() {
       URL.revokeObjectURL(url);
       return;
     }
-    if (!result) return;
-    const html = buildHtmlReport(scene, result, aiReport, temporalProfile, operationalEvidenceEvents);
+    if (!singleExportReport || !result) return;
+    const html = buildHtmlReport(scene, result, aiReport, temporalProfile, operationalEvidenceEvents, audienceProfile, visibilityProfile, singleExportReport);
     const blob = new Blob([html], { type: "text/html;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -136,20 +171,13 @@ export function ReportLiteTab() {
   };
 
   const handleExportEvidenceBundle = () => {
-    if (reportMode === "compare" && snapshotA?.simulation && snapshotB?.simulation) {
-      const beforeScene = { ...snapshotA.scene, snapshots: [], scenarios: [] } as never;
+    if (reportMode === "compare" && compareExportReport && snapshotB?.simulation) {
       const afterScene = { ...snapshotB.scene, snapshots: [], scenarios: [] } as never;
-      const compare = buildCompareReportData(
-        beforeScene,
-        snapshotA.simulation,
-        afterScene,
-        snapshotB.simulation,
-      );
       const bundle = buildReportEvidenceBundle({
         scene: afterScene,
-        report: compare.after,
+        report: compareExportReport.after,
         simulationResult: snapshotB.simulation,
-        compare,
+        compare: compareExportReport,
         visualEvidence: visuals,
         notes: ["Compare-mode report evidence bundle exported from the report handoff surface."],
       });
@@ -163,7 +191,8 @@ export function ReportLiteTab() {
       return;
     }
     if (!result) return;
-    const report = buildReportData(scene, result, { operationalEvidenceEvents });
+    const report = singleExportReport;
+    if (!report) return;
     const bundle = buildReportEvidenceBundle({
       scene,
       report,
@@ -183,15 +212,8 @@ export function ReportLiteTab() {
     const filenameBase = reportMode === "compare"
       ? `sentineltwin-compare-report-${scene.name.replace(/[^a-zA-Z0-9_-]/g, "_")}`
       : `sentineltwin-report-${scene.name.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
-    const text = reportMode === "compare" && snapshotA?.simulation && snapshotB?.simulation
-      ? exportCompareAsMarkdown(
-          buildCompareReportData(
-            { ...snapshotA.scene, snapshots: [], scenarios: [] } as never,
-            snapshotA.simulation,
-            { ...snapshotB.scene, snapshots: [], scenarios: [] } as never,
-            snapshotB.simulation,
-          ),
-        )
+    const text = reportMode === "compare" && compareExportReport
+      ? exportCompareAsMarkdown(compareExportReport)
       : currentReportMarkdown;
     if (!text) return;
     const blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
@@ -207,15 +229,8 @@ export function ReportLiteTab() {
     const filenameBase = reportMode === "compare"
       ? `sentineltwin-compare-report-${scene.name.replace(/[^a-zA-Z0-9_-]/g, "_")}`
       : `sentineltwin-report-${scene.name.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
-    const text = reportMode === "compare" && snapshotA?.simulation && snapshotB?.simulation
-      ? exportCompareAsMarkdown(
-          buildCompareReportData(
-            { ...snapshotA.scene, snapshots: [], scenarios: [] } as never,
-            snapshotA.simulation,
-            { ...snapshotB.scene, snapshots: [], scenarios: [] } as never,
-            snapshotB.simulation,
-          ),
-        )
+    const text = reportMode === "compare" && compareExportReport
+      ? exportCompareAsMarkdown(compareExportReport)
       : currentReportMarkdown;
     if (!text) return;
     await exportTextAsPdf({
@@ -226,14 +241,8 @@ export function ReportLiteTab() {
   };
 
   const handlePrint = () => {
-    if (reportMode === "compare" && snapshotA?.simulation && snapshotB?.simulation) {
-      const compare = buildCompareReportData(
-        { ...snapshotA.scene, snapshots: [], scenarios: [] } as never,
-        snapshotA.simulation,
-        { ...snapshotB.scene, snapshots: [], scenarios: [] } as never,
-        snapshotB.simulation,
-      );
-      const html = exportCompareAsHtml(compare, visuals);
+    if (reportMode === "compare" && compareExportReport) {
+      const html = exportCompareAsHtml(compareExportReport, visuals);
       const win = window.open("", "_blank");
       if (win) {
         win.document.write(html);
@@ -244,7 +253,7 @@ export function ReportLiteTab() {
       return;
     }
     if (!result) return;
-    const html = buildHtmlReport(scene, result, aiReport, temporalProfile, operationalEvidenceEvents);
+    const html = buildHtmlReport(scene, result, aiReport, temporalProfile, operationalEvidenceEvents, audienceProfile, visibilityProfile, singleExportReport);
     const win = window.open("", "_blank");
     if (win) {
       win.document.write(html);
@@ -262,7 +271,7 @@ export function ReportLiteTab() {
           {aiReport ? "AI Report" : "Markdown Report"}
         </span>
         <div className="flex items-center gap-1.5">
-          <div className="flex items-center gap-1 rounded border border-[#1e2130] bg-[#0f141f] p-0.5">
+        <div className="flex items-center gap-1 rounded border border-[#1e2130] bg-[#0f141f] p-0.5">
             <button
               onClick={() => setReportMode("single")}
               className={`rounded px-2 py-0.5 text-[9px] ${reportMode === "single" ? "bg-[#1d2738] text-white" : "text-[#8090a8]"}`}
@@ -275,7 +284,60 @@ export function ReportLiteTab() {
             >
               Before/After
             </button>
+        </div>
+          <div className="flex flex-wrap gap-1.5 rounded border border-[#1e2130] bg-[#0f141f] p-1">
+            {reportCatalog.map((preset) => {
+              const selected = preset.audience === reportAudience && preset.visibility === reportVisibility;
+              const visibility = getReportVisibilityProfile(preset.visibility);
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => {
+                    setReportAudience(preset.audience);
+                    setReportVisibility(preset.visibility);
+                  }}
+                  className={`min-w-[10rem] rounded px-2 py-1 text-left text-[9px] transition-colors ${
+                    selected
+                      ? "border border-sky-500/40 bg-sky-500/10 text-sky-100"
+                      : "border border-[#24283a] bg-[#111521] text-[#9aa6bf] hover:border-[#2f3650] hover:text-white"
+                  }`}
+                >
+                  <div className="font-semibold uppercase tracking-[0.14em]">{preset.title}</div>
+                  <div className="mt-0.5 text-[8px] text-[#70809c]">
+                    {getReportAudienceProfile(preset.audience).label} · {visibility.label}
+                  </div>
+                  <div className="mt-1 text-[8px] text-[#70809c]">{preset.summary}</div>
+                </button>
+              );
+            })}
           </div>
+          <label className="flex items-center gap-1 rounded border border-[#1e2130] bg-[#0f141f] px-2 py-1 text-[9px] text-[#8090a8]">
+            Audience
+            <select
+              value={reportAudience}
+              onChange={(event) => setReportAudience(event.target.value as ReportAudience)}
+              className="rounded border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#d2d9e8]"
+            >
+              <option value="operator">Operator</option>
+              <option value="auditor">Auditor</option>
+              <option value="insurer">Insurer</option>
+              <option value="installer">Installer</option>
+              <option value="privacy_reviewer">Privacy reviewer</option>
+            </select>
+          </label>
+          <label className="flex items-center gap-1 rounded border border-[#1e2130] bg-[#0f141f] px-2 py-1 text-[9px] text-[#8090a8]">
+            Visibility
+            <select
+              value={reportVisibility}
+              onChange={(event) => setReportVisibility(event.target.value as ReportVisibility)}
+              className="rounded border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#d2d9e8]"
+            >
+              <option value="internal">Internal</option>
+              <option value="shared">Shared</option>
+              <option value="privacy_safe">Privacy safe</option>
+            </select>
+          </label>
           <button
             onClick={handleGenerateAI}
             disabled={isGenerating || !result}
@@ -371,6 +433,8 @@ export function ReportLiteTab() {
               <div>
                 <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#7f8da8]">Report Summary</div>
                 <div className="text-[9px] text-[#6f7f9d]">Four bullet executive summary from the latest run.</div>
+                <div className="text-[9px] text-[#6f7f9d]">Audience framing: {audienceProfile.label} · {audienceProfile.framing}</div>
+                <div className="text-[9px] text-[#6f7f9d]">Visibility framing: {visibilityProfile.label} · {visibilityProfile.framing}</div>
               </div>
               <button
                 type="button"
@@ -542,6 +606,7 @@ function defaultMarkdown(
   scene: ReturnType<typeof useStudioStore.getState>["scene"],
   temporalProfile: ReturnType<typeof useStudioStore.getState>["temporalProfile"],
   operationalEvidenceEvents: ReturnType<typeof useStudioStore.getState>["operationalEvidenceEvents"],
+  audienceProfile: ReturnType<typeof getReportAudienceProfile>,
 ): string {
   const failingZones = result.criticalZoneResults.filter((zone) => zone.status !== "pass");
   const verifiedRecommendations = result.recommendations.filter((rec) => rec.verified);
@@ -594,6 +659,7 @@ function defaultMarkdown(
     ...(scene.cameras.length > 6 ? [`- ...${scene.cameras.length - 6} additional cameras not shown in this summary.`] : []),
     "",
     "### Summary",
+    `- Audience: ${audienceProfile.label} (${audienceProfile.framing})`,
     "- Total Coverage: " + result.totalCoveragePct.toFixed(1) + "%",
     "- Recognition Area: " + result.recognitionAreaPct.toFixed(1) + "%",
     "- Identification Area: " + result.identificationAreaPct.toFixed(1) + "%",
@@ -741,6 +807,9 @@ function buildHtmlReport(
   aiReport: SecurityReport | null,
   temporalProfile: ReturnType<typeof useStudioStore.getState>["temporalProfile"],
   operationalEvidenceEvents: ReturnType<typeof useStudioStore.getState>["operationalEvidenceEvents"],
+  audienceProfile: ReturnType<typeof getReportAudienceProfile>,
+  visibilityProfile: ReturnType<typeof getReportVisibilityProfile>,
+  reportView?: unknown,
 ): string {
   const isAi = aiReport != null;
   const title = isAi ? aiReport!.title : "SentinelTwin Coverage Report";
@@ -792,6 +861,8 @@ function buildHtmlReport(
 <body>
   <h1>${escapeHtml(title)}</h1>
   <div class="meta">Scene: ${escapeHtml(scene.name)} &middot; ${new Date().toLocaleDateString()} &middot; DORI: ${scene.assumptions.doriStandard.toUpperCase()}</div>
+  <div class="meta">Audience: ${escapeHtml(audienceProfile.label)} · ${escapeHtml(audienceProfile.framing)}</div>
+  <div class="meta">Visibility: ${escapeHtml(visibilityProfile.label)} · ${escapeHtml(visibilityProfile.framing)}</div>
 
   <h2>Summary</h2>
   <div class="summary-grid">

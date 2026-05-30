@@ -114,7 +114,7 @@ const DEMO_STEPS = [
       s.setViewMode("report");
       s.setBottomTab("report");
     },
-    actionLabel: "Finish Demo",
+    actionLabel: "Finish Walkthrough",
     isLast: true,
   },
 ];
@@ -239,7 +239,7 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
             target.position = newPosition;
           }
           return next;
-        }, "Demo: Move cupboard away from cash counter zone");
+        }, "Walkthrough: Move cupboard away from cash counter zone");
 
         setFixApplied(true);
         return true;
@@ -276,12 +276,12 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
       <div className="flex items-center justify-between border-b border-[#1e2130] px-3 py-2">
         <div className="flex items-center gap-2">
           <Shield className="h-3.5 w-3.5 text-emerald-400" />
-          <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">Demo Walkthrough</span>
+          <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">Guided Walkthrough</span>
         </div>
         <button
           onClick={handleSkip}
           className="flex h-5 w-5 items-center justify-center rounded text-[#5b667c] hover:bg-[#1a2333] hover:text-white"
-          title="Exit demo"
+          title="Exit walkthrough"
         >
           <X className="h-3 w-3" />
         </button>

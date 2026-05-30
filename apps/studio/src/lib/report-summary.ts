@@ -18,6 +18,8 @@ export function buildReportSummaryLines(
     | "publishedCheckpointCount"
     | "latestCheckpointAgeMs"
     | "latestPublishedCheckpointAgeMs"
+    | "latestCheckpointProvenance"
+    | "latestPublishedCheckpointProvenance"
     | "currentVsLatestCheckpointDelta"
     | "currentVsLatestPublishedCheckpointDelta"
   > | null,
@@ -52,8 +54,18 @@ export function buildReportSummaryLines(
     ? `${scene.changeLog.length} change-log entries, ${evidenceEntries} evidence entries, ${sensorEvidenceEntries} sensor-related evidence`
     : "Scene evidence trail unavailable.";
   const publishedCheckpointLabel = temporalTwin?.publishedCheckpointCount === 1 ? "published checkpoint" : "published checkpoints";
+  const latestCheckpointProvenanceText = temporalTwin?.latestCheckpointProvenance
+    ? temporalTwin.latestCheckpointProvenance.isExactSnapshot
+      ? `, latest checkpoint exact snapshot from "${temporalTwin.latestCheckpointProvenance.sourceEventTitle}"`
+      : `, latest checkpoint derived from "${temporalTwin.latestCheckpointProvenance.sourceEventTitle}"`
+    : "";
+  const latestPublishedCheckpointProvenanceText = temporalTwin?.latestPublishedCheckpointProvenance
+    ? temporalTwin.latestPublishedCheckpointProvenance.isExactSnapshot
+      ? `, latest published exact snapshot from "${temporalTwin.latestPublishedCheckpointProvenance.sourceEventTitle}"`
+      : `, latest published derived from "${temporalTwin.latestPublishedCheckpointProvenance.sourceEventTitle}"`
+    : "";
   const temporalTwinLine = temporalTwin
-    ? `${temporalTwin.totalEvents} scene events, ${temporalTwin.checkpointCount} reconstructable checkpoints, ${temporalTwin.publishedCheckpointCount} ${publishedCheckpointLabel}${temporalTwin.latestCheckpointAgeMs != null ? `, latest checkpoint ${Math.max(1, Math.round(temporalTwin.latestCheckpointAgeMs / 60000))}m old` : ""}${temporalTwin.latestPublishedCheckpointAgeMs != null ? `, latest published ${Math.max(1, Math.round(temporalTwin.latestPublishedCheckpointAgeMs / 60000))}m old` : ""}${temporalTwin.currentVsLatestCheckpointDelta ? `, checkpoint delta cams ${temporalTwin.currentVsLatestCheckpointDelta.cameras >= 0 ? "+" : ""}${temporalTwin.currentVsLatestCheckpointDelta.cameras}` : ""}${temporalTwin.currentVsLatestPublishedCheckpointDelta ? `, published delta cams ${temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras >= 0 ? "+" : ""}${temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras}` : ""}`
+    ? `${temporalTwin.totalEvents} scene events, ${temporalTwin.checkpointCount} reconstructable checkpoints, ${temporalTwin.publishedCheckpointCount} ${publishedCheckpointLabel}${temporalTwin.latestCheckpointAgeMs != null ? `, latest checkpoint ${Math.max(1, Math.round(temporalTwin.latestCheckpointAgeMs / 60000))}m old` : ""}${latestCheckpointProvenanceText}${temporalTwin.latestPublishedCheckpointAgeMs != null ? `, latest published ${Math.max(1, Math.round(temporalTwin.latestPublishedCheckpointAgeMs / 60000))}m old` : ""}${latestPublishedCheckpointProvenanceText}${temporalTwin.currentVsLatestCheckpointDelta ? `, checkpoint delta cams ${temporalTwin.currentVsLatestCheckpointDelta.cameras >= 0 ? "+" : ""}${temporalTwin.currentVsLatestCheckpointDelta.cameras}` : ""}${temporalTwin.currentVsLatestPublishedCheckpointDelta ? `, published delta cams ${temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras >= 0 ? "+" : ""}${temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras}` : ""}`
     : null;
 
   const lines: ReportSummaryLine[] = [

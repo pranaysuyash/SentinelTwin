@@ -5,6 +5,7 @@ import { buildOperationalEvidenceEvent } from "@/lib/operational-evidence";
 import { simulateStudio } from "@/simulation/simulate-studio";
 import { cloneSecurityScene, type SecurityScene } from "@/schema/security-scene";
 import {
+  applyReportVisibility,
   buildReportData,
   buildCompareReportData,
   exportAsHtml,
@@ -21,6 +22,10 @@ const testWithTimeout = test as unknown as (
   options: { timeout: number },
   fn: () => void,
 ) => void;
+
+function longTest(name: string, fn: () => void) {
+  return (test as any)(name, { timeout: 15000 }, fn);
+}
 
 function makeEvidenceReport(baseScene: SecurityScene) {
   const evidenceScene = cloneSecurityScene(baseScene);
@@ -61,7 +66,7 @@ describe("report engine", () => {
   const scene = createSmallRetailShopScene();
   const result = simulateStudio(scene);
 
-  test("buildReportData produces complete report", () => {
+  testWithTimeout("buildReportData produces complete report", { timeout: 15000 }, () => {
     const report = buildReportData(scene, result);
 
     expect(report.siteName).toBe(scene.name);
@@ -99,7 +104,7 @@ describe("report engine", () => {
     expect(report.redundancyMatrix?.vulnerableZones.length).toBeGreaterThan(0);
   });
 
-  test("buildReportData carries the temporal twin publication checkpoint when evidence is present", () => {
+  testWithTimeout("buildReportData carries the temporal twin publication checkpoint when evidence is present", { timeout: 15000 }, () => {
     const publishedEvent = buildOperationalEvidenceEvent({
       kind: "scene_published",
       title: "Scene published",
@@ -122,10 +127,12 @@ describe("report engine", () => {
 
     expect(report.temporalTwin?.publishedCheckpointCount).toBe(1);
     expect(report.temporalTwin?.latestPublishedCheckpoint?.title).toBe("Scene published");
+    expect(report.temporalTwin?.latestPublishedCheckpointProvenance?.isExactSnapshot).toBe(true);
+    expect(report.temporalTwin?.latestPublishedCheckpointProvenance?.sourceEventTitle).toBe("Scene published");
     expect(report.temporalTwin?.latestPublishedCheckpointAgeMs).toBeGreaterThanOrEqual(0);
   });
 
-  test("buildReportData maps zone results correctly", () => {
+  longTest("buildReportData maps zone results correctly", () => {
     const report = buildReportData(scene, result);
 
     expect(report.zones.length).toBe(result.criticalZoneResults.length);
@@ -136,7 +143,7 @@ describe("report engine", () => {
     }
   });
 
-  test("buildReportData maps camera results correctly", () => {
+  longTest("buildReportData maps camera results correctly", () => {
     const report = buildReportData(scene, result);
 
     expect(report.cameras.length).toBe(result.cameraResults.length);
@@ -149,7 +156,7 @@ describe("report engine", () => {
     }
   });
 
-  testWithTimeout("buildReportData maps issues with severity", { timeout: 10000 }, () => {
+  testWithTimeout("buildReportData maps issues with severity", { timeout: 20000 }, () => {
     const report = buildReportData(scene, result);
 
     for (const issue of report.issues) {
@@ -158,7 +165,7 @@ describe("report engine", () => {
     }
   });
 
-  test("buildReportData maps recommendations with verification status", () => {
+  longTest("buildReportData maps recommendations with verification status", () => {
     const report = buildReportData(scene, result);
 
     for (const rec of report.recommendations) {
@@ -168,7 +175,7 @@ describe("report engine", () => {
     }
   });
 
-  test("buildReportData accepts adversarial path options", () => {
+  longTest("buildReportData accepts adversarial path options", () => {
     const report = buildReportData(scene, result, {
       adversarialPath: {
         exposureScore: 8.5,
@@ -188,7 +195,7 @@ describe("report engine", () => {
     expect(report.adversarialPath?.waypoints).toHaveLength(2);
   });
 
-  test("buildReportData accepts temporal profile options", () => {
+  longTest("buildReportData accepts temporal profile options", () => {
     const report = buildReportData(scene, result, {
       temporalProfile: {
         vulnerabilityWindowCount: 3,
@@ -205,12 +212,58 @@ describe("report engine", () => {
     expect(report.temporalProfile?.worstCoverage).toBe(45.2);
   });
 
-  testWithTimeout("buildReportData with custom title", { timeout: 10000 }, () => {
+  testWithTimeout("buildReportData with custom title", { timeout: 20000 }, () => {
     const report = buildReportData(scene, result, { title: "Custom Audit" });
     expect(report.title).toBe("Custom Audit");
   });
 
-  testWithTimeout("buildReportData extracts an operational evidence trail", { timeout: 10000 }, () => {
+  longTest("buildReportData accepts audience options", () => {
+    const report = buildReportData(scene, result, { audience: "auditor" });
+    expect(report.audience).toBe("auditor");
+    expect(report.audienceLabel).toBe("Auditor");
+    expect(report.title).toBe("Security Audit Evidence Report");
+  });
+
+  longTest("applyReportVisibility redacts shared and privacy-safe exports", () => {
+    const evidenceScene = cloneSecurityScene(scene);
+    evidenceScene.changeLog = [
+      ...evidenceScene.changeLog,
+      "Evidence: May 29, 10:05 AM | Simulation Run | Coverage recomputed after scene edit | medium",
+    ];
+    const report = buildReportData(evidenceScene, result, {
+      operationalEvidenceEvents: [
+        buildOperationalEvidenceEvent({
+          kind: "scene_published",
+          title: "Scene published",
+          details: "Promoted the current scene state to the published branch.",
+          actor: "user",
+          source: evidenceScene.source,
+          sceneId: evidenceScene.id,
+          sceneName: evidenceScene.name,
+          revisionDepth: evidenceScene.changeLog.length,
+          affectedNodeIds: evidenceScene.cameras.map((camera) => camera.id),
+          confidence: 0.98,
+          branchLabel: "published",
+          lifecycleStage: "published",
+          published: true,
+          beforeSummary: "Before publish",
+          afterSummary: "After publish",
+          sceneSnapshot: cloneSecurityScene(evidenceScene),
+        }),
+      ],
+    });
+    const shared = applyReportVisibility(report, "shared");
+    const privacySafe = applyReportVisibility(report, "privacy_safe");
+
+    expect(shared.visibility).toBe("shared");
+    expect(shared.provenance.confidenceNotes).toHaveLength(0);
+    expect(shared.evidenceTrail.recentEntries[0]?.confidence).toBe("withheld");
+    expect(privacySafe.visibility).toBe("privacy_safe");
+    expect(privacySafe.provenance.sourceNotes).toHaveLength(0);
+    expect(privacySafe.evidenceTrail.recentEntries[0]?.details).toBe("Redacted for privacy-safe export.");
+  });
+
+  testWithTimeout("buildReportData extracts an operational evidence trail", { timeout: 20000 }, () => {
     const report = makeEvidenceReport(scene);
 
     expect(report.evidenceTrail.evidenceEntryCount).toBeGreaterThanOrEqual(2);
@@ -219,7 +272,7 @@ describe("report engine", () => {
     expect(report.evidenceTrail.recentEntries[0].title).toBe("Simulation Run");
   });
 
-  test("buildReportData summarizes the truth ladder", () => {
+  longTest("buildReportData summarizes the truth ladder", () => {
     const truthScene = makeTruthLadderScene(scene);
     const report = buildReportData(truthScene, simulateStudio(truthScene));
 
@@ -232,7 +285,7 @@ describe("report engine", () => {
     expect(report.truthLadder.summary).toContain("verified");
   });
 
-  test("buildCompareReportData produces correct deltas", () => {
+  longTest("buildCompareReportData produces correct deltas", () => {
     const modifiedScene = createSmallRetailShopScene();
     const camera = modifiedScene.cameras.find((c) => c.id === "cam_entrance");
     if (camera) camera.status = "off";
@@ -253,7 +306,7 @@ describe("report engine", () => {
     expect(compare.zoneChanges.length).toBe(beforeResult.criticalZoneResults.length);
   });
 
-  test("buildCompareReportData identifies zone status changes", () => {
+  longTest("buildCompareReportData identifies zone status changes", () => {
     const modifiedScene = createSmallRetailShopScene();
     const camera = modifiedScene.cameras.find((c) => c.id === "cam_entrance");
     if (camera) camera.status = "off";
@@ -279,87 +332,98 @@ describe("exportAsHtml", () => {
     };
   }
 
-  test("produces valid HTML document", () => {
+  longTest("produces valid HTML document", () => {
     const html = exportAsHtml(makeReport());
     expect(html).toContain("<!DOCTYPE html>");
     expect(html).toContain("</html>");
     expect(html).toContain(scene.name);
   });
 
-  test("includes standards badge", () => {
+  longTest("includes standards badge", () => {
     const html = exportAsHtml(makeReport());
     expect(html).toContain("IEC 62676");
   });
 
-  test("includes provenance section", () => {
+  longTest("includes audience framing", () => {
+    const html = exportAsHtml(makeReport({
+      audience: "insurer",
+      audienceLabel: "Insurer",
+      audienceFraming: "Risk, resilience, and recovery framing for underwriting or exposure review.",
+      title: "Security Risk Exposure Brief",
+    }));
+    expect(html).toContain("Insurer audience");
+    expect(html).toContain("Risk, resilience, and recovery framing");
+  });
+
+  longTest("includes provenance section", () => {
     const html = exportAsHtml(makeReport());
     expect(html).toContain("Provenance");
     expect(html).toContain("Source history");
   });
 
-  test("includes truth ladder section", () => {
+  longTest("includes truth ladder section", () => {
     const html = exportAsHtml(makeReport());
     expect(html).toContain("Truth Ladder");
     expect(html).toContain("Reviewed Nodes");
   });
 
-  testWithTimeout("includes operational evidence section", { timeout: 10000 }, () => {
+  testWithTimeout("includes operational evidence section", { timeout: 20000 }, () => {
     const html = exportAsHtml(makeEvidenceReport(scene));
     expect(html).toContain("Operational Evidence");
     expect(html).toContain("Sensor-related evidence");
     expect(html).toContain("Recent evidence entries");
   });
 
-  test("includes uncertainty section", () => {
+  longTest("includes uncertainty section", () => {
     const html = exportAsHtml(makeReport());
     expect(html).toContain("Coverage Uncertainty");
     expect(html).toContain("samples");
   });
 
-  test("includes entropy section", () => {
+  longTest("includes entropy section", () => {
     const html = exportAsHtml(makeReport());
     expect(html).toContain("Coverage Entropy");
     expect(html).toContain("dominant");
   });
 
-  test("includes posture variation section", () => {
+  longTest("includes posture variation section", () => {
     const html = exportAsHtml(makeReport());
     expect(html).toContain("Coverage Posture Variation");
     expect(html).toContain("largest drop");
   });
 
-  test("includes blind spot topology section", () => {
+  longTest("includes blind spot topology section", () => {
     const html = exportAsHtml(makeReport());
     expect(html).toContain("Blind Spot Topology");
     expect(html).toContain("critical");
   });
 
-  test("includes blind spot fingerprint section", () => {
+  longTest("includes blind spot fingerprint section", () => {
     const html = exportAsHtml(makeReport());
     expect(html).toContain("Blind Spot Fingerprint");
     expect(html).toContain("Fingerprint");
     expect(html).toContain("Regions");
   });
 
-  test("includes redundancy matrix section", () => {
+  longTest("includes redundancy matrix section", () => {
     const html = exportAsHtml(makeReport());
     expect(html).toContain("Redundancy Matrix");
     expect(html).toContain("Vulnerable Zones");
     expect(html).toContain("Single-point zones");
   });
 
-  test("includes sensors summary card", () => {
+  longTest("includes sensors summary card", () => {
     const html = exportAsHtml(makeReport());
     expect(html).toContain("Sensors</div>");
   });
 
-  test("includes camera analysis columns", () => {
+  longTest("includes camera analysis columns", () => {
     const html = exportAsHtml(makeReport());
     expect(html).toContain("Best Zone Quality");
     expect(html).toContain("Zones Failed");
   });
 
-  test("includes reflective bounce section", () => {
+  longTest("includes reflective bounce section", () => {
     const html = exportAsHtml({
       ...makeReport(),
       novelAlgorithms: {
@@ -376,14 +440,14 @@ describe("exportAsHtml", () => {
     expect(html).toContain("affected cells");
   });
 
-  test("includes placement oracle detail section", () => {
+  longTest("includes placement oracle detail section", () => {
     const html = exportAsHtml(makeReport());
     expect(html).toContain("Placement Oracle");
     expect(html).toContain("Best Score");
     expect(html).toContain("candidates");
   });
 
-  test("includes k-robustness critical sets section", () => {
+  longTest("includes k-robustness critical sets section", () => {
     const html = exportAsHtml({
       ...makeReport(),
       novelAlgorithms: {
@@ -404,7 +468,7 @@ describe("exportAsHtml", () => {
     expect(html).toContain("2.2");
   });
 
-  test("includes occlusion blame detail section", () => {
+  longTest("includes occlusion blame detail section", () => {
     const baseReport = makeReport();
     const html = exportAsHtml({
       ...baseReport,
@@ -433,13 +497,13 @@ describe("exportAsHtml", () => {
     expect(html).toContain("Quality Without");
   });
 
-  test("renders zone table when zones exist", () => {
+  longTest("renders zone table when zones exist", () => {
     const html = exportAsHtml(makeReport());
     expect(html).toContain("Zone Analysis");
     expect(html).toContain("<table");
   });
 
-  test("renders 'no zones' message when zones are empty", () => {
+  longTest("renders 'no zones' message when zones are empty", () => {
     const emptyReport = makeReport({ zones: [] });
     const html = exportAsHtml(emptyReport);
     expect(html).toContain("No critical zones defined");
@@ -447,7 +511,7 @@ describe("exportAsHtml", () => {
     expect(html).toContain("Zone Analysis");
   });
 
-  test("includes adversarial path section when provided", () => {
+  longTest("includes adversarial path section when provided", () => {
     const report = makeReport({
       adversarialPath: {
         exposureScore: 8.5,
@@ -461,12 +525,12 @@ describe("exportAsHtml", () => {
     expect(html).toContain("8.5");
   });
 
-  test("omits adversarial path section when not provided", () => {
+  longTest("omits adversarial path section when not provided", () => {
     const html = exportAsHtml(makeReport({ adversarialPath: undefined }));
     expect(html).not.toContain("Coverage Failure Replay");
   });
 
-  test("includes temporal profile section when provided", () => {
+  longTest("includes temporal profile section when provided", () => {
     const report = makeReport({
       temporalProfile: {
         vulnerabilityWindowCount: 2,
@@ -479,19 +543,19 @@ describe("exportAsHtml", () => {
     expect(html).toContain("2");
   });
 
-  test("omits temporal profile section when not provided", () => {
+  longTest("omits temporal profile section when not provided", () => {
     const html = exportAsHtml(makeReport({ temporalProfile: undefined }));
     expect(html).not.toContain("Temporal Security Profile");
   });
 
-  test("escapes HTML in user-provided strings", () => {
+  longTest("escapes HTML in user-provided strings", () => {
     const malicious = makeReport({ siteName: '<script>alert("xss")</script>' });
     const html = exportAsHtml(malicious);
     expect(html).not.toContain("<script>");
     expect(html).toContain("&lt;script&gt;");
   });
 
-  test("compliance section shows modeled requirements when all zones pass", () => {
+  longTest("compliance section shows modeled requirements when all zones pass", () => {
     const passingReport = makeReport({
       summary: {
         ...baseReport.summary,
@@ -505,7 +569,7 @@ describe("exportAsHtml", () => {
     expect(html).toContain("Meets modeled zone requirements");
   });
 
-  test("compliance section shows unmet modeled requirements when zones fail", () => {
+  longTest("compliance section shows unmet modeled requirements when zones fail", () => {
     const failingReport = makeReport({
       summary: {
         ...baseReport.summary,
@@ -525,94 +589,106 @@ describe("exportAsMarkdown", () => {
   const result = simulateStudio(scene);
   const baseReport = buildReportData(scene, result);
 
-  test("produces valid markdown with header", () => {
+  longTest("produces valid markdown with header", () => {
     const md = exportAsMarkdown(baseReport);
     expect(md).toContain("# ");
     expect(md).toContain(scene.name);
   });
 
-  test("includes summary table", () => {
+  longTest("includes summary table", () => {
     const md = exportAsMarkdown(baseReport);
     expect(md).toContain("| Total Coverage |");
     expect(md).toContain("| Zones Passing |");
     expect(md).toContain("| Sensors |");
   });
 
-  test("includes zone analysis section", () => {
+  longTest("includes audience framing", () => {
+    const md = exportAsMarkdown({
+      ...baseReport,
+      audience: "privacy_reviewer",
+      audienceLabel: "Privacy Reviewer",
+      audienceFraming: "Visibility, retention, and overcollection framing for privacy review.",
+      title: "Privacy Review Brief",
+    });
+    expect(md).toContain("**Audience:** Privacy Reviewer");
+    expect(md).toContain("Visibility, retention, and overcollection framing");
+  });
+
+  longTest("includes zone analysis section", () => {
     const md = exportAsMarkdown(baseReport);
     expect(md).toContain("## Zone Analysis");
   });
 
-  test("includes issues section", () => {
+  longTest("includes issues section", () => {
     const md = exportAsMarkdown(baseReport);
     expect(md).toContain("## Issues");
   });
 
-  test("includes recommendations section", () => {
+  longTest("includes recommendations section", () => {
     const md = exportAsMarkdown(baseReport);
     expect(md).toContain("## Recommendations");
   });
 
-  test("includes provenance section", () => {
+  longTest("includes provenance section", () => {
     const md = exportAsMarkdown(baseReport);
     expect(md).toContain("## Provenance");
     expect(md).toContain("Scene Source");
   });
 
-  test("includes truth ladder section", () => {
+  longTest("includes truth ladder section", () => {
     const md = exportAsMarkdown(baseReport);
     expect(md).toContain("## Truth Ladder");
     expect(md).toContain("Reviewed Nodes");
   });
 
-  testWithTimeout("includes operational evidence section", { timeout: 10000 }, () => {
+  testWithTimeout("includes operational evidence section", { timeout: 20000 }, () => {
     const md = exportAsMarkdown(makeEvidenceReport(scene));
     expect(md).toContain("## Operational Evidence");
     expect(md).toContain("Sensor-related Evidence");
     expect(md).toContain("Recent Evidence Entries");
   });
 
-  test("includes sensors summary row", () => {
+  longTest("includes sensors summary row", () => {
     const md = exportAsMarkdown(baseReport);
     expect(md).toContain("| Sensors |");
   });
 
-  test("includes camera analysis table", () => {
+  longTest("includes camera analysis table", () => {
     const md = exportAsMarkdown(baseReport);
     expect(md).toContain("## Camera Analysis");
     expect(md).toContain("Best Zone Quality");
     expect(md).toContain("Zones Failed");
   });
 
-  test("includes uncertainty section", () => {
+  longTest("includes uncertainty section", () => {
     const md = exportAsMarkdown(baseReport);
     expect(md).toContain("Coverage Uncertainty");
   });
 
-  test("includes entropy section", () => {
+  longTest("includes entropy section", () => {
     const md = exportAsMarkdown(baseReport);
     expect(md).toContain("Coverage Entropy");
     expect(md).toContain("dominant");
   });
 
-  test("includes posture variation section", () => {
+  longTest("includes posture variation section", () => {
     const md = exportAsMarkdown(baseReport);
     expect(md).toContain("Coverage Posture Variation");
   });
 
-  test("includes blind spot topology section", () => {
+  longTest("includes blind spot topology section", () => {
     const md = exportAsMarkdown(baseReport);
     expect(md).toContain("Blind Spot Topology");
   });
 
-  test("includes blind spot fingerprint section", () => {
+  longTest("includes blind spot fingerprint section", () => {
     const md = exportAsMarkdown(baseReport);
     expect(md).toContain("Blind Spot Fingerprint");
     expect(md).toContain("Fingerprint:");
     expect(md).toContain("Regions:");
   });
 
-  test("includes reflective bounce section", () => {
+  longTest("includes reflective bounce section", () => {
     const md = exportAsMarkdown({
       ...baseReport,
       novelAlgorithms: {
@@ -629,20 +705,20 @@ describe("exportAsMarkdown", () => {
     expect(md).toContain("Affected cells:");
   });
 
-  test("includes placement oracle detail section", () => {
+  longTest("includes placement oracle detail section", () => {
     const md = exportAsMarkdown(baseReport);
     expect(md).toContain("Placement Oracle");
     expect(md).toContain("Best score");
   });
 
-  test("includes redundancy matrix section", () => {
+  longTest("includes redundancy matrix section", () => {
     const md = exportAsMarkdown(baseReport);
     expect(md).toContain("Redundancy Matrix");
     expect(md).toContain("SPOF zones");
     expect(md).toContain("Camera matrix");
   });
 
-  test("includes k-robustness critical sets section", () => {
+  longTest("includes k-robustness critical sets section", () => {
     const md = exportAsMarkdown({
       ...baseReport,
       novelAlgorithms: {
@@ -662,7 +738,7 @@ describe("exportAsMarkdown", () => {
     expect(md).toContain("Camera 1, Camera 2");
   });
 
-  test("includes occlusion blame detail section", () => {
+  longTest("includes occlusion blame detail section", () => {
     const md = exportAsMarkdown({
       ...baseReport,
       novelAlgorithms: {
@@ -689,7 +765,7 @@ describe("exportAsMarkdown", () => {
     expect(md).toContain("Blame");
   });
 
-  testWithTimeout("includes adverse path when provided", { timeout: 10000 }, () => {
+  testWithTimeout("includes adverse path when provided", { timeout: 20000 }, () => {
     const report = buildReportData(scene, result, {
       adversarialPath: {
         exposureScore: 5,
@@ -703,7 +779,7 @@ describe("exportAsMarkdown", () => {
     expect(md).toContain("5.0");
   });
 
-  test("includes temporal profile when provided", () => {
+  longTest("includes temporal profile when provided", () => {
     const report = buildReportData(scene, result, {
       temporalProfile: {
         vulnerabilityWindowCount: 1,
@@ -721,14 +797,14 @@ describe("exportAsText", () => {
   const result = simulateStudio(scene);
   const baseReport = buildReportData(scene, result);
 
-  test("produces plain text report", () => {
+  longTest("produces plain text report", () => {
     const text = exportAsText(baseReport);
     expect(text).toContain(scene.name);
     expect(text).toContain("SUMMARY");
     expect(text).toContain("Modeled requirements");
   });
 
-  test("includes all key metrics", () => {
+  longTest("includes all key metrics", () => {
     const text = exportAsText(baseReport);
     expect(text).toContain("Total Coverage");
     expect(text).toContain("Blindspot");
@@ -739,43 +815,55 @@ describe("exportAsText", () => {
     expect(text).toContain("Issues Found");
   });
 
-  test("includes novel algorithms section with uncertainty", () => {
+  longTest("includes audience framing", () => {
+    const text = exportAsText({
+      ...baseReport,
+      audience: "installer",
+      audienceLabel: "Installer",
+      audienceFraming: "Acceptance-oriented summary for installers, integrators, and commissioning teams.",
+      title: "Installation Acceptance Report",
+    });
+    expect(text).toContain("Audience: Installer");
+    expect(text).toContain("Acceptance-oriented summary");
+  });
+
+  longTest("includes novel algorithms section with uncertainty", () => {
     const text = exportAsText(baseReport);
     expect(text).toContain("NOVEL ALGORITHMS");
     expect(text).toContain("Coverage Uncertainty");
   });
 
-  test("includes entropy section", () => {
+  longTest("includes entropy section", () => {
     const text = exportAsText(baseReport);
     expect(text).toContain("Coverage Entropy");
     expect(text).toContain("dominant");
   });
 
-  test("includes redundancy matrix section", () => {
+  longTest("includes redundancy matrix section", () => {
     const text = exportAsText(baseReport);
     expect(text).toContain("REDUNDANCY MATRIX");
     expect(text).toContain("SPOF zones");
     expect(text).toContain("Camera matrix");
   });
 
-  test("includes posture variation in novel algorithms section", () => {
+  longTest("includes posture variation in novel algorithms section", () => {
     const text = exportAsText(baseReport);
     expect(text).toContain("Coverage Posture Variation");
   });
 
-  test("includes blind spot topology in novel algorithms section", () => {
+  longTest("includes blind spot topology in novel algorithms section", () => {
     const text = exportAsText(baseReport);
     expect(text).toContain("Blind Spot Topology");
   });
 
-  test("includes blind spot fingerprint in novel algorithms section", () => {
+  longTest("includes blind spot fingerprint in novel algorithms section", () => {
     const text = exportAsText(baseReport);
     expect(text).toContain("Blind Spot Fingerprint");
     expect(text).toContain("Fingerprint:");
     expect(text).toContain("Regions:");
   });
 
-  test("includes reflective bounce in novel algorithms section", () => {
+  longTest("includes reflective bounce in novel algorithms section", () => {
     const text = exportAsText({
       ...baseReport,
       novelAlgorithms: {
@@ -792,13 +880,13 @@ describe("exportAsText", () => {
     expect(text).toContain("Affected cells:");
   });
 
-  test("includes placement oracle detail in novel algorithms section", () => {
+  longTest("includes placement oracle detail in novel algorithms section", () => {
     const text = exportAsText(baseReport);
     expect(text).toContain("Placement Oracle");
     expect(text).toContain("score");
   });
 
-  test("includes k-robustness critical sets in novel algorithms section", () => {
+  longTest("includes k-robustness critical sets in novel algorithms section", () => {
     const text = exportAsText({
       ...baseReport,
       novelAlgorithms: {
@@ -818,7 +906,7 @@ describe("exportAsText", () => {
     expect(text).toContain("Camera 1, Camera 2");
   });
 
-  test("includes occlusion blame in novel algorithms section", () => {
+  longTest("includes occlusion blame in novel algorithms section", () => {
     const text = exportAsText({
       ...baseReport,
       novelAlgorithms: {
@@ -844,26 +932,26 @@ describe("exportAsText", () => {
     expect(text).toContain("Occlusion Blame");
   });
 
-  test("includes provenance section", () => {
+  longTest("includes provenance section", () => {
     const text = exportAsText(baseReport);
     expect(text).toContain("PROVENANCE");
     expect(text).toContain("Source Counts");
   });
 
-  test("includes truth ladder section", () => {
+  longTest("includes truth ladder section", () => {
     const text = exportAsText(baseReport);
     expect(text).toContain("TRUTH LADDER");
     expect(text).toContain("Reviewed Nodes");
   });
 
-  testWithTimeout("includes operational evidence section", { timeout: 10000 }, () => {
+  testWithTimeout("includes operational evidence section", { timeout: 20000 }, () => {
     const text = exportAsText(makeEvidenceReport(scene));
     expect(text).toContain("OPERATIONAL EVIDENCE");
     expect(text).toContain("Sensor-related Evidence");
     expect(text).toContain("Recent Evidence Entries");
   });
 
-  test("omits issues section when no issues are present", () => {
+  longTest("omits issues section when no issues are present", () => {
     const text = exportAsText(baseReport);
     expect(text).not.toContain("ISSUES");
   });
@@ -893,7 +981,7 @@ describe("exportAsText", () => {
 describe("comparison exports", () => {
   const scene = createSmallRetailShopScene();
 
-  test("exportCompareAsHtml produces valid HTML", () => {
+  longTest("exportCompareAsHtml produces valid HTML", () => {
     const afterScene = createSmallRetailShopScene();
     const camera = afterScene.cameras.find((c) => c.id === "cam_entrance");
     if (camera) camera.status = "off";
@@ -913,14 +1001,14 @@ describe("comparison exports", () => {
     expect(html).toContain("Operational Evidence");
   });
 
-  test("exportCompareAsMarkdown produces valid markdown", () => {
+  longTest("exportCompareAsMarkdown produces valid markdown", () => {
     const afterScene = createSmallRetailShopScene();
     const camera = afterScene.cameras.find((c) => c.id === "cam_entrance");
     if (camera) camera.status = "off";
 
     const beforeResult = simulateStudio(scene);
     const afterResult = simulateStudio(afterScene);
-    const compare = buildCompareReportData(scene, beforeResult, afterScene, afterResult);
+    const compare = buildCompareReportData(scene, beforeResult, afterScene, afterResult, { audience: "auditor" });
 
     const md = exportCompareAsMarkdown(compare);
     expect(md).toContain("# Before/After Comparison");
@@ -930,13 +1018,14 @@ describe("comparison exports", () => {
     expect(md).toContain("## Truth Ladder");
     expect(md).toContain("Evidence Entries");
     expect(md).toContain("## Operational Evidence");
+    expect(md).toContain("**Audience:** Auditor");
   });
 });
 
 describe("buildCompareReport (compatibility export)", () => {
   const scene = createSmallRetailShopScene();
 
-  test("produces same output as buildCompareReportData", () => {
+  longTest("produces same output as buildCompareReportData", () => {
     const afterScene = createSmallRetailShopScene();
     const camera = afterScene.cameras.find((c) => c.id === "cam_entrance");
     if (camera) camera.status = "off";

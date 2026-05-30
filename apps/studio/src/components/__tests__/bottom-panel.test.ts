@@ -27,6 +27,7 @@ describe("BottomPanel", () => {
     const source = readFileSync(join(import.meta.dir, "../bottom-panel/DebugTab.tsx"), "utf8");
 
     expect(source).toContain("Download Bundle");
+    expect(source).toContain("Download Runtime Truth");
     expect(source).toContain("Download Support Bundle");
     expect(source).toContain("Download Evidence Bundle");
     expect(source).toContain("Publish Scene");

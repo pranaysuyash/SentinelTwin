@@ -208,17 +208,38 @@ function parseXmlCandidates(raw: string): { items: unknown[]; errors: string[] }
   const trimmed = raw.trim();
   if (!trimmed.startsWith("<")) return { items: [], errors: [] };
 
-  const taggedBlocks = trimmed.match(/<(?:[A-Za-z0-9_.-]+:)?(?:SensorEvent|Event|Record|Sensor|Item)\b[^>]*>[\s\S]*?<\/(?:[A-Za-z0-9_.-]+:)?(?:SensorEvent|Event|Record|Sensor|Item)>/gi);
+  const taggedBlocks = trimmed.match(/<(?:[A-Za-z0-9_.-]+:)?(?:SensorEvent|Event|Record|Sensor|Item|NotificationMessage|MetadataStream)\b[^>]*>[\s\S]*?<\/(?:[A-Za-z0-9_.-]+:)?(?:SensorEvent|Event|Record|Sensor|Item|NotificationMessage|MetadataStream)>/gi);
   const blocks = taggedBlocks && taggedBlocks.length > 0 ? taggedBlocks : [trimmed];
   const items: unknown[] = [];
   const errors: string[] = [];
 
   for (const block of blocks) {
-    const sensorId = findXmlTagText(block, ["SensorId", "SensorToken", "Token", "Id"]) ?? findXmlAttribute(block, ["sensorId", "sensor-id", "id", "token"]);
-    const sensorLabel = findXmlTagText(block, ["SensorLabel", "SensorName", "Label", "Name", "Title"]) ?? findXmlAttribute(block, ["sensorLabel", "sensor-label", "name", "label", "title"]);
-    const sensorType = normalizeSensorType(findXmlTagText(block, ["SensorType", "Type", "Category", "Kind"]) ?? findXmlAttribute(block, ["sensorType", "type", "category", "kind"]));
-    const kind = normalizeEventKind(findXmlTagText(block, ["Kind", "EventKind", "Status", "EventType"]) ?? findXmlAttribute(block, ["kind", "eventKind", "status", "eventType"]));
-    const details = findXmlTagText(block, ["Details", "Message", "Description", "Note"]) ?? findXmlAttribute(block, ["details", "message", "description", "note"]);
+    // Basic XML extraction
+    let sensorId = findXmlTagText(block, ["SensorId", "SensorToken", "Token", "Id"]) ?? findXmlAttribute(block, ["sensorId", "sensor-id", "id", "token"]);
+    let sensorLabel = findXmlTagText(block, ["SensorLabel", "SensorName", "Label", "Name", "Title"]) ?? findXmlAttribute(block, ["sensorLabel", "sensor-label", "name", "label", "title"]);
+    let sensorType = normalizeSensorType(findXmlTagText(block, ["SensorType", "Type", "Category", "Kind"]) ?? findXmlAttribute(block, ["sensorType", "type", "category", "kind"]));
+    let kind = normalizeEventKind(findXmlTagText(block, ["Kind", "EventKind", "Status", "EventType"]) ?? findXmlAttribute(block, ["kind", "eventKind", "status", "eventType"]));
+    let details = findXmlTagText(block, ["Details", "Message", "Description", "Note"]) ?? findXmlAttribute(block, ["details", "message", "description", "note"]);
+    
+    // ONVIF specific heuristics
+    if (block.includes("NotificationMessage") || block.includes("MetadataStream")) {
+      const topic = findXmlTagText(block, ["Topic"]);
+      if (topic && topic.includes("Motion")) {
+        sensorType = "motion";
+      }
+      
+      const isMotionMatch = block.match(/Name="IsMotion" Value="(true|false)"/i);
+      if (isMotionMatch) {
+        kind = isMotionMatch[1].toLowerCase() === "true" ? "triggered" : "restored";
+        details = details || `ONVIF Motion ${kind}`;
+      }
+
+      const isLineCrossMatch = block.match(/Name="IsLineCrossed" Value="(true|false)"/i);
+      if (isLineCrossMatch && isLineCrossMatch[1].toLowerCase() === "true") {
+        kind = "triggered";
+        details = details || `ONVIF Line Crossed`;
+      }
+    }
     const timestamp = parseTimestampValue(
       findXmlTagText(block, ["Timestamp", "Time", "ObservedAt", "DateTime", "UtcTime"])
       ?? findXmlAttribute(block, ["timestamp", "time", "observedAt", "dateTime", "utcTime"]),

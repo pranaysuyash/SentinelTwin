@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const reportLitePath = "./src/components/bottom-panel/ReportLiteTab.tsx";
+const reportLitePath = new URL("../bottom-panel/ReportLiteTab.tsx", import.meta.url);
 
 describe("ReportLiteTab", () => {
   test("exposes markdown and html export actions for the handoff report", () => {
@@ -22,6 +22,11 @@ describe("ReportLiteTab", () => {
     expect(source).toContain("Report Summary");
     expect(source).toContain("Truth: Computed");
     expect(source).toContain("buildReportSummaryLines");
+    expect(source).toContain("getReportExportPresets");
+    expect(source).toContain("Audience");
+    expect(source).toContain("reportAudience");
+    expect(source).toContain("Visibility");
+    expect(source).toContain("reportVisibility");
     expect(source).toContain("Latest Run");
     expect(source).toContain("Truth Ladder");
     expect(source).toContain("Best Zone Quality");

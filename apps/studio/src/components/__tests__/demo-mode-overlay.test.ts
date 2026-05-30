@@ -1,13 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 
-const demoWalkthroughPath = "./src/components/demo/DemoWalkthroughPanel.tsx";
+const demoWalkthroughPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../demo/DemoWalkthroughPanel.tsx");
 
 describe("DemoWalkthroughPanel (supersedes DemoModeOverlay)", () => {
-  test("exports a walkthrough panel that drives real simulation state", () => {
+  test("exports a guided walkthrough panel that drives real simulation state", () => {
     const source = readFileSync(demoWalkthroughPath, "utf8");
 
     expect(source).toContain("DemoWalkthroughPanel");
     expect(source).toContain("runSimulation");
+    expect(source).toContain("Guided Walkthrough");
+    expect(source).toContain("Finish Walkthrough");
   });
 });

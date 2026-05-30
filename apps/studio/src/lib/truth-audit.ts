@@ -303,6 +303,7 @@ export const TRUST_AUDIT_SURFACES: TrustAuditSurface[] = [
     file: "src/components/bottom-panel/DebugTab.tsx",
     requiredPhrases: [
       "Download Bundle",
+      "Download Runtime Truth",
       "Download Support Bundle",
       "Download Archive",
       "Share Archive",

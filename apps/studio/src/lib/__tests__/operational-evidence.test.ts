@@ -26,6 +26,7 @@ import {
   normalizeOperationalEvidenceEvents,
   safeParseOperationalEvidenceEvent,
   resolveOperationalEvidenceSceneAtTime,
+  resolveOperationalEvidenceSceneAtTimeWithContext,
   traceOperationalEvidenceLineage,
 } from "@/lib/operational-evidence";
 
@@ -442,6 +443,53 @@ describe("operational evidence helpers", () => {
     const stateAtT = resolveOperationalEvidenceSceneAtTime([third, first, second], third.timestamp, midScene);
     expect(stateAtT?.cameras.length).toBe(2);
     expect(resolveOperationalEvidenceSceneAtTime([third, first, second], first.timestamp - 1, midScene)).toBeNull();
+  });
+
+  test("resolves exact and derived point-in-time snapshots with source provenance", () => {
+    const scene = createBlankSecurityScene();
+    scene.name = "Derived Timeline";
+    const camera = createCameraNode([2, 2, 2]);
+    scene.cameras.push(camera);
+
+    const snapshotEvent = buildOperationalEvidenceEvent({
+      kind: "snapshot_saved",
+      title: "Initial checkpoint",
+      details: "Captured a point-in-time checkpoint.",
+      actor: "system",
+      source: "manual",
+      sceneId: scene.id,
+      sceneName: scene.name,
+      revisionDepth: 1,
+      affectedNodeIds: [],
+      confidence: 1,
+      sceneSnapshot: structuredClone(scene),
+      branchLabel: "draft",
+      lifecycleStage: "draft",
+      timestamp: 1000,
+    });
+    const derivedEvent = buildOperationalEvidenceEvent({
+      kind: "scene_updated",
+      title: "Scene updated",
+      details: "Adjusted the scene without taking a new snapshot.",
+      actor: "user",
+      source: "manual",
+      sceneId: scene.id,
+      sceneName: scene.name,
+      revisionDepth: 2,
+      affectedNodeIds: [camera.id],
+      confidence: 0.9,
+      branchLabel: "draft",
+      lifecycleStage: "draft",
+      timestamp: 2000,
+    });
+
+    const resolution = resolveOperationalEvidenceSceneAtTimeWithContext([snapshotEvent, derivedEvent], derivedEvent.timestamp, scene);
+    expect(resolution.scene?.cameras.length).toBe(1);
+    expect(resolution.isExactSnapshot).toBe(false);
+    expect(resolution.derivedFromEarlierSnapshot).toBe(true);
+    expect(resolution.sourceEvent?.id).toBe(snapshotEvent.id);
+    expect(resolution.sourceSnapshotDistance).toBe(1);
+    expect(resolution.sourceSnapshotAgeMs).toBe(1000);
   });
 
   test("finds node-specific evidence trails for entity and scene nodes", () => {

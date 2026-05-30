@@ -41,6 +41,11 @@ describe("SceneIntelligenceTab", () => {
     expect(source).toContain("Checkpoint age");
     expect(source).toContain("Published delta");
     expect(source).toContain("Published age");
+    expect(source).toContain("Operational evidence archives");
+    expect(source).toContain("Copy archive link");
+    expect(source).toContain("Open archive link");
+    expect(source).toContain("Restore archive");
+    expect(source).toContain("Restore state at T");
     expect(source).toContain("state at time T");
     expect(source).toContain("Version history");
     expect(source).toContain("Evidence events");

@@ -5,7 +5,7 @@ import { BadgeInfo, Database, Layers3, RefreshCw, ShieldAlert, Sparkles, TimerRe
 
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { Badge } from "@/components/shared/Badge";
-import { buildDiagnosticBundle, buildIncidentBundle, buildSupportBundle, stringifyDiagnosticBundle, stringifyIncidentBundle, stringifySupportBundle } from "@/lib/diagnostic-bundle";
+import { buildDiagnosticBundle, buildIncidentBundle, buildRuntimeTruthBundle, buildSupportBundle, stringifyDiagnosticBundle, stringifyIncidentBundle, stringifyRuntimeTruthBundle, stringifySupportBundle } from "@/lib/diagnostic-bundle";
 import { buildArchiveHandoffLink, type ArchiveHandoffRequest } from "@/lib/archive-handoff-link";
 import type { CameraLiveConnectionArchiveRecord } from "@/lib/camera-live-connection-history";
 import type { CameraLiveSessionRecord } from "@/lib/camera-live-session-registry";
@@ -534,6 +534,41 @@ export function DebugTab() {
     URL.revokeObjectURL(url);
   };
 
+  const downloadRuntimeTruthBundle = () => {
+    const bundle = buildRuntimeTruthBundle({
+      scene,
+      simulationResult: result,
+      sceneIntelligenceGraph,
+      operationalEvidenceEvents,
+      workspaceGovernance,
+      workspaceAccess,
+      lastRunMs,
+      showDebugOverlays,
+      overlayDensity,
+      autoRecompute,
+      cameraFailures,
+      runtimeIncidents,
+      externalLogEntries,
+      localOnlyMode,
+      aiProviderLabel: providerSummary.providerLabel,
+      simulationDirty,
+      simulationRunning,
+      launchNotice,
+      pathname: typeof window !== "undefined" ? window.location.pathname : undefined,
+      userAgent: typeof window !== "undefined" ? window.navigator.userAgent : undefined,
+    });
+    const blob = new Blob([stringifyRuntimeTruthBundle(bundle)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `sentineltwin-runtime-truth-${scene.id}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setLaunchNotice("Runtime truth bundle downloaded.");
+  };
+
   const downloadSupportBundle = () => {
     const blob = new Blob([stringifySupportBundle(supportBundle)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -1026,6 +1061,9 @@ export function DebugTab() {
             </PillButton>
             <PillButton active={false} onClick={downloadDiagnosticBundle}>
               Download Bundle
+            </PillButton>
+            <PillButton active={false} onClick={downloadRuntimeTruthBundle}>
+              Download Runtime Truth
             </PillButton>
             <PillButton active={false} onClick={downloadIncidentBundle}>
               Download Incident Bundle

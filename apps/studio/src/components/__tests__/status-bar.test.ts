@@ -13,6 +13,10 @@ describe("StatusBar", () => {
     expect(source).toContain("Coverage:");
     expect(source).toContain("Scene overview");
     expect(source).toContain("Truth: Live");
+    expect(source).toContain("Workflow: Idle");
+    expect(source).toContain("formatWorkflowLabel");
+    expect(source).toContain("activeWorkflowStep");
+    expect(source).toContain("activeWorkflowSteps");
     expect(source).toContain("describeSelection");
     expect(source).toContain("formatCoverageSummary");
     expect(source).toContain("Map / Edit");

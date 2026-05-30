@@ -8,6 +8,9 @@ import { ProjectStartLauncher } from "@/components/launcher/ProjectStartLauncher
 import { SceneBuilderWizard } from "@/components/scan-to-scene/SceneBuilderWizard";
 import { ScanSiteWizard } from "@/components/scan-to-scene/ScanSiteWizard";
 import { StudioDashboardHome } from "@/components/launcher/StudioDashboardHome";
+import { SiteIntakeHub } from "@/components/site-intake/SiteIntakeHub";
+import { SiteDraftReview } from "@/components/site-intake/SiteDraftReview";
+import { compileScanToSiteResult, compileAiDraftToSiteResult, compileFloorPlanToSiteResult, makeSiteCompilerWarnings, calculateConfidence } from "@/lib/site-compiler";
 import { useStudioStore, type ActiveWorkflowId, type BottomTab, type ViewMode, type WorkspacePreset } from "@/store/studio-store";
 import { draftSceneFromPrompt, draftSceneFromPromptWithModel, summarizeDraftResult } from "@/lib/ai-layout-draft";
 import { summarizeAiActionTelemetry } from "@/lib/ai-action-telemetry";
@@ -56,7 +59,7 @@ function parseTimelineFocusFromUrl(search: string) {
 function StudioPageContent() {
   const searchParams = useSearchParams();
   const shouldBypassLauncher = searchParams.get("studio") === "1";
-  const [enterStudio, setEnterStudio] = useState(shouldBypassLauncher);
+  const [enterStudio, setEnterStudio] = useState(true);
   const [showWizard, setShowWizard] = useState(false);
   const [showFloorPlanWizard, setShowFloorPlanWizard] = useState(false);
   const [showScanWizard, setShowScanWizard] = useState(false);
@@ -76,6 +79,7 @@ function StudioPageContent() {
   const [aiDraftJsonText, setAiDraftJsonText] = useState("");
   const [aiDraftJsonError, setAiDraftJsonError] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [showProjects, setShowProjects] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scene = useStudioStore((s) => s.scene);
@@ -100,6 +104,8 @@ function StudioPageContent() {
   const setCameraViewVerificationIntent = useStudioStore((s) => s.setCameraViewVerificationIntent);
   const runSimulationFromStore = useStudioStore((s) => s.runSimulation);
   const savedProjects = useStudioStore((s) => s.savedProjects);
+  const siteIntakeSession = useStudioStore((s) => s.siteIntakeSession);
+  const setSiteIntakeSession = useStudioStore((s) => s.setSiteIntakeSession);
   const updateSavedSceneMetadata = useStudioStore((s) => s.updateSavedSceneMetadata);
   const duplicateSavedScene = useStudioStore((s) => s.duplicateSavedScene);
   const renameSavedScene = useStudioStore((s) => s.renameSavedScene);
@@ -427,12 +433,50 @@ function StudioPageContent() {
   const runSimulation = () => {
     runSimulationFromStore();
     if (activeWorkflowId !== "idle") {
-      setActiveWorkflowStep(activeWorkflowId === "scan" ? 4 : 1);
+      const workflowSteps: Partial<Record<ActiveWorkflowId, number>> = {
+        audit: 1,
+        design: 4,
+        scan: 4,
+        floor_plan: 4,
+        ai_draft: 4,
+        verify_footage: 1,
+        report: 4,
+        demo: 2,
+      };
+
+      setActiveWorkflowStep(workflowSteps[activeWorkflowId] ?? 1);
     }
     setWorkspacePreset("coverage");
     setViewMode("map");
     setBottomTab("metrics");
     setEnterStudio(true);
+  };
+
+  const startDesignFlow = () => {
+    setActiveWorkflow("design");
+    setActiveWorkflowStep(0);
+    if (!confirmWorkspaceReplacement("create a new scene")) return;
+    setShowWizard(true);
+  };
+
+  const openFloorPlanFlow = () => {
+    setActiveWorkflow("floor_plan");
+    setActiveWorkflowStep(0);
+    if (!confirmWorkspaceReplacement("import a floor plan")) return;
+    setShowFloorPlanWizard(true);
+  };
+
+  const startAiDraftFlow = () => {
+    setActiveWorkflow("ai_draft");
+    setActiveWorkflowStep(0);
+    if (!confirmWorkspaceReplacement("open AI layout draft")) return;
+    setShowAiDraft(true);
+  };
+
+  const startVerifyFootageFlow = () => {
+    setActiveWorkflow("verify_footage");
+    setActiveWorkflowStep(0);
+    setShowVerifyFootagePreview(true);
   };
 
   const openScene = (nextScene = scene) => {
@@ -467,67 +511,150 @@ function StudioPageContent() {
     fileInputRef.current?.click();
   };
 
+  const compileCurrentScene = (source: import("@/lib/site-compiler").SiteIntakeSource) => {
+    const { scene } = useStudioStore.getState();
+    let result: import("@/lib/site-compiler").SiteCompilerResult;
+    switch (source) {
+      case "scan":
+        result = compileScanToSiteResult(scene);
+        break;
+      case "ai_prompt":
+        result = compileAiDraftToSiteResult(scene);
+        break;
+      case "manual":
+        result = {
+          source: "manual",
+          scene,
+          warnings: makeSiteCompilerWarnings(scene),
+          confidence: calculateConfidence(makeSiteCompilerWarnings(scene)),
+          provenance: {
+            source: "manual",
+            label: "Manual Build",
+            notes: ["Scene built manually in the Scene Builder wizard."],
+            confidence: calculateConfidence(makeSiteCompilerWarnings(scene)),
+          },
+        };
+        break;
+      case "floor_plan":
+      case "json":
+        result = compileFloorPlanToSiteResult(scene);
+        break;
+      default:
+        result = compileFloorPlanToSiteResult(scene);
+    }
+    setSiteIntakeSession({
+      id: `intake_${Date.now()}`,
+      source,
+      stage: "review",
+      result,
+      warnings: [],
+      provenanceNotes: [],
+      createdAt: Date.now(),
+    });
+  };
+
+  const approveIntakeSession = () => {
+    const session = useStudioStore.getState().siteIntakeSession;
+    if (!session) return;
+    setSiteIntakeSession(null);
+    setEnterStudio(true);
+  };
+
+  const rejectIntakeSession = () => {
+    setSiteIntakeSession(null);
+  };
+
   if (enterStudio) {
     return <StudioShell />;
   }
 
+  if (siteIntakeSession) {
+    return (
+      <SiteDraftReview
+        session={siteIntakeSession}
+        onApprove={approveIntakeSession}
+        onReject={rejectIntakeSession}
+      />
+    );
+  }
+
   return (
     <>
-      <StudioDashboardHome
-        scene={scene}
-        result={currentResult}
-        simulationDirty={simulationDirty}
-        simulationRunning={simulationRunning}
-        savedScenes={savedScenes}
-        savedProjects={savedProjects}
-        currentRunLabel={currentRunLabel}
-        onOpenStudio={openStudio}
-        onOpenCoverageWorkspace={openCoverageWorkspace}
-        onOpenCameraWall={openCameraWall}
-        onOpenPathReplay={openPathReplay}
-        onOpenCompareFixes={openCompareFixes}
-        onOpenIssues={openIssues}
-        onRunSimulation={runSimulation}
-        onStartProject={() => {
-          startSecurityAudit();
-        }}
-        onOpenAdvancedWorkflows={() => {
-          openProjectLauncher();
-        }}
-        onCreateScene={() => {
-          if (!confirmWorkspaceReplacement("create a new scene")) return;
-          setShowWizard(true);
-        }}
-        onImportFloorPlan={() => {
-          if (!confirmWorkspaceReplacement("import a floor plan")) return;
-          setShowFloorPlanWizard(true);
-        }}
-        onImportScene={handleImportScene}
-        onScanSite={() => {
-          if (!confirmWorkspaceReplacement("start scan intake")) return;
-          openScanWizard();
-        }}
-        onGuidedScanAssistant={() => {
-          if (!confirmWorkspaceReplacement("open the guided scan assistant")) return;
-          setShowGuidedScanKickoff(true);
-        }}
-        onAiDraft={() => {
-          if (!confirmWorkspaceReplacement("open AI layout draft")) return;
-          setShowAiDraft(true);
-        }}
-        onOpenDemoScene={openDemoWorkspace}
-        onOpenReport={openReport}
-        onOpenScene={openScene}
-        onUpdateProjectMetadata={updateSavedSceneMetadata}
-        onDuplicateProject={duplicateSavedScene}
-        onRenameProject={renameSavedScene}
-        onOpenMode={(viewMode, preset, bottomTab) => launchWorkspace(viewMode, preset, bottomTab)}
-        onOpenDemoWalkthrough={() => {
-          setDemoMode(true);
-          setDemoStep(0);
-          launchWorkspace("map", "coverage", "metrics");
-        }}
-      />
+      {showProjects ? (
+        <div className="flex h-full w-full flex-col overflow-y-auto" style={{ background: "var(--bg)" }}>
+          <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 py-4">
+            <div className="mb-4 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setShowProjects(false)}
+                className="rounded-xl border border-[color:var(--border)] bg-white/[0.03] px-3 py-1.5 text-xs text-[color:var(--text-muted)] transition-colors hover:border-sky-400/25 hover:bg-white/[0.05] hover:text-white"
+              >
+                Back to Create
+              </button>
+              <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--text-dim)]">Projects</div>
+            </div>
+            <StudioDashboardHome
+              scene={scene}
+              result={currentResult}
+              simulationDirty={simulationDirty}
+              simulationRunning={simulationRunning}
+              savedScenes={savedScenes}
+              savedProjects={savedProjects}
+              currentRunLabel={currentRunLabel}
+              onOpenStudio={openStudio}
+              onOpenCoverageWorkspace={openCoverageWorkspace}
+              onOpenCameraWall={openCameraWall}
+              onOpenPathReplay={openPathReplay}
+              onOpenCompareFixes={openCompareFixes}
+              onOpenIssues={openIssues}
+              onRunSimulation={runSimulation}
+              onStartProject={() => {
+                startSecurityAudit();
+              }}
+              onOpenAdvancedWorkflows={() => {
+                openProjectLauncher();
+              }}
+              onCreateScene={startDesignFlow}
+              onImportFloorPlan={openFloorPlanFlow}
+              onImportScene={handleImportScene}
+              onScanSite={() => {
+                if (!confirmWorkspaceReplacement("start scan intake")) return;
+                openScanWizard();
+              }}
+              onGuidedScanAssistant={() => {
+                if (!confirmWorkspaceReplacement("open the guided scan assistant")) return;
+                setShowGuidedScanKickoff(true);
+              }}
+              onAiDraft={startAiDraftFlow}
+              onOpenDemoScene={openDemoWorkspace}
+              onOpenReport={openReport}
+              onOpenScene={openScene}
+              onUpdateProjectMetadata={updateSavedSceneMetadata}
+              onDuplicateProject={duplicateSavedScene}
+              onRenameProject={renameSavedScene}
+              onOpenMode={(viewMode, preset, bottomTab) => launchWorkspace(viewMode, preset, bottomTab)}
+              onOpenDemoWalkthrough={() => {
+                setDemoMode(true);
+                setDemoStep(0);
+                launchWorkspace("map", "coverage", "metrics");
+              }}
+            />
+          </div>
+        </div>
+      ) : (
+        <SiteIntakeHub
+          onCreateScene={startDesignFlow}
+          onScanSite={() => {
+            if (!confirmWorkspaceReplacement("start scan intake")) return;
+            openScanWizard();
+          }}
+          onAiDraft={startAiDraftFlow}
+          onImportFloorPlan={openFloorPlanFlow}
+          onImportScene={handleImportScene}
+          onEnterStudio={() => setEnterStudio(true)}
+          onShowProjects={() => setShowProjects(true)}
+        />
+      )}
 
       <ProjectStartLauncher
         open={showProjectLauncher}
@@ -538,14 +665,12 @@ function StudioPageContent() {
           openDemoWorkspace();
         }}
         onCreateScene={() => {
-          if (!confirmWorkspaceReplacement("create a new scene")) return;
           setShowProjectLauncher(false);
-          setShowWizard(true);
+          startDesignFlow();
         }}
         onImportFloorPlan={() => {
-          if (!confirmWorkspaceReplacement("import a floor plan")) return;
           setShowProjectLauncher(false);
-          setShowFloorPlanWizard(true);
+          openFloorPlanFlow();
         }}
         onImportScene={() => {
           if (!confirmWorkspaceReplacement("import a scene JSON")) return;
@@ -558,13 +683,12 @@ function StudioPageContent() {
           openScanWizard();
         }}
         onAiDraft={() => {
-          if (!confirmWorkspaceReplacement("open AI layout draft")) return;
           setShowProjectLauncher(false);
-          setShowAiDraft(true);
+          startAiDraftFlow();
         }}
         onVerifyFootagePlanned={() => {
           setShowProjectLauncher(false);
-          setShowVerifyFootagePreview(true);
+          startVerifyFootageFlow();
         }}
         onOpenReport={() => {
           setShowProjectLauncher(false);
@@ -595,7 +719,7 @@ function StudioPageContent() {
                   return;
                 }
                 setImportError(null);
-                openStudio();
+                compileCurrentScene("json");
                 return;
               }
               const result = importScene(json);
@@ -604,7 +728,7 @@ function StudioPageContent() {
                 return;
               }
               setImportError(null);
-              openStudio();
+              compileCurrentScene("json");
             } catch {
               setImportError("Failed to parse JSON.");
             }
@@ -620,7 +744,7 @@ function StudioPageContent() {
             <SceneBuilderWizard
               onClose={() => {
                 setShowWizard(false);
-                setEnterStudio(true);
+                compileCurrentScene("manual");
               }}
             />
           </div>
@@ -634,7 +758,7 @@ function StudioPageContent() {
               forceImportMethod="floor_plan"
               onClose={() => {
                 setShowFloorPlanWizard(false);
-                setEnterStudio(true);
+                compileCurrentScene("floor_plan");
               }}
             />
           </div>
@@ -648,7 +772,7 @@ function StudioPageContent() {
               mode={scanWizardMode}
               onClose={() => {
                 setShowScanWizard(false);
-                setEnterStudio(true);
+                compileCurrentScene("scan");
               }}
             />
           </div>
@@ -1110,7 +1234,7 @@ function StudioPageContent() {
                     const store = useStudioStore.getState();
                     store.runSimulation();
                   }, 100);
-                  openStudio();
+                  compileCurrentScene("ai_prompt");
                 }}
                 disabled={!aiDraftPreview || aiGenerating || (aiDraftJsonEditable && !aiDraftJsonValidation.valid)}
                 className="rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:bg-cyan-900/60"

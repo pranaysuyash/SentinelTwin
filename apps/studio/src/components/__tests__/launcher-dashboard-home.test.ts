@@ -9,11 +9,14 @@ describe("Studio dashboard launcher surface", () => {
   test("surfaces the product-home and workspace dashboard surface", () => {
     const source = readFileSync(dashboardHomePath, "utf8");
 
-    expect(source).toContain("Product home");
-    expect(source).toContain("Advanced Workflows");
-    expect(source).toContain("Current workspace");
+    expect(source).toContain("Studio dashboard");
     expect(source).toContain("SentinelTwin Studio");
-    expect(source).toContain("Security Audit Workspace");
+    expect(source).toContain("Security Simulation Workspace");
+    expect(source).toContain("Workspace selector:");
+    expect(source).toContain("Status:");
+    expect(source).toContain("Last run: Never");
+    expect(source).toContain("Environment mode:");
+    expect(source).toContain("CURRENT WORKSPACE");
     expect(source).toContain("Open Workspace");
     expect(source).toContain("Run Simulation");
     expect(source).toContain("Import Scene JSON");
@@ -27,7 +30,7 @@ describe("Studio dashboard launcher surface", () => {
     expect(source).toContain("Redundancy");
     expect(source).toContain("Running");
     expect(source).toContain("Quick Start");
-    expect(source).toContain("Security Status");
+    expect(source).toContain("SECURITY STATUS");
     expect(source).toContain("OUTCOME SUMMARY");
     expect(source).toContain("OPEN ISSUES");
     expect(source).toContain("SIMULATION ASSUMPTIONS");
@@ -36,6 +39,9 @@ describe("Studio dashboard launcher surface", () => {
     expect(source).toContain("Scan a Site");
     expect(source).toContain("Guided Scan Assistant");
     expect(source).toContain("AI Layout Draft");
+    expect(source).toContain("Run Guided Walkthrough");
+    expect(source).toContain("QUICK START");
+    expect(source).toContain("RECENT WORKSPACES");
     expect(source).toContain("setTimelineFocusRequest");
     expect(source).toContain("branch:");
     expect(source).toContain("after:");

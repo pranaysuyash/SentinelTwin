@@ -176,9 +176,55 @@ async function ensureDevBootstrapArtifacts() {
   const documentShimPath = path.join(devServerDir, "pages", "_document.js");
   const documentShim = `'use strict';\n\nconst documentModule = require('next/dist/pages/_document');\nconst document = documentModule.default || documentModule;\n\nmodule.exports = document;\n`;
   await fs.writeFile(documentShimPath, documentShim);
+
+  const devStaticDir = path.join(devDir, "static");
+  const staticAliasDir = path.join(nextDir, "static");
+  try {
+    await fs.access(devStaticDir);
+    await fs.rm(staticAliasDir, { recursive: true, force: true });
+    await fs.symlink(devStaticDir, staticAliasDir, "dir");
+  } catch {
+    // If the dev asset tree is not ready yet, Next will create it on demand.
+  }
+}
+
+async function ensureProductionBootstrapArtifacts() {
+  if (mode !== "start") return;
+
+  const nextDir = path.join(process.cwd(), ".next");
+  const requiredServerFilesJsonPath = path.join(nextDir, "required-server-files.json");
+  const requiredServerFilesJsPath = path.join(nextDir, "required-server-files.js");
+
+  try {
+    await fs.access(requiredServerFilesJsonPath);
+  } catch {
+    try {
+      const manifestSource = await fs.readFile(requiredServerFilesJsPath, "utf8");
+      const manifestJson = manifestSource
+        .replace(/^self\.__SERVER_FILES_MANIFEST=/, "")
+        .replace(/;\s*$/, "");
+      await fs.writeFile(requiredServerFilesJsonPath, `${manifestJson}\n`);
+    } catch {
+      // If the manifest cannot be derived, let Next report the underlying build issue.
+    }
+  }
+
+  const serverPagesDir = path.join(nextDir, "server", "pages");
+  await fs.mkdir(serverPagesDir, { recursive: true });
+
+  const error500Path = path.join(serverPagesDir, "500.html");
+  try {
+    await fs.access(error500Path);
+  } catch {
+    await fs.writeFile(
+      error500Path,
+      `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>SentinelTwin Studio</title></head><body></body></html>\n`,
+    );
+  }
 }
 
 await ensureDevBootstrapArtifacts();
+await ensureProductionBootstrapArtifacts();
 
 const nextArgs = mode === "dev" ? ["dev", "--webpack", "-p", String(PORT)] : ["start", "-p", String(PORT)];
 const child = spawn("next", nextArgs, {

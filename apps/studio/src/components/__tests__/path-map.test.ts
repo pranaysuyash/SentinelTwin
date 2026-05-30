@@ -10,5 +10,9 @@ describe("PathMap", () => {
     expect(source).toContain("Path Map - Scenario / Path");
     expect(source).toContain("Route Visibility");
     expect(source).toContain("Open Path Replay");
+    expect(source).toContain("Visibility State");
+    expect(source).toContain("Best Camera");
+    expect(source).toContain("Actor Position");
+    expect(source).toContain("Upcoming Lost / Zone Event");
   });
 });

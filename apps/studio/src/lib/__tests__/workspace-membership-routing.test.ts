@@ -89,6 +89,8 @@ describe("workspace membership routing helpers", () => {
     expect(drift.policyChanged).toBe(true);
     expect(route.routeStatus).toBe("reconcile_before_route");
     expect(route.routeScope).toBe("reconcile");
+    expect(route.routeSyncMode).toBe("archive_backed");
+    expect(route.routeSyncLabel).toBe("Archive-backed replay");
     expect(route.routeLabel).toContain("Reconcile membership");
     expect(route.routeReason).toContain("drift");
     expect(route.activeMemberLabel).toContain("Reviewer");
@@ -96,6 +98,7 @@ describe("workspace membership routing helpers", () => {
     expect(route.currentPolicyLabel).toBe("Shared workspace");
     expect(route.archivedPolicyLabel).toBe("Single-user workspace");
     expect(route.routeKey).toContain("scene:scene-membership");
+    expect(route.routeKey).toContain("sync:archive_backed");
     expect(route.activeMemberEligible).toBe(false);
     expect(route.activeMemberReason).toContain("reconcile");
   });
@@ -144,12 +147,15 @@ describe("workspace membership routing helpers", () => {
 
     expect(route.routeStatus).toBe("open_publish");
     expect(route.routeScope).toBe("direct");
+    expect(route.routeSyncMode).toBe("local_only");
+    expect(route.routeSyncLabel).toBe("Local-only routing");
     expect(route.routeLabel).toBe("Open publish route");
     expect(route.routeReason).toContain("open");
     expect(route.drift).toBeNull();
     expect(route.archivedPolicyLabel).toBe("No archived snapshot");
     expect(route.activeMemberEligible).toBe(true);
     expect(route.activeMemberReason).toContain("publish directly");
+    expect(route.routeKey).toContain("sync:local_only");
   });
 
   test("rejects malformed approval route summaries and normalizes valid ones", () => {
@@ -162,6 +168,9 @@ describe("workspace membership routing helpers", () => {
       archivedMemberLabel: "Archived Operator · operator",
       currentPolicyLabel: "Shared workspace",
       archivedPolicyLabel: "Single-user workspace",
+      routeSyncMode: "archive_backed",
+      routeSyncLabel: "Archive-backed replay",
+      routeSyncReason: "Approval routing is replayed against an archived membership snapshot so shared-identity handoffs can be compared or delivered.",
       drift: null,
       hasPrivacyExposure: true,
     })).not.toBeNull();
@@ -175,6 +184,9 @@ describe("workspace membership routing helpers", () => {
       archivedMemberLabel: "Archived Operator · operator",
       currentPolicyLabel: "Shared workspace",
       archivedPolicyLabel: "Single-user workspace",
+      routeSyncMode: "archive_backed",
+      routeSyncLabel: "Archive-backed replay",
+      routeSyncReason: "Approval routing is replayed against an archived membership snapshot so shared-identity handoffs can be compared or delivered.",
       drift: null,
       hasPrivacyExposure: true,
     })).toBeNull();

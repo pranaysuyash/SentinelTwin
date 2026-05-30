@@ -82,6 +82,9 @@ describe("workspace-membership-archive route", () => {
         },
         approvalRoute: {
           routeStatus: "review_required",
+          routeSyncMode: "archive_backed",
+          routeSyncLabel: "Archive-backed replay",
+          routeSyncReason: "Approval routing is replayed against an archived membership snapshot so shared-identity handoffs can be compared or delivered.",
           routeLabel: "Route approval to reviewer",
           routeReason: "Approval should route through reviewer before publish.",
           targetReviewerLabel: "reviewer",
@@ -106,6 +109,7 @@ describe("workspace-membership-archive route", () => {
     expect(body.workspaceAccessState.members).toHaveLength(2);
     expect(body.workspaceGovernanceState.activeRole).toBe("reviewer");
     expect(body.approvalRoute.routeStatus).toBe("review_required");
+    expect(body.approvalRoute.routeSyncMode).toBe("archive_backed");
 
     const archive = await GET(createNextRequest("http://localhost/api/workspace-membership-archive"));
     const archiveBody = await archive.json();
@@ -169,6 +173,9 @@ describe("workspace-membership-archive route", () => {
           },
           approvalRoute: {
             routeStatus: "open_publish",
+            routeSyncMode: "local_only",
+            routeSyncLabel: "Local-only routing",
+            routeSyncReason: "Approval routing is computed only from the live workspace state and has no archived membership snapshot yet.",
             routeLabel: "Open publish route",
             routeReason: "Publish can route directly because the workspace is open and aligned.",
             targetReviewerLabel: "admin",
@@ -189,6 +196,7 @@ describe("workspace-membership-archive route", () => {
       expect(body.deliveredCount).toBe(1);
       expect(body.queuedCount).toBe(0);
       expect(body.approvalRoute.routeStatus).toBe("open_publish");
+      expect(body.approvalRoute.routeSyncMode).toBe("local_only");
       expect(received).toHaveLength(1);
       expect((received[0] as { workspaceAccess?: { activeMemberId?: string }; approvalRoute?: { routeStatus?: string } }).workspaceAccess?.activeMemberId).toBe("member_admin");
       expect((received[0] as { approvalRoute?: { routeStatus?: string } }).approvalRoute?.routeStatus).toBe("open_publish");

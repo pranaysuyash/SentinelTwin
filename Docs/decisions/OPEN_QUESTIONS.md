@@ -13,6 +13,7 @@ alias we can extend, or scattered across multiple files? Need to read Pascal sou
 designing extension.
 **Where to look:** `pascalorg/editor` packages/core/src/types/
 **Outcome needed:** Specific file and line to extend, or a pattern decision.
+**2026-05-30 update:** Pre-fork reuse audit indicates a staged path while fork is parked: reuse non-graph Pascal utilities directly, route graph-dependent helpers through an adapter boundary, and defer AnyNode/store-loop integration until fork phase. This lowers immediate integration risk without contradicting D-001.
 
 ### Q-002: Vision collider mesh building — how do we merge all objects for BVH?
 The coverage engine needs a single merged mesh of all vision colliders for BVH raycasting.

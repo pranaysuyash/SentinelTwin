@@ -142,3 +142,24 @@ export function canTransitionBranch(state: BranchState, action: BranchAction): b
 export function validActionsFromState(state: BranchState): BranchAction[] {
   return Object.keys(VALID_TRANSITIONS[state] ?? {}) as BranchAction[];
 }
+
+/**
+ * Factory: create a new draft BranchRecord.
+ */
+export function createBranchRecord(
+  id: string,
+  label: string,
+  authorId: string,
+  notes?: string,
+): BranchRecord {
+  const now = Date.now();
+  return {
+    id,
+    label,
+    state: "draft",
+    createdAt: now,
+    updatedAt: now,
+    authorId,
+    notes,
+  };
+}

@@ -22,6 +22,7 @@ import { CameraViewMode } from "@/components/view/CameraViewMode";
 import { PathReplayView } from "@/components/view/PathReplayView";
 import { CompareView } from "@/components/view/CompareView";
 import { ReportView } from "@/components/view/ReportView";
+import { AutosaveRecoveryBanner } from "@/components/shared/AutosaveRecoveryBanner";
 
 function WorkspaceArea() {
   const viewMode = useStudioStore((s) => s.viewMode);
@@ -414,6 +415,7 @@ export default function StudioShell() {
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[#0b0c10] text-[#dde2ef]">
       <TopBar />
+      <AutosaveRecoveryBanner />
       {studioBypassMode ? (
         <div className="border-b border-amber-500/15 bg-amber-500/8 px-3 py-1.5 text-[10px] uppercase tracking-[0.18em] text-amber-100">
           Studio bypass mode - root product launcher skipped

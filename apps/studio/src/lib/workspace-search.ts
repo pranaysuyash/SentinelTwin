@@ -604,3 +604,56 @@ export function searchWorkspaceMemory(query: string, input: WorkspaceSearchInput
     .sort((a, b) => b.score - a.score || b.timestamp - a.timestamp)
     .slice(0, input.maxResults ?? 10);
 }
+
+// ---------------------------------------------------------------------------
+// Direct operational evidence event search (4.12 — Global Search)
+// ---------------------------------------------------------------------------
+
+export type OperationalEventSearchHit = {
+  event: {
+    id: string;
+    title: string;
+    details?: string | null;
+    afterSummary?: string | null;
+    kind: string;
+    timestamp: number;
+  };
+  score: number;
+};
+
+/**
+ * Simple case-insensitive substring search over operational evidence events.
+ *
+ * Matches against `title`, `details`, and `afterSummary` fields.
+ * Returns matching events ordered by relevance score descending, then
+ * timestamp descending (most recent first).
+ */
+export function searchOperationalEvents(
+  query: string,
+  events: Array<{
+    id: string;
+    title: string;
+    details?: string | null;
+    afterSummary?: string | null;
+    kind: string;
+    timestamp: number;
+  }>,
+): OperationalEventSearchHit[] {
+  const normalizedQuery = query.trim();
+  if (!normalizedQuery) return [];
+
+  const hits: OperationalEventSearchHit[] = [];
+
+  for (const event of events) {
+    const haystack = [event.title, event.details, event.afterSummary, event.kind]
+      .filter(Boolean)
+      .join(" ");
+    const score = scoreText(haystack, normalizedQuery);
+    if (score > 0) {
+      hits.push({ event, score });
+    }
+  }
+
+  return hits.sort((a, b) => b.score - a.score || b.event.timestamp - a.event.timestamp);
+}
+

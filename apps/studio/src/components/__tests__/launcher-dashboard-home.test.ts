@@ -19,7 +19,7 @@ describe("Studio dashboard launcher surface", () => {
     expect(source).toContain("CURRENT WORKSPACE");
     expect(source).toContain("STUDIO");
     expect(source).toContain("Reference Sites");
-    expect(source).toContain("Open Workspace");
+    expect(source).toContain("Open Studio");
     expect(source).toContain("Run Simulation");
     expect(source).toContain("Import Scene JSON");
     expect(source).toContain("New Blank Scene");

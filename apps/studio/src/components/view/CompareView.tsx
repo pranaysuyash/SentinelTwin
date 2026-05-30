@@ -1,8 +1,8 @@
 "use client";
 
 import { OrbitControls } from "@react-three/drei";
-import { Canvas } from "@react-three/fiber";
-import { ArrowLeftRight, Database, GitCompare, Globe, Plus, AlertTriangle, Share2, Sparkles } from "lucide-react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { ArrowLeftRight, Database, GitCompare, Globe, Lock, Plus, AlertTriangle, Share2, Sparkles, Unlock } from "lucide-react";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
@@ -130,16 +130,76 @@ function buildTrendPath(points: Array<{ x: number; y: number }>) {
   return points.map((pt, index) => `${index === 0 ? "M" : "L"} ${pt.x} ${pt.y}`).join(" ");
 }
 
+/** Renders inside a Canvas context to sync camera position/target with the shared store. */
+function CameraSyncController({
+  orbitSync,
+  orbitCameraState,
+  onOrbitChange,
+}: {
+  orbitSync: boolean;
+  orbitCameraState: { position: [number, number, number] | null; target: [number, number, number] | null };
+  onOrbitChange: (state: { position: [number, number, number]; target: [number, number, number] }) => void;
+}) {
+  const { camera, controls } = useThree();
+  const lastSentKey = useRef<string>("");
+  const lastAppliedKey = useRef<string>("");
+
+  useFrame(() => {
+    const orbitControls = controls as { target: THREE.Vector3 } | null;
+    if (!orbitControls || !camera) return;
+
+    const pos = camera.position;
+    const tgt = orbitControls.target;
+
+    const localKey = `${pos.x.toFixed(4)},${pos.y.toFixed(4)},${pos.z.toFixed(4)}|${tgt.x.toFixed(4)},${tgt.y.toFixed(4)},${tgt.z.toFixed(4)}`;
+
+    if (orbitSync) {
+      // If the shared state has been updated by the other panel, apply it to this camera
+      if (orbitCameraState.position && orbitCameraState.target) {
+        const sharedKey = `${orbitCameraState.position[0].toFixed(4)},${orbitCameraState.position[1].toFixed(4)},${orbitCameraState.position[2].toFixed(4)}|${orbitCameraState.target[0].toFixed(4)},${orbitCameraState.target[1].toFixed(4)},${orbitCameraState.target[2].toFixed(4)}`;
+
+        if (sharedKey !== lastAppliedKey.current && sharedKey !== localKey) {
+          lastAppliedKey.current = sharedKey;
+          camera.position.set(orbitCameraState.position[0], orbitCameraState.position[1], orbitCameraState.position[2]);
+          orbitControls.target.set(orbitCameraState.target[0], orbitCameraState.target[1], orbitCameraState.target[2]);
+          return;
+        }
+      }
+
+      // If this camera moved locally, emit the new state to the store
+      if (localKey !== lastSentKey.current) {
+        lastSentKey.current = localKey;
+        onOrbitChange({
+          position: [pos.x, pos.y, pos.z],
+          target: [tgt.x, tgt.y, tgt.z],
+        });
+      }
+    } else {
+      // Reset tracking when sync is off
+      lastSentKey.current = "";
+      lastAppliedKey.current = "";
+    }
+  });
+
+  return null;
+}
+
 function ScenePanel({
   label,
   accent,
   scene,
   coverageCells,
+  orbitSync,
+  orbitCameraState,
+  onOrbitChange,
 }: {
   label: string;
   accent: "baseline" | "proposed";
   scene: SceneSnapshot["scene"];
   coverageCells: CoverageCell[];
+  orbitSync: boolean;
+  orbitCameraState: { position: [number, number, number] | null; target: [number, number, number] | null };
+  onOrbitChange: (state: { position: [number, number, number]; target: [number, number, number] }) => void;
 }) {
   const { width, depth } = scene.dimensions;
 
@@ -201,6 +261,11 @@ function ScenePanel({
             maxPolarAngle={Math.PI / 2.1}
             enableDamping
             dampingFactor={0.08}
+          />
+          <CameraSyncController
+            orbitSync={orbitSync}
+            orbitCameraState={orbitCameraState}
+            onOrbitChange={onOrbitChange}
           />
         </Canvas>
       </div>
@@ -568,6 +633,10 @@ export function CompareView() {
   const compareReportSelection = useStudioStore((s) => s.compareReportSelection);
   const compareVisualEvidence = useStudioStore((s) => s.compareVisualEvidence);
   const activePathId = useStudioStore((s) => s.activePathId);
+  const compareOrbitSync = useStudioStore((s) => s.compareOrbitSync);
+  const compareOrbitCameraState = useStudioStore((s) => s.compareOrbitCameraState);
+  const setCompareOrbitSync = useStudioStore((s) => s.setCompareOrbitSync);
+  const setCompareOrbitCameraState = useStudioStore((s) => s.setCompareOrbitCameraState);
   const demoMode = useStudioStore((s) => s.demoMode);
   const demoStep = useStudioStore((s) => s.demoStep);
   const [comparisonAId, setComparisonAId] = useState<string | null>(null);
@@ -769,6 +838,17 @@ export function CompareView() {
     setExportToast("Visual evidence captured for report export");
     window.setTimeout(() => setExportToast(null), 2500);
   }, [setCompareVisualEvidence, snapshotA, snapshotB]);
+  const handleOrbitChange = useCallback(
+    (state: { position: [number, number, number]; target: [number, number, number] }) => {
+      setCompareOrbitCameraState(state);
+    },
+    [setCompareOrbitCameraState],
+  );
+
+  const handleToggleOrbitSync = useCallback(() => {
+    setCompareOrbitSync(!compareOrbitSync);
+  }, [compareOrbitSync, setCompareOrbitSync]);
+
   const handleOpenReplay = useCallback(() => {
     setBottomTab("timeline");
     setViewMode("replay");
@@ -870,6 +950,30 @@ export function CompareView() {
             {snapshotB?.label ?? "Scenario B"}
           </div>
         </div>
+        <button
+          type="button"
+          onClick={handleToggleOrbitSync}
+          className={cn(
+            "flex items-center gap-1 rounded-md border px-2 py-0.5 text-[9px] font-medium transition-colors",
+            compareOrbitSync
+              ? "border-sky-400/30 bg-sky-500/10 text-sky-200 hover:bg-sky-500/20"
+              : "border-[#24283a] bg-[#111521] text-[#8090a8] hover:text-white",
+          )}
+        >
+          {compareOrbitSync
+            ? <Lock className="h-3 w-3" />
+            : <Unlock className="h-3 w-3" />
+          }
+          <span>Synchronize View</span>
+          <span className={cn(
+            "ml-0.5 rounded px-1 py-0.5 text-[8px] uppercase tracking-[0.12em]",
+            compareOrbitSync
+              ? "bg-sky-500/15 text-sky-300"
+              : "bg-[#1d2330] text-[#556076]",
+          )}>
+            {compareOrbitSync ? "Synced" : "Independent"}
+          </span>
+        </button>
         <div className="ml-auto flex items-center gap-1.5">
           {exportToast ? (
             <span className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] text-emerald-300">
@@ -1057,6 +1161,9 @@ export function CompareView() {
               accent="baseline"
               scene={snapshotA.scene}
               coverageCells={cellsA}
+              orbitSync={compareOrbitSync}
+              orbitCameraState={compareOrbitCameraState}
+              onOrbitChange={handleOrbitChange}
             />
           ) : (
             <SnapshotPlaceholder
@@ -1072,6 +1179,9 @@ export function CompareView() {
               accent="proposed"
               scene={snapshotB.scene}
               coverageCells={cellsB}
+              orbitSync={compareOrbitSync}
+              orbitCameraState={compareOrbitCameraState}
+              onOrbitChange={handleOrbitChange}
             />
           ) : (
             <SnapshotPlaceholder

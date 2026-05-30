@@ -40,15 +40,21 @@ if (alreadyRunning) {
   process.exit(1);
 }
 
-async function ensureDevBootstrapArtifacts() {
+async function ensureDevBootstrapArtifacts({ cleanPages = false } = {}) {
   if (mode !== "dev") return;
 
   const nextDir = path.join(process.cwd(), ".next");
   const devDir = path.join(nextDir, "dev");
+  const devCacheDir = path.join(devDir, "cache");
   const devServerDir = path.join(devDir, "server");
   const devPagesDir = path.join(devServerDir, "pages");
 
+  if (cleanPages) {
+    await fs.rm(devPagesDir, { recursive: true, force: true });
+  }
+
   await fs.mkdir(devPagesDir, { recursive: true });
+  await fs.mkdir(devCacheDir, { recursive: true });
 
   const routesManifestPath = path.join(devDir, "routes-manifest.json");
   const routesManifest = {
@@ -223,10 +229,14 @@ async function ensureProductionBootstrapArtifacts() {
   }
 }
 
-await ensureDevBootstrapArtifacts();
+await ensureDevBootstrapArtifacts({ cleanPages: true });
 await ensureProductionBootstrapArtifacts();
 
-const nextArgs = mode === "dev" ? ["dev", "--webpack", "-p", String(PORT)] : ["start", "-p", String(PORT)];
+const devBundler = (process.env.STUDIO_DEV_BUNDLER ?? "turbopack").toLowerCase();
+const devArgs = devBundler === "webpack"
+  ? ["dev", "--webpack", "-p", String(PORT)]
+  : ["dev", "--turbopack", "-p", String(PORT)];
+const nextArgs = mode === "dev" ? devArgs : ["start", "-p", String(PORT)];
 const localNextBinary = path.join(process.cwd(), "node_modules", "next", "dist", "bin", "next");
 const child = spawn(process.execPath, [localNextBinary, ...nextArgs], {
   env: {

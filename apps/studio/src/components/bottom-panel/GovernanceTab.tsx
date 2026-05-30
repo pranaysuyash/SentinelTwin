@@ -1110,6 +1110,11 @@ export function GovernanceTab() {
                   <div className="mt-0.5 font-semibold text-[#d2d9e8]">{approvalRoute.routeScope}</div>
                 </div>
               </div>
+              <div className="mt-1.5 rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1">
+                <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Route source</div>
+                <div className="mt-0.5 font-semibold text-[#d2d9e8]">{approvalRoute.routeSyncLabel}</div>
+                <div className="mt-0.5 text-[#8b96ab]">{approvalRoute.routeSyncReason}</div>
+              </div>
               <div className="mt-1">
                 <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Active member eligibility</div>
                 <div className="mt-0.5 text-[#8b96ab]">{approvalRoute.activeMemberReason}</div>

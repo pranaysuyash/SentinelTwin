@@ -764,7 +764,10 @@ export function SceneIntelligenceTab() {
   const restoreOperationalArchive = (archiveHistoryId: string) => {
     const archiveRecord = operationalEvidenceArchiveHistory.find((record) => record.historyId === archiveHistoryId) ?? null;
     if (!archiveRecord) return;
-    const result = importOperationalEvidenceArchive(archiveRecord.archive);
+    const result = importOperationalEvidenceArchive(archiveRecord.archive, {
+      archiveExportedAt: archiveRecord.exportedAt,
+      archiveRestoreBranch: archiveRecord.restoreBranch,
+    });
     if (result.success) {
       const eventId = archiveRecord.archive.operationalEvidenceEvents.at(-1)?.id ?? null;
       if (eventId) {

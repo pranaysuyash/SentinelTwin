@@ -82,6 +82,7 @@ export function createBlankSecurityScene(): SecurityScene {
     sensors: [],
     entryPoints: [],
     paths: [],
+    comments: [],
     assumptions: {
       wallHeightM: 3,
       personHeightM: 1.75,

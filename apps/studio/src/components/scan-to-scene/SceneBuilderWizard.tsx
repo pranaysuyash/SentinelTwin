@@ -10,7 +10,12 @@ import {
   createSceneFromFloorPlan,
   recalibrateFloorPlanResult,
   type FloorPlanResult,
+  type FloorPlanSemanticContext,
+  type FloorPlanGateDecision,
   validateFloorPlan,
+  deriveFloorPlanSemanticContext,
+  evaluateFloorPlanTierGate,
+  getFloorPlanTierGateWarning,
 } from "@/lib/floor-plan-import";
 import { SCENE_TEMPLATES, type SceneTemplate } from "@/lib/scene-templates";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
@@ -29,6 +34,8 @@ interface WizardState {
   importMethod: ImportMethod | null;
   selectedTemplate: SceneTemplate | null;
   floorPlanResult: FloorPlanResult | null;
+  floorPlanSemanticContext: FloorPlanSemanticContext | null;
+  floorPlanGateDecision: FloorPlanGateDecision | null;
   floorPlanFile: File | null;
   isProcessing: boolean;
   importWarnings: string[];
@@ -44,6 +51,8 @@ const initialState: WizardState = {
   importMethod: null,
   selectedTemplate: null,
   floorPlanResult: null,
+  floorPlanSemanticContext: null,
+  floorPlanGateDecision: null,
   floorPlanFile: null,
   isProcessing: false,
   importWarnings: [],
@@ -85,12 +94,14 @@ export function SceneBuilderWizard({ onClose, forceImportMethod = null }: SceneB
       case 2:
         if (state.importMethod === "blank") return true;
         if (state.importMethod === "template") return state.selectedTemplate !== null;
-        if (state.importMethod === "floor_plan") return state.floorPlanResult !== null;
+        if (state.importMethod === "floor_plan") {
+          return state.floorPlanResult !== null && state.floorPlanGateDecision?.action !== "rescan_required";
+        }
         return false;
       case 3: return true; // Review always ready
       default: return true;
     }
-  }, [state.step, state.roomName, state.importMethod, state.selectedTemplate, state.floorPlanResult]);
+  }, [state.step, state.roomName, state.importMethod, state.selectedTemplate, state.floorPlanResult, state.floorPlanGateDecision]);
 
   const handleTemplateSelect = useCallback((template: SceneTemplate) => {
     update({
@@ -110,15 +121,23 @@ export function SceneBuilderWizard({ onClose, forceImportMethod = null }: SceneB
         heightM: roomHeightM,
         floorPlanScalePixelsPerMeter,
       }));
-      const { warnings } = validateFloorPlan(result);
+      const validation = validateFloorPlan(result);
+      const semanticContext = deriveFloorPlanSemanticContext(result, validation.diagnostics);
+      const gateDecision = evaluateFloorPlanTierGate(semanticContext);
+      const gateWarning = getFloorPlanTierGateWarning(gateDecision);
       update({
         floorPlanResult: result,
-        importWarnings: warnings,
+        floorPlanSemanticContext: semanticContext,
+        floorPlanGateDecision: gateDecision,
+        importWarnings: gateWarning ? [...validation.warnings, gateWarning] : validation.warnings,
         isProcessing: false,
       });
     } catch (err) {
       update({
         isProcessing: false,
+        floorPlanResult: null,
+        floorPlanSemanticContext: null,
+        floorPlanGateDecision: null,
         importWarnings: [`Failed to process image: ${err instanceof Error ? err.message : "Unknown error"}`],
       });
     }
@@ -550,15 +569,37 @@ function ConfigureStep({
               key={`${value.floorPlanResult.imageWidth}x${value.floorPlanResult.imageHeight}-${value.floorPlanResult.walls.length}-${value.floorPlanResult.doors.length}-${value.floorPlanResult.windows.length}-${value.floorPlanResult.confidence.toFixed(3)}`}
               result={value.floorPlanResult}
               warnings={value.importWarnings}
-              onImageChange={() => onChange({ floorPlanResult: null, floorPlanFile: null })}
+              onImageChange={() => onChange({
+                floorPlanResult: null,
+                floorPlanFile: null,
+                floorPlanSemanticContext: null,
+                floorPlanGateDecision: null,
+                importWarnings: [],
+              })}
               onRecalibrate={(calibration) => {
                 const recalibrated = recalibrateFloorPlanResult(value.floorPlanResult!, calibration);
-                const { warnings } = validateFloorPlan(recalibrated);
-                onChange({ floorPlanResult: recalibrated, importWarnings: warnings });
+                const validation = validateFloorPlan(recalibrated);
+                const semanticContext = deriveFloorPlanSemanticContext(recalibrated, validation.diagnostics);
+                const gateDecision = evaluateFloorPlanTierGate(semanticContext);
+                const gateWarning = getFloorPlanTierGateWarning(gateDecision);
+                onChange({
+                  floorPlanResult: recalibrated,
+                  floorPlanSemanticContext: semanticContext,
+                  floorPlanGateDecision: gateDecision,
+                  importWarnings: gateWarning ? [...validation.warnings, gateWarning] : validation.warnings,
+                });
               }}
               onUpdateResult={(nextResult) => {
-                const { warnings } = validateFloorPlan(nextResult);
-                onChange({ floorPlanResult: nextResult, importWarnings: warnings });
+                const validation = validateFloorPlan(nextResult);
+                const semanticContext = deriveFloorPlanSemanticContext(nextResult, validation.diagnostics);
+                const gateDecision = evaluateFloorPlanTierGate(semanticContext);
+                const gateWarning = getFloorPlanTierGateWarning(gateDecision);
+                onChange({
+                  floorPlanResult: nextResult,
+                  floorPlanSemanticContext: semanticContext,
+                  floorPlanGateDecision: gateDecision,
+                  importWarnings: gateWarning ? [...validation.warnings, gateWarning] : validation.warnings,
+                });
               }}
             />
           </div>
@@ -617,6 +658,23 @@ function ConfigureStep({
             <span className="text-[8px] text-[#59637a]">pixels/meter</span>
           </div>
         </div>
+
+        {value.floorPlanGateDecision ? (
+          <div className={`rounded-lg border px-2 py-1.5 text-[8px] ${
+            value.floorPlanGateDecision.action === "rescan_required"
+              ? "border-red-500/25 bg-red-500/10 text-red-100"
+              : value.floorPlanGateDecision.action === "human_review"
+                ? "border-amber-500/25 bg-amber-500/10 text-amber-100"
+                : value.floorPlanGateDecision.action === "cloud_geometry_required"
+                  ? "border-blue-500/25 bg-blue-500/10 text-blue-100"
+                  : "border-emerald-500/25 bg-emerald-500/10 text-emerald-100"
+          }`}>
+            <div className="text-[8px] font-medium uppercase tracking-wider">Tier 1 Gate</div>
+            <div className="mt-1">
+              {formatGateAction(value.floorPlanGateDecision.action)} — {value.floorPlanGateDecision.reason}
+            </div>
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -643,6 +701,9 @@ function ReviewStep({
     if (value.floorPlanResult) {
       lines.push({ label: "Detected Walls", value: `${value.floorPlanResult.walls.length}` });
       lines.push({ label: "Confidence", value: `${(value.floorPlanResult.confidence * 100).toFixed(0)}%` });
+      if (value.floorPlanGateDecision) {
+        lines.push({ label: "Tier 1 Gate", value: formatGateAction(value.floorPlanGateDecision.action) });
+      }
     }
 
     return lines;
@@ -669,7 +730,10 @@ function ReviewStep({
           <div className="text-[8px] font-medium uppercase tracking-wider text-[#59637a]">Floor Plan Commit Summary</div>
           <div className="mt-2 grid grid-cols-2 gap-2 text-[9px] text-[#8090a8]">
             <div>Detection confidence: <span className="text-[#c5ccdb]">{(value.floorPlanResult.confidence * 100).toFixed(0)}%</span></div>
+            <div>Tier 1 gate: <span className="text-[#c5ccdb]">{formatGateAction(value.floorPlanGateDecision?.action ?? "proceed_to_tier2")}</span></div>
             <div>Unresolved warnings: <span className={value.importWarnings.length > 0 ? "text-amber-300" : "text-emerald-300"}>{value.importWarnings.length}</span></div>
+            <div>Scene type: <span className="text-[#c5ccdb]">{value.floorPlanSemanticContext?.sceneType ?? "unknown"}</span></div>
+            <div>Tier 1 quality: <span className="text-[#c5ccdb]">{value.floorPlanSemanticContext ? `${Math.round(value.floorPlanSemanticContext.qualityScore * 100)}%` : "—"}</span></div>
             <div>Doors: <span className="text-[#c5ccdb]">{value.floorPlanResult.doors.length}</span></div>
             <div>Windows: <span className="text-[#c5ccdb]">{value.floorPlanResult.windows.length}</span></div>
             <div>Walls: <span className="text-[#c5ccdb]">{value.floorPlanResult.walls.length}</span></div>
@@ -708,4 +772,18 @@ function ReviewStep({
       )}
     </div>
   );
+}
+
+function formatGateAction(action: FloorPlanGateDecision["action"]) {
+  switch (action) {
+    case "rescan_required":
+      return "Rescan Required";
+    case "human_review":
+      return "Manual Review";
+    case "cloud_geometry_required":
+      return "Force Cloud Geometry";
+    case "proceed_to_tier2":
+    default:
+      return "Proceed";
+  }
 }

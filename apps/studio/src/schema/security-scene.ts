@@ -263,6 +263,21 @@ export const privacyZoneNodeSchema = z.object({
   geometryValidity: geometryValiditySchema.default("valid"),
 });
 
+export const commentNodeSchema = z.object({
+  id: z.string().startsWith("cmt_"),
+  nodeType: z.literal("comment"),
+  position: point3Schema,
+  text: z.string(),
+  author: z.string(),
+  createdAt: z.number(),
+  resolved: z.boolean().default(false),
+  attachedToNodeId: z.string().nullable().default(null),
+  source: sceneSourceSchema,
+  reviewStatus: reviewStatusSchema.default("unreviewed"),
+  sourceTrace: z.string().default(""),
+  geometryValidity: geometryValiditySchema.default("valid"),
+});
+
 export const sensorNodeSchema = z.object({
   id: z.string().startsWith("sensor_"),
   nodeType: z.literal("sensor"),
@@ -768,6 +783,7 @@ const securitySceneBaseSchema = z.object({
   sensors: z.array(sensorNodeSchema).default([]),
   entryPoints: z.array(entryPointNodeSchema).default([]),
   paths: z.array(scenarioPathSchema).default([]),
+  comments: z.array(commentNodeSchema).default([]),
   assumptions: simulationAssumptionsSchema,
   timeSchedule: timeScheduleSchema.optional(),
   simulation: simulationResultSchema.optional(),
@@ -803,6 +819,7 @@ export type SecurityLightNode = z.infer<typeof securityLightNodeSchema>;
 export type ObstructionNode = z.infer<typeof obstructionNodeSchema>;
 export type CriticalZoneNode = z.infer<typeof criticalZoneNodeSchema>;
 export type PrivacyZoneNode = z.infer<typeof privacyZoneNodeSchema>;
+export type CommentNode = z.infer<typeof commentNodeSchema>;
 export type SensorNode = z.infer<typeof sensorNodeSchema>;
 export type EntryPointNode = z.infer<typeof entryPointNodeSchema>;
 export type PathPoint = z.infer<typeof pathPointSchema>;
@@ -834,7 +851,8 @@ export type AnyEditableNode =
   | CriticalZoneNode
   | PrivacyZoneNode
   | EntryPointNode
-  | ScenarioPath;
+  | ScenarioPath
+  | CommentNode;
 
 export type TimePeriod = z.infer<typeof timePeriodSchema>;
 export type LightSchedule = z.infer<typeof lightScheduleSchema>;

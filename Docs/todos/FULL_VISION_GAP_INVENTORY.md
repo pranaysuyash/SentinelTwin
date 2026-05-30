@@ -203,6 +203,7 @@ Every input mode should compile into the same truth model. Every report should r
 
 **What is still missing**
 - Authenticated multi-step device-protocol session management for live cameras beyond the current probe/archive, operator-bound live connection, session-refresh, and active-lease registry layers, now narrowed to subscription renewal, event streaming, and longer-lived session continuity rather than the initial challenge-response handshake. The current client now already exercises a real second-leg event-subscribe probe when a device advertises one, and the returned subscription URI/reference/expiry now survive the route, store, inspector, and HUD surfaces.
+- `onvif-event-mapper.ts` now exists and translates WS-Notification XML envelopes into `OperationalEvidenceEventInput` via a topic routing table. A `TODO(4.7)` comment in `camera-live-connection/route.ts` marks where the event should be published to the store once a server-side event bus exists.
 - ONVIF Profile M richness beyond the current ONVIF notification-envelope ingest bridge, including broader analytics metadata and event-stream semantics that go beyond the notification topics currently mapped into the ledger.
 - A trustworthy operating model for multi-sensor evidence and a deeper incident bundle that combines runtime logs, live metadata, and automated alerting.
 
@@ -223,10 +224,8 @@ Every input mode should compile into the same truth model. Every report should r
 - The governance control plane now shows a live action gate for edit/annotate/request-review/approve/reject/publish/restore decisions, along with member routing and approval posture, so the local RBAC/ABAC policy is visible in-product rather than hidden in store helpers.
 
 **What is still missing**
-- Collaboration semantics beyond local review.
-- Change approval workflows for shared environments.
-- A cleaner model for draft branches, reviewed branches, and published states.
-- A backend-safe shared membership model that can persist the same routing and approval policy across multiple operators instead of only local state.
+- A formal `BranchLifecycle` state machine (`branch-lifecycle.ts`) now exists enforcing draft → review → approved → published transitions, and the studio store exposes `branchLifecycleState: Record<string, BranchRecord>` + `updateBranchLifecycle(branchId, action)` to update it.
+- Collaboration semantics beyond local review and a backend-safe shared membership model that can persist routing and approval policy across multiple operators instead of only local state.
 
 ### 4.9 Reporting, Export, and Compliance Evidence
 
@@ -241,11 +240,16 @@ Every input mode should compile into the same truth model. Every report should r
 **Current state**
 - Reports exist and carry provenance.
 - Comparison/export is already useful.
+- Exported reports now make visibility/redaction explicit and include buyer-facing drill-through shortcuts to the live sections.
+- Privacy reviewer exports now include a dedicated privacy masking summary.
+- Compare exports now preserve the same visibility framing instead of dropping the disclosure story at the handoff boundary.
 
 **What is still missing**
-- Stronger compliance-specific reporting modes.
-- Evidence ledger integration so a report can cite the exact site history behind it.
-- More explicit audience modes: operator, auditor, insurer, installer, privacy reviewer.
+- `AudienceMode` type (`operator | auditor | insurer | installer | privacy_reviewer`) now exists in `report-summary.ts` with `audienceModeLabel`, `audienceModeDescription`, and `audienceModeReportHeader`. An `AudienceModeSelector` component now exists in `components/shared/AudienceModeSelector.tsx`.
+- Evidence ledger integration so a report can cite the exact site history behind it (still open).
+- A persisted report catalog with audience defaults and quick-apply presets.
+- Deeper section-to-data-point links for the report builder and export surface.
+- More export formats beyond the current HTML/Markdown/Text surface.
 
 ### 4.10 Distribution, Deployment, and Market Packaging
 
@@ -417,9 +421,10 @@ Every input mode should compile into the same truth model. Every report should r
 - Scene snapshots and restore checkpoints exist.
 - Local storage persistence exists for key workspace data.
 - A downloadable operational evidence archive now exists and can restore the scene, ledger, governance state, and workspace account bridge into the workspace.
+- Archive restore events now carry the archive export timestamp and requested restore branch through the event trail, so restore/import history preserves branch/time provenance instead of flattening it.
 
 **What is still missing**
-- Branch-aware recovery beyond single-scene checkpoint restore (the debug archive path now restores the latest archived checkpoint, preserves the journal payload, and can merge conflict-free diverged local branches).
+- Branch-aware recovery beyond single-scene checkpoint restore (the debug archive path now restores the latest archived checkpoint, preserves the journal payload, preserves branch/time provenance on restore events, and can merge conflict-free diverged local branches, but it still does not round-trip a richer restore cursor through every archive handoff surface).
 - Sync/conflict semantics for archived or collaborative branches.
 - Shared-workspace conflict resolution and merge policy for future collaborative workflows.
 
@@ -562,12 +567,12 @@ Every input mode should compile into the same truth model. Every report should r
 - The report surface already includes standards-oriented reporting language and the current product can surface evidence-backed narrative content.
 - The trust and evidence layers now make it possible to cite the exact checkpoint and branch state behind a report.
 - Report Lite now exposes explicit audience modes for operator, auditor, insurer, installer, and privacy reviewer, and those modes flow through single-scene and compare exports.
-- Report Lite now also exposes report catalog presets plus internal/shared/privacy-safe visibility selectors, so export intent is explicit before the artifact is generated.
+- Report Lite now also exposes report catalog presets plus internal/shared/privacy-safe visibility selectors, and the catalog persists the selected preset plus saved quick-apply presets locally, so export intent is explicit before the artifact is generated.
+- The report exports now carry explicit standards-template metadata and depth notes per template, so the standards framing is more than a flat label.
 
 **What is still missing**
 - Policy-driven redaction and visibility controls for external sharing.
-- A richer report catalog with standards-specific templates, audience defaults, and share-policy annotations for each export preset.
-- Compliance-specific export templates that are separate from the general-purpose handoff report.
+- Share-policy annotations for each export preset, beyond the audience/visibility/template data already present.
 - The exported report handoff still needs deeper section-to-simulation drill-through beyond the recent evidence anchors now present in the report outputs.
 
 ## 5) What Is Still Demo / Placeholder / Planned

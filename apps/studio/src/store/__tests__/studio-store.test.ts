@@ -421,6 +421,23 @@ describe("studio store editor mutations", () => {
     expect(useStudioStore.getState().workspaceAccount.accountName).toBe("North Region Security");
     expect(useStudioStore.getState().workspaceAccount.ownerName).toBe("Pranay");
     expect(useStudioStore.getState().workspaceAccount.planTier).toBe("enterprise");
+    const restoredEvidenceEvent = useStudioStore.getState().operationalEvidenceEvents.at(-1);
+    expect(restoredEvidenceEvent?.archiveExportedAt).toBe(archive.exportedAt);
+    expect(restoredEvidenceEvent?.archiveRestoreBranch).toBe("recovered");
+  });
+
+  test("operational evidence archive restore preserves explicit branch and export context", () => {
+    const archive = useStudioStore.getState().exportOperationalEvidenceArchive();
+
+    const result = useStudioStore.getState().importOperationalEvidenceArchive(archive, {
+      archiveExportedAt: "2026-05-30T10:15:00.000Z",
+      archiveRestoreBranch: "published",
+    });
+
+    expect(result.success).toBe(true);
+    const restoredEvidenceEvent = useStudioStore.getState().operationalEvidenceEvents.at(-1);
+    expect(restoredEvidenceEvent?.archiveExportedAt).toBe("2026-05-30T10:15:00.000Z");
+    expect(restoredEvidenceEvent?.archiveRestoreBranch).toBe("published");
   });
 
   test("ai telemetry records preserve prompt lineage", () => {

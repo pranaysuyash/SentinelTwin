@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, Copy, Crosshair, Eye, Loader2, Trash2, Zap } from "lucide-react";
+import { Camera, CircleCheck, CircleX, Copy, Crosshair, Eye, Loader2, Trash2, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { CameraFeedCanvas } from "@/components/inspector/CameraFeedCanvas";
@@ -31,7 +31,11 @@ import {
   findBestCameraPreset,
   getCameraPreset,
 } from "@/components/workspace/camera-preset-utils";
+import { validateCameraInstallability } from "@/lib/installability-validator";
+import type { InstallabilityResult } from "@/lib/installability-validator";
+import { InstallabilityBadge } from "@/components/inspector/InstallabilityBadge";
 import { snapCameraToMount, type CameraMountSnapMode } from "./camera-mount-snap";
+import { LensFovTradeoffSimulator } from "@/components/inspector/LensFovTradeoffSimulator";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -172,6 +176,7 @@ export function CameraInspector() {
   });
   const [snapshotNote, setSnapshotNote] = useState("");
   const [cameraMetadataUrl, setCameraMetadataUrl] = useState("");
+  const [showLensFovSimulator, setShowLensFovSimulator] = useState(false);
   const [cameraMetadataLabel, setCameraMetadataLabel] = useState("ONVIF relay");
   const [cameraMetadataRaw, setCameraMetadataRaw] = useState("");
   const [cameraMetadataStatus, setCameraMetadataStatus] = useState<string | null>(null);
@@ -390,6 +395,12 @@ export function CameraInspector() {
   const nearestSensorLabel = nearestSensor.sensor ? nearestSensor.sensor.label : "None";
   const nearestSensorState = nearestSensor.sensor ? nearestSensor.sensor.state.replace(/_/g, " ") : "—";
   const nearestSensorCoverage = nearestSensor.sensor ? nearestSensor.sensor.coverageMode.replace(/_/g, " ") : "—";
+
+  // ── Installability validation ──────────────────────────────────────────
+  const installabilityResult: InstallabilityResult | null = useMemo(
+    () => (camera ? validateCameraInstallability(camera, scene) : null),
+    [camera, scene],
+  );
 
   const updatePosition = (next: [number, number, number]) => updateNode(camera!.id, { position: next });
 
@@ -752,7 +763,12 @@ export function CameraInspector() {
               <Camera className="h-4 w-4 text-blue-400" />
             </div>
             <div>
-              <div className="text-[12px] font-semibold text-white">{camera.name}</div>
+              <div className="flex items-center gap-2">
+                <span className="text-[12px] font-semibold text-white">{camera.name}</span>
+                {installabilityResult && (
+                  <InstallabilityBadge result={installabilityResult} />
+                )}
+              </div>
               <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">{camera.mountType} mount · {camera.resolutionMP}MP</div>
             </div>
           </div>
@@ -1388,6 +1404,14 @@ export function CameraInspector() {
               options={LENS_OPTIONS}
               onChange={(v) => updateNode(camera.id, { focalLengthMm: parseFloat(v) })}
             />
+            <button
+              type="button"
+              onClick={() => setShowLensFovSimulator(true)}
+              className="mt-1 flex w-full items-center justify-center gap-1.5 rounded border border-cyan-500/20 bg-cyan-500/8 px-2 py-1 text-[9px] text-cyan-300 hover:bg-cyan-500/15 transition-colors"
+            >
+              <Eye className="h-3 w-3" />
+              Lens / FOV Simulator
+            </button>
 
             <div className="border-b border-[#181c27] py-1.5">
               <div className="mb-1.5 text-[10px] text-[#6a748b]">Height</div>
@@ -1431,6 +1455,87 @@ export function CameraInspector() {
                 />
               </div>
             </div>
+
+            {/* ── Installability section ── */}
+            {installabilityResult && (
+              <SectionCard title="Installability">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] text-[#6a748b]">Overall</span>
+                    <InstallabilityBadge result={installabilityResult} />
+                  </div>
+
+                  {/* Individual checks */}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {([
+                      { key: "mountSurfaceValid" as const, label: "Mount surface" },
+                      { key: "mountHeightValid" as const, label: "Height" },
+                      { key: "angleValid" as const, label: "Pitch angle" },
+                      { key: "obstructionClearance" as const, label: "Obstruction clearance" },
+                      { key: "ladderAccessible" as const, label: "Ladder access" },
+                      { key: "cableReachable" as const, label: "Cable routing" },
+                    ] as const).map(({ key, label }) => (
+                      <div
+                        key={key}
+                        className={cn(
+                          "rounded-lg border px-2 py-1.5",
+                          installabilityResult[key]
+                            ? "border-emerald-500/15 bg-emerald-500/5"
+                            : "border-red-500/15 bg-red-500/5",
+                        )}
+                      >
+                        <div className="flex items-center gap-1">
+                          {installabilityResult[key]
+                            ? <CircleCheck className="h-2.5 w-2.5 text-emerald-400" />
+                            : <CircleX className="h-2.5 w-2.5 text-red-400" />
+                          }
+                          <span className={cn(
+                            "text-[9px]",
+                            installabilityResult[key] ? "text-emerald-200" : "text-red-200",
+                          )}>
+                            {label}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Warnings */}
+                  {installabilityResult.warnings.length > 0 && (
+                    <div className="rounded-lg border border-amber-500/20 bg-amber-500/8 px-2 py-1.5">
+                      <div className="mb-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-amber-400">
+                        Warnings
+                      </div>
+                      <ul className="space-y-0.5">
+                        {installabilityResult.warnings.map((w, index) => (
+                          <li key={`w-${index}`} className="flex items-start gap-1 text-[8px] text-[#b8b8b8]">
+                            <span className="mt-0.5 text-amber-400">•</span>
+                            {w}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Suggestions */}
+                  {installabilityResult.suggestions.length > 0 && (
+                    <div className="rounded-lg border border-blue-500/20 bg-blue-500/8 px-2 py-1.5">
+                      <div className="mb-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-blue-400">
+                        Suggestions
+                      </div>
+                      <ul className="space-y-0.5">
+                        {installabilityResult.suggestions.map((s, index) => (
+                          <li key={`s-${index}`} className="flex items-start gap-1 text-[8px] text-[#b8b8b8]">
+                            <span className="mt-0.5 text-blue-400">→</span>
+                            {s}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </SectionCard>
+            )}
 
             {(() => {
               const dori = computeDoriRanges(camera, scene.assumptions.pixelsPerMeter);
@@ -1985,6 +2090,15 @@ export function CameraInspector() {
           </button>
         </div>
       </div>
+
+      {/* Lens/FOV Tradeoff Simulator Modal */}
+      {showLensFovSimulator && camera && (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="relative max-h-[90vh] w-[820px] overflow-y-auto rounded-2xl border border-[#202536] bg-[#0b0f17] shadow-2xl shadow-black/50">
+            <LensFovTradeoffSimulator camera={camera} onClose={() => setShowLensFovSimulator(false)} />
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { createSmallRetailShopScene } from "@/demo-scenes/small-retail-shop";
 import type { SimulationResult } from "@/schema/security-scene";
-import { buildSecurityOutcomeModel, buildSecurityOutcomeDelta } from "@/lib/security-outcome/security-outcome-model";
+import { buildSecurityOutcomeModel, buildSecurityOutcomeDelta, CAUSE_CATEGORY_PRODUCT_LABELS } from "@/lib/security-outcome/security-outcome-model";
 import {
   explainFailureReason,
   explainQualityGap,
@@ -411,6 +411,165 @@ describe("security outcome model — enriched", () => {
     expect(model.recommendations[0].verificationLabel).toBe("verified_by_simulation");
   });
 
+  test("recommendation fixesFinding maps rotate_camera to camera_angle", () => {
+    const scene = createSmallRetailShopScene();
+    const result = makeResult({
+      criticalZoneResults: [{
+        zoneId: "z1",
+        label: "Cash Counter",
+        requiredQuality: "recognition",
+        actualQuality: "observation",
+        coveringCameras: ["cam_1"],
+        redundancyCameraCount: 1,
+        status: "fail",
+        failureReasons: [],
+      }],
+      issues: [{ severity: "high", category: "quality_fail", description: "fail", affectedZones: ["z1"], affectedCameras: [] }],
+      recommendations: [{
+        type: "rotate_camera",
+        description: "Re-aim Camera 2 toward Cash Counter",
+        estimatedImpact: "Zone quality improves from observation to recognition",
+        costCategory: "low",
+        verified: true,
+        affectedNodeId: "cam_1",
+        suggestedYawDeg: 12,
+        suggestedPitchDeg: -30,
+      }],
+    });
+    const model = buildSecurityOutcomeModel(scene, result, null);
+    expect(model.recommendations[0].fixesFinding).toBe("camera_angle");
+  });
+
+  test("recommendation fixesFinding maps move_object to occlusion", () => {
+    const scene = createSmallRetailShopScene();
+    const result = makeResult({
+      criticalZoneResults: [{
+        zoneId: "z1",
+        label: "Cash Counter",
+        requiredQuality: "recognition",
+        actualQuality: "observation",
+        coveringCameras: ["cam_1"],
+        redundancyCameraCount: 1,
+        status: "fail",
+        failureReasons: ["Blocked by Shelf"],
+      }],
+      issues: [{ severity: "high", category: "quality_fail", description: "fail", affectedZones: ["z1"], affectedCameras: [] }],
+      recommendations: [{
+        type: "move_object",
+        description: "Move Shelf away from Cash Counter",
+        estimatedImpact: "Simulated zone quality changes from observation to recognition.",
+        costCategory: "free",
+        verified: true,
+        affectedNodeId: "obs_1",
+        suggestedPosition: [3, 0, 4] as [number, number, number],
+      }],
+    });
+    const model = buildSecurityOutcomeModel(scene, result, null);
+    expect(model.recommendations[0].fixesFinding).toBe("occlusion");
+  });
+
+  test("recommendation fixesFinding is null for unknown type", () => {
+    const scene = createSmallRetailShopScene();
+    const result = makeResult({
+      criticalZoneResults: [],
+      recommendations: [{
+        type: "other",
+        description: "Review camera placement",
+        estimatedImpact: "N/A",
+        costCategory: "free",
+        verified: false,
+      }],
+    });
+    const model = buildSecurityOutcomeModel(scene, result, null);
+    expect(model.recommendations[0].fixesFinding).toBeNull();
+  });
+
+  test("recommendation scorecardDelta uses estimated impact text", () => {
+    const scene = createSmallRetailShopScene();
+    const result = makeResult({
+      criticalZoneResults: [{
+        zoneId: "z1",
+        label: "Cash Counter",
+        requiredQuality: "recognition",
+        actualQuality: "observation",
+        coveringCameras: ["cam_1"],
+        redundancyCameraCount: 1,
+        status: "fail",
+        failureReasons: [],
+      }],
+      issues: [{ severity: "high", category: "quality_fail", description: "fail", affectedZones: ["z1"], affectedCameras: [] }],
+      recommendations: [{
+        type: "rotate_camera",
+        description: "Rotate Camera 2",
+        estimatedImpact: "Simulated zone quality changes from observation to recognition.",
+        costCategory: "free",
+        verified: true,
+        affectedNodeId: "cam_1",
+        suggestedYawDeg: 12,
+      }],
+    });
+    const model = buildSecurityOutcomeModel(scene, result, null);
+    expect(model.recommendations[0].scorecardDelta).not.toBeNull();
+    expect(model.recommendations[0].scorecardDelta!.description).toContain("observation → recognition");
+    expect(model.recommendations[0].scorecardDelta!.estimatedChange).toBe("improvement");
+  });
+
+  test("recommendation scorecardDelta is null for unknown impact", () => {
+    const scene = createSmallRetailShopScene();
+    const result = makeResult({
+      criticalZoneResults: [],
+      recommendations: [{
+        type: "other",
+        description: "Review",
+        estimatedImpact: "",
+        costCategory: "free",
+        verified: false,
+      }],
+    });
+    const model = buildSecurityOutcomeModel(scene, result, null);
+    expect(model.recommendations[0].scorecardDelta).toBeNull();
+  });
+
+  test("all recommendations have fixesFinding and scorecardDelta fields", () => {
+    const scene = createSmallRetailShopScene();
+    const result = makeResult({
+      criticalZoneResults: [{
+        zoneId: "z1",
+        label: "Cash Counter",
+        requiredQuality: "recognition",
+        actualQuality: "observation",
+        coveringCameras: ["cam_1"],
+        redundancyCameraCount: 1,
+        status: "fail",
+        failureReasons: ["Blocked by Shelf"],
+      }],
+      issues: [{ severity: "high", category: "quality_fail", description: "fail", affectedZones: ["z1"], affectedCameras: [] }],
+      recommendations: [
+        {
+          type: "move_object",
+          description: "Move Shelf away",
+          estimatedImpact: "Simulated improvement.",
+          costCategory: "free",
+          verified: true,
+          affectedNodeId: "obs_1",
+        },
+        {
+          type: "rotate_camera",
+          description: "Rotate Camera 2",
+          estimatedImpact: "Improvement expected",
+          costCategory: "low",
+          verified: true,
+          affectedNodeId: "cam_1",
+        },
+      ],
+    });
+    const model = buildSecurityOutcomeModel(scene, result, null);
+    for (const rec of model.recommendations) {
+      expect(rec).toHaveProperty("fixesFinding");
+      expect(rec).toHaveProperty("scorecardDelta");
+    }
+  });
+
   test("missing prerequisites surface when no cameras", () => {
     const scene = createSmallRetailShopScene();
     scene.cameras = [];
@@ -586,5 +745,361 @@ describe("security outcome — truth checks", () => {
       expect(str.toLowerCase()).not.toContain("optimal evasion");
       expect(str.toLowerCase()).not.toContain("bypass security");
     }
+  });
+});
+
+describe("security outcome — cause taxonomy", () => {
+  test("includes cause taxonomy as a top-level field", () => {
+    const scene = createSmallRetailShopScene();
+    const result = makeResult({
+      criticalZoneResults: [{
+        zoneId: "z1",
+        label: "Cash Counter",
+        requiredQuality: "recognition",
+        actualQuality: "observation",
+        coveringCameras: ["cam_1"],
+        redundancyCameraCount: 1,
+        status: "fail",
+        failureReasons: ["Blocked by Shelf 1"],
+      }],
+      issues: [{ severity: "high", category: "quality_fail", description: "Cash counter below recognition", affectedZones: ["z1"], affectedCameras: ["cam_1"] }],
+    });
+    const model = buildSecurityOutcomeModel(scene, result, null);
+    expect(Array.isArray(model.causeTaxonomy)).toBe(true);
+  });
+
+  test("classifies occlusion cause from blocked reason", () => {
+    const scene = createSmallRetailShopScene();
+    const result = makeResult({
+      criticalZoneResults: [{
+        zoneId: "z1",
+        label: "Cash Counter",
+        requiredQuality: "recognition",
+        actualQuality: "observation",
+        coveringCameras: ["cam_1"],
+        redundancyCameraCount: 1,
+        status: "fail",
+        failureReasons: ["Blocked by Shelf 1"],
+      }],
+      issues: [{ severity: "high", category: "quality_fail", description: "Cash counter below recognition", affectedZones: ["z1"], affectedCameras: ["cam_1"] }],
+    });
+    const model = buildSecurityOutcomeModel(scene, result, null);
+    const occlusionFinding = model.causeTaxonomy.find((c) => c.category === "occlusion");
+    expect(occlusionFinding).toBeDefined();
+    expect(["medium", "high"]).toContain(occlusionFinding!.severity);
+    expect(occlusionFinding!.affectedZoneIds).toContain("z1");
+  });
+
+  test("classifies distance cause from range reason", () => {
+    const scene = createSmallRetailShopScene();
+    const result = makeResult({
+      criticalZoneResults: [{
+        zoneId: "z1",
+        label: "Entry Door",
+        requiredQuality: "recognition",
+        actualQuality: "detection",
+        coveringCameras: ["cam_1"],
+        redundancyCameraCount: 1,
+        status: "fail",
+        failureReasons: ["Out of range"],
+      }],
+      issues: [{ severity: "high", category: "quality_fail", description: "Entry door below recognition", affectedZones: ["z1"], affectedCameras: ["cam_1"] }],
+    });
+    const model = buildSecurityOutcomeModel(scene, result, null);
+    const distanceFinding = model.causeTaxonomy.find((c) => c.category === "distance");
+    expect(distanceFinding).toBeDefined();
+  });
+
+  test("classifies night_mode cause", () => {
+    const scene = createSmallRetailShopScene();
+    const result = makeResult({
+      criticalZoneResults: [{
+        zoneId: "z1",
+        label: "Cash Counter",
+        requiredQuality: "recognition",
+        actualQuality: "observation",
+        coveringCameras: ["cam_1"],
+        redundancyCameraCount: 1,
+        status: "fail",
+        failureReasons: ["Night penalty applied"],
+      }],
+      issues: [
+        { severity: "high", category: "quality_fail", description: "Cash counter below recognition", affectedZones: ["z1"], affectedCameras: ["cam_1"] },
+        { severity: "high", category: "night", description: "Night degrades coverage", affectedZones: ["z1"], affectedCameras: ["cam_1"] },
+      ],
+    });
+    const model = buildSecurityOutcomeModel(scene, result, null);
+    const nightFinding = model.causeTaxonomy.find((c) => c.category === "night_mode");
+    expect(nightFinding).toBeDefined();
+    expect(["medium", "high"]).toContain(nightFinding!.severity);
+  });
+
+  test("classifies redundancy cause for single-camera zone", () => {
+    const scene = createSmallRetailShopScene();
+    const result = makeResult({
+      criticalZoneResults: [{
+        zoneId: "z1",
+        label: "Cash Counter",
+        requiredQuality: "recognition",
+        actualQuality: "detection",
+        coveringCameras: ["cam_1"],
+        redundancyCameraCount: 1,
+        status: "fail",
+        failureReasons: [],
+      }],
+      issues: [{ severity: "high", category: "quality_fail", description: "Cash counter below recognition", affectedZones: ["z1"], affectedCameras: ["cam_1"] }],
+    });
+    const model = buildSecurityOutcomeModel(scene, result, null);
+    const redundancyFinding = model.causeTaxonomy.find((c) => c.category === "redundancy");
+    expect(redundancyFinding).toBeDefined();
+    expect(redundancyFinding!.affectedZoneIds).toContain("z1");
+  });
+
+  test("classifies privacy cause", () => {
+    const scene = createSmallRetailShopScene();
+    const result = makeResult({
+      issues: [{
+        severity: "medium",
+        category: "privacy",
+        description: "Camera sees into privacy zone",
+        affectedZones: ["priv_1"],
+        affectedCameras: ["cam_1"],
+      }],
+    });
+    const model = buildSecurityOutcomeModel(scene, result, null);
+    const privacyFinding = model.causeTaxonomy.find((c) => c.category === "privacy");
+    expect(privacyFinding).toBeDefined();
+  });
+
+  test("cause findings include product explanation in product language", () => {
+    const scene = createSmallRetailShopScene();
+    const result = makeResult({
+      criticalZoneResults: [{
+        zoneId: "z1",
+        label: "Cash Counter",
+        requiredQuality: "recognition",
+        actualQuality: "observation",
+        coveringCameras: ["cam_1"],
+        redundancyCameraCount: 1,
+        status: "fail",
+        failureReasons: ["Blocked by Shelf 1"],
+      }],
+      issues: [{ severity: "high", category: "quality_fail", description: "Cash counter below recognition", affectedZones: ["z1"], affectedCameras: ["cam_1"] }],
+    });
+    const model = buildSecurityOutcomeModel(scene, result, null);
+    const occlusionFinding = model.causeTaxonomy.find((c) => c.category === "occlusion");
+    expect(occlusionFinding).toBeDefined();
+    expect(occlusionFinding!.productExplanation.length).toBeGreaterThan(0);
+    expect(occlusionFinding!.productExplanation.toLowerCase()).toContain("block");
+  });
+
+  test("cause taxonomy is empty when no result", () => {
+    const scene = createSmallRetailShopScene();
+    const model = buildSecurityOutcomeModel(scene, null, null);
+    expect(model.causeTaxonomy).toEqual([]);
+  });
+
+  test("cause taxonomy sorted by severity", () => {
+    const scene = createSmallRetailShopScene();
+    const result = makeResult({
+      criticalZoneResults: [
+        {
+          zoneId: "z1",
+          label: "Critical Safe",
+          requiredQuality: "identification",
+          actualQuality: "none",
+          coveringCameras: [],
+          redundancyCameraCount: 0,
+          status: "fail",
+          failureReasons: ["No camera coverage"],
+        },
+        {
+          zoneId: "z2",
+          label: "Entry Door",
+          requiredQuality: "recognition",
+          actualQuality: "observation",
+          coveringCameras: ["cam_1"],
+          redundancyCameraCount: 1,
+          status: "fail",
+          failureReasons: ["Blocked by Plant"],
+        },
+      ],
+      issues: [
+        { severity: "critical", category: "quality_fail", description: "Critical safe has no coverage", affectedZones: ["z1"], affectedCameras: [] },
+        { severity: "high", category: "quality_fail", description: "Entry door blocked", affectedZones: ["z2"], affectedCameras: ["cam_1"] },
+      ],
+    });
+    const model = buildSecurityOutcomeModel(scene, result, null);
+    expect(model.causeTaxonomy.length).toBeGreaterThanOrEqual(2);
+    const severityRank = model.causeTaxonomy.map((c) => c.severity);
+    const severityOrder = ["critical", "high", "medium", "low"];
+    const ranks = severityRank.map((s) => severityOrder.indexOf(s));
+    for (let i = 1; i < ranks.length; i++) {
+      expect(ranks[i]).toBeGreaterThanOrEqual(ranks[i - 1]);
+    }
+  });
+
+  test("failed zone includes causeCategories", () => {
+    const scene = createSmallRetailShopScene();
+    const result = makeResult({
+      criticalZoneResults: [{
+        zoneId: "z1",
+        label: "Cash Counter",
+        requiredQuality: "recognition",
+        actualQuality: "observation",
+        coveringCameras: ["cam_1"],
+        redundancyCameraCount: 1,
+        status: "fail",
+        failureReasons: ["Blocked by Shelf 1"],
+      }],
+      issues: [{ severity: "high", category: "quality_fail", description: "Cash counter below recognition", affectedZones: ["z1"], affectedCameras: ["cam_1"] }],
+    });
+    const model = buildSecurityOutcomeModel(scene, result, null);
+    expect(model.failedZones[0].causeCategories).toBeDefined();
+    expect(Array.isArray(model.failedZones[0].causeCategories)).toBe(true);
+    expect(model.failedZones[0].causeCategories.length).toBeGreaterThan(0);
+  });
+});
+
+describe("security outcome — scorecard", () => {
+  test("includes scorecard as a top-level field", () => {
+    const scene = createSmallRetailShopScene();
+    const result = makeResult({
+      criticalZoneResults: [{
+        zoneId: "z1",
+        label: "Cash Counter",
+        requiredQuality: "recognition",
+        actualQuality: "recognition",
+        coveringCameras: ["cam_1"],
+        redundancyCameraCount: 2,
+        status: "pass",
+        failureReasons: [],
+      }],
+    });
+    const model = buildSecurityOutcomeModel(scene, result, null);
+    expect(model.scorecard).toBeDefined();
+    expect(typeof model.scorecard.overall).toBe("number");
+    expect(model.scorecard.overall).toBeGreaterThanOrEqual(0);
+    expect(model.scorecard.overall).toBeLessThanOrEqual(100);
+  });
+
+  test("scorecard has six dimensions", () => {
+    const scene = createSmallRetailShopScene();
+    const result = makeResult();
+    const model = buildSecurityOutcomeModel(scene, result, null);
+    const dims = model.scorecard.dimensions;
+    expect(dims).toHaveProperty("coverage");
+    expect(dims).toHaveProperty("zoneCompliance");
+    expect(dims).toHaveProperty("redundancy");
+    expect(dims).toHaveProperty("nightReadiness");
+    expect(dims).toHaveProperty("pathVisibility");
+    expect(dims).toHaveProperty("privacy");
+    expect(typeof dims.coverage.score).toBe("number");
+    expect(typeof dims.zoneCompliance.passing).toBe("number");
+    expect(typeof dims.zoneCompliance.total).toBe("number");
+  });
+
+  test("scorecard reflects passing zones with high score", () => {
+    const scene = createSmallRetailShopScene();
+    const result = makeResult({
+      totalCoveragePct: 90,
+      criticalZoneResults: [{
+        zoneId: "z1",
+        label: "Cash Counter",
+        requiredQuality: "recognition",
+        actualQuality: "recognition",
+        coveringCameras: ["cam_1"],
+        redundancyCameraCount: 2,
+        status: "pass",
+        failureReasons: [],
+      }],
+    });
+    const model = buildSecurityOutcomeModel(scene, result, null);
+    expect(model.scorecard.dimensions.coverage.score).toBe(90);
+    expect(model.scorecard.dimensions.zoneCompliance.score).toBe(100);
+    expect(model.scorecard.dimensions.zoneCompliance.passing).toBe(1);
+    expect(model.scorecard.dimensions.zoneCompliance.total).toBe(1);
+  });
+
+  test("scorecard reflects failing zones with lower compliance", () => {
+    const scene = createSmallRetailShopScene();
+    const result = makeResult({
+      totalCoveragePct: 30,
+      criticalZoneResults: [
+        {
+          zoneId: "z1",
+          label: "Cash Counter",
+          requiredQuality: "recognition",
+          actualQuality: "recognition",
+          coveringCameras: ["cam_1"],
+          redundancyCameraCount: 1,
+          status: "pass",
+          failureReasons: [],
+        },
+        {
+          zoneId: "z2",
+          label: "Entry Door",
+          requiredQuality: "recognition",
+          actualQuality: "none",
+          coveringCameras: [],
+          redundancyCameraCount: 0,
+          status: "fail",
+          failureReasons: [],
+        },
+      ],
+      issues: [{ severity: "critical", category: "quality_fail", description: "Entry door fails", affectedZones: ["z2"], affectedCameras: [] }],
+    });
+    const model = buildSecurityOutcomeModel(scene, result, null);
+    expect(model.scorecard.dimensions.zoneCompliance.score).toBe(50);
+    expect(model.scorecard.dimensions.zoneCompliance.passing).toBe(1);
+    expect(model.scorecard.dimensions.zoneCompliance.total).toBe(2);
+  });
+
+  test("scorecard is zero for not_run", () => {
+    const scene = createSmallRetailShopScene();
+    const model = buildSecurityOutcomeModel(scene, null, null);
+    expect(model.scorecard.overall).toBe(0);
+    expect(model.scorecard.overallLabel).toBe("No data");
+  });
+
+  test("scorecard overall is weighted average of all dimensions", () => {
+    const scene = createSmallRetailShopScene();
+    const sceneWithPaths = { ...scene, paths: [] as typeof scene.paths };
+    const result = makeResult({
+      totalCoveragePct: 100,
+      criticalZoneResults: [{
+        zoneId: "z1",
+        label: "Cash Counter",
+        requiredQuality: "recognition",
+        actualQuality: "recognition",
+        coveringCameras: ["cam_1"],
+        redundancyCameraCount: 2,
+        status: "pass",
+        failureReasons: [],
+      }],
+    });
+    const model = buildSecurityOutcomeModel(sceneWithPaths, result, null);
+    expect(model.scorecard.overall).toBeGreaterThan(0);
+    expect(model.scorecard.overall).toBeLessThanOrEqual(100);
+  });
+
+  test("scorecard label reflects overall range", () => {
+    const scene = createSmallRetailShopScene();
+    const result = makeResult({
+      totalCoveragePct: 10,
+      criticalZoneResults: [{
+        zoneId: "z1",
+        label: "Cash Counter",
+        requiredQuality: "recognition",
+        actualQuality: "none",
+        coveringCameras: [],
+        redundancyCameraCount: 0,
+        status: "fail",
+        failureReasons: ["No camera coverage"],
+      }],
+      issues: [{ severity: "critical", category: "quality_fail", description: "No coverage", affectedZones: ["z1"], affectedCameras: [] }],
+    });
+    const model = buildSecurityOutcomeModel(scene, result, null);
+    expect(["Poor", "At risk"]).toContain(model.scorecard.overallLabel);
   });
 });

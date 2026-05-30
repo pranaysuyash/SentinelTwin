@@ -7,8 +7,8 @@ import { cn } from "@/lib/cn";
 import { CoverageRibbon } from "@/components/map/CoverageRibbon";
 import { MapCanvas } from "@/components/map/MapCanvas";
 import { MAP_COLORS, qualityColor } from "@/components/map/map-colors";
-import { groupPathQualitySamples, pathLengthM, pointOnPathAtProgress, samplePathQuality } from "@/components/map/path-quality";
-import { QUALITY_LABEL } from "@/lib/quality-display";
+import { pathLengthM, pointOnPathAtProgress, samplePathQuality } from "@/components/map/path-quality";
+import { QUALITY_LABEL, QUALITY_RANK } from "@/lib/quality-display";
 import type { DoriQuality, ScenarioPath } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 
@@ -45,14 +45,6 @@ function findLastAtOrBefore<T extends { timeS: number }>(items: T[], timeS: numb
 
 function findNextAfter<T extends { timeS: number }>(items: T[], timeS: number) {
   return items.find((item) => item.timeS > timeS) ?? null;
-}
-
-function bandForSample(
-  bands: ReturnType<typeof groupPathQualitySamples>,
-  sample: ReturnType<typeof samplePathQuality>[number] | null,
-) {
-  if (!sample) return null;
-  return bands.find((band) => sample.distanceM >= band.startDistanceM && sample.distanceM <= band.endDistanceM) ?? null;
 }
 
 export function PathMap({
@@ -103,7 +95,6 @@ export function PathMap({
     return samplePathQuality(activePath, result?.coverageCells ?? [], 0.3);
   }, [activePath, result?.coverageCells]);
 
-  const pathBands = useMemo(() => groupPathQualitySamples(pathSamples), [pathSamples]);
   const mapState = useMemo(
     () => ({
       zoom: mapZoom,
@@ -129,7 +120,6 @@ export function PathMap({
   const [selectedSegmentIndex, setSelectedSegmentIndex] = useState<number | null>(null);
   const detailIndex = selectedSegmentIndex ?? currentSampleIndex;
   const detailSample = detailIndex >= 0 ? pathSamples[Math.min(detailIndex, Math.max(pathSamples.length - 1, 0))] ?? null : null;
-  const currentBand = bandForSample(pathBands, detailSample);
   const currentEvent = pathResult ? findLastAtOrBefore(pathResult.timeline, currentTime) : null;
   const nextEvent = pathResult ? findNextAfter(pathResult.timeline, currentTime) : null;
   const currentQualityLabel = detailSample ? QUALITY_LABEL[detailSample.quality] : "No path";
@@ -229,12 +219,13 @@ export function PathMap({
       <CurrentPathStatePanel
         activePath={activePath}
         currentSample={detailSample}
-        currentBand={currentBand}
         currentEvent={currentEvent}
         nextEvent={nextEvent}
         currentTime={currentTime}
         currentQualityLabel={currentQualityLabel}
         currentQualityColor={currentQualityColor}
+        replayActor={replayActor}
+        pathResult={pathResult}
       />
 
       <div className="mt-2 grid grid-cols-3 gap-2">
@@ -321,22 +312,41 @@ export function PathMap({
 function CurrentPathStatePanel({
   activePath,
   currentSample,
-  currentBand,
   currentEvent,
   nextEvent,
   currentTime,
   currentQualityLabel,
   currentQualityColor,
+  replayActor,
+  pathResult,
 }: {
   activePath: ScenarioPath | null;
   currentSample: ReturnType<typeof samplePathQuality>[number] | null;
-  currentBand: ReturnType<typeof groupPathQualitySamples>[number] | null;
   currentEvent: { timeS: number; event: string; quality?: DoriQuality; cameraId?: string; reason?: string } | null;
   nextEvent: { timeS: number; event: string; quality?: DoriQuality; cameraId?: string; reason?: string } | null;
   currentTime: number;
   currentQualityLabel: string;
   currentQualityColor: string;
+  replayActor: [number, number] | null;
+  pathResult: {
+    visibilityByCamera: Record<string, { visibleS: number; maxQuality: DoriQuality }>;
+    timeline: { timeS: number; event: string; quality?: DoriQuality; cameraId?: string; reason?: string }[];
+  } | null;
 }) {
+  const visibilityState = currentSample?.quality === "none" ? "Lost now" : currentSample ? "Visible now" : "No path";
+  const bestCameraNow = currentSample?.coveringCameras.length
+    ? currentSample.coveringCameras
+        .slice()
+        .sort((a, b) => {
+          const aData = pathResult?.visibilityByCamera[a];
+          const bData = pathResult?.visibilityByCamera[b];
+          const rankDiff = (QUALITY_RANK[bData?.maxQuality ?? "none"] ?? 0) - (QUALITY_RANK[aData?.maxQuality ?? "none"] ?? 0);
+          if (rankDiff !== 0) return rankDiff;
+          return (bData?.visibleS ?? 0) - (aData?.visibleS ?? 0);
+        })[0]
+    : null;
+  const upcomingRiskEvent = pathResult?.timeline.find((event) => event.timeS > currentTime && event.event === "lost") ?? nextEvent;
+
   return (
     <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
       <div className="flex items-start justify-between gap-2">
@@ -357,21 +367,21 @@ function CurrentPathStatePanel({
           <div className="text-[11px] font-semibold text-[#dfe5f2]">{currentTime.toFixed(1)}s</div>
         </div>
         <div className="rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
-          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Sample</div>
+          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Visibility State</div>
           <div className="text-[11px] font-semibold text-[#dfe5f2]">
-            {currentSample ? `${currentSample.distanceM.toFixed(1)}m` : "None"}
+            {visibilityState}
           </div>
         </div>
         <div className="rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
-          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Next</div>
+          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Best Camera</div>
           <div className="text-[11px] font-semibold text-[#dfe5f2]">
-            {currentBand ? `${QUALITY_LABEL[currentBand.quality]}` : "End"}
+            {bestCameraNow ?? "None"}
           </div>
         </div>
         <div className="rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
-          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Cameras</div>
+          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Actor Position</div>
           <div className="text-[11px] font-semibold text-[#dfe5f2]">
-            {currentSample?.coveringCameras.length ? currentSample.coveringCameras.join(", ") : "None"}
+            {replayActor ? `${replayActor[0].toFixed(1)}, ${replayActor[1].toFixed(1)}` : "--"}
           </div>
         </div>
       </div>
@@ -383,11 +393,14 @@ function CurrentPathStatePanel({
         </div>
       </div>
 
-      {nextEvent ? (
+      {upcomingRiskEvent ? (
         <div className="mt-2 rounded-lg border border-[#243146] bg-[#0c1320] px-2 py-1.5">
-          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Upcoming Event</div>
+          <div className="text-[8px] uppercase tracking-[0.16em] text-[#6f7b94]">Upcoming Lost / Zone Event</div>
           <div className="text-[10px] font-semibold text-[#dfe5f2]">
-            {nextEvent.event}{nextEvent.reason ? ` · ${nextEvent.reason}` : ""} @ {nextEvent.timeS.toFixed(1)}s
+            {upcomingRiskEvent.event}
+            {upcomingRiskEvent.reason ? ` · ${upcomingRiskEvent.reason}` : ""}
+            {" @ "}
+            {upcomingRiskEvent.timeS.toFixed(1)}s
           </div>
         </div>
       ) : null}

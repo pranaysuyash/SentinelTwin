@@ -28,6 +28,7 @@ import { SurfaceButton } from "@/components/shared/SurfaceButton";
 import { useStudioStore } from "@/store/studio-store";
 import { WorkspacePresetSwitcher } from "@/components/dock/WorkspacePresetSwitcher";
 import { BranchSwitcher } from "@/components/top-bar/BranchSwitcher";
+import { FixSandboxBar } from "@/components/top-bar/FixSandboxBar";
 import { SceneBuilderWizard } from "@/components/scan-to-scene/SceneBuilderWizard";
 import { ScanSiteWizard } from "@/components/scan-to-scene/ScanSiteWizard";
 import type { CriticalZoneNode, SecurityScene } from "@/schema/security-scene";
@@ -206,7 +207,25 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
     setSceneOpen(false);
   }, [refreshSavedScenesList, renameSavedScene]);
 
+  // Keyboard shortcut to enter fix sandbox (Ctrl+Shift+S)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === "S") {
+        e.preventDefault();
+        const { fixSandboxActive, enterFixSandbox, exitFixSandbox } = useStudioStore.getState();
+        if (fixSandboxActive) {
+          exitFixSandbox();
+        } else {
+          enterFixSandbox();
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
   return (
+    <div className="flex flex-col">
     <header className="relative z-[320] isolate flex h-12 items-center gap-2 overflow-visible border-b border-[#1e2130] bg-[#0c0f16]/96 px-2.5 backdrop-blur-md">
       <div className="flex min-w-0 items-center gap-2.5">
         <div className="flex min-w-0 items-center gap-2 pr-2.5">
@@ -630,5 +649,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
         </div>
       )}
     </header>
+      <FixSandboxBar />
+    </div>
   );
 }

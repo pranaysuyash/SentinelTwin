@@ -4,6 +4,8 @@ import { PROMPT_REGISTRY } from "@/agents/prompt-registry";
 import type { ModelProvider } from "@/agents/providers/ModelProvider";
 import { z } from "zod";
 import { createCameraNode, createCriticalZoneNode, createEntryPointNode, createObstructionNode, createScenarioPathNode, createSecurityLightNode } from "@/lib/node-factory";
+import type { SiteCompilerResult, SiteCompilerWarning } from "@/lib/site-compiler";
+import { compileAiDraftToSiteResult } from "@/lib/site-compiler";
 
 type DraftResult = {
   scene: SecurityScene;
@@ -506,4 +508,22 @@ function enrichSceneFromPrompt(scene: SecurityScene, prompt: string) {
 
   ensureBasicPath(scene, prompt);
   ensurePromptLighting(scene, prompt);
+}
+
+export function draftSceneToCompilerResult(draft: DraftResult): SiteCompilerResult {
+  const warnings: SiteCompilerWarning[] = [
+    ...draft.warnings.map((w): SiteCompilerWarning => ({
+      code: "AI_DRAFT_WARNING",
+      message: w,
+      severity: "info",
+    })),
+  ];
+  if (draft.provenance.mode === "heuristic") {
+    warnings.push({
+      code: "HEURISTIC_DRAFT",
+      message: "Generated via heuristic fallback instead of model. Review layout carefully.",
+      severity: "warning",
+    });
+  }
+  return compileAiDraftToSiteResult(draft.scene, draft.provenance.warnings, warnings);
 }

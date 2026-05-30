@@ -75,6 +75,8 @@ describe("BottomPanel", () => {
     expect(source).toContain("Performance Trace");
     expect(source).toContain("Run Trust Audit");
     expect(source).toContain("Trust Audit");
+    expect(source).toContain("View audit report");
+    expect(source).toContain("trustAuditReport.formatted");
     expect(source).toContain("Provider Governance");
     expect(source).toContain("Active provider");
     expect(source).toContain("Fallback order");

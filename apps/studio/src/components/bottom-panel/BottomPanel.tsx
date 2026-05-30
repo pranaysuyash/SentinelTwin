@@ -19,6 +19,7 @@ import { ReportLiteTab } from "./ReportLiteTab";
 import { HelpTab } from "./HelpTab";
 import { TimelineTab } from "./TimelineTab";
 import { RedundancyTab } from "./RedundancyTab";
+import { CoverageBudgetTab } from "./CoverageBudgetTab";
 import { SensorsTab } from "./SensorsTab";
 import { TemporalProfileView } from "./TemporalProfileView";
 import { SecurityOutcomePanel } from "@/components/security-outcome/SecurityOutcomePanel";
@@ -41,6 +42,7 @@ const PANEL_EXPLAINERS: Record<BottomTab, string> = {
   report: "Client-facing summary output with exports from the same simulation evidence.",
   help: "Workflow guidance and shortcuts for first-run and power-user operation.",
   debug: "Low-level inspection output for implementation and troubleshooting.",
+  budgeting: "Hardware cost estimation based on camera presets, light models, and obstruction move costs.",
 };
 
 const TABS: { id: BottomTab; label: string; hasCount?: boolean }[] = [
@@ -55,6 +57,7 @@ const TABS: { id: BottomTab; label: string; hasCount?: boolean }[] = [
   { id: "governance", label: "GOVERNANCE" },
   { id: "provenance", label: "PROVENANCE" },
   { id: "redundancy", label: "REDUNDANCY" },
+  { id: "budgeting", label: "BUDGET" },
   { id: "counterfactual", label: "COUNTERFACTUAL" },
   { id: "threat", label: "THREAT REVIEW" },
   { id: "novel", label: "NOVEL ALGORITHMS" },
@@ -126,6 +129,8 @@ export function BottomPanel() {
         return <SceneIntelligenceTab />;
       case "redundancy":
         return <RedundancyTab />;
+      case "budgeting":
+        return <CoverageBudgetTab />;
       case "counterfactual":
         return <CounterfactualPanel />;
       case "threat":

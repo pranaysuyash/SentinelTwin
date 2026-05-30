@@ -38,6 +38,81 @@ describe("studio store quality gate", () => {
     expect(useStudioStore.getState().simulationDirty).toBe(true);
   });
 
+  test("routes contextual dock targets for major node types", () => {
+    const scene = createSmallRetailShopScene();
+    useStudioStore.getState().setScene(scene);
+    const camera = scene.cameras[0];
+    const light = scene.securityLights[0];
+    const obstruction = scene.obstructions[0];
+    const criticalZone = scene.criticalZones[0];
+    const privacyZone = scene.privacyZones[0];
+    const door = scene.doors[0];
+    const windowNode = scene.windows[0];
+    const entryPoint = scene.entryPoints[0];
+    const wall = scene.walls[0];
+    expect(camera).toBeTruthy();
+
+    useStudioStore.getState().selectNode(camera.id);
+    expect(useStudioStore.getState().rightPanelMode).toBe("camera_controls");
+    expect(useStudioStore.getState().bottomTab).toBe("metrics");
+    expect(useStudioStore.getState().activeTool).toBe("camera");
+
+    if (light) {
+      useStudioStore.getState().selectNode(light.id);
+      expect(useStudioStore.getState().rightPanelMode).toBe("inspector");
+      expect(useStudioStore.getState().bottomTab).toBe("metrics");
+      expect(useStudioStore.getState().activeTool).toBe("light");
+    }
+
+    if (obstruction) {
+      useStudioStore.getState().selectNode(obstruction.id);
+      expect(useStudioStore.getState().rightPanelMode).toBe("inspector");
+      expect(useStudioStore.getState().bottomTab).toBe("issues");
+      expect(useStudioStore.getState().activeTool).toBe("obstruction");
+    }
+
+    if (criticalZone) {
+      useStudioStore.getState().selectNode(criticalZone.id);
+      expect(useStudioStore.getState().rightPanelMode).toBe("inspector");
+      expect(useStudioStore.getState().bottomTab).toBe("issues");
+      expect(useStudioStore.getState().activeTool).toBe("zone");
+    }
+
+    if (privacyZone) {
+      useStudioStore.getState().selectNode(privacyZone.id);
+      expect(useStudioStore.getState().rightPanelMode).toBe("inspector");
+      expect(useStudioStore.getState().bottomTab).toBe("issues");
+      expect(useStudioStore.getState().activeTool).toBe("zone");
+    }
+
+    if (door) {
+      useStudioStore.getState().selectNode(door.id);
+      expect(useStudioStore.getState().rightPanelMode).toBe("inspector");
+      expect(useStudioStore.getState().bottomTab).toBe("threat");
+      expect(useStudioStore.getState().activeTool).toBe("door_window");
+    }
+
+    if (windowNode) {
+      useStudioStore.getState().selectNode(windowNode.id);
+      expect(useStudioStore.getState().rightPanelMode).toBe("inspector");
+      expect(useStudioStore.getState().bottomTab).toBe("threat");
+      expect(useStudioStore.getState().activeTool).toBe("door_window");
+    }
+
+    if (entryPoint) {
+      useStudioStore.getState().selectNode(entryPoint.id);
+      expect(useStudioStore.getState().rightPanelMode).toBe("inspector");
+      expect(useStudioStore.getState().bottomTab).toBe("threat");
+    }
+
+    if (wall) {
+      useStudioStore.getState().selectNode(wall.id);
+      expect(useStudioStore.getState().rightPanelMode).toBe("inspector");
+      expect(useStudioStore.getState().bottomTab).toBe("assumptions");
+      expect(useStudioStore.getState().activeTool).toBe("wall");
+    }
+  });
+
   test("adds and removes a node through the canonical store API", () => {
     const obstruction = createObstructionNode([4, 1, 5], "shelf");
     useStudioStore.getState().addNode(obstruction);

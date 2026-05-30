@@ -235,6 +235,7 @@ These systems exist, are wired, compute real data, and pass tests:
 - Privacy review sections in report and issue surfaces
 
 ### Governance
+
 - Governance tab with role selection, review-required policy, request/approve/reject actions
 - Action gate with allow/blocked status per operation
 - Shared-workspace access surface with member routing
@@ -243,6 +244,23 @@ These systems exist, are wired, compute real data, and pass tests:
 - Approval route resolution and archive
 - Identity conflict resolution and archive with replay
 - Remote governance handoff queue
+
+### Organization and Account Model
+
+- Canonical `Organization` and `Account` Zod schemas with `PlanTier`, `OrganizationRole`, quotas, and entitlements
+- Multi-organization CRUD with localStorage persistence: create, read, update, delete organizations
+- Organization membership management with role-based access (owner, admin, member, guest)
+- Active organization selector and per-org profile switching
+- OrganizationManager class (`lib/organization-store.ts`) with full test coverage (20 tests)
+- Entitlement checking: `checkEntitlement()` returns allowed/reason per action
+- Quota enforcement: `checkQuota()` validates resource limits before operations
+- Plan upgrade path: `upgradeOrganizationPlan()` with canonical free/pro/enterprise profiles
+- Plan-specific quotas: free (3 workspaces, 1 member), pro (12 workspaces, 5 members), enterprise (50 workspaces, 50 members)
+- Plan-specific entitlements: free (archive, report), pro (sharing, scan, evidence, invites), enterprise (all including publish)
+- Launcher integration: OrganizationManagerPanel modal with org creation, editing, org switching, and removal
+- Workspace metadata editor: organization picker dropdown sourced from the org manager
+- Left panel: active org display with plan badge and "Manage Organizations" entry point
+- All data derived: no hardcoded org names, no fake billing surfaces, no placeholder entitlements
 
 ### Diagnostics and Debug
 - Debug tab with overlay controls, simulation stats, camera-failure chips
@@ -310,7 +328,7 @@ These systems exist and are wired, but lack depth, production quality, or comple
 
 These surfaces exist as UI, API routes, or data structures but are not connected to real behavior or are stubbed behind local-only implementations:
 
-- **Organization/Account model:** Local workspace org/owner/visibility metadata exists. No canonical org/account model, no billing, no invites, no ownership transfer.
+- **Billing and invites:** Canonical org/account model exists locally. No remote billing, no invites, no ownership transfer backend.
 - **Workspace catalog:** Local workspace catalog summary renders. No remote workspace directory, no cross-device catalog.
 - **Provider model eval:** Model eval suite exercises fixtures against the current provider. No broader eval harness for draft quality, scan extraction, or report quality.
 - **Support delivery queue:** `/api/support-delivery` route exists. No real external fan-out/delivery pipeline.
@@ -366,11 +384,12 @@ These do not exist in any form and must be built:
 - Branch/merge semantics for collaborative editing
 - Role-aware RBAC/ABAC across users and services
 
-### Organization/Account/Billing
-- Canonical org model with teams and membership
-- Plan, billing, quota, and entitlement semantics
-- Invite, transfer, and ownership workflows
-- Remote workspace directory/catalog
+### Billing/Invites/Ownership Transfer
+
+- Remote billing and payment processing
+- Remote invite workflows (local invite modeling exists in org member CRUD but no email/notification delivery)
+- Ownership transfer workflows for shared workspaces
+- Remote workspace directory/catalog beyond local storage
 
 ### Compliance-Specific Reporting
 - Policy-driven redaction and visibility controls for external sharing
@@ -527,7 +546,7 @@ Remaining work is deepening:
 | A10-04 | Add report catalog with standards defaults, audience defaults, and share-policy annotations | Report catalog |
 
 ### Area 11: Collaboration/Governance/Backend Persistence
-**Maturity: SCAFFOLDED** (local governance scaffolding exists)
+**Maturity: PARTIAL** (local governance scaffolding + canonical org model exist)
 
 | ID | Task | Depends On |
 |----|------|------------|
@@ -537,9 +556,9 @@ Remaining work is deepening:
 | A11-04 | Build change-approval workflows for shared environments | Auth (A11-02), sync (A11-03) |
 | A11-05 | Implement branch/merge semantics for collaborative editing | Sync (A11-03) |
 | A11-06 | Build role-aware RBAC/ABAC across users and services | Auth (A11-02) |
-| A11-07 | Implement canonical org/account model with teams and membership | Auth (A11-02) |
-| A11-08 | Add plan, billing, quota, and entitlement semantics | Org model (A11-07) |
-| A11-09 | Add invite, transfer, and ownership workflows | Org model (A11-07) |
+| A11-07 | ✅ Implement canonical org/account model with teams and membership | *Completed* — `schema/organization.ts`, `lib/organization-store.ts`, `OrganizationManagerPanel`, 20 tests |
+| A11-08 | ✅ Add plan, billing, quota, and entitlement semantics | *Completed* — free/pro/enterprise plans with entitlements and quota enforcement locally |
+| A11-09 | Add invite, transfer, and ownership workflows | Org model (A11-07) — invite modeling exists in member CRUD, no remote delivery |
 | A11-10 | Build remote workspace directory/catalog | Storage (A11-01), org (A11-07) |
 
 ### Area 12: Workspace Retrieval and Memory Search
@@ -749,16 +768,16 @@ This sequence respects dependency order and avoids building on missing foundatio
 
 ### Phase E: Backend and Collaboration (L8)
 **Goal:** Multiple operators can collaborate with real governance.
+- ✅ A11-07: Org/account model — completed with multi-org CRUD, membership, plan tiers, entitlements, and quota enforcement locally
+- ✅ A11-08: Billing/quota/entitlement — completed locally with free/pro/enterprise plans, quota checks, and entitlement gates
 1. A11-01: Server-side scene/evidence storage
 2. A11-02: User authentication and sessions
 3. A11-03: Shared workspace sync with conflict resolution
 4. A11-04: Change-approval workflows
 5. A11-05: Branch/merge semantics
 6. A11-06: Role-aware RBAC/ABAC
-7. A11-07: Org/account model
-8. A11-08: Billing/quota/entitlement
-9. A11-09: Invite/transfer/ownership
-10. A11-10: Remote workspace catalog
+7. A11-09: Invite/transfer/ownership (member CRUD exists, remote delivery needed)
+8. A11-10: Remote workspace catalog
 
 ### Phase F: Import Depth (L1/L2)
 **Goal:** The product can import from professional tools.

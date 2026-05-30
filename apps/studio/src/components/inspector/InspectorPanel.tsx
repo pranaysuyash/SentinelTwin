@@ -15,6 +15,7 @@ import { useState } from "react";
 import { NodeHistoryTab as NodeHistoryPanel } from "./NodeHistoryTab";
 
 import { CameraFeedCanvas } from "@/components/inspector/CameraFeedCanvas";
+import { CommentInspector } from "@/components/inspector/CommentInspector";
 import { snapDoorWindowToWall } from "@/components/inspector/door-window-snap";
 import {
   Field,
@@ -2309,6 +2310,7 @@ export function InspectorPanel({ showHeader = true }: { showHeader?: boolean } =
   const sensor = scene.sensors.find((entry) => entry.id === selectedId);
   const zone = scene.criticalZones.find((entry) => entry.id === selectedId);
   const privacyZone = scene.privacyZones.find((entry) => entry.id === selectedId);
+  const comment = scene.comments?.find((entry) => entry.id === selectedId) ?? null;
   const path = scene.paths.find((entry) => entry.id === selectedId);
   const entryPoint = scene.entryPoints.find((entry) => entry.id === selectedId);
   const selectedCount = selectedNodeIds.length;
@@ -2369,6 +2371,8 @@ export function InspectorPanel({ showHeader = true }: { showHeader?: boolean } =
         ? <CriticalZoneInspector />
         : privacyZone
         ? <PrivacyZoneInspector />
+        : comment
+        ? <CommentInspector comment={comment} />
         : path
         ? <PathInspector />
         : obstruction

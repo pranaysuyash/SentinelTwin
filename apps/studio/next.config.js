@@ -1,4 +1,4 @@
-const path = require("node:path");
+import path from "node:path";
 
 /** @type {import("next").NextConfig} */
 const nextConfig = {
@@ -10,10 +10,10 @@ const nextConfig = {
     config.resolve = config.resolve ?? {};
     config.resolve.alias = {
       ...(config.resolve.alias ?? {}),
-      "@": path.join(__dirname, "src"),
+      "@": path.join(process.cwd(), "src"),
     };
     return config;
   },
 };
 
-module.exports = nextConfig;
+export default nextConfig;

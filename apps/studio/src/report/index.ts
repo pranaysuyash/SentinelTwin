@@ -18,6 +18,13 @@ type ReportCameraQuality = "none" | "detection" | "observation" | "recognition" 
 
 export type ReportAudience = "operator" | "auditor" | "insurer" | "installer" | "privacy_reviewer";
 export type ReportVisibility = "internal" | "shared" | "privacy_safe";
+export type ReportStandardTemplateId =
+  | "oodpcvs-audit"
+  | "dori-audit"
+  | "gdpr-dpia"
+  | "bipa-compliance"
+  | "hipaa-privacy"
+  | "general-audit";
 export type ReportSectionKey =
   | "summary"
   | "assumptions"
@@ -63,11 +70,28 @@ interface ReportVisibilityProfile {
   summary: string;
 }
 
+export interface ReportStandardTemplateSection {
+  title: string;
+  detail: string;
+}
+
+export interface ReportStandardTemplateProfile {
+  id: ReportStandardTemplateId;
+  title: string;
+  standardLabel: string;
+  summary: string;
+  audienceHint: string;
+  focusAreas: string[];
+  evidenceAnchors: string[];
+  sections: ReportStandardTemplateSection[];
+}
+
 export interface ReportExportPreset {
   id: string;
   title: string;
   audience: ReportAudience;
   visibility: ReportVisibility;
+  templateId: ReportStandardTemplateId;
   summary: string;
 }
 
@@ -201,12 +225,148 @@ const REPORT_VISIBILITY_PROFILES: Record<ReportVisibility, ReportVisibilityProfi
   },
 };
 
+const REPORT_STANDARD_TEMPLATES: Record<ReportStandardTemplateId, ReportStandardTemplateProfile> = {
+  "oodpcvs-audit": {
+    id: "oodpcvs-audit",
+    title: "IEC 62676-4 OODPCVS Audit",
+    standardLabel: "IEC 62676-4:2025",
+    summary: "Coverage quality by zone with evidence-linked handoff framing for operators and auditors.",
+    audienceHint: "Best for operational coverage reviews and audit-ready site hardening notes.",
+    focusAreas: [
+      "Zone requirement mapping",
+      "Coverage pass/fail traceability",
+      "Evidence-linked drill-through",
+    ],
+    evidenceAnchors: ["Zone Analysis", "Operational Evidence", "Temporal Operational Twin"],
+    sections: [
+      {
+        title: "Coverage Quality Spine",
+        detail: "Shows required versus actual quality for every critical zone so the OODPCVS threshold story stays visible.",
+      },
+      {
+        title: "Evidence Handoff",
+        detail: "Keeps the recent evidence trail and checkpoint provenance attached to the final audit artifact.",
+      },
+    ],
+  },
+  "dori-audit": {
+    id: "dori-audit",
+    title: "DORI Threshold Audit",
+    standardLabel: "DORI 2014",
+    summary: "Detection, observation, recognition, and identification framing for legacy quality review.",
+    audienceHint: "Best for teams comparing classic DORI expectations against the current scene.",
+    focusAreas: ["DORI threshold mapping", "Camera quality ladder", "Worst-zone identification"],
+    evidenceAnchors: ["Camera Analysis", "Zone Analysis", "Recommendations"],
+    sections: [
+      {
+        title: "Quality Ladder",
+        detail: "Summarizes the DORI ladder by zone so the report reads as a standards comparison, not just a scorecard.",
+      },
+      {
+        title: "Exposure Summary",
+        detail: "Highlights the lowest-quality areas and the cameras that need calibration or relocation.",
+      },
+    ],
+  },
+  "gdpr-dpia": {
+    id: "gdpr-dpia",
+    title: "GDPR DPIA Brief",
+    standardLabel: "GDPR Art. 35",
+    summary: "Privacy-minimized review with masking posture, retention awareness, and evidence restraint.",
+    audienceHint: "Best for privacy reviewers who need a DPIA-style summary without the full operational trace.",
+    focusAreas: ["Privacy masking posture", "Disclosure minimization", "Evidence traceability boundaries"],
+    evidenceAnchors: ["Privacy Masking", "Visibility and Redaction", "Provenance"],
+    sections: [
+      {
+        title: "Masking Posture",
+        detail: "Surfaces which cameras are protected and which remain exposed so privacy review can focus on the highest-risk edges.",
+      },
+      {
+        title: "Disclosure Boundary",
+        detail: "Explains which sections are intentionally withheld in the privacy-safe export and why.",
+      },
+    ],
+  },
+  "bipa-compliance": {
+    id: "bipa-compliance",
+    title: "BIPA Compliance Brief",
+    standardLabel: "Illinois BIPA",
+    summary: "Biometric capture risk framing for face-identification and access-sensitive areas.",
+    audienceHint: "Best for teams reviewing identification-heavy zones and biometric-sensitive capture paths.",
+    focusAreas: ["Identification-heavy zone review", "Biometric-sensitive capture paths", "Access-control evidence"],
+    evidenceAnchors: ["Zone Analysis", "Camera Analysis", "Operational Evidence"],
+    sections: [
+      {
+        title: "Biometric Exposure",
+        detail: "Highlights cameras and zones that support identification or recognition quality so biometric risk is explicit.",
+      },
+      {
+        title: "Control Summary",
+        detail: "Pairs the exposure summary with the evidence trail so compliance reviewers can follow the handoff without guessing.",
+      },
+    ],
+  },
+  "hipaa-privacy": {
+    id: "hipaa-privacy",
+    title: "HIPAA Privacy Brief",
+    standardLabel: "HIPAA",
+    summary: "Privacy-safe operational brief for protected-area visibility and disclosure minimization.",
+    audienceHint: "Best for sensitive environments where exposure summary matters more than operational detail.",
+    focusAreas: ["Protected-area visibility", "Disclosure minimization", "Audit spine without over-sharing"],
+    evidenceAnchors: ["Privacy Masking", "Visibility and Redaction", "Recommendations"],
+    sections: [
+      {
+        title: "Protected-Area Summary",
+        detail: "Summarizes the cameras and zones involved in sensitive-area coverage without reprinting the full evidence trace.",
+      },
+      {
+        title: "Minimal Disclosure Path",
+        detail: "Keeps the export readable for privacy reviewers while preserving the headline risk and next-step recommendations.",
+      },
+    ],
+  },
+  "general-audit": {
+    id: "general-audit",
+    title: "General Coverage Audit",
+    standardLabel: "General Audit",
+    summary: "Operational handoff for the active workspace owner with the strongest product-wide evidence spine.",
+    audienceHint: "Best for day-to-day operational review and client-facing handoff drafts.",
+    focusAreas: ["Overall coverage posture", "Evidence-linked recommendations", "Audience-specific disclosure"],
+    evidenceAnchors: ["Executive Summary", "Operational Evidence", "Recommendations"],
+    sections: [
+      {
+        title: "Audit Spine",
+        detail: "Keeps the report balanced between coverage metrics, evidence links, and next actions.",
+      },
+      {
+        title: "Buyer Handoff",
+        detail: "Highlights the top issue, best next action, and inspection shortcuts for the report consumer.",
+      },
+    ],
+  },
+};
+
+function getDefaultReportStandardTemplateId(scene: SecurityScene, audience: ReportAudience): ReportStandardTemplateId {
+  if (audience === "privacy_reviewer") return "gdpr-dpia";
+  if (scene.assumptions.doriStandard === "oodpcvs_2025") return "oodpcvs-audit";
+  return "dori-audit";
+}
+
+function resolveReportStandardTemplateId(
+  scene: SecurityScene,
+  audience: ReportAudience,
+  templateId?: ReportStandardTemplateId,
+): ReportStandardTemplateId {
+  return templateId ?? getDefaultReportStandardTemplateId(scene, audience);
+}
+
 const REPORT_EXPORT_PRESETS: ReportExportPreset[] = [
   {
     id: "operator-internal",
     title: "Operator Internal",
     audience: "operator",
     visibility: "internal",
+    templateId: "general-audit",
     summary: "Full-detail operational export for the active workspace owner.",
   },
   {
@@ -214,6 +374,7 @@ const REPORT_EXPORT_PRESETS: ReportExportPreset[] = [
     title: "Auditor Shared",
     audience: "auditor",
     visibility: "shared",
+    templateId: "oodpcvs-audit",
     summary: "Evidence-oriented export with a narrower helper-note footprint.",
   },
   {
@@ -221,6 +382,7 @@ const REPORT_EXPORT_PRESETS: ReportExportPreset[] = [
     title: "Insurer Brief",
     audience: "insurer",
     visibility: "shared",
+    templateId: "dori-audit",
     summary: "Risk and resilience framing for underwriting or exposure review.",
   },
   {
@@ -228,6 +390,7 @@ const REPORT_EXPORT_PRESETS: ReportExportPreset[] = [
     title: "Installer Handoff",
     audience: "installer",
     visibility: "shared",
+    templateId: "general-audit",
     summary: "Commissioning-friendly export with reduced internal commentary.",
   },
   {
@@ -235,6 +398,7 @@ const REPORT_EXPORT_PRESETS: ReportExportPreset[] = [
     title: "Privacy Safe",
     audience: "privacy_reviewer",
     visibility: "privacy_safe",
+    templateId: "gdpr-dpia",
     summary: "Minimized export for privacy review or public sharing.",
   },
 ];
@@ -251,6 +415,14 @@ export function getReportAudiencePolicy(audience: ReportAudience): ReportAudienc
 
 export function getReportVisibilityProfile(visibility: ReportVisibility): ReportVisibilityProfile {
   return REPORT_VISIBILITY_PROFILES[visibility];
+}
+
+export function getReportStandardTemplateProfile(templateId: ReportStandardTemplateId): ReportStandardTemplateProfile {
+  return REPORT_STANDARD_TEMPLATES[templateId];
+}
+
+export function getReportStandardTemplates(): ReportStandardTemplateProfile[] {
+  return Object.values(REPORT_STANDARD_TEMPLATES);
 }
 
 export function getReportExportPresets(): ReportExportPreset[] {
@@ -290,6 +462,7 @@ export interface ReportData {
   visibility: ReportVisibility;
   visibilityLabel: string;
   visibilityFraming: string;
+  template: ReportStandardTemplateProfile;
   dimensions: { width: number; depth: number; height: number };
   assumptions: {
     doriStandard: string;
@@ -534,6 +707,7 @@ export function buildReportData(
     title?: string;
     audience?: ReportAudience;
     visibility?: ReportVisibility;
+    templateId?: ReportStandardTemplateId;
     temporalProfile?: TemporalProfileSummary;
     adversarialPath?: AdversarialPathSummary;
     operationalEvidenceEvents?: OperationalEvidenceEvent[];
@@ -543,6 +717,8 @@ export function buildReportData(
   const audienceProfile = getReportAudienceProfile(audience);
   const visibility = resolveReportVisibility(options?.visibility);
   const visibilityProfile = getReportVisibilityProfile(visibility);
+  const templateId = resolveReportStandardTemplateId(scene, audience, options?.templateId);
+  const templateProfile = getReportStandardTemplateProfile(templateId);
   const zonesPassing = result.criticalZoneResults.filter((z) => z.status === "pass").length;
   const totalZones = result.criticalZoneResults.length;
   const verifiedRecs = result.recommendations.filter((r) => r.verified).length;
@@ -590,6 +766,7 @@ export function buildReportData(
     visibility,
     visibilityLabel: visibilityProfile.label,
     visibilityFraming: visibilityProfile.framing,
+    template: templateProfile,
     dimensions: { width: scene.dimensions.width, depth: scene.dimensions.depth, height: scene.dimensions.height },
     assumptions: {
       doriStandard: scene.assumptions.doriStandard,
@@ -861,12 +1038,14 @@ export function buildCompareReportData(
   options?: {
     audience?: ReportAudience;
     visibility?: ReportVisibility;
+    templateId?: ReportStandardTemplateId;
   },
 ): CompareReportData {
   const audience = resolveReportAudience(options?.audience);
   const visibility = resolveReportVisibility(options?.visibility);
-  const before = buildCompareReportSnapshot(beforeScene, beforeResult, audience, visibility);
-  const after = buildCompareReportSnapshot(afterScene, afterResult, audience, visibility);
+  const templateId = resolveReportStandardTemplateId(afterScene, audience, options?.templateId);
+  const before = buildCompareReportSnapshot(beforeScene, beforeResult, audience, visibility, templateId);
+  const after = buildCompareReportSnapshot(afterScene, afterResult, audience, visibility, templateId);
 
   const zoneChanges = before.zones.map((z) => {
     const afterZone = after.zones.find((az) => az.label === z.label);
@@ -902,9 +1081,11 @@ function buildCompareReportSnapshot(
   result: SimulationResult,
   audience: ReportAudience,
   visibility: ReportVisibility,
+  templateId: ReportStandardTemplateId,
 ): ReportData {
   const audienceProfile = getReportAudienceProfile(audience);
   const visibilityProfile = getReportVisibilityProfile(visibility);
+  const templateProfile = getReportStandardTemplateProfile(resolveReportStandardTemplateId(scene, audience, templateId));
   const zonesPassing = result.criticalZoneResults.filter((zone) => zone.status === "pass").length;
   const totalZones = result.criticalZoneResults.length;
   const verifiedRecs = result.recommendations.filter((rec) => rec.verified).length;
@@ -939,6 +1120,7 @@ function buildCompareReportSnapshot(
     visibility,
     visibilityLabel: visibilityProfile.label,
     visibilityFraming: visibilityProfile.framing,
+    template: templateProfile,
     dimensions: { width: scene.dimensions.width, depth: scene.dimensions.depth, height: scene.dimensions.height },
     assumptions: {
       doriStandard: scene.assumptions.doriStandard,
@@ -1018,6 +1200,131 @@ function buildCompareReportSnapshot(
 }
 
 // ── Export Helpers ──
+
+function buildVisibilityAndRedactionHtml(report: ReportData): string {
+  const redactionEffect =
+    report.visibility === "internal"
+      ? "No redaction. Full report detail is visible."
+      : report.visibility === "shared"
+        ? "Shared exports keep the audit spine, but redact confidence notes and trim evidence detail."
+        : "Privacy-safe exports remove operational evidence, provenance notes, and temporal trace detail.";
+
+  return `
+  <h2 id="visibility-redaction">Visibility &amp; Redaction</h2>
+  <div class="assumptions-box">
+    <table>
+      <tr><th>Audience</th><td>${escapeHtml(report.audienceLabel)}</td></tr>
+      <tr><th>Visibility mode</th><td>${escapeHtml(report.visibilityLabel)}</td></tr>
+      <tr><th>Disclosure policy</th><td>${escapeHtml(report.audiencePolicy.disclosureSummary)}</td></tr>
+      <tr><th>Visible sections</th><td>${escapeHtml(report.audiencePolicy.visibleSections.join(", "))}</td></tr>
+      <tr><th>Withheld sections</th><td>${escapeHtml(report.audiencePolicy.withheldSections.length > 0 ? report.audiencePolicy.withheldSections.join(", ") : "none")}</td></tr>
+    </table>
+    <div style="margin-top:10px;">
+      <strong>Redaction effect</strong>
+      <p>${escapeHtml(redactionEffect)}</p>
+    </div>
+  </div>
+  `;
+}
+
+function buildBuyerDrillThroughHtml(report: ReportData): string {
+  const sortedZones = [...report.zones].sort((a, b) => a.coveragePct - b.coveragePct);
+  const sortedCameras = [...report.cameras].sort(
+    (a, b) => b.zonesFailed - a.zonesFailed || a.coveragePct - b.coveragePct,
+  );
+  const topIssue = report.issues[0];
+  const topRecommendation = report.recommendations[0];
+  const topZone = sortedZones[0];
+  const topCamera = sortedCameras[0];
+
+  return `
+  <h2 id="buyer-drill-through">Buyer Drill-Through</h2>
+  <div class="assumptions-box">
+    <table>
+      <tr><th>Top issue</th><td>${topIssue ? escapeHtml(`[${topIssue.severity.toUpperCase()}] ${topIssue.description}`) : "none"}</td></tr>
+      <tr><th>Best next action</th><td>${topRecommendation ? escapeHtml(`[${topRecommendation.verified ? "verified" : "unverified"}] ${topRecommendation.description} (${topRecommendation.costCategory})`) : "none"}</td></tr>
+      <tr><th>Lowest coverage zone</th><td>${topZone ? escapeHtml(`${topZone.label} (${topZone.coveragePct.toFixed(1)}%, ${topZone.status})`) : "none"}</td></tr>
+      <tr><th>Most exposed camera</th><td>${topCamera ? escapeHtml(`${topCamera.name} (${topCamera.zonesFailed} failed zones, ${topCamera.coveragePct.toFixed(1)}%)`) : "none"}</td></tr>
+    </table>
+    <div style="margin-top:10px;">
+      <strong>Inspection shortcuts</strong>
+      <p><a href="#zone-analysis">Zone Analysis</a> · <a href="#camera-analysis">Camera Analysis</a> · <a href="#recommendations">Recommendations</a> · <a href="#operational-evidence">Operational Evidence</a></p>
+    </div>
+    <div style="margin-top:10px;">
+      <strong>Evidence jump points</strong>
+      ${report.evidenceTrail.recentEntries.length > 0
+        ? `<ul style="margin-left:18px;">${report.evidenceTrail.recentEntries.slice(0, 3).map((entry) => `<li><a href="#${entry.anchorId}">${escapeHtml(entry.when)} · ${escapeHtml(entry.title)}</a></li>`).join("")}</ul>`
+        : "<p>No evidence jump points available yet.</p>"}
+    </div>
+  </div>
+  `;
+}
+
+function buildPrivacyMaskingHtml(report: ReportData): string {
+  return `
+  <h2 id="privacy-masking">Privacy Masking Summary</h2>
+  <div class="assumptions-box">
+    <table>
+      <thead>
+        <tr><th>Camera</th><th>Status</th><th>Privacy Masking</th><th>NDAA</th></tr>
+      </thead>
+      <tbody>
+        ${report.cameras.length > 0
+          ? report.cameras.map(
+              (camera) => `<tr><td>${escapeHtml(camera.name)}</td><td>${escapeHtml(camera.status)}</td><td>${camera.privacyMaskingEnabled ? "Enabled" : "Disabled"}</td><td>${camera.ndaaCompliant ? "Yes" : "No"}</td></tr>`,
+            ).join("")
+          : `<tr><td colspan="4">No cameras deployed.</td></tr>`}
+      </tbody>
+    </table>
+  </div>
+  `;
+}
+
+function buildStandardsTemplateHtml(report: ReportData): string {
+  const sections = report.template.sections.length > 0
+    ? report.template.sections.map((section) => `<li><strong>${escapeHtml(section.title)}:</strong> ${escapeHtml(section.detail)}</li>`).join("")
+    : "<li>No template depth available.</li>";
+
+  return `
+  <h2 id="standards-template">Standards Template</h2>
+  <div class="assumptions-box">
+    <table>
+      <tr><th>Template</th><td>${escapeHtml(report.template.title)}</td></tr>
+      <tr><th>Standard</th><td>${escapeHtml(report.template.standardLabel)}</td></tr>
+      <tr><th>Template Summary</th><td>${escapeHtml(report.template.summary)}</td></tr>
+      <tr><th>Audience Hint</th><td>${escapeHtml(report.template.audienceHint)}</td></tr>
+      <tr><th>Focus Areas</th><td>${escapeHtml(report.template.focusAreas.join(" · "))}</td></tr>
+      <tr><th>Evidence Anchors</th><td>${escapeHtml(report.template.evidenceAnchors.join(" · "))}</td></tr>
+    </table>
+    <div style="margin-top:10px;">
+      <strong>Template Depth</strong>
+      <ul style="margin-left:18px;">
+        ${sections}
+      </ul>
+    </div>
+  </div>
+  `;
+}
+
+function buildStandardsTemplateText(report: ReportData): string[] {
+  return [
+    "STANDARDS TEMPLATE",
+    `${"-".repeat(30)}`,
+    `  Template:               ${report.template.title}`,
+    `  Standard:               ${report.template.standardLabel}`,
+    `  Template Summary:       ${report.template.summary}`,
+    `  Audience Hint:          ${report.template.audienceHint}`,
+    `  Focus Areas:            ${report.template.focusAreas.join(" · ")}`,
+    `  Evidence Anchors:       ${report.template.evidenceAnchors.join(" · ")}`,
+    ...(report.template.sections.length > 0
+      ? [
+          "  Template Depth:",
+          ...report.template.sections.map((section) => `    - ${section.title}: ${section.detail}`),
+        ]
+      : ["  Template Depth: none"]),
+    "",
+  ];
+}
 
 export function exportAsHtml(report: ReportData): string {
   return `<!DOCTYPE html>
@@ -1104,7 +1411,7 @@ export function exportAsHtml(report: ReportData): string {
     <div class="standards-badge">${escapeHtml(report.standardsRef)}</div>
   </div>
 
-  <h2>Executive Summary</h2>
+  <h2 id="executive-summary">Executive Summary</h2>
   <p>This report evaluates the security camera coverage for <strong>${escapeHtml(report.siteName)}</strong>
   (${report.dimensions.width}m × ${report.dimensions.depth}m, ${report.cameras.length} cameras)
   using ${escapeHtml(report.standardsRef)} as a planning-oriented configuration reference.</p>
@@ -1144,7 +1451,12 @@ export function exportAsHtml(report: ReportData): string {
     </div>
   </div>
 
-  <h2>Assumptions</h2>
+  ${buildVisibilityAndRedactionHtml(report)}
+  ${buildBuyerDrillThroughHtml(report)}
+  ${buildStandardsTemplateHtml(report)}
+  ${report.audience === "privacy_reviewer" ? buildPrivacyMaskingHtml(report) : ""}
+
+  <h2 id="assumptions">Assumptions</h2>
   <div class="assumptions-box">
     <table>
       <tr><th>DORI Standard</th><td>${escapeHtml(report.assumptions.doriStandard)}</td></tr>
@@ -1159,7 +1471,7 @@ export function exportAsHtml(report: ReportData): string {
     </p>
   </div>
 
-  <h2>Provenance</h2>
+  <h2 id="provenance">Provenance</h2>
   <div class="assumptions-box">
     <table>
       <tr><th>Scene Source</th><td>${escapeHtml(report.provenance.sceneSourceLabel)} (${escapeHtml(report.provenance.sceneSource)})</td></tr>
@@ -1190,7 +1502,7 @@ export function exportAsHtml(report: ReportData): string {
     ` : ""}
   </div>
 
-  <h2>Truth Ladder</h2>
+  <h2 id="truth-ladder">Truth Ladder</h2>
   <div class="assumptions-box">
     <table>
       <tr><th>Nodes</th><td>${report.truthLadder.nodeCount}</td></tr>
@@ -1206,7 +1518,7 @@ export function exportAsHtml(report: ReportData): string {
     </div>
   </div>
 
-  <h2>Operational Evidence</h2>
+  <h2 id="operational-evidence">Operational Evidence</h2>
   <div class="assumptions-box">
     <table>
       <tr><th>Scene ID</th><td>${escapeHtml(report.sceneId)}</td></tr>
@@ -1233,7 +1545,7 @@ export function exportAsHtml(report: ReportData): string {
   </div>
 
   ${report.temporalTwin ? `
-  <h2>Temporal Operational Twin</h2>
+  <h2 id="temporal-operational-twin">Temporal Operational Twin</h2>
   <div class="assumptions-box">
     <table>
       <tr><th>Scene Events</th><td>${report.temporalTwin.totalEvents}</td></tr>
@@ -1253,7 +1565,7 @@ export function exportAsHtml(report: ReportData): string {
   </div>
   ` : ""}
 
-  <h2>Zone Analysis</h2>
+  <h2 id="zone-analysis">Zone Analysis</h2>
   ${report.zones.length > 0 ? `
   <table>
     <thead><tr><th>Zone</th><th>Target</th><th>Required</th><th>Actual</th><th>Status</th><th>Coverage</th><th>Cameras</th></tr></thead>
@@ -1273,7 +1585,7 @@ export function exportAsHtml(report: ReportData): string {
   </table>
   ` : "<p>No critical zones defined.</p>"}
 
-  <h2>Camera Analysis</h2>
+  <h2 id="camera-analysis">Camera Analysis</h2>
   ${report.cameras.length > 0 ? `
   <table>
     <thead><tr><th>Camera</th><th>Coverage</th><th>Best Zone Quality</th><th>Zones Failed</th><th>Zones Covered</th></tr></thead>
@@ -1292,7 +1604,7 @@ export function exportAsHtml(report: ReportData): string {
   ` : "<p>No cameras configured.</p>"}
 
   ${report.redundancyMatrix ? `
-  <h2>Redundancy Matrix</h2>
+  <h2 id="redundancy-matrix">Redundancy Matrix</h2>
   <p>Rows show how each camera contributes to zone coverage. Single-point zones are the cells most likely to fail if a camera goes offline.</p>
   <table>
     <thead>
@@ -1341,7 +1653,7 @@ export function exportAsHtml(report: ReportData): string {
   </table>
   ` : ""}
 
-  <h2>Issues Found (${report.issues.length})</h2>
+  <h2 id="issues">Issues Found (${report.issues.length})</h2>
   ${report.issues.length > 0
     ? report.issues.map((i) => `
       <div class="issue ${i.severity}">
@@ -1351,7 +1663,7 @@ export function exportAsHtml(report: ReportData): string {
     `).join("")
     : "<p>No issues found. Coverage meets all defined requirements.</p>"}
 
-  <h2>Recommendations (${report.recommendations.length})</h2>
+  <h2 id="recommendations">Recommendations (${report.recommendations.length})</h2>
   ${report.recommendations.length > 0
     ? report.recommendations.map((r) => `
       <div class="rec ${r.verified ? "verified" : "unverified"}">
@@ -1363,7 +1675,7 @@ export function exportAsHtml(report: ReportData): string {
     : "<p>No recommendations at this time.</p>"}
 
   ${report.temporalProfile ? `
-  <h2>Temporal Security Profile</h2>
+  <h2 id="temporal-profile">Temporal Security Profile</h2>
   <p>Coverage varies across the 24-hour cycle due to lighting and occupancy changes.</p>
   <table>
     <tr><th>Vulnerability Windows</th><td>${report.temporalProfile.vulnerabilityWindowCount}</td></tr>
@@ -1375,7 +1687,7 @@ export function exportAsHtml(report: ReportData): string {
   ` : ""}
 
   ${report.adversarialPath ? `
-  <h2>Coverage Failure Replay</h2>
+  <h2 id="coverage-failure-replay">Coverage Failure Replay</h2>
   <p>Defensive coverage-failure route analysis under current assumptions (hardening aid, not attacker guidance).</p>
   <table>
     <tr><th>Exposure Score</th><td>${report.adversarialPath.exposureScore.toFixed(1)}</td></tr>
@@ -1385,7 +1697,7 @@ export function exportAsHtml(report: ReportData): string {
   ` : ""}
 
   ${report.novelAlgorithms ? `
-  <h2>Novel Algorithms</h2>
+  <h2 id="novel-algorithms">Novel Algorithms</h2>
   <table>
     <tr><th>Coverage Entropy</th><td>${report.novelAlgorithms.coverageEntropy ? `${report.novelAlgorithms.coverageEntropy.normalizedEntropy.toFixed(2)} norm · ${report.novelAlgorithms.coverageEntropy.entropyBits.toFixed(2)} bits · dominant ${report.novelAlgorithms.coverageEntropy.dominantQuality} ${report.novelAlgorithms.coverageEntropy.dominantQualityShare.toFixed(1)}%` : "Not computed"}</td></tr>
     <tr><th>Coverage Fragility</th><td>${report.novelAlgorithms.coverageFragility ? `${(report.novelAlgorithms.coverageFragility.meanFragility * 100).toFixed(1)}% mean · ${report.novelAlgorithms.coverageFragility.fragileCellCount}/${report.novelAlgorithms.coverageFragility.totalCells} fragile cells` : "Not computed"}</td></tr>
@@ -1500,7 +1812,7 @@ export function exportAsHtml(report: ReportData): string {
   </table>
   ` : ""}
 
-  <h2>Modeling scope and requirement checks</h2>
+  <h2 id="modeling-scope">Modeling scope and requirement checks</h2>
   <p>
     <strong style="color:${report.meetsModeledZoneRequirements ? "#16a34a" : "#dc2626"}">
       ${report.meetsModeledZoneRequirements ? "✓ Meets modeled zone requirements" : "○ Does not fully meet modeled zone requirements"}
@@ -1539,6 +1851,8 @@ export function exportAsMarkdown(report: ReportData): string {
 }
 
 export function exportAsText(report: ReportData): string {
+  const sortedZones = [...report.zones].sort((a, b) => a.coveragePct - b.coveragePct);
+  const sortedCameras = [...report.cameras].sort((a, b) => b.zonesFailed - a.zonesFailed || a.coveragePct - b.coveragePct);
   const lines = [
     `${report.title}`,
     `${"=".repeat(report.title.length)}`,
@@ -1553,6 +1867,23 @@ export function exportAsText(report: ReportData): string {
     `Dimensions: ${report.dimensions.width}m x ${report.dimensions.depth}m x ${report.dimensions.height}m`,
     `Standard: ${report.standardsRef}`,
     "",
+    "VISIBILITY & REDACTION",
+    `${"-".repeat(30)}`,
+    `  Audience:               ${report.audienceLabel}`,
+    `  Visibility Mode:        ${report.visibilityLabel}`,
+    `  Disclosure Policy:      ${report.audiencePolicy.disclosureSummary}`,
+    `  Visible Sections:       ${report.audiencePolicy.visibleSections.join(", ")}`,
+    `  Withheld Sections:      ${report.audiencePolicy.withheldSections.length > 0 ? report.audiencePolicy.withheldSections.join(", ") : "none"}`,
+    `  Redaction Effect:       ${report.visibility === "internal" ? "No redaction" : report.visibility === "shared" ? "Confidence notes and evidence detail trimmed" : "Operational evidence and provenance removed"}`,
+    "",
+    "BUYER DRILL-THROUGH",
+    `${"-".repeat(30)}`,
+    `  Top Issue:              ${report.issues[0] ? `[${report.issues[0].severity.toUpperCase()}] ${report.issues[0].description}` : "none"}`,
+    `  Best Next Action:       ${report.recommendations[0] ? `[${report.recommendations[0].verified ? "verified" : "unverified"}] ${report.recommendations[0].description} (${report.recommendations[0].costCategory})` : "none"}`,
+    `  Lowest Coverage Zone:   ${sortedZones[0] ? `${sortedZones[0].label} (${sortedZones[0].coveragePct.toFixed(1)}%)` : "none"}`,
+    `  Most Exposed Camera:    ${sortedCameras[0] ? `${sortedCameras[0].name} (${sortedCameras[0].zonesFailed} failed zones)` : "none"}`,
+    "",
+    ...buildStandardsTemplateText(report),
     "ASSUMPTIONS",
     `DORI Standard: ${report.assumptions.doriStandard}`,
     `Person Height: ${report.assumptions.personHeightM}m`,
@@ -1821,7 +2152,47 @@ export function exportCompareAsHtml(
   <p><strong>Withheld Sections:</strong> ${escapeHtml(compare.before.audiencePolicy.withheldSections.length > 0 ? compare.before.audiencePolicy.withheldSections.join(", ") : "none")}</p>
   <p><strong>Visibility:</strong> ${escapeHtml(compare.before.visibilityLabel)} · ${escapeHtml(compare.before.visibilityFraming)}</p>
 
-  <h2>Delta Summary</h2>
+  <h2 id="compare-visibility-redaction">Visibility &amp; Redaction</h2>
+  <div class="before-card" style="margin-bottom:16px;">
+    <table>
+      <tr><td>Audience</td><td>${escapeHtml(compare.before.audienceLabel)}</td></tr>
+      <tr><td>Visibility mode</td><td>${escapeHtml(compare.before.visibilityLabel)}</td></tr>
+      <tr><td>Disclosure policy</td><td>${escapeHtml(compare.before.audiencePolicy.disclosureSummary)}</td></tr>
+      <tr><td>Visible sections</td><td>${escapeHtml(compare.before.audiencePolicy.visibleSections.join(", "))}</td></tr>
+      <tr><td>Withheld sections</td><td>${escapeHtml(compare.before.audiencePolicy.withheldSections.length > 0 ? compare.before.audiencePolicy.withheldSections.join(", ") : "none")}</td></tr>
+    </table>
+  </div>
+
+  <h2 id="compare-drill-through">Buyer Drill-Through</h2>
+  <div class="before-card" style="margin-bottom:16px;">
+    <table>
+      <tr><td>Top issue</td><td>${compare.before.issues[0] ? escapeHtml(`[${compare.before.issues[0].severity.toUpperCase()}] ${compare.before.issues[0].description}`) : "none"}</td></tr>
+      <tr><td>Best next action</td><td>${compare.before.recommendations[0] ? escapeHtml(`[${compare.before.recommendations[0].verified ? "verified" : "unverified"}] ${compare.before.recommendations[0].description} (${compare.before.recommendations[0].costCategory})`) : "none"}</td></tr>
+      <tr><td>Changed zones</td><td>${compare.zoneChanges.filter((zone) => zone.changed).length}</td></tr>
+      <tr><td>Evidence links</td><td>${compare.before.evidenceTrail.recentEntries.length > 0 ? `${compare.before.evidenceTrail.recentEntries.length} before / ${compare.after.evidenceTrail.recentEntries.length} after` : "none"}</td></tr>
+    </table>
+    <p style="margin-top:10px;"><a href="#compare-delta-summary">Delta Summary</a> · <a href="#compare-side-by-side">Side-by-Side</a> · <a href="#compare-operational-evidence">Operational Evidence</a> · <a href="#compare-zone-status">Zone Status Changes</a></p>
+  </div>
+
+  <h2 id="compare-standards-template">Standards Template</h2>
+  <div class="before-card" style="margin-bottom:16px;">
+    <table>
+      <tr><td>Template</td><td>${escapeHtml(compare.before.template.title)}</td></tr>
+      <tr><td>Standard</td><td>${escapeHtml(compare.before.template.standardLabel)}</td></tr>
+      <tr><td>Template Summary</td><td>${escapeHtml(compare.before.template.summary)}</td></tr>
+      <tr><td>Audience Hint</td><td>${escapeHtml(compare.before.template.audienceHint)}</td></tr>
+      <tr><td>Focus Areas</td><td>${escapeHtml(compare.before.template.focusAreas.join(" · "))}</td></tr>
+      <tr><td>Evidence Anchors</td><td>${escapeHtml(compare.before.template.evidenceAnchors.join(" · "))}</td></tr>
+    </table>
+    <div style="margin-top:10px;">
+      <strong>Template Depth</strong>
+      <ul style="margin-left:18px;">
+        ${compare.before.template.sections.map((section) => `<li><strong>${escapeHtml(section.title)}:</strong> ${escapeHtml(section.detail)}</li>`).join("")}
+      </ul>
+    </div>
+  </div>
+
+  <h2 id="compare-delta-summary">Delta Summary</h2>
   <div class="delta-summary">
     <div class="delta-card"><div class="value ${deltaClass(compare.deltas.totalCoveragePctDelta)}">${deltaSign(compare.deltas.totalCoveragePctDelta)}%</div><div class="label">Coverage Delta</div></div>
     <div class="delta-card"><div class="value ${deltaClass(-compare.deltas.blindspotPctDelta)}">${deltaSign(-compare.deltas.blindspotPctDelta)}%</div><div class="label">Blindspot Reduction</div></div>
@@ -1868,7 +2239,7 @@ export function exportCompareAsHtml(
     </tbody>
   </table>
 
-  <h2>Side-by-Side</h2>
+  <h2 id="compare-side-by-side">Side-by-Side</h2>
   <div class="grid-2">
     <div class="before-card">
       <h3>Before</h3>
@@ -1896,7 +2267,7 @@ export function exportCompareAsHtml(
     </div>
   </div>
 
-  <h2>Provenance</h2>
+  <h2 id="compare-provenance">Provenance</h2>
   <table>
     <thead><tr><th>Field</th><th>Before</th><th>After</th></tr></thead>
     <tbody>
@@ -1915,7 +2286,7 @@ export function exportCompareAsHtml(
     </tbody>
   </table>
 
-  <h2>Truth Ladder</h2>
+  <h2 id="compare-truth-ladder">Truth Ladder</h2>
   <div class="grid-2">
     <div class="before-card">
       <h3>Before truth ladder</h3>
@@ -1931,7 +2302,7 @@ export function exportCompareAsHtml(
     </div>
   </div>
 
-  <h2>Operational Evidence</h2>
+  <h2 id="compare-operational-evidence">Operational Evidence</h2>
   <div class="grid-2">
   <div class="before-card">
       <h3>Before evidence trail</h3>
@@ -1980,7 +2351,7 @@ export function exportCompareAsHtml(
   </div>
 
   ${compare.zoneChanges.some((z) => z.changed) ? `
-  <h2>Zone Status Changes</h2>
+  <h2 id="compare-zone-status">Zone Status Changes</h2>
   <table>
     <thead><tr><th>Zone</th><th>Before</th><th>After</th></tr></thead>
     <tbody>
@@ -2013,6 +2384,33 @@ export function exportCompareAsMarkdown(compare: CompareReportData): string {
     `**Withheld Sections:** ${compare.before.audiencePolicy.withheldSections.length > 0 ? compare.before.audiencePolicy.withheldSections.join(", ") : "none"}`,
     `**Visibility:** ${compare.before.visibilityLabel}`,
     `**Visibility Framing:** ${compare.before.visibilityFraming}`,
+    "",
+    "## Standards Template",
+    `- Template: ${compare.before.template.title}`,
+    `- Standard: ${compare.before.template.standardLabel}`,
+    `- Template Summary: ${compare.before.template.summary}`,
+    `- Audience Hint: ${compare.before.template.audienceHint}`,
+    `- Focus Areas: ${compare.before.template.focusAreas.join(" · ")}`,
+    `- Evidence Anchors: ${compare.before.template.evidenceAnchors.join(" · ")}`,
+    ...(compare.before.template.sections.length > 0
+      ? [
+          "- Template Depth:",
+          ...compare.before.template.sections.map((section) => `  - ${section.title}: ${section.detail}`),
+        ]
+      : ["- Template Depth: none"]),
+    "",
+    "## Visibility and Redaction",
+    `- Audience: ${compare.before.audienceLabel}`,
+    `- Visibility mode: ${compare.before.visibilityLabel}`,
+    `- Disclosure policy: ${compare.before.audiencePolicy.disclosureSummary}`,
+    `- Visible sections: ${compare.before.audiencePolicy.visibleSections.join(", ")}`,
+    `- Withheld sections: ${compare.before.audiencePolicy.withheldSections.length > 0 ? compare.before.audiencePolicy.withheldSections.join(", ") : "none"}`,
+    "",
+    "## Buyer Drill-Through",
+    `- Top issue: ${compare.before.issues[0] ? `[${compare.before.issues[0].severity.toUpperCase()}] ${compare.before.issues[0].description}` : "none"}`,
+    `- Best next action: ${compare.before.recommendations[0] ? `[${compare.before.recommendations[0].verified ? "verified" : "unverified"}] ${compare.before.recommendations[0].description} (${compare.before.recommendations[0].costCategory})` : "none"}`,
+    `- Changed zones: ${compare.zoneChanges.filter((zone) => zone.changed).length}`,
+    `- Inspection shortcuts: [Delta Summary](#deltas) · [Side-by-Side](#side-by-side) · [Operational Evidence](#operational-evidence)`,
     "",
     "## Deltas",
     `| Metric | Delta |`,
@@ -2114,6 +2512,8 @@ export function buildCompareReport(
   afterResult: SimulationResult,
   options?: {
     audience?: ReportAudience;
+    visibility?: ReportVisibility;
+    templateId?: ReportStandardTemplateId;
   },
 ): CompareReportData {
   return buildCompareReportData(beforeScene, beforeResult, afterScene, afterResult, options);
@@ -2144,6 +2544,7 @@ function redactReportDataForVisibility(report: ReportData, visibility: ReportVis
     redacted.visibilityFraming = getReportVisibilityProfile(visibility).framing;
     redacted.provenance.confidenceNotes = [];
     redacted.evidenceTrail.recentEntries.forEach((entry) => {
+      entry.details = "Redacted in shared export.";
       entry.confidence = "withheld";
     });
     if (redacted.evidenceLedger) {

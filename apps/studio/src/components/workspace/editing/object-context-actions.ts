@@ -85,7 +85,10 @@ const HEIGHT_STEP_M = 0.15;
 const ROTATE_STEP_DEG = 15;
 
 function getNodeLabel(node: AnyEditableNode) {
-  return "name" in node ? node.name : node.label;
+  if ("name" in node) return node.name;
+  if ("label" in node) return node.label;
+  if (node.nodeType === "comment") return node.text;
+  return "Object";
 }
 
 function getNodeKindLabel(node: AnyEditableNode) {

@@ -10,10 +10,15 @@ export type WorkspaceMembershipDriftSummary = {
   policyChanged: boolean;
 };
 
+export type WorkspaceApprovalRouteSyncMode = "local_only" | "archive_backed";
+
 export type WorkspaceApprovalRouteSummary = {
   routeKey: string;
   routeStatus: "ready" | "reconcile_before_route" | "review_required" | "open_publish";
   routeScope: "direct" | "review" | "reconcile";
+  routeSyncMode: WorkspaceApprovalRouteSyncMode;
+  routeSyncLabel: string;
+  routeSyncReason: string;
   routeLabel: string;
   routeReason: string;
   targetReviewerLabel: string;
@@ -37,6 +42,9 @@ export const WorkspaceApprovalRouteSummarySchema = z.object({
   routeKey: z.string().min(1).optional(),
   routeStatus: z.enum(["ready", "reconcile_before_route", "review_required", "open_publish"]),
   routeScope: z.enum(["direct", "review", "reconcile"]).optional(),
+  routeSyncMode: z.enum(["local_only", "archive_backed"]).optional(),
+  routeSyncLabel: z.string().min(1).optional(),
+  routeSyncReason: z.string().min(1).optional(),
   routeLabel: z.string().min(1),
   routeReason: z.string().min(1),
   targetReviewerLabel: z.string().min(1),
@@ -56,6 +64,7 @@ function buildWorkspaceApprovalRouteKey(params: {
   activeMemberRole: string | null;
   routeStatus: WorkspaceApprovalRouteSummary["routeStatus"];
   routeScope: WorkspaceApprovalRouteSummary["routeScope"];
+  routeSyncMode: WorkspaceApprovalRouteSyncMode;
   currentPolicyMode: WorkspaceAccessState["policy"]["mode"];
   currentPublishRequiresApproval: boolean;
   currentPrivacySensitiveRequiresReviewer: boolean;
@@ -82,6 +91,7 @@ function buildWorkspaceApprovalRouteKey(params: {
     `role:${params.activeMemberRole ?? "none"}`,
     `status:${params.routeStatus}`,
     `scope:${params.routeScope}`,
+    `sync:${params.routeSyncMode}`,
     `governance:${params.governanceApprovalMode}:${params.governanceSceneStatus}`,
     `current:${params.currentPolicyMode}:${params.currentPublishRequiresApproval ? 1 : 0}:${params.currentPrivacySensitiveRequiresReviewer ? 1 : 0}:${currentRoles}`,
     `archived:${params.archivedPolicyMode}:${params.archivedPublishRequiresApproval ?? "none"}:${params.archivedPrivacySensitiveRequiresReviewer ?? "none"}:${archivedRoles}`,
@@ -124,6 +134,11 @@ export function summarizeWorkspaceApprovalRouting(
     : null;
   const drift = archivedAccess ? summarizeWorkspaceMembershipDrift(currentAccess, archivedAccess) : null;
   const hasPrivacyExposure = scene.privacyZones.length > 0;
+  const routeSyncMode: WorkspaceApprovalRouteSyncMode = archivedAccess ? "archive_backed" : "local_only";
+  const routeSyncLabel = routeSyncMode === "archive_backed" ? "Archive-backed replay" : "Local-only routing";
+  const routeSyncReason = routeSyncMode === "archive_backed"
+    ? "Approval routing is replayed against an archived membership snapshot so shared-identity handoffs can be compared or delivered."
+    : "Approval routing is computed only from the live workspace state and has no archived membership snapshot yet.";
   const requiresReview = workspaceGovernance.approvalMode === "review_required" || currentAccess.policy.publishRequiresApproval;
   const routeStatus: WorkspaceApprovalRouteSummary["routeStatus"] = drift && (drift.activeMemberChanged || drift.teamSizeChanged || drift.policyChanged)
     ? "reconcile_before_route"
@@ -170,6 +185,7 @@ export function summarizeWorkspaceApprovalRouting(
     activeMemberRole: activeMember?.role ?? null,
     routeStatus,
     routeScope,
+    routeSyncMode,
     currentPolicyMode: currentAccess.policy.mode,
     currentPublishRequiresApproval: currentAccess.policy.publishRequiresApproval,
     currentPrivacySensitiveRequiresReviewer: currentAccess.policy.privacySensitiveRequiresReviewer,
@@ -189,6 +205,9 @@ export function summarizeWorkspaceApprovalRouting(
     routeKey,
     routeStatus,
     routeScope,
+    routeSyncMode,
+    routeSyncLabel,
+    routeSyncReason,
     routeLabel,
     routeReason,
     targetReviewerLabel: currentRoute.requiredReviewerRole.replace(/_/g, " "),
@@ -217,17 +236,29 @@ export function normalizeWorkspaceApprovalRouteSummary(
     hasPrivacyExposure?: boolean;
     routeKey?: string;
     routeScope?: WorkspaceApprovalRouteSummary["routeScope"];
+    routeSyncMode?: WorkspaceApprovalRouteSyncMode;
+    routeSyncLabel?: string;
+    routeSyncReason?: string;
     activeMemberEligible?: boolean;
     activeMemberReason?: string;
   },
 ): WorkspaceApprovalRouteSummary {
   const parsed = WorkspaceApprovalRouteSummarySchema.safeParse(summary);
   if (parsed.success) {
+    const routeSyncMode = parsed.data.routeSyncMode
+      ?? (parsed.data.archivedMemberLabel === "No archived member" && parsed.data.archivedPolicyLabel === "No archived snapshot"
+        ? "local_only"
+        : "archive_backed");
+    const routeSyncLabel = parsed.data.routeSyncLabel ?? (routeSyncMode === "archive_backed" ? "Archive-backed replay" : "Local-only routing");
+    const routeSyncReason = parsed.data.routeSyncReason ?? (routeSyncMode === "archive_backed"
+      ? "Approval routing is replayed against an archived membership snapshot so shared-identity handoffs can be compared or delivered."
+      : "Approval routing is computed only from the live workspace state and has no archived membership snapshot yet.");
     return {
       ...parsed.data,
       routeKey: parsed.data.routeKey ?? [
         `status:${parsed.data.routeStatus}`,
         `scope:${parsed.data.routeScope ?? (parsed.data.routeStatus === "reconcile_before_route" ? "reconcile" : parsed.data.routeStatus === "review_required" ? "review" : "direct")}`,
+        `sync:${routeSyncMode}`,
         `active:${parsed.data.activeMemberLabel}`,
         `archived:${parsed.data.archivedMemberLabel}`,
         `current:${parsed.data.currentPolicyLabel}`,
@@ -241,6 +272,9 @@ export function normalizeWorkspaceApprovalRouteSummary(
         : parsed.data.routeStatus === "review_required"
           ? "review"
           : "direct"),
+      routeSyncMode,
+      routeSyncLabel,
+      routeSyncReason,
       activeMemberEligible: parsed.data.activeMemberEligible ?? false,
       activeMemberReason: parsed.data.activeMemberReason ?? "No route eligibility summary available.",
     };
@@ -259,9 +293,18 @@ export function normalizeWorkspaceApprovalRouteSummary(
   const archivedMemberLabel = summary.archivedMemberLabel ?? "No archived member";
   const hasPrivacyExposure = summary.hasPrivacyExposure ?? false;
   const drift = summary.drift ?? null;
+  const routeSyncMode = summary.routeSyncMode
+    ?? (archivedMemberLabel === "No archived member" && (summary.archivedPolicyLabel ?? "No archived snapshot") === "No archived snapshot"
+      ? "local_only"
+      : "archive_backed");
+  const routeSyncLabel = summary.routeSyncLabel ?? (routeSyncMode === "archive_backed" ? "Archive-backed replay" : "Local-only routing");
+  const routeSyncReason = summary.routeSyncReason ?? (routeSyncMode === "archive_backed"
+    ? "Approval routing is replayed against an archived membership snapshot so shared-identity handoffs can be compared or delivered."
+    : "Approval routing is computed only from the live workspace state and has no archived membership snapshot yet.");
   const routeKey = summary.routeKey ?? [
     `status:${routeStatus}`,
     `scope:${routeScope}`,
+    `sync:${routeSyncMode}`,
     `active:${activeMemberLabel}`,
     `archived:${archivedMemberLabel}`,
     `current:${currentPolicyLabel}`,
@@ -275,6 +318,9 @@ export function normalizeWorkspaceApprovalRouteSummary(
     routeKey,
     routeStatus,
     routeScope,
+    routeSyncMode,
+    routeSyncLabel,
+    routeSyncReason,
     routeLabel: summary.routeLabel ?? "Approval route",
     routeReason: summary.routeReason ?? "Approval route summary",
     targetReviewerLabel,

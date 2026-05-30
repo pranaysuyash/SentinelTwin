@@ -4571,3 +4571,12 @@ Fixed the `CameraLiveConnectionEventRecord` and `WorkspaceApprovalRouteSummary` 
 - Consequence: All five intake sources (scan, AI draft, floor plan, JSON, manual) now flow through one review → approve → baseline simulation → Studio pipeline. The `canRunBaselineSimulation()` function gates automatic simulation to scenes with at least one camera and one critical zone. Manual/guided scan naming is consistent: dashboard "Scan a Site" → manual mode, "Guided Scan Assistant" → guided mode. Maturity language is truthful everywhere: no claims of automatic segmentation, depth, or reconstruction.
 - Key files: `lib/site-compiler.ts` (unified draft model), `components/site-intake/SiteDraftReview.tsx` (full review UI), `app/page.tsx` (routing), `lib/__tests__/site-twin-draft.test.ts` (22 tests)
 - Alternatives rejected: per-source review components (duplicate UI, drift risk), bypassing review for "trusted" sources like JSON import (trust without verification is how errors propagate), keeping separate compile functions without a shared draft type (already had this and it caused inconsistency).
+
+## D-278 - Report exports should surface visibility redaction and buyer drill-through explicitly
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: Report exports already carried audience policies and visibility labels, but the buyer-facing drill-through path was still implicit and the redaction posture was easy to miss in the exported artifact itself.
+- Decision: Add explicit visibility/redaction summaries, buyer drill-through shortcuts, and privacy masking summaries directly into the report export surfaces, and mirror the same disclosure framing in compare exports.
+- Rationale: Report artifacts need to read like buyer-ready handoff material, not just simulation dumps. Showing the redaction posture and direct section shortcuts at the point of export makes the report easier to consume, easier to trust, and harder to misread when it is shared outside the workspace.
+- Consequence: Report exports now expose a visible redaction story and direct drill-down path, while the remaining work remains on standards-specific templates, catalog persistence, and richer export formats.

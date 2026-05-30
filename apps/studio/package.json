@@ -19,6 +19,9 @@
     "test:watch": "bun test --watch"
   },
   "dependencies": {
+    "@sentineltwin/core": "workspace:*",
+    "@sentineltwin/simulation": "workspace:*",
+    "@sentineltwin/report": "workspace:*",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
     "clsx": "^2.1.1",

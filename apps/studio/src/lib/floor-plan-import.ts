@@ -8,6 +8,7 @@
  * making it fast and dependency-free for common floor plan layouts.
  */
 import type { SecurityScene, DoorNode, WindowNode, WallNode } from "@/schema/security-scene";
+import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 
 export interface WallSegment {
   start: { x: number; y: number };
@@ -50,6 +51,26 @@ export interface FloorPlanDiagnostics {
   boundsCoverageRatio: number;
 }
 
+export type FloorPlanSceneType = "retail" | "warehouse" | "office" | "residential" | "industrial" | "unknown";
+export type FloorPlanSemanticConfidence = "high" | "medium" | "low_clutter";
+export type FloorPlanGateAction = "rescan_required" | "human_review" | "cloud_geometry_required" | "proceed_to_tier2";
+
+export interface FloorPlanSemanticContext {
+  sceneType: FloorPlanSceneType;
+  ocrText: string[];
+  roomCount: number;
+  zones: string[];
+  confidence: FloorPlanSemanticConfidence;
+  qualityScore: number;
+  ambiguityFlags: string[];
+}
+
+export interface FloorPlanGateDecision {
+  action: FloorPlanGateAction;
+  reason: string;
+  qualityThreshold: number;
+}
+
 export interface FloorPlanConfig {
   /** Pixels per meter scale factor. Auto-detected if not provided. */
   scalePixelsPerMeter?: number;
@@ -67,6 +88,7 @@ const DEFAULT_CONFIG: Required<FloorPlanConfig> = {
   edgeThreshold: 40,
   minWallLengthPx: 20,
 };
+const DEFAULT_TIER1_QUALITY_THRESHOLD = 0.45;
 
 /**
  * Process a floor plan image and extract wall/room geometry.
@@ -117,6 +139,7 @@ export function createSceneFromFloorPlan(
   result: FloorPlanResult,
 ): SecurityScene {
   const normalized = normalizeFloorPlanResult(result);
+  const diagnostics = getFloorPlanDiagnostics(normalized);
   const now = Date.now();
   let seq = 0;
   const uid = (prefix: string) => `${prefix}_${(now + seq++).toString(36)}`;
@@ -202,28 +225,27 @@ export function createSceneFromFloorPlan(
     });
   }
 
+  const baseScene = createBlankSecurityScene();
+  baseScene.id = uid("scene");
+  baseScene.name = name;
+  baseScene.dimensions = {
+    width: normalized.roomDimensions.widthM,
+    depth: normalized.roomDimensions.depthM,
+    height: roomHeight,
+  };
+  baseScene.source = "import";
+  baseScene.sourceTrace = "heuristic-import-v1";
+  baseScene.geometryValidity = "valid";
+  baseScene.reviewStatus = "unreviewed";
+
   return {
-    id: uid("scene"),
-    name,
+    ...baseScene,
     createdAt: now,
     updatedAt: now,
-    units: "meters",
-    dimensions: {
-      width: normalized.roomDimensions.widthM,
-      depth: normalized.roomDimensions.depthM,
-      height: roomHeight,
-    },
     walls,
     doors,
     windows,
-    cameras: [],
-    securityLights: [],
-    obstructions: [],
-    criticalZones: [],
-    privacyZones: [],
-    sensors: [],
     entryPoints,
-    paths: [],
     assumptions: {
       wallHeightM: roomHeight,
       personHeightM: 1.75,
@@ -238,14 +260,14 @@ export function createSceneFromFloorPlan(
       glareIntensity: "none" as const,
       overexposedZones: false,
     },
-    source: "import",
-    reviewStatus: "unreviewed",
-    sourceTrace: "heuristic-import-v1",
-    geometryValidity: "valid",
     version: "0.1.0",
-    snapshots: [],
-    scenarios: [],
-    changeLog: [],
+    changeLog: [
+      `Floor plan import: ${normalized.walls.length} walls, ${normalized.doors.length} doors, ${normalized.windows.length} windows at ${Math.round(normalized.confidence * 100)}% confidence.`,
+      `Floor plan diagnostics: ${diagnostics.duplicateWallPairs} duplicate wall pair${diagnostics.duplicateWallPairs === 1 ? "" : "s"}, ${diagnostics.unsnappedDoorCount + diagnostics.unsnappedWindowCount} off-wall opening${diagnostics.unsnappedDoorCount + diagnostics.unsnappedWindowCount === 1 ? "" : "s"}, ${diagnostics.shortWallCount} short fragment${diagnostics.shortWallCount === 1 ? "" : "s"}, ${Math.round(diagnostics.boundsCoverageRatio * 100)}% bounds coverage.`,
+      ...(normalized.walls.length === 4 && normalized.doors.length === 0 && normalized.windows.length === 0
+        ? ["Floor plan fallback shell preserved because the import produced a bare room outline."]
+        : []),
+    ],
   };
 }
 
@@ -342,6 +364,104 @@ export function validateFloorPlan(result: FloorPlanResult): {
   };
 }
 
+export function deriveFloorPlanSemanticContext(
+  result: FloorPlanResult,
+  diagnosticsInput?: FloorPlanDiagnostics,
+): FloorPlanSemanticContext {
+  const diagnostics = diagnosticsInput ?? getFloorPlanDiagnostics(result);
+  const wallCount = Math.max(1, diagnostics.wallCount);
+  const areaM2 = result.roomDimensions.widthM * result.roomDimensions.depthM;
+  const orthogonalRatio = (diagnostics.horizontalWallCount + diagnostics.verticalWallCount) / wallCount;
+  const duplicatePenalty = Math.min(0.2, diagnostics.duplicateWallPairs * 0.05);
+  const fragmentPenalty = Math.min(0.2, (diagnostics.shortWallCount / wallCount) * 0.35);
+  const offWallPenalty = Math.min(0.15, (diagnostics.unsnappedDoorCount + diagnostics.unsnappedWindowCount) * 0.05);
+  const qualityScore = clampUnit(
+    Number((
+      result.confidence * 0.55 +
+      diagnostics.boundsCoverageRatio * 0.25 +
+      orthogonalRatio * 0.2 -
+      duplicatePenalty -
+      fragmentPenalty -
+      offWallPenalty
+    ).toFixed(2)),
+  );
+  const sceneType = inferSceneType(result, diagnostics, areaM2);
+  const roomCount = Math.max(1, Math.round(Math.max(1, diagnostics.wallCount) / 4));
+  const zones = inferZoneHints(result, diagnostics);
+  const confidence =
+    qualityScore < DEFAULT_TIER1_QUALITY_THRESHOLD ||
+    result.confidence < 0.35 ||
+    diagnostics.shortWallCount > Math.max(2, diagnostics.wallCount * 0.35)
+      ? "low_clutter"
+      : qualityScore >= 0.75 && result.confidence >= 0.65
+        ? "high"
+        : "medium";
+
+  const ambiguityFlags: string[] = [];
+  if (sceneType === "unknown") ambiguityFlags.push("unknown_scene_type");
+  if (diagnostics.duplicateWallPairs > 0) ambiguityFlags.push("duplicate_walls");
+  if (diagnostics.shortWallCount > Math.max(2, diagnostics.wallCount * 0.25)) ambiguityFlags.push("wall_fragmentation");
+  if (diagnostics.unsnappedDoorCount + diagnostics.unsnappedWindowCount > 0) ambiguityFlags.push("openings_off_wall");
+  if (result.confidence < 0.45) ambiguityFlags.push("low_detection_confidence");
+
+  return {
+    sceneType,
+    ocrText: [],
+    roomCount,
+    zones,
+    confidence,
+    qualityScore,
+    ambiguityFlags,
+  };
+}
+
+export function evaluateFloorPlanTierGate(
+  context: FloorPlanSemanticContext,
+  options?: { qualityThreshold?: number },
+): FloorPlanGateDecision {
+  const qualityThreshold = options?.qualityThreshold ?? DEFAULT_TIER1_QUALITY_THRESHOLD;
+  if (context.qualityScore < qualityThreshold) {
+    return {
+      action: "rescan_required",
+      reason: `Tier 1 quality score ${context.qualityScore.toFixed(2)} is below ${qualityThreshold.toFixed(2)}.`,
+      qualityThreshold,
+    };
+  }
+  if (context.sceneType === "unknown") {
+    return {
+      action: "human_review",
+      reason: "Tier 1 could not confidently classify the scene type.",
+      qualityThreshold,
+    };
+  }
+  if (context.confidence === "low_clutter") {
+    return {
+      action: "cloud_geometry_required",
+      reason: "Tier 1 confidence is low_clutter, so cloud geometry extraction should be forced.",
+      qualityThreshold,
+    };
+  }
+  return {
+    action: "proceed_to_tier2",
+    reason: "Tier 1 quality and confidence are sufficient to continue with normal Tier 2 processing.",
+    qualityThreshold,
+  };
+}
+
+export function getFloorPlanTierGateWarning(decision: FloorPlanGateDecision): string | null {
+  switch (decision.action) {
+    case "rescan_required":
+      return "Tier 1 gate blocked this import: image quality is too low. Upload a clearer floor plan to continue.";
+    case "human_review":
+      return "Tier 1 gate flagged this floor plan for manual review before scene creation.";
+    case "cloud_geometry_required":
+      return "Tier 1 gate recommends forced cloud geometry extraction for this floor plan.";
+    case "proceed_to_tier2":
+    default:
+      return null;
+  }
+}
+
 export function getFloorPlanDiagnostics(result: FloorPlanResult): FloorPlanDiagnostics {
   const horizontalWalls = result.walls.filter((wall) => Math.abs(wall.start.y - wall.end.y) < 3);
   const verticalWalls = result.walls.filter((wall) => Math.abs(wall.start.x - wall.end.x) < 3);
@@ -409,6 +529,30 @@ function detectEdges(
   }
 
   return edges;
+}
+
+function inferSceneType(
+  result: FloorPlanResult,
+  diagnostics: FloorPlanDiagnostics,
+  areaM2: number,
+): FloorPlanSceneType {
+  const openingCount = result.doors.length + result.windows.length;
+  if (areaM2 >= 180 && diagnostics.wallCount <= 8) return "warehouse";
+  if (openingCount >= 4 && areaM2 >= 60 && areaM2 <= 220) return "retail";
+  if (areaM2 <= 80 && diagnostics.wallCount >= 4) return "office";
+  if (areaM2 <= 45 && openingCount <= 2) return "residential";
+  if (areaM2 > 220 && diagnostics.diagonalWallCount > 2) return "industrial";
+  return "unknown";
+}
+
+function inferZoneHints(result: FloorPlanResult, diagnostics: FloorPlanDiagnostics): string[] {
+  const zones = new Set<string>();
+  if (result.doors.length > 0) zones.add("entry_flow");
+  if (result.windows.length > 0) zones.add("window_perimeter");
+  if (diagnostics.wallCount >= 8) zones.add("partitioned_layout");
+  if (diagnostics.wallCount <= 5) zones.add("open_floor");
+  if (zones.size === 0) zones.add("general_floor");
+  return [...zones];
 }
 
 function traceWalls(
@@ -719,6 +863,10 @@ function wallLengthPx(wall: WallSegment): number {
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
+}
+
+function clampUnit(value: number) {
+  return clamp(value, 0, 1);
 }
 
 function getWallBounds(walls: WallSegment[]): { minX: number; minY: number; maxX: number; maxY: number } | null {

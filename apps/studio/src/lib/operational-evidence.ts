@@ -135,6 +135,8 @@ const OperationalEvidenceEventPayloadSchema = z.object({
   published: z.boolean().optional(),
   beforeSummary: z.string().optional(),
   afterSummary: z.string().optional(),
+  archiveExportedAt: z.string().min(1).optional(),
+  archiveRestoreBranch: z.enum(["draft", "recovered", "published"]).optional(),
   previousSceneSnapshot: z.unknown().optional(),
   sceneSnapshot: z.unknown().optional(),
   simulation: OperationalEvidenceSimulationSchema.optional(),

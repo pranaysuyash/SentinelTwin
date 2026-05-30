@@ -2,7 +2,7 @@
 
 import { Html, OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { motion } from "framer-motion";
+import { animate, motion } from "framer-motion";
 import { ListRestart, Pause, Play, SkipBack, SkipForward } from "lucide-react";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
@@ -1073,34 +1073,30 @@ export function PathReplayView() {
   const playbackAnchorRef = useRef({ startWallTime: 0, startPlaybackTime: 0 });
 
   useEffect(() => {
-    // currentTime intentionally excluded from deps below: captured once in the ref when
-    // playback starts. Adding it would reset the anchor on every tick (break seek-while-playing).
+    // currentTime intentionally excluded from deps below: captured once when playback starts.
     if (!playing || totalDuration <= 0) return;
 
     // Reset anchor when playback starts or restarts
-    playbackAnchorRef.current = { startWallTime: performance.now(), startPlaybackTime: currentTime };
+    const startPlaybackTime = currentTime;
+    playbackAnchorRef.current = { startWallTime: performance.now(), startPlaybackTime };
 
-    let rafId: number;
+    const remainingTime = totalDuration - startPlaybackTime;
+    const animationDuration = remainingTime / speed;
 
-    const tick = (now: number) => {
-      const elapsed = (now - playbackAnchorRef.current.startWallTime) / 1000;
-      const nextTime = Math.min(
-        playbackAnchorRef.current.startPlaybackTime + elapsed * speed,
-        totalDuration,
-      );
-      setCurrentTime(nextTime);
-      setPathReplayProgress(totalDuration > 0 ? Math.min(nextTime / totalDuration, 1) : 0);
-
-      if (nextTime >= totalDuration) {
+    const controls = animate(startPlaybackTime, totalDuration, {
+      duration: animationDuration,
+      ease: "linear",
+      onUpdate: (latest) => {
+        setCurrentTime(latest);
+        setPathReplayProgress(totalDuration > 0 ? Math.min(latest / totalDuration, 1) : 0);
+      },
+      onComplete: () => {
         setPlaying(false);
         setPathReplayPlaying(false);
-      } else {
-        rafId = requestAnimationFrame(tick);
       }
-    };
+    });
 
-    rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
+    return () => controls.stop();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playing, setPathReplayPlaying, setPathReplayProgress, speed, totalDuration]);
 

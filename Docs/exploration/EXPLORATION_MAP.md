@@ -1,7 +1,7 @@
 # Exploration Map — SentinelTwin
 
 **This is a living document. Append findings. Never replace.**
-**Last updated:** 2026-05-30 (Dedicated lighting/shadow overlay mode added on top of heatmap lighting/shadow implementation) — previous: Heatmap lighting/shadow implementation — camera PPM now combines independent security-light illumination, obstruction-cast light shadows, and camera line-of-sight; Physics engine audit — zero implementation across entire codebase, deferred to V0.2, no new action needed; Checkpoint compare/report pivots + launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Sensor provenance + runtime health surfacing; Sensor fusion preview + workspace access policy surfacing; Digital twin simulation physics: PTZ movement, BRDF reflectivity, dynamic lighting, view distance, placement constraints, scene fidelity, occlusion culling, camera feed synthesis, real-time feedback
+**Last updated:** 2026-05-30 (Pascal pre-fork reuse audit logged: direct vs adapter vs not-practical-now tiers) — previous: Dedicated lighting/shadow overlay mode added on top of heatmap lighting/shadow implementation; Heatmap lighting/shadow implementation — camera PPM now combines independent security-light illumination, obstruction-cast light shadows, and camera line-of-sight; Physics engine audit — zero implementation across entire codebase, deferred to V0.2, no new action needed; Checkpoint compare/report pivots + launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Sensor provenance + runtime health surfacing; Sensor fusion preview + workspace access policy surfacing; Digital twin simulation physics: PTZ movement, BRDF reflectivity, dynamic lighting, view distance, placement constraints, scene fidelity, occlusion culling, camera feed synthesis, real-time feedback
 
 ---
 
@@ -13,6 +13,14 @@
 node store pattern are exactly what SentinelTwin needs.
 **Open:** Which Pascal systems can we reuse directly? Read WallSystem before writing CameraSystem.
 **Next:** Fork the repo and verify build. Read source of 5 key files (per PASCAL_EDITOR_DEEP_DIVE.md).
+
+**2026-05-30 update — pre-fork reuse audit (fork parked for now):**
+- We can adopt some Pascal surfaces immediately without forking by consuming published packages/utilities where shape-compatible.
+- **Direct reuse now (low friction):** selected viewer-side utilities/patterns from `@pascal-app/viewer` and standalone helper functions that do not require Pascal's internal node graph store contract.
+- **Adapter-required reuse (medium):** graph-dependent `@pascal-app/core` helpers (scene clone/validation/registry patterns). These assume Pascal graph primitives and need a SecurityScene↔Pascal translation boundary.
+- **Not practical before fork (high):** replacing SentinelTwin store/system loop with Pascal's `useScene` + `AnyNode` internals while current SecurityScene remains array-first.
+- Core constraint: SentinelTwin currently uses canonical array collections (`walls/cameras/paths/...`) rather than Pascal's `nodes + rootNodeIds` graph contract.
+- Near-term action if fork remains deferred: introduce a thin adapter boundary and only import Pascal helpers through it; avoid piecemeal direct graph assumptions in app code.
 
 ---
 
@@ -5737,6 +5745,17 @@ Post-processing: Validate cloud output against Tier 1 coarse room count
 **Performance budget:** Total pipeline ~15-30s, ~$0.015/image. Without Tier 1 gating: every image costs $0.01-0.02.
 
 **Fallback chain:** MiniCPM → GPT-4o → Gemini 2.5 Flash → Gemini 2.5 Pro → SemanticContext only (no geometry if all fail)
+
+**Implementation update (2026-05-30):**
+- `apps/studio/src/lib/floor-plan-import.ts` now includes a production Tier 1 semantic gate layer for the existing heuristic import path:
+  - `deriveFloorPlanSemanticContext()` emits `sceneType`, `roomCount`, `zones`, `confidence`, `qualityScore`, and `ambiguityFlags`.
+  - `evaluateFloorPlanTierGate()` maps context to gate outcomes: `rescan_required`, `human_review`, `cloud_geometry_required`, or `proceed_to_tier2`.
+  - `getFloorPlanTierGateWarning()` surfaces operator-facing warnings for non-green outcomes.
+- `apps/studio/src/components/scan-to-scene/SceneBuilderWizard.tsx` now wires gate status into the floor-plan flow:
+  - Stores Tier 1 semantic context and gate decision in wizard state.
+  - Recomputes gate state after upload, recalibration, and manual geometry correction.
+  - Blocks progression to review when gate outcome is `rescan_required`.
+  - Exposes gate status in Configure + Review summaries for explicit operator visibility.
 
 **Open questions:**
 - Should Tier 2 prompt include Tier 1 OCR results as context?

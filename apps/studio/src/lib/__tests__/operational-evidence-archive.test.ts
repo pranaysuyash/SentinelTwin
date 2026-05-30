@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { smallRetailShopScene } from "@/demo-scenes/small-retail-shop";
 import { buildSceneIntelligenceGraph } from "@/lib/scene-intelligence-graph";
-import { buildOperationalEvidenceEvent } from "@/lib/operational-evidence";
+import { buildOperationalEvidenceEvent, safeParseOperationalEvidenceEvent } from "@/lib/operational-evidence";
 import {
   buildOperationalEvidenceArchive,
   createArchiveRestoreEvent,
@@ -158,11 +158,19 @@ describe("operational evidence archive", () => {
       workspaceGovernance: createDefaultWorkspaceGovernance(),
     });
 
-    const restoreEvent = createArchiveRestoreEvent(archive, smallRetailShopScene, "seed_event");
+    const restoreEvent = createArchiveRestoreEvent(archive, smallRetailShopScene, "seed_event", {
+      archiveExportedAt: "2026-05-30T10:15:00.000Z",
+      archiveRestoreBranch: "published",
+    });
+    const persisted = safeParseOperationalEvidenceEvent(JSON.parse(JSON.stringify(restoreEvent)));
 
     expect(restoreEvent.kind).toBe("scene_reverted");
     expect(restoreEvent.branchLabel).toBe("recovered");
     expect(restoreEvent.parentEventId).toBe("seed_event");
     expect(restoreEvent.sceneSnapshot?.id).toBe(smallRetailShopScene.id);
+    expect(restoreEvent.archiveExportedAt).toBe("2026-05-30T10:15:00.000Z");
+    expect(restoreEvent.archiveRestoreBranch).toBe("published");
+    expect(persisted?.archiveExportedAt).toBe("2026-05-30T10:15:00.000Z");
+    expect(persisted?.archiveRestoreBranch).toBe("published");
   });
 });

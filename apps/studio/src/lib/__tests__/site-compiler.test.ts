@@ -187,9 +187,11 @@ describe("compileScanToSiteResult", () => {
   test("wraps existing scene with scan source", () => {
     const scene = makeScene();
     addCamera(scene);
+    scene.changeLog.push("Scan evidence: camera marker accepted.");
     const result = compileScanToSiteResult(scene);
     expect(result.source).toBe("scan");
     expect(result.scene.cameras).toHaveLength(1);
+    expect(result.provenance.notes).toContain("Scan evidence: camera marker accepted.");
   });
 
   test("includes extra notes", () => {
@@ -211,9 +213,11 @@ describe("compileFloorPlanToSiteResult", () => {
   test("wraps existing scene with floor_plan source", () => {
     const scene = makeScene();
     addWall(scene);
+    scene.changeLog.push("Floor plan import: 4 walls, 1 door, 0 windows at 85% confidence.");
     const result = compileFloorPlanToSiteResult(scene, 0.85);
     expect(result.source).toBe("floor_plan");
     expect(result.confidence).toBe(0.85);
+    expect(result.provenance.notes).toContain("Floor plan import: 4 walls, 1 door, 0 windows at 85% confidence.");
   });
 });
 
@@ -221,7 +225,7 @@ describe("compileJsonToSiteResult", () => {
   test("validates a valid scene and returns success", () => {
     const scene = makeScene();
     const result = compileJsonToSiteResult(scene, "export.json");
-    expect(result.source).toBe("json");
+    expect(result.source).toBe("json_import");
     expect(result.warnings.some((w) => w.code === "INVALID_SCENE")).toBe(false);
   });
 

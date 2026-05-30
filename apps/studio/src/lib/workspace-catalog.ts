@@ -1,5 +1,14 @@
-import type { SavedProjectRecord } from "@/store/studio-store";
 import { type OrganizationEntitlements, type OrganizationQuotas, createDefaultOrganization } from "@/schema/organization";
+
+type WorkspaceVisibility = "private" | "shared" | "published";
+
+type SavedProjectRecord = {
+  workspaceOrganization: string;
+  workspaceOwner: string;
+  workspaceVisibility: WorkspaceVisibility;
+  pinned: boolean;
+  scene: { id: string };
+};
 
 export type WorkspaceCatalogScope = "personal" | "shared" | "published" | "organization";
 

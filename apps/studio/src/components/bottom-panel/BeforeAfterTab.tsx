@@ -1,7 +1,7 @@
 "use client";
 
 import { Copy, GitCompare, Share2 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { DonutChart } from "@/components/shared/DonutChart";
 import { QualityBar } from "@/components/shared/QualityBar";
 import { buildSecurityOutcomeDelta } from "@/lib/security-outcome/security-outcome-model";
@@ -70,6 +70,10 @@ function MetricColumn({
 }
 
 export function BeforeAfterTab() {
+  return <BeforeAfterTabContent />;
+}
+
+function BeforeAfterTabContent() {
   const snapshots = useStudioStore((s) => s.snapshots);
   const compareVisualEvidence = useStudioStore((s) => s.compareVisualEvidence);
   const compareReportSelection = useStudioStore((s) => s.compareReportSelection);
@@ -77,20 +81,6 @@ export function BeforeAfterTab() {
   const setViewMode = useStudioStore((s) => s.setViewMode);
   const [beforeSnapshotId, setBeforeSnapshotId] = useState<string | null>(null);
   const [afterSnapshotId, setAfterSnapshotId] = useState<string | null>(null);
-
-  if (snapshots.length < 2) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-8">
-        <GitCompare className="w-8 h-8 text-[#1e2130]" />
-        <div>
-          <div className="text-[11px] text-[#4a5568] font-medium">No comparison available</div>
-          <div className="text-[9px] text-[#3a4158] mt-1">
-            Save at least 2 snapshots to compare before/after states.
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   const validBeforeId = beforeSnapshotId && snapshots.some((snapshot) => snapshot.id === beforeSnapshotId)
     ? beforeSnapshotId
@@ -114,7 +104,6 @@ export function BeforeAfterTab() {
   const bCov    = bSim?.totalCoveragePct ?? 0;
   const aCov    = aSim?.totalCoveragePct ?? 0;
 
-  // Recognition & identification zone counts: cells with quality >= threshold
   const countQuality = (sim: SimulationResult | undefined, q: string) => {
     const threshold = qualityToScore(q as Parameters<typeof qualityToScore>[0]);
     return (sim?.coverageCells ?? []).filter((c) => qualityToScore(c.quality) >= threshold).length;
@@ -149,7 +138,7 @@ export function BeforeAfterTab() {
           afterImageDataUrl: compareVisualEvidence.afterImageDataUrl,
         }
     : null;
-  const handleCopyCompareLink = useCallback(async () => {
+  const handleCopyCompareLink = async () => {
     if (!before || !after) return;
     const link = buildCompareShareLink(
       window.location.origin + window.location.pathname,
@@ -163,9 +152,9 @@ export function BeforeAfterTab() {
       window.location.hash,
     );
     await navigator.clipboard.writeText(link);
-  }, [before, after, compareSelectionProvenanceNote]);
+  };
 
-  const handleShareCompareLink = useCallback(async () => {
+  const handleShareCompareLink = async () => {
     if (!before || !after) return;
     const link = buildCompareShareLink(
       window.location.origin + window.location.pathname,
@@ -183,7 +172,21 @@ export function BeforeAfterTab() {
       text: `Open ${before.label} vs ${after.label} in SentinelTwin before/after comparison.`,
       url: link,
     });
-  }, [before, after, compareSelectionProvenanceNote]);
+  };
+
+  if (snapshots.length < 2) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-8">
+        <GitCompare className="w-8 h-8 text-[#1e2130]" />
+        <div>
+          <div className="text-[11px] text-[#4a5568] font-medium">No comparison available</div>
+          <div className="text-[9px] text-[#3a4158] mt-1">
+            Save at least 2 snapshots to compare before/after states.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col overflow-hidden">

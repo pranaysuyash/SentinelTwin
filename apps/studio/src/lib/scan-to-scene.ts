@@ -13,6 +13,8 @@ import type {
   WallNode,
   WindowNode,
 } from "@/schema/security-scene";
+import type { SiteCompilerResult, SiteCompilerWarning } from "@/lib/site-compiler";
+import { compileScanToSiteResult } from "@/lib/site-compiler";
 
 export type ScanCandidateKind =
   | "wall"
@@ -592,4 +594,21 @@ export function compileScanSessionToScene(
   }
 
   return { scene: parsed.data, provenance, warnings };
+}
+
+export function compileScanSessionToCompilerResult(
+  session: ScanSession,
+  options: ScanCompileOptions = {},
+): SiteCompilerResult {
+  const { scene, warnings: scanWarnings } = compileScanSessionToScene(session, options);
+  const compilerWarnings: SiteCompilerWarning[] = [
+    ...scanWarnings.map((w): SiteCompilerWarning => ({
+      code: w.code,
+      message: w.message,
+      severity: w.code === "NO_CAMERA" ? "blocking" : "warning",
+    })),
+    ...scene.cameras.length === 0 ? [] : [],
+    ...scene.criticalZones.length === 0 ? [{ code: "NO_CRITICAL_ZONE", message: "No critical zones marked. Add zones for coverage evaluation.", severity: "warning" as const }] : [],
+  ];
+  return compileScanToSiteResult(scene, ["Scan candidates compiled via scan-to-scene pipeline."], compilerWarnings);
 }

@@ -2,3 +2,7 @@ packages:
   - "apps/*"
   - "packages/*"
   - "tools/*"
+allowBuilds:
+  core-js: true
+  sharp: true
+  unrs-resolver: true

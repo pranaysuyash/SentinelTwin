@@ -49,6 +49,10 @@ import type { SupportIngestHistoryRecord } from "@/lib/support-ingest-history";
 import type { TrustAuditReport } from "@/lib/truth-audit";
 import { OPERATIONAL_EVIDENCE_STORAGE_KEY, useStudioStore } from "@/store/studio-store";
 
+type TrustAuditPayload = TrustAuditReport & {
+  formatted: string;
+};
+
 const OVERLAY_DENSITY_OPTIONS = [
   { value: "all", label: "All" },
   { value: "compact", label: "Compact" },
@@ -172,7 +176,7 @@ export function DebugTab() {
   const [pendingArchiveError, setPendingArchiveError] = useState<string | null>(null);
   const [archiveRestoreBranch, setArchiveRestoreBranch] = useState<"draft" | "recovered" | "published">("recovered");
   const [externalLogDraft, setExternalLogDraft] = useState("");
-  const [trustAuditReport, setTrustAuditReport] = useState<TrustAuditReport | null>(null);
+  const [trustAuditReport, setTrustAuditReport] = useState<TrustAuditPayload | null>(null);
   const [trustAuditLoading, setTrustAuditLoading] = useState(false);
   const [trustAuditError, setTrustAuditError] = useState<string | null>(null);
   const [modelEvalReport, setModelEvalReport] = useState<ModelEvalSuiteResult | null>(null);
@@ -964,7 +968,7 @@ export function DebugTab() {
       if (!response.ok) {
         throw new Error(`Trust audit failed with HTTP ${response.status}.`);
       }
-      const payload = (await response.json()) as TrustAuditReport & { formatted: string };
+      const payload = (await response.json()) as TrustAuditPayload;
       setTrustAuditReport(payload);
       setLaunchNotice(payload.ok ? "Trust audit passed." : "Trust audit reported surface drift.");
     } catch (error) {
@@ -1089,7 +1093,10 @@ export function DebugTab() {
       return;
     }
 
-    const result = importOperationalEvidenceArchive(pendingArchive);
+    const result = importOperationalEvidenceArchive(pendingArchive, {
+      archiveExportedAt: pendingArchive.exportedAt,
+      archiveRestoreBranch,
+    });
     if (result.success) {
       setPendingArchive(null);
       setPendingArchiveError(null);
@@ -2178,10 +2185,16 @@ export function DebugTab() {
                       </div>
                     </div>
                   ))}
+                  <details className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                    <summary className="cursor-pointer text-[10px] font-semibold text-[#edf2ff]">View audit report</summary>
+                    <pre className="mt-1 whitespace-pre-wrap break-words text-[9px] leading-4 text-[#8b96ab]">
+                      {trustAuditReport.formatted}
+                    </pre>
+                  </details>
                 </div>
               ) : null}
-          </div>
-        </Section>
+            </div>
+          </Section>
 
           <Section title="Provider Governance" icon={<Sparkles className="h-3 w-3 text-sky-400" />}>
             <div className="space-y-1.5 text-[9px] text-[#8b96ab]">

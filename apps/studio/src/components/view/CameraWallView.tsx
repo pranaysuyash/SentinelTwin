@@ -428,6 +428,7 @@ const CameraSlotButton = memo(function CameraSlotButton({
   isBestCamera,
   cameraResult,
   pathVisibility,
+  replayState,
   className = "",
   timestampLabel,
 }: {
@@ -440,6 +441,7 @@ const CameraSlotButton = memo(function CameraSlotButton({
     totalDurationS: number;
     maxQuality: string;
   } | null;
+  replayState?: CameraReplayState | null;
   className?: string;
   timestampLabel: string;
 }) {
@@ -463,6 +465,7 @@ const CameraSlotButton = memo(function CameraSlotButton({
         isBestCamera={isBestCamera}
         cameraResult={cameraResult}
         pathVisibility={pathVisibility}
+        replayState={replayState}
         timestampLabel={timestampLabel}
       />
     </button>

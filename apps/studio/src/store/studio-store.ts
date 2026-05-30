@@ -1,4 +1,10 @@
 import { create } from "zustand";
+import {
+  type BranchAction,
+  type BranchRecord,
+  createBranchRecord,
+  transitionBranch,
+} from "@/lib/branch-lifecycle";
 
 import { createSmallRetailShopScene, smallRetailShopScene } from "@/demo-scenes/small-retail-shop";
 import {
@@ -70,10 +76,14 @@ import {
   type WorkspaceSceneStatus,
 } from "@/lib/workspace-governance";
 import {
-  createDefaultWorkspaceAccountProfile,
   normalizeWorkspaceAccountProfile,
+  createDefaultWorkspaceAccountProfile,
   type WorkspaceAccountProfile,
 } from "@/lib/workspace-catalog";
+import {
+  getOrganizationManager,
+} from "@/lib/organization-store";
+import type { OrganizationList, Organization } from "@/schema/organization";
 import {
   canPerformWorkspaceAction,
   createDefaultWorkspaceAccessState,
@@ -100,6 +110,7 @@ import {
 import {
   type AnyEditableNode,
   type CameraNode,
+  type CommentNode,
   type CriticalZoneNode,
   type SecurityScene,
   type SimulationResult,
@@ -113,6 +124,16 @@ import { simulateStudio } from "@/simulation/simulate-studio";
 import { computeTemporalProfile } from "@/simulation/temporal";
 import type { TemporalSecurityProfile } from "@/schema/security-scene";
 import type { SiteIntakeSession } from "@/lib/site-compiler";
+import { validateSceneGeometry } from "@/lib/scene-validation";
+import {
+  type ReportCatalogState,
+  type ReportCatalogPreset,
+  loadReportCatalogState,
+  persistReportCatalogState,
+  createReportCatalogPreset,
+  upsertReportCatalogPreset,
+  removeReportCatalogPreset,
+} from "@/lib/report-catalog";
 
 export type ViewMode = "map" | "wall" | "replay" | "camera_view" | "compare" | "report";
 export type CanvasMode = "orbit_3d" | "topdown_2d";
@@ -162,6 +183,18 @@ type DemoSceneSnapshot = Omit<SceneSnapshot, "scene"> & {
   scene: SecurityScene;
 };
 
+function createDraftBranchRecord(id: string, label: string, authorId: string): BranchRecord {
+  const now = Date.now();
+  return {
+    id,
+    label,
+    state: "draft",
+    createdAt: now,
+    updatedAt: now,
+    authorId,
+  };
+}
+
 export type ActiveTool =
   | "select" | "camera" | "obstruction" | "light"
   | "sensor" | "path" | "zone" | "door_window" | "wall" | "measure" | "comment";
@@ -187,7 +220,7 @@ export type EditorDraft = {
   selectedHandle?: string;
 };
 
-export type BottomTab = "outcome" | "metrics" | "issues" | "sensors" | "timeline" | "beforeafter" | "report" | "help" | "debug" | "counterfactual" | "threat" | "redundancy" | "temporal" | "assumptions" | "governance" | "provenance" | "novel";
+export type BottomTab = "outcome" | "metrics" | "issues" | "sensors" | "timeline" | "beforeafter" | "report" | "help" | "debug" | "counterfactual" | "threat" | "redundancy" | "temporal" | "assumptions" | "governance" | "provenance" | "novel" | "budgeting";
 
 export type ActiveWorkflowId = "idle" | "audit" | "design" | "scan" | "floor_plan" | "ai_draft" | "verify_footage" | "report" | "reference" | "demo";
 
@@ -271,6 +304,13 @@ export type HeatmapHoverState = {
   cell: import("@/schema/security-scene").CoverageCellResult;
   screenX: number;
   screenY: number;
+};
+
+export type CommentToolState = {
+  active: boolean;
+  position: [number, number, number] | null;
+  attachedToNodeId: string | null;
+  draftText: string;
 };
 
 export type MeasurementToolState = {
@@ -364,6 +404,11 @@ export type TimelineFocusRequest = {
 };
 
 export type ArchiveHandoffState = ArchiveHandoffRequest | null;
+
+export type ArchiveRestoreContext = {
+  archiveExportedAt?: string;
+  archiveRestoreBranch?: "draft" | "recovered" | "published";
+};
 
 export type RuntimeIncidentCategory =
   | "user_error"
@@ -654,6 +699,7 @@ const OPERATIONAL_EVIDENCE_ARCHIVE_HISTORY_STORAGE_KEY = "sentineltwin_operation
 const WORKSPACE_GOVERNANCE_STORAGE_KEY = "sentineltwin_workspace_governance_v1";
 const WORKSPACE_ACCESS_STORAGE_KEY = "sentineltwin_workspace_access_v1";
 const WORKSPACE_ACCOUNT_STORAGE_KEY = "sentineltwin_workspace_account_v1";
+const FIX_SANDBOX_STORAGE_KEY = "sentineltwin_fix_sandbox_v1";
 
 export type SavedProjectRecord = {
   scene: SecurityScene;
@@ -1501,6 +1547,46 @@ function loadWorkspaceGovernance(): WorkspaceGovernanceState {
   }
 }
 
+function loadFixSandboxState(): { fixSandboxActive: boolean; fixSandboxBaselineScene: SecurityScene | null; fixSandboxDraftScene: SecurityScene | null } {
+  if (typeof window === "undefined") return { fixSandboxActive: false, fixSandboxBaselineScene: null, fixSandboxDraftScene: null };
+  try {
+    const raw = window.localStorage.getItem(FIX_SANDBOX_STORAGE_KEY);
+    if (!raw) return { fixSandboxActive: false, fixSandboxBaselineScene: null, fixSandboxDraftScene: null };
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return { fixSandboxActive: false, fixSandboxBaselineScene: null, fixSandboxDraftScene: null };
+    const candidate = parsed as {
+      fixSandboxActive?: boolean;
+      fixSandboxBaselineScene?: unknown;
+      fixSandboxDraftScene?: unknown;
+    };
+    const baselineResult = candidate.fixSandboxBaselineScene ? safeParseSecurityScene(candidate.fixSandboxBaselineScene) : null;
+    const draftResult = candidate.fixSandboxDraftScene ? safeParseSecurityScene(candidate.fixSandboxDraftScene) : null;
+    return {
+      fixSandboxActive: candidate.fixSandboxActive === true && baselineResult !== null && draftResult !== null,
+      fixSandboxBaselineScene: baselineResult?.success ? cloneSecurityScene(baselineResult.data) : null,
+      fixSandboxDraftScene: draftResult?.success ? cloneSecurityScene(draftResult.data) : null,
+    };
+  } catch {
+    return { fixSandboxActive: false, fixSandboxBaselineScene: null, fixSandboxDraftScene: null };
+  }
+}
+
+function persistFixSandboxState(active: boolean, baseline: SecurityScene | null, draft: SecurityScene | null) {
+  try {
+    if (!active || !baseline || !draft) {
+      localStorage.removeItem(FIX_SANDBOX_STORAGE_KEY);
+      return;
+    }
+    localStorage.setItem(FIX_SANDBOX_STORAGE_KEY, JSON.stringify({
+      fixSandboxActive: true,
+      fixSandboxBaselineScene: baseline,
+      fixSandboxDraftScene: draft,
+    }));
+  } catch {
+    // Storage full or unavailable — silently fail
+  }
+}
+
 function loadWorkspaceAccess(): WorkspaceAccessState {
   if (typeof window === "undefined") return createDefaultWorkspaceAccessState();
   try {
@@ -1874,6 +1960,8 @@ export type StudioStoreState = {
   submitForReview: (branchName: string, note?: string) => void;
   approveBranch: (branchName: string, note?: string) => void;
   rejectBranch: (branchName: string, note?: string) => void;
+  branchLifecycleState: Record<string, BranchRecord>;
+  updateBranchLifecycle: (branchId: string, action: BranchAction, actorId?: string) => void;
   simulationResult: SimulationResult | null;
   simulationDirty: boolean;
   simulationRunning: boolean;
@@ -1924,6 +2012,13 @@ export type StudioStoreState = {
   workspaceAccount: WorkspaceAccountProfile;
   setWorkspaceAccountProfile: (patch: Partial<WorkspaceAccountProfile>) => void;
   resetWorkspaceAccountProfile: () => void;
+  organizations: OrganizationList;
+  activeOrganizationId: string | null;
+  setActiveOrganization: (id: string | null) => void;
+  addOrganization: (name: string, plan?: Organization["plan"]) => OrganizationList[number] | null;
+  updateOrganization: (id: string, patch: Partial<Pick<OrganizationList[number], "name" | "plan">>) => boolean;
+  removeOrganization: (id: string) => boolean;
+  refreshOrganizations: () => void;
   workspaceGovernance: WorkspaceGovernanceState;
   setWorkspaceRole: (role: WorkspaceRole) => void;
   setWorkspaceApprovalMode: (mode: WorkspaceApprovalMode) => void;
@@ -1948,6 +2043,8 @@ export type StudioStoreState = {
     capturedAt: number;
   } | null;
   compareReportSelection: { snapshotAId: string; snapshotBId: string; provenanceNote: string | null } | null;
+  compareOrbitSync: boolean;
+  compareOrbitCameraState: { position: [number, number, number] | null; target: [number, number, number] | null };
   cameraViewVerificationIntent: { source: "launcher_preview" | "other"; openPanel: boolean } | null;
   cameraVerificationSnapshots: Record<string, Array<{
     id: string;
@@ -1980,6 +2077,12 @@ export type StudioStoreState = {
   setHeatmapHover: (hover: HeatmapHoverState | null) => void;
   measurementTool: MeasurementToolState;
   setMeasurementTool: (tool: Partial<MeasurementToolState>) => void;
+  commentTool: CommentToolState;
+  setCommentTool: (tool: Partial<CommentToolState>) => void;
+  addComment: (position: [number, number, number], text: string, author?: string, attachedToNodeId?: string | null) => void;
+  updateComment: (id: string, patch: Partial<CommentNode>) => void;
+  removeComment: (id: string) => void;
+  resolveComment: (id: string) => void;
   editor: EditorDraft;
   bottomTab: BottomTab;
   inspectorTab: InspectorTab;
@@ -2035,6 +2138,8 @@ export type StudioStoreState = {
   setArchiveHandoffRequest: (request: ArchiveHandoffState) => void;
   setCompareVisualEvidence: (evidence: StudioStoreState["compareVisualEvidence"]) => void;
   setCompareReportSelection: (selection: StudioStoreState["compareReportSelection"]) => void;
+  setCompareOrbitSync: (sync: boolean) => void;
+  setCompareOrbitCameraState: (state: { position: [number, number, number]; target: [number, number, number] }) => void;
   setActiveWorkflow: (workflowId: ActiveWorkflowId, steps?: string[]) => void;
   setActiveWorkflowStep: (stepIndex: number) => void;
   clearActiveWorkflow: () => void;
@@ -2149,6 +2254,15 @@ export type StudioStoreState = {
   historyPast: SecurityScene[];
   historyFuture: SecurityScene[];
 
+  // Fix sandbox (draft mode)
+  fixSandboxActive: boolean;
+  fixSandboxBaselineScene: SecurityScene | null;
+  fixSandboxDraftScene: SecurityScene | null;
+  enterFixSandbox: () => void;
+  exitFixSandbox: () => void;
+  applyFixSandbox: () => void;
+  fixSandboxDiff: { camerasChanged: number; zonesAffected: number; needsRecompute: boolean };
+
   setSimulationRunning: (running: boolean) => void;
   setSimulationResult: (result: SimulationResult, durationMs: number) => void;
   runSimulation: () => void;
@@ -2169,7 +2283,7 @@ export type StudioStoreState = {
   importScene: (json: unknown) => { success: boolean; error?: string };
   exportScene: () => SecurityScene;
   exportOperationalEvidenceArchive: () => OperationalEvidenceArchive;
-  importOperationalEvidenceArchive: (raw: unknown) => { success: boolean; error?: string };
+  importOperationalEvidenceArchive: (raw: unknown, context?: ArchiveRestoreContext) => { success: boolean; error?: string };
 
   // Scene management
   setScene: (scene: SecurityScene) => void;
@@ -2190,6 +2304,12 @@ export type StudioStoreState = {
 
   siteIntakeSession: SiteIntakeSession | null;
   setSiteIntakeSession: (session: SiteIntakeSession | null) => void;
+
+  reportCatalog: ReportCatalogState;
+  addReportCatalogPreset: (input: Parameters<typeof createReportCatalogPreset>[0]) => void;
+  updateReportCatalogPreset: (preset: ReportCatalogPreset) => void;
+  removeReportCatalogPreset: (presetId: string) => void;
+  setReportCatalogSelectedPresetId: (presetId: string | null) => void;
 };
 
 const collectionKeys = [
@@ -2234,6 +2354,7 @@ function insertNode(scene: SecurityScene, node: AnyEditableNode): SecurityScene 
     case "privacy_zone":   next.privacyZones.push(node);    break;
     case "entry_point":    next.entryPoints.push(node);     break;
     case "path":           next.paths.push(node);           break;
+    case "comment":        next.comments.push(node);        break;
   }
   next.updatedAt = Date.now();
   return next;
@@ -2254,6 +2375,7 @@ function duplicateNodeInScene(scene: SecurityScene, id: string): { scene: Securi
     privacy_zone: "privacy",
     entry_point: "entry",
     path: "path",
+    comment: "comment",
   };
 
   const makeDuplicateId = (prefix: string) => `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
@@ -2680,6 +2802,56 @@ function dockCollapsedKey(side: DockSide) {
       : "bottomDockCollapsed";
 }
 
+function resolveSelectedNodeType(scene: SecurityScene, id: string | null) {
+  if (!id) return null;
+  if (scene.cameras.some((entry) => entry.id === id)) return "camera";
+  if (scene.paths.some((entry) => entry.id === id)) return "path";
+  if (scene.sensors.some((entry) => entry.id === id)) return "sensor";
+  if (scene.obstructions.some((entry) => entry.id === id)) return "obstruction";
+  if (scene.securityLights.some((entry) => entry.id === id)) return "security_light";
+  if (scene.walls.some((entry) => entry.id === id)) return "wall";
+  if (scene.doors.some((entry) => entry.id === id)) return "door";
+  if (scene.windows.some((entry) => entry.id === id)) return "window";
+  if (scene.criticalZones.some((entry) => entry.id === id)) return "critical_zone";
+  if (scene.privacyZones.some((entry) => entry.id === id)) return "privacy_zone";
+  if (scene.entryPoints.some((entry) => entry.id === id)) return "entry_point";
+  if (scene.comments.some((entry) => entry.id === id)) return "comment";
+  return null;
+}
+
+function contextualRightPanelModeForNode(scene: SecurityScene, id: string | null): RightPanelMode {
+  const nodeType = resolveSelectedNodeType(scene, id);
+  if (nodeType === "camera") return "camera_controls";
+  return "inspector";
+}
+
+function contextualBottomTabForNode(scene: SecurityScene, id: string | null): BottomTab | null {
+  const nodeType = resolveSelectedNodeType(scene, id);
+  if (nodeType === "camera") return "metrics";
+  if (nodeType === "path") return "timeline";
+  if (nodeType === "sensor") return "sensors";
+  if (nodeType === "security_light") return "metrics";
+  if (nodeType === "obstruction") return "issues";
+  if (nodeType === "critical_zone" || nodeType === "privacy_zone") return "issues";
+  if (nodeType === "door" || nodeType === "window" || nodeType === "entry_point") return "threat";
+  if (nodeType === "wall") return "assumptions";
+  return null;
+}
+
+function contextualToolForNode(scene: SecurityScene, id: string | null): ActiveTool | null {
+  const nodeType = resolveSelectedNodeType(scene, id);
+  if (nodeType === "camera") return "camera";
+  if (nodeType === "obstruction") return "obstruction";
+  if (nodeType === "security_light") return "light";
+  if (nodeType === "sensor") return "sensor";
+  if (nodeType === "path") return "path";
+  if (nodeType === "critical_zone" || nodeType === "privacy_zone") return "zone";
+  if (nodeType === "door" || nodeType === "window") return "door_window";
+  if (nodeType === "wall") return "wall";
+  if (nodeType === "comment") return "comment";
+  return null;
+}
+
 const ANALYSIS_TAB_ORDER: BottomTab[] = [
   "metrics",
   "issues",
@@ -2706,6 +2878,7 @@ function getFirstEnabledAnalysisTab(enabledAnalysisModules: Record<BottomTab, bo
 const DEMO_SNAPSHOT_BASE_TS = smallRetailShopScene.createdAt + 18 * 60_000;
 const SEEDED_WORKSPACE_BASE_TS = smallRetailShopScene.createdAt + 24 * 60_000;
 const SEEDED_LAYOUT_BASE_TS = smallRetailShopScene.createdAt + 30 * 60_000;
+const IS_BROWSER_RUNTIME = typeof window !== "undefined";
 
 function createSnapshotVariant(
   label: string,
@@ -2714,8 +2887,12 @@ function createSnapshotVariant(
 ): DemoSceneSnapshot {
   const scene = createSmallRetailShopScene();
   mutate?.(scene);
-  const simulation = simulateStudio(scene);
-  scene.simulation = simulation;
+  const simulation = IS_BROWSER_RUNTIME ? simulateStudio(scene) : undefined;
+  if (simulation) {
+    scene.simulation = simulation;
+  } else {
+    delete scene.simulation;
+  }
   scene.updatedAt = DEMO_SNAPSHOT_BASE_TS - minutesAgo * 60_000;
 
   return {
@@ -2760,15 +2937,19 @@ INITIAL_SCENE.snapshots = INITIAL_SNAPSHOTS.map((snapshot) => ({
   ...snapshot,
   scene: structuredClone(snapshot.scene),
 }));
-const INITIAL_SIMULATION = simulateStudio(INITIAL_SCENE);
-INITIAL_SCENE.simulation = INITIAL_SIMULATION;
+const INITIAL_SIMULATION = IS_BROWSER_RUNTIME ? simulateStudio(INITIAL_SCENE) : null;
+if (INITIAL_SIMULATION) {
+  INITIAL_SCENE.simulation = INITIAL_SIMULATION;
+} else {
+  delete INITIAL_SCENE.simulation;
+}
 const INITIAL_SCENE_INTELLIGENCE_GRAPH = buildGraphState(INITIAL_SCENE, INITIAL_SIMULATION, 0, INITIAL_SNAPSHOTS.length);
 const INITIAL_OPERATIONAL_EVIDENCE_EVENTS = (() => {
   const loaded = loadOperationalEvidenceEvents();
   if (loaded.length > 0) return loaded;
 
   const summary = summarizeSceneEvidence(INITIAL_SCENE);
-  const simulation = summarizeSimulationEvidence(INITIAL_SIMULATION);
+  const simulation = INITIAL_SIMULATION ? summarizeSimulationEvidence(INITIAL_SIMULATION) : null;
   const seededEvents = [
     buildOperationalEvidenceEvent({
       kind: "scene_initialized",
@@ -2917,8 +3098,12 @@ function buildSeededWorkspaceProjects(): SavedProjectRecord[] {
       geometryValidity: "valid",
     },
   ];
-  const seededDraftResult = simulateStudio(blankWorkspace);
-  blankWorkspace.simulation = seededDraftResult;
+  if (IS_BROWSER_RUNTIME) {
+    const seededDraftResult = simulateStudio(blankWorkspace);
+    blankWorkspace.simulation = seededDraftResult;
+  } else {
+    delete blankWorkspace.simulation;
+  }
   blankWorkspace.updatedAt = baseTs;
   blankWorkspace.createdAt = baseTs;
 
@@ -2976,6 +3161,39 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   scene: INITIAL_SCENE,
   activeBranch: "main",
   branchScenes: { "main": INITIAL_SCENE },
+  branchLifecycleState: {},
+  reportCatalog: loadReportCatalogState(),
+  addReportCatalogPreset: (input) => set((state) => {
+    const preset = createReportCatalogPreset(input);
+    const nextState = upsertReportCatalogPreset(state.reportCatalog, preset);
+    persistReportCatalogState(nextState);
+    return { reportCatalog: nextState };
+  }),
+  updateReportCatalogPreset: (preset) => set((state) => {
+    const nextState = upsertReportCatalogPreset(state.reportCatalog, preset);
+    persistReportCatalogState(nextState);
+    return { reportCatalog: nextState };
+  }),
+  removeReportCatalogPreset: (presetId) => set((state) => {
+    const nextState = removeReportCatalogPreset(state.reportCatalog, presetId);
+    persistReportCatalogState(nextState);
+    return { reportCatalog: nextState };
+  }),
+  setReportCatalogSelectedPresetId: (presetId) => set((state) => {
+    const nextState = { ...state.reportCatalog, selectedPresetId: presetId };
+    persistReportCatalogState(nextState);
+    return { reportCatalog: nextState };
+  }),
+  updateBranchLifecycle: (branchId, action, actorId = "user") => set((state) => {
+    const existing = state.branchLifecycleState[branchId];
+    const record = existing ?? createDraftBranchRecord(branchId, branchId, actorId);
+    try {
+      const next = transitionBranch(record, action, actorId);
+      return { branchLifecycleState: { ...state.branchLifecycleState, [branchId]: next } };
+    } catch {
+      return state;
+    }
+  }),
   createDraftBranch: (branchName) => set((state) => {
     if (state.branchScenes[branchName]) return state;
     return {
@@ -3038,6 +3256,45 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   cameraLiveConnectionEvents: loadCameraLiveConnectionEvents(),
   workspaceAccess: INITIAL_WORKSPACE_ACCESS,
   workspaceAccount: INITIAL_WORKSPACE_ACCOUNT,
+  organizations: getOrganizationManager().getOrganizations(),
+  activeOrganizationId: getOrganizationManager().getActiveOrganizationId(),
+  setActiveOrganization: (id) => {
+    const result = getOrganizationManager().setActiveOrganization(id);
+    if (result.success) {
+      set({ activeOrganizationId: id });
+    }
+  },
+  addOrganization: (name, plan) => {
+    const org = getOrganizationManager().addOrganization(name, "local-user", plan ?? "free");
+    set({
+      organizations: getOrganizationManager().getOrganizations(),
+      activeOrganizationId: getOrganizationManager().getActiveOrganizationId(),
+    });
+    return org;
+  },
+  updateOrganization: (id, patch) => {
+    const result = getOrganizationManager().updateOrganization(id, patch);
+    if (result.success) {
+      set({ organizations: getOrganizationManager().getOrganizations() });
+    }
+    return result.success;
+  },
+  removeOrganization: (id) => {
+    const result = getOrganizationManager().removeOrganization(id);
+    if (result.success) {
+      set({
+        organizations: getOrganizationManager().getOrganizations(),
+        activeOrganizationId: getOrganizationManager().getActiveOrganizationId(),
+      });
+    }
+    return result.success;
+  },
+  refreshOrganizations: () => {
+    set({
+      organizations: getOrganizationManager().getOrganizations(),
+      activeOrganizationId: getOrganizationManager().getActiveOrganizationId(),
+    });
+  },
   workspaceGovernance: INITIAL_WORKSPACE_GOVERNANCE,
   lastRunMs: 0,
   savedScenes: INITIAL_SAVED_PROJECTS.length > 0 ? INITIAL_SAVED_PROJECTS.map((record) => record.scene) : INITIAL_SEEDED_PROJECTS.map((record) => record.scene),
@@ -3047,6 +3304,8 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   archiveHandoffRequest: null,
   compareVisualEvidence: null,
   compareReportSelection: null,
+  compareOrbitSync: false,
+  compareOrbitCameraState: { position: null, target: null },
   cameraViewVerificationIntent: null,
   cameraVerificationSnapshots: {},
 
@@ -3087,6 +3346,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   heatmapMode: "quality" as HeatmapMode,
   heatmapHover: null as HeatmapHoverState | null,
   measurementTool: { active: false, sourceCameraId: null, targetPoint: null, result: null } as MeasurementToolState,
+  commentTool: { active: false, position: null, attachedToNodeId: null, draftText: "" } as CommentToolState,
   environmentMode: "day",
   showDebugOverlays: INITIAL_LAYOUT.showDebugOverlays,
   autoRecompute: true,
@@ -3122,6 +3382,15 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   sceneIntelligenceGraph: INITIAL_SCENE_INTELLIGENCE_GRAPH,
   historyPast: [],
   historyFuture: [],
+  ...(() => {
+    const loaded = loadFixSandboxState();
+    return {
+      fixSandboxActive: loaded.fixSandboxActive,
+      fixSandboxBaselineScene: loaded.fixSandboxBaselineScene,
+      fixSandboxDraftScene: loaded.fixSandboxDraftScene,
+    };
+  })(),
+  fixSandboxDiff: { camerasChanged: 0, zonesAffected: 0, needsRecompute: true },
   viewSettingsOpen: false,
   savedLayouts: INITIAL_SAVED_LAYOUTS.length > 0 ? INITIAL_SAVED_LAYOUTS : INITIAL_SEEDED_LAYOUTS,
   visibleComponents: INITIAL_LAYOUT.visibleComponents,
@@ -3276,7 +3545,8 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     set((s) => {
       void label;
       const before = cloneSecurityScene(s.scene);
-      const next = updater(cloneSecurityScene(s.scene));
+      const nextRaw = updater(cloneSecurityScene(s.scene));
+      const next = validateSceneGeometry(nextRaw);
       const sensorMutation = detectSensorMutation(before, next);
       const evidenceEvent = buildOperationalEvidenceEvent({
         kind: sensorMutation?.kind ?? "scene_updated",
@@ -4391,20 +4661,31 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     return true;
   },
 
-  selectNode: (id) => set((state) => ({
-    selectedNodeId: id,
-    selectedNodeIds: id ? [id] : [],
-    selectedCameraId:
-      id && state.scene.cameras.some((camera) => camera.id === id)
-        ? id
-        : state.selectedCameraId,
-    dockAttention: id && state.rightDockCollapsed
-      ? { ...state.dockAttention, right: true }
-      : state.dockAttention,
-  })),
+  selectNode: (id) => set((state) => {
+    const contextualTab = contextualBottomTabForNode(state.scene, id);
+    const contextualTool = contextualToolForNode(state.scene, id);
+    return {
+      selectedNodeId: id,
+      selectedNodeIds: id ? [id] : [],
+      selectedCameraId:
+        id && state.scene.cameras.some((camera) => camera.id === id)
+          ? id
+          : state.selectedCameraId,
+      rightDockCollapsed: id && !state.focusMode ? false : state.rightDockCollapsed,
+      rightPanelMode: id ? contextualRightPanelModeForNode(state.scene, id) : state.rightPanelMode,
+      bottomTab: contextualTab
+        ? getFirstEnabledAnalysisTab(state.enabledAnalysisModules, contextualTab)
+        : state.bottomTab,
+      activeTool: contextualTool ?? state.activeTool,
+      dockAttention: id
+        ? { ...state.dockAttention, right: false }
+        : state.dockAttention,
+    };
+  }),
   setSelectedNodes: (ids) => set((state) => {
     const next = purgeInvalidSelection(state.scene, ids);
     const nextPrimary = primarySelection(next);
+    const contextualTool = contextualToolForNode(state.scene, nextPrimary);
     return {
       selectedNodeIds: next,
       selectedNodeId: nextPrimary,
@@ -4412,8 +4693,17 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         nextPrimary && state.scene.cameras.some((camera) => camera.id === nextPrimary)
           ? nextPrimary
           : state.selectedCameraId,
-      dockAttention: nextPrimary && state.rightDockCollapsed
-        ? { ...state.dockAttention, right: true }
+      rightDockCollapsed: nextPrimary && !state.focusMode ? false : state.rightDockCollapsed,
+      rightPanelMode: nextPrimary ? contextualRightPanelModeForNode(state.scene, nextPrimary) : state.rightPanelMode,
+      bottomTab: nextPrimary
+        ? getFirstEnabledAnalysisTab(
+            state.enabledAnalysisModules,
+            contextualBottomTabForNode(state.scene, nextPrimary) ?? state.bottomTab,
+          )
+        : state.bottomTab,
+      activeTool: contextualTool ?? state.activeTool,
+      dockAttention: nextPrimary
+        ? { ...state.dockAttention, right: false }
         : state.dockAttention,
     };
   }),
@@ -4421,6 +4711,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     if (state.selectedNodeIds.includes(id)) return state;
     const next = purgeInvalidSelection(state.scene, [...state.selectedNodeIds, id]);
     const nextPrimary = primarySelection(next);
+    const contextualTool = contextualToolForNode(state.scene, nextPrimary);
     return {
       selectedNodeIds: next,
       selectedNodeId: nextPrimary,
@@ -4428,8 +4719,17 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         nextPrimary && state.scene.cameras.some((camera) => camera.id === nextPrimary)
           ? nextPrimary
           : state.selectedCameraId,
-      dockAttention: nextPrimary && state.rightDockCollapsed
-        ? { ...state.dockAttention, right: true }
+      rightDockCollapsed: nextPrimary && !state.focusMode ? false : state.rightDockCollapsed,
+      rightPanelMode: nextPrimary ? contextualRightPanelModeForNode(state.scene, nextPrimary) : state.rightPanelMode,
+      bottomTab: nextPrimary
+        ? getFirstEnabledAnalysisTab(
+            state.enabledAnalysisModules,
+            contextualBottomTabForNode(state.scene, nextPrimary) ?? state.bottomTab,
+          )
+        : state.bottomTab,
+      activeTool: contextualTool ?? state.activeTool,
+      dockAttention: nextPrimary
+        ? { ...state.dockAttention, right: false }
         : state.dockAttention,
     };
   }),
@@ -4439,6 +4739,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       : [...state.selectedNodeIds, id];
     const filtered = purgeInvalidSelection(state.scene, next);
     const nextPrimary = primarySelection(filtered);
+    const contextualTool = contextualToolForNode(state.scene, nextPrimary);
     return {
       selectedNodeIds: filtered,
       selectedNodeId: nextPrimary,
@@ -4446,8 +4747,17 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         nextPrimary && state.scene.cameras.some((camera) => camera.id === nextPrimary)
           ? nextPrimary
           : state.selectedCameraId,
-      dockAttention: nextPrimary && state.rightDockCollapsed
-        ? { ...state.dockAttention, right: true }
+      rightDockCollapsed: nextPrimary && !state.focusMode ? false : state.rightDockCollapsed,
+      rightPanelMode: nextPrimary ? contextualRightPanelModeForNode(state.scene, nextPrimary) : state.rightPanelMode,
+      bottomTab: nextPrimary
+        ? getFirstEnabledAnalysisTab(
+            state.enabledAnalysisModules,
+            contextualBottomTabForNode(state.scene, nextPrimary) ?? state.bottomTab,
+          )
+        : state.bottomTab,
+      activeTool: contextualTool ?? state.activeTool,
+      dockAttention: nextPrimary
+        ? { ...state.dockAttention, right: false }
         : state.dockAttention,
     };
   }),
@@ -4456,6 +4766,12 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       const isValid = !!id && state.scene.cameras.some((camera) => camera.id === id);
       return {
         selectedCameraId: isValid ? id : null,
+        rightDockCollapsed: isValid && !state.focusMode ? false : state.rightDockCollapsed,
+        rightPanelMode: isValid ? contextualRightPanelModeForNode(state.scene, id) : state.rightPanelMode,
+        activeTool: isValid ? "camera" : state.activeTool,
+        dockAttention: isValid
+          ? { ...state.dockAttention, right: false }
+          : state.dockAttention,
       };
     });
   },
@@ -4659,6 +4975,8 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   setHeatmapHover: (hover) => set({ heatmapHover: hover }),
   setMeasurementTool: (patch) =>
     set((s) => ({ measurementTool: { ...s.measurementTool, ...patch } })),
+  setCommentTool: (patch) =>
+    set((s) => ({ commentTool: { ...s.commentTool, ...patch } })),
   setEnvironmentMode: (mode) => set({ environmentMode: mode }),
   setShowDebugOverlays: (enabled) => set({ showDebugOverlays: enabled }),
   setVisibleComponent: (component, visible) => set((state) => ({ visibleComponents: { ...state.visibleComponents, [component]: visible } })),
@@ -4908,6 +5226,8 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   clearRuntimeIncidents: () => set({ runtimeIncidents: [] }),
   setCompareVisualEvidence: (compareVisualEvidence) => set({ compareVisualEvidence }),
   setCompareReportSelection: (compareReportSelection) => set({ compareReportSelection }),
+  setCompareOrbitSync: (compareOrbitSync) => set({ compareOrbitSync }),
+  setCompareOrbitCameraState: (compareOrbitCameraState) => set({ compareOrbitCameraState }),
   setCameraViewVerificationIntent: (cameraViewVerificationIntent) => set({ cameraViewVerificationIntent }),
   upsertCameraVerificationSnapshot: (cameraId, snapshot) =>
     set((state) => {
@@ -4928,14 +5248,122 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         },
       };
     }),
+  addComment: (position, text, author = "Operator", attachedToNodeId = null) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    useStudioStore.getState().commitSceneChange((scene) => {
+      const next = cloneSecurityScene(scene);
+      next.comments.push({
+        id: `comment_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+        nodeType: "comment",
+        position,
+        text: trimmed,
+        author,
+        createdAt: Date.now(),
+        resolved: false,
+        attachedToNodeId,
+        source: "manual",
+        reviewStatus: "unreviewed",
+        sourceTrace: "",
+        geometryValidity: "valid",
+      });
+      next.updatedAt = Date.now();
+      return next;
+    });
+  },
+  updateComment: (id, patch) => {
+    useStudioStore.getState().commitSceneChange((scene) => {
+      const next = cloneSecurityScene(scene);
+      const index = next.comments.findIndex((comment) => comment.id === id);
+      if (index === -1) return next;
+      next.comments[index] = { ...next.comments[index], ...patch };
+      next.updatedAt = Date.now();
+      return next;
+    });
+  },
+  removeComment: (id) => {
+    useStudioStore.getState().commitSceneChange((scene) => {
+      const next = cloneSecurityScene(scene);
+      const countBefore = next.comments.length;
+      next.comments = next.comments.filter((comment) => comment.id !== id);
+      if (next.comments.length !== countBefore) next.updatedAt = Date.now();
+      return next;
+    });
+  },
+  resolveComment: (id) => {
+    useStudioStore.getState().commitSceneChange((scene) => {
+      const next = cloneSecurityScene(scene);
+      const index = next.comments.findIndex((comment) => comment.id === id);
+      if (index === -1) return next;
+      next.comments[index] = { ...next.comments[index], resolved: true };
+      next.updatedAt = Date.now();
+      return next;
+    });
+  },
 
   addNode: (node) => {
+    const { fixSandboxActive, fixSandboxDraftScene } = get();
+    if (fixSandboxActive && fixSandboxDraftScene) {
+      const patchedDraft = insertNode(fixSandboxDraftScene, node);
+      const camerasChanged = compareSceneCollections(fixSandboxDraftScene.cameras, patchedDraft.cameras).added.length +
+        compareSceneCollections(fixSandboxDraftScene.cameras, patchedDraft.cameras).updated.length;
+      const zonesAffected = compareSceneCollections(fixSandboxDraftScene.criticalZones, patchedDraft.criticalZones).added.length +
+        compareSceneCollections(fixSandboxDraftScene.criticalZones, patchedDraft.criticalZones).updated.length;
+      set({
+        fixSandboxDraftScene: patchedDraft,
+        fixSandboxDiff: { camerasChanged, zonesAffected, needsRecompute: true },
+        simulationDirty: true,
+      });
+      persistFixSandboxState(true, get().fixSandboxBaselineScene!, patchedDraft);
+      return;
+    }
     useStudioStore.getState().commitSceneChange((scene) => insertNode(scene, node));
   },
   updateNode: (id, patch) => {
+    const { fixSandboxActive, fixSandboxDraftScene, fixSandboxBaselineScene } = get();
+    if (fixSandboxActive && fixSandboxDraftScene) {
+      const patchedDraft = patchNode(fixSandboxDraftScene, id, patch);
+      let camerasChanged = 0;
+      let zonesAffected = 0;
+      if (fixSandboxBaselineScene) {
+        const baselineCameras = fixSandboxBaselineScene.cameras;
+        const draftCameras = patchedDraft.cameras;
+        camerasChanged = baselineCameras.filter((c, i) => {
+          const draft = draftCameras[i];
+          return draft && JSON.stringify(c) !== JSON.stringify(draft);
+        }).length;
+        const baselineZones = fixSandboxBaselineScene.criticalZones;
+        const draftZones = patchedDraft.criticalZones;
+        zonesAffected = baselineZones.filter((z, i) => {
+          const draft = draftZones[i];
+          return draft && JSON.stringify(z) !== JSON.stringify(draft);
+        }).length;
+      }
+      set({
+        fixSandboxDraftScene: patchedDraft,
+        fixSandboxDiff: { camerasChanged, zonesAffected, needsRecompute: true },
+        simulationDirty: true,
+      });
+      persistFixSandboxState(true, fixSandboxBaselineScene!, patchedDraft);
+      return;
+    }
     useStudioStore.getState().commitSceneChange((scene) => patchNode(scene, id, patch));
   },
   duplicateNode: (id) => {
+    const { fixSandboxActive, fixSandboxDraftScene } = get();
+    if (fixSandboxActive && fixSandboxDraftScene) {
+      const { scene: nextDraft, duplicatedId } = duplicateNodeInScene(fixSandboxDraftScene, id);
+      if (!duplicatedId) return;
+      const camerasChanged = compareSceneCollections(fixSandboxDraftScene.cameras, nextDraft.cameras).added.length;
+      const zonesAffected = compareSceneCollections(fixSandboxDraftScene.criticalZones, nextDraft.criticalZones).added.length;
+      set({
+        fixSandboxDraftScene: nextDraft,
+        fixSandboxDiff: { camerasChanged, zonesAffected, needsRecompute: true },
+        simulationDirty: true,
+      });
+      persistFixSandboxState(true, get().fixSandboxBaselineScene!, nextDraft);
+      return;
+    }
     const { scene: currentScene, selectedNodeIds } = get();
     const idsToDuplicate = selectedNodeIds.length > 1 && selectedNodeIds.includes(id)
       ? selectedNodeIds
@@ -4975,9 +5403,53 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     }));
   },
   removeNode: (id) => {
+    const { fixSandboxActive, fixSandboxDraftScene, fixSandboxBaselineScene } = get();
+    if (fixSandboxActive && fixSandboxDraftScene) {
+      const patchedDraft = removeNode(fixSandboxDraftScene, id);
+      let camerasChanged = 0;
+      let zonesAffected = 0;
+      if (fixSandboxBaselineScene) {
+        const baselineCameras = fixSandboxBaselineScene.cameras;
+        const draftCameras = patchedDraft.cameras;
+        camerasChanged = Math.abs(baselineCameras.length - draftCameras.length);
+        const baselineZones = fixSandboxBaselineScene.criticalZones;
+        const draftZones = patchedDraft.criticalZones;
+        zonesAffected = Math.abs(baselineZones.length - draftZones.length);
+      }
+      set({
+        fixSandboxDraftScene: patchedDraft,
+        fixSandboxDiff: { camerasChanged, zonesAffected, needsRecompute: true },
+        simulationDirty: true,
+      });
+      persistFixSandboxState(true, fixSandboxBaselineScene!, patchedDraft);
+      return;
+    }
     useStudioStore.getState().commitSceneChange((scene) => removeNode(scene, id));
   },
   removeSelectedNodes: (ids) => {
+    const { fixSandboxActive, fixSandboxDraftScene, fixSandboxBaselineScene } = get();
+    if (fixSandboxActive && fixSandboxDraftScene) {
+      const { selectedNodeIds } = get();
+      const idsToRemove = ids && ids.length > 0 ? ids : selectedNodeIds;
+      if (idsToRemove.length === 0) return;
+      let patchedDraft = cloneSecurityScene(fixSandboxDraftScene);
+      idsToRemove.forEach((removeId) => {
+        patchedDraft = removeNode(patchedDraft, removeId);
+      });
+      let camerasChanged = 0;
+      let zonesAffected = 0;
+      if (fixSandboxBaselineScene) {
+        camerasChanged = Math.abs(fixSandboxBaselineScene.cameras.length - patchedDraft.cameras.length);
+        zonesAffected = Math.abs(fixSandboxBaselineScene.criticalZones.length - patchedDraft.criticalZones.length);
+      }
+      set({
+        fixSandboxDraftScene: patchedDraft,
+        fixSandboxDiff: { camerasChanged, zonesAffected, needsRecompute: true },
+        simulationDirty: true,
+      });
+      persistFixSandboxState(true, fixSandboxBaselineScene!, patchedDraft);
+      return;
+    }
     const { selectedNodeIds } = get();
     const idsToRemove = ids && ids.length > 0 ? ids : selectedNodeIds;
     if (idsToRemove.length === 0) return;
@@ -4990,18 +5462,60 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     });
   },
   translateSelectedNodes: (delta) => {
+    const { fixSandboxActive, fixSandboxDraftScene, fixSandboxBaselineScene } = get();
+    if (fixSandboxActive && fixSandboxDraftScene) {
+      const { selectedNodeIds } = get();
+      if (selectedNodeIds.length === 0) return;
+      const patchedDraft = translateNodesInScene(fixSandboxDraftScene, selectedNodeIds, delta);
+      let camerasChanged = 0;
+      let zonesAffected = 0;
+      if (fixSandboxBaselineScene) {
+        const baselineCameras = fixSandboxBaselineScene.cameras;
+        const draftCameras = patchedDraft.cameras;
+        camerasChanged = baselineCameras.filter((c, i) => {
+          const draft = draftCameras[i];
+          return draft && JSON.stringify(c) !== JSON.stringify(draft);
+        }).length;
+        const baselineZones = fixSandboxBaselineScene.criticalZones;
+        const draftZones = patchedDraft.criticalZones;
+        zonesAffected = baselineZones.filter((z, i) => {
+          const draft = draftZones[i];
+          return draft && JSON.stringify(z) !== JSON.stringify(draft);
+        }).length;
+      }
+      set({
+        fixSandboxDraftScene: patchedDraft,
+        fixSandboxDiff: { camerasChanged, zonesAffected, needsRecompute: true },
+        simulationDirty: true,
+      });
+      persistFixSandboxState(true, fixSandboxBaselineScene!, patchedDraft);
+      return;
+    }
     const { selectedNodeIds } = get();
     if (selectedNodeIds.length === 0) return;
     useStudioStore.getState().commitSceneChange((scene) => translateNodesInScene(scene, selectedNodeIds, delta));
   },
-  updateAssumptions: (patch) =>
+  updateAssumptions: (patch) => {
+    const { fixSandboxActive, fixSandboxDraftScene, fixSandboxBaselineScene } = get();
+    if (fixSandboxActive && fixSandboxDraftScene) {
+      const patchedDraft = cloneSecurityScene(fixSandboxDraftScene);
+      patchedDraft.assumptions = { ...patchedDraft.assumptions, ...patch };
+      set({
+        fixSandboxDraftScene: patchedDraft,
+        fixSandboxDiff: { ...get().fixSandboxDiff, needsRecompute: true },
+        simulationDirty: true,
+      });
+      persistFixSandboxState(true, fixSandboxBaselineScene!, patchedDraft);
+      return;
+    }
     useStudioStore.getState().commitSceneChange((scene) => ({
       ...scene,
       assumptions: {
         ...scene.assumptions,
         ...patch,
       },
-    })),
+    }));
+  },
 
   setSimulationRunning: (running) => set({ simulationRunning: running }),
   setSimulationResult: (result, durationMs) =>
@@ -5023,6 +5537,48 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   runSimulation: () => {
     const state = get();
     if (state.simulationRunning) return;
+
+    // When fix sandbox is active, simulate the draft scene instead
+    if (state.fixSandboxActive && state.fixSandboxDraftScene) {
+      const draftSnapshot = cloneSecurityScene(state.fixSandboxDraftScene);
+      set({ simulationRunning: true });
+      setTimeout(() => {
+        try {
+          const start = performance.now();
+          const result = simulateStudio(draftSnapshot);
+          const durationMs = Math.round(performance.now() - start);
+          set({
+            simulationResult: result,
+            simulationDirty: false,
+            simulationRunning: false,
+            lastRunMs: durationMs,
+            fixSandboxDiff: { ...get().fixSandboxDiff, needsRecompute: false },
+          });
+          get().recordRuntimeIncident({
+            category: "performance_trace",
+            severity: durationMs >= 1000 ? "warning" : "info",
+            title: "Fix sandbox simulation run",
+            details: `Sandbox simulation completed in ${durationMs} ms with ${result.issues.length} issue${result.issues.length === 1 ? "" : "s"}.`,
+            durationMs,
+            action: "simulate_sandbox",
+            path: "/studio",
+          });
+        } catch (err) {
+          console.error("[simulation] sandbox failed:", err);
+          get().recordRuntimeIncident({
+            category: "runtime_failure",
+            severity: "error",
+            title: "Fix sandbox simulation failed",
+            details: err instanceof Error ? err.message : "Simulation threw an unknown error.",
+            stack: err instanceof Error ? err.stack : undefined,
+            action: "simulate_sandbox",
+            path: "/studio",
+          });
+          set({ simulationRunning: false });
+        }
+      }, 30);
+      return;
+    }
 
     const sceneVersion = state.scene.updatedAt;
     const sceneSnapshot = cloneSecurityScene(state.scene);
@@ -5146,6 +5702,92 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     set((state) => ({
       scene: cloneSceneWithChangeLog(state.scene, []),
     })),
+
+  enterFixSandbox: () => {
+    const { scene } = get();
+    const baselineClone = cloneSecurityScene(scene);
+    const draftClone = cloneSecurityScene(scene);
+    set({
+      fixSandboxActive: true,
+      fixSandboxBaselineScene: baselineClone,
+      fixSandboxDraftScene: draftClone,
+      fixSandboxDiff: { camerasChanged: 0, zonesAffected: 0, needsRecompute: true },
+    });
+    persistFixSandboxState(true, baselineClone, draftClone);
+  },
+
+  exitFixSandbox: () => {
+    const { fixSandboxBaselineScene } = get();
+    set({
+      fixSandboxActive: false,
+      fixSandboxBaselineScene: null,
+      fixSandboxDraftScene: null,
+      fixSandboxDiff: { camerasChanged: 0, zonesAffected: 0, needsRecompute: true },
+    });
+    persistFixSandboxState(false, null, null);
+    if (fixSandboxBaselineScene) {
+      // Restore scene to the baseline state
+      const { setScene } = get();
+      setScene(cloneSecurityScene(fixSandboxBaselineScene));
+    }
+  },
+
+  applyFixSandbox: () => {
+    const { fixSandboxDraftScene, scene, simulationResult, snapshots } = get();
+    if (!fixSandboxDraftScene) return;
+
+    // Apply draft as new scene state
+    const appliedScene = cloneSecurityScene(fixSandboxDraftScene);
+
+    // Create a snapshot from the draft using existing saveSnapshot logic
+    const snapshotLabel = `Fix sandbox applied ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`;
+    const appliedSnapshot: SceneSnapshot = {
+      id: `snap_${Date.now().toString(36)}`,
+      label: snapshotLabel,
+      createdAt: Date.now(),
+      scene: cloneSecurityScene(appliedScene),
+      simulation: simulationResult ?? undefined,
+    };
+    const nextSnapshots = [...snapshots, appliedSnapshot];
+    appliedScene.snapshots = nextSnapshots;
+
+    const evidenceEvent = buildOperationalEvidenceEvent({
+      kind: "scene_updated",
+      title: "Fix sandbox applied",
+      details: "Draft changes from fix sandbox committed to the scene.",
+      actor: "user",
+      source: appliedScene.source,
+      sceneId: appliedScene.id,
+      sceneName: appliedScene.name,
+      revisionDepth: get().historyPast.length,
+      affectedNodeIds: [],
+      confidence: 0.92,
+      beforeSummary: summarizeSceneEvidence(scene).detail,
+      afterSummary: summarizeSceneEvidence(appliedScene).detail,
+      sceneSnapshot: cloneSecurityScene(appliedScene),
+      notes: [snapshotLabel],
+    });
+    const nextEvents = [...get().operationalEvidenceEvents, evidenceEvent];
+    persistOperationalEvidenceEvents(nextEvents);
+
+    set({
+      fixSandboxActive: false,
+      fixSandboxBaselineScene: null,
+      fixSandboxDraftScene: null,
+      fixSandboxDiff: { camerasChanged: 0, zonesAffected: 0, needsRecompute: true },
+      snapshots: nextSnapshots,
+      simulationDirty: true,
+      operationalEvidenceEvents: nextEvents,
+      sceneIntelligenceGraph: buildGraphState(appliedScene, simulationResult, get().historyPast.length, nextSnapshots.length, get().operationalEvidenceEvents),
+      scene: cloneSceneWithAppendedChangeLog(appliedScene, evidenceLogLine(evidenceEvent)),
+    });
+    persistFixSandboxState(false, null, null);
+
+    // Auto-run simulation after applying
+    setTimeout(() => {
+      get().runSimulation();
+    }, 50);
+  },
 
   counterfactualResult: null,
   counterfactualObsId: null,
@@ -5406,7 +6048,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     return archive;
   },
 
-  importOperationalEvidenceArchive: (raw) => {
+  importOperationalEvidenceArchive: (raw, context) => {
     const startedAt = performance.now();
     const archive = normalizeOperationalEvidenceArchive(raw);
     if (!archive) {
@@ -5429,7 +6071,10 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       const restoredScene = cloneSecurityScene(archive.scene);
       const priorEvents = normalizeOperationalEvidenceEvents(archive.operationalEvidenceEvents);
       const previousEvent = priorEvents.at(-1) ?? null;
-      const restoreEvent = createArchiveRestoreEvent(archive, restoredScene, previousEvent?.id);
+      const restoreEvent = createArchiveRestoreEvent(archive, restoredScene, previousEvent?.id, {
+        archiveExportedAt: context?.archiveExportedAt,
+        archiveRestoreBranch: context?.archiveRestoreBranch,
+      });
       const nextEvents = [...priorEvents, restoreEvent];
       const nextCameraId = restoredScene.cameras[0]?.id ?? null;
       persistOperationalEvidenceEvents(nextEvents);
@@ -5600,6 +6245,8 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         },
         workspaceCount: mergedScene.snapshots.length,
       });
+      const archiveExportedAt = context?.archiveExportedAt ?? archive.exportedAt;
+      const archiveRestoreBranch = context?.archiveRestoreBranch ?? "recovered";
       const mergeEvent = buildOperationalEvidenceEvent({
         kind: "scene_merged",
         title: "Operational archive merged",
@@ -5621,8 +6268,12 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         sceneSnapshot: cloneSecurityScene(mergedScene),
         notes: [
           `Merged archive branch ${archiveBranchId} against current branch ${currentBranchId}.`,
+          `Requested archive restore branch: ${archiveRestoreBranch}.`,
+          `Archive export time: ${archiveExportedAt}.`,
           `Common ancestor: ${comparison.commonAncestor?.event.id ?? "unknown"}.`,
         ],
+        archiveExportedAt,
+        archiveRestoreBranch,
       });
 
       const nextEvents = combineOperationalEvidenceEventChains(currentState.operationalEvidenceEvents, archive.operationalEvidenceEvents, [mergeEvent]);
@@ -5707,7 +6358,10 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     const nextCameraId = restoredScene.cameras[0]?.id ?? null;
     const priorEvents = normalizeOperationalEvidenceEvents(archive.operationalEvidenceEvents);
     const previousEvent = priorEvents.at(-1) ?? null;
-    const restoreEvent = createArchiveRestoreEvent(archive, restoredScene, previousEvent?.id);
+    const restoreEvent = createArchiveRestoreEvent(archive, restoredScene, previousEvent?.id, {
+      archiveExportedAt: context?.archiveExportedAt,
+      archiveRestoreBranch: context?.archiveRestoreBranch,
+    });
     const nextEvents = [...priorEvents, restoreEvent];
     persistOperationalEvidenceEvents(nextEvents);
     if (archive.operationalEvidenceJournal && typeof window !== "undefined" && (readiness.status === "same" || readiness.status === "fast_forward_left")) {

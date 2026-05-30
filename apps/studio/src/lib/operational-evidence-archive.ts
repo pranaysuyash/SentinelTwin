@@ -21,6 +21,11 @@ import type { WorkspaceGovernanceState } from "@/lib/workspace-governance";
 
 export type OperationalEvidenceArchiveVersion = "1";
 
+export type ArchiveRestoreEventContext = {
+  archiveExportedAt?: string;
+  archiveRestoreBranch?: "draft" | "recovered" | "published";
+};
+
 export type OperationalEvidenceArchive = {
   version: OperationalEvidenceArchiveVersion;
   exportedAt: string;
@@ -178,11 +183,20 @@ export function normalizeOperationalEvidenceArchive(raw: unknown): OperationalEv
   return archive;
 }
 
-export function createArchiveRestoreEvent(archive: OperationalEvidenceArchive, restoredScene: SecurityScene, parentEventId?: string) {
+export function createArchiveRestoreEvent(
+  archive: OperationalEvidenceArchive,
+  restoredScene: SecurityScene,
+  parentEventId?: string,
+  context?: ArchiveRestoreEventContext,
+) {
+  const archiveExportedAt = context?.archiveExportedAt ?? archive.exportedAt;
+  const archiveRestoreBranch = context?.archiveRestoreBranch ?? "recovered";
   return buildOperationalEvidenceEvent({
     kind: "scene_reverted",
     title: "Operational archive restored",
-    details: "Restored the workspace from an exported operational evidence archive.",
+    details: archiveExportedAt
+      ? `Restored the workspace from an exported operational evidence archive created at ${archiveExportedAt}.`
+      : "Restored the workspace from an exported operational evidence archive.",
     actor: "user",
     source: restoredScene.source,
     sceneId: restoredScene.id,
@@ -193,9 +207,14 @@ export function createArchiveRestoreEvent(archive: OperationalEvidenceArchive, r
     parentEventId,
     branchLabel: "recovered",
     lifecycleStage: "recovered",
+    archiveExportedAt,
+    archiveRestoreBranch,
     beforeSummary: `${restoredScene.name || "Untitled Scene"} restored from archive`,
     afterSummary: `${restoredScene.name || "Untitled Scene"} restored from archive`,
     sceneSnapshot: structuredClone(restoredScene),
-    notes: ["Archive import rewired the workspace to the recovered branch."],
+    notes: [
+      `Archive import rewired the workspace to the ${archiveRestoreBranch} branch.`,
+      `Archive export time: ${archiveExportedAt}.`,
+    ],
   });
 }

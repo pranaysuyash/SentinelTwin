@@ -5,9 +5,8 @@ export type SiteIntakeSource =
   | "scan"
   | "ai_prompt"
   | "floor_plan"
-  | "json_import"
+  | "json"
   | "manual"
-  | "footage_verify"
   | "camera_evidence";
 
 export type SiteIntakeStage =
@@ -125,6 +124,45 @@ const SOURCE_LABELS: Record<SiteIntakeSource, string> = {
   camera_evidence: "Camera Evidence Preview",
 };
 
+const LEGACY_SOURCE_ALIASES: Record<string, SiteIntakeSource> = {
+  scan: "scan",
+  ai_prompt: "ai_prompt",
+  floor_plan: "floor_plan",
+  json: "json",
+  json_import: "json",
+  manual: "manual",
+  camera_evidence: "camera_evidence",
+  footage_verify: "camera_evidence",
+};
+
+export function normalizeSiteIntakeSource(
+  value: string,
+): { source: SiteIntakeSource | null; warning: SiteCompilerWarning | null } {
+  const normalized = LEGACY_SOURCE_ALIASES[value];
+  if (!normalized) {
+    return {
+      source: null,
+      warning: {
+        code: "UNSUPPORTED_SITE_SOURCE",
+        message: `Unsupported site source "${value}". Use scan, ai_prompt, floor_plan, json, manual, or camera_evidence.`,
+        severity: "blocking",
+        suggestedAction: "Choose a supported site source and retry compile.",
+      },
+    };
+  }
+  if (value !== normalized) {
+    return {
+      source: normalized,
+      warning: {
+        code: "SITE_SOURCE_NORMALIZED",
+        message: `Legacy source "${value}" normalized to "${normalized}".`,
+        severity: "info",
+      },
+    };
+  }
+  return { source: normalized, warning: null };
+}
+
 function countEntities(scene: SecurityScene): EntityCounts {
   return {
     walls: scene.walls.length,
@@ -139,6 +177,12 @@ function countEntities(scene: SecurityScene): EntityCounts {
     paths: scene.paths.length,
     sensors: scene.sensors.length,
   };
+}
+
+function collectSceneProvenanceNotes(scene: SecurityScene, prefixes: string[]): string[] {
+  const notes = scene.changeLog ?? [];
+  if (prefixes.length === 0) return notes.slice(0, 4);
+  return notes.filter((note) => prefixes.some((prefix) => note.startsWith(prefix))).slice(0, 6);
 }
 
 export function makeSiteCompilerWarnings(scene: SecurityScene, extra: string[] = []): ActionableWarning[] {
@@ -260,7 +304,7 @@ function deriveAssumptions(scene: SecurityScene, source: SiteIntakeSource): Draf
   assumptions.push({
     label: "Source",
     value: SOURCE_LABELS[source],
-    source: source === "ai_prompt" ? "model" : source === "scan" ? "user" : "imported",
+    source: source === "ai_prompt" ? "model" : source === "scan" || source === "manual" ? "user" : "imported",
   });
   assumptions.push({
     label: "Room dimensions",
@@ -483,7 +527,8 @@ export function compileScanToSiteResult(
 ): SiteCompilerResult {
   scene.source = sourceToSceneSource("scan");
   const warnings = overrideWarnings ?? makeSiteCompilerWarnings(scene);
-  const notes = ["Scene compiled from manual-assisted scan intake.", ...extraNotes];
+  const provenanceNotes = collectSceneProvenanceNotes(scene, ["Provenance:", "Scan evidence:", "Scan path:"]);
+  const notes = ["Scene compiled from manual-assisted scan intake.", ...provenanceNotes, ...extraNotes];
   return {
     source: "scan",
     scene,
@@ -528,7 +573,8 @@ export function compileFloorPlanToSiteResult(
 ): SiteCompilerResult {
   scene.source = sourceToSceneSource("floor_plan");
   const warnings = overrideWarnings ?? makeSiteCompilerWarnings(scene);
-  const notes = ["Scene extracted from floor plan image.", ...extraNotes];
+  const provenanceNotes = collectSceneProvenanceNotes(scene, ["Floor plan import:", "Floor plan diagnostics:"]);
+  const notes = ["Scene extracted from floor plan image.", ...provenanceNotes, ...extraNotes];
   return {
     source: "floor_plan",
     scene,
@@ -583,6 +629,50 @@ export function compileJsonToSiteResult(
   };
 }
 
+export function compileCameraEvidenceToSiteResult(
+  scene: SecurityScene,
+  extraNotes: string[] = [],
+  overrideWarnings: SiteCompilerWarning[] | null = null,
+): SiteCompilerResult {
+  scene.source = sourceToSceneSource("camera_evidence");
+  const warnings = overrideWarnings ?? makeSiteCompilerWarnings(scene);
+  const notes = ["Scene compiled from camera evidence verification.", ...extraNotes];
+  return {
+    source: "camera_evidence",
+    scene,
+    warnings,
+    confidence: calculateConfidence(warnings),
+    provenance: {
+      source: "camera_evidence",
+      label: SOURCE_LABELS.camera_evidence,
+      notes,
+      confidence: calculateConfidence(warnings),
+    },
+  };
+}
+
+export function compileFootageVerifyToSiteResult(
+  scene: SecurityScene,
+  extraNotes: string[] = [],
+  overrideWarnings: SiteCompilerWarning[] | null = null,
+): SiteCompilerResult {
+  scene.source = sourceToSceneSource("camera_evidence");
+  const warnings = overrideWarnings ?? makeSiteCompilerWarnings(scene);
+  const notes = ["Scene updated from footage verification alignment.", ...extraNotes];
+  return {
+    source: "camera_evidence",
+    scene,
+    warnings,
+    confidence: calculateConfidence(warnings),
+    provenance: {
+      source: "camera_evidence",
+      label: SOURCE_LABELS.camera_evidence,
+      notes,
+      confidence: calculateConfidence(warnings),
+    },
+  };
+}
+
 export function formatCompilerSummary(result: SiteCompilerResult): string {
   const counts = countEntities(result.scene);
   const countParts = [
@@ -620,7 +710,7 @@ export const SITE_SOURCE_MATURITY: Record<SiteIntakeSource, { label: string; sta
     description: "User-authored scene truth.",
   },
   camera_evidence: {
-    label: "Footage Verification",
+    label: "Camera Evidence Preview",
     status: "Preview",
     description: "Static/reference-frame alignment only. No product-grade video/stream verification yet.",
   },

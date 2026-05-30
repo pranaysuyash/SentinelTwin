@@ -1,6 +1,6 @@
 # Current Implementation State — Camera Studio
 
-**Updated:** 2026-05-30 (session 34: workflow progress surfaced in live footer status)
+**Updated:** 2026-05-30 (session 35: governance route sync-source surfaced in approval routing)
 **Source:** Direct code audit of apps/studio/src/
 **Purpose:** Accurate baseline of what is actually built, tested, and rendering.
 Use this instead of the earlier CAMERASTUDIO_GAP_ANALYSIS.md which was written
@@ -26,6 +26,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - The Governance tab now exposes a local shared-workspace access surface with active member routing, single-user/shared mode toggles, and per-member approval posture so the current actor and reviewer path are visible in-product ✅
 - Workspace access changes now flow through the canonical store, evidence ledger, support bundle, and `/api/workspace-identity-conflict` archive boundary, so local membership drift, approval routing, and shared-identity conflict replay are all represented as canonical product state instead of ad-hoc test fixtures ✅
 - The shared approval route now carries a stable route key plus route-scope and active-member eligibility metadata, and the archive loaders normalize older route records into that canonical route contract so remote identity/routing decisions can be replayed consistently across live and archived workspace state ✅
+- The shared approval route now also carries an explicit route sync source (`Local-only routing` vs `Archive-backed replay`), so the Governance tab can separate live workspace decisions from archive-backed replay without guessing whether the route depends on backend sync ✅
 - The Governance tab now surfaces that route key and route-scope directly in the Approval Routing card, along with the active-member eligibility reason, so operators can see the backend identity token and why the route is direct, review-gated, or reconcile-blocked without leaving the control plane ✅
 - The workspace membership archive and identity-conflict cards now also surface the same route key, including the replay result, so the canonical routing token stays visible across live, archived, and replayed shared-identity records ✅
 
@@ -277,6 +278,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - 5 scene templates accessible from wizard: retail-shop, open-office, warehouse, classroom, parking-garage ✅
 - Floor-plan import scale control now feeds the actual extractor config instead of acting as a dead UI field ✅
 - Floor-plan import validation now emits structural diagnostics for duplicate wall pairs, short fragments, off-wall door/window markers, wall orientation mix, and image-bounds coverage; the review UI surfaces those flags before scene creation ✅
+- Floor-plan imports now carry extraction and diagnostics notes into the canonical scene change log, so the review surface can show what was parsed versus what remains heuristic ✅
 - The target switcher now shows the current target label in-place, so the user sees `Target: Cash Counter` versus `Target: Mixed` without opening the dropdown ✅
 - The top bar now exposes a dedicated `Assumptions` shortcut that jumps the right panel and bottom drawer to the assumptions surface ✅
 - TopBar scene menu now also exposes `Scan a Site...`, which opens the dedicated manual-assisted scan intake flow and compiles into a canonical `scan` scene ✅
@@ -285,6 +287,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - Launcher page now has a visible `Scan a Site` entry point alongside scene creation/import and AI layout draft ✅
 - `ScanSiteWizard` handles manual-assisted site photo intake, candidate placement/classification, review, and compile-to-scene handoff ✅
 - Scan review now shows a provenance summary before compile, and the compiled scene carries provenance notes into the canonical `SecurityScene` change log ✅
+- Scan intake provenance now preserves accepted candidate evidence in the canonical scene log, so the review surface can show what the guided/manual-assisted compiler actually accepted ✅
 - `apps/studio/src/lib/scene-skeleton.ts` centralizes the blank-scene shell used by both new-scene creation and scan compilation ✅
 - `apps/studio/src/lib/scan-to-scene.ts` converts scan candidates into real `SecurityScene` nodes without introducing a parallel scene model ✅
 - Scan sessions remain separate from the final scene until compile, and the UI labels the flow as manual-assisted rather than claiming AI perception ✅
@@ -331,7 +334,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - The Governance tab now records identity conflict resolution itself as a first-class `workspace_identity_conflict_resolved` evidence event, so the governance trail distinguishes the conflict resolution from the generic membership-sync action that accompanied it ✅
 - The sensor panel now also exposes an external feed bridge that can pull JSON/NDJSON from a live URL through `/api/sensor-ingest`, so live metadata can enter the canonical evidence trail without paste-only intake ✅
 - The provenance surface now also supports branch-target checkpoint restore actions so a reconstructable event can be reopened as draft, recovered, or published instead of only a generic restore ✅
-- The debug diagnostics panel now exports a full operational evidence archive, loads uploaded archives into a merge-preflight preview, can restore the latest archived checkpoint with an explicit draft/recovered/published branch selector, and can apply a conflict-free divergent branch merge when the live ledger has forked, so recovery/backups travel with the scene, ledger, journal, and governance state instead of only a support bundle ✅
+- The debug diagnostics panel now exports a full operational evidence archive, loads uploaded archives into a merge-preflight preview, can restore the latest archived checkpoint with an explicit draft/recovered/published branch selector, preserves archive export time and requested restore branch on restore events, and can apply a conflict-free divergent branch merge when the live ledger has forked, so recovery/backups travel with the scene, ledger, journal, and governance state instead of only a support bundle ✅
 - Trust-sensitive launcher and provenance surfaces now have a reusable `truth-audit` harness that checks the visible claim copy against the manifest so placeholder drift gets caught in tests instead of slipping back into the UI ✅
 - The provenance surface now includes ledger search/filtering so operators can narrow events and checkpoints by scene, node, note, event type, lifecycle stage, or branch label instead of scanning the full history manually ✅
 - The debug panel now exports a support-ready diagnostic bundle with scene, simulation, graph, evidence, governance, approval-route, and runtime truth fields so failures can be handed off with context instead of just a screenshot ✅
@@ -339,6 +342,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - The support bundle now also carries the recent sensor ingest archive, so live metadata handoff travels with the diagnostic/report evidence package instead of living only behind the sensor ingest route ✅
 - The debug panel now also exposes a dedicated `Download Evidence Bundle` action so the canonical report evidence package can be exported directly from the support/control plane ✅
 - The debug panel now also exposes a runtime health summary plus a runtime journey trace with import/scan/AI/render/save/publish path health cards, and it now surfaces a runtime incident log plus a performance trace list and a runnable truth-audit report so the operator can see both path health, failure/timing evidence, and trust-surface drift from inside the studio shell ✅
+- The trust-audit UI now expands the formatted report output alongside the per-surface counts, so the debug panel shows exact missing and forbidden phrases instead of only a pass/fail summary ✅
 - The debug panel now also exposes a support bundle summary card with incident snapshot, latest incident/performance trace, AI telemetry trend, and a dedicated `Download Support Bundle` action so the support handoff artifact is visible in-product instead of buried behind a single export button ✅
 - The debug panel now also exposes a paste-based `External Log Capture` lane, persists external log entries locally, and includes them in the support bundle so browser/app/device logs can be handed off with the incident snapshot instead of living only in ad hoc copy-paste notes ✅
 - The debug panel now also exposes an `Automated Alerting` summary that turns runtime incidents and captured external logs into prioritized alert candidates, with a high-priority recommendation to attach external logs before escalation ✅
@@ -778,3 +782,22 @@ The following issues were fixed to reach 0 typed errors (only pre-existing TS700
 - **AI Layout Draft**: Explicitly documented as a prototype-level draft assistant. Generates approximate layouts but requires manual refinement.
 - **Floor-plan Import**: Explicitly documented as a best-effort prototype extraction. Not yet production-grade and requires manual cleanup of extracted walls.
  - Scene Intelligence, Before/After, Report Lite, and Compare View now expose browser-native share buttons for checkpoint/archive/compare links, with clipboard copy as the fallback path when sharing is unavailable ✅
+
+## Security Outcome Review — enriched model + UI (2026-05-30)
+
+- `security-outcome-model.ts` (761 lines) now exports: `FailedZoneDetail` (with `productFailureReasons`, `causeSummary`), `CameraFinding` (with `roleSummary`, `offlineImpactSummary`), `PathFinding` (with `lostSegmentLabels`, `worstMomentSummary`), `PrivacyFinding`, `OutcomeRecommendationCard` (with `verificationLabel`, `beforeAfterSummary`), `AssumptionEntry`, `SecurityOutcomeSummary` (with `nightReadiness`, `redundancyStatus`, `primaryRisk`, `recommendedNextAction`), `SecurityOutcomeModel` (with `missingPrerequisites`, `pathOutcome`) ✅
+- `security-outcome-copy.ts` provides product-language mapping functions: `explainFailureReason` (maps obstruction/night/FOV/range/privacy to human-readable), `explainQualityGap`, `explainCameraOfflineImpact`, `explainPrivacyIssue`, `explainPathLoss`, `explainPathEmpty`, `explainNoZones`, `explainNoCameras`, `verificationLabel`, `costLabel` ✅
+- All 12 UI components wired to enriched model:
+  - `OutcomeSummaryCard` — shows status, headline, coverage pct, critical zone pass/total, issue count, night readiness, redundancy, recognition/identification area % ✅
+  - `CriticalZoneReview` — shows `productFailureReasons` and `causeSummary` per zone, priority/status badges, target type, coverage count, Focus in Scene action ✅
+  - `CameraResponsibilityPanel` — shows `roleSummary`, `offlineImpactSummary`, coverage %, zones passed/failed, View Camera action ✅
+  - `RecommendationCard` — shows `verificationLabel` with tone colors, `beforeAfterSummary`, Preview/Compare/Apply actions gated by verification state ✅
+  - `PathOutcomeReview` — shows active path duration/visible/lost metrics and per-path `visiblePct`, `lostSegmentLabels`, `worstMomentSummary`, `bestQuality` ✅
+  - `AssumptionDisclosure` — shows structured `assumptions` (label/value/impact) and `limitations` array with expandable details section ✅
+  - `PrivacyReview` — shows privacy zone stats, `privacyFindings` with camera/zone/issue details ✅
+  - `NightReadinessReview`, `RedundancyReview`, `OutcomeEmptyState`, `IssueCard`, `SecurityOutcomePanel` — all wired ✅
+- 35 tests (159 assertions) covering model building, language mapping, truth checks (no "AI certainty", no "forensic guarantee" in user-facing strings, no evasion guidance) ✅
+- `buildSecurityOutcomeDelta` computes before/after coverage, blindspot, issue, and critical-zone delta ✅
+- Product language constraint: failure reasons map technical causes to human-readable text (e.g. "Blocked by Shelf 1" → "Shelf 1 blocks the camera's line of sight") ✅
+- Model uses defensive framing throughout: "coverage failure analysis", no "optimal evasion" or "bypass security" language ✅
+- Verification labeling distinguishes `verified_by_simulation`, `not_yet_tested`, `requires_user_input`, `assumption_based` — never claims "AI certainty" or "100% guaranteed" ✅

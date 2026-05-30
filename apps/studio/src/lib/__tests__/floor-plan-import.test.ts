@@ -1,6 +1,16 @@
 import { describe, expect, test } from "bun:test";
 
-import { createSceneFromFloorPlan, getFloorPlanDiagnostics, normalizeFloorPlanResult, recalibrateFloorPlanResult, validateFloorPlan, type FloorPlanResult } from "@/lib/floor-plan-import";
+import {
+  createSceneFromFloorPlan,
+  deriveFloorPlanSemanticContext,
+  evaluateFloorPlanTierGate,
+  getFloorPlanDiagnostics,
+  getFloorPlanTierGateWarning,
+  normalizeFloorPlanResult,
+  recalibrateFloorPlanResult,
+  validateFloorPlan,
+  type FloorPlanResult,
+} from "@/lib/floor-plan-import";
 
 describe("createSceneFromFloorPlan", () => {
   test("materializes imported walls, doors, and windows into SecurityScene", () => {
@@ -28,6 +38,8 @@ describe("createSceneFromFloorPlan", () => {
     expect(scene.windows.length).toBe(1);
     expect(scene.cameras.length).toBe(0);
     expect(scene.securityLights.length).toBe(0);
+    expect(scene.changeLog.some((entry) => entry.startsWith("Floor plan import:"))).toBe(true);
+    expect(scene.changeLog.some((entry) => entry.startsWith("Floor plan diagnostics:"))).toBe(true);
   });
 
   test("uses fallback room walls when all detected walls are removed during correction", () => {
@@ -141,6 +153,88 @@ describe("SceneBuilderWizard floor-plan extraction config", () => {
     ).toEqual({
       roomHeightM: 3.2,
       scalePixelsPerMeter: 72,
+    });
+  });
+
+  describe("floor-plan Tier 1 gate", () => {
+    const buildResult = (overrides: Partial<FloorPlanResult> = {}): FloorPlanResult => ({
+      imageWidth: 1000,
+      imageHeight: 800,
+      scalePixelsPerMeter: 100,
+      confidence: 0.78,
+      roomDimensions: { widthM: 10, depthM: 8, heightM: 3 },
+      walls: [
+        { start: { x: 100, y: 100 }, end: { x: 900, y: 100 }, detected: true },
+        { start: { x: 900, y: 100 }, end: { x: 900, y: 700 }, detected: true },
+        { start: { x: 100, y: 700 }, end: { x: 900, y: 700 }, detected: true },
+        { start: { x: 100, y: 100 }, end: { x: 100, y: 700 }, detected: true },
+      ],
+      doors: [{ position: { x: 500, y: 100 }, widthM: 0.9, orientation: "horizontal" }],
+      windows: [{ position: { x: 900, y: 450 }, widthM: 1.2, orientation: "vertical" }],
+      ...overrides,
+    });
+
+    test("returns rescan_required for low-quality imports", () => {
+      const lowQuality = buildResult({
+        confidence: 0.15,
+        walls: [{ start: { x: 100, y: 120 }, end: { x: 220, y: 130 }, detected: true }],
+        doors: [],
+        windows: [],
+      });
+      const context = deriveFloorPlanSemanticContext(lowQuality);
+      const gate = evaluateFloorPlanTierGate(context);
+      expect(gate.action).toBe("rescan_required");
+      expect(getFloorPlanTierGateWarning(gate)).toContain("blocked this import");
+    });
+
+    test("returns human_review when scene type stays unknown", () => {
+      const unknownScene = buildResult({
+        roomDimensions: { widthM: 24, depthM: 5, heightM: 3 },
+        walls: [
+          { start: { x: 80, y: 100 }, end: { x: 920, y: 100 }, detected: true },
+          { start: { x: 920, y: 100 }, end: { x: 920, y: 700 }, detected: true },
+          { start: { x: 80, y: 700 }, end: { x: 920, y: 700 }, detected: true },
+          { start: { x: 80, y: 100 }, end: { x: 80, y: 700 }, detected: true },
+          { start: { x: 300, y: 100 }, end: { x: 300, y: 700 }, detected: true },
+          { start: { x: 700, y: 100 }, end: { x: 700, y: 700 }, detected: true },
+        ],
+        doors: [{ position: { x: 500, y: 100 }, widthM: 1, orientation: "horizontal" }],
+        windows: [],
+      });
+      const context = deriveFloorPlanSemanticContext(unknownScene);
+      const gate = evaluateFloorPlanTierGate(context);
+      expect(gate.action).toBe("human_review");
+    });
+
+    test("returns cloud_geometry_required for low-clutter confidence", () => {
+      const lowClutter = buildResult({
+        walls: [
+          { start: { x: 100, y: 100 }, end: { x: 900, y: 100 }, detected: true },
+          { start: { x: 900, y: 100 }, end: { x: 900, y: 700 }, detected: true },
+          { start: { x: 100, y: 700 }, end: { x: 900, y: 700 }, detected: true },
+          { start: { x: 100, y: 100 }, end: { x: 100, y: 700 }, detected: true },
+          { start: { x: 200, y: 250 }, end: { x: 220, y: 250 }, detected: true },
+          { start: { x: 280, y: 320 }, end: { x: 300, y: 320 }, detected: true },
+          { start: { x: 460, y: 380 }, end: { x: 480, y: 380 }, detected: true },
+          { start: { x: 620, y: 450 }, end: { x: 640, y: 450 }, detected: true },
+        ],
+        doors: [
+          { position: { x: 500, y: 100 }, widthM: 0.9, orientation: "horizontal" },
+          { position: { x: 500, y: 400 }, widthM: 0.9, orientation: "horizontal" },
+        ],
+        windows: [{ position: { x: 900, y: 450 }, widthM: 1.2, orientation: "vertical" }],
+      });
+      const context = deriveFloorPlanSemanticContext(lowClutter);
+      expect(context.confidence).toBe("low_clutter");
+      const gate = evaluateFloorPlanTierGate(context);
+      expect(gate.action).toBe("cloud_geometry_required");
+    });
+
+    test("returns proceed_to_tier2 for stable imports", () => {
+      const context = deriveFloorPlanSemanticContext(buildResult());
+      const gate = evaluateFloorPlanTierGate(context);
+      expect(gate.action).toBe("proceed_to_tier2");
+      expect(getFloorPlanTierGateWarning(gate)).toBeNull();
     });
   });
 });

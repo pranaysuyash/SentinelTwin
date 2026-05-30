@@ -8,8 +8,8 @@ import {
   applyReportVisibility,
   buildReportData,
   buildCompareReportData,
-  exportAsHtml,
   exportAsMarkdown,
+  exportAsHtml,
   exportAsText,
   exportCompareAsHtml,
   exportCompareAsMarkdown,
@@ -68,6 +68,7 @@ describe("report engine", () => {
 
   testWithTimeout("buildReportData produces complete report", { timeout: 15000 }, () => {
     const report = buildReportData(scene, result);
+    const standardsReport = buildReportData(scene, result, { templateId: "oodpcvs-audit" });
 
     expect(report.sceneId).toBe(scene.id);
     expect(report.siteName).toBe(scene.name);
@@ -103,6 +104,10 @@ describe("report engine", () => {
     expect(report.redundancyMatrix).toBeDefined();
     expect(report.redundancyMatrix?.cameraRows.length).toBeGreaterThan(0);
     expect(report.redundancyMatrix?.vulnerableZones.length).toBeGreaterThan(0);
+    expect(standardsReport.template.id).toBe("oodpcvs-audit");
+    expect(standardsReport.template.standardLabel).toBe("IEC 62676-4:2025");
+    expect(standardsReport.template.sections.length).toBeGreaterThan(0);
+    expect(exportAsMarkdown(standardsReport)).toContain("Standards Template");
   });
 
   testWithTimeout("buildReportData carries the temporal twin publication checkpoint when evidence is present", { timeout: 15000 }, () => {
@@ -275,8 +280,10 @@ describe("report engine", () => {
     const privacySafe = applyReportVisibility(report, "privacy_safe");
 
     expect(shared.visibility).toBe("shared");
+    expect(shared.template.id).toBe(report.template.id);
     expect(shared.provenance.confidenceNotes).toHaveLength(0);
     expect(shared.evidenceTrail.recentEntries[0]?.confidence).toBe("withheld");
+    expect(shared.evidenceTrail.recentEntries[0]?.details).toBe("Redacted in shared export.");
     expect(privacySafe.visibility).toBe("privacy_safe");
     expect(privacySafe.provenance.sourceNotes).toHaveLength(0);
     expect(privacySafe.evidenceTrail.recentEntries).toHaveLength(0);
@@ -386,6 +393,26 @@ describe("exportAsHtml", () => {
     expect(html).toContain("Audience Policy");
     expect(html).toContain("Visible Sections");
     expect(html).toContain("Withheld Sections");
+  });
+
+  longTest("includes visibility redaction and buyer drill-through", () => {
+    const html = exportAsHtml(makeReport());
+    expect(html).toContain("Visibility &amp; Redaction");
+    expect(html).toContain("Buyer Drill-Through");
+    expect(html).toContain("Inspection shortcuts");
+    expect(html).toContain("Standards Template");
+    expect(html).toContain("Template Depth");
+  });
+
+  longTest("includes privacy masking summary for privacy reviewer exports", () => {
+    const html = exportAsHtml(makeReport({
+      audience: "privacy_reviewer",
+      audienceLabel: "Privacy Reviewer",
+      audienceFraming: "Visibility, retention, and overcollection framing for privacy review.",
+      title: "Privacy Review Brief",
+    }));
+    expect(html).toContain("Privacy Masking Summary");
+    expect(html).toContain("Privacy Masking");
   });
 
   longTest("includes provenance section", () => {
@@ -662,6 +689,25 @@ describe("exportAsMarkdown", () => {
     expect(md).toContain("**Audience Policy:**");
     expect(md).toContain("**Visible Sections:**");
     expect(md).toContain("**Withheld Sections:**");
+  });
+
+  longTest("includes visibility redaction and buyer drill-through", () => {
+    const md = exportAsMarkdown(baseReport);
+    expect(md).toContain("## Visibility and Redaction");
+    expect(md).toContain("## Buyer Drill-Through");
+    expect(md).toContain("Inspection shortcuts");
+  });
+
+  longTest("includes privacy masking summary for privacy reviewer exports", () => {
+    const md = exportAsMarkdown({
+      ...baseReport,
+      audience: "privacy_reviewer",
+      audienceLabel: "Privacy Reviewer",
+      audienceFraming: "Visibility, retention, and overcollection framing for privacy review.",
+      title: "Privacy Review Brief",
+    });
+    expect(md).toContain("## Privacy Masking Summary");
+    expect(md).toContain("Privacy Masking");
   });
 
   longTest("includes zone analysis section", () => {
@@ -1073,6 +1119,8 @@ describe("comparison exports", () => {
     expect(html).toContain("data:image/svg+xml");
     expect(html).toContain("Evidence Entries");
     expect(html).toContain("Operational Evidence");
+    expect(html).toContain("Visibility &amp; Redaction");
+    expect(html).toContain("Buyer Drill-Through");
     expect(html).toContain("Scene IDs");
   });
 
@@ -1093,6 +1141,8 @@ describe("comparison exports", () => {
     expect(md).toContain("## Truth Ladder");
     expect(md).toContain("Evidence Entries");
     expect(md).toContain("## Operational Evidence");
+    expect(md).toContain("## Visibility and Redaction");
+    expect(md).toContain("## Buyer Drill-Through");
     expect(md).toContain("Scene IDs");
     expect(md).toContain("**Audience:** Auditor");
   });

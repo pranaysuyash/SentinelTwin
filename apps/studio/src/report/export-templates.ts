@@ -42,6 +42,96 @@ function buildBaseHeader(report: ReportData): string[] {
   ];
 }
 
+function buildStandardsTemplate(report: ReportData): string[] {
+  return [
+    "## Standards Template",
+    `- Template: ${report.template.title}`,
+    `- Standard: ${report.template.standardLabel}`,
+    `- Template Summary: ${report.template.summary}`,
+    `- Audience Hint: ${report.template.audienceHint}`,
+    `- Focus Areas: ${report.template.focusAreas.join(" · ")}`,
+    `- Evidence Anchors: ${report.template.evidenceAnchors.join(" · ")}`,
+    ...(report.template.sections.length > 0
+      ? [
+          "- Template Depth:",
+          ...report.template.sections.map((section) => `  - ${section.title}: ${section.detail}`),
+        ]
+      : []),
+    "",
+  ];
+}
+
+function buildVisibilityAndRedaction(report: ReportData): string[] {
+  const redactionEffect =
+    report.visibility === "internal"
+      ? "No redaction. Full report detail is visible."
+      : report.visibility === "shared"
+        ? "Shared exports keep the audit spine, but redact confidence notes and trim evidence detail."
+        : "Privacy-safe exports remove operational evidence, provenance notes, and temporal trace detail.";
+
+  return [
+    "## Visibility and Redaction",
+    `- Audience: ${report.audienceLabel}`,
+    `- Visibility mode: ${report.visibilityLabel}`,
+    `- Disclosure policy: ${report.audiencePolicy.disclosureSummary}`,
+    `- Visible sections: ${report.audiencePolicy.visibleSections.join(", ")}`,
+    `- Withheld sections: ${report.audiencePolicy.withheldSections.length > 0 ? report.audiencePolicy.withheldSections.join(", ") : "none"}`,
+    `- Redaction effect: ${redactionEffect}`,
+    "",
+  ];
+}
+
+function buildBuyerDrillThrough(report: ReportData): string[] {
+  const sortedZones = [...report.zones].sort((a, b) => a.coveragePct - b.coveragePct);
+  const sortedCameras = [...report.cameras].sort(
+    (a, b) => b.zonesFailed - a.zonesFailed || a.coveragePct - b.coveragePct,
+  );
+  const topIssue = report.issues[0];
+  const topRecommendation = report.recommendations[0];
+  const topZone = sortedZones[0];
+  const topCamera = sortedCameras[0];
+
+  return [
+    "## Buyer Drill-Through",
+    topIssue
+      ? `- Top issue: [${topIssue.severity.toUpperCase()}] ${topIssue.description}`
+      : "- Top issue: none",
+    topRecommendation
+      ? `- Best next action: [${topRecommendation.verified ? "verified" : "unverified"}] ${topRecommendation.description} (${topRecommendation.costCategory})`
+      : "- Best next action: none",
+    topZone
+      ? `- Lowest coverage zone: ${topZone.label} (${topZone.coveragePct.toFixed(1)}%, ${topZone.status})`
+      : "- Lowest coverage zone: none",
+    topCamera
+      ? `- Most exposed camera: ${topCamera.name} (${topCamera.zonesFailed} failed zones, ${topCamera.coveragePct.toFixed(1)}%)`
+      : "- Most exposed camera: none",
+    `- Inspection shortcuts: [Zone Analysis](#zone-analysis) · [Camera Analysis](#camera-analysis) · [Recommendations](#recommendations) · [Operational Evidence](#operational-evidence)`,
+    ...(report.evidenceTrail.recentEntries.length > 0
+      ? [
+          "- Evidence jump points:",
+          ...report.evidenceTrail.recentEntries.slice(0, 3).map((entry) => `  - [${entry.when} · ${entry.title}](#${entry.anchorId})`),
+        ]
+      : ["- Evidence jump points: none"]),
+    "",
+  ];
+}
+
+function buildPrivacyMaskingSummary(report: ReportData): string[] {
+  return [
+    "## Privacy Masking Summary",
+    ...(report.cameras.length > 0
+      ? [
+          "| Camera | Status | Privacy Masking | NDAA |",
+          "|--------|--------|-----------------|------|",
+          ...report.cameras.map(
+            (camera) => `| ${camera.name} | ${camera.status} | ${camera.privacyMaskingEnabled ? "Enabled" : "Disabled"} | ${camera.ndaaCompliant ? "Yes" : "No"} |`,
+          ),
+        ]
+      : ["No cameras deployed."]),
+    "",
+  ];
+}
+
 function buildExecutiveSummary(report: ReportData): string[] {
   return [
     "## Executive Summary",
@@ -323,7 +413,10 @@ export function exportOperatorMarkdown(report: ReportData): string {
   // Operator needs everything
   return [
     ...buildBaseHeader(report),
+    ...buildStandardsTemplate(report),
     ...buildExecutiveSummary(report),
+    ...buildVisibilityAndRedaction(report),
+    ...buildBuyerDrillThrough(report),
     ...buildAssumptions(report),
     ...buildProvenanceAndTruth(report),
     ...buildOperationalEvidence(report),
@@ -344,7 +437,10 @@ export function exportAuditorMarkdown(report: ReportData): string {
   // Auditor focuses on truth ladder and evidence, less on hardware details
   return [
     ...buildBaseHeader(report),
+    ...buildStandardsTemplate(report),
     ...buildExecutiveSummary(report),
+    ...buildVisibilityAndRedaction(report),
+    ...buildBuyerDrillThrough(report),
     ...buildAssumptions(report),
     ...buildProvenanceAndTruth(report),
     ...buildOperationalEvidence(report),
@@ -361,7 +457,10 @@ export function exportInsurerMarkdown(report: ReportData): string {
   // Insurer focuses on high-level risk and coverage, not provenance
   return [
     ...buildBaseHeader(report),
+    ...buildStandardsTemplate(report),
     ...buildExecutiveSummary(report),
+    ...buildVisibilityAndRedaction(report),
+    ...buildBuyerDrillThrough(report),
     ...buildAssumptions(report),
     ...buildZoneAnalysis(report),
     ...buildIssues(report),
@@ -374,7 +473,10 @@ export function exportInstallerMarkdown(report: ReportData): string {
   // Installer focuses on camera list and locations
   return [
     ...buildBaseHeader(report),
+    ...buildStandardsTemplate(report),
     ...buildExecutiveSummary(report),
+    ...buildVisibilityAndRedaction(report),
+    ...buildBuyerDrillThrough(report),
     ...buildCameraAnalysis(report),
     ...buildZoneAnalysis(report),
     ...buildIssues(report),
@@ -387,16 +489,11 @@ export function exportPrivacyReviewerMarkdown(report: ReportData): string {
   // Privacy reviewer focuses on cameras and privacy masks
   return [
     ...buildBaseHeader(report),
+    ...buildStandardsTemplate(report),
     ...buildExecutiveSummary(report),
-    "## Privacy Masking Summary",
-    ...(report.cameras.length > 0
-      ? ["| Camera | Status | Privacy Masking |",
-         "|--------|--------|-----------------|",
-         ...report.cameras.map((c) =>
-           `| ${c.name} | ${c.status} | ${c.privacyMaskingEnabled ? "Enabled" : "Disabled"} |`,
-         )]
-      : ["No cameras deployed."]),
-    "",
+    ...buildVisibilityAndRedaction(report),
+    ...buildPrivacyMaskingSummary(report),
+    ...buildBuyerDrillThrough(report),
     ...buildIssues(report),
     ...buildRecommendations(report),
     ...buildFooter(report),

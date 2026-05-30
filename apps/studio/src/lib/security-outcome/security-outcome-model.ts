@@ -29,6 +29,54 @@ export type OutcomeRecommendationCard = Recommendation & {
   id: string;
   verificationLabel: VerificationLabel;
   beforeAfterSummary: string | null;
+  fixesFinding: CauseCategory | null;
+  scorecardDelta: {
+    description: string;
+    estimatedChange: "improvement" | "neutral" | "unknown";
+  } | null;
+};
+
+export type CauseCategory =
+  | "occlusion"
+  | "distance"
+  | "fov"
+  | "camera_angle"
+  | "lighting"
+  | "night_mode"
+  | "camera_status"
+  | "material_glare"
+  | "privacy"
+  | "redundancy";
+
+export type CauseSeverity = "critical" | "high" | "medium" | "low";
+
+export type CauseFinding = {
+  category: CauseCategory;
+  label: string;
+  description: string;
+  productExplanation: string;
+  affectedZoneIds: string[];
+  affectedCameraIds: string[];
+  severity: CauseSeverity;
+};
+
+export type SecurityScorecardDimension = {
+  score: number;
+  label: string;
+  detail?: string;
+};
+
+export type SecurityScorecard = {
+  overall: number;
+  overallLabel: string;
+  dimensions: {
+    coverage: SecurityScorecardDimension;
+    zoneCompliance: SecurityScorecardDimension & { passing: number; total: number };
+    redundancy: SecurityScorecardDimension;
+    nightReadiness: SecurityScorecardDimension;
+    pathVisibility: SecurityScorecardDimension;
+    privacy: SecurityScorecardDimension;
+  };
 };
 
 export type FailedZoneDetail = {
@@ -43,6 +91,7 @@ export type FailedZoneDetail = {
   failureReasons: string[];
   productFailureReasons: string[];
   causeSummary: string;
+  causeCategories: CauseCategory[];
   recommendedActionIds: string[];
 };
 
@@ -102,8 +151,10 @@ export type SecurityOutcomeSummary = {
 
 export type SecurityOutcomeModel = {
   summary: SecurityOutcomeSummary;
+  scorecard: SecurityScorecard;
   topIssues: OutcomeIssueCard[];
   allIssues: OutcomeIssueCard[];
+  causeTaxonomy: CauseFinding[];
   failedZones: FailedZoneDetail[];
   cameraFindings: CameraFinding[];
   pathFindings: PathFinding[];
@@ -331,6 +382,10 @@ function deriveFailedZones(
       ? buildCauseSummary(zone, result, scene)
       : "";
 
+    const causeCategories: CauseCategory[] = zone.status !== "pass"
+      ? deriveCauseCategoriesForZone(zone, result.cameraResults)
+      : [];
+
     const recIds = recommendations
       .filter((rec) => {
         if (!rec.affectedNodeId) return false;
@@ -353,9 +408,32 @@ function deriveFailedZones(
       failureReasons: zone.failureReasons,
       productFailureReasons: productReasons,
       causeSummary,
+      causeCategories,
       recommendedActionIds: recIds,
     };
   });
+}
+
+function deriveCauseCategoriesForZone(
+  zone: { label: string; failureReasons: string[]; coveringCameras: string[]; actualQuality: DoriQuality },
+  cameraResults: SimulationResult["cameraResults"],
+): CauseCategory[] {
+  const categories = new Set<CauseCategory>();
+
+  for (const reason of zone.failureReasons) {
+    const cause = classifyCauseFromText(reason);
+    if (cause) categories.add(cause);
+  }
+
+  if (zone.actualQuality === "none" && !categories.has("distance") && !categories.has("fov") && !categories.has("occlusion")) {
+    categories.add("camera_angle");
+  }
+
+  if (zone.coveringCameras.length <= 1) {
+    categories.add("redundancy");
+  }
+
+  return CAUSE_CATEGORY_ORDER.filter((c) => categories.has(c));
 }
 
 function deriveCameraFindings(
@@ -553,6 +631,74 @@ function buildBeforeAfterSummary(
   return null;
 }
 
+const RECOMMENDATION_TYPE_TO_CAUSE: Record<string, CauseCategory> = {
+  move_object: "occlusion",
+  rotate_camera: "camera_angle",
+  add_camera: "fov",
+  add_light: "lighting",
+  change_fov: "fov",
+};
+
+function deriveRecommendationFixingCause(
+  rec: Recommendation,
+  result: SimulationResult,
+): CauseCategory | null {
+  const fromType = RECOMMENDATION_TYPE_TO_CAUSE[rec.type];
+  if (fromType) return fromType;
+
+  const lower = rec.description.toLowerCase();
+  const causePatterns: { pattern: RegExp; cause: CauseCategory }[] = [
+    { pattern: /blocked|obstruction|shelf|cupboard/i, cause: "occlusion" },
+    { pattern: /re-aim|rotate|angle|position|pan|tilt/i, cause: "camera_angle" },
+    { pattern: /light|illuminat|bright/i, cause: "lighting" },
+    { pattern: /night|ir|thermal|low.light/i, cause: "night_mode" },
+    { pattern: /add.*camera|new camera|extra camera/i, cause: "redundancy" },
+    { pattern: /fov|field.of.view|zoom|lens/i, cause: "fov" },
+    { pattern: /privacy|mask/i, cause: "privacy" },
+    { pattern: /glare|reflection|glass/i, cause: "material_glare" },
+    { pattern: /range|distance|far/i, cause: "distance" },
+    { pattern: /restore|fix|repair|replace.*camera/i, cause: "camera_status" },
+  ];
+
+  for (const entry of causePatterns) {
+    if (entry.pattern.test(lower)) return entry.cause;
+  }
+
+  return null;
+}
+
+function deriveRecommendationScorecardDelta(
+  rec: Recommendation,
+): { description: string; estimatedChange: "improvement" | "neutral" | "unknown" } | null {
+  if (!rec.estimatedImpact) return null;
+  const lower = rec.estimatedImpact.toLowerCase();
+
+  if (lower.includes("improve") || lower.includes("change")) {
+    const qualityMatch = lower.match(/(\w+)\s+to\s+(\w+)/);
+    if (qualityMatch) {
+      return {
+        description: `Quality improves: ${qualityMatch[1]} → ${qualityMatch[2]}`,
+        estimatedChange: "improvement",
+      };
+    }
+    if (lower.includes("improve")) {
+      return {
+        description: "Simulated improvement expected",
+        estimatedChange: "improvement",
+      };
+    }
+  }
+
+  if (lower.includes("simulated")) {
+    return {
+      description: rec.estimatedImpact,
+      estimatedChange: "improvement",
+    };
+  }
+
+  return null;
+}
+
 function toIssueCards(
   issues: SecurityIssue[],
   result: SimulationResult | null,
@@ -632,12 +778,319 @@ export function qualityLabel(quality: DoriQuality): string {
   return qualityLabelPlain(quality);
 }
 
+export const CAUSE_CATEGORY_PRODUCT_LABELS: Record<CauseCategory, string> = {
+  occlusion: "Line of sight is blocked",
+  distance: "Camera is too far away",
+  fov: "Area falls outside camera field of view",
+  camera_angle: "Camera angle reduces usable detail",
+  lighting: "Lighting conditions reduce image quality",
+  night_mode: "Night conditions reduce useful detail",
+  camera_status: "Camera is off, blocked, or degraded",
+  material_glare: "Glass, reflections, or glare reduce quality",
+  privacy: "Camera sees a privacy-marked area",
+  redundancy: "No backup camera at required quality",
+};
+
+export const CAUSE_CATEGORY_ORDER: CauseCategory[] = [
+  "occlusion",
+  "distance",
+  "fov",
+  "camera_angle",
+  "lighting",
+  "night_mode",
+  "camera_status",
+  "material_glare",
+  "privacy",
+  "redundancy",
+];
+
+const REASON_CODE_TO_CAUSE: Record<string, CauseCategory> = {
+  CAMERA_OFF: "camera_status",
+  OUT_OF_RANGE: "distance",
+  OUT_OF_FOV: "fov",
+  BLOCKED_BY_SOLID: "occlusion",
+  EDGE_OF_FOV: "camera_angle",
+  DIRTY_CAMERA: "camera_status",
+  MOUNT_TILT_EXCEEDED: "camera_angle",
+  BLIND_SPOT_UNDER_CAMERA: "camera_angle",
+  PARTIAL_MATERIAL: "material_glare",
+  GLARE_RISK: "material_glare",
+  LOW_PPM: "distance",
+  LOW_LIGHT: "lighting",
+  IR_RANGE: "night_mode",
+  THERMAL_MODE: "night_mode",
+  REFLECTIVE_BOUNCE: "material_glare",
+};
+
+const FAILURE_CAUSE_PATTERNS: { pattern: RegExp; category: CauseCategory }[] = [
+  { pattern: /blocked by/i, category: "occlusion" },
+  { pattern: /out of range|too far|range limit/i, category: "distance" },
+  { pattern: /out of fov|field of view/i, category: "fov" },
+  { pattern: /night penalty|night mode|night condition/i, category: "night_mode" },
+  { pattern: /low light|lighting penalty|backlight|overexposed/i, category: "lighting" },
+  { pattern: /ir not active|camera off|blocked camera|dirty|malfunctioning/i, category: "camera_status" },
+  { pattern: /glare|reflection|glass penalty|partial material|reflective/i, category: "material_glare" },
+  { pattern: /privacy|private zone/i, category: "privacy" },
+  { pattern: /no redundancy|single point|no backup/i, category: "redundancy" },
+];
+
+function classifyCauseFromText(text: string): CauseCategory | null {
+  for (const entry of FAILURE_CAUSE_PATTERNS) {
+    if (entry.pattern.test(text)) return entry.category;
+  }
+  return null;
+}
+
+function deriveCauseTaxonomy(
+  result: SimulationResult,
+  scene: SecurityScene,
+  issues: OutcomeIssueCard[],
+  failedZones: FailedZoneDetail[],
+): CauseFinding[] {
+  const findingsByCategory = new Map<CauseCategory, CauseFinding>();
+
+  const addFinding = (
+    category: CauseCategory,
+    description: string,
+    severity: CauseSeverity,
+    zoneIds: string[],
+    cameraIds: string[],
+  ) => {
+    const existing = findingsByCategory.get(category);
+    if (existing) {
+      for (const zid of zoneIds) {
+        if (!existing.affectedZoneIds.includes(zid)) existing.affectedZoneIds.push(zid);
+      }
+      for (const cid of cameraIds) {
+        if (!existing.affectedCameraIds.includes(cid)) existing.affectedCameraIds.push(cid);
+      }
+      if (CAUSE_CATEGORY_ORDER.indexOf(category) < CAUSE_CATEGORY_ORDER.indexOf(CAUSE_CATEGORY_ORDER.find((c) => findingsByCategory.get(c)?.severity === severity) ?? category)) {
+        existing.severity = severity;
+      }
+      return;
+    }
+    findingsByCategory.set(category, {
+      category,
+      label: CAUSE_CATEGORY_PRODUCT_LABELS[category],
+      description,
+      productExplanation: "",
+      affectedZoneIds: zoneIds,
+      affectedCameraIds: cameraIds,
+      severity,
+    });
+  };
+
+  for (const zone of failedZones) {
+    if (zone.status === "pass") continue;
+
+    const categories = new Set<CauseCategory>();
+
+    for (const reason of zone.failureReasons) {
+      const cause = classifyCauseFromText(reason);
+      if (cause) {
+        categories.add(cause);
+        const severity: CauseSeverity = zone.priority === "critical" ? "critical" : zone.actualQuality === "none" ? "high" : "medium";
+        addFinding(cause, reason, severity, [zone.zoneId], zone.coveringCameras);
+      }
+    }
+
+    if (zone.actualQuality === "none" && !categories.has("distance") && !categories.has("fov") && !categories.has("occlusion")) {
+      addFinding("camera_angle", `${zone.label} has no camera coverage`, "high", [zone.zoneId], zone.coveringCameras);
+    }
+
+    if (zone.coveringCameras.length <= 1) {
+      addFinding("redundancy", `${zone.label} has no backup at required quality`, "medium", [zone.zoneId], zone.coveringCameras);
+    }
+  }
+
+  for (const issue of issues) {
+    if (issue.category === "privacy") {
+      addFinding("privacy", issue.description, "medium", issue.affectedZones, issue.affectedCameras);
+    }
+    if (issue.category === "night") {
+      addFinding("night_mode", issue.description, issue.severity === "critical" ? "critical" : "high", issue.affectedZones, issue.affectedCameras);
+    }
+  }
+
+  for (const camera of result.cameraResults) {
+    const coverageCells = result.coverageCells.filter((cell) => cell.coveringCameras.includes(camera.cameraId));
+    for (const cell of coverageCells) {
+      const evalData = cell.cameraEvaluations?.[camera.cameraId];
+      if (!evalData) continue;
+      for (const code of evalData.reasonCodes ?? []) {
+        const baseCode = code.split(":")[0];
+        const cause = REASON_CODE_TO_CAUSE[baseCode];
+        if (cause && !findingsByCategory.has(cause)) {
+          const cameraNode = scene.cameras.find((c) => c.id === camera.cameraId);
+          addFinding(cause, `${baseCode} for ${cameraNode?.name ?? camera.cameraId}`, "low", [], [camera.cameraId]);
+        }
+      }
+    }
+  }
+
+  for (const privacyFinding of result.issues.filter((i) => i.category === "privacy")) {
+    addFinding("privacy", privacyFinding.description, "medium", privacyFinding.affectedZones, privacyFinding.affectedCameras);
+  }
+
+  const sorted = CAUSE_CATEGORY_ORDER
+    .map((cat) => findingsByCategory.get(cat))
+    .filter((f): f is CauseFinding => !!f);
+
+  const severityRank: Record<CauseSeverity, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+  for (const finding of sorted) {
+    finding.productExplanation = buildCauseProductExplanation(finding);
+  }
+
+  return sorted.sort((a, b) => severityRank[a.severity] - severityRank[b.severity]);
+}
+
+function buildCauseProductExplanation(finding: CauseFinding): string {
+  const zoneCount = finding.affectedZoneIds.length;
+  const cameraCount = finding.affectedCameraIds.length;
+  const zoneSuffix = zoneCount === 1 ? "1 zone" : `${zoneCount} zones`;
+  const cameraSuffix = cameraCount === 1 ? "1 camera" : `${cameraCount} cameras`;
+
+  switch (finding.category) {
+    case "occlusion":
+      return `An obstruction blocks the camera's line of sight, affecting ${zoneSuffix} and ${cameraSuffix}.`;
+    case "distance":
+      return `Cameras are too far from ${zoneSuffix} to provide the required level of detail.`;
+    case "fov":
+      return `${cameraSuffix} cannot physically see ${zoneSuffix} — they fall outside the camera's field of view.`;
+    case "camera_angle":
+      return `Camera angle or position limits useful detail for ${zoneSuffix}.`;
+    case "lighting":
+      return `Poor lighting reduces image quality in ${zoneSuffix} — adding lights or switching camera night mode may help.`;
+    case "night_mode":
+      return `Night conditions reduce useful camera detail. IR illuminators or low-light cameras can improve coverage in ${zoneSuffix}.`;
+    case "camera_status":
+      return `${cameraSuffix} is off, blocked, or degraded. Restoring or replacing the camera affects ${zoneSuffix}.`;
+    case "material_glare":
+      return `Glass, reflections, or glare between ${cameraSuffix} and ${zoneSuffix} reduce effective image quality.`;
+    case "privacy":
+      return `${cameraSuffix} can see into a privacy-marked area. Configure privacy masking to restrict the field of view in applicable zones.`;
+    case "redundancy":
+      return `${zoneSuffix} relies on ${cameraSuffix}. If that camera goes offline, the zone loses required-quality coverage. Add overlapping coverage.`;
+  }
+}
+
+function deriveScorecard(
+  result: SimulationResult,
+  scene: SecurityScene,
+  summary: SecurityOutcomeSummary,
+  privacyFindings: PrivacyFinding[],
+  pathFindings: PathFinding[],
+): SecurityScorecard {
+  const coverageScore = Math.round(Math.min(100, Math.max(0, result.totalCoveragePct)));
+  const zonesTotal = result.criticalZoneResults.length;
+  const zonesPassing = result.criticalZoneResults.filter((z) => z.status === "pass").length;
+  const zoneComplianceScore = zonesTotal > 0 ? Math.round((zonesPassing / zonesTotal) * 100) : 100;
+
+  const redundancyScore = (() => {
+    if (summary.redundancyStatus === "robust") return 100;
+    if (summary.redundancyStatus === "single_point_failure") return 50;
+    if (summary.redundancyStatus === "fails") return 0;
+    return 50;
+  })();
+
+  const nightReadinessScore = (() => {
+    if (summary.nightReadiness === "good") return 100;
+    if (summary.nightReadiness === "weak") return 40;
+    if (summary.nightReadiness === "fails") return 0;
+    return 75;
+  })();
+
+  const pathVisibilityScore = (() => {
+    if (pathFindings.length === 0) return 50;
+    const avgVisible = pathFindings.reduce((sum, p) => sum + p.visiblePct, 0) / pathFindings.length;
+    if (avgVisible >= 80) return 100;
+    if (avgVisible >= 50) return 60;
+    if (avgVisible > 0) return 30;
+    return 0;
+  })();
+
+  const privacyScore = (() => {
+    if (privacyFindings.length === 0) return 100;
+    if (privacyFindings.length <= 2) return 50;
+    return 20;
+  })();
+
+  const allScores = [
+    coverageScore,
+    zoneComplianceScore,
+    redundancyScore,
+    nightReadinessScore,
+    pathVisibilityScore,
+    privacyScore,
+  ];
+  const overall = Math.round(allScores.reduce((sum, s) => sum + s, 0) / allScores.length);
+
+  const overallLabel = (() => {
+    if (overall >= 85) return "Good";
+    if (overall >= 60) return "Needs improvement";
+    if (overall >= 35) return "At risk";
+    return "Poor";
+  })();
+
+  return {
+    overall,
+    overallLabel,
+    dimensions: {
+      coverage: {
+        score: coverageScore,
+        label: coverageScore >= 80 ? "Adequate" : coverageScore >= 50 ? "Partial" : "Insufficient",
+        detail: `${coverageScore}% of walkable area covered`,
+      },
+      zoneCompliance: {
+        score: zoneComplianceScore,
+        label: zonesPassing === zonesTotal ? "All passing" : `${zonesPassing}/${zonesTotal} passing`,
+        passing: zonesPassing,
+        total: zonesTotal,
+        detail: `${zonesPassing}/${zonesTotal} critical zones meet their quality requirements`,
+      },
+      redundancy: {
+        score: redundancyScore,
+        label: summary.redundancyStatus === "robust" ? "Adequate overlap" : summary.redundancyStatus === "single_point_failure" ? "Single points of failure" : "Redundancy failures",
+        detail: summary.redundancyStatus.replace(/_/g, " "),
+      },
+      nightReadiness: {
+        score: nightReadinessScore,
+        label: summary.nightReadiness === "good" ? "Night-ready" : summary.nightReadiness === "weak" ? "Night-weak" : summary.nightReadiness === "fails" ? "Night-fails" : "Unknown",
+        detail: `Assumption: ${scene.assumptions.timeOfDay}`,
+      },
+      pathVisibility: {
+        score: pathVisibilityScore,
+        label: pathFindings.length === 0 ? "No paths" : pathVisibilityScore >= 80 ? "Good path visibility" : pathVisibilityScore >= 50 ? "Partial path visibility" : "Poor path visibility",
+        detail: `${pathFindings.length} path(s) modeled`,
+      },
+      privacy: {
+        score: privacyScore,
+        label: privacyFindings.length === 0 ? "No privacy issues" : `${privacyFindings.length} privacy finding(s)`,
+        detail: `Privacy zones: ${scene.privacyZones.length}`,
+      },
+    },
+  };
+}
+
 export function buildSecurityOutcomeModel(
   scene: SecurityScene,
   result: SimulationResult | null,
   activePath: ScenarioPath | null,
 ): SecurityOutcomeModel {
   if (!result) {
+    const emptyScorecard: SecurityScorecard = {
+      overall: 0,
+      overallLabel: "No data",
+      dimensions: {
+        coverage: { score: 0, label: "No data", detail: "Run simulation" },
+        zoneCompliance: { score: 0, label: "No data", passing: 0, total: scene.criticalZones.length, detail: "Run simulation" },
+        redundancy: { score: 0, label: "No data", detail: "Run simulation" },
+        nightReadiness: { score: 0, label: "No data", detail: "Run simulation" },
+        pathVisibility: { score: 0, label: "No data", detail: "Run simulation" },
+        privacy: { score: 0, label: "No data", detail: "Run simulation" },
+      },
+    };
+
     return {
       summary: {
         status: "not_run",
@@ -658,8 +1111,10 @@ export function buildSecurityOutcomeModel(
         nightReadiness: "unknown",
         redundancyStatus: "unknown",
       },
+      scorecard: emptyScorecard,
       topIssues: [],
       allIssues: [],
+      causeTaxonomy: [],
       failedZones: [],
       cameraFindings: [],
       pathFindings: [],
@@ -689,6 +1144,8 @@ export function buildSecurityOutcomeModel(
     id: `rec_${index}_${rec.type}`,
     verificationLabel: deriveVerificationLabel(rec),
     beforeAfterSummary: buildBeforeAfterSummary(rec, result),
+    fixesFinding: deriveRecommendationFixingCause(rec, result),
+    scorecardDelta: deriveRecommendationScorecardDelta(rec),
   }));
 
   const pathResult = activePath ? result.pathResults.find((entry) => entry.pathId === activePath.id) ?? null : null;
@@ -699,6 +1156,33 @@ export function buildSecurityOutcomeModel(
     : avgQuality < 3 ? "Observation"
     : avgQuality < 5 ? "Recognition"
     : "Identification";
+
+  const failedZoneResults = deriveFailedZones(result, scene, recommendations);
+  const pathFindings = derivePathFindings(result, scene);
+  const privacyFindings = derivePrivacyFindings(result, scene);
+  const cameraFindings = deriveCameraFindings(result, scene);
+
+  const causeTaxonomy = deriveCauseTaxonomy(result, scene, issueCards, failedZoneResults);
+
+  const scorecard = deriveScorecard(result, scene, {
+    status,
+    headline: buildHeadline(status, worstIssue, result, scene),
+    summary: buildSummary(status, result, scene),
+    primaryRisk: buildPrimaryRisk(result, worstIssue),
+    recommendedNextAction: buildRecommendedNextAction(result, recommendations, scene),
+    coveragePct: result.totalCoveragePct,
+    blindspotPct: result.blindspotPct,
+    criticalZonesPassing: passCount,
+    criticalZonesTotal: totalZones,
+    recognitionAreaPct: result.recognitionAreaPct,
+    identificationAreaPct: result.identificationAreaPct,
+    averageQualityLabel: avgQualityLabel,
+    worstAreaQuality: qualityLabelPlain(result.worstAreaQuality),
+    worstIssue,
+    issueCount: issueCards.length,
+    nightReadiness: deriveNightReadiness(scene, result),
+    redundancyStatus: deriveRedundancyStatus(result),
+  }, privacyFindings, pathFindings);
 
   return {
     summary: {
@@ -720,12 +1204,14 @@ export function buildSecurityOutcomeModel(
       nightReadiness: deriveNightReadiness(scene, result),
       redundancyStatus: deriveRedundancyStatus(result),
     },
+    scorecard,
     topIssues: issueCards.slice(0, 5),
     allIssues: issueCards,
-    failedZones: deriveFailedZones(result, scene, recommendations),
-    cameraFindings: deriveCameraFindings(result, scene),
-    pathFindings: derivePathFindings(result, scene),
-    privacyFindings: derivePrivacyFindings(result, scene),
+    causeTaxonomy,
+    failedZones: failedZoneResults,
+    cameraFindings,
+    pathFindings,
+    privacyFindings,
     recommendations,
     pathOutcome: pathResult
       ? {

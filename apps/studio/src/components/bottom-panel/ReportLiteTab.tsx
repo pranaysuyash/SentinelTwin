@@ -19,17 +19,43 @@ import {
   exportCompareAsMarkdown,
   exportAsMarkdown,
   getReportAudienceProfile,
-  getReportExportPresets,
+  getReportStandardTemplateProfile,
+  getReportStandardTemplates,
   getReportVisibilityProfile,
   type ReportAudience,
+  type ReportStandardTemplateId,
   type ReportVisibility,
 } from "@/report";
+import {
+  buildReportCatalogPresets,
+  createReportCatalogPreset,
+  findReportCatalogPresetById,
+  findReportCatalogPresetBySelection,
+  loadReportCatalogState,
+  persistReportCatalogState,
+  removeReportCatalogPreset,
+  upsertReportCatalogPreset,
+  type ReportCatalogState,
+} from "@/lib/report-catalog";
 import { summarizeSceneTruthLadder } from "@/lib/truth-ladder";
 import { QUALITY_RANK } from "@/lib/quality-display";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { useStudioStore } from "@/store/studio-store";
 import { buildReportSummaryLines } from "@/lib/report-summary";
+import { buildOutcomeDrivenReportMarkdown } from "@/lib/report-outcome-markdown";
 import { truthLabelDetail } from "@/lib/truth-labels";
+
+type InfrastructureEstimate = {
+  cameraCount: number;
+  sensorCount: number;
+  retentionDays: number;
+  storageTb: number;
+  bandwidthMbps: number;
+  poeBudgetW: number;
+  poeEstimatedW: number;
+  cableEstimateM: number;
+  nvrChannels: number;
+};
 
 export function ReportLiteTab() {
   const result = useStudioStore((s) => s.simulationResult);
@@ -44,8 +70,12 @@ export function ReportLiteTab() {
   const [aiReport, setAiReport] = useState<SecurityReport | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [reportMode, setReportMode] = useState<"single" | "compare">(compareReportSelection ? "compare" : "single");
+  const defaultTemplateId: ReportStandardTemplateId = scene.assumptions.doriStandard === "oodpcvs_2025" ? "oodpcvs-audit" : "dori-audit";
+  const [reportCatalogState, setReportCatalogState] = useState<ReportCatalogState>(() => loadReportCatalogState());
   const [reportAudience, setReportAudience] = useState<ReportAudience>("operator");
   const [reportVisibility, setReportVisibility] = useState<ReportVisibility>("internal");
+  const [reportTemplateId, setReportTemplateId] = useState<ReportStandardTemplateId>(defaultTemplateId);
+  const [presetNameDraft, setPresetNameDraft] = useState("Operator Internal");
   const [snapshotAId, setSnapshotAId] = useState<string | null>(null);
   const [snapshotBId, setSnapshotBId] = useState<string | null>(null);
   const activePath = scene.paths.find((path) => path.id === activePathId) ?? null;
@@ -53,7 +83,15 @@ export function ReportLiteTab() {
   const truthLadder = useMemo(() => summarizeSceneTruthLadder(scene), [scene]);
   const audienceProfile = useMemo(() => getReportAudienceProfile(reportAudience), [reportAudience]);
   const visibilityProfile = useMemo(() => getReportVisibilityProfile(reportVisibility), [reportVisibility]);
-  const reportCatalog = useMemo(() => getReportExportPresets(), []);
+  const reportCatalog = useMemo(
+    () => buildReportCatalogPresets(reportCatalogState.customPresets),
+    [reportCatalogState.customPresets],
+  );
+  const selectedCatalogPreset = useMemo(
+    () => findReportCatalogPresetById(reportCatalog, reportCatalogState.selectedPresetId),
+    [reportCatalog, reportCatalogState.selectedPresetId],
+  );
+  const availableTemplates = useMemo(() => getReportStandardTemplates(), []);
   const singleReport = useMemo(
     () =>
       (result
@@ -61,9 +99,10 @@ export function ReportLiteTab() {
             operationalEvidenceEvents,
             audience: reportAudience,
             visibility: reportVisibility,
+            templateId: reportTemplateId,
           })
         : null),
-    [operationalEvidenceEvents, reportAudience, reportVisibility, result, scene],
+    [operationalEvidenceEvents, reportAudience, reportTemplateId, reportVisibility, result, scene],
   );
   const singleExportReport = useMemo(
     () => (singleReport ? applyReportVisibility(singleReport, reportVisibility) : null),
@@ -74,10 +113,119 @@ export function ReportLiteTab() {
     [operationalEvidenceEvents, scene],
   );
   const reportSummary = buildReportSummaryLines(outcome, result, scene, temporalTwin);
+  const infrastructureEstimate = useMemo<InfrastructureEstimate>(() => {
+    const cameraCount = scene.cameras.length;
+    const sensorCount = scene.sensors.length;
+    const retentionDays = 30;
+    const storagePerCameraTb = 0.45;
+    const storageTb = Number((cameraCount * storagePerCameraTb).toFixed(2));
+    const avgBitrateMbps = 3.5;
+    const bandwidthMbps = Number((cameraCount * avgBitrateMbps).toFixed(1));
+    const poeEstimatedW = Number((cameraCount * 8.5 + sensorCount * 2.2).toFixed(1));
+    const poeBudgetW = Math.max(120, Math.ceil(poeEstimatedW / 60) * 60);
+    const cableEstimateM = Math.max(40, Math.round((cameraCount * 18 + sensorCount * 8) / 5) * 5);
+    const nvrChannels = Math.max(4, Math.ceil(cameraCount / 4) * 4);
+    return {
+      cameraCount,
+      sensorCount,
+      retentionDays,
+      storageTb,
+      bandwidthMbps,
+      poeBudgetW,
+      poeEstimatedW,
+      cableEstimateM,
+      nvrChannels,
+    };
+  }, [scene.cameras.length, scene.sensors.length]);
+  const zoneComplianceRows = useMemo(() => {
+    if (!result) return [];
+    const byId = new Map(result.criticalZoneResults.map((entry) => [entry.zoneId, entry] as const));
+    return scene.criticalZones.map((zone) => {
+      const row = byId.get(zone.id) ?? null;
+      const status = row?.status ?? "unknown";
+      return {
+        id: zone.id,
+        label: zone.label,
+        required: zone.requiredQuality,
+        actual: row?.actualQuality ?? "none",
+        status,
+        pass: status === "pass",
+      };
+    });
+  }, [result, scene.criticalZones]);
+  const installerHandoffMarkdown = useMemo(() => {
+    const lines = [
+      "# SentinelTwin Installer Handoff",
+      `Scene: ${scene.name}`,
+      `Cameras: ${infrastructureEstimate.cameraCount}`,
+      `Sensors: ${infrastructureEstimate.sensorCount}`,
+      `Cable estimate: ${infrastructureEstimate.cableEstimateM}m`,
+      `NVR channels: ${infrastructureEstimate.nvrChannels}`,
+      "",
+      "## Zone Compliance Checklist",
+      ...zoneComplianceRows.map((row) => `- [${row.pass ? "x" : " "}] ${row.label}: required ${row.required}, actual ${row.actual} (${row.status})`),
+      "",
+      "## Pre-Install Notes",
+      "- Validate mounting points, cable paths, and power budget on site.",
+      "- Confirm night lighting assumptions and obstruction reality before final alignment.",
+      "- Re-run simulation after commissioning captures and update report evidence bundle.",
+    ];
+    return lines.join("\n");
+  }, [infrastructureEstimate, scene.name, zoneComplianceRows]);
+  const commissioningChecklistMarkdown = useMemo(() => {
+    const lines = [
+      "# SentinelTwin Commissioning Checklist",
+      `Scene: ${scene.name}`,
+      "",
+      "1. Camera stream online and naming verified against plan.",
+      "2. Field of view, yaw/pitch, and mount heights match simulated assumptions.",
+      "3. Critical zones pass required quality thresholds.",
+      "4. Path replay visibility validated for active incident routes.",
+      "5. Sensor events linked to nearest cameras and evidence timeline.",
+      "6. Before/after report and evidence bundle exported for handoff.",
+    ];
+    return lines.join("\n");
+  }, [scene.name]);
 
-  // Build markdown from either AI report or simulation data
+  useEffect(() => {
+    persistReportCatalogState(reportCatalogState);
+  }, [reportCatalogState]);
+
+  useEffect(() => {
+    if (!selectedCatalogPreset) return;
+    setReportAudience(selectedCatalogPreset.audience);
+    setReportVisibility(selectedCatalogPreset.visibility);
+    setReportTemplateId(selectedCatalogPreset.templateId);
+    setPresetNameDraft(selectedCatalogPreset.title);
+  }, [selectedCatalogPreset]);
+
+  useEffect(() => {
+    if (reportCatalogState.selectedPresetId && !selectedCatalogPreset) {
+      setReportCatalogState((current) => ({
+        ...current,
+        selectedPresetId: null,
+      }));
+    }
+  }, [reportCatalogState.selectedPresetId, selectedCatalogPreset]);
+
+  const syncCatalogSelection = (nextAudience: ReportAudience, nextVisibility: ReportVisibility, nextTemplateId: ReportStandardTemplateId) => {
+    const matched = findReportCatalogPresetBySelection(reportCatalog, {
+      audience: nextAudience,
+      visibility: nextVisibility,
+      templateId: nextTemplateId,
+    });
+    setReportCatalogState((current) => {
+      if (current.selectedPresetId === (matched?.id ?? null)) return current;
+      return {
+        ...current,
+        selectedPresetId: matched?.id ?? null,
+      };
+    });
+  };
+
+  // Build markdown from outcome model (canonical source) or AI report
   const singleSceneMarkdown = result
-    ? (aiReport ? buildAiReportMarkdown(aiReport) : defaultMarkdown(result, scene, temporalProfile, operationalEvidenceEvents, audienceProfile))
+    ? (aiReport ? buildAiReportMarkdown(aiReport) : buildOutcomeDrivenReportMarkdown(outcome, result, scene, activePathId))
     : "";
 
   const handleGenerateAI = async () => {
@@ -106,10 +254,10 @@ export function ReportLiteTab() {
         snapshotA.simulation,
         { ...snapshotB.scene, snapshots: [], scenarios: [] } as never,
         snapshotB.simulation,
-        { audience: reportAudience, visibility: reportVisibility },
+        { audience: reportAudience, visibility: reportVisibility, templateId: reportTemplateId },
       );
     },
-    [hasCompareSimulation, reportAudience, reportVisibility, snapshotA, snapshotB],
+    [hasCompareSimulation, reportAudience, reportTemplateId, reportVisibility, snapshotA, snapshotB],
   );
   const compareExportReport = useMemo(
     () => (compareReport ? applyReportVisibility(compareReport, reportVisibility) : null),
@@ -288,6 +436,32 @@ export function ReportLiteTab() {
     }
   };
 
+  const handleApplyCatalogPreset = (presetId: string) => {
+    const preset = findReportCatalogPresetById(reportCatalog, presetId);
+    if (!preset) return;
+    setReportAudience(preset.audience);
+    setReportVisibility(preset.visibility);
+    setReportTemplateId(preset.templateId);
+    setPresetNameDraft(preset.title);
+    setReportCatalogState((current) => ({
+      ...current,
+      selectedPresetId: preset.id,
+    }));
+  };
+
+  const handleSaveCatalogPreset = () => {
+    const presetTitle = presetNameDraft.trim() || `${getReportAudienceProfile(reportAudience).label} ${getReportVisibilityProfile(reportVisibility).label}`;
+    const preset = createReportCatalogPreset({
+      title: presetTitle,
+      audience: reportAudience,
+      visibility: reportVisibility,
+      templateId: reportTemplateId,
+      summary: `${getReportStandardTemplateProfile(reportTemplateId).title} · ${getReportAudienceProfile(reportAudience).label} · ${getReportVisibilityProfile(reportVisibility).label}`,
+    });
+    setReportCatalogState((current) => upsertReportCatalogPreset(current, preset));
+    setPresetNameDraft(preset.title);
+  };
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Toolbar */}
@@ -310,38 +484,122 @@ export function ReportLiteTab() {
               Before/After
             </button>
         </div>
-          <div className="flex flex-wrap gap-1.5 rounded border border-[#1e2130] bg-[#0f141f] p-1">
-            {reportCatalog.map((preset) => {
-              const selected = preset.audience === reportAudience && preset.visibility === reportVisibility;
-              const visibility = getReportVisibilityProfile(preset.visibility);
-              return (
+          <div className="min-w-[22rem] rounded border border-[#1e2130] bg-[#0f141f] p-2">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#c7d0e4]">Catalog</div>
+                <div className="text-[8px] text-[#70809c]">Saved quick-apply presets and the active standards template.</div>
+              </div>
+              <div className="flex items-center gap-1">
+                <input
+                  value={presetNameDraft}
+                  onChange={(event) => setPresetNameDraft(event.target.value)}
+                  aria-label="Preset name"
+                  className="w-32 rounded border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] text-[#d2d9e8]"
+                />
                 <button
-                  key={preset.id}
                   type="button"
-                  onClick={() => {
-                    setReportAudience(preset.audience);
-                    setReportVisibility(preset.visibility);
-                  }}
-                  className={`min-w-[10rem] rounded px-2 py-1 text-left text-[9px] transition-colors ${
-                    selected
-                      ? "border border-sky-500/40 bg-sky-500/10 text-sky-100"
-                      : "border border-[#24283a] bg-[#111521] text-[#9aa6bf] hover:border-[#2f3650] hover:text-white"
-                  }`}
+                  onClick={handleSaveCatalogPreset}
+                  className="rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-[9px] text-emerald-200 transition-colors hover:bg-emerald-500/15"
                 >
-                  <div className="font-semibold uppercase tracking-[0.14em]">{preset.title}</div>
-                  <div className="mt-0.5 text-[8px] text-[#70809c]">
-                    {getReportAudienceProfile(preset.audience).label} · {visibility.label}
-                  </div>
-                  <div className="mt-1 text-[8px] text-[#70809c]">{preset.summary}</div>
+                  Save preset
                 </button>
-              );
-            })}
+              </div>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {reportCatalog.filter((preset) => !preset.isCustom).map((preset) => {
+                const selected = preset.id === selectedCatalogPreset?.id;
+                const visibility = getReportVisibilityProfile(preset.visibility);
+                const template = getReportStandardTemplateProfile(preset.templateId);
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => handleApplyCatalogPreset(preset.id)}
+                    className={`min-w-[10rem] rounded px-2 py-1 text-left text-[9px] transition-colors ${
+                      selected
+                        ? "border border-sky-500/40 bg-sky-500/10 text-sky-100"
+                        : "border border-[#24283a] bg-[#111521] text-[#9aa6bf] hover:border-[#2f3650] hover:text-white"
+                    }`}
+                  >
+                    <div className="font-semibold uppercase tracking-[0.14em]">{preset.title}</div>
+                    <div className="mt-0.5 text-[8px] text-[#70809c]">
+                      {getReportAudienceProfile(preset.audience).label} · {visibility.label} · {template.title}
+                    </div>
+                    <div className="mt-1 text-[8px] text-[#70809c]">{preset.summary}</div>
+                  </button>
+                );
+              })}
+            </div>
+            {reportCatalog.some((preset) => preset.isCustom) ? (
+              <div className="mt-2 border-t border-[#1e2130] pt-2">
+                <div className="mb-1 text-[8px] uppercase tracking-[0.14em] text-[#70809c]">Saved presets</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {reportCatalog.filter((preset) => preset.isCustom).map((preset) => {
+                    const selected = preset.id === selectedCatalogPreset?.id;
+                    const visibility = getReportVisibilityProfile(preset.visibility);
+                    const template = getReportStandardTemplateProfile(preset.templateId);
+                    return (
+                      <div
+                        key={preset.id}
+                        className={`min-w-[10rem] rounded border px-2 py-1 text-left text-[9px] ${
+                          selected
+                            ? "border-sky-500/40 bg-sky-500/10 text-sky-100"
+                            : "border-[#24283a] bg-[#111521] text-[#9aa6bf]"
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleApplyCatalogPreset(preset.id)}
+                          className="w-full text-left"
+                        >
+                          <div className="font-semibold uppercase tracking-[0.14em]">{preset.title}</div>
+                          <div className="mt-0.5 text-[8px] text-[#70809c]">
+                            {getReportAudienceProfile(preset.audience).label} · {visibility.label} · {template.title}
+                          </div>
+                          <div className="mt-1 text-[8px] text-[#70809c]">{preset.summary}</div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setReportCatalogState((current) => removeReportCatalogPreset(current, preset.id))}
+                          className="mt-1 text-[8px] uppercase tracking-[0.12em] text-[#fca5a5] transition-colors hover:text-white"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
           </div>
+          <label className="flex items-center gap-1 rounded border border-[#1e2130] bg-[#0f141f] px-2 py-1 text-[9px] text-[#8090a8]">
+            Template
+            <select
+              value={reportTemplateId}
+              onChange={(event) => {
+                const nextTemplateId = event.target.value as ReportStandardTemplateId;
+                setReportTemplateId(nextTemplateId);
+                syncCatalogSelection(reportAudience, reportVisibility, nextTemplateId);
+              }}
+              className="rounded border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#d2d9e8]"
+            >
+              {availableTemplates.map((template) => (
+                <option key={template.id} value={template.id}>
+                  {template.title}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="flex items-center gap-1 rounded border border-[#1e2130] bg-[#0f141f] px-2 py-1 text-[9px] text-[#8090a8]">
             Audience
             <select
               value={reportAudience}
-              onChange={(event) => setReportAudience(event.target.value as ReportAudience)}
+              onChange={(event) => {
+                const nextAudience = event.target.value as ReportAudience;
+                setReportAudience(nextAudience);
+                syncCatalogSelection(nextAudience, reportVisibility, reportTemplateId);
+              }}
               className="rounded border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#d2d9e8]"
             >
               <option value="operator">Operator</option>
@@ -355,7 +613,11 @@ export function ReportLiteTab() {
             Visibility
             <select
               value={reportVisibility}
-              onChange={(event) => setReportVisibility(event.target.value as ReportVisibility)}
+              onChange={(event) => {
+                const nextVisibility = event.target.value as ReportVisibility;
+                setReportVisibility(nextVisibility);
+                syncCatalogSelection(reportAudience, nextVisibility, reportTemplateId);
+              }}
               className="rounded border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#d2d9e8]"
             >
               <option value="internal">Internal</option>
@@ -428,6 +690,18 @@ export function ReportLiteTab() {
             >
               <Copy className="h-3 w-3" /> Copy
             </button>
+            <button
+              onClick={() => navigator.clipboard.writeText(installerHandoffMarkdown)}
+              className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
+            >
+              <Copy className="h-3 w-3" /> Copy Installer Handoff
+            </button>
+            <button
+              onClick={() => navigator.clipboard.writeText(commissioningChecklistMarkdown)}
+              className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
+            >
+              <Copy className="h-3 w-3" /> Copy Commissioning
+            </button>
           <button
             onClick={() => {
               void shareCompareLink();
@@ -498,6 +772,7 @@ export function ReportLiteTab() {
                 <div className="text-[9px] text-[#6f7f9d]">Four bullet executive summary from the latest run.</div>
                 <div className="text-[9px] text-[#6f7f9d]">Audience framing: {audienceProfile.label} · {audienceProfile.framing}</div>
                 <div className="text-[9px] text-[#6f7f9d]">Visibility framing: {visibilityProfile.label} · {visibilityProfile.framing}</div>
+                <div className="text-[9px] text-[#6f7f9d]">Standards template: {getReportStandardTemplateProfile(reportTemplateId).title} · {getReportStandardTemplateProfile(reportTemplateId).summary}</div>
               </div>
               <button
                 type="button"
@@ -553,6 +828,29 @@ export function ReportLiteTab() {
               </div>
             ))}
           </div>
+        </div>
+        <div className="mb-3 rounded-xl border border-[#1e2130] bg-[#0b1018] p-3">
+          <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#7f8da8]">Infrastructure Estimate</div>
+          <div className="grid gap-1.5 text-[10px] text-[#b9c7df] md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-lg border border-[#1e2130] bg-[#101521] px-2.5 py-2"><span className="font-semibold text-sky-300">Bandwidth:</span> {infrastructureEstimate.bandwidthMbps} Mbps</div>
+            <div className="rounded-lg border border-[#1e2130] bg-[#101521] px-2.5 py-2"><span className="font-semibold text-sky-300">Storage:</span> {infrastructureEstimate.storageTb} TB / {infrastructureEstimate.retentionDays}d</div>
+            <div className="rounded-lg border border-[#1e2130] bg-[#101521] px-2.5 py-2"><span className="font-semibold text-sky-300">PoE:</span> {infrastructureEstimate.poeEstimatedW}W est / {infrastructureEstimate.poeBudgetW}W budget</div>
+            <div className="rounded-lg border border-[#1e2130] bg-[#101521] px-2.5 py-2"><span className="font-semibold text-sky-300">Cable + NVR:</span> {infrastructureEstimate.cableEstimateM}m · {infrastructureEstimate.nvrChannels}ch</div>
+          </div>
+        </div>
+        <div className="mb-3 rounded-xl border border-[#1e2130] bg-[#0b1018] p-3">
+          <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#7f8da8]">Zone Compliance</div>
+          {zoneComplianceRows.length === 0 ? (
+            <div className="text-[10px] text-[#8090a8]">No critical zones available for compliance summary.</div>
+          ) : (
+            <div className="grid gap-1 text-[10px] text-[#b9c7df]">
+              {zoneComplianceRows.map((row) => (
+                <div key={row.id} className="rounded-lg border border-[#1e2130] bg-[#101521] px-2.5 py-2">
+                  <span className={`font-semibold ${row.pass ? "text-emerald-300" : "text-rose-300"}`}>{row.label}:</span> required {row.required}, actual {row.actual} ({row.status})
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         {activePathId ? (
           <div className="mb-3 rounded-lg border border-[#1e2130] bg-[#0b1018] px-3 py-2 text-[10px] text-[#8090a8]">
@@ -664,221 +962,7 @@ function buildAiReportMarkdown(report: SecurityReport): string {
   return lines.join("\n");
 }
 
-function defaultMarkdown(
-  result: NonNullable<ReturnType<typeof useStudioStore.getState>["simulationResult"]>,
-  scene: ReturnType<typeof useStudioStore.getState>["scene"],
-  temporalProfile: ReturnType<typeof useStudioStore.getState>["temporalProfile"],
-  operationalEvidenceEvents: ReturnType<typeof useStudioStore.getState>["operationalEvidenceEvents"],
-  audienceProfile: ReturnType<typeof getReportAudienceProfile>,
-): string {
-  const obstructionMaterialById = new Map<string, { material: string; transmission?: number }>();
-  for (const wall of scene.walls) {
-    obstructionMaterialById.set(wall.id, { material: wall.material, transmission: wall.visionTransmission });
-  }
-  for (const obstruction of scene.obstructions) {
-    obstructionMaterialById.set(obstruction.id, { material: obstruction.material, transmission: obstruction.visionTransmission });
-  }
-  for (const windowNode of scene.windows) {
-    obstructionMaterialById.set(windowNode.id, { material: windowNode.state, transmission: windowNode.visionTransmission });
-  }
-  const failingZones = result.criticalZoneResults.filter((zone) => zone.status !== "pass");
-  const verifiedRecommendations = result.recommendations.filter((rec) => rec.verified);
-  const topRecommendations = (verifiedRecommendations.length > 0 ? verifiedRecommendations : result.recommendations).slice(0, 5);
-  const kRobustness = result.kRobustness;
-  const placementOracle = result.placementOracle;
-  const anomalies = temporalProfile?.anomalyWindows ?? [];
-  const occlusion = result.occlusionBlame ?? [];
-  const blindRegions = result.blindRegions ?? [];
-  const evidenceEntries = (scene.changeLog ?? [])
-    .filter((entry) => entry.startsWith("Evidence: "))
-    .map((entry) => parseEvidenceEntry(entry))
-    .filter((entry): entry is { when: string; title: string; details: string; confidence: string } => entry !== null);
-  const sensorEvidenceCount = evidenceEntries.filter((entry) => /sensor/i.test(`${entry.title} ${entry.details}`)).length;
-  const temporalTwin = summarizeOperationalEvidenceTemporalTwin(operationalEvidenceEvents, scene);
-  const truthLadder = summarizeSceneTruthLadder(scene);
-  const averagePathVisibility = result.pathResults.length > 0
-    ? result.pathResults.reduce((acc, path) => {
-        const total = Math.max(path.totalDurationS, 1);
-        return acc + ((path.visibleDurationS / total) * 100);
-      }, 0) / result.pathResults.length
-    : 0;
-  const averagePathLost = result.pathResults.length > 0
-    ? result.pathResults.reduce((acc, path) => {
-        const total = Math.max(path.totalDurationS, 1);
-        return acc + ((path.lostDurationS / total) * 100);
-      }, 0) / result.pathResults.length
-    : 0;
-  const lines = [
-    "# SentinelTwin Coverage Report",
-    "## Scene: " + scene.name,
-    "Generated: " + new Date().toLocaleString(),
-    "",
-    "### Assumptions",
-    "- DORI Model: " + scene.assumptions.doriStandard,
-    "- Person Height: " + scene.assumptions.personHeightM + "m",
-    "- Vehicle Height: " + scene.assumptions.vehicleHeightM + "m",
-    "- PPM Thresholds: " + [
-      scene.assumptions.pixelsPerMeter.detection,
-      scene.assumptions.pixelsPerMeter.observation,
-      scene.assumptions.pixelsPerMeter.recognition,
-      scene.assumptions.pixelsPerMeter.identification,
-    ].join(" / "),
-    "",
-    "### Camera Setup",
-    `- Cameras Modeled: ${scene.cameras.length}`,
-    ...scene.cameras.slice(0, 6).map((camera) => (
-      `- ${camera.name}: ${camera.mountType} mount, ${camera.fovHorizontalDeg}° FOV, ${camera.rangeM}m range, status ${camera.status}`
-    )),
-    ...(scene.cameras.length > 6 ? [`- ...${scene.cameras.length - 6} additional cameras not shown in this summary.`] : []),
-    "",
-    "### Summary",
-    `- Audience: ${audienceProfile.label} (${audienceProfile.framing})`,
-    `- Audience Policy: ${audienceProfile.disclosureLevel.replace(/_/g, " ")} · ${audienceProfile.disclosureSummary}`,
-    `- Visible Sections: ${audienceProfile.visibleSections.join(", ")}`,
-    `- Withheld Sections: ${audienceProfile.withheldSections.length > 0 ? audienceProfile.withheldSections.join(", ") : "none"}`,
-    "- Total Coverage: " + result.totalCoveragePct.toFixed(1) + "%",
-    "- Recognition Area: " + result.recognitionAreaPct.toFixed(1) + "%",
-    "- Identification Area: " + result.identificationAreaPct.toFixed(1) + "%",
-    "- Critical Zones: " + result.criticalZoneResults.filter((z) => z.status === "pass").length + "/" + result.criticalZoneResults.length + " passing",
-    "- Issues Found: " + result.issues.length,
-    "- Verified Recommendations: " + result.recommendations.filter((r) => r.verified).length + "/" + result.recommendations.length,
-    "",
-    "### Coverage Analysis",
-    `- Worst Area Quality: ${result.worstAreaQuality}`,
-    `- Average Walkable Quality Score: ${result.averageWalkableQuality.toFixed(2)}`,
-    "",
-    "### Blindspot Summary",
-    `- Blindspot Area: ${result.blindspotPct.toFixed(1)}% of modeled walkable cells`,
-    `- Blind Regions Detected: ${blindRegions.length}`,
-    ...(result.blindSpotFingerprint
-      ? [
-          `- Blind Spot Fingerprint: ${result.blindSpotFingerprint.fingerprint}`,
-          `- Largest Blind Region: ${result.blindSpotFingerprint.largestRegionAreaSqM.toFixed(1)} m²`,
-        ]
-      : []),
-    "",
-    "### Path Replay Coverage",
-    `- Paths Modeled: ${result.pathResults.length}`,
-    `- Average Path Visibility: ${averagePathVisibility.toFixed(1)}%`,
-    `- Average Path Lost Time: ${averagePathLost.toFixed(1)}%`,
-    ...(result.pathResults.slice(0, 4).map((path) => {
-      const total = Math.max(path.totalDurationS, 1);
-      const visiblePct = (path.visibleDurationS / total) * 100;
-      const lostPct = (path.lostDurationS / total) * 100;
-      return `- ${path.pathId}: visible ${visiblePct.toFixed(1)}%, lost ${lostPct.toFixed(1)}%`;
-    })),
-    "",
-    "### Truth Ladder",
-    "- Nodes: " + truthLadder.nodeCount,
-    "- Reviewed Nodes: " + truthLadder.reviewedNodeCount + ` (${truthLadder.reviewedCoveragePct.toFixed(1)}%)`,
-    "- Verified Nodes: " + truthLadder.verifiedNodeCount,
-    "- Source Traces: " + truthLadder.sourceTraceCount + ` (${truthLadder.sourceTraceCoveragePct.toFixed(1)}%)`,
-    "- Suspect Geometry: " + truthLadder.suspectGeometryCount,
-    "- Invalid Geometry: " + truthLadder.invalidGeometryCount,
-    "- Summary: " + truthLadder.summary,
-    "",
-    "### Issues",
-    ...result.issues.map((i) => "- [" + i.severity + "] " + i.description),
-    "",
-    "### Zones Needing Hardening",
-    ...(failingZones.length > 0
-      ? failingZones.map((z) => `- ${z.label}: required ${z.requiredQuality}, actual ${z.actualQuality} (${z.status})`)
-      : ["- All modeled critical zones are currently passing."]),
-    "",
-    "### Immediate Action Plan",
-    ...(topRecommendations.length > 0
-      ? topRecommendations.map((r, index) => `${index + 1}. ${r.description} (${r.estimatedImpact})`)
-      : ["1. No recommendations generated yet. Review assumptions and rerun simulation."]),
-    "",
-    "### Before / After Compare Guidance",
-    "- Use the Report tab Compare mode to export before/after deltas for baseline vs proposed scenarios.",
-    "- Recommended baseline sequence: Baseline -> Moved Obstruction -> Cam 2 Rotated -> Night Mode.",
-    "",
-    "### Changes Applied",
-    ...(scene.changeLog?.length ? scene.changeLog.map((entry, index) => `${index + 1}. ${entry}`)
-      : ["No changes have been applied to this scene."]),
-    "",
-    "### Operational Evidence",
-    `- Change Log Entries: ${scene.changeLog.length}`,
-    `- Evidence Entries: ${evidenceEntries.length}`,
-    `- Sensor-related Evidence: ${sensorEvidenceCount}`,
-    ...(evidenceEntries.length > 0
-      ? [
-          "- Recent Evidence Entries:",
-          ...evidenceEntries.slice(-5).reverse().map((entry) => `  - ${entry.when} · ${entry.title} · ${entry.details} · ${entry.confidence}`),
-        ]
-      : ["- Recent Evidence Entries: none"]),
-    "",
-    "### Temporal Operational Twin",
-    `- Scene Events: ${temporalTwin.totalEvents}`,
-    `- Reconstructable Checkpoints: ${temporalTwin.checkpointCount}`,
-    `- Published Checkpoints: ${temporalTwin.publishedCheckpointCount}`,
-    `- Branch Heads: ${temporalTwin.branchHeadCount}`,
-    `- Current Scene: ${temporalTwin.currentSceneSummary?.detail ?? "Unavailable."}`,
-    `- Latest Checkpoint: ${temporalTwin.latestCheckpoint ? `${temporalTwin.latestCheckpoint.title} (${temporalTwin.latestCheckpoint.branchLabel})` : "Unavailable."}`,
-    `- Checkpoint Age: ${temporalTwin.latestCheckpointAgeMs != null ? `${Math.max(1, Math.round(temporalTwin.latestCheckpointAgeMs / 60000))}m` : "Unavailable."}`,
-    `- Checkpoint Delta: ${temporalTwin.currentVsLatestCheckpointDelta
-      ? `cameras ${temporalTwin.currentVsLatestCheckpointDelta.cameras >= 0 ? "+" : ""}${temporalTwin.currentVsLatestCheckpointDelta.cameras}, zones ${temporalTwin.currentVsLatestCheckpointDelta.zones >= 0 ? "+" : ""}${temporalTwin.currentVsLatestCheckpointDelta.zones}, sensors ${temporalTwin.currentVsLatestCheckpointDelta.sensors >= 0 ? "+" : ""}${temporalTwin.currentVsLatestCheckpointDelta.sensors}`
-      : "Unavailable."}`,
-    `- Latest Published Checkpoint: ${temporalTwin.latestPublishedCheckpoint ? `${temporalTwin.latestPublishedCheckpoint.title} (${temporalTwin.latestPublishedCheckpoint.branchLabel})` : "Unavailable."}`,
-    `- Published Age: ${temporalTwin.latestPublishedCheckpointAgeMs != null ? `${Math.max(1, Math.round(temporalTwin.latestPublishedCheckpointAgeMs / 60000))}m` : "Unavailable."}`,
-    `- Published Delta: ${temporalTwin.currentVsLatestPublishedCheckpointDelta
-      ? `cameras ${temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras >= 0 ? "+" : ""}${temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras}, zones ${temporalTwin.currentVsLatestPublishedCheckpointDelta.zones >= 0 ? "+" : ""}${temporalTwin.currentVsLatestPublishedCheckpointDelta.zones}, sensors ${temporalTwin.currentVsLatestPublishedCheckpointDelta.sensors >= 0 ? "+" : ""}${temporalTwin.currentVsLatestPublishedCheckpointDelta.sensors}`
-      : "Unavailable."}`,
-    "",
-    "### Recommendations",
-    ...result.recommendations.map((r) => "- [" + (r.verified ? "verified" : "unverified") + "] " + r.description + " :: " + r.estimatedImpact),
-    "",
-    "### Novel Algorithms",
-    "- Coverage Fragility: " + (result.fragilitySummary ? `${Math.round(result.fragilitySummary.meanFragility * 100)}% mean fragility across ${result.fragilitySummary.totalCells} cells` : "not computed"),
-    "- K-Robustness: " + (kRobustness ? `K=${kRobustness.kRobustness} from ${kRobustness.totalCameras} cameras` : "not computed"),
-    "- Placement Oracle: " + (placementOracle?.bestCandidate
-      ? `${placementOracle.bestCandidate.mountType} @ ${placementOracle.bestCandidate.position[0].toFixed(1)}, ${placementOracle.bestCandidate.position[2].toFixed(1)}`
-      : "not computed"),
-    "- Temporal Anomalies: " + (anomalies.length > 0 ? `${anomalies.length} windows` : "none detected"),
-    "- Occlusion Blame: " + (occlusion.length > 0 ? `${occlusion.length} zones` : "none"),
-    "- Blind Spot Topology: " + (blindRegions.length > 0 ? `${blindRegions.length} regions` : "none"),
-    "",
-    ...(occlusion.length > 0
-      ? [
-          "### Occlusion Blame",
-          ...occlusion.flatMap((zone) => [
-            `- ${zone.zoneLabel} (${zone.baselineQuality})`,
-            ...zone.obstructions.map(
-              (obstruction) => {
-                const materialInfo = obstructionMaterialById.get(obstruction.obstructionId);
-                const materialLabel = materialInfo ? `${materialInfo.material}${materialInfo.transmission != null ? ` (${Math.round(materialInfo.transmission * 100)}% transmission)` : ""}` : "unknown";
-                return `  - ${obstruction.label}: ${(obstruction.blameFraction * 100).toFixed(0)}% blame, ${obstruction.qualityWithout} without, +${obstruction.qualityImprovement.toFixed(1)} improvement, material ${materialLabel}`;
-              },
-            ),
-          ]),
-          "",
-        ]
-      : []),
-    "### Limitations",
-    "- This output is a deterministic simulation estimate based on current scene assumptions.",
-    "- It is not a legal, forensic, or certified compliance determination.",
-    "- Real-world operations can differ due to lighting, motion, environment changes, and hardware behavior.",
-    "",
-    "_Planning indicator only: modeled outcomes depend on assumptions and are not legal/forensic guarantees._",
-  ];
-  return lines.join("\n");
-}
 
-function parseEvidenceEntry(entry: string) {
-  const payload = entry.slice("Evidence: ".length);
-  const parts = payload.split(" | ");
-  if (parts.length < 4) return null;
-  const [when, title, ...rest] = parts;
-  const confidence = rest.pop();
-  if (!confidence) return null;
-  return {
-    when,
-    title,
-    details: rest.join(" | "),
-    confidence,
-  };
-}
 
 function buildHtmlReport(
   scene: ReturnType<typeof useStudioStore.getState>["scene"],
@@ -895,6 +979,18 @@ function buildHtmlReport(
   const passing = result.criticalZoneResults.filter((z) => z.status === "pass").length;
   const totalZones = result.criticalZoneResults.length;
   const temporalTwin = summarizeOperationalEvidenceTemporalTwin(operationalEvidenceEvents, scene);
+  const template = reportView && typeof reportView === "object" && "template" in reportView
+    ? (reportView as {
+        template: {
+          title: string;
+          standardLabel: string;
+          summary: string;
+          audienceHint: string;
+          focusAreas: string[];
+          evidenceAnchors: string[];
+        };
+      }).template
+    : null;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -945,6 +1041,11 @@ function buildHtmlReport(
   <div class="meta">Visible Sections: ${escapeHtml(audienceProfile.visibleSections.join(", "))}</div>
   <div class="meta">Withheld Sections: ${escapeHtml(audienceProfile.withheldSections.length > 0 ? audienceProfile.withheldSections.join(", ") : "none")}</div>
   <div class="meta">Visibility: ${escapeHtml(visibilityProfile.label)} · ${escapeHtml(visibilityProfile.framing)}</div>
+  ${template ? `
+  <div class="meta">Standards Template: ${escapeHtml(template.title)} · ${escapeHtml(template.standardLabel)}</div>
+  <div class="meta">Template Summary: ${escapeHtml(template.summary)}</div>
+  <div class="meta">Template Focus: ${escapeHtml(template.focusAreas.join(", "))}</div>
+  ` : ""}
 
   <h2>Summary</h2>
   <div class="summary-grid">

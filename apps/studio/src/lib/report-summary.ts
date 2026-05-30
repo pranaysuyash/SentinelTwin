@@ -7,6 +7,55 @@ export type ReportSummaryLine = {
   text: string;
 };
 
+// ---------------------------------------------------------------------------
+// Audience modes (4.9 — Reporting, Export, and Compliance Evidence)
+// ---------------------------------------------------------------------------
+
+export type AudienceMode =
+  | "operator"
+  | "auditor"
+  | "insurer"
+  | "installer"
+  | "privacy_reviewer";
+
+/**
+ * Returns the human-readable label for an audience mode.
+ */
+export function audienceModeLabel(mode: AudienceMode): string {
+  const labels: Record<AudienceMode, string> = {
+    operator: "Operator",
+    auditor: "Security Auditor",
+    insurer: "Insurance Reviewer",
+    installer: "Installer / Integrator",
+    privacy_reviewer: "Privacy Reviewer",
+  };
+  return labels[mode];
+}
+
+/**
+ * Returns a one-sentence description of what this audience cares about
+ * in the exported report.
+ */
+export function audienceModeDescription(mode: AudienceMode): string {
+  const descriptions: Record<AudienceMode, string> = {
+    operator: "Focused on day-to-day coverage quality, alert posture, and operational incident history.",
+    auditor: "Focused on standards compliance (IEC 62676-4:2025 / DORI), evidence trail completeness, and audit trail integrity.",
+    insurer: "Focused on verified coverage percentages, critical zone pass/fail status, and documented risk mitigation.",
+    installer: "Focused on camera placement geometry, field-of-view calculations, and wiring / mounting recommendations.",
+    privacy_reviewer: "Focused on privacy zone compliance, GDPR-relevant restricted coverage areas, and data minimisation posture.",
+  };
+  return descriptions[mode];
+}
+
+/**
+ * Returns a Markdown header block to prepend to a report when an audience mode
+ * is specified, making the audience context explicit in the export artifact.
+ */
+export function audienceModeReportHeader(mode: AudienceMode): string {
+  return `## Report Mode: ${audienceModeLabel(mode)}\n\n> ${audienceModeDescription(mode)}\n\n---\n\n`;
+}
+
+
 export function buildReportSummaryLines(
   outcome: SecurityOutcomeModel,
   result: SimulationResult | null,

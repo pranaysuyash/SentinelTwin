@@ -43,6 +43,7 @@ export const ANALYSIS_MODULE_IDS: BottomTab[] = [
   "help",
   "debug",
   "novel",
+  "budgeting",
 ];
 
 export type WorkspaceLayoutSnapshot = {
@@ -118,6 +119,7 @@ const BASE_ANALYSIS_MODULE_VISIBILITY: Record<BottomTab, boolean> = {
   help: true,
   debug: false,
   novel: true,
+  budgeting: true,
 };
 
 export const PRESET_VIEW_MODES: Record<WorkspacePreset, ViewMode> = {

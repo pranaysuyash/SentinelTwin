@@ -21,14 +21,9 @@ import {
   CheckCircle2,
   Video
 } from "lucide-react";
+import type { SiteIntakeSource } from "@/lib/site-compiler";
 
-export type SiteIntakeSource =
-  | "scan"
-  | "ai_prompt"
-  | "floor_plan"
-  | "json_import"
-  | "manual"
-  | "footage_verify";
+export type { SiteIntakeSource };
 
 export type SiteIntakeHubProps = {
   onStartScan: () => void;
@@ -158,7 +153,7 @@ const cards: SiteIntakeSourceCard[] = [
     onClickAction: "onImportFloorPlan",
   },
   {
-    id: "json_import",
+    id: "json",
     title: "Import SecurityScene",
     status: "Working",
     description: "Import an existing SecurityScene JSON file.",
@@ -214,7 +209,7 @@ const cards: SiteIntakeSourceCard[] = [
     onClickAction: "onBuildManually",
   },
   {
-    id: "footage_verify",
+    id: "camera_evidence",
     title: "Verify from Footage",
     status: "Preview",
     description: "Preview: static/reference-frame alignment only. No product-grade video/stream verification yet.",

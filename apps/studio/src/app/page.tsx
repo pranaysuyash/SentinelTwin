@@ -9,7 +9,7 @@ import { ScanSiteWizard } from "@/components/scan-to-scene/ScanSiteWizard";
 import { StudioDashboardHome } from "@/components/launcher/StudioDashboardHome";
 import { SiteIntakeHub } from "@/components/site-intake/SiteIntakeHub";
 import { SiteDraftReview } from "@/components/site-intake/SiteDraftReview";
-import { compileScanToSiteResult, compileAiDraftToSiteResult, compileFloorPlanToSiteResult, makeSiteCompilerWarnings, calculateConfidence, compileToSiteTwinDraft, compileJsonToSiteResult, canRunBaselineSimulation } from "@/lib/site-compiler";
+import { compileScanToSiteResult, compileAiDraftToSiteResult, compileFloorPlanToSiteResult, makeSiteCompilerWarnings, calculateConfidence, compileToSiteTwinDraft, compileJsonToSiteResult, compileCameraEvidenceToSiteResult } from "@/lib/site-compiler";
 import { useStudioStore, type ActiveWorkflowId, type BottomTab, type ViewMode, type WorkspacePreset } from "@/store/studio-store";
 import { draftSceneFromPrompt, draftSceneFromPromptWithModel, summarizeDraftResult } from "@/lib/ai-layout-draft";
 import { summarizeAiActionTelemetry } from "@/lib/ai-action-telemetry";
@@ -54,6 +54,10 @@ function estimateTokensFromText(text: string) {
 
 function parseTimelineFocusFromUrl(search: string) {
   return parseTimelineShareLink(search);
+}
+
+function assertNever(value: never): never {
+  throw new Error(`Unsupported site intake source: ${String(value)}`);
 }
 
 function StudioPageContent() {
@@ -353,45 +357,53 @@ function StudioPageContent() {
     const compareRequest = parseCompareShareLink(search);
 
     if (archiveRequest) {
-      setArchiveHandoffRequest(archiveRequest);
-      setEnterStudio(true);
-      setWorkspacePreset("debug");
-      setViewMode("map");
-      setBottomTab("debug");
-      setLaunchNotice(
-        `Archive handoff opened for ${archiveRequest.archive.scene.name || "Untitled Scene"} in ${archiveRequest.restoreBranch} branch preflight.`,
-      );
+      queueMicrotask(() => {
+        setArchiveHandoffRequest(archiveRequest);
+        setEnterStudio(true);
+        setWorkspacePreset("debug");
+        setViewMode("map");
+        setBottomTab("debug");
+        setLaunchNotice(
+          `Archive handoff opened for ${archiveRequest.archive.scene.name || "Untitled Scene"} in ${archiveRequest.restoreBranch} branch preflight.`,
+        );
+      });
       return;
     }
 
     if (focusRequest) {
-      setTimelineFocusRequest(focusRequest);
+      queueMicrotask(() => {
+        setTimelineFocusRequest(focusRequest);
+      });
     }
 
     if (compareRequest) {
-      setCompareReportSelection({
-        snapshotAId: compareRequest.snapshotAId,
-        snapshotBId: compareRequest.snapshotBId,
-        provenanceNote: compareRequest.provenanceNote ?? null,
+      queueMicrotask(() => {
+        setCompareReportSelection({
+          snapshotAId: compareRequest.snapshotAId,
+          snapshotBId: compareRequest.snapshotBId,
+          provenanceNote: compareRequest.provenanceNote ?? null,
+        });
+        setEnterStudio(true);
+        if (compareRequest.mode === "report") {
+          setWorkspacePreset("report");
+          setViewMode("report");
+          setBottomTab("report");
+        } else {
+          setWorkspacePreset("compare");
+          setViewMode("compare");
+          setBottomTab("beforeafter");
+        }
       });
-      setEnterStudio(true);
-      if (compareRequest.mode === "report") {
-        setWorkspacePreset("report");
-        setViewMode("report");
-        setBottomTab("report");
-      } else {
-        setWorkspacePreset("compare");
-        setViewMode("compare");
-        setBottomTab("beforeafter");
-      }
       return;
     }
 
     if (focusRequest) {
-      setEnterStudio(true);
-      setWorkspacePreset("coverage");
-      setViewMode("map");
-      setBottomTab("timeline");
+      queueMicrotask(() => {
+        setEnterStudio(true);
+        setWorkspacePreset("coverage");
+        setViewMode("map");
+        setBottomTab("timeline");
+      });
     }
   }, [
     setArchiveHandoffRequest,
@@ -550,8 +562,11 @@ function StudioPageContent() {
       case "json":
         result = compileJsonToSiteResult(scene);
         break;
+      case "camera_evidence":
+        result = compileCameraEvidenceToSiteResult(scene);
+        break;
       default:
-        result = compileFloorPlanToSiteResult(scene);
+        assertNever(source);
     }
     const draft = compileToSiteTwinDraft(result, sourceArtifacts);
     setSiteIntakeSession({
@@ -568,8 +583,63 @@ function StudioPageContent() {
 
   const approveIntakeSession = () => {
     const session = useStudioStore.getState().siteIntakeSession;
-    if (!session) return;
+    if (!session?.draft) return;
+    const parsed = safeParseSecurityScene(session.draft.scene);
+    if (!parsed.success) {
+      setLaunchNotice(`Draft approval blocked: ${parsed.error.issues[0]?.message ?? "scene validation failed"}`);
+      return;
+    }
+
+    const approvedScene = parsed.data;
+    const provenanceLines = [
+      `Site intake approval: source=${session.draft.source} draft=${session.draft.id} confidence=${Math.round(session.draft.confidence * 100)}%`,
+      `Site intake entities: walls=${session.draft.entityCounts.walls} cameras=${session.draft.entityCounts.cameras} zones=${session.draft.entityCounts.criticalZones} paths=${session.draft.entityCounts.paths}`,
+      ...(session.draft.provenance.sourceArtifacts.length > 0
+        ? [`Site intake artifacts: ${session.draft.provenance.sourceArtifacts.join(", ")}`]
+        : []),
+      ...session.draft.provenance.notes.map((note) => `Site intake note: ${note}`),
+      ...session.draft.assumptions.map((assumption) => `Site intake assumption: ${assumption.label}=${assumption.value} [${assumption.source}]`),
+      ...session.draft.warnings.map((warning) => `Site intake warning: ${warning.code} (${warning.severity}) ${warning.message}`),
+    ];
+    approvedScene.changeLog = [...approvedScene.changeLog, ...provenanceLines];
+    setScene(approvedScene);
+    recordOperationalEvidenceEvent({
+      kind: "scan_compiled",
+      title: "Site intake draft approved",
+      details: `Approved ${session.draft.source} draft and promoted it to the active canonical scene.`,
+      actor: "user",
+      source: approvedScene.source,
+      sceneId: approvedScene.id,
+      sceneName: approvedScene.name,
+      revisionDepth: historyDepth,
+      affectedNodeIds: [],
+      confidence: session.draft.confidence,
+      beforeSummary: `${scene.name || "Workspace"} · ${scene.cameras.length} cameras · ${scene.criticalZones.length} critical zones`,
+      afterSummary: `${approvedScene.name || "Approved scene"} · ${approvedScene.cameras.length} cameras · ${approvedScene.criticalZones.length} critical zones`,
+      notes: [
+        `Draft id: ${session.draft.id}`,
+        `Source artifacts: ${session.draft.provenance.sourceArtifacts.join(", ") || "none"}`,
+        `Warnings: ${session.draft.warnings.length}`,
+      ],
+    });
+
+    const approvedWarnings = makeSiteCompilerWarnings(approvedScene);
+    const canRunBaseline = approvedScene.cameras.length > 0
+      && approvedScene.criticalZones.length > 0
+      && !approvedWarnings.some((warning) => warning.severity === "blocking");
     setSiteIntakeSession(null);
+    if (canRunBaseline) {
+      runSimulationFromStore();
+      setWorkspacePreset("coverage");
+      setViewMode("map");
+      setBottomTab("metrics");
+      setLaunchNotice("Draft approved and activated. Baseline simulation started from the approved scene.");
+    } else {
+      setWorkspacePreset("edit");
+      setViewMode("map");
+      setBottomTab("metrics");
+      setLaunchNotice("Draft approved and activated. Add missing camera/zone prerequisites, then run baseline simulation.");
+    }
     setEnterStudio(true);
   };
 
@@ -578,10 +648,6 @@ function StudioPageContent() {
   };
 
   const approveAndRunBaseline = () => {
-    const session = useStudioStore.getState().siteIntakeSession;
-    if (session?.draft && canRunBaselineSimulation(session.draft)) {
-      runSimulationFromStore();
-    }
     approveIntakeSession();
   };
 

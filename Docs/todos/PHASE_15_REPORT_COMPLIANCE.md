@@ -19,13 +19,17 @@ Reports exist and work well:
 - `src/report/export-templates.ts` — HTML/Markdown/JSON export
 - Before/after delta comparison
 - Privacy zone compliance evidence generation
+- Visibility/redaction summaries and buyer drill-through are now surfaced in the exported report views
+- Privacy reviewer exports now include a dedicated privacy masking summary
+- Compare exports now carry the same visibility framing plus direct drill-through shortcuts
+- Report exports now carry explicit standards-template metadata and per-template depth notes
+- Report Lite now persists a local report catalog with quick-apply presets and a selected preset cursor
 
 But missing:
-- Policy-driven redaction/visibility controls for external sharing
-- Standards-specific templates with deeper evidence-link coverage beyond the core handoff trail
-- Full report catalog with audience defaults
-- Evidence ledger integration linking report sections to specific simulation data points
+- Deeper standards-specific evidence-link coverage beyond the core handoff trail
 - Share-policy annotations per preset
+- Evidence ledger integration linking report sections to specific simulation data points
+- Export format depth beyond the current HTML/Markdown/Text surface
 
 ---
 
@@ -60,7 +64,7 @@ But missing:
   - Sections included/excluded
   - Default audience
   - Export format preference
-- Catalog persisted in IndexedDB
+- Catalog persisted in browser-local storage
 - Quick-apply from catalog on new report generation
 
 ### 4. Evidence Ledger Integration

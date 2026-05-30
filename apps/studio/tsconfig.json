@@ -19,7 +19,13 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@sentineltwin/core": ["../../packages/core/src/index.ts"],
+      "@sentineltwin/core/*": ["../../packages/core/src/*"],
+      "@sentineltwin/simulation": ["../../packages/simulation/src/index.ts"],
+      "@sentineltwin/simulation/*": ["../../packages/simulation/src/*"],
+      "@sentineltwin/report": ["../../packages/report/src/index.ts"],
+      "@sentineltwin/report/*": ["../../packages/report/src/*"]
     }
   },
   "include": [

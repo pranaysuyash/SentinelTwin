@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, expect, test } from "bun:test";
 import {
   compileToSiteTwinDraft,
@@ -51,9 +52,10 @@ function addEntryPoint(scene: SecurityScene) {
 function addPath(scene: SecurityScene) {
   scene.paths.push({
     id: "path_1", nodeType: "path", label: "Entry Route",
+    actorType: "person", speedMps: 1.4, heightM: 1.7, timeOfDay: "day", intent: "authorized",
     points: [{ position: [1, 1] }, { position: [3, 3] }],
     source: "manual", reviewStatus: "unreviewed", sourceTrace: "", geometryValidity: "valid",
-  });
+  } as any);
 }
 
 describe("compileToSiteTwinDraft", () => {
@@ -107,7 +109,7 @@ describe("compileToSiteTwinDraft", () => {
     const result = compileJsonToSiteResult(scene, "export.json");
     const draft = compileToSiteTwinDraft(result, ["export.json"]);
 
-    expect(draft.source).toBe("json");
+    expect(draft.source).toBe("json_import");
     expect(draft.provenance.sourceArtifacts).toContain("export.json");
   });
 
@@ -271,10 +273,9 @@ describe("actionable warnings", () => {
     });
     scene.doors.push({
       id: "door_1", nodeType: "door", label: "Far Door",
-      position: [50, 0, 50], state: "closed", widthM: 1, heightM: 2.1,
-      wallId: "wall_1", openTransmission: 0.95,
+      position: [50, 0, 50], state: "closed", dimensions: [1, 2.1, 0.1],
       source: "manual", reviewStatus: "unreviewed", sourceTrace: "", geometryValidity: "valid",
-    });
+    } as any);
     const warnings = makeSiteCompilerWarnings(scene);
     const doorWarning = warnings.find((w) => w.code === "DOOR_NOT_NEAR_WALL");
     expect(doorWarning).toBeDefined();

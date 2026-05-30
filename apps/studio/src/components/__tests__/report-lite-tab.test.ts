@@ -24,11 +24,19 @@ describe("ReportLiteTab", () => {
     expect(source).toContain("Report Summary");
     expect(source).toContain("Truth: Computed");
     expect(source).toContain("buildReportSummaryLines");
-    expect(source).toContain("getReportExportPresets");
+    expect(source).toContain("getReportStandardTemplates");
+    expect(source).toContain("Save preset");
+    expect(source).toContain("Catalog");
+    expect(source).toContain("Standards template");
+    expect(source).toContain("Template");
+    expect(source).toContain("Preset name");
+    expect(source).toContain("Saved presets");
+    expect(source).toContain("Remove");
     expect(source).toContain("Audience");
     expect(source).toContain("reportAudience");
     expect(source).toContain("Visibility");
     expect(source).toContain("reportVisibility");
+    expect(source).toContain("reportTemplateId");
     expect(source).toContain("Audience Policy");
     expect(source).toContain("disclosureSummary");
     expect(source).toContain("Visible Sections");
@@ -46,6 +54,6 @@ describe("ReportLiteTab", () => {
     expect(source).toContain("summarizeSceneTruthLadder");
     expect(source).toContain("Occlusion Blame");
     expect(source).toContain("Quality Without");
-    expect(source).toContain("Operational Evidence");
+    expect(source).toContain("Operational evidence");
   });
 });

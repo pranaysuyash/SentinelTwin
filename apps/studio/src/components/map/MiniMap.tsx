@@ -730,6 +730,8 @@ export function MiniMap({
   const setFocusScenePointRequest = useStudioStore((s) => s.setFocusScenePointRequest);
   const leftDockSizePx = useStudioStore((s) => s.leftDockSizePx);
   const setDockSize = useStudioStore((s) => s.setDockSize);
+  const leftDockCollapsed = useStudioStore((s) => s.leftDockCollapsed);
+  const setDockCollapsed = useStudioStore((s) => s.setDockCollapsed);
 
   const [mode, setMode] = useState<MiniMapMode>("compact");
   const [hoveredPreview, setHoveredPreview] = useState(false);
@@ -779,6 +781,15 @@ export function MiniMap({
       setDockSize("left", restoreWidthRef.current);
     };
   }, [mode, setDockSize]);
+
+  useEffect(() => {
+    if (leftDockCollapsed) {
+      setMode("collapsed");
+      setHoveredPreview(false);
+      return;
+    }
+    setMode((current) => (current === "collapsed" ? "compact" : current));
+  }, [leftDockCollapsed]);
 
   const mapWidth = mode === "expanded" ? Math.max(248, leftDockSizePx - 28) : width;
   const mapHeight = mode === "expanded" ? EXPANDED_MAP_HEIGHT : height;
@@ -907,7 +918,11 @@ export function MiniMap({
             <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">Quick Controls</div>
             <button
               type="button"
-              onClick={() => setMode("collapsed")}
+              onClick={() => {
+                setDockCollapsed("left", true);
+                setMode("collapsed");
+                setHoveredPreview(false);
+              }}
               className="inline-flex h-6 items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 text-[9px] font-medium text-[#7f8aa3] transition-colors hover:border-[#32384d] hover:text-white"
             >
               <X className="h-3 w-3" />

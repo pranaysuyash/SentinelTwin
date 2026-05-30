@@ -36,10 +36,13 @@ import type { CameraMetadataArchiveRecord } from "@/lib/camera-metadata-ingest-h
 import type { CameraLiveConnectionArchiveRecord } from "@/lib/camera-live-connection-history";
 import type { BottomTab, SavedProjectRecord, ViewMode, WorkspacePreset } from "@/store/studio-store";
 import { useStudioStore } from "@/store/studio-store";
+import { OrganizationManagerPanel } from "@/components/launcher/OrganizationManagerPanel";
 import type { SecurityScene, SecurityIssue, SimulationResult, DoriQuality, ScenarioPath, CameraNode, ObstructionNode, SecurityLightNode } from "@/schema/security-scene";
+import type { OrganizationList } from "@/schema/organization";
 import { MiniStat } from "@/components/shared/MiniStat";
 import { QUALITY_COLOR, QUALITY_TEXT_COLOR } from "@/lib/quality-display";
 import { QualityBadge } from "@/components/shared/QualityBadge";
+import { selectSecurityOutcomeFromStore } from "@/lib/security-outcome/security-outcome-selectors";
 
 type ProjectSort = "recent" | "name" | "coverage";
 type ProjectSourceFilter = "All" | SecurityScene["source"];
@@ -774,12 +777,14 @@ function ProjectMetadataEditor({
   onDuplicateProject,
   onRenameProject,
   onSelectProject,
+  organizations,
 }: {
   project: SavedProjectRecord;
   onUpdateProjectMetadata: StudioDashboardHomeProps["onUpdateProjectMetadata"];
   onDuplicateProject: StudioDashboardHomeProps["onDuplicateProject"];
   onRenameProject: StudioDashboardHomeProps["onRenameProject"];
   onSelectProject: (sceneId: string) => void;
+  organizations: OrganizationList;
 }) {
   const [folderDraft, setFolderDraft] = useState(project.folder);
   const [tagDraft, setTagDraft] = useState(project.tags.join(", "));
@@ -986,19 +991,27 @@ function ProjectMetadataEditor({
 
           <label className="block">
             <span className="text-[11px] text-[color:var(--st-muted)]">Organization</span>
-            <input
-              value={organizationDraft}
-              onChange={(event) => setOrganizationDraft(event.target.value)}
-              onBlur={applyOrganizationDraft}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
+            <div className="relative mt-1">
+              <select
+                value={organizationDraft}
+                onChange={(event) => {
+                  setOrganizationDraft(event.target.value);
                   applyOrganizationDraft();
-                }
-              }}
-              className="mt-1 w-full rounded-2xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-[color:var(--st-muted)] focus:border-sky-400/35 focus:bg-white/[0.04]"
-              placeholder="Personal Workspace"
-            />
+                }}
+                className="w-full appearance-none rounded-2xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 pr-8 text-sm text-white outline-none transition-colors focus:border-sky-400/35 focus:bg-white/[0.04]"
+              >
+                {organizations?.length > 0 ? (
+                  organizations.map((org) => (
+                    <option key={org.id} value={org.name} className="bg-[#0b0f17] text-white">
+                      {org.name}
+                    </option>
+                  ))
+                ) : (
+                  <option value="Personal Workspace" className="bg-[#0b0f17] text-white">Personal Workspace</option>
+                )}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[color:var(--st-muted)]" />
+            </div>
           </label>
 
           <label className="block">
@@ -1105,6 +1118,8 @@ export function StudioDashboardHome({
   }, criticalZoneResults[0]) ?? null : null;
   const worstQualityLabel = topCriticalZone ? qualityToLabel(topCriticalZone.actualQuality) : null;
   const worstQualityValue = topCriticalZone?.actualQuality ?? null;
+  const outcomeActivePathId = useStudioStore((s) => s.activePathId);
+  const canonicalOutcome = selectSecurityOutcomeFromStore({ scene, simulationResult: result, activePathId: outcomeActivePathId });
   const cameraFailureZones = scene.criticalZones
     .map((zone) => ({
       zone,
@@ -1241,6 +1256,10 @@ export function StudioDashboardHome({
   const workspaceAccountProfile = useStudioStore((s) => s.workspaceAccount);
   const setWorkspaceAccountProfile = useStudioStore((s) => s.setWorkspaceAccountProfile);
   const resetWorkspaceAccountProfile = useStudioStore((s) => s.resetWorkspaceAccountProfile);
+  const organizations = useStudioStore((s) => s.organizations);
+  const activeOrganizationId = useStudioStore((s) => s.activeOrganizationId);
+  const setActiveOrganization = useStudioStore((s) => s.setActiveOrganization);
+  const [showOrgManager, setShowOrgManager] = useState(false);
   const browserProjects = useMemo(() => {
     const query = projectQuery.trim().toLowerCase();
     const filtered = savedProjects.filter((project) => {
@@ -1441,18 +1460,22 @@ export function StudioDashboardHome({
     return filteredProjects.slice(0, 8);
   }, [filteredProjects]);
   const tagFilters = Object.keys(tagCounts).sort((a, b) => tagCounts[b] - tagCounts[a] || a.localeCompare(b)).slice(0, 8);
-  const statusLabel = simulationRunning
-    ? "Running"
-    : coverage == null
-      ? "Simulation pending"
+  const statusLabel = !hydrated
+    ? "Loading"
+    : simulationRunning
+      ? "Running"
+      : coverage == null
+        ? "Simulation pending"
+        : simulationDirty
+          ? "Needs recompute"
+          : "Up to date";
+  const statusTone = !hydrated
+    ? "border-slate-400/20 bg-slate-500/10 text-slate-200"
+    : simulationRunning
+      ? "border-cyan-400/25 bg-cyan-500/10 text-cyan-200"
       : simulationDirty
-        ? "Needs recompute"
-        : "Up to date";
-  const statusTone = simulationRunning
-    ? "border-cyan-400/25 bg-cyan-500/10 text-cyan-200"
-    : simulationDirty
-      ? "border-amber-400/25 bg-amber-500/10 text-amber-200"
-      : "border-emerald-400/25 bg-emerald-500/10 text-emerald-200";
+        ? "border-amber-400/25 bg-amber-500/10 text-amber-200"
+        : "border-emerald-400/25 bg-emerald-500/10 text-emerald-200";
   const [activeFolder, setActiveFolder] = useState<string>("All");
   const [activeTag, setActiveTag] = useState<string>("All");
   const visibleProjects = browserProjects.filter((project) => {
@@ -1619,8 +1642,22 @@ export function StudioDashboardHome({
             </div>
 
             <div className="mt-auto rounded-2xl border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2">
-              <div className="text-sm font-semibold text-white">Studio User</div>
-              <div className="mt-0.5 text-[11px] text-[color:var(--st-muted)]">Admin</div>
+              <div className="flex items-center gap-2">
+                <div className="text-sm font-semibold text-white">{organizations.find((o) => o.id === activeOrganizationId)?.name ?? "Personal Workspace"}</div>
+                <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-1.5 py-0.5 text-[8px] uppercase tracking-[0.14em] text-emerald-200">
+                  {workspaceAccountProfile.planTier}
+                </span>
+              </div>
+              <div className="mt-0.5 text-[11px] text-[color:var(--st-muted)]">
+                {workspaceAccountSummary?.scopeLabel ?? "Personal catalog"}
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowOrgManager(true)}
+                className="mt-1.5 w-full rounded-xl border border-sky-400/20 bg-sky-500/10 px-2 py-1 text-[10px] font-semibold text-sky-200 hover:bg-sky-500/20"
+              >
+                Manage Organizations
+              </button>
             </div>
           </aside>
 
@@ -2020,6 +2057,11 @@ export function StudioDashboardHome({
           </div>
         </footer>
       </div>
+
+      <OrganizationManagerPanel
+        open={showOrgManager}
+        onClose={() => setShowOrgManager(false)}
+      />
     </main>
   );
 }

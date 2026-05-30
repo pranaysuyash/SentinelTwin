@@ -36,7 +36,7 @@ describe("CameraWallView", () => {
     expect(source).toContain("Route Context {activePath.label}");
     expect(source).toContain("Best feed");
     expect(source).toContain("const pathTimeS = activePathResult && activePathResult.totalDurationS > 0");
-    expect(source).toContain("Replay {pathTimeS.toFixed(1)}s / {activePathResult.totalDurationS.toFixed(1)}s");
+    expect(source).toContain("Replay ${pathTimeS.toFixed(1)}s / ${activePathResult.totalDurationS.toFixed(1)}s");
     expect(source).toContain("Current Replay");
     expect(source).toContain("Actor visible now");
     expect(source).toContain("Actor lost now");

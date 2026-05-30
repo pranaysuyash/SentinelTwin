@@ -14,6 +14,7 @@ describe("SceneIntelligenceTab", () => {
     expect(source).toContain("Inspect");
     expect(source).toContain("Focus source");
     expect(source).toContain("Focus target");
+    expect(source).toContain("Share deep link");
     expect(source).toContain("Copy deep link");
     expect(source).toContain("Copy checkpoint link");
     expect(source).toContain("Open checkpoint link");
@@ -43,6 +44,7 @@ describe("SceneIntelligenceTab", () => {
     expect(source).toContain("Published age");
     expect(source).toContain("Operational evidence archives");
     expect(source).toContain("Compare handoff provenance");
+    expect(source).toContain("Share archive link");
     expect(source).toContain("Copy archive link");
     expect(source).toContain("Open archive link");
     expect(source).toContain("Restore archive");
@@ -78,10 +80,12 @@ describe("SceneIntelligenceTab", () => {
     expect(source).toContain("point-in-time");
     expect(source).toContain("Point-in-time reconstruction");
     expect(source).toContain("Preview only");
+    expect(source).toContain("Share checkpoint link");
     expect(source).toContain("Reconstruct the scene state at this checkpoint without committing it yet.");
     expect(source).toContain("Compare handoff provenance");
     expect(source).toContain("Open Before/After");
     expect(source).toContain("Open Report Compare");
+    expect(source).toContain("Share compare link");
     expect(source).toContain("Copy compare link");
     expect(source).toContain("No branch lineage selected.");
     expect(source).toContain("Branch comparison");

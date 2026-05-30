@@ -4,15 +4,15 @@ import { Settings2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
 import { GeminiProvider } from "@/agents/providers/GeminiProvider";
-import type { ModelProvider } from "@/agents/providers/ModelProvider";
 import { OpenAIProvider } from "@/agents/providers/OpenAIProvider";
 import { QwenProvider } from "@/agents/providers/QwenProvider";
+import type { AiProviderSelection } from "@/agents/provider-selection";
 
 interface ProviderOption {
   id: string;
   name: string;
   description: string;
-  create: (model: string) => ModelProvider;
+  create: (model: string) => unknown;
   defaultModel: string;
   models: string[];
   envKey: string;
@@ -53,16 +53,18 @@ const PROVIDERS: ProviderOption[] = [
 ];
 
 interface ProviderConfigPanelProps {
-  onProviderChange?: (provider: ModelProvider) => void;
-  initialProviderId?: string;
+  onSelectionChange?: (selection: AiProviderSelection) => void;
+  initialProviderId?: AiProviderSelection["providerId"];
+  initialModel?: string;
 }
 
 export function ProviderConfigPanel({
-  onProviderChange,
+  onSelectionChange,
   initialProviderId,
+  initialModel,
 }: ProviderConfigPanelProps) {
-  const [selectedId, setSelectedId] = useState(initialProviderId ?? "openai");
-  const [selectedModel, setSelectedModel] = useState<string>("");
+  const [selectedId, setSelectedId] = useState<AiProviderSelection["providerId"]>(initialProviderId ?? "openai");
+  const [selectedModel, setSelectedModel] = useState<string>(initialModel ?? "");
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const currentProvider = useMemo(
@@ -72,23 +74,21 @@ export function ProviderConfigPanel({
 
   const handleProviderChange = useCallback(
     (providerId: string) => {
-      setSelectedId(providerId);
+      const selectedProviderId = providerId as AiProviderSelection["providerId"];
+      setSelectedId(selectedProviderId);
       const option = PROVIDERS.find((p) => p.id === providerId) ?? PROVIDERS[0];
       const model = selectedModel || option.defaultModel;
-      const provider = option.create(model);
-      onProviderChange?.(provider);
+      onSelectionChange?.({ providerId: selectedProviderId, model });
     },
-    [selectedModel, onProviderChange],
+    [selectedModel, onSelectionChange],
   );
 
   const handleModelChange = useCallback(
     (model: string) => {
       setSelectedModel(model);
-      const option = PROVIDERS.find((p) => p.id === selectedId) ?? PROVIDERS[0];
-      const provider = option.create(model);
-      onProviderChange?.(provider);
+      onSelectionChange?.({ providerId: selectedId, model });
     },
-    [selectedId, onProviderChange],
+    [selectedId, onSelectionChange],
   );
 
   return (

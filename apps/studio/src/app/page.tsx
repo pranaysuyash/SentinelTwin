@@ -1,13 +1,13 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
 
 import StudioShell from "@/components/layout/StudioShell";
 import { ProjectStartLauncher } from "@/components/launcher/ProjectStartLauncher";
 import { SceneBuilderWizard } from "@/components/scan-to-scene/SceneBuilderWizard";
 import { ScanSiteWizard } from "@/components/scan-to-scene/ScanSiteWizard";
 import { StudioDashboardHome } from "@/components/launcher/StudioDashboardHome";
+import { SiteIntakeHub } from "@/components/site-intake/SiteIntakeHub";
 import { SiteDraftReview } from "@/components/site-intake/SiteDraftReview";
 import { compileScanToSiteResult, compileAiDraftToSiteResult, compileFloorPlanToSiteResult, makeSiteCompilerWarnings, calculateConfidence } from "@/lib/site-compiler";
 import { useStudioStore, type ActiveWorkflowId, type BottomTab, type ViewMode, type WorkspacePreset } from "@/store/studio-store";
@@ -23,6 +23,7 @@ import {
   describeAiProviderSelection,
   providerKeyAvailable,
 } from "@/agents/provider-selection";
+import { resolvePromptRegistryLineage } from "@/agents/prompt-registry";
 import { safeParseSecurityScene, type SecurityScene } from "@/schema/security-scene";
 import { bakeoffToSecurityScene } from "@/lib/bakeoff-bridge";
 
@@ -56,11 +57,10 @@ function parseTimelineFocusFromUrl(search: string) {
 }
 
 function StudioPageContent() {
-  const searchParams = useSearchParams();
-  const shouldBypassLauncher = searchParams.get("studio") === "1";
-  const [enterStudio, setEnterStudio] = useState(shouldBypassLauncher);
+  const [enterStudio, setEnterStudio] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const [showFloorPlanWizard, setShowFloorPlanWizard] = useState(false);
+  const [showSiteIntakeHub, setShowSiteIntakeHub] = useState(false);
   const [showScanWizard, setShowScanWizard] = useState(false);
   const [scanWizardMode, setScanWizardMode] = useState<"manual" | "guided">("manual");
   const [showProjectLauncher, setShowProjectLauncher] = useState(false);
@@ -211,7 +211,7 @@ function StudioPageContent() {
       afterSummary: "Manual-assisted scan intake opened.",
       notes: ["Launcher-scoped scan intake event recorded in the evidence ledger."],
     });
-    setScanWizardMode("manual");
+    setScanWizardMode("guided");
     setShowScanWizard(true);
   };
   const openGuidedScanAssistant = () => {
@@ -235,6 +235,10 @@ function StudioPageContent() {
     setScanWizardMode("guided");
     setShowScanWizard(true);
     setLaunchNotice("Guided scan assistant opened. The manual-assisted review and compile flow remains in control.");
+  };
+  const openSiteIntakeHub = () => {
+    setShowSiteIntakeHub(true);
+    setShowProjectLauncher(false);
   };
   const aiDraftSceneJson = useMemo(
     () => {
@@ -510,12 +514,6 @@ function StudioPageContent() {
     setShowProjectLauncher(true);
   };
 
-  useEffect(() => {
-    if (shouldBypassLauncher) {
-      setEnterStudio(true);
-    }
-  }, [shouldBypassLauncher]);
-
   const handleImportScene = () => {
     if (!confirmWorkspaceReplacement("import a scene JSON")) return;
     fileInputRef.current?.click();
@@ -598,10 +596,7 @@ function StudioPageContent() {
   return (
     <>
       <div className="flex h-full w-full flex-col overflow-y-auto" style={{ background: "var(--bg)" }}>
-        <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 py-4">
-          <div className="mb-4 flex items-center justify-between">
-            <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--text-dim)]">Projects</div>
-          </div>
+        <div className="mx-auto flex w-full max-w-[1520px] flex-1 flex-col px-4 py-4 sm:px-6">
           <StudioDashboardHome
               scene={scene}
               result={currentResult}
@@ -628,7 +623,7 @@ function StudioPageContent() {
               onImportScene={handleImportScene}
               onScanSite={() => {
                 if (!confirmWorkspaceReplacement("start scan intake")) return;
-                openScanWizard();
+                openSiteIntakeHub();
               }}
               onGuidedScanAssistant={() => {
                 if (!confirmWorkspaceReplacement("open the guided scan assistant")) return;
@@ -675,7 +670,7 @@ function StudioPageContent() {
         onScanSite={() => {
           if (!confirmWorkspaceReplacement("start scan intake")) return;
           setShowProjectLauncher(false);
-          openScanWizard();
+          openSiteIntakeHub();
         }}
         onAiDraft={() => {
           setShowProjectLauncher(false);
@@ -760,6 +755,60 @@ function StudioPageContent() {
         </div>
       ) : null}
 
+      {showSiteIntakeHub ? (
+        <div className="fixed inset-0 z-50 bg-black/55 p-4">
+          <div className="mx-auto h-full max-w-[1520px] rounded-2xl border border-[#1f2637] bg-[#0a0f17] shadow-2xl overflow-hidden">
+            <SiteIntakeHub
+              onStartSecurityAudit={() => {
+                setShowSiteIntakeHub(false);
+                openCoverageWorkspace();
+              }}
+              onEnterStudio={() => {
+                setShowSiteIntakeHub(false);
+                setEnterStudio(true);
+              }}
+              onShowProjects={() => {
+                setShowSiteIntakeHub(false);
+              }}
+              onOpenDemo={() => {
+                setShowSiteIntakeHub(false);
+                openDemoWorkspace();
+              }}
+              onStartScan={() => {
+                setShowSiteIntakeHub(false);
+                openGuidedScanAssistant();
+              }}
+              onStartAiDraft={() => {
+                setShowSiteIntakeHub(false);
+                startAiDraftFlow();
+              }}
+              onImportFloorPlan={() => {
+                setShowSiteIntakeHub(false);
+                openFloorPlanFlow();
+              }}
+              onImportJson={() => {
+                if (!confirmWorkspaceReplacement("import a scene JSON")) return;
+                setShowSiteIntakeHub(false);
+                fileInputRef.current?.click();
+              }}
+              onBuildManually={() => {
+                setShowSiteIntakeHub(false);
+                startDesignFlow();
+              }}
+              onVerifyFootage={() => {
+                setShowSiteIntakeHub(false);
+                startVerifyFootageFlow();
+              }}
+              recentSites={[
+                { id: "downtown-retail", name: "Downtown Retail Store", updatedLabel: "Updated 2h ago", riskLabel: "Medium Risk" },
+                { id: "office-lobby", name: "Office Lobby", updatedLabel: "Updated 1d ago", riskLabel: "Low Risk" },
+                { id: "warehouse-a", name: "Warehouse A", updatedLabel: "Updated 2d ago", riskLabel: "High Risk" },
+              ]}
+            />
+          </div>
+        </div>
+      ) : null}
+
         {showScanWizard ? (
         <div className="fixed inset-0 z-50 bg-black/55 p-4">
           <div className="mx-auto h-full max-w-6xl rounded-2xl border border-[#1f2637] bg-[#0b0f17] shadow-2xl">
@@ -839,7 +888,7 @@ function StudioPageContent() {
                 Stage policy: {currentAiProviderTelemetry.stagePolicies.map((stage) => `${stage.stage}:${stage.ready ? "ready" : "guarded"}`).join(" · ")}.
               </p>
               <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">
-                Latest measured action: {latestAiActionTelemetry ? `${latestAiActionTelemetry.stage} · ${latestAiActionTelemetry.durationMs} ms · ~${latestAiActionTelemetry.estimatedTotalTokens} tokens` : "none yet"}.
+                Latest measured action: {latestAiActionTelemetry ? `${latestAiActionTelemetry.stage}${latestAiActionTelemetry.promptTitle ? ` · ${latestAiActionTelemetry.promptTitle}${latestAiActionTelemetry.promptVersion ? ` ${latestAiActionTelemetry.promptVersion}` : ""}` : ""} · ${latestAiActionTelemetry.durationMs} ms · ~${latestAiActionTelemetry.estimatedTotalTokens} tokens` : "none yet"}.
               </p>
               <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">
                 Telemetry trend: {aiActionTelemetrySummary.trendLabel} · {aiActionTelemetrySummary.trendNote}
@@ -1028,13 +1077,14 @@ function StudioPageContent() {
               >
                 Cancel
               </button>
-              <button
-                onClick={async () => {
-                  setAiGenerating(true);
-                  const draftStartedAt = performance.now();
-                  try {
-                    const provider = createModelProvider(aiProviderSelection);
-                    const useModelDraft = aiDraftModelAvailable;
+                <button
+                  onClick={async () => {
+                    setAiGenerating(true);
+                    const draftStartedAt = performance.now();
+                    const promptLineage = resolvePromptRegistryLineage("ai_draft");
+                    try {
+                      const provider = createModelProvider(aiProviderSelection);
+                      const useModelDraft = aiDraftModelAvailable;
                     const draft = useModelDraft
                       ? await draftSceneFromPromptWithModel(aiPrompt, provider)
                       : draftSceneFromPrompt(aiPrompt);
@@ -1043,14 +1093,15 @@ function StudioPageContent() {
                       throw new Error(`Generated draft is invalid SecurityScene data: ${draftValidation.error.issues[0]?.message ?? "validation failed"}`);
                     }
                     setAiDraftPreview(draft);
-                    recordAiActionTelemetry({
-                      stage: "ai_draft",
-                      providerId: aiProviderSelection.providerId,
-                      providerLabel: currentAiProvider.providerLabel,
-                      model: aiProviderSelection.model,
-                      localOnlyMode,
-                      cloudAvailable: useModelDraft,
-                      durationMs: Math.max(0, Math.round(performance.now() - draftStartedAt)),
+                      recordAiActionTelemetry({
+                        stage: "ai_draft",
+                        providerId: aiProviderSelection.providerId,
+                        providerLabel: currentAiProvider.providerLabel,
+                        model: aiProviderSelection.model,
+                        ...(promptLineage ?? {}),
+                        localOnlyMode,
+                        cloudAvailable: useModelDraft,
+                        durationMs: Math.max(0, Math.round(performance.now() - draftStartedAt)),
                       estimatedPromptTokens: estimateTokensFromText(aiPrompt),
                       estimatedCompletionTokens: estimateTokensFromText(JSON.stringify(draft.scene)),
                       estimatedTotalTokens: estimateTokensFromText(aiPrompt) + estimateTokensFromText(JSON.stringify(draft.scene)),
@@ -1102,6 +1153,7 @@ function StudioPageContent() {
                         providerId: aiProviderSelection.providerId,
                         providerLabel: currentAiProvider.providerLabel,
                         model: aiProviderSelection.model,
+                        ...(promptLineage ?? {}),
                         localOnlyMode,
                         cloudAvailable: false,
                         durationMs: Math.max(0, Math.round(performance.now() - draftStartedAt)),
@@ -1120,6 +1172,7 @@ function StudioPageContent() {
                       providerId: aiProviderSelection.providerId,
                       providerLabel: currentAiProvider.providerLabel,
                       model: aiProviderSelection.model,
+                      ...(promptLineage ?? {}),
                       localOnlyMode,
                       cloudAvailable: false,
                       durationMs: Math.max(0, Math.round(performance.now() - draftStartedAt)),

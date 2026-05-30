@@ -613,8 +613,8 @@ function CameraInspector() {
                     Recommended Next Steps
                   </div>
                   <div className="space-y-2">
-                    {recs.slice(0, 3).map((rec, i) => (
-                      <div key={i} className="flex items-start gap-2">
+                    {recs.slice(0, 3).map((rec) => (
+                      <div key={rec.description} className="flex items-start gap-2">
                         <span className={`mt-0.5 flex-shrink-0 text-[7px] font-bold ${COST_COLOR[rec.costCategory] ?? "text-[#8090a8]"}`}>
                           {rec.costCategory.toUpperCase()}
                         </span>
@@ -685,7 +685,7 @@ function CameraInspector() {
               {offlineImpact.length > 0 ? (
                 <div className="space-y-2">
                   {offlineImpact.map((message, index) => (
-                    <div key={index} className="rounded-lg border border-amber-500/20 bg-amber-500/8 px-2 py-2 text-[10px] text-amber-200">
+                    <div key={`msg-${index}`} /* stable order */ className="rounded-lg border border-amber-500/20 bg-amber-500/8 px-2 py-2 text-[10px] text-amber-200">
                       {message}
                     </div>
                   ))}
@@ -1101,7 +1101,7 @@ function CameraInspector() {
                   <div className="space-y-1.5">
                     {offlineImpact.map((message, index) => (
                       <div
-                        key={index}
+                        key={`msg-${index}`} /* stable order */
                         className="rounded-lg border border-amber-500/20 bg-amber-500/8 px-2 py-1.5 text-[9px] text-amber-200"
                       >
                         {message}

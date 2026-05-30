@@ -79,8 +79,19 @@ const SOAP_EVENT_SUBSCRIBE_ENVELOPE = `<?xml version="1.0" encoding="utf-8"?>
   </s:Body>
 </s:Envelope>`;
 
+const SOAP_EVENT_RENEW_ENVELOPE = `<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:wsnt="http://docs.oasis-open.org/wsn/b-2">
+  <s:Body>
+    <wsnt:Renew>
+      <wsnt:TerminationTime>PT1H</wsnt:TerminationTime>
+    </wsnt:Renew>
+  </s:Body>
+</s:Envelope>`;
+
 const SOAP_DEVICE_SOAPACTION = "http://www.onvif.org/ver10/device/wsdl/GetDeviceInformation";
 const SOAP_EVENT_SOAPACTION = "http://docs.oasis-open.org/wsn/b-2/NotificationProducer/Subscribe";
+const SOAP_EVENT_RENEW_SOAPACTION = "http://docs.oasis-open.org/wsn/bw-2/SubscriptionManager/RenewRequest";
+const DEFAULT_EVENT_SUBSCRIPTION_TTL_MS = 60 * 60 * 1000;
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -305,6 +316,13 @@ function parseOnvifTimestamp(raw: string, tagNames: string[]) {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
+function parseEventSubscriptionResponse(raw: string) {
+  return {
+    eventSubscriptionReference: parseOnvifUri(raw, ["SubscriptionReference", "Address", "Uri", "XAddr"]),
+    eventSubscriptionExpiresAt: parseOnvifTimestamp(raw, ["TerminationTime", "Expires", "ExpirationTime"]),
+  };
+}
+
 function createSession(credentials: OnvifCredentials): OnvifSession {
   return {
     sessionId: crypto.randomUUID(),
@@ -374,6 +392,35 @@ export class OnvifClient {
     };
   }
 
+  private updateSessionFromEventSubscriptionAttempt(
+    attempt: { response: Response; raw: string; authChallengeHeader: string | null },
+    targetUrl: string,
+    eventSubscriptionUri: string | null,
+  ) {
+    const parsedSubscription = parseEventSubscriptionResponse(attempt.raw);
+    const nextEventSubscriptionUri = attempt.response.ok
+      ? this.session.eventSubscriptionUri ?? eventSubscriptionUri ?? targetUrl ?? undefined
+      : this.session.eventSubscriptionUri ?? undefined;
+    const nextEventSubscriptionReference = attempt.response.ok
+      ? parsedSubscription.eventSubscriptionReference ?? this.session.eventSubscriptionReference ?? undefined
+      : this.session.eventSubscriptionReference ?? undefined;
+    const nextEventSubscriptionExpiresAt = attempt.response.ok
+      ? parsedSubscription.eventSubscriptionExpiresAt ?? this.session.eventSubscriptionExpiresAt ?? (Date.now() + DEFAULT_EVENT_SUBSCRIPTION_TTL_MS)
+      : this.session.eventSubscriptionExpiresAt ?? undefined;
+    this.session = {
+      ...this.session,
+      state: attempt.response.ok ? "streaming" : "error",
+      responseStatus: attempt.response.status,
+      responseStatusText: attempt.response.statusText || null,
+      authChallengeHeader: attempt.authChallengeHeader,
+      eventSubscriptionUri: nextEventSubscriptionUri,
+      eventSubscriptionReference: nextEventSubscriptionReference,
+      eventSubscriptionExpiresAt: nextEventSubscriptionExpiresAt,
+      lastHeartbeatAt: Date.now(),
+    };
+    return this.getSession();
+  }
+
   public async connect(): Promise<OnvifProbeResult> {
     this.session.state = "authenticating";
 
@@ -394,7 +441,6 @@ export class OnvifClient {
     const mediaUri = parseOnvifUri(raw, ["MediaUri", "StreamUri", "XAddr", "Uri"]);
     let eventSubscriptionReference: string | null = null;
     let eventSubscriptionExpiresAt: number | null = null;
-    const finalChallenge = parseAuthChallengeHeader(authChallengeHeader);
 
     if (response.ok && eventSubscriptionUri) {
       this.session.state = "subscribing_events";
@@ -406,8 +452,9 @@ export class OnvifClient {
       response = eventAttempt.response;
       raw = `${raw}\n${eventAttempt.raw}`.trim();
       authChallengeHeader = authChallengeHeader ?? eventAttempt.authChallengeHeader;
-      eventSubscriptionReference = parseOnvifUri(eventAttempt.raw, ["SubscriptionReference", "Address", "Uri", "XAddr"]);
-      eventSubscriptionExpiresAt = parseOnvifTimestamp(eventAttempt.raw, ["TerminationTime", "Expires", "ExpirationTime"]);
+      const parsedSubscription = parseEventSubscriptionResponse(eventAttempt.raw);
+      eventSubscriptionReference = parsedSubscription.eventSubscriptionReference;
+      eventSubscriptionExpiresAt = parsedSubscription.eventSubscriptionExpiresAt;
     }
 
     const connected = response.ok;
@@ -431,6 +478,32 @@ export class OnvifClient {
       responseStatusText: response.statusText || null,
       authChallengeHeader,
       session: this.getSession(),
+    };
+  }
+
+  public async renewEventSubscription(
+    targetUrl = this.session.eventSubscriptionReference ?? this.session.eventSubscriptionUri ?? null,
+    eventSubscriptionUri: string | null = this.session.eventSubscriptionUri ?? null,
+  ): Promise<OnvifProbeResult | null> {
+    const renewalTarget = typeof targetUrl === "string" && targetUrl.trim().length > 0 ? targetUrl.trim() : null;
+    if (!renewalTarget) {
+      return null;
+    }
+
+    this.session.state = "subscribing_events";
+    const renewalAttempt = await this.probeAuthenticatedOnvifRequest(
+      renewalTarget,
+      SOAP_EVENT_RENEW_ENVELOPE,
+      SOAP_EVENT_RENEW_SOAPACTION,
+    );
+
+    const session = this.updateSessionFromEventSubscriptionAttempt(renewalAttempt, renewalTarget, eventSubscriptionUri);
+    return {
+      raw: renewalAttempt.raw,
+      responseStatus: renewalAttempt.response.status,
+      responseStatusText: renewalAttempt.response.statusText || null,
+      authChallengeHeader: renewalAttempt.authChallengeHeader,
+      session,
     };
   }
 

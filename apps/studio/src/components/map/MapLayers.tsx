@@ -236,13 +236,13 @@ export function MapLayers({
 
       {layers.coverage && (
         <g>
-          {cells.map((cell, index) => {
+          {cells.map((cell) => {
             if (cell.quality === "none" && isMini) return null;
 
             const { x, y } = projection.sceneToSvg([cell.x, cell.z]);
             return (
                 <rect
-                  key={`coverage-${index}`}
+                  key={`${cell.x}-${cell.z}`}
                   x={x - projection.lengthToSvg(cellHalf)}
                   y={y - projection.lengthToSvg(cellHalf)}
                   width={projection.lengthToSvg(cellSize)}
@@ -668,7 +668,7 @@ export function MapLayers({
 
                     return (
                       <line
-                        key={`${path.id}-qseg-${index}`}
+                        key={`${path.id}-qseg-${sample.position[0].toFixed(2)}-${sample.position[1].toFixed(2)}`}
                         x1={a.x}
                         y1={a.y}
                         x2={b.x}
@@ -750,7 +750,7 @@ export function MapLayers({
             const b = projection.sceneToSvg([wp.position[0], wp.position[1]]);
             return (
               <line
-                key={`adv-${index}`}
+                key={`adv-${wp.position[0].toFixed(2)}-${wp.position[1].toFixed(2)}`}
                 x1={a.x}
                 y1={a.y}
                 x2={b.x}

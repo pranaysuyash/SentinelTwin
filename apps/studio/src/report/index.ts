@@ -17,6 +17,18 @@ type ReportCameraQuality = "none" | "detection" | "observation" | "recognition" 
 
 export type ReportAudience = "operator" | "auditor" | "insurer" | "installer" | "privacy_reviewer";
 export type ReportVisibility = "internal" | "shared" | "privacy_safe";
+export type ReportSectionKey =
+  | "summary"
+  | "assumptions"
+  | "provenance"
+  | "truth_ladder"
+  | "operational_evidence"
+  | "causal_trace"
+  | "zone_analysis"
+  | "camera_analysis"
+  | "temporal_twin"
+  | "recommendations"
+  | "privacy_masking";
 
 function qualityRank(quality: ReportCameraQuality) {
   return QUALITY_ORDER.indexOf(quality as typeof QUALITY_ORDER[number]);
@@ -27,6 +39,10 @@ interface ReportAudienceProfile {
   defaultTitle: string;
   framing: string;
   planningNote: string;
+  disclosureLevel: "full" | "evidence_first" | "risk_first" | "installation" | "privacy_minimized";
+  visibleSections: ReportSectionKey[];
+  withheldSections: ReportSectionKey[];
+  disclosureSummary: string;
 }
 
 interface ReportVisibilityProfile {
@@ -49,30 +65,109 @@ const REPORT_AUDIENCE_PROFILES: Record<ReportAudience, ReportAudienceProfile> = 
     defaultTitle: "Security Coverage Audit Report",
     framing: "Operational coverage review for site operators and security leads.",
     planningNote: "Operator-facing planning summary with actionable hardening context.",
+    disclosureLevel: "full",
+    visibleSections: [
+      "summary",
+      "assumptions",
+      "provenance",
+      "truth_ladder",
+      "operational_evidence",
+      "causal_trace",
+      "zone_analysis",
+      "camera_analysis",
+      "temporal_twin",
+      "recommendations",
+    ],
+    withheldSections: [],
+    disclosureSummary: "Full operational disclosure for the active workspace owner.",
   },
   auditor: {
     label: "Auditor",
     defaultTitle: "Security Audit Evidence Report",
     framing: "Evidence-oriented review for auditors and control owners.",
     planningNote: "Audit-facing evidence pack with provenance, truth ladder, and temporal history.",
+    disclosureLevel: "evidence_first",
+    visibleSections: [
+      "summary",
+      "assumptions",
+      "provenance",
+      "truth_ladder",
+      "operational_evidence",
+      "causal_trace",
+      "zone_analysis",
+      "camera_analysis",
+      "temporal_twin",
+      "recommendations",
+    ],
+    withheldSections: [],
+    disclosureSummary: "Evidence-first disclosure with the full audit spine and camera detail intact.",
   },
   insurer: {
     label: "Insurer",
     defaultTitle: "Security Risk Exposure Brief",
     framing: "Risk, resilience, and recovery framing for underwriting or exposure review.",
     planningNote: "Exposure-oriented brief for underwriting, loss prevention, or risk review.",
+    disclosureLevel: "risk_first",
+    visibleSections: [
+      "summary",
+      "assumptions",
+      "zone_analysis",
+      "camera_analysis",
+      "recommendations",
+    ],
+    withheldSections: [
+      "provenance",
+      "truth_ladder",
+      "operational_evidence",
+      "causal_trace",
+      "temporal_twin",
+    ],
+    disclosureSummary: "Risk-first disclosure with provenance and causal trace withheld from the main export.",
   },
   installer: {
     label: "Installer",
     defaultTitle: "Installation Acceptance Report",
     framing: "Installation, calibration, and acceptance framing for implementation teams.",
     planningNote: "Acceptance-oriented summary for installers, integrators, and commissioning teams.",
+    disclosureLevel: "installation",
+    visibleSections: [
+      "summary",
+      "assumptions",
+      "zone_analysis",
+      "camera_analysis",
+      "recommendations",
+      "provenance",
+    ],
+    withheldSections: [
+      "truth_ladder",
+      "operational_evidence",
+      "causal_trace",
+      "temporal_twin",
+    ],
+    disclosureSummary: "Installation-focused disclosure with provenance but without the full evidence trace.",
   },
   privacy_reviewer: {
     label: "Privacy Reviewer",
     defaultTitle: "Privacy Review Brief",
     framing: "Visibility, retention, and overcollection framing for privacy review.",
     planningNote: "Privacy-facing brief that highlights visibility boundaries and evidence traceability.",
+    disclosureLevel: "privacy_minimized",
+    visibleSections: [
+      "summary",
+      "assumptions",
+      "zone_analysis",
+      "privacy_masking",
+      "recommendations",
+    ],
+    withheldSections: [
+      "provenance",
+      "truth_ladder",
+      "operational_evidence",
+      "causal_trace",
+      "temporal_twin",
+      "camera_analysis",
+    ],
+    disclosureSummary: "Privacy-minimized disclosure focused on masking posture and headline risk only.",
   },
 };
 
@@ -138,6 +233,10 @@ export function getReportAudienceProfile(audience: ReportAudience): ReportAudien
   return REPORT_AUDIENCE_PROFILES[audience];
 }
 
+export function getReportAudiencePolicy(audience: ReportAudience): ReportAudienceProfile {
+  return getReportAudienceProfile(audience);
+}
+
 export function getReportVisibilityProfile(visibility: ReportVisibility): ReportVisibilityProfile {
   return REPORT_VISIBILITY_PROFILES[visibility];
 }
@@ -174,6 +273,7 @@ export interface ReportData {
   audience: ReportAudience;
   audienceLabel: string;
   audienceFraming: string;
+  audiencePolicy: ReportAudienceProfile;
   visibility: ReportVisibility;
   visibilityLabel: string;
   visibilityFraming: string;
@@ -465,6 +565,7 @@ export function buildReportData(
     audience,
     audienceLabel: audienceProfile.label,
     audienceFraming: audienceProfile.framing,
+    audiencePolicy: audienceProfile,
     visibility,
     visibilityLabel: visibilityProfile.label,
     visibilityFraming: visibilityProfile.framing,
@@ -810,6 +911,7 @@ function buildCompareReportSnapshot(
     audience,
     audienceLabel: audienceProfile.label,
     audienceFraming: audienceProfile.framing,
+    audiencePolicy: audienceProfile,
     visibility,
     visibilityLabel: visibilityProfile.label,
     visibilityFraming: visibilityProfile.framing,

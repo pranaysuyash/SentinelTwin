@@ -1,0 +1,31 @@
+name: studio-quality-gate
+
+on:
+  pull_request:
+    paths:
+      - 'apps/studio/**'
+      - 'tools/**'
+      - '.github/workflows/studio-quality-gate.yml'
+  workflow_dispatch:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Studio quality gate
+        run: ./tools/studio-quality-gate.sh

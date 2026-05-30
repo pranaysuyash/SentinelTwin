@@ -503,7 +503,7 @@ export function ImportReview({ result, warnings, onImageChange, onRecalibrate, o
           </div>
           <ul className="mt-1 space-y-0.5">
             {warnings.map((w, i) => (
-              <li key={i} className="flex items-start gap-1 text-[8px] text-amber-300/80">
+              <li key={i} /* stable display list */ className="flex items-start gap-1 text-[8px] text-amber-300/80">
                 <span className="mt-0.5 block h-1 w-1 flex-shrink-0 rounded-full bg-amber-400/40" />
                 {w}
               </li>

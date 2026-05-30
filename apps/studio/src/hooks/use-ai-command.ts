@@ -17,6 +17,7 @@ import { applySceneOperation } from "@/lib/applySceneOperation";
 import { createObstructionNode, createSecurityLightNode } from "@/lib/node-factory";
 import { parseOfflineCommand, type OfflineCommandAction } from "@/lib/offline-command-parser";
 import { evaluateAiRateLimit, formatRetryHint, recordAiRateLimitUsage } from "@/lib/ai-rate-limit";
+import { resolvePromptRegistryLineage } from "@/agents/prompt-registry";
 import { useStudioStore } from "@/store/studio-store";
 import { simulateStudio } from "@/simulation/simulate-studio";
 import type { CameraNode, CriticalZoneNode, SecurityScene, SimulationResult } from "@/schema/security-scene";
@@ -119,11 +120,13 @@ export function useAiCommand() {
     status: "success" | "error",
     note?: string | null,
   ) => {
+    const promptLineage = resolvePromptRegistryLineage(stage);
     recordAiActionTelemetry({
       stage,
       providerId: aiProviderSelection.providerId,
       providerLabel: providerSummary.providerLabel,
       model: aiProviderSelection.model,
+      ...(promptLineage ?? {}),
       localOnlyMode,
       cloudAvailable: apiKeyAvailable && !localOnlyMode,
       durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
@@ -767,11 +770,13 @@ export function useAiCommand() {
 
       const report = await generateReport(simData, sceneSummary, provider);
       const elapsedMs = Math.round(performance.now() - startedAt);
+      const promptLineage = resolvePromptRegistryLineage("report_generation");
       recordAiActionTelemetry({
         stage: "report_generation",
         providerId: aiProviderSelection.providerId,
         providerLabel: providerSummary.providerLabel,
         model: aiProviderSelection.model,
+        ...(promptLineage ?? {}),
         localOnlyMode,
         cloudAvailable: apiKeyAvailable,
         durationMs: elapsedMs,

@@ -1,0 +1,14 @@
+{
+  "id": "local-only",
+  "name": "Local Only",
+  "description": "No cloud model/provider use. All AI gates remain local policy constrained.",
+  "requiredEnv": [],
+  "recommendedEnv": ["NEXT_PUBLIC_ENABLE_REACT_DIAGNOSTICS"],
+  "localOnlyMode": true,
+  "checks": ["typecheck", "truth-audit", "build"],
+  "slo": {
+    "buildMinutes": 10,
+    "coldStartSeconds": 15,
+    "simulationMsP95": 50
+  }
+}

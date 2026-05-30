@@ -21,4 +21,10 @@ describe("Studio shell launcher handoff", () => {
     expect(source).toContain('if (selectedNodeId && rightPanelMode === "security_status")');
     expect(source).toContain('setRightPanelMode("inspector")');
   });
+
+  test("keeps report mode in dock layout instead of full-canvas bypass", () => {
+    const source = readFileSync(studioShellPath, "utf8");
+
+    expect(source).toContain('const fullCanvasMode = viewMode === "camera_view" || viewMode === "wall";');
+  });
 });

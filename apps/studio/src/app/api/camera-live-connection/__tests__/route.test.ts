@@ -54,6 +54,9 @@ describe("camera-live-connection route", () => {
           authRealm: "front-entrance",
           authSessionId: "auth_session_cam_front_raw",
           authSessionExpiresAt: 1_725_000_128_000,
+          eventSubscriptionUri: "http://camera.example.com/onvif/events",
+          eventSubscriptionReference: "http://camera.example.com/onvif/events/subscription/raw",
+          eventSubscriptionExpiresAt: 1_725_000_228_000,
           notes: "ONVIF relay reachable",
         }),
       }),
@@ -74,6 +77,9 @@ describe("camera-live-connection route", () => {
     expect(body.record.authRealm).toBe("front-entrance");
     expect(body.record.authSessionId).toBe("auth_session_cam_front_raw");
     expect(body.record.authSessionExpiresAt).toBe(1_725_000_128_000);
+    expect(body.record.eventSubscriptionUri).toBe("http://camera.example.com/onvif/events");
+    expect(body.record.eventSubscriptionReference).toBe("http://camera.example.com/onvif/events/subscription/raw");
+    expect(body.record.eventSubscriptionExpiresAt).toBe(1_725_000_228_000);
     expect(body.record.transportSessionId).toContain("transport_session_");
     expect(body.record.lastHeartbeatAt).toBeGreaterThan(0);
 
@@ -187,6 +193,7 @@ describe("camera-live-connection route", () => {
   });
 
   test("records a heartbeat renewal without reprobing the device", async () => {
+    const originalFetch = globalThis.fetch;
     const bindResponse = await POST(createNextRequest("http://localhost/api/camera-live-connection", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -211,6 +218,9 @@ describe("camera-live-connection route", () => {
           authRealm: "heartbeat-scene",
           authSessionId: "auth_session_cam_heartbeat_raw",
           authSessionExpiresAt: 1_725_000_138_000,
+          eventSubscriptionUri: "http://camera.example.com/onvif/events",
+          eventSubscriptionReference: "http://camera.example.com/onvif/events/subscription/heartbeat",
+          eventSubscriptionExpiresAt: 1_725_000_238_000,
           notes: "Initial bind",
         }),
       }),
@@ -218,48 +228,81 @@ describe("camera-live-connection route", () => {
 
     const bindBody = await bindResponse.json();
 
-    const heartbeatResponse = await POST(createNextRequest("http://localhost/api/camera-live-connection", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        source: "camera-inspector",
-        action: "heartbeat",
-        protocol: "onvif",
-        cameraId: "cam_heartbeat",
-        cameraName: "Heartbeat Camera",
-        sceneId: "scene-camera-heartbeat",
-        sceneName: "Camera Heartbeat Scene",
-        submittedAt: 1_725_000_029_000,
-        liveSessionId: bindBody.record.liveSessionId,
-        transportSessionId: bindBody.record.transportSessionId,
-        liveFeedUrl: "rtsp://camera.example.com/heartbeat",
-        feedLabel: "Heartbeat feed",
-        raw: "",
-      }),
-    }));
+    globalThis.fetch = (async (input: Parameters<typeof fetch>[0]) => {
+      const url = typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+      expect(url).toBe("http://camera.example.com/onvif/events/subscription/heartbeat");
+      return new Response([
+        "<Envelope>",
+        "  <Body>",
+        "    <RenewResponse>",
+        "      <TerminationTime>2026-05-30T15:45:00Z</TerminationTime>",
+        "    </RenewResponse>",
+        "  </Body>",
+        "</Envelope>",
+      ].join("\n"), {
+        status: 200,
+        statusText: "OK",
+        headers: {
+          "content-type": "application/soap+xml",
+        },
+      });
+    }) as unknown as typeof fetch;
 
-    expect(heartbeatResponse.status).toBe(200);
-    const heartbeatBody = await heartbeatResponse.json();
-    expect(heartbeatBody.ok).toBe(true);
-    expect(heartbeatBody.action).toBe("heartbeat");
-    expect(heartbeatBody.record.liveSessionId).toBe(bindBody.record.liveSessionId);
-    expect(heartbeatBody.record.transportSessionId).toBe(bindBody.record.transportSessionId);
-    expect(heartbeatBody.record.liveConnectionStatus).toBe("connected");
-    expect(heartbeatBody.record.lastHeartbeatAt).toBeGreaterThanOrEqual(bindBody.record.lastHeartbeatAt ?? 0);
-    expect(heartbeatBody.record.authState).toBe("authenticated");
-    expect(heartbeatBody.record.authMode).toBe("token");
-    expect(heartbeatBody.record.authRealm).toBe("heartbeat-scene");
-    expect(heartbeatBody.record.authSessionId).toBe("auth_session_cam_heartbeat_raw");
-    expect(heartbeatBody.record.authSessionExpiresAt).toBe(1_725_000_138_000);
-    expect(heartbeatBody.summary).toContain("Heartbeat");
-    expect(heartbeatBody.summary).toContain("Authenticated via token");
+    try {
+      const heartbeatResponse = await POST(createNextRequest("http://localhost/api/camera-live-connection", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          source: "camera-inspector",
+          action: "heartbeat",
+          protocol: "onvif",
+          cameraId: "cam_heartbeat",
+          cameraName: "Heartbeat Camera",
+          sceneId: "scene-camera-heartbeat",
+          sceneName: "Camera Heartbeat Scene",
+          submittedAt: 1_725_000_029_000,
+          liveSessionId: bindBody.record.liveSessionId,
+          transportSessionId: bindBody.record.transportSessionId,
+          liveFeedUrl: "rtsp://camera.example.com/heartbeat",
+          feedLabel: "Heartbeat feed",
+          raw: "",
+        }),
+      }));
 
-    const history = await GET(createNextRequest("http://localhost/api/camera-live-connection"));
-    const payload = await history.json();
-    expect(payload.historyCount).toBe(2);
-    expect(payload.activeSessionCount).toBe(1);
-    expect(payload.activeSessions[0].sessionId).toBe(bindBody.record.liveSessionId);
-    expect(payload.activeSessions[0].lastAction).toBe("heartbeat");
+      expect(heartbeatResponse.status).toBe(200);
+      const heartbeatBody = await heartbeatResponse.json();
+      expect(heartbeatBody.ok).toBe(true);
+      expect(heartbeatBody.action).toBe("heartbeat");
+      expect(heartbeatBody.record.liveSessionId).toBe(bindBody.record.liveSessionId);
+      expect(heartbeatBody.record.transportSessionId).toBe(bindBody.record.transportSessionId);
+      expect(heartbeatBody.record.liveConnectionStatus).toBe("connected");
+      expect(heartbeatBody.record.lastHeartbeatAt).toBeGreaterThanOrEqual(bindBody.record.lastHeartbeatAt ?? 0);
+      expect(heartbeatBody.record.authState).toBe("authenticated");
+      expect(heartbeatBody.record.authMode).toBe("token");
+      expect(heartbeatBody.record.authRealm).toBe("heartbeat-scene");
+      expect(heartbeatBody.record.authSessionId).toBe("auth_session_cam_heartbeat_raw");
+      expect(heartbeatBody.record.authSessionExpiresAt).toBe(1_725_000_138_000);
+      expect(heartbeatBody.record.eventSubscriptionUri).toBe("http://camera.example.com/onvif/events");
+      expect(heartbeatBody.record.eventSubscriptionReference).toBe("http://camera.example.com/onvif/events/subscription/heartbeat");
+      expect(heartbeatBody.record.eventSubscriptionExpiresAt).toBe(Date.parse("2026-05-30T15:45:00Z"));
+      expect(heartbeatBody.summary).toContain("Heartbeat");
+      expect(heartbeatBody.summary).toContain("Authenticated via token");
+      expect(heartbeatBody.summary).toContain("Renewed the ONVIF event subscription");
+
+      const history = await GET(createNextRequest("http://localhost/api/camera-live-connection"));
+      const payload = await history.json();
+      expect(payload.historyCount).toBe(2);
+      expect(payload.activeSessionCount).toBe(1);
+      expect(payload.activeSessions[0].sessionId).toBe(bindBody.record.liveSessionId);
+      expect(payload.activeSessions[0].lastAction).toBe("heartbeat");
+      expect(payload.activeSessions[0].eventSubscriptionExpiresAt).toBe(Date.parse("2026-05-30T15:45:00Z"));
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 
   test("probes an external live connection endpoint through the canonical route", async () => {

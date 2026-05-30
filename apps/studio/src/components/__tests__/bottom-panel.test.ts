@@ -25,6 +25,8 @@ describe("BottomPanel", () => {
 
   test("exposes a support-ready diagnostic bundle action in debug mode", () => {
     const source = readFileSync(join(import.meta.dir, "../bottom-panel/DebugTab.tsx"), "utf8");
+    const providerSource = readFileSync(join(import.meta.dir, "../agents/ProviderConfigPanel.tsx"), "utf8");
+    const coordinatorSource = readFileSync(join(import.meta.dir, "../agents/AgentCoordinatorPanel.tsx"), "utf8");
 
     expect(source).toContain("Download Bundle");
     expect(source).toContain("Download Runtime Truth");
@@ -77,6 +79,9 @@ describe("BottomPanel", () => {
     expect(source).toContain("Active provider");
     expect(source).toContain("Fallback order");
     expect(source).toContain("Local-only policy");
+    expect(source).toContain("Provider Governance History");
+    expect(source).toContain("Provider selection and local-only policy changes are persisted as a governance history");
+    expect(source).toContain("Current provider policy matches the latest captured snapshot.");
     expect(source).toContain("Cost / Latency Policy");
     expect(source).toContain("Active cost");
     expect(source).toContain("Active latency");
@@ -87,7 +92,9 @@ describe("BottomPanel", () => {
     expect(source).toContain("AI Action Telemetry");
     expect(source).toContain("Latest stage");
     expect(source).toContain("Trend");
+    expect(source).toContain("Policy");
     expect(source).toContain("Recent avg");
+    expect(source).toContain("Long-horizon avg");
     expect(source).toContain("Model Eval Suite");
     expect(source).toContain("Budget Policy");
     expect(source).toContain("Run Eval Suite");
@@ -102,6 +109,8 @@ describe("BottomPanel", () => {
     expect(source).toContain("The active session registry keeps the current live lease visible");
     expect(source).toContain("Provider Health Dashboard");
     expect(source).toContain("Prompt Registry");
+    expect(source).toContain("Prompt Registry History");
+    expect(source).toContain("Capture snapshot");
     expect(source).toContain("Heuristic Layout Baseline");
     expect(source).toContain("Command Parse");
     expect(source).toContain("Counterfactual Candidates");
@@ -117,6 +126,15 @@ describe("BottomPanel", () => {
     expect(source).toContain("Output preview");
     expect(source).toContain("AI Provider");
     expect(source).toContain("Provider Status");
+    expect(source).toContain("Agent Runtime");
+    expect(source).toContain("ProviderConfigPanel");
+    expect(source).toContain("AgentCoordinatorPanel");
+    expect(source).toContain("setAiProviderSelection");
+    expect(source).toContain("onSelectionChange");
+    expect(providerSource).toContain("Provider Configuration");
+    expect(providerSource).toContain("Active:");
+    expect(coordinatorSource).toContain("Agent Pipeline");
+    expect(coordinatorSource).toContain("Token Usage");
     expect(source).toContain("Simulation");
     expect(source).toContain("Archive Branch");
     expect(source).toContain("Merge Archive");

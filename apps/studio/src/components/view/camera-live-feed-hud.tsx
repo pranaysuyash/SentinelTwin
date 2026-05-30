@@ -64,6 +64,9 @@ type CameraLiveConnectionEvent = {
   authChallengeHeader: string | null;
   authChallengeScheme: "basic" | "digest" | "bearer" | "token" | null;
   authChallengeRealm: string | null;
+  eventSubscriptionUri: string | null;
+  eventSubscriptionReference: string | null;
+  eventSubscriptionExpiresAt: number | null;
   liveConnectionMode: "rtsp" | "mjpeg" | "http" | "onvif" | "proxy" | null;
   liveConnectionStatus: "disconnected" | "connecting" | "connected" | "error" | null;
   ingestMode: "manual" | "external";
@@ -257,8 +260,11 @@ export function LiveFeedHUD({
             <div className="col-span-2"><span className="text-[#6a748b]">Expires:</span> {cameraLiveConnectionEvent.liveSessionExpiresAt == null ? "—" : new Date(cameraLiveConnectionEvent.liveSessionExpiresAt).toLocaleTimeString()}</div>
             <div className="col-span-2"><span className="text-[#6a748b]">Auth expires:</span> {cameraLiveConnectionEvent.authSessionExpiresAt == null ? "—" : new Date(cameraLiveConnectionEvent.authSessionExpiresAt).toLocaleTimeString()}</div>
             <div className="col-span-2"><span className="text-[#6a748b]">Challenge:</span> {cameraLiveConnectionEvent.authChallengeHeader ?? "—"}</div>
+            <div><span className="text-[#6a748b]">Events:</span> {cameraLiveConnectionEvent.eventSubscriptionUri ?? "—"}</div>
             <div><span className="text-[#6a748b]">Transport response:</span> {cameraLiveConnectionEvent.transportResponseStatus == null ? "—" : `${cameraLiveConnectionEvent.transportResponseStatus}${cameraLiveConnectionEvent.transportResponseStatusText ? ` ${cameraLiveConnectionEvent.transportResponseStatusText}` : ""}`}</div>
+            <div><span className="text-[#6a748b]">Event ref:</span> {cameraLiveConnectionEvent.eventSubscriptionReference ?? "—"}</div>
             <div><span className="text-[#6a748b]">Challenge scheme:</span> {cameraLiveConnectionEvent.authChallengeScheme ?? "—"}</div>
+            <div className="col-span-2"><span className="text-[#6a748b]">Event expiry:</span> {cameraLiveConnectionEvent.eventSubscriptionExpiresAt == null ? "—" : new Date(cameraLiveConnectionEvent.eventSubscriptionExpiresAt).toLocaleTimeString()}</div>
             <div className="col-span-2"><span className="text-[#6a748b]">Heartbeat:</span> {cameraLiveConnectionEvent.lastHeartbeatAt == null ? "—" : new Date(cameraLiveConnectionEvent.lastHeartbeatAt).toLocaleTimeString()} · probes {cameraLiveConnectionEvent.probeCount}</div>
           </div>
           <div className="mt-1 text-[8px] text-[#8ea6cc]">

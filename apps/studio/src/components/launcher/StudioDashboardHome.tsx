@@ -2555,7 +2555,7 @@ export function StudioDashboardHome({
                   </div>
                 </div>
               </div>
-            )}
+            ) : null}
           </section>
 
           <aside className="flex flex-col gap-4 rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">

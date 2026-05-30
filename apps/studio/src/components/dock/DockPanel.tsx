@@ -14,6 +14,7 @@ export function DockPanel({
   workspacePreset,
   collapsed,
   focusMode,
+  attention,
   sizePx,
   onToggle,
   onResize,
@@ -27,6 +28,7 @@ export function DockPanel({
   workspacePreset: WorkspacePreset;
   collapsed: boolean;
   focusMode: boolean;
+  attention?: boolean;
   sizePx: number;
   onToggle: () => void;
   onResize: (sizePx: number) => void;
@@ -60,6 +62,7 @@ export function DockPanel({
           title={title}
           subtitle={subtitle}
           workspacePreset={workspacePreset}
+          attention={attention}
           onToggle={onToggle}
           onFocus={onFocus}
         />

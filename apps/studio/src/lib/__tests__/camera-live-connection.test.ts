@@ -234,6 +234,9 @@ describe("camera live connection probe", () => {
       expect(result.record.liveConnectionStatus).toBe("connected");
       expect(result.record.authState).toBe("authenticated");
       expect(result.record.protocolProfile).toBe("onvif_device");
+      expect(result.record.eventSubscriptionUri).toBe("http://camera.example.com/onvif/events");
+      expect(result.record.eventSubscriptionReference).toBe("http://camera.example.com/onvif/events/subscription/beta");
+      expect(result.record.eventSubscriptionExpiresAt).toBe(Date.parse("2026-05-30T15:00:00Z"));
       expect(result.record.notes).toContain("ONVIF device information");
     } finally {
       globalThis.fetch = originalFetch;

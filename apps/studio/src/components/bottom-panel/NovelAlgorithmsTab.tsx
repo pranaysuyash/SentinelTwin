@@ -747,11 +747,11 @@ export function NovelAlgorithmsTab() {
               </div>
               <div className="mt-2 space-y-1.5">
                 {visibleBands.length > 0 ? (
-                  visibleBands.slice(0, 3).map((segment, index) => (
-                    <div key={`${segment.startDistanceM}-${segment.endDistanceM}-${index}`} className="rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1.5">
+                  visibleBands.slice(0, 3).map((segment, i) => (
+                    <div key={`${segment.startDistanceM}-${segment.endDistanceM}`} className="rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1.5">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-[9px] uppercase tracking-[0.08em] text-[#8b96ab]">
-                          Visible segment {index + 1}
+                          Visible segment {i + 1}
                         </span>
                         <span className="font-mono text-[9px] text-[#d2d9e8]">
                           {segment.startDistanceM.toFixed(1)}m → {segment.endDistanceM.toFixed(1)}m

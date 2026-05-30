@@ -165,6 +165,7 @@ export function CameraInspector() {
   const allCameraMetadataEvents = useStudioStore((s) => s.cameraMetadataEvents);
   const recordCameraMetadataEvent = useStudioStore((s) => s.recordCameraMetadataEvent);
   const recordCameraLiveConnectionEvent = useStudioStore((s) => s.recordCameraLiveConnectionEvent);
+  const recordOperationalEvidenceEvent = useStudioStore((s) => s.recordOperationalEvidenceEvent);
   const [viewMode, setViewModeState] = useState<CameraViewMode>("normal");
   const [viewToggles, setViewToggles] = useState<ViewToggleState>({
     overlays: true, dori: true, path: false, zones: true, timestamp: true, boundingBox: false, grid: false,
@@ -201,6 +202,9 @@ export function CameraInspector() {
     authChallengeHeader: string | null;
     authChallengeScheme: "basic" | "digest" | "bearer" | "token" | null;
     authChallengeRealm: string | null;
+    eventSubscriptionUri: string | null;
+    eventSubscriptionReference: string | null;
+    eventSubscriptionExpiresAt: number | null;
     lastAction: "bind" | "refresh" | "heartbeat" | "disconnect";
   }>>([]);
   const sceneId = useStudioStore((s) => s.scene.id);
@@ -476,6 +480,7 @@ export function CameraInspector() {
         ok?: boolean;
         summary?: string;
         records?: CameraMetadataIngestResponse["records"];
+        evidenceEvents?: CameraMetadataIngestResponse["evidenceEvents"];
         error?: string;
         issues?: Array<{ path: string; message: string }>;
       };
@@ -513,6 +518,9 @@ export function CameraInspector() {
           summary: body.summary ?? `Camera metadata archived for ${record.cameraName}.`,
           notes: record.notes,
         });
+      });
+      body.evidenceEvents?.forEach((event) => {
+        recordOperationalEvidenceEvent(event);
       });
 
       const preferredRecord = body.records?.find((record) => record.cameraId === camera!.id) ?? body.records?.[0] ?? null;
@@ -605,6 +613,9 @@ export function CameraInspector() {
         authChallengeHeader: body.record.authChallengeHeader ?? undefined,
         authChallengeScheme: body.record.authChallengeScheme ?? undefined,
         authChallengeRealm: body.record.authChallengeRealm ?? undefined,
+        eventSubscriptionUri: body.record.eventSubscriptionUri ?? undefined,
+        eventSubscriptionReference: body.record.eventSubscriptionReference ?? undefined,
+        eventSubscriptionExpiresAt: body.record.eventSubscriptionExpiresAt ?? undefined,
       });
       recordCameraLiveConnectionEvent({
         cameraId: camera!.id,
@@ -623,6 +634,9 @@ export function CameraInspector() {
         previousAuthChallengeHeader: cameraBeforeUpdate?.authChallengeHeader ?? null,
         previousAuthChallengeScheme: cameraBeforeUpdate?.authChallengeScheme ?? null,
         previousAuthChallengeRealm: cameraBeforeUpdate?.authChallengeRealm ?? null,
+        previousEventSubscriptionUri: cameraBeforeUpdate?.eventSubscriptionUri ?? null,
+        previousEventSubscriptionReference: cameraBeforeUpdate?.eventSubscriptionReference ?? null,
+        previousEventSubscriptionExpiresAt: cameraBeforeUpdate?.eventSubscriptionExpiresAt ?? null,
         previousLiveSessionId: cameraBeforeUpdate?.liveSessionId ?? null,
         previousLiveSessionState: cameraBeforeUpdate?.liveSessionState ?? null,
         previousLiveSessionStartedAt: cameraBeforeUpdate?.liveSessionStartedAt ?? null,
@@ -654,6 +668,9 @@ export function CameraInspector() {
         authChallengeHeader: body.record.authChallengeHeader ?? null,
         authChallengeScheme: body.record.authChallengeScheme ?? null,
         authChallengeRealm: body.record.authChallengeRealm ?? null,
+        eventSubscriptionUri: body.record.eventSubscriptionUri ?? null,
+        eventSubscriptionReference: body.record.eventSubscriptionReference ?? null,
+        eventSubscriptionExpiresAt: body.record.eventSubscriptionExpiresAt ?? null,
         ingestMode: action === "disconnect" ? "manual" : "external",
         summary: body.summary ?? (action === "disconnect"
           ? `Live camera connection cleared for ${camera!.name}.`
@@ -950,6 +967,9 @@ export function CameraInspector() {
                             Auth {entry.authState ?? "unauthenticated"} · {entry.authMode ?? "none"}{entry.authRealm ? ` · realm ${entry.authRealm}` : ""}{entry.authSessionId ? ` · session ${entry.authSessionId.slice(-8)}` : ""}{entry.authSessionExpiresAt == null ? "" : ` · expires ${new Date(entry.authSessionExpiresAt).toLocaleTimeString()}`}{entry.authChallengeHeader ? ` · challenge ${entry.authChallengeHeader}` : ""}{entry.transportResponseStatus == null ? "" : ` · response ${entry.transportResponseStatus}${entry.transportResponseStatusText ? ` ${entry.transportResponseStatusText}` : ""}`}
                           </div>
                           <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+                            Events {entry.eventSubscriptionUri ? entry.eventSubscriptionUri : "—"}{entry.eventSubscriptionReference ? ` · ref ${entry.eventSubscriptionReference}` : ""}{entry.eventSubscriptionExpiresAt == null ? "" : ` · expires ${new Date(entry.eventSubscriptionExpiresAt).toLocaleTimeString()}`}
+                          </div>
+                          <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
                             Transport {entry.transportSessionId ? entry.transportSessionId.slice(-8) : "—"} · {entry.protocolProfile ?? "unknown"} · probes {entry.probeCount}
                           </div>
                         </div>
@@ -995,6 +1015,9 @@ export function CameraInspector() {
                           </div>
                           <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
                             Auth {entry.record.authState ?? "unauthenticated"} · {entry.record.authMode ?? "none"}{entry.record.authSessionId ? ` · ${entry.record.authSessionId.slice(-8)}` : ""}{entry.record.authSessionExpiresAt == null ? "" : ` · expires ${new Date(entry.record.authSessionExpiresAt).toLocaleTimeString()}`}
+                          </div>
+                          <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
+                            Events {entry.record.eventSubscriptionUri ? entry.record.eventSubscriptionUri : "—"}{entry.record.eventSubscriptionReference ? ` · ref ${entry.record.eventSubscriptionReference}` : ""}{entry.record.eventSubscriptionExpiresAt == null ? "" : ` · expires ${new Date(entry.record.eventSubscriptionExpiresAt).toLocaleTimeString()}`}
                           </div>
                           <div className="mt-0.5 text-[8px] uppercase tracking-[0.14em] text-[#556076]">
                             Expires {entry.record.liveSessionExpiresAt == null ? "—" : new Date(entry.record.liveSessionExpiresAt).toLocaleTimeString()}
@@ -1153,6 +1176,15 @@ export function CameraInspector() {
                     <div className="text-[9px] text-[#6a748b]">No camera metadata has been archived yet.</div>
                   )}
                 </div>
+              </div>
+            </SectionCard>
+
+            <SectionCard title="Camera Spec Import">
+              <div className="space-y-2">
+                <div className="text-[9px] leading-relaxed text-[#6a748b]">
+                  Paste a spec sheet snippet or JSON payload, then let the inspector stamp the parsed optics values back onto this camera through the canonical store.
+                </div>
+                <CameraSpecImport camera={camera} updateNode={updateNode} />
               </div>
             </SectionCard>
 
@@ -1452,8 +1484,8 @@ export function CameraInspector() {
                     Recommended Next Steps
                   </div>
                   <div className="space-y-2">
-                    {recs.slice(0, 3).map((rec, i) => (
-                      <div key={i} className="flex items-start gap-2">
+                    {recs.slice(0, 3).map((rec) => (
+                      <div key={rec.description} className="flex items-start gap-2">
                         <span className={`mt-0.5 flex-shrink-0 text-[7px] font-bold ${COST_COLOR[rec.costCategory] ?? "text-[#8090a8]"}`}>
                           {rec.costCategory.toUpperCase()}
                         </span>
@@ -1527,7 +1559,7 @@ export function CameraInspector() {
               {offlineImpact.length > 0 ? (
                 <div className="space-y-2">
                   {offlineImpact.map((message, index) => (
-                    <div key={index} className="rounded-lg border border-amber-500/20 bg-amber-500/8 px-2 py-2 text-[10px] text-amber-200">{message}</div>
+                    <div key={`msg-${index}`} /* stable order */ className="rounded-lg border border-amber-500/20 bg-amber-500/8 px-2 py-2 text-[10px] text-amber-200">{message}</div>
                   ))}
                 </div>
               ) : (
@@ -1894,7 +1926,7 @@ export function CameraInspector() {
                   <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">Impact Notes</div>
                   <div className="space-y-1.5">
                     {offlineImpact.map((message, index) => (
-                      <div key={`${index}-${message}`} className="rounded-lg border border-amber-500/20 bg-amber-500/8 px-2 py-1.5 text-[9px] text-amber-200">{message}</div>
+                      <div key={`msg-${index}`} /* stable order */ className="rounded-lg border border-amber-500/20 bg-amber-500/8 px-2 py-1.5 text-[9px] text-amber-200">{message}</div>
                     ))}
                   </div>
                 </div>

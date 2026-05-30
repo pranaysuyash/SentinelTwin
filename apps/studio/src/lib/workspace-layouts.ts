@@ -251,9 +251,10 @@ export function getPresetLayoutSnapshot(preset: WorkspacePreset, layerVisibility
     viewMode: PRESET_VIEW_MODES[preset],
     workspacePreset: preset,
     canvasMode: PRESET_CANVAS_MODES[preset],
-    leftDockCollapsed: preset === "camera_wall" || preset === "replay" || preset === "compare" || preset === "report" || preset === "focus",
-    rightDockCollapsed: preset === "camera_wall" || preset === "focus",
-    bottomDockCollapsed: preset === "camera_wall" || preset === "focus",
+    // Default to minimized docks; users expand intentionally as needed.
+    leftDockCollapsed: true,
+    rightDockCollapsed: true,
+    bottomDockCollapsed: true,
     leftDockSizePx: sizes.left,
     rightDockSizePx: sizes.right,
     bottomDockSizePx: sizes.bottom,

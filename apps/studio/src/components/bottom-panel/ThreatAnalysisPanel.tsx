@@ -62,8 +62,8 @@ function DetailList({
 
   return (
     <div className="space-y-1">
-      {items.map((item, i) => (
-        <div key={i} className="flex items-center gap-1.5 text-[10px] text-[#9da8c0]">
+      {items.map((item) => (
+        <div key={item} className="flex items-center gap-1.5 text-[10px] text-[#9da8c0]">
           <span className="flex-shrink-0">{icon}</span>
           <span>{item}</span>
         </div>
@@ -214,8 +214,8 @@ export function ThreatAnalysisPanel() {
             </div>
             {criticalZonesReachable.length > 0 ? (
               <div className="space-y-1">
-                {criticalZonesReachable.map((zone, i) => (
-                  <div key={i} className="flex items-center gap-1.5 text-[10px] text-red-300">
+                {criticalZonesReachable.map((zone) => (
+                  <div key={zone} className="flex items-center gap-1.5 text-[10px] text-red-300">
                     <Siren className="h-3 w-3" />
                     <span>{zone}</span>
                   </div>
@@ -241,15 +241,15 @@ export function ThreatAnalysisPanel() {
               <span className="text-[8px] text-[#4d566b]">{failurePath.waypoints.length} waypoints</span>
             </div>
             <div className="flex h-3 overflow-hidden rounded-full border border-[#202536] bg-[#111521]">
-              {failurePath.waypoints.map((wp, i) => (
+              {failurePath.waypoints.map((wp) => (
                 <div
-                  key={i}
+                  key={`${wp.timeS}-${wp.position[0]}-${wp.position[1]}`}
                   className="h-full flex-1"
                   style={{
                     backgroundColor: QUALITY_COLOR[wp.detectionQuality] ?? "#ef4444",
                     opacity: wp.detectionQuality === "none" ? 0.85 : 0.92,
                   }}
-                  title={`${QUALITY_ABBR[wp.detectionQuality]} at waypoint ${i + 1}`}
+                  title={`${QUALITY_ABBR[wp.detectionQuality]} at waypoint ${wp.position[0].toFixed(1)}, ${wp.position[1].toFixed(1)}`}
                 />
               ))}
             </div>

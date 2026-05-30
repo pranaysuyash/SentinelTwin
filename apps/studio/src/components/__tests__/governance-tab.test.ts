@@ -41,6 +41,12 @@ describe("GovernanceTab", () => {
     expect(source).toContain("Policy drift");
     expect(source).toContain("Route status");
     expect(source).toContain("Route reason");
+    expect(source).toContain("Route key");
+    expect(source).toContain("Route scope");
+    expect(source).toContain("Active member eligibility");
+    expect(source).toContain("Archived route key");
+    expect(source).toContain("Conflict route key");
+    expect(source).toContain("Replay route key");
     expect(source).toContain("Resolve Approval Route");
     expect(source).toContain("Resolve Identity Conflict");
     expect(source).toContain("Workspace Branch Sync");

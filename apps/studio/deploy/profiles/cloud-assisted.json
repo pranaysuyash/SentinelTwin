@@ -1,0 +1,14 @@
+{
+  "id": "cloud-assisted",
+  "name": "Cloud Assisted",
+  "description": "Cloud model providers enabled with explicit local-only override policy still available.",
+  "requiredEnv": ["NODE_ENV"],
+  "recommendedEnv": ["OPENAI_API_KEY", "GEMINI_API_KEY", "QWEN_API_KEY"],
+  "localOnlyMode": false,
+  "checks": ["typecheck", "truth-audit", "build", "provider-health"],
+  "slo": {
+    "buildMinutes": 12,
+    "coldStartSeconds": 20,
+    "simulationMsP95": 60
+  }
+}

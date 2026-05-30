@@ -200,7 +200,7 @@ export function CommandBar() {
                 {status.descriptions.length > 0 ? (
                   <ul className="space-y-1 rounded-md border border-[#1f2d45] bg-[#08101b] px-2.5 py-2 text-[10px] text-[#b8c9e8]">
                     {status.descriptions.map((description, index) => (
-                      <li key={`${description}_${index}`} className="flex items-center gap-2">
+                      <li key={`desc-${index}`} /* stable order */ className="flex items-center gap-2">
                         <span className="inline-flex h-4 min-w-4 items-center justify-center rounded bg-[#14233a] px-1 text-[8px] text-cyan-200">{index + 1}</span>
                         <span>{description}</span>
                       </li>

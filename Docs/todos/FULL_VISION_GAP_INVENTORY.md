@@ -195,15 +195,15 @@ Every input mode should compile into the same truth model. Every report should r
 **Current state**
 - Future live-camera verification is documented.
 - The schema can carry sensors.
-- The editor now exposes a dedicated sensor tool, sensor inspector, and sensor inventory tab, and both the camera inspector analytics tab and live camera feed now show a nearest-sensor `Sensor Fusion` preview; sensor live triggers, heartbeats, faults, restores, pasted metadata intake, an external feed bridge, a camera live binding stream, and a camera metadata ingest bridge now all flow into the canonical evidence trail, Scene Intelligence now shows that sensor evidence in the provenance surface, the debug panel reuses the same parser for pasted live metadata, and `/api/sensor-ingest` now gives that intake a history-backed backend-shaped boundary, while the camera live-connection probe/archive route now gives live binding a canonical backend round-trip, understands JSON/NDJSON plus ONVIF-style XML responses, and the ONVIF probe now runs through a real SOAP client that parses device information and retries authenticated Basic/Digest challenge-response probes on both the device and advertised event-subscription endpoints, with the remaining open seam narrowed to event/subscription renewal and live stream continuity rather than initial credential negotiation.
+- The editor now exposes a dedicated sensor tool, sensor inspector, and sensor inventory tab, and both the camera inspector analytics tab and live camera feed now show a nearest-sensor `Sensor Fusion` preview; sensor live triggers, heartbeats, faults, restores, pasted metadata intake, an external feed bridge, a camera live binding stream, and a camera metadata ingest bridge now all flow into the canonical evidence trail, Scene Intelligence now shows that sensor evidence in the provenance surface, the debug panel reuses the same parser for pasted live metadata, and `/api/sensor-ingest` now gives that intake a history-backed backend-shaped boundary, while the camera live-connection probe/archive route now gives live binding a canonical backend round-trip, understands JSON/NDJSON plus ONVIF-style XML responses, and the ONVIF probe now runs through a real SOAP client that parses device information, retries authenticated Basic/Digest challenge-response probes on both the device and advertised event-subscription endpoints, and renews the event-subscription lease on heartbeat, with the remaining open seam narrowed to longer-lived event-stream continuity rather than initial credential negotiation.
 - Camera live binding now also emits a durable event stream that appears in the live camera overlays and Scene Intelligence timeline, so the camera connection state is no longer hidden inside the inspector alone.
 - Camera metadata ingest now also emits a durable event stream that appears in the live camera overlays and Scene Intelligence timeline, so camera health state is no longer hidden inside the inspector alone.
 - Sensor edits now also write sensor-specific provenance events into the operational ledger, so the visible sensor layer has an audit trail even before ONVIF/live ingestion exists.
 - The debug panel now exposes a runtime health summary plus a runtime journey trace with import/scan/AI/render/save/publish path health cards, and it now surfaces a runtime incident log, a performance trace list, a support bundle summary card, a paste-based external log capture lane, and an automated alerting summary so runtime truth, failure evidence, timing evidence, support handoff context, local log capture, and alert candidates are visible without leaving the studio shell.
 
 **What is still missing**
-- Authenticated multi-step device-protocol session management for live cameras beyond the current probe/archive, operator-bound live connection, session-refresh, and active-lease registry layers, now narrowed to subscription renewal, event streaming, and longer-lived session continuity rather than the initial challenge-response handshake. The current client now already exercises a real second-leg event-subscribe probe when a device advertises one.
-- ONVIF metadata ingestion and mapping to scene events, beyond the current URL-based sensor, camera metadata, camera connection, and live-connection probe bridges.
+- Authenticated multi-step device-protocol session management for live cameras beyond the current probe/archive, operator-bound live connection, session-refresh, and active-lease registry layers, now narrowed to subscription renewal, event streaming, and longer-lived session continuity rather than the initial challenge-response handshake. The current client now already exercises a real second-leg event-subscribe probe when a device advertises one, and the returned subscription URI/reference/expiry now survive the route, store, inspector, and HUD surfaces.
+- ONVIF Profile M richness beyond the current ONVIF notification-envelope ingest bridge, including broader analytics metadata and event-stream semantics that go beyond the notification topics currently mapped into the ledger.
 - A trustworthy operating model for multi-sensor evidence and a deeper incident bundle that combines runtime logs, live metadata, and automated alerting.
 
 ### 4.8 Human Review, Collaboration, and Governance
@@ -282,7 +282,7 @@ Every input mode should compile into the same truth model. Every report should r
 - A `TruthBadge` component now exists in `components/shared/TruthBadge.tsx` with four canonical labels: `simulated`, `inferred`, `real`, `placeholder`.
 - `SectionCard` now accepts a `truthLabel` prop and renders the badge inline with the title, so any data card can be labeled at the call site.
 - Inspector analytics tab now labels Coverage Performance and Privacy Impact as `simulated` (or `placeholder` when simulation hasn't run).
-- The formal trust-audit surface registry in `lib/truth-audit.ts` has been expanded with four new surfaces covering `NodeHistoryTab`, `TimelineScrubberTab`, `TruthBadge`, and the inspector analytics truth labels — these are now regression-tested by the audit runner.
+- The formal trust-audit surface registry in `lib/truth-audit.ts` now covers the canonical `SceneIntelligenceTab` provenance/timeline surface, `NodeHistoryTab`, `TruthBadge`, and the inspector analytics truth labels — these are now regression-tested by the audit runner, and the old standalone `TimelineScrubberTab` helper was superseded and removed.
 
 **What is still missing**
 - Broader rollout of `truthLabel` props across all remaining data cards in the bottom panel tabs (Metrics, Report, Timeline etc. already have existing truth-label text but not the new badge component yet).
@@ -325,11 +325,15 @@ Every input mode should compile into the same truth model. Every report should r
 - Structured output is already used in the AI draft path and validated before apply.
 - The debug panel now shows a provider-governance dashboard with active provider, active model, local-only policy, cloud availability, and explicit fallback order.
 - The debug panel now also exposes a visible Provider Health Dashboard, a canonical Prompt Registry, and a Model Eval Suite that runs canonical structured-output fixtures for command parsing, counterfactuals, report generation, and AI layout drafting, and it now persists a local run history with stage-budget and trend comparison.
+- Measured AI telemetry now persists prompt lineage alongside each action (prompt id, version, title, agent, stage, and output schema), so the point-of-use trail can explain which canonical prompt produced a given run.
+- The prompt registry itself now has a persisted history trail captured from model eval runs and manual snapshots, so prompt evolution can be audited across time instead of only as a current table.
+- The provider-governance surface itself now has a persisted selection/policy history trail captured from provider selection changes, local-only policy changes, manual snapshots, and eval runs, so provider policy can be audited across time instead of only as a current table.
+- The measured AI telemetry trail now compares recent runs against a longer-horizon policy baseline, so the product can distinguish short-term spikes from broader drift instead of only showing a single recent-vs-previous window.
 
 **What is still missing**
-- A first-class persistent prompt/version registry for future model stages beyond the four canonical prompt definitions now visible in Debug.
-- Richer cost/latency telemetry, stage-specific thresholds, and longer-horizon trend analysis beyond the current measured per-run trail now visible in Debug, the command bar, and the AI draft launcher.
-- Richer telemetry may still move beyond the current point-of-use summaries into a broader operational dashboard or settings surface once the measured metrics mature.
+- Richer cost/latency telemetry, stage-specific thresholds, and operator-tunable policy thresholds beyond the current measured per-run trail now visible in Debug, the command bar, and the AI draft launcher.
+- Richer telemetry may still move beyond the current point-of-use summaries into a broader operational dashboard or settings surface once the measured metrics and policy controls mature.
+- A dynamic prompt registry workflow for future model stages beyond the four canonical prompt definitions now visible in Debug.
 
 ### 4.14 Observability, Diagnostics, and Runtime Truth
 
@@ -671,5 +675,5 @@ The rule remains:
 - The in-product trust-audit route now checks those labels alongside the launcher/governance/provenance/debug surfaces.
 - The remaining placeholder/truth work is broader claim-label coverage across the rest of the visible shell, not these already-labeled surfaces.
 - Remaining gap: the operational-fusion card is shared and canonical, but the next macro step is still deeper device-side truth, meaning protocol-backed live session state instead of the modeled session/transport posture we are summarizing today.
-- Remaining gap: heartbeat renewal is now explicit, but the deeper device-side truth is still protocol-native session negotiation and authorization, not just a modeled lease with keepalive semantics.
+- Remaining gap: heartbeat renewal now actually refreshes the ONVIF event-subscription lease and notification envelopes can land in the canonical ingest path, but the deeper device-side truth is still protocol-native event-stream continuity, broader metadata semantics, and authorization, not just a modeled lease with keepalive semantics.
 - Remaining gap: auth metadata is now canonical in the live record, but the next step is still real device-side session negotiation and credential handling rather than inferred auth posture from the probe/archive path.

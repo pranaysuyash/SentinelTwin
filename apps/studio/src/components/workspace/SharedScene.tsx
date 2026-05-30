@@ -371,7 +371,7 @@ export function SceneObstructions({
             {/* Shelf boards for shelf type */}
             {isShelf
               ? [0.78, 0.42, 0.06].map((fraction, i) => (
-                  <mesh key={i} position={[0, fraction * h - h / 2, 0]} castShadow>
+                  <mesh key={i} /* stable order */ position={[0, fraction * h - h / 2, 0]} castShadow>
                     <boxGeometry args={[w * 0.95, 0.03, d * 0.94]} />
                     <meshStandardMaterial color="#6d522f" roughness={0.86} />
                   </mesh>

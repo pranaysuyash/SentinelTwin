@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { mapOnvifNotificationToEvidenceEvent, parseOnvifNotificationXml } from "@/lib/onvif-event-mapper";
+import type { OperationalEvidenceEventInput } from "@/lib/operational-evidence";
 import type { CameraNode } from "@/schema/security-scene";
 
 const CameraMetadataRecordSchema = z.object({
@@ -24,6 +26,7 @@ export type CameraMetadataLiveParseResult = {
     notes: string | null;
     timestamp: number;
   }>;
+  evidenceEvents: OperationalEvidenceEventInput[];
   errors: string[];
   sourceCount: number;
 };
@@ -217,6 +220,40 @@ function parseXmlCandidates(raw: string): { items: unknown[]; errors: string[] }
   return { items, errors };
 }
 
+function resolveCameraForOnvifNotification(
+  notification: ReturnType<typeof parseOnvifNotificationXml>[number],
+  cameras: CameraMetadataIngestRequest["cameras"],
+) {
+  const candidateIds = [
+    notification.sourceToken,
+    notification.data.VideoSourceConfigurationToken,
+    notification.data.VideoSourceToken,
+    notification.data.VideoSourceId,
+    notification.data.CameraId,
+    notification.data.CameraToken,
+    notification.data.SensorId,
+    notification.data.Source,
+  ]
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .map((value) => value.trim().toLowerCase());
+
+  const candidateNames = [
+    notification.data.CameraName,
+    notification.data.SensorName,
+    notification.data.Name,
+    notification.data.Label,
+    notification.data.Title,
+  ]
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .map((value) => value.trim().toLowerCase());
+
+  return cameras.find((camera) => {
+    const cameraId = camera.id.trim().toLowerCase();
+    const cameraName = camera.name.trim().toLowerCase();
+    return candidateIds.includes(cameraId) || candidateNames.includes(cameraName);
+  }) ?? null;
+}
+
 function resolveCamera(candidate: z.infer<typeof CameraMetadataRecordSchema>, cameras: CameraMetadataIngestRequest["cameras"]) {
   if (candidate.cameraId) {
     const byId = cameras.find((camera) => camera.id === candidate.cameraId);
@@ -270,8 +307,10 @@ export async function summarizeCameraMetadataLiveFeed(request: CameraMetadataIng
   const jsonResult = parseJsonCandidates(payload.raw);
   const xmlResult = jsonResult.items.length > 0 ? { items: [] as unknown[], errors: [] as string[] } : parseXmlCandidates(payload.raw);
   const candidates = jsonResult.items.length > 0 ? jsonResult.items : xmlResult.items;
+  const onvifNotifications = payload.raw.trim().startsWith("<") ? parseOnvifNotificationXml(payload.raw) : [];
   const parseErrors = [...jsonResult.errors, ...xmlResult.errors];
   const records: CameraMetadataLiveParseResult["records"] = [];
+  const evidenceEvents: OperationalEvidenceEventInput[] = [];
   const errors: string[] = [...parseErrors];
 
   for (const [index, item] of candidates.entries()) {
@@ -299,15 +338,45 @@ export async function summarizeCameraMetadataLiveFeed(request: CameraMetadataIng
     });
   }
 
+  for (const [index, notification] of onvifNotifications.entries()) {
+    const camera = resolveCameraForOnvifNotification(notification, request.cameras);
+    if (!camera) {
+      errors.push(`ONVIF notification ${index + 1} could not be matched to a scene camera.`);
+      continue;
+    }
+
+    const evidenceEvent = mapOnvifNotificationToEvidenceEvent(notification, {
+      cameraId: camera.id,
+      cameraName: camera.name,
+      sceneId: request.sceneId ?? "scene_unknown",
+      sceneName: request.sceneName ?? "Unknown Scene",
+      revisionDepth: 0,
+    });
+
+    if (!evidenceEvent) {
+      errors.push(`ONVIF notification ${index + 1} could not be mapped to an operational evidence event.`);
+      continue;
+    }
+
+    evidenceEvents.push(evidenceEvent);
+  }
+
   const receivedAt = new Date(request.submittedAt ?? Date.now()).toISOString();
   const feedSourceLabel = payload.feedUrl
     ? payload.feedLabel
       ? `${payload.feedLabel} (${payload.feedUrl})`
       : payload.feedUrl
     : request.source;
-  const summary = records.length > 0
-    ? `Imported ${records.length} camera metadata record${records.length === 1 ? "" : "s"} from ${candidates.length} source record${candidates.length === 1 ? "" : "s"} via ${feedSourceLabel}.`
-    : "No matching camera metadata records were found in the submitted payload.";
+  const summaryParts: string[] = [];
+  if (records.length > 0) {
+    summaryParts.push(`Imported ${records.length} camera metadata record${records.length === 1 ? "" : "s"} from ${candidates.length} source record${candidates.length === 1 ? "" : "s"} via ${feedSourceLabel}.`);
+  }
+  if (evidenceEvents.length > 0) {
+    summaryParts.push(`Imported ${evidenceEvents.length} ONVIF notification event${evidenceEvents.length === 1 ? "" : "s"} from ${onvifNotifications.length} notification envelope${onvifNotifications.length === 1 ? "" : "s"} via ${feedSourceLabel}.`);
+  }
+  const summary = summaryParts.length > 0
+    ? summaryParts.join(" ")
+    : "No matching camera metadata records or ONVIF notifications were found in the submitted payload.";
 
   return {
     ok: true,
@@ -320,7 +389,8 @@ export async function summarizeCameraMetadataLiveFeed(request: CameraMetadataIng
     feedLabel: payload.feedLabel,
     summary,
     records,
+    evidenceEvents,
     errors,
-    sourceCount: candidates.length,
+    sourceCount: candidates.length + onvifNotifications.length,
   };
 }

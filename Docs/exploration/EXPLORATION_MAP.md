@@ -6068,9 +6068,10 @@ The studio app is a large React surface with motion-heavy panels and several lon
 ### Current finding
 
 - Camera metadata ingest now accepts XML in addition to JSON and NDJSON, so ONVIF-style feeds can land directly in the Debug panel and still match scene cameras by id or name.
+- ONVIF WS-Notification envelopes now flow through the same ingest boundary as camera metadata and become canonical operational evidence events in the archive/history trail, so live device notifications do not need a parallel route.
 - The live fusion path can now preserve metadata freshness and connection posture without requiring a pre-normalized JSON adapter for external camera feeds.
 - Live camera connection probes now also preserve XML negotiation payloads without polluting the error channel with JSON-only parse failures.
-- The reusable ONVIF probe helper now performs a real SOAP session probe, retries Basic/Digest challenge-response authentication on both the device and event-subscription requests when the first request is challenged, and parses device information instead of simulating a session manager, so the live camera boundary has a concrete transport/client primitive rather than a mock implementation.
+- The reusable ONVIF probe helper now performs a real SOAP session probe, retries Basic/Digest challenge-response authentication on both the device and event-subscription requests when the first request is challenged, parses device information instead of simulating a session manager, preserves event-subscription URI/reference/expiry through the canonical live-camera route and HUD surfaces, and renews the event subscription on heartbeat, so the live camera boundary has a concrete transport/client primitive rather than a mock implementation.
 - The launcher now enters the existing Camera View verification workflow directly, so real-footage verification no longer stops at a separate preview modal before the overlay/alignment tools appear.
 - The launcher now opens the guided scan assistant directly too, so scan guidance no longer stops at a separate kickoff modal before the actual scan wizard appears.
 
@@ -6078,6 +6079,7 @@ The studio app is a large React surface with motion-heavy panels and several lon
 
 - Keep the XML parser conservative and map only the fields that have canonical scene equivalents.
 - If the live feed vocabulary expands, extend the same parser rather than adding a parallel ingest format.
+- Extend the ONVIF notification mapper with richer Profile M metadata fields before introducing any new route boundary.
 
 ## Thread: Operational evidence memory
 
@@ -6197,6 +6199,17 @@ All relevant decisions and analysis are already captured in:
 
 - Keep the provenance note consistent in any future archive, compare, or report entry point so the exact/derived story stays legible across the entire evidence flow.
 
+### Thread: ONVIF live-camera evidence path
+
+### Current finding
+
+- The ONVIF probe, camera live session registry, camera live connection history, inspector history event, and live HUD all now preserve the event-subscription URI/reference/expiry fields as part of the canonical live-connection record, so the subscription leg survives the full device-to-UI path.
+- ONVIF notification envelopes now map into the same canonical camera-metadata ingest route and surface as operational evidence events, so the metadata ingest bridge can carry both static camera state and live notification evidence.
+
+### Follow-up
+
+- Keep renewal/continuity of the event-subscription stream aligned with the live connection session shape so future ONVIF probes and heartbeats do not lose the subscription identity or expiry across refreshes.
+
 
 ---
 
@@ -6205,3 +6218,4 @@ All relevant decisions and analysis are already captured in:
 **Key finding:** GSAP is the industry standard for timeline animations but its commercial license is incompatible with our Apache 2.0 / MIT dependency strategy.
 **Decision:** Motion One (WAAPI) is the primary engine for complex timeline choreography (path replay, multi-step sequences). Framer Motion is the primary engine for React UI state transitions. Native R3F useFrame + Three.js curves is the primary engine for simple 3D path traversal.
 **Why it matters:** This ensures SentinelTwin remains strictly compliant with open-source licensing without sacrificing animation fidelity.
+ - Browser-native share support is now available on the main archive/compare handoff surfaces via a shared helper that uses `navigator.share` when possible and clipboard copy as fallback, so the existing link builders now reach a native share surface instead of only copy/open buttons.

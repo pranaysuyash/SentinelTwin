@@ -11,6 +11,10 @@
     "start": "node ./scripts/run-fixed-port.mjs start",
     "lint": "eslint",
     "audit:truth": "bun ../../tools/truth-audit.ts",
+    "quality:gate": "bash ../../tools/studio-quality-gate.sh",
+    "deploy:validate": "node ./scripts/validate-deploy-profile.mjs local-only",
+    "deploy:validate:self-hosted": "node ./scripts/validate-deploy-profile.mjs self-hosted",
+    "deploy:validate:cloud-assisted": "node ./scripts/validate-deploy-profile.mjs cloud-assisted",
     "test": "bun test",
     "test:watch": "bun test --watch"
   },

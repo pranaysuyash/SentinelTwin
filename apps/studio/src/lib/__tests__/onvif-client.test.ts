@@ -52,6 +52,108 @@ describe("OnvifClient", () => {
     }
   });
 
+  test("renews an event subscription and updates the session lease", async () => {
+    const originalFetch = globalThis.fetch;
+    const requests: Array<{ url: string; authorization: string | null }> = [];
+    globalThis.fetch = (async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+      const url = typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+      const headers = new Headers(init?.headers ?? {});
+      requests.push({ url, authorization: headers.get("authorization") });
+
+      if (requests.length === 1) {
+        return new Response([
+          "<Envelope>",
+          "  <Body>",
+          "    <GetDeviceInformationResponse>",
+          "      <Manufacturer>Axis</Manufacturer>",
+          "      <Model>P3265-LVE</Model>",
+          "      <FirmwareVersion>10.12.1</FirmwareVersion>",
+          "      <SerialNumber>AX-7788</SerialNumber>",
+          "      <HardwareId>HW-7788</HardwareId>",
+          "    </GetDeviceInformationResponse>",
+          "    <SubscriptionReference>",
+          "      <Address>http://camera.example.com/onvif/events</Address>",
+          "    </SubscriptionReference>",
+          "  </Body>",
+          "</Envelope>",
+        ].join("\n"), {
+          status: 200,
+          statusText: "OK",
+          headers: {
+            "content-type": "application/soap+xml",
+          },
+        });
+      }
+
+      if (requests.length === 2) {
+        expect(url).toBe("http://camera.example.com/onvif/events");
+        expect(headers.get("authorization")).toBeNull();
+        return new Response([
+          "<Envelope>",
+          "  <Body>",
+          "    <SubscribeResponse>",
+          "      <SubscriptionReference>",
+          "        <Address>http://camera.example.com/onvif/events/subscription/alpha</Address>",
+          "      </SubscriptionReference>",
+          "      <TerminationTime>2026-05-30T15:00:00Z</TerminationTime>",
+          "    </SubscribeResponse>",
+          "  </Body>",
+          "</Envelope>",
+        ].join("\n"), {
+          status: 200,
+          statusText: "OK",
+          headers: {
+            "content-type": "application/soap+xml",
+          },
+        });
+      }
+
+      expect(url).toBe("http://camera.example.com/onvif/events/subscription/alpha");
+      expect(headers.get("authorization")).toBeNull();
+
+      return new Response([
+        "<Envelope>",
+        "  <Body>",
+        "    <RenewResponse>",
+        "      <TerminationTime>2026-05-30T16:00:00Z</TerminationTime>",
+        "    </RenewResponse>",
+        "  </Body>",
+        "</Envelope>",
+      ].join("\n"), {
+        status: 200,
+        statusText: "OK",
+        headers: {
+          "content-type": "application/soap+xml",
+        },
+      });
+    }) as unknown as typeof fetch;
+
+    try {
+      const client = new OnvifClient({ address: "https://camera.example.com/onvif" });
+      const probe = await client.connect();
+      const renewed = await client.renewEventSubscription();
+
+      expect(requests).toHaveLength(3);
+      expect(requests[0].authorization).toBeNull();
+      expect(requests[1].authorization).toBeNull();
+      expect(requests[2].authorization).toBeNull();
+      expect(probe.session.eventSubscriptionUri).toBe("http://camera.example.com/onvif/events");
+      expect(probe.session.eventSubscriptionReference).toBe("http://camera.example.com/onvif/events/subscription/alpha");
+      expect(probe.session.eventSubscriptionExpiresAt).toBe(Date.parse("2026-05-30T15:00:00Z"));
+      expect(renewed?.session.eventSubscriptionReference).toBe("http://camera.example.com/onvif/events/subscription/alpha");
+      expect(renewed?.session.eventSubscriptionExpiresAt).toBe(Date.parse("2026-05-30T16:00:00Z"));
+      expect(renewed?.session.state).toBe("streaming");
+      expect(renewed?.responseStatus).toBe(200);
+      expect(client.getSession().eventSubscriptionExpiresAt).toBe(Date.parse("2026-05-30T16:00:00Z"));
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   test("retries with digest auth after an ONVIF challenge", async () => {
     const originalFetch = globalThis.fetch;
     const requests: Array<{ url: string; authorization: string | null }> = [];

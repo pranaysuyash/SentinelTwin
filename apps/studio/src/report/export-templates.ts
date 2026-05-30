@@ -24,6 +24,9 @@ function buildBaseHeader(report: ReportData): string[] {
     `**Site:** ${report.siteName}`,
     `**Audience:** ${report.audienceLabel}`,
     `**Framing:** ${report.audienceFraming}`,
+    `**Disclosure Policy:** ${report.audiencePolicy.disclosureSummary}`,
+    `**Visible Sections:** ${report.audiencePolicy.visibleSections.join(", ")}`,
+    `**Withheld Sections:** ${report.audiencePolicy.withheldSections.length > 0 ? report.audiencePolicy.withheldSections.join(", ") : "none"}`,
     `**Visibility:** ${report.visibilityLabel}`,
     `**Visibility Framing:** ${report.visibilityFraming}`,
     `**Date:** ${new Date(report.generatedAt).toLocaleDateString()}`,
@@ -59,6 +62,7 @@ function buildAssumptions(report: ReportData): string[] {
     `- PPM Thresholds: ${report.assumptions.ppm.detection} / ${report.assumptions.ppm.observation} / ${report.assumptions.ppm.recognition} / ${report.assumptions.ppm.identification}`,
     "",
     `_${report.audienceFraming} These outputs are estimated planning indicators under current assumptions, not legal or forensic guarantees._`,
+    `_${report.audiencePolicy.disclosureSummary}_`,
     "",
   ];
 }

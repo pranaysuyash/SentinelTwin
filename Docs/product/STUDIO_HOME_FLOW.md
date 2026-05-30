@@ -6,12 +6,11 @@ Updated: 2026-05-30 (loop-orchestration pass)
 
 - `/` -> `StudioDashboardHome` (Product home shell)
 - `/studio` -> `StudioShell` (explicit workspace route, implemented via `src/app/studio/page.tsx`)
-- `?studio=1` -> `StudioShell` (explicit launcher bypass for dev/debug)
 
 This is now positioned as a product-first root: users arrive at a job-oriented home, then enter the workspace when they choose a path.
 
 - `/` now exposes a primary **Start Security Audit** flow that opens the current workspace in audit mode.
-- `?studio=1` is intentionally treated as a debug bypass and shows a launcher-skipped notice in studio.
+- The root no longer has a hidden boot bypass; all workspace entry happens through visible launcher actions or the explicit `/studio` route.
 
 ## What Root Means Today
 
@@ -80,7 +79,6 @@ Current examples:
 
 ## Important routing note
 
-`?studio=1` is no longer the normal entry URL for users. It should only be used in
-developer/debug contexts when the product launcher should be skipped.
-
-That means the perceived default does not need to be a demo/workspace shell.
+There is no hidden launcher bypass on the root page. The launcher/dashboard is the
+normal entry URL for users, and `/studio` is the explicit workspace route for direct
+workspace entry in development and internal workflows.

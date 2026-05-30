@@ -16,8 +16,11 @@ export type AiActionTelemetrySummary = {
   averageTokens: number;
   recentWindow: AiActionTelemetryWindowSummary | null;
   previousWindow: AiActionTelemetryWindowSummary | null;
+  longHorizonWindow: AiActionTelemetryWindowSummary | null;
   trendLabel: "faster" | "slower" | "stable" | "insufficient-data";
   trendNote: string;
+  policyLabel: "healthy" | "warming" | "degraded" | "insufficient-data";
+  policyNote: string;
   stageCounts: Record<AiActionTelemetryRecord["stage"], number>;
 };
 
@@ -49,6 +52,7 @@ export function summarizeAiActionTelemetry(records: AiActionTelemetryRecord[]): 
     : 0;
   const recentWindow = summarizeWindow(ordered.slice(0, 5));
   const previousWindow = summarizeWindow(ordered.slice(5, 10));
+  const longHorizonWindow = summarizeWindow(ordered.slice(5));
 
   let trendLabel: AiActionTelemetrySummary["trendLabel"] = "insufficient-data";
   let trendNote = "Need at least two windows to compare recent telemetry.";
@@ -66,6 +70,32 @@ export function summarizeAiActionTelemetry(records: AiActionTelemetryRecord[]): 
     }
   } else if (recentWindow) {
     trendNote = "Add more measured actions to compare the latest window with an earlier baseline.";
+  }
+
+  let policyLabel: AiActionTelemetrySummary["policyLabel"] = "insufficient-data";
+  let policyNote = "Need a longer historical baseline before the AI telemetry policy can compare recent behavior.";
+  if (recentWindow && longHorizonWindow) {
+    const durationDelta = recentWindow.averageDurationMs - longHorizonWindow.averageDurationMs;
+    const tokenDelta = recentWindow.averageTokens - longHorizonWindow.averageTokens;
+    const successRateDelta = (recentWindow.successCount / recentWindow.count) - (longHorizonWindow.successCount / longHorizonWindow.count);
+    const regressionSignals = [
+      durationDelta > 25,
+      tokenDelta > 150,
+      successRateDelta < -0.05,
+      recentWindow.errorCount > longHorizonWindow.errorCount,
+    ].filter(Boolean).length;
+    if (regressionSignals >= 2) {
+      policyLabel = "degraded";
+      policyNote = `Recent telemetry is materially worse than the longer-horizon baseline (${durationDelta >= 0 ? "+" : ""}${durationDelta} ms, ${tokenDelta >= 0 ? "+" : ""}${tokenDelta} tokens, success-rate delta ${successRateDelta >= 0 ? "+" : ""}${(successRateDelta * 100).toFixed(0)}%).`;
+    } else if (regressionSignals === 1) {
+      policyLabel = "warming";
+      policyNote = `Recent telemetry is drifting above the longer-horizon baseline (${durationDelta >= 0 ? "+" : ""}${durationDelta} ms, ${tokenDelta >= 0 ? "+" : ""}${tokenDelta} tokens, success-rate delta ${successRateDelta >= 0 ? "+" : ""}${(successRateDelta * 100).toFixed(0)}%).`;
+    } else {
+      policyLabel = "healthy";
+      policyNote = `Recent telemetry is within policy bounds versus the longer-horizon baseline (${durationDelta >= 0 ? "+" : ""}${durationDelta} ms, ${tokenDelta >= 0 ? "+" : ""}${tokenDelta} tokens, success-rate delta ${successRateDelta >= 0 ? "+" : ""}${(successRateDelta * 100).toFixed(0)}%).`;
+    }
+  } else if (recentWindow) {
+    policyNote = "Add more measured actions so the AI telemetry policy can compare recent behavior against a longer-horizon baseline.";
   }
 
   const stageCounts = ordered.reduce<Record<AiActionTelemetryRecord["stage"], number>>((acc, record) => {
@@ -86,8 +116,11 @@ export function summarizeAiActionTelemetry(records: AiActionTelemetryRecord[]): 
     averageTokens,
     recentWindow,
     previousWindow,
+    longHorizonWindow,
     trendLabel,
     trendNote,
+    policyLabel,
+    policyNote,
     stageCounts,
   };
 }

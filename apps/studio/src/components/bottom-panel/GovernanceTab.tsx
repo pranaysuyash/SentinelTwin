@@ -25,10 +25,9 @@ import {
 } from "@/lib/workspace-membership-routing";
 import { replayWorkspaceIdentityConflict, type WorkspaceIdentityConflictArchiveRecord, type WorkspaceIdentityConflictArchiveResponse } from "@/lib/workspace-identity-conflict-client";
 import type { WorkspaceMembershipArchiveRecord } from "@/lib/workspace-membership-types";
+import type { WorkspaceControlPlaneSnapshot } from "@/lib/workspace-control-plane-history";
 import { useStudioStore } from "@/store/studio-store";
 import { resolveSyncConflict, type WorkspaceSyncConflict } from "@/lib/workspace-sync-conflict";
-import type { OperationalEvidenceBranchComparison } from "@/lib/operational-evidence";
-
 function Section({
   title,
   children,
@@ -96,6 +95,7 @@ export function GovernanceTab() {
   const operationalEvidenceArchiveHistory = useStudioStore((s) => s.operationalEvidenceArchiveHistory);
   const workspaceAccess = useStudioStore((s) => s.workspaceAccess);
   const workspaceGovernance = useStudioStore((s) => s.workspaceGovernance);
+  const workspaceAccount = useStudioStore((s) => s.workspaceAccount);
   const publishCurrentScene = useStudioStore((s) => s.publishCurrentScene);
   const setWorkspaceActiveMember = useStudioStore((s) => s.setWorkspaceActiveMember);
   const setWorkspaceAccessMode = useStudioStore((s) => s.setWorkspaceAccessMode);
@@ -157,6 +157,13 @@ export function GovernanceTab() {
   const [annotation, setAnnotation] = useState("");
   const [syncConflictReport, setSyncConflictReport] = useState<WorkspaceSyncConflict | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [workspaceControlPlaneReport, setWorkspaceControlPlaneReport] = useState<{
+    snapshot: WorkspaceControlPlaneSnapshot;
+    historyCount: number;
+  } | null>(null);
+  const [workspaceControlPlaneLoading, setWorkspaceControlPlaneLoading] = useState(false);
+  const [workspaceControlPlaneError, setWorkspaceControlPlaneError] = useState<string | null>(null);
+  const [workspaceControlPlaneHistory, setWorkspaceControlPlaneHistory] = useState<WorkspaceControlPlaneSnapshot[]>([]);
 
   const summary = useMemo(() => summarizeWorkspaceGovernance(workspaceGovernance), [workspaceGovernance]);
   const accessSummary = useMemo(() => summarizeWorkspaceAccess(workspaceAccess), [workspaceAccess]);
@@ -260,12 +267,35 @@ export function GovernanceTab() {
     }
   };
 
+  const refreshWorkspaceControlPlane = async () => {
+    setWorkspaceControlPlaneLoading(true);
+    setWorkspaceControlPlaneError(null);
+    try {
+      const response = await fetch("/api/workspace-control-plane");
+      if (!response.ok) {
+        throw new Error(`Workspace control-plane archive failed with HTTP ${response.status}.`);
+      }
+      const payload = (await response.json()) as {
+        ok: true;
+        history: WorkspaceControlPlaneSnapshot[];
+        historyCount: number;
+      };
+      setWorkspaceControlPlaneHistory(payload.history);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Workspace control-plane archive failed.";
+      setWorkspaceControlPlaneError(message);
+    } finally {
+      setWorkspaceControlPlaneLoading(false);
+    }
+  };
+
   useEffect(() => {
     void (async () => {
       await refreshGovernanceArchive();
       await refreshWorkspaceMembershipArchive();
       await refreshApprovalRouteArchive();
       await refreshIdentityConflictArchive();
+      await refreshWorkspaceControlPlane();
     })();
   }, []);
 
@@ -676,6 +706,41 @@ export function GovernanceTab() {
       });
   };
 
+  const dispatchWorkspaceControlPlane = async () => {
+    setWorkspaceControlPlaneLoading(true);
+    setWorkspaceControlPlaneError(null);
+    try {
+      const response = await fetch("/api/workspace-control-plane", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          source: "governance-tab",
+          sceneId: scene.id,
+          sceneName: scene.name || "Untitled Scene",
+          capturedAt: Date.now(),
+          access: workspaceAccess,
+          governance: workspaceGovernance,
+          account: workspaceAccount,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(`Workspace control-plane archive failed with HTTP ${response.status}.`);
+      }
+      const payload = (await response.json()) as {
+        ok: true;
+        snapshot: WorkspaceControlPlaneSnapshot;
+        historyCount: number;
+      };
+      setWorkspaceControlPlaneReport(payload);
+      await refreshWorkspaceControlPlane();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Workspace control-plane archive failed.";
+      setWorkspaceControlPlaneError(message);
+    } finally {
+      setWorkspaceControlPlaneLoading(false);
+    }
+  };
+
   return (
     <div className="flex h-full gap-4 overflow-y-auto px-3 py-2">
       <div className="min-w-[250px] space-y-2.5">
@@ -1035,6 +1100,20 @@ export function GovernanceTab() {
                 <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Route reason</div>
                 <div className="mt-0.5 text-[#8b96ab]">{approvalRoute.routeReason}</div>
               </div>
+              <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                <div>
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Route key</div>
+                  <div className="mt-0.5 break-all font-mono text-[9px] text-[#d2d9e8]">{approvalRoute.routeKey}</div>
+                </div>
+                <div>
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Route scope</div>
+                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{approvalRoute.routeScope}</div>
+                </div>
+              </div>
+              <div className="mt-1">
+                <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Active member eligibility</div>
+                <div className="mt-0.5 text-[#8b96ab]">{approvalRoute.activeMemberReason}</div>
+              </div>
             </div>
             {approvalRouteArchiveReport ? (
               <div className="space-y-1.5">
@@ -1084,16 +1163,17 @@ export function GovernanceTab() {
             <div className="space-y-1.5">
               {remoteApprovalRouteHistory.length > 0 ? remoteApprovalRouteHistory.slice(0, 3).map((record) => (
                 <div key={`${record.sceneName}-${record.storedAt}`} className="rounded-md border border-[#1a2030] bg-[#0f141f] px-3 py-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="text-[10px] font-semibold text-[#edf2ff]">{record.sceneName}</div>
-                    <Badge variant={record.archiveStatus === "server archive" ? "green" : "amber"}>{record.archiveStatus}</Badge>
-                  </div>
-                  <div className="mt-1 text-[9px] text-[#8b96ab]">{record.summary}</div>
-                  <div className="mt-1 flex flex-wrap gap-1.5">
-                    <Badge variant="gray">{record.approvalRoute.routeStatus.replace(/_/g, " ")}</Badge>
-                    <Badge variant="gray">{new Date(record.submittedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Badge>
-                  </div>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-[10px] font-semibold text-[#edf2ff]">{record.sceneName}</div>
+                  <Badge variant={record.archiveStatus === "server archive" ? "green" : "amber"}>{record.archiveStatus}</Badge>
                 </div>
+                <div className="mt-1 text-[9px] text-[#8b96ab]">{record.summary}</div>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  <Badge variant="gray">{record.approvalRoute.routeStatus.replace(/_/g, " ")}</Badge>
+                  <Badge variant="gray">{record.approvalRoute.routeScope}</Badge>
+                  <Badge variant="gray">{new Date(record.submittedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Badge>
+                </div>
+              </div>
               )) : (
                 <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
                   No approval route archive yet. Resolve a route to create the first record.
@@ -1344,6 +1424,10 @@ export function GovernanceTab() {
                   <Badge variant="gray">{new Date(latestWorkspaceMembershipArchive.submittedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Badge>
                 </div>
                 <div className="mt-2 rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1 text-[9px] text-[#8b96ab]">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Archived route key</div>
+                  <div className="mt-0.5 break-all font-mono text-[9px] text-[#d2d9e8]">{latestWorkspaceMembershipArchive.approvalRoute.routeKey}</div>
+                </div>
+                <div className="mt-2 rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1 text-[9px] text-[#8b96ab]">
                   Approval route: {latestWorkspaceMembershipArchive.approvalRoute.routeLabel} · {latestWorkspaceMembershipArchive.approvalRoute.routeReason}
                 </div>
 	                  {membershipDrift ? (
@@ -1381,6 +1465,10 @@ export function GovernanceTab() {
                     <Badge variant="gray">{record.teamSize} members</Badge>
                     <Badge variant="gray">{record.policyMode === "shared" ? "shared" : "single-user"}</Badge>
                     <Badge variant="gray">{new Date(record.submittedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Badge>
+                  </div>
+                  <div className="mt-1 rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1 text-[9px] text-[#8b96ab]">
+                    <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Archived route key</div>
+                    <div className="mt-0.5 break-all font-mono text-[9px] text-[#d2d9e8]">{record.approvalRoute.routeKey}</div>
                   </div>
                 </div>
               )) : (
@@ -1488,6 +1576,10 @@ export function GovernanceTab() {
                     <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Queued / failed</div>
                     <div className="mt-0.5 font-semibold text-[#d2d9e8]">{identityConflictArchiveReport.queuedCount} / {identityConflictArchiveReport.failedCount}</div>
                   </div>
+                </div>
+                <div className="rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1.5 text-[9px] text-[#8b96ab]">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Conflict route key</div>
+                  <div className="mt-0.5 break-all font-mono text-[9px] text-[#d2d9e8]">{identityConflictArchiveReport.approvalRoute.routeKey}</div>
                 </div>
                 {identityConflictArchiveReport.membershipDrift ? (
                   <div className="grid grid-cols-3 gap-1.5">
@@ -1610,6 +1702,10 @@ export function GovernanceTab() {
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5 text-[9px] text-[#8b96ab]">
                   {selectedIdentityConflictRecord.conflictDiff.recommendedAction}
                 </div>
+                <div className="rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1.5 text-[9px] text-[#8b96ab]">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Conflict route key</div>
+                  <div className="mt-0.5 break-all font-mono text-[9px] text-[#d2d9e8]">{selectedIdentityConflictRecord.conflictDiff.routeKey}</div>
+                </div>
                 {identityConflictReplayError ? (
                   <div className="rounded-md border border-rose-500/20 bg-rose-500/10 px-2 py-1 text-[9px] text-rose-200">
                     {identityConflictReplayError}
@@ -1643,6 +1739,10 @@ export function GovernanceTab() {
                         <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Queued / failed</div>
                         <div className="mt-0.5 font-semibold text-[#d2d9e8]">{identityConflictReplayReport.queuedCount} / {identityConflictReplayReport.failedCount}</div>
                       </div>
+                    </div>
+                    <div className="rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1.5 text-[9px] text-[#8b96ab]">
+                      <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Replay route key</div>
+                      <div className="mt-0.5 break-all font-mono text-[9px] text-[#d2d9e8]">{identityConflictReplayReport.approvalRoute.routeKey}</div>
                     </div>
                     <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1 text-[9px] text-[#8b96ab]">
                       Replayed against the current workspace state using the archived snapshot from the selected conflict.
@@ -1693,10 +1793,69 @@ export function GovernanceTab() {
                     <Badge variant="gray">{new Date(record.receivedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Badge>
                     <Badge variant="gray">{new Date(record.submittedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Badge>
                   </div>
+                  <div className="mt-1 rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1 text-[9px] text-[#8b96ab]">
+                    <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Conflict route key</div>
+                    <div className="mt-0.5 break-all font-mono text-[9px] text-[#d2d9e8]">{record.approvalRoute.routeKey}</div>
+                  </div>
                 </div>
               )) : (
                 <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
                   No identity conflict resolution yet. Resolve one to create the remote shared-identity record.
+                </div>
+              )}
+            </div>
+          </div>
+        </Section>
+
+        <Section title="Control Plane Snapshot">
+          <div className="space-y-1.5 text-[9px] text-[#8b96ab]">
+            <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
+              Capture the current workspace access, governance, and account profile into the shared control-plane archive.
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={dispatchWorkspaceControlPlane}
+                className="rounded-md border border-sky-500/20 bg-sky-500/10 px-2 py-1 text-[9px] text-sky-100 hover:border-sky-400/30 hover:bg-sky-500/20"
+              >
+                {workspaceControlPlaneLoading ? "Capturing..." : "Capture Control Plane"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void refreshWorkspaceControlPlane()}
+                className="rounded-md border border-[#1e2538] bg-[#111521] px-2 py-1 text-[9px] text-[#c7d0e4] hover:border-[#2a3245] hover:text-white"
+              >
+                {workspaceControlPlaneLoading ? "Refreshing..." : "Refresh Control Plane"}
+              </button>
+            </div>
+            {workspaceControlPlaneError ? (
+              <div className="rounded-md border border-rose-500/20 bg-rose-500/10 px-2 py-1 text-rose-200">
+                {workspaceControlPlaneError}
+              </div>
+            ) : null}
+            {workspaceControlPlaneReport ? (
+              <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
+                Captured {workspaceControlPlaneReport.snapshot.sceneName} at{" "}
+                {new Date(workspaceControlPlaneReport.snapshot.capturedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}. History size: {workspaceControlPlaneReport.historyCount}.
+              </div>
+            ) : null}
+            <div className="space-y-1.5">
+              {workspaceControlPlaneHistory.length > 0 ? workspaceControlPlaneHistory.slice(0, 3).map((record) => (
+                <div key={record.id} className="rounded-md border border-[#1a2030] bg-[#0f141f] px-3 py-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-[10px] font-semibold text-[#edf2ff]">{record.sceneName}</div>
+                    <Badge variant="gray">{record.source}</Badge>
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    <Badge variant="gray">{record.access.policy.mode}</Badge>
+                    <Badge variant="gray">{record.governance.approvalMode}</Badge>
+                    <Badge variant="gray">{record.account.accountName}</Badge>
+                    <Badge variant="gray">{new Date(record.capturedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Badge>
+                  </div>
+                </div>
+              )) : (
+                <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                  No control-plane snapshots yet. Capture the workspace state to create the first record.
                 </div>
               )}
             </div>
@@ -1787,7 +1946,7 @@ export function GovernanceTab() {
                     <div className="font-semibold uppercase tracking-[0.18em] mb-1">Conflicts detected:</div>
                     <ul className="list-inside list-disc">
                       {syncConflictReport.conflicts.map((c, i) => (
-                        <li key={i}>{c.collection} ({c.nodeId}): {c.reason}</li>
+                        <li key={`${c.collection}-${c.nodeId}`}>{c.collection} ({c.nodeId}): {c.reason}</li>
                       ))}
                     </ul>
                   </div>

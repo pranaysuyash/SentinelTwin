@@ -10,8 +10,7 @@ describe("Studio launcher shell", () => {
     const source = readFileSync(pagePath, "utf8");
 
     expect(source).toContain("StudioDashboardHome");
-    expect(source).toContain("const [enterStudio, setEnterStudio] = useState(shouldBypassLauncher);");
-    expect(source).toContain("const [showProjects, setShowProjects] = useState(true);");
+    expect(source).toContain("const [enterStudio, setEnterStudio] = useState(false);");
     expect(source).toContain("ProjectStartLauncher");
     expect(source).toContain("showProjectLauncher");
     expect(source).toContain("onOpenCoverageWorkspace={openCoverageWorkspace}");
@@ -96,6 +95,7 @@ describe("Studio launcher shell", () => {
     expect(source).toContain("Guided scan assistant opened. The manual-assisted review and compile flow remains in control.");
     expect(source).not.toContain("Guided assistant preview: the assistant shortens capture setup, but the scene still compiles through the manual-assisted review path.");
     expect(source).not.toContain("queryBootEnabled");
-    expect(source).not.toContain('new URLSearchParams(window.location.search).get("studio") === "1"');
+    expect(source).not.toContain('searchParams.get("studio") === "1"');
+    expect(source).not.toContain("shouldBypassLauncher");
   });
 });

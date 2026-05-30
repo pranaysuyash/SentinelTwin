@@ -175,6 +175,15 @@ export function TimelineTab() {
   const rows = useMemo(() => (activePath ? buildRows(activePath, activePathResult) : []), [activePath, activePathResult]);
   const cameraSummary = useMemo(() => buildCameraSummary(activePathResult), [activePathResult]);
   const qualityRibbon = useMemo(() => buildQualityRibbon(activePathResult, totalDuration), [activePathResult, totalDuration]);
+  const currentEvent = useMemo(() => {
+    if (!rows.length) return null;
+    const pastEvents = rows.filter((row) => row.timeS <= currentTime);
+    return pastEvents[pastEvents.length - 1] ?? rows[0] ?? null;
+  }, [currentTime, rows]);
+  const highRiskEvents = useMemo(() => {
+    const candidates = rows.filter((row) => row.severity === "high" || row.quality === "none");
+    return candidates.slice(0, 6);
+  }, [rows]);
   const camerasById = useMemo(() => Object.fromEntries(scene.cameras.map((camera) => [camera.id, camera.name])), [scene.cameras]);
   const editDeltas = useMemo(() => {
     const items = scene.snapshots.filter((snap) => snap.simulation);
@@ -448,6 +457,22 @@ export function TimelineTab() {
                   {formatTime(currentTime)} / {formatTime(totalDuration)} · {pathReplay.speed.toFixed(1)}x
                 </div>
               </div>
+              <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 sm:col-span-2 xl:col-span-4">
+                <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#7dd3fc]">Current Event</div>
+                {currentEvent ? (
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] text-[#d5e0f5]">
+                    <span className="font-mono text-[#93c5fd]">{currentEvent.timeS.toFixed(1)}s</span>
+                    <span>•</span>
+                    <span>{currentEvent.cameraId ? camerasById[currentEvent.cameraId] ?? currentEvent.cameraId : "No camera"}</span>
+                    <span>•</span>
+                    <QualityBadge quality={currentEvent.quality} />
+                    <span className="text-[#8ea5cc]">{currentEvent.event}</span>
+                    {currentEvent.reason ? <span className="text-[#5b667c]">— {currentEvent.reason}</span> : null}
+                  </div>
+                ) : (
+                  <div className="mt-1 text-[9px] text-[#5b667c]">No timeline event has been recorded yet.</div>
+                )}
+              </div>
             </div>
             <div className="grid gap-2 border-b border-[#1e2130] px-3 py-2 sm:grid-cols-2 xl:grid-cols-4">
               {visibleCameraSummary.length > 0 ? visibleCameraSummary.map((entry) => (
@@ -464,6 +489,25 @@ export function TimelineTab() {
                 <div className="px-3 py-2 text-[10px] text-[#5b667c]">No camera reach data available for this path.</div>
               )}
             </div>
+            <div className="border-b border-[#1e2130] px-3 py-2">
+              <div className="mb-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#7dd3fc]">High-risk jumps</div>
+              <div className="flex flex-wrap gap-1.5">
+                {highRiskEvents.length > 0 ? highRiskEvents.map((event) => (
+                  <button
+                    key={`${event.timeS}-${event.cameraId ?? "nocam"}`}
+                    type="button"
+                    onClick={() => handleSeek(event.timeS)}
+                    className="inline-flex items-center gap-1 rounded border border-rose-500/25 bg-rose-500/10 px-2 py-0.5 text-[9px] text-rose-200 transition-colors hover:bg-rose-500/20"
+                  >
+                    <span className="font-mono">{event.timeS.toFixed(1)}s</span>
+                    <span>{event.cameraId ? camerasById[event.cameraId] ?? event.cameraId : "No camera"}</span>
+                    <span className="text-rose-100/80">{event.event}</span>
+                  </button>
+                )) : (
+                  <div className="text-[9px] text-[#5b667c]">No high-risk events detected for this path replay.</div>
+                )}
+              </div>
+            </div>
             <div className="min-h-0 flex-1 overflow-auto">
               <table className="w-full border-collapse text-[10px]">
                 <thead className="sticky top-0 bg-[#0b0f17] text-left text-[8px] uppercase tracking-[0.14em] text-[#556076]">
@@ -479,8 +523,8 @@ export function TimelineTab() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((row, index) => (
-                    <tr key={`${row.timeS}-${index}`} className="border-t border-[#141925] hover:bg-[#111521]">
+                  {rows.map((row) => (
+                    <tr key={`${row.timeS}-${row.cameraId ?? "nocam"}`} className="border-t border-[#141925] hover:bg-[#111521]">
                       <td className="px-3 py-2 font-mono text-[#c7d0e4]">{row.timeS.toFixed(1)}s</td>
                       <td className="px-3 py-2 font-mono text-[#8b96ab]">{formatPoint(row.position)}</td>
                       <td className="px-3 py-2 text-[#c7d0e4]">
@@ -515,8 +559,8 @@ export function TimelineTab() {
         {subTab === "events" && (
           <div className="h-full overflow-auto p-3">
             <div className="grid gap-2 sm:grid-cols-2">
-              {rows.map((row, index) => (
-                <div key={`${row.timeS}-${index}`} className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
+              {rows.map((row) => (
+                <div key={`${row.timeS}-${row.cameraId ?? "nocam"}`} className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
                   <div className="mb-1 flex items-center justify-between gap-2">
                     <span className="font-mono text-[10px] text-[#c7d0e4]">{row.timeS.toFixed(1)}s</span>
                     <QualityBadge quality={row.quality} />

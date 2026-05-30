@@ -18,6 +18,7 @@ import type {
 import { DORI_THRESHOLDS, maxQuality, ppmToOodpcvsQuality, ppmToQuality, qualityToScore } from "@/simulation/dori";
 import { getYawPitchDirection, normalizeAngle } from "@/simulation/geometry";
 import { buildCoverageGrid, type GridCell } from "@/simulation/grid";
+import { computeBlindSpotPenalty, computeMountTiltPenalty } from "@/simulation/mount-model";
 
 // three-mesh-bvh provides its own type augmentations for BufferGeometry and Mesh.
 // The declarations below only add what the package doesn't declare itself.
@@ -155,6 +156,22 @@ function getLightOcclusion(
   return assessOcclusion(pseudoLightCamera, target, raycaster, visionMesh);
 }
 
+function computeEnvironmentRiskPenalty(assumptions: {
+  backlightIntensity?: "none" | "low" | "medium" | "high";
+  glareIntensity?: "none" | "low" | "medium" | "high";
+  overexposedZones?: boolean;
+}): number {
+  let penalty = 0;
+  const backlightTable: Record<string, number> = { none: 0, low: 0.06, medium: 0.14, high: 0.25 };
+  penalty += backlightTable[assumptions.backlightIntensity ?? "none"] ?? 0;
+  const glareTable: Record<string, number> = { none: 0, low: 0.04, medium: 0.1, high: 0.18 };
+  penalty += glareTable[assumptions.glareIntensity ?? "none"] ?? 0;
+  if (assumptions.overexposedZones) {
+    penalty += 0.08;
+  }
+  return Math.min(1, penalty);
+}
+
 function getLightingContext(
   camera: CameraNode,
   cell: GridCell,
@@ -196,25 +213,30 @@ function getLightingContext(
     }
   }
 
+  const envPenalty = computeEnvironmentRiskPenalty(scene.assumptions);
+
   if (scene.assumptions.timeOfDay === "day") {
-    return { penalty: 0, lightLevel, illuminatedBy, shadowedBy: [...shadowedBy] };
+    return { penalty: envPenalty, lightLevel, illuminatedBy, shadowedBy: [...shadowedBy] };
   }
 
-  if (lightLevel >= 0.65) return { penalty: 0.1, lightLevel, illuminatedBy, shadowedBy: [...shadowedBy] };
-  if (lightLevel >= 0.35) return { penalty: 0.24, lightLevel, illuminatedBy, shadowedBy: [...shadowedBy] };
-  if (lightLevel >= 0.12) return { penalty: 0.42, lightLevel, illuminatedBy, shadowedBy: [...shadowedBy] };
-  if (camera.nightMode === "thermal") return { penalty: 0.08, lightLevel, illuminatedBy, shadowedBy: [...shadowedBy] };
-  if (camera.nightMode === "low_light") return { penalty: 0.18, lightLevel, illuminatedBy, shadowedBy: [...shadowedBy] };
-
-  const [cx, , cz] = camera.position;
-  const distance = Math.hypot(cx - cell.x, cz - cell.z);
-
-  if (camera.nightMode === "ir" && distance <= camera.irRangeM) {
-    return { penalty: 0.32, lightLevel, illuminatedBy, shadowedBy: [...shadowedBy] };
+  let nightPenalty = 0;
+  if (lightLevel >= 0.65) nightPenalty = 0.1;
+  else if (lightLevel >= 0.35) nightPenalty = 0.24;
+  else if (lightLevel >= 0.12) nightPenalty = 0.42;
+  else if (camera.nightMode === "thermal") nightPenalty = 0.08;
+  else if (camera.nightMode === "low_light") nightPenalty = 0.18;
+  else {
+    const [cx, , cz] = camera.position;
+    const distance = Math.hypot(cx - cell.x, cz - cell.z);
+    if (camera.nightMode === "ir" && distance <= camera.irRangeM) {
+      nightPenalty = 0.32;
+    } else {
+      nightPenalty = camera.nightMode === "none" ? 0.88 : 0.78;
+    }
   }
 
   return {
-    penalty: camera.nightMode === "none" ? 0.88 : 0.78,
+    penalty: Math.min(1, nightPenalty + envPenalty),
     lightLevel,
     illuminatedBy,
     shadowedBy: [...shadowedBy],
@@ -603,6 +625,18 @@ function evaluateCameraAgainstCell(
   }
   ppm *= clarityMultiplier;
 
+  const mountTiltPenalty = computeMountTiltPenalty(camera);
+  if (mountTiltPenalty > 0) {
+    reasonCodes.add("MOUNT_TILT_EXCEEDED");
+  }
+  ppm *= 1 - mountTiltPenalty;
+
+  const blindSpotPenalty = computeBlindSpotPenalty(camera, distance);
+  if (blindSpotPenalty > 0) {
+    reasonCodes.add("BLIND_SPOT_UNDER_CAMERA");
+  }
+  ppm *= 1 - blindSpotPenalty;
+
   const materialTransmission = occlusion.materialPenalty;
   ppm *= materialTransmission;
   if (materialTransmission < 1) {
@@ -620,6 +654,17 @@ function evaluateCameraAgainstCell(
   const lightingPenalty = lightingContext.penalty;
   if (lightingPenalty > 0) {
     getReasonCodesForLighting(camera, lightingPenalty).forEach((code) => reasonCodes.add(code));
+  }
+
+  const envRisks = scene.assumptions;
+  if (envRisks.backlightIntensity && envRisks.backlightIntensity !== "none") {
+    reasonCodes.add(`BACKLIGHT_${envRisks.backlightIntensity.toUpperCase()}`);
+  }
+  if (envRisks.glareIntensity && envRisks.glareIntensity !== "none") {
+    reasonCodes.add(`GLARE_ENV_${envRisks.glareIntensity.toUpperCase()}`);
+  }
+  if (envRisks.overexposedZones) {
+    reasonCodes.add("OVEREXPOSED_ZONE");
   }
 
   if (lightingContext.illuminatedBy.length > 0) {

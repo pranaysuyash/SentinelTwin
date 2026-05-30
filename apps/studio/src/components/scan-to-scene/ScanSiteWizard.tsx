@@ -1,13 +1,24 @@
 "use client";
 
 import {
+  Activity,
   ArrowLeft,
   ArrowRight,
+  Blocks,
+  Camera,
   Check,
+  ChevronDown,
+  CircleHelp,
   CirclePlus,
+  Database,
+  FileText,
+  FileUp,
+  FolderOpen,
   ImageUp,
+  LayoutDashboard,
   Loader2,
   ScanSearch,
+  ShieldCheck,
   Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
@@ -200,6 +211,7 @@ export function ScanSiteWizard({ onClose, mode = "manual" }: ScanSiteWizardProps
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const [step, setStep] = useState<ScanStep>(0);
+  const [guidedStep, setGuidedStep] = useState(0);
   const [activeKind, setActiveKind] = useState<ScanCandidateKind>("counter");
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
   const [isReading, setIsReading] = useState(false);
@@ -219,6 +231,7 @@ export function ScanSiteWizard({ onClose, mode = "manual" }: ScanSiteWizardProps
   useEffect(() => {
     if (isGuided) {
       setAutoCreatePath(true);
+      setGuidedStep(0);
     }
   }, [isGuided]);
 
@@ -720,6 +733,424 @@ export function ScanSiteWizard({ onClose, mode = "manual" }: ScanSiteWizardProps
       };
     });
   }, []);
+
+  if (isGuided) {
+    const guidedSteps = [
+      "Set room dimensions",
+      "Upload overview photos",
+      "Mark front wall / room shell",
+      "Mark entry point",
+      "Mark critical zone",
+      "Mark existing cameras",
+      "Mark obstructions",
+      "Mark lights & windows",
+      "Mark path",
+      "Review & compile",
+    ];
+    const photoSlots = Array.from({ length: 6 }, (_, index) => session.photos[index] ?? null);
+    const createdAtLabel = new Intl.DateTimeFormat("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: "UTC",
+    }).format(new Date(session.createdAt));
+    const nextLabel = "Next: Mark Entry";
+
+    return (
+      <div className="flex h-full flex-col overflow-hidden bg-[#08101a] text-slate-200">
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          <aside className="flex w-[248px] flex-none flex-col justify-between border-r border-white/8 bg-[#07111b] px-3 py-4">
+            <div>
+              <div className="flex items-center gap-2 px-2 py-1 text-[17px] font-medium tracking-tight text-white">
+                <ShieldCheck className="h-6 w-6 text-sky-400" />
+                <span>SentinelTwin</span>
+              </div>
+
+              <nav className="mt-7 space-y-2">
+                {[
+                  { label: "Create Site Twin", icon: LayoutDashboard, active: true },
+                  { label: "Workspaces", icon: Blocks, active: false },
+                  { label: "Projects", icon: FolderOpen, active: false },
+                  { label: "Reports", icon: FileText, active: false },
+                  { label: "Issues & Actions", icon: Activity, active: false },
+                  { label: "Evidence", icon: Camera, active: false },
+                  { label: "Integrations", icon: Database, active: false },
+                  { label: "Settings", icon: ScanSearch, active: false },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.label}
+                      type="button"
+                      className={[
+                        "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-[15px] transition-colors",
+                        item.active ? "bg-sky-500/12 text-sky-400 ring-1 ring-sky-500/20" : "text-slate-300 hover:bg-white/4 hover:text-white",
+                      ].join(" ")}
+                    >
+                      <Icon className="h-[18px] w-[18px] flex-none" />
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+
+            <div className="space-y-4">
+              <div className="rounded-xl border border-white/8 bg-white/[0.02] p-3">
+                <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/82">Reference Demo</div>
+                <div className="overflow-hidden rounded-lg border border-white/6 bg-[#0d1520]">
+                  <div
+                    className="h-[82px] bg-cover bg-center"
+                    style={{
+                      backgroundImage:
+                        "linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.32)), linear-gradient(135deg, rgba(255,255,255,0.14), rgba(255,255,255,0.02)), url('https://images.unsplash.com/photo-1556740764-3ce1d1d0c9d0?auto=format&fit=crop&w=640&q=60')",
+                    }}
+                  />
+                </div>
+                <div className="mt-3 text-[15px] font-medium text-white">Retail Store Demo</div>
+                <p className="mt-1 max-w-[170px] text-[13px] leading-5 text-slate-300">Explore a complete site twin example</p>
+                <button
+                  type="button"
+                  onClick={() => onClose?.()}
+                  className="mt-3 flex h-10 w-full items-center justify-center rounded-xl border border-sky-500/40 bg-sky-500/10 text-[15px] text-sky-300 transition-colors hover:bg-sky-500/16"
+                >
+                  Open Demo
+                </button>
+              </div>
+
+              <button
+                type="button"
+                className="flex w-full items-center justify-between rounded-xl px-2 py-2 text-left transition-colors hover:bg-white/[0.03]"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500 text-sm font-medium text-white">AD</div>
+                  <div>
+                    <div className="text-[15px] text-white">Admin User</div>
+                    <div className="text-[13px] text-slate-400">Acme Security</div>
+                  </div>
+                </div>
+                <ChevronDown className="h-4 w-4 text-slate-400" />
+              </button>
+            </div>
+          </aside>
+
+          <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(37,78,140,0.14),_transparent_32%),linear-gradient(180deg,#08101a_0%,#071019_100%)]">
+            <div className="flex items-start justify-between gap-4 px-5 pb-3 pt-6 lg:px-6">
+              <div className="min-w-0">
+                <div className="text-[15px] text-slate-400">Create Site Twin &gt; <span className="text-white">Scan Site Photos</span></div>
+                <div className="mt-4 flex flex-wrap items-center gap-4">
+                  <h1 className="text-[50px] font-semibold tracking-[-0.045em] text-white">Scan Site Photos</h1>
+                  <span className="inline-flex items-center rounded-md bg-emerald-500/12 px-3 py-1.5 text-[18px] text-emerald-300 ring-1 ring-emerald-500/15">
+                    Manual-assisted · Working
+                  </span>
+                </div>
+                <p className="mt-3 max-w-[980px] text-[19px] leading-8 text-slate-300">
+                  Capture your site using guided steps. Mark key elements in your photos and compile them into a trusted SecurityScene.
+                </p>
+              </div>
+
+              <div className="flex flex-none flex-col items-end gap-3 pt-1">
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="flex h-12 items-center gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-4 text-[15px] text-slate-200 transition-colors hover:bg-white/[0.06]"
+                  >
+                    <FileUp className="h-4 w-4" />
+                    <span>Save &amp; Exit</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGuidedStep((current) => Math.min(current + 1, 9))}
+                    className="flex h-12 items-center gap-2 rounded-xl bg-[#2563eb] px-5 text-[15px] font-medium text-white transition-colors hover:bg-[#2b6df0]"
+                  >
+                    <span>{nextLabel}</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  className="flex h-12 items-center gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-4 text-[15px] text-slate-200 transition-colors hover:bg-white/[0.06]"
+                >
+                  <CircleHelp className="h-4 w-4" />
+                  <span>How it works</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="px-5 lg:px-6">
+              <div className="grid grid-cols-10 gap-0 rounded-[18px] border border-white/8 bg-white/[0.015] px-4 py-5">
+                {guidedSteps.map((label, index) => {
+                  const active = index === guidedStep;
+                  const complete = index < guidedStep;
+                  return (
+                    <div key={label} className="flex min-w-0 flex-col items-center">
+                      <div className="flex w-full items-center">
+                        {index > 0 ? <div className="h-px flex-1 bg-white/10" /> : null}
+                        <div
+                          className={[
+                            "flex h-9 w-9 flex-none items-center justify-center rounded-full border text-[15px] font-medium",
+                            complete
+                              ? "border-emerald-500/40 bg-emerald-500 text-white"
+                              : active
+                                ? "border-blue-500/50 bg-blue-500/20 text-blue-300"
+                                : "border-white/20 bg-transparent text-slate-400",
+                          ].join(" ")}
+                        >
+                          {complete ? <Check className="h-4 w-4" /> : index + 1}
+                        </div>
+                        {index < guidedSteps.length - 1 ? <div className="h-px flex-1 bg-white/10" /> : null}
+                      </div>
+                      <div className={[
+                        "mt-3 px-1 text-center text-[15px] leading-[1.15]",
+                        active ? "text-white" : "text-slate-300",
+                      ].join(" ")}>
+                        {label}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="grid min-h-0 flex-1 gap-5 px-5 py-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-6">
+              <section className="min-w-0 rounded-[22px] border border-white/8 bg-white/[0.015] p-5">
+                <h2 className="text-[31px] font-medium tracking-[-0.03em] text-white">Step 1 of 10: Set Room Dimensions</h2>
+
+                <div className="mt-8 grid gap-5 xl:grid-cols-[330px_minmax(0,1fr)]">
+                  <div className="space-y-6 pt-4">
+                    <p className="max-w-[280px] text-[16px] leading-7 text-slate-300">
+                      Provide approximate room dimensions to help scale your photos accurately.
+                    </p>
+
+                    <label className="grid grid-cols-[1fr_128px] items-center gap-4">
+                      <span className="text-[15px] font-medium text-white">Length (X)</span>
+                      <div className="flex items-center rounded-lg border border-white/8 bg-[#0b1320] px-3 py-2.5">
+                        <input
+                          type="number"
+                          value={session.widthM}
+                          onChange={(event) => updateSession({ widthM: Math.max(1, Number(event.target.value) || 1) })}
+                          className="w-full bg-transparent text-[16px] text-white outline-none"
+                        />
+                        <span className="ml-2 text-[16px] text-slate-400">m</span>
+                      </div>
+                    </label>
+
+                    <label className="grid grid-cols-[1fr_128px] items-center gap-4">
+                      <span className="text-[15px] font-medium text-white">Width (Y)</span>
+                      <div className="flex items-center rounded-lg border border-white/8 bg-[#0b1320] px-3 py-2.5">
+                        <input
+                          type="number"
+                          value={session.depthM}
+                          onChange={(event) => updateSession({ depthM: Math.max(1, Number(event.target.value) || 1) })}
+                          className="w-full bg-transparent text-[16px] text-white outline-none"
+                        />
+                        <span className="ml-2 text-[16px] text-slate-400">m</span>
+                      </div>
+                    </label>
+
+                    <label className="grid grid-cols-[1fr_128px] items-center gap-4">
+                      <span className="text-[15px] font-medium text-white">Ceiling Height (Z)</span>
+                      <div className="flex items-center rounded-lg border border-white/8 bg-[#0b1320] px-3 py-2.5">
+                        <input
+                          type="number"
+                          value={session.heightM}
+                          onChange={(event) => updateSession({ heightM: Math.max(2, Number(event.target.value) || 2) })}
+                          className="w-full bg-transparent text-[16px] text-white outline-none"
+                        />
+                        <span className="ml-2 text-[16px] text-slate-400">m</span>
+                      </div>
+                    </label>
+
+                    <div className="rounded-xl border border-white/8 bg-[#0b1320] px-4 py-5 text-[15px] leading-7 text-slate-300">
+                      These values can be adjusted later. Accuracy here improves results.
+                    </div>
+                  </div>
+
+                  <div className="rounded-[18px] border border-white/8 bg-[#0b1320] p-5">
+                    <h3 className="text-[19px] font-medium text-white">Upload Overview Photos</h3>
+                    <p className="mt-2 max-w-[430px] text-[15px] leading-6 text-slate-300">
+                      Add 3–6 photos from different corners or sides. Include walls, entry, ceiling and layout context.
+                    </p>
+
+                    <div className="mt-6 grid grid-cols-3 gap-3">
+                      {photoSlots.map((photo, index) =>
+                        photo ? (
+                          <div key={photo.id} className="group relative overflow-hidden rounded-[14px] border border-white/8 bg-[#111a28]">
+                            <div className="absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-[#2563eb] text-[12px] font-medium text-white">
+                              {index + 1}
+                            </div>
+                            <button
+                              type="button"
+                              className="absolute right-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-90 transition-opacity hover:opacity-100"
+                              onClick={() => {
+                                setSession((current) => ({
+                                  ...current,
+                                  photos: current.photos.filter((entry) => entry.id !== photo.id),
+                                  updatedAt: Date.now(),
+                                }));
+                              }}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                            <img src={photo.dataUrl} alt={photo.name} className="h-[144px] w-full object-cover" draggable={false} />
+                          </div>
+                        ) : (
+                          <button
+                            key={`empty-${index}`}
+                            type="button"
+                            onClick={handleUploadClick}
+                            className="group flex h-[144px] items-center justify-center rounded-[14px] border border-dashed border-sky-500/35 bg-[#0d1624] text-sky-400 transition-colors hover:border-sky-400 hover:bg-sky-500/8"
+                          >
+                            <div className="flex h-14 w-14 items-center justify-center rounded-[12px] border border-white/8 bg-[#111b29]">
+                              <CirclePlus className="h-7 w-7" />
+                            </div>
+                          </button>
+                        ),
+                      )}
+                    </div>
+
+                    <div className="mt-6 grid gap-4 xl:grid-cols-[1fr_232px]">
+                      <div className="rounded-[14px] border border-white/8 bg-[#0d1624] px-4 py-4">
+                        <div className="text-[17px] font-medium text-white">Tips for better results</div>
+                        <ul className="mt-4 space-y-3 text-[15px] leading-6 text-slate-300">
+                          <li className="flex items-start gap-3">
+                            <Check className="mt-1 h-4 w-4 flex-none text-emerald-400" />
+                            <span>Take photos from all four corners.</span>
+                          </li>
+                          <li className="flex items-start gap-3">
+                            <Check className="mt-1 h-4 w-4 flex-none text-emerald-400" />
+                            <span>Include ceiling and floor in at least one shot.</span>
+                          </li>
+                          <li className="flex items-start gap-3">
+                            <Check className="mt-1 h-4 w-4 flex-none text-emerald-400" />
+                            <span>Avoid zoom. Use wide-angle if possible.</span>
+                          </li>
+                        </ul>
+                      </div>
+
+                      <div className="rounded-[14px] border border-white/8 bg-[#0d1624] px-4 py-4">
+                        <div className="text-[17px] font-medium text-white">Example coverage</div>
+                        <div className="mt-4 flex h-[120px] items-center justify-center rounded-[12px] border border-white/8 bg-[#09101a]">
+                          <div className="relative h-[88px] w-[136px] rounded-[12px] border border-white/10">
+                            <div className="absolute left-2 top-2 h-2.5 w-2.5 rounded-full bg-blue-500" />
+                            <div className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-blue-500" />
+                            <div className="absolute left-2 bottom-2 h-2.5 w-2.5 rounded-full bg-blue-500" />
+                            <div className="absolute right-2 bottom-2 h-2.5 w-2.5 rounded-full bg-blue-500" />
+                            <div className="absolute left-[50%] top-[50%] flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/12 text-[18px] text-slate-300">📷</div>
+                            <div className="absolute left-[18px] top-[20px] text-slate-300">↖</div>
+                            <div className="absolute right-[18px] top-[20px] text-slate-300">↗</div>
+                            <div className="absolute left-[18px] bottom-[20px] text-slate-300">↙</div>
+                            <div className="absolute right-[18px] bottom-[20px] text-slate-300">↘</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <aside className="min-w-0 rounded-[22px] border border-white/8 bg-[#0b1320] p-5">
+                <div>
+                  <div className="text-[18px] font-medium text-white">Your progress</div>
+                  <div className="mt-4 h-2 rounded-full bg-white/8">
+                    <div className="h-2 w-[10%] rounded-full bg-[#2563eb]" />
+                  </div>
+                  <div className="mt-3 text-[15px] text-slate-300">1 of 10 steps completed</div>
+                </div>
+
+                <div className="mt-7 border-t border-white/8 pt-5">
+                  <div className="text-[18px] font-medium text-white">Steps overview</div>
+                  <div className="mt-4 space-y-2">
+                    {guidedSteps.map((label, index) => {
+                      const active = index === guidedStep;
+                      return (
+                        <div
+                          key={label}
+                          className={[
+                            "flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px]",
+                            active ? "bg-[#1b325c] text-white" : "text-slate-400",
+                          ].join(" ")}
+                        >
+                          <div className={[
+                            "flex h-6 w-6 items-center justify-center rounded-full border text-[12px]",
+                            active ? "border-blue-500/40 bg-blue-500/20 text-blue-300" : "border-white/20 text-slate-400",
+                          ].join(" ")}>
+                            {index + 1}
+                          </div>
+                          <span className="leading-5">{label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="mt-7 border-t border-white/8 pt-5">
+                  <div className="text-[18px] font-medium text-white">Session info</div>
+                  <div className="mt-4 space-y-4 text-[15px] text-slate-300">
+                    <div className="flex items-center justify-between gap-3">
+                      <span>Session ID</span>
+                      <span className="text-white">{session.id}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span>Created</span>
+                      <span className="text-white">{createdAtLabel}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span>Photos uploaded</span>
+                      <span className="text-white">{session.photos.length}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span>Est. time remaining</span>
+                      <span className="text-white">15–25 min</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-7 rounded-[14px] border border-sky-500/20 bg-[#0d1f36] px-4 py-4 text-[15px] text-slate-100">
+                  <div className="flex items-start gap-3">
+                    <ScanSearch className="mt-0.5 h-5 w-5 flex-none text-sky-300" />
+                    <div>
+                      <div className="font-medium text-white">Manual-assisted scan (V1)</div>
+                      <div className="mt-1 leading-6 text-slate-200">You confirm all elements.</div>
+                      <div className="mt-1 leading-6 text-slate-300">AI segmentation &amp; depth coming later.</div>
+                    </div>
+                  </div>
+                </div>
+              </aside>
+            </div>
+
+            <div className="mx-5 mb-5 flex items-center justify-between gap-4 rounded-[18px] border border-white/8 bg-white/[0.02] px-5 py-4 lg:mx-6">
+              <div className="flex items-center gap-3 text-[15px] text-slate-300">
+                <span className="text-[22px]">💡</span>
+                <span>There is no perfect photo. More context helps us help you.</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  className="flex h-11 items-center rounded-xl border border-white/8 bg-white/[0.03] px-4 text-[15px] text-slate-200 transition-colors hover:bg-white/[0.06]"
+                  onClick={onClose}
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGuidedStep((current) => Math.min(current + 1, 9))}
+                  className="flex h-11 items-center gap-2 rounded-xl bg-[#2563eb] px-5 text-[15px] font-medium text-white transition-colors hover:bg-[#2b6df0]"
+                >
+                  <span>{nextLabel}</span>
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[#0b0f17]">

@@ -8,8 +8,8 @@ export function RedundancyReview({ cameraResults }: { cameraResults: SimulationR
       <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8ea0bf]">Redundancy / Failure Review</h3>
       <div className="mt-2 space-y-2">
         {entries.length === 0 ? <div className="text-[10px] text-[#7384a5]">No camera-offline degradation detected.</div> : null}
-        {entries.map(({ cameraId, detail }, index) => (
-          <div key={`${cameraId}_${detail.zoneId}_${index}`} className="rounded-lg border border-[#232a3d] bg-[#0f1420] p-2 text-[10px] text-[#d7deed]">
+        {entries.map(({ cameraId, detail }) => (
+          <div key={`${cameraId}_${detail.zoneId}`} className="rounded-lg border border-[#232a3d] bg-[#0f1420] p-2 text-[10px] text-[#d7deed]">
             {detail.label} depends on {cameraId}: {detail.beforeQuality} &rarr; {detail.afterQuality} ({detail.reason})
           </div>
         ))}

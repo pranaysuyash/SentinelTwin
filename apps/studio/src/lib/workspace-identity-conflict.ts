@@ -13,7 +13,6 @@ import type {
   WorkspaceIdentityConflictResolutionStatus,
   WorkspaceIdentityConflictReplayRequest,
   WorkspaceIdentityConflictStatus,
-  WorkspaceIdentityConflictTarget,
 } from "@/lib/workspace-identity-conflict-types";
 
 const WorkspaceIdentityConflictTargetSchema = z.object({
@@ -203,6 +202,7 @@ export function summarizeWorkspaceIdentityConflictDiff(
     archivedMemberLabel: request.approvalRoute.archivedMemberLabel,
     currentPolicyLabel: request.approvalRoute.currentPolicyLabel,
     archivedPolicyLabel: request.approvalRoute.archivedPolicyLabel,
+    routeKey: request.approvalRoute.routeKey,
     routeLabel: request.approvalRoute.routeLabel,
     routeReason: request.approvalRoute.routeReason,
     resolutionLabel: request.resolutionLabel,

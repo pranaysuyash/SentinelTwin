@@ -128,6 +128,7 @@ describe("workspace identity conflict diff", () => {
         archivedMemberLabel: "Archived Operator · operator",
         currentPolicyLabel: "Shared workspace",
         archivedPolicyLabel: "Single-user workspace",
+        routeKey: "scene:scene-conflict|member:member_operator|role:operator|status:review_required|scope:review|current:Shared workspace|archived:Single-user workspace|reviewer:Reviewer|privacy:1|drift:000",
         routeLabel: "Route approval to reviewer",
         routeReason: "Approval should route through reviewer before publish.",
         resolutionLabel: "Route through reviewer before publish",

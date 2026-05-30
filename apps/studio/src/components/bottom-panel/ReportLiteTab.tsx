@@ -1,10 +1,11 @@
 "use client";
 
-import { Copy, Database, FileText, Globe, Loader2, Printer, Sparkles } from "lucide-react";
+import { Copy, Database, FileText, Globe, Loader2, Printer, Share2, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import type { SecurityReport } from "@/agents/ReportAgent";
 import { buildCompareShareLink } from "@/lib/compare-share-link";
+import { shareLinkOrCopy } from "@/lib/share-link";
 import { useAiCommand } from "@/hooks/use-ai-command";
 import { buildSecurityOutcomeModel } from "@/lib/security-outcome/security-outcome-model";
 import { exportTextAsPdf } from "@/lib/pdf-export";
@@ -140,6 +141,26 @@ export function ReportLiteTab() {
       window.location.hash,
     );
     await navigator.clipboard.writeText(link);
+  };
+
+  const shareCompareLink = async () => {
+    if (reportMode !== "compare" || !snapshotA || !snapshotB) return;
+    const link = buildCompareShareLink(
+      window.location.origin + window.location.pathname,
+      window.location.search,
+      {
+        compareSnapshotAId: snapshotA.id,
+        compareSnapshotBId: snapshotB.id,
+        compareMode: "report",
+        compareProvenanceNote: compareSelectionProvenanceNote,
+      },
+      window.location.hash,
+    );
+    await shareLinkOrCopy({
+      title: "SentinelTwin report compare handoff",
+      text: "Open this compare pair in the SentinelTwin report comparison view.",
+      url: link,
+    });
   };
   const visuals = compareVisualEvidence &&
     compareVisualEvidence.snapshotAId === (snapshotA?.id ?? "") &&
@@ -342,6 +363,14 @@ export function ReportLiteTab() {
               <option value="privacy_safe">Privacy safe</option>
             </select>
           </label>
+          <div className="rounded border border-[#1e2130] bg-[#0f141f] px-2 py-1 text-[9px] text-[#8090a8]">
+            <div className="font-semibold uppercase tracking-[0.14em] text-[#c7d0e4]">Audience Policy</div>
+            <div className="mt-0.5 text-[#6f7f9d]">
+              {audienceProfile.disclosureLevel.replace(/_/g, " ")} · {audienceProfile.disclosureSummary}
+            </div>
+            <div className="mt-1 text-[#6f7f9d]">Visible: {audienceProfile.visibleSections.join(", ")}</div>
+            <div className="text-[#6f7f9d]">Withheld: {audienceProfile.withheldSections.length > 0 ? audienceProfile.withheldSections.join(", ") : "none"}</div>
+          </div>
           <button
             onClick={handleGenerateAI}
             disabled={isGenerating || !result}
@@ -399,6 +428,15 @@ export function ReportLiteTab() {
             >
               <Copy className="h-3 w-3" /> Copy
             </button>
+          <button
+            onClick={() => {
+              void shareCompareLink();
+            }}
+            disabled={reportMode !== "compare" || !snapshotA || !snapshotB}
+            className="flex items-center gap-1 rounded border border-sky-400/20 bg-sky-500/10 px-2 py-1 text-[9px] text-sky-100 transition-colors hover:bg-sky-500/15 disabled:opacity-40"
+          >
+            <Share2 className="h-3 w-3" /> Share compare link
+          </button>
           <button
             onClick={() => {
               void copyCompareLink();

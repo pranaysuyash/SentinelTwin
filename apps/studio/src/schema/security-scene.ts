@@ -130,6 +130,9 @@ export const cameraNodeSchema = z.object({
   authRealm: z.string().optional(),
   onvifUsername: z.string().optional(),
   onvifPassword: z.string().optional(),
+  eventSubscriptionUri: z.string().optional(),
+  eventSubscriptionReference: z.string().optional(),
+  eventSubscriptionExpiresAt: z.number().int().nonnegative().optional(),
   ndaaCompliant: z.boolean().default(true),
   privacyMaskingEnabled: z.boolean().default(false),
   authSessionId: z.string().optional(),
@@ -341,11 +344,21 @@ export const simulationAssumptionsSchema = z.object({
     identification: z.number().positive(),
   }),
   showAssumptionsPanel: z.boolean(),
+  /** Backlight from windows/doors behind the subject — reduces face/body contrast */
+  backlightIntensity: z.enum(["none", "low", "medium", "high"]).default("none"),
+  /** Glare/reflection from reflective surfaces, glass, or wet floors */
+  glareIntensity: z.enum(["none", "low", "medium", "high"]).default("none"),
+  /** Overexposed zones (e.g. entrance in direct sun, bright signage) */
+  overexposedZones: z.boolean().default(false),
 });
 
 export const zoneResultSchema = z.object({
   zoneId: z.string(),
   label: z.string(),
+  targetType: criticalZoneNodeSchema.shape.targetType.optional(),
+  targetProfile: z.string().optional(),
+  targetSamplingMode: z.enum(["any", "all"]).optional(),
+  sampleHeightsM: z.array(z.number().positive()).optional(),
   requiredQuality: doriQualitySchema.exclude(["none"]),
   actualQuality: doriQualitySchema,
   coveringCameras: z.array(z.string()),

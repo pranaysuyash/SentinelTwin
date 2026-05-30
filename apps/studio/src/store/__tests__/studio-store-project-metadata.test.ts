@@ -44,7 +44,7 @@ afterEach(() => {
   Object.defineProperty(globalThis, "window", { value: originalWindow, configurable: true });
   Object.defineProperty(globalThis, "localStorage", { value: originalLocalStorage, configurable: true });
   useStudioStore.getState().setScene(createSmallRetailShopScene());
-  useStudioStore.setState({ savedProjects: [], savedScenes: [], modelEvalHistory: [], supportIngestHistory: [] });
+  useStudioStore.setState({ savedProjects: [], savedScenes: [], modelEvalHistory: [], promptRegistryHistory: [], aiProviderGovernanceHistory: [], supportIngestHistory: [] });
 });
 
 describe("studio store project metadata", () => {
@@ -169,7 +169,7 @@ describe("studio store project metadata", () => {
 
   test("persists model eval history for cross-run comparison", () => {
     const storage = installStorage();
-    useStudioStore.setState({ modelEvalHistory: [] });
+    useStudioStore.setState({ modelEvalHistory: [], promptRegistryHistory: [] });
 
     const selection = normalizeAiProviderSelection({ providerId: "openai", model: "gpt-4o" });
     const governance = describeAiProviderGovernance(selection, false);
@@ -212,6 +212,9 @@ describe("studio store project metadata", () => {
     expect(history).toHaveLength(1);
     expect(history[0]?.providerLabel).toBe(governance.activeProviderLabel);
     expect(history[0]?.stageBudget.modeLabel).toBe("Cloud-backed budget");
+    expect(useStudioStore.getState().promptRegistryHistory).toHaveLength(1);
+    expect(useStudioStore.getState().promptRegistryHistory[0]?.source).toBe("model_eval");
+    expect(useStudioStore.getState().promptRegistryHistory[0]?.registryDigest).toBe(report.promptRegistry.registryDigest);
 
     let raw = storage.getItem("sentineltwin_model_eval_history_v1");
     expect(raw).toContain("Heuristic Layout Baseline");
@@ -229,6 +232,50 @@ describe("studio store project metadata", () => {
 
     raw = storage.getItem("sentineltwin_model_eval_history_v1");
     expect(JSON.parse(raw ?? "[]")).toHaveLength(2);
+    expect(useStudioStore.getState().promptRegistryHistory).toHaveLength(2);
+    expect(useStudioStore.getState().promptRegistryHistory[0]?.source).toBe("model_eval");
+    expect(useStudioStore.getState().promptRegistryHistory[0]?.registryDigest).toBe(report.promptRegistry.registryDigest);
+  });
+
+  test("persists prompt registry history snapshots for governance review", () => {
+    const storage = installStorage();
+    useStudioStore.setState({ promptRegistryHistory: [] });
+
+    useStudioStore.getState().recordPromptRegistrySnapshot("manual", "Captured from unit test.");
+
+    const history = useStudioStore.getState().promptRegistryHistory;
+    expect(history).toHaveLength(1);
+    expect(history[0]?.source).toBe("manual");
+    expect(history[0]?.registryDigest).toBe(buildPromptRegistrySnapshot().registryDigest);
+    expect(storage.getItem("sentineltwin_prompt_registry_history_v1")).toContain("Captured from unit test.");
+  });
+
+  test("persists ai provider governance history snapshots for policy review", () => {
+    const storage = installStorage();
+    const selection = normalizeAiProviderSelection({ providerId: "openai", model: "gpt-4o" });
+
+    useStudioStore.setState({
+      aiProviderSelection: selection,
+      localOnlyMode: false,
+      aiProviderGovernanceHistory: [],
+    });
+
+    useStudioStore.getState().setAiProviderSelection(selection);
+
+    let history = useStudioStore.getState().aiProviderGovernanceHistory;
+    expect(history).toHaveLength(1);
+    expect(history[0]?.source).toBe("selection");
+    expect(history[0]?.activeProviderLabel).toBe(describeAiProviderGovernance(selection, false).activeProviderLabel);
+    expect(storage.getItem("sentineltwin_ai_provider_governance_history_v1")).toContain("Provider selection changed from View Settings.");
+
+    useStudioStore.getState().setLocalOnlyMode(true);
+
+    history = useStudioStore.getState().aiProviderGovernanceHistory;
+    expect(history).toHaveLength(2);
+    expect(history[0]?.source).toBe("policy");
+    expect(history[0]?.localOnlyMode).toBe(true);
+    expect(history[1]?.source).toBe("selection");
+    expect(storage.getItem("sentineltwin_ai_provider_governance_history_v1")).toContain("Local-only policy enabled.");
   });
 
   test("persists support ingest history for routed support handoffs", () => {

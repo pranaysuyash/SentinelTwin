@@ -23,10 +23,10 @@ export function PolygonDrawTool({ points, hoverPoint }: PolygonDrawToolProps) {
     <group>
       {points.length > 1 ? <Line points={previewPoints} color="#22c55e" lineWidth={1.6} /> : null}
       {closedLoopPoints ? <Line points={closedLoopPoints} color="#22c55e" lineWidth={1.2} /> : null}
-      {points.map(([x, z], index) => (
-        <mesh key={`${x}-${z}-${index}`} position={[x, 0.02, z]}>
+      {points.map(([x, z], i) => (
+        <mesh key={`${x.toFixed(1)}-${z.toFixed(1)}`} position={[x, 0.02, z]}>
           <ringGeometry args={[0.08, 0.13, 12]} />
-          <meshBasicMaterial color={index === 0 ? "#bef264" : "#22c55e"} transparent opacity={0.85} />
+          <meshBasicMaterial color={i === 0 ? "#bef264" : "#22c55e"} transparent opacity={0.85} />
         </mesh>
       ))}
       {hasSegment && hoverPoint ? (

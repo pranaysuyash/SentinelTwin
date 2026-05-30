@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { buildPromptRegistrySnapshot, PROMPT_REGISTRY, getPromptRegistryEntry, summarizePromptRegistry } from "@/agents/prompt-registry";
+import { buildPromptRegistrySnapshot, PROMPT_REGISTRY, getPromptRegistryEntry, resolvePromptRegistryLineage, summarizePromptRegistry } from "@/agents/prompt-registry";
 
 describe("prompt registry", () => {
   test("exposes canonical prompt metadata for the model-backed stages", () => {
@@ -16,6 +16,8 @@ describe("prompt registry", () => {
     expect(summary.stages.draft).toBe(1);
     expect(getPromptRegistryEntry("report_generation")?.agent).toBe("ReportAgent");
     expect(getPromptRegistryEntry("model_layout_draft")?.outputSchema).toContain("SecurityScene");
+    expect(resolvePromptRegistryLineage("ai_draft")?.promptId).toBe("model_layout_draft");
+    expect(resolvePromptRegistryLineage("report_generation")?.promptOutputSchema).toBe("SecurityReport");
     expect(buildPromptRegistrySnapshot().observedAt).toBeGreaterThan(0);
   });
 });

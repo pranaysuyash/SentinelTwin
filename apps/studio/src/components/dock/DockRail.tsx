@@ -25,6 +25,7 @@ export function DockRail({
   title,
   subtitle,
   workspacePreset,
+  attention,
   onToggle,
   onFocus,
 }: {
@@ -32,6 +33,7 @@ export function DockRail({
   title: string;
   subtitle?: string;
   workspacePreset: WorkspacePreset;
+  attention?: boolean;
   onToggle: () => void;
   onFocus?: () => void;
 }) {
@@ -49,6 +51,7 @@ export function DockRail({
         onClick={onToggle}
         className={cn(
           "inline-flex items-center justify-center rounded-md border border-[#24283a] bg-[#111521] text-[#9aa6bd] transition-colors hover:border-[#32384d] hover:text-white",
+          attention && "border-amber-400/40 bg-amber-500/15 text-amber-100 shadow-[0_0_0_1px_rgba(251,191,36,0.25)]",
           isBottom ? "h-6 w-6 flex-shrink-0" : "h-7 w-7 flex-shrink-0",
         )}
         title={`Expand ${title}`}
@@ -67,6 +70,7 @@ export function DockRail({
             {title}
           </div>
           <div className="truncate text-[8px] text-[#556076]">{subtitle ?? workspacePreset.replace(/_/g, " ")}</div>
+          {attention ? <div className="text-[8px] uppercase tracking-[0.14em] text-amber-200">Needs attention</div> : null}
         </div>
 
         <div className={cn("flex items-center gap-1", isBottom ? "ml-auto" : "mt-1")}>

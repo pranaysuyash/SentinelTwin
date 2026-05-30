@@ -64,7 +64,7 @@ function CoverageTimelineBar({ snapshots }: { snapshots: HourlySecuritySnapshot[
           const isActive = i === activeSlot;
           return (
             <button
-              key={i}
+              key={`${snap.hour}-${snap.minute}`}
               onClick={() => setTemporalScrub(snap.hour, snap.minute)}
               className={`flex-1 rounded-px transition-all cursor-pointer hover:opacity-90 ${
                 isActive ? "ring-1 ring-white ring-offset-[#0b0f17] ring-offset-1" : ""
@@ -172,8 +172,8 @@ function VulnerabilityCard({ window, label }: { window: VulnerabilityWindow; lab
             <div>
               <span className="text-[8px] text-[#4a5568] uppercase tracking-wide">Failing Zones</span>
               <div className="flex flex-wrap gap-1 mt-0.5">
-                {window.criticalZonesFailing.map((zone, i) => (
-                  <span key={i} className="px-1.5 py-0.5 rounded bg-red-950/30 border border-red-800/30 text-[8px] text-red-300">
+                {window.criticalZonesFailing.map((zone) => (
+                  <span key={zone} className="px-1.5 py-0.5 rounded bg-red-950/30 border border-red-800/30 text-[8px] text-red-300">
                     {zone}
                   </span>
                 ))}
@@ -257,12 +257,12 @@ function StateTransitionMap({ snapshots }: { snapshots: HourlySecuritySnapshot[]
 
   return (
     <div className="flex h-2 gap-px overflow-hidden rounded">
-      {states.map((state, i) => {
+      {states.map((state) => {
         const color = STATE_COLORS[state.label] ?? "#4a5568";
         const pct = ((state.end - state.start) / 24) * 100;
         return (
           <div
-            key={i}
+            key={state.label}
             className="h-full flex-shrink-0"
             style={{ width: `${Math.max(pct, 1)}%`, backgroundColor: color }}
             title={`${state.label}: ${hourToTime(Math.floor(state.start), 0)} — ${hourToTime(Math.floor(state.end), 0)}`}
@@ -444,7 +444,7 @@ export function TemporalProfileView() {
               <div className="space-y-1.5 max-h-[260px] overflow-y-auto">
                 {temporalProfile.peakVulnerabilityWindows.map((window, i) => (
                   <VulnerabilityCard
-                    key={i}
+                    key={`${window.startHour}:${window.startMinute}-${window.endHour}:${window.endMinute}`}
                     window={window}
                     label={`Window ${i + 1}`}
                   />
@@ -493,8 +493,8 @@ export function TemporalProfileView() {
                 <span className="text-[9px] font-semibold text-[#c7d0e4]">Safest Periods</span>
               </div>
               <div className="flex flex-wrap gap-1">
-                {temporalProfile.safestPeriods.map((period, i) => (
-                  <div key={i} className="px-2 py-1 rounded bg-green-950/30 border border-green-800/30">
+                {temporalProfile.safestPeriods.map((period) => (
+                  <div key={`${period.startHour}-${period.endHour}`} className="px-2 py-1 rounded bg-green-950/30 border border-green-800/30">
                     <span className="text-[8px] text-green-300 font-mono">
                       {hourToTime(period.startHour, 0)} — {period.endHour >= 24 ? "Midnight" : hourToTime(period.endHour, 0)}
                     </span>

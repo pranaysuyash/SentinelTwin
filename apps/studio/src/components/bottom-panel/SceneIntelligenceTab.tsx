@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Share2 } from "lucide-react";
 
 import { Badge } from "@/components/shared/Badge";
 import { cn } from "@/lib/cn";
@@ -26,6 +27,7 @@ import { summarizeSceneTruthLadder } from "@/lib/truth-ladder";
 import { buildCompareShareLink } from "@/lib/compare-share-link";
 import { buildArchiveHandoffLink } from "@/lib/archive-handoff-link";
 import { buildTimelineShareLink } from "@/lib/timeline-share-link";
+import { shareLinkOrCopy } from "@/lib/share-link";
 import { useStudioStore } from "@/store/studio-store";
 import type { SceneSnapshot } from "@/schema/security-scene";
 
@@ -679,11 +681,35 @@ export function SceneIntelligenceTab() {
     await navigator.clipboard.writeText(deepLink);
   };
 
+  const shareDeepLink = async (event?: OperationalEvidenceEvent | null) => {
+    if (typeof window === "undefined") return;
+    const deepLink = buildDeepLink(event) ?? "";
+    if (!deepLink) return;
+    await shareLinkOrCopy({
+      title: "SentinelTwin checkpoint link",
+      text: "Open this checkpoint in Scene Intelligence.",
+      url: deepLink,
+    });
+  };
+
   const copyCompareDeepLink = async (target: "beforeafter" | "report") => {
     if (typeof window === "undefined") return;
     const deepLink = buildCompareDeepLink(target);
     if (!deepLink) return;
     await navigator.clipboard.writeText(deepLink);
+  };
+
+  const shareCompareDeepLink = async (target: "beforeafter" | "report") => {
+    if (typeof window === "undefined") return;
+    const deepLink = buildCompareDeepLink(target);
+    if (!deepLink) return;
+    await shareLinkOrCopy({
+      title: target === "report" ? "SentinelTwin report compare handoff" : "SentinelTwin before/after compare handoff",
+      text: target === "report"
+        ? "Open this compare pair in the report comparison surface."
+        : "Open this compare pair in the before/after comparison surface.",
+      url: deepLink,
+    });
   };
 
   const openDeepLink = (event?: OperationalEvidenceEvent | null) => {
@@ -712,6 +738,20 @@ export function SceneIntelligenceTab() {
     const deepLink = buildArchiveDeepLink(archiveHistoryId);
     if (!deepLink) return;
     await navigator.clipboard.writeText(deepLink);
+  };
+
+  const shareArchiveDeepLink = async (archiveHistoryId: string) => {
+    if (typeof window === "undefined") return;
+    const deepLink = buildArchiveDeepLink(archiveHistoryId);
+    if (!deepLink) return;
+    const archiveRecord = operationalEvidenceArchiveHistory.find((record) => record.historyId === archiveHistoryId) ?? null;
+    await shareLinkOrCopy({
+      title: "SentinelTwin archive handoff",
+      text: archiveRecord
+        ? `Open ${archiveRecord.archive.scene.name || "Untitled Scene"} in SentinelTwin recovery preflight.`
+        : "Open this archived checkpoint in SentinelTwin recovery preflight.",
+      url: deepLink,
+    });
   };
 
   const openArchiveDeepLink = (archiveHistoryId: string) => {
@@ -992,6 +1032,14 @@ export function SceneIntelligenceTab() {
                   <div className="mt-2 flex flex-wrap gap-2">
                     <button
                       type="button"
+                      onClick={() => void shareArchiveDeepLink(record.historyId)}
+                      className="rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1.5 text-[10px] font-medium text-sky-100 hover:bg-sky-500/15"
+                    >
+                      <Share2 className="mr-1.5 inline h-3 w-3" />
+                      Share archive link
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => copyArchiveDeepLink(record.historyId)}
                       className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08]"
                     >
@@ -1266,6 +1314,15 @@ export function SceneIntelligenceTab() {
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button
                         type="button"
+                        onClick={() => void shareCompareDeepLink("beforeafter")}
+                        disabled={snapshots.length < 2}
+                        className="rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1.5 text-[10px] font-medium text-sky-100 hover:bg-sky-500/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.04] disabled:text-[#74809a]"
+                      >
+                        <Share2 className="mr-1.5 inline h-3 w-3" />
+                        Share compare link
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => handleRestoreCheckpoint(selectedEvidenceEvent.id, "recovered")}
                         className="rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1.5 text-[10px] font-medium text-sky-100 hover:bg-sky-500/15"
                       >
@@ -1342,6 +1399,14 @@ export function SceneIntelligenceTab() {
                     <StatCard label="Outgoing" value={outgoingEdges.length} detail="Relations this node creates" />
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void shareDeepLink()}
+                      className="rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1.5 text-[11px] font-medium text-sky-100 hover:bg-sky-500/15"
+                    >
+                      <Share2 className="mr-1.5 inline h-3 w-3" />
+                      Share deep link
+                    </button>
                     <button
                       type="button"
                       onClick={() => void copyDeepLink()}
@@ -2249,6 +2314,14 @@ export function SceneIntelligenceTab() {
                         className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-white hover:bg-white/[0.08]"
                       >
                         Preview lineage
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void shareDeepLink(event)}
+                        className="rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1.5 text-[10px] font-medium text-sky-100 hover:bg-sky-500/15"
+                      >
+                        <Share2 className="mr-1.5 inline h-3 w-3" />
+                        Share checkpoint link
                       </button>
                       <button
                         type="button"

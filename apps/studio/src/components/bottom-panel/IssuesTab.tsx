@@ -117,8 +117,8 @@ export function IssuesTab() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="p-2 space-y-1.5">
-        {result.issues.map((issue, i) => (
-          <div key={i} className="flex gap-2.5 p-2.5 bg-[#0d0f17] border border-[#1e2130] rounded-lg hover:border-[#2a3045] transition-colors group">
+        {result.issues.map((issue) => (
+          <div key={`${issue.category}-${issue.description}`} className="flex gap-2.5 p-2.5 bg-[#0d0f17] border border-[#1e2130] rounded-lg hover:border-[#2a3045] transition-colors group">
             <SeverityIcon severity={issue.severity} />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
@@ -270,8 +270,8 @@ export function IssuesTab() {
         {result.recommendations.length > 0 && (
           <div className="mt-3">
             <div className="text-[9px] font-semibold text-[#3a4158] uppercase tracking-widest mb-2">Recommendations</div>
-            {result.recommendations.map((rec, i) => {
-              const recKey = `${i}:${rec.description}`;
+            {result.recommendations.map((rec) => {
+              const recKey = `${rec.type}-${rec.description}`;
               const canFix = rec.verified && rec.affectedNodeId != null;
               const canPreview = canFix && makePatch(rec) != null;
               const isPreviewActive = previewStateByRecKey[recKey] != null;
@@ -317,7 +317,7 @@ export function IssuesTab() {
                 });
               };
               return (
-                <div key={i} className="flex items-start gap-2 py-2 border-b border-[#181b26]">
+                <div key={`${rec.type}-${rec.description}`} className="flex items-start gap-2 py-2 border-b border-[#181b26]">
                   <ChevronRight className="w-3 h-3 text-blue-400 mt-0.5 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <span className="text-[10px] text-[#8090a8]">{rec.description}</span>

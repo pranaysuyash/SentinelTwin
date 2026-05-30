@@ -1,7 +1,13 @@
 import { create } from "zustand";
 
 import { createSmallRetailShopScene, smallRetailShopScene } from "@/demo-scenes/small-retail-shop";
-import { DEFAULT_AI_PROVIDER_SELECTION, normalizeAiProviderSelection, type AiProviderSelection } from "@/agents/provider-selection";
+import {
+  DEFAULT_AI_PROVIDER_SELECTION,
+  describeAiProviderGovernance,
+  normalizeAiProviderSelection,
+  type AiProviderGovernanceSummary,
+  type AiProviderSelection,
+} from "@/agents/provider-selection";
 import {
   loadModelEvalHistoryFromRaw,
   serializeModelEvalHistory,
@@ -9,6 +15,7 @@ import {
   type ModelEvalRunRecord,
   type ModelEvalSuiteResult,
 } from "@/agents/model-eval";
+import { buildPromptRegistrySnapshot, type PromptRegistrySnapshot } from "@/agents/prompt-registry";
 import type { SupportIngestResponse } from "@/lib/support-ingest";
 import type { SupportIngestHistoryRecord } from "@/lib/support-ingest-history";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
@@ -28,6 +35,8 @@ import {
   type OperationalEvidenceEventInput,
   type OperationalEvidenceEvent,
 } from "@/lib/operational-evidence";
+import { mapOnvifSessionToEvidenceEvent } from "@/lib/onvif-event-mapper";
+import type { OnvifSession } from "@/lib/onvif-client";
 import {
   loadOperationalEvidenceEventsFromRaw,
   loadOperationalEvidenceJournalFromRaw,
@@ -109,6 +118,7 @@ export type RightPanelMode =
   | "recommendations"
   | "assumptions"
   | "camera_controls"
+  | "bulk_camera"
   | "governance";
 export type BottomDrawerMode = "tabs" | "single_module" | "hidden";
 export type WorkspaceComponentId =
@@ -451,6 +461,9 @@ export type CameraLiveConnectionEventRecord = {
   previousAuthChallengeHeader: string | null;
   previousAuthChallengeScheme: "basic" | "digest" | "bearer" | "token" | null;
   previousAuthChallengeRealm: string | null;
+  previousEventSubscriptionUri: string | null;
+  previousEventSubscriptionReference: string | null;
+  previousEventSubscriptionExpiresAt: number | null;
   liveSessionId: string | null;
   liveSessionState: "idle" | "probing" | "connected" | "error" | null;
   liveSessionStartedAt: number | null;
@@ -471,6 +484,9 @@ export type CameraLiveConnectionEventRecord = {
   authChallengeHeader: string | null;
   authChallengeScheme: "basic" | "digest" | "bearer" | "token" | null;
   authChallengeRealm: string | null;
+  eventSubscriptionUri: string | null;
+  eventSubscriptionReference: string | null;
+  eventSubscriptionExpiresAt: number | null;
   onvifUsername?: string | null;
   onvifPassword?: string | null;
   liveFeedUrl: string | null;
@@ -483,7 +499,18 @@ export type CameraLiveConnectionEventRecord = {
   timestamp: number;
 };
 
-export type CameraLiveConnectionEventInput = Omit<CameraLiveConnectionEventRecord, "id" | "timestamp" | "sceneId" | "sceneName"> & {
+export type CameraLiveConnectionEventInput = Omit<
+  CameraLiveConnectionEventRecord,
+  | "id"
+  | "timestamp"
+  | "sceneId"
+  | "sceneName"
+  | "previousEventSubscriptionUri"
+  | "previousEventSubscriptionReference"
+  | "previousEventSubscriptionExpiresAt"
+  | "onvifUsername"
+  | "onvifPassword"
+> & {
   timestamp?: number;
   previousLiveSessionId?: CameraLiveConnectionEventRecord["previousLiveSessionId"];
   previousLiveSessionState?: CameraLiveConnectionEventRecord["previousLiveSessionState"];
@@ -504,6 +531,12 @@ export type CameraLiveConnectionEventInput = Omit<CameraLiveConnectionEventRecor
   previousAuthChallengeHeader?: CameraLiveConnectionEventRecord["previousAuthChallengeHeader"];
   previousAuthChallengeScheme?: CameraLiveConnectionEventRecord["previousAuthChallengeScheme"];
   previousAuthChallengeRealm?: CameraLiveConnectionEventRecord["previousAuthChallengeRealm"];
+  previousEventSubscriptionUri?: CameraLiveConnectionEventRecord["previousEventSubscriptionUri"];
+  previousEventSubscriptionReference?: CameraLiveConnectionEventRecord["previousEventSubscriptionReference"];
+  previousEventSubscriptionExpiresAt?: CameraLiveConnectionEventRecord["previousEventSubscriptionExpiresAt"];
+  eventSubscriptionUri?: CameraLiveConnectionEventRecord["eventSubscriptionUri"];
+  eventSubscriptionReference?: CameraLiveConnectionEventRecord["eventSubscriptionReference"];
+  eventSubscriptionExpiresAt?: CameraLiveConnectionEventRecord["eventSubscriptionExpiresAt"];
   onvifUsername?: CameraLiveConnectionEventRecord["onvifUsername"];
   onvifPassword?: CameraLiveConnectionEventRecord["onvifPassword"];
   liveSessionId?: CameraLiveConnectionEventRecord["liveSessionId"];
@@ -545,12 +578,35 @@ export type ExternalLogEntryInput = Omit<ExternalLogEntry, "id" | "timestamp"> &
 
 export type AiActionTelemetryStage = "command_parse" | "counterfactual" | "report_generation" | "ai_draft";
 
+export type PromptRegistryHistorySource = "startup" | "manual" | "model_eval";
+
+export type PromptRegistryHistoryRecord = PromptRegistrySnapshot & {
+  id: string;
+  source: PromptRegistryHistorySource;
+  note?: string | null;
+};
+
+export type AiProviderGovernanceHistorySource = "startup" | "selection" | "policy" | "manual" | "eval";
+
+export type AiProviderGovernanceHistoryRecord = AiProviderGovernanceSummary & {
+  id: string;
+  observedAt: number;
+  source: AiProviderGovernanceHistorySource;
+  note?: string | null;
+};
+
 export type AiActionTelemetryRecord = {
   id: string;
   stage: AiActionTelemetryStage;
   providerId: AiProviderSelection["providerId"];
   providerLabel: string;
   model: string;
+  promptId?: string | null;
+  promptVersion?: string | null;
+  promptTitle?: string | null;
+  promptAgent?: string | null;
+  promptStage?: "command" | "counterfactual" | "report" | "draft" | null;
+  promptOutputSchema?: string | null;
   localOnlyMode: boolean;
   cloudAvailable: boolean;
   timestamp: number;
@@ -573,6 +629,8 @@ const AI_PROVIDER_STORAGE_KEY = "sentineltwin_ai_provider_selection";
 const LOCAL_ONLY_STORAGE_KEY = "sentineltwin_local_only_mode";
 export const OPERATIONAL_EVIDENCE_STORAGE_KEY = "sentineltwin_operational_evidence_v1";
 const MODEL_EVAL_HISTORY_STORAGE_KEY = "sentineltwin_model_eval_history_v1";
+const PROMPT_REGISTRY_HISTORY_STORAGE_KEY = "sentineltwin_prompt_registry_history_v1";
+const AI_PROVIDER_GOVERNANCE_HISTORY_STORAGE_KEY = "sentineltwin_ai_provider_governance_history_v1";
 const AI_TELEMETRY_STORAGE_KEY = "sentineltwin_ai_action_telemetry_v1";
 const EXTERNAL_LOG_STORAGE_KEY = "sentineltwin_external_log_entries_v1";
 const SENSOR_EVENT_STORAGE_KEY = "sentineltwin_sensor_live_events_v1";
@@ -728,7 +786,7 @@ function loadSavedLayoutsFromStorage(): WorkspaceLayoutRecord[] {
       const enabledAnalysisModules = candidate.enabledAnalysisModules && typeof candidate.enabledAnalysisModules === "object"
         ? { ...presetLayout.enabledAnalysisModules, ...(candidate.enabledAnalysisModules as Partial<Record<BottomTab, boolean>>) }
         : { ...presetLayout.enabledAnalysisModules };
-      const rightPanelMode = candidate.rightPanelMode === "inspector" || candidate.rightPanelMode === "security_status" || candidate.rightPanelMode === "issues" || candidate.rightPanelMode === "recommendations" || candidate.rightPanelMode === "assumptions" || candidate.rightPanelMode === "camera_controls"
+      const rightPanelMode = candidate.rightPanelMode === "inspector" || candidate.rightPanelMode === "security_status" || candidate.rightPanelMode === "issues" || candidate.rightPanelMode === "recommendations" || candidate.rightPanelMode === "assumptions" || candidate.rightPanelMode === "camera_controls" || candidate.rightPanelMode === "bulk_camera"
         ? candidate.rightPanelMode
         : presetLayout.rightPanelMode;
       const bottomDrawerMode = candidate.bottomDrawerMode === "tabs" || candidate.bottomDrawerMode === "single_module" || candidate.bottomDrawerMode === "hidden"
@@ -992,6 +1050,9 @@ function loadCameraLiveConnectionEvents(): CameraLiveConnectionEventRecord[] {
             ? candidate.previousAuthChallengeScheme
             : null,
         previousAuthChallengeRealm: typeof candidate.previousAuthChallengeRealm === "string" ? candidate.previousAuthChallengeRealm : null,
+        previousEventSubscriptionUri: typeof candidate.previousEventSubscriptionUri === "string" ? candidate.previousEventSubscriptionUri : null,
+        previousEventSubscriptionReference: typeof candidate.previousEventSubscriptionReference === "string" ? candidate.previousEventSubscriptionReference : null,
+        previousEventSubscriptionExpiresAt: typeof candidate.previousEventSubscriptionExpiresAt === "number" ? candidate.previousEventSubscriptionExpiresAt : null,
         liveSessionId: typeof candidate.liveSessionId === "string" ? candidate.liveSessionId : null,
         liveSessionState: candidate.liveSessionState === "idle" || candidate.liveSessionState === "probing" || candidate.liveSessionState === "connected" || candidate.liveSessionState === "error"
           ? candidate.liveSessionState
@@ -1038,6 +1099,9 @@ function loadCameraLiveConnectionEvents(): CameraLiveConnectionEventRecord[] {
             ? candidate.authChallengeScheme
             : null,
         authChallengeRealm: typeof candidate.authChallengeRealm === "string" ? candidate.authChallengeRealm : null,
+        eventSubscriptionUri: typeof candidate.eventSubscriptionUri === "string" ? candidate.eventSubscriptionUri : null,
+        eventSubscriptionReference: typeof candidate.eventSubscriptionReference === "string" ? candidate.eventSubscriptionReference : null,
+        eventSubscriptionExpiresAt: typeof candidate.eventSubscriptionExpiresAt === "number" ? candidate.eventSubscriptionExpiresAt : null,
         liveFeedUrl: typeof candidate.liveFeedUrl === "string" ? candidate.liveFeedUrl : null,
         liveFeedLabel: typeof candidate.liveFeedLabel === "string" ? candidate.liveFeedLabel : null,
         liveConnectionMode: candidate.liveConnectionMode === "rtsp" || candidate.liveConnectionMode === "mjpeg" || candidate.liveConnectionMode === "http" || candidate.liveConnectionMode === "onvif" || candidate.liveConnectionMode === "proxy"
@@ -1064,6 +1128,170 @@ function loadModelEvalHistory(): ModelEvalRunRecord[] {
   try {
     const raw = window.localStorage.getItem(MODEL_EVAL_HISTORY_STORAGE_KEY);
     return loadModelEvalHistoryFromRaw(raw);
+  } catch {
+    return [];
+  }
+}
+
+function createPromptRegistryHistoryRecord(
+  snapshot: PromptRegistrySnapshot,
+  source: PromptRegistryHistorySource,
+  note?: string | null,
+): PromptRegistryHistoryRecord {
+  return {
+    ...snapshot,
+    id: `prompt_registry_${snapshot.observedAt.toString(36)}_${snapshot.registryDigest.slice(0, 8)}`,
+    source,
+    note: note ?? null,
+  };
+}
+
+function normalizePromptRegistryHistory(raw: unknown): PromptRegistryHistoryRecord[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const candidate = item as Partial<PromptRegistryHistoryRecord>;
+    if (
+      typeof candidate.id !== "string"
+      || typeof candidate.observedAt !== "number"
+      || typeof candidate.total !== "number"
+      || typeof candidate.latestVersion !== "string"
+      || typeof candidate.registryDigest !== "string"
+      || typeof candidate.stages !== "object"
+    ) {
+      return [];
+    }
+    const source = candidate.source === "manual" || candidate.source === "model_eval" || candidate.source === "startup"
+      ? candidate.source
+      : "manual";
+    return [{
+      id: candidate.id,
+      source,
+      observedAt: candidate.observedAt,
+      total: candidate.total,
+      latestVersion: candidate.latestVersion,
+      registryDigest: candidate.registryDigest,
+      stages: {
+        command: typeof candidate.stages?.command === "number" ? candidate.stages.command : 0,
+        counterfactual: typeof candidate.stages?.counterfactual === "number" ? candidate.stages.counterfactual : 0,
+        report: typeof candidate.stages?.report === "number" ? candidate.stages.report : 0,
+        draft: typeof candidate.stages?.draft === "number" ? candidate.stages.draft : 0,
+      },
+      note: typeof candidate.note === "string" ? candidate.note : null,
+    }];
+  }).slice(0, 24);
+}
+
+function loadPromptRegistryHistory(): PromptRegistryHistoryRecord[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(PROMPT_REGISTRY_HISTORY_STORAGE_KEY);
+    if (!raw) {
+      const initialSnapshot = [createPromptRegistryHistoryRecord(buildPromptRegistrySnapshot(), "startup", "Initial prompt registry snapshot.")];
+      persistPromptRegistryHistory(initialSnapshot);
+      return initialSnapshot;
+    }
+    const parsed = JSON.parse(raw);
+    const normalized = normalizePromptRegistryHistory(parsed);
+    if (normalized.length === 0) {
+      const fallbackSnapshot = [createPromptRegistryHistoryRecord(buildPromptRegistrySnapshot(), "startup", "Initial prompt registry snapshot.")];
+      persistPromptRegistryHistory(fallbackSnapshot);
+      return fallbackSnapshot;
+    }
+    return normalized;
+  } catch {
+    return [];
+  }
+}
+
+function createAiProviderGovernanceHistoryRecord(
+  selection: AiProviderSelection,
+  localOnlyMode: boolean,
+  source: AiProviderGovernanceHistorySource,
+  note?: string | null,
+): AiProviderGovernanceHistoryRecord {
+  const governance = describeAiProviderGovernance(selection, localOnlyMode);
+  return {
+    ...governance,
+    id: `ai_provider_governance_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+    observedAt: Date.now(),
+    source,
+    note: note ?? null,
+  };
+}
+
+function normalizeAiProviderGovernanceHistory(raw: unknown): AiProviderGovernanceHistoryRecord[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const candidate = item as Partial<AiProviderGovernanceHistoryRecord>;
+    if (
+      typeof candidate.id !== "string"
+      || typeof candidate.observedAt !== "number"
+      || typeof candidate.activeProviderId !== "string"
+      || typeof candidate.activeProviderName !== "string"
+      || typeof candidate.activeProviderLabel !== "string"
+      || typeof candidate.activeModel !== "string"
+      || typeof candidate.activeEnvKey !== "string"
+      || typeof candidate.localOnlyMode !== "boolean"
+      || typeof candidate.cloudAvailable !== "boolean"
+      || !Array.isArray(candidate.fallbackOrder)
+    ) {
+      return [];
+    }
+    const source = candidate.source === "startup" || candidate.source === "selection" || candidate.source === "policy" || candidate.source === "manual" || candidate.source === "eval"
+      ? candidate.source
+      : "manual";
+    return [{
+      id: candidate.id,
+      observedAt: candidate.observedAt,
+      source,
+      activeProviderId: candidate.activeProviderId as AiProviderSelection["providerId"],
+      activeProviderName: candidate.activeProviderName,
+      activeProviderLabel: candidate.activeProviderLabel,
+      activeModel: candidate.activeModel,
+      activeEnvKey: candidate.activeEnvKey,
+      localOnlyMode: candidate.localOnlyMode,
+      cloudAvailable: candidate.cloudAvailable,
+      fallbackOrder: candidate.fallbackOrder.flatMap((entry) => {
+        if (!entry || typeof entry !== "object") return [];
+        const fallback = entry as AiProviderGovernanceSummary["fallbackOrder"][number];
+        if (
+          typeof fallback.providerId !== "string"
+          || typeof fallback.name !== "string"
+          || typeof fallback.label !== "string"
+          || typeof fallback.model !== "string"
+          || typeof fallback.envKey !== "string"
+          || typeof fallback.available !== "boolean"
+          || typeof fallback.isActive !== "boolean"
+          || typeof fallback.fallbackPriority !== "number"
+        ) {
+          return [];
+        }
+        return [fallback];
+      }),
+      note: typeof candidate.note === "string" ? candidate.note : null,
+    }];
+  }).slice(0, 24);
+}
+
+function loadAiProviderGovernanceHistory(): AiProviderGovernanceHistoryRecord[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(AI_PROVIDER_GOVERNANCE_HISTORY_STORAGE_KEY);
+    if (!raw) {
+      const initialSnapshot = [createAiProviderGovernanceHistoryRecord(loadAiProviderSelection(), loadLocalOnlyMode(), "startup", "Initial provider governance snapshot.")];
+      persistAiProviderGovernanceHistory(initialSnapshot);
+      return initialSnapshot;
+    }
+    const parsed = JSON.parse(raw);
+    const normalized = normalizeAiProviderGovernanceHistory(parsed);
+    if (normalized.length === 0) {
+      const fallbackSnapshot = [createAiProviderGovernanceHistoryRecord(loadAiProviderSelection(), loadLocalOnlyMode(), "startup", "Initial provider governance snapshot.")];
+      persistAiProviderGovernanceHistory(fallbackSnapshot);
+      return fallbackSnapshot;
+    }
+    return normalized;
   } catch {
     return [];
   }
@@ -1173,6 +1401,14 @@ function loadAiActionTelemetry(): AiActionTelemetryRecord[] {
         providerId: candidate.providerId as AiProviderSelection["providerId"],
         providerLabel: candidate.providerLabel,
         model: candidate.model,
+        promptId: typeof candidate.promptId === "string" ? candidate.promptId : null,
+        promptVersion: typeof candidate.promptVersion === "string" ? candidate.promptVersion : null,
+        promptTitle: typeof candidate.promptTitle === "string" ? candidate.promptTitle : null,
+        promptAgent: typeof candidate.promptAgent === "string" ? candidate.promptAgent : null,
+        promptStage: candidate.promptStage === "command" || candidate.promptStage === "counterfactual" || candidate.promptStage === "report" || candidate.promptStage === "draft"
+          ? candidate.promptStage
+          : null,
+        promptOutputSchema: typeof candidate.promptOutputSchema === "string" ? candidate.promptOutputSchema : null,
         localOnlyMode: candidate.localOnlyMode,
         cloudAvailable: candidate.cloudAvailable,
         timestamp: candidate.timestamp,
@@ -1360,6 +1596,22 @@ function persistCameraLiveConnectionEvents(events: CameraLiveConnectionEventReco
 function persistModelEvalHistory(history: ModelEvalRunRecord[]) {
   try {
     localStorage.setItem(MODEL_EVAL_HISTORY_STORAGE_KEY, serializeModelEvalHistory(history));
+  } catch {
+    // Storage full or unavailable — silently fail
+  }
+}
+
+function persistPromptRegistryHistory(history: PromptRegistryHistoryRecord[]) {
+  try {
+    localStorage.setItem(PROMPT_REGISTRY_HISTORY_STORAGE_KEY, JSON.stringify(history.slice(0, 24)));
+  } catch {
+    // Storage full or unavailable — silently fail
+  }
+}
+
+function persistAiProviderGovernanceHistory(history: AiProviderGovernanceHistoryRecord[]) {
+  try {
+    localStorage.setItem(AI_PROVIDER_GOVERNANCE_HISTORY_STORAGE_KEY, JSON.stringify(history.slice(0, 24)));
   } catch {
     // Storage full or unavailable — silently fail
   }
@@ -1553,6 +1805,7 @@ const INITIAL_WORKSPACE_GOVERNANCE = {
   ...loadWorkspaceGovernance(),
   activeRole: getActiveWorkspaceMember(INITIAL_WORKSPACE_ACCESS)?.role ?? loadWorkspaceGovernance().activeRole,
 };
+const INITIAL_PROMPT_REGISTRY_HISTORY = loadPromptRegistryHistory();
 
 function renameSavedSceneRecord(sceneId: string, nextName: string): SavedProjectRecord | null {
   const trimmed = nextName.trim();
@@ -1597,6 +1850,8 @@ export type StudioStoreState = {
   supportIngestHistory: SupportIngestHistoryRecord[];
   operationalEvidenceArchiveHistory: OperationalEvidenceArchiveHistoryRecord[];
   modelEvalHistory: ModelEvalRunRecord[];
+  promptRegistryHistory: PromptRegistryHistoryRecord[];
+  aiProviderGovernanceHistory: AiProviderGovernanceHistoryRecord[];
   aiActionTelemetry: AiActionTelemetryRecord[];
   snapshots: SceneSnapshot[];
   operationalEvidenceEvents: OperationalEvidenceEvent[];
@@ -1617,6 +1872,10 @@ export type StudioStoreState = {
   clearSupportIngestHistory: () => void;
   recordModelEvalRun: (report: ModelEvalSuiteResult) => void;
   clearModelEvalHistory: () => void;
+  recordPromptRegistrySnapshot: (source?: PromptRegistryHistorySource, note?: string | null) => void;
+  clearPromptRegistryHistory: () => void;
+  recordAiProviderGovernanceSnapshot: (source?: AiProviderGovernanceHistorySource, note?: string | null) => void;
+  clearAiProviderGovernanceHistory: () => void;
   recordAiActionTelemetry: (record: Omit<AiActionTelemetryRecord, "id" | "timestamp"> & { timestamp?: number }) => void;
   clearAiActionTelemetry: () => void;
   clearRuntimeIncidents: () => void;
@@ -1699,6 +1958,7 @@ export type StudioStoreState = {
   rightDockCollapsed: boolean;
   rightPanelMode: RightPanelMode;
   bottomDockCollapsed: boolean;
+  dockAttention: Record<DockSide, boolean>;
   leftDockSizePx: number;
   rightDockSizePx: number;
   bottomDockSizePx: number;
@@ -1792,6 +2052,7 @@ export type StudioStoreState = {
   resetCanvasView: () => void;
   toggleDock: (side: DockSide) => void;
   setDockCollapsed: (side: DockSide, collapsed: boolean) => void;
+  clearDockAttention: (side: DockSide) => void;
   setDockSize: (side: DockSide, sizePx: number) => void;
   setRightPanelMode: (mode: RightPanelMode) => void;
   setBottomDrawerMode: (mode: BottomDrawerMode) => void;
@@ -2731,6 +2992,8 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   supportIngestHistory: loadSupportIngestHistory(),
   operationalEvidenceArchiveHistory: loadOperationalEvidenceArchiveHistory(),
   modelEvalHistory: loadModelEvalHistory(),
+  promptRegistryHistory: INITIAL_PROMPT_REGISTRY_HISTORY,
+  aiProviderGovernanceHistory: loadAiProviderGovernanceHistory(),
   aiActionTelemetry: loadAiActionTelemetry(),
   snapshots: INITIAL_SNAPSHOTS,
   operationalEvidenceEvents: INITIAL_OPERATIONAL_EVIDENCE_EVENTS,
@@ -2779,6 +3042,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   rightDockCollapsed: INITIAL_LAYOUT.rightDockCollapsed,
   rightPanelMode: INITIAL_LAYOUT.rightPanelMode,
   bottomDockCollapsed: INITIAL_LAYOUT.bottomDockCollapsed,
+  dockAttention: { left: false, right: false, bottom: false },
   leftDockSizePx: INITIAL_LAYOUT.leftDockSizePx,
   rightDockSizePx: INITIAL_LAYOUT.rightDockSizePx,
   bottomDockSizePx: INITIAL_LAYOUT.bottomDockSizePx,
@@ -3328,7 +3592,10 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       authChallengeHeader: string | null,
       authChallengeScheme: "basic" | "digest" | "bearer" | "token" | null,
       authChallengeRealm: string | null,
-    ) => `status ${liveConnectionStatus ?? "unknown"}, mode ${liveConnectionMode ?? "unknown"}, auth ${authState ?? "unknown"} via ${authMode ?? "unknown"}, feed ${liveFeedUrl ?? "none"}${liveFeedLabel ? ` (${liveFeedLabel})` : ""}${transportResponseStatus != null ? `, transport ${transportResponseStatus}${transportResponseStatusText ? ` ${transportResponseStatusText}` : ""}` : ""}${authChallengeHeader ? `, challenge ${authChallengeHeader}` : ""}${authChallengeScheme ? `, scheme ${authChallengeScheme}` : ""}${authChallengeRealm ? `, realm ${authChallengeRealm}` : ""}`;
+      eventSubscriptionUri: string | null,
+      eventSubscriptionReference: string | null,
+      eventSubscriptionExpiresAt: number | null,
+    ) => `status ${liveConnectionStatus ?? "unknown"}, mode ${liveConnectionMode ?? "unknown"}, auth ${authState ?? "unknown"} via ${authMode ?? "unknown"}, feed ${liveFeedUrl ?? "none"}${liveFeedLabel ? ` (${liveFeedLabel})` : ""}${transportResponseStatus != null ? `, transport ${transportResponseStatus}${transportResponseStatusText ? ` ${transportResponseStatusText}` : ""}` : ""}${authChallengeHeader ? `, challenge ${authChallengeHeader}` : ""}${authChallengeScheme ? `, scheme ${authChallengeScheme}` : ""}${authChallengeRealm ? `, realm ${authChallengeRealm}` : ""}${eventSubscriptionUri ? `, events ${eventSubscriptionUri}` : ""}${eventSubscriptionReference ? `, ref ${eventSubscriptionReference}` : ""}${eventSubscriptionExpiresAt != null ? `, expires ${new Date(eventSubscriptionExpiresAt).toLocaleTimeString()}` : ""}`;
     const nextRecord: CameraLiveConnectionEventRecord = {
       id: `camera_live_connection_${timestamp.toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
       sceneId: state.scene.id,
@@ -3354,6 +3621,9 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       previousAuthChallengeHeader: event.previousAuthChallengeHeader ?? null,
       previousAuthChallengeScheme: event.previousAuthChallengeScheme ?? null,
       previousAuthChallengeRealm: event.previousAuthChallengeRealm ?? null,
+      previousEventSubscriptionUri: event.previousEventSubscriptionUri ?? null,
+      previousEventSubscriptionReference: event.previousEventSubscriptionReference ?? null,
+      previousEventSubscriptionExpiresAt: event.previousEventSubscriptionExpiresAt ?? null,
       liveSessionId: event.liveSessionId ?? null,
       liveSessionState: event.liveSessionState ?? null,
       liveSessionStartedAt: event.liveSessionStartedAt ?? null,
@@ -3374,6 +3644,9 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       authChallengeHeader: event.authChallengeHeader ?? null,
       authChallengeScheme: event.authChallengeScheme ?? null,
       authChallengeRealm: event.authChallengeRealm ?? null,
+      eventSubscriptionUri: event.eventSubscriptionUri ?? null,
+      eventSubscriptionReference: event.eventSubscriptionReference ?? null,
+      eventSubscriptionExpiresAt: event.eventSubscriptionExpiresAt ?? null,
       liveFeedUrl: event.liveFeedUrl ?? null,
       liveFeedLabel: event.liveFeedLabel ?? null,
       liveConnectionMode: event.liveConnectionMode ?? null,
@@ -3387,11 +3660,44 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     };
     const nextCameraLiveConnectionEvents = [nextRecord, ...state.cameraLiveConnectionEvents].slice(0, 60);
     persistCameraLiveConnectionEvents(nextCameraLiveConnectionEvents);
-
+    const onvifEvidence = nextRecord.liveConnectionMode === "onvif" || nextRecord.protocolProfile === "onvif_device"
+      ? mapOnvifSessionToEvidenceEvent({
+          sessionId: nextRecord.transportSessionId ?? nextRecord.liveSessionId ?? nextRecord.id,
+          address: nextRecord.eventSubscriptionReference ?? nextRecord.eventSubscriptionUri ?? nextRecord.liveFeedUrl ?? camera.name,
+          state: nextRecord.liveConnectionStatus === "connected"
+            ? "streaming"
+            : nextRecord.liveConnectionStatus === "connecting"
+              ? "authenticating"
+              : nextRecord.liveConnectionStatus === "disconnected"
+                ? "disconnected"
+                : "error",
+          responseStatus: nextRecord.transportResponseStatus,
+          responseStatusText: nextRecord.transportResponseStatusText,
+          authChallengeHeader: nextRecord.authChallengeHeader,
+          deviceInformation: undefined,
+          eventSubscriptionUri: nextRecord.eventSubscriptionUri ?? undefined,
+          eventSubscriptionReference: nextRecord.eventSubscriptionReference ?? undefined,
+          eventSubscriptionExpiresAt: nextRecord.eventSubscriptionExpiresAt ?? undefined,
+          mediaUri: nextRecord.liveFeedUrl ?? undefined,
+          lastHeartbeatAt: nextRecord.lastHeartbeatAt ?? timestamp,
+        } satisfies OnvifSession, {
+          cameraId: camera.id,
+          cameraName: camera.name,
+          sceneId: state.scene.id,
+          sceneName: state.scene.name,
+          revisionDepth: state.historyPast.length,
+        })
+      : null;
     const evidenceEvent = buildOperationalEvidenceEvent({
-      kind: "camera_live_connection_updated",
-      title: `Camera live connection updated: ${camera.name}`,
-      details: nextRecord.summary,
+      ...(onvifEvidence ?? {
+        kind: "camera_live_connection_updated",
+        title: `Camera live connection updated: ${camera.name}`,
+        details: nextRecord.summary,
+        notes: [
+          `Live camera binding updated via ${event.ingestMode}.`,
+          nextRecord.notes ? `Notes: ${nextRecord.notes}` : null,
+        ].filter((value): value is string => Boolean(value)),
+      }),
       actor: "user",
       source: state.scene.source,
       sceneId: state.scene.id,
@@ -3413,6 +3719,9 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         nextRecord.previousAuthChallengeHeader,
         nextRecord.previousAuthChallengeScheme,
         nextRecord.previousAuthChallengeRealm,
+        nextRecord.previousEventSubscriptionUri,
+        nextRecord.previousEventSubscriptionReference,
+        nextRecord.previousEventSubscriptionExpiresAt,
       )}.`,
       afterSummary: `After: ${formatConnectionSnapshot(
         nextRecord.liveFeedUrl,
@@ -3426,11 +3735,10 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         nextRecord.authChallengeHeader,
         nextRecord.authChallengeScheme,
         nextRecord.authChallengeRealm,
+        nextRecord.eventSubscriptionUri,
+        nextRecord.eventSubscriptionReference,
+        nextRecord.eventSubscriptionExpiresAt,
       )}.`,
-      notes: [
-        `Live camera binding updated via ${event.ingestMode}.`,
-        nextRecord.notes ? `Notes: ${nextRecord.notes}` : null,
-      ].filter((value): value is string => Boolean(value)),
     });
     const nextEvents = [...state.operationalEvidenceEvents, evidenceEvent];
     persistOperationalEvidenceEvents(nextEvents);
@@ -4210,15 +4518,28 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     set((state) => {
       if (state.focusMode) return state;
       const key = dockCollapsedKey(side);
-      return { [key]: collapsed } as Pick<StudioStoreState, typeof key>;
+      return {
+        [key]: collapsed,
+        dockAttention: collapsed
+          ? state.dockAttention
+          : { ...state.dockAttention, [side]: false },
+      } as Pick<StudioStoreState, typeof key> & { dockAttention: StudioStoreState["dockAttention"] };
     }),
+  clearDockAttention: (side) => set((state) => ({
+    dockAttention: { ...state.dockAttention, [side]: false },
+  })),
   setDockSize: (side, sizePx) =>
     set((state) => {
       if (state.focusMode) return state;
       const key = dockSizeKey(side);
       return { [key]: clampDockSize(side, sizePx) } as Pick<StudioStoreState, typeof key>;
     }),
-  setRightPanelMode: (mode) => set({ rightPanelMode: mode }),
+  setRightPanelMode: (mode) => set((state) => ({
+    rightPanelMode: mode,
+    dockAttention: state.rightDockCollapsed
+      ? { ...state.dockAttention, right: true }
+      : state.dockAttention,
+  })),
   setBottomDrawerMode: (mode) => set({ bottomDrawerMode: mode }),
   setPinnedAnalysisModule: (moduleId) => set({ pinnedAnalysisModule: moduleId }),
   enterFocusMode: () =>
@@ -4277,6 +4598,9 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   setBottomTab: (tab) => set((state) => ({
     bottomTab: getFirstEnabledAnalysisTab(state.enabledAnalysisModules, tab),
     pinnedAnalysisModule: state.bottomDrawerMode === "single_module" ? getFirstEnabledAnalysisTab(state.enabledAnalysisModules, tab) : state.pinnedAnalysisModule,
+    dockAttention: state.bottomDockCollapsed
+      ? { ...state.dockAttention, bottom: true }
+      : state.dockAttention,
   })),
   setInspectorTab: (tab) => set({ inspectorTab: tab }),
   toggleLayer: (layer) =>
@@ -4323,11 +4647,31 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   setAiProviderSelection: (selection) => {
     const next = normalizeAiProviderSelection(selection);
     persistAiProviderSelection(next);
-    set({ aiProviderSelection: next });
+    set((state) => {
+      const nextHistory = [
+        createAiProviderGovernanceHistoryRecord(next, state.localOnlyMode, "selection", "Provider selection changed from View Settings."),
+        ...state.aiProviderGovernanceHistory,
+      ].slice(0, 24);
+      persistAiProviderGovernanceHistory(nextHistory);
+      return {
+        aiProviderSelection: next,
+        aiProviderGovernanceHistory: nextHistory,
+      };
+    });
   },
   setLocalOnlyMode: (enabled) => {
     persistLocalOnlyMode(enabled);
-    set({ localOnlyMode: enabled });
+    set((state) => {
+      const nextHistory = [
+        createAiProviderGovernanceHistoryRecord(state.aiProviderSelection, enabled, "policy", enabled ? "Local-only policy enabled." : "Local-only policy disabled."),
+        ...state.aiProviderGovernanceHistory,
+      ].slice(0, 24);
+      persistAiProviderGovernanceHistory(nextHistory);
+      return {
+        localOnlyMode: enabled,
+        aiProviderGovernanceHistory: nextHistory,
+      };
+    });
   },
   setOverlayFilter: (filter, visible) => set((s) => ({ overlayFilters: { ...s.overlayFilters, [filter]: visible } })),
   setCriticalZoneTargetType: (targetType) => set({ criticalZoneTargetType: targetType }),
@@ -4424,12 +4768,48 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     set((state) => {
       const nextHistory = [summarizeModelEvalRun(report), ...state.modelEvalHistory].slice(0, 12);
       persistModelEvalHistory(nextHistory);
-      return { modelEvalHistory: nextHistory };
+      const nextPromptRegistryHistory = [
+        createPromptRegistryHistoryRecord(report.promptRegistry, "model_eval", "Captured from model eval run."),
+        ...state.promptRegistryHistory,
+      ].slice(0, 24);
+      persistPromptRegistryHistory(nextPromptRegistryHistory);
+      return {
+        modelEvalHistory: nextHistory,
+        promptRegistryHistory: nextPromptRegistryHistory,
+      };
     }),
   clearModelEvalHistory: () =>
     set(() => {
       persistModelEvalHistory([]);
       return { modelEvalHistory: [] };
+    }),
+  recordPromptRegistrySnapshot: (source = "manual", note = "Manually captured registry snapshot.") =>
+    set((state) => {
+      const nextHistory = [
+        createPromptRegistryHistoryRecord(buildPromptRegistrySnapshot(), source, note),
+        ...state.promptRegistryHistory,
+      ].slice(0, 24);
+      persistPromptRegistryHistory(nextHistory);
+      return { promptRegistryHistory: nextHistory };
+    }),
+  clearPromptRegistryHistory: () =>
+    set(() => {
+      persistPromptRegistryHistory([]);
+      return { promptRegistryHistory: [] };
+    }),
+  recordAiProviderGovernanceSnapshot: (source = "manual", note = "Manually captured provider governance snapshot.") =>
+    set((state) => {
+      const nextHistory = [
+        createAiProviderGovernanceHistoryRecord(state.aiProviderSelection, state.localOnlyMode, source, note),
+        ...state.aiProviderGovernanceHistory,
+      ].slice(0, 24);
+      persistAiProviderGovernanceHistory(nextHistory);
+      return { aiProviderGovernanceHistory: nextHistory };
+    }),
+  clearAiProviderGovernanceHistory: () =>
+    set(() => {
+      persistAiProviderGovernanceHistory([]);
+      return { aiProviderGovernanceHistory: [] };
     }),
   recordAiActionTelemetry: (record) =>
     set((state) => {
@@ -4440,6 +4820,12 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         providerId: record.providerId,
         providerLabel: record.providerLabel,
         model: record.model,
+        promptId: record.promptId ?? null,
+        promptVersion: record.promptVersion ?? null,
+        promptTitle: record.promptTitle ?? null,
+        promptAgent: record.promptAgent ?? null,
+        promptStage: record.promptStage ?? null,
+        promptOutputSchema: record.promptOutputSchema ?? null,
         localOnlyMode: record.localOnlyMode,
         cloudAvailable: record.cloudAvailable,
         durationMs: Math.max(0, Math.round(record.durationMs)),
@@ -5554,7 +5940,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     }
     return scene.cameras[0] ?? null;
   },
-}) as StudioStoreState);
+}) satisfies StudioStoreState);
 
 declare global {
   interface Window {

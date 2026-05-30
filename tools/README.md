@@ -74,3 +74,28 @@ Behavior:
 - exits `0` when clean (no suspicious untracked artifacts)
 - exits `1` when known generated artifacts are detected and prints suggested `.gitignore` entries
 - exits `2` when run outside a git repository
+
+## Studio Quality Gate
+
+Run the full studio quality gate used by CI:
+
+```bash
+./tools/studio-quality-gate.sh
+```
+
+It runs:
+- TypeScript typecheck
+- Trust audit
+- Goal4-focused UI contract tests
+- Production build
+
+## Deployment Profile Validation
+
+Deployment profiles live in `apps/studio/deploy/profiles/` and can be validated with:
+
+```bash
+cd apps/studio
+npm run deploy:validate
+npm run deploy:validate:self-hosted
+npm run deploy:validate:cloud-assisted
+```

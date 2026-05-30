@@ -3,19 +3,22 @@
 import { useState } from "react";
 import {
   Camera,
+  ChevronDown,
+  CircleHelp,
+  FolderOpen,
+  LayoutDashboard,
+  ShieldCheck,
+  ArrowRight,
   FileUp,
   Image as ImageIcon,
   ScanSearch,
   Sparkles,
   Square,
-  FolderOpen,
-  LayoutDashboard,
   FileText,
   Activity,
   Database,
   Blocks,
   CheckCircle2,
-  PlayCircle,
   Video
 } from "lucide-react";
 
@@ -255,259 +258,314 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
   const tClasses = toneClasses[selected.tone];
 
   return (
-    <div className="flex h-screen w-full bg-[#0a0a0a] text-slate-300 font-sans overflow-hidden">
-      
-      {/* Left Navigation Rail */}
-      <div className="w-[240px] flex-none border-r border-white/5 bg-[#0a0a0a] flex flex-col justify-between py-6 px-3">
-        <div className="space-y-1">
-          <div className="px-3 mb-6 text-sm font-bold tracking-widest text-white/90">
-            SENTINELTWIN
+    <div className="flex h-screen w-full overflow-hidden bg-[#08101a] text-slate-200">
+      <aside className="flex w-[248px] flex-none flex-col justify-between border-r border-white/8 bg-[#07111b] px-3 py-4">
+        <div>
+          <div className="flex items-center gap-2 px-2 py-1 text-[17px] font-medium tracking-tight text-white">
+            <ShieldCheck className="h-6 w-6 text-sky-400" />
+            <span>SentinelTwin</span>
           </div>
-          
-          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-sky-500/10 text-sky-400 font-medium">
-            <LayoutDashboard className="w-4 h-4" />
-            <span className="text-sm">Create Site Twin</span>
-          </button>
 
-          <button
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-slate-300 transition-colors"
-            onClick={props.onStartSecurityAudit}
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            <span className="text-sm">Start Security Audit</span>
-          </button>
-          
-          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-slate-400 transition-colors">
-            <Blocks className="w-4 h-4" />
-            <span className="text-sm">Workspaces</span>
-          </button>
-          
-          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-slate-400 transition-colors" onClick={props.onShowProjects}>
-            <FolderOpen className="w-4 h-4" />
-            <span className="text-sm">Projects</span>
-          </button>
-          
-          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-slate-400 transition-colors">
-            <FileText className="w-4 h-4" />
-            <span className="text-sm">Reports</span>
-          </button>
-          
-          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-slate-400 transition-colors">
-            <Activity className="w-4 h-4" />
-            <span className="text-sm">Issues & Actions</span>
-          </button>
-          
-          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-slate-400 transition-colors">
-            <Camera className="w-4 h-4" />
-            <span className="text-sm">Evidence</span>
-          </button>
-          
-          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-slate-400 transition-colors">
-            <Database className="w-4 h-4" />
-            <span className="text-sm">Integrations</span>
-          </button>
+          <nav className="mt-7 space-y-2">
+            {[
+              { label: "Create Site Twin", icon: LayoutDashboard, active: true },
+              { label: "Workspaces", icon: Blocks, active: false },
+              { label: "Projects", icon: FolderOpen, active: false },
+              { label: "Reports", icon: FileText, active: false },
+              { label: "Issues & Actions", icon: Activity, active: false },
+              { label: "Evidence", icon: Camera, active: false },
+              { label: "Integrations", icon: Database, active: false },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={item.active ? undefined : props.onShowProjects}
+                  className={[
+                    "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-[15px] transition-colors",
+                    item.active ? "bg-sky-500/12 text-sky-400 ring-1 ring-sky-500/20" : "text-slate-300 hover:bg-white/4 hover:text-white",
+                  ].join(" ")}
+                >
+                  <Icon className="h-[18px] w-[18px] flex-none" />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
         </div>
 
-        <div className="px-3">
-          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-            <h4 className="text-xs font-semibold text-white mb-1">Reference Demo</h4>
-            <p className="text-[10px] text-slate-400 mb-3 leading-snug">Explore a complete retail store example with 6 cameras</p>
-            <button 
+        <div className="space-y-4">
+          <div className="rounded-xl border border-white/8 bg-white/[0.02] p-3">
+            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/82">Reference Demo</div>
+            <div className="overflow-hidden rounded-lg border border-white/6 bg-[#0d1520]">
+              <div
+                className="h-[82px] bg-cover bg-center"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.32)), linear-gradient(135deg, rgba(255,255,255,0.14), rgba(255,255,255,0.02)), url('https://images.unsplash.com/photo-1556740764-3ce1d1d0c9d0?auto=format&fit=crop&w=640&q=60')",
+                }}
+              />
+            </div>
+            <div className="mt-3 text-[15px] font-medium text-white">Retail Store Demo</div>
+            <p className="mt-1 max-w-[170px] text-[13px] leading-5 text-slate-300">Explore a complete site twin example</p>
+            <button
+              type="button"
               onClick={props.onOpenDemo}
-              className="w-full flex items-center justify-center gap-2 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 text-xs text-white transition-colors"
+              className="mt-3 flex h-10 w-full items-center justify-center rounded-xl border border-sky-500/40 bg-sky-500/10 text-[15px] text-sky-300 transition-colors hover:bg-sky-500/16"
             >
-              <PlayCircle className="w-3 h-3" /> Open Demo
+              Open Demo
             </button>
           </div>
-        </div>
-      </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-full overflow-y-auto">
-        
-        {/* Top Split Area: Center Grid + Right Panel */}
-        <div className="flex-1 flex min-h-0">
-          
-          {/* Center Column: Header + Source Grid */}
-          <div className="flex-1 px-10 py-12 flex flex-col">
-            <div className="max-w-[700px]">
-              <h1 className="text-3xl font-semibold text-white tracking-tight">Create Site Twin</h1>
-              <p className="mt-2 text-sm text-slate-400 leading-relaxed">
-                Turn a physical site into a trusted, editable SecurityScene. <br/>Choose how you want to start.
+          <button
+            type="button"
+            className="flex w-full items-center justify-between rounded-xl px-2 py-2 text-left transition-colors hover:bg-white/[0.03]"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500 text-sm font-medium text-white">AD</div>
+              <div>
+                <div className="text-[15px] text-white">Admin User</div>
+                <div className="text-[13px] text-slate-400">Acme Security</div>
+              </div>
+            </div>
+            <ChevronDown className="h-4 w-4 text-slate-400" />
+          </button>
+        </div>
+      </aside>
+
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(37,78,140,0.14),_transparent_32%),linear-gradient(180deg,#08101a_0%,#071019_100%)]">
+        <div className="flex min-h-0 flex-1 flex-col overflow-auto px-5 pb-5 pt-7 lg:px-7">
+          <div className="flex items-start justify-between gap-4">
+            <div className="max-w-[720px]">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/12 text-sky-400 ring-1 ring-sky-500/20">
+                  <LayoutDashboard className="h-6 w-6" />
+                </div>
+                <h1 className="text-[50px] font-semibold tracking-[-0.04em] text-white">Create Site Twin</h1>
+              </div>
+              <p className="mt-4 text-[19px] leading-7 text-slate-300">
+                Turn a physical site into a trusted, editable SecurityScene.
               </p>
+              <p className="text-[19px] leading-7 text-slate-300">Choose how you want to start.</p>
             </div>
 
-            <div className="mt-10 grid grid-cols-2 gap-4 max-w-[700px]">
-              {cards.map(card => {
-                const isSelected = selectedSourceId === card.id;
-                const Icon = card.icon;
-                return (
-                  <button
-                    key={card.id}
-                    onClick={() => setSelectedSourceId(card.id)}
-                    className={`text-left p-5 rounded-2xl border transition-all duration-200 relative overflow-hidden group ${
-                      isSelected 
-                        ? `${toneClasses[card.tone].border} ${toneClasses[card.tone].bg} ${toneClasses[card.tone].glow}`
-                        : "border-white/10 bg-[#0e0e0e] hover:border-white/20 hover:bg-[#141414]"
-                    }`}
-                  >
-                    {isSelected && card.recommended && (
-                      <div className="absolute top-4 right-4 text-sky-400">
-                        <CheckCircle2 className="w-5 h-5 fill-sky-950" />
-                      </div>
-                    )}
-                    
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className={`p-2 rounded-lg ${isSelected ? toneClasses[card.tone].bg : "bg-white/5"}`}>
-                        <Icon className={`w-5 h-5 ${isSelected ? toneClasses[card.tone].text : "text-slate-400"}`} />
-                      </div>
-                      <div>
-                        <h3 className={`font-semibold text-sm ${isSelected ? "text-white" : "text-slate-200"}`}>{card.title}</h3>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className={`text-[9px] uppercase tracking-wider font-medium px-1.5 py-0.5 rounded ${
-                            card.status === "Working" ? "bg-emerald-500/10 text-emerald-400" : "bg-amber-500/10 text-amber-400"
-                          }`}>
+            <button
+              type="button"
+              className="mt-1 flex h-12 items-center gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-4 text-[15px] text-slate-200 transition-colors hover:bg-white/[0.06]"
+            >
+              <CircleHelp className="h-4 w-4" />
+              <span>How it works</span>
+            </button>
+          </div>
+
+          <div className="mt-10 grid min-h-0 flex-1 gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+            <section className="min-w-0">
+              <div className="grid grid-cols-2 gap-4">
+                {cards.map((card) => {
+                  const isSelected = selectedSourceId === card.id;
+                  const Icon = card.icon;
+                  return (
+                    <button
+                      key={card.id}
+                      type="button"
+                      onClick={() => setSelectedSourceId(card.id)}
+                      className={[
+                        "relative overflow-hidden rounded-3xl border p-5 text-left transition-all duration-200",
+                        isSelected
+                          ? `${toneClasses[card.tone].border} ${toneClasses[card.tone].bg} ${toneClasses[card.tone].glow}`
+                          : "border-white/10 bg-white/[0.015] hover:border-white/16 hover:bg-white/[0.03]",
+                      ].join(" ")}
+                    >
+                      {isSelected ? (
+                        <div className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-sky-500 text-white">
+                          <CheckCircle2 className="h-5 w-5" />
+                        </div>
+                      ) : null}
+                      <div className="flex items-start gap-4">
+                        <div className={[
+                          "flex h-[56px] w-[56px] flex-none items-center justify-center rounded-xl ring-1",
+                          isSelected ? toneClasses[card.tone].bg : "bg-white/[0.05] ring-white/6",
+                        ].join(" ")}>
+                          <Icon className={`h-7 w-7 ${isSelected ? toneClasses[card.tone].text : "text-slate-400"}`} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-[22px] font-medium tracking-[-0.02em] text-white">{card.title}</div>
+                          <span className={[
+                            "mt-2 inline-flex rounded-lg border px-2.5 py-1 text-[12px] font-medium uppercase tracking-[0.14em]",
+                            card.status === "Working" ? "border-emerald-500/20 bg-emerald-500/12 text-emerald-300" : "border-violet-500/20 bg-violet-500/12 text-violet-300",
+                          ].join(" ")}>
                             {card.status}
+                          </span>
+                          <p className="mt-4 max-w-[240px] text-[17px] leading-7 text-slate-300">{card.description}</p>
+                        </div>
+                      </div>
+                      <div className="mt-7 border-t border-white/8 pt-4 text-[14px] text-slate-400">
+                        <div className="flex items-center justify-between gap-3">
+                          <span>
+                            <span className="text-slate-300">Output:</span> {card.output}
+                          </span>
+                          <span>
+                            <span className="text-slate-300">Review:</span> {card.review}
                           </span>
                         </div>
                       </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            <aside className="min-w-0 rounded-[28px] border border-white/8 bg-white/[0.02] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.24)]">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className={[
+                    "flex h-12 w-12 items-center justify-center rounded-xl ring-1",
+                    tClasses.bg,
+                  ].join(" ")}>
+                    <selected.icon className={`h-6 w-6 ${tClasses.text}`} />
+                  </div>
+                  <div>
+                    <h2 className="text-[31px] font-medium tracking-[-0.03em] text-white">{selected.title}</h2>
+                    <div className="mt-2 flex items-center gap-2 text-[18px] text-emerald-300">
+                      <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                      <span>Manual-assisted · {selected.status}</span>
                     </div>
-                    
-                    <p className="text-xs text-slate-400 leading-relaxed mb-4">{card.description}</p>
-                    
-                    <div className="space-y-1">
-                      <div className="text-[10px] text-slate-500"><span className="text-slate-300">Output:</span> {card.output}</div>
-                      <div className="text-[10px] text-slate-500"><span className="text-slate-300">Review:</span> {card.review}</div>
+                  </div>
+                </div>
+                {selected.recommended ? (
+                  <span className="rounded-xl border border-sky-500/20 bg-sky-500/8 px-4 py-2 text-[15px] text-sky-300">Recommended</span>
+                ) : null}
+              </div>
+
+              <p className="mt-7 max-w-[560px] border-b border-white/8 pb-6 text-[18px] leading-8 text-slate-300">
+                Capture your site using guided steps. You&apos;ll mark key elements in photos and compile them into a trusted SecurityScene.
+              </p>
+
+              <div className="border-b border-white/8 py-6">
+                <div className="grid gap-6 xl:grid-cols-2">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/8 text-[15px] text-slate-300">
+                      <span className="relative top-px">👥</span>
                     </div>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Right Column: Detail Panel */}
-          <div className="w-[360px] flex-none border-l border-white/5 bg-[#0a0a0a] p-8 overflow-y-auto">
-            <div className="flex items-center gap-3 mb-6">
-              <selected.icon className={`w-6 h-6 ${tClasses.text}`} />
-              <div>
-                <h2 className="text-lg font-semibold text-white">{selected.title}</h2>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[10px] uppercase tracking-wider text-slate-500">
-                    {selected.recommended ? "Manual-assisted · " : ""}{selected.status}
-                  </span>
-                  {selected.recommended && (
-                    <span className="text-[9px] uppercase tracking-wider bg-sky-500/10 text-sky-400 px-1.5 py-0.5 rounded">
-                      Recommended
-                    </span>
-                  )}
+                    <div>
+                      <div className="text-[14px] font-medium text-white">Best for</div>
+                      <div className="mt-1 max-w-[260px] text-[14px] leading-6 text-slate-300">{selected.detail.bestFor}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/8 text-[15px] text-slate-300">
+                      <span className="relative top-px">↪</span>
+                    </div>
+                    <div>
+                      <div className="text-[14px] font-medium text-white">Output</div>
+                      <div className="mt-1 max-w-[260px] text-[14px] leading-6 text-slate-300">{selected.output} from reviewed photo markers.</div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <p className="text-xs text-slate-400 leading-relaxed mb-6">
-              {selected.description} {selected.id === "scan" && "You'll mark key elements in photos and compile them into a trusted SecurityScene."}
-            </p>
-
-            <div className="space-y-6">
-              <div>
-                <h4 className="text-[10px] uppercase tracking-widest font-semibold text-slate-500 mb-2">Best for</h4>
-                <p className="text-xs text-slate-300 leading-relaxed">{selected.detail.bestFor}</p>
-              </div>
-              
-              <div>
-                <h4 className="text-[10px] uppercase tracking-widest font-semibold text-slate-500 mb-2">Output</h4>
-                <p className="text-xs text-slate-300 leading-relaxed">{selected.output}</p>
-              </div>
-
-              <div>
-                <h4 className="text-[10px] uppercase tracking-widest font-semibold text-slate-500 mb-3">What you'll do</h4>
-                <ol className="space-y-2">
-                  {selected.detail.steps.map((step, i) => (
-                    <li key={i} className="flex gap-3 text-xs text-slate-400">
-                      <span className="w-4 h-4 rounded-full border border-white/10 flex items-center justify-center text-[9px] flex-none mt-0.5 text-slate-500">
-                        {i + 1}
-                      </span>
-                      <span className="leading-relaxed">{step}</span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+              <div className="grid gap-5 py-6 xl:grid-cols-[minmax(0,1fr)_252px]">
                 <div>
-                  <h4 className="text-[10px] uppercase tracking-widest font-semibold text-slate-500 mb-1">Review level</h4>
-                  <p className="text-xs text-slate-300">{selected.review}</p>
+                  <div className="mb-4 text-[17px] font-medium text-white">What you&apos;ll do</div>
+                  <ol className="space-y-4">
+                    {selected.detail.steps.map((step, index) => (
+                      <li key={step} className="flex items-center gap-4 text-[16px] text-slate-300">
+                        <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-sky-500 text-[14px] font-medium text-white">
+                          {index + 1}
+                        </span>
+                        <span className="leading-6">{step}</span>
+                      </li>
+                    ))}
+                  </ol>
                 </div>
-                <div>
-                  <h4 className="text-[10px] uppercase tracking-widest font-semibold text-slate-500 mb-1">Average time</h4>
-                  <p className="text-xs text-slate-300">{selected.detail.timeEstimate}</p>
-                </div>
-                <div className="col-span-2">
-                  <h4 className="text-[10px] uppercase tracking-widest font-semibold text-slate-500 mb-1">Confidence</h4>
-                  <p className="text-xs text-slate-300">{selected.detail.confidence}</p>
+
+                <div className="self-start rounded-2xl border border-white/8 bg-[#0c1420] p-4">
+                  <div className="grid gap-4 text-[14px] text-slate-300">
+                    <div>
+                      <div className="text-white">Review level</div>
+                      <div className="mt-1">{selected.review}</div>
+                    </div>
+                    <div>
+                      <div className="text-white">Confidence</div>
+                      <div className="mt-1">{selected.detail.confidence}</div>
+                    </div>
+                    <div>
+                      <div className="text-white">Average time</div>
+                      <div className="mt-1">{selected.detail.timeEstimate}</div>
+                    </div>
+                    <div>
+                      <div className="text-white">Limitations</div>
+                      <div className="mt-1 leading-6 text-slate-300">{selected.detail.limitations[0]}</div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <h4 className="text-[10px] uppercase tracking-widest font-semibold text-slate-500 mb-2">Limitations</h4>
-                <ul className="space-y-1.5">
-                  {selected.detail.limitations.map((lim, i) => (
-                    <li key={i} className="flex gap-2 text-xs text-amber-500/70">
-                      <span className="flex-none mt-0.5">—</span>
-                      <span className="leading-relaxed">{lim}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            <div className="mt-8 pt-6 border-t border-white/5">
-              <button 
+              <button
+                type="button"
                 onClick={() => {
                   const action = props[selected.onClickAction] as (() => void) | undefined;
                   if (action) action();
                 }}
-                className={`w-full py-3 px-4 rounded-xl text-sm font-medium text-white shadow-lg transition-all hover:scale-[1.02] active:scale-95 ${tClasses.bg} ${tClasses.border} border bg-opacity-100 hover:brightness-110`}
-                style={{ backgroundColor: `var(--${selected.tone}-600)` }}
+                className={`mt-2 flex h-14 w-full items-center justify-center gap-3 rounded-2xl border text-[18px] font-medium text-white transition-transform hover:scale-[1.01] active:scale-[0.99] ${tClasses.bg} ${tClasses.border}`}
               >
-                {selected.detail.ctaLabel}
+                <span>{selected.detail.ctaLabel}</span>
+                <ArrowRight className="h-5 w-5" />
               </button>
-              <p className="text-center mt-3 text-[10px] text-slate-500">Your data is secure and never shared.</p>
-            </div>
-          </div>
-        </div>
 
-        {/* Bottom Area: Recent Site Twins */}
-        <div className="flex-none border-t border-white/5 p-8 bg-[#0a0a0a]">
-          <h3 className="text-sm font-semibold text-white mb-4">Recent Site Twins</h3>
-          <div className="flex gap-4 overflow-x-auto pb-2">
-            {props.recentSites.slice(0, 4).map((site) => (
-              <button key={site.id} className="flex-none w-[260px] text-left p-4 rounded-xl border border-white/10 bg-[#0e0e0e] hover:border-white/20 transition-colors group">
-                <div className="flex justify-between items-start mb-6">
-                  <h4 className="text-sm font-medium text-slate-200 group-hover:text-white transition-colors">{site.name}</h4>
-                  <span className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded ${
-                    site.riskLabel === "Low Risk" ? "bg-emerald-500/10 text-emerald-400" :
-                    site.riskLabel === "Medium Risk" ? "bg-amber-500/10 text-amber-400" :
-                    "bg-rose-500/10 text-rose-400"
-                  }`}>
-                    {site.riskLabel}
-                  </span>
+              <div className="mt-3 flex items-center gap-2 text-[14px] text-slate-400">
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/10 text-[11px] text-slate-500">🛡</span>
+                <span>Your data is secure and never shared.</span>
+              </div>
+            </aside>
+          </div>
+
+          <section className="mt-6 rounded-[24px] border border-white/8 bg-white/[0.02] p-5">
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <div className="text-[18px] font-medium text-white">Recent Site Twins</div>
+              <button type="button" className="text-[15px] text-sky-400 hover:text-sky-300">View all</button>
+            </div>
+            <div className="flex gap-4 overflow-x-auto pb-1">
+              {props.recentSites.slice(0, 3).map((site, index) => (
+                <button
+                  key={site.id}
+                  type="button"
+                  className="flex w-[285px] flex-none items-center gap-4 rounded-2xl border border-white/8 bg-[#0e1520] p-3 text-left transition-colors hover:border-white/16 hover:bg-[#111926]"
+                >
+                  <div
+                    className="h-[76px] w-[108px] flex-none rounded-xl bg-cover bg-center"
+                    style={{
+                      backgroundImage: site.thumbnailUrl
+                        ? `url(${site.thumbnailUrl})`
+                        : "linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0.26)), url('https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=300&q=60')",
+                    }}
+                  />
+                  <div className="min-w-0">
+                    <div className="truncate text-[15px] font-medium text-white">{site.name}</div>
+                    <div className="mt-1 text-[14px] text-slate-400">{site.updatedLabel}</div>
+                    <div className={`mt-2 text-[14px] ${site.riskLabel === "Low Risk" ? "text-emerald-300" : site.riskLabel === "Medium Risk" ? "text-amber-300" : "text-rose-300"}`}>
+                      ● {site.riskLabel}
+                    </div>
+                  </div>
+                </button>
+              ))}
+              <button
+                type="button"
+                className="flex w-[285px] flex-none items-center gap-4 rounded-2xl border border-dashed border-white/12 bg-transparent p-3 text-left transition-colors hover:border-sky-400/35 hover:bg-sky-500/6"
+              >
+                <div className="flex h-[76px] w-[108px] items-center justify-center rounded-xl border border-white/10 bg-white/[0.02] text-white">
+                  <FileUp className="h-8 w-8" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <FolderOpen className="w-3.5 h-3.5 text-slate-500" />
-                  <span className="text-[10px] text-slate-500">{site.updatedLabel}</span>
+                <div>
+                  <div className="text-[15px] font-medium text-white">Quick Import</div>
+                  <div className="mt-1 text-[14px] text-slate-400">Import JSON or floor plan</div>
                 </div>
               </button>
-            ))}
-            
-            <button className="flex-none w-[260px] p-4 rounded-xl border border-dashed border-white/10 hover:border-white/20 hover:bg-white/5 transition-colors flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-slate-200">
-              <FileUp className="w-5 h-5" />
-              <span className="text-xs font-medium">Quick Import</span>
-            </button>
-          </div>
+            </div>
+          </section>
         </div>
-        
-      </div>
+      </main>
     </div>
   );
 }

@@ -74,7 +74,7 @@ export function SiteDraftReview({ session, onApprove, onReject, onEdit, onRunBas
                 <div className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--text-dim)]">Provenance Notes</div>
                 <ul className="mt-2 space-y-1 text-[12px] text-[color:var(--text-muted)]">
                   {result.provenance.notes.map((note: string, i: number) => (
-                    <li key={i} className="flex items-start gap-2">
+                    <li key={i} /* stable display list */ className="flex items-start gap-2">
                       <span className="mt-1 h-1 w-1 flex-none rounded-full bg-[color:var(--text-dim)]" />
                       {note}
                     </li>
@@ -116,7 +116,7 @@ export function SiteDraftReview({ session, onApprove, onReject, onEdit, onRunBas
                 </div>
                 <div className="mt-2 space-y-2">
                   {result.warnings.map((warning: SiteCompilerWarning, i: number) => (
-                    <div key={i} className="flex items-start gap-2 text-[11px]">
+                    <div key={i} /* stable display list */ className="flex items-start gap-2 text-[11px]">
                       {severityIcon[warning.severity]}
                       <div>
                         <span className={`font-semibold ${severityLabel[warning.severity]}`}>

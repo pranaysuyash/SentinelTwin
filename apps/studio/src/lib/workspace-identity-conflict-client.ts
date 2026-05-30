@@ -138,6 +138,7 @@ function summarizeWorkspaceIdentityConflictDiff(
     archivedMemberLabel: request.approvalRoute.archivedMemberLabel,
     currentPolicyLabel: request.approvalRoute.currentPolicyLabel,
     archivedPolicyLabel: request.approvalRoute.archivedPolicyLabel,
+    routeKey: request.approvalRoute.routeKey,
     routeLabel: request.approvalRoute.routeLabel,
     routeReason: request.approvalRoute.routeReason,
     resolutionLabel: request.resolutionLabel,

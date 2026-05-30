@@ -94,6 +94,7 @@ When real cameras are connected (V2+), ONVIF Profile M provides object classific
 geolocation, vehicle, license plate, face, and body metadata from analytics.
 **Research needed before V2 design:** Read ONVIF Profile M spec. Understand data format.
 How does this metadata map to our coverage quality labels?
+**Update:** The existing camera-metadata ingest boundary now maps ONVIF notification envelopes into canonical operational evidence events, so the remaining question is the broader Profile M field set and how those richer analytics objects should extend the same ingest model rather than whether live ONVIF evidence can land in the ledger at all.
 
 ### Q-012: Is the coverage entropy metric useful or confusing?
 Coverage entropy captures "how fragile is the coverage" — cells near their DORI threshold
@@ -258,7 +259,7 @@ The app has a provider selection and local-only policy, but the long-term AI con
 - How should we surface latency, cost, and confidence per model stage to the user?
 - How should richer measured cost/latency telemetry, thresholds, and trend history be surfaced now that provider health, estimated budget classes, and the first measured AI action trail are visible in the Debug panel, command bar, and AI draft launcher?
 **Related decisions:** D-058, D-059, D-127, D-128, D-168, D-169, D-170 in `Docs/decisions/DECISION_LOG.md`.
-**Update:** The Debug panel now exposes a visible Model Eval Suite that exercises the current provider/model against canonical structured-output fixtures for command parsing, counterfactuals, report generation, and AI layout drafting. It also persists a local eval history with stage-budget and trend comparison, and now adds a provider-health dashboard plus a canonical prompt registry. The command bar and AI draft launcher now mirror the provider-health summary, and all three surfaces now show estimated cost/latency policy classes plus a live measured AI action trail, so the remaining open design question is richer telemetry aggregation and broader threshold policy rather than basic provider visibility.
+**Update:** The Debug panel now exposes a visible Model Eval Suite that exercises the current provider/model against canonical structured-output fixtures for command parsing, counterfactuals, report generation, and AI layout drafting. It also persists a local eval history with stage-budget and trend comparison, and now adds a provider-health dashboard plus a canonical prompt registry. The command bar and AI draft launcher now mirror the provider-health summary, and all three surfaces now show estimated cost/latency policy classes plus a live measured AI action trail, while the prompt registry and provider governance surfaces now each persist a history trail from manual snapshots and selection/policy changes. The measured AI telemetry trail now also compares recent runs against a longer-horizon policy baseline, so the remaining open design question has shifted from simple trend visibility to operator-tunable thresholds and richer policy controls.
 
 ### Q-025: What is the first-class guided capture backend for scan-first?
 RoomPlan, manual-assisted mobile capture, and later sparse reconstruction all point at the same product wedge, but the implementation path still needs an explicit backend choice.

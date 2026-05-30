@@ -54,6 +54,7 @@ export type WorkspaceIdentityConflictDiffSummary = {
   archivedMemberLabel: string;
   currentPolicyLabel: string;
   archivedPolicyLabel: string;
+  routeKey: string;
   routeLabel: string;
   routeReason: string;
   resolutionLabel: string;

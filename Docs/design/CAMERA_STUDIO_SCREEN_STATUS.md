@@ -27,3 +27,4 @@ This document is intentionally narrow. It captures the current screen/component 
 - The live implementation already covers the core Studio shell, the main 3D workspace, replay, compare, and camera wall modes.
 - The remaining work is mostly polish, canonical surfacing, and consistency rather than building entirely new screens from scratch.
 - Any new screen proposal should be checked against this table first.
+- For an implementation-oriented checklist with exact file targets, see `Docs/design/CAMERA_STUDIO_PIXEL_PARITY_PUNCH_LIST.md`.

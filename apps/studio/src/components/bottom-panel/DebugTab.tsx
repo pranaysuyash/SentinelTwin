@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
-import { BadgeInfo, Database, Layers3, RefreshCw, ShieldAlert, Sparkles, TimerReset, TriangleAlert, Upload, Video, Waves } from "lucide-react";
+import { BadgeInfo, Layers3, RefreshCw, ShieldAlert, Sparkles, TimerReset, TriangleAlert, Upload, Video, Waves } from "lucide-react";
 
+import { AgentCoordinatorPanel } from "@/components/agents/AgentCoordinatorPanel";
+import { ProviderConfigPanel } from "@/components/agents/ProviderConfigPanel";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { Badge } from "@/components/shared/Badge";
 import { buildDiagnosticBundle, buildIncidentBundle, buildRuntimeTruthBundle, buildSupportBundle, stringifyDiagnosticBundle, stringifyIncidentBundle, stringifyRuntimeTruthBundle, stringifySupportBundle } from "@/lib/diagnostic-bundle";
@@ -31,6 +33,7 @@ import {
   describeAiProviderSelection,
   describeAiProviderTelemetry,
 } from "@/agents/provider-selection";
+import type { AiProviderSelection } from "@/agents/provider-selection";
 import {
   compareModelEvalRuns,
   runModelEvalSuite,
@@ -40,7 +43,7 @@ import {
 import { PROMPT_REGISTRY, summarizePromptRegistry } from "@/agents/prompt-registry";
 import { summarizeAiActionTelemetry } from "@/lib/ai-action-telemetry";
 import { parseSensorLiveFeed } from "@/lib/sensor-live-ingest";
-import type { SupportDeliveryArchiveRecord, SupportDeliveryResponse } from "@/lib/support-delivery";
+import type { SupportDeliveryArchiveRecord } from "@/lib/support-delivery";
 import type { SupportIngestResponse } from "@/lib/support-ingest";
 import type { SupportIngestHistoryRecord } from "@/lib/support-ingest-history";
 import type { TrustAuditReport } from "@/lib/truth-audit";
@@ -124,6 +127,7 @@ export function DebugTab() {
   const simulationRunning = useStudioStore((s) => s.simulationRunning);
   const localOnlyMode = useStudioStore((s) => s.localOnlyMode);
   const aiProviderSelection = useStudioStore((s) => s.aiProviderSelection);
+  const setAiProviderSelection = useStudioStore((s) => s.setAiProviderSelection);
   const launchNotice = useStudioStore((s) => s.launchNotice);
   const heatmapMode = useStudioStore((s) => s.heatmapMode);
   const heatmapHover = useStudioStore((s) => s.heatmapHover);
@@ -190,9 +194,22 @@ export function DebugTab() {
   const [cameraLiveSessionRegistry, setCameraLiveSessionRegistry] = useState<CameraLiveSessionRecord[]>([]);
   const [cameraLiveConnectionHistoryLoading, setCameraLiveConnectionHistoryLoading] = useState(false);
   const [cameraLiveConnectionHistoryError, setCameraLiveConnectionHistoryError] = useState<string | null>(null);
+  const [cameraLiveSessionHealth, setCameraLiveSessionHealth] = useState<{
+    totals: { active: number; expiringSoon: number; expired: number; closed: number };
+    expiringSoon: CameraLiveSessionRecord[];
+    generatedAt: number;
+  } | null>(null);
+  const [cameraLiveSessionHealthLoading, setCameraLiveSessionHealthLoading] = useState(false);
+  const [cameraLiveSessionHealthError, setCameraLiveSessionHealthError] = useState<string | null>(null);
   const modelEvalHistory = useStudioStore((s) => s.modelEvalHistory);
   const recordModelEvalRun = useStudioStore((s) => s.recordModelEvalRun);
   const clearModelEvalHistory = useStudioStore((s) => s.clearModelEvalHistory);
+  const aiProviderGovernanceHistory = useStudioStore((s) => s.aiProviderGovernanceHistory);
+  const recordAiProviderGovernanceSnapshot = useStudioStore((s) => s.recordAiProviderGovernanceSnapshot);
+  const clearAiProviderGovernanceHistory = useStudioStore((s) => s.clearAiProviderGovernanceHistory);
+  const promptRegistryHistory = useStudioStore((s) => s.promptRegistryHistory);
+  const recordPromptRegistrySnapshot = useStudioStore((s) => s.recordPromptRegistrySnapshot);
+  const clearPromptRegistryHistory = useStudioStore((s) => s.clearPromptRegistryHistory);
   const recordExternalLogEntry = useStudioStore((s) => s.recordExternalLogEntry);
   const clearExternalLogEntries = useStudioStore((s) => s.clearExternalLogEntries);
   const recordSensorEvent = useStudioStore((s) => s.recordSensorEvent);
@@ -274,11 +291,41 @@ export function DebugTab() {
     }
   };
 
+  const refreshCameraLiveSessionHealth = async () => {
+    setCameraLiveSessionHealthLoading(true);
+    setCameraLiveSessionHealthError(null);
+    try {
+      const response = await fetch("/api/camera-live-session-health");
+      if (!response.ok) {
+        throw new Error(`Camera live session health failed with HTTP ${response.status}.`);
+      }
+      const payload = (await response.json()) as {
+        ok: true;
+        sessions: CameraLiveSessionRecord[];
+        totals: { active: number; expiringSoon: number; expired: number; closed: number };
+        expiringSoon: CameraLiveSessionRecord[];
+        generatedAt: number;
+      };
+      setCameraLiveSessionRegistry(payload.sessions);
+      setCameraLiveSessionHealth({
+        totals: payload.totals,
+        expiringSoon: payload.expiringSoon,
+        generatedAt: payload.generatedAt,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Camera live session health failed.";
+      setCameraLiveSessionHealthError(message);
+    } finally {
+      setCameraLiveSessionHealthLoading(false);
+    }
+  };
+
   useEffect(() => {
     void (async () => {
       await refreshSupportIngestArchive();
       await refreshSupportDeliveryArchive();
       await refreshCameraLiveConnectionArchive();
+      await refreshCameraLiveSessionHealth();
     })();
   }, []);
 
@@ -319,6 +366,44 @@ export function DebugTab() {
       active = false;
     };
   }, []);
+
+  const renewCameraLiveSession = async (sessionId: string) => {
+    setCameraLiveSessionHealthLoading(true);
+    setCameraLiveSessionHealthError(null);
+    try {
+      const response = await fetch("/api/camera-live-session-health", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          ttlMs: 120_000,
+          summary: "Lease refreshed from debug panel.",
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(`Camera live session renew failed with HTTP ${response.status}.`);
+      }
+      const payload = (await response.json()) as {
+        ok: true;
+        sessions: CameraLiveSessionRecord[];
+        totals: { active: number; expiringSoon: number; expired: number; closed: number };
+        expiringSoon: CameraLiveSessionRecord[];
+        generatedAt: number;
+      };
+      setCameraLiveSessionRegistry(payload.sessions);
+      setCameraLiveSessionHealth({
+        totals: payload.totals,
+        expiringSoon: payload.expiringSoon,
+        generatedAt: payload.generatedAt,
+      });
+      await refreshCameraLiveConnectionArchive();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Camera live session renew failed.";
+      setCameraLiveSessionHealthError(message);
+    } finally {
+      setCameraLiveSessionHealthLoading(false);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -422,7 +507,7 @@ export function DebugTab() {
     } catch {
       return null;
     }
-  }, [operationalEvidenceEvents]);
+  }, []);
 
   const diagnosticBundle = useMemo(
     () =>
@@ -458,6 +543,7 @@ export function DebugTab() {
         providerSummary.providerLabel,
         result,
         scene,
+        workspaceAccess,
         workspaceGovernance,
         overlayDensity,
         simulationDirty,
@@ -939,11 +1025,13 @@ export function DebugTab() {
 
   useEffect(() => {
     if (!archiveHandoffRequest) return;
-    setPendingArchive(archiveHandoffRequest.archive);
-    setArchiveRestoreBranch(archiveHandoffRequest.restoreBranch);
-    setPendingArchiveError(null);
-    setLaunchNotice(`Archive handoff loaded for merge preflight: ${archiveHandoffRequest.archive.scene.name || "Untitled Scene"}.`);
-    setArchiveHandoffRequest(null);
+    queueMicrotask(() => {
+      setPendingArchive(archiveHandoffRequest.archive);
+      setArchiveRestoreBranch(archiveHandoffRequest.restoreBranch);
+      setPendingArchiveError(null);
+      setLaunchNotice(`Archive handoff loaded for merge preflight: ${archiveHandoffRequest.archive.scene.name || "Untitled Scene"}.`);
+      setArchiveHandoffRequest(null);
+    });
   }, [archiveHandoffRequest, setArchiveHandoffRequest, setLaunchNotice]);
 
   const pendingArchiveComparison = useMemo(() => {
@@ -1466,6 +1554,20 @@ export function DebugTab() {
             </div>
           </Section>
 
+          <Section title="Agent Runtime" icon={<Sparkles className="h-3 w-3 text-sky-400" />}>
+            <div className="space-y-2">
+              <ProviderConfigPanel
+                initialProviderId={aiProviderSelection.providerId}
+                initialModel={aiProviderSelection.model}
+                onSelectionChange={(selection) => setAiProviderSelection({
+                  providerId: selection.providerId as AiProviderSelection["providerId"],
+                  model: selection.model,
+                })}
+              />
+              <AgentCoordinatorPanel />
+            </div>
+          </Section>
+
           <Section title="Support Bundle" icon={<BadgeInfo className="h-3 w-3 text-sky-400" />}>
             <div className="space-y-1.5 text-[9px] text-[#8b96ab]">
               <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
@@ -1601,18 +1703,32 @@ export function DebugTab() {
               <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
                 The active session registry keeps the current live lease visible so refreshes and expiry are auditable alongside the archive.
               </div>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => void refreshCameraLiveSessionHealth()}
+                  className="rounded-md border border-sky-500/20 bg-sky-500/10 px-2 py-1 text-[9px] text-sky-100 hover:border-sky-400/30 hover:bg-sky-500/20"
+                >
+                  {cameraLiveSessionHealthLoading ? "Refreshing..." : "Refresh Session Health"}
+                </button>
+              </div>
+              {cameraLiveSessionHealthError ? (
+                <div className="rounded-md border border-rose-500/20 bg-rose-500/10 px-2 py-1 text-rose-200">
+                  {cameraLiveSessionHealthError}
+                </div>
+              ) : null}
               <div className="grid grid-cols-3 gap-1.5">
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Active leases</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{supportBundle.cameraLiveSessionRegistry.activeSessionCount}</div>
+                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{cameraLiveSessionHealth?.totals.active ?? supportBundle.cameraLiveSessionRegistry.activeSessionCount}</div>
+                </div>
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Expiring soon</div>
+                  <div className="mt-0.5 truncate font-semibold text-[#d2d9e8]">{cameraLiveSessionHealth?.totals.expiringSoon ?? 0}</div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Latest lease</div>
                   <div className="mt-0.5 truncate font-semibold text-[#d2d9e8]">{supportBundle.cameraLiveSessionRegistry.latestSession?.cameraName ?? "No active lease"}</div>
-                </div>
-                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
-                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Loading</div>
-                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{cameraLiveConnectionHistoryLoading ? "Yes" : "No"}</div>
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -1630,6 +1746,15 @@ export function DebugTab() {
                     </div>
                     <div className="mt-1 text-[9px] text-[#8b96ab]">
                       Registry expiry: {record.sessionExpiresAt == null ? "—" : new Date(record.sessionExpiresAt).toLocaleTimeString()}
+                    </div>
+                    <div className="mt-1">
+                      <button
+                        type="button"
+                        onClick={() => void renewCameraLiveSession(record.sessionId)}
+                        className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[9px] text-emerald-100 hover:border-emerald-400/30 hover:bg-emerald-500/20"
+                      >
+                        {cameraLiveSessionHealthLoading ? "Renewing..." : "Renew Lease +120s"}
+                      </button>
                     </div>
                   </div>
                 )) : (
@@ -2093,6 +2218,92 @@ export function DebugTab() {
             </div>
           </Section>
 
+          <Section title="Provider Governance History" icon={<Sparkles className="h-3 w-3 text-sky-400" />}>
+            <div className="space-y-1.5 text-[9px] text-[#8b96ab]">
+              <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
+                Provider selection and local-only policy changes are persisted as a governance history so the AI control plane can be audited over time instead of only at the current snapshot.
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => recordAiProviderGovernanceSnapshot("manual", "Captured from Debug panel.")}
+                  className="rounded-md border border-[#1e2130] bg-[#0f141f] px-2 py-1 text-[9px] text-[#9bb0cf] transition-colors hover:border-emerald-500/30 hover:text-emerald-200"
+                >
+                  Capture snapshot
+                </button>
+                <button
+                  type="button"
+                  onClick={clearAiProviderGovernanceHistory}
+                  className="rounded-md border border-[#1e2130] bg-[#0f141f] px-2 py-1 text-[9px] text-[#9bb0cf] transition-colors hover:border-rose-500/30 hover:text-rose-200"
+                >
+                  Clear history
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Snapshots</div>
+                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{aiProviderGovernanceHistory.length}</div>
+                </div>
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Latest source</div>
+                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{aiProviderGovernanceHistory[0]?.source ?? "none"}</div>
+                </div>
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Latest observed</div>
+                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">
+                    {aiProviderGovernanceHistory[0]
+                      ? new Date(aiProviderGovernanceHistory[0].observedAt).toLocaleString([], {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : "—"}
+                  </div>
+                </div>
+              </div>
+              {aiProviderGovernanceHistory[0] ? (
+                <div className={`rounded-md border px-2 py-1 ${aiProviderGovernanceHistory[0].activeProviderLabel === providerGovernance.activeProviderLabel && aiProviderGovernanceHistory[0].localOnlyMode === providerGovernance.localOnlyMode ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-100" : "border-amber-500/30 bg-amber-500/10 text-amber-100"}`}>
+                  {aiProviderGovernanceHistory[0].activeProviderLabel === providerGovernance.activeProviderLabel && aiProviderGovernanceHistory[0].localOnlyMode === providerGovernance.localOnlyMode
+                    ? "Current provider policy matches the latest captured snapshot."
+                    : "Current provider policy differs from the latest captured snapshot."}
+                </div>
+              ) : null}
+              <div className="space-y-1.5">
+                {aiProviderGovernanceHistory.length > 0 ? aiProviderGovernanceHistory.slice(0, 4).map((snapshot) => (
+                  <div key={snapshot.id} className="rounded-md border border-[#1a2030] bg-[#0f141f] px-3 py-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <div className="text-[10px] font-semibold text-[#edf2ff]">{snapshot.activeProviderLabel}</div>
+                        <div className="mt-0.5 text-[9px] text-[#8b96ab]">
+                          {new Date(snapshot.observedAt).toLocaleString([], {
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
+                      </div>
+                      <Badge variant={snapshot.localOnlyMode ? "amber" : "green"}>{snapshot.source}</Badge>
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      <Badge variant="gray">{snapshot.activeModel}</Badge>
+                      <Badge variant="gray">{snapshot.cloudAvailable ? "cloud" : "local"}</Badge>
+                      <Badge variant="gray">{snapshot.fallbackOrder.length} providers</Badge>
+                    </div>
+                    <div className="mt-1 text-[9px] text-[#8b96ab]">
+                      {snapshot.note ?? "Provider governance snapshot captured from the live selection state."}
+                    </div>
+                  </div>
+                )) : (
+                  <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                    No provider governance snapshots yet. Capture one to start the control-plane trail.
+                  </div>
+                )}
+              </div>
+            </div>
+          </Section>
+
           <Section title="Provider Health Dashboard" icon={<ShieldAlert className="h-3 w-3 text-sky-400" />}>
             <div className="space-y-1.5 text-[9px] text-[#8b96ab]">
               <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
@@ -2199,6 +2410,12 @@ export function DebugTab() {
                   </div>
                 </div>
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Policy</div>
+                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{aiActionTelemetrySummary.policyLabel}</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Recent avg</div>
                   <div className="mt-0.5 font-semibold text-[#d2d9e8]">
                     {aiActionTelemetrySummary.recentWindow
@@ -2206,21 +2423,41 @@ export function DebugTab() {
                       : "—"}
                   </div>
                 </div>
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Long-horizon avg</div>
+                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">
+                    {aiActionTelemetrySummary.longHorizonWindow
+                      ? `${aiActionTelemetrySummary.longHorizonWindow.averageDurationMs} ms · ~${aiActionTelemetrySummary.longHorizonWindow.averageTokens} tokens`
+                      : "—"}
+                  </div>
+                </div>
               </div>
               <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1 text-[9px] text-[#b3bfd6]">
                 {aiActionTelemetrySummary.trendNote}
+              </div>
+              <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1 text-[9px] text-[#b3bfd6]">
+                {aiActionTelemetrySummary.policyNote}
               </div>
               <div className="space-y-1.5">
                 {aiActionTelemetry.length > 0 ? aiActionTelemetry.slice(0, 4).map((entry) => (
                   <div key={entry.id} className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="text-[10px] font-semibold text-[#edf2ff]">{entry.stage.replace(/_/g, " ")}</div>
+                      <div className="text-[10px] font-semibold text-[#edf2ff]">
+                        {entry.stage.replace(/_/g, " ")}
+                        {entry.promptTitle ? <span className="text-[#8b96ab]"> · {entry.promptTitle}</span> : null}
+                      </div>
                       <Badge variant={entry.status === "success" ? "green" : "red"}>{entry.durationMs} ms</Badge>
                     </div>
                     <div className="mt-1 flex flex-wrap gap-1.5">
                       <Badge variant="gray">{entry.providerLabel}</Badge>
                       <Badge variant="gray">{entry.tokenSource}</Badge>
                       <Badge variant="gray">~{entry.estimatedTotalTokens} tokens</Badge>
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {entry.promptId ? <Badge variant="gray">{entry.promptId}</Badge> : <Badge variant="gray">Prompt lineage missing</Badge>}
+                      {entry.promptVersion ? <Badge variant="gray">{entry.promptVersion}</Badge> : null}
+                      {entry.promptAgent ? <Badge variant="gray">{entry.promptAgent}</Badge> : null}
+                      {entry.promptOutputSchema ? <Badge variant="gray">{entry.promptOutputSchema}</Badge> : null}
                     </div>
                     <div className="mt-1 text-[9px] text-[#8b96ab]">{entry.note ?? "Measured at the AI action surface."}</div>
                   </div>
@@ -2237,6 +2474,22 @@ export function DebugTab() {
             <div className="space-y-1.5 text-[9px] text-[#8b96ab]">
               <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
                 Canonical prompt definitions are shared by the command, counterfactual, report, and draft agents so the same prompt version can be audited and replayed.
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => recordPromptRegistrySnapshot("manual", "Captured from Debug panel.")}
+                  className="rounded-md border border-[#1e2130] bg-[#0f141f] px-2 py-1 text-[9px] text-[#9bb0cf] transition-colors hover:border-emerald-500/30 hover:text-emerald-200"
+                >
+                  Capture snapshot
+                </button>
+                <button
+                  type="button"
+                  onClick={clearPromptRegistryHistory}
+                  className="rounded-md border border-[#1e2130] bg-[#0f141f] px-2 py-1 text-[9px] text-[#9bb0cf] transition-colors hover:border-rose-500/30 hover:text-rose-200"
+                >
+                  Clear history
+                </button>
               </div>
               <div className="grid grid-cols-3 gap-1.5">
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
@@ -2299,6 +2552,75 @@ export function DebugTab() {
                     <div className="mt-1 text-[9px] text-[#8b96ab]">{entry.note}</div>
                   </div>
                 ))}
+              </div>
+            </div>
+          </Section>
+
+          <Section title="Prompt Registry History" icon={<TimerReset className="h-3 w-3 text-cyan-400" />}>
+            <div className="space-y-1.5 text-[9px] text-[#8b96ab]">
+              <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
+                Each snapshot records the canonical prompt registry digest at a point in time so prompt edits and eval runs can be audited as a durable history, not just a current table.
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Snapshots</div>
+                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{promptRegistryHistory.length}</div>
+                </div>
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Latest source</div>
+                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">{promptRegistryHistory[0]?.source ?? "none"}</div>
+                </div>
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Latest observed</div>
+                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">
+                    {promptRegistryHistory[0]
+                      ? new Date(promptRegistryHistory[0].observedAt).toLocaleString([], {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : "—"}
+                  </div>
+                </div>
+              </div>
+              {promptRegistryHistory[0] ? (
+                <div className={`rounded-md border px-2 py-1 ${promptRegistryHistory[0].registryDigest === promptRegistrySummary.registryDigest ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-100" : "border-amber-500/30 bg-amber-500/10 text-amber-100"}`}>
+                  {promptRegistryHistory[0].registryDigest === promptRegistrySummary.registryDigest
+                    ? "Current prompt registry matches the latest captured snapshot."
+                    : "Current prompt registry differs from the latest captured snapshot."}
+                </div>
+              ) : null}
+              <div className="space-y-1.5">
+                {promptRegistryHistory.length > 0 ? promptRegistryHistory.slice(0, 4).map((snapshot) => (
+                  <div key={snapshot.id} className="rounded-md border border-[#1a2030] bg-[#0f141f] px-3 py-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <div className="text-[10px] font-semibold text-[#edf2ff]">{snapshot.latestVersion}</div>
+                        <div className="mt-0.5 text-[9px] text-[#8b96ab]">
+                          {new Date(snapshot.observedAt).toLocaleString([], {
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
+                      </div>
+                      <Badge variant="gray">{snapshot.source}</Badge>
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      <Badge variant="gray">{snapshot.total} prompts</Badge>
+                      <Badge variant="gray">{snapshot.registryDigest.slice(0, 12)}…</Badge>
+                    </div>
+                    <div className="mt-1 text-[9px] text-[#8b96ab]">
+                      {snapshot.note ?? "Registry snapshot captured from the live prompt definitions."}
+                    </div>
+                  </div>
+                )) : (
+                  <div className="rounded-md border border-dashed border-[#243048] bg-[#0b0f17] px-3 py-3 text-[10px] text-[#74809a]">
+                    No registry snapshots yet. Capture one to start the governance trail.
+                  </div>
+                )}
               </div>
             </div>
           </Section>

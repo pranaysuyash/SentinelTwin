@@ -7,8 +7,8 @@ export interface CameraPreset {
   description: string;
   icon: React.ReactNode;
   fovHorizontalDeg: number;
-  mountType: "wall" | "ceiling" | "pole";
-  lensType: "fixed" | "varifocal" | "fisheye";
+  mountType: "wall" | "ceiling" | "pole" | "corner";
+  lensType: "fixed" | "varifocal" | "fisheye" | "panoramic";
   resolutionMP: number;
   rangeM: number;
   nightMode: "none" | "ir" | "low_light" | "thermal";
@@ -72,6 +72,62 @@ export const CAMERA_PRESETS: CameraPreset[] = [
     nightMode: "ir",
     ptz: false,
     irRangeM: 8,
+  },
+  {
+    id: "thermal_perimeter",
+    label: "Thermal Perimeter",
+    description: "0.3MP thermal, 24° FOV, pole mount, 100m range",
+    icon: null,
+    fovHorizontalDeg: 24,
+    mountType: "pole",
+    lensType: "fixed",
+    resolutionMP: 0.3,
+    rangeM: 100,
+    nightMode: "thermal",
+    ptz: false,
+    irRangeM: 0,
+  },
+  {
+    id: "low_light_indoor",
+    label: "Low-Light Indoor",
+    description: "6MP, 100° FOV, corner mount, 20m range, low-light sensor",
+    icon: null,
+    fovHorizontalDeg: 100,
+    mountType: "corner",
+    lensType: "varifocal",
+    resolutionMP: 6,
+    rangeM: 20,
+    nightMode: "low_light",
+    ptz: false,
+    irRangeM: 12,
+  },
+  {
+    id: "license_plate",
+    label: "License Plate",
+    description: "8MP, 30° telephoto, wall mount, 25m range, LPR-optimized",
+    icon: null,
+    fovHorizontalDeg: 30,
+    mountType: "wall",
+    lensType: "fixed",
+    resolutionMP: 8,
+    rangeM: 25,
+    nightMode: "ir",
+    ptz: false,
+    irRangeM: 20,
+  },
+  {
+    id: "panoramic_wide",
+    label: "Panoramic Wide",
+    description: "20MP, 360° panoramic, ceiling mount, 15m range",
+    icon: null,
+    fovHorizontalDeg: 360,
+    mountType: "ceiling",
+    lensType: "panoramic",
+    resolutionMP: 20,
+    rangeM: 15,
+    nightMode: "ir",
+    ptz: false,
+    irRangeM: 10,
   },
 ];
 

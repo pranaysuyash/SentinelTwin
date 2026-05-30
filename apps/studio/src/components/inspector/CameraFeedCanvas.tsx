@@ -213,6 +213,7 @@ function FeedArtifacts({
                 : ` · expires ${new Date(operationalFusion?.cameraLiveConnectionEvent?.authSessionExpiresAt ?? 0).toLocaleTimeString()}`}
             </div>
             <div>Challenge: {operationalFusion?.cameraLiveConnectionEvent?.authChallengeHeader ?? "none"}</div>
+            <div>Events: {operationalFusion?.cameraLiveConnectionEvent?.eventSubscriptionUri ?? "none"}</div>
             <div>Sensors: {sensorFusion.activeCount} / {sensorFusion.totalCount}</div>
             <div>Nearest: {sensorFusion.nearestSensorLabel}</div>
           </div>
@@ -432,6 +433,9 @@ export function CameraFeedCanvas({
           <div className="mt-0.5 text-[10px] font-semibold text-white">{latestCameraLiveConnectionEvent.cameraName}</div>
           <div className="mt-0.5 text-[8px] uppercase tracking-[0.12em] text-cyan-100/75">
             {latestCameraLiveConnectionEvent.liveConnectionStatus ?? "—"} · {latestCameraLiveConnectionEvent.liveConnectionMode ?? "—"} · {latestCameraLiveConnectionEvent.liveFeedLabel ?? latestCameraLiveConnectionEvent.liveFeedUrl ?? "—"}
+          </div>
+          <div className="mt-0.5 text-[8px] uppercase tracking-[0.12em] text-cyan-100/75">
+            Events {latestCameraLiveConnectionEvent.eventSubscriptionUri ?? "—"}{latestCameraLiveConnectionEvent.eventSubscriptionReference ? ` · ref ${latestCameraLiveConnectionEvent.eventSubscriptionReference}` : ""}{latestCameraLiveConnectionEvent.eventSubscriptionExpiresAt == null ? "" : ` · expires ${new Date(latestCameraLiveConnectionEvent.eventSubscriptionExpiresAt).toLocaleTimeString()}`}
           </div>
         </div>
       ) : null}

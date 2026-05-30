@@ -13,6 +13,7 @@ describe("BeforeAfterTab", () => {
     expect(source).toContain("setCompareReportSelection");
     expect(source).toContain('setViewMode("compare")');
     expect(source).toContain("Open Compare View");
+    expect(source).toContain("Share compare link");
     expect(source).toContain("Copy compare link");
     expect(source).toContain("Scene Intelligence can seed this panel with a checkpoint pair now.");
     expect(source).toContain("Compare provenance:");

@@ -135,11 +135,13 @@ export default function StudioShell() {
   const leftDockCollapsed = useStudioStore((s) => s.leftDockCollapsed);
   const rightDockCollapsed = useStudioStore((s) => s.rightDockCollapsed);
   const bottomDockCollapsed = useStudioStore((s) => s.bottomDockCollapsed);
+  const dockAttention = useStudioStore((s) => s.dockAttention);
   const leftDockSizePx = useStudioStore((s) => s.leftDockSizePx);
   const rightDockSizePx = useStudioStore((s) => s.rightDockSizePx);
   const bottomDockSizePx = useStudioStore((s) => s.bottomDockSizePx);
   const visibleComponents = useStudioStore((s) => s.visibleComponents);
   const toggleDock = useStudioStore((s) => s.toggleDock);
+  const clearDockAttention = useStudioStore((s) => s.clearDockAttention);
   const setDockSize = useStudioStore((s) => s.setDockSize);
   const enterFocusMode = useStudioStore((s) => s.enterFocusMode);
   const restorePreviousLayout = useStudioStore((s) => s.restorePreviousLayout);
@@ -173,7 +175,7 @@ export default function StudioShell() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showFirstRunGuide, setShowFirstRunGuide] = useState(false);
   const rightRailAutoSetRef = useRef(false);
-  const fullCanvasMode = viewMode === "camera_view" || viewMode === "wall" || viewMode === "report";
+  const fullCanvasMode = viewMode === "camera_view" || viewMode === "wall";
 
   // Read ?mode= from URL on mount only — prevents URL from overriding user's mode changes.
   useEffect(() => {
@@ -451,9 +453,13 @@ export default function StudioShell() {
               subtitle={workspacePreset.replace(/_/g, " ")}
               workspacePreset={workspacePreset}
               collapsed={leftDockCollapsed}
+              attention={dockAttention.left}
               focusMode={focusMode}
               sizePx={leftDockSizePx}
-              onToggle={() => toggleDock("left")}
+              onToggle={() => {
+                if (leftDockCollapsed) clearDockAttention("left");
+                toggleDock("left");
+              }}
               onResize={(sizePx) => setDockSize("left", sizePx)}
               onFocus={enterFocusMode}
               className="border-r"
@@ -468,9 +474,13 @@ export default function StudioShell() {
               subtitle={focusMode ? "Focus mode" : workspacePreset.replace(/_/g, " ")}
               workspacePreset={workspacePreset}
               collapsed={bottomDockCollapsed}
+              attention={dockAttention.bottom}
               focusMode={focusMode}
               sizePx={bottomDockSizePx}
-              onToggle={() => toggleDock("bottom")}
+              onToggle={() => {
+                if (bottomDockCollapsed) clearDockAttention("bottom");
+                toggleDock("bottom");
+              }}
               onResize={(sizePx) => setDockSize("bottom", sizePx)}
               onFocus={focusMode ? restorePreviousLayout : enterFocusMode}
             >
@@ -484,9 +494,13 @@ export default function StudioShell() {
               subtitle={workspacePreset.replace(/_/g, " ")}
               workspacePreset={workspacePreset}
               collapsed={rightDockCollapsed}
+              attention={dockAttention.right}
               focusMode={focusMode}
               sizePx={rightDockSizePx}
-              onToggle={() => toggleDock("right")}
+              onToggle={() => {
+                if (rightDockCollapsed) clearDockAttention("right");
+                toggleDock("right");
+              }}
               onResize={(sizePx) => setDockSize("right", sizePx)}
               onFocus={enterFocusMode}
               className="border-l"

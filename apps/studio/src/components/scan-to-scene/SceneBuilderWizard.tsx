@@ -695,7 +695,7 @@ function ReviewStep({
           <span className="text-[8px] font-medium uppercase tracking-wider text-[#59637a]">Detected Wall Layout</span>
           <div className="mt-2 space-y-1">
             {value.floorPlanResult.walls.slice(0, 8).map((w, i) => (
-              <div key={i} className="flex gap-2 text-[8px] text-[#68738a]">
+              <div key={i} /* stable display list */ className="flex gap-2 text-[8px] text-[#68738a]">
                 <span>Wall {i + 1}:</span>
                 <span>({Math.round(w.start.x)}, {Math.round(w.start.y)}) → ({Math.round(w.end.x)}, {Math.round(w.end.y)})</span>
               </div>

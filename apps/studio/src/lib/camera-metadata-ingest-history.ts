@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import type { CameraMetadataIngestRequest, CameraMetadataIngestResponse } from "@/lib/camera-metadata-live-ingest";
+import type { OperationalEvidenceEventInput } from "@/lib/operational-evidence";
 
 export type CameraMetadataArchiveRecord = {
   ok: true;
@@ -14,6 +15,7 @@ export type CameraMetadataArchiveRecord = {
   feedLabel: string | null;
   summary: string;
   records: CameraMetadataIngestResponse["records"];
+  evidenceEvents: OperationalEvidenceEventInput[];
   errors: string[];
   sourceCount: number;
   submittedAt: number;
@@ -66,6 +68,7 @@ export function loadCameraMetadataHistory(rootDir = resolveCameraMetadataStoreRo
         || typeof candidate.storedAt !== "number"
         || typeof candidate.raw !== "string"
         || !Array.isArray(candidate.records)
+        || typeof candidate.evidenceEvents !== "undefined" && !Array.isArray(candidate.evidenceEvents)
         || !Array.isArray(candidate.errors)
         || typeof candidate.sourceCount !== "number"
         || !Array.isArray(candidate.cameras)
@@ -83,6 +86,7 @@ export function loadCameraMetadataHistory(rootDir = resolveCameraMetadataStoreRo
         feedLabel: typeof candidate.feedLabel === "string" ? candidate.feedLabel : null,
         summary: candidate.summary,
         records: candidate.records as CameraMetadataIngestResponse["records"],
+        evidenceEvents: Array.isArray(candidate.evidenceEvents) ? candidate.evidenceEvents as OperationalEvidenceEventInput[] : [],
         errors: candidate.errors as string[],
         sourceCount: candidate.sourceCount,
         submittedAt: candidate.submittedAt,

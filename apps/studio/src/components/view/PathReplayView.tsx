@@ -622,9 +622,9 @@ function CoverageQualityBands({ waypoints, totalDuration }: {
 
   return (
     <div className="absolute inset-x-0 top-0 h-full overflow-hidden rounded-full" style={{ pointerEvents: "none" }}>
-      {bands.map((band, i) => (
+      {bands.map((band) => (
         <div
-          key={i}
+          key={`band-${band.startDistanceM}-${band.endDistanceM}`}
           className="absolute top-0 h-full opacity-25 transition-opacity duration-200 group-hover:opacity-35"
           style={{
             left: `${band.leftPct}%`,

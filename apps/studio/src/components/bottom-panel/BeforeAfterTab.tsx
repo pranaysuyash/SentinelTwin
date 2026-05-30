@@ -1,11 +1,12 @@
 "use client";
 
-import { Copy, GitCompare } from "lucide-react";
+import { Copy, GitCompare, Share2 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { DonutChart } from "@/components/shared/DonutChart";
 import { QualityBar } from "@/components/shared/QualityBar";
 import { buildSecurityOutcomeDelta } from "@/lib/security-outcome/security-outcome-model";
 import { buildCompareShareLink } from "@/lib/compare-share-link";
+import { shareLinkOrCopy } from "@/lib/share-link";
 import { useStudioStore } from "@/store/studio-store";
 import type { SimulationResult } from "@/schema/security-scene";
 import { qualityToScore } from "@/simulation/dori";
@@ -164,6 +165,26 @@ export function BeforeAfterTab() {
     await navigator.clipboard.writeText(link);
   }, [before, after, compareSelectionProvenanceNote]);
 
+  const handleShareCompareLink = useCallback(async () => {
+    if (!before || !after) return;
+    const link = buildCompareShareLink(
+      window.location.origin + window.location.pathname,
+      window.location.search,
+      {
+        compareSnapshotAId: before.id,
+        compareSnapshotBId: after.id,
+        compareMode: "beforeafter",
+        compareProvenanceNote: compareSelectionProvenanceNote,
+      },
+      window.location.hash,
+    );
+    await shareLinkOrCopy({
+      title: "SentinelTwin before/after compare handoff",
+      text: `Open ${before.label} vs ${after.label} in SentinelTwin before/after comparison.`,
+      url: link,
+    });
+  }, [before, after, compareSelectionProvenanceNote]);
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Header strip */}
@@ -223,15 +244,26 @@ export function BeforeAfterTab() {
         <span>
           Seeded by Scene Intelligence or the compare picker. Copy the link to share this exact before/after pair.
         </span>
-        <button
-          type="button"
-          onClick={handleCopyCompareLink}
-          disabled={!before || !after}
-          className="inline-flex items-center gap-1 rounded border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] font-medium text-[#8090a8] transition-colors hover:border-[#32384d] hover:text-white disabled:opacity-40"
-        >
-          <Copy className="h-3 w-3" />
-          Copy compare link
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleShareCompareLink}
+            disabled={!before || !after}
+            className="inline-flex items-center gap-1 rounded border border-sky-400/20 bg-sky-500/10 px-2 py-1 text-[9px] font-medium text-sky-100 transition-colors hover:bg-sky-500/15 disabled:opacity-40"
+          >
+            <Share2 className="h-3 w-3" />
+            Share compare link
+          </button>
+          <button
+            type="button"
+            onClick={handleCopyCompareLink}
+            disabled={!before || !after}
+            className="inline-flex items-center gap-1 rounded border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] font-medium text-[#8090a8] transition-colors hover:border-[#32384d] hover:text-white disabled:opacity-40"
+          >
+            <Copy className="h-3 w-3" />
+            Copy compare link
+          </button>
+        </div>
       </div>
       <div className="border-b border-[#1e2130] px-3 py-1.5 text-[9px] text-[#74809a]">
         {compareSelectionProvenanceNote ? (

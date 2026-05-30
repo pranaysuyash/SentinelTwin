@@ -33,6 +33,9 @@ const CameraLiveConnectionRecordSchema = z.object({
   authChallengeHeader: z.string().min(1).optional().nullable(),
   authChallengeScheme: z.enum(["basic", "digest", "bearer", "token"]).optional().nullable(),
   authChallengeRealm: z.string().min(1).optional().nullable(),
+  eventSubscriptionUri: z.string().min(1).optional().nullable(),
+  eventSubscriptionReference: z.string().min(1).optional().nullable(),
+  eventSubscriptionExpiresAt: z.number().int().nonnegative().optional().nullable(),
   notes: z.string().min(1).optional().nullable(),
   timestamp: z.number().int().nonnegative().optional(),
 }).refine((value) => Boolean(
@@ -52,6 +55,9 @@ const CameraLiveConnectionRecordSchema = z.object({
   || value.authChallengeHeader
   || value.authChallengeScheme
   || value.authChallengeRealm
+  || value.eventSubscriptionUri
+  || value.eventSubscriptionReference
+  || value.eventSubscriptionExpiresAt !== undefined
   || value.notes
 ), {
   message: "Provide at least one camera connection field.",
@@ -207,9 +213,12 @@ function parseXmlCandidates(raw: string): { items: unknown[]; errors: string[] }
     const authChallengeHeader = tagText(/<(?:[A-Za-z0-9_.-]+:)?(?:AuthChallengeHeader|WWWAuthenticate|WwwAuthenticate)>([^<]+)<\/(?:[A-Za-z0-9_.-]+:)?(?:AuthChallengeHeader|WWWAuthenticate|WwwAuthenticate)>/i);
     const authChallengeScheme = tagText(/<(?:[A-Za-z0-9_.-]+:)?(?:AuthChallengeScheme|ChallengeScheme)>([^<]+)<\/(?:[A-Za-z0-9_.-]+:)?(?:AuthChallengeScheme|ChallengeScheme)>/i)?.toLowerCase();
     const authChallengeRealm = tagText(/<(?:[A-Za-z0-9_.-]+:)?(?:AuthChallengeRealm|ChallengeRealm)>([^<]+)<\/(?:[A-Za-z0-9_.-]+:)?(?:AuthChallengeRealm|ChallengeRealm)>/i);
+    const eventSubscriptionUri = tagText(/<(?:[A-Za-z0-9_.-]+:)?(?:EventSubscriptionUri|SubscriptionReference|PullPointUri|EventsUri|XAddr)>([^<]+)<\/(?:[A-Za-z0-9_.-]+:)?(?:EventSubscriptionUri|SubscriptionReference|PullPointUri|EventsUri|XAddr)>/i);
+    const eventSubscriptionReference = tagText(/<(?:[A-Za-z0-9_.-]+:)?(?:EventSubscriptionReference|SubscriptionReference|Address|Uri)>([^<]+)<\/(?:[A-Za-z0-9_.-]+:)?(?:EventSubscriptionReference|SubscriptionReference|Address|Uri)>/i);
+    const eventSubscriptionExpiresAtText = tagText(/<(?:[A-Za-z0-9_.-]+:)?(?:EventSubscriptionExpiresAt|TerminationTime|Expires|ExpirationTime)>([^<]+)<\/(?:[A-Za-z0-9_.-]+:)?(?:EventSubscriptionExpiresAt|TerminationTime|Expires|ExpirationTime)>/i);
     const notes = tagText(/<(?:[A-Za-z0-9_.-]+:)?(?:Notes|Message|Description)>([^<]+)<\/(?:[A-Za-z0-9_.-]+:)?(?:Notes|Message|Description)>/i);
 
-    if (!liveFeedUrl && !feedLabel && !cameraId && !cameraName && !mode && !status && !authMode && !authState && !authRealm && !authSessionId && !authSessionExpiresAtText && !transportResponseStatusText && !transportResponseStatusMessage && !authChallengeHeader && !authChallengeScheme && !authChallengeRealm && !notes) {
+    if (!liveFeedUrl && !feedLabel && !cameraId && !cameraName && !mode && !status && !authMode && !authState && !authRealm && !authSessionId && !authSessionExpiresAtText && !transportResponseStatusText && !transportResponseStatusMessage && !authChallengeHeader && !authChallengeScheme && !authChallengeRealm && !eventSubscriptionUri && !eventSubscriptionReference && !eventSubscriptionExpiresAtText && !notes) {
       errors.push("The XML payload did not expose a usable live connection record.");
       continue;
     }
@@ -256,6 +265,11 @@ function parseXmlCandidates(raw: string): { items: unknown[]; errors: string[] }
           ? authChallengeScheme
           : undefined,
       authChallengeRealm: authChallengeRealm ?? undefined,
+      eventSubscriptionUri: eventSubscriptionUri ?? undefined,
+      eventSubscriptionReference: eventSubscriptionReference ?? undefined,
+      eventSubscriptionExpiresAt: eventSubscriptionExpiresAtText && Number.isFinite(Number(eventSubscriptionExpiresAtText))
+        ? Number(eventSubscriptionExpiresAtText)
+        : undefined,
       notes: notes ?? undefined,
     });
   }
@@ -271,6 +285,9 @@ type ResolvedLiveConnectionPayload = {
   responseStatus: number | null;
   responseStatusText: string | null;
   authChallengeHeader: string | null;
+  eventSubscriptionUri: string | null;
+  eventSubscriptionReference: string | null;
+  eventSubscriptionExpiresAt: number | null;
   onvifDeviceInformation: OnvifDeviceInformation | null;
 };
 
@@ -284,8 +301,11 @@ async function resolveLiveConnectionPayload(request: CameraLiveConnectionProbeRe
       responseStatus: null,
       responseStatusText: null,
       authChallengeHeader: null,
+      eventSubscriptionUri: null,
+      eventSubscriptionReference: null,
+      eventSubscriptionExpiresAt: null,
       onvifDeviceInformation: null,
-    };
+    } as ResolvedLiveConnectionPayload;
   }
 
   const trimmedRaw = request.raw.trim();
@@ -298,8 +318,11 @@ async function resolveLiveConnectionPayload(request: CameraLiveConnectionProbeRe
       responseStatus: null,
       responseStatusText: null,
       authChallengeHeader: null,
+      eventSubscriptionUri: null,
+      eventSubscriptionReference: null,
+      eventSubscriptionExpiresAt: null,
       onvifDeviceInformation: null,
-    };
+    } as ResolvedLiveConnectionPayload;
   }
 
   const probeUrl = request.endpointUrl ?? request.liveFeedUrl;
@@ -312,8 +335,11 @@ async function resolveLiveConnectionPayload(request: CameraLiveConnectionProbeRe
       responseStatus: null,
       responseStatusText: null,
       authChallengeHeader: null,
+      eventSubscriptionUri: null,
+      eventSubscriptionReference: null,
+      eventSubscriptionExpiresAt: null,
       onvifDeviceInformation: null,
-    };
+    } as ResolvedLiveConnectionPayload;
   }
 
   const accept = "application/json, application/x-ndjson, application/xml, text/xml, text/plain;q=0.9, */*;q=0.1";
@@ -345,8 +371,11 @@ async function resolveLiveConnectionPayload(request: CameraLiveConnectionProbeRe
           responseStatus: onvifProbe.responseStatus,
           responseStatusText: onvifProbe.responseStatusText,
           authChallengeHeader: onvifProbe.authChallengeHeader,
+          eventSubscriptionUri: onvifProbe.session.eventSubscriptionUri ?? null,
+          eventSubscriptionReference: onvifProbe.session.eventSubscriptionReference ?? null,
+          eventSubscriptionExpiresAt: onvifProbe.session.eventSubscriptionExpiresAt ?? null,
           onvifDeviceInformation: onvifProbe.session.deviceInformation ?? null,
-        };
+        } as ResolvedLiveConnectionPayload;
       }
     } catch {
       // Fall back to a GET probe below.
@@ -367,8 +396,11 @@ async function resolveLiveConnectionPayload(request: CameraLiveConnectionProbeRe
     responseStatus: resolved.responseStatus,
     responseStatusText: resolved.responseStatusText,
     authChallengeHeader: resolved.authChallengeHeader,
+    eventSubscriptionUri: null,
+    eventSubscriptionReference: null,
+    eventSubscriptionExpiresAt: null,
     onvifDeviceInformation: null,
-  };
+  } as ResolvedLiveConnectionPayload;
 }
 
 function parseAuthChallengeHeader(header: string | null | undefined): { scheme: CameraLiveAuthChallengeScheme; realm: string | null } {
@@ -548,6 +580,9 @@ export async function probeCameraLiveConnection(request: CameraLiveConnectionPro
     authChallengeHeader,
     authChallengeScheme,
     authChallengeRealm,
+    eventSubscriptionUri: payload.eventSubscriptionUri ?? (parsedCandidate?.success ? parsedCandidate.data.eventSubscriptionUri ?? null : null),
+    eventSubscriptionReference: payload.eventSubscriptionReference ?? (parsedCandidate?.success ? parsedCandidate.data.eventSubscriptionReference ?? null : null),
+    eventSubscriptionExpiresAt: payload.eventSubscriptionExpiresAt ?? (parsedCandidate?.success ? parsedCandidate.data.eventSubscriptionExpiresAt ?? null : null),
     notes,
     timestamp: parsedCandidate?.success && parsedCandidate.data.timestamp ? parsedCandidate.data.timestamp : Date.now(),
   } as const;

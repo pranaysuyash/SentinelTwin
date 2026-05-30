@@ -10,6 +10,7 @@ import { AssumptionsPanel } from "@/components/panels/AssumptionsPanel";
 import { IssuesTab } from "@/components/bottom-panel/IssuesTab";
 import { SecurityOutcomePanel } from "@/components/security-outcome/SecurityOutcomePanel";
 import { GovernanceReviewPanel } from "@/components/panels/GovernanceReviewPanel";
+import { BulkCameraEditor } from "@/components/panels/BulkCameraEditor";
 import { ExplainBadge } from "@/components/shared/ExplainBadge";
 import { cn } from "@/lib/cn";
 import { useStudioStore } from "@/store/studio-store";
@@ -96,6 +97,7 @@ export function ContextRightPanel() {
           ["recommendations", "Recommendations"],
           ["assumptions", "Assumptions"],
           ["camera_controls", "Camera Controls"],
+          ["bulk_camera", "Bulk Cameras"],
           ["governance", "Governance Review"],
         ] as const).map(([mode, label]) => (
           <button
@@ -115,6 +117,7 @@ export function ContextRightPanel() {
         {rightPanelMode === "recommendations" && <div className="h-full"><SecurityOutcomePanel compact /></div>}
         {rightPanelMode === "assumptions" && <div className="h-full"><AssumptionsPanel /></div>}
         {rightPanelMode === "camera_controls" && <div className="h-full overflow-y-auto"><CameraInspector /></div>}
+        {rightPanelMode === "bulk_camera" && <div className="h-full overflow-y-auto"><BulkCameraEditor /></div>}
         {rightPanelMode === "governance" && <div className="h-full"><GovernanceReviewPanel /></div>}
         {rightPanelMode === "inspector" && (
           <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2">

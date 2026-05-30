@@ -33,14 +33,14 @@ export function CoverageRibbon({ path, coverageCells, stepM = 0.25 }: CoverageRi
   return (
     <div className="space-y-1">
       <div className="flex h-3 overflow-hidden rounded-full border border-[#202536] bg-[#111521]">
-        {bands.map((band, index) => {
+        {bands.map((band) => {
           const widthPct = totalDistance > 0
             ? ((band.endDistanceM - band.startDistanceM) / totalDistance) * 100
             : 0;
 
           return (
             <div
-              key={`${band.quality}-${index}`}
+              key={`${band.startDistanceM}-${band.endDistanceM}`}
               className="h-full"
               style={{
                 width: `${Math.max(widthPct, 1)}%`,

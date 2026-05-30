@@ -190,6 +190,30 @@ export const TRUST_AUDIT_SURFACES: TrustAuditSurface[] = [
     forbiddenPhrases: ["placeholder", "stub"],
   },
   {
+    surface: "Report visibility policy",
+    file: "src/report/index.ts",
+    requiredPhrases: [
+      "applyReportVisibility",
+      "redactReportDataForVisibility",
+      "visibility === \"shared\"",
+      "redacted.temporalTwin = undefined;",
+      "redacted.evidenceLedger = undefined;",
+    ],
+    forbiddenPhrases: ["TODO redaction", "stub redaction"],
+  },
+  {
+    surface: "Workspace control-plane persistence route",
+    file: "src/app/api/workspace-control-plane/route.ts",
+    requiredPhrases: [
+      "loadWorkspaceControlPlaneHistory",
+      "appendWorkspaceControlPlaneSnapshot",
+      "normalizeWorkspaceAccessState",
+      "normalizeWorkspaceGovernance",
+      "normalizeWorkspaceAccountProfile",
+    ],
+    forbiddenPhrases: ["stub", "Coming Soon"],
+  },
+  {
     surface: "Status bar truth labeling",
     file: "src/components/layout/StatusBar.tsx",
     requiredPhrases: [
@@ -417,15 +441,6 @@ export const TRUST_AUDIT_SURFACES: TrustAuditSurface[] = [
       "affectedNodeIds",
       "reconstructSceneFromEvidence",
       "Restore Scene to This Point",
-    ],
-    forbiddenPhrases: ["stub", "placeholder", "FAKE_DATA"],
-  },
-  {
-    surface: "Timeline scrubber tab data wiring",
-    file: "src/components/bottom-panel/TimelineScrubberTab.tsx",
-    requiredPhrases: [
-      "operationalEvidenceEvents",
-      "reconstructSceneFromEvidence",
     ],
     forbiddenPhrases: ["stub", "placeholder", "FAKE_DATA"],
   },

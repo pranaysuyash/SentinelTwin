@@ -2,7 +2,7 @@
 
 import { OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { ArrowLeftRight, Database, GitCompare, Globe, Plus, AlertTriangle, Sparkles } from "lucide-react";
+import { ArrowLeftRight, Database, GitCompare, Globe, Plus, AlertTriangle, Share2, Sparkles } from "lucide-react";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
@@ -10,6 +10,7 @@ import { useStudioStore } from "@/store/studio-store";
 import { qualityToScore } from "@/simulation/dori";
 import "@/lib/three-compat";
 import { buildCompareShareLink } from "@/lib/compare-share-link";
+import { shareLinkOrCopy } from "@/lib/share-link";
 import { buildCompareReportData, exportCompareAsHtml, exportCompareAsMarkdown } from "@/report";
 import { buildReportEvidenceBundle, stringifyReportEvidenceBundle } from "@/lib/report-evidence-bundle";
 import {
@@ -406,8 +407,8 @@ function NotesPanel({
         <div className="rounded-lg border border-[#1d2330] bg-[#090d14] p-2">
           <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Issues</div>
           <div className="mt-1 space-y-1">
-            {(issues.length ? issues : [{ severity: "low", description: "No issues reported", category: "blindspot" }]).slice(0, 4).map((issue, index) => (
-              <div key={`${issue.description}-${index}`} className="flex items-start gap-2 text-[9px] text-[#c7d0e4]">
+            {(issues.length ? issues : [{ severity: "low", description: "No issues reported", category: "blindspot" }]).slice(0, 4).map((issue) => (
+              <div key={`${issue.severity}-${issue.description}`} className="flex items-start gap-2 text-[9px] text-[#c7d0e4]">
                 <span className={cn("mt-0.5 h-1.5 w-1.5 rounded-full", issue.severity === "critical" ? "bg-red-400" : issue.severity === "high" ? "bg-orange-400" : issue.severity === "medium" ? "bg-yellow-400" : "bg-emerald-400")} />
                 <span className="leading-snug">{issue.description}</span>
               </div>
@@ -417,8 +418,8 @@ function NotesPanel({
         <div className="rounded-lg border border-[#1d2330] bg-[#090d14] p-2">
           <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Recommended next steps</div>
           <div className="mt-1 space-y-1">
-            {(recommendations.length ? recommendations : [{ description: "Open report lite for the full hardening summary." }]).slice(0, 4).map((rec, index) => (
-              <div key={`${rec.description}-${index}`} className="flex items-start gap-2 text-[9px] text-[#c7d0e4]">
+            {(recommendations.length ? recommendations : [{ description: "Open report lite for the full hardening summary." }]).slice(0, 4).map((rec) => (
+              <div key={rec.description} className="flex items-start gap-2 text-[9px] text-[#c7d0e4]">
                 <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400" />
                 <span className="leading-snug">{rec.description}</span>
               </div>
@@ -725,6 +726,27 @@ export function CompareView() {
     setExportToast("Compare link copied");
     window.setTimeout(() => setExportToast(null), 2500);
   }, [snapshotA, snapshotB]);
+  const handleShareCompareLink = useCallback(async () => {
+    if (!snapshotA || !snapshotB) return;
+    const link = buildCompareShareLink(
+      window.location.origin + window.location.pathname,
+      window.location.search,
+      {
+        compareSnapshotAId: snapshotA.id,
+        compareSnapshotBId: snapshotB.id,
+        compareMode: "beforeafter",
+        compareProvenanceNote: compareReportSelection?.provenanceNote ?? null,
+      },
+      window.location.hash,
+    );
+    const status = await shareLinkOrCopy({
+      title: "SentinelTwin compare handoff",
+      text: `Open ${snapshotA.label} vs ${snapshotB.label} in SentinelTwin compare view.`,
+      url: link,
+    });
+    setExportToast(status === "shared" ? "Compare link shared" : status === "copied" ? "Compare link copied" : "Compare link unavailable");
+    window.setTimeout(() => setExportToast(null), 2500);
+  }, [compareReportSelection?.provenanceNote, snapshotA, snapshotB]);
 
   const handleCaptureVisualEvidence = useCallback(() => {
     if (!snapshotA || !snapshotB) return;
@@ -861,12 +883,21 @@ export function CompareView() {
           >
             Copy Summary
           </button>
-          <button
-            type="button"
-            onClick={handleCopyCompareLink}
-            disabled={!snapshotA || !snapshotB}
-            className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white disabled:opacity-40"
-          >
+	          <button
+	            type="button"
+	            onClick={handleShareCompareLink}
+	            disabled={!snapshotA || !snapshotB}
+	            className="flex items-center gap-1 rounded-md border border-sky-400/20 bg-sky-500/10 px-2 py-0.5 text-[9px] text-sky-100 hover:bg-sky-500/15 disabled:opacity-40"
+	          >
+	            <Share2 className="h-3 w-3" />
+	            Share compare link
+	          </button>
+	          <button
+	            type="button"
+	            onClick={handleCopyCompareLink}
+	            disabled={!snapshotA || !snapshotB}
+	            className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white disabled:opacity-40"
+	          >
             Copy compare link
           </button>
           <button
@@ -1067,9 +1098,9 @@ export function CompareView() {
         <div className="mt-2 rounded-xl border border-[#1d2330] bg-[#0b1018] p-2.5">
           <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Actionable Next Move</div>
           <div className="mt-1.5 grid gap-1.5 md:grid-cols-3">
-            {prioritizedActions.map((action, index) => (
-              <div key={`${action}-${index}`} className="rounded-lg border border-[#1d2330] bg-[#090d14] px-2 py-1.5 text-[9px] text-[#b7c5de]">
-                <span className="mr-1 text-[#7dd3fc]">{index + 1}.</span>
+            {prioritizedActions.map((action, i) => (
+              <div key={action} className="rounded-lg border border-[#1d2330] bg-[#090d14] px-2 py-1.5 text-[9px] text-[#b7c5de]">
+                <span className="mr-1 text-[#7dd3fc]">{i + 1}.</span>
                 {action}
               </div>
             ))}

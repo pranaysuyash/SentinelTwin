@@ -1,0 +1,14 @@
+{
+  "id": "self-hosted",
+  "name": "Self Hosted",
+  "description": "Private infrastructure deploy with optional cloud provider keys managed by tenant.",
+  "requiredEnv": ["NODE_ENV"],
+  "recommendedEnv": ["SENTINELTWIN_API_ALLOWED_ORIGINS"],
+  "localOnlyMode": false,
+  "checks": ["typecheck", "truth-audit", "build", "api-cors"],
+  "slo": {
+    "buildMinutes": 12,
+    "coldStartSeconds": 20,
+    "simulationMsP95": 60
+  }
+}

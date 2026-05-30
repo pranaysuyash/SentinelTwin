@@ -1,9 +1,21 @@
 import { appendCameraLiveConnectionHistory, loadCameraLiveConnectionHistory } from "@/lib/camera-live-connection-history";
-import { appendCameraLiveSessionRecord, closeCameraLiveSessionRecord, pruneExpiredCameraLiveSessionRegistry, renewCameraLiveSessionRecord } from "@/lib/camera-live-session-registry";
-import { CameraLiveConnectionProbeRequestSchema, probeCameraLiveConnection, type CameraLiveConnectionProbeRequest } from "@/lib/camera-live-connection";
+import { appendCameraLiveSessionRecord, closeCameraLiveSessionRecord, pruneExpiredCameraLiveSessionRegistry, renewCameraLiveSessionRecord, type CameraLiveSessionRecord } from "@/lib/camera-live-session-registry";
+import { CameraLiveConnectionProbeRequestSchema, probeCameraLiveConnection, type CameraLiveConnectionProbeRequest, type CameraLiveConnectionProbeResponse } from "@/lib/camera-live-connection";
+import { OnvifClient } from "@/lib/onvif-client";
 import { corsJson, corsNoContent } from "@/lib/api-cors";
 
 import { NextRequest } from "next/server";
+
+const ONVIF_EVENT_SUBSCRIPTION_RENEWAL_WINDOW_MS = 5 * 60 * 1000;
+
+function shouldRenewOnvifSubscription(activeSession: CameraLiveSessionRecord | null, storedAt: number) {
+  if (!activeSession) return false;
+  if (activeSession.status !== "active") return false;
+  if (activeSession.protocolProfile !== "onvif_device") return false;
+  if (!activeSession.eventSubscriptionReference && !activeSession.eventSubscriptionUri) return false;
+  if (activeSession.eventSubscriptionExpiresAt == null) return true;
+  return activeSession.eventSubscriptionExpiresAt - storedAt <= ONVIF_EVENT_SUBSCRIPTION_RENEWAL_WINDOW_MS;
+}
 
 export async function GET(request: NextRequest) {
   const history = loadCameraLiveConnectionHistory();
@@ -60,6 +72,27 @@ export async function POST(request: NextRequest) {
       const authChallengeHeader = parsed.data.authChallengeHeader ?? activeSession?.authChallengeHeader ?? null;
       const authChallengeScheme = parsed.data.authChallengeScheme ?? activeSession?.authChallengeScheme ?? null;
       const authChallengeRealm = parsed.data.authChallengeRealm ?? activeSession?.authChallengeRealm ?? null;
+      const renewTargetUrl = activeSession?.eventSubscriptionReference ?? activeSession?.eventSubscriptionUri ?? null;
+      let renewedEventSubscription: Awaited<ReturnType<OnvifClient["renewEventSubscription"]>> | null = null;
+      if (shouldRenewOnvifSubscription(activeSession, storedAt) && renewTargetUrl) {
+        try {
+          const onvifClient = new OnvifClient({
+            address: renewTargetUrl,
+            username: parsed.data.onvifUsername ?? activeSession?.onvifUsername ?? undefined,
+            password: parsed.data.onvifPassword ?? activeSession?.onvifPassword ?? undefined,
+          });
+          renewedEventSubscription = await onvifClient.renewEventSubscription(renewTargetUrl, activeSession?.eventSubscriptionUri ?? null);
+        } catch {
+          renewedEventSubscription = null;
+        }
+      }
+      const renewedSession = renewedEventSubscription?.session ?? null;
+      const eventSubscriptionUri = renewedSession?.eventSubscriptionUri ?? activeSession?.eventSubscriptionUri ?? null;
+      const eventSubscriptionReference = renewedSession?.eventSubscriptionReference ?? activeSession?.eventSubscriptionReference ?? null;
+      const eventSubscriptionExpiresAt = renewedSession?.eventSubscriptionExpiresAt ?? activeSession?.eventSubscriptionExpiresAt ?? null;
+      const renewalSummary = renewedEventSubscription?.responseStatus === 200
+        ? `Renewed the ONVIF event subscription${eventSubscriptionExpiresAt != null ? ` until ${new Date(eventSubscriptionExpiresAt).toLocaleTimeString()}` : ""}.`
+        : null;
       const authSummary = authState === "authenticated"
         ? `Authenticated via ${authMode.replaceAll("_", " ")}`
         : authState === "unauthenticated"
@@ -67,7 +100,7 @@ export async function POST(request: NextRequest) {
           : authState === "failed"
             ? "Authentication failed"
             : `Authenticating via ${authMode.replaceAll("_", " ")}`;
-      const heartbeatRecord = {
+      const heartbeatRecord: CameraLiveConnectionProbeResponse = {
         ok: true as const,
         source: parsed.data.source,
         action: "heartbeat" as const,
@@ -78,7 +111,7 @@ export async function POST(request: NextRequest) {
         endpointUrl: parsed.data.endpointUrl ?? parsed.data.liveFeedUrl ?? null,
         liveFeedUrl: parsed.data.liveFeedUrl ?? parsed.data.endpointUrl ?? null,
         feedLabel: parsed.data.feedLabel ?? activeSession?.feedLabel ?? null,
-        summary: `Heartbeat renewed the live session for ${parsed.data.cameraName}. ${authSummary}.`,
+        summary: `Heartbeat renewed the live session for ${parsed.data.cameraName}. ${authSummary}.${renewalSummary ? ` ${renewalSummary}` : ""}`.trim(),
         record: {
           cameraId: parsed.data.cameraId,
           cameraName: parsed.data.cameraName,
@@ -104,6 +137,9 @@ export async function POST(request: NextRequest) {
           authChallengeHeader,
           authChallengeScheme,
           authChallengeRealm,
+          eventSubscriptionUri,
+          eventSubscriptionReference,
+          eventSubscriptionExpiresAt,
           liveFeedUrl: parsed.data.liveFeedUrl ?? activeSession?.liveFeedUrl ?? null,
           liveFeedLabel: parsed.data.feedLabel ?? activeSession?.feedLabel ?? null,
           liveConnectionMode: parsed.data.protocol,
@@ -146,9 +182,9 @@ export async function POST(request: NextRequest) {
         authChallengeHeader,
         authChallengeScheme,
         authChallengeRealm,
-        eventSubscriptionUri: activeSession?.eventSubscriptionUri ?? null,
-        eventSubscriptionReference: activeSession?.eventSubscriptionReference ?? null,
-        eventSubscriptionExpiresAt: activeSession?.eventSubscriptionExpiresAt ?? null,
+        eventSubscriptionUri,
+        eventSubscriptionReference,
+        eventSubscriptionExpiresAt,
         sessionExpiresAt: heartbeatRecord.record.liveSessionExpiresAt,
         summary: heartbeatRecord.summary,
       });
@@ -215,6 +251,8 @@ export async function POST(request: NextRequest) {
           authMode: summary.record.authMode,
           authState: summary.record.authState,
           authRealm: summary.record.authRealm,
+          onvifUsername: summary.record.onvifUsername ?? null,
+          onvifPassword: summary.record.onvifPassword ?? null,
           authSessionId: summary.record.authSessionId,
           authSessionExpiresAt: summary.record.authSessionExpiresAt,
           transportResponseStatus: summary.record.transportResponseStatus,

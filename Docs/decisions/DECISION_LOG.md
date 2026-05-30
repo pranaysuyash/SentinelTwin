@@ -4404,3 +4404,94 @@ Fixed the `CameraLiveConnectionEventRecord` and `WorkspaceApprovalRouteSummary` 
 - Decision: Extend the canonical workspace approval route summary with a deterministic route key, route scope, and active-member eligibility metadata, and normalize older archived route records back into that contract on load.
 - Rationale: Route summaries should be replayable as backend identity artifacts, not just human-readable labels. The stable key makes the route comparable across archives, while the eligibility metadata makes it clear whether the active member can actually execute the route or must hand off to the reviewer path.
 - Consequence: Approval routes now have a reproducible backend-facing identity contract, and archive/history loaders can round-trip older records without fragmenting the governance model.
+
+## D-262 - Measured AI telemetry should persist prompt registry lineage
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: Measured AI telemetry already captured provider, model, duration, and token estimates, but the run trail still did not record which canonical prompt registry entry produced the action, which made the telemetry useful for performance but weak for provenance.
+- Decision: Persist prompt registry lineage on each measured AI action telemetry record, including prompt id, version, title, agent, stage, and output schema, and surface that lineage in the Debug panel and support ingestion path.
+- Rationale: AI actions should be explainable as canonical prompt executions, not just opaque provider calls. Recording prompt lineage keeps the telemetry aligned with the prompt registry and makes support bundles, debug logs, and runtime reports auditable.
+- Consequence: The AI execution ledger can now explain which prompt definition produced a given action, while still leaving the prompt registry itself as the canonical source of prompt metadata.
+
+## D-265 - Prompt registry snapshots should persist as a history ledger
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: The prompt registry was visible in Debug, but it still behaved like a current-state table rather than a durable governance trail for future prompt-stage changes and audit replay.
+- Decision: Persist prompt registry snapshots as a history ledger captured from model eval runs and manual snapshots, and expose the snapshot trail in the Debug panel alongside the live prompt registry.
+- Rationale: The registry should be auditable across time, not just visible in the current UI. Capturing snapshots keeps prompt evolution aligned with the existing eval and telemetry history without inventing a separate prompt-management system too early.
+- Consequence: The app can now compare current registry state against historical snapshots, and future prompt-stage growth can build on a durable history instead of starting from a blank table.
+
+## D-263 - ONVIF event subscription details should survive the full live-camera evidence path
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: The ONVIF probe could already negotiate credentials and fetch the event-subscription leg, but the subscription URI/reference/expiry still risked getting lost between the probe result, camera node, inspector cards, and event-ledger trail.
+- Decision: Treat ONVIF event-subscription URI, reference, and expiry as canonical live-camera state and carry them through the probe response, camera node schema, stored live-connection events, live session registry, inspector cards, and HUD surfaces.
+- Rationale: Subscription details are part of the real device handshake story and operators need to see them in the same archive/session trail as the rest of the live-camera state. Keeping them in one canonical path avoids a hidden split between the probe result and the visible evidence model.
+- Consequence: The live camera path now preserves event-subscription metadata through the UI, store, archive, and route responses instead of only reporting the initial credential negotiation, and the remaining gap is specifically renewal/continuity of that live event stream.
+
+## D-264 - Compare handoffs should carry the checkpoint provenance note through compare/report bootstrap
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: Scene Intelligence already exposed exact-versus-derived checkpoint provenance on the reconstructed checkpoint card, but the compare/report handoff only received the snapshot ids. That made the shareable compare pair legible, but the provenance story itself could still be dropped at the point the handoff left Scene Intelligence.
+- Decision: Extend the compare share-link contract and compare/report bootstrap state with an optional provenance note, and surface that note in Before/After, Report Lite, and Compare View when the seeded compare pair still matches the active selection.
+- Rationale: The handoff should preserve the same exact/derived trust signal that Scene Intelligence already computed, instead of forcing operators to reconstruct it from the source checkpoint after they have already crossed into compare/report mode.
+- Consequence: Compare/report surfaces now stay aligned with Scene Intelligence when the comparison was seeded from a checkpoint, while still falling back to an explicit prompt when the active pair no longer matches the seeded provenance.
+
+## D-266 - ONVIF heartbeat renewal should refresh the event-subscription lease, not just preserve it
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: The live-camera heartbeat path already preserved ONVIF event-subscription URI/reference/expiry in the registry and UI, but that still left the subscription lease static unless a new probe happened to run.
+- Decision: Teach the ONVIF client to renew the event subscription through the subscription reference when the lease is nearing expiry, and have the canonical camera-live heartbeat path call that renewal helper so the live session can stay continuous without a new probe.
+- Rationale: Real ONVIF sessions need an actual renewal step. Preserving the lease metadata is useful, but it is not the same as refreshing the device-side subscription. The heartbeat path is the natural place to do that because it already models keepalive semantics.
+- Consequence: Heartbeat renewals now extend the live ONVIF subscription lease and update the canonical session/archive/UI fields, narrowing the remaining gap to longer-lived continuity and device-side event streaming rather than basic lease bookkeeping.
+
+## D-267 - Studio build should include explicit fallback routes for production artifact stability
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: The clean production build for `apps/studio` was failing on Next-generated fallback artifacts for the app-router `not-found` route and the exported `500.html` page, which blocked browser verification even though the main dashboard implementation was otherwise ready.
+- Decision: Add explicit `src/app/not-found.tsx` and `src/pages/500.tsx` fallback routes so Next can produce the required production artifacts deterministically during clean builds.
+- Rationale: The dashboard must be verifiable from a clean production build, not only from a partially seeded dev tree. Providing explicit fallbacks keeps the app resilient and avoids relying on auto-generated error-route artifacts that were intermittently missing in this environment.
+- Consequence: The studio now builds cleanly from a fresh `.next` tree and can be launched into a stable production server for visual comparison against the design pack.
+
+## D-268 - AI provider governance should persist a history ledger alongside the live selection
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: The AI control plane already exposed the live provider selection, local-only policy, prompt registry history, and measured telemetry lineage, but provider governance itself still behaved like a current-state snapshot instead of a durable trail of selection and policy changes.
+- Decision: Persist AI provider governance snapshots as a history ledger captured from provider selection changes, local-only policy changes, manual capture, and eval runs, and expose that trail in the Debug panel alongside the live provider governance summary.
+- Rationale: Provider choice and local-only policy are part of the operational AI control plane, not just configuration. Keeping a history makes provider changes auditable over time and aligns the provider layer with the existing prompt-registry and telemetry history patterns.
+- Consequence: The app can now compare current provider policy against prior snapshots, and future provider/model governance work can build on a durable history instead of only the live selection state.
+
+## D-269 - AI action telemetry should compare recent runs against a longer-horizon policy baseline
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: The AI telemetry trail already summarized recent-vs-previous window movement, but that still only exposed a short local trend and did not distinguish momentary spikes from broader drift over a longer operational baseline.
+- Decision: Extend the AI telemetry summary with a longer-horizon policy baseline and expose a policy label and policy note in the Debug panel alongside the short-window trend summary.
+- Rationale: The control plane should tell operators whether recent AI performance is actually drifting relative to the longer run history, not just whether the latest few events are faster or slower than the immediately preceding slice.
+- Consequence: The debug telemetry trail now supports both short-window trend and longer-horizon policy comparison, while leaving room for future operator-tunable thresholds and broader telemetry dashboards.
+
+## D-270 - ONVIF notification envelopes should map into canonical operational evidence through the existing camera metadata ingest boundary
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: The camera metadata ingest route already handled JSON, NDJSON, and generic XML camera records, but ONVIF WS-Notification envelopes were still being parsed only as a library helper instead of flowing into the operational ledger through the canonical ingest/archive path.
+- Decision: Extend the existing `/api/camera-metadata-ingest` boundary so it can parse ONVIF notification envelopes into operational evidence events, persist those events in the camera metadata archive history, and let the inspector feed them into the canonical operational evidence ledger.
+- Rationale: ONVIF metadata should not require a parallel route or a mock bridge when the existing ingest path already owns camera metadata, history persistence, and scene-matched evidence updates. Reusing that path keeps camera metadata, ONVIF notification evidence, and inspector history aligned around one canonical archive model.
+- Consequence: ONVIF notification envelopes now land as first-class evidence events through the camera metadata ingest path, while the broader ONVIF Profile M richness remains a future extension of the same canonical ingest boundary rather than a separate system.
+
+## D-265: Browser-native share surfaces should reuse the same link builders with copy fallback
+
+**Context:** Scene Intelligence, compare, and report surfaces already had canonical deep-link builders for checkpoints, archives, and compare handoffs, but they still depended on copy/open buttons only.
+
+**Decision:** Add a shared share-link helper that attempts `navigator.share` when available and falls back to clipboard copy when the native share surface is unavailable, so the same handoff URLs work on mobile and desktop without forking the link contract.
+
+**Why:** This keeps the public handoff flow aligned with the existing copy/open behavior, avoids duplicate link-building code, and gives the product a real browser-native share surface where supported.
+
+**Consequence:** Archive and compare cards can now share the same checkpoint/archive URLs through the browser share sheet, while existing copy/open buttons remain available as the fallback path.

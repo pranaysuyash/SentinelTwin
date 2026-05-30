@@ -1,13 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 
-const rightPanelPath = "./src/components/panels/ContextRightPanel.tsx";
-const assumptionsPanelPath = "./src/components/panels/AssumptionsPanel.tsx";
+const testDir = fileURLToPath(new URL(".", import.meta.url));
+const rightPanelPath = resolve(testDir, "../panels/ContextRightPanel.tsx");
+const assumptionsPanelPath = resolve(testDir, "../panels/AssumptionsPanel.tsx");
+const bulkCameraPath = resolve(testDir, "../panels/BulkCameraEditor.tsx");
 
 describe("ContextRightPanel", () => {
   test("exposes the right panel mode switcher and inspector sections", () => {
     const source = readFileSync(rightPanelPath, "utf8");
     const assumptionsSource = readFileSync(assumptionsPanelPath, "utf8");
+    const bulkCameraSource = readFileSync(bulkCameraPath, "utf8");
 
     expect(source).toContain("function SectionToggle(");
     expect(source).toContain("CameraInspector");
@@ -24,6 +29,11 @@ describe("ContextRightPanel", () => {
     expect(source).toContain("Path controls are hidden. Expand them for replay and scenario editing.");
     expect(source).toContain("assumptionsSummary");
     expect(source).toContain("IEC 62676-4:2025");
+    expect(source).toContain("Bulk Cameras");
+    expect(source).toContain("bulk_camera");
+    expect(source).toContain("BulkCameraEditor");
+    expect(bulkCameraSource).toContain("Apply to All Cameras");
+    expect(bulkCameraSource).toContain("Night Mode Batch");
     expect(assumptionsSource).toContain("DORI Model");
     expect(assumptionsSource).toContain("Grid Resolution");
     expect(assumptionsSource).toContain("Edit Assumptions");

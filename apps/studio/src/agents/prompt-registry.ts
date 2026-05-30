@@ -1,3 +1,5 @@
+import type { AiActionTelemetryStage } from "@/store/studio-store";
+
 export type PromptRegistryStage = "command" | "counterfactual" | "report" | "draft";
 
 export type PromptRegistryEntry = {
@@ -20,6 +22,15 @@ export type PromptRegistrySummary = {
 
 export type PromptRegistrySnapshot = PromptRegistrySummary & {
   observedAt: number;
+};
+
+export type PromptRegistryLineage = {
+  promptId: string;
+  promptVersion: string;
+  promptTitle: string;
+  promptAgent: string;
+  promptStage: PromptRegistryStage;
+  promptOutputSchema: string;
 };
 
 export const PROMPT_REGISTRY: PromptRegistryEntry[] = [
@@ -102,6 +113,13 @@ Output ONLY valid JSON matching the schema. Do not explain, do not add commentar
   },
 ];
 
+const TELEMETRY_STAGE_TO_PROMPT_ID: Record<AiActionTelemetryStage, string> = {
+  command_parse: "command_parse",
+  counterfactual: "counterfactual_candidates",
+  report_generation: "report_generation",
+  ai_draft: "model_layout_draft",
+};
+
 function buildRegistryDigest(registry: PromptRegistryEntry[]) {
   return registry
     .map((entry) => [entry.id, entry.version, entry.stage, entry.title, entry.agent, entry.outputSchema].join("@"))
@@ -110,6 +128,19 @@ function buildRegistryDigest(registry: PromptRegistryEntry[]) {
 
 export function getPromptRegistryEntry(id: string) {
   return PROMPT_REGISTRY.find((entry) => entry.id === id) ?? null;
+}
+
+export function resolvePromptRegistryLineage(stage: AiActionTelemetryStage): PromptRegistryLineage | null {
+  const entry = getPromptRegistryEntry(TELEMETRY_STAGE_TO_PROMPT_ID[stage]);
+  if (!entry) return null;
+  return {
+    promptId: entry.id,
+    promptVersion: entry.version,
+    promptTitle: entry.title,
+    promptAgent: entry.agent,
+    promptStage: entry.stage,
+    promptOutputSchema: entry.outputSchema,
+  };
 }
 
 export function summarizePromptRegistry(registry: PromptRegistryEntry[] = PROMPT_REGISTRY): PromptRegistrySummary {

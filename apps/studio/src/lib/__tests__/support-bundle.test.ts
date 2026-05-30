@@ -301,6 +301,7 @@ describe("buildSupportBundle", () => {
     expect(bundle.diagnostic.runtime.alerts.statusLabel).toBe("attention");
     expect(bundle.incidents.aiTelemetry.totalEvents).toBe(2);
     expect(bundle.incidents.aiTelemetry.trendLabel).toBe("insufficient-data");
+    expect(bundle.incidents.aiTelemetry.policyLabel).toBe("insufficient-data");
     expect(bundle.incidents.summary).toContain("incidents");
     expect(bundle.incidents.summary).toContain("external logs");
     expect(bundle.alerts.alertCount).toBe(4);

@@ -19,6 +19,11 @@ describe("TimelineTab", () => {
     expect(source).toContain("Lead Camera");
     expect(source).toContain("Coverage Reach");
     expect(source).toContain("Replay Status");
+    expect(source).toContain("Current Event");
+    expect(source).toContain("No timeline event has been recorded yet.");
+    expect(source).toContain("highRiskEvents");
+    expect(source).toContain("High-risk jumps");
+    expect(source).toContain("No high-risk events detected for this path replay.");
   });
 
   test("surfaces the full quality ladder in the quality view", () => {

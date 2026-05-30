@@ -41,6 +41,9 @@ export type CameraLiveConnectionFusionEvent = {
   authChallengeHeader: string | null;
   authChallengeScheme: "basic" | "digest" | "bearer" | "token" | null;
   authChallengeRealm: string | null;
+  eventSubscriptionUri: string | null;
+  eventSubscriptionReference: string | null;
+  eventSubscriptionExpiresAt: number | null;
   liveFeedUrl: string | null;
   liveFeedLabel: string | null;
   ingestMode: "manual" | "external";

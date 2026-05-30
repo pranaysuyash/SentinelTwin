@@ -65,6 +65,59 @@ describe("camera-metadata-ingest route", () => {
     expect(payload.latestSubmission.records[0].status).toBe("dirty");
   });
 
+  test("archives ONVIF notification envelopes as evidence events and persists history", async () => {
+    const response = await POST(createNextRequest("http://localhost/api/camera-metadata-ingest", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        source: "camera-inspector",
+        ingestMode: "paste",
+        sceneId: "scene-onvif",
+        sceneName: "ONVIF Scene",
+        submittedAt: 1_725_000_006_500,
+        raw: [
+          "<Envelope>",
+          "  <NotificationMessage>",
+          "    <Topic>tns1:VideoSource/MotionAlarm</Topic>",
+          "    <Message PropertyOperation=\"Changed\">",
+          "      <Source>",
+          "        <SimpleItem Name=\"VideoSourceConfigurationToken\" Value=\"cam_front\" />",
+          "      </Source>",
+          "      <Data>",
+          "        <SimpleItem Name=\"IsMotion\" Value=\"true\" />",
+          "      </Data>",
+          "      <UtcTime>2024-03-09T16:00:05.000Z</UtcTime>",
+          "    </Message>",
+          "  </NotificationMessage>",
+          "</Envelope>",
+        ].join("\n"),
+        cameras: [
+          {
+            id: "cam_front",
+            name: "Front Entrance",
+            status: "on",
+            clarity: "good",
+            nightMode: "none",
+          },
+        ],
+      }),
+    }));
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.ok).toBe(true);
+    expect(body.historyCount).toBe(2);
+    expect(body.summary).toContain("Imported 1 ONVIF notification event");
+    expect(body.evidenceEvents).toHaveLength(1);
+    expect(body.evidenceEvents[0].title).toBe("Motion Alarm");
+
+    const history = await GET(createNextRequest("http://localhost/api/camera-metadata-ingest"));
+    const payload = await history.json();
+    expect(payload.historyCount).toBe(2);
+    expect(payload.latestSubmission.evidenceEvents).toHaveLength(1);
+    expect(payload.latestSubmission.evidenceEvents[0].title).toBe("Motion Alarm");
+  });
+
   test("pulls an external camera metadata feed URL through the canonical ingest route", async () => {
     const externalFeedServer = http.createServer((request, response) => {
       request.resume();

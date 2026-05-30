@@ -645,7 +645,7 @@ export function TransformHandles() {
         <HandleSphere position={[center[0], 0.08, center[1]]} color={node.nodeType === "critical_zone" ? "#22c55e" : "#8b5cf6"} onPointerDown={beginDrag("move")} label="Move" />
         {node.polygon.map((point, index) => (
           <HandleSphere
-            key={`${node.id}-${index}`}
+            key={`${node.id}-${point[0].toFixed(1)}-${point[1].toFixed(1)}`}
             position={[point[0], 0.06, point[1]]}
             color={index === 0 ? "#bef264" : "#22c55e"}
             onPointerDown={(event) => {
@@ -669,7 +669,7 @@ export function TransformHandles() {
           ];
           return (
             <HandleSphere
-              key={`insert-${node.id}-${index}`}
+              key={`insert-${node.id}-${point[0].toFixed(1)}-${point[1].toFixed(1)}`}
               position={midpoint}
               color="#38bdf8"
               onPointerDown={beginDrag("polygon_insert", index)}
@@ -703,7 +703,7 @@ export function TransformHandles() {
           ];
           return (
             <HandleSphere
-              key={`insert-${node.id}-${index}`}
+              key={`insert-${node.id}-${point[0].toFixed(1)}-${point[1].toFixed(1)}`}
               position={midpoint}
               color="#38bdf8"
               onPointerDown={beginDrag("path_insert", index)}
@@ -713,7 +713,7 @@ export function TransformHandles() {
         })}
         {points.map((point, index) => (
           <HandleSphere
-            key={`${node.id}-${index}`}
+            key={`${node.id}-${point[0].toFixed(1)}-${point[1].toFixed(1)}`}
             position={[point[0], 0.06, point[1]]}
             color={index === 0 ? "#fde68a" : "#fb923c"}
             onPointerDown={(event) => {

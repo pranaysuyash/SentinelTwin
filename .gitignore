@@ -68,3 +68,6 @@ apps/studio/.workspace-membership-archive/
 
 # TypeScript build info
 *.tsbuildinfo
+.sentineltwin-backend/
+.sentinel-reset-lock
+bin/

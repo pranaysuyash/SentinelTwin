@@ -89,6 +89,15 @@ describe("BottomPanel", () => {
     expect(source).toContain("Policy note");
     expect(source).toContain("max cost");
     expect(source).toContain("max latency");
+    expect(source).toContain("Telemetry Policy");
+    expect(source).toContain("Recent window");
+    expect(source).toContain("Baseline window");
+    expect(source).toContain("Duration threshold");
+    expect(source).toContain("Token threshold");
+    expect(source).toContain("Success-rate threshold");
+    expect(source).toContain("Reset telemetry policy");
+    expect(source).toContain("Policy window");
+    expect(source).toContain("Policy thresholds");
     expect(source).toContain("AI Action Telemetry");
     expect(source).toContain("Latest stage");
     expect(source).toContain("Trend");

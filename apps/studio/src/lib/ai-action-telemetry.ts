@@ -1,5 +1,21 @@
 import type { AiActionTelemetryRecord } from "@/store/studio-store";
 
+export type AiActionTelemetryPolicy = {
+  recentWindowSize: number;
+  baselineWindowSize: number;
+  durationDeltaThresholdMs: number;
+  tokenDeltaThreshold: number;
+  successRateDeltaThreshold: number;
+};
+
+export const DEFAULT_AI_ACTION_TELEMETRY_POLICY: AiActionTelemetryPolicy = {
+  recentWindowSize: 5,
+  baselineWindowSize: 10,
+  durationDeltaThresholdMs: 25,
+  tokenDeltaThreshold: 150,
+  successRateDeltaThreshold: 0.05,
+};
+
 export type AiActionTelemetryWindowSummary = {
   count: number;
   averageDurationMs: number;
@@ -14,6 +30,7 @@ export type AiActionTelemetrySummary = {
   errorCount: number;
   averageDurationMs: number;
   averageTokens: number;
+  policy: AiActionTelemetryPolicy;
   recentWindow: AiActionTelemetryWindowSummary | null;
   previousWindow: AiActionTelemetryWindowSummary | null;
   longHorizonWindow: AiActionTelemetryWindowSummary | null;
@@ -23,6 +40,49 @@ export type AiActionTelemetrySummary = {
   policyNote: string;
   stageCounts: Record<AiActionTelemetryRecord["stage"], number>;
 };
+
+function normalizePositiveInteger(value: number, fallback: number, minimum = 1): number {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.max(minimum, Math.round(value));
+}
+
+export function normalizeAiActionTelemetryPolicy(
+  policy: Partial<AiActionTelemetryPolicy> | null | undefined,
+): AiActionTelemetryPolicy {
+  const recentWindowSize = normalizePositiveInteger(policy?.recentWindowSize ?? DEFAULT_AI_ACTION_TELEMETRY_POLICY.recentWindowSize, DEFAULT_AI_ACTION_TELEMETRY_POLICY.recentWindowSize);
+  const baselineWindowSize = Math.max(
+    recentWindowSize,
+    normalizePositiveInteger(policy?.baselineWindowSize ?? DEFAULT_AI_ACTION_TELEMETRY_POLICY.baselineWindowSize, DEFAULT_AI_ACTION_TELEMETRY_POLICY.baselineWindowSize),
+  );
+  const durationDeltaThresholdMs = Math.max(
+    0,
+    Math.round(Number.isFinite(policy?.durationDeltaThresholdMs ?? Number.NaN)
+      ? (policy?.durationDeltaThresholdMs ?? DEFAULT_AI_ACTION_TELEMETRY_POLICY.durationDeltaThresholdMs)
+      : DEFAULT_AI_ACTION_TELEMETRY_POLICY.durationDeltaThresholdMs),
+  );
+  const tokenDeltaThreshold = Math.max(
+    0,
+    Math.round(Number.isFinite(policy?.tokenDeltaThreshold ?? Number.NaN)
+      ? (policy?.tokenDeltaThreshold ?? DEFAULT_AI_ACTION_TELEMETRY_POLICY.tokenDeltaThreshold)
+      : DEFAULT_AI_ACTION_TELEMETRY_POLICY.tokenDeltaThreshold),
+  );
+  const successRateDeltaThreshold = Math.min(
+    1,
+    Math.max(
+      0,
+      Number.isFinite(policy?.successRateDeltaThreshold ?? Number.NaN)
+        ? (policy?.successRateDeltaThreshold ?? DEFAULT_AI_ACTION_TELEMETRY_POLICY.successRateDeltaThreshold)
+        : DEFAULT_AI_ACTION_TELEMETRY_POLICY.successRateDeltaThreshold,
+    ),
+  );
+  return {
+    recentWindowSize,
+    baselineWindowSize,
+    durationDeltaThresholdMs,
+    tokenDeltaThreshold,
+    successRateDeltaThreshold,
+  };
+}
 
 function summarizeWindow(records: AiActionTelemetryRecord[]): AiActionTelemetryWindowSummary | null {
   if (records.length === 0) return null;
@@ -39,7 +99,11 @@ function summarizeWindow(records: AiActionTelemetryRecord[]): AiActionTelemetryW
   };
 }
 
-export function summarizeAiActionTelemetry(records: AiActionTelemetryRecord[]): AiActionTelemetrySummary {
+export function summarizeAiActionTelemetry(
+  records: AiActionTelemetryRecord[],
+  policyInput: Partial<AiActionTelemetryPolicy> | null | undefined = DEFAULT_AI_ACTION_TELEMETRY_POLICY,
+): AiActionTelemetrySummary {
+  const policy = normalizeAiActionTelemetryPolicy(policyInput);
   const ordered = [...records].sort((a, b) => b.timestamp - a.timestamp);
   const totalEvents = ordered.length;
   const successCount = ordered.filter((record) => record.status === "success").length;
@@ -50,9 +114,9 @@ export function summarizeAiActionTelemetry(records: AiActionTelemetryRecord[]): 
   const averageTokens = totalEvents > 0
     ? Math.round(ordered.reduce((sum, record) => sum + record.estimatedTotalTokens, 0) / totalEvents)
     : 0;
-  const recentWindow = summarizeWindow(ordered.slice(0, 5));
-  const previousWindow = summarizeWindow(ordered.slice(5, 10));
-  const longHorizonWindow = summarizeWindow(ordered.slice(5));
+  const recentWindow = summarizeWindow(ordered.slice(0, policy.recentWindowSize));
+  const previousWindow = summarizeWindow(ordered.slice(policy.recentWindowSize, policy.recentWindowSize * 2));
+  const longHorizonWindow = summarizeWindow(ordered.slice(policy.recentWindowSize, policy.recentWindowSize + policy.baselineWindowSize));
 
   let trendLabel: AiActionTelemetrySummary["trendLabel"] = "insufficient-data";
   let trendNote = "Need at least two windows to compare recent telemetry.";
@@ -79,9 +143,9 @@ export function summarizeAiActionTelemetry(records: AiActionTelemetryRecord[]): 
     const tokenDelta = recentWindow.averageTokens - longHorizonWindow.averageTokens;
     const successRateDelta = (recentWindow.successCount / recentWindow.count) - (longHorizonWindow.successCount / longHorizonWindow.count);
     const regressionSignals = [
-      durationDelta > 25,
-      tokenDelta > 150,
-      successRateDelta < -0.05,
+      durationDelta > policy.durationDeltaThresholdMs,
+      tokenDelta > policy.tokenDeltaThreshold,
+      successRateDelta < -policy.successRateDeltaThreshold,
       recentWindow.errorCount > longHorizonWindow.errorCount,
     ].filter(Boolean).length;
     if (regressionSignals >= 2) {
@@ -114,6 +178,7 @@ export function summarizeAiActionTelemetry(records: AiActionTelemetryRecord[]): 
     errorCount,
     averageDurationMs,
     averageTokens,
+    policy,
     recentWindow,
     previousWindow,
     longHorizonWindow,

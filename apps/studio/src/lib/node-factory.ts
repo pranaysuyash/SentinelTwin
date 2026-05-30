@@ -12,6 +12,7 @@ import type {
   EntryPointNode,
   WindowNode,
 } from "@/schema/security-scene";
+import { getDefaultQualityForTarget } from "@/lib/target-quality-requirements";
 
 let _camCounter = 0;
 let _obsCounter = 0;
@@ -266,7 +267,7 @@ export function createCriticalZoneNode(
     polygon,
     heightM: 2,
     priority: "high",
-    requiredQuality: "recognition",
+    requiredQuality: getDefaultQualityForTarget(targetType),
     targetType,
     nightRequired: true,
     redundancyRequired: false,

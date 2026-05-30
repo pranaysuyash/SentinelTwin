@@ -325,6 +325,7 @@ export function CameraViewMode() {
             mode={feedMode}
             flags={flags}
             ppm={scene.assumptions.pixelsPerMeter}
+            simulationAssumptions={scene.assumptions}
             targetType={selectedCriticalZone?.targetType}
             sensorFusion={{
               totalCount: sensorFusion.totalCount,

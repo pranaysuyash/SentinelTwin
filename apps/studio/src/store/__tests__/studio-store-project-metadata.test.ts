@@ -3,6 +3,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { describeAiProviderGovernance, normalizeAiProviderSelection } from "@/agents/provider-selection";
 import type { ModelEvalSuiteResult } from "@/agents/model-eval";
 import { buildPromptRegistrySnapshot } from "@/agents/prompt-registry";
+import { DEFAULT_AI_ACTION_TELEMETRY_POLICY } from "@/lib/ai-action-telemetry";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 import { createSmallRetailShopScene } from "@/demo-scenes/small-retail-shop";
 import { useStudioStore } from "@/store/studio-store";
@@ -44,7 +45,15 @@ afterEach(() => {
   Object.defineProperty(globalThis, "window", { value: originalWindow, configurable: true });
   Object.defineProperty(globalThis, "localStorage", { value: originalLocalStorage, configurable: true });
   useStudioStore.getState().setScene(createSmallRetailShopScene());
-  useStudioStore.setState({ savedProjects: [], savedScenes: [], modelEvalHistory: [], promptRegistryHistory: [], aiProviderGovernanceHistory: [], supportIngestHistory: [] });
+  useStudioStore.setState({
+    savedProjects: [],
+    savedScenes: [],
+    modelEvalHistory: [],
+    promptRegistryHistory: [],
+    aiProviderGovernanceHistory: [],
+    supportIngestHistory: [],
+    aiTelemetryPolicy: { ...DEFAULT_AI_ACTION_TELEMETRY_POLICY },
+  });
 });
 
 describe("studio store project metadata", () => {
@@ -276,6 +285,33 @@ describe("studio store project metadata", () => {
     expect(history[0]?.localOnlyMode).toBe(true);
     expect(history[1]?.source).toBe("selection");
     expect(storage.getItem("sentineltwin_ai_provider_governance_history_v1")).toContain("Local-only policy enabled.");
+  });
+
+  test("persists ai telemetry policy settings for operator tuning", () => {
+    const storage = installStorage();
+    useStudioStore.setState({ aiTelemetryPolicy: { ...DEFAULT_AI_ACTION_TELEMETRY_POLICY } });
+
+    useStudioStore.getState().setAiTelemetryPolicy({
+      recentWindowSize: 3,
+      baselineWindowSize: 7,
+      durationDeltaThresholdMs: 40,
+      tokenDeltaThreshold: 200,
+      successRateDeltaThreshold: 0.08,
+    });
+
+    let policy = useStudioStore.getState().aiTelemetryPolicy;
+    expect(policy.recentWindowSize).toBe(3);
+    expect(policy.baselineWindowSize).toBe(7);
+    expect(policy.durationDeltaThresholdMs).toBe(40);
+    expect(policy.tokenDeltaThreshold).toBe(200);
+    expect(policy.successRateDeltaThreshold).toBeCloseTo(0.08, 2);
+    expect(storage.getItem("sentineltwin_ai_action_telemetry_policy_v1")).toContain("\"recentWindowSize\":3");
+
+    useStudioStore.getState().resetAiTelemetryPolicy();
+
+    policy = useStudioStore.getState().aiTelemetryPolicy;
+    expect(policy).toEqual(DEFAULT_AI_ACTION_TELEMETRY_POLICY);
+    expect(storage.getItem("sentineltwin_ai_action_telemetry_policy_v1")).toContain("\"baselineWindowSize\":10");
   });
 
   test("persists support ingest history for routed support handoffs", () => {

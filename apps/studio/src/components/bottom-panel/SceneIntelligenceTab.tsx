@@ -37,7 +37,7 @@ const SOURCE_STYLES: Record<string, { label: string; className: string; variant:
   ai: { label: "AI", className: "border-l-[#60a5fa]", variant: "blue" },
   import: { label: "Import", className: "border-l-[#94a3b8]", variant: "gray" },
   preset: { label: "Preset", className: "border-l-[#a78bfa]", variant: "gray" },
-  demo: { label: "Demo", className: "border-l-[#64748b]", variant: "gray" },
+  demo: { label: "Reference", className: "border-l-[#64748b]", variant: "gray" },
   simulation: { label: "Simulation", className: "border-l-[#22c55e]", variant: "green" },
 };
 

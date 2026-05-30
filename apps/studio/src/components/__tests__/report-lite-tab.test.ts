@@ -29,6 +29,10 @@ describe("ReportLiteTab", () => {
     expect(source).toContain("reportAudience");
     expect(source).toContain("Visibility");
     expect(source).toContain("reportVisibility");
+    expect(source).toContain("Audience Policy");
+    expect(source).toContain("disclosureSummary");
+    expect(source).toContain("Visible Sections");
+    expect(source).toContain("Withheld Sections");
     expect(source).toContain("Latest Run");
     expect(source).toContain("Truth Ladder");
     expect(source).toContain("Best Zone Quality");

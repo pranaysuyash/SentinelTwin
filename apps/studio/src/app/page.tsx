@@ -265,17 +265,17 @@ function StudioPageContent() {
     setAiDraftJsonError(null);
   };
 
-  const openDemoWorkspace = () => {
-    setActiveWorkflow("demo");
+  const openReferenceWorkspace = () => {
+    setActiveWorkflow("reference");
     setActiveWorkflowStep(0);
-    const demoRecord =
+    const referenceRecord =
       savedProjects.find((project) => project.scene.source === "demo" && project.scene.name.toLowerCase().includes("open studio"))
       ?? savedProjects.find((project) => project.scene.source === "demo" && project.folder === "Featured")
       ?? savedProjects.find((project) => project.scene.source === "demo");
 
-    if (demoRecord) {
-      setScene(demoRecord.scene);
-      setLaunchNotice(`Loaded reference scene: ${demoRecord.scene.name}`);
+    if (referenceRecord) {
+      setScene(referenceRecord.scene);
+      setLaunchNotice(`Loaded reference scene: ${referenceRecord.scene.name}`);
       setDemoMode(false);
       setDemoStep(0);
       openCoverageWorkspace();
@@ -630,7 +630,7 @@ function StudioPageContent() {
                 openGuidedScanAssistant();
               }}
               onAiDraft={startAiDraftFlow}
-              onOpenDemoScene={openDemoWorkspace}
+      onOpenDemoScene={openReferenceWorkspace}
               onOpenReport={openReport}
               onOpenScene={openScene}
               onUpdateProjectMetadata={updateSavedSceneMetadata}
@@ -652,7 +652,7 @@ function StudioPageContent() {
         onOpenCoverageWorkspace={openCoverageWorkspace}
         onOpenDemoScene={() => {
           setShowProjectLauncher(false);
-          openDemoWorkspace();
+          openReferenceWorkspace();
         }}
         onCreateScene={() => {
           setShowProjectLauncher(false);
@@ -772,7 +772,7 @@ function StudioPageContent() {
               }}
               onOpenDemo={() => {
                 setShowSiteIntakeHub(false);
-                openDemoWorkspace();
+                openReferenceWorkspace();
               }}
               onStartScan={() => {
                 setShowSiteIntakeHub(false);

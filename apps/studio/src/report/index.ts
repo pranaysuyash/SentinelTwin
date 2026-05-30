@@ -6,6 +6,7 @@ import { QUALITY_ORDER } from "@/simulation/dori";
 import { computeCoverageEntropy } from "@/simulation/coverage-entropy";
 import { computeCoveragePostureVariation } from "@/simulation/coverage-posture";
 import { computeCoverageUncertainty } from "@/simulation/coverage-uncertainty";
+import { getTargetRequirementInfo, type TargetType } from "@/lib/target-quality-requirements";
 import { buildRedundancyMatrixReport, type RedundancyMatrixReport } from "./redundancy-matrix";
 
 type ReportScene = SecurityScene;
@@ -32,6 +33,17 @@ export type ReportSectionKey =
 
 function qualityRank(quality: ReportCameraQuality) {
   return QUALITY_ORDER.indexOf(quality as typeof QUALITY_ORDER[number]);
+}
+
+function buildZoneRequirementFields(targetType: TargetType | null | undefined) {
+  const resolvedTargetType = targetType ?? "person_detection";
+  const requirement = getTargetRequirementInfo(resolvedTargetType);
+  return {
+    targetType: resolvedTargetType,
+    targetRequirementQuality: requirement.defaultRequiredQuality,
+    targetRequirementPpmThreshold: requirement.ppmThreshold,
+    targetRequirementRationale: requirement.rationale,
+  };
 }
 
 interface ReportAudienceProfile {
@@ -301,7 +313,11 @@ export interface ReportData {
   };
   zones: {
     label: string;
+    targetType: TargetType;
     requiredQuality: string;
+    targetRequirementQuality: string;
+    targetRequirementPpmThreshold: "high" | "medium" | "low";
+    targetRequirementRationale: string;
     actualQuality: string;
     status: "pass" | "fail" | "warning";
     coveringCameras: string[];
@@ -556,6 +572,7 @@ export function buildReportData(
   );
 
   const cameraMap = new Map(scene.cameras.map((camera) => [camera.id, camera]));
+  const zoneMap = new Map(scene.criticalZones.map((zone) => [zone.id, zone]));
 
   return {
     title: options?.title ?? audienceProfile.defaultTitle,
@@ -593,6 +610,7 @@ export function buildReportData(
     },
     zones: result.criticalZoneResults.map((z) => ({
       label: z.label,
+      ...buildZoneRequirementFields(zoneMap.get(z.zoneId)?.targetType),
       requiredQuality: z.requiredQuality,
       actualQuality: z.actualQuality,
       status: z.status as "pass" | "fail" | "warning",
@@ -902,6 +920,7 @@ function buildCompareReportSnapshot(
   }
 
   const cameraMap = new Map(scene.cameras.map((camera) => [camera.id, camera]));
+  const zoneMap = new Map(scene.criticalZones.map((zone) => [zone.id, zone]));
 
   return {
     title: audienceProfile.defaultTitle,
@@ -939,6 +958,7 @@ function buildCompareReportSnapshot(
     },
     zones: result.criticalZoneResults.map((z: ReportCriticalZoneResult) => ({
       label: z.label,
+      ...buildZoneRequirementFields(zoneMap.get(z.zoneId)?.targetType),
       requiredQuality: z.requiredQuality,
       actualQuality: z.actualQuality,
       status: z.status as "pass" | "fail" | "warning",
@@ -1067,6 +1087,9 @@ export function exportAsHtml(report: ReportData): string {
     <h1>${escapeHtml(report.title)}</h1>
     <div class="subtitle">${escapeHtml(report.siteName)}</div>
     <div class="meta">${escapeHtml(report.audienceLabel)} audience · ${escapeHtml(report.audienceFraming)}</div>
+    <div class="meta">Audience Policy: ${escapeHtml(report.audiencePolicy.disclosureSummary)}</div>
+    <div class="meta">Visible Sections: ${escapeHtml(report.audiencePolicy.visibleSections.join(", "))}</div>
+    <div class="meta">Withheld Sections: ${escapeHtml(report.audiencePolicy.withheldSections.length > 0 ? report.audiencePolicy.withheldSections.join(", ") : "none")}</div>
     <div class="meta">${escapeHtml(report.visibilityLabel)} visibility · ${escapeHtml(report.visibilityFraming)}</div>
     <div class="meta">
       Generated: ${new Date(report.generatedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
@@ -1218,11 +1241,12 @@ export function exportAsHtml(report: ReportData): string {
   <h2>Zone Analysis</h2>
   ${report.zones.length > 0 ? `
   <table>
-    <thead><tr><th>Zone</th><th>Required</th><th>Actual</th><th>Status</th><th>Coverage</th><th>Cameras</th></tr></thead>
+    <thead><tr><th>Zone</th><th>Target</th><th>Required</th><th>Actual</th><th>Status</th><th>Coverage</th><th>Cameras</th></tr></thead>
     <tbody>
       ${report.zones.map((z) => `
         <tr>
           <td>${escapeHtml(z.label)}</td>
+          <td>${escapeHtml(`${z.targetType.replace(/_/g, " ")} · default ${z.targetRequirementQuality} (${z.targetRequirementPpmThreshold})`)}</td>
           <td>${z.requiredQuality}</td>
           <td>${z.actualQuality}</td>
           <td class="${z.status}">${z.status.toUpperCase()}</td>
@@ -1596,7 +1620,7 @@ export function exportAsText(report: ReportData): string {
           "ZONE ANALYSIS",
           `${"-".repeat(30)}`,
           ...report.zones.map(
-            (z) => `  ${z.label.padEnd(20)} ${z.requiredQuality.padEnd(12)} ${z.actualQuality.padEnd(12)} ${z.status}`,
+            (z) => `  ${z.label.padEnd(20)} ${`${z.targetType.replace(/_/g, " ")} / ${z.targetRequirementQuality}`.padEnd(24)} ${z.requiredQuality.padEnd(12)} ${z.actualQuality.padEnd(12)} ${z.status}`,
           ),
           "",
         ]
@@ -1772,6 +1796,9 @@ export function exportCompareAsHtml(
   <h1>Before/After Comparison</h1>
   <p>${escapeHtml(compare.before.siteName)} &middot; ${new Date().toLocaleDateString()}</p>
   <p><strong>Audience:</strong> ${escapeHtml(compare.before.audienceLabel)} · ${escapeHtml(compare.before.audienceFraming)}</p>
+  <p><strong>Audience Policy:</strong> ${escapeHtml(compare.before.audiencePolicy.disclosureSummary)}</p>
+  <p><strong>Visible Sections:</strong> ${escapeHtml(compare.before.audiencePolicy.visibleSections.join(", "))}</p>
+  <p><strong>Withheld Sections:</strong> ${escapeHtml(compare.before.audiencePolicy.withheldSections.length > 0 ? compare.before.audiencePolicy.withheldSections.join(", ") : "none")}</p>
   <p><strong>Visibility:</strong> ${escapeHtml(compare.before.visibilityLabel)} · ${escapeHtml(compare.before.visibilityFraming)}</p>
 
   <h2>Delta Summary</h2>
@@ -1942,6 +1969,9 @@ export function exportCompareAsMarkdown(compare: CompareReportData): string {
     `**Site:** ${compare.before.siteName}`,
     `**Audience:** ${compare.before.audienceLabel}`,
     `**Framing:** ${compare.before.audienceFraming}`,
+    `**Audience Policy:** ${compare.before.audiencePolicy.disclosureSummary}`,
+    `**Visible Sections:** ${compare.before.audiencePolicy.visibleSections.join(", ")}`,
+    `**Withheld Sections:** ${compare.before.audiencePolicy.withheldSections.length > 0 ? compare.before.audiencePolicy.withheldSections.join(", ") : "none"}`,
     `**Visibility:** ${compare.before.visibilityLabel}`,
     `**Visibility Framing:** ${compare.before.visibilityFraming}`,
     "",

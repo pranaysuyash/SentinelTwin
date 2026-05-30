@@ -4486,6 +4486,15 @@ Fixed the `CameraLiveConnectionEventRecord` and `WorkspaceApprovalRouteSummary` 
 - Rationale: ONVIF metadata should not require a parallel route or a mock bridge when the existing ingest path already owns camera metadata, history persistence, and scene-matched evidence updates. Reusing that path keeps camera metadata, ONVIF notification evidence, and inspector history aligned around one canonical archive model.
 - Consequence: ONVIF notification envelopes now land as first-class evidence events through the camera metadata ingest path, while the broader ONVIF Profile M richness remains a future extension of the same canonical ingest boundary rather than a separate system.
 
+## D-271 - AI telemetry policy should be persisted and editable alongside the live longer-horizon comparison
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: The AI telemetry control plane already compared recent runs against a longer-horizon baseline, but the threshold values themselves still lived as hard-coded constants rather than a persisted operator control.
+- Decision: Persist the AI telemetry policy in the store and expose it as an editable Debug-panel control that drives the telemetry summarizer.
+- Rationale: Operators need to tune the telemetry windows and regression thresholds without changing code, and the policy should travel with the rest of the AI governance state so telemetry comparisons stay auditable over time.
+- Consequence: The telemetry control plane now carries a persisted recent/baseline window policy plus duration, token, and success-rate thresholds, and future work can expand the single policy into stage-specific profiles or broader dashboard controls without reworking the storage shape.
+
 ## D-265: Browser-native share surfaces should reuse the same link builders with copy fallback
 
 **Context:** Scene Intelligence, compare, and report surfaces already had canonical deep-link builders for checkpoints, archives, and compare handoffs, but they still depended on copy/open buttons only.

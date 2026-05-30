@@ -68,6 +68,18 @@ function formatMultiplier(value: number | undefined): string {
   return `${(value * 100).toFixed(0)}%`;
 }
 
+function parseTelemetryPolicyInteger(value: string, fallback: number, minimum = 1): number {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(minimum, parsed);
+}
+
+function parseTelemetryPolicyFloat(value: string, fallback: number, minimum = 0, maximum = 1): number {
+  const parsed = Number.parseFloat(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(maximum, Math.max(minimum, parsed));
+}
+
 function Section({
   title,
   icon,
@@ -126,8 +138,11 @@ export function DebugTab() {
   const simulationDirty = useStudioStore((s) => s.simulationDirty);
   const simulationRunning = useStudioStore((s) => s.simulationRunning);
   const localOnlyMode = useStudioStore((s) => s.localOnlyMode);
+  const aiTelemetryPolicy = useStudioStore((s) => s.aiTelemetryPolicy);
   const aiProviderSelection = useStudioStore((s) => s.aiProviderSelection);
   const setAiProviderSelection = useStudioStore((s) => s.setAiProviderSelection);
+  const setAiTelemetryPolicy = useStudioStore((s) => s.setAiTelemetryPolicy);
+  const resetAiTelemetryPolicy = useStudioStore((s) => s.resetAiTelemetryPolicy);
   const launchNotice = useStudioStore((s) => s.launchNotice);
   const heatmapMode = useStudioStore((s) => s.heatmapMode);
   const heatmapHover = useStudioStore((s) => s.heatmapHover);
@@ -219,7 +234,7 @@ export function DebugTab() {
   const providerTelemetry = describeAiProviderTelemetry(aiProviderSelection, localOnlyMode);
   const promptRegistrySummary = summarizePromptRegistry();
   const aiActionTelemetry = useStudioStore((s) => s.aiActionTelemetry);
-  const aiActionTelemetrySummary = useMemo(() => summarizeAiActionTelemetry(aiActionTelemetry), [aiActionTelemetry]);
+  const aiActionTelemetrySummary = useMemo(() => summarizeAiActionTelemetry(aiActionTelemetry, aiTelemetryPolicy), [aiActionTelemetry, aiTelemetryPolicy]);
 
   const refreshSupportDeliveryArchive = async () => {
     setRemoteSupportDeliveryHistoryLoading(true);
@@ -2389,10 +2404,96 @@ export function DebugTab() {
             </div>
           </Section>
 
+          <Section title="Telemetry Policy" icon={<TimerReset className="h-3 w-3 text-cyan-400" />}>
+            <div className="space-y-1.5 text-[9px] text-[#8b96ab]">
+              <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
+                Tune the AI telemetry windows and regression thresholds that drive the short-window trend and longer-horizon policy summary below.
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Recent window</div>
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    inputMode="numeric"
+                    value={aiTelemetryPolicy.recentWindowSize}
+                    onChange={(event) => setAiTelemetryPolicy({ recentWindowSize: parseTelemetryPolicyInteger(event.target.value, aiTelemetryPolicy.recentWindowSize, 1) })}
+                    className="mt-1 w-full rounded border border-[#2a3245] bg-[#0b0f17] px-2 py-1 text-[10px] text-[#edf2ff] outline-none transition-colors focus:border-cyan-500/60"
+                  />
+                </div>
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Baseline window</div>
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    inputMode="numeric"
+                    value={aiTelemetryPolicy.baselineWindowSize}
+                    onChange={(event) => setAiTelemetryPolicy({ baselineWindowSize: parseTelemetryPolicyInteger(event.target.value, aiTelemetryPolicy.baselineWindowSize, 1) })}
+                    className="mt-1 w-full rounded border border-[#2a3245] bg-[#0b0f17] px-2 py-1 text-[10px] text-[#edf2ff] outline-none transition-colors focus:border-cyan-500/60"
+                  />
+                </div>
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Duration threshold</div>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    inputMode="numeric"
+                    value={aiTelemetryPolicy.durationDeltaThresholdMs}
+                    onChange={(event) => setAiTelemetryPolicy({ durationDeltaThresholdMs: parseTelemetryPolicyInteger(event.target.value, aiTelemetryPolicy.durationDeltaThresholdMs, 0) })}
+                    className="mt-1 w-full rounded border border-[#2a3245] bg-[#0b0f17] px-2 py-1 text-[10px] text-[#edf2ff] outline-none transition-colors focus:border-cyan-500/60"
+                  />
+                </div>
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Token threshold</div>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    inputMode="numeric"
+                    value={aiTelemetryPolicy.tokenDeltaThreshold}
+                    onChange={(event) => setAiTelemetryPolicy({ tokenDeltaThreshold: parseTelemetryPolicyInteger(event.target.value, aiTelemetryPolicy.tokenDeltaThreshold, 0) })}
+                    className="mt-1 w-full rounded border border-[#2a3245] bg-[#0b0f17] px-2 py-1 text-[10px] text-[#edf2ff] outline-none transition-colors focus:border-cyan-500/60"
+                  />
+                </div>
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5 col-span-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Success-rate threshold</div>
+                      <div className="mt-0.5 text-[9px] text-[#b3bfd6]">Shown as a fraction in storage, but displayed here as {formatMultiplier(aiTelemetryPolicy.successRateDeltaThreshold)}.</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={resetAiTelemetryPolicy}
+                      className="rounded-md border border-[#2a3245] bg-[#0b0f17] px-2 py-1 text-[9px] font-semibold text-[#d2d9e8] transition-colors hover:border-cyan-500/50 hover:text-white"
+                    >
+                      Reset telemetry policy
+                    </button>
+                  </div>
+                  <input
+                    type="number"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    inputMode="decimal"
+                    value={aiTelemetryPolicy.successRateDeltaThreshold}
+                    onChange={(event) => setAiTelemetryPolicy({ successRateDeltaThreshold: parseTelemetryPolicyFloat(event.target.value, aiTelemetryPolicy.successRateDeltaThreshold, 0, 1) })}
+                    className="mt-1 w-full rounded border border-[#2a3245] bg-[#0b0f17] px-2 py-1 text-[10px] text-[#edf2ff] outline-none transition-colors focus:border-cyan-500/60"
+                  />
+                </div>
+              </div>
+              <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1 text-[9px] text-[#b3bfd6]">
+                Recent window: {aiTelemetryPolicy.recentWindowSize} · Baseline window: {aiTelemetryPolicy.baselineWindowSize} · Duration delta: {aiTelemetryPolicy.durationDeltaThresholdMs} ms · Token delta: {aiTelemetryPolicy.tokenDeltaThreshold} tokens · Success delta: {formatMultiplier(aiTelemetryPolicy.successRateDeltaThreshold)}
+              </div>
+            </div>
+          </Section>
+
           <Section title="AI Action Telemetry" icon={<TimerReset className="h-3 w-3 text-cyan-400" />}>
             <div className="space-y-1.5 text-[9px] text-[#8b96ab]">
               <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
-                Recent measured AI actions are recorded with wall-clock duration and estimated token usage so point-of-use telemetry can show actual latency instead of only policy classes.
+                Recent measured AI actions are recorded with wall-clock duration and estimated token usage so point-of-use telemetry can show actual latency instead of only policy classes. The summary below compares those runs against the editable telemetry policy above.
               </div>
               <div className="grid grid-cols-4 gap-1.5">
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
@@ -2412,6 +2513,20 @@ export function DebugTab() {
                 <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
                   <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Policy</div>
                   <div className="mt-0.5 font-semibold text-[#d2d9e8]">{aiActionTelemetrySummary.policyLabel}</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Policy window</div>
+                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">
+                    {aiActionTelemetrySummary.policy.recentWindowSize} recent · {aiActionTelemetrySummary.policy.baselineWindowSize} baseline
+                  </div>
+                </div>
+                <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5">
+                  <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Policy thresholds</div>
+                  <div className="mt-0.5 font-semibold text-[#d2d9e8]">
+                    {aiActionTelemetrySummary.policy.durationDeltaThresholdMs} ms · {aiActionTelemetrySummary.policy.tokenDeltaThreshold} tokens · {formatMultiplier(aiActionTelemetrySummary.policy.successRateDeltaThreshold)}
+                  </div>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-1.5">

@@ -8,6 +8,7 @@ import { qualityToScore } from "@/simulation/dori";
 import { computeCoverageEntropy } from "@/simulation/coverage-entropy";
 import { truthLabelDetail } from "@/lib/truth-labels";
 import { QUALITY_COLOR } from "@/lib/quality-display";
+import { getTargetRequirementInfo } from "@/lib/target-quality-requirements";
 
 function MetricCard({ label, children, className = "" }: {
   label: string; children: React.ReactNode; className?: string;
@@ -44,6 +45,7 @@ export function MetricsTab() {
   const snapshots = useStudioStore((s) => s.snapshots);
   const selectedNodeId = useStudioStore((s) => s.selectedNodeId);
   const selectedCriticalZone = scene.criticalZones.find((zone) => zone.id === selectedNodeId) ?? null;
+  const selectedTargetRequirement = selectedCriticalZone ? getTargetRequirementInfo(selectedCriticalZone.targetType) : null;
 
   if (!result) {
     return (
@@ -247,10 +249,20 @@ export function MetricsTab() {
             sublabel={qualityLabel}
           />
           {selectedCriticalZone ? (
-            <div className="mt-1 text-[9px] text-[#68738a]">
-              Target: <span className="text-[#c0c8da] font-semibold">
-                {selectedCriticalZone.requiredQuality.toUpperCase()}
-              </span>
+            <div className="mt-1 space-y-0.5 text-[9px] text-[#68738a]">
+              <div>
+                Target: <span className="font-semibold text-[#c0c8da]">
+                  {selectedCriticalZone.requiredQuality.toUpperCase()}
+                </span>
+                {selectedTargetRequirement ? (
+                  <span className="text-[#4a5568]"> · default {selectedTargetRequirement.defaultRequiredQuality} for {selectedCriticalZone.targetType.replace(/_/g, " ")}</span>
+                ) : null}
+              </div>
+              {selectedTargetRequirement ? (
+                <div className="text-[#5a6a88]">
+                  Threshold: {selectedTargetRequirement.ppmThreshold} · {selectedTargetRequirement.rationale}
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="mt-1 text-[9px] text-[#68738a]">

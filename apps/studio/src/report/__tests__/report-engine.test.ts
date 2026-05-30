@@ -87,7 +87,7 @@ describe("report engine", () => {
     expect(report.meetsModeledZoneRequirements).toBeDefined();
     expect(report.meetsModeledZoneRequirements).toBe(report.codeCompliant);
     expect(report.standardsRef).toContain("IEC 62676");
-    expect(report.provenance.sceneSourceLabel).toBe("Demo Scene");
+    expect(report.provenance.sceneSourceLabel).toBe("Reference Scene");
     expect(report.provenance.nodeCount).toBeGreaterThan(0);
     expect(report.evidenceTrail.changeLogEntryCount).toBe(scene.changeLog.length);
     expect(report.evidenceTrail.evidenceEntryCount).toBeGreaterThanOrEqual(0);
@@ -137,6 +137,10 @@ describe("report engine", () => {
 
     expect(report.zones.length).toBe(result.criticalZoneResults.length);
     for (const zone of report.zones) {
+      expect(zone.targetType).toBeDefined();
+      expect(zone.targetRequirementQuality).toBeDefined();
+      expect(["high", "medium", "low"]).toContain(zone.targetRequirementPpmThreshold);
+      expect(zone.targetRequirementRationale.length).toBeGreaterThan(10);
       expect(["pass", "fail", "warning"]).toContain(zone.status);
       expect(zone.coveragePct).toBeGreaterThanOrEqual(0);
       expect(Array.isArray(zone.coveringCameras)).toBe(true);
@@ -222,6 +226,20 @@ describe("report engine", () => {
     expect(report.audience).toBe("auditor");
     expect(report.audienceLabel).toBe("Auditor");
     expect(report.title).toBe("Security Audit Evidence Report");
+    expect(report.audiencePolicy.disclosureLevel).toBe("evidence_first");
+    expect(report.audiencePolicy.visibleSections).toContain("operational_evidence");
+  });
+
+  longTest("buildReportData assigns distinct audience policies", () => {
+    const operatorReport = buildReportData(scene, result, { audience: "operator" });
+    const privacyReport = buildReportData(scene, result, { audience: "privacy_reviewer" });
+
+    expect(operatorReport.audiencePolicy.disclosureLevel).toBe("full");
+    expect(operatorReport.audiencePolicy.withheldSections).toHaveLength(0);
+    expect(privacyReport.audiencePolicy.disclosureLevel).toBe("privacy_minimized");
+    expect(privacyReport.audiencePolicy.visibleSections).toContain("privacy_masking");
+    expect(privacyReport.audiencePolicy.withheldSections).toContain("operational_evidence");
+    expect(operatorReport.audiencePolicy.disclosureSummary).not.toBe(privacyReport.audiencePolicy.disclosureSummary);
   });
 
   longTest("applyReportVisibility redacts shared and privacy-safe exports", () => {
@@ -260,7 +278,7 @@ describe("report engine", () => {
     expect(shared.evidenceTrail.recentEntries[0]?.confidence).toBe("withheld");
     expect(privacySafe.visibility).toBe("privacy_safe");
     expect(privacySafe.provenance.sourceNotes).toHaveLength(0);
-    expect(privacySafe.evidenceTrail.recentEntries[0]?.details).toBe("Redacted for privacy-safe export.");
+    expect(privacySafe.evidenceTrail.recentEntries).toHaveLength(0);
   });
 
   testWithTimeout("buildReportData extracts an operational evidence trail", { timeout: 20000 }, () => {
@@ -353,6 +371,18 @@ describe("exportAsHtml", () => {
     }));
     expect(html).toContain("Insurer audience");
     expect(html).toContain("Risk, resilience, and recovery framing");
+  });
+
+  longTest("includes audience policy", () => {
+    const html = exportAsHtml(makeReport({
+      audience: "privacy_reviewer",
+      audienceLabel: "Privacy Reviewer",
+      audienceFraming: "Visibility, retention, and overcollection framing for privacy review.",
+      title: "Privacy Review Brief",
+    }));
+    expect(html).toContain("Audience Policy");
+    expect(html).toContain("Visible Sections");
+    expect(html).toContain("Withheld Sections");
   });
 
   longTest("includes provenance section", () => {
@@ -614,6 +644,19 @@ describe("exportAsMarkdown", () => {
     expect(md).toContain("Visibility, retention, and overcollection framing");
   });
 
+  longTest("includes audience policy", () => {
+    const md = exportAsMarkdown({
+      ...baseReport,
+      audience: "privacy_reviewer",
+      audienceLabel: "Privacy Reviewer",
+      audienceFraming: "Visibility, retention, and overcollection framing for privacy review.",
+      title: "Privacy Review Brief",
+    });
+    expect(md).toContain("**Audience Policy:**");
+    expect(md).toContain("**Visible Sections:**");
+    expect(md).toContain("**Withheld Sections:**");
+  });
+
   longTest("includes zone analysis section", () => {
     const md = exportAsMarkdown(baseReport);
     expect(md).toContain("## Zone Analysis");
@@ -825,6 +868,21 @@ describe("exportAsText", () => {
     });
     expect(text).toContain("Audience: Installer");
     expect(text).toContain("Acceptance-oriented summary");
+  });
+
+  longTest("includes audience policy in compare exports", () => {
+    const afterScene = createSmallRetailShopScene();
+    const beforeResult = simulateStudio(scene);
+    const afterResult = simulateStudio(afterScene);
+    const compare = buildCompareReportData(scene, beforeResult, afterScene, afterResult, { audience: "auditor" });
+
+    const html = exportCompareAsHtml(compare);
+    const md = exportCompareAsMarkdown(compare);
+
+    expect(html).toContain("Audience Policy");
+    expect(html).toContain("Visible Sections");
+    expect(md).toContain("**Audience Policy:**");
+    expect(md).toContain("**Visible Sections:**");
   });
 
   longTest("includes novel algorithms section with uncertainty", () => {

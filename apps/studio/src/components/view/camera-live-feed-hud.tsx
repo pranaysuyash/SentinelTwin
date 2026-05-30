@@ -113,6 +113,7 @@ export function LiveFeedHUD({
   cameraMetadataEvent,
   cameraLiveConnectionEvent,
   operationalFusion,
+  simulationAssumptions,
 }: {
   camera: CameraNode;
   mode: CameraFeedMode;
@@ -124,9 +125,16 @@ export function LiveFeedHUD({
   cameraMetadataEvent: CameraMetadataEvent;
   cameraLiveConnectionEvent: CameraLiveConnectionEvent;
   operationalFusion: OperationalEvidenceFusionSummary | null;
+  simulationAssumptions: SimulationAssumptions;
 }) {
   const isActive = cam.status === "on";
   const ranges = rangeMeters(cam, ppm);
+  const realismFlags = [
+    simulationAssumptions.timeOfDay !== "day" ? `Light: ${simulationAssumptions.timeOfDay}` : null,
+    simulationAssumptions.backlightIntensity !== "none" ? `Backlight: ${simulationAssumptions.backlightIntensity}` : null,
+    simulationAssumptions.glareIntensity !== "none" ? `Glare: ${simulationAssumptions.glareIntensity}` : null,
+    simulationAssumptions.overexposedZones ? "Overexposure risk" : null,
+  ].filter((entry): entry is string => Boolean(entry));
   return (
     <>
       <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-linear-to-b from-black/80 to-transparent" />
@@ -167,6 +175,18 @@ export function LiveFeedHUD({
         <span className="rounded border border-[#2d3d56] bg-black/45 px-2 py-1">Mode: {modeLabel(mode)}</span>
         <span className="rounded border border-[#2d3d56] bg-black/45 px-2 py-1">LIVE MODE (SIMULATED)</span>
       </div>
+      {realismFlags.length > 0 ? (
+        <div className="absolute left-3 bottom-12 z-30 rounded-lg border border-amber-400/20 bg-black/55 px-2 py-1.5 text-[8px] text-amber-100">
+          <div className="font-semibold uppercase tracking-[0.16em] text-amber-200">Feed realism model</div>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {realismFlags.map((flag) => (
+              <span key={flag} className="rounded border border-amber-300/20 bg-amber-500/12 px-1.5 py-0.5">
+                {flag}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {flags.path || flags.zones || flags.overlays || flags.grid ? (
         <div className="absolute left-3 top-20 flex flex-col gap-1 rounded-lg border border-[#2d3d56] bg-black/40 px-2 py-1.5 text-[8px] text-[#8ea6cc]">

@@ -671,6 +671,16 @@ function defaultMarkdown(
   operationalEvidenceEvents: ReturnType<typeof useStudioStore.getState>["operationalEvidenceEvents"],
   audienceProfile: ReturnType<typeof getReportAudienceProfile>,
 ): string {
+  const obstructionMaterialById = new Map<string, { material: string; transmission?: number }>();
+  for (const wall of scene.walls) {
+    obstructionMaterialById.set(wall.id, { material: wall.material, transmission: wall.visionTransmission });
+  }
+  for (const obstruction of scene.obstructions) {
+    obstructionMaterialById.set(obstruction.id, { material: obstruction.material, transmission: obstruction.visionTransmission });
+  }
+  for (const windowNode of scene.windows) {
+    obstructionMaterialById.set(windowNode.id, { material: windowNode.state, transmission: windowNode.visionTransmission });
+  }
   const failingZones = result.criticalZoneResults.filter((zone) => zone.status !== "pass");
   const verifiedRecommendations = result.recommendations.filter((rec) => rec.verified);
   const topRecommendations = (verifiedRecommendations.length > 0 ? verifiedRecommendations : result.recommendations).slice(0, 5);
@@ -723,6 +733,9 @@ function defaultMarkdown(
     "",
     "### Summary",
     `- Audience: ${audienceProfile.label} (${audienceProfile.framing})`,
+    `- Audience Policy: ${audienceProfile.disclosureLevel.replace(/_/g, " ")} · ${audienceProfile.disclosureSummary}`,
+    `- Visible Sections: ${audienceProfile.visibleSections.join(", ")}`,
+    `- Withheld Sections: ${audienceProfile.withheldSections.length > 0 ? audienceProfile.withheldSections.join(", ") : "none"}`,
     "- Total Coverage: " + result.totalCoveragePct.toFixed(1) + "%",
     "- Recognition Area: " + result.recognitionAreaPct.toFixed(1) + "%",
     "- Identification Area: " + result.identificationAreaPct.toFixed(1) + "%",
@@ -832,8 +845,11 @@ function defaultMarkdown(
           ...occlusion.flatMap((zone) => [
             `- ${zone.zoneLabel} (${zone.baselineQuality})`,
             ...zone.obstructions.map(
-              (obstruction) =>
-                `  - ${obstruction.label}: ${(obstruction.blameFraction * 100).toFixed(0)}% blame, ${obstruction.qualityWithout} without, +${obstruction.qualityImprovement.toFixed(1)} improvement`,
+              (obstruction) => {
+                const materialInfo = obstructionMaterialById.get(obstruction.obstructionId);
+                const materialLabel = materialInfo ? `${materialInfo.material}${materialInfo.transmission != null ? ` (${Math.round(materialInfo.transmission * 100)}% transmission)` : ""}` : "unknown";
+                return `  - ${obstruction.label}: ${(obstruction.blameFraction * 100).toFixed(0)}% blame, ${obstruction.qualityWithout} without, +${obstruction.qualityImprovement.toFixed(1)} improvement, material ${materialLabel}`;
+              },
             ),
           ]),
           "",
@@ -925,6 +941,9 @@ function buildHtmlReport(
   <h1>${escapeHtml(title)}</h1>
   <div class="meta">Scene: ${escapeHtml(scene.name)} &middot; ${new Date().toLocaleDateString()} &middot; DORI: ${scene.assumptions.doriStandard.toUpperCase()}</div>
   <div class="meta">Audience: ${escapeHtml(audienceProfile.label)} · ${escapeHtml(audienceProfile.framing)}</div>
+  <div class="meta">Audience Policy: ${escapeHtml(audienceProfile.disclosureLevel.replace(/_/g, " "))} · ${escapeHtml(audienceProfile.disclosureSummary)}</div>
+  <div class="meta">Visible Sections: ${escapeHtml(audienceProfile.visibleSections.join(", "))}</div>
+  <div class="meta">Withheld Sections: ${escapeHtml(audienceProfile.withheldSections.length > 0 ? audienceProfile.withheldSections.join(", ") : "none")}</div>
   <div class="meta">Visibility: ${escapeHtml(visibilityProfile.label)} · ${escapeHtml(visibilityProfile.framing)}</div>
 
   <h2>Summary</h2>

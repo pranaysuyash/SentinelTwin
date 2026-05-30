@@ -47,7 +47,7 @@ type StarterTone = "blank" | "import" | "scan" | "ai";
 const NAV_ITEMS = [
   { label: "Home", detail: "Studio dashboard", active: true as const },
   { label: "Projects", detail: "Local workspaces", active: false as const },
-  { label: "Demo Sites", detail: "Retail / Office / Warehouse", active: false as const },
+  { label: "Reference Sites", detail: "Retail / Office / Warehouse", active: false as const },
   { label: "Reports", detail: "Evidence exports", active: false as const },
   { label: "Docs", detail: "Architecture notes", active: false as const },
   { label: "Settings", detail: "Studio preferences", active: false as const },
@@ -432,7 +432,7 @@ function ScenePreview({ scene, result, compact = false, showLabels = true, hydra
         })}
 
         {activePathPoints ? (
-          <>
+          <div className="contents">
             <polyline points={activePathPoints} fill="none" stroke="rgba(34,197,94,0.9)" strokeWidth="3" strokeDasharray="6 6" />
             {activePathStart ? (
               <circle cx={activePathStart[0]} cy={activePathStart[1]} r="6.5" fill="rgba(34,197,94,0.95)" />
@@ -440,7 +440,7 @@ function ScenePreview({ scene, result, compact = false, showLabels = true, hydra
             {activePathEnd ? (
               <circle cx={activePathEnd[0]} cy={activePathEnd[1]} r="6.5" fill="rgba(248,113,113,0.95)" />
             ) : null}
-          </>
+          </div>
         ) : null}
 
         {showLabels ? (
@@ -1091,6 +1091,7 @@ export function StudioDashboardHome({
   onOpenDemoWalkthrough,
 }: StudioDashboardHomeProps) {
   const [hydrated, setHydrated] = useState(false);
+  const [showWorkspaceLibrary, setShowWorkspaceLibrary] = useState(false);
   const [previewMode, setPreviewMode] = useState<"2d" | "3d">("2d");
   const coverage = result?.totalCoveragePct ?? scene.simulation?.totalCoveragePct ?? null;
   const criticalZoneResults = result?.criticalZoneResults ?? scene.simulation?.criticalZoneResults ?? [];
@@ -1397,6 +1398,10 @@ export function StudioDashboardHome({
       setHydrated(true);
     });
   }, []);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setShowWorkspaceLibrary(new URLSearchParams(window.location.search).has("library"));
+  }, []);
   const folderCounts = useMemo(() => {
     return browserProjects.reduce<Record<string, number>>((acc, project) => {
       acc[project.folder] = (acc[project.folder] ?? 0) + 1;
@@ -1619,7 +1624,7 @@ export function StudioDashboardHome({
             </div>
           </aside>
 
-          <section className="flex min-w-0 flex-col gap-4">
+          <div className="flex min-w-0 flex-col gap-4">
             <div className="rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4 shadow-[0_24px_70px_rgba(0,0,0,0.30)]">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -1981,6 +1986,8 @@ export function StudioDashboardHome({
                 </div>
             </div>
 
+            {showWorkspaceLibrary ? (
+              <div className="mt-4 space-y-4">
             {hydrated ? (
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_360px]">
               <div className="rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
@@ -2524,6 +2531,7 @@ export function StudioDashboardHome({
                     No saved workspace selected. Save the current scene in Studio to manage folders, tags, and pins here.
                   </div>
                 )}
+                
 
                 <div className="mt-4">
                   <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
@@ -2539,10 +2547,9 @@ export function StudioDashboardHome({
                   </div>
                 </div>
               </div>
-            </div>
             ) : (
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_360px]">
-                  <div className="rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
+                <div className="rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
                   <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Recent Workspaces</div>
                   <div className="mt-3 rounded-[22px] border border-dashed border-[color:var(--st-border)] bg-white/[0.02] p-4 text-sm text-[color:var(--st-muted)]">
                     Loading local workspace history...
@@ -2555,9 +2562,7 @@ export function StudioDashboardHome({
                   </div>
                 </div>
               </div>
-            ) : null}
-          </section>
-
+            )}
           <aside className="flex flex-col gap-4 rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
             <div>
               <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]"> 
@@ -2571,12 +2576,13 @@ export function StudioDashboardHome({
                     <div key={row.id} className="rounded-xl border border-[#243252] bg-white/[0.02] px-3 py-2">
                       <div className="flex items-center justify-between gap-2">
                         <span className="truncate text-sm font-semibold">{row.label}</span>
-                        <span className={cn(
-                          "shrink-0 rounded-full border px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em]",
-                          row.status === "pass"
-                            ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-200"
-                            : "border-amber-400/25 bg-amber-500/10 text-amber-200",
-                        )}>
+                        <span
+                          className={`shrink-0 rounded-full border px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em] ${
+                            row.status === "pass"
+                              ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-200"
+                              : "border-amber-400/25 bg-amber-500/10 text-amber-200"
+                          }`}
+                        >
                           {row.status}
                         </span>
                       </div>
@@ -2650,6 +2656,9 @@ export function StudioDashboardHome({
               </button>
             </div>
           </aside>
+          </div>
+          </div>
+          ) : null}
         </div>
         <footer className="mt-auto flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[color:var(--st-border)] bg-[color:var(--st-panel)] px-4 py-2.5 text-[11px] text-[color:var(--st-muted)]">
           <div>© 2026 SentinelTwin · Security Simulation Studio · v0.9.0</div>

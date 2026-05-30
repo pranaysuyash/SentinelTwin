@@ -15,7 +15,7 @@ describe("scene-intelligence-graph", () => {
     });
 
     expect(graph.rootId).toBe(`scene:${smallRetailShopScene.id}`);
-    expect(graph.summary.sceneSourceLabel).toBe("Demo Scene");
+    expect(graph.summary.sceneSourceLabel).toBe("Reference Scene");
     expect(graph.summary.cameraCount).toBe(smallRetailShopScene.cameras.length);
     expect(graph.summary.zoneCount).toBe(smallRetailShopScene.criticalZones.length);
     expect(graph.summary.snapshotCount).toBe(3);

@@ -331,8 +331,8 @@ Every input mode should compile into the same truth model. Every report should r
 - The measured AI telemetry trail now compares recent runs against a longer-horizon policy baseline, so the product can distinguish short-term spikes from broader drift instead of only showing a single recent-vs-previous window.
 
 **What is still missing**
-- Richer cost/latency telemetry, stage-specific thresholds, and operator-tunable policy thresholds beyond the current measured per-run trail now visible in Debug, the command bar, and the AI draft launcher.
-- Richer telemetry may still move beyond the current point-of-use summaries into a broader operational dashboard or settings surface once the measured metrics and policy controls mature.
+- Richer cost/latency telemetry, stage-specific policy profiles, and broader operator-tuned governance beyond the current measured per-run trail and the single editable policy now visible in Debug, the command bar, and the AI draft launcher.
+- Richer telemetry may still move beyond the current point-of-use summaries into a broader operational dashboard, per-stage policy presets, or org-level settings surface once the measured metrics and policy controls mature.
 - A dynamic prompt registry workflow for future model stages beyond the four canonical prompt definitions now visible in Debug.
 
 ### 4.14 Observability, Diagnostics, and Runtime Truth

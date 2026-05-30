@@ -2,6 +2,11 @@ import { create } from "zustand";
 
 import { createSmallRetailShopScene, smallRetailShopScene } from "@/demo-scenes/small-retail-shop";
 import {
+  DEFAULT_AI_ACTION_TELEMETRY_POLICY,
+  normalizeAiActionTelemetryPolicy,
+  type AiActionTelemetryPolicy,
+} from "@/lib/ai-action-telemetry";
+import {
   DEFAULT_AI_PROVIDER_SELECTION,
   describeAiProviderGovernance,
   normalizeAiProviderSelection,
@@ -183,7 +188,7 @@ export type EditorDraft = {
 
 export type BottomTab = "outcome" | "metrics" | "issues" | "sensors" | "timeline" | "beforeafter" | "report" | "help" | "debug" | "counterfactual" | "threat" | "redundancy" | "temporal" | "assumptions" | "governance" | "provenance" | "novel";
 
-export type ActiveWorkflowId = "idle" | "audit" | "design" | "scan" | "floor_plan" | "ai_draft" | "verify_footage" | "report" | "demo";
+export type ActiveWorkflowId = "idle" | "audit" | "design" | "scan" | "floor_plan" | "ai_draft" | "verify_footage" | "report" | "reference" | "demo";
 
 export const WORKFLOW_STEPS: Record<ActiveWorkflowId, string[]> = {
   idle: [],
@@ -242,6 +247,12 @@ export const WORKFLOW_STEPS: Record<ActiveWorkflowId, string[]> = {
     "Capture recommended actions",
     "Generate final report",
     "Add assumption and limitation notes",
+  ],
+  reference: [
+    "Load reference baseline",
+    "Review scenario summary",
+    "Run and compare modes",
+    "Apply suggested fix sequence",
   ],
   demo: [
     "Load reference baseline",
@@ -627,6 +638,7 @@ const UI_THEME_STORAGE_KEY = "sentineltwin_ui_theme";
 const UI_DENSITY_STORAGE_KEY = "sentineltwin_ui_density";
 const AI_PROVIDER_STORAGE_KEY = "sentineltwin_ai_provider_selection";
 const LOCAL_ONLY_STORAGE_KEY = "sentineltwin_local_only_mode";
+const AI_TELEMETRY_POLICY_STORAGE_KEY = "sentineltwin_ai_action_telemetry_policy_v1";
 export const OPERATIONAL_EVIDENCE_STORAGE_KEY = "sentineltwin_operational_evidence_v1";
 const MODEL_EVAL_HISTORY_STORAGE_KEY = "sentineltwin_model_eval_history_v1";
 const PROMPT_REGISTRY_HISTORY_STORAGE_KEY = "sentineltwin_prompt_registry_history_v1";
@@ -865,6 +877,17 @@ function loadAiProviderSelection(): AiProviderSelection {
 function loadLocalOnlyMode(): boolean {
   if (typeof window === "undefined") return false;
   return window.localStorage.getItem(LOCAL_ONLY_STORAGE_KEY) === "true";
+}
+
+function loadAiTelemetryPolicy(): AiActionTelemetryPolicy {
+  if (typeof window === "undefined") return { ...DEFAULT_AI_ACTION_TELEMETRY_POLICY };
+  try {
+    const raw = window.localStorage.getItem(AI_TELEMETRY_POLICY_STORAGE_KEY);
+    if (!raw) return { ...DEFAULT_AI_ACTION_TELEMETRY_POLICY };
+    return normalizeAiActionTelemetryPolicy(JSON.parse(raw) as Partial<AiActionTelemetryPolicy>);
+  } catch {
+    return { ...DEFAULT_AI_ACTION_TELEMETRY_POLICY };
+  }
 }
 
 function loadOperationalEvidenceEvents(): OperationalEvidenceEvent[] {
@@ -1560,6 +1583,14 @@ function persistLocalOnlyMode(enabled: boolean) {
   }
 }
 
+function persistAiTelemetryPolicy(policy: AiActionTelemetryPolicy) {
+  try {
+    localStorage.setItem(AI_TELEMETRY_POLICY_STORAGE_KEY, JSON.stringify(policy));
+  } catch {
+    // Storage full or unavailable — silently fail
+  }
+}
+
 function persistOperationalEvidenceEvents(events: OperationalEvidenceEvent[]) {
   try {
     const raw = localStorage.getItem(OPERATIONAL_EVIDENCE_STORAGE_KEY);
@@ -1853,6 +1884,7 @@ export type StudioStoreState = {
   promptRegistryHistory: PromptRegistryHistoryRecord[];
   aiProviderGovernanceHistory: AiProviderGovernanceHistoryRecord[];
   aiActionTelemetry: AiActionTelemetryRecord[];
+  aiTelemetryPolicy: AiActionTelemetryPolicy;
   snapshots: SceneSnapshot[];
   operationalEvidenceEvents: OperationalEvidenceEvent[];
   sensorEvents: SensorLiveEventRecord[];
@@ -2085,6 +2117,8 @@ export type StudioStoreState = {
   setUiTheme: (theme: UiTheme) => void;
   setAiProviderSelection: (selection: AiProviderSelection) => void;
   setLocalOnlyMode: (enabled: boolean) => void;
+  setAiTelemetryPolicy: (policy: Partial<AiActionTelemetryPolicy>) => void;
+  resetAiTelemetryPolicy: () => void;
   setOverlayFilter: (filter: OverlayFilterId, visible: boolean) => void;
   setCriticalZoneTargetType: (targetType: CriticalZoneNode["targetType"]) => void;
   viewSettingsOpen: boolean;
@@ -2737,7 +2771,7 @@ const INITIAL_OPERATIONAL_EVIDENCE_EVENTS = (() => {
   const seededEvents = [
     buildOperationalEvidenceEvent({
       kind: "scene_initialized",
-      title: "Demo scene initialized",
+      title: "Reference baseline initialized",
       details: `${summary.detail}.`,
       actor: "system",
       source: INITIAL_SCENE.source,
@@ -2995,6 +3029,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   promptRegistryHistory: INITIAL_PROMPT_REGISTRY_HISTORY,
   aiProviderGovernanceHistory: loadAiProviderGovernanceHistory(),
   aiActionTelemetry: loadAiActionTelemetry(),
+  aiTelemetryPolicy: loadAiTelemetryPolicy(),
   snapshots: INITIAL_SNAPSHOTS,
   operationalEvidenceEvents: INITIAL_OPERATIONAL_EVIDENCE_EVENTS,
   sensorEvents: loadSensorLiveEvents(),
@@ -4672,6 +4707,18 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         aiProviderGovernanceHistory: nextHistory,
       };
     });
+  },
+  setAiTelemetryPolicy: (policy) => {
+    set((state) => {
+      const nextPolicy = normalizeAiActionTelemetryPolicy({ ...state.aiTelemetryPolicy, ...policy });
+      persistAiTelemetryPolicy(nextPolicy);
+      return { aiTelemetryPolicy: nextPolicy };
+    });
+  },
+  resetAiTelemetryPolicy: () => {
+    const nextPolicy = { ...DEFAULT_AI_ACTION_TELEMETRY_POLICY };
+    persistAiTelemetryPolicy(nextPolicy);
+    set({ aiTelemetryPolicy: nextPolicy });
   },
   setOverlayFilter: (filter, visible) => set((s) => ({ overlayFilters: { ...s.overlayFilters, [filter]: visible } })),
   setCriticalZoneTargetType: (targetType) => set({ criticalZoneTargetType: targetType }),

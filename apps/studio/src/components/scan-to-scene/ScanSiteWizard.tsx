@@ -800,7 +800,7 @@ export function ScanSiteWizard({ onClose, mode = "manual" }: ScanSiteWizardProps
 
             <div className="space-y-4">
               <div className="rounded-xl border border-white/8 bg-white/[0.02] p-3">
-                <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/82">Reference Demo</div>
+                <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/82">Reference Baseline</div>
                 <div className="overflow-hidden rounded-lg border border-white/6 bg-[#0d1520]">
                   <div
                     className="h-[82px] bg-cover bg-center"
@@ -810,14 +810,14 @@ export function ScanSiteWizard({ onClose, mode = "manual" }: ScanSiteWizardProps
                     }}
                   />
                 </div>
-                <div className="mt-3 text-[15px] font-medium text-white">Retail Store Demo</div>
+                <div className="mt-3 text-[15px] font-medium text-white">Retail Store Reference</div>
                 <p className="mt-1 max-w-[170px] text-[13px] leading-5 text-slate-300">Explore a complete site twin example</p>
                 <button
                   type="button"
                   onClick={() => onClose?.()}
                   className="mt-3 flex h-10 w-full items-center justify-center rounded-xl border border-sky-500/40 bg-sky-500/10 text-[15px] text-sky-300 transition-colors hover:bg-sky-500/16"
                 >
-                  Open Demo
+                  Open Reference
                 </button>
               </div>
 

@@ -116,8 +116,10 @@ function formatWorkflowLabel(workflowId: string) {
       return "Verify Footage";
     case "report":
       return "Report";
+    case "reference":
+      return "Reference Baseline";
     case "demo":
-      return "Demo";
+      return "Reference Baseline";
     default:
       return "Idle";
   }

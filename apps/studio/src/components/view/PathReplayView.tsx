@@ -599,7 +599,7 @@ function CoverageQualityBands({ waypoints, totalDuration }: {
 }) {
   if (waypoints.length < 2 || totalDuration <= 0) return null;
 
-  const bands: { color: string; leftPct: number; widthPct: number; label: string }[] = [];
+  const bands: { color: string; leftPct: number; widthPct: number; label: string; key: string }[] = [];
 
   for (let i = 0; i < waypoints.length - 1; i++) {
     const curr = waypoints[i];
@@ -617,6 +617,7 @@ function CoverageQualityBands({ waypoints, totalDuration }: {
       leftPct: ((curr.timeS ?? 0) / totalDuration) * 100,
       widthPct: (segDuration / totalDuration) * 100,
       label: QUALITY_ABBR[quality],
+      key: `${i}-${curr.timeS ?? 0}-${next.timeS ?? 0}`,
     });
   }
 
@@ -624,7 +625,7 @@ function CoverageQualityBands({ waypoints, totalDuration }: {
     <div className="absolute inset-x-0 top-0 h-full overflow-hidden rounded-full" style={{ pointerEvents: "none" }}>
       {bands.map((band) => (
         <div
-          key={`band-${band.startDistanceM}-${band.endDistanceM}`}
+          key={`band-${band.key}`}
           className="absolute top-0 h-full opacity-25 transition-opacity duration-200 group-hover:opacity-35"
           style={{
             left: `${band.leftPct}%`,

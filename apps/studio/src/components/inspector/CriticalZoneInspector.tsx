@@ -5,6 +5,7 @@ import { Camera, Shield, Trash2 } from "lucide-react";
 import { Badge } from "@/components/shared/Badge";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { cn } from "@/lib/cn";
+import { getTargetRequirementInfo } from "@/lib/target-quality-requirements";
 import type { CriticalZoneNode } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 
@@ -43,6 +44,7 @@ export function CriticalZoneInspector() {
   const isPassing = zoneResult?.status === "pass";
   const isPartial = zoneResult?.status === "partial";
   const camNames: Record<string, string> = Object.fromEntries(scene.cameras.map((c) => [c.id, c.name]));
+  const targetRequirement = getTargetRequirementInfo(zone.targetType);
 
   return (
     <>
@@ -143,6 +145,35 @@ export function CriticalZoneInspector() {
               </button>
             </div>
           ))}
+        </SectionCard>
+
+        <SectionCard title="Target Requirement">
+          <div className="space-y-1.5 text-[10px] text-[#c7d0e4]">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[#6a748b]">Default quality</span>
+              <span className={cn("rounded px-1.5 py-0.5 text-[9px] font-semibold capitalize", QUALITY_BADGE_COLORS[targetRequirement.defaultRequiredQuality] ?? "bg-[#1f2536] text-[#8090a8]")}>
+                {targetRequirement.defaultRequiredQuality}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[#6a748b]">PPM threshold</span>
+              <span className="rounded px-1.5 py-0.5 text-[9px] font-semibold capitalize bg-[#1f2536] text-[#d2d9e8]">
+                {targetRequirement.ppmThreshold}
+              </span>
+            </div>
+            <div className="rounded-md border border-[#181c27] bg-[#0f141f] px-2 py-1.5 text-[9px] leading-relaxed text-[#8b96ab]">
+              {targetRequirement.rationale}
+            </div>
+            {zone.requiredQuality !== targetRequirement.defaultRequiredQuality ? (
+              <div className="rounded-md border border-amber-500/20 bg-amber-500/8 px-2 py-1.5 text-[9px] leading-relaxed text-amber-100">
+                This zone overrides the default with <strong>{zone.requiredQuality}</strong>.
+              </div>
+            ) : (
+              <div className="rounded-md border border-emerald-500/20 bg-emerald-500/8 px-2 py-1.5 text-[9px] leading-relaxed text-emerald-100">
+                This zone uses the default target quality for its target type.
+              </div>
+            )}
+          </div>
         </SectionCard>
 
         {coveringCameras.length > 0 && (

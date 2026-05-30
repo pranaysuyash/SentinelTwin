@@ -17,6 +17,10 @@ function formatCheckpointProvenance(provenance: any): string {
   return `${provenance.sceneSourceLabel} · ${provenance.nodeCount} nodes · ${provenance.edgeCount} edges`;
 }
 
+function formatZoneTarget(zone: ReportData["zones"][number]): string {
+  return `${zone.targetType.replace(/_/g, " ")} · default ${zone.targetRequirementQuality} (${zone.targetRequirementPpmThreshold})`;
+}
+
 function buildBaseHeader(report: ReportData): string[] {
   return [
     `# ${report.title}`,
@@ -24,6 +28,7 @@ function buildBaseHeader(report: ReportData): string[] {
     `**Site:** ${report.siteName}`,
     `**Audience:** ${report.audienceLabel}`,
     `**Framing:** ${report.audienceFraming}`,
+    `**Audience Policy:** ${report.audiencePolicy.disclosureSummary}`,
     `**Disclosure Policy:** ${report.audiencePolicy.disclosureSummary}`,
     `**Visible Sections:** ${report.audiencePolicy.visibleSections.join(", ")}`,
     `**Withheld Sections:** ${report.audiencePolicy.withheldSections.length > 0 ? report.audiencePolicy.withheldSections.join(", ") : "none"}`,
@@ -132,10 +137,10 @@ function buildZoneAnalysis(report: ReportData): string[] {
     "## Zone Analysis",
     "",
     ...(report.zones.length > 0
-      ? ["| Zone | Required | Actual | Status | Cameras |",
-         "|------|----------|--------|--------|---------|",
+      ? ["| Zone | Target | Required | Actual | Status | Cameras |",
+         "|------|--------|----------|--------|--------|---------|",
          ...report.zones.map((z) =>
-           `| ${z.label} | ${z.requiredQuality} | ${z.actualQuality} | ${z.status} | ${z.coveringCameras.join(", ") || "none"} |`,
+           `| ${z.label} | ${formatZoneTarget(z)} | ${z.requiredQuality} | ${z.actualQuality} | ${z.status} | ${z.coveringCameras.join(", ") || "none"} |`,
          )]
       : ["No critical zones defined."]),
     "",
@@ -147,14 +152,156 @@ function buildCameraAnalysis(report: ReportData): string[] {
     "## Camera Analysis",
     "",
     ...(report.cameras.length > 0
-      ? ["| Camera | Status | Coverage | Best Zone Q | Failed Zones | Covered Zones | Issues |",
-         "|--------|--------|----------|-------------|--------------|---------------|--------|",
+      ? ["| Camera | Status | Coverage | Best Zone Quality | Zones Failed | Covered Zones | Issues |",
+         "|--------|--------|----------|------------------|-------------|---------------|--------|",
          ...report.cameras.map((c) =>
            `| ${c.name} | ${c.status} | ${c.coveragePct.toFixed(1)}% | ${c.bestZoneQuality} | ${c.zonesFailed} | ${c.zonesCovered.length} | ${c.issues.length} |`,
          )]
       : ["No cameras deployed."]),
     "",
   ];
+}
+
+function buildIssues(report: ReportData): string[] {
+  return [
+    "## Issues",
+    ...(report.issues.length > 0
+      ? report.issues.map((issue) => `- [${issue.severity.toUpperCase()}] ${issue.description}`)
+      : ["No issues found. Coverage meets all defined requirements."]),
+    "",
+  ];
+}
+
+function buildRecommendations(report: ReportData): string[] {
+  return [
+    "## Recommendations",
+    ...(report.recommendations.length > 0
+      ? report.recommendations.map((rec) => `- [${rec.verified ? "verified" : "unverified"}] ${rec.description} (${rec.costCategory}) :: ${rec.estimatedImpact}`)
+      : ["No recommendations at this time."]),
+    "",
+  ];
+}
+
+function buildRedundancyMatrix(report: ReportData): string[] {
+  if (!report.redundancyMatrix) return [];
+  return [
+    "## Redundancy Matrix",
+    `- Cameras: ${report.redundancyMatrix.cameraCount}`,
+    `- Zones: ${report.redundancyMatrix.zoneCount}`,
+    `- Redundant zones: ${report.redundancyMatrix.redundantZoneCount}`,
+    `- SPOF zones: ${report.redundancyMatrix.spofZoneCount}`,
+    `- Uncovered zones: ${report.redundancyMatrix.uncoveredZoneCount}`,
+    ...(report.redundancyMatrix.vulnerableZones.length > 0
+      ? [
+          "- Vulnerable zones:",
+          ...report.redundancyMatrix.vulnerableZones.map(
+            (zone) => `  - ${zone.label}: ${zone.status.replace(/_/g, " ")}${zone.coveringCameraNames.length > 0 ? ` (${zone.coveringCameraNames.join(", ")})` : ""}`,
+          ),
+        ]
+      : []),
+    "- Camera matrix:",
+    ...report.redundancyMatrix.cameraRows.map(
+      (row) =>
+        `  - ${row.cameraName} (${row.status}, ${row.coveragePct.toFixed(1)}%, ${row.criticalityLabel} ${row.criticalityScore}/10) | single-point: ${row.soleCoverageZones.map((zone) => zone.label).join(", ") || "none"} | covered: ${row.coveredZones.map((zone) => `${zone.label}${zone.isSole ? " ⚠" : ""}`).join(", ") || "none"}`,
+    ),
+    "",
+  ];
+}
+
+function buildAdversarialPath(report: ReportData): string[] {
+  if (!report.adversarialPath) return [];
+  return [
+    "## Coverage Failure Replay",
+    `- Exposure score: ${report.adversarialPath.exposureScore.toFixed(1)}`,
+    `- Detection probability: ${(report.adversarialPath.detectionProbability * 100).toFixed(1)}%`,
+    `- Total distance: ${report.adversarialPath.totalDistance.toFixed(1)}m`,
+    ...(report.adversarialPath.waypoints.length > 0
+      ? [
+          "- Waypoints:",
+          ...report.adversarialPath.waypoints.map((waypoint, index) => `  - ${index + 1}. (${waypoint.x.toFixed(1)}, ${waypoint.z.toFixed(1)}) exposure ${waypoint.exposure.toFixed(2)}`),
+        ]
+      : ["- Waypoints: none"]),
+    "",
+  ];
+}
+
+function buildTemporalProfile(report: ReportData): string[] {
+  if (!report.temporalProfile) return [];
+  return [
+    "## Temporal Profile",
+    `- Vulnerability windows: ${report.temporalProfile.vulnerabilityWindowCount}`,
+    `- Worst coverage: ${report.temporalProfile.worstCoverage.toFixed(1)}%`,
+    ...(report.temporalProfile.safestPeriods.length > 0
+      ? [
+          "- Safest periods:",
+          ...report.temporalProfile.safestPeriods.map((period) => `  - ${period.label}: ${formatHour(period.startHour)} - ${formatHour(period.endHour)}`),
+        ]
+      : ["- Safest periods: none"]),
+    "",
+  ];
+}
+
+function buildNovelAlgorithms(report: ReportData): string[] {
+  if (!report.novelAlgorithms) return [];
+
+  const lines = [
+    "## Novel Algorithms",
+    `- Coverage Entropy: ${report.novelAlgorithms.coverageEntropy ? `${report.novelAlgorithms.coverageEntropy.normalizedEntropy.toFixed(2)} norm · ${report.novelAlgorithms.coverageEntropy.entropyBits.toFixed(2)} bits · dominant ${report.novelAlgorithms.coverageEntropy.dominantQuality} ${report.novelAlgorithms.coverageEntropy.dominantQualityShare.toFixed(1)}%` : "Not computed"}`,
+    `- Coverage Fragility: ${report.novelAlgorithms.coverageFragility ? `${(report.novelAlgorithms.coverageFragility.meanFragility * 100).toFixed(1)}% mean · ${report.novelAlgorithms.coverageFragility.fragileCellCount}/${report.novelAlgorithms.coverageFragility.totalCells} fragile cells` : "Not computed"}`,
+    `- Coverage Uncertainty: ${report.novelAlgorithms.coverageUncertainty ? `${report.novelAlgorithms.coverageUncertainty.sampleCount} samples · ${report.novelAlgorithms.coverageUncertainty.meanCoveragePct.toFixed(1)}% mean (${report.novelAlgorithms.coverageUncertainty.p5CoveragePct.toFixed(1)}%-${report.novelAlgorithms.coverageUncertainty.p95CoveragePct.toFixed(1)}%)` : "Not computed"}`,
+    `- Coverage Posture Variation: ${report.novelAlgorithms.postureVariation ? `${report.novelAlgorithms.postureVariation.profiles.length} profiles · worst ${report.novelAlgorithms.postureVariation.worstProfileLabel ?? "-"} ${report.novelAlgorithms.postureVariation.worstProfileCoveragePct != null ? `${report.novelAlgorithms.postureVariation.worstProfileCoveragePct.toFixed(1)}%` : ""} · largest drop ${report.novelAlgorithms.postureVariation.largestDropProfileLabel ?? "-"} (${formatSignedDelta(report.novelAlgorithms.postureVariation.largestDropDeltaPct)})` : "Not computed"}`,
+    `- Blind Spot Topology: ${report.novelAlgorithms.blindRegions ? `${report.novelAlgorithms.blindRegionCount ?? report.novelAlgorithms.blindRegions.length} regions · ${report.novelAlgorithms.blindRegions.filter((region) => region.severity === "critical").length} critical` : "Not computed"}`,
+    `- Blind Spot Fingerprint: ${report.novelAlgorithms.blindSpotFingerprint ? `${report.novelAlgorithms.blindSpotFingerprint.fingerprint} · ${report.novelAlgorithms.blindSpotFingerprint.regionCount} regions` : "Not computed"}`,
+    `- Reflective Bounce Vision: ${report.novelAlgorithms.reflectiveBounce ? `${report.novelAlgorithms.reflectiveBounce.reflectiveWindowCount} reflective windows · ${report.novelAlgorithms.reflectiveBounce.affectedCellCount} affected cells · ${report.novelAlgorithms.reflectiveBounce.affectedCameraCount} affected cameras` : "Not computed"}`,
+    `- K-Robustness: ${report.novelAlgorithms.kRobustness ? `K=${report.novelAlgorithms.kRobustness.kRobustness} / ${report.novelAlgorithms.kRobustness.totalCameras}` : "Not computed"}`,
+    ...(report.novelAlgorithms.kRobustness?.criticalSets?.length
+      ? [
+          "- K-Robustness Critical Sets:",
+          ...report.novelAlgorithms.kRobustness.criticalSets.slice(0, 5).map(
+            (set) => `  - K=${set.k}: ${set.cameraNames.join(", ")} (exposure ${set.exposureScore.toFixed(1)}, ${set.waypointCount} waypoints)`,
+          ),
+        ]
+      : []),
+    `- Placement Oracle: ${report.novelAlgorithms.placementOracle ? `${report.novelAlgorithms.placementOracle.candidateCount} candidates · best ${report.novelAlgorithms.placementOracle.bestCandidateMountType} @ ${report.novelAlgorithms.placementOracle.bestCandidatePosition[0].toFixed(1)}, ${report.novelAlgorithms.placementOracle.bestCandidatePosition[2].toFixed(1)} · score ${report.novelAlgorithms.placementOracle.bestCandidateScore.toFixed(1)}` : "Not computed"}`,
+    `- Temporal Anomalies: ${report.novelAlgorithms.temporalAnomalies ? `${report.novelAlgorithms.temporalAnomalies.anomalyWindowCount} windows` : "Not computed"}`,
+    `- Occlusion Blame: ${report.novelAlgorithms.occlusionBlame ? `${report.novelAlgorithms.occlusionBlame.length} zones` : `${report.novelAlgorithms.occlusionBlameCount ?? 0} groups`}`,
+    `- Blind Regions: ${report.novelAlgorithms.blindRegionCount ?? 0} regions`,
+    "",
+    ...(report.novelAlgorithms.occlusionBlame && report.novelAlgorithms.occlusionBlame.length > 0
+      ? [
+          "### Occlusion Blame",
+          ...report.novelAlgorithms.occlusionBlame.flatMap((zone) => [
+            `- ${zone.zoneLabel} (${zone.baselineQuality})`,
+            ...zone.obstructions.map(
+              (obstruction) =>
+                `  - ${obstruction.label}: ${(obstruction.blameFraction * 100).toFixed(0)}% blame, ${obstruction.qualityWithout} without, +${obstruction.qualityImprovement.toFixed(1)} improvement`,
+            ),
+          ]),
+          "",
+        ]
+      : []),
+    ...(report.novelAlgorithms.reflectiveBounce
+      ? [
+          "### Reflective Bounce Vision",
+          `- Reflective windows: ${report.novelAlgorithms.reflectiveBounce.reflectiveWindowCount}`,
+          `- Affected cells: ${report.novelAlgorithms.reflectiveBounce.affectedCellCount}`,
+          `- Affected cameras: ${report.novelAlgorithms.reflectiveBounce.affectedCameraCount}`,
+          "",
+        ]
+      : []),
+    ...(report.novelAlgorithms.placementOracle
+      ? [
+          "### Placement Oracle",
+          `- Candidate count: ${report.novelAlgorithms.placementOracle.candidateCount}`,
+          `- Best score: ${report.novelAlgorithms.placementOracle.bestCandidateScore.toFixed(1)}`,
+          `- Best candidate: ${report.novelAlgorithms.placementOracle.bestCandidateMountType} @ ${report.novelAlgorithms.placementOracle.bestCandidatePosition[0].toFixed(1)}, ${report.novelAlgorithms.placementOracle.bestCandidatePosition[2].toFixed(1)}`,
+          "",
+        ]
+      : []),
+    "",
+  ];
+
+  return lines;
 }
 
 function buildFooter(report: ReportData): string[] {
@@ -179,6 +326,12 @@ export function exportOperatorMarkdown(report: ReportData): string {
     ...buildCausalTrace(report),
     ...buildZoneAnalysis(report),
     ...buildCameraAnalysis(report),
+    ...buildIssues(report),
+    ...buildRecommendations(report),
+    ...buildRedundancyMatrix(report),
+    ...buildAdversarialPath(report),
+    ...buildTemporalProfile(report),
+    ...buildNovelAlgorithms(report),
     ...buildFooter(report),
   ].join("\n");
 }
@@ -193,6 +346,9 @@ export function exportAuditorMarkdown(report: ReportData): string {
     ...buildOperationalEvidence(report),
     ...buildCausalTrace(report),
     ...buildZoneAnalysis(report),
+    ...buildIssues(report),
+    ...buildRecommendations(report),
+    ...buildRedundancyMatrix(report),
     ...buildFooter(report),
   ].join("\n");
 }
@@ -204,6 +360,8 @@ export function exportInsurerMarkdown(report: ReportData): string {
     ...buildExecutiveSummary(report),
     ...buildAssumptions(report),
     ...buildZoneAnalysis(report),
+    ...buildIssues(report),
+    ...buildRecommendations(report),
     ...buildFooter(report),
   ].join("\n");
 }
@@ -215,6 +373,8 @@ export function exportInstallerMarkdown(report: ReportData): string {
     ...buildExecutiveSummary(report),
     ...buildCameraAnalysis(report),
     ...buildZoneAnalysis(report),
+    ...buildIssues(report),
+    ...buildRecommendations(report),
     ...buildFooter(report),
   ].join("\n");
 }
@@ -233,6 +393,8 @@ export function exportPrivacyReviewerMarkdown(report: ReportData): string {
          )]
       : ["No cameras deployed."]),
     "",
+    ...buildIssues(report),
+    ...buildRecommendations(report),
     ...buildFooter(report),
   ].join("\n");
 }

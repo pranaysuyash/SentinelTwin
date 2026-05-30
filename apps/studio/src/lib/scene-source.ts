@@ -34,9 +34,9 @@ export const SCENE_SOURCE_META: Record<
     description: "Scene seeded from a built-in template or preset.",
   },
   demo: {
-    label: "Demo Scene",
-    shortLabel: "Demo",
-    description: "Reference demo scene bundled with Studio.",
+    label: "Reference Scene",
+    shortLabel: "Reference",
+    description: "Reference baseline scene bundled with Studio.",
   },
 };
 

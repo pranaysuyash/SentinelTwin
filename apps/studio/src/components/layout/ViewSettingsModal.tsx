@@ -23,7 +23,7 @@ const MAIN_VIEWS: ViewOption[] = [
   { id: "replay", label: "Route Replay", description: "Timeline-first path replay and visibility analysis.", viewMode: "replay", preset: "replay" },
   { id: "compare", label: "Before / After", description: "Baseline vs fix comparison workflow.", viewMode: "compare", preset: "compare" },
   { id: "report", label: "Report Workspace", description: "Client-facing report and evidence summary.", viewMode: "report", preset: "report" },
-  { id: "focus", label: "Focus / Demo", description: "Minimal chrome presentation layout.", viewMode: "map", preset: "focus" },
+  { id: "focus", label: "Focus / Reference", description: "Minimal chrome presentation layout.", viewMode: "map", preset: "focus" },
 ];
 
 const PRESET_OPTIONS: Array<{ id: WorkspacePreset; label: string; description: string }> = [
@@ -671,7 +671,7 @@ export function ViewSettingsModal() {
             <section className="rounded-[24px] border border-[#1f2536] bg-[#0d121c] p-4">
               <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[#6d7892]">
                 <Settings2 className="h-3.5 w-3.5 text-rose-300" />
-                Client / Demo Options
+                Client / Reference Options
               </div>
               <div className="mt-3 grid gap-2">
                 {([

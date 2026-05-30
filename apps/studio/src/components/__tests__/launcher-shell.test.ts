@@ -22,7 +22,7 @@ describe("Studio launcher shell", () => {
     expect(source).toContain('launchWorkspace("report", "report", "report");');
     expect(source).toContain("onRunSimulation={runSimulation}");
     expect(source).toContain("onStartProject={() => {");
-    expect(source).toContain("openDemoWorkspace();");
+    expect(source).toContain("openReferenceWorkspace();");
     expect(source).toContain("onOpenAdvancedWorkflows");
     expect(source).toContain('if (!confirmWorkspaceReplacement("import a floor plan")) return;');
     expect(source).toContain('if (!confirmWorkspaceReplacement("start scan intake")) return;');

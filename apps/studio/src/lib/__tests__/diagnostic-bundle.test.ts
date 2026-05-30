@@ -104,7 +104,7 @@ describe("diagnostic bundle", () => {
 
     expect(bundle.version).toBe("1");
     expect(bundle.scene.id).toBe(smallRetailShopScene.id);
-    expect(bundle.scene.sourceLabel).toContain("Demo");
+    expect(bundle.scene.sourceLabel).toContain("Reference");
     expect(bundle.simulation.totalCoveragePct).toBeGreaterThanOrEqual(0);
     expect(bundle.graph.nodeCount).toBeGreaterThan(0);
     expect(bundle.evidence.totalEvents).toBe(2);

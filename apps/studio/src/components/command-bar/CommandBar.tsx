@@ -31,6 +31,7 @@ const TELEMETRY_COLORS: Record<string, string> = {
 export function CommandBar() {
   const [input, setInput] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { status, executeCommand, dismissError, applyCandidate, confirmPreview, cancelPreview, mode, providerHealth, providerTelemetry, latestAiActionTelemetry } = useAiCommand();
   const aiActionTelemetry = useStudioStore((s) => s.aiActionTelemetry);
@@ -76,6 +77,44 @@ export function CommandBar() {
     }
   }, [isExpanded]);
 
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  const healthStatus = hasMounted ? providerHealth.overallStatus : "partial";
+  const telemetryStatus = hasMounted ? providerTelemetry.overallStatus : "guarded";
+  const modeLabel = hasMounted ? mode.label : "AI";
+  const modeProviderLabel = hasMounted ? mode.providerLabel : "Loading";
+  const modeDetail = hasMounted ? mode.detail : "Syncing AI command state...";
+  const modeCloudLabel = hasMounted ? (mode.cloudAvailable ? "Cloud-backed available" : "Local-only") : "Syncing";
+  const providerSummary = hasMounted
+    ? `Provider health: ${providerHealth.healthyProviders} healthy / ${providerHealth.partialProviders} partial / ${providerHealth.blockedProviders} blocked.`
+    : "Provider health: syncing...";
+  const costLatencySummary = hasMounted
+    ? `Cost / latency: ${providerTelemetry.activeCostLabel} · ${providerTelemetry.activeLatencyLabel}.`
+    : "Cost / latency: syncing...";
+  const stagePolicySummary = hasMounted
+    ? `Stage policy: ${providerTelemetry.stagePolicies.map((stage) => `${stage.stage}:${stage.ready ? "ready" : "guarded"}`).join(" · ")}.`
+    : "Stage policy: syncing...";
+  const latestActionSummary = hasMounted && latestAiActionTelemetry
+    ? `${latestAiActionTelemetry.stage} · ${latestAiActionTelemetry.durationMs} ms · ~${latestAiActionTelemetry.estimatedTotalTokens} tokens`
+    : "none yet";
+  const telemetryTrendSummary = hasMounted
+    ? `${aiActionTelemetrySummary.trendLabel} · ${aiActionTelemetrySummary.trendNote}`
+    : "syncing · waiting for hydration";
+  const compactHealthClass = hasMounted
+    ? (HEALTH_COLORS[healthStatus] ?? HEALTH_COLORS.partial)
+    : "text-slate-300 border-slate-500/20 bg-slate-500/10";
+  const compactTelemetryClass = hasMounted
+    ? (TELEMETRY_COLORS[telemetryStatus] ?? TELEMETRY_COLORS.guarded)
+    : "text-slate-300 border-slate-500/20 bg-slate-500/10";
+  const fullHealthClass = hasMounted
+    ? (HEALTH_COLORS[healthStatus] ?? HEALTH_COLORS.partial)
+    : "text-slate-300 border-slate-500/20 bg-slate-500/10";
+  const fullTelemetryClass = hasMounted
+    ? (TELEMETRY_COLORS[telemetryStatus] ?? TELEMETRY_COLORS.guarded)
+    : "text-slate-300 border-slate-500/20 bg-slate-500/10";
+
   if (!visible) return null;
 
   if (!isExpanded) {
@@ -87,16 +126,16 @@ export function CommandBar() {
         <Sparkles className="h-3.5 w-3.5 text-emerald-400/70 group-hover:text-emerald-400" />
         AI Command
         <span className="rounded-full border border-emerald-500/15 bg-emerald-500/10 px-1.5 py-0.5 text-[8px] text-emerald-300">
-          {mode.label}
+          {modeLabel}
         </span>
         <span className="rounded-full border border-[#24283a] bg-[#111521] px-1.5 py-0.5 text-[8px] text-[#8b96ab]">
-          {mode.providerLabel}
+          {modeProviderLabel}
         </span>
-        <span className={`rounded-full border px-1.5 py-0.5 text-[8px] ${HEALTH_COLORS[providerHealth.overallStatus] ?? HEALTH_COLORS.partial}`}>
-          {providerHealth.overallStatus === "healthy" ? "Healthy" : providerHealth.overallStatus === "partial" ? "Partial" : "Blocked"}
+        <span className={`rounded-full border px-1.5 py-0.5 text-[8px] ${compactHealthClass}`}>
+          {hasMounted ? (healthStatus === "healthy" ? "Healthy" : healthStatus === "partial" ? "Partial" : "Blocked") : "Syncing"}
         </span>
-        <span className={`rounded-full border px-1.5 py-0.5 text-[8px] ${TELEMETRY_COLORS[providerTelemetry.overallStatus] ?? TELEMETRY_COLORS.guarded}`}>
-          {providerTelemetry.overallStatus === "ready" ? "Budget ready" : providerTelemetry.overallStatus === "guarded" ? "Budget guarded" : "Budget blocked"}
+        <span className={`rounded-full border px-1.5 py-0.5 text-[8px] ${compactTelemetryClass}`}>
+          {hasMounted ? (telemetryStatus === "ready" ? "Budget ready" : telemetryStatus === "guarded" ? "Budget guarded" : "Budget blocked") : "Syncing"}
         </span>
         <kbd className="ml-1 rounded border border-[#24283a] bg-[#111521] px-1 py-0.5 text-[8px] text-[#4d566b]">
           ⌘K
@@ -118,36 +157,30 @@ export function CommandBar() {
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="rounded-full border border-emerald-500/15 bg-emerald-500/10 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
-                {mode.label}
+                {modeLabel}
               </span>
               <span className="rounded-full border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[8px] text-[#8b96ab]">
-                {mode.providerLabel}
+                {modeProviderLabel}
               </span>
               <span className="rounded-full border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[8px] text-[#8b96ab]">
-                {mode.cloudAvailable ? "Cloud-backed available" : "Local-only"}
+                {modeCloudLabel}
               </span>
-              <span className={`rounded-full border px-2 py-0.5 text-[8px] ${HEALTH_COLORS[providerHealth.overallStatus] ?? HEALTH_COLORS.partial}`}>
-                {providerHealth.overallStatus === "healthy" ? "Provider healthy" : providerHealth.overallStatus === "partial" ? "Provider partial" : "Provider blocked"}
+              <span className={`rounded-full border px-2 py-0.5 text-[8px] ${fullHealthClass}`}>
+                {hasMounted ? (healthStatus === "healthy" ? "Provider healthy" : healthStatus === "partial" ? "Provider partial" : "Provider blocked") : "Provider syncing"}
               </span>
-              <span className={`rounded-full border px-2 py-0.5 text-[8px] ${TELEMETRY_COLORS[providerTelemetry.overallStatus] ?? TELEMETRY_COLORS.guarded}`}>
-                {providerTelemetry.overallStatus === "ready" ? "Budget ready" : providerTelemetry.overallStatus === "guarded" ? "Budget guarded" : "Budget blocked"}
+              <span className={`rounded-full border px-2 py-0.5 text-[8px] ${fullTelemetryClass}`}>
+                {hasMounted ? (telemetryStatus === "ready" ? "Budget ready" : telemetryStatus === "guarded" ? "Budget guarded" : "Budget blocked") : "Budget syncing"}
               </span>
             </div>
-            <p className="mt-1 text-[10px] leading-snug text-[#8b96ab]">{mode.detail}</p>
+            <p className="mt-1 text-[10px] leading-snug text-[#8b96ab]">{modeDetail}</p>
+            <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">{providerSummary}</p>
+            <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">{costLatencySummary}</p>
+            <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">{stagePolicySummary}</p>
             <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">
-              Provider health: {providerHealth.healthyProviders} healthy / {providerHealth.partialProviders} partial / {providerHealth.blockedProviders} blocked.
+              Latest measured action: {latestActionSummary}.
             </p>
             <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">
-              Cost / latency: {providerTelemetry.activeCostLabel} · {providerTelemetry.activeLatencyLabel}.
-            </p>
-            <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">
-              Stage policy: {providerTelemetry.stagePolicies.map((stage) => `${stage.stage}:${stage.ready ? "ready" : "guarded"}`).join(" · ")}.
-            </p>
-            <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">
-              Latest measured action: {latestAiActionTelemetry ? `${latestAiActionTelemetry.stage} · ${latestAiActionTelemetry.durationMs} ms · ~${latestAiActionTelemetry.estimatedTotalTokens} tokens` : "none yet"}.
-            </p>
-            <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">
-              Telemetry trend: {aiActionTelemetrySummary.trendLabel} · {aiActionTelemetrySummary.trendNote}
+              Telemetry trend: {telemetryTrendSummary}
             </p>
           </div>
           <button

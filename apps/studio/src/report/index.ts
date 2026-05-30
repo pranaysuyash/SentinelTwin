@@ -132,7 +132,7 @@ const REPORT_EXPORT_PRESETS: ReportExportPreset[] = [
   },
 ];
 
-const REPORT_UNCERTAINTY_SAMPLE_COUNT = 3;
+const REPORT_UNCERTAINTY_SAMPLE_COUNT = 2;
 
 export function getReportAudienceProfile(audience: ReportAudience): ReportAudienceProfile {
   return REPORT_AUDIENCE_PROFILES[audience];
@@ -527,12 +527,25 @@ export function buildReportData(
       edgeCount: graph.summary.edgeCount,
       revisionDepth: graph.summary.revisionDepth,
       snapshotCount: graph.summary.snapshotCount,
-      confidenceNotes,
-      sourceNotes,
+      confidenceNotes: visibility === "privacy_safe" ? [] : confidenceNotes,
+      sourceNotes: visibility === "privacy_safe" ? [] : sourceNotes,
     },
-    truthLadder,
-    evidenceTrail,
-    temporalTwin: temporalTwin ?? undefined,
+    truthLadder: visibility === "privacy_safe" ? {
+      labels: [],
+      highestConfidence: 0,
+      lowestConfidence: 0,
+      overallConfidenceLabel: "Redacted for privacy",
+    } : truthLadder,
+    evidenceTrail: visibility === "privacy_safe" ? {
+      changeLogEntryCount: 0,
+      evidenceEntryCount: 0,
+      sensorEvidenceCount: 0,
+      recentEntries: [],
+    } : (visibility === "shared" ? {
+      ...evidenceTrail,
+      recentEntries: evidenceTrail.recentEntries.slice(0, 3),
+    } : evidenceTrail),
+    temporalTwin: visibility === "privacy_safe" ? undefined : temporalTwin ?? undefined,
     adversarialPath: options?.adversarialPath
       ? {
           exposureScore: options.adversarialPath.exposureScore,
@@ -847,6 +860,8 @@ function buildCompareReportSnapshot(
       zonesFailed: c.criticalZonesFailed?.length ?? 0,
       zonesCovered: c.criticalZonesCovered ?? [],
       issues: [],
+      ndaaCompliant: cameraMap.get(c.cameraId)?.ndaaCompliant ?? true,
+      privacyMaskingEnabled: cameraMap.get(c.cameraId)?.privacyMaskingEnabled ?? false,
     })),
     issues: result.issues.map((i: ReportIssue) => ({
       severity: i.severity,
@@ -868,11 +883,24 @@ function buildCompareReportSnapshot(
       edgeCount: graph.summary.edgeCount,
       revisionDepth: graph.summary.revisionDepth,
       snapshotCount: graph.summary.snapshotCount,
-      confidenceNotes,
-      sourceNotes,
+      confidenceNotes: visibility === "privacy_safe" ? [] : confidenceNotes,
+      sourceNotes: visibility === "privacy_safe" ? [] : sourceNotes,
     },
-    truthLadder,
-    evidenceTrail,
+    truthLadder: visibility === "privacy_safe" ? {
+      labels: [],
+      highestConfidence: 0,
+      lowestConfidence: 0,
+      overallConfidenceLabel: "Redacted for privacy",
+    } : truthLadder,
+    evidenceTrail: visibility === "privacy_safe" ? {
+      changeLogEntryCount: 0,
+      evidenceEntryCount: 0,
+      sensorEvidenceCount: 0,
+      recentEntries: [],
+    } : (visibility === "shared" ? {
+      ...evidenceTrail,
+      recentEntries: evidenceTrail.recentEntries.slice(0, 3),
+    } : evidenceTrail),
     novelAlgorithms: undefined,
     meetsModeledZoneRequirements: zonesPassing === totalZones,
     codeCompliant: zonesPassing === totalZones,

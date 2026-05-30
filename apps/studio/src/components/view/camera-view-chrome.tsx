@@ -74,7 +74,7 @@ export function CameraHeader({
           <Camera className="h-3.5 w-3.5" />
         </div>
         <div className="leading-tight">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">Camera View</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">Camera View - Single Camera</div>
           <div className="text-[11px] font-medium text-white">{camera.name}</div>
         </div>
       </div>
@@ -130,6 +130,15 @@ export function ReplayStatusOverlay({
   segmentLabel?: string;
   progressPct?: number;
 }) {
+  const qualityToken = qualityLabel?.toLowerCase() ?? "none";
+  const risk = qualityToken.includes("identification") || qualityToken.includes("scrutinize") || qualityToken.includes("validate")
+    ? { label: "Low", className: "text-emerald-300" }
+    : qualityToken.includes("recognition") || qualityToken.includes("characterize") || qualityToken.includes("perceive")
+      ? { label: "Moderate", className: "text-amber-300" }
+      : qualityToken.includes("none")
+        ? { label: "Critical", className: "text-rose-300" }
+        : { label: "High", className: "text-orange-300" };
+
   return (
     <div className="absolute left-3 bottom-24 z-30 rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)] backdrop-blur-sm">
       <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-[#7dd3fc]">LIVE MODE (Simulated)</div>
@@ -156,6 +165,9 @@ export function ReplayStatusOverlay({
             <span className="text-[#6a748b]">Quality:</span> {qualityLabel}
           </div>
         ) : null}
+        <div>
+          <span className="text-[#6a748b]">Risk:</span> <span className={risk.className}>{risk.label}</span>
+        </div>
         {segmentLabel ? (
           <div className="max-w-55 truncate">
             <span className="text-[#6a748b]">Segment:</span> {segmentLabel}
@@ -440,6 +452,15 @@ export function BottomControlStrip({
         >
           <ArrowLeft className="inline-block h-3 w-3" /> Back to Map View
         </button>
+      </div>
+      <div className="rounded-md border border-[#27364e] bg-black/55 px-2 py-1.5 text-[8px] uppercase tracking-[0.08em] text-[#8ea5cc]">
+        <div className="font-semibold text-[#c7d0e4]">Timeline / Path Replay</div>
+        <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[7px]">
+          <span className="rounded border border-[#2f3d57] bg-[#111827] px-1 py-0.5">Events</span>
+          <span className="rounded border border-[#2f3d57] bg-[#111827] px-1 py-0.5">Quality Over Time</span>
+          <span className="rounded border border-[#2f3d57] bg-[#111827] px-1 py-0.5">Camera Wall Preview</span>
+          <span className="rounded border border-[#2f3d57] bg-[#111827] px-1 py-0.5">Scenario / Path</span>
+        </div>
       </div>
     </div>
   );

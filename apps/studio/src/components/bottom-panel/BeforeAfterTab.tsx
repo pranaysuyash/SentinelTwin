@@ -3,61 +3,13 @@
 import { Copy, GitCompare } from "lucide-react";
 import { useCallback, useState } from "react";
 import { DonutChart } from "@/components/shared/DonutChart";
+import { QualityBar } from "@/components/shared/QualityBar";
 import { buildSecurityOutcomeDelta } from "@/lib/security-outcome/security-outcome-model";
 import { buildCompareShareLink } from "@/lib/compare-share-link";
 import { useStudioStore } from "@/store/studio-store";
 import type { SimulationResult } from "@/schema/security-scene";
 import { qualityToScore } from "@/simulation/dori";
-
-// ── Coverage quality distribution mini bar ─────────────────────────────────
-function QualityBar({ result }: { result: SimulationResult | undefined }) {
-  if (!result) return <div className="h-3 rounded-sm bg-[#1a1d26]" />;
-
-  const cells = result.coverageCells ?? [];
-  const total = cells.length;
-  if (total === 0) return <div className="h-3 rounded-sm bg-[#1a1d26]" />;
-
-  // Use score-based buckets so it works for both DORI and OODPCVS quality names
-  const Segments = [
-    { minScore: 6, maxScore: 7, label: "identification", color: "#4ade80" },
-    { minScore: 5, maxScore: 5, label: "recognition",    color: "#60a5fa" },
-    { minScore: 3, maxScore: 4, label: "observation",    color: "#facc15" },
-    { minScore: 1, maxScore: 2, label: "detection",      color: "#fb923c" },
-  ] as const;
-  const noneCount = cells.filter((c) => qualityToScore(c.quality) === 0).length;
-
-  return (
-    <div className="flex h-3 w-full rounded overflow-hidden gap-px">
-      {Segments.map(({ minScore, maxScore, label, color }) => {
-        const count = cells.filter((c) => {
-          const s = qualityToScore(c.quality);
-          return s >= minScore && s <= maxScore;
-        }).length;
-        const w = (count / total) * 100;
-        if (w < 0.5) return null;
-        return (
-          <div
-            key={label}
-            className="h-full transition-all"
-            style={{ width: `${w}%`, backgroundColor: color }}
-            title={`${label}: ${Math.round(w)}%`}
-          />
-        );
-      })}
-      {(() => {
-        const w = (noneCount / total) * 100;
-        if (w < 0.5) return null;
-        return (
-          <div
-            className="h-full transition-all"
-            style={{ width: `${w}%`, backgroundColor: "#1a1d26" }}
-            title={`none: ${Math.round(w)}%`}
-          />
-        );
-      })()}
-    </div>
-  );
-}
+import { QUALITY_COLOR } from "@/lib/quality-display";
 
 // ── Delta badge ─────────────────────────────────────────────────────────────
 function Delta({ v, suffix = "%" }: { v: number; suffix?: string }) {
@@ -379,20 +331,15 @@ export function BeforeAfterTab() {
           <span className="text-[8px] font-medium uppercase tracking-wider text-[#3a4158]">
             {before?.label ?? "Before"} — Quality Distribution
           </span>
-          <QualityBar result={bSim} />
+          <QualityBar cells={bSim?.coverageCells} />
           <div className="flex gap-2 flex-wrap">
-            {[
-              { q: "identification", color: "#4ade80" },
-              { q: "recognition",    color: "#60a5fa" },
-              { q: "observation",    color: "#facc15" },
-              { q: "detection",      color: "#fb923c" },
-            ].map(({ q, color }) => {
+            {(["identification", "recognition", "observation", "detection"] as const).map((q) => {
               const cnt  = countQuality(bSim, q);
               const tot  = (bSim?.coverageCells ?? []).length;
               const pct  = tot > 0 ? Math.round((cnt / tot) * 100) : 0;
               return (
                 <span key={q} className="flex items-center gap-1 text-[8px] text-[#5a6478]">
-                  <span className="w-1.5 h-1.5 rounded-sm" style={{ backgroundColor: color }} />
+                  <span className="w-1.5 h-1.5 rounded-sm" style={{ backgroundColor: QUALITY_COLOR[q] }} />
                   {q.slice(0, 5)}: {pct}%
                 </span>
               );
@@ -414,20 +361,15 @@ export function BeforeAfterTab() {
           <span className="text-[8px] font-medium uppercase tracking-wider text-blue-400/70">
             {after?.label ?? "After"} — Quality Distribution
           </span>
-          <QualityBar result={aSim} />
+          <QualityBar cells={aSim?.coverageCells} />
           <div className="flex gap-2 flex-wrap">
-            {[
-              { q: "identification", color: "#4ade80" },
-              { q: "recognition",    color: "#60a5fa" },
-              { q: "observation",    color: "#facc15" },
-              { q: "detection",      color: "#fb923c" },
-            ].map(({ q, color }) => {
+            {(["identification", "recognition", "observation", "detection"] as const).map((q) => {
               const cnt  = countQuality(aSim, q);
               const tot  = (aSim?.coverageCells ?? []).length;
               const pct  = tot > 0 ? Math.round((cnt / tot) * 100) : 0;
               return (
                 <span key={q} className="flex items-center gap-1 text-[8px] text-[#5a6478]">
-                  <span className="w-1.5 h-1.5 rounded-sm" style={{ backgroundColor: color }} />
+                  <span className="w-1.5 h-1.5 rounded-sm" style={{ backgroundColor: QUALITY_COLOR[q] }} />
                   {q.slice(0, 5)}: {pct}%
                 </span>
               );

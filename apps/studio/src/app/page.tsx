@@ -59,15 +59,13 @@ function parseTimelineFocusFromUrl(search: string) {
 function StudioPageContent() {
   const searchParams = useSearchParams();
   const shouldBypassLauncher = searchParams.get("studio") === "1";
-  const [enterStudio, setEnterStudio] = useState(true);
+  const [enterStudio, setEnterStudio] = useState(shouldBypassLauncher);
   const [showWizard, setShowWizard] = useState(false);
   const [showFloorPlanWizard, setShowFloorPlanWizard] = useState(false);
   const [showScanWizard, setShowScanWizard] = useState(false);
   const [scanWizardMode, setScanWizardMode] = useState<"manual" | "guided">("manual");
   const [showProjectLauncher, setShowProjectLauncher] = useState(false);
-  const [showGuidedScanKickoff, setShowGuidedScanKickoff] = useState(false);
   const [showAiDraft, setShowAiDraft] = useState(false);
-  const [showVerifyFootagePreview, setShowVerifyFootagePreview] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("Create a 10m x 7m electronics shop with front entry, two shelves, right-side cash counter, back storage, and two cameras.");
   const [aiDraftPreview, setAiDraftPreview] = useState<ReturnType<typeof draftSceneFromPrompt> | null>(null);
   const [aiWarning, setAiWarning] = useState<string | null>(null);
@@ -100,6 +98,7 @@ function StudioPageContent() {
   const setDemoStep = useStudioStore((s) => s.setDemoStep);
   const setActiveWorkflow = useStudioStore((s) => s.setActiveWorkflow);
   const setActiveWorkflowStep = useStudioStore((s) => s.setActiveWorkflowStep);
+  const setSelectedCameraId = useStudioStore((s) => s.setSelectedCameraId);
   const activeWorkflowId = useStudioStore((s) => s.activeWorkflowId);
   const setCameraViewVerificationIntent = useStudioStore((s) => s.setCameraViewVerificationIntent);
   const runSimulationFromStore = useStudioStore((s) => s.runSimulation);
@@ -237,6 +236,7 @@ function StudioPageContent() {
     });
     setScanWizardMode("guided");
     setShowScanWizard(true);
+    setLaunchNotice("Guided scan assistant opened. The manual-assisted review and compile flow remains in control.");
   };
   const aiDraftSceneJson = useMemo(
     () => {
@@ -476,7 +476,18 @@ function StudioPageContent() {
   const startVerifyFootageFlow = () => {
     setActiveWorkflow("verify_footage");
     setActiveWorkflowStep(0);
-    setShowVerifyFootagePreview(true);
+    if (scene.cameras.length === 0) {
+      setLaunchNotice("Add a camera before opening the real footage verification workflow.");
+      openCoverageWorkspace();
+      return;
+    }
+    const targetCameraId = scene.cameras.find((entry) => entry.id === useStudioStore.getState().selectedCameraId)?.id ?? scene.cameras[0]?.id ?? null;
+    if (targetCameraId) {
+      setSelectedCameraId(targetCameraId);
+    }
+    setCameraViewVerificationIntent({ source: "other", openPanel: true });
+    launchWorkspace("camera_view", "coverage", "metrics");
+    setLaunchNotice("Opened Camera View verification workflow.");
   };
 
   const openScene = (nextScene = scene) => {
@@ -564,6 +575,11 @@ function StudioPageContent() {
     setSiteIntakeSession(null);
   };
 
+  const approveAndRunBaseline = () => {
+    runSimulationFromStore();
+    approveIntakeSession();
+  };
+
   if (enterStudio) {
     return <StudioShell />;
   }
@@ -574,6 +590,8 @@ function StudioPageContent() {
         session={siteIntakeSession}
         onApprove={approveIntakeSession}
         onReject={rejectIntakeSession}
+        onEdit={rejectIntakeSession}
+        onRunBaselineSimulation={approveAndRunBaseline}
       />
     );
   }
@@ -623,7 +641,7 @@ function StudioPageContent() {
               }}
               onGuidedScanAssistant={() => {
                 if (!confirmWorkspaceReplacement("open the guided scan assistant")) return;
-                setShowGuidedScanKickoff(true);
+                openGuidedScanAssistant();
               }}
               onAiDraft={startAiDraftFlow}
               onOpenDemoScene={openDemoWorkspace}
@@ -643,16 +661,26 @@ function StudioPageContent() {
         </div>
       ) : (
         <SiteIntakeHub
-          onCreateScene={startDesignFlow}
-          onScanSite={() => {
+          onBuildManually={startDesignFlow}
+          onStartScan={() => {
             if (!confirmWorkspaceReplacement("start scan intake")) return;
             openScanWizard();
           }}
-          onAiDraft={startAiDraftFlow}
+          onStartAiDraft={startAiDraftFlow}
           onImportFloorPlan={openFloorPlanFlow}
-          onImportScene={handleImportScene}
+          onImportJson={handleImportScene}
+          onVerifyFootage={() => {
+            alert("Footage verification coming in V1.");
+          }}
           onEnterStudio={() => setEnterStudio(true)}
           onShowProjects={() => setShowProjects(true)}
+          onOpenDemo={openDemoWorkspace}
+          recentSites={savedScenes.map(scene => ({
+            id: scene.id,
+            name: scene.name || "Untitled Scene",
+            updatedLabel: "Recently updated",
+            riskLabel: "Medium Risk"
+          }))}
         />
       )}
 
@@ -775,52 +803,6 @@ function StudioPageContent() {
                 compileCurrentScene("scan");
               }}
             />
-          </div>
-        </div>
-      ) : null}
-
-      {showGuidedScanKickoff ? (
-        <div className="fixed inset-0 z-50 bg-black/55 p-4">
-          <div className="mx-auto max-w-3xl rounded-2xl border border-[#1f2637] bg-[#0b0f17] p-4 shadow-2xl">
-            <h2 className="text-sm font-semibold text-white">Guided Scan Assistant</h2>
-            <p className="mt-1 text-xs text-[#91a4c5]">
-              This assistant guides photo capture, then hands off to the same manual review and compile flow used by Scan Site.
-            </p>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-[11px] text-emerald-100">
-                <div className="font-semibold uppercase tracking-[0.14em] text-emerald-200">What the assistant does</div>
-                <div className="mt-1">Suggests a practical capture order for overview, entry, counter, and close-ups</div>
-                <div>Enables auto-path hints while keeping manual review in the loop</div>
-                <div>Compiles to the same editable SecurityScene used by the manual flow</div>
-              </div>
-              <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-[11px] text-amber-100">
-                <div className="font-semibold uppercase tracking-[0.14em] text-amber-200">Still manual by design</div>
-                <div>No automatic segmentation or depth solve yet</div>
-                <div>The user still confirms, edits, and rejects candidates before compile</div>
-                <div>Advanced multi-photo correspondence remains a later upgrade</div>
-              </div>
-            </div>
-            <div className="mt-3 rounded-lg border border-[#22314b] bg-[#101827] px-3 py-2 text-[10px] text-[#b6c6e6]">
-              Guided assistant preview: the assistant shortens capture setup, but the scene still compiles through the manual-assisted review path.
-            </div>
-            <div className="mt-3 flex justify-end gap-2">
-              <button
-                onClick={() => setShowGuidedScanKickoff(false)}
-                className="rounded-lg border border-[#2a3347] px-3 py-1.5 text-xs text-[#9bb0cf]"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => {
-                  setShowGuidedScanKickoff(false);
-                  openGuidedScanAssistant();
-                  setLaunchNotice("Guided scan assistant opened. The manual-assisted review and compile flow remains in control.");
-                }}
-                className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500"
-              >
-                Open Guided Assistant
-              </button>
-            </div>
           </div>
         </div>
       ) : null}
@@ -1247,56 +1229,6 @@ function StudioPageContent() {
                 <span className="font-semibold text-cyan-200">AI draft status:</span> {aiDraftNotice}
               </div>
             ) : null}
-          </div>
-        </div>
-      ) : null}
-
-      {showVerifyFootagePreview ? (
-        <div className="fixed inset-0 z-50 bg-black/55 p-4">
-          <div className="mx-auto max-w-3xl rounded-2xl border border-[#1f2637] bg-[#0b0f17] p-4 shadow-2xl">
-            <h2 className="text-sm font-semibold text-white">Verify Real Camera Footage (Preview)</h2>
-            <p className="mt-1 text-xs text-[#91a4c5]">
-              Current support is a planning-assist workflow in Camera View, not a forensic verification pipeline.
-            </p>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-[11px] text-emerald-100">
-                <div className="font-semibold uppercase tracking-[0.14em] text-emerald-200">Available now</div>
-                <div className="mt-1">Reference frame upload</div>
-                <div>Overlay/split comparison</div>
-                <div>Manual candidate frame review</div>
-                <div>Planning impact annotation</div>
-                <div>Optional frame-by-frame inspection workflow</div>
-              </div>
-              <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-[11px] text-amber-100">
-                <div className="font-semibold uppercase tracking-[0.14em] text-amber-200">Not implemented yet</div>
-                <div>Auto camera pose/FOV recovery</div>
-                <div>Auto scoring and best-frame ranking</div>
-                <div>ONVIF/RTSP integration</div>
-                <div>Forensic-grade proof claims</div>
-              </div>
-            </div>
-            <div className="mt-3 rounded-lg border border-[#22314b] bg-[#101827] px-3 py-2 text-[10px] text-[#b6c6e6]">
-              Planning indicator only: modeled outcomes are deterministic simulation estimates and are not legal or forensic guarantees.
-            </div>
-            <div className="mt-3 flex justify-end gap-2">
-              <button
-                onClick={() => setShowVerifyFootagePreview(false)}
-                className="rounded-lg border border-[#2a3347] px-3 py-1.5 text-xs text-[#9bb0cf]"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => {
-                  setShowVerifyFootagePreview(false);
-                  setCameraViewVerificationIntent({ source: "launcher_preview", openPanel: true });
-                  launchWorkspace("camera_view", "coverage", "metrics");
-                  setLaunchNotice("Use Camera View footage verification overlay as current preview path.");
-                }}
-                className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500"
-              >
-                Open Camera View Preview
-              </button>
-            </div>
           </div>
         </div>
       ) : null}

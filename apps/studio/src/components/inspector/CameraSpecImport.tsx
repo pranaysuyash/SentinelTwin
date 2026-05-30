@@ -20,9 +20,9 @@ export function CameraSpecImport({
     // Simulated parsing of spec sheet JSON/text
     try {
       await new Promise(resolve => setTimeout(resolve, 500));
-      let parsed;
+      let parsed: Partial<Pick<CameraNode, "fovHorizontalDeg" | "resolutionMP" | "focalLengthMm" | "irRangeM">>;
       try {
-        parsed = JSON.parse(rawText);
+        parsed = JSON.parse(rawText) as Partial<Pick<CameraNode, "fovHorizontalDeg" | "resolutionMP" | "focalLengthMm" | "irRangeM">>;
       } catch {
         // Simple heuristic parsing if not valid JSON
         parsed = {};
@@ -41,10 +41,10 @@ export function CameraSpecImport({
 
       const patch: Partial<CameraNode> = {};
       
-      if (parsed.fovHorizontalDeg) patch.fovHorizontalDeg = Number(parsed.fovHorizontalDeg);
-      if (parsed.resolutionMP) patch.resolutionMP = Number(parsed.resolutionMP);
-      if (parsed.focalLengthMm) patch.focalLengthMm = Number(parsed.focalLengthMm);
-      if (parsed.irRangeM) patch.irRangeM = Number(parsed.irRangeM);
+      if (parsed.fovHorizontalDeg != null) patch.fovHorizontalDeg = Number(parsed.fovHorizontalDeg);
+      if (parsed.resolutionMP != null) patch.resolutionMP = Number(parsed.resolutionMP);
+      if (parsed.focalLengthMm != null) patch.focalLengthMm = Number(parsed.focalLengthMm);
+      if (parsed.irRangeM != null) patch.irRangeM = Number(parsed.irRangeM);
       
       if (Object.keys(patch).length > 0) {
         updateNode(camera.id, patch);

@@ -1,7 +1,7 @@
 # Exploration Map — SentinelTwin
 
 **This is a living document. Append findings. Never replace.**
-**Last updated:** 2026-05-29 (Physics engine audit — zero implementation across entire codebase, deferred to V0.2, no new action needed) — previous: Checkpoint compare/report pivots + launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Sensor provenance + runtime health surfacing; Sensor fusion preview + workspace access policy surfacing; Digital twin simulation physics: PTZ movement, BRDF reflectivity, dynamic lighting, view distance, placement constraints, scene fidelity, occlusion culling, camera feed synthesis, real-time feedback
+**Last updated:** 2026-05-30 (Dedicated lighting/shadow overlay mode added on top of heatmap lighting/shadow implementation) — previous: Heatmap lighting/shadow implementation — camera PPM now combines independent security-light illumination, obstruction-cast light shadows, and camera line-of-sight; Physics engine audit — zero implementation across entire codebase, deferred to V0.2, no new action needed; Checkpoint compare/report pivots + launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Sensor provenance + runtime health surfacing; Sensor fusion preview + workspace access policy surfacing; Digital twin simulation physics: PTZ movement, BRDF reflectivity, dynamic lighting, view distance, placement constraints, scene fidelity, occlusion culling, camera feed synthesis, real-time feedback
 
 ---
 
@@ -21,6 +21,19 @@ node store pattern are exactly what SentinelTwin needs.
 **Key finding:** three-mesh-bvh is mandatory from day one. Instanced mesh for heatmap.
 **Open:** Benchmark 40×40 grid × 4 cameras. Target <16ms. Log in OPEN_QUESTIONS.md Q-002.
 **Next:** Build prototype coverage engine in isolation. Measure raycast performance.
+
+**2026-05-30 update — heatmap lighting and shadows implemented:**
+- Coverage heatmap scoring now treats cameras and security lights as independent physical sources, then combines them at each sampled cell. Camera visibility still comes from camera FOV + camera-to-target occlusion + PPM. Lighting comes from each active `SecurityLightNode` with range, brightness, optional beam cone, and a separate light-to-target occlusion ray.
+- Obstructions now create two distinct effects: camera line-of-sight shadows (`blockedBy`, no visual coverage) and lighting shadows (`shadowedBy`, darkened/night-penalized camera quality even when a camera may geometrically see the point). This matches the product thesis: real coverage is not just camera cones; it is camera quality under actual illumination.
+- Heatmap rendering remains the canonical instanced-mesh path from D-006. Quality mode now subtly brightens lit cells and darkens shadowed/night-dark cells while preserving DORI/PPM colors from the design pack (`FullCameraSuiteCoverageMode_metrics_Camera1Inspector.png`, `DesignSystem_MapLayerVisualLanguage_CanonicalTokens.png`). Hover explainability exposes light level, lights contributing, and obstruction-cast light shadows.
+- External validation signal: System Surveyor's Boundaries positioning confirms that real device coverage must be constrained by walls/obstructions rather than theoretical cones; CCTV heatmap references commonly describe color overlays for motion/activity, but SentinelTwin's differentiator is deterministic predicted security coverage that includes FOV, occlusion, light, and shadows before deployment.
+- Code anchors: `apps/studio/src/simulation/coverage.ts`, `apps/studio/src/components/workspace/SharedScene.tsx`, `apps/studio/src/components/workspace/WorkspaceCanvas.tsx`, `apps/studio/src/simulation/__tests__/lighting.test.ts`.
+- Next hardening: calibrate light falloff/brightness weights against real lux targets and add a dedicated light-only overlay mode if operators need to debug lighting independent of camera PPM.
+
+**2026-05-30 follow-up — dedicated lighting overlay:**
+- Added a first-class `Lighting` heatmap mode in the coverage legend and shared scene renderer. It uses yellow/orange/blue/dark/red semantics for bright, usable, low, dark, and obstruction-shadowed light states, isolating lighting from camera PPM quality.
+- This should be the operator debugging view for “is the failure caused by camera geometry or by lighting?” while `Quality` remains the combined security-coverage view.
+- Next hardening: add lighting-mode QA screenshots and calibrate the thresholds against lux assumptions rather than the current normalized light proxy.
 
 ---
 
@@ -6059,6 +6072,8 @@ The studio app is a large React surface with motion-heavy panels and several lon
 - The live fusion path can now preserve metadata freshness and connection posture without requiring a pre-normalized JSON adapter for external camera feeds.
 - Live camera connection probes now also preserve XML negotiation payloads without polluting the error channel with JSON-only parse failures.
 - The reusable ONVIF probe helper now performs a real SOAP session probe and parses device information instead of simulating a session manager, so the live camera boundary has a concrete transport/client primitive rather than a mock implementation.
+- The launcher now enters the existing Camera View verification workflow directly, so real-footage verification no longer stops at a separate preview modal before the overlay/alignment tools appear.
+- The launcher now opens the guided scan assistant directly too, so scan guidance no longer stops at a separate kickoff modal before the actual scan wizard appears.
 
 ### Follow-up
 

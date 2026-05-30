@@ -42,11 +42,14 @@ describe("SceneIntelligenceTab", () => {
     expect(source).toContain("Published delta");
     expect(source).toContain("Published age");
     expect(source).toContain("Operational evidence archives");
+    expect(source).toContain("Compare handoff provenance");
     expect(source).toContain("Copy archive link");
     expect(source).toContain("Open archive link");
     expect(source).toContain("Restore archive");
     expect(source).toContain("Restore state at T");
     expect(source).toContain("state at time T");
+    expect(source).toContain("exact snapshot");
+    expect(source).toContain("derived state");
     expect(source).toContain("Version history");
     expect(source).toContain("Evidence events");
     expect(source).toContain("Latest change");
@@ -76,6 +79,7 @@ describe("SceneIntelligenceTab", () => {
     expect(source).toContain("Point-in-time reconstruction");
     expect(source).toContain("Preview only");
     expect(source).toContain("Reconstruct the scene state at this checkpoint without committing it yet.");
+    expect(source).toContain("Compare handoff provenance");
     expect(source).toContain("Open Before/After");
     expect(source).toContain("Open Report Compare");
     expect(source).toContain("Copy compare link");

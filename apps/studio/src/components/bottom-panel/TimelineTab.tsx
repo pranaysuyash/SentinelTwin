@@ -52,6 +52,8 @@ function buildRows(path: ScenarioPath, result: SimulationResult["pathResults"][n
     position: [number, number] | null;
     event: string;
     quality: DoriQuality;
+    severity: "low" | "medium" | "high";
+    action: string;
     cameraId?: string;
     reason?: string;
   }> = [];
@@ -59,11 +61,27 @@ function buildRows(path: ScenarioPath, result: SimulationResult["pathResults"][n
   if (!result) return rows;
 
   for (const evt of result.timeline) {
+    const normalizedQuality = evt.quality ?? (evt.event === "lost" ? "none" : "detection");
+    const severity = normalizedQuality === "none"
+      ? "high"
+      : normalizedQuality === "detection" || normalizedQuality === "observation" || normalizedQuality === "outline"
+        ? "medium"
+        : "low";
+    const action = evt.event === "lost"
+      ? "Re-aim / add camera coverage in this segment"
+      : normalizedQuality === "none"
+        ? "Investigate occlusion and verify line-of-sight"
+        : severity === "medium"
+          ? "Tune angle, zoom, or lighting to improve quality"
+          : "Maintain current placement";
+
     rows.push({
       timeS: evt.timeS,
       position: samplePathPosition(path, evt.timeS),
       event: evt.event,
-      quality: evt.quality ?? (evt.event === "lost" ? "none" : "detection"),
+      quality: normalizedQuality,
+      severity,
+      action,
       cameraId: evt.cameraId,
       reason: evt.reason,
     });
@@ -404,7 +422,9 @@ export function TimelineTab() {
                     <th className="px-3 py-2 font-semibold">Actor Position</th>
                     <th className="px-3 py-2 font-semibold">Camera</th>
                     <th className="px-3 py-2 font-semibold">Quality</th>
+                    <th className="px-3 py-2 font-semibold">Severity</th>
                     <th className="px-3 py-2 font-semibold">Event</th>
+                    <th className="px-3 py-2 font-semibold">Action</th>
                     <th className="px-3 py-2 font-semibold">Reason</th>
                   </tr>
                 </thead>
@@ -419,7 +439,20 @@ export function TimelineTab() {
                       <td className="px-3 py-2">
                         <QualityBadge quality={row.quality} />
                       </td>
+                      <td className="px-3 py-2">
+                        <span className={cn(
+                          "rounded px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.1em]",
+                          row.severity === "high"
+                            ? "bg-rose-500/15 text-rose-300"
+                            : row.severity === "medium"
+                              ? "bg-amber-500/15 text-amber-300"
+                              : "bg-emerald-500/15 text-emerald-300",
+                        )}>
+                          {row.severity}
+                        </span>
+                      </td>
                       <td className="px-3 py-2 text-[#c7d0e4]">{row.event}</td>
+                      <td className="px-3 py-2 text-[#9bb2d8]">{row.action}</td>
                       <td className="px-3 py-2 text-[#5b667c]">{row.reason ?? "—"}</td>
                     </tr>
                   ))}
@@ -441,9 +474,20 @@ export function TimelineTab() {
                   <div className="text-[10px] text-[#8b96ab]">
                     {row.cameraId ? camerasById[row.cameraId] ?? row.cameraId : "No camera"} · {row.event}
                   </div>
+                  <div className={cn(
+                    "mt-1 inline-flex rounded px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.1em]",
+                    row.severity === "high"
+                      ? "bg-rose-500/15 text-rose-300"
+                      : row.severity === "medium"
+                        ? "bg-amber-500/15 text-amber-300"
+                        : "bg-emerald-500/15 text-emerald-300",
+                  )}>
+                    {row.severity}
+                  </div>
                   <div className="mt-1.5 text-[9px] text-[#5b667c]">
                     Actor @ {formatPoint(row.position)}
                   </div>
+                  <div className="mt-1 text-[8px] text-[#9bb2d8]">Action: {row.action}</div>
                   {row.reason ? (
                     <div className="mt-2 rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5 text-[9px] text-[#c7d0e4]">
                       {row.reason}

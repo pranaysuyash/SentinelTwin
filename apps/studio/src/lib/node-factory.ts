@@ -72,6 +72,8 @@ export function createCameraNode(position: [number, number, number]): CameraNode
     reviewStatus: "unreviewed",
     sourceTrace: "",
     geometryValidity: "valid",
+    ndaaCompliant: true,
+    privacyMaskingEnabled: false,
     tags: [],
   };
 }

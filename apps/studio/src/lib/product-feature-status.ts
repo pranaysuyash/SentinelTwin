@@ -6,7 +6,7 @@ export interface ProductFeatureEntry {
   detail: string;
 }
 
-export const PRODUCT_FEATURE_STATUS_LAST_VERIFIED = "2026-05-29";
+export const PRODUCT_FEATURE_STATUS_LAST_VERIFIED = "2026-05-30";
 
 export const PRODUCT_FEATURE_STATUS: ProductFeatureEntry[] = [
   {
@@ -40,14 +40,19 @@ export const PRODUCT_FEATURE_STATUS: ProductFeatureEntry[] = [
     detail: "Role-aware publish, review, approval, rejection, and annotation controls with evidence-logged audit trails.",
   },
   {
-    status: "Planned",
+    status: "Preview",
+    feature: "Workspace catalog / org boundary",
+    detail: "Local workspace catalog summary with organization, owner, visibility, and surface mix. Canonical org, billing, invite, and ownership-transfer semantics remain open.",
+  },
+  {
+    status: "Preview",
     feature: "Guided scan reconstruction",
-    detail: "Future: guided phone capture, segmentation, depth, and multi-photo reconstruction that can plug into the same editable SecurityScene pipeline.",
+    detail: "Guided scan assistant opens the existing scan wizard directly, keeps auto-path hints and manual review in the loop, and compiles through the same editable SecurityScene pipeline. Full phone capture, segmentation, and depth reconstruction remain future work.",
   },
   {
     status: "Preview",
     feature: "Real footage verification",
     detail:
-      "Camera View preview workflow with reference-frame upload, overlay alignment, and manual comparison only. No auto pose/FOV recovery, no forensic-grade proof claims, and no auto best-frame ranking. Use results as planning-grade estimates only.",
+      "Camera View verification workflow with reference-frame upload, overlay or split alignment, video frame extraction, and manual comparison. Auto pose/FOV recovery and forensic-grade proof claims are still not implemented.",
   },
 ];

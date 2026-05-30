@@ -562,7 +562,7 @@ export function CoverageHeatmapInstanced({
   onClearHover,
 }: {
   cells: CoverageCellResult[];
-  mode?: "quality" | "fragility" | "overlap" | "contribution" | "blindspots";
+  mode?: "quality" | "lighting" | "fragility" | "overlap" | "contribution" | "blindspots";
   onHoverCell?: (cell: CoverageCellResult, event: ThreeEvent<PointerEvent>) => void;
   onClearHover?: () => void;
 }) {
@@ -584,6 +584,26 @@ export function CoverageHeatmapInstanced({
     return [0.94, 0.27, 0.27]; // red
   }, []);
 
+  const lightingRGB = useCallback((cell: CoverageCellResult): [number, number, number] => {
+    const evaluations = Object.values(cell.cameraEvaluations ?? {});
+    const bestEvaluation = evaluations.reduce<(typeof evaluations)[number] | undefined>((best, evaluation) => {
+      if (!best) return evaluation;
+      const bestScore = (best.lightLevel ?? 0) * (best.visible ? 1 : 0.35) - (best.lightingPenalty ?? 0);
+      const evaluationScore = (evaluation.lightLevel ?? 0) * (evaluation.visible ? 1 : 0.35) - (evaluation.lightingPenalty ?? 0);
+      return evaluationScore > bestScore ? evaluation : best;
+    }, undefined);
+
+    if (!bestEvaluation) return [0.22, 0.24, 0.30];
+
+    const lightLevel = bestEvaluation.lightLevel ?? 0;
+    const shadowed = (bestEvaluation.shadowedBy ?? []).length > 0;
+    if (shadowed && lightLevel < 0.35) return [0.70, 0.13, 0.13];
+    if (lightLevel >= 0.65) return [1.00, 0.88, 0.28];
+    if (lightLevel >= 0.35) return [0.97, 0.58, 0.16];
+    if (lightLevel >= 0.12) return [0.27, 0.51, 0.96];
+    return [0.11, 0.14, 0.22];
+  }, []);
+
   const contributionRGB = useCallback((cell: CoverageCellResult): [number, number, number] => {
     const evaluations = Object.values(cell.cameraEvaluations ?? {}).filter((evaluation) => evaluation.visible && evaluation.ppm > 0);
     if (evaluations.length === 0) return [0.42, 0.45, 0.51];
@@ -598,6 +618,35 @@ export function CoverageHeatmapInstanced({
     if (contribution >= 0.5) return [0.13, 0.78, 0.30];
     if (contribution >= 0.25) return [0.98, 0.79, 0.16];
     return [0.42, 0.45, 0.51];
+  }, []);
+
+  const lightingAwareQualityRGB = useCallback((cell: CoverageCellResult): [number, number, number] => {
+    const rgb = cell.quality === "none" ? TILE_FLOOR_RGB.none : heatmapColorFromPpm(cell.ppm);
+    const evaluations = Object.values(cell.cameraEvaluations ?? {});
+    const bestEvaluation = evaluations.reduce<(typeof evaluations)[number] | undefined>((best, evaluation) => {
+      if (!best) return evaluation;
+      return evaluation.ppm > best.ppm ? evaluation : best;
+    }, undefined);
+
+    if (!bestEvaluation) return rgb;
+
+    const lightLevel = bestEvaluation.lightLevel ?? 1;
+    const shadowed = (bestEvaluation.shadowedBy ?? []).length > 0;
+    const lightingPenalty = bestEvaluation.lightingPenalty ?? 0;
+
+    if (shadowed && lightingPenalty > 0.2) {
+      return [rgb[0] * 0.52 + 0.38, rgb[1] * 0.38, rgb[2] * 0.38];
+    }
+
+    if (lightLevel < 0.12 && lightingPenalty > 0.5) {
+      return [rgb[0] * 0.55, rgb[1] * 0.55, rgb[2] * 0.65 + 0.08];
+    }
+
+    if ((bestEvaluation.illuminatedBy ?? []).length > 0) {
+      return [Math.min(1, rgb[0] * 1.08 + 0.06), Math.min(1, rgb[1] * 1.06 + 0.04), rgb[2] * 0.94];
+    }
+
+    return rgb;
   }, []);
 
   const blindspotRGB = useCallback((cell: CoverageCellResult): [number, number, number] => {
@@ -620,6 +669,8 @@ export function CoverageHeatmapInstanced({
       let rgb: [number, number, number];
       if (mode === "fragility" && cell.fragility != null) {
         rgb = fragilityRGB(cell.fragility);
+      } else if (mode === "lighting") {
+        rgb = lightingRGB(cell);
       } else if (mode === "overlap") {
         rgb = overlapRGB(cell.coveringCameras.length);
       } else if (mode === "contribution") {
@@ -627,7 +678,7 @@ export function CoverageHeatmapInstanced({
       } else if (mode === "blindspots") {
         rgb = blindspotRGB(cell);
       } else {
-        rgb = cell.quality === "none" ? TILE_FLOOR_RGB.none : heatmapColorFromPpm(cell.ppm);
+        rgb = lightingAwareQualityRGB(cell);
       }
 
       col.current.setRGB(rgb[0], rgb[1], rgb[2]);
@@ -636,7 +687,7 @@ export function CoverageHeatmapInstanced({
 
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [visibleCells, mode, blindspotRGB, contributionRGB, overlapRGB]);
+  }, [visibleCells, mode, blindspotRGB, contributionRGB, lightingAwareQualityRGB, lightingRGB, overlapRGB]);
 
   const handlePointerMove = useCallback((event: ThreeEvent<PointerEvent>) => {
     if (!onHoverCell) return;

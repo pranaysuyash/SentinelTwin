@@ -540,12 +540,25 @@ export function CameraWallView() {
   const selectedCamera = cameras.find((cam) => cam.id === selectedId)
     ?? cameras.find((cam) => cam.id === selectedCameraId)
     ?? null;
+  const weakRouteCameras = useMemo(() => {
+    return cameras.filter((cam) => {
+      const vis = pathVisibilityByCameraId[cam.id];
+      if (!vis || vis.totalDurationS <= 0) return false;
+      return vis.visibleS / vis.totalDurationS <= 0.35;
+    }).length;
+  }, [cameras, pathVisibilityByCameraId]);
+
+  const wallActionHint = activePath
+    ? weakRouteCameras > 0
+      ? `Action: ${weakRouteCameras} feed${weakRouteCameras === 1 ? "" : "s"} weak on route. Re-aim or add coverage.`
+      : "Action: Route coverage stable. Validate with replay evidence."
+    : "Action: Pick a route to prioritize wall feeds by visibility.";
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[#07090d] p-2.5">
       <div className="mb-2 flex items-center justify-between rounded-xl border border-[#1f2536] bg-[#0b0f17] px-3 py-2">
         <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">Camera Wall</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">Camera Wall - Multi Camera</div>
           <div className="mt-0.5 text-[11px] text-[#94a3b8]">
             {viewCount} view layout
             {hiddenCount > 0 ? ` · ${hiddenCount} more camera${hiddenCount === 1 ? "" : "s"}` : ""}
@@ -574,6 +587,16 @@ export function CameraWallView() {
                 Best camera now {scene.cameras.find((cam) => cam.id === bestCameraId)?.name ?? bestCameraId}
               </span>
             ) : null}
+            {activePath ? (
+              <span className={cn(
+                "rounded-md border px-2 py-0.5",
+                weakRouteCameras > 0
+                  ? "border-rose-500/20 bg-rose-500/10 text-rose-300"
+                  : "border-emerald-500/20 bg-emerald-500/10 text-emerald-300",
+              )}>
+                Route risk {weakRouteCameras > 0 ? "Elevated" : "Low"}
+              </span>
+            ) : null}
             <button
               type="button"
               onClick={() => setSyncTime((prev) => !prev)}
@@ -586,6 +609,7 @@ export function CameraWallView() {
               {syncTime ? "Synchronized Time" : "Free Running Time"}
             </button>
           </div>
+          <div className="mt-1 text-[9px] text-[#9fb0c9]">{wallActionHint}</div>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 rounded-lg border border-[#27364e] bg-black/40 p-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#c7d0e4]">

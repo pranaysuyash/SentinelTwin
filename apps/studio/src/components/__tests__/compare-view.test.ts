@@ -19,5 +19,6 @@ describe("CompareView", () => {
     expect(source).toContain("Critical zones failed");
     expect(source).toContain("Critical zones passed");
     expect(source).toContain("Detection range");
+    expect(source).toContain("Compare - Before / After");
   });
 });

@@ -12,7 +12,7 @@ import { computeCoverageUncertainty } from "@/simulation/coverage-uncertainty";
 import { buildRedundancyMatrixReport } from "@/report/redundancy-matrix";
 import { useStudioStore } from "@/store/studio-store";
 
-const REPORT_VIEW_UNCERTAINTY_SAMPLE_COUNT = 3;
+const REPORT_VIEW_UNCERTAINTY_SAMPLE_COUNT = 2;
 
 function StatCard({
   label,

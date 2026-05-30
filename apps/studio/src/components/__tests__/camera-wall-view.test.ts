@@ -11,6 +11,7 @@ describe("CameraWallView", () => {
 
     expect(source).toContain("Active {activeCount}");
     expect(source).toContain("Offline {offlineCount}");
+    expect(source).toContain("Camera Wall - Multi Camera");
     expect(source).toContain("Selected {selectedCamera?.name ?? \"None\"}");
     expect(source).toContain("Best camera now");
     expect(source).toContain("Zone Quality");

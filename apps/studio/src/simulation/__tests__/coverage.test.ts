@@ -89,6 +89,9 @@ describe("computeCoverageCells occlusion handling", () => {
       materialTransmission: expect.any(Number),
       glarePenalty: expect.any(Number),
       lightingPenalty: expect.any(Number),
+      lightLevel: expect.any(Number),
+      illuminatedBy: expect.any(Array),
+      shadowedBy: expect.any(Array),
       finalPpmMultiplier: expect.any(Number),
       reasonCodes: expect.any(Array),
     });

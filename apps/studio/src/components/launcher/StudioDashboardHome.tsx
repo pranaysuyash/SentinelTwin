@@ -25,6 +25,7 @@ import {
 
 import { cn } from "@/lib/cn";
 import { getSceneSourceMeta } from "@/lib/scene-source";
+import { summarizeWorkspaceCatalog } from "@/lib/workspace-catalog";
 import { formatWorkspaceBranchLabel, searchWorkspaceMemory } from "@/lib/workspace-search";
 import type { GovernanceArchiveRecord } from "@/lib/governance-archive";
 import type { WorkspaceMembershipArchiveRecord } from "@/lib/workspace-membership-types";
@@ -36,6 +37,9 @@ import type { CameraLiveConnectionArchiveRecord } from "@/lib/camera-live-connec
 import type { BottomTab, SavedProjectRecord, ViewMode, WorkspacePreset } from "@/store/studio-store";
 import { useStudioStore } from "@/store/studio-store";
 import type { SecurityScene, SecurityIssue, SimulationResult, DoriQuality, ScenarioPath, CameraNode, ObstructionNode, SecurityLightNode } from "@/schema/security-scene";
+import { MiniStat } from "@/components/shared/MiniStat";
+import { QUALITY_COLOR, QUALITY_TEXT_COLOR } from "@/lib/quality-display";
+import { QualityBadge } from "@/components/shared/QualityBadge";
 
 type ProjectSort = "recent" | "name" | "coverage";
 type ProjectSourceFilter = "All" | SecurityScene["source"];
@@ -43,7 +47,7 @@ type StarterTone = "blank" | "import" | "scan" | "ai";
 const NAV_ITEMS = [
   { label: "Home", detail: "Studio dashboard", active: true as const },
   { label: "Projects", detail: "Local workspaces", active: false as const },
-  { label: "Reference Sites", detail: "Retail / Office / Warehouse", active: false as const },
+  { label: "Demo Sites", detail: "Retail / Office / Warehouse", active: false as const },
   { label: "Reports", detail: "Evidence exports", active: false as const },
   { label: "Docs", detail: "Architecture notes", active: false as const },
   { label: "Settings", detail: "Studio preferences", active: false as const },
@@ -102,36 +106,6 @@ function issueSeverityTone(severity: SecurityIssue["severity"]) {
       return "text-sky-300";
   }
 }
-
-const QUALITY_COLOR: Record<DoriQuality, string> = {
-  none: "#7f1d1d",
-  detection: "#f59e0b",
-  observation: "#fbbf24",
-  recognition: "#22c55e",
-  identification: "#38bdf8",
-  overview: "#38bdf8",
-  outline: "#60a5fa",
-  discern: "#4ade80",
-  perceive: "#22c55e",
-  characterize: "#0ea5e9",
-  validate: "#2563eb",
-  scrutinize: "#1d4ed8",
-};
-
-const QUALITY_TEXT_CLASS: Record<DoriQuality, string> = {
-  none: "text-red-300",
-  detection: "text-amber-400",
-  observation: "text-amber-300",
-  recognition: "text-emerald-300",
-  identification: "text-sky-300",
-  overview: "text-sky-300",
-  outline: "text-sky-300",
-  discern: "text-emerald-300",
-  perceive: "text-emerald-300",
-  characterize: "text-sky-300",
-  validate: "text-blue-300",
-  scrutinize: "text-blue-300",
-};
 
 const DORI_QUALITY_ORDER: Record<DoriQuality, number> = {
   none: 0,
@@ -251,6 +225,7 @@ function sceneSummary(scene: SecurityScene) {
     countLabel(scene.securityLights.length, "light"),
     countLabel(scene.obstructions.length, "obstruction"),
     countLabel(scene.criticalZones.length, "critical zone"),
+    countLabel(scene.paths.length, "path"),
   ].join(" · ");
 }
 
@@ -793,26 +768,6 @@ function WorkspaceSeedCard({
   );
 }
 
-function MiniStat({
-  label,
-  value,
-  accent = "text-white",
-  detail,
-}: {
-  label: string;
-  value: string;
-  accent?: string;
-  detail?: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-[color:var(--st-border)] bg-white/[0.025] p-3">
-      <div className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--st-muted)]">{label}</div>
-      <div suppressHydrationWarning className={cn("mt-1 text-2xl font-semibold tracking-tight", accent)}>{value}</div>
-      {detail ? <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">{detail}</div> : null}
-    </div>
-  );
-}
-
 function ProjectMetadataEditor({
   project,
   onUpdateProjectMetadata,
@@ -1196,7 +1151,7 @@ export function StudioDashboardHome({
       icon: <Sparkles className="h-4 w-4" />,
       label: "Guided Scan Assistant",
       detail: "Preview / Manual-assisted",
-      description: "Use guided capture with review checkpoints before compile.",
+      description: "Manual-assisted site photo intake with guided capture and review checkpoints before compile.",
       onClick: onGuidedScanAssistant ?? onScanSite,
     },
     {
@@ -1327,6 +1282,10 @@ export function StudioDashboardHome({
     return browserProjects[0] ?? null;
   }, [browserProjects, selectedProjectId]);
   const selectedProjectScene = selectedProjectRecord?.scene ?? scene;
+  const workspaceCatalog = useMemo(
+    () => summarizeWorkspaceCatalog(savedProjects, selectedProjectRecord?.scene.id ?? scene.id),
+    [savedProjects, scene.id, selectedProjectRecord?.scene.id],
+  );
   const workspaceMemoryResults = useMemo(
     () => searchWorkspaceMemory(workspaceMemoryQuery, {
       currentScene: scene,
@@ -1604,7 +1563,7 @@ export function StudioDashboardHome({
             <div>
               <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-[color:var(--st-muted)]">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-300" />
-                Workspace
+                STUDIO
               </div>
               <div className="mt-3 space-y-1.5">
                 {NAV_ITEMS.map((item) => (
@@ -1751,7 +1710,7 @@ export function StudioDashboardHome({
                 <MiniStat
                   label="Worst Quality"
                   value={worstQualityLabel ?? "—"}
-                  accent={worstQualityValue ? QUALITY_TEXT_CLASS[worstQualityValue] : "text-white"}
+                  accent={worstQualityValue ? QUALITY_TEXT_COLOR[worstQualityValue] : "text-white"}
                   detail={worstIssue ? `Top issue: ${worstIssue.description}` : "Coverage quality floor"}
                 />
                 <MiniStat
@@ -1797,7 +1756,7 @@ export function StudioDashboardHome({
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-semibold text-sky-100">Open Guided Scan Assistant</div>
-                      <div className="mt-0.5 text-[11px] text-sky-200/60">Manual-assisted intake with a guided capture and review loop.</div>
+                      <div className="mt-0.5 text-[11px] text-sky-200/60">Manual-assisted site photo intake with a guided capture and review loop.</div>
                     </div>
                     <ArrowRight className="h-4 w-4 flex-none text-sky-300 transition-transform duration-200 group-hover:translate-x-1" />
                   </button>
@@ -2353,6 +2312,68 @@ export function StudioDashboardHome({
                       onRenameProject={onRenameProject}
                       onSelectProject={setSelectedProjectId}
                     />
+                    <div className="mt-4 rounded-[22px] border border-[color:var(--st-border)] bg-white/[0.025] p-4">
+                      <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Workspace Catalog</div>
+                      <div className="mt-3 flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-base font-semibold text-white">{workspaceCatalog.scopeLabel}</div>
+                          <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
+                            {workspaceCatalog.primaryOrganization} · {workspaceCatalog.primaryOwner}
+                          </div>
+                        </div>
+                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-[color:var(--st-muted)]">
+                          {workspaceCatalog.primaryVisibility ?? "n/a"}
+                        </span>
+                      </div>
+                      <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                        <MiniStat
+                          label="Workspaces"
+                          value={`${workspaceCatalog.workspaceCount}`}
+                          accent="text-sky-200"
+                          detail={`${workspaceCatalog.organizationCount} orgs · ${workspaceCatalog.ownerCount} owners`}
+                        />
+                        <MiniStat
+                          label="Visibility"
+                          value={`${workspaceCatalog.counts.shared + workspaceCatalog.counts.published}`}
+                          accent="text-emerald-200"
+                          detail={`${workspaceCatalog.counts.private} private · ${workspaceCatalog.counts.shared} shared · ${workspaceCatalog.counts.published} published`}
+                        />
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {workspaceCatalog.topOrganizations.slice(0, 2).map((entry) => (
+                          <span key={`org-${entry.name}`} className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+                            Org: {entry.name}
+                          </span>
+                        ))}
+                        {workspaceCatalog.topOrganizations.length > 2 ? (
+                          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+                            +{workspaceCatalog.topOrganizations.length - 2} orgs
+                          </span>
+                        ) : null}
+                        {workspaceCatalog.topOwners.slice(0, 2).map((entry) => (
+                          <span key={`owner-${entry.name}`} className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+                            Owner: {entry.name}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="mt-3 text-[11px] text-[color:var(--st-muted)]">
+                        {workspaceCatalog.scopeDetail}
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+                          Shared: {workspaceCatalog.capabilities.sharedWorkspaces ? "Enabled" : "Local-only"}
+                        </span>
+                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+                          Published: {workspaceCatalog.capabilities.publishedWorkspaces ? "Enabled" : "Local-only"}
+                        </span>
+                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+                          Archive: {workspaceCatalog.capabilities.archiveRecovery ? "Ready" : "Empty"}
+                        </span>
+                      </div>
+                      <div className="mt-2 text-[11px] text-[color:var(--st-muted)]">
+                        {workspaceCatalog.notes.join(" ")}
+                      </div>
+                    </div>
                     <div className="mt-4 space-y-2">
                       <ActionButton
                         icon={<FolderOpen className="h-4 w-4" />}
@@ -2386,7 +2407,7 @@ export function StudioDashboardHome({
                   <div className="mt-4 space-y-2">
                     <ActionButton icon={<Plus className="h-4 w-4" />} label="New Blank Scene" description="Start from an empty scene shell." onClick={onCreateScene} />
                     <ActionButton icon={<FileUp className="h-4 w-4" />} label="Import Scene JSON" description="Load a canonical scene file." onClick={onImportScene} />
-                    <ActionButton icon={<ScanSearch className="h-4 w-4" />} label="Scan a Site" description="Preview: manual-assisted photo marking compiles to editable SecurityScene." onClick={onScanSite} />
+                    <ActionButton icon={<ScanSearch className="h-4 w-4" />} label="Scan a Site" description="Preview: manual-assisted site photo intake compiles to editable SecurityScene." onClick={onScanSite} />
                     <ActionButton icon={<MapIcon className="h-4 w-4" />} label="Import Floor Plan" description="Upload plan image/PDF to generate scene geometry." onClick={onImportFloorPlan} />
                     <ActionButton icon={<Sparkles className="h-4 w-4" />} label="AI Layout Draft" description="Generate a prompt-backed draft scene." onClick={onAiDraft} />
                   </div>
@@ -2422,17 +2443,21 @@ export function StudioDashboardHome({
                 {outcomeSummary.length > 0 ? (
                   outcomeSummary.slice(0, 3).map((row) => (
                     <div key={row.id} className="rounded-xl border border-[#243252] bg-white/[0.02] px-3 py-2">
-                      <div className="text-sm font-semibold">{row.label}</div>
-                      <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
-                        {row.required} required · {row.actual} actual
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate text-sm font-semibold">{row.label}</span>
                         <span className={cn(
-                          "ml-2 rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em]",
+                          "shrink-0 rounded-full border px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em]",
                           row.status === "pass"
                             ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-200"
                             : "border-amber-400/25 bg-amber-500/10 text-amber-200",
                         )}>
                           {row.status}
                         </span>
+                      </div>
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <QualityBadge quality={row.required} display="abbr" />
+                        <span className="text-[10px] text-[#4a5568]">→</span>
+                        <QualityBadge quality={row.actual} display="abbr" />
                       </div>
                     </div>
                   ))
@@ -2487,7 +2512,7 @@ export function StudioDashboardHome({
                   onClick={onOpenReport}
                   className="inline-flex items-center justify-center rounded-xl border border-sky-400/25 bg-sky-500/12 px-3 py-2 text-xs font-medium text-sky-100 transition-colors hover:border-sky-300/35 hover:bg-sky-500/16"
                 >
-                  Open Report
+                  Open Report Lite
                 </button>
               </div>
               <button

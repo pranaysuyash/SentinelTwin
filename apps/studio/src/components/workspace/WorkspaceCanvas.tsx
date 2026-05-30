@@ -1050,6 +1050,7 @@ function ToolPlacementFloor({
   const [hoverPos, setHoverPos] = useState<THREE.Vector3 | null>(null);
   const [isHovering, setIsHovering] = useState(false);
   const floorRef = useRef<THREE.Mesh>(null!);
+  const lastHoverRef = useRef<[number, number] | null>(null);
   const hasEntryPointsRef = useRef(scene.entryPoints.length > 0);
   const raycaster = useMemo(() => new THREE.Raycaster(), []);
   const { width: sceneWidth, depth: sceneDepth } = scene.dimensions;
@@ -1134,8 +1135,13 @@ function ToolPlacementFloor({
       }
 
       setEditorFeedbackMessage(nextMessage);
-      setEditorHoverPoint(snapped);
-      setHoverPos(new THREE.Vector3(snapped[0], 0.02, snapped[1]));
+      const lastHover = lastHoverRef.current;
+      const shouldUpdateHover = !lastHover || Math.abs(lastHover[0] - snapped[0]) > 0.01 || Math.abs(lastHover[1] - snapped[1]) > 0.01;
+      if (shouldUpdateHover) {
+        lastHoverRef.current = snapped;
+        setEditorHoverPoint(snapped);
+        setHoverPos(new THREE.Vector3(snapped[0], 0.02, snapped[1]));
+      }
     },
     [activeTool, draftWallStart, getFloorPoint, isPlacing, selectionDrag, setEditorFeedbackMessage, setEditorHoverPoint, setSelectionDrag, snapEngine],
   );
@@ -1482,6 +1488,7 @@ function ToolPlacementFloor({
         onPointerLeave={() => {
           setIsHovering(false);
           setHoverPos(null);
+          lastHoverRef.current = null;
           setEditorHoverPoint(undefined);
           setEditorFeedbackMessage(null);
         }}
@@ -1795,8 +1802,16 @@ function HeatmapCellExplainabilityCard() {
                 <span>Material: {formatMultiplier(evaluation.materialTransmission)}</span>
                 <span>Glare: {typeof evaluation.glarePenalty === "number" ? `${(evaluation.glarePenalty * 100).toFixed(0)}%` : "—"}</span>
                 <span>Lighting: {typeof evaluation.lightingPenalty === "number" ? `${(evaluation.lightingPenalty * 100).toFixed(0)}%` : "—"}</span>
+                <span>Lux proxy: {typeof evaluation.lightLevel === "number" ? `${(evaluation.lightLevel * 100).toFixed(0)}%` : "—"}</span>
                 <span>Final factor: {formatMultiplier(evaluation.finalPpmMultiplier)}</span>
               </div>
+              {evaluation.illuminatedBy?.length || evaluation.shadowedBy?.length ? (
+                <div className="mt-1 text-[8px] text-[#8ea2c4]">
+                  {evaluation.illuminatedBy?.length ? <span>Lit by {evaluation.illuminatedBy.join(", ")}</span> : null}
+                  {evaluation.illuminatedBy?.length && evaluation.shadowedBy?.length ? <span> · </span> : null}
+                  {evaluation.shadowedBy?.length ? <span>Light shadow: {evaluation.shadowedBy.join(", ")}</span> : null}
+                </div>
+              ) : null}
               {evaluation.reasonCodes.length > 0 ? (
                 <div className="mt-1 flex flex-wrap gap-1">
                   {evaluation.reasonCodes.slice(0, 4).map((reasonCode) => (

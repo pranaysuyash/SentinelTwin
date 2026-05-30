@@ -227,7 +227,8 @@ await ensureDevBootstrapArtifacts();
 await ensureProductionBootstrapArtifacts();
 
 const nextArgs = mode === "dev" ? ["dev", "--webpack", "-p", String(PORT)] : ["start", "-p", String(PORT)];
-const child = spawn("next", nextArgs, {
+const localNextBinary = path.join(process.cwd(), "node_modules", "next", "dist", "bin", "next");
+const child = spawn(process.execPath, [localNextBinary, ...nextArgs], {
   env: {
     ...process.env,
     HOSTNAME: HOST,

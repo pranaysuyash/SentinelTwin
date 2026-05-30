@@ -5,7 +5,7 @@ Updated: 2026-05-30
 ## Current Root Hierarchy
 
 - `/` -> `StudioDashboardHome` (Product home shell)
-- `/studio` -> `StudioShell` (explicit workspace route)
+- `/studio` -> `StudioShell` (explicit workspace route, implemented via `src/app/studio/page.tsx`)
 - `?studio=1` -> `StudioShell` (explicit launcher bypass for dev/debug)
 
 This is now positioned as a product-first root: users arrive at a job-oriented home, then enter the workspace when they choose a path.
@@ -20,6 +20,8 @@ This is now positioned as a product-first root: users arrive at a job-oriented h
 - Current workspace preview and risk/status summary
 - Top identity copy aligned to `SentinelTwin Studio` + `Security Simulation Workspace`
 - Root top controls explicitly expose `Workspace selector`, `Status`, `Last run`, and `Environment mode` labels for operator clarity
+- Quick-start actions (`New Blank Scene`, `Import Scene JSON`, `Scan a Site`, `AI Layout Draft`, plus optional floor-plan/guided entries) are now visible directly instead of hidden behind an expand toggle
+- Shared mode labels now follow one canonical contract across launcher and shell: `Coverage - Map & Analysis`, `Camera View - Single Camera`, `Camera Wall - Multi Camera`, `Path Replay - Route Analysis`, `Compare - Before / After`, `Report Lite - Quick Report`
 - Primary workspace actions:
   - Coverage
   - Camera View / Camera Wall

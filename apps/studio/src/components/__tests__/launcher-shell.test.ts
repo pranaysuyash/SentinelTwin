@@ -10,6 +10,8 @@ describe("Studio launcher shell", () => {
     const source = readFileSync(pagePath, "utf8");
 
     expect(source).toContain("StudioDashboardHome");
+    expect(source).toContain("const [enterStudio, setEnterStudio] = useState(shouldBypassLauncher);");
+    expect(source).toContain("const [showProjects, setShowProjects] = useState(false);");
     expect(source).toContain("ProjectStartLauncher");
     expect(source).toContain("showProjectLauncher");
     expect(source).toContain("onOpenCoverageWorkspace={openCoverageWorkspace}");
@@ -29,7 +31,7 @@ describe("Studio launcher shell", () => {
     expect(source).toContain('if (!confirmWorkspaceReplacement("open AI layout draft")) return;');
     expect(source).toContain("onGuidedScanAssistant={() => {");
     expect(source).toContain('if (!confirmWorkspaceReplacement("open the guided scan assistant")) return;');
-    expect(source).toContain("setShowGuidedScanKickoff(true);");
+    expect(source).toContain("openGuidedScanAssistant();");
     expect(source).toContain("onOpenScene={openScene}");
     expect(source).toContain("savedProjects={savedProjects}");
     expect(source).toContain("onUpdateProjectMetadata={updateSavedSceneMetadata}");
@@ -86,13 +88,13 @@ describe("Studio launcher shell", () => {
     expect(source).toContain("setLaunchNotice(provenanceNote)");
     expect(source).toContain("setAiDraftNotice(provenanceNote)");
     expect(source).toContain("AI draft status:");
-    expect(source).toContain("Verify Real Camera Footage (Preview)");
-    expect(source).toContain("Open Camera View Preview");
-    expect(source).toContain("What the assistant does");
-    expect(source).toContain("Guided Scan Assistant");
-    expect(source).toContain("Open Guided Assistant");
-    expect(source).toContain("Guided assistant preview: the assistant shortens capture setup, but the scene still compiles through the manual-assisted review path.");
+    expect(source).toContain("Opened Camera View verification workflow.");
+    expect(source).toContain("Add a camera before opening the real footage verification workflow.");
+    expect(source).toContain("Guided scan assistant started");
     expect(source).toContain("Guided scan assistant opened. The manual-assisted review and compile flow remains in control.");
+    expect(source).toContain("setShowScanWizard(true);");
+    expect(source).toContain("Guided scan assistant opened. The manual-assisted review and compile flow remains in control.");
+    expect(source).not.toContain("Guided assistant preview: the assistant shortens capture setup, but the scene still compiles through the manual-assisted review path.");
     expect(source).not.toContain("queryBootEnabled");
     expect(source).not.toContain('new URLSearchParams(window.location.search).get("studio") === "1"');
   });

@@ -4248,6 +4248,15 @@ geometryValidity: z.enum(["valid", "suspect", "invalid"]).default("valid")
 - Rationale: ONVIF support should be built on a real transport/client primitive even if full authenticated multi-step subscription renewal is still a future seam. The shared helper keeps the ONVIF path canonical instead of pretending a simulated session is enough.
 - Consequence: The ONVIF probe path now returns real device information from SOAP responses, camera live probe tests can exercise the client directly, and the remaining gap narrows to authenticated multi-step ONVIF session management rather than the initial probe itself.
 
+## D-252 - Real footage verification should enter Camera View directly instead of a preview modal
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: The launcher already had a dedicated camera-verification workflow in Camera View, but the start-project path still opened a separate preview modal that duplicated the implementation story and kept the entry point looking provisional.
+- Decision: Route the launcher action directly into the existing Camera View verification workflow with the verification panel open, and keep the launcher copy focused on what the workflow actually does instead of explaining a preview shell.
+- Rationale: The Camera View verification path is already the canonical implementation. A separate modal only diluted the real workflow and made the launcher look less implemented than it is.
+- Consequence: The launcher no longer stops at a preview gate for real-footage verification, the Camera View workflow becomes the visible implementation boundary, and the remaining gap is the verification fidelity itself rather than the entry path.
+
 ## D-252 - Point-in-time reconstruction should expose source provenance, not just the reconstructed scene
 
 - Date: 2026-05-30
@@ -4274,3 +4283,33 @@ geometryValidity: z.enum(["valid", "suspect", "invalid"]).default("valid")
 - Decision: Extend the temporal twin summary with explicit checkpoint provenance fields and surface them in report summaries, HTML exports, markdown exports, and plain-text exports.
 - Rationale: Report exports should preserve the same checkpoint lineage trust signal that Scene Intelligence now shows in the interactive reconstruction view. Provenance text makes the exported report less ambiguous without changing the underlying reconstruction model.
 - Consequence: Reports now say when the latest checkpoint is exact versus derived, and the same provenance metadata is available to any future export or comparison surface built on the temporal twin summary.
+
+## D-255 - Guided scan reconstruction should open the real assistant instead of a kickoff modal
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: The guided scan path already compiled through the real `ScanSiteWizard` in guided mode, but the launcher still paused on a kickoff modal that only described the assistant instead of launching it.
+- Decision: Route the guided scan launcher action directly into the guided scan assistant and let the assistant open the existing wizard immediately with the guided scan notice and auto-path hints enabled.
+- Rationale: The assistant was already implemented, so a preview-like kickoff layer only made the workflow look less complete than it looks. The direct launch path is clearer and reduces one more stub-style gate.
+- Consequence: Guided scan now behaves like a real entry workflow from the launcher, the remaining gap is richer capture/reconstruction depth rather than the entry path itself, and the product truth manifests can describe it as a previewable native flow instead of a planned placeholder.
+
+## D-256 - Componentize analytics display surface and compact MetricsTab layout
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: The MetricsTab used 2 single-value donut charts that consumed the same column space as richer cards, a standalone Coverage Fragility card, and standalone Recognition/Identification cards — 8 columns total, 25% of which was low-density visual decoration. The advanced signals section was a wall of 7 text-description pairs with no visual encoding. The Outcome Summary on the launcher dashboard right panel was text-only, making failures hard to scan.
+- Decision: (1) Extract `MiniStat` → `shared/MiniStat.tsx` (big-number card pattern, previously local to StudioDashboardHome). (2) Extract `QualityBar` → `shared/QualityBar.tsx` (horizontal segmented quality-distribution bar, previously local to BeforeAfterTab). (3) Merge standalone Coverage Fragility into Worst Area Quality card with separator + sub-label, reducing the main grid from 8 to 6 columns. (4) Merge standalone Recognition Area + Identification Area into a single Walkable Area Quality card with side-by-side numbers. (5) Replace the 7-card advanced-signals text wall with a compact 2-column color-coded signal table with status dots (good/warn/neutral). (6) Update Outcome Summary to use `QualityBadge` components (`shared/QualityBadge.tsx`) for compact required→actual quality display. (7) Update `BeforeAfterTab` to use the shared `QualityBar` instead of its local copy.
+- Rationale: Keeping the donut charts (design intent) but freeing 2 columns reduces wasted horizontal space while preserving the approved visual language. Merging related metrics (Recog+Ident, Fragility→Worst) creates more information-dense cards without losing data. The color-coded signal table replaces prose reading with scanable status at a glance. Using `QualityBadge` in the Outcome Summary makes failures visually distinct without needing to read text.
+- Alternative rejected — remove donuts entirely: The UI design pack shows donut charts for Overall Coverage and Average Quality as intentional design elements. Removing them creates divergence from the approved visual language. Instead, the cards are given more breathing room by reducing the grid count.
+- Alternative rejected — keep everything as-is: The 8-column grid was low-density and the advanced signals section was consumed as prose. Users scanning for failures had to read every text row.
+- Files created: `src/components/shared/MiniStat.tsx`, `src/components/shared/QualityBar.tsx`
+- Files modified: `src/components/bottom-panel/MetricsTab.tsx`, `src/components/bottom-panel/BeforeAfterTab.tsx`, `src/components/launcher/StudioDashboardHome.tsx`, `src/components/__tests__/metrics-tab.test.ts`
+
+## D-257 - Adversarial Path Target Orientation Penalties
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: Target height was modeled, but target facing direction was completely missing. When a person walks away from a camera, their face is not visible, making recognition and identification impossible, yet the previous engine assigned quality based purely on distance and occlusion.
+- Decision: Compute target facing direction (yaw) derived from the path trajectory. Compare this direction against the angle from the target to the covering cameras. Apply a hard clamp on the maximum quality metric (capping at `observation` for DORI, `perceive` for OODPCVS) if the camera is > 90° off the target's facing direction.
+- Rationale: Face-capture requires the target to be facing the camera (or in profile, < 90° offset). Without orientation penalties, path replay simulates false confidence in recognition where no facial features could be captured.
+- Consequence: Path visibility timelines will now downgrade quality when the target is walking away. The engine is now closer to physical reality.

@@ -366,9 +366,9 @@ export function MapLayers({
                   points={polygon}
                   fill={fill}
                   stroke={priorityStrokeColor(zone.priority)}
-                  strokeWidth={isSelected ? 1.45 : 1.15}
+                  strokeWidth={isSelected ? 1.9 : 1.3}
                   strokeOpacity={0.95}
-                  fillOpacity={isSelected ? 0.95 : 0.85}
+                  fillOpacity={isSelected ? 0.9 : 0.75}
                   {...makeNodeHandlers(zone.id, onNodeSelect, onNodeHover)}
                 />
                 {showNodeLabels ? (
@@ -377,6 +377,9 @@ export function MapLayers({
                     y={centroid.y}
                     fill="#f8fafc"
                     fontSize={8}
+                    stroke="#020617"
+                    strokeWidth={2}
+                    paintOrder="stroke"
                     opacity={0.95}
                     style={{ pointerEvents: "none" }}
                   >
@@ -414,9 +417,9 @@ export function MapLayers({
                 <polygon
                   points={polygon}
                   fill={`url(#privacy-hatch-${mode})`}
-                  fillOpacity={isSelected ? 0.5 : 0.38}
+                  fillOpacity={isSelected ? 0.58 : 0.42}
                   stroke="#fecdd3"
-                  strokeWidth={isSelected ? 1.35 : 1}
+                  strokeWidth={isSelected ? 1.8 : 1.25}
                   {...makeNodeHandlers(zone.id, onNodeSelect, onNodeHover)}
                 />
                 <g transform={`translate(${centroid.x} ${centroid.y})`}>
@@ -633,8 +636,8 @@ export function MapLayers({
                     fontSize="9"
                     fontWeight="700"
                     fill={isHovered ? "#e0e7ff" : "#cbd5e1"}
-                    stroke="#06080d"
-                    strokeWidth="2"
+                    stroke="#020617"
+                    strokeWidth="2.4"
                     paintOrder="stroke"
                     pointerEvents="none"
                   >

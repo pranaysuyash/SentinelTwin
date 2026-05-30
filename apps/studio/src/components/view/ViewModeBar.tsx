@@ -9,12 +9,12 @@ import type { ViewMode } from "@/store/studio-store";
 import { useStudioStore } from "@/store/studio-store";
 
 const VIEW_OPTIONS: { mode: ViewMode; label: string; icon: React.ReactNode }[] = [
-  { mode: "map", label: "Site Map", icon: <LayoutDashboard className="h-3.5 w-3.5" /> },
-  { mode: "camera_view", label: "Single Camera", icon: <Camera className="h-3.5 w-3.5" /> },
-  { mode: "wall", label: "Camera Wall Grid", icon: <Monitor className="h-3.5 w-3.5" /> },
-  { mode: "replay", label: "Route Replay", icon: <Play className="h-3.5 w-3.5" /> },
-  { mode: "compare", label: "Before/After", icon: <GitCompare className="h-3.5 w-3.5" /> },
-  { mode: "report", label: "Report", icon: <FileText className="h-3.5 w-3.5" /> },
+  { mode: "map", label: "Coverage - Map & Analysis", icon: <LayoutDashboard className="h-3.5 w-3.5" /> },
+  { mode: "camera_view", label: "Camera View - Single Camera", icon: <Camera className="h-3.5 w-3.5" /> },
+  { mode: "wall", label: "Camera Wall - Multi Camera", icon: <Monitor className="h-3.5 w-3.5" /> },
+  { mode: "replay", label: "Path Replay - Route Analysis", icon: <Play className="h-3.5 w-3.5" /> },
+  { mode: "compare", label: "Compare - Before / After", icon: <GitCompare className="h-3.5 w-3.5" /> },
+  { mode: "report", label: "Report Lite - Quick Report", icon: <FileText className="h-3.5 w-3.5" /> },
 ];
 
 const tabVariants = {

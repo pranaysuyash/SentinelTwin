@@ -3,6 +3,7 @@
 import { Edit3, Play } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { cn } from "@/lib/cn";
 import { CoverageRibbon } from "@/components/map/CoverageRibbon";
 import { MapCanvas } from "@/components/map/MapCanvas";
 import { MAP_COLORS, qualityColor } from "@/components/map/map-colors";
@@ -137,7 +138,7 @@ export function PathMap({
   return (
     <div className="w-[194px] flex-shrink-0 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
       <div className="mb-1.5 flex items-center justify-between gap-2">
-        <span className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">Path Map</span>
+        <span className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">Path Map - Scenario / Path</span>
         {activePath ? (
           <span className="max-w-[104px] truncate rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-0.5 text-[8px] text-[#9ea8bf]">
             {activePath.label}
@@ -257,7 +258,7 @@ export function PathMap({
           }`}>
             {visiblePct === null ? "--" : `${visiblePct}%`}
           </div>
-          <div className="mt-0.5 text-[8px] uppercase tracking-[0.18em] text-[#556076]">Visible</div>
+          <div className="mt-0.5 text-[8px] uppercase tracking-[0.18em] text-[#556076]">Route Visibility</div>
         </div>
       </div>
 
@@ -310,7 +311,7 @@ export function PathMap({
           className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border border-sky-800/35 bg-sky-900/20 text-[10px] font-medium text-sky-300 transition-colors hover:bg-sky-900/30"
           disabled={!activePath}
         >
-          Open in 3D Replay
+          Open Path Replay
         </button>
       </div>
     </div>
@@ -414,6 +415,20 @@ function PathEventsList({
   currentTime: number;
   onSeek: (timeS: number) => void;
 }) {
+  const severityFor = (event: { quality?: DoriQuality; event: string }) => {
+    const quality = event.quality ?? (event.event === "lost" ? "none" : "detection");
+    if (quality === "none") return "high" as const;
+    if (quality === "detection" || quality === "observation" || quality === "outline") return "medium" as const;
+    return "low" as const;
+  };
+
+  const actionFor = (event: { quality?: DoriQuality; event: string }) => {
+    const quality = event.quality ?? (event.event === "lost" ? "none" : "detection");
+    if (event.event === "lost" || quality === "none") return "Re-aim or add camera for this segment";
+    if (quality === "detection" || quality === "observation" || quality === "outline") return "Tune camera angle / lighting";
+    return "Monitor only";
+  };
+
   if (timeline.length === 0) {
     return (
       <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 text-[9px] text-[#6f7b94]">
@@ -431,6 +446,7 @@ function PathEventsList({
       <div className="max-h-28 space-y-1 overflow-auto pr-1">
         {timeline.map((event, index) => {
           const active = event.timeS <= currentTime && timeline[index + 1]?.timeS > currentTime;
+          const severity = severityFor(event);
           return (
             <button
               key={`${event.event}-${event.timeS}-${index}`}
@@ -447,6 +463,17 @@ function PathEventsList({
                 <div className="text-[8px] text-[#7f8ca6]">
                   {event.reason ?? event.cameraId ?? "No detail"}
                 </div>
+                <div className={cn(
+                  "mt-1 inline-flex rounded px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.1em]",
+                  severity === "high"
+                    ? "bg-rose-500/15 text-rose-300"
+                    : severity === "medium"
+                      ? "bg-amber-500/15 text-amber-300"
+                      : "bg-emerald-500/15 text-emerald-300",
+                )}>
+                  {severity}
+                </div>
+                <div className="mt-1 text-[8px] text-[#9ea8bf]">Action: {actionFor(event)}</div>
               </div>
               <div className="flex flex-col items-end gap-0.5 text-[8px] text-[#9ea8bf]">
                 <span>{event.timeS.toFixed(1)}s</span>

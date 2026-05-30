@@ -1085,7 +1085,7 @@ export function PathReplayView() {
       <div className="flex items-center justify-between gap-4 border-b border-[#1f2536] bg-[#0b0f17] px-4 py-3">
         <div className="min-w-0">
           <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">
-            Active Path Replay
+            Path Replay - Route Analysis
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <select

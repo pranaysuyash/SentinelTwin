@@ -93,6 +93,8 @@ describe("computeSensorFusionSummary", () => {
       reviewStatus: "unreviewed",
       sourceTrace: "",
       geometryValidity: "valid",
+      ndaaCompliant: true,
+      privacyMaskingEnabled: false,
     };
 
     const summary = computeOperationalEvidenceFusionSummary(

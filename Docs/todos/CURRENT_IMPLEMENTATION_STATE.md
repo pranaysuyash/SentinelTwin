@@ -72,7 +72,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - The `Your Workspaces` region now includes starter tiles for blank/import/scan/AI workspace entry, making the section behave like a workspace hub instead of a passive saved-scene list ✅
 - The launcher left rail now includes a task-first `Security Jobs` surface with explicit `Available` / `Preview` / `Planned` status per workflow so users see product maturity before entering Studio ✅
 - The launcher now also exposes a job-first `Start Project` chooser modal, so users can pick their intent (audit, design, import, scan, draft, verify, report) before falling into the studio shell ✅
-- Planned workflows (`Guided Scan Reconstruction`, `Verify Real Camera Footage`) now show explicit planned-state launch notices instead of silently routing into unrelated studio modes ✅
+- The launcher now opens `Guided Scan Reconstruction` directly into the guided scan assistant, while `Verify real footage` opens the real Camera View verification workflow directly instead of routing into a separate preview modal ✅
 - Dashboard hero preview now includes explicit 2D/3D controls, compass/north indicator, canonical PPM legend chips, and obstruction warning callout so the root scene preview reads like a live simulation surface instead of a static banner ✅
 - The root dashboard first-viewport dock now pairs compact `Recent Workspaces` cards with direct quick-start actions for blank scenes, JSON import, floor-plan import, manual-assisted scan, and AI layout draft ✅
 - Root dashboard now includes an explicit footer/status row (`Security Simulation Studio`, version badge, systems operational, feedback/help affordances) matching the studio-home target structure ✅
@@ -81,7 +81,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - Floor-plan import now also has a dedicated launcher entry path (`forceImportMethod="floor_plan"`), so floor-plan users are not routed through the generic new-scene method picker ✅
 - Floor-plan scene generation now emits the required `sensors: []` field so floor-plan output remains valid against the current `SecurityScene` schema ✅
 - SceneBuilderWizard review now includes a floor-plan commit summary card (confidence, unresolved warning count, detected counts, and warning preview) before scene creation ✅
-- Launcher now opens a dedicated `Verify Real Camera Footage (Preview)` modal with explicit capability/limitation framing and direct handoff to Camera View preview tools ✅
+- Launcher now opens the real Camera View verification workflow directly from `Verify real footage`, keeping the reference-frame upload, overlay alignment, and video frame extraction tools in the existing camera view shell ✅
 - Root launcher query boot now initializes client-side (effect-driven) to avoid server/client render divergence that can trigger runtime hydration errors in production builds ✅
 - `ScanSiteWizard` now runs as a stronger manual-assisted product flow: photo upload + metadata, multiple local photos with per-photo previews/status, marker placement/drag/retype/delete, explicit review warnings, and compile-to-canonical `scan` scene output ✅
 - `ScanSiteWizard` now also surfaces a visible `Needs Review` queue summary plus direct `Accept` / `Review` / `Reject` actions per candidate, making correction of extracted objects more explicit before compile ✅
@@ -280,6 +280,8 @@ For the full-vision gap inventory and next-slice sequencing, see
 - Launcher page now exposes a workspace-resume card with direct resume, coverage entry, and saved-scene shortcuts pulled from local storage ✅
 - Workspace footer status now surfaces active workflow progress (`Workflow: <flow> step/total`) from `activeWorkflowId`, `activeWorkflowStep`, and `activeWorkflowSteps`, so users can see guided flow state directly while operating the shell ✅
 - Root dashboard labels now explicitly match operator-control semantics (`Workspace selector`, `Status`, `Last run`, `Environment mode`) and section headings (`CURRENT WORKSPACE`, `SECURITY STATUS`) for closer design-pack parity ✅
+- Shared mode naming is now normalized in the mode bar and footer status bar to goal-aligned labels (`Coverage - Map & Analysis`, `Camera View - Single Camera`, `Camera Wall - Multi Camera`, `Path Replay - Route Analysis`, `Compare - Before / After`, `Report Lite - Quick Report`) ✅
+- Camera View chrome now uses canonical header labeling and includes explicit bottom-strip replay context chips (`Timeline / Path Replay`, `Events`, `Quality Over Time`, `Camera Wall Preview`, `Scenario / Path`) so operator replay context is visible in-view without leaving Camera View ✅
 - Product feature maturity remains tracked in docs and launch flows, but the root dashboard itself now prioritizes the workspace preview, security status, and quick-start actions instead of an in-surface maturity panel ✅
 - AI layout draft launcher modal now warns that the generated scene replaces the current workspace and discloses the model-backed vs heuristic fallback path ✅
 - AI layout draft now records provenance on the scene change log and forwards provenance-backed notices into the launcher/status surface instead of passing opaque warning text alone ✅
@@ -481,6 +483,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - Shows all issues and recommendations
 - Audience selector now frames exports for operator, auditor, insurer, installer, or privacy reviewer, and the same audience mode flows through single-scene and compare exports ✅
 - Report catalog presets and visibility selectors now let exports choose internal/shared/privacy-safe framing before the user exports or copies the artifact ✅
+- Exported reports use a lightweight uncertainty sampling budget so handoff generation stays interactive, while deeper analysis tabs can still increase the sample count when needed ✅
 
 **DebugTab** ✅
 - Toggle switches for all 11 layers
@@ -731,3 +734,10 @@ The following issues were fixed to reach 0 typed errors (only pre-existing TS700
 - Scene Intelligence now also shows that recent operational evidence archive history directly in the provenance surface, with browser handoff copy/open and canonical restore actions for each archive.
 - The point-in-time reconstruction card now exposes exact-versus-derived provenance for the selected checkpoint, so users can see whether the resolved scene came from the selected event itself or from an earlier snapshot source.
 - Report exports now include the same exact-versus-derived checkpoint provenance for the latest checkpoint and latest published checkpoint in the temporal twin summary, so HTML/markdown/text exports match the interactive reconstruction surface.
+- `PathMap` copy now uses canonical scenario/replay language (`Path Map - Scenario / Path`, `Route Visibility`, `Open Path Replay`) so bottom-map semantics align with the design-pack route-analysis contract.
+- Added `path-map.test.ts` source-contract coverage to prevent regression on the canonical PathMap naming and replay action copy.
+- `StudioDashboardHome` now matches remaining goal4 root-copy requirements: `Demo Sites` nav label, `STUDIO` section heading, scene summary including path counts, and explicit `manual-assisted site photo intake` wording on guided scan surfaces.
+- Root launch behavior now defaults to `StudioDashboardHome` (`showProjects` default true, `enterStudio` keyed to `?studio=1` bypass only), so `/` is launcher-first while `?studio=1` remains the explicit StudioShell bypass.
+- Added explicit `/studio` route via `apps/studio/src/app/studio/page.tsx`, so the documented root hierarchy (`/` dashboard, `/studio` workspace, `?studio=1` bypass) is now implemented in code rather than only implied by query handling.
+- Dashboard action/copy consistency pass: right-rail report action now says `Open Report Lite`, and quick-start scan copy now uses `manual-assisted site photo intake` language.
+- Added `root-routing-contract.test.ts` to lock the launcher-first root contract (`/` dashboard by default, `?studio=1` explicit StudioShell bypass) at the source level.

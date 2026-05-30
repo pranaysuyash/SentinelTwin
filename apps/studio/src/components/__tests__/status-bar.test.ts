@@ -19,8 +19,8 @@ describe("StatusBar", () => {
     expect(source).toContain("activeWorkflowSteps");
     expect(source).toContain("describeSelection");
     expect(source).toContain("formatCoverageSummary");
-    expect(source).toContain("Map / Edit");
-    expect(source).toContain("Camera View");
-    expect(source).toContain("Report");
+    expect(source).toContain("Coverage - Map & Analysis");
+    expect(source).toContain("Camera View - Single Camera");
+    expect(source).toContain("Report Lite - Quick Report");
   });
 });

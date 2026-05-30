@@ -565,7 +565,7 @@ Every input mode should compile into the same truth model. Every report should r
 
 These are the remaining places where the product is honest but not yet fully complete:
 
-- Guided scan reconstruction is planned, not implemented as a first-class native flow.
+- Guided scan reconstruction is now a first-class native flow entry point, but it still needs richer phone capture, segmentation, depth reconstruction, and cross-photo correspondence before it reaches the full vision.
 - Text-to-scene is still more of a preview-first authoring path than a mature authoring system.
 - Some model-provider paths remain stubs or fallback-only.
 - The AI pipeline still depends on candidate bakeoffs for stage selection.

@@ -182,7 +182,7 @@ function MiniMapCollapsed({
           <Map className="h-3.5 w-3.5 text-[#93c5fd]" />
         </div>
         <div>
-          <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">MiniMap</div>
+          <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">MiniMap - Collapsed</div>
           <div className="text-[10px] text-[#9aa6bf]">Tap to expand</div>
         </div>
       </div>
@@ -372,7 +372,7 @@ function MiniMapCompact({
     <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
       <div className="mb-2 flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">MiniMap</div>
+          <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">MiniMap - Compact</div>
           <div className="mt-0.5 text-[10px] text-[#8f9bb1]">Compact navigation + status</div>
         </div>
 
@@ -526,7 +526,7 @@ function MiniMapExpanded({
     <div className="rounded-2xl border border-[#1f2536] bg-[#0b0f17] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
       <div className="mb-3 flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">MiniMap</div>
+          <div className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">MiniMap - Expanded</div>
           <div className="mt-0.5 text-[10px] text-[#8f9bb1]">Navigation drawer</div>
         </div>
 
@@ -618,9 +618,9 @@ function MiniMapExpanded({
                 onFit("minimap");
               }}
               className="h-7 rounded-md border border-[#1f2536] bg-[#111521] px-2 text-[9px] font-medium text-[#7f8ca6] transition-colors hover:border-[#2b3246] hover:text-white"
-              title="Switch to map view"
+              title="Switch to 2D top view"
             >
-              2D
+              2D Top View
             </button>
             <button
               onClick={() => {

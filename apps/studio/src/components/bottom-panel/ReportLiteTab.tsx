@@ -410,6 +410,16 @@ export function ReportLiteTab() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-3">
+        {reportVisibility !== "internal" ? (
+          <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+            <div className="text-[10px] font-semibold text-amber-300">Data Disclosure Warning</div>
+            <div className="text-[9px] text-amber-200/80">
+              {reportVisibility === "privacy_safe"
+                ? "Operational evidence, confidence notes, and truth ladder details are fully redacted in Privacy Safe mode."
+                : "Confidence notes are softened and some operational evidence is truncated in Shared mode."}
+            </div>
+          </div>
+        ) : null}
         {!result && reportMode === "single" ? (
           <RunSimulationPrompt
             className="rounded-xl border border-dashed border-[#2a3246] bg-[#0b0f17] px-3 py-4"

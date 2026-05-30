@@ -12,12 +12,12 @@ type StatusBarNode = {
 };
 
 const VIEW_MODE_LABELS: Record<string, string> = {
-  map: "Map / Edit",
-  wall: "Camera Wall",
-  replay: "Path Replay",
-  camera_view: "Camera View",
-  compare: "Before / After",
-  report: "Report",
+  map: "Coverage - Map & Analysis",
+  wall: "Camera Wall - Multi Camera",
+  replay: "Path Replay - Route Analysis",
+  camera_view: "Camera View - Single Camera",
+  compare: "Compare - Before / After",
+  report: "Report Lite - Quick Report",
 };
 
 function formatRunText(timestamp: number | null, durationMs: number | null) {

@@ -801,10 +801,39 @@ export function CompareView() {
     { label: "Path Visibility", beforeValue: mA?.visiblePathPct ?? null, afterValue: mB?.visiblePathPct ?? null, delta: mA && mB ? mB.visiblePathPct - mA.visiblePathPct : null, tone: "#c4b5fd" },
   ] as const;
 
+  const prioritizedActions = useMemo(() => {
+    const actions: string[] = [];
+    if (mA && mB) {
+      if (mB.blindspot > mA.blindspot) {
+        actions.push("Blindspot increased — run obstruction and angle review first.");
+      }
+      if (mB.visiblePathPct < mA.visiblePathPct) {
+        actions.push("Path visibility regressed — open 3D replay and inspect lost segments.");
+      }
+      if (mB.critZonePct < mA.critZonePct) {
+        actions.push("Critical-zone pass rate dropped — prioritize failing zones in camera comparison.");
+      }
+      if (mB.covered > mA.covered && mB.recognition > mA.recognition) {
+        actions.push("Coverage and recognition improved — capture visual evidence and export compare report.");
+      }
+    }
+
+    const topIssue = snapshotB?.simulation?.issues?.[0];
+    if (topIssue?.description) {
+      actions.push(`Top issue in Scenario B: ${topIssue.description}`);
+    }
+
+    if (actions.length === 0) {
+      actions.push("No critical regressions detected — validate with report export and evidence bundle.");
+    }
+
+    return actions.slice(0, 3);
+  }, [mA, mB, snapshotB?.simulation?.issues]);
+
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#07090d]">
       <div className="flex items-center gap-2 border-b border-[#1e2130] bg-[#0c0f16] px-3 py-1.5">
-        <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">Compare Scenarios</span>
+        <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">Compare - Before / After</span>
         <div className="flex items-center gap-1.5">
           <div className="rounded-md border border-red-500/20 bg-red-500/10 px-2 py-0.5 text-[9px] font-medium text-red-300">
             {snapshotA?.label ?? "Scenario A"}
@@ -1018,6 +1047,17 @@ export function CompareView() {
               tone={card.tone}
             />
           ))}
+        </div>
+        <div className="mt-2 rounded-xl border border-[#1d2330] bg-[#0b1018] p-2.5">
+          <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Actionable Next Move</div>
+          <div className="mt-1.5 grid gap-1.5 md:grid-cols-3">
+            {prioritizedActions.map((action, index) => (
+              <div key={`${action}-${index}`} className="rounded-lg border border-[#1d2330] bg-[#090d14] px-2 py-1.5 text-[9px] text-[#b7c5de]">
+                <span className="mr-1 text-[#7dd3fc]">{index + 1}.</span>
+                {action}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

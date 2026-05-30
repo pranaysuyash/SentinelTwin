@@ -812,3 +812,688 @@ CameraViewMode_TimelinePathReplay_Camera1InspectorViewtab.png
 PathReplayMode_Timeline_Camera1Inspector.png
 CompareMode_BeforeAfter_Camera1InspectorViewTab.png
 ```
+## 22. Site Intake Hub — Create Site Twin Source Selection
+
+![Site Intake Hub — Create Site Twin Source Selection](images/SiteIntakeHub_CreateSiteTwin_SourceSelection.png)
+
+| Field | Value |
+|---|---|
+| Status | Primary target for Area 1 / Site Intake |
+| Screen | SentinelTwin |
+| Workspace preset | Site Intake / Create Site Twin |
+| Subscreen | Source Selection |
+| Active tab/panel | Scan Site Photos selected |
+| Selected component | SiteIntakeHub |
+| Dock state | Product left nav + source card grid + selected source detail panel + recent site twins |
+| Purpose | First full-product entry screen for turning a real physical site into a trusted editable SecurityScene. |
+| Save as | `SiteIntakeHub_CreateSiteTwin_SourceSelection.png` |
+| Feel target | Security command-center intake screen; serious, operational, not marketing SaaS. |
+
+### What is correct in the image
+
+- Site creation is primary, not Studio/demo.
+- All input sources are treated as native product paths.
+- Scan Site Photos is selected and recommended, matching the no-CAD real-world wedge.
+- Each source card states status, output, and review requirement.
+- The right panel explains selected source workflow, limitations, and CTA.
+- Recent site twins and reference demo are available but secondary.
+- Visual style matches the existing dark command-center / Studio language.
+
+### What feels wrong / avoid
+
+- Do not make this a generic marketing homepage.
+- Do not turn it into a plain centered form/checklist.
+- Do not overstate scan automation; manual-assisted status must remain visible.
+- Do not let Reference Demo dominate the page.
+
+### What must stay / implementation contract
+
+- Every source path must compile or hand off toward a canonical `SecurityScene`.
+- Every source path must show review/warnings/provenance before replacing the workspace.
+- Scan Site Photos remains the default recommended source.
+- Demo stays available as reference only.
+
+Suggested filename:
+
+```text
+ScanSiteWizard_GuidedCapture_RoomDimensionsOverviewPhotos.png
+```
+
+This follows the same convention:
+
+```text
+<ScreenOrComponent>_<StateOrMode>_<SpecificFocus>.png
+```
+
+It fits after the first design:
+
+```text
+SiteIntakeHub_CreateSiteTwin_SourceSelection.png
+ScanSiteWizard_GuidedCapture_RoomDimensionsOverviewPhotos.png
+```
+
+---
+
+# Image / screen details
+
+## Screen
+
+**Scan Site Photos — Guided Capture**
+
+## Component / area
+
+```text
+ScanSiteWizard
+```
+
+or more specifically:
+
+```text
+GuidedScanCaptureFlow
+```
+
+This is the second screen in Area 1:
+
+```text
+Site Intake & Scene Creation
+```
+
+It appears after the user selects **Scan Site Photos** from the `SiteIntakeHub`.
+
+## Status
+
+**Primary target for Scan Site Photos V1**
+
+This should be added to the design pack as a new primary target for the manual-assisted scan intake flow.
+
+## Proposed save-as filename
+
+```text
+ScanSiteWizard_GuidedCapture_RoomDimensionsOverviewPhotos.png
+```
+
+## Purpose
+
+This screen turns “scan site photos” from a loose upload/marking utility into a structured product flow.
+
+The user is guided through site capture in ten steps:
+
+1. Room Dimensions
+2. Overview Photos
+3. Front Wall / Room Shell
+4. Entry Point
+5. Critical Zone
+6. Cameras
+7. Obstructions
+8. Lights & Windows
+9. Path
+10. Review & Compile
+
+The screen makes the capture process feel deliberate, trustworthy, and operational.
+
+---
+
+# What the image covers
+
+## 1. Product left navigation
+
+The left rail remains consistent with the previous `SiteIntakeHub` design.
+
+### Items shown
+
+```text
+Create Site Twin
+Workspaces
+Projects
+Reports
+Issues & Actions
+Evidence
+Integrations
+Settings
+```
+
+`Create Site Twin` remains active.
+
+### Why it matters
+
+This keeps the scan flow inside the broader product, not as a separate modal or disconnected wizard.
+
+---
+
+## 2. Breadcrumb
+
+Top-left of the main area:
+
+```text
+Create Site Twin > Scan Site Photos
+```
+
+### Why it matters
+
+The user knows they came from the first product area and is now inside the selected source mode.
+
+---
+
+## 3. Header
+
+```text
+Scan Site Photos
+Manual-assisted · Working
+```
+
+Subtitle:
+
+```text
+Capture your site using guided steps. Mark key elements in your photos and compile them into a trusted SecurityScene.
+```
+
+### Why it matters
+
+The status remains honest. It does not claim automatic AI reconstruction.
+
+---
+
+## 4. Top-right actions
+
+```text
+Save & Exit
+Next: Mark Entry
+How it works
+```
+
+### Why it matters
+
+This flow may take time in a real site. The user needs a save/exit affordance.
+
+`Next: Mark Entry` shows forward progress.
+
+---
+
+# Stepper design
+
+The screen has a horizontal 10-step progress stepper:
+
+```text
+1. Room Dimensions
+2. Overview Photos
+3. Front Wall (Shell)
+4. Entry Point
+5. Critical Zone
+6. Cameras
+7. Obstructions
+8. Lights & Windows
+9. Path
+10. Review & Compile
+```
+
+## Current state
+
+Step 1 is active.
+
+The main panel is titled:
+
+```text
+Step 1 of 10: Set Room Dimensions
+```
+
+Even though overview photos are visible in the same screen, the screen combines room dimensions and overview upload to keep the first step productive.
+
+## Design note
+
+For implementation, this can be either:
+
+* Step 1: dimensions only, then Step 2: upload photos, or
+* combined Step 1 screen with dimensions left and overview photos right.
+
+The mockup chooses the second because it feels faster and less form-like.
+
+---
+
+# Main content layout
+
+The main card is split into two sections:
+
+```text
+Left: Room dimensions
+Right: Upload overview photos
+```
+
+## Left panel — room dimensions
+
+Fields:
+
+```text
+Length (X): 12.0 m
+Width (Y): 8.0 m
+Ceiling Height (Z): 3.0 m
+```
+
+Helper note:
+
+```text
+These values can be adjusted later. Accuracy here improves results.
+```
+
+### Why it matters
+
+This gives the manual-assisted scan a basic scale reference before object marking.
+
+It also avoids overclaiming depth estimation.
+
+---
+
+## Right panel — upload overview photos
+
+Title:
+
+```text
+Upload Overview Photos
+```
+
+Instructions:
+
+```text
+Add 3–6 photos from different corners or sides.
+Include walls, entry, ceiling and layout context.
+```
+
+The design shows:
+
+* 3 uploaded photo thumbnails,
+* 3 empty upload slots,
+* numbered photo badges,
+* remove buttons on each thumbnail.
+
+Tips:
+
+```text
+Take photos from all four corners.
+Include ceiling and floor in at least one shot.
+Avoid zoom. Use wide-angle if possible.
+```
+
+Example coverage diagram:
+
+* small plan preview,
+* camera/photo positions at corners,
+* arrows showing coverage direction.
+
+### Why it matters
+
+This is the first actual capture-quality coaching. It teaches the user what kind of photos are useful.
+
+---
+
+# Right progress panel
+
+The right sidebar shows:
+
+## Progress
+
+```text
+Your progress
+1 of 10 steps completed
+```
+
+Progress bar.
+
+## Steps overview
+
+List:
+
+```text
+1. Set room dimensions
+2. Upload overview photos
+3. Mark front wall / room shell
+4. Mark entry point
+5. Mark critical zone
+6. Mark existing cameras
+7. Mark obstructions
+8. Mark lights & windows
+9. Mark path
+10. Review & compile
+```
+
+Current step is highlighted.
+
+## Session info
+
+```text
+Session ID: SCAN-2025-05-26-001
+Created: May 26, 2025 · 10:24 AM
+Photos uploaded: 3
+Est. time remaining: 15–25 min
+```
+
+## Limitation card
+
+```text
+Manual-assisted scan (V1)
+You confirm all elements.
+AI segmentation & depth coming later.
+```
+
+### Why it matters
+
+This is the honest product status system applied at the point of use.
+
+---
+
+# Bottom action bar
+
+The bottom bar contains:
+
+```text
+There is no perfect photo. More context helps us help you.
+```
+
+Actions:
+
+```text
+Back
+Next: Mark Entry
+```
+
+### Why it matters
+
+This keeps the user moving and reduces anxiety about capture quality.
+
+---
+
+# Layout summary
+
+```text
+┌──────────────────┬────────────────────────────────────────────────────┐
+│ Product nav       │ Breadcrumb + Header + Actions                      │
+│                  ├────────────────────────────────────────────────────┤
+│ Create Site Twin  │ Horizontal 10-step progress stepper                │
+│ Workspaces        ├───────────────────────────────┬────────────────────┤
+│ Projects          │ Main content card              │ Progress sidebar   │
+│ Reports           │                               │                    │
+│ Evidence          │ Left: dimensions               │ Your progress      │
+│ Integrations      │ Right: overview photos         │ Steps overview     │
+│ Settings          │ Tips + example coverage        │ Session info       │
+│                  ├───────────────────────────────┴────────────────────┤
+│ Reference demo    │ Bottom helper + Back / Next CTA                    │
+└──────────────────┴────────────────────────────────────────────────────┘
+```
+
+---
+
+# Design language
+
+## Style
+
+Dark, professional, operational, product-grade.
+
+## Visual continuity
+
+This screen directly continues from:
+
+```text
+SiteIntakeHub_CreateSiteTwin_SourceSelection.png
+```
+
+It preserves:
+
+* left product nav,
+* dark command-center theme,
+* blue active state,
+* green Working badge,
+* card-based layout,
+* serious security product tone.
+
+## Existing design references
+
+This should align with:
+
+* `StudioDashboardHome_CurrentWorkspacePreview_RiskStatusPanel.png`
+* `PlatformHome_CommandCenter_RecentWorkspaceRiskOverview.png`
+* `DesignSystem_MapLayerVisualLanguage_CanonicalTokens.png`
+* `CurrentRepoRootLauncher_FormProblem.png` as a negative reference.
+
+The design should avoid generic SaaS onboarding and avoid the old centered form/checklist problem.
+
+---
+
+# Implementation mapping
+
+## Existing component to evolve
+
+```text
+apps/studio/src/components/scan-to-scene/ScanSiteWizard.tsx
+```
+
+## Suggested component extraction
+
+```text
+apps/studio/src/components/site-intake/ScanSiteWizardFrame.tsx
+apps/studio/src/components/site-intake/ScanProgressStepper.tsx
+apps/studio/src/components/site-intake/RoomDimensionsPanel.tsx
+apps/studio/src/components/site-intake/OverviewPhotoUploader.tsx
+apps/studio/src/components/site-intake/ScanProgressSidebar.tsx
+apps/studio/src/components/site-intake/ScanCaptureTips.tsx
+```
+
+Do not rebuild everything. Existing `ScanSiteWizard` logic can remain; this design mainly changes layout and hierarchy.
+
+---
+
+# Suggested state model
+
+```ts
+type ScanSiteStep =
+  | "room_dimensions"
+  | "overview_photos"
+  | "front_wall_shell"
+  | "entry_point"
+  | "critical_zone"
+  | "cameras"
+  | "obstructions"
+  | "lights_windows"
+  | "path"
+  | "review_compile";
+
+type ScanSessionProgress = {
+  currentStep: ScanSiteStep;
+  completedSteps: ScanSiteStep[];
+  photosUploaded: number;
+  estimatedTimeRemainingLabel: string;
+};
+```
+
+---
+
+# Copy spec
+
+## Header
+
+```text
+Scan Site Photos
+Manual-assisted · Working
+
+Capture your site using guided steps. Mark key elements in your photos and compile them into a trusted SecurityScene.
+```
+
+## Stepper labels
+
+```text
+Room Dimensions
+Overview Photos
+Front Wall (Shell)
+Entry Point
+Critical Zone
+Cameras
+Obstructions
+Lights & Windows
+Path
+Review & Compile
+```
+
+## Main panel title
+
+```text
+Step 1 of 10: Set Room Dimensions
+```
+
+## Room dimension helper
+
+```text
+Provide approximate room dimensions to help scale your photos accurately.
+```
+
+## Upload helper
+
+```text
+Add 3–6 photos from different corners or sides.
+Include walls, entry, ceiling and layout context.
+```
+
+## Tips
+
+```text
+Take photos from all four corners.
+Include ceiling and floor in at least one shot.
+Avoid zoom. Use wide-angle if possible.
+```
+
+## Limitation card
+
+```text
+Manual-assisted scan (V1)
+You confirm all elements.
+AI segmentation & depth coming later.
+```
+
+## Bottom helper
+
+```text
+There is no perfect photo. More context helps us help you.
+```
+
+---
+
+# What is correct in the image
+
+* Scan is now a structured guided flow, not a loose upload modal.
+* Manual-assisted status is visible.
+* The user sees all 10 steps upfront.
+* Room dimensions and overview photos are gathered early.
+* Upload guidance teaches what photos to capture.
+* Progress sidebar makes the workflow feel professional.
+* Limitations are honest.
+* Reference demo remains available but secondary.
+* The screen maintains visual continuity with `SiteIntakeHub`.
+
+---
+
+# What feels wrong / avoid
+
+* Do not turn the right progress panel into a generic onboarding checklist with no actual state.
+* Do not claim AI segmentation/depth is available.
+* Do not make Save & Exit fake; it should persist the scan session or be hidden until persistence exists.
+* Do not make the 10-step flow rigid if the user already has photos/candidates.
+* Do not make the user enter exact dimensions before allowing approximate capture.
+* Do not overcomplicate the first step with calibration tools.
+
+---
+
+# Must stay / implementation contract
+
+* Scan remains manual-assisted until real segmentation/depth exists.
+* Every scan session eventually compiles to canonical `SecurityScene`.
+* Every marked object must be reviewable before compile.
+* The user must see warnings before handoff.
+* The scan session must preserve source/provenance metadata.
+* The flow must support save/resume if Save & Exit is shown.
+* Step status must be derived from actual scan session state, not hardcoded UI.
+
+---
+
+# Design pack entry to add
+
+```md
+## 23. Scan Site Wizard — Guided Capture / Room Dimensions + Overview Photos
+
+![Scan Site Wizard — Guided Capture](images/ScanSiteWizard_GuidedCapture_RoomDimensionsOverviewPhotos.png)
+
+| Field | Value |
+|---|---|
+| Status | Primary target for Scan Site Photos V1 |
+| Screen | SentinelTwin |
+| Workspace preset | Site Intake / Scan Site Photos |
+| Subscreen | Guided Capture — Room Dimensions + Overview Photos |
+| Active tab/panel | Step 1 of 10 |
+| Selected component | ScanSiteWizard / GuidedScanCaptureFlow |
+| Dock state | Product left nav + top stepper + main capture card + progress sidebar |
+| Purpose | Guides the user through manual-assisted site photo capture before compiling to a canonical SecurityScene. |
+| Save as | `ScanSiteWizard_GuidedCapture_RoomDimensionsOverviewPhotos.png` |
+| Feel target | Operational capture workflow; field-audit tool, not generic onboarding form. |
+
+### What is correct in the image
+
+- Scan flow is structured into clear steps.
+- Manual-assisted status is prominent and honest.
+- Room dimensions and overview photos are gathered early.
+- Photo upload guidance improves capture quality.
+- Progress sidebar shows current step, session info, and limitations.
+- CTA moves user toward the next concrete marking task.
+- Reference demo is available but secondary.
+
+### What feels wrong / avoid
+
+- Do not overclaim AI reconstruction.
+- Do not create fake Save & Exit behavior without persistence.
+- Do not turn this into a static checklist; progress must reflect real scan session state.
+- Do not force exact dimensions before capture; approximate values should be allowed.
+
+### What must stay / implementation contract
+
+- Every scan session compiles into a canonical `SecurityScene`.
+- Every user-marked candidate must remain reviewable before compile.
+- Scan warnings and provenance must be visible before handoff.
+- The flow must support source confidence and manual correction history.
+```
+
+This is the next component/screen after the Site Intake Hub.
+
+## 22. Site Intake Hub — Create Site Twin Source Selection
+
+![Site Intake Hub — Create Site Twin Source Selection](images/SiteIntakeHub_CreateSiteTwin_SourceSelection.png)
+
+| Field | Value |
+|---|---|
+| Status | Primary target for Area 1 / Site Intake |
+| Screen | SentinelTwin |
+| Workspace preset | Site Intake / Create Site Twin |
+| Subscreen | Source Selection |
+| Active tab/panel | Scan Site Photos selected |
+| Selected component | SiteIntakeHub |
+| Dock state | Product left nav + source card grid + selected source detail panel + recent site twins |
+| Purpose | First full-product entry screen for turning a real physical site into a trusted editable SecurityScene. |
+| Save as | `SiteIntakeHub_CreateSiteTwin_SourceSelection.png` |
+| Feel target | Security command-center intake screen; serious, operational, not marketing SaaS. |
+
+### What is correct in the image
+
+- Site creation is primary, not Studio/demo.
+- All input sources are treated as native product paths.
+- Scan Site Photos is selected and recommended, matching the no-CAD real-world wedge.
+- Each source card states status, output, and review requirement.
+- The right panel explains selected source workflow, limitations, and CTA.
+- Recent site twins and reference demo are available but secondary.
+- Visual style matches the existing dark command-center / Studio language.
+
+### What feels wrong / avoid
+
+- Do not make this a generic marketing homepage.
+- Do not turn it into a plain centered form/checklist.
+- Do not overstate scan automation; manual-assisted status must remain visible.
+- Do not let Reference Demo dominate the page.
+
+### What must stay / implementation contract
+
+- Every source path must compile or hand off toward a canonical `SecurityScene`.
+- Every source path must show review/warnings/provenance before replacing the workspace.
+- Scan Site Photos remains the default recommended source.
+- Demo stays available as reference only.

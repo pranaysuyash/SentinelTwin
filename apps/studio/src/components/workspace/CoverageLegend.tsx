@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Eye, EyeOff, Filter, Layers, Crosshair, Sigma, Grid3x3, Shield, Target } from "lucide-react";
+import { ChevronDown, ChevronUp, Eye, EyeOff, Filter, Layers, Crosshair, Sigma, Grid3x3, Shield, Sun, Target } from "lucide-react";
 import { MAP_COLORS } from "@/components/map/map-colors";
 import { useStudioStore, type OverlayDensity, type OverlayFilterId, type HeatmapMode } from "@/store/studio-store";
 
@@ -19,13 +19,22 @@ const FRAGILITY_LEVELS = [
   { label: "Fragile", range: "60-100%", detail: "Near DORI threshold", color: "#ef4444" },
 ];
 
+const LIGHTING_LEVELS = [
+  { label: "Bright", range: "65%+", detail: "Strong light reach", color: "#ffe047" },
+  { label: "Usable", range: "35-65%", detail: "Moderate illumination", color: "#f97316" },
+  { label: "Low", range: "12-35%", detail: "Weak light / IR-dependent", color: "#3b82f6" },
+  { label: "Shadow", range: "Blocked", detail: "Light ray obstructed", color: "#b91c1c" },
+  { label: "Dark", range: "<12%", detail: "No useful light", color: "#1c2435" },
+];
+
 const MODE_CONFIG: { mode: HeatmapMode; label: string; icon: React.ReactNode; description: string; levels: { label: string; range: string; detail: string; color: string }[]; legendNote?: string }[] = [
   {
     mode: "quality",
     label: "Quality",
     icon: <Target className="h-3 w-3" />,
-    description: "Coverage quality by PPM density",
+    description: "Camera PPM quality adjusted by light, occlusion, and shadows",
     levels: QUALITY_LEVELS,
+    legendNote: "Night cells brighten when security lights reach them and darken where objects cast light shadows.",
   },
   {
     mode: "fragility",
@@ -34,6 +43,14 @@ const MODE_CONFIG: { mode: HeatmapMode; label: string; icon: React.ReactNode; de
     description: "How close each cell is to a DORI threshold boundary",
     levels: FRAGILITY_LEVELS,
     legendNote: "Fragile cells may drop quality under minor camera adjustments.",
+  },
+  {
+    mode: "lighting",
+    label: "Lighting",
+    icon: <Sun className="h-3 w-3" />,
+    description: "Light-only overlay showing illumination and obstruction shadows",
+    levels: LIGHTING_LEVELS,
+    legendNote: "This isolates lighting from camera PPM so operators can tell dark zones from camera blindspots.",
   },
   {
     mode: "overlap",
@@ -136,12 +153,14 @@ export function CoverageLegend() {
         <div id="coverage-legend-body">
           {/* Mode toggle grid — only when simulation data is present */}
           {hasResult ? (
-            <div className="mb-2 grid grid-cols-5 gap-0.5 rounded-md overflow-hidden border border-[#2a3246]">
+            <div className="mb-2 grid grid-cols-3 gap-0.5 rounded-md overflow-hidden border border-[#2a3246]">
               {MODE_CONFIG.map((config) => {
                 const isActive = heatmapMode === config.mode;
                 const activeBg = config.mode === "fragility"
                   ? "rgba(127, 29, 29, 0.45)"
-                  : config.mode === "overlap"
+                  : config.mode === "lighting"
+                    ? "rgba(202, 138, 4, 0.32)"
+                    : config.mode === "overlap"
                     ? "rgba(30, 64, 175, 0.35)"
                     : config.mode === "contribution"
                       ? "rgba(21, 128, 61, 0.35)"

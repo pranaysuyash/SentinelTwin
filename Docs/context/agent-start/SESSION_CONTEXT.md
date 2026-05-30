@@ -1,6 +1,6 @@
 # Session Context
 
-- Generated: 2026-05-30T03:06:19Z
+- Generated: 2026-05-30T04:41:02Z
 - Project: `SentinelTwin`
 - Provider: `local`
 - Model: `BAAI/bge-m3`
@@ -23,22 +23,22 @@
 ### Reusable Patterns
 - Collection: `projects_workspace_shared`
 - Query: `similar architecture patterns for SentinelTwin`
-_Project retrieval store is busy. Try again in a minute._
+_Collection check timed out. Retry shortly._
 
 ### Process Templates
 - Collection: `projects_workspace_shared`
 - Query: `project management templates and workflows`
-_Project retrieval store is busy. Try again in a minute._
+_Collection check timed out. Retry shortly._
 
 ### Common Failure Modes
 - Collection: `projects_workspace_shared`
 - Query: `lessons learned mistakes retrospectives postmortems`
-_Project retrieval store is busy. Try again in a minute._
+_Search timed out. Retry when the retrieval store is less busy._
 
 ### System Learning Graph
 - Collection: `projects_workspace_shared`
 - Query: `knowledge graph memory learning feedback loops autoresearch semantic taste graph`
-_Project retrieval store is busy. Try again in a minute._
+_Search timed out. Retry when the retrieval store is less busy._
 
 
 ---

@@ -22,5 +22,6 @@ describe("PathReplayView", () => {
     expect(source).toContain("Collision guard");
     expect(source).toContain("Collision corrected");
     expect(source).toContain("Current state");
+    expect(source).toContain("Path Replay - Route Analysis");
   });
 });

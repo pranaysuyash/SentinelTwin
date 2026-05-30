@@ -237,7 +237,7 @@ export const WORKFLOW_STEPS: Record<ActiveWorkflowId, string[]> = {
 
 export type InspectorTab = "properties" | "view" | "status" | "analytics" | "failures";
 
-export type HeatmapMode = "quality" | "fragility" | "overlap" | "contribution" | "blindspots";
+export type HeatmapMode = "quality" | "lighting" | "fragility" | "overlap" | "contribution" | "blindspots";
 
 export type HeatmapHoverState = {
   cell: import("@/schema/security-scene").CoverageCellResult;

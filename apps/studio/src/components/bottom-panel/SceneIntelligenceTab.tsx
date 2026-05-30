@@ -159,6 +159,33 @@ function formatLedgerTime(timestamp: number) {
   }).format(new Date(timestamp));
 }
 
+function describeCheckpointProvenance(
+  provenance: {
+    sourceEventTitle: string;
+    isExactSnapshot: boolean;
+    sourceSnapshotDistance: number | null;
+  } | null | undefined,
+) {
+  if (!provenance) return "No reconstructable checkpoint provenance.";
+  if (provenance.isExactSnapshot) {
+    return `Exact snapshot from "${provenance.sourceEventTitle}".`;
+  }
+  const distance = provenance.sourceSnapshotDistance != null
+    ? `${provenance.sourceSnapshotDistance} event${provenance.sourceSnapshotDistance === 1 ? "" : "s"} earlier`
+    : "an earlier snapshot";
+  return `Derived from "${provenance.sourceEventTitle}" ${distance}.`;
+}
+
+function checkpointCardProvenance(event: OperationalEvidenceEvent) {
+  if (event.sceneSnapshot) {
+    return { label: "exact snapshot", variant: "green" as const, detail: "The checkpoint captures a point-in-time scene snapshot." };
+  }
+  if (event.previousSceneSnapshot) {
+    return { label: "derived state", variant: "amber" as const, detail: "The checkpoint reconstructs from an earlier snapshot source." };
+  }
+  return { label: "state at time T", variant: "gray" as const, detail: "The checkpoint is a derived time-slice without a stored scene snapshot." };
+}
+
 function resolvePivotSnapshots(event: OperationalEvidenceEvent | null, snapshots: SceneSnapshot[]) {
   const orderedSnapshots = [...snapshots].sort((left, right) => left.createdAt - right.createdAt || left.id.localeCompare(right.id));
   if (orderedSnapshots.length < 2) return null;
@@ -405,16 +432,11 @@ export function SceneIntelligenceTab() {
   );
   const selectedEvidenceReconstructionSourceNote = useMemo(() => {
     if (!selectedEvidenceReconstruction?.sourceEvent) return null;
-    if (selectedEvidenceReconstruction.isExactSnapshot) {
-      return `Exact snapshot captured in "${selectedEvidenceReconstruction.sourceEvent.title}".`;
-    }
-    const distanceText = selectedEvidenceReconstruction.sourceSnapshotDistance != null
-      ? `${selectedEvidenceReconstruction.sourceSnapshotDistance} event${selectedEvidenceReconstruction.sourceSnapshotDistance === 1 ? "" : "s"} earlier`
-      : "an earlier checkpoint";
-    const ageText = selectedEvidenceReconstruction.sourceSnapshotAgeMs != null
-      ? ` · ${Math.max(1, Math.round(selectedEvidenceReconstruction.sourceSnapshotAgeMs / 60000))}m earlier`
-      : "";
-    return `Derived from "${selectedEvidenceReconstruction.sourceEvent.title}" ${distanceText}${ageText}.`;
+    return describeCheckpointProvenance({
+      sourceEventTitle: selectedEvidenceReconstruction.sourceEvent.title,
+      isExactSnapshot: selectedEvidenceReconstruction.isExactSnapshot,
+      sourceSnapshotDistance: selectedEvidenceReconstruction.sourceSnapshotDistance,
+    });
   }, [selectedEvidenceReconstruction]);
   const selectedEvidenceReconstructionCounts = useMemo(
     () => (selectedEvidenceReconstructionScene
@@ -925,6 +947,9 @@ export function SceneIntelligenceTab() {
           {operationalEvidenceArchiveHistory.length > 0 ? (
             operationalEvidenceArchiveHistory.map((record) => {
               const latestEvent = record.archive.operationalEvidenceEvents.at(-1) ?? null;
+              const archiveProvenance = latestEvent
+                ? resolveOperationalEvidenceSceneAtTimeWithContext(record.archive.operationalEvidenceEvents, latestEvent.timestamp, record.archive.scene)
+                : null;
               return (
                 <div key={`${record.historyId}-${record.storedAt}`} className="rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -939,12 +964,26 @@ export function SceneIntelligenceTab() {
                         {record.restoreBranch}
                       </Badge>
                       {latestEvent?.branchLabel ? <Badge variant="gray">{latestEvent.branchLabel}</Badge> : null}
+                      {archiveProvenance ? (
+                        <Badge variant={archiveProvenance.isExactSnapshot ? "green" : "amber"}>
+                          {archiveProvenance.isExactSnapshot ? "exact snapshot" : "derived state"}
+                        </Badge>
+                      ) : null}
                       {latestEvent?.id ? <Badge variant="green">checkpoint</Badge> : <Badge variant="gray">archive</Badge>}
                     </div>
                   </div>
                   <div className="mt-1 text-[10px] text-[#74809a]">
                     {latestEvent ? latestEvent.details : "No reconstructable checkpoint event is attached to this archive yet."}
                   </div>
+                  {archiveProvenance ? (
+                    <div className="mt-1 text-[10px] text-[#74809a]">
+                      {describeCheckpointProvenance({
+                        sourceEventTitle: archiveProvenance.sourceEvent?.title ?? latestEvent?.title ?? "Unknown checkpoint",
+                        isExactSnapshot: archiveProvenance.isExactSnapshot,
+                        sourceSnapshotDistance: archiveProvenance.sourceSnapshotDistance,
+                      })}
+                    </div>
+                  ) : null}
                   <div className="mt-2 flex flex-wrap gap-2">
                     <button
                       type="button"
@@ -1214,6 +1253,10 @@ export function SceneIntelligenceTab() {
                           <div className="mt-1 text-[14px] font-semibold text-[#edf2fb]">{item.current} → {item.value}</div>
                         </div>
                       ))}
+                    </div>
+                    <div className="mt-3 rounded-md border border-[#1e2130] bg-[#0f1320] px-3 py-2">
+                      <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5f6a82]">Compare handoff provenance</div>
+                      <div className="mt-1 text-[10px] text-[#74809a]">{selectedEvidenceReconstructionSourceNote ?? "The compare handoff will reuse the selected checkpoint provenance."}</div>
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button
@@ -2263,11 +2306,12 @@ export function SceneIntelligenceTab() {
                         <Badge variant="gray">{formatLedgerTime(event.timestamp)}</Badge>
                       </div>
                       <div className="mt-1 flex flex-wrap gap-1.5">
-                        <Badge variant="blue">checkpoint</Badge>
+                        <Badge variant={checkpointCardProvenance(event).variant}>{checkpointCardProvenance(event).label}</Badge>
                         <Badge variant="gray">{confidenceLabel(event.confidence)}</Badge>
                         {event.affectedNodeIds.length > 0 ? <Badge variant="gray">{event.affectedNodeIds.length} nodes</Badge> : null}
                         {event.branchLabel ? <Badge variant="gray">{event.branchLabel}</Badge> : null}
                       </div>
+                      <div className="mt-1 text-[10px] text-[#74809a]">{checkpointCardProvenance(event).detail}</div>
                       {event.beforeSummary ? (
                         <div className="mt-1 text-[9px] text-[#8aa1c4]">
                           <span className="font-medium text-[#c9d5e9]">Before:</span> {event.beforeSummary}

@@ -1343,12 +1343,16 @@ export function CameraInspector() {
               <div className="space-y-1.5">
                 <ToggleField
                   label="NDAA Compliant"
-                  checked={camera.ndaaCompliant ?? true}
+                  value={camera.ndaaCompliant ?? true}
+                  trueLabel="Yes"
+                  falseLabel="No"
                   onChange={(v) => updateNode(camera.id, { ndaaCompliant: v })}
                 />
                 <ToggleField
                   label="Privacy Masking Active"
-                  checked={camera.privacyMaskingEnabled ?? false}
+                  value={camera.privacyMaskingEnabled ?? false}
+                  trueLabel="On"
+                  falseLabel="Off"
                   onChange={(v) => updateNode(camera.id, { privacyMaskingEnabled: v })}
                 />
               </div>

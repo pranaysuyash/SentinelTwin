@@ -57,6 +57,8 @@ export function suggestCameraPlacements(scene: SecurityScene): CameraNode[] {
       reviewStatus: "unreviewed",
       sourceTrace: "heuristic-suggestion-v1",
       geometryValidity: "valid",
+      ndaaCompliant: true,
+      privacyMaskingEnabled: false,
       notes: "Suggested placement — adjust as needed",
       tags: ["suggested"],
     });
@@ -92,6 +94,8 @@ export function suggestCameraPlacements(scene: SecurityScene): CameraNode[] {
       reviewStatus: "unreviewed",
       sourceTrace: "heuristic-suggestion-v1",
       geometryValidity: "valid",
+      ndaaCompliant: true,
+      privacyMaskingEnabled: false,
       notes: "Suggested placement — adjust as needed",
       tags: ["suggested"],
     });

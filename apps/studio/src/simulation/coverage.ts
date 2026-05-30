@@ -65,6 +65,9 @@ export type CameraEvaluation = {
   materialTransmission: number;
   glarePenalty: number;
   lightingPenalty: number;
+  lightLevel: number;
+  illuminatedBy: string[];
+  shadowedBy: string[];
   finalPpmMultiplier: number;
   reasonCodes: string[];
 };
@@ -90,37 +93,132 @@ function computePixelDensity(camera: CameraNode, distanceM: number) {
   return widthPx / sceneWidthAtDistance;
 }
 
-function getLightingPenalty(
-  camera: CameraNode,
-  cell: GridCell,
-  lights: SecurityLightNode[],
-  scene: SecurityScene,
-) {
-  if (scene.assumptions.timeOfDay === "day") {
-    return 0;
+const LIGHT_BRIGHTNESS_WEIGHT: Record<SecurityLightNode["brightness"], number> = {
+  dim: 0.25,
+  low: 0.42,
+  medium: 0.62,
+  high: 0.82,
+  very_high: 1,
+};
+
+function isPointInLightCone(light: SecurityLightNode, cell: GridCell) {
+  if (!light.coneDeg || light.coneDeg >= 359 || light.yawDeg == null) {
+    return true;
   }
 
-  const illuminated = lights.some((light) => {
+  const [lx, , lz] = light.position;
+  const targetYaw = THREE.MathUtils.radToDeg(Math.atan2(cell.x - lx, -(cell.z - lz)));
+  const hAngle = normalizeAngle(targetYaw - light.yawDeg);
+  return Math.abs(hAngle) <= light.coneDeg / 2;
+}
+
+function getLightOcclusion(
+  light: SecurityLightNode,
+  cell: GridCell,
+  targetHeightM: number,
+  raycaster: THREE.Raycaster,
+  visionMesh: VisionMesh,
+) {
+  const pseudoLightCamera: CameraNode = {
+    id: light.id,
+    nodeType: "camera",
+    name: light.name,
+    position: light.position,
+    yawDeg: light.yawDeg ?? 0,
+    pitchDeg: light.pitchDeg ?? -45,
+    rollDeg: 0,
+    mountType: "ceiling",
+    mountHeightM: light.position[1],
+    fovHorizontalDeg: light.coneDeg ?? 360,
+    fovVerticalDeg: 180,
+    rangeM: light.rangeM,
+    resolutionMP: 1,
+    resolutionWidth: 1000,
+    resolutionHeight: 1000,
+    lensType: "fixed",
+    status: "on",
+    nightMode: "none",
+    irRangeM: 0,
+    thermalCapable: false,
+    ptz: false,
+    clarity: "excellent",
+    source: "manual",
+    reviewStatus: "unreviewed",
+    sourceTrace: "coverage-light-occlusion",
+    geometryValidity: "valid",
+    ndaaCompliant: true,
+    privacyMaskingEnabled: false,
+    tags: [],
+  };
+
+  const target = new THREE.Vector3(cell.x, targetHeightM, cell.z);
+  return assessOcclusion(pseudoLightCamera, target, raycaster, visionMesh);
+}
+
+function getLightingContext(
+  camera: CameraNode,
+  cell: GridCell,
+  scene: SecurityScene,
+  targetHeightM: number,
+  raycaster: THREE.Raycaster,
+  visionMesh: VisionMesh,
+) {
+  const illuminatedBy: string[] = [];
+  const shadowedBy = new Set<string>();
+  let lightLevel = scene.assumptions.timeOfDay === "day" ? 1 : 0;
+
+  for (const light of scene.securityLights) {
     if (light.status !== "on" || !light.illuminatesNightCoverage) {
-      return false;
+      continue;
     }
 
     const [lx, , lz] = light.position;
-    return Math.hypot(lx - cell.x, lz - cell.z) <= light.rangeM;
-  });
+    const distance = Math.hypot(lx - cell.x, lz - cell.z);
+    if (distance > light.rangeM || !isPointInLightCone(light, cell)) {
+      continue;
+    }
 
-  if (illuminated) return 0.12;
-  if (camera.nightMode === "thermal") return 0.08;
-  if (camera.nightMode === "low_light") return 0.18;
+    const occlusion = getLightOcclusion(light, cell, targetHeightM, raycaster, visionMesh);
+    if (occlusion.blocked) {
+      if (occlusion.blockedBy) shadowedBy.add(occlusion.blockedBy);
+      continue;
+    }
+
+    if (occlusion.blockedBy) shadowedBy.add(occlusion.blockedBy);
+    const falloff = Math.max(0, 1 - distance / Math.max(light.rangeM, 0.01));
+    const beam = Math.sqrt(falloff);
+    const transmission = Math.max(0, Math.min(1, occlusion.materialPenalty));
+    const contribution = LIGHT_BRIGHTNESS_WEIGHT[light.brightness] * beam * transmission;
+
+    if (contribution > 0.04) {
+      lightLevel = Math.max(lightLevel, contribution);
+      illuminatedBy.push(light.id);
+    }
+  }
+
+  if (scene.assumptions.timeOfDay === "day") {
+    return { penalty: 0, lightLevel, illuminatedBy, shadowedBy: [...shadowedBy] };
+  }
+
+  if (lightLevel >= 0.65) return { penalty: 0.1, lightLevel, illuminatedBy, shadowedBy: [...shadowedBy] };
+  if (lightLevel >= 0.35) return { penalty: 0.24, lightLevel, illuminatedBy, shadowedBy: [...shadowedBy] };
+  if (lightLevel >= 0.12) return { penalty: 0.42, lightLevel, illuminatedBy, shadowedBy: [...shadowedBy] };
+  if (camera.nightMode === "thermal") return { penalty: 0.08, lightLevel, illuminatedBy, shadowedBy: [...shadowedBy] };
+  if (camera.nightMode === "low_light") return { penalty: 0.18, lightLevel, illuminatedBy, shadowedBy: [...shadowedBy] };
 
   const [cx, , cz] = camera.position;
   const distance = Math.hypot(cx - cell.x, cz - cell.z);
 
   if (camera.nightMode === "ir" && distance <= camera.irRangeM) {
-    return 0.32;
+    return { penalty: 0.32, lightLevel, illuminatedBy, shadowedBy: [...shadowedBy] };
   }
 
-  return camera.nightMode === "none" ? 0.88 : 0.78;
+  return {
+    penalty: camera.nightMode === "none" ? 0.88 : 0.78,
+    lightLevel,
+    illuminatedBy,
+    shadowedBy: [...shadowedBy],
+  };
 }
 
 function getClarityMultiplier(camera: CameraNode) {
@@ -382,6 +480,9 @@ function evaluateCameraAgainstCell(
       materialTransmission: 1,
       glarePenalty: 0,
       lightingPenalty: 0,
+      lightLevel: scene.assumptions.timeOfDay === "day" ? 1 : 0,
+      illuminatedBy: [],
+      shadowedBy: [],
       finalPpmMultiplier: 0,
       reasonCodes: ["CAMERA_OFF"],
     };
@@ -407,6 +508,9 @@ function evaluateCameraAgainstCell(
       materialTransmission: 1,
       glarePenalty: 0,
       lightingPenalty: 0,
+      lightLevel: scene.assumptions.timeOfDay === "day" ? 1 : 0,
+      illuminatedBy: [],
+      shadowedBy: [],
       finalPpmMultiplier: 0,
       reasonCodes: ["OUT_OF_RANGE"],
     };
@@ -440,6 +544,9 @@ function evaluateCameraAgainstCell(
       materialTransmission: 1,
       glarePenalty: 0,
       lightingPenalty: 0,
+      lightLevel: scene.assumptions.timeOfDay === "day" ? 1 : 0,
+      illuminatedBy: [],
+      shadowedBy: [],
       finalPpmMultiplier: 0,
       reasonCodes: ["OUT_OF_FOV"],
     };
@@ -464,6 +571,9 @@ function evaluateCameraAgainstCell(
       materialTransmission: 0,
       glarePenalty: 0,
       lightingPenalty: 0,
+      lightLevel: scene.assumptions.timeOfDay === "day" ? 1 : 0,
+      illuminatedBy: [],
+      shadowedBy: [],
       finalPpmMultiplier: 0,
       reasonCodes: ["BLOCKED_BY_SOLID"],
     };
@@ -506,9 +616,18 @@ function evaluateCameraAgainstCell(
 
   ppm *= 1 - glarePenalty;
 
-  const lightingPenalty = getLightingPenalty(camera, cell, scene.securityLights, scene);
+  const lightingContext = getLightingContext(camera, cell, scene, targetHeightM, raycaster, visionMesh);
+  const lightingPenalty = lightingContext.penalty;
   if (lightingPenalty > 0) {
     getReasonCodesForLighting(camera, lightingPenalty).forEach((code) => reasonCodes.add(code));
+  }
+
+  if (lightingContext.illuminatedBy.length > 0) {
+    reasonCodes.add("ILLUMINATED_BY_LIGHT");
+  }
+
+  if (lightingContext.shadowedBy.length > 0) {
+    reasonCodes.add("LIGHT_SHADOWED_BY_OBSTRUCTION");
   }
 
   ppm *= 1 - lightingPenalty;
@@ -540,6 +659,9 @@ function evaluateCameraAgainstCell(
     materialTransmission,
     glarePenalty,
     lightingPenalty,
+    lightLevel: lightingContext.lightLevel,
+    illuminatedBy: lightingContext.illuminatedBy,
+    shadowedBy: lightingContext.shadowedBy,
     finalPpmMultiplier,
     reasonCodes: [...reasonCodes],
   };

@@ -104,6 +104,8 @@ export function createTestCamera(overrides: Partial<CameraNode> = {}): CameraNod
     sourceTrace: overrides.sourceTrace ?? "",
     geometryValidity: overrides.geometryValidity ?? "valid",
     notes: overrides.notes,
+    ndaaCompliant: overrides.ndaaCompliant ?? true,
+    privacyMaskingEnabled: overrides.privacyMaskingEnabled ?? false,
     tags: overrides.tags ?? [],
   };
 }

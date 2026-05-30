@@ -148,9 +148,9 @@ export function ProjectStartLauncher({
       icon: <Camera className="h-3.5 w-3.5" />,
       badge: "Preview",
       title: "Verify real footage",
-      description: "Open the current footage-verify preview path for overlay comparison and alignment checks.",
+      description: "Open Camera View with the verification overlay and alignment workflow ready for a selected camera.",
       tone: "slate",
-      status: "Planned",
+      status: "Preview",
       onClick: onVerifyFootagePlanned,
     },
     {

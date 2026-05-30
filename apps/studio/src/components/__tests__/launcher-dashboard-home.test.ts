@@ -17,6 +17,8 @@ describe("Studio dashboard launcher surface", () => {
     expect(source).toContain("Last run: Never");
     expect(source).toContain("Environment mode:");
     expect(source).toContain("CURRENT WORKSPACE");
+    expect(source).toContain("STUDIO");
+    expect(source).toContain("Demo Sites");
     expect(source).toContain("Open Workspace");
     expect(source).toContain("Run Simulation");
     expect(source).toContain("Import Scene JSON");
@@ -38,6 +40,7 @@ describe("Studio dashboard launcher surface", () => {
     expect(source).toContain("Open Report Lite");
     expect(source).toContain("Scan a Site");
     expect(source).toContain("Guided Scan Assistant");
+    expect(source).toContain("Manual-assisted site photo intake");
     expect(source).toContain("AI Layout Draft");
     expect(source).toContain("Run Guided Walkthrough");
     expect(source).toContain("QUICK START");
@@ -52,6 +55,7 @@ describe("Studio dashboard launcher surface", () => {
     expect(source).toContain("Organization");
     expect(source).toContain("Owner");
     expect(source).toContain("Visibility");
+    expect(source).toContain("Workspace Catalog");
     expect(source).toContain("Target:");
     expect(source).toContain("Route:");
   });

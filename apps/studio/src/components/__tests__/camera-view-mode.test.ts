@@ -10,6 +10,7 @@ const cameraVerificationWorkflowPath = resolve(fileURLToPath(new URL(".", import
 const cameraLiveFeedHudPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../view/camera-live-feed-hud.tsx");
 const cameraVerificationPanelPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../view/camera-verification-panel.tsx");
 const cameraVerificationUtilsPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../view/camera-verification-utils.ts");
+const cameraViewChromePath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../view/camera-view-chrome.tsx");
 
 describe("CameraViewMode", () => {
   test("exposes the live overlay strip and replay presets", () => {
@@ -18,9 +19,11 @@ describe("CameraViewMode", () => {
     const hudSource = readFileSync(cameraLiveFeedHudPath, "utf8");
     const panelSource = readFileSync(cameraVerificationPanelPath, "utf8");
     const utilsSource = readFileSync(cameraVerificationUtilsPath, "utf8");
-    const combinedSource = `${source}\n${workflowSource}\n${hudSource}\n${panelSource}\n${utilsSource}`;
+    const chromeSource = readFileSync(cameraViewChromePath, "utf8");
+    const combinedSource = `${source}\n${workflowSource}\n${hudSource}\n${panelSource}\n${utilsSource}\n${chromeSource}`;
 
     expect(source).toContain("VerificationPanel as SharedVerificationPanel");
+    expect(combinedSource).toContain("Camera View - Single Camera");
     expect(panelSource).toContain("Footage Verification");
 
     expect(combinedSource).toContain("Back to Map View");
@@ -37,6 +40,10 @@ describe("CameraViewMode", () => {
     expect(combinedSource).toContain("Manual offset controls are active for the current reference frame.");
     expect(combinedSource).toContain("Run auto align or use manual offsets after loading a reference frame.");
     expect(combinedSource).toContain("Difference heat overlay");
+    expect(combinedSource).toContain("Timeline / Path Replay");
+    expect(combinedSource).toContain("Quality Over Time");
+    expect(combinedSource).toContain("Camera Wall Preview");
+    expect(combinedSource).toContain("Scenario / Path");
     expect(combinedSource).toContain("non-forensic");
     expect(combinedSource).toContain("Extracting video frame…");
     expect(combinedSource).toContain("Video frame sampled at");

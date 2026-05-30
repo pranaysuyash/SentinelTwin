@@ -63,7 +63,7 @@ function cam(
   fovH: number,
   fovV: number,
   mountH: number,
-) {
+): SecurityScene["cameras"][number] {
   return {
     id: uid("cam"),
     nodeType: "camera" as const,
@@ -89,8 +89,8 @@ function cam(
     reviewStatus: "unreviewed" as const,
     sourceTrace: "",
     geometryValidity: "valid" as const,
-    tags: [] as string[],
-  };
+    ndaaCompliant: true, privacyMaskingEnabled: false, tags: [] as string[],
+  } as SecurityScene["cameras"][number];
 }
 
 // Helper: create a security light with all required schema fields

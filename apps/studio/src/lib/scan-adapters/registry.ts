@@ -3,20 +3,24 @@ import { StubObjectDetectionAdapter } from "@/lib/scan-adapters/adapters/stub-de
 import { StubDepthEstimationAdapter } from "@/lib/scan-adapters/adapters/stub-depth-adapter";
 import { StubScaleAnchoringAdapter } from "@/lib/scan-adapters/adapters/stub-scale-anchoring-adapter";
 import { StubSegmentationAdapter } from "@/lib/scan-adapters/adapters/stub-segmentation-adapter";
+import { VlmObjectDetectionAdapter, VlmStructuralExtractionAdapter } from "@/lib/vlm-pipeline/vlm-adapter";
 
 const stubObjectDetection = new StubObjectDetectionAdapter();
 const stubDepthEstimation = new StubDepthEstimationAdapter();
 const stubScaleAnchoring = new StubScaleAnchoringAdapter();
 const stubSegmentation = new StubSegmentationAdapter();
 
+const vlmObjectDetection = new VlmObjectDetectionAdapter();
+const vlmStructuralExtraction = new VlmStructuralExtractionAdapter();
+
 export function getDefaultAdapterSet(): ScanAdapterSet {
   return {
-    objectDetection: [stubObjectDetection],
+    objectDetection: [stubObjectDetection, vlmObjectDetection],
     segmentation: [stubSegmentation],
     depthEstimation: [stubDepthEstimation],
     scaleAnchoring: [stubScaleAnchoring],
     multiPhoto: [],
-    structuralExtraction: [],
+    structuralExtraction: [vlmStructuralExtraction],
   };
 }
 
@@ -33,6 +37,10 @@ export function getStubAdapterSet(): ScanAdapterSet {
 
 export function getSegmentationAdapters(): SegmentationAdapter[] {
   return [stubSegmentation];
+}
+
+export function getVlmAdapters(): { objectDetection: VlmObjectDetectionAdapter; structuralExtraction: VlmStructuralExtractionAdapter } {
+  return { objectDetection: vlmObjectDetection, structuralExtraction: vlmStructuralExtraction };
 }
 
 export function getObjectDetectionAdapters(): ObjectDetectionAdapter[] {

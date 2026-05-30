@@ -13,10 +13,11 @@ import {
 
 describe("scan-adapters/registry", () => {
   describe("getDefaultAdapterSet", () => {
-    test("has object detection adapter", () => {
+    test("has object detection adapters (stub + VLM)", () => {
       const adapters = getDefaultAdapterSet();
-      expect(adapters.objectDetection.length).toBeGreaterThan(0);
-      expect(adapters.objectDetection[0]?.id).toBe("stub-object-detection");
+      expect(adapters.objectDetection.length).toBeGreaterThanOrEqual(2);
+      expect(adapters.objectDetection.some((a) => a.id === "stub-object-detection")).toBe(true);
+      expect(adapters.objectDetection.some((a) => a.id === "vlm-detection")).toBe(true);
     });
 
     test("has depth estimation and scale anchoring adapters", () => {
@@ -33,10 +34,15 @@ describe("scan-adapters/registry", () => {
       expect(adapters.segmentation[0]?.id).toBe("stub-segmentation");
     });
 
-    test("multiPhoto, structuralExtraction are still empty", () => {
+    test("structural extraction has VLM adapter", () => {
+      const adapters = getDefaultAdapterSet();
+      expect(adapters.structuralExtraction.length).toBeGreaterThan(0);
+      expect(adapters.structuralExtraction[0]?.id).toBe("vlm-structural");
+    });
+
+    test("multiPhoto is still empty", () => {
       const adapters = getDefaultAdapterSet();
       expect(adapters.multiPhoto).toHaveLength(0);
-      expect(adapters.structuralExtraction).toHaveLength(0);
     });
   });
 
@@ -177,6 +183,35 @@ describe("getStubProfileForRole", () => {
     const hasCamera = profile.dominantObjects.some((o) => o.kind === "camera");
     expect(hasCamera).toBe(true);
     expect(profile.dominantObjects[0]?.confidence).toBeGreaterThan(0.7);
+  });
+});
+
+describe("VlmStructuralExtractionAdapter", () => {
+  test("returns structural elements from photo artifact", async () => {
+    const { VlmStructuralExtractionAdapter } = await import("@/lib/vlm-pipeline/vlm-adapter");
+    const adapter = new VlmStructuralExtractionAdapter();
+    const session = createScanCaptureSession("Test", "ai_assisted");
+    const photo = createPhotoArtifact("data:img/png;base64,x", "test.jpg", 640, 480);
+    session.photos = [photo];
+
+    const result = await adapter.extractStructures([photo], session);
+    expect(result.elements).toBeDefined();
+    expect(result.confidence).toBeGreaterThanOrEqual(0);
+  });
+
+  test("returns empty for no photo artifact", async () => {
+    const { VlmStructuralExtractionAdapter } = await import("@/lib/vlm-pipeline/vlm-adapter");
+    const adapter = new VlmStructuralExtractionAdapter();
+    const session = createScanCaptureSession("Test", "ai_assisted");
+    const result = await adapter.extractStructures([], session);
+    expect(result.elements).toHaveLength(0);
+    expect(result.warnings.length).toBeGreaterThan(0);
+  });
+
+  test("getDefaultAdapterSet includes VLM adapters", () => {
+    const adapters = getDefaultAdapterSet();
+    expect(adapters.objectDetection.some((a) => a.id === "vlm-detection")).toBe(true);
+    expect(adapters.structuralExtraction.some((a) => a.id === "vlm-structural")).toBe(true);
   });
 });
 

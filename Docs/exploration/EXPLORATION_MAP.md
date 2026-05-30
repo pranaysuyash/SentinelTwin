@@ -6319,3 +6319,68 @@ a Next.js build (`next build` or `next dev --webpack`), not just `tsc --noEmit`.
 
 **Test validation:** 779 tests pass with 9417 expect() calls across 166 files.
 All packages (`core`, `simulation`, `report`, `studio`) compile clean.
+
+---
+
+### Thread 150: VLM Pipeline — Two-Tier Floorplan & Scene Understanding Pipeline
+**Status:** Implemented (2026-05-30).
+**Files:** `apps/studio/src/lib/vlm-pipeline/`
+
+**What was built:**
+
+**SemanticContext schema** (`types.ts`):
+- `SemanticContext` — the formal handoff structure between Tier 1 and Tier 2, with Zod schemas for every intermediate data structure
+- `VlmPipelineConfig` — configuration for quality thresholds, model IDs, tier enablement
+- `Tier1Output` — image quality assessment, scene type classification, coarse room detection, OCR text
+- `Tier2Output` — wall coordinates, door/window detections, obstructions, critical zones, adjacency graph
+- `GateDecision` — branching logic output (reject_blurry, human_review, proceed_to_tier2)
+
+**Tier 1: Local Gating** (`tier1-local-gate.ts`):
+- `Tier1Provider` interface for pluggable local VLM backends (MiniCPM-V, Qwen3.5-4B)
+- `StubTier1Provider` — development stub producing plausible quality/scene/OCR/room outputs
+- `runTier1Heuristic()` — browser Canvas-based fallback using Laplacian blur detection, exposure assessment, scene type inference from aspect ratio
+- Laplacian variance function for quantitative blur scoring without model calls
+
+**Gate Decision Logic** (`gate-decision.ts`):
+- `evaluateGateDecision()` — branching logic: blur → reject, low quality → reject, unknown scene → human review, too many flags → human review, low confidence → human review, pass → proceed
+- `getGateWarning()` — user-facing warning messages per action
+- `forceTier2` bypass config for testing/debugging
+
+**Tier 2: Cloud Pass** (`tier2-cloud-pass.ts`):
+- `Tier2Provider` interface for cloud VLM backends (GPT-4o, Gemini 2.5)
+- `ModelTier2Provider` — wraps existing `ModelProvider` abstraction for real API calls with structured output parsing and error recovery
+- `StubTier2Provider` — synthetic wall/room perimeter generation from Tier 1 room bounding boxes
+
+**Post-Processing Validation** (`post-processing.ts`):
+- `PostProcessor` interface with `DefaultPostProcessor` implementation
+- Validation rules: wall count vs expected range, wall endpoint continuity (orphan detection), door-on-wall proximity, room dimension reasonableness (too small → blocking, too large → info)
+- Confidence adjustment: blocking issues reduce to 30%, warnings reduce with 15% per warning
+
+**Orchestrator** (`orchestrator.ts`):
+- `runVlmPipeline()` — end-to-end orchestrator handling Tier 1 → gate → Tier 2 → post-processing with proper error boundaries and metadata tracking
+- Returns `VlmPipelineResult` with full `SemanticContext` for downstream consumption
+
+**VLM Adapters** (`vlm-adapter.ts`):
+- `VlmObjectDetectionAdapter` — implements `ObjectDetectionAdapter` using the VLM pipeline, mapping Tier 2 doors/windows/obstructions/zones to `ScanCandidate[]`
+- `VlmStructuralExtractionAdapter` — implements `StructuralExtractionAdapter`, mapping Tier 2 walls/doors/windows to `StructuralElement[]`
+
+**Tests:** 27 tests in 5 files — all pass (27/27):
+- `gate-decision.test.ts` — 8 tests: proceed, reject blurry, reject low quality, human_review for unknown scene/low confidence/ambiguity/overall, forceTier2 bypass
+- `post-processing.test.ts` — 5 tests: valid pass, low wall count warning, excessive wall warning, too-small room blocking, confidence adjustment
+- `tier1-local-gate.test.ts` — 4 tests: stub provider quality/scene/OCR/room
+- `tier2-cloud-pass.test.ts` — 5 tests: wall segments, door detection, adjacency graph, confidence range, clean warnings
+- `orchestrator.test.ts` — 5 tests: full pipeline, blur gate rejection, tier2 disabled, metadata population, forceTier2 bypass
+
+**Design decisions:**
+- SemanticContext is the single source of truth for Tier 1→Tier 2 handoff — no parallel context representations
+- Gate decision is deterministic (no AI) — Tier 1 quality scoring is geometric, not model-dependent
+- Stubs match the existing adapter pattern (StubObjectDetectionAdapter, StubDepthEstimationAdapter, etc.)
+- Tier 2 uses the existing ModelProvider abstraction for cloud calls
+- Post-processing validation mirrors the heuristic floor plan import's `validateFloorPlan()` pattern
+- All outputs carry the truth ladder fields via the existing compile pipeline (`sourceTrace`, `reviewStatus`, `geometryValidity`)
+
+**Open questions:**
+- Should Tier 2 prompt include Tier 1 OCR results as context for better dimension extraction?
+- How should quality thresholds be calibrated empirically?
+- Can Tier 1 zone detections be coupled with SAM3 for zone-level segmentation masks?
+- Need telemetry to track cloud API cost reduction from local gating

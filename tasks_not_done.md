@@ -31,6 +31,8 @@ This document consolidates all the incomplete tasks, known blockers, and pending
 *   [ ] **Plan & Entitlement Semantics:** Implement plan, quota, and entitlement logic (without a full billing backend).
 *   [ ] **Workspace Transfer:** Support invite, transfer, and ownership workflows for shared workspaces.
 *   [ ] **Remote Workspace Directory:** Unify local and remote projects in a central, remote-aware catalog.
+*   [ ] **D-020: Security Evidence Twin Framing:** Resolve the product framing for "Evidence Twin" versus "Simulated Twin" before report layer expansion.
+*   [ ] **D-022: Multi-sensor Scope:** Finalize the multi-sensor data model extension before V1 freeze.
 
 ## 4. Temporal Twin & Evidence (P1)
 *   [ ] **Extend Checkpoints:** Include live camera/session and sensor ingest provenance continuity in temporal checkpoints.
@@ -48,10 +50,11 @@ This document consolidates all the incomplete tasks, known blockers, and pending
 *   [ ] **Wire Submission URL:** Finalize the deployment target and configure the submission URL.
 *   [ ] **Report Catalog Persistence:** Build a persisted catalog for reports with audience defaults and presets.
 *   [ ] **Section-to-Simulation Drill-through:** Add deep links from report sections back into live simulation results.
-*   [ ] **Floor-Plan Import Bridge:** 
-    *   Implement `floor-plan-to-scene.ts` converter (actual walls/doors/windows).
-    *   Ensure valid source enum usage (`manual | ai | scan | import | preset | demo`).
-    *   Add "Import Review" step showing counts, confidence, and dimensions.
+*   [ ] **Floor-Plan Import Bridge (Tier 2):** 
+    *   [ ] **D-021: Text-to-scene scope:** Define the final V0.2 scope for prompt-to-scene fidelity.
+    *   [ ] **Integrate Tier 2 Cloud Pass:** Implement the GPT-4o/Gemini 2.5 pass for precise geometry extraction from floor plans.
+    *   [ ] **Model Experimentation (Future):** Explore GGUF Qwen3.5-4B, SAM3, and PaddleOCR integration.
+    *   [ ] **Fine-tuning:** Fine-tune local models on CubiCasa5K for room classification.
 *   [ ] **Release Automation:** 
     *   Establish SemVer scheme and `CHANGELOG.md`.
     *   Create GitHub Release workflow (tag -> build -> notes).
@@ -79,7 +82,16 @@ This document consolidates all the incomplete tasks, known blockers, and pending
 *   [ ] **Novel Algorithm 5: Temporal Security Profile Anomaly Detection:** Implement anomaly detection within the 24h temporal profile.
 
 ## 8. Platform Infrastructure & Refinement (P1/P2/P3)
-*   [ ] **Studio Dashboard Home (P1):** Replace the form-like root launcher with the full-screen `StudioDashboardHome` including:
+*   [ ] **First-Run Guidance (P1):** Implement a guided onboarding tour or step-by-step first-run walkthrough from launcher to simulation.
+*   [ ] **Panel Clean-up (P1):** Remove remaining static/stubbed placeholders in Metrics, Issues, and Timeline panels.
+*   [ ] **Visual Diff Parity (P1):** Achieve full visual diff parity across all scenarios in Compare Mode.
+*   [ ] **AI Layout Draft Upgrade (P1):** Upgrade the AI layout draft into a robust SecurityScene generation workflow with higher spatial intent fidelity.
+*   [ ] **Product-Grade Verification (P1):** Move footage verification from "operator assist" to a product-grade workflow against simulated outcomes.
+*   [ ] **Project Backend (P2):** Implement a product-grade multi-project backend collaboration layer (replacing local-only storage).
+*   [ ] **Multi-Site Dashboard (P2):** Expand the dashboard to support multi-site/multi-client management.
+*   [ ] **Clean Stale Strings (P2):** Remove demo-specific hardcoded strings ("small retail shop", "cupboard") from core schemas and default names.
+*   [ ] **ONVIF/RTSP Full Integration (P2):** Complete the integration of live ONVIF/RTSP camera feeds.
+*   [ ] **Studio Dashboard Home (P1):** (In Progress) Refine the full-screen `StudioDashboardHome` including:
     *   Large scene preview (heatmap, cones, zones).
     *   Right Security Status panel (Outcome, Issues, Assumptions).
     *   6 Metric cards using real simulation data.

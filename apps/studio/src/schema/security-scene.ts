@@ -869,6 +869,9 @@ export type TemporalSecurityProfile = z.infer<typeof temporalSecurityProfileSche
 export type TemporalAnomalyWindow = z.infer<typeof temporalAnomalyWindowSchema>;
 export type TemporalAnomalySummary = z.infer<typeof temporalAnomalySummarySchema>;
 
+export type ReviewStatus = z.infer<typeof reviewStatusSchema>;
+export type SceneSource = z.infer<typeof sceneSourceSchema>;
+
 export function parseSecurityScene(input: unknown): SecurityScene {
   return securitySceneSchema.parse(input);
 }

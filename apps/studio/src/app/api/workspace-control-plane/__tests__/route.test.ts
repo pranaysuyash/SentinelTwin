@@ -30,7 +30,7 @@ describe("workspace-control-plane route", () => {
         governance: { activeRole: "operator", approvalMode: "review_required", sceneStatus: "draft", requestedAt: null, requestedBy: null, reviewedAt: null, reviewedBy: null, publishedAt: null, publishedBy: null, reviewNotes: [] },
         account: { accountName: "Local", ownerName: "You", planTier: "free", quotas: { maxWorkspaces: 6, maxMembers: 3, maxStorageBytes: 1024 }, entitlements: { sharedWorkspaces: false, publishedWorkspaces: false, archiveRecovery: true, reportExports: true, scanIntake: true, liveEvidence: true, ownershipTransfer: false, invites: false } },
       }),
-    }) as any);
+    }) as unknown as Request);
 
     expect(response.status).toBe(200);
     const body = await response.json() as { ok: boolean; historyCount: number };
@@ -43,9 +43,9 @@ describe("workspace-control-plane route", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ source: "governance-tab", sceneId: "scene-1", sceneName: "Retail", access: {}, governance: {}, account: {} }),
-    }) as any);
+    }) as unknown as Request);
 
-    const response = await GET(new Request("http://localhost/api/workspace-control-plane") as any);
+    const response = await GET(new Request("http://localhost/api/workspace-control-plane") as unknown as Request);
     expect(response.status).toBe(200);
     const body = await response.json() as { ok: boolean; historyCount: number };
     expect(body.ok).toBe(true);

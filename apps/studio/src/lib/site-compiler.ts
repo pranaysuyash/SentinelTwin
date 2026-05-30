@@ -126,6 +126,9 @@ const SOURCE_LABELS: Record<SiteIntakeSource, string> = {
 
 const LEGACY_SOURCE_ALIASES: Record<string, SiteIntakeSource> = {
   scan: "scan",
+  guided_scan: "scan",
+  reconstructed: "scan",
+  reconstruction: "scan",
   ai_prompt: "ai_prompt",
   floor_plan: "floor_plan",
   json: "json",
@@ -443,7 +446,8 @@ function confidenceToLabel(confidence: number): "high" | "medium" | "low" {
 
 function sourceToSceneSource(source: SiteIntakeSource): SecurityScene["source"] {
   switch (source) {
-    case "scan": return "scan";
+    case "scan":
+      return "scan";
     case "ai_prompt": return "ai";
     case "floor_plan": return "import";
     case "json": return "import";

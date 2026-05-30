@@ -270,8 +270,11 @@ function getReasonCodesForLighting(camera: CameraNode, lightingPenalty: number) 
 
 export function getQualityThresholds(scene: SecurityScene) {
   if (scene.assumptions.doriStandard === "oodpcvs_2025") {
+    // In OODPCVS mode, the standard-defined thresholds are used by ppmToOodpcvsQuality.
+    // This returns DORI thresholds for legacy consumers (getRecognitionAreaPct, etc.).
     return scene.assumptions.pixelsPerMeter;
   }
+  // dori_2014 mode uses the scene's PPM values
   return scene.assumptions.pixelsPerMeter;
 }
 
@@ -529,6 +532,7 @@ function evaluateCameraAgainstCell(
   ppm *= 1 - lightingPenalty;
   const finalPpmMultiplier = basePpm > 0 ? ppm / basePpm : 0;
 
+  // Determine cell quality based on the active standard.
   const isOodpcvs = scene.assumptions.doriStandard === "oodpcvs_2025";
   const quality = isOodpcvs
     ? ppmToOodpcvsQuality(ppm)

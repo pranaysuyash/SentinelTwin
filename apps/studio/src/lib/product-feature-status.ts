@@ -51,8 +51,23 @@ export const PRODUCT_FEATURE_STATUS: ProductFeatureEntry[] = [
   },
   {
     status: "Preview",
-    feature: "Guided scan reconstruction",
-    detail: "Guided scan assistant opens the existing scan wizard directly, keeps auto-path hints and manual review in the loop, and compiles through the same editable SecurityScene pipeline. Full phone capture, segmentation, and depth reconstruction remain future work.",
+    feature: "Guided scan reconstruction (legacy)",
+    detail: "Guided scan assistant opens the existing scan wizard directly, keeps auto-path hints and manual review in the loop, and compiles through the same editable SecurityScene pipeline.",
+  },
+  {
+    status: "Scaffolded",
+    feature: "Reconstruction data model",
+    detail: "ScanArtifact, ScanCaptureSession, and ScanCandidate types with photo roles, capture steps, scale anchors, candidate warnings, and evidence linkage. The session object supports guided capture sequence, per-candidate bounding boxes/masks/estimated positions, and confidence tracking.",
+  },
+  {
+    status: "Scaffolded",
+    feature: "AI/CV adapter interfaces",
+    detail: "Adapter interfaces for object detection, segmentation, depth estimation, scale anchoring, multi-photo correspondence, and structural extraction. All adapters are stubbed; no model integrations are wired. The architecture forces AI candidates through user review before compile.",
+  },
+  {
+    status: "Preview",
+    feature: "Reconstruction compilation pipeline",
+    detail: "compileReconstructionToScene() converts accepted candidates into valid SecurityScene through SiteTwinDraft. compileReconstructionToSiteTwinDraft() wraps the result with source artifacts, capture mode, scale anchors, confidence, and warnings. Quality gates evaluate completeness before compile. All AI/CV output passes through review-required pattern.",
   },
   {
     status: "Preview",

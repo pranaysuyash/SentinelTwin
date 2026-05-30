@@ -1,11 +1,24 @@
 # Exploration Map — SentinelTwin
 
 **This is a living document. Append findings. Never replace.**
-**Last updated:** 2026-05-30 (Pascal pre-fork reuse audit logged: direct vs adapter vs not-practical-now tiers) — previous: Dedicated lighting/shadow overlay mode added on top of heatmap lighting/shadow implementation; Heatmap lighting/shadow implementation — camera PPM now combines independent security-light illumination, obstruction-cast light shadows, and camera line-of-sight; Physics engine audit — zero implementation across entire codebase, deferred to V0.2, no new action needed; Checkpoint compare/report pivots + launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Sensor provenance + runtime health surfacing; Sensor fusion preview + workspace access policy surfacing; Digital twin simulation physics: PTZ movement, BRDF reflectivity, dynamic lighting, view distance, placement constraints, scene fidelity, occlusion culling, camera feed synthesis, real-time feedback
+**Last updated:** 2026-05-30 (Reconstruction adapters: depth estimation + scale anchoring stubs, candidate review panel UI, bridge module, 100 scan tests) — previous: Dedicated lighting/shadow overlay mode added on top of heatmap lighting/shadow implementation; Heatmap lighting/shadow implementation — camera PPM now combines independent security-light illumination, obstruction-cast light shadows, and camera line-of-sight; Physics engine audit — zero implementation across entire codebase, deferred to V0.2, no new action needed; Checkpoint compare/report pivots + launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Sensor provenance + runtime health surfacing; Sensor fusion preview + workspace access policy surfacing; Digital twin simulation physics: PTZ movement, BRDF reflectivity, dynamic lighting, view distance, placement constraints, scene fidelity, occlusion culling, camera feed synthesis, real-time feedback
 
 ---
 
 ## Active Research Threads
+
+### Thread 0: Product integrity hardening spine
+**Status:** Implemented in code (2026-05-30).
+**Key findings:**
+- Canonical intake source taxonomy is now stable (`scan | ai_prompt | floor_plan | json | manual | camera_evidence`) with legacy alias normalization at boundaries only.
+- Site draft approval now validates and activates `draft.scene` explicitly before baseline simulation is allowed to run.
+- SecurityOutcome semantics now separate `zoneFindings` (all) from `failedZones` (non-pass only), reducing narrative and UI drift.
+- SiteDraftReview now renders a real read-only draft-scene spatial preview (SVG) instead of placeholder text.
+- Shared narrative model now feeds both security outcome and report summary/export surfaces.
+
+**Next:** Use this hardened foundation before adding new scan/ONVIF/compliance breadth.
+
+---
 
 ### Thread 1: Pascal Editor Integration
 **Status:** Decision made (fork). Details in architecture/02.
@@ -71,6 +84,37 @@ node store pattern are exactly what SentinelTwin needs.
 **Next:** Reuse the same keep/discard discipline while extending the floorplan harness and cloud fallback candidates.
 
 ---
+
+### Thread 5a: Scan/Reconstruction Pipeline Foundation
+**Status:** Architecture built, adapters scaffolded, compilation pipeline complete (2026-05-30).
+**Key architecture:**
+- Three-layer design: data model (`ScanArtifact`, `ScanCaptureSession`) → adapter interfaces (6 adapter types + VisionProvider) → compilation pipeline (`compileReconstructionToSiteTwinDraft`)
+- Every AI/CV candidate starts `status: "pending"` — user review required before compile
+- Compilation produces `SiteTwinDraft`, not direct `SecurityScene` mutation — preserves review → approve → baseline flow
+- Quality gates evaluate completeness before compile
+- 73 new tests covering data model, reconstruction pipeline, and quality gates
+**What exists now:**
+- `lib/scan-artifacts.ts` — Complete data model with 13-step guided capture sequence, photo roles, scale anchors, typed warnings
+- `lib/scan-adapters/types.ts` — All 6 adapter interfaces + VisionProvider
+- `lib/scan-reconstruction.ts` — Compilation pipeline with confidence estimation, quality gates, default warnings
+- `lib/scan-quality-gates.ts` — 6 gate definitions with evaluate/convert utilities
+- `lib/site-compiler.ts` — Extended with `guided_scan` and `reconstructed` source types
+**What is NOT built:**
+- No model integrations are wired (VLM detection, SAM2 segmentation, Depth Anything V2, VGGT, SpatialLM)
+- No multi-photo correspondence beyond the data model
+- No structural extraction (wall/door/window from images)
+- No UI components for the new capture session (uses legacy ScanSiteWizard)
+- No toast/notification surface for reconstruction progress
+**Next:**
+- Integrate with the existing GuidedCaptureAssistant UI to show the candidate review panel after pipeline run
+- Wire a real vision provider call through the ModelProvider interface (requires adding image support to ConversationMessage)
+- Add correspondence adapter (VGGT-style camera pose estimation)
+- Add structural extraction (SpatialLM integration)
+**Code anchors:**
+- `lib/scan-artifacts.ts` — Core data model
+- `lib/scan-adapters/types.ts` — Adapter interfaces
+- `lib/scan-reconstruction.ts` — Compilation pipeline
+- `lib/scan-quality-gates.ts` — Quality gate evaluation
 
 ### Thread 5: Physics Layer (Rapier)
 **Status:** Decision made — optional, not in V0.1. Details in PHYSICS_OPTIONS.md.

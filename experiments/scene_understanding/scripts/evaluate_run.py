@@ -123,6 +123,11 @@ def main():
     print(f"  Door F1: {summary.door_f1_mean:.3f}")
     print(f"  Window F1: {summary.window_f1_mean:.3f}")
     print(f"  Obstruction F1: {summary.obstruction_f1_mean:.3f}")
+    print(f"  Schema acceptance: {'PASS' if summary.accepted else 'FAIL'}")
+    if summary.acceptance_failures:
+        print("  Acceptance blockers:")
+        for failure in summary.acceptance_failures:
+            print(f"    - {failure}")
     print(f"  Critical Zone Recall: {summary.critical_zone_recall_mean:.3f}")
     print(f"  P50 Latency: {summary.p50_latency_ms:.0f}ms")
     print(f"  P95 Latency: {summary.p95_latency_ms:.0f}ms\n")

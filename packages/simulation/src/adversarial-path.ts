@@ -5,7 +5,7 @@ import type {
 } from "@sentineltwin/core";
 import { pointInPolygon, polygonCenter } from "@sentineltwin/core";
 import { buildCoverageGrid } from "@sentineltwin/core";
-import { selectHighestPriorityCriticalZone } from "./critical-zone-selection.js";
+import { selectHighestPriorityCriticalZone } from "./critical-zone-selection";
 
 type CoverageCellLookup = {
   x: number;

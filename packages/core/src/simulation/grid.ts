@@ -1,5 +1,5 @@
 import type { SecurityScene } from "../schema/security-scene.js";
-import { pointInPolygon } from "./geometry.js";
+import { pointInPolygon } from "./geometry";
 
 export type GridCell = {
   id: string;

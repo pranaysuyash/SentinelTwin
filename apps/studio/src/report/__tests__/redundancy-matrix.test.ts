@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
 import { createSmallRetailShopScene } from "@/demo-scenes/small-retail-shop";
-import { simulateStudio } from "@/simulation/simulate-studio";
-import { buildRedundancyMatrixReport } from "@/report/redundancy-matrix";
+import { simulateStudio } from "@sentineltwin/simulation";
+import { buildRedundancyMatrixReport } from "@sentineltwin/report";
 
 describe("buildRedundancyMatrixReport", () => {
   test("computes camera rows and vulnerable zones from the scene", () => {

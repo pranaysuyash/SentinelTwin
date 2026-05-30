@@ -83,6 +83,7 @@ import {
 import {
   getOrganizationManager,
 } from "@/lib/organization-store";
+import { guardVisibilityChange, guardWorkspaceCountQuota } from "@/lib/entitlement-guards";
 import type { OrganizationList, Organization } from "@/schema/organization";
 import {
   canPerformWorkspaceAction,
@@ -120,8 +121,8 @@ import {
   parseSecurityScene,
   safeParseSecurityScene,
 } from "@/schema/security-scene";
-import { simulateStudio } from "@/simulation/simulate-studio";
-import { computeTemporalProfile } from "@/simulation/temporal";
+import { simulateStudio } from "@sentineltwin/simulation";
+import { computeTemporalProfile } from "@sentineltwin/simulation";
 import type { TemporalSecurityProfile } from "@/schema/security-scene";
 import type { SiteIntakeSession } from "@/lib/site-compiler";
 import { validateSceneGeometry } from "@/lib/scene-validation";
@@ -1845,6 +1846,18 @@ function updateSavedSceneMetadata(sceneId: string, patch: Partial<Pick<SavedProj
   const idx = projects.findIndex((record) => record.scene.id === sceneId);
   if (idx < 0) return;
   const existing = projects[idx];
+
+  const targetVisibility = patch.workspaceVisibility !== undefined
+    ? normalizeWorkspaceVisibility(patch.workspaceVisibility, existing.scene.source)
+    : null;
+  if (targetVisibility !== null) {
+    const guard = guardVisibilityChange(existing.workspaceVisibility, targetVisibility);
+    if (!guard.allowed) {
+      console.warn(`Entitlement guard rejected visibility change: ${guard.reason}`);
+      return;
+    }
+  }
+
   projects[idx] = {
     ...existing,
     folder: patch.folder !== undefined ? normalizeFolder(patch.folder) : existing.folder,
@@ -1856,9 +1869,7 @@ function updateSavedSceneMetadata(sceneId: string, patch: Partial<Pick<SavedProj
     workspaceOwner: patch.workspaceOwner !== undefined
       ? normalizeWorkspaceOwner(patch.workspaceOwner, existing.scene.source)
       : existing.workspaceOwner,
-    workspaceVisibility: patch.workspaceVisibility !== undefined
-      ? normalizeWorkspaceVisibility(patch.workspaceVisibility, existing.scene.source)
-      : existing.workspaceVisibility,
+    workspaceVisibility: targetVisibility ?? existing.workspaceVisibility,
     lastOpenedAt: patch.lastOpenedAt !== undefined ? patch.lastOpenedAt : existing.lastOpenedAt,
     updatedAt: Date.now(),
   };
@@ -1886,10 +1897,15 @@ function makeDuplicateSceneName(name: string, existingNames: Set<string>) {
   return candidate;
 }
 
-function duplicateSavedSceneRecord(sceneId: string): SavedProjectRecord | null {
+function duplicateSavedSceneRecord(sceneId: string): { success: boolean; record?: SavedProjectRecord; error?: string } {
   const projects = loadSavedProjectsFromStorage();
   const source = projects.find((record) => record.scene.id === sceneId);
-  if (!source) return null;
+  if (!source) return { success: false, error: "Source scene not found." };
+
+  const quotaGuard = guardWorkspaceCountQuota(projects.length);
+  if (!quotaGuard.allowed) {
+    return { success: false, error: quotaGuard.reason };
+  }
 
   const now = Date.now();
   const existingIds = new Set(projects.map((record) => record.scene.id));
@@ -1915,7 +1931,7 @@ function duplicateSavedSceneRecord(sceneId: string): SavedProjectRecord | null {
   };
 
   persistSavedProjects([duplicateRecord, ...projects]);
-  return duplicateRecord;
+  return { success: true, record: duplicateRecord };
 }
 
 const INITIAL_WORKSPACE_ACCESS = loadWorkspaceAccess();
@@ -2850,6 +2866,19 @@ function contextualToolForNode(scene: SecurityScene, id: string | null): ActiveT
   if (nodeType === "wall") return "wall";
   if (nodeType === "comment") return "comment";
   return null;
+}
+
+function contextualInspectorTabForNode(scene: SecurityScene, id: string | null): InspectorTab | null {
+  const nodeType = resolveSelectedNodeType(scene, id);
+  if (!nodeType) return null;
+  if (nodeType === "camera") return "view";
+  if (nodeType === "path") return "analytics";
+  if (nodeType === "sensor") return "status";
+  if (nodeType === "critical_zone" || nodeType === "privacy_zone") return "failures";
+  if (nodeType === "door" || nodeType === "window" || nodeType === "entry_point") return "status";
+  if (nodeType === "obstruction" || nodeType === "security_light" || nodeType === "wall") return "properties";
+  if (nodeType === "comment") return "history";
+  return "properties";
 }
 
 const ANALYSIS_TAB_ORDER: BottomTab[] = [
@@ -4664,6 +4693,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   selectNode: (id) => set((state) => {
     const contextualTab = contextualBottomTabForNode(state.scene, id);
     const contextualTool = contextualToolForNode(state.scene, id);
+    const contextualInspectorTab = contextualInspectorTabForNode(state.scene, id);
     return {
       selectedNodeId: id,
       selectedNodeIds: id ? [id] : [],
@@ -4672,7 +4702,9 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
           ? id
           : state.selectedCameraId,
       rightDockCollapsed: id && !state.focusMode ? false : state.rightDockCollapsed,
+      bottomDockCollapsed: id && !state.focusMode ? false : state.bottomDockCollapsed,
       rightPanelMode: id ? contextualRightPanelModeForNode(state.scene, id) : state.rightPanelMode,
+      inspectorTab: contextualInspectorTab ?? state.inspectorTab,
       bottomTab: contextualTab
         ? getFirstEnabledAnalysisTab(state.enabledAnalysisModules, contextualTab)
         : state.bottomTab,
@@ -4686,6 +4718,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     const next = purgeInvalidSelection(state.scene, ids);
     const nextPrimary = primarySelection(next);
     const contextualTool = contextualToolForNode(state.scene, nextPrimary);
+    const contextualInspectorTab = contextualInspectorTabForNode(state.scene, nextPrimary);
     return {
       selectedNodeIds: next,
       selectedNodeId: nextPrimary,
@@ -4694,7 +4727,9 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
           ? nextPrimary
           : state.selectedCameraId,
       rightDockCollapsed: nextPrimary && !state.focusMode ? false : state.rightDockCollapsed,
+      bottomDockCollapsed: nextPrimary && !state.focusMode ? false : state.bottomDockCollapsed,
       rightPanelMode: nextPrimary ? contextualRightPanelModeForNode(state.scene, nextPrimary) : state.rightPanelMode,
+      inspectorTab: contextualInspectorTab ?? state.inspectorTab,
       bottomTab: nextPrimary
         ? getFirstEnabledAnalysisTab(
             state.enabledAnalysisModules,
@@ -4712,6 +4747,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     const next = purgeInvalidSelection(state.scene, [...state.selectedNodeIds, id]);
     const nextPrimary = primarySelection(next);
     const contextualTool = contextualToolForNode(state.scene, nextPrimary);
+    const contextualInspectorTab = contextualInspectorTabForNode(state.scene, nextPrimary);
     return {
       selectedNodeIds: next,
       selectedNodeId: nextPrimary,
@@ -4720,7 +4756,9 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
           ? nextPrimary
           : state.selectedCameraId,
       rightDockCollapsed: nextPrimary && !state.focusMode ? false : state.rightDockCollapsed,
+      bottomDockCollapsed: nextPrimary && !state.focusMode ? false : state.bottomDockCollapsed,
       rightPanelMode: nextPrimary ? contextualRightPanelModeForNode(state.scene, nextPrimary) : state.rightPanelMode,
+      inspectorTab: contextualInspectorTab ?? state.inspectorTab,
       bottomTab: nextPrimary
         ? getFirstEnabledAnalysisTab(
             state.enabledAnalysisModules,
@@ -4740,6 +4778,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     const filtered = purgeInvalidSelection(state.scene, next);
     const nextPrimary = primarySelection(filtered);
     const contextualTool = contextualToolForNode(state.scene, nextPrimary);
+    const contextualInspectorTab = contextualInspectorTabForNode(state.scene, nextPrimary);
     return {
       selectedNodeIds: filtered,
       selectedNodeId: nextPrimary,
@@ -4748,7 +4787,9 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
           ? nextPrimary
           : state.selectedCameraId,
       rightDockCollapsed: nextPrimary && !state.focusMode ? false : state.rightDockCollapsed,
+      bottomDockCollapsed: nextPrimary && !state.focusMode ? false : state.bottomDockCollapsed,
       rightPanelMode: nextPrimary ? contextualRightPanelModeForNode(state.scene, nextPrimary) : state.rightPanelMode,
+      inspectorTab: contextualInspectorTab ?? state.inspectorTab,
       bottomTab: nextPrimary
         ? getFirstEnabledAnalysisTab(
             state.enabledAnalysisModules,
@@ -4767,7 +4808,10 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       return {
         selectedCameraId: isValid ? id : null,
         rightDockCollapsed: isValid && !state.focusMode ? false : state.rightDockCollapsed,
+        bottomDockCollapsed: isValid && !state.focusMode ? false : state.bottomDockCollapsed,
         rightPanelMode: isValid ? contextualRightPanelModeForNode(state.scene, id) : state.rightPanelMode,
+        inspectorTab: isValid ? "view" : state.inspectorTab,
+        bottomTab: isValid ? getFirstEnabledAnalysisTab(state.enabledAnalysisModules, "metrics") : state.bottomTab,
         activeTool: isValid ? "camera" : state.activeTool,
         dockAttention: isValid
           ? { ...state.dockAttention, right: false }
@@ -6626,10 +6670,20 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   },
 
   duplicateSavedScene: (sceneId) => {
-    const duplicate = duplicateSavedSceneRecord(sceneId);
-    if (!duplicate) return null;
+    const result = duplicateSavedSceneRecord(sceneId);
+    if (!result.success) {
+      get().recordRuntimeIncident({
+        category: "user_error",
+        severity: "warning",
+        title: result.error ?? "Duplicate failed",
+        details: "Workspace quota exceeded or source not found.",
+        action: "duplicate_scene",
+        path: "/studio",
+      });
+      return null;
+    }
     get().refreshSavedScenesList();
-    return duplicate;
+    return result.record ?? null;
   },
 
   renameSavedScene: (sceneId, nextName) => {

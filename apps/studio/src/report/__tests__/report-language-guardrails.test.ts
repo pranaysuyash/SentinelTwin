@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
 import { createSmallRetailShopScene } from "@/demo-scenes/small-retail-shop";
-import { buildReportData, exportAsHtml, exportAsMarkdown, exportAsText } from "@/report";
-import { simulateStudio } from "@/simulation/simulate-studio";
+import { buildReportData, exportAsHtml, exportAsMarkdown, exportAsText } from "@sentineltwin/report";
+import { simulateStudio } from "@sentineltwin/simulation";
 
 const testWithTimeout = test as unknown as (
   name: string,

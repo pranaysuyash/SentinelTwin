@@ -17,6 +17,7 @@ const DEFAULT_ALLOWED_HEADERS = [
 
 const DEFAULT_ALLOWED_METHODS = ["GET", "POST", "OPTIONS"];
 const LOOPBACK_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1"]);
+const SAME_ORIGIN_SENTINELS = new Set(["self", "same-origin", "same_origin"]);
 
 function getConfiguredAllowedOrigins() {
   const raw = process.env.SENTINELTWIN_API_ALLOWED_ORIGINS ?? "";
@@ -55,9 +56,22 @@ function isAllowedOrigin(origin: string) {
 function resolveCorsOrigin(request?: Request) {
   if (!request) return null;
   const origin = request.headers.get("origin");
-  if (!origin || !isAllowedOrigin(origin)) {
+  if (!origin) {
     return null;
   }
+
+  const configuredAllowedOrigins = getConfiguredAllowedOrigins();
+  if (configuredAllowedOrigins.some((entry) => SAME_ORIGIN_SENTINELS.has(entry.toLowerCase()))) {
+    try {
+      if (new URL(origin).origin === new URL(request.url).origin) {
+        return origin;
+      }
+    } catch {
+      return null;
+    }
+  }
+
+  if (!isAllowedOrigin(origin)) return null;
   return origin;
 }
 

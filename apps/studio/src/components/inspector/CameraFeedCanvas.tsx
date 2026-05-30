@@ -7,7 +7,7 @@ import { cn } from "@/lib/cn";
 import "@/lib/three-compat";
 import type { CameraNode, DoriQuality, SecurityScene } from "@/schema/security-scene";
 import { computeOperationalEvidenceFusionSummary, computeSensorFusionSummary } from "@/lib/sensor-fusion";
-import { qualityToScore } from "@/simulation/dori";
+import { qualityToScore } from "@sentineltwin/core";
 import { useStudioStore } from "@/store/studio-store";
 import { PathActor, CoverageSegmentPath } from "@/components/workspace/SharedScene";
 import { CameraRigLive, SceneFeedGeometry } from "@/components/view/SceneFeedCanvas";

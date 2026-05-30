@@ -8,23 +8,23 @@ import type {
   SimulationResult,
   ZoneResult,
 } from "@sentineltwin/core";
-import { computeAdversarialPath } from "./adversarial-path.js";
-import { analyseBlindSpotTopology } from "./blind-spot-topology.js";
-import { computeBlindSpotFingerprint } from "./blind-spot-fingerprint.js";
-import { computeCoverageFragility } from "./coverage-fragility.js";
-import { analyzeOcclusionBlame } from "./occlusion-blame.js";
+import { computeAdversarialPath } from "./adversarial-path";
+import { analyseBlindSpotTopology } from "./blind-spot-topology";
+import { computeBlindSpotFingerprint } from "./blind-spot-fingerprint";
+import { computeCoverageFragility } from "./coverage-fragility";
+import { analyzeOcclusionBlame } from "./occlusion-blame";
 import {
   createCoverageEvaluator,
   type CellComputation,
   getIdentificationAreaPct,
   getRecognitionAreaPct,
   getQualityThresholds,
-} from "./coverage.js";
+} from "./coverage";
 import { maxQuality, qualityToScore, scoreToQuality } from "@sentineltwin/core";
-import { computeKRobustness } from "./k-robustness.js";
-import { computePathResults } from "./path-analysis.js";
+import { computeKRobustness } from "./k-robustness";
+import { computePathResults } from "./path-analysis";
 import { pointInPolygon, polygonCenter } from "@sentineltwin/core";
-import { computePlacementOracle } from "./placement-oracle.js";
+import { computePlacementOracle } from "./placement-oracle";
 
 type EvaluatedZone = ZoneResult & {
   blockingLabels: string[];

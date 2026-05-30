@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { organizationRoleSchema } from "./organization.js";
+import { organizationRoleSchema } from "./organization";
 
 export const workspaceInviteStatusSchema = z.enum(["pending", "accepted", "declined", "revoked", "expired"]);
 export type WorkspaceInviteStatus = z.infer<typeof workspaceInviteStatusSchema>;

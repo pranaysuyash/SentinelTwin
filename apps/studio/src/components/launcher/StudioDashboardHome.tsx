@@ -1545,7 +1545,7 @@ export function StudioDashboardHome({
               statusTone,
             )}>
               <span className="text-[10px] uppercase tracking-[0.14em]">Status:</span>
-              {statusLabel}
+              <span suppressHydrationWarning>{statusLabel}</span>
             </span>
             <span suppressHydrationWarning className="inline-flex items-center rounded-xl border border-transparent px-2 py-2 text-xs text-[color:var(--st-muted)]">
               {currentRunLabel ?? "Last run: Never"}

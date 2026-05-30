@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 import { GET } from "../route";
 
 const createNextRequest = (url: string, init?: RequestInit): NextRequest => (
-  new Request(url, init) as any as unknown as any
+  new Request(url, init) as unknown as NextRequest
 );
 
 describe("truth-audit route", () => {

@@ -13,7 +13,7 @@ import {
   type SecurityIssue,
   type SensorNode,
 } from "@/schema/security-scene";
-import { getYawPitchDirection } from "@/simulation/geometry";
+import { getYawPitchDirection } from "@sentineltwin/core";
 import { CameraLabelCard } from "@/components/workspace/overlays/CameraLabelCard";
 import { CriticalZoneLabelCard } from "@/components/workspace/overlays/CriticalZoneLabelCard";
 import { EntryDoorChip } from "@/components/workspace/overlays/EntryDoorChip";

@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Camera, FileText, GitCompare, LayoutDashboard, Monitor, Play } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { MAP_COLORS } from "@/components/map/map-colors";
 import { VIEW_MODE_PRESETS } from "@/lib/studio-constants";
@@ -16,8 +17,8 @@ const PRIMARY_VIEW_OPTIONS: { mode: ViewMode; label: string; icon: React.ReactNo
 ];
 
 const SECONDARY_VIEW_OPTIONS: { mode: ViewMode; label: string; icon: React.ReactNode }[] = [
-  { mode: "compare", label: "Compare", icon: <GitCompare className="h-3.5 w-3.5" /> },
-  { mode: "report", label: "Report", icon: <FileText className="h-3.5 w-3.5" /> },
+  { mode: "compare", label: "Compare View", icon: <GitCompare className="h-3.5 w-3.5" /> },
+  { mode: "report", label: "Report View", icon: <FileText className="h-3.5 w-3.5" /> },
 ];
 
 const tabVariants = {
@@ -33,11 +34,15 @@ const iconVariants = {
 
 /** Context chip shown next to the active mode tab to orient the user */
 function ContextChip() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const viewMode = useStudioStore((s) => s.viewMode);
   const scene = useStudioStore((s) => s.scene);
   const selectedId = useStudioStore((s) => s.selectedNodeId);
   const activePathId = useStudioStore((s) => s.activePathId);
   const result = useStudioStore((s) => s.simulationResult);
+
+  if (!mounted) return null;
 
   if (viewMode === "camera_view") {
     const cam = scene.cameras.find((c) => c.id === selectedId) ?? null;

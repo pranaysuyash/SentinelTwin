@@ -2,7 +2,7 @@
 
 import type { SecurityScene, SimulationResult } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
-import { simulateStudio } from "@/simulation/simulate-studio";
+import { simulateStudio } from "@sentineltwin/simulation";
 
 type StatusBarNode = {
   nodeType?: string;

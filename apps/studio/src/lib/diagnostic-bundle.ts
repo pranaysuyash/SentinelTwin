@@ -8,7 +8,7 @@ import { summarizeWorkspaceApprovalRouting } from "@/lib/workspace-membership-ro
 import { summarizeAiActionTelemetry } from "@/lib/ai-action-telemetry";
 import { summarizeIncidentAlerts } from "@/lib/incident-alerts";
 import type { IncidentAlertSummary } from "@/lib/incident-alerts";
-import { buildReportData } from "@/report";
+import { buildReportData } from "@sentineltwin/report";
 import { buildReportEvidenceBundle, type ReportEvidenceBundle } from "@/lib/report-evidence-bundle";
 import type { CameraLiveConnectionArchiveRecord } from "@/lib/camera-live-connection-history";
 import type { CameraLiveSessionRecord } from "@/lib/camera-live-session-registry";

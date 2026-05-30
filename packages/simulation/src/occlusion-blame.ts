@@ -1,5 +1,5 @@
 import type { SecurityScene, DoriQuality } from "@sentineltwin/core";
-import { computeCoverageCells } from "./coverage.js";
+import { computeCoverageCells } from "./coverage";
 import { qualityToScore, maxQuality } from "@sentineltwin/core";
 
 export interface ObstructionBlame {

@@ -1,5 +1,6 @@
 import type { SecurityScene, SimulationResult } from "@/schema/security-scene";
 import type { SecurityOutcomeModel } from "@/lib/security-outcome/security-outcome-model";
+import { buildSecurityNarrativeModel } from "@/lib/security-outcome/security-narrative";
 
 export function buildOutcomeDrivenReportMarkdown(
   outcome: SecurityOutcomeModel,
@@ -12,6 +13,7 @@ export function buildOutcomeDrivenReportMarkdown(
   const hasFailures = outcome.failedZones.some((z) => z.status !== "pass");
   const statusLine = s.status === "pass" ? "PASS" : s.status === "high_risk" ? "HIGH RISK" : s.status === "needs_attention" ? "NEEDS ATTENTION" : "INCOMPLETE";
   const coverageLine = s.coveragePct != null ? `${Math.round(s.coveragePct)}%` : "N/A";
+  const narrative = buildSecurityNarrativeModel(outcome, result, scene);
 
   const lines: string[] = [
     "# SentinelTwin Security Audit Outcome",
@@ -35,10 +37,12 @@ export function buildOutcomeDrivenReportMarkdown(
     "---",
     "",
     "## Summary",
-    `**Headline:** ${s.headline}`,
+    `**Headline:** ${narrative.criticalIssue}`,
     `**Coverage:** ${coverageLine}  ·  **Critical Zones:** ${s.criticalZonesPassing}/${s.criticalZonesTotal} passing  ·  **Issues:** ${s.issueCount}`,
-    s.primaryRisk ? `**Primary Risk:** ${s.primaryRisk}` : null,
-    s.recommendedNextAction ? `**Recommended Action:** ${s.recommendedNextAction}` : null,
+    `**Primary Cause:** ${narrative.primaryCause}`,
+    `**Impact:** ${narrative.impact}`,
+    `**Recommended Action:** ${narrative.recommendation}`,
+    `**Evidence Trail:** ${narrative.evidenceTrail}`,
     "",
     "---",
     "",

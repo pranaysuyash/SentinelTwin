@@ -28,9 +28,9 @@ import { pathLength } from "@/components/workspace/editing/editor-geometry";
 import { samplePathQuality } from "@/components/map/path-quality";
 import { VisibilityTimeline } from "@/components/view/VisibilityTimeline";
 import type { DoriQuality, ScenarioPath } from "@/schema/security-scene";
-import { getYawPitchDirection } from "@/simulation/geometry";
+import { getYawPitchDirection } from "@sentineltwin/core";
 import { getCameraColorForId } from "@/lib/camera-colors";
-import { buildCoverageGrid } from "@/simulation/grid";
+import { buildCoverageGrid } from "@sentineltwin/core";
 import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 

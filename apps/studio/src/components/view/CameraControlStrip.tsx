@@ -19,7 +19,7 @@ import {
 import { useCallback } from "react";
 
 import { cn } from "@/lib/cn";
-import { normalizeAngle } from "@/simulation/geometry";
+import { normalizeAngle } from "@sentineltwin/core";
 import type { CameraNode, SecurityScene } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 

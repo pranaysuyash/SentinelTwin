@@ -9,7 +9,7 @@ import { buildCompareShareLink } from "@/lib/compare-share-link";
 import { shareLinkOrCopy } from "@/lib/share-link";
 import { useStudioStore } from "@/store/studio-store";
 import type { SimulationResult } from "@/schema/security-scene";
-import { qualityToScore } from "@/simulation/dori";
+import { qualityToScore } from "@sentineltwin/core";
 import { QUALITY_COLOR } from "@/lib/quality-display";
 
 // ── Delta badge ─────────────────────────────────────────────────────────────

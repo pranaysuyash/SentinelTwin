@@ -5,7 +5,7 @@ import {
   type ReportExportPreset,
   type ReportStandardTemplateId,
   type ReportVisibility,
-} from "@/report";
+} from "@sentineltwin/report";
 
 const REPORT_CATALOG_STORAGE_KEY = "sentineltwin.report.catalog.v1";
 

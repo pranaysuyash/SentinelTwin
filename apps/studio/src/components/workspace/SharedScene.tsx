@@ -12,7 +12,7 @@ import type {
   WallNode,
   WindowNode,
 } from "@/schema/security-scene";
-import { DORI_THRESHOLDS } from "@/simulation/dori";
+import { DORI_THRESHOLDS } from "@sentineltwin/core";
 import { useStudioStore } from "@/store/studio-store";
 
 // ── Environment themes ──

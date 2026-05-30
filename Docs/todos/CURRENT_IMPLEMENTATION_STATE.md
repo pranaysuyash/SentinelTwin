@@ -8,6 +8,14 @@ before the Phase 2 audit. This doc supersedes the gap analysis for "what exists.
 For the full-vision gap inventory and next-slice sequencing, see
 `Docs/todos/FULL_VISION_GAP_INVENTORY.md`.
 
+## Product integrity hardening (2026-05-30)
+
+- Site intake source taxonomy is now canonical in compiler/session state (`scan`, `ai_prompt`, `floor_plan`, `json`, `manual`, `camera_evidence`) with explicit normalization for legacy aliases (`json_import`, `footage_verify`) ✅
+- Site draft approval is now explicit and review-first: the approved draft scene is validated before activation, promoted into active scene state, and baseline simulation is only kicked off from that approved scene when prerequisites exist ✅
+- Security outcome zone semantics are now split: `zoneFindings` holds all critical-zone evaluations while `failedZones` is strict non-pass only ✅
+- Site draft review no longer uses a placeholder preview; it renders a real read-only 2D spatial draft preview from `draft.scene` with entity overlays and warning highlights ✅
+- Security narrative wording is now shared through a canonical narrative helper used by SecurityOutcome and report-summary/report-export surfaces, reducing cross-surface narrative drift ✅
+
 ## Scene editor workbench hardening (2026-05-29)
 
 - The editor now uses a shared store-backed feedback channel for placement and transform validation, so wall/zone/path/selection warnings are visible in the same place instead of being split between local and store state ✅
@@ -782,6 +790,91 @@ The following issues were fixed to reach 0 typed errors (only pre-existing TS700
 - **AI Layout Draft**: Explicitly documented as a prototype-level draft assistant. Generates approximate layouts but requires manual refinement.
 - **Floor-plan Import**: Explicitly documented as a best-effort prototype extraction. Not yet production-grade and requires manual cleanup of extracted walls.
  - Scene Intelligence, Before/After, Report Lite, and Compare View now expose browser-native share buttons for checkpoint/archive/compare links, with clipboard copy as the fallback path when sharing is unavailable ✅
+
+## Scan / Reconstruction Pipeline Foundation (2026-05-30)
+
+### Scan Artifact Data Model — built and tested
+- `apps/studio/src/lib/scan-artifacts.ts` — Core data types for the full scan pipeline:
+  - `ScanCandidateKind` extended to include `"pillar"` alongside existing kinds ✅
+  - `ScanCandidate` enhanced with `boundingBox`, `maskArtifactId`, `sourceArtifactIds[]`, `estimatedPosition`, `estimatedDimensions`, `warnings[]`, and `source` (manual | model_detection | segmentation | structural_extraction) ✅
+  - `ScanArtifact` and `PhotoArtifact` with `exif`, `role` (front_wall, right_wall, etc.), `linkedCandidateIds[]` ✅
+  - `DepthMapArtifact`, `MaskArtifact` for AI/CV outputs ✅
+  - `ScanCaptureStep` with 13-step guided capture sequence (overview, 4 walls, critical_zones, existing_cameras, obstructions, entry_points, ceiling, known_measurement, dimensions, complete) ✅
+  - `ScanCaptureSession` with `captureMode` (manual_assisted | guided_capture | ai_assisted), photos, artifacts, candidates, knownMeasurements, captureSteps, warnings ✅
+  - `ScanCandidateWarning` with typed codes (LOW_CONFIDENCE, DIMENSIONS_ESTIMATED, POSITION_ESTIMATED, NO_MASK, NO_DEPTH_REFERENCE, FAR_FROM_CAMERA, NOT_ALIGNED_TO_WALL, SINGLE_PHOTO_ONLY, DEPTH_OUTLIER) ✅
+  - `ScanWarning` with typed codes (NO_CAMERAS, NO_CRITICAL_ZONES, DIMENSIONS_UNANCHORED, SINGLE_PHOTO_ONLY, etc.) ✅
+  - Session mutation helpers: `addPhotoToSession`, `addCandidateToSession`, `updateCandidateInSession`, `removeCandidateFromSession`, `markCaptureStepCompleted`, `addWarning`, `addCandidateWarning`, `linkArtifactToCandidate` ✅
+  - `sessionCompletionRatio()`, `captureModeLabel()`, `captureModeDescription()` utilities ✅
+- 33 tests covering all data model operations ✅
+
+### AI/CV Adapter Interfaces — scaffolded and tested
+- `apps/studio/src/lib/scan-adapters/types.ts` — Adapter interfaces:
+  - `ObjectDetectionAdapter` — detects objects (VLM/ML) from scan artifacts ✅
+  - `SegmentationAdapter` — tap-to-segment with point, box, or text prompt ✅
+  - `DepthEstimationAdapter` — depth map estimation ✅
+  - `ScaleAnchoringAdapter` — suggest anchors and refine depth with user anchor ✅
+  - `MultiPhotoCorrespondenceAdapter` — link same objects across photos, relate walls ✅
+  - `StructuralExtractionAdapter` — extract walls/doors/windows/floors/corners ✅
+  - `VisionProvider` — interface for vision-capable AI models ✅
+- All adapters return typed results with confidence and warnings ✅
+- No model integrations are wired — architecture is scaffolded for future integration ✅
+
+### Reconstruction Compilation Pipeline — built and tested
+- `apps/studio/src/lib/scan-reconstruction.ts`:
+  - `compileReconstructionToScene()` — converts accepted session candidates into valid `SecurityScene` via `SiteCompilerResult`. Preserves sourceTrace, reviewStatus, geometryValidity per node. Merges explicit entry points with door-derived entries. Writes reconstruction provenance into change log ✅
+  - `compileReconstructionToSiteTwinDraft()` — wraps compiled scene in `SiteTwinDraft` with source artifacts, capture mode, scale anchors, and confidence ✅
+  - `estimateOverallConfidence()` — computes composite confidence from candidate confidence, depth data, scale anchors, photo count, correspondence, and blocking warnings ✅
+  - `computeQualityGates()` — evaluates 8 quality gates (cameras, critical zones, depth reference, scale anchor, entry points, multi-photo, candidate warnings, session warnings) ✅
+  - `computeDefaultWarnings()` — computes standard warnings for missing cameras, zones, scale anchors, and single photo ✅
+  - `computeConfidenceLabel()` — maps numeric confidence to very_low/low/medium/high ✅
+  - `DEFAULT_RECONSTRUCTION_CONFIG` — with `forceReview: true` by default ✅
+- 27 tests covering compilation, confidence, quality gates, and default warnings ✅
+
+### Quality Gates — built and tested
+- `apps/studio/src/lib/scan-quality-gates.ts`:
+  - `evaluateQualityGates()` — evaluates all gates with override support for thresholds and required flags ✅
+  - `qualityGateToWarning()` — converts failed gates to type-safe warnings with blocking/warning severity ✅
+  - `QUALITY_GATE_DEFINITIONS` — canonical gate definitions with labels, default thresholds, and descriptions ✅
+- 12 tests covering all gate evaluation paths ✅
+
+### Site Compiler Extension
+- `apps/studio/src/lib/site-compiler.ts` — added `SiteIntakeSource` values:
+  - `"guided_scan"` — for guided capture sessions ✅
+  - `"reconstructed"` — for AI-assisted reconstruction pipeline ✅
+  - Source labels, legacy aliases, entity source mapping, and maturity descriptions updated accordingly ✅
+
+### Product Feature Status Updated
+- Three new entries: `Reconstruction data model`, `AI/CV adapter interfaces`, `Reconstruction compilation pipeline` — all marked `Scaffolded` or `Preview` ✅
+
+### Key design decisions captured
+- **Review-required principle preserved**: All AI/CV candidates start with `status: "pending"`. Only user-approved candidates reach compilation. `forceReview: true` by default in reconstruction config ✅
+- **Candidates → SiteTwinDraft, not directly into SecurityScene**: The reconstruction pipeline compiles through `compileReconstructionToSiteTwinDraft()` which produces a `SiteTwinDraft`. The draft must go through site draft approval to become the active scene ✅
+- **No overclaiming automatic reconstruction**: Tests explicitly verify that pending/rejected candidates are skipped, that confidence is never 1.0, and that the system clearly labels estimated vs anchored dimensions ✅
+- **Architecture before integration**: Adapter interfaces exist but no model backend is wired. The product contract is real while the implementation path is clear ✅
+
+### Adapter Stubs Built (second pass)
+- `lib/scan-adapters/adapters/stub-depth-adapter.ts` — `StubDepthEstimationAdapter` produces plausible depth ranges per photo role (overview=max 12m, critical_zones=~4m, existing_cameras=~6m). Uses jitter for realistic variation. ✅
+- `lib/scan-adapters/adapters/stub-scale-anchoring-adapter.ts` — `StubScaleAnchoringAdapter` suggests anchors from candidate labels (door→0.9m, counter→1.1m, shelf→1.8m). Respects user-provided measurements from `knownMeasurements`. `refineWithAnchor()` adjusts depth estimates by a scaling factor. ✅
+- `lib/scan-adapters/registry.ts` — Updated `getDefaultAdapterSet()` to include all three stubs. Added `getStubAdapterSet()`, `getDepthEstimationAdapters()`, `getScaleAnchoringAdapters()`. ✅
+- 4 new tests for depth adapter (role profiles, non-photo fallback, close-up range) ✅
+- Registry tests updated for new adapter layout ✅
+
+### Reconstruction Candidate Review UI — built
+- `components/reconstruction/ReconstructionCandidatePanel.tsx` — Full review panel for scan candidates:
+  - Renders candidates grouped by kind with color-coded icons, confidence badges, source labels, position/dimensions display ✅
+  - Per-candidate Accept/Reject actions with visual state (accepted=green, rejected=gray+opacity) ✅
+  - Batch Accept All / Reject All for pending candidates ✅
+  - Summary bar: accepted/pending/rejected/confidence counts ✅
+  - Toggle to show/hide rejected candidates ✅
+  - Candidate warnings displayed as severity-badged chips ✅
+  - Session warnings section with suggested actions ✅
+  - Footer with count summary and **Compile to Draft** button that calls `compileReconstructionToSiteTwinDraft()` ✅
+- `lib/scan-reconstruction-bridge.ts` — `runFullReconstruction()` convenience: creates session, adds photos, runs pipeline. `compileCurrentSession()` convenience wrapper. ✅
+
+### Test count updated
+- 100 scan tests across 5 files, all passing ✅
+
+---
 
 ## Security Outcome Review — enriched model + UI (2026-05-30)
 

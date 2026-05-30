@@ -7,11 +7,11 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import * as THREE from "three";
 
 import { useStudioStore } from "@/store/studio-store";
-import { qualityToScore } from "@/simulation/dori";
+import { qualityToScore } from "@sentineltwin/core";
 import "@/lib/three-compat";
 import { buildCompareShareLink } from "@/lib/compare-share-link";
 import { shareLinkOrCopy } from "@/lib/share-link";
-import { buildCompareReportData, exportCompareAsHtml, exportCompareAsMarkdown } from "@/report";
+import { buildCompareReportData, exportCompareAsHtml, exportCompareAsMarkdown } from "@sentineltwin/report";
 import { buildReportEvidenceBundle, stringifyReportEvidenceBundle } from "@/lib/report-evidence-bundle";
 import {
   ENVIRONMENT_THEMES,

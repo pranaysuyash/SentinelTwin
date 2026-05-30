@@ -6,12 +6,14 @@ import StudioShell from "@/components/layout/StudioShell";
 import { ProjectStartLauncher } from "@/components/launcher/ProjectStartLauncher";
 import { SceneBuilderWizard } from "@/components/scan-to-scene/SceneBuilderWizard";
 import { ScanSiteWizard } from "@/components/scan-to-scene/ScanSiteWizard";
+import { GuidedCaptureAssistant } from "@/components/scan-to-scene/GuidedCaptureAssistant";
 import { StudioDashboardHome } from "@/components/launcher/StudioDashboardHome";
 import { SiteIntakeHub } from "@/components/site-intake/SiteIntakeHub";
 import { SiteDraftReview } from "@/components/site-intake/SiteDraftReview";
 import { compileScanToSiteResult, compileAiDraftToSiteResult, compileFloorPlanToSiteResult, makeSiteCompilerWarnings, calculateConfidence, compileToSiteTwinDraft, compileJsonToSiteResult, compileCameraEvidenceToSiteResult } from "@/lib/site-compiler";
 import { useStudioStore, type ActiveWorkflowId, type BottomTab, type ViewMode, type WorkspacePreset } from "@/store/studio-store";
 import { draftSceneFromPrompt, draftSceneFromPromptWithModel, summarizeDraftResult } from "@/lib/ai-layout-draft";
+import { approveSiteTwinDraft } from "@/lib/site-draft-approval";
 import { summarizeAiActionTelemetry } from "@/lib/ai-action-telemetry";
 import { parseArchiveHandoffLink } from "@/lib/archive-handoff-link";
 import { parseCompareShareLink } from "@/lib/compare-share-link";
@@ -67,9 +69,10 @@ function StudioPageContent() {
   const [showSiteIntakeHub, setShowSiteIntakeHub] = useState(false);
   const [showScanWizard, setShowScanWizard] = useState(false);
   const [scanWizardMode, setScanWizardMode] = useState<"manual" | "guided">("manual");
+  const [showGuidedCapture, setShowGuidedCapture] = useState(false);
   const [showProjectLauncher, setShowProjectLauncher] = useState(false);
   const [showAiDraft, setShowAiDraft] = useState(false);
-  const [aiPrompt, setAiPrompt] = useState("Create a 10m x 7m electronics shop with front entry, two shelves, right-side cash counter, back storage, and two cameras.");
+  const [aiPrompt, setAiPrompt] = useState("");
   const [aiDraftPreview, setAiDraftPreview] = useState<ReturnType<typeof draftSceneFromPrompt> | null>(null);
   const [aiWarning, setAiWarning] = useState<string | null>(null);
   const [aiDraftNotice, setAiDraftNotice] = useState<string | null>(null);
@@ -237,9 +240,8 @@ function StudioPageContent() {
       afterSummary: "Guided scan assistant opened.",
       notes: ["Launcher-scoped guided scan assistant event recorded in the evidence ledger."],
     });
-    setScanWizardMode("guided");
-    setShowScanWizard(true);
-    setLaunchNotice("Guided scan assistant opened. The manual-assisted review and compile flow remains in control.");
+    setShowGuidedCapture(true);
+    setLaunchNotice("Guided capture reconstruction opened. Upload photos to run the reconstruction pipeline.");
   };
   const openSiteIntakeHub = () => {
     setShowSiteIntakeHub(true);
@@ -584,24 +586,14 @@ function StudioPageContent() {
   const approveIntakeSession = () => {
     const session = useStudioStore.getState().siteIntakeSession;
     if (!session?.draft) return;
-    const parsed = safeParseSecurityScene(session.draft.scene);
-    if (!parsed.success) {
-      setLaunchNotice(`Draft approval blocked: ${parsed.error.issues[0]?.message ?? "scene validation failed"}`);
+    const approval = approveSiteTwinDraft(session.draft);
+    if (!approval.success) {
+      setLaunchNotice(`Draft approval blocked: ${approval.error}`);
       return;
     }
 
-    const approvedScene = parsed.data;
-    const provenanceLines = [
-      `Site intake approval: source=${session.draft.source} draft=${session.draft.id} confidence=${Math.round(session.draft.confidence * 100)}%`,
-      `Site intake entities: walls=${session.draft.entityCounts.walls} cameras=${session.draft.entityCounts.cameras} zones=${session.draft.entityCounts.criticalZones} paths=${session.draft.entityCounts.paths}`,
-      ...(session.draft.provenance.sourceArtifacts.length > 0
-        ? [`Site intake artifacts: ${session.draft.provenance.sourceArtifacts.join(", ")}`]
-        : []),
-      ...session.draft.provenance.notes.map((note) => `Site intake note: ${note}`),
-      ...session.draft.assumptions.map((assumption) => `Site intake assumption: ${assumption.label}=${assumption.value} [${assumption.source}]`),
-      ...session.draft.warnings.map((warning) => `Site intake warning: ${warning.code} (${warning.severity}) ${warning.message}`),
-    ];
-    approvedScene.changeLog = [...approvedScene.changeLog, ...provenanceLines];
+    const approvedScene = approval.scene;
+    approvedScene.changeLog = [...approvedScene.changeLog, ...approval.provenanceLog];
     setScene(approvedScene);
     recordOperationalEvidenceEvent({
       kind: "scan_compiled",
@@ -623,12 +615,8 @@ function StudioPageContent() {
       ],
     });
 
-    const approvedWarnings = makeSiteCompilerWarnings(approvedScene);
-    const canRunBaseline = approvedScene.cameras.length > 0
-      && approvedScene.criticalZones.length > 0
-      && !approvedWarnings.some((warning) => warning.severity === "blocking");
     setSiteIntakeSession(null);
-    if (canRunBaseline) {
+    if (approval.baselineReady) {
       runSimulationFromStore();
       setWorkspacePreset("coverage");
       setViewMode("map");
@@ -882,6 +870,19 @@ function StudioPageContent() {
           </div>
         </div>
       ) : null}
+
+        {showGuidedCapture ? (
+          <div className="fixed inset-0 z-50 bg-black/55 p-4">
+            <div className="mx-auto h-full max-w-6xl rounded-2xl border border-[#1f2637] bg-[#0b0f17] shadow-2xl overflow-y-auto">
+              <GuidedCaptureAssistant
+                onClose={() => {
+                  setShowGuidedCapture(false);
+                  compileCurrentScene("scan");
+                }}
+              />
+            </div>
+          </div>
+        ) : null}
 
         {showScanWizard ? (
         <div className="fixed inset-0 z-50 bg-black/55 p-4">

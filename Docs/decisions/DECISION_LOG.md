@@ -4,6 +4,23 @@
 
 ---
 
+## D-244 | 2026-05-30 | Canonicalize site-intake source taxonomy and explicit draft activation
+
+**Decision:** Canonical site-intake sources are now fixed to:
+`scan | ai_prompt | floor_plan | json | manual | camera_evidence`.
+Legacy aliases (`json_import`, `footage_verify`) are accepted only at normalization boundaries and are immediately translated before compiler/session state. Draft approval must validate and activate `draft.scene` explicitly before any baseline simulation run is allowed.
+
+**Rationale:**
+- Source-key drift was creating inconsistent compiler/session behavior and brittle tests.
+- Approval previously depended on pre-mutated scene state; this violated a review-first, canonical-draft pipeline.
+- Making activation explicit ensures simulation runs from approved truth, not stale workspace state.
+
+**Alternatives rejected:**
+- Keep legacy keys in canonical type: rejected due to long-term drift and ambiguity.
+- Keep implicit approval behavior: rejected due to non-deterministic handoff and weak provenance semantics.
+
+---
+
 ## D-001 | 2026-05-25 | Fork Pascal Editor (MIT) as the spatial foundation
 
 **Decision:** Fork `pascalorg/editor` (MIT license) rather than building a 3D scene editor from scratch
@@ -4571,6 +4588,58 @@ Fixed the `CameraLiveConnectionEventRecord` and `WorkspaceApprovalRouteSummary` 
 - Consequence: All five intake sources (scan, AI draft, floor plan, JSON, manual) now flow through one review → approve → baseline simulation → Studio pipeline. The `canRunBaselineSimulation()` function gates automatic simulation to scenes with at least one camera and one critical zone. Manual/guided scan naming is consistent: dashboard "Scan a Site" → manual mode, "Guided Scan Assistant" → guided mode. Maturity language is truthful everywhere: no claims of automatic segmentation, depth, or reconstruction.
 - Key files: `lib/site-compiler.ts` (unified draft model), `components/site-intake/SiteDraftReview.tsx` (full review UI), `app/page.tsx` (routing), `lib/__tests__/site-twin-draft.test.ts` (22 tests)
 - Alternatives rejected: per-source review components (duplicate UI, drift risk), bypassing review for "trusted" sources like JSON import (trust without verification is how errors propagate), keeping separate compile functions without a shared draft type (already had this and it caused inconsistency).
+
+## D-279 - Scan/Reconstruction pipeline is architecture-first, adapter-scaffolded, review-enforced
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: The product had a working manual-assisted scan pipeline (ScanSiteWizard → compileScanSessionToScene), but no foundation for AI/CV-assisted reconstruction. Adding real capture-to-scene compilation without a data model would create the same kind of fragmentation that the SiteTwinDraft unification fixed for intake sources.
+- Decision: Build the scan/reconstruction pipeline in three layers:
+  1. **Data model first** — `ScanArtifact`, `ScanCaptureSession`, and enhanced `ScanCandidate` types with capture steps, photo roles, scale anchors, artifact/candidate linkage, and typed warnings. These live in `lib/scan-artifacts.ts` and are independent of any specific AI model.
+  2. **Adapter interfaces** — `ObjectDetectionAdapter`, `SegmentationAdapter`, `DepthEstimationAdapter`, `ScaleAnchoringAdapter`, `MultiPhotoCorrespondenceAdapter`, `StructuralExtractionAdapter`, and `VisionProvider` in `lib/scan-adapters/types.ts`. All interfaces exist; no model backends are wired yet.
+  3. **Compilation pipeline** — `compileReconstructionToScene()` and `compileReconstructionToSiteTwinDraft()` convert approved session candidates into canonical `SiteTwinDraft` through the existing site-compiler pipeline, preserving the review → approve → baseline simulation flow.
+- Rationale: The previous scan pipeline had no intermediate representation for AI/CV outputs (masks, depth maps, detection results). Adding model integrations without a shared data model would make each model a disconnected experiment. The three-layer approach lets models be integrated incrementally while the product contract stays stable. The adapter interfaces are deliberately wider than what will be implemented first, so future model experiments have a place to live.
+- Key design rules:
+  - Every AI/CV candidate starts with `status: "pending"`. Only user-accepted candidates reach compilation (`forceReview: true` by default).
+  - The pipeline produces `SiteTwinDraft`, not direct `SecurityScene` mutation. The site-draft-approval path applies to all reconstruction output.
+  - All adapters return confidence and warnings. The quality gate system evaluates completeness before compile.
+  - Adapter interfaces are scaffolded but not wired. This is intentional: the architecture is ready before any model dependency is introduced.
+  - `ScanArtifact` supports photos, depth maps, masks, point clouds, and camera poses — only photos are wired in the initial implementation.
+- Files created:
+  - `lib/scan-artifacts.ts` — Core data model (380 lines)
+  - `lib/scan-adapters/types.ts` — Adapter interfaces (90 lines)
+  - `lib/scan-reconstruction.ts` — Compilation pipeline (340 lines)
+  - `lib/scan-quality-gates.ts` — Quality gate evaluation (130 lines)
+  - `lib/__tests__/scan-artifacts.test.ts` — 33 tests
+  - `lib/__tests__/scan-reconstruction.test.ts` — 27 tests
+  - `lib/__tests__/scan-quality-gates.test.ts` — 12 tests
+- Site compiler extended: `"guided_scan"` and `"reconstructed"` source types added.
+- Total: 73 new tests, all passing. Existing 359 tests unchanged, 12 existing scan tests unchanged.
+
+## D-280 - Reconstruction adapters: depth estimation and scale anchoring stubs, candidate review UI
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: The reconstruction pipeline foundation had data models, adapter interfaces, and a compilation pipeline, but only one stub adapter (object detection). The next layer needed depth estimation and scale anchoring stubs to prove the multi-adapter pattern, plus a UI component so candidates can be reviewed before compile.
+- Decision:
+  1. **Depth estimation stub** — `StubDepthEstimationAdapter` maps photo roles to plausible depth ranges (overview=max 12m, closeup=~4m, entry_points=~5m). Registers in default adapter set.
+  2. **Scale anchoring stub** — `StubScaleAnchoringAdapter` suggests standard anchors from candidate labels (door=0.9m, counter=1.1m, shelf=1.8m) and user-provided measurements. Includes `refineWithAnchor()` for adjusting depth by scaling factor.
+  3. **Candidate review UI** — `ReconstructionCandidatePanel` renders candidates grouped by kind with color-coded icons, confidence badges, source labels, position/dimensions, accept/reject per candidate, batch Accept All / Reject All, warning display, session warning display, and a **Compile to Draft** button calling `compileReconstructionToSiteTwinDraft()`.
+  4. **Bridge module** — `runFullReconstruction()` convenience function that creates session from raw photo inputs, adds photos, runs the full pipeline.
+- Rationale: The depth adapter proves the second adapter type works end-to-end. The review panel closes the gap between "candidates exist as data" and "an operator can see and act on them." Without the review component, the entire reconstruction pipeline is headless — no one can use it. The bridge module makes it trivial to wire into the existing `GuidedCaptureAssistant` or any other capture UI.
+- Key design rules:
+  - The review panel never auto-accepts; every AI candidate starts pending and must be manually accepted.
+  - The Compile to Draft button calls the existing `compileReconstructionToSiteTwinDraft`, preserving the draft → approve → baseline flow.
+  - Depth profiles are role-aware but still clearly stub — no real model runs.
+- Files created/modified:
+  - `lib/scan-adapters/adapters/stub-depth-adapter.ts` — Depth estimation stub (80 lines)
+  - `lib/scan-adapters/adapters/stub-scale-anchoring-adapter.ts` — Scale anchoring stub (70 lines)
+  - `components/reconstruction/ReconstructionCandidatePanel.tsx` — Candidate review UI (370 lines)
+  - `lib/scan-reconstruction-bridge.ts` — Bridge convenience (50 lines)
+  - `lib/__tests__/scan-depth-adapter.test.ts` — 4 tests
+  - `lib/scan-adapters/registry.ts` — Updated: 3 stubs registered, new getter functions
+  - `lib/__tests__/scan-adapters.test.ts` — Updated test expectations for 3 adapters
+- Test count: 100 scan tests across 5 files (27 new or updated), all passing.
 
 ## D-278 - Report exports should surface visibility redaction and buyer drill-through explicitly
 

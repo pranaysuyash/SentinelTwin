@@ -1,5 +1,5 @@
 import type { CriticalZoneNode, SecurityScene } from "@/schema/security-scene";
-import { qualityToScore } from "@/simulation/dori";
+import { qualityToScore } from "@sentineltwin/core";
 
 function sortCriticalZonesByPriority(zones: CriticalZoneNode[]) {
   return [...zones].sort((a, b) => {

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { createSmallRetailShopScene } from "@/demo-scenes/small-retail-shop";
 import { buildOperationalEvidenceEvent } from "@/lib/operational-evidence";
-import { simulateStudio } from "@/simulation/simulate-studio";
+import { simulateStudio } from "@sentineltwin/simulation";
 import { cloneSecurityScene, type SecurityScene } from "@/schema/security-scene";
 import {
   applyReportVisibility,
@@ -15,7 +15,7 @@ import {
   exportCompareAsMarkdown,
   buildCompareReport,
   type ReportData,
-} from "@/report/index";
+} from "@sentineltwin/report";
 
 const testWithTimeout = test as unknown as (
   name: string,

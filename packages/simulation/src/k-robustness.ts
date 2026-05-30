@@ -1,6 +1,6 @@
 import type { SecurityScene } from "@sentineltwin/core";
-import { computeCoverageCells } from "./coverage.js";
-import { computeAdversarialPath } from "./adversarial-path.js";
+import { computeCoverageCells } from "./coverage";
+import { computeAdversarialPath } from "./adversarial-path";
 
 export interface CriticalFailureSet {
   k: number;

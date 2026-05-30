@@ -2,6 +2,7 @@
 
 import { selectSecurityOutcomeFromStore } from "@/lib/security-outcome/security-outcome-selectors";
 import { CAUSE_CATEGORY_PRODUCT_LABELS, type CauseCategory } from "@/lib/security-outcome/security-outcome-model";
+import { buildSecurityNarrativeModel } from "@/lib/security-outcome/security-narrative";
 import { useStudioStore } from "@/store/studio-store";
 import { AssumptionDisclosure } from "./AssumptionDisclosure";
 import { CameraResponsibilityPanel } from "./CameraResponsibilityPanel";
@@ -35,6 +36,7 @@ export function SecurityOutcomePanel({ compact = false }: { compact?: boolean })
   const result = useStudioStore((s) => s.simulationResult);
   const activePathId = useStudioStore((s) => s.activePathId);
   const model = selectSecurityOutcomeFromStore({ scene, simulationResult: result, activePathId });
+  const narrative = buildSecurityNarrativeModel(model, result, scene);
 
   if (!result) {
     return <OutcomeEmptyState />;
@@ -81,6 +83,16 @@ export function SecurityOutcomePanel({ compact = false }: { compact?: boolean })
           <span className="text-[#d7deed]">{model.summary.recommendedNextAction}</span>
         </div>
       )}
+      {!compact ? (
+        <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-3 text-[10px]">
+          <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8ea0bf]">Narrative Snapshot</h3>
+          <div className="mt-2 space-y-1 text-[#9fb1cf]">
+            <div><span className="text-[#d8e1f3]">Critical issue:</span> {narrative.criticalIssue}</div>
+            <div><span className="text-[#d8e1f3]">Primary cause:</span> {narrative.primaryCause}</div>
+            <div><span className="text-[#d8e1f3]">Impact:</span> {narrative.impact}</div>
+          </div>
+        </div>
+      ) : null}
       <IssueStack issues={model.topIssues} compact={compact} />
       {!compact && model.causeTaxonomy.length > 0 ? (
         <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-3">
@@ -121,7 +133,7 @@ export function SecurityOutcomePanel({ compact = false }: { compact?: boolean })
       <PrivacyReview result={result} privacyZonesCount={scene.privacyZones.length} privacyFindings={model.privacyFindings} compact={compact} />
       {!compact ? (
         <>
-          <CriticalZoneReview zones={model.failedZones} />
+          <CriticalZoneReview zones={model.zoneFindings} />
           <RecommendationReview recommendations={model.recommendations} />
           <CameraResponsibilityPanel cameraFindings={model.cameraFindings} />
           <RedundancyReview cameraResults={result.cameraResults} />

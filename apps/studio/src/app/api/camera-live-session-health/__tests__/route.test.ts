@@ -61,7 +61,7 @@ describe("camera-live-session-health route", () => {
   });
 
   test("returns session health summary", async () => {
-    const response = await GET(new Request("http://localhost/api/camera-live-session-health") as any);
+    const response = await GET(new Request("http://localhost/api/camera-live-session-health") as unknown as Request);
     expect(response.status).toBe(200);
     const body = await response.json() as { ok: boolean; totals: { active: number } };
     expect(body.ok).toBe(true);
@@ -73,7 +73,7 @@ describe("camera-live-session-health route", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ sessionId: "session_1", ttlMs: 300000 }),
-    }) as any);
+    }) as unknown as Request);
 
     expect(response.status).toBe(200);
     const body = await response.json() as { ok: boolean; renewedSessionId: string };

@@ -45,6 +45,7 @@ describe("security outcome model — enriched", () => {
     expect(model.summary.coveragePct).toBeNull();
     expect(model.summary.primaryRisk).toBeNull();
     expect(model.summary.recommendedNextAction).toBeTruthy();
+    expect(model.zoneFindings).toEqual([]);
     expect(model.failedZones).toEqual([]);
     expect(model.cameraFindings).toEqual([]);
     expect(model.pathFindings).toEqual([]);
@@ -70,9 +71,10 @@ describe("security outcome model — enriched", () => {
     });
     const model = buildSecurityOutcomeModel(scene, result, null);
     expect(model.summary.status).toBe("pass");
-    expect(model.failedZones.length).toBe(1);
-    expect(model.failedZones[0].status).toBe("pass");
-    expect(model.failedZones[0].causeSummary).toBe("");
+    expect(model.zoneFindings.length).toBe(1);
+    expect(model.zoneFindings[0].status).toBe("pass");
+    expect(model.zoneFindings[0].causeSummary).toBe("");
+    expect(model.failedZones).toHaveLength(0);
   });
 
   test("returns high_risk when zone fails with obstruction issue", () => {
@@ -958,6 +960,38 @@ describe("security outcome — cause taxonomy", () => {
     expect(model.failedZones[0].causeCategories).toBeDefined();
     expect(Array.isArray(model.failedZones[0].causeCategories)).toBe(true);
     expect(model.failedZones[0].causeCategories.length).toBeGreaterThan(0);
+  });
+
+  test("zoneFindings includes pass zones while failedZones excludes them", () => {
+    const scene = createSmallRetailShopScene();
+    const result = makeResult({
+      criticalZoneResults: [
+        {
+          zoneId: "z1",
+          label: "Cash Counter",
+          requiredQuality: "recognition",
+          actualQuality: "recognition",
+          coveringCameras: ["cam_1"],
+          redundancyCameraCount: 2,
+          status: "pass",
+          failureReasons: [],
+        },
+        {
+          zoneId: "z2",
+          label: "Storage",
+          requiredQuality: "recognition",
+          actualQuality: "observation",
+          coveringCameras: ["cam_2"],
+          redundancyCameraCount: 1,
+          status: "fail",
+          failureReasons: ["Blocked by shelf"],
+        },
+      ],
+    });
+    const model = buildSecurityOutcomeModel(scene, result, null);
+    expect(model.zoneFindings.length).toBe(2);
+    expect(model.failedZones.length).toBe(1);
+    expect(model.failedZones[0].zoneId).toBe("z2");
   });
 });
 

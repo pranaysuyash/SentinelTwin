@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { smallRetailShopScene } from "@/demo-scenes/small-retail-shop";
 import { buildOperationalEvidenceEvent } from "@/lib/operational-evidence";
 import { buildSceneIntelligenceGraph } from "@/lib/scene-intelligence-graph";
-import { simulateStudio } from "@/simulation/simulate-studio";
+import { simulateStudio } from "@sentineltwin/simulation";
 
 describe("scene-intelligence-graph", () => {
   test("derives a provenance graph from scene inputs and simulation output", () => {

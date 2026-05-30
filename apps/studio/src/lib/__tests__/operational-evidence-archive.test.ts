@@ -16,7 +16,7 @@ import {
 import { createDefaultWorkspaceAccessState } from "@/lib/workspace-access";
 import { createDefaultWorkspaceAccountProfile } from "@/lib/workspace-catalog";
 import { createDefaultWorkspaceGovernance } from "@/lib/workspace-governance";
-import { simulateStudio } from "@/simulation/simulate-studio";
+import { simulateStudio } from "@sentineltwin/simulation";
 
 describe("operational evidence archive", () => {
   test("round-trips the current scene, evidence ledger, and governance state", () => {

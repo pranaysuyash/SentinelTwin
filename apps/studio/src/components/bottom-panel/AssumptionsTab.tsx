@@ -3,7 +3,7 @@
 import { Info } from "lucide-react";
 import { useStudioStore } from "@/store/studio-store";
 import type { SimulationAssumptions, DoriQuality } from "@/schema/security-scene";
-import { OODPCVS_THRESHOLDS } from "@/simulation/dori";
+import { OODPCVS_THRESHOLDS } from "@sentineltwin/core";
 
 const DORI_PRESETS: Record<SimulationAssumptions["doriStandard"], SimulationAssumptions["pixelsPerMeter"]> = {
   dori_2014: { detection: 25, observation: 62.5, recognition: 125, identification: 250 },

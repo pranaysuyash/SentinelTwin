@@ -6,10 +6,10 @@ import { useMemo } from "react";
 import { cn } from "@/lib/cn";
 import { ReportLiteTab } from "@/components/bottom-panel/ReportLiteTab";
 import { SecurityOutcomePanel } from "@/components/security-outcome/SecurityOutcomePanel";
-import { computeCoverageEntropy } from "@/simulation/coverage-entropy";
-import { computeCoveragePostureVariation } from "@/simulation/coverage-posture";
-import { computeCoverageUncertainty } from "@/simulation/coverage-uncertainty";
-import { buildRedundancyMatrixReport } from "@/report/redundancy-matrix";
+import { computeCoverageEntropy } from "@sentineltwin/simulation";
+import { computeCoveragePostureVariation } from "@sentineltwin/simulation";
+import { computeCoverageUncertainty } from "@sentineltwin/simulation";
+import { buildRedundancyMatrixReport } from "@sentineltwin/report";
 import { useStudioStore } from "@/store/studio-store";
 
 const REPORT_VIEW_UNCERTAINTY_SAMPLE_COUNT = 2;

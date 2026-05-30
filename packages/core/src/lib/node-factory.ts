@@ -12,7 +12,7 @@ import type {
   EntryPointNode,
   WindowNode,
 } from "../schema/security-scene.js";
-import { getDefaultQualityForTarget } from "./target-quality-requirements.js";
+import { getDefaultQualityForTarget } from "./target-quality-requirements";
 
 let _camCounter = 0;
 let _obsCounter = 0;

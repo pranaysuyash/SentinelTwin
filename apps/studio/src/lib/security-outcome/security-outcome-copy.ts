@@ -1,6 +1,6 @@
 import type { SecurityOutcomeStatus } from "./security-outcome-model";
 import type { DoriQuality } from "@/schema/security-scene";
-import { qualityToScore } from "@/simulation/dori";
+import { qualityToScore } from "@sentineltwin/core";
 
 export function formatOutcomeStatusLabel(status: SecurityOutcomeStatus) {
   if (status === "not_run") return "Simulation Not Run";

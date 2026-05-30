@@ -3,10 +3,10 @@ import { beforeEach, describe, expect, test } from "bun:test";
 
 import { createSmallRetailShopScene } from "@/demo-scenes/small-retail-shop";
 import { createCameraNode, createObstructionNode } from "@/lib/node-factory";
-import { buildCompareReportData } from "@/report";
-import { simulateStudio } from "@/simulation/simulate-studio";
+import { buildCompareReportData } from "@sentineltwin/report";
+import { simulateStudio } from "@sentineltwin/simulation";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
-import { createTestCamera, createTestScene } from "@/simulation/__tests__/helpers";
+import { createTestCamera, createTestScene } from "@sentineltwin/simulation/__tests__/helpers";
 import { useStudioStore } from "@/store/studio-store";
 
 const testWithTimeout = test as unknown as (
@@ -56,12 +56,16 @@ describe("studio store quality gate", () => {
     expect(useStudioStore.getState().rightPanelMode).toBe("camera_controls");
     expect(useStudioStore.getState().bottomTab).toBe("metrics");
     expect(useStudioStore.getState().activeTool).toBe("camera");
+    expect(useStudioStore.getState().inspectorTab).toBe("view");
+    expect(useStudioStore.getState().rightDockCollapsed).toBe(false);
+    expect(useStudioStore.getState().bottomDockCollapsed).toBe(false);
 
     if (light) {
       useStudioStore.getState().selectNode(light.id);
       expect(useStudioStore.getState().rightPanelMode).toBe("inspector");
       expect(useStudioStore.getState().bottomTab).toBe("metrics");
       expect(useStudioStore.getState().activeTool).toBe("light");
+      expect(useStudioStore.getState().inspectorTab).toBe("properties");
     }
 
     if (obstruction) {
@@ -69,6 +73,7 @@ describe("studio store quality gate", () => {
       expect(useStudioStore.getState().rightPanelMode).toBe("inspector");
       expect(useStudioStore.getState().bottomTab).toBe("issues");
       expect(useStudioStore.getState().activeTool).toBe("obstruction");
+      expect(useStudioStore.getState().inspectorTab).toBe("properties");
     }
 
     if (criticalZone) {
@@ -76,6 +81,7 @@ describe("studio store quality gate", () => {
       expect(useStudioStore.getState().rightPanelMode).toBe("inspector");
       expect(useStudioStore.getState().bottomTab).toBe("issues");
       expect(useStudioStore.getState().activeTool).toBe("zone");
+      expect(useStudioStore.getState().inspectorTab).toBe("failures");
     }
 
     if (privacyZone) {
@@ -83,6 +89,7 @@ describe("studio store quality gate", () => {
       expect(useStudioStore.getState().rightPanelMode).toBe("inspector");
       expect(useStudioStore.getState().bottomTab).toBe("issues");
       expect(useStudioStore.getState().activeTool).toBe("zone");
+      expect(useStudioStore.getState().inspectorTab).toBe("failures");
     }
 
     if (door) {
@@ -90,6 +97,7 @@ describe("studio store quality gate", () => {
       expect(useStudioStore.getState().rightPanelMode).toBe("inspector");
       expect(useStudioStore.getState().bottomTab).toBe("threat");
       expect(useStudioStore.getState().activeTool).toBe("door_window");
+      expect(useStudioStore.getState().inspectorTab).toBe("status");
     }
 
     if (windowNode) {
@@ -97,6 +105,7 @@ describe("studio store quality gate", () => {
       expect(useStudioStore.getState().rightPanelMode).toBe("inspector");
       expect(useStudioStore.getState().bottomTab).toBe("threat");
       expect(useStudioStore.getState().activeTool).toBe("door_window");
+      expect(useStudioStore.getState().inspectorTab).toBe("status");
     }
 
     if (entryPoint) {
@@ -110,6 +119,7 @@ describe("studio store quality gate", () => {
       expect(useStudioStore.getState().rightPanelMode).toBe("inspector");
       expect(useStudioStore.getState().bottomTab).toBe("assumptions");
       expect(useStudioStore.getState().activeTool).toBe("wall");
+      expect(useStudioStore.getState().inspectorTab).toBe("properties");
     }
   });
 

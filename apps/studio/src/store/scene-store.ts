@@ -1,4 +1,4 @@
-import { createStore, type StoreApi } from "zustand/vanilla";
+import { createStore, type StoreApi } from "zustand";
 
 import {
   type AnyEditableNode,

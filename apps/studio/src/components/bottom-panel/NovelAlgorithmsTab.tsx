@@ -6,10 +6,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/shared/Badge";
 import { StatCard } from "@/components/shared/StatCard";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
-import { computeCoverageEntropy } from "@/simulation/coverage-entropy";
-import { computeCoverageTimeBudget } from "@/simulation/coverage-time-budget";
-import { computeCoveragePostureVariation } from "@/simulation/coverage-posture";
-import { computeCoverageUncertainty } from "@/simulation/coverage-uncertainty";
+import { computeCoverageEntropy } from "@sentineltwin/simulation";
+import { computeCoverageTimeBudget } from "@sentineltwin/simulation";
+import { computeCoveragePostureVariation } from "@sentineltwin/simulation";
+import { computeCoverageUncertainty } from "@sentineltwin/simulation";
 import { useStudioStore } from "@/store/studio-store";
 import type { DoriQuality } from "@/schema/security-scene";
 

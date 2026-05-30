@@ -109,7 +109,7 @@ describe("compileToSiteTwinDraft", () => {
     const result = compileJsonToSiteResult(scene, "export.json");
     const draft = compileToSiteTwinDraft(result, ["export.json"]);
 
-    expect(draft.source).toBe("json_import");
+    expect(draft.source).toBe("json");
     expect(draft.provenance.sourceArtifacts).toContain("export.json");
   });
 
@@ -236,7 +236,7 @@ describe("SITE_SOURCE_MATURITY", () => {
   test("every source has truthful maturity description", () => {
     for (const [key, mat] of Object.entries(SITE_SOURCE_MATURITY)) {
       expect(mat.label.length).toBeGreaterThan(0);
-      expect(mat.status).toMatch(/^(Working|Preview|Planned|Working prototype)$/);
+      expect(mat.status).toMatch(/^(Working|Preview|Planned|Scaffolded|Working prototype)$/);
       expect(mat.description.length).toBeGreaterThan(10);
     }
   });

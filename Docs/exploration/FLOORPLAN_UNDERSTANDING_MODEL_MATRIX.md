@@ -258,3 +258,11 @@ For the first pilot, start with two local baselines and one cloud control:
 - Cloud control: `gpt-4o` or `gemini-2.5-flash`
 
 That gives the harness a cheap baseline, a strong open-source ceiling, and a cloud control to measure the gap.
+
+## 2026-05-30 Addendum: completion status
+
+- Remaining V0.2 implementation gaps documented in this area are closed:
+  - `configs/eval_rubric.yaml` is now consumed by the evaluator and drives acceptance outcomes.
+  - `candidates.py` now uses `configs/candidates.yaml` as canonical registry when available.
+- `evaluate_run.py` now surfaces `PASS/FAIL` against the rubric with blocker reasons for downstream triage.
+- We are currently blocked only by non-document items (new model run coverage and noisy-scan dataset expansion), not by incomplete matrix tasks.

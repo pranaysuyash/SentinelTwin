@@ -21,7 +21,7 @@ import type { CameraLiveConnectionArchiveRecord } from "@/lib/camera-live-connec
 import type { CameraMetadataIngestResponse } from "@/lib/camera-metadata-live-ingest";
 import { QUALITY_COLOR, QUALITY_LABEL } from "@/lib/quality-display";
 import type { CameraNode, DoriQuality, SimulationAssumptions } from "@/schema/security-scene";
-import { qualityToScore } from "@/simulation/dori";
+import { qualityToScore } from "@sentineltwin/core";
 import { type InspectorTab, useStudioStore } from "@/store/studio-store";
 import { computeOperationalEvidenceFusionSummary } from "@/lib/sensor-fusion";
 import {

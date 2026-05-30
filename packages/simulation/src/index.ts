@@ -1,28 +1,66 @@
-// Simulation engine — pure TS, no React deps
-export { simulateStudio, simulateStudioLite } from "./simulate-studio.js";
-export { computeCoverageCells, createCoverageEvaluator, getQualityShare, getIdentificationAreaPct, getRecognitionAreaPct } from "./coverage.js";
-export { computeAdversarialPath } from "./adversarial-path.js";
-export { analyseBlindSpotTopology } from "./blind-spot-topology.js";
-export { computeBlindSpotFingerprint } from "./blind-spot-fingerprint.js";
-export { computeCoverageEntropy } from "./coverage-entropy.js";
-export { computeCoverageFragility } from "./coverage-fragility.js";
-export { computeCoveragePostureVariation } from "./coverage-posture.js";
-export { computeCoverageTimeBudget } from "./coverage-time-budget.js";
-export { computeCoverageUncertainty } from "./coverage-uncertainty.js";
-export { computeKRobustness } from "./k-robustness.js";
-export { computeMountTiltPenalty, getMountModel, getDefaultHeight, isPitchWithinMountLimits, isYawWithinMountLimits, computeBlindSpotPenalty } from "./mount-model.js";
-export { analyzeOcclusionBlame } from "./occlusion-blame.js";
-export { computePathResults, deriveCameraQualityByZone } from "./path-analysis.js";
-export { pathLengthM, pointOnPathAtProgress, samplePathQuality, groupPathQualitySamples } from "./path-quality.js";
-export { computePlacementOracle } from "./placement-oracle.js";
-export { computeTemporalProfile, computeTimeSliceStateForHour } from "./temporal.js";
-export { detectTemporalAnomalies } from "./temporal-anomaly.js";
-export { selectHighestPriorityCriticalZone, selectCounterCriticalZone } from "./critical-zone-selection.js";
+// Core coverage engine
+export { createCoverageEvaluator, computeCoverageCells, getQualityShare, getIdentificationAreaPct, getRecognitionAreaPct } from "./coverage";
+export type { CellComputation, CameraEvaluation, CoverageEvaluator } from "./coverage";
+export { simulateStudio, simulateStudioLite } from "./simulate-studio";
 
-// Re-export types from core for convenience
-export type {
-  SecurityScene, SimulationResult, DoriQuality, CoverageCellResult,
-  ZoneResult, CameraResult, SecurityIssue, Recommendation,
-  AdversarialPathResult, TemporalSecurityProfile,
-  CellComputation
-} from "@sentineltwin/core";
+// DORI/OODPCVS quality models
+export {
+  DORI_THRESHOLDS, OODPCVS_THRESHOLDS,
+  qualityToScore, scoreToQuality, maxQuality,
+  ppmToDoriQuality, ppmToOodpcvsQuality, ppmToQuality,
+  QUALITY_ORDER,
+} from "./dori";
+export { OODPCVS_MIN_PPM, computeOODPCVSQuality, getPopFactor, getCriticalityMargin, meetsOODPCVSRequirement } from "./odpcvs";
+
+// Geometry utilities
+export { toRadians, normalizeAngle, getYawPitchDirection, pointInPolygon, polygonCenter, distance2D, lerp2D } from "./geometry";
+
+// Grid
+export { buildCoverageGrid } from "./grid";
+
+// Mount model
+export { computeMountTiltPenalty, getMountModel, getDefaultHeight, isPitchWithinMountLimits, isYawWithinMountLimits, computeBlindSpotPenalty } from "./mount-model";
+
+// Vision collider
+export { buildVisionColliderMesh, getVisionColliderSource } from "./vision-collider-mesh";
+
+// Path analysis
+export { computePathResults, deriveCameraQualityByZone } from "./path-analysis";
+export { pathLengthM, pointOnPathAtProgress, samplePathQuality, groupPathQualitySamples } from "./path-quality";
+export type { Point2, CoverageCellLike, PathQualitySample, PathQualityBand } from "./path-quality";
+
+// Adversarial path
+export { computeAdversarialPath } from "./adversarial-path";
+
+// Blind spot analysis
+export { analyseBlindSpotTopology } from "./blind-spot-topology";
+export { computeBlindSpotFingerprint } from "./blind-spot-fingerprint";
+
+// Coverage analytics
+export { computeCoverageEntropy } from "./coverage-entropy";
+export { computeCoverageFragility } from "./coverage-fragility";
+export { computeCoveragePostureVariation } from "./coverage-posture";
+export { computeCoverageTimeBudget } from "./coverage-time-budget";
+export { computeCoverageUncertainty } from "./coverage-uncertainty";
+
+// Redundancy
+export { computeKRobustness } from "./k-robustness";
+
+// Occlusion blame
+export { analyzeOcclusionBlame } from "./occlusion-blame";
+
+// Placement oracle
+export { computePlacementOracle } from "./placement-oracle";
+
+// Temporal simulation
+export { computeTemporalProfile, computeTimeSliceStateForHour } from "./temporal";
+export { detectTemporalAnomalies } from "./temporal-anomaly";
+
+// Critical zones
+export { selectHighestPriorityCriticalZone, selectCounterCriticalZone } from "./critical-zone-selection";
+
+// Temporal time-slice state
+export type { TimeSliceState } from "./temporal";
+
+// Utility
+export { getQualityThresholds, getForwardVector } from "./coverage";

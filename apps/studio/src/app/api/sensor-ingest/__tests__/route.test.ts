@@ -12,7 +12,7 @@ import { createSensorNode } from "@/lib/node-factory";
 import { GET, POST } from "../route";
 
 const createNextRequest = (url: string, init?: RequestInit): NextRequest => (
-  new Request(url, init) as any as unknown as any
+  new Request(url, init) as unknown as NextRequest
 );
 
 const originalStoreDir = process.env.SENTINELTWIN_SENSOR_INGEST_STORE_DIR;

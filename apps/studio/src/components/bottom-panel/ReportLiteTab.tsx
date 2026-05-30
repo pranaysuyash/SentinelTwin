@@ -25,7 +25,7 @@ import {
   type ReportAudience,
   type ReportStandardTemplateId,
   type ReportVisibility,
-} from "@/report";
+} from "@sentineltwin/report";
 import {
   buildReportCatalogPresets,
   createReportCatalogPreset,
@@ -75,7 +75,7 @@ export function ReportLiteTab() {
   const [reportAudience, setReportAudience] = useState<ReportAudience>("operator");
   const [reportVisibility, setReportVisibility] = useState<ReportVisibility>("internal");
   const [reportTemplateId, setReportTemplateId] = useState<ReportStandardTemplateId>(defaultTemplateId);
-  const [presetNameDraft, setPresetNameDraft] = useState("Operator Internal");
+  const [presetNameDraft, setPresetNameDraft] = useState("Operator Evidence");
   const [snapshotAId, setSnapshotAId] = useState<string | null>(null);
   const [snapshotBId, setSnapshotBId] = useState<string | null>(null);
   const activePath = scene.paths.find((path) => path.id === activePathId) ?? null;
@@ -620,8 +620,8 @@ export function ReportLiteTab() {
               }}
               className="rounded border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#d2d9e8]"
             >
-              <option value="internal">Internal</option>
-              <option value="shared">Shared</option>
+              <option value="internal">Operator evidence</option>
+              <option value="shared">Historical baseline</option>
               <option value="privacy_safe">Privacy safe</option>
             </select>
           </label>

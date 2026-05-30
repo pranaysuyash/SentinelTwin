@@ -16,6 +16,10 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+const INTERIOR_LIGHT_OPTIONS = ["dark", "dim", "normal", "bright"] as const;
+const NIGHT_PENALTY_OPTIONS = ["none", "simple", "detailed"] as const;
+const ENV_INTENSITY_OPTIONS = ["none", "low", "medium", "high"] as const;
+
 export function AssumptionsPanel() {
   const scene = useStudioStore((s) => s.scene);
   const updateAssumptions = useStudioStore((s) => s.updateAssumptions);
@@ -64,11 +68,44 @@ export function AssumptionsPanel() {
             </div>
           </div>
 
+          <Field label="Wall Height">
+            <select
+              value={assumptions.wallHeightM.toString()}
+              onChange={(event) => updateAssumptions({ wallHeightM: parseFloat(event.target.value) })}
+              className="rounded border border-[#1e2130] bg-[#111521] px-1.5 py-0.5 text-[10px] text-[#d2d9e8] outline-none focus:border-blue-500/40"
+            >
+              <option value="2.4">2.4m</option>
+              <option value="3.0">3.0m</option>
+              <option value="3.5">3.5m</option>
+              <option value="4.0">4.0m</option>
+              <option value="5.0">5.0m</option>
+              <option value="8.0">8.0m</option>
+            </select>
+          </Field>
+
           <Field label="Person Height">
-            <span className="font-mono">{assumptions.personHeightM.toFixed(2)}m</span>
+            <input
+              type="number"
+              min={0.5}
+              max={2.5}
+              step={0.05}
+              value={assumptions.personHeightM}
+              onChange={(event) => updateAssumptions({ personHeightM: parseFloat(event.target.value) || 1.75 })}
+              className="w-16 rounded border border-[#1e2130] bg-[#111521] px-1.5 py-0.5 text-right font-mono text-[10px] text-[#d2d9e8] outline-none focus:border-blue-500/40"
+            />
+            <span className="text-[10px] text-[#6a748b]">m</span>
           </Field>
           <Field label="Vehicle Height">
-            <span className="font-mono">{assumptions.vehicleHeightM.toFixed(2)}m</span>
+            <input
+              type="number"
+              min={0.5}
+              max={4.0}
+              step={0.1}
+              value={assumptions.vehicleHeightM}
+              onChange={(event) => updateAssumptions({ vehicleHeightM: parseFloat(event.target.value) || 1.5 })}
+              className="w-16 rounded border border-[#1e2130] bg-[#111521] px-1.5 py-0.5 text-right font-mono text-[10px] text-[#d2d9e8] outline-none focus:border-blue-500/40"
+            />
+            <span className="text-[10px] text-[#6a748b]">m</span>
           </Field>
           <Field label="Time of Day">
             <select
@@ -82,7 +119,26 @@ export function AssumptionsPanel() {
             </select>
           </Field>
           <Field label="Interior Light">
-            <span className="capitalize">{assumptions.interiorLightLevel}</span>
+            <select
+              value={assumptions.interiorLightLevel}
+              onChange={(event) => updateAssumptions({ interiorLightLevel: event.target.value as typeof assumptions.interiorLightLevel })}
+              className="rounded border border-[#1e2130] bg-[#111521] px-1.5 py-0.5 text-[10px] capitalize text-[#d2d9e8] outline-none focus:border-blue-500/40"
+            >
+              {INTERIOR_LIGHT_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Exterior Light (lux)">
+            <input
+              type="number"
+              min={0}
+              max={100000}
+              step={100}
+              value={assumptions.exteriorLightLux ?? 10000}
+              onChange={(event) => updateAssumptions({ exteriorLightLux: parseFloat(event.target.value) || 0 })}
+              className="w-20 rounded border border-[#1e2130] bg-[#111521] px-1.5 py-0.5 text-right font-mono text-[10px] text-[#d2d9e8] outline-none focus:border-blue-500/40"
+            />
           </Field>
           <Field label="DORI Standard">
             <select
@@ -95,7 +151,48 @@ export function AssumptionsPanel() {
             </select>
           </Field>
           <Field label="Night Penalty">
-            <span className="capitalize">{assumptions.nightPenaltyMode}</span>
+            <select
+              value={assumptions.nightPenaltyMode}
+              onChange={(event) => updateAssumptions({ nightPenaltyMode: event.target.value as typeof assumptions.nightPenaltyMode })}
+              className="rounded border border-[#1e2130] bg-[#111521] px-1.5 py-0.5 text-[10px] capitalize text-[#d2d9e8] outline-none focus:border-blue-500/40"
+            >
+              {NIGHT_PENALTY_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Backlight">
+            <select
+              value={assumptions.backlightIntensity ?? "none"}
+              onChange={(event) => updateAssumptions({ backlightIntensity: event.target.value as typeof assumptions.backlightIntensity })}
+              className="rounded border border-[#1e2130] bg-[#111521] px-1.5 py-0.5 text-[10px] capitalize text-[#d2d9e8] outline-none focus:border-blue-500/40"
+            >
+              {ENV_INTENSITY_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Glare">
+            <select
+              value={assumptions.glareIntensity ?? "none"}
+              onChange={(event) => updateAssumptions({ glareIntensity: event.target.value as typeof assumptions.glareIntensity })}
+              className="rounded border border-[#1e2130] bg-[#111521] px-1.5 py-0.5 text-[10px] capitalize text-[#d2d9e8] outline-none focus:border-blue-500/40"
+            >
+              {ENV_INTENSITY_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Overexposed Zones">
+            <label className="relative inline-flex cursor-pointer items-center">
+              <input
+                type="checkbox"
+                checked={assumptions.overexposedZones ?? false}
+                onChange={(event) => updateAssumptions({ overexposedZones: event.target.checked })}
+                className="peer sr-only"
+              />
+              <div className="h-4 w-7 rounded-full border border-[#1e2130] bg-[#111521] after:absolute after:left-[2px] after:top-[2px] after:h-3 after:w-3 after:rounded-full after:bg-[#5a6882] after:transition-all peer-checked:bg-blue-500/20 peer-checked:after:translate-x-full peer-checked:after:bg-blue-400" />
+            </label>
           </Field>
 
           {/* Pixels Per Meter thresholds */}
@@ -110,9 +207,19 @@ export function AssumptionsPanel() {
               ]).map(({ label, key }) => (
                 <div key={key} className="flex items-center justify-between rounded bg-[#111521] px-2 py-1">
                   <span className="text-[9px] text-[#6a748b]">{label}</span>
-                  <span className="font-mono text-[10px] text-[#d2d9e8]">
-                    {assumptions.pixelsPerMeter[key]}
-                  </span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={1000}
+                    step={1}
+                    value={assumptions.pixelsPerMeter[key]}
+                    onChange={(event) =>
+                      updateAssumptions({
+                        pixelsPerMeter: { ...assumptions.pixelsPerMeter, [key]: parseInt(event.target.value) || 25 },
+                      })
+                    }
+                    className="w-14 rounded border border-[#1e2130] bg-[#0b0f17] px-1.5 py-0.5 text-right font-mono text-[10px] text-[#d2d9e8] outline-none focus:border-blue-500/40"
+                  />
                 </div>
               ))}
             </div>
@@ -122,7 +229,7 @@ export function AssumptionsPanel() {
             onClick={() => setBottomTab("assumptions")}
             className="mt-1.5 w-full rounded-md border border-blue-500/30 bg-blue-500/10 px-2 py-1.5 text-[8px] uppercase tracking-[0.14em] text-blue-200 transition-colors hover:border-blue-400/50 hover:text-white"
           >
-            Edit Assumptions
+            Open Full Assumptions Tab
           </button>
         </div>
       )}

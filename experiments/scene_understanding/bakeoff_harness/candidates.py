@@ -1,7 +1,10 @@
 import os
+from pathlib import Path
+import yaml
+
 from .schema import CandidateConfig
 
-CANDIDATE_REGISTRY: dict[str, CandidateConfig] = {
+_HARDCODED_CANDIDATE_REGISTRY: dict[str, CandidateConfig] = {
     "stack_a_qwen_ocr": CandidateConfig(
         id="stack_a_qwen_ocr",
         description="Qwen VL parser with OCR assist",
@@ -172,24 +175,47 @@ CANDIDATE_REGISTRY: dict[str, CandidateConfig] = {
     ),
 }
 
+_CANDIDATE_CONFIG_PATH = Path(__file__).resolve().parent.parent / "configs" / "candidates.yaml"
+
+
+def _load_candidate_yaml(config_path: str) -> dict[str, CandidateConfig]:
+    if not os.path.exists(config_path):
+        return {}
+    with open(config_path) as f:
+        data = yaml.safe_load(f) or {}
+    candidates = {}
+    for raw in data.get("candidates", []):
+        if raw.get("status", "").lower() == "deprecated":
+            continue
+        candidate_id = raw.get("id")
+        if not candidate_id:
+            continue
+        candidates[candidate_id] = CandidateConfig(
+            id=candidate_id,
+            description=raw.get("description", ""),
+            components=raw.get("components", {}),
+            expected_strengths=raw.get("expected_strengths", []),
+            known_risks=raw.get("known_risks", []),
+            pipeline_kind=raw.get("pipeline_kind", "end_to_end"),
+            provider=raw.get("provider", "local"),
+            stage_roles=raw.get("stage_roles", {}),
+            cloud_fallbacks=raw.get("cloud_fallbacks", []),
+        )
+    return candidates
+
 
 def load_candidate_configs(config_path: str | None = None) -> dict[str, CandidateConfig]:
-    if config_path and os.path.exists(config_path):
-        import yaml
-        with open(config_path) as f:
-            data = yaml.safe_load(f)
-        for c in data.get("candidates", []):
-            CANDIDATE_REGISTRY[c["id"]] = CandidateConfig(
-                id=c["id"],
-                description=c.get("description", ""),
-                components=c.get("components", {}),
-                expected_strengths=c.get("expected_strengths", []),
-                known_risks=c.get("known_risks", []),
-                pipeline_kind=c.get("pipeline_kind", "end_to_end"),
-                provider=c.get("provider", "local"),
-                stage_roles=c.get("stage_roles", {}),
-                cloud_fallbacks=c.get("cloud_fallbacks", []),
-            )
+    path = config_path or str(_CANDIDATE_CONFIG_PATH)
+    loaded = _load_candidate_yaml(path)
+    if loaded:
+        if config_path is None:
+            CANDIDATE_REGISTRY.clear()
+            CANDIDATE_REGISTRY.update(loaded)
+        else:
+            CANDIDATE_REGISTRY.update(loaded)
+    elif config_path is None:
+        CANDIDATE_REGISTRY.clear()
+        CANDIDATE_REGISTRY.update(_HARDCODED_CANDIDATE_REGISTRY)
     return CANDIDATE_REGISTRY
 
 
@@ -197,3 +223,7 @@ def get_candidate_config(candidate_id: str) -> CandidateConfig:
     if candidate_id not in CANDIDATE_REGISTRY:
         raise ValueError(f"Unknown candidate '{candidate_id}'. Available: {list(CANDIDATE_REGISTRY.keys())}")
     return CANDIDATE_REGISTRY[candidate_id]
+
+
+CANDIDATE_REGISTRY: dict[str, CandidateConfig] = {}
+load_candidate_configs()

@@ -6,7 +6,7 @@ import { buildSceneIntelligenceGraph } from "@/lib/scene-intelligence-graph";
 import { buildOperationalEvidenceEvent } from "@/lib/operational-evidence";
 import { createDefaultWorkspaceAccessState } from "@/lib/workspace-access";
 import { createDefaultWorkspaceGovernance } from "@/lib/workspace-governance";
-import { simulateStudio } from "@/simulation/simulate-studio";
+import { simulateStudio } from "@sentineltwin/simulation";
 import { createRuntimeIncident, type ExternalLogEntry } from "@/store/studio-store";
 
 describe("diagnostic bundle", () => {

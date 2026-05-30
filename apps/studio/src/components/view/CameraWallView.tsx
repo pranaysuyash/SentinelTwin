@@ -589,6 +589,12 @@ export function CameraWallView() {
     return () => window.clearInterval(timer);
   }, [syncTime]);
 
+  const activeCount = cameras.filter((cam) => cam.status === "on").length;
+  const offlineCount = cameras.length - activeCount;
+  const selectedCamera = cameras.find((cam) => cam.id === selectedId)
+    ?? cameras.find((cam) => cam.id === selectedCameraId)
+    ?? null;
+
   if (cameras.length === 0) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -605,11 +611,6 @@ export function CameraWallView() {
     );
   }
 
-  const activeCount = cameras.filter((cam) => cam.status === "on").length;
-  const offlineCount = cameras.length - activeCount;
-  const selectedCamera = cameras.find((cam) => cam.id === selectedId)
-    ?? cameras.find((cam) => cam.id === selectedCameraId)
-    ?? null;
   const weakRouteCameras = useMemo(() => {
     return cameras.filter((cam) => {
       const vis = pathVisibilityByCameraId[cam.id];

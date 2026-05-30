@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Share2 } from "lucide-react";
 
 import { Badge } from "@/components/shared/Badge";
@@ -387,28 +387,39 @@ export function SceneIntelligenceTab() {
   const selectedTimelineProgress = selectedTimelineIndex >= 0 && evidenceTimeline.length > 1
     ? selectedTimelineIndex / (evidenceTimeline.length - 1)
     : 0;
+  const focusRequestPending = useRef(timelineFocusRequest);
+
   useEffect(() => {
     if (!timelineFocusRequest) return;
-    if (timelineFocusRequest.query) {
-      setEvidenceQuery(timelineFocusRequest.query);
+    focusRequestPending.current = timelineFocusRequest;
+    setTimelineFocusRequest(null);
+  }, [setTimelineFocusRequest, timelineFocusRequest]);
+
+  useEffect(() => {
+    const request = focusRequestPending.current;
+    if (!request) return;
+    focusRequestPending.current = null;
+
+    if (request.query) {
+      setEvidenceQuery(request.query);
     }
-    if (timelineFocusRequest.branchLabel) {
-      setEvidenceBranchFilter(timelineFocusRequest.branchLabel);
+    if (request.branchLabel) {
+      setEvidenceBranchFilter(request.branchLabel);
     }
-    if (timelineFocusRequest.provenanceNodeId) {
-      setSelectedNodeId(timelineFocusRequest.provenanceNodeId);
+    if (request.provenanceNodeId) {
+      setSelectedNodeId(request.provenanceNodeId);
     }
-    if (timelineFocusRequest.provenanceEdgeId) {
-      setSelectedEdgeId(timelineFocusRequest.provenanceEdgeId);
+    if (request.provenanceEdgeId) {
+      setSelectedEdgeId(request.provenanceEdgeId);
     } else {
       setSelectedEdgeId(null);
     }
 
-    const targetEvent = timelineFocusRequest.eventId
-      ? operationalEvidenceEvents.find((candidate) => candidate.id === timelineFocusRequest.eventId) ?? null
+    const targetEvent = request.eventId
+      ? operationalEvidenceEvents.find((candidate) => candidate.id === request.eventId) ?? null
       : [...operationalEvidenceEvents].reduce<OperationalEvidenceEvent | null>((closest, candidate) => {
-          const targetBranch = timelineFocusRequest.branchLabel?.trim().toLowerCase() ?? null;
-          const targetTimestamp = timelineFocusRequest.timestamp;
+          const targetBranch = request.branchLabel?.trim().toLowerCase() ?? null;
+          const targetTimestamp = request.timestamp;
           if (targetBranch) {
             const candidateBranch = (candidate.branchLabel ?? candidate.lifecycleStage ?? "manual").toLowerCase();
             if (candidateBranch !== targetBranch) return closest;
@@ -420,14 +431,11 @@ export function SceneIntelligenceTab() {
 
     if (targetEvent) {
       setSelectedEvidenceEventId(targetEvent.id);
-      setTimelineFocusRequest(null);
       return;
     }
 
-    if (operationalEvidenceEvents.length > 0) {
-      setTimelineFocusRequest(null);
-    }
-  }, [operationalEvidenceEvents, setTimelineFocusRequest, timelineFocusRequest]);
+    if (operationalEvidenceEvents.length === 0) return;
+  }, [operationalEvidenceEvents]);
   const selectedEvidenceReconstructionSummary = useMemo(
     () => (selectedEvidenceReconstructionScene ? summarizeSceneEvidence(selectedEvidenceReconstructionScene) : null),
     [selectedEvidenceReconstructionScene],

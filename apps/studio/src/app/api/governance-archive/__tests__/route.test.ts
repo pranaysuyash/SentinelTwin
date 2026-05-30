@@ -9,7 +9,7 @@ import type { NextRequest } from "next/server";
 import { GET, POST } from "../route";
 
 const createNextRequest = (url: string, init?: RequestInit): NextRequest => (
-  new Request(url, init) as any as unknown as any
+  new Request(url, init) as unknown as NextRequest
 );
 
 const originalStoreDir = process.env.SENTINELTWIN_GOVERNANCE_ARCHIVE_STORE_DIR;

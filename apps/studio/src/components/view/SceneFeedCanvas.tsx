@@ -15,7 +15,7 @@ import {
   SceneWindows,
 } from "@/components/workspace/SharedScene";
 
-import { getYawPitchDirection } from "@/simulation/geometry";
+import { getYawPitchDirection } from "@sentineltwin/core";
 import { useStudioStore } from "@/store/studio-store";
 import type { CameraNode } from "@/schema/security-scene";
 

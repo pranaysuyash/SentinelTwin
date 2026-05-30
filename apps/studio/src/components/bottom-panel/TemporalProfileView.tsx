@@ -3,7 +3,7 @@
 import { AlertTriangle, Clock, Shield, ShieldAlert, Sun, Moon, Sunset, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useStudioStore } from "@/store/studio-store";
-import { computeTemporalProfile } from "@/simulation/temporal";
+import { computeTemporalProfile } from "@sentineltwin/simulation";
 import type { HourlySecuritySnapshot, TemporalAnomalyWindow, VulnerabilityWindow } from "@/schema/security-scene";
 
 const DAY_COLORS = [

@@ -6,7 +6,7 @@
  */
 
 import type { DoriQuality } from "@/schema/security-scene";
-import { ppmToDoriQuality } from "@/simulation/dori";
+import { ppmToDoriQuality } from "@sentineltwin/core";
 
 // ── Standard sensor widths (mm) ───────────────────────────────────────────────
 

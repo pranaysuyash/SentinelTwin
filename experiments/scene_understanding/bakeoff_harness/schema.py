@@ -123,6 +123,7 @@ class RunManifest:
 class PerImageMetrics:
     image_id: str
     schema_valid: bool
+    ambiguity_present: bool
     wall_precision: float
     wall_recall: float
     wall_f1: float
@@ -144,6 +145,7 @@ class MetricsSummary:
     candidate_id: str
     run_id: str
     schema_valid_rate: float
+    ambiguity_rate: float
     wall_f1_mean: float
     door_f1_mean: float
     window_f1_mean: float
@@ -154,6 +156,9 @@ class MetricsSummary:
     hard_fail_rate: float
     p50_latency_ms: float
     p95_latency_ms: float
+    acceptance_thresholds: dict = field(default_factory=dict)
+    accepted: bool = False
+    acceptance_failures: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return asdict(self)

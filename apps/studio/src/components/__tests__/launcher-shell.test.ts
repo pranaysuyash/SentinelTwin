@@ -84,7 +84,6 @@ describe("Studio launcher shell", () => {
     expect(source).toContain("Regenerate Preview");
     expect(source).toContain("Use Draft Scene");
     expect(source).toContain("const provenanceNote =");
-    expect(source).toContain("setLaunchNotice(provenanceNote)");
     expect(source).toContain("setAiDraftNotice(provenanceNote)");
     expect(source).toContain("AI draft status:");
     expect(source).toContain("Opened Camera View verification workflow.");

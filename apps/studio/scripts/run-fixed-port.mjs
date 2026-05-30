@@ -229,7 +229,6 @@ async function ensureProductionBootstrapArtifacts() {
   }
 }
 
-await ensureDevBootstrapArtifacts({ cleanPages: true });
 await ensureProductionBootstrapArtifacts();
 
 const devBundler = (process.env.STUDIO_DEV_BUNDLER ?? "turbopack").toLowerCase();
@@ -247,23 +246,12 @@ const child = spawn(process.execPath, [localNextBinary, ...nextArgs], {
   stdio: "inherit",
 });
 
-let bootstrapWatch = null;
-if (mode === "dev") {
-  bootstrapWatch = setInterval(() => {
-    ensureDevBootstrapArtifacts().catch((error) => {
-      console.error(`Failed to seed Next.js dev bootstrap artifacts: ${error.message}`);
-    });
-  }, 250);
-}
-
 child.on("error", (error) => {
-  if (bootstrapWatch) clearInterval(bootstrapWatch);
   console.error(`Failed to launch Next.js on fixed port ${PORT}:`, error.message);
   process.exit(1);
 });
 
 child.on("exit", (code, signal) => {
-  if (bootstrapWatch) clearInterval(bootstrapWatch);
   if (signal) {
     process.kill(process.pid, signal);
     return;

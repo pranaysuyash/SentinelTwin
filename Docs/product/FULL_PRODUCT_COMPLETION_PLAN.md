@@ -1,6 +1,6 @@
 # SentinelTwin Full Product Completion Plan
 
-**Status:** Source of truth — 2026-05-30
+**Status:** Source of truth — 2026-05-30 (integrity hardening: canonical source taxonomy, explicit draft approval activation, outcome zone semantics split)
 **Purpose:** One document that maps the entire SentinelTwin product from current repo state to full completion. Prevents agents from stopping at camera/demo surfaces. Distinguishes real, partial, scaffolded, and missing. Provides actionable backlog items, not aspirations.
 **Supersedes:** `FULL_VISION_GAP_INVENTORY.md` (for execution planning), `CURRENT_STATUS.md` (for product-level state), `CAMERASTUDIO_GAP_ANALYSIS.md` (for feature gaps).
 
@@ -118,14 +118,15 @@ These systems exist, are wired, compute real data, and pass tests:
 - Blank scene creation — canonical factory, room dimensions, wall generation
 - Scene templates — 5 built-in templates (retail, office, warehouse, classroom, parking)
 - SiteIntakeHub — unified source selection surface with maturity labels
-- SiteDraftReview — compiled-draft review with confidence scoring and warnings
+- SiteDraftReview — compiled-draft review with confidence scoring, warning trail, and real draft-scene spatial preview (2D SVG)
 
 ### L2 — Scene Compilers
 - Manual edits compile into SecurityScene via the store
 - Scan sessions compile via `scan-to-scene.ts` with deterministic node mapping
 - AI drafts compile via `ai-layout-draft.ts` with Zod validation before apply
 - Floor-plan import compiles via `floor-plan-import.ts` with structural validation
-- Site compiler abstraction (`site-compiler.ts`) normalizes all sources into a canonical `SiteTwinDraft`
+- Site compiler abstraction (`site-compiler.ts`) normalizes sources into a canonical `SiteTwinDraft` taxonomy (`scan | ai_prompt | floor_plan | json | manual | camera_evidence`) with legacy alias normalization
+- Site draft approval is explicit: draft scene validation + active-scene activation happens at approval time before baseline simulation gating
 
 ### L3 — Canonical Scene Graph
 - `security-scene.ts` — complete Zod schemas + TypeScript types for all node types:
@@ -302,8 +303,8 @@ These systems exist and are wired, but lack depth, production quality, or comple
 - **What exists:** Image upload, geometry extraction, scale calibration, correction controls (merge duplicates, snap openings, exclude false positives, drag markers), structural auto-fix, validation diagnostics.
 - **What is partial:** Extraction quality is prototype-grade. Advanced correction depth is limited. No CAD/IFC/BIM-level import. The extractor produces usable but rough geometry that needs manual cleanup.
 
-### Footage Verification
-- **What exists:** Camera View verification workflow with reference-frame upload, overlay/split comparison, opacity/alignment controls, alignment quality score, difference heat overlay, defensive non-forensic disclaimer. Reference-frame snapshots write into the evidence ledger.
+### Camera Evidence Verification
+- **What exists:** Camera View evidence workflow with reference-frame upload, overlay/split comparison, opacity/alignment controls, alignment quality score, difference heat overlay, defensive non-forensic disclaimer. Reference-frame snapshots write into the evidence ledger.
 - **What is partial:** Static reference-frame alignment is not product-grade footage verification. No real-time video comparison. No automated frame extraction from live feeds. No forensic-grade pixel matching.
 
 ### Live Camera/Sensor Connection

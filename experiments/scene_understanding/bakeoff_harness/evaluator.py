@@ -2,7 +2,22 @@ import json
 import math
 from pathlib import Path
 from typing import Optional
+import yaml
 from .schema import SecuritySceneSubset, PerImageMetrics, MetricsSummary
+
+
+RUBRIC_DEFAULTS = {
+    "acceptance_thresholds": {
+        "schema_valid_rate": 1.0,
+        "wall_topology_f1_min": 0.0,
+        "door_window_f1_min": 0.0,
+        "wall_endpoint_error_norm_max": 1.0,
+        "obstruction_macro_f1_min": 0.0,
+        "critical_zone_recall_min": 0.0,
+        "p95_latency_seconds_max": float("inf"),
+        "hard_fail_rate_max": 1.0,
+    },
+}
 
 
 def _load_annotations(split: str) -> dict[str, dict]:
@@ -195,6 +210,44 @@ def _match_polygons(pred_zones: list, gt_zones: list[dict], centroid_threshold: 
     return tp, fp, fn
 
 
+def _load_rubric(rubric_path: str | None = None) -> dict:
+    config_dir = Path(__file__).resolve().parent.parent / "configs"
+    path = Path(rubric_path) if rubric_path else config_dir / "eval_rubric.yaml"
+    if not path.exists():
+        return dict(RUBRIC_DEFAULTS)
+    with open(path) as f:
+        yaml_data = yaml.safe_load(f) or {}
+    rubric = dict(RUBRIC_DEFAULTS)
+    for section in ("acceptance_thresholds", "metrics", "failure_taxonomy", "securityscene_subset_required"):
+        if section in yaml_data:
+            rubric[section] = yaml_data[section]
+    return rubric
+
+
+def _evaluate_acceptance(summary: MetricsSummary, rubric: dict) -> tuple[bool, list[str]]:
+    failures: list[str] = []
+    thresholds = rubric.get("acceptance_thresholds", {})
+    if summary.schema_valid_rate < thresholds.get("schema_valid_rate", 1.0):
+        failures.append("schema_valid_rate below threshold")
+    if summary.wall_f1_mean < thresholds.get("wall_topology_f1_min", 0.0):
+        failures.append("wall_topology_f1 below threshold")
+    if summary.door_f1_mean < thresholds.get("door_window_f1_min", 0.0):
+        failures.append("door_f1 below threshold")
+    if summary.window_f1_mean < thresholds.get("door_window_f1_min", 0.0):
+        failures.append("window_f1 below threshold")
+    if summary.wall_endpoint_error_mean > thresholds.get("wall_endpoint_error_norm_max", 1.0):
+        failures.append("wall_endpoint_error_norm too high")
+    if summary.obstruction_f1_mean < thresholds.get("obstruction_macro_f1_min", 0.0):
+        failures.append("obstruction_f1 below threshold")
+    if summary.critical_zone_recall_mean < thresholds.get("critical_zone_recall_min", 0.0):
+        failures.append("critical_zone_recall below threshold")
+    if (summary.p95_latency_ms / 1000.0) > thresholds.get("p95_latency_seconds_max", float("inf")):
+        failures.append("p95_latency too high")
+    if summary.hard_fail_rate > thresholds.get("hard_fail_rate_max", 1.0):
+        failures.append("hard_fail_rate too high")
+    return (len(failures) == 0, failures)
+
+
 def evaluate_predictions(predictions: list[SecuritySceneSubset], split: str) -> tuple[list[PerImageMetrics], list[str]]:
     annotations = _load_annotations(split)
     per_image: list[PerImageMetrics] = []
@@ -211,6 +264,7 @@ def evaluate_predictions(predictions: list[SecuritySceneSubset], split: str) -> 
         if pred.parse_error:
             per_image.append(PerImageMetrics(
                 image_id=pred.image_id, schema_valid=False,
+                ambiguity_present=bool(pred.ambiguities),
                 wall_precision=0, wall_recall=0, wall_f1=0, wall_endpoint_error=1.0,
                 door_f1=0, window_f1=0, obstruction_f1=0,
                 critical_zone_recall=0, critical_zone_precision=0,
@@ -251,6 +305,7 @@ def evaluate_predictions(predictions: list[SecuritySceneSubset], split: str) -> 
 
         per_image.append(PerImageMetrics(
             image_id=pred.image_id, schema_valid=schema_valid,
+            ambiguity_present=bool(pred.ambiguities),
             wall_precision=wall_prec, wall_recall=wall_rec, wall_f1=wall_f1,
             wall_endpoint_error=wall_err,
             door_f1=door_f1, window_f1=window_f1, obstruction_f1=obstruction_f1,
@@ -261,11 +316,11 @@ def evaluate_predictions(predictions: list[SecuritySceneSubset], split: str) -> 
     return per_image, failure_cases
 
 
-def compute_summary(per_image: list[PerImageMetrics], candidate_id: str, run_id: str) -> MetricsSummary:
+def compute_summary(per_image: list[PerImageMetrics], candidate_id: str, run_id: str, rubric_path: str | None = None) -> MetricsSummary:
     n = len(per_image)
     if n == 0:
         return MetricsSummary(candidate_id=candidate_id, run_id=run_id, schema_valid_rate=0,
-            wall_f1_mean=0, door_f1_mean=0, window_f1_mean=0, obstruction_f1_mean=0,
+            ambiguity_rate=0, wall_f1_mean=0, door_f1_mean=0, window_f1_mean=0, obstruction_f1_mean=0,
             critical_zone_recall_mean=0, critical_zone_precision_mean=0,
             wall_endpoint_error_mean=0, hard_fail_rate=0, p50_latency_ms=0, p95_latency_ms=0)
 
@@ -273,11 +328,13 @@ def compute_summary(per_image: list[PerImageMetrics], candidate_id: str, run_id:
     p50 = latencies[len(latencies) // 2]
     p95 = latencies[int(len(latencies) * 0.95)]
     fails = sum(1 for p in per_image if p.parse_error)
+    ambiguity_cases = sum(1 for p in per_image if p.ambiguity_present)
 
-    return MetricsSummary(
+    summary = MetricsSummary(
         candidate_id=candidate_id,
         run_id=run_id,
         schema_valid_rate=sum(1 for p in per_image if p.schema_valid) / n,
+        ambiguity_rate=ambiguity_cases / n,
         wall_f1_mean=sum(p.wall_f1 for p in per_image) / n,
         door_f1_mean=sum(p.door_f1 for p in per_image) / n,
         window_f1_mean=sum(p.window_f1 for p in per_image) / n,
@@ -289,3 +346,10 @@ def compute_summary(per_image: list[PerImageMetrics], candidate_id: str, run_id:
         p50_latency_ms=p50,
         p95_latency_ms=p95,
     )
+
+    rubric = _load_rubric(rubric_path)
+    accepted, failures = _evaluate_acceptance(summary, rubric)
+    summary.accepted = accepted
+    summary.acceptance_failures = failures
+    summary.acceptance_thresholds = rubric.get("acceptance_thresholds", {})
+    return summary

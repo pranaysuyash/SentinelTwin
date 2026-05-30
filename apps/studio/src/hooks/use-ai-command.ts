@@ -19,7 +19,7 @@ import { parseOfflineCommand, type OfflineCommandAction } from "@/lib/offline-co
 import { evaluateAiRateLimit, formatRetryHint, recordAiRateLimitUsage } from "@/lib/ai-rate-limit";
 import { resolvePromptRegistryLineage } from "@/agents/prompt-registry";
 import { useStudioStore } from "@/store/studio-store";
-import { simulateStudio } from "@/simulation/simulate-studio";
+import { simulateStudio } from "@sentineltwin/simulation";
 import type { CameraNode, CriticalZoneNode, SecurityScene, SimulationResult } from "@/schema/security-scene";
 import type { AiActionTelemetryStage } from "@/store/studio-store";
 

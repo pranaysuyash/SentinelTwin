@@ -1,0 +1,654 @@
+{
+  "id": "scene_small_retail_shop",
+  "name": "Small Retail Shop Demo",
+  "createdAt": 1748131200000,
+  "updatedAt": 1748131200000,
+  "units": "meters",
+  "dimensions": {
+    "width": 10,
+    "depth": 7,
+    "height": 3
+  },
+  "walls": [
+    {
+      "id": "wall_north",
+      "nodeType": "wall",
+      "label": "North Wall",
+      "start": [
+        0,
+        0
+      ],
+      "end": [
+        10,
+        0
+      ],
+      "heightM": 3,
+      "thicknessM": 0.2,
+      "material": "solid",
+      "visionTransmission": 0,
+      "source": "demo"
+    },
+    {
+      "id": "wall_east",
+      "nodeType": "wall",
+      "label": "East Wall",
+      "start": [
+        10,
+        0
+      ],
+      "end": [
+        10,
+        7
+      ],
+      "heightM": 3,
+      "thicknessM": 0.2,
+      "material": "solid",
+      "visionTransmission": 0,
+      "source": "demo"
+    },
+    {
+      "id": "wall_south_west",
+      "nodeType": "wall",
+      "label": "South Wall West",
+      "start": [
+        0,
+        7
+      ],
+      "end": [
+        4.5,
+        7
+      ],
+      "heightM": 3,
+      "thicknessM": 0.2,
+      "material": "glass",
+      "visionTransmission": 0.86,
+      "source": "demo"
+    },
+    {
+      "id": "wall_south_east",
+      "nodeType": "wall",
+      "label": "South Wall East",
+      "start": [
+        5.5,
+        7
+      ],
+      "end": [
+        10,
+        7
+      ],
+      "heightM": 3,
+      "thicknessM": 0.2,
+      "material": "glass",
+      "visionTransmission": 0.86,
+      "source": "demo"
+    },
+    {
+      "id": "wall_west",
+      "nodeType": "wall",
+      "label": "West Wall",
+      "start": [
+        0,
+        7
+      ],
+      "end": [
+        0,
+        0
+      ],
+      "heightM": 3,
+      "thicknessM": 0.2,
+      "material": "solid",
+      "visionTransmission": 0,
+      "source": "demo"
+    },
+    {
+      "id": "wall_storage_west",
+      "nodeType": "wall",
+      "label": "Storage Wall West",
+      "start": [
+        6.4,
+        0
+      ],
+      "end": [
+        6.4,
+        2.25
+      ],
+      "heightM": 3,
+      "thicknessM": 0.15,
+      "material": "solid",
+      "visionTransmission": 0,
+      "source": "demo"
+    },
+    {
+      "id": "wall_storage_south",
+      "nodeType": "wall",
+      "label": "Storage Wall South",
+      "start": [
+        6.4,
+        2.25
+      ],
+      "end": [
+        9.8,
+        2.25
+      ],
+      "heightM": 3,
+      "thicknessM": 0.15,
+      "material": "solid",
+      "visionTransmission": 0,
+      "source": "demo"
+    }
+  ],
+  "doors": [
+    {
+      "id": "door_front",
+      "nodeType": "door",
+      "label": "Front Entrance",
+      "position": [
+        5,
+        1,
+        7
+      ],
+      "dimensions": [
+        1,
+        2.2,
+        0.14
+      ],
+      "state": "closed",
+      "source": "demo"
+    },
+    {
+      "id": "door_storage",
+      "nodeType": "door",
+      "label": "Storage Door",
+      "position": [
+        9.1,
+        1.05,
+        2.25
+      ],
+      "dimensions": [
+        0.9,
+        2.1,
+        0.12
+      ],
+      "state": "closed",
+      "source": "demo"
+    }
+  ],
+  "windows": [
+    {
+      "id": "window_front_left",
+      "nodeType": "window",
+      "label": "Front Display Left",
+      "position": [
+        2,
+        1.4,
+        7
+      ],
+      "dimensions": [
+        2.4,
+        1.8,
+        0.1
+      ],
+      "state": "closed_glass",
+      "visionTransmission": 0.88,
+      "source": "demo"
+    },
+    {
+      "id": "window_front_right",
+      "nodeType": "window",
+      "label": "Front Display Right",
+      "position": [
+        8,
+        1.4,
+        7
+      ],
+      "dimensions": [
+        2.4,
+        1.8,
+        0.1
+      ],
+      "state": "closed_glass",
+      "visionTransmission": 0.88,
+      "source": "demo"
+    }
+  ],
+  "cameras": [
+    {
+      "id": "cam_entrance",
+      "nodeType": "camera",
+      "name": "Camera 1",
+      "position": [
+        2.1,
+        2.8,
+        1.3
+      ],
+      "yawDeg": 137,
+      "pitchDeg": -24,
+      "rollDeg": 0,
+      "mountType": "ceiling",
+      "mountHeightM": 2.8,
+      "fovHorizontalDeg": 110,
+      "fovVerticalDeg": 70,
+      "rangeM": 11,
+      "resolutionMP": 4,
+      "resolutionWidth": 2688,
+      "resolutionHeight": 1520,
+      "lensType": "fixed",
+      "focalLengthMm": 2.8,
+      "status": "on",
+      "nightMode": "none",
+      "irRangeM": 0,
+      "thermalCapable": false,
+      "ptz": false,
+      "clarity": "excellent",
+      "source": "demo",
+      "tags": [
+        "entry",
+        "aisle"
+      ]
+    },
+    {
+      "id": "cam_counter",
+      "nodeType": "camera",
+      "name": "Camera 2",
+      "position": [
+        8.6,
+        2.6,
+        5.9
+      ],
+      "yawDeg": 322,
+      "pitchDeg": -18,
+      "rollDeg": 0,
+      "mountType": "wall",
+      "mountHeightM": 2.6,
+      "fovHorizontalDeg": 90,
+      "fovVerticalDeg": 58,
+      "rangeM": 10,
+      "resolutionMP": 4,
+      "resolutionWidth": 1920,
+      "resolutionHeight": 1080,
+      "lensType": "fixed",
+      "focalLengthMm": 2.8,
+      "status": "on",
+      "nightMode": "none",
+      "irRangeM": 0,
+      "thermalCapable": false,
+      "ptz": false,
+      "clarity": "average",
+      "source": "demo",
+      "tags": [
+        "counter",
+        "register"
+      ]
+    },
+    {
+      "id": "cam_aisle_wide",
+      "nodeType": "camera",
+      "name": "Camera 3",
+      "position": [
+        5,
+        2.7,
+        3.2
+      ],
+      "yawDeg": 180,
+      "pitchDeg": -20,
+      "rollDeg": 0,
+      "mountType": "ceiling",
+      "mountHeightM": 2.7,
+      "fovHorizontalDeg": 120,
+      "fovVerticalDeg": 76,
+      "rangeM": 11,
+      "resolutionMP": 4,
+      "resolutionWidth": 2688,
+      "resolutionHeight": 1520,
+      "lensType": "fisheye",
+      "focalLengthMm": 2.8,
+      "status": "on",
+      "nightMode": "low_light",
+      "irRangeM": 8,
+      "thermalCapable": false,
+      "ptz": false,
+      "clarity": "good",
+      "source": "demo",
+      "tags": [
+        "aisle",
+        "wide"
+      ]
+    },
+    {
+      "id": "cam_storage_offline",
+      "nodeType": "camera",
+      "name": "Camera 4",
+      "position": [
+        8.6,
+        2.55,
+        1.05
+      ],
+      "yawDeg": 112,
+      "pitchDeg": -18,
+      "rollDeg": 0,
+      "mountType": "wall",
+      "mountHeightM": 2.55,
+      "fovHorizontalDeg": 110,
+      "fovVerticalDeg": 68,
+      "rangeM": 10,
+      "resolutionMP": 2,
+      "resolutionWidth": 1920,
+      "resolutionHeight": 1080,
+      "lensType": "fixed",
+      "focalLengthMm": 2.8,
+      "status": "off",
+      "nightMode": "none",
+      "irRangeM": 0,
+      "thermalCapable": false,
+      "ptz": false,
+      "clarity": "average",
+      "source": "demo",
+      "tags": [
+        "storage",
+        "offline"
+      ]
+    },
+    {
+      "id": "cam_front_ptz",
+      "nodeType": "camera",
+      "name": "Camera 5",
+      "position": [
+        7.4,
+        2.9,
+        6.55
+      ],
+      "yawDeg": 236,
+      "pitchDeg": -26,
+      "rollDeg": 0,
+      "mountType": "ceiling",
+      "mountHeightM": 2.9,
+      "fovHorizontalDeg": 84,
+      "fovVerticalDeg": 52,
+      "rangeM": 12,
+      "resolutionMP": 8,
+      "resolutionWidth": 3840,
+      "resolutionHeight": 2160,
+      "lensType": "varifocal",
+      "focalLengthMm": 4,
+      "status": "on",
+      "nightMode": "low_light",
+      "irRangeM": 10,
+      "thermalCapable": false,
+      "ptz": true,
+      "clarity": "excellent",
+      "source": "demo",
+      "tags": [
+        "front",
+        "ptz"
+      ]
+    }
+  ],
+  "securityLights": [
+    {
+      "id": "light_main",
+      "nodeType": "security_light",
+      "name": "Main Ceiling Light",
+      "lightType": "ceiling",
+      "position": [
+        5,
+        2.85,
+        3.5
+      ],
+      "status": "on",
+      "brightness": "high",
+      "rangeM": 6.5,
+      "coneDeg": 120,
+      "colorTemperatureK": 4200,
+      "emergencyPower": true,
+      "illuminatesNightCoverage": true,
+      "glareRisk": "low",
+      "source": "demo"
+    }
+  ],
+  "obstructions": [
+    {
+      "id": "obs_shelf_west",
+      "nodeType": "obstruction",
+      "label": "Shelf 1",
+      "position": [
+        2.2,
+        0.9,
+        3.6
+      ],
+      "rotationYDeg": 0,
+      "dimensions": [
+        0.5,
+        2.1,
+        1.8
+      ],
+      "material": "solid",
+      "visionTransmission": 0,
+      "glareRisk": false,
+      "nightIRReflective": false,
+      "movable": true,
+      "movableByAI": true,
+      "obstructionType": "shelf",
+      "source": "demo"
+    },
+    {
+      "id": "obs_shelf_east",
+      "nodeType": "obstruction",
+      "label": "Shelf 2",
+      "position": [
+        7.8,
+        0.9,
+        3.6
+      ],
+      "rotationYDeg": 0,
+      "dimensions": [
+        0.5,
+        2.1,
+        1.8
+      ],
+      "material": "solid",
+      "visionTransmission": 0,
+      "glareRisk": false,
+      "nightIRReflective": false,
+      "movable": true,
+      "movableByAI": true,
+      "obstructionType": "shelf",
+      "source": "demo"
+    },
+    {
+      "id": "obs_center_counter",
+      "nodeType": "obstruction",
+      "label": "Cash Counter",
+      "position": [
+        5,
+        0.5,
+        5.4
+      ],
+      "rotationYDeg": 90,
+      "dimensions": [
+        2.2,
+        0.8,
+        1
+      ],
+      "material": "solid",
+      "visionTransmission": 0,
+      "glareRisk": false,
+      "nightIRReflective": false,
+      "movable": false,
+      "movableByAI": false,
+      "obstructionType": "counter",
+      "source": "demo"
+    },
+    {
+      "id": "obs_cupboard_blocker",
+      "nodeType": "obstruction",
+      "label": "Cupboard",
+      "position": [
+        4.2,
+        1,
+        3.3
+      ],
+      "rotationYDeg": 90,
+      "dimensions": [
+        1.1,
+        0.55,
+        2
+      ],
+      "material": "solid",
+      "visionTransmission": 0,
+      "glareRisk": false,
+      "nightIRReflective": false,
+      "movable": true,
+      "movableByAI": true,
+      "obstructionType": "cupboard",
+      "source": "demo"
+    },
+    {
+      "id": "obs_storage_rack",
+      "nodeType": "obstruction",
+      "label": "Storage Rack",
+      "position": [
+        8.1,
+        1,
+        1.05
+      ],
+      "rotationYDeg": 90,
+      "dimensions": [
+        1.4,
+        0.5,
+        2
+      ],
+      "material": "solid",
+      "visionTransmission": 0,
+      "glareRisk": false,
+      "nightIRReflective": false,
+      "movable": false,
+      "movableByAI": false,
+      "obstructionType": "storage_boxes",
+      "source": "demo"
+    }
+  ],
+  "criticalZones": [
+    {
+      "id": "zone_cash_counter",
+      "nodeType": "critical_zone",
+      "label": "Cash Counter",
+      "polygon": [
+        [
+          4,
+          4.85
+        ],
+        [
+          6,
+          4.85
+        ],
+        [
+          6,
+          6.35
+        ],
+        [
+          4,
+          6.35
+        ]
+      ],
+      "heightM": 2,
+      "priority": "critical",
+      "requiredQuality": "recognition",
+      "targetType": "cash_counter_activity",
+      "nightRequired": true,
+      "redundancyRequired": false,
+      "privacyZone": false
+    }
+  ],
+  "privacyZones": [],
+  "sensors": [],
+  "entryPoints": [
+    {
+      "id": "entry_front_door",
+      "nodeType": "entry_point",
+      "label": "Entry Door",
+      "position": [
+        5,
+        6.9
+      ]
+    }
+  ],
+  "paths": [
+    {
+      "id": "path_front_to_counter",
+      "nodeType": "path",
+      "label": "Night Entry \u2192 Cash Counter",
+      "actorType": "person",
+      "points": [
+        {
+          "position": [
+            5,
+            6.85
+          ],
+          "action": "enter"
+        },
+        {
+          "position": [
+            5,
+            6.15
+          ]
+        },
+        {
+          "position": [
+            5.1,
+            5.3
+          ]
+        },
+        {
+          "position": [
+            5.2,
+            4.45
+          ]
+        },
+        {
+          "position": [
+            4.55,
+            4.05
+          ]
+        },
+        {
+          "position": [
+            4.45,
+            4.9
+          ]
+        },
+        {
+          "position": [
+            4.9,
+            5.45
+          ],
+          "action": "wait"
+        }
+      ],
+      "speedMps": 1.2,
+      "heightM": 1.7,
+      "widthM": 0.55,
+      "timeOfDay": "day",
+      "intent": "authorized"
+    }
+  ],
+  "assumptions": {
+    "wallHeightM": 3,
+    "personHeightM": 1.7,
+    "vehicleHeightM": 1.5,
+    "timeOfDay": "day",
+    "interiorLightLevel": "normal",
+    "nightPenaltyMode": "detailed",
+    "doriStandard": "simplified",
+    "pixelsPerMeter": {
+      "detection": 25,
+      "observation": 62.5,
+      "recognition": 125,
+      "identification": 250
+    },
+    "showAssumptionsPanel": true
+  },
+  "source": "demo",
+  "version": "0.1.0",
+  "snapshots": [],
+  "scenarios": []
+}

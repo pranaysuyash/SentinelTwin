@@ -8,7 +8,7 @@ import type {
   SecurityScene,
   SimulationResult,
 } from "@/schema/security-scene";
-import { qualityToScore } from "@/simulation/dori";
+import { qualityToScore } from "@sentineltwin/core";
 import { sortIssuesBySeverity } from "./security-outcome-severity";
 
 export type SecurityOutcomeStatus = "not_run" | "pass" | "needs_attention" | "high_risk" | "incomplete";
@@ -155,6 +155,7 @@ export type SecurityOutcomeModel = {
   topIssues: OutcomeIssueCard[];
   allIssues: OutcomeIssueCard[];
   causeTaxonomy: CauseFinding[];
+  zoneFindings: FailedZoneDetail[];
   failedZones: FailedZoneDetail[];
   cameraFindings: CameraFinding[];
   pathFindings: PathFinding[];
@@ -353,7 +354,7 @@ function buildCauseSummary(
   return parts.length > 0 ? parts.join("; ") + "." : "Coverage is below the required quality threshold.";
 }
 
-function deriveFailedZones(
+function deriveZoneFindings(
   result: SimulationResult,
   scene: SecurityScene,
   recommendations: OutcomeRecommendationCard[],
@@ -1115,6 +1116,7 @@ export function buildSecurityOutcomeModel(
       topIssues: [],
       allIssues: [],
       causeTaxonomy: [],
+      zoneFindings: [],
       failedZones: [],
       cameraFindings: [],
       pathFindings: [],
@@ -1157,7 +1159,8 @@ export function buildSecurityOutcomeModel(
     : avgQuality < 5 ? "Recognition"
     : "Identification";
 
-  const failedZoneResults = deriveFailedZones(result, scene, recommendations);
+  const zoneFindings = deriveZoneFindings(result, scene, recommendations);
+  const failedZoneResults = zoneFindings.filter((zone) => zone.status !== "pass");
   const pathFindings = derivePathFindings(result, scene);
   const privacyFindings = derivePrivacyFindings(result, scene);
   const cameraFindings = deriveCameraFindings(result, scene);
@@ -1208,6 +1211,7 @@ export function buildSecurityOutcomeModel(
     topIssues: issueCards.slice(0, 5),
     allIssues: issueCards,
     causeTaxonomy,
+    zoneFindings,
     failedZones: failedZoneResults,
     cameraFindings,
     pathFindings,

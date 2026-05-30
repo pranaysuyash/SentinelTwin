@@ -1,4 +1,4 @@
-import type { CompareReportData, ReportData } from "@/report";
+import type { CompareReportData, ReportData } from "@sentineltwin/report";
 import type { SecurityScene, SimulationResult } from "@/schema/security-scene";
 
 export type ReportEvidenceBundleVersion = "1";

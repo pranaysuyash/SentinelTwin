@@ -11,7 +11,7 @@ import { buildOperationalEvidenceArchive } from "@/lib/operational-evidence-arch
 import { createDefaultWorkspaceAccessState } from "@/lib/workspace-access";
 import { createDefaultWorkspaceAccountProfile } from "@/lib/workspace-catalog";
 import { createDefaultWorkspaceGovernance } from "@/lib/workspace-governance";
-import { simulateStudio } from "@/simulation/simulate-studio";
+import { simulateStudio } from "@sentineltwin/simulation";
 
 describe("archive handoff link", () => {
   test("builds and parses an archive handoff URL with the requested restore branch", () => {

@@ -21,6 +21,8 @@ import {
   Save,
   MoreHorizontal,
   SlidersHorizontal,
+  Undo2,
+  Redo2,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
@@ -116,6 +118,8 @@ export function TopBar() {
   const running = useStudioStore((s) => s.simulationRunning);
   const demoMode = useStudioStore((s) => s.demoMode);
   const setDemoMode = useStudioStore((s) => s.setDemoMode);
+  const canUndo = useStudioStore((s) => s.historyPast.length > 0);
+  const canRedo = useStudioStore((s) => s.historyFuture.length > 0);
   const targetTypes = new Set(scene.criticalZones.map((zone) => zone.targetType));
   const currentTargetType = targetTypes.size === 1 ? [...targetTypes][0] ?? null : null;
   const currentTargetLabel = currentTargetType ? TARGET_TYPE_LABELS[currentTargetType] : TARGET_TYPE_LABELS[criticalZoneTargetType];
@@ -241,6 +245,44 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
         <div className="hidden h-5 w-px bg-[#1e2130] xl:block" />
 
         <BranchSwitcher />
+
+        <div className="flex items-center gap-1">
+          <SurfaceButton
+            onClick={() => setWizardOpen(true)}
+            title="Create new scene"
+          >
+            <Plus className="h-3 w-3" />
+            <span className="hidden md:inline">Create</span>
+          </SurfaceButton>
+          <SurfaceButton
+            onClick={handleImportScene}
+            title="Import scene from JSON"
+          >
+            <Upload className="h-3 w-3" />
+            <span className="hidden lg:inline">Import</span>
+          </SurfaceButton>
+        </div>
+
+        <div className="mr-1 h-4 w-px bg-[#1e2130]" />
+
+        <div className="flex items-center gap-0.5">
+          <SurfaceButton
+            onClick={() => useStudioStore.getState().undo()}
+            disabled={!canUndo}
+            title="Undo (Cmd+Z)"
+          >
+            <Undo2 className="h-3 w-3" />
+          </SurfaceButton>
+          <SurfaceButton
+            onClick={() => useStudioStore.getState().redo()}
+            disabled={!canRedo}
+            title="Redo (Cmd+Shift+Z)"
+          >
+            <Redo2 className="h-3 w-3" />
+          </SurfaceButton>
+        </div>
+
+        <div className="h-4 w-px bg-[#1e2130]" />
 
         <div className="relative min-w-0">
           <button

@@ -2,8 +2,8 @@ import { describe, expect, test } from "bun:test";
 
 import { createSmallRetailShopScene } from "@/demo-scenes/small-retail-shop";
 import { buildOperationalEvidenceEvent } from "@/lib/operational-evidence";
-import { simulateStudio } from "@/simulation/simulate-studio";
-import { buildCompareReportData, buildReportData } from "@/report";
+import { simulateStudio } from "@sentineltwin/simulation";
+import { buildCompareReportData, buildReportData } from "@sentineltwin/report";
 import { buildReportEvidenceBundle, stringifyReportEvidenceBundle } from "@/lib/report-evidence-bundle";
 
 describe("report evidence bundle", () => {

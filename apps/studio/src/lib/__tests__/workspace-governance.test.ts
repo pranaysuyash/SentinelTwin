@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { describe, expect, test } from "bun:test";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
-import { type SecurityScene } from "@/schema/security-scene";
+import type { SecurityScene, CriticalZoneNode, PrivacyZoneNode } from "@/schema/security-scene";
 
 import {
   canApproveWorkspaceScene,
@@ -11,7 +11,6 @@ import {
   summarizeWorkspaceGovernance,
   resolveApprovalRoute,
 } from "@/lib/workspace-governance";
-import type { SecurityScene } from "@/schema/security-scene";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 
 describe("workspace governance", () => {
@@ -65,17 +64,17 @@ describe("workspace governance", () => {
       sensors: [],
       snapshots: [],
       ...overrides,
-    } as any);
+    } as SecurityScene);
 
     test("requires privacy_reviewer review if there are privacy zones", () => {
-      const scene = createMockScene({ privacyZones: [{ id: "p1", type: "privacy_zone", position: [0,0,0], scale: [1,1,1] } as any] });
+      const scene = createMockScene({ privacyZones: [{ id: "p1", type: "privacy_zone", position: [0,0,0], scale: [1,1,1] } as unknown as PrivacyZoneNode] });
       const governance = createDefaultWorkspaceGovernance();
       const roles = resolveApprovalRoute(governance, scene);
       expect(roles).toContain("privacy_reviewer");
     });
 
     test("requires admin review if there are critical priority zones", () => {
-      const scene = createMockScene({ criticalZones: [{ id: "c1", type: "critical_zone", position: [0,0,0], scale: [1,1,1], priority: "critical" } as any] });
+      const scene = createMockScene({ criticalZones: [{ id: "c1", type: "critical_zone", position: [0,0,0], scale: [1,1,1], priority: "critical" } as unknown as CriticalZoneNode] });
       const governance = createDefaultWorkspaceGovernance();
       const roles = resolveApprovalRoute(governance, scene);
       expect(roles).toContain("admin");
@@ -84,7 +83,7 @@ describe("workspace governance", () => {
 
     test("routes privacy-sensitive scenes through privacy review before broader reviewer fallback", () => {
       const scene = createMockScene({
-        privacyZones: [{ id: "p1", type: "privacy_zone", position: [0, 0, 0], scale: [1, 1, 1] } as any],
+        privacyZones: [{ id: "p1", type: "privacy_zone", position: [0, 0, 0], scale: [1, 1, 1] } as unknown as PrivacyZoneNode],
       });
       const governance = createDefaultWorkspaceGovernance();
       const roles = resolveApprovalRoute(governance, scene);
@@ -96,14 +95,14 @@ describe("workspace governance", () => {
 
     test("keeps critical and privacy-sensitive scenes admin-gated", () => {
       const scene = createMockScene({
-        privacyZones: [{ id: "p1", type: "privacy_zone", position: [0, 0, 0], scale: [1, 1, 1] } as any],
+        privacyZones: [{ id: "p1", type: "privacy_zone", position: [0, 0, 0], scale: [1, 1, 1] } as unknown as PrivacyZoneNode],
         criticalZones: [{
           id: "c1",
           type: "critical_zone",
           position: [0, 0, 0],
           scale: [1, 1, 1],
           priority: "high",
-        } as any],
+        } as unknown as CriticalZoneNode],
       });
       const governance = createDefaultWorkspaceGovernance();
       const roles = resolveApprovalRoute(governance, scene);
@@ -130,7 +129,7 @@ describe("workspace governance", () => {
       id: "test-scene",
       name: "Critical Scene",
       source: "manual" as const,
-      criticalZones: [{ id: "c1", type: "critical_zone", position: [0, 0, 0], scale: [1, 1, 1], priority: "critical" } as any],
+      criticalZones: [{ id: "c1", type: "critical_zone", position: [0, 0, 0], scale: [1, 1, 1], priority: "critical" } as unknown as CriticalZoneNode],
     } as unknown as SecurityScene;
 
     expect(canPublishWorkspaceScene(governance, scene)).toBe(false);

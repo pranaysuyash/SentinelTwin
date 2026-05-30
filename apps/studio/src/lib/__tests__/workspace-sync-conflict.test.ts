@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { resolveSyncConflict } from "@/lib/workspace-sync-conflict";
-import type { OperationalEvidenceBranchComparison } from "@/lib/operational-evidence";
+import type { OperationalEvidenceBranchComparison, OperationalEvidenceEvent, OperationalEvidenceLineageStep } from "@/lib/operational-evidence";
 import { createCameraNode } from "@/lib/node-factory";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 import type { SecurityScene } from "@/schema/security-scene";
@@ -34,9 +34,9 @@ describe("workspace-sync-conflict", () => {
 
   test("detects same state", () => {
     const comparison: OperationalEvidenceBranchComparison = {
-      left: { depth: 0, event: {} as any },
-      right: { depth: 0, event: {} as any },
-      commonAncestor: { depth: 0, event: {} as any },
+      left: { depth: 0, event: {} as unknown as OperationalEvidenceEvent },
+      right: { depth: 0, event: {} as unknown as OperationalEvidenceEvent },
+      commonAncestor: { depth: 0, event: {} as unknown as OperationalEvidenceEvent },
       leftScene: mockScene,
       rightScene: mockScene,
       ancestorScene: mockScene,
@@ -51,9 +51,9 @@ describe("workspace-sync-conflict", () => {
 
   test("detects fast_forward_local", () => {
     const comparison: OperationalEvidenceBranchComparison = {
-      left: { depth: 1, event: { id: "left-id" } as any },
-      right: { depth: 0, event: { id: "right-id" } as any },
-      commonAncestor: { depth: 0, event: { id: "right-id" } as any },
+      left: { depth: 1, event: { id: "left-id" } as unknown as OperationalEvidenceEvent },
+      right: { depth: 0, event: { id: "right-id" } as unknown as OperationalEvidenceEvent },
+      commonAncestor: { depth: 0, event: { id: "right-id" } as unknown as OperationalEvidenceEvent },
       leftScene: { ...mockScene, name: "Local change" },
       rightScene: mockScene,
       ancestorScene: mockScene,
@@ -69,9 +69,9 @@ describe("workspace-sync-conflict", () => {
 
   test("detects diverged branches with auto-merge", () => {
     const comparison: OperationalEvidenceBranchComparison = {
-      left: { depth: 1, event: { id: "left-id" } as any },
-      right: { depth: 1, event: { id: "right-id" } as any },
-      commonAncestor: { depth: 0, event: { id: "ancestor-id" } as any },
+      left: { depth: 1, event: { id: "left-id" } as unknown as OperationalEvidenceEvent },
+      right: { depth: 1, event: { id: "right-id" } as unknown as OperationalEvidenceEvent },
+      commonAncestor: { depth: 0, event: { id: "ancestor-id" } as unknown as OperationalEvidenceEvent },
       leftScene: { ...mockScene, name: "Local change" },
       rightScene: { ...mockScene, name: "Remote change" },
       ancestorScene: mockScene,
@@ -120,9 +120,9 @@ describe("workspace-sync-conflict", () => {
     } as SecurityScene;
 
     const comparison: OperationalEvidenceBranchComparison = {
-      left: { depth: 1, event: { id: "left-id" } as any },
-      right: { depth: 1, event: { id: "right-id" } as any },
-      commonAncestor: { depth: 0, event: { id: "ancestor-id" } as any },
+      left: { depth: 1, event: { id: "left-id" } as unknown as OperationalEvidenceEvent },
+      right: { depth: 1, event: { id: "right-id" } as unknown as OperationalEvidenceEvent },
+      commonAncestor: { depth: 0, event: { id: "ancestor-id" } as unknown as OperationalEvidenceEvent },
       leftScene,
       rightScene,
       ancestorScene: baseScene,

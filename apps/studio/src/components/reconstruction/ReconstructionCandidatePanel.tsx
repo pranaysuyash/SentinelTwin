@@ -358,11 +358,19 @@ export function ReconstructionCandidatePanel({
         {/* Batch actions */}
         {pendingCount > 0 ? (
           <div className="flex items-center gap-2">
-            <SurfaceButton onClick={handleAcceptAll} size="sm" variant="primary" disabled={pendingCount === 0}>
+            <SurfaceButton
+              onClick={handleAcceptAll}
+              disabled={pendingCount === 0}
+              className="h-7 gap-1 rounded-md border-emerald-500/30 bg-emerald-500/12 px-2 py-1 text-[10px] text-emerald-100 hover:border-emerald-400/40 hover:bg-emerald-500/18"
+            >
               <Check className="h-3 w-3" />
               Accept All ({pendingCount})
             </SurfaceButton>
-            <SurfaceButton onClick={handleRejectAllPending} size="sm" variant="secondary" disabled={pendingCount === 0}>
+            <SurfaceButton
+              onClick={handleRejectAllPending}
+              disabled={pendingCount === 0}
+              className="h-7 gap-1 rounded-md border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-100 hover:border-amber-400/40 hover:bg-amber-500/16"
+            >
               <X className="h-3 w-3" />
               Reject All ({pendingCount})
             </SurfaceButton>
@@ -439,9 +447,8 @@ export function ReconstructionCandidatePanel({
           </div>
           <SurfaceButton
             onClick={handleCompile}
-            size="sm"
-            variant="primary"
             disabled={!canCompile || compiling}
+            className="h-7 rounded-md border-sky-500/30 bg-sky-500/12 px-2.5 py-1 text-[10px] text-sky-100 hover:border-sky-400/40 hover:bg-sky-500/18"
           >
             {compiling ? "Compiling..." : `Compile to Draft (${acceptedCount})`}
           </SurfaceButton>

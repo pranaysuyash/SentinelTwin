@@ -11,7 +11,7 @@ import {
   compileFloorPlanToSiteResult,
   compileJsonToSiteResult,
 } from "@/lib/site-compiler";
-import type { SecurityScene } from "@/schema/security-scene";
+import type { SecurityScene, ScenarioPath, DoorNode } from "@/schema/security-scene";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 
 function makeScene(overrides?: Partial<SecurityScene>): SecurityScene {
@@ -55,7 +55,7 @@ function addPath(scene: SecurityScene) {
     actorType: "person", speedMps: 1.4, heightM: 1.7, timeOfDay: "day", intent: "authorized",
     points: [{ position: [1, 1] }, { position: [3, 3] }],
     source: "manual", reviewStatus: "unreviewed", sourceTrace: "", geometryValidity: "valid",
-  } as any);
+  } as unknown as ScenarioPath);
 }
 
 describe("compileToSiteTwinDraft", () => {
@@ -275,7 +275,7 @@ describe("actionable warnings", () => {
       id: "door_1", nodeType: "door", label: "Far Door",
       position: [50, 0, 50], state: "closed", dimensions: [1, 2.1, 0.1],
       source: "manual", reviewStatus: "unreviewed", sourceTrace: "", geometryValidity: "valid",
-    } as any);
+    } as unknown as DoorNode);
     const warnings = makeSiteCompilerWarnings(scene);
     const doorWarning = warnings.find((w) => w.code === "DOOR_NOT_NEAR_WALL");
     expect(doorWarning).toBeDefined();

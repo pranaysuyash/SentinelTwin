@@ -19,14 +19,15 @@
     "test:watch": "bun test --watch"
   },
   "dependencies": {
-    "@sentineltwin/core": "workspace:*",
-    "@sentineltwin/simulation": "workspace:*",
-    "@sentineltwin/report": "workspace:*",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
+    "@sentineltwin/core": "workspace:*",
+    "@sentineltwin/report": "workspace:*",
+    "@sentineltwin/simulation": "workspace:*",
     "clsx": "^2.1.1",
     "framer-motion": "^12.40.0",
     "jspdf": "^3.0.3",
+    "jspdf-autotable": "^5.0.8",
     "lucide-react": "^1.16.0",
     "next": "16.2.6",
     "react": "19.2.6",

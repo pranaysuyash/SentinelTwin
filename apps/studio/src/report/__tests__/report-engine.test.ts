@@ -24,7 +24,7 @@ const testWithTimeout = test as unknown as (
 ) => void;
 
 function longTest(name: string, fn: () => void) {
-  return (test as any)(name, { timeout: 15000 }, fn);
+  return (test as unknown as typeof testWithTimeout)(name, { timeout: 15000 }, fn);
 }
 
 function makeEvidenceReport(baseScene: SecurityScene) {

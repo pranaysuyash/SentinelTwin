@@ -1,12 +1,25 @@
 # Current Implementation State — Camera Studio
 
-**Updated:** 2026-05-30 (session 35: governance route sync-source surfaced in approval routing)
+**Updated:** 2026-05-30 (simulation engine unified: `packages/simulation/` is now canonical, studio local copy removed)
 **Source:** Direct code audit of apps/studio/src/
 **Purpose:** Accurate baseline of what is actually built, tested, and rendering.
 Use this instead of the earlier CAMERASTUDIO_GAP_ANALYSIS.md which was written
 before the Phase 2 audit. This doc supersedes the gap analysis for "what exists."
 For the full-vision gap inventory and next-slice sequencing, see
 `Docs/todos/FULL_VISION_GAP_INVENTORY.md`.
+
+## Simulation engine canonicalized to packages/simulation/ (2026-05-30)
+
+- `packages/simulation/` is now the single source of truth for all simulation engine code. Previously there was a dual copy: `packages/simulation/` (3,835 lines, never imported) and `apps/studio/src/simulation/` (4,928 lines, the live copy) ✅
+- All 22 engine files replaced with the studio's richer implementations (e.g. temporal.ts: 107→453 lines, placement-oracle.ts: 162→386 lines) ✅
+- dori.ts, geometry.ts, grid.ts — no longer duplicated in the app; live in the package, importing from `@sentineltwin/core` ✅
+- Package-only files preserved: `odpcvs.ts`, `critical-zone-selection.ts` ✅
+- 86 tests across 15 test files live in `packages/simulation/src/__tests__/` with test helpers and retail-shop fixture ✅
+- All 127 `@/simulation/` imports across the studio updated to `@sentineltwin/simulation` ✅
+- `apps/studio/src/simulation/` directory removed entirely ✅
+- Package tsconfig updated with `baseUrl` and `paths` for workspace module resolution; `__tests__` excluded from build config ✅
+- Core and simulation packages both build to `dist/` successfully ✅
+- See `Docs/decisions/DECISION_LOG.md` entry D-023 for full rationale
 
 ## Product integrity hardening (2026-05-30)
 

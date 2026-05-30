@@ -8,7 +8,7 @@ import { buildCompareShareLink } from "@/lib/compare-share-link";
 import { shareLinkOrCopy } from "@/lib/share-link";
 import { useAiCommand } from "@/hooks/use-ai-command";
 import { buildSecurityOutcomeModel } from "@/lib/security-outcome/security-outcome-model";
-import { exportTextAsPdf } from "@/lib/pdf-export";
+import { exportTextAsPdf, exportAuditReportPdf } from "@/lib/pdf-export";
 import { buildReportEvidenceBundle, stringifyReportEvidenceBundle } from "@/lib/report-evidence-bundle";
 import { summarizeOperationalEvidenceTemporalTwin } from "@/lib/operational-evidence";
 import {
@@ -402,6 +402,18 @@ export function ReportLiteTab() {
     const filenameBase = reportMode === "compare"
       ? `sentineltwin-compare-report-${scene.name.replace(/[^a-zA-Z0-9_-]/g, "_")}`
       : `sentineltwin-report-${scene.name.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+
+    if (reportMode !== "compare" && result) {
+      await exportAuditReportPdf({
+        scene,
+        result,
+        title: scene.name || "Security Audit Report",
+        subtitle: `${scene.cameras.length} cameras · ${scene.criticalZones.length} critical zones · ${scene.dimensions.width}m x ${scene.dimensions.depth}m`,
+        includeTimestamp: true,
+      });
+      return;
+    }
+
     const text = reportMode === "compare" && compareExportReport
       ? exportCompareAsMarkdown(compareExportReport)
       : currentReportMarkdown;

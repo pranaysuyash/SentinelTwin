@@ -7,6 +7,7 @@ import { buildCompareReportData } from "@sentineltwin/report";
 import { simulateStudio } from "@sentineltwin/simulation";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 import { createTestCamera, createTestScene } from "@sentineltwin/simulation/__tests__/helpers";
+import type { SecurityScene } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 
 const testWithTimeout = test as unknown as (
@@ -200,8 +201,8 @@ describe("studio store quality gate", () => {
 
     expect(useStudioStore.getState().compareReportSelection).toBeTruthy();
 
-    const compareSceneA = (snapshots[0]?.scene ?? scene) as any;
-    const compareSceneB = (snapshots[1]?.scene ?? scene) as any;
+    const compareSceneA = snapshots[0]?.scene ?? scene;
+    const compareSceneB = snapshots[1]?.scene ?? scene;
     const compare = buildCompareReportData(
       compareSceneA,
       snapshots[0]?.simulation ?? baselineResult,

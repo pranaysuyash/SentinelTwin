@@ -28,18 +28,78 @@ export type ReportExportPreset = {
 export type ReportData = any;
 export type CompareReportData = any;
 
-const AUDIENCE_META: Record<ReportAudience, { label: string; summary: string }> = {
-  operator: { label: "Operator", summary: "Operational report for daily security teams." },
-  auditor: { label: "Auditor", summary: "Controls, evidence, and standards compliance framing." },
-  insurer: { label: "Insurer", summary: "Risk exposure summary with mitigation priorities." },
-  installer: { label: "Installer", summary: "Implementation-focused install and commissioning handoff." },
-  privacy_reviewer: { label: "Privacy Reviewer", summary: "Privacy-safe summary for governance review." },
+const AUDIENCE_META: Record<ReportAudience, {
+  label: string;
+  summary: string;
+  framing: string;
+  disclosureLevel: "full_internal" | "partner_shared" | "privacy_safe";
+  disclosureSummary: string;
+  visibleSections: string[];
+  withheldSections: string[];
+}> = {
+  operator: {
+    label: "Operator",
+    summary: "Operational report for daily security teams.",
+    framing: "Operational readiness and immediate actions.",
+    disclosureLevel: "full_internal",
+    disclosureSummary: "Complete operational detail retained.",
+    visibleSections: ["coverage", "issues", "counterfactual", "timeline", "provenance"],
+    withheldSections: [],
+  },
+  auditor: {
+    label: "Auditor",
+    summary: "Controls, evidence, and standards compliance framing.",
+    framing: "Evidence-backed compliance posture.",
+    disclosureLevel: "partner_shared",
+    disclosureSummary: "Sensitive implementation details reduced.",
+    visibleSections: ["coverage", "issues", "assumptions", "provenance"],
+    withheldSections: ["credentials", "internal_only_notes"],
+  },
+  insurer: {
+    label: "Insurer",
+    summary: "Risk exposure summary with mitigation priorities.",
+    framing: "Risk and mitigation delta with accountability trail.",
+    disclosureLevel: "partner_shared",
+    disclosureSummary: "Business-sensitive detail condensed.",
+    visibleSections: ["coverage", "issues", "recommendations", "before_after"],
+    withheldSections: ["internal_only_notes"],
+  },
+  installer: {
+    label: "Installer",
+    summary: "Implementation-focused install and commissioning handoff.",
+    framing: "Implementation packet for field execution.",
+    disclosureLevel: "partner_shared",
+    disclosureSummary: "Install-relevant detail prioritized.",
+    visibleSections: ["recommendations", "camera_matrix", "zones", "commissioning"],
+    withheldSections: ["internal_only_notes"],
+  },
+  privacy_reviewer: {
+    label: "Privacy Reviewer",
+    summary: "Privacy-safe summary for governance review.",
+    framing: "Privacy and governance-safe evidence digest.",
+    disclosureLevel: "privacy_safe",
+    disclosureSummary: "Personal/sensitive details redacted.",
+    visibleSections: ["coverage_summary", "privacy_zones", "governance"],
+    withheldSections: ["identifiable_media", "credentials", "internal_only_notes"],
+  },
 };
 
-const VISIBILITY_META: Record<ReportVisibility, { label: string; summary: string }> = {
-  internal: { label: "Internal", summary: "Full internal workspace context and evidence." },
-  shared: { label: "Shared", summary: "Partner-shareable with sensitive internal details reduced." },
-  privacy_safe: { label: "Privacy Safe", summary: "Strict redaction profile for external disclosure." },
+const VISIBILITY_META: Record<ReportVisibility, { label: string; summary: string; framing: string }> = {
+  internal: {
+    label: "Internal",
+    summary: "Full internal workspace context and evidence.",
+    framing: "Unredacted internal operating mode.",
+  },
+  shared: {
+    label: "Shared",
+    summary: "Partner-shareable with sensitive internal details reduced.",
+    framing: "Externally shareable with operational redactions.",
+  },
+  privacy_safe: {
+    label: "Privacy Safe",
+    summary: "Strict redaction profile for external disclosure.",
+    framing: "Maximum privacy preservation and minimal disclosure.",
+  },
 };
 
 const TEMPLATE_META: Record<ReportStandardTemplateId, { title: string; summary: string }> = {

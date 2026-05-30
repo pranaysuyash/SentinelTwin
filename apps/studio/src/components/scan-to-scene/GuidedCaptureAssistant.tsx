@@ -25,12 +25,18 @@ import { ReconstructionPipeline, assessSceneReconstructionReadiness } from "@/li
 import { createCapturePhoto } from "@/schema/reconstruction-pipeline";
 import type { ReconstructionStage, StageResult, ReconstructionSession, CapturePhoto, RoomMeasurement } from "@/schema/reconstruction-pipeline";
 import { RECONSTRUCTION_STAGE_LABELS } from "@/schema/reconstruction-pipeline";
+import { runReconstruction } from "@/lib/scan-reconstruction-runner";
+import { createScanCaptureSession, createPhotoArtifact } from "@/lib/scan-artifacts";
+import type { ScanCaptureSession, ScanCandidate } from "@/lib/scan-artifacts";
+import { ReconstructionCandidatePanel } from "@/components/reconstruction/ReconstructionCandidatePanel";
+import type { SiteTwinDraft } from "@/lib/site-compiler";
+import { compileReconstructionToSiteTwinDraft } from "@/lib/scan-reconstruction";
 
 interface GuidedCaptureAssistantProps {
   onClose?: () => void;
 }
 
-type CaptureStep = "prep" | "capture" | "review" | "process" | "result" | "compile";
+type CaptureStep = "prep" | "capture" | "review" | "process" | "review_candidates" | "result" | "compile";
 
 const CAPTURE_COACHING_TIPS = [
   {
@@ -70,6 +76,8 @@ export function GuidedCaptureAssistant({ onClose }: GuidedCaptureAssistantProps)
   const [stageProgress, setStageProgress] = useState<Record<ReconstructionStage, StageResult["status"]>>({} as Record<ReconstructionStage, StageResult["status"]>);
   const [coachingOpen, setCoachingOpen] = useState(true);
   const [readiness, setReadiness] = useState<{ ready: boolean; confidence: number; gaps: string[]; recommendations: string[] } | null>(null);
+  const [scanSession, setScanSession] = useState<ScanCaptureSession | null>(null);
+  const [reviewLoading, setReviewLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const recordEvent = useStudioStore((s) => s.recordOperationalEvidenceEvent);
@@ -111,6 +119,55 @@ export function GuidedCaptureAssistant({ onClose }: GuidedCaptureAssistantProps)
       knownReferenceLabel: knownRefInput.trim() || undefined,
     });
   }, [widthInput, depthInput, heightInput, knownRefInput]);
+
+  const runNewPipeline = useCallback(async (
+    currentPhotos: CapturePhoto[],
+    widthVal: string,
+    depthVal: string,
+    heightVal: string,
+    refVal: string,
+  ) => {
+    setReviewLoading(true);
+    try {
+      const newSession = createScanCaptureSession("Guided Capture", "ai_assisted");
+      newSession.roomDimensions = {
+        widthM: parseFloat(widthVal) || undefined,
+        depthM: parseFloat(depthVal) || undefined,
+        heightM: parseFloat(heightVal) || 3,
+      };
+      if (refVal.trim()) {
+        newSession.knownMeasurements.push({
+          label: refVal.trim(),
+          valueM: 0.9,
+          source: "user",
+        });
+      }
+      for (const photo of currentPhotos) {
+        const artifact = createPhotoArtifact(
+          photo.dataUrl ?? "",
+          photo.fileName,
+          photo.widthPx ?? 640,
+          photo.heightPx ?? 480,
+        );
+        newSession.photos.push(artifact);
+        newSession.artifacts.push(artifact);
+      }
+      const result = await runReconstruction(newSession);
+      if (result.ok) {
+        setScanSession(result.data.session);
+        setStep("review_candidates");
+      } else {
+        setStep("result");
+      }
+    } finally {
+      setReviewLoading(false);
+    }
+  }, []);
+
+  const handleCandidateCompile = useCallback((draft: SiteTwinDraft) => {
+    setScene(draft.scene);
+    setStep("result");
+  }, [setScene]);
 
   const runPipeline = useCallback(async () => {
     if (photos.length === 0) return;
@@ -167,7 +224,7 @@ export function GuidedCaptureAssistant({ onClose }: GuidedCaptureAssistantProps)
       setScene(result.compiledScene as Parameters<typeof setScene>[0]);
     }
 
-    setStep("result");
+    runNewPipeline(photos, widthInput, depthInput, heightInput, knownRefInput);
   }, [photos, widthInput, depthInput, heightInput, knownRefInput, recordEvent, setScene, updateMeasurements]);
 
   const acceptScene = useCallback(() => {
@@ -504,6 +561,32 @@ export function GuidedCaptureAssistant({ onClose }: GuidedCaptureAssistantProps)
                 );
               })}
             </div>
+          </div>
+        ) : null}
+
+        {/* Step: Review Candidates */}
+        {step === "review_candidates" && scanSession ? (
+          <div className="mt-4 -mx-2" style={{ height: "calc(100vh - 280px)" }}>
+            {reviewLoading ? (
+              <div className="flex items-center gap-3 rounded-2xl border border-sky-400/15 bg-sky-500/8 px-4 py-3">
+                <Loader2 className="h-5 w-5 animate-spin text-sky-300" />
+                <div>
+                  <div className="text-sm font-semibold text-white">Generating candidates...</div>
+                  <div className="text-xs text-[color:var(--text-muted)]">Running object detection and depth estimation on {photos.length} photos.</div>
+                </div>
+              </div>
+            ) : (
+              <ReconstructionCandidatePanel
+                session={scanSession}
+                onSessionUpdate={setScanSession}
+                onCompileToDraft={(draft) => {
+                  handleCandidateCompile(draft);
+                  setStep("result");
+                }}
+                onClose={() => setStep("result")}
+                runLabel={`${photos.length} photos captured`}
+              />
+            )}
           </div>
         ) : null}
 

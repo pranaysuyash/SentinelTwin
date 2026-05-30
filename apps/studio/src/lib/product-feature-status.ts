@@ -60,14 +60,14 @@ export const PRODUCT_FEATURE_STATUS: ProductFeatureEntry[] = [
     detail: "ScanArtifact, ScanCaptureSession, and ScanCandidate types with photo roles, capture steps, scale anchors, candidate warnings, and evidence linkage. The session object supports guided capture sequence, per-candidate bounding boxes/masks/estimated positions, and confidence tracking.",
   },
   {
-    status: "Scaffolded",
+    status: "Preview",
     feature: "AI/CV adapter interfaces",
-    detail: "Adapter interfaces for object detection, segmentation, depth estimation, scale anchoring, multi-photo correspondence, and structural extraction. All adapters are stubbed; no model integrations are wired. The architecture forces AI candidates through user review before compile.",
+    detail: "Adapter interfaces for object detection, segmentation, depth estimation, scale anchoring, multi-photo correspondence, and structural extraction. 3 of 6 adapters have working stubs (detection, depth, scale anchoring). All force AI candidates through user review before compile.",
   },
   {
     status: "Preview",
-    feature: "Reconstruction compilation pipeline",
-    detail: "compileReconstructionToScene() converts accepted candidates into valid SecurityScene through SiteTwinDraft. compileReconstructionToSiteTwinDraft() wraps the result with source artifacts, capture mode, scale anchors, confidence, and warnings. Quality gates evaluate completeness before compile. All AI/CV output passes through review-required pattern.",
+    feature: "Reconstruction compilation pipeline + review UI",
+    detail: "compileReconstructionToScene() converts accepted candidates into valid SecurityScene through SiteTwinDraft. ReconstructionCandidatePanel provides accept/reject/compile UI for candidates. runReconstruction() orchestrates full detection+depth+quality+compile flow. 112 tests covering data model, adapters, pipeline, and UI.",
   },
   {
     status: "Preview",

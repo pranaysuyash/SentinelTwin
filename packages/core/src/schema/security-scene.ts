@@ -263,6 +263,22 @@ export const privacyZoneNodeSchema = z.object({
   geometryValidity: geometryValiditySchema.default("valid"),
 });
 
+export const commentNodeSchema = z.object({
+  id: z.string().startsWith("comment_"),
+  nodeType: z.literal("comment"),
+  label: z.string(),
+  position: point3Schema,
+  text: z.string(),
+  author: z.string().default("Operator"),
+  createdAt: z.number().int().nonnegative(),
+  resolved: z.boolean().default(false),
+  attachedToNodeId: z.string().nullable().default(null),
+  source: sceneSourceSchema.default("manual"),
+  reviewStatus: reviewStatusSchema.default("unreviewed"),
+  sourceTrace: z.string().default(""),
+  geometryValidity: geometryValiditySchema.default("valid"),
+});
+
 export const sensorNodeSchema = z.object({
   id: z.string().startsWith("sensor_"),
   nodeType: z.literal("sensor"),
@@ -766,6 +782,7 @@ const securitySceneBaseSchema = z.object({
   criticalZones: z.array(criticalZoneNodeSchema).default([]),
   privacyZones: z.array(privacyZoneNodeSchema).default([]),
   sensors: z.array(sensorNodeSchema).default([]),
+  comments: z.array(commentNodeSchema).default([]),
   entryPoints: z.array(entryPointNodeSchema).default([]),
   paths: z.array(scenarioPathSchema).default([]),
   assumptions: simulationAssumptionsSchema,

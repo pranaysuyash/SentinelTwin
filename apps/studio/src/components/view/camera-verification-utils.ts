@@ -12,6 +12,7 @@ export type CameraVerificationSnapshot = {
   videoDurationS?: number | null;
   candidateCount?: number;
   bestCandidateId?: string | null;
+  bestCandidateScore?: number | null;
   selectedCandidateId?: string | null;
   alignmentMethod?: VerificationAlignmentMethod | null;
   autoAlignDelta?: number | null;
@@ -73,6 +74,9 @@ export function formatSnapshotEvidenceSummary(snapshot: CameraVerificationSnapsh
       ? "best frame selected"
       : "manual frame selected"
     : "no frame selected";
+  const bestScore = typeof snapshot.bestCandidateScore === "number"
+    ? `best score ${snapshot.bestCandidateScore.toFixed(1)}`
+    : null;
 
-  return `Video ${sampled}/${duration} · ${frames} · ${picked}${alignTag ? ` · ${alignTag}` : ""}${scaleTag ? ` · ${scaleTag}` : ""}`;
+  return `Video ${sampled}/${duration} · ${frames}${bestScore ? ` · ${bestScore}` : ""} · ${picked}${alignTag ? ` · ${alignTag}` : ""}${scaleTag ? ` · ${scaleTag}` : ""}`;
 }

@@ -21,6 +21,9 @@ export function OutcomeSummaryCard({ summary }: { summary: SecurityOutcomeSummar
         <div className="text-[10px] text-[#8ea5cc]">{summary.coveragePct != null ? `${Math.round(summary.coveragePct)}% coverage` : "No coverage data"}</div>
       </div>
       <div className="mt-2 text-[11px] font-medium text-[#d7deed]">{summary.headline}</div>
+      {summary.summary !== summary.headline && (
+        <div className="mt-1 text-[10px] text-[#9fb1cf]">{summary.summary}</div>
+      )}
       <div className="mt-3 grid grid-cols-2 gap-2 text-[10px]">
         <div className="rounded-lg border border-[#24283a] bg-[#111521] px-2 py-1">
           <div className="text-[#6a748b]">Critical Zones</div>
@@ -38,8 +41,19 @@ export function OutcomeSummaryCard({ summary }: { summary: SecurityOutcomeSummar
           <div className="text-[#6a748b]">Redundancy</div>
           <div className="text-[#c7d0e4] capitalize">{summary.redundancyStatus.replace(/_/g, " ")}</div>
         </div>
+        {summary.recognitionAreaPct != null ? (
+          <div className="rounded-lg border border-[#24283a] bg-[#111521] px-2 py-1">
+            <div className="text-[#6a748b]">Recognition Area</div>
+            <div className="text-[#c7d0e4]">{Math.round(summary.recognitionAreaPct)}%</div>
+          </div>
+        ) : null}
+        {summary.identificationAreaPct != null ? (
+          <div className="rounded-lg border border-[#24283a] bg-[#111521] px-2 py-1">
+            <div className="text-[#6a748b]">Identification Area</div>
+            <div className="text-[#c7d0e4]">{Math.round(summary.identificationAreaPct)}%</div>
+          </div>
+        ) : null}
       </div>
     </div>
   );
 }
-

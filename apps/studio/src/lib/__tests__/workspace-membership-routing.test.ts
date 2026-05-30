@@ -4,6 +4,7 @@ import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 import {
   summarizeWorkspaceApprovalRouting,
   summarizeWorkspaceMembershipDrift,
+  safeParseWorkspaceApprovalRouteSummary,
 } from "@/lib/workspace-membership-routing";
 import type { WorkspaceAccessState } from "@/lib/workspace-access";
 import type { WorkspaceGovernanceState } from "@/lib/workspace-governance";
@@ -149,5 +150,33 @@ describe("workspace membership routing helpers", () => {
     expect(route.archivedPolicyLabel).toBe("No archived snapshot");
     expect(route.activeMemberEligible).toBe(true);
     expect(route.activeMemberReason).toContain("publish directly");
+  });
+
+  test("rejects malformed approval route summaries and normalizes valid ones", () => {
+    expect(safeParseWorkspaceApprovalRouteSummary({
+      routeStatus: "review_required",
+      routeLabel: "Route approval",
+      routeReason: "Approval should route through reviewer before publish.",
+      targetReviewerLabel: "Reviewer",
+      activeMemberLabel: "Operator · operator",
+      archivedMemberLabel: "Archived Operator · operator",
+      currentPolicyLabel: "Shared workspace",
+      archivedPolicyLabel: "Single-user workspace",
+      drift: null,
+      hasPrivacyExposure: true,
+    })).not.toBeNull();
+
+    expect(safeParseWorkspaceApprovalRouteSummary({
+      routeStatus: "review_required",
+      routeLabel: "",
+      routeReason: "Approval should route through reviewer before publish.",
+      targetReviewerLabel: "Reviewer",
+      activeMemberLabel: "Operator · operator",
+      archivedMemberLabel: "Archived Operator · operator",
+      currentPolicyLabel: "Shared workspace",
+      archivedPolicyLabel: "Single-user workspace",
+      drift: null,
+      hasPrivacyExposure: true,
+    })).toBeNull();
   });
 });

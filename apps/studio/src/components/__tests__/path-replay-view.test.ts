@@ -22,6 +22,14 @@ describe("PathReplayView", () => {
     expect(source).toContain("Collision guard");
     expect(source).toContain("Collision corrected");
     expect(source).toContain("Current state");
+    expect(source).toContain("Current Visibility");
+    expect(source).toContain("Visible now");
+    expect(source).toContain("Lost now");
+    expect(source).toContain("const replayCameraStateSummary = useMemo(() =>");
+    expect(source).toContain("event.event === \"visible\"");
+    expect(source).toContain("event.event === \"lost\"");
+    expect(source).toContain("event.event === \"quality_change\"");
+    expect(source).toContain("Visible Now");
     expect(source).toContain("Path Replay - Route Analysis");
   });
 });

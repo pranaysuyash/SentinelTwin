@@ -1,19 +1,20 @@
 # SentinelTwin
 
-AI-native physical security digital twin for reviewing coverage in a live scene.
+AI-native physical security digital twin for authorized incident replay, coverage failure analysis, hardening recommendations, and evidence-backed reporting.
 
-SentinelTwin is being built as a studio-first experience for understanding what a camera setup actually achieves in context, not just where cameras point.
+SentinelTwin is the full product, not a camera studio. The studio/editor is one major subsystem inside a broader security intelligence platform that includes intake, audit, replay, compare, governance, sensor evidence, reporting, deployment, and extensibility.
 
-## Hackathon Update
+## Current Product Frame
 
-The current submission shows an in-progress but coherent studio workflow:
+The current repository already includes a coherent security platform spine:
 
-- map-first scene editing
-- camera, replay, and comparison review modes
-- coverage and blind-spot feedback
-- visual exploration of security risk in the scene
+- intake flows for scan, floor plan, JSON import, and AI draft
+- map, camera, wall, replay, compare, report, and governance surfaces
+- deterministic coverage and evidence computation
+- sensor and live metadata ingest seams
+- local-first workspace persistence and archive/recovery flows
 
-This is a progress update, not a full product reveal. The repo is already moving in the right direction, and the visuals below show the current shape of the experience.
+The visuals below show the current shape of the experience. The product should be read as an evolving full app, not as a versioned MVP series.
 
 ## Selected Screens
 
@@ -45,7 +46,7 @@ This is a progress update, not a full product reveal. The repo is already moving
 
 ## What is next
 
-The next phase is about tightening the studio experience, finishing the remaining review flows, and making the security feedback easier to read at a glance.
+The next work should continue the full-app buildout: complete missing surfaces, remove stub/placeholder claims, harden deployment and governance, and keep the UI honest about what is implemented versus preview or planned.
 
 ## Repo structure
 
@@ -54,4 +55,4 @@ The next phase is about tightening the studio experience, finishing the remainin
 
 ## Notes
 
-This README is intentionally high-level for the hackathon submission update. The detailed architecture and working notes live in `Docs/`.
+This README is intentionally high-level for the repo entry point. The detailed architecture and working notes live in `Docs/`.

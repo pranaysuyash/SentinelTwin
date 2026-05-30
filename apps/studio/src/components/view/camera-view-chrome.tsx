@@ -216,6 +216,7 @@ export function DoriInsightCard({
   angleDeg,
   lightingLabel,
   reasonLine,
+  replayTimeS,
 }: {
   camera: CameraNode;
   zoneLabel: string;
@@ -228,6 +229,7 @@ export function DoriInsightCard({
   angleDeg: number;
   lightingLabel: string;
   reasonLine: string;
+  replayTimeS?: number;
 }) {
   const statusLabel =
     zoneStatus === "pass" ? "PASSES"
@@ -274,6 +276,12 @@ export function DoriInsightCard({
           <span className="text-[#6a748b]">Lighting</span>
           <span className="text-[#c7d0e4]">{lightingLabel}</span>
         </div>
+        {replayTimeS != null ? (
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[#6a748b]">Replay Time</span>
+            <span className="font-mono text-[#c7d0e4]">{replayTimeS.toFixed(1)}s</span>
+          </div>
+        ) : null}
       </div>
       <div className="mt-2 rounded-lg border border-[#1f2b42] bg-[#111521] px-2 py-1.5 text-[9px] text-[#8b96ab]">
         Why this quality: {reasonLine}

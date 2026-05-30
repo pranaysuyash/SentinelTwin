@@ -476,12 +476,35 @@ function buildPathFromCandidates(session: ScanSession) {
   return path;
 }
 
+function entryPointDistance(a: EntryPointNode, b: EntryPointNode): number {
+  return Math.hypot(a.position[0] - b.position[0], a.position[1] - b.position[1]);
+}
+
+function mergeEntryPoints(
+  explicitEntries: EntryPointNode[],
+  doorDerivedEntries: EntryPointNode[],
+): EntryPointNode[] {
+  const duplicateThresholdM = 0.5;
+  const retainedDoorEntries = explicitEntries.length > 0
+    ? doorDerivedEntries.filter((doorEntry) => !explicitEntries.some((explicitEntry) => entryPointDistance(explicitEntry, doorEntry) <= duplicateThresholdM))
+    : doorDerivedEntries;
+
+  const merged: EntryPointNode[] = [];
+  for (const entry of [...explicitEntries, ...retainedDoorEntries]) {
+    if (merged.some((existing) => entryPointDistance(existing, entry) <= 0.05)) continue;
+    merged.push(entry);
+  }
+  return merged;
+}
+
 export function compileScanSessionToScene(
   session: ScanSession,
   options: ScanCompileOptions = {},
 ): { scene: SecurityScene; provenance: ScanCompilationProvenance; warnings: ScanCompilationWarning[] } {
   const provenance = summarizeScanProvenance(session);
   const scene = createBlankSecurityScene();
+  const explicitEntryPoints: EntryPointNode[] = [];
+  const doorEntryPoints: EntryPointNode[] = [];
   scene.name = session.roomName;
   scene.dimensions = {
     width: session.widthM,
@@ -512,7 +535,7 @@ export function compileScanSessionToScene(
     switch (node.nodeType) {
       case "door":
         scene.doors.push(node);
-        scene.entryPoints.push(createEntryPointNode([node.position[0], node.position[2]]));
+        doorEntryPoints.push(createEntryPointNode([node.position[0], node.position[2]]));
         break;
       case "window":
         scene.windows.push(node);
@@ -530,13 +553,15 @@ export function compileScanSessionToScene(
         scene.criticalZones.push(node);
         break;
       case "entry_point":
-        scene.entryPoints.push(node);
+        explicitEntryPoints.push(node);
         break;
       case "wall":
         scene.walls.push(node);
         break;
     }
   }
+
+  scene.entryPoints = mergeEntryPoints(explicitEntryPoints, doorEntryPoints);
 
   const pathFromCandidates = buildPathFromCandidates(session);
   if (pathFromCandidates) {

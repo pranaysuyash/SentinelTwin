@@ -1,10 +1,12 @@
 #!/usr/bin/env node
-import { readFileSync, existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { readDeployProfile, resolveStudioRoot, validateDeployProfileShape } from './deploy-profile-utils.mjs';
 
 const profileId = process.argv[2] ?? 'local-only';
-const studioRoot = resolve(process.cwd(), 'apps/studio');
+const studioRoot = resolveStudioRoot(fileURLToPath(import.meta.url));
 const profilePath = resolve(studioRoot, 'deploy/profiles', `${profileId}.json`);
 
 if (!existsSync(profilePath)) {
@@ -12,7 +14,15 @@ if (!existsSync(profilePath)) {
   process.exit(2);
 }
 
-const profile = JSON.parse(readFileSync(profilePath, 'utf8'));
+const profile = readDeployProfile(profilePath);
+const profileErrors = validateDeployProfileShape(profile, profilePath, profileId);
+if (profileErrors.length > 0) {
+  for (const error of profileErrors) {
+    console.error(`[deploy] ${error}`);
+  }
+  process.exit(1);
+}
+
 const missing = (profile.requiredEnv ?? []).filter((name) => !process.env[name]);
 if (missing.length > 0) {
   console.error(`[deploy] missing required env for ${profileId}: ${missing.join(', ')}`);
@@ -22,6 +32,11 @@ if (missing.length > 0) {
 console.log(`[deploy] profile: ${profile.name}`);
 console.log(`[deploy] description: ${profile.description}`);
 console.log(`[deploy] localOnlyMode: ${profile.localOnlyMode ? 'true' : 'false'}`);
+
+const missingRecommended = (profile.recommendedEnv ?? []).filter((name) => !process.env[name]);
+if (missingRecommended.length > 0) {
+  console.log(`[deploy] recommended env not set: ${missingRecommended.join(', ')}`);
+}
 
 function run(label, cmd, args) {
   console.log(`[deploy] check: ${label}`);

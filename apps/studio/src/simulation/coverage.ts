@@ -1,49 +1,21 @@
 import * as THREE from "three";
-import {
-  acceleratedRaycast,
-  computeBoundsTree,
-  disposeBoundsTree,
-} from "three-mesh-bvh";
-import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 import type {
   CameraNode,
   CoverageCellResult,
   DoriQuality,
-  ObstructionNode,
   SecurityLightNode,
   SecurityScene,
-  WallNode,
 } from "@/schema/security-scene";
 import { DORI_THRESHOLDS, maxQuality, ppmToOodpcvsQuality, ppmToQuality, qualityToScore } from "@/simulation/dori";
 import { getYawPitchDirection, normalizeAngle } from "@/simulation/geometry";
 import { buildCoverageGrid, type GridCell } from "@/simulation/grid";
 import { computeBlindSpotPenalty, computeMountTiltPenalty } from "@/simulation/mount-model";
-
-// three-mesh-bvh provides its own type augmentations for BufferGeometry and Mesh.
-// The declarations below only add what the package doesn't declare itself.
-declare module "three" {
-  interface Raycaster {
-    firstHitOnly?: boolean;
-  }
-}
-
-THREE.Mesh.prototype.raycast = acceleratedRaycast;
-THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
-THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
-
-type VisionSource = {
-  id: string;
-  material: string;
-  visionTransmission: number;
-  label: string;
-  glarePenalty: boolean;
-};
-
-type VisionMesh = {
-  mesh: THREE.Mesh;
-  sources: VisionSource[];
-};
+import {
+  buildVisionColliderMesh,
+  getVisionColliderSource,
+  type VisionColliderMesh,
+} from "@/simulation/vision-collider-mesh";
 
 export type CellComputation = CoverageCellResult & {
   probabilities: number[];
@@ -118,7 +90,7 @@ function getLightOcclusion(
   cell: GridCell,
   targetHeightM: number,
   raycaster: THREE.Raycaster,
-  visionMesh: VisionMesh,
+  visionMesh: VisionColliderMesh,
 ) {
   const pseudoLightCamera: CameraNode = {
     id: light.id,
@@ -178,7 +150,7 @@ function getLightingContext(
   scene: SecurityScene,
   targetHeightM: number,
   raycaster: THREE.Raycaster,
-  visionMesh: VisionMesh,
+  visionMesh: VisionColliderMesh,
 ) {
   const illuminatedBy: string[] = [];
   const shadowedBy = new Set<string>();
@@ -306,129 +278,11 @@ export function getQualityThresholds(scene: SecurityScene) {
   return scene.assumptions.pixelsPerMeter;
 }
 
-function buildWallGeometry(wall: WallNode) {
-  const [sx, sz] = wall.start;
-  const [ex, ez] = wall.end;
-  const length = Math.hypot(ex - sx, ez - sz);
-  const geometry = new THREE.BoxGeometry(length, wall.heightM, wall.thicknessM);
-  const midpointX = (sx + ex) / 2;
-  const midpointZ = (sz + ez) / 2;
-  const angle = Math.atan2(ez - sz, ex - sx);
-  geometry.rotateY(angle);
-  geometry.translate(midpointX, wall.heightM / 2, midpointZ);
-  return geometry;
-}
-
-function buildObstructionGeometry(obstruction: ObstructionNode) {
-  const [width, depth, height] = obstruction.dimensions;
-  const geometry = new THREE.BoxGeometry(width, height, depth);
-  geometry.rotateY((obstruction.rotationYDeg * Math.PI) / 180);
-  geometry.translate(...obstruction.position);
-  return geometry;
-}
-
-function buildVisionMesh(scene: SecurityScene): VisionMesh {
-  const geometries: THREE.BufferGeometry[] = [];
-  const sources: VisionSource[] = [];
-
-  for (const wall of scene.walls) {
-    geometries.push(buildWallGeometry(wall));
-    sources.push({
-      id: wall.id,
-      material: wall.material,
-      visionTransmission: wall.visionTransmission,
-      label: wall.label,
-      glarePenalty: false,
-    });
-  }
-
-  for (const obstruction of scene.obstructions) {
-    geometries.push(buildObstructionGeometry(obstruction));
-    sources.push({
-      id: obstruction.id,
-      material: obstruction.material,
-      visionTransmission: obstruction.visionTransmission,
-      label: obstruction.label,
-      glarePenalty: false,
-    });
-  }
-
-  for (const door of scene.doors) {
-    const doorState = String(door.state);
-    if (doorState === "open") continue;
-    const [width, height, thickness] = door.dimensions;
-    const geometry = new THREE.BoxGeometry(width, height, thickness);
-    geometry.translate(door.position[0], door.position[1], door.position[2]);
-    geometries.push(geometry);
-    sources.push({
-      id: door.id,
-      material: "solid",
-      visionTransmission: 0,
-      label: door.label,
-      glarePenalty: false,
-    });
-  }
-
-  for (const window of scene.windows) {
-    if (window.state === "open") continue;
-    const [width, height, thickness] = window.dimensions;
-    const geometry = new THREE.BoxGeometry(width, height, thickness);
-    geometry.translate(window.position[0], window.position[1], window.position[2]);
-    geometries.push(geometry);
-    const isCurved = window.state === "reflective";
-    const transmission =
-      window.state === "closed_glass"
-        ? window.visionTransmission
-        : window.state === "grill"
-          ? 0.5
-          : window.state === "curtain"
-            ? 0.15
-            : window.state === "reflective"
-              ? Math.min(0.4, Math.max(0.12, window.visionTransmission))
-              : 0;
-    sources.push({
-      id: window.id,
-      material: window.state,
-      visionTransmission: transmission,
-      label: window.label,
-      glarePenalty: isCurved,
-    });
-  }
-
-  const merged = mergeGeometries(geometries, true);
-  merged.computeBoundsTree?.();
-
-  const materials = sources.map(() => new THREE.MeshBasicMaterial());
-  const mesh = new THREE.Mesh(merged, materials);
-  mesh.userData.sources = sources;
-
-  return {
-    mesh,
-    sources,
-  };
-}
-
-function getSourceForIntersection(mesh: THREE.Mesh, faceIndex?: number): VisionSource | undefined {
-  if (faceIndex === undefined) return undefined;
-
-  const geometry = mesh.geometry;
-  const groups = geometry.groups;
-  const indexStart = faceIndex * 3;
-  const group = groups.find(
-    (candidate) =>
-      indexStart >= candidate.start && indexStart < candidate.start + candidate.count,
-  );
-
-  return group
-    ? (mesh.userData.sources as VisionSource[])[group.materialIndex ?? 0]
-    : undefined;
-}
-
 function assessOcclusion(
   camera: CameraNode,
   target: THREE.Vector3,
   raycaster: THREE.Raycaster,
-  visionMesh: VisionMesh,
+  visionMesh: VisionColliderMesh,
   ignoredSourceIds: Set<string> = new Set<string>(),
 ) {
   const origin = new THREE.Vector3(...camera.position);
@@ -445,7 +299,7 @@ function assessOcclusion(
       break;
     }
 
-    const source = getSourceForIntersection(visionMesh.mesh, hit.faceIndex ?? undefined);
+    const source = getVisionColliderSource(visionMesh.mesh, hit.faceIndex ?? undefined);
 
     if (!source || ignoredSourceIds.has(source.id)) {
       continue;
@@ -482,7 +336,7 @@ function evaluateCameraAgainstCell(
   cell: GridCell,
   targetHeightM: number,
   raycaster: THREE.Raycaster,
-  visionMesh: VisionMesh,
+  visionMesh: VisionColliderMesh,
   ignoredSourceIds: Set<string> = new Set<string>(),
 ): CameraEvaluation {
   if (camera.status !== "on") {
@@ -713,7 +567,7 @@ function evaluateCameraAgainstCell(
 }
 
 export function createCoverageEvaluator(scene: SecurityScene): CoverageEvaluator {
-  const visionMesh = buildVisionMesh(scene);
+  const visionMesh = buildVisionColliderMesh(scene);
   const raycaster = new THREE.Raycaster();
 
   const evaluatePoint = (

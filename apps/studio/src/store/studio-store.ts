@@ -34,6 +34,7 @@ import {
   normalizeOperationalEvidenceEvents,
   mergeOperationalEvidenceBranchScenes,
   reconstructSceneFromEvidence,
+  resolveOperationalEvidenceRestoreScene,
   findLatestOperationalEvidenceEventForScene,
   summarizeSceneEvidence,
   summarizeSimulationEvidence,
@@ -3810,9 +3811,8 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   restoreSceneFromEvidence: (eventId, targetBranch = "recovered") => {
     const { operationalEvidenceEvents, scene, historyPast } = get();
     const sourceEvent = operationalEvidenceEvents.find((event) => event.id === eventId) ?? null;
-    const restoredScene = sourceEvent?.sceneSnapshot
-      ? cloneSecurityScene(sourceEvent.previousSceneSnapshot ?? sourceEvent.sceneSnapshot)
-      : reconstructSceneFromEvidence(operationalEvidenceEvents, eventId);
+    const restoredScene = resolveOperationalEvidenceRestoreScene(sourceEvent)
+      ?? reconstructSceneFromEvidence(operationalEvidenceEvents, eventId);
     if (!restoredScene) return false;
 
     const evidenceEvent = buildOperationalEvidenceEvent({
@@ -4398,6 +4398,9 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       id && state.scene.cameras.some((camera) => camera.id === id)
         ? id
         : state.selectedCameraId,
+    dockAttention: id && state.rightDockCollapsed
+      ? { ...state.dockAttention, right: true }
+      : state.dockAttention,
   })),
   setSelectedNodes: (ids) => set((state) => {
     const next = purgeInvalidSelection(state.scene, ids);
@@ -4409,6 +4412,9 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         nextPrimary && state.scene.cameras.some((camera) => camera.id === nextPrimary)
           ? nextPrimary
           : state.selectedCameraId,
+      dockAttention: nextPrimary && state.rightDockCollapsed
+        ? { ...state.dockAttention, right: true }
+        : state.dockAttention,
     };
   }),
   addSelectedNode: (id) => set((state) => {
@@ -4422,6 +4428,9 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         nextPrimary && state.scene.cameras.some((camera) => camera.id === nextPrimary)
           ? nextPrimary
           : state.selectedCameraId,
+      dockAttention: nextPrimary && state.rightDockCollapsed
+        ? { ...state.dockAttention, right: true }
+        : state.dockAttention,
     };
   }),
   toggleSelectedNode: (id) => set((state) => {
@@ -4437,6 +4446,9 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         nextPrimary && state.scene.cameras.some((camera) => camera.id === nextPrimary)
           ? nextPrimary
           : state.selectedCameraId,
+      dockAttention: nextPrimary && state.rightDockCollapsed
+        ? { ...state.dockAttention, right: true }
+        : state.dockAttention,
     };
   }),
   setSelectedCameraId: (id) => {
@@ -4450,6 +4462,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   clearSelection: () => set({ selectedNodeId: null, selectedNodeIds: [] }),
   setActiveTool: (tool) => set((s) => ({
     activeTool: tool,
+    dockAttention: s.leftDockCollapsed ? { ...s.dockAttention, left: true } : s.dockAttention,
     editor: {
       ...s.editor,
       editorMode: "idle",

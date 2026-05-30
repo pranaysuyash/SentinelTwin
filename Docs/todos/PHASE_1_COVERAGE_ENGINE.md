@@ -1,6 +1,6 @@
 # Phase 1 — Coverage Engine
 
-**Status:** Not started
+**Status:** Completed — 2026-05-30
 **Blocking:** Phase 0 must be complete
 **Agent:** Claude Code (or any agent)
 **Read first:** Docs/architecture/03_COVERAGE_ENGINE.md
@@ -227,7 +227,7 @@ Document results in `Docs/decisions/OPEN_QUESTIONS.md` (Q-002 update).
 ## Phase 1 Done Criteria
 
 - [x] 1.1: Grid sampler works, tests pass
-- [ ] 1.2: Vision BVH mesh builds correctly
+- [x] 1.2: Vision BVH mesh builds correctly
 - [x] 1.3: FOV test accurate, edge cases handled
 - [x] 1.4: Raycast occlusion correct for solid/glass/grill
 - [x] 1.5: DORI quality scoring matches expected PPM values

@@ -25,6 +25,8 @@ import {
   summarizeOperationalEvidenceTemporalTwin,
   normalizeOperationalEvidenceEvents,
   safeParseOperationalEvidenceEvent,
+  resolveOperationalEvidencePublicationCheckpoint,
+  resolveOperationalEvidenceRestoreScene,
   resolveOperationalEvidenceSceneAtTime,
   resolveOperationalEvidenceSceneAtTimeWithContext,
   traceOperationalEvidenceLineage,
@@ -62,6 +64,26 @@ describe("operational evidence helpers", () => {
     expect(normalized?.previousSceneSnapshot?.id).toBe(scene.id);
     expect(normalized?.simulation?.issueCount).toBe(1);
     expect(normalized?.notes).toContain("Recovered from branch head.");
+  });
+
+  test("buildOperationalEvidenceEvent canonicalizes blank input through the schema", () => {
+    const scene = createBlankSecurityScene();
+    const event = buildOperationalEvidenceEvent({
+      kind: "scene_updated",
+      title: "   ",
+      details: "",
+      actor: "user",
+      source: scene.source,
+      sceneId: scene.id,
+      sceneName: scene.name,
+      revisionDepth: 2,
+      affectedNodeIds: [],
+      confidence: 0.93,
+    });
+
+    expect(event.title).toBe("Scene updated");
+    expect(event.details).toBe("Scene updated");
+    expect(safeParseOperationalEvidenceEvent(event)).not.toBeNull();
   });
 
   test("drops malformed operational evidence records", () => {
@@ -490,6 +512,96 @@ describe("operational evidence helpers", () => {
     expect(resolution.sourceEvent?.id).toBe(snapshotEvent.id);
     expect(resolution.sourceSnapshotDistance).toBe(1);
     expect(resolution.sourceSnapshotAgeMs).toBe(1000);
+  });
+
+  test("resolves the latest published checkpoint with canonical publication provenance", () => {
+    const scene = createBlankSecurityScene();
+    scene.name = "Published Timeline";
+    const camera = createCameraNode([2, 2, 2]);
+    scene.cameras.push(camera);
+
+    const checkpointEvent = buildOperationalEvidenceEvent({
+      kind: "snapshot_saved",
+      title: "Checkpoint saved",
+      details: "Captured a publishable checkpoint.",
+      actor: "system",
+      source: "manual",
+      sceneId: scene.id,
+      sceneName: scene.name,
+      revisionDepth: 1,
+      affectedNodeIds: [],
+      confidence: 1,
+      sceneSnapshot: structuredClone(scene),
+      branchLabel: "draft",
+      lifecycleStage: "draft",
+      timestamp: 1000,
+    });
+    const publishedEvent = buildOperationalEvidenceEvent({
+      kind: "scene_published",
+      title: "Scene published",
+      details: "Promoted the scene to the published branch.",
+      actor: "user",
+      source: "manual",
+      sceneId: scene.id,
+      sceneName: scene.name,
+      revisionDepth: 2,
+      affectedNodeIds: [],
+      confidence: 0.96,
+      published: true,
+      branchLabel: "published",
+      lifecycleStage: "published",
+      timestamp: 2000,
+    });
+
+    const timeline = buildOperationalEvidenceTimeline([checkpointEvent, publishedEvent], scene);
+    const publication = resolveOperationalEvidencePublicationCheckpoint(timeline);
+
+    expect(publication?.entry.event.id).toBe(publishedEvent.id);
+    expect(publication?.provenance?.sourceEventId).toBe(checkpointEvent.id);
+    expect(publication?.provenance?.isExactSnapshot).toBe(false);
+    expect(publication?.provenance?.derivedFromEarlierSnapshot).toBe(true);
+    expect(publication?.provenance?.sourceSnapshotDistance).toBe(1);
+    expect(publication?.provenance?.sourceSnapshotAgeMs).toBe(1000);
+
+    const temporalTwin = summarizeOperationalEvidenceTemporalTwin([checkpointEvent, publishedEvent], scene);
+    expect(temporalTwin.publishedCheckpointCount).toBe(1);
+    expect(temporalTwin.latestPublishedCheckpoint?.eventId).toBe(publishedEvent.id);
+    expect(temporalTwin.latestPublishedCheckpointProvenance?.sourceEventId).toBe(checkpointEvent.id);
+  });
+
+  test("restores the checkpoint snapshot rather than the pre-checkpoint snapshot", () => {
+    const beforeScene = createBlankSecurityScene();
+    beforeScene.name = "Restore Target";
+    beforeScene.cameras.push(createCameraNode([1, 1, 2]));
+
+    const afterScene = createBlankSecurityScene();
+    afterScene.id = beforeScene.id;
+    afterScene.name = beforeScene.name;
+    afterScene.cameras.push(createCameraNode([1, 1, 2]));
+    afterScene.cameras.push(createCameraNode([3, 1, 2]));
+
+    const checkpointEvent = buildOperationalEvidenceEvent({
+      kind: "scene_reverted",
+      title: "Restored checkpoint",
+      details: "Reopened the selected checkpoint.",
+      actor: "user",
+      source: "manual",
+      sceneId: beforeScene.id,
+      sceneName: beforeScene.name,
+      revisionDepth: 2,
+      affectedNodeIds: [],
+      confidence: 0.9,
+      previousSceneSnapshot: structuredClone(beforeScene),
+      sceneSnapshot: structuredClone(afterScene),
+      branchLabel: "recovered",
+      lifecycleStage: "recovered",
+      timestamp: 5000,
+    });
+
+    const restoredScene = resolveOperationalEvidenceRestoreScene(checkpointEvent);
+
+    expect(restoredScene?.cameras).toHaveLength(2);
+    expect(restoredScene?.cameras[1]?.id).toBe(afterScene.cameras[1]?.id);
   });
 
   test("finds node-specific evidence trails for entity and scene nodes", () => {

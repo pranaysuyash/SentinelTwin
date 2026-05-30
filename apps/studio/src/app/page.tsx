@@ -9,7 +9,7 @@ import { ScanSiteWizard } from "@/components/scan-to-scene/ScanSiteWizard";
 import { StudioDashboardHome } from "@/components/launcher/StudioDashboardHome";
 import { SiteIntakeHub } from "@/components/site-intake/SiteIntakeHub";
 import { SiteDraftReview } from "@/components/site-intake/SiteDraftReview";
-import { compileScanToSiteResult, compileAiDraftToSiteResult, compileFloorPlanToSiteResult, makeSiteCompilerWarnings, calculateConfidence } from "@/lib/site-compiler";
+import { compileScanToSiteResult, compileAiDraftToSiteResult, compileFloorPlanToSiteResult, makeSiteCompilerWarnings, calculateConfidence, compileToSiteTwinDraft, compileJsonToSiteResult, canRunBaselineSimulation } from "@/lib/site-compiler";
 import { useStudioStore, type ActiveWorkflowId, type BottomTab, type ViewMode, type WorkspacePreset } from "@/store/studio-store";
 import { draftSceneFromPrompt, draftSceneFromPromptWithModel, summarizeDraftResult } from "@/lib/ai-layout-draft";
 import { summarizeAiActionTelemetry } from "@/lib/ai-action-telemetry";
@@ -211,8 +211,9 @@ function StudioPageContent() {
       afterSummary: "Manual-assisted scan intake opened.",
       notes: ["Launcher-scoped scan intake event recorded in the evidence ledger."],
     });
-    setScanWizardMode("guided");
+    setScanWizardMode("manual");
     setShowScanWizard(true);
+    setLaunchNotice("Manual-assisted scan intake opened. You control candidate marking, review, and compile.");
   };
   const openGuidedScanAssistant = () => {
     setActiveWorkflow("scan");
@@ -519,7 +520,7 @@ function StudioPageContent() {
     fileInputRef.current?.click();
   };
 
-  const compileCurrentScene = (source: import("@/lib/site-compiler").SiteIntakeSource) => {
+  const compileCurrentScene = (source: import("@/lib/site-compiler").SiteIntakeSource, sourceArtifacts: string[] = []) => {
     const { scene } = useStudioStore.getState();
     let result: import("@/lib/site-compiler").SiteCompilerResult;
     switch (source) {
@@ -544,17 +545,21 @@ function StudioPageContent() {
         };
         break;
       case "floor_plan":
-      case "json":
         result = compileFloorPlanToSiteResult(scene);
+        break;
+      case "json":
+        result = compileJsonToSiteResult(scene);
         break;
       default:
         result = compileFloorPlanToSiteResult(scene);
     }
+    const draft = compileToSiteTwinDraft(result, sourceArtifacts);
     setSiteIntakeSession({
       id: `intake_${Date.now()}`,
       source,
       stage: "review",
       result,
+      draft,
       warnings: [],
       provenanceNotes: [],
       createdAt: Date.now(),
@@ -573,7 +578,10 @@ function StudioPageContent() {
   };
 
   const approveAndRunBaseline = () => {
-    runSimulationFromStore();
+    const session = useStudioStore.getState().siteIntakeSession;
+    if (session?.draft && canRunBaselineSimulation(session.draft)) {
+      runSimulationFromStore();
+    }
     approveIntakeSession();
   };
 
@@ -623,7 +631,7 @@ function StudioPageContent() {
               onImportScene={handleImportScene}
               onScanSite={() => {
                 if (!confirmWorkspaceReplacement("start scan intake")) return;
-                openSiteIntakeHub();
+                openScanWizard();
               }}
               onGuidedScanAssistant={() => {
                 if (!confirmWorkspaceReplacement("open the guided scan assistant")) return;
@@ -709,7 +717,7 @@ function StudioPageContent() {
                   return;
                 }
                 setImportError(null);
-                compileCurrentScene("json");
+                compileCurrentScene("json", [file.name]);
                 return;
               }
               const result = importScene(json);
@@ -718,7 +726,7 @@ function StudioPageContent() {
                 return;
               }
               setImportError(null);
-              compileCurrentScene("json");
+              compileCurrentScene("json", [file.name]);
             } catch {
               setImportError("Failed to parse JSON.");
             }
@@ -776,7 +784,7 @@ function StudioPageContent() {
               }}
               onStartScan={() => {
                 setShowSiteIntakeHub(false);
-                openGuidedScanAssistant();
+                openScanWizard();
               }}
               onStartAiDraft={() => {
                 setShowSiteIntakeHub(false);
@@ -1227,15 +1235,9 @@ function StudioPageContent() {
                     return;
                   }
                   if (!confirmWorkspaceReplacement("apply this AI layout draft")) return;
-                  const provenanceNote = `${aiDraftPreview.provenance.summary} (${aiDraftPreview.provenance.confidenceLevel} confidence)`;
                   setScene(aiDraftScene ?? aiDraftPreview.scene);
-                  setLaunchNotice(provenanceNote);
                   resetAiDraftPreview();
                   setShowAiDraft(false);
-                  setTimeout(() => {
-                    const store = useStudioStore.getState();
-                    store.runSimulation();
-                  }, 100);
                   compileCurrentScene("ai_prompt");
                 }}
                 disabled={!aiDraftPreview || aiGenerating || (aiDraftJsonEditable && !aiDraftJsonValidation.valid)}

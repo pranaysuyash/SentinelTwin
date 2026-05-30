@@ -49,8 +49,10 @@ function OfflineFeed({ camera: cam }: { camera: CameraNode }) {
 
 export function CameraViewMode() {
   const scene = useStudioStore((s) => s.scene);
+  const sceneId = useStudioStore((s) => s.scene.id);
   const selectedId = useStudioStore((s) => s.selectedNodeId);
   const selectedCameraId = useStudioStore((s) => s.selectedCameraId);
+  const historyDepth = useStudioStore((s) => s.historyPast.length);
   const setSelectedCameraId = useStudioStore((s) => s.setSelectedCameraId);
   const selectNode = useStudioStore((s) => s.selectNode);
   const result = useStudioStore((s) => s.simulationResult);
@@ -64,6 +66,7 @@ export function CameraViewMode() {
   const cameraVerificationSnapshots = useStudioStore((s) => s.cameraVerificationSnapshots);
   const upsertCameraVerificationSnapshot = useStudioStore((s) => s.upsertCameraVerificationSnapshot);
   const removeCameraVerificationSnapshot = useStudioStore((s) => s.removeCameraVerificationSnapshot);
+  const recordOperationalEvidenceEvent = useStudioStore((s) => s.recordOperationalEvidenceEvent);
 
   const camera = scene.cameras.find((c) => c.id === selectedId)
     ?? scene.cameras.find((c) => c.id === selectedCameraId)
@@ -71,12 +74,17 @@ export function CameraViewMode() {
   const frameRootRef = useRef<HTMLDivElement | null>(null);
   const verification = useCameraVerificationWorkflow({
     camera,
+    sceneId,
+    sceneName: scene.name,
+    sceneSource: scene.source,
+    sceneRevisionDepth: historyDepth,
     frameRootRef,
     cameraVerificationSnapshots,
     cameraViewVerificationIntent,
     setCameraViewVerificationIntent,
     upsertCameraVerificationSnapshot,
     removeCameraVerificationSnapshot,
+    recordOperationalEvidenceEvent,
   });
   const cameraId = camera?.id ?? null;
   const cameraIndex = useMemo(() => scene.cameras.findIndex((c) => c.id === camera?.id), [camera?.id, scene.cameras]);
@@ -161,16 +169,17 @@ export function CameraViewMode() {
     };
   }, [camera, camResult, result, scene.cameras, selectedCriticalZone, zoneResult?.status]);
 
-  const activeTimelineEvent = useMemo(() => {
-    if (!activePathResult?.timeline?.length) return null;
-    const events = activePathResult.timeline.filter((event) => event.timeS <= pathTimeS);
-    return events[events.length - 1] ?? activePathResult.timeline[0] ?? null;
-  }, [activePathResult, pathTimeS]);
+  const activeCameraTimelineEvent = useMemo(() => {
+    if (!activePathResult?.timeline?.length || !camera) return null;
+    const events = activePathResult.timeline.filter(
+      (event) => event.timeS <= pathTimeS && (!event.cameraId || event.cameraId === camera.id),
+    );
+    return events[events.length - 1] ?? null;
+  }, [activePathResult, camera, pathTimeS]);
   const cameraPosition = useMemo<[number, number, number]>(
     () => (camera ? [camera.position[0], camera.position[1], camera.position[2]] : [0, 0, 0]),
     [camera],
   );
-  const sceneId = useStudioStore((s) => s.scene.id);
   const allSensorEvents = useStudioStore((s) => s.sensorEvents);
   const allCameraMetadataEvents = useStudioStore((s) => s.cameraMetadataEvents);
   const allCameraLiveConnectionEvents = useStudioStore((s) => s.cameraLiveConnectionEvents);
@@ -207,13 +216,13 @@ export function CameraViewMode() {
     [camera, cameraLiveConnectionEvents, cameraMetadataEvents, scene.sensors],
   );
 
-  const replayQualityLabel = activeTimelineEvent?.quality
-    ? activeTimelineEvent.quality.toUpperCase()
+  const replayQualityLabel = activeCameraTimelineEvent?.quality
+    ? activeCameraTimelineEvent.quality.toUpperCase()
     : visibilityForCurrentCamera?.maxQuality
       ? visibilityForCurrentCamera.maxQuality.toUpperCase()
       : undefined;
 
-  const replaySegmentLabel = activeTimelineEvent?.reason
+  const replaySegmentLabel = activeCameraTimelineEvent?.reason
     ?? (activePath ? `${activePath.label} active replay` : undefined);
 
   if (!camera) {
@@ -340,7 +349,7 @@ export function CameraViewMode() {
             cameraMetadataEvent={latestCameraMetadataEvent}
             cameraLiveConnectionEvent={latestCameraLiveConnectionEvent}
           />
-          {activePath && activePathResult ? (
+          {flags.overlays && flags.path && activePath && activePathResult ? (
             <ReplayStatusOverlay
               pathLabel={activePath.label}
               timeS={pathTimeS}
@@ -350,7 +359,7 @@ export function CameraViewMode() {
               progressPct={pathReplay.progress}
             />
           ) : null}
-          {activePathResult && visibilityForCurrentCamera ? (
+          {flags.overlays && flags.path && activePathResult && visibilityForCurrentCamera ? (
             <CameraPathVisibilityOverlay
               cameraName={camera.name}
               visibleSeconds={visibilityForCurrentCamera.visibleS}
@@ -358,20 +367,23 @@ export function CameraViewMode() {
               maxQuality={visibilityForCurrentCamera.maxQuality}
             />
           ) : null}
-          {selectedCriticalZone ? (
+          {flags.overlays && flags.dori && selectedCriticalZone ? (
             zoneAnalysis ? (
               <DoriInsightCard
                 camera={camera}
                 zoneLabel={selectedCriticalZone.label}
                 targetType={selectedCriticalZone.targetType}
-                currentQuality={zoneAnalysis.currentQuality}
+                currentQuality={activeCameraTimelineEvent?.quality ?? zoneAnalysis.currentQuality}
                 requiredQuality={zoneResult?.requiredQuality ?? selectedCriticalZone.requiredQuality}
                 zoneStatus={zoneResult?.status ?? "unknown"}
                 bestCameraName={zoneAnalysis.bestCameraName}
                 distanceM={zoneAnalysis.distanceM}
                 angleDeg={zoneAnalysis.angleDeg}
                 lightingLabel={envMode === "night" ? "Night" : envMode === "dusk" ? "Dusk" : "Day"}
-                reasonLine={zoneAnalysis.reasonLine}
+                reasonLine={activeCameraTimelineEvent?.quality
+                  ? `${zoneAnalysis.reasonLine}. Replay @ ${pathTimeS.toFixed(1)}s is ${activeCameraTimelineEvent.quality}${activeCameraTimelineEvent.reason ? ` (${activeCameraTimelineEvent.reason})` : ""}.`
+                  : zoneAnalysis.reasonLine}
+                replayTimeS={activeCameraTimelineEvent ? pathTimeS : undefined}
               />
             ) : null
           ) : (

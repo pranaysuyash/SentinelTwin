@@ -1,0 +1,35 @@
+{
+  "name": "@sentineltwin/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./schema/*": {
+      "types": "./dist/schema/*.d.ts",
+      "import": "./dist/schema/*.js"
+    },
+    "./simulation/*": {
+      "types": "./dist/simulation/*.d.ts",
+      "import": "./dist/simulation/*.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "zod": "^4.4.3",
+    "three": "^0.184.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.184.1",
+    "typescript": "^5"
+  }
+}

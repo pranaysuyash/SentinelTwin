@@ -568,6 +568,7 @@ Every input mode should compile into the same truth model. Every report should r
 - Policy-driven redaction and visibility controls for external sharing.
 - A richer report catalog with standards-specific templates, audience defaults, and share-policy annotations for each export preset.
 - Compliance-specific export templates that are separate from the general-purpose handoff report.
+- The exported report handoff still needs deeper section-to-simulation drill-through beyond the recent evidence anchors now present in the report outputs.
 
 ## 5) What Is Still Demo / Placeholder / Planned
 
@@ -578,6 +579,9 @@ These are the remaining places where the product is honest but not yet fully com
 - Some model-provider paths remain stubs or fallback-only.
 - The AI pipeline still depends on candidate bakeoffs for stage selection.
 - Live camera verification is not yet a true real-feed verification system.
+
+**Addendum**
+- Saved reference-frame snapshots now write into the operational evidence ledger and keep their provenance inside the canonical audit trail, so the current verification workflow is auditable even though the real-feed validation stack is still missing.
 - Multi-sensor editing is not yet a real editor workflow, even though the schema can hold sensors.
 - Multi-user collaboration, approvals, and branch merge semantics are still not platform-grade, but Governance now has a real branch-sync comparison against the latest archived operational evidence branch instead of a mock remote placeholder.
 - Compliance mode policy is not yet fully complete: redaction, visibility, and catalog behavior still need a first-class control layer, even though audience-mode report framing now exists in Report Lite.

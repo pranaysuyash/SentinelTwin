@@ -235,6 +235,9 @@ indoor mesh. Outperforms 2DGS, DA3, FineRecon, MonoSDF, Murre by ~16% on indoor 
 ### Thread 20: Operational Evidence Memory
 **Status:** In progress.
 **Key finding:** Canonical runtime evidence events now normalize through a validated schema, launcher memory search can carry exact checkpoint ids through to Scene Intelligence when a branch-bearing archive hit resolves to a real event, Scene Intelligence can now pivot a checkpoint into seeded Before/After and Report compare selections, and the compare/report share-link contract can round-trip that seeded selection through the studio bootstrap.
+**Schema note:** The operational evidence event contract now lives in a canonical zod schema with a companion input schema, so build-time validation and runtime normalization share one shape instead of relying on hand-maintained object interfaces.
+**Publication note:** Published checkpoints now resolve through a canonical publication helper, so the temporal twin and downstream report surfaces read publication as an explicit branch concept rather than an inline filter.
+**Merge note:** Sync conflict resolution now uses structural equality for merge comparisons instead of `JSON.stringify`, so semantically identical nodes with different property insertion order no longer fabricate false conflicts during branch reconciliation.
 **Open:** Should other archive families gain comparable checkpoint ids, or should they remain timestamp/branch routed only?
 **Next:** Extend exact-checkpoint provenance to any additional launcher memory hit families that can resolve to stable evidence ids, and consider whether the report surface should auto-enter compare mode when seeded from a checkpoint pivot and whether more archive families should get stable event ids.
 Uses Trellis.2 (Microsoft) as the underlying generative 3D prior, lifted to scene scale via chunked

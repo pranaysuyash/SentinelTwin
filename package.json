@@ -1,0 +1,23 @@
+{
+  "name": "sentineltwin",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=24.13.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "cd apps/studio && pnpm dev",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0",
+    "typescript": "^5",
+    "prettier": "^3"
+  },
+  "packageManager": "pnpm@11.4.0+sha512.f0febc7e37552ab485494a914241b338e0b3580b93d54ce31f00933015880863129038a1b4ae4e414a0ee63ac35bf21197e990172c4a68256450b5636310968f"
+}

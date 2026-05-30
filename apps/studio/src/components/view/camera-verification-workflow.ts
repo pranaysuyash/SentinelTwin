@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type RefObject } from "react
 
 import { formatSecondsShort, type CameraVerificationSnapshot, type VerificationAlignmentMethod, type VerificationSourceType, type VerificationViewMode, type VideoFrameCandidate } from "@/components/view/camera-verification-utils";
 import type { CameraNode } from "@/schema/security-scene";
+import type { OperationalEvidenceEventInput } from "@/lib/operational-evidence";
 
 type CameraViewVerificationIntent = {
   source: "launcher_preview" | "other";
@@ -37,12 +38,17 @@ type ExtractVideoCandidatesResult = {
 
 type UseCameraVerificationWorkflowArgs = {
   camera: CameraNode | null;
+  sceneId: string;
+  sceneName: string;
+  sceneSource: CameraNode["source"];
+  sceneRevisionDepth: number;
   frameRootRef: RefObject<HTMLDivElement | null>;
   cameraVerificationSnapshots: CameraVerificationSnapshotMap;
   cameraViewVerificationIntent: CameraViewVerificationIntent;
   setCameraViewVerificationIntent: (value: CameraViewVerificationIntent) => void;
   upsertCameraVerificationSnapshot: (cameraId: string, snapshot: CameraVerificationSnapshot) => void;
   removeCameraVerificationSnapshot: (cameraId: string, snapshotId: string) => void;
+  recordOperationalEvidenceEvent: (event: OperationalEvidenceEventInput) => void;
 };
 
 type UseCameraVerificationWorkflowResult = {
@@ -331,12 +337,17 @@ async function extractVideoFrameCandidates(file: File, candidateCount = 5): Prom
 
 export function useCameraVerificationWorkflow({
   camera,
+  sceneId,
+  sceneName,
+  sceneSource,
+  sceneRevisionDepth,
   frameRootRef,
   cameraVerificationSnapshots,
   cameraViewVerificationIntent,
   setCameraViewVerificationIntent,
   upsertCameraVerificationSnapshot,
   removeCameraVerificationSnapshot,
+  recordOperationalEvidenceEvent,
 }: UseCameraVerificationWorkflowArgs): UseCameraVerificationWorkflowResult {
   const [verificationEnabled, setVerificationEnabled] = useState(false);
   const [verificationImageUrl, setVerificationImageUrl] = useState<string | null>(null);
@@ -565,8 +576,11 @@ export function useCameraVerificationWorkflow({
 
   const handleSaveSnapshot = useCallback(() => {
     if (!camera || !verificationImageUrl || !verificationFileName) return;
+    const bestCandidate = verificationVideoCandidates.find((entry) => entry.id === verificationBestCandidateId) ?? null;
+    const savedAt = Date.now();
+    const savedSnapshotId = `verification_snapshot_${savedAt}`;
     upsertCameraVerificationSnapshot(camera.id, {
-      id: `verification_snapshot_${Date.now()}`,
+      id: savedSnapshotId,
       fileName: verificationFileName,
       imageUrl: verificationImageUrl,
       mode: verificationMode,
@@ -575,6 +589,7 @@ export function useCameraVerificationWorkflow({
       videoDurationS: verificationVideoDurationS,
       candidateCount: verificationVideoCandidates.length,
       bestCandidateId: verificationBestCandidateId,
+      bestCandidateScore: bestCandidate?.qualityScore ?? null,
       selectedCandidateId: verificationSelectedCandidateId,
       alignmentMethod: verificationAlignmentMethod,
       autoAlignDelta: verificationAutoAlignDelta,
@@ -584,15 +599,39 @@ export function useCameraVerificationWorkflow({
       offsetY: verificationOffsetY,
       scale: verificationScale,
       alignmentScore: alignmentQualityScore,
-      createdAt: Date.now(),
+      createdAt: savedAt,
+    });
+    recordOperationalEvidenceEvent({
+      kind: "snapshot_saved",
+      title: "Camera verification snapshot saved",
+      details: `Saved a reference-frame verification snapshot for ${camera.name}.`,
+      actor: "user",
+      source: sceneSource,
+      sceneId,
+      sceneName,
+      revisionDepth: sceneRevisionDepth,
+      affectedNodeIds: [camera.id],
+      confidence: alignmentQualityScore === null ? 0.66 : Math.min(0.97, 0.68 + alignmentQualityScore / 200),
+      lifecycleStage: "manual",
+      branchLabel: "verification",
+      notes: [
+        `Verification snapshot ${savedSnapshotId} captured from ${verificationSourceType === "video" ? "video" : "image"} input.`,
+        verificationAlignmentMethod ? `Alignment method: ${verificationAlignmentMethod}.` : "Alignment method: manual/auto state not captured.",
+      ],
     });
   }, [
     alignmentQualityScore,
     camera,
+    recordOperationalEvidenceEvent,
+    sceneId,
+    sceneName,
+    sceneRevisionDepth,
+    sceneSource,
     upsertCameraVerificationSnapshot,
     verificationAlignmentMethod,
     verificationAutoAlignDelta,
     verificationBestCandidateId,
+    verificationVideoCandidates,
     verificationFileName,
     verificationImageUrl,
     verificationMode,

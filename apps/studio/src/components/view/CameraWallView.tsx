@@ -26,6 +26,11 @@ import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
 
 const CAMERA_WALL_THEME = ENVIRONMENT_THEMES.day;
 type CameraWallLayoutMode = "auto" | "quad" | "overview" | "dense";
+type CameraReplayState = {
+  visible: boolean;
+  quality?: DoriQuality;
+  reason?: string;
+};
 
 /** Short label like "CAM 1" from camera name */
 function shortTag(name: string) {
@@ -80,6 +85,7 @@ function LiveFeedOverlay({
   camera: camData,
   cameraResult,
   pathVisibility,
+  replayState,
   isBestCamera = false,
   timestampLabel,
 }: {
@@ -90,6 +96,7 @@ function LiveFeedOverlay({
     totalDurationS: number;
     maxQuality: string;
   } | null;
+  replayState?: CameraReplayState | null;
   isBestCamera?: boolean;
   timestampLabel: string;
 }) {
@@ -178,6 +185,23 @@ function LiveFeedOverlay({
             </div>
           </div>
         ) : null}
+        {replayState ? (
+          <div className={cn(
+            "rounded-md border px-2 py-1",
+            replayState.visible ? "border-emerald-500/30 bg-emerald-500/10" : "border-rose-500/30 bg-rose-500/10",
+          )}>
+            <div className="text-[9px] uppercase tracking-[0.14em] text-[#e2e8f0]">
+              Current Replay
+            </div>
+            <div className={cn("text-[8px] font-semibold", replayState.visible ? "text-emerald-200" : "text-rose-200")}>
+              {replayState.visible ? "Actor visible now" : "Actor lost now"}
+              {replayState.quality ? ` · ${replayState.quality.toUpperCase()}` : ""}
+            </div>
+            {replayState.reason ? (
+              <div className="text-[8px] text-[#b6c2db]">{replayState.reason}</div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </>
   );
@@ -189,6 +213,7 @@ const CameraFeedPanel = memo(function CameraFeedPanel({
   isBestCamera = false,
   cameraResult,
   pathVisibility,
+  replayState,
   timestampLabel,
 }: {
   camera: CameraNode;
@@ -200,6 +225,7 @@ const CameraFeedPanel = memo(function CameraFeedPanel({
     totalDurationS: number;
     maxQuality: string;
   } | null;
+  replayState?: CameraReplayState | null;
   timestampLabel: string;
 }) {
   const isActive = camData.status === "on";
@@ -243,6 +269,7 @@ const CameraFeedPanel = memo(function CameraFeedPanel({
             camera={camData}
             cameraResult={cameraResult}
             pathVisibility={pathVisibility}
+            replayState={replayState}
             isBestCamera={isBestCamera}
             timestampLabel={timestampLabel}
           />
@@ -448,6 +475,7 @@ export function CameraWallView() {
   const activePathId = useStudioStore((s) => s.activePathId);
   const selectedId = useStudioStore((s) => s.selectedNodeId);
   const selectedCameraId = useStudioStore((s) => s.selectedCameraId);
+  const pathReplay = useStudioStore((s) => s.pathReplay);
   const [layoutMode, setLayoutMode] = useState<CameraWallLayoutMode>("auto");
   const [syncTime, setSyncTime] = useState(true);
   const [freeRunningTimestamp, setFreeRunningTimestamp] = useState(() => Date.now());
@@ -501,12 +529,51 @@ export function CameraWallView() {
     })[0];
     return best?.[0] ?? null;
   }, [activePathResult]);
+  const pathTimeS = activePathResult && activePathResult.totalDurationS > 0
+    ? pathReplay.progress * activePathResult.totalDurationS
+    : 0;
+  const replayStateByCameraId = useMemo<Record<string, CameraReplayState | null>>(() => {
+    if (!activePathResult?.timeline?.length) return {};
+    const states = new Map<string, CameraReplayState>();
+    for (const event of activePathResult.timeline) {
+      if (event.timeS > pathTimeS || !event.cameraId) continue;
+      const prev = states.get(event.cameraId);
+      if (event.event === "visible") {
+        states.set(event.cameraId, {
+          visible: true,
+          quality: event.quality,
+          reason: event.reason,
+        });
+        continue;
+      }
+      if (event.event === "lost") {
+        states.set(event.cameraId, {
+          visible: false,
+          quality: event.quality,
+          reason: event.reason,
+        });
+        continue;
+      }
+      if (event.event === "quality_change") {
+        states.set(event.cameraId, {
+          visible: prev?.visible ?? true,
+          quality: event.quality ?? prev?.quality,
+          reason: event.reason ?? prev?.reason,
+        });
+      }
+    }
+    return Object.fromEntries(Array.from(states.entries()));
+  }, [activePathResult, pathTimeS]);
   const effectiveLayout = getEffectiveCameraWallLayout(layoutMode, cameras.length);
   const visibleCount = effectiveLayout === "quad" ? 4 : effectiveLayout === "overview" ? 5 : 15;
   const visible = cameras.slice(0, visibleCount);
   const hiddenCount = Math.max(0, cameras.length - visible.length);
   const viewCount = effectiveLayout === "quad" ? 4 : effectiveLayout === "overview" ? 6 : 16;
-  const timestampLabel = syncTime ? formatWallTimestamp(simulationResult?.computedAt) : formatWallTimestamp(freeRunningTimestamp);
+  const timestampLabel = syncTime
+    ? activePathResult
+      ? `Replay ${pathTimeS.toFixed(1)}s / ${activePathResult.totalDurationS.toFixed(1)}s`
+      : formatWallTimestamp(simulationResult?.computedAt)
+    : formatWallTimestamp(freeRunningTimestamp);
 
   useEffect(() => {
     if (syncTime) return;
@@ -658,6 +725,7 @@ export function CameraWallView() {
               isBestCamera={cam.id === bestCameraId}
               cameraResult={cameraResultById[cam.id] ?? null}
               pathVisibility={pathVisibilityByCameraId[cam.id] ?? null}
+              replayState={replayStateByCameraId[cam.id] ?? null}
               timestampLabel={timestampLabel}
               className="h-full w-full"
             />
@@ -677,6 +745,7 @@ export function CameraWallView() {
               isBestCamera={cam.id === bestCameraId}
               cameraResult={cameraResultById[cam.id] ?? null}
               pathVisibility={pathVisibilityByCameraId[cam.id] ?? null}
+              replayState={replayStateByCameraId[cam.id] ?? null}
               timestampLabel={timestampLabel}
               className="h-full w-full"
             />
@@ -692,6 +761,7 @@ export function CameraWallView() {
               isBestCamera={visible[0].id === bestCameraId}
               cameraResult={cameraResultById[visible[0].id] ?? null}
               pathVisibility={pathVisibilityByCameraId[visible[0].id] ?? null}
+              replayState={replayStateByCameraId[visible[0].id] ?? null}
               timestampLabel={timestampLabel}
               className="h-full w-full"
             />
@@ -705,6 +775,7 @@ export function CameraWallView() {
               isBestCamera={visible[1].id === bestCameraId}
               cameraResult={cameraResultById[visible[1].id] ?? null}
               pathVisibility={pathVisibilityByCameraId[visible[1].id] ?? null}
+              replayState={replayStateByCameraId[visible[1].id] ?? null}
               timestampLabel={timestampLabel}
               className="h-full w-full"
             />
@@ -718,6 +789,7 @@ export function CameraWallView() {
               isBestCamera={visible[2].id === bestCameraId}
               cameraResult={cameraResultById[visible[2].id] ?? null}
               pathVisibility={pathVisibilityByCameraId[visible[2].id] ?? null}
+              replayState={replayStateByCameraId[visible[2].id] ?? null}
               timestampLabel={timestampLabel}
               className="h-full w-full"
             />

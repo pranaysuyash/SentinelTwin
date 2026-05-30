@@ -1987,678 +1987,29 @@ export function StudioDashboardHome({
             </div>
 
             {showWorkspaceLibrary ? (
-              <div className="mt-4 space-y-4">
-            {hydrated ? (
-              <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_360px]">
-              <div className="rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Recent Workspaces</div>
-                    <div className="mt-1 text-sm text-[color:var(--st-muted)]">
-                      Search, pin, and reopen your workspaces first. The seeded baseline remains available as a reference baseline below.
-                    </div>
-                  </div>
-                  <div className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1.5 text-[11px] text-[color:var(--st-muted)]">
-                    {visibleProjectCount} visible of {savedScenes.length} local workspaces
-                  </div>
-                </div>
-
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <label className="flex-1">
-                    <span className="sr-only">Search local workspaces</span>
-                    <input
-                      value={projectQuery}
-                      onChange={(event) => setProjectQuery(event.target.value)}
-                      placeholder="Search projects, scene names, folders, tags, or counts..."
-                      className="w-full rounded-2xl border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-[color:var(--st-muted)] focus:border-sky-400/35 focus:bg-white/[0.04]"
-                    />
-                  </label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {([
-                      ["recent", "Recent"],
-                      ["coverage", "Coverage"],
-                      ["name", "Name"],
-                    ] as const).map(([value, label]) => (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() => setProjectSort(value)}
-                        className={cn(
-                          "rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
-                          projectSort === value
-                            ? "border-sky-400/30 bg-sky-500/12 text-sky-100"
-                            : "border-[color:var(--st-border)] bg-white/[0.03] text-[color:var(--st-muted)] hover:bg-white/[0.05]",
-                        )}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-4 space-y-3">
-                  <div className="flex flex-wrap gap-1.5">
-                    {sourceFilters.map((source) => {
-                      const isActive = activeSource === source;
-                      const count = sourceCounts[source] ?? 0;
-                      return (
-                        <button
-                          key={source}
-                          type="button"
-                          onClick={() => setActiveSource(source)}
-                          className={cn(
-                            "rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
-                            isActive
-                              ? "border-sky-400/30 bg-sky-500/12 text-sky-100"
-                              : "border-[color:var(--st-border)] bg-white/[0.03] text-[color:var(--st-muted)] hover:bg-white/[0.05]",
-                          )}
-                        >
-                          {source === "All" ? "All sources" : SOURCE_LABELS[source]} <span className="text-[10px] opacity-70">({count})</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {folderFilters.slice(0, 10).map((folder) => (
-                      <button
-                        key={folder}
-                        type="button"
-                        onClick={() => setActiveFolder(folder)}
-                        className={cn(
-                          "rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
-                          activeFolder === folder
-                            ? "border-sky-400/30 bg-sky-500/12 text-sky-100"
-                            : "border-[color:var(--st-border)] bg-white/[0.03] text-[color:var(--st-muted)] hover:bg-white/[0.05]",
-                        )}
-                      >
-                        {folder} <span className="text-[10px] opacity-70">({folderCounts[folder] ?? browserProjects.length})</span>
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setActiveTag("All")}
-                      className={cn(
-                        "rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
-                        activeTag === "All"
-                          ? "border-emerald-400/30 bg-emerald-500/12 text-emerald-100"
-                          : "border-[color:var(--st-border)] bg-white/[0.03] text-[color:var(--st-muted)] hover:bg-white/[0.05]",
-                      )}
-                    >
-                      All tags
-                    </button>
-                    {tagFilters.map((tag) => (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => setActiveTag(tag)}
-                        className={cn(
-                          "rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
-                          activeTag === tag
-                            ? "border-emerald-400/30 bg-emerald-500/12 text-emerald-100"
-                            : "border-[color:var(--st-border)] bg-white/[0.03] text-[color:var(--st-muted)] hover:bg-white/[0.05]",
-                        )}
-                      >
-                        {tag} <span className="text-[10px] opacity-70">({tagCounts[tag] ?? 0})</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-4 space-y-4">
-                  <div>
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Your Workspaces</div>
-                      <div className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1 text-[10px] text-[color:var(--st-muted)]">
-                        {userWorkspaceCount} visible
-                      </div>
-                    </div>
-                    <div className="mt-3 grid gap-2 lg:grid-cols-2 xl:grid-cols-4">
-                      <WorkspaceSeedCard
-                        icon={<Plus className="h-3.5 w-3.5" />}
-                        badge="Blank"
-                        tone="blank"
-                        title="Blank Workspace"
-                        description="Create a new site from scratch and start placing walls, cameras, and zones."
-                        onClick={onCreateScene}
-                      />
-                      <WorkspaceSeedCard
-                        icon={<FileUp className="h-3.5 w-3.5" />}
-                        badge="Import"
-                        tone="import"
-                        title="Import Workspace"
-                        description="Bring in an existing SecurityScene JSON workspace and continue editing."
-                        onClick={onImportScene}
-                      />
-                      <WorkspaceSeedCard
-                        icon={<ScanSearch className="h-3.5 w-3.5" />}
-                        badge="Scan"
-                        tone="scan"
-                        title="Scan Workspace"
-                        description="Reconstruct a site from a photo and turn it into an editable scene."
-                        onClick={onScanSite}
-                      />
-                      <WorkspaceSeedCard
-                        icon={<Sparkles className="h-3.5 w-3.5" />}
-                        badge="AI"
-                        tone="ai"
-                        title="AI Draft Workspace"
-                        description="Generate a draft layout that you can refine inside Studio."
-                        onClick={onAiDraft}
-                      />
-                    </div>
-                    <div className="mt-3 grid gap-2">
-                      {userWorkspaceProjects.length > 0 ? (
-                        userWorkspaceProjects.map((project) => {
-                          const saved = project.scene;
-                          const savedCoverage = saved.simulation?.totalCoveragePct ?? null;
-                          const savedIssues = saved.simulation?.issues.length ?? 0;
-                          const savedZones = saved.simulation?.criticalZoneResults.length ?? saved.criticalZones.length;
-                          const selected = saved.id === selectedProjectRecord?.scene.id;
-                          const isDraftWorkspace = saved.source === "manual";
-                          return (
-                            <button
-                              key={saved.id}
-                              type="button"
-                              onClick={() => setSelectedProjectId(saved.id)}
-                              className={cn(
-                                "rounded-[22px] border px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5",
-                                selected
-                                  ? isDraftWorkspace
-                                    ? "border-amber-400/30 bg-amber-500/10 shadow-[0_12px_28px_rgba(245,158,11,0.08)]"
-                                    : "border-sky-400/30 bg-sky-500/10 shadow-[0_12px_28px_rgba(14,165,233,0.08)]"
-                                  : isDraftWorkspace
-                                    ? "border-amber-400/20 bg-amber-500/[0.045] hover:border-amber-400/35 hover:bg-amber-500/[0.065]"
-                                    : "border-[color:var(--st-border)] bg-white/[0.025] hover:border-[rgba(79,183,255,0.28)] hover:bg-white/[0.04]",
-                              )}
-                            >
-                              <WorkspaceMiniPreview scene={saved} result={saved.simulation ?? null} hydrated={hydrated} />
-                              <div className="flex flex-wrap items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <div className="truncate text-sm font-semibold text-white">{saved.name}</div>
-                                    {saved.id === scene.id ? (
-                                      <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.16em] text-emerald-200">
-                                        Current
-                                      </span>
-                                    ) : null}
-                                    {isDraftWorkspace ? (
-                                      <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.16em] text-amber-100">
-                                        Draft
-                                      </span>
-                                    ) : null}
-                                    {project.pinned ? (
-                                      <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.16em] text-amber-100">
-                                        Pinned
-                                      </span>
-                                    ) : null}
-                                  </div>
-                                  <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
-                                    {sourceLabel(saved)} · Updated {formatTime(project.updatedAt)} · Folder {project.folder}
-                                  </div>
-                                </div>
-                                <div className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
-                                  {savedCoverage != null ? `${Math.round(savedCoverage)}%` : "Pending"}
-                                </div>
-                              </div>
-                              <div className="mt-3 flex flex-wrap gap-2">
-                                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-white">
-                                  {countLabel(saved.cameras.length, "camera")}
-                                </span>
-                                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-white">
-                                  {countLabel(saved.obstructions.length, "obstruction")}
-                                </span>
-                                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-white">
-                                  {countLabel(savedZones, "zone")}
-                                </span>
-                                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-white">
-                                  {countLabel(savedIssues, "issue")}
-                                </span>
-                              </div>
-                              <div className="mt-3 flex flex-wrap gap-1.5">
-                                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
-                                  Folder: {project.folder}
-                                </span>
-                                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
-                                  Org: {project.workspaceOrganization}
-                                </span>
-                                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
-                                  Owner: {project.workspaceOwner}
-                                </span>
-                                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
-                                  {project.workspaceVisibility}
-                                </span>
-                                {project.tags.slice(0, 3).map((tag) => (
-                                  <span key={tag} className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
-                                    #{tag}
-                                  </span>
-                                ))}
-                                {project.tags.length > 3 ? (
-                                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
-                                    +{project.tags.length - 3} more
-                                  </span>
-                                ) : null}
-                              </div>
-                            </button>
-                          );
-                        })
-                      ) : (
-                        <div className="rounded-[24px] border border-dashed border-[color:var(--st-border)] px-4 py-8 text-sm text-[color:var(--st-muted)]">
-                          {projectQuery.trim() ? "No saved user workspaces match this search." : "Create, import, or scan a scene to start your own workspace history."}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="rounded-[24px] border border-[#1e2536] bg-[#0a0e16] p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                    <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Reference Baseline</div>
-                      <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
-                      The canonical retail scene is available for first-run analysis and replay comparisons.
-                        </div>
-                      </div>
-                      <div className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1 text-[10px] text-[color:var(--st-muted)]">
-                        {referenceDemoCount} visible
-                      </div>
-                    </div>
-                    <div className="mt-3 grid gap-2">
-                      {referenceDemoProjects.length > 0 ? (
-                        referenceDemoProjects.map((project) => {
-                          const saved = project.scene;
-                          const selected = saved.id === selectedProjectRecord?.scene.id;
-                          const savedCoverage = saved.simulation?.totalCoveragePct ?? null;
-                          return (
-                            <button
-                              key={saved.id}
-                              type="button"
-                              onClick={() => setSelectedProjectId(saved.id)}
-                              className={cn(
-                                "rounded-[22px] border px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5",
-                                selected
-                                  ? "border-emerald-400/30 bg-emerald-500/10 shadow-[0_12px_28px_rgba(16,185,129,0.08)]"
-                                  : "border-[#2a3244] bg-white/[0.02] hover:border-[rgba(79,183,255,0.24)] hover:bg-white/[0.035]",
-                              )}
-                            >
-                              <WorkspaceMiniPreview scene={saved} result={saved.simulation ?? null} hydrated={hydrated} />
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <div className="truncate text-sm font-semibold text-white">{saved.name}</div>
-                                    <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.16em] text-emerald-200">
-                                      Reference
-                                    </span>
-                                  </div>
-                                <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
-                                    Baseline reference · Updated {formatTime(project.updatedAt)} · {sourceLabel(saved)}
-                                  </div>
-                                </div>
-                                <div className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
-                                  {savedCoverage != null ? `${Math.round(savedCoverage)}%` : "Pending"}
-                                </div>
-                              </div>
-                            </button>
-                          );
-                        })
-                      ) : (
-                        <div className="rounded-[20px] border border-dashed border-[#243047] px-3 py-4 text-sm text-[color:var(--st-muted)]">
-                          No reference baseline visible in the current filter set.
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
-                <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
-                  <Settings2 className="h-3.5 w-3.5 text-sky-300" />
-                  Quick Start
-                </div>
-                {selectedProjectRecord ? (
-                  <>
-                    <ProjectMetadataEditor
-                      key={selectedProjectRecord.scene.id}
-                      project={selectedProjectRecord}
-                      onUpdateProjectMetadata={onUpdateProjectMetadata}
-                      onDuplicateProject={onDuplicateProject}
-                      onRenameProject={onRenameProject}
-                      onSelectProject={setSelectedProjectId}
-                    />
-                    <div className="mt-4 rounded-[22px] border border-[color:var(--st-border)] bg-white/[0.025] p-4">
-                      <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Workspace Catalog</div>
-                      <div className="mt-3 flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="text-base font-semibold text-white">{workspaceCatalog.scopeLabel}</div>
-                          <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
-                            {workspaceCatalog.primaryOrganization} · {workspaceCatalog.primaryOwner}
-                          </div>
-                        </div>
-                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-[color:var(--st-muted)]">
-                          {workspaceCatalog.primaryVisibility ?? "n/a"}
-                        </span>
-                      </div>
-                      <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                        <MiniStat
-                          label="Workspaces"
-                          value={`${workspaceCatalog.workspaceCount}`}
-                          accent="text-sky-200"
-                          detail={`${workspaceCatalog.organizationCount} orgs · ${workspaceCatalog.ownerCount} owners`}
-                        />
-                        <MiniStat
-                          label="Visibility"
-                          value={`${workspaceCatalog.counts.shared + workspaceCatalog.counts.published}`}
-                          accent="text-emerald-200"
-                          detail={`${workspaceCatalog.counts.private} private · ${workspaceCatalog.counts.shared} shared · ${workspaceCatalog.counts.published} published`}
-                        />
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        {workspaceCatalog.topOrganizations.slice(0, 2).map((entry) => (
-                          <span key={`org-${entry.name}`} className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
-                            Org: {entry.name}
-                          </span>
-                        ))}
-                        {workspaceCatalog.topOrganizations.length > 2 ? (
-                          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
-                            +{workspaceCatalog.topOrganizations.length - 2} orgs
-                          </span>
-                        ) : null}
-                        {workspaceCatalog.topOwners.slice(0, 2).map((entry) => (
-                          <span key={`owner-${entry.name}`} className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
-                            Owner: {entry.name}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="mt-3 text-[11px] text-[color:var(--st-muted)]">
-                        {workspaceCatalog.scopeDetail}
-                      </div>
-                      <div className="mt-2 text-[11px] text-[color:var(--st-muted)]">
-                        Local-first catalog bridge toward the canonical org/account boundary.
-                      </div>
-                      <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
-                        Plan, billing, invites, and ownership transfer remain open.
-                      </div>
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
-                          Shared: {workspaceCatalog.capabilities.sharedWorkspaces ? "Enabled" : "Local-only"}
-                        </span>
-                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
-                          Published: {workspaceCatalog.capabilities.publishedWorkspaces ? "Enabled" : "Local-only"}
-                        </span>
-                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
-                          Archive: {workspaceCatalog.capabilities.archiveRecovery ? "Ready" : "Empty"}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="mt-4 rounded-[22px] border border-[color:var(--st-border)] bg-white/[0.025] p-4">
-                      <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Workspace Account</div>
-                      <div className="mt-3 flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="text-base font-semibold text-white">{workspaceAccountSummary.planLabel}</div>
-                          <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
-                            {workspaceAccountSummary.accountName} · {workspaceAccountSummary.ownerName}
-                          </div>
-                        </div>
-                        <span className={cn(
-                          "rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[0.16em]",
-                          workspaceAccountSummary.softQuotaExceeded
-                            ? "border-amber-400/25 bg-amber-500/10 text-amber-100"
-                            : "border-white/10 bg-white/[0.04] text-[color:var(--st-muted)]",
-                        )}>
-                          {workspaceAccountSummary.softQuotaLabel}
-                        </span>
-                      </div>
-                      <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                        <MiniStat
-                          label="Workspaces"
-                          value={`${workspaceAccountSummary.workspaceCount}`}
-                          accent="text-sky-200"
-                          detail={workspaceAccountSummary.planDetail}
-                        />
-                        <MiniStat
-                          label="Entitlements"
-                          value={`${Object.values(workspaceAccountSummary.entitlements).filter(Boolean).length}`}
-                          accent="text-emerald-200"
-                          detail="Shared, published, archive, report, scan, and live-evidence posture"
-                        />
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
-                          Shared: {workspaceAccountSummary.entitlements.sharedWorkspaces ? "Enabled" : "Local-only"}
-                        </span>
-                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
-                          Published: {workspaceAccountSummary.entitlements.publishedWorkspaces ? "Enabled" : "Local-only"}
-                        </span>
-                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
-                          Ownership transfer: {workspaceAccountSummary.entitlements.ownershipTransfer ? "Enabled" : "Open"}
-                        </span>
-                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
-                          Invites: {workspaceAccountSummary.entitlements.invites ? "Enabled" : "Open"}
-                        </span>
-                      </div>
-                      <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
-                        <MiniStat label="Private" value={`${workspaceAccountSummary.quotas.private}`} accent="text-white" />
-                        <MiniStat label="Shared" value={`${workspaceAccountSummary.quotas.shared}`} accent="text-white" />
-                        <MiniStat label="Published" value={`${workspaceAccountSummary.quotas.published}`} accent="text-white" />
-                      </div>
-                      <div className="mt-3 space-y-3 rounded-2xl border border-white/8 bg-black/[0.12] p-3">
-                        <div className="grid gap-3 md:grid-cols-2">
-                          <label className="block">
-                            <span className="text-[11px] text-[color:var(--st-muted)]">Account name</span>
-                            <input
-                              value={workspaceAccountProfile.accountName}
-                              onChange={(event) => setWorkspaceAccountProfile({ accountName: event.target.value })}
-                              className="mt-1 w-full rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-sm text-white outline-none transition-colors focus:border-sky-400/35 focus:bg-white/[0.04]"
-                              placeholder="Personal Workspace"
-                            />
-                          </label>
-                          <label className="block">
-                            <span className="text-[11px] text-[color:var(--st-muted)]">Owner</span>
-                            <input
-                              value={workspaceAccountProfile.ownerName}
-                              onChange={(event) => setWorkspaceAccountProfile({ ownerName: event.target.value })}
-                              className="mt-1 w-full rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-sm text-white outline-none transition-colors focus:border-sky-400/35 focus:bg-white/[0.04]"
-                              placeholder="You"
-                            />
-                          </label>
-                          <label className="block">
-                            <span className="text-[11px] text-[color:var(--st-muted)]">Plan tier</span>
-                            <select
-                              value={workspaceAccountProfile.planTier}
-                              onChange={(event) => setWorkspaceAccountProfile({ planTier: event.target.value as typeof workspaceAccountProfile.planTier })}
-                              className="mt-1 w-full rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-sm text-white outline-none transition-colors focus:border-sky-400/35 focus:bg-white/[0.04]"
-                            >
-                              <option value="free">Free</option>
-                              <option value="pro">Pro</option>
-                              <option value="enterprise">Enterprise</option>
-                            </select>
-                          </label>
-                          <label className="block">
-                            <span className="text-[11px] text-[color:var(--st-muted)]">Workspace limit</span>
-                            <input
-                              type="number"
-                              min={1}
-                              value={workspaceAccountProfile.quotas.maxWorkspaces}
-                              onChange={(event) => setWorkspaceAccountProfile({
-                                quotas: {
-                                  ...workspaceAccountProfile.quotas,
-                                  maxWorkspaces: Number(event.target.value) || 1,
-                                },
-                              })}
-                              className="mt-1 w-full rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-sm text-white outline-none transition-colors focus:border-sky-400/35 focus:bg-white/[0.04]"
-                            />
-                          </label>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={resetWorkspaceAccountProfile}
-                            className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-[color:var(--st-muted)] transition-colors hover:bg-white/[0.05] hover:text-white"
-                          >
-                            Reset account profile
-                          </button>
-                        </div>
-                      </div>
-                      <div className="mt-3 text-[11px] text-[color:var(--st-muted)]">
-                        Local-first account bridge toward the canonical org/account model.
-                      </div>
-                      <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
-                        Plan, quota, invites, and ownership transfer remain open.
-                      </div>
-                    </div>
-                    <div className="mt-4 space-y-2">
-                      <ActionButton
-                        icon={<FolderOpen className="h-4 w-4" />}
-                        label="Open Workspace"
-                        description="Load the selected project into Studio."
-                        onClick={() => onOpenScene?.(selectedProjectScene)}
-                        variant="primary"
-                      />
-                      <ActionButton
-                        icon={<MapIcon className="h-4 w-4" />}
-                        label="Open Coverage"
-                        description="Open the selected project in the analysis workspace."
-                        onClick={() => {
-                          onOpenScene?.(selectedProjectScene);
-                          onOpenCoverageWorkspace();
-                        }}
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <div className="mt-3 rounded-[22px] border border-dashed border-[color:var(--st-border)] bg-white/[0.02] p-4 text-sm text-[color:var(--st-muted)]">
-                    No saved workspace selected. Save the current scene in Studio to manage folders, tags, and pins here.
-                  </div>
-                )}
-                
-
-                <div className="mt-4">
-                  <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
-                    <Layers3 className="h-3.5 w-3.5 text-emerald-300" />
-                    Quick Start
-                  </div>
-                  <div className="mt-4 space-y-2">
-                    <ActionButton icon={<Plus className="h-4 w-4" />} label="New Blank Scene" description="Start from an empty scene shell." onClick={onCreateScene} />
-                    <ActionButton icon={<FileUp className="h-4 w-4" />} label="Import Scene JSON" description="Load a canonical scene file." onClick={onImportScene} />
-                    <ActionButton icon={<ScanSearch className="h-4 w-4" />} label="Scan a Site" description="Preview: manual-assisted site photo intake compiles to editable SecurityScene." onClick={onScanSite} />
-                    <ActionButton icon={<MapIcon className="h-4 w-4" />} label="Import Floor Plan" description="Upload plan image/PDF to generate scene geometry." onClick={onImportFloorPlan} />
-                    <ActionButton icon={<Sparkles className="h-4 w-4" />} label="AI Layout Draft" description="Generate a prompt-backed draft scene." onClick={onAiDraft} />
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_360px]">
-                <div className="rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
-                  <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Recent Workspaces</div>
-                  <div className="mt-3 rounded-[22px] border border-dashed border-[color:var(--st-border)] bg-white/[0.02] p-4 text-sm text-[color:var(--st-muted)]">
-                    Loading local workspace history...
-                  </div>
-                </div>
-                <div className="rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
-                  <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Selected Workspace</div>
-                  <div className="mt-3 rounded-[22px] border border-dashed border-[color:var(--st-border)] bg-white/[0.02] p-4 text-sm text-[color:var(--st-muted)]">
-                    Loading selected workspace...
-                  </div>
-                </div>
-              </div>
-            )}
-          <aside className="flex flex-col gap-4 rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
-            <div>
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]"> 
-                <TriangleAlert className="h-3.5 w-3.5 text-amber-300" />
-                SECURITY STATUS
-              </div>
-              <div className="mt-2 text-[11px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">OUTCOME SUMMARY</div>
-              <div className="mt-2 space-y-2">
-                {outcomeSummary.length > 0 ? (
-                  outcomeSummary.slice(0, 3).map((row) => (
-                    <div key={row.id} className="rounded-xl border border-[#243252] bg-white/[0.02] px-3 py-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="truncate text-sm font-semibold">{row.label}</span>
-                        <span
-                          className={`shrink-0 rounded-full border px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em] ${
-                            row.status === "pass"
-                              ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-200"
-                              : "border-amber-400/25 bg-amber-500/10 text-amber-200"
-                          }`}
-                        >
-                          {row.status}
-                        </span>
-                      </div>
-                      <div className="mt-1.5 flex items-center gap-2">
-                        <QualityBadge quality={row.required} display="abbr" />
-                        <span className="text-[10px] text-[#4a5568]">→</span>
-                        <QualityBadge quality={row.actual} display="abbr" />
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="rounded-xl border border-dashed border-[color:var(--st-border)] p-3 text-[11px] text-[color:var(--st-muted)]">
-                    No critical-zone outcome computed yet.
-                  </div>
-                )}
-              </div>
-              <div className="mt-4 text-[11px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">OPEN ISSUES ({issues.length})</div>
-              <div className="mt-2 space-y-2">
-                {(["critical", "high", "medium", "low"] as const).flatMap((severity) =>
-                  issuesBySeverity[severity]
-                    .slice(0, 2)
-                    .map((issue) => (
-                      <div key={`${issue.severity}-${issue.description}`} className="rounded-xl border border-[#243252] bg-white/[0.02] px-3 py-2">
-                        <div className="flex items-center justify-between gap-2 text-xs">
-                          <span className={cn("rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em]", issueSeverityTone(issue.severity))}>
-                            {issue.severity}
-                          </span>
-                          <span className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--st-muted)]">
-                            {issue.pathId ? `Path ${issue.pathId}` : "General"}
-                          </span>
-                        </div>
-                        <div className="mt-1 text-sm">{issue.description}</div>
-                      </div>
-                    ))
-                ).slice(0, 4)}
-                {issues.length === 0 ? (
-                  <div className="rounded-xl border border-[#243252] bg-white/[0.02] px-3 py-2 text-sm text-[color:var(--st-muted)]">No open issues.</div>
-                ) : null}
-              </div>
-              <div className="mt-4 text-[11px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">SIMULATION ASSUMPTIONS</div>
-              <div className="mt-2 space-y-1.5">
-                {sceneAssumptionRows.map((assumption) => (
-                  <div key={assumption.label} className="rounded-xl border border-[#243252] bg-white/[0.02] px-3 py-2">
-                    <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">{assumption.label}</div>
-                    <div className="mt-0.5 text-sm text-white">{assumption.value}</div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={onOpenIssues}
-                  className="inline-flex items-center justify-center rounded-xl border border-amber-400/25 bg-amber-500/12 px-3 py-2 text-xs font-medium text-amber-100 transition-colors hover:border-amber-300/35 hover:bg-amber-500/16"
-                >
-                  See all issues & recommendations
-                </button>
-                <button
-                  type="button"
-                  onClick={onOpenReport}
-                  className="inline-flex items-center justify-center rounded-xl border border-sky-400/25 bg-sky-500/12 px-3 py-2 text-xs font-medium text-sky-100 transition-colors hover:border-sky-300/35 hover:bg-sky-500/16"
-                >
-                  Open Report Lite
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={onOpenStudio}
-                className="mt-3 w-full rounded-2xl border border-sky-400/25 bg-sky-500/12 px-4 py-3 text-sm font-medium text-sky-100 transition-colors hover:border-sky-300/35 hover:bg-sky-500/16"
-              >
-                Open Workspace
-              </button>
-            </div>
-          </aside>
-          </div>
-          </div>
-          ) : null}
+              <WorkspaceLibraryPanel
+                scene={scene}
+                result={result ?? scene.simulation ?? null}
+                hydrated={hydrated}
+                savedScenes={savedScenes}
+                savedProjects={savedProjects}
+                onOpenStudio={onOpenStudio}
+                onOpenCoverageWorkspace={onOpenCoverageWorkspace}
+                onOpenReport={onOpenReport}
+                onOpenScene={onOpenScene}
+                onOpenDemoScene={onOpenDemoScene}
+                onCreateScene={onCreateScene}
+                onImportFloorPlan={onImportFloorPlan}
+                onImportScene={onImportScene}
+                onScanSite={onScanSite}
+                onGuidedScanAssistant={onGuidedScanAssistant}
+                onAiDraft={onAiDraft}
+                onUpdateProjectMetadata={onUpdateProjectMetadata}
+                onDuplicateProject={onDuplicateProject}
+                onRenameProject={onRenameProject}
+              />
+            ) : null}
+        </div>
         </div>
         <footer className="mt-auto flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[color:var(--st-border)] bg-[color:var(--st-panel)] px-4 py-2.5 text-[11px] text-[color:var(--st-muted)]">
           <div>© 2026 SentinelTwin · Security Simulation Studio · v0.9.0</div>
@@ -2670,5 +2021,113 @@ export function StudioDashboardHome({
         </footer>
       </div>
     </main>
+  );
+}
+
+type WorkspaceLibraryPanelProps = {
+  scene: SecurityScene;
+  result: SimulationResult | null;
+  hydrated: boolean;
+  savedScenes: SecurityScene[];
+  savedProjects: SavedProjectRecord[];
+  onOpenStudio?: () => void;
+  onOpenCoverageWorkspace?: () => void;
+  onOpenReport?: () => void;
+  onOpenScene?: (scene: SecurityScene) => void;
+  onOpenDemoScene?: () => void;
+  onCreateScene?: () => void;
+  onImportFloorPlan?: () => void;
+  onImportScene?: () => void;
+  onScanSite?: () => void;
+  onGuidedScanAssistant?: () => void;
+  onAiDraft?: () => void;
+  onUpdateProjectMetadata?: StudioDashboardHomeProps["onUpdateProjectMetadata"];
+  onDuplicateProject?: (sceneId: string) => void;
+  onRenameProject?: (sceneId: string, nextName: string) => void;
+};
+
+function WorkspaceLibraryPanel({
+  scene,
+  result,
+  hydrated,
+  savedScenes,
+  savedProjects,
+  onOpenStudio,
+  onOpenCoverageWorkspace,
+  onOpenReport,
+  onOpenScene,
+  onOpenDemoScene,
+  onCreateScene,
+  onImportFloorPlan,
+  onImportScene,
+  onScanSite,
+  onGuidedScanAssistant,
+  onAiDraft,
+  onUpdateProjectMetadata,
+  onDuplicateProject,
+  onRenameProject,
+}: WorkspaceLibraryPanelProps) {
+  const projects = (savedProjects.length > 0 ? savedProjects.map((entry) => entry.scene) : savedScenes).slice(0, 8);
+
+  const openScene = (target: SecurityScene) => {
+    onOpenScene?.(target);
+    onOpenStudio?.();
+  };
+
+  return (
+    <section className="mt-4 rounded-[24px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">Workspace Library</div>
+          <div className="mt-1 text-xs text-[color:var(--st-muted)]">
+            Resume existing site twins or start a new intake path without leaving the dashboard.
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2 text-[10px]">
+          <button type="button" onClick={onCreateScene} className="rounded-full border border-sky-400/30 bg-sky-500/10 px-2.5 py-1 text-sky-100">New Scene</button>
+          <button type="button" onClick={onImportScene} className="rounded-full border border-white/15 bg-white/[0.03] px-2.5 py-1 text-white/90">Import JSON</button>
+          <button type="button" onClick={onImportFloorPlan} className="rounded-full border border-white/15 bg-white/[0.03] px-2.5 py-1 text-white/90">Floor Plan</button>
+          <button type="button" onClick={onScanSite} className="rounded-full border border-white/15 bg-white/[0.03] px-2.5 py-1 text-white/90">Manual Scan</button>
+          <button type="button" onClick={onGuidedScanAssistant} className="rounded-full border border-white/15 bg-white/[0.03] px-2.5 py-1 text-white/90">Guided Assist</button>
+          <button type="button" onClick={onAiDraft} className="rounded-full border border-white/15 bg-white/[0.03] px-2.5 py-1 text-white/90">AI Draft</button>
+          <button type="button" onClick={onOpenCoverageWorkspace} className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1 text-emerald-100">Open Coverage</button>
+          <button type="button" onClick={onOpenReport} className="rounded-full border border-amber-400/25 bg-amber-500/10 px-2.5 py-1 text-amber-100">Open Report</button>
+          <button type="button" onClick={onOpenDemoScene} className="rounded-full border border-violet-400/25 bg-violet-500/10 px-2.5 py-1 text-violet-100">Load Demo</button>
+        </div>
+      </div>
+
+      <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+        {hydrated ? (
+          projects.length > 0 ? (
+            projects.map((projectScene) => (
+              <div key={projectScene.id} className="rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] p-2">
+                <button type="button" onClick={() => openScene(projectScene)} className="w-full text-left">
+                  <div className="h-10 overflow-hidden rounded-lg border border-white/10 bg-[#0b1322]">
+                    <ScenePreview scene={projectScene} result={projectScene.simulation ?? (projectScene.id === scene.id ? result : null)} compact showLabels={false} hydrated={hydrated} />
+                  </div>
+                  <div className="mt-1.5 truncate text-[11px] font-semibold text-white">{projectScene.name}</div>
+                  <div className="text-[10px] text-[color:var(--st-muted)]">
+                    {SOURCE_LABELS[projectScene.source]} · {(projectScene.simulation?.totalCoveragePct ?? null) != null ? `${Math.round(projectScene.simulation!.totalCoveragePct)}% coverage` : "Coverage pending"}
+                  </div>
+                </button>
+                <div className="mt-2 flex flex-wrap gap-1 text-[9px]">
+                  <button type="button" onClick={() => onRenameProject?.(projectScene.id, `${projectScene.name} Copy`)} className="rounded border border-white/15 px-1.5 py-0.5 text-white/80">Quick Rename</button>
+                  <button type="button" onClick={() => onDuplicateProject?.(projectScene.id)} className="rounded border border-white/15 px-1.5 py-0.5 text-white/80">Duplicate</button>
+                  <button type="button" onClick={() => onUpdateProjectMetadata?.(projectScene.id, { lastOpenedAt: Date.now() })} className="rounded border border-white/15 px-1.5 py-0.5 text-white/80">Mark Opened</button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="col-span-full rounded-[16px] border border-dashed border-[color:var(--st-border)] bg-white/[0.02] px-3 py-4 text-xs text-[color:var(--st-muted)]">
+              No saved projects yet. Start with New Scene, Scan, Import, or AI Draft.
+            </div>
+          )
+        ) : (
+          <div className="col-span-full rounded-[16px] border border-dashed border-[color:var(--st-border)] bg-white/[0.02] px-3 py-4 text-xs text-[color:var(--st-muted)]">
+            Loading workspace library...
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

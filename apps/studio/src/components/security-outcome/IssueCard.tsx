@@ -30,7 +30,7 @@ export function IssueCard({
         </span>
         <span className="text-[8px] uppercase tracking-[0.12em] text-[#6b7c95]">{issue.category.replace(/_/g, " ")}</span>
       </div>
-      <div className="mt-1 text-[10px] text-[#d2d9e8]">{issue.description}</div>
+      <div className="mt-1 text-[10px] text-[#d2d9e8]">{issue.productExplanation}</div>
       <div className="mt-2 flex flex-wrap gap-1">
         {onFocusZone
           ? issue.affectedZones.slice(0, 2).map((zoneId) => (
@@ -70,6 +70,7 @@ export function IssueCard({
           <div>Severity: {issue.severity}</div>
           <div>Affected zones: {issue.affectedZones.length > 0 ? issue.affectedZones.join(", ") : "none mapped"}</div>
           <div>Affected cameras: {issue.affectedCameras.length > 0 ? issue.affectedCameras.join(", ") : "none mapped"}</div>
+          <div className="mt-1 text-[#8ea0bf]">Technical: {issue.description}</div>
         </div>
       ) : null}
     </div>

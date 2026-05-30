@@ -69,6 +69,7 @@ describe("report engine", () => {
   testWithTimeout("buildReportData produces complete report", { timeout: 15000 }, () => {
     const report = buildReportData(scene, result);
 
+    expect(report.sceneId).toBe(scene.id);
     expect(report.siteName).toBe(scene.name);
     expect(report.dimensions.width).toBe(scene.dimensions.width);
     expect(report.dimensions.depth).toBe(scene.dimensions.depth);
@@ -288,6 +289,8 @@ describe("report engine", () => {
     expect(report.evidenceTrail.sensorEvidenceCount).toBeGreaterThanOrEqual(1);
     expect(report.evidenceTrail.recentEntries.length).toBeGreaterThan(0);
     expect(report.evidenceTrail.recentEntries[0].title).toBe("Simulation Run");
+    expect(report.evidenceTrail.recentEntries[0].anchorId).toContain("evidence-");
+    expect(report.evidenceTrail.recentEntries[0].evidenceUri).toContain(`scene:${scene.id}:report:`);
   });
 
   longTest("buildReportData summarizes the truth ladder", () => {
@@ -400,8 +403,12 @@ describe("exportAsHtml", () => {
   testWithTimeout("includes operational evidence section", { timeout: 20000 }, () => {
     const html = exportAsHtml(makeEvidenceReport(scene));
     expect(html).toContain("Operational Evidence");
+    expect(html).toContain("Scene ID");
     expect(html).toContain("Sensor-related evidence");
+    expect(html).toContain("Evidence links");
     expect(html).toContain("Recent evidence entries");
+    expect(html).toContain(`scene:${scene.id}:report:`);
+    expect(html).toContain("id=\"evidence-");
   });
 
   longTest("includes uncertainty section", () => {
@@ -687,8 +694,12 @@ describe("exportAsMarkdown", () => {
   testWithTimeout("includes operational evidence section", { timeout: 20000 }, () => {
     const md = exportAsMarkdown(makeEvidenceReport(scene));
     expect(md).toContain("## Operational Evidence");
+    expect(md).toContain("Scene ID");
     expect(md).toContain("Sensor-related Evidence");
-    expect(md).toContain("Recent Evidence Entries");
+    expect(md).toContain("Evidence Links");
+    expect(md).toContain("Recent Evidence Details");
+    expect(md).toContain(`scene:${scene.id}:report:`);
+    expect(md).toContain("#evidence-");
   });
 
   longTest("includes sensors summary row", () => {
@@ -881,8 +892,10 @@ describe("exportAsText", () => {
 
     expect(html).toContain("Audience Policy");
     expect(html).toContain("Visible Sections");
+    expect(html).toContain("Scene IDs");
     expect(md).toContain("**Audience Policy:**");
     expect(md).toContain("**Visible Sections:**");
+    expect(md).toContain("Scene IDs");
   });
 
   longTest("includes novel algorithms section with uncertainty", () => {
@@ -1005,8 +1018,11 @@ describe("exportAsText", () => {
   testWithTimeout("includes operational evidence section", { timeout: 20000 }, () => {
     const text = exportAsText(makeEvidenceReport(scene));
     expect(text).toContain("OPERATIONAL EVIDENCE");
+    expect(text).toContain("Scene ID");
     expect(text).toContain("Sensor-related Evidence");
+    expect(text).toContain("Evidence Links");
     expect(text).toContain("Recent Evidence Entries");
+    expect(text).toContain(`scene:${scene.id}:report:`);
   });
 
   longTest("omits issues section when no issues are present", () => {
@@ -1057,6 +1073,7 @@ describe("comparison exports", () => {
     expect(html).toContain("data:image/svg+xml");
     expect(html).toContain("Evidence Entries");
     expect(html).toContain("Operational Evidence");
+    expect(html).toContain("Scene IDs");
   });
 
   longTest("exportCompareAsMarkdown produces valid markdown", () => {
@@ -1076,7 +1093,35 @@ describe("comparison exports", () => {
     expect(md).toContain("## Truth Ladder");
     expect(md).toContain("Evidence Entries");
     expect(md).toContain("## Operational Evidence");
+    expect(md).toContain("Scene IDs");
     expect(md).toContain("**Audience:** Auditor");
+  });
+
+  longTest("compare exports render evidence links when evidence entries exist", () => {
+    const beforeScene = createSmallRetailShopScene();
+    const afterScene = createSmallRetailShopScene();
+    beforeScene.changeLog = [
+      ...beforeScene.changeLog,
+      "Evidence: May 29, 09:15 AM | Baseline Capture | Before state captured for handoff review | medium",
+    ];
+    afterScene.changeLog = [
+      ...afterScene.changeLog,
+      "Evidence: May 29, 09:30 AM | Recheck Capture | After state captured for handoff review | high",
+    ];
+    const beforeResult = simulateStudio(beforeScene);
+    const afterResult = simulateStudio(afterScene);
+    const compare = buildCompareReportData(beforeScene, beforeResult, afterScene, afterResult);
+
+    const html = exportCompareAsHtml(compare);
+    const md = exportCompareAsMarkdown(compare);
+
+    expect(html).toContain("Evidence links");
+    expect(html).toContain(`scene:${beforeScene.id}:report:`);
+    expect(html).toContain(`scene:${afterScene.id}:report:`);
+    expect(md).toContain("Before Evidence Links");
+    expect(md).toContain("After Evidence Links");
+    expect(md).toContain(`scene:${beforeScene.id}:report:`);
+    expect(md).toContain(`scene:${afterScene.id}:report:`);
   });
 });
 

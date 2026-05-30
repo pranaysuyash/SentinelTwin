@@ -105,7 +105,7 @@ const cards: SiteIntakeSourceCard[] = [
     id: "ai_prompt",
     title: "Describe with AI",
     status: "Preview",
-    description: "Draft a site from text description using AI.",
+    description: "Draft a site from text description. Review required before trust.",
     output: "Draft Scene",
     review: "Required",
     icon: Sparkles,
@@ -121,6 +121,7 @@ const cards: SiteIntakeSourceCard[] = [
       ],
       limitations: [
         "Layout is approximate — expect adjustments after import.",
+        "Review required before trusting as canonical scene.",
       ],
       timeEstimate: "1–2 minutes",
       confidence: "Low (Generative Draft)",
@@ -132,7 +133,7 @@ const cards: SiteIntakeSourceCard[] = [
     id: "floor_plan",
     title: "Upload Floor Plan",
     status: "Working",
-    description: "Upload blueprints, images or PDFs of your floor plan.",
+    description: "Best-effort wall/opening extraction from blueprints or images. Manual correction required.",
     output: "Scene Shell",
     review: "Required",
     icon: ImageIcon,
@@ -216,7 +217,7 @@ const cards: SiteIntakeSourceCard[] = [
     id: "footage_verify",
     title: "Verify from Footage",
     status: "Preview",
-    description: "Preview: static/reference-frame alignment only.",
+    description: "Preview: static/reference-frame alignment only. No product-grade video/stream verification yet.",
     output: "Evidence",
     review: "Required",
     icon: Video,
@@ -232,6 +233,7 @@ const cards: SiteIntakeSourceCard[] = [
       ],
       limitations: [
         "Currently limited to static occlusion mapping.",
+        "No product-grade video or stream verification yet.",
         "Requires active ONVIF/RTSP feeds for live mode.",
       ],
       timeEstimate: "10–20 minutes",
@@ -516,7 +518,7 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
 
               <div className="mt-3 flex items-center gap-2 text-[14px] text-slate-400">
                 <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/10 text-[11px] text-slate-500">🛡</span>
-                <span>Your data is secure and never shared.</span>
+                <span>Local-only mode is available. Cloud-backed AI actions are explicitly labeled before use.</span>
               </div>
             </aside>
           </div>

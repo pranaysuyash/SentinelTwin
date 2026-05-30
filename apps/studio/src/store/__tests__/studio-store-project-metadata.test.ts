@@ -4,7 +4,9 @@ import { describeAiProviderGovernance, normalizeAiProviderSelection } from "@/ag
 import type { ModelEvalSuiteResult } from "@/agents/model-eval";
 import { buildPromptRegistrySnapshot } from "@/agents/prompt-registry";
 import { DEFAULT_AI_ACTION_TELEMETRY_POLICY } from "@/lib/ai-action-telemetry";
+import { createCameraNode } from "@/lib/node-factory";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
+import { buildOperationalEvidenceEvent } from "@/lib/operational-evidence";
 import { createSmallRetailShopScene } from "@/demo-scenes/small-retail-shop";
 import { useStudioStore } from "@/store/studio-store";
 
@@ -174,6 +176,50 @@ describe("studio store project metadata", () => {
     expect(journal.entries.at(-1)?.kind).toBe("replace");
     expect(journal.entries.at(-1)?.events).toEqual([]);
     expect(useStudioStore.getState().operationalEvidenceEvents).toHaveLength(0);
+  });
+
+  test("restores the selected checkpoint snapshot instead of the pre-checkpoint state", () => {
+    installStorage();
+
+    const beforeScene = createBlankSecurityScene();
+    beforeScene.name = "Recovery Draft";
+    beforeScene.cameras.push(createCameraNode([1, 1, 2]));
+
+    const afterScene = createBlankSecurityScene();
+    afterScene.id = beforeScene.id;
+    afterScene.name = beforeScene.name;
+    afterScene.cameras.push(createCameraNode([1, 1, 2]));
+    afterScene.cameras.push(createCameraNode([3, 1, 2]));
+
+    const checkpointEvent = buildOperationalEvidenceEvent({
+      kind: "scene_reverted",
+      title: "Restored checkpoint",
+      details: "Reopened the selected checkpoint.",
+      actor: "user",
+      source: "manual",
+      sceneId: beforeScene.id,
+      sceneName: beforeScene.name,
+      revisionDepth: 1,
+      affectedNodeIds: [],
+      confidence: 0.9,
+      previousSceneSnapshot: structuredClone(beforeScene),
+      sceneSnapshot: structuredClone(afterScene),
+      branchLabel: "recovered",
+      lifecycleStage: "recovered",
+    });
+
+    useStudioStore.setState({
+      scene: beforeScene,
+      operationalEvidenceEvents: [checkpointEvent],
+      historyPast: [],
+      historyFuture: [],
+    });
+
+    const restored = useStudioStore.getState().restoreSceneFromEvidence(checkpointEvent.id, "recovered");
+
+    expect(restored).toBe(true);
+    expect(useStudioStore.getState().scene.cameras).toHaveLength(2);
+    expect(useStudioStore.getState().scene.cameras[1]?.id).toBe(afterScene.cameras[1]?.id);
   });
 
   test("persists model eval history for cross-run comparison", () => {

@@ -29,6 +29,18 @@ export function SecurityOutcomePanel({ compact = false }: { compact?: boolean })
   return (
     <div className="space-y-3 p-3 text-[#ced7e8]">
       <OutcomeSummaryCard summary={model.summary} />
+      {model.summary.primaryRisk && (
+        <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[10px]">
+          <span className="font-semibold text-amber-300">Primary risk: </span>
+          <span className="text-amber-200">{model.summary.primaryRisk}</span>
+        </div>
+      )}
+      {model.summary.recommendedNextAction && (
+        <div className="rounded-lg border border-[#1f2536] bg-[#0b0f17] px-3 py-2 text-[10px]">
+          <span className="font-semibold text-[#8ea0bf]">Next action: </span>
+          <span className="text-[#d7deed]">{model.summary.recommendedNextAction}</span>
+        </div>
+      )}
       <IssueStack issues={model.topIssues} compact={compact} />
       {compact ? (
         <div className="rounded-lg border border-[#1f2536] bg-[#0b0f17] px-3 py-2 text-[10px] text-[#9fb1cf]">
@@ -49,17 +61,17 @@ export function SecurityOutcomePanel({ compact = false }: { compact?: boolean })
           </div>
         </section>
       ) : null}
-      <AssumptionDisclosure assumptions={scene.assumptions} />
-      <PrivacyReview result={result} privacyZonesCount={scene.privacyZones.length} compact={compact} />
+      <AssumptionDisclosure assumptions={scene.assumptions} model={model} />
+      <PrivacyReview result={result} privacyZonesCount={scene.privacyZones.length} privacyFindings={model.privacyFindings} compact={compact} />
       {!compact ? (
         <>
-          <CriticalZoneReview zones={result.criticalZoneResults} />
+          <CriticalZoneReview zones={model.failedZones} />
           <RecommendationReview recommendations={model.recommendations} />
-          <CameraResponsibilityPanel cameraResults={result.cameraResults} />
+          <CameraResponsibilityPanel cameraFindings={model.cameraFindings} />
           <RedundancyReview cameraResults={result.cameraResults} />
           <RedundancyMatrixPanel />
           <NightReadinessReview summary={model.summary} issues={model.allIssues} />
-          <PathOutcomeReview pathOutcome={model.pathOutcome} pathResults={result.pathResults} />
+          <PathOutcomeReview pathOutcome={model.pathOutcome} pathFindings={model.pathFindings} />
         </>
       ) : null}
     </div>

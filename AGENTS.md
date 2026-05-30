@@ -19,6 +19,10 @@ SentinelTwin is an AI-native physical security simulation platform. It is not a 
 It is a live security digital twin where cameras, lights, obstructions, access points, time,
 lighting conditions, and human movement are all editable variables in a continuous risk model.
 
+SentinelTwin is the whole app, not just the camera studio. The studio/editor is a core subsystem,
+but agents should keep the broader product framing in view: intake, audit, replay, compare,
+governance, sensor evidence, reporting, deployment, and extensibility all matter.
+
 Core loop: `Edit scene → recompute coverage → show security impact → explain what changed → recommend fixes`
 
 Product value: saves 4–8 hours per security audit, eliminates false confidence about coverage,
@@ -233,7 +237,9 @@ Read-only git commands only unless user explicitly approves writes in this conve
 
 ## Status
 
-Phases 0–2 complete. Simulation engine, schema, store, and core UI all built and working.
+Phases 0–2 are the current verified baseline, not the product frame. Simulation engine, schema,
+store, and core UI all exist and work, but the product should be treated as an app-wide platform
+that continues beyond any 0.1/0.2-style framing.
 See `Docs/todos/CURRENT_IMPLEMENTATION_STATE.md` for exact verified state.
 See `Docs/todos/CAMERASTUDIO_GAP_ANALYSIS.md` for gap analysis vs full product spec.
 See `Docs/decisions/PRE_BUILD_DISCUSSION_LOG.md` for all discussion topics resolved before coding.

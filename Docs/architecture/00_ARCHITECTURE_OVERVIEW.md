@@ -333,20 +333,35 @@ Details in `Docs/architecture/08_MONOREPO_STRUCTURE.md`.
 
 ## 11. Build Phases
 
+### Camera Studio (Phases 0–11 — Complete)
+
 | Phase | What | Status |
 |---|---|---|
-| 0 | Architecture documentation | Complete — 47+ exploration threads, 12 decisions, ISO 30173 / IEC 62676-4 alignment |
-| 1 | SecurityScene schema + Zustand store | Complete — Zod schemas, TypeScript types, CRUD operations, import/export |
-| 2 | Coverage engine: raycasting, DORI/ODPCVS, heatmap, three-mesh-bvh | Complete — BVH-accelerated, ~10.8ms average, door/window/glass occlusion |
-| 3 | Adversarial path simulation (Dijkstra, exposure cost) | Complete — Dijkstra minimum-exposure pathfinding, full AdversarialPathResult |
-| 4 | Camera + light + obstruction + privacy zone node system | Complete — 11 node types, layer visibility, inspector panels |
-| 5 | AI command layer + counterfactual + SOAR-ready output format | Complete — CommandAgent, set_time_of_day, obstruction counterfactuals |
-| 6 | Temporal simulation | Complete — 24h profile engine, TemporalProfileView UI, 29 tests, tab surfaced |
-| 7 | Before/after snapshots + privacy compliance report generation | Complete — snapshot system, HTML/Markdown/JSON reports |
+| 0 | Architecture documentation | Complete — exploration threads, decisions, ISO 30173 / IEC 62676-4 alignment |
+| 1 | SecurityScene schema + Zustand store | Complete |
+| 2 | Coverage engine: raycasting, DORI/ODPCVS, heatmap, three-mesh-bvh | Complete |
+| 3 | Adversarial path simulation (Dijkstra, exposure cost) | Complete |
+| 4 | Camera + light + obstruction + privacy zone node system | Complete |
+| 5 | AI command layer + counterfactual + SOAR-ready output format | Complete |
+| 6 | Temporal simulation | Complete |
+| 7 | Before/after snapshots + privacy compliance report generation | Complete |
 | 8 | Pascal fork + monorepo scaffold (editor integration) | Deferred — standalone studio app built first (see D-010) |
-| 9 | Demo scene (Small Retail Shop) | Complete — small-retail-shop.json loads and validates |
-| 10 | Privacy compliance evidence export (GDPR, BIPA, HIPAA) | Partial — report generation built, compliance export format pending |
+| 9 | Demo scene (Small Retail Shop) | Complete |
+| 10 | Privacy compliance evidence export (GDPR, BIPA, HIPAA) | Complete |
 | 11 | Scan/photo input pipeline (VGGT → SpatialLM → SecurityScene, V0.4) | Future |
+
+### Platform Build-Out (Phases 12–18 — In Progress)
+
+| Phase | What | Status |
+|---|---|---|
+| 12 | **Monorepo Package Extraction** — extract `@sentineltwin/simulation`, `core`, `report`, `agents`, `viewer` from `apps/studio/src` into standalone packages with proper build chains | In progress — simulation package extraction started |
+| 13 | **Deployment & Packaging** — local-only production profile, Docker Compose self-hosted, release process, environment validation | Not started |
+| 14 | **Persistent Identity & Governance** — multi-operator RBAC, approval workflow, conflict resolution, backend APIs | Not started |
+| 15 | **AI Agent Pipeline** — model-agnostic provider abstraction, multi-agent orchestration, structured tool calling, SOAR-ready output | Not started |
+| 16 | **Report & Compliance** — policy-driven redaction, standards templates (IEC 62676-4, GDPR, BIPA, HIPAA), evidence ledger, report catalog | Partial — report engine exists, compliance templates pending |
+| 17 | **Cross-Device Sync** — sync engine, cloud storage adapter, offline support, conflict resolution | Not started |
+| 18 | **SDK & Extensibility** — public API surfaces, NPM publication, plugin system design | Not started |
+| 19 | **Platform Polish** — accessibility (WCAG 2.1 AA), performance budgets, error recovery, cross-browser testing, telemetry, docs | Not started |
 
 **Why Phase 1 is now SecurityScene schema (not Pascal fork):** Per D-010, the simulation core
 is built first, independent of any editor foundation. Pascal fork (Phase 8) comes after the
@@ -354,6 +369,8 @@ simulation pipeline is verified correct.
 
 **Why adversarial path is Phase 3 (not later):** Per D-011, this is a core primitive and the
 most differentiated feature. It is not a later add-on.
+
+**Phase 12 numbering shift:** The monorepo extraction is numbered 12 to avoid confusion with existing Phase 11 (scan/photo pipeline, which is a `Docs/todos/` file). All subsequent phases are renumbered accordingly in the broader build plan.
 ---
 
 ## 12. What SentinelTwin Is NOT

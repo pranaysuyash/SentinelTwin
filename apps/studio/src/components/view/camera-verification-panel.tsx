@@ -93,6 +93,8 @@ export function VerificationPanel({
   onResetAlign: () => void;
   onClear: () => void;
 }) {
+  const bestCandidate = bestCandidateId ? (videoCandidates.find((candidate) => candidate.id === bestCandidateId) ?? null) : null;
+  const selectedCandidate = selectedCandidateId ? (videoCandidates.find((candidate) => candidate.id === selectedCandidateId) ?? null) : null;
   return (
     <div className="absolute right-3 top-82.5 z-30 w-64 rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)] backdrop-blur-sm">
       <div className="flex items-center justify-between gap-2">
@@ -155,11 +157,25 @@ export function VerificationPanel({
                       disabled={!bestCandidateId}
                       onClick={onAutoPickBestFrame}
                       className="rounded bg-[#1b3a5a] px-1.5 py-0.5 text-[8px] text-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
+                      >
                       Auto-pick best extracted frame
                     </button>
                   </div>
-                  <div className="flex flex-wrap gap-1">
+                  <div className="mb-1 rounded border border-[#243146] bg-[#0c1320] px-1.5 py-1 text-[8px] text-[#9db7e1]">
+                    {bestCandidate ? (
+                      <div className="flex items-center justify-between gap-1">
+                        <span>
+                          Best frame {formatSecondsShort(bestCandidate.timeS)} · score {bestCandidate.qualityScore.toFixed(1)}
+                        </span>
+                        <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-emerald-200">
+                          {selectedCandidate?.id === bestCandidate.id ? "Selected" : "Ready"}
+                        </span>
+                      </div>
+                    ) : (
+                      <div>Frames are scored deterministically by sharpness.</div>
+                    )}
+                  </div>
+                  <div className="grid gap-1">
                     {videoCandidates.map((candidate) => {
                       const selected = selectedCandidateId === candidate.id;
                       const isBest = bestCandidateId === candidate.id;
@@ -168,10 +184,15 @@ export function VerificationPanel({
                           key={candidate.id}
                           type="button"
                           onClick={() => onSelectVideoCandidate(candidate.id)}
-                          className={`rounded border px-1.5 py-0.5 text-[8px] ${selected ? "border-cyan-300 bg-cyan-500/20 text-cyan-100" : "border-[#2a3650] bg-[#111b2c] text-[#9db7e1]"}`}
+                          className={`flex items-center justify-between gap-2 rounded border px-1.5 py-1 text-left text-[8px] ${selected ? "border-cyan-300 bg-cyan-500/20 text-cyan-100" : "border-[#2a3650] bg-[#111b2c] text-[#9db7e1]"}`}
                           title={`Sharpness score ${candidate.qualityScore.toFixed(1)}`}
                         >
-                          {formatSecondsShort(candidate.timeS)}{isBest ? " · Best" : ""}
+                          <span className="min-w-0 truncate">
+                            {formatSecondsShort(candidate.timeS)}{isBest ? " · Best" : ""}
+                          </span>
+                          <span className="flex-none font-mono text-[7px] uppercase tracking-[0.12em] text-[#8aa0c8]">
+                            {candidate.qualityScore.toFixed(1)}
+                          </span>
                         </button>
                       );
                     })}

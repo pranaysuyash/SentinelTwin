@@ -22,9 +22,9 @@ describe("Studio shell launcher handoff", () => {
     expect(source).toContain('setRightPanelMode("inspector")');
   });
 
-  test("keeps report mode in dock layout instead of full-canvas bypass", () => {
+  test("keeps report mode in dock layout while replay, camera, and wall stay full-canvas", () => {
     const source = readFileSync(studioShellPath, "utf8");
 
-    expect(source).toContain('const fullCanvasMode = viewMode === "camera_view" || viewMode === "wall";');
+    expect(source).toContain('const fullCanvasMode = viewMode === "camera_view" || viewMode === "wall" || viewMode === "replay";');
   });
 });

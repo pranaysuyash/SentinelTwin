@@ -160,7 +160,7 @@ describe("countSiteEntities", () => {
     const counts = countSiteEntities(scene);
     expect(counts.cameras).toBe(1);
     expect(counts.walls).toBe(5);
-    expect(counts.zones).toBe(0);
+    expect(counts.criticalZones).toBe(0);
   });
 });
 

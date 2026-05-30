@@ -11,6 +11,8 @@ describe("Studio error boundary", () => {
     expect(source).toContain("ErrorFallback");
     expect(source).toContain("HorizontalDivider");
     expect(source).toContain("The studio hit a runtime error");
-    expect(source).toContain("Retry will re-enter the canonical shell");
+    expect(source).toContain("onResetSafeState");
+    expect(source).toContain("createNewScene()");
+    expect(source).toContain("Reset to safe state creates a fresh blank scene first");
   });
 });

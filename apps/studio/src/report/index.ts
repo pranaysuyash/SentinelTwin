@@ -278,6 +278,7 @@ function formatCheckpointProvenance(provenance: OperationalEvidenceTemporalTwinS
 // ── Report Data Interface ──
 
 export interface ReportData {
+  sceneId: string;
   title: string;
   siteName: string;
   generatedAt: number;
@@ -520,6 +521,8 @@ interface ReportEvidenceEntry {
   title: string;
   details: string;
   confidence: string;
+  anchorId: string;
+  evidenceUri: string;
 }
 
 // ── Build Report Data ──
@@ -575,6 +578,7 @@ export function buildReportData(
   const zoneMap = new Map(scene.criticalZones.map((zone) => [zone.id, zone]));
 
   return {
+    sceneId: scene.id,
     title: options?.title ?? audienceProfile.defaultTitle,
     siteName: scene.name,
     generatedAt: Date.now(),
@@ -923,6 +927,7 @@ function buildCompareReportSnapshot(
   const zoneMap = new Map(scene.criticalZones.map((zone) => [zone.id, zone]));
 
   return {
+    sceneId: scene.id,
     title: audienceProfile.defaultTitle,
     siteName: scene.name,
     generatedAt: Date.now(),
@@ -1086,6 +1091,7 @@ export function exportAsHtml(report: ReportData): string {
   <div class="cover">
     <h1>${escapeHtml(report.title)}</h1>
     <div class="subtitle">${escapeHtml(report.siteName)}</div>
+    <div class="meta">Scene ID: ${escapeHtml(report.sceneId)}</div>
     <div class="meta">${escapeHtml(report.audienceLabel)} audience · ${escapeHtml(report.audienceFraming)}</div>
     <div class="meta">Audience Policy: ${escapeHtml(report.audiencePolicy.disclosureSummary)}</div>
     <div class="meta">Visible Sections: ${escapeHtml(report.audiencePolicy.visibleSections.join(", "))}</div>
@@ -1203,15 +1209,24 @@ export function exportAsHtml(report: ReportData): string {
   <h2>Operational Evidence</h2>
   <div class="assumptions-box">
     <table>
+      <tr><th>Scene ID</th><td>${escapeHtml(report.sceneId)}</td></tr>
       <tr><th>Change log entries</th><td>${report.evidenceTrail.changeLogEntryCount}</td></tr>
       <tr><th>Evidence entries</th><td>${report.evidenceTrail.evidenceEntryCount}</td></tr>
       <tr><th>Sensor-related evidence</th><td>${report.evidenceTrail.sensorEvidenceCount}</td></tr>
     </table>
     ${report.evidenceTrail.recentEntries.length > 0 ? `
     <div style="margin-top:10px;">
+      <strong>Evidence links</strong>
+      <ul style="margin-left:18px;">
+        ${report.evidenceTrail.recentEntries.map((entry) => `<li><a href="#${entry.anchorId}">${escapeHtml(entry.when)} · ${escapeHtml(entry.title)}</a> <code>${escapeHtml(entry.evidenceUri)}</code></li>`).join("")}
+      </ul>
+    </div>
+    ` : "<p style=\"margin-top:10px; color:#64748b;\">No evidence links are available yet.</p>"}
+    ${report.evidenceTrail.recentEntries.length > 0 ? `
+    <div style="margin-top:10px;">
       <strong>Recent evidence entries</strong>
       <ul style="margin-left:18px;">
-        ${report.evidenceTrail.recentEntries.map((entry) => `<li><strong>${escapeHtml(entry.when)}</strong> · ${escapeHtml(entry.title)} · ${escapeHtml(entry.details)} · ${escapeHtml(entry.confidence)}</li>`).join("")}
+        ${report.evidenceTrail.recentEntries.map((entry) => `<li id="${entry.anchorId}"><strong>${escapeHtml(entry.when)}</strong> · ${escapeHtml(entry.title)} · ${escapeHtml(entry.details)} · ${escapeHtml(entry.confidence)} · <code>${escapeHtml(entry.evidenceUri)}</code></li>`).join("")}
       </ul>
     </div>
     ` : "<p style=\"margin-top:10px; color:#64748b;\">No evidence entries are recorded in the scene ledger yet.</p>"}
@@ -1529,6 +1544,7 @@ export function exportAsText(report: ReportData): string {
     `${"=".repeat(report.title.length)}`,
     "",
     `Site: ${report.siteName}`,
+    `Scene ID: ${report.sceneId}`,
     `Audience: ${report.audienceLabel}`,
     `Framing: ${report.audienceFraming}`,
     `Visibility: ${report.visibilityLabel}`,
@@ -1573,15 +1589,18 @@ export function exportAsText(report: ReportData): string {
     "",
     "OPERATIONAL EVIDENCE",
     `${"-".repeat(30)}`,
+    `  Scene ID:                ${report.sceneId}`,
     `  Change Log Entries:      ${report.evidenceTrail.changeLogEntryCount}`,
     `  Evidence Entries:        ${report.evidenceTrail.evidenceEntryCount}`,
     `  Sensor-related Evidence: ${report.evidenceTrail.sensorEvidenceCount}`,
     ...(report.evidenceTrail.recentEntries.length > 0
       ? [
+          "  Evidence Links:",
+          ...report.evidenceTrail.recentEntries.map((entry) => `    - [${entry.when} · ${entry.title}](#${entry.anchorId}) :: ${entry.evidenceUri}`),
           "  Recent Evidence Entries:",
-          ...report.evidenceTrail.recentEntries.map((entry) => `    - ${entry.when} · ${entry.title} · ${entry.details} · ${entry.confidence}`),
+          ...report.evidenceTrail.recentEntries.map((entry) => `    - <a id=\"${entry.anchorId}\"></a>${entry.when} · ${entry.title} · ${entry.details} · ${entry.confidence} · ${entry.evidenceUri}`),
         ]
-      : ["  Recent Evidence Entries: none"]),
+      : ["  Evidence Links: none", "  Recent Evidence Entries: none"]),
     "",
     ...(report.temporalTwin
       ? [
@@ -1796,6 +1815,7 @@ export function exportCompareAsHtml(
   <h1>Before/After Comparison</h1>
   <p>${escapeHtml(compare.before.siteName)} &middot; ${new Date().toLocaleDateString()}</p>
   <p><strong>Audience:</strong> ${escapeHtml(compare.before.audienceLabel)} · ${escapeHtml(compare.before.audienceFraming)}</p>
+  <p><strong>Scene IDs:</strong> ${escapeHtml(compare.before.sceneId)} → ${escapeHtml(compare.after.sceneId)}</p>
   <p><strong>Audience Policy:</strong> ${escapeHtml(compare.before.audiencePolicy.disclosureSummary)}</p>
   <p><strong>Visible Sections:</strong> ${escapeHtml(compare.before.audiencePolicy.visibleSections.join(", "))}</p>
   <p><strong>Withheld Sections:</strong> ${escapeHtml(compare.before.audiencePolicy.withheldSections.length > 0 ? compare.before.audiencePolicy.withheldSections.join(", ") : "none")}</p>
@@ -1913,29 +1933,47 @@ export function exportCompareAsHtml(
 
   <h2>Operational Evidence</h2>
   <div class="grid-2">
-    <div class="before-card">
+  <div class="before-card">
       <h3>Before evidence trail</h3>
       <table>
+        <tr><td>Scene ID</td><td>${escapeHtml(compare.before.sceneId)}</td></tr>
         <tr><td>Change log entries</td><td>${compare.before.evidenceTrail.changeLogEntryCount}</td></tr>
         <tr><td>Evidence entries</td><td>${compare.before.evidenceTrail.evidenceEntryCount}</td></tr>
         <tr><td>Sensor-related evidence</td><td>${compare.before.evidenceTrail.sensorEvidenceCount}</td></tr>
       </table>
       ${compare.before.evidenceTrail.recentEntries.length > 0 ? `
+      <div style="margin-top:10px;">
+        <strong>Evidence links</strong>
+        <ul style="margin-left:18px; font-size:9pt;">
+          ${compare.before.evidenceTrail.recentEntries.map((entry) => `<li><a href="#before-${entry.anchorId}">${escapeHtml(entry.when)} · ${escapeHtml(entry.title)}</a> <code>${escapeHtml(entry.evidenceUri)}</code></li>`).join("")}
+        </ul>
+      </div>
+      ` : "<p style=\"margin-top:10px; font-size:9pt; color:#64748b;\">No evidence links available.</p>"}
+      ${compare.before.evidenceTrail.recentEntries.length > 0 ? `
       <ul style="margin-top:10px; margin-left:18px; font-size:9pt;">
-        ${compare.before.evidenceTrail.recentEntries.map((entry) => `<li><strong>${escapeHtml(entry.when)}</strong> · ${escapeHtml(entry.title)} · ${escapeHtml(entry.details)} · ${escapeHtml(entry.confidence)}</li>`).join("")}
+        ${compare.before.evidenceTrail.recentEntries.map((entry) => `<li id="before-${entry.anchorId}"><strong>${escapeHtml(entry.when)}</strong> · ${escapeHtml(entry.title)} · ${escapeHtml(entry.details)} · ${escapeHtml(entry.confidence)} · <code>${escapeHtml(entry.evidenceUri)}</code></li>`).join("")}
       </ul>
       ` : "<p style=\"margin-top:10px; font-size:9pt; color:#64748b;\">No evidence entries recorded.</p>"}
     </div>
     <div class="after-card">
       <h3>After evidence trail</h3>
       <table>
+        <tr><td>Scene ID</td><td>${escapeHtml(compare.after.sceneId)}</td></tr>
         <tr><td>Change log entries</td><td>${compare.after.evidenceTrail.changeLogEntryCount}</td></tr>
         <tr><td>Evidence entries</td><td>${compare.after.evidenceTrail.evidenceEntryCount}</td></tr>
         <tr><td>Sensor-related evidence</td><td>${compare.after.evidenceTrail.sensorEvidenceCount}</td></tr>
       </table>
       ${compare.after.evidenceTrail.recentEntries.length > 0 ? `
+      <div style="margin-top:10px;">
+        <strong>Evidence links</strong>
+        <ul style="margin-left:18px; font-size:9pt;">
+          ${compare.after.evidenceTrail.recentEntries.map((entry) => `<li><a href="#after-${entry.anchorId}">${escapeHtml(entry.when)} · ${escapeHtml(entry.title)}</a> <code>${escapeHtml(entry.evidenceUri)}</code></li>`).join("")}
+        </ul>
+      </div>
+      ` : "<p style=\"margin-top:10px; font-size:9pt; color:#64748b;\">No evidence links available.</p>"}
+      ${compare.after.evidenceTrail.recentEntries.length > 0 ? `
       <ul style="margin-top:10px; margin-left:18px; font-size:9pt;">
-        ${compare.after.evidenceTrail.recentEntries.map((entry) => `<li><strong>${escapeHtml(entry.when)}</strong> · ${escapeHtml(entry.title)} · ${escapeHtml(entry.details)} · ${escapeHtml(entry.confidence)}</li>`).join("")}
+        ${compare.after.evidenceTrail.recentEntries.map((entry) => `<li id="after-${entry.anchorId}"><strong>${escapeHtml(entry.when)}</strong> · ${escapeHtml(entry.title)} · ${escapeHtml(entry.details)} · ${escapeHtml(entry.confidence)} · <code>${escapeHtml(entry.evidenceUri)}</code></li>`).join("")}
       </ul>
       ` : "<p style=\"margin-top:10px; font-size:9pt; color:#64748b;\">No evidence entries recorded.</p>"}
     </div>
@@ -1967,6 +2005,7 @@ export function exportCompareAsMarkdown(compare: CompareReportData): string {
     "# Before/After Comparison",
     "",
     `**Site:** ${compare.before.siteName}`,
+    `**Scene IDs:** ${compare.before.sceneId} → ${compare.after.sceneId}`,
     `**Audience:** ${compare.before.audienceLabel}`,
     `**Framing:** ${compare.before.audienceFraming}`,
     `**Audience Policy:** ${compare.before.audiencePolicy.disclosureSummary}`,
@@ -2038,6 +2077,8 @@ export function exportCompareAsMarkdown(compare: CompareReportData): string {
     `- After Invalid Geometry: ${compare.after.truthLadder.invalidGeometryCount}`,
     "",
     "## Operational Evidence",
+    `- Before Scene ID: ${compare.before.sceneId}`,
+    `- After Scene ID: ${compare.after.sceneId}`,
     `- Before Change Log Entries: ${compare.before.evidenceTrail.changeLogEntryCount}`,
     `- After Change Log Entries: ${compare.after.evidenceTrail.changeLogEntryCount}`,
     `- Before Evidence Entries: ${compare.before.evidenceTrail.evidenceEntryCount}`,
@@ -2048,10 +2089,14 @@ export function exportCompareAsMarkdown(compare: CompareReportData): string {
     `- After Truth Ladder: ${compare.after.truthLadder.summary}`,
     ...(compare.before.evidenceTrail.recentEntries.length > 0 || compare.after.evidenceTrail.recentEntries.length > 0
       ? [
+          "- Before Evidence Links:",
+          ...compare.before.evidenceTrail.recentEntries.map((entry) => `  - [${entry.when} · ${entry.title}](#before-${entry.anchorId}) :: ${entry.evidenceUri}`),
+          "- After Evidence Links:",
+          ...compare.after.evidenceTrail.recentEntries.map((entry) => `  - [${entry.when} · ${entry.title}](#after-${entry.anchorId}) :: ${entry.evidenceUri}`),
           "- Before Recent Evidence:",
-          ...compare.before.evidenceTrail.recentEntries.map((entry) => `  - ${entry.when} · ${entry.title} · ${entry.details} · ${entry.confidence}`),
+          ...compare.before.evidenceTrail.recentEntries.map((entry) => `  - <a id=\"before-${entry.anchorId}\"></a>${entry.when} · ${entry.title} · ${entry.details} · ${entry.confidence} · ${entry.evidenceUri}`),
           "- After Recent Evidence:",
-          ...compare.after.evidenceTrail.recentEntries.map((entry) => `  - ${entry.when} · ${entry.title} · ${entry.details} · ${entry.confidence}`),
+          ...compare.after.evidenceTrail.recentEntries.map((entry) => `  - <a id=\"after-${entry.anchorId}\"></a>${entry.when} · ${entry.title} · ${entry.details} · ${entry.confidence} · ${entry.evidenceUri}`),
         ]
       : ["- Recent Evidence: none"]),
     "",
@@ -2166,7 +2211,7 @@ function formatSignedDelta(delta: number | null | undefined) {
 function buildEvidenceTrail(scene: SecurityScene): ReportData["evidenceTrail"] {
   const evidenceEntries = (scene.changeLog ?? [])
     .filter((entry) => entry.startsWith("Evidence: "))
-    .map((entry) => parseEvidenceEntry(entry))
+    .map((entry, index) => parseEvidenceEntry(entry, scene.id, index))
     .filter((entry): entry is ReportEvidenceEntry => entry !== null);
   const sensorEvidenceCount = evidenceEntries.filter((entry) => /sensor/i.test(`${entry.title} ${entry.details}`)).length;
   return {
@@ -2177,7 +2222,7 @@ function buildEvidenceTrail(scene: SecurityScene): ReportData["evidenceTrail"] {
   };
 }
 
-function parseEvidenceEntry(entry: string): ReportEvidenceEntry | null {
+function parseEvidenceEntry(entry: string, sceneId: string, index: number): ReportEvidenceEntry | null {
   const payload = entry.slice("Evidence: ".length);
   const parts = payload.split(" | ");
   if (parts.length < 4) return null;
@@ -2185,7 +2230,32 @@ function parseEvidenceEntry(entry: string): ReportEvidenceEntry | null {
   const confidence = rest.pop();
   if (!confidence) return null;
   const details = rest.join(" | ");
-  return { when, title, details, confidence };
+  const anchorId = buildEvidenceAnchorId(index, title);
+  return {
+    when,
+    title,
+    details,
+    confidence,
+    anchorId,
+    evidenceUri: buildEvidenceUri(sceneId, when, index),
+  };
+}
+
+function buildEvidenceAnchorId(index: number, title: string): string {
+  const slug = slugifyEvidenceToken(title);
+  return `evidence-${index + 1}-${slug}`;
+}
+
+function buildEvidenceUri(sceneId: string, when: string, index: number): string {
+  return `scene:${sceneId}:report:${slugifyEvidenceToken(when)}:operationalEvidence.recentEntries[${index}]`;
+}
+
+function slugifyEvidenceToken(value: string): string {
+  const slug = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || "entry";
 }
 
 function scenarioEvidenceDataUri(input: {

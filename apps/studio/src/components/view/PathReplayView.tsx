@@ -670,6 +670,13 @@ type QualityExposure = {
   [key: string]: number | undefined;
 };
 const EXPOSURE_KEYS: DoriQuality[] = ["identification", "recognition", "observation", "detection"];
+type ReplayCameraStateSummary = {
+  cameraId: string;
+  cameraName: string;
+  visible: boolean;
+  quality?: DoriQuality;
+  reason?: string;
+};
 
 function InfoOverlay({
   pathLabel,
@@ -814,6 +821,54 @@ function EmptyReplayState() {
   );
 }
 
+function CurrentVisibilityPanel({
+  currentTime,
+  visibleNow,
+  lostNow,
+}: {
+  currentTime: number;
+  visibleNow: ReplayCameraStateSummary[];
+  lostNow: ReplayCameraStateSummary[];
+}) {
+  return (
+    <div className="absolute right-3 top-14 z-10 w-76 rounded-xl border border-[#1f2536] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.32)] backdrop-blur-sm">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[8px] font-semibold uppercase tracking-[0.2em] text-[#7dd3fc]">Current Visibility</div>
+        <div className="text-[8px] font-mono text-[#8b96ab]">@ {currentTime.toFixed(1)}s</div>
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-1.5">
+        <div className="rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2 py-1">
+          <div className="text-[7px] uppercase tracking-[0.14em] text-[#86efac]">Visible now</div>
+          <div className="mt-0.5 text-[12px] font-semibold text-emerald-200">{visibleNow.length}</div>
+        </div>
+        <div className="rounded-md border border-rose-500/25 bg-rose-500/10 px-2 py-1">
+          <div className="text-[7px] uppercase tracking-[0.14em] text-[#fda4af]">Lost now</div>
+          <div className="mt-0.5 text-[12px] font-semibold text-rose-200">{lostNow.length}</div>
+        </div>
+      </div>
+      <div className="mt-2 space-y-1.5">
+        {[...visibleNow.slice(0, 3), ...lostNow.slice(0, 2)].map((entry) => (
+          <div key={entry.cameraId} className="rounded-md border border-[#243146] bg-[#111521] px-2 py-1">
+            <div className="flex items-center justify-between gap-2">
+              <span className="truncate text-[9px] font-medium text-[#d2d9e8]">{entry.cameraName}</span>
+              <span
+                className={`rounded px-1 py-0.5 text-[7px] font-semibold uppercase tracking-[0.12em] ${
+                  entry.visible ? "bg-emerald-500/20 text-emerald-200" : "bg-rose-500/20 text-rose-200"
+                }`}
+              >
+                {entry.visible ? "Visible" : "Lost"}
+              </span>
+            </div>
+            <div className="mt-0.5 truncate text-[8px] text-[#8b96ab]">
+              {entry.quality ? `${entry.quality.toUpperCase()} • ` : ""}{entry.reason ?? "No reason annotation"}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Path Replay View ──
 
 export function PathReplayView() {
@@ -949,6 +1004,46 @@ export function PathReplayView() {
     if (!best) return undefined;
     return scene.cameras.find((camera) => camera.id === best[0])?.name ?? best[0];
   }, [activePathResult, scene.cameras]);
+  const replayCameraStateSummary = useMemo(() => {
+    if (!activePathResult?.timeline?.length) {
+      return { visibleNow: [] as ReplayCameraStateSummary[], lostNow: [] as ReplayCameraStateSummary[] };
+    }
+    const stateByCamera = new Map<string, { visible: boolean; quality?: DoriQuality; reason?: string }>();
+    for (const event of activePathResult.timeline) {
+      if (event.timeS > currentTime || !event.cameraId) continue;
+      const previous = stateByCamera.get(event.cameraId);
+      if (event.event === "visible") {
+        stateByCamera.set(event.cameraId, { visible: true, quality: event.quality, reason: event.reason });
+        continue;
+      }
+      if (event.event === "lost") {
+        stateByCamera.set(event.cameraId, { visible: false, quality: event.quality, reason: event.reason });
+        continue;
+      }
+      if (event.event === "quality_change") {
+        stateByCamera.set(event.cameraId, {
+          visible: previous?.visible ?? true,
+          quality: event.quality ?? previous?.quality,
+          reason: event.reason ?? previous?.reason,
+        });
+      }
+    }
+
+    const entries: ReplayCameraStateSummary[] = Array.from(stateByCamera.entries()).map(([cameraId, state]) => ({
+      cameraId,
+      cameraName: scene.cameras.find((camera) => camera.id === cameraId)?.name ?? cameraId,
+      visible: state.visible,
+      quality: state.quality,
+      reason: state.reason,
+    }));
+    const sortByPriority = (a: ReplayCameraStateSummary, b: ReplayCameraStateSummary) =>
+      (QUALITY_RANK[b.quality ?? "none"] - QUALITY_RANK[a.quality ?? "none"])
+      || a.cameraName.localeCompare(b.cameraName);
+    return {
+      visibleNow: entries.filter((entry) => entry.visible).sort(sortByPriority),
+      lostNow: entries.filter((entry) => !entry.visible).sort(sortByPriority),
+    };
+  }, [activePathResult, currentTime, scene.cameras]);
 
   const totalDuration =
     activePathResult?.totalDurationS
@@ -1119,7 +1214,7 @@ export function PathReplayView() {
             </button>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-2 text-right text-[9px]">
+        <div className="grid grid-cols-4 gap-2 text-right text-[9px]">
           <div className="rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5">
             <div className="uppercase tracking-[0.16em] text-[#556076]">Path Length</div>
             <div className="mt-0.5 font-mono text-[#c7d0e4]">{pathLengthM.toFixed(1)}m</div>
@@ -1131,6 +1226,12 @@ export function PathReplayView() {
           <div className="rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5">
             <div className="uppercase tracking-[0.16em] text-[#556076]">Start Time</div>
             <div className="mt-0.5 font-mono text-[#c7d0e4]">{formatSecondsShort(playbackWaypoints[0]?.timeS ?? 0)}</div>
+          </div>
+          <div className="rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5">
+            <div className="uppercase tracking-[0.16em] text-[#556076]">Visible Now</div>
+            <div className="mt-0.5 font-mono text-[#c7d0e4]">
+              {activePathResult ? `${replayCameraStateSummary.visibleNow.length}/${scene.cameras.length}` : "--"}
+            </div>
           </div>
         </div>
       </div>
@@ -1152,6 +1253,13 @@ export function PathReplayView() {
           nextEventLabel={nextTimelineEvent?.reason ?? nextTimelineEvent?.event?.replace(/_/g, " ")}
         />
       )}
+      {activePathResult ? (
+        <CurrentVisibilityPanel
+          currentTime={currentTime}
+          visibleNow={replayCameraStateSummary.visibleNow}
+          lostNow={replayCameraStateSummary.lostNow}
+        />
+      ) : null}
 
       <Canvas
         camera={{ position: [12.8, 7.6, 11.6], fov: 31, near: 0.1, far: 200 }}

@@ -465,6 +465,54 @@ export const TRUST_AUDIT_SURFACES: TrustAuditSurface[] = [
     ],
     forbiddenPhrases: [],
   },
+  {
+    surface: "Site intake hub truthful maturity",
+    file: "src/components/site-intake/SiteIntakeHub.tsx",
+    requiredPhrases: [
+      "Manual-assisted",
+      "No automatic segmentation or depth",
+      "Review required before trust",
+      "Best-effort wall/opening extraction",
+      "No product-grade video/stream verification yet",
+      "Local-only mode is available",
+    ],
+    forbiddenPhrases: [
+      "Your data is secure and never shared",
+      "automatic reconstruction",
+      "automatic depth estimation",
+    ],
+  },
+  {
+    surface: "Site draft review unified pipeline",
+    file: "src/components/site-intake/SiteDraftReview.tsx",
+    requiredPhrases: [
+      "compileToSiteTwinDraft",
+      "canRunBaselineSimulation",
+      "Missing Prerequisites",
+      "Assumptions",
+      "Next Actions",
+      "suggestedAction",
+      "Approve & Open in Studio",
+    ],
+    forbiddenPhrases: ["stub", "placeholder"],
+  },
+  {
+    surface: "Site twin draft compiler maturity",
+    file: "src/lib/site-compiler.ts",
+    requiredPhrases: [
+      "SITE_SOURCE_MATURITY",
+      "No automatic segmentation",
+      "No product-grade video",
+      "Review required before trust",
+      "Manual correction required",
+      "canRunBaselineSimulation",
+      "compileToSiteTwinDraft",
+      "MissingPrerequisite",
+      "SuggestedNextAction",
+      "DraftAssumption",
+    ],
+    forbiddenPhrases: ["stub", "placeholder"],
+  },
 ];
 
 function readSurface(rootDir: string, surface: TrustAuditSurface) {

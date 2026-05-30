@@ -2,6 +2,7 @@ import type { WorkspaceAccessState } from "@/lib/workspace-access";
 import { routeWorkspaceApproval } from "@/lib/workspace-access";
 import type { SecurityScene } from "@/schema/security-scene";
 import type { WorkspaceGovernanceState } from "@/lib/workspace-governance";
+import { z } from "zod";
 
 export type WorkspaceMembershipDriftSummary = {
   activeMemberChanged: boolean;
@@ -25,6 +26,29 @@ export type WorkspaceApprovalRouteSummary = {
   activeMemberEligible: boolean;
   activeMemberReason: string;
 };
+
+export const WorkspaceMembershipDriftSummarySchema = z.object({
+  activeMemberChanged: z.boolean(),
+  teamSizeChanged: z.boolean(),
+  policyChanged: z.boolean(),
+});
+
+export const WorkspaceApprovalRouteSummarySchema = z.object({
+  routeKey: z.string().min(1).optional(),
+  routeStatus: z.enum(["ready", "reconcile_before_route", "review_required", "open_publish"]),
+  routeScope: z.enum(["direct", "review", "reconcile"]).optional(),
+  routeLabel: z.string().min(1),
+  routeReason: z.string().min(1),
+  targetReviewerLabel: z.string().min(1),
+  activeMemberLabel: z.string().min(1),
+  archivedMemberLabel: z.string().min(1),
+  currentPolicyLabel: z.string().min(1),
+  archivedPolicyLabel: z.string().min(1),
+  drift: WorkspaceMembershipDriftSummarySchema.nullable(),
+  hasPrivacyExposure: z.boolean(),
+  activeMemberEligible: z.boolean().optional(),
+  activeMemberReason: z.string().optional(),
+});
 
 function buildWorkspaceApprovalRouteKey(params: {
   sceneId: string;
@@ -65,6 +89,12 @@ function buildWorkspaceApprovalRouteKey(params: {
     `privacy:${params.hasPrivacyExposure ? "1" : "0"}`,
     `drift:${driftLabel}`,
   ].join("|");
+}
+
+export function safeParseWorkspaceApprovalRouteSummary(summary: unknown): WorkspaceApprovalRouteSummary | null {
+  const parsed = WorkspaceApprovalRouteSummarySchema.safeParse(summary);
+  if (!parsed.success) return null;
+  return normalizeWorkspaceApprovalRouteSummary(parsed.data);
 }
 
 export function summarizeWorkspaceMembershipDrift(
@@ -191,6 +221,30 @@ export function normalizeWorkspaceApprovalRouteSummary(
     activeMemberReason?: string;
   },
 ): WorkspaceApprovalRouteSummary {
+  const parsed = WorkspaceApprovalRouteSummarySchema.safeParse(summary);
+  if (parsed.success) {
+    return {
+      ...parsed.data,
+      routeKey: parsed.data.routeKey ?? [
+        `status:${parsed.data.routeStatus}`,
+        `scope:${parsed.data.routeScope ?? (parsed.data.routeStatus === "reconcile_before_route" ? "reconcile" : parsed.data.routeStatus === "review_required" ? "review" : "direct")}`,
+        `active:${parsed.data.activeMemberLabel}`,
+        `archived:${parsed.data.archivedMemberLabel}`,
+        `current:${parsed.data.currentPolicyLabel}`,
+        `archivedPolicy:${parsed.data.archivedPolicyLabel}`,
+        `reviewer:${parsed.data.targetReviewerLabel}`,
+        `privacy:${parsed.data.hasPrivacyExposure ? "1" : "0"}`,
+        `drift:${parsed.data.drift ? `${parsed.data.drift.activeMemberChanged ? 1 : 0}${parsed.data.drift.teamSizeChanged ? 1 : 0}${parsed.data.drift.policyChanged ? 1 : 0}` : "000"}`,
+      ].join("|"),
+      routeScope: parsed.data.routeScope ?? (parsed.data.routeStatus === "reconcile_before_route"
+        ? "reconcile"
+        : parsed.data.routeStatus === "review_required"
+          ? "review"
+          : "direct"),
+      activeMemberEligible: parsed.data.activeMemberEligible ?? false,
+      activeMemberReason: parsed.data.activeMemberReason ?? "No route eligibility summary available.",
+    };
+  }
   const routeStatus = summary.routeStatus ?? "ready";
   const routeScope = summary.routeScope
     ?? (routeStatus === "reconcile_before_route"

@@ -43,6 +43,10 @@ describe("CameraViewMode", () => {
     expect(combinedSource).toContain("Timeline / Path Replay");
     expect(combinedSource).toContain("Quality Over Time");
     expect(combinedSource).toContain("Camera Wall Preview");
+    expect(combinedSource).toContain("activeCameraTimelineEvent");
+    expect(combinedSource).toContain("flags.overlays && flags.path");
+    expect(combinedSource).toContain("flags.overlays && flags.dori");
+    expect(combinedSource).toContain("Replay Time");
     expect(combinedSource).toContain("Scenario / Path");
     expect(combinedSource).toContain("non-forensic");
     expect(combinedSource).toContain("Extracting video frame…");
@@ -58,11 +62,19 @@ describe("CameraViewMode", () => {
     expect(combinedSource).toContain("Extracted frames");
     expect(combinedSource).toContain("verificationVideoCandidates");
     expect(combinedSource).toContain("verificationBestCandidateId");
+    expect(combinedSource).toContain("bestCandidateScore");
+    expect(combinedSource).toContain("Best frame");
+    expect(combinedSource).toContain("score");
+    expect(combinedSource).toContain("Frames are scored deterministically by sharpness.");
     expect(combinedSource).toContain("sourceType: verificationSourceType");
     expect(combinedSource).toContain("sampleTimeS: verificationSampleTimeS");
     expect(combinedSource).toContain("videoDurationS: verificationVideoDurationS");
     expect(combinedSource).toContain("bestCandidateId: verificationBestCandidateId");
     expect(combinedSource).toContain("selectedCandidateId: verificationSelectedCandidateId");
+    expect(combinedSource).toContain("recordOperationalEvidenceEvent");
+    expect(combinedSource).toContain("snapshot_saved");
+    expect(combinedSource).toContain("Camera verification snapshot saved");
+    expect(combinedSource).toContain("branchLabel: \"verification\"");
     expect(combinedSource).toContain("alignmentMethod: verificationAlignmentMethod");
     expect(combinedSource).toContain("autoAlignDelta: verificationAutoAlignDelta");
     expect(combinedSource).toContain("scale: verificationScale");
@@ -80,6 +92,7 @@ describe("CameraViewMode", () => {
     expect(combinedSource).toContain("best frame selected");
     expect(combinedSource).toContain("manual frame selected");
     expect(combinedSource).toContain("no frame selected");
+    expect(combinedSource).toContain("best score");
     expect(combinedSource).toContain("title={formatSnapshotEvidenceSummary(snapshot)}");
     expect(combinedSource).toContain("Excellent");
     expect(combinedSource).toContain("Good");

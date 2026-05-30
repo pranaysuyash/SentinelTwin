@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { z } from "zod";
 
 import { normalizeWorkspaceAccessState, type WorkspaceAccessState } from "@/lib/workspace-access";
-import { normalizeWorkspaceApprovalRouteSummary, summarizeWorkspaceApprovalRouting } from "@/lib/workspace-membership-routing";
+import { normalizeWorkspaceApprovalRouteSummary, safeParseWorkspaceApprovalRouteSummary, summarizeWorkspaceApprovalRouting } from "@/lib/workspace-membership-routing";
 import { WORKSPACE_ROLES, normalizeWorkspaceGovernance, type WorkspaceRole } from "@/lib/workspace-governance";
 import type { SecurityScene } from "@/schema/security-scene";
 import type {
@@ -163,7 +163,7 @@ export function loadWorkspaceMembershipArchiveHistory(rootDir = resolveWorkspace
         workspaceAccessState: normalizeWorkspaceAccessState(candidate.workspaceAccessState),
         workspaceGovernanceState: normalizeWorkspaceGovernance(candidate.workspaceGovernanceState),
         approvalRoute: candidate.approvalRoute
-          ? normalizeWorkspaceApprovalRouteSummary(candidate.approvalRoute as WorkspaceMembershipArchiveRecord["approvalRoute"])
+          ? safeParseWorkspaceApprovalRouteSummary(candidate.approvalRoute) ?? normalizeWorkspaceApprovalRouteSummary(candidate.approvalRoute as WorkspaceMembershipArchiveRecord["approvalRoute"])
           : summarizeWorkspaceApprovalRouting(
             {
               id: candidate.sceneId,

@@ -4293,6 +4293,15 @@ geometryValidity: z.enum(["valid", "suspect", "invalid"]).default("valid")
 - Rationale: The product needs a visible bridge from the current local workspace list to the future org/account model without pretending that plan or invite infrastructure already exists.
 - Consequence: The launcher now shows a dedicated workspace catalog summary, the org/account boundary is visible in-product, and the remaining work stays focused on the canonical org/account, billing, and transfer model rather than another metadata patch.
 
+## D-257 - Report exports should emit scene-scoped evidence URIs and anchor-backed evidence links
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: The report engine already exposed provenance, evidence summaries, and audience-aware exports, but exported handoff artifacts still lacked explicit link targets for the recent operational evidence entries they described.
+- Decision: Extend the canonical report contract with `sceneId`, per-entry evidence anchor IDs, and scene-scoped evidence URIs, then render those links in the existing HTML, Markdown, and text report exports instead of building a separate evidence surface.
+- Rationale: Evidence handoff should be traceable inside the canonical report spine. Anchor-backed links are the smallest durable step toward clickable report sections and keep the report engine aligned with the same scene identity used elsewhere in the product.
+- Consequence: Report exports now expose linkable evidence entries and scene IDs, and future compliance/reporting work can build on the same contract for deeper drill-through, redaction, and standards-specific templates.
+
 ## D-256 - The launcher should expose a local workspace account summary as the org/account bridge
 
 - Date: 2026-05-30
@@ -4504,3 +4513,61 @@ Fixed the `CameraLiveConnectionEventRecord` and `WorkspaceApprovalRouteSummary` 
 **Why:** This keeps the public handoff flow aligned with the existing copy/open behavior, avoids duplicate link-building code, and gives the product a real browser-native share surface where supported.
 
 **Consequence:** Archive and compare cards can now share the same checkpoint/archive URLs through the browser share sheet, while existing copy/open buttons remain available as the fallback path.
+
+## D-272 - Operational evidence events should be schema-first and build-time validated
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: The operational evidence layer already had a parser wrapper and hand-maintained TypeScript event shape, but the canonical event contract itself was still implicit in caller code and normalizer assumptions.
+- Decision: Define the operational evidence event contract as a canonical zod schema plus companion input schema, and make `buildOperationalEvidenceEvent(...)` validate/canonicalize its inputs before emitting a ledger event. Nested scene snapshots must be validated against the SecurityScene parser before they can enter the event, and the normalized event must satisfy the output schema before it is returned.
+- Rationale: The evidence ledger is a platform spine, so the event shape needs to be discoverable and enforceable in one place. Schema-first validation reduces drift between builder, archive, journal, and UI callers, while still allowing the builder to canonicalize blank human-authored fields into the final event form.
+- Consequence: Ledger imports and live event creation now share one canonical contract, malformed snapshots are rejected at the boundary, and future event kinds or payload extensions can be added by extending the schema rather than duplicating validation logic across callers.
+
+## D-273 - SentinelTwin reviews and planning must use full-vision framing, not milestone shorthand
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: Milestone shorthand (for example, checkpoint-style version framing) was repeatedly causing implementation and review loops to optimize for local demo completeness rather than full product truth.
+- Decision: Evaluate and plan SentinelTwin only against the full product vision using explicit state buckets: real, partial, scaffold/placeholder, missing, and next-build-required.
+- Rationale: The simulation engine is a core subsystem, not the product endpoint. Full-vision framing keeps intake, evidence, verification, reporting, collaboration, and deployment gaps visible and actionable.
+- Consequence: Audits, implementation backlogs, and acceptance criteria must map each subsystem to full-vision state and required next work; checkpoint shorthand must not be used as completion logic.
+
+## D-274 - Publication checkpoints should be resolved through a canonical publication helper
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: The temporal twin summary already distinguishes reconstructable checkpoints from published checkpoints, but the published branch was still being resolved inline by multiple callers using the same kind/published-flag filter.
+- Decision: Add a canonical publication checkpoint resolver that returns the latest published entry plus its source provenance, and use that resolver from the temporal twin summary instead of duplicating the publication lookup logic inline.
+- Rationale: Publication is a semantic layer on top of the evidence timeline, not just another event filter. Centralizing the lookup makes the published branch easier to reason about and keeps report/Scene Intelligence publication views aligned.
+- Consequence: The ledger now has an explicit publication checkpoint helper that can be reused by the report and timeline surfaces, while the temporal twin summary remains the single consumer of the resolved publication checkpoint state.
+
+## D-275 - Camera View verification snapshots should enter the operational evidence ledger
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: The real-footage verification workflow already saved alignment snapshots locally, but those captures were still living only in panel state and panel-specific summaries instead of the canonical evidence trail.
+- Decision: When the operator saves a Camera View verification snapshot, also emit a `snapshot_saved` operational evidence event with verification branch metadata, scene provenance, revision depth, affected camera id, and confidence derived from the alignment score.
+- Rationale: Verification is an operational activity, not a throwaway preview. Saving the snapshot into the evidence ledger keeps the verification workflow auditable alongside scene edits, scans, simulations, and reports, and it makes the current preview-level verification path feel like part of the same product spine.
+- Consequence: Camera View verification snapshots now round-trip through the evidence ledger and can be searched, audited, and timeline-linked from the same provenance surface as the rest of the scene history, while the feature status remains preview until real-feed validation is stronger.
+
+## D-276 - Workspace approval route summaries should be schema-first and archive-validated
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: The approval route summary already carried route key, scope, labels, and drift metadata, but the summary shape was still being hand-normalized in the archive loader instead of validated by a canonical schema.
+- Decision: Define a workspace approval route summary schema and use it for route normalization and archive loading, so route records and their derived metadata are parsed through one canonical contract.
+- Rationale: The approval route is a governance primitive that travels through live UI, archive history, conflict replay, and handoff logs. A schema-backed route summary reduces drift and makes the route contract explicit enough to reuse beyond a single helper.
+- Consequence: Workspace approval routes now normalize through a shared schema before they enter archive or conflict records, and future remote approval routing can extend the same contract instead of inventing another route shape.
+
+---
+
+## D-277 - Unified Site Twin draft/review pipeline for all intake sources
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: Site creation was fragmented across multiple surfaces (SiteIntakeHub, ProjectStartLauncher, ScanSiteWizard, SceneBuilderWizard, AI draft modal, JSON import) with no shared review contract. Each source had its own compile path, and some bypassed review entirely.
+- Decision: Define a canonical `SiteTwinDraft` type that every intake source must produce before the scene becomes active. The draft includes entity counts, assumptions, actionable warnings with suggested fixes, missing prerequisites, provenance, and suggested next actions. A single `compileToSiteTwinDraft()` function upgrades any `SiteCompilerResult` into this draft. The `SiteDraftReview` component renders the full draft uniformly regardless of source.
+- Rationale: A shared review contract ensures every site twin goes through the same quality gate, regardless of how it was created. This prevents low-quality AI drafts or incomplete scans from entering the simulation pipeline without human review. Actionable warnings with suggested fixes reduce operator cognitive load. Missing prerequisite tracking makes it clear when baseline simulation can run.
+- Consequence: All five intake sources (scan, AI draft, floor plan, JSON, manual) now flow through one review → approve → baseline simulation → Studio pipeline. The `canRunBaselineSimulation()` function gates automatic simulation to scenes with at least one camera and one critical zone. Manual/guided scan naming is consistent: dashboard "Scan a Site" → manual mode, "Guided Scan Assistant" → guided mode. Maturity language is truthful everywhere: no claims of automatic segmentation, depth, or reconstruction.
+- Key files: `lib/site-compiler.ts` (unified draft model), `components/site-intake/SiteDraftReview.tsx` (full review UI), `app/page.tsx` (routing), `lib/__tests__/site-twin-draft.test.ts` (22 tests)
+- Alternatives rejected: per-source review components (duplicate UI, drift risk), bypassing review for "trusted" sources like JSON import (trust without verification is how errors propagate), keeping separate compile functions without a shared draft type (already had this and it caused inconsistency).

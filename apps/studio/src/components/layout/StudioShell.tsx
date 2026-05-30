@@ -175,7 +175,7 @@ export default function StudioShell() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showFirstRunGuide, setShowFirstRunGuide] = useState(false);
   const rightRailAutoSetRef = useRef(false);
-  const fullCanvasMode = viewMode === "camera_view" || viewMode === "wall";
+  const fullCanvasMode = viewMode === "camera_view" || viewMode === "wall" || viewMode === "replay";
 
   // Read ?mode= from URL on mount only — prevents URL from overriding user's mode changes.
   useEffect(() => {

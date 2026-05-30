@@ -99,3 +99,5 @@ npm run deploy:validate
 npm run deploy:validate:self-hosted
 npm run deploy:validate:cloud-assisted
 ```
+
+The validator resolves the studio root from its own script location, so the same commands also work when they are invoked through `apps/studio/package.json` scripts.

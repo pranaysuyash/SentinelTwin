@@ -55,41 +55,6 @@ export type OperationalEvidenceEventKind =
   | "scene_merged"
   | "scan_compiled";
 
-export type OperationalEvidenceEvent = {
-  id: string;
-  kind: OperationalEvidenceEventKind;
-  title: string;
-  details: string;
-  actor: OperationalEvidenceActor;
-  source: SecurityScene["source"] | "system";
-  sceneId: string;
-  sceneName: string;
-  timestamp: number;
-  revisionDepth: number;
-  affectedNodeIds: string[];
-  confidence: number;
-  branchId?: string;
-  branchLabel?: string;
-  lifecycleStage?: OperationalEvidenceLifecycleStage;
-  parentEventId?: string;
-  published?: boolean;
-  beforeSummary?: string;
-  afterSummary?: string;
-  previousSceneSnapshot?: SecurityScene;
-  sceneSnapshot?: SecurityScene;
-  simulation?: {
-    totalCoveragePct: number;
-    issueCount: number;
-    failedZoneCount: number;
-    deltaCoveragePct?: number | null;
-  };
-  notes?: string[];
-};
-
-export type OperationalEvidenceEventInput = Omit<OperationalEvidenceEvent, "id" | "timestamp"> & {
-  timestamp?: number;
-};
-
 const OPERATIONAL_EVIDENCE_EVENT_KINDS = [
   "scene_initialized",
   "scene_imported",
@@ -152,17 +117,14 @@ const OperationalEvidenceSimulationSchema = z.object({
   failedZoneCount: z.number().int(),
   deltaCoveragePct: z.number().nullable().optional(),
 });
-
-const OperationalEvidenceEventSchema = z.object({
-  id: z.string().min(1),
+const OperationalEvidenceEventPayloadSchema = z.object({
   kind: OperationalEvidenceEventKindSchema,
-  title: z.string().min(1),
-  details: z.string().min(1),
+  title: z.string(),
+  details: z.string(),
   actor: OperationalEvidenceActorSchema,
   source: OperationalEvidenceSourceSchema,
   sceneId: z.string().min(1),
   sceneName: z.string().min(1),
-  timestamp: z.number().int(),
   revisionDepth: z.number().int().nonnegative(),
   affectedNodeIds: z.array(z.string()),
   confidence: z.number().min(0).max(1),
@@ -178,6 +140,27 @@ const OperationalEvidenceEventSchema = z.object({
   simulation: OperationalEvidenceSimulationSchema.optional(),
   notes: z.array(z.string()).optional(),
 });
+
+export const OperationalEvidenceEventInputSchema = OperationalEvidenceEventPayloadSchema.extend({
+  timestamp: z.number().int().optional(),
+});
+
+export const OperationalEvidenceEventSchema = OperationalEvidenceEventPayloadSchema.extend({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  details: z.string().min(1),
+  timestamp: z.number().int(),
+});
+
+export type OperationalEvidenceEvent = Omit<z.infer<typeof OperationalEvidenceEventSchema>, "previousSceneSnapshot" | "sceneSnapshot"> & {
+  previousSceneSnapshot?: SecurityScene;
+  sceneSnapshot?: SecurityScene;
+};
+
+export type OperationalEvidenceEventInput = Omit<z.infer<typeof OperationalEvidenceEventInputSchema>, "previousSceneSnapshot" | "sceneSnapshot"> & {
+  previousSceneSnapshot?: SecurityScene;
+  sceneSnapshot?: SecurityScene;
+};
 
 function normalizeSceneSnapshot(value: unknown) {
   const parsed = safeParseSecurityScene(value);
@@ -198,13 +181,15 @@ export function safeParseOperationalEvidenceEvent(input: unknown): OperationalEv
     : normalizeSceneSnapshot(parsed.data.sceneSnapshot);
   if (parsed.data.sceneSnapshot != null && !sceneSnapshot) return null;
 
-  return {
+  const normalized = {
     ...parsed.data,
     previousSceneSnapshot,
     sceneSnapshot,
     simulation: parsed.data.simulation ? structuredClone(parsed.data.simulation) : undefined,
     notes: parsed.data.notes?.filter((note): note is string => typeof note === "string"),
   };
+  const validated = OperationalEvidenceEventSchema.safeParse(normalized);
+  return validated.success ? (validated.data as OperationalEvidenceEvent) : null;
 }
 
 export type SceneEvidenceSummary = {
@@ -322,6 +307,11 @@ export type OperationalEvidenceTemporalTwinSummary = {
   } | null;
   latestCheckpointAgeMs: number | null;
   latestPublishedCheckpointAgeMs: number | null;
+};
+
+export type OperationalEvidencePublicationCheckpoint = {
+  entry: OperationalEvidenceTimelineEntry;
+  provenance: OperationalEvidenceCheckpointProvenance | null;
 };
 
 export type OperationalEvidenceCheckpointProvenance = {
@@ -482,22 +472,39 @@ export function summarizeSimulationEvidence(simulationResult: SimulationResult |
 }
 
 export function buildOperationalEvidenceEvent(input: OperationalEvidenceEventInput): OperationalEvidenceEvent {
-  const timestamp = input.timestamp ?? Date.now();
-  const title = input.title.trim() || kindToTitle(input.kind);
-  const details = input.details.trim() || title;
-  const lifecycleStage = input.lifecycleStage ?? deriveOperationalEvidenceLifecycleStage(input.kind, input.source);
-  const branchId = input.branchId ?? `${input.sceneId}:${lifecycleStage}`;
-  const branchLabel = input.branchLabel ?? lifecycleStage.replace(/_/g, " ");
-  return {
-    ...input,
+  const parsedInput = OperationalEvidenceEventInputSchema.parse(input);
+  const timestamp = parsedInput.timestamp ?? Date.now();
+  const title = parsedInput.title.trim() || kindToTitle(parsedInput.kind);
+  const details = parsedInput.details.trim() || title;
+  const lifecycleStage = parsedInput.lifecycleStage ?? deriveOperationalEvidenceLifecycleStage(parsedInput.kind, parsedInput.source);
+  const branchId = parsedInput.branchId?.trim() || `${parsedInput.sceneId}:${lifecycleStage}`;
+  const branchLabel = parsedInput.branchLabel?.trim() || lifecycleStage.replace(/_/g, " ");
+  const previousSceneSnapshot = parsedInput.previousSceneSnapshot == null
+    ? undefined
+    : normalizeSceneSnapshot(parsedInput.previousSceneSnapshot);
+  if (parsedInput.previousSceneSnapshot != null && !previousSceneSnapshot) {
+    throw new Error("Invalid previousSceneSnapshot in operational evidence event input.");
+  }
+  const sceneSnapshot = parsedInput.sceneSnapshot == null
+    ? undefined
+    : normalizeSceneSnapshot(parsedInput.sceneSnapshot);
+  if (parsedInput.sceneSnapshot != null && !sceneSnapshot) {
+    throw new Error("Invalid sceneSnapshot in operational evidence event input.");
+  }
+  return OperationalEvidenceEventSchema.parse({
+    ...parsedInput,
     branchId,
     branchLabel,
     lifecycleStage,
-    id: `${input.kind}:${input.sceneId}:${timestamp.toString(36)}:${Math.random().toString(36).slice(2, 8)}`,
+    id: `${parsedInput.kind}:${parsedInput.sceneId}:${timestamp.toString(36)}:${Math.random().toString(36).slice(2, 8)}`,
     title,
     details,
     timestamp,
-  };
+    previousSceneSnapshot,
+    sceneSnapshot,
+    simulation: parsedInput.simulation ? structuredClone(parsedInput.simulation) : undefined,
+    notes: parsedInput.notes?.filter((note): note is string => typeof note === "string"),
+  }) as OperationalEvidenceEvent;
 }
 
 export function kindToTitle(kind: OperationalEvidenceEventKind) {
@@ -681,6 +688,67 @@ export function summarizeOperationalEvidenceBranchHeads(events: OperationalEvide
   }));
 }
 
+function resolveOperationalEvidenceCheckpointProvenance(
+  timeline: OperationalEvidenceTimelineSummary,
+  entry: OperationalEvidenceTimelineEntry | null,
+): OperationalEvidenceCheckpointProvenance | null {
+  if (!entry) return null;
+
+  let sourceEntry: OperationalEvidenceTimelineEntry | null = null;
+  for (let index = entry.index; index >= 0; index -= 1) {
+    const candidate = timeline.entries[index];
+    if (candidate?.event.sceneSnapshot) {
+      sourceEntry = candidate;
+      break;
+    }
+  }
+
+  if (!sourceEntry) return null;
+
+  return {
+    sourceEventId: sourceEntry.event.id,
+    sourceEventTitle: sourceEntry.event.title,
+    sourceEventTimestamp: sourceEntry.event.timestamp,
+    isExactSnapshot: sourceEntry.index === entry.index,
+    derivedFromEarlierSnapshot: sourceEntry.index !== entry.index,
+    sourceSnapshotDistance: sourceEntry.index === entry.index ? 0 : entry.index - sourceEntry.index,
+    sourceSnapshotAgeMs: sourceEntry.index === entry.index ? 0 : Math.max(0, entry.event.timestamp - sourceEntry.event.timestamp),
+  };
+}
+
+export function resolveOperationalEvidencePublicationCheckpoint(
+  timeline: OperationalEvidenceTimelineSummary,
+): OperationalEvidencePublicationCheckpoint | null {
+  const latestPublishedEntry = [...timeline.entries].reverse().find((entry) => entry.event.kind === "scene_published" || entry.event.published) ?? null;
+  if (!latestPublishedEntry) return null;
+
+  let sourceEntry: OperationalEvidenceTimelineEntry | null = null;
+  for (let index = latestPublishedEntry.index; index >= 0; index -= 1) {
+    const candidate = timeline.entries[index];
+    if (candidate?.event.sceneSnapshot) {
+      sourceEntry = candidate;
+      break;
+    }
+  }
+
+  const provenance = sourceEntry
+    ? {
+        sourceEventId: sourceEntry.event.id,
+        sourceEventTitle: sourceEntry.event.title,
+        sourceEventTimestamp: sourceEntry.event.timestamp,
+        isExactSnapshot: sourceEntry.index === latestPublishedEntry.index,
+        derivedFromEarlierSnapshot: sourceEntry.index !== latestPublishedEntry.index,
+        sourceSnapshotDistance: sourceEntry.index === latestPublishedEntry.index ? 0 : latestPublishedEntry.index - sourceEntry.index,
+        sourceSnapshotAgeMs: sourceEntry.index === latestPublishedEntry.index ? 0 : Math.max(0, latestPublishedEntry.event.timestamp - sourceEntry.event.timestamp),
+      }
+    : null;
+
+  return {
+    entry: latestPublishedEntry,
+    provenance,
+  };
+}
+
 export function summarizeOperationalGovernanceTrail(
   events: OperationalEvidenceEvent[],
   sceneId: string,
@@ -710,30 +778,9 @@ export function summarizeOperationalEvidenceTemporalTwin(
 ): OperationalEvidenceTemporalTwinSummary {
   const timeline = buildOperationalEvidenceTimeline(events, scene);
   const latestCheckpointScene = timeline.latestCheckpoint?.reconstructedScene ?? null;
-  const latestPublishedCheckpoint = [...timeline.entries].reverse().find((entry) => entry.event.kind === "scene_published" || entry.event.published) ?? null;
+  const publicationCheckpoint = resolveOperationalEvidencePublicationCheckpoint(timeline);
+  const latestPublishedCheckpoint = publicationCheckpoint?.entry ?? null;
   const latestPublishedCheckpointScene = latestPublishedCheckpoint?.reconstructedScene ?? null;
-
-  const checkpointProvenance = (entry: OperationalEvidenceTimelineEntry | null): OperationalEvidenceCheckpointProvenance | null => {
-    if (!entry) return null;
-    let sourceEntry: OperationalEvidenceTimelineEntry | null = null;
-    for (let index = entry.index; index >= 0; index -= 1) {
-      const candidate = timeline.entries[index];
-      if (candidate?.event.sceneSnapshot) {
-        sourceEntry = candidate;
-        break;
-      }
-    }
-    if (!sourceEntry) return null;
-    return {
-      sourceEventId: sourceEntry.event.id,
-      sourceEventTitle: sourceEntry.event.title,
-      sourceEventTimestamp: sourceEntry.event.timestamp,
-      isExactSnapshot: sourceEntry.index === entry.index,
-      derivedFromEarlierSnapshot: sourceEntry.index !== entry.index,
-      sourceSnapshotDistance: sourceEntry.index === entry.index ? 0 : entry.index - sourceEntry.index,
-      sourceSnapshotAgeMs: sourceEntry.index === entry.index ? 0 : Math.max(0, entry.event.timestamp - sourceEntry.event.timestamp),
-    };
-  };
 
   const sceneDelta = (currentScene: SecurityScene | null | undefined, comparisonScene: SecurityScene | null | undefined) => (
     currentScene && comparisonScene
@@ -757,8 +804,8 @@ export function summarizeOperationalEvidenceTemporalTwin(
     checkpointCount: timeline.checkpoints.length,
     publishedCheckpointCount: timeline.entries.filter((entry) => entry.event.kind === "scene_published" || entry.event.published).length,
     branchHeadCount: timeline.branchHeads.filter((entry) => entry.event != null).length,
-    latestCheckpointProvenance: checkpointProvenance(timeline.latestCheckpoint),
-    latestPublishedCheckpointProvenance: checkpointProvenance(latestPublishedCheckpoint),
+    latestCheckpointProvenance: resolveOperationalEvidenceCheckpointProvenance(timeline, timeline.latestCheckpoint),
+    latestPublishedCheckpointProvenance: publicationCheckpoint?.provenance ?? null,
     latestCheckpoint: timeline.latestCheckpoint && timeline.latestCheckpoint.reconstructedSceneSummary
       ? {
           eventId: timeline.latestCheckpoint.event.id,
@@ -1122,8 +1169,54 @@ export function assessOperationalEvidenceMergeReadiness(
   };
 }
 
-function compareValues(left: unknown, right: unknown) {
-  return JSON.stringify(left) === JSON.stringify(right);
+function compareValues(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) {
+    return true;
+  }
+
+  if (left === null || right === null || typeof left !== typeof right) {
+    return false;
+  }
+
+  if (typeof left !== "object" || typeof right !== "object") {
+    return false;
+  }
+
+  if (left instanceof Date && right instanceof Date) {
+    return Object.is(left.getTime(), right.getTime());
+  }
+
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
+      return false;
+    }
+
+    return left.every((entry, index) => compareValues(entry, right[index]));
+  }
+
+  const leftPrototype = Object.getPrototypeOf(left);
+  const rightPrototype = Object.getPrototypeOf(right);
+  if (leftPrototype !== rightPrototype) {
+    return false;
+  }
+
+  const leftEntries = Object.entries(left as Record<string, unknown>);
+  const rightRecord = right as Record<string, unknown>;
+  if (leftEntries.length !== Object.keys(rightRecord).length) {
+    return false;
+  }
+
+  for (const [key, value] of leftEntries) {
+    if (!Object.prototype.hasOwnProperty.call(rightRecord, key)) {
+      return false;
+    }
+
+    if (!compareValues(value, rightRecord[key])) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 function mergeSceneCollection<T extends { id: string }>(
@@ -1447,5 +1540,14 @@ export function reconstructSceneFromEvidence(
     }
   }
 
+  return null;
+}
+
+export function resolveOperationalEvidenceRestoreScene(
+  event: OperationalEvidenceEvent | null | undefined,
+): SecurityScene | null {
+  if (!event) return null;
+  if (event.sceneSnapshot) return structuredClone(event.sceneSnapshot);
+  if (event.previousSceneSnapshot) return structuredClone(event.previousSceneSnapshot);
   return null;
 }

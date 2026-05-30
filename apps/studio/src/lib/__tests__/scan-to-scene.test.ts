@@ -77,6 +77,27 @@ describe("scan-to-scene", () => {
     expect(scene.entryPoints[0]?.label).toContain("Entry");
   });
 
+  test("prefers explicit entry markers over door-derived fallback entries", () => {
+    const session = createScanSession("Explicit Entry", 12, 9, 3.2);
+    session.imageDataUrl = "data:image/png;base64,AA==";
+    session.imageName = "explicit-entry.png";
+    const explicitEntry = createScanCandidate("entry_point", [0.5, 0.05], 1);
+    explicitEntry.label = "Main Entry";
+    session.candidates = [
+      createScanCandidate("door", [0.5, 0.05], 0),
+      explicitEntry,
+      createScanCandidate("camera", [0.2, 0.2], 2),
+      createScanCandidate("critical_zone", [0.7, 0.7], 3),
+    ];
+
+    const { scene, warnings } = compileScanSessionToScene(session);
+
+    expect(scene.doors).toHaveLength(1);
+    expect(scene.entryPoints).toHaveLength(1);
+    expect(scene.entryPoints[0]?.label).toBe("Main Entry");
+    expect(warnings.some((warning) => warning.code === "NO_ENTRY")).toBe(false);
+  });
+
   test("creates fallback rectangular room when no wall markers exist", () => {
     const session = createScanSession("No Walls", 8, 6, 3);
     session.imageDataUrl = "data:image/png;base64,AA==";

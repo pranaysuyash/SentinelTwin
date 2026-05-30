@@ -43,6 +43,21 @@ describe("provider selection", () => {
     expect(health.providers.every((entry) => entry.status === "blocked")).toBe(true);
   });
 
+  test("normalizes unsupported or messy model input to the provider default", () => {
+    const selection = normalizeAiProviderSelection({ providerId: "qwen", model: "  qwen/does-not-exist  " });
+    const summary = describeAiProviderSelection({ providerId: "gemini", model: "  GEMINI-2.5-PRO  " } as any);
+    const governance = describeAiProviderGovernance({ providerId: "gemini", model: "  GEMINI-2.5-PRO  " } as any, false);
+    const telemetry = describeAiProviderTelemetry({ providerId: "gemini", model: "  GEMINI-2.5-PRO  " } as any, false);
+
+    expect(selection.model).toBe("Qwen/Qwen2.5-VL-72B-Instruct-Turbo");
+    expect(summary.providerLabel).toBe("Gemini · gemini-2.5-pro");
+    expect(governance.activeModel).toBe("gemini-2.5-pro");
+    expect(governance.activeProviderLabel).toBe("Gemini · gemini-2.5-pro");
+    expect(telemetry.activeProviderLabel).toBe("Gemini · gemini-2.5-pro");
+    expect(telemetry.activeCostTier).toBe("medium");
+    expect(telemetry.stagePolicies.find((stage) => stage.stage === "command")?.ready).toBe(false);
+  });
+
   test("summarizes estimated cost and latency policy per stage", () => {
     const telemetry = describeAiProviderTelemetry(
       normalizeAiProviderSelection({ providerId: "gemini", model: "gemini-2.5-flash" }),

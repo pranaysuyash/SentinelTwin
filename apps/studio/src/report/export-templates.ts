@@ -26,6 +26,7 @@ function buildBaseHeader(report: ReportData): string[] {
     `# ${report.title}`,
     "",
     `**Site:** ${report.siteName}`,
+    `**Scene ID:** ${report.sceneId}`,
     `**Audience:** ${report.audienceLabel}`,
     `**Framing:** ${report.audienceFraming}`,
     `**Audience Policy:** ${report.audiencePolicy.disclosureSummary}`,
@@ -105,15 +106,18 @@ function buildProvenanceAndTruth(report: ReportData): string[] {
 function buildOperationalEvidence(report: ReportData): string[] {
   return [
     "## Operational Evidence",
+    `- Scene ID: ${report.sceneId}`,
     `- Change Log Entries: ${report.evidenceTrail.changeLogEntryCount}`,
     `- Evidence Entries: ${report.evidenceTrail.evidenceEntryCount}`,
     `- Sensor-related Evidence: ${report.evidenceTrail.sensorEvidenceCount}`,
     ...(report.evidenceTrail.recentEntries.length > 0
       ? [
-          "- Recent Evidence Entries:",
-          ...report.evidenceTrail.recentEntries.map((entry) => `  - ${entry.when} · ${entry.title} · ${entry.details} · ${entry.confidence}`),
+          "- Evidence Links:",
+          ...report.evidenceTrail.recentEntries.map((entry) => `  - [${entry.when} · ${entry.title}](#${entry.anchorId}) :: ${entry.evidenceUri}`),
+          "- Recent Evidence Details:",
+          ...report.evidenceTrail.recentEntries.map((entry) => `  - <a id="${entry.anchorId}"></a><strong>${entry.when}</strong> · ${entry.title} · ${entry.details} · ${entry.confidence} · ${entry.evidenceUri}`),
         ]
-      : ["- Recent Evidence Entries: none"]),
+      : ["- Evidence Links: none", "- Recent Evidence Entries: none"]),
     "",
   ];
 }

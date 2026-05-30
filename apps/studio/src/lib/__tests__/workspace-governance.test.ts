@@ -75,6 +75,35 @@ describe("workspace governance", () => {
       expect(roles).not.toContain("reviewer");
     });
 
+    test("routes privacy-sensitive scenes through privacy review before broader reviewer fallback", () => {
+      const scene = createMockScene({
+        privacyZones: [{ id: "p1", type: "privacy_zone", position: [0, 0, 0], scale: [1, 1, 1] } as any],
+      });
+      const governance = createDefaultWorkspaceGovernance();
+      const roles = resolveApprovalRoute(governance, scene);
+
+      expect(roles[0]).toBe("privacy_reviewer");
+      expect(roles).toContain("reviewer");
+      expect(roles).toContain("admin");
+    });
+
+    test("keeps critical and privacy-sensitive scenes admin-gated", () => {
+      const scene = createMockScene({
+        privacyZones: [{ id: "p1", type: "privacy_zone", position: [0, 0, 0], scale: [1, 1, 1] } as any],
+        criticalZones: [{
+          id: "c1",
+          type: "critical_zone",
+          position: [0, 0, 0],
+          scale: [1, 1, 1],
+          priority: "high",
+        } as any],
+      });
+      const governance = createDefaultWorkspaceGovernance();
+      const roles = resolveApprovalRoute(governance, scene);
+
+      expect(roles).toEqual(["admin", "privacy_reviewer"]);
+    });
+
     test("allows standard reviewer review for basic scenes without critical priority or privacy zones", () => {
       const scene = createMockScene();
       const governance = createDefaultWorkspaceGovernance();
@@ -82,5 +111,28 @@ describe("workspace governance", () => {
       expect(roles).toContain("reviewer");
       expect(roles).toContain("admin");
     });
+  });
+
+  test("canPublishWorkspaceScene respects admin-only routes for critical scenes", () => {
+    const governance = {
+      ...createDefaultWorkspaceGovernance(),
+      activeRole: "reviewer" as const,
+    };
+    const scene = {
+      id: "test-scene",
+      name: "Critical Scene",
+      source: "manual" as const,
+      cameras: [],
+      securityLights: [],
+      obstructions: [],
+      criticalZones: [{ id: "c1", type: "critical_zone", position: [0, 0, 0], scale: [1, 1, 1], priority: "critical" } as any],
+      privacyZones: [],
+      paths: [],
+      sensors: [],
+      snapshots: [],
+    } as SecurityScene;
+
+    expect(canPublishWorkspaceScene(governance, scene)).toBe(false);
+    expect(canPublishWorkspaceScene({ ...governance, activeRole: "admin" }, scene)).toBe(true);
   });
 });

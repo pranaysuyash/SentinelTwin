@@ -58,6 +58,15 @@ export type WorkspaceGovernanceSummary = {
   reviewerLabel: string | null;
 };
 
+type GovernanceSceneZone = {
+  priority?: string | null;
+};
+
+type GovernanceSceneContext = {
+  criticalZones?: GovernanceSceneZone[] | null;
+  privacyZones?: unknown[] | null;
+};
+
 function capitalizeLabel(value: string) {
   return value
     .replace(/_/g, " ")
@@ -122,47 +131,40 @@ export function canApproveWorkspaceScene(role: WorkspaceRole) {
   return role === "reviewer" || role === "admin";
 }
 
-export function resolveApprovalRoute(governance: WorkspaceGovernanceState, scene: any): WorkspaceRole[] {
-  const requiredRoles: WorkspaceRole[] = [];
-  
-  if (governance.approvalMode === "open") return ["operator", "reviewer", "admin"];
-  
-  // ABAC logic: check scene attributes
-  let needsAdmin = false;
-  let needsPrivacyReview = false;
-  
-  if (scene) {
-    if (scene.criticalZones && scene.criticalZones.length > 0) {
-      // Any critical zone requires at least a reviewer, but if they are high/critical priority, maybe admin
-      const hasCriticalPriority = scene.criticalZones.some((z: any) => z.priority === "critical" || z.priority === "high");
-      if (hasCriticalPriority) needsAdmin = true;
-    }
-    if (scene.privacyZones && scene.privacyZones.length > 0) {
-      needsPrivacyReview = true;
-    }
-  }
-
-  if (needsAdmin) requiredRoles.push("admin");
-  else requiredRoles.push("reviewer", "admin");
-
-  if (needsPrivacyReview) requiredRoles.push("privacy_reviewer");
-
-  return requiredRoles;
+function hasHighPriorityCriticalZone(scene?: GovernanceSceneContext | null) {
+  return Boolean(scene?.criticalZones?.some((zone) => zone?.priority === "critical" || zone?.priority === "high"));
 }
 
-export function canPublishWorkspaceScene(governance: WorkspaceGovernanceState, scene?: any) {
+function hasPrivacyExposure(scene?: GovernanceSceneContext | null) {
+  return Boolean(scene?.privacyZones && scene.privacyZones.length > 0);
+}
+
+export function resolveApprovalRoute(governance: WorkspaceGovernanceState, scene?: GovernanceSceneContext | null): WorkspaceRole[] {
+  if (governance.approvalMode === "open") return ["operator", "reviewer", "admin"];
+
+  const requiresAdmin = hasHighPriorityCriticalZone(scene);
+  const requiresPrivacyReview = hasPrivacyExposure(scene);
+
+  if (requiresAdmin) {
+    return requiresPrivacyReview ? ["admin", "privacy_reviewer"] : ["admin"];
+  }
+
+  return requiresPrivacyReview ? ["privacy_reviewer", "reviewer", "admin"] : ["reviewer", "admin"];
+}
+
+export function canPublishWorkspaceScene(governance: WorkspaceGovernanceState, scene?: GovernanceSceneContext | null) {
   if (governance.approvalMode === "open") return true;
   if (governance.sceneStatus === "approved") return true;
-  
+
   const allowedRoles = resolveApprovalRoute(governance, scene);
   return allowedRoles.includes(governance.activeRole);
 }
 
-export function isPublishReviewRequired(governance: WorkspaceGovernanceState, scene?: any) {
+export function isPublishReviewRequired(governance: WorkspaceGovernanceState, scene?: GovernanceSceneContext | null) {
   return governance.approvalMode === "review_required" && governance.sceneStatus !== "approved";
 }
 
-export function summarizeWorkspaceGovernance(governance: WorkspaceGovernanceState, scene?: any): WorkspaceGovernanceSummary {
+export function summarizeWorkspaceGovernance(governance: WorkspaceGovernanceState, scene?: GovernanceSceneContext | null): WorkspaceGovernanceSummary {
   const reviewAgeLabel = governance.requestedAt
     ? `${Math.max(0, Math.round((Date.now() - governance.requestedAt) / 60000))} min ago`
     : null;
@@ -177,4 +179,3 @@ export function summarizeWorkspaceGovernance(governance: WorkspaceGovernanceStat
     reviewerLabel: governance.reviewedBy ? capitalizeLabel(governance.reviewedBy) : governance.requestedBy ? capitalizeLabel(governance.requestedBy) : null,
   };
 }
-

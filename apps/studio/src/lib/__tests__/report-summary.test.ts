@@ -9,10 +9,17 @@ describe("buildReportSummaryLines", () => {
       summary: {
         status: "needs_attention",
         headline: "Headline",
+        summary: "Headline",
+        primaryRisk: null,
+        recommendedNextAction: null,
         coveragePct: 71.4,
         blindspotPct: 12.3,
         criticalZonesPassing: 1,
         criticalZonesTotal: 2,
+        recognitionAreaPct: null,
+        identificationAreaPct: null,
+        averageQualityLabel: "Observation",
+        worstAreaQuality: "Detection",
         worstIssue: {
           id: "issue_0",
           severity: "high",
@@ -20,6 +27,7 @@ describe("buildReportSummaryLines", () => {
           description: "Cash counter has a blind spot.",
           affectedZones: ["Cash Counter"],
           affectedCameras: ["Camera 1"],
+          productExplanation: "Cash counter has a blind spot.",
         },
         issueCount: 3,
         nightReadiness: "weak",
@@ -27,8 +35,15 @@ describe("buildReportSummaryLines", () => {
       },
       topIssues: [],
       allIssues: [],
+      failedZones: [],
+      cameraFindings: [],
+      pathFindings: [],
+      privacyFindings: [],
       recommendations: [],
       pathOutcome: null,
+      assumptions: [],
+      limitations: [],
+      missingPrerequisites: [],
     } as SecurityOutcomeModel;
 
     const result = {
@@ -62,10 +77,17 @@ describe("buildReportSummaryLines", () => {
       summary: {
         status: "needs_attention",
         headline: "Headline",
+        summary: "Headline",
+        primaryRisk: null,
+        recommendedNextAction: null,
         coveragePct: 71.4,
         blindspotPct: 12.3,
         criticalZonesPassing: 1,
         criticalZonesTotal: 2,
+        recognitionAreaPct: null,
+        identificationAreaPct: null,
+        averageQualityLabel: "Observation",
+        worstAreaQuality: "Detection",
         worstIssue: {
           id: "issue_0",
           severity: "high",
@@ -73,6 +95,7 @@ describe("buildReportSummaryLines", () => {
           description: "Cash counter has a blind spot.",
           affectedZones: ["Cash Counter"],
           affectedCameras: ["Camera 1"],
+          productExplanation: "Cash counter has a blind spot.",
         },
         issueCount: 3,
         nightReadiness: "weak",
@@ -80,8 +103,15 @@ describe("buildReportSummaryLines", () => {
       },
       topIssues: [],
       allIssues: [],
+      failedZones: [],
+      cameraFindings: [],
+      pathFindings: [],
+      privacyFindings: [],
       recommendations: [],
       pathOutcome: null,
+      assumptions: [],
+      limitations: [],
+      missingPrerequisites: [],
     } as SecurityOutcomeModel;
 
     const result = {

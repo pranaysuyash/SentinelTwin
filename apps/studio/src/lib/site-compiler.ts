@@ -5,8 +5,9 @@ export type SiteIntakeSource =
   | "scan"
   | "ai_prompt"
   | "floor_plan"
-  | "json"
+  | "json_import"
   | "manual"
+  | "footage_verify"
   | "camera_evidence";
 
 export type SiteIntakeStage =
@@ -18,6 +19,67 @@ export type SiteIntakeStage =
   | "validated"
   | "handoff";
 
+export type DraftAssumption = {
+  label: string;
+  value: string;
+  source: "user" | "default" | "estimated" | "model" | "imported";
+  confidence?: number;
+};
+
+export type ActionableWarning = {
+  code: string;
+  message: string;
+  severity: "info" | "warning" | "blocking";
+  suggestedAction?: string;
+  affectedNodeIds?: string[];
+};
+
+export type MissingPrerequisite = {
+  code: string;
+  message: string;
+  requiredFor: "baseline_simulation" | "report" | "replay" | "verification";
+};
+
+export type SuggestedNextAction = {
+  label: string;
+  action: "edit" | "approve" | "run_baseline" | "add_camera" | "add_zone" | "add_path" | "open_studio";
+  enabled: boolean;
+  reason?: string;
+};
+
+export type EntityCounts = {
+  walls: number;
+  doors: number;
+  windows: number;
+  cameras: number;
+  lights: number;
+  obstructions: number;
+  criticalZones: number;
+  privacyZones: number;
+  entryPoints: number;
+  paths: number;
+  sensors: number;
+};
+
+export type SiteTwinDraft = {
+  id: string;
+  source: SiteIntakeSource;
+  scene: SecurityScene;
+  confidence: number;
+  confidenceLabel: "high" | "medium" | "low";
+  entityCounts: EntityCounts;
+  assumptions: DraftAssumption[];
+  warnings: ActionableWarning[];
+  missingPrerequisites: MissingPrerequisite[];
+  provenance: {
+    sourceLabel: string;
+    sourceArtifacts: string[];
+    notes: string[];
+    createdAt: number;
+  };
+  suggestedNextActions: SuggestedNextAction[];
+};
+
 export type SiteIntakeSession = {
   id: string;
   source: SiteIntakeSource;
@@ -28,12 +90,15 @@ export type SiteIntakeSession = {
   provenanceNotes: string[];
   createdAt: number;
   result?: SiteCompilerResult;
+  draft?: SiteTwinDraft;
 };
 
 export type SiteCompilerWarning = {
   code: string;
   message: string;
   severity: "info" | "warning" | "blocking";
+  suggestedAction?: string;
+  affectedNodeIds?: string[];
 };
 
 export type SiteCompilerProvenance = {
@@ -60,7 +125,7 @@ const SOURCE_LABELS: Record<SiteIntakeSource, string> = {
   camera_evidence: "Camera Evidence Preview",
 };
 
-function countEntities(scene: SecurityScene) {
+function countEntities(scene: SecurityScene): EntityCounts {
   return {
     walls: scene.walls.length,
     doors: scene.doors.length,
@@ -68,33 +133,268 @@ function countEntities(scene: SecurityScene) {
     cameras: scene.cameras.length,
     lights: scene.securityLights.length,
     obstructions: scene.obstructions.length,
-    zones: scene.criticalZones.length,
+    criticalZones: scene.criticalZones.length,
+    privacyZones: scene.privacyZones.length,
+    entryPoints: scene.entryPoints.length,
     paths: scene.paths.length,
-    entries: scene.entryPoints.length,
+    sensors: scene.sensors.length,
   };
 }
 
-export function makeSiteCompilerWarnings(scene: SecurityScene, extra: string[] = []): SiteCompilerWarning[] {
-  const warnings: SiteCompilerWarning[] = [];
+export function makeSiteCompilerWarnings(scene: SecurityScene, extra: string[] = []): ActionableWarning[] {
+  const warnings: ActionableWarning[] = [];
   if (scene.cameras.length === 0) {
-    warnings.push({ code: "NO_CAMERA", message: "No cameras in scene; add at least one for coverage simulation.", severity: "blocking" });
+    warnings.push({
+      code: "NO_CAMERA",
+      message: "No cameras found.",
+      severity: "blocking",
+      suggestedAction: "Add a camera marker, or continue without baseline simulation.",
+    });
   }
   if (scene.criticalZones.length === 0) {
-    warnings.push({ code: "NO_CRITICAL_ZONE", message: "No critical zones defined; coverage outcome will be limited.", severity: "warning" });
+    warnings.push({
+      code: "NO_CRITICAL_ZONE",
+      message: "No critical zones found.",
+      severity: "warning",
+      suggestedAction: "Mark cash counter, entry, storage, parking gate, or another protected area.",
+    });
   }
   if (scene.entryPoints.length === 0) {
-    warnings.push({ code: "NO_ENTRY", message: "No entry points; path replay and entry risk analysis will be limited.", severity: "info" });
+    warnings.push({
+      code: "NO_ENTRY",
+      message: "No entry points defined.",
+      severity: "info",
+      suggestedAction: "Add at least one entry point for route analysis and replay.",
+    });
   }
   if (scene.walls.length === 0) {
-    warnings.push({ code: "NO_WALL", message: "No walls defined; spatial analysis may be unreliable.", severity: "warning" });
+    warnings.push({
+      code: "NO_WALL",
+      message: "No walls defined. Spatial analysis may be unreliable.",
+      severity: "warning",
+      suggestedAction: "Draw walls to enclose the space, or mark the scene as open-area.",
+    });
   }
   if (scene.paths.length === 0) {
-    warnings.push({ code: "NO_PATH", message: "No paths defined; path replay unavailable.", severity: "info" });
+    warnings.push({
+      code: "NO_PATH",
+      message: "No paths defined.",
+      severity: "info",
+      suggestedAction: "Add path points for replay analysis, or auto-create an entry-to-zone path.",
+    });
+  }
+  for (const door of scene.doors) {
+    const nearWall = scene.walls.some((wall) => {
+      const wLen = Math.hypot(wall.end[0] - wall.start[0], wall.end[1] - wall.start[1]);
+      if (wLen === 0) return false;
+      const t = Math.max(0, Math.min(1,
+        ((door.position[0] - wall.start[0]) * (wall.end[0] - wall.start[0]) +
+         (door.position[2] - wall.start[1]) * (wall.end[1] - wall.start[1])) / (wLen * wLen)));
+      const closestX = wall.start[0] + t * (wall.end[0] - wall.start[0]);
+      const closestY = wall.start[1] + t * (wall.end[1] - wall.start[1]);
+      const dist = Math.hypot(door.position[0] - closestX, door.position[2] - closestY);
+      return dist < 0.6;
+    });
+    if (!nearWall) {
+      warnings.push({
+        code: "DOOR_NOT_NEAR_WALL",
+        message: `Door "${door.label || door.id}" is not near any wall.`,
+        severity: "info",
+        suggestedAction: "Snap to nearest wall or edit position.",
+        affectedNodeIds: [door.id],
+      });
+    }
+  }
+  for (const camera of scene.cameras) {
+    if (!camera.fovHorizontalDeg || camera.fovHorizontalDeg <= 0) {
+      warnings.push({
+        code: "CAMERA_FOV_UNKNOWN",
+        message: `Camera "${camera.name || camera.id}" has unknown FOV.`,
+        severity: "info",
+        suggestedAction: "Choose a camera preset or keep default assumption.",
+        affectedNodeIds: [camera.id],
+      });
+    }
   }
   for (const extraWarning of extra) {
     warnings.push({ code: "EXTRA", message: extraWarning, severity: "info" });
   }
   return warnings;
+}
+
+function deriveMissingPrerequisites(scene: SecurityScene): MissingPrerequisite[] {
+  const missing: MissingPrerequisite[] = [];
+  if (scene.cameras.length === 0) {
+    missing.push({
+      code: "NEED_CAMERA",
+      message: "At least 1 camera is required for baseline simulation.",
+      requiredFor: "baseline_simulation",
+    });
+  }
+  if (scene.criticalZones.length === 0) {
+    missing.push({
+      code: "NEED_ZONE",
+      message: "At least 1 critical zone is required for baseline simulation.",
+      requiredFor: "baseline_simulation",
+    });
+  }
+  if (scene.entryPoints.length === 0) {
+    missing.push({
+      code: "NEED_ENTRY",
+      message: "Entry points are required for route analysis.",
+      requiredFor: "replay",
+    });
+  }
+  if (scene.paths.length === 0) {
+    missing.push({
+      code: "NEED_PATH",
+      message: "At least 1 path is required for replay.",
+      requiredFor: "replay",
+    });
+  }
+  return missing;
+}
+
+function deriveAssumptions(scene: SecurityScene, source: SiteIntakeSource): DraftAssumption[] {
+  const assumptions: DraftAssumption[] = [];
+  assumptions.push({
+    label: "Source",
+    value: SOURCE_LABELS[source],
+    source: source === "ai_prompt" ? "model" : source === "scan" ? "user" : "imported",
+  });
+  assumptions.push({
+    label: "Room dimensions",
+    value: `${scene.dimensions.width}m × ${scene.dimensions.depth}m × ${scene.dimensions.height}m`,
+    source: source === "scan" || source === "manual" ? "user" : "estimated",
+    confidence: source === "scan" || source === "manual" ? 0.9 : 0.6,
+  });
+  assumptions.push({
+    label: "Wall height",
+    value: `${scene.assumptions.wallHeightM}m`,
+    source: scene.assumptions.wallHeightM === 3 ? "default" : "user",
+    confidence: 0.7,
+  });
+  assumptions.push({
+    label: "Time of day",
+    value: scene.assumptions.timeOfDay,
+    source: scene.assumptions.timeOfDay === "day" ? "default" : "user",
+  });
+  assumptions.push({
+    label: "DORI standard",
+    value: scene.assumptions.doriStandard ?? "dori_2014",
+    source: "default",
+  });
+  if (source === "ai_prompt") {
+    assumptions.push({
+      label: "Layout accuracy",
+      value: "Approximate — AI-generated layouts require manual review",
+      source: "model",
+      confidence: 0.5,
+    });
+  }
+  if (source === "floor_plan") {
+    assumptions.push({
+      label: "Extraction accuracy",
+      value: "Best-effort wall detection; furniture and fixtures not extracted",
+      source: "estimated",
+      confidence: 0.65,
+    });
+  }
+  return assumptions;
+}
+
+function deriveNextActions(
+  scene: SecurityScene,
+  warnings: ActionableWarning[],
+  source: SiteIntakeSource,
+): SuggestedNextAction[] {
+  const hasCamera = scene.cameras.length > 0;
+  const hasZone = scene.criticalZones.length > 0;
+  const hasBlocking = warnings.some((w) => w.severity === "blocking");
+  const canBaseline = hasCamera && hasZone;
+
+  const actions: SuggestedNextAction[] = [];
+
+  if (hasBlocking) {
+    actions.push({
+      label: "Fix blocking issues before continuing",
+      action: "edit",
+      enabled: true,
+      reason: "Blocking warnings must be resolved before the draft can be approved.",
+    });
+  }
+
+  if (!hasCamera) {
+    actions.push({
+      label: "Add a camera",
+      action: "add_camera",
+      enabled: true,
+      reason: "At least one camera is required for coverage simulation.",
+    });
+  }
+
+  if (!hasZone) {
+    actions.push({
+      label: "Mark a critical zone",
+      action: "add_zone",
+      enabled: true,
+      reason: "Critical zones define what the security system must protect.",
+    });
+  }
+
+  if (scene.entryPoints.length === 0) {
+    actions.push({
+      label: "Add an entry point",
+      action: "edit",
+      enabled: true,
+      reason: "Entry points enable route analysis and path replay.",
+    });
+  }
+
+  if (scene.paths.length === 0 && hasCamera) {
+    actions.push({
+      label: "Add a path for replay",
+      action: "add_path",
+      enabled: true,
+    });
+  }
+
+  if (canBaseline && !hasBlocking) {
+    actions.push({
+      label: "Run baseline simulation",
+      action: "run_baseline",
+      enabled: true,
+      reason: "Prerequisites met: camera and critical zone exist.",
+    });
+  }
+
+  if (!hasBlocking) {
+    actions.push({
+      label: "Approve and open in Studio",
+      action: "approve",
+      enabled: true,
+      reason: source === "ai_prompt"
+        ? "AI draft review required before trusting as canonical scene."
+        : "Review complete. Scene can become the active site twin.",
+    });
+  }
+
+  if (source === "ai_prompt") {
+    actions.push({
+      label: "Regenerate AI draft",
+      action: "edit",
+      enabled: true,
+      reason: "Low-confidence AI layouts can be improved with a revised prompt.",
+    });
+  }
+
+  return actions;
+}
+
+function confidenceToLabel(confidence: number): "high" | "medium" | "low" {
+  if (confidence >= 0.75) return "high";
+  if (confidence >= 0.4) return "medium";
+  return "low";
 }
 
 function sourceToSceneSource(source: SiteIntakeSource): SecurityScene["source"] {
@@ -116,6 +416,45 @@ export function calculateConfidence(warnings: SiteCompilerWarning[]): number | n
   if (warningsCount > 1) return 0.65;
   if (warningsCount === 0) return 0.92;
   return 0.78;
+}
+
+export function compileToSiteTwinDraft(
+  result: SiteCompilerResult,
+  sourceArtifacts: string[] = [],
+): SiteTwinDraft {
+  const scene = result.scene;
+  const warnings = result.warnings.map((w) => ({
+    code: w.code,
+    message: w.message,
+    severity: w.severity,
+    suggestedAction: w.suggestedAction,
+    affectedNodeIds: w.affectedNodeIds,
+  }));
+  const confidence = result.confidence ?? 0.5;
+
+  return {
+    id: `draft_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    source: result.source,
+    scene,
+    confidence,
+    confidenceLabel: confidenceToLabel(confidence),
+    entityCounts: countEntities(scene),
+    assumptions: deriveAssumptions(scene, result.source),
+    warnings,
+    missingPrerequisites: deriveMissingPrerequisites(scene),
+    provenance: {
+      sourceLabel: result.provenance.label,
+      sourceArtifacts,
+      notes: result.provenance.notes,
+      createdAt: Date.now(),
+    },
+    suggestedNextActions: deriveNextActions(scene, warnings, result.source),
+  };
+}
+
+export function canRunBaselineSimulation(draft: SiteTwinDraft): boolean {
+  return draft.entityCounts.cameras > 0 && draft.entityCounts.criticalZones > 0
+    && !draft.warnings.some((w) => w.severity === "blocking");
 }
 
 export function compileBlankToSiteResult(name?: string): SiteCompilerResult {
@@ -249,9 +588,42 @@ export function formatCompilerSummary(result: SiteCompilerResult): string {
   const countParts = [
     `${counts.walls} wall${counts.walls !== 1 ? "s" : ""}`,
     `${counts.cameras} camera${counts.cameras !== 1 ? "s" : ""}`,
-    `${counts.zones} zone${counts.zones !== 1 ? "s" : ""}`,
+    `${counts.criticalZones} zone${counts.criticalZones !== 1 ? "s" : ""}`,
   ];
   return `Created: ${countParts.join(", ")} · Source: ${result.provenance.label} · Confidence: ${result.confidence != null ? `${Math.round(result.confidence * 100)}%` : "N/A"}`;
 }
+
+export const SITE_SOURCE_MATURITY: Record<SiteIntakeSource, { label: string; status: string; description: string }> = {
+  scan: {
+    label: "Scan Site Photos",
+    status: "Working",
+    description: "Manual-assisted photo marking. No automatic segmentation or depth yet.",
+  },
+  ai_prompt: {
+    label: "AI Layout Draft",
+    status: "Preview",
+    description: "Model or heuristic draft. Review required before trust.",
+  },
+  floor_plan: {
+    label: "Floor Plan Upload",
+    status: "Working prototype",
+    description: "Best-effort wall/opening extraction. Manual correction required.",
+  },
+  json: {
+    label: "JSON Import",
+    status: "Working",
+    description: "Schema-backed import.",
+  },
+  manual: {
+    label: "Manual Build",
+    status: "Working",
+    description: "User-authored scene truth.",
+  },
+  camera_evidence: {
+    label: "Footage Verification",
+    status: "Preview",
+    description: "Static/reference-frame alignment only. No product-grade video/stream verification yet.",
+  },
+};
 
 export { countEntities as countSiteEntities, SOURCE_LABELS as SITE_INTAKE_SOURCE_LABELS };

@@ -251,20 +251,29 @@ export function getProviderOption(providerId: AiProviderId) {
   return AI_PROVIDER_OPTIONS.find((option) => option.id === providerId) ?? AI_PROVIDER_OPTIONS[0]!;
 }
 
+function normalizeProviderModel(option: AiProviderOption, model?: string | null): string {
+  const trimmedModel = typeof model === "string" ? model.trim() : "";
+  if (!trimmedModel) {
+    return option.defaultModel;
+  }
+
+  const matchedModel = option.models.find((candidate) => candidate.toLowerCase() === trimmedModel.toLowerCase());
+  return matchedModel ?? option.defaultModel;
+}
+
 export function normalizeAiProviderSelection(selection?: Partial<AiProviderSelection> | null): AiProviderSelection {
   const providerId = selection?.providerId && AI_PROVIDER_OPTIONS.some((option) => option.id === selection.providerId)
     ? selection.providerId
     : DEFAULT_AI_PROVIDER_SELECTION.providerId;
   const option = getProviderOption(providerId);
-  const model = typeof selection?.model === "string" && selection.model.trim().length > 0
-    ? selection.model
-    : option.defaultModel;
+  const model = normalizeProviderModel(option, selection?.model);
   return { providerId, model };
 }
 
 export function createModelProvider(selection: AiProviderSelection): ModelProvider {
-  const option = getProviderOption(selection.providerId);
-  return option.create(selection.model || option.defaultModel);
+  const normalizedSelection = normalizeAiProviderSelection(selection);
+  const option = getProviderOption(normalizedSelection.providerId);
+  return option.create(normalizedSelection.model);
 }
 
 export function providerKeyAvailable(providerId: AiProviderId): boolean {
@@ -274,13 +283,14 @@ export function providerKeyAvailable(providerId: AiProviderId): boolean {
 }
 
 export function describeAiProviderSelection(selection: AiProviderSelection) {
-  const option = getProviderOption(selection.providerId);
+  const normalizedSelection = normalizeAiProviderSelection(selection);
+  const option = getProviderOption(normalizedSelection.providerId);
   return {
     providerName: option.name,
-    providerLabel: `${option.name} · ${selection.model}`,
+    providerLabel: `${option.name} · ${normalizedSelection.model}`,
     description: option.description,
     envKey: option.envKey,
-    cloudAvailable: providerKeyAvailable(selection.providerId),
+    cloudAvailable: providerKeyAvailable(normalizedSelection.providerId),
   };
 }
 
@@ -288,13 +298,14 @@ export function describeAiProviderGovernance(
   selection: AiProviderSelection,
   localOnlyMode: boolean,
 ): AiProviderGovernanceSummary {
-  const activeOption = getProviderOption(selection.providerId);
-  const cloudAvailable = providerKeyAvailable(selection.providerId);
+  const normalizedSelection = normalizeAiProviderSelection(selection);
+  const activeOption = getProviderOption(normalizedSelection.providerId);
+  const cloudAvailable = providerKeyAvailable(normalizedSelection.providerId);
   return {
-    activeProviderId: selection.providerId,
+    activeProviderId: normalizedSelection.providerId,
     activeProviderName: activeOption.name,
-    activeProviderLabel: `${activeOption.name} · ${selection.model}`,
-    activeModel: selection.model,
+    activeProviderLabel: `${activeOption.name} · ${normalizedSelection.model}`,
+    activeModel: normalizedSelection.model,
     activeEnvKey: activeOption.envKey,
     localOnlyMode,
     cloudAvailable: cloudAvailable && !localOnlyMode,
@@ -367,8 +378,9 @@ export function describeAiProviderTelemetry(
   selection: AiProviderSelection,
   localOnlyMode: boolean,
 ): AiProviderTelemetrySummary {
-  const governance = describeAiProviderGovernance(selection, localOnlyMode);
-  const activeTelemetry = inferProviderTelemetry(selection);
+  const normalizedSelection = normalizeAiProviderSelection(selection);
+  const governance = describeAiProviderGovernance(normalizedSelection, localOnlyMode);
+  const activeTelemetry = inferProviderTelemetry(normalizedSelection);
   const stagePolicies = AI_TELEMETRY_STAGE_POLICIES.map((stage) => ({
     ...stage,
     ready:

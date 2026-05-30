@@ -56,6 +56,7 @@ export type TimeSliceState = {
   exteriorLightsOn: boolean;
   occupancy: OccupancyLevel;
   stateLabel: string;
+  doorStates?: Record<string, "closed" | "locked">;
 };
 
 function isNight(hour: number): SimState {
@@ -126,6 +127,24 @@ function getExteriorLightStateFromSchedule(
   return { on: false, label: "Off" };
 }
 
+function getDoorStateFromSchedule(
+  hour: number,
+  minute: number,
+  schedule: TimeSchedule,
+  doorId: string,
+): "closed" | "locked" {
+  const time = hour + minute / 60;
+  for (const ds of schedule.doorLockSchedule) {
+    if (ds.doorId !== doorId) continue;
+    for (const period of ds.periods) {
+      if (timeInPeriod(time, period.startHour, period.endHour)) {
+        return "locked";
+      }
+    }
+  }
+  return "closed";
+}
+
 function getOccupancyFromSchedule(
   hour: number,
   minute: number,
@@ -146,7 +165,8 @@ function hasSceneSchedule(scene: SecurityScene): boolean {
   return (
     ts.interiorLightSchedule.length > 0 ||
     ts.exteriorLightSchedule.length > 0 ||
-    ts.occupancySchedule.length > 0
+    ts.occupancySchedule.length > 0 ||
+    ts.doorLockSchedule.length > 0
   );
 }
 
@@ -167,6 +187,14 @@ function computeTimeSliceState(hour: number, minute: number, scene?: SecuritySce
     ? getOccupancyFromSchedule(hour, minute, ts)
     : getOccupancyDefault(hour, minute);
 
+  let doorStates: Record<string, "closed" | "locked"> | undefined;
+  if (useScene && ts && ts.doorLockSchedule.length > 0 && scene) {
+    doorStates = {};
+    for (const door of scene.doors) {
+      doorStates[door.id] = getDoorStateFromSchedule(hour, minute, ts, door.id);
+    }
+  }
+
   return {
     hour,
     minute,
@@ -174,7 +202,10 @@ function computeTimeSliceState(hour: number, minute: number, scene?: SecuritySce
     interiorLightsOn: interior.on,
     exteriorLightsOn: exterior.on,
     occupancy: occupancy.level,
-    stateLabel: interior.label,
+    stateLabel: ts && ts.doorLockSchedule.length > 0 && scene && scene.doors.length > 0
+      ? `${interior.label}${doorStates && Object.values(doorStates).some(s => s === "locked") ? " (doors locked)" : ""}`
+      : interior.label,
+    doorStates,
   };
 }
 
@@ -251,6 +282,16 @@ function patchSceneForTimeSlice(
     }
     return { ...light, status: state.interiorLightsOn ? ("on" as const) : ("off" as const) };
   });
+
+  if (state.doorStates) {
+    patched.doors = scene.doors.map((door) => {
+      const scheduledState = state.doorStates?.[door.id];
+      if (scheduledState) {
+        return { ...door, state: scheduledState };
+      }
+      return door;
+    });
+  }
 
   return patched;
 }
@@ -452,6 +493,6 @@ export function computeTemporalProfile(scene: SecurityScene): TemporalSecurityPr
   };
 }
 
-export function computeTimeSliceStateForHour(hour: number, minute = 0): TimeSliceState {
-  return computeTimeSliceState(hour, minute);
+export function computeTimeSliceStateForHour(hour: number, minute = 0, scene?: SecurityScene): TimeSliceState {
+  return computeTimeSliceState(hour, minute, scene);
 }

@@ -143,7 +143,7 @@ export async function runReconstruction(
       compilerResult,
       finalSession.photos.map(
         (p) =>
-          `${p.sourceFileName ?? "unnamed"} (${"role" in p ? (p as any).role ?? "unassigned" : "unassigned"})`,
+          `${p.sourceFileName ?? "unnamed"} (${p.role ?? "unassigned"})`,
       ),
     );
     const confidence = estimateOverallConfidence(finalSession);

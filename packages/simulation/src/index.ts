@@ -3,20 +3,20 @@ export { createCoverageEvaluator, computeCoverageCells, getQualityShare, getIden
 export type { CellComputation, CameraEvaluation, CoverageEvaluator } from "./coverage";
 export { simulateStudio, simulateStudioLite } from "./simulate-studio";
 
-// DORI/OODPCVS quality models
+// DORI/OODPCVS quality models (re-exported from core)
 export {
   DORI_THRESHOLDS, OODPCVS_THRESHOLDS,
   qualityToScore, scoreToQuality, maxQuality,
   ppmToDoriQuality, ppmToOodpcvsQuality, ppmToQuality,
   QUALITY_ORDER,
-} from "./dori";
+} from "@sentineltwin/core";
 export { OODPCVS_MIN_PPM, computeOODPCVSQuality, getPopFactor, getCriticalityMargin, meetsOODPCVSRequirement } from "./odpcvs";
 
-// Geometry utilities
-export { toRadians, normalizeAngle, getYawPitchDirection, pointInPolygon, polygonCenter, distance2D, lerp2D } from "./geometry";
+// Geometry utilities (re-exported from core)
+export { toRadians, normalizeAngle, getYawPitchDirection, pointInPolygon, polygonCenter, distance2D, lerp2D } from "@sentineltwin/core";
 
-// Grid
-export { buildCoverageGrid } from "./grid";
+// Grid (re-exported from core)
+export { buildCoverageGrid } from "@sentineltwin/core";
 
 // Mount model
 export { computeMountTiltPenalty, getMountModel, getDefaultHeight, isPitchWithinMountLimits, isYawWithinMountLimits, computeBlindSpotPenalty } from "./mount-model";
@@ -56,6 +56,8 @@ export { computePlacementOracle } from "./placement-oracle";
 export { computeTemporalProfile, computeTimeSliceStateForHour } from "./temporal";
 
 export type { TimeSliceState } from "./temporal";
+
+export { detectTemporalAnomalies } from "./temporal-anomaly";
 
 export { computeSeasonalLightState, getExteriorLightStateSeasonal, estimateExteriorLux, computeTwilightPeriods } from "./seasonal-lighting";
 

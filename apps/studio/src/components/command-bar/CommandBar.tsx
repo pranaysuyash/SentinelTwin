@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { ArrowUp, CheckCircle2, Loader2, Sparkles, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAiCommand } from "@/hooks/use-ai-command";
 import type { CounterfactualCandidate } from "@/agents/CounterfactualAgent";
@@ -78,7 +78,9 @@ export function CommandBar() {
   }, [isExpanded]);
 
   useEffect(() => {
-    setHasMounted(true);
+    startTransition(() => {
+      setHasMounted(true);
+    });
   }, []);
 
   const healthStatus = hasMounted ? providerHealth.overallStatus : "partial";

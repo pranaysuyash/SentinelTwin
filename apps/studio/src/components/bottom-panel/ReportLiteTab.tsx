@@ -1,7 +1,7 @@
 "use client";
 
 import { Copy, Database, FileText, Globe, Loader2, Printer, Share2, Sparkles } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 
 import type { SecurityReport } from "@/agents/ReportAgent";
 import { buildCompareShareLink } from "@/lib/compare-share-link";
@@ -193,18 +193,22 @@ export function ReportLiteTab() {
 
   useEffect(() => {
     if (!selectedCatalogPreset) return;
-    setReportAudience(selectedCatalogPreset.audience);
-    setReportVisibility(selectedCatalogPreset.visibility);
-    setReportTemplateId(selectedCatalogPreset.templateId);
-    setPresetNameDraft(selectedCatalogPreset.title);
+    startTransition(() => {
+      setReportAudience(selectedCatalogPreset.audience);
+      setReportVisibility(selectedCatalogPreset.visibility);
+      setReportTemplateId(selectedCatalogPreset.templateId);
+      setPresetNameDraft(selectedCatalogPreset.title);
+    });
   }, [selectedCatalogPreset]);
 
   useEffect(() => {
     if (reportCatalogState.selectedPresetId && !selectedCatalogPreset) {
-      setReportCatalogState((current) => ({
-        ...current,
-        selectedPresetId: null,
-      }));
+      startTransition(() => {
+        setReportCatalogState((current) => ({
+          ...current,
+          selectedPresetId: null,
+        }));
+      });
     }
   }, [reportCatalogState.selectedPresetId, selectedCatalogPreset]);
 
@@ -270,7 +274,9 @@ export function ReportLiteTab() {
 
   useEffect(() => {
     if (compareReportSelection) {
-      setReportMode("compare");
+      startTransition(() => {
+        setReportMode("compare");
+      });
     }
   }, [compareReportSelection]);
 

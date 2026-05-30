@@ -3,7 +3,7 @@
 import { OrbitControls } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { ArrowLeftRight, Database, GitCompare, Globe, Lock, Plus, AlertTriangle, Share2, Sparkles, Unlock } from "lucide-react";
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 import { useStudioStore } from "@/store/studio-store";
@@ -882,8 +882,10 @@ export function CompareView() {
     const baselineSnap = snapshots.find((s) => s.label === "Baseline") ?? snapshots[0];
     const proposedSnap = snapshots[snapshots.length - 1];
     if (!baselineSnap || !proposedSnap || baselineSnap.id === proposedSnap.id) return;
-    setComparisonAId(baselineSnap.id);
-    setComparisonBId(proposedSnap.id);
+    startTransition(() => {
+      setComparisonAId(baselineSnap.id);
+      setComparisonBId(proposedSnap.id);
+    });
   }, [demoMode, demoStep, snapshots, comparisonAId, comparisonBId]);
 
   const prioritizedActions = useMemo(() => {

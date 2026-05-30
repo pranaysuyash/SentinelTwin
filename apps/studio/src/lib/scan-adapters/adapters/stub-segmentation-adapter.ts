@@ -30,11 +30,11 @@ export class StubSegmentationAdapter implements SegmentationAdapter {
   ): Promise<SegmentationResult> {
     segCounter += 1;
 
-    const widthPx = "widthPx" in artifact && typeof (artifact as any).widthPx === "number"
-      ? (artifact as any).widthPx
+    const widthPx = typeof artifact.widthPx === "number"
+      ? artifact.widthPx
       : 640;
-    const heightPx = "heightPx" in artifact && typeof (artifact as any).heightPx === "number"
-      ? (artifact as any).heightPx
+    const heightPx = typeof artifact.heightPx === "number"
+      ? artifact.heightPx
       : 480;
 
     const box = normalizedPoint(point, widthPx, heightPx);
@@ -107,11 +107,11 @@ export class StubSegmentationAdapter implements SegmentationAdapter {
       confidence = 0.7;
     }
 
-    const widthPx = "widthPx" in artifact && typeof (artifact as any).widthPx === "number"
-      ? (artifact as any).widthPx
+    const widthPx = typeof artifact.widthPx === "number"
+      ? artifact.widthPx
       : 640;
-    const heightPx = "heightPx" in artifact && typeof (artifact as any).heightPx === "number"
-      ? (artifact as any).heightPx
+    const heightPx = typeof artifact.heightPx === "number"
+      ? artifact.heightPx
       : 480;
 
     const box: [number, number, number, number] = [

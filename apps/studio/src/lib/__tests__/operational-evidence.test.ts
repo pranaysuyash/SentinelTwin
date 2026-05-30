@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import {
   createCameraNode,
   createObstructionNode,
-  createPathNode,
+  createScenarioPathNode,
   createSecurityLightNode,
   createSensorNode,
 } from "@/lib/node-factory";
@@ -834,7 +834,7 @@ describe("operational evidence helpers", () => {
       obstructions: [
         createObstructionNode([2, 0, 2], "shelf"),
       ],
-      paths: [createPathNode([
+      paths: [createScenarioPathNode([
         { position: [0.5, 0.5] },
         { position: [3, 1] },
       ])],
@@ -853,7 +853,7 @@ describe("operational evidence helpers", () => {
           { position: [5.5, 1] },
           { position: [8, 3.5] },
         ]),
-        createPathNode([
+        createScenarioPathNode([
           { position: [1, 6] },
           { position: [4, 6.5] },
         ]),
@@ -943,7 +943,7 @@ describe("operational evidence helpers", () => {
       cameras: [...childScene.cameras, createCameraNode([7, 2, 3])],
       securityLights: [createSecurityLightNode([4, 2.5, 2])],
       paths: [
-        createPathNode([
+        createScenarioPathNode([
           { position: [0.5, 0.5] },
           { position: [5.5, 1] },
           { position: [8, 3.5] },

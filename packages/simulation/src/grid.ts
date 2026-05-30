@@ -1,5 +1,5 @@
 import type { SecurityScene } from "@sentineltwin/core";
-import { pointInPolygon } from "./geometry";
+import { pointInPolygon } from "@sentineltwin/core";
 
 export type GridCell = {
   id: string;

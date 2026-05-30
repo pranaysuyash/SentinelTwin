@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, ChevronUp, Layers, Map, Minus, Plus, RefreshCcw, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 
 import { MapCanvas } from "@/components/map/MapCanvas";
 import { MAP_COLORS } from "@/components/map/map-colors";
@@ -783,12 +783,14 @@ export function MiniMap({
   }, [mode, setDockSize]);
 
   useEffect(() => {
-    if (leftDockCollapsed) {
-      setMode("collapsed");
-      setHoveredPreview(false);
-      return;
-    }
-    setMode((current) => (current === "collapsed" ? "compact" : current));
+    startTransition(() => {
+      if (leftDockCollapsed) {
+        setMode("collapsed");
+        setHoveredPreview(false);
+        return;
+      }
+      setMode((current) => (current === "collapsed" ? "compact" : current));
+    });
   }, [leftDockCollapsed]);
 
   const mapWidth = mode === "expanded" ? Math.max(248, leftDockSizePx - 28) : width;

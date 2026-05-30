@@ -1,4 +1,4 @@
-import type { ScanCaptureSession, ScanCandidate } from "@/lib/scan-artifacts";
+import type { PhotoArtifact, ScanCaptureSession, ScanCandidate } from "@/lib/scan-artifacts";
 import {
   createScanCaptureSession,
   createPhotoArtifact,
@@ -44,7 +44,7 @@ export async function runFullReconstruction(
       photoInput.fileName,
       photoInput.widthPx,
       photoInput.heightPx,
-      photoInput.role as any,
+      photoInput.role as PhotoArtifact["role"],
     );
     session.photos.push(photoArtifact);
     session.artifacts.push(photoArtifact);

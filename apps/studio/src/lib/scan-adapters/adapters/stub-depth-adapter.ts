@@ -1,5 +1,5 @@
 import type { DepthEstimationAdapter, DepthEstimate } from "@/lib/scan-adapters/types";
-import type { ScanArtifact, ScanCaptureSession } from "@/lib/scan-artifacts";
+import type { PhotoArtifact, ScanArtifact, ScanCaptureSession } from "@/lib/scan-artifacts";
 
 const ROLE_DEPTH_PROFILES: Record<string, { minM: number; maxM: number; confidence: number }> = {
   overview: { minM: 0.5, maxM: 12, confidence: 0.55 },
@@ -42,7 +42,7 @@ export class StubDepthEstimationAdapter implements DepthEstimationAdapter {
       };
     }
 
-    const role = "role" in artifact ? (artifact as any).role as string | undefined : undefined;
+    const role = "role" in artifact ? (artifact as unknown as PhotoArtifact).role : undefined;
     const profile = role && role in ROLE_DEPTH_PROFILES
       ? ROLE_DEPTH_PROFILES[role]
       : DEFAULT_DEPTH;

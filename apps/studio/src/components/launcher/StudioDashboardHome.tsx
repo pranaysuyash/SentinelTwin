@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { startTransition, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 
 import {
   ArrowRight,
@@ -1419,7 +1419,9 @@ export function StudioDashboardHome({
   }, []);
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setShowWorkspaceLibrary(new URLSearchParams(window.location.search).has("library"));
+    startTransition(() => {
+      setShowWorkspaceLibrary(new URLSearchParams(window.location.search).has("library"));
+    });
   }, []);
   const folderCounts = useMemo(() => {
     return browserProjects.reduce<Record<string, number>>((acc, project) => {

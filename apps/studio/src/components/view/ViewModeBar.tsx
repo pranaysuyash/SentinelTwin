@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Camera, FileText, GitCompare, LayoutDashboard, Monitor, Play } from "lucide-react";
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 
 import { MAP_COLORS } from "@/components/map/map-colors";
 import { VIEW_MODE_PRESETS } from "@/lib/studio-constants";
@@ -35,7 +35,9 @@ const iconVariants = {
 /** Context chip shown next to the active mode tab to orient the user */
 function ContextChip() {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    startTransition(() => setMounted(true));
+  }, []);
   const viewMode = useStudioStore((s) => s.viewMode);
   const scene = useStudioStore((s) => s.scene);
   const selectedId = useStudioStore((s) => s.selectedNodeId);

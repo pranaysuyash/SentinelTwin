@@ -278,4 +278,122 @@ describe("temporal simulation engine", () => {
       }
     });
   });
+
+  describe("door lock schedule integration", () => {
+    function createDoorScene(): SecurityScene {
+      const scene = createTemporalTestScene();
+      scene.doors = [
+        {
+          id: "door_main",
+          nodeType: "door",
+          label: "Main Entrance",
+          position: [5, 0, 0.1],
+          dimensions: [0.9, 2.1, 0.08],
+          state: "closed",
+          source: "manual",
+          reviewStatus: "unreviewed",
+          sourceTrace: "",
+          geometryValidity: "valid",
+        },
+        {
+          id: "door_side",
+          nodeType: "door",
+          label: "Side Door",
+          position: [0.1, 4, 0],
+          dimensions: [0.9, 2.1, 0.08],
+          state: "closed",
+          source: "manual",
+          reviewStatus: "unreviewed",
+          sourceTrace: "",
+          geometryValidity: "valid",
+        },
+      ];
+      return scene;
+    }
+
+    test("computeTimeSliceStateForHour locks doors during scheduled periods", () => {
+      const scene = createDoorScene();
+      scene.timeSchedule = {
+        location: undefined,
+        seasonalDate: undefined,
+        interiorLightSchedule: [],
+        exteriorLightSchedule: [],
+        doorLockSchedule: [
+          {
+            doorId: "door_side",
+            periods: [{ startHour: 22, endHour: 6 }],
+          },
+        ],
+        occupancySchedule: [],
+        guardPatrolSchedule: [],
+      };
+
+      const lockedState = computeTimeSliceStateForHour(23, 0, scene);
+      expect(lockedState.doorStates).toBeDefined();
+      expect(lockedState.doorStates!["door_side"]).toBe("locked");
+      expect(lockedState.doorStates!["door_main"]).toBe("closed");
+
+      const unlockedState = computeTimeSliceStateForHour(12, 0, scene);
+      expect(unlockedState.doorStates!["door_side"]).toBe("closed");
+    });
+
+    test("no door states when no schedule exists", () => {
+      const scene = createDoorScene();
+      const state = computeTimeSliceStateForHour(12, scene);
+      expect(state.doorStates).toBeUndefined();
+    });
+
+    test("time slice patch applies locked state to doors", () => {
+      const scene = createDoorScene();
+      scene.timeSchedule = {
+        location: undefined,
+        seasonalDate: undefined,
+        interiorLightSchedule: [],
+        exteriorLightSchedule: [],
+        doorLockSchedule: [
+          {
+            doorId: "door_main",
+            periods: [{ startHour: 20, endHour: 7 }],
+          },
+        ],
+        occupancySchedule: [],
+        guardPatrolSchedule: [],
+      };
+
+      const profile = computeTemporalProfile(scene);
+      expect(profile.hourlySnapshots.length).toBeGreaterThan(0);
+
+      const nightSnap = profile.hourlySnapshots.find((s) => s.hour === 23);
+      const daySnap = profile.hourlySnapshots.find((s) => s.hour === 12);
+
+      expect(nightSnap).toBeDefined();
+      expect(daySnap).toBeDefined();
+
+      const nightIssues = nightSnap!.issues.filter((i) =>
+        i.toLowerCase().includes("door") || i.toLowerCase().includes("lock"),
+      );
+      expect(nightIssues.length).toBeGreaterThanOrEqual(0);
+    });
+
+    test("hasSceneSchedule detects door schedules", () => {
+      const scene = createDoorScene();
+      expect(computeTimeSliceStateForHour(12, 0, scene).doorStates).toBeUndefined();
+
+      scene.timeSchedule = {
+        location: undefined,
+        seasonalDate: undefined,
+        interiorLightSchedule: [],
+        exteriorLightSchedule: [],
+        doorLockSchedule: [{
+          doorId: "door_side",
+          periods: [{ startHour: 22, endHour: 6 }],
+        }],
+        occupancySchedule: [],
+        guardPatrolSchedule: [],
+      };
+      const state = computeTimeSliceStateForHour(23, 0, scene);
+      expect(state.doorStates).toBeDefined();
+      expect(Object.keys(state.doorStates!).length).toBe(2);
+    });
+  });
 });

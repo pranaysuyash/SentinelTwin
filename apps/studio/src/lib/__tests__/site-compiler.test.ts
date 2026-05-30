@@ -252,7 +252,7 @@ describe("compileJsonToSiteResult", () => {
   test("validates a valid scene and returns success", () => {
     const scene = makeScene();
     const result = compileJsonToSiteResult(scene, "export.json");
-    expect(result.source).toBe("json_import");
+    expect(result.source).toBe("json");
     expect(result.warnings.some((w) => w.code === "INVALID_SCENE")).toBe(false);
   });
 

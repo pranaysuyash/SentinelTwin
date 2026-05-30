@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import { Share2 } from "lucide-react";
 
 import { Badge } from "@/components/shared/Badge";
@@ -392,7 +392,9 @@ export function SceneIntelligenceTab() {
   useEffect(() => {
     if (!timelineFocusRequest) return;
     focusRequestPending.current = timelineFocusRequest;
-    setTimelineFocusRequest(null);
+    startTransition(() => {
+      setTimelineFocusRequest(null);
+    });
   }, [setTimelineFocusRequest, timelineFocusRequest]);
 
   useEffect(() => {
@@ -400,20 +402,22 @@ export function SceneIntelligenceTab() {
     if (!request) return;
     focusRequestPending.current = null;
 
-    if (request.query) {
-      setEvidenceQuery(request.query);
-    }
-    if (request.branchLabel) {
-      setEvidenceBranchFilter(request.branchLabel);
-    }
-    if (request.provenanceNodeId) {
-      setSelectedNodeId(request.provenanceNodeId);
-    }
-    if (request.provenanceEdgeId) {
-      setSelectedEdgeId(request.provenanceEdgeId);
-    } else {
-      setSelectedEdgeId(null);
-    }
+    startTransition(() => {
+      if (request.query) {
+        setEvidenceQuery(request.query);
+      }
+      if (request.branchLabel) {
+        setEvidenceBranchFilter(request.branchLabel);
+      }
+      if (request.provenanceNodeId) {
+        setSelectedNodeId(request.provenanceNodeId);
+      }
+      if (request.provenanceEdgeId) {
+        setSelectedEdgeId(request.provenanceEdgeId);
+      } else {
+        setSelectedEdgeId(null);
+      }
+    });
 
     const targetEvent = request.eventId
       ? operationalEvidenceEvents.find((candidate) => candidate.id === request.eventId) ?? null
@@ -430,7 +434,9 @@ export function SceneIntelligenceTab() {
         }, null);
 
     if (targetEvent) {
-      setSelectedEvidenceEventId(targetEvent.id);
+      startTransition(() => {
+        setSelectedEvidenceEventId(targetEvent.id);
+      });
       return;
     }
 

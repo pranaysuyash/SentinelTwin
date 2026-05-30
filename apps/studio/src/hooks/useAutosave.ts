@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import type { SecurityScene } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 
@@ -110,7 +110,9 @@ export function useAutosave(): UseAutosaveReturn {
       didMountRef.current = true;
       const saved = loadAutosave();
       if (saved) {
-        setPendingRecovery(saved);
+        startTransition(() => {
+          setPendingRecovery(saved);
+        });
       }
     }
   }, []);

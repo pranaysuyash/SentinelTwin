@@ -1,5 +1,5 @@
 import type { ObjectDetectionAdapter, DetectionResult } from "@/lib/scan-adapters/types";
-import type { ScanArtifact, ScanCandidate, ScanCaptureSession } from "@/lib/scan-artifacts";
+import type { PhotoArtifact, ScanArtifact, ScanCandidate, ScanCaptureSession, ScanCandidateKind } from "@/lib/scan-artifacts";
 import { createScanCandidateFromArtifact, addCandidateWarning } from "@/lib/scan-artifacts";
 import { getStubProfileForRole, addJitter } from "@/lib/scan-adapters/adapters/stub-profiles";
 
@@ -19,7 +19,7 @@ export class StubObjectDetectionAdapter implements ObjectDetectionAdapter {
       return { candidates, artifacts: [], confidence: 0, warnings: ["Only photo artifacts are supported"] };
     }
 
-    const role = "role" in artifact ? (artifact as any).role as string | undefined : undefined;
+    const role = "role" in artifact ? (artifact as unknown as PhotoArtifact).role : undefined;
     const profile = getStubProfileForRole(role);
 
     for (const obj of profile.dominantObjects) {
@@ -30,7 +30,7 @@ export class StubObjectDetectionAdapter implements ObjectDetectionAdapter {
       ];
 
       let candidate = createScanCandidateFromArtifact(
-        obj.kind as any,
+        obj.kind as ScanCandidateKind,
         jitteredPos,
         artifact.id,
         Math.round(jitteredConf * 100) / 100,

@@ -105,7 +105,9 @@ describe("workspace identity conflict diff", () => {
     const record: WorkspaceIdentityConflictArchiveRecord = {
       ok: true,
       approvalRoute: {
+        routeKey: "scene:scene-conflict|member:member_operator|role:operator|status:review_required|scope:review|current:Shared workspace|archived:Single-user workspace|reviewer:Reviewer|privacy:1|drift:000",
         routeStatus: "review_required",
+        routeScope: "review",
         routeLabel: "Route approval to reviewer",
         routeReason: "Approval should route through reviewer before publish.",
         targetReviewerLabel: "Reviewer",
@@ -115,6 +117,8 @@ describe("workspace identity conflict diff", () => {
         archivedPolicyLabel: "Single-user workspace",
         drift: null,
         hasPrivacyExposure: true,
+        activeMemberEligible: false,
+        activeMemberReason: "Approval should route through Reviewer, and the active member is not eligible.",
       },
       conflictDiff: {
         title: "Conflict Diff",

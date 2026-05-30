@@ -18,6 +18,7 @@ describe("ReportLiteTab", () => {
     expect(source).toContain("compareReportSelection ? \"compare\" : \"single\"");
     expect(source).toContain("Copy");
     expect(source).toContain("Copy compare link");
+    expect(source).toContain("Compare provenance:");
     expect(source).toContain("Print");
     expect(source).toContain("Report Summary");
     expect(source).toContain("Truth: Computed");

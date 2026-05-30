@@ -160,6 +160,16 @@ export const TRUST_AUDIT_SURFACES: TrustAuditSurface[] = [
     forbiddenPhrases: ["stub"],
   },
   {
+    surface: "Workspace account bridge",
+    file: "src/components/launcher/StudioDashboardHome.tsx",
+    requiredPhrases: [
+      "Workspace Account",
+      "Local-first account bridge toward the canonical org/account model.",
+      "Plan, quota, invites, and ownership transfer remain open.",
+    ],
+    forbiddenPhrases: ["stub"],
+  },
+  {
     surface: "Metrics truth labeling",
     file: "src/components/bottom-panel/MetricsTab.tsx",
     requiredPhrases: [
@@ -398,6 +408,47 @@ export const TRUST_AUDIT_SURFACES: TrustAuditSurface[] = [
       "stringifyDiagnosticBundle",
     ],
     forbiddenPhrases: ["stub"],
+  },
+  {
+    surface: "Node history tab data wiring",
+    file: "src/components/inspector/NodeHistoryTab.tsx",
+    requiredPhrases: [
+      "operationalEvidenceEvents",
+      "affectedNodeIds",
+      "reconstructSceneFromEvidence",
+      "Restore Scene to This Point",
+    ],
+    forbiddenPhrases: ["stub", "placeholder", "FAKE_DATA"],
+  },
+  {
+    surface: "Timeline scrubber tab data wiring",
+    file: "src/components/bottom-panel/TimelineScrubberTab.tsx",
+    requiredPhrases: [
+      "operationalEvidenceEvents",
+      "reconstructSceneFromEvidence",
+    ],
+    forbiddenPhrases: ["stub", "placeholder", "FAKE_DATA"],
+  },
+  {
+    surface: "TruthBadge component",
+    file: "src/components/shared/TruthBadge.tsx",
+    requiredPhrases: [
+      "simulated",
+      "inferred",
+      "real",
+      "placeholder",
+      "TruthLabel",
+      "TruthBadge",
+    ],
+    forbiddenPhrases: ["stub"],
+  },
+  {
+    surface: "Inspector analytics truth labels",
+    file: "src/components/inspector/InspectorPanel.tsx",
+    requiredPhrases: [
+      'truthLabel={camResult ? "simulated" : "placeholder"}',
+    ],
+    forbiddenPhrases: [],
   },
 ];
 

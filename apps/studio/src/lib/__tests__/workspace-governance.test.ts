@@ -6,7 +6,9 @@ import {
   createDefaultWorkspaceGovernance,
   normalizeWorkspaceGovernance,
   summarizeWorkspaceGovernance,
+  resolveApprovalRoute,
 } from "@/lib/workspace-governance";
+import type { SecurityScene } from "@/schema/security-scene";
 
 describe("workspace governance", () => {
   test("starts with a review-required operator workflow", () => {
@@ -40,5 +42,45 @@ describe("workspace governance", () => {
     expect(summary.needsApproval).toBe(false);
     expect(canApproveWorkspaceScene(governance.activeRole)).toBe(true);
     expect(canPublishWorkspaceScene(governance)).toBe(true);
+  });
+
+  describe("resolveApprovalRoute", () => {
+    const createMockScene = (overrides?: Partial<SecurityScene>): SecurityScene => ({
+      id: "test-scene",
+      name: "Test Scene",
+      source: "manual",
+      cameras: [],
+      securityLights: [],
+      obstructions: [],
+      criticalZones: [],
+      privacyZones: [],
+      paths: [],
+      sensors: [],
+      snapshots: [],
+      ...overrides,
+    } as any);
+
+    test("requires privacy_reviewer review if there are privacy zones", () => {
+      const scene = createMockScene({ privacyZones: [{ id: "p1", type: "privacy_zone", position: [0,0,0], scale: [1,1,1] } as any] });
+      const governance = createDefaultWorkspaceGovernance();
+      const roles = resolveApprovalRoute(governance, scene);
+      expect(roles).toContain("privacy_reviewer");
+    });
+
+    test("requires admin review if there are critical priority zones", () => {
+      const scene = createMockScene({ criticalZones: [{ id: "c1", type: "critical_zone", position: [0,0,0], scale: [1,1,1], priority: "critical" } as any] });
+      const governance = createDefaultWorkspaceGovernance();
+      const roles = resolveApprovalRoute(governance, scene);
+      expect(roles).toContain("admin");
+      expect(roles).not.toContain("reviewer");
+    });
+
+    test("allows standard reviewer review for basic scenes without critical priority or privacy zones", () => {
+      const scene = createMockScene();
+      const governance = createDefaultWorkspaceGovernance();
+      const roles = resolveApprovalRoute(governance, scene);
+      expect(roles).toContain("reviewer");
+      expect(roles).toContain("admin");
+    });
   });
 });

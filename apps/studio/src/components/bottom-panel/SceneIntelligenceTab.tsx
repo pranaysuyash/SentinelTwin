@@ -617,7 +617,11 @@ export function SceneIntelligenceTab() {
   const pivotToCompareOrReport = (target: "beforeafter" | "report") => {
     const pivot = resolvePivotSnapshots(selectedEvidenceEvent, snapshots);
     if (!pivot) return;
-    setCompareReportSelection({ snapshotAId: pivot.before.id, snapshotBId: pivot.after.id });
+    setCompareReportSelection({
+      snapshotAId: pivot.before.id,
+      snapshotBId: pivot.after.id,
+      provenanceNote: selectedEvidenceReconstructionSourceNote ?? null,
+    });
     if (target === "beforeafter") {
       setWorkspacePreset("compare");
       setViewMode("compare");
@@ -665,6 +669,7 @@ export function SceneIntelligenceTab() {
       compareSnapshotAId: pivot.before.id,
       compareSnapshotBId: pivot.after.id,
       compareMode: target,
+      compareProvenanceNote: selectedEvidenceReconstructionSourceNote ?? null,
     }, url.hash);
   };
 

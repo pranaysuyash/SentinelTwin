@@ -2,8 +2,13 @@ import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { NextRequest } from "next/server";
 
 import { GET, POST } from "../route";
+
+const createNextRequest = (url: string, init?: RequestInit): NextRequest => (
+  new Request(url, init) as unknown as NextRequest
+);
 
 const originalStoreDir = process.env.SENTINELTWIN_CAMERA_LIVE_CONNECTION_STORE_DIR;
 const testStoreDir = mkdtempSync(join(tmpdir(), "sentineltwin-camera-live-connection-"));
@@ -25,7 +30,7 @@ describe("camera-live-connection route", () => {
   });
 
   test("archives a live connection probe and persists history", async () => {
-    const response = await POST(new Request("http://localhost/api/camera-live-connection", {
+    const response = await POST(createNextRequest("http://localhost/api/camera-live-connection", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -72,7 +77,7 @@ describe("camera-live-connection route", () => {
     expect(body.record.transportSessionId).toContain("transport_session_");
     expect(body.record.lastHeartbeatAt).toBeGreaterThan(0);
 
-    const history = await GET();
+    const history = await GET(createNextRequest("http://localhost/api/camera-live-connection"));
     const payload = await history.json();
     expect(payload.historyCount).toBe(1);
     expect(payload.latestSubmission.record.liveFeedUrl).toBe("rtsp://camera.example.com/live");
@@ -108,7 +113,7 @@ describe("camera-live-connection route", () => {
       }),
     };
 
-    const bindResponse = await POST(new Request("http://localhost/api/camera-live-connection", {
+    const bindResponse = await POST(createNextRequest("http://localhost/api/camera-live-connection", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(baseRequest),
@@ -127,7 +132,7 @@ describe("camera-live-connection route", () => {
     expect(bindBody.record.authSessionId).toBe("auth_session_cam_front_raw");
     expect(bindBody.record.authSessionExpiresAt).toBe(1_725_000_128_000);
 
-    const refreshResponse = await POST(new Request("http://localhost/api/camera-live-connection", {
+    const refreshResponse = await POST(createNextRequest("http://localhost/api/camera-live-connection", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -182,7 +187,7 @@ describe("camera-live-connection route", () => {
   });
 
   test("records a heartbeat renewal without reprobing the device", async () => {
-    const bindResponse = await POST(new Request("http://localhost/api/camera-live-connection", {
+    const bindResponse = await POST(createNextRequest("http://localhost/api/camera-live-connection", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -213,7 +218,7 @@ describe("camera-live-connection route", () => {
 
     const bindBody = await bindResponse.json();
 
-    const heartbeatResponse = await POST(new Request("http://localhost/api/camera-live-connection", {
+    const heartbeatResponse = await POST(createNextRequest("http://localhost/api/camera-live-connection", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -249,7 +254,7 @@ describe("camera-live-connection route", () => {
     expect(heartbeatBody.summary).toContain("Heartbeat");
     expect(heartbeatBody.summary).toContain("Authenticated via token");
 
-    const history = await GET();
+    const history = await GET(createNextRequest("http://localhost/api/camera-live-connection"));
     const payload = await history.json();
     expect(payload.historyCount).toBe(2);
     expect(payload.activeSessionCount).toBe(1);
@@ -289,7 +294,7 @@ describe("camera-live-connection route", () => {
       });
       globalThis.fetch = mockedFetch as typeof fetch;
 
-      const response = await POST(new Request("http://localhost/api/camera-live-connection", {
+      const response = await POST(createNextRequest("http://localhost/api/camera-live-connection", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -361,7 +366,7 @@ describe("camera-live-connection route", () => {
       });
       globalThis.fetch = mockedFetch as typeof fetch;
 
-      const response = await POST(new Request("http://localhost/api/camera-live-connection", {
+      const response = await POST(createNextRequest("http://localhost/api/camera-live-connection", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -419,7 +424,7 @@ describe("camera-live-connection route", () => {
       });
       globalThis.fetch = mockedFetch as typeof fetch;
 
-      const response = await POST(new Request("http://localhost/api/camera-live-connection", {
+      const response = await POST(createNextRequest("http://localhost/api/camera-live-connection", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -452,7 +457,7 @@ describe("camera-live-connection route", () => {
       expect(body.record.authChallengeRealm).toBe("camera.example.com");
       expect(body.summary).toContain("challenge");
 
-      const history = await GET();
+      const history = await GET(createNextRequest("http://localhost/api/camera-live-connection"));
       const payload = await history.json();
       expect(payload.activeSessionCount).toBe(1);
       expect(payload.activeSessions[0].status).toBe("active");
@@ -463,7 +468,7 @@ describe("camera-live-connection route", () => {
   });
 
   test("archives a disconnect action through the canonical route", async () => {
-    const bindResponse = await POST(new Request("http://localhost/api/camera-live-connection", {
+    const bindResponse = await POST(createNextRequest("http://localhost/api/camera-live-connection", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -490,7 +495,7 @@ describe("camera-live-connection route", () => {
     expect(bindResponse.status).toBe(200);
     const bindBody = await bindResponse.json();
 
-    const response = await POST(new Request("http://localhost/api/camera-live-connection", {
+    const response = await POST(createNextRequest("http://localhost/api/camera-live-connection", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -523,7 +528,7 @@ describe("camera-live-connection route", () => {
     expect(body.summary).toContain("Disconnected Front Entrance");
     expect(body.record.transportSessionState).toBe("closing");
 
-    const history = await GET();
+    const history = await GET(createNextRequest("http://localhost/api/camera-live-connection"));
     const payload = await history.json();
     expect(payload.activeSessionCount).toBe(0);
   });

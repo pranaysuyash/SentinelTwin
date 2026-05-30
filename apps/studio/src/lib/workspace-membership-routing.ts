@@ -10,7 +10,9 @@ export type WorkspaceMembershipDriftSummary = {
 };
 
 export type WorkspaceApprovalRouteSummary = {
+  routeKey: string;
   routeStatus: "ready" | "reconcile_before_route" | "review_required" | "open_publish";
+  routeScope: "direct" | "review" | "reconcile";
   routeLabel: string;
   routeReason: string;
   targetReviewerLabel: string;
@@ -20,7 +22,50 @@ export type WorkspaceApprovalRouteSummary = {
   archivedPolicyLabel: string;
   drift: WorkspaceMembershipDriftSummary | null;
   hasPrivacyExposure: boolean;
+  activeMemberEligible: boolean;
+  activeMemberReason: string;
 };
+
+function buildWorkspaceApprovalRouteKey(params: {
+  sceneId: string;
+  activeMemberId: string;
+  activeMemberRole: string | null;
+  routeStatus: WorkspaceApprovalRouteSummary["routeStatus"];
+  routeScope: WorkspaceApprovalRouteSummary["routeScope"];
+  currentPolicyMode: WorkspaceAccessState["policy"]["mode"];
+  currentPublishRequiresApproval: boolean;
+  currentPrivacySensitiveRequiresReviewer: boolean;
+  currentRequiredReviewerRoles: WorkspaceAccessState["policy"]["requiredReviewerRoles"];
+  archivedPolicyMode: WorkspaceAccessState["policy"]["mode"] | "none";
+  archivedPublishRequiresApproval: boolean | null;
+  archivedPrivacySensitiveRequiresReviewer: boolean | null;
+  archivedRequiredReviewerRoles: WorkspaceAccessState["policy"]["requiredReviewerRoles"] | null;
+  targetReviewerRole: string;
+  governanceApprovalMode: WorkspaceGovernanceState["approvalMode"];
+  governanceSceneStatus: WorkspaceGovernanceState["sceneStatus"];
+  hasPrivacyExposure: boolean;
+  drift: WorkspaceMembershipDriftSummary | null;
+}) {
+  const driftLabel = params.drift
+    ? `${params.drift.activeMemberChanged ? 1 : 0}${params.drift.teamSizeChanged ? 1 : 0}${params.drift.policyChanged ? 1 : 0}`
+    : "000";
+  const currentRoles = params.currentRequiredReviewerRoles.join(",");
+  const archivedRoles = params.archivedRequiredReviewerRoles ? params.archivedRequiredReviewerRoles.join(",") : "none";
+
+  return [
+    `scene:${params.sceneId}`,
+    `member:${params.activeMemberId}`,
+    `role:${params.activeMemberRole ?? "none"}`,
+    `status:${params.routeStatus}`,
+    `scope:${params.routeScope}`,
+    `governance:${params.governanceApprovalMode}:${params.governanceSceneStatus}`,
+    `current:${params.currentPolicyMode}:${params.currentPublishRequiresApproval ? 1 : 0}:${params.currentPrivacySensitiveRequiresReviewer ? 1 : 0}:${currentRoles}`,
+    `archived:${params.archivedPolicyMode}:${params.archivedPublishRequiresApproval ?? "none"}:${params.archivedPrivacySensitiveRequiresReviewer ?? "none"}:${archivedRoles}`,
+    `reviewer:${params.targetReviewerRole}`,
+    `privacy:${params.hasPrivacyExposure ? "1" : "0"}`,
+    `drift:${driftLabel}`,
+  ].join("|");
+}
 
 export function summarizeWorkspaceMembershipDrift(
   currentAccess: WorkspaceAccessState,
@@ -55,6 +100,11 @@ export function summarizeWorkspaceApprovalRouting(
     : requiresReview
       ? "review_required"
       : "open_publish";
+  const routeScope: WorkspaceApprovalRouteSummary["routeScope"] = routeStatus === "reconcile_before_route"
+    ? "reconcile"
+    : routeStatus === "review_required"
+      ? "review"
+      : "direct";
 
   const routeLabel = routeStatus === "reconcile_before_route"
     ? "Reconcile membership before routing approval"
@@ -67,9 +117,48 @@ export function summarizeWorkspaceApprovalRouting(
     : routeStatus === "review_required"
       ? `Approval should route through ${currentRoute.requiredReviewerRole.replace(/_/g, " ")} before publish.`
       : "Publish can route directly because the workspace is open and aligned.";
+  const activeMemberRole = activeMember?.role ?? null;
+  const activeMemberEligible = routeStatus === "open_publish"
+    ? Boolean(activeMember?.canPublish || activeMember?.role === "admin")
+    : routeStatus === "review_required"
+      ? Boolean(activeMember?.canReview && (activeMemberRole === currentRoute.requiredReviewerRole || activeMemberRole === "admin"))
+      : false;
+  const activeMemberReason = !activeMember
+    ? "No active member is selected."
+    : routeStatus === "reconcile_before_route"
+      ? "The active member must reconcile membership drift before routing can be trusted."
+      : routeStatus === "review_required"
+        ? activeMemberEligible
+          ? `The active member can route approval as ${activeMember.role.replace(/_/g, " ")}.`
+          : `Approval should route through ${currentRoute.requiredReviewerRole.replace(/_/g, " ")}, and the active member is not eligible.`
+        : activeMemberEligible
+          ? "The active member can publish directly in the aligned workspace."
+          : `Direct publish requires a publishing-capable member, and ${activeMember.role.replace(/_/g, " ")} is not eligible.`;
+  const routeKey = buildWorkspaceApprovalRouteKey({
+    sceneId: scene.id,
+    activeMemberId: activeMember?.id ?? "none",
+    activeMemberRole: activeMember?.role ?? null,
+    routeStatus,
+    routeScope,
+    currentPolicyMode: currentAccess.policy.mode,
+    currentPublishRequiresApproval: currentAccess.policy.publishRequiresApproval,
+    currentPrivacySensitiveRequiresReviewer: currentAccess.policy.privacySensitiveRequiresReviewer,
+    currentRequiredReviewerRoles: currentAccess.policy.requiredReviewerRoles,
+    archivedPolicyMode: archivedAccess?.policy.mode ?? "none",
+    archivedPublishRequiresApproval: archivedAccess?.policy.publishRequiresApproval ?? null,
+    archivedPrivacySensitiveRequiresReviewer: archivedAccess?.policy.privacySensitiveRequiresReviewer ?? null,
+    archivedRequiredReviewerRoles: archivedAccess?.policy.requiredReviewerRoles ?? null,
+    targetReviewerRole: currentRoute.requiredReviewerRole,
+    governanceApprovalMode: workspaceGovernance.approvalMode,
+    governanceSceneStatus: workspaceGovernance.sceneStatus,
+    hasPrivacyExposure,
+    drift,
+  });
 
   return {
+    routeKey,
     routeStatus,
+    routeScope,
     routeLabel,
     routeReason,
     targetReviewerLabel: currentRoute.requiredReviewerRole.replace(/_/g, " "),
@@ -79,5 +168,69 @@ export function summarizeWorkspaceApprovalRouting(
     archivedPolicyLabel: archivedAccess ? (archivedAccess.policy.mode === "shared" ? "Shared workspace" : "Single-user workspace") : "No archived snapshot",
     drift,
     hasPrivacyExposure,
+    activeMemberEligible,
+    activeMemberReason,
+  };
+}
+
+export function normalizeWorkspaceApprovalRouteSummary(
+  summary: Partial<WorkspaceApprovalRouteSummary> & {
+    routeStatus?: WorkspaceApprovalRouteSummary["routeStatus"];
+    routeLabel?: string;
+    routeReason?: string;
+    targetReviewerLabel?: string;
+    activeMemberLabel?: string;
+    archivedMemberLabel?: string;
+    currentPolicyLabel?: string;
+    archivedPolicyLabel?: string;
+    drift?: WorkspaceMembershipDriftSummary | null;
+    hasPrivacyExposure?: boolean;
+    routeKey?: string;
+    routeScope?: WorkspaceApprovalRouteSummary["routeScope"];
+    activeMemberEligible?: boolean;
+    activeMemberReason?: string;
+  },
+): WorkspaceApprovalRouteSummary {
+  const routeStatus = summary.routeStatus ?? "ready";
+  const routeScope = summary.routeScope
+    ?? (routeStatus === "reconcile_before_route"
+      ? "reconcile"
+      : routeStatus === "review_required"
+        ? "review"
+        : "direct");
+  const currentPolicyLabel = summary.currentPolicyLabel ?? "Unknown policy";
+  const archivedPolicyLabel = summary.archivedPolicyLabel ?? "No archived snapshot";
+  const targetReviewerLabel = summary.targetReviewerLabel ?? "reviewer";
+  const activeMemberLabel = summary.activeMemberLabel ?? "No active member";
+  const archivedMemberLabel = summary.archivedMemberLabel ?? "No archived member";
+  const hasPrivacyExposure = summary.hasPrivacyExposure ?? false;
+  const drift = summary.drift ?? null;
+  const routeKey = summary.routeKey ?? [
+    `status:${routeStatus}`,
+    `scope:${routeScope}`,
+    `active:${activeMemberLabel}`,
+    `archived:${archivedMemberLabel}`,
+    `current:${currentPolicyLabel}`,
+    `archivedPolicy:${archivedPolicyLabel}`,
+    `reviewer:${targetReviewerLabel}`,
+    `privacy:${hasPrivacyExposure ? "1" : "0"}`,
+    `drift:${drift ? `${drift.activeMemberChanged ? 1 : 0}${drift.teamSizeChanged ? 1 : 0}${drift.policyChanged ? 1 : 0}` : "000"}`,
+  ].join("|");
+
+  return {
+    routeKey,
+    routeStatus,
+    routeScope,
+    routeLabel: summary.routeLabel ?? "Approval route",
+    routeReason: summary.routeReason ?? "Approval route summary",
+    targetReviewerLabel,
+    activeMemberLabel,
+    archivedMemberLabel,
+    currentPolicyLabel,
+    archivedPolicyLabel,
+    drift,
+    hasPrivacyExposure,
+    activeMemberEligible: summary.activeMemberEligible ?? false,
+    activeMemberReason: summary.activeMemberReason ?? "No route eligibility summary available.",
   };
 }

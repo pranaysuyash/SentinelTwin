@@ -4,8 +4,13 @@ import { once } from "node:events";
 import http from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { NextRequest } from "next/server";
 
 import { GET, POST } from "../route";
+
+const createNextRequest = (url: string, init?: RequestInit): NextRequest => (
+  new Request(url, init) as any as unknown as any
+);
 
 const originalStoreDir = process.env.SENTINELTWIN_SUPPORT_DELIVERY_STORE_DIR;
 const testStoreDir = mkdtempSync(join(tmpdir(), "sentineltwin-support-delivery-"));
@@ -24,7 +29,7 @@ afterAll(() => {
 describe("support-delivery route", () => {
   test("queues a routed support payload and persists delivery history", async () => {
     const response = await POST(
-      new Request("http://localhost/api/support-delivery", {
+      createNextRequest("http://localhost/api/support-delivery", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -86,7 +91,7 @@ describe("support-delivery route", () => {
     expect(payload.archiveStatus).toBe("local cache");
     expect(payload.summary).toContain("delivery target");
 
-    const historyResponse = await GET();
+    const historyResponse = await GET(createNextRequest("http://localhost/api/support-delivery"));
     expect(historyResponse.status).toBe(200);
     const historyPayload = await historyResponse.json();
     expect(historyPayload.ok).toBe(true);
@@ -96,7 +101,7 @@ describe("support-delivery route", () => {
 
   test("rejects invalid payloads", async () => {
     const response = await POST(
-      new Request("http://localhost/api/support-delivery", {
+      createNextRequest("http://localhost/api/support-delivery", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ destinations: [{ label: "" }] }),
@@ -134,7 +139,7 @@ describe("support-delivery route", () => {
       }
 
       const response = await POST(
-        new Request("http://localhost/api/support-delivery", {
+        createNextRequest("http://localhost/api/support-delivery", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({

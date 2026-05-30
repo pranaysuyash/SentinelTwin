@@ -9,6 +9,7 @@ import {
 } from "@/lib/archive-handoff-link";
 import { buildOperationalEvidenceArchive } from "@/lib/operational-evidence-archive";
 import { createDefaultWorkspaceAccessState } from "@/lib/workspace-access";
+import { createDefaultWorkspaceAccountProfile } from "@/lib/workspace-catalog";
 import { createDefaultWorkspaceGovernance } from "@/lib/workspace-governance";
 import { simulateStudio } from "@/simulation/simulate-studio";
 
@@ -25,6 +26,18 @@ describe("archive handoff link", () => {
       }),
       operationalEvidenceEvents: [],
       workspaceAccess: createDefaultWorkspaceAccessState(),
+      workspaceAccount: {
+        accountName: "North Region Security",
+        ownerName: "Pranay",
+        planTier: "enterprise",
+        quotas: { maxWorkspaces: 10, maxMembers: 5, maxStorageBytes: 1000 },
+        entitlements: {
+          sharedWorkspaces: true,
+          publishedWorkspaces: true,
+          archiveRecovery: true, reportExports: true, scanIntake: true, liveEvidence: true, ownershipTransfer: true,
+          invites: true,
+        },
+      },
       workspaceGovernance: createDefaultWorkspaceGovernance(),
       notes: ["handoff"],
     });

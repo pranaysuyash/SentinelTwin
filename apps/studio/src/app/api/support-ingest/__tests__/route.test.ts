@@ -2,8 +2,13 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { NextRequest } from "next/server";
 
 import { GET, POST } from "../route";
+
+const createNextRequest = (url: string, init?: RequestInit): NextRequest => (
+  new Request(url, init) as any as unknown as any
+);
 
 const originalStoreDir = process.env.SENTINELTWIN_SUPPORT_INGEST_STORE_DIR;
 const testStoreDir = mkdtempSync(join(tmpdir(), "sentineltwin-support-ingest-"));
@@ -26,7 +31,7 @@ afterAll(() => {
 describe("support-ingest route", () => {
   test("summarizes a submitted support payload into alert routing", async () => {
     const response = await POST(
-      new Request("http://localhost/api/support-ingest", {
+      createNextRequest("http://localhost/api/support-ingest", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -82,7 +87,7 @@ describe("support-ingest route", () => {
     expect(payload.routing.statusLabel).toBe("attention");
     expect(payload.summary).toContain("alert candidate");
 
-    const historyResponse = await GET();
+    const historyResponse = await GET(createNextRequest("http://localhost/api/support-ingest"));
     expect(historyResponse.status).toBe(200);
     const historyPayload = await historyResponse.json();
     expect(historyPayload.ok).toBe(true);
@@ -92,7 +97,7 @@ describe("support-ingest route", () => {
 
   test("rejects invalid payloads", async () => {
     const response = await POST(
-      new Request("http://localhost/api/support-ingest", {
+      createNextRequest("http://localhost/api/support-ingest", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ runtimeIncidents: [{ invalid: true }] }),

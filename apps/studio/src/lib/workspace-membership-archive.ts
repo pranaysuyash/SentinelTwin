@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { z } from "zod";
 
 import { normalizeWorkspaceAccessState, type WorkspaceAccessState } from "@/lib/workspace-access";
-import { summarizeWorkspaceApprovalRouting } from "@/lib/workspace-membership-routing";
+import { normalizeWorkspaceApprovalRouteSummary, summarizeWorkspaceApprovalRouting } from "@/lib/workspace-membership-routing";
 import { WORKSPACE_ROLES, normalizeWorkspaceGovernance, type WorkspaceRole } from "@/lib/workspace-governance";
 import type { SecurityScene } from "@/schema/security-scene";
 import type {
@@ -59,7 +59,9 @@ const WorkspaceMembershipDriftSchema = z.object({
 });
 
 const WorkspaceApprovalRouteSummarySchema = z.object({
+  routeKey: z.string().min(1).optional(),
   routeStatus: z.enum(["ready", "reconcile_before_route", "review_required", "open_publish"]),
+  routeScope: z.enum(["direct", "review", "reconcile"]).optional(),
   routeLabel: z.string().min(1),
   routeReason: z.string().min(1),
   targetReviewerLabel: z.string().min(1),
@@ -69,6 +71,8 @@ const WorkspaceApprovalRouteSummarySchema = z.object({
   archivedPolicyLabel: z.string().min(1),
   drift: WorkspaceMembershipDriftSchema.nullable(),
   hasPrivacyExposure: z.boolean(),
+  activeMemberEligible: z.boolean().optional(),
+  activeMemberReason: z.string().optional(),
 });
 
 export const WorkspaceMembershipArchiveTargetSchema = z.object({
@@ -159,7 +163,7 @@ export function loadWorkspaceMembershipArchiveHistory(rootDir = resolveWorkspace
         workspaceAccessState: normalizeWorkspaceAccessState(candidate.workspaceAccessState),
         workspaceGovernanceState: normalizeWorkspaceGovernance(candidate.workspaceGovernanceState),
         approvalRoute: candidate.approvalRoute
-          ? candidate.approvalRoute as WorkspaceMembershipArchiveRecord["approvalRoute"]
+          ? normalizeWorkspaceApprovalRouteSummary(candidate.approvalRoute as WorkspaceMembershipArchiveRecord["approvalRoute"])
           : summarizeWorkspaceApprovalRouting(
             {
               id: candidate.sceneId,
@@ -289,7 +293,7 @@ export async function summarizeWorkspaceMembershipArchive(request: WorkspaceMemb
     teamSize: workspaceAccess.members.length,
     workspaceAccessState: workspaceAccess,
     workspaceGovernanceState: workspaceGovernance,
-    approvalRoute,
+    approvalRoute: normalizeWorkspaceApprovalRouteSummary(approvalRoute),
     deliveredCount,
     queuedCount,
     failedCount,

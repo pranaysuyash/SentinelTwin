@@ -148,7 +148,7 @@ export function ProjectStartLauncher({
       icon: <Camera className="h-3.5 w-3.5" />,
       badge: "Preview",
       title: "Verify real footage",
-      description: "Open Camera View with the verification overlay and alignment workflow ready for a selected camera.",
+      description: "Preview: static/reference-frame alignment only.",
       tone: "slate",
       status: "Preview",
       onClick: onVerifyFootagePlanned,

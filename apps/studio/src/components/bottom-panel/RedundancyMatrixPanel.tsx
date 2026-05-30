@@ -11,6 +11,8 @@ export function RedundancyMatrixPanel() {
   const runSimulation = useStudioStore((s) => s.runSimulation);
   const scene = useStudioStore((s) => s.scene);
   const selectNode = useStudioStore((s) => s.selectNode);
+  const selectedNodeId = useStudioStore((s) => s.selectedNodeId);
+  const selectedCameraId = useStudioStore((s) => s.selectedCameraId);
 
   if (!result) {
     return (
@@ -31,7 +33,7 @@ export function RedundancyMatrixPanel() {
     );
   }
 
-  const cameras = scene.cameras.filter((c) => c.status === "on");
+  const cameras = scene.cameras;
   const zones = scene.criticalZones;
 
   if (cameras.length === 0 || zones.length === 0) {
@@ -47,12 +49,16 @@ export function RedundancyMatrixPanel() {
 
   // Build matrix: for each camera, which zones would lose coverage if it fails
   const cameraResults = result.cameraResults;
+  const focusedCameraId = scene.cameras.some((camera) => camera.id === selectedNodeId)
+    ? selectedNodeId
+    : selectedCameraId;
   const matrix = cameras.map((cam) => {
     const camResult = cameraResults.find((r) => r.cameraId === cam.id);
     const coveredZones = camResult?.criticalZonesCovered ?? [];
     return {
       cameraId: cam.id,
       cameraName: cam.name,
+      isOffline: cam.status !== "on",
       coveragePct: camResult?.coveragePct ?? 0,
       coveredZones,
       // Which zones have this camera as their ONLY coverage?
@@ -64,13 +70,22 @@ export function RedundancyMatrixPanel() {
         });
       }),
     };
-  }).sort((a, b) => b.soleCoverageZones.length - a.soleCoverageZones.length);
+  }).sort((a, b) => {
+    if (focusedCameraId && a.cameraId === focusedCameraId) return -1;
+    if (focusedCameraId && b.cameraId === focusedCameraId) return 1;
+    const soleDelta = b.soleCoverageZones.length - a.soleCoverageZones.length;
+    if (soleDelta !== 0) return soleDelta;
+    return b.coveragePct - a.coveragePct;
+  });
 
   const criticalityScore = (cam: typeof matrix[number]) => {
     const soleCount = cam.soleCoverageZones.length;
     const coverageWeight = cam.coveragePct / 15;
     return Math.min(10, Math.round(soleCount * 3 + coverageWeight));
   };
+  const focusedCamera = focusedCameraId ? matrix.find((cam) => cam.cameraId === focusedCameraId) ?? null : null;
+  const focusedCameraResult = focusedCameraId ? cameraResults.find((entry) => entry.cameraId === focusedCameraId) ?? null : null;
+  const focusedImpactDetail = focusedCameraResult?.offlineImpactDetail ?? [];
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -87,6 +102,48 @@ export function RedundancyMatrixPanel() {
         </span>
       </div>
 
+      {focusedCamera ? (
+        <div className="border-b border-[#1e2130] bg-[#0b0f17] px-3 py-2">
+          <div className="flex items-start gap-3">
+            <div className="min-w-0">
+              <div className="text-[8px] font-semibold uppercase tracking-[0.2em] text-[#7dd3fc]">
+                Selected Camera Impact
+              </div>
+              <div className="mt-1 text-[11px] font-semibold text-[#e2e8f7]">
+                {scene.cameras.find((camera) => camera.id === focusedCamera.cameraId)?.name ?? focusedCamera.cameraName}
+                {focusedCamera.isOffline ? <span className="ml-2 rounded bg-red-900/30 px-1.5 py-0.5 text-[8px] font-semibold text-red-300">OFFLINE</span> : null}
+              </div>
+              <div className="mt-0.5 text-[9px] text-[#6a748b]">
+                If this camera fails, these zones lose their only backup.
+              </div>
+            </div>
+            <div className="ml-auto text-right">
+              <div className="text-[8px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">Single-point zones</div>
+              <div className="mt-0.5 text-[18px] font-bold text-red-300">{focusedCamera.soleCoverageZones.length}</div>
+            </div>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1">
+            {focusedImpactDetail.length > 0 ? (
+              focusedImpactDetail.map((entry) => (
+                <span key={entry.zoneId} className="rounded bg-red-900/35 px-1.5 py-0.5 text-[8px] font-medium text-red-300" title={entry.reason}>
+                  {entry.label}
+                </span>
+              ))
+            ) : focusedCamera.soleCoverageZones.length > 0 ? (
+              focusedCamera.soleCoverageZones.map((zoneId) => (
+                <span key={zoneId} className="rounded bg-red-900/35 px-1.5 py-0.5 text-[8px] font-medium text-red-300">
+                  {zones.find((zone) => zone.id === zoneId)?.label ?? zoneId}
+                </span>
+              ))
+            ) : (
+              <span className="rounded bg-emerald-900/25 px-1.5 py-0.5 text-[8px] font-medium text-emerald-300">
+                No zones would be lost by this camera alone
+              </span>
+            )}
+          </div>
+        </div>
+      ) : null}
+
       <div className="flex-1 overflow-y-auto p-2">
         <div className="space-y-1.5">
           {matrix.map((cam) => {
@@ -101,6 +158,8 @@ export function RedundancyMatrixPanel() {
                 key={cam.cameraId}
                 className={cn(
                   "rounded-lg border p-2.5 transition-colors",
+                  focusedCameraId === cam.cameraId ? "ring-1 ring-sky-400/35" : "",
+                  cam.isOffline ? "opacity-80" : "",
                   critBorder,
                   critBg,
                 )}
@@ -108,14 +167,22 @@ export function RedundancyMatrixPanel() {
                 {/* Header row */}
                 <div className="mb-2 flex items-center gap-2">
                   <button
+                    type="button"
                     onClick={() => selectNode(cam.cameraId)}
-                    className="truncate text-[11px] font-semibold text-[#c7d0e4] hover:text-blue-400"
+                    className={cn(
+                      "truncate text-[11px] font-semibold hover:text-blue-400",
+                      cam.isOffline ? "text-[#7a869e] line-through" : "text-[#c7d0e4]",
+                    )}
                   >
                     {cam.cameraName}
                   </button>
                   <span className={cn("ml-auto text-[9px] font-semibold", critColor)}>
                     {critLabel} ({crit}/10)
                   </span>
+                </div>
+                <div className="mb-2 flex items-center gap-1.5">
+                  <span className={cn("h-1.5 w-1.5 rounded-full", cam.isOffline ? "bg-red-500" : "bg-green-400")} />
+                  <span className="text-[8px] text-[#6a748b]">{cam.isOffline ? "Offline" : "Online"}</span>
                 </div>
 
                 {/* Zone chips */}

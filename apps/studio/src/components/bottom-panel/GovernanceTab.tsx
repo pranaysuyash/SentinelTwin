@@ -16,6 +16,7 @@ import {
 } from "@/lib/workspace-access";
 import {
   summarizeOperationalGovernanceTrail,
+  compareOperationalEvidenceBranches,
 } from "@/lib/operational-evidence";
 import type { GovernanceArchiveRecord } from "@/lib/governance-archive";
 import {
@@ -25,6 +26,8 @@ import {
 import { replayWorkspaceIdentityConflict, type WorkspaceIdentityConflictArchiveRecord, type WorkspaceIdentityConflictArchiveResponse } from "@/lib/workspace-identity-conflict-client";
 import type { WorkspaceMembershipArchiveRecord } from "@/lib/workspace-membership-types";
 import { useStudioStore } from "@/store/studio-store";
+import { resolveSyncConflict, type WorkspaceSyncConflict } from "@/lib/workspace-sync-conflict";
+import type { OperationalEvidenceBranchComparison } from "@/lib/operational-evidence";
 
 function Section({
   title,
@@ -90,6 +93,7 @@ function statusTone(status: string) {
 export function GovernanceTab() {
   const scene = useStudioStore((s) => s.scene);
   const operationalEvidenceEvents = useStudioStore((s) => s.operationalEvidenceEvents);
+  const operationalEvidenceArchiveHistory = useStudioStore((s) => s.operationalEvidenceArchiveHistory);
   const workspaceAccess = useStudioStore((s) => s.workspaceAccess);
   const workspaceGovernance = useStudioStore((s) => s.workspaceGovernance);
   const publishCurrentScene = useStudioStore((s) => s.publishCurrentScene);
@@ -151,6 +155,8 @@ export function GovernanceTab() {
   const [identityConflictReplayLoading, setIdentityConflictReplayLoading] = useState(false);
   const [identityConflictReplayError, setIdentityConflictReplayError] = useState<string | null>(null);
   const [annotation, setAnnotation] = useState("");
+  const [syncConflictReport, setSyncConflictReport] = useState<WorkspaceSyncConflict | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const summary = useMemo(() => summarizeWorkspaceGovernance(workspaceGovernance), [workspaceGovernance]);
   const accessSummary = useMemo(() => summarizeWorkspaceAccess(workspaceAccess), [workspaceAccess]);
@@ -279,6 +285,7 @@ export function GovernanceTab() {
     }));
   }, [scene, workspaceAccess, workspaceGovernance]);
   const latestWorkspaceMembershipArchive = remoteWorkspaceMembershipArchiveHistory[0] ?? null;
+  const latestOperationalEvidenceArchive = operationalEvidenceArchiveHistory[0] ?? null;
   const approvalRoute = useMemo(
     () => summarizeWorkspaceApprovalRouting(
       scene,
@@ -464,6 +471,26 @@ export function GovernanceTab() {
         : "Workspace identity already matches the latest archived snapshot.",
     );
     void refreshWorkspaceMembershipArchive();
+  };
+
+  const compareLatestArchiveBranch = () => {
+    if (!latestOperationalEvidenceArchive) {
+      setSyncConflictReport(resolveSyncConflict(null));
+      return;
+    }
+
+    const currentHead = operationalEvidenceEvents.at(-1) ?? null;
+    const archiveEvents = latestOperationalEvidenceArchive.archive.operationalEvidenceEvents;
+    const archiveHead = archiveEvents.at(-1) ?? null;
+    if (!currentHead || !archiveHead) {
+      setSyncConflictReport(resolveSyncConflict(null));
+      return;
+    }
+
+    const combinedEvents = [...operationalEvidenceEvents, ...archiveEvents];
+    const comparison = compareOperationalEvidenceBranches(combinedEvents, currentHead.id, archiveHead.id);
+    const result = resolveSyncConflict(comparison);
+    setSyncConflictReport(result);
   };
 
   const resolveWorkspaceApprovalRoute = () => {
@@ -1686,6 +1713,87 @@ export function GovernanceTab() {
               <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Can publish</div>
               <div className="mt-0.5 font-semibold">{canPublish ? "Yes" : "No"}</div>
             </div>
+          </div>
+        </Section>
+
+        <Section title="Workspace Branch Sync">
+          <div className="space-y-1.5 text-[9px] text-[#8b96ab]">
+            <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1">
+              Compare the current branch against the latest exported operational archive, then resolve whether the workspace is same, fast-forward, or diverged.
+            </div>
+            <div className="rounded-md border border-[#1a2030] bg-[#0f141f] px-2 py-1.5 text-[9px] text-[#d2d9e8]">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[#556076] uppercase tracking-[0.18em]">Latest archive</span>
+                <span className="font-semibold">{latestOperationalEvidenceArchive?.archive.scene.name ?? "No archive"}</span>
+              </div>
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <span className="text-[#556076] uppercase tracking-[0.18em]">Restore branch</span>
+                <span className="font-semibold">{latestOperationalEvidenceArchive?.restoreBranch ?? "n/a"}</span>
+              </div>
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <span className="text-[#556076] uppercase tracking-[0.18em]">Event count</span>
+                <span className="font-semibold">{latestOperationalEvidenceArchive?.archive.operationalEvidenceEvents.length ?? 0}</span>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSyncing(true);
+                  window.setTimeout(() => {
+                    compareLatestArchiveBranch();
+                    setIsSyncing(false);
+                  }, 300);
+                }}
+                disabled={isSyncing || !latestOperationalEvidenceArchive}
+                className={cn(
+                  "rounded-md border px-2 py-1 text-[9px] transition-colors",
+                  isSyncing
+                    ? "cursor-not-allowed border-sky-500/10 bg-sky-500/5 text-sky-200/60"
+                    : "border-sky-500/20 bg-sky-500/10 text-sky-100 hover:border-sky-400/30 hover:bg-sky-500/20"
+                )}
+              >
+                {isSyncing ? "Comparing..." : "Compare Latest Archive"}
+              </button>
+              {syncConflictReport && (
+                <button
+                  type="button"
+                  onClick={() => setSyncConflictReport(null)}
+                  className="rounded-md border border-[#1e2538] bg-[#111521] px-2 py-1 text-[#c7d0e4] hover:border-[#2a3245] hover:text-white"
+                >
+                  Clear Sync Report
+                </button>
+              )}
+            </div>
+
+            {syncConflictReport && (
+              <div className="space-y-1.5 mt-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-sky-100">Branch Sync Status</div>
+                  <Badge variant={syncConflictReport.status === "diverged" ? "amber" : syncConflictReport.status === "unrelated" ? "gray" : "green"}>
+                    {syncConflictReport.status.replace(/_/g, " ")}
+                  </Badge>
+                </div>
+                <div className="rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1 text-[9px] text-[#d2d9e8]">
+                  {syncConflictReport.recommendation}
+                </div>
+                <div className="rounded-md border border-[#1a2030] bg-[#0b0f17] px-2 py-1 text-[9px] text-[#8b96ab]">
+                  {latestOperationalEvidenceArchive
+                    ? `Current branch compared to ${latestOperationalEvidenceArchive.archive.scene.name} (${latestOperationalEvidenceArchive.restoreBranch}).`
+                    : "No archived operational evidence branch is available yet."}
+                </div>
+                {syncConflictReport.conflicts.length > 0 && (
+                  <div className="rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-1.5 text-[9px] text-amber-200/90">
+                    <div className="font-semibold uppercase tracking-[0.18em] mb-1">Conflicts detected:</div>
+                    <ul className="list-inside list-disc">
+                      {syncConflictReport.conflicts.map((c, i) => (
+                        <li key={i}>{c.collection} ({c.nodeId}): {c.reason}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </Section>
       </div>

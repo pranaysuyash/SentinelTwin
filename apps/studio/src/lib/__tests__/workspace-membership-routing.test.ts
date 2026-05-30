@@ -87,12 +87,16 @@ describe("workspace membership routing helpers", () => {
     expect(drift.teamSizeChanged).toBe(true);
     expect(drift.policyChanged).toBe(true);
     expect(route.routeStatus).toBe("reconcile_before_route");
+    expect(route.routeScope).toBe("reconcile");
     expect(route.routeLabel).toContain("Reconcile membership");
     expect(route.routeReason).toContain("drift");
     expect(route.activeMemberLabel).toContain("Reviewer");
     expect(route.archivedMemberLabel).toContain("Operator");
     expect(route.currentPolicyLabel).toBe("Shared workspace");
     expect(route.archivedPolicyLabel).toBe("Single-user workspace");
+    expect(route.routeKey).toContain("scene:scene-membership");
+    expect(route.activeMemberEligible).toBe(false);
+    expect(route.activeMemberReason).toContain("reconcile");
   });
 
   test("summarizes an open approval route when the workspace is aligned", () => {
@@ -138,9 +142,12 @@ describe("workspace membership routing helpers", () => {
     const route = summarizeWorkspaceApprovalRouting(scene, currentAccess, governance, null);
 
     expect(route.routeStatus).toBe("open_publish");
+    expect(route.routeScope).toBe("direct");
     expect(route.routeLabel).toBe("Open publish route");
     expect(route.routeReason).toContain("open");
     expect(route.drift).toBeNull();
     expect(route.archivedPolicyLabel).toBe("No archived snapshot");
+    expect(route.activeMemberEligible).toBe(true);
+    expect(route.activeMemberReason).toContain("publish directly");
   });
 });

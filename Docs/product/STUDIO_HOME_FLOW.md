@@ -1,6 +1,6 @@
 # Studio Home Flow (V0.1)
 
-Updated: 2026-05-30
+Updated: 2026-05-30 (loop-orchestration pass)
 
 ## Current Root Hierarchy
 
@@ -27,13 +27,14 @@ This is now positioned as a product-first root: users arrive at a job-oriented h
   - Camera View / Camera Wall
   - Path Replay
   - Compare
-  - Report
+  - Report Lite
 - Quick-start flows:
   - New scene
   - Import JSON
   - Manual-assisted Scan Site
   - AI Layout Draft
   - Import Floor Plan workflow (advanced path via Project Start Launcher)
+  - Verify from Footage now routes to Camera View verification flow (preview path, not a dead-end alert)
 
 Priority ordering on home is now intentionally job-first:
 
@@ -51,7 +52,8 @@ Priority ordering on home is now intentionally job-first:
 - Camera Wall
 - Path Replay
 - Compare
-- Report
+- Report Lite
+- Report workspace now surfaces a decision-priority strip (verified recommendations + critical issue context + latest AI recommendation telemetry)
 - Inspector, docks, analysis modules, minimap/path map, snapshots
 
 ## Platform Home (Future V1+)

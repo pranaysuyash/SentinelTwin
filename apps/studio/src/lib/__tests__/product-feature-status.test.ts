@@ -12,6 +12,8 @@ describe("product feature status", () => {
     expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Governance control plane" && entry.detail.includes("review, approval, rejection, and annotation controls"))).toBe(true);
     expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Workspace catalog / org boundary" && entry.status === "Preview")).toBe(true);
     expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Workspace catalog / org boundary" && entry.detail.includes("organization, owner, visibility, and surface mix"))).toBe(true);
+    expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Workspace account bridge" && entry.status === "Preview")).toBe(true);
+    expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Workspace account bridge" && entry.detail.includes("plan posture, soft quota, and entitlements"))).toBe(true);
     expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Scan Site (manual-assisted)" && entry.status === "Preview")).toBe(true);
     expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Scan Site (manual-assisted)" && entry.detail.includes("AI segmentation/depth is not implemented yet"))).toBe(true);
     expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Guided scan reconstruction" && entry.status === "Preview")).toBe(true);

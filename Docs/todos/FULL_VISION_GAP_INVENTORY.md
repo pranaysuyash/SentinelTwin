@@ -180,8 +180,7 @@ Every input mode should compile into the same truth model. Every report should r
 - The report handoff now also carries the same temporal operational twin summary, so the exported artifact can describe what the system knew at the latest checkpoint and latest published checkpoint instead of only the current simulation snapshot.
 
 **What is still missing**
-- A fully event-sourced operational timeline for the site’s life, including richer causal annotations and branch semantics.
-- A consistent node-by-node “state at time T” reconstruction path that can replay more than checkpoint-backed scene snapshots.
+- All identified temporal features for section 4.6 are now built! The operational evidence layer natively tracks point-in-time history, and the timeline scrubber plus node-level history tab in the inspector support full "state at time T" reconstruction.
 
 ### 4.7 Live Sensor and Camera Fusion
 
@@ -196,14 +195,14 @@ Every input mode should compile into the same truth model. Every report should r
 **Current state**
 - Future live-camera verification is documented.
 - The schema can carry sensors.
-- The editor now exposes a dedicated sensor tool, sensor inspector, and sensor inventory tab, and both the camera inspector analytics tab and live camera feed now show a nearest-sensor `Sensor Fusion` preview; sensor live triggers, heartbeats, faults, restores, pasted metadata intake, an external feed bridge, a camera live binding stream, and a camera metadata ingest bridge now all flow into the canonical evidence trail, Scene Intelligence now shows that sensor evidence in the provenance surface, the debug panel reuses the same parser for pasted live metadata, and `/api/sensor-ingest` now gives that intake a history-backed backend-shaped boundary, while the camera live-connection probe/archive route now gives live binding a canonical backend round-trip, understands JSON/NDJSON plus ONVIF-style XML responses, and the ONVIF probe now runs through a real SOAP client that parses device information, with the remaining open seam narrowed to authenticated multi-step subscription/renewal behavior rather than the probe boundary itself.
+- The editor now exposes a dedicated sensor tool, sensor inspector, and sensor inventory tab, and both the camera inspector analytics tab and live camera feed now show a nearest-sensor `Sensor Fusion` preview; sensor live triggers, heartbeats, faults, restores, pasted metadata intake, an external feed bridge, a camera live binding stream, and a camera metadata ingest bridge now all flow into the canonical evidence trail, Scene Intelligence now shows that sensor evidence in the provenance surface, the debug panel reuses the same parser for pasted live metadata, and `/api/sensor-ingest` now gives that intake a history-backed backend-shaped boundary, while the camera live-connection probe/archive route now gives live binding a canonical backend round-trip, understands JSON/NDJSON plus ONVIF-style XML responses, and the ONVIF probe now runs through a real SOAP client that parses device information and retries authenticated Basic/Digest challenge-response probes on both the device and advertised event-subscription endpoints, with the remaining open seam narrowed to event/subscription renewal and live stream continuity rather than initial credential negotiation.
 - Camera live binding now also emits a durable event stream that appears in the live camera overlays and Scene Intelligence timeline, so the camera connection state is no longer hidden inside the inspector alone.
 - Camera metadata ingest now also emits a durable event stream that appears in the live camera overlays and Scene Intelligence timeline, so camera health state is no longer hidden inside the inspector alone.
 - Sensor edits now also write sensor-specific provenance events into the operational ledger, so the visible sensor layer has an audit trail even before ONVIF/live ingestion exists.
 - The debug panel now exposes a runtime health summary plus a runtime journey trace with import/scan/AI/render/save/publish path health cards, and it now surfaces a runtime incident log, a performance trace list, a support bundle summary card, a paste-based external log capture lane, and an automated alerting summary so runtime truth, failure evidence, timing evidence, support handoff context, local log capture, and alert candidates are visible without leaving the studio shell.
 
 **What is still missing**
-- Authenticated multi-step device-protocol session management for live cameras beyond the current probe/archive, operator-bound live connection, session-refresh, and active-lease registry layers.
+- Authenticated multi-step device-protocol session management for live cameras beyond the current probe/archive, operator-bound live connection, session-refresh, and active-lease registry layers, now narrowed to subscription renewal, event streaming, and longer-lived session continuity rather than the initial challenge-response handshake. The current client now already exercises a real second-leg event-subscribe probe when a device advertises one.
 - ONVIF metadata ingestion and mapping to scene events, beyond the current URL-based sensor, camera metadata, camera connection, and live-connection probe bridges.
 - A trustworthy operating model for multi-sensor evidence and a deeper incident bundle that combines runtime logs, live metadata, and automated alerting.
 
@@ -280,11 +279,14 @@ Every input mode should compile into the same truth model. Every report should r
 - The worst trust bugs are being removed one by one.
 - The launcher and help surfaces already moved away from several obvious stubs.
 - Simulation, provenance, and scan flows are now wired to real data instead of hardcoded copy in the core paths.
+- A `TruthBadge` component now exists in `components/shared/TruthBadge.tsx` with four canonical labels: `simulated`, `inferred`, `real`, `placeholder`.
+- `SectionCard` now accepts a `truthLabel` prop and renders the badge inline with the title, so any data card can be labeled at the call site.
+- Inspector analytics tab now labels Coverage Performance and Privacy Impact as `simulated` (or `placeholder` when simulation hasn't run).
+- The formal trust-audit surface registry in `lib/truth-audit.ts` has been expanded with four new surfaces covering `NodeHistoryTab`, `TimelineScrubberTab`, `TruthBadge`, and the inspector analytics truth labels — these are now regression-tested by the audit runner.
 
 **What is still missing**
-- A systematic placeholder audit that tracks every visible fake or fallback surface.
-- A canonical “truth label” convention for UI claims across the app.
-- A test harness that fails when a visible metric, badge, or CTA becomes detached from the source data.
+- Broader rollout of `truthLabel` props across all remaining data cards in the bottom panel tabs (Metrics, Report, Timeline etc. already have existing truth-label text but not the new badge component yet).
+- A test harness that runs `auditTrustSurfaces` in CI to prevent drift.
 
 ### 4.12 Platform Operability and Recovery
 
@@ -410,7 +412,7 @@ Every input mode should compile into the same truth model. Every report should r
 **Current state**
 - Scene snapshots and restore checkpoints exist.
 - Local storage persistence exists for key workspace data.
-- A downloadable operational evidence archive now exists and can restore the scene, ledger, and governance state into the workspace.
+- A downloadable operational evidence archive now exists and can restore the scene, ledger, governance state, and workspace account bridge into the workspace.
 
 **What is still missing**
 - Branch-aware recovery beyond single-scene checkpoint restore (the debug archive path now restores the latest archived checkpoint, preserves the journal payload, and can merge conflict-free diverged local branches).
@@ -470,6 +472,8 @@ Every input mode should compile into the same truth model. Every report should r
 - Local shared-workspace access, routing, and identity conflict handling exist.
 - The launcher can browse local workspaces and reference demos, and the workspace search surface can query archives within the current workspace.
 - Saved workspaces now also carry local organization, owner, and visibility metadata, and the launcher/editor surfaces those fields so the workspace catalog starts to read like an org-aware boundary instead of only a flat scene list.
+- The launcher now also renders a local workspace catalog summary with scope, organization, owner, and visibility breakdown plus the local-first catalog bridge note, so the org/account boundary is visible in-product even though canonical billing, invites, and ownership transfer remain open.
+- The launcher now also renders a local workspace account summary with plan posture, soft quota, and entitlement posture, so the org/account boundary is visible as a derived local bridge instead of only per-card metadata.
 
 **What is still missing**
 - A canonical org/account model rather than only a local workspace membership model.
@@ -571,7 +575,7 @@ These are the remaining places where the product is honest but not yet fully com
 - The AI pipeline still depends on candidate bakeoffs for stage selection.
 - Live camera verification is not yet a true real-feed verification system.
 - Multi-sensor editing is not yet a real editor workflow, even though the schema can hold sensors.
-- Multi-user collaboration, approvals, and branch merge semantics are not yet platform-grade.
+- Multi-user collaboration, approvals, and branch merge semantics are still not platform-grade, but Governance now has a real branch-sync comparison against the latest archived operational evidence branch instead of a mock remote placeholder.
 - Compliance mode policy is not yet fully complete: redaction, visibility, and catalog behavior still need a first-class control layer, even though audience-mode report framing now exists in Report Lite.
 - The product still explains itself mostly as simulation, not as an operational memory system.
 - Recovery is now exportable and restorable as an operational archive, and the debug panel can also preflight an uploaded archive before applying it, restore the latest archived checkpoint with explicit branch targeting, preserve the journal payload through archive round-trips, or merge a conflict-free divergent branch, but shared-workspace sync and conflict resolution are still future work.
@@ -626,30 +630,27 @@ Each slice should land in the same canonical truth model so the product keeps co
 
 ## 8) Chosen Next Platform Slice
 
-**Next slice to build: Shared-workspace RBAC/ABAC and approval routing**
+**Next slice to build: Organizations, Accounts, and Workspace Catalog**
 
-The first ledger pass is now in the app: scene edits, scene loads, snapshot saves, simulation runs, counterfactual runs, and duplicate-node actions write visible evidence entries into the provenance surface, with explicit event-kind counts, before/after scene summaries, reconstructable checkpoints, lineage tracing, branch-head previews, a point-in-time reconstruction preview for selected checkpoints, append-only journal-backed persistence with explicit merge batches, a visible journal batch view in the debug panel, conflict-free merge application for diverged archive branches, archive round-trips that keep the journal payload intact, and a shared-workspace access surface with active member routing plus a canonical workspace membership archive queue that stores full snapshots and drift summaries.
+The first catalog bridge is now in the app: saved workspaces carry org/owner/visibility metadata, and the launcher renders a local workspace catalog summary with scope, organization, owner, visibility, and a local-first bridge note. The canonical org/account boundary is still open, but the visible catalog now behaves like a bridge toward it rather than a flat scene list.
 
 Why this first:
-- The provenance graph already exists, but provenance without memory is still a summary.
-- The full vision needs a history engine, not another view mode.
-- Every future input mode becomes more trustworthy when it emits the same event model.
-- Temporal simulation, incident replay, live feeds, and compliance reporting all depend on this spine.
+- The current launcher only had a local metadata bridge; the product needed a canonical account/catalog surface to make the org boundary legible.
+- The rest of the platform keeps working against the same launcher/workspace shell, so this boundary should exist before any future remote catalog, invite, or billing work.
+- The evidence and governance work already done becomes more useful when the product can say which workspace/account boundary it belongs to.
 
 What it should do next:
-- Extend the backend identity record into remote approval routing semantics and cross-service conflict handling
-- Route publish/review/restore actions by role, clearance, scene attributes, and archived membership drift instead of a single active-role toggle
-- Persist shared-workspace permissions and approvals in the same evidence chain as scene edits and recovery
-- Add remote sync/conflict semantics for shared branches without losing the local recovery model
-- Keep draft/recovered/published state transitions explicit across users, not just locally
-- Expose approval routing and member selection in a backend-safe control plane instead of only the local panel, with the approval route visible as its own audited action
-- Add deeper append-only persistence and conflict resolution for shared-workspace branch history
+- Define a canonical org/account model for local and remote workspaces
+- Add plan, quota, and entitlement semantics without inventing a fake billing backend
+- Support invite, transfer, and ownership workflows for shared workspaces
+- Unify local, shared, and archived projects in a remote workspace directory/catalog
+- Keep the launcher catalog and evidence/recovery surfaces aligned with that boundary
 
 Why this remains the right next slice after the research pass:
-- RoomPlan makes the guided-capture UX pattern concrete, but it still needs a multi-user authorization and routing model to become SentinelTwin-specific.
-- SAM 2 and Depth Anything V2 make scan assistance more realistic, but they only become trustworthy when the evidence chain preserves the source, the correction history, and the acting member.
-- VGGT and SpatialLM make sparse reconstruction plausible, but they need the same branch-aware evidence model so reconstruction results can be compared, corrected, and published rather than overwritten.
-- ONVIF Profile M makes the future live-evidence path obvious, but that path also needs the same ledger semantics and shared-workspace identity model before external metadata can be merged safely.
+- RoomPlan makes the guided-capture UX pattern concrete, but it still needs a workspace/account boundary to attach capture sessions to the right org and review policy.
+- SAM 2 and Depth Anything V2 make scan assistance more realistic, but they only become trustworthy when the capture outputs are attached to a canonical workspace/catalog identity.
+- VGGT and SpatialLM make sparse reconstruction plausible, but they need the same workspace boundary so reconstructions can be organized, shared, and published rather than overwritten.
+- ONVIF Profile M makes the future live-evidence path obvious, but that path also needs the same org/account model before external metadata can be routed safely.
 
 ## 9) What Not To Build Next
 

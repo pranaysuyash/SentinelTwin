@@ -2,12 +2,14 @@ export type CompareShareLinkState = {
   compareSnapshotAId?: string | null;
   compareSnapshotBId?: string | null;
   compareMode?: "beforeafter" | "report" | null;
+  compareProvenanceNote?: string | null;
 };
 
 export type ParsedCompareShareLink = {
   snapshotAId: string;
   snapshotBId: string;
   mode: "beforeafter" | "report";
+  provenanceNote: string | null;
 };
 
 export function applyCompareShareLinkState(params: URLSearchParams, state: CompareShareLinkState) {
@@ -28,6 +30,12 @@ export function applyCompareShareLinkState(params: URLSearchParams, state: Compa
   } else {
     params.delete("compareMode");
   }
+
+  if (state.compareProvenanceNote?.trim()) {
+    params.set("compareProvenance", state.compareProvenanceNote.trim());
+  } else {
+    params.delete("compareProvenance");
+  }
 }
 
 export function buildCompareShareLink(baseUrl: string, currentSearch: string, state: CompareShareLinkState, hash = "") {
@@ -42,10 +50,12 @@ export function parseCompareShareLink(search: string): ParsedCompareShareLink | 
   const snapshotAId = params.get("compareSnapshotA");
   const snapshotBId = params.get("compareSnapshotB");
   const modeParam = params.get("compareMode");
+  const provenanceNote = params.get("compareProvenance");
   if (!snapshotAId || !snapshotBId) return null;
   return {
     snapshotAId,
     snapshotBId,
     mode: modeParam === "report" ? "report" : "beforeafter",
+    provenanceNote,
   };
 }

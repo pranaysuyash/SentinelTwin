@@ -55,6 +55,11 @@ import {
   type WorkspaceSceneStatus,
 } from "@/lib/workspace-governance";
 import {
+  createDefaultWorkspaceAccountProfile,
+  normalizeWorkspaceAccountProfile,
+  type WorkspaceAccountProfile,
+} from "@/lib/workspace-catalog";
+import {
   canPerformWorkspaceAction,
   createDefaultWorkspaceAccessState,
   getActiveWorkspaceMember,
@@ -103,7 +108,8 @@ export type RightPanelMode =
   | "issues"
   | "recommendations"
   | "assumptions"
-  | "camera_controls";
+  | "camera_controls"
+  | "governance";
 export type BottomDrawerMode = "tabs" | "single_module" | "hidden";
 export type WorkspaceComponentId =
   | "coverage_legend"
@@ -235,7 +241,7 @@ export const WORKFLOW_STEPS: Record<ActiveWorkflowId, string[]> = {
   ],
 };
 
-export type InspectorTab = "properties" | "view" | "status" | "analytics" | "failures";
+export type InspectorTab = "properties" | "view" | "status" | "analytics" | "failures" | "history";
 
 export type HeatmapMode = "quality" | "lighting" | "fragility" | "overlap" | "contribution" | "blindspots";
 
@@ -465,6 +471,8 @@ export type CameraLiveConnectionEventRecord = {
   authChallengeHeader: string | null;
   authChallengeScheme: "basic" | "digest" | "bearer" | "token" | null;
   authChallengeRealm: string | null;
+  onvifUsername?: string | null;
+  onvifPassword?: string | null;
   liveFeedUrl: string | null;
   liveFeedLabel: string | null;
   liveConnectionMode: "rtsp" | "mjpeg" | "http" | "onvif" | "proxy" | null;
@@ -496,6 +504,8 @@ export type CameraLiveConnectionEventInput = Omit<CameraLiveConnectionEventRecor
   previousAuthChallengeHeader?: CameraLiveConnectionEventRecord["previousAuthChallengeHeader"];
   previousAuthChallengeScheme?: CameraLiveConnectionEventRecord["previousAuthChallengeScheme"];
   previousAuthChallengeRealm?: CameraLiveConnectionEventRecord["previousAuthChallengeRealm"];
+  onvifUsername?: CameraLiveConnectionEventRecord["onvifUsername"];
+  onvifPassword?: CameraLiveConnectionEventRecord["onvifPassword"];
   liveSessionId?: CameraLiveConnectionEventRecord["liveSessionId"];
   liveSessionState?: CameraLiveConnectionEventRecord["liveSessionState"];
   liveSessionStartedAt?: CameraLiveConnectionEventRecord["liveSessionStartedAt"];
@@ -572,6 +582,7 @@ const SUPPORT_INGEST_HISTORY_STORAGE_KEY = "sentineltwin_support_ingest_history_
 const OPERATIONAL_EVIDENCE_ARCHIVE_HISTORY_STORAGE_KEY = "sentineltwin_operational_evidence_archive_history_v1";
 const WORKSPACE_GOVERNANCE_STORAGE_KEY = "sentineltwin_workspace_governance_v1";
 const WORKSPACE_ACCESS_STORAGE_KEY = "sentineltwin_workspace_access_v1";
+const WORKSPACE_ACCOUNT_STORAGE_KEY = "sentineltwin_workspace_account_v1";
 
 export type SavedProjectRecord = {
   scene: SecurityScene;
@@ -1039,6 +1050,8 @@ function loadCameraLiveConnectionEvents(): CameraLiveConnectionEventRecord[] {
         summary: candidate.summary,
         notes: typeof candidate.notes === "string" ? candidate.notes : null,
         timestamp: candidate.timestamp,
+        onvifUsername: typeof candidate.onvifUsername === "string" ? candidate.onvifUsername : null,
+        onvifPassword: typeof candidate.onvifPassword === "string" ? candidate.onvifPassword : null,
       }];
     });
   } catch {
@@ -1239,6 +1252,46 @@ function loadWorkspaceAccess(): WorkspaceAccessState {
   }
 }
 
+function loadWorkspaceAccountProfile(savedProjects: SavedProjectRecord[]): WorkspaceAccountProfile {
+  if (typeof window === "undefined") {
+    return createDefaultWorkspaceAccountProfile({
+      primaryOrganization: savedProjects[0]?.workspaceOrganization ?? "Personal Workspace",
+      primaryOwner: savedProjects[0]?.workspaceOwner ?? "You",
+      capabilities: {
+        sharedWorkspaces: savedProjects.some((project) => project.workspaceVisibility === "shared"),
+        publishedWorkspaces: savedProjects.some((project) => project.workspaceVisibility === "published"),
+        archiveRecovery: savedProjects.length > 0,
+        reportExports: savedProjects.length > 0,
+        scanIntake: savedProjects.length > 0,
+        liveEvidence: savedProjects.length > 0,
+      },
+      workspaceCount: savedProjects.length,
+    });
+  }
+
+  const summary = {
+    primaryOrganization: savedProjects[0]?.workspaceOrganization ?? "Personal Workspace",
+    primaryOwner: savedProjects[0]?.workspaceOwner ?? "You",
+    capabilities: {
+      sharedWorkspaces: savedProjects.some((project) => project.workspaceVisibility === "shared"),
+      publishedWorkspaces: savedProjects.some((project) => project.workspaceVisibility === "published"),
+      archiveRecovery: savedProjects.length > 0,
+      reportExports: savedProjects.length > 0,
+      scanIntake: savedProjects.length > 0,
+      liveEvidence: savedProjects.length > 0,
+    },
+    workspaceCount: savedProjects.length,
+  };
+
+  try {
+    const raw = window.localStorage.getItem(WORKSPACE_ACCOUNT_STORAGE_KEY);
+    if (!raw) return createDefaultWorkspaceAccountProfile(summary);
+    return normalizeWorkspaceAccountProfile(JSON.parse(raw), summary);
+  } catch {
+    return createDefaultWorkspaceAccountProfile(summary);
+  }
+}
+
 function persistSavedLayouts(layouts: WorkspaceLayoutRecord[]) {
   try {
     localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(layouts));
@@ -1355,6 +1408,14 @@ function persistWorkspaceGovernance(governance: WorkspaceGovernanceState) {
 function persistWorkspaceAccess(access: WorkspaceAccessState) {
   try {
     localStorage.setItem(WORKSPACE_ACCESS_STORAGE_KEY, JSON.stringify(access));
+  } catch {
+    // Storage full or unavailable — silently fail
+  }
+}
+
+function persistWorkspaceAccount(account: WorkspaceAccountProfile) {
+  try {
+    localStorage.setItem(WORKSPACE_ACCOUNT_STORAGE_KEY, JSON.stringify(account));
   } catch {
     // Storage full or unavailable — silently fail
   }
@@ -1521,6 +1582,13 @@ function renameSavedSceneRecord(sceneId: string, nextName: string): SavedProject
 
 export type StudioStoreState = {
   scene: SecurityScene;
+  activeBranch: string;
+  branchScenes: Record<string, SecurityScene>;
+  createDraftBranch: (branchName: string) => void;
+  switchBranch: (branchName: string) => void;
+  submitForReview: (branchName: string, note?: string) => void;
+  approveBranch: (branchName: string, note?: string) => void;
+  rejectBranch: (branchName: string, note?: string) => void;
   simulationResult: SimulationResult | null;
   simulationDirty: boolean;
   simulationRunning: boolean;
@@ -1561,6 +1629,9 @@ export type StudioStoreState = {
     workspaceAccessState: WorkspaceAccessState;
     workspaceGovernanceState: WorkspaceGovernanceState;
   }) => boolean;
+  workspaceAccount: WorkspaceAccountProfile;
+  setWorkspaceAccountProfile: (patch: Partial<WorkspaceAccountProfile>) => void;
+  resetWorkspaceAccountProfile: () => void;
   workspaceGovernance: WorkspaceGovernanceState;
   setWorkspaceRole: (role: WorkspaceRole) => void;
   setWorkspaceApprovalMode: (mode: WorkspaceApprovalMode) => void;
@@ -1584,7 +1655,7 @@ export type StudioStoreState = {
     afterImageDataUrl: string;
     capturedAt: number;
   } | null;
-  compareReportSelection: { snapshotAId: string; snapshotBId: string } | null;
+  compareReportSelection: { snapshotAId: string; snapshotBId: string; provenanceNote: string | null } | null;
   cameraViewVerificationIntent: { source: "launcher_preview" | "other"; openPanel: boolean } | null;
   cameraVerificationSnapshots: Record<string, Array<{
     id: string;
@@ -2471,6 +2542,7 @@ const INITIAL_SAVED_PROJECTS = loadSavedProjectsFromStorage();
 const INITIAL_SAVED_LAYOUTS = loadSavedLayoutsFromStorage();
 const INITIAL_SEEDED_PROJECTS = buildSeededWorkspaceProjects();
 const INITIAL_SEEDED_LAYOUTS = buildSeededLayouts();
+const INITIAL_WORKSPACE_ACCOUNT = loadWorkspaceAccountProfile(INITIAL_SAVED_PROJECTS.length > 0 ? INITIAL_SAVED_PROJECTS : INITIAL_SEEDED_PROJECTS);
 
 function buildSeededDemoProjects(): SavedProjectRecord[] {
   return INITIAL_SNAPSHOTS.map((snapshot, index) => {
@@ -2606,6 +2678,51 @@ function buildSeededLayouts(): WorkspaceLayoutRecord[] {
 
 export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   scene: INITIAL_SCENE,
+  activeBranch: "main",
+  branchScenes: { "main": INITIAL_SCENE },
+  createDraftBranch: (branchName) => set((state) => {
+    if (state.branchScenes[branchName]) return state;
+    return {
+      activeBranch: branchName,
+      branchScenes: {
+        ...state.branchScenes,
+        [branchName]: cloneSecurityScene(state.scene),
+      },
+    };
+  }),
+  switchBranch: (branchName) => set((state) => {
+    const branchScene = state.branchScenes[branchName];
+    if (!branchScene) return state;
+    return {
+      activeBranch: branchName,
+      scene: cloneSecurityScene(branchScene),
+    };
+  }),
+  submitForReview: (branchName, note) => set((state) => {
+    // Stub for UI
+    return state;
+  }),
+  approveBranch: (branchName, note) => set((state) => {
+    const branchScene = state.branchScenes[branchName];
+    if (!branchScene) return state;
+    const mergedScene = cloneSecurityScene(branchScene);
+    return {
+      scene: mergedScene,
+      branchScenes: {
+        ...state.branchScenes,
+        "main": cloneSecurityScene(mergedScene),
+      },
+      activeBranch: "main",
+    };
+  }),
+  rejectBranch: (branchName, note) => set((state) => {
+    const { [branchName]: _, ...remainingBranches } = state.branchScenes;
+    return {
+      branchScenes: remainingBranches,
+      activeBranch: state.activeBranch === branchName ? "main" : state.activeBranch,
+      scene: state.activeBranch === branchName && state.branchScenes["main"] ? cloneSecurityScene(state.branchScenes["main"]) : state.scene,
+    };
+  }),
   simulationResult: INITIAL_SIMULATION,
   simulationDirty: false,
   simulationRunning: false,
@@ -2621,6 +2738,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   cameraMetadataEvents: loadCameraMetadataEvents(),
   cameraLiveConnectionEvents: loadCameraLiveConnectionEvents(),
   workspaceAccess: INITIAL_WORKSPACE_ACCESS,
+  workspaceAccount: INITIAL_WORKSPACE_ACCOUNT,
   workspaceGovernance: INITIAL_WORKSPACE_GOVERNANCE,
   lastRunMs: 0,
   savedScenes: INITIAL_SAVED_PROJECTS.length > 0 ? INITIAL_SAVED_PROJECTS.map((record) => record.scene) : INITIAL_SEEDED_PROJECTS.map((record) => record.scene),
@@ -3264,6 +3382,8 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       summary: event.summary.trim() || `Live camera connection updated for ${camera.name}.`,
       notes: event.notes?.trim() || null,
       timestamp,
+      onvifUsername: event.onvifUsername || null,
+      onvifPassword: event.onvifPassword || null,
     };
     const nextCameraLiveConnectionEvents = [nextRecord, ...state.cameraLiveConnectionEvents].slice(0, 60);
     persistCameraLiveConnectionEvents(nextCameraLiveConnectionEvents);
@@ -3667,6 +3787,33 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       scene: cloneSceneWithAppendedChangeLog(scene, evidenceLogLine(evidenceEvent)),
     });
     return true;
+  },
+
+  setWorkspaceAccountProfile: (patch) => {
+    const { workspaceAccount, savedProjects } = get();
+    const summary = {
+      primaryOrganization: savedProjects[0]?.workspaceOrganization ?? workspaceAccount.accountName,
+      primaryOwner: savedProjects[0]?.workspaceOwner ?? workspaceAccount.ownerName,
+      capabilities: {
+        sharedWorkspaces: savedProjects.some((project) => project.workspaceVisibility === "shared"),
+        publishedWorkspaces: savedProjects.some((project) => project.workspaceVisibility === "published"),
+        archiveRecovery: savedProjects.length > 0,
+        reportExports: savedProjects.length > 0,
+        scanIntake: savedProjects.length > 0,
+        liveEvidence: savedProjects.length > 0,
+      },
+      workspaceCount: savedProjects.length,
+    };
+    const nextAccount = normalizeWorkspaceAccountProfile({ ...workspaceAccount, ...patch }, summary);
+    persistWorkspaceAccount(nextAccount);
+    set({ workspaceAccount: nextAccount });
+  },
+
+  resetWorkspaceAccountProfile: () => {
+    const { savedProjects } = get();
+    const nextAccount = loadWorkspaceAccountProfile(savedProjects.length > 0 ? savedProjects : INITIAL_SEEDED_PROJECTS);
+    persistWorkspaceAccount(nextAccount);
+    set({ workspaceAccount: nextAccount });
   },
 
   setWorkspaceRole: (role) => {
@@ -4797,6 +4944,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         : window.localStorage.getItem(OPERATIONAL_EVIDENCE_STORAGE_KEY)),
       workspaceGovernance: get().workspaceGovernance,
       workspaceAccess: get().workspaceAccess,
+      workspaceAccount: get().workspaceAccount,
     });
 
     if (typeof window !== "undefined") {
@@ -4843,11 +4991,25 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         window.localStorage.setItem(OPERATIONAL_EVIDENCE_STORAGE_KEY, JSON.stringify(archive.operationalEvidenceJournal));
       }
       const nextAccess = normalizeWorkspaceAccessState(archive.workspaceAccess);
+      const nextAccount = normalizeWorkspaceAccountProfile(archive.workspaceAccount, {
+        primaryOrganization: restoredScene.source === "demo" ? "SentinelTwin Reference" : "Personal Workspace",
+        primaryOwner: restoredScene.source === "demo" ? "SentinelTwin" : "You",
+        capabilities: {
+          sharedWorkspaces: restoredScene.cameras.length + restoredScene.obstructions.length + restoredScene.criticalZones.length > 0,
+          publishedWorkspaces: restoredScene.source === "demo",
+          archiveRecovery: true,
+          reportExports: true,
+          scanIntake: true,
+          liveEvidence: false,
+        },
+        workspaceCount: restoredScene.snapshots.length,
+      });
       const nextGovernance = {
         ...normalizeWorkspaceGovernance(archive.workspaceGovernance),
         activeRole: getActiveWorkspaceMember(nextAccess)?.role ?? normalizeWorkspaceGovernance(archive.workspaceGovernance).activeRole,
       };
       persistWorkspaceAccess(nextAccess);
+      persistWorkspaceAccount(nextAccount);
       persistWorkspaceGovernance(nextGovernance);
       if (typeof window !== "undefined") {
         const archiveHistoryKey = archiveHead?.id ?? archive.scene.id;
@@ -4900,6 +5062,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         compareReportSelection: null,
         operationalEvidenceEvents: nextEvents,
         workspaceAccess: nextAccess,
+        workspaceAccount: nextAccount,
         workspaceGovernance: nextGovernance,
         sceneModified: false,
         savedSceneName: restoredScene.name,
@@ -4978,6 +5141,19 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       const currentBranchId = currentHead.branchId ?? currentState.scene.id;
       const archiveBranchId = archiveHead.branchId ?? archive.scene.id;
       const nextAccess = normalizeWorkspaceAccessState(archive.workspaceAccess);
+      const nextAccount = normalizeWorkspaceAccountProfile(archive.workspaceAccount, {
+        primaryOrganization: mergedScene.source === "demo" ? "SentinelTwin Reference" : "Personal Workspace",
+        primaryOwner: mergedScene.source === "demo" ? "SentinelTwin" : "You",
+        capabilities: {
+          sharedWorkspaces: mergedScene.cameras.length + mergedScene.obstructions.length + mergedScene.criticalZones.length > 0,
+          publishedWorkspaces: mergedScene.source === "demo",
+          archiveRecovery: true,
+          reportExports: true,
+          scanIntake: true,
+          liveEvidence: false,
+        },
+        workspaceCount: mergedScene.snapshots.length,
+      });
       const mergeEvent = buildOperationalEvidenceEvent({
         kind: "scene_merged",
         title: "Operational archive merged",
@@ -5011,6 +5187,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         activeRole: getActiveWorkspaceMember(nextAccess)?.role ?? currentState.workspaceGovernance.activeRole,
       };
       persistWorkspaceAccess(nextAccess);
+      persistWorkspaceAccount(nextAccount);
       persistWorkspaceGovernance(nextGovernance);
       if (typeof window !== "undefined") {
         const nextArchiveHistory = [
@@ -5063,6 +5240,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         compareReportSelection: null,
         operationalEvidenceEvents: nextEvents,
         workspaceAccess: nextAccess,
+        workspaceAccount: nextAccount,
         workspaceGovernance: nextGovernance,
         sceneModified: false,
         savedSceneName: mergedScene.name,

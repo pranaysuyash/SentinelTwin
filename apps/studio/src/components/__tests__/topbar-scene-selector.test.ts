@@ -20,5 +20,7 @@ describe("TopBar scene selector", () => {
     expect(source).toContain("Duplicate scene");
     expect(source).toContain("Rename scene");
     expect(source).toContain("Duplicate the reference baseline first to rename it");
+    expect(source).toContain('setBottomTab("redundancy")');
+    expect(source).toContain("handleCameraFailure");
   });
 });

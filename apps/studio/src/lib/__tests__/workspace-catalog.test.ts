@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
-import { summarizeWorkspaceCatalog } from "@/lib/workspace-catalog";
+import { summarizeWorkspaceAccount, summarizeWorkspaceCatalog } from "@/lib/workspace-catalog";
 import type { SavedProjectRecord } from "@/store/studio-store";
 
 function makeProject(overrides: Partial<SavedProjectRecord>): SavedProjectRecord {
@@ -62,5 +62,37 @@ describe("workspace catalog", () => {
     expect(summary.capabilities.publishedWorkspaces).toBe(true);
     expect(summary.capabilities.archiveRecovery).toBe(true);
     expect(summary.notes.some((note) => note.includes("canonical org/account boundary"))).toBe(true);
+  });
+
+  test("summarizes the local workspace account bridge", () => {
+    const scene = createBlankSecurityScene();
+    scene.id = "scene_account";
+
+    const summary = summarizeWorkspaceAccount(
+      [
+        makeProject({
+          scene,
+          workspaceOrganization: "North Region Security",
+          workspaceOwner: "Pranay",
+          workspaceVisibility: "shared",
+          pinned: true,
+        }),
+      ],
+      scene.id,
+    );
+
+    expect(summary.activeSceneId).toBe(scene.id);
+    expect(summary.planLabel).toBe("Pro workspace account");
+    expect(summary.planDetail).toContain("local-first collaboration bridge");
+    expect(summary.accountName).toBe("North Region Security");
+    expect(summary.ownerName).toBe("Pranay");
+    expect(summary.softQuotaLabel).toBe("1/12 workspaces");
+    expect(summary.softQuotaExceeded).toBe(false);
+    expect(summary.quotas.shared).toBe(1);
+    expect(summary.quotas.published).toBe(0);
+    expect(summary.entitlements.sharedWorkspaces).toBe(true);
+    expect(summary.entitlements.publishedWorkspaces).toBe(false);
+    expect(summary.entitlements.ownershipTransfer).toBe(false);
+    expect(summary.notes.some((note) => note.includes("account bridge toward the canonical org/account model"))).toBe(true);
   });
 });

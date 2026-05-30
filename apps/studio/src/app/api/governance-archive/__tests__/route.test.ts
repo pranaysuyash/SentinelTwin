@@ -4,8 +4,13 @@ import { once } from "node:events";
 import http from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { NextRequest } from "next/server";
 
 import { GET, POST } from "../route";
+
+const createNextRequest = (url: string, init?: RequestInit): NextRequest => (
+  new Request(url, init) as any as unknown as any
+);
 
 const originalStoreDir = process.env.SENTINELTWIN_GOVERNANCE_ARCHIVE_STORE_DIR;
 const testStoreDir = mkdtempSync(join(tmpdir(), "sentineltwin-governance-archive-"));
@@ -24,7 +29,7 @@ afterAll(() => {
 describe("governance-archive route", () => {
   test("queues a governance handoff and persists archive history", async () => {
     const response = await POST(
-      new Request("http://localhost/api/governance-archive", {
+      createNextRequest("http://localhost/api/governance-archive", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -97,7 +102,7 @@ describe("governance-archive route", () => {
     expect(payload.archiveStatus).toBe("local cache");
     expect(payload.summary).toContain("governance target");
 
-    const historyResponse = await GET();
+    const historyResponse = await GET(createNextRequest("http://localhost/api/governance-archive"));
     expect(historyResponse.status).toBe(200);
     const historyPayload = await historyResponse.json();
     expect(historyPayload.ok).toBe(true);
@@ -126,7 +131,7 @@ describe("governance-archive route", () => {
       }
 
       const response = await POST(
-        new Request("http://localhost/api/governance-archive", {
+        createNextRequest("http://localhost/api/governance-archive", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({

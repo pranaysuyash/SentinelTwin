@@ -248,6 +248,7 @@ The product now has visible branch labels, branch-lineage previews, a branch-com
 **Update 8:** The same boundary now returns an explicit resolution status, resolution label, reason, and recommended action, so the remaining question shifts further toward how that policy recommendation should fan out across future backend services rather than whether the product can compute one locally.
 **Update 9:** The Governance tab now records identity conflict resolution itself as a first-class evidence event, so the remaining question is now purely about remote backend identity and cross-service replay rather than whether the local governance trail can distinguish resolution from generic membership sync.
 **Update 10:** The Governance tab now also exposes a selectable conflict diff/replay view that compares the live workspace against the latest archived membership snapshot, recomputes the selected conflict against current workspace state, and lets the operator inspect older archived conflicts in place, so the remaining question is now specifically about remote replay/fan-out semantics rather than whether the local archive can be inspected as a diff.
+**Update 11:** The shared approval route now carries a stable route key plus route-scope and active-member eligibility metadata, and the archive loaders normalize older route records into that canonical contract, so the remaining question is now narrower: which backend service should own the persisted route identity and how should cross-service replication/versioning work when multiple operators disagree.
 
 ### Q-024: What should the provider/model governance layer expose?
 The app has a provider selection and local-only policy, but the long-term AI control plane still needs a formal governance model.
@@ -270,7 +271,7 @@ RoomPlan, manual-assisted mobile capture, and later sparse reconstruction all po
 
 ### Q-026: What is the canonical organization, account, and billing model?
 The app now has local shared-workspace routing and archive-backed membership state, but the product still lacks a canonical org/account boundary.
-Update: saved workspaces now also carry local organization, owner, and visibility metadata in the launcher and metadata editor, but this is still a launcher-level bridge rather than the canonical org/account model.
+Update: saved workspaces now also carry local organization, owner, and visibility metadata in the launcher and metadata editor, and the launcher now also shows local catalog and account summaries for that bridge, but this is still a launcher-level bridge rather than the canonical org/account model.
 **Questions to answer:**
 - Is the primary top-level unit an organization, a team, or a workspace?
 - How do plan, quota, and entitlements map onto workspaces and users?
@@ -344,3 +345,11 @@ The current rendering architecture doc still references older stack details (for
 - Which owner is responsible for updating `Docs/architecture/07_RENDERING_PIPELINE.md` during rendering-stack changes?
 
 **Related evidence:** `Docs/decisions/R3F_DREI_FULL_AUDIT_2026-05-29.md`.
+
+---
+
+### Q-030: Target Orientation Penalty Thresholds
+**Status:** Open
+**Priority:** Medium
+**Context:** We implemented a penalty for path targets facing away from the camera (clamping quality to `observation` if >90° offset).
+**What's needed:** Validate with security domain experts if 90° is the correct threshold for losing `recognition`/`identification` quality. Should there be a softer falloff or a strict cutoff?

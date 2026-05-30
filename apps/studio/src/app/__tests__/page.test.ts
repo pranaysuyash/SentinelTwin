@@ -13,6 +13,7 @@ describe("Studio page share-link bootstrap", () => {
     expect(source).toContain("setArchiveHandoffRequest");
     expect(source).toContain("setCompareReportSelection");
     expect(source).toContain("compareRequest.mode === \"report\"");
+    expect(source).toContain("compareRequest.provenanceNote ?? null");
     expect(source).toContain("setWorkspacePreset(\"compare\")");
     expect(source).toContain("setWorkspacePreset(\"report\")");
     expect(source).toContain("setWorkspacePreset(\"debug\")");

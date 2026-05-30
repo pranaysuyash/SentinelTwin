@@ -1,29 +1,34 @@
-import { NextResponse } from "next/server";
-
 import { appendCameraLiveConnectionHistory, loadCameraLiveConnectionHistory } from "@/lib/camera-live-connection-history";
 import { appendCameraLiveSessionRecord, closeCameraLiveSessionRecord, pruneExpiredCameraLiveSessionRegistry, renewCameraLiveSessionRecord } from "@/lib/camera-live-session-registry";
 import { CameraLiveConnectionProbeRequestSchema, probeCameraLiveConnection, type CameraLiveConnectionProbeRequest } from "@/lib/camera-live-connection";
+import { corsJson, corsNoContent } from "@/lib/api-cors";
 
-export async function GET() {
+import { NextRequest } from "next/server";
+
+export async function GET(request: NextRequest) {
   const history = loadCameraLiveConnectionHistory();
   const sessions = pruneExpiredCameraLiveSessionRegistry().filter((record) => record.status === "active");
-  return NextResponse.json({
+  return corsJson({
     ok: true,
     history,
     historyCount: history.length,
     latestSubmission: history[0] ?? null,
     activeSessions: sessions,
     activeSessionCount: sessions.length,
-  });
+  }, request, undefined, { methods: ["GET", "POST", "OPTIONS"] });
 }
 
-export async function POST(request: Request) {
+export async function OPTIONS(request: NextRequest) {
+  return corsNoContent(request, { methods: ["GET", "POST", "OPTIONS"] });
+}
+
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const parsed = CameraLiveConnectionProbeRequestSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
+      return corsJson(
         {
           ok: false,
           error: "Invalid camera live connection payload.",
@@ -32,7 +37,9 @@ export async function POST(request: Request) {
             message: issue.message,
           })),
         },
+        request,
         { status: 400 },
+        { methods: ["GET", "POST", "OPTIONS"] },
       );
     }
 
@@ -88,6 +95,8 @@ export async function POST(request: Request) {
           authMode,
           authState,
           authRealm,
+          onvifUsername: parsed.data.onvifUsername ?? activeSession?.onvifUsername ?? null,
+          onvifPassword: parsed.data.onvifPassword ?? activeSession?.onvifPassword ?? null,
           authSessionId,
           authSessionExpiresAt,
           transportResponseStatus,
@@ -128,6 +137,8 @@ export async function POST(request: Request) {
         authMode,
         authState,
         authRealm,
+        onvifUsername: parsed.data.onvifUsername ?? activeSession?.onvifUsername ?? null,
+        onvifPassword: parsed.data.onvifPassword ?? activeSession?.onvifPassword ?? null,
         authSessionId,
         authSessionExpiresAt,
         transportResponseStatus,
@@ -146,11 +157,11 @@ export async function POST(request: Request) {
         raw: parsed.data.raw.trim(),
       });
 
-      return NextResponse.json({
+      return corsJson({
         ...heartbeatRecord,
         storedAt,
         historyCount: history.length,
-      });
+      }, request, undefined, { methods: ["GET", "POST", "OPTIONS"] });
     }
 
     const probeRequest: CameraLiveConnectionProbeRequest = parsed.data.action === "disconnect"
@@ -208,6 +219,9 @@ export async function POST(request: Request) {
           authChallengeHeader: summary.record.authChallengeHeader,
           authChallengeScheme: summary.record.authChallengeScheme,
           authChallengeRealm: summary.record.authChallengeRealm,
+          eventSubscriptionUri: summary.record.eventSubscriptionUri,
+          eventSubscriptionReference: summary.record.eventSubscriptionReference,
+          eventSubscriptionExpiresAt: summary.record.eventSubscriptionExpiresAt,
           sessionExpiresAt: summary.record.liveSessionExpiresAt,
           summary: summary.summary,
         } as Parameters<typeof appendCameraLiveSessionRecord>[0]);
@@ -220,18 +234,20 @@ export async function POST(request: Request) {
       raw: parsed.data.raw.trim(),
     });
 
-    return NextResponse.json({
+    return corsJson({
       ...summary,
       storedAt,
       historyCount: history.length,
-    });
+    }, request, undefined, { methods: ["GET", "POST", "OPTIONS"] });
   } catch {
-    return NextResponse.json(
+    return corsJson(
       {
         ok: false,
         error: "Failed to parse camera live connection payload.",
       },
+      request,
       { status: 400 },
+      { methods: ["GET", "POST", "OPTIONS"] },
     );
   }
 }

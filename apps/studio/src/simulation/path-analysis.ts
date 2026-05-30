@@ -5,7 +5,7 @@ import type {
   ScenarioPath,
   SecurityScene,
 } from "@/schema/security-scene";
-import { maxQuality } from "@/simulation/dori";
+import { maxQuality, qualityToScore } from "@/simulation/dori";
 import { distance2D, lerp2D } from "@/simulation/geometry";
 
 type CoverageLookup = {

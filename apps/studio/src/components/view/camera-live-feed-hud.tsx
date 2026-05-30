@@ -5,6 +5,7 @@ import type { CameraFeedMode, OverlayFlags } from "@/components/view/camera-view
 import type { OperationalEvidenceFusionSummary } from "@/lib/sensor-fusion";
 import { nowTimestamp } from "@/components/view/scene-feed-canvas-utils";
 import type { CameraNode, SimulationAssumptions, SecurityScene } from "@/schema/security-scene";
+import { QUALITY_TEXT_COLOR } from "@/lib/quality-display";
 
 type SensorFusionSummary = {
   totalCount: number;
@@ -149,10 +150,10 @@ export function LiveFeedHUD({
         <div className="absolute right-3 top-24 flex w-48 flex-col gap-1 rounded-lg border border-[#2d3d56] bg-black/55 px-2 py-2 text-[9px] text-[#cdd6ef]">
           <div className="text-[8px] font-semibold uppercase tracking-[0.2em] text-[#87a5cf]">DORI RANGES AT TARGET</div>
           <div className="space-y-0.5">
-            <div className="flex justify-between"><span>Detection</span><span className="font-mono text-[#f97316]">{ranges.detection.toFixed(1)}m</span></div>
-            <div className="flex justify-between"><span>Observation</span><span className="font-mono text-[#eab308]">{ranges.observation.toFixed(1)}m</span></div>
-            <div className="flex justify-between"><span>Recognition</span><span className="font-mono text-[#22c55e]">{ranges.recognition.toFixed(1)}m</span></div>
-            <div className="flex justify-between"><span>Identification</span><span className="font-mono text-[#60a5fa]">{ranges.identification.toFixed(1)}m</span></div>
+            <div className="flex justify-between"><span>Detection</span><span className={"font-mono " + QUALITY_TEXT_COLOR.detection}>{ranges.detection.toFixed(1)}m</span></div>
+            <div className="flex justify-between"><span>Observation</span><span className={"font-mono " + QUALITY_TEXT_COLOR.observation}>{ranges.observation.toFixed(1)}m</span></div>
+            <div className="flex justify-between"><span>Recognition</span><span className={"font-mono " + QUALITY_TEXT_COLOR.recognition}>{ranges.recognition.toFixed(1)}m</span></div>
+            <div className="flex justify-between"><span>Identification</span><span className={"font-mono " + QUALITY_TEXT_COLOR.identification}>{ranges.identification.toFixed(1)}m</span></div>
           </div>
           {targetType ? <div className="mt-1 border-t border-[#334563] pt-1 text-[8px] uppercase tracking-wide text-[#7a94c7]">Target: {formatTargetTypeLabel(targetType)}</div> : null}
           <div className="text-[8px] text-[#95a9cf]">Mode: {modeLabel(mode)}</div>

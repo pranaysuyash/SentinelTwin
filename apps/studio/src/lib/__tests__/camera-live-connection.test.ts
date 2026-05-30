@@ -113,4 +113,130 @@ describe("camera live connection probe", () => {
       globalThis.fetch = originalFetch;
     }
   });
+
+  test("forwards ONVIF credentials through the canonical probe path", async () => {
+    const originalFetch = globalThis.fetch;
+    const requests: Array<{ url: string; authorization: string | null }> = [];
+    globalThis.fetch = (async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+      const url = typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+      const headers = new Headers(init?.headers ?? {});
+      requests.push({ url, authorization: headers.get("authorization") });
+
+      if (requests.length === 1) {
+        return new Response("", {
+          status: 401,
+          statusText: "Unauthorized",
+          headers: {
+            "content-type": "text/plain",
+            "www-authenticate": 'Digest realm="camera-gateway", nonce="abc123", qop="auth"',
+          },
+        });
+      }
+
+      if (requests.length === 2) {
+        expect(url).toBe("https://camera.example.com/onvif");
+        expect(headers.get("authorization")).toContain('Digest username="operator"');
+        expect(headers.get("authorization")).toContain('realm="camera-gateway"');
+        expect(headers.get("authorization")).toContain('nonce="abc123"');
+
+        return new Response([
+          "<Envelope>",
+          "  <Body>",
+          "    <GetDeviceInformationResponse>",
+          "      <Manufacturer>Axis</Manufacturer>",
+          "      <Model>Q3538-LVE</Model>",
+          "      <FirmwareVersion>11.8.71</FirmwareVersion>",
+          "      <SerialNumber>AX-8844</SerialNumber>",
+          "      <HardwareId>HW-AX-8844</HardwareId>",
+          "    </GetDeviceInformationResponse>",
+          "    <SubscriptionReference>",
+          "      <Address>http://camera.example.com/onvif/events</Address>",
+          "    </SubscriptionReference>",
+          "    <MediaUri>rtsp://camera.example.com/live</MediaUri>",
+          "  </Body>",
+          "</Envelope>",
+        ].join("\n"), {
+          status: 200,
+          statusText: "OK",
+          headers: {
+            "content-type": "application/soap+xml",
+          },
+        });
+      }
+
+      if (requests.length === 3) {
+        expect(url).toBe("http://camera.example.com/onvif/events");
+        expect(headers.get("authorization")).toBeNull();
+        return new Response("", {
+          status: 401,
+          statusText: "Unauthorized",
+          headers: {
+            "content-type": "text/plain",
+            "www-authenticate": 'Digest realm="camera-gateway", nonce="event123", qop="auth"',
+          },
+        });
+      }
+
+      expect(url).toBe("http://camera.example.com/onvif/events");
+      expect(headers.get("authorization")).toContain('Digest username="operator"');
+      expect(headers.get("authorization")).toContain('realm="camera-gateway"');
+      expect(headers.get("authorization")).toContain('nonce="event123"');
+
+      return new Response([
+        "<Envelope>",
+        "  <Body>",
+        "    <SubscribeResponse>",
+        "      <SubscriptionReference>",
+        "        <Address>http://camera.example.com/onvif/events/subscription/beta</Address>",
+        "      </SubscriptionReference>",
+        "      <TerminationTime>2026-05-30T15:00:00Z</TerminationTime>",
+        "    </SubscribeResponse>",
+        "  </Body>",
+        "</Envelope>",
+      ].join("\n"), {
+        status: 200,
+        statusText: "OK",
+        headers: {
+          "content-type": "application/soap+xml",
+        },
+      });
+    }) as unknown as typeof fetch;
+
+    try {
+      const probe = await probeCameraLiveConnection({
+        source: "camera-inspector",
+        action: "bind",
+        protocol: "onvif",
+        endpointUrl: "https://camera.example.com/onvif",
+        liveFeedUrl: null,
+        cameraId: "cam-axis-auth",
+        cameraName: "Axis Lobby",
+        sceneId: "scene-axis-auth",
+        sceneName: "Axis Auth Scene",
+        submittedAt: 1710000015000,
+        onvifUsername: "operator",
+        onvifPassword: "secret",
+        raw: "",
+      });
+
+      const result = await probe;
+      expect(requests.length).toBe(4);
+      expect(requests[0].authorization).toBeNull();
+      expect(requests[1].authorization).toContain("Digest ");
+      expect(requests[2].url).toBe("http://camera.example.com/onvif/events");
+      expect(requests[2].authorization).toBeNull();
+      expect(requests[3].url).toBe("http://camera.example.com/onvif/events");
+      expect(requests[3].authorization).toContain("Digest ");
+      expect(result.record.liveConnectionStatus).toBe("connected");
+      expect(result.record.authState).toBe("authenticated");
+      expect(result.record.protocolProfile).toBe("onvif_device");
+      expect(result.record.notes).toContain("ONVIF device information");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });

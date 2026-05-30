@@ -1,9 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 
-const inspectorPath = "./src/components/inspector/InspectorPanel.tsx";
-const cameraInspectorPath = "./src/components/inspector/CameraInspector.tsx";
-const controlsPath = "./src/components/inspector/inspector-controls.tsx";
+const inspectorPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../inspector/InspectorPanel.tsx");
+const cameraInspectorPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../inspector/CameraInspector.tsx");
+const controlsPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../inspector/inspector-controls.tsx");
 
 describe("InspectorPanel", () => {
   test("defines an obstruction inspector and obstruction selection branch", () => {
@@ -105,6 +107,8 @@ describe("InspectorPanel", () => {
     expect(source).toContain("Failure active — re-run simulation to see impact");
     expect(source).toContain("Run the shared simulation to populate failure impact analysis for this camera.");
     expect(source).toContain("runSimulation");
+    expect(source).toContain('setBottomTab("redundancy")');
+    expect(source).toContain("updateCameraFailure");
   });
 
   test("uses a full-width dock shell so the right panel can expand with context", () => {

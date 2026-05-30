@@ -10,7 +10,7 @@ import {
   type WorkspaceIdentityConflictStatus,
   type WorkspaceIdentityConflictDispatchAttempt,
 } from "@/lib/workspace-identity-conflict";
-import type { WorkspaceApprovalRouteSummary } from "@/lib/workspace-membership-routing";
+import { normalizeWorkspaceApprovalRouteSummary, type WorkspaceApprovalRouteSummary } from "@/lib/workspace-membership-routing";
 import type { WorkspaceAccessState } from "@/lib/workspace-access";
 import type { WorkspaceGovernanceState } from "@/lib/workspace-governance";
 
@@ -45,9 +45,9 @@ export function loadWorkspaceIdentityConflictHistory(rootDir = resolveWorkspaceI
         return [];
       }
       const record: WorkspaceIdentityConflictArchiveRecord = {
-        approvalRoute: candidate.approvalRoute as WorkspaceApprovalRouteSummary,
+        approvalRoute: normalizeWorkspaceApprovalRouteSummary(candidate.approvalRoute as WorkspaceApprovalRouteSummary),
         conflictDiff: candidate.conflictDiff ?? summarizeWorkspaceIdentityConflictDiff({
-          approvalRoute: candidate.approvalRoute as WorkspaceApprovalRouteSummary,
+          approvalRoute: normalizeWorkspaceApprovalRouteSummary(candidate.approvalRoute as WorkspaceApprovalRouteSummary),
           hasPrivacyExposure: candidate.hasPrivacyExposure,
           workspaceAccessState: candidate.workspaceAccessState as WorkspaceAccessState,
           archivedWorkspaceAccessState: candidate.archivedWorkspaceAccessState ? candidate.archivedWorkspaceAccessState as WorkspaceAccessState : null,
@@ -57,7 +57,7 @@ export function loadWorkspaceIdentityConflictHistory(rootDir = resolveWorkspaceI
         }),
         ...deriveWorkspaceIdentityConflictResolution(
           (candidate.conflictStatus === "reconcile_needed" ? "reconcile_needed" : candidate.conflictStatus === "archive_pending" ? "archive_pending" : "aligned") as WorkspaceIdentityConflictStatus,
-          candidate.approvalRoute as WorkspaceApprovalRouteSummary,
+          normalizeWorkspaceApprovalRouteSummary(candidate.approvalRoute as WorkspaceApprovalRouteSummary),
         ),
         ok: true as const,
         source: candidate.source,

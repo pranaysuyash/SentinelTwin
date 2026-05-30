@@ -279,9 +279,8 @@ but haven't been turned into full exploration docs yet.
    the defensive incident replay angle is distinct — worth its own doc.
 4. **GSAP in animation** — The original project brief uses GSAP extensively for replay timelines,
    camera flythroughs, before/after transitions. OPEN_SOURCE_LICENSING.md flags it as needing
-   a decision (buy Club GSAP ~$99/yr OR replace with motion/anime.js). Decision pending.
-   Do NOT remove GSAP references from exploration docs — keep exploring. Make the decision
-   at first-use time when the animation requirements are clearer.
+   a decision (buy Club GSAP ~$99/yr OR replace with motion/anime.js). 
+   **Decision Made (D-259):** Proceed with Motion One (now merged into Framer Motion 11+ as `motion`) as the primary timeline library. Use Framer Motion for React UI, and fallback to GSAP only if strictly necessary and licensing permits. Do NOT remove GSAP references from exploration docs — keep both the exploration of alternatives and the final decision documented together so the rationale is preserved. Make the decision at first-use time when the animation requirements are clearer.
 5. **Multi-agent Codex narrative** — For the hackathon, showing Codex/AI as a parallel
 software engineering team is a stronger story than "AI helped me write code."
 Each agent owns a defined deliverable with tests + docs. This pattern should be in
@@ -6071,7 +6070,7 @@ The studio app is a large React surface with motion-heavy panels and several lon
 - Camera metadata ingest now accepts XML in addition to JSON and NDJSON, so ONVIF-style feeds can land directly in the Debug panel and still match scene cameras by id or name.
 - The live fusion path can now preserve metadata freshness and connection posture without requiring a pre-normalized JSON adapter for external camera feeds.
 - Live camera connection probes now also preserve XML negotiation payloads without polluting the error channel with JSON-only parse failures.
-- The reusable ONVIF probe helper now performs a real SOAP session probe and parses device information instead of simulating a session manager, so the live camera boundary has a concrete transport/client primitive rather than a mock implementation.
+- The reusable ONVIF probe helper now performs a real SOAP session probe, retries Basic/Digest challenge-response authentication on both the device and event-subscription requests when the first request is challenged, and parses device information instead of simulating a session manager, so the live camera boundary has a concrete transport/client primitive rather than a mock implementation.
 - The launcher now enters the existing Camera View verification workflow directly, so real-footage verification no longer stops at a separate preview modal before the overlay/alignment tools appear.
 - The launcher now opens the guided scan assistant directly too, so scan guidance no longer stops at a separate kickoff modal before the actual scan wizard appears.
 
@@ -6178,3 +6177,31 @@ All relevant decisions and analysis are already captured in:
 - Preserve the same evidence and checkpoint lineage in every compliance variant, even when redaction or audience-specific framing changes the presentation.
 - Scene Intelligence point-in-time reconstruction now also records source provenance, so the resolved state can explain whether it is an exact snapshot or a derived reconstruction from an earlier checkpoint event.
 - Report exports now carry the same exact-versus-derived checkpoint provenance for the latest temporal twin checkpoint and latest published checkpoint, so the exported report explains where its temporal summary came from instead of only reporting age and delta.
+
+---
+
+### Thread 29: Target Orientation Simulation
+**Status:** Implemented in `path-analysis.ts`.
+**Key finding:** The current engine samples target heights by target type, but for path replay, adding path direction versus camera direction is a major quality factor. A face facing away from the camera should be penalized.
+**Implementation details:** Uses `Math.atan2(dx, -dz)` to calculate target facing direction (yaw) based on path trajectory, and applies a quality clamp (to `observation` / `perceive`) if the camera view angle is > 90° from the target's facing direction.
+**Open:** Need to refine the thresholds. Is 90° the right cutoff for identification drop-off?
+**Next:** Validate with domain experts.
+
+### Thread: Compare and archive handoff provenance
+
+### Current finding
+
+- Scene Intelligence archive cards, selected checkpoint cards, and compare handoff cards now show the same exact-versus-derived checkpoint provenance note that powers the reconstructed scene, so the user can see whether a handoff is exact or derived before opening Before/After or Report Compare.
+
+### Follow-up
+
+- Keep the provenance note consistent in any future archive, compare, or report entry point so the exact/derived story stays legible across the entire evidence flow.
+
+
+---
+
+### Thread 29: Animation Engine Strategy (GSAP Alternative)
+**Status:** Decision made. Details in DECISION_LOG.md (D-259).
+**Key finding:** GSAP is the industry standard for timeline animations but its commercial license is incompatible with our Apache 2.0 / MIT dependency strategy.
+**Decision:** Motion One (WAAPI) is the primary engine for complex timeline choreography (path replay, multi-step sequences). Framer Motion is the primary engine for React UI state transitions. Native R3F useFrame + Three.js curves is the primary engine for simple 3D path traversal.
+**Why it matters:** This ensures SentinelTwin remains strictly compliant with open-source licensing without sacrificing animation fidelity.

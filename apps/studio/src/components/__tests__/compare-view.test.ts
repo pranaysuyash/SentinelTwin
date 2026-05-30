@@ -15,6 +15,8 @@ describe("CompareView", () => {
     expect(source).toContain("Evidence Bundle");
     expect(source).toContain("buildReportEvidenceBundle");
     expect(source).toContain("stringifyReportEvidenceBundle");
+    expect(source).toContain("compareReportSelection");
+    expect(source).toContain("Compare provenance:");
     expect(source).toContain("Best zone quality");
     expect(source).toContain("Critical zones failed");
     expect(source).toContain("Critical zones passed");

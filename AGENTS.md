@@ -249,7 +249,7 @@ Next build priorities (from reference image analysis):
 6. Wire remaining stubs (Failures tab, Tool placement, Test Without This)
 
 Open decisions that must be resolved before relevant sprint:
-- D-018: GSAP vs motion for path replay animation (before Sprint 1)
+- D-018: GSAP vs motion for path replay animation (RESOLVED: Motion One)
 - D-019: Local-first vs server-side compute (before AI call layer)
 - D-020: Security Evidence Twin framing (before report layer design)
 - D-021: Text-to-scene scope (before V0.2 design)

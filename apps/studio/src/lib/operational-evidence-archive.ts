@@ -12,6 +12,11 @@ import {
   type OperationalEvidenceJournal,
 } from "@/lib/operational-evidence-journal";
 import { createDefaultWorkspaceAccessState, normalizeWorkspaceAccessState, type WorkspaceAccessState } from "@/lib/workspace-access";
+import {
+  createDefaultWorkspaceAccountProfile,
+  normalizeWorkspaceAccountProfile,
+  type WorkspaceAccountProfile,
+} from "@/lib/workspace-catalog";
 import type { WorkspaceGovernanceState } from "@/lib/workspace-governance";
 
 export type OperationalEvidenceArchiveVersion = "1";
@@ -27,6 +32,7 @@ export type OperationalEvidenceArchive = {
   operationalEvidenceJournal?: OperationalEvidenceJournal | null;
   workspaceGovernance: WorkspaceGovernanceState;
   workspaceAccess: WorkspaceAccessState;
+  workspaceAccount: WorkspaceAccountProfile;
   notes: string[];
 };
 
@@ -38,6 +44,7 @@ export type OperationalEvidenceArchiveInput = {
   operationalEvidenceJournal?: OperationalEvidenceJournal | null;
   workspaceGovernance: WorkspaceGovernanceState;
   workspaceAccess: WorkspaceAccessState;
+  workspaceAccount: WorkspaceAccountProfile;
   notes?: string[];
 };
 
@@ -53,6 +60,7 @@ export function buildOperationalEvidenceArchive(input: OperationalEvidenceArchiv
     operationalEvidenceJournal: input.operationalEvidenceJournal ? normalizeOperationalEvidenceJournal(input.operationalEvidenceJournal) : undefined,
     workspaceGovernance: structuredClone(input.workspaceGovernance),
     workspaceAccess: structuredClone(input.workspaceAccess),
+    workspaceAccount: structuredClone(input.workspaceAccount),
     notes: input.notes?.length ? [...input.notes] : [
       "Operational evidence archive exported from the SentinelTwin studio workspace.",
       "Use this archive to recover the current scene, evidence chain, access policy, and governance state.",
@@ -73,6 +81,7 @@ export function normalizeOperationalEvidenceArchive(raw: unknown): OperationalEv
     operationalEvidenceJournal?: unknown;
     workspaceGovernance?: unknown;
     workspaceAccess?: unknown;
+    workspaceAccount?: unknown;
     sceneIntelligenceGraphSummary?: unknown;
     notes?: unknown;
   };
@@ -136,6 +145,33 @@ export function normalizeOperationalEvidenceArchive(raw: unknown): OperationalEv
     workspaceAccess: candidate.workspaceAccess && typeof candidate.workspaceAccess === "object"
       ? normalizeWorkspaceAccessState(candidate.workspaceAccess)
       : createDefaultWorkspaceAccessState(),
+    workspaceAccount: candidate.workspaceAccount && typeof candidate.workspaceAccount === "object"
+      ? normalizeWorkspaceAccountProfile(candidate.workspaceAccount, {
+        primaryOrganization: scene.data.source === "demo" ? "SentinelTwin Reference" : "Personal Workspace",
+        primaryOwner: scene.data.source === "demo" ? "SentinelTwin" : "You",
+        capabilities: {
+          sharedWorkspaces: scene.data.source !== "manual",
+          publishedWorkspaces: scene.data.source === "demo",
+          archiveRecovery: true,
+          reportExports: true,
+          scanIntake: true,
+          liveEvidence: false,
+        },
+        workspaceCount: scene.data.snapshots.length,
+      })
+      : createDefaultWorkspaceAccountProfile({
+        primaryOrganization: scene.data.source === "demo" ? "SentinelTwin Reference" : "Personal Workspace",
+        primaryOwner: scene.data.source === "demo" ? "SentinelTwin" : "You",
+        capabilities: {
+          sharedWorkspaces: scene.data.source !== "manual",
+          publishedWorkspaces: scene.data.source === "demo",
+          archiveRecovery: true,
+          reportExports: true,
+          scanIntake: true,
+          liveEvidence: false,
+        },
+        workspaceCount: scene.data.snapshots.length,
+      }),
     notes,
   };
 

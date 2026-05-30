@@ -49,7 +49,7 @@ const SHORTCUT_GROUPS = [
   {
     title: "Workspace Shortcuts",
     items: [
-      { keys: "R", action: "Open Report" },
+      { keys: "R", action: "Open Report Lite" },
       { keys: "N", action: "Toggle Night Mode" },
       { keys: "F", action: "Toggle Focus Mode" },
       { keys: "S", action: "Save Snapshot" },

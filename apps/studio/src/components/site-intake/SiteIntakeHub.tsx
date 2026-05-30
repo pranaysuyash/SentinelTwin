@@ -34,6 +34,7 @@ export type SiteIntakeHubProps = {
   onImportJson: () => void;
   onBuildManually: () => void;
   onVerifyFootage: () => void;
+  onStartSecurityAudit: () => void;
   onEnterStudio: () => void;
   onShowProjects?: () => void;
   onOpenDemo?: () => void;
@@ -212,7 +213,7 @@ const cards: SiteIntakeSourceCard[] = [
     id: "footage_verify",
     title: "Verify from Footage",
     status: "Preview",
-    description: "Verify real camera views against your scene.",
+    description: "Preview: static/reference-frame alignment only.",
     output: "Evidence",
     review: "Required",
     icon: Video,
@@ -266,6 +267,14 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
           <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-sky-500/10 text-sky-400 font-medium">
             <LayoutDashboard className="w-4 h-4" />
             <span className="text-sm">Create Site Twin</span>
+          </button>
+
+          <button
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-slate-300 transition-colors"
+            onClick={props.onStartSecurityAudit}
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            <span className="text-sm">Start Security Audit</span>
           </button>
           
           <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-slate-400 transition-colors">

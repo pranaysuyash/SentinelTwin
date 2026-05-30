@@ -11,7 +11,7 @@ describe("Studio launcher shell", () => {
 
     expect(source).toContain("StudioDashboardHome");
     expect(source).toContain("const [enterStudio, setEnterStudio] = useState(shouldBypassLauncher);");
-    expect(source).toContain("const [showProjects, setShowProjects] = useState(false);");
+    expect(source).toContain("const [showProjects, setShowProjects] = useState(true);");
     expect(source).toContain("ProjectStartLauncher");
     expect(source).toContain("showProjectLauncher");
     expect(source).toContain("onOpenCoverageWorkspace={openCoverageWorkspace}");

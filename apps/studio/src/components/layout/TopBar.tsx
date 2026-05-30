@@ -23,11 +23,11 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-
 import { cn } from "@/lib/cn";
 import { SurfaceButton } from "@/components/shared/SurfaceButton";
 import { useStudioStore } from "@/store/studio-store";
 import { WorkspacePresetSwitcher } from "@/components/dock/WorkspacePresetSwitcher";
+import { BranchSwitcher } from "@/components/top-bar/BranchSwitcher";
 import { SceneBuilderWizard } from "@/components/scan-to-scene/SceneBuilderWizard";
 import { ScanSiteWizard } from "@/components/scan-to-scene/ScanSiteWizard";
 import type { CriticalZoneNode, SecurityScene } from "@/schema/security-scene";
@@ -126,6 +126,13 @@ export function TopBar() {
   const [scanWizardOpen, setScanWizardOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const handleCameraFailure = useCallback(() => {
+    const { getSelectedCamera, updateNode, setBottomTab } = useStudioStore.getState();
+    const selectedCamera = getSelectedCamera();
+    if (!selectedCamera) return;
+    updateNode(selectedCamera.id, { status: selectedCamera.status === "on" ? "off" : "on" });
+    setBottomTab("redundancy");
+  }, []);
 
   useEffect(() => {
     refreshSavedScenesList();
@@ -213,6 +220,8 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
         </div>
 
         <div className="hidden h-5 w-px bg-[#1e2130] xl:block" />
+
+        <BranchSwitcher />
 
         <div className="relative min-w-0">
           <button
@@ -428,12 +437,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
           </SurfaceButton>
 
           <SurfaceButton
-            onClick={() => {
-              const { scene, updateNode, getSelectedCamera, selectNode } = useStudioStore.getState();
-              const selectedCamera = getSelectedCamera();
-              if (!selectedCamera) return;
-              updateNode(selectedCamera.id, { status: selectedCamera.status === "on" ? "off" : "on" });
-            }}
+            onClick={handleCameraFailure}
           >
             <Shield className="h-3 w-3" />
             Failure
@@ -516,7 +520,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                   Night Mode
                 </button>
                 <button
-                  onClick={() => { const s = useStudioStore.getState(); const cam = s.getSelectedCamera(); if (cam) s.updateNode(cam.id, { status: cam.status === "on" ? "off" : "on" }); setMoreOpen(false); }}
+                  onClick={() => { handleCameraFailure(); setMoreOpen(false); }}
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
                 >
                   <Shield className="h-3 w-3" />

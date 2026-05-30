@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 
-const panelPath = "./src/components/security-outcome/SecurityOutcomePanel.tsx";
+const panelPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../security-outcome/SecurityOutcomePanel.tsx");
 
 describe("SecurityOutcomePanel", () => {
   test("keeps the assumption disclosure visible in the compact security rail", () => {

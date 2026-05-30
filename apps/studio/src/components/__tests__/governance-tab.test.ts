@@ -43,6 +43,7 @@ describe("GovernanceTab", () => {
     expect(source).toContain("Route reason");
     expect(source).toContain("Resolve Approval Route");
     expect(source).toContain("Resolve Identity Conflict");
+    expect(source).toContain("Workspace Branch Sync");
     expect(source).toContain("Conflict status");
     expect(source).toContain("Conflict Diff");
     expect(source).toContain("View diff");
@@ -65,5 +66,7 @@ describe("GovernanceTab", () => {
     expect(source).toContain("Allowed");
     expect(source).toContain("Blocked");
     expect(source).toContain("Remote identity webhook");
+    expect(source).toContain("Compare Latest Archive");
+    expect(source).toContain("Branch Sync Status");
   });
 });

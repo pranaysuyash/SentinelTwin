@@ -4,8 +4,13 @@ import { once } from "node:events";
 import http from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { NextRequest } from "next/server";
 
 import { GET, POST } from "../route";
+
+const createNextRequest = (url: string, init?: RequestInit): NextRequest => (
+  new Request(url, init) as any as unknown as any
+);
 
 const originalStoreDir = process.env.SENTINELTWIN_CAMERA_METADATA_STORE_DIR;
 const testStoreDir = mkdtempSync(join(tmpdir(), "sentineltwin-camera-metadata-"));
@@ -23,7 +28,7 @@ afterAll(() => {
 
 describe("camera-metadata-ingest route", () => {
   test("archives a live camera metadata feed and persists history", async () => {
-    const response = await POST(new Request("http://localhost/api/camera-metadata-ingest", {
+    const response = await POST(createNextRequest("http://localhost/api/camera-metadata-ingest", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -54,7 +59,7 @@ describe("camera-metadata-ingest route", () => {
     expect(body.summary).toContain("Imported 1 camera metadata record");
     expect(body.records).toHaveLength(1);
 
-    const history = await GET();
+    const history = await GET(createNextRequest("http://localhost/api/camera-metadata-ingest"));
     const payload = await history.json();
     expect(payload.historyCount).toBe(1);
     expect(payload.latestSubmission.records[0].status).toBe("dirty");
@@ -79,7 +84,7 @@ describe("camera-metadata-ingest route", () => {
         throw new Error("External camera feed test server did not expose a numeric port.");
       }
 
-      const response = await POST(new Request("http://localhost/api/camera-metadata-ingest", {
+      const response = await POST(createNextRequest("http://localhost/api/camera-metadata-ingest", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

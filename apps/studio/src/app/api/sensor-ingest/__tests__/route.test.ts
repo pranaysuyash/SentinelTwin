@@ -4,11 +4,16 @@ import { once } from "node:events";
 import http from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { NextRequest } from "next/server";
 
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 import { createSensorNode } from "@/lib/node-factory";
 
 import { GET, POST } from "../route";
+
+const createNextRequest = (url: string, init?: RequestInit): NextRequest => (
+  new Request(url, init) as any as unknown as any
+);
 
 const originalStoreDir = process.env.SENTINELTWIN_SENSOR_INGEST_STORE_DIR;
 const testStoreDir = mkdtempSync(join(tmpdir(), "sentineltwin-sensor-ingest-"));
@@ -32,7 +37,7 @@ describe("sensor-ingest route", () => {
     scene.sensors = [sensor];
 
     const response = await POST(
-      new Request("http://localhost/api/sensor-ingest", {
+      createNextRequest("http://localhost/api/sensor-ingest", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -54,7 +59,7 @@ describe("sensor-ingest route", () => {
     expect(payload.summary).toContain("Imported 1 sensor event");
     expect(payload.sceneId).toBe("scene-1");
 
-    const historyResponse = await GET();
+    const historyResponse = await GET(createNextRequest("http://localhost/api/sensor-ingest"));
     expect(historyResponse.status).toBe(200);
     const historyPayload = await historyResponse.json();
     expect(historyPayload.ok).toBe(true);
@@ -64,7 +69,7 @@ describe("sensor-ingest route", () => {
 
   test("rejects invalid payloads", async () => {
     const response = await POST(
-      new Request("http://localhost/api/sensor-ingest", {
+      createNextRequest("http://localhost/api/sensor-ingest", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ raw: "" }),
@@ -98,7 +103,7 @@ describe("sensor-ingest route", () => {
         throw new Error("External feed test server did not expose a numeric port.");
       }
 
-      const response = await POST(new Request("http://localhost/api/sensor-ingest", {
+      const response = await POST(createNextRequest("http://localhost/api/sensor-ingest", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -128,7 +133,7 @@ describe("sensor-ingest route", () => {
       expect(body.events).toHaveLength(1);
       expect(body.summary).toContain("via External relay");
       expect(receivedRequests).toHaveLength(1);
-      const history = await GET();
+      const history = await GET(createNextRequest("http://localhost/api/sensor-ingest"));
       const payload = await history.json();
       expect(payload.historyCount).toBeGreaterThan(0);
       expect(payload.latestSubmission.feedUrl).toBe(`http://127.0.0.1:${address.port}/feed`);

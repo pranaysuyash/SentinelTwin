@@ -4,8 +4,13 @@ import { once } from "node:events";
 import http from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { NextRequest } from "next/server";
 
 import { GET, POST } from "../route";
+
+const createNextRequest = (url: string, init?: RequestInit): NextRequest => (
+  new Request(url, init) as any as unknown as any
+);
 
 const originalStoreDir = process.env.SENTINELTWIN_WORKSPACE_APPROVAL_ROUTE_STORE_DIR;
 const testStoreDir = mkdtempSync(join(tmpdir(), "sentineltwin-workspace-approval-route-"));
@@ -23,7 +28,7 @@ afterAll(() => {
 
 describe("workspace-approval-route route", () => {
   test("archives a routed approval decision and persists history", async () => {
-    const response = await POST(new Request("http://localhost/api/workspace-approval-route", {
+    const response = await POST(createNextRequest("http://localhost/api/workspace-approval-route", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -97,7 +102,7 @@ describe("workspace-approval-route route", () => {
     expect(body.approvalRoute.routeStatus).toBe("review_required");
     expect(body.summary).toContain("archived for Route Scene");
 
-    const history = await GET();
+    const history = await GET(createNextRequest("http://localhost/api/workspace-approval-route"));
     const payload = await history.json();
     expect(payload.historyCount).toBe(1);
     expect(payload.latestSubmission.approvalRoute.routeStatus).toBe("review_required");
@@ -123,7 +128,7 @@ describe("workspace-approval-route route", () => {
         throw new Error("Webhook test server did not expose a numeric port.");
       }
 
-      const response = await POST(new Request("http://localhost/api/workspace-approval-route", {
+      const response = await POST(createNextRequest("http://localhost/api/workspace-approval-route", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

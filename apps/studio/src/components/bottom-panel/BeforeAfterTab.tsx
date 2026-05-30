@@ -101,7 +101,9 @@ export function BeforeAfterTab() {
     : compareReportSelection?.snapshotBId && snapshots.some((snapshot) => snapshot.id === compareReportSelection.snapshotBId)
       ? compareReportSelection.snapshotBId
       : null;
-
+  const seededCompareSelection = compareReportSelection?.snapshotAId === validBeforeId && compareReportSelection?.snapshotBId === validAfterId
+    ? compareReportSelection
+    : null;
   const before = validBeforeId ? snapshots.find((snapshot) => snapshot.id === validBeforeId) ?? null : null;
   const after = validAfterId ? snapshots.find((snapshot) => snapshot.id === validAfterId) ?? null : null;
   const bSim = before?.simulation as SimulationResult | undefined;
@@ -135,6 +137,7 @@ export function BeforeAfterTab() {
     (aSim?.coverageCells ?? []).length,
     1,
   );
+  const compareSelectionProvenanceNote = seededCompareSelection?.provenanceNote ?? null;
 
   const visuals = compareVisualEvidence &&
     compareVisualEvidence.snapshotAId === (before?.id ?? "") &&
@@ -154,11 +157,12 @@ export function BeforeAfterTab() {
         compareSnapshotAId: before.id,
         compareSnapshotBId: after.id,
         compareMode: "beforeafter",
+        compareProvenanceNote: compareSelectionProvenanceNote,
       },
       window.location.hash,
     );
     await navigator.clipboard.writeText(link);
-  }, [before, after]);
+  }, [before, after, compareSelectionProvenanceNote]);
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -229,6 +233,13 @@ export function BeforeAfterTab() {
           Copy compare link
         </button>
       </div>
+      <div className="border-b border-[#1e2130] px-3 py-1.5 text-[9px] text-[#74809a]">
+        {compareSelectionProvenanceNote ? (
+          <span>Compare provenance: {compareSelectionProvenanceNote}</span>
+        ) : (
+          <span>Scene Intelligence can seed the exact/derived checkpoint provenance for this pair.</span>
+        )}
+      </div>
 
       {!before || !after ? (
         <div className="border-b border-[#1e2130] px-3 py-2 text-[9px] text-[#6b7894]">
@@ -292,7 +303,11 @@ export function BeforeAfterTab() {
             type="button"
             onClick={() => {
               if (!before || !after) return;
-              setCompareReportSelection({ snapshotAId: before.id, snapshotBId: after.id });
+              setCompareReportSelection({
+                snapshotAId: before.id,
+                snapshotBId: after.id,
+                provenanceNote: compareSelectionProvenanceNote,
+              });
               setViewMode("compare");
             }}
             disabled={!before || !after}

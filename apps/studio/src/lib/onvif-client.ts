@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from "node:crypto";
 import { z } from "zod";
 
 export const OnvifCredentialsSchema = z.object({
@@ -24,6 +25,18 @@ export type OnvifDeviceInformation = {
   hardwareId: string;
 };
 
+type OnvifAuthScheme = "basic" | "digest" | "bearer" | "token" | null;
+
+type ParsedOnvifAuthChallenge = {
+  scheme: OnvifAuthScheme;
+  realm: string | null;
+  nonce: string | null;
+  qop: string[];
+  algorithm: string | null;
+  opaque: string | null;
+  stale: boolean | null;
+};
+
 export interface OnvifSession {
   sessionId: string;
   address: string;
@@ -33,6 +46,8 @@ export interface OnvifSession {
   authChallengeHeader: string | null;
   deviceInformation?: OnvifDeviceInformation;
   eventSubscriptionUri?: string;
+  eventSubscriptionReference?: string;
+  eventSubscriptionExpiresAt?: number;
   mediaUri?: string;
   lastHeartbeatAt: number;
 }
@@ -51,6 +66,21 @@ const SOAP_DEVICE_INFORMATION_ENVELOPE = `<?xml version="1.0" encoding="utf-8"?>
     <GetDeviceInformation xmlns="http://www.onvif.org/ver10/device/wsdl" />
   </s:Body>
 </s:Envelope>`;
+
+const SOAP_EVENT_SUBSCRIBE_ENVELOPE = `<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:wsa="http://www.w3.org/2005/08/addressing" xmlns:wsnt="http://docs.oasis-open.org/wsn/b-2">
+  <s:Body>
+    <wsnt:Subscribe>
+      <wsnt:ConsumerReference>
+        <wsa:Address>http://www.w3.org/2005/08/addressing/anonymous</wsa:Address>
+      </wsnt:ConsumerReference>
+      <wsnt:InitialTerminationTime>PT1H</wsnt:InitialTerminationTime>
+    </wsnt:Subscribe>
+  </s:Body>
+</s:Envelope>`;
+
+const SOAP_DEVICE_SOAPACTION = "http://www.onvif.org/ver10/device/wsdl/GetDeviceInformation";
+const SOAP_EVENT_SOAPACTION = "http://docs.oasis-open.org/wsn/b-2/NotificationProducer/Subscribe";
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -107,18 +137,78 @@ function parseOnvifUri(raw: string, tagNames: string[]) {
   return findXmlAttribute(raw, tagNames) ?? findXmlTagText(raw, ["Address", "Uri", "URL", "XAddr"]) ?? null;
 }
 
-function parseAuthChallengeHeader(header: string | null | undefined): { scheme: "basic" | "digest" | "bearer" | "token" | null; realm: string | null } {
-  if (!header) return { scheme: null, realm: null };
+function splitAuthChallengeParameters(input: string) {
+  const parts: string[] = [];
+  let current = "";
+  let quoted = false;
+  let escaped = false;
+
+  for (const character of input) {
+    if (escaped) {
+      current += character;
+      escaped = false;
+      continue;
+    }
+    if (character === "\\") {
+      current += character;
+      escaped = true;
+      continue;
+    }
+    if (character === "\"") {
+      current += character;
+      quoted = !quoted;
+      continue;
+    }
+    if (character === "," && !quoted) {
+      if (current.trim().length > 0) parts.push(current.trim());
+      current = "";
+      continue;
+    }
+    current += character;
+  }
+
+  if (current.trim().length > 0) parts.push(current.trim());
+  return parts;
+}
+
+function parseAuthChallengeHeader(header: string | null | undefined): ParsedOnvifAuthChallenge {
+  if (!header) {
+    return {
+      scheme: null,
+      realm: null,
+      nonce: null,
+      qop: [],
+      algorithm: null,
+      opaque: null,
+      stale: null,
+    };
+  }
   const trimmed = header.trim();
   const schemeText = (trimmed.match(/^(\S+)/)?.[1] ?? "").toLowerCase();
   const scheme =
     schemeText === "basic" || schemeText === "digest" || schemeText === "bearer" || schemeText === "token"
       ? schemeText
       : null;
-  const realmMatch = trimmed.match(/realm="?([^",]+)"?/i);
+  const parameterText = trimmed.slice(trimmed.indexOf(" ") + 1).trim();
+  const parameters = new Map<string, string>();
+  for (const part of splitAuthChallengeParameters(parameterText)) {
+    const separatorIndex = part.indexOf("=");
+    if (separatorIndex <= 0) continue;
+    const key = part.slice(0, separatorIndex).trim().toLowerCase();
+    let value = part.slice(separatorIndex + 1).trim();
+    if (value.startsWith("\"") && value.endsWith("\"")) {
+      value = value.slice(1, -1);
+    }
+    if (key) parameters.set(key, value);
+  }
   return {
     scheme,
-    realm: realmMatch?.[1]?.trim() || null,
+    realm: parameters.get("realm")?.trim() || null,
+    nonce: parameters.get("nonce")?.trim() || null,
+    qop: parameters.get("qop")?.split(",").map((item) => item.trim()).filter(Boolean) ?? [],
+    algorithm: parameters.get("algorithm")?.trim() || null,
+    opaque: parameters.get("opaque")?.trim() || null,
+    stale: parameters.get("stale") ? parameters.get("stale") === "true" : null,
   };
 }
 
@@ -130,19 +220,89 @@ function encodeBasicAuth(username: string, password: string) {
   return Buffer.from(text, "utf8").toString("base64");
 }
 
-function buildOnvifHeaders(credentials: OnvifCredentials, extraHeaders: HeadersInit = {}): HeadersInit {
+function escapeAuthHeaderValue(value: string) {
+  return value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
+}
+
+function buildBasicAuthorizationHeader(credentials: OnvifCredentials) {
+  if (!credentials.username || !credentials.password) return null;
+  return `Basic ${encodeBasicAuth(credentials.username, credentials.password)}`;
+}
+
+function buildOnvifHeaders(authorizationHeader: string | null = null, extraHeaders: HeadersInit = {}): HeadersInit {
   const headers: Record<string, string> = {
     accept: "application/soap+xml, application/xml, text/xml, */*;q=0.1",
     "content-type": "application/soap+xml; charset=utf-8",
-    soapaction: "http://www.onvif.org/ver10/device/wsdl/GetDeviceInformation",
+    soapaction: SOAP_DEVICE_SOAPACTION,
   };
-  if (credentials.username && credentials.password) {
-    headers.authorization = `Basic ${encodeBasicAuth(credentials.username, credentials.password)}`;
+  if (authorizationHeader) {
+    headers.authorization = authorizationHeader;
   }
   return {
     ...headers,
     ...extraHeaders,
   };
+}
+
+function buildOnvifRequestPath(address: string) {
+  const url = new URL(address);
+  const path = `${url.pathname || "/"}${url.search || ""}`;
+  return path.length > 0 ? path : "/";
+}
+
+function md5Hex(input: string) {
+  return createHash("md5").update(input, "utf8").digest("hex");
+}
+
+function buildDigestAuthorizationHeader(credentials: OnvifCredentials, challenge: ParsedOnvifAuthChallenge, address: string, method = "POST") {
+  if (!credentials.username || !credentials.password) return null;
+  if (!challenge.realm || !challenge.nonce) return null;
+
+  const algorithm = (challenge.algorithm ?? "MD5").toUpperCase();
+  if (algorithm !== "MD5" && algorithm !== "MD5-SESS") return null;
+
+  const qop = challenge.qop.includes("auth") ? "auth" : null;
+  if (challenge.qop.length > 0 && !qop) return null;
+
+  const requestPath = buildOnvifRequestPath(address);
+  const cnonce = randomBytes(16).toString("hex");
+  const nonceCount = "00000001";
+  const ha1Base = md5Hex(`${credentials.username}:${challenge.realm}:${credentials.password}`);
+  const ha1 = algorithm === "MD5-SESS"
+    ? md5Hex(`${ha1Base}:${challenge.nonce}:${cnonce}`)
+    : ha1Base;
+  const ha2 = md5Hex(`${method.toUpperCase()}:${requestPath}`);
+  const response = qop
+    ? md5Hex(`${ha1}:${challenge.nonce}:${nonceCount}:${cnonce}:${qop}:${ha2}`)
+    : md5Hex(`${ha1}:${challenge.nonce}:${ha2}`);
+  const authorization = [
+    `Digest username="${escapeAuthHeaderValue(credentials.username)}"`,
+    `realm="${escapeAuthHeaderValue(challenge.realm)}"`,
+    `nonce="${escapeAuthHeaderValue(challenge.nonce)}"`,
+    `uri="${escapeAuthHeaderValue(requestPath)}"`,
+    `response="${response}"`,
+    `algorithm=${algorithm === "MD5-SESS" ? "MD5-sess" : "MD5"}`,
+  ];
+
+  if (challenge.opaque) {
+    authorization.push(`opaque="${escapeAuthHeaderValue(challenge.opaque)}"`);
+  }
+  if (qop) {
+    authorization.push(`qop=${qop}`);
+    authorization.push(`nc=${nonceCount}`);
+    authorization.push(`cnonce="${cnonce}"`);
+  }
+
+  return authorization.join(", ");
+}
+
+function parseOnvifTimestamp(raw: string, tagNames: string[]) {
+  const value = findXmlTagText(raw, tagNames);
+  if (!value) return null;
+  const parsed = Date.parse(value);
+  if (Number.isFinite(parsed)) return parsed;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
 }
 
 function createSession(credentials: OnvifCredentials): OnvifSession {
@@ -174,39 +334,93 @@ export class OnvifClient {
     };
   }
 
+  private async probeAuthenticatedOnvifRequest(targetUrl: string, body: string, soapAction: string) {
+    const hasCredentials = Boolean(this.credentials.username && this.credentials.password);
+    const initialAttempt = await fetch(targetUrl, {
+      method: "POST",
+      headers: buildOnvifHeaders(null, { soapaction: soapAction }),
+      body,
+    });
+
+    const initialRaw = (await initialAttempt.text()).trim();
+    const initialAuthChallengeHeader = initialAttempt.headers.get("www-authenticate");
+    const initialChallenge = parseAuthChallengeHeader(initialAuthChallengeHeader);
+
+    let response = initialAttempt;
+    let raw = initialRaw;
+    let authChallengeHeader = initialAuthChallengeHeader;
+
+    if ((response.status === 401 || response.status === 403) && hasCredentials) {
+      const authorizationHeader = initialChallenge.scheme === "digest"
+        ? buildDigestAuthorizationHeader(this.credentials, initialChallenge, targetUrl) ?? buildBasicAuthorizationHeader(this.credentials)
+        : buildBasicAuthorizationHeader(this.credentials);
+
+      if (authorizationHeader) {
+        const retryAttempt = await fetch(targetUrl, {
+          method: "POST",
+          headers: buildOnvifHeaders(authorizationHeader, { soapaction: soapAction }),
+          body,
+        });
+        response = retryAttempt;
+        raw = (await retryAttempt.text()).trim();
+        authChallengeHeader = authChallengeHeader ?? retryAttempt.headers.get("www-authenticate");
+      }
+    }
+
+    return {
+      response,
+      raw,
+      authChallengeHeader,
+    };
+  }
+
   public async connect(): Promise<OnvifProbeResult> {
     this.session.state = "authenticating";
 
-    const response = await fetch(this.credentials.address, {
-      method: "POST",
-      headers: buildOnvifHeaders(this.credentials),
-      body: SOAP_DEVICE_INFORMATION_ENVELOPE,
-    });
+    const deviceAttempt = await this.probeAuthenticatedOnvifRequest(
+      this.credentials.address,
+      SOAP_DEVICE_INFORMATION_ENVELOPE,
+      SOAP_DEVICE_SOAPACTION,
+    );
+
+    let response = deviceAttempt.response;
+    let raw = deviceAttempt.raw;
+    let authChallengeHeader = deviceAttempt.authChallengeHeader;
 
     this.session.state = "probing_services";
 
-    const raw = (await response.text()).trim();
     const deviceInformation = parseDeviceInformation(raw);
     const eventSubscriptionUri = parseOnvifUri(raw, ["EventSubscriptionUri", "SubscriptionReference", "PullPointUri", "EventsUri", "XAddr"]);
     const mediaUri = parseOnvifUri(raw, ["MediaUri", "StreamUri", "XAddr", "Uri"]);
-    const authChallengeHeader = response.headers.get("www-authenticate");
-    const challenge = parseAuthChallengeHeader(authChallengeHeader);
+    let eventSubscriptionReference: string | null = null;
+    let eventSubscriptionExpiresAt: number | null = null;
+    const finalChallenge = parseAuthChallengeHeader(authChallengeHeader);
+
+    if (response.ok && eventSubscriptionUri) {
+      this.session.state = "subscribing_events";
+      const eventAttempt = await this.probeAuthenticatedOnvifRequest(
+        eventSubscriptionUri,
+        SOAP_EVENT_SUBSCRIBE_ENVELOPE,
+        SOAP_EVENT_SOAPACTION,
+      );
+      response = eventAttempt.response;
+      raw = `${raw}\n${eventAttempt.raw}`.trim();
+      authChallengeHeader = authChallengeHeader ?? eventAttempt.authChallengeHeader;
+      eventSubscriptionReference = parseOnvifUri(eventAttempt.raw, ["SubscriptionReference", "Address", "Uri", "XAddr"]);
+      eventSubscriptionExpiresAt = parseOnvifTimestamp(eventAttempt.raw, ["TerminationTime", "Expires", "ExpirationTime"]);
+    }
 
     const connected = response.ok;
     this.session = {
       ...this.session,
-      state: connected
-        ? "streaming"
-        : challenge.scheme
-          ? "error"
-          : deviceInformation
-            ? "error"
-            : "error",
+      state: connected ? "streaming" : "error",
       responseStatus: response.status,
       responseStatusText: response.statusText || null,
       authChallengeHeader,
       deviceInformation: deviceInformation ?? undefined,
       eventSubscriptionUri: eventSubscriptionUri ?? undefined,
+      eventSubscriptionReference: eventSubscriptionReference ?? undefined,
+      eventSubscriptionExpiresAt: eventSubscriptionExpiresAt ?? undefined,
       mediaUri: mediaUri ?? undefined,
       lastHeartbeatAt: connected ? Date.now() : 0,
     };

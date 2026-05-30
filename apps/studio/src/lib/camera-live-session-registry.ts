@@ -35,6 +35,11 @@ export type CameraLiveSessionRecord = {
   authChallengeHeader: string | null;
   authChallengeScheme: CameraLiveAuthChallengeScheme;
   authChallengeRealm: string | null;
+  onvifUsername: string | null;
+  onvifPassword: string | null;
+  eventSubscriptionUri: string | null;
+  eventSubscriptionReference: string | null;
+  eventSubscriptionExpiresAt: number | null;
   lastObservedAt: number;
   sessionExpiresAt: number | null;
   lastAction: CameraLiveConnectionProbeResponse["action"];
@@ -169,6 +174,11 @@ export function loadCameraLiveSessionRegistry(rootDir = resolveCameraLiveSession
             ? candidate.authChallengeScheme
             : null,
         authChallengeRealm: typeof candidate.authChallengeRealm === "string" ? candidate.authChallengeRealm : null,
+        onvifUsername: typeof candidate.onvifUsername === "string" ? candidate.onvifUsername : null,
+        onvifPassword: typeof candidate.onvifPassword === "string" ? candidate.onvifPassword : null,
+        eventSubscriptionUri: typeof candidate.eventSubscriptionUri === "string" ? candidate.eventSubscriptionUri : null,
+        eventSubscriptionReference: typeof candidate.eventSubscriptionReference === "string" ? candidate.eventSubscriptionReference : null,
+        eventSubscriptionExpiresAt: typeof candidate.eventSubscriptionExpiresAt === "number" ? candidate.eventSubscriptionExpiresAt : null,
         lastObservedAt: candidate.lastObservedAt,
         sessionExpiresAt,
         lastAction: candidate.lastAction === "bind" || candidate.lastAction === "refresh" || candidate.lastAction === "heartbeat" || candidate.lastAction === "disconnect"

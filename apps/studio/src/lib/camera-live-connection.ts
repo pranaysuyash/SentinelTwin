@@ -83,6 +83,8 @@ export const CameraLiveConnectionProbeRequestSchema = z.object({
   authChallengeHeader: z.string().min(1).nullable().optional(),
   authChallengeScheme: z.enum(["basic", "digest", "bearer", "token"]).nullable().optional(),
   authChallengeRealm: z.string().min(1).nullable().optional(),
+  onvifUsername: z.string().min(1).optional(),
+  onvifPassword: z.string().min(1).optional(),
   raw: z.string().default(""),
   notes: z.string().optional(),
 }).refine((value) => value.action === "disconnect" || value.action === "heartbeat" || value.raw.trim().length > 0 || Boolean(value.endpointUrl) || Boolean(value.liveFeedUrl), {
@@ -119,17 +121,22 @@ export type CameraLiveConnectionProbeResponse = {
     protocolProfile: "onvif_device" | "rtsp_session" | "mjpeg_stream" | "http_poll" | "proxy" | null;
     authMode: CameraLiveAuthMode;
     authState: CameraLiveAuthState;
-  authRealm: string | null;
-  authSessionId: string | null;
-  authSessionExpiresAt: number | null;
-  transportResponseStatus: number | null;
-  transportResponseStatusText: string | null;
-  authChallengeHeader: string | null;
-  authChallengeScheme: CameraLiveAuthChallengeScheme;
-  authChallengeRealm: string | null;
-  liveFeedUrl: string | null;
-  liveFeedLabel: string | null;
-  liveConnectionMode: CameraLiveConnectionMode | null;
+    authRealm: string | null;
+    onvifUsername?: string | null;
+    onvifPassword?: string | null;
+    authSessionId: string | null;
+    authSessionExpiresAt: number | null;
+    transportResponseStatus: number | null;
+    transportResponseStatusText: string | null;
+    authChallengeHeader: string | null;
+    authChallengeScheme: CameraLiveAuthChallengeScheme;
+    authChallengeRealm: string | null;
+    eventSubscriptionUri: string | null;
+    eventSubscriptionReference: string | null;
+    eventSubscriptionExpiresAt: number | null;
+    liveFeedUrl: string | null;
+    liveFeedLabel: string | null;
+    liveConnectionMode: CameraLiveConnectionMode | null;
     liveConnectionStatus: CameraLiveConnectionStatus;
     notes: string | null;
     timestamp: number;
@@ -323,7 +330,11 @@ async function resolveLiveConnectionPayload(request: CameraLiveConnectionProbeRe
 
   if (request.protocol === "onvif") {
     try {
-      const onvifClient = new OnvifClient({ address: probeUrl });
+      const onvifClient = new OnvifClient({
+        address: probeUrl,
+        username: request.onvifUsername,
+        password: request.onvifPassword,
+      });
       const onvifProbe = await onvifClient.connect();
       if (onvifProbe.raw.length > 0 || onvifProbe.responseStatus !== null) {
         return {
@@ -413,7 +424,7 @@ export async function probeCameraLiveConnection(request: CameraLiveConnectionPro
   const authChallengeRealm = parsedCandidate?.success && parsedCandidate.data.authChallengeRealm
     ? parsedCandidate.data.authChallengeRealm
     : challengeFromHeader.realm;
-  const receivedAuthChallenge = request.action !== "disconnect" && (responseStatus === 401 || responseStatus === 403 || Boolean(authChallengeHeader));
+  const receivedAuthChallenge = request.action !== "disconnect" && (responseStatus === 401 || responseStatus === 403 || (Boolean(authChallengeHeader) && responseStatus !== 200));
   const onvifDeviceProbeSucceeded = request.action !== "disconnect" && request.protocol === "onvif" && (responseStatus === 200 || Boolean(payload.onvifDeviceInformation));
   const status = request.action === "disconnect"
     ? "disconnected"
@@ -528,6 +539,8 @@ export async function probeCameraLiveConnection(request: CameraLiveConnectionPro
     authMode,
     authState,
     authRealm,
+    onvifUsername: request.onvifUsername ?? null,
+    onvifPassword: request.onvifPassword ?? null,
     authSessionId,
     authSessionExpiresAt,
     transportResponseStatus: responseStatus,

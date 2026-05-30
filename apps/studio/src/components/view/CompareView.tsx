@@ -24,7 +24,7 @@ import {
   CoverageHeatmapInstanced,
 } from "@/components/workspace/SharedScene";
 import { cn } from "@/lib/cn";
-import { QUALITY_RANK } from "@/lib/quality-display";
+import { QUALITY_RANK, QUALITY_TEXT_COLOR } from "@/lib/quality-display";
 import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
 import type { SceneSnapshot, SimulationResult } from "@/schema/security-scene";
 
@@ -564,6 +564,7 @@ export function CompareView() {
   const setCompareReportSelection = useStudioStore((s) => s.setCompareReportSelection);
   const setBottomTab = useStudioStore((s) => s.setBottomTab);
   const setViewMode = useStudioStore((s) => s.setViewMode);
+  const compareReportSelection = useStudioStore((s) => s.compareReportSelection);
   const compareVisualEvidence = useStudioStore((s) => s.compareVisualEvidence);
   const activePathId = useStudioStore((s) => s.activePathId);
   const demoMode = useStudioStore((s) => s.demoMode);
@@ -582,6 +583,10 @@ export function CompareView() {
 
   const snapshotA = validComparisonAId ? snapshots.find((snapshot) => snapshot.id === validComparisonAId) ?? null : null;
   const snapshotB = validComparisonBId ? snapshots.find((snapshot) => snapshot.id === validComparisonBId) ?? null : null;
+  const seededCompareSelection = compareReportSelection?.snapshotAId === snapshotA?.id && compareReportSelection?.snapshotBId === snapshotB?.id
+    ? compareReportSelection
+    : null;
+  const compareSelectionProvenanceNote = seededCompareSelection?.provenanceNote ?? null;
   const latestSimulatedSnapshot = [...snapshots].reverse().find((snapshot) => Boolean(snapshot.simulation)) ?? null;
 
   const cellsA = useMemo(() => snapshotA?.simulation?.coverageCells ?? [], [snapshotA]);
@@ -899,7 +904,11 @@ export function CompareView() {
             type="button"
             onClick={() => {
               if (!snapshotA || !snapshotB) return;
-              setCompareReportSelection({ snapshotAId: snapshotA.id, snapshotBId: snapshotB.id });
+              setCompareReportSelection({
+                snapshotAId: snapshotA.id,
+                snapshotBId: snapshotB.id,
+                provenanceNote: compareSelectionProvenanceNote,
+              });
               setBottomTab("report");
               setExportToast("Compare selection sent to report");
               window.setTimeout(() => setExportToast(null), 2500);
@@ -931,6 +940,13 @@ export function CompareView() {
             Add Scenario
           </button>
         </div>
+      </div>
+      <div className="border-b border-[#1e2130] px-3 py-1.5 text-[9px] text-[#74809a]">
+        {compareSelectionProvenanceNote ? (
+          <span>Compare provenance: {compareSelectionProvenanceNote}</span>
+        ) : (
+          <span>Scene Intelligence can seed exact/derived checkpoint provenance before this view is exported.</span>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-2 border-b border-[#1e2130] bg-[#0a0d14] px-3 py-2">
@@ -1148,7 +1164,7 @@ export function CompareView() {
                     </div>
                     <div className="rounded border border-[#1d2330] bg-[#0b1018] px-2 py-1.5">
                       <div className="text-[#556076]">Detection range</div>
-                      <div className="mt-0.5 font-mono font-semibold text-[#f97316]">{dori.detection.toFixed(1)}m</div>
+                      <div className={"mt-0.5 font-mono font-semibold " + QUALITY_TEXT_COLOR.detection}>{dori.detection.toFixed(1)}m</div>
                     </div>
                   </div>
 

@@ -240,6 +240,7 @@ export interface ReportData {
     sensorEvidenceCount: number;
     recentEntries: ReportEvidenceEntry[];
   };
+  evidenceLedger?: OperationalEvidenceEvent[];
   temporalTwin?: {
     totalEvents: number;
     checkpointCount: number;
@@ -449,6 +450,11 @@ export function buildReportData(
     ? summarizeOperationalEvidenceTemporalTwin(options.operationalEvidenceEvents, scene)
     : null;
 
+  // Filter out noisy telemetry events from the ledger
+  const evidenceLedger = options?.operationalEvidenceEvents?.filter(
+    (e) => e.kind !== "sensor_heartbeat" && e.kind !== "camera_metadata_updated"
+  );
+
   const cameraMap = new Map(scene.cameras.map((camera) => [camera.id, camera]));
 
   return {
@@ -532,6 +538,7 @@ export function buildReportData(
     },
     truthLadder,
     evidenceTrail,
+    evidenceLedger,
     temporalTwin: temporalTwin ?? undefined,
     adversarialPath: options?.adversarialPath
       ? {
@@ -870,24 +877,12 @@ function buildCompareReportSnapshot(
       edgeCount: graph.summary.edgeCount,
       revisionDepth: graph.summary.revisionDepth,
       snapshotCount: graph.summary.snapshotCount,
-      confidenceNotes: visibility === "privacy_safe" ? [] : confidenceNotes,
-      sourceNotes: visibility === "privacy_safe" ? [] : sourceNotes,
+      confidenceNotes,
+      sourceNotes,
     },
-    truthLadder: visibility === "privacy_safe" ? {
-      labels: [],
-      highestConfidence: 0,
-      lowestConfidence: 0,
-      overallConfidenceLabel: "Redacted for privacy",
-    } : truthLadder,
-    evidenceTrail: visibility === "privacy_safe" ? {
-      changeLogEntryCount: 0,
-      evidenceEntryCount: 0,
-      sensorEvidenceCount: 0,
-      recentEntries: [],
-    } : (visibility === "shared" ? {
-      ...evidenceTrail,
-      recentEntries: evidenceTrail.recentEntries.slice(0, 3),
-    } : evidenceTrail),
+    truthLadder,
+    evidenceTrail,
+    temporalTwin: undefined,
     novelAlgorithms: undefined,
     meetsModeledZoneRequirements: zonesPassing === totalZones,
     codeCompliant: zonesPassing === totalZones,
@@ -1383,255 +1378,23 @@ export function exportAsHtml(report: ReportData): string {
 </html>`;
 }
 
+import {
+  exportOperatorMarkdown,
+  exportAuditorMarkdown,
+  exportInsurerMarkdown,
+  exportInstallerMarkdown,
+  exportPrivacyReviewerMarkdown,
+} from "./export-templates";
+
 export function exportAsMarkdown(report: ReportData): string {
-  const lines = [
-    `# ${report.title}`,
-    "",
-    `**Site:** ${report.siteName}`,
-    `**Audience:** ${report.audienceLabel}`,
-    `**Framing:** ${report.audienceFraming}`,
-    `**Visibility:** ${report.visibilityLabel}`,
-    `**Visibility Framing:** ${report.visibilityFraming}`,
-    `**Date:** ${new Date(report.generatedAt).toLocaleDateString()}`,
-    `**Dimensions:** ${report.dimensions.width}m × ${report.dimensions.depth}m × ${report.dimensions.height}m`,
-    `**Standard:** ${report.standardsRef}`,
-    "",
-    "## Executive Summary",
-    `| Metric | Value |`,
-    `|--------|-------|`,
-    `| Total Coverage | ${report.summary.totalCoveragePct.toFixed(1)}% |`,
-    `| Recognition Area | ${report.summary.recognitionAreaPct.toFixed(1)}% |`,
-    `| Identification Area | ${report.summary.identificationAreaPct.toFixed(1)}% |`,
-    `| Zones Passing | ${report.summary.zonesPassing}/${report.summary.zonesTotal} |`,
-    `| Sensors | ${report.summary.sensorCount} |`,
-    `| Issues Found | ${report.summary.issuesCount} |`,
-    `| Verified Recommendations | ${report.summary.verifiedRecommendationsCount}/${report.summary.recommendationsCount} |`,
-    "",
-    "## Assumptions",
-    `- DORI Standard: ${report.assumptions.doriStandard}`,
-    `- Person Height: ${report.assumptions.personHeightM}m`,
-    `- Vehicle Height: ${report.assumptions.vehicleHeightM}m`,
-    `- Time of Day: ${report.assumptions.timeOfDay}`,
-    `- PPM Thresholds: ${report.assumptions.ppm.detection} / ${report.assumptions.ppm.observation} / ${report.assumptions.ppm.recognition} / ${report.assumptions.ppm.identification}`,
-    "",
-    `_${report.audienceFraming} These outputs are estimated planning indicators under current assumptions, not legal or forensic guarantees._`,
-    "",
-    "## Provenance",
-    `- Scene Source: ${report.provenance.sceneSourceLabel} (${report.provenance.sceneSource})`,
-    `- Graph Nodes: ${report.provenance.nodeCount}`,
-    `- Graph Edges: ${report.provenance.edgeCount}`,
-    `- Revision Depth: ${report.provenance.revisionDepth}`,
-    `- Snapshots Tracked: ${report.provenance.snapshotCount}`,
-    `- Source Counts: ${Object.entries(report.provenance.sourceCounts).map(([source, count]) => `${source}:${count}`).join(" · ")}`,
-    ...(report.provenance.sourceNotes.length > 0 ? [
-      "- Source History:",
-      ...report.provenance.sourceNotes.map((note) => `  - ${note}`),
-    ] : []),
-    ...(report.provenance.confidenceNotes.length > 0 ? [
-      "- Confidence History:",
-      ...report.provenance.confidenceNotes.map((note) => `  - ${note}`),
-    ] : []),
-    "",
-    "## Truth Ladder",
-    `- Nodes: ${report.truthLadder.nodeCount}`,
-    `- Reviewed Nodes: ${report.truthLadder.reviewedNodeCount} (${report.truthLadder.reviewedCoveragePct.toFixed(1)}%)`,
-    `- Verified Nodes: ${report.truthLadder.verifiedNodeCount}`,
-    `- Source Traces: ${report.truthLadder.sourceTraceCount} (${report.truthLadder.sourceTraceCoveragePct.toFixed(1)}%)`,
-    `- Suspect Geometry: ${report.truthLadder.suspectGeometryCount}`,
-    `- Invalid Geometry: ${report.truthLadder.invalidGeometryCount}`,
-    `- Summary: ${report.truthLadder.summary}`,
-    "",
-    "## Operational Evidence",
-    `- Change Log Entries: ${report.evidenceTrail.changeLogEntryCount}`,
-    `- Evidence Entries: ${report.evidenceTrail.evidenceEntryCount}`,
-    `- Sensor-related Evidence: ${report.evidenceTrail.sensorEvidenceCount}`,
-    ...(report.evidenceTrail.recentEntries.length > 0
-      ? [
-          "- Recent Evidence Entries:",
-          ...report.evidenceTrail.recentEntries.map((entry) => `  - ${entry.when} · ${entry.title} · ${entry.details} · ${entry.confidence}`),
-        ]
-      : ["- Recent Evidence Entries: none"]),
-    "",
-    ...(report.temporalTwin
-      ? [
-          "## Temporal Operational Twin",
-          `- Scene events: ${report.temporalTwin.totalEvents}`,
-          `- Reconstructable checkpoints: ${report.temporalTwin.checkpointCount}`,
-          `- Published checkpoints: ${report.temporalTwin.publishedCheckpointCount}`,
-          `- Branch heads: ${report.temporalTwin.branchHeadCount}`,
-          `- Current scene: ${report.temporalTwin.currentSceneSummary?.detail ?? "Unavailable."}`,
-          `- Latest checkpoint: ${report.temporalTwin.latestCheckpoint ? `${report.temporalTwin.latestCheckpoint.title} (${report.temporalTwin.latestCheckpoint.branchLabel})` : "Unavailable."}`,
-          `- Latest checkpoint provenance: ${formatCheckpointProvenance(report.temporalTwin.latestCheckpointProvenance)}`,
-          `- Checkpoint age: ${report.temporalTwin.latestCheckpointAgeMs != null ? `${Math.max(1, Math.round(report.temporalTwin.latestCheckpointAgeMs / 60000))}m` : "Unavailable."}`,
-          `- Checkpoint delta: ${report.temporalTwin.currentVsLatestCheckpointDelta ? `cameras ${report.temporalTwin.currentVsLatestCheckpointDelta.cameras >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestCheckpointDelta.cameras}, zones ${report.temporalTwin.currentVsLatestCheckpointDelta.zones >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestCheckpointDelta.zones}, sensors ${report.temporalTwin.currentVsLatestCheckpointDelta.sensors >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestCheckpointDelta.sensors}` : "Unavailable."}`,
-          `- Latest published checkpoint: ${report.temporalTwin.latestPublishedCheckpoint ? `${report.temporalTwin.latestPublishedCheckpoint.title} (${report.temporalTwin.latestPublishedCheckpoint.branchLabel})` : "Unavailable."}`,
-          `- Published checkpoint provenance: ${formatCheckpointProvenance(report.temporalTwin.latestPublishedCheckpointProvenance)}`,
-          `- Published age: ${report.temporalTwin.latestPublishedCheckpointAgeMs != null ? `${Math.max(1, Math.round(report.temporalTwin.latestPublishedCheckpointAgeMs / 60000))}m` : "Unavailable."}`,
-          `- Published delta: ${report.temporalTwin.currentVsLatestPublishedCheckpointDelta ? `cameras ${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.cameras}, zones ${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.zones >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.zones}, sensors ${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.sensors >= 0 ? "+" : ""}${report.temporalTwin.currentVsLatestPublishedCheckpointDelta.sensors}` : "Unavailable."}`,
-          "",
-        ]
-      : []),
-    "## Zone Analysis",
-    "",
-    ...(report.zones.length > 0
-      ? ["| Zone | Required | Actual | Status | Cameras |",
-         "|------|----------|--------|--------|---------|",
-         ...report.zones.map((z) =>
-           `| ${z.label} | ${z.requiredQuality} | ${z.actualQuality} | ${z.status} | ${z.coveringCameras.join(", ") || "none"} |`,
-         )]
-      : ["No critical zones defined."]),
-    "",
-    "## Camera Analysis",
-    "",
-    ...(report.cameras.length > 0
-      ? ["| Camera | Coverage | Best Zone Quality | Zones Failed | NDAA | Privacy Mask |",
-         "|--------|----------|-------------------|--------------|------|--------------|",
-         ...report.cameras.map((c) =>
-           `| ${c.name} | ${c.coveragePct.toFixed(1)}% | ${c.bestZoneQuality} | ${c.zonesFailed} | ${c.ndaaCompliant ? "Yes" : "No"} | ${c.privacyMaskingEnabled ? "Active" : "Off"} |`,
-         )]
-      : ["No cameras configured."]),
-    "",
-    "## Issues",
-    "",
-    ...(report.issues.length > 0
-      ? report.issues.map((i) => `- **[${i.severity.toUpperCase()}]** ${i.description}`)
-      : ["No issues found."]),
-    "",
-    "## Recommendations",
-    "",
-    ...(report.recommendations.length > 0
-      ? report.recommendations.map((r) =>
-          `- [${r.verified ? "x" : " "}] ${r.description} (${r.costCategory}) — ${r.estimatedImpact}`,
-        )
-      : ["No recommendations."]),
-    "",
-    ...(report.redundancyMatrix
-      ? [
-          "## Redundancy Matrix",
-          `- Cameras: ${report.redundancyMatrix.cameraCount}`,
-          `- Zones: ${report.redundancyMatrix.zoneCount}`,
-          `- Redundant zones: ${report.redundancyMatrix.redundantZoneCount}`,
-          `- SPOF zones: ${report.redundancyMatrix.spofZoneCount}`,
-          `- Uncovered zones: ${report.redundancyMatrix.uncoveredZoneCount}`,
-          ...(report.redundancyMatrix.vulnerableZones.length > 0
-            ? [
-                "- Vulnerable zones:",
-                ...report.redundancyMatrix.vulnerableZones.map((zone) =>
-                  `  - ${zone.label}: ${zone.status.replace(/_/g, " ")}${zone.coveringCameraNames.length > 0 ? ` (${zone.coveringCameraNames.join(", ")})` : ""}`,
-                ),
-              ]
-            : []),
-          "- Camera matrix:",
-          ...report.redundancyMatrix.cameraRows.map(
-            (row) =>
-              `  - ${row.cameraName} (${row.status}, ${row.coveragePct.toFixed(1)}%, ${row.criticalityLabel} ${row.criticalityScore}/10) | single-point: ${row.soleCoverageZones.map((zone) => zone.label).join(", ") || "none"} | covered: ${row.coveredZones.map((zone) => `${zone.label}${zone.isSole ? " ⚠" : ""}`).join(", ") || "none"}`,
-          ),
-          "",
-        ]
-      : []),
-    ...(report.temporalProfile
-      ? [
-          "## Temporal Profile",
-          `- Vulnerability windows: ${report.temporalProfile.vulnerabilityWindowCount}`,
-          `- Safest periods: ${report.temporalProfile.safestPeriods.map((p) => `${formatHour(p.startHour)}–${formatHour(p.endHour)}`).join(", ")}`,
-          "",
-        ]
-      : []),
-    ...(report.adversarialPath
-      ? [
-          "## Coverage Failure Replay",
-          "- Defensive route-risk analysis for coverage hardening (not attacker guidance)",
-          `- Exposure score: ${report.adversarialPath.exposureScore.toFixed(1)}`,
-          `- Detection probability: ${(report.adversarialPath.detectionProbability * 100).toFixed(0)}%`,
-          "",
-        ]
-      : []),
-    ...(report.novelAlgorithms
-      ? [
-          "## Novel Algorithms",
-          `- Coverage Entropy: ${report.novelAlgorithms.coverageEntropy ? `${report.novelAlgorithms.coverageEntropy.normalizedEntropy.toFixed(2)} norm · ${report.novelAlgorithms.coverageEntropy.entropyBits.toFixed(2)} bits · dominant ${report.novelAlgorithms.coverageEntropy.dominantQuality} ${report.novelAlgorithms.coverageEntropy.dominantQualityShare.toFixed(1)}%` : "Not computed"}`,
-          `- Coverage Fragility: ${report.novelAlgorithms.coverageFragility ? `${(report.novelAlgorithms.coverageFragility.meanFragility * 100).toFixed(1)}% mean · ${report.novelAlgorithms.coverageFragility.fragileCellCount}/${report.novelAlgorithms.coverageFragility.totalCells} fragile cells` : "Not computed"}`,
-          `- Coverage Uncertainty: ${report.novelAlgorithms.coverageUncertainty ? `${report.novelAlgorithms.coverageUncertainty.sampleCount} samples · ${report.novelAlgorithms.coverageUncertainty.meanCoveragePct.toFixed(1)}% mean (${report.novelAlgorithms.coverageUncertainty.p5CoveragePct.toFixed(1)}%–${report.novelAlgorithms.coverageUncertainty.p95CoveragePct.toFixed(1)}%)` : "Not computed"}`,
-          `- Coverage Posture Variation: ${report.novelAlgorithms.postureVariation ? `${report.novelAlgorithms.postureVariation.profiles.length} profiles · worst ${report.novelAlgorithms.postureVariation.worstProfileLabel ?? "—"} ${report.novelAlgorithms.postureVariation.worstProfileCoveragePct != null ? `${report.novelAlgorithms.postureVariation.worstProfileCoveragePct.toFixed(1)}%` : ""} · largest drop ${report.novelAlgorithms.postureVariation.largestDropProfileLabel ?? "—"} (${formatSignedDelta(report.novelAlgorithms.postureVariation.largestDropDeltaPct)})` : "Not computed"}`,
-          `- Blind Spot Topology: ${report.novelAlgorithms.blindRegions ? `${report.novelAlgorithms.blindRegionCount ?? report.novelAlgorithms.blindRegions.length} regions · ${report.novelAlgorithms.blindRegions.filter((region) => region.severity === "critical").length} critical` : "Not computed"}`,
-          `- Blind Spot Fingerprint: ${report.novelAlgorithms.blindSpotFingerprint ? `${report.novelAlgorithms.blindSpotFingerprint.fingerprint} · ${report.novelAlgorithms.blindSpotFingerprint.regionCount} regions` : "Not computed"}`,
-          `- Reflective Bounce: ${report.novelAlgorithms.reflectiveBounce ? `${report.novelAlgorithms.reflectiveBounce.reflectiveWindowCount} reflective windows · ${report.novelAlgorithms.reflectiveBounce.affectedCellCount} affected cells` : "Not computed"}`,
-          `- K-Robustness: ${report.novelAlgorithms.kRobustness ? `K=${report.novelAlgorithms.kRobustness.kRobustness} / ${report.novelAlgorithms.kRobustness.totalCameras}` : "Not computed"}`,
-          `- Placement Oracle: ${report.novelAlgorithms.placementOracle ? `${report.novelAlgorithms.placementOracle.candidateCount} candidates · best ${report.novelAlgorithms.placementOracle.bestCandidateMountType} @ ${report.novelAlgorithms.placementOracle.bestCandidatePosition[0].toFixed(1)}, ${report.novelAlgorithms.placementOracle.bestCandidatePosition[2].toFixed(1)} · score ${report.novelAlgorithms.placementOracle.bestCandidateScore.toFixed(1)}` : "Not computed"}`,
-          `- Temporal Anomalies: ${report.novelAlgorithms.temporalAnomalies ? `${report.novelAlgorithms.temporalAnomalies.anomalyWindowCount} windows` : "Not computed"}`,
-          `- Occlusion Blame: ${report.novelAlgorithms.occlusionBlame ? `${report.novelAlgorithms.occlusionBlame.length} zones` : `${report.novelAlgorithms.occlusionBlameCount ?? 0} groups`}`,
-          `- Blind Regions: ${report.novelAlgorithms.blindRegionCount ?? 0} regions`,
-          "",
-        ]
-      : []),
-    ...(report.novelAlgorithms?.occlusionBlame && report.novelAlgorithms.occlusionBlame.length > 0
-      ? [
-          "## Occlusion Blame",
-          ...report.novelAlgorithms.occlusionBlame.map((zone) => [
-            `- ${zone.zoneLabel} (${zone.baselineQuality})`,
-            ...zone.obstructions.map(
-              (obstruction) =>
-                `  - ${obstruction.label}: ${(obstruction.blameFraction * 100).toFixed(0)}% blame, ${obstruction.qualityWithout} without, +${obstruction.qualityImprovement.toFixed(1)} improvement`,
-            ),
-          ]).flat(),
-          "",
-        ]
-      : []),
-    ...(report.novelAlgorithms?.blindRegions && report.novelAlgorithms.blindRegions.length > 0
-      ? [
-          "## Blind Spot Topology",
-          ...report.novelAlgorithms.blindRegions.map(
-            (region) =>
-              `- [${region.severity.toUpperCase()}] ${region.description} (${region.classification}, ${region.areaSqM.toFixed(1)}m²)${region.affectedZoneIds.length > 0 ? ` — zones: ${region.affectedZoneIds.join(", ")}` : ""}`,
-          ),
-          "",
-        ]
-      : []),
-    ...(report.novelAlgorithms?.blindSpotFingerprint
-      ? [
-          "## Blind Spot Fingerprint",
-          `- Fingerprint: ${report.novelAlgorithms.blindSpotFingerprint.fingerprint}`,
-          `- Regions: ${report.novelAlgorithms.blindSpotFingerprint.regionCount}`,
-          `- Critical / Entry-linked / Isolated: ${report.novelAlgorithms.blindSpotFingerprint.criticalRegionCount} / ${report.novelAlgorithms.blindSpotFingerprint.entryConnectedRegionCount} / ${report.novelAlgorithms.blindSpotFingerprint.isolatedRegionCount}`,
-          `- Total blind area: ${report.novelAlgorithms.blindSpotFingerprint.totalBlindAreaSqM.toFixed(1)} m²`,
-          "",
-        ]
-      : []),
-    ...(report.novelAlgorithms?.reflectiveBounce
-      ? [
-          "## Reflective Bounce Vision",
-          `- Reflective windows: ${report.novelAlgorithms.reflectiveBounce.reflectiveWindowCount}`,
-          `- Affected cells: ${report.novelAlgorithms.reflectiveBounce.affectedCellCount}`,
-          `- Affected cameras: ${report.novelAlgorithms.reflectiveBounce.affectedCameraCount}`,
-          "",
-        ]
-      : []),
-    ...(report.novelAlgorithms?.placementOracle
-      ? [
-          "## Placement Oracle",
-          `- Candidate count: ${report.novelAlgorithms.placementOracle.candidateCount}`,
-          `- Best candidate: ${report.novelAlgorithms.placementOracle.bestCandidateMountType} @ ${report.novelAlgorithms.placementOracle.bestCandidatePosition[0].toFixed(1)}, ${report.novelAlgorithms.placementOracle.bestCandidatePosition[2].toFixed(1)}`,
-          `- Best score: ${report.novelAlgorithms.placementOracle.bestCandidateScore.toFixed(1)}`,
-          "",
-        ]
-      : []),
-    ...(report.novelAlgorithms?.kRobustness?.criticalSets?.length
-      ? [
-          "## K-Robustness Critical Sets",
-          ...report.novelAlgorithms.kRobustness.criticalSets.slice(0, 5).map(
-            (set) => `- K=${set.k}: ${set.cameraNames.join(", ")} (exposure ${set.exposureScore.toFixed(1)}, ${set.waypointCount} waypoints)`,
-          ),
-          "",
-        ]
-      : []),
-    "## Modeling scope and requirement checks",
-    `**${report.meetsModeledZoneRequirements ? "Meets modeled zone requirements" : "Does not fully meet modeled zone requirements"}** — ${report.summary.zonesPassing}/${report.summary.zonesTotal} zones meet requirements under current assumptions.`,
-    "This report is planning-grade and does not confer legal, forensic, or compliance certification.",
-    "",
-    `---`,
-    `*Generated by SentinelTwin Studio. Standards: ${report.standardsRef}*`,
-  ];
-  return lines.join("\n");
+  switch (report.audience) {
+    case "operator": return exportOperatorMarkdown(report);
+    case "auditor": return exportAuditorMarkdown(report);
+    case "insurer": return exportInsurerMarkdown(report);
+    case "installer": return exportInstallerMarkdown(report);
+    case "privacy_reviewer": return exportPrivacyReviewerMarkdown(report);
+    default: return exportOperatorMarkdown(report);
+  }
 }
 
 export function exportAsText(report: ReportData): string {
@@ -2203,10 +1966,15 @@ function redactReportDataForVisibility(report: ReportData, visibility: ReportVis
     redacted.visibilityLabel = getReportVisibilityProfile(visibility).label;
     redacted.visibilityFraming = getReportVisibilityProfile(visibility).framing;
     redacted.provenance.confidenceNotes = [];
-    redacted.evidenceTrail.recentEntries = redacted.evidenceTrail.recentEntries.map((entry) => ({
-      ...entry,
-      confidence: "withheld",
-    })).slice(0, 3);
+    redacted.evidenceTrail.recentEntries.forEach((entry) => {
+      entry.confidence = "withheld";
+    });
+    if (redacted.evidenceLedger) {
+      redacted.evidenceLedger.forEach((entry) => {
+        entry.confidence = 0;
+      });
+    }
+    redacted.evidenceTrail.recentEntries = redacted.evidenceTrail.recentEntries.slice(0, 3);
     return redacted;
   }
 
@@ -2221,19 +1989,20 @@ function redactReportDataForVisibility(report: ReportData, visibility: ReportVis
     sensorEvidenceCount: 0,
     recentEntries: [],
   };
+  redacted.evidenceLedger = undefined;
   redacted.truthLadder = {
-    labels: [],
-    highestConfidence: 0,
-    lowestConfidence: 0,
-    overallConfidenceLabel: "Redacted for privacy",
     nodeCount: 0,
     reviewedNodeCount: 0,
-    reviewedCoveragePct: 0,
     verifiedNodeCount: 0,
     sourceTraceCount: 0,
-    sourceTraceCoveragePct: 0,
     suspectGeometryCount: 0,
     invalidGeometryCount: 0,
+    reviewStatusCounts: { unreviewed: 0, accepted: 0, corrected: 0, calibrated: 0, verified: 0 },
+    geometryValidityCounts: { valid: 0, suspect: 0, invalid: 0 },
+    sourceCounts: {},
+    reviewedCoveragePct: 0,
+    sourceTraceCoveragePct: 0,
+    geometryValidityCoveragePct: 0,
     summary: "Redacted",
   };
   redacted.temporalTwin = undefined;

@@ -11,12 +11,13 @@ describe("compare share link", () => {
         compareSnapshotAId: "snap_a",
         compareSnapshotBId: "snap_b",
         compareMode: "report",
+        compareProvenanceNote: "derived state from \"Checkpoint A\"",
       },
       "#report",
     );
 
     expect(url).toBe(
-      "https://sentineltwin.local/studio?project=retail&studio=1&compareSnapshotA=snap_a&compareSnapshotB=snap_b&compareMode=report#report",
+      "https://sentineltwin.local/studio?project=retail&studio=1&compareSnapshotA=snap_a&compareSnapshotB=snap_b&compareMode=report&compareProvenance=derived+state+from+%22Checkpoint+A%22#report",
     );
 
     const parsed = parseCompareShareLink(new URL(url).search);
@@ -24,6 +25,7 @@ describe("compare share link", () => {
       snapshotAId: "snap_a",
       snapshotBId: "snap_b",
       mode: "report",
+      provenanceNote: "derived state from \"Checkpoint A\"",
     });
   });
 
@@ -33,6 +35,7 @@ describe("compare share link", () => {
       compareSnapshotAId: null,
       compareSnapshotBId: null,
       compareMode: null,
+      compareProvenanceNote: null,
     });
 
     expect(params.toString()).toBe("keep=1");

@@ -1,10 +1,15 @@
 import { describe, expect, test } from "bun:test";
+import type { NextRequest } from "next/server";
 
 import { GET } from "../route";
 
+const createNextRequest = (url: string, init?: RequestInit): NextRequest => (
+  new Request(url, init) as any as unknown as any
+);
+
 describe("truth-audit route", () => {
   test("returns the current trust audit report", async () => {
-    const response = await GET();
+    const response = await GET(createNextRequest("http://localhost/api/truth-audit"));
     expect(response.status).toBe(200);
 
     const payload = await response.json();

@@ -19,11 +19,18 @@ For the full-vision gap inventory and next-slice sequencing, see
 ## Path replay / camera-view sync (2026-05-29)
 
 - Path Replay now writes its play/pause, seek, reset, and path-change state back into the shared replay store, so Camera View and Camera Wall stay synchronized with the active replay progress instead of reading a local-only loop ✅
+- The replay timeline now also surfaces a follow-actor focus cue, lead-camera summary, coverage reach count, and replay status strip so the operator can read the current path state without leaving the timeline surface ✅
 
 ## Shared-workspace access / identity conflict (2026-05-29)
 
 - The Governance tab now exposes a local shared-workspace access surface with active member routing, single-user/shared mode toggles, and per-member approval posture so the current actor and reviewer path are visible in-product ✅
 - Workspace access changes now flow through the canonical store, evidence ledger, support bundle, and `/api/workspace-identity-conflict` archive boundary, so local membership drift, approval routing, and shared-identity conflict replay are all represented as canonical product state instead of ad-hoc test fixtures ✅
+- The shared approval route now carries a stable route key plus route-scope and active-member eligibility metadata, and the archive loaders normalize older route records into that canonical route contract so remote identity/routing decisions can be replayed consistently across live and archived workspace state ✅
+
+## API CORS / origin handling (2026-05-30)
+
+- The Studio API routes now share a canonical CORS helper and respond to `OPTIONS` preflight requests, with loopback/local dev origins allowed by default and extra origins configurable through `SENTINELTWIN_API_ALLOWED_ORIGINS` so cross-origin browser access no longer depends on each route hand-rolling its own headers ✅
+- The launcher now also renders a local workspace catalog summary with scope, organization, owner, and visibility breakdown plus the local-first catalog bridge note, so the org/account boundary is visible in-product even though canonical billing, invites, and ownership transfer remain open ✅
 
 ## Workspace memory retrieval (2026-05-29)
 
@@ -36,6 +43,9 @@ For the full-vision gap inventory and next-slice sequencing, see
 - Launcher workspace-memory results now expose explicit destination metadata (`Target`, `Route`) so archive and report hits read like concrete navigation actions instead of opaque snippets ✅
 - The launcher’s start-project cards now show explicit maturity labels (`Complete`, `Available`, `Preview`, `Planned`) so the visible entry flows stay honest about what is actually ready versus still aspirational ✅
 - Saved workspaces now carry local `workspaceOrganization`, `workspaceOwner`, and `workspaceVisibility` metadata, and the launcher editor/browser surfaces those fields so the workspace catalog reads like an org-aware boundary instead of a flat local list ✅
+- The launcher now also renders a local workspace account summary with plan posture, soft quota, and entitlement posture, so the org/account boundary is visible as a derived local bridge instead of only per-card metadata ✅
+- Operational evidence archives now carry that workspace account profile too, so recovery and merge-preflight preserve the local account bridge instead of dropping back to defaults ✅
+- Governance now exposes a real branch-sync comparison against the latest archived operational evidence branch, so the sync control is no longer a mock remote placeholder ✅
 - The visible walkthrough and focus preset labels now use guided-workflow language (`Guided Walkthrough`, `Enter/Exit Guided Walkthrough`, `Focused workspace with all docks hidden`) instead of demo-first copy, while the underlying walkthrough and focus behavior remain the same ✅
 
 ## Guided scan assistant (2026-05-29)
@@ -205,7 +215,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - The report and compare surfaces now also export a dedicated JSON evidence bundle, carrying the scene, report data, compare context, and evidence trail as a reusable handoff artifact ✅
 - Report exports and the report workspace header now surface a Sensors count from the canonical scene model, and the editor now exposes a dedicated sensor tool, sensor inspector, and sensor inventory tab while the broader live fusion layer remains camera-first ✅
 - The camera inspector analytics tab now surfaces a live `Sensor Fusion` preview with the nearest sensor, distance, state, and coverage mode so the editor can show the current fusion boundary even before full ONVIF/live ingestion exists ✅
-- The camera inspector now also exposes a live camera binding section plus a camera metadata ingest bridge that can paste JSON/NDJSON or pull an external feed URL, archive the submission, and apply matched camera status/clarity/night-mode and live session fields through the canonical store while the live connection probe/archive boundary now understands JSON, NDJSON, and ONVIF-style XML responses, tries SOAP-first for ONVIF binds, supports session refreshes while connected, captures transport response and auth challenge metadata on real negotiation steps, and surfaces an active session lease registry with expiry timestamps plus a transport-session handle so the remaining device-protocol seam stays honest ✅
+- The camera inspector now also exposes a live camera binding section plus a camera metadata ingest bridge that can paste JSON/NDJSON or pull an external feed URL, archive the submission, and apply matched camera status/clarity/night-mode and live session fields through the canonical store while the live connection probe/archive boundary now understands JSON, NDJSON, and ONVIF-style XML responses, retries real Basic/Digest challenge-response probes on both the device and advertised event-subscription endpoints when the device challenges the first request, carries stored ONVIF credentials through the inspector request path, supports session refreshes while connected, captures transport response and auth challenge metadata on real negotiation steps, and surfaces an active session lease registry with expiry timestamps plus a transport-session handle so the remaining device-protocol seam stays honest ✅
 - The debug/support bundle now carries both the sensor ingest archive and the camera live connection archive, including the live session snapshot fields, transport-session metadata, and refresh history, while the inspector also shows the active lease registry, expiry, and transport handle, so the operator handoff package keeps the live metadata story together with the rest of the evidence trail ✅
 - Scene Intelligence now has an explicit temporal replay scrubber with point-in-time reconstruction and restore actions, so the operational evidence trail can be scrubbed and previewed instead of only listed as recent events ✅
 - Scene Intelligence now also surfaces a temporal operational twin summary with scene-event counts, reconstructable checkpoints, published checkpoints, branch heads, checkpoint age, published age, and current-vs-checkpoint / current-vs-published deltas so the operator can answer “what did we know, and when?” without leaving the evidence surface ✅
@@ -221,7 +231,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - All Zod schemas + TypeScript types ✅
 - All node types: Camera, ObstructionNode, SecurityLightNode, WallNode, DoorNode, WindowNode,
   CriticalZoneNode, PrivacyZoneNode, EntryPointNode, ScenarioPath ✅
-- `sensors: SensorNode[]` exists as a zero-default schema boundary for future multi-sensor work, and dedicated sensor tools / inspector / inventory surfaces are now wired into the editor while live sensor events, pasted metadata intake, the external feed bridge, the camera live binding stream, the camera live-connection probe/archive route, the camera metadata ingest bridge, the temporal replay surface, the camera metadata event stream, and the sensor ingest history archive now feed the canonical evidence trail, while the ONVIF probe now runs through a real SOAP client that parses device information instead of a mock session manager ✅
+- `sensors: SensorNode[]` exists as a zero-default schema boundary for future multi-sensor work, and dedicated sensor tools / inspector / inventory surfaces are now wired into the editor while live sensor events, pasted metadata intake, the external feed bridge, the camera live binding stream, the camera live-connection probe/archive route, the camera metadata ingest bridge, the temporal replay surface, the camera metadata event stream, and the sensor ingest history archive now feed the canonical evidence trail, while the ONVIF probe now runs through a real SOAP client that parses device information and retries authenticated challenge/response probes instead of a mock session manager ✅
 - Full SimulationResult with coverageCells, criticalZoneResults, adversarialPath ✅
 - `CoverageCellResult.fragility?: number` (0=robust, 1=fragile) ✅
 - `SimulationResult.fragilitySummary?: { meanFragility, fragileCellCount, robustCellCount, totalCells }` ✅
@@ -252,7 +262,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - SimStatus badge (Needs Recompute / Running / Up to date) ✅
 - Environment mode dropdown (Day/Dusk/Night) ✅
 - Run Simulation button (wired, triggers simulation) ✅
-- Night Mode and Camera Failure quick actions are wired to live scene state changes ✅
+- Night Mode and Camera Failure quick actions are wired to live scene state changes, and the Camera Failure action now jumps the operator into the redundancy analysis view after the toggle ✅
 - Save Snapshot, Compare, and Generate Report actions are wired ✅
 - Scene name dynamically displays `scene.name` (no longer hardcoded) ✅
 - "New Scene..." opens SceneBuilderWizard modal with template/blank/floor-plan creation ✅
@@ -309,6 +319,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - The `Governance` tab now also exposes a workspace membership archive queue so shared-workspace identity, routing policy, and snapshot drift can be archived and fanned out through a backend-shaped handoff instead of only living in local store state, and it can now sync the live state back to the latest archived snapshot when the operator chooses to reconcile ✅
 - The `Governance` tab now also exposes a `Resolve Approval Route` action that archives the resolved approval route through `/api/workspace-approval-route`, records a `workspace_approval_routed` evidence event, and surfaces the route status and target reviewer in the control plane ✅
 - The `Governance` tab now also exposes a workspace identity conflict resolution/archive backed by `/api/workspace-identity-conflict`, plus a selectable conflict diff view and replay result that recomputes the selected archived conflict against the current live workspace state, so drift can be captured, replayed, and turned into a canonical remote-shared-identity policy recommendation before a real backend identity service exists ✅
+- The right-rail Governance review panel now shows an actual structural branch comparison against `main` with before/after counts plus added, changed, and removed scene nodes, so the review surface no longer advertises a placeholder diff summary ✅
 - The trust-audit manifest now covers the shared-identity conflict surface copy, so the Governance tab's conflict-resolution lane is verified alongside the approval and membership handoff surfaces ✅
 - The Governance tab now records identity conflict resolution itself as a first-class `workspace_identity_conflict_resolved` evidence event, so the governance trail distinguishes the conflict resolution from the generic membership-sync action that accompanied it ✅
 - The sensor panel now also exposes an external feed bridge that can pull JSON/NDJSON from a live URL through `/api/sensor-ingest`, so live metadata can enter the canonical evidence trail without paste-only intake ✅
@@ -403,6 +414,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - View tab now leads with a dedicated View Mode card and Target Info card above the live feed, while the DORI overlay summary and overlay toggles remain wired to the same feed state ✅
 - Properties tab now includes a placement preset library with `Best fit` and `Tool rail` context, plus one-click preset application to the selected camera ✅
 - Failures: camera failure simulation controls (offline/dirty/night-disabled), criticality scoring, redundancy analysis, and impact notes are implemented ✅
+- The camera failures tab now deep-links into the redundancy analysis view after a failure toggle or restore, so the operator lands on the matrix that explains the impact instead of stopping at the switch itself ✅
 - ObstructionInspector: position, rotation, dimensions, material (all wired to updateNode) ✅
 - "Test Without This Obstruction" button is wired to counterfactual simulation with delta metrics ✅
 - Aim at Zone button: wired ✅
@@ -734,6 +746,7 @@ The following issues were fixed to reach 0 typed errors (only pre-existing TS700
 - Scene Intelligence now also shows that recent operational evidence archive history directly in the provenance surface, with browser handoff copy/open and canonical restore actions for each archive.
 - The point-in-time reconstruction card now exposes exact-versus-derived provenance for the selected checkpoint, so users can see whether the resolved scene came from the selected event itself or from an earlier snapshot source.
 - Report exports now include the same exact-versus-derived checkpoint provenance for the latest checkpoint and latest published checkpoint in the temporal twin summary, so HTML/markdown/text exports match the interactive reconstruction surface.
+- Scene Intelligence archive cards and compare handoff cards now surface the same checkpoint provenance note at the point of use, so archive restore and Before/After / Report Compare handoffs stay legible without needing to open the reconstructed scene first.
 - `PathMap` copy now uses canonical scenario/replay language (`Path Map - Scenario / Path`, `Route Visibility`, `Open Path Replay`) so bottom-map semantics align with the design-pack route-analysis contract.
 - Added `path-map.test.ts` source-contract coverage to prevent regression on the canonical PathMap naming and replay action copy.
 - `StudioDashboardHome` now matches remaining goal4 root-copy requirements: `Demo Sites` nav label, `STUDIO` section heading, scene summary including path counts, and explicit `manual-assisted site photo intake` wording on guided scan surfaces.
@@ -741,3 +754,17 @@ The following issues were fixed to reach 0 typed errors (only pre-existing TS700
 - Added explicit `/studio` route via `apps/studio/src/app/studio/page.tsx`, so the documented root hierarchy (`/` dashboard, `/studio` workspace, `?studio=1` bypass) is now implemented in code rather than only implied by query handling.
 - Dashboard action/copy consistency pass: right-rail report action now says `Open Report Lite`, and quick-start scan copy now uses `manual-assisted site photo intake` language.
 - Added `root-routing-contract.test.ts` to lock the launcher-first root contract (`/` dashboard by default, `?studio=1` explicit StudioShell bypass) at the source level.
+- Build/type hardening in progress: fixed `SiteIntakeHub` output detail binding (`selected.detail.output` -> `selected.output`) to match `SiteIntakeSourceCard` type, and added `site-intake-hub.test.ts` to guard manual-assisted copy + schema-aligned output binding.
+- Build verification now passes in `apps/studio` (`npm run build`): Next.js production build completes, TypeScript completes, and route output includes both `/` and `/studio`.
+- Scene template typing now explicitly returns canonical camera schema shape via `cam(...): SecurityScene["cameras"][number]`, preventing template-camera drift against required camera fields.
+- Canonical naming consistency pass:
+  - `StudioShell` shortcuts now use `Report Lite` wording (view-mode summary and `R` action label).
+  - `HelpTab` workspace shortcuts now use `Open Report Lite`.
+  - `Docs/product/STUDIO_HOME_FLOW.md` now uses `Report Lite` in primary actions and full workspace list.
+- Build runtime note (current parallel environment): repeated `npm run build` runs now complete webpack compile + TypeScript and then receive external `SIGTERM` (exit 143) during static page generation; this appears environmental/interruption-related rather than a TypeScript regression in current code.
+
+## Clarified Feature States (2026-05-30)
+
+- **Scan-First Flow**: Explicitly documented as a "manual-assisted capture" workflow. No automatic segmentation or depth mapping is currently active in the core loop.
+- **AI Layout Draft**: Explicitly documented as a prototype-level draft assistant. Generates approximate layouts but requires manual refinement.
+- **Floor-plan Import**: Explicitly documented as a best-effort prototype extraction. Not yet production-grade and requires manual cleanup of extracted walls.

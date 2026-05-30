@@ -1742,6 +1742,7 @@ function formatMultiplier(value: number | undefined): string {
 function HeatmapCellExplainabilityCard() {
   const hover = useStudioStore((s) => s.heatmapHover);
   const scene = useStudioStore((s) => s.scene);
+  const heatmapMode = useStudioStore((s) => s.heatmapMode);
 
   if (!hover) return null;
 
@@ -1752,6 +1753,19 @@ function HeatmapCellExplainabilityCard() {
   });
 
   const topEvaluations = cameraEvaluations.slice(0, 4);
+  const lightingEvaluations = cameraEvaluations.filter(([, evaluation]) =>
+    (evaluation.illuminatedBy?.length ?? 0) > 0 ||
+    (evaluation.shadowedBy?.length ?? 0) > 0 ||
+    typeof evaluation.lightLevel === "number",
+  );
+  const lightingSummary = lightingEvaluations.reduce(
+    (summary, [, evaluation]) => ({
+      maxLightLevel: Math.max(summary.maxLightLevel, evaluation.lightLevel ?? 0),
+      illuminatedBy: new Set([...summary.illuminatedBy, ...(evaluation.illuminatedBy ?? [])]),
+      shadowedBy: new Set([...summary.shadowedBy, ...(evaluation.shadowedBy ?? [])]),
+    }),
+    { maxLightLevel: 0, illuminatedBy: new Set<string>(), shadowedBy: new Set<string>() },
+  );
   const left = hover.screenX + 14;
   const top = hover.screenY + 14;
 
@@ -1766,16 +1780,22 @@ function HeatmapCellExplainabilityCard() {
       </div>
       <div className="grid grid-cols-3 gap-2 rounded-lg border border-[#1f2a40] bg-[#0d1421] p-2 text-[9px]">
         <div>
-          <div className="text-[#6c7e9f]">Quality</div>
-          <div className="font-semibold text-[#e3ebfb]">{getTrustQualityLabel(hover.cell.quality, scene.assumptions.doriStandard)}</div>
+          <div className="text-[#6c7e9f]">{heatmapMode === "lighting" ? "Light level" : "Quality"}</div>
+          <div className="font-semibold text-[#e3ebfb]">
+            {heatmapMode === "lighting" ? `${(lightingSummary.maxLightLevel * 100).toFixed(0)}%` : getTrustQualityLabel(hover.cell.quality, scene.assumptions.doriStandard)}
+          </div>
         </div>
         <div>
-          <div className="text-[#6c7e9f]">PPM</div>
-          <div className="font-semibold text-[#e3ebfb]">{hover.cell.ppm.toFixed(1)}</div>
+          <div className="text-[#6c7e9f]">{heatmapMode === "lighting" ? "Lit by" : "PPM"}</div>
+          <div className="truncate font-semibold text-[#e3ebfb]">
+            {heatmapMode === "lighting" ? ([...lightingSummary.illuminatedBy].join(", ") || "—") : hover.cell.ppm.toFixed(1)}
+          </div>
         </div>
         <div>
-          <div className="text-[#6c7e9f]">Covering cams</div>
-          <div className="font-semibold text-[#e3ebfb]">{hover.cell.coveringCameras.length}</div>
+          <div className="text-[#6c7e9f]">{heatmapMode === "lighting" ? "Light shadow" : "Covering cams"}</div>
+          <div className="truncate font-semibold text-[#e3ebfb]">
+            {heatmapMode === "lighting" ? ([...lightingSummary.shadowedBy].join(", ") || "—") : hover.cell.coveringCameras.length}
+          </div>
         </div>
       </div>
 

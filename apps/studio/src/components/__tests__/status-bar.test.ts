@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const statusBarPath = "./src/components/layout/StatusBar.tsx";
+const statusBarPath = new URL("../layout/StatusBar.tsx", import.meta.url);
 
 describe("StatusBar", () => {
   test("surfaces scene, view, selection, and coverage context in the footer", () => {

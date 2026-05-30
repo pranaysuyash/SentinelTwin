@@ -14,6 +14,7 @@ import {
   serializeOperationalEvidenceJournal,
 } from "@/lib/operational-evidence-journal";
 import { createDefaultWorkspaceAccessState } from "@/lib/workspace-access";
+import { createDefaultWorkspaceAccountProfile } from "@/lib/workspace-catalog";
 import { createDefaultWorkspaceGovernance } from "@/lib/workspace-governance";
 import { simulateStudio } from "@/simulation/simulate-studio";
 
@@ -31,6 +32,23 @@ describe("operational evidence archive", () => {
       sceneIntelligenceGraph: graph,
       operationalEvidenceEvents: [],
       workspaceAccess: createDefaultWorkspaceAccessState(),
+      workspaceAccount: {
+        ...createDefaultWorkspaceAccountProfile({
+          primaryOrganization: "North Region Security",
+          primaryOwner: "Pranay",
+          capabilities: {
+            sharedWorkspaces: true,
+            publishedWorkspaces: true,
+            archiveRecovery: true,
+            reportExports: true,
+            scanIntake: true,
+            liveEvidence: true,
+          },
+          workspaceCount: 2,
+        }),
+        accountName: "North Region Security",
+        ownerName: "Pranay",
+      },
       workspaceGovernance: { ...createDefaultWorkspaceGovernance(), sceneStatus: "published" },
     });
 
@@ -39,6 +57,9 @@ describe("operational evidence archive", () => {
     expect(restored?.version).toBe("1");
     expect(restored?.scene.id).toBe(smallRetailShopScene.id);
     expect(restored?.workspaceGovernance.sceneStatus).toBe("published");
+    expect(restored?.workspaceAccount.accountName).toBe("North Region Security");
+    expect(restored?.workspaceAccount.ownerName).toBe("Pranay");
+    expect(restored?.workspaceAccount.planTier).toBe("enterprise");
     expect(restored?.sceneIntelligenceGraphSummary.nodeCount).toBe(graph.summary.nodeCount);
   });
 
@@ -86,6 +107,19 @@ describe("operational evidence archive", () => {
       operationalEvidenceEvents: [first, second],
       operationalEvidenceJournal,
       workspaceAccess: createDefaultWorkspaceAccessState(),
+      workspaceAccount: createDefaultWorkspaceAccountProfile({
+        primaryOrganization: "North Region Security",
+        primaryOwner: "Pranay",
+        capabilities: {
+          sharedWorkspaces: true,
+          publishedWorkspaces: false,
+          archiveRecovery: true,
+          reportExports: true,
+          scanIntake: true,
+          liveEvidence: false,
+        },
+        workspaceCount: 1,
+      }),
       workspaceGovernance: createDefaultWorkspaceGovernance(),
     });
 
@@ -108,6 +142,19 @@ describe("operational evidence archive", () => {
       }),
       operationalEvidenceEvents: [],
       workspaceAccess: createDefaultWorkspaceAccessState(),
+      workspaceAccount: createDefaultWorkspaceAccountProfile({
+        primaryOrganization: "North Region Security",
+        primaryOwner: "Pranay",
+        capabilities: {
+          sharedWorkspaces: true,
+          publishedWorkspaces: false,
+          archiveRecovery: true,
+          reportExports: true,
+          scanIntake: true,
+          liveEvidence: false,
+        },
+        workspaceCount: 1,
+      }),
       workspaceGovernance: createDefaultWorkspaceGovernance(),
     });
 

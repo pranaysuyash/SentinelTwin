@@ -2,8 +2,13 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import type { NextRequest } from "next/server";
 
 import { GET, POST } from "../route";
+
+const createNextRequest = (url: string, init?: RequestInit): NextRequest => (
+  new Request(url, init) as any as unknown as any
+);
 
 function createTempRoot() {
   return mkdtempSync(join(tmpdir(), "sentineltwin-workspace-membership-archive-"));
@@ -24,7 +29,7 @@ describe("workspace-membership-archive route", () => {
   });
 
   test("queues a workspace membership handoff and persists archive history", async () => {
-    const response = await POST(new Request("http://localhost/api/workspace-membership-archive", {
+    const response = await POST(createNextRequest("http://localhost/api/workspace-membership-archive", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -102,7 +107,7 @@ describe("workspace-membership-archive route", () => {
     expect(body.workspaceGovernanceState.activeRole).toBe("reviewer");
     expect(body.approvalRoute.routeStatus).toBe("review_required");
 
-    const archive = await GET();
+    const archive = await GET(createNextRequest("http://localhost/api/workspace-membership-archive"));
     const archiveBody = await archive.json();
     expect(archiveBody.historyCount).toBe(1);
     expect(archiveBody.latestSubmission.sceneId).toBe("scene-membership");
@@ -121,7 +126,7 @@ describe("workspace-membership-archive route", () => {
     });
 
     try {
-      const response = await POST(new Request("http://localhost/api/workspace-membership-archive", {
+      const response = await POST(createNextRequest("http://localhost/api/workspace-membership-archive", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

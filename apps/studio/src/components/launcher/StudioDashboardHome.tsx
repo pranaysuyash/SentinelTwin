@@ -25,7 +25,7 @@ import {
 
 import { cn } from "@/lib/cn";
 import { getSceneSourceMeta } from "@/lib/scene-source";
-import { summarizeWorkspaceCatalog } from "@/lib/workspace-catalog";
+import { summarizeWorkspaceAccount, summarizeWorkspaceCatalog } from "@/lib/workspace-catalog";
 import { formatWorkspaceBranchLabel, searchWorkspaceMemory } from "@/lib/workspace-search";
 import type { GovernanceArchiveRecord } from "@/lib/governance-archive";
 import type { WorkspaceMembershipArchiveRecord } from "@/lib/workspace-membership-types";
@@ -1237,6 +1237,9 @@ export function StudioDashboardHome({
   const [cameraMetadataHistory, setCameraMetadataHistory] = useState<CameraMetadataArchiveRecord[]>([]);
   const [cameraLiveConnectionHistory, setCameraLiveConnectionHistory] = useState<CameraLiveConnectionArchiveRecord[]>([]);
   const operationalEvidenceArchiveHistory = useStudioStore((s) => s.operationalEvidenceArchiveHistory);
+  const workspaceAccountProfile = useStudioStore((s) => s.workspaceAccount);
+  const setWorkspaceAccountProfile = useStudioStore((s) => s.setWorkspaceAccountProfile);
+  const resetWorkspaceAccountProfile = useStudioStore((s) => s.resetWorkspaceAccountProfile);
   const browserProjects = useMemo(() => {
     const query = projectQuery.trim().toLowerCase();
     const filtered = savedProjects.filter((project) => {
@@ -1285,6 +1288,10 @@ export function StudioDashboardHome({
   const workspaceCatalog = useMemo(
     () => summarizeWorkspaceCatalog(savedProjects, selectedProjectRecord?.scene.id ?? scene.id),
     [savedProjects, scene.id, selectedProjectRecord?.scene.id],
+  );
+  const workspaceAccountSummary = useMemo(
+    () => summarizeWorkspaceAccount(savedProjects, selectedProjectRecord?.scene.id ?? scene.id, workspaceAccountProfile),
+    [savedProjects, scene.id, selectedProjectRecord?.scene.id, workspaceAccountProfile],
   );
   const workspaceMemoryResults = useMemo(
     () => searchWorkspaceMemory(workspaceMemoryQuery, {
@@ -2359,6 +2366,12 @@ export function StudioDashboardHome({
                       <div className="mt-3 text-[11px] text-[color:var(--st-muted)]">
                         {workspaceCatalog.scopeDetail}
                       </div>
+                      <div className="mt-2 text-[11px] text-[color:var(--st-muted)]">
+                        Local-first catalog bridge toward the canonical org/account boundary.
+                      </div>
+                      <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
+                        Plan, billing, invites, and ownership transfer remain open.
+                      </div>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
                           Shared: {workspaceCatalog.capabilities.sharedWorkspaces ? "Enabled" : "Local-only"}
@@ -2370,8 +2383,121 @@ export function StudioDashboardHome({
                           Archive: {workspaceCatalog.capabilities.archiveRecovery ? "Ready" : "Empty"}
                         </span>
                       </div>
-                      <div className="mt-2 text-[11px] text-[color:var(--st-muted)]">
-                        {workspaceCatalog.notes.join(" ")}
+                    </div>
+                    <div className="mt-4 rounded-[22px] border border-[color:var(--st-border)] bg-white/[0.025] p-4">
+                      <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Workspace Account</div>
+                      <div className="mt-3 flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-base font-semibold text-white">{workspaceAccountSummary.planLabel}</div>
+                          <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
+                            {workspaceAccountSummary.accountName} · {workspaceAccountSummary.ownerName}
+                          </div>
+                        </div>
+                        <span className={cn(
+                          "rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[0.16em]",
+                          workspaceAccountSummary.softQuotaExceeded
+                            ? "border-amber-400/25 bg-amber-500/10 text-amber-100"
+                            : "border-white/10 bg-white/[0.04] text-[color:var(--st-muted)]",
+                        )}>
+                          {workspaceAccountSummary.softQuotaLabel}
+                        </span>
+                      </div>
+                      <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                        <MiniStat
+                          label="Workspaces"
+                          value={`${workspaceAccountSummary.workspaceCount}`}
+                          accent="text-sky-200"
+                          detail={workspaceAccountSummary.planDetail}
+                        />
+                        <MiniStat
+                          label="Entitlements"
+                          value={`${Object.values(workspaceAccountSummary.entitlements).filter(Boolean).length}`}
+                          accent="text-emerald-200"
+                          detail="Shared, published, archive, report, scan, and live-evidence posture"
+                        />
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+                          Shared: {workspaceAccountSummary.entitlements.sharedWorkspaces ? "Enabled" : "Local-only"}
+                        </span>
+                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+                          Published: {workspaceAccountSummary.entitlements.publishedWorkspaces ? "Enabled" : "Local-only"}
+                        </span>
+                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+                          Ownership transfer: {workspaceAccountSummary.entitlements.ownershipTransfer ? "Enabled" : "Open"}
+                        </span>
+                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+                          Invites: {workspaceAccountSummary.entitlements.invites ? "Enabled" : "Open"}
+                        </span>
+                      </div>
+                      <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
+                        <MiniStat label="Private" value={`${workspaceAccountSummary.quotas.private}`} accent="text-white" />
+                        <MiniStat label="Shared" value={`${workspaceAccountSummary.quotas.shared}`} accent="text-white" />
+                        <MiniStat label="Published" value={`${workspaceAccountSummary.quotas.published}`} accent="text-white" />
+                      </div>
+                      <div className="mt-3 space-y-3 rounded-2xl border border-white/8 bg-black/[0.12] p-3">
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <label className="block">
+                            <span className="text-[11px] text-[color:var(--st-muted)]">Account name</span>
+                            <input
+                              value={workspaceAccountProfile.accountName}
+                              onChange={(event) => setWorkspaceAccountProfile({ accountName: event.target.value })}
+                              className="mt-1 w-full rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-sm text-white outline-none transition-colors focus:border-sky-400/35 focus:bg-white/[0.04]"
+                              placeholder="Personal Workspace"
+                            />
+                          </label>
+                          <label className="block">
+                            <span className="text-[11px] text-[color:var(--st-muted)]">Owner</span>
+                            <input
+                              value={workspaceAccountProfile.ownerName}
+                              onChange={(event) => setWorkspaceAccountProfile({ ownerName: event.target.value })}
+                              className="mt-1 w-full rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-sm text-white outline-none transition-colors focus:border-sky-400/35 focus:bg-white/[0.04]"
+                              placeholder="You"
+                            />
+                          </label>
+                          <label className="block">
+                            <span className="text-[11px] text-[color:var(--st-muted)]">Plan tier</span>
+                            <select
+                              value={workspaceAccountProfile.planTier}
+                              onChange={(event) => setWorkspaceAccountProfile({ planTier: event.target.value as typeof workspaceAccountProfile.planTier })}
+                              className="mt-1 w-full rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-sm text-white outline-none transition-colors focus:border-sky-400/35 focus:bg-white/[0.04]"
+                            >
+                              <option value="free">Free</option>
+                              <option value="pro">Pro</option>
+                              <option value="enterprise">Enterprise</option>
+                            </select>
+                          </label>
+                          <label className="block">
+                            <span className="text-[11px] text-[color:var(--st-muted)]">Workspace limit</span>
+                            <input
+                              type="number"
+                              min={1}
+                              value={workspaceAccountProfile.quotas.maxWorkspaces}
+                              onChange={(event) => setWorkspaceAccountProfile({
+                                quotas: {
+                                  ...workspaceAccountProfile.quotas,
+                                  maxWorkspaces: Number(event.target.value) || 1,
+                                },
+                              })}
+                              className="mt-1 w-full rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-sm text-white outline-none transition-colors focus:border-sky-400/35 focus:bg-white/[0.04]"
+                            />
+                          </label>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={resetWorkspaceAccountProfile}
+                            className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-[color:var(--st-muted)] transition-colors hover:bg-white/[0.05] hover:text-white"
+                          >
+                            Reset account profile
+                          </button>
+                        </div>
+                      </div>
+                      <div className="mt-3 text-[11px] text-[color:var(--st-muted)]">
+                        Local-first account bridge toward the canonical org/account model.
+                      </div>
+                      <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
+                        Plan, quota, invites, and ownership transfer remain open.
                       </div>
                     </div>
                     <div className="mt-4 space-y-2">

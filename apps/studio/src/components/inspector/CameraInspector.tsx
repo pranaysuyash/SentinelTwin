@@ -19,7 +19,7 @@ import { cn } from "@/lib/cn";
 import type { CameraLiveConnectionProbeResponse } from "@/lib/camera-live-connection";
 import type { CameraLiveConnectionArchiveRecord } from "@/lib/camera-live-connection-history";
 import type { CameraMetadataIngestResponse } from "@/lib/camera-metadata-live-ingest";
-import { QUALITY_LABEL } from "@/lib/quality-display";
+import { QUALITY_COLOR, QUALITY_LABEL } from "@/lib/quality-display";
 import type { CameraNode, DoriQuality, SimulationAssumptions } from "@/schema/security-scene";
 import { qualityToScore } from "@/simulation/dori";
 import { type InspectorTab, useStudioStore } from "@/store/studio-store";
@@ -150,6 +150,7 @@ export function CameraInspector() {
   const scene = useStudioStore((s) => s.scene);
   const inspectorTab = useStudioStore((s) => s.inspectorTab);
   const setTab = useStudioStore((s) => s.setInspectorTab);
+  const setBottomTab = useStudioStore((s) => s.setBottomTab);
   const result = useStudioStore((s) => s.simulationResult);
   const simulationRunning = useStudioStore((s) => s.simulationRunning);
   const runSimulation = useStudioStore((s) => s.runSimulation);
@@ -221,6 +222,8 @@ export function CameraInspector() {
   const [liveConnectionLabel, setLiveConnectionLabel] = useState(camera?.liveFeedLabel ?? "Primary live feed");
   const [liveConnectionMode, setLiveConnectionMode] = useState<CameraNode["liveConnectionMode"]>(camera?.liveConnectionMode ?? "onvif");
   const [liveConnectionStatus, setLiveConnectionStatus] = useState<CameraNode["liveConnectionStatus"]>(camera?.liveConnectionStatus ?? "disconnected");
+  const [liveConnectionOnvifUsername, setLiveConnectionOnvifUsername] = useState(camera?.onvifUsername ?? "");
+  const [liveConnectionOnvifPassword, setLiveConnectionOnvifPassword] = useState(camera?.onvifPassword ?? "");
   const [liveConnectionNotes, setLiveConnectionNotes] = useState("");
   const [liveConnectionStatusMessage, setLiveConnectionStatusMessage] = useState<string | null>(null);
   const [liveConnectionError, setLiveConnectionError] = useState<string | null>(null);
@@ -274,11 +277,13 @@ export function CameraInspector() {
       setLiveConnectionLabel((prev) => prev !== (camera?.liveFeedLabel ?? "Primary live feed") ? (camera?.liveFeedLabel ?? "Primary live feed") : prev);
       setLiveConnectionMode((prev) => prev !== (camera?.liveConnectionMode ?? "onvif") ? (camera?.liveConnectionMode ?? "onvif") : prev);
       setLiveConnectionStatus((prev) => prev !== (camera?.liveConnectionStatus ?? "disconnected") ? (camera?.liveConnectionStatus ?? "disconnected") : prev);
+      setLiveConnectionOnvifUsername((prev) => prev !== (camera?.onvifUsername ?? "") ? (camera?.onvifUsername ?? "") : prev);
+      setLiveConnectionOnvifPassword((prev) => prev !== (camera?.onvifPassword ?? "") ? (camera?.onvifPassword ?? "") : prev);
       setLiveConnectionNotes((prev) => prev !== "" ? "" : prev);
       setLiveConnectionStatusMessage((prev) => prev !== null ? null : prev);
       setLiveConnectionError((prev) => prev !== null ? null : prev);
     });
-  }, [cameraId, camera?.liveFeedLabel, camera?.liveFeedUrl, camera?.liveConnectionMode, camera?.liveConnectionStatus, camera?.notes]);
+  }, [cameraId, camera?.liveFeedLabel, camera?.liveFeedUrl, camera?.liveConnectionMode, camera?.liveConnectionStatus, camera?.notes, camera?.onvifPassword, camera?.onvifUsername]);
 
   const placementPreset = getCameraPreset();
   const bestPreset = camera ? findBestCameraPreset(camera) : null;
@@ -344,6 +349,14 @@ export function CameraInspector() {
     grid: viewToggles.overlays && viewToggles.grid,
   };
   const offlineImpact = camResult?.offlineImpact ?? [];
+  const openRedundancyMatrix = useCallback(() => {
+    setBottomTab("redundancy");
+  }, [setBottomTab]);
+  const updateCameraFailure = useCallback((patch: Partial<CameraNode>) => {
+    if (!camera) return;
+    updateNode(camera.id, patch);
+    openRedundancyMatrix();
+  }, [camera, openRedundancyMatrix, updateNode]);
   const resolutionKey = camera ? `${camera.resolutionMP}_${camera.resolutionWidth ?? 2688}x${camera.resolutionHeight ?? 1520}` : "";
   const typeKey = camera ? (camera.mountType === "ceiling" ? `${camera.resolutionMP}mp_dome` : `${camera.resolutionMP}mp_bullet`) : "";
   const viewModeLabel =
@@ -550,6 +563,8 @@ export function CameraInspector() {
           authMode: cameraBeforeUpdate?.authMode ?? undefined,
           authState: cameraBeforeUpdate?.authState ?? undefined,
           authRealm: cameraBeforeUpdate?.authRealm ?? undefined,
+          onvifUsername: (liveConnectionOnvifUsername.trim() || cameraBeforeUpdate?.onvifUsername) ?? undefined,
+          onvifPassword: (liveConnectionOnvifPassword || cameraBeforeUpdate?.onvifPassword) ?? undefined,
           authSessionId: cameraBeforeUpdate?.authSessionId ?? undefined,
           authSessionExpiresAt: cameraBeforeUpdate?.authSessionExpiresAt ?? undefined,
           raw: action === "disconnect" || action === "heartbeat" ? "" : "",
@@ -581,6 +596,8 @@ export function CameraInspector() {
         authMode: body.record.authMode ?? undefined,
         authState: body.record.authState ?? undefined,
         authRealm: body.record.authRealm ?? undefined,
+        onvifUsername: liveConnectionOnvifUsername.trim() || undefined,
+        onvifPassword: liveConnectionOnvifPassword || undefined,
         authSessionId: body.record.authSessionId ?? undefined,
         authSessionExpiresAt: body.record.authSessionExpiresAt ?? undefined,
         transportResponseStatus: body.record.transportResponseStatus ?? undefined,
@@ -628,6 +645,8 @@ export function CameraInspector() {
         authMode: body.record.authMode,
         authState: body.record.authState,
         authRealm: body.record.authRealm,
+        onvifUsername: liveConnectionOnvifUsername.trim() || undefined,
+        onvifPassword: liveConnectionOnvifPassword || undefined,
         authSessionId: body.record.authSessionId,
         authSessionExpiresAt: body.record.authSessionExpiresAt,
         transportResponseStatus: body.record.transportResponseStatus ?? null,
@@ -679,6 +698,8 @@ export function CameraInspector() {
     scene.name,
     liveConnectionLabel,
     liveConnectionMode,
+    liveConnectionOnvifPassword,
+    liveConnectionOnvifUsername,
     liveConnectionNotes,
     liveConnectionUrl,
     recordCameraLiveConnectionEvent,
@@ -756,7 +777,7 @@ export function CameraInspector() {
 
             <SectionCard title="Live Camera Binding">
               <div className="space-y-2">
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                   <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
                     <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Live feed URL</div>
                     <input
@@ -774,6 +795,27 @@ export function CameraInspector() {
                       value={liveConnectionLabel}
                       onChange={(event) => setLiveConnectionLabel(event.target.value)}
                       placeholder="Front entrance live stream"
+                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+                    />
+                  </div>
+                  <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
+                    <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">ONVIF username</div>
+                    <input
+                      aria-label="ONVIF username"
+                      value={liveConnectionOnvifUsername}
+                      onChange={(event) => setLiveConnectionOnvifUsername(event.target.value)}
+                      placeholder="camera operator"
+                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+                    />
+                  </div>
+                  <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
+                    <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">ONVIF password</div>
+                    <input
+                      aria-label="ONVIF password"
+                      type="password"
+                      value={liveConnectionOnvifPassword}
+                      onChange={(event) => setLiveConnectionOnvifPassword(event.target.value)}
+                      placeholder="••••••••"
                       className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
                     />
                   </div>
@@ -1657,10 +1699,10 @@ export function CameraInspector() {
                     }))
                     .filter((entry) => entry.quality !== undefined);
                   const doriRows = [
-                    ["identification", safeTargetDoriRanges.ident, "#60a5fa"],
-                    ["recognition", safeTargetDoriRanges.recog, "#22c55e"],
-                    ["observation", safeTargetDoriRanges.obs, "#eab308"],
-                    ["detection", safeTargetDoriRanges.det, "#f97316"],
+                    ["identification", safeTargetDoriRanges.ident, QUALITY_COLOR.identification],
+                    ["recognition", safeTargetDoriRanges.recog, QUALITY_COLOR.recognition],
+                    ["observation", safeTargetDoriRanges.obs, QUALITY_COLOR.observation],
+                    ["detection", safeTargetDoriRanges.det, QUALITY_COLOR.detection],
                   ] as const;
                   return (
                     <div className="space-y-2">
@@ -1783,9 +1825,9 @@ export function CameraInspector() {
                 <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">Simulate Failure</div>
                 <div className="space-y-2">
                   {[
-                    { label: "Camera Offline",       sub: "Power cut / network loss",      isActive: isOffline,       onToggle: () => updateNode(camera.id, { status: isOffline ? "on" : "off" }), activeColor: "bg-red-500/60" },
-                    { label: "Dirty / Blocked Lens", sub: "Spray paint, grease, mud",       isActive: isDirty,         onToggle: () => updateNode(camera.id, { clarity: isDirty ? "good" : "poor" }), activeColor: "bg-amber-500/60" },
-                    { label: "Night Vision Disabled", sub: "IR cut / low-light mode off",   isActive: isNightDisabled, onToggle: () => updateNode(camera.id, { nightMode: isNightDisabled ? "ir" : "none" }), activeColor: "bg-amber-500/60" },
+                    { label: "Camera Offline",       sub: "Power cut / network loss",      isActive: isOffline,       onToggle: () => updateCameraFailure({ status: isOffline ? "on" : "off" }), activeColor: "bg-red-500/60" },
+                    { label: "Dirty / Blocked Lens", sub: "Spray paint, grease, mud",       isActive: isDirty,         onToggle: () => updateCameraFailure({ clarity: isDirty ? "good" : "poor" }), activeColor: "bg-amber-500/60" },
+                    { label: "Night Vision Disabled", sub: "IR cut / low-light mode off",   isActive: isNightDisabled, onToggle: () => updateCameraFailure({ nightMode: isNightDisabled ? "ir" : "none" }), activeColor: "bg-amber-500/60" },
                   ].map(({ label, sub, isActive, onToggle, activeColor }) => (
                     <div key={label} className="flex items-center justify-between gap-2">
                       <div>
@@ -1806,7 +1848,7 @@ export function CameraInspector() {
                     <span className="text-[9px] text-amber-300">Failure active — re-run simulation to see impact</span>
                     <button
                       type="button"
-                      onClick={() => updateNode(camera.id, { status: "on", clarity: "good", nightMode: "ir" })}
+                      onClick={() => updateCameraFailure({ status: "on", clarity: "good", nightMode: "ir" })}
                       className="ml-2 flex-shrink-0 rounded border border-amber-500/30 px-1.5 py-0.5 text-[8px] font-medium text-amber-300 transition-colors hover:bg-amber-500/15"
                     >
                       Restore

@@ -1,8 +1,8 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { NextResponse } from "next/server";
 
 import { auditTrustSurfaces, formatTrustAuditReport } from "@/lib/truth-audit";
+import { corsJson, corsNoContent } from "@/lib/api-cors";
 
 function resolveStudioRoot() {
   const cwd = process.cwd();
@@ -18,13 +18,19 @@ function resolveStudioRoot() {
   return cwd;
 }
 
-export async function GET() {
+import { NextRequest } from "next/server";
+
+export async function GET(request: NextRequest) {
   const report = auditTrustSurfaces(resolveStudioRoot());
-  return NextResponse.json({
+  return corsJson({
     ok: report.ok,
     rootDir: report.rootDir,
     issues: report.issues,
     surfaces: report.surfaces,
     formatted: formatTrustAuditReport(report),
-  });
+  }, request, undefined, { methods: ["GET", "OPTIONS"] });
+}
+
+export async function OPTIONS(request: NextRequest) {
+  return corsNoContent(request, { methods: ["GET", "OPTIONS"] });
 }

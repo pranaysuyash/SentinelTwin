@@ -2,8 +2,13 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { NextRequest } from "next/server";
 
 import { GET, POST } from "../route";
+
+const createNextRequest = (url: string, init?: RequestInit): NextRequest => (
+  new Request(url, init) as any as unknown as any
+);
 
 const originalStoreDir = process.env.SENTINELTWIN_WORKSPACE_IDENTITY_CONFLICT_STORE_DIR;
 const testStoreDir = mkdtempSync(join(tmpdir(), "sentineltwin-workspace-identity-conflict-"));
@@ -21,7 +26,7 @@ afterAll(() => {
 
 describe("workspace-identity-conflict route", () => {
   test("archives the workspace identity conflict state and persists history", async () => {
-    const response = await POST(new Request("http://localhost/api/workspace-identity-conflict", {
+    const response = await POST(createNextRequest("http://localhost/api/workspace-identity-conflict", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -98,7 +103,7 @@ describe("workspace-identity-conflict route", () => {
     expect(body.conflictDiff.title).toBe("Conflict Diff");
     expect(body.conflictDiff.rows.some((row: { label: string }) => row.label === "Active member")).toBe(true);
 
-    const history = await GET();
+    const history = await GET(createNextRequest("http://localhost/api/workspace-identity-conflict"));
     const payload = await history.json();
     expect(payload.historyCount).toBe(1);
     expect(payload.latestSubmission.conflictStatus).toBe("reconcile_needed");
@@ -129,7 +134,7 @@ describe("workspace-identity-conflict route", () => {
     }) as typeof fetch;
 
     try {
-      const response = await POST(new Request("http://localhost/api/workspace-identity-conflict", {
+      const response = await POST(createNextRequest("http://localhost/api/workspace-identity-conflict", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import { z } from "zod";
 
-import { summarizeWorkspaceApprovalRouting } from "@/lib/workspace-membership-routing";
+import { normalizeWorkspaceApprovalRouteSummary, summarizeWorkspaceApprovalRouting } from "@/lib/workspace-membership-routing";
 import type { WorkspaceAccessState } from "@/lib/workspace-access";
 import type { WorkspaceApprovalRouteSummary } from "@/lib/workspace-membership-routing";
 import type { WorkspaceGovernanceState } from "@/lib/workspace-governance";
@@ -145,7 +145,7 @@ export function loadWorkspaceApprovalRouteHistory(rootDir = resolveWorkspaceAppr
         summary: candidate.summary,
         archiveStatus: (candidate.archiveStatus === "server archive" ? "server archive" : "local cache") as "server archive" | "local cache",
         historyId: candidate.historyId,
-        approvalRoute: candidate.approvalRoute,
+        approvalRoute: normalizeWorkspaceApprovalRouteSummary(candidate.approvalRoute as WorkspaceApprovalRouteSummary),
         workspaceAccessState: candidate.workspaceAccessState as WorkspaceAccessState,
         workspaceGovernanceState: candidate.workspaceGovernanceState as WorkspaceGovernanceState,
         archivedWorkspaceAccessState: candidate.archivedWorkspaceAccessState ? candidate.archivedWorkspaceAccessState as WorkspaceAccessState : null,

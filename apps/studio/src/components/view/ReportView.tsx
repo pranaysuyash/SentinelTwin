@@ -38,10 +38,31 @@ function StatCard({
   );
 }
 
+type ActionPriority = {
+  id: string;
+  title: string;
+  detail: string;
+  source: "simulation" | "issue" | "ai";
+  tone: "emerald" | "amber" | "rose";
+};
+
+function sourceTone(source: ActionPriority["source"]): string {
+  if (source === "simulation") return "border-emerald-400/20 bg-emerald-500/10 text-emerald-200";
+  if (source === "issue") return "border-rose-400/20 bg-rose-500/10 text-rose-200";
+  return "border-sky-400/20 bg-sky-500/10 text-sky-200";
+}
+
+function actionToneClass(tone: ActionPriority["tone"]): string {
+  if (tone === "emerald") return "border-emerald-400/20 bg-emerald-500/8";
+  if (tone === "rose") return "border-rose-400/20 bg-rose-500/8";
+  return "border-amber-400/20 bg-amber-500/8";
+}
+
 export function ReportView() {
   const scene = useStudioStore((s) => s.scene);
   const result = useStudioStore((s) => s.simulationResult);
   const workspacePreset = useStudioStore((s) => s.workspacePreset);
+  const latestAiActionTelemetry = useStudioStore((s) => s.aiActionTelemetry[0] ?? null);
   const summary = useMemo(() => {
     const issues = result?.issues.length ?? 0;
     const recs = result?.recommendations.length ?? 0;
@@ -92,6 +113,49 @@ export function ReportView() {
     };
   }, [result, scene]);
 
+  const prioritizedActions = useMemo<ActionPriority[]>(() => {
+    if (!result) {
+      return [{
+        id: "run_baseline",
+        title: "Run baseline simulation",
+        detail: "Decision-grade recommendations are generated after a full simulation run.",
+        source: "simulation",
+        tone: "amber",
+      }];
+    }
+
+    const recActions = result.recommendations.slice(0, 3).map((rec, index) => ({
+      id: `rec_${index}`,
+      title: rec.description,
+      detail: `${rec.verified ? "Verified" : "Needs verification"} · ${rec.estimatedImpact}`,
+      source: "simulation" as const,
+      tone: rec.verified ? "emerald" as const : "amber" as const,
+    }));
+
+    const issueActions = result.issues
+      .filter((issue) => issue.severity === "critical" || issue.severity === "high")
+      .slice(0, 2)
+      .map((issue, index) => ({
+        id: `issue_${index}`,
+        title: issue.description,
+        detail: `Severity: ${issue.severity.toUpperCase()} · Category: ${issue.category.replaceAll("_", " ")}`,
+        source: "issue" as const,
+        tone: "rose" as const,
+      }));
+
+    const aiAction = latestAiActionTelemetry
+      ? [{
+          id: "ai_last_action",
+          title: "Latest AI recommendation pass",
+          detail: `${latestAiActionTelemetry.stage} · ${latestAiActionTelemetry.durationMs} ms · ~${latestAiActionTelemetry.estimatedTotalTokens} tokens`,
+          source: "ai" as const,
+          tone: latestAiActionTelemetry.status === "success" ? "emerald" as const : "amber" as const,
+        }]
+      : [];
+
+    return [...recActions, ...issueActions, ...aiAction].slice(0, 5);
+  }, [latestAiActionTelemetry, result]);
+
   return (
     <div className="absolute inset-0 overflow-hidden bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.16),transparent_34%),linear-gradient(180deg,#07090d_0%,#0a0f18_46%,#0a0c11_100%)]">
       <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-sky-500/10 to-transparent" />
@@ -137,6 +201,28 @@ export function ReportView() {
             <StatCard label="Uncovered Zones" value={summary.redundancyMatrix ? String(summary.redundancyMatrix.uncoveredZoneCount) : "--"} tone={summary.redundancyMatrix && summary.redundancyMatrix.uncoveredZoneCount > 0 ? "rose" : "emerald"} />
           </div>
         </div>
+
+        <section className="mt-4 rounded-[28px] border border-[#1f2536] bg-[#0b0f17]/92 px-4 py-3 shadow-2xl shadow-black/20">
+          <div className="flex items-center gap-2">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#7a86a0]">Decision Priorities</div>
+            <span className="rounded-full border border-[#2a3246] bg-[#111521] px-2 py-0.5 text-[9px] font-semibold text-[#8f9bb1]">
+              {prioritizedActions.length} actions
+            </span>
+          </div>
+          <div className="mt-3 grid gap-2 lg:grid-cols-2">
+            {prioritizedActions.map((action) => (
+              <div key={action.id} className={cn("rounded-2xl border px-3 py-2", actionToneClass(action.tone))}>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-sm font-medium text-white">{action.title}</div>
+                  <span className={cn("rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em]", sourceTone(action.source))}>
+                    {action.source}
+                  </span>
+                </div>
+                <div className="mt-1 text-[11px] text-[#8d98b0]">{action.detail}</div>
+              </div>
+            ))}
+          </div>
+        </section>
 
         <div className="mt-4 grid min-h-0 flex-1 gap-4 xl:grid-cols-[1fr_1.1fr]">
           {summary.kCriticalSets.length > 0 ? (

@@ -46,6 +46,11 @@ export const PRODUCT_FEATURE_STATUS: ProductFeatureEntry[] = [
   },
   {
     status: "Preview",
+    feature: "Workspace account bridge",
+    detail: "Derived local account summary with plan posture, soft quota, and entitlements. Canonical org, billing, invite, and ownership-transfer semantics remain open.",
+  },
+  {
+    status: "Preview",
     feature: "Guided scan reconstruction",
     detail: "Guided scan assistant opens the existing scan wizard directly, keeps auto-path hints and manual review in the loop, and compiles through the same editable SecurityScene pipeline. Full phone capture, segmentation, and depth reconstruction remain future work.",
   },

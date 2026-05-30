@@ -1,3 +1,4 @@
+import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, test } from "bun:test";
 
 import { createSmallRetailShopScene } from "@/demo-scenes/small-retail-shop";
@@ -109,6 +110,7 @@ describe("studio store quality gate", () => {
     useStudioStore.getState().setCompareReportSelection({
       snapshotAId: snapshots[0]?.id ?? "",
       snapshotBId: snapshots[1]?.id ?? "",
+      provenanceNote: null,
     });
 
     expect(useStudioStore.getState().compareReportSelection).toBeTruthy();

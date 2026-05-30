@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 
 import { createCameraNode, createObstructionNode, createSensorNode } from "@/lib/node-factory";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
+import { createDefaultWorkspaceAccountProfile } from "@/lib/workspace-catalog";
 import { useStudioStore } from "@/store/studio-store";
 
 describe("studio store editor mutations", () => {
@@ -285,5 +286,42 @@ describe("studio store editor mutations", () => {
     const operationalEvidenceEvent = useStudioStore.getState().operationalEvidenceEvents.at(-1);
     expect(operationalEvidenceEvent?.afterSummary).toContain("challenge");
     expect(operationalEvidenceEvent?.afterSummary).toContain("transport 401 Unauthorized");
+  });
+
+  test("operational evidence archive round-trips the workspace account profile", () => {
+    useStudioStore.getState().setWorkspaceAccountProfile({
+      ...createDefaultWorkspaceAccountProfile({
+        primaryOrganization: "North Region Security",
+        primaryOwner: "Pranay",
+        capabilities: {
+          sharedWorkspaces: true,
+          publishedWorkspaces: true,
+          archiveRecovery: true,
+          reportExports: true,
+          scanIntake: true,
+          liveEvidence: true,
+        },
+        workspaceCount: 1,
+      }),
+      accountName: "North Region Security",
+      ownerName: "Pranay",
+      planTier: "enterprise",
+    });
+
+    const archive = useStudioStore.getState().exportOperationalEvidenceArchive();
+
+    useStudioStore.getState().setWorkspaceAccountProfile({
+      accountName: "Temp Account",
+      ownerName: "Temp Owner",
+      planTier: "free",
+      quotas: { ...useStudioStore.getState().workspaceAccount.quotas, maxWorkspaces: 6 },
+    });
+
+    const result = useStudioStore.getState().importOperationalEvidenceArchive(archive);
+
+    expect(result.success).toBe(true);
+    expect(useStudioStore.getState().workspaceAccount.accountName).toBe("North Region Security");
+    expect(useStudioStore.getState().workspaceAccount.ownerName).toBe("Pranay");
+    expect(useStudioStore.getState().workspaceAccount.planTier).toBe("enterprise");
   });
 });

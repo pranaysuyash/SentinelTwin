@@ -12,6 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
+import { NodeHistoryTab as NodeHistoryPanel } from "./NodeHistoryTab";
 
 import { CameraFeedCanvas } from "@/components/inspector/CameraFeedCanvas";
 import { snapDoorWindowToWall } from "@/components/inspector/door-window-snap";
@@ -27,7 +28,7 @@ import {
 import { Badge } from "@/components/shared/Badge";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { cn } from "@/lib/cn";
-import { QUALITY_LABEL } from "@/lib/quality-display";
+import { QUALITY_COLOR, QUALITY_LABEL } from "@/lib/quality-display";
 import { pathLength } from "@/components/workspace/editing/editor-geometry";
 import { snapCameraToMount, type CameraMountSnapMode } from "@/components/inspector/camera-mount-snap";
 import type {
@@ -206,6 +207,7 @@ function CameraInspector() {
     { id: "status", label: "Status" },
     { id: "analytics", label: "Analytics" },
     { id: "failures", label: "Failures" },
+    { id: "history", label: "History" },
   ];
 
   const camResult = result?.cameraResults.find((entry) => entry.cameraId === camera.id);
@@ -636,7 +638,7 @@ function CameraInspector() {
 
         {inspectorTab === "analytics" && (
           <div className="space-y-2.5">
-            <SectionCard title="Coverage Performance">
+            <SectionCard title="Coverage Performance" truthLabel={camResult ? "simulated" : "placeholder"}>
               <div className="grid grid-cols-3 gap-1.5">
                 <SummaryStat label="Coverage" value={camResult ? `${camResult.coveragePct.toFixed(1)}%` : "--"} accent="text-emerald-300" />
                 <SummaryStat label="Zones Pass" value={camResult ? `${camResult.criticalZonesCovered.length}` : "--"} accent="text-blue-300" />
@@ -644,7 +646,7 @@ function CameraInspector() {
               </div>
             </SectionCard>
 
-            <SectionCard title="Privacy Impact">
+            <SectionCard title="Privacy Impact" truthLabel={result ? "simulated" : "placeholder"}>
               {result ? (() => {
                 const privacyIssues = result.issues.filter((issue) => issue.category === "privacy" && issue.affectedCameras.includes(camera.id));
                 const restrictedCells = result.coverageCells.filter((cell) => cell.privacyRestricted && cell.coveringCameras.includes(camera.id)).length;
@@ -800,10 +802,10 @@ function CameraInspector() {
                     .filter((entry) => entry.quality !== undefined);
 
                   const doriRows = [
-                    ["identification", ranges.ident, "#60a5fa"],
-                    ["recognition", ranges.recog, "#22c55e"],
-                    ["observation", ranges.obs, "#eab308"],
-                    ["detection", ranges.det, "#f97316"],
+                    ["identification", ranges.ident, QUALITY_COLOR.identification],
+                    ["recognition", ranges.recog, QUALITY_COLOR.recognition],
+                    ["observation", ranges.obs, QUALITY_COLOR.observation],
+                    ["detection", ranges.det, QUALITY_COLOR.detection],
                   ] as const;
 
                   return (
@@ -1118,6 +1120,9 @@ function CameraInspector() {
             </div>
           );
         })()}
+        {inspectorTab === "history" && (
+          <NodeHistoryPanel nodeId={camera.id} />
+        )}
       </div>
 
       <div className="space-y-2 border-t border-[#1e2130] px-3 py-3">

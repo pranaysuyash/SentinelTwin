@@ -9,6 +9,10 @@ describe("ViewModeBar semantics", () => {
 
     expect(source).toContain('aria-label={`Switch to ${label} mode`}');
     expect(source).toContain("aria-pressed={viewMode === mode}");
+    expect(source).toContain("Map View");
+    expect(source).toContain("Camera View");
+    expect(source).toContain("Camera Wall");
+    expect(source).toContain("Path Replay");
     expect(source).toContain("MAP_COLORS.viewport");
     expect(source).toContain("MAP_COLORS.panelFillAlt");
   });

@@ -8,7 +8,6 @@ import { ProjectStartLauncher } from "@/components/launcher/ProjectStartLauncher
 import { SceneBuilderWizard } from "@/components/scan-to-scene/SceneBuilderWizard";
 import { ScanSiteWizard } from "@/components/scan-to-scene/ScanSiteWizard";
 import { StudioDashboardHome } from "@/components/launcher/StudioDashboardHome";
-import { SiteIntakeHub } from "@/components/site-intake/SiteIntakeHub";
 import { SiteDraftReview } from "@/components/site-intake/SiteDraftReview";
 import { compileScanToSiteResult, compileAiDraftToSiteResult, compileFloorPlanToSiteResult, makeSiteCompilerWarnings, calculateConfidence } from "@/lib/site-compiler";
 import { useStudioStore, type ActiveWorkflowId, type BottomTab, type ViewMode, type WorkspacePreset } from "@/store/studio-store";
@@ -77,7 +76,6 @@ function StudioPageContent() {
   const [aiDraftJsonText, setAiDraftJsonText] = useState("");
   const [aiDraftJsonError, setAiDraftJsonError] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
-  const [showProjects, setShowProjects] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scene = useStudioStore((s) => s.scene);
@@ -369,6 +367,7 @@ function StudioPageContent() {
       setCompareReportSelection({
         snapshotAId: compareRequest.snapshotAId,
         snapshotBId: compareRequest.snapshotBId,
+        provenanceNote: compareRequest.provenanceNote ?? null,
       });
       setEnterStudio(true);
       if (compareRequest.mode === "report") {
@@ -598,20 +597,12 @@ function StudioPageContent() {
 
   return (
     <>
-      {showProjects ? (
-        <div className="flex h-full w-full flex-col overflow-y-auto" style={{ background: "var(--bg)" }}>
-          <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 py-4">
-            <div className="mb-4 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setShowProjects(false)}
-                className="rounded-xl border border-[color:var(--border)] bg-white/[0.03] px-3 py-1.5 text-xs text-[color:var(--text-muted)] transition-colors hover:border-sky-400/25 hover:bg-white/[0.05] hover:text-white"
-              >
-                Back to Create
-              </button>
-              <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--text-dim)]">Projects</div>
-            </div>
-            <StudioDashboardHome
+      <div className="flex h-full w-full flex-col overflow-y-auto" style={{ background: "var(--bg)" }}>
+        <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 py-4">
+          <div className="mb-4 flex items-center justify-between">
+            <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--text-dim)]">Projects</div>
+          </div>
+          <StudioDashboardHome
               scene={scene}
               result={currentResult}
               simulationDirty={simulationDirty}
@@ -657,32 +648,8 @@ function StudioPageContent() {
                 launchWorkspace("map", "coverage", "metrics");
               }}
             />
-          </div>
         </div>
-      ) : (
-        <SiteIntakeHub
-          onBuildManually={startDesignFlow}
-          onStartScan={() => {
-            if (!confirmWorkspaceReplacement("start scan intake")) return;
-            openScanWizard();
-          }}
-          onStartAiDraft={startAiDraftFlow}
-          onImportFloorPlan={openFloorPlanFlow}
-          onImportJson={handleImportScene}
-          onVerifyFootage={() => {
-            alert("Footage verification coming in V1.");
-          }}
-          onEnterStudio={() => setEnterStudio(true)}
-          onShowProjects={() => setShowProjects(true)}
-          onOpenDemo={openDemoWorkspace}
-          recentSites={savedScenes.map(scene => ({
-            id: scene.id,
-            name: scene.name || "Untitled Scene",
-            updatedLabel: "Recently updated",
-            riskLabel: "Medium Risk"
-          }))}
-        />
-      )}
+      </div>
 
       <ProjectStartLauncher
         open={showProjectLauncher}

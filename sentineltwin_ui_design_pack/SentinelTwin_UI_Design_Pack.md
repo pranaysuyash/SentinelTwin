@@ -1497,3 +1497,22 @@ This is the next component/screen after the Site Intake Hub.
 - Every source path must show review/warnings/provenance before replacing the workspace.
 - Scan Site Photos remains the default recommended source.
 - Demo stays available as reference only.
+
+---
+
+## 22. Create Site Twin — Source Selection
+
+![Create Site Twin — Source Selection](images/SiteIntakeHub_CreateSiteTwin_SourceSelection.png)
+
+| Field | Value |
+|---|---|
+| Status | New primary target for Area 1 |
+| Screen | Create Site Twin — Source Selection |
+| Workspace preset | N/A |
+| Subscreen | N/A |
+| Active tab/panel | N/A |
+| Selected component | SiteIntakeHub |
+| Dock state | N/A |
+| Purpose | This is the first full-product component for Area 1: Site Intake & Scene Creation. It is not a marketing landing page and not the Studio workspace. It is the first product screen where the user chooses how to turn a real physical site into a trusted editable SecurityScene. |
+| Save as | `SiteIntakeHub_CreateSiteTwin_SourceSelection.png` |
+| Feel target | Operator workspace / security simulation studio. |

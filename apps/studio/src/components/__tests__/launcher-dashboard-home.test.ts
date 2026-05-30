@@ -56,6 +56,11 @@ describe("Studio dashboard launcher surface", () => {
     expect(source).toContain("Owner");
     expect(source).toContain("Visibility");
     expect(source).toContain("Workspace Catalog");
+    expect(source).toContain("Local-first catalog bridge toward the canonical org/account boundary.");
+    expect(source).toContain("Plan, billing, invites, and ownership transfer remain open.");
+    expect(source).toContain("Workspace Account");
+    expect(source).toContain("Local-first account bridge toward the canonical org/account model.");
+    expect(source).toContain("Plan, quota, invites, and ownership transfer remain open.");
     expect(source).toContain("Target:");
     expect(source).toContain("Route:");
   });

@@ -90,6 +90,9 @@ export function ReportLiteTab() {
   const selectedSnapshotBId = snapshotBId ?? compareReportSelection?.snapshotBId ?? null;
   const snapshotA = selectedSnapshotAId ? snapshots.find((snapshot) => snapshot.id === selectedSnapshotAId) ?? null : null;
   const snapshotB = selectedSnapshotBId ? snapshots.find((snapshot) => snapshot.id === selectedSnapshotBId) ?? null : null;
+  const compareSelectionProvenanceNote = compareReportSelection?.snapshotAId === selectedSnapshotAId && compareReportSelection?.snapshotBId === selectedSnapshotBId
+    ? compareReportSelection.provenanceNote
+    : null;
   const compareSelectionMissing = reportMode === "compare" && (!snapshotA || !snapshotB);
   const hasCompareSimulation = Boolean(snapshotA?.simulation && snapshotB?.simulation);
   const compareReport = useMemo(
@@ -132,6 +135,7 @@ export function ReportLiteTab() {
         compareSnapshotAId: snapshotA.id,
         compareSnapshotBId: snapshotB.id,
         compareMode: "report",
+        compareProvenanceNote: compareSelectionProvenanceNote,
       },
       window.location.hash,
     );
@@ -395,17 +399,28 @@ export function ReportLiteTab() {
             >
               <Copy className="h-3 w-3" /> Copy
             </button>
-            <button
-              onClick={() => {
-                void copyCompareLink();
-              }}
-              disabled={reportMode !== "compare" || !snapshotA || !snapshotB}
+          <button
+            onClick={() => {
+              void copyCompareLink();
+            }}
+            disabled={reportMode !== "compare" || !snapshotA || !snapshotB}
               className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white disabled:opacity-40"
             >
               <Copy className="h-3 w-3" /> Copy compare link
             </button>
           </div>
         </div>
+      </div>
+      <div className="border-b border-[#1e2130] px-3 py-1.5 text-[9px] text-[#74809a]">
+        {reportMode === "compare" ? (
+          compareSelectionProvenanceNote ? (
+            <span>Compare provenance: {compareSelectionProvenanceNote}</span>
+          ) : (
+            <span>Scene Intelligence can seed the exact/derived checkpoint provenance for the active compare pair.</span>
+          )
+        ) : (
+          <span>Switch to compare mode to carry checkpoint provenance through the report handoff.</span>
+        )}
       </div>
 
       {/* Content */}

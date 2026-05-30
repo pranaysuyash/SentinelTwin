@@ -1,5 +1,3 @@
-import { NextResponse } from "next/server";
-
 import {
   appendWorkspaceIdentityConflictHistory,
   loadWorkspaceIdentityConflictHistory,
@@ -10,24 +8,31 @@ import {
 } from "@/lib/workspace-identity-conflict";
 import { normalizeWorkspaceAccessState } from "@/lib/workspace-access";
 import { normalizeWorkspaceGovernance } from "@/lib/workspace-governance";
+import { corsJson, corsNoContent } from "@/lib/api-cors";
 
-export async function GET() {
+import { NextRequest } from "next/server";
+
+export async function GET(request: NextRequest) {
   const history = await loadWorkspaceIdentityConflictHistory();
-  return NextResponse.json({
+  return corsJson({
     ok: true,
     history,
     historyCount: history.length,
     latestSubmission: history[0] ?? null,
-  });
+  }, request, undefined, { methods: ["GET", "POST", "OPTIONS"] });
 }
 
-export async function POST(request: Request) {
+export async function OPTIONS(request: NextRequest) {
+  return corsNoContent(request, { methods: ["GET", "POST", "OPTIONS"] });
+}
+
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const parsed = WorkspaceIdentityConflictRequestSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
+      return corsJson(
         {
           ok: false,
           error: "Invalid workspace identity conflict payload.",
@@ -36,7 +41,9 @@ export async function POST(request: Request) {
             message: issue.message,
           })),
         },
+        request,
         { status: 400 },
+        { methods: ["GET", "POST", "OPTIONS"] },
       );
     }
 
@@ -55,18 +62,20 @@ export async function POST(request: Request) {
       storedAt,
     });
 
-    return NextResponse.json({
+    return corsJson({
       ...summary,
       storedAt,
       historyCount: history.length,
-    });
+    }, request, undefined, { methods: ["GET", "POST", "OPTIONS"] });
   } catch {
-    return NextResponse.json(
+    return corsJson(
       {
         ok: false,
         error: "Failed to parse workspace identity conflict payload.",
       },
+      request,
       { status: 400 },
+      { methods: ["GET", "POST", "OPTIONS"] },
     );
   }
 }

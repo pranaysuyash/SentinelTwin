@@ -195,10 +195,16 @@ export function TimelineTab() {
   }, [scene.snapshots]);
 
   const bestCamera = cameraSummary[0];
+  const leadCameraName = bestCamera ? (camerasById[bestCamera.cameraId] ?? bestCamera.cameraId) : null;
   const visiblePct = activePathResult && activePathResult.totalDurationS > 0
     ? Math.round((activePathResult.visibleDurationS / activePathResult.totalDurationS) * 100)
     : 0;
   const visibleCameraSummary = cameraSummary.slice(0, 4);
+  const focusLabel = pathReplayFollowActor
+    ? "Follow actor locked to the live path"
+    : leadCameraName
+      ? `Lead camera: ${leadCameraName}`
+      : "No strong lead camera yet";
 
   const handleSeek = useCallback((seconds: number) => {
     if (totalDuration <= 0) return;
@@ -353,21 +359,27 @@ export function TimelineTab() {
         </div>
       </div>
 
-      <div className="flex items-center gap-3 border-b border-[#1e2130] bg-[#090c12] px-3 py-1.5 text-[8px] text-[#4d566b]">
-        <span>
-          Path: <span className="text-[#c7d0e4]">{activePath.label}</span>
-        </span>
-        <span>
-          Visible: <span className="font-mono text-emerald-300">{visiblePct}%</span>
-        </span>
-        <span>
-          Events: <span className="font-mono text-[#8b96ab]">{activePathResult?.timeline.length ?? 0}</span>
-        </span>
-        {bestCamera ? (
+        <div className="flex items-center gap-3 border-b border-[#1e2130] bg-[#090c12] px-3 py-1.5 text-[8px] text-[#4d566b]">
           <span>
-            Best camera: <span className="text-[#c7d0e4]">{camerasById[bestCamera.cameraId] ?? bestCamera.cameraId}</span>
+            Path: <span className="text-[#c7d0e4]">{activePath.label}</span>
           </span>
-        ) : null}
+          <span>
+            Visible: <span className="font-mono text-emerald-300">{visiblePct}%</span>
+          </span>
+          <span>
+            Events: <span className="font-mono text-[#8b96ab]">{activePathResult?.timeline.length ?? 0}</span>
+          </span>
+          <span className={cn("rounded border px-1.5 py-0.5 font-medium", pathReplayFollowActor ? "border-sky-500/25 bg-sky-500/10 text-sky-300" : "border-[#273246] bg-[#111521] text-[#8ea5cc]")}>
+            {pathReplayFollowActor ? "Follow Actor" : "Free Scrub"}
+          </span>
+          <span className="text-[#6f7f9f]">
+            {focusLabel}
+          </span>
+          {bestCamera ? (
+            <span>
+              Best camera: <span className="text-[#c7d0e4]">{camerasById[bestCamera.cameraId] ?? bestCamera.cameraId}</span>
+            </span>
+          ) : null}
       </div>
 
       <div className="flex items-center gap-0.5 border-b border-[#1e2130] px-2 pt-1.5">
@@ -398,6 +410,44 @@ export function TimelineTab() {
             <div className="flex items-center gap-2 border-b border-[#1e2130] px-3 py-1.5 text-[8px] font-semibold uppercase tracking-[0.14em] text-[#4a5568]">
               Coverage Failure Timeline
               <ExplainBadge text="Timeline shows when visibility is gained, lost, or degraded along the selected path." />
+            </div>
+            <div className="grid gap-2 border-b border-[#1e2130] px-3 py-2 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2">
+                <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#7dd3fc]">Replay Focus</div>
+                <div className="mt-1 text-[10px] font-medium text-[#d5e0f5]">
+                  {pathReplayFollowActor ? "Follow Actor enabled" : "Manual scrub enabled"}
+                </div>
+                <div className="mt-1 text-[9px] text-[#5b667c]">
+                  {pathReplayFollowActor
+                    ? "The playhead stays anchored to the actor route and replay timing."
+                    : "Use the playhead to inspect visibility changes frame by frame."}
+                </div>
+              </div>
+              <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2">
+                <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#7dd3fc]">Lead Camera</div>
+                <div className="mt-1 text-[10px] font-medium text-[#d5e0f5]">{leadCameraName ?? "No lead camera"}</div>
+                <div className="mt-1 text-[9px] text-[#5b667c]">
+                  {bestCamera
+                    ? `${bestCamera.visibleS.toFixed(1)}s visible · best quality ${bestCamera.maxQuality.toUpperCase()}`
+                    : "No camera reach data available for this path."}
+                </div>
+              </div>
+              <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2">
+                <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#7dd3fc]">Coverage Reach</div>
+                <div className="mt-1 text-[10px] font-medium text-[#d5e0f5]">
+                  {visibleCameraSummary.length} camera{visibleCameraSummary.length === 1 ? "" : "s"} with visibility
+                </div>
+                <div className="mt-1 text-[9px] text-[#5b667c]">
+                  Ranked by quality first, then by visible time.
+                </div>
+              </div>
+              <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2">
+                <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#7dd3fc]">Replay Status</div>
+                <div className="mt-1 text-[10px] font-medium text-[#d5e0f5]">{pathReplay.playing ? "Playing" : "Paused"}</div>
+                <div className="mt-1 text-[9px] text-[#5b667c]">
+                  {formatTime(currentTime)} / {formatTime(totalDuration)} · {pathReplay.speed.toFixed(1)}x
+                </div>
+              </div>
             </div>
             <div className="grid gap-2 border-b border-[#1e2130] px-3 py-2 sm:grid-cols-2 xl:grid-cols-4">
               {visibleCameraSummary.length > 0 ? visibleCameraSummary.map((entry) => (

@@ -4284,6 +4284,24 @@ geometryValidity: z.enum(["valid", "suspect", "invalid"]).default("valid")
 - Rationale: Report exports should preserve the same checkpoint lineage trust signal that Scene Intelligence now shows in the interactive reconstruction view. Provenance text makes the exported report less ambiguous without changing the underlying reconstruction model.
 - Consequence: Reports now say when the latest checkpoint is exact versus derived, and the same provenance metadata is available to any future export or comparison surface built on the temporal twin summary.
 
+## D-255 - The launcher should expose a local workspace catalog summary as the org/account bridge
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: Saved workspaces already carried organization, owner, and visibility metadata, but the launcher still only exposed those fields as per-card metadata rather than as a first-class workspace catalog boundary.
+- Decision: Add a canonical local workspace catalog summary derived from saved workspaces and surface it in the launcher with scope, organization, owner, visibility, and catalog-health breakdowns, while keeping billing, invites, and ownership transfer explicitly open.
+- Rationale: The product needs a visible bridge from the current local workspace list to the future org/account model without pretending that plan or invite infrastructure already exists.
+- Consequence: The launcher now shows a dedicated workspace catalog summary, the org/account boundary is visible in-product, and the remaining work stays focused on the canonical org/account, billing, and transfer model rather than another metadata patch.
+
+## D-256 - The launcher should expose a local workspace account summary as the org/account bridge
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: The workspace catalog bridge made organization, owner, and visibility visible, but the product still needed an explicit account posture with plan, quota, and entitlement signals so the org boundary could read like an account model instead of only a catalog summary.
+- Decision: Add a derived local workspace account summary to the launcher that surfaces plan posture, soft quota, and entitlements from the current workspace catalog, while keeping billing, invites, and ownership transfer explicitly open.
+- Rationale: The product needs to reveal the account boundary as an operational bridge now, not wait for the canonical remote org/account backend before the UI becomes legible.
+- Consequence: The launcher now shows both catalog and account bridges, and the remaining work stays focused on the canonical org/account backend rather than on more metadata-only fields.
+
 ## D-255 - Guided scan reconstruction should open the real assistant instead of a kickoff modal
 
 - Date: 2026-05-30
@@ -4292,6 +4310,15 @@ geometryValidity: z.enum(["valid", "suspect", "invalid"]).default("valid")
 - Decision: Route the guided scan launcher action directly into the guided scan assistant and let the assistant open the existing wizard immediately with the guided scan notice and auto-path hints enabled.
 - Rationale: The assistant was already implemented, so a preview-like kickoff layer only made the workflow look less complete than it looks. The direct launch path is clearer and reduces one more stub-style gate.
 - Consequence: Guided scan now behaves like a real entry workflow from the launcher, the remaining gap is richer capture/reconstruction depth rather than the entry path itself, and the product truth manifests can describe it as a previewable native flow instead of a planned placeholder.
+
+## D-259 - ONVIF binding should perform real challenge-response retries and carry camera credentials through the probe path
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: The reusable ONVIF helper already parsed device info and auth challenges, but it still stopped at a single unauthenticated probe, and the camera inspector had schema-level ONVIF username/password fields that were not yet forwarded through the live binding request.
+- Decision: Keep the canonical camera-live binding path honest by retrying ONVIF probes with a real Basic or Digest Authorization header when the device challenges the first request, and forward any stored ONVIF credentials from the camera inspector into the live-connection request path.
+- Rationale: Real devices often require challenge/response negotiation before they reveal metadata. The scene schema already reserves ONVIF credentials, so the UI and route should honor them instead of leaving them as schema-only state.
+- Consequence: The live camera probe can now complete a real Basic or Digest retry before the canonical archive is written, and the remaining device-protocol seam narrows to longer-lived subscription renewal and event streaming rather than initial credential negotiation.
 
 ## D-256 - Componentize analytics display surface and compact MetricsTab layout
 
@@ -4313,3 +4340,58 @@ geometryValidity: z.enum(["valid", "suspect", "invalid"]).default("valid")
 - Decision: Compute target facing direction (yaw) derived from the path trajectory. Compare this direction against the angle from the target to the covering cameras. Apply a hard clamp on the maximum quality metric (capping at `observation` for DORI, `perceive` for OODPCVS) if the camera is > 90° off the target's facing direction.
 - Rationale: Face-capture requires the target to be facing the camera (or in profile, < 90° offset). Without orientation penalties, path replay simulates false confidence in recognition where no facial features could be captured.
 - Consequence: Path visibility timelines will now downgrade quality when the target is walking away. The engine is now closer to physical reality.
+
+## D-258 - Compare and archive handoffs should expose checkpoint provenance alongside the checkpoint itself
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: Scene Intelligence and the report exports already exposed exact-versus-derived checkpoint provenance for reconstructed scenes, but the compare handoff surfaces still only described the selected checkpoint and snapshot pair without making the provenance legible at the point of use.
+- Decision: Surface checkpoint provenance directly in Scene Intelligence archive cards, selected checkpoint cards, and compare handoff cards, and reuse the same provenance note when the checkpoint is bridged into Before/After or Report Compare flows.
+- Rationale: Users should not have to infer whether a handoff is exact or derived from the checkpoint card alone. Making the provenance visible where the compare action is launched keeps the evidence story coherent across timeline, archive, compare, and report surfaces.
+- Consequence: The provenance language now stays consistent from reconstruction through handoff, and the remaining work is to extend the same trust signal into any other archive/compare surfaces that grow from this workflow.
+
+
+## D-259 - GSAP vs Motion One for Path Replay Animation
+
+- Date: 2026-05-30
+- Status: Accepted (Resolves D-018 from AGENTS.md)
+- Context: The original project brief anticipated using GSAP for timeline animations (like actor path replay), but GSAP has a proprietary commercial license that violates the project's MIT/Apache 2.0 dependency requirements.
+- Decision: Use Motion One as the primary 1:1 replacement for GSAP timeline choreography. Use Framer Motion for general React UI transitions. Use Native R3F `useFrame` for pure 3D canvas path traversal when full timeline control is not needed.
+- Rationale: Motion One is MIT licensed, built on WAAPI, highly performant, and offers a Timeline API comparable to GSAP's `gsap.timeline()`. This maintains strict open-source licensing compliance.
+- Consequence: Path replay animation work is now unblocked.
+
+## D-023 | 2026-05-30 | Deletion of CanvasViewTabs
+
+**Decision:** Deleted `CanvasViewTabs.tsx` as it was superseded by `ViewModeBar.tsx`.
+
+**Rationale:**
+- The newer `ViewModeBar` component provides additional features and is better integrated with the new Area 1 roadmap.
+- `CanvasViewTabs` was redundant code.
+
+## D-024 | 2026-05-30 | Typescript Error Remediation across API Routes and Stores
+
+**Decision:** Replaced `Request` parameter types with `NextRequest` on all `app/api/*/route.ts` API route handlers, and resolved associated downstream test typing mismatches. 
+Fixed the `CameraLiveConnectionEventRecord` and `WorkspaceApprovalRouteSummary` types to appropriately mark unsupplied properties as optional or to supply mock values in tests.
+
+**Rationale:**
+- Next.js 15+ API routes strongly prefer `NextRequest` from `next/server` over the global `Request` to access Next.js-specific properties (like `nextUrl`, `cookies`).
+- Test mismatches were cascading and creating a fragile build state.
+- Allowed the `studio-store` to pass `tsc` cleanly.
+
+## D-260 - Operational evidence archives should preserve the workspace account bridge
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: The launcher now exposes a derived local workspace account bridge, but archive restore still needed to round-trip that account posture instead of rebuilding it from defaults during recovery and merge-preflight.
+- Decision: Include the workspace account profile in the operational evidence archive shape and restore path so exported archives preserve the local account bridge across recovery, merge-preflight, and archive handoff flows.
+- Rationale: The account bridge is now part of the workspace truth model, so recovery should preserve it alongside the scene, ledger, governance, and access state.
+- Consequence: Exported archives now carry the workspace account profile, and recovery can reopen with the same local account posture instead of falling back to a default profile.
+
+## D-261 - Approval routing should carry a stable identity key and eligibility metadata
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: The governance route archive and identity-conflict replay surfaces already summarized routing decisions, but the backend contract still lacked a stable route identity that could survive reloads, archive round-trips, and cross-service replay without recomputing everything from the current UI state.
+- Decision: Extend the canonical workspace approval route summary with a deterministic route key, route scope, and active-member eligibility metadata, and normalize older archived route records back into that contract on load.
+- Rationale: Route summaries should be replayable as backend identity artifacts, not just human-readable labels. The stable key makes the route comparable across archives, while the eligibility metadata makes it clear whether the active member can actually execute the route or must hand off to the reviewer path.
+- Consequence: Approval routes now have a reproducible backend-facing identity contract, and archive/history loaders can round-trip older records without fragmenting the governance model.

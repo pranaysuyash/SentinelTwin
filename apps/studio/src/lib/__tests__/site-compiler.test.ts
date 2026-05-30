@@ -80,6 +80,26 @@ function addWall(scene: SecurityScene) {
   });
 }
 
+function addZone(scene: SecurityScene) {
+  scene.criticalZones.push({
+    id: "zone_1",
+    nodeType: "critical_zone",
+    label: "Entry Zone",
+    targetType: "person_detection",
+    priority: "medium",
+    requiredQuality: "detection",
+    polygon: [[0, 0], [2, 0], [2, 2], [0, 2]],
+    heightM: 2.5,
+    source: "manual",
+    reviewStatus: "unreviewed",
+    sourceTrace: "",
+    geometryValidity: "valid",
+    nightRequired: false,
+    redundancyRequired: false,
+    privacyZone: false,
+  });
+}
+
 describe("makeSiteCompilerWarnings", () => {
   test("returns blocking warning when scene has no cameras", () => {
     const scene = makeScene();
@@ -232,7 +252,7 @@ describe("compileJsonToSiteResult", () => {
   test("validates a valid scene and returns success", () => {
     const scene = makeScene();
     const result = compileJsonToSiteResult(scene, "export.json");
-    expect(result.source).toBe("json");
+    expect(result.source).toBe("json_import");
     expect(result.warnings.some((w) => w.code === "INVALID_SCENE")).toBe(false);
   });
 
@@ -241,116 +261,124 @@ describe("compileJsonToSiteResult", () => {
     expect(result.warnings.some((w) => w.code === "INVALID_SCENE" && w.severity === "blocking")).toBe(true);
     expect(result.confidence).toBe(0);
   });
+});
 
-  describe("normalizeSiteIntakeSource", () => {
-    test("normalizes supported legacy keys", () => {
-      expect(normalizeSiteIntakeSource("json_import").source).toBe("json");
-      expect(normalizeSiteIntakeSource("footage_verify").source).toBe("camera_evidence");
-    });
-
-    test("rejects unsupported source keys", () => {
-      const normalized = normalizeSiteIntakeSource("random_source");
-      expect(normalized.source).toBeNull();
-      expect(normalized.warning?.code).toBe("UNSUPPORTED_SITE_SOURCE");
-      expect(normalized.warning?.severity).toBe("blocking");
-    });
+describe("normalizeSiteIntakeSource", () => {
+  test("normalizes supported legacy keys", () => {
+    expect(normalizeSiteIntakeSource("json_import").source).toBe("json");
+    expect(normalizeSiteIntakeSource("footage_verify").source).toBe("camera_evidence");
   });
 
-  describe("compileCameraEvidenceToSiteResult", () => {
-    test("wraps scene with camera_evidence source", () => {
-      const scene = makeScene();
-      addCamera(scene);
-      const result = compileCameraEvidenceToSiteResult(scene);
-      expect(result.source).toBe("camera_evidence");
-      expect(result.provenance.label).toBe("Camera Evidence Preview");
-    });
+  test("rejects unsupported source keys", () => {
+    const normalized = normalizeSiteIntakeSource("random_source");
+    expect(normalized.source).toBeNull();
+    expect(normalized.warning?.code).toBe("UNSUPPORTED_SITE_SOURCE");
+    expect(normalized.warning?.severity).toBe("blocking");
+  });
+});
 
-    test("includes extra notes", () => {
-      const scene = makeScene();
-      const result = compileCameraEvidenceToSiteResult(scene, ["Aligned reference frame"]);
-      expect(result.provenance.notes).toContain("Aligned reference frame");
-    });
+describe("compileCameraEvidenceToSiteResult", () => {
+  test("wraps scene with camera_evidence source", () => {
+    const scene = makeScene();
+    addCamera(scene);
+    const result = compileCameraEvidenceToSiteResult(scene);
+    expect(result.source).toBe("camera_evidence");
+    expect(result.provenance.label).toBe("Camera Evidence Preview");
   });
 
-  describe("compileFootageVerifyToSiteResult", () => {
-    test("wraps scene with footage_verify source", () => {
-      const scene = makeScene();
-      addCamera(scene);
-      const result = compileFootageVerifyToSiteResult(scene);
-      expect(result.source).toBe("footage_verify");
-      expect(result.provenance.label).toBe("Footage Verification");
+  test("includes extra notes", () => {
+    const scene = makeScene();
+    const result = compileCameraEvidenceToSiteResult(scene, ["Aligned reference frame"]);
+    expect(result.provenance.notes).toContain("Aligned reference frame");
+  });
+});
+
+describe("compileFootageVerifyToSiteResult", () => {
+  test("normalizes legacy footage_verify input to canonical camera_evidence source", () => {
+    const scene = makeScene();
+    addCamera(scene);
+    const result = compileFootageVerifyToSiteResult(scene);
+    expect(result.source).toBe("camera_evidence");
+    expect(result.provenance.label).toBe("Camera Evidence Preview");
+  });
+});
+
+describe("compileToSiteTwinDraft pipeline completeness", () => {
+  function addZone(scene: SecurityScene) {
+    scene.criticalZones.push({
+      id: "zone_1", nodeType: "critical_zone", label: "Entry Zone",
+      targetType: "person_detection", priority: "medium", requiredQuality: "detection",
+      polygon: [[0, 0], [2, 0], [2, 2], [0, 2]], heightM: 2.5, source: "manual",
+      reviewStatus: "unreviewed", sourceTrace: "", geometryValidity: "valid",
+      nightRequired: false, redundancyRequired: false, privacyZone: false,
     });
+  }
+
+  test("every source produces a valid draft without throwing", () => {
+    const scene = makeScene();
+    addCamera(scene);
+    addZone(scene);
+    const sources = [
+      { label: "scan", result: compileScanToSiteResult(scene) },
+      { label: "ai_prompt", result: compileAiDraftToSiteResult(scene) },
+      { label: "floor_plan", result: compileFloorPlanToSiteResult(scene) },
+      { label: "json", result: compileJsonToSiteResult(scene, "test.json") },
+      { label: "manual", result: compileBlankToSiteResult("test") },
+      { label: "camera_evidence", result: compileCameraEvidenceToSiteResult(scene) },
+    ];
+    for (const entry of sources) {
+      const draft = compileToSiteTwinDraft(entry.result);
+      expect(draft.id).toMatch(/^draft_/);
+      expect(draft.entityCounts).toBeDefined();
+      expect(draft.assumptions.length).toBeGreaterThanOrEqual(1);
+      expect(draft.warnings).toBeInstanceOf(Array);
+      expect(draft.missingPrerequisites).toBeInstanceOf(Array);
+      expect(draft.suggestedNextActions.length).toBeGreaterThanOrEqual(1);
+      expect(draft.provenance.sourceLabel.length).toBeGreaterThan(0);
+    }
   });
 
-  describe("compileToSiteTwinDraft pipeline completeness", () => {
-    test("every source produces a valid draft without throwing", () => {
-      const scene = makeScene();
-      addCamera(scene);
-      addZone(scene);
-      const sources = [
-        { label: "scan", result: compileScanToSiteResult(scene) },
-        { label: "ai_prompt", result: compileAiDraftToSiteResult(scene) },
-        { label: "floor_plan", result: compileFloorPlanToSiteResult(scene) },
-        { label: "json_import", result: compileJsonToSiteResult(scene, "test.json") },
-        { label: "manual", result: compileBlankToSiteResult("test") },
-        { label: "camera_evidence", result: compileCameraEvidenceToSiteResult(scene) },
-        { label: "footage_verify", result: compileFootageVerifyToSiteResult(scene) },
-      ];
-      for (const entry of sources) {
-        const draft = compileToSiteTwinDraft(entry.result);
-        expect(draft.id).toMatch(/^draft_/);
-        expect(draft.entityCounts).toBeDefined();
-        expect(draft.assumptions.length).toBeGreaterThanOrEqual(1);
-        expect(draft.warnings).toBeInstanceOf(Array);
-        expect(draft.missingPrerequisites).toBeInstanceOf(Array);
-        expect(draft.suggestedNextActions.length).toBeGreaterThanOrEqual(1);
-        expect(draft.provenance.sourceLabel.length).toBeGreaterThan(0);
-      }
+  test("pipeline: compile -> draft -> canRunBaselineSimulation is consistent", () => {
+    const scene = makeScene();
+    const emptyResult = compileBlankToSiteResult();
+    const emptyDraft = compileToSiteTwinDraft(emptyResult);
+    expect(canRunBaselineSimulation(emptyDraft)).toBe(false);
+
+    addCamera(scene);
+    const camOnlyResult = compileScanToSiteResult(scene);
+    const camOnlyDraft = compileToSiteTwinDraft(camOnlyResult);
+    expect(canRunBaselineSimulation(camOnlyDraft)).toBe(false);
+
+    addZone(scene);
+    const fullResult = compileScanToSiteResult(scene);
+    const fullDraft = compileToSiteTwinDraft(fullResult);
+    expect(canRunBaselineSimulation(fullDraft)).toBe(true);
+
+    fullDraft.warnings.push({
+      code: "TEST_BLOCKING",
+      message: "Blocking for test",
+      severity: "blocking",
     });
+    expect(canRunBaselineSimulation(fullDraft)).toBe(false);
+  });
 
-    test("pipeline: compile → draft → canRunBaselineSimulation is consistent", () => {
-      const scene = makeScene();
-      const emptyResult = compileBlankToSiteResult();
-      const emptyDraft = compileToSiteTwinDraft(emptyResult);
-      expect(canRunBaselineSimulation(emptyDraft)).toBe(false);
-
-      addCamera(scene);
-      const camOnlyResult = compileScanToSiteResult(scene);
-      const camOnlyDraft = compileToSiteTwinDraft(camOnlyResult);
-      expect(canRunBaselineSimulation(camOnlyDraft)).toBe(false);
-
-      addZone(scene);
-      const fullResult = compileScanToSiteResult(scene);
-      const fullDraft = compileToSiteTwinDraft(fullResult);
-      expect(canRunBaselineSimulation(fullDraft)).toBe(true);
-
-      fullDraft.warnings.push({
-        code: "TEST_BLOCKING",
-        message: "Blocking for test",
-        severity: "blocking",
-      });
-      expect(canRunBaselineSimulation(fullDraft)).toBe(false);
-    });
-
-    test("pipeline: compile → draft → approve produces schema-valid scene for all sources", () => {
-      const scene = makeScene();
-      addCamera(scene);
-      addZone(scene);
-      const sources = [
-        compileScanToSiteResult(scene),
-        compileAiDraftToSiteResult(scene),
-        compileFloorPlanToSiteResult(scene),
-        compileJsonToSiteResult(scene, "test.json"),
-        compileCameraEvidenceToSiteResult(scene),
-        compileFootageVerifyToSiteResult(scene),
-      ];
-      for (const result of sources) {
-        const draft = compileToSiteTwinDraft(result);
-        expect(draft.scene.cameras.length).toBe(1);
-        expect(draft.scene.criticalZones.length).toBe(1);
-        expect(draft.scene.source).not.toBe("manual");
-        expect(draft.scene.updatedAt).toBeGreaterThan(0);
-      }
-    });
+  test("pipeline: compile -> draft -> approve produces schema-valid scene for all sources", () => {
+    const scene = makeScene();
+    addCamera(scene);
+    addZone(scene);
+    const sources = [
+      compileScanToSiteResult(scene),
+      compileAiDraftToSiteResult(scene),
+      compileFloorPlanToSiteResult(scene),
+      compileJsonToSiteResult(scene, "test.json"),
+      compileCameraEvidenceToSiteResult(scene),
+    ];
+    for (const result of sources) {
+      const draft = compileToSiteTwinDraft(result);
+      expect(draft.scene.cameras.length).toBe(1);
+      expect(draft.scene.criticalZones.length).toBe(1);
+      expect(draft.scene.source).not.toBe("manual");
+      expect(draft.scene.updatedAt).toBeGreaterThan(0);
+    }
   });
 });

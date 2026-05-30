@@ -299,9 +299,6 @@ export function CameraFeedCanvas({
         || operationalFusion.cameraLiveConnectionEvent),
   );
 
-  if (!camera) return null;
-
-  const isNight = scene.assumptions.timeOfDay === "night";
   const selectedPath = activePathId ? (scene.paths.find((path) => path.id === activePathId) ?? null) : null;
   const pathPoints = useMemo(
     () => selectedPath?.points.map((point) => point.position) ?? [],
@@ -314,6 +311,10 @@ export function CameraFeedCanvas({
     })) ?? [],
     [selectedPath],
   );
+
+  if (!camera) return null;
+
+  const isNight = scene.assumptions.timeOfDay === "night";
   const pathState = selectedPath ? getReplaySegmentState(pathPoints, pathReplay.progress) : null;
   const targetZone = scene.criticalZones.find((zone) => zone.id === selectedNodeId) ?? null;
   const cameraResult = result?.cameraResults.find((entry) => entry.cameraId === camera.id) ?? null;

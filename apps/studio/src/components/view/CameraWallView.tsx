@@ -595,6 +595,14 @@ export function CameraWallView() {
     ?? cameras.find((cam) => cam.id === selectedCameraId)
     ?? null;
 
+  const weakRouteCameras = useMemo(() => {
+    return cameras.filter((cam) => {
+      const vis = pathVisibilityByCameraId[cam.id];
+      if (!vis || vis.totalDurationS <= 0) return false;
+      return vis.visibleS / vis.totalDurationS <= 0.35;
+    }).length;
+  }, [cameras, pathVisibilityByCameraId]);
+
   if (cameras.length === 0) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -610,14 +618,6 @@ export function CameraWallView() {
       </div>
     );
   }
-
-  const weakRouteCameras = useMemo(() => {
-    return cameras.filter((cam) => {
-      const vis = pathVisibilityByCameraId[cam.id];
-      if (!vis || vis.totalDurationS <= 0) return false;
-      return vis.visibleS / vis.totalDurationS <= 0.35;
-    }).length;
-  }, [cameras, pathVisibilityByCameraId]);
 
   const wallActionHint = activePath
     ? weakRouteCameras > 0

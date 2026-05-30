@@ -6285,3 +6285,37 @@ All relevant decisions and analysis are already captured in:
 **Decision:** Motion One (WAAPI) is the primary engine for complex timeline choreography (path replay, multi-step sequences). Framer Motion is the primary engine for React UI state transitions. Native R3F useFrame + Three.js curves is the primary engine for simple 3D path traversal.
 **Why it matters:** This ensures SentinelTwin remains strictly compliant with open-source licensing without sacrificing animation fidelity.
  - Browser-native share support is now available on the main archive/compare handoff surfaces via a shared helper that uses `navigator.share` when possible and clipboard copy as fallback, so the existing link builders now reach a native share surface instead of only copy/open buttons.
+
+---
+
+### Thread 30: Next.js 16 Turbopack workspace root detection in pnpm monorepos
+**Status:** Webpack workaround active. Upstream issue.
+**Key finding:** Next.js 16.2.6's Turbopack has workspace root detection problems when there are
+multiple lockfiles at different levels in a pnpm monorepo. The `findRootDirAndLockFiles` function
+in `node_modules/next/dist/lib/find-root.js` walks up from `cwd` collecting lockfiles, then selects
+the topmost one as the workspace root. When any lockfile exists inside `apps/studio/` (created by
+prior `bun install` or `npm install` runs), Turbopack picks the wrong root and fails to find
+`next/package.json`, producing "couldn't find the Next.js package from the project directory" errors.
+- The `turbopack.root` config option exists but Turbopack's Rust binary does not consistently
+  respect it in all monorepo layouts.
+- **Webpack fix confirmed:** `next dev --webpack` works without workspace root errors.
+- Stale lockfiles (`pnpm-lock.yaml`, `package-lock.json`, `bun.lock`) were cleaned from `apps/studio/`.
+
+**Next:** If Turbopack is desired in the future, test with Next.js 17+ updates.
+Add a CI check that prevents lockfiles from being committed inside package subdirectories.
+
+### Thread 31: Simulation index.ts export hygiene
+**Status:** Cleaned. Resolved.
+**Key finding:** `@sentineltwin/simulation/src/index.ts` had stale re-exports from source modules
+that no longer existed after the temporal and placement-oracle refactoring. Specifically:
+- `deriveCameraQualityByZone` was re-exported from `./coverage` but never existed in `coverage.ts`.
+- `tsc --noEmit` silently accepts stale re-exports when using `moduleResolution: "Bundler"`.
+- Webpack's resolver correctly rejects them, creating a type-check pass / build fail mismatch.
+- The `CellComputation` type export was also removed from the simulation package (still exported
+  from the `@sentineltwin/core` package).
+
+**Implication:** After any refactoring that changes exports, verify with both `tsc --noEmit` AND
+a Next.js build (`next build` or `next dev --webpack`), not just `tsc --noEmit`.
+
+**Test validation:** 779 tests pass with 9417 expect() calls across 166 files.
+All packages (`core`, `simulation`, `report`, `studio`) compile clean.

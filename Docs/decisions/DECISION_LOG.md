@@ -4,6 +4,94 @@
 
 ---
 
+## D-248 | 2026-05-30 | Build resolution: Webpack over Turbopack for Next.js pnpm monorepos
+
+**Decision:** Use `next dev --webpack` as the default dev mode because Next.js 16.2.6's Turbopack
+has workspace root detection issues in pnpm monorepos with multiple lockfile levels.
+Stale lockfiles (`pnpm-lock.yaml`, `package-lock.json`, `bun.lock`) were cleaned from `apps/studio/`.
+
+**Rationale:**
+- Turbopack's `findRootDirAndLockFiles` function walks up the directory tree detecting lockfiles
+  at each level, then selects the topmost directory as the workspace root.
+- In the root-level pnpm monorepo, the presence of any lockfile inside `apps/studio/` causes
+  Turbopack to incorrectly infer the workspace root, leading to "couldn't find the Next.js package"
+  errors because it looks for `next/package.json` from `apps/studio/src/app` instead of `apps/studio/`.
+- The stale lockfiles were created by prior `bun install`/`npm install` runs inside the studio directory.
+- While the stale lockfiles were removed, the core issue is Next.js 16's Turbopack resolution in
+  monorepo subdirectories. Webpack does not have this issue.
+
+**Alternatives rejected:**
+- Keep Turbopack with `turbopack.root` config: the config exists but Turbopack's Rust binary
+  does not consistently respect it in all monorepo layouts.
+- Remove all non-pnpm lockfiles from subdirectories: done as a mitigation but does not guarantee
+  future compatibility with Turbopack.
+
+**Impact:** All `turbo dev` and `next dev` scripts should prefer `--webpack` flag or set
+`STUDIO_DEV_BUNDLER=webpack` in the environment until this is resolved upstream.
+
+---
+
+## D-247 | 2026-05-30 | Clean up stale simulation index.ts re-exports after temporal refactoring
+
+**Decision:** Removed non-existent re-exports from `@sentineltwin/simulation/src/index.ts`:
+`deriveCameraQualityByZone` (from `./coverage`). The temporal and placement-oracle refactoring
+had left the index.ts referencing exports that no longer existed in their source files.
+
+**Rationale:**
+- `tsc --noEmit` on the simulation package silently accepted the stale re-exports due to its
+  `moduleResolution: "Bundler"` setting, which does not enforce export existence.
+- Webpack's resolver, used by Next.js when compiling the studio app, correctly rejects stale
+  exports, causing build failures.
+- Zone quality evaluation is handled through `CameraEvaluation` and `computeZoneResults` paths
+  instead.
+
+**Alternatives rejected:**
+- Add the missing `deriveCameraQualityByZone` function to `coverage.ts`: unnecessary because
+  the same functionality exists through the `CameraEvaluation` type and `getQualityThresholds` path.
+
+---
+
+## D-246 | 2026-05-30 | Placement oracle returns PlacementOracleResult with typed candidate evaluations
+
+**Decision:** `computePlacementOracle` now returns a `PlacementOracleResult` containing
+`sampleCount`, `templateCameraId`, `candidateCount`, `bestCandidate: CandidateEvaluation | null`,
+and `candidates: CandidateEvaluation[]`. The previous return type `PlacementRecommendation[]`
+is removed.
+
+**Rationale:**
+- The new type enables richer downstream analysis: per-candidate coverage deltas, recognition/identification
+  improvements, critical zone gains, privacy zone hits, and composite scores.
+- The oracle now only processes failing zones (skipping zones that already pass), reducing noise.
+- Early-exit when no failing zones exist avoids unnecessary computation.
+
+**Alternatives rejected:**
+- Keep `PlacementRecommendation[]`: too flat for downstream scoring and filtering needs.
+- Process all zones including passing ones: wastes compute on zones that need no improvement.
+
+---
+
+## D-245 | 2026-05-30 | Temporal simulation refactored to hourlySnapshots format
+
+**Decision:** The temporal simulation engine now produces `HourlySecuritySnapshot[]` aligned with
+the canonical `TemporalSecurityProfile` type from `@sentineltwin/core`. The older `TimeSlice[]`
+format is replaced.
+
+**Rationale:**
+- The new format provides richer per-snapshot data: `overallCoveragePct`, `criticalZonePassCount`,
+  `criticalZoneStatuses`, `activeCameraCount`, `activeLightCount`, `adversarialPathExposureScore`,
+  `issues[]`, and `stateLabel`.
+- Vulnerability window detection and safest-period analysis are now built on top of snapshots,
+  matching the canonical product output structure.
+- The `TimeSliceState` type is preserved as an internal engine helper for per-time-slice
+  scene patching, while the public output uses `HourlySecuritySnapshot`.
+
+**Alternatives rejected:**
+- Keep `TimeSlice[]` as public output: incompatible with the canonical `TemporalSecurityProfile` schema
+  and would require conversion at every consumer boundary.
+- Remove all state types and use a flat hour/minute approach: would lose the rich per-snapshot metadata.
+
+---
+
 ## D-244 | 2026-05-30 | Canonicalize site-intake source taxonomy and explicit draft activation
 
 **Decision:** Canonical site-intake sources are now fixed to:

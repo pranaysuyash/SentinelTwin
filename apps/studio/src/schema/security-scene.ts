@@ -264,12 +264,13 @@ export const privacyZoneNodeSchema = z.object({
 });
 
 export const commentNodeSchema = z.object({
-  id: z.string().startsWith("cmt_"),
+  id: z.string().startsWith("comment_"),
   nodeType: z.literal("comment"),
+  label: z.string().default("Comment"),
   position: point3Schema,
   text: z.string(),
-  author: z.string(),
-  createdAt: z.number(),
+  author: z.string().default("Operator"),
+  createdAt: z.number().int().nonnegative(),
   resolved: z.boolean().default(false),
   attachedToNodeId: z.string().nullable().default(null),
   source: sceneSourceSchema,
@@ -691,6 +692,7 @@ export const timeScheduleSchema = z.object({
     longitude: z.number(),
     timezone: z.string(),
   }).optional(),
+  seasonalDate: z.string().optional(),
   interiorLightSchedule: z.array(lightScheduleSchema).default([]),
   exteriorLightSchedule: z.array(lightScheduleSchema).default([]),
   doorLockSchedule: z.array(z.object({

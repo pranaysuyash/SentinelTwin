@@ -2650,7 +2650,7 @@ function buildSimulationState(
   const nextScene = cloneSecurityScene(scene);
   nextScene.simulation = result;
   nextScene.updatedAt = Date.now();
-  const temporalProfile = computeTemporalProfile(nextScene);
+  const temporalProfile = computeTemporalProfile(nextScene as never);
 
   return {
     scene: nextScene,
@@ -3380,7 +3380,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   showDebugOverlays: INITIAL_LAYOUT.showDebugOverlays,
   autoRecompute: true,
   cameraFailures: [],
-  temporalProfile: computeTemporalProfile(INITIAL_SCENE),
+  temporalProfile: computeTemporalProfile(INITIAL_SCENE as never),
   temporalScrubHour: 10,
   temporalScrubMinute: 0,
   demoMode: false,
@@ -5123,7 +5123,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   },
   computeTemporalProfile: () => {
     const { scene } = get();
-    const profile = computeTemporalProfile(scene);
+    const profile = computeTemporalProfile(scene as never);
     set({ temporalProfile: profile });
   },
 

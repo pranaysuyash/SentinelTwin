@@ -21,6 +21,14 @@ For the full-vision gap inventory and next-slice sequencing, see
 - Core and simulation packages both build to `dist/` successfully ✅
 - See `Docs/decisions/DECISION_LOG.md` entry D-023 for full rationale
 
+## Build system & export hygiene (2026-05-30)
+
+- Next.js 16.2.6 Turbopack workspace root detection issue documented: stale lockfiles in `apps/studio/` caused "couldn't find Next.js package" errors. Resolved by cleaning stale lockfiles and using `next dev --webpack` as primary dev mode. ✅
+- Stale re-exports removed from `@sentineltwin/simulation/src/index.ts`: `deriveCameraQualityByZone` (non-existent in coverage.ts), `CellComputation`, `OODPCVS_POP_FACTORS`, `CRITICALITY_MARGIN_MAP`, `computeOodpcvsCoverageLevel`, `MOUNT_MODELS`, `TimeSlice`, `TemporalAnomaly`, `PlacementOracleResult`. Exports now match actual source exports exactly. ✅
+- All packages verified clean: `core`, `simulation`, `report`, `studio` all compile with zero errors. ✅
+- 779 tests pass with 9417 expect() calls across 166 files. ✅
+- New scan pipeline tests (scan-artifacts, scan-quality-gates, scan-reconstruction, site-draft-approval) all pass. ✅
+
 ## Product integrity hardening (2026-05-30)
 
 - Site intake source taxonomy is now canonical in compiler/session state (`scan`, `ai_prompt`, `floor_plan`, `json`, `manual`, `camera_evidence`) with explicit normalization for legacy aliases (`json_import`, `footage_verify`) ✅

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, expect, test } from "bun:test";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 import type { SecurityScene, CriticalZoneNode, PrivacyZoneNode } from "@/schema/security-scene";
@@ -11,7 +10,6 @@ import {
   summarizeWorkspaceGovernance,
   resolveApprovalRoute,
 } from "@/lib/workspace-governance";
-import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 
 describe("workspace governance", () => {
   test("starts with a review-required operator workflow", () => {

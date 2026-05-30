@@ -171,6 +171,9 @@ export function buildReportData(scene: any, simulationResult: any, options?: any
   };
 }
 
+/** @deprecated Use buildCompareReportData instead */
+export const buildCompareReport = buildCompareReportData;
+
 export function buildCompareReportData(sceneA: any, resultA: any, sceneB: any, resultB: any, options?: any): CompareReportData {
   return {
     before: buildReportData(sceneA, resultA),

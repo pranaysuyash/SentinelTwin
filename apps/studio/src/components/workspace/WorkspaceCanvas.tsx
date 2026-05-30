@@ -359,7 +359,7 @@ function CameraMarker({
 }: {
   camera: CameraNode;
   selected: boolean;
-  onContextMenu?: (id: string, event: ThreeEvent<any>) => void;
+  onContextMenu?: (id: string, event: ThreeEvent<MouseEvent>) => void;
 }) {
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
@@ -508,7 +508,7 @@ function AccentSurface({
 function CeilingLightMarkers({
   onContextMenu,
 }: {
-  onContextMenu?: (id: string, event: ThreeEvent<any>) => void;
+  onContextMenu?: (id: string, event: ThreeEvent<MouseEvent>) => void;
 }) {
   const scene = useStudioStore((s) => s.scene);
 
@@ -537,7 +537,7 @@ function CeilingLightMarkers({
 function SensorMarkers({
   onContextMenu,
 }: {
-  onContextMenu?: (id: string, event: ThreeEvent<any>) => void;
+  onContextMenu?: (id: string, event: ThreeEvent<MouseEvent>) => void;
 }) {
   const scene = useStudioStore((s) => s.scene);
   const selected = useStudioStore((s) => s.selectedNodeId);
@@ -624,7 +624,7 @@ function CriticalZoneOverlay({
   result?: { status: string; actualQuality: string };
   selected?: boolean;
   onSelect?: (id: string) => void;
-  onContextMenu?: (id: string, event: ThreeEvent<any>) => void;
+  onContextMenu?: (id: string, event: ThreeEvent<MouseEvent>) => void;
 }) {
   const layers = useStudioStore((s) => s.layerVisibility);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
@@ -736,7 +736,7 @@ function SceneGeometry({
   onHeatmapHover,
   onHeatmapHoverClear,
 }: {
-  onObjectContextMenu: (nodeId: string, event: ThreeEvent<any>) => void;
+  onObjectContextMenu: (nodeId: string, event: ThreeEvent<MouseEvent>) => void;
   onHeatmapHover: (cell: CoverageCellResult, event: ThreeEvent<PointerEvent>) => void;
   onHeatmapHoverClear: () => void;
 }) {
@@ -1892,7 +1892,7 @@ export function WorkspaceCanvas() {
     [frame.position.x, frame.position.y, frame.position.z, isTopDown],
   );
 
-  const openObjectContextMenu = useCallback((nodeId: string, event: ThreeEvent<any>) => {
+  const openObjectContextMenu = useCallback((nodeId: string, event: ThreeEvent<MouseEvent>) => {
     event.stopPropagation();
     event.nativeEvent.preventDefault();
     const snapshot = selectedNodeIds.length > 0 ? [...selectedNodeIds] : [];

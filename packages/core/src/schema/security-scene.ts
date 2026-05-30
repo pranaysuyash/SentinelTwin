@@ -266,7 +266,7 @@ export const privacyZoneNodeSchema = z.object({
 export const commentNodeSchema = z.object({
   id: z.string().startsWith("comment_"),
   nodeType: z.literal("comment"),
-  label: z.string(),
+  label: z.string().default("Comment"),
   position: point3Schema,
   text: z.string(),
   author: z.string().default("Operator"),
@@ -692,6 +692,7 @@ export const timeScheduleSchema = z.object({
     longitude: z.number(),
     timezone: z.string(),
   }).optional(),
+  seasonalDate: z.string().optional(),
   interiorLightSchedule: z.array(lightScheduleSchema).default([]),
   exteriorLightSchedule: z.array(lightScheduleSchema).default([]),
   doorLockSchedule: z.array(z.object({
@@ -821,6 +822,7 @@ export type ObstructionNode = z.infer<typeof obstructionNodeSchema>;
 export type CriticalZoneNode = z.infer<typeof criticalZoneNodeSchema>;
 export type PrivacyZoneNode = z.infer<typeof privacyZoneNodeSchema>;
 export type SensorNode = z.infer<typeof sensorNodeSchema>;
+export type CommentNode = z.infer<typeof commentNodeSchema>;
 export type EntryPointNode = z.infer<typeof entryPointNodeSchema>;
 export type PathPoint = z.infer<typeof pathPointSchema>;
 export type ScenarioPath = z.infer<typeof scenarioPathSchema>;
@@ -851,7 +853,8 @@ export type AnyEditableNode =
   | CriticalZoneNode
   | PrivacyZoneNode
   | EntryPointNode
-  | ScenarioPath;
+  | ScenarioPath
+  | CommentNode;
 
 export type TimePeriod = z.infer<typeof timePeriodSchema>;
 export type LightSchedule = z.infer<typeof lightScheduleSchema>;

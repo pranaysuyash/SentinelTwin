@@ -107,7 +107,7 @@ export function SceneWalls({
 }: {
   walls: WallNode[];
   selectable?: boolean;
-  onContextMenu?: (id: string, event: ThreeEvent<any>) => void;
+  onContextMenu?: (id: string, event: ThreeEvent<MouseEvent>) => void;
 }) {
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
@@ -176,7 +176,7 @@ export function SceneDoors({
 }: {
   doors: DoorNode[];
   selectable?: boolean;
-  onContextMenu?: (id: string, event: ThreeEvent<any>) => void;
+  onContextMenu?: (id: string, event: ThreeEvent<MouseEvent>) => void;
 }) {
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
@@ -247,7 +247,7 @@ export function SceneWindows({
 }: {
   windows: WindowNode[];
   selectable?: boolean;
-  onContextMenu?: (id: string, event: ThreeEvent<any>) => void;
+  onContextMenu?: (id: string, event: ThreeEvent<MouseEvent>) => void;
 }) {
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
@@ -325,7 +325,7 @@ export function SceneObstructions({
   selectedId?: string | null;
   /** Optional click handler. If not provided, uses store's selectNode. */
   onSelect?: (id: string) => void;
-  onContextMenu?: (id: string, event: ThreeEvent<any>) => void;
+  onContextMenu?: (id: string, event: ThreeEvent<MouseEvent>) => void;
 }) {
   const storeSelect = useStudioStore((s) => s.selectNode);
   const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
@@ -836,7 +836,7 @@ export function ScenePrivacyZones({
 }: {
   zones: { id: string; label: string; polygon: [number, number][]; restriction: string }[];
   onSelect?: (id: string) => void;
-  onContextMenu?: (id: string, event: ThreeEvent<any>) => void;
+  onContextMenu?: (id: string, event: ThreeEvent<MouseEvent>) => void;
 }) {
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
   const selectNode = useStudioStore((s) => s.selectNode);
@@ -882,7 +882,7 @@ export function ScenePathLine({
   showMarkers?: boolean;
   id?: string;
   onSelect?: (id: string) => void;
-  onContextMenu?: (id: string, event: ThreeEvent<any>) => void;
+  onContextMenu?: (id: string, event: ThreeEvent<MouseEvent>) => void;
 }) {
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
   const selectNode = useStudioStore((s) => s.selectNode);

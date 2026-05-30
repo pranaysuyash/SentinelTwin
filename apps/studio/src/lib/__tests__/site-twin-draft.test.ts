@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, expect, test } from "bun:test";
 import {
   compileToSiteTwinDraft,
@@ -22,7 +21,7 @@ function makeScene(overrides?: Partial<SecurityScene>): SecurityScene {
 
 function addCamera(scene: SecurityScene) {
   scene.cameras.push({
-    id: "cam_1", nodeType: "camera", name: "Camera 1", position: [5, 3, 2],
+    id: "cam_1", nodeType: "camera", name: "Camera 1", position: [5, 3, 2] as [number, number, number],
     yawDeg: 0, pitchDeg: 0, rollDeg: 0, mountHeightM: 3, mountType: "wall",
     fovHorizontalDeg: 90, fovVerticalDeg: 60, rangeM: 30, resolutionMP: 8,
     resolutionWidth: 3840, resolutionHeight: 2160, lensType: "fixed", focalLengthMm: 4,
@@ -36,7 +35,7 @@ function addZone(scene: SecurityScene) {
   scene.criticalZones.push({
     id: "zone_1", nodeType: "critical_zone", label: "Entry Zone",
     targetType: "person_detection", priority: "medium", requiredQuality: "detection",
-    polygon: [[0, 0], [2, 0], [2, 2], [0, 2]], heightM: 2.5, source: "manual",
+    polygon: [[0, 0] as [number, number], [2, 0] as [number, number], [2, 2] as [number, number], [0, 2] as [number, number]], heightM: 2.5, source: "manual",
     reviewStatus: "unreviewed", sourceTrace: "", geometryValidity: "valid",
     nightRequired: false, redundancyRequired: false, privacyZone: false,
   });
@@ -44,7 +43,7 @@ function addZone(scene: SecurityScene) {
 
 function addEntryPoint(scene: SecurityScene) {
   scene.entryPoints.push({
-    id: "entry_1", nodeType: "entry_point", label: "Main Door", position: [1, 1],
+    id: "entry_1", nodeType: "entry_point", label: "Main Door", position: [1, 1] as [number, number],
     source: "manual", reviewStatus: "unreviewed", sourceTrace: "", geometryValidity: "valid",
   });
 }
@@ -267,13 +266,13 @@ describe("actionable warnings", () => {
     const scene = makeScene();
     scene.walls.push({
       id: "wall_1", nodeType: "wall", label: "North Wall",
-      start: [0, 0], end: [10, 0], thicknessM: 0.2, heightM: 3,
+      start: [0, 0] as [number, number], end: [10, 0] as [number, number], thicknessM: 0.2, heightM: 3,
       material: "solid", visionTransmission: 0, source: "manual",
       reviewStatus: "unreviewed", sourceTrace: "", geometryValidity: "valid",
     });
     scene.doors.push({
       id: "door_1", nodeType: "door", label: "Far Door",
-      position: [50, 0, 50], state: "closed", dimensions: [1, 2.1, 0.1],
+      position: [50, 0, 50] as [number, number, number], state: "closed", dimensions: [1, 2.1, 0.1] as [number, number, number],
       source: "manual", reviewStatus: "unreviewed", sourceTrace: "", geometryValidity: "valid",
     } as unknown as DoorNode);
     const warnings = makeSiteCompilerWarnings(scene);
@@ -286,7 +285,7 @@ describe("actionable warnings", () => {
   test("camera with no FOV produces a warning", () => {
     const scene = makeScene();
     scene.cameras.push({
-      id: "cam_nolens", nodeType: "camera", name: "Mystery Cam", position: [5, 3, 2],
+      id: "cam_nolens", nodeType: "camera", name: "Mystery Cam", position: [5, 3, 2] as [number, number, number],
       yawDeg: 0, pitchDeg: 0, rollDeg: 0, mountHeightM: 3, mountType: "wall",
       fovHorizontalDeg: 0, fovVerticalDeg: 0, rangeM: 30, resolutionMP: 8,
       resolutionWidth: 3840, resolutionHeight: 2160, lensType: "fixed", focalLengthMm: 4,

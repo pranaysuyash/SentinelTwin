@@ -13,6 +13,7 @@
  */
 import { simulateStudio } from "./simulate-studio";
 import { detectTemporalAnomalies } from "./temporal-anomaly";
+import { getExteriorLightStateSeasonal } from "./seasonal-lighting";
 import {
   type HourlySecuritySnapshot,
   type SecurityScene,
@@ -152,13 +153,16 @@ function hasSceneSchedule(scene: SecurityScene): boolean {
 function computeTimeSliceState(hour: number, minute: number, scene?: SecurityScene): TimeSliceState {
   const ts = scene?.timeSchedule;
   const useScene = !!scene && hasSceneSchedule(scene);
+  const hasLocation = !!(ts?.location?.latitude != null && ts?.location?.longitude != null);
 
   const interior = useScene && ts
     ? getInteriorLightStateFromSchedule(hour, minute, ts)
     : getInteriorLightStateDefault(hour, minute);
-  const exterior = useScene && ts
-    ? getExteriorLightStateFromSchedule(hour, minute, ts)
-    : getExteriorLightStateDefault(hour, minute);
+  const exterior = ts && hasLocation
+    ? getExteriorLightStateSeasonal(hour, minute, ts)
+    : useScene && ts
+      ? getExteriorLightStateFromSchedule(hour, minute, ts)
+      : getExteriorLightStateDefault(hour, minute);
   const occupancy = useScene && ts
     ? getOccupancyFromSchedule(hour, minute, ts)
     : getOccupancyDefault(hour, minute);

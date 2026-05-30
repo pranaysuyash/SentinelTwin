@@ -215,8 +215,8 @@ function parseXmlCandidates(raw: string): { items: unknown[]; errors: string[] }
 
   for (const block of blocks) {
     // Basic XML extraction
-    let sensorId = findXmlTagText(block, ["SensorId", "SensorToken", "Token", "Id"]) ?? findXmlAttribute(block, ["sensorId", "sensor-id", "id", "token"]);
-    let sensorLabel = findXmlTagText(block, ["SensorLabel", "SensorName", "Label", "Name", "Title"]) ?? findXmlAttribute(block, ["sensorLabel", "sensor-label", "name", "label", "title"]);
+    const sensorId = findXmlTagText(block, ["SensorId", "SensorToken", "Token", "Id"]) ?? findXmlAttribute(block, ["sensorId", "sensor-id", "id", "token"]);
+    const sensorLabel = findXmlTagText(block, ["SensorLabel", "SensorName", "Label", "Name", "Title"]) ?? findXmlAttribute(block, ["sensorLabel", "sensor-label", "name", "label", "title"]);
     let sensorType = normalizeSensorType(findXmlTagText(block, ["SensorType", "Type", "Category", "Kind"]) ?? findXmlAttribute(block, ["sensorType", "type", "category", "kind"]));
     let kind = normalizeEventKind(findXmlTagText(block, ["Kind", "EventKind", "Status", "EventType"]) ?? findXmlAttribute(block, ["kind", "eventKind", "status", "eventType"]));
     let details = findXmlTagText(block, ["Details", "Message", "Description", "Note"]) ?? findXmlAttribute(block, ["details", "message", "description", "note"]);

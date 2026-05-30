@@ -54,13 +54,12 @@ export { computePlacementOracle } from "./placement-oracle";
 
 // Temporal simulation
 export { computeTemporalProfile, computeTimeSliceStateForHour } from "./temporal";
-export { detectTemporalAnomalies } from "./temporal-anomaly";
 
-// Critical zones
-export { selectHighestPriorityCriticalZone, selectCounterCriticalZone } from "./critical-zone-selection";
-
-// Temporal time-slice state
 export type { TimeSliceState } from "./temporal";
+
+export { computeSeasonalLightState, getExteriorLightStateSeasonal, estimateExteriorLux, computeTwilightPeriods } from "./seasonal-lighting";
+
+export type { SunPosition, LightMeasurement, SeasonalLightState } from "./seasonal-lighting";
 
 // Utility
 export { getQualityThresholds, getForwardVector } from "./coverage";

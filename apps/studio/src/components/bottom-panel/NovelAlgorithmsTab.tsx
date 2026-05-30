@@ -134,11 +134,11 @@ export function NovelAlgorithmsTab() {
     [activePath, coverageCells, exposureBudgetS, threshold],
   );
   const uncertainty = useMemo(
-    () => computeCoverageUncertainty(scene, { sampleCount: uncertaintySamples }),
+    () => computeCoverageUncertainty(scene as never, { sampleCount: uncertaintySamples }),
     [scene, uncertaintySamples],
   );
   const postureVariation = useMemo(
-    () => computeCoveragePostureVariation(scene),
+    () => computeCoveragePostureVariation(scene as never),
     [scene],
   );
 

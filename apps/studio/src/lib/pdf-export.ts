@@ -1,5 +1,10 @@
 import type { SimulationResult, SecurityScene } from "@/schema/security-scene";
 
+interface AutoTableJsPDF {
+  autoTable(options: Record<string, unknown>): void;
+  lastAutoTable: { finalY: number };
+}
+
 interface PdfReportOptions {
   scene: SecurityScene;
   result: SimulationResult | null;
@@ -181,7 +186,7 @@ export async function exportAuditReportPdf(options: PdfReportOptions) {
       ["Identification", formatPct(result.coverageByQuality.identification)],
     ];
 
-    (doc as any).autoTable({
+    (doc as unknown as AutoTableJsPDF).autoTable({
       startY: y,
       margin: { left: ml, right: ml },
       tableWidth: contentW,
@@ -205,7 +210,7 @@ export async function exportAuditReportPdf(options: PdfReportOptions) {
         fillColor: [18, 26, 42],
       },
     });
-    y = (doc as any).lastAutoTable.finalY + 10;
+    y = (doc as unknown as AutoTableJsPDF).lastAutoTable.finalY + 10;
 
     // === Section: Zone Compliance ===
     doc.setFont("helvetica", "bold");
@@ -222,7 +227,7 @@ export async function exportAuditReportPdf(options: PdfReportOptions) {
       z.redundancyCameraCount > 0 ? `${z.redundancyCameraCount}` : "0",
     ]);
 
-    (doc as any).autoTable({
+    (doc as unknown as AutoTableJsPDF).autoTable({
       startY: y,
       margin: { left: ml, right: ml },
       tableWidth: contentW,
@@ -249,13 +254,13 @@ export async function exportAuditReportPdf(options: PdfReportOptions) {
         3: {
           fontStyle: "bold",
           fillColor: (value?: string) => {
-            if (value === "FAIL") return [60, 20, 20] as any;
-            if (value === "PARTIAL") return [50, 40, 10] as any;
+            if (value === "FAIL") return [60, 20, 20] as [number, number, number];
+            if (value === "PARTIAL") return [50, 40, 10] as [number, number, number];
             return undefined;
           },
         },
       },
-      didParseCell: (data: any) => {
+      didParseCell: (data: { column: { index: number }; cell: { raw: string; styles: { textColor: [number, number, number] } } }) => {
         if (data.column.index === 3) {
           const val = data.cell.raw as string;
           if (val === "FAIL") {
@@ -268,7 +273,7 @@ export async function exportAuditReportPdf(options: PdfReportOptions) {
         }
       },
     });
-    y = (doc as any).lastAutoTable.finalY + 10;
+    y = (doc as unknown as AutoTableJsPDF).lastAutoTable.finalY + 10;
 
     // === Section: Camera Results ===
     doc.setFont("helvetica", "bold");
@@ -284,7 +289,7 @@ export async function exportAuditReportPdf(options: PdfReportOptions) {
       `${c.criticalZonesFailed.length}`,
     ]);
 
-    (doc as any).autoTable({
+    (doc as unknown as AutoTableJsPDF).autoTable({
       startY: y,
       margin: { left: ml, right: ml },
       tableWidth: contentW,
@@ -308,7 +313,7 @@ export async function exportAuditReportPdf(options: PdfReportOptions) {
         fillColor: [18, 26, 42],
       },
     });
-    y = (doc as any).lastAutoTable.finalY + 10;
+    y = (doc as unknown as AutoTableJsPDF).lastAutoTable.finalY + 10;
 
     // === Section: Issues ===
     if (result.issues.length > 0) {
@@ -362,7 +367,7 @@ export async function exportAuditReportPdf(options: PdfReportOptions) {
         r.costCategory ?? "",
       ]);
 
-      (doc as any).autoTable({
+      (doc as unknown as AutoTableJsPDF).autoTable({
         startY: y,
         margin: { left: ml, right: ml },
         tableWidth: contentW,
@@ -386,7 +391,7 @@ export async function exportAuditReportPdf(options: PdfReportOptions) {
           fillColor: [18, 26, 42],
         },
       });
-      y = (doc as any).lastAutoTable.finalY + 10;
+      y = (doc as unknown as AutoTableJsPDF).lastAutoTable.finalY + 10;
     }
 
     // === Section: Advanced Metrics ===
@@ -440,7 +445,7 @@ export async function exportAuditReportPdf(options: PdfReportOptions) {
       }
 
       if (metricRows.length > 0) {
-        (doc as any).autoTable({
+        (doc as unknown as AutoTableJsPDF).autoTable({
           startY: y,
           margin: { left: ml, right: ml },
           tableWidth: contentW,

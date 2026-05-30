@@ -303,7 +303,7 @@ export function TemporalProfileView() {
     setLoading(true);
     // Defer computation to let React commit the loading state render first
     requestAnimationFrame(() => {
-      const profile = computeTemporalProfile(scene);
+      const profile = computeTemporalProfile(scene as never);
       setTemporalProfile(profile);
       setLoading(false);
     });

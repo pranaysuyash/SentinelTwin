@@ -886,28 +886,6 @@ export function CompareView() {
     setComparisonBId(proposedSnap.id);
   }, [demoMode, demoStep, snapshots, comparisonAId, comparisonBId]);
 
-  if (snapshots.length === 0) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center gap-4 bg-[#07090d]">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-dashed border-[#1f2536]">
-          <GitCompare className="h-6 w-6 text-[#2a3246]" />
-        </div>
-        <div className="text-center">
-          <div className="text-[12px] font-medium text-[#4a5568]">No snapshots to compare</div>
-          <div className="mt-1 text-[10px] text-[#3a4158]">Save snapshots from the map view to compare scenarios.</div>
-        </div>
-      </div>
-    );
-  }
-
-  const comparisonCards = [
-    { label: "Overall Coverage", beforeValue: mA?.covered ?? null, afterValue: mB?.covered ?? null, delta: mA && mB ? mB.covered - mA.covered : null, tone: "#9ae6b4" },
-    { label: "Recognition", beforeValue: mA?.recognition ?? null, afterValue: mB?.recognition ?? null, delta: mA && mB ? mB.recognition - mA.recognition : null, tone: "#93c5fd" },
-    { label: "Blindspot", beforeValue: mA?.blindspot ?? null, afterValue: mB?.blindspot ?? null, delta: mA && mB ? mB.blindspot - mA.blindspot : null, tone: "#fca5a5" },
-    { label: "Critical Zones", beforeValue: mA?.critZonePct ?? null, afterValue: mB?.critZonePct ?? null, delta: mA && mB ? mB.critZonePct - mA.critZonePct : null, tone: "#fdba74" },
-    { label: "Path Visibility", beforeValue: mA?.visiblePathPct ?? null, afterValue: mB?.visiblePathPct ?? null, delta: mA && mB ? mB.visiblePathPct - mA.visiblePathPct : null, tone: "#c4b5fd" },
-  ] as const;
-
   const prioritizedActions = useMemo(() => {
     const actions: string[] = [];
     if (mA && mB) {
@@ -936,6 +914,28 @@ export function CompareView() {
 
     return actions.slice(0, 3);
   }, [mA, mB, snapshotB?.simulation?.issues]);
+
+  if (snapshots.length === 0) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-4 bg-[#07090d]">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-dashed border-[#1f2536]">
+          <GitCompare className="h-6 w-6 text-[#2a3246]" />
+        </div>
+        <div className="text-center">
+          <div className="text-[12px] font-medium text-[#4a5568]">No snapshots to compare</div>
+          <div className="mt-1 text-[10px] text-[#3a4158]">Save snapshots from the map view to compare scenarios.</div>
+        </div>
+      </div>
+    );
+  }
+
+  const comparisonCards = [
+    { label: "Overall Coverage", beforeValue: mA?.covered ?? null, afterValue: mB?.covered ?? null, delta: mA && mB ? mB.covered - mA.covered : null, tone: "#9ae6b4" },
+    { label: "Recognition", beforeValue: mA?.recognition ?? null, afterValue: mB?.recognition ?? null, delta: mA && mB ? mB.recognition - mA.recognition : null, tone: "#93c5fd" },
+    { label: "Blindspot", beforeValue: mA?.blindspot ?? null, afterValue: mB?.blindspot ?? null, delta: mA && mB ? mB.blindspot - mA.blindspot : null, tone: "#fca5a5" },
+    { label: "Critical Zones", beforeValue: mA?.critZonePct ?? null, afterValue: mB?.critZonePct ?? null, delta: mA && mB ? mB.critZonePct - mA.critZonePct : null, tone: "#fdba74" },
+    { label: "Path Visibility", beforeValue: mA?.visiblePathPct ?? null, afterValue: mB?.visiblePathPct ?? null, delta: mA && mB ? mB.visiblePathPct - mA.visiblePathPct : null, tone: "#c4b5fd" },
+  ] as const;
 
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#07090d]">

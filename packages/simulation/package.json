@@ -1,6 +1,7 @@
 {
   "name": "@sentineltwin/simulation",
   "version": "0.1.0",
+  "license": "Apache-2.0",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
@@ -22,11 +23,13 @@
   },
   "dependencies": {
     "@sentineltwin/core": "workspace:*",
+    "suncalc": "^1.9.0",
     "three": "^0.184.0",
     "three-mesh-bvh": "^0.9.10"
   },
   "devDependencies": {
     "@types/node": "^22",
+    "@types/suncalc": "^1.9.2",
     "@types/three": "^0.184.1",
     "typescript": "^5"
   }

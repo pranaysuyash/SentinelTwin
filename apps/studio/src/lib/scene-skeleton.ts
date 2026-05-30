@@ -83,6 +83,8 @@ export function createBlankSecurityScene(): SecurityScene {
     entryPoints: [],
     paths: [],
     comments: [],
+    evidenceArtifacts: [],
+    mismatchReports: [],
     assumptions: {
       wallHeightM: 3,
       personHeightM: 1.75,

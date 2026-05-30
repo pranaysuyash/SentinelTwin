@@ -194,8 +194,8 @@ export function safeParseOperationalEvidenceEvent(input: unknown): OperationalEv
     previousSceneSnapshot,
     sceneSnapshot,
     simulation: parsed.data.simulation ? structuredClone(parsed.data.simulation) : undefined,
-    liveCameraConnectionContinuity: parsed.data.liveCameraConnectionContinuity as any,
-    sensorIngestContinuity: parsed.data.sensorIngestContinuity as any,
+    liveCameraConnectionContinuity: parsed.data.liveCameraConnectionContinuity as unknown as import("./camera-live-connection-history").CameraLiveConnectionArchiveRecord[],
+    sensorIngestContinuity: parsed.data.sensorIngestContinuity as unknown as import("./sensor-ingest-history").SensorIngestArchiveRecord[],
     notes: parsed.data.notes?.filter((note): note is string => typeof note === "string"),
   };
   const validated = OperationalEvidenceEventSchema.safeParse(normalized);
@@ -515,8 +515,8 @@ export function buildOperationalEvidenceEvent(input: OperationalEvidenceEventInp
     previousSceneSnapshot,
     sceneSnapshot,
     simulation: parsedInput.simulation ? structuredClone(parsedInput.simulation) : undefined,
-    liveCameraConnectionContinuity: parsedInput.liveCameraConnectionContinuity as any,
-    sensorIngestContinuity: parsedInput.sensorIngestContinuity as any,
+    liveCameraConnectionContinuity: parsedInput.liveCameraConnectionContinuity as unknown as import("./camera-live-connection-history").CameraLiveConnectionArchiveRecord[],
+    sensorIngestContinuity: parsedInput.sensorIngestContinuity as unknown as import("./sensor-ingest-history").SensorIngestArchiveRecord[],
     notes: parsedInput.notes?.filter((note): note is string => typeof note === "string"),
   }) as OperationalEvidenceEvent;
 }

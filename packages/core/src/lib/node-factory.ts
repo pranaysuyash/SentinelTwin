@@ -84,6 +84,7 @@ type ObstructionFactoryOptions = NodeFactoryOptions & {
   nightIRReflective?: boolean;
   movable?: boolean;
   movableByAI?: boolean;
+  weightKg?: number;
   source?: SceneSource;
 };
 

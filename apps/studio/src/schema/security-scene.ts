@@ -88,6 +88,47 @@ export const windowNodeSchema = z.object({
   geometryValidity: geometryValiditySchema.default("valid"),
 });
 
+export const sceneUpdateSuggestionSchema = z.object({
+  id: z.string().startsWith("sugg_"),
+  type: z.enum(["adjust_yaw", "adjust_pitch", "adjust_fov", "add_obstruction", "move_obstruction"]),
+  cameraId: z.string().optional(),
+  description: z.string(),
+  suggestedYawDeg: z.number().optional(),
+  suggestedPitchDeg: z.number().optional(),
+  suggestedFovHorizontalDeg: z.number().optional(),
+  suggestedPosition: point3Schema.optional(),
+  suggestedDimensions: point3Schema.optional(),
+  reviewStatus: reviewStatusSchema.default("unreviewed"),
+});
+
+export const mismatchReportSchema = z.object({
+  id: z.string().startsWith("mismatch_"),
+  cameraId: z.string(),
+  evidenceId: z.string(),
+  severity: z.enum(["critical", "high", "medium", "low"]),
+  mismatchTypes: z.array(z.enum(["angle", "fov", "obstruction", "missing_modeled_object", "other"])),
+  description: z.string(),
+  suggestions: z.array(sceneUpdateSuggestionSchema).default([]),
+});
+
+export const cameraEvidenceArtifactSchema = z.object({
+  id: z.string().startsWith("evidence_"),
+  type: z.enum(["still_image", "video", "extracted_frame", "stream_snapshot"]),
+  timestamp: z.number().int().nonnegative(),
+  source: sceneSourceSchema,
+  url: z.string().optional(),
+  cameraId: z.string(),
+  binding: z.object({
+    isBound: z.boolean(),
+    landmarkMatches: z.array(z.object({
+      scenePosition: point3Schema,
+      evidencePosition2D: point2Schema,
+    })).default([]),
+    transformConfidence: z.number().min(0).max(1).optional(),
+    verifiedAt: z.number().int().nonnegative().optional(),
+  }).optional(),
+});
+
 export const cameraNodeSchema = z.object({
   id: z.string().startsWith("cam_"),
   nodeType: z.literal("camera"),
@@ -788,6 +829,8 @@ const securitySceneBaseSchema = z.object({
   entryPoints: z.array(entryPointNodeSchema).default([]),
   paths: z.array(scenarioPathSchema).default([]),
   comments: z.array(commentNodeSchema).default([]),
+  evidenceArtifacts: z.array(cameraEvidenceArtifactSchema).default([]),
+  mismatchReports: z.array(mismatchReportSchema).default([]),
   assumptions: simulationAssumptionsSchema,
   timeSchedule: timeScheduleSchema.optional(),
   simulation: simulationResultSchema.optional(),
@@ -844,6 +887,9 @@ export type SimulationResult = z.infer<typeof simulationResultSchema>;
 export type SceneSnapshot = z.infer<typeof sceneSnapshotSchema>;
 export type SecurityScene = z.infer<typeof securitySceneSchema>;
 export type SerializedSecurityScene = z.input<typeof securitySceneSchema>;
+export type CameraEvidenceArtifact = z.infer<typeof cameraEvidenceArtifactSchema>;
+export type MismatchReport = z.infer<typeof mismatchReportSchema>;
+export type SceneUpdateSuggestion = z.infer<typeof sceneUpdateSuggestionSchema>;
 export type AnyEditableNode =
   | WallNode
   | DoorNode
@@ -872,12 +918,50 @@ export type TemporalAnomalySummary = z.infer<typeof temporalAnomalySummarySchema
 export type ReviewStatus = z.infer<typeof reviewStatusSchema>;
 export type SceneSource = z.infer<typeof sceneSourceSchema>;
 
+export function migrateSecuritySceneInput(input: unknown): unknown {
+  if (!input || typeof input !== "object") return input;
+  const scene = structuredClone(input) as Record<string, unknown>;
+
+  const commentsRaw = scene.comments;
+  if (Array.isArray(commentsRaw)) {
+    scene.comments = commentsRaw.map((entry) => {
+      if (!entry || typeof entry !== "object") return entry;
+      const comment = { ...(entry as Record<string, unknown>) };
+      const id = typeof comment.id === "string" ? comment.id : "";
+      if (id.startsWith("cmt_")) {
+        comment.id = `comment_${id.slice(4)}`;
+      }
+      if (typeof comment.label !== "string" || comment.label.trim().length === 0) {
+        comment.label = "Comment";
+      }
+      if (typeof comment.author !== "string" || comment.author.trim().length === 0) {
+        comment.author = "Operator";
+      }
+      if (typeof comment.source !== "string") {
+        comment.source = "manual";
+      }
+      if (typeof comment.sourceTrace !== "string") {
+        comment.sourceTrace = "";
+      }
+      if (typeof comment.geometryValidity !== "string") {
+        comment.geometryValidity = "valid";
+      }
+      if (typeof comment.reviewStatus !== "string") {
+        comment.reviewStatus = "unreviewed";
+      }
+      return comment;
+    });
+  }
+
+  return scene;
+}
+
 export function parseSecurityScene(input: unknown): SecurityScene {
-  return securitySceneSchema.parse(input);
+  return securitySceneSchema.parse(migrateSecuritySceneInput(input));
 }
 
 export function safeParseSecurityScene(input: unknown) {
-  return securitySceneSchema.safeParse(input);
+  return securitySceneSchema.safeParse(migrateSecuritySceneInput(input));
 }
 
 export function cloneSecurityScene(scene: SecurityScene): SecurityScene {

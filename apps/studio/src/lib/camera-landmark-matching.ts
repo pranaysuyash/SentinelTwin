@@ -1,6 +1,6 @@
 import type { CameraEvidenceArtifact, CameraNode } from "@/schema/security-scene";
 
-export type LandmarkMatch = CameraEvidenceArtifact["binding"]["landmarkMatches"][number];
+export type LandmarkMatch = NonNullable<CameraEvidenceArtifact["binding"]>["landmarkMatches"][number];
 
 export function computeLandmarkAlignmentConfidence(
   camera: CameraNode,

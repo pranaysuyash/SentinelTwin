@@ -1,4 +1,4 @@
-export type ProductFeatureStatus = "Available" | "Preview" | "Planned";
+export type ProductFeatureStatus = "Available" | "Preview" | "Planned" | "Scaffolded";
 
 export interface ProductFeatureEntry {
   status: ProductFeatureStatus;
@@ -55,7 +55,7 @@ export const PRODUCT_FEATURE_STATUS: ProductFeatureEntry[] = [
     detail: "Guided scan assistant opens the existing scan wizard directly, keeps auto-path hints and manual review in the loop, and compiles through the same editable SecurityScene pipeline.",
   },
   {
-    status: "Scaffolded",
+    status: "Scaffolded" as ProductFeatureStatus,
     feature: "Reconstruction data model",
     detail: "ScanArtifact, ScanCaptureSession, and ScanCandidate types with photo roles, capture steps, scale anchors, candidate warnings, and evidence linkage. The session object supports guided capture sequence, per-candidate bounding boxes/masks/estimated positions, and confidence tracking.",
   },

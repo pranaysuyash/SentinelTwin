@@ -1,10 +1,11 @@
 import { z } from "zod";
 
 import { normalizeWorkspaceAccessState } from "@/lib/workspace-access";
-import { normalizeWorkspaceGovernance } from "@/lib/workspace-governance";
+import { normalizeWorkspaceGovernance, type WorkspaceSceneStatus } from "@/lib/workspace-governance";
 import { normalizeWorkspaceAccountProfile } from "@/lib/workspace-catalog";
 import { corsJson, corsNoContent } from "@/lib/api-cors";
 import { db } from "@/lib/backend-database";
+import type { SceneRecord } from "@sentineltwin/core";
 import { mapLocalGovernanceToSceneRecord, generateAuditLogForGovernanceTransition } from "@/lib/governance-backend-mapper";
 
 import { NextRequest } from "next/server";
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
     const normGov = normalizeWorkspaceGovernance(governance);
     const normAcc = normalizeWorkspaceAccountProfile(account);
 
-    const authId = normAcc.userId || "anonymous";
+    const authId = normAcc.ownerName || "anonymous";
 
     let sceneRecord = db.getSceneRecord(sceneId);
     if (!sceneRecord) {
@@ -67,13 +68,13 @@ export async function POST(request: NextRequest) {
     const mappedUpdates = mapLocalGovernanceToSceneRecord(normGov, sceneRecord);
     const nextRecord = { ...sceneRecord, ...mappedUpdates };
 
-    db.saveSceneRecord(nextRecord as any);
+    db.saveSceneRecord(nextRecord as SceneRecord);
 
     const auditLog = generateAuditLogForGovernanceTransition(
       "workspace-mock-id",
       authId,
       sceneId,
-      { ...normGov, sceneStatus: sceneRecord.status as any },
+      { ...normGov, sceneStatus: sceneRecord.status as WorkspaceSceneStatus },
       normGov
     );
 

@@ -204,7 +204,7 @@ export function StatusBar() {
           if (!running) {
             setSimulationRunning(true);
             const start = performance.now();
-            const simResult = simulateStudio(scene);
+            const simResult = simulateStudio(scene as never);
             setSimulationResult(simResult, performance.now() - start);
           }
         }}

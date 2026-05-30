@@ -3,7 +3,7 @@ import {
   type SimulationResult,
 } from "@/schema/security-scene";
 import { cloneSecurityScene } from "@/schema/security-scene";
-import { simulateStudio } from "./simulate-studio";
+import { simulateStudio } from "@sentineltwin/simulation";
 
 export interface CounterfactualConstraint {
   noNewWiring?: boolean;

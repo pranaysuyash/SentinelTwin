@@ -113,6 +113,7 @@ import {
   type CameraNode,
   type CommentNode,
   type CriticalZoneNode,
+  type ObstructionNode,
   type SecurityScene,
   type SimulationResult,
   type SceneSnapshot,
@@ -5894,16 +5895,16 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
 
   previewCounterfactualPlan: (planId) => {
     const state = get();
-    const plan = state.counterfactualPlans.find((p: any) => p.planId === planId);
+    const plan = state.counterfactualPlans.find((p: CounterfactualPlan) => p.planId === planId);
     if (!plan) return;
 
-    let patched = cloneSecurityScene(state.scene);
+    const patched = cloneSecurityScene(state.scene);
     for (const action of plan.actions) {
       if (action.type === "move_object" && action.affectedNodeId && action.suggestedPosition) {
-        const obs = patched.obstructions.find((o: any) => o.id === action.affectedNodeId);
+        const obs = patched.obstructions.find((o: ObstructionNode) => o.id === action.affectedNodeId);
         if (obs) obs.position = action.suggestedPosition;
       } else if (action.type === "rotate_camera" && action.affectedNodeId) {
-        const cam = patched.cameras.find((c: any) => c.id === action.affectedNodeId);
+        const cam = patched.cameras.find((c: CameraNode) => c.id === action.affectedNodeId);
         if (cam) {
           if (action.suggestedYawDeg !== undefined) cam.yawDeg = action.suggestedYawDeg;
           if (action.suggestedPitchDeg !== undefined) cam.pitchDeg = action.suggestedPitchDeg;
@@ -5950,7 +5951,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
 
   applyCounterfactualPlan: (planId) => {
     const state = get();
-    const plan = state.counterfactualPlans.find((p: any) => p.planId === planId);
+    const plan = state.counterfactualPlans.find((p: CounterfactualPlan) => p.planId === planId);
     if (!plan) return;
 
     const evidenceEvent = buildOperationalEvidenceEvent({
@@ -5966,7 +5967,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       confidence: plan.confidenceScore,
       beforeSummary: "",
       afterSummary: summarizeSceneEvidence(state.scene).detail,
-      simulation: state.scene.simulation ? summarizeSimulationEvidence(state.scene.simulation) as any : undefined,
+      simulation: state.scene.simulation ? (summarizeSimulationEvidence(state.scene.simulation) ?? undefined) : undefined,
     });
     const nextEvents = [...get().operationalEvidenceEvents, evidenceEvent];
     persistOperationalEvidenceEvents(nextEvents);

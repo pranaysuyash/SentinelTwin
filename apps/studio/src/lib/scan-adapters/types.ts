@@ -1,4 +1,4 @@
-import type { ScanArtifact, ScanCandidate, ScanCaptureSession } from "@/lib/scan-artifacts";
+import type { DepthMapArtifact, MaskArtifact, ScanArtifact, ScanCandidate, ScanCaptureSession } from "@/lib/scan-artifacts";
 
 export type DetectionResult = {
   candidates: ScanCandidate[];
@@ -8,13 +8,13 @@ export type DetectionResult = {
 };
 
 export type SegmentationResult = {
-  maskArtifact: ScanArtifact & { kind: "mask" };
+  maskArtifact: MaskArtifact;
   boundingBox: [number, number, number, number];
   confidence: number;
 };
 
 export type DepthEstimate = {
-  depthArtifact: ScanArtifact & { kind: "depth_map" };
+  depthArtifact: DepthMapArtifact;
   depthValues?: Float32Array;
   depthMinM: number;
   depthMaxM: number;

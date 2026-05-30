@@ -87,7 +87,6 @@ const ROTATE_STEP_DEG = 15;
 function getNodeLabel(node: AnyEditableNode) {
   if ("name" in node) return node.name;
   if ("label" in node) return node.label;
-  if (node.nodeType === "comment") return node.text;
   return "Object";
 }
 

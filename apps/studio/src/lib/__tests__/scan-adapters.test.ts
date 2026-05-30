@@ -27,9 +27,14 @@ describe("scan-adapters/registry", () => {
       expect(adapters.scaleAnchoring[0]?.id).toBe("stub-scale-anchoring");
     });
 
-    test("segmentation, multiPhoto, structuralExtraction are still empty", () => {
+    test("segmentation adapter is registered", () => {
       const adapters = getDefaultAdapterSet();
-      expect(adapters.segmentation).toHaveLength(0);
+      expect(adapters.segmentation.length).toBeGreaterThan(0);
+      expect(adapters.segmentation[0]?.id).toBe("stub-segmentation");
+    });
+
+    test("multiPhoto, structuralExtraction are still empty", () => {
+      const adapters = getDefaultAdapterSet();
       expect(adapters.multiPhoto).toHaveLength(0);
       expect(adapters.structuralExtraction).toHaveLength(0);
     });

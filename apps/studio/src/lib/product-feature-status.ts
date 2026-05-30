@@ -62,7 +62,7 @@ export const PRODUCT_FEATURE_STATUS: ProductFeatureEntry[] = [
   {
     status: "Preview",
     feature: "AI/CV adapter interfaces",
-    detail: "Adapter interfaces for object detection, segmentation, depth estimation, scale anchoring, multi-photo correspondence, and structural extraction. 3 of 6 adapters have working stubs (detection, depth, scale anchoring). All force AI candidates through user review before compile.",
+    detail: "Adapter interfaces for object detection, segmentation, depth estimation, scale anchoring, multi-photo correspondence, and structural extraction. 4 of 6 adapters have working stubs (detection, segmentation, depth, scale anchoring). All force AI candidates through user review before compile.",
   },
   {
     status: "Preview",

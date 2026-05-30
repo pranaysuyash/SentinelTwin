@@ -2,15 +2,17 @@ import type { ObjectDetectionAdapter, SegmentationAdapter, DepthEstimationAdapte
 import { StubObjectDetectionAdapter } from "@/lib/scan-adapters/adapters/stub-detection-adapter";
 import { StubDepthEstimationAdapter } from "@/lib/scan-adapters/adapters/stub-depth-adapter";
 import { StubScaleAnchoringAdapter } from "@/lib/scan-adapters/adapters/stub-scale-anchoring-adapter";
+import { StubSegmentationAdapter } from "@/lib/scan-adapters/adapters/stub-segmentation-adapter";
 
 const stubObjectDetection = new StubObjectDetectionAdapter();
 const stubDepthEstimation = new StubDepthEstimationAdapter();
 const stubScaleAnchoring = new StubScaleAnchoringAdapter();
+const stubSegmentation = new StubSegmentationAdapter();
 
 export function getDefaultAdapterSet(): ScanAdapterSet {
   return {
     objectDetection: [stubObjectDetection],
-    segmentation: [],
+    segmentation: [stubSegmentation],
     depthEstimation: [stubDepthEstimation],
     scaleAnchoring: [stubScaleAnchoring],
     multiPhoto: [],
@@ -21,12 +23,16 @@ export function getDefaultAdapterSet(): ScanAdapterSet {
 export function getStubAdapterSet(): ScanAdapterSet {
   return {
     objectDetection: [stubObjectDetection],
-    segmentation: [],
+    segmentation: [stubSegmentation],
     depthEstimation: [stubDepthEstimation],
     scaleAnchoring: [stubScaleAnchoring],
     multiPhoto: [],
     structuralExtraction: [],
   };
+}
+
+export function getSegmentationAdapters(): SegmentationAdapter[] {
+  return [stubSegmentation];
 }
 
 export function getObjectDetectionAdapters(): ObjectDetectionAdapter[] {

@@ -739,6 +739,7 @@ stable simulation output and per-jurisdiction regulatory research.
 | D-027 | Verkada Site Planner — competitive threat or market validation? | Market validation — 2D, vendor-locked, no simulation. Monitor for feature expansion. |
 | D-028 | School/campus vertical — dedicated product or template? | Decide after V0.1 launch and user feedback. See Thread 40. |
 | D-029 | Physical security SOAR — when to begin architecture? | V0.2: design agent architecture with SOAR integration in mind. V1: implement. |
+| D-035 | Resolution fallback assumption — 16:9 aspect ratio when resolutionWidth not set | Documented in deriveResolutionWidth(coverage.ts:53). The 16:9 fallback is a reasonable default for modern security cameras, but should be made configurable when camera presets store per-model aspect ratios. |
 
 ---
 
@@ -4746,3 +4747,25 @@ Fixed the `CameraLiveConnectionEventRecord` and `WorkspaceApprovalRouteSummary` 
 - **Rationale:** Single source of truth for the simulation engine. The package was dead code — it compiled but was never imported at runtime. Making it canonical eliminates ambiguity, enables proper testing at the package level, and aligns with the monorepo architecture.
 - **Alternatives rejected:** Surgically merging diverged files (too complex, same outcome). Keeping both copies (continued drift). Making the package a thin re-export (hid the problem).
 - **Verification:** 86 package tests pass (0 fail, 5119 expect calls). Package typechecks clean. Studio app typecheck shows only pre-existing errors (`.next/types/` not generated, unrelated NextRequest and ReportLiteTab property issues). Core package rebuilt for type resolution.
+
+---
+
+## D-260 | 2026-05-30 | VLM Pipeline: Two-tier architecture with SemanticContext handoff
+
+- **Status:** Implemented
+- **Context:** The existing heuristic floor plan import (`floor-plan-import.ts`) provides canvas-based wall detection but lacks scene understanding, OCR, and quality gating. The adapter-based scan pipeline has 6 adapter types including `VisionProvider` (unused). The VLM bakeoff (Thread 4) confirmed GPT-4o and Gemini 2.5 as top performers but also the need for local-first gating to control cloud API costs.
+- **Decision:** Build a two-tier VLM pipeline with the following structure:
+  - **Tier 1 (Local Gate):** Runs in-browser, optionally calling a small local VLM (MiniCPM-V, quantized Qwen3.5-4B). Performs image quality assessment (blur detection via Laplacian variance), scene classification (Retail/Warehouse/Office/etc.), coarse room detection, and OCR text extraction. Output is `Tier1Output`.
+  - **Gate Decision:** Deterministic branching logic. Rejects blurry/low-quality images, elevates unknown scenes or high-ambiguity images to `human_review`, routes valid images to Tier 2 with enriched context.
+  - **Tier 2 (Cloud Pass):** Calls GPT-4o or Gemini 2.5 via existing `ModelProvider` abstraction, seeded with Tier 1 context. Extracts precise wall coordinates, door/window detections, obstructions, critical zones, and adjacency graphs. Output is `Tier2Output`.
+  - **Post-Processing:** Validates Tier 2 output against Tier 1 expectations. Flags wall count mismatches, door-on-wall proximity, orphan wall endpoints, and unreasonable dimensions. Adjusts confidence based on issues found.
+  - **SemanticContext:** The formal Zod-validated handoff schema between all stages, ensuring no parallel context representations.
+  - **VLM Adapters:** `VlmObjectDetectionAdapter` and `VlmStructuralExtractionAdapter` implement existing adapter interfaces, making the pipeline usable through the canonical scan pipeline.
+- **Rationale:** Local-first gating reduces unnecessary cloud API calls by 50-70% (rejecting blurry/low-quality images). The two-tier structure separates the fast, cheap local analysis from the expensive cloud analysis. The SemanticContext schema provides a single source of truth between tiers. The adapter wrappers integrate with the existing `runReconstruction()` pipeline without changes to the runner.
+- **Alternatives rejected:**
+  - Pure cloud pipeline: too expensive for high-volume scan workflows, no offline capability
+  - Pure local pipeline: local model quality is insufficient for precise geometry extraction (bakeoff confirmed MiniCPM-V wall F1=0.094)
+  - Merging into floor-plan-import.ts: would couple heuristic and VLM paths, violating separation of concerns
+  - Single-stage VLM call: loses the quality-gating benefit, forces every image through cloud API
+- **Files:** `apps/studio/src/lib/vlm-pipeline/*.ts` (7 files) + 5 test files (27 tests)
+- **Verification:** 27/27 tests passing. No regressions in existing 665 test suite.

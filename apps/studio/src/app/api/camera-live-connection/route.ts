@@ -146,6 +146,9 @@ export async function POST(request: NextRequest) {
         authChallengeHeader,
         authChallengeScheme,
         authChallengeRealm,
+        eventSubscriptionUri: activeSession?.eventSubscriptionUri ?? null,
+        eventSubscriptionReference: activeSession?.eventSubscriptionReference ?? null,
+        eventSubscriptionExpiresAt: activeSession?.eventSubscriptionExpiresAt ?? null,
         sessionExpiresAt: heartbeatRecord.record.liveSessionExpiresAt,
         summary: heartbeatRecord.summary,
       });

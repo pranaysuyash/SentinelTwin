@@ -4387,6 +4387,15 @@ Fixed the `CameraLiveConnectionEventRecord` and `WorkspaceApprovalRouteSummary` 
 - Rationale: The account bridge is now part of the workspace truth model, so recovery should preserve it alongside the scene, ledger, governance, and access state.
 - Consequence: Exported archives now carry the workspace account profile, and recovery can reopen with the same local account posture instead of falling back to a default profile.
 
+## D-261 - Governance branch sync should compare against the latest archived operational evidence branch
+
+- Date: 2026-05-30
+- Status: Accepted
+- Context: The Governance tab had a visible sync control, but it still faked the comparison with a null placeholder instead of using the archive branch ledger that the app already preserves locally.
+- Decision: Compare the current operational evidence branch against the latest archived operational evidence branch and surface the sync result as a real branch-sync report in Governance.
+- Rationale: The sync control should explain the actual branch state, not imply a remote system that the app does not have. The archive ledger already provides enough history to show same / fast-forward / diverged branch posture.
+- Consequence: Governance now shows a real branch-sync comparison against the latest archived branch, and the mock remote sync placeholder is gone.
+
 ## D-261 - Approval routing should carry a stable identity key and eligibility metadata
 
 - Date: 2026-05-30

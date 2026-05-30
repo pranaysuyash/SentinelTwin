@@ -78,6 +78,110 @@ function computeOcrConfidence(entries: OcrText[]): number {
   return entries.reduce((sum, e) => sum + e.confidence, 0) / entries.length;
 }
 
+// ── ModelProvider-backed Tier1 (for real scene classification) ──
+
+export class ModelTier1Provider implements Tier1Provider {
+  id = "model-tier1";
+  name = "Model Tier 1 (scene classification)";
+
+  constructor(private provider: import("@/agents/providers/ModelProvider").ModelProvider) {}
+
+  async assessImageQuality(dataUrl: string): Promise<ImageQuality> {
+    const content: import("@/agents/providers/ModelProvider").MessageContentPart[] = [
+      { type: "text", text: "Assess this image for: blurriness, low light, overexposure, resolution. Return JSON with: isBlurry (bool), blurScore (0-1), lowLight (bool), overexposed (bool), resolutionSufficient (bool), qualityScore (0-1)." },
+      { type: "image_url", image_url: { url: dataUrl, detail: "low" } },
+    ];
+
+    try {
+      const response = await this.provider.complete({
+        system: "You are an image quality assessor. Return only valid JSON.",
+        messages: [{ role: "user", content }],
+      });
+      const parsed = JSON.parse(response.content);
+      return {
+        isBlurry: parsed.isBlurry ?? false,
+        blurScore: parsed.blurScore ?? 0.5,
+        lowLight: parsed.lowLight ?? false,
+        overexposed: parsed.overexposed ?? false,
+        resolutionSufficient: parsed.resolutionSufficient ?? true,
+        qualityScore: parsed.qualityScore ?? 0.5,
+      };
+    } catch {
+      return { isBlurry: false, blurScore: 0.7, lowLight: false, overexposed: false, resolutionSufficient: true, qualityScore: 0.6 };
+    }
+  }
+
+  async classifyScene(dataUrl: string): Promise<{ sceneType: SceneType; confidence: number }> {
+    const content: import("@/agents/providers/ModelProvider").MessageContentPart[] = [
+      { type: "text", text: "Classify this image scene type. Return JSON with: sceneType (one of: retail, warehouse, office, residential, industrial, outdoor, unknown), confidence (0-1)." },
+      { type: "image_url", image_url: { url: dataUrl, detail: "low" } },
+    ];
+
+    try {
+      const response = await this.provider.complete({
+        system: "You are a scene classifier. Return only valid JSON.",
+        messages: [{ role: "user", content }],
+      });
+      const parsed = JSON.parse(response.content);
+      const validTypes = ["retail", "warehouse", "office", "residential", "industrial", "outdoor", "unknown"];
+      return {
+        sceneType: validTypes.includes(parsed.sceneType) ? parsed.sceneType : "unknown",
+        confidence: parsed.confidence ?? 0.4,
+      };
+    } catch {
+      return { sceneType: "unknown", confidence: 0.3 };
+    }
+  }
+
+  async extractOcr(dataUrl: string): Promise<OcrText[]> {
+    const content: import("@/agents/providers/ModelProvider").MessageContentPart[] = [
+      { type: "text", text: "Extract any visible text in this image. Return JSON with: texts (array of {text: string, boundingBox?: [x1,y1,x2,y2], confidence: 0-1}). Bound normalized 0-1." },
+      { type: "image_url", image_url: { url: dataUrl, detail: "high" } },
+    ];
+
+    try {
+      const response = await this.provider.complete({
+        system: "You are an OCR extractor. Return only valid JSON.",
+        messages: [{ role: "user", content }],
+      });
+      const parsed = JSON.parse(response.content);
+      return (parsed.texts ?? []).map((t: { text: string; boundingBox?: [number, number, number, number]; confidence: number }) => ({
+        text: t.text,
+        boundingBox: t.boundingBox,
+        confidence: t.confidence ?? 0.5,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  async detectRooms(dataUrl: string): Promise<{ rooms: CoarseRoom[]; roomCount: number }> {
+    const content: import("@/agents/providers/ModelProvider").MessageContentPart[] = [
+      { type: "text", text: "Detect rooms or distinct spatial zones in this image. Return JSON with: rooms (array of {index: number, label: string, boundingBox?: [x1,y1,x2,y2]}), roomCount (number). Coordinates normalized 0-1." },
+      { type: "image_url", image_url: { url: dataUrl, detail: "low" } },
+    ];
+
+    try {
+      const response = await this.provider.complete({
+        system: "You are a room detector. Return only valid JSON.",
+        messages: [{ role: "user", content }],
+      });
+      const parsed = JSON.parse(response.content);
+      return {
+        rooms: parsed.rooms ?? [],
+        roomCount: parsed.roomCount ?? 0,
+      };
+    } catch {
+      return { rooms: [], roomCount: 0 };
+    }
+  }
+}
+
+export function createModelTier1Provider(provider?: import("@/agents/providers/ModelProvider").ModelProvider | null): Tier1Provider {
+  if (provider) return new ModelTier1Provider(provider);
+  return new StubTier1Provider();
+}
+
 // ── Stub Tier1Provider (for development / testing) ──
 
 export class StubTier1Provider implements Tier1Provider {

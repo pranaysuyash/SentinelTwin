@@ -1,5 +1,5 @@
 import type { Tier1Output, Tier2Output, WallCoordinate, OpeningDetection, ObstructionDetection, CriticalZoneDetection } from "./types";
-import type { ModelProvider } from "@/agents/providers/ModelProvider";
+import type { ModelProvider, MessageContentPart } from "@/agents/providers/ModelProvider";
 
 export interface Tier2Provider {
   id: string;
@@ -10,7 +10,7 @@ export interface Tier2Provider {
 const SYSTEM_PROMPT = `You are a security floor plan analyzer. Given a floor plan image and semantic context from an initial pass, extract precise spatial structures.
 
 Return a JSON object with these fields:
-- walls: array of { start: [x, y], end: [x, y], label?: string, confidence: 0-1 } — wall line segments in image coordinates (normalized 0-1)
+- walls: array of { start: [x, y], end: [x, y], label?: string, confidence: 0-1 }
 - doors: array of { kind: "door", position: [x, y], widthM: number, heightM?: number, orientation: "horizontal" | "vertical", confidence: 0-1 }
 - windows: array of { kind: "window", position: [x, y], widthM: number, heightM?: number, orientation: "horizontal" | "vertical", confidence: 0-1 }
 - obstructions: array of { kind: "pillar" | "counter" | "cupboard" | "shelf" | "furniture" | "other", position: [x, y], dimensions?: [w, h, d], label?: string, confidence: 0-1 }
@@ -42,20 +42,15 @@ export class ModelTier2Provider implements Tier2Provider {
   constructor(private provider: ModelProvider) {}
 
   async extractScene(context: Tier1Output, dataUrl: string): Promise<Tier2Output> {
-    const prompt: import("@/agents/providers/ModelProvider").ModelPrompt = {
-      system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: buildTier2Prompt(context) },
-            { type: "image_url", image_url: { url: dataUrl } },
-          ],
-        },
-      ],
-    };
+    const content: MessageContentPart[] = [
+      { type: "text", text: buildTier2Prompt(context) },
+      { type: "image_url", image_url: { url: dataUrl, detail: "high" } },
+    ];
 
-    const response = await this.provider.complete(prompt);
+    const response = await this.provider.complete({
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content }],
+    });
 
     try {
       const parsed = JSON.parse(response.content);
@@ -84,6 +79,11 @@ export class ModelTier2Provider implements Tier2Provider {
 }
 
 // ── Stub Tier2Provider (for testing) ──
+
+export function createModelTier2Provider(provider?: import("@/agents/providers/ModelProvider").ModelProvider | null): Tier2Provider {
+  if (provider) return new ModelTier2Provider(provider);
+  return new StubTier2Provider();
+}
 
 export class StubTier2Provider implements Tier2Provider {
   id = "stub-tier2";

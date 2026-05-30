@@ -8,10 +8,27 @@ import type {
 import type { ScanArtifact, ScanCaptureSession, ScanCandidate } from "@/lib/scan-artifacts";
 import { createScanCandidateFromArtifact } from "@/lib/scan-artifacts";
 import { runVlmPipeline } from "./orchestrator";
-import { StubTier1Provider } from "./tier1-local-gate";
-import { StubTier2Provider } from "./tier2-cloud-pass";
+import { StubTier1Provider, createModelTier1Provider } from "./tier1-local-gate";
+import { StubTier2Provider, createModelTier2Provider } from "./tier2-cloud-pass";
+import type { Tier1Provider } from "./tier1-local-gate";
+import type { Tier2Provider } from "./tier2-cloud-pass";
+import type { ModelProvider } from "@/agents/providers/ModelProvider";
 
 const adapterCounters = { t1: 0, t2: 0 };
+
+export function createVlmObjectDetectionAdapter(provider?: ModelProvider | null): VlmObjectDetectionAdapter {
+  return new VlmObjectDetectionAdapter(
+    createModelTier1Provider(provider),
+    createModelTier2Provider(provider),
+  );
+}
+
+export function createVlmStructuralExtractionAdapter(provider?: ModelProvider | null): VlmStructuralExtractionAdapter {
+  return new VlmStructuralExtractionAdapter(
+    createModelTier1Provider(provider),
+    createModelTier2Provider(provider),
+  );
+}
 
 function makeCandidate(
   kind: ScanCandidate["kind"],
@@ -34,6 +51,14 @@ export class VlmObjectDetectionAdapter implements ObjectDetectionAdapter {
   name = "VLM Object Detection";
   description = "Uses two-tier VLM pipeline (local gate + cloud pass) for object detection from floor plan / site photos.";
 
+  private tier1Provider: Tier1Provider;
+  private tier2Provider: Tier2Provider;
+
+  constructor(tier1Provider?: Tier1Provider, tier2Provider?: Tier2Provider) {
+    this.tier1Provider = tier1Provider ?? new StubTier1Provider();
+    this.tier2Provider = tier2Provider ?? new StubTier2Provider();
+  }
+
   async detect(
     artifact: ScanArtifact,
     _session: ScanCaptureSession,
@@ -53,8 +78,8 @@ export class VlmObjectDetectionAdapter implements ObjectDetectionAdapter {
       artifact.dataUrl,
       artifact.sourceFileName ?? `photo_${adapterCounters.t1}`,
       {
-        tier1Provider: new StubTier1Provider(),
-        tier2Provider: new StubTier2Provider(),
+        tier1Provider: this.tier1Provider,
+        tier2Provider: this.tier2Provider,
       },
     );
 
@@ -134,6 +159,14 @@ export class VlmStructuralExtractionAdapter implements StructuralExtractionAdapt
   name = "VLM Structural Extraction";
   description = "Uses Tier 2 VLM output to produce wall elements, room dimensions, and adjacency.";
 
+  private tier1Provider: Tier1Provider;
+  private tier2Provider: Tier2Provider;
+
+  constructor(tier1Provider?: Tier1Provider, tier2Provider?: Tier2Provider) {
+    this.tier1Provider = tier1Provider ?? new StubTier1Provider();
+    this.tier2Provider = tier2Provider ?? new StubTier2Provider();
+  }
+
   async extractStructures(
     artifacts: ScanArtifact[],
     _session: ScanCaptureSession,
@@ -153,8 +186,8 @@ export class VlmStructuralExtractionAdapter implements StructuralExtractionAdapt
       photoArtifact.dataUrl!,
       photoArtifact.sourceFileName ?? `struct_${adapterCounters.t2}`,
       {
-        tier1Provider: new StubTier1Provider(),
-        tier2Provider: new StubTier2Provider(),
+        tier1Provider: this.tier1Provider,
+        tier2Provider: this.tier2Provider,
       },
     );
 

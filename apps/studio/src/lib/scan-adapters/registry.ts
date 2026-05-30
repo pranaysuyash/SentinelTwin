@@ -1,9 +1,10 @@
 import type { ObjectDetectionAdapter, SegmentationAdapter, DepthEstimationAdapter, ScaleAnchoringAdapter, MultiPhotoCorrespondenceAdapter, StructuralExtractionAdapter, ScanAdapterSet } from "@/lib/scan-adapters/types";
+import type { ModelProvider } from "@/agents/providers/ModelProvider";
 import { StubObjectDetectionAdapter } from "@/lib/scan-adapters/adapters/stub-detection-adapter";
 import { StubDepthEstimationAdapter } from "@/lib/scan-adapters/adapters/stub-depth-adapter";
 import { StubScaleAnchoringAdapter } from "@/lib/scan-adapters/adapters/stub-scale-anchoring-adapter";
 import { StubSegmentationAdapter } from "@/lib/scan-adapters/adapters/stub-segmentation-adapter";
-import { VlmObjectDetectionAdapter, VlmStructuralExtractionAdapter } from "@/lib/vlm-pipeline/vlm-adapter";
+import { VlmObjectDetectionAdapter, VlmStructuralExtractionAdapter, createVlmObjectDetectionAdapter, createVlmStructuralExtractionAdapter } from "@/lib/vlm-pipeline/vlm-adapter";
 
 const stubObjectDetection = new StubObjectDetectionAdapter();
 const stubDepthEstimation = new StubDepthEstimationAdapter();
@@ -12,6 +13,17 @@ const stubSegmentation = new StubSegmentationAdapter();
 
 const vlmObjectDetection = new VlmObjectDetectionAdapter();
 const vlmStructuralExtraction = new VlmStructuralExtractionAdapter();
+
+export function getModelBackedAdapterSet(provider: ModelProvider): ScanAdapterSet {
+  return {
+    objectDetection: [createVlmObjectDetectionAdapter(provider)],
+    segmentation: [stubSegmentation],
+    depthEstimation: [stubDepthEstimation],
+    scaleAnchoring: [stubScaleAnchoring],
+    multiPhoto: [],
+    structuralExtraction: [createVlmStructuralExtractionAdapter(provider)],
+  };
+}
 
 export function getDefaultAdapterSet(): ScanAdapterSet {
   return {

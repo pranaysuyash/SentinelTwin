@@ -161,6 +161,22 @@ For the full-vision gap inventory and next-slice sequencing, see
 - The debug panel now reuses the same sensor metadata parser for pasted live metadata, so support/debug workflows can feed the canonical sensor evidence trail without a separate ingest path ✅
 - A dedicated `/api/sensor-ingest` route now accepts pasted sensor metadata as a history-backed backend-shaped intake seam and resolves it into canonical sensor live events ✅
 
+## Site creation pipeline unification (2026-05-30)
+
+- Duplicate `SiteIntakeSource` type is now unified. `SiteIntakeHub.tsx` imports from `site-compiler.ts` instead of defining its own. The canonical type includes `scan`, `ai_prompt`, `floor_plan`, `json_import`, `manual`, `footage_verify`, and `camera_evidence` ✅
+- Source adapters exist for all 7 intake sources. Each produces a `SiteCompilerResult` through dedicated compile functions (`compileScanToSiteResult`, `compileAiDraftToSiteResult`, `compileFloorPlanToSiteResult`, `compileJsonToSiteResult`, `compileCameraEvidenceToSiteResult`, `compileFootageVerifyToSiteResult`, plus inline for `manual` in `page.tsx`) ✅
+- Every source adapter feeds into the unified `compileToSiteTwinDraft()` pipeline that produces a `SiteTwinDraft` with entity counts, assumptions, warnings, missing prerequisites, suggested next actions, and provenance across all sources ✅
+- `compileScanSessionToCompilerResult()` adapter in `scan-to-scene.ts` bridges the existing scan compile path into the canonical pipeline ✅
+- `draftSceneToCompilerResult()` adapter in `ai-layout-draft.ts` bridges the AI layout draft path into the canonical pipeline ✅
+- `SiteDraftReview.tsx` now shows source-specific icons, maturity status, and approval labels per intake source (e.g., "Import as Canonical Scene" for JSON, "Approve as Draft — Review Required" for AI, "Approve as Canonical Twin" for scan) ✅
+- `page.tsx` `compileCurrentScene` now handles all 7 source types including `footage_verify` and `camera_evidence` ✅
+- The approval flow (`approveIntakeSession`) validates the scene, records provenance in the change log, emits operational evidence, runs baseline simulation when prerequisites are met, and opens Studio ✅
+- `normalizeSiteIntakeSource()` provides backward compatibility for legacy source names with explicit blocking warnings for unsupported keys ✅
+- `SITE_SOURCE_MATURITY` covers all 7 source variants with truthful descriptions, and `SOURCE_LABELS` provides display names ✅
+- 24 tests cover all source adapters, the compile-to-draft pipeline, `canRunBaselineSimulation` gating, and pipeline completeness across every source ✅
+- Scan wizard labeling is already truthful: non-guided path says "Manual-assisted scan" and guided path says "Guided scan assistant" ✅
+- `SceneBuilderWizard` already feeds into the pipeline through `onClose` → `compileCurrentScene(source)` → review cycle ✅
+
 ## QA infra state (2026-05-29)
 
 - Webwright QA bootstrap exists and is wired through `tools/webwright/run-sentineltwin-qa.sh`.

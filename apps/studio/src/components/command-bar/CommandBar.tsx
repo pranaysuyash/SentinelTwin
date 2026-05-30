@@ -366,7 +366,7 @@ function CandidateCard({ candidate, onApply }: { candidate: CounterfactualCandid
       {candidate.verifiedDelta && (
         <div className="mt-1 flex flex-wrap gap-3 rounded bg-[#0a0d15] px-2 py-1 text-[8px]">
           <span className={candidate.verifiedDelta.totalCoveragePctDelta >= 0 ? "text-emerald-400" : "text-red-400"}>
-            {candidate.verifiedDelta.totalCoveragePctDelta >= 0 ? "+" : ""}{candidate.verifiedDelta.totalCoveragePctDelta}% cov
+            {candidate.verifiedDelta.totalCoveragePctDelta >= 0 ? "+" : ""}{candidate.verifiedDelta.totalCoveragePctDelta}{'% cov'}
           </span>
           <span className={candidate.verifiedDelta.blindspotPctDelta <= 0 ? "text-emerald-400" : "text-red-400"}>
             {candidate.verifiedDelta.blindspotPctDelta >= 0 ? "+" : ""}{candidate.verifiedDelta.blindspotPctDelta}% blind

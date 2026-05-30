@@ -4769,3 +4769,21 @@ Fixed the `CameraLiveConnectionEventRecord` and `WorkspaceApprovalRouteSummary` 
   - Single-stage VLM call: loses the quality-gating benefit, forces every image through cloud API
 - **Files:** `apps/studio/src/lib/vlm-pipeline/*.ts` (7 files) + 5 test files (27 tests)
 - **Verification:** 27/27 tests passing. No regressions in existing 665 test suite.
+
+---
+
+## D-048 | 2026-05-30 | Collision layer model: vision collider live; physics + visual mesh layers deferred
+
+**Decision:** The vision collider (`vision-collider-mesh.ts`) is fully implemented as a BVH-accelerated merged mesh for raycasting. The physics collider (for drag-and-drop collision) and a separate visual mesh layer (for rendering-only geometry) remain consolidated in the single mesh path.
+
+**Rationale:**
+- Three-layer model (visual mesh, physics collider, vision collider) is documented as a design principle in `01_DATA_MODEL_SECURITY_SCENE.md` §3 but the implementation currently builds one mesh for both raycasting and rendering.
+- Physics fully deferred per D-008 (Rapier optional in V0.1). Simple AABB overlap checking for drag-and-drop is handled by the existing geometry.
+- `buildVisionColliderMesh()` returns `VisionColliderMesh { mesh, sources, faceSources }` — this single mesh serves BVH raycast target AND visual representation.
+- When physics or visual LOD requires separate geometry, the split should use simplified convex hull primitives for physics and optional detail meshes for visual.
+
+**Implementation gap:** No separate visual mesh layer exists. If rendering diverges from collision geometry (e.g., LOD, decorative geometry, transparent fallback meshes), a refactor is required. Tracked in OPEN_QUESTIONS.md under collision layer split.
+
+**Alternatives rejected:**
+- Full three-layer split now: premature without Rapier integration or LOD requirements
+- Keep undocumented: design principle in data model doc implies implementation exists; gap needs explicit flagging

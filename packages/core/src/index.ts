@@ -13,3 +13,6 @@ export * from "./simulation/grid";
 export * from "./lib/scene-source";
 export * from "./lib/target-quality-requirements";
 export * from "./lib/node-factory";
+
+// Backend schemas
+export * from "./schema/workspace-backend";

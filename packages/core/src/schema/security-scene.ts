@@ -88,6 +88,47 @@ export const windowNodeSchema = z.object({
   geometryValidity: geometryValiditySchema.default("valid"),
 });
 
+export const sceneUpdateSuggestionSchema = z.object({
+  id: z.string().startsWith("sugg_"),
+  type: z.enum(["adjust_yaw", "adjust_pitch", "adjust_fov", "add_obstruction", "move_obstruction"]),
+  cameraId: z.string().optional(),
+  description: z.string(),
+  suggestedYawDeg: z.number().optional(),
+  suggestedPitchDeg: z.number().optional(),
+  suggestedFovHorizontalDeg: z.number().optional(),
+  suggestedPosition: point3Schema.optional(),
+  suggestedDimensions: point3Schema.optional(),
+  reviewStatus: reviewStatusSchema.default("unreviewed"),
+});
+
+export const mismatchReportSchema = z.object({
+  id: z.string().startsWith("mismatch_"),
+  cameraId: z.string(),
+  evidenceId: z.string(),
+  severity: z.enum(["critical", "high", "medium", "low"]),
+  mismatchTypes: z.array(z.enum(["angle", "fov", "obstruction", "missing_modeled_object", "other"])),
+  description: z.string(),
+  suggestions: z.array(sceneUpdateSuggestionSchema).default([]),
+});
+
+export const cameraEvidenceArtifactSchema = z.object({
+  id: z.string().startsWith("evidence_"),
+  type: z.enum(["still_image", "video", "extracted_frame", "stream_snapshot"]),
+  timestamp: z.number().int().nonnegative(),
+  source: sceneSourceSchema,
+  url: z.string().optional(),
+  cameraId: z.string(),
+  binding: z.object({
+    isBound: z.boolean(),
+    landmarkMatches: z.array(z.object({
+      scenePosition: point3Schema,
+      evidencePosition2D: point2Schema,
+    })).default([]),
+    transformConfidence: z.number().min(0).max(1).optional(),
+    verifiedAt: z.number().int().nonnegative().optional(),
+  }).optional(),
+});
+
 export const cameraNodeSchema = z.object({
   id: z.string().startsWith("cam_"),
   nodeType: z.literal("camera"),
@@ -788,6 +829,8 @@ const securitySceneBaseSchema = z.object({
   comments: z.array(commentNodeSchema).default([]),
   entryPoints: z.array(entryPointNodeSchema).default([]),
   paths: z.array(scenarioPathSchema).default([]),
+  evidenceArtifacts: z.array(cameraEvidenceArtifactSchema).default([]),
+  mismatchReports: z.array(mismatchReportSchema).default([]),
   assumptions: simulationAssumptionsSchema,
   timeSchedule: timeScheduleSchema.optional(),
   simulation: simulationResultSchema.optional(),
@@ -826,6 +869,9 @@ export type PrivacyZoneNode = z.infer<typeof privacyZoneNodeSchema>;
 export type SensorNode = z.infer<typeof sensorNodeSchema>;
 export type CommentNode = z.infer<typeof commentNodeSchema>;
 export type EntryPointNode = z.infer<typeof entryPointNodeSchema>;
+export type CameraEvidenceArtifact = z.infer<typeof cameraEvidenceArtifactSchema>;
+export type MismatchReport = z.infer<typeof mismatchReportSchema>;
+export type SceneUpdateSuggestion = z.infer<typeof sceneUpdateSuggestionSchema>;
 export type PathPoint = z.infer<typeof pathPointSchema>;
 export type ScenarioPath = z.infer<typeof scenarioPathSchema>;
 export type SimulationAssumptions = z.infer<typeof simulationAssumptionsSchema>;

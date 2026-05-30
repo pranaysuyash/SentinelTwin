@@ -354,23 +354,6 @@ The current rendering architecture doc still references older stack details (for
 
 ---
 
-### Q-033: Report engine `buildReportData` test expectations out of sync with source after dist rebuild
-**Status:** Pre-existing mismatch — not introduced by current session.
-**Priority:** P1
-**Context:** The `@sentineltwin/report` package's `buildReportData` function was reduced to a
-minimal stub (returning `sceneId`, `sceneName`, `createdAt`, `simulation`, `options`, `findings: []`,
-`recommendations: []`, `summary: { coveragePct }`) but the test suite in
-`apps/studio/src/report/__tests__/report-engine.test.ts` still expects the full properties
-(`totalCoveragePct`, `blindspotPct`, `recognitionAreaPct`, `zonesTotal`, `sensorCount`, `zones`,
-`cameras`, `issues`, `evidenceTrail`, `truthLadder`, etc.).
-- The mismatch was exposed when `npx tsc` rebuilt the package dist from current source.
-- Previously the dist was stale and contained the old (full) implementation, masking the mismatch.
-- 99 tests fail as a result, all in the report/export suite.
-**What's needed:** Either restore the full `buildReportData` implementation or update the test
-expectations to match the current output shape.
-
----
-
 ### Q-030: Target Orientation Penalty Thresholds
 **Status:** Open
 **Priority:** Medium

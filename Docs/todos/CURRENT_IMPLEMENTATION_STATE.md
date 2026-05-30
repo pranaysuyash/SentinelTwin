@@ -1,33 +1,12 @@
 # Current Implementation State — Camera Studio
 
-**Updated:** 2026-05-30 (simulation engine unified: `packages/simulation/` is now canonical, studio local copy removed)
+**Updated:** 2026-05-30 (session 35: governance route sync-source surfaced in approval routing)
 **Source:** Direct code audit of apps/studio/src/
 **Purpose:** Accurate baseline of what is actually built, tested, and rendering.
 Use this instead of the earlier CAMERASTUDIO_GAP_ANALYSIS.md which was written
 before the Phase 2 audit. This doc supersedes the gap analysis for "what exists."
 For the full-vision gap inventory and next-slice sequencing, see
 `Docs/todos/FULL_VISION_GAP_INVENTORY.md`.
-
-## Simulation engine canonicalized to packages/simulation/ (2026-05-30)
-
-- `packages/simulation/` is now the single source of truth for all simulation engine code. Previously there was a dual copy: `packages/simulation/` (3,835 lines, never imported) and `apps/studio/src/simulation/` (4,928 lines, the live copy) ✅
-- All 22 engine files replaced with the studio's richer implementations (e.g. temporal.ts: 107→453 lines, placement-oracle.ts: 162→386 lines) ✅
-- dori.ts, geometry.ts, grid.ts — no longer duplicated in the app; live in the package, importing from `@sentineltwin/core` ✅
-- Package-only files preserved: `odpcvs.ts`, `critical-zone-selection.ts` ✅
-- 86 tests across 15 test files live in `packages/simulation/src/__tests__/` with test helpers and retail-shop fixture ✅
-- All 127 `@/simulation/` imports across the studio updated to `@sentineltwin/simulation` ✅
-- `apps/studio/src/simulation/` directory removed entirely ✅
-- Package tsconfig updated with `baseUrl` and `paths` for workspace module resolution; `__tests__` excluded from build config ✅
-- Core and simulation packages both build to `dist/` successfully ✅
-- See `Docs/decisions/DECISION_LOG.md` entry D-023 for full rationale
-
-## Build system & export hygiene (2026-05-30)
-
-- Next.js 16.2.6 Turbopack workspace root detection issue documented: stale lockfiles in `apps/studio/` caused "couldn't find Next.js package" errors. Resolved by cleaning stale lockfiles and using `next dev --webpack` as primary dev mode. ✅
-- Stale re-exports removed from `@sentineltwin/simulation/src/index.ts`: `deriveCameraQualityByZone` (non-existent in coverage.ts), `CellComputation`, `OODPCVS_POP_FACTORS`, `CRITICALITY_MARGIN_MAP`, `computeOodpcvsCoverageLevel`, `MOUNT_MODELS`, `TimeSlice`, `TemporalAnomaly`, `PlacementOracleResult`. Exports now match actual source exports exactly. ✅
-- All packages verified clean: `core`, `simulation`, `report`, `studio` all compile with zero errors. ✅
-- 779 tests pass with 9417 expect() calls across 166 files. ✅
-- New scan pipeline tests (scan-artifacts, scan-quality-gates, scan-reconstruction, site-draft-approval) all pass. ✅
 
 ## Product integrity hardening (2026-05-30)
 
@@ -160,22 +139,6 @@ For the full-vision gap inventory and next-slice sequencing, see
 - Scene Intelligence now surfaces sensor live evidence alongside the provenance ledger, making the sensor trail visible in the temporal/operator story instead of only in the sensor panel ✅
 - The debug panel now reuses the same sensor metadata parser for pasted live metadata, so support/debug workflows can feed the canonical sensor evidence trail without a separate ingest path ✅
 - A dedicated `/api/sensor-ingest` route now accepts pasted sensor metadata as a history-backed backend-shaped intake seam and resolves it into canonical sensor live events ✅
-
-## Site creation pipeline unification (2026-05-30)
-
-- Duplicate `SiteIntakeSource` type is now unified. `SiteIntakeHub.tsx` imports from `site-compiler.ts` instead of defining its own. The canonical type includes `scan`, `ai_prompt`, `floor_plan`, `json_import`, `manual`, `footage_verify`, and `camera_evidence` ✅
-- Source adapters exist for all 7 intake sources. Each produces a `SiteCompilerResult` through dedicated compile functions (`compileScanToSiteResult`, `compileAiDraftToSiteResult`, `compileFloorPlanToSiteResult`, `compileJsonToSiteResult`, `compileCameraEvidenceToSiteResult`, `compileFootageVerifyToSiteResult`, plus inline for `manual` in `page.tsx`) ✅
-- Every source adapter feeds into the unified `compileToSiteTwinDraft()` pipeline that produces a `SiteTwinDraft` with entity counts, assumptions, warnings, missing prerequisites, suggested next actions, and provenance across all sources ✅
-- `compileScanSessionToCompilerResult()` adapter in `scan-to-scene.ts` bridges the existing scan compile path into the canonical pipeline ✅
-- `draftSceneToCompilerResult()` adapter in `ai-layout-draft.ts` bridges the AI layout draft path into the canonical pipeline ✅
-- `SiteDraftReview.tsx` now shows source-specific icons, maturity status, and approval labels per intake source (e.g., "Import as Canonical Scene" for JSON, "Approve as Draft — Review Required" for AI, "Approve as Canonical Twin" for scan) ✅
-- `page.tsx` `compileCurrentScene` now handles all 7 source types including `footage_verify` and `camera_evidence` ✅
-- The approval flow (`approveIntakeSession`) validates the scene, records provenance in the change log, emits operational evidence, runs baseline simulation when prerequisites are met, and opens Studio ✅
-- `normalizeSiteIntakeSource()` provides backward compatibility for legacy source names with explicit blocking warnings for unsupported keys ✅
-- `SITE_SOURCE_MATURITY` covers all 7 source variants with truthful descriptions, and `SOURCE_LABELS` provides display names ✅
-- 24 tests cover all source adapters, the compile-to-draft pipeline, `canRunBaselineSimulation` gating, and pipeline completeness across every source ✅
-- Scan wizard labeling is already truthful: non-guided path says "Manual-assisted scan" and guided path says "Guided scan assistant" ✅
-- `SceneBuilderWizard` already feeds into the pipeline through `onClose` → `compileCurrentScene(source)` → review cycle ✅
 
 ## QA infra state (2026-05-29)
 
@@ -888,28 +851,6 @@ The following issues were fixed to reach 0 typed errors (only pre-existing TS700
 - **Candidates → SiteTwinDraft, not directly into SecurityScene**: The reconstruction pipeline compiles through `compileReconstructionToSiteTwinDraft()` which produces a `SiteTwinDraft`. The draft must go through site draft approval to become the active scene ✅
 - **No overclaiming automatic reconstruction**: Tests explicitly verify that pending/rejected candidates are skipped, that confidence is never 1.0, and that the system clearly labels estimated vs anchored dimensions ✅
 - **Architecture before integration**: Adapter interfaces exist but no model backend is wired. The product contract is real while the implementation path is clear ✅
-
-### Adapter Stubs Built (second pass)
-- `lib/scan-adapters/adapters/stub-depth-adapter.ts` — `StubDepthEstimationAdapter` produces plausible depth ranges per photo role (overview=max 12m, critical_zones=~4m, existing_cameras=~6m). Uses jitter for realistic variation. ✅
-- `lib/scan-adapters/adapters/stub-scale-anchoring-adapter.ts` — `StubScaleAnchoringAdapter` suggests anchors from candidate labels (door→0.9m, counter→1.1m, shelf→1.8m). Respects user-provided measurements from `knownMeasurements`. `refineWithAnchor()` adjusts depth estimates by a scaling factor. ✅
-- `lib/scan-adapters/registry.ts` — Updated `getDefaultAdapterSet()` to include all three stubs. Added `getStubAdapterSet()`, `getDepthEstimationAdapters()`, `getScaleAnchoringAdapters()`. ✅
-- 4 new tests for depth adapter (role profiles, non-photo fallback, close-up range) ✅
-- Registry tests updated for new adapter layout ✅
-
-### Reconstruction Candidate Review UI — built
-- `components/reconstruction/ReconstructionCandidatePanel.tsx` — Full review panel for scan candidates:
-  - Renders candidates grouped by kind with color-coded icons, confidence badges, source labels, position/dimensions display ✅
-  - Per-candidate Accept/Reject actions with visual state (accepted=green, rejected=gray+opacity) ✅
-  - Batch Accept All / Reject All for pending candidates ✅
-  - Summary bar: accepted/pending/rejected/confidence counts ✅
-  - Toggle to show/hide rejected candidates ✅
-  - Candidate warnings displayed as severity-badged chips ✅
-  - Session warnings section with suggested actions ✅
-  - Footer with count summary and **Compile to Draft** button that calls `compileReconstructionToSiteTwinDraft()` ✅
-- `lib/scan-reconstruction-bridge.ts` — `runFullReconstruction()` convenience: creates session, adds photos, runs pipeline. `compileCurrentSession()` convenience wrapper. ✅
-
-### Test count updated
-- 100 scan tests across 5 files, all passing ✅
 
 ---
 

@@ -63,7 +63,7 @@ export const stageResultSchema = z.object({
   durationMs: z.number().int().nonnegative(),
   error: z.string().optional(),
   extractedElements: z.array(extractedElementSchema).default([]),
-  outputData: z.record(z.unknown()).default({}),
+  outputData: z.record(z.string(), z.unknown()).default({}),
   confidence: z.number().min(0).max(1).optional(),
 });
 export type StageResult = z.infer<typeof stageResultSchema>;

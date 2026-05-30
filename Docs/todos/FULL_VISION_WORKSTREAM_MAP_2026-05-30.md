@@ -5,7 +5,7 @@
 
 ## Explicit Not-Started Phase Docs
 
-- ~~Phase 1: Coverage Engine~~ (RESOLVED — see below)
+- Phase 1: Coverage Engine
 - Phase 12: Deployment & Packaging
 - Phase 13: Persistent Identity & Governance
 - Phase 14: AI Agent Pipeline
@@ -18,7 +18,6 @@
 - Coverage engine and simulation core
   - Agent: completed and closed
   - Scope: coverage-engine phase 1 gap closed; follow-up is docs alignment only.
-  - **2026-05-30 migration:** Dual-copy (`packages/simulation/` + `apps/studio/src/simulation/`) resolved. `packages/simulation/` is now canonical. All 22 engine files replaced with the studio's richer implementations. dori/geometry/grid added. 17 test files moved. 127 `@/simulation/` imports updated to `@sentineltwin/simulation`. Studio sim directory deleted. 86 package tests pass. See DECISION_LOG entry D-023.
 
 - Deployment and packaging
   - Agent: completed and closed

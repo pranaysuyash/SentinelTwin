@@ -366,7 +366,7 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
                   Snapshots saved
                 </div>
                 <div className="text-[9px]">
-                  Before: "{snapshots[0]?.label ?? "Baseline"}" — After: "{snapshots[snapshots.length - 1]?.label ?? "Fixed"}"
+                  {'Before: "'}{snapshots[0]?.label ?? 'Baseline'}{'" \u2014 After: "'}{snapshots[snapshots.length - 1]?.label ?? 'Fixed'}{'"'}
                 </div>
                 <div className="mt-1 text-[9px] text-[#556076]">
                   Select snapshots A and B above to compare coverage, critical zones, and path quality.

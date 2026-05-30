@@ -21,7 +21,7 @@ import {
   ShieldCheck,
   Trash2,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 
 import { SurfaceButton } from "@/components/shared/SurfaceButton";
 import { compileScanSessionToScene, createScanCandidate, createScanSession, SCAN_CANDIDATE_TYPES, summarizeScanProvenance, type ScanCandidate, type ScanCandidateKind, type ScanCompilationWarning, type ScanSession } from "@/lib/scan-to-scene";
@@ -230,8 +230,10 @@ export function ScanSiteWizard({ onClose, mode = "manual" }: ScanSiteWizardProps
 
   useEffect(() => {
     if (isGuided) {
-      setAutoCreatePath(true);
-      setGuidedStep(0);
+      startTransition(() => {
+        setAutoCreatePath(true);
+        setGuidedStep(0);
+      });
     }
   }, [isGuided]);
 

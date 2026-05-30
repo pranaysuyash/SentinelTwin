@@ -343,7 +343,7 @@ describe("report engine", () => {
     const afterResult = simulateStudio(modifiedScene);
     const compare = buildCompareReportData(scene, beforeResult, modifiedScene, afterResult);
 
-    const changed = compare.zoneChanges.filter((z) => z.changed);
+    const changed = compare.zoneChanges.filter((z: { changed: boolean }) => z.changed);
     expect(changed.length).toBeGreaterThanOrEqual(0);
   });
 });

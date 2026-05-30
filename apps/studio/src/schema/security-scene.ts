@@ -883,3 +883,48 @@ export function safeParseSecurityScene(input: unknown) {
 export function cloneSecurityScene(scene: SecurityScene): SecurityScene {
   return structuredClone(scene);
 }
+
+// ── Counterfactual Engine Types ──
+
+export const counterfactualConstraintSchema = z.object({
+  maxBudget: z.number().min(0).optional(),
+  noNewWiring: z.boolean().default(false),
+  privacyPreserving: z.boolean().default(true),
+});
+
+export const counterfactualActionSchema = z.object({
+  actionId: z.string(),
+  type: z.enum([
+    "move_object",
+    "rotate_camera",
+    "add_camera",
+    "add_light",
+    "change_fov",
+    "remove_object",
+    "other",
+  ]),
+  description: z.string(),
+  affectedNodeId: z.string().optional(),
+  suggestedPosition: point3Schema.optional(),
+  suggestedYawDeg: z.number().optional(),
+  suggestedPitchDeg: z.number().optional(),
+  suggestedFovHorizontalDeg: z.number().optional(),
+  suggestedFovVerticalDeg: z.number().optional(),
+  estimatedCost: z.number().min(0).default(0),
+});
+
+export const counterfactualPlanSchema = z.object({
+  planId: z.string(),
+  label: z.string(),
+  actions: z.array(counterfactualActionSchema),
+  simulatedCoveragePct: z.number().min(0).max(100).optional(),
+  simulatedImprovementPct: z.number().optional(),
+  totalCost: z.number().min(0).default(0),
+  confidenceScore: z.number().min(0).max(1).default(1),
+  privacyScore: z.number().min(0).max(1).default(1),
+  simulationResult: simulationResultSchema.optional(),
+});
+
+export type CounterfactualConstraint = z.infer<typeof counterfactualConstraintSchema>;
+export type CounterfactualAction = z.infer<typeof counterfactualActionSchema>;
+export type CounterfactualPlan = z.infer<typeof counterfactualPlanSchema>;

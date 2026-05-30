@@ -1,0 +1,2 @@
+Repository-level reset lock active.
+To override for this process only: SENTINELTWIN_ALLOW_RESET=1

@@ -1,6 +1,10 @@
 import type { SecurityScene } from "@/schema/security-scene";
-import type { WorkspaceGovernanceState } from "@/lib/workspace-governance";
-import type { WorkspaceRole } from "@/lib/workspace-governance";
+import {
+  WORKSPACE_ROLES,
+  formatRoleLabel,
+  type WorkspaceGovernanceState,
+  type WorkspaceRole,
+} from "@/lib/workspace-governance";
 
 export type WorkspaceClearance = "standard" | "restricted" | "privacy_sensitive";
 
@@ -72,15 +76,7 @@ export type WorkspaceAccessRouteSummary = {
 };
 
 function isWorkspaceRole(value: string): value is WorkspaceRole {
-  return [
-    "operator",
-    "reviewer",
-    "auditor",
-    "installer",
-    "insurer",
-    "privacy_reviewer",
-    "admin",
-  ].includes(value as WorkspaceRole);
+  return WORKSPACE_ROLES.includes(value as WorkspaceRole);
 }
 
 export function createDefaultWorkspaceMembers(): WorkspaceMember[] {
@@ -208,9 +204,9 @@ export function getActiveWorkspaceMember(access: WorkspaceAccessState) {
 
 export function summarizeWorkspaceAccess(access: WorkspaceAccessState): WorkspaceAccessSummary {
   const activeMember = getActiveWorkspaceMember(access);
-  const reviewRouteLabel = access.policy.requiredReviewerRoles.map((role) => role.replace(/_/g, " ")).join(", ");
+  const reviewRouteLabel = access.policy.requiredReviewerRoles.map((role) => formatRoleLabel(role)).join(", ");
   return {
-    activeMemberLabel: activeMember ? `${activeMember.displayName} · ${activeMember.role.replace(/_/g, " ")}` : "No active member",
+    activeMemberLabel: activeMember ? `${activeMember.displayName} · ${formatRoleLabel(activeMember.role)}` : "No active member",
     modeLabel: access.policy.mode === "shared" ? "Shared workspace" : "Single-user workspace",
     teamSize: access.members.length,
     reviewRouteLabel,
@@ -239,8 +235,8 @@ export function routeWorkspaceApproval(scene: SecurityScene, access: WorkspaceAc
 export function summarizeWorkspaceAccessRoutes(access: WorkspaceAccessState, scene: SecurityScene): WorkspaceAccessRouteSummary {
   const activeMember = getActiveWorkspaceMember(access);
   const route = routeWorkspaceApproval(scene, access);
-  const activeMemberLabel = activeMember ? `${activeMember.displayName} · ${activeMember.role.replace(/_/g, " ")}` : "No active member";
-  const requiredReviewerLabel = route.requiredReviewerRole.replace(/_/g, " ");
+  const activeMemberLabel = activeMember ? `${activeMember.displayName} · ${formatRoleLabel(activeMember.role)}` : "No active member";
+  const requiredReviewerLabel = formatRoleLabel(route.requiredReviewerRole);
   const hasPrivacyExposure = scene.privacyZones.length > 0;
 
   return {
@@ -271,7 +267,7 @@ export function summarizeWorkspaceAccessRoutes(access: WorkspaceAccessState, sce
           ? `Publish must route through ${requiredReviewerLabel} before publish approval.`
           : "Member can publish directly."
         : canReview
-          ? `Member can process reviews as ${member.role.replace(/_/g, " ")}.`
+          ? `Member can process reviews as ${formatRoleLabel(member.role)}.`
           : canRestore
             ? "Member can restore checkpoints but cannot publish."
             : "Member stays in draft and annotation routing.";
@@ -346,10 +342,10 @@ export function canPerformWorkspaceAction(
         allowed: canReview,
         reason: canReview
           ? requiresPrivacyReviewer && activeMember.role !== "admin"
-            ? `Privacy-sensitive approval routing is assigned to ${route.requiredReviewerRole.replace(/_/g, " ")}, and ${activeMember.role} matches the required role.`
+            ? `Privacy-sensitive approval routing is assigned to ${formatRoleLabel(route.requiredReviewerRole)}, and ${activeMember.role} matches the required role.`
             : `The active member can process approvals as ${activeMember.role}.`
           : requiresPrivacyReviewer
-            ? `Privacy-sensitive approval routing requires ${route.requiredReviewerRole.replace(/_/g, " ")}, and ${activeMember.role} is not eligible.`
+            ? `Privacy-sensitive approval routing requires ${formatRoleLabel(route.requiredReviewerRole)}, and ${activeMember.role} is not eligible.`
             : `Approval routing requires a reviewer role, and ${activeMember.role} is not eligible.`,
         member: activeMember,
         requiredReviewerRole: route.requiredReviewerRole,
@@ -371,9 +367,9 @@ export function canPerformWorkspaceAction(
         reason: !canPublish
           ? `Publish routing requires a publishing-capable member, and ${activeMember.role} is not eligible.`
           : requiresPublishReview && !publishIsApproved && activeMember.role !== "admin"
-            ? `Publish requires approval routed through ${route.requiredReviewerRole.replace(/_/g, " ")} before the scene can be published.`
+            ? `Publish requires approval routed through ${formatRoleLabel(route.requiredReviewerRole)} before the scene can be published.`
             : requiresPublishReview && publishIsApproved
-              ? `Publish approval is complete and can proceed through ${route.requiredReviewerRole.replace(/_/g, " ")}.`
+              ? `Publish approval is complete and can proceed through ${formatRoleLabel(route.requiredReviewerRole)}.`
               : "The active member can publish this scene.",
         member: activeMember,
         requiredReviewerRole: route.requiredReviewerRole,

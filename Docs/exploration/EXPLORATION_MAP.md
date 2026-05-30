@@ -1,7 +1,7 @@
 # Exploration Map — SentinelTwin
 
 **This is a living document. Append findings. Never replace.**
-**Last updated:** 2026-05-30 (Reconstruction adapters: depth estimation + scale anchoring stubs, candidate review panel UI, bridge module, 100 scan tests) — previous: Dedicated lighting/shadow overlay mode added on top of heatmap lighting/shadow implementation; Heatmap lighting/shadow implementation — camera PPM now combines independent security-light illumination, obstruction-cast light shadows, and camera line-of-sight; Physics engine audit — zero implementation across entire codebase, deferred to V0.2, no new action needed; Checkpoint compare/report pivots + launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Sensor provenance + runtime health surfacing; Sensor fusion preview + workspace access policy surfacing; Digital twin simulation physics: PTZ movement, BRDF reflectivity, dynamic lighting, view distance, placement constraints, scene fidelity, occlusion culling, camera feed synthesis, real-time feedback
+**Last updated:** 2026-05-30 (Scan/reconstruction pipeline foundation: artifact data model, adapter interfaces, reconstruction compiler, quality gates, 73 new tests) — previous: Dedicated lighting/shadow overlay mode added on top of heatmap lighting/shadow implementation; Heatmap lighting/shadow implementation — camera PPM now combines independent security-light illumination, obstruction-cast light shadows, and camera line-of-sight; Physics engine audit — zero implementation across entire codebase, deferred to V0.2, no new action needed; Checkpoint compare/report pivots + launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Sensor provenance + runtime health surfacing; Sensor fusion preview + workspace access policy surfacing; Digital twin simulation physics: PTZ movement, BRDF reflectivity, dynamic lighting, view distance, placement constraints, scene fidelity, occlusion culling, camera feed synthesis, real-time feedback
 
 ---
 
@@ -106,10 +106,9 @@ node store pattern are exactly what SentinelTwin needs.
 - No UI components for the new capture session (uses legacy ScanSiteWizard)
 - No toast/notification surface for reconstruction progress
 **Next:**
-- Integrate with the existing GuidedCaptureAssistant UI to show the candidate review panel after pipeline run
-- Wire a real vision provider call through the ModelProvider interface (requires adding image support to ConversationMessage)
-- Add correspondence adapter (VGGT-style camera pose estimation)
-- Add structural extraction (SpatialLM integration)
+- Wire the first adapter (object detection via vision provider) as a proof of concept
+- Build a reconstruction step UI that maps to the guided capture steps
+- Add depth estimation (Depth Anything V2 via provider or local model)
 **Code anchors:**
 - `lib/scan-artifacts.ts` — Core data model
 - `lib/scan-adapters/types.ts` — Adapter interfaces
@@ -6285,102 +6284,3 @@ All relevant decisions and analysis are already captured in:
 **Decision:** Motion One (WAAPI) is the primary engine for complex timeline choreography (path replay, multi-step sequences). Framer Motion is the primary engine for React UI state transitions. Native R3F useFrame + Three.js curves is the primary engine for simple 3D path traversal.
 **Why it matters:** This ensures SentinelTwin remains strictly compliant with open-source licensing without sacrificing animation fidelity.
  - Browser-native share support is now available on the main archive/compare handoff surfaces via a shared helper that uses `navigator.share` when possible and clipboard copy as fallback, so the existing link builders now reach a native share surface instead of only copy/open buttons.
-
----
-
-### Thread 30: Next.js 16 Turbopack workspace root detection in pnpm monorepos
-**Status:** Webpack workaround active. Upstream issue.
-**Key finding:** Next.js 16.2.6's Turbopack has workspace root detection problems when there are
-multiple lockfiles at different levels in a pnpm monorepo. The `findRootDirAndLockFiles` function
-in `node_modules/next/dist/lib/find-root.js` walks up from `cwd` collecting lockfiles, then selects
-the topmost one as the workspace root. When any lockfile exists inside `apps/studio/` (created by
-prior `bun install` or `npm install` runs), Turbopack picks the wrong root and fails to find
-`next/package.json`, producing "couldn't find the Next.js package from the project directory" errors.
-- The `turbopack.root` config option exists but Turbopack's Rust binary does not consistently
-  respect it in all monorepo layouts.
-- **Webpack fix confirmed:** `next dev --webpack` works without workspace root errors.
-- Stale lockfiles (`pnpm-lock.yaml`, `package-lock.json`, `bun.lock`) were cleaned from `apps/studio/`.
-
-**Next:** If Turbopack is desired in the future, test with Next.js 17+ updates.
-Add a CI check that prevents lockfiles from being committed inside package subdirectories.
-
-### Thread 31: Simulation index.ts export hygiene
-**Status:** Cleaned. Resolved.
-**Key finding:** `@sentineltwin/simulation/src/index.ts` had stale re-exports from source modules
-that no longer existed after the temporal and placement-oracle refactoring. Specifically:
-- `deriveCameraQualityByZone` was re-exported from `./coverage` but never existed in `coverage.ts`.
-- `tsc --noEmit` silently accepts stale re-exports when using `moduleResolution: "Bundler"`.
-- Webpack's resolver correctly rejects them, creating a type-check pass / build fail mismatch.
-- The `CellComputation` type export was also removed from the simulation package (still exported
-  from the `@sentineltwin/core` package).
-
-**Implication:** After any refactoring that changes exports, verify with both `tsc --noEmit` AND
-a Next.js build (`next build` or `next dev --webpack`), not just `tsc --noEmit`.
-
-**Test validation:** 779 tests pass with 9417 expect() calls across 166 files.
-All packages (`core`, `simulation`, `report`, `studio`) compile clean.
-
----
-
-### Thread 150: VLM Pipeline — Two-Tier Floorplan & Scene Understanding Pipeline
-**Status:** Implemented (2026-05-30).
-**Files:** `apps/studio/src/lib/vlm-pipeline/`
-
-**What was built:**
-
-**SemanticContext schema** (`types.ts`):
-- `SemanticContext` — the formal handoff structure between Tier 1 and Tier 2, with Zod schemas for every intermediate data structure
-- `VlmPipelineConfig` — configuration for quality thresholds, model IDs, tier enablement
-- `Tier1Output` — image quality assessment, scene type classification, coarse room detection, OCR text
-- `Tier2Output` — wall coordinates, door/window detections, obstructions, critical zones, adjacency graph
-- `GateDecision` — branching logic output (reject_blurry, human_review, proceed_to_tier2)
-
-**Tier 1: Local Gating** (`tier1-local-gate.ts`):
-- `Tier1Provider` interface for pluggable local VLM backends (MiniCPM-V, Qwen3.5-4B)
-- `StubTier1Provider` — development stub producing plausible quality/scene/OCR/room outputs
-- `runTier1Heuristic()` — browser Canvas-based fallback using Laplacian blur detection, exposure assessment, scene type inference from aspect ratio
-- Laplacian variance function for quantitative blur scoring without model calls
-
-**Gate Decision Logic** (`gate-decision.ts`):
-- `evaluateGateDecision()` — branching logic: blur → reject, low quality → reject, unknown scene → human review, too many flags → human review, low confidence → human review, pass → proceed
-- `getGateWarning()` — user-facing warning messages per action
-- `forceTier2` bypass config for testing/debugging
-
-**Tier 2: Cloud Pass** (`tier2-cloud-pass.ts`):
-- `Tier2Provider` interface for cloud VLM backends (GPT-4o, Gemini 2.5)
-- `ModelTier2Provider` — wraps existing `ModelProvider` abstraction for real API calls with structured output parsing and error recovery
-- `StubTier2Provider` — synthetic wall/room perimeter generation from Tier 1 room bounding boxes
-
-**Post-Processing Validation** (`post-processing.ts`):
-- `PostProcessor` interface with `DefaultPostProcessor` implementation
-- Validation rules: wall count vs expected range, wall endpoint continuity (orphan detection), door-on-wall proximity, room dimension reasonableness (too small → blocking, too large → info)
-- Confidence adjustment: blocking issues reduce to 30%, warnings reduce with 15% per warning
-
-**Orchestrator** (`orchestrator.ts`):
-- `runVlmPipeline()` — end-to-end orchestrator handling Tier 1 → gate → Tier 2 → post-processing with proper error boundaries and metadata tracking
-- Returns `VlmPipelineResult` with full `SemanticContext` for downstream consumption
-
-**VLM Adapters** (`vlm-adapter.ts`):
-- `VlmObjectDetectionAdapter` — implements `ObjectDetectionAdapter` using the VLM pipeline, mapping Tier 2 doors/windows/obstructions/zones to `ScanCandidate[]`
-- `VlmStructuralExtractionAdapter` — implements `StructuralExtractionAdapter`, mapping Tier 2 walls/doors/windows to `StructuralElement[]`
-
-**Tests:** 27 tests in 5 files — all pass (27/27):
-- `gate-decision.test.ts` — 8 tests: proceed, reject blurry, reject low quality, human_review for unknown scene/low confidence/ambiguity/overall, forceTier2 bypass
-- `post-processing.test.ts` — 5 tests: valid pass, low wall count warning, excessive wall warning, too-small room blocking, confidence adjustment
-- `tier1-local-gate.test.ts` — 4 tests: stub provider quality/scene/OCR/room
-- `tier2-cloud-pass.test.ts` — 5 tests: wall segments, door detection, adjacency graph, confidence range, clean warnings
-- `orchestrator.test.ts` — 5 tests: full pipeline, blur gate rejection, tier2 disabled, metadata population, forceTier2 bypass
-
-**Design decisions:**
-- SemanticContext is the single source of truth for Tier 1→Tier 2 handoff — no parallel context representations
-- Gate decision is deterministic (no AI) — Tier 1 quality scoring is geometric, not model-dependent
-- Stubs match the existing adapter pattern (StubObjectDetectionAdapter, StubDepthEstimationAdapter, etc.)
-- Tier 2 uses the existing ModelProvider abstraction for cloud calls
-- Post-processing validation mirrors the heuristic floor plan import's `validateFloorPlan()` pattern
-- All outputs carry the truth ladder fields via the existing compile pipeline (`sourceTrace`, `reviewStatus`, `geometryValidity`)
-
-**Open questions:**
-- Should Tier 2 prompt include Tier 1 OCR results as context for better dimension extraction?
-- How should quality thresholds be calibrated empirically?
-- Can Tier 1 zone detections be coupled with SAM3 for zone-level segmentation masks?
-- Need telemetry to track cloud API cost reduction from local gating

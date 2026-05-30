@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Repo-local guardrail: block destructive reset commands unless explicitly overridden.
+# Bypass only with: env SENTINELTWIN_ALLOW_RESET=1 git reset ...
+
+if [[ "${1:-}" == "reset" ]] || [[ "${1:-}" == "reset-*" ]]; then
+  if [[ -z "${SENTINELTWIN_ALLOW_RESET:-}" ]]; then
+    echo "BLOCKED: git reset is disabled for this repo (Agent safety lock)." >&2
+    echo "Enable temporarily with SENTINELTWIN_ALLOW_RESET=1 if you explicitly approved a reset." >&2
+    exit 1
+  fi
+fi
+
+exec /usr/bin/git "$@"

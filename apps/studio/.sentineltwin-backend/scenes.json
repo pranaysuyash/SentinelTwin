@@ -1,0 +1,14 @@
+[
+  {
+    "id": "scene-1",
+    "siteId": "c5fa9f30-9e2c-4953-955b-a0cd9781ece7",
+    "name": "Retail",
+    "version": 1,
+    "status": "draft",
+    "createdAt": 1780166373901,
+    "updatedAt": 1780166622721,
+    "publishedAt": null,
+    "publishedBy": null,
+    "sceneDataId": "081935c8-a37b-49dc-abbc-3eebfb9484f3"
+  }
+]

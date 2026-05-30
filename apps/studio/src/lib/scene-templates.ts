@@ -11,11 +11,10 @@ export interface SceneTemplate {
   create: (overrides?: { widthM?: number; depthM?: number; heightM?: number }) => SecurityScene;
 }
 
-const now = Date.now();
-let counter = 0;
-const uid = (prefix: string) => `${prefix}_${(now + counter++).toString(36)}`;
+const uid = (prefix: string) => `${prefix}_${crypto.randomUUID()}`;
 
 function makeBase(name: string, w: number, d: number, h: number): Partial<SecurityScene> {
+  const now = Date.now();
   return {
     id: uid("scene"),
     name,
@@ -90,7 +89,7 @@ function cam(
     clarity: "good" as const,
     source: "preset" as const,
     reviewStatus: "unreviewed" as const,
-    sourceTrace: "",
+    sourceTrace: "factory:scene-templates:cam",
     geometryValidity: "valid" as const,
     ndaaCompliant: true, privacyMaskingEnabled: false, tags: [] as string[],
   } as SecurityScene["cameras"][number];
@@ -112,7 +111,7 @@ function light(name: string, position: [number, number, number], rangeM: number)
     glareRisk: "none" as const,
     source: "preset" as const,
     reviewStatus: "unreviewed" as const,
-    sourceTrace: "",
+    sourceTrace: "factory:scene-templates:light",
     geometryValidity: "valid" as const,
   };
 }
@@ -141,7 +140,7 @@ function obs(
     obstructionType,
     source: "preset" as const,
     reviewStatus: "unreviewed" as const,
-    sourceTrace: "",
+    sourceTrace: "factory:scene-templates:obs",
     geometryValidity: "valid" as const,
   };
 }
@@ -168,7 +167,7 @@ function zone(
     privacyZone: false,
     source: "manual" as const,
     reviewStatus: "unreviewed" as const,
-    sourceTrace: "",
+    sourceTrace: "factory:scene-templates:zone",
     geometryValidity: "valid" as const,
   };
 }
@@ -184,7 +183,7 @@ function door(label: string, position: [number, number, number], w = 0.9) {
     state: "closed" as const,
     source: "preset" as const,
     reviewStatus: "unreviewed" as const,
-    sourceTrace: "",
+    sourceTrace: "factory:scene-templates:door",
     geometryValidity: "valid" as const,
   };
 }
@@ -201,7 +200,7 @@ function win(label: string, position: [number, number, number], dimensions: [num
     visionTransmission: 0.9,
     source: "preset" as const,
     reviewStatus: "unreviewed" as const,
-    sourceTrace: "",
+    sourceTrace: "factory:scene-templates:win",
     geometryValidity: "valid" as const,
   };
 }

@@ -1,6 +1,6 @@
 # Session Context
 
-- Generated: 2026-05-30T17:42:32Z
+- Generated: 2026-05-30T18:42:51Z
 - Project: `SentinelTwin`
 - Provider: `local`
 - Model: `BAAI/bge-m3`
@@ -29,7 +29,7 @@ _Search timed out. Retry when the retrieval store is less busy._
 ### Known Issues and Worklogs
 - Collection: `projects_proj_sentineltwin`
 - Query: `known issues and worklog for SentinelTwin`
-_Search failed for this collection/query._
+_Search timed out. Retry when the retrieval store is less busy._
 
 ### Prompts and Guidelines
 - Collection: `projects_proj_sentineltwin`
@@ -46,7 +46,7 @@ _Search timed out. Retry when the retrieval store is less busy._
 ### Reusable Patterns
 - Collection: `projects_workspace_shared`
 - Query: `similar architecture patterns for SentinelTwin`
-_Collection check timed out. Retry shortly._
+_Search timed out. Retry when the retrieval store is less busy._
 
 ### Process Templates
 - Collection: `projects_workspace_shared`

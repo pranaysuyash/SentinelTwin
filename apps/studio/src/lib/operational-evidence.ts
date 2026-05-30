@@ -141,6 +141,8 @@ const OperationalEvidenceEventPayloadSchema = z.object({
   sceneSnapshot: z.unknown().optional(),
   simulation: OperationalEvidenceSimulationSchema.optional(),
   notes: z.array(z.string()).optional(),
+  liveCameraConnectionContinuity: z.array(z.unknown()).optional(),
+  sensorIngestContinuity: z.array(z.unknown()).optional(),
 });
 
 export const OperationalEvidenceEventInputSchema = OperationalEvidenceEventPayloadSchema.extend({
@@ -157,11 +159,15 @@ export const OperationalEvidenceEventSchema = OperationalEvidenceEventPayloadSch
 export type OperationalEvidenceEvent = Omit<z.infer<typeof OperationalEvidenceEventSchema>, "previousSceneSnapshot" | "sceneSnapshot"> & {
   previousSceneSnapshot?: SecurityScene;
   sceneSnapshot?: SecurityScene;
+  liveCameraConnectionContinuity?: import("./camera-live-connection-history").CameraLiveConnectionArchiveRecord[];
+  sensorIngestContinuity?: import("./sensor-ingest-history").SensorIngestArchiveRecord[];
 };
 
 export type OperationalEvidenceEventInput = Omit<z.infer<typeof OperationalEvidenceEventInputSchema>, "previousSceneSnapshot" | "sceneSnapshot"> & {
   previousSceneSnapshot?: SecurityScene;
   sceneSnapshot?: SecurityScene;
+  liveCameraConnectionContinuity?: import("./camera-live-connection-history").CameraLiveConnectionArchiveRecord[];
+  sensorIngestContinuity?: import("./sensor-ingest-history").SensorIngestArchiveRecord[];
 };
 
 function normalizeSceneSnapshot(value: unknown) {
@@ -188,6 +194,8 @@ export function safeParseOperationalEvidenceEvent(input: unknown): OperationalEv
     previousSceneSnapshot,
     sceneSnapshot,
     simulation: parsed.data.simulation ? structuredClone(parsed.data.simulation) : undefined,
+    liveCameraConnectionContinuity: parsed.data.liveCameraConnectionContinuity as any,
+    sensorIngestContinuity: parsed.data.sensorIngestContinuity as any,
     notes: parsed.data.notes?.filter((note): note is string => typeof note === "string"),
   };
   const validated = OperationalEvidenceEventSchema.safeParse(normalized);
@@ -309,6 +317,8 @@ export type OperationalEvidenceTemporalTwinSummary = {
   } | null;
   latestCheckpointAgeMs: number | null;
   latestPublishedCheckpointAgeMs: number | null;
+  liveCameraConnectionContinuity?: import("./camera-live-connection-history").CameraLiveConnectionArchiveRecord[];
+  sensorIngestContinuity?: import("./sensor-ingest-history").SensorIngestArchiveRecord[];
 };
 
 export type OperationalEvidencePublicationCheckpoint = {
@@ -505,6 +515,8 @@ export function buildOperationalEvidenceEvent(input: OperationalEvidenceEventInp
     previousSceneSnapshot,
     sceneSnapshot,
     simulation: parsedInput.simulation ? structuredClone(parsedInput.simulation) : undefined,
+    liveCameraConnectionContinuity: parsedInput.liveCameraConnectionContinuity as any,
+    sensorIngestContinuity: parsedInput.sensorIngestContinuity as any,
     notes: parsedInput.notes?.filter((note): note is string => typeof note === "string"),
   }) as OperationalEvidenceEvent;
 }
@@ -833,6 +845,8 @@ export function summarizeOperationalEvidenceTemporalTwin(
     currentSceneSummary: timeline.currentSceneSummary,
     currentVsLatestCheckpointDelta,
     currentVsLatestPublishedCheckpointDelta,
+    liveCameraConnectionContinuity: timeline.latestCheckpoint?.event.liveCameraConnectionContinuity,
+    sensorIngestContinuity: timeline.latestCheckpoint?.event.sensorIngestContinuity,
     latestCheckpointAgeMs: timeline.latestCheckpoint ? Date.now() - timeline.latestCheckpoint.event.timestamp : null,
     latestPublishedCheckpointAgeMs: latestPublishedCheckpoint ? Date.now() - latestPublishedCheckpoint.event.timestamp : null,
   };

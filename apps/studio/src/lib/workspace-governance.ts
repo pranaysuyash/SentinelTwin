@@ -67,12 +67,16 @@ type GovernanceSceneContext = {
   privacyZones?: unknown[] | null;
 };
 
-function capitalizeLabel(value: string) {
+export function capitalizeLabel(value: string) {
   return value
     .replace(/_/g, " ")
     .split(" ")
     .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+export function formatRoleLabel(role: string): string {
+  return role.replace(/_/g, " ");
 }
 
 export function createDefaultWorkspaceGovernance(): WorkspaceGovernanceState {

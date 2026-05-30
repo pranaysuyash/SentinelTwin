@@ -1,7 +1,5 @@
 import type {
   SemanticContext,
-  Tier1Output,
-  GateDecision,
   VlmPipelineConfig,
   VlmPipelineResult,
 } from "./types";
@@ -13,7 +11,6 @@ import type { Tier2Provider } from "./tier2-cloud-pass";
 import { StubTier2Provider } from "./tier2-cloud-pass";
 import type { PostProcessor } from "./post-processing";
 import { DefaultPostProcessor } from "./post-processing";
-import type { ImageQuality, SceneType, CoarseRoom, OcrText } from "./types";
 
 export type VlmPipelineOptions = {
   config?: Partial<VlmPipelineConfig>;
@@ -21,34 +18,6 @@ export type VlmPipelineOptions = {
   tier2Provider?: Tier2Provider;
   postProcessor?: PostProcessor;
 };
-
-function emptyTier1(): Tier1Output {
-  return {
-    imageQuality: {
-      isBlurry: false, blurScore: 1, lowLight: false, overexposed: false,
-      resolutionSufficient: true, qualityScore: 1,
-    },
-    sceneType: "unknown" as SceneType,
-    sceneTypeConfidence: 0,
-    roomCount: 0,
-    rooms: [],
-    ocrTexts: [],
-    overallConfidence: 0,
-    ambiguityFlags: [],
-  };
-}
-
-function emptyGate(): GateDecision {
-  return { action: "human_review", reason: "Pipeline not started", qualityThreshold: 0.4 };
-}
-
-function resolveTier2Provider(
-  options: VlmPipelineOptions,
-  _cfg: VlmPipelineConfig,
-): Tier2Provider {
-  if (options.tier2Provider) return options.tier2Provider;
-  return new StubTier2Provider();
-}
 
 export async function runVlmPipeline(
   dataUrl: string,
@@ -61,7 +30,7 @@ export async function runVlmPipeline(
   };
 
   const tier1Provider = options.tier1Provider ?? new StubTier1Provider();
-  const tier2Provider = resolveTier2Provider(options, cfg);
+  const tier2Provider = options.tier2Provider ?? new StubTier2Provider();
   const postProcessor = options.postProcessor ?? new DefaultPostProcessor();
 
   const pipelineMetadata = {
@@ -76,43 +45,44 @@ export async function runVlmPipeline(
       heightPx: 0,
       fileName,
     },
-    tier1: emptyTier1(),
-    gateDecision: emptyGate(),
+    tier1: null as unknown as SemanticContext["tier1"],
+    gateDecision: null as unknown as SemanticContext["gateDecision"],
     pipelineMetadata,
   };
 
   // ── Phase 1: Tier 1 (Local Gating) ──
 
   try {
-    let tier1Output: Tier1Output;
+    let tier1Output;
     if (cfg.tier1Enabled) {
-      const quality = await tier1Provider.assessImageQuality(dataUrl);
-      const scene = await tier1Provider.classifyScene(dataUrl);
-      const ocr = await tier1Provider.extractOcr(dataUrl);
-      const rooms = await tier1Provider.detectRooms(dataUrl);
-      const ambiguityFlags: string[] = [];
-      if (quality.isBlurry) ambiguityFlags.push("blurry");
-      if (quality.lowLight) ambiguityFlags.push("low_light");
-      if (quality.overexposed) ambiguityFlags.push("overexposed");
-      if (!quality.resolutionSufficient) ambiguityFlags.push("low_resolution");
-      if (scene.sceneType === "unknown") ambiguityFlags.push("unknown_scene_type");
+      tier1Output = await tier1Provider.assessImageQuality(dataUrl).then(async (quality) => {
+        const scene = await tier1Provider.classifyScene(dataUrl);
+        const ocr = await tier1Provider.extractOcr(dataUrl);
+        const rooms = await tier1Provider.detectRooms(dataUrl);
+        const ambiguityFlags: string[] = [];
+        if (quality.isBlurry) ambiguityFlags.push("blurry");
+        if (quality.lowLight) ambiguityFlags.push("low_light");
+        if (quality.overexposed) ambiguityFlags.push("overexposed");
+        if (!quality.resolutionSufficient) ambiguityFlags.push("low_resolution");
+        if (scene.sceneType === "unknown") ambiguityFlags.push("unknown_scene_type");
 
-      const overallConfidence =
-        quality.qualityScore * 0.35 +
-        scene.confidence * 0.3 +
-        Math.min(1, rooms.roomCount / 5) * 0.2 +
-        (ocr.length > 0 ? 0.15 : 0);
+        const overallConfidence =
+          quality.qualityScore * 0.35 +
+          scene.confidence * 0.3 +
+          Math.min(1, rooms.roomCount / 5) * 0.2 +
+          (ocr.length > 0 ? 0.15 : 0);
 
-      tier1Output = {
-        imageQuality: quality,
-        sceneType: scene.sceneType,
-        sceneTypeConfidence: scene.confidence,
-        roomCount: rooms.roomCount,
-        rooms: rooms.rooms,
-        ocrTexts: ocr,
-        overallConfidence: Math.round(overallConfidence * 100) / 100,
-        ambiguityFlags,
-      };
+        return {
+          imageQuality: quality,
+          sceneType: scene.sceneType,
+          sceneTypeConfidence: scene.confidence,
+          roomCount: rooms.roomCount,
+          rooms: rooms.rooms,
+          ocrTexts: ocr,
+          overallConfidence: Math.round(overallConfidence * 100) / 100,
+          ambiguityFlags,
+        };
+      });
     } else {
       tier1Output = await runTier1Heuristic(dataUrl, fileName);
     }
@@ -122,7 +92,7 @@ export async function runVlmPipeline(
     return {
       semanticContext: {
         ...ctx,
-        tier1: emptyTier1(),
+        tier1: null as unknown as SemanticContext["tier1"],
         gateDecision: {
           action: "human_review",
           reason: `Tier 1 processing failed: ${err}`,

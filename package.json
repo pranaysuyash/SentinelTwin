@@ -13,7 +13,9 @@
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
-    "clean": "turbo run clean && rm -rf node_modules"
+    "clean": "turbo run clean && rm -rf node_modules",
+    "support:bundle": "bash tools/generate-support-bundle.sh",
+    "qa:all": "bash tools/studio-quality-gate.sh"
   },
   "devDependencies": {
     "turbo": "^2.5.0",

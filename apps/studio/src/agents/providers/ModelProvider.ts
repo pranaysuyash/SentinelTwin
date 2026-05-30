@@ -1,15 +1,11 @@
 import type { z } from "zod";
 
-export type MessageContentPart =
-  | { type: "text"; text: string }
-  | { type: "image_url"; image_url: { url: string; detail?: "low" | "high" | "auto" } };
-
 /**
  * A conversation message in the provider's native format.
  */
 export interface ConversationMessage {
   role: "system" | "user" | "assistant";
-  content: string | MessageContentPart[];
+  content: string;
 }
 
 export interface ModelPrompt {

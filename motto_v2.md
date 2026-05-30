@@ -260,6 +260,12 @@ If a newer canonical path exists:
 - do not keep two editable sources of truth
 - do not delete old non-trivial logic without inventory and approval
 
+Pre-launch compatibility rule:
+
+- Before public launch of a feature/path, do not introduce or retain legacy IDs, aliases, or compatibility shims.
+- During pre-launch, behavior should be canonical-only and simple to reason about: one active path, one config, one execution contract.
+- Backward-compatibility bridges are allowed only after launch is available and formally approved, with an explicit deprecation/removal date.
+
 If no canonical path exists, fix the root cause instead of layering a workaround.
 
 ---

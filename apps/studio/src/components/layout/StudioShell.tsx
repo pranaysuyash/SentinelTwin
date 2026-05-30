@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import { useSimulation } from "@/hooks/use-simulation";
 import { useStudioStore, type ViewMode, type ActiveTool } from "@/store/studio-store";
 import { VIEW_MODE_KEYS, VIEW_MODE_PRESETS, TOOL_SHORTCUTS } from "@/lib/studio-constants";
@@ -364,7 +364,9 @@ export default function StudioShell() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setStudioBypassMode(new URLSearchParams(window.location.search).get("studio") === "1");
+    startTransition(() => {
+      setStudioBypassMode(new URLSearchParams(window.location.search).get("studio") === "1");
+    });
   }, []);
 
   useEffect(() => {

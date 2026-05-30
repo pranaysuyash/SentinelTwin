@@ -101,3 +101,18 @@ npm run deploy:validate:cloud-assisted
 ```
 
 The validator resolves the studio root from its own script location, so the same commands also work when they are invoked through `apps/studio/package.json` scripts.
+
+## Store Method Injector
+
+`store-method-injector.ts` is a code-injection script that uses regex-based search-and-replace
+to add store methods to `apps/studio/src/store/studio-store.ts`. It was used by an agent
+subagent to add counterfactual engine integration when direct file editing wasn't available.
+
+**Purpose:** Documents the injection pattern for agent-based store patching when the store
+file is too large for typical edit tools. The logic it injects (counterfactual plans,
+preview/apply/revert workflow) is already committed — the script exists as a reference.
+
+Run from repo root:
+```bash
+bun tools/store-method-injector.ts
+```

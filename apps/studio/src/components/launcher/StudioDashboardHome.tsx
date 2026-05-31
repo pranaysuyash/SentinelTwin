@@ -7,6 +7,7 @@ import {
   Camera,
   ChevronDown,
   Compass,
+  FileText,
   FileUp,
   FolderOpen,
   LayoutDashboard,
@@ -20,6 +21,7 @@ import {
   ShieldCheck,
   Sparkles,
   Sun,
+  Zap,
   TriangleAlert,
 } from "lucide-react";
 
@@ -2049,6 +2051,126 @@ export function StudioDashboardHome({
               />
             ) : null}
         </div>
+
+          <aside className="flex flex-col gap-3">
+            <div className="rounded-[20px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3.5">
+              <div className="flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#7dd3fc]">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Security Status
+              </div>
+
+              <div className="mt-3 space-y-1.5">
+                <div className="flex items-center justify-between rounded-xl border border-[#1a2030] bg-white/[0.02] px-3 py-2">
+                  <span className="text-[10px] text-[#8b96ab]">Risk Score</span>
+                  <span className={cn(
+                    "text-sm font-bold",
+                    coverage == null ? "text-[#5a6478]" :
+                    coverage >= 70 ? "text-emerald-300" :
+                    coverage >= 40 ? "text-amber-300" : "text-red-300"
+                  )}>
+                    {coverage != null
+                      ? coverage >= 70 ? "Low"
+                        : coverage >= 40 ? "Medium" : "High"
+                      : "Unknown"}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between rounded-xl border border-[#1a2030] bg-white/[0.02] px-3 py-2">
+                  <span className="text-[10px] text-[#8b96ab]">Coverage</span>
+                  <span className="text-sm font-bold text-white">
+                    {coverage != null ? `${Math.round(coverage)}%` : "—"}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between rounded-xl border border-[#1a2030] bg-white/[0.02] px-3 py-2">
+                  <span className="text-[10px] text-[#8b96ab]">Critical Zones</span>
+                  <span className={cn(
+                    "text-sm font-bold",
+                    totalZones > 0 && passCount === totalZones ? "text-emerald-300" : "text-amber-300"
+                  )}>
+                    {passCount}/{totalZones}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between rounded-xl border border-[#1a2030] bg-white/[0.02] px-3 py-2">
+                  <span className="text-[10px] text-[#8b96ab]">Cameras</span>
+                  <span className="text-sm font-bold text-white">{scene.cameras.length}</span>
+                </div>
+
+                <div className="flex items-center justify-between rounded-xl border border-[#1a2030] bg-white/[0.02] px-3 py-2">
+                  <span className="text-[10px] text-[#8b96ab]">Open Issues</span>
+                  <span className={cn(
+                    "text-sm font-bold",
+                    issues.length === 0 ? "text-emerald-300" : "text-amber-300"
+                  )}>
+                    {issues.length}
+                  </span>
+                </div>
+
+                {worstQualityValue ? (
+                  <div className="flex items-center justify-between rounded-xl border border-[#1a2030] bg-white/[0.02] px-3 py-2">
+                    <span className="text-[10px] text-[#8b96ab]">Worst Quality</span>
+                    <span className="text-sm font-bold text-white">{worstQualityLabel}</span>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="rounded-[20px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3.5">
+              <div className="flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#fbbf24]">
+                <Zap className="h-3.5 w-3.5" />
+                Quick Actions
+              </div>
+              <div className="mt-3 space-y-1.5">
+                <button
+                  type="button"
+                  onClick={onRunSimulation}
+                  className="flex w-full items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-[10px] font-semibold text-emerald-200 transition-colors hover:bg-emerald-500/15"
+                >
+                  <Play className="h-3.5 w-3.5" />
+                  Run Simulation
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenReport}
+                  className="flex w-full items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-[10px] font-semibold text-[#dfe8ff] transition-colors hover:bg-white/[0.06]"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  Generate Report
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenCoverageWorkspace}
+                  className="flex w-full items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-[10px] font-semibold text-[#dfe8ff] transition-colors hover:bg-white/[0.06]"
+                >
+                  <Radar className="h-3.5 w-3.5" />
+                  Open Coverage
+                </button>
+              </div>
+            </div>
+
+            {issues.length > 0 ? (
+              <div className="rounded-[20px] border border-amber-400/20 bg-amber-500/8 p-3.5">
+                <div className="flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-amber-200">
+                  <TriangleAlert className="h-3.5 w-3.5" />
+                  Top Issues
+                </div>
+                <div className="mt-2 space-y-1">
+                  {issues.slice(0, 3).map((issue, index) => (
+                    <div key={issue.id ?? `issue-${index}`} className="rounded-lg border border-amber-500/15 bg-amber-500/8 px-2.5 py-1.5 text-[9px] text-amber-100/80">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-amber-100">{issue.severity}</span>
+                        <span className="text-amber-200/60">{issue.description.slice(0, 60)}</span>
+                      </div>
+                    </div>
+                  ))}
+                  {issues.length > 3 ? (
+                    <div className="text-[9px] text-[#8b96ab]">+{issues.length - 3} more issues</div>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+          </aside>
         </div>
         <footer className="mt-auto flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[color:var(--st-border)] bg-[color:var(--st-panel)] px-4 py-2.5 text-[11px] text-[color:var(--st-muted)]">
           <div>© 2026 SentinelTwin · Security Simulation Studio · v0.9.0</div>

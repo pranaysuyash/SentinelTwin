@@ -95,16 +95,16 @@ const DASHBOARD_SECTION_ITEMS: { id: DashboardSectionId; label: string; group: s
 ];
 
 const DEFAULT_DASHBOARD_VISIBILITY: Record<DashboardSectionId, boolean> = {
-  overview: true,
-  preview: true,
-  metrics: true,
-  workspaces: true,
-  recent: true,
-  create: true,
-  library: true,
-  securityStatus: true,
-  issues: true,
-  assumptions: true,
+  overview: false,
+  preview: false,
+  metrics: false,
+  workspaces: false,
+  recent: false,
+  create: false,
+  library: false,
+  securityStatus: false,
+  issues: false,
+  assumptions: false,
 };
 
 const SOURCE_LABELS: Record<SecurityScene["source"], string> = {
@@ -679,6 +679,36 @@ function HideSectionButton({ label, onClick }: { label: string; onClick: () => v
   );
 }
 
+function DashboardOpenHint({
+  title,
+  description,
+  actions,
+}: {
+  title: string;
+  description: string;
+  actions: { id: DashboardSectionId; label: string; onClick: () => void }[];
+}) {
+  return (
+    <section className="rounded-[20px] border border-dashed border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
+      <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-sky-200">{title}</div>
+      <div className="mt-1 max-w-2xl text-xs leading-5 text-[color:var(--st-muted)]">{description}</div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {actions.map((action) => (
+          <button
+            key={action.id}
+            type="button"
+            onClick={action.onClick}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-sky-400/25 bg-sky-500/10 px-3 py-1.5 text-[11px] font-medium text-sky-100 transition-colors hover:border-sky-300/40 hover:bg-sky-500/16"
+          >
+            <Eye className="h-3 w-3" />
+            {action.label}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function LaunchStatusRow({
   label,
   value,
@@ -1175,6 +1205,16 @@ export function StudioDashboardHome({
     setDashboardVisibility((current) => ({ ...current, [id]: visible }));
   };
   const hiddenDashboardCount = DASHBOARD_SECTION_ITEMS.filter((item) => !dashboardVisibility[item.id]).length;
+  const shownDashboardCount = DASHBOARD_SECTION_ITEMS.length - hiddenDashboardCount;
+  const hasMainDashboardPanel = (
+    dashboardVisibility.overview
+    || dashboardVisibility.preview
+    || dashboardVisibility.metrics
+    || dashboardVisibility.workspaces
+    || dashboardVisibility.recent
+    || dashboardVisibility.create
+    || (showWorkspaceLibrary && dashboardVisibility.library)
+  );
   const navActionByKey: Record<(typeof NAV_ITEMS)[number]["key"], (() => void) | undefined> = {
     home: undefined,
     projects: () => setShowWorkspaceLibrary(true),
@@ -1195,6 +1235,7 @@ export function StudioDashboardHome({
   const openReferenceSitesFromFooter = onOpenReferenceSites ?? onOpenDemoScene ?? onOpenStudio;
   const openSettingsFromFooter = onOpenSettings ?? onOpenStudio;
   const coverage = result?.totalCoveragePct ?? scene.simulation?.totalCoveragePct ?? null;
+  const displayCoverage = hydrated ? coverage : null;
   const criticalZoneResults = result?.criticalZoneResults ?? scene.simulation?.criticalZoneResults ?? [];
   const criticalZoneResultMap = criticalZoneStatusMap(result ?? scene.simulation ?? null);
   const hasZoneResults = criticalZoneResults.length > 0;
@@ -1284,7 +1325,24 @@ export function StudioDashboardHome({
         ? "Some redundancy paths fail if a camera drops"
         : "Redundancy coverage intact";
   const issues = [...(result?.issues ?? scene.simulation?.issues ?? [])].sort((a, b) => ISSUE_SEVERITY_ORDER[a.severity] - ISSUE_SEVERITY_ORDER[b.severity]);
+  const displayPassCount = hydrated ? passCount : 0;
+  const displayTotalZones = hydrated ? totalZones : scene.criticalZones.length;
+  const displayWorstQualityLabel = hydrated ? worstQualityLabel : null;
+  const displayWorstQualityValue = hydrated ? worstQualityValue : null;
+  const displayIssues = hydrated ? issues : [];
+  const displayRedundancyFailCount = hydrated ? redundancyFailCount : 0;
+  const displayRedundancyCount = hydrated ? redundancyCount : 0;
+  const hasSideDashboardPanel = (
+    dashboardVisibility.securityStatus
+    || dashboardVisibility.issues
+    || dashboardVisibility.assumptions
+  );
   const worstIssue = issues[0] ?? canonicalOutcome.summary.worstIssue ?? null;
+  const displayWorstIssue = hydrated ? worstIssue : null;
+  const displayOutcomeStatus = hydrated ? canonicalOutcome.summary.status.replace(/_/g, " ") : "not run";
+  const displayPrimaryRisk = hydrated
+    ? (canonicalOutcome.summary.primaryRisk ?? "Run baseline simulation to compute primary risk.")
+    : "Run baseline simulation to compute primary risk.";
   const issuesBySeverity: Record<IssueSeverity, SecurityIssue[]> = {
     critical: [],
     high: [],
@@ -1300,7 +1358,7 @@ export function StudioDashboardHome({
     || issue.description.toLowerCase().includes("blind spot"),
   );
   const outcomeSummary = useMemo(() => {
-    const zoneMap = criticalZoneStatusMap(result ?? scene.simulation ?? null);
+    const zoneMap = hydrated ? criticalZoneStatusMap(result ?? scene.simulation ?? null) : new Map();
     return scene.criticalZones.slice(0, 3).map((zone) => {
       const resultEntry = zoneMap.get(zone.id);
       return {
@@ -1311,7 +1369,7 @@ export function StudioDashboardHome({
         actual: resultEntry?.actualQuality ?? "none",
       };
     });
-  }, [scene.criticalZones, result, scene.simulation]);
+  }, [hydrated, scene.criticalZones, result, scene.simulation]);
   const sceneAssumptions = scene.assumptions;
   const sceneAssumptionRows = useMemo(
     () => [
@@ -1662,10 +1720,10 @@ export function StudioDashboardHome({
               aria-controls="dashboard-view-menu"
             >
               <Eye className="h-3.5 w-3.5 text-sky-200" />
-              View
-              {hiddenDashboardCount > 0 ? (
+              Open panels
+              {shownDashboardCount > 0 ? (
                 <span className="rounded-full border border-amber-400/25 bg-amber-500/12 px-1.5 py-0.5 text-[9px] text-amber-100">
-                  {hiddenDashboardCount} hidden
+                  {shownDashboardCount} open
                 </span>
               ) : null}
             </button>
@@ -1676,15 +1734,15 @@ export function StudioDashboardHome({
               >
                 <div className="flex items-center justify-between border-b border-white/10 px-2 pb-2">
                   <div>
-                    <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-200">Dashboard view</div>
-                    <div className="mt-0.5 text-[10px] text-[color:var(--st-muted)]">Show or hide panels without losing work.</div>
+                    <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-200">Dashboard panels</div>
+                    <div className="mt-0.5 text-[10px] text-[color:var(--st-muted)]">Open only the panels you need for this review.</div>
                   </div>
                   <button
                     type="button"
                     onClick={() => setDashboardVisibility(DEFAULT_DASHBOARD_VISIBILITY)}
                     className="rounded-md border border-white/10 px-2 py-1 text-[10px] text-white/75 hover:text-white"
                   >
-                    Show all
+                    Hide all
                   </button>
                 </div>
                 <div className="max-h-[62vh] overflow-y-auto py-1">
@@ -1829,8 +1887,23 @@ export function StudioDashboardHome({
           </aside>
 
           <div className="flex min-w-0 flex-col gap-4">
-            {isDashboardSectionVisible("overview") ? (
+            {!hasMainDashboardPanel ? (
+              <DashboardOpenHint
+                title="Dashboard panels are hidden"
+                description="Open the panels that match the current job. This keeps the launcher quiet by default while preserving every implemented dashboard surface."
+                actions={[
+                  { id: "overview", label: "Current site twin", onClick: () => setDashboardSectionVisible("overview", true) },
+                  { id: "preview", label: "Map preview", onClick: () => setDashboardSectionVisible("preview", true) },
+                  { id: "metrics", label: "Summary metrics", onClick: () => setDashboardSectionVisible("metrics", true) },
+                  { id: "workspaces", label: "Workspace shortcuts", onClick: () => setDashboardSectionVisible("workspaces", true) },
+                  { id: "recent", label: "Recent site twins", onClick: () => setDashboardSectionVisible("recent", true) },
+                  { id: "create", label: "Create and import", onClick: () => setDashboardSectionVisible("create", true) },
+                ]}
+              />
+            ) : null}
+            {hasMainDashboardPanel ? (
             <div className="rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4 shadow-[0_24px_70px_rgba(0,0,0,0.30)]">
+              {isDashboardSectionVisible("overview") ? (
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">CURRENT SITE TWIN</div>
@@ -1887,6 +1960,7 @@ export function StudioDashboardHome({
                   </button>
                 </div>
               </div>
+              ) : null}
 
               {isDashboardSectionVisible("preview") ? (
               <div className="mt-4 overflow-hidden rounded-[24px] border border-white/[0.05] bg-black/[0.15]">
@@ -1957,43 +2031,43 @@ export function StudioDashboardHome({
                     <HideSectionButton label="summary metrics" onClick={() => setDashboardSectionVisible("metrics", false)} />
                   </div>
                   <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">COVERAGE</div>
-                  <div className={cn("text-xl font-bold tracking-tight", coverage != null ? coverageTone(coverage) : "text-slate-200")}>
-                    {coverage != null ? `${Math.round(coverage)}%` : "Pending"}
+                  <div className={cn("text-xl font-bold tracking-tight", displayCoverage != null ? coverageTone(displayCoverage) : "text-slate-200")}>
+                    {displayCoverage != null ? `${Math.round(displayCoverage)}%` : "Pending"}
                   </div>
-                  <div className="text-[10px] text-[color:var(--st-muted)]">{coverage == null ? "Run baseline simulation" : "vs last run"}</div>
+                  <div className="text-[10px] text-[color:var(--st-muted)]">{displayCoverage == null ? "Run baseline simulation" : "vs last run"}</div>
                 </div>
                 <div className="flex flex-col gap-1 rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
                   <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">CRITICAL ZONES</div>
-                  <div className={cn("text-xl font-bold", totalZones > 0 && passCount === totalZones ? "text-emerald-300" : "text-amber-300")}>
-                    {passCount}/{totalZones}
+                  <div className={cn("text-xl font-bold", displayTotalZones > 0 && displayPassCount === displayTotalZones ? "text-emerald-300" : "text-amber-300")}>
+                    {displayPassCount}/{displayTotalZones}
                   </div>
                   <div className="flex items-center gap-1 text-[10px] text-[color:var(--st-muted)]">
-                    {totalZones > 0 && passCount < totalZones ? <TriangleAlert className="h-3 w-3 text-amber-400" /> : null}
+                    {displayTotalZones > 0 && displayPassCount < displayTotalZones ? <TriangleAlert className="h-3 w-3 text-amber-400" /> : null}
                     Passing
                   </div>
                 </div>
                 <div className="flex flex-col gap-1 rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
                   <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">WORST QUALITY</div>
-                  <div className={cn("text-xl font-bold", worstQualityValue ? QUALITY_TEXT_COLOR[worstQualityValue] : "text-slate-200")}>
-                    {worstQualityLabel ?? "Pending"}
+                  <div className={cn("text-xl font-bold", displayWorstQualityValue ? QUALITY_TEXT_COLOR[displayWorstQualityValue] : "text-slate-200")}>
+                    {displayWorstQualityLabel ?? "Pending"}
                   </div>
                   <div className="truncate text-[10px] text-[color:var(--st-muted)]">
-                    {(canonicalOutcome.summary.primaryRisk ?? worstIssue?.description)?.slice(0, 30) ?? "Baseline required"}
+                    {(displayPrimaryRisk ?? displayWorstIssue?.description ?? "Baseline required").slice(0, 30)}
                   </div>
                 </div>
                 <div className="flex flex-col gap-1 rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
                   <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">ISSUES</div>
-                  <div className={cn("text-xl font-bold", issues.length > 0 ? "text-amber-300" : "text-emerald-300")}>{issues.length}</div>
+                  <div className={cn("text-xl font-bold", displayIssues.length > 0 ? "text-amber-300" : "text-emerald-300")}>{displayIssues.length}</div>
                   <div className="text-[10px] text-[color:var(--st-muted)]">Open</div>
                 </div>
                 <div className="flex flex-col gap-1 rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
                   <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">REDUNDANCY</div>
-                  <div className={cn("text-xl font-bold", redundancyFailCount > 0 ? "text-red-300" : redundancyCount === 0 ? "text-sky-200" : "text-emerald-300")}>
-                    {redundancyFailCount > 0 ? "FAILS" : redundancyCount === 0 ? "Not set" : "OK"}
+                  <div className={cn("text-xl font-bold", displayRedundancyFailCount > 0 ? "text-red-300" : displayRedundancyCount === 0 ? "text-sky-200" : "text-emerald-300")}>
+                    {displayRedundancyFailCount > 0 ? "FAILS" : displayRedundancyCount === 0 ? "Not set" : "OK"}
                   </div>
                   <div className="flex items-center gap-1 text-[10px] text-[color:var(--st-muted)]">
-                    {redundancyFailCount > 0 ? <TriangleAlert className="h-3 w-3 text-red-400" /> : null}
-                    {redundancyFailCount > 0 ? `If CAM 1 offline` : "Coverage intact"}
+                    {displayRedundancyFailCount > 0 ? <TriangleAlert className="h-3 w-3 text-red-400" /> : null}
+                    {displayRedundancyFailCount > 0 ? `If CAM 1 offline` : displayRedundancyCount === 0 ? "No redundancy required" : "Coverage intact"}
                   </div>
                 </div>
                 <div className="flex flex-col gap-1 rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
@@ -2242,6 +2316,17 @@ export function StudioDashboardHome({
         </div>
 
           <aside className="flex flex-col gap-3">
+            {!hasSideDashboardPanel ? (
+              <DashboardOpenHint
+                title="Side panels are hidden"
+                description="Open status, issue, or assumption panels when you need supporting context for the active site twin."
+                actions={[
+                  { id: "securityStatus", label: "Security status", onClick: () => setDashboardSectionVisible("securityStatus", true) },
+                  { id: "issues", label: "Open issues", onClick: () => setDashboardSectionVisible("issues", true) },
+                  { id: "assumptions", label: "Assumptions", onClick: () => setDashboardSectionVisible("assumptions", true) },
+                ]}
+              />
+            ) : null}
             {/* Security Status panel */}
             {isDashboardSectionVisible("securityStatus") ? (
             <div className="rounded-[20px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3.5">
@@ -2258,8 +2343,8 @@ export function StudioDashboardHome({
               <div className="mt-3">
                 <div className="mb-2 rounded-xl border border-[#1a2030] bg-white/[0.02] px-3 py-2">
                   <div className="text-[9px] uppercase tracking-[0.18em] text-[#8b96ab]">SITE RISK</div>
-                  <div className="mt-1 text-[12px] font-semibold text-white">{canonicalOutcome.summary.status.replace(/_/g, " ")}</div>
-                  <div className="mt-1 text-[10px] text-[#aab7d1]">{canonicalOutcome.summary.primaryRisk ?? "Run baseline simulation to compute primary risk."}</div>
+                  <div className="mt-1 text-[12px] font-semibold text-white">{displayOutcomeStatus}</div>
+                  <div className="mt-1 text-[10px] text-[#aab7d1]">{displayPrimaryRisk}</div>
                 </div>
                 <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#8b96ab]">OUTCOME SUMMARY</div>
                 <div className="space-y-1">
@@ -2268,7 +2353,7 @@ export function StudioDashboardHome({
                     const isPartial = zone.status === "partial";
                     const isPass = zone.status === "pass";
                     const badgeLabel = isPass
-                      ? (coverage != null ? `${Math.round(coverage)}%` : "PASS")
+                      ? (displayCoverage != null ? `${Math.round(displayCoverage)}%` : "PASS")
                       : isFail
                         ? qualityToLabel(zone.actual).toUpperCase()
                         : isPartial
@@ -2302,11 +2387,11 @@ export function StudioDashboardHome({
                     </div>
                     <span className={cn(
                       "ml-2 flex-none rounded border px-1.5 py-0.5 text-[8px] font-bold",
-                      coverage == null ? "border-slate-400/20 bg-slate-500/8 text-slate-300" :
-                      coverage >= 70 ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-300" :
-                      coverage >= 40 ? "border-amber-400/30 bg-amber-500/12 text-amber-300" : "border-red-400/30 bg-red-500/12 text-red-300"
+                      displayCoverage == null ? "border-slate-400/20 bg-slate-500/8 text-slate-300" :
+                      displayCoverage >= 70 ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-300" :
+                      displayCoverage >= 40 ? "border-amber-400/30 bg-amber-500/12 text-amber-300" : "border-red-400/30 bg-red-500/12 text-red-300"
                     )}>
-                      {coverage != null ? `${Math.round(coverage)}%` : "—"}
+                      {displayCoverage != null ? `${Math.round(displayCoverage)}%` : "—"}
                     </span>
                   </div>
                 </div>
@@ -2315,11 +2400,11 @@ export function StudioDashboardHome({
             ) : null}
 
             {/* Open Issues panel */}
-            {issues.length > 0 && isDashboardSectionVisible("issues") ? (
+            {isDashboardSectionVisible("issues") ? (
               <div className="rounded-[20px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3.5">
                 <div className="flex items-center justify-between">
                   <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-300">
-                    OPEN ISSUES ({issues.length})
+                    OPEN ISSUES ({displayIssues.length})
                   </div>
                   <div className="flex items-center gap-2">
                     <button type="button" onClick={onOpenIssues} className="text-[10px] text-sky-300 hover:text-sky-200">
@@ -2328,8 +2413,9 @@ export function StudioDashboardHome({
                     <HideSectionButton label="open issues" onClick={() => setDashboardSectionVisible("issues", false)} />
                   </div>
                 </div>
+                {displayIssues.length > 0 ? (
                 <div className="mt-2 space-y-1">
-                  {issues.slice(0, 4).map((issue, index) => (
+                  {displayIssues.slice(0, 4).map((issue, index) => (
                     <button
                       key={`issue-${index}`}
                       type="button"
@@ -2362,6 +2448,11 @@ export function StudioDashboardHome({
                     See all issues &amp; recommendations
                   </button>
                 </div>
+                ) : (
+                  <div className="mt-2 rounded-xl border border-[#1a2030] bg-white/[0.015] px-3 py-2 text-[10px] leading-4 text-[#8b96ab]">
+                    No open issues in the latest review. Run a fresh review after changes to confirm the current site state.
+                  </div>
+                )}
               </div>
             ) : null}
 

@@ -5,7 +5,7 @@ import { startTransition, useEffect, useMemo, useState } from "react";
 
 import type { SecurityReport } from "@/agents/ReportAgent";
 import { buildCompareShareLink } from "@/lib/compare-share-link";
-import { shareLinkOrCopy } from "@/lib/share-link";
+import { shareLinkOrCopy, writeClipboardText } from "@/lib/share-link";
 import { useAiCommand } from "@/hooks/use-ai-command";
 import { buildSecurityOutcomeModel } from "@/lib/security-outcome/security-outcome-model";
 import { exportTextAsPdf, exportAuditReportPdf } from "@/lib/pdf-export";
@@ -280,7 +280,7 @@ export function ReportLiteTab() {
     }
   }, [compareReportSelection]);
 
-  const copy = () => navigator.clipboard.writeText(currentReportMarkdown);
+  const copy = () => writeClipboardText(currentReportMarkdown);
   const copyCompareLink = async () => {
     if (reportMode !== "compare" || !snapshotA || !snapshotB) return;
     const link = buildCompareShareLink(
@@ -294,7 +294,7 @@ export function ReportLiteTab() {
       },
       window.location.hash,
     );
-    await navigator.clipboard.writeText(link);
+    await writeClipboardText(link);
   };
 
   const shareCompareLink = async () => {
@@ -709,13 +709,13 @@ export function ReportLiteTab() {
               <Copy className="h-3 w-3" /> Copy
             </button>
             <button type="button"
-              onClick={() => navigator.clipboard.writeText(installerHandoffMarkdown)}
+              onClick={() => void writeClipboardText(installerHandoffMarkdown)}
               className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
             >
               <Copy className="h-3 w-3" /> Copy Installer Handoff
             </button>
             <button type="button"
-              onClick={() => navigator.clipboard.writeText(commissioningChecklistMarkdown)}
+              onClick={() => void writeClipboardText(commissioningChecklistMarkdown)}
               className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
             >
               <Copy className="h-3 w-3" /> Copy Commissioning

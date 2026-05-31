@@ -7,6 +7,7 @@ const componentRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), ".."
 const dashboardHomePath = resolve(componentRoot, "launcher/StudioDashboardHome.tsx");
 const referenceSitesPath = resolve(componentRoot, "product/ReferenceSitesView.tsx");
 const settingsPath = resolve(componentRoot, "product/SettingsView.tsx");
+const topBarPath = resolve(componentRoot, "layout/TopBar.tsx");
 
 describe("product home affordance contract", () => {
   test("wires header chips and account row to explicit home affordance actions", () => {
@@ -49,5 +50,14 @@ describe("product home affordance contract", () => {
     expect(settingsSource).toContain("toggleViewSettingsOpen");
     expect(settingsSource).toContain('navigate("studio")');
     expect(settingsSource).toContain("Open View Settings");
+  });
+
+  test("keeps a Studio top-bar route back to Product Home", () => {
+    const source = readFileSync(topBarPath, "utf8");
+
+    expect(source).toContain("useProductViewStore");
+    expect(source).toContain('navigateProductView("product_home")');
+    expect(source).toContain('title="Return to Product Home"');
+    expect(source).toContain('aria-label="Return to Product Home"');
   });
 });

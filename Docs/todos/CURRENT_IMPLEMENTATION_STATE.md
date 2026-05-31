@@ -1,6 +1,6 @@
 # Current Implementation State — Camera Studio
 
-**Updated:** 2026-05-31 (session 36: intake clickability honesty + demo flow documentation + recent-site scene routing)
+**Updated:** 2026-05-31 (session 37: performance hardening for replay clock, hydration stability, and evaluator disposal)
 **Source:** Direct code audit of apps/studio/src/
 **Purpose:** Accurate baseline of what is actually built, tested, and rendering.
 Use this instead of the earlier CAMERASTUDIO_GAP_ANALYSIS.md which was written
@@ -10,6 +10,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 
 ## Product integrity hardening (2026-05-30)
 
+- Product home simulation-derived metric cells now render stable pre-hydration placeholders and swap to live values after mount, eliminating the dashboard hydration mismatch that forced React to regenerate the tree on first load ✅
 - Site intake source taxonomy is now canonical in compiler/session state (`scan`, `ai_prompt`, `floor_plan`, `json`, `manual`, `camera_evidence`) with explicit normalization for legacy aliases (`json_import`, `footage_verify`) ✅
 - Site draft approval is now explicit and review-first: the approved draft scene is validated before activation, promoted into active scene state, and baseline simulation is only kicked off from that approved scene when prerequisites exist ✅
 - Security outcome zone semantics are now split: `zoneFindings` holds all critical-zone evaluations while `failedZones` is strict non-pass only ✅
@@ -33,6 +34,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 
 ## Path replay / camera-view sync (2026-05-29)
 
+- Path replay now has a single shell-owned shared progress clock for map/camera/wall modes. The 3D workspace actor consumes replay state without publishing global progress from the R3F frame loop, and replay progress publication is bounded to 24 Hz to reduce app-wide re-render churn while preserving Camera View / Camera Wall / Timeline synchronization ✅
 - Path Replay now writes its play/pause, seek, reset, and path-change state back into the shared replay store, so Camera View and Camera Wall stay synchronized with the active replay progress instead of reading a local-only loop ✅
 - The replay timeline now also surfaces a follow-actor focus cue, lead-camera summary, coverage reach count, and replay status strip so the operator can read the current path state without leaving the timeline surface ✅
 
@@ -179,6 +181,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - `path-analysis.ts` — path visibility over time ✅
 - `simulate-studio.ts` — orchestrates full simulation run ✅
 - `simulate-studio.ts` — camera failure offline-impact analysis now recomputes a degraded scene with the selected camera disabled, so redundancy and downstream zone loss come from a fresh scenario comparison instead of baseline inference ✅
+- `coverage.ts` / `vision-collider-mesh.ts` — coverage evaluators now expose explicit disposal for Three.js geometry/material/BVH resources, and long-running simulation analytics dispose shared evaluators after use instead of retaining collider resources beyond the computation window ✅
 - `coverage-fragility.ts` — Coverage Fragility Field: per-cell distance-to-DORI-threshold score (0=robust, 1=fragile), `computeCoverageFragility()` pure function with `FragilitySummary` output ✅
 - `simulate-studio.ts` — Coverage Fragility wired: per-cell `fragility` field + `fragilitySummary` attached to every `SimulationResult` ✅
 - `simulate-studio.ts` — zone quality uses target-height profiles, privacy coverage issues are surfaced, and all aggregate metrics are computed over non-privacy walkable cells for canonical coverage denominators ✅

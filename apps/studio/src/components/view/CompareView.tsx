@@ -10,7 +10,7 @@ import { useStudioStore } from "@/store/studio-store";
 import { qualityToScore } from "@sentineltwin/core";
 import "@/lib/three-compat";
 import { buildCompareShareLink } from "@/lib/compare-share-link";
-import { shareLinkOrCopy } from "@/lib/share-link";
+import { shareLinkOrCopy, writeClipboardText } from "@/lib/share-link";
 import { buildCompareReportData, exportCompareAsHtml, exportCompareAsMarkdown } from "@sentineltwin/report";
 import { buildReportEvidenceBundle, stringifyReportEvidenceBundle } from "@/lib/report-evidence-bundle";
 import { buildSecurityOutcomeModel } from "@/lib/security-outcome/security-outcome-model";
@@ -828,8 +828,8 @@ export function CompareView() {
       `Critical zones: ${mA && mB ? formatDelta(mB.critZonePct - mA.critZonePct) : "--"}`,
       `Path visibility: ${mA && mB ? formatDelta(mB.visiblePathPct - mA.visiblePathPct) : "--"}`,
     ].join("\n");
-    await navigator.clipboard.writeText(summary);
-    setExportToast("Summary copied");
+    const copied = await writeClipboardText(summary);
+    setExportToast(copied ? "Summary copied" : "Clipboard unavailable");
     window.setTimeout(() => setExportToast(null), 2500);
   }, [mA, mB, snapshotA, snapshotB]);
   const handleCopyCompareLink = useCallback(async () => {
@@ -844,8 +844,8 @@ export function CompareView() {
       },
       window.location.hash,
     );
-    await navigator.clipboard.writeText(link);
-    setExportToast("Compare link copied");
+    const copied = await writeClipboardText(link);
+    setExportToast(copied ? "Compare link copied" : "Clipboard unavailable");
     window.setTimeout(() => setExportToast(null), 2500);
   }, [snapshotA, snapshotB]);
   const handleShareCompareLink = useCallback(async () => {
@@ -1307,7 +1307,7 @@ export function CompareView() {
               onClick={() => {
                 const changedCards = comparisonCards.filter(c => c.delta != null && c.delta !== 0);
                 const summary = `Apply Scenario B: ${snapshotB.label ?? "Proposed Fix"}\n${changedCards.map(c => `${c.label}: ${c.beforeValue != null ? `${Math.round(c.beforeValue)}%` : "—"} → ${c.afterValue != null ? `${Math.round(c.afterValue)}%` : "—"} (${c.delta != null ? `${c.delta >= 0 ? "+" : ""}${Math.round(c.delta)}%` : "—"})`).join("\n")}`;
-                navigator.clipboard.writeText(summary);
+                void writeClipboardText(summary);
               }}
               className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-[10px] font-semibold text-emerald-200 transition-colors hover:bg-emerald-500/20"
             >

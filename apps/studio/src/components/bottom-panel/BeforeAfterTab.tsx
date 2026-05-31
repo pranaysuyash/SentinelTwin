@@ -6,7 +6,7 @@ import { DonutChart } from "@/components/shared/DonutChart";
 import { QualityBar } from "@/components/shared/QualityBar";
 import { buildSecurityOutcomeDelta } from "@/lib/security-outcome/security-outcome-model";
 import { buildCompareShareLink } from "@/lib/compare-share-link";
-import { shareLinkOrCopy } from "@/lib/share-link";
+import { shareLinkOrCopy, writeClipboardText } from "@/lib/share-link";
 import { useStudioStore } from "@/store/studio-store";
 import type { SimulationResult } from "@/schema/security-scene";
 import { qualityToScore } from "@sentineltwin/core";
@@ -151,7 +151,7 @@ function BeforeAfterTabContent() {
       },
       window.location.hash,
     );
-    await navigator.clipboard.writeText(link);
+    await writeClipboardText(link);
   };
 
   const handleShareCompareLink = async () => {

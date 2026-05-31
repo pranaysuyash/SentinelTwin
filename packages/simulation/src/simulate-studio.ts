@@ -412,8 +412,8 @@ function simulateStudioInternal(
 ): SimulationResult {
   const evaluator = createCoverageEvaluator(scene);
   try {
-  const coverageCells = evaluator.computeCoverageCells(4);
-  return buildSimulationResult(scene, evaluator, coverageCells, includeRecommendations, includeNovelAnalytics, includeFailureAnalysis);
+    const { coverageCells, zoneEvaluations } = computeZoneEvaluations(scene, evaluator);
+    return buildSimulationResult(scene, evaluator, coverageCells, zoneEvaluations, includeRecommendations, includeNovelAnalytics, includeFailureAnalysis);
   } finally {
     evaluator.dispose();
   }
@@ -423,6 +423,7 @@ function buildSimulationResult(
   scene: SecurityScene,
   evaluator: ReturnType<typeof createCoverageEvaluator>,
   coverageCells: CellComputation[],
+  zoneEvaluations: EvaluatedZone[],
   includeRecommendations: boolean,
   includeNovelAnalytics: boolean,
   includeFailureAnalysis: boolean,
@@ -463,10 +464,6 @@ function buildSimulationResult(
       ? 0
       : includedCoverageCells.reduce((sum, cell) => sum + qualityToScore(cell.quality), 0) /
         includedCoverageCellCount;
-
-  const zoneEvaluations = scene.criticalZones.map((zone) =>
-    evaluateZone(scene, evaluator, coverageCells, zone),
-  );
 
   const baselineZoneById = Object.fromEntries(
     zoneEvaluations.map((zone) => [zone.zoneId, zone]),
@@ -751,7 +748,10 @@ export function simulateStudioAsync(
   const evaluator = createCoverageEvaluator(scene);
   return evaluator.computeCoverageCellsAsync(4, scene.assumptions.personHeightM, options?.yieldEvery)
     .then((coverageCells) => {
-      const result = buildSimulationResult(scene, evaluator, coverageCells, includeRecommendations, true, true);
+      const zoneEvaluations = scene.criticalZones.map((zone) =>
+        evaluateZone(scene, evaluator, coverageCells, zone),
+      );
+      const result = buildSimulationResult(scene, evaluator, coverageCells, zoneEvaluations, includeRecommendations, true, true);
       evaluator.dispose();
       return result;
     })

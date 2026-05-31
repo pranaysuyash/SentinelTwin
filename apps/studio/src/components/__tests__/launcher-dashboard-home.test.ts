@@ -12,7 +12,7 @@ describe("Studio dashboard launcher surface", () => {
     expect(source).toContain("StudioDashboardHome");
     expect(source).toContain("SentinelTwin");
     expect(source).toContain("Home");
-    expect(source).toContain("Command center");
+    expect(source).toContain("Security Simulation Studio");
     expect(source).toContain("Run Simulation");
     expect(source).toContain("Coverage");
     expect(source).toContain("SITE TWIN MEMORY SEARCH");
@@ -22,5 +22,15 @@ describe("Studio dashboard launcher surface", () => {
     expect(source).toContain("after:");
     expect(source).toContain("All systems operational");
     expect(source).toContain("OrganizationManagerPanel");
+  });
+
+  test("gates simulation-derived metric values until client hydration", () => {
+    const source = readFileSync(dashboardHomePath, "utf8");
+
+    expect(source).toContain("const displayPassCount = hydrated ? passCount : 0;");
+    expect(source).toContain("const displayIssues = hydrated ? issues : [];");
+    expect(source).toContain("const displayRedundancyFailCount = hydrated ? redundancyFailCount : 0;");
+    expect(source).toContain("displayPassCount}/{displayTotalZones");
+    expect(source).toContain("displayIssues.length");
   });
 });

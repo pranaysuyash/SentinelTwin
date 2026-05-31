@@ -1,12 +1,7 @@
 import type { Metadata } from "next";
-import dynamic from "next/dynamic";
 import { Analytics } from "@vercel/analytics/next";
+import { ReactScan } from "@/components/dev/ReactScan";
 import "./globals.css";
-
-const ReactScan = dynamic(
-  () => import("@/components/dev/ReactScan").then((m) => m.ReactScan),
-  { ssr: false },
-);
 
 export const metadata: Metadata = {
   title: "SentinelTwin — Physical Security Site Twin",

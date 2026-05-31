@@ -26,6 +26,7 @@ import {
   assessOperationalEvidenceMergeReadiness,
   compareOperationalEvidenceBranches,
 } from "@/lib/operational-evidence";
+import { writeClipboardText } from "@/lib/share-link";
 import {
   describeAiProviderGovernance,
   describeAiProviderHealth,
@@ -907,8 +908,8 @@ export function DebugTab() {
     const archive = exportOperationalEvidenceArchive();
     const deepLink = buildArchiveHandoffDeepLink(archive, archiveRestoreBranch);
     if (!deepLink) return;
-    await window.navigator.clipboard.writeText(deepLink);
-    setLaunchNotice("Archive handoff link copied.");
+    const copied = await writeClipboardText(deepLink);
+    setLaunchNotice(copied ? "Archive handoff link copied." : "Clipboard unavailable.");
   };
 
   const shareArchiveHandoffLink = async () => {
@@ -930,8 +931,8 @@ export function DebugTab() {
       };
       if (typeof shareNavigator.share === "function") {
         if (typeof shareNavigator.canShare === "function" && !shareNavigator.canShare(shareData)) {
-          await window.navigator.clipboard.writeText(deepLink);
-          setLaunchNotice("Archive handoff copied. Sharing was unavailable for this payload.");
+          const copied = await writeClipboardText(deepLink);
+          setLaunchNotice(copied ? "Archive handoff copied. Sharing was unavailable for this payload." : "Archive handoff sharing unavailable.");
           return;
         }
 
@@ -945,8 +946,8 @@ export function DebugTab() {
       return;
     }
 
-    await window.navigator.clipboard.writeText(deepLink);
-    setLaunchNotice("Archive handoff link copied.");
+    const copied = await writeClipboardText(deepLink);
+    setLaunchNotice(copied ? "Archive handoff link copied." : "Clipboard unavailable.");
   };
 
   const openArchiveHandoffLink = () => {

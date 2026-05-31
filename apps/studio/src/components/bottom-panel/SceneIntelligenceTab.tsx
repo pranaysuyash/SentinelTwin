@@ -27,7 +27,7 @@ import { summarizeSceneTruthLadder } from "@/lib/truth-ladder";
 import { buildCompareShareLink } from "@/lib/compare-share-link";
 import { buildArchiveHandoffLink } from "@/lib/archive-handoff-link";
 import { buildTimelineShareLink } from "@/lib/timeline-share-link";
-import { shareLinkOrCopy } from "@/lib/share-link";
+import { shareLinkOrCopy, writeClipboardText } from "@/lib/share-link";
 import { useStudioStore } from "@/store/studio-store";
 import type { SceneSnapshot } from "@/schema/security-scene";
 
@@ -692,7 +692,7 @@ export function SceneIntelligenceTab() {
   const copyDeepLink = async (event?: OperationalEvidenceEvent | null) => {
     if (typeof window === "undefined") return;
     const deepLink = buildDeepLink(event) ?? "";
-    await navigator.clipboard.writeText(deepLink);
+    await writeClipboardText(deepLink);
   };
 
   const shareDeepLink = async (event?: OperationalEvidenceEvent | null) => {
@@ -710,7 +710,7 @@ export function SceneIntelligenceTab() {
     if (typeof window === "undefined") return;
     const deepLink = buildCompareDeepLink(target);
     if (!deepLink) return;
-    await navigator.clipboard.writeText(deepLink);
+    await writeClipboardText(deepLink);
   };
 
   const shareCompareDeepLink = async (target: "beforeafter" | "report") => {
@@ -751,7 +751,7 @@ export function SceneIntelligenceTab() {
     if (typeof window === "undefined") return;
     const deepLink = buildArchiveDeepLink(archiveHistoryId);
     if (!deepLink) return;
-    await navigator.clipboard.writeText(deepLink);
+    await writeClipboardText(deepLink);
   };
 
   const shareArchiveDeepLink = async (archiveHistoryId: string) => {

@@ -11,6 +11,7 @@ import {
   FileText,
   Info,
   Keyboard,
+  LayoutDashboard,
   Loader2,
   Moon,
   Play,
@@ -28,6 +29,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { SurfaceButton } from "@/components/shared/SurfaceButton";
 import { ExplainBadge } from "@/components/shared/ExplainBadge";
+import { useProductViewStore } from "@/store/product-view-store";
 import { useStudioStore } from "@/store/studio-store";
 import { WorkspacePresetSwitcher } from "@/components/dock/WorkspacePresetSwitcher";
 import { BranchSwitcher } from "@/components/top-bar/BranchSwitcher";
@@ -97,6 +99,7 @@ function SimStatus() {
 
 
 export function TopBar() {
+  const navigateProductView = useProductViewStore((s) => s.navigate);
   const runSimulation = useStudioStore((s) => s.runSimulation);
   const envMode = useStudioStore((s) => s.environmentMode);
   const setEnvMode = useStudioStore((s) => s.setEnvironmentMode);
@@ -242,6 +245,17 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
             <div className="truncate text-[10px] uppercase tracking-[0.18em] text-[#5a6882]">Security Site Twin</div>
           </div>
         </div>
+
+        <div className="hidden h-5 w-px bg-[#1e2130] xl:block" />
+
+        <SurfaceButton
+          onClick={() => navigateProductView("product_home")}
+          title="Return to Product Home"
+          aria-label="Return to Product Home"
+        >
+          <LayoutDashboard className="h-3 w-3" />
+          <span className="hidden lg:inline">Home</span>
+        </SurfaceButton>
 
         <div className="hidden h-5 w-px bg-[#1e2130] xl:block" />
 

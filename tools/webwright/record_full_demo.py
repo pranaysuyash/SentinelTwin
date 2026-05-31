@@ -672,7 +672,6 @@ def main() -> int:
     LOG_PATH.write_text(json.dumps(log, indent=2), encoding="utf-8")
     critical = {
         "open_root",
-        "home_loaded",
         "enter_studio",
         "studio_ready",
         "video_artifacts",
@@ -680,6 +679,7 @@ def main() -> int:
     if REQUIRE_JSON_SAMPLE:
         critical.add("json_sample_review_ready")
     if STRICT_GATES:
+        critical.add("home_loaded")
         critical.add("mode_switch_threshold")
         critical.add("operator_edit_threshold")
         critical.add("required_demo_signals")

@@ -14,6 +14,21 @@ export type ShareNavigator = {
   } | null;
 };
 
+export async function writeClipboardText(
+  text: string,
+  navigatorLike?: Pick<ShareNavigator, "clipboard"> | null,
+): Promise<boolean> {
+  const shareNavigator = navigatorLike ?? (typeof window === "undefined" ? null : (window.navigator as unknown as ShareNavigator));
+  if (!shareNavigator?.clipboard?.writeText) return false;
+
+  try {
+    await shareNavigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function shareLinkOrCopy(
   payload: ShareLinkPayload,
   navigatorLike?: ShareNavigator | null,
@@ -24,11 +39,7 @@ export async function shareLinkOrCopy(
   try {
     if (typeof shareNavigator.share === "function") {
       if (typeof shareNavigator.canShare === "function" && !shareNavigator.canShare(payload)) {
-        if (shareNavigator.clipboard?.writeText) {
-          await shareNavigator.clipboard.writeText(payload.url);
-          return "copied";
-        }
-        return "unavailable";
+        return await writeClipboardText(payload.url, shareNavigator) ? "copied" : "unavailable";
       }
 
       await shareNavigator.share(payload);
@@ -38,10 +49,5 @@ export async function shareLinkOrCopy(
     // Fall through to the clipboard fallback below.
   }
 
-  if (shareNavigator.clipboard?.writeText) {
-    await shareNavigator.clipboard.writeText(payload.url);
-    return "copied";
-  }
-
-  return "unavailable";
+  return await writeClipboardText(payload.url, shareNavigator) ? "copied" : "unavailable";
 }

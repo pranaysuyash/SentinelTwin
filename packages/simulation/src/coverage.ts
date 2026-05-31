@@ -32,13 +32,11 @@ import type {
   DoriQuality,
   SecurityLightNode,
   SecurityScene,
-  WallNode,
 } from "@sentineltwin/core";
 import {
   DORI_THRESHOLDS,
   getDetectionProbability,
   maxQuality,
-  ppmToOodpcvsQuality,
   ppmToQuality,
   qualityToScore,
   type PpmThresholds,

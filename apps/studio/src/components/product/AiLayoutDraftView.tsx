@@ -19,6 +19,7 @@ import { safeParseSecurityScene, type SecurityScene } from "@/schema/security-sc
 import { useStudioStore } from "@/store/studio-store";
 import type { SiteIntakeSource } from "@/lib/site-compiler";
 import { useProductViewStore } from "@/store/product-view-store";
+import { writeClipboardText } from "@/lib/share-link";
 
 function countSceneEntities(scene: SecurityScene) {
   return {
@@ -501,8 +502,8 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
                   type="button"
                   onClick={async () => {
                     if (!aiDraftSceneJson) return;
-                    await navigator.clipboard.writeText(aiDraftSceneJson);
-                    setAiDraftCopyNotice("Draft JSON copied to clipboard.");
+                    const copied = await writeClipboardText(aiDraftSceneJson);
+                    setAiDraftCopyNotice(copied ? "Draft JSON copied to clipboard." : "Clipboard unavailable.");
                   }}
                   disabled={!aiDraftSceneJson}
                   className="rounded-full border border-[#2a3347] bg-[#101827] px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] text-[#c4d5ff] disabled:cursor-not-allowed disabled:opacity-60"

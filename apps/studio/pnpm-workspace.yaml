@@ -1,5 +1,0 @@
-allowBuilds:
-  core-js: false
-  sharp: true
-  unrs-resolver: true
-minimumReleaseAge: 1440

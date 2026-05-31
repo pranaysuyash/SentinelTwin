@@ -1,6 +1,5 @@
 {
-  "version": 2,
   "framework": "nextjs",
-  "installCommand": "pnpm install --no-frozen-lockfile",
+  "installCommand": "cd ../.. && pnpm install",
   "buildCommand": "NEXT_PRIVATE_WORKER_THREADS=false next build --webpack"
 }

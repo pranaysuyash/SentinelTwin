@@ -2280,8 +2280,12 @@ export function StudioDashboardHome({
                   <div className="mt-2 grid grid-cols-4 gap-2">
                     {compactRecentProjects.map((project) => {
                       const recentScene = project.scene;
-                      const recentCoverage = recentScene.simulation?.totalCoveragePct ?? (recentScene.id === scene.id ? coverage : null);
-                      const recentIssues = recentScene.simulation?.issues.length ?? (recentScene.id === scene.id ? issues.length : 0);
+                      const recentCoverage = hydrated
+                        ? recentScene.simulation?.totalCoveragePct ?? (recentScene.id === scene.id ? coverage : null)
+                        : null;
+                      const recentIssues = hydrated
+                        ? recentScene.simulation?.issues.length ?? (recentScene.id === scene.id ? issues.length : 0)
+                        : 0;
                       return (
                         <button
                           key={recentScene.id}

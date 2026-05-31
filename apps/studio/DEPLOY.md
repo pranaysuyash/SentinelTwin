@@ -10,7 +10,7 @@ npx vercel --prod
 Or connect GitHub via the Vercel dashboard:
 - Import repo → root dir: `apps/studio`
 - Framework: Next.js (auto-detect)
-- Build: `NEXT_PRIVATE_WORKER_THREADS=false next build --webpack`
+- Build: `NEXT_PRIVATE_WORKER_THREADS=false next build --turbopack`
 - Install: `pnpm install --frozen-lockfile`
 
 Free tier caps: 100GB bandwidth, 6000 build min/mo, 10 serverless fn invocations/day.

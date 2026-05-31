@@ -3,6 +3,7 @@ set -uo pipefail
 
 ROOT="/Users/pranay/Projects/SentinelTwin"
 APP="$ROOT/apps/studio"
+export PATH="/opt/homebrew/opt/node@24/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 URL="${SENTINELTWIN_WATCH_URL:-http://localhost:3000/}"
 LOG="${SENTINELTWIN_WATCH_LOG:-/tmp/sentineltwin-studio-watch.log}"
 SERVER_LOG="${SENTINELTWIN_SERVER_LOG:-/tmp/sentineltwin-studio-watch-server.log}"
@@ -40,8 +41,8 @@ start_server() {
     log "starting production server on 3000"
     (cd "$APP" && pnpm exec next start -p 3000 -H 127.0.0.1 >>"$SERVER_LOG" 2>&1 & echo $! > "$PID_FILE")
   else
-    log "starting webpack dev server on 3000"
-    (cd "$ROOT" && STUDIO_DEV_BUNDLER=webpack pnpm dev >>"$SERVER_LOG" 2>&1 & echo $! > "$PID_FILE")
+    log "starting ${STUDIO_DEV_BUNDLER:-turbopack} dev server on 3000"
+    (cd "$ROOT" && pnpm dev >>"$SERVER_LOG" 2>&1 & echo $! > "$PID_FILE")
   fi
 }
 

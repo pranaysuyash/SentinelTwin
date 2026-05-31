@@ -922,6 +922,21 @@ reference to the new path, then remove the old."
 
 ---
 
+## D-039A | 2026-06-01 | Restore Turbopack as the Studio default after green App Router build
+
+**Decision:** Use Turbopack for `apps/studio` dev and build by default again. Keep `STUDIO_DEV_BUNDLER=webpack` as an explicit emergency override through `run-fixed-port.mjs`, but do not force it in the watchdog.
+
+**Rationale:**
+- `NEXT_PRIVATE_WORKER_THREADS=false pnpm --dir apps/studio exec next build --turbopack --experimental-app-only` now completes successfully.
+- The recent local 500s were stale `.next/dev` artifact and missing-install issues, not a current Turbopack compilation failure.
+- Matching dev/build/deploy on Turbopack reduces drift and avoids treating Webpack fallback as the normal path after the underlying blocker is gone.
+
+**Verification:**
+- Turbopack App Router-only build completed successfully on 2026-06-01.
+- Hydration-sensitive dashboard values are gated behind the existing `hydrated` flag before switching defaults.
+
+---
+
 ## D-040 | 2026-05-26 | Override nested PostCSS to the patched 8.5.15 line
 
 **Decision:** Add a root `overrides` entry for `postcss` so the installed tree uses `8.5.15` everywhere, including the copy nested under `next`.

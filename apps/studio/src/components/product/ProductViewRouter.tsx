@@ -187,7 +187,6 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
       <SiteIntakeHub
         onStartScan={() => {
           handlers.openScanWizard();
-          navigate("scan_site");
         }}
         onEnterStudio={() => navigate("studio")}
         onOpenDemo={() => {
@@ -195,13 +194,13 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
         }}
         onStartAiDraft={() => navigate("ai_layout_draft")}
         onImportFloorPlan={() => {
-          navigate("floor_plan_import");
+          handlers.openFloorPlanFlow();
         }}
         onImportJson={() => {
           handlers.handleImportScene();
         }}
         onBuildManually={() => {
-          navigate("manual_builder");
+          handlers.startDesignFlow();
         }}
         onVerifyFootage={() => {
           const { setActiveWorkflow, setActiveWorkflowStep, setViewMode, setWorkspacePreset, setCameraViewVerificationIntent, setSelectedCameraId, setBottomTab, scene } = useStudioStore.getState();
@@ -249,9 +248,10 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
           mode={subContext === "guided" ? "guided" : "manual"}
           onCompile={(scene) => {
             handlers.createDraftFromScene(scene, "scan");
+            navigate("site_draft_review");
           }}
           onClose={() => {
-            navigate("site_draft_review");
+            navigate("site_intake");
           }}
         />
       </div>
@@ -265,9 +265,10 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
         <SceneBuilderWizard
           onBuild={(scene) => {
             handlers.createDraftFromScene(scene, "manual");
+            navigate("site_draft_review");
           }}
           onClose={() => {
-            navigate("site_draft_review");
+            navigate("site_intake");
           }}
         />
       </div>
@@ -282,9 +283,10 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
           forceImportMethod="floor_plan"
           onBuild={(scene) => {
             handlers.createDraftFromScene(scene, "floor_plan");
+            navigate("site_draft_review");
           }}
           onClose={() => {
-            navigate("site_draft_review");
+            navigate("site_intake");
           }}
         />
       </div>

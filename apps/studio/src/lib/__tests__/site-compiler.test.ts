@@ -269,9 +269,18 @@ describe("compileJsonToSiteResult", () => {
 });
 
 describe("normalizeSiteIntakeSource", () => {
-  test("normalizes supported legacy keys", () => {
-    expect(normalizeSiteIntakeSource("json_import").source).toBe("json");
-    expect(normalizeSiteIntakeSource("footage_verify").source).toBe("camera_evidence");
+  test("normalizes legacy json_import to canonical json", () => {
+    const normalized = normalizeSiteIntakeSource("json_import");
+    expect(normalized.source).toBe("json");
+    expect(normalized.warning?.code).toBe("SITE_SOURCE_NORMALIZED");
+    expect(normalized.warning?.severity).toBe("info");
+  });
+
+  test("normalizes legacy footage_verify to canonical camera_evidence", () => {
+    const normalized = normalizeSiteIntakeSource("footage_verify");
+    expect(normalized.source).toBe("camera_evidence");
+    expect(normalized.warning?.code).toBe("SITE_SOURCE_NORMALIZED");
+    expect(normalized.warning?.severity).toBe("info");
   });
 
   test("rejects unsupported source keys", () => {
@@ -436,16 +445,17 @@ describe("createSiteIntakeSession — activation gate contract", () => {
     const artifacts = ["photo1.jpg", "raw-data.json"];
     const session = createSiteIntakeSession(scene, "json", artifacts);
     expect(session.draft!.provenance.sourceArtifacts).toEqual(artifacts);
+    artifacts.push("later-mutation.json");
+    expect(session.draft!.provenance.sourceArtifacts).toEqual(["photo1.jpg", "raw-data.json"]);
   });
 
-  test("session does not reference or modify the active scene — scene reference is unchanged", () => {
+  test("session snapshot is isolated from later caller-side scene mutation", () => {
     const scene = makeScene();
-    const sceneRefBefore = scene;
     addCamera(scene);
     const session = createSiteIntakeSession(scene, "manual");
-    expect(session.draft!.scene).toBe(sceneRefBefore);
+    expect(session.draft!.scene).not.toBe(scene);
     expect(scene.cameras.length).toBe(1);
     scene.cameras.push({} as never);
-    expect(session.draft!.scene.cameras.length).toBe(2);
+    expect(session.draft!.scene.cameras.length).toBe(1);
   });
 });

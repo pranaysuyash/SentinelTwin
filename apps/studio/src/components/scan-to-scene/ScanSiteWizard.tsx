@@ -1883,7 +1883,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                 No AI perception is claimed here. The image is a manual-assisted intake that compiles directly into the existing simulation pipeline.
               </div>
               <div className="mt-3 rounded-2xl border border-rose-500/20 bg-rose-500/8 p-3 text-xs text-rose-100/90">
-                <strong>Compiling replaces your current workspace scene.</strong> The compiled scan will become the active SecurityScene. Export or snapshot your current scene first if you want to preserve it.
+                <strong>Compiling now creates a draft review session.</strong> The compiled scan is not promoted to the active SecurityScene until you approve it in Site Draft Review.
               </div>
               <div className="mt-3 rounded-2xl border border-[#243049] bg-[#09111b] p-3">
                 <h4 className="text-xs font-semibold text-white">Compile preview</h4>
@@ -2032,7 +2032,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
             <div className="rounded-2xl border border-[#1f2536] bg-[#0c111b] p-4">
               <h3 className="text-sm font-semibold text-white">Compiled node preview</h3>
               <p className="mt-1 text-xs text-[#8292af]">
-                Accepted scan candidates will appear in the live Studio scene after compile.
+                Accepted scan candidates are staged as a draft and only become the live Studio scene after approval.
               </p>
               <div className="mt-4 max-h-[360px] space-y-2 overflow-y-auto pr-1">
                 {session.candidates.filter((candidate) => candidate.status !== "rejected").map((candidate, index) => {

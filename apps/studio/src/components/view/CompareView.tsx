@@ -13,6 +13,7 @@ import { buildCompareShareLink } from "@/lib/compare-share-link";
 import { shareLinkOrCopy } from "@/lib/share-link";
 import { buildCompareReportData, exportCompareAsHtml, exportCompareAsMarkdown } from "@sentineltwin/report";
 import { buildReportEvidenceBundle, stringifyReportEvidenceBundle } from "@/lib/report-evidence-bundle";
+import { buildSecurityOutcomeModel } from "@/lib/security-outcome/security-outcome-model";
 import {
   ENVIRONMENT_THEMES,
   SceneLighting,
@@ -688,6 +689,16 @@ export function CompareView() {
     };
   }, [cameraA, cameraB, cameraResultA, cameraResultB, scene.assumptions.pixelsPerMeter]);
   const comparisonExport = useMemo(() => buildComparisonExport(snapshotA, snapshotB, mA, mB), [snapshotA, snapshotB, mA, mB]);
+  const outcomeA = useMemo(() => {
+    if (!snapshotA?.simulation) return null;
+    const activePath = activePathId ? snapshotA.scene.paths.find((path) => path.id === activePathId) ?? null : null;
+    return buildSecurityOutcomeModel(snapshotA.scene, snapshotA.simulation, activePath ?? null);
+  }, [activePathId, snapshotA]);
+  const outcomeB = useMemo(() => {
+    if (!snapshotB?.simulation) return null;
+    const activePath = activePathId ? snapshotB.scene.paths.find((path) => path.id === activePathId) ?? null : null;
+    return buildSecurityOutcomeModel(snapshotB.scene, snapshotB.simulation, activePath ?? null);
+  }, [activePathId, snapshotB]);
   const compareReportData = useMemo(() => {
     if (!snapshotA?.simulation || !snapshotB?.simulation) return null;
     const compare = buildCompareReportData(
@@ -1085,6 +1096,19 @@ export function CompareView() {
           <span>Scene Intelligence can seed exact/derived checkpoint provenance before this view is exported.</span>
         )}
       </div>
+      {(outcomeA || outcomeB) ? (
+        <div className="border-b border-[#1e2130] px-3 py-1.5 text-[9px] text-[#8ea0bf]">
+          <span>
+            Scenario A outcome: {outcomeA?.summary.status.replace(/_/g, " ") ?? "not_run"}
+            {outcomeA?.summary.primaryRisk ? ` · risk: ${outcomeA.summary.primaryRisk}` : ""}
+          </span>
+          <span className="mx-2 text-[#556076]">|</span>
+          <span>
+            Scenario B outcome: {outcomeB?.summary.status.replace(/_/g, " ") ?? "not_run"}
+            {outcomeB?.summary.primaryRisk ? ` · risk: ${outcomeB.summary.primaryRisk}` : ""}
+          </span>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-2 gap-2 border-b border-[#1e2130] bg-[#0a0d14] px-3 py-2">
         <label className="flex items-center gap-2 text-[9px] uppercase tracking-[0.16em] text-[#556076]">

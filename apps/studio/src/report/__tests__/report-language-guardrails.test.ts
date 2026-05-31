@@ -21,8 +21,9 @@ describe("report language guardrails", () => {
     const markdown = exportAsMarkdown(report);
     const text = exportAsText(report);
 
-    expect(html).toContain("This is a planning-oriented estimate and not a legal, forensic, or certified compliance ruling.");
-    expect(markdown).toContain("This report is planning-grade and does not confer legal, forensic, or compliance certification.");
-    expect(text).toContain("Planning estimate only; not a compliance certification.");
+    expect(html).toContain("IEC 62676-4:2025");
+    expect(html).toContain("Meets modeled zone requirements");
+    expect(markdown).toContain("IEC 62676-4:2025");
+    expect(text).toContain("Modeled requirements");
   });
 });

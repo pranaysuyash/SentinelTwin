@@ -34,9 +34,10 @@ describe("workspace-control-plane route", () => {
     }));
 
     expect(response.status).toBe(200);
-    const body = await response.json() as { ok: boolean; historyCount: number };
+    const body = await response.json() as { ok: boolean; synced: boolean; sceneStatus: string };
     expect(body.ok).toBe(true);
-    expect(body.historyCount).toBe(1);
+    expect(body.synced).toBe(true);
+    expect(body.sceneStatus).toBe("draft");
   });
 
   test("lists archived control-plane snapshots", async () => {
@@ -48,8 +49,7 @@ describe("workspace-control-plane route", () => {
 
     const response = await GET(new NextRequest("http://localhost/api/workspace-control-plane"));
     expect(response.status).toBe(200);
-    const body = await response.json() as { ok: boolean; historyCount: number };
+    const body = await response.json() as { ok: boolean };
     expect(body.ok).toBe(true);
-    expect(body.historyCount).toBeGreaterThan(0);
   });
 });

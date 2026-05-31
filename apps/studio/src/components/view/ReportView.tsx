@@ -11,6 +11,7 @@ import { computeCoveragePostureVariation } from "@sentineltwin/simulation";
 import { computeCoverageUncertainty } from "@sentineltwin/simulation";
 import { buildRedundancyMatrixReport } from "@sentineltwin/report";
 import { useStudioStore } from "@/store/studio-store";
+import { selectSecurityOutcomeFromStore } from "@/lib/security-outcome/security-outcome-selectors";
 
 const REPORT_VIEW_UNCERTAINTY_SAMPLE_COUNT = 2;
 
@@ -61,8 +62,13 @@ function actionToneClass(tone: ActionPriority["tone"]): string {
 export function ReportView() {
   const scene = useStudioStore((s) => s.scene);
   const result = useStudioStore((s) => s.simulationResult);
+  const activePathId = useStudioStore((s) => s.activePathId);
   const workspacePreset = useStudioStore((s) => s.workspacePreset);
   const latestAiActionTelemetry = useStudioStore((s) => s.aiActionTelemetry[0] ?? null);
+  const outcome = useMemo(
+    () => selectSecurityOutcomeFromStore({ scene, simulationResult: result, activePathId }),
+    [activePathId, result, scene],
+  );
   const summary = useMemo(() => {
     const issues = result?.issues.length ?? 0;
     const recs = result?.recommendations.length ?? 0;
@@ -171,6 +177,9 @@ export function ReportView() {
                 {workspacePreset.replace(/_/g, " ")}
               </span>
               <span className="rounded-full border border-[#2a3246] bg-[#111521] px-2 py-0.5 text-[9px] font-semibold text-[#8f9bb1]">
+                Outcome {outcome.summary.status.replace(/_/g, " ")}
+              </span>
+              <span className="rounded-full border border-[#2a3246] bg-[#111521] px-2 py-0.5 text-[9px] font-semibold text-[#8f9bb1]">
                 {scene.name}
               </span>
             </div>
@@ -178,6 +187,11 @@ export function ReportView() {
             <p className="mt-1 max-w-3xl text-sm text-[#90a0bc]">
               The report view surfaces the verified simulation outcome, the strongest findings, and a concise handoff narrative without forcing the user back into the editing shell.
             </p>
+            {outcome.summary.primaryRisk ? (
+              <p className="mt-1 max-w-3xl text-xs text-amber-200">
+                Primary risk: {outcome.summary.primaryRisk}
+              </p>
+            ) : null}
           </div>
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
             <StatCard label="Coverage" value={summary.coverage} tone="sky" />

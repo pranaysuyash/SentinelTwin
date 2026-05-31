@@ -2,20 +2,22 @@
 
 **Status:** Design — 2026-05-25
 
+> ⚠️ **Runtime drift:** See [`07_RENDERING_PIPELINE_ADDENDUM_2026-05-29.md`](./07_RENDERING_PIPELINE_ADDENDUM_2026-05-29.md) for the actual deployed versions (Next.js 16.2.6, Three.js 0.184.x) and any deviations from this design reference.
+
 ---
 
 ## Stack
 
 ```
-Next.js 15 (App Router)
+Next.js 16.2.6 (App Router)
 React 19
 React Three Fiber (R3F)
 @react-three/drei
-Three.js r168+
+Three.js 0.184.x
 Zustand (from Pascal fork)
 three-mesh-bvh
 @react-three/rapier (optional physics layer)
-GSAP (replay timelines and transitions)
+Framer Motion (replay timelines and transitions)  ← resolved D-018: GSAP replaced
 Tailwind CSS v4
 shadcn/ui
 WebGPU (via Pascal's foundation, fallback to WebGL)
@@ -138,25 +140,21 @@ on a typical laptop GPU is fine. 4 (camera wall) needs testing.
 
 ## Path Replay Animation
 
-Person/vehicle replay uses GSAP for timeline control.
+Person/vehicle replay uses **Framer Motion** for timeline control (see D-018 — replaced GSAP).
 
 ```typescript
-// Create timeline
-const tl = gsap.timeline({ paused: true });
+import { animate, spring } from "framer-motion";
 
-pathPoints.forEach((point, i) => {
-  tl.to(actorRef.current.position, {
-    x: point.position[0],
-    z: point.position[1],
-    duration: point.durationToNext / playbackSpeed,
-    ease: "none",
-  });
-});
+// Animate actor along path
+const animationControl = animate(
+  actorRef.current.position,
+  { x: targetX, z: targetZ },
+  { duration: segmentDuration / playbackSpeed, ease: "linear" }
+);
 
-// Controls
-const play = () => tl.play();
-const pause = () => tl.pause();
-const scrub = (t: number) => tl.seek(t);
+// Timeline mode uses AnimationPlaybackControls
+// Controls: animationControl.play(), .pause(), .seek() via Framer Motion time
+// For multi-segment replay, chain with motion.Value timeline or a sequence
 ```
 
 During replay:

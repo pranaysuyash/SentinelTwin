@@ -6,6 +6,7 @@ import { useStudioStore } from "@/store/studio-store";
 import { Badge } from "@/components/shared/Badge";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import type { BlindRegionResult, SecurityIssue } from "@/schema/security-scene";
+import { selectSecurityOutcomeFromStore } from "@/lib/security-outcome/security-outcome-selectors";
 
 function SeverityBadge({ severity }: { severity: SecurityIssue["severity"] }) {
   const map: Record<SecurityIssue["severity"], { variant: "red" | "amber" | "blue" | "gray"; label: string }> = {
@@ -48,9 +49,11 @@ function BlindRegionIcon({ severity }: { severity: BlindRegionResult["severity"]
 export function IssuesTab() {
   const scene = useStudioStore((s) => s.scene);
   const result = useStudioStore((s) => s.simulationResult);
+  const activePathId = useStudioStore((s) => s.activePathId);
   const updateNode = useStudioStore((s) => s.updateNode);
   const runSimulation = useStudioStore((s) => s.runSimulation);
   const selectNode = useStudioStore((s) => s.selectNode);
+  const outcome = selectSecurityOutcomeFromStore({ scene, simulationResult: result, activePathId });
   const [previewStateByRecKey, setPreviewStateByRecKey] = useState<Record<string, Record<string, unknown>>>({});
 
   const findNodeById = (nodeId: string) => {
@@ -117,6 +120,10 @@ export function IssuesTab() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="p-2 space-y-1.5">
+        <div className="rounded-lg border border-[#1e2130] bg-[#0b1018] px-2.5 py-2 text-[10px] text-[#b9c7df]">
+          Outcome status: {outcome.summary.status.replace(/_/g, " ")}
+          {outcome.summary.primaryRisk ? ` · Primary risk: ${outcome.summary.primaryRisk}` : ""}
+        </div>
         {result.issues.map((issue) => (
           <div key={`${issue.category}-${issue.description}`} className="flex gap-2.5 p-2.5 bg-[#0d0f17] border border-[#1e2130] rounded-lg hover:border-[#2a3045] transition-colors group">
             <SeverityIcon severity={issue.severity} />

@@ -159,6 +159,7 @@ those assumptions, not a measured fact.
 "78% coverage" as a hard fact could make a bad decision. We are responsible for that framing.
 **Related:** Assumptions panel in architecture docs. SimulationAssumptions type.
 **Update:** The product now surfaces assumptions in the report workspace, security outcome rail, and live novelty/report handoff surfaces. The remaining question is how much extra explanation to attach to entropy/uncertainty metrics versus the existing coverage labels.
+**Update (2026-05-31):** GSAP→framer-motion/Motion One resolution now complete (D-018). The earlier stale reference to GSAP as a possible animation library has been resolved — answer: **Motion One** for path replay, **Framer Motion** for UI transitions. Both MIT-licensed. See `Docs/decisions/DECISION_LOG.md` D-018 entry for full rationale.
 
 ### Q-018: Local-first vs server-side — data security architecture
 A CCTV installer or security agency will not upload their client's facility layout —
@@ -341,16 +342,18 @@ The report exports already carry provenance and evidence summaries, but the prod
 - **Question:** Should SentinelTwin surface object-specific actions through a right-click context menu, a radial menu, or a compact floating action sheet in the 3D workspace?
 - **Needed to answer:** A quick interaction prototype or wireframe that compares discoverability, speed, and visual fit against the existing inspector and transform handles.
 
-### Q-029: How do we keep rendering architecture docs in lockstep with runtime stack reality?
+### Q-029: How do we keep rendering architecture docs in lockstep with runtime stack reality? ✅ **RESOLVED**
 
-The current rendering architecture doc still references older stack details (for example `Next.js 15`, `Three r168+`, and `GSAP`) while runtime package truth has moved to `next@16.2.6`, `three@0.184.x`, and `framer-motion`-centric replay surfaces.
+**Resolution:** Architecture doc updated in-session 2026-05-31:
+- `07_RENDERING_PIPELINE.md` version drift fixed: `Next.js 16.2.6`, `three@0.184.x`, `framer-motion` (replaced GSAP per D-018), with prominent addendum cross-reference at top
+- `07_RENDERING_PIPELINE_ADDENDUM_2026-05-29.md` verified accurate and linked as companion
+- AGENTS.md critical-files table updated to include addendum
+- CLAUDE.md (root + apps/studio) updated with addendum reference
+- 4-question audit standard codified in AGENTS.md for future skill audits (should-we-use, where, at-what-level, when-to-trigger)
 
-**Questions to answer:**
-- What is the canonical source of truth for runtime rendering stack (package manifests, lockfile, or generated snapshot)?
-- Should we add a lightweight doc-health check that flags architecture docs when declared versions/libs diverge from runtime manifests?
-- Which owner is responsible for updating `Docs/architecture/07_RENDERING_PIPELINE.md` during rendering-stack changes?
+**Owner:** Rendering-stack changes must update both the main doc and addendum. The addendum is the runtime truth; the main doc is the design reference. Use the 4-question audit standard (see AGENTS.md) for all future library/skill audits.
 
-**Related evidence:** `Docs/decisions/R3F_DREI_FULL_AUDIT_2026-05-29.md`.
+**Related:** `Docs/decisions/DECISION_LOG.md` (D-018, 4-question standard entry), `R3F_DREI_FULL_AUDIT_2026-05-29.md` (closure evidence).
 
 ---
 

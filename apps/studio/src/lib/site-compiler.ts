@@ -1,5 +1,5 @@
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
-import { safeParseSecurityScene, type SecurityScene } from "@/schema/security-scene";
+import { cloneSecurityScene, safeParseSecurityScene, type SecurityScene } from "@/schema/security-scene";
 
 export type SiteIntakeSource =
   | "scan"
@@ -732,19 +732,23 @@ export function createSiteIntakeSession(
   source: SiteIntakeSource,
   sourceArtifacts: string[] = [],
 ): SiteIntakeSession {
+  const candidateScene = cloneSecurityScene(scene);
+  const warnings = makeSiteCompilerWarnings(candidateScene);
+  const confidence = calculateConfidence(warnings);
+  const artifacts = sourceArtifacts.slice();
   const result: SiteCompilerResult = {
     source,
-    scene,
-    warnings: makeSiteCompilerWarnings(scene),
-    confidence: calculateConfidence(makeSiteCompilerWarnings(scene)),
+    scene: candidateScene,
+    warnings,
+    confidence,
     provenance: {
       source,
       label: SOURCE_LABELS[source],
-      notes: sourceArtifacts,
-      confidence: calculateConfidence(makeSiteCompilerWarnings(scene)),
+      notes: artifacts,
+      confidence,
     },
   };
-  const draft = compileToSiteTwinDraft(result, sourceArtifacts);
+  const draft = compileToSiteTwinDraft(result, artifacts);
   return {
     id: `intake_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
     source,

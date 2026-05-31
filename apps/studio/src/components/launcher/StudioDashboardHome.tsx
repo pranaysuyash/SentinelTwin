@@ -1103,8 +1103,6 @@ export function StudioDashboardHome({
   const criticalZoneResults = result?.criticalZoneResults ?? scene.simulation?.criticalZoneResults ?? [];
   const criticalZoneResultMap = criticalZoneStatusMap(result ?? scene.simulation ?? null);
   const hasZoneResults = criticalZoneResults.length > 0;
-  const passCount = criticalZoneResults.filter((zone) => zone.status === "pass").length;
-  const totalZones = criticalZoneResults.length || scene.criticalZones.length;
   const topCriticalZone = criticalZoneResults.length > 0 ? criticalZoneResults.reduce((acc, zone) => {
     if (!acc) return zone;
     return DORI_QUALITY_ORDER[zone.actualQuality] < DORI_QUALITY_ORDER[acc.actualQuality] ? zone : acc;
@@ -1113,6 +1111,8 @@ export function StudioDashboardHome({
   const worstQualityValue = topCriticalZone?.actualQuality ?? null;
   const outcomeActivePathId = useStudioStore((s) => s.activePathId);
   const canonicalOutcome = selectSecurityOutcomeFromStore({ scene, simulationResult: result, activePathId: outcomeActivePathId });
+  const passCount = canonicalOutcome.summary.criticalZonesPassing;
+  const totalZones = canonicalOutcome.summary.criticalZonesTotal || scene.criticalZones.length;
   const cameraFailureZones = scene.criticalZones
     .map((zone) => ({
       zone,
@@ -1189,7 +1189,7 @@ export function StudioDashboardHome({
         ? "Some redundancy paths fail if a camera drops"
         : "Redundancy coverage intact";
   const issues = [...(result?.issues ?? scene.simulation?.issues ?? [])].sort((a, b) => ISSUE_SEVERITY_ORDER[a.severity] - ISSUE_SEVERITY_ORDER[b.severity]);
-  const worstIssue = issues[0] ?? null;
+  const worstIssue = issues[0] ?? canonicalOutcome.summary.worstIssue ?? null;
   const issuesBySeverity: Record<IssueSeverity, SecurityIssue[]> = {
     critical: [],
     high: [],

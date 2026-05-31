@@ -402,7 +402,7 @@ function computeProjectiveConfidence(camera: CameraNode, matches: LandmarkMatch[
   const spreadConfidence = computeSpreadConfidence(matches);
   const visibilityConfidence = computeVisibilityPrior(camera, matches);
 
-  return clamp01(fitConfidence * (0.25 + 0.75 * spreadConfidence) * (0.35 + 0.65 * visibilityConfidence));
+  return clamp01(fitConfidence * (0.25 + 0.75 * spreadConfidence) * Math.pow(visibilityConfidence, 1.6));
 }
 
 function computeAffineConfidence(camera: CameraNode, matches: LandmarkMatch[]) {
@@ -441,7 +441,7 @@ function computeAffineConfidence(camera: CameraNode, matches: LandmarkMatch[]) {
   const spreadConfidence = computeSpreadConfidence(matches);
   const visibilityConfidence = computeVisibilityPrior(camera, matches);
 
-  return clamp01(0.72 * fitConfidence * (0.3 + 0.7 * spreadConfidence) * (0.35 + 0.65 * visibilityConfidence));
+  return clamp01(0.72 * fitConfidence * (0.3 + 0.7 * spreadConfidence) * Math.pow(visibilityConfidence, 1.6));
 }
 
 /**

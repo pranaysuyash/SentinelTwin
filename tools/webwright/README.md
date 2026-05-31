@@ -40,7 +40,8 @@ source tools/webwright/venv.env
 
 `record_full_demo.py` is the rerunnable browser evidence path for the product home and Studio demo.
 It records a continuous browser video, step screenshots, console/page-error summaries, and a
-structured `run-log.json`.
+structured `run-log.json`. The target may be local or deployed; the recorder only checks that
+`SENTINELTWIN_DEMO_URL` is reachable and does not start or manage the app server.
 
 The current flow covers:
 
@@ -80,13 +81,18 @@ Useful overrides:
 
 - `SENTINELTWIN_DEMO_RUN_ID=<name>` to make artifact paths deterministic.
 - `SENTINELTWIN_DEMO_OUT_DIR=qa-output/full-demo/<name>` to pin artifact location.
+- `SENTINELTWIN_DEMO_MAX_SECONDS=<seconds>` to cap the whole run with the recorder watchdog.
+- `SENTINELTWIN_DEMO_SCREENSHOT_TIMEOUT_MS=<ms>` to tune per-screenshot capture timeout.
 - `SENTINELTWIN_DEMO_SAMPLE_JSON_PATH=<path>` to use a different import sample.
-- `SENTINELTWIN_DEMO_REQUIRE_JSON_SAMPLE=0` to keep recording when the sample import path is unavailable.
+- `SENTINELTWIN_DEMO_REQUIRE_JSON_SAMPLE=0` to attempt sample import but keep recording when it is unavailable.
+- `SENTINELTWIN_DEMO_STRICT=1` to make home/mode/operator-edit/demo-signal checks fail the run.
 
 Artifacts land under `qa-output/full-demo/<run-id>/` with screenshots, video, and `run-log.json`.
 The JSON intake check sets the app's `.json` file input directly through Playwright and verifies the
 review screen with the imported scene name from the sample payload, avoiding brittle dependence on
-button or heading copy.
+button or heading copy. `run-log.json` includes `target_ready`, `video_artifacts`,
+`screenshot_artifacts`, and `artifact_dir` entries so deployed and local runs report artifacts with
+the same labels.
 
 Any new Python tooling in `tools/` should follow this same contract:
 install/run from `/tmp/webwright-sentinel` with `uv pip ... --python` and avoid unrelated new local venvs.

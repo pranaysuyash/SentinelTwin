@@ -18,6 +18,7 @@ VIDEO_DIR = OUT_DIR / "video"
 SHOT_DIR = OUT_DIR / "screens"
 LOG_PATH = OUT_DIR / "run-log.json"
 MAX_RUN_SECONDS = int(os.environ.get("SENTINELTWIN_DEMO_MAX_SECONDS", "900"))
+SCREENSHOT_TIMEOUT_MS = int(os.environ.get("SENTINELTWIN_DEMO_SCREENSHOT_TIMEOUT_MS", "15000"))
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SAMPLE_JSON_PATH = Path(
     os.environ.get(
@@ -65,7 +66,7 @@ def wait_for_server(url: str, timeout_s: int) -> bool:
 
 def safe_shot(page, path: Path, log: list[dict], step_name: str) -> None:
     try:
-        page.screenshot(path=str(path), timeout=60000, animations="disabled")
+        page.screenshot(path=str(path), timeout=SCREENSHOT_TIMEOUT_MS, animations="disabled")
         step(log, step_name, True, path.name)
     except Exception as exc:
         step(log, step_name, False, f"screenshot skipped: {exc}")
@@ -379,10 +380,10 @@ def main() -> int:
         try:
             step(log, "run_id", True, RUN_ID)
             ensure_within_runtime("startup")
-            server_ready = wait_for_server(BASE_URL, SERVER_WAIT_SECONDS)
-            step(log, "server_ready", server_ready, BASE_URL)
-            if not server_ready:
-                raise RuntimeError(f"Server not reachable after {SERVER_WAIT_SECONDS}s: {BASE_URL}")
+            target_ready = wait_for_server(BASE_URL, SERVER_WAIT_SECONDS)
+            step(log, "target_ready", target_ready, BASE_URL)
+            if not target_ready:
+                raise RuntimeError(f"Target not reachable after {SERVER_WAIT_SECONDS}s: {BASE_URL}")
             page.goto(BASE_URL, wait_until="commit", timeout=60000)
             home_signal = wait_any_text(
                 page,
@@ -437,9 +438,8 @@ def main() -> int:
                 detail="Verify the command-center create/import surface without applying a new scene.",
                 optional=True,
             )
-            if REQUIRE_JSON_SAMPLE:
-                run_json_sample_intake_check(page, log)
-                ensure_within_runtime("post_json_sample")
+            run_json_sample_intake_check(page, log)
+            ensure_within_runtime("post_json_sample")
             run_demo_step(
                 page,
                 log,
@@ -622,7 +622,7 @@ def main() -> int:
                 step(log, "select_camera_object", False, "No camera label found for click selection")
 
             page.wait_for_timeout(800)
-            safe_shot(page, SHOT_DIR / "09-selection-context.png", log, "shot_selection_context")
+            safe_shot(page, SHOT_DIR / "24-selection-context.png", log, "shot_selection_context")
 
             page.wait_for_timeout(800)
             text = current_text(page, 4000)
@@ -645,6 +645,9 @@ def main() -> int:
 
             videos = sorted(VIDEO_DIR.glob("*.webm"))
             step(log, "video_artifacts", len(videos) > 0, ", ".join(v.name for v in videos) if videos else "none")
+            screenshots = sorted(SHOT_DIR.glob("*.png"))
+            step(log, "screenshot_artifacts", len(screenshots) > 0, f"count={len(screenshots)}")
+            step(log, "artifact_dir", True, str(OUT_DIR))
             if console_errors:
                 (OUT_DIR / "console-errors.json").write_text(json.dumps(console_errors, indent=2), encoding="utf-8")
             if page_errors:

@@ -7,7 +7,7 @@ import type { ProductViewHandlers } from "@/components/product/ProductViewRouter
 import { createSiteIntakeSession } from "@/lib/site-compiler";
 import { useStudioStore, type BottomTab, type ViewMode, type WorkspacePreset } from "@/store/studio-store";
 import { useProductViewStore } from "@/store/product-view-store";
-import { approveSiteTwinDraft } from "@/lib/site-draft-approval";
+import { promoteToActiveScene } from "@/lib/site-draft-approval";
 import { parseArchiveHandoffLink } from "@/lib/archive-handoff-link";
 import { parseCompareShareLink } from "@/lib/compare-share-link";
 import { parseTimelineShareLink } from "@/lib/timeline-share-link";
@@ -205,14 +205,14 @@ function StudioPageContent() {
   const approveIntakeSession = () => {
     const session = useStudioStore.getState().siteIntakeSession;
     if (!session?.draft) return;
-    const approval = approveSiteTwinDraft(session.draft);
-    if (!approval.success) {
-      setLaunchNotice(`Draft approval blocked: ${approval.error}`);
+    const promotion = promoteToActiveScene(session);
+    if (!promotion.result.success) {
+      setLaunchNotice(`Draft approval blocked: ${promotion.result.error}`);
       return;
     }
 
-    const approvedScene = approval.scene;
-    approvedScene.changeLog = [...approvedScene.changeLog, ...approval.provenanceLog];
+    const approvedScene = promotion.result.scene;
+    approvedScene.changeLog = [...approvedScene.changeLog, ...promotion.result.provenanceLog];
     setScene(approvedScene);
     recordOperationalEvidenceEvent({
       kind: "scan_compiled",
@@ -235,7 +235,7 @@ function StudioPageContent() {
     });
 
     setSiteIntakeSession(null);
-    if (approval.baselineReady) {
+    if (promotion.result.baselineReady) {
       runSimulationFromStore();
       launchWorkspace("map", "coverage", "metrics");
       setLaunchNotice("Draft approved and activated. Baseline simulation started from the approved scene.");

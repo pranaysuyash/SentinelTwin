@@ -148,7 +148,7 @@ export function IssuesTab() {
                     <button type="button"
                       key={c}
                       onClick={() => selectNode(c)}
-                      className="text-[8px] text-blue-400 bg-[#1a1d26] px-1 rounded hover:bg-[#1e2235] cursor-pointer transition-colors"
+                      className="text-[8px] text-blue-400 bg-[#1a1d26] px-1 rounded hover:bg-[#1e2235] cursor-pointer transition-colors active:scale-[0.97]"
                     >
                       {c}
                     </button>

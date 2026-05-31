@@ -180,6 +180,7 @@ export function LeftPanel() {
                   value={toolPresetName}
                   onChange={(e) => setToolPresetName(e.target.value)}
                   placeholder="Preset name"
+                  aria-label="Preset name"
                   className="h-7 flex-1 rounded border border-[#2a3248] bg-[#111521] px-2 text-[10px] text-[#d6deef]"
                 />
                 <button
@@ -326,7 +327,7 @@ export function LeftPanel() {
                       )}
                     </span>
                     <span className={cn("flex-1 truncate text-[10px]", visible ? "text-[#c6cfdf]" : "text-[#535d73]")}>{layer.label}</span>
-                    <button type="button" onClick={() => toggleLayer(layer.id)} className="flex-shrink-0 text-[#57627a] transition-all hover:text-white">
+                    <button type="button" onClick={() => toggleLayer(layer.id)} className="flex-shrink-0 text-[#57627a] transition-colors hover:text-white">
                       {visible ? <Eye className="h-2.5 w-2.5" /> : <EyeOff className="h-2.5 w-2.5" />}
                     </button>
                   </div>

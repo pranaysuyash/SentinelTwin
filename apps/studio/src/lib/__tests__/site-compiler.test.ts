@@ -18,6 +18,9 @@ import {
   SITE_SOURCE_MATURITY,
   SITE_INTAKE_SOURCE_LABELS,
   normalizeSiteIntakeSource,
+  advanceSessionStage,
+  canAdvanceStage,
+  SITE_INTAKE_STAGE_ORDER,
 } from "@/lib/site-compiler";
 import type { SecurityScene } from "@/schema/security-scene";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
@@ -315,7 +318,7 @@ describe("compileFootageVerifyToSiteResult", () => {
     const result = compileFootageVerifyToSiteResult(scene);
     expect(result.source).toBe("camera_evidence");
     expect(result.scene.source).toBe("import");
-    expect(result.provenance.label).toBe("Camera Evidence Preview");
+    expect(result.provenance.label).toBe("Camera Evidence Preview (Footage Verify)");
   });
 });
 
@@ -458,5 +461,139 @@ describe("createSiteIntakeSession — activation gate contract", () => {
     expect(scene.cameras.length).toBe(1);
     scene.cameras.push({} as never);
     expect(session.draft!.scene.cameras.length).toBe(1);
+  });
+});
+
+describe("advanceSessionStage — stage progression engine", () => {
+  function makeReviewSession(): ReturnType<typeof createSiteIntakeSession> {
+    const scene = makeScene();
+    addCamera(scene);
+    addZone(scene);
+    return createSiteIntakeSession(scene, "scan");
+  }
+
+  test("starts at review stage and advances through the sequence", () => {
+    const session = makeReviewSession();
+    const { session: s1 } = advanceSessionStage(session);
+    expect(s1.stage).toBe("compile");
+    const { session: s2 } = advanceSessionStage(s1);
+    expect(s2.stage).toBe("validated");
+    const { session: s3 } = advanceSessionStage(s2);
+    expect(s3.stage).toBe("handoff");
+  });
+
+  test("blocks direct advance from handoff to activated; use promoteToActiveScene instead", () => {
+    const session = makeReviewSession();
+    let current = session;
+    // review → compile → validated → handoff = 3 advances
+    for (let i = 0; i < 3; i++) {
+      const result = advanceSessionStage(current);
+      current = result.session;
+    }
+    expect(current.stage).toBe("handoff");
+    // handoff → activated is blocked — must use promoteToActiveScene
+    const result = advanceSessionStage(current);
+    expect(result.error).toContain("promoteToActiveScene");
+    expect(result.session.stage).toBe("handoff");
+  });
+
+  test("returns error for unknown stage value", () => {
+    const session = makeReviewSession();
+    const bad = { ...session, stage: "unknown_stage" as unknown as import("@/lib/site-compiler").SiteIntakeStage };
+    const result = advanceSessionStage(bad);
+    expect(result.error).toContain("Unknown stage");
+  });
+
+  test("records transition notes in provenanceNotes", () => {
+    const session = makeReviewSession();
+    const { session: advanced } = advanceSessionStage(session);
+    expect(advanced.provenanceNotes).toContain("Stage advanced: review → compile");
+  });
+
+  test("adds warning summaries to session warnings on advance", () => {
+    const session = makeReviewSession();
+    const { session: advanced } = advanceSessionStage(session);
+    expect(advanced.warnings.length).toBeGreaterThanOrEqual(0);
+  });
+
+  test("blocks advance from review if no draft is present", () => {
+    const session = makeReviewSession();
+    const noDraft = { ...session, draft: undefined };
+    const result = advanceSessionStage(noDraft);
+    expect(result.error).toContain("no draft");
+    expect(result.session.stage).toBe("review");
+  });
+
+  test("blocks advance from review if blocking warnings exist", () => {
+    const scene = makeScene();
+    const session = createSiteIntakeSession(scene, "scan");
+    const blockingDraft = session.draft!;
+    blockingDraft.warnings.push({
+      code: "NO_CAMERA", message: "No cameras", severity: "blocking",
+      suggestedAction: "Add a camera",
+    });
+    const withBlocking = { ...session, draft: blockingDraft };
+    const result = advanceSessionStage(withBlocking);
+    expect(result.error).toContain("blocking");
+    expect(result.session.stage).toBe("review");
+  });
+
+  test("blocks advance when blocking warnings exist (earliest gate blocks)", () => {
+    const scene = makeScene();
+    addZone(scene);
+    const session = createSiteIntakeSession(scene, "scan");
+    // No camera means NO_CAMERA is blocking, so review→compile gate blocks immediately
+    const result = advanceSessionStage(session);
+    expect(result.error).toContain("blocking warnings");
+    expect(result.session.stage).toBe("review");
+  });
+
+  test("blocks advance from validated to handoff if no zone", () => {
+    const scene = makeScene();
+    addCamera(scene);
+    const session = createSiteIntakeSession(scene, "scan");
+    const { session: compiled } = advanceSessionStage(session);
+    const { session: validated } = advanceSessionStage(compiled);
+    const result = advanceSessionStage(validated);
+    expect(result.error).toContain("zone");
+  });
+
+  test("canAdvanceStage returns null when advance would succeed", () => {
+    const session = makeReviewSession();
+    expect(canAdvanceStage(session)).toBeNull();
+  });
+
+  test("canAdvanceStage returns error string when advance blocked", () => {
+    const scene = makeScene();
+    const noCamera = createSiteIntakeSession(scene, "scan");
+    expect(canAdvanceStage(noCamera)).not.toBeNull();
+  });
+});
+
+describe("compileFootageVerifyToSiteResult — enriched provenance", () => {
+  test("includes footage verification specific notes", () => {
+    const scene = makeScene();
+    addCamera(scene);
+    const result = compileFootageVerifyToSiteResult(scene);
+    expect(result.provenance.notes.some((n) => n.includes("footage verification"))).toBe(true);
+    expect(result.provenance.notes.some((n) => n.includes("pre-verification baselines"))).toBe(true);
+  });
+
+  test("applies 1.1x confidence multiplier", () => {
+    const scene = makeScene();
+    addCamera(scene);
+    addZone(scene);
+    const result = compileFootageVerifyToSiteResult(scene);
+    const baseConfidence = calculateConfidence(result.warnings) ?? 0.5;
+    expect(result.confidence).toBeCloseTo(Math.min(1, baseConfidence * 1.1), 5);
+  });
+
+  test("label differentiates from base camera_evidence", () => {
+    const scene = makeScene();
+    addCamera(scene);
+    const evidenceResult = compileCameraEvidenceToSiteResult(scene);
+    const verifyResult = compileFootageVerifyToSiteResult(scene);
+    expect(verifyResult.provenance.label).not.toBe(evidenceResult.provenance.label);
+    expect(verifyResult.provenance.label).toContain("Footage Verify");
   });
 });

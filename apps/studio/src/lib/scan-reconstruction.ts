@@ -568,3 +568,18 @@ export function computeConfidenceLabel(confidence: number): "very_low" | "low" |
   if (confidence >= 0.3) return "low";
   return "very_low";
 }
+
+/**
+ * Compile a ScanCaptureSession directly to a SiteCompilerResult.
+ *
+ * This is the dedicated reconstruction pipeline entry point that returns
+ * a SiteCompilerResult compatible with the site-intake workflow. Callers
+ * that need the full scene + warnings tuple can use compileReconstructionToScene
+ * directly instead.
+ */
+export function compileReconstructionToSiteResult(
+  session: ScanCaptureSession,
+): SiteCompilerResult {
+  const { compilerResult } = compileReconstructionToScene(session);
+  return compilerResult;
+}

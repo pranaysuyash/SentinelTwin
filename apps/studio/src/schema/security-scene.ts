@@ -430,6 +430,7 @@ export const zoneResultSchema = z.object({
   redundancyCameraCount: z.number().int().min(0),
   status: z.enum(["pass", "fail", "partial"]),
   failureReasons: z.array(z.string()),
+  coveragePct: z.number().min(0).max(100).optional(),
 });
 
 export const cameraOfflineImpactEntrySchema = z.object({

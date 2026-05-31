@@ -105,7 +105,7 @@ export function CommandBar() {
     return (
         <button type="button"
           onClick={() => setIsExpanded(true)}
-          className="group absolute bottom-3 right-3 z-30 flex h-9 items-center gap-2 rounded-xl border border-[#1f2536] bg-[#0b0f17]/80 px-3 text-[10px] font-medium text-[#5b667c] shadow-[0_4px_16px_rgba(0,0,0,0.25)] transition-all hover:border-[#32384d] hover:text-white hover:shadow-[0_4px_20px_rgba(0,0,0,0.35)]"
+          className="group absolute bottom-3 right-3 z-30 flex h-9 items-center gap-2 rounded-xl border border-[#1f2536] bg-[#0b0f17]/80 px-3 text-[10px] font-medium text-[#5b667c] shadow-[0_4px_16px_rgba(0,0,0,0.25)] transition-[border-color,color,box-shadow] hover:border-[#32384d] hover:text-white hover:shadow-[0_4px_20px_rgba(0,0,0,0.35)]"
         >
         <Sparkles className="h-3.5 w-3.5 text-emerald-400/70 group-hover:text-emerald-400" />
         AI Command

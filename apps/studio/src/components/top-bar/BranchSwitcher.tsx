@@ -66,6 +66,7 @@ export function BranchSwitcher() {
                 value={newBranchName}
                 onChange={(e) => setNewBranchName(e.target.value)}
                 placeholder="branch-name..."
+                aria-label="New branch name"
                 className="flex-1 bg-neutral-900 border border-neutral-800 rounded px-2 py-1 text-sm font-mono focus:outline-none focus:border-emerald-500"
               />
               <button

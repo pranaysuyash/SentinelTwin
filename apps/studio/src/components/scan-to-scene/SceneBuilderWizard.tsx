@@ -406,7 +406,7 @@ function MethodStep({
           <button type="button"
             key={method.id}
             onClick={() => onChange({ importMethod: method.id, selectedTemplate: method.id === "template" ? value.selectedTemplate : null })}
-            className={`rounded-xl border-2 p-4 text-left transition-all ${
+            className={`rounded-xl border-2 p-4 text-left transition-[border-color,background-color] ${
               value.importMethod === method.id
                 ? `${method.color} bg-${method.id === "floor_plan" ? "emerald" : "blue"}-500/5`
                 : "border-[#1a2030] bg-[#070a12] hover:border-[#2a3045]"
@@ -570,7 +570,7 @@ function ConfigureStep({
           </div>
         ) : (
           <div
-            className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#1e2130] bg-[#070a12] p-8 transition-colors hover:border-[#2a3045]"
+            className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#1e2130] bg-[#070a12] p-8 transition-colors hover:border-[#2a3045] active:scale-[0.97]"
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
               e.preventDefault();

@@ -101,7 +101,7 @@ function CandidateCard({
 
   return (
     <div
-      className={`rounded-xl border p-3 transition-all ${
+      className={`rounded-xl border p-3 transition-[border-color,opacity] ${
         isAccepted
           ? "border-emerald-500/25 bg-emerald-500/6"
           : isRejected

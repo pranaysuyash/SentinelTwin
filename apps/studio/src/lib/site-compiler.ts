@@ -16,7 +16,8 @@ export type SiteIntakeStage =
   | "review"
   | "compile"
   | "validated"
-  | "handoff";
+  | "handoff"
+  | "activated";
 
 export type DraftAssumption = {
   label: string;
@@ -662,17 +663,21 @@ export function compileFootageVerifyToSiteResult(
 ): SiteCompilerResult {
   scene.source = sourceToSceneSource("camera_evidence");
   const warnings = overrideWarnings ?? makeSiteCompilerWarnings(scene);
-  const notes = ["Scene updated from footage verification alignment.", ...extraNotes];
+  const notes = [
+    "Scene updated from footage verification alignment.",
+    "Footage verification: scenes prior to this edit are identified as pre-verification baselines; scenes after this edit should be treated as verified site evidence.",
+    ...extraNotes,
+  ];
   return {
     source: "camera_evidence",
     scene,
     warnings,
-    confidence: calculateConfidence(warnings),
+    confidence: Math.min(1, (calculateConfidence(warnings) ?? 0.5) * 1.1),
     provenance: {
       source: "camera_evidence",
-      label: SOURCE_LABELS.camera_evidence,
+      label: `${SOURCE_LABELS.camera_evidence} (Footage Verify)`,
       notes,
-      confidence: calculateConfidence(warnings),
+      confidence: Math.min(1, (calculateConfidence(warnings) ?? 0.5) * 1.1),
     },
   };
 }
@@ -759,6 +764,133 @@ export function createSiteIntakeSession(
     provenanceNotes: [],
     createdAt: Date.now(),
   };
+}
+
+/**
+ * Stage progression order for site intake sessions.
+ * Each stage represents a phase in the intake lifecycle.
+ */
+export const SITE_INTAKE_STAGE_ORDER: readonly SiteIntakeStage[] = [
+  "choose_source",
+  "capture_or_upload",
+  "mark_or_generate",
+  "review",
+  "compile",
+  "validated",
+  "handoff",
+  "activated",
+] as const;
+
+/**
+ * Advance a SiteIntakeSession to its next stage with validation gates.
+ *
+ * Each stage transition enforces preconditions:
+ * - review → compile: requires a compiled draft with no blocking warnings
+ * - compile → validated: requires no blocking warnings
+ * - validated → handoff: requires at least one camera and one critical zone
+ * - choose_source/capture/mark: no hard gates, always pass
+ *
+ * Returns the updated session and optionally an error message if the
+ * transition is blocked by unmet preconditions.
+ */
+export function advanceSessionStage(
+  session: SiteIntakeSession,
+): { session: SiteIntakeSession; error?: string } {
+  const currentIndex = SITE_INTAKE_STAGE_ORDER.indexOf(session.stage);
+  if (currentIndex === -1) {
+    return { session, error: `Unknown stage "${session.stage}". Cannot advance.` };
+  }
+  if (currentIndex >= SITE_INTAKE_STAGE_ORDER.length - 1) {
+    return { session, error: `Already at final stage "${session.stage}". No further stage to advance to.` };
+  }
+
+  const nextStage = SITE_INTAKE_STAGE_ORDER[currentIndex + 1]!;
+
+  // --- Validation gates ---
+
+  if (session.stage === "handoff" && nextStage === "activated") {
+    return {
+      session,
+      error: "Cannot advance from handoff to activated via direct stage advance. Use promoteToActiveScene() to activate a draft.",
+    };
+  }
+
+  if (session.stage === "review" && nextStage === "compile") {
+    if (!session.draft) {
+      return {
+        session,
+        error: "Cannot advance from review: no draft compiled. Use createSiteIntakeSession or compile the scene first.",
+      };
+    }
+    if (session.draft.warnings.some((w) => w.severity === "blocking")) {
+      return {
+        session,
+        error: "Cannot advance from review: blocking warnings must be resolved before compile.",
+      };
+    }
+  }
+
+  if (session.stage === "compile" && nextStage === "validated") {
+    if (!session.draft) {
+      return {
+        session,
+        error: "Cannot advance to validated: no draft compiled.",
+      };
+    }
+    if (session.draft.warnings.some((w) => w.severity === "blocking")) {
+      return {
+        session,
+        error: "Cannot advance to validated: blocking warnings remain. Resolve before validation.",
+      };
+    }
+  }
+
+  if (session.stage === "validated" && nextStage === "handoff") {
+    if (!session.draft) {
+      return {
+        session,
+        error: "Cannot advance to handoff: no draft to promote.",
+      };
+    }
+    if (session.draft.entityCounts.cameras === 0) {
+      return {
+        session,
+        error: "Cannot advance to handoff: at least one camera is required.",
+      };
+    }
+    if (session.draft.entityCounts.criticalZones === 0) {
+      return {
+        session,
+        error: "Cannot advance to handoff: at least one critical zone is required.",
+      };
+    }
+  }
+
+  // Stage transition notes for provenance
+  const transitionNote = `Stage advanced: ${session.stage} → ${nextStage}`;
+
+  return {
+    session: {
+      ...session,
+      stage: nextStage,
+      provenanceNotes: [...session.provenanceNotes, transitionNote],
+      warnings: session.draft
+        ? session.draft.warnings
+            .filter((w) => w.severity === "blocking" || w.severity === "warning")
+            .map((w) => `[${w.severity}] ${w.message}`)
+        : session.warnings,
+    },
+  };
+}
+
+/**
+ * Check whether a stage transition is permitted without applying it.
+ * Returns the same error message that advanceSessionStage would produce,
+ * or null if the transition would succeed.
+ */
+export function canAdvanceStage(session: SiteIntakeSession): string | null {
+  const result = advanceSessionStage(session);
+  return result.error ?? null;
 }
 
 export { countEntities as countSiteEntities, SOURCE_LABELS as SITE_INTAKE_SOURCE_LABELS };

@@ -64,7 +64,7 @@ function SceneCard({
     <button
       type="button"
       onClick={() => onOpen(scene)}
-      className="group flex flex-col overflow-hidden rounded-[24px] border border-[#20273a] bg-[#0d121c] text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-sky-400/25 hover:shadow-xl hover:shadow-black/30"
+      className="group flex flex-col overflow-hidden rounded-[24px] border border-[#20273a] bg-[#0d121c] text-left transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-sky-400/25 hover:shadow-xl hover:shadow-black/30"
     >
       {/* Scene preview area */}
       <div className="relative aspect-[16/9] overflow-hidden bg-gradient-to-br from-[#0f1623] to-[#060a12]">

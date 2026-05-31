@@ -57,7 +57,7 @@ function ProjectStartCard({ icon, badge, title, description, tone, status, onCli
     <button
       type="button"
       onClick={onClick}
-      className={`group flex h-full min-h-[132px] flex-col justify-between rounded-[24px] border p-4 text-left transition-all duration-200 hover:-translate-y-0.5 ${toneClasses[tone]}`}
+      className={`group flex h-full min-h-[132px] flex-col justify-between rounded-[24px] border p-4 text-left transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 ${toneClasses[tone]}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">

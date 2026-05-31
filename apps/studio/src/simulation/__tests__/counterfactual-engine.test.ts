@@ -8,14 +8,14 @@ describe("Counterfactual Engine", () => {
   it("should generate and rank plans requiring simulation", () => {
     const scene = createBlankSecurityScene();
 
-    // Camera at south wall left, looking north into the room
-    const cam = createCameraNode([1.5, 2.5, 0], { yawDeg: 180, pitchDeg: -15, fovHorizontalDeg: 90 });
+    // Camera at south wall center, looking north into the room
+    const cam = createCameraNode([4, 2.5, 0], { yawDeg: 180, pitchDeg: -15, fovHorizontalDeg: 90 });
     scene.cameras.push(cam);
 
-    // Wide obstruction blocking the camera's view of the back-right portion.
-    // Moving it 3m to the right (engine's suggested move) clears the line of
-    // sight and measurably improves coverage.
-    const obs = createObstructionNode([3, 0, 2], "partition", {
+    // Obstruction centered in front of the camera, covering the back half.
+    // Moving it 3m to the right (+3 in X) clears the line of sight to the
+    // critical zone behind it.
+    const obs = createObstructionNode([4, 0, 3], "partition", {
       dimensions: [4, 2.8, 0.2],
       movableByAI: true,
       visionTransmission: 0,
@@ -23,7 +23,7 @@ describe("Counterfactual Engine", () => {
     scene.obstructions.push(obs);
 
     // Critical zone behind the obstruction — initially blocked, improves with move
-    const zone = createCriticalZoneNode([[4, 5], [7, 5], [7, 7], [4, 7]]);
+    const zone = createCriticalZoneNode([[3, 5.5], [5, 5.5], [5, 7], [3, 7]]);
     scene.criticalZones.push(zone);
 
     const baselineResult = simulateStudioLite(scene);

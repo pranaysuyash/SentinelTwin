@@ -212,7 +212,7 @@ export function CameraControlStrip({
         <button
           type="button"
           onClick={resetAim}
-          className="flex h-7 items-center gap-1 rounded-md border border-[#2a3650] bg-[#111721] px-2 text-[8px] font-semibold uppercase tracking-[0.08em] text-[#8ea5cc] transition-colors hover:border-[#3a4d70] hover:text-white"
+          className="flex h-7 items-center gap-1 rounded-md border border-[#2a3650] bg-[#111721] px-2 text-[8px] font-semibold uppercase tracking-[0.08em] text-[#8ea5cc] transition-colors hover:border-[#3a4d70] hover:text-white active:scale-[0.97]"
           title="Reset aim"
         >
           <Target className="h-3 w-3" />
@@ -247,7 +247,7 @@ export function CameraControlStrip({
           type="button"
           onClick={togglePower}
           className={cn(
-            "flex h-7 items-center gap-1 rounded-md border px-2 text-[8px] font-semibold uppercase tracking-[0.08em] transition-colors",
+            "flex h-7 items-center gap-1 rounded-md border px-2 text-[8px] font-semibold uppercase tracking-[0.08em] transition-colors active:scale-[0.97]",
             camera.status === "on"
               ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
               : "border-red-500/40 bg-red-500/10 text-red-300",
@@ -260,7 +260,7 @@ export function CameraControlStrip({
         <button
           type="button"
           onClick={cycleNightMode}
-          className="flex h-7 items-center gap-1 rounded-md border border-[#2a3650] bg-[#111721] px-2 text-[8px] font-semibold uppercase tracking-[0.08em] text-[#8ea5cc] transition-colors hover:border-[#3a4d70] hover:text-white"
+          className="flex h-7 items-center gap-1 rounded-md border border-[#2a3650] bg-[#111721] px-2 text-[8px] font-semibold uppercase tracking-[0.08em] text-[#8ea5cc] transition-colors hover:border-[#3a4d70] hover:text-white active:scale-[0.97]"
           title={`Night mode: ${camera.nightMode}`}
         >
           {camera.nightMode === "none" ? (

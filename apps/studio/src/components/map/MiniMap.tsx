@@ -380,7 +380,7 @@ function MiniMapCompact({
           <button
             type="button"
             onClick={onExpand}
-            className="inline-flex h-7 items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 text-[9px] font-medium text-[#7f8aa3] transition-colors hover:border-[#32384d] hover:text-white"
+            className="inline-flex h-7 items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 text-[9px] font-medium text-[#7f8aa3] transition-colors hover:border-[#32384d] hover:text-white active:scale-[0.97]"
             title="Expand drawer"
           >
             <ChevronUp className="h-3 w-3" />
@@ -534,7 +534,7 @@ function MiniMapExpanded({
           <button
             type="button"
             onClick={onCollapse}
-            className="inline-flex h-7 items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 text-[9px] font-medium text-[#7f8aa3] transition-colors hover:border-[#32384d] hover:text-white"
+            className="inline-flex h-7 items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 text-[9px] font-medium text-[#7f8aa3] transition-colors hover:border-[#32384d] hover:text-white active:scale-[0.97]"
             title="Collapse drawer"
           >
             <ChevronDown className="h-3 w-3" />
@@ -543,7 +543,7 @@ function MiniMapExpanded({
           <button
             type="button"
             onClick={() => setLabelDensity(labelDensity === "off" ? "sparse" : labelDensity === "sparse" ? "dense" : "off")}
-            className="inline-flex h-7 items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 text-[9px] font-medium text-[#7f8aa3] transition-colors hover:border-[#32384d] hover:text-white"
+            className="inline-flex h-7 items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 text-[9px] font-medium text-[#7f8aa3] transition-colors hover:border-[#32384d] hover:text-white active:scale-[0.97]"
             title="Cycle label density"
           >
             <Layers className="h-3 w-3" />
@@ -599,7 +599,7 @@ function MiniMapExpanded({
             </button>
             <button type="button"
               onClick={() => onSetZoom("minimap", mapState.zoom * 1.1)}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[#1f2536] bg-[#111521] text-[#556076] transition-colors hover:border-[#2b3246] hover:text-white"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[#1f2536] bg-[#111521] text-[#556076] transition-colors hover:border-[#2b3246] hover:text-white active:scale-[0.97]"
               aria-label="Zoom in minimap"
               title="Zoom in"
             >
@@ -607,7 +607,7 @@ function MiniMapExpanded({
             </button>
             <button type="button"
               onClick={() => onFit("minimap")}
-              className="h-7 rounded-md border border-[#1f2536] bg-[#111521] px-2 text-[9px] font-medium text-[#7f8ca6] transition-colors hover:border-[#2b3246] hover:text-white"
+              className="h-7 rounded-md border border-[#1f2536] bg-[#111521] px-2 text-[9px] font-medium text-[#7f8ca6] transition-colors hover:border-[#2b3246] hover:text-white active:scale-[0.97]"
               aria-label="Fit minimap"
             >
               Fit
@@ -617,7 +617,7 @@ function MiniMapExpanded({
                 useStudioStore.getState().setViewMode("map");
                 onFit("minimap");
               }}
-              className="h-7 rounded-md border border-[#1f2536] bg-[#111521] px-2 text-[9px] font-medium text-[#7f8ca6] transition-colors hover:border-[#2b3246] hover:text-white"
+              className="h-7 rounded-md border border-[#1f2536] bg-[#111521] px-2 text-[9px] font-medium text-[#7f8ca6] transition-colors hover:border-[#2b3246] hover:text-white active:scale-[0.97]"
               title="Switch to 2D top view"
             >
               2D Top View
@@ -627,7 +627,7 @@ function MiniMapExpanded({
                 useStudioStore.getState().setPathReplayPlaying(false);
                 useStudioStore.getState().setPathReplayProgress(0);
               }}
-              className="inline-flex h-7 items-center gap-1 rounded-md border border-[#1f2536] bg-[#111521] px-2 text-[9px] font-medium text-[#7f8ca6] transition-colors hover:border-[#2b3246] hover:text-white"
+              className="inline-flex h-7 items-center gap-1 rounded-md border border-[#1f2536] bg-[#111521] px-2 text-[9px] font-medium text-[#7f8ca6] transition-colors hover:border-[#2b3246] hover:text-white active:scale-[0.97]"
               title="Reset replay"
             >
               <RefreshCcw className="h-3 w-3" />
@@ -925,7 +925,7 @@ export function MiniMap({
                 setMode("collapsed");
                 setHoveredPreview(false);
               }}
-              className="inline-flex h-6 items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 text-[9px] font-medium text-[#7f8aa3] transition-colors hover:border-[#32384d] hover:text-white"
+              className="inline-flex h-6 items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 text-[9px] font-medium text-[#7f8aa3] transition-colors hover:border-[#32384d] hover:text-white active:scale-[0.97]"
             >
               <X className="h-3 w-3" />
               Collapse to Icon
@@ -934,7 +934,7 @@ export function MiniMap({
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <button type="button"
               onClick={() => setZoom("minimap", mapState.zoom * 0.9)}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[#1f2536] bg-[#111521] text-[#556076] transition-colors hover:border-[#2b3246] hover:text-white"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[#1f2536] bg-[#111521] text-[#556076] transition-colors hover:border-[#2b3246] hover:text-white active:scale-[0.97]"
               aria-label="Zoom out minimap"
               title="Zoom out"
             >
@@ -942,7 +942,7 @@ export function MiniMap({
             </button>
             <button type="button"
               onClick={() => setZoom("minimap", mapState.zoom * 1.1)}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[#1f2536] bg-[#111521] text-[#556076] transition-colors hover:border-[#2b3246] hover:text-white"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[#1f2536] bg-[#111521] text-[#556076] transition-colors hover:border-[#2b3246] hover:text-white active:scale-[0.97]"
               aria-label="Zoom in minimap"
               title="Zoom in"
             >
@@ -950,7 +950,7 @@ export function MiniMap({
             </button>
             <button type="button"
               onClick={() => fitMap("minimap")}
-              className="h-7 rounded-md border border-[#1f2536] bg-[#111521] px-2 text-[9px] font-medium text-[#7f8ca6] transition-colors hover:border-[#2b3246] hover:text-white"
+              className="h-7 rounded-md border border-[#1f2536] bg-[#111521] px-2 text-[9px] font-medium text-[#7f8ca6] transition-colors hover:border-[#2b3246] hover:text-white active:scale-[0.97]"
               aria-label="Fit minimap"
             >
               Fit

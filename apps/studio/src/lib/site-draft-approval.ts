@@ -1,5 +1,5 @@
 import { safeParseSecurityScene } from "@/schema/security-scene";
-import type { ActionableWarning, SiteTwinDraft } from "@/lib/site-compiler";
+import type { ActionableWarning, SiteIntakeSession, SiteTwinDraft } from "@/lib/site-compiler";
 import { makeSiteCompilerWarnings } from "@/lib/site-compiler";
 
 export type SiteDraftApprovalResult =
@@ -47,4 +47,41 @@ export function approveSiteTwinDraft(draft: SiteTwinDraft): SiteDraftApprovalRes
     warnings,
     provenanceLog,
   };
+}
+
+export type PromoteToActiveSceneResult = {
+  result: SiteDraftApprovalResult;
+  updatedSession: SiteIntakeSession;
+};
+
+/**
+ * Promote a SiteIntakeSession's draft to an active scene.
+ *
+ * Runs the full approval gate (schema validation + warning check) and,
+ * on success, sets the session stage to "activated".
+ * Returns both the approval result and the updated session so callers
+ * can persist the stage change (e.g. via store) before dismissing the session.
+ *
+ * Only sessions at "review" or "handoff" stage can be promoted.
+ */
+export function promoteToActiveScene(
+  session: SiteIntakeSession,
+): PromoteToActiveSceneResult {
+  if (!session.draft) {
+    return {
+      result: { success: false, error: "Cannot promote: session has no compiled draft." },
+      updatedSession: session,
+    };
+  }
+  if (session.stage !== "handoff" && session.stage !== "review") {
+    return {
+      result: { success: false, error: `Cannot promote from stage "${session.stage}". Must be at "review" or "handoff" to approve a draft.` },
+      updatedSession: session,
+    };
+  }
+  const result = approveSiteTwinDraft(session.draft);
+  const updatedSession = result.success
+    ? { ...session, stage: "activated" as const, provenanceNotes: [...session.provenanceNotes, "Activated: draft promoted to active scene."] }
+    : session;
+  return { result, updatedSession };
 }

@@ -1167,7 +1167,7 @@ export function SceneIntelligenceTab() {
                     title={`${node.label}${node.subtitle ? ` · ${node.subtitle}` : ""}`}
                     aria-label={`Inspect ${node.label}`}
                     className={cn(
-                      "pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-sky-300/70",
+                      "pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 transition-[border-color,transform] duration-150 focus:outline-none focus:ring-2 focus:ring-sky-300/70",
                       selected ? "scale-110" : "hover:scale-105",
                     )}
                     style={{

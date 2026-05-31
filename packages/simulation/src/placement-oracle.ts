@@ -46,6 +46,33 @@ type SampleTarget = {
   baselineQuality: DoriQuality;
 };
 
+/**
+ * Score multipliers by sample kind.
+ *
+ * Critical zones get the highest weight (2.4×) because improving
+ * coverage on a high-priority target is the oracle's primary goal.
+ * Fragile cells (at risk of dropping below a threshold) get 1.4×.
+ * All other cells (blind, privacy) use 1×.
+ *
+ * These values were calibrated on small-retail reference scenes
+ * (4–8 cameras, 10×15m floor plates). They favour candidates that:
+ *   1. Improve critical zone quality above recognition
+ *   2. Shore up fragile cells near quality boundaries
+ *   3. Minimise new privacy zone visibility
+ */
+const KIND_MULTIPLIER: Record<SampleTarget["kind"], number> = {
+  critical: 2.4,
+  fragile: 1.4,
+  blind: 1,
+  privacy: 1,
+};
+
+/**
+ * Penalty per privacy zone that the candidate camera would expose.
+ * Applied once as a flat subtraction from the total weighted score.
+ */
+const PRIVACY_PENALTY_PER_ZONE = 4;
+
 const PRIORITY_WEIGHT: Record<CriticalZoneNode["priority"], number> = {
   low: 1,
   medium: 2,
@@ -71,14 +98,19 @@ function getTemplateCamera(scene: SecurityScene) {
     id: "cam_oracle_template",
     nodeType: "camera" as const,
     name: "Oracle Template Camera",
-    position: [scene.dimensions.width / 2, scene.dimensions.height - 0.25, scene.dimensions.depth / 2] as [number, number, number],
+    // Wall-mount camera at mountHeight, not at ceiling height
+    position: [
+      scene.dimensions.width / 2,
+      scene.assumptions.wallHeightM - 0.25,
+      scene.dimensions.depth / 2,
+    ] as [number, number, number],
     yawDeg: 180,
     pitchDeg: -25,
     rollDeg: 0,
     mountType: "wall" as const,
-    mountHeightM: 2.5,
+    mountHeightM: scene.assumptions.wallHeightM - 0.25,
     fovHorizontalDeg: 90,
-    fovVerticalDeg: 60,
+    fovVerticalDeg: 80,  // 16:9 aspect ratio, matching createTestCamera default
     rangeM: Math.max(scene.dimensions.width, scene.dimensions.depth),
     resolutionMP: 4,
     resolutionWidth: 1920,
@@ -187,9 +219,6 @@ function getQualitySampleTargets(
   baselineZones: ZoneResult[],
 ): SampleTarget[] {
   const targets: SampleTarget[] = [];
-  const baselineByCell = new Map(
-    baselineCells.map((cell) => [`${cell.x.toFixed(2)}:${cell.z.toFixed(2)}`, cell]),
-  );
   const criticalCentres = scene.criticalZones.map((zone) => {
     const [x, z] = polygonCenter(zone.polygon);
     const centreCell = baselineCells.reduce((best, cell) => {
@@ -259,14 +288,13 @@ function getQualitySampleTargets(
 
   for (const zone of scene.privacyZones) {
     const [x, z] = polygonCenter(zone.polygon);
-    const cell = baselineByCell.get(`${x.toFixed(2)}:${z.toFixed(2)}`);
     targets.push({
       point: [x, z],
       heightM: scene.assumptions.personHeightM,
       label: zone.label,
       kind: "privacy",
-      weight: -4,
-      baselineQuality: cell?.quality ?? "none",
+      weight: 0,  // neutral weight — penalty applied only if visible
+      baselineQuality: "none" as DoriQuality,
     });
   }
 
@@ -274,12 +302,11 @@ function getQualitySampleTargets(
 }
 
 function evaluateCandidate(
-  scene: SecurityScene,
+  evaluator: ReturnType<typeof createCoverageEvaluator>,
+  cameraTemplate: CameraNode,
   candidate: PlacementOracleCandidate,
   targetSamples: SampleTarget[],
 ) {
-  const evaluator = createCoverageEvaluator(scene);
-  const cameraTemplate = getTemplateCamera(scene);
   const camera = {
     ...cameraTemplate,
     id: `${cameraTemplate.id}_oracle`,
@@ -294,9 +321,9 @@ function evaluateCandidate(
   const privacyHits = new Set<string>();
   const improvedCriticalZones = new Set<string>();
   let weightedScore = 0;
-  let coverageImprovedWeight = 0;
-  let recognitionImprovedWeight = 0;
-  let identificationImprovedWeight = 0;
+  let anyImprovementWeight = 0;
+  let improvedToRecognitionWeight = 0;
+  let improvedToIdentificationWeight = 0;
   let criticalGain = 0;
   let totalWeight = 0;
 
@@ -317,28 +344,29 @@ function evaluateCandidate(
       criticalGain += delta * weight;
     }
 
-    weightedScore += delta * weight * (sample.kind === "critical" ? 2.4 : sample.kind === "fragile" ? 1.4 : 1);
+    weightedScore += delta * weight * KIND_MULTIPLIER[sample.kind];
 
     if (delta > 0) {
-      coverageImprovedWeight += weight;
+      anyImprovementWeight += weight;
     }
 
-    if (nextScore >= qualityToScore("recognition")) {
-      recognitionImprovedWeight += weight;
+    // Track improvement TO recognition/identification (not just at level)
+    if (nextScore >= qualityToScore("recognition") && baseScore < qualityToScore("recognition")) {
+      improvedToRecognitionWeight += weight;
     }
-    if (nextScore >= qualityToScore("identification")) {
-      identificationImprovedWeight += weight;
+    if (nextScore >= qualityToScore("identification") && baseScore < qualityToScore("identification")) {
+      improvedToIdentificationWeight += weight;
     }
   }
 
-  const privacyPenalty = privacyHits.size * 4;
-  const totalSignal = weightedScore - privacyPenalty;
+  // Privacy penalty applied once (not double-counted via negative weight in weightedScore)
+  const totalSignal = weightedScore - privacyHits.size * PRIVACY_PENALTY_PER_ZONE;
 
   return {
     ...candidate,
-    estimatedCoverageDeltaPct: Number(((coverageImprovedWeight / Math.max(totalWeight, 1)) * 100).toFixed(1)),
-    estimatedRecognitionDeltaPct: Number(((recognitionImprovedWeight / Math.max(totalWeight, 1)) * 100).toFixed(1)),
-    estimatedIdentificationDeltaPct: Number(((identificationImprovedWeight / Math.max(totalWeight, 1)) * 100).toFixed(1)),
+    estimatedCoverageDeltaPct: Number(((anyImprovementWeight / Math.max(totalWeight, 1)) * 100).toFixed(1)),
+    estimatedRecognitionDeltaPct: Number(((improvedToRecognitionWeight / Math.max(totalWeight, 1)) * 100).toFixed(1)),
+    estimatedIdentificationDeltaPct: Number(((improvedToIdentificationWeight / Math.max(totalWeight, 1)) * 100).toFixed(1)),
     estimatedCriticalZoneGain: Number(criticalGain.toFixed(2)),
     improvedCriticalZones: Array.from(improvedCriticalZones),
     privacyZoneHits: Array.from(privacyHits),
@@ -351,13 +379,16 @@ export function computePlacementOracle(
   baselineCoverageCells: CoverageCellResult[],
   baselineZones: ZoneResult[],
 ): PlacementOracleResult {
-  const templateCamera = getTemplateCamera(scene);
+  const templateCamera = getTemplateCamera(scene) as CameraNode;
   const sampleTargets = getQualitySampleTargets(scene, baselineCoverageCells, baselineZones);
   const aimPoint = getAimPoint(scene);
 
+  // Build the BVH/collider mesh once — all candidates share the same scene geometry.
+  const evaluator = createCoverageEvaluator(scene);
+
   const candidates = buildMountCandidates(scene).map((candidate) => {
     const { yawDeg, pitchDeg } = toYawPitch(candidate.position, aimPoint);
-    return evaluateCandidate(scene, {
+    return evaluateCandidate(evaluator, templateCamera, {
       position: candidate.position,
       mountType: candidate.mountType,
       yawDeg,

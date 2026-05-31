@@ -15,11 +15,11 @@ export function EmptyState({ icon, message, subtext, action }: EmptyStateProps) 
           {icon}
         </div>
       )}
-      <p className="text-center text-[10px] text-[#4d566b] max-w-[200px] leading-relaxed">
+      <p className="text-center text-[10px] max-w-[200px] leading-relaxed" style={{ color: "var(--st-text-dim, #4d566b)" }}>
         {message}
       </p>
       {subtext && (
-        <p className="text-[9px] text-[#3a4158]">{subtext}</p>
+        <p className="text-[9px]" style={{ color: "color-mix(in srgb, var(--st-text-dim, #3a4158) 80%, transparent)" }}>{subtext}</p>
       )}
       {action}
     </div>

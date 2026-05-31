@@ -6287,6 +6287,14 @@ All relevant decisions and analysis are already captured in:
 
 - If this path becomes user-visible in a report or inspector badge, keep the label honest about the fact that the binding payload still lacks explicit calibration metadata, so the solver is geometric and normalized rather than fully camera-calibrated.
 
+### Current finding
+
+- The canonical binding helper now stamps `transformConfidence` onto evidence bindings, and the mismatch-report path prefers that field over ad hoc alignment inputs when the evidence already carries a solved confidence.
+
+### Follow-up
+
+- Keep future evidence producers using the shared binding helper so the solver, stored record, and mismatch consumer stay on one contract.
+
 
 ---
 

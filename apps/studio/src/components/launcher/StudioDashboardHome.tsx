@@ -595,7 +595,7 @@ function ActionButton({
       type="button"
       onClick={onClick}
       className={cn(
-        "group flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5",
+        "group flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition-[transform,border-color,box-shadow,background-color] duration-200 hover:-translate-y-0.5",
         variant === "primary"
           ? "border-sky-400/30 bg-sky-500/12 text-sky-50 shadow-[0_12px_36px_rgba(14,165,233,0.10)] hover:border-sky-300/45 hover:bg-sky-500/16"
           : variant === "ghost"
@@ -673,7 +673,7 @@ function SceneStarterCard({
       type="button"
       onClick={onClick}
       className={cn(
-        "group flex min-h-[136px] flex-col justify-between rounded-[24px] border p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(0,0,0,0.18)]",
+        "group flex min-h-[136px] flex-col justify-between rounded-[24px] border p-4 text-left transition-[transform,border-color,box-shadow,background-color] duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(0,0,0,0.18)]",
         variant === "primary"
           ? "border-sky-400/30 bg-sky-500/12 text-sky-50 shadow-[0_12px_36px_rgba(14,165,233,0.12)] hover:border-sky-300/45 hover:bg-sky-500/16"
           : "border-[color:var(--st-border)] bg-white/[0.03] text-[color:var(--st-text)] hover:border-[rgba(79,183,255,0.35)] hover:bg-[color:var(--st-panel-2)]",
@@ -739,7 +739,7 @@ function WorkspaceSeedCard({
     <button
       type="button"
       onClick={onClick}
-      className="group flex min-h-[92px] flex-col justify-between rounded-[20px] border border-[color:var(--st-border)] bg-white/[0.03] p-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(79,183,255,0.35)] hover:bg-[color:var(--st-panel-2)]"
+      className="group flex min-h-[92px] flex-col justify-between rounded-[20px] border border-[color:var(--st-border)] bg-white/[0.03] p-3 text-left transition-[transform,border-color,box-shadow,background-color] duration-200 hover:-translate-y-0.5 hover:border-[rgba(79,183,255,0.35)] hover:bg-[color:var(--st-panel-2)]"
     >
       <div className={cn("mb-2 overflow-hidden rounded-[14px] border border-white/8 p-2", STARTER_PREVIEW_CLASS[tone])}>
         <div className="flex h-[34px] items-center justify-between">
@@ -1817,7 +1817,7 @@ export function StudioDashboardHome({
                 <button
                   type="button"
                   onClick={onOpenCoverageWorkspace}
-                  className="group flex items-center gap-3 rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-3.5 text-left transition-all hover:border-emerald-400/30 hover:bg-emerald-500/5"
+                  className="group flex items-center gap-3 rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-3.5 text-left transition-[transform,border-color,background-color] hover:border-emerald-400/30 hover:bg-emerald-500/5"
                 >
                   <div className="flex h-9 w-9 flex-none items-center justify-center rounded-xl border border-emerald-400/25 bg-emerald-500/10">
                     <MapIcon className="h-4.5 w-4.5 h-[18px] w-[18px] text-emerald-300" />
@@ -1830,7 +1830,7 @@ export function StudioDashboardHome({
                 <button
                   type="button"
                   onClick={onOpenCameraWall}
-                  className="group flex items-center gap-3 rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-3.5 text-left transition-all hover:border-sky-400/30 hover:bg-sky-500/5"
+                  className="group flex items-center gap-3 rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-3.5 text-left transition-[transform,border-color,background-color] hover:border-sky-400/30 hover:bg-sky-500/5"
                 >
                   <div className="flex h-9 w-9 flex-none items-center justify-center rounded-xl border border-sky-400/25 bg-sky-500/10">
                     <Camera className="h-[18px] w-[18px] text-sky-300" />
@@ -1843,7 +1843,7 @@ export function StudioDashboardHome({
                 <button
                   type="button"
                   onClick={onOpenPathReplay}
-                  className="group flex items-center gap-3 rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-3.5 text-left transition-all hover:border-violet-400/30 hover:bg-violet-500/5"
+                  className="group flex items-center gap-3 rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-3.5 text-left transition-[transform,border-color,background-color] hover:border-violet-400/30 hover:bg-violet-500/5"
                 >
                   <div className="flex h-9 w-9 flex-none items-center justify-center rounded-xl border border-violet-400/25 bg-violet-500/10">
                     <Play className="h-[18px] w-[18px] text-violet-300" />
@@ -1856,7 +1856,7 @@ export function StudioDashboardHome({
                 <button
                   type="button"
                   onClick={onOpenCompareFixes}
-                  className="group flex items-center gap-3 rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-3.5 text-left transition-all hover:border-amber-400/30 hover:bg-amber-500/5"
+                  className="group flex items-center gap-3 rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-3.5 text-left transition-[transform,border-color,background-color] hover:border-amber-400/30 hover:bg-amber-500/5"
                 >
                   <div className="flex h-9 w-9 flex-none items-center justify-center rounded-xl border border-amber-400/25 bg-amber-500/10">
                     <LayoutDashboard className="h-[18px] w-[18px] text-amber-300" />
@@ -1869,7 +1869,7 @@ export function StudioDashboardHome({
                 <button
                   type="button"
                   onClick={onOpenReport}
-                  className="group flex items-center gap-3 rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-3.5 text-left transition-all hover:border-cyan-400/30 hover:bg-cyan-500/5"
+                  className="group flex items-center gap-3 rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-3.5 text-left transition-[transform,border-color,background-color] hover:border-cyan-400/30 hover:bg-cyan-500/5"
                 >
                   <div className="flex h-9 w-9 flex-none items-center justify-center rounded-xl border border-cyan-400/25 bg-cyan-500/10">
                     <FileText className="h-[18px] w-[18px] text-cyan-300" />
@@ -2255,17 +2255,17 @@ function WorkspaceLibraryPanel({
     <section className="mt-4 rounded-[24px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">Workspace Library</div>
+          <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">Site Twin Library</div>
           <div className="mt-1 text-xs text-[color:var(--st-muted)]">
             Resume existing site twins or start a new intake path without leaving the dashboard.
           </div>
         </div>
         <div className="flex flex-wrap gap-2 text-[10px]">
-          <button type="button" onClick={onCreateScene} className="rounded-full border border-sky-400/30 bg-sky-500/10 px-2.5 py-1 text-sky-100">New Scene</button>
-          <button type="button" onClick={onImportScene} className="rounded-full border border-white/15 bg-white/[0.03] px-2.5 py-1 text-white/90">Import JSON</button>
+          <button type="button" onClick={onCreateScene} className="rounded-full border border-sky-400/30 bg-sky-500/10 px-2.5 py-1 text-sky-100">Create Site Twin</button>
+          <button type="button" onClick={onImportScene} className="rounded-full border border-white/15 bg-white/[0.03] px-2.5 py-1 text-white/90">Import Site JSON</button>
           <button type="button" onClick={onImportFloorPlan} className="rounded-full border border-white/15 bg-white/[0.03] px-2.5 py-1 text-white/90">Floor Plan</button>
-          <button type="button" onClick={onScanSite} className="rounded-full border border-white/15 bg-white/[0.03] px-2.5 py-1 text-white/90">Manual Scan</button>
-          <button type="button" onClick={onGuidedScanAssistant} className="rounded-full border border-white/15 bg-white/[0.03] px-2.5 py-1 text-white/90">Guided Assist</button>
+          <button type="button" onClick={onScanSite} className="rounded-full border border-white/15 bg-white/[0.03] px-2.5 py-1 text-white/90">Scan Site</button>
+          <button type="button" onClick={onGuidedScanAssistant} className="rounded-full border border-white/15 bg-white/[0.03] px-2.5 py-1 text-white/90">Guided Scan</button>
           <button type="button" onClick={onAiDraft} className="rounded-full border border-white/15 bg-white/[0.03] px-2.5 py-1 text-white/90">AI Draft</button>
           <button type="button" onClick={onOpenCoverageWorkspace} className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1 text-emerald-100">Open Coverage</button>
           <button type="button" onClick={onOpenReport} className="rounded-full border border-amber-400/25 bg-amber-500/10 px-2.5 py-1 text-amber-100">Open Report</button>
@@ -2295,7 +2295,7 @@ function WorkspaceLibraryPanel({
             ))
           ) : (
             <div className="col-span-full rounded-[16px] border border-dashed border-[color:var(--st-border)] bg-white/[0.02] px-3 py-4 text-xs text-[color:var(--st-muted)]">
-              No saved projects yet. Start with New Scene, Scan, Import, or AI Draft.
+              No saved Site Twins yet. Start with Create Site Twin, Scan, Import, or AI Draft.
             </div>
           )}
       </div>
@@ -2328,6 +2328,7 @@ function SiteTwinSearchBar({
   onOpenStudio,
   scene,
 }: SiteTwinSearchBarProps) {
+  const [expanded, setExpanded] = useState(false);
   const hasQuery = workspaceMemoryQuery.trim().length > 0;
   const openHit = (hit: WorkspaceSearchHit) => {
     if (hit.kind === "report") {
@@ -2363,20 +2364,29 @@ function SiteTwinSearchBar({
 
   return (
     <section className="mt-4 rounded-[16px] border border-[color:var(--st-border)] bg-[color:var(--st-panel-2)] p-2.5">
-      <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">
-        <Radar className="h-3.5 w-3.5 text-sky-300" />
-        SITE TWIN MEMORY SEARCH
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">
+          <Radar className="h-3.5 w-3.5 text-sky-300" />
+          SITE TWIN MEMORY SEARCH
+        </div>
+        <button
+          type="button"
+          onClick={() => setExpanded((value) => !value)}
+          className="rounded-md border border-[color:var(--st-border)] bg-white/[0.03] px-2 py-1 text-[10px] text-[#c9d5eb] hover:border-sky-400/35 hover:text-white"
+        >
+          {expanded || hasQuery ? "Hide" : "Search"}
+        </button>
       </div>
-      <div className="mt-2 rounded-lg border border-[color:var(--st-border)] bg-white/[0.03] px-2.5 py-2">
-        <input
-          value={workspaceMemoryQuery}
-          onChange={(event) => setWorkspaceMemoryQuery(event.target.value)}
-          placeholder="Search Site Twin history, evidence, archives, and reports..."
-          className="w-full bg-transparent text-xs text-white placeholder:text-[color:var(--st-muted)] focus:outline-none"
-        />
-      </div>
-      {hasQuery ? (
+      {expanded || hasQuery ? (
         <div className="mt-2 space-y-1.5">
+          <div className="rounded-lg border border-[color:var(--st-border)] bg-white/[0.03] px-2.5 py-2">
+            <input
+              value={workspaceMemoryQuery}
+              onChange={(event) => setWorkspaceMemoryQuery(event.target.value)}
+              placeholder="Search Site Twin history, evidence, archives, and reports..."
+              className="w-full bg-transparent text-xs text-white placeholder:text-[color:var(--st-muted)] focus:outline-none"
+            />
+          </div>
           {workspaceMemoryResults.length > 0 ? workspaceMemoryResults.map((hit) => (
             <button
               key={hit.id}
@@ -2393,11 +2403,11 @@ function SiteTwinSearchBar({
               <div className="mt-1 text-[10px] text-[color:var(--st-muted)]">{hit.summary}</div>
               <div className="mt-1 text-[10px] text-[#9db0cf]">{hit.targetSummary}</div>
             </button>
-          )) : (
+          )) : hasQuery ? (
             <div className="rounded-xl border border-dashed border-[color:var(--st-border)] px-3 py-2 text-[10px] text-[color:var(--st-muted)]">
-              No matching workspace memory found for this query.
+              No matching Site Twin memory found for this query.
             </div>
-          )}
+          ) : null}
         </div>
       ) : null}
     </section>

@@ -154,6 +154,7 @@ export function OrganizationManagerPanel({ open, onClose }: OrganizationManagerP
                 value={createName}
                 onChange={(e) => setCreateName(e.target.value)}
                 placeholder="Organization name"
+                aria-label="Organization name"
                 className="mt-2 w-full rounded-lg border border-[#2a3347] bg-[#101827] px-3 py-2 text-xs text-white outline-none focus:border-blue-500/50"
               />
               <div className="mt-2 flex items-center gap-2">
@@ -214,6 +215,7 @@ export function OrganizationManagerPanel({ open, onClose }: OrganizationManagerP
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
                         placeholder="Organization name"
+                        aria-label="Edit organization name"
                         className="w-full rounded-lg border border-[#2a3347] bg-[#101827] px-3 py-2 text-xs text-white outline-none focus:border-blue-500/50"
                       />
                       <div className="mt-2 flex items-center gap-2">

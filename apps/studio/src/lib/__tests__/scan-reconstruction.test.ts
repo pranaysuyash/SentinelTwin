@@ -12,6 +12,7 @@ import {
 import {
   compileReconstructionToScene,
   compileReconstructionToSiteTwinDraft,
+  compileReconstructionToSiteResult,
   estimateOverallConfidence,
   computeQualityGates,
   computeDefaultWarnings,
@@ -412,6 +413,43 @@ describe("scan-reconstruction pipeline", () => {
       ];
       const updated = computeDefaultWarnings(session);
       expect(updated.warnings.some((w) => w.code === "SINGLE_PHOTO_ONLY")).toBe(false);
+    });
+  });
+
+  describe("compileReconstructionToSiteResult", () => {
+    test("returns SiteCompilerResult compatible with site-intake workflow", () => {
+      const session = createScanCaptureSession("Result Test", "guided_capture");
+      session.roomDimensions = { widthM: 12, depthM: 9, heightM: 3.2 };
+
+      const camCandidate = createScanCandidateFromArtifact("camera", [0.18, 0.2], "photo_1", 0.84);
+      camCandidate.status = "accepted";
+
+      const zoneCandidate = createScanCandidateFromArtifact("critical_zone", [0.61, 0.66], "photo_1", 0.76);
+      zoneCandidate.status = "accepted";
+
+      session.candidates = [camCandidate, zoneCandidate];
+
+      const result = compileReconstructionToSiteResult(session);
+
+      expect(result.source).toBe("scan");
+      expect(result.confidence).toBeGreaterThan(0);
+      expect(result.scene).toBeDefined();
+      expect(result.scene.cameras).toHaveLength(1);
+      expect(result.scene.criticalZones).toHaveLength(1);
+      expect(result.warnings).toBeDefined();
+      expect(result.provenance.source).toBe("scan");
+      expect(result.provenance.notes).toBeDefined();
+    });
+
+    test("handles empty session gracefully", () => {
+      const session = createScanCaptureSession("Empty Result", "guided_capture");
+      const result = compileReconstructionToSiteResult(session);
+
+      expect(result.source).toBe("scan");
+      expect(result.confidence).toBeDefined();
+      expect(result.confidence).toBeGreaterThanOrEqual(0);
+      expect(result.scene).toBeDefined();
+      expect(result.scene.cameras).toHaveLength(0);
     });
   });
 

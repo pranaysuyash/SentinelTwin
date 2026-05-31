@@ -105,8 +105,12 @@ body {
    3     body        13px   normal     Default body — the baseline
    4     heading     15px   semibold   Panel headers, object names, stat values
    5     display     18px   bold       Large numeric stats, title chrome
+
+   Minimum readable text size: the canonical reference for UI text.
+   New components should target the caption step (10px) or above.
 */
 :root {
+  --fs-min:     10px;
   --fs-caption:  10px;
   --fs-label:    11px;
   --fs-body:     13px;

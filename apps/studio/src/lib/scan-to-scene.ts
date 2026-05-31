@@ -98,6 +98,7 @@ export type ScanCompilationWarningCode =
 export type ScanCompilationWarning = {
   code: ScanCompilationWarningCode;
   message: string;
+  severity?: "info" | "warning" | "blocking";
 };
 
 export type ScanCompileOptions = {
@@ -579,14 +580,14 @@ export function compileScanSessionToScene(
   }
 
   const warnings: ScanCompilationWarning[] = [];
-  if (scene.cameras.length === 0) warnings.push({ code: "NO_CAMERA", message: "No camera marker accepted; add at least one camera for coverage simulation." });
-  if (scene.criticalZones.length === 0) warnings.push({ code: "NO_CRITICAL_ZONE", message: "No high-value/critical zone marker accepted; add one to evaluate outcome quality." });
-  if (scene.entryPoints.length === 0) warnings.push({ code: "NO_ENTRY", message: "No door or entry marker accepted; path replay and entry risk analysis will be limited." });
-  if (scene.obstructions.length === 0) warnings.push({ code: "NO_OBSTRUCTION", message: "No obstruction marker accepted; blindspot exploration may be unrealistic." });
+  if (scene.cameras.length === 0) warnings.push({ code: "NO_CAMERA", message: "No camera marker accepted; add at least one camera for coverage simulation.", severity: "blocking" });
+  if (scene.criticalZones.length === 0) warnings.push({ code: "NO_CRITICAL_ZONE", message: "No high-value/critical zone marker accepted; add one to evaluate outcome quality.", severity: "warning" });
+  if (scene.entryPoints.length === 0) warnings.push({ code: "NO_ENTRY", message: "No door or entry marker accepted; path replay and entry risk analysis will be limited.", severity: "info" });
+  if (scene.obstructions.length === 0) warnings.push({ code: "NO_OBSTRUCTION", message: "No obstruction marker accepted; blindspot exploration may be unrealistic.", severity: "info" });
   if (session.candidates.filter((candidate) => candidate.kind === "wall" && candidate.status !== "rejected").length === 0) {
-    warnings.push({ code: "NO_WALL", message: "No wall markers accepted; using the room dimensions to build a rectangular shell." });
+    warnings.push({ code: "NO_WALL", message: "No wall markers accepted; using the room dimensions to build a rectangular shell.", severity: "info" });
   }
-  if (scene.paths.length === 0) warnings.push({ code: "NO_PATH", message: "No path points created; add path points or enable auto entry-to-zone path." });
+  if (scene.paths.length === 0) warnings.push({ code: "NO_PATH", message: "No path points created; add path points or enable auto entry-to-zone path.", severity: "info" });
 
   const parsed = safeParseSecurityScene(scene);
   if (!parsed.success) {
@@ -605,10 +606,8 @@ export function compileScanSessionToCompilerResult(
     ...scanWarnings.map((w): SiteCompilerWarning => ({
       code: w.code,
       message: w.message,
-      severity: w.code === "NO_CAMERA" ? "blocking" : "warning",
+      severity: w.severity ?? "warning",
     })),
-    ...scene.cameras.length === 0 ? [] : [],
-    ...scene.criticalZones.length === 0 ? [{ code: "NO_CRITICAL_ZONE", message: "No critical zones marked. Add zones for coverage evaluation.", severity: "warning" as const }] : [],
   ];
   return compileScanToSiteResult(scene, ["Scan candidates compiled via scan-to-scene pipeline."], compilerWarnings);
 }

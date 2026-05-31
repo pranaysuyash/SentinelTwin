@@ -467,6 +467,7 @@ function simulateStudioInternal(
     redundancyCameraCount: zone.redundancyCameraCount,
     status: zone.status,
     failureReasons: zone.failureReasons,
+    coveragePct: zone.status === "pass" ? 100 : zone.status === "partial" ? 50 : 0,
   }));
 
   const cameraResults: CameraResult[] = scene.cameras.map((camera) => {

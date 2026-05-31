@@ -47,7 +47,7 @@ export function QualityBar({ cells, segments = DEFAULT_SEGMENTS, className }: Qu
         return (
           <div
             key={label}
-            className="h-full transition-all"
+            className="h-full transition-[width]"
             style={{ width: `${w}%`, backgroundColor: color }}
             title={`${label}: ${Math.round(w)}%`}
           />
@@ -59,7 +59,7 @@ export function QualityBar({ cells, segments = DEFAULT_SEGMENTS, className }: Qu
         if (w < 0.5) return null;
         return (
           <div
-            className="h-full transition-all"
+            className="h-full transition-[width]"
             style={{ width: `${w}%`, backgroundColor: "#1a1d26" }}
             title={`none: ${Math.round(w)}%`}
           />

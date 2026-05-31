@@ -389,7 +389,7 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
 
       <div className="border-t border-[#1e2130] px-3 py-2">
         <div className="mb-2 h-1 w-full overflow-hidden rounded-full bg-[#1a2333]">
-          <div className="h-full rounded-full bg-emerald-400 transition-all duration-300" style={{ width: `${progress}%` }} />
+          <div className="h-full rounded-full bg-emerald-400 transition-[width] duration-300" style={{ width: `${progress}%` }} />
         </div>
 
         <div className="flex items-center justify-between gap-2">

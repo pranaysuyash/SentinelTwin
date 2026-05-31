@@ -1,6 +1,7 @@
 import {
   type SecurityScene,
   type SimulationResult,
+  type ZoneResult,
 } from "@/schema/security-scene";
 import { cloneSecurityScene } from "@/schema/security-scene";
 import { simulateStudio } from "@sentineltwin/simulation";
@@ -32,6 +33,14 @@ export interface CounterfactualPlan {
   simulationResult?: SimulationResult;
   simulatedCoveragePct?: number;
   simulatedImprovementPct?: number;
+  zoneResults?: ZoneResult[];
+  zoneDeltas?: Array<{
+    zoneId: string;
+    baselineStatus: string;
+    proposedStatus: string;
+    coverageChangePct: number;
+    improved: boolean;
+  }>;
 }
 
 function generateCandidateActions(
@@ -165,11 +174,27 @@ export function generateAndRankCounterfactuals(
     plan.simulationResult = result;
     plan.simulatedCoveragePct = result.totalCoveragePct;
     plan.simulatedImprovementPct = result.totalCoveragePct - baselineResult.totalCoveragePct;
+
+    // Track zone-level deltas so downstream consumers can evaluate per-zone impact
+    plan.zoneResults = result.criticalZoneResults;
+    if (baselineResult.criticalZoneResults.length > 0) {
+      plan.zoneDeltas = result.criticalZoneResults.map((zone, i) => {
+        const prev = baselineResult.criticalZoneResults[i];
+        return {
+          zoneId: zone.label,
+          baselineStatus: prev?.status ?? "unknown",
+          proposedStatus: zone.status,
+          coverageChangePct: (zone.coveragePct ?? 0) - (prev?.coveragePct ?? 0),
+          improved: prev?.status === "fail" && zone.status === "pass",
+        };
+      });
+    }
   }
 
   const validPlans = candidatePlans.filter(p => {
+    // Budget gate only — all valid actions are worth showing even if they
+    // don't improve total coverage. Sorting prioritizes positive deltas.
     if (constraints.maxBudget !== undefined && p.totalCost > constraints.maxBudget) return false;
-    if (p.simulatedImprovementPct !== undefined && p.simulatedImprovementPct <= 0) return false;
     return true;
   });
 

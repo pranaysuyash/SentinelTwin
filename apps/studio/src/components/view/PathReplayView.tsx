@@ -725,7 +725,7 @@ function InfoOverlay({
       initial={{ x: -20, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ type: "spring", stiffness: 280, damping: 24 }}
-      className="absolute left-3 top-12 z-10 rounded-xl border border-[#1f2536] bg-[#0b0f17]/90 px-3.5 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.32)] backdrop-blur-sm"
+      className="absolute left-3 top-12 z-10 rounded-xl border border-[#1f2536] bg-[#0b0f17]/90 px-3.5 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.32)]"
     >
       <div className="mb-2.5 flex items-center gap-3">
         <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#5b667c]">{pathLabel}</div>
@@ -842,7 +842,7 @@ function CurrentVisibilityPanel({
   lostNow: ReplayCameraStateSummary[];
 }) {
   return (
-    <div className="absolute right-3 top-14 z-10 w-76 rounded-xl border border-[#1f2536] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.32)] backdrop-blur-sm">
+    <div className="absolute right-3 top-14 z-10 w-76 rounded-xl border border-[#1f2536] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.32)]">
       <div className="flex items-center justify-between gap-2">
         <div className="text-[8px] font-semibold uppercase tracking-[0.2em] text-[#7dd3fc]">Current Visibility</div>
         <div className="text-[8px] font-mono text-[#8b96ab]">@ {currentTime.toFixed(1)}s</div>
@@ -1196,7 +1196,7 @@ export function PathReplayView() {
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <select
-              className="min-w-55 rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5 text-[11px] font-medium text-[#d7deed] outline-none transition-colors hover:border-[#32384d]"
+              className="min-w-55 rounded-lg border border-[#24283a] bg-[#111521] px-2.5 py-1.5 text-[11px] font-medium text-[#d7deed] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
               value={activePathId ?? ""}
               onChange={(event) => handlePathChange(event.target.value || null)}
               aria-label="Select active replay path"

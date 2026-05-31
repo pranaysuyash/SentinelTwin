@@ -92,7 +92,7 @@ export function CommentInspector({ comment }: CommentInspectorProps) {
           <textarea
             value={editText}
             onChange={(e) => setEditText(e.target.value)}
-            className="w-full rounded border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] text-[#c7d0e4] outline-none resize-none"
+            className="w-full rounded border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] text-[#c7d0e4] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 resize-none"
             rows={3}
           />
           <div className="flex items-center gap-1.5">

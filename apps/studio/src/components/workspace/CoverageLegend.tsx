@@ -116,7 +116,7 @@ export function CoverageLegend() {
   const [showFilters, setShowFilters] = useState(false);
 
   return (
-    <div className="absolute left-3 top-3 z-10 min-w-[182px] rounded-xl border border-[#1f2536] bg-[#0b0f17]/90 px-3 py-2.5 shadow-[0_16px_40px_rgba(0,0,0,0.28)] backdrop-blur-sm">
+    <div className="absolute left-3 top-3 z-10 min-w-[182px] rounded-xl border border-[#1f2536] bg-[#0b0f17]/90 px-3 py-2.5 shadow-[0_16px_40px_rgba(0,0,0,0.28)]">
       {/* Header row with collapse toggle */}
       <div className="flex items-center justify-between mb-1.5">
         <button

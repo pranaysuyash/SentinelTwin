@@ -3,6 +3,10 @@ import type { CameraEvidenceArtifact, CameraNode } from "@/schema/security-scene
 
 export type LandmarkMatch = NonNullable<CameraEvidenceArtifact["binding"]>["landmarkMatches"][number];
 
+type Vec2 = [number, number];
+type Vec3 = [number, number, number];
+type Vec4 = [number, number, number, number];
+
 const EPSILON = 1e-9;
 
 function clamp01(value: number) {
@@ -13,40 +17,44 @@ function toRadians(value: number) {
   return (value * Math.PI) / 180;
 }
 
-function subtract3(a: [number, number, number], b: [number, number, number]) {
-  return [a[0] - b[0], a[1] - b[1], a[2] - b[2]] as [number, number, number];
+function subtract2(a: Vec2, b: Vec2): Vec2 {
+  return [a[0] - b[0], a[1] - b[1]];
 }
 
-function subtract2(a: [number, number], b: [number, number]) {
-  return [a[0] - b[0], a[1] - b[1]] as [number, number];
+function subtract3(a: Vec3, b: Vec3): Vec3 {
+  return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 }
 
-function dot3(a: [number, number, number], b: [number, number, number]) {
+function scale3(value: Vec3, factor: number): Vec3 {
+  return [value[0] * factor, value[1] * factor, value[2] * factor];
+}
+
+function dot3(a: Vec3, b: Vec3) {
   return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
 
-function cross3(a: [number, number, number], b: [number, number, number]) {
+function cross3(a: Vec3, b: Vec3): Vec3 {
   return [
     a[1] * b[2] - a[2] * b[1],
     a[2] * b[0] - a[0] * b[2],
     a[0] * b[1] - a[1] * b[0],
-  ] as [number, number, number];
+  ];
 }
 
-function length3(value: [number, number, number]) {
-  return Math.hypot(value[0], value[1], value[2]);
-}
-
-function length2(value: [number, number]) {
+function length2(value: Vec2) {
   return Math.hypot(value[0], value[1]);
 }
 
-function normalize3(value: [number, number, number]) {
+function length3(value: Vec3) {
+  return Math.hypot(value[0], value[1], value[2]);
+}
+
+function normalize3(value: Vec3): Vec3 {
   const magnitude = length3(value);
   if (magnitude <= EPSILON) {
-    return [0, 0, 0] as [number, number, number];
+    return [0, 0, 0];
   }
-  return [value[0] / magnitude, value[1] / magnitude, value[2] / magnitude] as [number, number, number];
+  return scale3(value, 1 / magnitude);
 }
 
 function angleWeight(angleRad: number, limitRad: number) {
@@ -56,7 +64,55 @@ function angleWeight(angleRad: number, limitRad: number) {
   return clamp01(1 - angleRad / limitRad);
 }
 
-function maxTriangleScore2D(points: Array<[number, number]>) {
+function meanPairwiseDistance2D(points: Vec2[]) {
+  if (points.length < 2) {
+    return 0;
+  }
+
+  let total = 0;
+  let count = 0;
+  for (let i = 0; i < points.length - 1; i += 1) {
+    for (let j = i + 1; j < points.length; j += 1) {
+      total += length2(subtract2(points[i]!, points[j]!));
+      count += 1;
+    }
+  }
+  return count > 0 ? total / count : 0;
+}
+
+function normalizePoints2D(points: Vec2[]) {
+  const centroid = points.reduce<Vec2>((acc, point) => [acc[0] + point[0], acc[1] + point[1]], [0, 0]);
+  const count = Math.max(points.length, 1);
+  const center: Vec2 = [centroid[0] / count, centroid[1] / count];
+  const meanDistance = points.reduce((sum, point) => sum + length2(subtract2(point, center)), 0) / count;
+  const scale = meanDistance <= EPSILON ? 1 : Math.SQRT2 / meanDistance;
+
+  return {
+    normalized: points.map((point) => [(point[0] - center[0]) * scale, (point[1] - center[1]) * scale] as Vec2),
+    center,
+    scale,
+  };
+}
+
+function normalizePoints3D(points: Vec3[]) {
+  const centroid = points.reduce<Vec3>((acc, point) => [acc[0] + point[0], acc[1] + point[1], acc[2] + point[2]], [0, 0, 0]);
+  const count = Math.max(points.length, 1);
+  const center: Vec3 = [centroid[0] / count, centroid[1] / count, centroid[2] / count];
+  const meanDistance = points.reduce((sum, point) => sum + length3(subtract3(point, center)), 0) / count;
+  const scale = meanDistance <= EPSILON ? 1 : Math.sqrt(3) / meanDistance;
+
+  return {
+    normalized: points.map((point) => [
+      (point[0] - center[0]) * scale,
+      (point[1] - center[1]) * scale,
+      (point[2] - center[2]) * scale,
+    ] as Vec3),
+    center,
+    scale,
+  };
+}
+
+function maxTriangleScore2D(points: Vec2[]) {
   if (points.length < 3) {
     return 0;
   }
@@ -87,7 +143,7 @@ function maxTriangleScore2D(points: Array<[number, number]>) {
   return clamp01((bestArea / (bestEdge * bestEdge)) * 2.5);
 }
 
-function maxTriangleScore3D(points: Array<[number, number, number]>) {
+function maxTriangleScore3D(points: Vec3[]) {
   if (points.length < 3) {
     return 0;
   }
@@ -118,20 +174,138 @@ function maxTriangleScore3D(points: Array<[number, number, number]>) {
   return clamp01((bestArea / (bestEdge * bestEdge)) * 2.5);
 }
 
-function computeCameraFitScore(camera: CameraNode, matches: LandmarkMatch[]) {
-  const forward = getYawPitchDirection(camera.yawDeg, camera.pitchDeg).toArray() as [number, number, number];
-  const worldUp: [number, number, number] = [0, 1, 0];
-  let right = cross3(forward, worldUp);
+function gaussianSolve(matrix: number[][], rhs: number[]) {
+  const n = matrix.length;
+  const augmented = matrix.map((row, index) => [...row, rhs[index] ?? 0]);
 
-  if (length3(right) <= EPSILON) {
-    right = [1, 0, 0];
-  } else {
-    right = normalize3(right);
+  for (let col = 0; col < n; col += 1) {
+    let pivotRow = col;
+    let pivotValue = Math.abs(augmented[col]![col] ?? 0);
+    for (let row = col + 1; row < n; row += 1) {
+      const value = Math.abs(augmented[row]![col] ?? 0);
+      if (value > pivotValue) {
+        pivotValue = value;
+        pivotRow = row;
+      }
+    }
+
+    if (pivotValue <= EPSILON) {
+      augmented[col]![col] = EPSILON;
+      pivotValue = EPSILON;
+      pivotRow = col;
+    }
+
+    if (pivotRow !== col) {
+      const temp = augmented[col]!;
+      augmented[col] = augmented[pivotRow]!;
+      augmented[pivotRow] = temp;
+    }
+
+    const pivot = augmented[col]![col]!;
+    for (let entry = col; entry <= n; entry += 1) {
+      augmented[col]![entry]! /= pivot;
+    }
+
+    for (let row = 0; row < n; row += 1) {
+      if (row === col) continue;
+      const factor = augmented[row]![col]!;
+      if (Math.abs(factor) <= EPSILON) continue;
+      for (let entry = col; entry <= n; entry += 1) {
+        augmented[row]![entry]! -= factor * augmented[col]![entry]!;
+      }
+    }
   }
 
-  const up = normalize3(cross3(right, forward));
+  return augmented.map((row) => row[n]!);
+}
+
+function symmetricSmallestEigenvector(matrix: number[][]) {
+  const regularized = matrix.map((row, rowIndex) =>
+    row.map((value, colIndex) => value + (rowIndex === colIndex ? 1e-8 : 0)),
+  );
+  let vector = new Array(matrix.length).fill(0);
+  vector[0] = 1;
+
+  for (let iteration = 0; iteration < 24; iteration += 1) {
+    const next = gaussianSolve(regularized, vector);
+    const norm = Math.hypot(...next);
+    if (norm <= EPSILON) {
+      break;
+    }
+    vector = next.map((value) => value / norm);
+  }
+
+  return vector;
+}
+
+function buildAtA(rows: number[][]) {
+  const size = rows[0]?.length ?? 0;
+  const ata = Array.from({ length: size }, () => new Array(size).fill(0));
+
+  for (const row of rows) {
+    for (let i = 0; i < size; i += 1) {
+      const left = row[i] ?? 0;
+      if (Math.abs(left) <= EPSILON) continue;
+      for (let j = i; j < size; j += 1) {
+        const product = left * (row[j] ?? 0);
+        ata[i]![j]! += product;
+        if (j !== i) {
+          ata[j]![i]! += product;
+        }
+      }
+    }
+  }
+
+  return ata;
+}
+
+function projectProjectivePoint(matrix: number[][], point: Vec3) {
+  const homogeneous: Vec4 = [point[0], point[1], point[2], 1];
+  const projected = matrix.map((row) => row.reduce((sum, value, index) => sum + value * (homogeneous[index] ?? 0), 0));
+  const w = projected[2] ?? 0;
+  if (Math.abs(w) <= EPSILON) {
+    return null;
+  }
+  return [projected[0]! / w, projected[1]! / w] as Vec2;
+}
+
+function projectAffinePoint(coefficients: number[], point: Vec3) {
+  return [
+    (coefficients[0] ?? 0) * point[0] + (coefficients[1] ?? 0) * point[1] + (coefficients[2] ?? 0) * point[2] + (coefficients[3] ?? 0),
+    (coefficients[4] ?? 0) * point[0] + (coefficients[5] ?? 0) * point[1] + (coefficients[6] ?? 0) * point[2] + (coefficients[7] ?? 0),
+  ] as Vec2;
+}
+
+function computeResidualStats(residuals: number[]) {
+  if (!residuals.length) {
+    return null;
+  }
+
+  const sorted = [...residuals].sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)] ?? 0;
+  const meanSquare = residuals.reduce((sum, value) => sum + value * value, 0) / residuals.length;
+  const rmse = Math.sqrt(meanSquare);
+  const inlierRatio = residuals.filter((value) => value <= 0.15).length / residuals.length;
+
+  return {
+    median,
+    rmse,
+    inlierRatio,
+  };
+}
+
+function computeVisibilityPrior(camera: CameraNode, matches: LandmarkMatch[]) {
+  const forward = getYawPitchDirection(camera.yawDeg, camera.pitchDeg).toArray() as Vec3;
   const halfHorizontal = Math.max(toRadians(camera.fovHorizontalDeg / 2), EPSILON);
   const halfVertical = Math.max(toRadians(camera.fovVerticalDeg / 2), EPSILON);
+  let right = normalize3(cross3(forward, [0, 1, 0]));
+  if (length3(right) <= EPSILON) {
+    right = [1, 0, 0];
+  }
+  let up = normalize3(cross3(right, forward));
+  if (length3(up) <= EPSILON) {
+    up = [0, 1, 0];
+  }
 
   const scores = matches.map((match) => {
     const delta = subtract3(match.scenePosition, camera.position);
@@ -141,39 +315,151 @@ function computeCameraFitScore(camera: CameraNode, matches: LandmarkMatch[]) {
     }
 
     const direction = normalize3(delta);
-    const forwardComponent = clamp01(dot3(direction, forward));
-    const rightComponent = dot3(direction, right);
-    const upComponent = dot3(direction, up);
     const forwardDot = dot3(direction, forward);
-    const horizontalOffset = Math.abs(Math.atan2(rightComponent, forwardDot));
-    const verticalOffset = Math.abs(Math.atan2(upComponent, forwardDot));
+    const horizontalOffset = Math.abs(Math.atan2(dot3(direction, right), forwardDot));
+    const verticalOffset = Math.abs(Math.atan2(dot3(direction, up), forwardDot));
+
+    const frontScore = clamp01(forwardDot);
     const fovScore = angleWeight(horizontalOffset, halfHorizontal) * angleWeight(verticalOffset, halfVertical);
     const rangeScore = clamp01(1 - distance / camera.rangeM);
 
-    return (fovScore * 0.55) + (rangeScore * 0.25) + (forwardComponent * 0.2);
+    return (frontScore * 0.35) + (fovScore * 0.45) + (rangeScore * 0.2);
   });
 
-  return scores.reduce((sum, score) => sum + score, 0) / scores.length;
+  return scores.reduce((sum, value) => sum + value, 0) / scores.length;
 }
 
-export function computeLandmarkAlignmentConfidence(
-  camera: CameraNode,
-  matches: LandmarkMatch[]
-): number {
-  if (!matches || matches.length < 3) {
+function computeSpreadConfidence(matches: LandmarkMatch[]) {
+  const scenePoints = matches.map((match) => match.scenePosition);
+  const evidencePoints = matches.map((match) => match.evidencePosition2D);
+  const sceneScore = maxTriangleScore3D(scenePoints);
+  const evidenceScore = maxTriangleScore2D(evidencePoints);
+  const pairwiseSpread = clamp01(meanPairwiseDistance2D(evidencePoints) / 2);
+
+  return clamp01((sceneScore * 0.45) + (evidenceScore * 0.35) + (pairwiseSpread * 0.2));
+}
+
+function computeProjectiveConfidence(camera: CameraNode, matches: LandmarkMatch[]) {
+  const normalized3D = normalizePoints3D(matches.map((match) => match.scenePosition));
+  const normalized2D = normalizePoints2D(matches.map((match) => match.evidencePosition2D));
+  const rows: number[][] = [];
+
+  for (let index = 0; index < matches.length; index += 1) {
+    const point3D = normalized3D.normalized[index]!;
+    const point2D = normalized2D.normalized[index]!;
+    rows.push([
+      point3D[0],
+      point3D[1],
+      point3D[2],
+      1,
+      0,
+      0,
+      0,
+      0,
+      -point2D[0] * point3D[0],
+      -point2D[0] * point3D[1],
+      -point2D[0] * point3D[2],
+      -point2D[0],
+    ]);
+    rows.push([
+      0,
+      0,
+      0,
+      0,
+      point3D[0],
+      point3D[1],
+      point3D[2],
+      1,
+      -point2D[1] * point3D[0],
+      -point2D[1] * point3D[1],
+      -point2D[1] * point3D[2],
+      -point2D[1],
+    ]);
+  }
+
+  const smallest = symmetricSmallestEigenvector(buildAtA(rows));
+  const projection = [
+    smallest.slice(0, 4),
+    smallest.slice(4, 8),
+    smallest.slice(8, 12),
+  ] as number[][];
+
+  const residuals = matches.map((match, index) => {
+    const predicted = projectProjectivePoint(projection, normalized3D.normalized[index]!);
+    if (!predicted) {
+      return Number.POSITIVE_INFINITY;
+    }
+    const target = normalized2D.normalized[index]!;
+    return length2(subtract2(predicted, target));
+  });
+
+  const stats = computeResidualStats(residuals);
+  if (!stats) {
     return 0;
   }
 
-  const matchCountScore = clamp01((matches.length - 2) / 3);
-  const cameraFitScore = computeCameraFitScore(camera, matches);
-  const geometry3DScore = maxTriangleScore3D(matches.map((match) => match.scenePosition));
-  const geometry2DScore = maxTriangleScore2D(matches.map((match) => match.evidencePosition2D));
-  const geometryScore = (geometry3DScore * 0.6) + (geometry2DScore * 0.4);
+  const fitConfidence = clamp01(Math.exp(-(stats.rmse + stats.median) * 3.5) * (0.45 + 0.55 * stats.inlierRatio));
+  const spreadConfidence = computeSpreadConfidence(matches);
+  const visibilityConfidence = computeVisibilityPrior(camera, matches);
 
-  const confidence =
-    (matchCountScore * 0.2) +
-    (cameraFitScore * 0.5) +
-    (cameraFitScore * geometryScore * 0.3);
+  return clamp01(fitConfidence * (0.25 + 0.75 * spreadConfidence) * (0.35 + 0.65 * visibilityConfidence));
+}
 
-  return Math.min(0.95, clamp01(confidence));
+function computeAffineConfidence(camera: CameraNode, matches: LandmarkMatch[]) {
+  const normalized3D = normalizePoints3D(matches.map((match) => match.scenePosition));
+  const normalized2D = normalizePoints2D(matches.map((match) => match.evidencePosition2D));
+  const rows: number[][] = [];
+  const targets: number[] = [];
+
+  for (let index = 0; index < matches.length; index += 1) {
+    const point3D = normalized3D.normalized[index]!;
+    const point2D = normalized2D.normalized[index]!;
+    rows.push([point3D[0], point3D[1], point3D[2], 1, 0, 0, 0, 0]);
+    targets.push(point2D[0]);
+    rows.push([0, 0, 0, 0, point3D[0], point3D[1], point3D[2], 1]);
+    targets.push(point2D[1]);
+  }
+
+  const ata = buildAtA(rows);
+  const atb = new Array(8).fill(0).map((_, columnIndex) =>
+    rows.reduce((sum, values, rowIndex) => sum + (values[columnIndex] ?? 0) * (targets[rowIndex] ?? 0), 0),
+  );
+  const coefficients = gaussianSolve(ata, atb);
+
+  const residuals = matches.map((match, index) => {
+    const predicted = projectAffinePoint(coefficients, normalized3D.normalized[index]!);
+    const target = normalized2D.normalized[index]!;
+    return length2(subtract2(predicted, target));
+  });
+
+  const stats = computeResidualStats(residuals);
+  if (!stats) {
+    return 0;
+  }
+
+  const fitConfidence = clamp01(Math.exp(-stats.rmse * 3) * (0.4 + 0.6 * stats.inlierRatio));
+  const spreadConfidence = computeSpreadConfidence(matches);
+  const visibilityConfidence = computeVisibilityPrior(camera, matches);
+
+  return clamp01(0.72 * fitConfidence * (0.3 + 0.7 * spreadConfidence) * (0.35 + 0.65 * visibilityConfidence));
+}
+
+/**
+ * Estimate how trustworthy the landmark alignment is using an actual geometric fit.
+ *
+ * The solver works in normalized evidence space because the binding payload does not
+ * currently carry camera calibration or image dimensions. Confidence therefore comes
+ * from reprojection residuals, geometric spread, and a soft visibility prior from the
+ * current camera pose.
+ */
+export function computeLandmarkAlignmentConfidence(camera: CameraNode, matches: LandmarkMatch[]) {
+  if (!matches || matches.length < 4) {
+    return 0;
+  }
+
+  if (matches.length >= 6) {
+    return computeProjectiveConfidence(camera, matches);
+  }
+
+  return computeAffineConfidence(camera, matches);
 }

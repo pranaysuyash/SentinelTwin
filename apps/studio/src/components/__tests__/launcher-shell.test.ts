@@ -29,7 +29,6 @@ describe("Studio launcher shell", () => {
     expect(source).toContain("openScanWizard");
     expect(source).toContain("openGuidedScanAssistant");
     expect(source).toContain("handleImportScene");
-    expect(source).toContain("compileCurrentScene");
     expect(source).toContain("createDraftFromScene");
     expect(source).toContain("approveIntakeSession");
     expect(source).toContain("rejectIntakeSession");
@@ -59,13 +58,8 @@ describe("Studio launcher shell", () => {
     expect(source).toContain("useStudioStore((s) => s.importScene)");
     expect(source).toContain("useStudioStore((s) => s.setScene)");
 
-    // Compilation and draft pipeline
-    expect(source).toContain("compileScanToSiteResult");
-    expect(source).toContain("compileAiDraftToSiteResult");
-    expect(source).toContain("compileFloorPlanToSiteResult");
-    expect(source).toContain("compileJsonToSiteResult");
-    expect(source).toContain("compileCameraEvidenceToSiteResult");
-    expect(source).toContain("compileToSiteTwinDraft");
+    // Draft pipeline — createSiteIntakeSession is the single entry point
+    expect(source).toContain("createSiteIntakeSession");
     expect(source).toContain("approveSiteTwinDraft");
     expect(source).toContain("safeParseSecurityScene");
 

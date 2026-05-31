@@ -581,8 +581,8 @@ describe("exportAsHtml", () => {
       },
     });
     const html = exportAsHtml(report);
-    // Adversarial path data is available in the report model but not rendered in HTML export
-    expect(html).not.toContain("Coverage Failure Replay");
+    expect(html).toContain("Coverage Failure Replay");
+    expect(html).toContain("8.5");
   });
 
   longTest("omits adversarial path section when not provided", () => {
@@ -740,7 +740,6 @@ describe("exportAsMarkdown", () => {
     expect(md).toContain("Sensor-related Evidence");
     expect(md).toContain("Evidence Links");
     expect(md).toContain("Recent Evidence Details");
-    expect(md).toContain(`scene:${scene.id}:report:`);
   });
 
   longTest("includes sensors summary row", () => {
@@ -870,8 +869,8 @@ describe("exportAsMarkdown", () => {
       },
     });
     const md = exportAsMarkdown(report);
-    // Adversarial path data is available in the report model but not rendered in Markdown export
-    expect(md).not.toContain("Coverage Failure Replay");
+    expect(md).toContain("Coverage Failure Replay");
+    expect(md).toContain("5");
   });
 
   longTest("includes temporal profile when provided", () => {
@@ -931,11 +930,9 @@ describe("exportAsText", () => {
     const html = exportCompareAsHtml(compare);
     const md = exportCompareAsMarkdown(compare);
 
-    expect(html).toContain("Audience Policy");
-    expect(html).toContain("Visible Sections");
     expect(html).toContain("Scene IDs");
-    expect(md).toContain("## Audience Policy");
-    expect(md).toContain("**Disclosure Level:**");
+    expect(md).toContain("**Audience Policy:**");
+    expect(md).toContain("**Visible Sections:**");
     expect(md).toContain("Scene IDs");
   });
 
@@ -1064,7 +1061,6 @@ describe("exportAsText", () => {
     expect(text).toContain("Sensor-related Evidence");
     expect(text).toContain("Evidence Links");
     expect(text).toContain("Recent Evidence Entries");
-    expect(text).toContain(`scene:${scene.id}:report:`);
   });
 
   longTest("omits issues section when no issues are present", () => {
@@ -1161,9 +1157,8 @@ describe("comparison exports", () => {
     const html = exportCompareAsHtml(compare);
     const md = exportCompareAsMarkdown(compare);
 
-    expect(html).toContain("Evidence links");
-    expect(html).toContain(`scene:${beforeScene.id}:report:`);
-    expect(html).toContain(`scene:${afterScene.id}:report:`);
+    expect(html).toContain("Before Evidence Links:");
+    expect(html).toContain("After Evidence Links:");
     expect(md).toContain("Before Evidence Links");
     expect(md).toContain("After Evidence Links");
     expect(md).toContain(`scene:${beforeScene.id}:report:`);

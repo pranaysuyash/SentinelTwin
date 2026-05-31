@@ -201,7 +201,7 @@ export function CameraControlStrip({
   );
 
   return (
-    <div className="absolute inset-x-3 bottom-14 z-30 flex flex-wrap items-center gap-1.5 rounded-xl border border-[#27364e] bg-[#0b0f17]/92 px-3 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.4)] backdrop-blur-sm">
+    <div className="absolute inset-x-3 bottom-14 z-30 flex flex-wrap items-center gap-1.5 rounded-xl border border-[#27364e] bg-[#0b0f17]/92 px-3 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.4)]">
       <CameraYawControl yawDeg={camera.yawDeg} onYawChange={updateYaw} />
       <div className="h-7 w-px bg-[#27364e]" />
       <CameraTiltControl pitchDeg={camera.pitchDeg} onPitchChange={updatePitch} />
@@ -228,7 +228,7 @@ export function CameraControlStrip({
               e.target.value = "";
             }}
             defaultValue=""
-            className="h-7 rounded-md border border-[#2a3650] bg-[#111721] px-2 text-[8px] font-semibold uppercase tracking-[0.08em] text-[#8ea5cc] outline-none"
+            className="h-7 rounded-md border border-[#2a3650] bg-[#111721] px-2 text-[8px] font-semibold uppercase tracking-[0.08em] text-[#8ea5cc] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
           >
             <option value="" disabled>
               Aim at zone...

@@ -1092,7 +1092,7 @@ export function CompareView() {
           <select
             value={validComparisonAId ?? ""}
             onChange={(event) => setComparisonAId(event.target.value)}
-            className="min-w-0 flex-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none"
+            className="min-w-0 flex-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
           >
             <option value="" disabled>
               Select snapshot
@@ -1109,7 +1109,7 @@ export function CompareView() {
           <select
             value={validComparisonBId ?? ""}
             onChange={(event) => setComparisonBId(event.target.value)}
-            className="min-w-0 flex-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none"
+            className="min-w-0 flex-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
           >
             <option value="" disabled>
               Select snapshot
@@ -1273,7 +1273,7 @@ export function CompareView() {
                 <select
                   value={validCameraAId ?? ""}
                   onChange={(event) => setCameraComparisonAId(event.target.value)}
-                  className="rounded border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none"
+                  className="rounded border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
                 >
                   <option value="">Select camera</option>
                   {scene.cameras.map((camera) => (
@@ -1288,7 +1288,7 @@ export function CompareView() {
                 <select
                   value={validCameraBId ?? ""}
                   onChange={(event) => setCameraComparisonBId(event.target.value)}
-                  className="rounded border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none"
+                  className="rounded border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
                 >
                   <option value="">Select camera</option>
                   {scene.cameras.map((camera) => (

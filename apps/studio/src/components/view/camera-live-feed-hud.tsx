@@ -198,7 +198,7 @@ export function LiveFeedHUD({
       ) : null}
 
       {sensorFusion.totalCount > 0 ? (
-        <div className="absolute right-3 bottom-24 z-30 rounded-xl border border-cyan-400/20 bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)] backdrop-blur-sm">
+        <div className="absolute right-3 bottom-24 z-30 rounded-xl border border-cyan-400/20 bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)]">
           <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Sensor Fusion</div>
           <div className="mt-1 text-[10px] font-semibold text-white">{sensorFusion.nearestSensorLabel}</div>
           <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] text-[#d2d9e8]">
@@ -220,7 +220,7 @@ export function LiveFeedHUD({
       ) : null}
 
       {sensorEvent ? (
-        <div className="absolute left-3 top-20 z-30 rounded-xl border border-cyan-400/18 bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)] backdrop-blur-sm">
+        <div className="absolute left-3 top-20 z-30 rounded-xl border border-cyan-400/18 bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)]">
           <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Live Sensor Event</div>
           <div className="mt-1 text-[10px] font-semibold text-white">{sensorEvent.sensorLabel}</div>
           <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] text-[#d2d9e8]">
@@ -243,7 +243,7 @@ export function LiveFeedHUD({
       ) : null}
 
       {cameraMetadataEvent ? (
-        <div className="absolute right-3 bottom-52 z-30 rounded-xl border border-emerald-400/18 bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)] backdrop-blur-sm">
+        <div className="absolute right-3 bottom-52 z-30 rounded-xl border border-emerald-400/18 bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)]">
           <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-emerald-300">Live Camera Metadata</div>
           <div className="mt-1 text-[10px] font-semibold text-white">{cameraMetadataEvent.cameraName}</div>
           <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] text-[#d2d9e8]">
@@ -260,7 +260,7 @@ export function LiveFeedHUD({
       ) : null}
 
       {cameraLiveConnectionEvent ? (
-        <div className="absolute right-3 bottom-80 z-30 rounded-xl border border-cyan-400/18 bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)] backdrop-blur-sm">
+        <div className="absolute right-3 bottom-80 z-30 rounded-xl border border-cyan-400/18 bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)]">
           <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Live Camera Connection</div>
           <div className="mt-1 text-[10px] font-semibold text-white">{cameraLiveConnectionEvent.cameraName}</div>
           <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] text-[#d2d9e8]">
@@ -295,7 +295,7 @@ export function LiveFeedHUD({
 
       <CameraNoise />
       {operationalFusion && (operationalFusion.operationalHealth !== "unknown" || operationalFusion.sensorFusion.totalCount > 0 || operationalFusion.cameraMetadataEvent || operationalFusion.cameraLiveConnectionEvent) ? (
-        <div className="absolute right-3 bottom-8 z-30 rounded-lg border border-[#243146] bg-[#0b0f17]/92 px-2.5 py-2 text-[8px] text-[#8ea6cc] shadow-[0_12px_24px_rgba(0,0,0,0.35)] backdrop-blur-sm">
+        <div className="absolute right-3 bottom-8 z-30 rounded-lg border border-[#243146] bg-[#0b0f17]/92 px-2.5 py-2 text-[8px] text-[#8ea6cc] shadow-[0_12px_24px_rgba(0,0,0,0.35)]">
           <div className="text-[8px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">Operational Evidence</div>
           <div className="mt-1 text-[9px] font-semibold text-white">{operationalFusion.operationalHealthLabel}</div>
           <div className="mt-1 text-[8px] text-[#9ab0ce]">{operationalFusion.operationalHealthDetail}</div>

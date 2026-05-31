@@ -4,7 +4,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 
 import { ProductViewRouter } from "@/components/product/ProductViewRouter";
 import type { ProductViewHandlers } from "@/components/product/ProductViewRouter";
-import { compileScanToSiteResult, compileAiDraftToSiteResult, compileFloorPlanToSiteResult, makeSiteCompilerWarnings, calculateConfidence, compileToSiteTwinDraft, compileJsonToSiteResult, compileCameraEvidenceToSiteResult } from "@/lib/site-compiler";
+import { createSiteIntakeSession } from "@/lib/site-compiler";
 import { useStudioStore, type BottomTab, type ViewMode, type WorkspacePreset } from "@/store/studio-store";
 import { useProductViewStore } from "@/store/product-view-store";
 import { approveSiteTwinDraft } from "@/lib/site-draft-approval";
@@ -16,10 +16,6 @@ import { bakeoffToSecurityScene } from "@/lib/bakeoff-bridge";
 
 function parseTimelineFocusFromUrl(search: string) {
   return parseTimelineShareLink(search);
-}
-
-function assertNever(value: never): never {
-  throw new Error(`Unsupported site intake source: ${String(value)}`);
 }
 
 function StudioPageContent() {
@@ -200,81 +196,11 @@ function StudioPageContent() {
     openStudio();
   };
 
-  // Compile current scene into a draft
-  const compileCurrentScene = (source: import("@/lib/site-compiler").SiteIntakeSource, sourceArtifacts: string[] = []) => {
-    const { scene } = useStudioStore.getState();
-    let result: import("@/lib/site-compiler").SiteCompilerResult;
-    switch (source) {
-      case "scan":
-        result = compileScanToSiteResult(scene);
-        break;
-      case "ai_prompt":
-        result = compileAiDraftToSiteResult(scene);
-        break;
-      case "manual":
-        result = {
-          source: "manual",
-          scene,
-          warnings: makeSiteCompilerWarnings(scene),
-          confidence: calculateConfidence(makeSiteCompilerWarnings(scene)),
-          provenance: {
-            source: "manual",
-            label: "Manual Build",
-            notes: ["Scene built manually in the Scene Builder wizard."],
-            confidence: calculateConfidence(makeSiteCompilerWarnings(scene)),
-          },
-        };
-        break;
-      case "floor_plan":
-        result = compileFloorPlanToSiteResult(scene);
-        break;
-      case "json":
-        result = compileJsonToSiteResult(scene);
-        break;
-      case "camera_evidence":
-        result = compileCameraEvidenceToSiteResult(scene);
-        break;
-      default:
-        assertNever(source);
-    }
-    const draft = compileToSiteTwinDraft(result, sourceArtifacts);
-    setSiteIntakeSession({
-      id: `intake_${Date.now()}`,
-      source,
-      stage: "review",
-      result,
-      draft,
-      warnings: [],
-      provenanceNotes: [],
-      createdAt: Date.now(),
-    });
-  };
-
-  // Create a draft directly from a provided scene (no store mutation before review)
+  // Create a SiteIntakeSession from a candidate scene without store mutation.
+  // All creation/import flows must pass through this before SiteDraftReview.
   const createDraftFromScene = (scene: SecurityScene, source: import("@/lib/site-compiler").SiteIntakeSource, sourceArtifacts: string[] = []) => {
-    const result: import("@/lib/site-compiler").SiteCompilerResult = {
-      source,
-      scene,
-      warnings: makeSiteCompilerWarnings(scene),
-      confidence: calculateConfidence(makeSiteCompilerWarnings(scene)),
-      provenance: {
-        source,
-        label: source.replace(/_/g, " "),
-        notes: sourceArtifacts,
-        confidence: calculateConfidence(makeSiteCompilerWarnings(scene)),
-      },
-    };
-    const draft = compileToSiteTwinDraft(result, sourceArtifacts);
-    setSiteIntakeSession({
-      id: `intake_${Date.now()}`,
-      source,
-      stage: "review",
-      result,
-      draft,
-      warnings: [],
-      provenanceNotes: [],
-      createdAt: Date.now(),
-    });
+    const session = createSiteIntakeSession(scene, source, sourceArtifacts);
+    setSiteIntakeSession(session);
   };
 
   const approveIntakeSession = () => {
@@ -462,7 +388,6 @@ function StudioPageContent() {
     openScanWizard,
     openGuidedScanAssistant,
     handleImportScene,
-    compileCurrentScene,
     createDraftFromScene,
     approveIntakeSession,
     rejectIntakeSession,

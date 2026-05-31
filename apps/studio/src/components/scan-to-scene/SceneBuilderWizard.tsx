@@ -618,7 +618,7 @@ function ConfigureStep({
                 if (Number.isNaN(next)) return;
                 onChange({ floorPlanScalePixelsPerMeter: Math.max(10, Math.min(200, next)) });
               }}
-              className="w-20 rounded border border-[#1e2130] bg-[#0b0f17] px-2 py-1 text-[10px] text-[#c5ccdb] outline-none"
+              className="w-20 rounded border border-[#1e2130] bg-[#0b0f17] px-2 py-1 text-[10px] text-[#c5ccdb] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
             />
             <span className="text-[8px] text-[#59637a]">pixels/meter</span>
           </div>

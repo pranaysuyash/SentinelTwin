@@ -68,7 +68,7 @@ export function CameraHeader({
   onSelect: (id: string) => void;
 }) {
   return (
-    <div className="absolute left-3 top-3 z-30 flex items-center gap-2 rounded-xl border border-[#263246] bg-[#0b0f17]/90 px-3 py-2 backdrop-blur-sm">
+    <div className="absolute left-3 top-3 z-30 flex items-center gap-2 rounded-xl border border-[#263246] bg-[#0b0f17]/90 px-3 py-2">
       <div className="flex items-center gap-2">
         <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-300">
           <Camera className="h-3.5 w-3.5" />
@@ -140,7 +140,7 @@ export function ReplayStatusOverlay({
         : { label: "High", className: "text-orange-300" };
 
   return (
-    <div className="absolute left-3 bottom-24 z-30 rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)] backdrop-blur-sm">
+    <div className="absolute left-3 bottom-24 z-30 rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)]">
       <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-[#7dd3fc]">LIVE MODE (Simulated)</div>
       <div className="mt-1 space-y-0.5 text-[10px] text-[#d2d9e8]">
         <div>
@@ -195,7 +195,7 @@ export function CameraPathVisibilityOverlay({
   const statusColor = ratio > 0.7 ? "text-emerald-300" : ratio > 0.35 ? "text-amber-300" : "text-red-300";
 
   return (
-    <div className="absolute left-3 bottom-3 z-30 rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2 backdrop-blur-sm">
+    <div className="absolute left-3 bottom-3 z-30 rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2">
       <div className="text-[8px] uppercase tracking-[0.18em] text-[#7dd3fc]">Path Visibility</div>
       <div className="mt-1 text-[10px] text-[#d2d9e8]">{cameraName}</div>
       <div className={`mt-1 text-[10px] font-semibold ${statusColor}`}>{status}</div>
@@ -238,7 +238,7 @@ export function DoriInsightCard({
           : "UNKNOWN";
 
   return (
-    <div className="absolute right-3 top-24 z-30 w-56 rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)] backdrop-blur-sm">
+    <div className="absolute right-3 top-24 z-30 w-56 rounded-xl border border-[#243146] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)]">
       <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-[#7dd3fc]">DORI OVERLAY</div>
       <div className="mt-1 text-[10px] font-semibold text-white">{zoneLabel}</div>
       <div className="mt-1 text-[8px] uppercase tracking-[0.16em] text-[#8ea5cc]">
@@ -398,7 +398,7 @@ export function BottomControlStrip({
             MORE
           </button>
           {moreOpen ? (
-            <div className="absolute bottom-full left-0 mb-1.5 w-44 rounded-lg border border-[#27364e] bg-[#0b0f17]/96 p-1.5 shadow-[0_12px_24px_rgba(0,0,0,0.35)] backdrop-blur-sm">
+            <div className="absolute bottom-full left-0 mb-1.5 w-44 rounded-lg border border-[#27364e] bg-[#0b0f17]/96 p-1.5 shadow-[0_12px_24px_rgba(0,0,0,0.35)]">
               <button
                 type="button"
                 onClick={() => {

@@ -818,7 +818,7 @@ export function CameraInspector() {
                       value={liveConnectionUrl}
                       onChange={(event) => setLiveConnectionUrl(event.target.value)}
                       placeholder="rtsp://camera.example.com/live"
-                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
                     />
                   </div>
                   <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
@@ -828,7 +828,7 @@ export function CameraInspector() {
                       value={liveConnectionLabel}
                       onChange={(event) => setLiveConnectionLabel(event.target.value)}
                       placeholder="Front entrance live stream"
-                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
                     />
                   </div>
                   <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
@@ -838,7 +838,7 @@ export function CameraInspector() {
                       value={liveConnectionOnvifUsername}
                       onChange={(event) => setLiveConnectionOnvifUsername(event.target.value)}
                       placeholder="camera operator"
-                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
                     />
                   </div>
                   <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
@@ -849,7 +849,7 @@ export function CameraInspector() {
                       value={liveConnectionOnvifPassword}
                       onChange={(event) => setLiveConnectionOnvifPassword(event.target.value)}
                       placeholder="••••••••"
-                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
                     />
                   </div>
                   <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
@@ -858,7 +858,7 @@ export function CameraInspector() {
                       aria-label="Connection mode"
                       value={liveConnectionMode ?? "onvif"}
                       onChange={(event) => setLiveConnectionMode(event.target.value as CameraNode["liveConnectionMode"])}
-                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
                     >
                       {LIVE_CONNECTION_MODE_OPTIONS.map((option) => (
                         <option key={option.value} value={option.value}>{option.label}</option>
@@ -871,7 +871,7 @@ export function CameraInspector() {
                       aria-label="Connection status"
                       value={liveConnectionStatus ?? "disconnected"}
                       onChange={(event) => setLiveConnectionStatus(event.target.value as CameraNode["liveConnectionStatus"])}
-                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
                     >
                       {LIVE_CONNECTION_STATUS_OPTIONS.map((option) => (
                         <option key={option.value} value={option.value}>{option.label}</option>
@@ -896,7 +896,7 @@ export function CameraInspector() {
                     onChange={(event) => setLiveConnectionNotes(event.target.value)}
                     placeholder="Notes about the remote camera, relay, or ONVIF proxy."
                     rows={3}
-                    className="mt-2 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+                    className="mt-2 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
                   />
                 </div>
 
@@ -1096,7 +1096,7 @@ export function CameraInspector() {
                       value={cameraMetadataUrl}
                       onChange={(event) => setCameraMetadataUrl(event.target.value)}
                       placeholder="https://camera-feed.example.com/metadata"
-                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
                     />
                   </div>
                   <div className="rounded-xl border border-[#1f2536] bg-[#111521] p-2">
@@ -1105,7 +1105,7 @@ export function CameraInspector() {
                       value={cameraMetadataLabel}
                       onChange={(event) => setCameraMetadataLabel(event.target.value)}
                       placeholder="ONVIF relay"
-                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+                      className="mt-1 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
                     />
                   </div>
                 </div>
@@ -1125,7 +1125,7 @@ export function CameraInspector() {
                     onChange={(event) => setCameraMetadataRaw(event.target.value)}
                     placeholder='[{"cameraName":"Front Entrance","status":"malfunctioning","clarity":"poor"}]'
                     rows={5}
-                    className="mt-2 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+                    className="mt-2 w-full rounded-md border border-[#24283a] bg-[#0b0f17] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
                   />
                 </div>
 
@@ -1291,7 +1291,7 @@ export function CameraInspector() {
                     mountType: shape === "dome" ? "ceiling" : "wall",
                   });
                 }}
-                className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+                className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
               >
                 <option value="4mp_dome">4MP Indoor Dome</option>
                 <option value="2mp_dome">2MP Indoor Dome</option>
@@ -1885,7 +1885,7 @@ export function CameraInspector() {
                   value={snapshotNote}
                   onChange={(event) => setSnapshotNote(event.target.value)}
                   placeholder="e.g. before wall shift"
-                  className="rounded-lg border border-[#24283a] bg-[#111521] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none"
+                  className="rounded-lg border border-[#24283a] bg-[#111521] px-2 py-1.5 text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
                 />
                 <button
                   type="button" onClick={saveInspectionSnapshot}

@@ -913,7 +913,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                           type="number"
                           value={session.widthM}
                           onChange={(event) => updateSession({ widthM: Math.max(1, Number(event.target.value) || 1) })}
-                          className="w-full bg-transparent text-[16px] text-white outline-none"
+                          className="w-full bg-transparent text-[16px] text-white outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
                         />
                         <span className="ml-2 text-[16px] text-slate-400">m</span>
                       </div>
@@ -926,7 +926,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                           type="number"
                           value={session.depthM}
                           onChange={(event) => updateSession({ depthM: Math.max(1, Number(event.target.value) || 1) })}
-                          className="w-full bg-transparent text-[16px] text-white outline-none"
+                          className="w-full bg-transparent text-[16px] text-white outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
                         />
                         <span className="ml-2 text-[16px] text-slate-400">m</span>
                       </div>
@@ -939,7 +939,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                           type="number"
                           value={session.heightM}
                           onChange={(event) => updateSession({ heightM: Math.max(2, Number(event.target.value) || 2) })}
-                          className="w-full bg-transparent text-[16px] text-white outline-none"
+                          className="w-full bg-transparent text-[16px] text-white outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
                         />
                         <span className="ml-2 text-[16px] text-slate-400">m</span>
                       </div>

@@ -720,4 +720,41 @@ export const SITE_SOURCE_MATURITY: Record<SiteIntakeSource, { label: string; sta
   },
 };
 
+/**
+ * Create a SiteIntakeSession from a candidate scene and source without
+ * touching any store or mutating the active scene.
+ *
+ * This is the single entry point for all creation/import flows that
+ * must pass through SiteDraftReview before activation.
+ */
+export function createSiteIntakeSession(
+  scene: SecurityScene,
+  source: SiteIntakeSource,
+  sourceArtifacts: string[] = [],
+): SiteIntakeSession {
+  const result: SiteCompilerResult = {
+    source,
+    scene,
+    warnings: makeSiteCompilerWarnings(scene),
+    confidence: calculateConfidence(makeSiteCompilerWarnings(scene)),
+    provenance: {
+      source,
+      label: SOURCE_LABELS[source],
+      notes: sourceArtifacts,
+      confidence: calculateConfidence(makeSiteCompilerWarnings(scene)),
+    },
+  };
+  const draft = compileToSiteTwinDraft(result, sourceArtifacts);
+  return {
+    id: `intake_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+    source,
+    stage: "review",
+    result,
+    draft,
+    warnings: [],
+    provenanceNotes: [],
+    createdAt: Date.now(),
+  };
+}
+
 export { countEntities as countSiteEntities, SOURCE_LABELS as SITE_INTAKE_SOURCE_LABELS };

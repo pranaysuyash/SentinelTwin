@@ -105,7 +105,7 @@ export function CommandBar() {
     return (
         <button
           onClick={() => setIsExpanded(true)}
-          className="group absolute bottom-3 right-3 z-30 flex h-9 items-center gap-2 rounded-xl border border-[#1f2536] bg-[#0b0f17]/80 px-3 text-[10px] font-medium text-[#5b667c] shadow-[0_4px_16px_rgba(0,0,0,0.25)] backdrop-blur-sm transition-all hover:border-[#32384d] hover:text-white hover:shadow-[0_4px_20px_rgba(0,0,0,0.35)]"
+          className="group absolute bottom-3 right-3 z-30 flex h-9 items-center gap-2 rounded-xl border border-[#1f2536] bg-[#0b0f17]/80 px-3 text-[10px] font-medium text-[#5b667c] shadow-[0_4px_16px_rgba(0,0,0,0.25)] transition-all hover:border-[#32384d] hover:text-white hover:shadow-[0_4px_20px_rgba(0,0,0,0.35)]"
         >
         <Sparkles className="h-3.5 w-3.5 text-emerald-400/70 group-hover:text-emerald-400" />
         AI Command
@@ -136,7 +136,7 @@ export function CommandBar() {
       transition={{ duration: 0.15, ease: "easeOut" }}
       className="absolute bottom-3 left-3 right-3 z-30"
     >
-      <div className="mx-auto max-w-2xl rounded-2xl border border-[#1f2536] bg-[#0b0f17]/95 p-2 shadow-[0_8px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+      <div className="mx-auto max-w-2xl rounded-2xl border border-[#1f2536] bg-[#0b0f17]/95 p-2 shadow-[0_8px_40px_rgba(0,0,0,0.45)]">
         <div className="mb-2 flex items-start justify-between gap-2 rounded-xl border border-[#1a2030] bg-[#07090f]/70 px-3 py-2">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
@@ -284,7 +284,7 @@ export function CommandBar() {
             onKeyDown={handleKeyDown}
             placeholder="Ask AI to modify the scene..."
             disabled={status.state === "parsing" || status.state === "applying"}
-            className="min-w-0 flex-1 bg-transparent text-[12px] text-white placeholder-[#4d566b] outline-none disabled:opacity-50"
+            className="min-w-0 flex-1 bg-transparent text-[12px] text-white placeholder-[#4d566b] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 disabled:opacity-50"
           />
           <div className="flex items-center gap-1">
             <span className="text-[8px] text-[#3a4158]">Esc</span>

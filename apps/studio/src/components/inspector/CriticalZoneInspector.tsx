@@ -97,7 +97,7 @@ export function CriticalZoneInspector() {
             <select
               value={zone.targetType}
               onChange={(e) => updateNode(zone.id, { targetType: e.target.value as CriticalZoneNode["targetType"] })}
-              className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] font-medium text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+              className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] font-medium text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
             >
               {(Object.keys(TARGET_TYPE_LABELS) as CriticalZoneNode["targetType"][]).map((t) => (
                 <option key={t} value={t}>{TARGET_TYPE_LABELS[t]}</option>
@@ -109,7 +109,7 @@ export function CriticalZoneInspector() {
             <select
               value={zone.requiredQuality}
               onChange={(e) => updateNode(zone.id, { requiredQuality: e.target.value as CriticalZoneNode["requiredQuality"] })}
-              className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] font-medium text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+              className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] font-medium text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
             >
               <option value="detection">Detection</option>
               <option value="observation">Observation</option>
@@ -122,7 +122,7 @@ export function CriticalZoneInspector() {
             <select
               value={zone.priority}
               onChange={(e) => updateNode(zone.id, { priority: e.target.value as CriticalZoneNode["priority"] })}
-              className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] font-medium text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+              className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[9px] font-medium text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
             >
               <option value="low">Low</option>
               <option value="medium">Medium</option>

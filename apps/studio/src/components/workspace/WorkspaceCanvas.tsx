@@ -341,7 +341,7 @@ function CameraFrustum({
       {(selected || hovered) && (
         <Html position={[centerPos.x, centerPos.y + range * 0.58, centerPos.z]} center distanceFactor={11} style={{ pointerEvents: "none" }}>
           <div className={cn(
-            "rounded-full border px-2 py-0.5 text-[9px] font-semibold tracking-wide shadow-lg backdrop-blur-sm",
+            "rounded-full border px-2 py-0.5 text-[9px] font-semibold tracking-wide shadow-lg",
             selected ? "border-sky-300/70 bg-sky-400/15 text-sky-100" : "border-white/15 bg-black/45 text-sky-100",
           )}>
             {selected ? "Selected" : "Click to select"}
@@ -1585,7 +1585,7 @@ function ToolPlacementFloor({
 
 function NorthCompass() {
   return (
-    <div className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-[#2a3246] bg-[#0e1320]/90 backdrop-blur-sm">
+    <div className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-[#2a3246] bg-[#0e1320]/90">
       <div className="relative">
         <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[8px] font-bold text-white">N</span>
         <div className="h-5 w-0.5 rounded-full bg-gradient-to-b from-red-500 to-transparent" />
@@ -1609,7 +1609,7 @@ function ViewControls() {
         aria-label="Switch to 3D orbit"
         title="Switch to 3D orbit"
         className={cn(
-          "flex h-7 w-7 items-center justify-center rounded-lg border text-[8px] font-bold backdrop-blur-sm transition-colors",
+          "flex h-7 w-7 items-center justify-center rounded-lg border text-[8px] font-bold transition-colors",
           canvasMode === "orbit_3d"
             ? "border-sky-400 text-sky-100"
             : "border-[#2a3246] bg-[#0e1320]/90 text-[#6b7280] hover:bg-[#171e30] hover:text-white",
@@ -1629,7 +1629,7 @@ function ViewControls() {
         aria-label="Switch to 2D top-down"
         title="Switch to 2D top-down"
         className={cn(
-          "flex h-7 w-7 items-center justify-center rounded-lg border text-[8px] font-bold backdrop-blur-sm transition-colors",
+          "flex h-7 w-7 items-center justify-center rounded-lg border text-[8px] font-bold transition-colors",
           canvasMode === "topdown_2d"
             ? "border-emerald-400 text-emerald-100"
             : "border-[#2a3246] bg-[#0e1320]/90 text-[#6b7280] hover:bg-[#171e30] hover:text-white",
@@ -1648,7 +1648,7 @@ function ViewControls() {
         onClick={resetCanvasView}
         aria-label="Reset canvas view"
         title="Reset canvas view"
-        className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#2a3246] bg-[#0e1320]/90 backdrop-blur-sm hover:bg-[#171e30]"
+        className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#2a3246] bg-[#0e1320]/90 hover:bg-[#171e30]"
       >
         <RefreshCcw className="h-3.5 w-3.5 text-[#6b7280] hover:text-white" />
       </button>
@@ -1657,7 +1657,7 @@ function ViewControls() {
         onClick={() => toggleViewSettingsOpen()}
         aria-label="Open View Settings"
         title="Open View Settings"
-        className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#2a3246] bg-[#0e1320]/90 backdrop-blur-sm hover:bg-[#171e30]"
+        className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#2a3246] bg-[#0e1320]/90 hover:bg-[#171e30]"
       >
         <Layers className="h-3.5 w-3.5 text-[#6b7280] hover:text-white" />
       </button>
@@ -1684,7 +1684,7 @@ function ControlHintBar() {
       comment: "T",
     };
     return (
-      <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-[#1f2536] bg-[#0b0f17]/80 px-3 py-1 backdrop-blur-sm">
+      <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-[#1f2536] bg-[#0b0f17]/80 px-3 py-1">
         <span className="text-[8px]" style={{ color }}>◉ {toolLabel}</span>
         <span className="text-[8px] text-[#2a3246]">•</span>
         <span className="text-[8px] text-[#4a5568]">Click floor to place</span>
@@ -1695,7 +1695,7 @@ function ControlHintBar() {
   }
 
   return (
-    <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-[#1f2536] bg-[#0b0f17]/80 px-3 py-1 backdrop-blur-sm">
+    <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-[#1f2536] bg-[#0b0f17]/80 px-3 py-1">
       <span className="text-[8px] text-[#4a5568]">Left: Orbit</span>
       <span className="text-[8px] text-[#2a3246]">•</span>
       <span className="text-[8px] text-[#4a5568]">Middle: Pan</span>
@@ -1717,7 +1717,7 @@ function EditorStatusBanner() {
   if (!message) return null;
 
   return (
-    <div className="pointer-events-none absolute bottom-14 left-3 z-10 max-w-[min(32rem,calc(100%-1.5rem))] rounded-lg border border-[#2a3246] bg-[#0b0f17]/92 px-3 py-2 text-[10px] font-medium text-[#d2d9e8] shadow-xl backdrop-blur-sm">
+    <div className="pointer-events-none absolute bottom-14 left-3 z-10 max-w-[min(32rem,calc(100%-1.5rem))] rounded-lg border border-[#2a3246] bg-[#0b0f17]/92 px-3 py-2 text-[10px] font-medium text-[#d2d9e8] shadow-xl">
       <span className="inline-flex items-center gap-2">
         <span className="h-2 w-2 rounded-full bg-sky-400" />
         {message}
@@ -1771,7 +1771,7 @@ function HeatmapCellExplainabilityCard() {
 
   return (
     <div
-      className="pointer-events-none absolute z-20 w-85 rounded-xl border border-[#25304a] bg-[#0a0f1a]/95 p-3 text-[10px] text-[#d2d9e8] shadow-[0_16px_40px_rgba(0,0,0,0.38)] backdrop-blur-sm"
+      className="pointer-events-none absolute z-20 w-85 rounded-xl border border-[#25304a] bg-[#0a0f1a]/95 p-3 text-[10px] text-[#d2d9e8] shadow-[0_16px_40px_rgba(0,0,0,0.38)]"
       style={{ left, top }}
     >
       <div className="mb-1 flex items-center justify-between">

@@ -48,7 +48,7 @@ export function NumberInput({
           if (Number.isNaN(next)) return;
           onChange(next);
         }}
-        className="w-full bg-transparent text-right font-mono text-[11px] text-[#d2d9e8] outline-none"
+        className="w-full bg-transparent text-right font-mono text-[11px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
       />
     </label>
   );
@@ -152,7 +152,7 @@ export function SelectInput({
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+        className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -187,7 +187,7 @@ export function PropSelect({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+        className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>{opt.label}</option>

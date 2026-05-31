@@ -13,10 +13,8 @@ import { SiteDraftReview } from "@/components/site-intake/SiteDraftReview";
 import { AiLayoutDraftView } from "./AiLayoutDraftView";
 import { ReferenceSitesView } from "./ReferenceSitesView";
 import { SettingsView } from "./SettingsView";
-import type { SiteIntakeSource, SiteCompilerResult } from "@/lib/site-compiler";
+import type { SiteIntakeSource, SiteIntakeSession } from "@/lib/site-compiler";
 import type { SecurityScene } from "@/schema/security-scene";
-import type { SiteIntakeSession } from "@/lib/site-compiler";
-import { compileToSiteTwinDraft } from "@/lib/site-compiler";
 
 /**
  * All the orchestration handlers that page.tsx provides.
@@ -43,8 +41,8 @@ export type ProductViewHandlers = {
   openGuidedScanAssistant: () => void;
   handleImportScene: () => void;
 
-  // Compile / approval
-  compileCurrentScene: (source: SiteIntakeSource, sourceArtifacts?: string[]) => void;
+  // Compile / approval — all creation/import flows create a draft session
+  // and route through SiteDraftReview. Only approveIntakeSession activates the scene.
   createDraftFromScene: (scene: SecurityScene, source: SiteIntakeSource, sourceArtifacts?: string[]) => void;
   approveIntakeSession: () => void;
   rejectIntakeSession: () => void;

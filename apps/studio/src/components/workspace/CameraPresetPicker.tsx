@@ -46,7 +46,7 @@ export function CameraPresetPicker() {
       <button
         type="button"
         onClick={() => setCollapsed(false)}
-        className="flex items-center gap-2 rounded-xl border border-[#1f2536] bg-[#0d1017]/96 px-3 py-2 shadow-2xl shadow-black/35 backdrop-blur-md transition-colors hover:border-[#2d3750] hover:bg-[#111521]"
+        className="flex items-center gap-2 rounded-xl border border-[#1f2536] bg-[#0d1017]/96 px-3 py-2 shadow-2xl shadow-black/35 transition-colors hover:border-[#2d3750] hover:bg-[#111521]"
       >
         <div
           className={cn(
@@ -65,7 +65,7 @@ export function CameraPresetPicker() {
   }
 
   return (
-    <div className="w-[560px] rounded-2xl border border-[#1f2536] bg-[#0d1017]/96 p-2.5 shadow-2xl shadow-black/35 backdrop-blur-md">
+    <div className="w-[560px] rounded-2xl border border-[#1f2536] bg-[#0d1017]/96 p-2.5 shadow-2xl shadow-black/35">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#4a5568]">

@@ -1516,7 +1516,7 @@ export function StudioDashboardHome({
       <div className="pointer-events-none absolute inset-0 opacity-[0.18] [background-image:linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] [background-size:64px_64px]" />
 
       <div className="relative z-10 flex min-h-screen flex-col gap-4 p-4 lg:p-5">
-        <header className="flex flex-wrap items-center gap-3 rounded-[24px] border border-[color:var(--st-border)] bg-[rgba(9,14,23,0.94)] px-4 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.34)] backdrop-blur-lg">
+        <header className="flex flex-wrap items-center gap-3 rounded-[24px] border border-[color:var(--st-border)] bg-[rgba(9,14,23,0.94)] px-4 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.34)]">
           <div className="flex min-w-[200px] items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#1e3a29] bg-[#0d2318] text-emerald-300">
               <ShieldCheck className="h-5 w-5" />
@@ -1693,12 +1693,12 @@ export function StudioDashboardHome({
                   previewMode === "3d" ? "[transform:perspective(1800px)_rotateX(8deg)] [transform-origin:center_top]" : "",
                 )}>
                   <ScenePreview scene={scene} result={result ?? scene.simulation ?? null} hydrated={hydrated} />
-                  <div className="pointer-events-none absolute right-3 top-3 z-20 flex items-center gap-2 rounded-xl border border-[#2a334a] bg-[#0b111e]/88 px-3 py-1.5 text-[10px] text-[#c7d0e4] backdrop-blur-sm">
+                  <div className="pointer-events-none absolute right-3 top-3 z-20 flex items-center gap-2 rounded-xl border border-[#2a334a] bg-[#0b111e]/88 px-3 py-1.5 text-[10px] text-[#c7d0e4]">
                     <Compass className="h-3.5 w-3.5 text-cyan-300" />
                     <span className="font-semibold">N</span>
                     <span className="text-[#8ea0bf]">Top view</span>
                   </div>
-                  <div className="absolute left-3 top-3 z-20 inline-flex rounded-xl border border-[#2a334a] bg-[#0b111e]/88 p-1 backdrop-blur-sm">
+                  <div className="absolute left-3 top-3 z-20 inline-flex rounded-xl border border-[#2a334a] bg-[#0b111e]/88 p-1">
                     <button
                       type="button"
                       onClick={() => setPreviewMode("2d")}
@@ -1720,7 +1720,7 @@ export function StudioDashboardHome({
                       3D
                     </button>
                   </div>
-                  <div className="absolute bottom-3 left-3 z-20 w-[220px] rounded-xl border border-[#2a334a] bg-[#0a111d]/90 px-3 py-2 text-[10px] text-[#c8d3ea] backdrop-blur-sm">
+                  <div className="absolute bottom-3 left-3 z-20 w-[220px] rounded-xl border border-[#2a334a] bg-[#0a111d]/90 px-3 py-2 text-[10px] text-[#c8d3ea]">
                     <div className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#8ea5cc]">Coverage (PPM)</div>
                     <div className="mt-1 grid grid-cols-[12px_1fr] items-center gap-x-2 gap-y-1">
                       <span className="h-2.5 w-2.5 rounded-sm bg-[#38bdf8]" />

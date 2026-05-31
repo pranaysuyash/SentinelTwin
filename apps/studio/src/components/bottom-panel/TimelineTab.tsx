@@ -252,7 +252,7 @@ export function TimelineTab() {
           <select
             value={activePath.id}
             onChange={(event) => setActivePathId(event.target.value)}
-            className="min-w-[190px] rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none transition-colors hover:border-[#32384d]"
+            className="min-w-[190px] rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
           >
             {scene.paths.map((path) => (
               <option key={path.id} value={path.id}>{path.label}</option>

@@ -160,7 +160,7 @@ export function ReportView() {
     <div className="absolute inset-0 overflow-hidden bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.16),transparent_34%),linear-gradient(180deg,#07090d_0%,#0a0f18_46%,#0a0c11_100%)]">
       <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-sky-500/10 to-transparent" />
       <div className="relative flex h-full min-h-0 flex-col p-4">
-        <div className="flex items-start gap-3 rounded-[28px] border border-[#1f2536] bg-[#0b0f17]/90 p-4 shadow-2xl shadow-black/25 backdrop-blur">
+        <div className="flex items-start gap-3 rounded-[28px] border border-[#1f2536] bg-[#0b0f17]/90 p-4 shadow-2xl shadow-black/25">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-sky-400/20 bg-sky-500/12 text-sky-200">
             <FileText className="h-5 w-5" />
           </div>

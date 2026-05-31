@@ -9,6 +9,7 @@ import {
   compileCameraEvidenceToSiteResult,
   compileFootageVerifyToSiteResult,
   compileToSiteTwinDraft,
+  createSiteIntakeSession,
   canRunBaselineSimulation,
   makeSiteCompilerWarnings,
   calculateConfidence,
@@ -386,5 +387,65 @@ describe("compileToSiteTwinDraft pipeline completeness", () => {
       expect(draft.scene.source).not.toBe("manual");
       expect(draft.scene.updatedAt).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("createSiteIntakeSession — activation gate contract", () => {
+  test("creates a session at stage review without mutating any store state", () => {
+    const scene = makeScene();
+    addCamera(scene);
+    addZone(scene);
+    const originalId = scene.id;
+    const session = createSiteIntakeSession(scene, "scan", ["photo1.jpg"]);
+    expect(session.stage).toBe("review");
+    expect(session.source).toBe("scan");
+    expect(session.draft).toBeDefined();
+    expect(session.result).toBeDefined();
+    expect(session.id).toMatch(/^intake_/);
+    expect(scene.id).toBe(originalId);
+    expect(scene.cameras.length).toBe(1);
+  });
+
+  test("session contains a full draft with correct source provenance", () => {
+    const scene = makeScene();
+    addCamera(scene);
+    const session = createSiteIntakeSession(scene, "ai_prompt");
+    expect(session.draft!.source).toBe("ai_prompt");
+    expect(session.draft!.confidence).toBeGreaterThan(0);
+    expect(session.draft!.scene.name).toBe(scene.name);
+    expect(session.draft!.provenance.sourceArtifacts).toEqual([]);
+  });
+
+  test("every intake source produces a valid session with review stage", () => {
+    const scene = makeScene();
+    addCamera(scene);
+    const sources: Array<import("@/lib/site-compiler").SiteIntakeSource> = [
+      "scan", "ai_prompt", "floor_plan", "json", "manual", "camera_evidence",
+    ];
+    for (const source of sources) {
+      const session = createSiteIntakeSession(scene, source);
+      expect(session.stage).toBe("review");
+      expect(session.result!.source).toBe(source);
+      expect(session.draft!.source).toBe(source);
+      expect(session.draft!.scene).toBe(scene);
+    }
+  });
+
+  test("source artifacts are preserved in the draft provenance", () => {
+    const scene = makeScene();
+    const artifacts = ["photo1.jpg", "raw-data.json"];
+    const session = createSiteIntakeSession(scene, "json", artifacts);
+    expect(session.draft!.provenance.sourceArtifacts).toEqual(artifacts);
+  });
+
+  test("session does not reference or modify the active scene — scene reference is unchanged", () => {
+    const scene = makeScene();
+    const sceneRefBefore = scene;
+    addCamera(scene);
+    const session = createSiteIntakeSession(scene, "manual");
+    expect(session.draft!.scene).toBe(sceneRefBefore);
+    expect(scene.cameras.length).toBe(1);
+    scene.cameras.push({} as never);
+    expect(session.draft!.scene.cameras.length).toBe(2);
   });
 });

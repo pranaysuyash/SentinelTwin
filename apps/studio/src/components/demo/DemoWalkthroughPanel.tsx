@@ -272,7 +272,7 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
   }, [demoStep]);
 
   return (
-    <div className="pointer-events-auto absolute inset-y-0 left-0 z-40 flex w-[340px] flex-col border-r border-[#1e2130] bg-[#0b0f17]/95 backdrop-blur-xl shadow-[4px_0_24px_rgba(0,0,0,0.3)]">
+    <div className="pointer-events-auto absolute inset-y-0 left-0 z-40 flex w-[340px] flex-col border-r border-[#1e2130] bg-[#0b0f17]/95 shadow-[4px_0_24px_rgba(0,0,0,0.3)]">
       <div className="flex items-center justify-between border-b border-[#1e2130] px-3 py-2">
         <div className="flex items-center gap-2">
           <Shield className="h-3.5 w-3.5 text-emerald-400" />

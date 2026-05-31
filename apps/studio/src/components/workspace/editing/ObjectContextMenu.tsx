@@ -131,7 +131,7 @@ export function ObjectContextMenu({
         onClick={onClose}
       />
       <div
-        className="absolute z-10 w-[300px] overflow-hidden rounded-[20px] border border-white/10 bg-[#07111dcc] text-slate-100 shadow-[0_24px_80px_rgba(0,0,0,0.55)] backdrop-blur-xl"
+        className="absolute z-10 w-[300px] overflow-hidden rounded-[20px] border border-white/10 bg-[#07111dcc] text-slate-100 shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
         style={{
           left,
           top,

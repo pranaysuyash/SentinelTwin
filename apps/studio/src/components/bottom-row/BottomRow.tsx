@@ -251,7 +251,7 @@ function AssumptionsPanel() {
                   step={0.05}
                   value={cur("personHeightM") as number}
                   onChange={(e) => setDraft((d) => ({ ...d, personHeightM: parseFloat(e.target.value) || d.personHeightM }))}
-                  className="w-16 rounded border border-[#24283a] bg-[#111521] px-1.5 py-0.5 text-right font-mono text-[9px] text-white outline-none"
+                  className="w-16 rounded border border-[#24283a] bg-[#111521] px-1.5 py-0.5 text-right font-mono text-[9px] text-white outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
                 />
                 <span className="text-[#556076]">m</span>
               </div>
@@ -267,7 +267,7 @@ function AssumptionsPanel() {
                   step={0.1}
                   value={cur("wallHeightM") as number}
                   onChange={(e) => setDraft((d) => ({ ...d, wallHeightM: parseFloat(e.target.value) || d.wallHeightM }))}
-                  className="w-16 rounded border border-[#24283a] bg-[#111521] px-1.5 py-0.5 text-right font-mono text-[9px] text-white outline-none"
+                  className="w-16 rounded border border-[#24283a] bg-[#111521] px-1.5 py-0.5 text-right font-mono text-[9px] text-white outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
                 />
                 <span className="text-[#556076]">m</span>
               </div>

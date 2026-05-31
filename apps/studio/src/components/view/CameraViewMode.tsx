@@ -396,7 +396,7 @@ export function CameraViewMode() {
               />
             ) : null
           ) : (
-            <div className="absolute right-3 top-24 z-30 w-56 rounded-xl border border-dashed border-[#243146] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)] backdrop-blur-sm">
+            <div className="absolute right-3 top-24 z-30 w-56 rounded-xl border border-dashed border-[#243146] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_12px_34px_rgba(0,0,0,0.35)]">
               <div className="text-[8px] font-semibold uppercase tracking-[0.22em] text-[#7dd3fc]">DORI OVERLAY</div>
               <div className="mt-1 text-[10px] font-semibold text-white">Select a critical zone</div>
               <div className="mt-1 text-[9px] text-[#9ab0ce]">
@@ -498,7 +498,7 @@ export function CameraViewMode() {
           setWorkspacePreset("edit");
           setViewMode("map");
         }}
-        className="absolute right-3 top-3 z-30 flex items-center gap-1.5 rounded-lg border border-[#2a3246] bg-[#0e1320]/90 px-3 py-1.5 text-[10px] font-medium text-[#c7d0e4] backdrop-blur-sm transition-colors hover:border-[#3a4a66] hover:text-white"
+        className="absolute right-3 top-3 z-30 flex items-center gap-1.5 rounded-lg border border-[#2a3246] bg-[#0e1320]/90 px-3 py-1.5 text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#3a4a66] hover:text-white"
       >
         <ArrowLeft className="size-3" />
         Back to Map View

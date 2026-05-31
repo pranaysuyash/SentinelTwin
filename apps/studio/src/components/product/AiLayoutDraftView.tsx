@@ -146,10 +146,6 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
   const aiDraftDisplayCounts = aiDraftCounts ?? aiDraftSummary?.counts ?? null;
   const aiDraftJsonIssue = aiDraftJsonError ?? (aiDraftJsonEditable && !aiDraftJsonValidation.valid ? aiDraftJsonValidation.error : null);
 
-  const confirmWorkspaceReplacement = (nextActionLabel: string) => {
-    if (!simulationDirty) return true;
-    return window.confirm(`Current workspace has unapplied changes. Continue to ${nextActionLabel}?`);
-  };
   const resetAiDraftPreview = () => {
     setAiDraftPreview(null);
     setAiWarning(null);
@@ -323,7 +319,7 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
       setAiDraftJsonError(aiDraftJsonValidation.error ?? "Draft JSON must validate as a SecurityScene.");
       return;
     }
-    if (!confirmWorkspaceReplacement("apply this AI layout draft")) return;
+    if (simulationDirty && !window.confirm("Current workspace has unapplied changes. Continue to apply this AI layout draft?")) return;
     const nextScene = aiDraftScene ?? aiDraftPreview.scene;
     onApplyDraft(nextScene, "ai_prompt");
     navigate("site_draft_review");

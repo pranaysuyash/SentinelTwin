@@ -213,7 +213,7 @@ function BeforeAfterTabContent() {
           <select
             value={validBeforeId ?? ""}
             onChange={(event) => setBeforeSnapshotId(event.target.value)}
-            className="min-w-0 flex-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none"
+            className="min-w-0 flex-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
           >
             <option value="" disabled>
               Select snapshot
@@ -230,7 +230,7 @@ function BeforeAfterTabContent() {
           <select
             value={validAfterId ?? ""}
             onChange={(event) => setAfterSnapshotId(event.target.value)}
-            className="min-w-0 flex-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none"
+            className="min-w-0 flex-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
           >
             <option value="" disabled>
               Select snapshot

@@ -171,13 +171,13 @@ function FeedArtifacts({
       ) : null}
 
       {overlayOptions.doriLabels && badgeLabel ? (
-        <div className="absolute left-3 top-20 z-10 rounded-lg border border-amber-400/25 bg-black/65 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.18em] text-amber-200 backdrop-blur-sm">
+        <div className="absolute left-3 top-20 z-10 rounded-lg border border-amber-400/25 bg-black/65 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.18em] text-amber-200">
           {badgeLabel}
         </div>
       ) : null}
 
       {overlayOptions.pathActor && pathState ? (
-        <div className="pointer-events-none absolute right-3 bottom-3 z-10 rounded-lg border border-sky-400/20 bg-black/60 px-2.5 py-1.5 text-[8px] font-semibold uppercase tracking-[0.14em] text-sky-200 backdrop-blur-sm">
+        <div className="pointer-events-none absolute right-3 bottom-3 z-10 rounded-lg border border-sky-400/20 bg-black/60 px-2.5 py-1.5 text-[8px] font-semibold uppercase tracking-[0.14em] text-sky-200">
           <div>Actor replay active</div>
           <div className="mt-0.5 max-w-[160px] truncate text-[7px] font-medium tracking-[0.1em] text-sky-100/80">
             {pathLabel ?? "Selected path"} · {Math.round((pathProgress ?? 0) * 100)}% complete
@@ -193,13 +193,13 @@ function FeedArtifacts({
       ) : null}
 
       {overlayOptions.timestamp ? (
-        <div className="pointer-events-none absolute left-3 bottom-3 z-10 rounded-lg border border-[#2d3d56] bg-black/65 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.12em] text-[#c7d0e4] backdrop-blur-sm">
+        <div className="pointer-events-none absolute left-3 bottom-3 z-10 rounded-lg border border-[#2d3d56] bg-black/65 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.12em] text-[#c7d0e4]">
           {timestamp}
         </div>
       ) : null}
 
       {showOperationalFusionSummaryFlag && operationalFusion ? (
-        <div className="pointer-events-none absolute right-3 bottom-3 z-10 rounded-lg border border-cyan-400/20 bg-black/68 px-2.5 py-2 text-[8px] font-semibold uppercase tracking-[0.14em] text-cyan-100 backdrop-blur-sm">
+        <div className="pointer-events-none absolute right-3 bottom-3 z-10 rounded-lg border border-cyan-400/20 bg-black/68 px-2.5 py-2 text-[8px] font-semibold uppercase tracking-[0.14em] text-cyan-100">
           <div className="text-[8px] uppercase tracking-[0.18em] text-cyan-300/90">Operational Fusion</div>
           <div className="mt-1 text-[9px] font-semibold normal-case tracking-normal text-white">{operationalFusion?.operationalHealthLabel}</div>
           <div className="mt-1 space-y-0.5 text-[8px] font-medium uppercase tracking-[0.12em] text-cyan-100/75">
@@ -409,7 +409,7 @@ export function CameraFeedCanvas({
       />
 
       {latestSensorEvent ? (
-        <div className="absolute left-2 bottom-16 z-10 rounded-lg border border-cyan-400/20 bg-black/72 px-2 py-1.5 backdrop-blur-sm">
+        <div className="absolute left-2 bottom-16 z-10 rounded-lg border border-cyan-400/20 bg-black/72 px-2 py-1.5">
           <div className="text-[8px] uppercase tracking-[0.18em] text-cyan-300/90">Latest Sensor Event</div>
           <div className="mt-0.5 text-[10px] font-semibold text-white">{latestSensorEvent.sensorLabel}</div>
           <div className="mt-0.5 text-[8px] uppercase tracking-[0.12em] text-cyan-100/75">
@@ -419,7 +419,7 @@ export function CameraFeedCanvas({
       ) : null}
 
       {latestCameraMetadataEvent ? (
-        <div className="absolute left-2 bottom-32 z-10 rounded-lg border border-emerald-400/20 bg-black/72 px-2 py-1.5 backdrop-blur-sm">
+        <div className="absolute left-2 bottom-32 z-10 rounded-lg border border-emerald-400/20 bg-black/72 px-2 py-1.5">
           <div className="text-[8px] uppercase tracking-[0.18em] text-emerald-300/90">Latest Camera Metadata</div>
           <div className="mt-0.5 text-[10px] font-semibold text-white">{latestCameraMetadataEvent.cameraName}</div>
           <div className="mt-0.5 text-[8px] uppercase tracking-[0.12em] text-emerald-100/75">
@@ -429,7 +429,7 @@ export function CameraFeedCanvas({
       ) : null}
 
       {latestCameraLiveConnectionEvent ? (
-        <div className="absolute left-2 bottom-48 z-10 rounded-lg border border-cyan-400/20 bg-black/72 px-2 py-1.5 backdrop-blur-sm">
+        <div className="absolute left-2 bottom-48 z-10 rounded-lg border border-cyan-400/20 bg-black/72 px-2 py-1.5">
           <div className="text-[8px] uppercase tracking-[0.18em] text-cyan-300/90">Live Camera Connection</div>
           <div className="mt-0.5 text-[10px] font-semibold text-white">{latestCameraLiveConnectionEvent.cameraName}</div>
           <div className="mt-0.5 text-[8px] uppercase tracking-[0.12em] text-cyan-100/75">
@@ -441,7 +441,7 @@ export function CameraFeedCanvas({
         </div>
       ) : null}
 
-      <div className="absolute left-2 top-2 z-10 flex items-center gap-1 rounded-lg border border-[#24304a] bg-black/50 p-1 backdrop-blur-sm">
+      <div className="absolute left-2 top-2 z-10 flex items-center gap-1 rounded-lg border border-[#24304a] bg-black/50 p-1">
         {(Object.keys(FEED_MODE_LABELS) as FeedViewMode[]).map((mode) => (
           <button
             key={mode}
@@ -469,7 +469,7 @@ export function CameraFeedCanvas({
       )}
 
       {overlayFlags.doriLabels && targetZone ? (
-        <div className="absolute right-2 top-2 z-10 rounded-xl border border-[#24304a] bg-black/70 px-2.5 py-2 backdrop-blur-sm">
+        <div className="absolute right-2 top-2 z-10 rounded-xl border border-[#24304a] bg-black/70 px-2.5 py-2">
           <div className="mb-1 text-[8px] font-semibold uppercase tracking-[0.18em] text-[#8ab4ff]">DORI Overlay</div>
           <div className="text-[11px] font-semibold text-white">
             {targetZone.label}

@@ -50,6 +50,6 @@ describe("ScanSiteWizard", () => {
     expect(source).toContain("heightHintM");
     expect(source).toContain("Zone width");
     expect(source).toContain("Zone depth");
-    expect(source).toContain("Missing prerequisites");
+    expect(source).toContain("Cannot compile yet");
   });
 });

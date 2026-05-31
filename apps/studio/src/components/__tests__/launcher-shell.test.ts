@@ -6,93 +6,100 @@ import { resolve } from "node:path";
 const pagePath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../app/page.tsx");
 
 describe("Studio launcher shell", () => {
-  test("wires the launcher dashboard and AI draft handoff", () => {
+  test("wires the launcher dashboard and AI draft handoff via ProductViewRouter", () => {
     const source = readFileSync(pagePath, "utf8");
 
-    expect(source).toContain("StudioDashboardHome");
-    expect(source).toContain("const [enterStudio, setEnterStudio] = useState(false);");
-    expect(source).toContain("ProjectStartLauncher");
-    expect(source).toContain("showProjectLauncher");
-    expect(source).toContain("onOpenCoverageWorkspace={openCoverageWorkspace}");
-    expect(source).toContain("onOpenCameraWall={openCameraWall}");
-    expect(source).toContain("onOpenPathReplay={openPathReplay}");
-    expect(source).toContain("onOpenCompareFixes={openCompareFixes}");
-    expect(source).toContain("onOpenIssues={openIssues}");
-    expect(source).toContain('const openReport = () => {');
-    expect(source).toContain('launchWorkspace("report", "report", "report");');
-    expect(source).toContain("onRunSimulation={runSimulation}");
-    expect(source).toContain("onStartProject={() => {");
-    expect(source).toContain("openReferenceWorkspace();");
-    expect(source).toContain("onOpenAdvancedWorkflows");
-    expect(source).toContain('if (!confirmWorkspaceReplacement("import a floor plan")) return;');
-    expect(source).toContain('if (!confirmWorkspaceReplacement("start scan intake")) return;');
-    expect(source).toContain('if (!confirmWorkspaceReplacement("create a new scene")) return;');
-    expect(source).toContain('if (!confirmWorkspaceReplacement("open AI layout draft")) return;');
-    expect(source).toContain("onGuidedScanAssistant={() => {");
-    expect(source).toContain('if (!confirmWorkspaceReplacement("open the guided scan assistant")) return;');
-    expect(source).toContain("openGuidedScanAssistant();");
-    expect(source).toContain("onOpenScene={openScene}");
-    expect(source).toContain("savedProjects={savedProjects}");
-    expect(source).toContain("onUpdateProjectMetadata={updateSavedSceneMetadata}");
-    expect(source).toContain("onDuplicateProject={duplicateSavedScene}");
-    expect(source).toContain("onRenameProject={renameSavedScene}");
-    expect(source).toContain("const [aiDraftPreview, setAiDraftPreview] = useState");
-    expect(source).toContain("const aiDraftSummary = useMemo");
-    expect(source).toContain("const recordOperationalEvidenceEvent = useStudioStore((s) => s.recordOperationalEvidenceEvent);");
-    expect(source).toContain("const recordAiActionTelemetry = useStudioStore((s) => s.recordAiActionTelemetry);");
-    expect(source).toContain("const aiActionTelemetry = useStudioStore((s) => s.aiActionTelemetry);");
-    expect(source).toContain("const latestAiActionTelemetry = useStudioStore((s) => s.aiActionTelemetry[0] ?? null);");
-    expect(source).toContain("const localOnlyMode = useStudioStore((s) => s.localOnlyMode);");
-    expect(source).toContain("const currentAiProviderHealth = useMemo");
-    expect(source).toContain("const currentAiProviderTelemetry = useMemo");
-    expect(source).toContain("estimateTokensFromText(text: string)");
-    expect(source).toContain("Latest measured action:");
-    expect(source).toContain("Telemetry trend:");
-    expect(source).toContain("stage: \"ai_draft\"");
-    expect(source).toContain("Heuristic draft preview enforced by local-only policy.");
-    expect(source).toContain("Model-backed if the provider is configured and local-only mode is off.");
-    expect(source).toContain("Draft preview from ${currentAiProvider.providerLabel}");
-    expect(source).toContain("kind: \"draft_proposed\"");
+    // New architecture: ProductViewRouter with handlers
+    expect(source).toContain("ProductViewRouter");
+    expect(source).toContain("ProductViewHandlers");
+    expect(source).toContain("useProductViewStore");
+    expect(source).toContain("navigate");
+
+    // Handler definitions
+    expect(source).toContain("openCoverageWorkspace");
+    expect(source).toContain("openCameraWall");
+    expect(source).toContain("openPathReplay");
+    expect(source).toContain("openCompareFixes");
+    expect(source).toContain("openIssues");
+    expect(source).toContain("openReport");
+    expect(source).toContain("runSimulation");
+    expect(source).toContain("openReferenceWorkspace");
+    expect(source).toContain("startDesignFlow");
+    expect(source).toContain("openFloorPlanFlow");
+    expect(source).toContain("openScanWizard");
+    expect(source).toContain("openGuidedScanAssistant");
+    expect(source).toContain("handleImportScene");
+    expect(source).toContain("compileCurrentScene");
+    expect(source).toContain("createDraftFromScene");
+    expect(source).toContain("approveIntakeSession");
+    expect(source).toContain("rejectIntakeSession");
+
+    // Workspace navigation via launchWorkspace
+    expect(source).toContain("launchWorkspace");
+    expect(source).toContain('launchWorkspace("map", "edit", "metrics")');
+    expect(source).toContain('launchWorkspace("map", "coverage", "metrics")');
+    expect(source).toContain('launchWorkspace("wall", "camera_wall", "metrics")');
+    expect(source).toContain('launchWorkspace("replay", "replay", "timeline")');
+    expect(source).toContain('launchWorkspace("compare", "compare", "beforeafter")');
+    expect(source).toContain('launchWorkspace("report", "report", "report")');
+
+    // State guards
+    expect(source).toContain("confirmWorkspaceReplacement");
+    expect(source).toContain('confirmWorkspaceReplacement("start scan intake")');
+    expect(source).toContain('confirmWorkspaceReplacement("create a new scene")');
+    expect(source).toContain('confirmWorkspaceReplacement("import a floor plan")');
+    expect(source).toContain('confirmWorkspaceReplacement("start guided scan intake")');
+    expect(source).toContain('confirmWorkspaceReplacement("import a scene JSON")');
+
+    // Store interactions
+    expect(source).toContain("useStudioStore((s) => s.refreshSavedScenesList)");
+    expect(source).toContain("useStudioStore((s) => s.runSimulation)");
+    expect(source).toContain("useStudioStore((s) => s.recordOperationalEvidenceEvent)");
+    expect(source).toContain("useStudioStore((s) => s.setSiteIntakeSession)");
+    expect(source).toContain("useStudioStore((s) => s.importScene)");
+    expect(source).toContain("useStudioStore((s) => s.setScene)");
+
+    // Compilation and draft pipeline
+    expect(source).toContain("compileScanToSiteResult");
+    expect(source).toContain("compileAiDraftToSiteResult");
+    expect(source).toContain("compileFloorPlanToSiteResult");
+    expect(source).toContain("compileJsonToSiteResult");
+    expect(source).toContain("compileCameraEvidenceToSiteResult");
+    expect(source).toContain("compileToSiteTwinDraft");
+    expect(source).toContain("approveSiteTwinDraft");
+    expect(source).toContain("safeParseSecurityScene");
+
+    // Draft review hooks
+    expect(source).toContain("approveIntakeSession");
+    expect(source).toContain("rejectIntakeSession");
+    expect(source).toContain("approveAndRunBaseline");
+
+    // Scan session events
     expect(source).toContain("kind: \"scan_session_started\"");
-    expect(source).toContain("Draft Preview");
-    expect(source).toContain("Review before apply");
-    expect(source).toContain("Provider health:");
-    expect(source).toContain("Provider healthy");
-    expect(source).toContain("Provider partial");
-    expect(source).toContain("Provider blocked");
-    expect(source).toContain("Budget ready");
-    expect(source).toContain("Budget guarded");
-    expect(source).toContain("Budget blocked");
-    expect(source).toContain("Cost / latency:");
-    expect(source).toContain("Stage policy:");
-    expect(source).toContain("Workspace comparison");
-    expect(source).toContain("Current vs Draft");
-    expect(source).toContain("Generated Scene JSON");
-    expect(source).toContain("Show JSON");
-    expect(source).toContain("Edit JSON");
-    expect(source).toContain("Lock JSON");
-    expect(source).toContain("Copy JSON");
-    expect(source).toContain("Draft JSON copied to clipboard.");
-    expect(source).toContain("JSON must be valid SecurityScene data before apply:");
-    expect(source).toContain("Local-only mode");
-    expect(source).toContain("Cloud-backed AI is disabled by policy.");
-    expect(source).toContain("const aiDraftModelAvailable = useMemo");
-    expect(source).toContain("const aiDraftModeLabel = aiDraftModelAvailable ? \"Model mode active\" : \"Heuristic fallback active\";");
-    expect(source).toContain("const aiDraftModeDescription = localOnlyMode");
-    expect(source).toContain("const useModelDraft = aiDraftModelAvailable;");
-    expect(source).toContain("Generate Preview");
-    expect(source).toContain("Regenerate Preview");
-    expect(source).toContain("Use Draft Scene");
-    expect(source).toContain("const provenanceNote =");
-    expect(source).toContain("setAiDraftNotice(provenanceNote)");
-    expect(source).toContain("AI draft status:");
-    expect(source).toContain("Opened Camera View verification workflow.");
-    expect(source).toContain("Add a camera before opening the real footage verification workflow.");
-    expect(source).toContain("Guided scan assistant started");
-    expect(source).toContain("Guided scan assistant opened. The manual-assisted review and compile flow remains in control.");
-    expect(source).toContain("setShowScanWizard(true);");
-    expect(source).toContain("Guided scan assistant opened. The manual-assisted review and compile flow remains in control.");
-    expect(source).not.toContain("Guided assistant preview: the assistant shortens capture setup, but the scene still compiles through the manual-assisted review path.");
+    expect(source).toContain("kind: \"scan_compiled\"");
+
+    // URL deep-link handling
+    expect(source).toContain("parseArchiveHandoffLink");
+    expect(source).toContain("parseCompareShareLink");
+    expect(source).toContain("parseTimelineShareLink");
+
+    // Handlers object passed to ProductViewRouter
+    expect(source).toContain("const handlers: ProductViewHandlers");
+    expect(source).toContain("<ProductViewRouter handlers={handlers} />");
+
+    // Error handling
+    expect(source).toContain("recordRuntimeIncident");
+    expect(source).toContain("window.addEventListener(\"error\"");
+
+    // JSON import via hidden file input
+    expect(source).toContain("accept=\".json\"");
+    expect(source).toContain("bakeoffToSecurityScene");
+
+    // Demo scene auto-bootstrap
+    expect(source).toContain("bootstrapRef");
+    expect(source).toContain('scene.source !== "demo"');
+
+    // Canceled action does not mutate workflow state (confirm check)
     expect(source).not.toContain("queryBootEnabled");
     expect(source).not.toContain('searchParams.get("studio") === "1"');
     expect(source).not.toContain("shouldBypassLauncher");

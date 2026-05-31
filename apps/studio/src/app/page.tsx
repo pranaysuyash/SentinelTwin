@@ -24,7 +24,6 @@ function assertNever(value: never): never {
 
 function StudioPageContent() {
   const navigate = useProductViewStore((s) => s.navigate);
-  const productView = useProductViewStore((s) => s.view);
 
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);

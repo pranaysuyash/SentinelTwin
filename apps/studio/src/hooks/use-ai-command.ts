@@ -2,16 +2,14 @@
 
 import { useCallback, useRef, useState } from "react";
 
-import { parseCommandDetailed, type SceneContextSummary } from "@/agents/CommandAgent";
-import { proposeCounterfactuals, type CounterfactualCandidate } from "@/agents/CounterfactualAgent";
+import type { SceneContextSummary } from "@/agents/CommandAgent";
+import type { CounterfactualCandidate } from "@/agents/CounterfactualAgent";
 import {
-  createModelProvider,
   describeAiProviderHealth,
   describeAiProviderTelemetry,
   describeAiProviderSelection,
-  providerKeyAvailable,
 } from "@/agents/provider-selection";
-import { generateReport, buildSimulationSummary } from "@/agents/ReportAgent";
+import { buildSimulationSummary } from "@/agents/ReportAgent";
 import type { SceneOperation } from "@/schema/SceneOperation";
 import { applySceneOperation } from "@/lib/applySceneOperation";
 import { createObstructionNode, createSecurityLightNode } from "@/lib/node-factory";
@@ -85,9 +83,7 @@ export function useAiCommand() {
   const providerSummary = describeAiProviderSelection(aiProviderSelection);
   const providerHealth = describeAiProviderHealth(aiProviderSelection, localOnlyMode);
   const providerTelemetry = describeAiProviderTelemetry(aiProviderSelection, localOnlyMode);
-  const provider = createModelProvider(aiProviderSelection);
-  const apiKeyAvailable = providerKeyAvailable(aiProviderSelection.providerId);
-  const cloudAvailable = apiKeyAvailable && !localOnlyMode;
+  const cloudAvailable = providerHealth.overallStatus !== "blocked" && !localOnlyMode;
   const mode: AiCommandMode = localOnlyMode
     ? {
         label: "Local-only",
@@ -128,7 +124,7 @@ export function useAiCommand() {
       model: aiProviderSelection.model,
       ...(promptLineage ?? {}),
       localOnlyMode,
-      cloudAvailable: apiKeyAvailable && !localOnlyMode,
+      cloudAvailable,
       durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
       estimatedPromptTokens: Math.max(0, Math.round(promptTokens)),
       estimatedCompletionTokens: Math.max(0, Math.round(completionTokens)),
@@ -137,7 +133,7 @@ export function useAiCommand() {
       status,
       note: note ?? null,
     });
-  }, [aiProviderSelection.model, aiProviderSelection.providerId, apiKeyAvailable, localOnlyMode, providerSummary.providerLabel, recordAiActionTelemetry]);
+  }, [aiProviderSelection.model, aiProviderSelection.providerId, cloudAvailable, localOnlyMode, providerSummary.providerLabel, recordAiActionTelemetry]);
 
   const setStatusSafe = useCallback((newStatus: AiCommandStatus) => {
     // Clear any pending auto-dismiss when status changes
@@ -149,7 +145,7 @@ export function useAiCommand() {
       setPendingPreview(null);
     }
     setStatus(newStatus);
-  }, [aiProviderSelection.providerId, provider, providerSummary.providerName]);
+  }, [aiProviderSelection.providerId, providerSummary.providerName]);
 
   const autoDismiss = useCallback(() => {
     dismissRef.current = setTimeout(() => {
@@ -339,8 +335,7 @@ export function useAiCommand() {
             return;
           }
 
-          const hasKey = providerKeyAvailable(aiProviderSelection.providerId);
-          if (!hasKey) {
+          if (!cloudAvailable) {
             setStatusSafe({ state: "error", message: `${providerSummary.providerName} API key not configured. Set ${providerSummary.envKey}.` });
             autoDismiss();
             return;
@@ -378,7 +373,26 @@ export function useAiCommand() {
             }
             recordAiRateLimitUsage("counterfactual", estimatedCounterfactualTokens);
 
-            const rawCandidates = await proposeCounterfactuals(issuesSummary, sceneSummary, constraints, provider);
+            const counterfactualResponse = await fetch("/api/ai/counterfactuals", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({
+                selection: aiProviderSelection,
+                localOnlyMode,
+                issuesSummary,
+                sceneSummary,
+                constraints,
+              }),
+            });
+            const counterfactualPayload = await counterfactualResponse.json() as {
+              ok: boolean;
+              error?: string;
+              candidates?: CounterfactualCandidate[];
+            };
+            if (!counterfactualPayload.ok || !counterfactualPayload.candidates) {
+              throw new Error(counterfactualPayload.error ?? "Counterfactual proposal failed.");
+            }
+            const rawCandidates = counterfactualPayload.candidates;
             const ranked = verifyAndRankCounterfactualCandidates(rawCandidates, scene, sim);
 
             setStatusSafe({
@@ -446,8 +460,7 @@ export function useAiCommand() {
       return;
     }
 
-    const hasProviderKey = providerKeyAvailable(aiProviderSelection.providerId);
-    if (!hasProviderKey) {
+    if (!cloudAvailable) {
       recordRuntimeIncident({
         category: "provider_failure",
         severity: "warning",
@@ -475,7 +488,31 @@ export function useAiCommand() {
         return;
       }
       recordAiRateLimitUsage("command_parse", estimatedParseTokens);
-      const parseResult = await parseCommandDetailed(userText, context, provider, useStudioStore.getState().scene);
+      const commandResponse = await fetch("/api/ai/command", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          userText,
+          selection: aiProviderSelection,
+          localOnlyMode,
+          sceneContext: context,
+          scene: useStudioStore.getState().scene,
+        }),
+      });
+      const commandPayload = await commandResponse.json() as {
+        ok: boolean;
+        error?: string;
+        result?: {
+          operations: SceneOperation[];
+          confidence: number;
+          warnings: string[];
+          requiresConfirmation: boolean;
+        };
+      };
+      if (!commandPayload.ok || !commandPayload.result) {
+        throw new Error(commandPayload.error ?? "Command parsing failed.");
+      }
+      const parseResult = commandPayload.result;
       const operations = parseResult.operations;
       const parsePromptTokens = estimateTokensFromText(`${userText}\n${JSON.stringify(context)}`);
       const parseCompletionTokens = estimateTokensFromText(JSON.stringify(operations));
@@ -524,7 +561,26 @@ export function useAiCommand() {
           }
           recordAiRateLimitUsage("counterfactual", estimatedCounterfactualTokens);
 
-          const rawCandidates = await proposeCounterfactuals(issuesSummary, sceneSummary, [userText], provider);
+          const counterfactualResponse = await fetch("/api/ai/counterfactuals", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              selection: aiProviderSelection,
+              localOnlyMode,
+              issuesSummary,
+              sceneSummary,
+              constraints: [userText],
+            }),
+          });
+          const counterfactualPayload = await counterfactualResponse.json() as {
+            ok: boolean;
+            error?: string;
+            candidates?: CounterfactualCandidate[];
+          };
+          if (!counterfactualPayload.ok || !counterfactualPayload.candidates) {
+            throw new Error(counterfactualPayload.error ?? "Counterfactual proposal failed.");
+          }
+          const rawCandidates = counterfactualPayload.candidates;
           const ranked = verifyAndRankCounterfactualCandidates(rawCandidates, scene, sim);
 
           recordTelemetry(
@@ -596,11 +652,10 @@ export function useAiCommand() {
     providerSummary.envKey,
     providerSummary.providerName,
     providerSummary.providerLabel,
-    provider,
     localOnlyMode,
     recordRuntimeIncident,
     recordTelemetry,
-    apiKeyAvailable,
+    cloudAvailable,
     stageCommandPreview,
   ]);
 
@@ -618,8 +673,7 @@ export function useAiCommand() {
       return;
     }
 
-    const apiKeyAvailable = providerKeyAvailable(aiProviderSelection.providerId);
-    if (!apiKeyAvailable) {
+    if (!cloudAvailable) {
       recordRuntimeIncident({
         category: "provider_failure",
         severity: "warning",
@@ -664,7 +718,26 @@ export function useAiCommand() {
       }
       recordAiRateLimitUsage("counterfactual", estimatedCounterfactualTokens);
 
-      const candidates = await proposeCounterfactuals(issuesSummary, sceneSummary, constraints, provider);
+      const counterfactualResponse = await fetch("/api/ai/counterfactuals", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          selection: aiProviderSelection,
+          localOnlyMode,
+          issuesSummary,
+          sceneSummary,
+          constraints,
+        }),
+      });
+      const counterfactualPayload = await counterfactualResponse.json() as {
+        ok: boolean;
+        error?: string;
+        candidates?: CounterfactualCandidate[];
+      };
+      if (!counterfactualPayload.ok || !counterfactualPayload.candidates) {
+        throw new Error(counterfactualPayload.error ?? "Counterfactual proposal failed.");
+      }
+      const candidates = counterfactualPayload.candidates;
       const ranked = verifyAndRankCounterfactualCandidates(candidates, scene, sim);
 
       recordTelemetry(
@@ -708,7 +781,7 @@ export function useAiCommand() {
     }
   }, [
     aiProviderSelection.providerId,
-    provider,
+    cloudAvailable,
     providerSummary.providerName,
     providerSummary.providerLabel,
     localOnlyMode,
@@ -731,8 +804,7 @@ export function useAiCommand() {
       return null;
     }
 
-    const apiKeyAvailable = providerKeyAvailable(aiProviderSelection.providerId);
-    if (!apiKeyAvailable) {
+    if (!cloudAvailable) {
       recordRuntimeIncident({
         category: "provider_failure",
         severity: "warning",
@@ -769,7 +841,34 @@ export function useAiCommand() {
       }
       recordAiRateLimitUsage("report_generation", estimatedReportTokens);
 
-      const report = await generateReport(simData, sceneSummary, provider);
+      const reportResponse = await fetch("/api/ai/report", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          selection: aiProviderSelection,
+          localOnlyMode,
+          simulationSummary: simData,
+          sceneSummary,
+        }),
+      });
+      const reportPayload = await reportResponse.json() as {
+        ok: boolean;
+        error?: string;
+        report?: {
+          title: string;
+          siteName: string;
+          generatedAt: string;
+          executiveSummary: string;
+          sections: Array<{ heading: string; content: string }>;
+          recommendations: string[];
+          assumptions: string[];
+          limitations: string[];
+        };
+      };
+      if (!reportPayload.ok || !reportPayload.report) {
+        throw new Error(reportPayload.error ?? "Report generation failed.");
+      }
+      const report = reportPayload.report;
       const elapsedMs = Math.round(performance.now() - startedAt);
       const promptLineage = resolvePromptRegistryLineage("report_generation");
       recordAiActionTelemetry({
@@ -779,7 +878,7 @@ export function useAiCommand() {
         model: aiProviderSelection.model,
         ...(promptLineage ?? {}),
         localOnlyMode,
-        cloudAvailable: apiKeyAvailable,
+        cloudAvailable,
         durationMs: elapsedMs,
         estimatedPromptTokens: estimatedReportTokens,
         estimatedCompletionTokens: estimateTokensFromText(report.executiveSummary + report.sections.map((section) => section.content).join(" ")),
@@ -814,7 +913,7 @@ export function useAiCommand() {
       setStatus({ state: "error", message });
       return null;
     }
-  }, [aiProviderSelection.providerId, providerSummary.providerName, localOnlyMode, recordRuntimeIncident, provider]);
+  }, [aiProviderSelection.model, aiProviderSelection.providerId, cloudAvailable, localOnlyMode, providerSummary.providerLabel, providerSummary.providerName, recordAiActionTelemetry, recordRuntimeIncident]);
 
   const confirmPreview = useCallback(() => {
     if (!pendingPreview) {

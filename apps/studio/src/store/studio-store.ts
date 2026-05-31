@@ -141,6 +141,41 @@ import {
 } from "@/lib/report-catalog";
 
 export type ViewMode = "map" | "wall" | "replay" | "camera_view" | "compare" | "report";
+
+/**
+ * Product-area navigation state.
+ * Answers "which product area is visible?" — separate from workflow ("what process is active?").
+ */
+export type ProductArea =
+  | "studio_home"
+  | "studio_workspace"
+  | "site_intake"
+  | "scan_site_photos"
+  | "manual_scene_builder"
+  | "floor_plan_import"
+  | "ai_layout_draft"
+  | "site_draft_review"
+  | "reports"
+  | "issues"
+  | "evidence";
+
+/** Map a ProductArea to a human-readable label. */
+export function formatProductArea(area: ProductArea): string {
+  const labels: Record<ProductArea, string> = {
+    studio_home: "Studio Home",
+    studio_workspace: "Workspace",
+    site_intake: "Site Intake",
+    scan_site_photos: "Scan Site",
+    manual_scene_builder: "Manual Builder",
+    floor_plan_import: "Floor Plan Import",
+    ai_layout_draft: "AI Layout Draft",
+    site_draft_review: "Draft Review",
+    reports: "Reports",
+    issues: "Issues",
+    evidence: "Evidence",
+  };
+  return labels[area];
+}
 export type CanvasMode = "orbit_3d" | "topdown_2d";
 export type DockSide = "left" | "right" | "bottom";
 export type RightPanelMode =
@@ -2332,6 +2367,12 @@ export type StudioStoreState = {
   siteIntakeSession: SiteIntakeSession | null;
   setSiteIntakeSession: (session: SiteIntakeSession | null) => void;
 
+  productArea: ProductArea;
+  setProductArea: (area: ProductArea) => void;
+  openStudioMode: (mode: ViewMode) => void;
+  openSiteIntake: (selectedSource?: string) => void;
+  openScanSitePhotos: (sessionId?: string) => void;
+
   reportCatalog: ReportCatalogState;
   addReportCatalogPreset: (input: Parameters<typeof createReportCatalogPreset>[0]) => void;
   updateReportCatalogPreset: (preset: ReportCatalogPreset) => void;
@@ -3435,6 +3476,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   focusScenePointHighlight: null,
   cameraPresetId: null,
   siteIntakeSession: null,
+  productArea: "studio_home" as const,
   sceneIntelligenceGraph: INITIAL_SCENE_INTELLIGENCE_GRAPH,
   historyPast: [],
   historyFuture: [],
@@ -3517,6 +3559,14 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   setSelectedHandle: (handle) => set((s) => ({ editor: { ...s.editor, selectedHandle: handle } })),
   setCameraPresetId: (presetId) => set({ cameraPresetId: presetId }),
   setSiteIntakeSession: (session) => set({ siteIntakeSession: session }),
+  setProductArea: (area) => set({ productArea: area }),
+  openStudioMode: (mode) => set({ productArea: "studio_workspace", viewMode: mode }),
+  openSiteIntake: (selectedSource) => set({
+    productArea: selectedSource === "scan_photos" ? "scan_site_photos" : "site_intake",
+  }),
+  openScanSitePhotos: (sessionId) => set({
+    productArea: "scan_site_photos",
+  }),
   setViewSettingsOpen: (open) => set({ viewSettingsOpen: open }),
   toggleViewSettingsOpen: () => set((state) => ({ viewSettingsOpen: !state.viewSettingsOpen })),
   refreshSavedLayoutsList: () => {

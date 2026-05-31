@@ -11,11 +11,8 @@ import {
   ScanSearch,
   Sparkles,
   Square,
-  FileText,
-  Activity,
   Blocks,
   CheckCircle2,
-  FolderOpen,
   Video
 } from "lucide-react";
 import type { SiteIntakeSource } from "@/lib/site-compiler";
@@ -31,7 +28,6 @@ export type SiteIntakeHubProps = {
   onVerifyFootage: () => void;
   onStartSecurityAudit: () => void;
   onEnterStudio: () => void;
-  onShowProjects?: () => void;
   onOpenDemo?: () => void;
   recentSites: Array<{
     id: string;
@@ -263,26 +259,21 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
           <nav className="mt-7 space-y-2">
             {[
               { label: "Create Site Twin", icon: LayoutDashboard, active: true },
-              { label: "Studio", icon: Blocks, active: false, note: "Coming soon" },
-              { label: "Reports", icon: FileText, active: false, note: "Coming soon" },
-              { label: "Reference Sites", icon: FolderOpen, active: false, note: "Coming soon" },
-              { label: "Settings", icon: Activity, active: false, note: "Coming soon" },
+              { label: "Studio", icon: Blocks, active: true },
             ].map((item) => {
               const Icon = item.icon;
               return (
                 <button
                   key={item.label}
                   type="button"
+                  onClick={item.label === "Studio" ? props.onEnterStudio : undefined}
                   className={[
                     "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-[15px] transition-colors",
-                    item.active ? "bg-sky-500/12 text-sky-400 ring-1 ring-sky-500/20" : "text-slate-400 hover:bg-white/4 hover:text-white",
+                    item.active ? "bg-sky-500/12 text-sky-400 ring-1 ring-sky-500/20" : "text-slate-300 hover:bg-white/4 hover:text-white",
                   ].join(" ")}
                 >
                   <Icon className="h-[18px] w-[18px] flex-none" />
-                  <span className="min-w-0">{item.label}</span>
-                  {item.note ? (
-                    <span className="ml-auto rounded-md border border-slate-500/20 bg-slate-500/10 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.12em] text-slate-400">{item.note}</span>
-                  ) : null}
+                  <span>{item.label}</span>
                 </button>
               );
             })}

@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+
 import { useProductViewStore, type ProductView } from "@/store/product-view-store";
 import { useStudioStore } from "@/store/studio-store";
 import StudioShell from "@/components/layout/StudioShell";
@@ -54,6 +56,28 @@ export type ProductViewHandlers = {
 type ProductViewRouterProps = {
   handlers: ProductViewHandlers;
 };
+
+function StudioModeRedirect({
+  viewMode,
+  preset,
+  bottomTab,
+}: {
+  viewMode: import("@/store/studio-store").ViewMode;
+  preset: import("@/store/studio-store").WorkspacePreset;
+  bottomTab?: import("@/store/studio-store").BottomTab;
+}) {
+  const navigate = useProductViewStore((s) => s.navigate);
+
+  useEffect(() => {
+    const { setViewMode, setWorkspacePreset, setBottomTab } = useStudioStore.getState();
+    setWorkspacePreset(preset);
+    setViewMode(viewMode);
+    if (bottomTab) setBottomTab(bottomTab);
+    navigate("studio");
+  }, [bottomTab, navigate, preset, viewMode]);
+
+  return null;
+}
 
 /**
  * Maps ProductView to the correct full-page product surface.
@@ -166,7 +190,6 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
           navigate("scan_site");
         }}
         onEnterStudio={() => navigate("studio")}
-        onShowProjects={() => navigate("product_home")}
         onOpenDemo={() => {
           handlers.openReferenceWorkspace();
         }}
@@ -208,11 +231,12 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
           );
           handlers.openCoverageWorkspace();
         }}
-        recentSites={[
-          { id: "downtown-retail", name: "Downtown Retail Store", updatedLabel: "Updated 2h ago", riskLabel: "Medium Risk" },
-          { id: "office-lobby", name: "Office Lobby", updatedLabel: "Updated 1d ago", riskLabel: "Low Risk" },
-          { id: "warehouse-a", name: "Warehouse A", updatedLabel: "Updated 2d ago", riskLabel: "High Risk" },
-        ]}
+        recentSites={savedProjects.slice(0, 6).map((project) => ({
+          id: project.scene.id,
+          name: project.scene.name,
+          updatedLabel: `Updated ${project.updatedAt ? `${Math.max(1, Math.round((Date.now() - project.updatedAt) / 3600000))}h ago` : "recently"}`,
+          riskLabel: (project.scene.simulation?.totalCoveragePct ?? 0) >= 70 ? "Low Risk" as const : (project.scene.simulation?.totalCoveragePct ?? 0) >= 40 ? "Medium Risk" as const : "High Risk" as const,
+        }))}
       />
     );
   }
@@ -239,8 +263,10 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
     return (
       <div className="h-full w-full overflow-hidden" style={{ background: "var(--bg)" }}>
         <SceneBuilderWizard
+          onBuild={(scene) => {
+            handlers.createDraftFromScene(scene, "manual");
+          }}
           onClose={() => {
-            handlers.compileCurrentScene("manual");
             navigate("site_draft_review");
           }}
         />
@@ -254,8 +280,10 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
       <div className="h-full w-full overflow-hidden" style={{ background: "var(--bg)" }}>
         <SceneBuilderWizard
           forceImportMethod="floor_plan"
+          onBuild={(scene) => {
+            handlers.createDraftFromScene(scene, "floor_plan");
+          }}
           onClose={() => {
-            handlers.compileCurrentScene("floor_plan");
             navigate("site_draft_review");
           }}
         />
@@ -316,26 +344,67 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
     return <StudioShell />;
   }
 
-  // Reference Sites — placeholder
+  // Camera Operations — canonical product surface routed into Studio camera modes.
+  if (productView === "camera_operations") {
+    if (subContext === "wall") {
+      return <StudioModeRedirect viewMode="wall" preset="camera_wall" bottomTab="metrics" />;
+    }
+    return <StudioModeRedirect viewMode="camera_view" preset="coverage" bottomTab="metrics" />;
+  }
+
+  // Incident Review — canonical product surface routed into replay.
+  if (productView === "incident_review") {
+    return <StudioModeRedirect viewMode="replay" preset="replay" bottomTab="timeline" />;
+  }
+
+  // Counterfactual Compare — canonical product surface routed into compare.
+  if (productView === "counterfactual_compare") {
+    return <StudioModeRedirect viewMode="compare" preset="compare" bottomTab="beforeafter" />;
+  }
+
+  // Audit Report — canonical product surface routed into report mode.
+  if (productView === "audit_report") {
+    return <StudioModeRedirect viewMode="report" preset="report" bottomTab="report" />;
+  }
+
+  // Reference Sites — explicit product-level placeholder while canonical library matures.
   if (productView === "reference_sites") {
     return (
-      <div className="flex h-full w-full flex-col items-center justify-center gap-3" style={{ background: "var(--bg)" }}>
-        <div className="text-sm text-[color:var(--text-muted)]">Reference Sites — coming soon</div>
-        <button type="button" onClick={() => navigate("product_home")} className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-[color:var(--text-muted)] hover:text-white">
-          Back to Product Home
-        </button>
+      <div className="flex h-full w-full items-center justify-center" style={{ background: "var(--bg)" }}>
+        <div className="rounded-2xl border border-white/10 bg-black/20 px-5 py-4 text-center">
+          <div className="text-sm font-medium text-white">Reference Sites</div>
+          <div className="mt-1 text-xs text-[color:var(--text-muted)]">
+            Open a seeded reference site from Product Home while library management is being finalized.
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate("product_home")}
+            className="mt-3 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-[color:var(--text-muted)] hover:text-white"
+          >
+            Return to Product Home
+          </button>
+        </div>
       </div>
     );
   }
 
-  // Settings — placeholder
+  // Settings — explicit product-level placeholder while settings suite is being wired.
   if (productView === "settings") {
     return (
-      <div className="flex h-full w-full flex-col items-center justify-center gap-3" style={{ background: "var(--bg)" }}>
-        <div className="text-sm text-[color:var(--text-muted)]">Settings — coming soon</div>
-        <button type="button" onClick={() => navigate("product_home")} className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-[color:var(--text-muted)] hover:text-white">
-          Back to Product Home
-        </button>
+      <div className="flex h-full w-full items-center justify-center" style={{ background: "var(--bg)" }}>
+        <div className="rounded-2xl border border-white/10 bg-black/20 px-5 py-4 text-center">
+          <div className="text-sm font-medium text-white">Settings</div>
+          <div className="mt-1 text-xs text-[color:var(--text-muted)]">
+            Product settings surface is reserved here; active workspace controls remain available in Studio.
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate("product_home")}
+            className="mt-3 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-[color:var(--text-muted)] hover:text-white"
+          >
+            Return to Product Home
+          </button>
+        </div>
       </div>
     );
   }

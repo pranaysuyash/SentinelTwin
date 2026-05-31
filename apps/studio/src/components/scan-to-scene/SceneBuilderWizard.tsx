@@ -3,7 +3,6 @@
 import { ArrowLeft, ArrowRight, Check, ImageUp, Loader2, Plus, RotateCcw } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
-import { useStudioStore } from "@/store/studio-store";
 import {
   loadImageToData,
   extractFloorPlan,
@@ -19,6 +18,7 @@ import {
 } from "@/lib/floor-plan-import";
 import { SCENE_TEMPLATES, type SceneTemplate } from "@/lib/scene-templates";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
+import type { SecurityScene } from "@/schema/security-scene";
 import { ImportReview } from "./ImportReview";
 import { getFloorPlanExtractionConfig } from "./floor-plan-extraction-config";
 
@@ -60,10 +60,11 @@ const initialState: WizardState = {
 
 interface SceneBuilderWizardProps {
   onClose?: () => void;
+  onBuild?: (scene: SecurityScene) => void;
   forceImportMethod?: ImportMethod | null;
 }
 
-export function SceneBuilderWizard({ onClose, forceImportMethod = null }: SceneBuilderWizardProps) {
+export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null }: SceneBuilderWizardProps) {
   const seededState = useMemo<WizardState>(() => {
     if (forceImportMethod === "floor_plan") {
       return {
@@ -75,7 +76,6 @@ export function SceneBuilderWizard({ onClose, forceImportMethod = null }: SceneB
     return initialState;
   }, [forceImportMethod]);
   const [state, setState] = useState<WizardState>(seededState);
-  const setScene = useStudioStore((s) => s.setScene);
   const roomHeightM = state.heightM;
   const floorPlanScalePixelsPerMeter = state.floorPlanScalePixelsPerMeter;
 
@@ -225,45 +225,10 @@ export function SceneBuilderWizard({ onClose, forceImportMethod = null }: SceneB
     }
 
     if (scene) {
-      setScene(scene);
-      // Capture scene source before onClose may reset state
-      const sceneSource = scene.source;
-      const shouldRunSimulation = scene.cameras.length > 0 && scene.criticalZones.length > 0;
-      if (shouldRunSimulation) {
-        setTimeout(() => {
-          const store = useStudioStore.getState();
-          store.runSimulation();
-        }, 100);
-      }
+      onBuild?.(scene);
       onClose?.();
-      // Guide the user on what to do next
-      setTimeout(() => {
-        const store = useStudioStore.getState();
-        if (!shouldRunSimulation) {
-          const cameras = store.scene.cameras.length;
-          const zones = store.scene.criticalZones.length;
-          if (cameras === 0 && zones === 0) {
-            store.setLaunchNotice(
-              `${sceneSource === "import" ? "Floor-plan" : "Scene"} import is ready. Add cameras and at least one critical zone before simulation.`,
-            );
-          } else if (cameras === 0) {
-            store.setLaunchNotice("Scene imported. Add cameras before simulation.");
-          } else {
-            store.setLaunchNotice("Scene imported. Add critical zones before simulation.");
-          }
-          return;
-        }
-
-        if (sceneSource === "import") {
-          store.setLaunchNotice("Floor-plan import ready. Review geometry and adjust if needed, then tune coverage paths.");
-        } else if (sceneSource === "manual") {
-          store.setLaunchNotice("Blank scene created. Add walls, doors, and cameras to get started.");
-        } else {
-          store.setLaunchNotice("Scene created. Add cameras and critical zones to see coverage.");
-        }
-      }, 200);
     }
-  }, [state, setScene, onClose]);
+  }, [onBuild, onClose]);
 
   const handleReset = useCallback(() => {
     setState(seededState);

@@ -1,105 +1,78 @@
 # SentinelTwin Studio (`apps/studio`)
 
-SentinelTwin Studio is the active V0.1 Camera Coverage Testbed.
-
-Core loop: `Edit scene -> run simulation -> inspect impact -> apply/revert fixes -> compare/report`.
+SentinelTwin is an AI-native physical security simulation platform.
+Core loop: `Edit scene → run simulation → inspect impact → compare → report`.
 
 ## Requirements
 
 - Node.js `>=24.13.0`
+- pnpm `>=11.4`
 - Bun (for tests)
 
 ## Run
 
-From repo root:
-
 ```bash
 cd apps/studio
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
-Studio is pinned to `http://localhost:3000` and will not fall back to another port.
-If `3000` is already in use, reuse the running instance instead of starting a second one.
+Studio runs on `http://localhost:3000`.
 
 ## Build and Test
 
 ```bash
 # production build
-npm run build
+pnpm build
 
 # lint
-npm run lint
+pnpm lint
 
 # tests (bun)
-npm test
+pnpm test
 
 # watch mode
-npm run test:watch
+pnpm test:watch
 ```
 
-Useful targeted tests:
+## Deploy
+
+**Vercel (recommended):** `https://sentinel-twin-studio.vercel.app`
 
 ```bash
-bun test src/components/__tests__/issues-tab.test.ts
-bun test src/components/__tests__/camera-view-mode.test.ts
-bun test src/components/__tests__/scenario-path-panel.test.ts
-bun test src/simulation/__tests__/golden-simulation-claims.test.ts
+cd apps/studio
+npx vercel --prod
 ```
 
-## Current Workflow Surface
+Or connect GitHub via Vercel dashboard (root dir: `apps/studio`).
 
-- Root launcher flow before Studio shell: `Create or Import Scene` / `Open Current Workspace` / JSON import.
-- Root launcher includes a 5-step guided security workflow with direct handoff actions into Studio.
-- Launcher includes task-first `Security Jobs` entry cards with explicit `Available` / `Preview` / `Planned` maturity badges.
-- Root launcher includes a visible `Product Feature Status` board (`Available`/`Preview`/`Planned`) to avoid demoware ambiguity.
-- Guided flow includes quick actions for baseline run, failure simulation, cheapest-fix counterfactual, replay, night mode, and report.
-- Guided flow uses outcome-focused CTA language and disables stress/fix actions when prerequisites are missing.
-- Root launcher also includes `AI Layout Draft` (prompt-to-`SecurityScene` starter).
-- AI Layout Draft uses structured model output when configured (`NEXT_PUBLIC_OPENAI_API_KEY`) and otherwise falls back to deterministic local drafting.
-- AI Layout Draft also maps key prompt hints into scene entities (camera count, shelves/counter, back-storage zone).
-- Studio shell with view modes: `Map`, `Camera View`, `Camera Wall`, `Path Replay`, `Compare`.
-- Scene controls in top bar: new scene wizard, save/load, import/export JSON, simulation run, snapshots, compare, report.
-- Scene builder wizard paths: blank, template, floor-plan import prototype.
-- Blank path now uses the canonical `createBlankSecurityScene()` factory and room-dimension wall generation (no demo-scene cloning).
-- Floor-plan review supports manual scale calibration before creating the scene.
-- Floor-plan review also supports correction controls (drop false wall/door/window detections before scene creation).
-- Floor-plan review supports draggable door/window marker adjustments in preview before applying corrections.
-- Scan wizard supports direct candidate marker repositioning (drag and arrow-key nudge), quick geometry sanity checks, explicit structural auto-fix actions (merge near duplicates, snap openings toward nearest wall), and low-confidence compile override confirmation.
-- Bottom panel: metrics, issues, timeline, before/after, report-lite, assumptions.
-- Report-lite supports `Single Scene` and `Before/After` export modes.
+See `DEPLOY.md` for Docker/Railway/Hetzner options.
 
-## What Works Well
+## Product Architecture
 
-- Typed `SecurityScene` schema and validation.
-- Canonical scene-source lineage is normalized on parse (`manual`, `ai`, `scan`, `import`, `preset`, `demo`), with legacy aliases accepted for backward compatibility.
-- Deterministic simulation pipeline (coverage, occlusion, quality scoring, path visibility).
-- Recommendation preview/apply/revert loop in issues tab.
-- Counterfactual scene comparisons and snapshot flow.
-- Defensive report wording and assumptions/disclaimer framing.
-- Report-lite includes failing-zone summaries and immediate action checklist output.
-- Assumptions are visible and editable in-panel (quick controls + full assumptions tab).
-- Golden simulation claim tests for major behavior checks.
-- Camera wall POV stays in sync with live camera transform edits.
-- Camera view includes per-camera replay visibility status overlay.
-- Camera view includes metric-backed footage verification assist (reference frame upload, overlay/split compare, opacity/alignment nudges, alignment-quality score, optional difference heat overlay) with explicit planning-only disclaimer language.
-- Camera wall tiles include route visibility status/quality overlays and route-context chip in header.
-- Compare mode renders selected snapshot geometry per side for truthful before/after visuals.
-- Compare mode includes changed-object delta summaries and snapshot-level simulation recovery for unsimulated scenarios.
-- Compare mode can capture live canvas evidence for selected snapshot A/B, and Report-lite compare export consumes these captures when available.
+Product-level views routed via `ProductViewRouter`:
 
-## Known Gaps
+- `product_home` — StudioDashboardHome (current site twin preview, security status, mode launcher)
+- `site_intake` — Create Site Twin (scan, AI draft, floor plan, import, manual build, footage verify)
+- `scan_site` — Manual-assisted or guided scan photo intake
+- `manual_builder` — Scene Builder Wizard (blank/template)
+- `floor_plan_import` — Floor plan image import
+- `ai_layout_draft` — Prompt-to-scene AI draft
+- `site_draft_review` — Review and approve before activation
+- `studio` — Security Twin Studio (coverage, camera view/wall, path replay, compare, report)
 
-- Floor-plan import now materializes basic walls/doors/windows but remains prototype-level (heuristic parsing, no robust correction loop).
-- Some UI surfaces are wired but still demo/static in parts.
-- Full product layers (guided scan automation, robust AI layout draft, product-grade footage verification, project backend) are not implemented yet.
+Studio sub-modes: Coverage, Camera Operations, Incident Review, Counterfactual Fix, Audit Report.
 
-## Defensive Framing
+## Key Design Principles
 
-This tool is for defensive security hardening and coverage-failure analysis. It does not provide offensive bypass guidance.
+- **Draft gating**: All creation/import paths produce a `SiteTwinDraft` that must pass through `SiteDraftReview` before activation. No flow bypasses this.
+- **AI proposes, simulation verifies**: AI generates structured scene edits; the simulation engine computes coverage deltas.
+- **Deterministic simulation**: Coverage, occlusion, DORI quality scoring, and path visibility are deterministic geometry — not AI.
+- **Defensive framing**: Output is expressed as "coverage failure analysis" and "hardening recommendations."
 
-## Notes
+## Product Language
 
-- Main implementation status is tracked in:
-  - `CURRENT_STATUS.md` (repo snapshot)
-  - `Docs/todos/CURRENT_IMPLEMENTATION_STATE.md` (detailed implementation ledger)
+- **Site Twin** — The canonical security scene (what the product works with)
+- **Security Twin Studio** — The 3D editor workspace
+- **Draft** — Unactivated scene pending review
+- **Audit Report** — Security assessment output

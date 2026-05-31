@@ -27,6 +27,12 @@ describe("Root routing contract", () => {
     expect(routerSource).toContain('productView === "site_intake"');
     expect(routerSource).toContain('productView === "scan_site"');
     expect(routerSource).toContain('productView === "studio"');
+    expect(routerSource).toContain('productView === "camera_operations"');
+    expect(routerSource).toContain('productView === "incident_review"');
+    expect(routerSource).toContain('productView === "counterfactual_compare"');
+    expect(routerSource).toContain('productView === "audit_report"');
+    expect(routerSource).toContain('productView === "reference_sites"');
+    expect(routerSource).toContain('productView === "settings"');
     expect(routerSource).toContain("useProductViewStore");
   });
 
@@ -37,6 +43,12 @@ describe("Root routing contract", () => {
     expect(storeSource).toContain('"product_home"');
     expect(storeSource).toContain('"site_intake"');
     expect(storeSource).toContain('"studio"');
+    expect(storeSource).toContain('"camera_operations"');
+    expect(storeSource).toContain('"incident_review"');
+    expect(storeSource).toContain('"counterfactual_compare"');
+    expect(storeSource).toContain('"audit_report"');
+    expect(storeSource).toContain('"reference_sites"');
+    expect(storeSource).toContain('"settings"');
     expect(storeSource).toContain('navigate:');
     expect(storeSource).toContain('goHome:');
   });

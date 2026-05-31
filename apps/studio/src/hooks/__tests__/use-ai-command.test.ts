@@ -5,27 +5,28 @@ import { join } from "node:path";
 const hookPath = join(import.meta.dir, "../use-ai-command.ts");
 
 describe("useAiCommand", () => {
-  test("uses the offline parser fallback and the selected provider before requiring an API key", () => {
+  test("uses offline parser fallback and server-side AI routes", () => {
     const source = readFileSync(hookPath, "utf8");
 
     expect(source).toContain('import { parseOfflineCommand, type OfflineCommandAction } from "@/lib/offline-command-parser";');
     expect(source).toContain("describeAiProviderHealth");
     expect(source).toContain("describeAiProviderTelemetry");
     expect(source).toContain("describeAiProviderSelection");
-    expect(source).toContain("providerKeyAvailable");
+    expect(source).not.toContain("createModelProvider(aiProviderSelection)");
     expect(source).toContain('const aiProviderSelection = useStudioStore((s) => s.aiProviderSelection);');
     expect(source).toContain('const localOnlyMode = useStudioStore((s) => s.localOnlyMode);');
     expect(source).toContain('const providerSummary = describeAiProviderSelection(aiProviderSelection);');
     expect(source).toContain('const providerHealth = describeAiProviderHealth(aiProviderSelection, localOnlyMode);');
     expect(source).toContain('const providerTelemetry = describeAiProviderTelemetry(aiProviderSelection, localOnlyMode);');
-    expect(source).toContain('const provider = createModelProvider(aiProviderSelection);');
-    expect(source).toContain('const cloudAvailable = apiKeyAvailable && !localOnlyMode;');
+    expect(source).toContain('const cloudAvailable = providerHealth.overallStatus !== "blocked" && !localOnlyMode;');
     expect(source).toContain('const recordTelemetry = useCallback(');
     expect(source).toContain("const offlinePlan = parseOfflineCommand(userText, storeState.scene);");
     expect(source).toContain("stageCommandPreview({");
     expect(source).toContain('state: "preview"');
     expect(source).toContain("providerSummary.providerName");
-    expect(source).toContain("providerKeyAvailable(aiProviderSelection.providerId)");
+    expect(source).toContain('fetch("/api/ai/command"');
+    expect(source).toContain('fetch("/api/ai/counterfactuals"');
+    expect(source).toContain('fetch("/api/ai/report"');
     expect(source).toContain("Try commands like /night, /privacy on, /simulate, /report, or /target license_plate.");
     expect(source).toContain('const mode: AiCommandMode = localOnlyMode');
     expect(source).toContain('label: "Local-only"');

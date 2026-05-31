@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 
 import {
-  createModelProvider,
   describeAiProviderHealth,
   describeAiProviderTelemetry,
   describeAiProviderSelection,
@@ -13,7 +12,6 @@ import {
 import { resolvePromptRegistryLineage } from "@/agents/prompt-registry";
 import {
   draftSceneFromPrompt,
-  draftSceneFromPromptWithModel,
   summarizeDraftResult,
 } from "@/lib/ai-layout-draft";
 import { summarizeAiActionTelemetry } from "@/lib/ai-action-telemetry";
@@ -47,7 +45,6 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
   const scene = useStudioStore((s) => s.scene);
   const recordOperationalEvidenceEvent = useStudioStore((s) => s.recordOperationalEvidenceEvent);
   const recordAiActionTelemetry = useStudioStore((s) => s.recordAiActionTelemetry);
-  const setScene = useStudioStore((s) => s.setScene);
   const historyDepth = useStudioStore((s) => s.historyPast.length);
   const aiProviderSelection = useStudioStore((s) => s.aiProviderSelection);
   const localOnlyMode = useStudioStore((s) => s.localOnlyMode);
@@ -174,11 +171,27 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
     const draftStartedAt = performance.now();
     const promptLineage = resolvePromptRegistryLineage("ai_draft");
     try {
-      const provider = createModelProvider(aiProviderSelection);
-      const useModelDraft = aiDraftModelAvailable;
-      const draft = useModelDraft
-        ? await draftSceneFromPromptWithModel(aiPrompt, provider)
-        : draftSceneFromPrompt(aiPrompt);
+      const draftResponse = await fetch("/api/ai/draft-scene", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          prompt: aiPrompt,
+          selection: aiProviderSelection,
+          localOnlyMode,
+        }),
+      });
+      const draftPayload = await draftResponse.json() as {
+        ok: boolean;
+        mode?: "model" | "heuristic";
+        reason?: string;
+        draft?: ReturnType<typeof draftSceneFromPrompt>;
+        error?: string;
+      };
+      if (!draftPayload.ok || !draftPayload.draft) {
+        throw new Error(draftPayload.error ?? "AI draft generation failed.");
+      }
+      const useModelDraft = draftPayload.mode === "model";
+      const draft = draftPayload.draft;
       const draftValidation = safeParseSecurityScene(draft.scene);
       if (!draftValidation.success) {
         throw new Error(`Generated draft is invalid SecurityScene data: ${draftValidation.error.issues[0]?.message ?? "validation failed"}`);
@@ -224,7 +237,7 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
         notes: [useModelDraft ? `Provider: ${currentAiProvider.providerLabel}` : "Heuristic preview generated locally."],
       });
       const warning =
-        draft.warnings[0] ?? (localOnlyMode
+        draft.warnings[0] ?? draftPayload.reason ?? (localOnlyMode
           ? "Local-only mode is on, so heuristic draft generation is enforced."
           : useModelDraft
             ? `Model draft generated with ${currentAiProvider.providerLabel}.`

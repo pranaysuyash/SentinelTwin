@@ -27,7 +27,6 @@ import {
   compareOperationalEvidenceBranches,
 } from "@/lib/operational-evidence";
 import {
-  createModelProvider,
   describeAiProviderGovernance,
   describeAiProviderHealth,
   describeAiProviderSelection,
@@ -36,7 +35,6 @@ import {
 import type { AiProviderSelection } from "@/agents/provider-selection";
 import {
   compareModelEvalRuns,
-  runModelEvalSuite,
   summarizeModelEvalRun,
   type ModelEvalSuiteResult,
 } from "@/agents/model-eval";
@@ -984,21 +982,20 @@ export function DebugTab() {
     setModelEvalLoading(true);
     setModelEvalError(null);
     try {
-      const provider = providerGovernance.cloudAvailable
-        ? createModelProvider(aiProviderSelection)
-        : ({
-            name: providerGovernance.activeProviderName.toLowerCase(),
-            async complete() {
-              throw new Error("Cloud-backed provider unavailable.");
-            },
-            async *completeStreaming() {
-              throw new Error("Cloud-backed provider unavailable.");
-            },
-            async completeStructured() {
-              throw new Error("Cloud-backed provider unavailable.");
-            },
-          } as ReturnType<typeof createModelProvider>);
-      const report = await runModelEvalSuite(provider, aiProviderSelection, localOnlyMode);
+      const response = await fetch("/api/ai/model-eval", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ selection: aiProviderSelection, localOnlyMode }),
+      });
+      const payload = await response.json() as {
+        ok: boolean;
+        error?: string;
+        report?: ModelEvalSuiteResult;
+      };
+      if (!payload.ok || !payload.report) {
+        throw new Error(payload.error ?? "Model eval suite failed.");
+      }
+      const report = payload.report;
       setModelEvalReport(report);
       recordModelEvalRun(report);
       setLaunchNotice(

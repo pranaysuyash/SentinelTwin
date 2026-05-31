@@ -36,6 +36,6 @@ describe("ContextRightPanel", () => {
     expect(bulkCameraSource).toContain("Night Mode Batch");
     expect(assumptionsSource).toContain("DORI Model");
     expect(assumptionsSource).toContain("Grid Resolution");
-    expect(assumptionsSource).toContain("Edit Assumptions");
+    expect(assumptionsSource).toContain("Open Full Assumptions Tab");
   });
 });

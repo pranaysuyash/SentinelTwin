@@ -17,6 +17,10 @@ export type ProductView =
   | "ai_layout_draft"
   | "site_draft_review"
   | "studio"
+  | "camera_operations"
+  | "incident_review"
+  | "counterfactual_compare"
+  | "audit_report"
   | "reference_sites"
   | "settings";
 

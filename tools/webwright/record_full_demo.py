@@ -140,6 +140,34 @@ def click_any(page, labels: Sequence[str], timeout_ms: int = 6000) -> str | None
     return None
 
 
+def click_visible_text(page, labels: Sequence[str], timeout_ms: int = 4000) -> str | None:
+    for label in labels:
+        try:
+            clicked = page.evaluate(
+                """(needle) => {
+                  const lower = needle.toLowerCase();
+                  const candidates = Array.from(document.querySelectorAll('button, [role="button"], a, [data-node-id], div, span'))
+                    .filter((el) => {
+                      const rect = el.getBoundingClientRect();
+                      const text = `${el.innerText || ''} ${el.getAttribute('aria-label') || ''}`.toLowerCase();
+                      return rect.width > 0 && rect.height > 0 && text.includes(lower);
+                    });
+                  const target = candidates.find((el) => el.matches('button, [role="button"], a, [data-node-id]'))
+                    || candidates[0];
+                  if (!target) return false;
+                  target.click();
+                  return true;
+                }""",
+                label,
+            )
+            if clicked:
+                page.wait_for_timeout(timeout_ms // 4)
+                return label
+        except Exception:
+            continue
+    return None
+
+
 def load_sample_scene_name(log: list[dict]) -> str | None:
     try:
         payload = json.loads(SAMPLE_JSON_PATH.read_text(encoding="utf-8"))
@@ -432,9 +460,9 @@ def main() -> int:
                 page,
                 log,
                 name="root_site_intake",
-                labels=[],
+                labels=["Create Site Twin", "New Scene", "Import JSON"],
                 shot="03-root-create-site-twin.png",
-                wait_for=["Create Site Twin", "Import Site Twin Data", "AI Layout Draft"],
+                wait_for=["Create Site Twin", "Import Site Twin Data", "Import", "Scan a Site", "AI Layout Draft", "New Blank Site"],
                 detail="Verify the command-center create/import surface without applying a new scene.",
                 optional=True,
             )
@@ -502,6 +530,7 @@ def main() -> int:
                 step(log, "studio_ready", False, "No studio workspace signal found")
             else:
                 step(log, "studio_ready", True, "workspace signal found")
+            click_visible_text(page, ["Start", "Close", "Dismiss"], timeout_ms=1200)
             page.wait_for_timeout(2500)
             try:
                 page.wait_for_load_state("networkidle", timeout=12000)

@@ -287,9 +287,9 @@ function ScenePreview({ scene, result, compact = false, showLabels = true, hydra
         <div className="absolute inset-0 opacity-60 [background-image:linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)] [background-size:44px_44px]" />
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="rounded-2xl border border-white/8 bg-black/30 px-4 py-3 text-center">
-            <div className="text-xs uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Loading preview</div>
+            <div className="text-xs uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Scene Preview</div>
             <div className="mt-1 text-sm font-medium text-white">{scene.name}</div>
-            <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">Hydrating scene geometry</div>
+            <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">Scene loaded · Run simulation for coverage data</div>
           </div>
         </div>
       </div>
@@ -484,7 +484,7 @@ function WorkspaceMiniPreview({ scene, result, hydrated = true }: ScenePreviewPr
         <div className="absolute inset-0 opacity-55 [background-image:linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)] [background-size:32px_32px]" />
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="rounded-full border border-white/8 bg-black/30 px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">
-            Preview loading
+            Scene loaded
           </div>
         </div>
       </div>
@@ -1464,19 +1464,17 @@ export function StudioDashboardHome({
     return filteredProjects.slice(0, 8);
   }, [filteredProjects]);
   const tagFilters = Object.keys(tagCounts).sort((a, b) => tagCounts[b] - tagCounts[a] || a.localeCompare(b)).slice(0, 8);
-  const statusLabel = !hydrated
-    ? "Loading"
-    : simulationRunning
-      ? "Running"
-      : coverage == null
-        ? "Simulation pending"
-        : simulationDirty
-          ? "Needs recompute"
-          : "Up to date";
-  const statusTone = !hydrated
-    ? "border-slate-400/20 bg-slate-500/10 text-slate-200"
-    : simulationRunning
-      ? "border-cyan-400/25 bg-cyan-500/10 text-cyan-200"
+  const statusLabel = simulationRunning
+    ? "Running"
+    : coverage == null
+      ? "Baseline required"
+      : simulationDirty
+        ? "Needs recompute"
+        : "Up to date";
+  const statusTone = simulationRunning
+    ? "border-cyan-400/25 bg-cyan-500/10 text-cyan-200"
+    : coverage == null
+      ? "border-slate-400/20 bg-slate-500/10 text-slate-200"
       : simulationDirty
         ? "border-amber-400/25 bg-amber-500/10 text-amber-200"
         : "border-emerald-400/25 bg-emerald-500/10 text-emerald-200";
@@ -1492,8 +1490,8 @@ export function StudioDashboardHome({
   const referenceDemoProjects = visibleProjects.filter((project) => project.scene.source === "demo");
   const headerAssumptions = scene.assumptions;
   const lastRun = result?.computedAt ?? scene.simulation?.computedAt ?? null;
-  const lastRunLabel = hydrated ? formatTime(lastRun) : "Loading...";
-  const lastRunDetail = hydrated ? "Computed simulation" : "Hydrating workspace state...";
+  const lastRunLabel = lastRun ? formatTime(lastRun) : "Not yet simulated";
+  const lastRunDetail = lastRun ? "Computed simulation" : "Run simulation for coverage data";
   const visibleProjectCount = visibleProjects.length;
   const userWorkspaceCount = userWorkspaceProjects.length;
   const referenceDemoCount = referenceDemoProjects.length;
@@ -1781,22 +1779,6 @@ export function StudioDashboardHome({
                 <MiniStat label="Last Run" value={lastRunLabel} accent="text-sky-200" detail={lastRunDetail} />
               </div>
 
-              <div className="mt-4 flex flex-wrap gap-2">
-                {onOpenDemoScene ? (
-                  <ActionButton
-                    icon={<Sparkles className="h-4 w-4" />}
-                    label="Open Seeded Retail Baseline"
-                    description="Start from the seeded retail scene as the reference workflow."
-                    onClick={onOpenDemoScene}
-                    className="min-w-[210px] flex-1"
-                  />
-                ) : null}
-                <ActionButton icon={<MapIcon className="h-4 w-4" />} label="Open Coverage Workspace" description="Enter the analysis workspace directly." onClick={onOpenCoverageWorkspace} className="min-w-[210px] flex-1" />
-                <ActionButton icon={<Camera className="h-4 w-4" />} label="Open Camera Wall" description="Review the live feed grid." onClick={onOpenCameraWall} className="min-w-[210px] flex-1" />
-                <ActionButton icon={<Play className="h-4 w-4" />} label="Open Path Replay" description="Inspect the replay actor and route." onClick={onOpenPathReplay} className="min-w-[210px] flex-1" />
-                <ActionButton icon={<LayoutDashboard className="h-4 w-4" />} label="Compare Fixes" description="Open the before/after comparison view." onClick={onOpenCompareFixes} className="min-w-[210px] flex-1" />
-                <ActionButton icon={<Radar className="h-4 w-4" />} label="Open Report Lite" description="Open the report summary view." onClick={onOpenReport} className="min-w-[210px] flex-1" />
-              </div>
               {onGuidedScanAssistant ? (
                 <div className="mt-4">
                   <button
@@ -1947,12 +1929,11 @@ export function StudioDashboardHome({
               <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.8fr)]">
                 <div className="rounded-[24px] border border-[color:var(--st-border)] bg-[color:var(--st-panel-2)] p-3">
                   <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">RECENT WORKSPACES</div>
-                  {hydrated ? (
-                    <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-                      {compactRecentProjects.map((project) => {
-                        const recentScene = project.scene;
-                        const recentCoverage = recentScene.simulation?.totalCoveragePct ?? (recentScene.id === scene.id ? coverage : null);
-                        const recentIssues = recentScene.simulation?.issues.length ?? (recentScene.id === scene.id ? issues.length : 0);
+                  <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                    {compactRecentProjects.map((project) => {
+                      const recentScene = project.scene;
+                      const recentCoverage = recentScene.simulation?.totalCoveragePct ?? (recentScene.id === scene.id ? coverage : null);
+                      const recentIssues = recentScene.simulation?.issues.length ?? (recentScene.id === scene.id ? issues.length : 0);
                         return (
                           <button
                             key={recentScene.id}
@@ -1973,12 +1954,6 @@ export function StudioDashboardHome({
                           </button>
                         );
                       })}
-                    </div>
-                  ) : (
-                    <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-                      <div className="min-h-[92px] rounded-[18px] border border-dashed border-[color:var(--st-border)] bg-white/[0.02] p-3 text-xs text-[color:var(--st-muted)]">
-                        Loading recent workspaces...
-                      </div>
                     </div>
                   )}
                 </div>
@@ -2172,6 +2147,39 @@ export function StudioDashboardHome({
             ) : null}
           </aside>
         </div>
+
+        <div className="rounded-[20px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="mr-2 flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">
+              <Layers3 className="h-3.5 w-3.5" />
+              Modes
+            </div>
+            <button type="button" onClick={onOpenCoverageWorkspace} className="flex items-center gap-1.5 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-[10px] font-semibold text-[#dfe8ff] transition-colors hover:border-sky-400/30 hover:bg-white/[0.06]">
+              <MapIcon className="h-3 w-3" /> Coverage
+            </button>
+            <button type="button" onClick={() => onOpenMode("camera_view", "coverage", "metrics")} className="flex items-center gap-1.5 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-[10px] font-semibold text-[#dfe8ff] transition-colors hover:border-sky-400/30 hover:bg-white/[0.06]">
+              <Camera className="h-3 w-3" /> Camera View
+            </button>
+            <button type="button" onClick={onOpenCameraWall} className="flex items-center gap-1.5 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-[10px] font-semibold text-[#dfe8ff] transition-colors hover:border-sky-400/30 hover:bg-white/[0.06]">
+              <Camera className="h-3 w-3" /> Camera Wall
+            </button>
+            <button type="button" onClick={onOpenPathReplay} className="flex items-center gap-1.5 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-[10px] font-semibold text-[#dfe8ff] transition-colors hover:border-sky-400/30 hover:bg-white/[0.06]">
+              <Play className="h-3 w-3" /> Path Replay
+            </button>
+            <button type="button" onClick={onOpenCompareFixes} className="flex items-center gap-1.5 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-[10px] font-semibold text-[#dfe8ff] transition-colors hover:border-sky-400/30 hover:bg-white/[0.06]">
+              <LayoutDashboard className="h-3 w-3" /> Compare
+            </button>
+            <button type="button" onClick={onOpenReport} className="flex items-center gap-1.5 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-[10px] font-semibold text-[#dfe8ff] transition-colors hover:border-sky-400/30 hover:bg-white/[0.06]">
+              <Radar className="h-3 w-3" /> Report
+            </button>
+            {onOpenDemoScene ? (
+              <button type="button" onClick={onOpenDemoScene} className="flex items-center gap-1.5 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-[10px] font-semibold text-emerald-200 transition-colors hover:bg-emerald-500/15">
+                <Sparkles className="h-3 w-3" /> Seeded Baseline
+              </button>
+            ) : null}
+          </div>
+        </div>
+
         <footer className="mt-auto flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[color:var(--st-border)] bg-[color:var(--st-panel)] px-4 py-2.5 text-[11px] text-[color:var(--st-muted)]">
           <div>© 2026 SentinelTwin · Security Simulation Studio · v0.9.0</div>
           <div className="flex items-center gap-3">

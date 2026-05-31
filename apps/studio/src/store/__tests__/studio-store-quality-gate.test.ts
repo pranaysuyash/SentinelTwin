@@ -58,8 +58,10 @@ describe("studio store quality gate", () => {
     expect(useStudioStore.getState().bottomTab).toBe("metrics");
     expect(useStudioStore.getState().activeTool).toBe("camera");
     expect(useStudioStore.getState().inspectorTab).toBe("view");
-    expect(useStudioStore.getState().rightDockCollapsed).toBe(false);
-    expect(useStudioStore.getState().bottomDockCollapsed).toBe(false);
+    expect(useStudioStore.getState().rightDockCollapsed).toBe(true);
+    expect(useStudioStore.getState().bottomDockCollapsed).toBe(true);
+    expect(useStudioStore.getState().dockAttention.right).toBe(true);
+    expect(useStudioStore.getState().dockAttention.bottom).toBe(true);
 
     if (light) {
       useStudioStore.getState().selectNode(light.id);

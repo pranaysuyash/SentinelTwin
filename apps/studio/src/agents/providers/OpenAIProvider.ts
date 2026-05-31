@@ -2,6 +2,8 @@ import { z } from "zod";
 
 import type { ModelPrompt, ModelProvider, ModelResponse } from "./ModelProvider";
 
+let hasWarnedMissingOpenAiKey = false;
+
 function buildOpenAiMessages(prompt: ModelPrompt) {
   return [
     { role: "system" as const, content: prompt.system },
@@ -29,8 +31,9 @@ export class OpenAIProvider implements ModelProvider {
       typeof process !== "undefined"
         ? (process.env.OPENAI_API_KEY ?? process.env.NEXT_PUBLIC_OPENAI_API_KEY ?? "")
         : "";
-    if (!this.apiKey) {
+    if (!this.apiKey && !hasWarnedMissingOpenAiKey) {
       console.warn("[OpenAIProvider] No OPENAI_API_KEY set — AI commands will fail at runtime.");
+      hasWarnedMissingOpenAiKey = true;
     }
   }
 

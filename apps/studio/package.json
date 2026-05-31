@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "node ./scripts/run-fixed-port.mjs dev",
-    "build": "next build",
+    "build": "NEXT_PRIVATE_WORKER_THREADS=false next build --webpack",
     "start": "node ./scripts/run-fixed-port.mjs start",
     "lint": "eslint",
     "audit:truth": "bun ../../tools/truth-audit.ts",

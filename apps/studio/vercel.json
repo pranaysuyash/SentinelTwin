@@ -1,5 +1,5 @@
 {
   "framework": "nextjs",
   "installCommand": "cd ../.. && pnpm install",
-  "buildCommand": "next build"
+  "buildCommand": "NEXT_PRIVATE_WORKER_THREADS=false next build --webpack"
 }

@@ -860,68 +860,46 @@ export interface SceneSlice {
 // ---------------------------------------------------------------------------
 // Slice creator
 // ---------------------------------------------------------------------------
-export const createSceneSlice = (set: any, get: any): SceneSlice => ({
-  scene: ((): SecurityScene => {
-    const s = createSmallRetailShopScene();
-    const snapshots = ((): SceneSnapshot[] => {
-      const movePrimaryObstruction = (sc: SecurityScene) => {
-        const target = sc.obstructions.find((obs) => obs.id === "obs_cupboard_blocker") ?? sc.obstructions.find((obs) => obs.movable) ?? sc.obstructions[0];
-        if (target) {
-          target.position = [3.2, target.position[1], 2.4];
-        }
-      };
-      const isBrowserRuntime = typeof window !== "undefined";
-      const createSnapshotVariant = (label: string, minutesAgo: number, mutate?: (sc: SecurityScene) => void): SceneSnapshot => {
-        const sc = createSmallRetailShopScene();
-        mutate?.(sc);
-        const sim = isBrowserRuntime ? simulateStudio(sc) : undefined;
-        if (sim) {
-          sc.simulation = sim;
-        } else {
-          delete sc.simulation;
-        }
-        sc.updatedAt = (() => {
-          const DEMO_SNAPSHOT_BASE_TS = smallRetailShopScene.createdAt + 18 * 60_000;
-          return DEMO_SNAPSHOT_BASE_TS - minutesAgo * 60_000;
-        })();
-        return {
-          id: `snap_${label.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`,
-          label,
-          createdAt: (() => {
-            const DEMO_SNAPSHOT_BASE_TS = smallRetailShopScene.createdAt + 18 * 60_000;
-            return DEMO_SNAPSHOT_BASE_TS - minutesAgo * 60_000;
-          })(),
-          scene: cloneSecurityScene(sc),
-          simulation: sim,
-        };
-      };
-      return [
-        createSnapshotVariant("Baseline", 18),
-        createSnapshotVariant("Moved Obstruction", 14, movePrimaryObstruction),
-        createSnapshotVariant("Cam 2 Rotated", 10, (sc) => {
-          const cam2 = sc.cameras.find((camera) => camera.id === "cam_counter");
-          if (cam2) {
-            cam2.yawDeg = 305;
-            cam2.pitchDeg = -20;
-          }
-        }),
-        createSnapshotVariant("Night Mode", 7, (sc) => {
-          sc.assumptions.timeOfDay = "night";
-        }),
-      ];
-    })();
-    s.snapshots = snapshots.map((snap) => ({
-      ...snap,
-      scene: structuredClone(snap.scene),
-    }));
-    const sim = typeof window !== "undefined" ? simulateStudio(s) : null;
-    if (sim) {
-      s.simulation = sim;
-    } else {
-      delete s.simulation;
-    }
-    return s;
-  })(),
+export const createSceneSlice = (set: any, get: any): SceneSlice => {
+  // Build demo snapshots once and share across scene, snapshots, and graph fields
+  const DEMO_SNAPSHOT_BASE_TS = smallRetailShopScene.createdAt + 18 * 60_000;
+  const isBr = typeof window !== "undefined";
+  const mvObs = (sc: SecurityScene) => {
+    const t = sc.obstructions.find((obs) => obs.id === "obs_cupboard_blocker") ?? sc.obstructions.find((obs) => obs.movable) ?? sc.obstructions[0];
+    if (t) t.position = [3.2, t.position[1], 2.4];
+  };
+  const sv = (label: string, minsAgo: number, mutate?: (sc: SecurityScene) => void): SceneSnapshot => {
+    const sc = createSmallRetailShopScene();
+    mutate?.(sc);
+    const sim = isBr ? simulateStudio(sc) : undefined;
+    if (sim) sc.simulation = sim; else delete sc.simulation;
+    sc.updatedAt = DEMO_SNAPSHOT_BASE_TS - minsAgo * 60_000;
+    return { id: `snap_${label.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`, label, createdAt: DEMO_SNAPSHOT_BASE_TS - minsAgo * 60_000, scene: cloneSecurityScene(sc), simulation: sim };
+  };
+  const snapshots = [
+    sv("Baseline", 18),
+    sv("Moved Obstruction", 14, mvObs),
+    sv("Cam 2 Rotated", 10, (sc) => { const c = sc.cameras.find((cam) => cam.id === "cam_counter"); if (c) { c.yawDeg = 305; c.pitchDeg = -20; } }),
+    sv("Night Mode", 7, (sc) => { sc.assumptions.timeOfDay = "night"; }),
+  ];
+
+  const scene = createSmallRetailShopScene();
+  scene.snapshots = snapshots.map((snap) => ({ ...snap, scene: structuredClone(snap.scene) }));
+  const sim = isBr ? simulateStudio(scene) : null;
+  if (sim) scene.simulation = sim; else delete scene.simulation;
+
+  const loadedEvents = (() => {
+    try {
+      if (typeof window === "undefined") return [] as OperationalEvidenceEvent[];
+      const raw = window.localStorage.getItem(OPERATIONAL_EVIDENCE_STORAGE_KEY);
+      if (!raw) return [] as OperationalEvidenceEvent[];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed as OperationalEvidenceEvent[] : [];
+    } catch { return []; }
+  })();
+
+  return {
+  scene,
   selectedNodeId: "cam_entrance",
   selectedNodeIds: ["cam_entrance"],
   selectedCameraId: "cam_entrance",
@@ -946,83 +924,8 @@ export const createSceneSlice = (set: any, get: any): SceneSlice => ({
   criticalZoneTargetType: "person_detection",
   measurementTool: { active: false, sourceCameraId: null, targetPoint: null, result: null },
   commentTool: { active: false, position: null, attachedToNodeId: null, draftText: "" },
-  snapshots: (() => {
-    const scene = createSmallRetailShopScene();
-    const movePrimaryObstruction = (sc: SecurityScene) => {
-      const target = sc.obstructions.find((obs) => obs.id === "obs_cupboard_blocker") ?? sc.obstructions.find((obs) => obs.movable) ?? sc.obstructions[0];
-      if (target) {
-        target.position = [3.2, target.position[1], 2.4];
-      }
-    };
-    const isBrowserRuntime = typeof window !== "undefined";
-    const createSnapshotVariant = (label: string, minutesAgo: number, mutate?: (sc: SecurityScene) => void): SceneSnapshot => {
-      const sc = createSmallRetailShopScene();
-      mutate?.(sc);
-      const sim = isBrowserRuntime ? simulateStudio(sc) : undefined;
-      if (sim) {
-        sc.simulation = sim;
-      } else {
-        delete sc.simulation;
-      }
-      const DEMO_SNAPSHOT_BASE_TS = smallRetailShopScene.createdAt + 18 * 60_000;
-      sc.updatedAt = DEMO_SNAPSHOT_BASE_TS - minutesAgo * 60_000;
-      return {
-        id: `snap_${label.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`,
-        label,
-        createdAt: DEMO_SNAPSHOT_BASE_TS - minutesAgo * 60_000,
-        scene: cloneSecurityScene(sc),
-        simulation: sim,
-      };
-    };
-    return [
-      createSnapshotVariant("Baseline", 18),
-      createSnapshotVariant("Moved Obstruction", 14, movePrimaryObstruction),
-      createSnapshotVariant("Cam 2 Rotated", 10, (sc) => {
-        const cam2 = sc.cameras.find((camera) => camera.id === "cam_counter");
-        if (cam2) {
-          cam2.yawDeg = 305;
-          cam2.pitchDeg = -20;
-        }
-      }),
-      createSnapshotVariant("Night Mode", 7, (sc) => {
-        sc.assumptions.timeOfDay = "night";
-      }),
-    ];
-  })(),
+  snapshots,
   sceneIntelligenceGraph: (() => {
-    const scene = createSmallRetailShopScene();
-    const sim = typeof window !== "undefined" ? simulateStudio(scene) : null;
-    if (sim) {
-      scene.simulation = sim;
-    } else {
-      delete scene.simulation;
-    }
-    const snapshots = (() => {
-      const isBr = typeof window !== "undefined";
-      const mvObs = (sc: SecurityScene) => {
-        const t = sc.obstructions.find((obs) => obs.id === "obs_cupboard_blocker") ?? sc.obstructions.find((obs) => obs.movable) ?? sc.obstructions[0];
-        if (t) t.position = [3.2, t.position[1], 2.4];
-      };
-      const sv = (label: string, minsAgo: number, mutate?: (sc: SecurityScene) => void): SceneSnapshot => {
-        const sc = createSmallRetailShopScene();
-        mutate?.(sc);
-        const s = isBr ? simulateStudio(sc) : undefined;
-        if (s) sc.simulation = s; else delete sc.simulation;
-        const BASE_TS = smallRetailShopScene.createdAt + 18 * 60_000;
-        sc.updatedAt = BASE_TS - minsAgo * 60_000;
-        return { id: `snap_${label.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`, label, createdAt: BASE_TS - minsAgo * 60_000, scene: cloneSecurityScene(sc), simulation: s };
-      };
-      return [sv("Baseline", 18), sv("Moved Obstruction", 14, mvObs), sv("Cam 2 Rotated", 10, (sc) => { const c = sc.cameras.find((cam) => cam.id === "cam_counter"); if (c) { c.yawDeg = 305; c.pitchDeg = -20; } }), sv("Night Mode", 7, (sc) => { sc.assumptions.timeOfDay = "night"; })];
-    })();
-    const loadedEvents = (() => {
-      try {
-        if (typeof window === "undefined") return [] as OperationalEvidenceEvent[];
-        const raw = window.localStorage.getItem(OPERATIONAL_EVIDENCE_STORAGE_KEY);
-        if (!raw) return [] as OperationalEvidenceEvent[];
-        const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? parsed as OperationalEvidenceEvent[] : [] as OperationalEvidenceEvent[];
-      } catch { return [] as OperationalEvidenceEvent[]; }
-    })();
     if (loadedEvents.length > 0) return buildGraphState(scene, sim, 0, snapshots.length, loadedEvents);
     const summary = summarizeSceneEvidence(scene);
     const simulation = sim ? summarizeSimulationEvidence(sim) : null;
@@ -1839,4 +1742,6 @@ export const createSceneSlice = (set: any, get: any): SceneSlice => ({
     const scene = get().scene as SecurityScene;
     return findNodeInScene(scene, id);
   },
-});
+};
+};
+

@@ -206,7 +206,7 @@ export function ImportReview({ result, warnings, onImageChange, onRecalibrate, o
       <div className="rounded-lg border border-[#1e2130] bg-[#070a12] p-2">
         <div className="mb-1.5 flex items-center justify-between">
           <span className="text-[9px] font-medium text-[#59637a]">Detection Corrections</span>
-          <button
+          <button type="button"
             onClick={() => {
               setWallMask(result.walls.map(() => true));
               setDoorMask(result.doors.map(() => true));
@@ -429,7 +429,7 @@ export function ImportReview({ result, warnings, onImageChange, onRecalibrate, o
 
         <div className="mt-2 flex items-center justify-between">
           <span className="text-[8px] text-[#4f5a72]">Uncheck false detections, then apply.</span>
-          <button
+          <button type="button"
             disabled={!hasFilteredEdits}
             onClick={() => {
               const filtered: FloorPlanResult = {
@@ -477,7 +477,7 @@ export function ImportReview({ result, warnings, onImageChange, onRecalibrate, o
         </div>
         <div className="mt-2 flex items-center justify-between">
           <span className="text-[8px] text-[#4f5a72]">Use known room dimensions to refine scale.</span>
-          <button
+          <button type="button"
             onClick={() => {
               const nextWidth = Number(widthM);
               const nextDepth = Number(depthM);
@@ -521,7 +521,7 @@ export function ImportReview({ result, warnings, onImageChange, onRecalibrate, o
       )}
 
       {/* Re-upload button */}
-      <button
+      <button type="button"
         onClick={onImageChange}
         className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-[#1e2130] px-3 py-2 text-[9px] text-[#59637a] transition-colors hover:border-[#2a3045] hover:text-[#68738a]"
       >

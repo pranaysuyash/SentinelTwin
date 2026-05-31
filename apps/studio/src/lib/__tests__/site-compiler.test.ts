@@ -436,7 +436,8 @@ describe("createSiteIntakeSession — activation gate contract", () => {
       expect(session.stage).toBe("review");
       expect(session.result!.source).toBe(source);
       expect(session.draft!.source).toBe(source);
-      expect(session.draft!.scene).toBe(scene);
+      expect(session.draft!.scene).not.toBe(scene);
+      expect(session.draft!.scene).toEqual(scene);
     }
   });
 

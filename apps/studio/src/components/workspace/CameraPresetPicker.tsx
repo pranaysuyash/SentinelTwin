@@ -65,7 +65,7 @@ export function CameraPresetPicker() {
   }
 
   return (
-    <div className="w-[560px] rounded-2xl border border-[#1f2536] bg-[#0d1017]/96 p-2.5 shadow-2xl shadow-black/35">
+    <div className="w-[80vw] max-w-[560px] min-w-[340px] rounded-2xl border border-[#1f2536] bg-[#0d1017]/96 p-2.5 shadow-2xl shadow-black/35">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#4a5568]">

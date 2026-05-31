@@ -56,7 +56,7 @@ export function AssumptionsTab() {
           <div className="text-[9px] font-semibold text-[#3a4158] uppercase tracking-widest mb-1.5">Time of Day</div>
           <div className="flex gap-1">
             {(["day", "night", "custom"] as const).map((t) => (
-              <button
+              <button type="button"
                 key={t}
                 onClick={() => update("timeOfDay", t)}
                 className={`flex-1 py-1 text-[10px] rounded transition-colors capitalize ${
@@ -76,7 +76,7 @@ export function AssumptionsTab() {
           <div className="text-[9px] font-semibold text-[#3a4158] uppercase tracking-widest mb-1.5">Interior Light</div>
           <div className="flex gap-1">
             {(["dark", "dim", "normal", "bright"] as const).map((lvl) => (
-              <button
+              <button type="button"
                 key={lvl}
                 onClick={() => update("interiorLightLevel", lvl)}
                 className={`flex-1 py-1 text-[9px] rounded transition-colors capitalize ${
@@ -96,7 +96,7 @@ export function AssumptionsTab() {
           <div className="text-[9px] font-semibold text-[#3a4158] uppercase tracking-widest mb-1.5">Coverage Standard</div>
           <div className="flex gap-1">
             {(["dori_2014", "oodpcvs_2025"] as const).map((std) => (
-              <button
+              <button type="button"
                 key={std}
                 onClick={() => setDoriStandard(std)}
                 className={`flex-1 py-1 text-[9px] rounded transition-colors ${
@@ -147,7 +147,7 @@ export function AssumptionsTab() {
           <div className="text-[9px] font-semibold text-[#3a4158] uppercase tracking-widest mb-1.5">Night Penalty Mode</div>
           <div className="flex gap-1">
             {(["none", "simple", "detailed"] as const).map((mode) => (
-              <button
+              <button type="button"
                 key={mode}
                 onClick={() => update("nightPenaltyMode", mode)}
                 className={`flex-1 py-1 text-[9px] rounded transition-colors capitalize ${

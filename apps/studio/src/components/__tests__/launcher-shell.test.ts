@@ -55,7 +55,6 @@ describe("Studio launcher shell", () => {
     expect(source).toContain("useStudioStore((s) => s.runSimulation)");
     expect(source).toContain("useStudioStore((s) => s.recordOperationalEvidenceEvent)");
     expect(source).toContain("useStudioStore((s) => s.setSiteIntakeSession)");
-    expect(source).toContain("useStudioStore((s) => s.importScene)");
     expect(source).toContain("useStudioStore((s) => s.setScene)");
 
     // Draft pipeline — createSiteIntakeSession is the single entry point

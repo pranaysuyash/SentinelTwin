@@ -43,7 +43,7 @@ describe("ScanSiteWizard", () => {
     expect(source).toContain("Compile anyway with low-confidence accepted candidates (explicit manual override).");
     expect(source).toContain("fixWarning");
     expect(source).toContain("Fix now");
-    expect(source).toContain("Compiling replaces your current workspace scene.");
+    expect(source).toContain("Compiling now creates a draft review session.");
     expect(source).toContain("Compile preview");
     expect(source).toContain("widthHintM");
     expect(source).toContain("depthHintM");

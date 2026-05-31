@@ -23,6 +23,24 @@ import {
   type VulnerabilityWindow,
 } from "@sentineltwin/core";
 
+/**
+ * Vulnerability detection thresholds for the temporal analysis.
+ *
+ * COVERAGE_SAFETY_THRESHOLD (60%) — A snapshot is flagged as vulnerable
+ * when overall coverage falls below this percentage. Derived from common
+ * physical security standards (IEC 62676-4 recommends ≥60% for basic
+ * operational monitoring). Below this threshold, meaningful portions of
+ * the scene are not observable, creating exploitable gaps.
+ *
+ * ADVERSARIAL_EXPOSURE_WARNING (5) — An adversarial path exposure score
+ * above this threshold indicates a route with low detection probability
+ * exists. The score aggregates distance + exposure penalties along the
+ * path; values >5 correspond roughly to a >3-second continuous transit
+ * through sub-detection-quality zones in a typical small-retail scene.
+ */
+const COVERAGE_SAFETY_THRESHOLD = 60;
+const ADVERSARIAL_EXPOSURE_WARNING = 5;
+
 const DEFAULT_SCHEDULES = {
   interiorLights: [
     { hour: 6, label: "Business Hours" },
@@ -219,22 +237,24 @@ function collectScheduleTransitionHours(scene: SecurityScene): number[] {
   const hours = new Set<number>();
   const ts = scene.timeSchedule;
 
+  function addScheduleHours(
+    periods: { startHour: number; endHour?: number }[],
+  ) {
+    for (const p of periods) {
+      hours.add(p.startHour);
+      hours.add((p.endHour ?? 24) < 24 ? (p.endHour ?? 24) : 0);
+    }
+  }
+
   if (ts) {
     for (const ls of ts.interiorLightSchedule) {
-      for (const period of ls.periods) {
-        hours.add(period.startHour);
-        hours.add(period.endHour < 24 ? period.endHour : 0);
-      }
+      addScheduleHours(ls.periods);
     }
     for (const ls of ts.exteriorLightSchedule) {
-      for (const period of ls.periods) {
-        hours.add(period.startHour);
-        hours.add(period.endHour < 24 ? period.endHour : 0);
-      }
+      addScheduleHours(ls.periods);
     }
     for (const op of ts.occupancySchedule) {
-      hours.add(op.timeRange.startHour);
-      hours.add(op.timeRange.endHour < 24 ? op.timeRange.endHour : 0);
+      addScheduleHours([op.timeRange]);
     }
   }
 
@@ -276,7 +296,7 @@ function patchSceneForTimeSlice(
     patched.assumptions.interiorLightLevel = "dark";
   }
 
-  patched.securityLights = scene.securityLights.map((light) => {
+  patched.securityLights = patched.securityLights.map((light) => {
     if (light.illuminatesNightCoverage) {
       return { ...light, status: state.exteriorLightsOn ? ("on" as const) : ("off" as const) };
     }
@@ -308,22 +328,35 @@ function detectVulnerabilityWindows(
     adversarialAvailable: boolean;
   } | null = null;
 
+  /**
+   * Determine which critical zones are failing for a given snapshot.
+   * Populates zonesFailing with zone labels whose status is not "pass".
+   */
+  function collectZonesFailing(snap: HourlySecuritySnapshot): string[] {
+    return Object.entries(snap.criticalZoneStatuses)
+      .filter(([, status]) => status !== "pass")
+      .map(([label]) => label);
+  }
+
   for (const snap of snapshots) {
     const isVulnerable =
       snap.criticalZonePassCount < snap.criticalZoneTotalCount ||
-      snap.overallCoveragePct < 60;
+      snap.overallCoveragePct < COVERAGE_SAFETY_THRESHOLD;
 
     if (isVulnerable && !currentWindow) {
       currentWindow = {
         startHour: snap.hour,
         startMinute: snap.minute,
         reasons: new Set(snap.issues),
-        zonesFailing: new Set(),
-        adversarialAvailable: snap.adversarialPathExposureScore > 5,
+        zonesFailing: new Set(collectZonesFailing(snap)),
+        adversarialAvailable: snap.adversarialPathExposureScore > ADVERSARIAL_EXPOSURE_WARNING,
       };
     } else if (isVulnerable && currentWindow) {
       snap.issues.forEach((issue) => currentWindow!.reasons.add(issue));
-      if (snap.adversarialPathExposureScore > 5) {
+      for (const zf of collectZonesFailing(snap)) {
+        currentWindow!.zonesFailing.add(zf);
+      }
+      if (snap.adversarialPathExposureScore > ADVERSARIAL_EXPOSURE_WARNING) {
         currentWindow.adversarialAvailable = true;
       }
     } else if (!isVulnerable && currentWindow) {
@@ -349,6 +382,10 @@ function detectVulnerabilityWindows(
     }
   }
 
+  // Close any window still open at the final snapshot.
+  // If 0:00 is safe, the vulnerability ends at 24:00 (midnight).
+  // If 0:00 is also vulnerable, this window merges with the next day's
+  // first window — the caller should reconcile across 24→0 boundaries.
   if (currentWindow) {
     windows.push({
       startHour: currentWindow.startHour,
@@ -423,15 +460,20 @@ export function computeTemporalProfile(scene: SecurityScene): TemporalSecurityPr
     });
   }
 
+  // Build a Map from stateLabel → snapshot for O(1) lookup during fill
+  const snapshotByLabel = new Map<string, HourlySecuritySnapshot>();
+  for (const snap of hourlySnapshots) {
+    if (!snapshotByLabel.has(snap.stateLabel)) {
+      snapshotByLabel.set(snap.stateLabel, snap);
+    }
+  }
+
   for (let h = 0; h < 24; h++) {
     for (let m = 0; m < 60; m += resolutionMinutes) {
       if (transitionKeys.has(`${h}:${m}`)) continue;
 
       const state = computeTimeSliceState(h, m, scene);
-
-      const nearestSnapshot = hourlySnapshots.find(
-        (snap) => snap.stateLabel === state.stateLabel,
-      ) ?? hourlySnapshots[hourlySnapshots.length - 1];
+      const nearestSnapshot = snapshotByLabel.get(state.stateLabel);
 
       if (nearestSnapshot) {
         hourlySnapshots.push({
@@ -457,11 +499,11 @@ export function computeTemporalProfile(scene: SecurityScene): TemporalSecurityPr
   });
 
   const criticalZoneCoverageByHour: Record<string, number[]> = {};
-  const evaluatedZoneLabels = scene.criticalZones.map((z) => z.label);
-  for (const zoneLabel of evaluatedZoneLabels) {
-    criticalZoneCoverageByHour[zoneLabel] = hourlySnapshots.map(
+  const evaluatedZones = scene.criticalZones.map((z) => ({ id: z.id, label: z.label }));
+  for (const { id, label } of evaluatedZones) {
+    criticalZoneCoverageByHour[id] = hourlySnapshots.map(
       (snap) => {
-        const status = snap.criticalZoneStatuses[zoneLabel] ?? "fail";
+        const status = snap.criticalZoneStatuses[label] ?? "fail";
         return status === "pass" ? 100 : status === "partial" ? 50 : 0;
       },
     );

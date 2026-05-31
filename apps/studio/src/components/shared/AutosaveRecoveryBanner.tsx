@@ -39,14 +39,14 @@ export function AutosaveRecoveryBanner() {
         </span>
       </div>
       <div className="flex items-center gap-1.5">
-        <button
+        <button type="button"
           onClick={applyRecovery}
           className="flex items-center gap-1 rounded bg-amber-500/20 px-2 py-1 text-[10px] font-medium text-amber-300 transition-colors hover:bg-amber-500/30"
         >
           <RotateCcw className="h-3 w-3" />
           Recover
         </button>
-        <button
+        <button type="button"
           onClick={dismissRecovery}
           aria-label="Dismiss recovery prompt"
           className="rounded p-1 text-amber-500/50 transition-colors hover:text-amber-300"

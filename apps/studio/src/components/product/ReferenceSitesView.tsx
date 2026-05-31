@@ -70,7 +70,7 @@ function SceneCard({
       <div className="relative aspect-[16/9] overflow-hidden bg-gradient-to-br from-[#0f1623] to-[#060a12]">
         <div className="absolute inset-0 opacity-40 [background-image:linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)] [background-size:44px_44px]" />
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="rounded-2xl border border-white/8 bg-black/40 px-4 py-3 text-center backdrop-blur-sm">
+          <div className="rounded-2xl border border-white/8 bg-black/40 px-4 py-3 text-center">
             <div className="text-xs font-medium text-white">{scene.name}</div>
             <div className="mt-1 text-[10px] text-[color:var(--text-muted)]">
               {scene.dimensions.width}m × {scene.dimensions.depth}m
@@ -79,18 +79,18 @@ function SceneCard({
         </div>
         {/* Entity indicators */}
         <div className="absolute bottom-2 left-2 right-2 flex flex-wrap gap-1.5">
-          <span className="inline-flex items-center gap-1 rounded-full border border-white/8 bg-black/50 px-2 py-0.5 text-[9px] text-white/70 backdrop-blur-sm">
+          <span className="inline-flex items-center gap-1 rounded-full border border-white/8 bg-black/50 px-2 py-0.5 text-[9px] text-white/70 bg-black/60">
             <Camera className="h-2.5 w-2.5" />
             {scene.cameras.length}
           </span>
           {scene.criticalZones.length > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/20 bg-black/50 px-2 py-0.5 text-[9px] text-amber-200/80 backdrop-blur-sm">
+            <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/20 bg-black/50 px-2 py-0.5 text-[9px] text-amber-200/80 bg-black/60">
               <TriangleAlert className="h-2.5 w-2.5" />
               {scene.criticalZones.length}
             </span>
           )}
           {scene.securityLights.length > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/15 bg-black/50 px-2 py-0.5 text-[9px] text-amber-200/60 backdrop-blur-sm">
+            <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/15 bg-black/50 px-2 py-0.5 text-[9px] text-amber-200/60 bg-black/60">
               <Sun className="h-2.5 w-2.5" />
               {scene.securityLights.length}
             </span>

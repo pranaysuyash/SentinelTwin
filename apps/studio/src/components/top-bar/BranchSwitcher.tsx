@@ -22,7 +22,7 @@ export function BranchSwitcher() {
 
   return (
     <div className="relative">
-      <button
+      <button type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 px-3 py-1.5 bg-neutral-900 border border-neutral-800 rounded text-sm hover:bg-neutral-800 transition-colors"
       >
@@ -36,7 +36,7 @@ export function BranchSwitcher() {
             <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Branches</h3>
             <div className="space-y-1">
               {branches.map((branch) => (
-                <button
+                <button type="button"
                   key={branch}
                   onClick={() => {
                     switchBranch(branch);

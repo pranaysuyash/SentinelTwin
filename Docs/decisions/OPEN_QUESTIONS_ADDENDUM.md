@@ -9,11 +9,14 @@ We have approximate PPM equivalents but need the exact IEC-specified values.
 Exact values are behind the IEC paywall. These are the same values JVSG and Axis tools use in practice.
 If professional-grade precision is needed before V0.1 launch, purchase IEC 62676-4:2025 (~200 CHF).
 
-### Q-017 [P1]: GSAP → Framer Motion replacement — what exactly needs to change?
+### Q-017 [P1 — RESOLVED 2026-05-31]: GSAP → Framer Motion replacement — what exactly needs to change?
 GSAP's license prohibits SaaS use without paid Club GSAP license.
 Replacement: `motion` (Framer Motion v11, MIT).
-**Research needed:** Which specific GSAP APIs does the current architecture doc reference?
-Map each to Framer Motion equivalent. Update architecture/07 RENDERING_PIPELINE.md.
+**Resolution:**
+- **Decision logs:** D-011 in `DECISION_LOG_ADDENDUM.md` (initial replacement decision), D-018 in `DECISION_LOG.md` (formal resolution with Motion One for path replay + Framer Motion for UI), D-259 in `DECISION_LOG.md` (final call).
+- **Runtime truth:** `07_RENDERING_PIPELINE_ADDENDUM_2026-05-29.md` confirms GSAP is not in `package.json`; `framer-motion ^12.40.0` is the active dependency.
+- **Architecture doc:** `07_RENDERING_PIPELINE.md` updated with addendum banner and corrected stack listing.
+- **Doc trail closure:** 14 docs files originally referenced GSAP. Per addendum convention, base files retain historical references as provenance of the decision process. Resolution authority lives in this entry and the decision logs above.
 
 ### Q-018 [P1]: DUSt3R/MASt3R are CC BY-NC — confirm VGGT is a viable replacement.
 DUSt3R and MASt3R are CC BY-NC-SA 4.0 — cannot be used commercially.

@@ -742,7 +742,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
     return (
       <div className="flex h-full flex-col overflow-hidden bg-[#08101a] text-slate-200">
         <div className="flex min-h-0 flex-1 overflow-hidden">
-          <aside className="flex w-[248px] flex-none flex-col justify-between border-r border-white/8 bg-[#07111b] px-3 py-4">
+          <aside className="flex w-[248px] max-w-[30vw] flex-none flex-col justify-between border-r border-white/8 bg-[#07111b] px-3 py-4">
             <div>
               <div className="flex items-center gap-2 px-2 py-1 text-[17px] font-medium tracking-tight text-white">
                 <ShieldCheck className="h-6 w-6 text-sky-400" />

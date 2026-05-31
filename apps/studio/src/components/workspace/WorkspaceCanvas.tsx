@@ -1609,10 +1609,10 @@ function ViewControls() {
         aria-label="Switch to 3D orbit"
         title="Switch to 3D orbit"
         className={cn(
-          "flex h-7 w-7 items-center justify-center rounded-lg border text-[8px] font-bold transition-colors",
-          canvasMode === "orbit_3d"
-            ? "border-sky-400 text-sky-100"
-            : "border-[#2a3246] bg-[#0e1320]/90 text-[#6b7280] hover:bg-[#171e30] hover:text-white",
+          "flex h-8 w-8 items-center justify-center rounded-lg border text-[9px] font-bold transition-colors",
+           canvasMode === "orbit_3d"
+             ? "border-sky-400 text-sky-100"
+             : "border-[#2a3246] bg-[#0e1320]/90 text-[#6b7280] hover:bg-[#171e30] hover:text-white",
         )}
         style={canvasMode === "orbit_3d"
           ? {
@@ -1629,10 +1629,10 @@ function ViewControls() {
         aria-label="Switch to 2D top-down"
         title="Switch to 2D top-down"
         className={cn(
-          "flex h-7 w-7 items-center justify-center rounded-lg border text-[8px] font-bold transition-colors",
-          canvasMode === "topdown_2d"
-            ? "border-emerald-400 text-emerald-100"
-            : "border-[#2a3246] bg-[#0e1320]/90 text-[#6b7280] hover:bg-[#171e30] hover:text-white",
+          "flex h-8 w-8 items-center justify-center rounded-lg border text-[9px] font-bold transition-colors",
+           canvasMode === "topdown_2d"
+             ? "border-emerald-400 text-emerald-100"
+             : "border-[#2a3246] bg-[#0e1320]/90 text-[#6b7280] hover:bg-[#171e30] hover:text-white",
         )}
         style={canvasMode === "topdown_2d"
           ? {
@@ -1648,7 +1648,7 @@ function ViewControls() {
         onClick={resetCanvasView}
         aria-label="Reset canvas view"
         title="Reset canvas view"
-        className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#2a3246] bg-[#0e1320]/90 hover:bg-[#171e30]"
+        className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#2a3246] bg-[#0e1320]/90 hover:bg-[#171e30]"
       >
         <RefreshCcw className="h-3.5 w-3.5 text-[#6b7280] hover:text-white" />
       </button>
@@ -1657,7 +1657,7 @@ function ViewControls() {
         onClick={() => toggleViewSettingsOpen()}
         aria-label="Open View Settings"
         title="Open View Settings"
-        className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#2a3246] bg-[#0e1320]/90 hover:bg-[#171e30]"
+        className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#2a3246] bg-[#0e1320]/90 hover:bg-[#171e30]"
       >
         <Layers className="h-3.5 w-3.5 text-[#6b7280] hover:text-white" />
       </button>

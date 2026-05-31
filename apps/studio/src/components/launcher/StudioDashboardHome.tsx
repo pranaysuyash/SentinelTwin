@@ -50,12 +50,12 @@ type ProjectSort = "recent" | "name" | "coverage";
 type ProjectSourceFilter = "All" | SecurityScene["source"];
 type StarterTone = "blank" | "import" | "scan" | "ai";
 const NAV_ITEMS = [
-  { label: "Home", detail: "Studio dashboard", active: true as const },
-  { label: "Create Site Twin", detail: "New or import", active: false as const },
-  { label: "Security Twin Studio", detail: "Editor", active: false as const },
-  { label: "Audit Reports", detail: "Evidence exports", active: false as const },
-  { label: "Reference Sites", detail: "Retail / Office / Warehouse", active: false as const },
-  { label: "Settings", detail: "Studio preferences", active: false as const },
+  { key: "home", label: "Home", detail: "Command center" },
+  { key: "site_intake", label: "Create Site Twin", detail: "New or import" },
+  { key: "studio", label: "Security Twin Studio", detail: "Editor" },
+  { key: "report", label: "Audit Reports", detail: "Evidence exports" },
+  { key: "reference_sites", label: "Reference Sites", detail: "Retail / Office / Warehouse" },
+  { key: "settings", label: "Settings", detail: "Product preferences" },
 ] as const;
 
 const SOURCE_LABELS: Record<SecurityScene["source"], string> = {
@@ -165,6 +165,9 @@ type StudioDashboardHomeProps = {
   onOpenDemoScene?: () => void;
   onOpenReport: () => void;
   onOpenScene?: (scene: SecurityScene) => void;
+  onOpenSiteIntake?: () => void;
+  onOpenReferenceSites?: () => void;
+  onOpenSettings?: () => void;
   onUpdateProjectMetadata: (sceneId: string, patch: Partial<Pick<SavedProjectRecord, "folder" | "tags" | "pinned" | "workspaceOrganization" | "workspaceOwner" | "workspaceVisibility" | "lastOpenedAt">>) => void;
   onDuplicateProject: (sceneId: string) => SavedProjectRecord | null;
   onRenameProject: (sceneId: string, nextName: string) => SavedProjectRecord | null;
@@ -1090,6 +1093,9 @@ export function StudioDashboardHome({
   onOpenReport,
   onOpenDemoScene,
   onOpenScene,
+  onOpenSiteIntake,
+  onOpenReferenceSites,
+  onOpenSettings,
   onUpdateProjectMetadata,
   onDuplicateProject,
   onRenameProject,
@@ -1099,6 +1105,14 @@ export function StudioDashboardHome({
   const [hydrated, setHydrated] = useState(false);
   const [showWorkspaceLibrary, setShowWorkspaceLibrary] = useState(false);
   const [previewMode, setPreviewMode] = useState<"2d" | "3d">("2d");
+  const navActionByKey: Record<(typeof NAV_ITEMS)[number]["key"], (() => void) | undefined> = {
+    home: undefined,
+    site_intake: onOpenSiteIntake ?? onOpenAdvancedWorkflows,
+    studio: onOpenStudio,
+    report: onOpenReport,
+    reference_sites: onOpenReferenceSites ?? onOpenDemoScene,
+    settings: onOpenSettings,
+  };
   const coverage = result?.totalCoveragePct ?? scene.simulation?.totalCoveragePct ?? null;
   const criticalZoneResults = result?.criticalZoneResults ?? scene.simulation?.criticalZoneResults ?? [];
   const criticalZoneResultMap = criticalZoneStatusMap(result ?? scene.simulation ?? null);
@@ -1588,22 +1602,29 @@ export function StudioDashboardHome({
         <div className="grid flex-1 gap-4 lg:grid-cols-[228px_minmax(0,1fr)_388px]">
           <aside className="flex flex-col gap-4 rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
             <div>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--st-muted)]">STUDIO</div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--st-muted)]">NAVIGATION</div>
               <nav className="mt-3 space-y-0.5">
                 {NAV_ITEMS.map((item) => (
                   <button
-                    key={item.label}
+                    key={item.key}
                     type="button"
+                    onClick={() => navActionByKey[item.key]?.()}
                     className={cn(
                       "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-colors text-left",
-                      item.active
+                      item.key === "home"
                         ? "bg-sky-500/12 text-white font-medium"
-                        : "text-[color:var(--st-muted)] hover:bg-white/[0.04] hover:text-[color:var(--st-text)]",
+                        : navActionByKey[item.key]
+                          ? "text-[color:var(--st-muted)] hover:bg-white/[0.04] hover:text-[color:var(--st-text)]"
+                          : "text-[color:var(--st-muted)]/60 cursor-default",
                     )}
-                    aria-current={item.active ? "page" : undefined}
+                    aria-current={item.key === "home" ? "page" : undefined}
+                    disabled={!navActionByKey[item.key]}
                   >
-                    <span className="flex-1">{item.label}</span>
-                    {item.active ? (
+                    <span className="flex-1">
+                      <span className="block">{item.label}</span>
+                      <span className="block text-[10px] font-normal text-[color:var(--st-muted)]">{item.detail}</span>
+                    </span>
+                    {item.key === "home" ? (
                       <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
                     ) : null}
                   </button>
@@ -1618,7 +1639,7 @@ export function StudioDashboardHome({
                 {workspaceAccountProfile.accountName?.[0]?.toUpperCase() ?? "S"}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-semibold text-white">{workspaceAccountProfile.accountName ?? "Studio User"}</div>
+                <div className="truncate text-sm font-semibold text-white">{workspaceAccountProfile.accountName ?? "Sentinel Operator"}</div>
                 <div className="text-[10px] text-[color:var(--st-muted)]">{workspaceAccountProfile.planTier}</div>
               </div>
               <button
@@ -1635,7 +1656,7 @@ export function StudioDashboardHome({
             <div className="rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4 shadow-[0_24px_70px_rgba(0,0,0,0.30)]">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">CURRENT WORKSPACE</div>
+                  <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">CURRENT SITE TWIN</div>
                   <div className="mt-1.5 flex items-center gap-2">
                     <div className="text-2xl font-semibold tracking-tight sm:text-3xl">{scene.name}</div>
                     <button type="button" onClick={onOpenStudio} className="mt-0.5 text-[color:var(--st-muted)] hover:text-white transition-colors">
@@ -1746,10 +1767,10 @@ export function StudioDashboardHome({
               <div className="mt-4 grid grid-cols-3 gap-2 lg:grid-cols-6">
                 <div className="flex flex-col gap-1 rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
                   <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">COVERAGE</div>
-                  <div className={cn("text-xl font-bold tracking-tight", coverage != null ? coverageTone(coverage) : "text-white")}>
-                    {coverage != null ? `${Math.round(coverage)}%` : "—"}
+                  <div className={cn("text-xl font-bold tracking-tight", coverage != null ? coverageTone(coverage) : "text-slate-200")}>
+                    {coverage != null ? `${Math.round(coverage)}%` : "Pending"}
                   </div>
-                  <div className="text-[10px] text-[color:var(--st-muted)]">vs last run</div>
+                  <div className="text-[10px] text-[color:var(--st-muted)]">{coverage == null ? "Run baseline simulation" : "vs last run"}</div>
                 </div>
                 <div className="flex flex-col gap-1 rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
                   <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">CRITICAL ZONES</div>
@@ -1763,10 +1784,12 @@ export function StudioDashboardHome({
                 </div>
                 <div className="flex flex-col gap-1 rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
                   <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">WORST QUALITY</div>
-                  <div className={cn("text-xl font-bold", worstQualityValue ? QUALITY_TEXT_COLOR[worstQualityValue] : "text-white")}>
-                    {worstQualityLabel ?? "—"}
+                  <div className={cn("text-xl font-bold", worstQualityValue ? QUALITY_TEXT_COLOR[worstQualityValue] : "text-slate-200")}>
+                    {worstQualityLabel ?? "Pending"}
                   </div>
-                  <div className="truncate text-[10px] text-[color:var(--st-muted)]">{worstIssue?.description?.slice(0, 18) ?? "—"}</div>
+                  <div className="truncate text-[10px] text-[color:var(--st-muted)]">
+                    {(canonicalOutcome.summary.primaryRisk ?? worstIssue?.description)?.slice(0, 30) ?? "Baseline required"}
+                  </div>
                 </div>
                 <div className="flex flex-col gap-1 rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
                   <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">ISSUES</div>
@@ -1790,8 +1813,7 @@ export function StudioDashboardHome({
                 </div>
               </div>
 
-              {/* 4 primary mode action buttons — matches reference image */}
-              <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
                 <button
                   type="button"
                   onClick={onOpenCoverageWorkspace}
@@ -1842,6 +1864,19 @@ export function StudioDashboardHome({
                   <div className="min-w-0">
                     <div className="text-[13px] font-semibold text-white">Compare Fix</div>
                     <div className="mt-0.5 text-[11px] text-[color:var(--st-muted)]">Before / after analysis</div>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenReport}
+                  className="group flex items-center gap-3 rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-3.5 text-left transition-all hover:border-cyan-400/30 hover:bg-cyan-500/5"
+                >
+                  <div className="flex h-9 w-9 flex-none items-center justify-center rounded-xl border border-cyan-400/25 bg-cyan-500/10">
+                    <FileText className="h-[18px] w-[18px] text-cyan-300" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-semibold text-white">Audit Report</div>
+                    <div className="mt-0.5 text-[11px] text-[color:var(--st-muted)]">Summary & export</div>
                   </div>
                 </button>
               </div>
@@ -1895,7 +1930,7 @@ export function StudioDashboardHome({
 
                 <div className="rounded-[20px] border border-[color:var(--st-border)] bg-[color:var(--st-panel-2)] p-3">
                   <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[color:var(--st-muted)]">CREATE / IMPORT SITE TWIN</div>
-                  <div className="mt-2 grid grid-cols-2 gap-2">
+                  <div className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-3">
                     <button
                       type="button"
                       onClick={onCreateScene}
@@ -1903,7 +1938,7 @@ export function StudioDashboardHome({
                     >
                       <Plus className="h-5 w-5 text-sky-300" />
                       <div>
-                        <div className="text-[12px] font-semibold text-white">New Blank Scene</div>
+                        <div className="text-[12px] font-semibold text-white">Create Site Twin</div>
                         <div className="mt-0.5 text-[10px] text-[color:var(--st-muted)]">Start from scratch</div>
                       </div>
                     </button>
@@ -1920,6 +1955,17 @@ export function StudioDashboardHome({
                     </button>
                     <button
                       type="button"
+                      onClick={onImportFloorPlan}
+                      className="flex flex-col items-center gap-2 rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.025] px-3 py-3.5 text-center transition-colors hover:border-sky-400/30 hover:bg-white/[0.04]"
+                    >
+                      <FileUp className="h-5 w-5 text-sky-300" />
+                      <div>
+                        <div className="text-[12px] font-semibold text-white">Import Floor Plan</div>
+                        <div className="mt-0.5 text-[10px] text-[color:var(--st-muted)]">Trace and review</div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
                       onClick={onScanSite}
                       className="flex flex-col items-center gap-2 rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.025] px-3 py-3.5 text-center transition-colors hover:border-sky-400/30 hover:bg-white/[0.04]"
                     >
@@ -1929,6 +1975,19 @@ export function StudioDashboardHome({
                         <div className="mt-0.5 text-[10px] text-[color:var(--st-muted)]">Upload site photos</div>
                       </div>
                     </button>
+                    {onGuidedScanAssistant ? (
+                      <button
+                        type="button"
+                        onClick={onGuidedScanAssistant}
+                        className="flex flex-col items-center gap-2 rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.025] px-3 py-3.5 text-center transition-colors hover:border-emerald-400/30 hover:bg-white/[0.04]"
+                      >
+                        <Radar className="h-5 w-5 text-emerald-300" />
+                        <div>
+                          <div className="text-[12px] font-semibold text-white">Guided Scan</div>
+                          <div className="mt-0.5 text-[10px] text-[color:var(--st-muted)]">Step-by-step capture</div>
+                        </div>
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       onClick={onAiDraft}
@@ -1981,6 +2040,11 @@ export function StudioDashboardHome({
               </div>
 
               <div className="mt-3">
+                <div className="mb-2 rounded-xl border border-[#1a2030] bg-white/[0.02] px-3 py-2">
+                  <div className="text-[9px] uppercase tracking-[0.18em] text-[#8b96ab]">SITE RISK</div>
+                  <div className="mt-1 text-[12px] font-semibold text-white">{canonicalOutcome.summary.status.replace(/_/g, " ")}</div>
+                  <div className="mt-1 text-[10px] text-[#aab7d1]">{canonicalOutcome.summary.primaryRisk ?? "Run baseline simulation to compute primary risk."}</div>
+                </div>
                 <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#8b96ab]">OUTCOME SUMMARY</div>
                 <div className="space-y-1">
                   {outcomeSummary.map((zone) => {
@@ -2298,16 +2362,16 @@ function SiteTwinSearchBar({
   };
 
   return (
-    <section className="mt-4 rounded-[24px] border border-[color:var(--st-border)] bg-[color:var(--st-panel-2)] p-3">
-      <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
+    <section className="mt-4 rounded-[16px] border border-[color:var(--st-border)] bg-[color:var(--st-panel-2)] p-2.5">
+      <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">
         <Radar className="h-3.5 w-3.5 text-sky-300" />
-        SITE TWIN SEARCH
+        SITE TWIN MEMORY SEARCH
       </div>
-      <div className="mt-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2">
+      <div className="mt-2 rounded-lg border border-[color:var(--st-border)] bg-white/[0.03] px-2.5 py-2">
         <input
           value={workspaceMemoryQuery}
           onChange={(event) => setWorkspaceMemoryQuery(event.target.value)}
-          placeholder="Search workspace memory, evidence events, archives, and reports..."
+          placeholder="Search Site Twin history, evidence, archives, and reports..."
           className="w-full bg-transparent text-xs text-white placeholder:text-[color:var(--st-muted)] focus:outline-none"
         />
       </div>

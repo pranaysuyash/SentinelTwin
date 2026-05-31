@@ -12,10 +12,10 @@ describe("Studio dashboard launcher surface", () => {
     expect(source).toContain("StudioDashboardHome");
     expect(source).toContain("SentinelTwin");
     expect(source).toContain("Home");
-    expect(source).toContain("Studio dashboard");
+    expect(source).toContain("Command center");
     expect(source).toContain("Run Simulation");
     expect(source).toContain("Coverage");
-    expect(source).toContain("SITE TWIN SEARCH");
+    expect(source).toContain("SITE TWIN MEMORY SEARCH");
     expect(source).toContain("Open Report");
     expect(source).toContain("setTimelineFocusRequest");
     expect(source).toContain("branch:");

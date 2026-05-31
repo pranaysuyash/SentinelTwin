@@ -28,7 +28,7 @@ export function AgentCoordinatorPanel() {
           <Cpu className="h-3.5 w-3.5 text-emerald-400/70" />
           <span className="text-[11px] font-medium text-[#e8edf5]">Agent Pipeline</span>
         </div>
-        <button
+        <button type="button"
           onClick={() => setShowDetails(!showDetails)}
           className="rounded border border-[#1e2130] px-2 py-0.5 text-[8px] text-[#59637a] hover:text-white"
         >

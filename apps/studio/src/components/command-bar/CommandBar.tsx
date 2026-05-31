@@ -103,7 +103,7 @@ export function CommandBar() {
 
   if (!isExpanded) {
     return (
-        <button
+        <button type="button"
           onClick={() => setIsExpanded(true)}
           className="group absolute bottom-3 right-3 z-30 flex h-9 items-center gap-2 rounded-xl border border-[#1f2536] bg-[#0b0f17]/80 px-3 text-[10px] font-medium text-[#5b667c] shadow-[0_4px_16px_rgba(0,0,0,0.25)] transition-all hover:border-[#32384d] hover:text-white hover:shadow-[0_4px_20px_rgba(0,0,0,0.35)]"
         >
@@ -167,7 +167,7 @@ export function CommandBar() {
               Telemetry trend: {aiActionTelemetrySummary.trendLabel} · {aiActionTelemetrySummary.trendNote}
             </p>
           </div>
-          <button
+          <button type="button"
             onClick={() => {
               setIsExpanded(false);
               dismissError();
@@ -219,13 +219,13 @@ export function CommandBar() {
                   </div>
                 ) : null}
                 <div className="flex justify-end gap-2">
-                  <button
+                  <button type="button"
                     onClick={cancelPreview}
                     className="rounded border border-[#2a3347] bg-[#101827] px-2.5 py-1 text-[10px] text-[#aab8d2] hover:border-[#3a4967] hover:text-white"
                   >
                     Cancel
                   </button>
-                  <button
+                  <button type="button"
                     onClick={confirmPreview}
                     disabled={status.requiresTargetSelection}
                     className="rounded border border-cyan-400/30 bg-cyan-500/10 px-2.5 py-1 text-[10px] text-cyan-100 hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-50"
@@ -289,7 +289,7 @@ export function CommandBar() {
           <div className="flex items-center gap-1">
             <span className="text-[8px] text-[#3a4158]">Esc</span>
           </div>
-          <button
+          <button type="button"
             onClick={handleSubmit}
             disabled={!input.trim() || status.state === "parsing" || status.state === "applying"}
             className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white transition-colors hover:bg-emerald-500 disabled:opacity-40 disabled:hover:bg-emerald-600"
@@ -305,7 +305,7 @@ export function CommandBar() {
         {/* Quick hints */}
         <div className="mt-2 flex flex-wrap gap-1.5">
           {["Move Camera 1 toward the entry", "Switch to night mode", "Turn off Camera 2", "Add a light near the counter"].map((hint) => (
-            <button
+            <button type="button"
               key={hint}
               onClick={() => {
                 setInput(hint);
@@ -323,7 +323,7 @@ export function CommandBar() {
         {/* Slash commands */}
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           {["/dusk", "/compare", "/replay", "/wall", "/camera-view", "/fail", "/fix", "/simulate", "/snapshot", "/privacy on", "/target license_plate"].map((cmd) => (
-            <button
+            <button type="button"
               key={cmd}
               onClick={() => {
                 setInput(cmd);
@@ -376,7 +376,7 @@ function CandidateCard({ candidate, onApply }: { candidate: CounterfactualCandid
           )}
         </div>
       )}
-      <button
+      <button type="button"
         onClick={onApply}
         className="mt-1.5 inline-flex w-full items-center justify-center gap-1 rounded border border-[#24283a] bg-[#111521] py-1 text-[9px] font-medium text-emerald-300 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10"
       >

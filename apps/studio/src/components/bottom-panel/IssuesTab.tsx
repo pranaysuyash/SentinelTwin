@@ -145,7 +145,7 @@ export function IssuesTab() {
                 <div className="mt-1 flex flex-wrap gap-1">
                   <span className="text-[8px] text-[#4a5568]">Cameras:</span>
                   {issue.affectedCameras.map((c) => (
-                    <button
+                    <button type="button"
                       key={c}
                       onClick={() => selectNode(c)}
                       className="text-[8px] text-blue-400 bg-[#1a1d26] px-1 rounded hover:bg-[#1e2235] cursor-pointer transition-colors"
@@ -341,7 +341,7 @@ export function IssuesTab() {
                     {canFix && (
                       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                         {canPreview && !isPreviewActive ? (
-                          <button
+                          <button type="button"
                             onClick={previewFix}
                             className="flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-600/20 border border-emerald-600/30 text-[9px] text-emerald-300 hover:bg-emerald-600/30 transition-colors"
                           >
@@ -349,14 +349,14 @@ export function IssuesTab() {
                           </button>
                         ) : null}
                         {canPreview ? (
-                          <button
+                          <button type="button"
                             onClick={testFix}
                             className="flex items-center gap-1 px-2 py-0.5 rounded bg-violet-600/20 border border-violet-600/30 text-[9px] text-violet-300 hover:bg-violet-600/30 transition-colors"
                           >
                             Test Fix
                           </button>
                         ) : null}
-                        <button
+                        <button type="button"
                           onClick={applyFix}
                           className="flex items-center gap-1 px-2 py-0.5 rounded bg-blue-600/20 border border-blue-600/30 text-[9px] text-blue-300 hover:bg-blue-600/30 transition-colors"
                         >
@@ -364,7 +364,7 @@ export function IssuesTab() {
                           Apply Fix
                         </button>
                         {isPreviewActive ? (
-                          <button
+                          <button type="button"
                             onClick={revertPreview}
                             className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#1a1d26] border border-[#2b3143] text-[9px] text-[#b9c2d8] hover:border-[#3b435c] transition-colors"
                           >

@@ -34,7 +34,6 @@ function StudioPageContent() {
   const savedProjects = useStudioStore((s) => s.savedProjects);
   const refreshSavedScenesList = useStudioStore((s) => s.refreshSavedScenesList);
   const setScene = useStudioStore((s) => s.setScene);
-  const importScene = useStudioStore((s) => s.importScene);
   const setViewMode = useStudioStore((s) => s.setViewMode);
   const setBottomTab = useStudioStore((s) => s.setBottomTab);
   const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);

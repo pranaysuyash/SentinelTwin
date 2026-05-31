@@ -15,6 +15,9 @@ For the full-vision gap inventory and next-slice sequencing, see
 - Security outcome zone semantics are now split: `zoneFindings` holds all critical-zone evaluations while `failedZones` is strict non-pass only ✅
 - Site draft review no longer uses a placeholder preview; it renders a real read-only 2D spatial draft preview from `draft.scene` with entity overlays and warning highlights ✅
 - Security narrative wording is now shared through a canonical narrative helper used by SecurityOutcome and report-summary/report-export surfaces, reducing cross-surface narrative drift ✅
+- Product home action hierarchy now matches the approved security-first command-center shape: primary mode actions include Coverage, Camera Operations, Incident Review, Compare Fix, and Audit Report, while create/import/scan/AI paths are docked as secondary actions ✅
+- Product home language now centers Site Twin / Audit wording (Current Site Twin, Site Risk, Recent Site Twins, Site Twin Memory Search) and avoids unfinished hydration/unknown-state copy on first load ✅
+- Product home left navigation now routes into real product sections (`site_intake`, `studio`, `audit_report`, `reference_sites`, `settings`) instead of static placeholder labels ✅
 
 ## Scene editor workbench hardening (2026-05-29)
 

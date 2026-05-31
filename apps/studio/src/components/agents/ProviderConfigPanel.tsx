@@ -104,7 +104,7 @@ export function ProviderConfigPanel({
         <span className="text-[9px] font-medium text-[#68738a]">Provider</span>
         <div className="grid grid-cols-3 gap-1.5">
           {PROVIDERS.map((p) => (
-            <button
+            <button type="button"
               key={p.id}
               onClick={() => handleProviderChange(p.id)}
               className={`rounded-lg border px-2 py-1.5 text-left text-[9px] transition-colors ${
@@ -135,7 +135,7 @@ export function ProviderConfigPanel({
       </div>
 
       {/* Advanced toggle */}
-      <button
+      <button type="button"
         onClick={() => setShowAdvanced(!showAdvanced)}
         className="text-[8px] font-medium text-[#59637a] hover:text-[#8090a8]"
       >

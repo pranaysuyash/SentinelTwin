@@ -589,7 +589,7 @@ function MiniMapExpanded({
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5">
-            <button
+            <button type="button"
               onClick={() => onSetZoom("minimap", mapState.zoom * 0.9)}
               className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[#1f2536] bg-[#111521] text-[#556076] transition-colors hover:border-[#2b3246] hover:text-white"
               aria-label="Zoom out minimap"
@@ -597,7 +597,7 @@ function MiniMapExpanded({
             >
               <Minus className="h-3 w-3" />
             </button>
-            <button
+            <button type="button"
               onClick={() => onSetZoom("minimap", mapState.zoom * 1.1)}
               className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[#1f2536] bg-[#111521] text-[#556076] transition-colors hover:border-[#2b3246] hover:text-white"
               aria-label="Zoom in minimap"
@@ -605,14 +605,14 @@ function MiniMapExpanded({
             >
               <Plus className="h-3 w-3" />
             </button>
-            <button
+            <button type="button"
               onClick={() => onFit("minimap")}
               className="h-7 rounded-md border border-[#1f2536] bg-[#111521] px-2 text-[9px] font-medium text-[#7f8ca6] transition-colors hover:border-[#2b3246] hover:text-white"
               aria-label="Fit minimap"
             >
               Fit
             </button>
-            <button
+            <button type="button"
               onClick={() => {
                 useStudioStore.getState().setViewMode("map");
                 onFit("minimap");
@@ -622,7 +622,7 @@ function MiniMapExpanded({
             >
               2D Top View
             </button>
-            <button
+            <button type="button"
               onClick={() => {
                 useStudioStore.getState().setPathReplayPlaying(false);
                 useStudioStore.getState().setPathReplayProgress(0);
@@ -932,7 +932,7 @@ export function MiniMap({
             </button>
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <button
+            <button type="button"
               onClick={() => setZoom("minimap", mapState.zoom * 0.9)}
               className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[#1f2536] bg-[#111521] text-[#556076] transition-colors hover:border-[#2b3246] hover:text-white"
               aria-label="Zoom out minimap"
@@ -940,7 +940,7 @@ export function MiniMap({
             >
               <Minus className="h-3 w-3" />
             </button>
-            <button
+            <button type="button"
               onClick={() => setZoom("minimap", mapState.zoom * 1.1)}
               className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[#1f2536] bg-[#111521] text-[#556076] transition-colors hover:border-[#2b3246] hover:text-white"
               aria-label="Zoom in minimap"
@@ -948,7 +948,7 @@ export function MiniMap({
             >
               <Plus className="h-3 w-3" />
             </button>
-            <button
+            <button type="button"
               onClick={() => fitMap("minimap")}
               className="h-7 rounded-md border border-[#1f2536] bg-[#111521] px-2 text-[9px] font-medium text-[#7f8ca6] transition-colors hover:border-[#2b3246] hover:text-white"
               aria-label="Fit minimap"

@@ -199,7 +199,7 @@ export function StatusBar() {
       </div>
 
       {/* Last run — clickable to run when stale or never-run */}
-      <button
+      <button type="button"
         onClick={() => {
           if (!running) {
             setSimulationRunning(true);
@@ -228,7 +228,7 @@ export function StatusBar() {
       </button>
 
       {/* Auto recompute toggle */}
-      <button
+      <button type="button"
         onClick={toggleAuto}
         className="flex items-center gap-1.5 text-[10px] text-[#4a5568] transition-colors hover:text-white"
       >

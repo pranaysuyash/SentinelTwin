@@ -691,13 +691,15 @@ export function CompareView() {
   const comparisonExport = useMemo(() => buildComparisonExport(snapshotA, snapshotB, mA, mB), [snapshotA, snapshotB, mA, mB]);
   const outcomeA = useMemo(() => {
     if (!snapshotA?.simulation) return null;
-    const activePath = activePathId ? snapshotA.scene.paths.find((path) => path.id === activePathId) ?? null : null;
-    return buildSecurityOutcomeModel(snapshotA.scene, snapshotA.simulation, activePath ?? null);
+    const snapshotScene = { ...snapshotA.scene, snapshots: [], scenarios: [] };
+    const activePath = activePathId ? snapshotScene.paths.find((path) => path.id === activePathId) ?? null : null;
+    return buildSecurityOutcomeModel(snapshotScene, snapshotA.simulation, activePath ?? null);
   }, [activePathId, snapshotA]);
   const outcomeB = useMemo(() => {
     if (!snapshotB?.simulation) return null;
-    const activePath = activePathId ? snapshotB.scene.paths.find((path) => path.id === activePathId) ?? null : null;
-    return buildSecurityOutcomeModel(snapshotB.scene, snapshotB.simulation, activePath ?? null);
+    const snapshotScene = { ...snapshotB.scene, snapshots: [], scenarios: [] };
+    const activePath = activePathId ? snapshotScene.paths.find((path) => path.id === activePathId) ?? null : null;
+    return buildSecurityOutcomeModel(snapshotScene, snapshotB.simulation, activePath ?? null);
   }, [activePathId, snapshotB]);
   const compareReportData = useMemo(() => {
     if (!snapshotA?.simulation || !snapshotB?.simulation) return null;

@@ -93,6 +93,8 @@ describe("computeLandmarkAlignmentConfidence", () => {
       buildMatch([1.3, 1.7, 8.4], projectToEvidence([1.3, 1.7, 8.4])),
       buildMatch([-0.8, 2.0, 9.2], projectToEvidence([-0.8, 2.0, 9.2])),
       buildMatch([0.9, 1.5, 7.9], projectToEvidence([0.9, 1.5, 7.9])),
+      buildMatch([0.4, 1.6, 8.8], projectToEvidence([0.4, 1.6, 8.8])),
+      buildMatch([-1.0, 1.9, 7.4], projectToEvidence([-1.0, 1.9, 7.4])),
     ]);
 
     const collinear = computeLandmarkAlignmentConfidence(camera, [
@@ -100,10 +102,12 @@ describe("computeLandmarkAlignmentConfidence", () => {
       buildMatch([-0.25, 1.85, 8.5], projectToEvidence([-0.25, 1.85, 8.5])),
       buildMatch([0, 1.8, 9], projectToEvidence([0, 1.8, 9])),
       buildMatch([0.25, 1.75, 9.5], projectToEvidence([0.25, 1.75, 9.5])),
+      buildMatch([0.5, 1.7, 10], projectToEvidence([0.5, 1.7, 10])),
+      buildMatch([0.75, 1.65, 10.5], projectToEvidence([0.75, 1.65, 10.5])),
     ]);
 
     expect(wellSpread).toBeGreaterThan(collinear);
-    expect(wellSpread).toBeGreaterThan(0.25);
+    expect(wellSpread).toBeGreaterThan(0.3);
     expect(collinear).toBeLessThan(0.2);
   });
 

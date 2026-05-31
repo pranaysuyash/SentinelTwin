@@ -30,7 +30,7 @@ export function AssumptionsPanel() {
 
   return (
     <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
-      <button
+      <button type="button"
         onClick={() => setCollapsed(!collapsed)}
         className="mb-2 flex w-full items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]"
       >
@@ -225,7 +225,7 @@ export function AssumptionsPanel() {
             </div>
           </div>
 
-          <button
+          <button type="button"
             onClick={() => setBottomTab("assumptions")}
             className="mt-1.5 w-full rounded-md border border-blue-500/30 bg-blue-500/10 px-2 py-1.5 text-[8px] uppercase tracking-[0.14em] text-blue-200 transition-colors hover:border-blue-400/50 hover:text-white"
           >

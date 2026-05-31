@@ -489,13 +489,13 @@ export function ReportLiteTab() {
         </span>
         <div className="flex items-center gap-1.5">
         <div className="flex items-center gap-1 rounded border border-[#1e2130] bg-[#0f141f] p-0.5">
-            <button
+            <button type="button"
               onClick={() => setReportMode("single")}
               className={`rounded px-2 py-0.5 text-[9px] ${reportMode === "single" ? "bg-[#1d2738] text-white" : "text-[#8090a8]"}`}
             >
               Single Scene
             </button>
-            <button
+            <button type="button"
               onClick={() => setReportMode("compare")}
               className={`rounded px-2 py-0.5 text-[9px] ${reportMode === "compare" ? "bg-[#1d2738] text-white" : "text-[#8090a8]"}`}
             >
@@ -651,7 +651,7 @@ export function ReportLiteTab() {
             <div className="mt-1 text-[#6f7f9d]">Visible: {audienceProfile.visibleSections.join(", ")}</div>
             <div className="text-[#6f7f9d]">Withheld: {audienceProfile.withheldSections.length > 0 ? audienceProfile.withheldSections.join(", ") : "none"}</div>
           </div>
-          <button
+          <button type="button"
             onClick={handleGenerateAI}
             disabled={isGenerating || !result}
             className="inline-flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-emerald-300 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10 disabled:opacity-40"
@@ -664,31 +664,31 @@ export function ReportLiteTab() {
             {isGenerating ? "Generating..." : aiReport ? "Regenerate" : "Generate AI"}
           </button>
           <div className="flex gap-1.5">
-            <button
+            <button type="button"
               onClick={() => { setAiReport(null); }}
               className="rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#68738a] transition-colors hover:text-white"
             >
               Default
             </button>
-            <button
+            <button type="button"
               onClick={handleExportMarkdown}
               className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
             >
               <FileText className="h-3 w-3" /> Export Markdown
             </button>
-            <button
+            <button type="button"
               onClick={handleExportHtml}
               className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
             >
               <Globe className="h-3 w-3" /> Export HTML
             </button>
-            <button
+            <button type="button"
               onClick={handleExportEvidenceBundle}
               className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
             >
               <Database className="h-3 w-3" /> Export Evidence Bundle
             </button>
-            <button
+            <button type="button"
               onClick={() => {
                 void handleExportPdf();
               }}
@@ -696,31 +696,31 @@ export function ReportLiteTab() {
             >
               <FileText className="h-3 w-3" /> Export PDF
             </button>
-            <button
+            <button type="button"
               onClick={handlePrint}
               className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
             >
               <Printer className="h-3 w-3" /> Print
             </button>
-            <button
+            <button type="button"
               onClick={copy}
               className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
             >
               <Copy className="h-3 w-3" /> Copy
             </button>
-            <button
+            <button type="button"
               onClick={() => navigator.clipboard.writeText(installerHandoffMarkdown)}
               className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
             >
               <Copy className="h-3 w-3" /> Copy Installer Handoff
             </button>
-            <button
+            <button type="button"
               onClick={() => navigator.clipboard.writeText(commissioningChecklistMarkdown)}
               className="flex items-center gap-1 rounded border border-[#1e2130] px-2 py-1 text-[9px] text-[#8090a8] transition-colors hover:border-[#2a3045] hover:text-white"
             >
               <Copy className="h-3 w-3" /> Copy Commissioning
             </button>
-          <button
+          <button type="button"
             onClick={() => {
               void shareCompareLink();
             }}
@@ -729,7 +729,7 @@ export function ReportLiteTab() {
           >
             <Share2 className="h-3 w-3" /> Share compare link
           </button>
-          <button
+          <button type="button"
             onClick={() => {
               void copyCompareLink();
             }}

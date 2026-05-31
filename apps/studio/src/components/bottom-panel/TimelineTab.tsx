@@ -398,7 +398,7 @@ export function TimelineTab() {
           { id: "quality" as const, label: "QUALITY OVER TIME" },
           { id: "edits" as const, label: "EDIT DELTAS" },
         ].map((tab) => (
-          <button
+          <button type="button"
             key={tab.id}
             onClick={() => setSubTab(tab.id)}
             className={cn(

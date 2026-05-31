@@ -4669,3 +4669,12 @@ Fixed the `CameraLiveConnectionEventRecord` and `WorkspaceApprovalRouteSummary` 
 - Decision: Clamp `resolutionMP` to a minimum of `0.1` before computing fallback dimensions.
 - Rationale: Zero-PPM coverage is a silent failure that looks like a legitimate coverage gap. A minimum of 0.1 MP (100k pixels) ensures the fallback produces a reasonable width and valid coverage, even with incomplete camera data.
 - Consequence: Cameras with missing specs will still produce plausible fallback coverage instead of silently showing zero.
+
+## D-285 - Landmark binding confidence should come from a normalized geometric fit
+
+- Date: 2026-05-31
+- Status: Accepted
+- Context: `computeLandmarkAlignmentConfidence` previously returned a hand-tuned score based mostly on match count, which could overstate confidence for weak landmark sets and ignored the actual correspondence geometry.
+- Decision: Replace the count-based stub with a normalized correspondence solver. Use a projective fit when there are enough correspondences, fall back to an affine fit for smaller valid sets, then score the result by reprojection residuals, landmark spread, and a soft camera visibility prior.
+- Rationale: Binding confidence should be derived from the match geometry itself, not from arbitrary count thresholds. Residual-based scoring is more durable, easier to reason about, and less likely to mislead downstream UI/report surfaces.
+- Consequence: The helper is now a real geometric estimator rather than a placeholder heuristic. It remains normalized rather than fully camera-calibrated because the binding schema does not yet carry explicit calibration metadata.

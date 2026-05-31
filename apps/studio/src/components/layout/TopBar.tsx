@@ -285,7 +285,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
         <div className="h-4 w-px bg-[#1e2130]" />
 
         <div className="relative min-w-0">
-          <button
+          <button type="button"
             onClick={() => setSceneOpen((open) => !open)}
             className="flex h-7 min-w-[170px] max-w-[190px] items-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] px-2.5 text-[11px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
           >
@@ -302,7 +302,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                 <>
                   {savedScenes.map((saved) => (
                     <div key={saved.id} className="group flex items-center gap-0.5">
-                      <button
+                      <button type="button"
                         onClick={() => {
                           setScene(saved);
                           setSceneOpen(false);
@@ -314,7 +314,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                       >
                         {saved.name}
                       </button>
-                      <button
+                      <button type="button"
                         onClick={() => {
                           if (confirm(`Delete saved scene "${saved.name}"? This cannot be undone.`)) {
                             deleteSavedScene(saved.id);
@@ -325,14 +325,14 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                       >
                         ✕
                       </button>
-                      <button
+                      <button type="button"
                         onClick={() => handleDuplicateSavedScene(saved.id)}
                         className="hidden rounded-lg px-1.5 py-2 text-[10px] text-sky-300 opacity-60 transition-colors hover:opacity-100 group-hover:block"
                         title="Duplicate scene"
                       >
                         ⧉
                       </button>
-                      <button
+                      <button type="button"
                         onClick={() => handleRenameSavedScene(saved.id, saved.name, saved.source)}
                         disabled={saved.source === "demo"}
                         className={cn(
@@ -353,7 +353,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
               )}
 
               <div className="space-y-0.5">
-                <button
+                <button type="button"
                   onClick={() => {
                     handleExportScene();
                     setSceneOpen(false);
@@ -363,7 +363,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                   <Download className="h-3 w-3" />
                   Export Scene JSON
                 </button>
-                <button
+                <button type="button"
                   onClick={() => {
                     handleImportScene();
                     setSceneOpen(false);
@@ -373,7 +373,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                   <Upload className="h-3 w-3" />
                   Import Scene JSON
                 </button>
-                <button
+                <button type="button"
                   onClick={() => {
                     setScanWizardOpen(true);
                     setSceneOpen(false);
@@ -383,7 +383,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                   <ScanSearch className="h-3 w-3" />
                   Scan a Site...
                 </button>
-                <button
+                <button type="button"
                   onClick={() => {
                     setWizardOpen(true);
                     setSceneOpen(false);
@@ -393,7 +393,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                   <Plus className="h-3 w-3" />
                   New Scene...
                 </button>
-                <button
+                <button type="button"
                   onClick={() => {
                     saveSceneToStorage();
                     setSceneOpen(false);
@@ -425,7 +425,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
         </div>
 
         <div className="relative">
-          <button
+          <button type="button"
             onClick={() => setTargetOpen((open) => !open)}
             className="flex h-7 min-w-[130px] items-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] px-2.5 text-[11px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
           >
@@ -443,7 +443,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
               onMouseLeave={() => setTargetOpen(false)}
             >
               {TARGET_TYPE_OPTIONS.map((entry) => (
-                <button
+                <button type="button"
                   key={entry.value}
                   className="w-full rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-[#171c2b]"
                   onClick={() => {
@@ -476,7 +476,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
           <span className="hidden lg:inline">View Settings</span>
         </SurfaceButton>
 
-        <button
+        <button type="button"
           onClick={runSimulation}
           disabled={running}
           className={cn(
@@ -573,56 +573,56 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
             >
               {/* XL-only actions shown in menu for narrow widths */}
               <div className="xl:hidden">
-                <button
+                <button type="button"
                   onClick={() => { setEnvMode(envMode === "night" ? "day" : "night"); setMoreOpen(false); }}
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
                 >
                   <Moon className="h-3 w-3" />
                   Night Mode
                 </button>
-                <button
+                <button type="button"
                   onClick={() => { handleCameraFailure(); setMoreOpen(false); }}
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
                 >
                   <Shield className="h-3 w-3" />
                   Camera Failure
                 </button>
-                <button
+                <button type="button"
                   onClick={() => { saveSnapshot(`Snapshot ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`); setMoreOpen(false); }}
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
                 >
                   <Copy className="h-3 w-3" />
                   Save Snapshot
                 </button>
-                <button
+                <button type="button"
                   onClick={() => { setBottomTab("beforeafter"); setMoreOpen(false); }}
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
                 >
                   <Clapperboard className="h-3 w-3" />
                   Compare
                 </button>
-                <button
+                <button type="button"
                   onClick={() => { setBottomTab("threat"); setMoreOpen(false); }}
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
                 >
                   <Crosshair className="h-3 w-3" />
                   Threat Path
                 </button>
-                <button
+                <button type="button"
                   onClick={() => { setBottomTab("report"); setMoreOpen(false); }}
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
                 >
                   <FileText className="h-3 w-3" />
                   Generate Report
                 </button>
-                <button
+                <button type="button"
                   onClick={() => { setBottomTab("assumptions"); setMoreOpen(false); }}
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
                 >
                   <Info className="h-3 w-3" />
                   Assumptions
                 </button>
-                <button
+                <button type="button"
                   onClick={() => { setBottomTab("provenance"); setMoreOpen(false); }}
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
                 >
@@ -631,7 +631,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                 </button>
                 <div className="my-1 border-t border-[#1e2130]" />
               </div>
-              <button
+              <button type="button"
                 onClick={() => {
                   setDemoMode(!demoMode);
                   setMoreOpen(false);
@@ -640,7 +640,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
               >
                 {demoMode ? "Exit Guided Walkthrough" : "Enter Guided Walkthrough"}
               </button>
-              <button
+              <button type="button"
                 onClick={() => {
                   toggleViewSettingsOpen();
                   setMoreOpen(false);
@@ -651,7 +651,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                 <SlidersHorizontal className="h-3 w-3" />
                 View Settings
               </button>
-              <button
+              <button type="button"
                 onClick={() => {
                   handleExportScene();
                   setMoreOpen(false);
@@ -662,7 +662,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                 Export JSON
               </button>
               <div className="xl:hidden">
-                <button
+                <button type="button"
                   onClick={() => { window.dispatchEvent(new CustomEvent("sentineltwin:toggle-shortcuts")); setMoreOpen(false); }}
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
                 >

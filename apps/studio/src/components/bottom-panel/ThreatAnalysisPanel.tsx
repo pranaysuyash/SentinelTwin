@@ -102,7 +102,7 @@ export function ThreatAnalysisPanel() {
             </span>
           </div>
         </div>
-        <button
+        <button type="button"
           onClick={runSimulation}
           disabled={simulationRunning}
           className="inline-flex items-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] px-3 py-1.5 text-[10px] font-medium text-rose-300 transition-colors hover:border-rose-500/30 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-60"

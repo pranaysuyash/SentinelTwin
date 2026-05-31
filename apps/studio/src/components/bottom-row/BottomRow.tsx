@@ -67,7 +67,7 @@ function SnapshotsPanel() {
     <BottomSection
       title="Snapshots"
       action={
-        <button
+        <button type="button"
           onClick={() => result && saveSnap(`Snapshot ${snapshots.length + 1}`)}
           className="inline-flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[8px] text-green-300 transition-colors hover:border-[#32384d] hover:text-white"
         >
@@ -85,7 +85,7 @@ function SnapshotsPanel() {
           </div>
         ))}
 
-        <button type="button" className="flex w-[88px] flex-shrink-0 flex-col items-center justify-center rounded-xl border border-[#1f2536] bg-[#0b0f17] text-[#7f8ca6] transition-colors hover:border-[#32384d] hover:text-white">
+        <button type="button" className="flex w-[96px] flex-shrink-0 flex-col items-center justify-center rounded-xl border border-[#1f2536] bg-[#0b0f17] text-[#7f8ca6] transition-colors hover:border-[#32384d] hover:text-white">
           <Plus className="h-4 w-4" />
           <span className="mt-1 text-[10px]">New Snapshot</span>
         </button>
@@ -160,14 +160,14 @@ function AssumptionsPanel() {
       action={
         editing ? (
           <div className="flex items-center gap-1">
-            <button
+            <button type="button"
               onClick={commitEdit}
               className="inline-flex items-center gap-1 rounded-md border border-green-600/40 bg-green-600/15 px-2 py-1 text-[8px] text-green-300 transition-colors hover:bg-green-600/25"
             >
               <Check className="h-3 w-3" />
               Save
             </button>
-            <button
+            <button type="button"
               onClick={cancelEdit}
               className="inline-flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[8px] text-[#6a7490] transition-colors hover:text-white"
             >
@@ -175,7 +175,7 @@ function AssumptionsPanel() {
             </button>
           </div>
         ) : (
-          <button
+          <button type="button"
             onClick={startEdit}
             className="inline-flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[8px] text-[#aab5ca] transition-colors hover:border-[#32384d] hover:text-white"
           >
@@ -338,7 +338,7 @@ function ReportSummaryPanel() {
             </div>
           )}
         </div>
-        <button
+        <button type="button"
           onClick={() => setBottomTab("report")}
           className="mt-2 inline-flex w-fit items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[8px] text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
         >

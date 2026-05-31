@@ -2,6 +2,7 @@ import { getYawPitchDirection } from "@sentineltwin/core";
 import type { CameraEvidenceArtifact, CameraNode } from "@/schema/security-scene";
 
 export type LandmarkMatch = NonNullable<CameraEvidenceArtifact["binding"]>["landmarkMatches"][number];
+export type CameraEvidenceBinding = NonNullable<CameraEvidenceArtifact["binding"]>;
 
 type Vec2 = [number, number];
 type Vec3 = [number, number, number];
@@ -462,4 +463,17 @@ export function computeLandmarkAlignmentConfidence(camera: CameraNode, matches: 
   }
 
   return computeAffineConfidence(camera, matches);
+}
+
+export function buildCameraEvidenceBinding(
+  camera: CameraNode,
+  matches: LandmarkMatch[],
+  verifiedAt = Date.now(),
+): CameraEvidenceBinding {
+  return {
+    isBound: matches.length >= 4,
+    landmarkMatches: matches,
+    transformConfidence: computeLandmarkAlignmentConfidence(camera, matches),
+    verifiedAt,
+  };
 }

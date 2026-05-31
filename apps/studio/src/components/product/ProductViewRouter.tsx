@@ -155,6 +155,9 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
             onAiDraft={() => navigate("ai_layout_draft")}
             onOpenDemoScene={handlers.openReferenceWorkspace}
             onOpenReport={handlers.openReport}
+            onOpenSiteIntake={() => navigate("site_intake")}
+            onOpenReferenceSites={() => navigate("reference_sites")}
+            onOpenSettings={() => navigate("settings")}
             onOpenScene={handlers.openScene}
             onUpdateProjectMetadata={updateSavedSceneMetadata}
             onDuplicateProject={duplicateSavedScene}

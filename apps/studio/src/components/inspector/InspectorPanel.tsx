@@ -305,7 +305,7 @@ function CameraInspector() {
 
       <div className="flex gap-1 border-b border-[#1e2130] px-2 pt-1.5">
         {tabs.map((tab) => (
-          <button
+          <button type="button"
             key={tab.id}
             onClick={() => setTab(tab.id)}
             className={cn(

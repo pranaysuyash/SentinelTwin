@@ -235,7 +235,7 @@ export function BottomPanel() {
         </div>
         <div className="flex items-end gap-0.5 border-b border-[#1e2130] px-1.5 pt-1.5">
           {compareTabs.map(({ id }) => (
-            <button
+            <button type="button"
               key={id}
               onClick={() => setTab(id)}
               className={cn(
@@ -292,7 +292,7 @@ export function BottomPanel() {
         <div className="pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-8 bg-gradient-to-l from-[#0d1017] to-transparent" />
         <div className="flex min-w-0 items-end gap-0.5 overflow-x-auto scrollbar-none">
           {enabledTabs.map(({ id, label, hasCount }) => (
-            <button
+            <button type="button"
               key={id}
               onClick={() => setTab(id)}
               className={cn(

@@ -23,7 +23,7 @@ export function FixSandboxBar() {
   if (!fixSandboxActive) {
     return (
       <div className="flex items-center gap-2">
-        <button
+        <button type="button"
           onClick={enterFixSandbox}
           className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 text-[11px] font-semibold text-amber-300 transition-colors hover:bg-amber-500/20"
           title="Open a sandbox to test changes without affecting the scene"
@@ -81,7 +81,7 @@ export function FixSandboxBar() {
 
       <div className="flex items-center gap-2">
         {/* Run simulation on sandbox */}
-        <button
+        <button type="button"
           onClick={runSimulation}
           disabled={simulationRunning}
           className={cn(
@@ -100,7 +100,7 @@ export function FixSandboxBar() {
         </button>
 
         {/* Apply Changes — green */}
-        <button
+        <button type="button"
           onClick={applyFixSandbox}
           className="inline-flex h-6 items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 text-[10px] font-semibold text-white transition-colors hover:bg-emerald-500"
         >
@@ -109,7 +109,7 @@ export function FixSandboxBar() {
         </button>
 
         {/* Discard — red */}
-        <button
+        <button type="button"
           onClick={exitFixSandbox}
           className="inline-flex h-6 items-center gap-1.5 rounded-lg bg-red-600/80 px-2.5 text-[10px] font-semibold text-white transition-colors hover:bg-red-500"
         >

@@ -141,7 +141,7 @@ export function LeftPanel() {
               {TOOLS.map((tool) => {
                 const active = activeTool === tool.id;
                 return (
-                  <button
+                  <button type="button"
                     key={tool.id}
                     onClick={() => setActiveTool(tool.id)}
                     className={cn(

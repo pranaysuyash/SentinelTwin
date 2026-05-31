@@ -160,7 +160,7 @@ export function PathMap({
           )}
         </select>
 
-        <button
+        <button type="button"
           className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[#24283a] bg-[#111521] text-[#c7d0e4]"
           onClick={() => {
             if (!activePath) return;
@@ -278,13 +278,13 @@ export function PathMap({
       />
 
       <div className="mt-2 flex gap-1.5">
-        <button
+        <button type="button"
           className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border border-[#24283a] bg-[#111521] text-[10px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
         >
           <Edit3 className="h-3 w-3" />
           Edit Path
         </button>
-        <button
+        <button type="button"
           onClick={() => {
             if (!activePath) return;
             setSelectedSegmentIndex(null);
@@ -297,7 +297,7 @@ export function PathMap({
           <Play className="h-3 w-3" />
           Play Path
         </button>
-        <button
+        <button type="button"
           onClick={() => setViewMode("replay")}
           className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border border-sky-800/35 bg-sky-900/20 text-[10px] font-medium text-sky-300 transition-colors hover:bg-sky-900/30"
           disabled={!activePath}

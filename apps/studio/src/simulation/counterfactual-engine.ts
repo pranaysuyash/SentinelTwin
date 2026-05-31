@@ -47,7 +47,7 @@ function generateCandidateActions(
         type: "move_object",
         description: `Move ${obs.label} to improve coverage`,
         affectedNodeId: obs.id,
-        suggestedPosition: [obs.position[0] + 1, obs.position[1], obs.position[2] + 1],
+        suggestedPosition: [obs.position[0] + 3, obs.position[1], obs.position[2]],
         estimatedCost: 0,
       });
     }

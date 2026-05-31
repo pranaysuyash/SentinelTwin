@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 
 const routerPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../product/ProductViewRouter.tsx");
 const pagePath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../app/page.tsx");
+const aiDraftPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../product/AiLayoutDraftView.tsx");
 
 describe("Site Draft activation gate contract", () => {
   test("site intake launchers do not force-navigate scan/import builders outside handler guards", () => {
@@ -22,7 +23,8 @@ describe("Site Draft activation gate contract", () => {
     const source = readFileSync(routerPath, "utf8");
     expect(source).toContain("handlers.createDraftFromScene(scene, \"scan\");");
     expect(source).toContain("navigate(\"site_draft_review\");");
-    expect(source).toContain("onClose={() => {\n            navigate(\"site_intake\");");
+    expect(source).toContain("onClose={() => {");
+    expect(source).toContain("navigate(\"site_intake\");");
     expect(source).toContain("handlers.createDraftFromScene(scene, \"manual\");");
     expect(source).toContain("handlers.createDraftFromScene(scene, \"floor_plan\");");
   });
@@ -53,5 +55,20 @@ describe("Site Draft activation gate contract", () => {
     expect(createDraftBody).toContain("createSiteIntakeSession");
     expect(createDraftBody).toContain("setSiteIntakeSession(session);");
     expect(createDraftBody).not.toContain("setScene(");
+  });
+
+  test("AI draft apply path creates a review session and never promotes active scene directly", () => {
+    const aiSource = readFileSync(aiDraftPath, "utf8");
+    expect(aiSource).toContain("onApplyDraft(nextScene, \"ai_prompt\")");
+    expect(aiSource).toContain("navigate(\"site_draft_review\")");
+    expect(aiSource).not.toContain("setScene(");
+  });
+
+  test("JSON import path creates review draft and routes to site_draft_review", () => {
+    const source = readFileSync(pagePath, "utf8");
+    expect(source).toContain("createDraftFromScene(scene, \"json\", [file.name]);");
+    expect(source).toContain("createDraftFromScene(parsed.data, \"json\", [file.name]);");
+    expect(source).toContain("navigate(\"site_draft_review\");");
+    expect(source).not.toContain("useStudioStore((s) => s.importScene)");
   });
 });

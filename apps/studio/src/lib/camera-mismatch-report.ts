@@ -5,12 +5,17 @@ export function generateMismatchReport(
   evidence: CameraEvidenceArtifact,
   alignmentScore: number
 ): MismatchReport | null {
-  if (alignmentScore > 90) return null;
+  const bindingAlignmentScore = typeof evidence.binding?.transformConfidence === "number"
+    ? evidence.binding.transformConfidence * 100
+    : null;
+  const effectiveAlignmentScore = bindingAlignmentScore ?? alignmentScore;
+
+  if (effectiveAlignmentScore > 90) return null;
 
   const mismatchTypes: MismatchReport["mismatchTypes"] = [];
   const suggestions: SceneUpdateSuggestion[] = [];
 
-  if (alignmentScore < 50) {
+  if (effectiveAlignmentScore < 50) {
     mismatchTypes.push("angle");
     suggestions.push({
       id: `sugg_yaw_${Date.now()}`,
@@ -21,7 +26,7 @@ export function generateMismatchReport(
     });
   }
 
-  if (alignmentScore >= 50 && alignmentScore < 80) {
+  if (effectiveAlignmentScore >= 50 && effectiveAlignmentScore < 80) {
     mismatchTypes.push("fov");
     suggestions.push({
       id: `sugg_fov_${Date.now()}`,
@@ -32,7 +37,7 @@ export function generateMismatchReport(
     });
   }
 
-  const severity = alignmentScore < 30 ? "critical" : alignmentScore < 60 ? "high" : alignmentScore < 80 ? "medium" : "low";
+  const severity = effectiveAlignmentScore < 30 ? "critical" : effectiveAlignmentScore < 60 ? "high" : effectiveAlignmentScore < 80 ? "medium" : "low";
 
   return {
     id: `mismatch_${Date.now()}`,
@@ -40,7 +45,7 @@ export function generateMismatchReport(
     evidenceId: evidence.id,
     severity,
     mismatchTypes,
-    description: `Alignment score is ${Math.round(alignmentScore)}%. Mismatches detected.`,
+    description: `Alignment score is ${Math.round(effectiveAlignmentScore)}%. Mismatches detected.`,
     suggestions,
   };
 }

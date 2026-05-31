@@ -263,7 +263,7 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
             </div>
           ))}
         </div>
-        <button
+        <button type="button"
           onClick={handleReset}
           className="flex items-center gap-1 rounded px-2 py-1 text-[9px] text-[#59637a] hover:text-white"
         >
@@ -287,7 +287,7 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
 
       {/* Navigation */}
       <div className="flex items-center justify-between border-t border-[#1e2130] px-4 py-2">
-        <button
+        <button type="button"
           onClick={() => state.step > 0 ? goTo(state.step - 1) : onClose?.()}
           className="flex items-center gap-1 rounded-lg border border-[#1e2130] px-3 py-1.5 text-[10px] text-[#68738a] transition-colors hover:border-[#2a3045] hover:text-white"
         >
@@ -296,7 +296,7 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
         </button>
 
         {state.step < 3 ? (
-          <button
+          <button type="button"
             onClick={() => goTo(state.step + 1)}
             disabled={!canAdvance}
             className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-[10px] font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
@@ -305,7 +305,7 @@ export function SceneBuilderWizard({ onClose, onBuild, forceImportMethod = null 
             <ArrowRight className="h-3 w-3" />
           </button>
         ) : (
-          <button
+          <button type="button"
             onClick={handleCreate}
             className="flex items-center gap-1 rounded-lg bg-emerald-600 px-4 py-1.5 text-[10px] font-medium text-white transition-colors hover:bg-emerald-500"
           >
@@ -403,7 +403,7 @@ function MethodStep({
           { id: "template" as const, label: "Use Template", desc: "Pre-configured spaces", icon: "📐", color: "border-blue-500/40" },
           { id: "floor_plan" as const, label: "Import Floor Plan", desc: "Upload image to detect walls", icon: "📄", color: "border-emerald-500/40" },
         ].map((method) => (
-          <button
+          <button type="button"
             key={method.id}
             onClick={() => onChange({ importMethod: method.id, selectedTemplate: method.id === "template" ? value.selectedTemplate : null })}
             className={`rounded-xl border-2 p-4 text-left transition-all ${
@@ -424,7 +424,7 @@ function MethodStep({
           <h4 className="text-[10px] font-medium text-[#8090a8]">Templates</h4>
           <div className="grid grid-cols-2 gap-2">
             {SCENE_TEMPLATES.map((t) => (
-              <button
+              <button type="button"
                 key={t.id}
                 onClick={() => onTemplateSelect(t)}
                 className={`rounded-lg border p-2.5 text-left transition-colors ${

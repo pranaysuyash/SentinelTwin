@@ -12,6 +12,7 @@ Read in order before any work:
 7. `Docs/context/origin/INDEX.md` — check for new context files Pranay has added
 8. `sentineltwin_ui_design_pack/SentinelTwin_UI_Design_Pack.md` and its referenced images when the task touches UI, layout, motion, tokens, or screen composition
 9. `Docs/todos/PHASE_0_SETUP.md` (if no code exists yet)
+10. Addendum files in `Docs/` (e.g., `*_ADDENDUM*.md`) — check these after their corresponding base docs. Per D-028, addendums supersede base docs for decisions made after the base doc was written, preserving historical provenance without in-place edits.
 
 ## What SentinelTwin Is
 
@@ -112,7 +113,9 @@ Key packages:
 | `Docs/architecture/07_RENDERING_PIPELINE.md` | R3F, WebGPU, camera feed view |
 | `Docs/architecture/08_MONOREPO_STRUCTURE.md` | Full monorepo layout |
 | `Docs/decisions/DECISION_LOG.md` | Architecture decisions made — read before proposing changes |
+| `Docs/decisions/DECISION_LOG_ADDENDUM.md` | Subsequent decisions (D-027+) — check after DECISION_LOG.md |
 | `Docs/decisions/OPEN_QUESTIONS.md` | Open questions — pick up from here |
+| `Docs/decisions/OPEN_QUESTIONS_ADDENDUM.md` | Subsequent questions/clarifications — check after OPEN_QUESTIONS.md |
 | `Docs/exploration/EXPLORATION_MAP.md` | Living research map — append, don't replace |
 | `Docs/exploration/AGENTIC_SYSTEMS_CODEX.md` | How Codex is used, agent framework choices |
 | `Docs/exploration/STANDARDS_COMPLIANCE_REGULATORY.md` | IEC 62676-4:2025, GDPR, NDAA, insurance |
@@ -255,7 +258,7 @@ Next build priorities (from reference image analysis):
 6. Wire remaining stubs (Failures tab, Tool placement, Test Without This)
 
 Open decisions that must be resolved before relevant sprint:
-- D-018: GSAP vs motion for path replay animation (RESOLVED: Motion One)
+- D-018: GSAP vs motion for path replay animation (RESOLVED: Framer Motion — see 07_RENDERING_PIPELINE_ADDENDUM_2026-05-29.md, DECISION_LOG_ADDENDUM.md)
 - D-019: Local-first vs server-side compute (before AI call layer)
 - D-020: Security Evidence Twin framing (before report layer design)
 - D-021: Text-to-scene scope (before V0.2 design)

@@ -6,8 +6,8 @@ import type {
   ScanCandidateKind,
 } from "@/lib/scan-artifacts";
 import { addWarning, addCandidateWarning, captureModeLabel } from "@/lib/scan-artifacts";
-import type { SiteTwinDraft, SiteCompilerResult, SiteCompilerWarning } from "@/lib/site-compiler";
-import { compileScanToSiteResult, compileToSiteTwinDraft, makeSiteCompilerWarnings } from "@/lib/site-compiler";
+import type { SiteTwinDraft, SiteCompilerResult } from "@/lib/site-compiler";
+import { compileScanToSiteResult, compileToSiteTwinDraft } from "@/lib/site-compiler";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 import type { SecurityScene, CameraNode, ObstructionNode, DoorNode, WindowNode, SecurityLightNode, EntryPointNode, CriticalZoneNode, WallNode } from "@/schema/security-scene";
 import { safeParseSecurityScene } from "@/schema/security-scene";

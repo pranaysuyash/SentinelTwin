@@ -63,7 +63,7 @@ function CoverageTimelineBar({ snapshots }: { snapshots: HourlySecuritySnapshot[
         {snapshots.slice(0, 96).map((snap, i) => {
           const isActive = i === activeSlot;
           return (
-            <button
+            <button type="button"
               key={`${snap.hour}-${snap.minute}`}
               onClick={() => setTemporalScrub(snap.hour, snap.minute)}
               className={`flex-1 rounded-px transition-all cursor-pointer hover:opacity-90 ${
@@ -136,7 +136,7 @@ function VulnerabilityCard({ window, label }: { window: VulnerabilityWindow; lab
               <span className="text-[9px] font-mono text-[#68738a]">
                 {hourToTime(window.startHour, window.startMinute)} → {hourToTime(window.endHour, window.endMinute)}
               </span>
-              <button
+              <button type="button"
                 onClick={() => setTemporalScrub(window.startHour, window.startMinute)}
                 className="text-[8px] text-blue-400 hover:text-blue-300 underline"
               >
@@ -145,7 +145,7 @@ function VulnerabilityCard({ window, label }: { window: VulnerabilityWindow; lab
             </div>
           </div>
         </div>
-        <button
+        <button type="button"
           onClick={() => setExpanded(!expanded)}
           className="flex-shrink-0 p-0.5 rounded hover:bg-white/5"
         >
@@ -328,7 +328,7 @@ export function TemporalProfileView() {
             </span>
           )}
         </div>
-        <button
+        <button type="button"
           onClick={handleCompute}
           disabled={loading}
           className="flex items-center gap-1 px-2 py-1 rounded bg-[#1a1d26] hover:bg-[#1e2235] text-[9px] text-[#8090a8] transition-colors disabled:opacity-50"

@@ -20,7 +20,7 @@ export function CameraResponsibilityPanel({ cameraFindings }: { cameraFindings: 
           <div key={camera.cameraId} className="rounded-lg border border-[#232a3d] bg-[#0f1420] p-2">
             <div className="flex items-center justify-between gap-2">
               <div className="text-[11px] font-medium text-[#deebff]">{camera.cameraName}</div>
-              <button
+              <button type="button"
                 onClick={() => { selectNode(camera.cameraId); setViewMode("camera_view"); setWorkspacePreset("coverage"); }}
                 className="rounded border border-[#2d3750] px-2 py-1 text-[10px] text-[#bcd3ff] hover:bg-[#1a2233]"
               >View Camera</button>

@@ -272,13 +272,13 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
   }, [demoStep]);
 
   return (
-    <div className="pointer-events-auto absolute inset-y-0 left-0 z-40 flex w-[340px] flex-col border-r border-[#1e2130] bg-[#0b0f17]/95 shadow-[4px_0_24px_rgba(0,0,0,0.3)]">
+    <div         className="pointer-events-auto absolute inset-y-0 left-0 z-40 flex w-[340px] max-w-[90vw] flex-col border-r border-[#1e2130] bg-[#0b0f17]/95 shadow-[4px_0_24px_rgba(0,0,0,0.3)]">
       <div className="flex items-center justify-between border-b border-[#1e2130] px-3 py-2">
         <div className="flex items-center gap-2">
           <Shield className="h-3.5 w-3.5 text-emerald-400" />
           <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">Guided Walkthrough</span>
         </div>
-        <button
+        <button type="button"
           onClick={handleSkip}
           className="flex h-5 w-5 items-center justify-center rounded text-[#5b667c] hover:bg-[#1a2333] hover:text-white"
           title="Exit walkthrough"
@@ -294,7 +294,7 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
             const isCompleted = lastActionStep != null && index <= lastActionStep;
 
             return (
-              <button
+              <button type="button"
                 key={s.id}
                 onClick={() => {
                   setDemoStep(index);
@@ -393,7 +393,7 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
         </div>
 
         <div className="flex items-center justify-between gap-2">
-          <button
+          <button type="button"
             onClick={handlePrev}
             disabled={isFirst}
             className="flex h-7 items-center gap-1 rounded-lg border border-[#24283a] bg-[#111521] px-2 text-[9px] font-medium text-[#9da8c0] transition-colors hover:border-[#32384d] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
@@ -403,7 +403,7 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
           </button>
 
           {step?.requiresAction ? (
-            <button
+            <button type="button"
               onClick={handleAction}
               disabled={!canAction}
               className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg bg-emerald-600 px-2 text-[9px] font-medium text-white transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-emerald-900/60"
@@ -417,7 +417,7 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
             </button>
           ) : null}
 
-          <button
+          <button type="button"
             onClick={handleNext}
             disabled={step?.requiresAction && !stepCompleted}
             className="flex h-7 items-center gap-1 rounded-lg bg-cyan-600 px-3 text-[9px] font-medium text-white transition-colors hover:bg-cyan-500 disabled:cursor-not-allowed disabled:bg-cyan-900/60"

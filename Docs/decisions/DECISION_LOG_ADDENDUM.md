@@ -1,4 +1,4 @@
-## New Decisions — Added 2026-05-25
+## New Decisions — Added 2026-05-25 (updated 2026-05-31)
 
 ---
 
@@ -131,3 +131,98 @@ open questions are updated. This is a hard requirement, not a preference.
 3. "Enter lens + sensor, derive FOV" is requested as a feature
 
 **Research location:** Thread 114 in `Docs/exploration/EXPLORATION_MAP.md`. Full sensor size table documented there.
+
+---
+
+## D-026 | 2026-05-29 | 4-question audit standard for all rendering/runtime audits
+
+**Decision:** Every future framework audit report must answer 4 actionability questions
+for each "not found" or "deferred" result.
+
+**Standard questions:**
+1. **Should this be used now?** — Is there a current need for this capability?
+2. **Where first?** — Which surface/subsystem is the natural entry point?
+3. **At what implementation level?** — Custom code, library integration, or architectural change?
+4. **When to trigger?** — What activation criteria must be met before implementing?
+
+**Rationale:**
+- The R3F/Drei audit (`Docs/decisions/R3F_DREI_FULL_AUDIT_2026-05-29.md`) produced 3 findings
+  (post-processing, shaders, geometry optimization) that were technically accurate but not
+  execution-ready. The audit was descriptive when it should have been actionable.
+- Applying the 4-question pattern after the fact made each finding immediately actionable
+  for the next available sprint.
+
+**Adopted for:**
+- All future rendering/runtime/audit reports
+- Recommended but not required for AI model evaluations and product research threads
+
+**Related:** `Docs/decisions/R3F_DREI_FULL_AUDIT_2026-05-29.md` (Thread 51 in EXPLORATION_MAP).
+
+---
+
+## D-027 | 2026-05-31 | Rendering runtime stack closure — verified against source of truth
+
+**Decision:** The rendering runtime stack is closed and verified against `apps/studio/package.json`.
+`07_RENDERING_PIPELINE_ADDENDUM_2026-05-29.md` is the canonical runtime truth snapshot.
+
+**Resolution:**
+- GSAP is NOT a runtime dependency — confirmed absent from all source code and `package.json`.
+- `framer-motion ^12.40.0` (MIT, per D-011) is the active animation library.
+- All 14 non-origin docs files that referenced GSAP have been resolved:
+  - **Base docs:** Retain historical references per addendum convention (provenance of the decision process).
+  - **Addendums:** `OPEN_QUESTIONS_ADDENDUM.md` (Q-017 resolved), `DECISION_LOG_ADDENDUM.md` (this entry),
+    `07_RENDERING_PIPELINE_ADDENDUM_2026-05-29.md` (runtime truth), `EXPLORATION_MAP.md` (thread findings).
+  - **Updated in-place:** `07_RENDERING_PIPELINE.md` addendum banner + corrected stack,
+    `OPEN_QUESTIONS.md` D-018 marked resolved.
+
+**Verification evidence:**
+- `grep -rn -i 'gsap|green[sS]ock' apps/ --include='*.ts' --include='*.tsx'` = 0 results in source code.
+- `grep -rn -i 'gsap' Docs/ --include='*.md' -l` = 14 files, all non-origin confirmed as historical.
+- `apps/studio/package.json`: `framer-motion: ^12.40.0`, no GSAP entry.
+
+**Documents retaining GSAP references (historical only):**
+1. `Docs/architecture/07_RENDERING_PIPELINE.md`*  
+2. `Docs/architecture/07_RENDERING_PIPELINE_ADDENDUM_2026-05-29.md`*  
+3. `Docs/decisions/DECISION_LOG.md`
+4. `Docs/decisions/DECISION_LOG_ADDENDUM.md`*
+5. `Docs/decisions/OPEN_QUESTIONS.md`*
+6. `Docs/decisions/OPEN_QUESTIONS_ADDENDUM.md`*
+7. `Docs/decisions/PRE_BUILD_DISCUSSION_LOG.md`
+8. `Docs/decisions/WIDE_OPEN_BRAINSTORM_2026-05-26.md`
+9. `Docs/decisions/R3F_DREI_FULL_AUDIT_2026-05-29.md`
+10. `Docs/exploration/OPEN_SOURCE_LICENSING.md`
+11. `Docs/exploration/EXPLORATION_MAP.md`*
+
+  * = Updated with resolution cross-references during this closure pass.
+
+**Policy for all future GSAP questions:**
+- Direct to D-011, D-018, D-259 in `DECISION_LOG.md`, and D-027 in this addendum.
+- Do not re-open. The decision is closed.
+
+---
+
+## D-028 | 2026-05-31 | Addendum convention — resolve stale doc references without editing base docs
+
+**Decision:** When base docs contain stale references that are historically accurate for the time
+of writing, and the resolution is documented elsewhere, create or update addendums rather than
+editing the base documents in-place.
+
+**Rationale:**
+- Base docs are records of the decision-making process at a point in time. Editing them erases
+  provenance for how and why decisions evolved.
+- Addendums supersede base docs without destroying them. Future readers can see both the
+  original thinking and the resolution, side by side.
+- This aligns with the existing addendum pattern (`07_RENDERING_PIPELINE_ADDENDUM_2026-05-29.md`,
+  `DECISION_LOG_ADDENDUM.md`, `OPEN_QUESTIONS_ADDENDUM.md`).
+
+**Exception:** In-place edits are acceptable for:
+- Cross-reference banners ("This doc has been superseded — see addendum X")
+- Correcting factual errors that would mislead a new reader
+- Minor version/version-drift corrections that don't affect decision provenance
+
+**Policy for resolution documentation:**
+1. Identify all docs files with stale references (via grep or find).
+2. Group by topic (e.g., GSAP references across 14 docs).
+3. Create/update one addendum per topic with: what was resolved, where cross-references live,
+   and the verification evidence.
+4. Optionally add cross-reference banners to high-traffic base docs so readers find the addendum.

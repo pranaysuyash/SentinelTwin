@@ -15,6 +15,8 @@
 - SecurityOutcome semantics now separate `zoneFindings` (all) from `failedZones` (non-pass only), reducing narrative and UI drift.
 - SiteDraftReview now renders a real read-only draft-scene spatial preview (SVG) instead of placeholder text.
 - Shared narrative model now feeds both security outcome and report summary/export surfaces.
+- Product home now uses the security-command-center hierarchy from the approved reference: large current site twin preview, right-side risk/status decision panel, primary operational mode strip, and secondary intake dock.
+- Home navigation now routes into real product sections (Create Site Twin, Security Twin Studio, Audit Reports, Reference Sites, Settings) instead of passive labels.
 
 **Next:** Use this hardened foundation before adding new scan/ONVIF/compliance breadth.
 
@@ -6279,11 +6281,11 @@ All relevant decisions and analysis are already captured in:
 
 ### Current finding
 
-- Camera landmark binding confidence now uses a camera-aware heuristic instead of match count alone: it combines match count, camera-facing fit, and 2D/3D landmark spread so a sparse but well-distributed set does not look as trustworthy as a geometrically weak one.
+- Camera landmark binding confidence now uses a residual-based geometric fit instead of match count alone: it solves a normalized projective model when there are enough correspondences, falls back to an affine fit for smaller sets, and scores the result by reprojection error, spread, and camera visibility.
 
 ### Follow-up
 
-- If this path becomes user-visible in a report or inspector badge, keep the label honest about being a geometric heuristic unless a calibrated solver replaces it.
+- If this path becomes user-visible in a report or inspector badge, keep the label honest about the fact that the binding payload still lacks explicit calibration metadata, so the solver is geometric and normalized rather than fully camera-calibrated.
 
 
 ---

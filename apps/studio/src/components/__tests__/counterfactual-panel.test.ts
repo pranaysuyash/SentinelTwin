@@ -9,7 +9,7 @@ describe("CounterfactualPanel", () => {
 
     expect(source).toContain("Batch Compare");
     expect(source).toContain("Card View");
-    expect(source).toContain("Adversarial exposure");
+    expect(source).toContain("Route exposure");
     expect(source).toContain("Adversarial");
     expect(source).toContain("showBatchCompare");
   });

@@ -6,19 +6,21 @@ import { resolve } from "node:path";
 const siteIntakeHubPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../site-intake/SiteIntakeHub.tsx");
 
 describe("SiteIntakeHub", () => {
-  test("uses manual-assisted intake language and schema-aligned output binding", () => {
+  test("uses guided-plus-review intake language and schema-aligned output binding", () => {
     const source = readFileSync(siteIntakeHubPath, "utf8");
 
-    expect(source).toContain("Manual-assisted");
+    expect(source).toContain("Guided capture + manual review");
     expect(source).toContain("Output");
-    expect(source).toContain("{selected.output}");
-    expect(source).not.toContain("{selected.detail.output}");
+    expect(source).toContain('Output:');
+    expect(source).toContain('{card.output}');
+    expect(source).toContain("{selected.detail.outputDetail}");
+    expect(source).not.toContain("selected.detail.output}");
   });
 
   test("uses truthful maturity language for all sources", () => {
     const source = readFileSync(siteIntakeHubPath, "utf8");
 
-    expect(source).toContain("No automatic segmentation or depth");
+    expect(source).toContain("Automatic segmentation/depth reconstruction is still rolling out; candidate confirmation is required.");
     expect(source).toContain("Review required before trust");
     expect(source).toContain("Best-effort wall/opening extraction");
     expect(source).toContain("Manual correction required");
@@ -41,6 +43,16 @@ describe("SiteIntakeHub", () => {
     expect(source).toContain("onClick={props.onEnterStudio}");
     expect(source).toContain("onClick={() => props.onOpenRecentSite?.(site.id) ?? props.onEnterStudio()}");
     expect(source).toContain("onClick={props.onImportJson}");
+    expect(source).toContain("SAMPLE_SECURITY_SCENE_IMPORT_URL");
+    expect(source).toContain("download=\"sample-security-scene-import.json\"");
     expect(source).not.toContain(">How it works<");
+  });
+
+  test("selected source details are source-specific instead of scan-only copy", () => {
+    const source = readFileSync(siteIntakeHubPath, "utf8");
+
+    expect(source).toContain("{selected.detail.description}");
+    expect(source).toContain("{selected.detail.outputDetail}");
+    expect(source).not.toContain("from reviewed photo markers.</div>");
   });
 });

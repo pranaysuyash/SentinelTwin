@@ -19,6 +19,8 @@ import type { SiteIntakeSource } from "@/lib/site-compiler";
 
 export type { SiteIntakeSource };
 
+export const SAMPLE_SECURITY_SCENE_IMPORT_URL = "/sample-security-scene-import.json";
+
 export type SiteIntakeHubProps = {
   onStartScan: () => void;
   onStartAiDraft: () => void;
@@ -34,7 +36,7 @@ export type SiteIntakeHubProps = {
     id: string;
     name: string;
     updatedLabel: string;
-    riskLabel: "Low Risk" | "Medium Risk" | "High Risk";
+    riskLabel: "Low Risk" | "Medium Risk" | "High Risk" | "Baseline Required";
     thumbnailUrl?: string;
   }>;
 };
@@ -51,6 +53,8 @@ type SiteIntakeSourceCard = {
   tone: "sky" | "violet" | "amber" | "slate" | "emerald" | "rose";
   detail: {
     bestFor: string;
+    description: string;
+    outputDetail: string;
     steps: string[];
     limitations: string[];
     timeEstimate: string;
@@ -65,7 +69,7 @@ const cards: SiteIntakeSourceCard[] = [
     id: "scan",
     title: "Scan Site Photos",
     status: "Working",
-    description: "Manual-assisted capture using your phone photos.",
+    description: "Guided capture + manual review from phone photos.",
     output: "Site Twin",
     review: "Required",
     icon: ScanSearch,
@@ -73,6 +77,8 @@ const cards: SiteIntakeSourceCard[] = [
     tone: "sky",
     detail: {
       bestFor: "Existing shops, lobbies, offices, warehouses without CAD.",
+      description: "Capture your site using guided steps. You'll mark key elements in photos and create a trusted site twin draft.",
+      outputDetail: "Site Twin draft from reviewed photo markers.",
       steps: [
         "Set room dimensions",
         "Upload overview photos",
@@ -82,7 +88,7 @@ const cards: SiteIntakeSourceCard[] = [
         "Run baseline simulation",
       ],
       limitations: [
-        "No automatic segmentation or depth yet. User confirms all candidates."
+        "Automatic segmentation/depth reconstruction is still rolling out; candidate confirmation is required."
       ],
       timeEstimate: "15–30 minutes",
       confidence: "Available after compile",
@@ -101,6 +107,8 @@ const cards: SiteIntakeSourceCard[] = [
     tone: "violet",
     detail: {
       bestFor: "Drafting a site from text before real measurements are available.",
+      description: "Describe the space, generate a layout draft, then review it before it can become the active site twin.",
+      outputDetail: "Draft Site Twin from text plus model or heuristic layout generation.",
       steps: [
         "Write a description of the space",
         "Generate a draft layout",
@@ -129,6 +137,8 @@ const cards: SiteIntakeSourceCard[] = [
     tone: "amber",
     detail: {
       bestFor: "Blueprints, rough plans, screenshots, PDFs, and site images.",
+      description: "Upload a floor plan, review the extracted shell, then send the result through draft review before activation.",
+      outputDetail: "Scene shell draft from reviewed floor-plan extraction.",
       steps: [
         "Upload a floor plan image",
         "Review wall extraction and scale",
@@ -150,26 +160,29 @@ const cards: SiteIntakeSourceCard[] = [
     id: "json",
     title: "Import Site Twin",
     status: "Working",
-    description: "Import an existing Site Twin from an exported data file.",
-    output: "Site Twin",
-    review: "Validation",
+    description: "Import a full SecurityScene JSON as a draft Site Twin.",
+    output: "Draft Site Twin",
+    review: "Required",
     icon: FileUp,
     tone: "slate",
     detail: {
       bestFor: "Existing exports, shared site twins, and approved handoff files.",
+      description: "Import a valid site twin data file, validate it, then review the draft before it becomes active.",
+      outputDetail: "Validated Site Twin draft from JSON import.",
       steps: [
-        "Select a site twin data file",
+        "Select a Site Twin JSON file",
         "Schema validation runs automatically",
-        "Review validation results",
-        "Enter Studio to continue editing",
+        "Open Site Twin Draft Review",
+        "Approve to activate the imported site twin",
+        "Enter Studio and run simulation",
       ],
       limitations: [
-        "Only valid site twin data files are accepted.",
-        "No backward compatibility with older schema versions.",
+        "Only valid SecurityScene JSON files are accepted.",
+        "Older schema exports may require migration before import.",
       ],
       timeEstimate: "< 1 minute",
-      confidence: "Absolute (validated data)",
-      ctaLabel: "Import Site Twin Data",
+      confidence: "High (schema-validated draft)",
+      ctaLabel: "Import SecurityScene JSON",
     },
     onClickAction: "onImportJson",
   },
@@ -184,6 +197,8 @@ const cards: SiteIntakeSourceCard[] = [
     tone: "emerald",
     detail: {
       bestFor: "Starting from a blank canvas and drawing the site by hand.",
+      description: "Draw the site yourself, then approve the manual draft before opening it as the active site twin.",
+      outputDetail: "Site Twin draft from manual authoring.",
       steps: [
         "Open the manual builder",
         "Draw walls to define the space",
@@ -213,6 +228,8 @@ const cards: SiteIntakeSourceCard[] = [
     tone: "rose",
     detail: {
       bestFor: "Future/live camera footage alignment and verification.",
+      description: "Compare virtual cameras against reference evidence before locking verified camera state.",
+      outputDetail: "Evidence review for the current site twin.",
       steps: [
         "Connect live stream or video file",
         "Map stream to virtual camera",
@@ -415,7 +432,7 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
               </div>
 
               <p className="mt-7 max-w-[560px] border-b border-white/8 pb-6 text-[18px] leading-8 text-slate-300">
-                Capture your site using guided steps. You&apos;ll mark key elements in photos and create a trusted site twin draft.
+                {selected.detail.description}
               </p>
 
               <div className="border-b border-white/8 py-6">
@@ -435,7 +452,7 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                     </div>
                     <div>
                       <div className="text-[14px] font-medium text-white">Output</div>
-                      <div className="mt-1 max-w-[260px] text-[14px] leading-6 text-slate-300">{selected.output} from reviewed photo markers.</div>
+                      <div className="mt-1 max-w-[260px] text-[14px] leading-6 text-slate-300">{selected.detail.outputDetail}</div>
                     </div>
                   </div>
                 </div>
@@ -489,6 +506,16 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                 <span>{selected.detail.ctaLabel}</span>
                 <ArrowRight className="h-5 w-5" />
               </button>
+              {selected.id === "json" ? (
+                <a
+                  href={SAMPLE_SECURITY_SCENE_IMPORT_URL}
+                  download="sample-security-scene-import.json"
+                  className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] text-[15px] text-slate-200 transition-colors hover:bg-white/[0.06]"
+                >
+                  <FileUp className="h-4 w-4" />
+                  <span>Download sample JSON</span>
+                </a>
+              ) : null}
 
               <div className="mt-3 flex items-center gap-2 text-[14px] text-slate-400">
                 <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/10 text-[11px] text-slate-500">🛡</span>
@@ -518,7 +545,7 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                   <div className="min-w-0">
                     <div className="truncate text-[15px] font-medium text-white">{site.name}</div>
                     <div className="mt-1 text-[14px] text-slate-400">{site.updatedLabel}</div>
-                    <div className={`mt-2 text-[14px] ${site.riskLabel === "Low Risk" ? "text-emerald-300" : site.riskLabel === "Medium Risk" ? "text-amber-300" : "text-rose-300"}`}>
+                    <div className={`mt-2 text-[14px] ${site.riskLabel === "Low Risk" ? "text-emerald-300" : site.riskLabel === "Medium Risk" ? "text-amber-300" : site.riskLabel === "Baseline Required" ? "text-sky-300" : "text-rose-300"}`}>
                       ● {site.riskLabel}
                     </div>
                   </div>

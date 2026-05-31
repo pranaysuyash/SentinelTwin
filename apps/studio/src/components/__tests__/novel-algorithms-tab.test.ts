@@ -8,11 +8,11 @@ describe("NovelAlgorithmsTab", () => {
     const source = readFileSync(novelAlgorithmsPath, "utf8");
 
     expect(source).toContain("Coverage Time Budget");
-    expect(source).toContain("Coverage Entropy");
+    expect(source).toContain("Coverage Stability Index");
     expect(source).toContain("Coverage Uncertainty");
     expect(source).toContain("Coverage Under Posture Variation");
     expect(source).toContain("Blind Spot Topology");
-    expect(source).toContain("Blind Spot Fingerprint");
+    expect(source).toContain("Blind-Spot Pattern");
     expect(source).toContain("Reflective Bounce Vision");
     expect(source).toContain("Navigator");
     expect(source).toContain("Inspect on Map");

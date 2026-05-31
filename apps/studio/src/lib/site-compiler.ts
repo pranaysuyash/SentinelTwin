@@ -530,6 +530,7 @@ export function compileScanToSiteResult(
   extraNotes: string[] = [],
   overrideWarnings: SiteCompilerWarning[] | null = null,
 ): SiteCompilerResult {
+  scene = cloneSecurityScene(scene);
   scene.source = sourceToSceneSource("scan");
   const warnings = overrideWarnings ?? makeSiteCompilerWarnings(scene);
   const provenanceNotes = collectSceneProvenanceNotes(scene, ["Provenance:", "Scan evidence:", "Scan path:"]);
@@ -553,6 +554,7 @@ export function compileAiDraftToSiteResult(
   extraNotes: string[] = [],
   overrideWarnings: SiteCompilerWarning[] | null = null,
 ): SiteCompilerResult {
+  scene = cloneSecurityScene(scene);
   scene.source = sourceToSceneSource("ai_prompt");
   const warnings = overrideWarnings ?? makeSiteCompilerWarnings(scene);
   const notes = ["Scene generated from AI prompt draft.", ...extraNotes];
@@ -576,6 +578,7 @@ export function compileFloorPlanToSiteResult(
   extraNotes: string[] = [],
   overrideWarnings: SiteCompilerWarning[] | null = null,
 ): SiteCompilerResult {
+  scene = cloneSecurityScene(scene);
   scene.source = sourceToSceneSource("floor_plan");
   const warnings = overrideWarnings ?? makeSiteCompilerWarnings(scene);
   const provenanceNotes = collectSceneProvenanceNotes(scene, ["Floor plan import:", "Floor plan diagnostics:"]);
@@ -639,6 +642,7 @@ export function compileCameraEvidenceToSiteResult(
   extraNotes: string[] = [],
   overrideWarnings: SiteCompilerWarning[] | null = null,
 ): SiteCompilerResult {
+  scene = cloneSecurityScene(scene);
   scene.source = sourceToSceneSource("camera_evidence");
   const warnings = overrideWarnings ?? makeSiteCompilerWarnings(scene);
   const notes = ["Scene compiled from camera evidence verification.", ...extraNotes];
@@ -661,6 +665,7 @@ export function compileFootageVerifyToSiteResult(
   extraNotes: string[] = [],
   overrideWarnings: SiteCompilerWarning[] | null = null,
 ): SiteCompilerResult {
+  scene = cloneSecurityScene(scene);
   scene.source = sourceToSceneSource("camera_evidence");
   const warnings = overrideWarnings ?? makeSiteCompilerWarnings(scene);
   const notes = [

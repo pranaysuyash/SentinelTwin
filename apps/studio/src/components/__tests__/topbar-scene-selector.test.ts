@@ -13,9 +13,9 @@ describe("TopBar scene selector", () => {
     expect(source).toContain("renameSavedScene");
     expect(source).toContain("handleDuplicateSavedScene");
     expect(source).toContain("handleRenameSavedScene");
-    expect(source).toContain("Export Scene JSON");
-    expect(source).toContain("Import Scene JSON");
-    expect(source).toContain("Save Current Scene");
+    expect(source).toContain("Export Site Twin File");
+    expect(source).toContain("Import Site Twin File");
+    expect(source).toContain("Save Current Site Twin");
     expect(source).toContain("Delete scene");
     expect(source).toContain("Duplicate scene");
     expect(source).toContain("Rename scene");

@@ -8,7 +8,7 @@ describe("CompareView", () => {
   test("exposes an evidence bundle export alongside compare exports", () => {
     const source = readFileSync(compareViewPath, "utf8");
 
-    expect(source).toContain("Export JSON");
+    expect(source).toContain("Export Compare Data");
     expect(source).toContain("Share compare link");
     expect(source).toContain("Copy compare link");
     expect(source).toContain("Export MD");

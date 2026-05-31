@@ -13,7 +13,7 @@ describe("WorkspacePresetSwitcher", () => {
     expect(source).toContain('const rightPanelMode = useStudioStore((s) => s.rightPanelMode);');
     expect(source).toContain('const current = useMemo(() => ({');
     expect(source).toContain('const active = PRESETS.find((entry) => entry.id === workspacePreset) ?? PRESETS[0]!');
-    expect(source).toContain("Focused workspace with all docks hidden");
+    expect(source).toContain("Hide panels for uninterrupted site review.");
     expect(source).not.toContain('const current = useStudioStore((s) => ({');
   });
 });

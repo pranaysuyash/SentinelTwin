@@ -11,8 +11,8 @@ import { promoteToActiveScene } from "@/lib/site-draft-approval";
 import { parseArchiveHandoffLink } from "@/lib/archive-handoff-link";
 import { parseCompareShareLink } from "@/lib/compare-share-link";
 import { parseTimelineShareLink } from "@/lib/timeline-share-link";
-import { safeParseSecurityScene, type SecurityScene } from "@/schema/security-scene";
-import { bakeoffToSecurityScene } from "@/lib/bakeoff-bridge";
+import { type SecurityScene } from "@/schema/security-scene";
+import { parseImportSceneDraft } from "@/lib/import-scene-draft";
 
 function parseTimelineFocusFromUrl(search: string) {
   return parseTimelineShareLink(search);
@@ -412,22 +412,12 @@ function StudioPageContent() {
           reader.onload = (e) => {
             try {
               const json = JSON.parse((e.target?.result as string) || "");
-              if (json && typeof json.image_id === "string" && Array.isArray(json.walls)) {
-                const scene = bakeoffToSecurityScene(json, {
-                  knownDimensionM: 8,
-                  axisHint: "width",
-                }, json.image_id);
-                createDraftFromScene(scene, "json", [file.name]);
-                setImportError(null);
-                navigate("site_draft_review");
+              const parsedDraft = parseImportSceneDraft(json);
+              if (!parsedDraft.success) {
+                setImportError(parsedDraft.error);
                 return;
               }
-              const parsed = safeParseSecurityScene(json);
-              if (!parsed.success) {
-                setImportError(parsed.error.issues[0]?.message ?? "Scene import failed validation");
-                return;
-              }
-              createDraftFromScene(parsed.data, "json", [file.name]);
+              createDraftFromScene(parsedDraft.scene, parsedDraft.source, [file.name]);
               setImportError(null);
               navigate("site_draft_review");
             } catch {

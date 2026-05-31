@@ -59,8 +59,8 @@ describe("Studio launcher shell", () => {
 
     // Draft pipeline — createSiteIntakeSession is the single entry point
     expect(source).toContain("createSiteIntakeSession");
-    expect(source).toContain("approveSiteTwinDraft");
-    expect(source).toContain("safeParseSecurityScene");
+    expect(source).toContain("promoteToActiveScene");
+    expect(source).not.toContain("safeParseSecurityScene");
 
     // Draft review hooks
     expect(source).toContain("approveIntakeSession");
@@ -86,7 +86,7 @@ describe("Studio launcher shell", () => {
 
     // JSON import via hidden file input
     expect(source).toContain("accept=\".json\"");
-    expect(source).toContain("bakeoffToSecurityScene");
+    expect(source).toContain("parseImportSceneDraft");
 
     // Demo scene auto-bootstrap
     expect(source).toContain("bootstrapRef");

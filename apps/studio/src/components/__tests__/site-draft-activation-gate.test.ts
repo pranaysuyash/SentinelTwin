@@ -66,8 +66,8 @@ describe("Site Draft activation gate contract", () => {
 
   test("JSON import path creates review draft and routes to site_draft_review", () => {
     const source = readFileSync(pagePath, "utf8");
-    expect(source).toContain("createDraftFromScene(scene, \"json\", [file.name]);");
-    expect(source).toContain("createDraftFromScene(parsed.data, \"json\", [file.name]);");
+    expect(source).toContain("parseImportSceneDraft");
+    expect(source).toContain("createDraftFromScene(parsedDraft.scene, parsedDraft.source, [file.name]);");
     expect(source).toContain("navigate(\"site_draft_review\");");
     expect(source).not.toContain("useStudioStore((s) => s.importScene)");
   });

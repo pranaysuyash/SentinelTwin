@@ -24,9 +24,9 @@ describe("Help tab", () => {
     expect(source).toContain("Path Replay");
     expect(source).toContain("Compare");
     expect(source).toContain("Report Lite");
-    expect(source).toContain("Preview Fix");
-    expect(source).toContain("Test Fix");
-    expect(source).toContain("Apply Fix");
+    expect(source).toContain("Unclear recommendation");
+    expect(source).toContain("verify fixes");
+    expect(source).toContain("preview the fix");
     expect(source).toContain("TOOL_SHORTCUTS");
     expect(source).toContain("VIEW_MODE_KEYS");
   });

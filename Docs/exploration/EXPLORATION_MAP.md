@@ -20,6 +20,7 @@
 - Site intake recent-site cards now open real scene flows (via routed scene open), and quick-import from intake triggers the JSON import path directly.
 - Home header scene/environment indicators are now explicit status chips to avoid false dropdown affordances.
 - Demo flow is documented for product walkthroughs at `Docs/product/SITE_TWIN_CREATION_DEMO_FLOW.md`.
+- Aligned Studio walkthrough steps with timed judging narrative (problem -> simulation -> failure case -> compare/report -> close).
 
 **Next:** Use this hardened foundation before adding new scan/ONVIF/compliance breadth.
 

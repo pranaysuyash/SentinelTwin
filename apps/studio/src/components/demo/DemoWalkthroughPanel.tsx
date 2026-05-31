@@ -1,19 +1,44 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, CheckCircle2, Play, RotateCcw, RotateCw, Move, BarChart3, GitCompare, FileText, Camera, Map, Columns2, Route, Shield, Play as PlayIcon, X, AlertTriangle, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Play, GitCompare, FileText, Columns2, Route, Shield, Play as PlayIcon, X, AlertTriangle, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { cn } from "@/lib/cn";
 import { useStudioStore } from "@/store/studio-store";
-import type { Recommendation, CameraNode, ObstructionNode } from "@/schema/security-scene";
+import type { CameraNode } from "@/schema/security-scene";
 
 const DEMO_STEPS = [
   {
-    id: "baseline",
-    title: "Baseline Coverage",
-    shortTitle: "Baseline",
-    description: "Run the simulation to see the current security posture: coverage % across the retail shop, critical zone status, and detected issues.",
-    icon: PlayIcon,
+    id: "problem",
+    timestamp: "0:00",
+    title: "Problem framing",
+    shortTitle: "0:00 Problem",
+    description: "CCTV placement creates false confidence. Coverage cones do not guarantee useful identification evidence in real incidents.",
+    icon: AlertTriangle,
+  },
+  {
+    id: "product_intro",
+    timestamp: "0:20",
+    title: "SentinelTwin framing",
+    shortTitle: "0:20 Intro",
+    description: "Introduce SentinelTwin as an AI-native physical security digital twin for deterministic coverage failure analysis and audit reporting.",
+    icon: Shield,
+  },
+  {
+    id: "dashboard",
+    timestamp: "0:45",
+    title: "Dashboard and current workspace",
+    shortTitle: "0:45 Dashboard",
+    description: "Show the deployed app command center and current Site Twin status before entering Studio.",
+    icon: Shield,
+  },
+  {
+    id: "studio_map",
+    timestamp: "1:10",
+    title: "Camera Studio map scene",
+    shortTitle: "1:10 Studio",
+    description: "Show map/scene geometry, camera placements, critical zones, obstructions, and heatmap-backed risk context.",
+    icon: Route,
     transition: () => {
       const s = useStudioStore.getState();
       s.setWorkspacePreset("coverage");
@@ -21,46 +46,41 @@ const DEMO_STEPS = [
       s.setBottomTab("metrics");
       s.setDemoMode(true);
     },
-    action: () => {
-      const s = useStudioStore.getState();
-      s.runSimulation();
-    },
-    actionLabel: "Run Baseline Simulation",
+  },
+  {
+    id: "simulation",
+    timestamp: "1:45",
+    title: "Run deterministic simulation",
+    shortTitle: "1:45 Sim",
+    description: "Run simulation and explain detection, observation, recognition, and identification quality outcomes.",
+    icon: PlayIcon,
+    actionLabel: "Run Simulation",
     requiresAction: true,
   },
   {
-    id: "camera_wall",
-    title: "Camera Wall",
-    shortTitle: "Camera Wall",
-    description: "See all five camera feeds in the multi-camera wall view. Each camera's coverage zone, quality, and status are displayed side by side.",
+    id: "camera_replay_path",
+    timestamp: "2:15",
+    title: "Camera view, replay, path visibility",
+    shortTitle: "2:15 Replay",
+    description: "Open camera operations and path replay views to show per-camera perspective plus path-visibility timeline.",
     icon: Columns2,
     transition: () => {
       const s = useStudioStore.getState();
-      s.setWorkspacePreset("camera_wall");
-      s.setViewMode("wall");
-      s.setBottomTab("metrics");
-    },
-  },
-  {
-    id: "path_replay",
-    title: "Replay Path: Entry → Counter",
-    shortTitle: "Replay",
-    description: "Watch the 'Night Entry → Cash Counter' path replay. The actor moves through the shop — coverage quality along the path is shown in the timeline.",
-    icon: Route,
-    transition: () => {
-      const s = useStudioStore.getState();
-      s.setActivePathId("path_front_to_counter");
       s.setWorkspacePreset("replay");
       s.setViewMode("replay");
       s.setBottomTab("timeline");
+      s.setActivePathId("path_front_to_counter");
     },
   },
   {
-    id: "failure",
-    title: "Identify Weak Zone",
-    shortTitle: "Failure",
-    description: "The cash counter zone has reduced coverage because the cupboard obstructs Camera 1's view. Open the Issues tab to see detected problems.",
+    id: "failure_case",
+    timestamp: "2:45",
+    title: "Failure case under stress",
+    shortTitle: "2:45 Failure",
+    description: "Switch to night conditions and force one camera offline to surface a real failure case before remediation.",
     icon: AlertTriangle,
+    actionLabel: "Apply Failure Case",
+    requiresAction: true,
     transition: () => {
       const s = useStudioStore.getState();
       s.setWorkspacePreset("coverage");
@@ -69,52 +89,41 @@ const DEMO_STEPS = [
     },
   },
   {
-    id: "apply_fix",
-    title: "Apply Suggested Fix",
-    shortTitle: "Fix",
-    description: "Move the cupboard away from the cash counter zone, then re-run the simulation to verify the improvement.",
-    icon: Move,
-    transition: () => {
-      const s = useStudioStore.getState();
-      s.setWorkspacePreset("coverage");
-      s.setViewMode("map");
-      s.setBottomTab("metrics");
-    },
-    actionLabel: "Move Cupboard & Rerun",
-    requiresAction: true,
-  },
-  {
-    id: "compare",
-    title: "Before / After Comparison",
-    shortTitle: "Compare",
-    description: "Compare the baseline simulation against the fixed scene. Coverage delta, zone status changes, and path visibility improvements are shown.",
+    id: "compare_report",
+    timestamp: "3:15",
+    title: "Before/after compare and report",
+    shortTitle: "3:15 Compare",
+    description: "Show compare and report surfaces to communicate delta impact and exportable audit narrative.",
     icon: GitCompare,
     transition: () => {
       const s = useStudioStore.getState();
-      const snapshots = s.snapshots;
-      const baselineSnap = snapshots.find((snap) => snap.label === "Baseline") ?? snapshots[0] ?? null;
-      const proposedSnap = snapshots[snapshots.length - 1] ?? null;
-      if (baselineSnap && proposedSnap && baselineSnap.id !== proposedSnap.id) {
-        s.snapshots; // trigger re-read
-      }
       s.setWorkspacePreset("compare");
       s.setViewMode("compare");
       s.setBottomTab("beforeafter");
     },
   },
   {
-    id: "report",
-    title: "Generate Report",
-    shortTitle: "Report",
-    description: "Open the report view with the before/after comparison data, issues, and recommendations ready for export.",
-    icon: FileText,
+    id: "judge_focus",
+    timestamp: "3:45",
+    title: "Judge focus callouts",
+    shortTitle: "3:45 Focus",
+    description: "Emphasize deterministic simulation logic, DORI-style scoring, SecurityScene schema integrity, counterfactual comparisons, temporal/profile/report/provenance surfaces.",
+    icon: Sparkles,
     transition: () => {
       const s = useStudioStore.getState();
       s.setWorkspacePreset("report");
       s.setViewMode("report");
       s.setBottomTab("report");
     },
-    actionLabel: "Finish Walkthrough",
+  },
+  {
+    id: "close",
+    timestamp: "4:15",
+    title: "Close",
+    shortTitle: "4:15 Close",
+    description: "Close with product thesis: SentinelTwin is not a cone viewer; it is a deterministic security audit workspace.",
+    icon: FileText,
+    actionLabel: "Finish Judge Demo",
     isLast: true,
   },
 ];
@@ -175,8 +184,9 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
   const snapshots = useStudioStore((s) => s.snapshots);
   const runSimulation = useStudioStore((s) => s.runSimulation);
   const updateNode = useStudioStore((s) => s.updateNode);
+  const setEnvironmentMode = useStudioStore((s) => s.setEnvironmentMode);
 
-  const [fixApplied, setFixApplied] = useState(false);
+  const [failureCaseApplied, setFailureCaseApplied] = useState(false);
   const [lastActionStep, setLastActionStep] = useState<number | null>(null);
 
   const step = DEMO_STEPS[demoStep];
@@ -217,55 +227,42 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
   }, [onFinish, setDemoMode, setDemoStep]);
 
   const handleAction = useCallback(() => {
-    if (demoStep === 0) {
+    if (demoStep === 4) {
       runSimulation();
-      setLastActionStep(0);
+      setLastActionStep(4);
       return;
     }
 
-    if (demoStep === 4) {
-      const moveCupboardAway = () => {
+    if (demoStep === 6) {
+      const applyFailureCase = () => {
         const state = useStudioStore.getState();
-        const obstruction = state.scene.obstructions.find((o) => o.id === "obs_cupboard_blocker") ?? null;
-        if (!obstruction) return false;
+        const fallbackCamera = state.scene.cameras[0]?.id ?? null;
+        const targetCameraId = state.scene.cameras.find((camera) => camera.id === "cam_1")?.id ?? fallbackCamera;
+        if (!targetCameraId) return false;
 
-        const originalPosition: [number, number, number] = [obstruction.position[0], obstruction.position[1], obstruction.position[2]];
-        const newPosition: [number, number, number] = [3.2, obstruction.position[1], 2.4];
-
-        state.commitSceneChange((scene) => {
-          const next = structuredClone(scene) as typeof scene;
-          const target = next.obstructions.find((o) => o.id === "obs_cupboard_blocker");
-          if (target) {
-            target.position = newPosition;
-          }
-          return next;
-        }, "Walkthrough: Move cupboard away from cash counter zone");
-
-        setFixApplied(true);
+        setEnvironmentMode("night");
+        updateNode(targetCameraId, { status: "off" as CameraNode["status"] });
+        runSimulation();
+        setFailureCaseApplied(true);
         return true;
       };
 
-      const moved = moveCupboardAway();
-      if (moved) {
-        setTimeout(() => {
-          runSimulation();
-          setLastActionStep(4);
-        }, 50);
-      }
+      const applied = applyFailureCase();
+      if (applied) setLastActionStep(6);
       return;
     }
-  }, [demoStep, runSimulation]);
+  }, [demoStep, runSimulation, setEnvironmentMode, updateNode]);
 
   const canAction = useMemo(() => {
-    if (demoStep === 0) return !simulationRunning;
-    if (demoStep === 4) return !fixApplied && !simulationRunning;
+    if (demoStep === 4) return !simulationRunning;
+    if (demoStep === 6) return !failureCaseApplied && !simulationRunning;
     return false;
-  }, [demoStep, fixApplied, simulationRunning]);
+  }, [demoStep, failureCaseApplied, simulationRunning]);
 
   const Icon = step?.icon ?? Shield;
-  const showRerunWarning = demoStep > 0 && simulationDirty && !fixApplied;
-  const baselineComplete = lastActionStep != null && lastActionStep >= 0;
-  const fixComplete = lastActionStep != null && lastActionStep >= 4;
+  const showRerunWarning = demoStep > 0 && simulationDirty && !failureCaseApplied;
+  const simulationStepComplete = lastActionStep != null && lastActionStep >= 4;
+  const failureStepComplete = lastActionStep != null && lastActionStep >= 6;
 
   useEffect(() => {
     DEMO_STEPS[demoStep]?.transition?.();
@@ -276,7 +273,7 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
       <div className="flex items-center justify-between border-b border-[#1e2130] px-3 py-2">
         <div className="flex items-center gap-2">
           <Shield className="h-3.5 w-3.5 text-emerald-400" />
-          <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">Guided Walkthrough</span>
+          <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">Judge Demo Walkthrough (4:15)</span>
         </div>
         <button type="button"
           onClick={handleSkip}
@@ -298,7 +295,7 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
                 key={s.id}
                 onClick={() => {
                   setDemoStep(index);
-                  s.transition();
+                  s.transition?.();
                 }}
                 className={cn(
                   "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[10px] transition-colors",
@@ -329,7 +326,7 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
           <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">
             Step {demoStep + 1} of {DEMO_STEPS.length}
           </div>
-          <h3 className="mt-1 text-[13px] font-semibold text-[#d7deed]">{step?.title}</h3>
+          <h3 className="mt-1 text-[13px] font-semibold text-[#d7deed]">{step?.timestamp ? `${step.timestamp} — ` : ""}{step?.title}</h3>
           <p className="mt-1 text-[10px] leading-relaxed text-[#8b96ab]">{step?.description}</p>
 
           {showRerunWarning ? (
@@ -342,45 +339,45 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
             </div>
           ) : null}
 
-          {demoStep === 0 && baselineComplete ? (
+          {demoStep === 4 && simulationStepComplete ? (
             <div className="mt-3">
-              <div className="mb-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#4a5568]">Baseline metrics</div>
+              <div className="mb-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#4a5568]">Simulation metrics</div>
               <CoverageMetricsPanel />
             </div>
           ) : null}
 
-          {demoStep === 4 && fixComplete ? (
+          {demoStep === 6 && failureStepComplete ? (
             <div className="mt-3">
-              <div className="mb-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#4a5568]">After fix metrics</div>
+              <div className="mb-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#4a5568]">Failure metrics</div>
               <CoverageMetricsPanel />
             </div>
           ) : null}
 
-          {demoStep === 5 ? (
+          {demoStep === 7 ? (
             <div className="mt-3">
-              <div className="mb-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#4a5568]">Comparison</div>
+              <div className="mb-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#4a5568]">Judge focus areas</div>
               <CoverageMetricsPanel />
               <div className="mt-2 rounded-lg border border-[#1d2330] bg-[#090d14] px-2.5 py-2 text-[10px] text-[#8b96ab]">
                 <div className="flex items-center gap-1.5 text-emerald-300 font-semibold mb-1">
                   <Sparkles className="h-3 w-3" />
-                  Snapshots saved
+                  Evaluation priorities
                 </div>
                 <div className="text-[9px]">
-                  {'Before: "'}{snapshots[0]?.label ?? 'Baseline'}{'" \u2014 After: "'}{snapshots[snapshots.length - 1]?.label ?? 'Fixed'}{'"'}
+                  Deterministic simulation · DORI-style scoring · SecurityScene schema · counterfactual deltas · temporal/profile/report/provenance
                 </div>
                 <div className="mt-1 text-[9px] text-[#556076]">
-                  Select snapshots A and B above to compare coverage, critical zones, and path quality.
+                  Emphasize verified outputs over AI narration claims.
                 </div>
               </div>
             </div>
           ) : null}
 
-          {demoStep === 6 ? (
+          {demoStep === 8 ? (
             <div className="mt-3">
-              <div className="mb-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#4a5568]">Report</div>
+              <div className="mb-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#4a5568]">Close line</div>
               <CoverageMetricsPanel />
               <div className="mt-2 text-[9px] text-[#556076]">
-                Issues and recommendations from the latest simulation are included in the report.
+                SentinelTwin is a security audit workspace, not a static cone viewer.
               </div>
             </div>
           ) : null}
@@ -408,7 +405,7 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
               disabled={!canAction}
               className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg bg-emerald-600 px-2 text-[9px] font-medium text-white transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-emerald-900/60"
             >
-              {(fixApplied && demoStep === 4) || (baselineComplete && demoStep === 0) ? (
+              {(failureCaseApplied && demoStep === 6) || (simulationStepComplete && demoStep === 4) ? (
                 <CheckCircle2 className="h-3 w-3" />
               ) : (
                 <Play className="h-3 w-3" />
@@ -427,15 +424,15 @@ export function DemoWalkthroughPanel({ onFinish }: DemoWalkthroughPanelProps) {
           </button>
         </div>
 
-        {demoStep === 0 && baselineComplete ? (
+        {demoStep === 4 && simulationStepComplete ? (
           <div className="mt-2 rounded border border-emerald-400/20 bg-emerald-500/8 px-2 py-1 text-center text-[8px] text-emerald-200">
-            Baseline complete — proceed to Camera Wall
+            Simulation complete — proceed to replay and failure demonstration
           </div>
         ) : null}
 
-        {demoStep === 4 && fixComplete ? (
+        {demoStep === 6 && failureStepComplete ? (
           <div className="mt-2 rounded border border-emerald-400/20 bg-emerald-500/8 px-2 py-1 text-center text-[8px] text-emerald-200">
-            Cupboard moved & simulation re-run — proceed to Compare
+            Failure case applied — proceed to compare/report and judge focus
           </div>
         ) : null}
       </div>

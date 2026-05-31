@@ -16,9 +16,9 @@ describe("MetricsTab", () => {
     expect(source).toContain("Walkable Area Quality");
     expect(source).toContain("Recognition");
     expect(source).toContain("Identification");
-    expect(source).toContain("Coverage Entropy");
-    expect(source).toContain("K-Robustness");
-    expect(source).toContain("Placement Oracle");
+    expect(source).toContain("Coverage Stability Index");
+    expect(source).toContain("Backup Coverage");
+    expect(source).toContain("Recommended Mounts");
     expect(source).toContain("Blind Spot FP");
     expect(source).toContain("Reflective Bounce");
     expect(source).toContain("Temporal Anomalies");

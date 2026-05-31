@@ -10,7 +10,7 @@ describe("BottomPanel", () => {
 
     expect(source).toContain("SensorsTab");
     expect(source).toContain('{ id: "sensors", label: "SENSORS" }');
-    expect(source).toContain('sensors: "Sensor layer summary and live schema-backed sensor inventory."');
+    expect(source).toContain('sensors: "Use this to review non-camera sensor inventory and live evidence that may confirm or challenge camera coverage."');
     expect(source).toContain('case "sensors":');
   });
 
@@ -19,7 +19,7 @@ describe("BottomPanel", () => {
 
     expect(source).toContain("GovernanceTab");
     expect(source).toContain('{ id: "governance", label: "GOVERNANCE" }');
-    expect(source).toContain('governance: "Role, approval, and publish policy controls for the scene control plane."');
+    expect(source).toContain('governance: "Use this to review role, approval, and publishing controls before sharing audit evidence."');
     expect(source).toContain('case "governance":');
   });
 

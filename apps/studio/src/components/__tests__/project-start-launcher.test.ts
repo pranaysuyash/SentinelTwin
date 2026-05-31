@@ -10,12 +10,12 @@ describe("ProjectStartLauncher", () => {
     const source = readFileSync(launcherPath, "utf8");
 
     expect(source).toContain("Job-first starting path");
-    expect(source).toContain("Audit existing CCTV setup");
-    expect(source).toContain("Design a new camera layout");
+    expect(source).toContain("Audit existing camera coverage");
+    expect(source).toContain("Design a new site layout");
     expect(source).toContain("Import a floor plan");
     expect(source).toContain("Scan site with phone photos");
-    expect(source).toContain("Scan / Manual-assisted");
-    expect(source).toContain("Draft from text prompt");
+    expect(source).toContain("Guided Marking");
+    expect(source).toContain("Draft from site description");
     expect(source).toContain("Verify real footage");
     expect(source).toContain("Generate client report");
     expect(source).toContain("Open seeded retail baseline");

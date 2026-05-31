@@ -31,7 +31,7 @@ def step(log: list[dict], name: str, ok: bool, detail: str = "") -> None:
 
 def safe_shot(page, path: Path, log: list[dict], step_name: str) -> None:
     try:
-        page.screenshot(path=str(path), timeout=30000, animations="disabled")
+        page.screenshot(path=str(path), timeout=60000, animations="disabled")
         step(log, step_name, True, path.name)
     except Exception as exc:
         step(log, step_name, False, f"screenshot skipped: {exc}")
@@ -63,14 +63,34 @@ def click_label(page, label: str, timeout_ms: int = 4000) -> bool:
             return True
     except Exception:
         pass
+    try:
+        clicked = page.evaluate(
+            """(needle) => {
+              const lower = needle.toLowerCase();
+              const candidates = Array.from(document.querySelectorAll('button, [role="button"], a'));
+              const target = candidates.find((el) => {
+                const text = `${el.innerText || ''} ${el.getAttribute('aria-label') || ''}`.toLowerCase();
+                const rect = el.getBoundingClientRect();
+                return text.includes(lower) && rect.width > 0 && rect.height > 0 && !el.disabled;
+              });
+              if (!target) return false;
+              target.click();
+              return true;
+            }""",
+            label,
+        )
+        return bool(clicked)
+    except Exception:
+        pass
     return False
 
 
 def wait_any_text(page, texts: Iterable[str], timeout_ms: int = 12000) -> str | None:
     deadline = time.time() + timeout_ms / 1000
     while time.time() < deadline:
+        body_text = current_text(page, 8000).lower()
         for text in texts:
-            if page.get_by_text(text).count() > 0:
+            if text.lower() in body_text:
                 return text
         page.wait_for_timeout(200)
     return None
@@ -150,6 +170,9 @@ def main() -> int:
                 page,
                 [
                     "Create Site Twin",
+                    "Current Site Twin",
+                    "Open Security Twin Studio",
+                    "Security Digital Twin Command Center",
                     "Start Project",
                     "Workspace",
                     "Security Audit Studio",
@@ -234,7 +257,19 @@ def main() -> int:
                 page.goto(BASE_URL.rstrip("/") + "/studio", wait_until="commit", timeout=45000)
                 step(log, "enter_studio", True, "fallback:/studio")
 
-            if not wait_any_text(page, ["Map View", "Camera View", "Camera Operations", "Coverage"], timeout_ms=30000):
+            if not wait_any_text(
+                page,
+                [
+                    "Map View",
+                    "Camera View",
+                    "Camera Operations",
+                    "Coverage",
+                    "QUALITY VIEW",
+                    "Coverage - Map & Analysis",
+                    "Path Replay",
+                ],
+                timeout_ms=45000,
+            ):
                 step(log, "studio_ready", False, "No studio workspace signal found")
             else:
                 step(log, "studio_ready", True, "workspace signal found")

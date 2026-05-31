@@ -1,12 +1,12 @@
 "use client";
 
-import { ArrowLeft, Camera, ShieldCheck, Sun, TriangleAlert, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { ArrowLeft, Camera, Sun, TriangleAlert } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { cn } from "@/lib/cn";
 import { useProductViewStore } from "@/store/product-view-store";
 import { useStudioStore, type SavedProjectRecord } from "@/store/studio-store";
-import type { SecurityScene, SimulationResult } from "@/schema/security-scene";
+import type { SecurityScene } from "@/schema/security-scene";
 
 function coverageTone(pct: number) {
   if (pct >= 80) return "text-emerald-300";
@@ -44,6 +44,20 @@ function formatTime(ts: number | null | undefined): string {
   if (elapsed < 3600000) return `${Math.round(elapsed / 60000)}m ago`;
   if (elapsed < 86400000) return `${Math.round(elapsed / 3600000)}h ago`;
   return `${Math.round(elapsed / 86400000)}d ago`;
+}
+
+function siteCategory(scene: SecurityScene): "retail" | "office" | "warehouse" {
+  const haystack = [
+    scene.name,
+    ...scene.changeLog,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  if (haystack.includes("warehouse") || haystack.includes("loading") || haystack.includes("dock")) return "warehouse";
+  if (haystack.includes("office") || haystack.includes("lobby") || haystack.includes("reception")) return "office";
+  return "retail";
 }
 
 function SceneCard({
@@ -161,6 +175,18 @@ export function ReferenceSitesView() {
     () => savedProjects.filter((p) => p.scene.source === "demo" || p.scene.source === "preset"),
     [savedProjects],
   );
+  const filteredReferenceProjects = useMemo(
+    () => referenceProjects.filter((project) => filter === "all" || siteCategory(project.scene) === filter),
+    [filter, referenceProjects],
+  );
+  const categoryCounts = useMemo(
+    () => referenceProjects.reduce<Record<typeof filter, number>>((acc, project) => {
+      acc.all += 1;
+      acc[siteCategory(project.scene)] += 1;
+      return acc;
+    }, { all: 0, retail: 0, office: 0, warehouse: 0 }),
+    [referenceProjects],
+  );
 
   const openReferenceScene = (scene: SecurityScene) => {
     setScene(scene);
@@ -215,15 +241,16 @@ export function ReferenceSitesView() {
             )}
           >
             {cat.label}
+            <span className="ml-1 text-[9px] text-[color:var(--text-muted)]">{categoryCounts[cat.id]}</span>
           </button>
         ))}
       </div>
 
       {/* Scene grid */}
       <div className="flex-1 overflow-y-auto px-5 py-4">
-        {referenceProjects.length > 0 ? (
+        {filteredReferenceProjects.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {referenceProjects.map((record) => (
+            {filteredReferenceProjects.map((record) => (
               <SceneCard
                 key={record.scene.id}
                 record={record}
@@ -234,16 +261,20 @@ export function ReferenceSitesView() {
         ) : (
           <div className="flex h-full items-center justify-center">
             <div className="rounded-2xl border border-white/10 bg-black/20 px-6 py-8 text-center">
-              <div className="text-sm font-medium text-white">No reference scenes</div>
+              <div className="text-sm font-medium text-white">
+                {referenceProjects.length > 0 ? "No matches in this category" : "No reference scenes"}
+              </div>
               <div className="mt-2 text-xs text-[color:var(--text-muted)]">
-                Run the app to seed reference scenes, or create a workspace from Product Home.
+                {referenceProjects.length > 0
+                  ? "Choose another reference category, or return home to create a new site twin."
+                  : "Run the app to seed reference scenes, or create a workspace from Product Home."}
               </div>
               <button
                 type="button"
-                onClick={() => navigate("product_home")}
+                onClick={() => referenceProjects.length > 0 ? setFilter("all") : navigate("product_home")}
                 className="mt-4 rounded-xl border border-sky-400/25 bg-sky-500/12 px-4 py-2 text-xs font-medium text-sky-100 transition-colors hover:bg-sky-500/20"
               >
-                Return to Product Home
+                {referenceProjects.length > 0 ? "Show All References" : "Return to Product Home"}
               </button>
             </div>
           </div>

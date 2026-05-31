@@ -1,0 +1,202 @@
+{
+  "id": "scene_sample_security_import",
+  "name": "Sample Retail Site Twin Import",
+  "createdAt": 1767225600000,
+  "updatedAt": 1767225600000,
+  "units": "meters",
+  "dimensions": {
+    "width": 10,
+    "depth": 8,
+    "height": 3
+  },
+  "walls": [
+    {
+      "id": "wall_sample_south",
+      "nodeType": "wall",
+      "label": "South Wall",
+      "start": [0, 0],
+      "end": [10, 0],
+      "heightM": 3,
+      "thicknessM": 0.18,
+      "material": "solid",
+      "visionTransmission": 0,
+      "source": "import",
+      "reviewStatus": "unreviewed",
+      "sourceTrace": "sample-security-scene-import.json",
+      "geometryValidity": "valid"
+    },
+    {
+      "id": "wall_sample_east",
+      "nodeType": "wall",
+      "label": "East Wall",
+      "start": [10, 0],
+      "end": [10, 8],
+      "heightM": 3,
+      "thicknessM": 0.18,
+      "material": "solid",
+      "visionTransmission": 0,
+      "source": "import",
+      "reviewStatus": "unreviewed",
+      "sourceTrace": "sample-security-scene-import.json",
+      "geometryValidity": "valid"
+    },
+    {
+      "id": "wall_sample_north",
+      "nodeType": "wall",
+      "label": "North Wall",
+      "start": [10, 8],
+      "end": [0, 8],
+      "heightM": 3,
+      "thicknessM": 0.18,
+      "material": "solid",
+      "visionTransmission": 0,
+      "source": "import",
+      "reviewStatus": "unreviewed",
+      "sourceTrace": "sample-security-scene-import.json",
+      "geometryValidity": "valid"
+    },
+    {
+      "id": "wall_sample_west",
+      "nodeType": "wall",
+      "label": "West Wall",
+      "start": [0, 8],
+      "end": [0, 0],
+      "heightM": 3,
+      "thicknessM": 0.18,
+      "material": "solid",
+      "visionTransmission": 0,
+      "source": "import",
+      "reviewStatus": "unreviewed",
+      "sourceTrace": "sample-security-scene-import.json",
+      "geometryValidity": "valid"
+    }
+  ],
+  "doors": [],
+  "windows": [],
+  "cameras": [
+    {
+      "id": "cam_sample_entry",
+      "nodeType": "camera",
+      "name": "Entry Camera",
+      "position": [2.2, 3, 7.6],
+      "yawDeg": -35,
+      "pitchDeg": -12,
+      "rollDeg": 0,
+      "mountType": "wall",
+      "mountHeightM": 3,
+      "fovHorizontalDeg": 92,
+      "fovVerticalDeg": 58,
+      "rangeM": 16,
+      "resolutionMP": 8,
+      "resolutionWidth": 3840,
+      "resolutionHeight": 2160,
+      "lensType": "fixed",
+      "focalLengthMm": 4,
+      "status": "on",
+      "nightMode": "ir",
+      "irRangeM": 18,
+      "thermalCapable": false,
+      "ptz": false,
+      "clarity": "good",
+      "ndaaCompliant": true,
+      "privacyMaskingEnabled": false,
+      "source": "import",
+      "tags": ["sample", "entry"],
+      "reviewStatus": "unreviewed",
+      "sourceTrace": "sample-security-scene-import.json",
+      "geometryValidity": "valid"
+    }
+  ],
+  "securityLights": [],
+  "obstructions": [],
+  "criticalZones": [
+    {
+      "id": "zone_sample_checkout",
+      "nodeType": "critical_zone",
+      "label": "Checkout Counter",
+      "polygon": [[6.4, 1.3], [9.1, 1.3], [9.1, 3.4], [6.4, 3.4]],
+      "heightM": 2.2,
+      "priority": "high",
+      "requiredQuality": "recognition",
+      "targetType": "cash_counter_activity",
+      "nightRequired": true,
+      "redundancyRequired": false,
+      "privacyZone": false,
+      "source": "import",
+      "reviewStatus": "unreviewed",
+      "sourceTrace": "sample-security-scene-import.json",
+      "geometryValidity": "valid"
+    }
+  ],
+  "privacyZones": [],
+  "sensors": [],
+  "entryPoints": [
+    {
+      "id": "entry_sample_front",
+      "nodeType": "entry_point",
+      "label": "Front Entry",
+      "position": [5, 7.8],
+      "source": "import",
+      "reviewStatus": "unreviewed",
+      "sourceTrace": "sample-security-scene-import.json",
+      "geometryValidity": "valid"
+    }
+  ],
+  "paths": [
+    {
+      "id": "path_sample_customer",
+      "nodeType": "path",
+      "label": "Customer Entry to Checkout",
+      "actorType": "person",
+      "points": [
+        { "position": [5, 7.6], "action": "enter" },
+        { "position": [5.4, 5.2] },
+        { "position": [7.4, 3.2], "action": "wait" }
+      ],
+      "speedMps": 1.2,
+      "heightM": 1.7,
+      "widthM": 0.55,
+      "timeOfDay": "day",
+      "intent": "authorized",
+      "source": "import",
+      "reviewStatus": "unreviewed",
+      "sourceTrace": "sample-security-scene-import.json",
+      "geometryValidity": "valid"
+    }
+  ],
+  "comments": [],
+  "evidenceArtifacts": [],
+  "mismatchReports": [],
+  "assumptions": {
+    "wallHeightM": 3,
+    "personHeightM": 1.75,
+    "vehicleHeightM": 1.5,
+    "timeOfDay": "day",
+    "interiorLightLevel": "normal",
+    "nightPenaltyMode": "simple",
+    "doriStandard": "oodpcvs_2025",
+    "pixelsPerMeter": {
+      "detection": 25,
+      "observation": 62.5,
+      "recognition": 125,
+      "identification": 250
+    },
+    "showAssumptionsPanel": false,
+    "backlightIntensity": "none",
+    "glareIntensity": "none",
+    "overexposedZones": false,
+    "sceneComplexity": "moderate",
+    "operatorExperience": "trained",
+    "taskCriticality": "standard"
+  },
+  "source": "import",
+  "reviewStatus": "unreviewed",
+  "sourceTrace": "sample-security-scene-import.json",
+  "geometryValidity": "valid",
+  "version": "0.1.0",
+  "snapshots": [],
+  "scenarios": [],
+  "changeLog": [
+    "Sample import artifact for Create Site Twin JSON draft review."
+  ]
+}

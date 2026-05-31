@@ -25,6 +25,8 @@ Root is product-first. Workspace entry is explicit through visible actions.
 - Controls that are informational must not render as clickable buttons.
 - `Create Site Twin` in left nav must open `site_intake`.
 - `Reference Sites` and `Settings` must route to intentional product views (no confusing fallback).
+- Footer controls must either open the lightweight feedback/help handoff panel or render as passive status text.
+- The Security Status panel header uses a passive `Live` badge; it must not show a menu/kebab unless a menu is wired.
 
 ## Site intake handoff from home
 
@@ -41,3 +43,5 @@ From intake, each source path must follow draft-gate lifecycle:
 
 - Scene name and environment mode in the header are currently status chips, not dropdowns.
 - Organization/account control remains interactive and opens org manager panel.
+- Reference Sites is a product page with category filters over seeded demo/preset scenes and opens selected scenes in the Studio coverage workspace.
+- Settings is a product page for preferences and includes a direct handoff into the in-Studio `View Settings` modal for layout/composition controls.

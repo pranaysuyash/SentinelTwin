@@ -13,10 +13,10 @@ describe("ReportView", () => {
     expect(source).toContain("Simulation verified");
     expect(source).toContain("SecurityOutcomePanel compact={false}");
     expect(source).toContain("ReportLiteTab");
-    expect(source).toContain("Coverage Entropy");
+    expect(source).toContain("Coverage Stability Index");
     expect(source).toContain("Fragility");
-    expect(source).toContain("K-Robustness");
-    expect(source).toContain("K-Robustness Critical Sets");
+    expect(source).toContain("Backup Coverage");
+    expect(source).toContain("Backup Coverage Critical Sets");
     expect(source).toContain("Blind Regions");
     expect(source).toContain("Uncertainty");
     expect(source).toContain("Posture");

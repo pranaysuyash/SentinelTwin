@@ -1,7 +1,7 @@
 "use client";
 
-import { ArrowLeft, Camera, Monitor, ShieldCheck, Sun, Moon, Save, Settings2, LayoutDashboard, RotateCcw } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ArrowLeft, Camera, Monitor, ShieldCheck, Sun, Moon, Settings2, LayoutDashboard, RotateCcw } from "lucide-react";
+import { useMemo } from "react";
 
 import { cn } from "@/lib/cn";
 import { useProductViewStore } from "@/store/product-view-store";
@@ -41,6 +41,7 @@ export function SettingsView() {
   const canvasMode = useStudioStore((s) => s.canvasMode);
   const setCanvasMode = useStudioStore((s) => s.setCanvasMode);
   const resetCanvasView = useStudioStore((s) => s.resetCanvasView);
+  const toggleViewSettingsOpen = useStudioStore((s) => s.toggleViewSettingsOpen);
 
   const providerInfo = useMemo(() => describeAiProviderSelection(aiProviderSelection), [aiProviderSelection]);
   const providerOption = useMemo(() => getProviderOption(aiProviderSelection.providerId), [aiProviderSelection.providerId]);
@@ -66,6 +67,30 @@ export function SettingsView() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-5 py-4">
         <div className="mx-auto max-w-5xl space-y-5">
+          <section className="rounded-[24px] border border-sky-400/20 bg-sky-500/10 p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-sky-200">
+                  <LayoutDashboard className="h-3.5 w-3.5" />
+                  Workspace View Settings
+                </div>
+                <p className="mt-2 max-w-2xl text-sm text-[#c8d4ea]">
+                  Open the live Studio layout panel for component visibility, saved layouts, analysis modules, and workspace presets.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  toggleViewSettingsOpen();
+                  navigate("studio");
+                }}
+                className="rounded-xl border border-sky-300/30 bg-sky-400 px-4 py-2 text-xs font-bold text-[#031424] transition-colors hover:bg-sky-300"
+              >
+                Open View Settings
+              </button>
+            </div>
+          </section>
+
           {/* Readability */}
           <section className="rounded-[24px] border border-[#1f2536] bg-[#0d121c] p-5">
             <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[#6d7892]">

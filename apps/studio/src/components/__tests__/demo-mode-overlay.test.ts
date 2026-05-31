@@ -11,7 +11,8 @@ describe("DemoWalkthroughPanel (supersedes DemoModeOverlay)", () => {
 
     expect(source).toContain("DemoWalkthroughPanel");
     expect(source).toContain("runSimulation");
-    expect(source).toContain("Guided Walkthrough");
-    expect(source).toContain("Finish Walkthrough");
+    expect(source).toContain("Judge Demo Walkthrough (4:15)");
+    expect(source).toContain("0:00");
+    expect(source).toContain("Finish Judge Demo");
   });
 });

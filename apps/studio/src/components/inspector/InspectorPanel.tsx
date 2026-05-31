@@ -639,7 +639,7 @@ function CameraInspector() {
 
         {inspectorTab === "analytics" && (
           <div className="space-y-2.5">
-            <SectionCard title="Coverage Performance" truthLabel={camResult ? "simulated" : "placeholder"}>
+            <SectionCard title="Coverage Performance" helpText="Shows how much usable coverage this camera contributes under the current assumptions and which critical zones pass or fail." truthLabel={camResult ? "simulated" : "placeholder"}>
               <div className="grid grid-cols-3 gap-1.5">
                 <SummaryStat label="Coverage" value={camResult ? `${camResult.coveragePct.toFixed(1)}%` : "--"} accent="text-emerald-300" />
                 <SummaryStat label="Zones Pass" value={camResult ? `${camResult.criticalZonesCovered.length}` : "--"} accent="text-blue-300" />
@@ -789,7 +789,7 @@ function CameraInspector() {
                 </div>
               </SectionCard>
 
-              <SectionCard title="DORI Profile">
+              <SectionCard title="DORI Profile" helpText="Shows how evidence quality changes by distance and zone. Use it to decide whether a wide shot needs a second, tighter camera.">
                 {(() => {
                   const ranges = computeDoriRanges(camera, scene.assumptions.pixelsPerMeter);
                   const sortedZoneEntries = (Object.entries(camResult?.qualityByZone ?? {}) as [string, DoriQuality][])
@@ -1268,7 +1268,7 @@ function CriticalZoneInspector() {
       {/* Body */}
       <div className="flex-1 overflow-y-auto px-3 py-2.5 space-y-2.5">
         {/* Required vs Actual */}
-        <SectionCard title="DORI Quality">
+        <SectionCard title="Evidence Quality" helpText="Shows the required and measured camera evidence level for this zone. A pass means the current simulation meets the zone target under the active assumptions.">
           <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-2">
               <span className="text-[10px] text-[#6a748b]">Required</span>
@@ -1288,7 +1288,7 @@ function CriticalZoneInspector() {
         </SectionCard>
 
         {/* Zone properties — editable */}
-        <SectionCard title="Properties">
+        <SectionCard title="Properties" helpText="Set what this zone needs operationally: the target type, required evidence quality, priority, night requirement, and redundancy requirement.">
           {/* Target Type */}
           <div className="flex items-center justify-between gap-2 border-b border-[#181c27] py-1.5">
             <span className="text-[10px] text-[#6a748b]">Target Type</span>

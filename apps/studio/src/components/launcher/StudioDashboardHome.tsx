@@ -172,7 +172,6 @@ type StudioDashboardHomeProps = {
   onDuplicateProject: (sceneId: string) => SavedProjectRecord | null;
   onRenameProject: (sceneId: string, nextName: string) => SavedProjectRecord | null;
   onOpenMode: (viewMode: ViewMode, preset: WorkspacePreset, bottomTab?: BottomTab) => void;
-  onOpenDemoWalkthrough?: () => void;
 };
 
 type ScenePreviewProps = {
@@ -1100,11 +1099,11 @@ export function StudioDashboardHome({
   onDuplicateProject,
   onRenameProject,
   onOpenMode,
-  onOpenDemoWalkthrough,
 }: StudioDashboardHomeProps) {
   const [hydrated, setHydrated] = useState(false);
   const [showWorkspaceLibrary, setShowWorkspaceLibrary] = useState(false);
   const [previewMode, setPreviewMode] = useState<"2d" | "3d">("2d");
+  const [footerPanel, setFooterPanel] = useState<"feedback" | "help" | null>(null);
   const navActionByKey: Record<(typeof NAV_ITEMS)[number]["key"], (() => void) | undefined> = {
     home: undefined,
     site_intake: onOpenSiteIntake ?? onOpenAdvancedWorkflows,
@@ -1113,6 +1112,9 @@ export function StudioDashboardHome({
     reference_sites: onOpenReferenceSites ?? onOpenDemoScene,
     settings: onOpenSettings,
   };
+  const openSiteIntakeFromFooter = onOpenSiteIntake ?? onOpenAdvancedWorkflows ?? onOpenStudio;
+  const openReferenceSitesFromFooter = onOpenReferenceSites ?? onOpenDemoScene ?? onOpenStudio;
+  const openSettingsFromFooter = onOpenSettings ?? onOpenStudio;
   const coverage = result?.totalCoveragePct ?? scene.simulation?.totalCoveragePct ?? null;
   const criticalZoneResults = result?.criticalZoneResults ?? scene.simulation?.criticalZoneResults ?? [];
   const criticalZoneResultMap = criticalZoneStatusMap(result ?? scene.simulation ?? null);
@@ -1658,7 +1660,8 @@ export function StudioDashboardHome({
               <button
                 type="button"
                 onClick={() => setShowOrgManager(true)}
-                className="flex-none"
+                className="flex-none rounded-md p-1 transition-colors hover:bg-white/[0.05]"
+                aria-label="Open organization and account switcher"
               >
                 <ChevronDown className="h-4 w-4 text-[color:var(--st-muted)] hover:text-white" />
               </button>
@@ -2047,9 +2050,9 @@ export function StudioDashboardHome({
             <div className="rounded-[20px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3.5">
               <div className="flex items-center justify-between">
                 <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#7dd3fc]">SECURITY STATUS</div>
-                <button type="button" className="flex h-5 w-5 items-center justify-center rounded text-[color:var(--st-muted)] hover:text-white">
-                  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><circle cx="10" cy="4" r="1.5" /><circle cx="10" cy="10" r="1.5" /><circle cx="10" cy="16" r="1.5" /></svg>
-                </button>
+                <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.16em] text-emerald-300">
+                  Live
+                </span>
               </div>
 
               <div className="mt-3">
@@ -2193,6 +2196,37 @@ export function StudioDashboardHome({
           </aside>
         </div>
 
+        {footerPanel ? (
+          <section className="rounded-2xl border border-[color:var(--st-border)] bg-[color:var(--st-panel)] px-4 py-3 text-[11px] text-[color:var(--st-muted)]">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-200">
+                  {footerPanel === "feedback" ? "Feedback Handoff" : "Command Center Help"}
+                </div>
+                <div className="mt-1 max-w-3xl text-xs text-[#c8d4ea]">
+                  {footerPanel === "feedback"
+                    ? "Capture product feedback from the current site twin, then open Settings or Studio to adjust the relevant workflow."
+                    : "Use Create Site Twin for new/imported sites, Security Twin Studio for editing, Audit Reports for exports, and Reference Sites for seeded examples."}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {footerPanel === "feedback" ? (
+                  <>
+                    <button type="button" onClick={openSettingsFromFooter} className="rounded-lg border border-sky-400/25 bg-sky-500/10 px-3 py-1.5 text-sky-100 hover:bg-sky-500/20">Open Settings</button>
+                    <button type="button" onClick={onOpenStudio} className="rounded-lg border border-white/15 bg-white/[0.03] px-3 py-1.5 text-white/90 hover:bg-white/[0.06]">Open Studio</button>
+                  </>
+                ) : (
+                  <>
+                    <button type="button" onClick={openSiteIntakeFromFooter} className="rounded-lg border border-sky-400/25 bg-sky-500/10 px-3 py-1.5 text-sky-100 hover:bg-sky-500/20">Create Site Twin</button>
+                    <button type="button" onClick={openReferenceSitesFromFooter} className="rounded-lg border border-white/15 bg-white/[0.03] px-3 py-1.5 text-white/90 hover:bg-white/[0.06]">Reference Sites</button>
+                  </>
+                )}
+                <button type="button" onClick={() => setFooterPanel(null)} className="rounded-lg border border-white/15 px-3 py-1.5 text-white/70 hover:text-white">Close</button>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         <footer className="mt-auto flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[color:var(--st-border)] bg-[color:var(--st-panel)] px-4 py-2.5 text-[11px] text-[color:var(--st-muted)]">
           <div>© 2026 SentinelTwin · Security Simulation Studio · v0.9.0</div>
           <div className="flex items-center gap-3">
@@ -2200,8 +2234,15 @@ export function StudioDashboardHome({
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
               <span className="text-emerald-200">All systems operational</span>
             </span>
-            <button type="button" className="hover:text-white">Give Feedback</button>
-            <button type="button" className="flex h-5 w-5 items-center justify-center rounded-full border border-[color:var(--st-border)] hover:border-sky-400/30 hover:text-white">?</button>
+            <button type="button" onClick={() => setFooterPanel("feedback")} className="hover:text-white">Give Feedback</button>
+            <button
+              type="button"
+              onClick={() => setFooterPanel("help")}
+              className="flex h-5 w-5 items-center justify-center rounded-full border border-[color:var(--st-border)] hover:border-sky-400/30 hover:text-white"
+              aria-label="Open command center help"
+            >
+              ?
+            </button>
           </div>
         </footer>
       </div>

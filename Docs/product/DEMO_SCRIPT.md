@@ -177,3 +177,20 @@ Every step maps to a buildable component:
 
 This is the V0.1 acceptance test. When all 7 steps work end-to-end on the small retail shop
 scene, V0.1 is complete.
+
+---
+
+## Judge-ready 4:15 walkthrough (current app)
+
+This flow is executable in the working app by opening home, then entering Studio and stepping through the views/actions in order.
+
+0:00 — Problem framing: coverage cones can hide evidence-quality failure.
+0:20 — Product framing: AI-native digital twin, deterministic security simulation.
+0:45 — Show dashboard/current workspace.
+1:10 — Show Camera Studio map scene (cameras, critical zones, obstructions, heatmap).
+1:45 — Run simulation and explain detection/observation/recognition/identification.
+2:15 — Show camera/replay/path visibility surfaces.
+2:45 — Apply failure case (night + camera offline), rerun.
+3:15 — Show compare/report surfaces.
+3:45 — Judge focus: deterministic engine, DORI-style scoring, schema integrity, counterfactuals, temporal/profile/report/provenance.
+4:15 — Close: SentinelTwin is a security audit workspace, not a cone viewer.

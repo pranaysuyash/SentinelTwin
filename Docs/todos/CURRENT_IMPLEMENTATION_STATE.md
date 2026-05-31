@@ -21,6 +21,7 @@ For the full-vision gap inventory and next-slice sequencing, see
 - Site intake recent-site cards now route to real scene-open actions, and intake quick-import now triggers JSON import directly from the intake surface ✅
 - Header scene/environment indicators on home are now explicit status chips (non-dropdown) to avoid false click affordances ✅
 - Canonical product demo walk-through is now documented at `Docs/product/SITE_TWIN_CREATION_DEMO_FLOW.md` with activation-gate acceptance criteria ✅
+- In-studio walkthrough content is aligned to the timed judge script (problem framing, deterministic simulation, failure case, compare/report, close thesis) ✅
 
 ## Scene editor workbench hardening (2026-05-29)
 

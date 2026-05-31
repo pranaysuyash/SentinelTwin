@@ -97,8 +97,6 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
   const updateSavedSceneMetadata = useStudioStore((s) => s.updateSavedSceneMetadata);
   const duplicateSavedScene = useStudioStore((s) => s.duplicateSavedScene);
   const renameSavedScene = useStudioStore((s) => s.renameSavedScene);
-  const setDemoMode = useStudioStore((s) => s.setDemoMode);
-  const setDemoStep = useStudioStore((s) => s.setDemoStep);
   const siteIntakeSession = useStudioStore((s) => s.siteIntakeSession);
   const currentResult = simulationResult ?? scene.simulation ?? null;
 
@@ -169,15 +167,6 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
               if (bottomTab) setBottomTab(bottomTab);
               navigate("studio");
             }}
-            onOpenDemoWalkthrough={() => {
-              setDemoMode(true);
-              setDemoStep(0);
-              const { setViewMode, setWorkspacePreset, setBottomTab } = useStudioStore.getState();
-              setWorkspacePreset("coverage");
-              setViewMode("map");
-              setBottomTab("metrics");
-              navigate("studio");
-            }}
           />
         </div>
       </div>
@@ -244,8 +233,8 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
         recentSites={savedProjects.slice(0, 6).map((project) => ({
           id: project.scene.id,
           name: project.scene.name,
-          updatedLabel: `Updated ${project.updatedAt ? `${Math.max(1, Math.round((Date.now() - project.updatedAt) / 3600000))}h ago` : "recently"}`,
-          riskLabel: (project.scene.simulation?.totalCoveragePct ?? 0) >= 70 ? "Low Risk" as const : (project.scene.simulation?.totalCoveragePct ?? 0) >= 40 ? "Medium Risk" as const : "High Risk" as const,
+          updatedLabel: `Updated ${formatClock(project.updatedAt) ?? "recently"}`,
+          riskLabel: !project.scene.simulation || project.scene.simulation.totalCoveragePct == null ? "Baseline Required" as const : project.scene.simulation.totalCoveragePct >= 70 ? "Low Risk" as const : project.scene.simulation.totalCoveragePct >= 40 ? "Medium Risk" as const : "High Risk" as const,
         }))}
       />
     );

@@ -2157,7 +2157,7 @@ export function StudioDashboardHome({
                 </div>
                 <div className="mt-2 space-y-1">
                   {issues.slice(0, 3).map((issue, index) => (
-                    <div key={issue.id ?? `issue-${index}`} className="rounded-lg border border-amber-500/15 bg-amber-500/8 px-2.5 py-1.5 text-[9px] text-amber-100/80">
+                    <div key={`issue-${index}`} className="rounded-lg border border-amber-500/15 bg-amber-500/8 px-2.5 py-1.5 text-[9px] text-amber-100/80">
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-medium text-amber-100">{issue.severity}</span>
                         <span className="text-amber-200/60">{issue.description.slice(0, 60)}</span>

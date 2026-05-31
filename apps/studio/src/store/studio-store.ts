@@ -4728,8 +4728,8 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         id && state.scene.cameras.some((camera) => camera.id === id)
           ? id
           : state.selectedCameraId,
-      rightDockCollapsed: id && !state.focusMode ? false : state.rightDockCollapsed,
-      bottomDockCollapsed: id && !state.focusMode ? false : state.bottomDockCollapsed,
+      rightDockCollapsed: state.rightDockCollapsed,
+      bottomDockCollapsed: state.bottomDockCollapsed,
       rightPanelMode: id ? contextualRightPanelModeForNode(state.scene, id) : state.rightPanelMode,
       inspectorTab: contextualInspectorTab ?? state.inspectorTab,
       bottomTab: contextualTab
@@ -4737,7 +4737,11 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         : state.bottomTab,
       activeTool: contextualTool ?? state.activeTool,
       dockAttention: id
-        ? { ...state.dockAttention, right: false }
+        ? {
+            ...state.dockAttention,
+            right: state.rightDockCollapsed ? true : false,
+            bottom: state.bottomDockCollapsed ? true : false,
+          }
         : state.dockAttention,
     };
   }),
@@ -4753,8 +4757,8 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         nextPrimary && state.scene.cameras.some((camera) => camera.id === nextPrimary)
           ? nextPrimary
           : state.selectedCameraId,
-      rightDockCollapsed: nextPrimary && !state.focusMode ? false : state.rightDockCollapsed,
-      bottomDockCollapsed: nextPrimary && !state.focusMode ? false : state.bottomDockCollapsed,
+      rightDockCollapsed: state.rightDockCollapsed,
+      bottomDockCollapsed: state.bottomDockCollapsed,
       rightPanelMode: nextPrimary ? contextualRightPanelModeForNode(state.scene, nextPrimary) : state.rightPanelMode,
       inspectorTab: contextualInspectorTab ?? state.inspectorTab,
       bottomTab: nextPrimary
@@ -4765,7 +4769,11 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         : state.bottomTab,
       activeTool: contextualTool ?? state.activeTool,
       dockAttention: nextPrimary
-        ? { ...state.dockAttention, right: false }
+        ? {
+            ...state.dockAttention,
+            right: state.rightDockCollapsed ? true : false,
+            bottom: state.bottomDockCollapsed ? true : false,
+          }
         : state.dockAttention,
     };
   }),
@@ -4782,8 +4790,8 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         nextPrimary && state.scene.cameras.some((camera) => camera.id === nextPrimary)
           ? nextPrimary
           : state.selectedCameraId,
-      rightDockCollapsed: nextPrimary && !state.focusMode ? false : state.rightDockCollapsed,
-      bottomDockCollapsed: nextPrimary && !state.focusMode ? false : state.bottomDockCollapsed,
+      rightDockCollapsed: state.rightDockCollapsed,
+      bottomDockCollapsed: state.bottomDockCollapsed,
       rightPanelMode: nextPrimary ? contextualRightPanelModeForNode(state.scene, nextPrimary) : state.rightPanelMode,
       inspectorTab: contextualInspectorTab ?? state.inspectorTab,
       bottomTab: nextPrimary
@@ -4794,7 +4802,11 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         : state.bottomTab,
       activeTool: contextualTool ?? state.activeTool,
       dockAttention: nextPrimary
-        ? { ...state.dockAttention, right: false }
+        ? {
+            ...state.dockAttention,
+            right: state.rightDockCollapsed ? true : false,
+            bottom: state.bottomDockCollapsed ? true : false,
+          }
         : state.dockAttention,
     };
   }),
@@ -4813,8 +4825,8 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         nextPrimary && state.scene.cameras.some((camera) => camera.id === nextPrimary)
           ? nextPrimary
           : state.selectedCameraId,
-      rightDockCollapsed: nextPrimary && !state.focusMode ? false : state.rightDockCollapsed,
-      bottomDockCollapsed: nextPrimary && !state.focusMode ? false : state.bottomDockCollapsed,
+      rightDockCollapsed: state.rightDockCollapsed,
+      bottomDockCollapsed: state.bottomDockCollapsed,
       rightPanelMode: nextPrimary ? contextualRightPanelModeForNode(state.scene, nextPrimary) : state.rightPanelMode,
       inspectorTab: contextualInspectorTab ?? state.inspectorTab,
       bottomTab: nextPrimary
@@ -4825,7 +4837,11 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         : state.bottomTab,
       activeTool: contextualTool ?? state.activeTool,
       dockAttention: nextPrimary
-        ? { ...state.dockAttention, right: false }
+        ? {
+            ...state.dockAttention,
+            right: state.rightDockCollapsed ? true : false,
+            bottom: state.bottomDockCollapsed ? true : false,
+          }
         : state.dockAttention,
     };
   }),
@@ -4834,14 +4850,18 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       const isValid = !!id && state.scene.cameras.some((camera) => camera.id === id);
       return {
         selectedCameraId: isValid ? id : null,
-        rightDockCollapsed: isValid && !state.focusMode ? false : state.rightDockCollapsed,
-        bottomDockCollapsed: isValid && !state.focusMode ? false : state.bottomDockCollapsed,
+        rightDockCollapsed: state.rightDockCollapsed,
+        bottomDockCollapsed: state.bottomDockCollapsed,
         rightPanelMode: isValid ? contextualRightPanelModeForNode(state.scene, id) : state.rightPanelMode,
         inspectorTab: isValid ? "view" : state.inspectorTab,
         bottomTab: isValid ? getFirstEnabledAnalysisTab(state.enabledAnalysisModules, "metrics") : state.bottomTab,
         activeTool: isValid ? "camera" : state.activeTool,
         dockAttention: isValid
-          ? { ...state.dockAttention, right: false }
+          ? {
+              ...state.dockAttention,
+              right: state.rightDockCollapsed ? true : false,
+              bottom: state.bottomDockCollapsed ? true : false,
+            }
           : state.dockAttention,
       };
     });

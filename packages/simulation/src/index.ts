@@ -1,7 +1,7 @@
 // Core coverage engine
 export { createCoverageEvaluator, computeCoverageCells, getQualityShare, getIdentificationAreaPct, getRecognitionAreaPct } from "./coverage";
 export type { CellComputation, CameraEvaluation, CoverageEvaluator } from "./coverage";
-export { simulateStudio, simulateStudioLite } from "./simulate-studio";
+export { simulateStudio, simulateStudioAsync, simulateStudioLite } from "./simulate-studio";
 
 // DORI/OODPCVS quality models (re-exported from core)
 export {
@@ -22,7 +22,7 @@ export { buildCoverageGrid } from "@sentineltwin/core";
 export { computeMountTiltPenalty, getMountModel, getDefaultHeight, isPitchWithinMountLimits, isYawWithinMountLimits, computeBlindSpotPenalty } from "./mount-model";
 
 // Vision collider
-export { buildVisionColliderMesh, getVisionColliderSource } from "./vision-collider-mesh";
+export { buildVisionColliderMesh, getVisionColliderSource, disposeVisionColliderMesh } from "./vision-collider-mesh";
 
 // Path analysis
 export { computePathResults, deriveCameraQualityByZone } from "./path-analysis";

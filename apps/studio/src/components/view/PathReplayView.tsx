@@ -725,7 +725,8 @@ function InfoOverlay({
       initial={{ x: -20, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ type: "spring", stiffness: 280, damping: 24 }}
-      className="absolute left-3 top-12 z-10 rounded-xl border border-[#1f2536] bg-[#0b0f17]/90 px-3.5 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.32)]"
+      className="absolute left-3 z-10 rounded-xl border border-[#1f2536] bg-[#0b0f17]/90 px-3.5 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.32)]"
+      style={{ top: "calc(var(--st-full-canvas-safe-top, 4.25rem) + 0.75rem)" }}
     >
       <div className="mb-2.5 flex items-center gap-3">
         <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#5b667c]">{pathLabel}</div>
@@ -842,7 +843,10 @@ function CurrentVisibilityPanel({
   lostNow: ReplayCameraStateSummary[];
 }) {
   return (
-    <div className="absolute right-3 top-14 z-10 w-76 rounded-xl border border-[#1f2536] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.32)]">
+    <div
+      className="absolute right-3 z-10 w-76 rounded-xl border border-[#1f2536] bg-[#0b0f17]/92 px-3 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.32)]"
+      style={{ top: "calc(var(--st-full-canvas-safe-top, 4.25rem) + 0.875rem)" }}
+    >
       <div className="flex items-center justify-between gap-2">
         <div className="text-[8px] font-semibold uppercase tracking-[0.2em] text-[#7dd3fc]">Current Visibility</div>
         <div className="text-[8px] font-mono text-[#8b96ab]">@ {currentTime.toFixed(1)}s</div>
@@ -881,6 +885,8 @@ function CurrentVisibilityPanel({
 }
 
 // ── Main Path Replay View ──
+
+const SHARED_REPLAY_PROGRESS_PUBLISH_INTERVAL_MS = 1000 / 24;
 
 export function PathReplayView() {
   const scene = useStudioStore((s) => s.scene);
@@ -1082,6 +1088,7 @@ export function PathReplayView() {
   // Use a ref to track the "anchor" (time when playback was last resumed) so
   // seeking while playing doesn't jump back to the pre-seek position.
   const playbackAnchorRef = useRef({ startWallTime: 0, startPlaybackTime: 0 });
+  const lastSharedProgressPublishAtRef = useRef(0);
 
   useEffect(() => {
     // currentTime intentionally excluded from deps below: captured once when playback starts.
@@ -1099,9 +1106,14 @@ export function PathReplayView() {
       ease: "linear",
       onUpdate: (latest) => {
         setCurrentTime(latest);
-        setPathReplayProgress(totalDuration > 0 ? Math.min(latest / totalDuration, 1) : 0);
+        const now = performance.now();
+        if (now - lastSharedProgressPublishAtRef.current >= SHARED_REPLAY_PROGRESS_PUBLISH_INTERVAL_MS) {
+          lastSharedProgressPublishAtRef.current = now;
+          setPathReplayProgress(totalDuration > 0 ? Math.min(latest / totalDuration, 1) : 0);
+        }
       },
       onComplete: () => {
+        setPathReplayProgress(1);
         setPlaying(false);
         setPathReplayPlaying(false);
       }
@@ -1123,7 +1135,7 @@ export function PathReplayView() {
     setCurrentTime(0);
     setPathReplayPlaying(false);
     setPathReplayProgress(0);
-  }, []);
+  }, [setPathReplayPlaying, setPathReplayProgress]);
 
   // Play/pause toggle
   const handlePlayPause = useCallback(() => {
@@ -1184,7 +1196,7 @@ export function PathReplayView() {
   }
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#07090d]">
+    <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#07090d]" style={{ paddingTop: "var(--st-full-canvas-safe-top, 4.25rem)" }}>
       <div className="flex items-center justify-between gap-4 border-b border-[#1f2536] bg-[#0b0f17] px-4 py-3">
         <div className="min-w-0">
           <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">

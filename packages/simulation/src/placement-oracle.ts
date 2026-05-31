@@ -385,33 +385,36 @@ export function computePlacementOracle(
 
   // Build the BVH/collider mesh once — all candidates share the same scene geometry.
   const evaluator = createCoverageEvaluator(scene);
+  try {
+    const candidates = buildMountCandidates(scene).map((candidate) => {
+      const { yawDeg, pitchDeg } = toYawPitch(candidate.position, aimPoint);
+      return evaluateCandidate(evaluator, templateCamera, {
+        position: candidate.position,
+        mountType: candidate.mountType,
+        yawDeg,
+        pitchDeg,
+        templateCameraId: templateCamera?.id ?? null,
+        estimatedCoverageDeltaPct: 0,
+        estimatedRecognitionDeltaPct: 0,
+        estimatedIdentificationDeltaPct: 0,
+        estimatedCriticalZoneGain: 0,
+        improvedCriticalZones: [],
+        privacyZoneHits: [],
+        score: 0,
+      }, sampleTargets);
+    });
 
-  const candidates = buildMountCandidates(scene).map((candidate) => {
-    const { yawDeg, pitchDeg } = toYawPitch(candidate.position, aimPoint);
-    return evaluateCandidate(evaluator, templateCamera, {
-      position: candidate.position,
-      mountType: candidate.mountType,
-      yawDeg,
-      pitchDeg,
+    candidates.sort((a, b) => b.score - a.score);
+    const topCandidates = candidates.slice(0, 5);
+
+    return {
+      sampleCount: sampleTargets.length,
       templateCameraId: templateCamera?.id ?? null,
-      estimatedCoverageDeltaPct: 0,
-      estimatedRecognitionDeltaPct: 0,
-      estimatedIdentificationDeltaPct: 0,
-      estimatedCriticalZoneGain: 0,
-      improvedCriticalZones: [],
-      privacyZoneHits: [],
-      score: 0,
-    }, sampleTargets);
-  });
-
-  candidates.sort((a, b) => b.score - a.score);
-  const topCandidates = candidates.slice(0, 5);
-
-  return {
-    sampleCount: sampleTargets.length,
-    templateCameraId: templateCamera?.id ?? null,
-    candidateCount: candidates.length,
-    bestCandidate: topCandidates[0] ?? null,
-    candidates: topCandidates,
-  };
+      candidateCount: candidates.length,
+      bestCandidate: topCandidates[0] ?? null,
+      candidates: topCandidates,
+    };
+  } finally {
+    evaluator.dispose();
+  }
 }

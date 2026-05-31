@@ -33,4 +33,11 @@ describe("TimelineTab", () => {
     expect(source).toContain("IEC 62676-4:2025 OODPCVS");
     expect(source).toContain("QUALITY_ORDER.map");
   });
+
+  test("does not run its own replay RAF clock", () => {
+    const source = readFileSync(timelineTabPath, "utf8");
+
+    expect(source).not.toContain("requestAnimationFrame(tick)");
+    expect(source).not.toContain("playbackAnchorRef");
+  });
 });

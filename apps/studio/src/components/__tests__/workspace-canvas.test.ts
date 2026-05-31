@@ -59,4 +59,14 @@ describe("WorkspaceCanvas obstruction selection", () => {
     expect(workspaceSource).not.toContain('key={`${canvasMode}:${canvasViewResetTick}`}');
     expect(workspaceSource).not.toContain('key={canvasMode}');
   });
+
+  test("renders the replay actor without publishing global progress from the canvas frame loop", () => {
+    const workspaceSource = readFileSync(workspaceCanvasPath, "utf8");
+    const actorSource = workspaceSource.slice(workspaceSource.indexOf("function PathReplayActor()"), workspaceSource.indexOf("function SceneFrameRig()"));
+
+    expect(actorSource).toContain("pathReplayProgress");
+    expect(actorSource).toContain("pointOnPathAtProgress(path, pathReplayProgress)");
+    expect(actorSource).not.toContain("setPathReplayProgress");
+    expect(actorSource).not.toContain("setPathReplayPlaying");
+  });
 });

@@ -1,9 +1,11 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { startTransition, useCallback, useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useSimulation } from "@/hooks/use-simulation";
-import { useStudioStore, type ViewMode, type ActiveTool } from "@/store/studio-store";
+import { useStudioStore, type ViewMode } from "@/store/studio-store";
 import { VIEW_MODE_KEYS, VIEW_MODE_PRESETS, TOOL_SHORTCUTS } from "@/lib/studio-constants";
 import { TopBar } from "./TopBar";
 import { StatusBar } from "./StatusBar";
@@ -23,6 +25,93 @@ import { PathReplayView } from "@/components/view/PathReplayView";
 import { CompareView } from "@/components/view/CompareView";
 import { ReportView } from "@/components/view/ReportView";
 import { AutosaveRecoveryBanner } from "@/components/shared/AutosaveRecoveryBanner";
+
+const FULL_CANVAS_SAFE_ZONE_STYLE = {
+  "--st-view-mode-bar-top": "0.75rem",
+  "--st-view-mode-bar-height": "2.75rem",
+  "--st-view-mode-bar-gap": "0.75rem",
+  "--st-full-canvas-safe-top": "calc(var(--st-view-mode-bar-top) + var(--st-view-mode-bar-height) + var(--st-view-mode-bar-gap))",
+} as CSSProperties;
+
+const PATH_REPLAY_PROGRESS_PUBLISH_INTERVAL_MS = 1000 / 24;
+
+function getPathReplayDurationS(path: { points: Array<{ position: [number, number] }>; speedMps?: number }) {
+  if (path.points.length < 2) return 0;
+  let distanceM = 0;
+  for (let index = 1; index < path.points.length; index += 1) {
+    const [x0, z0] = path.points[index - 1]!.position;
+    const [x1, z1] = path.points[index]!.position;
+    distanceM += Math.hypot(x1 - x0, z1 - z0);
+  }
+  return distanceM / Math.max(path.speedMps ?? 1.2, 0.01);
+}
+
+function PathReplayClock() {
+  const paths = useStudioStore((s) => s.scene.paths);
+  const activePathId = useStudioStore((s) => s.activePathId);
+  const viewMode = useStudioStore((s) => s.viewMode);
+  const playing = useStudioStore((s) => s.pathReplay.playing);
+  const progress = useStudioStore((s) => s.pathReplay.progress);
+  const speed = useStudioStore((s) => s.pathReplay.speed);
+  const setPathReplayPlaying = useStudioStore((s) => s.setPathReplayPlaying);
+  const setPathReplayProgress = useStudioStore((s) => s.setPathReplayProgress);
+  const progressRef = useRef(progress);
+  const speedRef = useRef(speed);
+
+  const activePath = useMemo(
+    () => (activePathId ? paths.find((path) => path.id === activePathId) ?? null : null),
+    [activePathId, paths],
+  );
+  const totalDurationS = useMemo(() => (activePath ? getPathReplayDurationS(activePath) : 0), [activePath]);
+
+  useEffect(() => {
+    progressRef.current = progress;
+  }, [progress]);
+
+  useEffect(() => {
+    speedRef.current = speed;
+  }, [speed]);
+
+  useEffect(() => {
+    if (viewMode === "replay" || !playing || totalDurationS <= 0) return;
+
+    let rafId = 0;
+    let previousFrameAt = performance.now();
+    let lastPublishedAt = previousFrameAt;
+
+    const tick = (now: number) => {
+      const elapsedS = Math.max(0, (now - previousFrameAt) / 1000);
+      previousFrameAt = now;
+
+      const nextProgress = Math.min(1, progressRef.current + (elapsedS * speedRef.current) / totalDurationS);
+      progressRef.current = nextProgress;
+
+      if (nextProgress >= 1) {
+        setPathReplayProgress(0);
+        setPathReplayPlaying(false);
+        return;
+      }
+
+      if (now - lastPublishedAt >= PATH_REPLAY_PROGRESS_PUBLISH_INTERVAL_MS) {
+        lastPublishedAt = now;
+        setPathReplayProgress(nextProgress);
+      }
+
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [playing, setPathReplayPlaying, setPathReplayProgress, totalDurationS, viewMode]);
+
+  useEffect(() => {
+    if (activePath) return;
+    if (playing) setPathReplayPlaying(false);
+    if (progress !== 0) setPathReplayProgress(0);
+  }, [activePath, playing, progress, setPathReplayPlaying, setPathReplayProgress]);
+
+  return null;
+}
 
 function WorkspaceArea() {
   const viewMode = useStudioStore((s) => s.viewMode);
@@ -129,58 +218,115 @@ export default function StudioShell() {
   const [hydrated, setHydrated] = useState(false);
   useSimulation(hydrated);
   const [studioBypassMode, setStudioBypassMode] = useState(false);
+  const [compactViewport, setCompactViewport] = useState(false);
+
   const demoMode = useStudioStore((s) => s.demoMode);
   const launchNotice = useStudioStore((s) => s.launchNotice);
   const setLaunchNotice = useStudioStore((s) => s.setLaunchNotice);
   const workspacePreset = useStudioStore((s) => s.workspacePreset);
   const focusMode = useStudioStore((s) => s.focusMode);
-  const leftDockCollapsed = useStudioStore((s) => s.leftDockCollapsed);
-  const rightDockCollapsed = useStudioStore((s) => s.rightDockCollapsed);
-  const bottomDockCollapsed = useStudioStore((s) => s.bottomDockCollapsed);
-  const dockAttention = useStudioStore((s) => s.dockAttention);
-  const leftDockSizePx = useStudioStore((s) => s.leftDockSizePx);
-  const rightDockSizePx = useStudioStore((s) => s.rightDockSizePx);
-  const bottomDockSizePx = useStudioStore((s) => s.bottomDockSizePx);
   const visibleComponents = useStudioStore((s) => s.visibleComponents);
-  const toggleDock = useStudioStore((s) => s.toggleDock);
-  const clearDockAttention = useStudioStore((s) => s.clearDockAttention);
-  const setDockSize = useStudioStore((s) => s.setDockSize);
-  const enterFocusMode = useStudioStore((s) => s.enterFocusMode);
-  const restorePreviousLayout = useStudioStore((s) => s.restorePreviousLayout);
 
-  const viewMode = useStudioStore((s) => s.viewMode);
-  const setViewMode = useStudioStore((s) => s.setViewMode);
-  const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
-  const activeTool = useStudioStore((s) => s.activeTool);
-  const setActiveTool = useStudioStore((s) => s.setActiveTool);
-  const selectedNodeId = useStudioStore((s) => s.selectedNodeId);
-  const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
-  const selectedCameraId = useStudioStore((s) => s.selectedCameraId);
-  const selectNode = useStudioStore((s) => s.selectNode);
-  const setSelectedCameraId = useStudioStore((s) => s.setSelectedCameraId);
-  const translateSelectedNodes = useStudioStore((s) => s.translateSelectedNodes);
+  const dockState = useStudioStore(
+    useShallow((s) => ({
+      leftDockCollapsed: s.leftDockCollapsed,
+      rightDockCollapsed: s.rightDockCollapsed,
+      bottomDockCollapsed: s.bottomDockCollapsed,
+      dockAttention: s.dockAttention,
+      leftDockSizePx: s.leftDockSizePx,
+      rightDockSizePx: s.rightDockSizePx,
+      bottomDockSizePx: s.bottomDockSizePx,
+    })),
+  );
+  const dockActions = useStudioStore(
+    useShallow((s) => ({
+      toggleDock: s.toggleDock,
+      clearDockAttention: s.clearDockAttention,
+      setDockSize: s.setDockSize,
+      enterFocusMode: s.enterFocusMode,
+      restorePreviousLayout: s.restorePreviousLayout,
+    })),
+  );
+
+  const viewState = useStudioStore(
+    useShallow((s) => ({
+      viewMode: s.viewMode,
+      activeTool: s.activeTool,
+      selectedNodeId: s.selectedNodeId,
+      selectedNodeIds: s.selectedNodeIds,
+      selectedCameraId: s.selectedCameraId,
+      rightPanelMode: s.rightPanelMode,
+      editor: s.editor,
+    })),
+  );
+  const viewActions = useStudioStore(
+    useShallow((s) => ({
+      setViewMode: s.setViewMode,
+      setWorkspacePreset: s.setWorkspacePreset,
+      setActiveTool: s.setActiveTool,
+      setSelectedCameraId: s.setSelectedCameraId,
+      translateSelectedNodes: s.translateSelectedNodes,
+      setRightPanelMode: s.setRightPanelMode,
+      duplicateNode: s.duplicateNode,
+      removeSelectedNodes: s.removeSelectedNodes,
+      setBottomTab: s.setBottomTab,
+    })),
+  );
+
+  const mutationActions = useStudioStore(
+    useShallow((s) => ({
+      undo: s.undo,
+      redo: s.redo,
+      createNewScene: s.createNewScene,
+      saveSceneToStorage: s.saveSceneToStorage,
+      saveSnapshot: s.saveSnapshot,
+      runSimulation: s.runSimulation,
+    })),
+  );
+
   const scene = useStudioStore((s) => s.scene);
-  const rightPanelMode = useStudioStore((s) => s.rightPanelMode);
-  const setRightPanelMode = useStudioStore((s) => s.setRightPanelMode);
-  const duplicateNode = useStudioStore((s) => s.duplicateNode);
-  const removeSelectedNodes = useStudioStore((s) => s.removeSelectedNodes);
-  const undo = useStudioStore((s) => s.undo);
-  const redo = useStudioStore((s) => s.redo);
-  const createNewScene = useStudioStore((s) => s.createNewScene);
-  const saveSceneToStorage = useStudioStore((s) => s.saveSceneToStorage);
-  const saveSnapshot = useStudioStore((s) => s.saveSnapshot);
-  const runSimulation = useStudioStore((s) => s.runSimulation);
-  const editor = useStudioStore((s) => s.editor);
-  const setBottomTab = useStudioStore((s) => s.setBottomTab);
   const uiDensity = useStudioStore((s) => s.uiDensity);
   const uiTheme = useStudioStore((s) => s.uiTheme);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showFirstRunGuide, setShowFirstRunGuide] = useState(false);
   const rightRailAutoSetRef = useRef(false);
+  const {
+    leftDockCollapsed, rightDockCollapsed, bottomDockCollapsed,
+    dockAttention, leftDockSizePx, rightDockSizePx, bottomDockSizePx,
+  } = dockState;
+  const {
+    toggleDock, clearDockAttention, setDockSize,
+    enterFocusMode, restorePreviousLayout,
+  } = dockActions;
+  const {
+    viewMode, activeTool, selectedNodeId, selectedNodeIds,
+    selectedCameraId, rightPanelMode, editor,
+  } = viewState;
+  const {
+    setViewMode, setWorkspacePreset, setActiveTool,
+    setSelectedCameraId, translateSelectedNodes,
+    setRightPanelMode, duplicateNode, removeSelectedNodes,
+    setBottomTab,
+  } = viewActions;
+  const {
+    undo, redo, createNewScene, saveSceneToStorage,
+    saveSnapshot, runSimulation,
+  } = mutationActions;
+
   const fullCanvasMode = viewMode === "camera_view" || viewMode === "wall" || viewMode === "replay";
+  const canvasOnlyLayout = compactViewport || fullCanvasMode;
 
   useEffect(() => {
     queueMicrotask(() => setHydrated(true));
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const media = window.matchMedia("(max-width: 720px)");
+    const syncCompactViewport = () => setCompactViewport(media.matches);
+    syncCompactViewport();
+    media.addEventListener("change", syncCompactViewport);
+    return () => media.removeEventListener("change", syncCompactViewport);
   }, []);
 
   // Read ?mode= from URL on mount only — prevents URL from overriding user's mode changes.
@@ -193,8 +339,10 @@ export default function StudioShell() {
     setViewMode(mode as ViewMode);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Keyboard shortcut handler
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+  // Keyboard shortcut handler — uses ref to avoid re-attaching the listener on every state change
+  const handleKeyDownRef = useRef<((e: KeyboardEvent) => void) | null>(null);
+  useEffect(() => {
+    handleKeyDownRef.current = (e: KeyboardEvent) => {
     // Don't intercept when user is typing in an input
     const tag = (e.target as HTMLElement)?.tagName;
     if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
@@ -220,8 +368,6 @@ export default function StudioShell() {
     // Ctrl+O: Open / Import
     if (isCtrlOrMeta && e.key === "o") {
       e.preventDefault();
-      // Trigger the file input by dispatching a custom event
-      // The TopBar already has a file input — we reuse it
       const fileInput = document.querySelector<HTMLInputElement>('input[type="file"][accept=".json"]');
       fileInput?.click();
       return;
@@ -235,7 +381,7 @@ export default function StudioShell() {
     }
 
     // ?: Toggle shortcuts modal
-    if (e.key === "?" && !e.shiftKey) {
+    if (e.key === "?") {
       setShowShortcuts((v) => !v);
       return;
     }
@@ -347,12 +493,37 @@ export default function StudioShell() {
       }
       return;
     }
-  }, [activeTool, createNewScene, duplicateNode, editor.gridSnapM, editor.snapEnabled, enterFocusMode, focusMode, redo, removeSelectedNodes, restorePreviousLayout, runSimulation, saveSceneToStorage, saveSnapshot, selectedNodeId, selectedNodeIds, setActiveTool, setBottomTab, setViewMode, setWorkspacePreset, translateSelectedNodes, undo, viewMode]);
+    };
+  }, [
+    activeTool,
+    createNewScene,
+    duplicateNode,
+    editor.gridSnapM,
+    editor.snapEnabled,
+    enterFocusMode,
+    focusMode,
+    redo,
+    removeSelectedNodes,
+    restorePreviousLayout,
+    runSimulation,
+    saveSceneToStorage,
+    saveSnapshot,
+    selectedNodeId,
+    selectedNodeIds,
+    setActiveTool,
+    setBottomTab,
+    setViewMode,
+    setWorkspacePreset,
+    translateSelectedNodes,
+    undo,
+    viewMode,
+  ]);
 
   useEffect(() => {
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown]);
+    const handler = (e: KeyboardEvent) => handleKeyDownRef.current?.(e);
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   // Listen for custom event from TopBar keyboard button
   useEffect(() => {
@@ -455,9 +626,10 @@ export default function StudioShell() {
       ) : null}
 
       <ViewSettingsModal />
+      <PathReplayClock />
 
-      {fullCanvasMode ? (
-        <div className="relative z-0 flex-1 min-h-0 overflow-hidden">
+      {canvasOnlyLayout ? (
+        <div className="relative z-0 flex-1 min-h-0 overflow-hidden" style={fullCanvasMode ? FULL_CANVAS_SAFE_ZONE_STYLE : undefined}>
           {visibleComponents.view_mode_bar ? <ViewModeBar /> : null}
           <WorkspaceArea />
           {visibleComponents.command_bar ? <CommandBar /> : null}
@@ -537,7 +709,7 @@ export default function StudioShell() {
         </DockLayout>
       )}
 
-      {visibleComponents.status_bar ? <StatusBar /> : null}
+      {visibleComponents.status_bar && !compactViewport ? <StatusBar /> : null}
 
       {showShortcuts && <ShortcutsModal onClose={() => setShowShortcuts(false)} />}
       {showFirstRunGuide && (

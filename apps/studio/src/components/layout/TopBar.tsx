@@ -232,7 +232,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
   return (
     <div className="flex flex-col">
     <header className="relative z-[320] isolate flex h-12 items-center gap-2 overflow-visible border-b border-[#1e2130] bg-[#0c0f16]/96 px-2.5">
-      <div className="flex min-w-0 items-center gap-2.5">
+      <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
         <div className="flex min-w-0 items-center gap-2 pr-2.5">
           <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border border-emerald-500/25 bg-emerald-500/12 shadow-[0_0_18px_rgba(16,185,129,0.18)]">
             <Shield className="h-3.5 w-3.5 text-emerald-400" />
@@ -247,7 +247,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
 
         <BranchSwitcher />
 
-        <div className="flex items-center gap-1">
+        <div className="flex flex-shrink-0 items-center gap-1">
           <SurfaceButton
             onClick={() => setWizardOpen(true)}
             title="Create a new site twin"
@@ -264,7 +264,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
           </SurfaceButton>
         </div>
 
-        <div className="mr-1 h-4 w-px bg-[#1e2130]" />
+        <div className="mr-1 hidden h-4 w-px flex-shrink-0 bg-[#1e2130] md:block" />
 
         <div className="flex items-center gap-0.5">
           <SurfaceButton
@@ -283,12 +283,12 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
           </SurfaceButton>
         </div>
 
-        <div className="h-4 w-px bg-[#1e2130]" />
+        <div className="hidden h-4 w-px flex-shrink-0 bg-[#1e2130] md:block" />
 
-        <div className="relative min-w-0">
+        <div className="relative hidden min-w-0 md:block">
           <button type="button"
             onClick={() => setSceneOpen((open) => !open)}
-            className="flex h-7 min-w-[170px] max-w-[190px] items-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] px-2.5 text-[11px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
+            className="flex h-7 min-w-[128px] max-w-[18vw] items-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] px-2.5 text-[11px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white xl:min-w-[170px] xl:max-w-[190px]"
           >
             <span className="truncate">{scene.name || "Untitled Site"}</span>
             <ChevronDown className="h-3 w-3 flex-shrink-0 text-[#546078]" />
@@ -421,15 +421,14 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
             type="file"
             accept=".json"
             className="hidden"
-            style={{ caretColor: "transparent" }}
             onChange={handleFileSelected}
           />
         </div>
 
-        <div className="relative">
+        <div className="relative hidden min-w-0 2xl:block">
           <button type="button"
             onClick={() => setTargetOpen((open) => !open)}
-            className="flex h-7 min-w-[130px] items-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] px-2.5 text-[11px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
+            className="flex h-7 max-w-[190px] items-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] px-2.5 text-[11px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
           >
             <Shield className="h-3 w-3 text-cyan-300" />
             <span className="truncate">
@@ -461,10 +460,12 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
             </div>
           )}
         </div>
-        <ExplainBadge
-          text="Coverage targets describe what the camera view must support in a zone: noticing movement, recognizing a person, reading a plate, or reviewing activity. Changing the target reruns the same geometry against a stricter or looser operating need."
-          side="right"
-        />
+        <span className="hidden 2xl:inline-flex">
+          <ExplainBadge
+            text="Coverage targets describe what the camera view must support in a zone: noticing movement, recognizing a person, reading a plate, or reviewing activity. Changing the target reruns the same geometry against a stricter or looser operating need."
+            side="right"
+          />
+        </span>
 
       </div>
 
@@ -686,7 +687,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
 
       {wizardOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="relative h-[520px] w-[640px] overflow-hidden rounded-2xl border border-[#202536] shadow-2xl shadow-black/50">
+          <div className="relative h-[min(520px,92vh)] w-[min(640px,94vw)] overflow-hidden rounded-2xl border border-[#202536] shadow-2xl shadow-black/50">
             <SceneBuilderWizard onClose={() => setWizardOpen(false)} />
           </div>
         </div>
@@ -694,7 +695,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
 
       {scanWizardOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="relative h-[720px] w-[1120px] overflow-hidden rounded-2xl border border-[#202536] shadow-2xl shadow-black/50">
+          <div className="relative h-[min(720px,94vh)] w-[min(1120px,96vw)] overflow-hidden rounded-2xl border border-[#202536] shadow-2xl shadow-black/50">
             <ScanSiteWizard onClose={() => setScanWizardOpen(false)} />
           </div>
         </div>

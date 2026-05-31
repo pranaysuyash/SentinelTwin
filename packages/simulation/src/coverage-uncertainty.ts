@@ -1,5 +1,6 @@
 import type { CameraNode, DoriQuality, SecurityScene } from "@sentineltwin/core";
 import { simulateStudioLite } from "./simulate-studio";
+import { cloneSecuritySceneSimulation } from "@sentineltwin/core";
 
 export type CoverageUncertaintyZoneRate = {
   zoneId: string;
@@ -113,7 +114,7 @@ function perturbCamera(camera: CameraNode, next: () => number, options: Required
 }
 
 function sampleScene(scene: SecurityScene, next: () => number, options: Required<Omit<CoverageUncertaintyOptions, "seed">>) {
-  const perturbed = structuredClone(scene);
+  const perturbed = cloneSecuritySceneSimulation(scene);
   perturbed.cameras = perturbed.cameras.map((camera) => perturbCamera(camera, next, options));
   return perturbed;
 }

@@ -259,10 +259,10 @@ export function BottomPanel() {
   return (
     <div className="flex h-[208px] flex-shrink-0 flex-col border-t border-[#1e2130] bg-[#0d1017]">
       {/* Tab strip — scrollable so the dock tabs don't overflow on narrow layouts */}
-      <div className="flex min-w-0 items-center gap-2 border-b border-[#1e2130] px-3 py-1.5">
-        <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#5f6f8e]">Analysis Drawer</div>
-          <div className="text-[10px] uppercase tracking-[0.12em] text-[#6a7b99]">
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-[#1e2130] px-3 py-1.5">
+        <div className="min-w-[180px] flex-1">
+          <div className="truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-[#5f6f8e]">Analysis Drawer</div>
+          <div className="truncate text-[10px] uppercase tracking-[0.12em] text-[#6a7b99]">
             {viewMode === "replay"
               ? "Timeline-first replay analysis"
               : viewMode === "camera_view"
@@ -270,7 +270,7 @@ export function BottomPanel() {
                 : "Metrics, issues, timeline, provenance, report, and help"}
           </div>
         </div>
-        <div className="ml-auto flex flex-wrap items-center gap-1">
+        <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-1">
           <button
             type="button"
             onClick={() => setShowPanelExplain((state) => !state)}

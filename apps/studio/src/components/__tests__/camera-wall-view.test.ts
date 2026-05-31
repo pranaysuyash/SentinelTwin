@@ -47,5 +47,6 @@ describe("CameraWallView", () => {
     expect(source).toContain("simulationResult.pathResults.find");
     expect(source).toContain("cameraResultById");
     expect(source).toContain("visibilityByCamera");
+    expect(source).toContain("--st-full-canvas-safe-top");
   });
 });

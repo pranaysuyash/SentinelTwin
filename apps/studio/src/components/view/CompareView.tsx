@@ -3,7 +3,7 @@
 import { OrbitControls } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { ArrowLeftRight, Database, GitCompare, Globe, Lock, Plus, AlertTriangle, Share2, Sparkles, Unlock } from "lucide-react";
-import { startTransition, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import * as THREE from "three";
 
 import { useStudioStore } from "@/store/studio-store";
@@ -144,6 +144,7 @@ function CameraSyncController({
   const { camera, controls } = useThree();
   const lastSentKey = useRef<string>("");
   const lastAppliedKey = useRef<string>("");
+  const throttleRef = useRef(0);
 
   useFrame(() => {
     const orbitControls = controls as { target: THREE.Vector3 } | null;
@@ -166,6 +167,11 @@ function CameraSyncController({
           return;
         }
       }
+
+      // Throttle store emissions to ~15fps (67ms) during orbit drag
+      const now = performance.now();
+      if (now - throttleRef.current < 67) return;
+      throttleRef.current = now;
 
       // If this camera moved locally, emit the new state to the store
       if (localKey !== lastSentKey.current) {
@@ -292,21 +298,55 @@ function MetricCard({
   const positive = delta != null ? delta >= 0 : false;
 
   return (
-    <div className="flex min-w-[140px] flex-1 flex-col rounded-xl border border-[#1d2330] bg-[#0b1018] px-3 py-2">
-      <div className="text-[8px] font-semibold uppercase tracking-[0.18em] text-[#556076]">{label}</div>
-      <div className="mt-1 flex items-end justify-between gap-2">
+    <div className="flex min-w-[128px] flex-1 flex-col rounded-lg border border-[#1d2330] bg-[#0b1018] px-3 py-2">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#65718a]">{label}</div>
+      <div className="mt-0.5 flex items-end justify-between gap-2">
         <div className="font-mono text-[16px] font-semibold text-white">{afterValue == null ? "--" : `${afterValue.toFixed(1)}${suffix}`}</div>
         {delta != null ? (
-          <div className={cn("rounded px-1.5 py-0.5 text-[9px] font-semibold", positive ? "bg-emerald-500/15 text-emerald-300" : "bg-rose-500/15 text-rose-300")}>
+          <div className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", positive ? "bg-emerald-500/15 text-emerald-300" : "bg-rose-500/15 text-rose-300")}>
             {formatDelta(delta)}
           </div>
         ) : null}
       </div>
-      <div className="mt-1 flex items-center justify-between text-[8px] text-[#556076]">
+      <div className="mt-0.5 flex items-center justify-between text-[10px] text-[#65718a]">
         <span>{beforeValue == null ? "Baseline unavailable" : `Was ${beforeValue.toFixed(1)}${suffix}`}</span>
         <span style={{ color: tone }} />
       </div>
     </div>
+  );
+}
+
+function ToolbarGroup({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-1 rounded-lg border border-[#1d2330] bg-[#090d14] px-1.5 py-1">
+      <span className="px-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#65718a]">{label}</span>
+      <div className="flex flex-wrap items-center gap-1">{children}</div>
+    </div>
+  );
+}
+
+function ToolbarButton({
+  children,
+  className,
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        "flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-medium transition-colors disabled:opacity-40",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -343,12 +383,12 @@ function QualityTrend({
     <div className="flex h-full flex-col rounded-xl border border-[#1d2330] bg-[#0b1018] p-3">
       <div className="mb-2 flex items-center justify-between">
         <div>
-          <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Quality Over Time</div>
-          <div className="text-[9px] text-[#556076]">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Quality Over Time</div>
+          <div className="text-[10px] text-[#556076]">
             {activePathId ? "Camera quality along the selected replay path" : "Select a path in Scenario Path to show route quality"}
           </div>
         </div>
-        <div className="flex items-center gap-3 text-[9px]">
+        <div className="flex items-center gap-3 text-[10px]">
           <span className="flex items-center gap-1 text-[#9aa6bf]"><span className="h-1.5 w-1.5 rounded-full bg-red-400" />Baseline</span>
           <span className="flex items-center gap-1 text-[#9aa6bf]"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />Proposed</span>
         </div>
@@ -398,14 +438,14 @@ function QualityTrend({
       ) : (
         <div className="flex h-[160px] items-center justify-center rounded-lg border border-dashed border-[#1f2737] bg-[#090d14] px-4 text-center">
           <div>
-            <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">No path selected</div>
-            <div className="mt-1 text-[9px] text-[#7f8ca6]">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#556076]">No path selected</div>
+            <div className="mt-1 text-[10px] text-[#7f8ca6]">
               Pick a scenario path in the Path panel to compare route quality over time.
             </div>
           </div>
         </div>
       )}
-        <div className="mt-2 grid grid-cols-3 gap-2 text-[9px] text-[#91a0bc]">
+        <div className="mt-2 grid grid-cols-3 gap-2 text-[10px] text-[#91a0bc]">
         <div className="rounded-lg border border-[#1d2330] bg-[#090d14] px-2 py-1.5">
           <div className="text-[#556076]">Baseline quality</div>
           <div className="mt-0.5 font-semibold text-red-300">{qualityLabel(qualityForScore(seriesA.at(-1)?.score ?? 0))}</div>
@@ -442,8 +482,8 @@ function NotesPanel({
     <div className="flex h-full flex-col rounded-xl border border-[#1d2330] bg-[#0b1018] p-3">
       <div className="mb-2 flex items-center justify-between">
         <div>
-          <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Changes in Scenario B</div>
-          <div className="text-[9px] text-[#556076]">What changed, what failed, and what got better.</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Changes in Scenario B</div>
+          <div className="text-[10px] text-[#556076]">What changed, what failed, and what got better.</div>
         </div>
         <ArrowLeftRight className="h-3.5 w-3.5 text-[#4a5568]" />
       </div>
@@ -471,10 +511,10 @@ function NotesPanel({
 
       <div className="mt-3 grid grid-cols-2 gap-2">
         <div className="rounded-lg border border-[#1d2330] bg-[#090d14] p-2">
-          <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Issues</div>
+          <div className="text-[10px] uppercase tracking-[0.16em] text-[#556076]">Issues</div>
           <div className="mt-1 space-y-1">
             {(issues.length ? issues : [{ severity: "low", description: "No issues reported", category: "blindspot" }]).slice(0, 4).map((issue) => (
-              <div key={`${issue.severity}-${issue.description}`} className="flex items-start gap-2 text-[9px] text-[#c7d0e4]">
+              <div key={`${issue.severity}-${issue.description}`} className="flex items-start gap-2 text-[10px] text-[#c7d0e4]">
                 <span className={cn("mt-0.5 h-1.5 w-1.5 rounded-full", issue.severity === "critical" ? "bg-red-400" : issue.severity === "high" ? "bg-orange-400" : issue.severity === "medium" ? "bg-yellow-400" : "bg-emerald-400")} />
                 <span className="leading-snug">{issue.description}</span>
               </div>
@@ -482,10 +522,10 @@ function NotesPanel({
           </div>
         </div>
         <div className="rounded-lg border border-[#1d2330] bg-[#090d14] p-2">
-          <div className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Recommended next steps</div>
+          <div className="text-[10px] uppercase tracking-[0.16em] text-[#556076]">Recommended next steps</div>
           <div className="mt-1 space-y-1">
             {(recommendations.length ? recommendations : [{ description: "Open report lite for the full hardening summary." }]).slice(0, 4).map((rec) => (
-              <div key={rec.description} className="flex items-start gap-2 text-[9px] text-[#c7d0e4]">
+              <div key={rec.description} className="flex items-start gap-2 text-[10px] text-[#c7d0e4]">
                 <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400" />
                 <span className="leading-snug">{rec.description}</span>
               </div>
@@ -563,8 +603,8 @@ function ChangedObjectsPanel({ snapshotA, snapshotB }: { snapshotA: SceneSnapsho
   if (!snapshotA || !snapshotB) {
     return (
       <div className="flex h-full flex-col rounded-xl border border-[#1d2330] bg-[#0b1018] p-3">
-        <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Changed Objects</div>
-        <div className="mt-2 text-[9px] text-[#556076]">Select two snapshots to compare object-level changes.</div>
+        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Changed Objects</div>
+        <div className="mt-2 text-[10px] text-[#556076]">Select two snapshots to compare object-level changes.</div>
       </div>
     );
   }
@@ -579,22 +619,22 @@ function ChangedObjectsPanel({ snapshotA, snapshotB }: { snapshotA: SceneSnapsho
   return (
     <div className="flex h-full flex-col rounded-xl border border-[#1d2330] bg-[#0b1018] p-3">
       <div className="mb-2">
-        <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Changed Objects</div>
-        <div className="text-[9px] text-[#556076]">Scenario B deltas vs Scenario A by object class and IDs.</div>
+        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Changed Objects</div>
+        <div className="text-[10px] text-[#556076]">Scenario B deltas vs Scenario A by object class and IDs.</div>
       </div>
       <div className="space-y-2">
         {diffRows.map(({ label, diff }) => (
           <div key={label} className="rounded-lg border border-[#1d2330] bg-[#090d14] px-2.5 py-2">
-            <div className="flex items-center justify-between text-[9px]">
+            <div className="flex items-center justify-between text-[10px]">
               <span className="font-semibold text-[#c7d0e4]">{label}</span>
               <span className="font-mono text-[#91a0bc]">{diff.before} → {diff.after}</span>
             </div>
-            <div className="mt-1 grid grid-cols-3 gap-1 text-[8px]">
+            <div className="mt-1 grid grid-cols-3 gap-1 text-[10px]">
               <span className="rounded border border-emerald-400/25 bg-emerald-500/10 px-1.5 py-0.5 text-emerald-300">+{diff.added.length}</span>
               <span className="rounded border border-rose-400/25 bg-rose-500/10 px-1.5 py-0.5 text-rose-300">-{diff.removed.length}</span>
               <span className="rounded border border-amber-400/25 bg-amber-500/10 px-1.5 py-0.5 text-amber-300">~{diff.changed.length}</span>
             </div>
-            <div className="mt-1.5 space-y-0.5 text-[8px] text-[#9aa6bf]">
+            <div className="mt-1.5 space-y-0.5 text-[10px] text-[#9aa6bf]">
               <div className="truncate">Added IDs: {diff.added.length > 0 ? diff.added.join(", ") : "--"}</div>
               <div className="truncate">Removed IDs: {diff.removed.length > 0 ? diff.removed.join(", ") : "--"}</div>
               <div className="truncate">Changed IDs: {diff.changed.length > 0 ? diff.changed.join(", ") : "--"}</div>
@@ -954,22 +994,20 @@ export function CompareView() {
 
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#07090d]">
-      <div className="flex items-center gap-2 border-b border-[#1e2130] bg-[#0c0f16] px-3 py-1.5">
-        <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">Compare - Before / After</span>
-        <div className="flex items-center gap-1.5">
-          <div className="rounded-md border border-red-500/20 bg-red-500/10 px-2 py-0.5 text-[9px] font-medium text-red-300">
+      <div className="flex flex-wrap items-center gap-2 border-b border-[#1e2130] bg-[#0c0f16] px-3 py-2">
+        <div className="flex min-w-[260px] items-center gap-2">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#65718a]">Compare - Before / After</span>
+          <div className="rounded-md border border-red-500/20 bg-red-500/10 px-2 py-1 text-[10px] font-medium text-red-300">
             {snapshotA?.label ?? "Scenario A"}
           </div>
           <ArrowLeftRight className="h-3 w-3 text-[#556076]" />
-          <div className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-medium text-emerald-300">
+          <div className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[10px] font-medium text-emerald-300">
             {snapshotB?.label ?? "Scenario B"}
           </div>
         </div>
-        <button
-          type="button"
+        <ToolbarButton
           onClick={handleToggleOrbitSync}
           className={cn(
-            "flex items-center gap-1 rounded-md border px-2 py-0.5 text-[9px] font-medium transition-colors",
             compareOrbitSync
               ? "border-sky-400/30 bg-sky-500/10 text-sky-200 hover:bg-sky-500/20"
               : "border-[#24283a] bg-[#111521] text-[#8090a8] hover:text-white",
@@ -981,117 +1019,110 @@ export function CompareView() {
           }
           <span>Synchronize View</span>
           <span className={cn(
-            "ml-0.5 rounded px-1 py-0.5 text-[8px] uppercase tracking-[0.12em]",
+            "ml-0.5 rounded px-1 py-0.5 text-[10px] uppercase tracking-[0.1em]",
             compareOrbitSync
               ? "bg-sky-500/15 text-sky-300"
               : "bg-[#1d2330] text-[#556076]",
           )}>
             {compareOrbitSync ? "Synced" : "Independent"}
           </span>
-        </button>
-        <div className="ml-auto flex items-center gap-1.5">
+        </ToolbarButton>
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
           {exportToast ? (
-            <span className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] text-emerald-300">
+            <span className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[10px] text-emerald-300">
               {exportToast}
             </span>
           ) : null}
-          <button
-            type="button"
-            onClick={handleCopySummary}
-            className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white"
-          >
-            Copy Summary
-          </button>
-	          <button
-	            type="button"
-	            onClick={handleShareCompareLink}
-	            disabled={!snapshotA || !snapshotB}
-	            className="flex items-center gap-1 rounded-md border border-sky-400/20 bg-sky-500/10 px-2 py-0.5 text-[9px] text-sky-100 hover:bg-sky-500/15 disabled:opacity-40"
-	          >
-	            <Share2 className="h-3 w-3" />
-	            Share compare link
-	          </button>
-	          <button
-	            type="button"
-	            onClick={handleCopyCompareLink}
-	            disabled={!snapshotA || !snapshotB}
-	            className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white disabled:opacity-40"
-	          >
-            Copy compare link
-          </button>
-          <button
-            type="button"
-            onClick={handleExportComparison}
-            className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white"
-          >
-            Export Compare Data
-          </button>
-          <button
-            type="button"
-            onClick={handleExportEvidenceBundle}
-            className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white"
-          >
-            <Database className="h-2.5 w-2.5" />
-            Evidence Bundle
-          </button>
-          <button
-            type="button"
-            onClick={handleExportMarkdown}
-            className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white"
-          >
-            <Globe className="h-2.5 w-2.5" />
-            Export MD
-          </button>
-          <button
-            type="button"
-            onClick={handleExportHtml}
-            className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white"
-          >
-            <Globe className="h-2.5 w-2.5" />
-            Export HTML
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (!snapshotA || !snapshotB) return;
-              setCompareReportSelection({
-                snapshotAId: snapshotA.id,
-                snapshotBId: snapshotB.id,
-                provenanceNote: compareSelectionProvenanceNote,
-              });
-              setBottomTab("report");
-              setExportToast("Compare selection sent to report");
-              window.setTimeout(() => setExportToast(null), 2500);
-            }}
-            className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white"
-          >
-            Export Compare Report
-          </button>
-          <button
-            type="button"
-            onClick={handleOpenReplay}
-            className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white"
-          >
-            Open 3D Replay
-          </button>
-          <button
-            type="button"
-            onClick={handleCaptureVisualEvidence}
-            className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white"
-          >
-            Capture Visual Evidence
-          </button>
-          <button
-            type="button"
-            onClick={() => saveSnapshot(`Scenario ${snapshots.length + 1}`)}
-            className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white"
-          >
-            <Plus className="h-2.5 w-2.5" />
-            Add Scenario
-          </button>
+          <ToolbarGroup label="Primary">
+            <ToolbarButton
+              onClick={handleShareCompareLink}
+              disabled={!snapshotA || !snapshotB}
+              className="border-sky-400/20 bg-sky-500/10 text-sky-100 hover:bg-sky-500/15"
+            >
+              <Share2 className="h-3 w-3" />
+              Share compare link
+            </ToolbarButton>
+            <ToolbarButton
+              onClick={() => {
+                if (!snapshotA || !snapshotB) return;
+                setCompareReportSelection({
+                  snapshotAId: snapshotA.id,
+                  snapshotBId: snapshotB.id,
+                  provenanceNote: compareSelectionProvenanceNote,
+                });
+                setBottomTab("report");
+                setExportToast("Compare selection sent to report");
+                window.setTimeout(() => setExportToast(null), 2500);
+              }}
+              className="border-emerald-400/25 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/15"
+            >
+              Export Compare Report
+            </ToolbarButton>
+            <ToolbarButton
+              onClick={handleCaptureVisualEvidence}
+              className="border-[#24283a] bg-[#111521] text-[#b8c3d9] hover:text-white"
+            >
+              Capture Visual Evidence
+            </ToolbarButton>
+            <ToolbarButton
+              onClick={() => saveSnapshot(`Scenario ${snapshots.length + 1}`)}
+              className="border-[#24283a] bg-[#111521] text-[#b8c3d9] hover:text-white"
+            >
+              <Plus className="h-3 w-3" />
+              Add Scenario
+            </ToolbarButton>
+          </ToolbarGroup>
+          <ToolbarGroup label="Handoff">
+            <ToolbarButton
+              onClick={handleCopySummary}
+              className="border-[#24283a] bg-[#111521] text-[#8090a8] hover:text-white"
+            >
+              Copy Summary
+            </ToolbarButton>
+            <ToolbarButton
+              onClick={handleCopyCompareLink}
+              disabled={!snapshotA || !snapshotB}
+              className="border-[#24283a] bg-[#111521] text-[#8090a8] hover:text-white"
+            >
+              Copy compare link
+            </ToolbarButton>
+            <ToolbarButton
+              onClick={handleExportComparison}
+              className="border-[#24283a] bg-[#111521] text-[#8090a8] hover:text-white"
+            >
+              Export Compare Data
+            </ToolbarButton>
+            <ToolbarButton
+              onClick={handleExportEvidenceBundle}
+              className="border-[#24283a] bg-[#111521] text-[#8090a8] hover:text-white"
+            >
+              <Database className="h-3 w-3" />
+              Evidence Bundle
+            </ToolbarButton>
+            <ToolbarButton
+              onClick={handleExportMarkdown}
+              className="border-[#24283a] bg-[#111521] text-[#8090a8] hover:text-white"
+            >
+              <Globe className="h-3 w-3" />
+              Export MD
+            </ToolbarButton>
+            <ToolbarButton
+              onClick={handleExportHtml}
+              className="border-[#24283a] bg-[#111521] text-[#8090a8] hover:text-white"
+            >
+              <Globe className="h-3 w-3" />
+              Export HTML
+            </ToolbarButton>
+            <ToolbarButton
+              onClick={handleOpenReplay}
+              className="border-[#24283a] bg-[#111521] text-[#8090a8] hover:text-white"
+            >
+              Open 3D Replay
+            </ToolbarButton>
+          </ToolbarGroup>
         </div>
       </div>
-      <div className="border-b border-[#1e2130] px-3 py-1.5 text-[9px] text-[#74809a]">
+      <div className="border-b border-[#1e2130] px-3 py-1.5 text-[10px] text-[#74809a]">
         {compareSelectionProvenanceNote ? (
           <span>Compare provenance: {compareSelectionProvenanceNote}</span>
         ) : (
@@ -1099,7 +1130,7 @@ export function CompareView() {
         )}
       </div>
       {(outcomeA || outcomeB) ? (
-        <div className="border-b border-[#1e2130] px-3 py-1.5 text-[9px] text-[#8ea0bf]">
+        <div className="border-b border-[#1e2130] px-3 py-1.5 text-[10px] text-[#8ea0bf]">
           <span>
             Scenario A outcome: {outcomeA?.summary.status.replace(/_/g, " ") ?? "not_run"}
             {outcomeA?.summary.primaryRisk ? ` · risk: ${outcomeA.summary.primaryRisk}` : ""}
@@ -1113,7 +1144,7 @@ export function CompareView() {
       ) : null}
 
       <div className="grid grid-cols-2 gap-2 border-b border-[#1e2130] bg-[#0a0d14] px-3 py-2">
-        <label className="flex items-center gap-2 text-[9px] uppercase tracking-[0.16em] text-[#556076]">
+        <label className="flex items-center gap-2 text-[10px] uppercase tracking-[0.16em] text-[#556076]">
           <span className="min-w-[56px] text-[#9aa6bf]">Scenario A</span>
           <select
             value={validComparisonAId ?? ""}
@@ -1130,7 +1161,7 @@ export function CompareView() {
             ))}
           </select>
         </label>
-        <label className="flex items-center gap-2 text-[9px] uppercase tracking-[0.16em] text-[#556076]">
+        <label className="flex items-center gap-2 text-[10px] uppercase tracking-[0.16em] text-[#556076]">
           <span className="min-w-[56px] text-[#d2f5db]">Scenario B</span>
           <select
             value={validComparisonBId ?? ""}
@@ -1164,14 +1195,14 @@ export function CompareView() {
                     setExportToast("Scenario B simulated");
                     window.setTimeout(() => setExportToast(null), 2500);
                   }}
-                  className="rounded border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-medium text-emerald-200 hover:bg-emerald-500/20"
+                  className="rounded border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-200 hover:bg-emerald-500/20"
                 >
                   Simulate Scenario B Now
                 </button>
                 <button
                   type="button"
                   onClick={() => setComparisonBId(latestSimulatedSnapshot.id)}
-                  className="rounded border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[9px] font-medium text-amber-200 hover:bg-amber-500/20"
+                  className="rounded border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-200 hover:bg-amber-500/20"
                 >
                   Use Latest Simulated
                 </button>
@@ -1221,7 +1252,7 @@ export function CompareView() {
       </div>
 
       <div className="px-2 pb-2">
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(128px,1fr))] gap-2">
           {comparisonCards.map((card) => (
             <MetricCard
               key={card.label}
@@ -1236,14 +1267,14 @@ export function CompareView() {
         {snapshotA && snapshotB ? (
           <div className="mt-2 rounded-xl border border-[#1d2330] bg-[#0b1018] p-2.5">
             <div className="flex items-center justify-between gap-2">
-              <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">What Changed</div>
-              <span className="rounded-full border border-sky-400/20 bg-sky-500/10 px-2 py-0.5 text-[8px] font-medium text-sky-200">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">What Changed</div>
+              <span className="rounded-full border border-sky-400/20 bg-sky-500/10 px-2 py-0.5 text-[10px] font-medium text-sky-200">
                 Verified by simulation
               </span>
             </div>
             <div className="mt-1.5 grid gap-1.5 md:grid-cols-2">
               {comparisonCards.filter((card) => card.delta != null && card.delta !== 0).map((card) => (
-                <div key={card.label} className="flex items-center justify-between rounded-lg border border-[#1d2330] bg-[#090d14] px-2.5 py-1.5 text-[9px] text-[#b7c5de]">
+                <div key={card.label} className="flex items-center justify-between rounded-lg border border-[#1d2330] bg-[#090d14] px-2.5 py-1.5 text-[10px] text-[#b7c5de]">
                   <span className="text-[#7a86a0]">{card.label}</span>
                   <span className="font-semibold" style={{ color: card.tone }}>
                     {card.beforeValue != null ? `${Math.round(card.beforeValue)}%` : "—"} → {card.afterValue != null ? `${Math.round(card.afterValue)}%` : "—"}
@@ -1252,7 +1283,7 @@ export function CompareView() {
                 </div>
               ))}
               {comparisonCards.every((card) => card.delta == null || card.delta === 0) ? (
-                <div className="col-span-2 rounded-lg border border-[#1d2330] bg-[#090d14] px-2.5 py-1.5 text-[9px] text-[#556076]">
+                <div className="col-span-2 rounded-lg border border-[#1d2330] bg-[#090d14] px-2.5 py-1.5 text-[10px] text-[#556076]">
                   No measurable changes between scenarios. Run simulation on both sides to surface deltas.
                 </div>
               ) : null}
@@ -1261,10 +1292,10 @@ export function CompareView() {
         ) : null}
 
         <div className="mt-2 rounded-xl border border-[#1d2330] bg-[#0b1018] p-2.5">
-          <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Actionable Next Move</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Actionable Next Move</div>
           <div className="mt-1.5 grid gap-1.5 md:grid-cols-3">
             {prioritizedActions.map((action, i) => (
-              <div key={action} className="rounded-lg border border-[#1d2330] bg-[#090d14] px-2 py-1.5 text-[9px] text-[#b7c5de]">
+              <div key={action} className="rounded-lg border border-[#1d2330] bg-[#090d14] px-2 py-1.5 text-[10px] text-[#b7c5de]">
                 <span className="mr-1 text-[#7dd3fc]">{i + 1}.</span>
                 {action}
               </div>
@@ -1290,10 +1321,10 @@ export function CompareView() {
         <div className="rounded-xl border border-[#1d2330] bg-[#0b1018] p-3">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <div>
-              <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Camera Comparison</div>
-              <div className="text-[9px] text-[#556076]">Compare two cameras from the current scene using live simulation results.</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Camera Comparison</div>
+              <div className="text-[10px] text-[#556076]">Compare two cameras from the current scene using live simulation results.</div>
             </div>
-            <div className="flex flex-wrap items-center gap-2 text-[9px] uppercase tracking-[0.16em] text-[#556076]">
+            <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.16em] text-[#556076]">
               <label className="flex items-center gap-1.5 rounded-md border border-[#1d2330] bg-[#090d14] px-2 py-1">
                 <span className="text-[#9aa6bf]">Camera A</span>
                 <select
@@ -1340,21 +1371,21 @@ export function CompareView() {
                 <div key={camera.id} className="rounded-lg border border-[#1d2330] bg-[#090d14] p-2.5">
                   <div className="flex items-center justify-between gap-2">
                     <div>
-                      <div className={cn("text-[9px] font-semibold uppercase tracking-[0.18em]", tone === "baseline" ? "text-red-300" : "text-emerald-300")}>
+                      <div className={cn("text-[10px] font-semibold uppercase tracking-[0.18em]", tone === "baseline" ? "text-red-300" : "text-emerald-300")}>
                         {tone === "baseline" ? "Camera A" : "Camera B"}
                       </div>
                       <div className="text-[12px] font-semibold text-[#dfe7f7]">{camera.name}</div>
-                      <div className="text-[9px] text-[#556076]">{camera.mountType} mount · {camera.fovHorizontalDeg}° FOV · {camera.rangeM}m range</div>
+                      <div className="text-[10px] text-[#556076]">{camera.mountType} mount · {camera.fovHorizontalDeg}° FOV · {camera.rangeM}m range</div>
                     </div>
                     <div className={cn("rounded-md border px-2 py-1 text-right", tone === "baseline" ? "border-red-500/20 bg-red-500/10" : "border-emerald-500/20 bg-emerald-500/10")}>
-                      <div className="text-[8px] uppercase tracking-[0.16em] text-[#8da0bf]">Coverage</div>
+                      <div className="text-[10px] uppercase tracking-[0.16em] text-[#8da0bf]">Coverage</div>
                       <div className={cn("font-mono text-[15px] font-semibold", tone === "baseline" ? "text-red-300" : "text-emerald-300")}>
                         {result.coveragePct.toFixed(1)}%
                       </div>
                     </div>
                   </div>
 
-                  <div className="mt-2 grid grid-cols-2 gap-2 text-[9px]">
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-[10px]">
                     <div className="rounded border border-[#1d2330] bg-[#0b1018] px-2 py-1.5">
                       <div className="text-[#556076]">Best zone quality</div>
                       <div className={cn("mt-0.5 font-semibold", tone === "baseline" ? "text-red-300" : "text-emerald-300")}>
@@ -1377,12 +1408,12 @@ export function CompareView() {
                     </div>
                   </div>
 
-                  <div className="mt-2 rounded border border-[#1d2330] bg-[#0b1018] px-2 py-1.5 text-[9px] text-[#9aa6bf]">
+                  <div className="mt-2 rounded border border-[#1d2330] bg-[#0b1018] px-2 py-1.5 text-[10px] text-[#9aa6bf]">
                     {result.offlineImpact.length > 0 ? result.offlineImpact[0] : "No offline impact warnings for this camera."}
                   </div>
                 </div>
               ))}
-              <div className="lg:col-span-2 rounded-lg border border-[#1d2330] bg-[#090d14] px-3 py-2 text-[9px] text-[#91a0bc]">
+              <div className="lg:col-span-2 rounded-lg border border-[#1d2330] bg-[#090d14] px-3 py-2 text-[10px] text-[#91a0bc]">
                 Camera delta: coverage {cameraDeltas.coverage >= 0 ? "+" : ""}{cameraDeltas.coverage.toFixed(1)}%, passed zones {cameraDeltas.passedZones >= 0 ? "+" : ""}{cameraDeltas.passedZones}, failed zones {cameraDeltas.failedZones >= 0 ? "+" : ""}{cameraDeltas.failedZones}.
               </div>
             </div>

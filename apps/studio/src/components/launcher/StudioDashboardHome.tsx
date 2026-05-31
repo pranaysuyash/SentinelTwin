@@ -7,6 +7,8 @@ import {
   Camera,
   ChevronDown,
   Compass,
+  Eye,
+  EyeOff,
   FileText,
   FileUp,
   FolderOpen,
@@ -50,13 +52,60 @@ type ProjectSort = "recent" | "name" | "coverage";
 type ProjectSourceFilter = "All" | SecurityScene["source"];
 type StarterTone = "blank" | "import" | "scan" | "ai";
 const NAV_ITEMS = [
-  { key: "home", label: "Home", detail: "Command center" },
-  { key: "site_intake", label: "Create Site Twin", detail: "New or import" },
-  { key: "studio", label: "Security Twin Studio", detail: "Editor" },
-  { key: "report", label: "Audit Reports", detail: "Evidence exports" },
-  { key: "reference_sites", label: "Reference Sites", detail: "Retail / Office / Warehouse" },
-  { key: "settings", label: "Settings", detail: "Product preferences" },
+  { key: "home", label: "Home", detail: "" },
+  { key: "projects", label: "Projects", detail: "" },
+  { key: "reference_sites", label: "Demo Sites", detail: "" },
+  { key: "report", label: "Reports", detail: "" },
+  { key: "docs", label: "Docs", detail: "" },
+  { key: "settings", label: "Settings", detail: "" },
 ] as const;
+
+const WORKSPACE_MODE_ITEMS = [
+  { key: "coverage", label: "Coverage", detail: "Map & Analysis" },
+  { key: "camera_view", label: "Camera View", detail: "Single Camera" },
+  { key: "camera_wall", label: "Camera Wall", detail: "Multi Camera" },
+  { key: "path_replay", label: "Path Replay", detail: "Route Analysis" },
+  { key: "compare", label: "Compare", detail: "Before / After" },
+  { key: "report_lite", label: "Report Lite", detail: "Quick Report" },
+] as const;
+
+type DashboardSectionId =
+  | "overview"
+  | "preview"
+  | "metrics"
+  | "workspaces"
+  | "recent"
+  | "create"
+  | "library"
+  | "securityStatus"
+  | "issues"
+  | "assumptions";
+
+const DASHBOARD_SECTION_ITEMS: { id: DashboardSectionId; label: string; group: string }[] = [
+  { id: "overview", label: "Current site twin", group: "Main" },
+  { id: "preview", label: "Map preview", group: "Main" },
+  { id: "metrics", label: "Summary metrics", group: "Main" },
+  { id: "workspaces", label: "Workspace shortcuts", group: "Main" },
+  { id: "recent", label: "Recent site twins", group: "Main" },
+  { id: "create", label: "Create and import", group: "Main" },
+  { id: "library", label: "Workspace library", group: "Main" },
+  { id: "securityStatus", label: "Security status", group: "Side panel" },
+  { id: "issues", label: "Open issues", group: "Side panel" },
+  { id: "assumptions", label: "Simulation assumptions", group: "Side panel" },
+];
+
+const DEFAULT_DASHBOARD_VISIBILITY: Record<DashboardSectionId, boolean> = {
+  overview: true,
+  preview: true,
+  metrics: true,
+  workspaces: true,
+  recent: true,
+  create: true,
+  library: true,
+  securityStatus: true,
+  issues: true,
+  assumptions: true,
+};
 
 const SOURCE_LABELS: Record<SecurityScene["source"], string> = {
   manual: "Draft",
@@ -615,6 +664,21 @@ function ActionButton({
   );
 }
 
+function HideSectionButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center gap-1 rounded-md border border-[color:var(--st-border)] bg-white/[0.03] px-2 py-1 text-[10px] font-medium text-[color:var(--st-muted)] transition-colors hover:border-sky-400/35 hover:text-white"
+      aria-label={`Hide ${label}`}
+      title={`Hide ${label}`}
+    >
+      <EyeOff className="h-3 w-3" />
+      Hide
+    </button>
+  );
+}
+
 function LaunchStatusRow({
   label,
   value,
@@ -1104,13 +1168,28 @@ export function StudioDashboardHome({
   const [showWorkspaceLibrary, setShowWorkspaceLibrary] = useState(false);
   const [previewMode, setPreviewMode] = useState<"2d" | "3d">("2d");
   const [footerPanel, setFooterPanel] = useState<"feedback" | "help" | null>(null);
+  const [dashboardViewMenuOpen, setDashboardViewMenuOpen] = useState(false);
+  const [dashboardVisibility, setDashboardVisibility] = useState(DEFAULT_DASHBOARD_VISIBILITY);
+  const isDashboardSectionVisible = (id: DashboardSectionId) => dashboardVisibility[id];
+  const setDashboardSectionVisible = (id: DashboardSectionId, visible: boolean) => {
+    setDashboardVisibility((current) => ({ ...current, [id]: visible }));
+  };
+  const hiddenDashboardCount = DASHBOARD_SECTION_ITEMS.filter((item) => !dashboardVisibility[item.id]).length;
   const navActionByKey: Record<(typeof NAV_ITEMS)[number]["key"], (() => void) | undefined> = {
     home: undefined,
-    site_intake: onOpenSiteIntake ?? onOpenAdvancedWorkflows,
-    studio: onOpenStudio,
+    projects: () => setShowWorkspaceLibrary(true),
     report: onOpenReport,
+    docs: onOpenReport,
     reference_sites: onOpenReferenceSites ?? onOpenDemoScene,
     settings: onOpenSettings,
+  };
+  const modeActionByKey: Record<(typeof WORKSPACE_MODE_ITEMS)[number]["key"], (() => void) | undefined> = {
+    coverage: onOpenCoverageWorkspace,
+    camera_view: () => onOpenMode("camera_view", "focus"),
+    camera_wall: onOpenCameraWall,
+    path_replay: onOpenPathReplay,
+    compare: onOpenCompareFixes,
+    report_lite: onOpenReport,
   };
   const openSiteIntakeFromFooter = onOpenSiteIntake ?? onOpenAdvancedWorkflows ?? onOpenStudio;
   const openReferenceSitesFromFooter = onOpenReferenceSites ?? onOpenDemoScene ?? onOpenStudio;
@@ -1528,106 +1607,161 @@ export function StudioDashboardHome({
     "--st-muted": "#8a96ab",
     "--st-accent": "#5bb6ff",
   } as CSSProperties;
-  if (!hydrated) {
-    return (
-      <main className="relative min-h-screen overflow-hidden bg-[color:var(--st-bg)] text-[color:var(--st-text)]" style={rootStyle}>
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(56,189,248,0.12),transparent_30%),radial-gradient(circle_at_80%_8%,rgba(16,185,129,0.08),transparent_28%),radial-gradient(circle_at_50%_100%,rgba(245,158,11,0.06),transparent_26%)]" />
-        <div className="relative z-10 flex min-h-screen items-center justify-center p-4">
-          <div className="rounded-[24px] border border-[color:var(--st-border)] bg-[rgba(9,14,23,0.94)] px-5 py-4 text-center shadow-[0_18px_60px_rgba(0,0,0,0.34)]">
-            <div className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-200">SentinelTwin</div>
-            <div className="mt-2 text-[11px] text-[color:var(--st-muted)]">Loading command center</div>
-          </div>
-        </div>
-      </main>
-    );
-  }
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[color:var(--st-bg)] text-[color:var(--st-text)]" style={rootStyle}>
+    <main className="relative h-screen overflow-y-auto overflow-x-hidden bg-[color:var(--st-bg)] text-[color:var(--st-text)]" style={rootStyle}>
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(56,189,248,0.12),transparent_30%),radial-gradient(circle_at_80%_8%,rgba(16,185,129,0.08),transparent_28%),radial-gradient(circle_at_50%_100%,rgba(245,158,11,0.06),transparent_26%)]" />
       <div className="pointer-events-none absolute inset-0 opacity-[0.18] [background-image:linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] [background-size:64px_64px]" />
 
-      <div className="relative z-10 flex min-h-screen flex-col gap-4 p-4 lg:p-5">
-        <header className="flex flex-wrap items-center gap-3 rounded-[24px] border border-[color:var(--st-border)] bg-[rgba(9,14,23,0.94)] px-4 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.34)]">
-          <div className="flex min-w-[200px] items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#1e3a29] bg-[#0d2318] text-emerald-300">
-              <ShieldCheck className="h-5 w-5" />
+      <div className="relative z-10 flex min-h-full flex-col gap-4 p-4 lg:p-5">
+        <header className="flex flex-wrap items-center gap-3 rounded-[18px] border border-[color:var(--st-border)] bg-[rgba(9,14,23,0.94)] px-4 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.34)]">
+          <div className="flex min-w-[260px] items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 text-emerald-300">
+              <ShieldCheck className="h-6 w-6" />
             </div>
             <div className="min-w-0">
-              <div className="truncate text-sm font-bold tracking-tight text-white">SentinelTwin</div>
-              <div className="truncate text-[11px] text-[color:var(--st-muted)]">Security Digital Twin Command Center</div>
+              <div className="truncate text-xl font-semibold tracking-tight text-white">SentinelTwin Studio</div>
+              <div className="truncate text-[12px] text-[color:var(--st-muted)]">Security Simulation Workspace</div>
             </div>
           </div>
 
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-            <span
-              className="inline-flex max-w-[260px] items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.04] px-3 py-2 text-xs font-medium text-white"
-              title="Current active Site Twin"
-            >
-              <span className="truncate">{scene.name}</span>
-            </span>
-            <span className={cn(
-              "inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium",
-              displayStatusTone,
-            )}>
-              {displayStatusLabel === "Up to date" ? (
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              ) : null}
-              <span>{displayStatusLabel}</span>
-            </span>
-            <span suppressHydrationWarning className="hidden text-xs text-[color:var(--st-muted)] lg:inline">
-              {currentRunLabel ?? "Last run: Never"}
-            </span>
-            <span
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-xs text-white"
-              title="Current environment profile"
-            >
-              <Sun className="h-3.5 w-3.5 text-amber-300" />
-              <span>{headerAssumptions.timeOfDay === "night" ? "Night Mode" : headerAssumptions.timeOfDay === "custom" ? "Custom Mode" : "Day Mode"}</span>
-            </span>
-          </div>
-
-          <div className="flex flex-none flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={onOpenStudio}
-              className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-xs font-medium text-white transition-colors hover:border-sky-400/30 hover:bg-white/[0.05]"
+              className="inline-flex max-w-[260px] items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.04] px-3 py-2 text-left text-xs font-medium text-white transition-colors hover:border-sky-400/30 hover:bg-white/[0.06]"
+              title="Current active Site Twin"
+              aria-label={`Open current Site Twin in Studio: ${scene.name}`}
+            >
+              <span className="truncate">{scene.name}</span>
+            </button>
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              <span suppressHydrationWarning>{displayStatusLabel}</span>
+            </span>
+            <span suppressHydrationWarning className="hidden text-xs text-[color:var(--st-muted)] lg:inline">
+              {currentRunLabel ? currentRunLabel.replace("Last run ", "Last run: Today, ") : "Last run: Never"}
+            </span>
+            <button
+              type="button"
+              onClick={onOpenStudio}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-xs text-white transition-colors hover:border-amber-400/30 hover:bg-white/[0.05]"
+              title="Current environment profile"
+              aria-label="Edit current environment profile in Studio"
+            >
+              <Sun className="h-3.5 w-3.5 text-amber-300" />
+              <span>{headerAssumptions.timeOfDay === "night" ? "Night Mode" : headerAssumptions.timeOfDay === "custom" ? "Custom Mode" : "Day Mode"}</span>
+            </button>
+          </div>
+
+          <div className="relative flex flex-none flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setDashboardViewMenuOpen((open) => !open)}
+              className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2.5 text-xs font-medium text-white transition-colors hover:border-sky-400/30 hover:bg-white/[0.05]"
+              aria-expanded={dashboardViewMenuOpen}
+              aria-controls="dashboard-view-menu"
+            >
+              <Eye className="h-3.5 w-3.5 text-sky-200" />
+              View
+              {hiddenDashboardCount > 0 ? (
+                <span className="rounded-full border border-amber-400/25 bg-amber-500/12 px-1.5 py-0.5 text-[9px] text-amber-100">
+                  {hiddenDashboardCount} hidden
+                </span>
+              ) : null}
+            </button>
+            {dashboardViewMenuOpen ? (
+              <div
+                id="dashboard-view-menu"
+                className="absolute right-0 top-full z-50 mt-2 w-[300px] overflow-hidden rounded-xl border border-[color:var(--st-border)] bg-[#0b111e] p-2 shadow-[0_24px_70px_rgba(0,0,0,0.45)]"
+              >
+                <div className="flex items-center justify-between border-b border-white/10 px-2 pb-2">
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-200">Dashboard view</div>
+                    <div className="mt-0.5 text-[10px] text-[color:var(--st-muted)]">Show or hide panels without losing work.</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDashboardVisibility(DEFAULT_DASHBOARD_VISIBILITY)}
+                    className="rounded-md border border-white/10 px-2 py-1 text-[10px] text-white/75 hover:text-white"
+                  >
+                    Show all
+                  </button>
+                </div>
+                <div className="max-h-[62vh] overflow-y-auto py-1">
+                  {DASHBOARD_SECTION_ITEMS.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setDashboardSectionVisible(item.id, !dashboardVisibility[item.id])}
+                      className="flex w-full items-center justify-between gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-white/[0.04]"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-xs font-medium text-white">{item.label}</span>
+                        <span className="block text-[10px] text-[color:var(--st-muted)]">{item.group}</span>
+                      </span>
+                      <span className={cn(
+                        "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px]",
+                        dashboardVisibility[item.id]
+                          ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-200"
+                          : "border-slate-400/20 bg-slate-500/8 text-slate-300",
+                      )}>
+                        {dashboardVisibility[item.id] ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                        {dashboardVisibility[item.id] ? "Shown" : "Hidden"}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            <button
+              type="button"
+              onClick={onOpenStudio}
+              className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-2.5 text-xs font-medium text-white transition-colors hover:border-sky-400/30 hover:bg-white/[0.05]"
             >
               <FolderOpen className="h-3.5 w-3.5 text-sky-200" />
-              Open Security Twin Studio
+              Open Studio
             </button>
             <button
               type="button"
               onClick={onRunSimulation}
-              className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/40 bg-emerald-500 px-3 py-2 text-xs font-bold text-[#031a0c] transition-colors hover:bg-emerald-400"
+              className="inline-flex items-center gap-2 rounded-lg border border-emerald-400/40 bg-emerald-500 px-4 py-2.5 text-xs font-bold text-[#031a0c] transition-colors hover:bg-emerald-400"
             >
               <Play className="h-3.5 w-3.5" />
               {simulationDirty ? "Refresh Simulation" : "Run Simulation"}
             </button>
             <button
               type="button"
-              onClick={onOpenReport}
-              className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-xs font-medium text-white transition-colors hover:border-sky-400/30 hover:bg-white/[0.05]"
+              onClick={onImportScene}
+              className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-2.5 text-xs font-medium text-white transition-colors hover:border-sky-400/30 hover:bg-white/[0.05]"
             >
               <FileText className="h-3.5 w-3.5 text-sky-200" />
-              Audit Report
+              Import JSON
+            </button>
+            <button
+              type="button"
+              onClick={onCreateScene}
+              className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-2.5 text-xs font-medium text-white transition-colors hover:border-sky-400/30 hover:bg-white/[0.05]"
+            >
+              <Plus className="h-3.5 w-3.5 text-sky-200" />
+              New Scene
             </button>
           </div>
         </header>
 
-        <div className="grid flex-1 gap-4 lg:grid-cols-[228px_minmax(0,1fr)_388px]">
-          <aside className="flex flex-col gap-4 rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
+        <div className="grid flex-1 items-start gap-4 lg:grid-cols-[220px_minmax(0,1fr)_326px]">
+          <aside className="flex flex-col gap-4 rounded-[8px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3">
             <div>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--st-muted)]">NAVIGATION</div>
-              <nav className="mt-3 space-y-0.5">
+              <div className="px-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--st-muted)]">STUDIO</div>
+              <nav className="mt-3 space-y-1">
                 {NAV_ITEMS.map((item) => (
                   <button
                     key={item.key}
                     type="button"
                     onClick={() => navActionByKey[item.key]?.()}
                     className={cn(
-                      "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-colors text-left",
+                      "flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-sm transition-colors text-left",
                       item.key === "home"
-                        ? "bg-sky-500/12 text-white font-medium"
+                        ? "bg-emerald-500/15 text-emerald-100 font-medium"
                         : navActionByKey[item.key]
                           ? "text-[color:var(--st-muted)] hover:bg-white/[0.04] hover:text-[color:var(--st-text)]"
                           : "text-[color:var(--st-muted)]/60 cursor-default",
@@ -1635,13 +1769,41 @@ export function StudioDashboardHome({
                     aria-current={item.key === "home" ? "page" : undefined}
                     disabled={!navActionByKey[item.key]}
                   >
+                    {item.key === "home" ? <MapIcon className="h-4 w-4 text-emerald-300" /> : null}
+                    {item.key === "projects" ? <FolderOpen className="h-4 w-4 text-[#aab7d1]" /> : null}
+                    {item.key === "reference_sites" ? <LayoutDashboard className="h-4 w-4 text-[#aab7d1]" /> : null}
+                    {item.key === "report" ? <FileText className="h-4 w-4 text-[#aab7d1]" /> : null}
+                    {item.key === "docs" ? <FileText className="h-4 w-4 text-[#aab7d1]" /> : null}
+                    {item.key === "settings" ? <Settings2 className="h-4 w-4 text-[#aab7d1]" /> : null}
                     <span className="flex-1">
                       <span className="block">{item.label}</span>
-                      <span className="block text-[10px] font-normal text-[color:var(--st-muted)]">{item.detail}</span>
+                      {item.detail ? <span className="block text-[10px] font-normal text-[color:var(--st-muted)]">{item.detail}</span> : null}
                     </span>
-                    {item.key === "home" ? (
-                      <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
-                    ) : null}
+                  </button>
+                ))}
+              </nav>
+            </div>
+
+            <div className="border-t border-white/10 pt-4">
+              <div className="px-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--st-muted)]">WORKSPACE MODES</div>
+              <nav className="mt-3 space-y-1">
+                {WORKSPACE_MODE_ITEMS.map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={modeActionByKey[item.key]}
+                    className="flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-left text-sm text-[#c5cde0] transition-colors hover:bg-white/[0.04] hover:text-white"
+                  >
+                    {item.key === "coverage" ? <MapIcon className="h-4 w-4 text-emerald-300" /> : null}
+                    {item.key === "camera_view" ? <Camera className="h-4 w-4 text-[#aab7d1]" /> : null}
+                    {item.key === "camera_wall" ? <LayoutDashboard className="h-4 w-4 text-[#aab7d1]" /> : null}
+                    {item.key === "path_replay" ? <Play className="h-4 w-4 text-[#aab7d1]" /> : null}
+                    {item.key === "compare" ? <Layers3 className="h-4 w-4 text-[#aab7d1]" /> : null}
+                    {item.key === "report_lite" ? <FileText className="h-4 w-4 text-[#aab7d1]" /> : null}
+                    <span>
+                      <span className="block">{item.label}</span>
+                      <span className="block text-[11px] text-[color:var(--st-muted)]">{item.detail}</span>
+                    </span>
                   </button>
                 ))}
               </nav>
@@ -1649,7 +1811,12 @@ export function StudioDashboardHome({
 
 
 
-            <div className="mt-auto flex items-center gap-2.5 rounded-2xl border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
+            <button
+              type="button"
+              onClick={() => setShowOrgManager(true)}
+              className="mt-auto flex items-center gap-2.5 rounded-[8px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5 text-left transition-colors hover:border-sky-400/30 hover:bg-white/[0.04]"
+              aria-label="Open organization and account switcher"
+            >
               <div className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[#1a2540] text-[11px] font-bold text-sky-200">
                 {workspaceAccountProfile.accountName?.[0]?.toUpperCase() ?? "S"}
               </div>
@@ -1657,18 +1824,12 @@ export function StudioDashboardHome({
                 <div className="truncate text-sm font-semibold text-white">{workspaceAccountProfile.accountName ?? "Sentinel Operator"}</div>
                 <div className="text-[10px] text-[color:var(--st-muted)]">{workspaceAccountProfile.planTier}</div>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowOrgManager(true)}
-                className="flex-none rounded-md p-1 transition-colors hover:bg-white/[0.05]"
-                aria-label="Open organization and account switcher"
-              >
-                <ChevronDown className="h-4 w-4 text-[color:var(--st-muted)] hover:text-white" />
-              </button>
-            </div>
+              <ChevronDown className="h-4 w-4 flex-none text-[color:var(--st-muted)]" />
+            </button>
           </aside>
 
           <div className="flex min-w-0 flex-col gap-4">
+            {isDashboardSectionVisible("overview") ? (
             <div className="rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4 shadow-[0_24px_70px_rgba(0,0,0,0.30)]">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -1714,17 +1875,25 @@ export function StudioDashboardHome({
                     ) : null}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={onOpenStudio}
-                  className="inline-flex flex-none items-center gap-1.5 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-[11px] text-[color:var(--st-muted)] transition-colors hover:border-sky-400/30 hover:text-white"
-                >
-                  Open Security Twin Studio
-                  <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                </button>
+                <div className="flex flex-none flex-wrap items-center gap-2">
+                  <HideSectionButton label="current site twin" onClick={() => setDashboardSectionVisible("overview", false)} />
+                  <button
+                    type="button"
+                    onClick={onOpenStudio}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-[11px] text-[color:var(--st-muted)] transition-colors hover:border-sky-400/30 hover:text-white"
+                  >
+                    Open Security Twin Studio
+                    <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                  </button>
+                </div>
               </div>
 
+              {isDashboardSectionVisible("preview") ? (
               <div className="mt-4 overflow-hidden rounded-[24px] border border-white/[0.05] bg-black/[0.15]">
+                <div className="flex items-center justify-between border-b border-white/[0.05] px-3 py-2">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--st-muted)]">Map preview</div>
+                  <HideSectionButton label="map preview" onClick={() => setDashboardSectionVisible("preview", false)} />
+                </div>
                 <div className={cn(
                   "relative",
                   previewMode === "3d" ? "[transform:perspective(1800px)_rotateX(8deg)] [transform-origin:center_top]" : "",
@@ -1779,9 +1948,14 @@ export function StudioDashboardHome({
                   </div>
                 </div>
               </div>
+              ) : null}
 
+              {isDashboardSectionVisible("metrics") ? (
               <div className="mt-4 grid grid-cols-3 gap-2 lg:grid-cols-6">
                 <div className="flex flex-col gap-1 rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
+                  <div className="-mx-1 -mt-1 mb-1 flex justify-end">
+                    <HideSectionButton label="summary metrics" onClick={() => setDashboardSectionVisible("metrics", false)} />
+                  </div>
                   <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">COVERAGE</div>
                   <div className={cn("text-xl font-bold tracking-tight", coverage != null ? coverageTone(coverage) : "text-slate-200")}>
                     {coverage != null ? `${Math.round(coverage)}%` : "Pending"}
@@ -1828,8 +2002,14 @@ export function StudioDashboardHome({
                   <div className="text-[10px] text-[color:var(--st-muted)]" suppressHydrationWarning>{lastRunDetail}</div>
                 </div>
               </div>
+              ) : null}
 
+              {isDashboardSectionVisible("workspaces") ? (
               <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
+                <div className="col-span-2 flex items-center justify-between lg:col-span-5">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--st-muted)]">Workspace shortcuts</div>
+                  <HideSectionButton label="workspace shortcuts" onClick={() => setDashboardSectionVisible("workspaces", false)} />
+                </div>
                 <button
                   type="button"
                   onClick={onOpenCoverageWorkspace}
@@ -1896,23 +2076,31 @@ export function StudioDashboardHome({
                   </div>
                 </button>
               </div>
+              ) : null}
 
-              <SiteTwinSearchBar
-                workspaceMemoryQuery={workspaceMemoryQuery}
-                setWorkspaceMemoryQuery={setWorkspaceMemoryQuery}
-                workspaceMemoryResults={workspaceMemoryResults}
-                setTimelineFocusRequest={setTimelineFocusRequest}
-                onOpenReport={onOpenReport}
-                onOpenMode={onOpenMode}
-                savedProjects={savedProjects}
-                onOpenScene={onOpenScene}
-                onOpenStudio={onOpenStudio}
-                scene={scene}
-              />
+              {showWorkspaceLibrary && isDashboardSectionVisible("library") ? (
+                <SiteTwinSearchBar
+                  workspaceMemoryQuery={workspaceMemoryQuery}
+                  setWorkspaceMemoryQuery={setWorkspaceMemoryQuery}
+                  workspaceMemoryResults={workspaceMemoryResults}
+                  setTimelineFocusRequest={setTimelineFocusRequest}
+                  onOpenReport={onOpenReport}
+                  onOpenMode={onOpenMode}
+                  savedProjects={savedProjects}
+                  onOpenScene={onOpenScene}
+                  onOpenStudio={onOpenStudio}
+                  scene={scene}
+                />
+              ) : null}
 
-              <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+              {(isDashboardSectionVisible("recent") || isDashboardSectionVisible("create")) ? (
+              <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+                {isDashboardSectionVisible("recent") ? (
                 <div className="rounded-[20px] border border-[color:var(--st-border)] bg-[color:var(--st-panel-2)] p-3">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[color:var(--st-muted)]">RECENT SITE TWINS</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[color:var(--st-muted)]">RECENT SITE TWINS</div>
+                    <HideSectionButton label="recent site twins" onClick={() => setDashboardSectionVisible("recent", false)} />
+                  </div>
                   <div className="mt-2 grid grid-cols-4 gap-2">
                     {compactRecentProjects.map((project) => {
                       const recentScene = project.scene;
@@ -1943,9 +2131,14 @@ export function StudioDashboardHome({
                     })}
                   </div>
                 </div>
+                ) : null}
 
+                {isDashboardSectionVisible("create") ? (
                 <div className="rounded-[20px] border border-[color:var(--st-border)] bg-[color:var(--st-panel-2)] p-3">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[color:var(--st-muted)]">CREATE / IMPORT SITE TWIN</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[color:var(--st-muted)]">CREATE / IMPORT SITE TWIN</div>
+                    <HideSectionButton label="create and import" onClick={() => setDashboardSectionVisible("create", false)} />
+                  </div>
                   <div className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-3">
                     <button
                       type="button"
@@ -2017,10 +2210,13 @@ export function StudioDashboardHome({
                     </button>
                   </div>
                 </div>
+                ) : null}
               </div>
+              ) : null}
             </div>
+            ) : null}
 
-            {showWorkspaceLibrary ? (
+            {showWorkspaceLibrary && isDashboardSectionVisible("library") ? (
               <WorkspaceLibraryPanel
                 scene={scene}
                 result={result ?? scene.simulation ?? null}
@@ -2047,12 +2243,16 @@ export function StudioDashboardHome({
 
           <aside className="flex flex-col gap-3">
             {/* Security Status panel */}
+            {isDashboardSectionVisible("securityStatus") ? (
             <div className="rounded-[20px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3.5">
               <div className="flex items-center justify-between">
                 <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#7dd3fc]">SECURITY STATUS</div>
-                <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.16em] text-emerald-300">
-                  Live
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.16em] text-emerald-300">
+                    Live
+                  </span>
+                  <HideSectionButton label="security status" onClick={() => setDashboardSectionVisible("securityStatus", false)} />
+                </div>
               </div>
 
               <div className="mt-3">
@@ -2112,17 +2312,21 @@ export function StudioDashboardHome({
                 </div>
               </div>
             </div>
+            ) : null}
 
             {/* Open Issues panel */}
-            {issues.length > 0 ? (
+            {issues.length > 0 && isDashboardSectionVisible("issues") ? (
               <div className="rounded-[20px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3.5">
                 <div className="flex items-center justify-between">
                   <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-300">
                     OPEN ISSUES ({issues.length})
                   </div>
-                  <button type="button" onClick={onOpenIssues} className="text-[10px] text-sky-300 hover:text-sky-200">
-                    View all
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button type="button" onClick={onOpenIssues} className="text-[10px] text-sky-300 hover:text-sky-200">
+                      View all
+                    </button>
+                    <HideSectionButton label="open issues" onClick={() => setDashboardSectionVisible("issues", false)} />
+                  </div>
                 </div>
                 <div className="mt-2 space-y-1">
                   {issues.slice(0, 4).map((issue, index) => (
@@ -2162,10 +2366,14 @@ export function StudioDashboardHome({
             ) : null}
 
             {/* Simulation Assumptions */}
+            {isDashboardSectionVisible("assumptions") ? (
             <div className="rounded-[20px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3.5">
               <div className="flex items-center justify-between">
                 <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#8b96ab]">SIMULATION ASSUMPTIONS</div>
-                <button type="button" onClick={onOpenStudio} className="text-[10px] text-sky-300 hover:text-sky-200">Edit</button>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={onOpenStudio} className="text-[10px] text-sky-300 hover:text-sky-200">Edit</button>
+                  <HideSectionButton label="simulation assumptions" onClick={() => setDashboardSectionVisible("assumptions", false)} />
+                </div>
               </div>
               <div className="mt-2 space-y-1.5">
                 <div className="flex items-center justify-between">
@@ -2193,6 +2401,7 @@ export function StudioDashboardHome({
                 View all assumptions
               </button>
             </div>
+            ) : null}
           </aside>
         </div>
 

@@ -39,4 +39,13 @@ describe("Studio shell shortcuts", () => {
     expect(shellSource).toContain('keys: "S"');
     expect(shellSource).toContain('keys: "?"');
   });
+
+  test("owns the shared path replay clock so dock panels do not start competing RAF loops", () => {
+    const shellSource = readFileSync(shellPath, "utf8");
+
+    expect(shellSource).toContain("PATH_REPLAY_PROGRESS_PUBLISH_INTERVAL_MS = 1000 / 24");
+    expect(shellSource).toContain("function PathReplayClock()");
+    expect(shellSource).toContain('if (viewMode === "replay" || !playing || totalDurationS <= 0) return;');
+    expect(shellSource).toContain("<PathReplayClock />");
+  });
 });

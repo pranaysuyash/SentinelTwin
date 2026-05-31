@@ -1,10 +1,12 @@
 "use client";
 
-import type {
-  PointerEvent,
+import {
+  memo,
+  type PointerEvent,
 } from "react";
 import {
   type CameraNode,
+  type CoverageCellResult,
   type CriticalZoneNode,
   type ObstructionNode,
   type PrivacyZoneNode,
@@ -155,6 +157,44 @@ function mapNodeLabel(nodeId: string, nodes: Map<string, string>): string {
 function nodeActive(id: string, selectedNodeId?: string | null, hoveredNodeId?: string | null) {
   return selectedNodeId === id || hoveredNodeId === id;
 }
+
+const CoverageCellsLayer = memo(function CoverageCellsLayer({
+  cells,
+  projection,
+  cellSize,
+  cellHalf,
+  isMini,
+  coverageOpacity,
+}: {
+  cells: CoverageCellResult[];
+  projection: MapProjection;
+  cellSize: number;
+  cellHalf: number;
+  isMini: boolean;
+  coverageOpacity?: number;
+}) {
+  if (cells.length === 0) return null;
+  return (
+    <g>
+      {cells.map((cell) => {
+        if (cell.quality === "none" && isMini) return null;
+        const { x, y } = projection.sceneToSvg([cell.x, cell.z]);
+        return (
+          <rect
+            key={`${cell.x}-${cell.z}`}
+            x={x - projection.lengthToSvg(cellHalf)}
+            y={y - projection.lengthToSvg(cellHalf)}
+            width={projection.lengthToSvg(cellSize)}
+            height={projection.lengthToSvg(cellSize)}
+            fill={qualityColor(cell.quality)}
+            opacity={coverageOpacity ?? 0.35}
+            stroke="none"
+          />
+        );
+      })}
+    </g>
+  );
+});
 
 export function MapLayers({
   scene,

@@ -178,6 +178,16 @@ export function buildVisionColliderMesh(
   return { mesh, sources, faceSources };
 }
 
+export function disposeVisionColliderMesh(mesh: VisionColliderMesh | { mesh: THREE.Mesh }): void {
+  const m = mesh.mesh;
+  m.geometry?.dispose();
+  if (m.material instanceof THREE.Material) {
+    m.material.dispose();
+  }
+  const bufGeo = m.geometry as THREE.BufferGeometry | undefined;
+  bufGeo?.disposeBoundsTree?.();
+}
+
 export function getVisionColliderSource(
   mesh: THREE.Mesh,
   faceIndex?: number,

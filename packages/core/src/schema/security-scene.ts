@@ -996,3 +996,21 @@ export function safeParseSecurityScene(input: unknown) {
 export function cloneSecurityScene(scene: SecurityScene): SecurityScene {
   return structuredClone(scene);
 }
+
+/** Lightweight clone that strips heavy non-geometry fields before deep-copying.
+ *  Use when the clone is only needed for simulation (coverage, path, zone eval),
+ *  avoiding the cost of copying simulation results, snapshots, changelogs, etc. */
+export function cloneSecuritySceneSimulation(scene: SecurityScene): SecurityScene {
+  const lite = {
+    ...scene,
+    simulation: undefined,
+    snapshots: [],
+    scenarios: [],
+    temporalProfile: undefined,
+    changeLog: [],
+    comments: [],
+    evidenceArtifacts: [],
+    mismatchReports: [],
+  };
+  return structuredClone(lite);
+}

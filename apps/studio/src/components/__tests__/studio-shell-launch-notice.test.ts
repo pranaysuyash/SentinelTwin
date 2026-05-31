@@ -26,5 +26,8 @@ describe("Studio shell launcher handoff", () => {
     const source = readFileSync(studioShellPath, "utf8");
 
     expect(source).toContain('const fullCanvasMode = viewMode === "camera_view" || viewMode === "wall" || viewMode === "replay";');
+    expect(source).toContain("FULL_CANVAS_SAFE_ZONE_STYLE");
+    expect(source).toContain("--st-full-canvas-safe-top");
+    expect(source).toContain("style={fullCanvasMode ? FULL_CANVAS_SAFE_ZONE_STYLE : undefined}");
   });
 });

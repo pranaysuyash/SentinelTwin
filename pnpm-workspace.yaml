@@ -4,5 +4,6 @@ packages:
   - "tools/*"
 allowBuilds:
   core-js: true
+  msgpackr-extract: true
   sharp: true
   unrs-resolver: true

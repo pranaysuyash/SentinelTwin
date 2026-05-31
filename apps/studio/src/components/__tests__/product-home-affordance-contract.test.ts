@@ -9,11 +9,15 @@ const referenceSitesPath = resolve(componentRoot, "product/ReferenceSitesView.ts
 const settingsPath = resolve(componentRoot, "product/SettingsView.tsx");
 
 describe("product home affordance contract", () => {
-  test("keeps home status chips non-clickable when they do not open a menu", () => {
+  test("wires header chips and account row to explicit home affordance actions", () => {
     const source = readFileSync(dashboardHomePath, "utf8");
 
     expect(source).toContain('title="Current active Site Twin"');
     expect(source).toContain('title="Current environment profile"');
+    expect(source).toContain("Open current Site Twin in Studio:");
+    expect(source).toContain('aria-label="Edit current environment profile in Studio"');
+    expect(source).toContain('aria-label="Open organization and account switcher"');
+    expect(source).toContain('onClick={() => setShowOrgManager(true)}');
     expect(source).not.toContain('aria-label="Open scene selector"');
     expect(source).not.toContain('aria-label="Open environment mode menu"');
     expect(source).not.toContain('<svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">');
@@ -28,6 +32,8 @@ describe("product home affordance contract", () => {
     expect(source).toContain('aria-label="Open command center help"');
     expect(source).toContain("Feedback Handoff");
     expect(source).toContain("Command Center Help");
+    expect(source).toContain("openSiteIntakeFromFooter");
+    expect(source).toContain("openReferenceSitesFromFooter");
   });
 
   test("keeps Reference Sites and Settings as intentional product views", () => {

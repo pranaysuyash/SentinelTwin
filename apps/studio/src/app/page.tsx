@@ -297,8 +297,8 @@ function StudioPageContent() {
 
   useEffect(() => {
     if (bootstrapRef.current) return;
-    if (currentResult || !simulationDirty || scene.source !== "demo") return;
     bootstrapRef.current = true;
+    if (currentResult || !simulationDirty || scene.source !== "demo") return;
     runSimulationFromStore();
   }, [currentResult, scene, scene.source, runSimulationFromStore, simulationDirty]);
 
@@ -324,12 +324,6 @@ function StudioPageContent() {
       return;
     }
 
-    if (focusRequest) {
-      queueMicrotask(() => {
-        setTimelineFocusRequest(focusRequest);
-      });
-    }
-
     if (compareRequest) {
       queueMicrotask(() => {
         setCompareReportSelection({
@@ -353,6 +347,7 @@ function StudioPageContent() {
 
     if (focusRequest) {
       queueMicrotask(() => {
+        setTimelineFocusRequest(focusRequest);
         navigate("studio");
         setWorkspacePreset("coverage");
         setViewMode("map");
@@ -404,7 +399,6 @@ function StudioPageContent() {
         type="file"
         accept=".json"
         className="hidden"
-        style={{ caretColor: "transparent" }}
         onChange={(event) => {
           const file = event.target.files?.[0];
           if (!file) return;
@@ -423,6 +417,9 @@ function StudioPageContent() {
             } catch {
               setImportError("Failed to parse JSON.");
             }
+          };
+          reader.onerror = () => {
+            setImportError("Failed to read file.");
           };
           reader.readAsText(file);
           event.target.value = "";

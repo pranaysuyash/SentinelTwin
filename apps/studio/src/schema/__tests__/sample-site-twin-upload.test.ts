@@ -1,24 +1,23 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 
+import {
+  JEWELRY_STORE_SITE_TWIN_FILENAME,
+  LEGACY_JEWELRY_STORE_UPLOAD_FILENAME,
+  SAMPLE_SECURITY_SCENE_IMPORT_FILENAME,
+  legacyRootJewelryStoreUploadPath,
+  publicJewelryStoreSiteTwinPath,
+  readSampleJson,
+  readSampleText,
+  sampleSecuritySceneImportPath,
+} from "@/fixtures/sample-scene-files";
 import { parseImportSceneDraft } from "@/lib/import-scene-draft";
 import { createSiteIntakeSession } from "@/lib/site-compiler";
 import { approveSiteTwinDraft } from "@/lib/site-draft-approval";
 import { safeParseSecurityScene } from "@/schema/security-scene";
 
-const quickImportSamplePath = resolve(
-  import.meta.dir,
-  "../../../public/sample-security-scene-import.json",
-);
-const jewelryStoreSamplePath = resolve(
-  import.meta.dir,
-  "../../../public/sample-site-twins/jewelry-store-site-twin.json",
-);
-
 describe("sample Site Twin upload", () => {
   test("validates and passes through the JSON draft approval gate", () => {
-    const payload = JSON.parse(readFileSync(quickImportSamplePath, "utf8"));
+    const payload = readSampleJson(sampleSecuritySceneImportPath);
     const importDraft = parseImportSceneDraft(payload);
     expect(importDraft.success).toBe(true);
     if (!importDraft.success) return;
@@ -29,7 +28,7 @@ describe("sample Site Twin upload", () => {
     if (!parsed.success) return;
 
     const session = createSiteIntakeSession(parsed.data, importDraft.source, [
-      "sample-security-scene-import.json",
+      SAMPLE_SECURITY_SCENE_IMPORT_FILENAME,
     ]);
 
     expect(session.draft?.source).toBe("json");
@@ -46,7 +45,7 @@ describe("sample Site Twin upload", () => {
   });
 
   test("keeps the richer jewelry-store upload sample valid", () => {
-    const payload = JSON.parse(readFileSync(jewelryStoreSamplePath, "utf8"));
+    const payload = readSampleJson(publicJewelryStoreSiteTwinPath);
     const parsed = safeParseSecurityScene(payload);
 
     expect(parsed.success).toBe(true);
@@ -54,5 +53,13 @@ describe("sample Site Twin upload", () => {
     expect(parsed.data.name).toContain("Jewelry Store");
     expect(parsed.data.cameras.length).toBeGreaterThanOrEqual(3);
     expect(parsed.data.criticalZones.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test("keeps the restored public jewelry-store sample mirrored to the legacy upload file", () => {
+    expect(readSampleText(publicJewelryStoreSiteTwinPath)).toBe(
+      readSampleText(legacyRootJewelryStoreUploadPath),
+    );
+    expect(JEWELRY_STORE_SITE_TWIN_FILENAME).toBe("jewelry-store-site-twin.json");
+    expect(LEGACY_JEWELRY_STORE_UPLOAD_FILENAME).toBe("sentineltwin_upload_test_jewelry_store.json");
   });
 });

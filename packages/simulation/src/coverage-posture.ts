@@ -157,52 +157,56 @@ export function computeCoveragePostureVariation(
   }
 
   const evaluator = createCoverageEvaluator(scene);
-  const profiles = (options?.profiles ?? DEFAULT_PROFILES).map((profile) => summarizeProfile(scene, evaluator, profile));
-  const standingProfile = profiles.find((profile) => profile.profileId === "standing") ?? profiles[0] ?? null;
+  try {
+    const profiles = (options?.profiles ?? DEFAULT_PROFILES).map((profile) => summarizeProfile(scene, evaluator, profile));
+    const standingProfile = profiles.find((profile) => profile.profileId === "standing") ?? profiles[0] ?? null;
 
-  const worstProfile = profiles.reduce<CoveragePostureProfileSummary | null>((worst, profile) => {
-    if (!worst) return profile;
-    return profile.totalCoveragePct < worst.totalCoveragePct ? profile : worst;
-  }, null);
-
-  let largestDropProfileLabel: string | null = null;
-  let largestDropDeltaPct: number | null = null;
-  if (standingProfile) {
-    for (const profile of profiles) {
-      if (profile.profileId === standingProfile.profileId) continue;
-      const delta = Number((profile.totalCoveragePct - standingProfile.totalCoveragePct).toFixed(1));
-      if (largestDropDeltaPct == null || delta < largestDropDeltaPct) {
-        largestDropDeltaPct = delta;
-        largestDropProfileLabel = profile.label;
-      }
-    }
-  }
-
-  const worstZoneAcrossProfiles = profiles
-    .flatMap((profile) => profile.zoneSummaries.map((zone) => ({ profileLabel: profile.label, zone })))
-    .reduce<{ profileLabel: string; zone: CoveragePostureZoneSummary } | null>((worst, entry) => {
-      if (!worst) return entry;
-
-      const worstMargin =
-        qualityToScore(worst.zone.actualQuality) - qualityToScore(worst.zone.requiredQuality);
-      const entryMargin =
-        qualityToScore(entry.zone.actualQuality) - qualityToScore(entry.zone.requiredQuality);
-
-      if (entryMargin < worstMargin) return entry;
-      if (entryMargin === worstMargin && qualityToScore(entry.zone.actualQuality) < qualityToScore(worst.zone.actualQuality)) {
-        return entry;
-      }
-      return worst;
+    const worstProfile = profiles.reduce<CoveragePostureProfileSummary | null>((worst, profile) => {
+      if (!worst) return profile;
+      return profile.totalCoveragePct < worst.totalCoveragePct ? profile : worst;
     }, null);
 
-  return {
-    baselineProfileLabel: standingProfile?.label ?? profiles[0]?.label ?? "Standing",
-    profiles,
-    worstProfileLabel: worstProfile?.label ?? null,
-    worstProfileCoveragePct: worstProfile?.totalCoveragePct ?? null,
-    largestDropProfileLabel,
-    largestDropDeltaPct,
-    worstZoneLabel: worstZoneAcrossProfiles?.zone.label ?? null,
-    worstZoneProfileLabel: worstZoneAcrossProfiles?.profileLabel ?? null,
-  };
+    let largestDropProfileLabel: string | null = null;
+    let largestDropDeltaPct: number | null = null;
+    if (standingProfile) {
+      for (const profile of profiles) {
+        if (profile.profileId === standingProfile.profileId) continue;
+        const delta = Number((profile.totalCoveragePct - standingProfile.totalCoveragePct).toFixed(1));
+        if (largestDropDeltaPct == null || delta < largestDropDeltaPct) {
+          largestDropDeltaPct = delta;
+          largestDropProfileLabel = profile.label;
+        }
+      }
+    }
+
+    const worstZoneAcrossProfiles = profiles
+      .flatMap((profile) => profile.zoneSummaries.map((zone) => ({ profileLabel: profile.label, zone })))
+      .reduce<{ profileLabel: string; zone: CoveragePostureZoneSummary } | null>((worst, entry) => {
+        if (!worst) return entry;
+
+        const worstMargin =
+          qualityToScore(worst.zone.actualQuality) - qualityToScore(worst.zone.requiredQuality);
+        const entryMargin =
+          qualityToScore(entry.zone.actualQuality) - qualityToScore(entry.zone.requiredQuality);
+
+        if (entryMargin < worstMargin) return entry;
+        if (entryMargin === worstMargin && qualityToScore(entry.zone.actualQuality) < qualityToScore(worst.zone.actualQuality)) {
+          return entry;
+        }
+        return worst;
+      }, null);
+
+    return {
+      baselineProfileLabel: standingProfile?.label ?? profiles[0]?.label ?? "Standing",
+      profiles,
+      worstProfileLabel: worstProfile?.label ?? null,
+      worstProfileCoveragePct: worstProfile?.totalCoveragePct ?? null,
+      largestDropProfileLabel,
+      largestDropDeltaPct,
+      worstZoneLabel: worstZoneAcrossProfiles?.zone.label ?? null,
+      worstZoneProfileLabel: worstZoneAcrossProfiles?.profileLabel ?? null,
+    };
+  } finally {
+    evaluator.dispose();
+  }
 }

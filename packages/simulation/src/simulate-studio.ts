@@ -20,7 +20,7 @@ import {
   getRecognitionAreaPct,
   getQualityThresholds,
 } from "./coverage";
-import { maxQuality, qualityToScore, scoreToQuality } from "@sentineltwin/core";
+import { maxQuality, qualityToScore, scoreToQuality, cloneSecuritySceneSimulation } from "@sentineltwin/core";
 import { computeKRobustness } from "./k-robustness";
 import { computePathResults } from "./path-analysis";
 import { pointInPolygon, polygonCenter } from "@sentineltwin/core";
@@ -135,40 +135,39 @@ function computeZoneEvaluations(
   scene: SecurityScene,
   evaluator?: ReturnType<typeof createCoverageEvaluator>,
 ) {
+  const ownsEvaluator = !evaluator;
   const sceneEvaluator = evaluator ?? createCoverageEvaluator(scene);
-  const coverageCells = sceneEvaluator.computeCoverageCells(4);
-  const zoneEvaluations = scene.criticalZones.map((zone) =>
-    evaluateZone(scene, sceneEvaluator, coverageCells, zone),
-  );
+  try {
+    const coverageCells = sceneEvaluator.computeCoverageCells(4);
+    const zoneEvaluations = scene.criticalZones.map((zone) =>
+      evaluateZone(scene, sceneEvaluator, coverageCells, zone),
+    );
 
-  return { coverageCells, zoneEvaluations, evaluator: sceneEvaluator };
+    return { coverageCells, zoneEvaluations, evaluator: sceneEvaluator };
+  } finally {
+    if (ownsEvaluator) sceneEvaluator.dispose();
+  }
 }
 
 function createOfflineImpactForCamera(
   scene: SecurityScene,
   camera: SecurityScene["cameras"][number],
   baselineZoneEvaluations: Record<string, EvaluatedZone>,
+  evaluator: ReturnType<typeof createCoverageEvaluator>,
+  coverageCells: CellComputation[],
 ): CameraOfflineImpactEntry[] {
   if (!scene.cameras.some((candidate) => candidate.id === camera.id && candidate.status !== "off")) {
     return [];
   }
 
-  const degradedScene = structuredClone(scene);
-  const degradedCamera = degradedScene.cameras.find((candidate) => candidate.id === camera.id);
-  if (!degradedCamera) return [];
-  degradedCamera.status = "off";
-
-  const degradedResult = simulateStudioInternal(degradedScene, false, false, false);
-  const degradedZoneById = Object.fromEntries(
-    degradedResult.criticalZoneResults.map((zone) => [zone.zoneId, zone]),
-  ) as Record<string, ZoneResult>;
+  const excludedId = camera.id;
 
   return scene.criticalZones
     .map((zone) => {
       const zoneBefore = baselineZoneEvaluations[zone.id];
-      const zoneAfter = degradedZoneById[zone.id];
       if (!zoneBefore) return null;
-      if (!zoneAfter) return null;
+
+      const zoneAfter = evaluateZone(scene, evaluator, coverageCells, zone, excludedId);
 
       const downgradedQuality =
         qualityToScore(zoneAfter.actualQuality) < qualityToScore(zoneBefore.actualQuality);
@@ -358,7 +357,7 @@ function moveObstructionAwayFromZone(
   const obstruction = getObstructionByLabel(scene, obstructionLabel);
   if (!obstruction) return null;
 
-  const next = structuredClone(scene);
+  const next = cloneSecuritySceneSimulation(scene);
   const nextObstruction = next.obstructions.find((obs) => obs.id === obstruction.id);
   if (!nextObstruction) return null;
 
@@ -391,7 +390,7 @@ function rotateCameraTowardZone(
   const camera = scene.cameras.find((entry) => entry.id === cameraId);
   if (!camera) return null;
 
-  const next = structuredClone(scene);
+  const next = cloneSecuritySceneSimulation(scene);
   const nextCamera = next.cameras.find((entry) => entry.id === cameraId);
   if (!nextCamera) return null;
 
@@ -412,8 +411,23 @@ function simulateStudioInternal(
   includeFailureAnalysis = true,
 ): SimulationResult {
   const evaluator = createCoverageEvaluator(scene);
-  const coverageThresholds = getQualityThresholds(scene);
+  try {
   const coverageCells = evaluator.computeCoverageCells(4);
+  return buildSimulationResult(scene, evaluator, coverageCells, includeRecommendations, includeNovelAnalytics, includeFailureAnalysis);
+  } finally {
+    evaluator.dispose();
+  }
+}
+
+function buildSimulationResult(
+  scene: SecurityScene,
+  evaluator: ReturnType<typeof createCoverageEvaluator>,
+  coverageCells: CellComputation[],
+  includeRecommendations: boolean,
+  includeNovelAnalytics: boolean,
+  includeFailureAnalysis: boolean,
+): SimulationResult {
+  const coverageThresholds = getQualityThresholds(scene);
   const fragility = computeCoverageFragility(
     coverageCells.map((c) => ({ ...c, ppm: c.ppm ?? 0, coverageIncluded: c.coverageIncluded, privacyRestricted: c.privacyRestricted ?? false, coveringCameras: c.coveringCameras, blockedBy: c.blockedBy ?? [] })),
     scene.assumptions.doriStandard,
@@ -476,7 +490,7 @@ function simulateStudioInternal(
       zoneEvaluations.map((zone) => [zone.label, zone.cameraQualityById[camera.id] ?? "none"]),
     ) as Record<string, DoriQuality>;
     const offlineImpactDetail = includeFailureAnalysis
-      ? createOfflineImpactForCamera(scene, camera, baselineZoneById)
+      ? createOfflineImpactForCamera(scene, camera, baselineZoneById, evaluator, coverageCells)
       : [];
 
     return {
@@ -727,6 +741,24 @@ function simulateStudioInternal(
 
 export function simulateStudio(scene: SecurityScene): SimulationResult {
   return simulateStudioInternal(scene, true);
+}
+
+export function simulateStudioAsync(
+  scene: SecurityScene,
+  options?: { includeRecommendations?: boolean; yieldEvery?: number },
+): Promise<SimulationResult> {
+  const includeRecommendations = options?.includeRecommendations ?? true;
+  const evaluator = createCoverageEvaluator(scene);
+  return evaluator.computeCoverageCellsAsync(4, scene.assumptions.personHeightM, options?.yieldEvery)
+    .then((coverageCells) => {
+      const result = buildSimulationResult(scene, evaluator, coverageCells, includeRecommendations, true, true);
+      evaluator.dispose();
+      return result;
+    })
+    .catch((error) => {
+      evaluator.dispose();
+      throw error;
+    });
 }
 
 export function simulateStudioLite(scene: SecurityScene): SimulationResult {

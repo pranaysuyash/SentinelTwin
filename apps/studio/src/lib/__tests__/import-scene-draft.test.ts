@@ -1,17 +1,12 @@
 import { describe, expect, test } from "vitest";
-import fs from "node:fs";
-import path from "node:path";
 
+import { fixtureJewelryStoreUploadPath, readSampleJson } from "@/fixtures/sample-scene-files";
 import { parseImportSceneDraft } from "@/lib/import-scene-draft";
 import { safeParseSecurityScene } from "@/schema/security-scene";
 
 describe("parseImportSceneDraft", () => {
   test("parses jewelry store fixture into a draft-ready SecurityScene", () => {
-    const fixturePath = path.resolve(
-      process.cwd(),
-      "src/fixtures/sentineltwin_upload_test_jewelry_store.json",
-    );
-    const raw = JSON.parse(fs.readFileSync(fixturePath, "utf8"));
+    const raw = readSampleJson(fixtureJewelryStoreUploadPath);
 
     const schemaCheck = safeParseSecurityScene(raw);
     expect(schemaCheck.success).toBe(true);

@@ -118,22 +118,22 @@ function LiveFeedOverlay({
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/75 to-transparent" />
 
       {/* Top-left: status dot + tag + name */}
-      <div className="absolute left-2 top-2 flex items-center gap-1.5">
+      <div className="absolute left-2 top-2 flex max-w-[calc(100%-5.5rem)] items-center gap-1.5">
         <span
           className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-emerald-400 shadow-[0_0_4px_rgba(52,211,153,0.9)]" : "bg-red-400"}`}
         />
-        <span className="text-[9px] font-bold tracking-wide text-white/90 [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]">
+        <span className="min-w-0 truncate text-[10px] font-bold tracking-wide text-white/90 [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]">
           {shortTag(camData.name)} · {camData.name}
         </span>
         <span
-          className={`rounded px-1 py-0.5 text-[7px] font-semibold uppercase tracking-wide ${
+          className={`flex-shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
             isActive ? "bg-emerald-500/25 text-emerald-300" : "bg-red-500/25 text-red-300"
           }`}
         >
           {isActive ? "Active" : "Offline"}
         </span>
         {isBestCamera ? (
-          <span className="rounded bg-emerald-500/20 px-1 py-0.5 text-[7px] font-semibold uppercase tracking-wide text-emerald-200">
+          <span className="hidden flex-shrink-0 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-200 md:inline">
             Best feed
           </span>
         ) : null}
@@ -141,46 +141,46 @@ function LiveFeedOverlay({
 
       {/* Top-right: resolution + timestamp */}
       <div className="absolute right-2 top-2 flex flex-col items-end gap-0.5">
-        <span className="rounded bg-black/60 px-1.5 py-0.5 text-[7px] font-semibold text-[#93c5fd]">
+        <span className="rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-[#93c5fd]">
           {camData.resolutionMP}MP
         </span>
-        <span className="font-mono text-[8px] text-white/60 [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]">
+        <span className="font-mono text-[10px] text-white/60 [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]">
           {timestampLabel}
         </span>
       </div>
 
       {/* Bottom metadata */}
-      <div className="absolute bottom-1.5 left-2 flex items-center gap-2">
-        <span className="text-[8px] text-white/50">{camData.fovHorizontalDeg}°</span>
-        <span className="text-[8px] text-white/25">·</span>
-        <span className="text-[8px] capitalize text-white/50">{camData.mountType}</span>
-        <span className="text-[8px] text-white/25">·</span>
-        <span className="text-[8px] text-white/50">{camData.rangeM}m range</span>
+      <div className="absolute bottom-1.5 left-2 flex max-w-[52%] items-center gap-1.5 overflow-hidden text-[10px]">
+        <span className="text-white/50">{camData.fovHorizontalDeg}°</span>
+        <span className="text-white/25">·</span>
+        <span className="truncate capitalize text-white/50">{camData.mountType}</span>
+        <span className="text-white/25">·</span>
+        <span className="text-white/50">{camData.rangeM}m range</span>
       </div>
 
       <div className="absolute bottom-1.5 right-2 flex flex-col gap-1">
         {cameraResult ? (
           <div className="rounded-md border border-emerald-500/25 bg-black/65 px-2 py-1">
-            <div className="text-[9px] uppercase tracking-[0.14em] text-[#86efac]">
+            <div className="text-[10px] uppercase tracking-[0.12em] text-[#86efac]">
               Zone Quality
             </div>
-            <div className="text-[8px] font-semibold text-emerald-200">
+            <div className="text-[10px] font-semibold text-emerald-200">
               {bestZoneQuality.toUpperCase()}
             </div>
-            <div className="text-[8px] text-[#b6c2db]">
+            <div className="text-[10px] text-[#b6c2db]">
               {coveredZones} covered • {failedZones} failed
             </div>
           </div>
         ) : null}
         {pathVisibility ? (
           <div className="rounded-md border border-[#27405f] bg-black/65 px-2 py-1">
-            <div className="text-[9px] uppercase tracking-[0.14em] text-[#7dd3fc]">
+            <div className="text-[10px] uppercase tracking-[0.12em] text-[#7dd3fc]">
               Route Visibility
             </div>
-            <div className={`text-[8px] font-semibold ${visibilityStatus.className}`}>
+            <div className={`text-[10px] font-semibold ${visibilityStatus.className}`}>
               {visibilityStatus.label}
             </div>
-            <div className="text-[8px] text-[#b6c2db]">
+            <div className="text-[10px] text-[#b6c2db]">
               {visiblePct}% visible • max {pathVisibility.maxQuality.toUpperCase()}
             </div>
           </div>
@@ -190,15 +190,15 @@ function LiveFeedOverlay({
             "rounded-md border px-2 py-1",
             replayState.visible ? "border-emerald-500/30 bg-emerald-500/10" : "border-rose-500/30 bg-rose-500/10",
           )}>
-            <div className="text-[9px] uppercase tracking-[0.14em] text-[#e2e8f0]">
+            <div className="text-[10px] uppercase tracking-[0.12em] text-[#e2e8f0]">
               Current Replay
             </div>
-            <div className={cn("text-[8px] font-semibold", replayState.visible ? "text-emerald-200" : "text-rose-200")}>
+            <div className={cn("text-[10px] font-semibold", replayState.visible ? "text-emerald-200" : "text-rose-200")}>
               {replayState.visible ? "Actor visible now" : "Actor lost now"}
               {replayState.quality ? ` · ${replayState.quality.toUpperCase()}` : ""}
             </div>
             {replayState.reason ? (
-              <div className="text-[8px] text-[#b6c2db]">{replayState.reason}</div>
+              <div className="text-[10px] text-[#b6c2db]">{replayState.reason}</div>
             ) : null}
           </div>
         ) : null}
@@ -626,7 +626,7 @@ export function CameraWallView() {
     : "Action: Pick a route to prioritize wall feeds by visibility.";
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-[#07090d] p-2.5">
+    <div className="flex h-full flex-col overflow-hidden bg-[#07090d] p-2.5" style={{ paddingTop: "var(--st-full-canvas-safe-top, 4.25rem)" }}>
       <div className="mb-2 flex items-center justify-between rounded-xl border border-[#1f2536] bg-[#0b0f17] px-3 py-2">
         <div>
           <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">Camera Wall - Multi Camera</div>

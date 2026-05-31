@@ -51,15 +51,16 @@ export function SceneFeedGeometry({
  */
 export function CameraRigLive({ camera: camData }: { camera: CameraNode }) {
   const camera = useThree((s) => s.camera);
+  const [cameraX, cameraY, cameraZ] = camData.position;
 
   useEffect(() => {
     const forward = getYawPitchDirection(camData.yawDeg, camData.pitchDeg);
-    const pos = new THREE.Vector3(...camData.position);
+    const pos = new THREE.Vector3(cameraX, cameraY, cameraZ);
     const target = pos.clone().add(forward.clone().multiplyScalar(8));
     camera.position.copy(pos);
     camera.lookAt(target);
     camera.updateProjectionMatrix();
-  }, [camera, camData.id, camData.pitchDeg, camData.position, camData.yawDeg]);
+  }, [camera, camData.id, camData.pitchDeg, camData.yawDeg, cameraX, cameraY, cameraZ]);
 
   return null;
 }
@@ -69,15 +70,16 @@ export function CameraRigLive({ camera: camData }: { camera: CameraNode }) {
  */
 export function CameraRigFixed({ camera: camData }: { camera: CameraNode }) {
   const camera = useThree((s) => s.camera);
+  const [cameraX, cameraY, cameraZ] = camData.position;
 
   useEffect(() => {
     const forward = getYawPitchDirection(camData.yawDeg, camData.pitchDeg);
-    const pos = new THREE.Vector3(...camData.position);
+    const pos = new THREE.Vector3(cameraX, cameraY, cameraZ);
     const target = pos.clone().add(forward.clone().multiplyScalar(6));
     camera.position.copy(pos);
     camera.lookAt(target);
     camera.updateProjectionMatrix();
-  }, [camera, camData.id, camData.pitchDeg, camData.position, camData.yawDeg]);
+  }, [camera, camData.id, camData.pitchDeg, camData.yawDeg, cameraX, cameraY, cameraZ]);
 
   return null;
 }

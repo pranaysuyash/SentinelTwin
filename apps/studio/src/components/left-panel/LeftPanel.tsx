@@ -70,10 +70,10 @@ function SectionTitle({
   helpText?: string;
 }) {
   return (
-    <div className="mb-1.5 flex items-center gap-1 px-0.5 text-[8px] font-semibold uppercase tracking-[0.22em] text-[#4a556b]">
+    <div className="mb-1.5 flex items-center gap-1 px-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#64738f]">
       {icon}
-      <span>{title}</span>
-      {summary ? <span className="ml-1 text-[9px] normal-case tracking-[0.12em] text-[#657086]">{summary}</span> : null}
+      <span className="min-w-0 truncate">{title}</span>
+      {summary ? <span className="ml-1 min-w-0 truncate text-[10px] normal-case tracking-[0.06em] text-[#7a86a0]">{summary}</span> : null}
       {helpText ? <ExplainBadge text={helpText} /> : null}
       <button
         type="button"
@@ -159,7 +159,7 @@ export function LeftPanel() {
               })}
             </div>
           ) : (
-            <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[9px] text-[#72809a]">
+            <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[10px] text-[#72809a]">
               Toolbar hidden to favor canvas space.
             </div>
           )}
@@ -181,7 +181,7 @@ export function LeftPanel() {
                   onChange={(e) => setToolPresetName(e.target.value)}
                   placeholder="Preset name"
                   aria-label="Preset name"
-                  className="h-7 flex-1 rounded border border-[#2a3248] bg-[#111521] px-2 text-[10px] text-[#d6deef]"
+                  className="h-7 min-w-0 flex-1 rounded border border-[#2a3248] bg-[#111521] px-2 text-[10px] text-[#d6deef]"
                 />
                 <button
                   type="button"
@@ -200,7 +200,7 @@ export function LeftPanel() {
                 </button>
               </div>
               <div className="mt-1.5 space-y-1">
-                {toolPresets.length === 0 ? <div className="text-[9px] text-[#7384a5]">No presets saved.</div> : null}
+                {toolPresets.length === 0 ? <div className="text-[10px] text-[#7384a5]">No presets saved.</div> : null}
                 {toolPresets.map((preset) => (
                   <div key={preset.name} className="flex items-center gap-1 rounded border border-[#242a3a] bg-[#111521] px-1.5 py-1">
                     <button
@@ -218,7 +218,7 @@ export function LeftPanel() {
                     <button
                       type="button"
                       onClick={() => persistPresets(toolPresets.filter((entry) => entry.name !== preset.name))}
-                      className="text-[9px] text-red-300"
+                      className="text-[10px] text-red-300"
                     >
                       Delete
                     </button>
@@ -227,7 +227,7 @@ export function LeftPanel() {
               </div>
             </div>
           ) : (
-            <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[9px] text-[#72809a]">
+            <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[10px] text-[#72809a]">
               Presets hidden. Expand to load saved tool setups.
             </div>
           )}
@@ -271,7 +271,7 @@ export function LeftPanel() {
                 }}
                 className="h-7 w-full rounded border border-[#2a3248] bg-[#0d111a] px-2 text-[10px] text-[#d6deef]"
               />
-              <span className="text-[9px] text-[#647187]">m</span>
+              <span className="text-[10px] text-[#647187]">m</span>
             </label>
             <label className="flex items-center gap-2 rounded-lg bg-[#111521] px-2 py-1.5 text-[10px] text-[#8b96ae]">
               <span className="w-24 flex-shrink-0">Grid size</span>
@@ -286,14 +286,14 @@ export function LeftPanel() {
                 }}
                 className="h-7 w-full rounded border border-[#2a3248] bg-[#0d111a] px-2 text-[10px] text-[#d6deef]"
               />
-              <span className="text-[9px] text-[#647187]">m</span>
+              <span className="text-[10px] text-[#647187]">m</span>
             </label>
-            <div className="px-0.5 text-[9px] leading-relaxed text-[#6d7891]">
+            <div className="px-0.5 text-[10px] leading-relaxed text-[#6d7891]">
               Grid visibility lives in Scene Layers, while these settings control edit snapping.
             </div>
             </div>
           ) : (
-            <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[9px] text-[#72809a]">
+            <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[10px] text-[#72809a]">
               Snapping settings hidden. Expand to tune grid and wall resolution.
             </div>
           )}
@@ -335,7 +335,7 @@ export function LeftPanel() {
               })}
             </div>
           ) : (
-            <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[9px] text-[#72809a]">
+            <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[10px] text-[#72809a]">
               Layer visibility hidden. Selected layers still drive the canvas.
             </div>
           )}
@@ -353,7 +353,7 @@ export function LeftPanel() {
           {!collapsedSections.minimap && visibleComponents.minimap ? (
             <MiniMap />
           ) : (
-            <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[9px] text-[#72809a]">
+            <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 text-[10px] text-[#72809a]">
               Minimap hidden. Expand only when navigating the scene.
             </div>
           )}

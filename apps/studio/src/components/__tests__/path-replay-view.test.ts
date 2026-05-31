@@ -31,5 +31,6 @@ describe("PathReplayView", () => {
     expect(source).toContain("event.event === \"quality_change\"");
     expect(source).toContain("Visible Now");
     expect(source).toContain("Incident Review");
+    expect(source).toContain("--st-full-canvas-safe-top");
   });
 });

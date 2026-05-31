@@ -60,6 +60,26 @@ source tools/webwright/venv.env
 "${WEBWRIGHT_VENV_PATH}/bin/python" -m playwright install chromium
 ```
 
+Full app demo recording:
+
+```bash
+source tools/webwright/venv.env
+SENTINELTWIN_DEMO_URL=http://127.0.0.1:3000 \
+SENTINELTWIN_DEMO_RUN_ID=full-flow-$(date +%Y%m%d-%H%M%S) \
+"${WEBWRIGHT_VENV_PATH}/bin/python" tools/webwright/record_full_demo.py
+```
+
+The recorder captures a continuous video, step screenshots, console/page-error summaries, and a
+structured `run-log.json` under `qa-output/full-demo/<run-id>/`. It walks the command center,
+settings, Studio coverage/review, overlays, camera view, camera wall, path replay, compare, report,
+and returns to the live map.
+
+For the rerunnable product-home intake path, use `tools/webwright/record_full_demo.py`.
+It opens Create Site Twin, imports `apps/studio/public/sample-security-scene-import.json`
+through the app's `.json` file input, verifies the draft review using the imported sample scene
+name, then reloads the command center before continuing the Studio demo. Use
+`SENTINELTWIN_DEMO_SAMPLE_JSON_PATH=<path>` to point the recorder at another local sample.
+
 ## Git Ignore Audit
 
 Use this before `git add -A` / commit to catch generated artifacts that should be ignored.

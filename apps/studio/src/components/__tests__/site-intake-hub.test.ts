@@ -44,7 +44,9 @@ describe("SiteIntakeHub", () => {
     expect(source).toContain("onClick={() => props.onOpenRecentSite?.(site.id) ?? props.onEnterStudio()}");
     expect(source).toContain("onClick={props.onImportJson}");
     expect(source).toContain("SAMPLE_SECURITY_SCENE_IMPORT_URL");
+    expect(source).toContain("JEWELRY_STORE_SITE_TWIN_IMPORT_URL");
     expect(source).toContain("download=\"sample-security-scene-import.json\"");
+    expect(source).toContain("download=\"jewelry-store-site-twin.json\"");
     expect(source).not.toContain(">How it works<");
   });
 
@@ -54,5 +56,14 @@ describe("SiteIntakeHub", () => {
     expect(source).toContain("{selected.detail.description}");
     expect(source).toContain("{selected.detail.outputDetail}");
     expect(source).not.toContain("from reviewed photo markers.</div>");
+  });
+
+  test("import affordances match the JSON-only import handler", () => {
+    const source = readFileSync(siteIntakeHubPath, "utf8");
+
+    expect(source).toContain("Import Site Twin JSON");
+    expect(source).toContain("Draft-gated · {selected.status}");
+    expect(source).not.toContain("Import JSON or floor plan");
+    expect(source).not.toContain("Manual-assisted · {selected.status}");
   });
 });

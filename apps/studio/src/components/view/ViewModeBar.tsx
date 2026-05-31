@@ -50,9 +50,9 @@ function ContextChip() {
     const cam = scene.cameras.find((c) => c.id === selectedId) ?? null;
     if (!cam) return null;
     return (
-      <div className="flex items-center gap-1 rounded-md border border-[#2a3246] bg-[#111827] px-2 py-1 text-[8px]">
+      <div className="flex max-w-[min(220px,35vw)] items-center gap-1 rounded-md border border-[#2a3246] bg-[#111827] px-2 py-1 text-[10px]">
         <span className={`h-1.5 w-1.5 rounded-full ${cam.status === "on" ? "bg-emerald-400" : "bg-red-400"}`} />
-        <span className="font-medium" style={{ color: MAP_COLORS.viewport }}>{cam.name}</span>
+        <span className="min-w-0 truncate font-medium" style={{ color: MAP_COLORS.viewport }}>{cam.name}</span>
       </div>
     );
   }
@@ -60,9 +60,9 @@ function ContextChip() {
   if (viewMode === "replay") {
     const activePath = scene.paths.find((path) => path.id === activePathId) ?? null;
     return (
-      <div className="flex items-center gap-1 rounded-md border border-[#2a3246] bg-[#111827] px-2 py-1 text-[8px]">
+      <div className="flex max-w-[min(220px,35vw)] items-center gap-1 rounded-md border border-[#2a3246] bg-[#111827] px-2 py-1 text-[10px]">
         <Play className="h-2.5 w-2.5 text-emerald-400" />
-        <span className="font-medium" style={{ color: MAP_COLORS.viewport }}>
+        <span className="min-w-0 truncate font-medium" style={{ color: MAP_COLORS.viewport }}>
           {activePath ? activePath.label : "No path selected"}
         </span>
       </div>
@@ -73,7 +73,7 @@ function ContextChip() {
     const pct = Math.round(result.totalCoveragePct);
     const color = pct > 80 ? "text-emerald-400" : pct > 60 ? "text-yellow-400" : "text-red-400";
     return (
-      <div className="flex items-center gap-1 rounded-md border border-[#2a3246] bg-[#111827] px-2 py-1 text-[8px]">
+      <div className="flex items-center gap-1 rounded-md border border-[#2a3246] bg-[#111827] px-2 py-1 text-[10px]">
         <span className={`font-mono font-bold ${color}`}>{pct}%</span>
         <span className="text-[#4a5568]">coverage</span>
       </div>
@@ -96,7 +96,7 @@ export function ViewModeBar() {
       initial={{ y: -8, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ type: "spring", stiffness: 300, damping: 26, delay: 0.05 }}
-      className="pointer-events-none absolute left-1/2 top-3 z-20 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-[#1f2536] bg-[#0b0f17]/90 px-1 py-1 shadow-[0_8px_32px_rgba(0,0,0,0.32)]"
+      className="pointer-events-none absolute left-1/2 top-3 z-20 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded-xl border border-[#1f2536] bg-[#0b0f17]/90 px-1 py-1 shadow-[0_8px_32px_rgba(0,0,0,0.32)]"
     >
       {PRIMARY_VIEW_OPTIONS.map(({ mode, label, icon }) => (
         <motion.button
@@ -112,7 +112,7 @@ export function ViewModeBar() {
           }}
           aria-pressed={viewMode === mode}
           aria-label={`Switch to ${label} mode`}
-          className="pointer-events-auto relative flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-medium"
+          className="pointer-events-auto relative flex flex-shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-medium md:px-3"
           transition={{ type: "spring", stiffness: 400, damping: 24 }}
         >
           {viewMode === mode && (
@@ -134,12 +134,12 @@ export function ViewModeBar() {
             style={viewMode === mode ? { color: MAP_COLORS.viewport } : undefined}
           >
             {icon}
-            {label}
+            <span className="hidden md:inline">{label}</span>
           </motion.span>
         </motion.button>
       ))}
 
-      <div className="mx-1 h-5 w-px bg-[#1f2536]" aria-hidden />
+      <div className="mx-1 hidden h-5 w-px flex-shrink-0 bg-[#1f2536] sm:block" aria-hidden />
 
       {SECONDARY_VIEW_OPTIONS.map(({ mode, label, icon }) => (
         <motion.button
@@ -156,7 +156,7 @@ export function ViewModeBar() {
           aria-pressed={viewMode === mode}
           aria-label={`Switch to ${label} mode`}
           title={`${label} mode`}
-          className="pointer-events-auto relative flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-medium"
+          className="pointer-events-auto relative flex flex-shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-medium"
           transition={{ type: "spring", stiffness: 400, damping: 24 }}
         >
           {viewMode === mode && (
@@ -178,7 +178,7 @@ export function ViewModeBar() {
             style={viewMode === mode ? { color: MAP_COLORS.viewport } : undefined}
           >
             {icon}
-            {label}
+            <span className="hidden md:inline">{label}</span>
           </motion.span>
         </motion.button>
       ))}

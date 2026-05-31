@@ -1,7 +1,7 @@
 "use client";
 
 import { Eye, ListRestart, Pause, Play, Route, SkipBack, SkipForward } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { cn } from "@/lib/cn";
 import { QUALITY_BAR_COLOR, QUALITY_LABEL, QUALITY_RANK, QUALITY_SHORT_LABEL } from "@/lib/quality-display";
@@ -141,31 +141,8 @@ export function TimelineTab() {
   }, [activePath, result]);
 
   const [subTab, setSubTab] = useState<"timeline" | "events" | "quality" | "edits">("timeline");
-  const playbackAnchorRef = useRef({ startWallTime: 0, startPlaybackTime: 0 });
   const totalDuration = activePathResult?.totalDurationS ?? 0;
   const currentTime = totalDuration > 0 ? pathReplay.progress * totalDuration : 0;
-
-  useEffect(() => {
-    if (!pathReplay.playing || totalDuration <= 0) return;
-
-    playbackAnchorRef.current = { startWallTime: performance.now(), startPlaybackTime: currentTime };
-
-    let rafId = 0;
-    const tick = (now: number) => {
-      const elapsed = (now - playbackAnchorRef.current.startWallTime) / 1000;
-      const nextTime = Math.min(playbackAnchorRef.current.startPlaybackTime + elapsed * pathReplay.speed, totalDuration);
-      setPathReplayProgress(nextTime / totalDuration);
-
-      if (nextTime >= totalDuration) {
-        setPathReplayPlaying(false);
-      } else {
-        rafId = requestAnimationFrame(tick);
-      }
-    };
-
-    rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
-  }, [currentTime, pathReplay.playing, pathReplay.speed, setPathReplayPlaying, setPathReplayProgress, totalDuration]);
 
   useEffect(() => {
     setPathReplayPlaying(false);
@@ -219,10 +196,7 @@ export function TimelineTab() {
     if (totalDuration <= 0) return;
     const clamped = Math.max(0, Math.min(seconds, totalDuration));
     setPathReplayProgress(clamped / totalDuration);
-    if (pathReplay.playing) {
-      playbackAnchorRef.current = { startWallTime: performance.now(), startPlaybackTime: clamped };
-    }
-  }, [pathReplay.playing, setPathReplayProgress, totalDuration]);
+  }, [setPathReplayProgress, totalDuration]);
 
   const handleReset = useCallback(() => {
     setPathReplayPlaying(false);

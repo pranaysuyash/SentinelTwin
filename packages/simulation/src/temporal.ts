@@ -13,6 +13,7 @@
  */
 import { simulateStudio } from "./simulate-studio";
 import { detectTemporalAnomalies } from "./temporal-anomaly";
+import { cloneSecuritySceneSimulation } from "@sentineltwin/core";
 import { getExteriorLightStateSeasonal } from "./seasonal-lighting";
 import {
   type HourlySecuritySnapshot,
@@ -281,7 +282,7 @@ function patchSceneForTimeSlice(
   scene: SecurityScene,
   state: TimeSliceState,
 ): SecurityScene {
-  const patched = structuredClone(scene);
+  const patched = cloneSecuritySceneSimulation(scene);
 
   patched.assumptions.timeOfDay = state.timeOfDay;
 

@@ -122,7 +122,7 @@ import {
   parseSecurityScene,
   safeParseSecurityScene,
 } from "@/schema/security-scene";
-import { simulateStudio } from "@sentineltwin/simulation";
+import { simulateStudio, simulateStudioAsync } from "@sentineltwin/simulation";
 import { computeTemporalProfile } from "@sentineltwin/simulation";
 import type { TemporalSecurityProfile } from "@/schema/security-scene";
 import type { AnyNode } from "@sentineltwin/core";
@@ -3640,10 +3640,21 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   clientDemoOptions: INITIAL_LAYOUT.clientDemoOptions,
 
   pathReplay: { playing: false, progress: 0, speed: 1, followActor: true },
-  setPathReplayPlaying: (playing) => set((s) => ({ pathReplay: { ...s.pathReplay, playing } })),
-  setPathReplayProgress: (progress) => set((s) => ({ pathReplay: { ...s.pathReplay, progress } })),
-  setPathReplaySpeed: (speed) => set((s) => ({ pathReplay: { ...s.pathReplay, speed } })),
-  setPathReplayFollowActor: (followActor) => set((s) => ({ pathReplay: { ...s.pathReplay, followActor } })),
+  setPathReplayPlaying: (playing) => set((s) =>
+    s.pathReplay.playing === playing ? s : { pathReplay: { ...s.pathReplay, playing } },
+  ),
+  setPathReplayProgress: (progress) => set((s) => {
+    const nextProgress = Math.max(0, Math.min(1, progress));
+    return Math.abs(s.pathReplay.progress - nextProgress) < 0.0005
+      ? s
+      : { pathReplay: { ...s.pathReplay, progress: nextProgress } };
+  }),
+  setPathReplaySpeed: (speed) => set((s) =>
+    s.pathReplay.speed === speed ? s : { pathReplay: { ...s.pathReplay, speed } },
+  ),
+  setPathReplayFollowActor: (followActor) => set((s) =>
+    s.pathReplay.followActor === followActor ? s : { pathReplay: { ...s.pathReplay, followActor } },
+  ),
   setActivePathId: (id) => set({ activePathId: id }),
   setMapZoom: (target, zoom) => {
     const nextZoom = Math.max(0.05, Math.min(6, zoom));
@@ -5669,10 +5680,10 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
 
     set({ simulationRunning: true });
 
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
         const start = performance.now();
-        const result = simulateStudio(sceneSnapshot);
+        const result = await simulateStudioAsync(sceneSnapshot, { yieldEvery: 50 });
         const durationMs = Math.round(performance.now() - start);
 
         if (get().scene.updatedAt !== sceneVersion) {

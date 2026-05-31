@@ -229,6 +229,7 @@ async function ensureProductionBootstrapArtifacts() {
   }
 }
 
+await ensureDevBootstrapArtifacts({ cleanPages: true });
 await ensureProductionBootstrapArtifacts();
 
 const devBundler = (process.env.STUDIO_DEV_BUNDLER ?? "turbopack").toLowerCase();
@@ -245,6 +246,16 @@ const child = spawn(process.execPath, [localNextBinary, ...nextArgs], {
   },
   stdio: "inherit",
 });
+
+if (mode === "dev") {
+  for (const delayMs of [1000, 3000, 7000, 15000, 30000, 45000]) {
+    setTimeout(() => {
+      ensureDevBootstrapArtifacts().catch((error) => {
+        console.warn(`Unable to refresh Next dev bootstrap artifacts after ${delayMs}ms:`, error.message);
+      });
+    }, delayMs);
+  }
+}
 
 child.on("error", (error) => {
   console.error(`Failed to launch Next.js on fixed port ${PORT}:`, error.message);

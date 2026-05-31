@@ -82,14 +82,14 @@ export function ContextRightPanel() {
             {workspacePreset.replace(/_/g, " ")} · {viewMode.replace(/_/g, " ")}
           </div>
         </div>
-        <div className="ml-auto inline-flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-0.5 text-[10px] text-[#9fb1d1]">
+        <div className="ml-auto inline-flex min-w-0 max-w-[42%] items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-1.5 py-0.5 text-[10px] text-[#9fb1d1]">
           <MapPinned className="h-2.5 w-2.5" />
           <span className={cn("truncate", selectedNodeId ? "text-[#c7d0e4]" : "text-[#6c768f]")}>
             {selectedNodeId ?? "Scene overview"}
           </span>
         </div>
       </div>
-      <div className="flex items-center gap-1 border-b border-[#1e2130] px-2 py-1">
+      <div className="flex min-w-0 items-center gap-1 overflow-x-auto border-b border-[#1e2130] px-2 py-1">
         {([
           ["inspector", "Inspector"],
           ["security_status", "Security Status"],
@@ -104,7 +104,8 @@ export function ContextRightPanel() {
             key={mode}
             type="button"
             onClick={() => setRightPanelMode(mode)}
-            className={cn("rounded px-2 py-1 text-[10px]", rightPanelMode === mode ? "bg-[#1a2233] text-white" : "text-[#92a5c8]")}
+            title={label}
+            className={cn("flex-shrink-0 whitespace-nowrap rounded px-2 py-1 text-[10px]", rightPanelMode === mode ? "bg-[#1a2233] text-white" : "text-[#92a5c8] hover:bg-[#141a28] hover:text-white")}
           >
             {label}
           </button>

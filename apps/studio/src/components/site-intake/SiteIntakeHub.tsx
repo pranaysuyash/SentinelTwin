@@ -20,6 +20,7 @@ import type { SiteIntakeSource } from "@/lib/site-compiler";
 export type { SiteIntakeSource };
 
 export const SAMPLE_SECURITY_SCENE_IMPORT_URL = "/sample-security-scene-import.json";
+export const JEWELRY_STORE_SITE_TWIN_IMPORT_URL = "/sample-site-twins/jewelry-store-site-twin.json";
 
 export type SiteIntakeHubProps = {
   onStartScan: () => void;
@@ -160,7 +161,7 @@ const cards: SiteIntakeSourceCard[] = [
     id: "json",
     title: "Import Site Twin",
     status: "Working",
-    description: "Import a full SecurityScene JSON as a draft Site Twin.",
+    description: "Import a full site twin data file as a reviewable draft.",
     output: "Draft Site Twin",
     review: "Required",
     icon: FileUp,
@@ -168,21 +169,21 @@ const cards: SiteIntakeSourceCard[] = [
     detail: {
       bestFor: "Existing exports, shared site twins, and approved handoff files.",
       description: "Import a valid site twin data file, validate it, then review the draft before it becomes active.",
-      outputDetail: "Validated Site Twin draft from JSON import.",
+      outputDetail: "Validated Site Twin draft from data import.",
       steps: [
-        "Select a Site Twin JSON file",
-        "Schema validation runs automatically",
+        "Select a Site Twin data file",
+        "File validation runs automatically",
         "Open Site Twin Draft Review",
         "Approve to activate the imported site twin",
-        "Enter Studio and run simulation",
+        "Enter Studio and run review",
       ],
       limitations: [
-        "Only valid SecurityScene JSON files are accepted.",
+        "Only valid site twin export files are accepted.",
         "Older schema exports may require migration before import.",
       ],
       timeEstimate: "< 1 minute",
-      confidence: "High (schema-validated draft)",
-      ctaLabel: "Import SecurityScene JSON",
+      confidence: "High (validated draft)",
+      ctaLabel: "Import Site Twin Data",
     },
     onClickAction: "onImportJson",
   },
@@ -422,7 +423,7 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                     <h2 className="text-[31px] font-medium tracking-[-0.03em] text-white">{selected.title}</h2>
                     <div className="mt-2 flex items-center gap-2 text-[18px] text-emerald-300">
                       <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                      <span>Manual-assisted · {selected.status}</span>
+                      <span>Draft-gated · {selected.status}</span>
                     </div>
                   </div>
                 </div>
@@ -507,14 +508,24 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                 <ArrowRight className="h-5 w-5" />
               </button>
               {selected.id === "json" ? (
-                <a
-                  href={SAMPLE_SECURITY_SCENE_IMPORT_URL}
-                  download="sample-security-scene-import.json"
-                  className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] text-[15px] text-slate-200 transition-colors hover:bg-white/[0.06]"
-                >
-                  <FileUp className="h-4 w-4" />
-                  <span>Download sample JSON</span>
-                </a>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <a
+                    href={SAMPLE_SECURITY_SCENE_IMPORT_URL}
+                    download="sample-security-scene-import.json"
+                    className="flex h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-center text-[14px] text-slate-200 transition-colors hover:bg-white/[0.06]"
+                  >
+                    <FileUp className="h-4 w-4 flex-none" />
+                    <span>Sample JSON</span>
+                  </a>
+                  <a
+                    href={JEWELRY_STORE_SITE_TWIN_IMPORT_URL}
+                    download="jewelry-store-site-twin.json"
+                    className="flex h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-center text-[14px] text-slate-200 transition-colors hover:bg-white/[0.06]"
+                  >
+                    <FileUp className="h-4 w-4 flex-none" />
+                    <span>Jewelry sample</span>
+                  </a>
+                </div>
               ) : null}
 
               <div className="mt-3 flex items-center gap-2 text-[14px] text-slate-400">
@@ -561,7 +572,7 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                 </div>
                 <div>
                   <div className="text-[15px] font-medium text-white">Quick Import</div>
-                  <div className="mt-1 text-[14px] text-slate-400">Import JSON or floor plan</div>
+                  <div className="mt-1 text-[14px] text-slate-400">Import Site Twin JSON</div>
                 </div>
               </button>
             </div>

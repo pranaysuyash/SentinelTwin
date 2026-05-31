@@ -36,6 +36,58 @@ source tools/webwright/venv.env
 "${WEBWRIGHT_VENV_PATH}/bin/python" -m playwright install chromium
 ```
 
+## Full app demo recorder
+
+`record_full_demo.py` is the rerunnable browser evidence path for the product home and Studio demo.
+It records a continuous browser video, step screenshots, console/page-error summaries, and a
+structured `run-log.json`.
+
+The current flow covers:
+
+1. command center load,
+2. Create Site Twin intake,
+3. sample JSON import into Site Twin Review,
+4. product settings,
+5. Studio entry,
+6. run-review simulation flow,
+7. coverage, lighting, and blindspot overlays,
+8. view settings,
+9. camera view,
+10. camera wall,
+11. path replay,
+12. compare,
+13. report,
+14. map return.
+
+Run against a local server:
+
+```bash
+source tools/webwright/venv.env
+SENTINELTWIN_DEMO_URL=http://127.0.0.1:3000 \
+SENTINELTWIN_DEMO_RUN_ID=full-flow-$(date +%Y%m%d-%H%M%S) \
+"${WEBWRIGHT_VENV_PATH}/bin/python" tools/webwright/record_full_demo.py
+```
+
+Run against a deployed target:
+
+```bash
+source tools/webwright/venv.env
+SENTINELTWIN_DEMO_URL=https://sentinel-twin-studio.vercel.app/ \
+"${WEBWRIGHT_VENV_PATH}/bin/python" tools/webwright/record_full_demo.py
+```
+
+Useful overrides:
+
+- `SENTINELTWIN_DEMO_RUN_ID=<name>` to make artifact paths deterministic.
+- `SENTINELTWIN_DEMO_OUT_DIR=qa-output/full-demo/<name>` to pin artifact location.
+- `SENTINELTWIN_DEMO_SAMPLE_JSON_PATH=<path>` to use a different import sample.
+- `SENTINELTWIN_DEMO_REQUIRE_JSON_SAMPLE=0` to keep recording when the sample import path is unavailable.
+
+Artifacts land under `qa-output/full-demo/<run-id>/` with screenshots, video, and `run-log.json`.
+The JSON intake check sets the app's `.json` file input directly through Playwright and verifies the
+review screen with the imported scene name from the sample payload, avoiding brittle dependence on
+button or heading copy.
+
 Any new Python tooling in `tools/` should follow this same contract:
 install/run from `/tmp/webwright-sentinel` with `uv pip ... --python` and avoid unrelated new local venvs.
 

@@ -49,6 +49,7 @@ import { computeBlindSpotPenalty, computeMountTiltPenalty } from "./mount-model"
 import { computeOODPCVSQuality } from "./odpcvs";
 import {
   buildVisionColliderMesh,
+  disposeVisionColliderMesh,
   getVisionColliderSource,
   type VisionColliderMesh,
 } from "./vision-collider-mesh";
@@ -84,6 +85,15 @@ export type CameraEvaluation = {
 export type CoverageEvaluator = {
   evaluatePoint: (camera: CameraNode, point: [number, number], targetHeightM?: number) => CameraEvaluation;
   computeCoverageCells: (cellsPerMeter?: number, targetHeightM?: number) => CellComputation[];
+  /** Async variant that yields to the event loop every `yieldEvery` cells.
+   *  Keeps the browser responsive during large simulations. */
+  computeCoverageCellsAsync: (
+    cellsPerMeter?: number,
+    targetHeightM?: number,
+    yieldEvery?: number,
+  ) => Promise<CellComputation[]>;
+  /** Release Three.js GPU resources (geometry, material, BVH). Safe to call after all evaluations are done. */
+  dispose: () => void;
 };
 
 function deriveResolutionWidth(camera: CameraNode) {
@@ -735,7 +745,7 @@ export function createCoverageEvaluator(scene: SecurityScene): CoverageEvaluator
       }
 
       const virtualCamera: CameraNode = {
-        ...structuredClone(camera),
+        ...camera,
         position: mirroredPos,
       };
       const { yawDeg, pitchDeg } = getYawPitchTowardTarget(virtualCamera.position, target);
@@ -800,61 +810,101 @@ export function createCoverageEvaluator(scene: SecurityScene): CoverageEvaluator
     return bestCandidate;
   };
 
+  const evaluateCell = (cell: GridCell, targetHeightM: number): CellComputation | null => {
+    if (!cell.walkable) return null;
+
+    let bestQuality: DoriQuality = "none";
+    let bestPpm = 0;
+    const coveringCameras: string[] = [];
+    const blockedBy = new Set<string>();
+    const probabilities: number[] = [];
+    const cameraEvaluations: Record<string, CameraEvaluation> = {};
+
+    for (const camera of scene.cameras) {
+      const directEvaluation = evaluatePoint(camera, [cell.x, cell.z], targetHeightM);
+      const bounceEvaluation = evaluateReflectiveBounce(camera, cell, targetHeightM, directEvaluation);
+      const evaluation = bounceEvaluation ? bounceEvaluation.evaluation : directEvaluation;
+      cameraEvaluations[camera.id] = evaluation;
+
+      if (evaluation.blockedBy) {
+        blockedBy.add(evaluation.blockedBy);
+      }
+
+      if (evaluation.quality !== "none") {
+        coveringCameras.push(camera.id);
+        probabilities.push(evaluation.probability);
+      }
+
+      bestQuality = maxQuality(bestQuality, evaluation.quality);
+      bestPpm = Math.max(bestPpm, evaluation.ppm);
+    }
+
+    return {
+      x: cell.x,
+      z: cell.z,
+      quality: bestQuality,
+      coverageIncluded: cell.coverageIncluded,
+      privacyRestricted: cell.privacyRestricted,
+      coveringCameras,
+      blockedBy: [...blockedBy],
+      ppm: bestPpm,
+      probabilities,
+      cameraEvaluations,
+    };
+  };
+
   const computeCoverageCells = (cellsPerMeter = 4, targetHeightM = scene.assumptions.personHeightM) => {
     const { cells } = buildCoverageGrid(scene, cellsPerMeter);
     const results: CellComputation[] = [];
 
     for (const cell of cells) {
-      if (!cell.walkable) continue;
-
-      let bestQuality: DoriQuality = "none";
-      let bestPpm = 0;
-      const coveringCameras: string[] = [];
-      const blockedBy = new Set<string>();
-      const probabilities: number[] = [];
-      const cameraEvaluations: Record<string, CameraEvaluation> = {};
-
-      for (const camera of scene.cameras) {
-        const directEvaluation = evaluatePoint(camera, [cell.x, cell.z], targetHeightM);
-        const bounceEvaluation = evaluateReflectiveBounce(camera, cell, targetHeightM, directEvaluation);
-        const evaluation = bounceEvaluation ? bounceEvaluation.evaluation : directEvaluation;
-        cameraEvaluations[camera.id] = evaluation;
-
-        if (evaluation.blockedBy) {
-          blockedBy.add(evaluation.blockedBy);
-        }
-
-        if (evaluation.quality !== "none") {
-          coveringCameras.push(camera.id);
-          probabilities.push(evaluation.probability);
-        }
-
-        bestQuality = maxQuality(bestQuality, evaluation.quality);
-        bestPpm = Math.max(bestPpm, evaluation.ppm);
-      }
-
-      results.push({
-        x: cell.x,
-        z: cell.z,
-        quality: bestQuality,
-        coverageIncluded: cell.coverageIncluded,
-        privacyRestricted: cell.privacyRestricted,
-        coveringCameras,
-        blockedBy: [...blockedBy],
-        ppm: bestPpm,
-        probabilities,
-        cameraEvaluations,
-      });
+      const result = evaluateCell(cell, targetHeightM);
+      if (result) results.push(result);
     }
 
     return results;
   };
 
-  return { evaluatePoint, computeCoverageCells };
+  const computeCoverageCellsAsync = async (
+    cellsPerMeter = 4,
+    targetHeightM = scene.assumptions.personHeightM,
+    yieldEvery = 50,
+  ) => {
+    const { cells } = buildCoverageGrid(scene, cellsPerMeter);
+    const results: CellComputation[] = [];
+    let evaluatedSinceYield = 0;
+
+    for (const cell of cells) {
+      const result = evaluateCell(cell, targetHeightM);
+      if (result) {
+        results.push(result);
+        evaluatedSinceYield++;
+      }
+
+      if (evaluatedSinceYield >= yieldEvery) {
+        evaluatedSinceYield = 0;
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      }
+    }
+
+    return results;
+  };
+
+  return {
+    evaluatePoint,
+    computeCoverageCells,
+    computeCoverageCellsAsync,
+    dispose: () => disposeVisionColliderMesh(visionMesh),
+  };
 }
 
 export function computeCoverageCells(scene: SecurityScene, cellsPerMeter = 4) {
-  return createCoverageEvaluator(scene).computeCoverageCells(cellsPerMeter);
+  const evaluator = createCoverageEvaluator(scene);
+  try {
+    return evaluator.computeCoverageCells(cellsPerMeter);
+  } finally {
+    evaluator.dispose();
+  }
 }
 
 export function getForwardVector(camera: CameraNode) {

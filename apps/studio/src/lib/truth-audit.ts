@@ -451,9 +451,9 @@ export const TRUST_AUDIT_SURFACES: TrustAuditSurface[] = [
     surface: "Site intake hub truthful maturity",
     file: "src/components/site-intake/SiteIntakeHub.tsx",
     requiredPhrases: [
-      "Manual-assisted",
+      "Guided capture + manual review from phone photos",
       "Automatic segmentation/depth reconstruction is still rolling out; candidate confirmation is required.",
-      "Review required before trust",
+      "Draft-gated",
       "Best-effort wall/opening extraction",
       "No product-grade video/stream verification yet",
       "Local-only mode is available",

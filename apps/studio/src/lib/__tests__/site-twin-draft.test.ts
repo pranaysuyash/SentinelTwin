@@ -1,7 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import {
   compileToSiteTwinDraft,
   canRunBaselineSimulation,
@@ -13,14 +10,14 @@ import {
   compileFloorPlanToSiteResult,
   compileJsonToSiteResult,
 } from "@/lib/site-compiler";
+import {
+  SAMPLE_SECURITY_SCENE_IMPORT_FILENAME,
+  readSampleJson,
+  sampleSecuritySceneImportPath,
+} from "@/fixtures/sample-scene-files";
 import type { SecurityScene, ScenarioPath, DoorNode } from "@/schema/security-scene";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 import { safeParseSecurityScene } from "@/schema/security-scene";
-
-const publicSamplePath = resolve(
-  fileURLToPath(new URL(".", import.meta.url)),
-  "../../../public/sample-security-scene-import.json",
-);
 
 function makeScene(overrides?: Partial<SecurityScene>): SecurityScene {
   const scene = createBlankSecurityScene();
@@ -122,17 +119,17 @@ describe("compileToSiteTwinDraft", () => {
   });
 
   test("bundled sample import artifact validates and compiles to a reviewable JSON draft", () => {
-    const raw = JSON.parse(readFileSync(publicSamplePath, "utf8"));
+    const raw = readSampleJson(sampleSecuritySceneImportPath);
     const parsed = safeParseSecurityScene(raw);
 
     expect(parsed.success).toBe(true);
     if (!parsed.success) return;
 
-    const result = compileJsonToSiteResult(parsed.data, "sample-security-scene-import.json");
-    const draft = compileToSiteTwinDraft(result, ["sample-security-scene-import.json"]);
+    const result = compileJsonToSiteResult(parsed.data, SAMPLE_SECURITY_SCENE_IMPORT_FILENAME);
+    const draft = compileToSiteTwinDraft(result, [SAMPLE_SECURITY_SCENE_IMPORT_FILENAME]);
 
     expect(draft.source).toBe("json");
-    expect(draft.provenance.sourceArtifacts).toContain("sample-security-scene-import.json");
+    expect(draft.provenance.sourceArtifacts).toContain(SAMPLE_SECURITY_SCENE_IMPORT_FILENAME);
     expect(draft.entityCounts.cameras).toBeGreaterThan(0);
     expect(draft.entityCounts.criticalZones).toBeGreaterThan(0);
     expect(canRunBaselineSimulation(draft)).toBe(true);

@@ -103,6 +103,7 @@ export function useAutosave(): UseAutosaveReturn {
   const [pendingRecovery, setPendingRecovery] = useState<AutosaveRecovery | null>(null);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didMountRef = useRef(false);
+  const lastSavedSnapshot = useRef<string | null>(null);
 
   // On mount: check for a pending autosave
   useEffect(() => {
@@ -117,9 +118,30 @@ export function useAutosave(): UseAutosaveReturn {
     }
   }, []);
 
-  // Watch scene changes and debounce writes
+  // Watch scene changes and debounce writes — only persists when geometry/edits actually change,
+  // not when derived state (e.g. simulation results) updates.
   useEffect(() => {
     if (!scene) return;
+    const snapshot = JSON.stringify({
+      id: scene.id,
+      version: scene.version,
+      updatedAt: scene.updatedAt,
+      walls: scene.walls,
+      doors: scene.doors,
+      windows: scene.windows,
+      cameras: scene.cameras.map((c) => ({ id: c.id, position: c.position, yawDeg: c.yawDeg, pitchDeg: c.pitchDeg, status: c.status })),
+      obstructions: scene.obstructions,
+      criticalZones: scene.criticalZones,
+      privacyZones: scene.privacyZones,
+      entryPoints: scene.entryPoints,
+      securityLights: scene.securityLights,
+      sensors: scene.sensors,
+      paths: scene.paths,
+      assumptions: scene.assumptions,
+    });
+    if (snapshot === lastSavedSnapshot.current) return;
+    lastSavedSnapshot.current = snapshot;
+
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);
     }

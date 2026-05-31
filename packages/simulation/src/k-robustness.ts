@@ -1,6 +1,7 @@
 import type { SecurityScene } from "@sentineltwin/core";
 import { computeCoverageCells } from "./coverage";
 import { computeAdversarialPath } from "./adversarial-path";
+import { cloneSecuritySceneSimulation } from "@sentineltwin/core";
 
 export interface CriticalFailureSet {
   k: number;
@@ -47,7 +48,7 @@ export function computeKRobustness(scene: SecurityScene, maxK = MAX_K): KRobustn
     let foundViable = false;
 
     for (const subset of getSubsets(cameras, k)) {
-      const modified: SecurityScene = structuredClone(scene);
+      const modified: SecurityScene = cloneSecuritySceneSimulation(scene);
       for (const cam of subset) {
         const target = modified.cameras.find((c) => c.id === cam.id);
         if (target) target.status = "off" as const;

@@ -101,6 +101,8 @@ describe("CameraViewMode", () => {
     expect(combinedSource).toContain("Auth:");
     expect(combinedSource).toContain("Auth session:");
     expect(combinedSource).toContain("Challenge:");
+    expect(source).toContain("st-camera-view-safe-zone");
+    expect(source).toContain("--st-full-canvas-safe-top");
   });
 
   test("derives target labels from the zone target type", () => {

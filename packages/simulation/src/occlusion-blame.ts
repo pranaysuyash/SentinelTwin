@@ -1,6 +1,6 @@
 import type { SecurityScene, DoriQuality } from "@sentineltwin/core";
 import { computeCoverageCells } from "./coverage";
-import { qualityToScore, maxQuality } from "@sentineltwin/core";
+import { qualityToScore, maxQuality, cloneSecuritySceneSimulation } from "@sentineltwin/core";
 
 export interface ObstructionBlame {
   obstructionId: string;
@@ -60,7 +60,7 @@ export function analyzeOcclusionBlame(scene: SecurityScene): ZoneOcclusionAnalys
     let blameTotal = 0;
 
     for (const obs of scene.obstructions) {
-      const modified: SecurityScene = structuredClone(scene);
+      const modified: SecurityScene = cloneSecuritySceneSimulation(scene);
       modified.obstructions = modified.obstructions.filter((o) => o.id !== obs.id);
 
       const q = computeZoneQuality(modified, zone.id);

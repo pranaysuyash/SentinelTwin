@@ -865,45 +865,24 @@ function SceneGeometry({
 function PathReplayActor() {
   const scene = useStudioStore((s) => s.scene);
   const activePathId = useStudioStore((s) => s.activePathId);
-  const pathReplay = useStudioStore((s) => s.pathReplay);
-  const setPathReplayProgress = useStudioStore((s) => s.setPathReplayProgress);
-  const setPathReplayPlaying = useStudioStore((s) => s.setPathReplayPlaying);
+  const pathReplayPlaying = useStudioStore((s) => s.pathReplay.playing);
+  const pathReplayProgress = useStudioStore((s) => s.pathReplay.progress);
 
   const path = scene.paths.find((item) => item.id === activePathId) ?? null;
   const meshRef = useRef<THREE.Mesh>(null);
 
-  const totalDuration = useMemo(() => {
-    if (!path || path.points.length < 2) return 1;
-    let dist = 0;
-    for (let i = 1; i < path.points.length; i++) {
-      const [x0, z0] = path.points[i - 1].position;
-      const [x1, z1] = path.points[i].position;
-      dist += Math.sqrt((x1 - x0) ** 2 + (z1 - z0) ** 2);
+  useFrame(() => {
+    if (!path || path.points.length < 2) return;
+    if (meshRef.current) {
+      const [x, z] = pointOnPathAtProgress(path, pathReplayProgress);
+      meshRef.current.position.set(x, 0.18, z);
     }
-    return dist / (path.speedMps ?? 1.2);
-  }, [path]);
-
-  useFrame((_, delta) => {
-    if (!pathReplay.playing || !path || path.points.length < 2) return;
-    const next = pathReplay.progress + (delta * pathReplay.speed) / totalDuration;
-    if (next >= 1) {
-      setPathReplayPlaying(false);
-      setPathReplayProgress(0);
-      return;
-    }
-    setPathReplayProgress(next);
   });
 
-  const actorPos = useMemo(() => {
-    if (!path || path.points.length < 2) return new THREE.Vector3(0, 0.18, 0);
-    const [x, z] = pointOnPathAtProgress(path, pathReplay.progress);
-    return new THREE.Vector3(x, 0.18, z);
-  }, [path, pathReplay.progress]);
-
-  if (!path || (!pathReplay.playing && pathReplay.progress === 0)) return null;
+  if (!path || (!pathReplayPlaying && pathReplayProgress === 0)) return null;
 
   return (
-    <mesh ref={meshRef} position={actorPos}>
+    <mesh ref={meshRef}>
       <sphereGeometry args={[0.18, 12, 12]} />
       <meshStandardMaterial color="#f97316" emissive="#f97316" emissiveIntensity={0.5} />
     </mesh>

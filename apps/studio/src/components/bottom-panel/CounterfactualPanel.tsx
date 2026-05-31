@@ -77,7 +77,7 @@ function CandidateCard({ candidate, onApply }: CandidateCardProps) {
           {typeof candidate.verifiedDelta.adversarialPathExposureDelta === "number" && (
             <DeltaBadge
               value={candidate.verifiedDelta.adversarialPathExposureDelta}
-              label="Adversarial exposure"
+              label="Route exposure"
               positive="down"
               suffix=""
             />

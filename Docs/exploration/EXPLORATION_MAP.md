@@ -1,7 +1,7 @@
 # Exploration Map — SentinelTwin
 
 **This is a living document. Append findings. Never replace.**
-**Last updated:** 2026-05-30 (Scan/reconstruction pipeline foundation: artifact data model, adapter interfaces, reconstruction compiler, quality gates, 73 new tests) — previous: Dedicated lighting/shadow overlay mode added on top of heatmap lighting/shadow implementation; Heatmap lighting/shadow implementation — camera PPM now combines independent security-light illumination, obstruction-cast light shadows, and camera line-of-sight; Physics engine audit — zero implementation across entire codebase, deferred to V0.2, no new action needed; Checkpoint compare/report pivots + launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Sensor provenance + runtime health surfacing; Sensor fusion preview + workspace access policy surfacing; Digital twin simulation physics: PTZ movement, BRDF reflectivity, dynamic lighting, view distance, placement constraints, scene fidelity, occlusion culling, camera feed synthesis, real-time feedback
+**Last updated:** 2026-05-31 (Intake/home clickability honesty hardening + demo-flow documentation + recent-site routing to real scene activation path) — previous: Scan/reconstruction pipeline foundation: artifact data model, adapter interfaces, reconstruction compiler, quality gates, 73 new tests; Dedicated lighting/shadow overlay mode added on top of heatmap lighting/shadow implementation; Heatmap lighting/shadow implementation — camera PPM now combines independent security-light illumination, obstruction-cast light shadows, and camera line-of-sight; Physics engine audit — zero implementation across entire codebase, deferred to V0.2, no new action needed; Checkpoint compare/report pivots + launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Sensor provenance + runtime health surfacing; Sensor fusion preview + workspace access policy surfacing; Digital twin simulation physics: PTZ movement, BRDF reflectivity, dynamic lighting, view distance, placement constraints, scene fidelity, occlusion culling, camera feed synthesis, real-time feedback
 
 ---
 
@@ -17,6 +17,9 @@
 - Shared narrative model now feeds both security outcome and report summary/export surfaces.
 - Product home now uses the security-command-center hierarchy from the approved reference: large current site twin preview, right-side risk/status decision panel, primary operational mode strip, and secondary intake dock.
 - Home navigation now routes into real product sections (Create Site Twin, Security Twin Studio, Audit Reports, Reference Sites, Settings) instead of passive labels.
+- Site intake recent-site cards now open real scene flows (via routed scene open), and quick-import from intake triggers the JSON import path directly.
+- Home header scene/environment indicators are now explicit status chips to avoid false dropdown affordances.
+- Demo flow is documented for product walkthroughs at `Docs/product/SITE_TWIN_CREATION_DEMO_FLOW.md`.
 
 **Next:** Use this hardened foundation before adding new scan/ONVIF/compliance breadth.
 

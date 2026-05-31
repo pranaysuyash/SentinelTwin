@@ -318,7 +318,7 @@ export function GuidedCaptureAssistant({ onClose }: GuidedCaptureAssistantProps)
                 Capture Preparation
               </div>
               <div className="mt-2 text-xs text-[color:var(--text-muted)]">
-                The guided assistant uses photos of your site to reconstruct a SecurityScene.
+                The guided assistant uses photos of your site to prepare a site twin draft.
                 For best results, capture the entire perimeter with overlapping photos.
               </div>
             </div>

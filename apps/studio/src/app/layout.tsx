@@ -3,8 +3,8 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SentinelTwin — AI Security Audit Studio",
-  description: "Create a site, model CCTV coverage, find blind spots, test fixes, and generate client-ready security audit reports.",
+  title: "SentinelTwin — Physical Security Site Twin",
+  description: "Model site coverage, test camera failures, review critical-zone risk, and produce security audit evidence.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

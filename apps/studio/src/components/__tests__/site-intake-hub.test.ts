@@ -34,4 +34,13 @@ describe("SiteIntakeHub", () => {
     expect(source).not.toContain("automatic depth estimation");
     expect(source).not.toContain("3D model");
   });
+
+  test("recent-site and quick-import controls are wired to real actions", () => {
+    const source = readFileSync(siteIntakeHubPath, "utf8");
+
+    expect(source).toContain("onClick={props.onEnterStudio}");
+    expect(source).toContain("onClick={() => props.onOpenRecentSite?.(site.id) ?? props.onEnterStudio()}");
+    expect(source).toContain("onClick={props.onImportJson}");
+    expect(source).not.toContain(">How it works<");
+  });
 });

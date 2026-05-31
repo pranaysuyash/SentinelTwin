@@ -113,8 +113,8 @@ export function ImportReview({ result, warnings, onImageChange, onRecalibrate, o
       <div className="rounded-lg border border-[#22314b] bg-[#0b1220] p-2">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#9bb0cf]">Floor Plan Preview Lane</div>
-            <div className="mt-0.5 text-[8px] text-[#7083a5]">Review extraction confidence and unresolved warnings before committing this plan into an editable scene.</div>
+            <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#9bb0cf]">Floor Plan Review</div>
+            <div className="mt-0.5 text-[8px] text-[#7083a5]">Review detected walls, openings, and warnings before creating a site twin draft.</div>
           </div>
           <span
             className={`rounded border px-1.5 py-0.5 text-[8px] uppercase tracking-[0.12em] ${

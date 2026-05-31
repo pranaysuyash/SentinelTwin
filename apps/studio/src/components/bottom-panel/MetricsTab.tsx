@@ -112,7 +112,7 @@ export function MetricsTab() {
   const advancedSignals: { label: string; value: string; detail: string; status: "good" | "warn" | "neutral" }[] = [];
   if (coverageEntropy) {
     advancedSignals.push({
-      label: "Coverage Entropy",
+      label: "Coverage Stability Index",
       value: `${coverageEntropy.normalizedEntropy.toFixed(2)} norm`,
       detail: `dominant ${coverageEntropy.dominantQuality} ${coverageEntropy.dominantQualityShare.toFixed(1)}%`,
       status: coverageEntropy.normalizedEntropy < 0.5 ? "good" : "warn",
@@ -120,7 +120,7 @@ export function MetricsTab() {
   }
   if (kRobustness) {
     advancedSignals.push({
-      label: "K-Robustness",
+      label: "Backup Coverage",
       value: `K=${kRobustness.kRobustness}`,
       detail: `${kRobustness.isRobust ? "robust" : "fragile"} · ${kRobustness.criticalSets.length} critical sets`,
       status: kRobustness.isRobust ? "good" : "warn",
@@ -128,7 +128,7 @@ export function MetricsTab() {
   }
   if (placementOracle) {
     advancedSignals.push({
-      label: "Placement Oracle",
+      label: "Recommended Mounts",
       value: `${placementOracle.candidateCount} candidates`,
       detail: placementOracle.bestCandidate
         ? `best ${placementOracle.bestCandidate.mountType} score ${placementOracle.bestCandidate.score.toFixed(1)}`

@@ -28,6 +28,7 @@ export type SiteIntakeHubProps = {
   onVerifyFootage: () => void;
   onStartSecurityAudit: () => void;
   onEnterStudio: () => void;
+  onOpenRecentSite?: (siteId: string) => void;
   onOpenDemo?: () => void;
   recentSites: Array<{
     id: string;
@@ -102,18 +103,18 @@ const cards: SiteIntakeSourceCard[] = [
       bestFor: "Drafting a site from text before real measurements are available.",
       steps: [
         "Write a description of the space",
-        "Generate draft (model or heuristic fallback)",
+        "Generate a draft layout",
         "Review entities and layout",
         "Edit if needed",
-        "Apply draft to current workspace",
+        "Approve draft for the current workspace",
       ],
       limitations: [
         "Layout is approximate — expect adjustments after import.",
-        "Review required before trusting as canonical scene.",
+        "Review required before trusting as the active site twin.",
       ],
       timeEstimate: "1–2 minutes",
-      confidence: "Low (Generative Draft)",
-      ctaLabel: "Start AI Draft",
+      confidence: "Low (Draft layout)",
+      ctaLabel: "Start Layout Draft",
     },
     onClickAction: "onStartAiDraft",
   },
@@ -149,26 +150,26 @@ const cards: SiteIntakeSourceCard[] = [
     id: "json",
     title: "Import Site Twin",
     status: "Working",
-    description: "Import an existing Site Twin from a SecurityScene JSON file.",
+    description: "Import an existing Site Twin from an exported data file.",
     output: "Site Twin",
     review: "Validation",
     icon: FileUp,
     tone: "slate",
     detail: {
-      bestFor: "Existing exports, shared scenes, agent-generated JSON files.",
+      bestFor: "Existing exports, shared site twins, and approved handoff files.",
       steps: [
-        "Select a JSON file",
+        "Select a site twin data file",
         "Schema validation runs automatically",
         "Review validation results",
         "Enter Studio to continue editing",
       ],
       limitations: [
-        "Only valid SecurityScene JSON files are accepted.",
+        "Only valid site twin data files are accepted.",
         "No backward compatibility with older schema versions.",
       ],
       timeEstimate: "< 1 minute",
-      confidence: "Absolute (Schema backed)",
-      ctaLabel: "Import JSON",
+      confidence: "Absolute (validated data)",
+      ctaLabel: "Import Site Twin Data",
     },
     onClickAction: "onImportJson",
   },
@@ -259,7 +260,7 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
           <nav className="mt-7 space-y-2">
             {[
               { label: "Create Site Twin", icon: LayoutDashboard, active: true },
-              { label: "Studio", icon: Blocks, active: true },
+              { label: "Studio", icon: Blocks, active: false },
             ].map((item) => {
               const Icon = item.icon;
               return (
@@ -267,6 +268,7 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                   key={item.label}
                   type="button"
                   onClick={item.label === "Studio" ? props.onEnterStudio : undefined}
+                  disabled={item.active}
                   className={[
                     "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-[15px] transition-colors",
                     item.active ? "bg-sky-500/12 text-sky-400 ring-1 ring-sky-500/20" : "text-slate-300 hover:bg-white/4 hover:text-white",
@@ -322,18 +324,15 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                 <h1 className="text-[50px] font-semibold tracking-[-0.04em] text-white">Create Site Twin</h1>
               </div>
               <p className="mt-4 text-[19px] leading-7 text-slate-300">
-                Turn a physical site into a trusted, editable SecurityScene.
+                Turn a physical site into a trusted, editable site twin.
               </p>
               <p className="text-[19px] leading-7 text-slate-300">Choose how you want to start.</p>
             </div>
 
-            <button
-              type="button"
-              className="mt-1 flex h-12 items-center gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-4 text-[15px] text-slate-200 transition-colors hover:bg-white/[0.06]"
-            >
+            <div className="mt-1 flex h-12 items-center gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-4 text-[15px] text-slate-300">
               <CircleHelp className="h-4 w-4" />
-              <span>How it works</span>
-            </button>
+              <span>Review model and source limits</span>
+            </div>
           </div>
 
           <div className="mt-10 grid min-h-0 flex-1 gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -416,7 +415,7 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
               </div>
 
               <p className="mt-7 max-w-[560px] border-b border-white/8 pb-6 text-[18px] leading-8 text-slate-300">
-                Capture your site using guided steps. You&apos;ll mark key elements in photos and compile them into a trusted SecurityScene.
+                Capture your site using guided steps. You&apos;ll mark key elements in photos and create a trusted site twin draft.
               </p>
 
               <div className="border-b border-white/8 py-6">
@@ -501,13 +500,14 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
           <section className="mt-6 rounded-[24px] border border-white/8 bg-white/[0.02] p-5">
             <div className="mb-4 flex items-center justify-between gap-4">
               <div className="text-[18px] font-medium text-white">Recent Site Twins</div>
-              <button type="button" className="text-[15px] text-sky-400 hover:text-sky-300">View all</button>
+              <button type="button" onClick={props.onEnterStudio} className="text-[15px] text-sky-400 hover:text-sky-300">Open Studio Library</button>
             </div>
             <div className="flex gap-4 overflow-x-auto pb-1">
-              {props.recentSites.slice(0, 3).map((site, index) => (
+              {props.recentSites.slice(0, 3).map((site) => (
                 <button
                   key={site.id}
                   type="button"
+                  onClick={() => props.onOpenRecentSite?.(site.id) ?? props.onEnterStudio()}
                   className="flex w-[285px] flex-none items-center gap-4 rounded-2xl border border-white/8 bg-[#0e1520] p-3 text-left transition-colors hover:border-white/16 hover:bg-[#111926]"
                 >
                   <div
@@ -526,6 +526,7 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
               ))}
               <button
                 type="button"
+                onClick={props.onImportJson}
                 className="flex w-[285px] flex-none items-center gap-4 rounded-2xl border border-dashed border-white/12 bg-transparent p-3 text-left transition-colors hover:border-sky-400/35 hover:bg-sky-500/6"
               >
                 <div className="flex h-[76px] w-[108px] items-center justify-center rounded-xl border border-white/10 bg-white/[0.02] text-white">

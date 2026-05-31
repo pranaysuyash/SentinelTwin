@@ -77,12 +77,12 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
   const [aiDraftJsonText, setAiDraftJsonText] = useState("");
   const [aiDraftJsonError, setAiDraftJsonError] = useState<string | null>(null);
 
-  const aiDraftModeLabel = aiDraftModelAvailable ? "Model mode active" : "Heuristic fallback active";
+  const aiDraftModeLabel = aiDraftModelAvailable ? "Assistant draft available" : "Local draft available";
   const aiDraftModeDescription = localOnlyMode
-    ? `Cloud-backed AI is disabled by policy. ${currentAiProvider.envKey} is ignored while local-only mode is enabled.`
+    ? "Local-only mode is on. Drafts stay on this device and cloud-assisted layout generation is disabled."
     : aiDraftModelAvailable
-      ? `${currentAiProvider.providerLabel} is active for draft generation.`
-      : `${currentAiProvider.envKey} is missing, so draft generation runs in deterministic heuristic mode.`;
+      ? "The assistant can prepare a draft from your description. Review and approve it before use."
+      : "No cloud assistant is configured, so SentinelTwin will prepare a local rule-based draft.";
 
   const aiDraftSummary = useMemo(
     () => (aiDraftPreview ? summarizeDraftResult(aiDraftPreview) : null),
@@ -341,9 +341,9 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
             <ShieldCheck className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-white">AI Layout Draft</h1>
+            <h1 className="text-xl font-bold tracking-tight text-white">Site Layout Draft</h1>
             <p className="text-xs text-[color:var(--text-muted)]">
-              Prompt-to-scene draft. Generated scenes are validated as SecurityScene before apply.
+              Describe the site, review the proposed layout, then approve it before it becomes active.
             </p>
           </div>
         </div>
@@ -366,19 +366,22 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
                     : "border-red-400/20 bg-red-500/10 text-red-200"
               }`}
             >
-              {currentAiProviderHealth.overallStatus === "healthy" ? "Provider healthy" : currentAiProviderHealth.overallStatus === "partial" ? "Provider partial" : "Provider blocked"}
+              {currentAiProviderHealth.overallStatus === "healthy" ? "Assistant ready" : currentAiProviderHealth.overallStatus === "partial" ? "Assistant limited" : "Assistant blocked"}
             </span>
           </div>
           <p className="mt-2 text-[10px] leading-snug text-[#7c8ba8]">{aiDraftModeDescription}</p>
-          <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">
-            Provider health: {currentAiProviderHealth.healthyProviders} healthy / {currentAiProviderHealth.partialProviders} partial / {currentAiProviderHealth.blockedProviders} blocked.
-          </p>
-          <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">
-            Cost / latency: {currentAiProviderTelemetry.activeCostLabel} · {currentAiProviderTelemetry.activeLatencyLabel}.
-          </p>
-          <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">
-            Telemetry: {aiActionTelemetrySummary.trendLabel} · {aiActionTelemetrySummary.trendNote}
-          </p>
+          <details className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">
+            <summary className="cursor-pointer text-[#9fb0ce]">Advanced assistant diagnostics</summary>
+            <p className="mt-1">
+              Provider readiness: {currentAiProviderHealth.healthyProviders} ready / {currentAiProviderHealth.partialProviders} limited / {currentAiProviderHealth.blockedProviders} blocked.
+            </p>
+            <p className="mt-1">
+              Cost and latency: {currentAiProviderTelemetry.activeCostLabel} · {currentAiProviderTelemetry.activeLatencyLabel}.
+            </p>
+            <p className="mt-1">
+              Usage trend: {aiActionTelemetrySummary.trendLabel} · {aiActionTelemetrySummary.trendNote}
+            </p>
+          </details>
         </div>
 
         {/* Prompt input */}
@@ -472,8 +475,8 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
             {/* JSON */}
             <div className="mt-3 flex items-center justify-between gap-2">
               <div>
-                <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#7e8fb0]">Generated Scene JSON</div>
-                <div className="mt-0.5 text-[10px] text-[#93a7c6]">Review the exact SecurityScene structure before applying it.</div>
+                <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#7e8fb0]">Advanced Data View</div>
+                <div className="mt-0.5 text-[10px] text-[#93a7c6]">Optional site twin data review before applying the draft.</div>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -481,7 +484,7 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
                   onClick={() => setAiDraftJsonVisible((v) => !v)}
                   className="rounded-full border border-[#2a3347] bg-[#101827] px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] text-[#c4d5ff]"
                 >
-                  {aiDraftJsonVisible ? "Hide JSON" : "Show JSON"}
+                  {aiDraftJsonVisible ? "Hide Data" : "Show Data"}
                 </button>
                 <button
                   type="button"
@@ -492,7 +495,7 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
                   }}
                   className="rounded-full border border-[#2a3347] bg-[#101827] px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] text-[#c4d5ff]"
                 >
-                  {aiDraftJsonEditable ? "Lock JSON" : "Edit JSON"}
+                  {aiDraftJsonEditable ? "Lock Data" : "Edit Data"}
                 </button>
                 <button
                   type="button"
@@ -504,7 +507,7 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
                   disabled={!aiDraftSceneJson}
                   className="rounded-full border border-[#2a3347] bg-[#101827] px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] text-[#c4d5ff] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Copy JSON
+                  Copy Data
                 </button>
               </div>
             </div>
@@ -529,7 +532,7 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
 
             {aiDraftJsonIssue ? (
               <div className="mt-2 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-[10px] text-red-100">
-                JSON must be valid SecurityScene data before apply: {aiDraftJsonIssue}
+                Site twin data must validate before apply: {aiDraftJsonIssue}
               </div>
             ) : null}
             {aiDraftCopyNotice ? (
@@ -552,7 +555,7 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
           </div>
         ) : (
           <div className="mt-3 rounded-lg border border-dashed border-[#22314b] bg-[#101827]/60 px-3 py-2 text-[10px] text-[#89a0c4]">
-            Generate a preview to review the scene summary, counts, and notes before applying it to the workspace.
+            Generate a preview to review the site summary, counts, and notes before applying it to the workspace.
           </div>
         )}
 
@@ -571,7 +574,7 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
             disabled={aiGenerating}
             className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-60"
           >
-            {aiGenerating ? "Generating..." : aiDraftSummary ? "Regenerate Preview" : "Generate Preview"}
+            {aiGenerating ? "Preparing..." : aiDraftSummary ? "Regenerate Preview" : "Generate Preview"}
           </button>
           <button
             type="button"
@@ -579,13 +582,13 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
             disabled={!aiDraftPreview || aiGenerating || (aiDraftJsonEditable && !aiDraftJsonValidation.valid)}
             className="rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:bg-cyan-900/60"
           >
-            Use Draft Scene
+            Review Draft Site
           </button>
         </div>
 
         {aiDraftNotice ? (
           <div className="mt-3 rounded-lg border border-[#22314b] bg-[#101827] px-3 py-2 text-[10px] text-[#b6c6e6]">
-            <span className="font-semibold text-cyan-200">AI draft status:</span> {aiDraftNotice}
+            <span className="font-semibold text-cyan-200">Draft status:</span> {aiDraftNotice}
           </div>
         ) : null}
       </div>

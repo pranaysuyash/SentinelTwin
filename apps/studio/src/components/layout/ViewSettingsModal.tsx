@@ -96,14 +96,14 @@ const ANALYSIS_MODULES: Array<{ id: BottomTab; label: string; description: strin
   { id: "beforeafter", label: "Before / After", description: "Comparison module" },
   { id: "assumptions", label: "Assumptions", description: "Simulation assumptions" },
   { id: "governance", label: "Governance", description: "Role and approval control plane" },
-  { id: "provenance", label: "Provenance", description: "Model and traceability" },
+  { id: "provenance", label: "Evidence Trail", description: "Sources and traceability" },
   { id: "redundancy", label: "Redundancy", description: "Coverage resilience" },
-  { id: "counterfactual", label: "Counterfactual", description: "What-if analysis" },
-  { id: "threat", label: "Threat Review", description: "Threat path analysis" },
+  { id: "counterfactual", label: "Fix Options", description: "Before/after fix testing" },
+  { id: "threat", label: "Route Exposure", description: "Authorized route visibility" },
   { id: "report", label: "Report Lite", description: "Client-ready report summary" },
   { id: "help", label: "Help", description: "Onboarding and contextual guidance" },
-  { id: "debug", label: "Debug", description: "Developer diagnostics" },
-  { id: "novel", label: "Novel Algorithms", description: "Research helpers" },
+  { id: "debug", label: "Diagnostics", description: "Implementation diagnostics" },
+  { id: "novel", label: "Advanced Risk Signals", description: "Stability and backup signals" },
 ];
 
 const LAYER_TOGGLES = [

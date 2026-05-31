@@ -71,4 +71,11 @@ describe("Site Draft activation gate contract", () => {
     expect(source).toContain("navigate(\"site_draft_review\");");
     expect(source).not.toContain("useStudioStore((s) => s.importScene)");
   });
+
+  test("recent Site Twin picks from intake route into a real scene open path", () => {
+    const source = readFileSync(routerPath, "utf8");
+    expect(source).toContain("onOpenRecentSite={(siteId) => {");
+    expect(source).toContain("handlers.openScene(project.scene);");
+    expect(source).toContain("handlers.openStudio();");
+  });
 });

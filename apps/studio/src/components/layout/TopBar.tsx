@@ -27,6 +27,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { SurfaceButton } from "@/components/shared/SurfaceButton";
+import { ExplainBadge } from "@/components/shared/ExplainBadge";
 import { useStudioStore } from "@/store/studio-store";
 import { WorkspacePresetSwitcher } from "@/components/dock/WorkspacePresetSwitcher";
 import { BranchSwitcher } from "@/components/top-bar/BranchSwitcher";
@@ -41,15 +42,15 @@ const TARGET_TYPE_OPTIONS: Array<{
   label: string;
   hint: string;
 }> = [
-  { value: "person_detection", label: "Person Detection", hint: "General movement watch" },
-  { value: "face_recognition", label: "Face Recognition", hint: "Recognize known faces" },
-  { value: "face_identification", label: "Face Identification", hint: "Higher certainty face match" },
-  { value: "vehicle_detection", label: "Vehicle Detection", hint: "Cars, bikes, deliveries" },
-  { value: "license_plate", label: "License Plate", hint: "Entry lane / LPR" },
-  { value: "package_detection", label: "Package Detection", hint: "Counter, drop-off, parcels" },
-  { value: "cash_counter_activity", label: "Cash Counter", hint: "Checkout / till activity" },
-  { value: "door_entry_exit", label: "Entry / Exit", hint: "Doors and thresholds" },
-  { value: "perimeter_breach", label: "Perimeter", hint: "Fence or boundary breach" },
+  { value: "person_detection", label: "Person Detection", hint: "Confirm a person is present in this area." },
+  { value: "face_recognition", label: "Face Recognition", hint: "Support watchlist or known-person review where policy allows." },
+  { value: "face_identification", label: "Face Identification", hint: "Require enough detail for higher-certainty identity review." },
+  { value: "vehicle_detection", label: "Vehicle Detection", hint: "Monitor cars, bikes, and delivery movement." },
+  { value: "license_plate", label: "License Plate", hint: "Check whether entry lanes have readable plate coverage." },
+  { value: "package_detection", label: "Package Detection", hint: "Monitor counters, drop-off points, and parcels." },
+  { value: "cash_counter_activity", label: "Cash Counter", hint: "Prioritize checkout and till activity." },
+  { value: "door_entry_exit", label: "Entry / Exit", hint: "Review doorways, thresholds, and access points." },
+  { value: "perimeter_breach", label: "Perimeter", hint: "Review fence lines, boundaries, and after-hours movement." },
 ];
 
 const TARGET_TYPE_LABELS: Record<CriticalZoneNode["targetType"], string> = {
@@ -72,7 +73,7 @@ function SimStatus() {
     return (
       <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-amber-500/20 bg-amber-500/8 px-2 py-1 text-[10px] font-semibold text-amber-300">
         <Loader2 className="h-3 w-3 animate-spin" />
-        Running
+        Reviewing
       </span>
     );
   }
@@ -81,7 +82,7 @@ function SimStatus() {
     return (
       <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-amber-500/20 bg-amber-500/8 px-2 py-1 text-[10px] font-semibold text-amber-300">
         <AlertTriangle className="h-3 w-3" />
-        Needs Recompute
+        Review stale
       </span>
     );
   }
@@ -238,7 +239,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
           </div>
           <div className="min-w-0 leading-tight">
             <div className="truncate text-[12px] font-semibold tracking-[0.01em] text-white">SentinelTwin</div>
-            <div className="truncate text-[10px] uppercase tracking-[0.18em] text-[#5a6882]">AI Security Audit Studio</div>
+            <div className="truncate text-[10px] uppercase tracking-[0.18em] text-[#5a6882]">Security Site Twin</div>
           </div>
         </div>
 
@@ -249,14 +250,14 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
         <div className="flex items-center gap-1">
           <SurfaceButton
             onClick={() => setWizardOpen(true)}
-            title="Create new scene"
+            title="Create a new site twin"
           >
             <Plus className="h-3 w-3" />
             <span className="hidden md:inline">Create</span>
           </SurfaceButton>
           <SurfaceButton
             onClick={handleImportScene}
-            title="Import scene from JSON"
+            title="Import a site twin file"
           >
             <Upload className="h-3 w-3" />
             <span className="hidden lg:inline">Import</span>
@@ -289,7 +290,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
             onClick={() => setSceneOpen((open) => !open)}
             className="flex h-7 min-w-[170px] max-w-[190px] items-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] px-2.5 text-[11px] font-medium text-[#c7d0e4] transition-colors hover:border-[#32384d] hover:text-white"
           >
-            <span className="truncate">{scene.name || "Untitled Scene"}</span>
+            <span className="truncate">{scene.name || "Untitled Site"}</span>
             <ChevronDown className="h-3 w-3 flex-shrink-0 text-[#546078]" />
           </button>
           {sceneOpen && (
@@ -349,7 +350,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                 </>
               )}
               {savedScenes.length === 0 && (
-                <div className="px-2.5 py-2 text-[11px] text-[#6f7f9d]">No saved scenes yet</div>
+                <div className="px-2.5 py-2 text-[11px] text-[#6f7f9d]">No saved site twins yet</div>
               )}
 
               <div className="space-y-0.5">
@@ -361,7 +362,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
                 >
                   <Download className="h-3 w-3" />
-                  Export Scene JSON
+                  Export Site Twin File
                 </button>
                 <button type="button"
                   onClick={() => {
@@ -371,7 +372,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
                 >
                   <Upload className="h-3 w-3" />
-                  Import Scene JSON
+                  Import Site Twin File
                 </button>
                 <button type="button"
                   onClick={() => {
@@ -391,7 +392,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
                 >
                   <Plus className="h-3 w-3" />
-                  New Scene...
+                  New Site Twin...
                 </button>
                 <button type="button"
                   onClick={() => {
@@ -401,7 +402,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
                 >
                   <Save className="h-3 w-3" />
-                  Save Current Scene
+                  Save Current Site Twin
                 </button>
               </div>
 
@@ -420,6 +421,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
             type="file"
             accept=".json"
             className="hidden"
+            style={{ caretColor: "transparent" }}
             onChange={handleFileSelected}
           />
         </div>
@@ -459,6 +461,10 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
             </div>
           )}
         </div>
+        <ExplainBadge
+          text="Coverage targets describe what the camera view must support in a zone: noticing movement, recognizing a person, reading a plate, or reviewing activity. Changing the target reruns the same geometry against a stricter or looser operating need."
+          side="right"
+        />
 
       </div>
 
@@ -473,12 +479,13 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
 
         <SurfaceButton onClick={() => toggleViewSettingsOpen()} data-testid="topbar-view-settings">
           <SlidersHorizontal className="h-3 w-3" />
-          <span className="hidden lg:inline">View Settings</span>
+          <span className="hidden lg:inline">View</span>
         </SurfaceButton>
 
         <button type="button"
           onClick={runSimulation}
           disabled={running}
+          title="Run the site review and refresh coverage, route exposure, redundancy, and report evidence."
           className={cn(
             "inline-flex h-7 items-center justify-center gap-1.5 rounded-lg px-3 text-[11px] font-semibold transition-colors",
             running
@@ -487,21 +494,22 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
           )}
         >
           {running ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3 fill-current" />}
-          {running ? "Running" : "Simulate"}
+          {running ? "Reviewing" : "Run Review"}
         </button>
 
         {/* Secondary actions — collapse into more menu below xl */}
         <div className="hidden items-center gap-1.5 xl:flex">
-          <SurfaceButton onClick={() => setEnvMode(envMode === "night" ? "day" : "night")}>
+          <SurfaceButton onClick={() => setEnvMode(envMode === "night" ? "day" : "night")} title="Switch between day and night assumptions before running review.">
             <Moon className="h-3 w-3" />
             Night
           </SurfaceButton>
 
           <SurfaceButton
             onClick={handleCameraFailure}
+            title="Toggle the selected camera offline to test single-camera outage impact."
           >
             <Shield className="h-3 w-3" />
-            Failure
+            Test Outage
           </SurfaceButton>
 
           <SurfaceButton
@@ -510,34 +518,35 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                 `Snapshot ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`,
               )
             }
+            title="Save the current site twin state for before/after comparison."
           >
             <Copy className="h-3 w-3" />
             Snapshot
           </SurfaceButton>
 
-          <SurfaceButton onClick={() => setBottomTab("beforeafter")}>
+          <SurfaceButton onClick={() => setBottomTab("beforeafter")} title="Compare baseline and proposed fixes with measured deltas.">
             <Clapperboard className="h-3 w-3" />
             Compare
           </SurfaceButton>
 
-          <SurfaceButton onClick={() => setBottomTab("threat")}>
+          <SurfaceButton onClick={() => setBottomTab("threat")} title="Review authorized route exposure and uncovered route sections.">
             <Crosshair className="h-3 w-3" />
-            Threat
+            Path Risk
           </SurfaceButton>
 
-          <SurfaceButton onClick={() => setBottomTab("report")}>
+          <SurfaceButton onClick={() => setBottomTab("report")} title="Open the evidence-backed report handoff.">
             <FileText className="h-3 w-3" />
             Report
           </SurfaceButton>
 
-          <SurfaceButton onClick={() => setBottomTab("assumptions")}>
+          <SurfaceButton onClick={() => setBottomTab("assumptions")} title="Review the assumptions that qualify simulation and report claims.">
             <Info className="h-3 w-3" />
             Assumptions
           </SurfaceButton>
 
-          <SurfaceButton onClick={() => setBottomTab("provenance")}>
+          <SurfaceButton onClick={() => setBottomTab("provenance")} title="Open the evidence trail behind the current site twin.">
             <SlidersHorizontal className="h-3 w-3" />
-            Provenance
+            Evidence Trail
           </SurfaceButton>
 
           {/* Visible keyboard shortcut toggle */}
@@ -585,7 +594,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
                 >
                   <Shield className="h-3 w-3" />
-                  Camera Failure
+                  Test Camera Outage
                 </button>
                 <button type="button"
                   onClick={() => { saveSnapshot(`Snapshot ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`); setMoreOpen(false); }}
@@ -606,14 +615,14 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
                 >
                   <Crosshair className="h-3 w-3" />
-                  Threat Path
+                  Path Risk
                 </button>
                 <button type="button"
                   onClick={() => { setBottomTab("report"); setMoreOpen(false); }}
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
                 >
                   <FileText className="h-3 w-3" />
-                  Generate Report
+                  Prepare Report
                 </button>
                 <button type="button"
                   onClick={() => { setBottomTab("assumptions"); setMoreOpen(false); }}
@@ -627,7 +636,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
                 >
                   <SlidersHorizontal className="h-3 w-3" />
-                  Provenance
+                  Evidence Trail
                 </button>
                 <div className="my-1 border-t border-[#1e2130]" />
               </div>
@@ -638,7 +647,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                 }}
                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
               >
-                {demoMode ? "Exit Guided Walkthrough" : "Enter Guided Walkthrough"}
+                {demoMode ? "Exit Guided Walkthrough" : "Start Guided Walkthrough"}
               </button>
               <button type="button"
                 onClick={() => {
@@ -659,7 +668,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
               >
                 <Download className="h-3 w-3" />
-                Export JSON
+                Export Site Twin File
               </button>
               <div className="xl:hidden">
                 <button type="button"

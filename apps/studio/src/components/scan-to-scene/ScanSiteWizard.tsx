@@ -552,7 +552,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
       recordOperationalEvidenceEvent({
         kind: "scan_session_compiled",
         title: isGuided ? "Guided scan assistant compiled" : "Scan session compiled",
-        details: `${isGuided ? "Guided assistant" : "Manual-assisted scan"} compiled ${session.roomName} into ${compiled.scene.name || "a scene"} with ${compiled.provenance.acceptedCandidates} accepted candidates.`,
+        details: `${isGuided ? "Guided assistant" : "Guided photo marking"} created ${compiled.scene.name || "a site twin draft"} from ${session.roomName} with ${compiled.provenance.acceptedCandidates} accepted candidates.`,
         actor: "user",
         source: compiled.scene.source,
         sceneId: compiled.scene.id,
@@ -824,11 +824,11 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                 <div className="mt-4 flex flex-wrap items-center gap-4">
                   <h1 className="text-[50px] font-semibold tracking-[-0.045em] text-white">Scan Site Photos</h1>
                   <span className="inline-flex items-center rounded-md bg-emerald-500/12 px-3 py-1.5 text-[18px] text-emerald-300 ring-1 ring-emerald-500/15">
-                    Manual-assisted · Working
+                    Guided marking · Working
                   </span>
                 </div>
                 <p className="mt-3 max-w-[980px] text-[19px] leading-8 text-slate-300">
-                  Capture your site using guided steps. Mark key elements in your photos and compile them into a trusted SecurityScene.
+                  Capture your site using guided steps. Mark key elements in your photos and create a trusted site twin draft.
                 </p>
               </div>
 
@@ -1094,9 +1094,9 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                   <div className="flex items-start gap-3">
                     <ScanSearch className="mt-0.5 h-5 w-5 flex-none text-sky-300" />
                     <div>
-                      <div className="font-medium text-white">Manual-assisted scan (V1)</div>
+                      <div className="font-medium text-white">Guided photo marking</div>
                       <div className="mt-1 leading-6 text-slate-200">You confirm all elements.</div>
-                      <div className="mt-1 leading-6 text-slate-300">AI segmentation &amp; depth coming later.</div>
+                      <div className="mt-1 leading-6 text-slate-300">Automatic photo detection is not enabled for this workflow yet.</div>
                     </div>
                   </div>
                 </div>
@@ -1423,8 +1423,8 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
               <div className="mt-4 space-y-3 text-xs text-[#8292af]">
                 <p>1. You upload one or more photos of the site or use the sample retail layout.</p>
                 <p>2. You tap locations on the image and classify them as wall, door, camera, cupboard, counter, or another object type.</p>
-                <p>3. The scan candidates remain separate from the final scene until you compile them.</p>
-                <p>4. The result becomes a real SecurityScene, ready for the existing coverage and replay flow.</p>
+                <p>3. The scan candidates remain separate from the active site twin until you create a draft.</p>
+                <p>4. The result becomes a reviewable site twin draft, ready for coverage and replay review after approval.</p>
               </div>
             </div>
           </div>
@@ -1837,7 +1837,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
             <div className="rounded-2xl border border-[#1f2536] bg-[#0c111b] p-4">
               <h3 className="text-sm font-semibold text-white">Review summary</h3>
               <p className="mt-1 text-xs text-[#8292af]">
-                The output is a real SecurityScene. Wall annotations tune the shell, while objects become scene nodes.
+                The output is a real site twin draft. Wall annotations tune the shell, while objects become editable site elements.
               </p>
 
               <div className="mt-4 space-y-2">
@@ -1880,14 +1880,14 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
               </div>
 
               <div className="mt-4 rounded-2xl border border-cyan-500/20 bg-cyan-500/8 p-3 text-xs text-cyan-100/90">
-                No AI perception is claimed here. The image is a manual-assisted intake that compiles directly into the existing simulation pipeline.
+                No automatic photo detection is claimed here. You mark the image, and the draft flows into the existing simulation pipeline after review.
               </div>
               <div className="mt-3 rounded-2xl border border-rose-500/20 bg-rose-500/8 p-3 text-xs text-rose-100/90">
-                <strong>Compiling now creates a draft review session.</strong> The compiled scan is not promoted to the active SecurityScene until you approve it in Site Draft Review.
+                <strong>Creating the draft opens review.</strong> The scan is not promoted to the active site twin until you approve it in Site Draft Review.
               </div>
               <div className="mt-3 rounded-2xl border border-[#243049] bg-[#09111b] p-3">
                 <h4 className="text-xs font-semibold text-white">Compile preview</h4>
-                <p className="mt-1 text-[11px] text-[#8aa1c4]">What will be created in the output SecurityScene:</p>
+                <p className="mt-1 text-[11px] text-[#8aa1c4]">What will be created in the site twin draft:</p>
                 <div className="mt-3 grid grid-cols-4 gap-2">
                   <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/8 p-2 text-center">
                     <div className="text-lg font-bold text-emerald-200">{candidateStats.cameraCount}</div>
@@ -2022,7 +2022,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
               <div className="mt-3 rounded-2xl border border-[#243049] bg-[#09111b] p-3">
                 <h4 className="text-xs font-semibold text-white">What will be created</h4>
                 <div className="mt-2 space-y-1 text-[11px] text-[#8aa1c4]">
-                  <p>• Canonical <code className="text-[#c4d5ff]">SecurityScene</code> with real walls, openings, obstructions, lights, cameras, zones, and optional path.</p>
+                  <p>• Validated site twin data with real walls, openings, obstructions, lights, cameras, zones, and optional path.</p>
                   <p>• Editable in Studio, starting in map mode with the metrics panel visible.</p>
                   <p>• Simulation-ready when at least one camera and one critical zone are present.</p>
                 </div>

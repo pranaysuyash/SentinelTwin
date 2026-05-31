@@ -27,14 +27,14 @@ const PRESETS: Array<{
   icon: ReactNode;
   hint: string;
 }> = [
-  { id: "edit", label: "Edit", icon: <PencilRuler className="h-3.5 w-3.5" />, hint: "Balanced layout for scene building" },
-  { id: "coverage", label: "Coverage", icon: <LayoutGrid className="h-3.5 w-3.5" />, hint: "Canvas-first review with inspector" },
-  { id: "camera_wall", label: "Camera Wall", icon: <Monitor className="h-3.5 w-3.5" />, hint: "Minimal chrome for multi-feed review" },
-  { id: "replay", label: "Replay", icon: <Play className="h-3.5 w-3.5" />, hint: "Timeline-forward path replay" },
-  { id: "compare", label: "Compare", icon: <Columns3 className="h-3.5 w-3.5" />, hint: "Before/after scenario comparison" },
-  { id: "report", label: "Report", icon: <FileText className="h-3.5 w-3.5" />, hint: "Reporting and handoff layout" },
-  { id: "debug", label: "Debug", icon: <Sparkles className="h-3.5 w-3.5" />, hint: "Dense diagnostic workspace" },
-  { id: "focus", label: "Focus", icon: <Shield className="h-3.5 w-3.5" />, hint: "Focused workspace with all docks hidden" },
+  { id: "edit", label: "Build", icon: <PencilRuler className="h-3.5 w-3.5" />, hint: "Draw the site and place cameras, zones, paths, and obstructions." },
+  { id: "coverage", label: "Verify", icon: <LayoutGrid className="h-3.5 w-3.5" />, hint: "Review coverage quality, critical zones, and camera responsibility." },
+  { id: "camera_wall", label: "Camera Wall", icon: <Monitor className="h-3.5 w-3.5" />, hint: "Check simulated feeds side by side." },
+  { id: "replay", label: "Replay", icon: <Play className="h-3.5 w-3.5" />, hint: "Review an authorized route and where coverage is lost." },
+  { id: "compare", label: "Compare", icon: <Columns3 className="h-3.5 w-3.5" />, hint: "Measure before/after impact before applying a fix." },
+  { id: "report", label: "Report", icon: <FileText className="h-3.5 w-3.5" />, hint: "Prepare the evidence-backed audit handoff." },
+  { id: "debug", label: "Diagnostics", icon: <Sparkles className="h-3.5 w-3.5" />, hint: "Inspect detailed signals used by the simulation." },
+  { id: "focus", label: "Focus", icon: <Shield className="h-3.5 w-3.5" />, hint: "Hide panels for uninterrupted site review." },
 ];
 
 export function WorkspacePresetSwitcher() {
@@ -143,7 +143,7 @@ export function WorkspacePresetSwitcher() {
           onMouseLeave={() => setOpen(false)}
         >
           <div className="px-2 py-1 text-[9px] uppercase tracking-[0.22em] text-[#4d566b]">
-            Workspace presets
+            Workspaces
           </div>
           <div className="grid gap-1">
             {PRESETS.map((entry) => (
@@ -209,7 +209,7 @@ export function WorkspacePresetSwitcher() {
 
           <div className="mt-2 border-t border-[#1e2130] pt-2">
             <div className="px-2 py-1 text-[9px] uppercase tracking-[0.22em] text-[#4d566b]">
-              Custom layouts
+              Saved layouts
             </div>
             {savedLayouts.length > 0 ? (
               <div className="max-h-48 space-y-1 overflow-y-auto pr-1">

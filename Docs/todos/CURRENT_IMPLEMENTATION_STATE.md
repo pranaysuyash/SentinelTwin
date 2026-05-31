@@ -1,6 +1,6 @@
 # Current Implementation State — Camera Studio
 
-**Updated:** 2026-05-30 (session 35: governance route sync-source surfaced in approval routing)
+**Updated:** 2026-05-31 (session 36: intake clickability honesty + demo flow documentation + recent-site scene routing)
 **Source:** Direct code audit of apps/studio/src/
 **Purpose:** Accurate baseline of what is actually built, tested, and rendering.
 Use this instead of the earlier CAMERASTUDIO_GAP_ANALYSIS.md which was written
@@ -18,6 +18,9 @@ For the full-vision gap inventory and next-slice sequencing, see
 - Product home action hierarchy now matches the approved security-first command-center shape: primary mode actions include Coverage, Camera Operations, Incident Review, Compare Fix, and Audit Report, while create/import/scan/AI paths are docked as secondary actions ✅
 - Product home language now centers Site Twin / Audit wording (Current Site Twin, Site Risk, Recent Site Twins, Site Twin Memory Search) and avoids unfinished hydration/unknown-state copy on first load ✅
 - Product home left navigation now routes into real product sections (`site_intake`, `studio`, `audit_report`, `reference_sites`, `settings`) instead of static placeholder labels ✅
+- Site intake recent-site cards now route to real scene-open actions, and intake quick-import now triggers JSON import directly from the intake surface ✅
+- Header scene/environment indicators on home are now explicit status chips (non-dropdown) to avoid false click affordances ✅
+- Canonical product demo walk-through is now documented at `Docs/product/SITE_TWIN_CREATION_DEMO_FLOW.md` with activation-gate acceptance criteria ✅
 
 ## Scene editor workbench hardening (2026-05-29)
 

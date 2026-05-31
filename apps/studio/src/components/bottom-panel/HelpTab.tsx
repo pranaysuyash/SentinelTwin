@@ -3,10 +3,82 @@
 import { TOOL_SHORTCUTS, VIEW_MODE_KEYS } from "@/lib/studio-constants";
 
 const WORKFLOW_STEPS = [
-  "Start from the launcher with a blank scene, import, scan, or AI draft.",
-  "Place cameras, lights, walls, zones, and obstructions in the live scene.",
-  "Run simulation to compute coverage, issues, redundancy, and uncertainty signals.",
-  "Open Security Outcome, Issues, Report Lite, or Compare to review and test fixes.",
+  "Start from a blank site, floor plan, guided photo marking, imported site twin, or layout draft.",
+  "Place cameras, lights, access points, critical zones, paths, and obstructions.",
+  "Run review to measure coverage quality, route exposure, redundancy, and night readiness.",
+  "Use Security Outcome, Issues, Compare, and Report Lite to verify fixes and prepare evidence.",
+] as const;
+
+const SECURITY_TEAM_GUIDES = [
+  {
+    title: "Audit an existing site",
+    detail: "Open the site twin, run review, check critical zones first, then work the issue list from highest severity.",
+  },
+  {
+    title: "Test a camera outage",
+    detail: "Select a camera, use Test Outage, then open Redundancy to see which zones lose backup coverage.",
+  },
+  {
+    title: "Review night readiness",
+    detail: "Switch to night review, rerun, and compare critical-zone quality before changing lights or IR-capable cameras.",
+  },
+  {
+    title: "Prepare audit evidence",
+    detail: "Save a snapshot, compare before/after, review assumptions, then open Report Lite for the handoff.",
+  },
+] as const;
+
+const DOMAIN_TERMS = [
+  {
+    term: "DORI / OODPCVS",
+    meaning: "Evidence quality levels for what a camera can support: detect, observe, recognize, identify, and higher-detail review.",
+    why: "Use this to decide whether a zone merely notices movement or captures usable evidence.",
+  },
+  {
+    term: "PPM",
+    meaning: "Pixels per meter at a point in the scene. Higher detail supports stronger evidence quality.",
+    why: "If PPM is low at a cash counter or entry lane, the camera may see activity without enough detail.",
+  },
+  {
+    term: "FOV",
+    meaning: "Field of view, or how wide the camera sees.",
+    why: "A wider view can cover more area but may reduce detail at the target.",
+  },
+  {
+    term: "IR / night mode",
+    meaning: "Low-light camera behavior used in the night review.",
+    why: "Night results can fail even when day coverage looks acceptable.",
+  },
+  {
+    term: "Critical zone",
+    meaning: "An area that needs a specific evidence level, such as a till, entry, stock room, or lane.",
+    why: "Coverage percentage matters less than whether these zones meet their required target.",
+  },
+  {
+    term: "Privacy zone",
+    meaning: "An area where monitoring should be limited or flagged for policy review.",
+    why: "This prevents a coverage fix from creating a privacy problem.",
+  },
+  {
+    term: "Single point of failure",
+    meaning: "A zone that fails if one camera goes offline.",
+    why: "Use redundancy checks before trusting a plan for operations.",
+  },
+  {
+    term: "Assumption",
+    meaning: "A setting the simulation used, such as lighting, target height, camera status, or wall height.",
+    why: "Reports should be read under these assumptions, not as field guarantees.",
+  },
+  {
+    term: "Evidence trail",
+    meaning: "The source files, edits, approvals, and computed results behind the current site twin.",
+    why: "Use this when a client or reviewer asks how a result was produced.",
+  },
+  {
+    term: "Verified by simulation",
+    meaning: "The change was measured against the current site geometry and assumptions.",
+    why: "This separates tested fixes from suggestions that still need review.",
+  },
 ] as const;
 
 const SHORTCUT_GROUPS = [
@@ -88,22 +160,36 @@ export function HelpTab() {
           </div>
 
           <div className="rounded-xl border border-[#222b3f] bg-[#0d1220] p-3">
-            <div className="text-[12px] font-semibold text-white">Domain Terms</div>
+            <div className="text-[12px] font-semibold text-white">For Security Teams</div>
+            <div className="mt-2 grid gap-2">
+              {SECURITY_TEAM_GUIDES.map((guide) => (
+                <div key={guide.title} className="rounded-lg border border-white/5 bg-white/[0.02] p-2">
+                  <div className="text-[11px] font-semibold text-[#d7e4ff]">{guide.title}</div>
+                  <div className="mt-0.5 text-[10px] leading-relaxed text-[#9fb0ce]">{guide.detail}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-[#222b3f] bg-[#0d1220] p-3">
+            <div className="text-[12px] font-semibold text-white">Glossary</div>
             <div className="mt-2 space-y-1 text-[11px] text-[#9fb0ce]">
-              <div><span className="text-[#d7e4ff]">DORI / OODPCVS:</span> Quality thresholds for what a camera can reliably see.</div>
-              <div><span className="text-[#d7e4ff]">Fragility:</span> How close coverage is to failing with small scene changes.</div>
-              <div><span className="text-[#d7e4ff]">Redundancy:</span> Whether a zone still passes when one camera goes offline.</div>
-              <div><span className="text-[#d7e4ff]">Provenance:</span> The source graph that explains how the current result was produced.</div>
+              {DOMAIN_TERMS.map((entry) => (
+                <div key={entry.term} className="rounded-lg border border-white/5 bg-white/[0.02] p-2">
+                  <div><span className="text-[#d7e4ff]">{entry.term}:</span> {entry.meaning}</div>
+                  <div className="mt-0.5 text-[10px] text-[#7384a5]">Why it matters: {entry.why}</div>
+                </div>
+              ))}
             </div>
           </div>
 
           <div className="rounded-xl border border-[#222b3f] bg-[#0d1220] p-3">
             <div className="text-[12px] font-semibold text-white">Recovery Guidance</div>
             <ul className="mt-2 space-y-1 text-[11px] text-[#9fb0ce]">
-              <li>• Import error: validate JSON structure and re-import.</li>
+              <li>• Import error: validate the site twin file and re-import.</li>
               <li>• Low night score: add light coverage or enable IR-capable camera.</li>
               <li>• Single-point failure: reorient or add a backup camera for the critical zone.</li>
-              <li>• Unclear recommendation: use Preview Fix, Test Fix, then Apply Fix.</li>
+              <li>• Unclear recommendation: preview the fix, run review, compare the delta, then apply.</li>
             </ul>
           </div>
         </div>

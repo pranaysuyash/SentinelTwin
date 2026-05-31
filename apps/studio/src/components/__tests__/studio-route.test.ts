@@ -12,6 +12,8 @@ describe("Studio route", () => {
     expect(source).toContain("StudioShell");
     expect(source).toContain("export default function StudioRoutePage()");
     expect(source).toContain("return <StudioShell />;");
+    expect(source).not.toContain("next/dynamic");
+    expect(source).not.toContain("ssr: false");
+    expect(source).not.toContain("Loading Studio");
   });
 });
-

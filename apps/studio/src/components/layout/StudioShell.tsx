@@ -126,7 +126,8 @@ function FirstRunGuide({ onClose, onOpenHelp }: { onClose: () => void; onOpenHel
 }
 
 export default function StudioShell() {
-  useSimulation();
+  const [hydrated, setHydrated] = useState(false);
+  useSimulation(hydrated);
   const [studioBypassMode, setStudioBypassMode] = useState(false);
   const demoMode = useStudioStore((s) => s.demoMode);
   const launchNotice = useStudioStore((s) => s.launchNotice);
@@ -177,6 +178,10 @@ export default function StudioShell() {
   const [showFirstRunGuide, setShowFirstRunGuide] = useState(false);
   const rightRailAutoSetRef = useRef(false);
   const fullCanvasMode = viewMode === "camera_view" || viewMode === "wall" || viewMode === "replay";
+
+  useEffect(() => {
+    queueMicrotask(() => setHydrated(true));
+  }, []);
 
   // Read ?mode= from URL on mount only — prevents URL from overriding user's mode changes.
   useEffect(() => {
@@ -413,6 +418,16 @@ export default function StudioShell() {
       setSelectedCameraId(scene.cameras[0]?.id ?? null);
     }
   }, [scene.cameras, selectedCameraId, selectedNodeId, setSelectedCameraId, viewMode]);
+
+  if (!hydrated) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#030611] text-[#9fb1cf]">
+        <div className="rounded-xl border border-[#1f2a3d] bg-[#0b1020] px-4 py-3 text-[11px] uppercase tracking-[0.28em] text-sky-100">
+          Loading Studio
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[#0b0c10] text-[#dde2ef]">

@@ -61,7 +61,7 @@ export function FixSandboxBar() {
       {needsRecompute && !simulationRunning && (
         <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-amber-500/20 bg-amber-500/8 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
           <AlertTriangle className="h-3 w-3" />
-          Needs Recompute
+          Review stale
         </span>
       )}
       {simulationRunning && (
@@ -73,7 +73,7 @@ export function FixSandboxBar() {
       {!needsRecompute && !simulationRunning && (
         <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-emerald-500/20 bg-emerald-500/8 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
           <CheckCircle2 className="h-3 w-3" />
-          Simulated
+          Reviewed
         </span>
       )}
 
@@ -96,7 +96,7 @@ export function FixSandboxBar() {
           ) : (
             <CheckCircle2 className="h-3 w-3" />
           )}
-          {simulationRunning ? "Simulating..." : "Simulate"}
+          {simulationRunning ? "Reviewing..." : "Run Review"}
         </button>
 
         {/* Apply Changes — green */}

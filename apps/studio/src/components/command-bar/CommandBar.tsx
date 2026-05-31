@@ -7,6 +7,7 @@ import { startTransition, useCallback, useEffect, useMemo, useRef, useState } fr
 import { useAiCommand } from "@/hooks/use-ai-command";
 import type { CounterfactualCandidate } from "@/agents/CounterfactualAgent";
 import { summarizeAiActionTelemetry } from "@/lib/ai-action-telemetry";
+import { ExplainBadge } from "@/components/shared/ExplainBadge";
 import { useStudioStore } from "@/store/studio-store";
 
 const COST_COLORS: Record<string, string> = {
@@ -85,7 +86,7 @@ export function CommandBar() {
 
   const healthStatus = hasMounted ? providerHealth.overallStatus : "partial";
   const telemetryStatus = hasMounted ? providerTelemetry.overallStatus : "guarded";
-  const modeDetail = hasMounted ? mode.detail : "Syncing AI command state...";
+  const modeDetail = hasMounted ? mode.detail : "Loading command guardrails...";
   const compactHealthClass = hasMounted
     ? (HEALTH_COLORS[healthStatus] ?? HEALTH_COLORS.partial)
     : "text-slate-300 border-slate-500/20 bg-slate-500/10";
@@ -108,7 +109,7 @@ export function CommandBar() {
           className="group absolute bottom-3 right-3 z-30 flex h-9 items-center gap-2 rounded-xl border border-[#1f2536] bg-[#0b0f17]/80 px-3 text-[10px] font-medium text-[#5b667c] shadow-[0_4px_16px_rgba(0,0,0,0.25)] transition-[border-color,color,box-shadow] hover:border-[#32384d] hover:text-white hover:shadow-[0_4px_20px_rgba(0,0,0,0.35)]"
         >
         <Sparkles className="h-3.5 w-3.5 text-emerald-400/70 group-hover:text-emerald-400" />
-        AI Command
+        Guided Edit
         <span className="rounded-full border border-emerald-500/15 bg-emerald-500/10 px-1.5 py-0.5 text-[8px] text-emerald-300">
           {mode.label}
         </span>
@@ -147,7 +148,7 @@ export function CommandBar() {
                 {mode.providerLabel}
               </span>
               <span className="rounded-full border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[8px] text-[#8b96ab]">
-                {mode.cloudAvailable ? "Cloud-backed available" : "Local-only"}
+                {mode.cloudAvailable ? "Cloud review available" : "Local-only"}
               </span>
               <span className={`rounded-full border px-2 py-0.5 text-[8px] ${fullHealthClass}`}>
                 {hasMounted ? (healthStatus === "healthy" ? "Provider healthy" : healthStatus === "partial" ? "Provider partial" : "Provider blocked") : "Provider syncing"}
@@ -157,14 +158,20 @@ export function CommandBar() {
               </span>
             </div>
             <p className="mt-1 text-[10px] leading-snug text-[#8b96ab]">{modeDetail}</p>
-            <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">Provider health: {providerHealth.healthyProviders} healthy / {providerHealth.partialProviders} partial / {providerHealth.blockedProviders} blocked.</p>
-            <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">Cost / latency: {providerTelemetry.activeCostLabel} · {providerTelemetry.activeLatencyLabel}.</p>
-            <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">Stage policy: {providerTelemetry.stagePolicies.map((stage) => `${stage.stage}:${stage.ready ? "ready" : "guarded"}`).join(" · ")}.</p>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] leading-snug text-[#7c8ba8]">
+              <span>Readiness: {providerHealth.healthyProviders} ready / {providerHealth.partialProviders} limited / {providerHealth.blockedProviders} blocked.</span>
+              <ExplainBadge
+                text="Guided edits can parse plain-language changes. The scene still changes through structured operations, and security impact must be verified by running the simulation."
+                side="right"
+              />
+            </div>
+            <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">Review cost and response time: {providerTelemetry.activeCostLabel} · {providerTelemetry.activeLatencyLabel}.</p>
+            <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">Policy gates: {providerTelemetry.stagePolicies.map((stage) => `${stage.stage}:${stage.ready ? "ready" : "guarded"}`).join(" · ")}.</p>
             <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">
-              Latest measured action: {latestAiActionTelemetry ? `${latestAiActionTelemetry.stage} · ${latestAiActionTelemetry.durationMs} ms · ~${latestAiActionTelemetry.estimatedTotalTokens} tokens` : "none yet"}.
+              Last assisted edit: {latestAiActionTelemetry ? `${latestAiActionTelemetry.stage} · ${latestAiActionTelemetry.durationMs} ms · ~${latestAiActionTelemetry.estimatedTotalTokens} tokens` : "none yet"}.
             </p>
             <p className="mt-1 text-[10px] leading-snug text-[#7c8ba8]">
-              Telemetry trend: {aiActionTelemetrySummary.trendLabel} · {aiActionTelemetrySummary.trendNote}
+              Usage trend: {aiActionTelemetrySummary.trendLabel} · {aiActionTelemetrySummary.trendNote}
             </p>
           </div>
           <button type="button"
@@ -184,13 +191,13 @@ export function CommandBar() {
             {status.state === "parsing" && (
               <div className="flex items-center gap-2 text-[11px] text-amber-300">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Thinking...
+                Preparing edit...
               </div>
             )}
             {status.state === "applying" && (
               <div className="flex items-center gap-2 text-[11px] text-blue-300">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Applying {status.descriptions.length} operation{status.descriptions.length > 1 ? "s" : ""}...
+                Applying {status.descriptions.length} site edit{status.descriptions.length > 1 ? "s" : ""}...
               </div>
             )}
             {status.state === "preview" && (
@@ -282,7 +289,7 @@ export function CommandBar() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask AI to modify the scene..."
+            placeholder="Describe a site edit or review action..."
             disabled={status.state === "parsing" || status.state === "applying"}
             className="min-w-0 flex-1 bg-transparent text-[12px] text-white placeholder-[#4d566b] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 disabled:opacity-50"
           />
@@ -304,7 +311,7 @@ export function CommandBar() {
 
         {/* Quick hints */}
         <div className="mt-2 flex flex-wrap gap-1.5">
-          {["Move Camera 1 toward the entry", "Switch to night mode", "Turn off Camera 2", "Add a light near the counter"].map((hint) => (
+          {["Move Camera 1 toward the entry", "Switch to night review", "Test Camera 2 outage", "Add a light near the counter"].map((hint) => (
             <button type="button"
               key={hint}
               onClick={() => {
@@ -318,7 +325,7 @@ export function CommandBar() {
           ))}
         </div>
         <div className="mt-1.5 rounded-lg border border-[#1a2030] bg-[#07090f]/70 px-2.5 py-1.5 text-[9px] text-[#8090a8]">
-          {mode.label}: recognized scene edits run locally. {mode.cloudAvailable ? "Cloud-backed parsing and fix proposals use a configured API key." : "Cloud-backed parsing and fix proposals are disabled by policy."}
+          {mode.label}: recognized site edits run locally. {mode.cloudAvailable ? "Cloud-assisted parsing and fix proposals use a configured API key." : "Cloud-assisted parsing and fix proposals are disabled by policy."}
         </div>
         {/* Slash commands */}
         <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -366,10 +373,10 @@ function CandidateCard({ candidate, onApply }: { candidate: CounterfactualCandid
       {candidate.verifiedDelta && (
         <div className="mt-1 flex flex-wrap gap-3 rounded bg-[#0a0d15] px-2 py-1 text-[8px]">
           <span className={candidate.verifiedDelta.totalCoveragePctDelta >= 0 ? "text-emerald-400" : "text-red-400"}>
-            {candidate.verifiedDelta.totalCoveragePctDelta >= 0 ? "+" : ""}{candidate.verifiedDelta.totalCoveragePctDelta}% cov
+            {candidate.verifiedDelta.totalCoveragePctDelta >= 0 ? "+" : ""}{candidate.verifiedDelta.totalCoveragePctDelta}% coverage
           </span>
           <span className={candidate.verifiedDelta.blindspotPctDelta <= 0 ? "text-emerald-400" : "text-red-400"}>
-            {candidate.verifiedDelta.blindspotPctDelta >= 0 ? "+" : ""}{candidate.verifiedDelta.blindspotPctDelta}% blind
+            {candidate.verifiedDelta.blindspotPctDelta >= 0 ? "+" : ""}{candidate.verifiedDelta.blindspotPctDelta}% uncovered
           </span>
           {candidate.verifiedDelta.worstIssueResolved && (
             <span className="text-emerald-400"><CheckCircle2 className="mr-0.5 inline h-2.5 w-2.5" />issue fixed</span>
@@ -381,7 +388,7 @@ function CandidateCard({ candidate, onApply }: { candidate: CounterfactualCandid
         className="mt-1.5 inline-flex w-full items-center justify-center gap-1 rounded border border-[#24283a] bg-[#111521] py-1 text-[9px] font-medium text-emerald-300 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10"
       >
         <Sparkles className="h-2.5 w-2.5" />
-        Apply This Fix
+        Apply Verified Fix
       </button>
     </div>
   );

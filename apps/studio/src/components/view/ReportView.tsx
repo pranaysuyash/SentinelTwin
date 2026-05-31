@@ -199,8 +199,8 @@ export function ReportView() {
             <StatCard label="Recommendations" value={String(summary.recs)} tone="amber" />
             <StatCard label="Critical Zones" value={String(summary.critical)} tone="emerald" />
             <StatCard label="Fragility" value={summary.fragility} tone={summary.fragility === "--" ? "emerald" : "amber"} />
-            <StatCard label="Coverage Entropy" value={summary.coverageEntropySummary} tone={summary.coverageEntropySummary === "--" ? "emerald" : "sky"} />
-            <StatCard label="K-Robustness" value={summary.kRobustness} tone={summary.kRobustness === "--" ? "emerald" : "sky"} />
+            <StatCard label="Coverage Stability Index" value={summary.coverageEntropySummary} tone={summary.coverageEntropySummary === "--" ? "emerald" : "sky"} />
+            <StatCard label="Backup Coverage" value={summary.kRobustness} tone={summary.kRobustness === "--" ? "emerald" : "sky"} />
             <StatCard label="Blind Regions" value={String(summary.blindRegions)} tone={summary.blindRegions > 0 ? "amber" : "emerald"} />
             <StatCard label="Uncertainty" value={summary.uncertaintySummary} tone={summary.uncertaintySummary === "--" ? "emerald" : "rose"} />
             <StatCard label="Posture" value={summary.postureSummary} tone={summary.postureSummary === "--" ? "emerald" : "sky"} />
@@ -242,7 +242,7 @@ export function ReportView() {
           {summary.kCriticalSets.length > 0 ? (
             <section className="mb-4 rounded-[28px] border border-[#1f2536] bg-[#0b0f17]/92 px-4 py-3 shadow-2xl shadow-black/20 xl:col-span-2">
               <div className="flex items-center gap-2">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#7a86a0]">K-Robustness Critical Sets</div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#7a86a0]">Backup Coverage Critical Sets</div>
                 <span className="rounded-full border border-sky-400/20 bg-sky-500/12 px-2 py-0.5 text-[9px] font-semibold text-sky-200">
                   {summary.kCriticalSets.length} sets
                 </span>

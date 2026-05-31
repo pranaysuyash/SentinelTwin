@@ -1,23 +1,61 @@
 "use client";
 
 import { HelpCircle } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 
-export function ExplainBadge({ text }: { text: string }) {
+import { cn } from "@/lib/cn";
+
+type ExplainBadgeProps = {
+  text: string;
+  label?: string;
+  title?: string;
+  className?: string;
+  panelClassName?: string;
+  side?: "left" | "right";
+};
+
+export function ExplainBadge({
+  text,
+  label,
+  title = "How to read this",
+  className,
+  panelClassName,
+  side = "right",
+}: ExplainBadgeProps) {
   const [open, setOpen] = useState(false);
+  const id = useId();
+
   return (
-    <div className="relative inline-flex items-center">
+    <div
+      className={cn("relative inline-flex items-center", className)}
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onFocus={() => setOpen(true)}
+      onBlur={() => setOpen(false)}
+    >
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex h-4 w-4 items-center justify-center rounded border border-[#2a3248] bg-[#121826] text-[#8ea2c8] hover:text-white"
-        aria-label="Explain this panel"
-        title="Explain this panel"
+        className={cn(
+          "inline-flex items-center justify-center gap-1 rounded border border-[#2a3248] bg-[#121826] text-[#8ea2c8] transition-colors hover:border-[#3a4967] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50",
+          label ? "h-6 px-1.5 text-[9px] font-medium" : "h-4 w-4",
+        )}
+        aria-label={label ? `${label}: ${title}` : title}
+        aria-describedby={open ? id : undefined}
       >
-        <HelpCircle className="h-3 w-3" />
+        <HelpCircle className={label ? "h-3 w-3" : "h-3 w-3"} />
+        {label ? <span>{label}</span> : null}
       </button>
       {open ? (
-        <div className="absolute right-0 top-5 z-30 w-56 rounded-md border border-[#2a3248] bg-[#0d1220] p-2 text-[10px] text-[#c9d7f0] shadow-xl">
+        <div
+          id={id}
+          role="tooltip"
+          className={cn(
+            "absolute top-full z-50 mt-1 w-64 rounded-md border border-[#2a3248] bg-[#0d1220] p-2 text-[10px] leading-snug text-[#c9d7f0] shadow-xl shadow-black/35",
+            side === "right" ? "left-0" : "right-0",
+            panelClassName,
+          )}
+        >
           {text}
         </div>
       ) : null}

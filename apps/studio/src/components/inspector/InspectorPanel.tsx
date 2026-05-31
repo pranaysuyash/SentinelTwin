@@ -1079,7 +1079,7 @@ function CameraInspector() {
               {pathSegmentCount > 0 && (
                 <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
                   <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">
-                    Adversarial Path Exposure
+                    Route Exposure Responsibility
                   </div>
                   <div className="flex items-baseline gap-1.5">
                     <span className="text-[17px] font-bold text-orange-300">{pathSegmentCount}</span>

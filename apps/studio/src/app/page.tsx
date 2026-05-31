@@ -120,10 +120,10 @@ function StudioPageContent() {
       affectedNodeIds: [],
       confidence: 0.74,
       beforeSummary: `${scene.name || "Current workspace"} · ${scene.cameras.length} cameras · ${scene.criticalZones.length} critical zones`,
-      afterSummary: "Manual-assisted scan intake opened.",
+      afterSummary: "Guided photo marking intake opened.",
       notes: ["Launcher-scoped scan intake event recorded in the evidence ledger."],
     });
-    setLaunchNotice("Manual-assisted scan intake opened. You control candidate marking, review, and compile.");
+    setLaunchNotice("Guided photo marking opened. You control candidate marking, review, and draft creation.");
     navigate("scan_site");
   };
 
@@ -404,6 +404,7 @@ function StudioPageContent() {
         type="file"
         accept=".json"
         className="hidden"
+        style={{ caretColor: "transparent" }}
         onChange={(event) => {
           const file = event.target.files?.[0];
           if (!file) return;

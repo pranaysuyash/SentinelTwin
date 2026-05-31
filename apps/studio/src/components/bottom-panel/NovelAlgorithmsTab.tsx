@@ -193,7 +193,7 @@ export function NovelAlgorithmsTab() {
     return (
       <RunSimulationPrompt
         className="h-full px-4"
-        message="Run the shared simulation to populate the novel algorithm outputs."
+        message="Run the shared simulation to populate advanced risk signals."
       />
     );
   }
@@ -203,55 +203,55 @@ export function NovelAlgorithmsTab() {
       <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-5">
         <StatCard
           icon={<Sigma className="h-3.5 w-3.5" />}
-          label="Coverage Fragility"
+          label="Coverage Stability"
           value={fragilityPct != null ? `${fragilityPct}%` : "—"}
           color={fragilityPct == null ? "text-[#8090a8]" : fragilityPct <= 30 ? "text-emerald-400" : fragilityPct <= 60 ? "text-amber-400" : "text-red-400"}
         />
         <StatCard
           icon={<ShieldAlert className="h-3.5 w-3.5" />}
-          label="K-Robustness"
+          label="Backup Coverage"
           value={kRobustness ? `K=${kRobustness.kRobustness}` : "—"}
           color={kRobustness?.isRobust ? "text-emerald-400" : "text-amber-400"}
         />
         <StatCard
           icon={<MapPinned className="h-3.5 w-3.5" />}
-          label="Placement Oracle"
+          label="Recommended Mounts"
           value={placementOracle ? `${placementOracle.candidateCount}` : "—"}
           color={bestCandidate ? "text-blue-300" : "text-[#8090a8]"}
         />
         <StatCard
           icon={<TriangleAlert className="h-3.5 w-3.5" />}
-          label="Temporal Anomalies"
+          label="Time-Based Weaknesses"
           value={temporalProfile ? `${anomalies.length}` : "—"}
           color={anomalies.length > 0 ? "text-amber-300" : "text-emerald-400"}
         />
         <StatCard
           icon={<Clock3 className="h-3.5 w-3.5" />}
-          label="Time Budget"
+          label="First Usable View"
           value={timeBudget ? formatSeconds(timeBudget.firstVisibleTimeS ?? timeBudget.totalDurationS) : "—"}
           color={timeBudget?.budgetMet ? "text-emerald-400" : "text-amber-400"}
         />
         <StatCard
           icon={<Sigma className="h-3.5 w-3.5" />}
-          label="Coverage Entropy"
+          label="Coverage Stability Index"
           value={entropy ? `${entropy.normalizedEntropy.toFixed(2)}` : "—"}
           color={entropy ? "text-fuchsia-300" : "text-[#8090a8]"}
         />
         <StatCard
           icon={<Sigma className="h-3.5 w-3.5" />}
-          label="Uncertainty"
+          label="Assumption Sensitivity"
           value={uncertainty ? `${uncertainty.sampleCount} runs` : "—"}
           color={uncertainty ? "text-violet-300" : "text-[#8090a8]"}
         />
         <StatCard
           icon={<BarChart3 className="h-3.5 w-3.5" />}
-          label="Posture"
+          label="Operating Posture"
           value={postureVariation ? `${postureVariation.worstProfileLabel ?? "—"} ${postureVariation.worstProfileCoveragePct != null ? `${postureVariation.worstProfileCoveragePct.toFixed(1)}%` : ""}` : "—"}
           color={postureVariation ? "text-sky-300" : "text-[#8090a8]"}
         />
         <StatCard
           icon={<Fingerprint className="h-3.5 w-3.5" />}
-          label="Fingerprint"
+          label="Blind-Spot Pattern"
           value={blindSpotFingerprint ? blindSpotFingerprint.fingerprint : "—"}
           color={blindSpotFingerprint ? "text-fuchsia-300" : "text-[#8090a8]"}
         />
@@ -402,7 +402,7 @@ export function NovelAlgorithmsTab() {
       </Section>
 
       <div className="grid grid-cols-2 gap-2">
-        <Section title="Coverage Fragility" icon={<BarChart3 className="h-3 w-3 text-emerald-400" />}>
+        <Section title="Coverage Stability" icon={<BarChart3 className="h-3 w-3 text-emerald-400" />}>
           {fragility ? (
             <div className="space-y-1.5">
               <CandidateLine label="Mean fragility" value={`${Math.round(fragility.meanFragility * 100)}%`} />
@@ -410,11 +410,11 @@ export function NovelAlgorithmsTab() {
               <CandidateLine label="Robust cells" value={`${fragility.robustCellCount}`} />
             </div>
           ) : (
-            <div className="text-[9px] text-[#59637a]">Fragility field not computed yet.</div>
+            <div className="text-[9px] text-[#59637a]">Coverage stability not computed yet.</div>
           )}
         </Section>
 
-        <Section title="Coverage Entropy" icon={<Sigma className="h-3 w-3 text-fuchsia-400" />}>
+        <Section title="Coverage Stability Index" icon={<Sigma className="h-3 w-3 text-fuchsia-400" />}>
           {entropy ? (
             <div className="space-y-1.5">
               <CandidateLine label="Normalized" value={entropy.normalizedEntropy.toFixed(2)} />
@@ -429,15 +429,15 @@ export function NovelAlgorithmsTab() {
               </div>
             </div>
           ) : (
-            <div className="text-[9px] text-[#59637a]">Coverage entropy not computed yet.</div>
+            <div className="text-[9px] text-[#59637a]">Coverage stability index not computed yet.</div>
           )}
         </Section>
 
-        <Section title="K-Robustness" icon={<ShieldAlert className="h-3 w-3 text-rose-400" />}>
+        <Section title="Backup Coverage" icon={<ShieldAlert className="h-3 w-3 text-rose-400" />}>
           {kRobustness ? (
             <div className="space-y-1.5">
-              <CandidateLine label="Robustness" value={`K=${kRobustness.kRobustness} / ${kRobustness.totalCameras}`} />
-              <CandidateLine label="Robust setup" value={kRobustness.isRobust ? "Yes" : "No"} />
+              <CandidateLine label="Backup depth" value={`K=${kRobustness.kRobustness} / ${kRobustness.totalCameras}`} />
+              <CandidateLine label="Backup setup" value={kRobustness.isRobust ? "Yes" : "No"} />
               <div className="text-[9px] text-[#8b96ab]">
                 {kCriticalSet
                   ? `Critical failure set: ${kCriticalSet.cameraNames.join(", ")} (exposure ${kCriticalSet.exposureScore.toFixed(1)})`
@@ -461,12 +461,12 @@ export function NovelAlgorithmsTab() {
               ) : null}
             </div>
           ) : (
-            <div className="text-[9px] text-[#59637a]">K-robustness not computed yet.</div>
+            <div className="text-[9px] text-[#59637a]">Backup coverage not computed yet.</div>
           )}
         </Section>
 
         <Section
-          title="Placement Oracle"
+          title="Recommended Mount Points"
           icon={<Radar className="h-3 w-3 text-blue-300" />}
           actions={bestCandidatePoint ? (
             <ActionButton
@@ -927,11 +927,11 @@ export function NovelAlgorithmsTab() {
         </Section>
       </div>
 
-      <Section title="Blind Spot Fingerprint" icon={<Fingerprint className="h-3 w-3 text-fuchsia-400" />}>
+      <Section title="Blind-Spot Pattern" icon={<Fingerprint className="h-3 w-3 text-fuchsia-400" />}>
         {blindSpotFingerprint ? (
           <div className="space-y-1.5">
             <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-4">
-              <CandidateLine label="Fingerprint" value={blindSpotFingerprint.fingerprint} />
+              <CandidateLine label="Pattern ID" value={blindSpotFingerprint.fingerprint} />
               <CandidateLine label="Regions" value={`${blindSpotFingerprint.regionCount}`} />
               <CandidateLine label="Total blind area" value={`${blindSpotFingerprint.totalBlindAreaSqM.toFixed(1)} m²`} />
               <CandidateLine label="Affected zones" value={`${blindSpotFingerprint.affectedZoneCount}`} />

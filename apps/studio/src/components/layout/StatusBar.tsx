@@ -111,7 +111,7 @@ function formatWorkflowLabel(workflowId: string) {
     case "floor_plan":
       return "Floor Plan";
     case "ai_draft":
-      return "AI Draft";
+      return "Layout Draft";
     case "verify_footage":
       return "Verify Footage";
     case "report":

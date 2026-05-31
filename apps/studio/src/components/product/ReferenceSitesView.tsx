@@ -31,7 +31,7 @@ function sourceLabel(source: SecurityScene["source"]): string {
     case "preset": return "Preset";
     case "manual": return "Draft";
     case "scan": return "Scanned";
-    case "ai": return "AI Draft";
+    case "ai": return "Layout Draft";
     case "import": return "Imported";
     default: return source;
   }

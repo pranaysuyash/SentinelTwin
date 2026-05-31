@@ -191,7 +191,15 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
         onStartScan={() => {
           handlers.openScanWizard();
         }}
-        onEnterStudio={() => navigate("studio")}
+        onEnterStudio={() => handlers.openStudio()}
+        onOpenRecentSite={(siteId) => {
+          const project = savedProjects.find((entry) => entry.scene.id === siteId);
+          if (project) {
+            handlers.openScene(project.scene);
+            return;
+          }
+          handlers.openStudio();
+        }}
         onOpenDemo={() => {
           handlers.openReferenceWorkspace();
         }}

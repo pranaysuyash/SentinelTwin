@@ -1024,7 +1024,7 @@ export function CompareView() {
             onClick={handleExportComparison}
             className="flex items-center gap-1 rounded-md border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#8090a8] hover:text-white"
           >
-            Export JSON
+            Export Compare Data
           </button>
           <button
             type="button"

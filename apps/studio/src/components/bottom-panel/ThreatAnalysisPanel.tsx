@@ -26,7 +26,7 @@ function ExposureBreakdown({ exposure }: { exposure: Record<string, number> }) {
 
   return (
     <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
-      <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">Exposure by Quality</div>
+      <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">Evidence Quality Along Route</div>
       <div className="space-y-2">
         {keys.map((key) => (
           <div key={key}>
@@ -96,9 +96,9 @@ export function ThreatAnalysisPanel() {
         <div className="flex min-w-0 items-center gap-2">
           <ShieldAlert className="h-4 w-4 shrink-0 text-rose-400" />
           <div className="min-w-0">
-            <span className="block text-[11px] font-semibold text-[#c7d0e4]">Coverage Failure Breakdown</span>
+            <span className="block text-[11px] font-semibold text-[#c7d0e4]">Route Exposure Review</span>
             <span className="block text-[8px] uppercase tracking-[0.16em] text-[#556076]">
-              Recomputes the current scene and refreshes the route analysis
+              Recomputes the current site twin and refreshes authorized route visibility
             </span>
           </div>
         </div>
@@ -108,7 +108,7 @@ export function ThreatAnalysisPanel() {
           className="inline-flex items-center gap-1.5 rounded-lg border border-[#24283a] bg-[#111521] px-3 py-1.5 text-[10px] font-medium text-rose-300 transition-colors hover:border-rose-500/30 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {simulationRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
-          {simulationRunning ? "Running..." : "Run Coverage Failure Analysis"}
+          {simulationRunning ? "Reviewing..." : "Run Route Review"}
         </button>
       </div>
 
@@ -116,11 +116,11 @@ export function ThreatAnalysisPanel() {
         <div className="flex flex-1 flex-col items-center justify-center gap-3">
           <Target className="h-8 w-8 text-[#3a4158]" />
           <p className="max-w-[240px] text-center text-[10px] leading-relaxed text-[#4d566b]">
-            Run the simulation to compute the current scene&apos;s coverage failure route and populate this breakdown.
+            Run the simulation to review route exposure, uncovered sections, and reachable critical zones.
           </p>
           {!result && (
             <p className="text-center text-[9px] text-[#3a4158]">
-              No breakdown yet. Use the button above or &quot;Run Simulation&quot; in the status bar.
+              No route review yet. Use the button above or &quot;Run Review&quot; in the status bar.
             </p>
           )}
         </div>
@@ -136,18 +136,18 @@ export function ThreatAnalysisPanel() {
           <div className="grid grid-cols-4 gap-1.5">
             <StatCard
               icon={<Crosshair className="h-3.5 w-3.5" />}
-              label="Exposure Score"
+              label="Route Exposure"
               value={failurePath.totalExposureScore.toFixed(1)}
               color="text-rose-400"
             />
             <StatCard
               icon={<Timer className="h-3.5 w-3.5" />}
-              label="Path Duration"
+              label="Route Duration"
               value={`${failurePath.totalDurationS.toFixed(1)}s`}
             />
             <StatCard
               icon={<EyeOff className="h-3.5 w-3.5" />}
-              label="No Coverage Cameras"
+              label="Cameras Missing Route"
               value={`${camerasWithoutCoverageOnRoute.length}`}
               color="text-amber-400"
             />
@@ -161,13 +161,13 @@ export function ThreatAnalysisPanel() {
           <div className="grid grid-cols-3 gap-1.5">
             <StatCard
               icon={<AlertTriangle className="h-3.5 w-3.5" />}
-              label="Max Detection"
+              label="Strongest Detection"
               value={`${(failurePath.maxDetectionProbability * 100).toFixed(0)}%`}
               color={failurePath.maxDetectionProbability > 0.7 ? "text-red-400" : "text-amber-400"}
             />
             <StatCard
               icon={<Fence className="h-3.5 w-3.5" />}
-              label="Coverage Gaps Used"
+              label="Uncovered Sections"
               value={`${blindspotSegments.length}`}
             />
             <StatCard
@@ -184,12 +184,12 @@ export function ThreatAnalysisPanel() {
             <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
               <div className="mb-1.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">
                 <EyeOff className="h-3 w-3 text-amber-400" />
-                Coverage Gaps Used
+                Uncovered Route Sections
               </div>
               <DetailList
                 items={blindspotSegments}
                 icon={<span className="text-amber-400/70">■</span>}
-                emptyText="No coverage gaps used on route."
+                emptyText="No uncovered route sections found."
                 emptyColor="text-emerald-400/60"
               />
             </div>
@@ -197,7 +197,7 @@ export function ThreatAnalysisPanel() {
             <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
               <div className="mb-1.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">
                 <EyeOff className="h-3 w-3 text-rose-400" />
-                Cameras Without Coverage On Route
+                Cameras Missing This Route
               </div>
               <DetailList
                 items={camerasWithoutCoverageOnRoute.map((id) => `📷 ${id}`)}
@@ -230,14 +230,14 @@ export function ThreatAnalysisPanel() {
 
           {failurePath.failureReason && (
             <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
-              <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">Failure Analysis</div>
+              <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">Coverage Finding</div>
               <p className="text-[10px] leading-relaxed text-amber-300/80">{failurePath.failureReason}</p>
             </div>
           )}
 
           <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
             <div className="mb-1.5 flex items-center justify-between">
-              <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">Path Coverage Ribbon</span>
+              <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#556076]">Route Visibility Ribbon</span>
               <span className="text-[8px] text-[#4d566b]">{failurePath.waypoints.length} waypoints</span>
             </div>
             <div className="flex h-3 overflow-hidden rounded-full border border-[#202536] bg-[#111521]">

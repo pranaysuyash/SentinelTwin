@@ -72,7 +72,7 @@ export function CriticalZoneInspector() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 py-2.5 space-y-2.5">
-        <SectionCard title="DORI Quality">
+        <SectionCard title="Evidence Quality" helpText="Shows the required and measured camera evidence level for this zone. A pass means the current simulation meets the zone target under the active assumptions." helpTitle="Evidence quality help">
           <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-2">
               <span className="text-[10px] text-[#6a748b]">Required</span>
@@ -91,7 +91,7 @@ export function CriticalZoneInspector() {
           </div>
         </SectionCard>
 
-        <SectionCard title="Properties">
+        <SectionCard title="Properties" helpText="Set what this zone needs operationally: the target type, required evidence quality, priority, night requirement, and redundancy requirement." helpTitle="Zone properties help">
           <div className="flex items-center justify-between gap-2 border-b border-[#181c27] py-1.5">
             <span className="text-[10px] text-[#6a748b]">Target Type</span>
             <select
@@ -147,7 +147,7 @@ export function CriticalZoneInspector() {
           ))}
         </SectionCard>
 
-        <SectionCard title="Target Requirement">
+        <SectionCard title="Target Requirement" helpText="Explains the default evidence quality SentinelTwin expects for this type of zone, plus the detail threshold used by the simulation." helpTitle="Target requirement help">
           <div className="space-y-1.5 text-[10px] text-[#c7d0e4]">
             <div className="flex items-center justify-between gap-2">
               <span className="text-[#6a748b]">Default quality</span>

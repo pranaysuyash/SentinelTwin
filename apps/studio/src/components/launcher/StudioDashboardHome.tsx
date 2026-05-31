@@ -60,7 +60,7 @@ const NAV_ITEMS = [
 
 const SOURCE_LABELS: Record<SecurityScene["source"], string> = {
   manual: "Draft",
-  ai: "AI Draft",
+  ai: "Layout Draft",
   scan: "Scan",
   import: "Import",
   preset: "Preset",
@@ -1144,44 +1144,44 @@ export function StudioDashboardHome({
   const advancedStarterActions = [
     {
       icon: <Plus className="h-4 w-4" />,
-      label: "New Blank Scene",
+      label: "New Blank Site",
       detail: "Available",
-      description: "Start from an empty scene shell.",
+      description: "Start from an empty site twin.",
       onClick: onCreateScene,
     },
     {
       icon: <FileUp className="h-4 w-4" />,
-      label: "Import Scene JSON",
+      label: "Import Site Twin Data",
       detail: "Available",
-      description: "Load a canonical SecurityScene file.",
+      description: "Load an exported site twin file.",
       onClick: onImportScene,
     },
     {
       icon: <ScanSearch className="h-4 w-4" />,
       label: "Scan a Site",
-      detail: "Preview / Manual-assisted",
-      description: "Manual photo marking compiles to an editable SecurityScene.",
+      detail: "Preview / Guided marking",
+      description: "Guided photo marking creates an editable site twin draft.",
       onClick: onScanSite,
     },
     {
       icon: <MapIcon className="h-4 w-4" />,
       label: "Import Floor Plan",
       detail: "Preview",
-      description: "Upload plan image/PDF to generate editable scene geometry.",
+      description: "Upload plan image/PDF to create editable site geometry.",
       onClick: onImportFloorPlan,
     },
     {
       icon: <Sparkles className="h-4 w-4" />,
       label: "Guided Scan Assistant",
-      detail: "Preview / Manual-assisted",
-      description: "Manual-assisted site photo intake with guided capture and review checkpoints before compile.",
+      detail: "Preview / Guided marking",
+      description: "Guided site photo intake with review checkpoints before draft creation.",
       onClick: onGuidedScanAssistant ?? onScanSite,
     },
     {
       icon: <Sparkles className="h-4 w-4" />,
-      label: "AI Layout Draft",
+      label: "Site Layout Draft",
       detail: "Preview",
-      description: "Generate a draft scene from text prompts, then review before use.",
+      description: "Create a draft site twin from a description, then review before use.",
       onClick: onAiDraft,
     },
   ];
@@ -1483,6 +1483,8 @@ export function StudioDashboardHome({
       : simulationDirty
         ? "border-amber-400/25 bg-amber-500/10 text-amber-200"
         : "border-emerald-400/25 bg-emerald-500/10 text-emerald-200";
+  const displayStatusLabel = hydrated ? statusLabel : "Baseline required";
+  const displayStatusTone = hydrated ? statusTone : "border-slate-400/20 bg-slate-500/10 text-slate-200";
   const [activeFolder, setActiveFolder] = useState<string>("All");
   const [activeTag, setActiveTag] = useState<string>("All");
   const visibleProjects = browserProjects.filter((project) => {
@@ -1524,6 +1526,19 @@ export function StudioDashboardHome({
     "--st-muted": "#8a96ab",
     "--st-accent": "#5bb6ff",
   } as CSSProperties;
+  if (!hydrated) {
+    return (
+      <main className="relative min-h-screen overflow-hidden bg-[color:var(--st-bg)] text-[color:var(--st-text)]" style={rootStyle}>
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(56,189,248,0.12),transparent_30%),radial-gradient(circle_at_80%_8%,rgba(16,185,129,0.08),transparent_28%),radial-gradient(circle_at_50%_100%,rgba(245,158,11,0.06),transparent_26%)]" />
+        <div className="relative z-10 flex min-h-screen items-center justify-center p-4">
+          <div className="rounded-[24px] border border-[color:var(--st-border)] bg-[rgba(9,14,23,0.94)] px-5 py-4 text-center shadow-[0_18px_60px_rgba(0,0,0,0.34)]">
+            <div className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-200">SentinelTwin</div>
+            <div className="mt-2 text-[11px] text-[color:var(--st-muted)]">Loading command center</div>
+          </div>
+        </div>
+      </main>
+    );
+  }
   return (
     <main className="relative min-h-screen overflow-hidden bg-[color:var(--st-bg)] text-[color:var(--st-text)]" style={rootStyle}>
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(56,189,248,0.12),transparent_30%),radial-gradient(circle_at_80%_8%,rgba(16,185,129,0.08),transparent_28%),radial-gradient(circle_at_50%_100%,rgba(245,158,11,0.06),transparent_26%)]" />
@@ -1542,33 +1557,31 @@ export function StudioDashboardHome({
           </div>
 
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-            <button
-              type="button"
-              className="inline-flex max-w-[260px] items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.04] px-3 py-2 text-xs font-medium text-white transition-colors hover:border-sky-400/30"
+            <span
+              className="inline-flex max-w-[260px] items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.04] px-3 py-2 text-xs font-medium text-white"
+              title="Current active Site Twin"
             >
               <span className="truncate">{scene.name}</span>
-              <ChevronDown className="h-3.5 w-3.5 flex-none text-[color:var(--st-muted)]" />
-            </button>
+            </span>
             <span className={cn(
               "inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium",
-              statusTone,
+              displayStatusTone,
             )}>
-              {statusLabel === "Up to date" ? (
+              {displayStatusLabel === "Up to date" ? (
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
               ) : null}
-              <span suppressHydrationWarning>{statusLabel}</span>
+              <span>{displayStatusLabel}</span>
             </span>
             <span suppressHydrationWarning className="hidden text-xs text-[color:var(--st-muted)] lg:inline">
               {currentRunLabel ?? "Last run: Never"}
             </span>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-xs text-white transition-colors hover:border-amber-400/30"
+            <span
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-xs text-white"
+              title="Current environment profile"
             >
               <Sun className="h-3.5 w-3.5 text-amber-300" />
               <span>{headerAssumptions.timeOfDay === "night" ? "Night Mode" : headerAssumptions.timeOfDay === "custom" ? "Custom Mode" : "Day Mode"}</span>
-              <ChevronDown className="h-3 w-3 text-[color:var(--st-muted)]" />
-            </button>
+            </span>
           </div>
 
           <div className="flex flex-none flex-wrap items-center gap-2">
@@ -1949,7 +1962,7 @@ export function StudioDashboardHome({
                     >
                       <FileUp className="h-5 w-5 text-cyan-300" />
                       <div>
-                        <div className="text-[12px] font-semibold text-white">Import Scene JSON</div>
+                        <div className="text-[12px] font-semibold text-white">Import Site Twin Data</div>
                         <div className="mt-0.5 text-[10px] text-[color:var(--st-muted)]">From file</div>
                       </div>
                     </button>
@@ -2262,11 +2275,11 @@ function WorkspaceLibraryPanel({
         </div>
         <div className="flex flex-wrap gap-2 text-[10px]">
           <button type="button" onClick={onCreateScene} className="rounded-full border border-sky-400/30 bg-sky-500/10 px-2.5 py-1 text-sky-100">Create Site Twin</button>
-          <button type="button" onClick={onImportScene} className="rounded-full border border-white/15 bg-white/[0.03] px-2.5 py-1 text-white/90">Import Site JSON</button>
+          <button type="button" onClick={onImportScene} className="rounded-full border border-white/15 bg-white/[0.03] px-2.5 py-1 text-white/90">Import Site Twin Data</button>
           <button type="button" onClick={onImportFloorPlan} className="rounded-full border border-white/15 bg-white/[0.03] px-2.5 py-1 text-white/90">Floor Plan</button>
           <button type="button" onClick={onScanSite} className="rounded-full border border-white/15 bg-white/[0.03] px-2.5 py-1 text-white/90">Scan Site</button>
           <button type="button" onClick={onGuidedScanAssistant} className="rounded-full border border-white/15 bg-white/[0.03] px-2.5 py-1 text-white/90">Guided Scan</button>
-          <button type="button" onClick={onAiDraft} className="rounded-full border border-white/15 bg-white/[0.03] px-2.5 py-1 text-white/90">AI Draft</button>
+          <button type="button" onClick={onAiDraft} className="rounded-full border border-white/15 bg-white/[0.03] px-2.5 py-1 text-white/90">Layout Draft</button>
           <button type="button" onClick={onOpenCoverageWorkspace} className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1 text-emerald-100">Open Coverage</button>
           <button type="button" onClick={onOpenReport} className="rounded-full border border-amber-400/25 bg-amber-500/10 px-2.5 py-1 text-amber-100">Open Report</button>
           <button type="button" onClick={onOpenDemoScene} className="rounded-full border border-violet-400/25 bg-violet-500/10 px-2.5 py-1 text-violet-100">Load Demo</button>
@@ -2295,7 +2308,7 @@ function WorkspaceLibraryPanel({
             ))
           ) : (
             <div className="col-span-full rounded-[16px] border border-dashed border-[color:var(--st-border)] bg-white/[0.02] px-3 py-4 text-xs text-[color:var(--st-muted)]">
-              No saved Site Twins yet. Start with Create Site Twin, Scan, Import, or AI Draft.
+              No saved Site Twins yet. Start with Create Site Twin, Scan, Import, or Layout Draft.
             </div>
           )}
       </div>

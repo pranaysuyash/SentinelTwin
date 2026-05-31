@@ -17,9 +17,9 @@
     }
   },
   "scripts": {
-    "build": "tsc",
-    "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "build": "tsc -b --force",
+    "typecheck": "pnpm --filter @sentineltwin/core build && tsc --noEmit",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
     "@sentineltwin/core": "workspace:*"

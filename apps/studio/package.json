@@ -8,8 +8,9 @@
   },
   "scripts": {
     "dev": "node ./scripts/run-fixed-port.mjs dev",
-    "build": "NEXT_PRIVATE_WORKER_THREADS=false next build --webpack --experimental-app-only",
+    "build": "rm -rf .next && NEXT_PRIVATE_WORKER_THREADS=false next build --webpack --experimental-app-only",
     "start": "node ./scripts/run-fixed-port.mjs start",
+    "clean": "rm -rf .next",
     "lint": "eslint",
     "audit:truth": "bun ../../tools/truth-audit.ts",
     "quality:gate": "bash ../../tools/studio-quality-gate.sh",

@@ -530,7 +530,7 @@ def main() -> int:
                 step(log, "studio_ready", False, "No studio workspace signal found")
             else:
                 step(log, "studio_ready", True, "workspace signal found")
-            click_visible_text(page, ["Start", "Close", "Dismiss"], timeout_ms=1200)
+            click_visible_text(page, ["Close", "Dismiss"], timeout_ms=1200)
             page.wait_for_timeout(2500)
             try:
                 page.wait_for_load_state("networkidle", timeout=12000)

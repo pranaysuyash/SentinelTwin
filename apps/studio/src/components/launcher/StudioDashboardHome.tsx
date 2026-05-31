@@ -95,16 +95,16 @@ const DASHBOARD_SECTION_ITEMS: { id: DashboardSectionId; label: string; group: s
 ];
 
 const DEFAULT_DASHBOARD_VISIBILITY: Record<DashboardSectionId, boolean> = {
-  overview: false,
-  preview: false,
+  overview: true,
+  preview: true,
   metrics: false,
   workspaces: false,
-  recent: false,
-  create: false,
+  recent: true,
+  create: true,
   library: false,
-  securityStatus: false,
-  issues: false,
-  assumptions: false,
+  securityStatus: true,
+  issues: true,
+  assumptions: true,
 };
 
 const SOURCE_LABELS: Record<SecurityScene["source"], string> = {
@@ -124,6 +124,28 @@ const ISSUE_SEVERITY_ORDER: Record<SecurityIssue["severity"], number> = {
 };
 
 type IssueSeverity = keyof typeof ISSUE_SEVERITY_ORDER;
+
+function getDemoWorkspaceTitle(scene: SecurityScene, index: number) {
+  if (scene.source !== "demo") return scene.name;
+  const coverage = scene.simulation?.totalCoveragePct ?? 0;
+  const haystack = scene.name.toLowerCase();
+  if (haystack.includes("obstruction") || coverage === 77) return "Demo: Obstruction Stress Test";
+  if (haystack.includes("rotated") || coverage === 80) return "Demo: Camera Rotation Test";
+  if (haystack.includes("night") || coverage === 81) return "Demo: Night Lighting Test";
+  if (index === 1) return "Demo: Obstruction Stress Test";
+  if (index === 2) return "Demo: Camera Rotation Test";
+  if (index === 3) return "Demo: Night Lighting Test";
+  return "Demo: Retail Baseline";
+}
+
+function getDemoWorkspaceDetail(scene: SecurityScene, fallbackDetail: string, index: number) {
+  if (scene.source !== "demo") return fallbackDetail;
+  const title = getDemoWorkspaceTitle(scene, index);
+  if (title.includes("Obstruction")) return "Shelf or fixture obstruction changes recognition coverage and issue count.";
+  if (title.includes("Rotation")) return "Small camera aim changes shift the floor risk map.";
+  if (title.includes("Night")) return "Lighting and shadows change which cells remain useful evidence.";
+  return "Reference retail layout with cameras, zones, paths, lights, and coverage scores.";
+}
 
 function issueSeverityLabel(severity: SecurityIssue["severity"]) {
   switch (severity) {
@@ -299,7 +321,7 @@ function anglePoint(origin: [number, number], angleDeg: number, distance: number
 
 function ScenePreview({ scene, result, compact = false, showLabels = true, hydrated = true }: ScenePreviewProps) {
   const width = compact ? 860 : 1280;
-  const height = compact ? 560 : 760;
+  const height = compact ? 460 : 620;
   const padding = compact ? 34 : 46;
   const scale = Math.min(
     (width - padding * 2) / scene.dimensions.width,
@@ -324,7 +346,7 @@ function ScenePreview({ scene, result, compact = false, showLabels = true, hydra
     return (
       <div className={cn(
         "relative overflow-hidden rounded-[28px] border border-[color:var(--st-border)] bg-[radial-gradient(circle_at_20%_0%,rgba(59,130,246,0.11),transparent_40%),radial-gradient(circle_at_85%_10%,rgba(16,185,129,0.09),transparent_30%),linear-gradient(180deg,rgba(11,14,21,0.98),rgba(11,14,21,0.86))]",
-        compact ? "min-h-[340px]" : "min-h-[430px]",
+        compact ? "min-h-[290px]" : "min-h-[340px]",
       )}>
         <div className="absolute inset-0 opacity-60 [background-image:linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)] [background-size:44px_44px]" />
         <div className="absolute inset-0 flex items-center justify-center">
@@ -341,7 +363,7 @@ function ScenePreview({ scene, result, compact = false, showLabels = true, hydra
   return (
     <div className={cn(
       "relative overflow-hidden rounded-[28px] border border-[color:var(--st-border)] bg-[radial-gradient(circle_at_20%_0%,rgba(59,130,246,0.11),transparent_40%),radial-gradient(circle_at_85%_10%,rgba(16,185,129,0.09),transparent_30%),linear-gradient(180deg,rgba(11,14,21,0.98),rgba(11,14,21,0.86))]",
-      compact ? "min-h-[340px]" : "min-h-[430px]",
+      compact ? "min-h-[290px]" : "min-h-[340px]",
     )}>
       <div className="absolute inset-0 opacity-60 [background-image:linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)] [background-size:44px_44px]" />
       <svg suppressHydrationWarning viewBox={`0 0 ${width} ${height}`} className="absolute inset-0 h-full w-full">
@@ -1196,6 +1218,10 @@ export function StudioDashboardHome({
 }: StudioDashboardHomeProps) {
   const [hydrated, setHydrated] = useState(false);
   const [showWorkspaceLibrary, setShowWorkspaceLibrary] = useState(false);
+  const [activeLauncherNav, setActiveLauncherNav] = useState<(typeof NAV_ITEMS)[number]["key"]>("home");
+  const [activeSource, setActiveSource] = useState<ProjectSourceFilter>("All");
+  const [activeFolder, setActiveFolder] = useState<string>("All");
+  const [activeTag, setActiveTag] = useState<string>("All");
   const [previewMode, setPreviewMode] = useState<"2d" | "3d">("2d");
   const [footerPanel, setFooterPanel] = useState<"feedback" | "help" | null>(null);
   const [dashboardViewMenuOpen, setDashboardViewMenuOpen] = useState(false);
@@ -1215,13 +1241,69 @@ export function StudioDashboardHome({
     || dashboardVisibility.create
     || (showWorkspaceLibrary && dashboardVisibility.library)
   );
+  const openLauncherHome = () => {
+    setActiveLauncherNav("home");
+    setShowWorkspaceLibrary(false);
+    setActiveSource("All");
+    setActiveFolder("All");
+    setActiveTag("All");
+    setDashboardVisibility({
+      ...DEFAULT_DASHBOARD_VISIBILITY,
+      overview: true,
+      preview: true,
+      recent: true,
+      create: true,
+      library: false,
+    });
+  };
+  const openProjectsLibrary = () => {
+    setActiveLauncherNav("projects");
+    setShowWorkspaceLibrary(true);
+    setActiveSource("All");
+    setActiveFolder("All");
+    setActiveTag("All");
+    setDashboardVisibility((current) => ({
+      ...current,
+      overview: false,
+      preview: false,
+      metrics: true,
+      recent: true,
+      create: false,
+      library: true,
+    }));
+  };
+  const openDemoLibrary = () => {
+    setActiveLauncherNav("reference_sites");
+    setShowWorkspaceLibrary(true);
+    setActiveSource("demo");
+    setActiveFolder("All");
+    setActiveTag("All");
+    setDashboardVisibility((current) => ({
+      ...current,
+      overview: false,
+      preview: false,
+      metrics: true,
+      recent: true,
+      create: false,
+      library: true,
+    }));
+  };
   const navActionByKey: Record<(typeof NAV_ITEMS)[number]["key"], (() => void) | undefined> = {
-    home: undefined,
-    projects: () => setShowWorkspaceLibrary(true),
-    report: onOpenReport,
-    docs: onOpenReport,
-    reference_sites: onOpenReferenceSites ?? onOpenDemoScene,
-    settings: onOpenSettings,
+    home: openLauncherHome,
+    projects: openProjectsLibrary,
+    report: () => {
+      setActiveLauncherNav("report");
+      onOpenReport?.();
+    },
+    docs: () => {
+      setActiveLauncherNav("docs");
+      onOpenReport?.();
+    },
+    reference_sites: openDemoLibrary,
+    settings: () => {
+      setActiveLauncherNav("settings");
+      onOpenSettings?.();
+    },
   };
   const modeActionByKey: Record<(typeof WORKSPACE_MODE_ITEMS)[number]["key"], (() => void) | undefined> = {
     coverage: onOpenCoverageWorkspace,
@@ -1389,7 +1471,6 @@ export function StudioDashboardHome({
   );
   const [projectQuery, setProjectQuery] = useState("");
   const [projectSort, setProjectSort] = useState<ProjectSort>("recent");
-  const [activeSource, setActiveSource] = useState<ProjectSourceFilter>("All");
   const [workspaceMemoryQuery, setWorkspaceMemoryQuery] = useState("");
   const [governanceArchiveHistory, setGovernanceArchiveHistory] = useState<GovernanceArchiveRecord[]>([]);
   const [workspaceMembershipArchiveHistory, setWorkspaceMembershipArchiveHistory] = useState<WorkspaceMembershipArchiveRecord[]>([]);
@@ -1624,8 +1705,6 @@ export function StudioDashboardHome({
         : "border-emerald-400/25 bg-emerald-500/10 text-emerald-200";
   const displayStatusLabel = hydrated ? statusLabel : "Baseline required";
   const displayStatusTone = hydrated ? statusTone : "border-slate-400/20 bg-slate-500/10 text-slate-200";
-  const [activeFolder, setActiveFolder] = useState<string>("All");
-  const [activeTag, setActiveTag] = useState<string>("All");
   const visibleProjects = browserProjects.filter((project) => {
     const sourceMatch = activeSource === "All" || project.scene.source === activeSource;
     const folderMatch = activeFolder === "All" || project.folder === activeFolder;
@@ -1720,7 +1799,7 @@ export function StudioDashboardHome({
               aria-controls="dashboard-view-menu"
             >
               <Eye className="h-3.5 w-3.5 text-sky-200" />
-              Open panels
+              Panels
               {shownDashboardCount > 0 ? (
                 <span className="rounded-full border border-amber-400/25 bg-amber-500/12 px-1.5 py-0.5 text-[9px] text-amber-100">
                   {shownDashboardCount} open
@@ -1809,36 +1888,41 @@ export function StudioDashboardHome({
         <div className="grid flex-1 items-start gap-4 lg:grid-cols-[220px_minmax(0,1fr)_326px]">
           <aside className="flex flex-col gap-4 rounded-[8px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3">
             <div>
-              <div className="px-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--st-muted)]">STUDIO</div>
+              <div className="px-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--st-muted)]">LAUNCHER</div>
               <nav className="mt-3 space-y-1">
-                {NAV_ITEMS.map((item) => (
-                  <button
-                    key={item.key}
-                    type="button"
-                    onClick={() => navActionByKey[item.key]?.()}
-                    className={cn(
-                      "flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-sm transition-colors text-left",
-                      item.key === "home"
-                        ? "bg-emerald-500/15 text-emerald-100 font-medium"
-                        : navActionByKey[item.key]
-                          ? "text-[color:var(--st-muted)] hover:bg-white/[0.04] hover:text-[color:var(--st-text)]"
-                          : "text-[color:var(--st-muted)]/60 cursor-default",
-                    )}
-                    aria-current={item.key === "home" ? "page" : undefined}
-                    disabled={!navActionByKey[item.key]}
-                  >
-                    {item.key === "home" ? <MapIcon className="h-4 w-4 text-emerald-300" /> : null}
-                    {item.key === "projects" ? <FolderOpen className="h-4 w-4 text-[#aab7d1]" /> : null}
-                    {item.key === "reference_sites" ? <LayoutDashboard className="h-4 w-4 text-[#aab7d1]" /> : null}
-                    {item.key === "report" ? <FileText className="h-4 w-4 text-[#aab7d1]" /> : null}
-                    {item.key === "docs" ? <FileText className="h-4 w-4 text-[#aab7d1]" /> : null}
-                    {item.key === "settings" ? <Settings2 className="h-4 w-4 text-[#aab7d1]" /> : null}
-                    <span className="flex-1">
-                      <span className="block">{item.label}</span>
-                      {item.detail ? <span className="block text-[10px] font-normal text-[color:var(--st-muted)]">{item.detail}</span> : null}
-                    </span>
-                  </button>
-                ))}
+                {NAV_ITEMS.map((item) => {
+                  const isActive = activeLauncherNav === item.key;
+                  return (
+                    <button
+                      key={item.key}
+                      type="button"
+                      onClick={() => navActionByKey[item.key]?.()}
+                      className={cn(
+                        "flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-sm transition-colors text-left",
+                        isActive
+                          ? "bg-emerald-500/15 text-emerald-100 font-medium"
+                          : navActionByKey[item.key]
+                            ? "text-[color:var(--st-muted)] hover:bg-white/[0.04] hover:text-[color:var(--st-text)]"
+                            : "text-[color:var(--st-muted)]/60 cursor-default",
+                      )}
+                      aria-current={isActive ? "page" : undefined}
+                      disabled={!navActionByKey[item.key]}
+                    >
+                      {item.key === "home" ? <MapIcon className={cn("h-4 w-4", isActive ? "text-emerald-300" : "text-[#aab7d1]")} /> : null}
+                      {item.key === "projects" ? <FolderOpen className={cn("h-4 w-4", isActive ? "text-emerald-300" : "text-[#aab7d1]")} /> : null}
+                      {item.key === "reference_sites" ? <LayoutDashboard className={cn("h-4 w-4", isActive ? "text-emerald-300" : "text-[#aab7d1]")} /> : null}
+                      {item.key === "report" ? <FileText className={cn("h-4 w-4", isActive ? "text-emerald-300" : "text-[#aab7d1]")} /> : null}
+                      {item.key === "docs" ? <FileText className={cn("h-4 w-4", isActive ? "text-emerald-300" : "text-[#aab7d1]")} /> : null}
+                      {item.key === "settings" ? <Settings2 className={cn("h-4 w-4", isActive ? "text-emerald-300" : "text-[#aab7d1]")} /> : null}
+                      <span className="flex-1">
+                        <span className="block">{item.label}</span>
+                        {item.key === "projects" && isActive ? <span className="block text-[10px] font-normal text-emerald-100/70">Workspace library open</span> : null}
+                        {item.key === "reference_sites" && isActive ? <span className="block text-[10px] font-normal text-emerald-100/70">Demo baselines shown</span> : null}
+                        {item.detail && !isActive ? <span className="block text-[10px] font-normal text-[color:var(--st-muted)]">{item.detail}</span> : null}
+                      </span>
+                    </button>
+                  );
+                })}
               </nav>
             </div>
 
@@ -2297,6 +2381,8 @@ export function StudioDashboardHome({
                 hydrated={hydrated}
                 savedScenes={savedScenes}
                 savedProjects={savedProjects}
+                visibleProjects={visibleProjects}
+                activeSource={activeSource}
                 onOpenStudio={onOpenStudio}
                 onOpenCoverageWorkspace={onOpenCoverageWorkspace}
                 onOpenReport={onOpenReport}
@@ -2561,6 +2647,8 @@ type WorkspaceLibraryPanelProps = {
   hydrated: boolean;
   savedScenes: SecurityScene[];
   savedProjects: SavedProjectRecord[];
+  visibleProjects?: SavedProjectRecord[];
+  activeSource?: ProjectSourceFilter;
   onOpenStudio?: () => void;
   onOpenCoverageWorkspace?: () => void;
   onOpenReport?: () => void;
@@ -2583,6 +2671,8 @@ function WorkspaceLibraryPanel({
   hydrated,
   savedScenes,
   savedProjects,
+  visibleProjects,
+  activeSource = "All",
   onOpenStudio,
   onOpenCoverageWorkspace,
   onOpenReport,
@@ -2598,7 +2688,16 @@ function WorkspaceLibraryPanel({
   onDuplicateProject,
   onRenameProject,
 }: WorkspaceLibraryPanelProps) {
-  const projects = (savedProjects.length > 0 ? savedProjects.map((entry) => entry.scene) : savedScenes).slice(0, 8);
+  const projectRecords = (visibleProjects ?? savedProjects).slice(0, 8);
+  const projects = projectRecords.length > 0
+    ? projectRecords.map((entry) => entry.scene)
+    : activeSource === "All"
+      ? savedScenes.slice(0, 8)
+      : [];
+  const libraryTitle = activeSource === "demo" ? "Demo Site Twins" : "Project Site Twins";
+  const libraryDescription = activeSource === "demo"
+    ? "Reference scenarios with different coverage outcomes. Open one to show how edits, camera aim, lighting, and obstructions change the simulation."
+    : "Resume a project, compare saved site twins, or start a new intake path from the dashboard.";
 
   const openScene = (target: SecurityScene) => {
     onOpenScene?.(target);
@@ -2609,9 +2708,9 @@ function WorkspaceLibraryPanel({
     <section className="mt-4 rounded-[24px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">Site Twin Library</div>
+          <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">{libraryTitle}</div>
           <div className="mt-1 text-xs text-[color:var(--st-muted)]">
-            Resume existing site twins or start a new intake path without leaving the dashboard.
+            {libraryDescription}
           </div>
         </div>
         <div className="flex flex-wrap gap-2 text-[10px]">
@@ -2629,24 +2728,53 @@ function WorkspaceLibraryPanel({
 
       <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
         {projects.length > 0 ? (
-            projects.map((projectScene) => (
+            projects.map((projectScene, index) => {
+              const coveragePct = projectScene.simulation?.totalCoveragePct ?? null;
+              const issueCount = projectScene.simulation?.issues.length ?? 0;
+              const displayTitle = getDemoWorkspaceTitle(projectScene, index);
+              const displayDetail = getDemoWorkspaceDetail(
+                projectScene,
+                `${projectScene.cameras.length} cameras · ${projectScene.criticalZones.length} zones`,
+                index,
+              );
+              return (
               <div key={projectScene.id} className="rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] p-2">
                 <button type="button" onClick={() => openScene(projectScene)} className="w-full text-left">
-                  <div className="h-10 overflow-hidden rounded-lg border border-white/10 bg-[#0b1322]">
+                  <div className="relative h-24 overflow-hidden rounded-lg border border-white/10 bg-[#0b1322]">
                     <ScenePreview scene={projectScene} result={projectScene.simulation ?? (projectScene.id === scene.id ? result : null)} compact showLabels={false} hydrated={hydrated} />
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#050914] to-transparent px-2 py-1.5">
+                      <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-sky-100">
+                        {projectScene.source === "demo" ? "Reference Demo" : SOURCE_LABELS[projectScene.source]}
+                      </div>
+                    </div>
                   </div>
-                  <div className="mt-1.5 truncate text-[11px] font-semibold text-white">{projectScene.name}</div>
-                  <div className="text-[10px] text-[color:var(--st-muted)]">
-                    {SOURCE_LABELS[projectScene.source]} · {(projectScene.simulation?.totalCoveragePct ?? null) != null ? `${Math.round(projectScene.simulation!.totalCoveragePct)}% coverage` : "Coverage pending"}
+                  <div className="mt-2 flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="truncate text-[12px] font-semibold text-white">{displayTitle}</div>
+                      <div className="mt-0.5 line-clamp-2 text-[10px] leading-4 text-[color:var(--st-muted)]">{displayDetail}</div>
+                    </div>
+                    <span className={cn(
+                      "flex-none rounded-md border px-1.5 py-0.5 text-[10px] font-bold",
+                      coveragePct == null ? "border-slate-400/20 bg-slate-500/10 text-slate-200" : coverageTone(coveragePct),
+                    )}>
+                      {coveragePct != null ? `${Math.round(coveragePct)}%` : "Run"}
+                    </span>
+                  </div>
+                  <div className="mt-2 grid grid-cols-3 gap-1 text-[9px] text-[color:var(--st-muted)]">
+                    <span className="rounded border border-white/10 bg-white/[0.03] px-1.5 py-1">{projectScene.cameras.length} cams</span>
+                    <span className="rounded border border-white/10 bg-white/[0.03] px-1.5 py-1">{projectScene.criticalZones.length} zones</span>
+                    <span className="rounded border border-white/10 bg-white/[0.03] px-1.5 py-1">{issueCount} issues</span>
                   </div>
                 </button>
                 <div className="mt-2 flex flex-wrap gap-1 text-[9px]">
+                  <button type="button" onClick={() => openScene(projectScene)} className="rounded border border-emerald-400/25 bg-emerald-500/10 px-1.5 py-0.5 text-emerald-100">Open Studio</button>
                   <button type="button" onClick={() => onRenameProject?.(projectScene.id, `${projectScene.name} Copy`)} className="rounded border border-white/15 px-1.5 py-0.5 text-white/80">Quick Rename</button>
                   <button type="button" onClick={() => onDuplicateProject?.(projectScene.id)} className="rounded border border-white/15 px-1.5 py-0.5 text-white/80">Duplicate</button>
                   <button type="button" onClick={() => onUpdateProjectMetadata?.(projectScene.id, { lastOpenedAt: Date.now() })} className="rounded border border-white/15 px-1.5 py-0.5 text-white/80">Mark Opened</button>
                 </div>
               </div>
-            ))
+              );
+            })
           ) : (
             <div className="col-span-full rounded-[16px] border border-dashed border-[color:var(--st-border)] bg-white/[0.02] px-3 py-4 text-xs text-[color:var(--st-muted)]">
               No saved Site Twins yet. Start with Create Site Twin, Scan, Import, or Layout Draft.

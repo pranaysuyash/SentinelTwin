@@ -4678,3 +4678,94 @@ Fixed the `CameraLiveConnectionEventRecord` and `WorkspaceApprovalRouteSummary` 
 - Decision: Replace the count-based stub with a normalized correspondence solver. Use a projective fit when there are enough correspondences, fall back to an affine fit for smaller valid sets, then score the result by reprojection residuals, landmark spread, and a soft camera visibility prior.
 - Rationale: Binding confidence should be derived from the match geometry itself, not from arbitrary count thresholds. Residual-based scoring is more durable, easier to reason about, and less likely to mislead downstream UI/report surfaces.
 - Consequence: The helper is now a real geometric estimator rather than a placeholder heuristic, and the shared binding builder stamps that confidence onto the canonical evidence payload so downstream consumers can prefer the stored transform confidence. It remains normalized rather than fully camera-calibrated because the binding schema does not yet carry explicit calibration metadata.
+
+## D-286 - Package builds must regenerate declaration boundaries from source
+
+- Date: 2026-05-31
+- Status: Accepted
+- Context: `@sentineltwin/core` could report a successful build while `packages/core/dist/index.d.ts` was missing because `tsconfig.tsbuildinfo` was stale. Downstream `@sentineltwin/simulation` then failed with `TS6305` when TypeScript compared core source files against missing/outdated declaration outputs.
+- Decision: Build referenced packages with TypeScript build mode forced (`tsc -b --force`), remove `tsconfig.tsbuildinfo` during package clean, cache `tsconfig.tsbuildinfo` together with `dist`, and avoid source-path aliases from `@sentineltwin/simulation` back into `@sentineltwin/core/src`. The Studio production build also clears `.next` before `next build` so dev/prod static manifests cannot be mixed across build ids.
+- Rationale: A package boundary is only valid when source, emitted declarations, and incremental build metadata agree. Trusting stale incremental metadata after `dist` changes breaks the monorepo contract. Downstream packages should consume core through its package/reference boundary, not by reaching through to source files. The same artifact-boundary rule applies to Next output: `.next` is generated build state and should not survive into a fresh production build when manifests can drift.
+- Consequence: `core`, `simulation`, and `report` rebuild their public declarations from source on package build; clean removes both emitted artifacts and incremental state; Turbo cache restore keeps declaration output and build metadata together; `simulation` no longer mixes core source aliases with project-reference declaration checks; Studio production builds regenerate `.next` from scratch.
+
+---
+
+## D-287 — Simulation engine maturity: calibration, confidence, hashing, provenance
+
+- Date: 2026-06-01
+- Status: Accepted
+- Context: The simulation engine computed deterministic coverage but offered no calibration basis, confidence estimates, or provenance metadata. Every simulation result appeared equally trustworthy regardless of input quality. See Thread 2b in exploration map for full audit.
+- Decision: Add four foundational maturity layers simultaneously:
+  1. **Calibration constants module** (`packages/simulation/src/calibration.ts`) with 7 camera presets (indoor dome 2MP, wide dome 5MP, bullet 5MP, PTZ 8MP, thermal 640, low-light 4MP, LPR 2MP), lux-to-light-level thresholds, night-mode PPM retention factors, mount tilt limits, and lens edge-falloff defaults. Default calibration is always available; scenes can override via `SecurityScene.calibrationConstants`.
+  2. **Scene hashing** (`packages/simulation/src/scene-hash.ts`) — deterministic hash of all simulation-relevant inputs. Every `SimulationResult` now carries a `sceneHash` for stale-result detection.
+  3. **Confidence propagation** (`packages/simulation/src/confidence.ts`) — `ConfidenceBand` with level, source, reason codes, and sensitivity tags. Computed automatically from camera provenance, geometry validity, calibration presence, and lighting assumptions. Stored in `SimulationResult.overallConfidence`, `zoneConfidence`, `pathConfidence`.
+  4. **Simulation provenance** (`SimulationResult.provenance`) — engine version, calibration version, computation mode, execution time.
+- Rationale: Without calibration, confidence, and provenance, every simulation result is equally credible regardless of input quality. This is dangerous for a security audit tool. The calibration module provides named constants that can be traced to source spec sheets. Confidence bands give operators a quick signal about when to trust a result. Scene hashing enables future stale-result prevention. Provenance enables debugging and regression tracking.
+- Consequence: Every `simulateStudio()` call now emits scene hash, provenance, and confidence bands. Calibration is used by default. Scene hashes can be compared with `isSceneHashMatch()` for stale-result prevention. No UI panels exist yet for these fields — they are data-level only for now.
+- Key files:
+  - `packages/core/src/schema/security-scene.ts` — New schemas: `confidenceLevelSchema`, `confidenceBandSchema`, `calibrationCameraPresetSchema`, `calibrationConstantsSchema`, `sceneInputHashSchema`, `simulationProvenanceSchema`
+  - `packages/simulation/src/calibration.ts` — Default calibration constants, preset library, utility functions
+  - `packages/simulation/src/scene-hash.ts` — Deterministic hashing
+  - `packages/simulation/src/confidence.ts` — Confidence computation
+  - `packages/simulation/src/simulate-studio.ts` — Wired at lines 689-710
+- Alternatives rejected: Hardcoding calibration in the coverage engine (breaks schema-driven design), skipping confidence for V0.1 (too risky for a security tool), using crypto.subtle for hashing (overkill for stale-result detection).
+
+## D-288 — Scenario batch runner for multi-state comparison
+
+- Date: 2026-06-01
+- Status: Accepted
+- Context: The engine simulated only the current scene state. Operators needed to compare security posture across scenarios: day vs night, camera failure, light failure, obstruction moved.
+- Decision: Add `ScenarioState` schema with overrides for camera status, light status, door state, time of day, light level, and obstruction presence. Add `runScenarioBatch()` that clones the scene, applies each state, re-simulates, and returns deltas. Default scenarios: `normal_day`, `normal_night`, `night_no_lights`. Helper generators: `generateCameraOfflineScenarios()`, `generateObstructionRemovedScenarios()`, `generateCameraBlockedScenarios()`.
+- Rationale: Batch comparison is the foundation for temporal simulation and what-if analysis. Each scenario is a first-class concept with structured overrides rather than ad-hoc scene mutations. The delta model makes comparison explicit and reportable.
+- Consequence: `runScenarioBatch()` returns `ScenarioBatchResult[]` with coverage/quality/zone/adversarial deltas. Results are NOT embedded in `SimulationResult` (avoids circular schema dependency). UI can call batch independently and store results alongside scene snapshots.
+- Key files:
+  - `packages/core/src/schema/security-scene.ts` — `scenarioStateSchema`, `scenarioBatchResultSchema`
+  - `packages/simulation/src/scenario-batch.ts` — `runScenarioBatch()`, generators, `applyScenarioState()`
+- Alternatives rejected: Embedding scenarios in `SimulationResult` (circular Zod dependency), running scenarios as separate ad-hoc calls (no structured comparison), storing full re-simulation results per scenario (too heavy).
+
+## D-289 — Counterfactual search with verified simulation ranking
+
+- Date: 2026-06-01
+- Status: Accepted
+- Context: The existing recommendation engine produced one heuristic recommendation (move first obstruction, rotate first camera). Operators needed to see multiple options ranked by simulated improvement, cost, and constraints.
+- Decision: Add `computeCounterfactualSearch()` that generates candidate fixes (move obstruction, rotate camera, add camera, add light), simulates each, computes a score from improvement, cost rank, and zone delta, then ranks candidates. Supports constraints: `cameraCannotMoveIds`, `noNewCamera`, `maxCostCategory`. Core rule: AI proposes — simulation verifies.
+- Rationale: A single recommendation hides tradeoffs. Counterfactual search surfaces the decision space: the cheapest fix may not be the most effective, and the best fix may violate constraints. Ranking by score makes tradeoffs visible. Every candidate's score is backed by a real simulation, not a heuristic estimate.
+- Consequence: `computeCounterfactualSearch()` returns `CounterfactualSearchResult` with up to 20 candidates, each with verified deltas, cost category, and rank. The old single-recommendation path is preserved for backward compatibility. UI can switch to the ranking view when operators need to explore options.
+- Key files:
+  - `packages/core/src/schema/security-scene.ts` — `counterfactualResultSchema`, `counterfactualSearchResultSchema`
+  - `packages/simulation/src/counterfactual-search.ts` — `computeCounterfactualSearch()`, generators, scoring
+- Alternatives rejected: Using the placement oracle for all counterfactuals (placement only handles new cameras, not obstruction moves or re-aiming), ranking by heuristic without simulation (violates "AI proposes — simulation verifies"), single fix at a time (hides tradeoffs).
+
+## D-290 — Assumption sensitivity analysis for input-criticality ranking
+
+- Date: 2026-06-01
+- Status: Accepted
+- Context: Operators had no way to know which inputs most affected simulation results. A coverage failure might be robust or might flip with a 10% person-height change. The engine needed to expose which assumptions drive the conclusion.
+- Decision: Add `computeAssumptionSensitivity()` that varies person height (±20%), night penalty on/off, interior light level, exterior lux, backlight intensity, and glare intensity, then reports `coverageDeltaPct`, `qualityDelta`, `zoneStatusChanges`, and a classified sensitivity level (critical/high/medium/low/none) per assumption. Results are sorted by severity.
+- Rationale: Security professionals need to know which assumptions are load-bearing. A zone that fails only under specific assumptions might be acceptable; one that fails under all assumptions is a real gap. Sensitivity analysis makes this visible.
+- Consequence: `computeAssumptionSensitivity()` returns `AssumptionSensitivity[]` sorted by severity. Results can be displayed in a sensitivity panel showing which inputs matter most. No UI panel exists yet.
+- Key files:
+  - `packages/core/src/schema/security-scene.ts` — `assumptionSensitivitySchema`
+  - `packages/simulation/src/assumption-sensitivity.ts` — `computeAssumptionSensitivity()`, classifiers
+- Alternatives rejected: Monte Carlo over all inputs simultaneously (expensive, hard to isolate), operator-declared sensitivity (misses unexpected dependencies), single parameter sweeps without classification (too much data without actionable signal).
+
+## D-XXX | 2026-06-01 | Slice monolithic Zustand store into domain slices; extract page orchestration into hooks
+
+- Date: 2026-06-01
+- Status: Accepted
+- Context: `studio-store.ts` was a 6763-line single Zustand `create()` block handling ~60 concern areas (scene CRUD, simulation, layout, workflow, governance, telemetry, persistence, AI provider selection, compare, fix sandbox, etc.). `page.tsx` was a 444-line orchestrator with 20+ inline handler functions and 3 useEffect blocks coordinating initialization, URL deep-linking, and error boundaries. The audit identified this as the weakest architectural point — "app architecture is getting obese."
+- Decision: Extract 6 domain slices under `store/slices/` (`scene`, `simulation`, `layout`, `workflow`, `governance`, `telemetry`) each owning a cohesive subset of state + actions. Each slice uses `(set: any, get: any)` pattern internally to avoid circular dependencies. `studio-store.ts` becomes a thin composition (~130 lines) that re-exports all shared types and composes the store via `create()`. `page.tsx` orchestration is extracted into `hooks/use-studio-navigation.ts` (all handler functions) and `hooks/use-studio-bootstrap.ts` (initialization effects, error boundaries, deep-link parsing). The obsolete `navigation-slice.ts` (superseded by workflow-slice) is deleted.
+- Rationale: Each slice is independently testable and navigable (scene-slice ~1900 lines vs previously 6763 for everything). The combined type `StudioStoreState = SceneSlice & SimulationSlice & LayoutSlice & WorkflowSlice & GovernanceSlice & TelemetrySlice` preserves full external type safety. Page.tsx drops from 444 to ~30 lines. Component selectors and external imports remain unchanged — no consumer migration needed.
+- Consequence: Slice creators MUST use `(set: any, get: any)` to avoid circular deps. Cross-slice state is accessed via runtime `get()` calls. Module-level initialization in slice files must be SSR-safe (guarded by `typeof window !== "undefined"` or using proper default objects instead of `{} as Type`). The composition is strict — no overlapping field names between slices (verified by script). Build passes with 0 errors. Refactoring is purely additive: every existing behavior, type export, and API surface is preserved.
+- Key files:
+  - `apps/studio/src/store/studio-store.ts` — composition point (~134 lines, down from 6763)
+  - `apps/studio/src/store/slices/scene-slice.ts` — scene, nodes, selection, history, tools, map state
+  - `apps/studio/src/store/slices/simulation-slice.ts` — simulation result, temporal, counterfactuals, path replay
+  - `apps/studio/src/store/slices/layout-slice.ts` — view modes, docks, panels, visibility, themes
+  - `apps/studio/src/store/slices/workflow-slice.ts` — product area, workflows, site intake, navigation
+  - `apps/studio/src/store/slices/governance-slice.ts` — branches, governance, access, organizations, save/load
+  - `apps/studio/src/store/slices/telemetry-slice.ts` — runtime events, camera events, AI telemetry, evidence
+  - `apps/studio/src/hooks/use-studio-navigation.ts` — handler functions extracted from page.tsx
+  - `apps/studio/src/hooks/use-studio-bootstrap.ts` — initialization effects extracted from page.tsx
+  - `apps/studio/src/app/page.tsx` — ~30 lines, down from 444
+- Alternatives rejected: Keep monolithic file (audit finding confirmed the obesity risk), split into more granular slices (6 is the sweet spot; more would increase composition boilerplate), use Redux or Jotai instead of Zustand slices (Zustand slice pattern requires zero new dependencies and preserves all existing selectors), use React Context (no selector optimization, re-render issues).

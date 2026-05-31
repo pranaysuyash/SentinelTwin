@@ -2,7 +2,7 @@
 
 **Status:** Source of truth — 2026-05-30 (integrity hardening: canonical source taxonomy, explicit draft approval activation, outcome zone semantics split)
 **Purpose:** One document that maps the entire SentinelTwin product from current repo state to full completion. Prevents agents from stopping at camera/demo surfaces. Distinguishes real, partial, scaffolded, and missing. Provides actionable backlog items, not aspirations.
-**Supersedes:** `FULL_VISION_GAP_INVENTORY.md` (for execution planning), `CURRENT_STATUS.md` (for product-level state), `CAMERASTUDIO_GAP_ANALYSIS.md` (for feature gaps).
+**Supersedes:** `FULL_VISION_GAP_INVENTORY.md` (for execution planning), `Docs/todos/CURRENT_STATUS.md` (for product-level state), `CAMERASTUDIO_GAP_ANALYSIS.md` (for feature gaps).
 
 ---
 
@@ -811,7 +811,7 @@ This sequence respects dependency order and avoids building on missing foundatio
 This plan synthesizes from:
 - `Docs/todos/FULL_VISION_GAP_INVENTORY.md` — full-vision gap analysis
 - `Docs/todos/CURRENT_IMPLEMENTATION_STATE.md` — verified implementation baseline
-- `CURRENT_STATUS.md` — repo status snapshot
+- `Docs/todos/CURRENT_STATUS.md` — repo status snapshot
 - `Docs/architecture/00_ARCHITECTURE_OVERVIEW.md` — system architecture
 - `Docs/architecture/01_DATA_MODEL_SECURITY_SCENE.md` — SecurityScene schema
 - `Docs/architecture/03_COVERAGE_ENGINE.md` — simulation engine design

@@ -514,26 +514,6 @@ export const securityIssueSchema = z.object({
   pathId: z.string().optional(),
 });
 
-export const recommendationSchema = z.object({
-  type: z.enum([
-    "move_object",
-    "rotate_camera",
-    "add_camera",
-    "add_light",
-    "change_fov",
-    "other",
-  ]),
-  description: z.string(),
-  estimatedImpact: z.string(),
-  costCategory: z.enum(["free", "low", "medium", "high"]),
-  verified: z.boolean(),
-  // Apply-fix support: node to act on and suggested transform
-  affectedNodeId: z.string().optional(),
-  suggestedPosition: point3Schema.optional(),
-  suggestedYawDeg: z.number().optional(),
-  suggestedPitchDeg: z.number().optional(),
-});
-
 export const qualityThresholdSchema = z.object({
   detection: z.number().positive(),
   observation: z.number().positive(),
@@ -618,6 +598,201 @@ export const reflectiveBounceSchema = z.object({
   reflectiveWindowCount: z.number().int().nonnegative(),
   affectedCellCount: z.number().int().nonnegative(),
   affectedCameraCount: z.number().int().nonnegative(),
+});
+
+// ── Simulation Engine Maturity Types (Thread 2b) ──
+// Defined before simulationResultSchema to avoid TDZ.
+// scenarioBatchResultSchema uses z.lazy() to break the circular dependency.
+
+export const confidenceLevelSchema = z.enum(["none", "low", "medium", "high", "verified"]);
+
+export const confidenceSourceSchema = z.enum([
+  "simulation", "calibration", "operator", "footage_verified",
+  "spec_sheet", "scan_reconstruction", "ai_estimate", "assumption", "unknown",
+]);
+
+export const confidenceBandSchema = z.object({
+  level: confidenceLevelSchema,
+  source: confidenceSourceSchema,
+  reasonCodes: z.array(z.string()).default([]),
+  sensitiveTo: z.array(z.string()).default([]),
+});
+
+export const calibrationCameraPresetSchema = z.object({
+  name: z.string(),
+  resolutionWidthPx: z.number().positive(),
+  resolutionHeightPx: z.number().positive(),
+  fovHorizontalDeg: z.number().positive().max(180),
+  fovVerticalDeg: z.number().positive().max(180),
+  rangeM: z.number().positive(),
+  nightMode: z.enum(["none", "ir", "low_light", "thermal"]),
+  irRangeM: z.number().min(0),
+  mountTypes: z.array(z.enum(["wall", "ceiling", "pole", "corner", "desk"])),
+  lensType: z.enum(["fixed", "varifocal", "fisheye", "panoramic"]),
+  focalLengthMm: z.number().positive().optional(),
+  source: confidenceSourceSchema,
+  confidence: confidenceLevelSchema,
+  notes: z.string().optional(),
+  edgeFalloffFactor: z.number().min(0).max(1).optional(),
+});
+
+export const calibrationConstantsSchema = z.object({
+  cameraPresets: z.record(z.string(), calibrationCameraPresetSchema).default({}),
+  luxThresholds: z.object({
+    bright: z.number().positive().default(50),
+    normal: z.number().positive().default(10),
+    dim: z.number().positive().default(3),
+    dark: z.number().positive().default(0.5),
+  }).default({ bright: 50, normal: 10, dim: 3, dark: 0.5 }),
+  nightModeRetention: z.object({
+    thermal: z.number().min(0).max(1).default(0.92),
+    low_light: z.number().min(0).max(1).default(0.82),
+    ir: z.number().min(0).max(1).default(0.68),
+    none: z.number().min(0).max(1).default(0.12),
+  }).default({ thermal: 0.92, low_light: 0.82, ir: 0.68, none: 0.12 }),
+  mountTiltLimits: z.object({
+    wall: z.number().default(60), ceiling: z.number().default(45),
+    pole: z.number().default(55), corner: z.number().default(50), desk: z.number().default(35),
+  }).default({ wall: 60, ceiling: 45, pole: 55, corner: 50, desk: 35 }),
+  lensEdgeFalloff: z.object({
+    fixed: z.number().min(0).max(1).default(0.42),
+    varifocal: z.number().min(0).max(1).default(0.35),
+    fisheye: z.number().min(0).max(1).default(0.15),
+    panoramic: z.number().min(0).max(1).default(0.20),
+  }).default({ fixed: 0.42, varifocal: 0.35, fisheye: 0.15, panoramic: 0.20 }),
+  version: z.string().default("0.1.0"),
+  notes: z.string().default("Initial calibration constants"),
+});
+
+export const sceneInputHashSchema = z.object({
+  hash: z.string(),
+  includeFields: z.array(z.string()),
+  algo: z.string().default("v1"),
+  computedAt: z.number().int().nonnegative(),
+});
+
+export const simulationProvenanceSchema = z.object({
+  engineVersion: z.string(),
+  calibrationVersion: z.string(),
+  calibrated: z.boolean().default(false),
+  computationMode: z.enum(["full", "lite", "async"]).default("full"),
+  computationTimeMs: z.number().min(0).optional(),
+});
+
+export const assumptionSensitivitySchema = z.object({
+  assumptionName: z.string(),
+  currentValue: z.union([z.string(), z.number(), z.boolean()]),
+  testValue: z.union([z.string(), z.number(), z.boolean()]),
+  coverageDeltaPct: z.number(),
+  qualityDelta: z.number(),
+  zoneStatusChanges: z.number().int().min(0),
+  sensitivity: z.enum(["critical", "high", "medium", "low", "none"]),
+  affectedZones: z.array(z.string()),
+  description: z.string(),
+});
+
+export const scenarioStateSchema = z.object({
+  label: z.string(),
+  description: z.string().default(""),
+  activeCameraIds: z.array(z.string()).optional(),
+  offlineCameraIds: z.array(z.string()).optional(),
+  lightStatusOverrides: z.record(z.string(), z.enum(["on", "off", "failed"])).optional(),
+  doorStateOverrides: z.record(z.string(), z.enum(["open", "closed", "locked", "restricted"])).optional(),
+  timeOfDay: z.enum(["day", "night", "dusk", "dawn", "custom"]).optional(),
+  exteriorLightLux: z.number().optional(),
+  interiorLightLevel: z.enum(["dark", "dim", "normal", "bright"]).optional(),
+  obstructionMovedIds: z.array(z.string()).optional(),
+  relativeOrder: z.number().int().min(0).default(0),
+});
+
+export const scenarioBatchResultSchema = z.object({
+  scenarioId: z.string(),
+  label: z.string(),
+  totalCoveragePct: z.number().min(0).max(100),
+  averageWalkableQuality: z.number().min(0),
+  zonePassCount: z.number().int().min(0),
+  zoneTotalCount: z.number().int().min(0),
+  adversarialExposureScore: z.number().min(0).optional(),
+  delta: z.object({
+    totalCoverageDeltaPct: z.number(),
+    qualityDelta: z.number(),
+    zonePassDelta: z.number(),
+    adversarialExposureDelta: z.number(),
+    description: z.string(),
+  }).optional(),
+});
+
+export const counterfactualResultSchema = z.object({
+  candidateId: z.string(),
+  description: z.string(),
+  fixType: z.enum([
+    "move_object", "rotate_camera", "add_camera", "add_light",
+    "change_fov", "change_mount", "remove_object", "adjust_zoom", "other",
+  ]),
+  costCategory: z.enum(["free", "low", "medium", "high"]),
+  installDifficulty: z.enum(["trivial", "easy", "moderate", "difficult", "custom"]).optional(),
+  estimatedCost: z.string().optional(),
+  constraintsOk: z.boolean(),
+  violatedConstraints: z.array(z.string()).default([]),
+  simulatedTotalCoveragePct: z.number().min(0).max(100),
+  simulatedWorstQuality: doriQualitySchema,
+  simulatedZonePassCount: z.number().int().min(0),
+  simulatedZoneTotalCount: z.number().int().min(0),
+  coverageDeltaPct: z.number(),
+  qualityDeltaScore: z.number(),
+  zoneDelta: z.number().int(),
+  adversarialExposureDelta: z.number().optional(),
+  score: z.number(),
+  rank: z.number().int().min(1),
+  affectedNodeId: z.string().optional(),
+  suggestedPosition: point3Schema.optional(),
+  suggestedYawDeg: z.number().optional(),
+  suggestedPitchDeg: z.number().optional(),
+  suggestedFovDeg: z.number().optional(),
+});
+
+export const counterfactualSearchResultSchema = z.object({
+  baselineLabel: z.string().default("current"),
+  candidates: z.array(counterfactualResultSchema),
+  candidateCount: z.number().int().nonnegative(),
+  topRecommendationId: z.string().optional(),
+  constraints: z.object({
+    cameraCannotMoveIds: z.array(z.string()).default([]),
+    noNewCamera: z.boolean().default(false),
+    maxCostCategory: z.enum(["free", "low", "medium", "high"]).default("high"),
+    noPrivacyViolation: z.boolean().default(false),
+    maxChanges: z.number().int().positive().default(3),
+  }).default({
+    cameraCannotMoveIds: [],
+    noNewCamera: false,
+    maxCostCategory: "high",
+    noPrivacyViolation: false,
+    maxChanges: 3,
+  }),
+  computedAt: z.number().int().nonnegative(),
+});
+
+export const recommendationSchema = z.object({
+  type: z.enum([
+    "move_object",
+    "rotate_camera",
+    "add_camera",
+    "add_light",
+    "change_fov",
+    "change_mount",
+    "remove_object",
+    "adjust_zoom",
+    "other",
+  ]),
+  description: z.string(),
+  estimatedImpact: z.string(),
+  costCategory: z.enum(["free", "low", "medium", "high"]),
+  verified: z.boolean(),
+  affectedNodeId: z.string().optional(),
+  suggestedPosition: point3Schema.optional(),
+  suggestedYawDeg: z.number().optional(),
+  suggestedPitchDeg: z.number().optional(),
+  confidence: confidenceBandSchema.optional(),
 });
 
 export const simulationResultSchema = z.object({
@@ -729,6 +904,18 @@ export const simulationResultSchema = z.object({
       score: z.number(),
     })),
   }).optional(),
+
+  // ── Simulation Engine Maturity Fields (Thread 2b) ──
+
+  sceneHash: sceneInputHashSchema.optional(),
+  provenance: simulationProvenanceSchema.optional(),
+  scenarioBatchResults: z.array(scenarioBatchResultSchema).optional(),
+  counterfactualSearch: counterfactualSearchResultSchema.optional(),
+  assumptionSensitivity: z.array(assumptionSensitivitySchema).optional(),
+  overallConfidence: confidenceBandSchema.optional(),
+  zoneConfidence: z.record(z.string(), confidenceBandSchema).optional(),
+  pathConfidence: z.record(z.string(), confidenceBandSchema).optional(),
+  recommendationConfidence: z.record(z.string(), confidenceBandSchema).optional(),
 });
 
 // ── Temporal Simulation Types (defined before base scene schema to avoid TDZ) ──
@@ -861,6 +1048,7 @@ const securitySceneBaseSchema = z.object({
   evidenceArtifacts: z.array(cameraEvidenceArtifactSchema).default([]),
   mismatchReports: z.array(mismatchReportSchema).default([]),
   assumptions: simulationAssumptionsSchema,
+  calibrationConstants: calibrationConstantsSchema.optional(),
   timeSchedule: timeScheduleSchema.optional(),
   simulation: simulationResultSchema.optional(),
   temporalProfile: temporalSecurityProfileSchema.optional(),
@@ -900,6 +1088,7 @@ export type CommentNode = z.infer<typeof commentNodeSchema>;
 export type EntryPointNode = z.infer<typeof entryPointNodeSchema>;
 export type CameraEvidenceArtifact = z.infer<typeof cameraEvidenceArtifactSchema>;
 export type MismatchReport = z.infer<typeof mismatchReportSchema>;
+
 export type SceneUpdateSuggestion = z.infer<typeof sceneUpdateSuggestionSchema>;
 export type PathPoint = z.infer<typeof pathPointSchema>;
 export type ScenarioPath = z.infer<typeof scenarioPathSchema>;
@@ -945,6 +1134,19 @@ export type VulnerabilityWindow = z.infer<typeof vulnerabilityWindowSchema>;
 export type TemporalSecurityProfile = z.infer<typeof temporalSecurityProfileSchema>;
 export type TemporalAnomalyWindow = z.infer<typeof temporalAnomalyWindowSchema>;
 export type TemporalAnomalySummary = z.infer<typeof temporalAnomalySummarySchema>;
+
+export type ConfidenceLevel = z.infer<typeof confidenceLevelSchema>;
+export type ConfidenceSource = z.infer<typeof confidenceSourceSchema>;
+export type ConfidenceBand = z.infer<typeof confidenceBandSchema>;
+export type CalibrationCameraPreset = z.infer<typeof calibrationCameraPresetSchema>;
+export type CalibrationConstants = z.infer<typeof calibrationConstantsSchema>;
+export type SceneInputHash = z.infer<typeof sceneInputHashSchema>;
+export type SimulationProvenance = z.infer<typeof simulationProvenanceSchema>;
+export type AssumptionSensitivity = z.infer<typeof assumptionSensitivitySchema>;
+export type ScenarioState = z.infer<typeof scenarioStateSchema>;
+export type ScenarioBatchResult = z.infer<typeof scenarioBatchResultSchema>;
+export type CounterfactualResult = z.infer<typeof counterfactualResultSchema>;
+export type CounterfactualSearchResult = z.infer<typeof counterfactualSearchResultSchema>;
 
 export type ReviewStatus = z.infer<typeof reviewStatusSchema>;
 export type SceneSource = z.infer<typeof sceneSourceSchema>;

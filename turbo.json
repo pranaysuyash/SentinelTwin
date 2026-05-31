@@ -1,10 +1,10 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["**/.env.*local"],
-  "pipeline": {
+  "globalDependencies": ["**/.env.*local", "tsconfig.base.json", "turbo.json"],
+  "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**"],
+      "outputs": ["dist/**", ".next/**", "tsconfig.tsbuildinfo"],
       "inputs": ["src/**/*.ts", "src/**/*.tsx", "package.json", "tsconfig.json"]
     },
     "dev": {

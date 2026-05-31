@@ -6,11 +6,11 @@ import { MAP_COLORS } from "@/components/map/map-colors";
 import { useStudioStore, type OverlayDensity, type OverlayFilterId, type HeatmapMode } from "@/store/studio-store";
 
 const QUALITY_LEVELS = [
-  { label: "Identification", range: "250+", detail: "250+ PPM", color: "#3b82f6" },
-  { label: "Recognition", range: "125-250", detail: "125-250 PPM", color: "#22c55e" },
-  { label: "Observation", range: "62.5-125", detail: "62.5-125 PPM", color: "#eab308" },
-  { label: "Detection", range: "25-62.5", detail: "25-62.5 PPM", color: "#f97316" },
-  { label: "No Coverage", range: "<25", detail: "<25 PPM", color: "#ef4444" },
+  { label: "Identify a person", range: "250+ PPM", detail: "clear face/detail evidence", color: "#3b82f6" },
+  { label: "Recognize a known person", range: "125-250 PPM", detail: "usable identity confidence", color: "#22c55e" },
+  { label: "Observe activity", range: "62.5-125 PPM", detail: "body/action visible", color: "#eab308" },
+  { label: "Detect motion/person", range: "25-62.5 PPM", detail: "presence only", color: "#f97316" },
+  { label: "No useful coverage", range: "<25 PPM", detail: "blind or too weak", color: "#ef4444" },
 ];
 
 const FRAGILITY_LEVELS = [
@@ -32,59 +32,62 @@ const MODE_CONFIG: { mode: HeatmapMode; label: string; icon: React.ReactNode; de
     mode: "quality",
     label: "Quality",
     icon: <Target className="h-3 w-3" />,
-    description: "Camera PPM quality adjusted by light, occlusion, and shadows",
+    description: "How much usable camera detail each floor cell has after distance, light, and obstruction effects.",
     levels: QUALITY_LEVELS,
-    legendNote: "Night cells brighten when security lights reach them and darken where objects cast light shadows.",
+    legendNote: "PPM means pixels per meter at that floor cell. Higher PPM means clearer faces, bodies, and evidence; lower PPM means the camera may only detect movement or miss the spot.",
   },
   {
     mode: "fragility",
     label: "Fragility",
     icon: <Shield className="h-3 w-3" />,
-    description: "How close each cell is to a DORI threshold boundary",
+    description: "How likely a cell is to drop below its required quality if a camera, object, or light changes.",
     levels: FRAGILITY_LEVELS,
-    legendNote: "Fragile cells may drop quality under minor camera adjustments.",
+    legendNote: "Fragile cells are near a quality boundary. A small camera move, obstruction, or lighting change can turn them from pass to fail.",
   },
   {
     mode: "lighting",
     label: "Lighting",
     icon: <Sun className="h-3 w-3" />,
-    description: "Light-only overlay showing illumination and obstruction shadows",
+    description: "Light reach only, separated from camera quality.",
     levels: LIGHTING_LEVELS,
-    legendNote: "This isolates lighting from camera PPM so operators can tell dark zones from camera blindspots.",
+    legendNote: "Bright cells have usable light. Shadow or dark cells are blocked or underlit, so night coverage can fail even when a camera points there.",
   },
   {
     mode: "overlap",
     label: "Overlap",
     icon: <Layers className="h-3 w-3" />,
-    description: "Number of cameras covering each cell",
+    description: "How many cameras can see the same floor cell.",
     levels: [
       { label: "3+ Cameras", range: "3+", detail: "High redundancy", color: "#3b82f6" },
       { label: "2 Cameras", range: "2", detail: "Moderate redundancy", color: "#22c55e" },
       { label: "1 Camera", range: "1", detail: "Single coverage", color: "#facc15" },
       { label: "No Coverage", range: "0", detail: "Uncovered area", color: "#ef4444" },
     ],
+    legendNote: "Overlap shows redundancy. One camera means a single point of failure; two or more cameras give backup evidence.",
   },
   {
     mode: "contribution",
     label: "Contribution",
     icon: <Sigma className="h-3 w-3" />,
-    description: "Each camera's coverage contribution to the area",
+    description: "Which cells depend heavily on the selected or strongest camera.",
     levels: [
       { label: "High Contribution", range: ">75%", detail: "Primary coverage provider", color: "#3b82f6" },
       { label: "Moderate", range: "50-75%", detail: "Secondary coverage", color: "#22c55e" },
       { label: "Low", range: "25-50%", detail: "Marginal contribution", color: "#facc15" },
       { label: "None", range: "<25%", detail: "Cell not covered by camera", color: "#6b7280" },
     ],
+    legendNote: "Contribution highlights dependency. High contribution areas are the cells most affected if that camera is moved, blocked, or offline.",
   },
   {
     mode: "blindspots",
     label: "Blindspots",
     icon: <EyeOff className="h-3 w-3" />,
-    description: "Areas with no camera coverage",
+    description: "Only the cells that no camera can currently see.",
     levels: [
       { label: "Covered", range: "Any", detail: "Cell is covered by ≥1 camera", color: "#22c55e" },
       { label: "Blindspot", range: "None", detail: "No camera coverage", color: "#991b1b" },
     ],
+    legendNote: "Blindspot view removes quality levels and shows the yes/no question: can any camera see this spot?",
   },
 ];
 
@@ -116,7 +119,7 @@ export function CoverageLegend() {
   const [showFilters, setShowFilters] = useState(false);
 
   return (
-    <div className="absolute left-3 top-3 z-10 min-w-[182px] rounded-xl border border-[#1f2536] bg-[#0b0f17]/90 px-3 py-2.5 shadow-[0_16px_40px_rgba(0,0,0,0.28)]">
+    <div className="absolute left-3 top-3 z-10 w-[240px] rounded-xl border border-[#1f2536] bg-[#0b0f17]/90 px-3 py-2.5 shadow-[0_16px_40px_rgba(0,0,0,0.28)]">
       {/* Header row with collapse toggle */}
       <div className="flex items-center justify-between mb-1.5">
         <button
@@ -185,6 +188,10 @@ export function CoverageLegend() {
               })}
             </div>
           ) : null}
+
+          <div className="mb-2 rounded-lg border border-[#1f2536] bg-white/[0.025] px-2 py-1.5 text-[9px] leading-4 text-[#8ea0bf]">
+            {activeConfig.description}
+          </div>
 
           {/* Legend items */}
           <div className="space-y-1.5">

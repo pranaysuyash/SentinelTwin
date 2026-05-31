@@ -1,7 +1,7 @@
 # Camera Studio — Build Gap Analysis
 
 **Updated:** 2026-05-25
-**Source of truth for spec:** `sentineltwin_camerastudio_fullcamerasuite_product_spec.md`
+**Source of truth for spec:** `Docs/product/sentineltwin_camerastudio_fullcamerasuite_product_spec.md`
 **Source of truth for current state:** `apps/studio/src/`
 
 This document maps every spec requirement against what is actually built.

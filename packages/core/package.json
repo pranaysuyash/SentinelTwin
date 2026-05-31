@@ -21,9 +21,9 @@
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -b --force",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
     "zod": "^4.4.3",

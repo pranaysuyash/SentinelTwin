@@ -65,3 +65,62 @@ export type { SunPosition, LightMeasurement, SeasonalLightState } from "./season
 
 // Utility
 export { getQualityThresholds, getForwardVector } from "./coverage";
+
+// ── Simulation Engine Maturity (Thread 2b) ──
+
+// Calibration
+export {
+  DEFAULT_CALIBRATION,
+  getCalibration,
+  getCameraPreset,
+  estimateCameraConfidence,
+  getEdgeFalloffFactor,
+  getMountTiltLimit,
+  getNightModeRetentionFactor,
+  luxToLightLevel,
+  computePpmConfidenceInterval,
+} from "./calibration";
+
+// Scene hashing
+export {
+  serializeSceneInputs,
+  computeSceneHash,
+  computeSceneInputHash,
+  isSceneHashMatch,
+} from "./scene-hash";
+
+// Confidence propagation
+export {
+  computeOverallConfidence,
+  computeZoneConfidence,
+  computePathConfidence,
+  formatConfidenceSummary,
+} from "./confidence";
+
+// Scenario batch runner
+export {
+  DEFAULT_SCENARIO_STATES,
+  applyScenarioState,
+  generateCameraOfflineScenarios,
+  generateObstructionRemovedScenarios,
+  generateCameraBlockedScenarios,
+  runScenarioBatch,
+} from "./scenario-batch";
+
+// Counterfactual search
+export {
+  computeCounterfactualSearch,
+} from "./counterfactual-search";
+export type { CounterfactualConstraints } from "./counterfactual-search";
+
+// Assumption sensitivity
+export { computeAssumptionSensitivity } from "./assumption-sensitivity";
+
+// Provenance / report language
+export {
+  classifyClaim,
+  getClaimLabel,
+  getConfidenceBadge,
+  getReportSourceLine,
+} from "./provenance-label";
+export type { ClaimClassification, ClaimLabel } from "./provenance-label";

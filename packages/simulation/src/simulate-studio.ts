@@ -1,6 +1,7 @@
 import type {
   CameraResult,
   CameraOfflineImpactEntry,
+  ConfidenceBand,
   DoriQuality,
   Recommendation,
   SecurityIssue,
@@ -8,6 +9,8 @@ import type {
   SimulationResult,
   ZoneResult,
 } from "@sentineltwin/core";
+import { computeSceneInputHash } from "./scene-hash";
+import { computeOverallConfidence, computeZoneConfidence, computePathConfidence } from "./confidence";
 import { computeAdversarialPath } from "./adversarial-path";
 import { analyseBlindSpotTopology } from "./blind-spot-topology";
 import { computeBlindSpotFingerprint } from "./blind-spot-fingerprint";
@@ -638,6 +641,7 @@ function buildSimulationResult(
           const obsNode = getObstructionByLabel(patchedScene, obstructionLabel);
           const movedObs = patchedScene.obstructions.find((o) => o.label === obstructionLabel);
 
+          const recKey = obsNode?.id ?? movedObs?.id ?? "rec_move";
           recommendations.push({
             type: "move_object",
             description: `Move "${obstructionLabel}" away from "${firstBlockingZone.label}".`,
@@ -648,6 +652,12 @@ function buildSimulationResult(
             verified: Boolean(improved),
             affectedNodeId: obsNode?.id ?? movedObs?.id,
             suggestedPosition: movedObs?.position,
+            confidence: {
+              level: improved ? "high" : "low",
+              source: "simulation",
+              reasonCodes: improved ? ["VERIFIED_BY_SIMULATION"] : ["NOT_VERIFIED"],
+              sensitiveTo: ["obstruction_position", "scene_assumptions"],
+            },
           });
         }
       }
@@ -678,10 +688,27 @@ function buildSimulationResult(
             affectedNodeId: cameraId,
             suggestedYawDeg: patchedCamera?.yawDeg,
             suggestedPitchDeg: patchedCamera?.pitchDeg,
+            confidence: {
+              level: improved ? "high" : "low",
+              source: "simulation",
+              reasonCodes: improved ? ["VERIFIED_BY_SIMULATION"] : ["NOT_VERIFIED"],
+              sensitiveTo: ["camera_orientation", "scene_assumptions"],
+            },
           });
         }
       }
     }
+  }
+
+  const sceneHash = computeSceneInputHash(scene);
+  const zConfidence = computeZoneConfidence(scene, criticalZoneResults);
+  const pConfidence = computePathConfidence(scene, pathResults);
+  const overallConfidence = computeOverallConfidence(scene);
+  const recConfidence: Record<string, ConfidenceBand> = {};
+  for (let i = 0; i < recommendations.length; i++) {
+    const r = recommendations[i];
+    const key = r.affectedNodeId ?? `rec_${i}`;
+    if (r.confidence) recConfidence[key] = r.confidence;
   }
 
   return {
@@ -733,6 +760,18 @@ function buildSimulationResult(
     } : undefined,
     kRobustness,
     placementOracle,
+    // Simulation engine maturity fields (Thread 2b)
+    sceneHash,
+    provenance: {
+      engineVersion: "0.1.0",
+      calibrationVersion: scene.calibrationConstants?.version ?? "0.1.0",
+      calibrated: Boolean(scene.calibrationConstants),
+      computationMode: "full",
+    },
+    overallConfidence,
+    zoneConfidence: zConfidence,
+    pathConfidence: pConfidence,
+    recommendationConfidence: recConfidence,
   };
 }
 

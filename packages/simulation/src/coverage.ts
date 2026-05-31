@@ -45,6 +45,7 @@ import { getYawPitchDirection, normalizeAngle } from "@sentineltwin/core";
 import { buildCoverageGrid, type GridCell } from "@sentineltwin/core";
 import { computeBlindSpotPenalty, computeMountTiltPenalty } from "./mount-model";
 import { computeOODPCVSQuality } from "./odpcvs";
+import { getCalibration, getNightModeRetentionFactor, getEdgeFalloffFactor } from "./calibration";
 import {
   buildVisionColliderMesh,
   disposeVisionColliderMesh,
@@ -280,26 +281,32 @@ function getLightingContext(
    *   below → <0.5 lux (near-dark)
    *
    * Camera night mode capabilities determine fallback when light is
-   * insufficient:
+   * insufficient. Penalty = 1 - retentionFactor from calibration:
    *   thermal    — 8–14 µm LWIR unaffected by visible light     → 0.08
    *   low_light  — amplified CMOS with noise reduction          → 0.18
    *   ir + range — active IR within rated distance              → 0.32
    *   ir (far)   — IR present but out of range                  → 0.78
    *   none       — no night capability                           → 0.88
+   *
+   * Calibration constants override these defaults via scene.calibrationConstants.
    */
   let nightPenalty = 0;
+  const calibration = getCalibration(scene);
+
   if (lightLevel >= 0.65) nightPenalty = 0.1;
   else if (lightLevel >= 0.35) nightPenalty = 0.24;
   else if (lightLevel >= 0.12) nightPenalty = 0.42;
-  else if (camera.nightMode === "thermal") nightPenalty = 0.08;
-  else if (camera.nightMode === "low_light") nightPenalty = 0.18;
   else {
-    const [cx, , cz] = camera.position;
-    const distance = Math.hypot(cx - cell.x, cz - cell.z);
-    if (camera.nightMode === "ir" && distance <= camera.irRangeM) {
-      nightPenalty = 0.32;
-    } else {
-      nightPenalty = camera.nightMode === "none" ? 0.88 : 0.78;
+    const retention = getNightModeRetentionFactor(camera, calibration);
+    nightPenalty = 1 - retention;
+
+    if (camera.nightMode === "ir") {
+      const [cx, , cz] = camera.position;
+      const distance = Math.hypot(cx - cell.x, cz - cell.z);
+      if (distance > camera.irRangeM) {
+        const irRetention = retention * 0.35;
+        nightPenalty = 1 - irRetention;
+      }
     }
   }
 
@@ -533,16 +540,24 @@ function evaluateCameraAgainstCell(
    *   > 42° → significant falloff (~58%)
    *   > 28° → moderate falloff (~76%)
    *   ≤ 28° → negligible (within the central ~56° region)
+   *
+   * Calibration edge falloff factor (by lens type) is combined as
+   * an additional multiplier to account for lens-specific optical quality.
    */
+  const calibration = getCalibration(scene);
+  const calibrationEdgeFactor = getEdgeFalloffFactor(camera, calibration);
+
   if (edgeAngle > 55) {
-    edgePenaltyMultiplier = 0.42;
+    edgePenaltyMultiplier = 0.42 * calibrationEdgeFactor;
     reasonCodes.add("EDGE_OF_FOV");
   } else if (edgeAngle > 42) {
-    edgePenaltyMultiplier = 0.58;
+    edgePenaltyMultiplier = 0.58 * calibrationEdgeFactor;
     reasonCodes.add("EDGE_OF_FOV");
   } else if (edgeAngle > 28) {
-    edgePenaltyMultiplier = 0.76;
+    edgePenaltyMultiplier = 0.76 * calibrationEdgeFactor;
     reasonCodes.add("EDGE_OF_FOV");
+  } else {
+    edgePenaltyMultiplier = calibrationEdgeFactor;
   }
   ppm *= edgePenaltyMultiplier;
 

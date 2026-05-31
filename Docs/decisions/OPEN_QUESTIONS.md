@@ -362,3 +362,77 @@ The report exports already carry provenance and evidence summaries, but the prod
 **Priority:** Medium
 **Context:** We implemented a penalty for path targets facing away from the camera (clamping quality to `observation` if >90° offset).
 **What's needed:** Validate with security domain experts if 90° is the correct threshold for losing `recognition`/`identification` quality. Should there be a softer falloff or a strict cutoff?
+
+---
+
+### Q-031: Simulation Engine Maturity — Minimum Calibration Dataset for Credibility
+**Status:** Open
+**Priority:** Medium
+**Context:** The calibration module (`packages/simulation/src/calibration.ts`) ships with 7 camera presets sourced from manufacturer spec sheets (confidence: medium). Field-verified calibration data would dramatically improve credibility.
+**What's needed:** What minimum calibration dataset is needed to make the quality model credible to security professionals? Options:
+- 10 real cameras measured in controlled conditions (lux meter, test chart, distance measurement)
+- Industry reference data (IPVM DORI calculator outputs, ONVIF compliance test results)
+- User-contributed calibration via footage verification
+**Related:** Thread 2b, D-287.
+
+---
+
+### Q-032: Confidence Numeric vs Categorical Representation
+**Status:** Open
+**Priority:** Low
+**Context:** Currently confidence is a 5-level categorical enum (none/low/medium/high/verified). Some downstream consumers (reports, charts) may prefer numeric scores.
+**What's needed:** Should confidence be numeric, categorical, or both? If both, what is the mapping? Proposed: none=0, low=0.25, medium=0.5, high=0.75, verified=1.0.
+
+---
+
+### Q-033: Scan-Derived Geometry Uncertainty and Pass/Fail Status
+**Status:** Open
+**Priority:** Medium
+**Context:** When geometry is derived from a scan or AI reconstruction, its accuracy is uncertain. A wall or obstruction position might be off by 10-30cm. This could change zone pass/fail status.
+**What's needed:** How should scan-derived geometry uncertainty affect pass/fail status? Options:
+- Never fail a zone based on uncertain geometry (conservative)
+- Show a confidence band on the pass/fail decision
+- Require minimum geometry validity before running simulation
+**Related:** Thread 2b, `confidence.ts` computeOverallConfidence includes geometryValidity as a factor.
+
+---
+
+### Q-034: Critical Zone Sampling Strategy
+**Status:** Open
+**Priority:** Low
+**Context:** The current zone sampler uses the 25th percentile quality among cells in the zone polygon. This is one strategy among several possible.
+**What's needed:** Should critical zones use worst-cell, percentile, average, or target-profile sampling? The best approach may vary by target type (face identification should be worst-cell; vehicle detection may be percentile).
+**Related:** `simulate-studio.ts` getZoneQuality().
+
+---
+
+### Q-035: Benchmark Scene Set for Regression Testing
+**Status:** Open
+**Priority:** Medium
+**Context:** No standard benchmark scenes exist for regression-testing the simulation engine. Current tests use a single `small-retail-shop` fixture.
+**What's needed:** What is the right benchmark scene set for regression testing? Proposed:
+- Small retail shop (exists) — <10m², 2-4 cameras, simple geometry
+- Apartment lobby — 20m², 1-2 cameras, glass doors, multiple zones
+- Warehouse aisle — 50m², 2 cameras, tall shelving obstructions
+- School corridor — 30m², 2-3 cameras, complex occlusion, multiple entry points
+- Outdoor perimeter — 100m², PTZ camera, variable lighting, long range
+
+---
+
+### Q-036: Report Language — "Recognition Estimate" vs "Recognition-Quality Coverage"
+**Status:** Open
+**Priority:** Medium
+**Context:** The simulation engine can say "this zone is at recognition quality" but the report should distinguish between an estimate (based on assumed inputs) and verified coverage (backed by real footage or calibration).
+**What's needed:** When should a report say "recognition estimate" vs "recognition-quality coverage"? The audit feedback recommends clear separation of planning estimate, DORI-style estimate, OODPCVS/IEC quality mode, operator assumption, field-verified claim, and legal/non-legal language.
+
+---
+
+### Q-037: Performance Targets by Scene Size
+**Status:** Open
+**Priority:** Low
+**Context:** Scene hashing and async simulation exist, but no formal performance targets are defined for different scene sizes.
+**What's needed:** Define benchmark targets by scene size:
+- Shop (40m², 4 cameras, 4 lights, 6400 cells) — <500ms full sim
+- Apartment lobby (80m², 6 cameras, 6 lights, 12800 cells) — <2s full sim
+- Warehouse (500m², 12 cameras, 20 lights, 32000 cells) — <10s full sim
+**Related:** Thread 2b, `scene-hash.ts` for stale-result prevention.

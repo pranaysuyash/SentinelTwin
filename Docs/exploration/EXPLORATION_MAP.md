@@ -1,7 +1,7 @@
 # Exploration Map — SentinelTwin
 
 **This is a living document. Append findings. Never replace.**
-**Last updated:** 2026-05-31 (Intake/home clickability honesty hardening + demo-flow documentation + recent-site routing to real scene activation path) — previous: Scan/reconstruction pipeline foundation: artifact data model, adapter interfaces, reconstruction compiler, quality gates, 73 new tests; Dedicated lighting/shadow overlay mode added on top of heatmap lighting/shadow implementation; Heatmap lighting/shadow implementation — camera PPM now combines independent security-light illumination, obstruction-cast light shadows, and camera line-of-sight; Physics engine audit — zero implementation across entire codebase, deferred to V0.2, no new action needed; Checkpoint compare/report pivots + launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Sensor provenance + runtime health surfacing; Sensor fusion preview + workspace access policy surfacing; Digital twin simulation physics: PTZ movement, BRDF reflectivity, dynamic lighting, view distance, placement constraints, scene fidelity, occlusion culling, camera feed synthesis, real-time feedback
+**Last updated:** 2026-06-01 (Simulation engine maturity Thread 2b — calibration, confidence, hashing, scenarios, counterfactuals, sensitivity) — previous: Scan/reconstruction pipeline foundation: artifact data model, adapter interfaces, reconstruction compiler, quality gates, 73 new tests; Dedicated lighting/shadow overlay mode added on top of heatmap lighting/shadow implementation; Heatmap lighting/shadow implementation — camera PPM now combines independent security-light illumination, obstruction-cast light shadows, and camera line-of-sight; Physics engine audit — zero implementation across entire codebase, deferred to V0.2, no new action needed; Checkpoint compare/report pivots + launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Sensor provenance + runtime health surfacing; Sensor fusion preview + workspace access policy surfacing; Digital twin simulation physics: PTZ movement, BRDF reflectivity, dynamic lighting, view distance, placement constraints, scene fidelity, occlusion culling, camera feed synthesis, real-time feedback
 
 ---
 
@@ -61,6 +61,61 @@ node store pattern are exactly what SentinelTwin needs.
 - Added a first-class `Lighting` heatmap mode in the coverage legend and shared scene renderer. It uses yellow/orange/blue/dark/red semantics for bright, usable, low, dark, and obstruction-shadowed light states, isolating lighting from camera PPM quality.
 - This should be the operator debugging view for “is the failure caused by camera geometry or by lighting?” while `Quality` remains the combined security-coverage view.
 - Next hardening: add lighting-mode QA screenshots and calibrate the thresholds against lux assumptions rather than the current normalized light proxy.
+
+---
+
+### Thread 2b: Simulation Engine Maturity — From Coverage Calculator to Security Decision Engine
+
+**Status:** Implemented in code (2026-06-01).
+
+**Why this exists:**
+The simulation engine already computes meaningful deterministic coverage (visibility, PPM/DORI/OODPCVS quality, occlusion, lighting/shadow penalties, privacy issues, adversarial paths, redundancy, recommendations, blind-spot topology, fragility, entropy, k-robustness, placement oracle). However, the engine answered "Given this simplified scene and assumptions, what coverage/quality do we estimate?" — not yet "Given an uncertain real site, imperfect camera specs, changing light, and user constraints, what security outcome can we defend, explain, compare, verify and improve?"
+
+The audit feedback identified 8 maturity tracks needed. All are now implemented.
+
+**Key findings:**
+
+1. **Calibration layer** — A `CalibrationConstants` schema with 7 camera presets (indoor dome 2MP, wide dome 5MP, bullet 5MP, PTZ 8MP, thermal 640, low-light 4MP, LPR 2MP), lux-to-light-level thresholds, night-mode PPM retention factors (thermal=0.92, low-light=0.82, IR=0.68, none=0.12), mount-tilt realism limits per mount type, and lens edge-falloff defaults per lens type. Defined in `packages/simulation/src/calibration.ts` with a `DEFAULT_CALIBRATION` constant and utility functions for preset lookup, confidence estimation, and PPM confidence intervals.
+
+2. **Uncertainty propagation** — `ConfidenceBand` type with level (none/low/medium/high/verified), source, reason codes, and sensitivity tags. `computeOverallConfidence()`, `computeZoneConfidence()`, and `computePathConfidence()` derive confidence from camera source provenance, scene geometry validity, calibration presence, lighting assumptions, and scene source. Confidence is computed automatically in every simulation run and stored in `SimulationResult.overallConfidence`, `zoneConfidence`, `pathConfidence`.
+
+3. **Scene hashing** — `computeSceneInputHash()` produces a deterministic hash from all simulation-relevant scene inputs (walls, doors, windows, cameras, lights, obstructions, zones, privacy zones, assumptions, time schedule). Stored in `SimulationResult.sceneHash` for stale-result prevention. Hash format is `base36(integerHash)-length`. Code in `packages/simulation/src/scene-hash.ts`.
+
+4. **Scenario engine** — `ScenarioState` schema with overrides for camera status, light status, door state, time of day, light level, and obstruction presence. `runScenarioBatch()` runs N scenario states against the baseline and returns `ScenarioBatchResult[]` with deltas. Default scenarios: `normal_day`, `normal_night`, `night_no_lights`. Helper functions generate camera-offline, obstruction-removed, and camera-blocked scenarios. Code in `packages/simulation/src/scenario-batch.ts`.
+
+5. **Counterfactual search** — `computeCounterfactualSearch()` generates multiple candidate fixes (move obstruction, rotate camera, add camera, add light), simulates each, scores them by verified improvement, cost rank, and zone delta, then ranks them. Supports constraints: `cameraCannotMoveIds`, `noNewCamera`, `maxCostCategory`. Core rule: AI proposes — simulation verifies. Every candidate's delta is a real full simulation. Code in `packages/simulation/src/counterfactual-search.ts`.
+
+6. **Real footage verification** — Schema foundation exists. `CameraEvidenceArtifact` with landmark binding, `MismatchReport` with severity/mismatch types, and `SceneUpdateSuggestion` for applying corrections. Full real-footage verification pipeline deferred — the schema is ready for when footage comparison is implemented.
+
+7. **Performance architecture** — Scene hashing enables stale-result detection. `computeSceneInputHash()` is fast and deterministic. `async` evaluation exists in `simulateStudioAsync()`. Adaptive sampling around critical zones is possible via `critical-zone-selection.ts`. Additional performance work (worker, incremental recompute, BVH lifecycle management) is tracked in open questions.
+
+8. **Assumption sensitivity** — `computeAssumptionSensitivity()` tests which inputs most affect results. It varies person height (±20%), night penalty on/off, interior light level, exterior lux, backlight, and glare, then reports `coverageDeltaPct`, `qualityDelta`, `zoneStatusChanges`, and a classified sensitivity level (critical/high/medium/low/none). Code in `packages/simulation/src/assumption-sensitivity.ts`.
+
+**Code anchors:**
+- `packages/core/src/schema/security-scene.ts` — All new Zod schemas (confidence, calibration, hash, provenance, sensitivity, scenario, counterfactual)
+- `packages/simulation/src/calibration.ts` — Calibration constants, preset library, utilities
+- `packages/simulation/src/scene-hash.ts` — Deterministic scene hashing
+- `packages/simulation/src/confidence.ts` — Confidence propagation engine
+- `packages/simulation/src/scenario-batch.ts` — Scenario batch runner
+- `packages/simulation/src/counterfactual-search.ts` — Counterfactual candidate search
+- `packages/simulation/src/assumption-sensitivity.ts` — Assumption sensitivity analysis
+- `packages/simulation/src/simulate-studio.ts` — Wired: scene hash + confidence in every `SimulationResult`
+
+**Decisions:** D-287 through D-290 in `DECISION_LOG.md`.
+
+**Success criteria:**
+- Every simulation result now includes `sceneHash`, `provenance`, `overallConfidence`, `zoneConfidence`, `pathConfidence`. ✓
+- Calibration constants module exists with 7 real camera presets. ✓
+- Scenario batch runner can compare day/night/light-failure states. ✓
+- Counterfactual search generates multiple candidates, simulates each, scores and ranks. ✓
+- Assumption sensitivity analysis identifies which inputs drive results. ✓
+
+**Next:**
+- Build UI panels for confidence display, sensitivity chart, scenario comparison, counterfactual ranking
+- Expand camera preset library with field-verified calibration data
+- Wire real-footage verification pipeline (schema exists, engine needed)
+- Add worker-based async simulation for large scenes
+- Add incremental recompute for fast edit feedback
 
 ---
 

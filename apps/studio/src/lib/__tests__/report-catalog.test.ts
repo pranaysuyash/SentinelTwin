@@ -80,7 +80,7 @@ describe("report catalog", () => {
       title: "Privacy Safe Draft",
       audience: "privacy_reviewer",
       visibility: "privacy_safe",
-      templateId: "gdpr-dpia",
+      templateId: "oodpcvs-audit",
     });
 
     const nextState = removeReportCatalogPreset(

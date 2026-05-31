@@ -2,6 +2,5 @@
   "version": 2,
   "framework": "nextjs",
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "NEXT_PRIVATE_WORKER_THREADS=false next build --webpack",
-  "nodeVersion": "24.x"
+  "buildCommand": "NEXT_PRIVATE_WORKER_THREADS=false next build --webpack"
 }

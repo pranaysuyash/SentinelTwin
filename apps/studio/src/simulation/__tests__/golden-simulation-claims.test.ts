@@ -1,17 +1,23 @@
 import { describe, expect, test } from "bun:test";
 
+import type {
+  CameraNode,
+  CameraOfflineImpactEntry,
+  CameraResult,
+  CoverageCellResult,
+  SecurityIssue,
+  ZoneResult,
+} from "@sentineltwin/core";
 import { createSmallRetailShopScene } from "@/demo-scenes/small-retail-shop";
 import { buildSecurityOutcomeModel } from "@/lib/security-outcome/security-outcome-model";
-import { simulateStudio } from "@/simulation/simulate-studio";
-import { qualityToScore } from "@/simulation/dori";
-import { computeCoverageCells } from "@/simulation/coverage";
+import { simulateStudio, qualityToScore, computeCoverageCells } from "@sentineltwin/simulation";
 import {
   createTestCamera,
   createTestLight,
   createTestObstruction,
   createTestScene,
   findCellNear,
-} from "@/simulation/__tests__/helpers";
+} from "@sentineltwin/simulation/__tests__/helpers";
 
 const testWithTimeout = test as unknown as (
   name: string,
@@ -194,7 +200,7 @@ describe("golden simulation product claims", () => {
     const result = simulateStudio(scene);
 
     expect(result.totalCoveragePct).toBeLessThan(baseline.totalCoveragePct);
-    expect(result.cameraResults.find((entry) => entry.cameraId === "cam_entrance")?.offlineImpact).toBeDefined();
+    expect(result.cameraResults.find((entry: CameraResult) => entry.cameraId === "cam_entrance")?.offlineImpact).toBeDefined();
   });
 
   test("moving the cupboard away from the aisle improves the small retail shop coverage", () => {
@@ -250,8 +256,8 @@ describe("golden simulation product claims", () => {
 
     const result = simulateStudio(scene);
 
-    expect(result.coverageCells.some((cell) => cell.privacyRestricted)).toBe(true);
-    expect(result.issues.some((issue) => issue.category === "privacy")).toBe(true);
+    expect(result.coverageCells.some((cell: CoverageCellResult) => cell.privacyRestricted)).toBe(true);
+    expect(result.issues.some((issue: SecurityIssue) => issue.category === "privacy")).toBe(true);
   });
 
   testWithTimeout("redundancy is preserved with one camera offline and degrades to single-point failure", { timeout: 15000 }, () => {
@@ -260,7 +266,7 @@ describe("golden simulation product claims", () => {
     const baselineOutcome = buildSecurityOutcomeModel(scene, baseline, null);
 
     const oneOffline = makeRedundancyScene();
-    const oneOfflineCamera = oneOffline.cameras.find((camera) => camera.id === "cam_right");
+    const oneOfflineCamera = oneOffline.cameras.find((camera: CameraNode) => camera.id === "cam_right");
     if (!oneOfflineCamera) {
       throw new Error("Expected right redundancy camera");
     }
@@ -393,15 +399,15 @@ describe("golden simulation product claims", () => {
     ];
 
     const improved = structuredClone(base);
-    const moved = improved.obstructions.find((obs) => obs.id === "obs_blocker");
+    const moved = improved.obstructions.find((obs: { id: string }) => obs.id === "obs_blocker");
     if (!moved) throw new Error("expected blocker obstruction");
     moved.position = [6.5, moved.position[1], 6.5];
 
     const baseResult = simulateStudio(base);
     const improvedResult = simulateStudio(improved);
 
-    const baseZone = baseResult.criticalZoneResults.find((zone) => zone.zoneId === "zone_register");
-    const improvedZone = improvedResult.criticalZoneResults.find((zone) => zone.zoneId === "zone_register");
+    const baseZone = baseResult.criticalZoneResults.find((zone: ZoneResult) => zone.zoneId === "zone_register");
+    const improvedZone = improvedResult.criticalZoneResults.find((zone: ZoneResult) => zone.zoneId === "zone_register");
 
     expect(baseZone).toBeDefined();
     expect(improvedZone).toBeDefined();
@@ -514,13 +520,13 @@ describe("golden simulation product claims", () => {
     ];
 
     const result = simulateStudio(scene);
-    const zone = result.criticalZoneResults.find((entry) => entry.zoneId === "zone_redundant");
+    const zone = result.criticalZoneResults.find((entry: ZoneResult) => entry.zoneId === "zone_redundant");
 
     expect(zone).toBeDefined();
     expect((zone?.redundancyCameraCount ?? 0) >= 2).toBe(true);
 
     for (const camera of result.cameraResults) {
-      const losesRedundancy = camera.offlineImpactDetail?.some((entry) =>
+      const losesRedundancy = camera.offlineImpactDetail?.some((entry: CameraOfflineImpactEntry) =>
         entry.reason.includes("loses redundancy"),
       ) ?? false;
       expect(losesRedundancy).toBe(false);

@@ -416,6 +416,9 @@ type SecurityScene = {
   entryPoints: EntryPointNode[];
   paths: ScenarioPath[];
   guardPatrols: GuardPatrolNode[];
+  comments: CommentNode[];
+  evidenceArtifacts: CameraEvidenceArtifact[]; // still/frame/video references linked to scene cameras
+  mismatchReports: MismatchReport[];           // modeled-vs-evidence discrepancy records
 
   // Simulation
   assumptions: SimulationAssumptions;
@@ -428,6 +431,8 @@ type SecurityScene = {
   version: string;
 };
 ```
+
+Implementation note (2026-05-31): camera transport/auth challenge metadata (`transportResponseStatus`, `authChallengeHeader`, `authChallengeScheme`, `authChallengeRealm`) is part of `CameraNode` for live bind/probe provenance and must remain optional.
 
 ---
 

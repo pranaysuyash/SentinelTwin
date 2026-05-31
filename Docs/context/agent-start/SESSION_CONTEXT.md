@@ -1,6 +1,6 @@
 # Session Context
 
-- Generated: 2026-05-30T18:42:51Z
+- Generated: 2026-05-30T20:55:14Z
 - Project: `SentinelTwin`
 - Provider: `local`
 - Model: `BAAI/bge-m3`
@@ -24,7 +24,7 @@ _Search timed out. Retry when the retrieval store is less busy._
 ### Project Management Workflow
 - Collection: `projects_proj_sentineltwin`
 - Query: `project management workflow for SentinelTwin`
-_Search timed out. Retry when the retrieval store is less busy._
+_Project retrieval store is busy. Try again in a minute._
 
 ### Known Issues and Worklogs
 - Collection: `projects_proj_sentineltwin`
@@ -39,7 +39,7 @@ _Search timed out. Retry when the retrieval store is less busy._
 ### System Learning Graph
 - Collection: `projects_proj_sentineltwin`
 - Query: `knowledge graph memory learning feedback loops autoresearch semantic taste graph for SentinelTwin`
-_Search timed out. Retry when the retrieval store is less busy._
+_Project retrieval store is busy. Try again in a minute._
 
 ## Shared Cross-Project Retrieval
 
@@ -51,7 +51,7 @@ _Search timed out. Retry when the retrieval store is less busy._
 ### Process Templates
 - Collection: `projects_workspace_shared`
 - Query: `project management templates and workflows`
-_Search timed out. Retry when the retrieval store is less busy._
+_Project retrieval store is busy. Try again in a minute._
 
 ### Common Failure Modes
 - Collection: `projects_workspace_shared`
@@ -61,7 +61,7 @@ _Search timed out. Retry when the retrieval store is less busy._
 ### System Learning Graph
 - Collection: `projects_workspace_shared`
 - Query: `knowledge graph memory learning feedback loops autoresearch semantic taste graph`
-_Search timed out. Retry when the retrieval store is less busy._
+_Project retrieval store is busy. Try again in a minute._
 
 
 ---

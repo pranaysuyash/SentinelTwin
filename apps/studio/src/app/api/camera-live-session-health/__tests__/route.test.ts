@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { NextRequest } from "next/server";
 import { GET, POST } from "@/app/api/camera-live-session-health/route";
 import { appendCameraLiveSessionRecord } from "@/lib/camera-live-session-registry";
 
@@ -61,7 +62,7 @@ describe("camera-live-session-health route", () => {
   });
 
   test("returns session health summary", async () => {
-    const response = await GET(new Request("http://localhost/api/camera-live-session-health") as unknown as Request);
+    const response = await GET(new NextRequest("http://localhost/api/camera-live-session-health"));
     expect(response.status).toBe(200);
     const body = await response.json() as { ok: boolean; totals: { active: number } };
     expect(body.ok).toBe(true);
@@ -69,11 +70,11 @@ describe("camera-live-session-health route", () => {
   });
 
   test("renews a session", async () => {
-    const response = await POST(new Request("http://localhost/api/camera-live-session-health", {
+    const response = await POST(new NextRequest("http://localhost/api/camera-live-session-health", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ sessionId: "session_1", ttlMs: 300000 }),
-    }) as unknown as Request);
+    }));
 
     expect(response.status).toBe(200);
     const body = await response.json() as { ok: boolean; renewedSessionId: string };

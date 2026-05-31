@@ -6,6 +6,7 @@ import { getDefaultAdapterSet, hasAnyAdapters, adapterSummary } from "@/lib/scan
 import {
   createScanCaptureSession,
   createPhotoArtifact,
+  type PhotoArtifact,
 } from "@/lib/scan-artifacts";
 import {
   runReconstruction,
@@ -99,7 +100,7 @@ describe("StubObjectDetectionAdapter", () => {
 
   test("all candidates have pending status", async () => {
     const session = createScanCaptureSession("Test", "ai_assisted");
-    const photo = createPhotoArtifact("data:img/png;base64,x", "cam.jpg", 640, 480, "existing_cameras");
+    const photo = createPhotoArtifact("data:img/png;base64,x", "cam.jpg", 640, 480, "existing_cameras" as PhotoArtifact["role"]);
     session.photos = [photo];
 
     const result = await adapter.detect(photo, session);
@@ -110,7 +111,7 @@ describe("StubObjectDetectionAdapter", () => {
 
   test("returns candidates with source artifact linkage", async () => {
     const session = createScanCaptureSession("Test", "ai_assisted");
-    const photo = createPhotoArtifact("data:img/png;base64,x", "entry.jpg", 1920, 1080, "entry_points");
+    const photo = createPhotoArtifact("data:img/png;base64,x", "entry.jpg", 1920, 1080, "entry_points" as PhotoArtifact["role"]);
     session.photos = [photo];
 
     const result = await adapter.detect(photo, session);
@@ -121,7 +122,7 @@ describe("StubObjectDetectionAdapter", () => {
 
   test("camera close-up photo includes camera candidate", async () => {
     const session = createScanCaptureSession("Test", "ai_assisted");
-    const photo = createPhotoArtifact("data:img/png;base64,x", "cam.jpg", 640, 480, "existing_cameras");
+    const photo = createPhotoArtifact("data:img/png;base64,x", "cam.jpg", 640, 480, "existing_cameras" as PhotoArtifact["role"]);
     session.photos = [photo];
 
     const result = await adapter.detect(photo, session);
@@ -268,7 +269,7 @@ describe("runReconstruction (end-to-end)", () => {
       "cam.jpg",
       640,
       480,
-      "existing_cameras",
+      "existing_cameras" as PhotoArtifact["role"],
     );
     session.photos = [photo];
 
@@ -295,7 +296,7 @@ describe("runReconstruction (end-to-end)", () => {
       "cam.jpg",
       640,
       480,
-      "existing_cameras",
+      "existing_cameras" as PhotoArtifact["role"],
     );
     session.photos = [photo];
 
@@ -323,7 +324,7 @@ describe("runReconstruction (end-to-end)", () => {
       "test.jpg",
       1920,
       1080,
-      "entry_points",
+      "entry_points" as PhotoArtifact["role"],
     );
     session.photos = [photo];
 
@@ -345,7 +346,7 @@ describe("runReconstruction (end-to-end)", () => {
       "test.jpg",
       640,
       480,
-      "existing_cameras",
+      "existing_cameras" as PhotoArtifact["role"],
     );
     session.photos = [photo];
 

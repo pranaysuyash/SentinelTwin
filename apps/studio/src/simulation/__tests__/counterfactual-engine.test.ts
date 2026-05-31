@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { generateAndRankCounterfactuals } from "../counterfactual-engine";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
-import { simulateStudioLite } from "../simulate-studio";
+import { simulateStudioLite } from "@sentineltwin/simulation";
 import { createCameraNode, createObstructionNode } from "@/lib/node-factory";
 
 describe("Counterfactual Engine", () => {
@@ -11,7 +11,7 @@ describe("Counterfactual Engine", () => {
     obs.movableByAI = true;
     scene.obstructions.push(obs);
 
-    const cam = createCameraNode([0, 2.5, 0], 45);
+    const cam = createCameraNode([0, 2.5, 0], { yawDeg: 45 });
     scene.cameras.push(cam);
 
     const baselineResult = simulateStudioLite(scene);

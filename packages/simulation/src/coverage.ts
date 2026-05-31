@@ -54,7 +54,14 @@ function deriveResolutionWidth(camera: CameraNode) {
   if (camera.resolutionWidth) {
     return camera.resolutionWidth;
   }
+  if (camera.resolutionHeight) {
+    // Preserve schema-provided aspect when only one dimension is present.
+    const megapixels = camera.resolutionMP * 1_000_000;
+    const width = megapixels / camera.resolutionHeight;
+    return Math.max(1, width);
+  }
 
+  // Legacy fallback only when explicit dimensions are unavailable.
   return Math.sqrt(camera.resolutionMP * 1_000_000 * (16 / 9));
 }
 

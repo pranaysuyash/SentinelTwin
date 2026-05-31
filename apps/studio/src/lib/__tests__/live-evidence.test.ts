@@ -92,6 +92,10 @@ const dummyScene: SecurityScene = {
   version: "1.0",
   snapshots: [],
   scenarios: [],
+  comments: [],
+  evidenceArtifacts: [],
+  mismatchReports: [],
+  changeLog: [],
 };
 
 describe("LiveEvidence", () => {

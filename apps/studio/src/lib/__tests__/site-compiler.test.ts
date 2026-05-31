@@ -217,6 +217,7 @@ describe("compileScanToSiteResult", () => {
     scene.changeLog.push("Scan evidence: camera marker accepted.");
     const result = compileScanToSiteResult(scene);
     expect(result.source).toBe("scan");
+    expect(result.scene.source).toBe("scan");
     expect(result.scene.cameras).toHaveLength(1);
     expect(result.provenance.notes).toContain("Scan evidence: camera marker accepted.");
   });
@@ -233,6 +234,7 @@ describe("compileAiDraftToSiteResult", () => {
     const scene = makeScene();
     const result = compileAiDraftToSiteResult(scene);
     expect(result.source).toBe("ai_prompt");
+    expect(result.scene.source).toBe("ai");
   });
 });
 
@@ -243,6 +245,7 @@ describe("compileFloorPlanToSiteResult", () => {
     scene.changeLog.push("Floor plan import: 4 walls, 1 door, 0 windows at 85% confidence.");
     const result = compileFloorPlanToSiteResult(scene, 0.85);
     expect(result.source).toBe("floor_plan");
+    expect(result.scene.source).toBe("import");
     expect(result.confidence).toBe(0.85);
     expect(result.provenance.notes).toContain("Floor plan import: 4 walls, 1 door, 0 windows at 85% confidence.");
   });
@@ -253,6 +256,7 @@ describe("compileJsonToSiteResult", () => {
     const scene = makeScene();
     const result = compileJsonToSiteResult(scene, "export.json");
     expect(result.source).toBe("json");
+    expect(result.scene.source).toBe("import");
     expect(result.warnings.some((w) => w.code === "INVALID_SCENE")).toBe(false);
   });
 
@@ -283,6 +287,7 @@ describe("compileCameraEvidenceToSiteResult", () => {
     addCamera(scene);
     const result = compileCameraEvidenceToSiteResult(scene);
     expect(result.source).toBe("camera_evidence");
+    expect(result.scene.source).toBe("import");
     expect(result.provenance.label).toBe("Camera Evidence Preview");
   });
 
@@ -299,6 +304,7 @@ describe("compileFootageVerifyToSiteResult", () => {
     addCamera(scene);
     const result = compileFootageVerifyToSiteResult(scene);
     expect(result.source).toBe("camera_evidence");
+    expect(result.scene.source).toBe("import");
     expect(result.provenance.label).toBe("Camera Evidence Preview");
   });
 });

@@ -4624,3 +4624,12 @@ Fixed the `CameraLiveConnectionEventRecord` and `WorkspaceApprovalRouteSummary` 
 - Decision: Add explicit visibility/redaction summaries, buyer drill-through shortcuts, and privacy masking summaries directly into the report export surfaces, and mirror the same disclosure framing in compare exports.
 - Rationale: Report artifacts need to read like buyer-ready handoff material, not just simulation dumps. Showing the redaction posture and direct section shortcuts at the point of export makes the report easier to consume, easier to trust, and harder to misread when it is shared outside the workspace.
 - Consequence: Report exports now expose a visible redaction story and direct drill-down path, while the remaining work remains on standards-specific templates, catalog persistence, and richer export formats.
+
+## D-280 - SecurityScene evidence parity and live transport metadata synchronization
+
+- Date: 2026-05-31
+- Status: Accepted
+- Context: Runtime and schema consumers drifted after adding live evidence/mismatch workflows and camera transport metadata, causing type/runtime mismatches between `apps/studio`, `@sentineltwin/core`, and `@sentineltwin/simulation`.
+- Decision: Treat `evidenceArtifacts` and `mismatchReports` as first-class SecurityScene fields across schema, scene skeletons, migrations, and compiler boundaries; keep camera live transport/auth challenge fields optional but schema-defined for provenance fidelity.
+- Rationale: Evidence-backed verification cannot be durable if scene contracts differ by package. Schema parity plus migration support prevents regressions while preserving older scene imports.
+- Consequence: Studio scene parsing now migrates legacy comment ids and defaults, scene defaults include evidence arrays, core/studio schema parity is restored, and simulation callers compile against one scene contract.

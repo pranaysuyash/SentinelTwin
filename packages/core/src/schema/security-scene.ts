@@ -918,12 +918,48 @@ export type TemporalAnomalySummary = z.infer<typeof temporalAnomalySummarySchema
 export type ReviewStatus = z.infer<typeof reviewStatusSchema>;
 export type SceneSource = z.infer<typeof sceneSourceSchema>;
 
+export function migrateSecuritySceneInput(input: unknown): unknown {
+  if (!input || typeof input !== "object") return input;
+  const scene = structuredClone(input) as Record<string, unknown>;
+  const commentsRaw = scene.comments;
+  if (!Array.isArray(commentsRaw)) return scene;
+
+  scene.comments = commentsRaw.map((entry) => {
+    if (!entry || typeof entry !== "object") return entry;
+    const comment = { ...(entry as Record<string, unknown>) };
+    const id = typeof comment.id === "string" ? comment.id : "";
+    if (id.startsWith("cmt_")) {
+      comment.id = `comment_${id.slice(4)}`;
+    }
+    if (typeof comment.label !== "string" || comment.label.trim().length === 0) {
+      comment.label = "Comment";
+    }
+    if (typeof comment.author !== "string" || comment.author.trim().length === 0) {
+      comment.author = "Operator";
+    }
+    if (typeof comment.source !== "string") {
+      comment.source = "manual";
+    }
+    if (typeof comment.sourceTrace !== "string") {
+      comment.sourceTrace = "";
+    }
+    if (typeof comment.geometryValidity !== "string") {
+      comment.geometryValidity = "valid";
+    }
+    if (typeof comment.reviewStatus !== "string") {
+      comment.reviewStatus = "unreviewed";
+    }
+    return comment;
+  });
+  return scene;
+}
+
 export function parseSecurityScene(input: unknown): SecurityScene {
-  return securitySceneSchema.parse(input);
+  return securitySceneSchema.parse(migrateSecuritySceneInput(input));
 }
 
 export function safeParseSecurityScene(input: unknown) {
-  return securitySceneSchema.safeParse(input);
+  return securitySceneSchema.safeParse(migrateSecuritySceneInput(input));
 }
 
 export function cloneSecurityScene(scene: SecurityScene): SecurityScene {

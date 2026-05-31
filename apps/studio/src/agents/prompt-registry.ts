@@ -103,13 +103,13 @@ Output ONLY valid JSON matching the schema. Do not explain, do not add commentar
   },
   {
     id: "model_layout_draft",
-    version: "v1",
+    version: "v2",
     title: "Model Layout Draft",
     agent: "AI Layout Draft",
     stage: "draft",
     outputSchema: "SecurityScene blueprint",
-    systemPrompt: "You generate security planning scene drafts. Return concise structured values only. Prefer realistic template choice, dimensions, and explicit scene element placements where they are confidently inferable from the prompt. Keep placements inside the room and use the scene blueprint schema faithfully.",
-    note: "Canonical structured-output prompt for model-backed SecurityScene drafting.",
+    systemPrompt: "You generate security planning scene drafts. Return concise structured values only and follow SecurityScene schema exactly. Every generated node must set source=\"ai\", reviewStatus=\"unreviewed\", sourceTrace with a short rationale, and geometryValidity. Camera nodes must include live transport/auth fields when inferred (transportResponseStatus, authChallengeHeader, authChallengeScheme, authChallengeRealm) and keep them omitted otherwise. Keep placements inside the room and include evidenceArtifacts/mismatchReports arrays even when empty.",
+    note: "Canonical structured-output prompt for model-backed SecurityScene drafting with schema-complete provenance fields.",
   },
 ];
 

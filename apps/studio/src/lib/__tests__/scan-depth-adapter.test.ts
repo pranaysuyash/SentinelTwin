@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { StubDepthEstimationAdapter } from "@/lib/scan-adapters/adapters/stub-depth-adapter";
-import { createPhotoArtifact, createScanCaptureSession } from "@/lib/scan-artifacts";
+import { createPhotoArtifact, createScanCaptureSession, type PhotoArtifact } from "@/lib/scan-artifacts";
 
 describe("StubDepthEstimationAdapter", () => {
   const adapter = new StubDepthEstimationAdapter();
@@ -16,7 +16,7 @@ describe("StubDepthEstimationAdapter", () => {
 
   test("uses role-specific depth profiles", async () => {
     const overviewPhoto = createPhotoArtifact("data:img/png;base64,x", "overview.jpg", 1920, 1080, "overview");
-    const closeupPhoto = createPhotoArtifact("data:img/png;base64,x", "cam.jpg", 640, 480, "existing_cameras");
+    const closeupPhoto = createPhotoArtifact("data:img/png;base64,x", "cam.jpg", 640, 480, "existing_cameras" as PhotoArtifact["role"]);
 
     const overview = await adapter.estimateDepth(overviewPhoto);
     const closeup = await adapter.estimateDepth(closeupPhoto);
@@ -39,7 +39,7 @@ describe("StubDepthEstimationAdapter", () => {
   });
 
   test("critical zone close-up produces tighter depth range", async () => {
-    const photo = createPhotoArtifact("data:img/png;base64,x", "counter.jpg", 1920, 1080, "critical_zones");
+    const photo = createPhotoArtifact("data:img/png;base64,x", "counter.jpg", 1920, 1080, "critical_zones" as PhotoArtifact["role"]);
     const result = await adapter.estimateDepth(photo);
     const range = result.depthMaxM - result.depthMinM;
     expect(range).toBeLessThan(6);

@@ -38,7 +38,7 @@ describe("ConversationMemory", () => {
     // Should have triggered summarization
     const summary = memory.getSummary();
     expect(summary).not.toBeNull();
-    expect(summary).toContain("Previous conversation summary");
+    expect(summary).toContain("Recent conversation summary");
   });
 
   it("returns null summary when under threshold", () => {

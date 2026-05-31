@@ -5,57 +5,20 @@ import { getSceneSourceMeta } from "@/lib/scene-source";
 
 export type OperationalEvidenceActor = "system" | "user" | "ai";
 
-export type OperationalEvidenceLifecycleStage =
-  | "draft"
-  | "review"
-  | "published"
-  | "recovered"
-  | "imported"
-  | "scanned"
-  | "simulated"
-  | "manual";
+export const OPERATIONAL_EVIDENCE_LIFECYCLE_STAGES = [
+  "draft",
+  "review",
+  "published",
+  "recovered",
+  "imported",
+  "scanned",
+  "simulated",
+  "manual",
+] as const;
 
-export type OperationalEvidenceEventKind =
-  | "scene_initialized"
-  | "scene_imported"
-  | "scene_created"
-  | "scene_updated"
-  | "scene_reverted"
-  | "draft_proposed"
-  | "scene_review_requested"
-  | "scene_review_approved"
-  | "scene_review_rejected"
-  | "scene_comment_added"
-  | "governance_role_changed"
-  | "governance_policy_changed"
-  | "workspace_member_selected"
-  | "workspace_access_policy_changed"
-  | "workspace_membership_synced"
-  | "workspace_approval_routed"
-  | "workspace_identity_conflict_resolved"
-  | "scan_session_started"
-  | "scan_session_compiled"
-  | "node_added"
-  | "node_updated"
-  | "node_removed"
-  | "sensor_added"
-  | "sensor_updated"
-  | "sensor_removed"
-  | "sensor_triggered"
-  | "sensor_heartbeat"
-  | "sensor_faulted"
-  | "sensor_restored"
-  | "camera_metadata_updated"
-  | "camera_live_connection_updated"
-  | "snapshot_saved"
-  | "scene_published"
-  | "simulation_completed"
-  | "counterfactual_completed"
-  | "draft_applied"
-  | "scene_merged"
-  | "scan_compiled";
+export type OperationalEvidenceLifecycleStage = (typeof OPERATIONAL_EVIDENCE_LIFECYCLE_STAGES)[number];
 
-const OPERATIONAL_EVIDENCE_EVENT_KINDS = [
+export const OPERATIONAL_EVIDENCE_EVENT_KINDS = [
   "scene_initialized",
   "scene_imported",
   "scene_created",
@@ -96,16 +59,7 @@ const OPERATIONAL_EVIDENCE_EVENT_KINDS = [
   "scan_compiled",
 ] as const;
 
-const OPERATIONAL_EVIDENCE_LIFECYCLE_STAGES = [
-  "draft",
-  "review",
-  "published",
-  "recovered",
-  "imported",
-  "scanned",
-  "simulated",
-  "manual",
-] as const;
+export type OperationalEvidenceEventKind = (typeof OPERATIONAL_EVIDENCE_EVENT_KINDS)[number];
 
 const OperationalEvidenceEventKindSchema = z.enum(OPERATIONAL_EVIDENCE_EVENT_KINDS);
 const OperationalEvidenceActorSchema = z.enum(["system", "user", "ai"]);
@@ -508,7 +462,7 @@ export function buildOperationalEvidenceEvent(input: OperationalEvidenceEventInp
     branchId,
     branchLabel,
     lifecycleStage,
-    id: `${parsedInput.kind}:${parsedInput.sceneId}:${timestamp.toString(36)}:${Math.random().toString(36).slice(2, 8)}`,
+    id: `${parsedInput.kind}:${parsedInput.sceneId}:${timestamp.toString(36)}:${crypto.randomUUID().slice(0, 8)}`,
     title,
     details,
     timestamp,
@@ -604,9 +558,12 @@ export function kindToTitle(kind: OperationalEvidenceEventKind) {
   }
 }
 
+const CONFIDENCE_HIGH_THRESHOLD = 0.9;
+const CONFIDENCE_MEDIUM_THRESHOLD = 0.65;
+
 export function confidenceLabel(confidence: number) {
-  if (confidence >= 0.9) return "High";
-  if (confidence >= 0.65) return "Medium";
+  if (confidence >= CONFIDENCE_HIGH_THRESHOLD) return "High";
+  if (confidence >= CONFIDENCE_MEDIUM_THRESHOLD) return "Medium";
   return "Low";
 }
 
@@ -861,6 +818,20 @@ function sortOperationalEvidenceEventsChronologically(events: OperationalEvidenc
   });
 }
 
+const NODE_KINDS = new Set([
+  "camera",
+  "wall",
+  "door",
+  "window",
+  "obstruction",
+  "critical_zone",
+  "privacy_zone",
+  "entry_point",
+  "path",
+  "sensor",
+  "security_light",
+]);
+
 function resolveOperationalEvidenceNodeId(sceneId: string, nodeId: string) {
   if (nodeId === `scene:${sceneId}`) return sceneId;
 
@@ -871,22 +842,8 @@ function resolveOperationalEvidenceNodeId(sceneId: string, nodeId: string) {
   const rawNodeId = nodeId.slice(separatorIndex + 1);
   if (!rawNodeId) return null;
 
-  switch (kind) {
-    case "camera":
-    case "wall":
-    case "door":
-    case "window":
-    case "obstruction":
-    case "critical_zone":
-    case "privacy_zone":
-    case "entry_point":
-    case "path":
-    case "sensor":
-    case "security_light":
-      return rawNodeId;
-    default:
-      return null;
-  }
+  if (!NODE_KINDS.has(kind)) return null;
+  return rawNodeId;
 }
 
 export function findOperationalEvidenceEventsForNode(

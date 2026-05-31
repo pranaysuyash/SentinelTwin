@@ -64,7 +64,7 @@ const WORKSPACE_MODE_ITEMS = [
   { label: "Camera Wall", detail: "Multi Camera", viewMode: "wall" as const, preset: "camera_wall" as const, tab: "metrics" as const },
   { label: "Path Replay", detail: "Route Analysis", viewMode: "replay" as const, preset: "replay" as const, tab: "timeline" as const },
   { label: "Compare", detail: "Before / After", viewMode: "compare" as const, preset: "compare" as const, tab: "beforeafter" as const },
-  { label: "Report Lite", detail: "Quick Report", viewMode: "report" as const, preset: "report" as const, tab: "report" as const },
+  { label: "Report", detail: "Audit summary", viewMode: "report" as const, preset: "report" as const, tab: "report" as const },
 ] as const;
 
 const SOURCE_LABELS: Record<SecurityScene["source"], string> = {
@@ -1918,11 +1918,11 @@ export function StudioDashboardHome({
                         No workspace memory hits matched this query.
                       </div>
                     )
-                  ) : (
-                    <div className="rounded-[18px] border border-dashed border-[color:var(--st-border)] bg-white/[0.02] px-4 py-5 text-sm text-[color:var(--st-muted)]">
-                      Search the current scene, saved workspaces, evidence trail, and report snapshot from one box.
-                    </div>
-                  )}
+                    ) : (
+                      <div className="rounded-[18px] border border-dashed border-[color:var(--st-border)] bg-white/[0.02] px-4 py-5 text-sm text-[color:var(--st-muted)]">
+                        Search the current scene, saved workspaces, evidence trail, and report snapshot from one box.
+                      </div>
+                    )}
                 </div>
               </div>
 
@@ -1955,9 +1955,8 @@ export function StudioDashboardHome({
                         );
                       })}
                     </div>
-                  )}
                 </div>
-
+ 
                   <div className="rounded-[24px] border border-sky-400/15 bg-sky-500/8 p-3">
                   <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
                     <Sparkles className="h-3.5 w-3.5 text-sky-300" />
@@ -2271,8 +2270,7 @@ function WorkspaceLibraryPanel({
       </div>
 
       <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-        {hydrated ? (
-          projects.length > 0 ? (
+        {projects.length > 0 ? (
             projects.map((projectScene) => (
               <div key={projectScene.id} className="rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] p-2">
                 <button type="button" onClick={() => openScene(projectScene)} className="w-full text-left">
@@ -2295,12 +2293,7 @@ function WorkspaceLibraryPanel({
             <div className="col-span-full rounded-[16px] border border-dashed border-[color:var(--st-border)] bg-white/[0.02] px-3 py-4 text-xs text-[color:var(--st-muted)]">
               No saved projects yet. Start with New Scene, Scan, Import, or AI Draft.
             </div>
-          )
-        ) : (
-          <div className="col-span-full rounded-[16px] border border-dashed border-[color:var(--st-border)] bg-white/[0.02] px-3 py-4 text-xs text-[color:var(--st-muted)]">
-            Loading workspace library...
-          </div>
-        )}
+          )}
       </div>
     </section>
   );

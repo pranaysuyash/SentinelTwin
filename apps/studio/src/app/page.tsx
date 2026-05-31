@@ -2,7 +2,6 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 
-import { ProjectStartLauncher } from "@/components/launcher/ProjectStartLauncher";
 import { ProductViewRouter } from "@/components/product/ProductViewRouter";
 import type { ProductViewHandlers } from "@/components/product/ProductViewRouter";
 import { compileScanToSiteResult, compileAiDraftToSiteResult, compileFloorPlanToSiteResult, makeSiteCompilerWarnings, calculateConfidence, compileToSiteTwinDraft, compileJsonToSiteResult, compileCameraEvidenceToSiteResult } from "@/lib/site-compiler";
@@ -112,6 +111,7 @@ function StudioPageContent() {
   };
 
   const openScanWizard = () => {
+    if (!confirmWorkspaceReplacement("start scan intake")) return;
     setActiveWorkflow("scan");
     setActiveWorkflowStep(0);
     recordOperationalEvidenceEvent({
@@ -134,6 +134,7 @@ function StudioPageContent() {
   };
 
   const openGuidedScanAssistant = () => {
+    if (!confirmWorkspaceReplacement("start guided scan intake")) return;
     setActiveWorkflow("scan");
     setActiveWorkflowStep(0);
     recordOperationalEvidenceEvent({
@@ -152,7 +153,7 @@ function StudioPageContent() {
       notes: ["Launcher-scoped guided scan assistant event recorded in the evidence ledger."],
     });
     setLaunchNotice("Guided capture reconstruction opened. Upload photos to run the reconstruction pipeline.");
-    navigate("scan_site");
+    navigate("scan_site", "guided");
   };
 
   const openReferenceWorkspace = () => {
@@ -177,16 +178,16 @@ function StudioPageContent() {
   };
 
   const startDesignFlow = () => {
+    if (!confirmWorkspaceReplacement("create a new scene")) return;
     setActiveWorkflow("design");
     setActiveWorkflowStep(0);
-    if (!confirmWorkspaceReplacement("create a new scene")) return;
     navigate("manual_builder");
   };
 
   const openFloorPlanFlow = () => {
+    if (!confirmWorkspaceReplacement("import a floor plan")) return;
     setActiveWorkflow("floor_plan");
     setActiveWorkflowStep(0);
-    if (!confirmWorkspaceReplacement("import a floor plan")) return;
     navigate("floor_plan_import");
   };
 
@@ -237,6 +238,33 @@ function StudioPageContent() {
       default:
         assertNever(source);
     }
+    const draft = compileToSiteTwinDraft(result, sourceArtifacts);
+    setSiteIntakeSession({
+      id: `intake_${Date.now()}`,
+      source,
+      stage: "review",
+      result,
+      draft,
+      warnings: [],
+      provenanceNotes: [],
+      createdAt: Date.now(),
+    });
+  };
+
+  // Create a draft directly from a provided scene (no store mutation before review)
+  const createDraftFromScene = (scene: SecurityScene, source: import("@/lib/site-compiler").SiteIntakeSource, sourceArtifacts: string[] = []) => {
+    const result: import("@/lib/site-compiler").SiteCompilerResult = {
+      source,
+      scene,
+      warnings: makeSiteCompilerWarnings(scene),
+      confidence: calculateConfidence(makeSiteCompilerWarnings(scene)),
+      provenance: {
+        source,
+        label: source.replace(/_/g, " "),
+        notes: sourceArtifacts,
+        confidence: calculateConfidence(makeSiteCompilerWarnings(scene)),
+      },
+    };
     const draft = compileToSiteTwinDraft(result, sourceArtifacts);
     setSiteIntakeSession({
       id: `intake_${Date.now()}`,
@@ -436,6 +464,7 @@ function StudioPageContent() {
     openGuidedScanAssistant,
     handleImportScene,
     compileCurrentScene,
+    createDraftFromScene,
     approveIntakeSession,
     rejectIntakeSession,
     approveAndRunBaseline,
@@ -446,51 +475,6 @@ function StudioPageContent() {
   return (
     <>
       <ProductViewRouter handlers={handlers} />
-
-      <ProjectStartLauncher
-        open={false}
-        onClose={() => {}}
-        onOpenCoverageWorkspace={() => {
-          openCoverageWorkspace();
-        }}
-        onOpenDemoScene={() => {
-          openReferenceWorkspace();
-        }}
-        onCreateScene={() => {
-          startDesignFlow();
-        }}
-        onImportFloorPlan={() => {
-          openFloorPlanFlow();
-        }}
-        onImportScene={() => {
-          if (!confirmWorkspaceReplacement("import a scene JSON")) return;
-          fileInputRef.current?.click();
-        }}
-        onScanSite={() => {
-          if (!confirmWorkspaceReplacement("start scan intake")) return;
-          navigate("site_intake");
-        }}
-        onAiDraft={() => {
-          navigate("ai_layout_draft");
-        }}
-        onVerifyFootagePlanned={() => {
-          const { setActiveWorkflow, setActiveWorkflowStep, scene } = useStudioStore.getState();
-          if (scene.cameras.length === 0) {
-            setLaunchNotice("Add a camera before opening the real footage verification workflow.");
-            openCoverageWorkspace();
-            return;
-          }
-          setActiveWorkflow("verify_footage");
-          setActiveWorkflowStep(0);
-          const targetCameraId = scene.cameras.find((c) => c.id === useStudioStore.getState().selectedCameraId)?.id ?? scene.cameras[0]?.id ?? null;
-          if (targetCameraId) setSelectedCameraId(targetCameraId);
-          setCameraViewVerificationIntent({ source: "other", openPanel: true });
-          navigate("studio");
-        }}
-        onOpenReport={() => {
-          openReport();
-        }}
-      />
 
       <input
         ref={fileInputRef}
@@ -509,22 +493,19 @@ function StudioPageContent() {
                   knownDimensionM: 8,
                   axisHint: "width",
                 }, json.image_id);
-                const result = importScene(scene);
-                if (!result.success) {
-                  setImportError(result.error ?? "Bakeoff scene import failed");
-                  return;
-                }
+                createDraftFromScene(scene, "json", [file.name]);
                 setImportError(null);
-                compileCurrentScene("json", [file.name]);
+                navigate("site_draft_review");
                 return;
               }
-              const result = importScene(json);
-              if (!result.success) {
-                setImportError(result.error ?? "Scene import failed");
+              const parsed = safeParseSecurityScene(json);
+              if (!parsed.success) {
+                setImportError(parsed.error.issues[0]?.message ?? "Scene import failed validation");
                 return;
               }
+              createDraftFromScene(parsed.data, "json", [file.name]);
               setImportError(null);
-              compileCurrentScene("json", [file.name]);
+              navigate("site_draft_review");
             } catch {
               setImportError("Failed to parse JSON.");
             }

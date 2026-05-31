@@ -171,7 +171,8 @@ function evaluateChecks(checks: ModelEvalCheck[]) {
 }
 
 function summarizeStageBudget(report: ModelEvalSuiteResult): ModelEvalStageBudget {
-  const expectedSkips = report.provider.cloudAvailable ? 0 : report.summary.skipped;
+  const cloudRequiredFixtures = MODEL_EVAL_FIXTURES.filter((fixture) => fixture.requiresCloud).length;
+  const expectedSkips = report.provider.cloudAvailable ? 0 : cloudRequiredFixtures;
   const expectedPasses = Math.max(0, report.summary.total - expectedSkips);
   const met = report.summary.failed === 0 && report.summary.skipped === expectedSkips;
   return {

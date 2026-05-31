@@ -42,7 +42,9 @@ export class ConversationMemory {
   private checkSummarization(): void {
     const totalChars = this.exchanges.reduce((sum, e) => sum + e.content.length, 0);
     if (Math.ceil(totalChars / 4) > this.maxContextTokens) {
-      this.summary = `Previous conversation summary: ${this.exchanges.length} exchanges covering the current session concerns.`;
+      const recent = this.exchanges.slice(-6);
+      const bullets = recent.map((entry) => `${entry.role}: ${entry.content.slice(0, 120)}`).join(" | ");
+      this.summary = `Recent conversation summary (${this.exchanges.length} exchanges): ${bullets}`;
     }
   }
 }
@@ -117,16 +119,17 @@ export class CoordinatorAgent {
         this.memory.add("assistant", result.output);
       }
 
-      agent.status = "idle";
       return result;
     } catch (err) {
-      agent.status = "error";
       return {
         taskId: task.id,
         role: task.role,
         output: "",
         error: err instanceof Error ? err.message : String(err),
       };
+    } finally {
+      this.activeChain = this.activeChain.filter((entry) => entry.id !== task.id);
+      agent.status = "idle";
     }
   }
 

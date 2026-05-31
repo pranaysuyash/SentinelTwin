@@ -1,6 +1,8 @@
 import { sceneOperationArraySchema } from "@/schema/SceneOperation";
 import type { SceneOperation } from "@/schema/SceneOperation";
 import { PROMPT_REGISTRY } from "@/agents/prompt-registry";
+import { validateSceneOperationsAgainstScene } from "@/lib/scene-operation-validator";
+import type { SecurityScene } from "@/schema/security-scene";
 import type { ModelProvider } from "./providers/ModelProvider";
 
 /**
@@ -18,7 +20,18 @@ export interface SceneContextSummary {
   dimensions: { width: number; depth: number; height: number };
 }
 
-const SYSTEM_PROMPT = PROMPT_REGISTRY.find((entry) => entry.id === "command_parse")?.systemPrompt ?? "";
+const commandPromptEntry = PROMPT_REGISTRY.find((entry) => entry.id === "command_parse");
+if (!commandPromptEntry) {
+  throw new Error("Missing command_parse prompt registry entry.");
+}
+const SYSTEM_PROMPT = commandPromptEntry.systemPrompt;
+
+export type CommandParseResult = {
+  operations: SceneOperation[];
+  confidence: number;
+  warnings: string[];
+  requiresConfirmation: boolean;
+};
 
 /**
  * Parse a natural language command into structured scene operations.
@@ -28,6 +41,16 @@ export async function parseCommand(
   sceneContext: SceneContextSummary,
   provider: ModelProvider,
 ): Promise<SceneOperation[]> {
+  const result = await parseCommandDetailed(userText, sceneContext, provider);
+  return result.operations;
+}
+
+export async function parseCommandDetailed(
+  userText: string,
+  sceneContext: SceneContextSummary,
+  provider: ModelProvider,
+  semanticScene?: SecurityScene,
+): Promise<CommandParseResult> {
   const sceneSummary = buildSceneSummary(sceneContext);
 
   const prompt = {
@@ -41,7 +64,22 @@ export async function parseCommand(
   };
 
   const result = await provider.completeStructured(prompt, sceneOperationArraySchema);
-  return result.operations;
+  const parsedOperations = result.operations;
+  if (!semanticScene) {
+    return {
+      operations: parsedOperations,
+      confidence: parsedOperations.length > 0 ? 0.7 : 0.25,
+      warnings: parsedOperations.length > 0 ? [] : ["No structured scene operation was produced."],
+      requiresConfirmation: parsedOperations.length > 0,
+    };
+  }
+  const semantic = validateSceneOperationsAgainstScene(parsedOperations, semanticScene);
+  return {
+    operations: semantic.validOperations,
+    confidence: semantic.issues.length === 0 ? 0.82 : 0.58,
+    warnings: semantic.issues.map((issue) => issue.message),
+    requiresConfirmation: true,
+  };
 }
 
 function buildSceneSummary(ctx: SceneContextSummary): string {

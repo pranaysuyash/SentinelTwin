@@ -312,10 +312,8 @@ export function AiLayoutDraftView({ onApplyDraft }: AiLayoutDraftViewProps) {
     }
     if (!confirmWorkspaceReplacement("apply this AI layout draft")) return;
     const nextScene = aiDraftScene ?? aiDraftPreview.scene;
-    setScene(nextScene);
     onApplyDraft(nextScene, "ai_prompt");
-    resetAiDraftPreview();
-    navigate("product_home");
+    navigate("site_draft_review");
   };
 
   return (

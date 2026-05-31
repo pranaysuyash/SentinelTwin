@@ -385,10 +385,13 @@ export function describeAiProviderTelemetry(
     ...stage,
     ready:
       !localOnlyMode &&
+      governance.cloudAvailable &&
       isWithinCostTier(activeTelemetry.costTier, stage.maxCostTier) &&
       isWithinLatencyTier(activeTelemetry.latencyTier, stage.maxLatencyTier),
     note: localOnlyMode
       ? "Blocked by local-only policy."
+      : !governance.cloudAvailable
+        ? `${governance.activeProviderName} is unavailable: missing ${governance.activeEnvKey}.`
       : `${activeTelemetry.costLabel} · ${activeTelemetry.latencyLabel}`,
   }));
 
@@ -398,6 +401,7 @@ export function describeAiProviderTelemetry(
       AI_TELEMETRY_STAGE_POLICIES.map((stage) => [
         stage.stage,
         !localOnlyMode &&
+          entry.available &&
           isWithinCostTier(telemetry.costTier, stage.maxCostTier) &&
           isWithinLatencyTier(telemetry.latencyTier, stage.maxLatencyTier),
       ]),

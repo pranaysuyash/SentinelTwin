@@ -21,23 +21,27 @@ export interface SecurityReport {
 }
 
 const reportSchema = z.object({
-  title: z.string(),
-  siteName: z.string(),
-  generatedAt: z.number(),
-  executiveSummary: z.string(),
+  title: z.string().min(4),
+  siteName: z.string().min(2),
+  generatedAt: z.number().optional(),
+  executiveSummary: z.string().min(24),
   sections: z.array(
     z.object({
-      title: z.string(),
-      content: z.string(),
+      title: z.string().min(2),
+      content: z.string().min(8),
       type: z.enum(["text", "table", "list"]),
     }),
-  ),
-  recommendations: z.array(z.string()),
-  assumptions: z.array(z.string()),
-  limitations: z.array(z.string()),
+  ).min(1),
+  recommendations: z.array(z.string().min(4)).min(1),
+  assumptions: z.array(z.string().min(4)),
+  limitations: z.array(z.string().min(4)),
 });
 
-const SYSTEM_PROMPT = PROMPT_REGISTRY.find((entry) => entry.id === "report_generation")?.systemPrompt ?? "";
+const reportPromptEntry = PROMPT_REGISTRY.find((entry) => entry.id === "report_generation");
+if (!reportPromptEntry) {
+  throw new Error("Missing report_generation prompt registry entry.");
+}
+const SYSTEM_PROMPT = reportPromptEntry.systemPrompt;
 
 /**
  * Generate a professional security audit report from simulation results.
@@ -63,7 +67,11 @@ export async function generateReport(
     ],
   };
 
-  return provider.completeStructured(prompt, reportSchema);
+  const report = await provider.completeStructured(prompt, reportSchema);
+  return {
+    ...report,
+    generatedAt: Date.now(),
+  };
 }
 
 /**
@@ -84,9 +92,12 @@ export function buildSimulationSummary(result: {
 }): string {
   return JSON.stringify(
     {
-      totalCoverage: `${result.totalCoveragePct}%`,
-      blindspot: `${result.blindspotPct}%`,
-      avgQuality: result.averageWalkableQuality.toFixed(2),
+      totalCoveragePct: result.totalCoveragePct,
+      totalCoverageLabel: `${result.totalCoveragePct}%`,
+      blindspotPct: result.blindspotPct,
+      blindspotLabel: `${result.blindspotPct}%`,
+      averageWalkableQuality: result.averageWalkableQuality,
+      avgQualityLabel: result.averageWalkableQuality.toFixed(2),
       worstArea: result.worstAreaQuality,
       recognitionArea: `${result.recognitionAreaPct}%`,
       identificationArea: `${result.identificationAreaPct}%`,

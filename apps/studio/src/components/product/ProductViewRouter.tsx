@@ -9,9 +9,10 @@ import { ScanSiteWizard } from "@/components/scan-to-scene/ScanSiteWizard";
 import { SceneBuilderWizard } from "@/components/scan-to-scene/SceneBuilderWizard";
 import { SiteDraftReview } from "@/components/site-intake/SiteDraftReview";
 import { AiLayoutDraftView } from "./AiLayoutDraftView";
-import type { SiteIntakeSource } from "@/lib/site-compiler";
+import type { SiteIntakeSource, SiteCompilerResult } from "@/lib/site-compiler";
 import type { SecurityScene } from "@/schema/security-scene";
 import type { SiteIntakeSession } from "@/lib/site-compiler";
+import { compileToSiteTwinDraft } from "@/lib/site-compiler";
 
 /**
  * All the orchestration handlers that page.tsx provides.
@@ -40,6 +41,7 @@ export type ProductViewHandlers = {
 
   // Compile / approval
   compileCurrentScene: (source: SiteIntakeSource, sourceArtifacts?: string[]) => void;
+  createDraftFromScene: (scene: SecurityScene, source: SiteIntakeSource, sourceArtifacts?: string[]) => void;
   approveIntakeSession: () => void;
   rejectIntakeSession: () => void;
   approveAndRunBaseline: () => void;
@@ -59,6 +61,7 @@ type ProductViewRouterProps = {
  */
 export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
   const productView = useProductViewStore((s) => s.view);
+  const subContext = useProductViewStore((s) => s.subContext);
   const navigate = useProductViewStore((s) => s.navigate);
 
   const scene = useStudioStore((s) => s.scene);
@@ -219,9 +222,11 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
     return (
       <div className="h-full w-full overflow-hidden" style={{ background: "var(--bg)" }}>
         <ScanSiteWizard
-          mode="manual"
+          mode={subContext === "guided" ? "guided" : "manual"}
+          onCompile={(scene) => {
+            handlers.createDraftFromScene(scene, "scan");
+          }}
           onClose={() => {
-            handlers.compileCurrentScene("scan");
             navigate("site_draft_review");
           }}
         />
@@ -263,7 +268,7 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
     return (
       <AiLayoutDraftView
         onApplyDraft={(nextScene, source) => {
-          handlers.compileCurrentScene(source, [`AI draft: ${nextScene.name}`]);
+          handlers.createDraftFromScene(nextScene, source, [`AI draft: ${nextScene.name}`]);
         }}
       />
     );
@@ -309,6 +314,30 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
   // Studio — Security Twin Studio workspace
   if (productView === "studio") {
     return <StudioShell />;
+  }
+
+  // Reference Sites — placeholder
+  if (productView === "reference_sites") {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center gap-3" style={{ background: "var(--bg)" }}>
+        <div className="text-sm text-[color:var(--text-muted)]">Reference Sites — coming soon</div>
+        <button type="button" onClick={() => navigate("product_home")} className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-[color:var(--text-muted)] hover:text-white">
+          Back to Product Home
+        </button>
+      </div>
+    );
+  }
+
+  // Settings — placeholder
+  if (productView === "settings") {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center gap-3" style={{ background: "var(--bg)" }}>
+        <div className="text-sm text-[color:var(--text-muted)]">Settings — coming soon</div>
+        <button type="button" onClick={() => navigate("product_home")} className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-[color:var(--text-muted)] hover:text-white">
+          Back to Product Home
+        </button>
+      </div>
+    );
   }
 
   // Fallback — return to product home

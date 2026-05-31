@@ -20,7 +20,7 @@ describe("Studio page share-link bootstrap", () => {
     expect(source).toContain("setBottomTab(\"beforeafter\")");
     expect(source).toContain("setBottomTab(\"report\")");
     expect(source).toContain("setBottomTab(\"debug\")");
-    expect(source).toContain("setEnterStudio(true)");
+    expect(source).toContain("navigate(\"studio\")");
     expect(source).toContain("setTimelineFocusRequest(focusRequest)");
     expect(source).toContain("setWorkspacePreset(\"coverage\")");
     expect(source).toContain("setBottomTab(\"timeline\")");

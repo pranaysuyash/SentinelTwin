@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 
-import { parseCommand, type SceneContextSummary } from "@/agents/CommandAgent";
+import { parseCommandDetailed, type SceneContextSummary } from "@/agents/CommandAgent";
 import { proposeCounterfactuals, type CounterfactualCandidate } from "@/agents/CounterfactualAgent";
 import {
   createModelProvider,
@@ -475,7 +475,8 @@ export function useAiCommand() {
         return;
       }
       recordAiRateLimitUsage("command_parse", estimatedParseTokens);
-      const operations = await parseCommand(userText, context, provider);
+      const parseResult = await parseCommandDetailed(userText, context, provider, useStudioStore.getState().scene);
+      const operations = parseResult.operations;
       const parsePromptTokens = estimateTokensFromText(`${userText}\n${JSON.stringify(context)}`);
       const parseCompletionTokens = estimateTokensFromText(JSON.stringify(operations));
       recordTelemetry(
@@ -486,7 +487,7 @@ export function useAiCommand() {
         "success",
         operations.length === 0
           ? "Parsed command produced no scene operations; counterfactual fallback considered."
-          : `Parsed ${operations.length} scene operation${operations.length === 1 ? "" : "s"}.`,
+          : `Parsed ${operations.length} scene operation${operations.length === 1 ? "" : "s"}${parseResult.warnings.length > 0 ? ` with ${parseResult.warnings.length} semantic warning(s)` : ""}.`,
       );
 
       if (operations.length === 0) {

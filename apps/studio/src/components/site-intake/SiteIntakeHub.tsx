@@ -2,10 +2,7 @@
 
 import { useState } from "react";
 import {
-  Camera,
-  ChevronDown,
   CircleHelp,
-  FolderOpen,
   LayoutDashboard,
   ShieldCheck,
   ArrowRight,
@@ -16,9 +13,9 @@ import {
   Square,
   FileText,
   Activity,
-  Database,
   Blocks,
   CheckCircle2,
+  FolderOpen,
   Video
 } from "lucide-react";
 import type { SiteIntakeSource } from "@/lib/site-compiler";
@@ -72,7 +69,7 @@ const cards: SiteIntakeSourceCard[] = [
     title: "Scan Site Photos",
     status: "Working",
     description: "Manual-assisted capture using your phone photos.",
-    output: "SecurityScene",
+    output: "Site Twin",
     review: "Required",
     icon: ScanSearch,
     recommended: true,
@@ -84,7 +81,7 @@ const cards: SiteIntakeSourceCard[] = [
         "Upload overview photos",
         "Mark entry, cameras, zones, obstructions",
         "Review candidates and warnings",
-        "Compile to SecurityScene",
+        "Compile to Site Twin draft",
         "Run baseline simulation",
       ],
       limitations: [
@@ -101,7 +98,7 @@ const cards: SiteIntakeSourceCard[] = [
     title: "Describe with AI",
     status: "Preview",
     description: "Draft a site from text description. Review required before trust.",
-    output: "Draft Scene",
+    output: "Draft Site Twin",
     review: "Required",
     icon: Sparkles,
     tone: "violet",
@@ -154,10 +151,10 @@ const cards: SiteIntakeSourceCard[] = [
   },
   {
     id: "json",
-    title: "Import SecurityScene",
+    title: "Import Site Twin",
     status: "Working",
-    description: "Import an existing SecurityScene JSON file.",
-    output: "SecurityScene",
+    description: "Import an existing Site Twin from a SecurityScene JSON file.",
+    output: "Site Twin",
     review: "Validation",
     icon: FileUp,
     tone: "slate",
@@ -184,7 +181,7 @@ const cards: SiteIntakeSourceCard[] = [
     title: "Build Manually",
     status: "Working",
     description: "Start with a blank canvas and build your site.",
-    output: "SecurityScene",
+    output: "Site Twin",
     review: "Optional",
     icon: Square,
     tone: "emerald",
@@ -266,26 +263,26 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
           <nav className="mt-7 space-y-2">
             {[
               { label: "Create Site Twin", icon: LayoutDashboard, active: true },
-              { label: "Workspaces", icon: Blocks, active: false },
-              { label: "Projects", icon: FolderOpen, active: false },
-              { label: "Reports", icon: FileText, active: false },
-              { label: "Issues & Actions", icon: Activity, active: false },
-              { label: "Evidence", icon: Camera, active: false },
-              { label: "Integrations", icon: Database, active: false },
+              { label: "Studio", icon: Blocks, active: false, note: "Coming soon" },
+              { label: "Reports", icon: FileText, active: false, note: "Coming soon" },
+              { label: "Reference Sites", icon: FolderOpen, active: false, note: "Coming soon" },
+              { label: "Settings", icon: Activity, active: false, note: "Coming soon" },
             ].map((item) => {
               const Icon = item.icon;
               return (
                 <button
                   key={item.label}
                   type="button"
-                  onClick={item.active ? undefined : props.onShowProjects}
                   className={[
                     "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-[15px] transition-colors",
-                    item.active ? "bg-sky-500/12 text-sky-400 ring-1 ring-sky-500/20" : "text-slate-300 hover:bg-white/4 hover:text-white",
+                    item.active ? "bg-sky-500/12 text-sky-400 ring-1 ring-sky-500/20" : "text-slate-400 hover:bg-white/4 hover:text-white",
                   ].join(" ")}
                 >
                   <Icon className="h-[18px] w-[18px] flex-none" />
-                  <span>{item.label}</span>
+                  <span className="min-w-0">{item.label}</span>
+                  {item.note ? (
+                    <span className="ml-auto rounded-md border border-slate-500/20 bg-slate-500/10 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.12em] text-slate-400">{item.note}</span>
+                  ) : null}
                 </button>
               );
             })}
@@ -295,14 +292,10 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
         <div className="space-y-4">
           <div className="rounded-xl border border-white/8 bg-white/[0.02] p-3">
             <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/82">Reference Baseline</div>
-            <div className="overflow-hidden rounded-lg border border-white/6 bg-[#0d1520]">
-              <div
-                className="h-[82px] bg-cover bg-center"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.32)), linear-gradient(135deg, rgba(255,255,255,0.14), rgba(255,255,255,0.02)), url('https://images.unsplash.com/photo-1556740764-3ce1d1d0c9d0?auto=format&fit=crop&w=640&q=60')",
-                }}
-              />
+            <div className="overflow-hidden rounded-lg border border-white/6 bg-[radial-gradient(ellipse_at_top,rgba(14,165,233,0.25),transparent_50%),linear-gradient(180deg,#0b192e,#09101d)]">
+              <div className="flex h-[82px] items-center justify-center">
+                <span className="rounded-full border border-sky-500/20 bg-sky-500/10 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-sky-200">Reference</span>
+              </div>
             </div>
             <div className="mt-3 text-[15px] font-medium text-white">Retail Store Reference</div>
             <p className="mt-1 max-w-[170px] text-[13px] leading-5 text-slate-300">Explore a complete site twin example</p>
@@ -315,19 +308,15 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
             </button>
           </div>
 
-          <button
-            type="button"
-            className="flex w-full items-center justify-between rounded-xl px-2 py-2 text-left transition-colors hover:bg-white/[0.03]"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500 text-sm font-medium text-white">AD</div>
-              <div>
-                <div className="text-[15px] text-white">Admin User</div>
-                <div className="text-[13px] text-slate-400">Acme Security</div>
-              </div>
+          <div className="flex items-center gap-3 rounded-xl px-2 py-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-500/15 text-sm font-medium text-sky-300">
+              ST
             </div>
-            <ChevronDown className="h-4 w-4 text-slate-400" />
-          </button>
+            <div>
+              <div className="text-[14px] text-white">SentinelTwin</div>
+              <div className="text-[12px] text-slate-400">Security Simulation</div>
+            </div>
+          </div>
         </div>
       </aside>
 
@@ -531,13 +520,10 @@ export function SiteIntakeHub(props: SiteIntakeHubProps) {
                   className="flex w-[285px] flex-none items-center gap-4 rounded-2xl border border-white/8 bg-[#0e1520] p-3 text-left transition-colors hover:border-white/16 hover:bg-[#111926]"
                 >
                   <div
-                    className="h-[76px] w-[108px] flex-none rounded-xl bg-cover bg-center"
-                    style={{
-                      backgroundImage: site.thumbnailUrl
-                        ? `url(${site.thumbnailUrl})`
-                        : "linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0.26)), url('https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=300&q=60')",
-                    }}
-                  />
+                    className="h-[76px] w-[108px] flex-none rounded-xl bg-gradient-to-br from-sky-500/15 to-slate-700/20 flex items-center justify-center"
+                  >
+                    <div className="rounded-full border border-white/12 bg-white/[0.04] px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] text-slate-300">Site</div>
+                  </div>
                   <div className="min-w-0">
                     <div className="truncate text-[15px] font-medium text-white">{site.name}</div>
                     <div className="mt-1 text-[14px] text-slate-400">{site.updatedLabel}</div>

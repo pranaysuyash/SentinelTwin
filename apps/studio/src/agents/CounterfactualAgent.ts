@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { PROMPT_REGISTRY } from "@/agents/prompt-registry";
+import { sceneOperationSchema, type SceneOperation } from "@/schema/SceneOperation";
 import type { ModelProvider } from "./providers/ModelProvider";
 
 /**
@@ -10,9 +11,12 @@ import type { ModelProvider } from "./providers/ModelProvider";
 export interface CounterfactualCandidate {
   id: string;
   description: string;
-  operations: Record<string, unknown>[];
+  operations: SceneOperation[];
   costCategory: "free" | "low" | "medium" | "high";
   estimatedImpact: string;
+  rationale?: string;
+  risks?: string[];
+  assumptions?: string[];
   verifiedDelta?: {
     totalCoveragePctDelta: number;
     blindspotPctDelta: number;
@@ -26,14 +30,21 @@ export interface CounterfactualCandidate {
 const counterfactualResponseSchema = z.object({
   candidates: z.array(
     z.object({
-      description: z.string(),
-      operations: z.array(z.record(z.string(), z.unknown())),
+      description: z.string().min(8),
+      rationale: z.string().min(8).optional(),
+      operations: z.array(sceneOperationSchema).min(1),
       costCategory: z.enum(["free", "low", "medium", "high"]),
+      risks: z.array(z.string()).optional(),
+      assumptions: z.array(z.string()).optional(),
     }),
   ),
 });
 
-const SYSTEM_PROMPT = PROMPT_REGISTRY.find((entry) => entry.id === "counterfactual_candidates")?.systemPrompt ?? "";
+const counterfactualPromptEntry = PROMPT_REGISTRY.find((entry) => entry.id === "counterfactual_candidates");
+if (!counterfactualPromptEntry) {
+  throw new Error("Missing counterfactual_candidates prompt registry entry.");
+}
+const SYSTEM_PROMPT = counterfactualPromptEntry.systemPrompt;
 
 /**
  * Propose counterfactual candidates based on current simulation results and constraints.
@@ -57,7 +68,7 @@ export async function proposeCounterfactuals(
           `Current problems: ${issuesSummary}`,
           `Scene context: ${sceneSummary}`,
           constraintsText,
-          "\nReturn: { candidates: [{ description, operations, costCategory }] }",
+          "\nReturn: { candidates: [{ description, rationale, operations, costCategory, risks, assumptions }] }",
         ].join("\n"),
       },
     ],
@@ -66,10 +77,13 @@ export async function proposeCounterfactuals(
   const result = await provider.completeStructured(prompt, counterfactualResponseSchema);
 
   return result.candidates.map((c, i) => ({
-    id: `cf_${Date.now().toString(36)}_${i}`,
+    id: `cf_${crypto.randomUUID()}`,
     description: c.description,
     operations: c.operations,
     costCategory: c.costCategory,
-    estimatedImpact: c.description,
+    estimatedImpact: c.rationale ?? c.description,
+    rationale: c.rationale,
+    risks: c.risks ?? [],
+    assumptions: c.assumptions ?? [],
   }));
 }

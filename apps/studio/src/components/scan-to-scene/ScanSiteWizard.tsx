@@ -27,8 +27,12 @@ import { SurfaceButton } from "@/components/shared/SurfaceButton";
 import { compileScanSessionToScene, createScanCandidate, createScanSession, SCAN_CANDIDATE_TYPES, summarizeScanProvenance, type ScanCandidate, type ScanCandidateKind, type ScanCompilationWarning, type ScanSession } from "@/lib/scan-to-scene";
 import { useStudioStore } from "@/store/studio-store";
 
+import type { SecurityScene } from "@/schema/security-scene";
+import type { ScanCompilationProvenance } from "@/lib/scan-to-scene";
+
 interface ScanSiteWizardProps {
   onClose?: () => void;
+  onCompile?: (scene: SecurityScene, provenance: ScanCompilationProvenance, warnings: ScanCompilationWarning[]) => void;
   mode?: "manual" | "guided";
 }
 
@@ -199,14 +203,8 @@ function StepBadge({ step, current, label }: { step: number; current: number; la
   );
 }
 
-export function ScanSiteWizard({ onClose, mode = "manual" }: ScanSiteWizardProps) {
+export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSiteWizardProps) {
   const isGuided = mode === "guided";
-  const setScene = useStudioStore((s) => s.setScene);
-  const runSimulation = useStudioStore((s) => s.runSimulation);
-  const setLaunchNotice = useStudioStore((s) => s.setLaunchNotice);
-  const setViewMode = useStudioStore((s) => s.setViewMode);
-  const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
-  const setBottomTab = useStudioStore((s) => s.setBottomTab);
   const recordOperationalEvidenceEvent = useStudioStore((s) => s.recordOperationalEvidenceEvent);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
@@ -573,34 +571,14 @@ export function ScanSiteWizard({ onClose, mode = "manual" }: ScanSiteWizardProps
           `Rejected ${compiled.provenance.rejectedCandidates} candidates during compile.`,
         ],
       });
-      setScene(compiled.scene);
-      setViewMode("map");
-      setWorkspacePreset("coverage");
-      if (compiled.scene.cameras.length > 0 && compiled.scene.criticalZones.length > 0) {
-        setBottomTab("metrics");
-        setTimeout(() => runSimulation(), 80);
-      } else {
-        setBottomTab("assumptions");
-      }
-      const missingPrerequisites: string[] = [];
-      if (compiled.scene.cameras.length === 0) missingPrerequisites.push("at least 1 camera");
-      if (compiled.scene.criticalZones.length === 0) missingPrerequisites.push("at least 1 critical zone");
-      if (compiled.scene.entryPoints.length === 0) missingPrerequisites.push("at least 1 entry point (add a door)");
-      if (compiled.scene.paths.length === 0) missingPrerequisites.push("at least 1 path (add path points or enable auto-path)");
-      const simulationNotice =
-        compiled.scene.cameras.length > 0 && compiled.scene.criticalZones.length > 0
-          ? "Baseline simulation will run in Studio."
-          : `Simulation not run. Missing prerequisites: ${missingPrerequisites.join(", ")}.`;
-      setLaunchNotice(
-        `${isGuided ? "Guided scan assistant" : "Manual-assisted scan"} compiled: ${compiled.scene.cameras.length} cameras, ${compiled.scene.obstructions.length} obstructions, ${compiled.scene.criticalZones.length} critical zones. ${simulationNotice}`,
-      );
+      onCompile?.(compiled.scene, compiled.provenance, compiled.warnings);
       onClose?.();
     } catch (compileError) {
       setError(compileError instanceof Error ? compileError.message : "Failed to compile scan session.");
     } finally {
       setIsCompiling(false);
     }
-  }, [autoCreatePath, compileBlockingErrors, compileLowConfidenceOverride, isGuided, lowConfidenceAccepted.length, onClose, recordOperationalEvidenceEvent, runSimulation, session, setBottomTab, setLaunchNotice, setScene, setViewMode, setWorkspacePreset, warningsAcknowledged]);
+  }, [autoCreatePath, compileBlockingErrors, compileLowConfidenceOverride, isGuided, lowConfidenceAccepted.length, onClose, recordOperationalEvidenceEvent, session, warningsAcknowledged]);
 
   const handleMergeNearDuplicates = useCallback(() => {
     setSession((current) => {

@@ -1201,10 +1201,15 @@ export function cloneSecurityScene(scene: SecurityScene): SecurityScene {
 
 /** Lightweight clone that strips heavy non-geometry fields before deep-copying.
  *  Use when the clone is only needed for simulation (coverage, path, zone eval),
- *  avoiding the cost of copying simulation results, snapshots, changelogs, etc. */
+ *  avoiding the cost of copying simulation results, snapshots, changelogs, etc.
+ *
+ *  IMPORTANT: When new fields are added to SecurityScene, check whether they
+ *  should be preserved (simulation-relevant) or stripped (non-geometry metadata).
+ *  Fields NOT explicitly listed in the strip set WILL be preserved via the spread. */
 export function cloneSecuritySceneSimulation(scene: SecurityScene): SecurityScene {
   const lite = {
     ...scene,
+    // Stripped — non-geometry metadata, results, or heavy logs
     simulation: undefined,
     snapshots: [],
     scenarios: [],
@@ -1213,6 +1218,10 @@ export function cloneSecuritySceneSimulation(scene: SecurityScene): SecurityScen
     comments: [],
     evidenceArtifacts: [],
     mismatchReports: [],
+    // Preserved — simulation-relevant fields (calibration, geometry, assumptions, etc.)
+    //   calibrationConstants — kept (affects simulation thresholds)
+    //   timeSchedule — kept (affects temporal simulation)
+    //   source, sourceTrace, reviewStatus, geometryValidity — kept (affects confidence)
   };
   return structuredClone(lite);
 }

@@ -124,3 +124,26 @@ export {
   getReportSourceLine,
 } from "./provenance-label";
 export type { ClaimClassification, ClaimLabel } from "./provenance-label";
+
+// Material behavior registry
+export {
+  getObstructionMaterialBehavior,
+  getWallMaterialBehavior,
+  getObstructionEffectiveTransmission,
+  getWallEffectiveTransmission,
+  getWindowEffectiveTransmission,
+  getElementGlareRisk,
+  materialBlocksMovement,
+} from "./material-behavior";
+export type { MaterialProperties, ObstructionMaterial, WallMaterial } from "./material-behavior";
+
+// Simulation cache controller
+export { SimulationCache, isResultStale, getStalenessLabel, globalSimulationCache } from "./simulation-cache";
+export type { CachedSimulation, CacheEntry } from "./simulation-cache";
+
+// Per-cell confidence
+export { computeCellConfidence } from "./confidence";
+
+// Adaptive grid
+export { computeDensityZones, getAdaptiveCellsPerMeter, buildAdaptiveGrid } from "./adaptive-grid";
+export type { DensityZone } from "./adaptive-grid";

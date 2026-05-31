@@ -213,6 +213,59 @@ function confidenceRank(level: ConfidenceLevel): number {
 }
 
 /**
+ * Compute per-cell confidence from covering cameras' provenance.
+ *
+ * A cell's confidence is the minimum confidence among its covering cameras,
+ * factoring in geometry reliability. Cells with no covering cameras get
+ * "none" confidence.
+ */
+export function computeCellConfidence(
+  cell: { coveringCameras: string[]; privacyRestricted?: boolean },
+  cameras: CameraNode[],
+  geometryValidity: SecurityScene["geometryValidity"],
+): ConfidenceBand {
+  const reasonCodes: string[] = [];
+  const sensitiveTo: string[] = [];
+  let level: ConfidenceLevel = cell.coveringCameras.length > 0 ? "high" : "none";
+
+  if (cell.coveringCameras.length === 0) {
+    reasonCodes.push("NO_COVERING_CAMERAS");
+    sensitiveTo.push("camera_count");
+  } else {
+    for (const cameraId of cell.coveringCameras) {
+      const camera = cameras.find(c => c.id === cameraId);
+      if (!camera) continue;
+      const camConf = estimateCameraConfidence(camera);
+      if (confidenceRank(camConf) < confidenceRank(level)) {
+        level = camConf;
+      }
+    }
+    if (level === "low" || level === "none") {
+      reasonCodes.push("LOW_CONFIDENCE_CAMERAS");
+    }
+    sensitiveTo.push("camera_positions");
+    sensitiveTo.push("camera_specs");
+  }
+
+  if (cell.privacyRestricted) {
+    if (confidenceRank("medium") < confidenceRank(level)) {
+      level = "medium";
+    }
+    reasonCodes.push("PRIVACY_RESTRICTED");
+  }
+
+  if (geometryValidity === "suspect") {
+    if (confidenceRank("medium") < confidenceRank(level)) {
+      level = "medium";
+    }
+    reasonCodes.push("GEOMETRY_SUSPECT");
+    sensitiveTo.push("geometry_accuracy");
+  }
+
+  return { level, source: "simulation", reasonCodes, sensitiveTo };
+}
+
+/**
  * Build a human-readable confidence summary sentence.
  */
 export function formatConfidenceSummary(

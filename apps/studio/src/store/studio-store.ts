@@ -125,7 +125,8 @@ import {
 import { simulateStudio } from "@sentineltwin/simulation";
 import { computeTemporalProfile } from "@sentineltwin/simulation";
 import type { TemporalSecurityProfile } from "@/schema/security-scene";
-import type { AnyNode, CounterfactualConstraint, CounterfactualPlan, CounterfactualAction } from "@/schema/security-scene";
+import type { AnyNode } from "@sentineltwin/core";
+import type { CounterfactualConstraint, CounterfactualPlan, CounterfactualAction } from "@/schema/security-scene";
 import { generateAndRankCounterfactuals } from "@/simulation/counterfactual-engine";
 import type { SiteIntakeSession } from "@/lib/site-compiler";
 import { validateSceneGeometry } from "@/lib/scene-validation";

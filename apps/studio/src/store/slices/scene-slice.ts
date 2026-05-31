@@ -1490,66 +1490,6 @@ export const createSceneSlice = (set: any, get: any): SceneSlice => ({
     return (get().historyFuture as SecurityScene[]).length > 0;
   },
 
-  // ===== Scene operations =====
-
-  setScene: (scene) => {
-    const nextScene = cloneSecurityScene(scene);
-    const nextCameraId = nextScene.cameras[0]?.id ?? null;
-    const layout = buildPresetDockLayout("edit");
-    const evidenceEvent = buildOperationalEvidenceEvent({
-      kind: scene.source === "import" ? "scene_imported" : scene.source === "scan" ? "scan_compiled" : scene.source === "ai" ? "draft_applied" : scene.source === "manual" ? "scene_created" : "scene_initialized",
-      title: `Scene loaded: ${nextScene.name || "Untitled Scene"}`,
-      details: `Opened ${nextScene.name || "Untitled Scene"} from ${nextScene.source}.`,
-      actor: "system",
-      source: nextScene.source,
-      sceneId: nextScene.id,
-      sceneName: nextScene.name,
-      revisionDepth: 0,
-      affectedNodeIds: [],
-      confidence: 0.9,
-      afterSummary: summarizeSceneEvidence(nextScene).detail,
-      sceneSnapshot: cloneSecurityScene(nextScene),
-    });
-    const nextEvents = [evidenceEvent];
-    persistOperationalEvidenceEvents(nextEvents);
-    const nextGovernance = resetWorkspaceGovernanceForDraft(get().workspaceGovernance as WorkspaceGovernanceState);
-    persistWorkspaceGovernanceLocal(nextGovernance);
-    set({
-      ...buildSceneReplacementPatch(nextScene, layout, nextEvents, nextGovernance, nextCameraId, (scene.snapshots ?? []).length, { bottomTab: "metrics" as BottomTab, inspectorTab: "properties" as InspectorTab, activeTool: "select" as ActiveTool }),
-    });
-  },
-
-  createNewScene: () => {
-    const blank = createBlankSecurityScene();
-    const nextCameraId = blank.cameras[0]?.id ?? null;
-    const layout = buildPresetDockLayout("edit");
-    const evidenceEvent = buildOperationalEvidenceEvent({
-      kind: "scene_created",
-      title: "Blank scene created",
-      details: "Started a new blank SecurityScene in Studio.",
-      actor: "system",
-      source: blank.source,
-      sceneId: blank.id,
-      sceneName: blank.name,
-      revisionDepth: 0,
-      affectedNodeIds: [],
-      confidence: 0.95,
-      afterSummary: summarizeSceneEvidence(blank).detail,
-      sceneSnapshot: cloneSecurityScene(blank),
-    });
-    const nextEvents = [evidenceEvent];
-    persistOperationalEvidenceEvents(nextEvents);
-    const nextGovernance = resetWorkspaceGovernanceForDraft(get().workspaceGovernance as WorkspaceGovernanceState);
-    persistWorkspaceGovernanceLocal(nextGovernance);
-    set({
-      ...buildSceneReplacementPatch(blank, layout, nextEvents, nextGovernance, nextCameraId, 0, { bottomTab: "metrics" as BottomTab, inspectorTab: "properties" as InspectorTab, activeTool: "select" as ActiveTool }),
-      compareVisualEvidence: null,
-      compareReportSelection: null,
-      operationalEvidenceEvents: nextEvents,
-      workspaceGovernance: nextGovernance,
-    });
-  },
-
   logChange: (entry) =>
     set((state: Record<string, unknown>) => ({
       scene: cloneSceneWithAppendedChangeLog(state.scene as SecurityScene, entry),

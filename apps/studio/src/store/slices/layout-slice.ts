@@ -397,7 +397,6 @@ export interface LayoutSlice {
   showDebugOverlays: boolean;
   clientDemoOptions: { hideDebugModules: boolean; simplifiedLabels: boolean; criticalIssuesOnly: boolean; lockLayout: boolean };
   viewSettingsOpen: boolean;
-  savedLayouts: WorkspaceLayoutRecord[];
 
   setViewMode: (mode: ViewMode) => void;
   setWorkspacePreset: (preset: WorkspacePreset) => void;
@@ -426,19 +425,12 @@ export interface LayoutSlice {
   setOverlayFilter: (filter: OverlayFilterId, visible: boolean) => void;
   setViewSettingsOpen: (open: boolean) => void;
   toggleViewSettingsOpen: () => void;
-  refreshSavedLayoutsList: () => void;
-  saveCurrentLayoutAs: (name: string) => WorkspaceLayoutRecord | null;
-  applySavedLayout: (layoutId: string) => void;
-  deleteSavedLayout: (layoutId: string) => void;
 }
 
 // ── Slice creator ──
 
 export const createLayoutSlice = (set: any, get: any, store: any): LayoutSlice => {
   ensureInitialized();
-
-  const savedLayouts: WorkspaceLayoutRecord[] =
-    _initialSavedLayouts.length > 0 ? _initialSavedLayouts : _initialSeededLayouts;
 
   return {
     viewMode: _initialLayout.viewMode,
@@ -471,7 +463,6 @@ export const createLayoutSlice = (set: any, get: any, store: any): LayoutSlice =
       pathLabels: true,
     },
     viewSettingsOpen: false,
-    savedLayouts,
     visibleComponents: _initialLayout.visibleComponents,
     enabledAnalysisModules: _initialLayout.enabledAnalysisModules,
     clientDemoOptions: _initialLayout.clientDemoOptions,
@@ -654,71 +645,5 @@ export const createLayoutSlice = (set: any, get: any, store: any): LayoutSlice =
     setViewSettingsOpen: (open) => set({ viewSettingsOpen: open }),
 
     toggleViewSettingsOpen: () => set((state: any) => ({ viewSettingsOpen: !state.viewSettingsOpen })),
-
-    refreshSavedLayoutsList: () => {
-      const saved = loadSavedLayoutsFromStorage();
-      if (saved.length === 0) {
-        const seeded = buildSeededLayouts();
-        persistSavedLayouts(seeded);
-        set({ savedLayouts: seeded });
-        return;
-      }
-      set({ savedLayouts: saved });
-    },
-
-    saveCurrentLayoutAs: (name) => {
-      const trimmed = name.trim();
-      if (!trimmed) return null;
-      const state = get();
-      const next: WorkspaceLayoutRecord = {
-        id: `layout_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
-        name: trimmed,
-        viewMode: state.viewMode,
-        canvasMode: state.canvasMode,
-        workspacePreset: state.workspacePreset,
-        leftDockCollapsed: state.leftDockCollapsed,
-        rightDockCollapsed: state.rightDockCollapsed,
-        bottomDockCollapsed: state.bottomDockCollapsed,
-        leftDockSizePx: state.leftDockSizePx,
-        rightDockSizePx: state.rightDockSizePx,
-        bottomDockSizePx: state.bottomDockSizePx,
-        visibleComponents: { ...state.visibleComponents },
-        enabledAnalysisModules: { ...state.enabledAnalysisModules },
-        rightPanelMode: state.rightPanelMode,
-        bottomDrawerMode: state.bottomDrawerMode,
-        pinnedAnalysisModule: state.pinnedAnalysisModule,
-        layerVisibility: { ...state.layerVisibility },
-        overlayDensity: state.overlayDensity,
-        showDebugOverlays: state.showDebugOverlays,
-        clientDemoOptions: { ...state.clientDemoOptions },
-        createdAt: Date.now(),
-      };
-      const savedLayouts = [next, ...state.savedLayouts.filter((layout: WorkspaceLayoutRecord) => layout.id !== next.id)];
-      persistSavedLayouts(savedLayouts);
-      set({ savedLayouts });
-      return next;
-    },
-
-    applySavedLayout: (layoutId) => {
-      const layout = get().savedLayouts.find((entry: WorkspaceLayoutRecord) => entry.id === layoutId);
-      if (!layout) return;
-      const patch = buildLayoutStatePatch(layout);
-      set({
-        ...patch,
-        focusMode: layout.workspacePreset === "focus",
-        previousLayout: null,
-        layerVisibility: { ...layout.layerVisibility },
-        bottomTab:
-          layout.pinnedAnalysisModule && layout.enabledAnalysisModules[layout.pinnedAnalysisModule]
-            ? layout.pinnedAnalysisModule
-            : viewModeToBottomTab(layout.viewMode),
-      });
-    },
-
-    deleteSavedLayout: (layoutId) => {
-      const savedLayouts = get().savedLayouts.filter((layout: WorkspaceLayoutRecord) => layout.id !== layoutId);
-      persistSavedLayouts(savedLayouts);
-      set({ savedLayouts });
-    },
   };
 };

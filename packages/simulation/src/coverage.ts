@@ -536,28 +536,26 @@ function evaluateCameraAgainstCell(
    * periphery of a typical varifocal security lens.
    *
    * Angle is the max of |hAngle| and |vAngle| away from the optical axis:
-   *   > 55° → severe falloff (extreme periphery, ~42% effective PPM)
-   *   > 42° → significant falloff (~58%)
-   *   > 28° → moderate falloff (~76%)
+   *   > 55° → severe falloff (extreme periphery)
+   *   > 42° → significant falloff
+   *   > 28° → moderate falloff
    *   ≤ 28° → negligible (within the central ~56° region)
    *
-   * Calibration edge falloff factor (by lens type) is combined as
-   * an additional multiplier to account for lens-specific optical quality.
+   * At the most severe angle (≥55°), the calibration's lens-specific
+   * edge falloff factor replaces the default 0.42 to account for
+   * varying optical quality across lens types.
    */
-  const calibration = getCalibration(scene);
-  const calibrationEdgeFactor = getEdgeFalloffFactor(camera, calibration);
+  const edgeCal = getEdgeFalloffFactor(camera, getCalibration(scene));
 
   if (edgeAngle > 55) {
-    edgePenaltyMultiplier = 0.42 * calibrationEdgeFactor;
+    edgePenaltyMultiplier = edgeCal;
     reasonCodes.add("EDGE_OF_FOV");
   } else if (edgeAngle > 42) {
-    edgePenaltyMultiplier = 0.58 * calibrationEdgeFactor;
+    edgePenaltyMultiplier = 0.58;
     reasonCodes.add("EDGE_OF_FOV");
   } else if (edgeAngle > 28) {
-    edgePenaltyMultiplier = 0.76 * calibrationEdgeFactor;
+    edgePenaltyMultiplier = 0.76;
     reasonCodes.add("EDGE_OF_FOV");
-  } else {
-    edgePenaltyMultiplier = calibrationEdgeFactor;
   }
   ppm *= edgePenaltyMultiplier;
 

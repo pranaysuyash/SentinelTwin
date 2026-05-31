@@ -2,10 +2,8 @@ import type {
   CameraNode,
   ConfidenceBand,
   ConfidenceLevel,
-  CoverageCellResult,
   DoriQuality,
   PathVisibilityResult,
-  Recommendation,
   SecurityScene,
   SimulationResult,
   ZoneResult,
@@ -241,43 +239,4 @@ export function formatConfidenceSummary(
     : "";
 
   return `${levelLabels[level]}${zoneNote}${sensitivityNote}`;
-}
-
-/**
- * Compute confidence for each recommendation.
- */
-export function computeRecommendationConfidence(
-  recommendations: Recommendation[],
-  sourceConfidence: ConfidenceLevel,
-): Record<string, ConfidenceBand> {
-  const result: Record<string, ConfidenceBand> = {};
-
-  for (let i = 0; i < recommendations.length; i++) {
-    const rec = recommendations[i];
-    const reasonCodes: string[] = [];
-    const sensitiveTo: string[] = [];
-    let level: ConfidenceLevel;
-
-    if (rec.verified) {
-      if (sourceConfidence === "high" || sourceConfidence === "verified") {
-        level = "high";
-      } else if (sourceConfidence === "medium") {
-        level = "medium";
-      } else {
-        level = "low";
-      }
-      reasonCodes.push("VERIFIED_BY_SIMULATION");
-    } else {
-      level = confidenceRank(sourceConfidence) >= 3 ? "low" : "none";
-      reasonCodes.push("NOT_VERIFIED");
-    }
-
-    sensitiveTo.push("scene_assumptions");
-    sensitiveTo.push("camera_specs");
-
-    const key = rec.affectedNodeId ?? `rec_${i}`;
-    result[key] = { level, source: "simulation", reasonCodes, sensitiveTo };
-  }
-
-  return result;
 }

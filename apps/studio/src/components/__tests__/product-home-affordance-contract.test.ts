@@ -33,6 +33,9 @@ describe("product home affordance contract", () => {
     expect(source).toContain('aria-label="Open command center help"');
     expect(source).toContain("Feedback Handoff");
     expect(source).toContain("Command Center Help");
+    expect(source).toContain("NEXT_PUBLIC_SENTINELTWIN_FEEDBACK_FORM_URL");
+    expect(source).toContain('title="SentinelTwin feedback form"');
+    expect(source).toContain("Open Google Form");
     expect(source).toContain("openSiteIntakeFromFooter");
     expect(source).toContain("openReferenceSitesFromFooter");
   });

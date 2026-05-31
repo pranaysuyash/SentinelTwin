@@ -69,6 +69,22 @@ const WORKSPACE_MODE_ITEMS = [
   { key: "report_lite", label: "Report Lite", detail: "Quick Report" },
 ] as const;
 
+const FEEDBACK_FORM_URL = process.env.NEXT_PUBLIC_SENTINELTWIN_FEEDBACK_FORM_URL?.trim() ?? "";
+
+function feedbackFormEmbedUrl(url: string) {
+  if (!url) return "";
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname === "docs.google.com" && parsed.pathname.includes("/forms/")) {
+      parsed.searchParams.set("embedded", "true");
+      return parsed.toString();
+    }
+  } catch {
+    return url;
+  }
+  return url;
+}
+
 type DashboardSectionId =
   | "overview"
   | "preview"
@@ -1744,6 +1760,8 @@ export function StudioDashboardHome({
     "--st-muted": "#8a96ab",
     "--st-accent": "#5bb6ff",
   } as CSSProperties;
+  const feedbackFormUrl = FEEDBACK_FORM_URL;
+  const feedbackEmbedUrl = feedbackFormEmbedUrl(feedbackFormUrl);
   return (
     <main className="relative h-screen overflow-y-auto overflow-x-hidden bg-[color:var(--st-bg)] text-[color:var(--st-text)]" style={rootStyle}>
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(56,189,248,0.12),transparent_30%),radial-gradient(circle_at_80%_8%,rgba(16,185,129,0.08),transparent_28%),radial-gradient(circle_at_50%_100%,rgba(245,158,11,0.06),transparent_26%)]" />
@@ -2598,6 +2616,16 @@ export function StudioDashboardHome({
               <div className="flex flex-wrap gap-2">
                 {footerPanel === "feedback" ? (
                   <>
+                    {feedbackEmbedUrl ? (
+                      <a
+                        href={feedbackFormUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-1.5 text-emerald-100 hover:bg-emerald-500/20"
+                      >
+                        Open Google Form
+                      </a>
+                    ) : null}
                     <button type="button" onClick={openSettingsFromFooter} className="rounded-lg border border-sky-400/25 bg-sky-500/10 px-3 py-1.5 text-sky-100 hover:bg-sky-500/20">Open Settings</button>
                     <button type="button" onClick={onOpenStudio} className="rounded-lg border border-white/15 bg-white/[0.03] px-3 py-1.5 text-white/90 hover:bg-white/[0.06]">Open Studio</button>
                   </>
@@ -2610,6 +2638,22 @@ export function StudioDashboardHome({
                 <button type="button" onClick={() => setFooterPanel(null)} className="rounded-lg border border-white/15 px-3 py-1.5 text-white/70 hover:text-white">Close</button>
               </div>
             </div>
+            {footerPanel === "feedback" ? (
+              <div className="mt-3 overflow-hidden rounded-xl border border-white/10 bg-[#060a12]">
+                {feedbackEmbedUrl ? (
+                  <iframe
+                    title="SentinelTwin feedback form"
+                    src={feedbackEmbedUrl}
+                    className="h-[420px] w-full bg-white"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="px-3 py-3 text-xs leading-5 text-[#c8d4ea]">
+                    Add a Google Forms URL with <span className="font-mono text-sky-200">NEXT_PUBLIC_SENTINELTWIN_FEEDBACK_FORM_URL</span> to embed the live feedback form here.
+                  </div>
+                )}
+              </div>
+            ) : null}
           </section>
         ) : null}
 

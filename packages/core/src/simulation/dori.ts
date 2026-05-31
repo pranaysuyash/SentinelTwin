@@ -12,19 +12,27 @@ export const DORI_THRESHOLDS = {
 } as const;
 
 /**
- * IEC 62676-4:2025 OODPCVS PPM thresholds (7-level).
- * overview=25, outline=50, discern=62.5, perceive=100,
- * characterize=125, validate=250, scrutinize=500.
+ * IEC 62676-4:2025 OODPCVS PPM thresholds — complete 12-level set.
+ *
+ * Covers every quality in QUALITY_ORDER (excluding "none").
+ * Maps each named quality level to the minimum PPM required to achieve it.
  */
-export const OODPCVS_THRESHOLDS = {
-  scrutinize: 500,
-  validate: 250,
-  characterize: 125,
-  perceive: 100,
-  discern: 62.5,
-  outline: 50,
-  overview: 25,
-} as const;
+export const OODPCVS_THRESHOLDS: Record<string, number> = {
+  detection: 12,
+  overview: 16,
+  outline: 24,
+  observation: 32,
+  discern: 48,
+  perceive: 64,
+  recognition: 96,
+  characterize: 128,
+  validate: 160,
+  identification: 192,
+  scrutinize: 256,
+};
+
+/** @deprecated Use OODPCVS_THRESHOLDS — same values, unified name. */
+export const OODPCVS_PPM_THRESHOLDS = OODPCVS_THRESHOLDS;
 
 export type PpmThresholds = {
   detection: number;
@@ -103,16 +111,44 @@ export function ppmToDoriQuality(ppm: number, thresholds: PpmThresholds = DORI_T
 
 /**
  * Map PPM to quality level using IEC 62676-4:2025 OODPCVS thresholds.
+ *
+ * Iterates QUALITY_ORDER in descending score to find the highest
+ * quality whose PPM threshold the given PPM meets or exceeds.
  */
 export function ppmToOodpcvsQuality(ppm: number): DoriQuality {
-  if (ppm >= OODPCVS_THRESHOLDS.scrutinize) return "scrutinize";
-  if (ppm >= OODPCVS_THRESHOLDS.validate) return "validate";
-  if (ppm >= OODPCVS_THRESHOLDS.characterize) return "characterize";
-  if (ppm >= OODPCVS_THRESHOLDS.perceive) return "perceive";
-  if (ppm >= OODPCVS_THRESHOLDS.discern) return "discern";
-  if (ppm >= OODPCVS_THRESHOLDS.outline) return "outline";
-  if (ppm >= OODPCVS_THRESHOLDS.overview) return "overview";
+  for (let i = QUALITY_ORDER.length - 1; i >= 0; i--) {
+    const q = QUALITY_ORDER[i];
+    if (q === "none") continue;
+    const threshold = OODPCVS_THRESHOLDS[q];
+    if (ppm >= threshold) return q;
+  }
   return "none";
+}
+
+/**
+ * Detection probability table — maps each quality level to the estimated
+ * probability that an operator will detect/track a subject at that quality.
+ *
+ * These values are used by the simulation, report, and AI agent layers
+ * and are housed centrally here so all consumers share the same model.
+ */
+export const DETECTION_PROBABILITY: Record<DoriQuality, number> = {
+  none: 0,
+  detection: 0.25,
+  overview: 0.25,
+  outline: 0.35,
+  observation: 0.5,
+  discern: 0.5,
+  perceive: 0.65,
+  recognition: 0.85,
+  characterize: 0.85,
+  validate: 0.92,
+  identification: 0.99,
+  scrutinize: 0.99,
+};
+
+export function getDetectionProbability(quality: DoriQuality): number {
+  return DETECTION_PROBABILITY[quality] ?? 0;
 }
 
 /**

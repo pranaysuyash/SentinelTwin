@@ -409,6 +409,12 @@ export const simulationAssumptionsSchema = z.object({
   glareIntensity: z.enum(["none", "low", "medium", "high"]).default("none"),
   /** Overexposed zones (e.g. entrance in direct sun, bright signage) */
   overexposedZones: z.boolean().default(false),
+  /** Scene complexity — affects PPM thresholds for I/O/D/C standards */
+  sceneComplexity: z.enum(["simple", "moderate", "complex", "cluttered"]).default("moderate"),
+  /** Operator experience level — affects confidence/reliability scoring */
+  operatorExperience: z.enum(["novice", "trained", "expert"]).default("trained"),
+  /** Task criticality — determines required quality baseline */
+  taskCriticality: z.enum(["low", "standard", "high", "critical"]).default("standard"),
 });
 
 export const zoneResultSchema = z.object({

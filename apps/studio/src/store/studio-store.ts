@@ -2854,6 +2854,97 @@ function snapshotLayout(state: Pick<
   };
 }
 
+function buildLayoutStatePatch(layout: DockSnapshot): Pick<
+  StudioStoreState,
+  | "viewMode"
+  | "workspacePreset"
+  | "canvasMode"
+  | "leftDockCollapsed"
+  | "rightDockCollapsed"
+  | "bottomDockCollapsed"
+  | "leftDockSizePx"
+  | "rightDockSizePx"
+  | "bottomDockSizePx"
+  | "visibleComponents"
+  | "enabledAnalysisModules"
+  | "rightPanelMode"
+  | "bottomDrawerMode"
+  | "pinnedAnalysisModule"
+  | "overlayDensity"
+  | "showDebugOverlays"
+  | "clientDemoOptions"
+  | "layerVisibility"
+> {
+  return {
+    viewMode: layout.viewMode,
+    workspacePreset: layout.workspacePreset,
+    canvasMode: layout.canvasMode,
+    leftDockCollapsed: layout.leftDockCollapsed,
+    rightDockCollapsed: layout.rightDockCollapsed,
+    bottomDockCollapsed: layout.bottomDockCollapsed,
+    leftDockSizePx: layout.leftDockSizePx,
+    rightDockSizePx: layout.rightDockSizePx,
+    bottomDockSizePx: layout.bottomDockSizePx,
+    visibleComponents: { ...layout.visibleComponents },
+    enabledAnalysisModules: { ...layout.enabledAnalysisModules },
+    rightPanelMode: layout.rightPanelMode,
+    bottomDrawerMode: layout.bottomDrawerMode,
+    pinnedAnalysisModule: layout.pinnedAnalysisModule,
+    overlayDensity: layout.overlayDensity,
+    showDebugOverlays: layout.showDebugOverlays,
+    clientDemoOptions: { ...layout.clientDemoOptions },
+    layerVisibility: { ...layout.layerVisibility },
+  };
+}
+
+function buildSceneReplacementPatch(
+  nextScene: SecurityScene,
+  layout: DockSnapshot,
+  nextEvents: OperationalEvidenceEvent[],
+  nextGovernance: WorkspaceGovernanceState,
+  nextCameraId: string | null,
+  snapshotCount: number,
+  defaultToolOverrides?: { bottomTab?: BottomTab; inspectorTab?: InspectorTab; activeTool?: ActiveTool },
+): Partial<StudioStoreState> {
+  return {
+    scene: cloneSceneWithAppendedChangeLog(nextScene, evidenceLogLine(nextEvents[0]!)),
+    snapshots: [],
+    simulationResult: null,
+    simulationDirty: true,
+    selectedNodeId: null,
+    selectedNodeIds: [],
+    selectedCameraId: nextCameraId,
+    activePathId: null,
+    focusScenePointRequest: null,
+    focusScenePointHighlight: null,
+    mapState: cloneDefaultMapState(),
+    focusMode: false,
+    previousLayout: null,
+    ...buildLayoutStatePatch(layout),
+    bottomTab: defaultToolOverrides?.bottomTab ?? "metrics",
+    inspectorTab: defaultToolOverrides?.inspectorTab ?? "properties",
+    activeTool: defaultToolOverrides?.activeTool ?? "select",
+    editor: {
+      editorMode: "idle",
+      draftWallStart: undefined,
+      draftPolygonPoints: [],
+      draftPathPoints: [],
+      hoverPoint: undefined,
+      feedbackMessage: null,
+      snapEnabled: true,
+      snapDistanceM: 0.25,
+      gridSnapM: 0.5,
+      selectedHandle: undefined,
+    },
+    historyPast: [],
+    historyFuture: [],
+    sceneIntelligenceGraph: buildGraphState(nextScene, null, 0, snapshotCount, nextEvents),
+    operationalEvidenceEvents: nextEvents,
+    workspaceGovernance: nextGovernance,
+  };
+}
+
+
 function dockSizeKey(side: DockSide) {
   return side === "left"
     ? "leftDockSizePx"
@@ -2889,7 +2980,12 @@ function resolveSelectedNodeType(scene: SecurityScene, id: string | null) {
 
 function contextualRightPanelModeForNode(scene: SecurityScene, id: string | null): RightPanelMode {
   const nodeType = resolveSelectedNodeType(scene, id);
+  if (!nodeType) return "inspector";
   if (nodeType === "camera") return "camera_controls";
+  if (nodeType === "sensor") return "security_status";
+  if (nodeType === "path") return "issues";
+  if (nodeType === "critical_zone" || nodeType === "privacy_zone") return "issues";
+  if (nodeType === "entry_point" || nodeType === "door" || nodeType === "window") return "security_status";
   return "inspector";
 }
 
@@ -2931,6 +3027,52 @@ function contextualInspectorTabForNode(scene: SecurityScene, id: string | null):
   if (nodeType === "obstruction" || nodeType === "security_light" || nodeType === "wall") return "properties";
   if (nodeType === "comment") return "history";
   return "properties";
+}
+
+function buildContextualSelectionPatch(
+  state: StudioStoreState,
+  selectedIds: string[],
+): Pick<
+  StudioStoreState,
+  | "selectedNodeId"
+  | "selectedNodeIds"
+  | "selectedCameraId"
+  | "rightDockCollapsed"
+  | "bottomDockCollapsed"
+  | "rightPanelMode"
+  | "inspectorTab"
+  | "bottomTab"
+  | "activeTool"
+  | "dockAttention"
+> {
+  const nextPrimary = primarySelection(selectedIds);
+  const contextualTool = contextualToolForNode(state.scene, nextPrimary);
+  const contextualInspectorTab = contextualInspectorTabForNode(state.scene, nextPrimary);
+  const contextualBottomTab = contextualBottomTabForNode(state.scene, nextPrimary);
+  const contextualRightPanelMode = contextualRightPanelModeForNode(state.scene, nextPrimary);
+  const hasSelection = Boolean(nextPrimary);
+  const isCameraSelection = hasSelection && state.scene.cameras.some((camera) => camera.id === nextPrimary);
+
+  return {
+    selectedNodeIds: selectedIds,
+    selectedNodeId: nextPrimary,
+    selectedCameraId: isCameraSelection ? nextPrimary : state.selectedCameraId,
+    rightDockCollapsed: hasSelection ? false : state.rightDockCollapsed,
+    bottomDockCollapsed: hasSelection ? false : state.bottomDockCollapsed,
+    rightPanelMode: hasSelection ? contextualRightPanelMode : state.rightPanelMode,
+    inspectorTab: contextualInspectorTab ?? state.inspectorTab,
+    bottomTab: hasSelection
+      ? getFirstEnabledAnalysisTab(state.enabledAnalysisModules, contextualBottomTab ?? state.bottomTab)
+      : state.bottomTab,
+    activeTool: contextualTool ?? state.activeTool,
+    dockAttention: hasSelection
+      ? {
+          ...state.dockAttention,
+          right: false,
+          bottom: false,
+        }
+      : state.dockAttention,
+  };
 }
 
 const ANALYSIS_TAB_ORDER: BottomTab[] = [
@@ -3615,27 +3757,12 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   applySavedLayout: (layoutId) => {
     const layout = get().savedLayouts.find((entry) => entry.id === layoutId);
     if (!layout) return;
+    const patch = buildLayoutStatePatch(layout);
     set({
-      viewMode: layout.viewMode,
-      canvasMode: layout.canvasMode,
-      workspacePreset: layout.workspacePreset,
+      ...patch,
       focusMode: layout.workspacePreset === "focus",
       previousLayout: null,
-      leftDockCollapsed: layout.leftDockCollapsed,
-      rightDockCollapsed: layout.rightDockCollapsed,
-      bottomDockCollapsed: layout.bottomDockCollapsed,
-      leftDockSizePx: layout.leftDockSizePx,
-      rightDockSizePx: layout.rightDockSizePx,
-      bottomDockSizePx: layout.bottomDockSizePx,
-      visibleComponents: { ...layout.visibleComponents },
-      enabledAnalysisModules: { ...layout.enabledAnalysisModules },
       layerVisibility: { ...layout.layerVisibility },
-      rightPanelMode: layout.rightPanelMode,
-      bottomDrawerMode: layout.bottomDrawerMode,
-      pinnedAnalysisModule: layout.pinnedAnalysisModule,
-      overlayDensity: layout.overlayDensity,
-      showDebugOverlays: layout.showDebugOverlays,
-      clientDemoOptions: { ...layout.clientDemoOptions },
       bottomTab: layout.pinnedAnalysisModule && layout.enabledAnalysisModules[layout.pinnedAnalysisModule]
         ? layout.pinnedAnalysisModule
         : viewModeToBottomTab(layout.viewMode),
@@ -4768,151 +4895,39 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   },
 
   selectNode: (id) => set((state) => {
-    const contextualTab = contextualBottomTabForNode(state.scene, id);
-    const contextualTool = contextualToolForNode(state.scene, id);
-    const contextualInspectorTab = contextualInspectorTabForNode(state.scene, id);
-    return {
-      selectedNodeId: id,
-      selectedNodeIds: id ? [id] : [],
-      selectedCameraId:
-        id && state.scene.cameras.some((camera) => camera.id === id)
-          ? id
-          : state.selectedCameraId,
-      rightDockCollapsed: state.rightDockCollapsed,
-      bottomDockCollapsed: state.bottomDockCollapsed,
-      rightPanelMode: id ? contextualRightPanelModeForNode(state.scene, id) : state.rightPanelMode,
-      inspectorTab: contextualInspectorTab ?? state.inspectorTab,
-      bottomTab: contextualTab
-        ? getFirstEnabledAnalysisTab(state.enabledAnalysisModules, contextualTab)
-        : state.bottomTab,
-      activeTool: contextualTool ?? state.activeTool,
-      dockAttention: id
-        ? {
-            ...state.dockAttention,
-            right: state.rightDockCollapsed ? true : false,
-            bottom: state.bottomDockCollapsed ? true : false,
-          }
-        : state.dockAttention,
-    };
+    return buildContextualSelectionPatch(state, id ? [id] : []);
   }),
   setSelectedNodes: (ids) => set((state) => {
     const next = purgeInvalidSelection(state.scene, ids);
-    const nextPrimary = primarySelection(next);
-    const contextualTool = contextualToolForNode(state.scene, nextPrimary);
-    const contextualInspectorTab = contextualInspectorTabForNode(state.scene, nextPrimary);
-    return {
-      selectedNodeIds: next,
-      selectedNodeId: nextPrimary,
-      selectedCameraId:
-        nextPrimary && state.scene.cameras.some((camera) => camera.id === nextPrimary)
-          ? nextPrimary
-          : state.selectedCameraId,
-      rightDockCollapsed: state.rightDockCollapsed,
-      bottomDockCollapsed: state.bottomDockCollapsed,
-      rightPanelMode: nextPrimary ? contextualRightPanelModeForNode(state.scene, nextPrimary) : state.rightPanelMode,
-      inspectorTab: contextualInspectorTab ?? state.inspectorTab,
-      bottomTab: nextPrimary
-        ? getFirstEnabledAnalysisTab(
-            state.enabledAnalysisModules,
-            contextualBottomTabForNode(state.scene, nextPrimary) ?? state.bottomTab,
-          )
-        : state.bottomTab,
-      activeTool: contextualTool ?? state.activeTool,
-      dockAttention: nextPrimary
-        ? {
-            ...state.dockAttention,
-            right: state.rightDockCollapsed ? true : false,
-            bottom: state.bottomDockCollapsed ? true : false,
-          }
-        : state.dockAttention,
-    };
+    return buildContextualSelectionPatch(state, next);
   }),
   addSelectedNode: (id) => set((state) => {
     if (state.selectedNodeIds.includes(id)) return state;
     const next = purgeInvalidSelection(state.scene, [...state.selectedNodeIds, id]);
-    const nextPrimary = primarySelection(next);
-    const contextualTool = contextualToolForNode(state.scene, nextPrimary);
-    const contextualInspectorTab = contextualInspectorTabForNode(state.scene, nextPrimary);
-    return {
-      selectedNodeIds: next,
-      selectedNodeId: nextPrimary,
-      selectedCameraId:
-        nextPrimary && state.scene.cameras.some((camera) => camera.id === nextPrimary)
-          ? nextPrimary
-          : state.selectedCameraId,
-      rightDockCollapsed: state.rightDockCollapsed,
-      bottomDockCollapsed: state.bottomDockCollapsed,
-      rightPanelMode: nextPrimary ? contextualRightPanelModeForNode(state.scene, nextPrimary) : state.rightPanelMode,
-      inspectorTab: contextualInspectorTab ?? state.inspectorTab,
-      bottomTab: nextPrimary
-        ? getFirstEnabledAnalysisTab(
-            state.enabledAnalysisModules,
-            contextualBottomTabForNode(state.scene, nextPrimary) ?? state.bottomTab,
-          )
-        : state.bottomTab,
-      activeTool: contextualTool ?? state.activeTool,
-      dockAttention: nextPrimary
-        ? {
-            ...state.dockAttention,
-            right: state.rightDockCollapsed ? true : false,
-            bottom: state.bottomDockCollapsed ? true : false,
-          }
-        : state.dockAttention,
-    };
+    return buildContextualSelectionPatch(state, next);
   }),
   toggleSelectedNode: (id) => set((state) => {
     const next = state.selectedNodeIds.includes(id)
       ? state.selectedNodeIds.filter((entry) => entry !== id)
       : [...state.selectedNodeIds, id];
     const filtered = purgeInvalidSelection(state.scene, next);
-    const nextPrimary = primarySelection(filtered);
-    const contextualTool = contextualToolForNode(state.scene, nextPrimary);
-    const contextualInspectorTab = contextualInspectorTabForNode(state.scene, nextPrimary);
-    return {
-      selectedNodeIds: filtered,
-      selectedNodeId: nextPrimary,
-      selectedCameraId:
-        nextPrimary && state.scene.cameras.some((camera) => camera.id === nextPrimary)
-          ? nextPrimary
-          : state.selectedCameraId,
-      rightDockCollapsed: state.rightDockCollapsed,
-      bottomDockCollapsed: state.bottomDockCollapsed,
-      rightPanelMode: nextPrimary ? contextualRightPanelModeForNode(state.scene, nextPrimary) : state.rightPanelMode,
-      inspectorTab: contextualInspectorTab ?? state.inspectorTab,
-      bottomTab: nextPrimary
-        ? getFirstEnabledAnalysisTab(
-            state.enabledAnalysisModules,
-            contextualBottomTabForNode(state.scene, nextPrimary) ?? state.bottomTab,
-          )
-        : state.bottomTab,
-      activeTool: contextualTool ?? state.activeTool,
-      dockAttention: nextPrimary
-        ? {
-            ...state.dockAttention,
-            right: state.rightDockCollapsed ? true : false,
-            bottom: state.bottomDockCollapsed ? true : false,
-          }
-        : state.dockAttention,
-    };
+    return buildContextualSelectionPatch(state, filtered);
   }),
   setSelectedCameraId: (id) => {
     set((state) => {
       const isValid = !!id && state.scene.cameras.some((camera) => camera.id === id);
+      if (!isValid || !id) {
+        return {
+          selectedCameraId: null,
+          selectedNodeId: null,
+          selectedNodeIds: [],
+        };
+      }
+      const patch = buildContextualSelectionPatch(state, [id]);
       return {
-        selectedCameraId: isValid ? id : null,
-        rightDockCollapsed: state.rightDockCollapsed,
-        bottomDockCollapsed: state.bottomDockCollapsed,
-        rightPanelMode: isValid ? contextualRightPanelModeForNode(state.scene, id) : state.rightPanelMode,
-        inspectorTab: isValid ? "view" : state.inspectorTab,
-        bottomTab: isValid ? getFirstEnabledAnalysisTab(state.enabledAnalysisModules, "metrics") : state.bottomTab,
-        activeTool: isValid ? "camera" : state.activeTool,
-        dockAttention: isValid
-          ? {
-              ...state.dockAttention,
-              right: state.rightDockCollapsed ? true : false,
-              bottom: state.bottomDockCollapsed ? true : false,
-            }
-          : state.dockAttention,
+        ...patch,
+        selectedCameraId: id,
+        inspectorTab: "view",
       };
     });
   },
@@ -4935,27 +4950,12 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   setViewMode: (mode) => {
     const preset = viewModeToPreset(mode);
     const layout = buildPresetDockLayout(preset);
+    const patch = buildLayoutStatePatch(layout);
     const autoTab = getFirstEnabledAnalysisTab(layout.enabledAnalysisModules, viewModeToBottomTab(mode));
     set({
-      viewMode: mode,
-      workspacePreset: preset,
-      canvasMode: layout.canvasMode,
+      ...patch,
       focusMode: false,
       previousLayout: null,
-      leftDockCollapsed: layout.leftDockCollapsed,
-      rightDockCollapsed: layout.rightDockCollapsed,
-      bottomDockCollapsed: layout.bottomDockCollapsed,
-      leftDockSizePx: layout.leftDockSizePx,
-      rightDockSizePx: layout.rightDockSizePx,
-      bottomDockSizePx: layout.bottomDockSizePx,
-      visibleComponents: { ...layout.visibleComponents },
-      enabledAnalysisModules: { ...layout.enabledAnalysisModules },
-      rightPanelMode: layout.rightPanelMode,
-      bottomDrawerMode: layout.bottomDrawerMode,
-      pinnedAnalysisModule: layout.pinnedAnalysisModule,
-      overlayDensity: layout.overlayDensity,
-      showDebugOverlays: layout.showDebugOverlays,
-      clientDemoOptions: { ...layout.clientDemoOptions },
       bottomTab: autoTab,
     });
   },
@@ -4964,50 +4964,21 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       if (preset === "focus") {
         if (state.focusMode) return state;
         const layout = buildPresetDockLayout("focus");
+        const patch = buildLayoutStatePatch(layout);
         return {
           previousLayout: snapshotLayout(state),
-          workspacePreset: preset,
-          viewMode: layout.viewMode,
+          ...patch,
           focusMode: true,
-          leftDockCollapsed: layout.leftDockCollapsed,
-          rightDockCollapsed: layout.rightDockCollapsed,
-          bottomDockCollapsed: layout.bottomDockCollapsed,
-          leftDockSizePx: layout.leftDockSizePx,
-          rightDockSizePx: layout.rightDockSizePx,
-          bottomDockSizePx: layout.bottomDockSizePx,
-          visibleComponents: { ...layout.visibleComponents },
-          enabledAnalysisModules: { ...layout.enabledAnalysisModules },
-          rightPanelMode: layout.rightPanelMode,
-          bottomDrawerMode: layout.bottomDrawerMode,
-          pinnedAnalysisModule: layout.pinnedAnalysisModule,
-          overlayDensity: layout.overlayDensity,
-          showDebugOverlays: layout.showDebugOverlays,
-          clientDemoOptions: { ...layout.clientDemoOptions },
           bottomTab: getFirstEnabledAnalysisTab(layout.enabledAnalysisModules, state.bottomTab),
         };
       }
 
       const layout = buildPresetDockLayout(preset);
+      const patch = buildLayoutStatePatch(layout);
       return {
-        workspacePreset: preset,
-        viewMode: layout.viewMode,
-        canvasMode: layout.canvasMode,
+        ...patch,
         focusMode: false,
         previousLayout: null,
-        leftDockCollapsed: layout.leftDockCollapsed,
-        rightDockCollapsed: layout.rightDockCollapsed,
-        bottomDockCollapsed: layout.bottomDockCollapsed,
-        leftDockSizePx: layout.leftDockSizePx,
-        rightDockSizePx: layout.rightDockSizePx,
-        bottomDockSizePx: layout.bottomDockSizePx,
-        visibleComponents: { ...layout.visibleComponents },
-        enabledAnalysisModules: { ...layout.enabledAnalysisModules },
-        rightPanelMode: layout.rightPanelMode,
-        bottomDrawerMode: layout.bottomDrawerMode,
-        pinnedAnalysisModule: layout.pinnedAnalysisModule,
-        overlayDensity: layout.overlayDensity,
-        showDebugOverlays: layout.showDebugOverlays,
-        clientDemoOptions: { ...layout.clientDemoOptions },
         bottomTab: getFirstEnabledAnalysisTab(layout.enabledAnalysisModules, viewModeToBottomTab(layout.viewMode)),
       };
     }),
@@ -5051,25 +5022,11 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     set((state) => {
       if (state.focusMode) return state;
       const layout = buildPresetDockLayout("focus");
+      const patch = buildLayoutStatePatch(layout);
       return {
         previousLayout: snapshotLayout(state),
-        workspacePreset: "focus",
-        viewMode: layout.viewMode,
+        ...patch,
         focusMode: true,
-        leftDockCollapsed: layout.leftDockCollapsed,
-        rightDockCollapsed: layout.rightDockCollapsed,
-        bottomDockCollapsed: layout.bottomDockCollapsed,
-        leftDockSizePx: layout.leftDockSizePx,
-        rightDockSizePx: layout.rightDockSizePx,
-        bottomDockSizePx: layout.bottomDockSizePx,
-        visibleComponents: { ...layout.visibleComponents },
-        enabledAnalysisModules: { ...layout.enabledAnalysisModules },
-        rightPanelMode: layout.rightPanelMode,
-        bottomDrawerMode: layout.bottomDrawerMode,
-        pinnedAnalysisModule: layout.pinnedAnalysisModule,
-        overlayDensity: layout.overlayDensity,
-        showDebugOverlays: layout.showDebugOverlays,
-        clientDemoOptions: { ...layout.clientDemoOptions },
         bottomTab: getFirstEnabledAnalysisTab(layout.enabledAnalysisModules, state.bottomTab),
       };
     }),
@@ -5077,27 +5034,12 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     set((state) => {
       if (!state.previousLayout) return state;
       const layout = state.previousLayout;
+      const patch = buildLayoutStatePatch(layout);
       return {
-        viewMode: layout.viewMode,
-        workspacePreset: layout.workspacePreset,
-        canvasMode: layout.canvasMode,
+        ...patch,
         focusMode: false,
-        leftDockCollapsed: layout.leftDockCollapsed,
-        rightDockCollapsed: layout.rightDockCollapsed,
-        bottomDockCollapsed: layout.bottomDockCollapsed,
-        leftDockSizePx: layout.leftDockSizePx,
-        rightDockSizePx: layout.rightDockSizePx,
-        bottomDockSizePx: layout.bottomDockSizePx,
-        visibleComponents: { ...layout.visibleComponents },
-        enabledAnalysisModules: { ...layout.enabledAnalysisModules },
-        rightPanelMode: layout.rightPanelMode,
-        bottomDrawerMode: layout.bottomDrawerMode,
-        pinnedAnalysisModule: layout.pinnedAnalysisModule,
-        overlayDensity: layout.overlayDensity,
-        showDebugOverlays: layout.showDebugOverlays,
-        clientDemoOptions: { ...layout.clientDemoOptions },
-        bottomTab: getFirstEnabledAnalysisTab(layout.enabledAnalysisModules, layout.pinnedAnalysisModule),
         previousLayout: null,
+        bottomTab: getFirstEnabledAnalysisTab(layout.enabledAnalysisModules, layout.pinnedAnalysisModule),
       };
     }),
   setBottomTab: (tab) => set((state) => ({
@@ -6239,29 +6181,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       mapState: cloneDefaultMapState(),
       focusMode: false,
       previousLayout: null,
-      viewMode: layout.viewMode,
-      workspacePreset: layout.workspacePreset,
-      canvasMode: layout.canvasMode,
-      leftDockCollapsed: layout.leftDockCollapsed,
-      rightDockCollapsed: layout.rightDockCollapsed,
-      bottomDockCollapsed: layout.bottomDockCollapsed,
-      leftDockSizePx: layout.leftDockSizePx,
-      rightDockSizePx: layout.rightDockSizePx,
-      bottomDockSizePx: layout.bottomDockSizePx,
-      visibleComponents: { ...layout.visibleComponents },
-      enabledAnalysisModules: { ...layout.enabledAnalysisModules },
-      rightPanelMode: layout.rightPanelMode,
-      bottomDrawerMode: layout.bottomDrawerMode,
-      pinnedAnalysisModule: layout.pinnedAnalysisModule,
-      overlayDensity: layout.overlayDensity,
-      showDebugOverlays: layout.showDebugOverlays,
-      clientDemoOptions: { ...layout.clientDemoOptions },
-      bottomTab: getFirstEnabledAnalysisTab(layout.enabledAnalysisModules, viewModeToBottomTab(layout.viewMode)),
-      sceneIntelligenceGraph: buildGraphState(scene, null, 0, scene.snapshots.length, nextEvents),
-      compareVisualEvidence: null,
-      compareReportSelection: null,
-      operationalEvidenceEvents: nextEvents,
-      workspaceGovernance: nextGovernance,
+      ...buildSceneReplacementPatch(scene, layout, nextEvents, nextGovernance, nextCameraId, scene.snapshots.length),
       scene: cloneSceneWithAppendedChangeLog(scene, evidenceLogLine(evidenceEvent)),
     }));
     return { success: true };
@@ -6705,59 +6625,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       const nextGovernance = resetWorkspaceGovernanceForDraft(get().workspaceGovernance);
       persistWorkspaceGovernance(nextGovernance);
       set({
-        snapshots: structuredClone(scene.snapshots ?? []),
-        simulationDirty: true,
-        simulationResult: null,
-        selectedNodeId: null,
-        selectedNodeIds: [],
-        selectedCameraId: nextCameraId,
-        activePathId: null,
-        focusScenePointRequest: null,
-        focusScenePointHighlight: null,
-        mapState: cloneDefaultMapState(),
-        focusMode: false,
-        previousLayout: null,
-        viewMode: layout.viewMode,
-        workspacePreset: layout.workspacePreset,
-        canvasMode: layout.canvasMode,
-        leftDockCollapsed: layout.leftDockCollapsed,
-        rightDockCollapsed: layout.rightDockCollapsed,
-        bottomDockCollapsed: layout.bottomDockCollapsed,
-        leftDockSizePx: layout.leftDockSizePx,
-        rightDockSizePx: layout.rightDockSizePx,
-        bottomDockSizePx: layout.bottomDockSizePx,
-        visibleComponents: { ...layout.visibleComponents },
-        enabledAnalysisModules: { ...layout.enabledAnalysisModules },
-        layerVisibility: { ...layout.layerVisibility },
-        rightPanelMode: layout.rightPanelMode,
-        bottomDrawerMode: layout.bottomDrawerMode,
-        pinnedAnalysisModule: layout.pinnedAnalysisModule,
-        overlayDensity: layout.overlayDensity,
-        showDebugOverlays: layout.showDebugOverlays,
-        clientDemoOptions: { ...layout.clientDemoOptions },
-        bottomTab: "metrics",
-        inspectorTab: "properties",
-        activeTool: "select",
-        historyPast: [],
-        historyFuture: [],
-        sceneIntelligenceGraph: buildGraphState(nextScene, null, 0, (scene.snapshots ?? []).length, nextEvents),
-        compareVisualEvidence: null,
-        compareReportSelection: null,
-        operationalEvidenceEvents: nextEvents,
-        workspaceGovernance: nextGovernance,
-        editor: {
-          editorMode: "idle",
-          draftWallStart: undefined,
-          draftPolygonPoints: [],
-          draftPathPoints: [],
-          hoverPoint: undefined,
-          feedbackMessage: null,
-          snapEnabled: true,
-          snapDistanceM: 0.25,
-          gridSnapM: 0.5,
-          selectedHandle: undefined,
-        },
-        scene: cloneSceneWithAppendedChangeLog(nextScene, evidenceLogLine(evidenceEvent)),
+        ...buildSceneReplacementPatch(nextScene, layout, nextEvents, nextGovernance, nextCameraId, (scene.snapshots ?? []).length, { bottomTab: "metrics", inspectorTab: "properties", activeTool: "select" }),
       });
     },
 
@@ -6784,55 +6652,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     const nextGovernance = resetWorkspaceGovernanceForDraft(get().workspaceGovernance);
     persistWorkspaceGovernance(nextGovernance);
     set({
-      scene: cloneSceneWithAppendedChangeLog(blank, evidenceLogLine(evidenceEvent)),
-      snapshots: [],
-      simulationResult: null,
-      simulationDirty: true,
-      selectedNodeId: null,
-      selectedNodeIds: [],
-      selectedCameraId: nextCameraId,
-      activePathId: null,
-      focusScenePointRequest: null,
-      focusScenePointHighlight: null,
-      mapState: cloneDefaultMapState(),
-      focusMode: false,
-      previousLayout: null,
-      viewMode: layout.viewMode,
-      workspacePreset: layout.workspacePreset,
-      canvasMode: layout.canvasMode,
-      leftDockCollapsed: layout.leftDockCollapsed,
-      rightDockCollapsed: layout.rightDockCollapsed,
-      bottomDockCollapsed: layout.bottomDockCollapsed,
-      leftDockSizePx: layout.leftDockSizePx,
-      rightDockSizePx: layout.rightDockSizePx,
-      bottomDockSizePx: layout.bottomDockSizePx,
-      visibleComponents: { ...layout.visibleComponents },
-      enabledAnalysisModules: { ...layout.enabledAnalysisModules },
-      layerVisibility: { ...layout.layerVisibility },
-      rightPanelMode: layout.rightPanelMode,
-      bottomDrawerMode: layout.bottomDrawerMode,
-      pinnedAnalysisModule: layout.pinnedAnalysisModule,
-      overlayDensity: layout.overlayDensity,
-      showDebugOverlays: layout.showDebugOverlays,
-      clientDemoOptions: { ...layout.clientDemoOptions },
-      bottomTab: "metrics",
-      inspectorTab: "properties",
-      activeTool: "select",
-      editor: {
-        editorMode: "idle",
-        draftWallStart: undefined,
-        draftPolygonPoints: [],
-        draftPathPoints: [],
-        hoverPoint: undefined,
-        feedbackMessage: null,
-        snapEnabled: true,
-        snapDistanceM: 0.25,
-        gridSnapM: 0.5,
-        selectedHandle: undefined,
-      },
-      historyPast: [],
-      historyFuture: [],
-      sceneIntelligenceGraph: buildGraphState(blank, null, 0, 0, nextEvents),
+      ...buildSceneReplacementPatch(blank, layout, nextEvents, nextGovernance, nextCameraId, 0, { bottomTab: "metrics", inspectorTab: "properties", activeTool: "select" }),
       compareVisualEvidence: null,
       compareReportSelection: null,
       operationalEvidenceEvents: nextEvents,

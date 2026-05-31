@@ -28,7 +28,7 @@ import {
 import { cn } from "@/lib/cn";
 import { getSceneSourceMeta } from "@/lib/scene-source";
 import { summarizeWorkspaceAccount, summarizeWorkspaceCatalog } from "@/lib/workspace-catalog";
-import { formatWorkspaceBranchLabel, searchWorkspaceMemory } from "@/lib/workspace-search";
+import { formatWorkspaceBranchLabel, searchWorkspaceMemory, type WorkspaceSearchHit } from "@/lib/workspace-search";
 import type { GovernanceArchiveRecord } from "@/lib/governance-archive";
 import type { WorkspaceMembershipArchiveRecord } from "@/lib/workspace-membership-types";
 import type { WorkspaceIdentityConflictArchiveRecord } from "@/lib/workspace-identity-conflict-types";
@@ -36,7 +36,7 @@ import type { SupportDeliveryArchiveRecord } from "@/lib/support-delivery";
 import type { SensorIngestArchiveRecord } from "@/lib/sensor-ingest-history";
 import type { CameraMetadataArchiveRecord } from "@/lib/camera-metadata-ingest-history";
 import type { CameraLiveConnectionArchiveRecord } from "@/lib/camera-live-connection-history";
-import type { BottomTab, SavedProjectRecord, ViewMode, WorkspacePreset } from "@/store/studio-store";
+import type { BottomTab, SavedProjectRecord, TimelineFocusRequest, ViewMode, WorkspacePreset } from "@/store/studio-store";
 import { useStudioStore } from "@/store/studio-store";
 import { OrganizationManagerPanel } from "@/components/launcher/OrganizationManagerPanel";
 import type { SecurityScene, SecurityIssue, SimulationResult, DoriQuality, ScenarioPath, CameraNode, ObstructionNode, SecurityLightNode } from "@/schema/security-scene";
@@ -51,20 +51,11 @@ type ProjectSourceFilter = "All" | SecurityScene["source"];
 type StarterTone = "blank" | "import" | "scan" | "ai";
 const NAV_ITEMS = [
   { label: "Home", detail: "Studio dashboard", active: true as const },
-  { label: "Projects", detail: "Local workspaces", active: false as const },
+  { label: "Create Site Twin", detail: "New or import", active: false as const },
+  { label: "Security Twin Studio", detail: "Editor", active: false as const },
+  { label: "Audit Reports", detail: "Evidence exports", active: false as const },
   { label: "Reference Sites", detail: "Retail / Office / Warehouse", active: false as const },
-  { label: "Reports", detail: "Evidence exports", active: false as const },
-  { label: "Docs", detail: "Architecture notes", active: false as const },
   { label: "Settings", detail: "Studio preferences", active: false as const },
-] as const;
-
-const WORKSPACE_MODE_ITEMS = [
-  { label: "Coverage", detail: "Map & Analysis", viewMode: "map" as const, preset: "coverage" as const, tab: "metrics" as const },
-  { label: "Camera View", detail: "Single Camera", viewMode: "camera_view" as const, preset: "coverage" as const, tab: "metrics" as const },
-  { label: "Camera Wall", detail: "Multi Camera", viewMode: "wall" as const, preset: "camera_wall" as const, tab: "metrics" as const },
-  { label: "Path Replay", detail: "Route Analysis", viewMode: "replay" as const, preset: "replay" as const, tab: "timeline" as const },
-  { label: "Compare", detail: "Before / After", viewMode: "compare" as const, preset: "compare" as const, tab: "beforeafter" as const },
-  { label: "Report", detail: "Audit summary", viewMode: "report" as const, preset: "report" as const, tab: "report" as const },
 ] as const;
 
 const SOURCE_LABELS: Record<SecurityScene["source"], string> = {
@@ -287,9 +278,9 @@ function ScenePreview({ scene, result, compact = false, showLabels = true, hydra
         <div className="absolute inset-0 opacity-60 [background-image:linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)] [background-size:44px_44px]" />
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="rounded-2xl border border-white/8 bg-black/30 px-4 py-3 text-center">
-            <div className="text-xs uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Scene Preview</div>
+            <div className="text-xs uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Site Twin Preview</div>
             <div className="mt-1 text-sm font-medium text-white">{scene.name}</div>
-            <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">Scene loaded · Run simulation for coverage data</div>
+            <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">Preparing site twin · Run simulation for coverage data</div>
           </div>
         </div>
       </div>
@@ -1526,71 +1517,70 @@ export function StudioDashboardHome({
 
       <div className="relative z-10 flex min-h-screen flex-col gap-4 p-4 lg:p-5">
         <header className="flex flex-wrap items-center gap-3 rounded-[24px] border border-[color:var(--st-border)] bg-[rgba(9,14,23,0.94)] px-4 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.34)] backdrop-blur-lg">
-          <div className="flex min-w-[240px] items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-emerald-400/25 bg-emerald-500/12 text-emerald-200">
-              <ShieldCheck className="h-6 w-6" />
+          <div className="flex min-w-[200px] items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#1e3a29] bg-[#0d2318] text-emerald-300">
+              <ShieldCheck className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <div className="truncate text-base font-semibold tracking-tight text-white">SentinelTwin Studio</div>
-              <div className="truncate text-xs text-[color:var(--st-muted)]">Security Simulation Workspace</div>
+              <div className="truncate text-sm font-bold tracking-tight text-white">SentinelTwin</div>
+              <div className="truncate text-[11px] text-[color:var(--st-muted)]">Security Digital Twin Command Center</div>
             </div>
           </div>
 
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-            <span className="inline-flex max-w-[320px] items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.04] px-3 py-2 text-xs font-medium text-white">
-              <span className="text-[10px] uppercase tracking-[0.14em] text-[color:var(--st-muted)]">Workspace selector:</span>
+            <button
+              type="button"
+              className="inline-flex max-w-[260px] items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.04] px-3 py-2 text-xs font-medium text-white transition-colors hover:border-sky-400/30"
+            >
               <span className="truncate">{scene.name}</span>
               <ChevronDown className="h-3.5 w-3.5 flex-none text-[color:var(--st-muted)]" />
-            </span>
+            </button>
             <span className={cn(
-              "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium",
+              "inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium",
               statusTone,
             )}>
-              <span className="text-[10px] uppercase tracking-[0.14em]">Status:</span>
+              {statusLabel === "Up to date" ? (
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              ) : null}
               <span suppressHydrationWarning>{statusLabel}</span>
             </span>
-            <span suppressHydrationWarning className="inline-flex items-center rounded-xl border border-transparent px-2 py-2 text-xs text-[color:var(--st-muted)]">
+            <span suppressHydrationWarning className="hidden text-xs text-[color:var(--st-muted)] lg:inline">
               {currentRunLabel ?? "Last run: Never"}
             </span>
-            <span className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-xs text-white">
-              <Sun className="h-4 w-4 text-amber-300" />
-              <span className="text-[10px] uppercase tracking-[0.14em] text-[color:var(--st-muted)]">Environment mode:</span>
-              {headerAssumptions.timeOfDay === "night" ? "Night Mode" : headerAssumptions.timeOfDay === "custom" ? "Custom Mode" : "Day Mode"}
-            </span>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-xs text-white transition-colors hover:border-amber-400/30"
+            >
+              <Sun className="h-3.5 w-3.5 text-amber-300" />
+              <span>{headerAssumptions.timeOfDay === "night" ? "Night Mode" : headerAssumptions.timeOfDay === "custom" ? "Custom Mode" : "Day Mode"}</span>
+              <ChevronDown className="h-3 w-3 text-[color:var(--st-muted)]" />
+            </button>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-none flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={onOpenStudio}
               className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-xs font-medium text-white transition-colors hover:border-sky-400/30 hover:bg-white/[0.05]"
             >
-              <FolderOpen className="h-4 w-4 text-sky-200" />
-              Open Studio
+              <FolderOpen className="h-3.5 w-3.5 text-sky-200" />
+              Open Security Twin Studio
             </button>
             <button
               type="button"
               onClick={onRunSimulation}
-              className="inline-flex items-center gap-2 rounded-xl border border-emerald-300/30 bg-emerald-500 px-3 py-2 text-xs font-semibold text-[#03130d] transition-colors hover:bg-emerald-400"
+              className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/40 bg-emerald-500 px-3 py-2 text-xs font-bold text-[#031a0c] transition-colors hover:bg-emerald-400"
             >
-              <Play className="h-4 w-4" />
-              Run Simulation
+              <Play className="h-3.5 w-3.5" />
+              {simulationDirty ? "Refresh Simulation" : "Run Simulation"}
             </button>
             <button
               type="button"
-              onClick={onImportScene}
+              onClick={onOpenReport}
               className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-xs font-medium text-white transition-colors hover:border-sky-400/30 hover:bg-white/[0.05]"
             >
-              <FileUp className="h-4 w-4 text-sky-200" />
-              Import JSON
-            </button>
-            <button
-              type="button"
-              onClick={onCreateScene}
-              className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-xs font-medium text-white transition-colors hover:border-sky-400/30 hover:bg-white/[0.05]"
-            >
-              <Plus className="h-4 w-4 text-sky-200" />
-              New Scene
+              <FileText className="h-3.5 w-3.5 text-sky-200" />
+              Audit Report
             </button>
           </div>
         </header>
@@ -1598,67 +1588,45 @@ export function StudioDashboardHome({
         <div className="grid flex-1 gap-4 lg:grid-cols-[228px_minmax(0,1fr)_388px]">
           <aside className="flex flex-col gap-4 rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
             <div>
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-[color:var(--st-muted)]">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-300" />
-                STUDIO
-              </div>
-              <div className="mt-3 space-y-1.5">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--st-muted)]">STUDIO</div>
+              <nav className="mt-3 space-y-0.5">
                 {NAV_ITEMS.map((item) => (
-                  <div
-                    key={item.label}
-                    className={cn(
-                      "flex items-center justify-between rounded-2xl border px-3 py-2 text-sm",
-                      item.active
-                        ? "border-sky-400/25 bg-sky-500/10 text-white"
-                        : "border-transparent bg-white/[0.02] text-[color:var(--st-muted)]",
-                    )}
-                  >
-                    <span>{item.label}</span>
-                    <span className="text-[10px] uppercase tracking-[0.18em]">{item.detail}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-[color:var(--st-muted)]">
-                <Layers3 className="h-3.5 w-3.5 text-emerald-300" />
-                Workspace Modes
-              </div>
-              <div className="mt-3 space-y-1.5">
-                {WORKSPACE_MODE_ITEMS.map((mode) => (
                   <button
-                    key={mode.label}
+                    key={item.label}
                     type="button"
-                    onClick={() => onOpenMode(mode.viewMode, mode.preset, mode.tab)}
                     className={cn(
-                      "w-full rounded-2xl border px-3 py-2 text-left transition-colors",
-                      "border-[color:var(--st-border)] bg-white/[0.03] text-[#dfe8ff] hover:border-sky-400/25 hover:bg-sky-500/8",
+                      "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-colors text-left",
+                      item.active
+                        ? "bg-sky-500/12 text-white font-medium"
+                        : "text-[color:var(--st-muted)] hover:bg-white/[0.04] hover:text-[color:var(--st-text)]",
                     )}
+                    aria-current={item.active ? "page" : undefined}
                   >
-                    <div className="text-sm font-semibold">{mode.label}</div>
-                    <div className="mt-0.5 text-[11px] text-[color:var(--st-muted)]">{mode.detail}</div>
+                    <span className="flex-1">{item.label}</span>
+                    {item.active ? (
+                      <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
+                    ) : null}
                   </button>
                 ))}
-              </div>
+              </nav>
             </div>
 
-            <div className="mt-auto rounded-2xl border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2">
-              <div className="flex items-center gap-2">
-                <div className="text-sm font-semibold text-white">{organizations.find((o) => o.id === activeOrganizationId)?.name ?? "Personal Workspace"}</div>
-                <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-1.5 py-0.5 text-[8px] uppercase tracking-[0.14em] text-emerald-200">
-                  {workspaceAccountProfile.planTier}
-                </span>
+
+
+            <div className="mt-auto flex items-center gap-2.5 rounded-2xl border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
+              <div className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[#1a2540] text-[11px] font-bold text-sky-200">
+                {workspaceAccountProfile.accountName?.[0]?.toUpperCase() ?? "S"}
               </div>
-              <div className="mt-0.5 text-[11px] text-[color:var(--st-muted)]">
-                {workspaceAccountSummary?.scopeLabel ?? "Personal catalog"}
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-semibold text-white">{workspaceAccountProfile.accountName ?? "Studio User"}</div>
+                <div className="text-[10px] text-[color:var(--st-muted)]">{workspaceAccountProfile.planTier}</div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowOrgManager(true)}
-                className="mt-1.5 w-full rounded-xl border border-sky-400/20 bg-sky-500/10 px-2 py-1 text-[10px] font-semibold text-sky-200 hover:bg-sky-500/20"
+                className="flex-none"
               >
-                Manage Organizations
+                <ChevronDown className="h-4 w-4 text-[color:var(--st-muted)] hover:text-white" />
               </button>
             </div>
           </aside>
@@ -1667,26 +1635,56 @@ export function StudioDashboardHome({
             <div className="rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4 shadow-[0_24px_70px_rgba(0,0,0,0.30)]">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
-                    <Radar className="h-3.5 w-3.5 text-sky-300" />
-                    CURRENT WORKSPACE
+                  <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">CURRENT WORKSPACE</div>
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <div className="text-2xl font-semibold tracking-tight sm:text-3xl">{scene.name}</div>
+                    <button type="button" onClick={onOpenStudio} className="mt-0.5 text-[color:var(--st-muted)] hover:text-white transition-colors">
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" /></svg>
+                    </button>
                   </div>
-                  <div className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">{scene.name}</div>
-                  <div className="mt-1 text-sm text-[color:var(--st-muted)]">
-                    {sceneSummary(scene)}
+                  <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-[color:var(--st-muted)]">
+                    <span className="flex items-center gap-1">
+                      <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M9 21V9" /></svg>
+                      {scene.dimensions.width}m × {scene.dimensions.depth}m
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Camera className="h-3 w-3" />
+                      {scene.cameras.length} {scene.cameras.length === 1 ? "Camera" : "Cameras"}
+                    </span>
+                    {scene.securityLights.length > 0 ? (
+                      <span className="flex items-center gap-1">
+                        <Sun className="h-3 w-3 text-amber-300" />
+                        {scene.securityLights.length} {scene.securityLights.length === 1 ? "Light" : "Lights"}
+                      </span>
+                    ) : null}
+                    {scene.obstructions.length > 0 ? (
+                      <span className="flex items-center gap-1">
+                        <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><rect x="3" y="3" width="14" height="14" rx="2" /></svg>
+                        {scene.obstructions.length} Obstructions
+                      </span>
+                    ) : null}
+                    {scene.criticalZones.length > 0 ? (
+                      <span className="flex items-center gap-1 text-amber-300/80">
+                        <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" /></svg>
+                        {scene.criticalZones.length} Critical {scene.criticalZones.length === 1 ? "Zone" : "Zones"}
+                      </span>
+                    ) : null}
+                    {scene.paths.length > 0 ? (
+                      <span className="flex items-center gap-1">
+                        <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" d="M3 12c0-4.97 4.03-9 9-9s9 4.03 9 9" /><path strokeLinecap="round" d="M12 21v-9" /></svg>
+                        {scene.paths.length} {scene.paths.length === 1 ? "Path" : "Paths"}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1.5 text-[11px] text-emerald-200">
-                    {coverage != null ? `Coverage ${Math.round(coverage)}%` : "Simulation not run yet"}
-                  </span>
-                  <span className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1.5 text-[11px] text-[color:var(--st-muted)]">
-                    {scene.paths.length} paths
-                  </span>
-                  <span className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1.5 text-[11px] text-[color:var(--st-muted)]">
-                    {scene.updatedAt ? `Updated ${formatTime(scene.updatedAt)}` : "Never updated"}
-                  </span>
-                </div>
+                <button
+                  type="button"
+                  onClick={onOpenStudio}
+                  className="inline-flex flex-none items-center gap-1.5 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-[11px] text-[color:var(--st-muted)] transition-colors hover:border-sky-400/30 hover:text-white"
+                >
+                  Open Security Twin Studio
+                  <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                </button>
               </div>
 
               <div className="mt-4 overflow-hidden rounded-[24px] border border-white/[0.05] bg-black/[0.15]">
@@ -1745,260 +1743,206 @@ export function StudioDashboardHome({
                 </div>
               </div>
 
-              <div className="mt-4 grid gap-3 lg:grid-cols-6">
-                <MiniStat
-                  label="Coverage"
-                  value={coverage != null ? `${Math.round(coverage)}%` : "—"}
-                  accent={coverage != null ? coverageTone(coverage) : "text-white"}
-                  detail="Walkable scene score"
-                />
-                <MiniStat
-                  label="Critical Zones"
-                  value={`${passCount}/${totalZones}`}
-                  accent={totalZones > 0 && passCount === totalZones ? "text-emerald-300" : "text-amber-300"}
-                  detail="Passing zones"
-                />
-                <MiniStat
-                  label="Worst Quality"
-                  value={worstQualityLabel ?? "—"}
-                  accent={worstQualityValue ? QUALITY_TEXT_COLOR[worstQualityValue] : "text-white"}
-                  detail={worstIssue ? `Top issue: ${worstIssue.description}` : "Coverage quality floor"}
-                />
-                <MiniStat
-                  label="Issues"
-                  value={`${issues.length}`}
-                  accent={issues.length > 0 ? "text-amber-300" : "text-emerald-300"}
-                  detail={issues[0] ? issues[0].description : "No open issues detected"}
-                />
-                <MiniStat
-                  label="Redundancy"
-                  value={redundancyValue}
-                  accent={redundancyFailCount > 0 ? "text-amber-300" : redundancyCount === 0 ? "text-sky-200" : "text-emerald-300"}
-                  detail={redundancyDetail}
-                />
-                <MiniStat label="Last Run" value={lastRunLabel} accent="text-sky-200" detail={lastRunDetail} />
-              </div>
-
-              {onGuidedScanAssistant ? (
-                <div className="mt-4">
-                  <button
-                    type="button"
-                    onClick={onGuidedScanAssistant}
-                    className="group flex w-full items-center gap-3 rounded-2xl border border-sky-400/25 bg-sky-500/8 px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-sky-300/45 hover:bg-sky-500/14"
-                  >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-sky-400/25 bg-sky-500/12">
-                      <ScanSearch className="h-5 w-5 text-sky-300" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-semibold text-sky-100">Open Guided Scan Assistant</div>
-                      <div className="mt-0.5 text-[11px] text-sky-200/60">Manual-assisted site photo intake with a guided capture and review loop.</div>
-                    </div>
-                    <ArrowRight className="h-4 w-4 flex-none text-sky-300 transition-transform duration-200 group-hover:translate-x-1" />
-                  </button>
-                </div>
-              ) : null}
-              {onOpenDemoWalkthrough ? (
-                <div className="mt-4">
-                  <button
-                    type="button"
-                    onClick={onOpenDemoWalkthrough}
-                    className="group flex w-full items-center gap-3 rounded-2xl border border-emerald-400/25 bg-emerald-500/8 px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-300/45 hover:bg-emerald-500/14"
-                  >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-400/25 bg-emerald-500/12">
-                      <Sparkles className="h-5 w-5 text-emerald-300" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-semibold text-emerald-100">Run Guided Walkthrough</div>
-                      <div className="mt-0.5 text-[11px] text-emerald-200/60">Guided 7-step walkthrough: baseline, camera wall, path replay, identify failures, apply a fix, compare, report.</div>
-                    </div>
-                    <ArrowRight className="h-4 w-4 flex-none text-emerald-300 transition-transform duration-200 group-hover:translate-x-1" />
-                  </button>
-                </div>
-              ) : null}
-
-              <div className="mt-4 rounded-[24px] border border-[#1f2637] bg-[#0b0f17] p-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Workspace Memory Search</div>
-                    <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
-                      Search the current scene, saved workspaces, evidence trail, report snapshot, and operational evidence archives from one query.
-                    </div>
+              <div className="mt-4 grid grid-cols-3 gap-2 lg:grid-cols-6">
+                <div className="flex flex-col gap-1 rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
+                  <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">COVERAGE</div>
+                  <div className={cn("text-xl font-bold tracking-tight", coverage != null ? coverageTone(coverage) : "text-white")}>
+                    {coverage != null ? `${Math.round(coverage)}%` : "—"}
                   </div>
-                  <div className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1 text-[10px] text-[color:var(--st-muted)]">
-                    {workspaceMemoryResults.length} hits
+                  <div className="text-[10px] text-[color:var(--st-muted)]">vs last run</div>
+                </div>
+                <div className="flex flex-col gap-1 rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
+                  <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">CRITICAL ZONES</div>
+                  <div className={cn("text-xl font-bold", totalZones > 0 && passCount === totalZones ? "text-emerald-300" : "text-amber-300")}>
+                    {passCount}/{totalZones}
+                  </div>
+                  <div className="flex items-center gap-1 text-[10px] text-[color:var(--st-muted)]">
+                    {totalZones > 0 && passCount < totalZones ? <TriangleAlert className="h-3 w-3 text-amber-400" /> : null}
+                    Passing
                   </div>
                 </div>
-                <div className="mt-3">
-                  <input
-                    value={workspaceMemoryQuery}
-                    onChange={(event) => setWorkspaceMemoryQuery(event.target.value)}
-                    placeholder="Search scenes, evidence, reports, and drafts..."
-                    className="w-full rounded-2xl border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-[color:var(--st-muted)] focus:border-sky-400/35 focus:bg-white/[0.04]"
-                  />
+                <div className="flex flex-col gap-1 rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
+                  <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">WORST QUALITY</div>
+                  <div className={cn("text-xl font-bold", worstQualityValue ? QUALITY_TEXT_COLOR[worstQualityValue] : "text-white")}>
+                    {worstQualityLabel ?? "—"}
+                  </div>
+                  <div className="truncate text-[10px] text-[color:var(--st-muted)]">{worstIssue?.description?.slice(0, 18) ?? "—"}</div>
                 </div>
-                <div className="mt-3 grid gap-2">
-                  {workspaceMemoryQuery.trim() ? (
-                    workspaceMemoryResults.length > 0 ? (
-                      workspaceMemoryResults.map((hit) => (
-                        <button
-                          key={hit.id}
-                          type="button"
-                          onClick={() => {
-                            setTimelineFocusRequest({
-                              timestamp: hit.timestamp,
-                              query: formatWorkspaceMemoryFocusQuery(hit.timestamp, hit.branchLabel ?? null),
-                              branchLabel: hit.branchLabel ?? null,
-                              eventId: hit.timelineEventId ?? null,
-                              source: "launcher",
-                            });
-                            if (hit.kind === "report") {
-                              onOpenReport();
-                              return;
-                            }
-                            if (hit.kind === "evidence" || (hit.kind === "archive" && (hit.branchLabel || hit.routeTab === "timeline"))) {
-                              onOpenMode("map", "coverage", "timeline");
-                              return;
-                            }
-                            if (hit.kind === "archive" && hit.routeTab) {
-                              onOpenMode("map", "coverage", hit.routeTab);
-                              return;
-                            }
-                            const matchedProject = savedProjects.find((project) => project.scene.id === hit.sceneId);
-                            if (matchedProject) {
-                              onOpenScene?.(matchedProject.scene);
-                              return;
-                            }
-                            if (hit.sceneId === scene.id) {
-                              onOpenStudio();
-                            }
-                          }}
-                          className="group rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.025] p-3 text-left transition-colors hover:border-sky-400/30 hover:bg-white/[0.045]"
-                        >
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <div className="truncate text-sm font-semibold text-white">{hit.title}</div>
-                                <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] text-[color:var(--st-muted)]">
-                                  {hit.kind}
-                                </span>
-                                {hit.branchLabel ? (
-                                  <span className="rounded-full border border-sky-400/20 bg-sky-500/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] text-sky-100">
-                                    Branch: {formatWorkspaceBranchLabel(hit.branchLabel)}
-                                  </span>
-                                ) : null}
-                                {hit.timelineEventId ? (
-                                  <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] text-emerald-100">
-                                    Exact checkpoint
-                                  </span>
-                                ) : null}
-                              </div>
-                              <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
-                                {hit.summary}
-                              </div>
-                              <div className="mt-1 text-[10px] text-[color:var(--st-muted)]">
-                                {hit.details}
-                              </div>
-                              <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[9px] uppercase tracking-[0.14em] text-[color:var(--st-muted)]">
-                                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5">
-                                  Target: {hit.targetSummary}
-                                </span>
-                                {hit.routeTab ? (
-                                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5">
-                                    Route: {hit.routeTab}
-                                  </span>
-                                ) : null}
-                              </div>
-                            </div>
-                            <ArrowRight className="h-4 w-4 flex-none text-[color:var(--st-accent)] transition-transform duration-200 group-hover:translate-x-1" />
-                          </div>
-                        </button>
-                      ))
-                    ) : (
-                      <div className="rounded-[18px] border border-dashed border-[color:var(--st-border)] bg-white/[0.02] px-4 py-5 text-sm text-[color:var(--st-muted)]">
-                        No workspace memory hits matched this query.
-                      </div>
-                    )
-                    ) : (
-                      <div className="rounded-[18px] border border-dashed border-[color:var(--st-border)] bg-white/[0.02] px-4 py-5 text-sm text-[color:var(--st-muted)]">
-                        Search the current scene, saved workspaces, evidence trail, and report snapshot from one box.
-                      </div>
-                    )}
+                <div className="flex flex-col gap-1 rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
+                  <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">ISSUES</div>
+                  <div className={cn("text-xl font-bold", issues.length > 0 ? "text-amber-300" : "text-emerald-300")}>{issues.length}</div>
+                  <div className="text-[10px] text-[color:var(--st-muted)]">Open</div>
+                </div>
+                <div className="flex flex-col gap-1 rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
+                  <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">REDUNDANCY</div>
+                  <div className={cn("text-xl font-bold", redundancyFailCount > 0 ? "text-red-300" : redundancyCount === 0 ? "text-sky-200" : "text-emerald-300")}>
+                    {redundancyFailCount > 0 ? "FAILS" : redundancyCount === 0 ? "Not set" : "OK"}
+                  </div>
+                  <div className="flex items-center gap-1 text-[10px] text-[color:var(--st-muted)]">
+                    {redundancyFailCount > 0 ? <TriangleAlert className="h-3 w-3 text-red-400" /> : null}
+                    {redundancyFailCount > 0 ? `If CAM 1 offline` : "Coverage intact"}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1 rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
+                  <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">LAST RUN</div>
+                  <div className="text-sm font-bold text-sky-200" suppressHydrationWarning>{lastRunLabel}</div>
+                  <div className="text-[10px] text-[color:var(--st-muted)]" suppressHydrationWarning>{lastRunDetail}</div>
                 </div>
               </div>
 
-              <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.8fr)]">
-                <div className="rounded-[24px] border border-[color:var(--st-border)] bg-[color:var(--st-panel-2)] p-3">
-                  <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">RECENT WORKSPACES</div>
-                  <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+              {/* 4 primary mode action buttons — matches reference image */}
+              <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <button
+                  type="button"
+                  onClick={onOpenCoverageWorkspace}
+                  className="group flex items-center gap-3 rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-3.5 text-left transition-all hover:border-emerald-400/30 hover:bg-emerald-500/5"
+                >
+                  <div className="flex h-9 w-9 flex-none items-center justify-center rounded-xl border border-emerald-400/25 bg-emerald-500/10">
+                    <MapIcon className="h-4.5 w-4.5 h-[18px] w-[18px] text-emerald-300" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-semibold text-white">Coverage</div>
+                    <div className="mt-0.5 text-[11px] text-[color:var(--st-muted)]">Map & full analysis</div>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenCameraWall}
+                  className="group flex items-center gap-3 rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-3.5 text-left transition-all hover:border-sky-400/30 hover:bg-sky-500/5"
+                >
+                  <div className="flex h-9 w-9 flex-none items-center justify-center rounded-xl border border-sky-400/25 bg-sky-500/10">
+                    <Camera className="h-[18px] w-[18px] text-sky-300" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-semibold text-white">Camera Operations</div>
+                    <div className="mt-0.5 text-[11px] text-[color:var(--st-muted)]">Multi-camera view</div>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenPathReplay}
+                  className="group flex items-center gap-3 rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-3.5 text-left transition-all hover:border-violet-400/30 hover:bg-violet-500/5"
+                >
+                  <div className="flex h-9 w-9 flex-none items-center justify-center rounded-xl border border-violet-400/25 bg-violet-500/10">
+                    <Play className="h-[18px] w-[18px] text-violet-300" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-semibold text-white">Incident Review</div>
+                    <div className="mt-0.5 text-[11px] text-[color:var(--st-muted)]">Route visibility over time</div>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenCompareFixes}
+                  className="group flex items-center gap-3 rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-3.5 text-left transition-all hover:border-amber-400/30 hover:bg-amber-500/5"
+                >
+                  <div className="flex h-9 w-9 flex-none items-center justify-center rounded-xl border border-amber-400/25 bg-amber-500/10">
+                    <LayoutDashboard className="h-[18px] w-[18px] text-amber-300" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-semibold text-white">Compare Fix</div>
+                    <div className="mt-0.5 text-[11px] text-[color:var(--st-muted)]">Before / after analysis</div>
+                  </div>
+                </button>
+              </div>
+
+              <SiteTwinSearchBar
+                workspaceMemoryQuery={workspaceMemoryQuery}
+                setWorkspaceMemoryQuery={setWorkspaceMemoryQuery}
+                workspaceMemoryResults={workspaceMemoryResults}
+                setTimelineFocusRequest={setTimelineFocusRequest}
+                onOpenReport={onOpenReport}
+                onOpenMode={onOpenMode}
+                savedProjects={savedProjects}
+                onOpenScene={onOpenScene}
+                onOpenStudio={onOpenStudio}
+                scene={scene}
+              />
+
+              <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+                <div className="rounded-[20px] border border-[color:var(--st-border)] bg-[color:var(--st-panel-2)] p-3">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[color:var(--st-muted)]">RECENT SITE TWINS</div>
+                  <div className="mt-2 grid grid-cols-4 gap-2">
                     {compactRecentProjects.map((project) => {
                       const recentScene = project.scene;
                       const recentCoverage = recentScene.simulation?.totalCoveragePct ?? (recentScene.id === scene.id ? coverage : null);
                       const recentIssues = recentScene.simulation?.issues.length ?? (recentScene.id === scene.id ? issues.length : 0);
-                        return (
-                          <button
-                            key={recentScene.id}
-                            type="button"
-                            onClick={() => onOpenScene?.(recentScene)}
-                            className="group min-h-[92px] rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.025] p-2 text-left transition-colors hover:border-emerald-400/25 hover:bg-white/[0.045]"
-                          >
-                            <div className="h-9 overflow-hidden rounded-xl border border-white/8 bg-[radial-gradient(circle_at_22%_35%,rgba(34,197,94,0.18),transparent_35%),radial-gradient(circle_at_78%_40%,rgba(56,189,248,0.16),transparent_35%),#08111d]">
-                              <ScenePreview scene={recentScene} result={recentScene.simulation ?? (recentScene.id === scene.id ? result : null)} compact showLabels={false} hydrated={hydrated} />
-                            </div>
-                            <div className="mt-2 truncate text-xs font-semibold text-white">{recentScene.name}</div>
-                            <div className="mt-0.5 text-[10px] leading-4 text-[color:var(--st-muted)]">
-                              {recentCoverage != null ? `${Math.round(recentCoverage)}% coverage` : "Coverage pending"} · {recentIssues} issues
-                            </div>
-                            <div suppressHydrationWarning className="text-[10px] text-[color:var(--st-muted)]">
-                              {formatTime(project.updatedAt)}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                </div>
- 
-                  <div className="rounded-[24px] border border-sky-400/15 bg-sky-500/8 p-3">
-                  <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
-                    <Sparkles className="h-3.5 w-3.5 text-sky-300" />
-                    QUICK START
-                  </div>
-                  <div className="mt-2 rounded border border-sky-400/20 bg-sky-500/10 px-3 py-2 text-[11px] text-[color:var(--st-muted)]">
-                    Start from scratch, import existing scene data, run manual-assisted site intake, or generate an AI draft.
-                  </div>
-                  <div className="mt-3 space-y-2">
-                    <ActionButton
-                      icon={<Sparkles className="h-4 w-4" />}
-                      label="Open Seeded Retail Baseline"
-                      description="Open the seeded retail scene as the reference baseline for comparison."
-                      onClick={onOpenDemoScene ?? onOpenCoverageWorkspace}
-                      className="min-w-[280px] border-sky-300/35 bg-sky-500/12 shadow-[0_12px_42px_rgba(14,165,233,0.14)]"
-                      variant="primary"
-                    />
-                    <div className="grid grid-cols-2 gap-2">
-                      {advancedStarterActions.map((action) => (
+                      return (
                         <button
-                          key={action.label}
+                          key={recentScene.id}
                           type="button"
-                          onClick={action.onClick}
-                          aria-label={action.description}
-                          className="group flex min-h-[86px] flex-col justify-between rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.035] p-3 text-left transition-colors hover:border-sky-400/30 hover:bg-white/[0.055]"
+                          onClick={() => onOpenScene?.(recentScene)}
+                          className="group rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.02] p-2 text-left transition-colors hover:border-sky-400/25 hover:bg-white/[0.04]"
                         >
-                          <span className="flex items-center justify-between gap-2 text-[color:var(--st-accent)]">
-                            {action.icon}
-                            <span className="rounded-full border border-amber-400/25 bg-amber-500/10 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.12em] text-amber-200">
-                              {action.detail}
-                            </span>
-                          </span>
-                          <span>
-                            <span className="block text-xs font-semibold text-white">{action.label}</span>
-                            <span className="mt-0.5 block text-[10px] leading-4 text-[color:var(--st-muted)]">{action.description}</span>
-                          </span>
+                          <div className="h-[72px] overflow-hidden rounded-lg border border-white/8 bg-[#08111d]">
+                            <ScenePreview scene={recentScene} result={recentScene.simulation ?? (recentScene.id === scene.id ? result : null)} compact showLabels={false} hydrated={hydrated} />
+                          </div>
+                          <div className="mt-1.5 truncate text-[11px] font-semibold text-white">{recentScene.name}</div>
+                          <div className="mt-0.5 text-[10px] text-[color:var(--st-muted)]">
+                            {recentCoverage != null ? `${Math.round(recentCoverage)}% coverage` : "Pending"}
+                          </div>
+                          <div className="text-[10px] text-[color:var(--st-muted)]">
+                            {recentIssues} issues
+                          </div>
+                          <div suppressHydrationWarning className="mt-0.5 text-[9px] text-[color:var(--st-muted)]/70">
+                            {formatTime(project.updatedAt)}
+                          </div>
                         </button>
-                      ))}
-                    </div>
-                  </div>
+                      );
+                    })}
                   </div>
                 </div>
+
+                <div className="rounded-[20px] border border-[color:var(--st-border)] bg-[color:var(--st-panel-2)] p-3">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[color:var(--st-muted)]">CREATE / IMPORT SITE TWIN</div>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={onCreateScene}
+                      className="flex flex-col items-center gap-2 rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.025] px-3 py-3.5 text-center transition-colors hover:border-sky-400/30 hover:bg-white/[0.04]"
+                    >
+                      <Plus className="h-5 w-5 text-sky-300" />
+                      <div>
+                        <div className="text-[12px] font-semibold text-white">New Blank Scene</div>
+                        <div className="mt-0.5 text-[10px] text-[color:var(--st-muted)]">Start from scratch</div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onImportScene}
+                      className="flex flex-col items-center gap-2 rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.025] px-3 py-3.5 text-center transition-colors hover:border-sky-400/30 hover:bg-white/[0.04]"
+                    >
+                      <FileUp className="h-5 w-5 text-cyan-300" />
+                      <div>
+                        <div className="text-[12px] font-semibold text-white">Import Scene JSON</div>
+                        <div className="mt-0.5 text-[10px] text-[color:var(--st-muted)]">From file</div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onScanSite}
+                      className="flex flex-col items-center gap-2 rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.025] px-3 py-3.5 text-center transition-colors hover:border-sky-400/30 hover:bg-white/[0.04]"
+                    >
+                      <ScanSearch className="h-5 w-5 text-emerald-300" />
+                      <div>
+                        <div className="text-[12px] font-semibold text-white">Scan a Site</div>
+                        <div className="mt-0.5 text-[10px] text-[color:var(--st-muted)]">Upload site photos</div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onAiDraft}
+                      className="flex flex-col items-center gap-2 rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.025] px-3 py-3.5 text-center transition-colors hover:border-violet-400/30 hover:bg-white/[0.04]"
+                    >
+                      <Sparkles className="h-5 w-5 text-violet-300" />
+                      <div>
+                        <div className="text-[12px] font-semibold text-white">AI Layout Draft</div>
+                        <div className="mt-0.5 text-[10px] text-[color:var(--st-muted)]">Generate layout</div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {showWorkspaceLibrary ? (
@@ -2027,164 +1971,160 @@ export function StudioDashboardHome({
         </div>
 
           <aside className="flex flex-col gap-3">
+            {/* Security Status panel */}
             <div className="rounded-[20px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3.5">
-              <div className="flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#7dd3fc]">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Security Status
+              <div className="flex items-center justify-between">
+                <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#7dd3fc]">SECURITY STATUS</div>
+                <button type="button" className="flex h-5 w-5 items-center justify-center rounded text-[color:var(--st-muted)] hover:text-white">
+                  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><circle cx="10" cy="4" r="1.5" /><circle cx="10" cy="10" r="1.5" /><circle cx="10" cy="16" r="1.5" /></svg>
+                </button>
               </div>
 
-              <div className="mt-3 space-y-1.5">
-                <div className="flex items-center justify-between rounded-xl border border-[#1a2030] bg-white/[0.02] px-3 py-2">
-                  <span className="text-[10px] text-[#8b96ab]">Risk Score</span>
-                  <span className={cn(
-                    "text-sm font-bold",
-                    coverage == null ? "text-[#5a6478]" :
-                    coverage >= 70 ? "text-emerald-300" :
-                    coverage >= 40 ? "text-amber-300" : "text-red-300"
-                  )}>
-                    {coverage != null
-                      ? coverage >= 70 ? "Low"
-                        : coverage >= 40 ? "Medium" : "High"
-                      : "Unknown"}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between rounded-xl border border-[#1a2030] bg-white/[0.02] px-3 py-2">
-                  <span className="text-[10px] text-[#8b96ab]">Coverage</span>
-                  <span className="text-sm font-bold text-white">
-                    {coverage != null ? `${Math.round(coverage)}%` : "—"}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between rounded-xl border border-[#1a2030] bg-white/[0.02] px-3 py-2">
-                  <span className="text-[10px] text-[#8b96ab]">Critical Zones</span>
-                  <span className={cn(
-                    "text-sm font-bold",
-                    totalZones > 0 && passCount === totalZones ? "text-emerald-300" : "text-amber-300"
-                  )}>
-                    {passCount}/{totalZones}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between rounded-xl border border-[#1a2030] bg-white/[0.02] px-3 py-2">
-                  <span className="text-[10px] text-[#8b96ab]">Cameras</span>
-                  <span className="text-sm font-bold text-white">{scene.cameras.length}</span>
-                </div>
-
-                <div className="flex items-center justify-between rounded-xl border border-[#1a2030] bg-white/[0.02] px-3 py-2">
-                  <span className="text-[10px] text-[#8b96ab]">Open Issues</span>
-                  <span className={cn(
-                    "text-sm font-bold",
-                    issues.length === 0 ? "text-emerald-300" : "text-amber-300"
-                  )}>
-                    {issues.length}
-                  </span>
-                </div>
-
-                {worstQualityValue ? (
-                  <div className="flex items-center justify-between rounded-xl border border-[#1a2030] bg-white/[0.02] px-3 py-2">
-                    <span className="text-[10px] text-[#8b96ab]">Worst Quality</span>
-                    <span className="text-sm font-bold text-white">{worstQualityLabel}</span>
+              <div className="mt-3">
+                <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#8b96ab]">OUTCOME SUMMARY</div>
+                <div className="space-y-1">
+                  {outcomeSummary.map((zone) => {
+                    const isFail = zone.status === "fail";
+                    const isPartial = zone.status === "partial";
+                    const isPass = zone.status === "pass";
+                    const badgeLabel = isPass
+                      ? (coverage != null ? `${Math.round(coverage)}%` : "PASS")
+                      : isFail
+                        ? qualityToLabel(zone.actual).toUpperCase()
+                        : isPartial
+                          ? qualityToLabel(zone.actual).toUpperCase()
+                          : "NOT RUN";
+                    const badgeCls = isPass
+                      ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-300"
+                      : isFail
+                        ? "border-red-400/30 bg-red-500/12 text-red-300"
+                        : isPartial
+                          ? "border-amber-400/30 bg-amber-500/12 text-amber-300"
+                          : "border-slate-400/20 bg-slate-500/8 text-slate-300";
+                    const reqLabel = isPass ? "Meets requirement" : isFail ? `Recognition required` : "Minimum requirement";
+                    return (
+                      <div key={zone.id} className="flex items-center justify-between rounded-xl border border-[#1a2030] bg-white/[0.015] px-3 py-2">
+                        <div className="min-w-0">
+                          <div className="truncate text-[11px] font-medium text-white">{zone.label}</div>
+                          <div className="text-[9px] text-[#8b96ab]">{reqLabel}</div>
+                        </div>
+                        <span className={cn("ml-2 flex-none rounded border px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.1em]", badgeCls)}>
+                          {badgeLabel}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  {/* Overall Coverage row */}
+                  <div className="flex items-center justify-between rounded-xl border border-[#1a2030] bg-white/[0.015] px-3 py-2">
+                    <div className="min-w-0">
+                      <div className="text-[11px] font-medium text-white">Overall Coverage</div>
+                      <div className="text-[9px] text-[#8b96ab]">Acceptable</div>
+                    </div>
+                    <span className={cn(
+                      "ml-2 flex-none rounded border px-1.5 py-0.5 text-[8px] font-bold",
+                      coverage == null ? "border-slate-400/20 bg-slate-500/8 text-slate-300" :
+                      coverage >= 70 ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-300" :
+                      coverage >= 40 ? "border-amber-400/30 bg-amber-500/12 text-amber-300" : "border-red-400/30 bg-red-500/12 text-red-300"
+                    )}>
+                      {coverage != null ? `${Math.round(coverage)}%` : "—"}
+                    </span>
                   </div>
-                ) : null}
+                </div>
               </div>
             </div>
 
-            <div className="rounded-[20px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3.5">
-              <div className="flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#fbbf24]">
-                <Zap className="h-3.5 w-3.5" />
-                Quick Actions
-              </div>
-              <div className="mt-3 space-y-1.5">
-                <button
-                  type="button"
-                  onClick={onRunSimulation}
-                  className="flex w-full items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-[10px] font-semibold text-emerald-200 transition-colors hover:bg-emerald-500/15"
-                >
-                  <Play className="h-3.5 w-3.5" />
-                  Run Simulation
-                </button>
-                <button
-                  type="button"
-                  onClick={onOpenReport}
-                  className="flex w-full items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-[10px] font-semibold text-[#dfe8ff] transition-colors hover:bg-white/[0.06]"
-                >
-                  <FileText className="h-3.5 w-3.5" />
-                  Generate Report
-                </button>
-                <button
-                  type="button"
-                  onClick={onOpenCoverageWorkspace}
-                  className="flex w-full items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-[10px] font-semibold text-[#dfe8ff] transition-colors hover:bg-white/[0.06]"
-                >
-                  <Radar className="h-3.5 w-3.5" />
-                  Open Coverage
-                </button>
-              </div>
-            </div>
-
+            {/* Open Issues panel */}
             {issues.length > 0 ? (
-              <div className="rounded-[20px] border border-amber-400/20 bg-amber-500/8 p-3.5">
-                <div className="flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-amber-200">
-                  <TriangleAlert className="h-3.5 w-3.5" />
-                  Top Issues
+              <div className="rounded-[20px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3.5">
+                <div className="flex items-center justify-between">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-300">
+                    OPEN ISSUES ({issues.length})
+                  </div>
+                  <button type="button" onClick={onOpenIssues} className="text-[10px] text-sky-300 hover:text-sky-200">
+                    View all
+                  </button>
                 </div>
                 <div className="mt-2 space-y-1">
-                  {issues.slice(0, 3).map((issue, index) => (
-                    <div key={`issue-${index}`} className="rounded-lg border border-amber-500/15 bg-amber-500/8 px-2.5 py-1.5 text-[9px] text-amber-100/80">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium text-amber-100">{issue.severity}</span>
-                        <span className="text-amber-200/60">{issue.description.slice(0, 60)}</span>
+                  {issues.slice(0, 4).map((issue, index) => (
+                    <button
+                      key={`issue-${index}`}
+                      type="button"
+                      onClick={onOpenIssues}
+                      className="group w-full rounded-xl border border-[#1a2030] bg-white/[0.015] p-2.5 text-left transition-colors hover:border-amber-400/20 hover:bg-amber-500/5"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className={cn("h-2 w-2 flex-none rounded-full",
+                              issue.severity === "critical" ? "bg-red-400" :
+                              issue.severity === "high" ? "bg-orange-400" :
+                              issue.severity === "medium" ? "bg-amber-400" : "bg-sky-400"
+                            )} />
+                            <span className={cn("text-[9px] font-bold uppercase tracking-[0.12em]", issueSeverityTone(issue.severity))}>
+                              {issueSeverityLabel(issue.severity)}
+                            </span>
+                          </div>
+                          <div className="mt-1 text-[10px] leading-[1.4] text-[#c5cde0]">{issue.description}</div>
+                        </div>
+                        <ArrowRight className="mt-0.5 h-3.5 w-3.5 flex-none text-[color:var(--st-muted)] opacity-40 transition-opacity group-hover:opacity-100" />
                       </div>
-                    </div>
+                    </button>
                   ))}
-                  {issues.length > 3 ? (
-                    <div className="text-[9px] text-[#8b96ab]">+{issues.length - 3} more issues</div>
-                  ) : null}
+                  <button
+                    type="button"
+                    onClick={onOpenIssues}
+                    className="w-full rounded-xl border border-dashed border-[color:var(--st-border)] px-3 py-2 text-[10px] text-[#8b96ab] transition-colors hover:text-white"
+                  >
+                    See all issues &amp; recommendations
+                  </button>
                 </div>
               </div>
             ) : null}
-          </aside>
-        </div>
 
-        <div className="rounded-[20px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="mr-2 flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">
-              <Layers3 className="h-3.5 w-3.5" />
-              Modes
-            </div>
-            <button type="button" onClick={onOpenCoverageWorkspace} className="flex items-center gap-1.5 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-[10px] font-semibold text-[#dfe8ff] transition-colors hover:border-sky-400/30 hover:bg-white/[0.06]">
-              <MapIcon className="h-3 w-3" /> Coverage
-            </button>
-            <button type="button" onClick={() => onOpenMode("camera_view", "coverage", "metrics")} className="flex items-center gap-1.5 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-[10px] font-semibold text-[#dfe8ff] transition-colors hover:border-sky-400/30 hover:bg-white/[0.06]">
-              <Camera className="h-3 w-3" /> Camera View
-            </button>
-            <button type="button" onClick={onOpenCameraWall} className="flex items-center gap-1.5 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-[10px] font-semibold text-[#dfe8ff] transition-colors hover:border-sky-400/30 hover:bg-white/[0.06]">
-              <Camera className="h-3 w-3" /> Camera Wall
-            </button>
-            <button type="button" onClick={onOpenPathReplay} className="flex items-center gap-1.5 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-[10px] font-semibold text-[#dfe8ff] transition-colors hover:border-sky-400/30 hover:bg-white/[0.06]">
-              <Play className="h-3 w-3" /> Path Replay
-            </button>
-            <button type="button" onClick={onOpenCompareFixes} className="flex items-center gap-1.5 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-[10px] font-semibold text-[#dfe8ff] transition-colors hover:border-sky-400/30 hover:bg-white/[0.06]">
-              <LayoutDashboard className="h-3 w-3" /> Compare
-            </button>
-            <button type="button" onClick={onOpenReport} className="flex items-center gap-1.5 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-[10px] font-semibold text-[#dfe8ff] transition-colors hover:border-sky-400/30 hover:bg-white/[0.06]">
-              <Radar className="h-3 w-3" /> Report
-            </button>
-            {onOpenDemoScene ? (
-              <button type="button" onClick={onOpenDemoScene} className="flex items-center gap-1.5 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-[10px] font-semibold text-emerald-200 transition-colors hover:bg-emerald-500/15">
-                <Sparkles className="h-3 w-3" /> Seeded Baseline
+            {/* Simulation Assumptions */}
+            <div className="rounded-[20px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3.5">
+              <div className="flex items-center justify-between">
+                <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#8b96ab]">SIMULATION ASSUMPTIONS</div>
+                <button type="button" onClick={onOpenStudio} className="text-[10px] text-sky-300 hover:text-sky-200">Edit</button>
+              </div>
+              <div className="mt-2 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-[#8b96ab]">DORI Model</span>
+                  <span className="text-[10px] font-medium text-[#c5cde0]">{formatDoriStandard(sceneAssumptions.doriStandard)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-[#8b96ab]">Person Height</span>
+                  <span className="text-[10px] font-medium text-[#c5cde0]">{sceneAssumptions.personHeightM} m</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-[#8b96ab]">Lighting</span>
+                  <span className="text-[10px] font-medium text-[#c5cde0]">{sceneAssumptions.timeOfDay === "night" ? "Night Mode" : sceneAssumptions.timeOfDay === "custom" ? "Custom" : "Day Mode"}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-[#8b96ab]">Grid Resolution</span>
+                  <span className="text-[10px] font-medium text-[#c5cde0]">0.25 m</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-[#8b96ab]">Glass Handling</span>
+                  <span className="text-[10px] font-medium text-[#c5cde0]">{sceneAssumptions.nightPenaltyMode === "none" ? "Standard" : "Adjusted"}</span>
+                </div>
+              </div>
+              <button type="button" onClick={onOpenStudio} className="mt-3 w-full text-center text-[10px] text-[#8b96ab] hover:text-white transition-colors">
+                View all assumptions
               </button>
-            ) : null}
-          </div>
+            </div>
+          </aside>
         </div>
 
         <footer className="mt-auto flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[color:var(--st-border)] bg-[color:var(--st-panel)] px-4 py-2.5 text-[11px] text-[color:var(--st-muted)]">
           <div>© 2026 SentinelTwin · Security Simulation Studio · v0.9.0</div>
           <div className="flex items-center gap-3">
-            <span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-200">All systems operational</span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              <span className="text-emerald-200">All systems operational</span>
+            </span>
             <button type="button" className="hover:text-white">Give Feedback</button>
-            <button type="button" className="hover:text-white">Help</button>
+            <button type="button" className="flex h-5 w-5 items-center justify-center rounded-full border border-[color:var(--st-border)] hover:border-sky-400/30 hover:text-white">?</button>
           </div>
         </footer>
       </div>
@@ -2295,6 +2235,107 @@ function WorkspaceLibraryPanel({
             </div>
           )}
       </div>
+    </section>
+  );
+}
+
+type SiteTwinSearchBarProps = {
+  workspaceMemoryQuery: string;
+  setWorkspaceMemoryQuery: (value: string) => void;
+  workspaceMemoryResults: WorkspaceSearchHit[];
+  setTimelineFocusRequest: (request: TimelineFocusRequest | null) => void;
+  onOpenReport: () => void;
+  onOpenMode: (viewMode: ViewMode, preset: WorkspacePreset, bottomTab?: BottomTab) => void;
+  savedProjects: SavedProjectRecord[];
+  onOpenScene?: (scene: SecurityScene) => void;
+  onOpenStudio: () => void;
+  scene: SecurityScene;
+};
+
+function SiteTwinSearchBar({
+  workspaceMemoryQuery,
+  setWorkspaceMemoryQuery,
+  workspaceMemoryResults,
+  setTimelineFocusRequest,
+  onOpenReport,
+  onOpenMode,
+  savedProjects,
+  onOpenScene,
+  onOpenStudio,
+  scene,
+}: SiteTwinSearchBarProps) {
+  const hasQuery = workspaceMemoryQuery.trim().length > 0;
+  const openHit = (hit: WorkspaceSearchHit) => {
+    if (hit.kind === "report") {
+      onOpenReport();
+      return;
+    }
+
+    if (hit.kind === "evidence" || hit.kind === "archive") {
+      if (hit.routeTab) {
+        onOpenMode("map", "coverage", hit.routeTab);
+      } else {
+        onOpenMode("map", "coverage", "timeline");
+      }
+      setTimelineFocusRequest({
+        timestamp: hit.timestamp,
+        query: workspaceMemoryQuery.trim() || hit.title,
+        branchLabel: hit.branchLabel ?? null,
+        eventId: hit.timelineEventId ?? null,
+        source: "launcher",
+      });
+      return;
+    }
+
+    if (hit.kind === "workspace") {
+      const target = savedProjects.find((project) => project.scene.id === hit.sceneId)?.scene
+        ?? (hit.sceneId === scene.id ? scene : null);
+      if (target) {
+        onOpenScene?.(target);
+      }
+      onOpenStudio();
+    }
+  };
+
+  return (
+    <section className="mt-4 rounded-[24px] border border-[color:var(--st-border)] bg-[color:var(--st-panel-2)] p-3">
+      <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
+        <Radar className="h-3.5 w-3.5 text-sky-300" />
+        SITE TWIN SEARCH
+      </div>
+      <div className="mt-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2">
+        <input
+          value={workspaceMemoryQuery}
+          onChange={(event) => setWorkspaceMemoryQuery(event.target.value)}
+          placeholder="Search workspace memory, evidence events, archives, and reports..."
+          className="w-full bg-transparent text-xs text-white placeholder:text-[color:var(--st-muted)] focus:outline-none"
+        />
+      </div>
+      {hasQuery ? (
+        <div className="mt-2 space-y-1.5">
+          {workspaceMemoryResults.length > 0 ? workspaceMemoryResults.map((hit) => (
+            <button
+              key={hit.id}
+              type="button"
+              onClick={() => openHit(hit)}
+              className="w-full rounded-xl border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2 text-left transition-colors hover:border-sky-400/30 hover:bg-white/[0.05]"
+            >
+              <div className="flex items-center gap-2">
+                <span className="rounded-full border border-sky-400/30 bg-sky-500/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.16em] text-sky-200">
+                  {hit.kind}
+                </span>
+                <span className="truncate text-xs font-semibold text-white">{hit.title}</span>
+              </div>
+              <div className="mt-1 text-[10px] text-[color:var(--st-muted)]">{hit.summary}</div>
+              <div className="mt-1 text-[10px] text-[#9db0cf]">{hit.targetSummary}</div>
+            </button>
+          )) : (
+            <div className="rounded-xl border border-dashed border-[color:var(--st-border)] px-3 py-2 text-[10px] text-[color:var(--st-muted)]">
+              No matching workspace memory found for this query.
+            </div>
+          )}
+        </div>
+      ) : null}
     </section>
   );
 }

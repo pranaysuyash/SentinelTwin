@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { PerspectiveCamera } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { ArrowLeft, CircleSmall, VideoOff } from "lucide-react";
+import { ArrowLeft, Camera as CameraIcon, CircleSmall, VideoOff } from "lucide-react";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 import { useStudioStore } from "@/store/studio-store";
@@ -226,25 +226,34 @@ export function CameraViewMode() {
     ?? (activePath ? `${activePath.label} active replay` : undefined);
 
   if (!camera) {
+    const hasCameras = scene.cameras.length > 0;
+    const title = hasCameras ? "Select a camera" : "No cameras in scene";
+    const subtitle1 = hasCameras
+      ? "Choose a camera from the scene to view its simulated feed."
+      : "Add a camera to the site twin before opening Camera View.";
+    const subtitle2 = hasCameras
+      ? "Click a camera in the map view or use the camera selector above."
+      : "Use the Map View editor to place cameras in the scene.";
     return (
       <div className="flex h-full items-center justify-center bg-[#07090d]">
-        <div className="text-center text-[#4a5568]">
-          <p className="text-[11px]">No camera selected</p>
+        <div className="max-w-[320px] text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-sky-400/25 bg-sky-500/10">
+            <CameraIcon className="h-7 w-7 text-sky-300" />
+          </div>
+          <p className="text-sm font-medium text-white">{title}</p>
+          <p className="mt-2 text-xs text-[#4a5568]">{subtitle1}</p>
+          <p className="mt-1 text-xs text-[#4a5568]">{subtitle2}</p>
           <button
             type="button"
-            onClick={() => {
-              setWorkspacePreset("edit");
-              setViewMode("map");
-            }}
-            className="mt-3 text-[10px] text-blue-400 hover:underline"
+            onClick={() => { setWorkspacePreset("edit"); setViewMode("map"); }}
+            className="mt-4 rounded-xl border border-sky-400/30 bg-sky-500/12 px-4 py-2 text-xs font-semibold text-sky-200 transition-colors hover:bg-sky-500/20"
           >
-            Back to Map View
+            {hasCameras ? "Select Camera in Map" : "Open Map View Editor"}
           </button>
         </div>
       </div>
     );
   }
-
   return (
     <div ref={frameRootRef} className="relative h-full w-full overflow-hidden bg-[#07090d]">
       {camera.status === "on" ? (

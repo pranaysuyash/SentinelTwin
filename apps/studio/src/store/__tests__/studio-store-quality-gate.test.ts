@@ -58,10 +58,10 @@ describe("studio store quality gate", () => {
     expect(useStudioStore.getState().bottomTab).toBe("metrics");
     expect(useStudioStore.getState().activeTool).toBe("camera");
     expect(useStudioStore.getState().inspectorTab).toBe("view");
-    expect(useStudioStore.getState().rightDockCollapsed).toBe(true);
-    expect(useStudioStore.getState().bottomDockCollapsed).toBe(true);
-    expect(useStudioStore.getState().dockAttention.right).toBe(true);
-    expect(useStudioStore.getState().dockAttention.bottom).toBe(true);
+    expect(useStudioStore.getState().rightDockCollapsed).toBe(false);
+    expect(useStudioStore.getState().bottomDockCollapsed).toBe(false);
+    expect(useStudioStore.getState().dockAttention.right).toBe(false);
+    expect(useStudioStore.getState().dockAttention.bottom).toBe(false);
 
     if (light) {
       useStudioStore.getState().selectNode(light.id);
@@ -81,7 +81,7 @@ describe("studio store quality gate", () => {
 
     if (criticalZone) {
       useStudioStore.getState().selectNode(criticalZone.id);
-      expect(useStudioStore.getState().rightPanelMode).toBe("inspector");
+      expect(useStudioStore.getState().rightPanelMode).toBe("issues");
       expect(useStudioStore.getState().bottomTab).toBe("issues");
       expect(useStudioStore.getState().activeTool).toBe("zone");
       expect(useStudioStore.getState().inspectorTab).toBe("failures");
@@ -89,7 +89,7 @@ describe("studio store quality gate", () => {
 
     if (privacyZone) {
       useStudioStore.getState().selectNode(privacyZone.id);
-      expect(useStudioStore.getState().rightPanelMode).toBe("inspector");
+      expect(useStudioStore.getState().rightPanelMode).toBe("issues");
       expect(useStudioStore.getState().bottomTab).toBe("issues");
       expect(useStudioStore.getState().activeTool).toBe("zone");
       expect(useStudioStore.getState().inspectorTab).toBe("failures");
@@ -97,7 +97,7 @@ describe("studio store quality gate", () => {
 
     if (door) {
       useStudioStore.getState().selectNode(door.id);
-      expect(useStudioStore.getState().rightPanelMode).toBe("inspector");
+      expect(useStudioStore.getState().rightPanelMode).toBe("security_status");
       expect(useStudioStore.getState().bottomTab).toBe("threat");
       expect(useStudioStore.getState().activeTool).toBe("door_window");
       expect(useStudioStore.getState().inspectorTab).toBe("status");
@@ -105,7 +105,7 @@ describe("studio store quality gate", () => {
 
     if (windowNode) {
       useStudioStore.getState().selectNode(windowNode.id);
-      expect(useStudioStore.getState().rightPanelMode).toBe("inspector");
+      expect(useStudioStore.getState().rightPanelMode).toBe("security_status");
       expect(useStudioStore.getState().bottomTab).toBe("threat");
       expect(useStudioStore.getState().activeTool).toBe("door_window");
       expect(useStudioStore.getState().inspectorTab).toBe("status");
@@ -113,7 +113,7 @@ describe("studio store quality gate", () => {
 
     if (entryPoint) {
       useStudioStore.getState().selectNode(entryPoint.id);
-      expect(useStudioStore.getState().rightPanelMode).toBe("inspector");
+      expect(useStudioStore.getState().rightPanelMode).toBe("security_status");
       expect(useStudioStore.getState().bottomTab).toBe("threat");
     }
 

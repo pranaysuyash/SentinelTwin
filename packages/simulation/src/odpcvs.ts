@@ -1,4 +1,5 @@
 import type { DoriQuality } from "@sentineltwin/core";
+import { OODPCVS_THRESHOLDS, QUALITY_ORDER } from "@sentineltwin/core";
 
 /**
  * IEC 62676-4:2025 OODPCVS (Operator-Observer Detection, Perception, Classification, Verification, Search)
@@ -6,23 +7,13 @@ import type { DoriQuality } from "@sentineltwin/core";
  *
  * Extends DORI (2014) with finer granularity over observation-level qualities and multi-factor
  * adjustments for scene complexity, operator experience, and task criticality.
+ *
+ * The canonical PPM threshold table lives in @sentineltwin/core (OODPCVS_THRESHOLDS).
+ * This module provides the multi-factor enrichment layer on top.
  */
 
-// OODPCVS resolution threshold in PPM (pixels per metre) at the imaging plane.
-// Each quality level maps to the minimum PPM needed to achieve it.
-export const OODPCVS_MIN_PPM: Record<string, number> = {
-  detection: 12,
-  overview: 16,
-  outline: 24,
-  observation: 32,
-  discern: 48,
-  perceive: 64,
-  recognition: 96,
-  characterize: 128,
-  validate: 160,
-  identification: 192,
-  scrutinize: 256,
-};
+/** @deprecated Use OODPCVS_THRESHOLDS from @sentineltwin/core — unified with dori.ts source of truth. */
+export const OODPCVS_MIN_PPM: Record<string, number> = OODPCVS_THRESHOLDS;
 
 /**
  * Scene complexity factors that degrade effective quality.
@@ -72,6 +63,9 @@ export function getCriticalityMargin(criticality: TaskCriticality): number {
 
 /**
  * Compute the OODPCVS quality given PPM and multi-factor adjustments.
+ *
+ * Applies Pop factor (scene complexity × operator experience) and criticality margin
+ * before comparing against the canonical OODPCVS PPM thresholds.
  */
 export function computeOODPCVSQuality(
   ppm: number,
@@ -84,11 +78,12 @@ export function computeOODPCVSQuality(
   const effectivePpm = ppm * popFactor;
   const requiredPpm = effectivePpm * (1 + margin);
 
-  // Walk descending from highest quality to find the best match
-  const levels = Object.entries(OODPCVS_MIN_PPM).reverse();
-  for (const [quality, minPpm] of levels) {
+  for (let i = QUALITY_ORDER.length - 1; i >= 0; i--) {
+    const q = QUALITY_ORDER[i];
+    if (q === "none") continue;
+    const minPpm = OODPCVS_THRESHOLDS[q];
     if (requiredPpm >= minPpm) {
-      return quality as DoriQuality;
+      return q as DoriQuality;
     }
   }
 
@@ -106,10 +101,5 @@ export function meetsOODPCVSRequirement(
   criticality: TaskCriticality = "standard",
 ): boolean {
   const actual = computeOODPCVSQuality(ppm, complexity, experience, criticality);
-  const qualityOrder: DoriQuality[] = [
-    "none", "detection", "overview", "outline", "observation",
-    "discern", "perceive", "recognition", "characterize",
-    "validate", "identification", "scrutinize",
-  ];
-  return qualityOrder.indexOf(actual) >= qualityOrder.indexOf(requiredQuality);
+  return QUALITY_ORDER.indexOf(actual) >= QUALITY_ORDER.indexOf(requiredQuality);
 }

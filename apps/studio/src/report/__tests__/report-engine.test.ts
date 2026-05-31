@@ -68,7 +68,7 @@ describe("report engine", () => {
 
   testWithTimeout("buildReportData produces complete report", { timeout: 15000 }, () => {
     const report = buildReportData(scene, result);
-    const standardsReport = buildReportData(scene, result, { templateId: "oodpcvs-audit" });
+    const standardsReport = buildReportData(scene, result, { templateId: "general-audit" });
 
     expect(report.sceneId).toBe(scene.id);
     expect(report.siteName).toBe(scene.name);
@@ -104,7 +104,7 @@ describe("report engine", () => {
     expect(report.redundancyMatrix).toBeDefined();
     expect(report.redundancyMatrix?.cameraRows.length).toBeGreaterThan(0);
     expect(report.redundancyMatrix?.vulnerableZones.length).toBeGreaterThan(0);
-    expect(standardsReport.template.id).toBe("oodpcvs-audit");
+    expect(standardsReport.template.id).toBe("general-audit");
     expect(standardsReport.template.standardLabel).toBe("IEC 62676-4:2025");
     expect(standardsReport.template.sections.length).toBeGreaterThan(0);
     expect(exportAsMarkdown(standardsReport)).toContain("Standards Template");

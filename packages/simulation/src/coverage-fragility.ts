@@ -1,5 +1,5 @@
 import type { CoverageCellResult, DoriQuality } from "@sentineltwin/core";
-import { DORI_THRESHOLDS, OODPCVS_THRESHOLDS } from "@sentineltwin/core";
+import { QUALITY_ORDER, OODPCVS_THRESHOLDS, DORI_THRESHOLDS } from "@sentineltwin/core";
 
 export interface CellFragility {
   cellX: number;
@@ -21,29 +21,22 @@ const FRAGILE_THRESHOLD = 0.3;
 
 function ppmThresholdForQuality(quality: DoriQuality, isOodpcvs: boolean): number | undefined {
   if (isOodpcvs) {
-    const t = OODPCVS_THRESHOLDS as Record<string, number | undefined>;
-    return t[quality] ?? undefined;
+    return OODPCVS_THRESHOLDS[quality];
   }
-  const t = DORI_THRESHOLDS as Record<string, number | undefined>;
-  return t[quality] ?? undefined;
+  return (DORI_THRESHOLDS as Record<string, number | undefined>)[quality];
 }
-
-const QUALITY_ORDER: DoriQuality[] = [
-  "none", "detection", "overview", "outline", "observation",
-  "discern", "perceive", "recognition", "characterize",
-  "identification", "validate", "scrutinize",
-];
 
 function computeFragilityWithOrder(
   ppm: number,
   quality: DoriQuality,
   isOodpcvs: boolean,
 ): { fragility: number; ppmMargin: number } {
-  const idx = QUALITY_ORDER.indexOf(quality);
-  if (idx <= 0 || idx >= QUALITY_ORDER.length - 1) return { fragility: 0, ppmMargin: 0 };
+  const qOrder = QUALITY_ORDER;
+  const idx = qOrder.indexOf(quality);
+  if (idx <= 0 || idx >= qOrder.length - 1) return { fragility: 0, ppmMargin: 0 };
 
   const lower = ppmThresholdForQuality(quality, isOodpcvs);
-  const nextQuality = QUALITY_ORDER[idx + 1];
+  const nextQuality = qOrder[idx + 1];
   const upper = ppmThresholdForQuality(nextQuality, isOodpcvs);
 
   if (lower == null || upper == null || !Number.isFinite(upper)) {

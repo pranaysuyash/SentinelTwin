@@ -27,7 +27,8 @@ import {
 import { pathLength } from "@/components/workspace/editing/editor-geometry";
 import { samplePathQuality } from "@/components/map/path-quality";
 import { VisibilityTimeline } from "@/components/view/VisibilityTimeline";
-import type { DoriQuality, ScenarioPath } from "@/schema/security-scene";
+import { safeParseSecurityScene, type DoriQuality, type ScenarioPath } from "@/schema/security-scene";
+import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 import { getYawPitchDirection } from "@sentineltwin/core";
 import { getCameraColorForId } from "@/lib/camera-colors";
 import { buildCoverageGrid } from "@sentineltwin/core";
@@ -204,7 +205,17 @@ function buildLegalizedReplayWaypoints(
     blockedBy: undefined as string | undefined,
   }));
 
-  const grid = buildCoverageGrid(scene, 6);
+  const canonicalScene = safeParseSecurityScene(scene);
+  const normalizedScene = canonicalScene.success
+    ? canonicalScene.data
+    : {
+        ...scene,
+        assumptions: {
+          ...createBlankSecurityScene().assumptions,
+          ...scene.assumptions,
+        },
+      };
+  const grid = buildCoverageGrid(normalizedScene, 6);
   const walkableCells = grid.cells.filter((cell) => cell.walkable);
   const legalized: Array<{
     position: [number, number];
@@ -1177,7 +1188,11 @@ export function PathReplayView() {
       <div className="flex items-center justify-between gap-4 border-b border-[#1f2536] bg-[#0b0f17] px-4 py-3">
         <div className="min-w-0">
           <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7dd3fc]">
-            Path Replay - Route Analysis
+            Incident Review — Coverage Replay
+          </div>
+          <div className="mt-1 text-[9px] leading-4 text-[#556076]">
+            Defensive analysis: subject visibility along the selected route.
+            Use the timeline controls below to review camera responsibility and coverage loss events.
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <select

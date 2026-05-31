@@ -1,3 +1,29 @@
+/**
+ * Coverage evaluator — deterministic geometry-based visibility and quality engine.
+ *
+ * Computes per-cell camera coverage using pixel density (PPM), occlusion raycasting,
+ * DORI 2014 / OODPCVS 2025 quality models, lighting context, and environmental penalties.
+ *
+ * ── KNOWN GAPS ──────────────────────────────────────────────────
+ * 1. Seasonal lighting (sun position, exterior lux, twilight) is
+ *    modelled separately in ./seasonal-lighting.ts but NOT integrated
+ *    into the coverage evaluator's getLightingContext(). Daylight
+ *    calculations ignore sun position and window-transmitted ambient
+ *    light. This means interior light levels are time-independent
+ *    during day mode.
+ *
+ *    Path to close: wire computeSeasonalLightState() output into
+ *    getLightingContext() so exterior light varies by time of day
+ *    and geographic location. For now, timeOfDay="day" assumes
+ *    full ambient light (lightLevel=1) everywhere.
+ *
+ * 2. Reflective bounce mirrors across the window's wall plane
+ *    (or Z-axis fallback for unlinked windows). Windows with no
+ *    wallId set cannot compute their wall normal, so the Z-axis
+ *    mirror match is only correct when boxes are unrotated.
+ * ────────────────────────────────────────────────────────────────
+ */
+
 import * as THREE from "three";
 
 import type {
@@ -6,11 +32,21 @@ import type {
   DoriQuality,
   SecurityLightNode,
   SecurityScene,
+  WallNode,
 } from "@sentineltwin/core";
-import { DORI_THRESHOLDS, maxQuality, ppmToOodpcvsQuality, ppmToQuality, qualityToScore } from "@sentineltwin/core";
+import {
+  DORI_THRESHOLDS,
+  getDetectionProbability,
+  maxQuality,
+  ppmToOodpcvsQuality,
+  ppmToQuality,
+  qualityToScore,
+  type PpmThresholds,
+} from "@sentineltwin/core";
 import { getYawPitchDirection, normalizeAngle } from "@sentineltwin/core";
 import { buildCoverageGrid, type GridCell } from "@sentineltwin/core";
 import { computeBlindSpotPenalty, computeMountTiltPenalty } from "./mount-model";
+import { computeOODPCVSQuality } from "./odpcvs";
 import {
   buildVisionColliderMesh,
   getVisionColliderSource,
@@ -71,6 +107,21 @@ function computePixelDensity(camera: CameraNode, distanceM: number) {
   return widthPx / sceneWidthAtDistance;
 }
 
+/**
+ * Light brightness → visibility contribution weights.
+ *
+ * These model the relative illuminance contribution of each brightness level
+ * as a factor of the light's maximum output. Derived from typical commercial
+ * security light lumen ranges (200–12,000 lm) normalized to [0, 1].
+ *
+ * | Brightness | Lumen range  | Weight |
+ * |------------|-------------|--------|
+ * | dim        | 200–500     | 0.25   |
+ * | low        | 500–1,200   | 0.42   |
+ * | medium     | 1,200–3,000 | 0.62   |
+ * | high       | 3,000–6,000 | 0.82   |
+ * | very_high  | 6,000–12,000| 1.0    |
+ */
 const LIGHT_BRIGHTNESS_WEIGHT: Record<SecurityLightNode["brightness"], number> = {
   dim: 0.25,
   low: 0.42,
@@ -133,18 +184,32 @@ function getLightOcclusion(
   return assessOcclusion(pseudoLightCamera, target, raycaster, visionMesh);
 }
 
+/**
+ * Environment risk penalties for backlight, glare, and overexposure.
+ *
+ * These model the PPM degradation each condition causes in practice:
+ * - Backlight reduces subject contrast (face/body in shadow against bright background).
+ * - Environment glare from reflective surfaces washes out detail.
+ * - Overexposed zones lose all detail in bright areas (blown highlights).
+ *
+ * Values are derived from camera sensor dynamic range modelling — a typical
+ * 8-bit sensor (~48 dB DR) loses 15–25% of effective resolution under strong
+ * backlight, and glare/highlight clipping adds 4–18% additional degradation.
+ */
+const BACKLIGHT_PENALTY: Record<string, number> = { none: 0, low: 0.06, medium: 0.14, high: 0.25 };
+const GLARE_ENV_PENALTY: Record<string, number> = { none: 0, low: 0.04, medium: 0.1, high: 0.18 };
+const OVEREXPOSED_PENALTY = 0.08;
+
 function computeEnvironmentRiskPenalty(assumptions: {
   backlightIntensity?: "none" | "low" | "medium" | "high";
   glareIntensity?: "none" | "low" | "medium" | "high";
   overexposedZones?: boolean;
 }): number {
   let penalty = 0;
-  const backlightTable: Record<string, number> = { none: 0, low: 0.06, medium: 0.14, high: 0.25 };
-  penalty += backlightTable[assumptions.backlightIntensity ?? "none"] ?? 0;
-  const glareTable: Record<string, number> = { none: 0, low: 0.04, medium: 0.1, high: 0.18 };
-  penalty += glareTable[assumptions.glareIntensity ?? "none"] ?? 0;
+  penalty += BACKLIGHT_PENALTY[assumptions.backlightIntensity ?? "none"] ?? 0;
+  penalty += GLARE_ENV_PENALTY[assumptions.glareIntensity ?? "none"] ?? 0;
   if (assumptions.overexposedZones) {
-    penalty += 0.08;
+    penalty += OVEREXPOSED_PENALTY;
   }
   return Math.min(1, penalty);
 }
@@ -196,6 +261,24 @@ function getLightingContext(
     return { penalty: envPenalty, lightLevel, illuminatedBy, shadowedBy: [...shadowedBy] };
   }
 
+  /**
+   * Night penalty models effective PPM degradation in low-light conditions.
+   *
+   * Light level thresholds approximate the minimum illuminance (lux) for
+   * each band in a typical security scene:
+   *   0.65+ → ~10 lux (well-lit by security lights)
+   *   0.35+ → ~3 lux (dim corridor with distant lights)
+   *   0.12+ → ~1 lux (starlight + minimal spill)
+   *   below → <0.5 lux (near-dark)
+   *
+   * Camera night mode capabilities determine fallback when light is
+   * insufficient:
+   *   thermal    — 8–14 µm LWIR unaffected by visible light     → 0.08
+   *   low_light  — amplified CMOS with noise reduction          → 0.18
+   *   ir + range — active IR within rated distance              → 0.32
+   *   ir (far)   — IR present but out of range                  → 0.78
+   *   none       — no night capability                           → 0.88
+   */
   let nightPenalty = 0;
   if (lightLevel >= 0.65) nightPenalty = 0.1;
   else if (lightLevel >= 0.35) nightPenalty = 0.24;
@@ -229,24 +312,6 @@ function getClarityMultiplier(camera: CameraNode) {
   }[camera.clarity];
 }
 
-function getDetectionProbability(quality: DoriQuality): number {
-  const table: Record<DoriQuality, number> = {
-    none: 0,
-    detection: 0.25,
-    overview: 0.25,
-    outline: 0.35,
-    observation: 0.5,
-    discern: 0.5,
-    perceive: 0.65,
-    recognition: 0.85,
-    characterize: 0.85,
-    validate: 0.92,
-    identification: 0.99,
-    scrutinize: 0.99,
-  };
-  return table[quality];
-}
-
 function getYawPitchTowardTarget(origin: [number, number, number], target: THREE.Vector3) {
   const direction = target.clone().sub(new THREE.Vector3(...origin)).normalize();
   return {
@@ -273,14 +338,57 @@ function getReasonCodesForLighting(camera: CameraNode, lightingPenalty: number) 
   return reasonCodes;
 }
 
-export function getQualityThresholds(scene: SecurityScene) {
+/**
+ * Return quality thresholds appropriate for the active standard.
+ *
+ * In DORI 2014 mode: returns the scene's user-configurable pixelsPerMeter.
+ * In OODPCVS 2025 mode: returns the canonical OODPCVS thresholds normalized
+ * to the PpmThresholds shape for consumers that need DORI-format thresholds
+ * (getRecognitionAreaPct, getIdentificationAreaPct, etc.).
+ */
+export function getQualityThresholds(scene: SecurityScene): PpmThresholds {
   if (scene.assumptions.doriStandard === "oodpcvs_2025") {
-    // In OODPCVS mode, the standard-defined thresholds are used by ppmToOodpcvsQuality.
-    // This returns DORI thresholds for legacy consumers (getRecognitionAreaPct, etc.).
-    return scene.assumptions.pixelsPerMeter;
+    return {
+      detection: 12,
+      observation: 32,
+      recognition: 96,
+      identification: 192,
+      // match the OODPCVS canonical thresholds for completeness
+    };
   }
-  // dori_2014 mode uses the scene's PPM values
   return scene.assumptions.pixelsPerMeter;
+}
+
+/**
+ * Build a partial CameraEvaluation for early-return paths (camera off,
+ * out of range, out of FOV, blocked by solid).
+ *
+ * Accepts overrides so callers supply only the fields that differ from
+ * the "no coverage" baseline.
+ */
+function makeEmptyEvaluation(overrides: Partial<CameraEvaluation> & { reasonCodes: string[] }): CameraEvaluation {
+  return {
+    quality: "none" as DoriQuality,
+    ppm: 0,
+    probability: 0,
+    visible: false,
+    blockedBy: undefined as string | undefined,
+    inFov: false,
+    withinRange: false,
+    distanceM: Number.MAX_VALUE,
+    hAngleDeg: 0,
+    vAngleDeg: 0,
+    edgePenaltyMultiplier: 0,
+    clarityMultiplier: 1,
+    materialTransmission: 1,
+    glarePenalty: 0,
+    lightingPenalty: 0,
+    lightLevel: 0,
+    illuminatedBy: [],
+    shadowedBy: [],
+    finalPpmMultiplier: 0,
+    ...overrides,
+  };
 }
 
 function assessOcclusion(
@@ -345,56 +453,23 @@ function evaluateCameraAgainstCell(
   ignoredSourceIds: Set<string> = new Set<string>(),
 ): CameraEvaluation {
   if (camera.status !== "on") {
-    return {
-      quality: "none" as DoriQuality,
-      ppm: 0,
-      probability: 0,
-      visible: false,
-      blockedBy: undefined as string | undefined,
-      inFov: false,
+    return makeEmptyEvaluation({
       withinRange: true,
-      distanceM: Number.MAX_VALUE,
-      hAngleDeg: 0,
-      vAngleDeg: 0,
-      edgePenaltyMultiplier: 0,
-      clarityMultiplier: 1,
-      materialTransmission: 1,
-      glarePenalty: 0,
-      lightingPenalty: 0,
       lightLevel: scene.assumptions.timeOfDay === "day" ? 1 : 0,
-      illuminatedBy: [],
-      shadowedBy: [],
-      finalPpmMultiplier: 0,
       reasonCodes: ["CAMERA_OFF"],
-    };
+    });
   }
 
   const origin = new THREE.Vector3(...camera.position);
   const target = new THREE.Vector3(cell.x, targetHeightM, cell.z);
   const distance = origin.distanceTo(target);
   if (distance > camera.rangeM) {
-    return {
-      quality: "none" as DoriQuality,
-      ppm: 0,
-      probability: 0,
-      visible: false,
-      blockedBy: undefined as string | undefined,
-      inFov: false,
+    return makeEmptyEvaluation({
       withinRange: false,
       distanceM: distance,
-      hAngleDeg: 0,
-      vAngleDeg: 0,
-      edgePenaltyMultiplier: 0,
-      clarityMultiplier: 1,
-      materialTransmission: 1,
-      glarePenalty: 0,
-      lightingPenalty: 0,
       lightLevel: scene.assumptions.timeOfDay === "day" ? 1 : 0,
-      illuminatedBy: [],
-      shadowedBy: [],
-      finalPpmMultiplier: 0,
       reasonCodes: ["OUT_OF_RANGE"],
-    };
+    });
   }
 
   const direction = target.clone().sub(origin).normalize();
@@ -409,55 +484,30 @@ function evaluateCameraAgainstCell(
     Math.abs(hAngle) > camera.fovHorizontalDeg / 2 ||
     Math.abs(vAngle) > camera.fovVerticalDeg / 2
     ) {
-    return {
-      quality: "none" as DoriQuality,
-      ppm: 0,
-      probability: 0,
-      visible: false,
-      blockedBy: undefined as string | undefined,
-      inFov: false,
+    return makeEmptyEvaluation({
       withinRange: true,
       distanceM: distance,
       hAngleDeg: hAngle,
       vAngleDeg: vAngle,
-      edgePenaltyMultiplier: 0,
-      clarityMultiplier: 1,
-      materialTransmission: 1,
-      glarePenalty: 0,
-      lightingPenalty: 0,
       lightLevel: scene.assumptions.timeOfDay === "day" ? 1 : 0,
-      illuminatedBy: [],
-      shadowedBy: [],
-      finalPpmMultiplier: 0,
       reasonCodes: ["OUT_OF_FOV"],
-    };
+    });
   }
 
   const occlusion = assessOcclusion(camera, target, raycaster, visionMesh, ignoredSourceIds);
 
   if (occlusion.blocked) {
-    return {
-      quality: "none" as DoriQuality,
-      ppm: 0,
-      probability: 0,
-      visible: false,
+    return makeEmptyEvaluation({
       blockedBy: occlusion.blockedBy,
       inFov: true,
       withinRange: true,
       distanceM: distance,
       hAngleDeg: hAngle,
       vAngleDeg: vAngle,
-      edgePenaltyMultiplier: 0,
-      clarityMultiplier: 1,
       materialTransmission: 0,
-      glarePenalty: 0,
-      lightingPenalty: 0,
       lightLevel: scene.assumptions.timeOfDay === "day" ? 1 : 0,
-      illuminatedBy: [],
-      shadowedBy: [],
-      finalPpmMultiplier: 0,
       reasonCodes: ["BLOCKED_BY_SOLID"],
-    };
+    });
   }
 
   const basePpm = computePixelDensity(camera, distance);
@@ -466,6 +516,16 @@ function evaluateCameraAgainstCell(
   const reasonCodes = new Set<string>();
   let edgePenaltyMultiplier = 1;
 
+  /**
+   * Edge-of-FOV penalty — models optical resolution falloff toward the
+   * periphery of a typical varifocal security lens.
+   *
+   * Angle is the max of |hAngle| and |vAngle| away from the optical axis:
+   *   > 55° → severe falloff (extreme periphery, ~42% effective PPM)
+   *   > 42° → significant falloff (~58%)
+   *   > 28° → moderate falloff (~76%)
+   *   ≤ 28° → negligible (within the central ~56° region)
+   */
   if (edgeAngle > 55) {
     edgePenaltyMultiplier = 0.42;
     reasonCodes.add("EDGE_OF_FOV");
@@ -537,11 +597,19 @@ function evaluateCameraAgainstCell(
   ppm *= 1 - lightingPenalty;
   const finalPpmMultiplier = basePpm > 0 ? ppm / basePpm : 0;
 
-  // Determine cell quality based on the active standard.
   const isOodpcvs = scene.assumptions.doriStandard === "oodpcvs_2025";
-  const quality = isOodpcvs
-    ? ppmToOodpcvsQuality(ppm)
+  const quality: DoriQuality = isOodpcvs
+    ? computeOODPCVSQuality(
+        ppm,
+        scene.assumptions.sceneComplexity,
+        scene.assumptions.operatorExperience,
+        scene.assumptions.taskCriticality,
+      )
     : ppmToQuality(ppm, scene.assumptions.pixelsPerMeter);
+
+  if (isOodpcvs) {
+    reasonCodes.add("OODPCVS_MODE");
+  }
 
   if (quality === "none") {
     reasonCodes.add("LOW_PPM");
@@ -599,6 +667,47 @@ export function createCoverageEvaluator(scene: SecurityScene): CoverageEvaluator
     );
   };
 
+  /**
+   * Compute the mirror position of a camera across a window's wall plane.
+   *
+   * When the window has a wallId, the wall's 2D normal is used for the reflection.
+   * Otherwise defaults to mirroring across the Z axis (aligned with unrotated window boxes).
+   */
+  function mirrorCameraAcrossWindow(
+    cameraPos: [number, number, number],
+    window: (typeof scene.windows)[number],
+  ): [number, number, number] {
+    if (window.wallId) {
+      const wall = scene.walls.find((w) => w.id === window.wallId);
+      if (wall) {
+        const [sx, sz] = wall.start;
+        const [ex, ez] = wall.end;
+        const dx = ex - sx;
+        const dz = ez - sz;
+        const len = Math.hypot(dx, dz);
+        if (len > 0.001) {
+          // Wall normal (perpendicular to wall direction, pointing toward +Z side)
+          const nx = dz / len;
+          const nz = -dx / len;
+          // Use window position as the plane anchor
+          const [wx, , wz] = window.position;
+          const dot = (cameraPos[0] - wx) * nx + (cameraPos[2] - wz) * nz;
+          return [
+            cameraPos[0] - 2 * dot * nx,
+            cameraPos[1],
+            cameraPos[2] - 2 * dot * nz,
+          ];
+        }
+      }
+    }
+    // Fallback: mirror across Z axis (matching unrotated BoxGeometry windows)
+    return [
+      cameraPos[0],
+      cameraPos[1],
+      (2 * window.position[2]) - cameraPos[2],
+    ];
+  }
+
   const evaluateReflectiveBounce = (
     camera: CameraNode,
     cell: GridCell,
@@ -607,15 +716,20 @@ export function createCoverageEvaluator(scene: SecurityScene): CoverageEvaluator
   ) => {
     let bestCandidate: { evaluation: CameraEvaluation; windowLabel: string } | null = null;
     const target = new THREE.Vector3(cell.x, targetHeightM, cell.z);
+    const cameraPos: [number, number, number] = [camera.position[0], camera.position[1], camera.position[2]];
 
     for (const window of scene.windows) {
       if (window.state !== "reflective") continue;
 
-      const cameraSide = camera.position[2] - window.position[2];
+      // Camera and target must be on opposite sides of the window plane
+      // for reflection to reach behind the window.
+      const cameraSide = cameraPos[2] - window.position[2];
       const targetSide = target.z - window.position[2];
-      if (cameraSide === 0 || targetSide === 0 || Math.sign(cameraSide) === Math.sign(targetSide)) {
+      if (Math.abs(cameraSide) < 0.001 || Math.abs(targetSide) < 0.001 || Math.sign(cameraSide) === Math.sign(targetSide)) {
         continue;
       }
+
+      const mirroredPos = mirrorCameraAcrossWindow(cameraPos, window);
 
       const windowVisibility = evaluatePoint(camera, [window.position[0], window.position[2]], window.position[1]);
       if (!windowVisibility.visible) {
@@ -624,11 +738,7 @@ export function createCoverageEvaluator(scene: SecurityScene): CoverageEvaluator
 
       const virtualCamera: CameraNode = {
         ...structuredClone(camera),
-        position: [
-          camera.position[0],
-          camera.position[1],
-          (2 * window.position[2]) - camera.position[2],
-        ],
+        position: mirroredPos,
       };
       const { yawDeg, pitchDeg } = getYawPitchTowardTarget(virtualCamera.position, target);
       virtualCamera.yawDeg = yawDeg;
@@ -655,8 +765,13 @@ export function createCoverageEvaluator(scene: SecurityScene): CoverageEvaluator
         directEvaluation.ppm + reflectiveBoost,
       );
       const isOodpcvs = scene.assumptions.doriStandard === "oodpcvs_2025";
-      const bouncedQuality = isOodpcvs
-        ? ppmToOodpcvsQuality(bouncedPpm)
+      const bouncedQuality: DoriQuality = isOodpcvs
+        ? computeOODPCVSQuality(
+            bouncedPpm,
+            scene.assumptions.sceneComplexity,
+            scene.assumptions.operatorExperience,
+            scene.assumptions.taskCriticality,
+          )
         : ppmToQuality(bouncedPpm, scene.assumptions.pixelsPerMeter);
 
       const candidate: CameraEvaluation = {

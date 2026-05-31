@@ -290,4 +290,82 @@ describe("computeCoverageCells occlusion handling", () => {
     expect(visibleCell?.cameraEvaluations?.cam_short?.visible).toBe(true);
   });
 
+  describe("reflective bounce", () => {
+    test("improves quality for a cell behind a reflective window", () => {
+      const width = 8;
+      const depth = 6;
+      const scene = createTestScene({
+        width,
+        depth,
+        walls: [
+          { id: "wall_left", nodeType: "wall", label: "Left", start: [0, 0], end: [0, depth], heightM: 3, thicknessM: 0.2, material: "solid", visionTransmission: 0, source: "manual", reviewStatus: "unreviewed", sourceTrace: "", geometryValidity: "valid" },
+          { id: "wall_right", nodeType: "wall", label: "Right", start: [width, 0], end: [width, depth], heightM: 3, thicknessM: 0.2, material: "solid", visionTransmission: 0, source: "manual", reviewStatus: "unreviewed", sourceTrace: "", geometryValidity: "valid" },
+          { id: "wall_top", nodeType: "wall", label: "Top", start: [0, 0], end: [width, 0], heightM: 3, thicknessM: 0.2, material: "solid", visionTransmission: 0, source: "manual", reviewStatus: "unreviewed", sourceTrace: "", geometryValidity: "valid" },
+          { id: "wall_bottom", nodeType: "wall", label: "Bottom", start: [0, depth], end: [width, depth], heightM: 3, thicknessM: 0.2, material: "solid", visionTransmission: 0, source: "manual", reviewStatus: "unreviewed", sourceTrace: "", geometryValidity: "valid" },
+        ],
+        cameras: [
+          createTestCamera({
+            id: "cam_bounce",
+            position: [1.5, 2.5, 1],
+            yawDeg: 90,
+            pitchDeg: -25,
+            mountType: "wall",
+          }),
+        ],
+        windows: [
+          {
+            id: "window_reflective",
+            nodeType: "window" as const,
+            label: "Reflective Glass",
+            position: [4, 1.5, 3],
+            dimensions: [1, 1.5, 0.05],
+            state: "reflective" as const,
+            visionTransmission: 0.25,
+            source: "manual",
+            reviewStatus: "unreviewed",
+            sourceTrace: "",
+            geometryValidity: "valid",
+          },
+        ],
+      });
+
+      // Force rear wall at depth so there's walkable cells behind the window
+      const cells = computeCoverageCells(scene, 4);
+      const behindWindow = findCellNear(cells, 5.5, 3);
+
+      expect(behindWindow.cameraEvaluations?.cam_bounce).toBeDefined();
+      expect(behindWindow.cameraEvaluations?.cam_bounce?.reasonCodes).toContain("REFLECTIVE_BOUNCE");
+    });
+  });
+
+  describe("OODPCVS quality mode", () => {
+    test("computes quality with Pop factor adjustments when doriStandard is oodpcvs_2025", () => {
+      const scene = createTestScene({
+        cameras: [
+          createTestCamera({
+            position: [2, 2.5, 2],
+            yawDeg: 0,
+            pitchDeg: -35,
+            rangeM: 12,
+          }),
+        ],
+        assumptions: {
+          doriStandard: "oodpcvs_2025",
+          sceneComplexity: "complex",
+          operatorExperience: "novice",
+          taskCriticality: "high",
+        },
+      });
+
+      const evaluator = createCoverageEvaluator(scene);
+      const evaluation = evaluator.evaluatePoint(scene.cameras[0], [2.875, 1.125]);
+
+      expect(evaluation.quality).not.toBe("none");
+      expect(evaluation.reasonCodes).toContain("OODPCVS_MODE");
+      // Pop factor: complex + novice = 0.5, high criticality margin = 0.2
+      // So effective PPM is roughly ppm * 0.5 * 1.2 = ppm * 0.6
+      expect(evaluation.finalPpmMultiplier).toBeGreaterThan(0);
+    });
+  });
+
 });

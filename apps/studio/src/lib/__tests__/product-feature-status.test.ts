@@ -16,9 +16,9 @@ describe("product feature status", () => {
     expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Workspace account bridge" && entry.detail.includes("plan posture, soft quota, and entitlements"))).toBe(true);
     expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Scan Site (manual-assisted)" && entry.status === "Preview")).toBe(true);
     expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Scan Site (manual-assisted)" && entry.detail.includes("AI segmentation/depth is not implemented yet"))).toBe(true);
-    expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Guided scan reconstruction" && entry.status === "Preview")).toBe(true);
-    expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Guided scan reconstruction" && entry.detail.includes("opens the existing scan wizard directly"))).toBe(true);
-    expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Guided scan reconstruction" && entry.detail.includes("manual review"))).toBe(true);
+    expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature.startsWith("Guided scan reconstruction") && entry.status === "Preview")).toBe(true);
+    expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature.startsWith("Guided scan reconstruction") && entry.detail.includes("opens the existing scan wizard directly"))).toBe(true);
+    expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature.startsWith("Guided scan reconstruction") && entry.detail.includes("manual review"))).toBe(true);
     expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Real footage verification" && entry.status === "Preview")).toBe(true);
     expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Real footage verification" && entry.detail.includes("reference-frame upload"))).toBe(true);
     expect(PRODUCT_FEATURE_STATUS.some((entry) => entry.feature === "Real footage verification" && entry.detail.includes("manual comparison"))).toBe(true);

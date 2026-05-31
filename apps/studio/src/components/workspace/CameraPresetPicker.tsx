@@ -1,6 +1,7 @@
 "use client";
 
-import { Crosshair, Expand, Maximize, RotateCw } from "lucide-react";
+import React from "react";
+import { Crosshair, Expand, Maximize, RotateCw, X } from "lucide-react";
 
 import { cn } from "@/lib/cn";
 import { useStudioStore } from "@/store/studio-store";
@@ -36,7 +37,32 @@ export function CameraPresetPicker() {
   const setSelectedPresetId = useStudioStore((s) => s.setCameraPresetId);
   const selectedPreset = getCameraPresetImpl(selectedPresetId);
 
+  const [collapsed, setCollapsed] = React.useState(false);
+
   if (activeTool !== "camera") return null;
+
+  if (collapsed) {
+    return (
+      <button
+        type="button"
+        onClick={() => setCollapsed(false)}
+        className="flex items-center gap-2 rounded-xl border border-[#1f2536] bg-[#0d1017]/96 px-3 py-2 shadow-2xl shadow-black/35 backdrop-blur-md transition-colors hover:border-[#2d3750] hover:bg-[#111521]"
+      >
+        <div
+          className={cn(
+            "flex h-6 w-6 items-center justify-center rounded-md border border-[#24314a] bg-[#101622]",
+            selectedPreset ? "text-blue-200" : "text-[#93a4bf]",
+          )}
+        >
+          {selectedPreset ? PRESET_ICONS[selectedPreset.id] ?? <Maximize className="h-3 w-3" /> : <Maximize className="h-3 w-3" />}
+        </div>
+        <span className="text-[10px] font-semibold text-[#d2d9e8]">{selectedPreset ? selectedPreset.label : "Camera Presets"}</span>
+        <span className="rounded-full border border-[#1f2536] bg-[#111521] px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] text-[#7d8aa4]">
+          Open
+        </span>
+      </button>
+    );
+  }
 
   return (
     <div className="w-[560px] rounded-2xl border border-[#1f2536] bg-[#0d1017]/96 p-2.5 shadow-2xl shadow-black/35 backdrop-blur-md">
@@ -49,11 +75,21 @@ export function CameraPresetPicker() {
             Pick the camera profile before placing a new camera. The preset rail stays canonical, and the same preset can also be applied to the selected camera from the inspector.
           </div>
         </div>
-        <div className="shrink-0 rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1 text-right">
-          <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Active</div>
-          <div className="mt-0.5 text-[10px] font-semibold text-[#d2d9e8]">
-            {selectedPreset ? selectedPreset.label : "Custom camera"}
+        <div className="flex items-start gap-2">
+          <div className="shrink-0 rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1 text-right">
+            <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Active</div>
+            <div className="mt-0.5 text-[10px] font-semibold text-[#d2d9e8]">
+              {selectedPreset ? selectedPreset.label : "Custom camera"}
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={() => setCollapsed(true)}
+            className="shrink-0 rounded-lg border border-[#1f2536] bg-[#111521] p-1.5 text-[#7b889f] transition-colors hover:border-[#2d3750] hover:text-[#d2d9e8]"
+            aria-label="Close camera preset picker"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
 

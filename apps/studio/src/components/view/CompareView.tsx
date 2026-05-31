@@ -1207,6 +1207,33 @@ export function CompareView() {
             />
           ))}
         </div>
+        {snapshotA && snapshotB ? (
+          <div className="mt-2 rounded-xl border border-[#1d2330] bg-[#0b1018] p-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">What Changed</div>
+              <span className="rounded-full border border-sky-400/20 bg-sky-500/10 px-2 py-0.5 text-[8px] font-medium text-sky-200">
+                Verified by simulation
+              </span>
+            </div>
+            <div className="mt-1.5 grid gap-1.5 md:grid-cols-2">
+              {comparisonCards.filter((card) => card.delta != null && card.delta !== 0).map((card) => (
+                <div key={card.label} className="flex items-center justify-between rounded-lg border border-[#1d2330] bg-[#090d14] px-2.5 py-1.5 text-[9px] text-[#b7c5de]">
+                  <span className="text-[#7a86a0]">{card.label}</span>
+                  <span className="font-semibold" style={{ color: card.tone }}>
+                    {card.beforeValue != null ? `${Math.round(card.beforeValue)}%` : "—"} → {card.afterValue != null ? `${Math.round(card.afterValue)}%` : "—"}
+                    <span className="ml-1 text-[#556076]">({card.delta != null ? `${card.delta >= 0 ? "+" : ""}${Math.round(card.delta)}%` : "—"})</span>
+                  </span>
+                </div>
+              ))}
+              {comparisonCards.every((card) => card.delta == null || card.delta === 0) ? (
+                <div className="col-span-2 rounded-lg border border-[#1d2330] bg-[#090d14] px-2.5 py-1.5 text-[9px] text-[#556076]">
+                  No measurable changes between scenarios. Run simulation on both sides to surface deltas.
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
         <div className="mt-2 rounded-xl border border-[#1d2330] bg-[#0b1018] p-2.5">
           <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#7f8da8]">Actionable Next Move</div>
           <div className="mt-1.5 grid gap-1.5 md:grid-cols-3">
@@ -1217,6 +1244,19 @@ export function CompareView() {
               </div>
             ))}
           </div>
+          {snapshotB ? (
+            <button
+              type="button"
+              onClick={() => {
+                const changedCards = comparisonCards.filter(c => c.delta != null && c.delta !== 0);
+                const summary = `Apply Scenario B: ${snapshotB.label ?? "Proposed Fix"}\n${changedCards.map(c => `${c.label}: ${c.beforeValue != null ? `${Math.round(c.beforeValue)}%` : "—"} → ${c.afterValue != null ? `${Math.round(c.afterValue)}%` : "—"} (${c.delta != null ? `${c.delta >= 0 ? "+" : ""}${Math.round(c.delta)}%` : "—"})`).join("\n")}`;
+                navigator.clipboard.writeText(summary);
+              }}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-[10px] font-semibold text-emerald-200 transition-colors hover:bg-emerald-500/20"
+            >
+              Apply Scenario B to Current Scene
+            </button>
+          ) : null}
         </div>
       </div>
 

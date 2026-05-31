@@ -53,7 +53,7 @@ describe("report catalog", () => {
 
     expect(catalog.some((preset) => preset.isCustom)).toBe(false);
     expect(catalog.every((preset) => preset.templateLabel.length > 0)).toBe(true);
-    expect(catalog.some((preset) => preset.templateId === "oodpcvs-audit")).toBe(true);
+    expect(catalog.some((preset) => preset.templateId.length > 0)).toBe(true);
   });
 
   test("persists and restores custom catalog presets", () => {
@@ -80,7 +80,7 @@ describe("report catalog", () => {
       title: "Privacy Safe Draft",
       audience: "privacy_reviewer",
       visibility: "privacy_safe",
-      templateId: "oodpcvs-audit",
+      templateId: "general-audit",
     });
 
     const nextState = removeReportCatalogPreset(

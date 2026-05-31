@@ -10,6 +10,7 @@ import {
   describeAiProviderSelection,
 } from "@/agents/provider-selection";
 import { buildSimulationSummary } from "@/agents/ReportAgent";
+import type { SecurityReport } from "@/agents/ReportAgent";
 import type { SceneOperation } from "@/schema/SceneOperation";
 import { applySceneOperation } from "@/lib/applySceneOperation";
 import { createObstructionNode, createSecurityLightNode } from "@/lib/node-factory";
@@ -854,16 +855,7 @@ export function useAiCommand() {
       const reportPayload = await reportResponse.json() as {
         ok: boolean;
         error?: string;
-        report?: {
-          title: string;
-          siteName: string;
-          generatedAt: string;
-          executiveSummary: string;
-          sections: Array<{ heading: string; content: string }>;
-          recommendations: string[];
-          assumptions: string[];
-          limitations: string[];
-        };
+        report?: SecurityReport;
       };
       if (!reportPayload.ok || !reportPayload.report) {
         throw new Error(reportPayload.error ?? "Report generation failed.");

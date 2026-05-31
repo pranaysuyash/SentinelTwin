@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+@theme {
+  --color-st-surface:      #0b0f17;
+  --color-st-surface-alt:  #0d1017;
+  --color-st-panel:        #111521;
+  --color-st-panel-hover:  #171e30;
+  --color-st-border:       #1f2536;
+  --color-st-border-sub:   #24283a;
+  --color-st-border-hover: #2d3750;
+  --color-st-text:         #d2d9e8;
+  --color-st-text-muted:   #7b889f;
+  --color-st-text-dim:     #556076;
+  --color-st-text-heading: #e6ebf7;
+  --color-st-accent:       #60a5fa;
+  --color-st-accent-bg:    rgba(96,165,250,0.10);
+}
+
 :root {
   color-scheme: dark;
   --bg:           #0b0c10;
@@ -17,6 +33,19 @@
   --amber:        #f59e0b;
   --red:          #ef4444;
   --red-dim:      #7f1d1d;
+  /* Component color tokens — map to the canonical hard-coded palette */
+  --st-surface:       #0b0f17;
+  --st-surface-alt:   #0d1017;
+  --st-panel:         #111521;
+  --st-panel-hover:   #171e30;
+  --st-border:        #1f2536;
+  --st-border-sub:    #24283a;
+  --st-border-hover:  #2d3750;
+  --st-text:          #d2d9e8;
+  --st-text-muted:    #7b889f;
+  --st-text-dim:      #556076;
+  --st-text-heading:  #e6ebf7;
+  --st-accent:        #60a5fa;
 }
 
 :root[data-theme="light"] {

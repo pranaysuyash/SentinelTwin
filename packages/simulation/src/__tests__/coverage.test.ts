@@ -296,6 +296,9 @@ describe("computeCoverageCells occlusion handling", () => {
       // at x=3, z=2, full-height. Cell behind the window at x≈5, z≈3.
       // The direct ray crosses the window at the window plane (z=2).
       // The reflected camera sits at z=3 and sees the cell without hitting the window.
+      //
+      // IMPORTANT: createTestScene ignores the windows option (line 191 always sets []).
+      // Must set scene.windows AFTER scene creation.
       const scene = createTestScene({
         width: 6,
         depth: 5,
@@ -305,27 +308,26 @@ describe("computeCoverageCells occlusion handling", () => {
             position: [1, 2.5, 1],
             yawDeg: 90,
             pitchDeg: -20,
-            mountType: "wall",
             rangeM: 12,
             fovHorizontalDeg: 80,
           }),
         ],
-        windows: [
-          {
-            id: "window_reflective",
-            nodeType: "window" as const,
-            label: "Reflective Glass",
-            position: [3, 1.5, 2],
-            dimensions: [1, 3, 0.05],
-            state: "reflective" as const,
-            visionTransmission: 0.25,
-            source: "manual",
-            reviewStatus: "unreviewed",
-            sourceTrace: "",
-            geometryValidity: "valid",
-          },
-        ],
       });
+      scene.windows = [
+        {
+          id: "window_reflective",
+          nodeType: "window" as const,
+          label: "Reflective Glass",
+          position: [3, 1.5, 2],
+          dimensions: [1, 3, 0.05],
+          state: "reflective" as const,
+          visionTransmission: 0.25,
+          source: "manual",
+          reviewStatus: "unreviewed",
+          sourceTrace: "",
+          geometryValidity: "valid",
+        },
+      ];
 
       const cells = computeCoverageCells(scene, 4);
       const behindWindow = findCellNear(cells, 5, 3);

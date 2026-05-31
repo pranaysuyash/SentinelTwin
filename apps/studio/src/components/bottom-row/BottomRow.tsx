@@ -85,7 +85,7 @@ function SnapshotsPanel() {
           </div>
         ))}
 
-        <button className="flex w-[88px] flex-shrink-0 flex-col items-center justify-center rounded-xl border border-[#1f2536] bg-[#0b0f17] text-[#7f8ca6] transition-colors hover:border-[#32384d] hover:text-white">
+        <button type="button" className="flex w-[88px] flex-shrink-0 flex-col items-center justify-center rounded-xl border border-[#1f2536] bg-[#0b0f17] text-[#7f8ca6] transition-colors hover:border-[#32384d] hover:text-white">
           <Plus className="h-4 w-4" />
           <span className="mt-1 text-[10px]">New Snapshot</span>
         </button>

@@ -245,7 +245,7 @@ export function CommandBar() {
               <div className="flex items-start gap-2 text-[11px] text-red-300">
                 <span className="mt-0.5">⚠</span>
                 <span className="flex-1">{status.message}</span>
-                <button onClick={dismissError} className="text-red-400/60 hover:text-red-300">
+                <button type="button" onClick={dismissError} className="text-red-400/60 hover:text-red-300">
                   <X className="h-3 w-3" />
                 </button>
               </div>

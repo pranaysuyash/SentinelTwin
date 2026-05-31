@@ -117,8 +117,8 @@ function FirstRunGuide({ onClose, onOpenHelp }: { onClose: () => void; onOpenHel
           <li>4. Preview Fix, compare before/after, then apply.</li>
         </ol>
         <div className="mt-3 flex items-center justify-end gap-2">
-          <button onClick={onOpenHelp} className="rounded border border-[#2d3750] px-3 py-1.5 text-[11px] text-[#cfe0ff] hover:bg-[#161f31]">Open Help</button>
-          <button onClick={onClose} className="rounded border border-emerald-500/35 px-3 py-1.5 text-[11px] text-emerald-300 hover:bg-emerald-500/10">Start</button>
+          <button type="button" onClick={onOpenHelp} className="rounded border border-[#2d3750] px-3 py-1.5 text-[11px] text-[#cfe0ff] hover:bg-[#161f31]">Open Help</button>
+          <button type="button" onClick={onClose} className="rounded border border-emerald-500/35 px-3 py-1.5 text-[11px] text-emerald-300 hover:bg-emerald-500/10">Start</button>
         </div>
       </div>
     </div>

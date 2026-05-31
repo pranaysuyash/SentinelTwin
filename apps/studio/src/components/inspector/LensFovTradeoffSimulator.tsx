@@ -55,8 +55,7 @@ function DoriRangeBar({
           className="h-full rounded transition-all duration-200"
           style={{
             width: `${pct}%`,
-            backgroundColor: `${color}44`,
-            borderRight: `2px solid ${color}`,
+            background: `linear-gradient(90deg, ${color}44, ${color}88)`,
           }}
         />
       </div>

@@ -32,13 +32,13 @@ import { useStudioStore } from "@/store/studio-store";
 import type { SceneSnapshot } from "@/schema/security-scene";
 
 const SOURCE_STYLES: Record<string, { label: string; className: string; variant: "green" | "blue" | "amber" | "gray" }> = {
-  manual: { label: "Manual", className: "border-l-[#22c55e]", variant: "green" },
-  scan: { label: "Scan", className: "border-l-[#f59e0b]", variant: "amber" },
-  ai: { label: "AI", className: "border-l-[#60a5fa]", variant: "blue" },
-  import: { label: "Import", className: "border-l-[#94a3b8]", variant: "gray" },
-  preset: { label: "Preset", className: "border-l-[#a78bfa]", variant: "gray" },
-  demo: { label: "Reference", className: "border-l-[#64748b]", variant: "gray" },
-  simulation: { label: "Simulation", className: "border-l-[#22c55e]", variant: "green" },
+  manual: { label: "Manual", className: "bg-emerald-500/8", variant: "green" },
+  scan: { label: "Scan", className: "bg-amber-500/8", variant: "amber" },
+  ai: { label: "AI", className: "bg-blue-500/8", variant: "blue" },
+  import: { label: "Import", className: "bg-slate-400/8", variant: "gray" },
+  preset: { label: "Preset", className: "bg-violet-400/8", variant: "gray" },
+  demo: { label: "Reference", className: "bg-slate-500/8", variant: "gray" },
+  simulation: { label: "Simulation", className: "bg-emerald-500/8", variant: "green" },
 };
 
 type GraphPoint = { x: number; y: number };
@@ -1728,7 +1728,7 @@ export function SceneIntelligenceTab() {
                 sourceRows.map(([source, count]) => {
                   const style = SOURCE_STYLES[source] ?? SOURCE_STYLES.manual;
                   return (
-                    <div key={source} className={cn("rounded-md border border-[#1e2130] border-l-4 bg-[#0b0f17] px-3 py-2", style.className)}>
+                    <div key={source} className={cn("rounded-md border border-[#1e2130] px-3 py-2", style.className)}>
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#dbe2f0]">{style.label}</span>
                         <Badge variant={style.variant}>{count}</Badge>

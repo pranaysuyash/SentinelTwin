@@ -52,15 +52,15 @@ export function BulkCameraEditor() {
             <input type="number" value={rangeDelta} onChange={(e) => setRangeDelta(Number(e.target.value || 0))} className="w-full rounded border border-[#2a3248] bg-[#111521] px-2 py-1" />
           </label>
         </div>
-        <button onClick={applyAll} className="mt-3 rounded border border-sky-500/35 px-3 py-1.5 text-[10px] text-sky-200 hover:bg-sky-500/10">Apply to All Cameras</button>
+        <button type="button" onClick={applyAll} className="mt-3 rounded border border-sky-500/35 px-3 py-1.5 text-[10px] text-sky-200 hover:bg-sky-500/10">Apply to All Cameras</button>
       </div>
 
       <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-3">
         <div className="text-[11px] font-semibold text-white">Night Mode Batch</div>
         <div className="mt-2 flex gap-2">
-          <button onClick={() => setNightAll("none")} className="rounded border border-[#2a3248] px-2 py-1">Off</button>
-          <button onClick={() => setNightAll("ir")} className="rounded border border-[#2a3248] px-2 py-1">IR</button>
-          <button onClick={() => setNightAll("low_light")} className="rounded border border-[#2a3248] px-2 py-1">Low-light</button>
+          <button type="button" onClick={() => setNightAll("none")} className="rounded border border-[#2a3248] px-2 py-1">Off</button>
+          <button type="button" onClick={() => setNightAll("ir")} className="rounded border border-[#2a3248] px-2 py-1">IR</button>
+          <button type="button" onClick={() => setNightAll("low_light")} className="rounded border border-[#2a3248] px-2 py-1">Low-light</button>
         </div>
       </div>
     </div>

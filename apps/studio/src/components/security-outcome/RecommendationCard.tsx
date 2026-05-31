@@ -56,16 +56,16 @@ export function RecommendationCard({ recommendation }: { recommendation: Outcome
       <div className="mt-2 flex gap-1 text-[10px]">
         {recommendation.verificationLabel === "verified_by_simulation" ? (
           <>
-            <button onClick={doPreview} className="rounded border border-[#2d3750] px-2 py-1 text-[#bcd3ff] hover:bg-[#1a2233]">Preview Fix</button>
-            <button onClick={() => store.setBottomTab("beforeafter")} className="rounded border border-[#2d3750] px-2 py-1 text-[#bcd3ff] hover:bg-[#1a2233]">Compare Fix</button>
-            <button onClick={doApply} className="rounded border border-emerald-500/30 px-2 py-1 text-emerald-300 hover:bg-emerald-500/10">Apply Fix</button>
+            <button type="button" onClick={doPreview} className="rounded border border-[#2d3750] px-2 py-1 text-[#bcd3ff] hover:bg-[#1a2233]">Preview Fix</button>
+            <button type="button" onClick={() => store.setBottomTab("beforeafter")} className="rounded border border-[#2d3750] px-2 py-1 text-[#bcd3ff] hover:bg-[#1a2233]">Compare Fix</button>
+            <button type="button" onClick={doApply} className="rounded border border-emerald-500/30 px-2 py-1 text-emerald-300 hover:bg-emerald-500/10">Apply Fix</button>
           </>
         ) : recommendation.verificationLabel === "requires_user_input" ? (
           <span className="text-[#7384a5]">Requires manual action (add camera or light)</span>
         ) : (
           <>
-            <button onClick={doPreview} className="rounded border border-[#2d3750] px-2 py-1 text-[#bcd3ff] hover:bg-[#1a2233]">Try This Fix</button>
-            <button onClick={doApply} className="rounded border border-[#2d3750] px-2 py-1 text-[#bcd3ff] hover:bg-[#1a2233]">Apply</button>
+            <button type="button" onClick={doPreview} className="rounded border border-[#2d3750] px-2 py-1 text-[#bcd3ff] hover:bg-[#1a2233]">Try This Fix</button>
+            <button type="button" onClick={doApply} className="rounded border border-[#2d3750] px-2 py-1 text-[#bcd3ff] hover:bg-[#1a2233]">Apply</button>
           </>
         )}
       </div>

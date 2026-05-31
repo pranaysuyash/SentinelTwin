@@ -4633,3 +4633,39 @@ Fixed the `CameraLiveConnectionEventRecord` and `WorkspaceApprovalRouteSummary` 
 - Decision: Treat `evidenceArtifacts` and `mismatchReports` as first-class SecurityScene fields across schema, scene skeletons, migrations, and compiler boundaries; keep camera live transport/auth challenge fields optional but schema-defined for provenance fidelity.
 - Rationale: Evidence-backed verification cannot be durable if scene contracts differ by package. Schema parity plus migration support prevents regressions while preserving older scene imports.
 - Consequence: Studio scene parsing now migrates legacy comment ids and defaults, scene defaults include evidence arrays, core/studio schema parity is restored, and simulation callers compile against one scene contract.
+
+## D-281 - Collision layer schema for three-layer entity model
+
+- Date: 2026-05-31
+- Status: Accepted
+- Context: Principle 3 ("three-layer entities") was aspirational — the schema had no fields for controlling visual mesh, physics collider, or vision collider participation per node. The vision collider mesh builder included all physical nodes unconditionally.
+- Decision: Add `collisionLayerSchema` as an optional field on all physical node types (walls, doors, windows, cameras, security lights, obstructions, sensors). Each field (`visualMesh`, `physicsCollider`, `visionCollider`) defaults to `true`. The `vision-collider-mesh.ts` builder now skips nodes where `visionCollider: false`.
+- Rationale: Per-node collision layer control enables decorative objects that shouldn't block cameras, invisible collision volumes for pathfinding, and fine-grained rendering control without duplicate scene representations.
+- Consequence: Physical nodes carry an optional `collisionLayer` object. Existing scenes without the field parse correctly (optional with Zod defaults downstream). `buildVisionColliderMesh` respects `visionCollider`. `physicsCollider` field is reserved for future nav-mesh integration.
+
+## D-282 - generateNodeId utility and AnyNode type
+
+- Date: 2026-05-31
+- Status: Accepted
+- Context: ID generation was scattered across modules with ad-hoc implementations (e.g. `Math.random().toString(36)` in `reconstruction-pipeline.ts` and `organization-store.ts`). No centralized `AnyNode` union type existed.
+- Decision: Add `generateNodeId(prefix)` to core schema with typed `IdPrefix` union covering all 17 ID prefixes enforced by Zod `.startsWith()`. Add `AnyNode` as the canonical union of all node types, with `AnyEditableNode = AnyNode` as a backward-compatible alias.
+- Rationale: Centralized ID generation ensures prefix compliance without callers needing to know Zod constraints. `AnyNode` provides a single union type for generic node operations.
+- Consequence: New code should use `generateNodeId("cam_")` instead of ad-hoc random strings. `AnyNode` is available for type-safe generic node arrays.
+
+## D-283 - getNodeById flat lookup utility
+
+- Date: 2026-05-31
+- Status: Accepted
+- Context: The store had no `getNodeById` method. All node lookups were O(n) linear scans via `Array.find()` on individual node type arrays. Callers had to know which array to search.
+- Decision: Add `findNodeInScene(scene, id)` pure utility and `getNodeById(id)` store method that scans all 11 node collections and returns `AnyNode | null`.
+- Rationale: Provides a single entry point for node lookup without callers knowing the node type. The O(n) scan is acceptable for current scene sizes (<2000 nodes). A flat `Record<id, AnyNode>` dict requires a full schema migration (D-284) and is deferred.
+- Consequence: `store.getState().getNodeById("cam_abc123")` returns the camera node or null. Implementation uses linear scan; O(1) optimization deferred.
+
+## D-284 - Resolution fallback guard for deriveResolutionWidth
+
+- Date: 2026-05-31
+- Status: Accepted
+- Context: `deriveResolutionWidth` in `coverage.ts` had a silent failure path: if `resolutionMP` was 0 or missing alongside both `resolutionWidth` and `resolutionHeight`, the function would return `0`, producing zero PPM and effectively "no coverage" for that camera.
+- Decision: Clamp `resolutionMP` to a minimum of `0.1` before computing fallback dimensions.
+- Rationale: Zero-PPM coverage is a silent failure that looks like a legitimate coverage gap. A minimum of 0.1 MP (100k pixels) ensures the fallback produces a reasonable width and valid coverage, even with incomplete camera data.
+- Consequence: Cameras with missing specs will still produce plausible fallback coverage instead of silently showing zero.

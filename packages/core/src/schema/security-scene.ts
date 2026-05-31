@@ -43,6 +43,21 @@ export const geometryValiditySchema = z.enum([
 const point3Schema = z.tuple([z.number(), z.number(), z.number()]);
 const point2Schema = z.tuple([z.number(), z.number()]);
 
+const ID_PREFIXES = ["wall_", "door_", "window_", "cam_", "light_", "obs_", "zone_", "privacy_", "sensor_", "comment_", "entry_", "path_", "snap_", "scene_", "sugg_", "mismatch_", "evidence_"] as const;
+export type IdPrefix = (typeof ID_PREFIXES)[number];
+
+export function generateNodeId(prefix: IdPrefix): string {
+  const rand = Math.random().toString(36).substring(2, 10);
+  return `${prefix}${rand}`;
+}
+
+export const collisionLayerSchema = z.object({
+  visualMesh: z.boolean().default(true),
+  physicsCollider: z.boolean().default(true),
+  visionCollider: z.boolean().default(true),
+});
+export type CollisionLayer = z.infer<typeof collisionLayerSchema>;
+
 export const wallNodeSchema = z.object({
   id: z.string().startsWith("wall_"),
   nodeType: z.literal("wall"),
@@ -57,6 +72,7 @@ export const wallNodeSchema = z.object({
   reviewStatus: reviewStatusSchema.default("unreviewed"),
   sourceTrace: z.string().default(""),
   geometryValidity: geometryValiditySchema.default("valid"),
+  collisionLayer: collisionLayerSchema.optional(),
 });
 
 export const doorNodeSchema = z.object({
@@ -71,6 +87,7 @@ export const doorNodeSchema = z.object({
   reviewStatus: reviewStatusSchema.default("unreviewed"),
   sourceTrace: z.string().default(""),
   geometryValidity: geometryValiditySchema.default("valid"),
+  collisionLayer: collisionLayerSchema.optional(),
 });
 
 export const windowNodeSchema = z.object({
@@ -86,6 +103,7 @@ export const windowNodeSchema = z.object({
   reviewStatus: reviewStatusSchema.default("unreviewed"),
   sourceTrace: z.string().default(""),
   geometryValidity: geometryValiditySchema.default("valid"),
+  collisionLayer: collisionLayerSchema.optional(),
 });
 
 export const sceneUpdateSuggestionSchema = z.object({
@@ -191,6 +209,7 @@ export const cameraNodeSchema = z.object({
   reviewStatus: reviewStatusSchema.default("unreviewed"),
   sourceTrace: z.string().default(""),
   geometryValidity: geometryValiditySchema.default("valid"),
+  collisionLayer: collisionLayerSchema.optional(),
 });
 
 export const securityLightNodeSchema = z.object({
@@ -220,6 +239,7 @@ export const securityLightNodeSchema = z.object({
   reviewStatus: reviewStatusSchema.default("unreviewed"),
   sourceTrace: z.string().default(""),
   geometryValidity: geometryValiditySchema.default("valid"),
+  collisionLayer: collisionLayerSchema.optional(),
 });
 
 export const obstructionNodeSchema = z.object({
@@ -263,6 +283,7 @@ export const obstructionNodeSchema = z.object({
   reviewStatus: reviewStatusSchema.default("unreviewed"),
   sourceTrace: z.string().default(""),
   geometryValidity: geometryValiditySchema.default("valid"),
+  collisionLayer: collisionLayerSchema.optional(),
 });
 
 export const criticalZoneNodeSchema = z.object({
@@ -342,6 +363,7 @@ export const sensorNodeSchema = z.object({
   reviewStatus: reviewStatusSchema.default("unreviewed"),
   sourceTrace: z.string().default(""),
   geometryValidity: geometryValiditySchema.default("valid"),
+  collisionLayer: collisionLayerSchema.optional(),
   notes: z.string().optional(),
 });
 
@@ -890,7 +912,7 @@ export type SimulationResult = z.infer<typeof simulationResultSchema>;
 export type SceneSnapshot = z.infer<typeof sceneSnapshotSchema>;
 export type SecurityScene = z.infer<typeof securitySceneSchema>;
 export type SerializedSecurityScene = z.input<typeof securitySceneSchema>;
-export type AnyEditableNode =
+export type AnyNode =
   | WallNode
   | DoorNode
   | WindowNode
@@ -903,6 +925,8 @@ export type AnyEditableNode =
   | EntryPointNode
   | ScenarioPath
   | CommentNode;
+
+export type AnyEditableNode = AnyNode;
 
 export type TimePeriod = z.infer<typeof timePeriodSchema>;
 export type LightSchedule = z.infer<typeof lightScheduleSchema>;

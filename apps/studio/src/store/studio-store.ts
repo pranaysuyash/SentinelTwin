@@ -125,7 +125,7 @@ import {
 import { simulateStudio } from "@sentineltwin/simulation";
 import { computeTemporalProfile } from "@sentineltwin/simulation";
 import type { TemporalSecurityProfile } from "@/schema/security-scene";
-import type { CounterfactualConstraint, CounterfactualPlan, CounterfactualAction } from "@/schema/security-scene";
+import type { AnyNode, CounterfactualConstraint, CounterfactualPlan, CounterfactualAction } from "@/schema/security-scene";
 import { generateAndRankCounterfactuals } from "@/simulation/counterfactual-engine";
 import type { SiteIntakeSession } from "@/lib/site-compiler";
 import { validateSceneGeometry } from "@/lib/scene-validation";
@@ -2326,6 +2326,7 @@ export type StudioStoreState = {
   getSceneStorageKey: () => string;
 
   getSelectedCamera: () => CameraNode | null;
+  getNodeById: (id: string) => AnyNode | null;
 
   siteIntakeSession: SiteIntakeSession | null;
   setSiteIntakeSession: (session: SiteIntakeSession | null) => void;
@@ -3193,6 +3194,22 @@ function buildSeededLayouts(): WorkspaceLayoutRecord[] {
       createdAt: SEEDED_LAYOUT_BASE_TS + 60_000,
     },
   ];
+}
+
+export function findNodeInScene(scene: SecurityScene, id: string): AnyNode | null {
+  const collections: Array<keyof SecurityScene & keyof { walls: unknown; doors: unknown; windows: unknown; cameras: unknown; securityLights: unknown; obstructions: unknown; criticalZones: unknown; privacyZones: unknown; entryPoints: unknown; paths: unknown; sensors: unknown; comments: unknown }> = [
+    "walls", "doors", "windows", "cameras", "securityLights",
+    "obstructions", "criticalZones", "privacyZones", "entryPoints",
+    "paths", "sensors", "comments",
+  ];
+  for (const key of collections) {
+    const arr = scene[key];
+    if (Array.isArray(arr)) {
+      const found = (arr as AnyNode[]).find((n: AnyNode) => n.id === id);
+      if (found) return found;
+    }
+  }
+  return null;
 }
 
 export const useStudioStore = create<StudioStoreState>()((set, get) => ({
@@ -6822,6 +6839,10 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       if (selectedById) return selectedById;
     }
     return scene.cameras[0] ?? null;
+  },
+  getNodeById: (id: string) => {
+    const { scene } = get();
+    return findNodeInScene(scene, id);
   },
 }) satisfies StudioStoreState);
 

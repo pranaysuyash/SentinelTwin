@@ -1,17 +1,58 @@
 # Data Model — SecurityScene
 
-**Status:** Design draft — 2026-05-25
-**This is the most important file in the repo.** All layers read and write this schema.
-Schema changes require updating: TypeScript types, Zod schemas, simulation engine, AI system prompts, report templates.
+**Status:** Updated 2026-05-31 — collision layer schema, generateNodeId utility, AnyNode type, resolution fallback guard, getNodeById store utility
+
+---
+
+## Shared Types & Utilities
+
+### CollisionLayer (three-layer entity model)
+
+```typescript
+type CollisionLayer = {
+  visualMesh: boolean;       // presence in 3D scene rendering
+  physicsCollider: boolean;  // blocks character/path movement (future: nav-mesh integration)
+  visionCollider: boolean;   // blocks raycast vision in coverage engine
+};
+```
+
+Default: all three `true`. Set `visionCollider: false` to make an object optically transparent (e.g. decorative glass that shouldn't block cameras).
+Set `visualMesh: false` for invisible collision volumes. The `physicsCollider` field is reserved for future nav-mesh and pathfinding integration.
+
+### generateNodeId
+
+```typescript
+type IdPrefix = "wall_" | "door_" | "window_" | "cam_" | "light_" | "obs_" | "zone_" | "privacy_" | "sensor_" | "comment_" | "entry_" | "path_" | "snap_" | "scene_" | "sugg_" | "mismatch_" | "evidence_";
+
+function generateNodeId(prefix: IdPrefix): string;
+```
+
+Generates a compliant ID with the correct prefix and random suffix (e.g. `generateNodeId("cam_")` → `"cam_a1b2c3d4"`). Use this instead of hand-rolling IDs.
+
+### AnyNode
+
+```typescript
+type AnyNode = WallNode | DoorNode | WindowNode | CameraNode | SecurityLightNode
+  | SensorNode | ObstructionNode | CriticalZoneNode | PrivacyZoneNode
+  | EntryPointNode | ScenarioPath | CommentNode;
+```
+
+Union of all editable node types. `AnyEditableNode = AnyNode` (backward-compatible alias).
+
+### findNodeInScene
+
+Pure O(n) linear search across all 11 node collections. Used by the store's `getNodeById()` method.
+Not yet optimized to O(1) — the current array-per-type pattern makes a flat hash-map impractical
+without a full schema migration.
 
 ---
 
 ## Design Principles
 
 1. **Single source of truth.** No layer maintains its own scene representation.
-2. **Flat dictionary storage.** Inherit Pascal's `nodes: Record<id, AnyNode>` pattern for O(1) access.
-3. **Three-layer entities.** Every physical object has: visual mesh, physics collider, vision collider.
-4. **Typed IDs.** All IDs use type prefixes: `cam_`, `light_`, `wall_`, `zone_`, `path_`, etc.
+2. **Flat dictionary storage (aspirational).** Current storage is per-type arrays; `getNodeById()` provides O(n) lookup via linear scan. A flat `Record<id, AnyNode>` pattern is deferred until a schema migration makes it practical.
+3. **Three-layer entities.** Every physical object now carries a `collisionLayer` field controlling visual mesh, physics collider, and vision collider participation.
+4. **Typed IDs.** All IDs use type prefixes: `cam_`, `light_`, `wall_`, `zone_`, `path_`, etc. Use `generateNodeId()` to create compliant IDs.
 5. **Simulation is derived, not stored.** `SimulationResult` is computed on demand, cached, not canonical.
 6. **Snapshots are first-class.** Before/after comparison requires serializable snapshots.
 7. **Source tracking.** Every node records how it was created: manual, AI, scan, import, preset.
@@ -65,6 +106,13 @@ type CameraNode = {
   // Presets
   presetId?: string;             // references camera preset library
 
+  // Collision layer (three-layer entity model)
+  collisionLayer?: {
+    visualMesh: boolean;        // presence in 3D scene
+    physicsCollider: boolean;   // blocks character/path movement
+    visionCollider: boolean;    // blocks raycast vision
+  };
+
   // Meta
   source: "manual" | "ai" | "scan" | "import" | "preset";
   notes?: string;
@@ -97,6 +145,9 @@ type SecurityLightNode = {
   illuminatesNightCoverage: boolean;
   glareRisk: "none" | "low" | "medium" | "high";
 
+  // Collision layer
+  collisionLayer?: CollisionLayer;
+
   source: "manual" | "ai" | "import";
 };
 ```
@@ -124,6 +175,9 @@ type ObstructionNode = {
   movable: boolean;
   movableByAI: boolean;           // can AI counterfactual engine suggest moving this?
   weightKg?: number;
+
+  // Collision layer
+  collisionLayer?: CollisionLayer;
 
   // Metadata
   obstructionType: ObstructionType;

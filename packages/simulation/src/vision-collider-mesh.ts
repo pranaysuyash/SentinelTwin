@@ -95,6 +95,7 @@ export function buildVisionColliderMesh(
   const faceSources: VisionColliderSource[] = [];
 
   for (const wall of scene.walls) {
+    if (wall.collisionLayer && !wall.collisionLayer.visionCollider) continue;
     const geometry = buildWallGeometry(wall);
     geometries.push(geometry);
     const source = {
@@ -109,6 +110,7 @@ export function buildVisionColliderMesh(
   }
 
   for (const obstruction of scene.obstructions) {
+    if (obstruction.collisionLayer && !obstruction.collisionLayer.visionCollider) continue;
     const geometry = buildObstructionGeometry(obstruction);
     geometries.push(geometry);
     const source = {
@@ -124,6 +126,7 @@ export function buildVisionColliderMesh(
 
   for (const door of scene.doors) {
     if (String(door.state) === "open") continue;
+    if (door.collisionLayer && !door.collisionLayer.visionCollider) continue;
 
     const geometry = buildDoorGeometry(door);
     geometries.push(geometry);
@@ -140,6 +143,7 @@ export function buildVisionColliderMesh(
 
   for (const window of scene.windows) {
     if (window.state === "open") continue;
+    if (window.collisionLayer && !window.collisionLayer.visionCollider) continue;
 
     const geometry = buildWindowGeometry(window);
     geometries.push(geometry);

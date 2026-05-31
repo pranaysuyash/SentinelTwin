@@ -6275,6 +6275,16 @@ All relevant decisions and analysis are already captured in:
 
 - Keep renewal/continuity of the event-subscription stream aligned with the live connection session shape so future ONVIF probes and heartbeats do not lose the subscription identity or expiry across refreshes.
 
+### Thread: Camera landmark alignment confidence
+
+### Current finding
+
+- Camera landmark binding confidence now uses a camera-aware heuristic instead of match count alone: it combines match count, camera-facing fit, and 2D/3D landmark spread so a sparse but well-distributed set does not look as trustworthy as a geometrically weak one.
+
+### Follow-up
+
+- If this path becomes user-visible in a report or inspector badge, keep the label honest about being a geometric heuristic unless a calibrated solver replaces it.
+
 
 ---
 

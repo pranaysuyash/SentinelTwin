@@ -721,8 +721,6 @@ export function createCoverageEvaluator(scene: SecurityScene): CoverageEvaluator
     for (const window of scene.windows) {
       if (window.state !== "reflective") continue;
 
-      // Camera and target must be on opposite sides of the window plane
-      // for reflection to reach behind the window.
       const cameraSide = cameraPos[2] - window.position[2];
       const targetSide = target.z - window.position[2];
       if (Math.abs(cameraSide) < 0.001 || Math.abs(targetSide) < 0.001 || Math.sign(cameraSide) === Math.sign(targetSide)) {

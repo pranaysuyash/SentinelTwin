@@ -11,6 +11,8 @@ import { ScanSiteWizard } from "@/components/scan-to-scene/ScanSiteWizard";
 import { SceneBuilderWizard } from "@/components/scan-to-scene/SceneBuilderWizard";
 import { SiteDraftReview } from "@/components/site-intake/SiteDraftReview";
 import { AiLayoutDraftView } from "./AiLayoutDraftView";
+import { ReferenceSitesView } from "./ReferenceSitesView";
+import { SettingsView } from "./SettingsView";
 import type { SiteIntakeSource, SiteCompilerResult } from "@/lib/site-compiler";
 import type { SecurityScene } from "@/schema/security-scene";
 import type { SiteIntakeSession } from "@/lib/site-compiler";
@@ -367,46 +369,14 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
     return <StudioModeRedirect viewMode="report" preset="report" bottomTab="report" />;
   }
 
-  // Reference Sites — explicit product-level placeholder while canonical library matures.
+  // Reference Sites — browse and load seeded reference scenes.
   if (productView === "reference_sites") {
-    return (
-      <div className="flex h-full w-full items-center justify-center" style={{ background: "var(--bg)" }}>
-        <div className="rounded-2xl border border-white/10 bg-black/20 px-5 py-4 text-center">
-          <div className="text-sm font-medium text-white">Reference Sites</div>
-          <div className="mt-1 text-xs text-[color:var(--text-muted)]">
-            Open a seeded reference site from Product Home while library management is being finalized.
-          </div>
-          <button
-            type="button"
-            onClick={() => navigate("product_home")}
-            className="mt-3 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-[color:var(--text-muted)] hover:text-white"
-          >
-            Return to Product Home
-          </button>
-        </div>
-      </div>
-    );
+    return <ReferenceSitesView />;
   }
 
-  // Settings — explicit product-level placeholder while settings suite is being wired.
+  // Settings — product preferences surface.
   if (productView === "settings") {
-    return (
-      <div className="flex h-full w-full items-center justify-center" style={{ background: "var(--bg)" }}>
-        <div className="rounded-2xl border border-white/10 bg-black/20 px-5 py-4 text-center">
-          <div className="text-sm font-medium text-white">Settings</div>
-          <div className="mt-1 text-xs text-[color:var(--text-muted)]">
-            Product settings surface is reserved here; active workspace controls remain available in Studio.
-          </div>
-          <button
-            type="button"
-            onClick={() => navigate("product_home")}
-            className="mt-3 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-[color:var(--text-muted)] hover:text-white"
-          >
-            Return to Product Home
-          </button>
-        </div>
-      </div>
-    );
+    return <SettingsView />;
   }
 
   // Fallback — return to product home

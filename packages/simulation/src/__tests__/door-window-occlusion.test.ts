@@ -108,15 +108,25 @@ describe("door and window occlusion", () => {
   });
 
   test("reflective windows can improve visibility via bounce", () => {
+    // Scene geometry designed so the camera→cell ray passes through the window:
+    //   Camera at (1, 2.5, 1), yaw=90 → faces +X
+    //   Window at (3, 1.5, 2), full-height (3m)
+    //   Cell behind window at x≈5, z≈3
+    //
+    // Direct ray from (1,2.5,1) to (5,1.7,3) crosses x=3 at y=2.1, z=2, squarely
+    // inside the window → material + glare penalties apply.
+    //
+    // Reflected camera mirrors to z=2*2-1=3. From (1,2.5,3) to (5,1.7,3)
+    // the ray is at constant z=3 — clear of the window at z=2 → no penalties.
     const scene = createTestScene({
-      width: 8,
-      depth: 8,
+      width: 6,
+      depth: 5,
       cameras: [
         createTestCamera({
-          position: [4, 2.5, 1],
-          yawDeg: 180,
-          pitchDeg: -25,
-          fovHorizontalDeg: 70,
+          position: [1, 2.5, 1],
+          yawDeg: 90,
+          pitchDeg: -20,
+          fovHorizontalDeg: 80,
           rangeM: 12,
           clarity: "excellent",
         }),
@@ -128,10 +138,10 @@ describe("door and window occlusion", () => {
         id: "window_reflective",
         nodeType: "window",
         label: "Reflective Window",
-        position: [4, 1.2, 3],
-        dimensions: [2.5, 1.8, 0.1],
+        position: [3, 1.5, 2],
+        dimensions: [1, 3, 0.05],
         state: "reflective",
-        visionTransmission: 0.4,
+        visionTransmission: 0.25,
         source: "manual",
         reviewStatus: "unreviewed",
         sourceTrace: "",
@@ -139,12 +149,12 @@ describe("door and window occlusion", () => {
       },
     ];
     const reflectiveCells = computeCoverageCells(scene, 4);
-    const reflectiveTarget = findCellNear(reflectiveCells, 4.125, 6.875);
+    const reflectiveTarget = findCellNear(reflectiveCells, 5, 3);
 
     const glassScene = structuredClone(scene);
     glassScene.windows[0].state = "closed_glass";
     const glassCells = computeCoverageCells(glassScene, 4);
-    const glassTarget = findCellNear(glassCells, 4.125, 6.875);
+    const glassTarget = findCellNear(glassCells, 5, 3);
 
     expect(reflectiveTarget.cameraEvaluations?.cam_test).toBeDefined();
     expect(reflectiveTarget.cameraEvaluations?.cam_test?.reasonCodes).toContain("REFLECTIVE_BOUNCE");

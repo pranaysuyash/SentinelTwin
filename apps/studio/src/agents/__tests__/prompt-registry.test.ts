@@ -8,7 +8,7 @@ describe("prompt registry", () => {
 
     expect(PROMPT_REGISTRY).toHaveLength(4);
     expect(summary.total).toBe(4);
-    expect(summary.latestVersion).toBe("v1");
+    expect(summary.latestVersion).toBe("v2");
     expect(summary.registryDigest).toContain("command_parse");
     expect(summary.stages.command).toBe(1);
     expect(summary.stages.counterfactual).toBe(1);

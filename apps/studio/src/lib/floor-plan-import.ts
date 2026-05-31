@@ -259,6 +259,9 @@ export function createSceneFromFloorPlan(
       backlightIntensity: "none" as const,
       glareIntensity: "none" as const,
       overexposedZones: false,
+      sceneComplexity: "moderate" as const,
+      operatorExperience: "trained" as const,
+      taskCriticality: "standard" as const,
     },
     version: "0.1.0",
     changeLog: [

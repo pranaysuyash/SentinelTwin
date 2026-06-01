@@ -95,6 +95,7 @@ describe("computeSensorFusionSummary", () => {
       geometryValidity: "valid",
       ndaaCompliant: true,
       privacyMaskingEnabled: false,
+      viewMotion: { movementMode: "fixed", dwellSeconds: 0, waypoints: [] },
     };
 
     const summary = computeOperationalEvidenceFusionSummary(

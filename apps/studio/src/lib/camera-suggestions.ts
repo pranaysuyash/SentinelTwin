@@ -61,6 +61,7 @@ export function suggestCameraPlacements(scene: SecurityScene): CameraNode[] {
       privacyMaskingEnabled: false,
       notes: "Suggested placement — adjust as needed",
       tags: ["suggested"],
+      viewMotion: { movementMode: "fixed", dwellSeconds: 0, waypoints: [] },
     });
   }
 
@@ -98,6 +99,7 @@ export function suggestCameraPlacements(scene: SecurityScene): CameraNode[] {
       privacyMaskingEnabled: false,
       notes: "Suggested placement — adjust as needed",
       tags: ["suggested"],
+      viewMotion: { movementMode: "fixed", dwellSeconds: 0, waypoints: [] },
     });
   }
 

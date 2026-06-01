@@ -417,6 +417,7 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
           reviewStatus: "unreviewed",
           sourceTrace: "",
           geometryValidity: "valid",
+          viewMotion: { movementMode: "fixed", dwellSeconds: 0, waypoints: [] },
         });
       }
     }

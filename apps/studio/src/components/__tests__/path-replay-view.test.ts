@@ -14,7 +14,10 @@ describe("PathReplayView", () => {
     expect(source).toContain('const setPathReplaySpeed = useStudioStore((s) => s.setPathReplaySpeed);');
     expect(source).toContain("const controlsRef = useRef<{ target: THREE.Vector3; update?: () => void } | null>(null);");
     expect(source).toContain("controlsRef.current.target.set(actorPosition[0], 0.6, actorPosition[1]);");
-    expect(source).toContain("setPathReplayProgress(totalDuration > 0 ? Math.min(latest / totalDuration, 1) : 0);");
+    expect(source).toContain("setPathReplayProgress(clampReplayProgress");
+    expect(source).toContain("getPathReplayDurationS");
+    expect(source).toContain("const estimatedTimeS = useMemo(() => clampPathDuration(activePath ? getPathReplayDurationS(activePath) : 0)");
+    expect(source).toContain("const replayDurationS = clampPathDuration(replaySamples[replaySamples.length - 1]?.timeS ?? 0)");
     expect(source).toContain("setPathReplayPlaying(false);");
     expect(source).toContain("setPathReplaySpeed(nextSpeed);");
     expect(source).toContain("CoverageTileFloor");
@@ -26,9 +29,8 @@ describe("PathReplayView", () => {
     expect(source).toContain("Visible now");
     expect(source).toContain("Lost now");
     expect(source).toContain("const replayCameraStateSummary = useMemo(() =>");
-    expect(source).toContain("event.event === \"visible\"");
-    expect(source).toContain("event.event === \"lost\"");
-    expect(source).toContain("event.event === \"quality_change\"");
+    expect(source).toContain("visibleNow: ReplayCameraStateSummary[]");
+    expect(source).toContain("lostNow: ReplayCameraStateSummary[]");
     expect(source).toContain("Visible Now");
     expect(source).toContain("Incident Review");
     expect(source).toContain("--st-full-canvas-safe-top");

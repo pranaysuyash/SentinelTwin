@@ -187,6 +187,7 @@ function getLightOcclusion(
     ndaaCompliant: true,
     privacyMaskingEnabled: false,
     tags: [],
+    viewMotion: { movementMode: "fixed", dwellSeconds: 0, waypoints: [] },
   };
 
   const target = new THREE.Vector3(cell.x, targetHeightM, cell.z);

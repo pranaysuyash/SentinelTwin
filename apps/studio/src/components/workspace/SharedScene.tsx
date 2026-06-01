@@ -28,7 +28,13 @@ type PrivacyZone = {
   id: string;
   label: string;
   polygon: [number, number][];
-  restriction: "no_video" | "restricted_view" | "masked_area";
+  restriction: "no_video" | "restricted_view" | "masked_area" | "blindspot_required";
+  nodeType?: string;
+  source?: string;
+  reviewStatus?: string;
+  sourceTrace?: string;
+  geometryValidity?: string;
+  regulation?: string;
 };
 
 type CameraEvaluation = NonNullable<CoverageCellResult["cameraEvaluations"]>[string];
@@ -986,14 +992,16 @@ const QUALITY_SEGMENT_COLORS: Partial<Record<DoriQuality, string>> = {
   none:           "#ef4444",
 };
 
+type LineSegment = { line: THREE.Line; key: number };
+
 export function CoverageSegmentPath({ waypoints }: { waypoints: CoverageSegmentWaypoint[] }) {
-  // Build individual line segments via useMemo and dispose old Three.js resources.
-  const segments = useMemo(() => {
+  const segments = useMemo((): LineSegment[] => {
     const safeWaypoints = waypoints.filter((waypoint) => sanitizePoint2D(waypoint.position).every(Number.isFinite));
     if (safeWaypoints.length < 2) return [];
-    return safeWaypoints.slice(0, -1).map((curr, i) => {
+    const result: LineSegment[] = [];
+    safeWaypoints.slice(0, -1).forEach((curr, i) => {
       const next = safeWaypoints[i + 1];
-      if (!next) return null;
+      if (!next) return;
       const color = QUALITY_SEGMENT_COLORS[curr.detectionQuality] ?? "#ef4444";
       const arr = new Float32Array([
         curr.position[0], 0.045, curr.position[1],
@@ -1002,8 +1010,9 @@ export function CoverageSegmentPath({ waypoints }: { waypoints: CoverageSegmentW
       const geo = new THREE.BufferGeometry();
       geo.setAttribute("position", new THREE.BufferAttribute(arr, 3));
       const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color }));
-      return { line, key: i };
-    }).filter((segment): segment is { line: THREE.Line; key: number } => segment !== null);
+      result.push({ line, key: i });
+    });
+    return result;
   }, [waypoints]);
 
   useEffect(() => {

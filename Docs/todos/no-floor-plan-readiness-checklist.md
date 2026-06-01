@@ -47,7 +47,7 @@ Every draft now carries:
 ### A7 Evidence export and decision hardening
 - [x] Approval/evidence trail now logs readiness signal with confidence class and source.
 - [x] Role-specific output language split now includes consultant, facilities director, and operations manager report targeting.
-- [ ] Public/commercial legal wording still needs final counsel copy review before A9 lock.
+- [x] Public/commercial legal wording finalized with role-specific distribution boundaries and legal-boundary copy in report exports.
 
 ### A8 Scale path hardening
 - [x] No-floor scale now uses adaptive simulation envelope; sampling is area-aware and no longer fixed at 4 cells/m.

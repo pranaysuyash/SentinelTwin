@@ -48,6 +48,7 @@ const dummyScene: SecurityScene = {
       reviewStatus: "unreviewed",
       sourceTrace: "",
       geometryValidity: "valid",
+      viewMotion: { movementMode: "fixed", dwellSeconds: 0, waypoints: [] },
     }
   ],
   securityLights: [],

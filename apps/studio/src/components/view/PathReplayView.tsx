@@ -37,6 +37,7 @@ import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import {
   buildReplayStateByCameraAtTime,
   clampPathDuration,
+  getPathReplayDurationS,
   clampReplayProgress,
   findLatestTimelineEventAtOrBeforeTime,
   findNextTimelineEventAfterTime,
@@ -49,7 +50,7 @@ const PATH_REPLAY_THEME = ENVIRONMENT_THEMES.day;
 const REPLAY_SPEED_OPTIONS = [0.5, 1, 2, 4] as const;
 const SHARED_REPLAY_PROGRESS_PUBLISH_INTERVAL_MS = 1000 / 24;
 const MIN_PATH_SEGMENT_DURATION_DISTANCE_M = 0.22;
-const MIN_PATH_SPEED_MPS = 0.01;
+const DEFAULT_PATH_SPEED_MPS = 1.2;
 const MIN_PLAYBACK_STEP_SECONDS = 2;
 const MIN_PLAYBACK_WAYPOINT_TIME_GAP_S = 0.0001;
 
@@ -155,13 +156,21 @@ function buildPlaybackWaypoints(path: ScenarioPath) {
 }
 
 function getSafePathSpeedMps(speedMps: number | undefined) {
-  return Number.isFinite(speedMps) && speedMps > 0 ? speedMps : MIN_PATH_SPEED_MPS;
+  return Number.isFinite(speedMps) && speedMps > 0 ? speedMps : DEFAULT_PATH_SPEED_MPS;
 }
 
-function sanitizeReplayWaypointsForPlayback(rawWaypoints: { position: [number, number]; timeS: number; }[]) {
+type ReplaySample = {
+  position: [number, number];
+  rawPosition: [number, number];
+  timeS: number;
+  collided: boolean;
+  blockedBy?: string;
+};
+
+function sanitizeReplayWaypointsForPlayback(rawWaypoints: ReplaySample[]) {
   if (!rawWaypoints.length) return [];
 
-  const normalized: { position: [number, number]; timeS: number }[] = [];
+  const normalized: ReplaySample[] = [];
   let lastTime = Number.NEGATIVE_INFINITY;
 
   for (const sample of rawWaypoints) {
@@ -177,11 +186,16 @@ function sanitizeReplayWaypointsForPlayback(rawWaypoints: { position: [number, n
       }
     }
 
-    normalized.push({ position: sample.position, timeS });
+    normalized.push({
+      position: sample.position,
+      rawPosition: sample.rawPosition,
+      timeS,
+      collided: sample.collided,
+      blockedBy: sample.blockedBy,
+    });
     lastTime = timeS;
   }
 
-  // Keep scrub + metrics zero-based and stable across upstream timing inputs.
   const startTime = normalized[0]?.timeS ?? 0;
   return normalized.map((sample) => ({ ...sample, timeS: Math.max(0, sample.timeS - startTime) }));
 }
@@ -1014,7 +1028,7 @@ export function PathReplayView() {
     [playbackWaypoints, scene],
   );
   const hasReplaySummary = Boolean(coverageFailurePath);
-  const replayDurationS = replaySamples[replaySamples.length - 1]?.timeS ?? 0;
+  const replayDurationS = clampPathDuration(replaySamples[replaySamples.length - 1]?.timeS ?? 0);
 
   const waypoints: [number, number][] = useMemo(
     () => replaySamples.map((wp) => wp.position),
@@ -1028,10 +1042,7 @@ export function PathReplayView() {
     if (!activePath) return 0;
     return pathLength(activePath.points.map((point) => point.position));
   }, [activePath]);
-  const estimatedTimeS = useMemo(() => {
-    if (!activePath) return 0;
-    return pathLengthM / getSafePathSpeedMps(activePath.speedMps);
-  }, [activePath, pathLengthM]);
+  const estimatedTimeS = useMemo(() => clampPathDuration(activePath ? getPathReplayDurationS(activePath) : 0), [activePath]);
   const selectedPathLabel = activePath?.label ?? "Coverage Failure Path";
   const timelineEvents = useMemo(() => sortTimelineEvents(activePathResult?.timeline), [activePathResult?.timeline]);
   const totalDuration = clampPathDuration(
@@ -1123,7 +1134,7 @@ export function PathReplayView() {
       return { visibleNow: [] as ReplayCameraStateSummary[], lostNow: [] as ReplayCameraStateSummary[] };
     }
     const stateByCamera = buildReplayStateByCameraAtTime(timelineEvents, safeCurrentTime);
-    const entries: ReplayCameraStateSummary[] = Array.from(stateByCamera.entries()).map(([cameraId, state]) => ({
+    const entries: ReplayCameraStateSummary[] = Object.entries(stateByCamera).map(([cameraId, state]) => ({
       cameraId,
       cameraName: scene.cameras.find((camera) => camera.id === cameraId)?.name ?? cameraId,
       visible: state.visible,

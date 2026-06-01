@@ -68,6 +68,7 @@ export { formatProductArea, WORKFLOW_STEPS } from "./slices/enterprise/workflow-
 
 // Enterprise telemetry types
 export type {
+  AiActionTelemetryStage,
   RuntimeIncidentCategory,
   RuntimeIncidentSeverity,
   RuntimeIncident,

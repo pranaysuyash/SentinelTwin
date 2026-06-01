@@ -227,7 +227,7 @@ export function normalizeSavedLayoutRecords(raw: unknown): WorkspaceLayoutRecord
 }
 
 export function buildSeededLayouts(baseTime = Date.now()): WorkspaceLayoutRecord[] {
-  return ["edit", "coverage", "camera_wall", "replay", "compare", "report"].map((preset, index) => {
+  return (["edit", "coverage", "camera_wall", "replay", "compare", "report"] as const).map((preset, index) => {
     const layout = getPresetLayoutSnapshot(preset, DEFAULT_LAYERS);
     return {
       id: `seeded_layout_${preset}`,

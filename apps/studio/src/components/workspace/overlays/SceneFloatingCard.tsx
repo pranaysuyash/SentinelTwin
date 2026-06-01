@@ -5,7 +5,7 @@
 import type { CSSProperties, ReactNode } from "react";
 
 export interface SceneFloatingCardProps {
-  children: ReactNode;
+  children?: ReactNode;
   borderColor?: string;
   textAlign?: "left" | "center" | "right";
   minWidth?: number | string;

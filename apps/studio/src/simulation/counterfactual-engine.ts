@@ -130,6 +130,7 @@ function applyAction(scene: SecurityScene, action: CounterfactualAction): Securi
       reviewStatus: "unreviewed",
       sourceTrace: "",
       geometryValidity: "valid",
+      viewMotion: { movementMode: "fixed", dwellSeconds: 0, waypoints: [] },
     });
   }
 

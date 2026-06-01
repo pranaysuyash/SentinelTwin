@@ -36,6 +36,70 @@ export type ReportExportPreset = {
 export type ReportData = any;
 export type CompareReportData = any;
 
+type ReportAudienceCommercialFraming = {
+  distributionMessage: string;
+  internalMessage: string;
+  legalBoundaryMessage: string;
+};
+
+const AUDIENCE_COMMERCIAL_FRAMING: Record<string, ReportAudienceCommercialFraming> = {
+  operator: {
+    distributionMessage: "Internal operations memo only; do not publish externally without route, staffing, or safety sign-off.",
+    internalMessage: "Operational packet for shift leads and facility operations: route, staffing, and immediate actions.",
+    legalBoundaryMessage: "This is a planning artifact, not a legal or statutory compliance certificate.",
+  },
+  auditor: {
+    distributionMessage: "Audit-focused evidence packet for governance review and controls traceability.",
+    internalMessage: "Internal audit evidence package with evidence, provenance, and simulation assumptions.",
+    legalBoundaryMessage: "This report supports auditability; it does not substitute for formal compliance certification.",
+  },
+  insurer: {
+    distributionMessage: "Commercial risk-summary packet for underwriting review and policy discussion.",
+    internalMessage: "Internal risk packet for exposure quantification, residual gap ranking, and recommended control envelope.",
+    legalBoundaryMessage: "Not a formal underwriting decision document; align with carrier questionnaires before binding coverage statements.",
+  },
+  installer: {
+    distributionMessage: "Implementation handoff language for contractor and installation planning.",
+    internalMessage: "Internal execution packet with commissioning context and implementation expectations.",
+    legalBoundaryMessage: "Not a contractual scope-of-work document; map recommendations to signed statements before execution.",
+  },
+  privacy_reviewer: {
+    distributionMessage: "Privacy-focused governance packet with controls visibility filtered for external compliance review.",
+    internalMessage: "Operational privacy report with redaction, masking, and sensitive-source note retention.",
+    legalBoundaryMessage: "This is a review artifact; verify legal and GDPR/PDPA workflows with counsel before external publication.",
+  },
+  consultant: {
+    distributionMessage:
+      "Commercially safe advisory framing for client-facing proposals and risk discussions; implementation sequencing and internal hardening notes are intentionally reduced for this share.",
+    internalMessage:
+      "Commercial advisory packet with full evidence continuity preserved for implementation planning and peer review.",
+    legalBoundaryMessage:
+      "This report is an engineering planning output, not legal advice; verify signage, retention, and privacy obligations before external guarantees.",
+  },
+  facilities_director: {
+    distributionMessage: "Deployment-readiness summary for non-technical stakeholder updates and operations planning.",
+    internalMessage: "Execution-focused operations packet: sequencing, teardown expectations, and controls readiness remain intact.",
+    legalBoundaryMessage: "Not a legal certification; align implementation claims with applicable site policy and regulatory review.",
+  },
+  operations_manager: {
+    distributionMessage: "Operations readiness brief for event planning with temporary controls and handoff checkpoints.",
+    internalMessage: "Temporary-control packet for staffing plans, control activation windows, and post-event recovery.",
+    legalBoundaryMessage:
+      "This is a temporary-control readiness artifact; escalate temporary perimeter and safety exceptions through formal operational policy.",
+  },
+};
+
+function getAudienceCommercialFraming(audience: ReportAudience) {
+  return (
+    AUDIENCE_COMMERCIAL_FRAMING[audience]
+    ?? {
+      distributionMessage: "Distribution intent should be set explicitly in the report workflow.",
+      internalMessage: "Internal execution intent is not yet mapped for this audience.",
+      legalBoundaryMessage: "No legal guarantee is conveyed through this artifact.",
+    }
+  );
+}
+
 export function getReportAudienceProfile(audience: ReportAudience) {
   return { id: audience, ...AUDIENCE_META[audience] };
 }
@@ -68,7 +132,15 @@ export function getReportExportPresets(): ReportExportPreset[] {
       audience: "consultant",
       visibility: "shared",
       templateId: "general-audit",
-      summary: "Consultative evidence packet for advisory review.",
+      summary: "Consultant Commercial packet for client-facing advisory review.",
+    },
+    {
+      id: "preset-consultant-distribution-ready",
+      title: "Consultant Commercial Distribution",
+      audience: "consultant",
+      visibility: "shared",
+      templateId: "general-audit",
+      summary: "Commercial-safe advisory output with implementation sequencing reduced for external distribution.",
     },
     {
       id: "preset-operator-internal",
@@ -120,9 +192,9 @@ const AUDIENCE_META: Record<string, { label: string; summary: string; framing: s
   consultant: {
     label: "Security Consultant",
     summary: "Advisory consultative packet for risk and controls roadmap.",
-    framing: "Scenario-driven advisory recommendations with evidentiary framing.",
+    framing: "Scenario-driven advisory recommendations for client-ready decision packets with implementation sequencing retained internally.",
     disclosureLevel: "partner_shared",
-    disclosureSummary: "Commercial advisory framing with implementation-sensitive details reduced.",
+    disclosureSummary: "Commercial client-facing framing with implementation-sensitive details reduced for distribution.",
     visibleSections: ["coverage", "issues", "assumptions", "provenance", "recommendations"],
     withheldSections: ["credentials", "internal_only_notes"],
   },
@@ -193,7 +265,7 @@ const AUDIENCE_POLICIES: Record<string, { disclosureLevel: string; visibleSectio
     disclosureLevel: "evidence_first",
     visibleSections: ["operational_evidence", "coverage", "provenance", "assumptions", "recommendations"],
     withheldSections: ["internal_only_notes"],
-    disclosureSummary: "Commercial advisory detail prioritized with operational context reduced.",
+    disclosureSummary: "Commercial advisory detail prioritized with operational context reduced for external sharing.",
   },
   facilities_director: {
     disclosureLevel: "full_internal",
@@ -360,6 +432,14 @@ export function buildReportData(scene: any, simulationResult: any, options?: any
     return { publishedCheckpointCount: pe.length, latestPublishedCheckpoint: { title: lp.title ?? "Published checkpoint" }, latestPublishedCheckpointProvenance: { isExactSnapshot: true, sourceEventTitle: lp.title ?? "Published checkpoint" }, latestPublishedCheckpointAgeMs: Date.now() - (lp.createdAt ?? Date.now()) };
   })();
 
+  const commercialFraming = getAudienceCommercialFraming(audience);
+  const visibilityMode = opt.visibility ?? "internal";
+  const audienceCommercialContext = {
+    distributionMessage: visibilityMode === "privacy_safe" || visibilityMode === "shared" ? commercialFraming.distributionMessage : commercialFraming.internalMessage,
+    internalMessage: commercialFraming.internalMessage,
+    legalBoundaryMessage: commercialFraming.legalBoundaryMessage,
+  };
+
   return {
     sceneId: scene?.id ?? "scene", siteName: scene?.name ?? "Untitled Scene", title, createdAt: Date.now(),
     simulation: sim, options: opt, dimensions: scene?.dimensions ?? { width: 0, depth: 0, height: 0 },
@@ -372,6 +452,7 @@ export function buildReportData(scene: any, simulationResult: any, options?: any
     truthLadder: truthLadder(scene),
     provenance: { sceneSourceLabel: sourceLabel(scene?.source ?? "manual"), sceneSource: scene?.source ?? "manual", nodeCount: [...(scene?.walls ?? []), ...(scene?.cameras ?? []), ...(scene?.obstructions ?? []), ...(scene?.criticalZones ?? [])].length, sourceNotes: [`Scene source: ${scene?.source ?? "manual"}`], confidenceNotes: [] },
     novelAlgorithms,
+    commercialContext: audienceCommercialContext,
     redundancyMatrix: { cameraRows: (sim.cameraResults ?? []).map((c: any) => ({ cameraId: c.cameraId, cameraName: c.cameraId, singlePointZones: [], redundantZones: [], vulnerableZones: [] })), vulnerableZones: vulnerableZones.map((z: any) => ({ zoneId: z.zoneId, zoneLabel: z.label ?? z.zoneId, requiredQuality: z.requiredQuality ?? "recognition", actualQuality: z.actualQuality ?? "none", coveringCameras: z.coveringCameras ?? [] })) },
     temporalTwin, temporalProfile: opt.temporalProfile ? { vulnerabilityWindowCount: opt.temporalProfile.vulnerabilityWindowCount ?? 0, safestPeriods: opt.temporalProfile.safestPeriods ?? [], worstCoverage: opt.temporalProfile.worstCoverage ?? 0 } : undefined,
     adversarialPath: opt.adversarialPath ? { exposureScore: opt.adversarialPath.exposureScore ?? 0, detectionProbability: opt.adversarialPath.detectionProbability ?? 0, totalDistance: opt.adversarialPath.totalDistance ?? 0, waypoints: opt.adversarialPath.waypoints ?? [] } : undefined,
@@ -399,9 +480,30 @@ export function buildCompareReportData(sceneA: any, resultA: any, sceneB: any, r
 }
 
 export function applyReportVisibility<T>(report: any, visibility: ReportVisibility): any {
-  if (visibility === "internal") return { ...report, visibility: "internal" };
-  if (visibility === "shared") return { ...report, visibility: "shared", provenance: { ...report.provenance, confidenceNotes: [], sourceNotes: report.provenance?.sourceNotes ?? [] }, evidenceTrail: { ...report.evidenceTrail, recentEntries: (report.evidenceTrail?.recentEntries ?? []).map((e: any) => ({ ...e, confidence: "withheld", details: "Redacted in shared export." })) } };
-  if (visibility === "privacy_safe") return { ...report, visibility: "privacy_safe", provenance: { ...report.provenance, sourceNotes: [], confidenceNotes: [] }, evidenceTrail: { ...report.evidenceTrail, recentEntries: [], evidenceEntryCount: 0 } };
+  const framing = getAudienceCommercialFraming(report.audience ?? "operator");
+  const withContext = {
+    ...report,
+    commercialContext: {
+      distributionMessage: visibility === "internal" ? framing.internalMessage : framing.distributionMessage,
+      internalMessage: framing.internalMessage,
+      legalBoundaryMessage: framing.legalBoundaryMessage,
+    },
+  };
+
+  if (visibility === "internal") return { ...withContext, visibility: "internal" };
+  if (visibility === "shared") return {
+    ...withContext,
+    visibility: "shared",
+    provenance: { ...report.provenance, confidenceNotes: [], sourceNotes: report.provenance?.sourceNotes ?? [] },
+    evidenceTrail: { ...report.evidenceTrail, recentEntries: (report.evidenceTrail?.recentEntries ?? []).map((e: any) => ({ ...e, confidence: "withheld", details: "Redacted in shared export." })) },
+  };
+  if (visibility === "privacy_safe")
+    return {
+      ...withContext,
+      visibility: "privacy_safe",
+      provenance: { ...report.provenance, sourceNotes: [], confidenceNotes: [] },
+      evidenceTrail: { ...report.evidenceTrail, recentEntries: [], evidenceEntryCount: 0 },
+    };
   return report;
 }
 
@@ -417,6 +519,15 @@ export function exportAsMarkdown(report: any): string {
   if (report.audienceFraming) lines.push(`*${report.audienceFraming}*`);
   lines.push("");
   if (report.audiencePolicy) lines.push("## Audience Policy", `**Disclosure Level:** ${report.audiencePolicy.disclosureLevel ?? "full"}`, `**Visible Sections:** ${(report.audiencePolicy.visibleSections ?? []).join(", ")}`, `**Withheld Sections:** ${(report.audiencePolicy.withheldSections ?? []).join(", ")}`, "");
+  if (report.commercialContext) {
+    lines.push(
+      "## Legal and Commercial Framing",
+      `**Distribution Message:** ${report.commercialContext.distributionMessage ?? ""}`,
+      `**Internal Handling:** ${report.commercialContext.internalMessage ?? ""}`,
+      `**Legal Boundary:** ${report.commercialContext.legalBoundaryMessage ?? ""}`,
+      "",
+    );
+  }
   lines.push("## Summary", `| Total Coverage | ${s.totalCoveragePct ?? s.coveragePct ?? 0}% |`, `| Zones Passing | ${s.zonesPassing}/${s.zonesTotal} |`, `| Sensors | ${s.sensorCount ?? 0} |`, "");
   lines.push("## Visibility and Redaction", `**Profile:** ${report.visibility ?? "internal"}`, "");
   lines.push("## Buyer Drill-Through", "Inspection shortcuts for security auditors and integrators.", "");
@@ -472,6 +583,7 @@ export function exportAsHtml(report: any): string {
 <h1>${esc(report.title ?? "Security Audit Report")}</h1><p>Scene: ${esc(report.siteName ?? report.sceneName ?? "Untitled Scene")}</p>
 <h2>Compliance</h2><p><strong>IEC 62676-4:2025</strong></p><p>${s.zonesPassing === s.zonesTotal ? "Meets modeled zone requirements" : "Does not fully meet modeled zone requirements"}</p>
 ${report.audience ? `<h2>Audience</h2><p>${esc(report.audienceLabel ?? report.audience)} audience</p><p>${esc(report.audienceFraming ?? "")}</p>` : ""}
+${report.commercialContext ? `<h2>Legal and Commercial Framing</h2><p>${esc(report.commercialContext.distributionMessage ?? "")}</p><p>${esc(report.commercialContext.internalMessage ?? "")}</p><p>${esc(report.commercialContext.legalBoundaryMessage ?? "")}</p>` : ""}
 <h2>Audience Policy</h2><p>Disclosure Level: ${report.audiencePolicy?.disclosureLevel ?? "full"}</p><p>Visible Sections: ${(report.audiencePolicy?.visibleSections ?? []).join(", ")}</p><p>Withheld Sections: ${(report.audiencePolicy?.withheldSections ?? []).join(", ")}</p>
 <h2>Visibility &amp; Redaction</h2><p>Profile: ${report.visibility ?? "internal"}</p>
 <h2>Buyer Drill-Through</h2><p>Inspection shortcuts for security auditors and integrators.</p>
@@ -505,6 +617,15 @@ export function exportAsText(report: any): string {
   lines.push(`SentinelTwin Report — ${report.siteName ?? report.sceneName ?? "Untitled Scene"}`, "");
   if (report.audience) lines.push(`Audience: ${report.audienceLabel ?? report.audience}`);
   if (report.audienceFraming) lines.push(report.audienceFraming);
+  if (report.commercialContext) {
+    lines.push(
+      "",
+      "=== LEGAL & COMMERCIAL FRAMING ===",
+      `Distribution: ${report.commercialContext.distributionMessage ?? ""}`,
+      `Internal handling: ${report.commercialContext.internalMessage ?? ""}`,
+      `Legal boundary: ${report.commercialContext.legalBoundaryMessage ?? ""}`,
+    );
+  }
   lines.push("", "=== SUMMARY ===", `Total Coverage: ${s.totalCoveragePct ?? s.coveragePct ?? 0}%`, `Blindspot: ${s.blindspotPct ?? 0}%`, `Recognition Area: ${s.recognitionAreaPct ?? 0}%`, `Identification Area: ${s.identificationAreaPct ?? 0}%`, `Zones Passing: ${s.zonesPassing}/${s.zonesTotal}`, `Sensors: ${s.sensorCount ?? 0}`, `Issues Found: ${s.issuesCount ?? 0}`, "Modeled requirements: " + (report.codeCompliant ? "PASS" : "FAIL"), "");
   const novel = report.novelAlgorithms ?? {};
   lines.push("=== NOVEL ALGORITHMS ===");

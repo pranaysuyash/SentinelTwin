@@ -16,7 +16,9 @@ describe("VisibilityTimeline", () => {
     expect(source).toContain("const safeCurrentTime = useMemo(");
     expect(source).toContain("clampPathDuration(currentTime)");
     expect(source).toContain("const cameraRows = useMemo((): TimelineRow[] => {");
-    expect(source).toContain("const safePct = Math.min(Math.max(pct, 0), 1)");
+    expect(source).toContain("safePct");
+    expect(source).toContain("const rect = event.currentTarget.getBoundingClientRect();");
+    expect(source).toContain("Math.min(Math.max(pct, 0), 1)");
     expect(source).toContain("Math.max(0, Math.min(100, (row.camData.visibleS / totalDuration) * 100))");
     expect(source).toContain("const timelineEvents = useMemo(() => {");
     expect(source).not.toContain("function sortTimelineEvents");

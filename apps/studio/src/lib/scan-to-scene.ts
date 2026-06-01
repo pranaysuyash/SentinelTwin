@@ -104,6 +104,7 @@ export type ScanCompilationWarning = {
   code: ScanCompilationWarningCode;
   message: string;
   severity?: "info" | "warning" | "blocking";
+  suggestedAction?: string;
 };
 
 type ScenarioEnvelope = {

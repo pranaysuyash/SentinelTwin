@@ -62,7 +62,8 @@ function addCamera(scene: SecurityScene) {
     geometryValidity: "valid",
     ndaaCompliant: true,
     privacyMaskingEnabled: false,
-    tags: []
+    tags: [],
+    viewMotion: { movementMode: "fixed", dwellSeconds: 0, waypoints: [] },
   });
 }
 

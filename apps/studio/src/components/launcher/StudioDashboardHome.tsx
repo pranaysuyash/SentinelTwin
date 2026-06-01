@@ -5,7 +5,6 @@ import { startTransition, useEffect, useMemo, useState, type CSSProperties, type
 import {
   ArrowRight,
   Camera,
-  ChevronDown,
   Compass,
   Eye,
   EyeOff,
@@ -34,6 +33,7 @@ import type { BottomTab, SavedProjectRecord, TimelineFocusRequest, ViewMode, Wor
 import { useStudioStore } from "@/store/studio-store";
 import { OrganizationManagerPanel } from "@/components/launcher/OrganizationManagerPanel";
 import { ScenePreview } from "@/components/launcher/ScenePreview";
+import { ProjectMetadataEditor } from "@/components/launcher/ProjectMetadataEditor";
 import { SecurityStatusPanel } from "@/components/launcher/SecurityStatusPanel";
 import { useDashboardArchives } from "@/hooks/useDashboardArchives";
 import type { SecurityScene, SecurityIssue, SimulationResult, DoriQuality } from "@/schema/security-scene";
@@ -908,6 +908,7 @@ export function StudioDashboardHome({
     dashboardVisibility.securityStatus
     || dashboardVisibility.issues
     || dashboardVisibility.assumptions
+    || dashboardVisibility.projectSettings
   );
   const worstIssue = issues[0] ?? canonicalOutcome.summary.worstIssue ?? null;
   const displayWorstIssue = hydrated ? worstIssue : null;
@@ -981,6 +982,9 @@ export function StudioDashboardHome({
     cameraMetadataHistory,
     cameraLiveConnectionHistory,
     operationalEvidenceArchiveHistory,
+    isArchiveLoading,
+    hasArchiveLoadFailures,
+    archiveLoadFailureCount,
   } = useDashboardArchives();
   const workspaceAccountProfile = useStudioStore((s) => s.workspaceAccount);
   const setWorkspaceAccountProfile = useStudioStore((s) => s.setWorkspaceAccountProfile);
@@ -1381,21 +1385,10 @@ export function StudioDashboardHome({
 
 
 
-            <button
-              type="button"
-              onClick={() => setShowOrgManager(true)}
-              className="mt-auto flex items-center gap-2.5 rounded-[8px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5 text-left transition-colors hover:border-sky-400/30 hover:bg-white/[0.04]"
-              aria-label="Open organization and account switcher"
-            >
-              <div className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[#1a2540] text-[11px] font-bold text-sky-200">
-                {workspaceAccountProfile.accountName?.[0]?.toUpperCase() ?? "S"}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-semibold text-white">{workspaceAccountProfile.accountName ?? "Sentinel Operator"}</div>
-                <div className="text-[10px] text-[color:var(--st-muted)]">{workspaceAccountProfile.planTier}</div>
-              </div>
-              <ChevronDown className="h-4 w-4 flex-none text-[color:var(--st-muted)]" />
-            </button>
+            <div className="mt-auto rounded-[10px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5 text-[10px] text-[color:var(--st-muted)]">
+              <div className="text-[10px] uppercase tracking-[0.18em] text-white">Project control surface</div>
+              <div className="mt-1 text-[10px]">Open Project Settings on the right to manage workspace metadata and organization controls.</div>
+            </div>
           </aside>
 
           <div className="flex min-w-0 flex-col gap-4">
@@ -1656,6 +1649,9 @@ export function StudioDashboardHome({
                   workspaceMemoryQuery={workspaceMemoryQuery}
                   setWorkspaceMemoryQuery={setWorkspaceMemoryQuery}
                   workspaceMemoryResults={workspaceMemoryResults}
+                  isArchiveLoading={isArchiveLoading}
+                  hasArchiveLoadFailures={hasArchiveLoadFailures}
+                  archiveLoadFailureCount={archiveLoadFailureCount}
                   setTimelineFocusRequest={setTimelineFocusRequest}
                   onOpenReport={onOpenReport}
                   onOpenMode={onOpenMode}
@@ -1813,6 +1809,7 @@ export function StudioDashboardHome({
                   { id: "securityStatus", label: "Security status", onClick: () => setDashboardSectionVisible("securityStatus", true) },
                   { id: "issues", label: "Open issues", onClick: () => setDashboardSectionVisible("issues", true) },
                   { id: "assumptions", label: "Assumptions", onClick: () => setDashboardSectionVisible("assumptions", true) },
+                  { id: "projectSettings", label: "Project settings", onClick: () => setDashboardSectionVisible("projectSettings", true) },
                 ]}
               />
             ) : null}
@@ -1924,6 +1921,85 @@ export function StudioDashboardHome({
                 View all assumptions
               </button>
             </div>
+            ) : null}
+
+            {/* Project Settings */}
+            {isDashboardSectionVisible("projectSettings") ? (
+              <section className="rounded-[16px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-200">Project Settings</div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowOrgManager(true)}
+                      className="rounded-lg border border-sky-400/25 bg-sky-500/10 px-2.5 py-1 text-[10px] font-medium text-sky-100 transition-colors hover:bg-sky-500/16"
+                    >
+                      Open workspace admin
+                    </button>
+                    <HideSectionButton
+                      label="project settings"
+                      onClick={() => setDashboardSectionVisible("projectSettings", false)}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-3 rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] p-3">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Workspace + account context</div>
+                  <div className="mt-2 space-y-2 text-[10px] text-[color:var(--st-muted)]">
+                    <div className="flex flex-wrap gap-1">
+                      <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-1">Catalog: {workspaceCatalog.scopeLabel}</span>
+                      <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-1">Workspace count: {workspaceCatalog.workspaceCount}</span>
+                      <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-1">Pinned: {workspaceCatalog.pinnedCount}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-1">Primary org: {workspaceCatalog.primaryOrganization}</span>
+                      <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-1">Primary owner: {workspaceCatalog.primaryOwner}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-1">Account: {workspaceAccountSummary.accountName}</span>
+                      <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-1">Plan: {workspaceAccountSummary.planLabel}</span>
+                      <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-1">Quota: {workspaceAccountSummary.softQuotaLabel}</span>
+                    </div>
+                    <div className="rounded-[12px] border border-white/10 bg-white/[0.03] px-2 py-1">
+                      <div className="text-[9px] uppercase tracking-[0.16em] text-[color:var(--st-muted)]">Policy scope</div>
+                      <div>{workspaceAccountSummary.scopeDetail}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {organizations.length > 0 ? (
+                  <label className="mt-3 block">
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">Active organization</span>
+                    <select
+                      value={activeOrganizationId ?? ""}
+                      onChange={(event) => setActiveOrganization(event.target.value || null)}
+                      className="mt-1 w-full rounded-lg border border-[color:var(--st-border)] bg-white/[0.04] px-3 py-2 text-[11px] text-white outline-none transition-colors focus:border-sky-400/35"
+                    >
+                      <option value="" className="bg-[#0b0f17] text-white">Use workspace primary</option>
+                      {organizations.map((organization) => (
+                        <option key={organization.id} value={organization.id} className="bg-[#0b0f17] text-white">
+                          {organization.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+
+                {selectedProjectRecord ? (
+                  <ProjectMetadataEditor
+                    project={selectedProjectRecord}
+                    onUpdateProjectMetadata={onUpdateProjectMetadata}
+                    onDuplicateProject={onDuplicateProject}
+                    onRenameProject={onRenameProject}
+                    onSelectProject={setSelectedProjectId}
+                    organizations={organizations}
+                  />
+                ) : (
+                  <div className="mt-3 rounded-[12px] border border-dashed border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2 text-[10px] text-[color:var(--st-muted)]">
+                    No workspace selected. Open a Workspace from the library to edit project metadata.
+                  </div>
+                )}
+              </section>
             ) : null}
           </aside>
         </div>
@@ -2170,6 +2246,9 @@ type SiteTwinSearchBarProps = {
   workspaceMemoryQuery: string;
   setWorkspaceMemoryQuery: (value: string) => void;
   workspaceMemoryResults: WorkspaceSearchHit[];
+  isArchiveLoading: boolean;
+  hasArchiveLoadFailures: boolean;
+  archiveLoadFailureCount: number;
   setTimelineFocusRequest: (request: TimelineFocusRequest | null) => void;
   onOpenReport: () => void;
   onOpenMode: (viewMode: ViewMode, preset: WorkspacePreset, bottomTab?: BottomTab) => void;
@@ -2183,6 +2262,9 @@ function SiteTwinSearchBar({
   workspaceMemoryQuery,
   setWorkspaceMemoryQuery,
   workspaceMemoryResults,
+  isArchiveLoading,
+  hasArchiveLoadFailures,
+  archiveLoadFailureCount,
   setTimelineFocusRequest,
   onOpenReport,
   onOpenMode,
@@ -2231,6 +2313,14 @@ function SiteTwinSearchBar({
         <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">
           <Radar className="h-3.5 w-3.5 text-sky-300" />
           SITE TWIN MEMORY SEARCH
+        </div>
+        <div className="flex flex-wrap items-center gap-1 text-[9px] text-[color:var(--st-muted)]">
+          {isArchiveLoading ? <span className="rounded-full border border-sky-400/25 bg-sky-500/10 px-2 py-0.5">Loading archive sources</span> : null}
+          {hasArchiveLoadFailures ? (
+            <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-amber-100">
+              {archiveLoadFailureCount} archive source(s) failed
+            </span>
+          ) : null}
         </div>
         <button
           type="button"

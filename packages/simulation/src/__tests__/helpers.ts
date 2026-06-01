@@ -107,6 +107,7 @@ export function createTestCamera(overrides: Partial<CameraNode> = {}): CameraNod
     ndaaCompliant: overrides.ndaaCompliant ?? true,
     privacyMaskingEnabled: overrides.privacyMaskingEnabled ?? false,
     tags: overrides.tags ?? [],
+    viewMotion: overrides.viewMotion ?? { movementMode: "fixed", dwellSeconds: 0, waypoints: [] },
   };
 }
 

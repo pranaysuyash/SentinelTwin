@@ -459,6 +459,7 @@ export function createTelemetrySlice(set: any, get: any): TelemetrySlice {
         simulationResult: state.simulationResult,
         revisionDepth: state.historyPast.length,
         snapshotCount: state.snapshots.length,
+        operationalEvidenceEvents: nextEvents,
       });
       set({
         operationalEvidenceEvents: nextEvents,
@@ -532,6 +533,7 @@ export function createTelemetrySlice(set: any, get: any): TelemetrySlice {
         simulationResult: state.simulationResult,
         revisionDepth: state.historyPast.length,
         snapshotCount: state.snapshots.length,
+        operationalEvidenceEvents: nextEvents,
       });
       set({
         operationalEvidenceEvents: nextEvents,
@@ -682,6 +684,7 @@ export function createTelemetrySlice(set: any, get: any): TelemetrySlice {
         simulationResult: state.simulationResult,
         revisionDepth: state.historyPast.length,
         snapshotCount: state.snapshots.length,
+        operationalEvidenceEvents: nextEvents,
       });
       set({
         operationalEvidenceEvents: nextEvents,

@@ -35,9 +35,9 @@ describe("camera preset utilities", () => {
       fovHorizontalDeg: 62,
       rangeM: 32,
       resolutionMP: 4,
-    } as const;
+    };
 
-    const best = findBestCameraPreset(camera);
+    const best = findBestCameraPreset(camera as any);
 
     expect(best).not.toBeNull();
     expect(best?.id).toBe("bullet_outdoor");
@@ -45,12 +45,11 @@ describe("camera preset utilities", () => {
 
   test("applies preset as scoped patch", () => {
     const preset = CAMERA_PRESETS.find((value) => value.id === "ptz_professional");
-    expect(preset).not.toBeNull();
-    const patch = applyCameraPreset(preset);
+    expect(preset).not.toBeUndefined();
+    const patch = applyCameraPreset(preset!);
     expect(patch.presetId).toBe(preset!.id);
     expect(patch.fovHorizontalDeg).toBe(preset!.fovHorizontalDeg);
     expect(patch.ptz).toBe(preset!.ptz);
-    expect(preset).not.toBeNull();
     expect(applyCameraPreset(null)).toEqual({});
   });
 });

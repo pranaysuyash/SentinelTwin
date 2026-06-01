@@ -6557,7 +6557,7 @@ All relevant decisions and analysis are already captured in:
 | A4 Simulation-first output | Produce deterministic blind-spot ranking before recommendations | Coverage/adversarial outputs run from draft scene; blind-region outputs, ranking, and readiness metadata are available; review-stage severity language is role-tiered | Blind-spot ranking still mixes scene-accuracy and scenario assumptions if input is sparse | Simulation + narrative layer |
 | A5 Temporary ops mode | Model short-duration control events (VIP/emergency/perimeter) | Scene branches and archive/route replay semantics can represent alternate states | Operational-mode schema is now wired from scan session into `SecurityScene.assumptions`; escalation remains open only for legal/commercial guidance and policy text | Governance + policy + archive model |
 | A6 Temporary/permanent split | Separate day-to-day posture from event posture and support teardown | `operationalMode`, `operationalContext`, and durable `operationalScenarioEnvelope` are now persisted for scan + reconstruction; teardown requirement is visible in assumptions and review | Legal/commercial wording for temporary postures remains open | Simulation + workflow + evidence |
-| A7 Evidence export + decision hardening | Convert advisory outputs into role-specific artifact | Report pipeline includes evidence continuity, audience mapping, and assumption visibility across analyst-facing surfaces | Public/commercial language split still needs final legal/commercial copy review | Report + product |
+| A7 Evidence export + decision hardening | Convert advisory outputs into role-specific artifact | Report pipeline includes evidence continuity, audience mapping, legal/commercial framing, and assumption visibility across analyst-facing surfaces | Closed: public/commercial wording and distribution boundaries finalized | Report + product |
 | A8 Scale path hardening | Extend from one room to facility scope | `workspace membership`, route tracing, and scale-aware storage model already in use; adaptive simulation envelope is now explicit | Remaining question: whether temporary-event caps should be stricter than permanent by default | Platform + simulation infra |
 | A9 Decision lock | Publish and stop drift on scope | No-floor-plan stage matrix locked at A6/A9 with explicit envelope + teardown contract and temporary/permanent split | Stage refinement shifts to A8/A10 scale, legal/commercial wording closure, and deferred acceleration patterns | Product + architecture board |
 
@@ -6566,7 +6566,7 @@ All relevant decisions and analysis are already captured in:
 1. Finalize A1 + A2 as a single canonical intake-and-confidence contract in code/docs (single source of truth for required vs assumed fields).
 2. Use A2 policy in A3 and A4: simulation must never emit hard recommendations when confidence class is `insufficient`.
 3. Pilot A5/A6 using one event profile (e.g., VIP sweep) with explicit apply/teardown events.
-4. Finalize A7 language split for consultant/facilities director/output stakeholders before A9.
+4. A7 language split for consultant/facilities director/output stakeholders is now finalized and documented.
 5. Resolve A8 scale benchmark for scan-derived scenes and decide default safe limits for v1.
 
 #### Open decision hooks tied to Dimension A

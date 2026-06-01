@@ -32,6 +32,7 @@ const camera: CameraNode = {
   reviewStatus: "unreviewed",
   sourceTrace: "",
   geometryValidity: "valid",
+  viewMotion: { movementMode: "fixed", dwellSeconds: 0, waypoints: [] },
 };
 
 function buildMatch(

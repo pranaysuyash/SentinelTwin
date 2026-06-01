@@ -374,3 +374,29 @@ approval posture regardless of coverage math.
 - `apps/studio/src/lib/__tests__/workspace-governance.test.ts`
 - `Docs/todos/no-floor-plan-readiness-checklist.md`
 - `Docs/exploration/EXPLORATION_MAP.md`
+
+## D-048 | 2026-06-01 | Dimension-A A7 legal/commercial framing finalized for report exports
+
+**Decision:** Finalize role-specific legal/commercial framing for no-floor-plan advisory outputs by adding
+distribution-safe report messaging and boundary language for consultant/facilities director/operations manager
+audiences in the report generation package.
+
+**Rationale:**
+- A7 required a closure on public/commercial wording and the advisory-vs. implementation split before A9 lock.
+- Role-aware narratives were present in review UI, but report exports needed dedicated legal/commercial framing and
+  explicit boundary language for distribution.
+- This update keeps `consultant` and `facilities_director` as primary customer-facing personas, with `operations_manager`
+  preserved for temporary-control readiness and rollout sequencing.
+
+**Canonical behavior now required:**
+1. `@sentineltwin/report` exposes audience-specific commercial framing with distribution and internal-use copies.
+2. Distribution mode changes in `applyReportVisibility` update the active distribution message while preserving
+   legal boundary and internal handling.
+3. All export surfaces (`markdown`, `html`, `text`) include a legal-commercial framing block so commercial reviewers
+   and operators receive the correct trust boundary.
+4. Preset catalogue includes a dedicated consultant distribution-ready export option for client-facing packets.
+
+**Updated in this pass:**
+- `packages/report/src/index.ts`
+- `Docs/todos/no-floor-plan-readiness-checklist.md`
+- `Docs/exploration/EXPLORATION_MAP.md`

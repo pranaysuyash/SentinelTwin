@@ -34,6 +34,7 @@ function addCamera(scene: SecurityScene) {
     status: "on", nightMode: "ir", irRangeM: 30, thermalCapable: false, ptz: false,
     clarity: "good", source: "manual", reviewStatus: "unreviewed", sourceTrace: "",
     geometryValidity: "valid", ndaaCompliant: true, privacyMaskingEnabled: false, tags: [],
+    viewMotion: { movementMode: "fixed", dwellSeconds: 0, waypoints: [] },
   });
 }
 
@@ -315,6 +316,7 @@ describe("actionable warnings", () => {
       status: "on", nightMode: "ir", irRangeM: 30, thermalCapable: false, ptz: false,
       clarity: "good", source: "manual", reviewStatus: "unreviewed", sourceTrace: "",
       geometryValidity: "valid", ndaaCompliant: true, privacyMaskingEnabled: false, tags: [],
+      viewMotion: { movementMode: "fixed", dwellSeconds: 0, waypoints: [] },
     });
     const warnings = makeSiteCompilerWarnings(scene);
     const fovWarning = warnings.find((w) => w.code === "CAMERA_FOV_UNKNOWN");

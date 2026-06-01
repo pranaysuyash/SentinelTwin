@@ -36,6 +36,7 @@ function createDraft() {
     ndaaCompliant: true,
     privacyMaskingEnabled: false,
     tags: [],
+    viewMotion: { movementMode: "fixed", dwellSeconds: 0, waypoints: [] },
   });
   scene.criticalZones.push({
     id: "zone_1",
@@ -97,6 +98,7 @@ describe("promoteToActiveScene — session activation gate", () => {
       irRangeM: 30, thermalCapable: false, ptz: false, clarity: "good",
       source: "manual", reviewStatus: "unreviewed", sourceTrace: "",
       geometryValidity: "valid", ndaaCompliant: true, privacyMaskingEnabled: false, tags: [],
+      viewMotion: { movementMode: "fixed", dwellSeconds: 0, waypoints: [] },
     });
     scene.criticalZones.push({
       id: "zone_1", nodeType: "critical_zone", label: "Entry",
@@ -135,6 +137,7 @@ describe("promoteToActiveScene — session activation gate", () => {
       irRangeM: 30, thermalCapable: false, ptz: false, clarity: "good",
       source: "manual", reviewStatus: "unreviewed", sourceTrace: "",
       geometryValidity: "valid", ndaaCompliant: true, privacyMaskingEnabled: false, tags: [],
+      viewMotion: { movementMode: "fixed", dwellSeconds: 0, waypoints: [] },
     });
     scene.criticalZones.push({
       id: "zone_1", nodeType: "critical_zone", label: "Entry",

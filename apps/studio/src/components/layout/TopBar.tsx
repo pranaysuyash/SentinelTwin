@@ -34,8 +34,6 @@ import { useStudioStore } from "@/store/studio-store";
 import { WorkspacePresetSwitcher } from "@/components/dock/WorkspacePresetSwitcher";
 import { BranchSwitcher } from "@/components/top-bar/BranchSwitcher";
 import { FixSandboxBar } from "@/components/top-bar/FixSandboxBar";
-import { SceneBuilderWizard } from "@/components/scan-to-scene/SceneBuilderWizard";
-import { ScanSiteWizard } from "@/components/scan-to-scene/ScanSiteWizard";
 import type { CriticalZoneNode, SecurityScene } from "@/schema/security-scene";
 import { bakeoffToSecurityScene } from "@/lib/bakeoff-bridge";
 
@@ -697,22 +695,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
         </div>
       </div>
 
-      {wizardOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="relative h-[min(520px,92vh)] w-[min(640px,94vw)] overflow-hidden rounded-2xl border border-[#202536] shadow-2xl shadow-black/50">
-            <SceneBuilderWizard onClose={() => setWizardOpen(false)} />
-          </div>
-        </div>
-      )}
-
-      {scanWizardOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="relative h-[min(720px,94vh)] w-[min(1120px,96vw)] overflow-hidden rounded-2xl border border-[#202536] shadow-2xl shadow-black/50">
-            <ScanSiteWizard onClose={() => setScanWizardOpen(false)} />
-          </div>
-        </div>
-      )}
-    </header>
+      </header>
       <FixSandboxBar />
     </div>
   );

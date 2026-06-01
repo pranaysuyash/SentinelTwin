@@ -1,11 +1,11 @@
 "use client";
 
-import { ArrowLeft, Camera, Sun, TriangleAlert } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ArrowLeft, Camera, Copy, Sun, TriangleAlert } from "lucide-react";
+import { useMemo, useState, useCallback } from "react";
 
 import { cn } from "@/lib/cn";
 import { useProductViewStore } from "@/store/product-view-store";
-import { useStudioStore, type SavedProjectRecord } from "@/store/studio-store";
+import { useStudioStore } from "@/store/studio-store";
 import type { SecurityScene } from "@/schema/security-scene";
 
 function coverageTone(pct: number) {
@@ -61,13 +61,14 @@ function siteCategory(scene: SecurityScene): "retail" | "office" | "warehouse" {
 }
 
 function SceneCard({
-  record,
+  scene,
   onOpen,
+  onDuplicate,
 }: {
-  record: SavedProjectRecord;
+  scene: SecurityScene;
   onOpen: (scene: SecurityScene) => void;
+  onDuplicate?: (scene: SecurityScene) => void;
 }) {
-  const scene = record.scene;
   const result = scene.simulation;
   const coverage = result?.totalCoveragePct ?? null;
   const worstQualityLabel = result?.worstAreaQuality
@@ -118,7 +119,7 @@ function SceneCard({
           <div className="min-w-0">
             <div className="truncate text-sm font-semibold text-white">{scene.name}</div>
             <div className="mt-0.5 text-[10px] text-[color:var(--text-muted)]">
-              {record.workspaceOrganization} · {formatTime(scene.updatedAt)}
+              {formatTime(scene.updatedAt)}
             </div>
           </div>
           <span className={cn(
@@ -163,7 +164,7 @@ function SceneCard({
 
 export function ReferenceSitesView() {
   const navigate = useProductViewStore((s) => s.navigate);
-  const savedProjects = useStudioStore((s) => s.savedProjects);
+  const referenceScenes = useStudioStore((s) => s.referenceScenes);
   const setScene = useStudioStore((s) => s.setScene);
   const setViewMode = useStudioStore((s) => s.setViewMode);
   const setBottomTab = useStudioStore((s) => s.setBottomTab);
@@ -171,9 +172,9 @@ export function ReferenceSitesView() {
 
   const [filter, setFilter] = useState<"all" | "retail" | "office" | "warehouse">("all");
 
-  const referenceProjects = useMemo(
-    () => savedProjects.filter((p) => p.scene.source === "demo" || p.scene.source === "preset"),
-    [savedProjects],
+  const referenceDemos = useMemo(
+    () => referenceScenes,
+    [referenceScenes],
   );
   const filteredReferenceProjects = useMemo(
     () => referenceProjects.filter((project) => filter === "all" || siteCategory(project.scene) === filter),

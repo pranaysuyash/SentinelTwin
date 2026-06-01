@@ -25,11 +25,20 @@ Reports exist and work well:
 - Report exports now carry explicit standards-template metadata and per-template depth notes
 - Report Lite now persists a local report catalog with quick-apply presets and a selected preset cursor
 
-But missing:
-- Deeper standards-specific evidence-link coverage beyond the core handoff trail
+**Currently implemented in the report engine:**
+- `oodpcvs-audit` and `dori-audit` standards templates with IEC 62676-4:2025 clause references — these are live in `packages/report/src/index.ts`
+- `general-audit`, `installer-proposal`, `insurer-brief`, `privacy-review` audience-specific templates
+- Privacy masking for `privacy_reviewer` audience (redaction behaviors)
+- Before/after delta comparison across all report modes
+- Standards-template metadata and per-template depth notes in export headers
+
+**What remains for Phase 15:**
+- GDPR Art. 35 DPIA-specific template (`gdpr-dpia`)
+- BIPA compliance template (`bipa-compliance`)
+- HIPAA privacy template (`hipaa-privacy`)
+- Evidence-ledger integration linking report sections to specific simulation data points
 - Share-policy annotations per preset
-- Evidence ledger integration linking report sections to specific simulation data points
-- Export format depth beyond the current HTML/Markdown/Text surface
+- Export format depth beyond current HTML/Markdown/Text surface
 
 ---
 

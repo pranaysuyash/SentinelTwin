@@ -9,6 +9,7 @@ import { MapCanvas } from "@/components/map/MapCanvas";
 import {
   clampPathDuration,
   clampReplayProgress,
+  getPathReplayDurationS,
   findLatestTimelineEventAtOrBeforeTime,
   findNextTimelineEventAfterTime,
   sortTimelineEvents,
@@ -74,11 +75,12 @@ export function PathMap({
   }, [activePath, result?.pathResults]);
   const timelineEvents = useMemo(() => sortTimelineEvents(pathResult?.timeline), [pathResult?.timeline]);
   const safeDurationS = useMemo(() => clampPathDuration(pathResult?.totalDurationS), [pathResult?.totalDurationS]);
+  const estimatedDurationS = useMemo(() => clampPathDuration(getPathReplayDurationS(activePath)), [activePath]);
   const safeReplayProgress = clampReplayProgress(pathReplay.progress);
   const safeCurrentTime = safeDurationS > 0 ? safeDurationS * safeReplayProgress : 0;
 
   const pathLength = activePath ? pathLengthM(activePath) : 0;
-  const estSeconds = activePath ? pathLength / activePath.speedMps : 0;
+  const estSeconds = activePath ? estimatedDurationS : 0;
   const visiblePct = pathResult && safeDurationS > 0
     ? Math.round((pathResult.visibleDurationS / safeDurationS) * 100)
     : null;
@@ -224,6 +226,7 @@ export function PathMap({
         currentQualityColor={currentQualityColor}
         replayActor={replayActor}
         pathResult={pathResult}
+        timelineEvents={timelineEvents}
       />
 
       <div className="mt-2 grid grid-cols-3 gap-2">
@@ -317,6 +320,7 @@ function CurrentPathStatePanel({
   currentQualityColor,
   replayActor,
   pathResult,
+  timelineEvents,
 }: {
   activePath: ScenarioPath | null;
   currentSample: ReturnType<typeof samplePathQuality>[number] | null;
@@ -330,6 +334,7 @@ function CurrentPathStatePanel({
     visibilityByCamera: Record<string, { visibleS: number; maxQuality: DoriQuality }>;
     timeline: { timeS: number; event: string; quality?: DoriQuality; cameraId?: string; reason?: string }[];
   } | null;
+  timelineEvents: { timeS: number; event: string; quality?: DoriQuality; cameraId?: string; reason?: string }[];
 }) {
   const visibilityState = currentSample?.quality === "none" ? "Lost now" : currentSample ? "Visible now" : "No path";
   const bestCameraNow = currentSample?.coveringCameras.length

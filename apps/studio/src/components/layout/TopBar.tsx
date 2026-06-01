@@ -131,8 +131,6 @@ export function TopBar() {
   const [sceneOpen, setSceneOpen] = useState(false);
   const [targetOpen, setTargetOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const [wizardOpen, setWizardOpen] = useState(false);
-  const [scanWizardOpen, setScanWizardOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const handleCameraFailure = useCallback(() => {
@@ -263,7 +261,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
 
         <div className="flex flex-shrink-0 items-center gap-1">
           <SurfaceButton
-            onClick={() => setWizardOpen(true)}
+            onClick={() => navigateProductView("manual_builder")}
             title="Create a new site twin"
           >
             <Plus className="h-3 w-3" />
@@ -390,7 +388,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                 </button>
                 <button type="button"
                   onClick={() => {
-                    setScanWizardOpen(true);
+                    navigateProductView("scan_site");
                     setSceneOpen(false);
                   }}
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"
@@ -400,7 +398,7 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                 </button>
                 <button type="button"
                   onClick={() => {
-                    setWizardOpen(true);
+                    navigateProductView("manual_builder");
                     setSceneOpen(false);
                   }}
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-[#6c768f] transition-colors hover:bg-[#171c2b] hover:text-white"

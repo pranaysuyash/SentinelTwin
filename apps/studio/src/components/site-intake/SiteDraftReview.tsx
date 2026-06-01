@@ -85,6 +85,7 @@ type PersonaPolicy = {
 const PERSONA_BY_ROLE: Record<WorkspaceRole, ReviewPersona> = {
   operator: "facilities_director",
   reviewer: "consultant",
+  auditor: "auditor",
   installer: "operations_manager",
   insurer: "auditor",
   privacy_reviewer: "auditor",

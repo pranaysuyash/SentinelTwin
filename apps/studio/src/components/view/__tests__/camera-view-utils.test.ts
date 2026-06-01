@@ -12,12 +12,13 @@ import {
   orderCamerasForReplayPlayback,
   sortTimelineEvents,
 } from "@/components/view/camera-view-utils";
+import type { DoriQuality } from "@/schema/security-scene";
 
 function camEvent(overrides: {
   timeS: number;
   event: "visible" | "lost" | "quality_change";
   cameraId?: string;
-  quality?: "none" | "low" | "medium" | "high" | "verified";
+  quality?: DoriQuality;
   reason?: string;
 }) {
   return {
@@ -80,7 +81,6 @@ describe("camera-view-utils", () => {
         waypoints: [],
       },
     }, 2)).toMatchObject({
-      pitchDeg: -30,
       pitchDeg: -30,
     });
     const poseAtTwoSeconds = sampleCameraReplayPose({
@@ -196,37 +196,37 @@ describe("camera-view-utils", () => {
   test("finds the latest timeline event for a camera at time", () => {
     const timeline = [
       camEvent({ timeS: 3, event: "lost", cameraId: "cam-2", reason: "lost late" }),
-      camEvent({ timeS: 1, event: "visible", cameraId: "cam-1", quality: "low" }),
-      camEvent({ timeS: 2, event: "quality_change", cameraId: "cam-1", quality: "medium" }),
+      camEvent({ timeS: 1, event: "visible", cameraId: "cam-1", quality: "detection" }),
+      camEvent({ timeS: 2, event: "quality_change", cameraId: "cam-1", quality: "observation" }),
       camEvent({ timeS: 4, event: "visible", reason: "future" }),
-      camEvent({ timeS: 2, event: "visible", cameraId: "cam-2", quality: "high" }),
+      camEvent({ timeS: 2, event: "visible", cameraId: "cam-2", quality: "recognition" }),
     ];
 
     expect(findLatestTimelineEventForCameraAtTime(timeline, 1.5, "cam-1")?.reason).toBeUndefined();
-    expect(findLatestTimelineEventForCameraAtTime(timeline, 2.1, "cam-1")?.quality).toBe("medium");
+    expect(findLatestTimelineEventForCameraAtTime(timeline, 2.1, "cam-1")?.quality).toBe("observation");
     expect(findLatestTimelineEventForCameraAtTime(timeline, 2.1, "cam-2")?.cameraId).toBe("cam-2");
-    expect(findLatestTimelineEventForCameraAtTime(timeline, 2.1, "cam-2")?.quality).toBe("high");
+    expect(findLatestTimelineEventForCameraAtTime(timeline, 2.1, "cam-2")?.quality).toBe("recognition");
   });
 
   test("finds the latest timeline event at or before a given time", () => {
     const timeline = [
-      camEvent({ timeS: 1, event: "visible", cameraId: "cam-1", quality: "low" }),
-      camEvent({ timeS: 3, event: "visible", cameraId: "cam-1", quality: "medium" }),
-      camEvent({ timeS: 5, event: "visible", cameraId: "cam-1", quality: "high" }),
+      camEvent({ timeS: 1, event: "visible", cameraId: "cam-1", quality: "detection" }),
+      camEvent({ timeS: 3, event: "visible", cameraId: "cam-1", quality: "observation" }),
+      camEvent({ timeS: 5, event: "visible", cameraId: "cam-1", quality: "recognition" }),
     ];
 
     expect(findLatestTimelineEventAtOrBeforeTime(timeline, 0)).toBeNull();
-    expect(findLatestTimelineEventAtOrBeforeTime(timeline, 1)?.quality).toBe("low");
-    expect(findLatestTimelineEventAtOrBeforeTime(timeline, 4)?.quality).toBe("medium");
-    expect(findLatestTimelineEventAtOrBeforeTime(timeline, 5)?.quality).toBe("high");
-    expect(findLatestTimelineEventAtOrBeforeTime(timeline, 6)?.quality).toBe("high");
+    expect(findLatestTimelineEventAtOrBeforeTime(timeline, 1)?.quality).toBe("detection");
+    expect(findLatestTimelineEventAtOrBeforeTime(timeline, 4)?.quality).toBe("observation");
+    expect(findLatestTimelineEventAtOrBeforeTime(timeline, 5)?.quality).toBe("recognition");
+    expect(findLatestTimelineEventAtOrBeforeTime(timeline, 6)?.quality).toBe("recognition");
   });
 
   test("finds the next timeline event after a given time", () => {
     const timeline = [
-      camEvent({ timeS: 1, event: "visible", cameraId: "cam-1", quality: "low" }),
-      camEvent({ timeS: 3, event: "visible", cameraId: "cam-1", quality: "medium" }),
-      camEvent({ timeS: 5, event: "visible", cameraId: "cam-1", quality: "high" }),
+      camEvent({ timeS: 1, event: "visible", cameraId: "cam-1", quality: "detection" }),
+      camEvent({ timeS: 3, event: "visible", cameraId: "cam-1", quality: "observation" }),
+      camEvent({ timeS: 5, event: "visible", cameraId: "cam-1", quality: "recognition" }),
     ];
 
     expect(findNextTimelineEventAfterTime(timeline, 0)?.timeS).toBe(1);
@@ -237,12 +237,12 @@ describe("camera-view-utils", () => {
 
   test("builds replay state by camera at time", () => {
     const timeline = [
-      camEvent({ timeS: 4, event: "quality_change", cameraId: "cam-2", quality: "high", reason: "clear" }),
-      camEvent({ timeS: 1, event: "visible", cameraId: "cam-2", quality: "low", reason: "start" }),
+      camEvent({ timeS: 4, event: "quality_change", cameraId: "cam-2", quality: "recognition", reason: "clear" }),
+      camEvent({ timeS: 1, event: "visible", cameraId: "cam-2", quality: "detection", reason: "start" }),
       camEvent({ timeS: 3, event: "lost", cameraId: "cam-2", quality: "none", reason: "occluded" }),
-      camEvent({ timeS: 2, event: "visible", cameraId: "cam-1", quality: "medium", reason: "start-1" }),
-      camEvent({ timeS: 3.2, event: "quality_change", cameraId: "cam-1", quality: "high", reason: "closer" }),
-      camEvent({ timeS: 5, event: "visible", cameraId: "cam-1", quality: "high", reason: "future" }),
+      camEvent({ timeS: 2, event: "visible", cameraId: "cam-1", quality: "observation", reason: "start-1" }),
+      camEvent({ timeS: 3.2, event: "quality_change", cameraId: "cam-1", quality: "recognition", reason: "closer" }),
+      camEvent({ timeS: 5, event: "visible", cameraId: "cam-1", quality: "recognition", reason: "future" }),
     ];
 
     expect(buildReplayStateByCameraAtTime(timeline, 3.2)).toEqual({
@@ -253,7 +253,7 @@ describe("camera-view-utils", () => {
       },
       "cam-1": {
         visible: true,
-        quality: "high",
+        quality: "recognition",
         reason: "closer",
       },
     });

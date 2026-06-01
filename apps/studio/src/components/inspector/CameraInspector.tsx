@@ -117,14 +117,7 @@ const VIEW_MODES: Array<{ value: CameraViewMode; label: string }> = [
 type ViewToggleKey = "overlays" | "dori" | "path" | "zones" | "timestamp" | "boundingBox" | "grid";
 type ViewToggleState = Record<ViewToggleKey, boolean>;
 
-type CameraMetadataArchiveRecord = CameraMetadataIngestResponse & {
-  storedAt: number;
-  submittedAt: number;
-  raw: string;
-  cameras: Array<Pick<CameraNode, "id" | "name" | "status" | "clarity" | "nightMode">>;
-  sceneId: string | null;
-  sceneName: string | null;
-};
+import type { CameraMetadataArchiveRecord } from "@/lib/camera-metadata-ingest-history";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

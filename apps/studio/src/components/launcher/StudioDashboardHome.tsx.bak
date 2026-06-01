@@ -28,18 +28,19 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/cn";
+import { getSceneSourceMeta } from "@/lib/scene-source";
 import { summarizeWorkspaceAccount, summarizeWorkspaceCatalog } from "@/lib/workspace-catalog";
-import { searchWorkspaceMemory, type WorkspaceSearchHit } from "@/lib/workspace-search";
+import { formatWorkspaceBranchLabel, searchWorkspaceMemory, type WorkspaceSearchHit } from "@/lib/workspace-search";
 import type { BottomTab, SavedProjectRecord, TimelineFocusRequest, ViewMode, WorkspacePreset } from "@/store/studio-store";
 import { useStudioStore } from "@/store/studio-store";
 import { OrganizationManagerPanel } from "@/components/launcher/OrganizationManagerPanel";
 import { ScenePreview } from "@/components/launcher/ScenePreview";
-import { SecurityStatusPanel } from "@/components/launcher/SecurityStatusPanel";
 import { useDashboardArchives } from "@/hooks/useDashboardArchives";
 import type { SecurityScene, SecurityIssue, SimulationResult, DoriQuality } from "@/schema/security-scene";
 import type { OrganizationList } from "@/schema/organization";
-import { QUALITY_TEXT_COLOR } from "@/lib/quality-display";
-
+import { MiniStat } from "@/components/shared/MiniStat";
+import { QUALITY_COLOR, QUALITY_TEXT_COLOR } from "@/lib/quality-display";
+import { QualityBadge } from "@/components/shared/QualityBadge";
 import { selectSecurityOutcomeFromStore } from "@/lib/security-outcome/security-outcome-selectors";
 
 type ProjectSort = "recent" | "name" | "coverage";
@@ -144,6 +145,9 @@ function getDemoWorkspaceTitle(scene: SecurityScene, index: number) {
   if (haystack.includes("obstruction")) return "Demo: Obstruction Stress Test";
   if (haystack.includes("rotation") || haystack.includes("rotated")) return "Demo: Camera Rotation Test";
   if (haystack.includes("night")) return "Demo: Night Lighting Test";
+  if (index === 1) return "Demo: Obstruction Stress Test";
+  if (index === 2) return "Demo: Camera Rotation Test";
+  if (index === 3) return "Demo: Night Lighting Test";
   return "Demo: Retail Baseline";
 }
 
@@ -315,7 +319,221 @@ function anglePoint(origin: [number, number], angleDeg: number, distance: number
   return [origin[0] + Math.cos(radians) * distance, origin[1] + Math.sin(radians) * distance] as [number, number];
 }
 
-function WorkspaceMiniPreview({ scene, result, hydrated = true }: { scene: SecurityScene; result: SimulationResult | null; hydrated?: boolean }) {
+// REMOVED - ScenePreview now imported from ScenePreview.tsx
+  const width = compact ? 860 : 1280;
+  const height = compact ? 460 : 620;
+  const padding = compact ? 34 : 46;
+  const scale = Math.min(
+    (width - padding * 2) / scene.dimensions.width,
+    (height - padding * 2) / scene.dimensions.depth,
+  );
+  const sceneWidth = scene.dimensions.width * scale;
+  const sceneHeight = scene.dimensions.depth * scale;
+  const offsetX = (width - sceneWidth) / 2;
+  const offsetY = (height - sceneHeight) / 2;
+  const toPoint = (point: [number, number]) => [offsetX + point[0] * scale, offsetY + point[1] * scale] as [number, number];
+  const zoneResults = criticalZoneStatusMap(result);
+  const activePath = activePathId ? (scene.paths.find((path) => path.id === activePathId) ?? null) : null;
+  const activePathStart = activePath ? toPoint(activePath.points[0].position) : null;
+  const activePathEnd = activePath ? toPoint(activePath.points[activePath.points.length - 1].position) : null;
+  const heatmapCells = result?.coverageCells ?? [];
+  const heatmapStep = Math.max(1, Math.ceil(heatmapCells.length / (compact ? 150 : 240)));
+  const cellSize = Math.max(2.6, scale * (compact ? 0.26 : 0.22));
+  const activePathPoints = pathPolyline(activePath ?? undefined, toPoint);
+  const downsampledHeatmapCells = useMemo(
+    () => heatmapCells.filter((_, index) => index % heatmapStep === 0),
+    [heatmapCells, heatmapStep],
+  );
+
+  if (!hydrated) {
+    return (
+      <div className={cn(
+        "relative overflow-hidden rounded-[28px] border border-[color:var(--st-border)] bg-[radial-gradient(circle_at_20%_0%,rgba(59,130,246,0.11),transparent_40%),radial-gradient(circle_at_85%_10%,rgba(16,185,129,0.09),transparent_30%),linear-gradient(180deg,rgba(11,14,21,0.98),rgba(11,14,21,0.86))]",
+        compact ? "min-h-[290px]" : "min-h-[340px]",
+      )}>
+        <div className="absolute inset-0 opacity-60 [background-image:linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)] [background-size:44px_44px]" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="rounded-2xl border border-white/8 bg-black/30 px-4 py-3 text-center">
+            <div className="text-xs uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Site Twin Preview</div>
+            <div className="mt-1 text-sm font-medium text-white">{scene.name}</div>
+            <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">Preparing site twin · Run simulation for coverage data</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn(
+      "relative overflow-hidden rounded-[28px] border border-[color:var(--st-border)] bg-[radial-gradient(circle_at_20%_0%,rgba(59,130,246,0.11),transparent_40%),radial-gradient(circle_at_85%_10%,rgba(16,185,129,0.09),transparent_30%),linear-gradient(180deg,rgba(11,14,21,0.98),rgba(11,14,21,0.86))]",
+      compact ? "min-h-[290px]" : "min-h-[340px]",
+    )}>
+      <div className="absolute inset-0 opacity-60 [background-image:linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)] [background-size:44px_44px]" />
+      <svg suppressHydrationWarning viewBox={`0 0 ${width} ${height}`} className="absolute inset-0 h-full w-full">
+        <defs>
+          <linearGradient id="coverageGlow" x1="0%" x2="100%" y1="0%" y2="100%">
+            <stop offset="0%" stopColor="rgba(59,130,246,0.18)" />
+            <stop offset="100%" stopColor="rgba(34,197,94,0.14)" />
+          </linearGradient>
+          <filter id="softBlur">
+            <feGaussianBlur stdDeviation="10" />
+          </filter>
+        </defs>
+
+        <rect x={offsetX} y={offsetY} width={sceneWidth} height={sceneHeight} rx="28" fill="rgba(10,14,20,0.92)" stroke="rgba(148,163,184,0.12)" />
+        <rect x={offsetX} y={offsetY} width={sceneWidth} height={sceneHeight} rx="28" fill="url(#coverageGlow)" opacity="0.38" />
+
+        {downsampledHeatmapCells.map((cell, index) => {
+          const [x, y] = toPoint([cell.x, cell.z]);
+          const baseOpacity = cell.privacyRestricted ? 0.12 : 0.28;
+          const opacity = cell.fragility != null ? Math.max(0.12, 0.42 - cell.fragility * 0.28) : baseOpacity;
+          const fill =
+            cell.quality === "none"
+              ? "rgba(239,68,68,0.22)"
+              : qualityToTone(cell.quality);
+          return (
+            <rect
+              key={`${cell.x}-${cell.z}-${index}`}
+              x={x - cellSize / 2}
+              y={y - cellSize / 2}
+              width={cellSize}
+              height={cellSize}
+              rx={cellSize / 5}
+              fill={fill}
+              opacity={opacity}
+            />
+          );
+        })}
+
+        {scene.walls.map((wall) => {
+          const [x1, y1] = toPoint(wall.start);
+          const [x2, y2] = toPoint(wall.end);
+          return (
+            <line
+              key={wall.id}
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke={wall.material === "glass" ? "rgba(96,165,250,0.75)" : "rgba(226,232,240,0.88)"}
+              strokeWidth={compact ? 3.2 : 4.2}
+              strokeLinecap="round"
+            />
+          );
+        })}
+
+        {scene.doors.map((door) => {
+          const [x, y] = toPoint([door.position[0], door.position[2]]);
+          return <rect key={door.id} x={x - 10} y={y - 6} width="20" height="12" rx="4" fill="rgba(56,189,248,0.8)" />;
+        })}
+
+        {scene.windows.map((windowNode) => {
+          const [x, y] = toPoint([windowNode.position[0], windowNode.position[2]]);
+          return <rect key={windowNode.id} x={x - 12} y={y - 4} width="24" height="8" rx="3" fill="rgba(96,165,250,0.76)" />;
+        })}
+
+        {scene.privacyZones.map((zone) => {
+          const points = zone.polygon.map((point) => toPoint(point)).map(([x, y]) => `${x},${y}`).join(" ");
+          return <polygon key={zone.id} points={points} fill="rgba(239,68,68,0.07)" stroke="rgba(248,113,113,0.55)" strokeDasharray="8 6" strokeWidth="2" />;
+        })}
+
+        {scene.criticalZones.map((zone) => {
+          const zoneResult = zoneResults.get(zone.id);
+          const tone =
+            zoneResult?.status === "pass"
+              ? "rgba(34,197,94,0.18)"
+              : zoneResult?.status === "partial"
+                ? "rgba(245,158,11,0.18)"
+                : "rgba(239,68,68,0.18)";
+          const outline =
+            zoneResult?.status === "pass"
+              ? "rgba(74,222,128,0.65)"
+              : zoneResult?.status === "partial"
+                ? "rgba(251,191,36,0.65)"
+                : "rgba(248,113,113,0.72)";
+          const points = zone.polygon.map((point) => toPoint(point)).map(([x, y]) => `${x},${y}`).join(" ");
+          return <polygon key={zone.id} points={points} fill={tone} stroke={outline} strokeWidth="2.4" />;
+        })}
+
+        {scene.obstructions.map((obstruction: ObstructionNode) => {
+          const [x, y] = toPoint([obstruction.position[0], obstruction.position[2]]);
+          const w = Math.max(12, obstruction.dimensions[0] * scale);
+          const h = Math.max(10, obstruction.dimensions[2] * scale);
+          return (
+            <rect
+              key={obstruction.id}
+              x={x - w / 2}
+              y={y - h / 2}
+              width={w}
+              height={h}
+              rx="8"
+              fill="rgba(148,163,184,0.34)"
+              stroke={obstruction.movable ? "rgba(251,191,36,0.55)" : "rgba(226,232,240,0.24)"}
+              strokeWidth="1.5"
+            />
+          );
+        })}
+
+        {scene.securityLights.map((light: SecurityLightNode) => {
+          const [x, y] = toPoint([light.position[0], light.position[2]]);
+          return (
+            <circle
+              key={light.id}
+              cx={x}
+              cy={y}
+              r={compact ? 7 : 8.5}
+              fill={light.status === "on" ? "rgba(251,191,36,0.95)" : "rgba(107,114,128,0.6)"}
+              stroke="rgba(255,255,255,0.24)"
+              strokeWidth="1.2"
+            />
+          );
+        })}
+
+        {scene.cameras.map((camera: CameraNode) => {
+          const origin = toPoint([camera.position[0], camera.position[2]]);
+          const range = camera.rangeM * scale;
+          const left = anglePoint(origin, camera.yawDeg - camera.fovHorizontalDeg / 2, range);
+          const right = anglePoint(origin, camera.yawDeg + camera.fovHorizontalDeg / 2, range);
+          const poly = `${origin[0]},${origin[1]} ${left[0]},${left[1]} ${right[0]},${right[1]}`;
+          return (
+            <g key={camera.id}>
+              <polygon points={poly} fill="rgba(59,130,246,0.11)" stroke="rgba(59,130,246,0.48)" strokeWidth="1.6" />
+              <circle cx={origin[0]} cy={origin[1]} r={compact ? 6 : 7.5} fill="rgba(59,130,246,0.96)" stroke="rgba(255,255,255,0.24)" strokeWidth="1.1" />
+            </g>
+          );
+        })}
+
+        {activePathPoints ? (
+          <g>
+            <polyline points={activePathPoints} fill="none" stroke="rgba(34,197,94,0.9)" strokeWidth="3" strokeDasharray="6 6" />
+            {activePathStart ? (
+              <circle cx={activePathStart[0]} cy={activePathStart[1]} r="6.5" fill="rgba(34,197,94,0.95)" />
+            ) : null}
+            {activePathEnd ? (
+              <circle cx={activePathEnd[0]} cy={activePathEnd[1]} r="6.5" fill="rgba(248,113,113,0.95)" />
+            ) : null}
+          </g>
+        ) : null}
+
+        {showLabels ? (
+          <>
+            <text x={offsetX + 18} y={offsetY + 26} fill="rgba(226,232,240,0.86)" fontSize={compact ? 13 : 15} fontWeight="700">
+              {scene.name}
+            </text>
+            <text x={offsetX + 18} y={offsetY + 46} fill="rgba(148,163,184,0.88)" fontSize={compact ? 10 : 12}>
+              {sceneSummary(scene)}
+            </text>
+            <text x={offsetX + sceneWidth - 18} y={offsetY + 26} textAnchor="end" fill="rgba(148,163,184,0.78)" fontSize={compact ? 10 : 11}>
+              Coverage preview
+            </text>
+          </>
+        ) : null}
+      </svg>
+    </div>
+  );
+}
+
+function WorkspaceMiniPreview({ scene, result, hydrated = true }: ScenePreviewProps) {
   const width = 320;
   const height = 156;
   const padding = 12;
@@ -667,6 +885,316 @@ function WorkspaceSeedCard({
   );
 }
 
+function ProjectMetadataEditor({
+  project,
+  onUpdateProjectMetadata,
+  onDuplicateProject,
+  onRenameProject,
+  onSelectProject,
+  organizations,
+}: {
+  project: SavedProjectRecord;
+  onUpdateProjectMetadata: StudioDashboardHomeProps["onUpdateProjectMetadata"];
+  onDuplicateProject: StudioDashboardHomeProps["onDuplicateProject"];
+  onRenameProject: StudioDashboardHomeProps["onRenameProject"];
+  onSelectProject: (sceneId: string) => void;
+  organizations: OrganizationList;
+}) {
+  const [folderDraft, setFolderDraft] = useState(project.folder);
+  const [tagDraft, setTagDraft] = useState(project.tags.join(", "));
+  const [organizationDraft, setOrganizationDraft] = useState(project.workspaceOrganization);
+  const [ownerDraft, setOwnerDraft] = useState(project.workspaceOwner);
+  const [visibilityDraft, setVisibilityDraft] = useState<SavedProjectRecord["workspaceVisibility"]>(project.workspaceVisibility);
+
+  const applyFolderDraft = () => {
+    onUpdateProjectMetadata(project.scene.id, { folder: folderDraft.trim() || "Unsorted" });
+  };
+
+  const applyTagDraft = () => {
+    const tags = tagDraft
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+    onUpdateProjectMetadata(project.scene.id, { tags });
+  };
+
+  const togglePinned = () => {
+    onUpdateProjectMetadata(project.scene.id, { pinned: !project.pinned });
+  };
+
+  const applyOrganizationDraft = (nextValue: string = organizationDraft) => {
+    onUpdateProjectMetadata(project.scene.id, { workspaceOrganization: nextValue.trim() || "Personal Workspace" });
+  };
+
+  const applyOwnerDraft = () => {
+    onUpdateProjectMetadata(project.scene.id, { workspaceOwner: ownerDraft.trim() || "You" });
+  };
+
+  const applyVisibilityDraft = (nextVisibility: SavedProjectRecord["workspaceVisibility"]) => {
+    setVisibilityDraft(nextVisibility);
+    onUpdateProjectMetadata(project.scene.id, { workspaceVisibility: nextVisibility });
+  };
+
+  const duplicateWorkspace = () => {
+    const duplicate = onDuplicateProject(project.scene.id);
+    if (duplicate) {
+      onSelectProject(duplicate.scene.id);
+    }
+  };
+
+  const renameWorkspace = () => {
+    if (project.scene.source === "demo") return;
+    const nextName = window.prompt("Rename workspace", project.scene.name);
+    if (nextName == null) return;
+    onRenameProject(project.scene.id, nextName);
+  };
+
+  const selectedProjectScene = project.scene;
+  const selectedProjectCoverage = selectedProjectScene.simulation?.totalCoveragePct ?? null;
+  const selectedProjectIssues = [...(selectedProjectScene.simulation?.issues ?? [])].sort(
+    (a, b) => ISSUE_SEVERITY_ORDER[a.severity] - ISSUE_SEVERITY_ORDER[b.severity],
+  );
+
+  return (
+    <div className="mt-4 rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
+      <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
+        <Settings2 className="h-3.5 w-3.5 text-sky-300" />
+        Selected Workspace
+      </div>
+      <div className="mt-3 rounded-[22px] border border-[color:var(--st-border)] bg-white/[0.025] p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="truncate text-base font-semibold text-white">{selectedProjectScene.name}</div>
+            <div className="mt-1 text-[11px] text-[color:var(--st-muted)]">
+              {sourceLabel(selectedProjectScene)} · Last updated {formatTime(project.updatedAt)}
+            </div>
+            <div className="mt-2">
+              <span
+                className={cn(
+                  "rounded-full border px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.18em]",
+                  sourceBadgeTone(selectedProjectScene.source),
+                )}
+              >
+                {selectedProjectScene.source === "demo"
+                  ? "Reference baseline"
+                  : selectedProjectScene.source === "manual"
+                    ? "Draft Workspace"
+                    : "Your Workspace"}
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={togglePinned}
+            className={cn(
+              "rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
+              project.pinned
+                ? "border-amber-400/30 bg-amber-500/12 text-amber-100"
+                : "border-[color:var(--st-border)] bg-white/[0.03] text-[color:var(--st-muted)] hover:bg-white/[0.05]",
+            )}
+          >
+            {project.pinned ? "Unpin" : "Pin"}
+          </button>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+            Folder: {folderDraft}
+          </span>
+          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+            Org: {organizationDraft}
+          </span>
+          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+            Owner: {ownerDraft}
+          </span>
+          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+            {visibilityDraft}
+          </span>
+          {project.tags.length > 0 ? (
+            project.tags.map((tag) => (
+              <span key={tag} className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+                #{tag}
+              </span>
+            ))
+          ) : (
+            <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
+              No tags
+            </span>
+          )}
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+          <MiniStat
+            label="Coverage"
+            value={selectedProjectCoverage != null ? `${Math.round(selectedProjectCoverage)}%` : "—"}
+            valueClassName={selectedProjectCoverage != null ? coverageTone(selectedProjectCoverage) : "text-white"}
+            detail="Saved workspace snapshot"
+          />
+          <MiniStat
+            label="Issues"
+            value={`${selectedProjectIssues.length}`}
+            valueClassName={selectedProjectIssues.length > 0 ? "text-amber-300" : "text-emerald-300"}
+            detail={selectedProjectIssues[0] ? selectedProjectIssues[0].description : "No saved issues"}
+          />
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+          <MiniStat
+            label="Cameras"
+            value={`${selectedProjectScene.cameras.length}`}
+            valueClassName="text-sky-200"
+            detail="Saved scene cameras"
+          />
+          <MiniStat
+            label="Zones"
+            value={`${selectedProjectScene.criticalZones.length}`}
+            valueClassName="text-sky-200"
+            detail="Critical zones tracked"
+          />
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={duplicateWorkspace}
+            className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-[color:var(--st-muted)] transition-colors hover:bg-white/[0.05] hover:text-white"
+          >
+            Duplicate Workspace
+          </button>
+          <button
+            type="button"
+            onClick={renameWorkspace}
+            disabled={project.scene.source === "demo"}
+            title={project.scene.source === "demo" ? "Duplicate the reference baseline first to rename it." : "Rename workspace"}
+            className={cn(
+              "rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
+              project.scene.source === "demo"
+                ? "border-[color:var(--st-border)] bg-white/[0.02] text-[color:var(--st-muted)] opacity-60"
+                : "border-[color:var(--st-border)] bg-white/[0.03] text-[color:var(--st-muted)] hover:bg-white/[0.05] hover:text-white",
+            )}
+          >
+            Rename Workspace
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-[22px] border border-[color:var(--st-border)] bg-white/[0.025] p-4">
+        <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Project metadata</div>
+        <div className="mt-3 space-y-3">
+          <label className="block">
+            <span className="text-[11px] text-[color:var(--st-muted)]">Folder</span>
+            <input
+              value={folderDraft}
+              onChange={(event) => setFolderDraft(event.target.value)}
+              onBlur={applyFolderDraft}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  applyFolderDraft();
+                }
+              }}
+              className="mt-1 w-full rounded-2xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-[color:var(--st-muted)] focus:border-sky-400/35 focus:bg-white/[0.04]"
+              placeholder="Unsorted"
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-[11px] text-[color:var(--st-muted)]">Tags</span>
+            <input
+              value={tagDraft}
+              onChange={(event) => setTagDraft(event.target.value)}
+              onBlur={applyTagDraft}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  applyTagDraft();
+                }
+              }}
+              className="mt-1 w-full rounded-2xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-[color:var(--st-muted)] focus:border-sky-400/35 focus:bg-white/[0.04]"
+              placeholder="retail, client, north"
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-[11px] text-[color:var(--st-muted)]">Organization</span>
+            <div className="relative mt-1">
+              <select
+                value={organizationDraft}
+                onChange={(event) => {
+                  setOrganizationDraft(event.target.value);
+                  applyOrganizationDraft(event.target.value);
+                }}
+                className="w-full appearance-none rounded-2xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 pr-8 text-sm text-white outline-none transition-colors focus:border-sky-400/35 focus:bg-white/[0.04]"
+              >
+                {organizations?.length > 0 ? (
+                  organizations.map((org) => (
+                    <option key={org.id} value={org.name} className="bg-[#0b0f17] text-white">
+                      {org.name}
+                    </option>
+                  ))
+                ) : (
+                  <option value="Personal Workspace" className="bg-[#0b0f17] text-white">Personal Workspace</option>
+                )}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[color:var(--st-muted)]" />
+            </div>
+          </label>
+
+          <label className="block">
+            <span className="text-[11px] text-[color:var(--st-muted)]">Owner</span>
+            <input
+              value={ownerDraft}
+              onChange={(event) => setOwnerDraft(event.target.value)}
+              onBlur={applyOwnerDraft}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  applyOwnerDraft();
+                }
+              }}
+              className="mt-1 w-full rounded-2xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-[color:var(--st-muted)] focus:border-sky-400/35 focus:bg-white/[0.04]"
+              placeholder="You"
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-[11px] text-[color:var(--st-muted)]">Visibility</span>
+            <select
+              value={visibilityDraft}
+              onChange={(event) => applyVisibilityDraft(event.target.value as SavedProjectRecord["workspaceVisibility"])}
+              className="mt-1 w-full rounded-2xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-sm text-white outline-none transition-colors focus:border-sky-400/35 focus:bg-white/[0.04]"
+            >
+              <option value="private">Private</option>
+              <option value="shared">Shared</option>
+              <option value="published">Published</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function sourceLabel(scene: SecurityScene) {
+  return SOURCE_LABELS[scene.source] ?? getSceneSourceMeta(scene.source).shortLabel;
+}
+
+function sourceBadgeTone(source: SecurityScene["source"]) {
+  switch (source) {
+    case "demo":
+      return "border-emerald-400/20 bg-emerald-500/10 text-emerald-200";
+    case "manual":
+      return "border-amber-400/20 bg-amber-500/10 text-amber-100";
+    case "scan":
+      return "border-cyan-400/20 bg-cyan-500/10 text-cyan-200";
+    case "import":
+      return "border-sky-400/20 bg-sky-500/10 text-sky-200";
+    case "ai":
+      return "border-violet-400/20 bg-violet-500/10 text-violet-200";
+    case "preset":
+      return "border-indigo-400/20 bg-indigo-500/10 text-indigo-200";
+    default:
+      return "border-slate-400/20 bg-slate-500/10 text-slate-200";
+  }
+}
 
 export function StudioDashboardHome({
   scene,
@@ -972,16 +1500,14 @@ export function StudioDashboardHome({
   const [projectQuery, setProjectQuery] = useState("");
   const [projectSort, setProjectSort] = useState<ProjectSort>("recent");
   const [workspaceMemoryQuery, setWorkspaceMemoryQuery] = useState("");
-  const {
-    governanceArchiveHistory,
-    workspaceMembershipArchiveHistory,
-    workspaceIdentityConflictHistory,
-    supportDeliveryHistory,
-    sensorIngestHistory,
-    cameraMetadataHistory,
-    cameraLiveConnectionHistory,
-    operationalEvidenceArchiveHistory,
-  } = useDashboardArchives();
+  const [governanceArchiveHistory, setGovernanceArchiveHistory] = useState<GovernanceArchiveRecord[]>([]);
+  const [workspaceMembershipArchiveHistory, setWorkspaceMembershipArchiveHistory] = useState<WorkspaceMembershipArchiveRecord[]>([]);
+  const [workspaceIdentityConflictHistory, setWorkspaceIdentityConflictHistory] = useState<WorkspaceIdentityConflictArchiveRecord[]>([]);
+  const [supportDeliveryHistory, setSupportDeliveryHistory] = useState<SupportDeliveryArchiveRecord[]>([]);
+  const [sensorIngestHistory, setSensorIngestHistory] = useState<SensorIngestArchiveRecord[]>([]);
+  const [cameraMetadataHistory, setCameraMetadataHistory] = useState<CameraMetadataArchiveRecord[]>([]);
+  const [cameraLiveConnectionHistory, setCameraLiveConnectionHistory] = useState<CameraLiveConnectionArchiveRecord[]>([]);
+  const operationalEvidenceArchiveHistory = useStudioStore((s) => s.operationalEvidenceArchiveHistory);
   const workspaceAccountProfile = useStudioStore((s) => s.workspaceAccount);
   const setWorkspaceAccountProfile = useStudioStore((s) => s.setWorkspaceAccountProfile);
   const resetWorkspaceAccountProfile = useStudioStore((s) => s.resetWorkspaceAccountProfile);
@@ -1074,6 +1600,32 @@ export function StudioDashboardHome({
       workspaceMemoryQuery,
     ],
   );
+  useEffect(() => {
+    void (async () => {
+      const loadArchiveHistory = async <T,>(url: string, setter: (value: T[]) => void) => {
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            setter([]);
+            return;
+          }
+          const payload = await response.json() as { history?: T[] };
+          setter(payload.history ?? []);
+        } catch {
+          setter([]);
+        }
+      };
+      await Promise.allSettled([
+        loadArchiveHistory<GovernanceArchiveRecord>("/api/governance-archive", setGovernanceArchiveHistory),
+        loadArchiveHistory<WorkspaceMembershipArchiveRecord>("/api/workspace-membership-archive", setWorkspaceMembershipArchiveHistory),
+        loadArchiveHistory<WorkspaceIdentityConflictArchiveRecord>("/api/workspace-identity-conflict", setWorkspaceIdentityConflictHistory),
+        loadArchiveHistory<SupportDeliveryArchiveRecord>("/api/support-delivery", setSupportDeliveryHistory),
+        loadArchiveHistory<SensorIngestArchiveRecord>("/api/sensor-ingest", setSensorIngestHistory),
+        loadArchiveHistory<CameraMetadataArchiveRecord>("/api/camera-metadata-ingest", setCameraMetadataHistory),
+        loadArchiveHistory<CameraLiveConnectionArchiveRecord>("/api/camera-live-connection", setCameraLiveConnectionHistory),
+      ]);
+    })();
+  }, []);
   useEffect(() => {
     queueMicrotask(() => {
       setHydrated(true);
@@ -1781,7 +2333,6 @@ export function StudioDashboardHome({
                 scene={scene}
                 result={result ?? scene.simulation ?? null}
                 hydrated={hydrated}
-                activePathId={outcomeActivePathId}
                 savedScenes={savedScenes}
                 savedProjects={savedProjects}
                 visibleProjects={visibleProjects}
@@ -1818,17 +2369,62 @@ export function StudioDashboardHome({
             ) : null}
             {/* Security Status panel */}
             {isDashboardSectionVisible("securityStatus") ? (
-              <SecurityStatusPanel
-                displayOutcomeStatus={displayOutcomeStatus}
-                displayPrimaryRisk={displayPrimaryRisk}
-                displayIssues={displayIssues}
-                railWorstQuality={railWorstQuality}
-                railNightStatus={railNightStatus}
-                displayCoverage={displayCoverage}
-                overallCoverageLabel={overallCoverageLabel}
-                railCoveragePct={railCoveragePct}
-                onHide={() => setDashboardSectionVisible("securityStatus", false)}
-              />
+            <div className="rounded-[16px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3">
+              <div className="flex items-center justify-between">
+                <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#7dd3fc]">SECURITY STATUS</div>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.16em] text-emerald-300">
+                    Live
+                  </span>
+                  <HideSectionButton label="security status" onClick={() => setDashboardSectionVisible("securityStatus", false)} />
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <div className="mb-2 rounded-xl border border-[#1a2030] bg-white/[0.02] px-3 py-2">
+                  <div className="text-[9px] uppercase tracking-[0.18em] text-[#8b96ab]">SITE RISK</div>
+                  <div className="mt-1 text-[12px] font-semibold text-white">{displayOutcomeStatus}</div>
+                  <div className="mt-1 text-[10px] text-[#aab7d1]">{displayPrimaryRisk}</div>
+                </div>
+                  <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#8b96ab]">OUTCOME SUMMARY</div>
+                  <div className="space-y-1">
+                  {[
+                    { id: "cash-counter", label: "Cash Counter", detail: "Recognition required", badge: displayIssues.some((i) => i.severity === "critical") ? "FAILS" : railWorstQuality, tone: "danger" },
+                    { id: "main-entry", label: "Main Entry", detail: "Minimum requirement", badge: railWorstQuality, tone: "warn" },
+                    { id: "night-mode", label: "Night Mode", detail: "Low light performance", badge: railNightStatus, tone: "warn" },
+                  ].map((row) => (
+                    <div key={row.id} className="flex items-center justify-between rounded-xl border border-[#1a2030] bg-white/[0.015] px-3 py-2">
+                      <div className="min-w-0">
+                        <div className="truncate text-[11px] font-medium text-white">{row.label}</div>
+                        <div className="text-[9px] text-[#8b96ab]">{row.detail}</div>
+                      </div>
+                      <span className={cn(
+                        "ml-2 flex-none rounded border px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.1em]",
+                        row.tone === "danger"
+                          ? "border-red-400/30 bg-red-500/12 text-red-300"
+                          : "border-amber-400/30 bg-amber-500/12 text-amber-300",
+                      )}>
+                        {row.badge}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between rounded-xl border border-[#1a2030] bg-white/[0.015] px-3 py-2">
+                    <div className="min-w-0">
+                      <div className="text-[11px] font-medium text-white">Overall Coverage</div>
+                      <div className="text-[9px] text-[#8b96ab]">{overallCoverageLabel}</div>
+                    </div>
+                    <span className={cn(
+                      "ml-2 flex-none rounded border px-1.5 py-0.5 text-[8px] font-bold",
+                      displayCoverage == null ? "border-slate-400/20 bg-slate-500/8 text-slate-300" :
+                      displayCoverage >= 70 ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-300" :
+                      displayCoverage >= 40 ? "border-amber-400/30 bg-amber-500/12 text-amber-300" : "border-red-400/30 bg-red-500/12 text-red-300"
+                    )}>
+                      {railCoveragePct}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
             ) : null}
 
             {/* Open Issues panel */}
@@ -2017,7 +2613,6 @@ type WorkspaceLibraryPanelProps = {
   scene: SecurityScene;
   result: SimulationResult | null;
   hydrated: boolean;
-  activePathId: string | null;
   savedScenes: SecurityScene[];
   savedProjects: SavedProjectRecord[];
   visibleProjects?: SavedProjectRecord[];
@@ -2042,7 +2637,6 @@ function WorkspaceLibraryPanel({
   scene,
   result,
   hydrated,
-  activePathId,
   savedScenes,
   savedProjects,
   visibleProjects,
@@ -2118,7 +2712,7 @@ function WorkspaceLibraryPanel({
                     <ScenePreview
                       scene={projectScene}
                       result={projectScene.simulation ?? (projectScene.id === scene.id ? result : null)}
-                      activePathId={projectScene.id === scene.id ? activePathId : null}
+                      activePathId={projectScene.id === scene.id ? outcomeActivePathId : null}
                       compact
                       showLabels={false}
                       hydrated={hydrated}

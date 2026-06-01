@@ -1,7 +1,7 @@
 # Exploration Map — SentinelTwin
 
 **This is a living document. Append findings. Never replace.**
-**Last updated:** 2026-06-01 (Phase 14: @sentineltwin/agents package extraction + LocalProvider + SceneUnderstandingAgent + tool calling) — previous: Simulation engine maturity Thread 2b — calibration, confidence, hashing, scenarios, counterfactuals, sensitivity; Scan/reconstruction pipeline foundation: artifact data model, adapter interfaces, reconstruction compiler, quality gates, 73 new tests; Dedicated lighting/shadow overlay mode added on top of heatmap lighting/shadow implementation; Heatmap lighting/shadow implementation — camera PPM now combines independent security-light illumination, obstruction-cast light shadows, and camera line-of-sight; Physics engine audit — zero implementation across entire codebase, deferred to V0.2, no new action needed; Checkpoint compare/report pivots + launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Sensor provenance + runtime health surfacing; Sensor fusion preview + workspace access policy surfacing; Digital twin simulation physics: PTZ movement, BRDF reflectivity, dynamic lighting, view distance, placement constraints, scene fidelity, occlusion culling, camera feed synthesis, real-time feedback
+**Last updated:** 2026-06-01 (Compliance depth gap documented: IEC 62676-4/DORI templates exist, GDPR/BIPA/HIPAA pending; hook purity fixes applied across 7 components; CI gate enhanced to cover packages; camera live-connection contract canonicalized; deployment packaging multi-stage Docker + health API + compose) — previous: Simulation engine maturity Thread 2b — calibration, confidence, hashing, scenarios, counterfactuals, sensitivity; Scan/reconstruction pipeline foundation: artifact data model, adapter interfaces, reconstruction compiler, quality gates, 73 new tests; Dedicated lighting/shadow overlay mode added on top of heatmap lighting/shadow implementation; Heatmap lighting/shadow implementation — camera PPM now combines independent security-light illumination, obstruction-cast light shadows, and camera line-of-sight; Physics engine audit — zero implementation across entire codebase, deferred to V0.2, no new action needed; Checkpoint compare/report pivots + launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Sensor provenance + runtime health surfacing; Sensor fusion preview + workspace access policy surfacing; Digital twin simulation physics: PTZ movement, BRDF reflectivity, dynamic lighting, view distance, placement constraints, scene fidelity, occlusion culling, camera feed synthesis, real-time feedback
 
 ---
 
@@ -6346,6 +6346,9 @@ All relevant decisions and analysis are already captured in:
 ### Current finding
 
 - Reports already carry provenance, evidence summaries, and standards references, which makes audience-specific compliance modes a natural next layer instead of a new data model.
+- **IEC 62676-4:2025 (OODPCVS) and DORI standards templates are already implemented** in `packages/report/src/index.ts` as `oodpcvs-audit` and `dori-audit` with clause-level references in HTML export. Also: `general-audit`, `installer-proposal`, `insurer-brief`, `privacy-review` audience templates.
+- **Privacy masking works:** the `privacy_reviewer` audience triggers specific redaction behaviors.
+- **What does NOT exist:** GDPR Art. 35 DPIA template, BIPA compliance template, HIPAA privacy template. These are the actual compliance depth gap — not the broader report engine.
 
 ### Follow-up
 
@@ -6353,6 +6356,7 @@ All relevant decisions and analysis are already captured in:
 - Preserve the same evidence and checkpoint lineage in every compliance variant, even when redaction or audience-specific framing changes the presentation.
 - Scene Intelligence point-in-time reconstruction now also records source provenance, so the resolved state can explain whether it is an exact snapshot or a derived reconstruction from an earlier checkpoint event.
 - Report exports now carry the same exact-versus-derived checkpoint provenance for the latest temporal twin checkpoint and latest published checkpoint, so the exported report explains where its temporal summary came from instead of only reporting age and delta.
+- **Documented gap:** PHASE_15_REPORT_COMPLIANCE.md now explicitly lists which templates exist and which are pending. ARCHITECTURE_OVERVIEW.md line 350 and 361 corrected to match reality.
 
 ---
 

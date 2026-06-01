@@ -210,8 +210,10 @@ export function VisibilityTimeline({ pathResult, currentTime, onSeek }: Visibili
         {/* Camera rows */}
         <div className="space-y-1">
           {cameraRows.map((row) => {
-            const visiblePct = row.camData ? (row.camData.visibleS / totalDuration) * 100 : 0;
-            return (
+            const visiblePct = row.camData
+              ? Math.max(0, Math.min(100, (row.camData.visibleS / totalDuration) * 100))
+              : 0;
+                return (
               <div key={row.camId} className="flex items-center gap-2">
                 {/* Camera label */}
                 <div className="w-20 flex-shrink-0 truncate text-[8px] font-medium text-[#8b96ab]" title={row.camId}>

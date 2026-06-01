@@ -27,6 +27,7 @@ describe("PathMap", () => {
     expect(source).toContain("sortTimelineEvents");
     expect(source).toContain("safeDurationS = useMemo(() => clampPathDuration(pathResult?.totalDurationS)");
     expect(source).toContain("safeReplayProgress = clampReplayProgress(pathReplay.progress)");
+    expect(source).toContain("getPathReplayDurationS(activePath)");
     expect(source).toContain("const currentTime = safeCurrentTime");
     expect(source).toContain("findLatestTimelineEventAtOrBeforeTime(timelineEvents, safeCurrentTime)");
     expect(source).not.toContain("function findLastAtOrBefore");

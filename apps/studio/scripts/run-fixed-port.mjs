@@ -42,8 +42,6 @@ if (alreadyRunning) {
 }
 
 async function ensureDevBootstrapArtifacts({ cleanPages = false } = {}) {
-  if (devBundler === "turbopack") return;
-
   if (mode !== "dev") return;
 
   const nextDir = path.join(process.cwd(), ".next");

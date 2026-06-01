@@ -7,7 +7,7 @@ import { cn } from "@/lib/cn";
 import { useProductViewStore } from "@/store/product-view-store";
 import { useStudioStore } from "@/store/studio-store";
 import { AI_PROVIDER_OPTIONS, describeAiProviderSelection, getProviderOption, normalizeAiProviderSelection } from "@/agents/provider-selection";
-import { CAMERA_PRESETS } from "@/components/workspace/camera-preset-utils";
+import { CAMERA_PRESETS, cameraPresetIcon } from "@/components/workspace/camera-preset-utils";
 
 const UI_DENSITIES = [
   { id: "compact" as const, label: "Compact", description: "Maximum information density." },
@@ -250,7 +250,7 @@ export function SettingsView() {
                   >
                     <div className="flex items-center gap-2">
                       <span className="rounded-full border border-[#26314a] bg-[#121829] p-1 text-cyan-300">
-                        {preset.icon}
+                        {cameraPresetIcon(preset.id)}
                       </span>
                       <div className="min-w-0">
                         <div className="text-sm font-semibold text-white">{preset.label}</div>

@@ -1,0 +1,22 @@
+# SentinelTwin Studio — local deployment
+# Usage: docker compose up -d
+services:
+  studio:
+    build:
+      context: .
+      dockerfile: apps/studio/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - HOST=0.0.0.0
+      - PORT=3000
+    env_file:
+      - apps/studio/.env.local
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped

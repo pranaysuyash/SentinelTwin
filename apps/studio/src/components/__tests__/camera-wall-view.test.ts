@@ -38,6 +38,9 @@ describe("CameraWallView", () => {
     expect(source).toContain("const safePathDuration = clampPathDuration(activePathResult?.totalDurationS);");
     expect(source).toContain("const pathTimeS = safePathDuration * safeReplayProgress;");
     expect(source).toContain("Replay ${pathTimeS.toFixed(1)}s / ${safePathDuration.toFixed(1)}s");
+    expect(source).toContain("const ratio = safePathDurationS > 0 ? (pathVisibility?.visibleS ?? 0) / safePathDurationS : 0;");
+    expect(source).toContain("if (safePathDuration <= 0) return 0;");
+    expect(source).toContain("return vis.visibleS / safePathDuration <= 0.35;");
     expect(source).toContain("Current Replay");
     expect(source).toContain("Actor visible now");
     expect(source).toContain("Actor lost now");
@@ -56,7 +59,7 @@ describe("CameraWallView", () => {
     expect(source).toContain("clampReplayProgress,");
     expect(source).toContain("orderCamerasForReplayPlayback,");
     expect(source).toContain("buildReplayStateByCameraAtTime,");
-    expect(source).toContain("return orderCamerasForReplayPlayback(scene.cameras, selectedId, selectedCameraId);");
+    expect(source).toContain("return orderCamerasForReplayPlayback(scene.cameras, selectedCameraId, selectedId);");
     expect(source).not.toContain("function clampReplayProgress(progress: number)");
     expect(source).not.toContain("function clampPathDuration(durationS: number | undefined)");
     expect(source).not.toContain("function buildReplayStateByCameraAtTime(");

@@ -141,12 +141,9 @@ export interface SimulationSlice {
   counterfactualPlans: CounterfactualPlan[];
   activeCounterfactualPlanId: string | null;
 
-  pathReplay: { playing: boolean; progress: number; speed: number; followActor: boolean };
-
   setSimulationRunning: (running: boolean) => void;
   setSimulationResult: (result: SimulationResult, durationMs: number) => void;
   runSimulation: () => void;
-  simulateSnapshot: (snapshotId: string) => boolean;
   markDirty: () => void;
   toggleAutoRecompute: () => void;
   toggleCameraFailure: (cameraId: string) => void;
@@ -162,11 +159,6 @@ export interface SimulationSlice {
   previewCounterfactualPlan: (planId: string) => void;
   applyCounterfactualPlan: (planId: string) => void;
   revertCounterfactualPreview: () => void;
-
-  setPathReplayPlaying: (playing: boolean) => void;
-  setPathReplayProgress: (progress: number) => void;
-  setPathReplaySpeed: (speed: number) => void;
-  setPathReplayFollowActor: (followActor: boolean) => void;
 }
 
 export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
@@ -185,8 +177,6 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
   counterfactualObsId: null,
   counterfactualPlans: [],
   activeCounterfactualPlanId: null,
-
-  pathReplay: { playing: false, progress: 0, speed: 1, followActor: true },
 
   setSimulationRunning: (running) => set({ simulationRunning: running }),
 
@@ -306,65 +296,6 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
         set({ simulationRunning: false });
       }
     }, 30);
-  },
-
-  simulateSnapshot: (snapshotId) => {
-    const current = get();
-    const index = current.snapshots.findIndex((snapshot: SceneSnapshot) => snapshot.id === snapshotId);
-    if (index === -1) return false;
-    const startedAt = performance.now();
-    const target = current.snapshots[index];
-    const fullScene = cloneSecurityScene(target.scene as unknown as SecurityScene);
-    const result = simulateStudio(fullScene);
-
-    set((state: any) => {
-      const nextSnapshots = state.snapshots.map((snapshot: SceneSnapshot, i: number) =>
-        i === index
-          ? {
-              ...snapshot,
-              simulation: result,
-            }
-          : snapshot);
-      const nextScene = cloneSecurityScene(state.scene);
-      nextScene.snapshots = structuredClone(nextSnapshots);
-      const evidenceEvent = buildOperationalEvidenceEvent({
-        kind: "snapshot_saved",
-        title: "Snapshot replay simulated",
-        details: `Snapshot ${target.label} recomputed against the current simulation rules.`,
-        actor: "system",
-        source: nextScene.source,
-        sceneId: nextScene.id,
-        sceneName: nextScene.name,
-        revisionDepth: state.historyPast.length,
-        affectedNodeIds: [],
-        confidence: 0.9,
-        beforeSummary: summarizeSceneEvidence(state.scene).detail,
-        afterSummary: summarizeSceneEvidence(nextScene).detail,
-        notes: [`Snapshot ${target.label} re-simulated.`],
-      });
-      const nextEvents = [...state.operationalEvidenceEvents, evidenceEvent];
-      persistOperationalEvidenceEvents(nextEvents);
-      const durationMs = Math.round(performance.now() - startedAt);
-      get().recordRuntimeIncident({
-        category: "performance_trace",
-        severity: durationMs >= 500 ? "warning" : "info",
-        title: "Snapshot replay simulated",
-        details: `Snapshot "${target.label}" recomputed in ${durationMs} ms.`,
-        durationMs,
-        action: "simulate_snapshot",
-        path: "/studio",
-      });
-      return {
-        snapshots: nextSnapshots,
-        operationalEvidenceEvents: nextEvents,
-        scene: {
-          ...nextScene,
-          changeLog: [...nextScene.changeLog, evidenceLogLine(evidenceEvent)],
-        },
-      };
-    });
-
-    return true;
   },
 
   markDirty: () => set({ simulationDirty: true }),
@@ -536,23 +467,4 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
     get().undo();
     set({ activeCounterfactualPlanId: null });
   },
-
-  setPathReplayPlaying: (playing) => set((s: any) =>
-    s.pathReplay.playing === playing ? s : { pathReplay: { ...s.pathReplay, playing } },
-  ),
-
-  setPathReplayProgress: (progress) => set((s: any) => {
-    const nextProgress = Math.max(0, Math.min(1, progress));
-    return Math.abs(s.pathReplay.progress - nextProgress) < 0.0005
-      ? s
-      : { pathReplay: { ...s.pathReplay, progress: nextProgress } };
-  }),
-
-  setPathReplaySpeed: (speed) => set((s: any) =>
-    s.pathReplay.speed === speed ? s : { pathReplay: { ...s.pathReplay, speed } },
-  ),
-
-  setPathReplayFollowActor: (followActor) => set((s: any) =>
-    s.pathReplay.followActor === followActor ? s : { pathReplay: { ...s.pathReplay, followActor } },
-  ),
 });

@@ -45,8 +45,6 @@ function resetWorkspaceGovernanceForDraft(governance: WorkspaceGovernanceState):
     publishedBy: null,
   };
 }
-import { createSmallRetailShopScene, smallRetailShopScene } from "@/demo-scenes/small-retail-shop";
-import { simulateStudio } from "@sentineltwin/simulation";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 import {
   getPresetLayoutSnapshot,
@@ -482,7 +480,7 @@ function cloneAndSetActivePath(scene: SecurityScene, activePathId: string | null
   return scene.paths.some((path) => path.id === activePathId) ? activePathId : null;
 }
 
-function buildGraphState(
+export function buildGraphState(
   scene: SecurityScene,
   simulationResult: SimulationResult | null,
   revisionDepth = 0,
@@ -775,7 +773,6 @@ export interface SceneSlice {
   criticalZoneTargetType: import("@/schema/security-scene").CriticalZoneNode["targetType"];
   measurementTool: MeasurementToolState;
   commentTool: CommentToolState;
-  snapshots: SceneSnapshot[];
   sceneIntelligenceGraph: SceneIntelligenceGraph;
   historyPast: SecurityScene[];
   historyFuture: SecurityScene[];
@@ -814,9 +811,6 @@ export interface SceneSlice {
   clearChangeLog: () => void;
   importScene: (json: unknown) => { success: boolean; error?: string };
   exportScene: () => SecurityScene;
-
-  addSnapshot: (label: string, result: SimulationResult) => void;
-  saveSnapshot: (label: string) => void;
 
   setInspectorTab: (tab: InspectorTab) => void;
 
@@ -862,32 +856,9 @@ export interface SceneSlice {
 // Slice creator
 // ---------------------------------------------------------------------------
 export const createSceneSlice = (set: any, get: any): SceneSlice => {
-  // Build demo snapshots once and share across scene, snapshots, and graph fields
-  const DEMO_SNAPSHOT_BASE_TS = smallRetailShopScene.createdAt + 18 * 60_000;
+  const scene = createBlankSecurityScene();
   const isBr = typeof window !== "undefined";
-  const mvObs = (sc: SecurityScene) => {
-    const t = sc.obstructions.find((obs) => obs.id === "obs_cupboard_blocker") ?? sc.obstructions.find((obs) => obs.movable) ?? sc.obstructions[0];
-    if (t) t.position = [3.2, t.position[1], 2.4];
-  };
-  const sv = (label: string, minsAgo: number, mutate?: (sc: SecurityScene) => void): SceneSnapshot => {
-    const sc = createSmallRetailShopScene();
-    mutate?.(sc);
-    const sim = isBr ? simulateStudio(sc) : undefined;
-    if (sim) sc.simulation = sim; else delete sc.simulation;
-    sc.updatedAt = DEMO_SNAPSHOT_BASE_TS - minsAgo * 60_000;
-    return { id: `snap_${label.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`, label, createdAt: DEMO_SNAPSHOT_BASE_TS - minsAgo * 60_000, scene: cloneSecurityScene(sc), simulation: sim };
-  };
-  const snapshots = [
-    sv("Baseline", 18),
-    sv("Moved Obstruction", 14, mvObs),
-    sv("Cam 2 Rotated", 10, (sc) => { const c = sc.cameras.find((cam) => cam.id === "cam_counter"); if (c) { c.yawDeg = 305; c.pitchDeg = -20; } }),
-    sv("Night Mode", 7, (sc) => { sc.assumptions.timeOfDay = "night"; }),
-  ];
-
-  const scene = createSmallRetailShopScene();
-  scene.snapshots = snapshots.map((snap) => ({ ...snap, scene: structuredClone(snap.scene) }));
-  const sim = isBr ? simulateStudio(scene) : null;
-  if (sim) scene.simulation = sim; else delete scene.simulation;
+  const snapshots: SceneSnapshot[] = [];
 
   const loadedEvents = (() => {
     try {
@@ -899,11 +870,34 @@ export const createSceneSlice = (set: any, get: any): SceneSlice => {
     } catch { return []; }
   })();
 
+  const seededEvents = (() => {
+    if (loadedEvents.length > 0) return loadedEvents;
+    const summary = summarizeSceneEvidence(scene);
+    const event = buildOperationalEvidenceEvent({
+      kind: "scene_initialized",
+      title: "Workspace initialized",
+      details: `${summary.detail}.`,
+      actor: "system",
+      source: scene.source,
+      sceneId: scene.id,
+      sceneName: scene.name,
+      revisionDepth: 0,
+      affectedNodeIds: [],
+      confidence: 0.98,
+      afterSummary: summary.detail,
+      notes: ["Blank workspace created on first load."],
+    });
+    if (isBr) persistOperationalEvidenceEvents([event]);
+    return [event];
+  })();
+
+  const initialGraph = buildGraphState(scene, null, 0, 0, seededEvents);
+
   return {
   scene,
-  selectedNodeId: "cam_entrance",
-  selectedNodeIds: ["cam_entrance"],
-  selectedCameraId: "cam_entrance",
+  selectedNodeId: null,
+  selectedNodeIds: [],
+  selectedCameraId: null,
   activeTool: "select",
   sensorPlacementType: "motion",
   editor: {
@@ -925,33 +919,7 @@ export const createSceneSlice = (set: any, get: any): SceneSlice => {
   criticalZoneTargetType: "person_detection",
   measurementTool: { active: false, sourceCameraId: null, targetPoint: null, result: null },
   commentTool: { active: false, position: null, attachedToNodeId: null, draftText: "" },
-  snapshots,
-  sceneIntelligenceGraph: (() => {
-    if (loadedEvents.length > 0) return buildGraphState(scene, sim, 0, snapshots.length, loadedEvents);
-    const summary = summarizeSceneEvidence(scene);
-    const simulation = sim ? summarizeSimulationEvidence(sim) : null;
-    const seededEvents = [
-      buildOperationalEvidenceEvent({
-        kind: "scene_initialized",
-        title: "Reference baseline initialized",
-        details: `${summary.detail}.`,
-        actor: "system",
-        source: scene.source,
-        sceneId: scene.id,
-        sceneName: scene.name,
-        revisionDepth: 0,
-        affectedNodeIds: [],
-        confidence: 0.98,
-        afterSummary: summary.detail,
-        simulation: simulation ? { ...simulation, deltaCoveragePct: null } : undefined,
-        notes: ["Seeded on first load so the studio starts with an honest evidence baseline."],
-      }),
-    ];
-    if (typeof window !== "undefined") {
-      persistOperationalEvidenceEvents(seededEvents);
-    }
-    return buildGraphState(scene, sim, 0, snapshots.length, seededEvents);
-  })(),
+  sceneIntelligenceGraph: initialGraph,
   historyPast: [],
   historyFuture: [],
   lastRunMs: 0,
@@ -1470,91 +1438,6 @@ export const createSceneSlice = (set: any, get: any): SceneSlice => {
   },
 
   exportScene: () => cloneSecurityScene(get().scene as SecurityScene),
-
-  // ===== Snapshots =====
-
-  addSnapshot: (label, result) =>
-    set((s: Record<string, unknown>) => {
-      const parsed = parseSecurityScene(s.scene as SecurityScene);
-      const nextScene = cloneSecurityScene(parsed);
-      const snapshot: SceneSnapshot = {
-        id: `snap_${Date.now().toString(36)}`,
-        label,
-        createdAt: Date.now(),
-        scene: cloneSecurityScene(nextScene),
-        simulation: result,
-      };
-      const snapshots = [...(s.snapshots as SceneSnapshot[]), snapshot];
-      const operationalEvidenceEvents = s.operationalEvidenceEvents as OperationalEvidenceEvent[];
-      const evidenceEvent = buildOperationalEvidenceEvent({
-        kind: "snapshot_saved",
-        title: "Snapshot captured",
-        details: `Saved snapshot "${label}" for later comparison.`,
-        actor: "user",
-        source: parsed.source,
-        sceneId: parsed.id,
-        sceneName: parsed.name,
-        revisionDepth: (s.historyPast as SecurityScene[]).length,
-        affectedNodeIds: [],
-        confidence: 0.9,
-        beforeSummary: summarizeSceneEvidence(s.scene as SecurityScene).detail,
-        afterSummary: summarizeSceneEvidence(nextScene).detail,
-        sceneSnapshot: cloneSecurityScene(nextScene),
-      });
-      const nextEvents = [...operationalEvidenceEvents, evidenceEvent];
-      persistOperationalEvidenceEvents(nextEvents);
-      nextScene.snapshots = snapshots;
-      return {
-        snapshots,
-        sceneIntelligenceGraph: buildGraphState(nextScene, s.simulationResult as SimulationResult | null, (s.historyPast as SecurityScene[]).length, snapshots.length, operationalEvidenceEvents),
-        operationalEvidenceEvents: nextEvents,
-        scene: cloneSceneWithAppendedChangeLog(nextScene, evidenceLogLine(evidenceEvent)),
-      };
-    }),
-
-  saveSnapshot: (label) =>
-    set((s: Record<string, unknown>) => {
-      const startedAt = performance.now();
-      const parsed = parseSecurityScene(s.scene as SecurityScene);
-      const scene = cloneSecurityScene(parsed);
-      const snapshot: SceneSnapshot = {
-        id: `snap_${Date.now().toString(36)}`,
-        label,
-        createdAt: Date.now(),
-        scene: cloneSecurityScene(scene),
-        simulation: (s.simulationResult as SimulationResult | null) ?? undefined,
-      };
-      const snapshots = [...(s.snapshots as SceneSnapshot[]), snapshot];
-      scene.snapshots = snapshots;
-      const operationalEvidenceEvents = s.operationalEvidenceEvents as OperationalEvidenceEvent[];
-      const evidenceEvent = buildOperationalEvidenceEvent({
-        kind: "snapshot_saved",
-        title: "Snapshot saved",
-        details: `Saved snapshot "${label}" for comparison and report handoff.`,
-        actor: "user",
-        source: scene.source,
-        sceneId: scene.id,
-        sceneName: scene.name,
-        revisionDepth: (s.historyPast as SecurityScene[]).length,
-        affectedNodeIds: [],
-        confidence: 0.9,
-        beforeSummary: summarizeSceneEvidence(s.scene as SecurityScene).detail,
-        afterSummary: summarizeSceneEvidence(scene).detail,
-        sceneSnapshot: cloneSecurityScene(scene),
-      });
-      const nextEvents = [...operationalEvidenceEvents, evidenceEvent];
-      persistOperationalEvidenceEvents(nextEvents);
-      const durationMs = Math.round(performance.now() - startedAt);
-      return {
-        snapshots,
-        sceneIntelligenceGraph: buildGraphState(scene, s.simulationResult as SimulationResult | null, (s.historyPast as SecurityScene[]).length, snapshots.length, operationalEvidenceEvents),
-        operationalEvidenceEvents: nextEvents,
-        scene: {
-          ...scene,
-          changeLog: [...scene.changeLog, evidenceLogLine(evidenceEvent)],
-        },
-      };
-    }),
 
   // ===== Inspector =====
 

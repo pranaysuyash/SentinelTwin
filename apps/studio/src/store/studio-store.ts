@@ -1,16 +1,31 @@
 import { create } from "zustand";
 
 // ─── Slice creators ───────────────────────────────────────────────────────────
-import { createSceneSlice } from "./slices/scene-slice";
-import { createSimulationSlice } from "./slices/simulation-slice";
-import { createLayoutSlice } from "./slices/layout-slice";
-import { createWorkflowSlice } from "./slices/workflow-slice";
-import { createGovernanceSlice } from "./slices/governance-slice";
-import { createTelemetrySlice } from "./slices/telemetry-slice";
+import {
+  createSceneSlice,
+  createSimulationSlice,
+  createLayoutSlice,
+  createWorkflowSlice,
+  createGovernanceSlice,
+  createTelemetrySlice,
+  createSnapshotSlice,
+  createReplaySlice,
+  createComparisonSlice,
+} from "./slices";
 
-// ─── Re-export slice types (preserve external API surface) ────────────────────
+// ─── Shared types ─────────────────────────────────────────────────────────────
+export type {
+  SavedProjectRecord,
+  ProjectMetadata,
+  TimelineFocusRequest,
+  ArchiveHandoffState,
+  ArchiveRestoreContext,
+  ArchiveHandoffRequest,
+} from "./studio-types";
+export { OPERATIONAL_EVIDENCE_STORAGE_KEY } from "./studio-types";
 
-// Layout types
+// ─── Re-export all slice types (preserve external API surface) ────────────────
+// Core layout types
 export type {
   ViewMode,
   CanvasMode,
@@ -27,9 +42,9 @@ export type {
   OverlayFilters,
   LayerId,
   LayerVisibility,
-} from "./slices/layout-slice";
+} from "./slices/core/layout-slice";
 
-// Scene types
+// Core scene types
 export type {
   ActiveTool,
   EditorMode,
@@ -42,16 +57,16 @@ export type {
   FocusScenePointRequest,
   MapViewportState,
   MapState,
-} from "./slices/scene-slice";
+} from "./slices/core/scene-slice";
 
-// Workflow types
+// Enterprise workflow types
 export type {
   ActiveWorkflowId,
   ProductArea,
-} from "./slices/workflow-slice";
-export { formatProductArea, WORKFLOW_STEPS } from "./slices/workflow-slice";
+} from "./slices/enterprise/workflow-slice";
+export { formatProductArea, WORKFLOW_STEPS } from "./slices/enterprise/workflow-slice";
 
-// Telemetry types
+// Enterprise telemetry types
 export type {
   RuntimeIncidentCategory,
   RuntimeIncidentSeverity,
@@ -68,63 +83,46 @@ export type {
   ExternalLogEntrySeverity,
   ExternalLogEntry,
   ExternalLogEntryInput,
-  AiActionTelemetryStage,
   PromptRegistryHistorySource,
   PromptRegistryHistoryRecord,
   AiProviderGovernanceHistorySource,
   AiProviderGovernanceHistoryRecord,
   AiActionTelemetryRecord,
-} from "./slices/telemetry-slice";
-export { createRuntimeIncident } from "./slices/telemetry-slice";
-
-// ─── Types kept in studio-store (not owned by any slice) ──────────────────────
-
-export type { ArchiveHandoffRequest } from "@/lib/archive-handoff-link";
-export type ArchiveHandoffState = import("@/lib/archive-handoff-link").ArchiveHandoffRequest | null;
-export type ArchiveRestoreContext = {
-  archiveExportedAt?: string;
-  archiveRestoreBranch?: "draft" | "recovered" | "published";
-};
-
-export type TimelineFocusRequest = {
-  timestamp: number;
-  query?: string | null;
-  branchLabel?: string | null;
-  eventId?: string | null;
-  provenanceNodeId?: string | null;
-  provenanceEdgeId?: string | null;
-  source?: "launcher" | "scene" | "debug" | "report";
-};
-
-export type SavedProjectRecord = {
-  scene: import("@/schema/security-scene").SecurityScene;
-  folder: string;
-  tags: string[];
-  pinned: boolean;
-  workspaceOrganization: string;
-  workspaceOwner: string;
-  workspaceVisibility: "private" | "shared" | "published";
-  createdAt: number;
-  updatedAt: number;
-  lastOpenedAt: number | null;
-};
-
-export const OPERATIONAL_EVIDENCE_STORAGE_KEY = "sentineltwin_operational_evidence_v1";
+} from "./slices/enterprise/telemetry-slice";
+export { createRuntimeIncident } from "./slices/enterprise/telemetry-slice";
 
 // ─── Combined store type ──────────────────────────────────────────────────────
 
-import type { SceneSlice } from "./slices/scene-slice";
-import type { SimulationSlice } from "./slices/simulation-slice";
-import type { LayoutSlice } from "./slices/layout-slice";
-import type { WorkflowSlice } from "./slices/workflow-slice";
-import type { GovernanceSlice } from "./slices/governance-slice";
-import type { TelemetrySlice } from "./slices/telemetry-slice";
+import type { SceneSlice } from "./slices/core/scene-slice";
+import type { SimulationSlice } from "./slices/core/simulation-slice";
+import type { LayoutSlice } from "./slices/core/layout-slice";
+import type { SnapshotSlice } from "./slices/core/snapshot-slice";
+import type { ReplaySlice } from "./slices/core/replay-slice";
+import type { ComparisonSlice } from "./slices/core/comparison-slice";
+import type { WorkflowSlice } from "./slices/enterprise/workflow-slice";
+import type { GovernanceSlice } from "./slices/enterprise/governance-slice";
+import type { TelemetrySlice } from "./slices/enterprise/telemetry-slice";
 
-export type StudioStoreState = SceneSlice & SimulationSlice & LayoutSlice & WorkflowSlice & GovernanceSlice & TelemetrySlice;
+export type StudioStoreState =
+  & SceneSlice
+  & SimulationSlice
+  & LayoutSlice
+  & SnapshotSlice
+  & ReplaySlice
+  & ComparisonSlice
+  & WorkflowSlice
+  & GovernanceSlice
+  & TelemetrySlice;
 
 // ─── Store composition ────────────────────────────────────────────────────────
+// Spread order: general defaults first, specific overrides later.
+// New slices define default initializers; scene-slice overrides snapshots with
+// demo data via spread ordering.
 
 export const useStudioStore = create<StudioStoreState>()((set, get, store) => ({
+  ...createSnapshotSlice(set, get),
+  ...createReplaySlice(set, get),
+  ...createComparisonSlice(set, get),
   ...createSceneSlice(set, get),
   ...createSimulationSlice(set, get),
   ...createLayoutSlice(set, get, store),

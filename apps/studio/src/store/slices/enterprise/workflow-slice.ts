@@ -1,4 +1,4 @@
-import type { ViewMode } from "./layout-slice";
+import type { ViewMode } from "../core/layout-slice";
 
 export type ActiveWorkflowId = "idle" | "audit" | "design" | "scan" | "floor_plan" | "ai_draft" | "verify_footage" | "report" | "reference" | "demo";
 

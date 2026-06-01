@@ -120,9 +120,8 @@ function LiveFeedOverlay({
   timestampLabel: string;
 }) {
   const isActive = camData.status === "on";
-  const ratio = pathVisibility && pathVisibility.totalDurationS > 0
-    ? pathVisibility.visibleS / pathVisibility.totalDurationS
-    : 0;
+  const safePathDurationS = clampPathDuration(pathVisibility?.totalDurationS);
+  const ratio = safePathDurationS > 0 ? (pathVisibility?.visibleS ?? 0) / safePathDurationS : 0;
   const visiblePct = Math.round(ratio * 100);
   const visibilityStatus = coverageStatusFromRatio(ratio);
   const bestZoneQuality = getBestZoneQuality(cameraResult);
@@ -518,12 +517,12 @@ export function CameraWallView() {
     if (!activePath || !simulationResult) return null;
     return simulationResult.pathResults.find((entry) => entry.pathId === activePath.id) ?? null;
   }, [activePath, simulationResult]);
+  const safePathDuration = clampPathDuration(activePathResult?.totalDurationS);
   const cameraResultById = useMemo(
     () => Object.fromEntries((simulationResult?.cameraResults ?? []).map((entry) => [entry.cameraId, entry])),
     [simulationResult],
   );
   const pathVisibilityByCameraId = useMemo(() => {
-    const safeDuration = clampPathDuration(activePathResult?.totalDurationS);
     const visibility = activePathResult?.visibilityByCamera ?? {};
     return Object.fromEntries(
       Object.entries(visibility).map(([cameraId, entry]) => [
@@ -531,13 +530,13 @@ export function CameraWallView() {
         entry
           ? {
               visibleS: entry.visibleS,
-              totalDurationS: safeDuration,
+              totalDurationS: safePathDuration,
               maxQuality: entry.maxQuality,
             }
           : null,
       ]),
     ) as Record<string, { visibleS: number; totalDurationS: number; maxQuality: string } | null>;
-  }, [activePathResult]);
+  }, [activePathResult, safePathDuration]);
   const bestCameraId = useMemo(() => {
     if (!activePathResult) return null;
     const entries = Object.entries(activePathResult.visibilityByCamera);
@@ -554,7 +553,6 @@ export function CameraWallView() {
     return best?.[0] ?? null;
   }, [activePathResult, cameras]);
   const safeReplayProgress = clampReplayProgress(pathReplay.progress);
-  const safePathDuration = clampPathDuration(activePathResult?.totalDurationS);
   const pathTimeS = safePathDuration * safeReplayProgress;
   const replayStateByCameraId = useMemo<Record<string, CameraReplayState | null>>(() => {
     return buildReplayStateByCameraAtTime(activePathResult?.timeline, pathTimeS);
@@ -592,10 +590,11 @@ export function CameraWallView() {
     ?? null;
 
   const weakRouteCameras = useMemo(() => {
+    if (safePathDuration <= 0) return 0;
     return cameras.filter((cam) => {
       const vis = pathVisibilityByCameraId[cam.id];
-      if (!vis || vis.totalDurationS <= 0) return false;
-      return vis.visibleS / vis.totalDurationS <= 0.35;
+      if (!vis) return false;
+      return vis.visibleS / safePathDuration <= 0.35;
     }).length;
   }, [cameras, pathVisibilityByCameraId]);
 

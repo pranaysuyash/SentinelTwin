@@ -255,7 +255,7 @@ describe("scan-reconstruction pipeline", () => {
       expect(modeAssumption?.value).toBe("Guided Capture");
 
       const operationalModeAssumption = draft.assumptions.find((a) => a.label === "Operational mode");
-      expect(operationalModeAssumption?.value).toBe("Permanent");
+      expect(operationalModeAssumption?.value).toBe("permanent");
     });
 
     test("includes scale anchors in assumptions when present", () => {
@@ -482,7 +482,7 @@ describe("scan-reconstruction pipeline", () => {
       session.candidates = [camCandidate, zoneCandidate];
 
       const result = compileReconstructionToSiteResult(session);
-      expect(result.provenance.notes.join(" ")).toContain("Operational mode: Temporary Event");
+      expect(result.provenance.notes.join(" ")).toContain("temporary event profile applied.");
     });
 
     test("handles empty session gracefully", () => {

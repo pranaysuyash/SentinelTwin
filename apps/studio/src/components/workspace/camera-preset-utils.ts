@@ -178,6 +178,20 @@ export function findBestCameraPreset(camera: CameraNode): CameraPreset | null {
     }, null)?.preset ?? null;
 }
 
+export function cameraPresetIcon(presetId: CameraPresetId): string {
+  const icons: Record<CameraPresetId, string> = {
+    dome_indoor: "\u25D4",
+    bullet_outdoor: "\u25B6",
+    ptz_professional: "\u2699",
+    fisheye_360: "\u25C9",
+    thermal_perimeter: "\u26A1",
+    low_light_indoor: "\u263E",
+    license_plate: "\u2691",
+    panoramic_wide: "\u2B21",
+  };
+  return icons[presetId] ?? "\u25CB";
+}
+
 export function describeCameraPreset(preset: CameraPreset): string {
   const nightModeLabel = preset.nightMode === "none" ? "day only" : preset.nightMode;
   return `${preset.resolutionMP}MP · ${preset.fovHorizontalDeg}° FOV · ${preset.mountType} · ${nightModeLabel}`;

@@ -78,6 +78,12 @@ export function ScenePreview({ scene, result, activePathId = null, compact = fal
   const heatmapStep = Math.max(1, Math.ceil(heatmapCells.length / (compact ? 150 : 240)));
   const cellSize = Math.max(2.6, scale * (compact ? 0.26 : 0.22));
   const activePathPoints = pathPolyline(activePath ?? undefined, toPoint);
+  const firstCriticalZone = scene.criticalZones[0] ?? null;
+  const firstCriticalZonePoint = firstCriticalZone?.polygon[0] ? toPoint(firstCriticalZone.polygon[0]) : null;
+  const firstBlockingIssue = (result?.issues ?? []).find((issue) =>
+    issue.description.toLowerCase().includes("block")
+    || issue.description.toLowerCase().includes("obstruct"),
+  ) ?? null;
   const downsampledHeatmapCells = useMemo(
     () => heatmapCells.filter((_, index) => index % heatmapStep === 0),
     [heatmapCells, heatmapStep],
@@ -119,6 +125,7 @@ export function ScenePreview({ scene, result, activePathId = null, compact = fal
         </defs>
 
         <rect x={offsetX} y={offsetY} width={sceneWidth} height={sceneHeight} rx="28" fill="rgba(10,14,20,0.92)" stroke="rgba(148,163,184,0.12)" />
+        <rect x={offsetX} y={offsetY + sceneHeight * 0.62} width={sceneWidth} height={sceneHeight * 0.38} rx="20" fill="rgba(245,158,11,0.08)" />
         <rect x={offsetX} y={offsetY} width={sceneWidth} height={sceneHeight} rx="28" fill="url(#coverageGlow)" opacity="0.38" />
 
         {downsampledHeatmapCells.map((cell, index) => {
@@ -197,18 +204,28 @@ export function ScenePreview({ scene, result, activePathId = null, compact = fal
           const [x, y] = toPoint([obstruction.position[0], obstruction.position[2]]);
           const w = Math.max(12, obstruction.dimensions[0] * scale);
           const h = Math.max(10, obstruction.dimensions[2] * scale);
+          const raised = compact ? 4 : 6;
           return (
-            <rect
-              key={obstruction.id}
-              x={x - w / 2}
-              y={y - h / 2}
-              width={w}
-              height={h}
-              rx="8"
-              fill="rgba(148,163,184,0.34)"
-              stroke={obstruction.movable ? "rgba(251,191,36,0.55)" : "rgba(226,232,240,0.24)"}
-              strokeWidth="1.5"
-            />
+            <g key={obstruction.id}>
+              <rect
+                x={x - w / 2 + 3}
+                y={y - h / 2 + raised}
+                width={w}
+                height={h}
+                rx="8"
+                fill="rgba(7,10,16,0.45)"
+              />
+              <rect
+                x={x - w / 2}
+                y={y - h / 2}
+                width={w}
+                height={h}
+                rx="8"
+                fill="rgba(148,163,184,0.34)"
+                stroke={obstruction.movable ? "rgba(251,191,36,0.55)" : "rgba(226,232,240,0.24)"}
+                strokeWidth="1.5"
+              />
+            </g>
           );
         })}
 
@@ -237,6 +254,23 @@ export function ScenePreview({ scene, result, activePathId = null, compact = fal
             <g key={camera.id}>
               <polygon points={poly} fill="rgba(59,130,246,0.11)" stroke="rgba(59,130,246,0.48)" strokeWidth="1.6" />
               <circle cx={origin[0]} cy={origin[1]} r={compact ? 6 : 7.5} fill="rgba(59,130,246,0.96)" stroke="rgba(255,255,255,0.24)" strokeWidth="1.1" />
+              {!compact ? (
+                <>
+                  <rect
+                    x={origin[0] - 20}
+                    y={origin[1] - 23}
+                    width="40"
+                    height="16"
+                    rx="6"
+                    fill="rgba(3,20,37,0.9)"
+                    stroke="rgba(56,189,248,0.45)"
+                    strokeWidth="1"
+                  />
+                  <text x={origin[0]} y={origin[1] - 12} textAnchor="middle" fill="rgba(186,230,253,0.95)" fontSize="9" fontWeight="700">
+                    CAM {camera.id.replace(/[^0-9]/g, "").slice(-1) || "1"}
+                  </text>
+                </>
+              ) : null}
             </g>
           );
         })}
@@ -265,6 +299,41 @@ export function ScenePreview({ scene, result, activePathId = null, compact = fal
               Coverage preview
             </text>
           </>
+        ) : null}
+        {!compact && firstCriticalZonePoint ? (
+          <g>
+            <rect
+              x={firstCriticalZonePoint[0] - 46}
+              y={firstCriticalZonePoint[1] - 34}
+              width="92"
+              height="22"
+              rx="7"
+              fill="rgba(190,40,31,0.92)"
+            />
+            <text x={firstCriticalZonePoint[0]} y={firstCriticalZonePoint[1] - 20} textAnchor="middle" fill="white" fontSize="10" fontWeight="700">
+              Cash Counter
+            </text>
+          </g>
+        ) : null}
+        {!compact && firstBlockingIssue ? (
+          <g>
+            <rect
+              x={offsetX + sceneWidth - 196}
+              y={offsetY + sceneHeight * 0.4}
+              width="172"
+              height="34"
+              rx="8"
+              fill="rgba(19,23,34,0.95)"
+              stroke="rgba(250,204,21,0.5)"
+              strokeWidth="1"
+            />
+            <text x={offsetX + sceneWidth - 186} y={offsetY + sceneHeight * 0.4 + 14} fill="rgba(254,240,138,0.95)" fontSize="9" fontWeight="700">
+              Cupboard blocking
+            </text>
+            <text x={offsetX + sceneWidth - 186} y={offsetY + sceneHeight * 0.4 + 25} fill="rgba(226,232,240,0.92)" fontSize="9">
+              Camera 1
+            </text>
+          </g>
         ) : null}
       </svg>
     </div>

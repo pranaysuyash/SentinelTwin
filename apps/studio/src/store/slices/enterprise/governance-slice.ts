@@ -68,6 +68,7 @@ import {
   removeReportCatalogPreset,
 } from "@/lib/report-catalog";
 import { buildSceneIntelligenceGraph, type SceneIntelligenceGraph } from "@/lib/scene-intelligence-graph";
+import type { BottomTab } from "../core/layout-slice";
 import {
   createDefaultEnabledAnalysisModules,
   createDefaultVisibleComponents,
@@ -107,6 +108,7 @@ import {
 } from "@/lib/operational-evidence-archive-history";
 import { computeTemporalProfile } from "@sentineltwin/simulation";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
+import { createSmallRetailShopScene } from "@/demo-scenes/small-retail-shop";
 import { validateSceneGeometry } from "@/lib/scene-validation";
 import type { ArchiveHandoffRequest } from "@/lib/archive-handoff-link";
 import {
@@ -118,6 +120,7 @@ import {
 } from "@/agents/model-eval";
 import { buildPromptRegistrySnapshot, type PromptRegistrySnapshot } from "@/agents/prompt-registry";
 import { simulateStudio } from "@sentineltwin/simulation";
+import { promoteToActiveScene } from "@/lib/site-draft-approval";
 import type { ArchiveRestoreEventContext } from "@/lib/operational-evidence-archive";
 
 const PROJECT_STORAGE_KEY = "sentineltwin_saved_projects_v2";
@@ -358,11 +361,7 @@ export interface GovernanceSlice {
 
   savedScenes: SecurityScene[];
   savedProjects: any[];
-
-  compareVisualEvidence: any;
-  compareReportSelection: any;
-  compareOrbitSync: boolean;
-  compareOrbitCameraState: { position: [number, number, number] | null; target: [number, number, number] | null; };
+  referenceScenes: SecurityScene[];
 
   cameraViewVerificationIntent: any;
   cameraVerificationSnapshots: Record<string, any[]>;
@@ -412,6 +411,7 @@ export interface GovernanceSlice {
   setScene: (scene: SecurityScene) => void;
   createNewScene: () => void;
   saveSceneToStorage: () => void;
+  saveSceneAsWorkspace: (scene: SecurityScene) => void;
   loadScenesFromStorage: () => SecurityScene[];
   refreshSavedScenesList: () => void;
   deleteSavedScene: (sceneId: string) => void;
@@ -420,10 +420,10 @@ export interface GovernanceSlice {
   renameSavedScene: (sceneId: string, nextName: string) => any;
   getSceneStorageKey: () => string;
 
-  setCompareVisualEvidence: (evidence: any) => void;
-  setCompareReportSelection: (selection: any) => void;
-  setCompareOrbitSync: (sync: boolean) => void;
-  setCompareOrbitCameraState: (state: any) => void;
+  activateWorkspaceFromDraft: () => void;
+  addReferenceScene: (scene: SecurityScene) => void;
+  loadReferenceScene: (sceneId: string) => SecurityScene | null;
+  duplicateReferenceToWorkspace: (sceneId: string) => void;
 
   setCameraViewVerificationIntent: (intent: any) => void;
   upsertCameraVerificationSnapshot: (cameraId: string, snapshot: any) => void;
@@ -467,11 +467,7 @@ export function createGovernanceSlice(set: any, get: any): GovernanceSlice {
 
     savedScenes: [],
     savedProjects: [],
-
-    compareVisualEvidence: null,
-    compareReportSelection: null,
-    compareOrbitSync: false,
-    compareOrbitCameraState: { position: null, target: null },
+    referenceScenes: [createSmallRetailShopScene()],
 
     cameraViewVerificationIntent: null,
     cameraVerificationSnapshots: {},
@@ -957,7 +953,6 @@ export function createGovernanceSlice(set: any, get: any): GovernanceSlice {
         ...buildSceneReplacementPatch(blank, layout, nextEvents, nextGovernance, nextCameraId, 0, {
           bottomTab: "metrics", inspectorTab: "properties", activeTool: "select",
         }),
-        compareVisualEvidence: null, compareReportSelection: null,
         operationalEvidenceEvents: nextEvents,
         workspaceGovernance: nextGovernance,
       });
@@ -971,7 +966,7 @@ export function createGovernanceSlice(set: any, get: any): GovernanceSlice {
       const now = Date.now();
       if (idx >= 0) {
         const existing = projects[idx];
-        projects[idx] = { ...existing, scene: cloned, updatedAt: now };
+        projects[idx] = { ...existing, scene: cloned, updatedAt: now, lastOpenedAt: now };
       } else {
         projects.push({
           scene: cloned, folder: "Unsorted",
@@ -980,11 +975,126 @@ export function createGovernanceSlice(set: any, get: any): GovernanceSlice {
           workspaceOrganization: "Personal Workspace",
           workspaceOwner: "You",
           workspaceVisibility: "private",
-          createdAt: now, updatedAt: now, lastOpenedAt: null,
+          createdAt: now, updatedAt: now, lastOpenedAt: now,
         });
       }
       persistSavedProjects(projects);
       get().refreshSavedScenesList();
+    },
+
+    saveSceneAsWorkspace: (scene) => {
+      const projects = loadProjectsFromStorage();
+      const now = Date.now();
+      const cloned = cloneSecurityScene(scene);
+      projects.unshift({
+        scene: cloned, folder: "Unsorted",
+        tags: [cloned.source === "demo" ? "demo" : scene.source === "manual" ? "manual" : "workspace"],
+        pinned: false,
+        workspaceOrganization: "Personal Workspace",
+        workspaceOwner: "You",
+        workspaceVisibility: "private",
+        createdAt: now, updatedAt: now, lastOpenedAt: now,
+      });
+      persistSavedProjects(projects);
+      get().refreshSavedScenesList();
+    },
+
+    activateWorkspaceFromDraft: () => {
+      const st = get();
+      const session = st.siteIntakeSession;
+      if (!session?.draft) return;
+
+      const promotion = promoteToActiveScene(session);
+      if (!promotion.result.success) {
+        st.setLaunchNotice?.(`Draft approval blocked: ${promotion.result.error}`);
+        return;
+      }
+
+      const approvedScene = promotion.result.scene;
+      approvedScene.changeLog = [...approvedScene.changeLog, ...promotion.result.provenanceLog];
+
+      st.setScene(approvedScene);
+      st.saveSceneAsWorkspace(approvedScene);
+
+      const evidenceEvent = buildOperationalEvidenceEvent({
+        kind: "scan_compiled",
+        title: "Site intake draft approved",
+        details: `Approved ${session.draft.source} draft and activated as workspace.`,
+        actor: "user",
+        source: approvedScene.source,
+        sceneId: approvedScene.id,
+        sceneName: approvedScene.name,
+        revisionDepth: (st.historyPast as any[]).length,
+        affectedNodeIds: [],
+        confidence: session.draft.confidence,
+        notes: [
+          `Draft id: ${session.draft.id}`,
+          `Source artifacts: ${(session.draft.provenance?.sourceArtifacts ?? []).join(", ") || "none"}`,
+          `Warnings: ${session.draft.warnings.length}`,
+          "Workspace automatically saved on approval.",
+        ],
+      });
+      const nextEvents = [...(st.operationalEvidenceEvents ?? []), evidenceEvent];
+      persistOperationalEvidenceEvents(nextEvents);
+      set({ operationalEvidenceEvents: nextEvents });
+
+      st.setSiteIntakeSession(null);
+
+      if (promotion.result.baselineReady) {
+        st.runSimulation();
+        st.setWorkspacePreset?.("coverage");
+        st.setViewMode?.("map");
+        st.setBottomTab?.("metrics");
+        const msg = promotion.result.canRecommend
+          ? "Draft approved, saved, and activated. Baseline simulation started."
+          : "Draft approved, saved, and activated. Baseline simulation started; recommendations remain review-gated.";
+        st.setLaunchNotice?.(msg);
+      } else {
+        st.setWorkspacePreset?.("edit");
+        st.setViewMode?.("map");
+        st.setBottomTab?.("metrics");
+        st.setLaunchNotice?.("Draft approved, saved, and activated. Add missing camera/zone prerequisites, then run baseline simulation.");
+      }
+    },
+
+    addReferenceScene: (scene) => {
+      const refs = get().referenceScenes;
+      const exists = refs.some((r: any) => r.id === scene.id);
+      if (exists) return;
+      set({ referenceScenes: [...refs, cloneSecurityScene(scene)] });
+    },
+
+    loadReferenceScene: (sceneId) => {
+      const refs = get().referenceScenes;
+      return refs.find((r: any) => r.id === sceneId) ?? null;
+    },
+
+    duplicateReferenceToWorkspace: (sceneId) => {
+      const ref = get().referenceScenes.find((r: any) => r.id === sceneId);
+      if (!ref) return;
+      const cloned = cloneSecurityScene(ref);
+      const now = Date.now();
+      const existingIds = new Set((loadProjectsFromStorage() as any[]).map((r: any) => r.scene.id));
+      const existingNames = new Set((loadProjectsFromStorage() as any[]).map((r: any) => r.scene.name));
+      cloned.id = `scene_${now.toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+      cloned.name = existingNames.has(ref.name) ? `${ref.name} (copy)` : ref.name;
+      cloned.source = "manual";
+      cloned.createdAt = now;
+      cloned.updatedAt = now;
+      const projects = loadProjectsFromStorage();
+      projects.unshift({
+        scene: cloned, folder: "Unsorted",
+        tags: ["manual", "from_reference"],
+        pinned: false,
+        workspaceOrganization: "Personal Workspace",
+        workspaceOwner: "You",
+        workspaceVisibility: "private",
+        createdAt: now, updatedAt: now, lastOpenedAt: now,
+      });
+      persistSavedProjects(projects);
+      get().refreshSavedScenesList();
+      get().setScene(cloned);
+      get().setLaunchNotice?.(`Duplicated "${ref.name}" as a new workspace.`);
     },
 
     loadScenesFromStorage: () => {
@@ -1079,11 +1189,6 @@ export function createGovernanceSlice(set: any, get: any): GovernanceSlice {
     },
 
     getSceneStorageKey: () => PROJECT_STORAGE_KEY,
-
-    setCompareVisualEvidence: (compareVisualEvidence) => set({ compareVisualEvidence }),
-    setCompareReportSelection: (compareReportSelection) => set({ compareReportSelection }),
-    setCompareOrbitSync: (compareOrbitSync) => set({ compareOrbitSync }),
-    setCompareOrbitCameraState: (compareOrbitCameraState) => set({ compareOrbitCameraState }),
 
     setCameraViewVerificationIntent: (cameraViewVerificationIntent) => set({ cameraViewVerificationIntent }),
 

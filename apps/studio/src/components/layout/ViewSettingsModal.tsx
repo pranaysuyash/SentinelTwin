@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { useStudioStore, type BottomTab, type ViewMode, type WorkspacePreset } from "@/store/studio-store";
 import { AI_PROVIDER_OPTIONS, describeAiProviderSelection, getProviderOption, normalizeAiProviderSelection } from "@/agents/provider-selection";
-import { CAMERA_PRESETS } from "@/components/workspace/camera-preset-utils";
+import { CAMERA_PRESETS, cameraPresetIcon } from "@/components/workspace/camera-preset-utils";
 
 type ViewOption = {
   id: string;
@@ -382,7 +382,7 @@ export function ViewSettingsModal() {
                     >
                       <div className="flex items-center gap-2">
                         <span className="rounded-full border border-[#26314a] bg-[#121829] p-1 text-cyan-300">
-                          {preset.icon}
+                          {cameraPresetIcon(preset.id)}
                         </span>
                         <div className="min-w-0">
                           <div className="text-sm font-semibold text-white">{preset.label}</div>

@@ -347,7 +347,7 @@ Details in `Docs/architecture/08_MONOREPO_STRUCTURE.md`.
 | 7 | Before/after snapshots + privacy compliance report generation | Complete |
 | 8 | Pascal fork + monorepo scaffold (editor integration) | Deferred — standalone studio app built first (see D-010) |
 | 9 | Demo scene (Small Retail Shop) | Complete |
-| 10 | Privacy compliance evidence export (GDPR, BIPA, HIPAA) | Complete |
+| 10 | Privacy compliance evidence basis (audience profiles, redaction, IEC 62676-4/DORI standards templates) | Complete — GDPR/BIPA/HIPAA regulation-specific templates deferred to Phase 16 |
 | 11 | Scan/photo input pipeline (VGGT → SpatialLM → SecurityScene, V0.4) | Future |
 
 ### Platform Build-Out (Phases 12–18 — In Progress)
@@ -358,7 +358,7 @@ Details in `Docs/architecture/08_MONOREPO_STRUCTURE.md`.
 | 13 | **Deployment & Packaging** — local-only production profile, Docker Compose self-hosted, release process, environment validation | Not started |
 | 14 | **Persistent Identity & Governance** — multi-operator RBAC, approval workflow, conflict resolution, backend APIs | Not started |
 | 15 | **AI Agent Pipeline** — model-agnostic provider abstraction, multi-agent orchestration, structured tool calling, SOAR-ready output | Not started |
-| 16 | **Report & Compliance** — policy-driven redaction, standards templates (IEC 62676-4, GDPR, BIPA, HIPAA), evidence ledger, report catalog | Partial — report engine exists, compliance templates pending |
+| 16 | **Report & Compliance** — policy-driven redaction, standards templates (IEC 62676-4, GDPR, BIPA, HIPAA), evidence ledger, report catalog | Partial — IEC 62676-4:2025 (OODPCVS, DORI) templates exist, GDPR/BIPA/HIPAA templates pending; redaction engine exists, evidence ledger integration pending |
 | 17 | **Cross-Device Sync** — sync engine, cloud storage adapter, offline support, conflict resolution | Not started |
 | 18 | **SDK & Extensibility** — public API surfaces, NPM publication, plugin system design | Not started |
 | 19 | **Platform Polish** — accessibility (WCAG 2.1 AA), performance budgets, error recovery, cross-browser testing, telemetry, docs | Not started |

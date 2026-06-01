@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { ProductViewHandlers } from "@/components/product/ProductViewRouter";
 import type { SecurityScene } from "@/schema/security-scene";
 import { useStudioStore, type BottomTab, type ViewMode, type WorkspacePreset } from "@/store/studio-store";
@@ -8,6 +8,8 @@ import { useProductViewStore } from "@/store/product-view-store";
 import { createSiteIntakeSession } from "@/lib/site-compiler";
 import { promoteToActiveScene } from "@/lib/site-draft-approval";
 import { parseImportSceneDraft } from "@/lib/import-scene-draft";
+
+type SceneIntakeSource = Parameters<typeof createSiteIntakeSession>[1];
 
 export function useStudioNavigation(): ProductViewHandlers {
   const navigate = useProductViewStore((s) => s.navigate);
@@ -26,50 +28,52 @@ export function useStudioNavigation(): ProductViewHandlers {
   const setCameraViewVerificationIntent = useStudioStore((s) => s.setCameraViewVerificationIntent);
   const runSimulationFromStore = useStudioStore((s) => s.runSimulation);
   const recordOperationalEvidenceEvent = useStudioStore((s) => s.recordOperationalEvidenceEvent);
+  const saveSceneToStorage = useStudioStore((s) => s.saveSceneToStorage);
 
   const scene = useStudioStore((s) => s.scene);
   const simulationDirty = useStudioStore((s) => s.simulationDirty);
   const savedProjects = useStudioStore((s) => s.savedProjects);
+  const referenceScenes = useStudioStore((s) => s.referenceScenes);
   const activeWorkflowId = useStudioStore((s) => s.activeWorkflowId);
   const historyDepth = useStudioStore((s) => s.historyPast.length);
 
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const confirmWorkspaceReplacement = (nextActionLabel: string) => {
+  const confirmWorkspaceReplacement = useCallback((nextActionLabel: string) => {
     if (!simulationDirty) return true;
     return window.confirm(`Current workspace has unapplied changes. Continue to ${nextActionLabel}?`);
-  };
+  }, [simulationDirty]);
 
-  const launchWorkspace = (viewMode: ViewMode, preset: WorkspacePreset, bottomTab?: BottomTab) => {
+  const launchWorkspace = useCallback((viewMode: ViewMode, preset: WorkspacePreset, bottomTab?: BottomTab) => {
     setWorkspacePreset(preset);
     setViewMode(viewMode);
     if (bottomTab) setBottomTab(bottomTab);
     navigate("studio");
-  };
+  }, [setWorkspacePreset, setViewMode, setBottomTab, navigate]);
 
-  const openStudio = () => launchWorkspace("map", "edit", "metrics");
-  const openCoverageWorkspace = () => launchWorkspace("map", "coverage", "metrics");
-  const openCameraWall = () => launchWorkspace("wall", "camera_wall", "metrics");
+  const openStudio = useCallback(() => launchWorkspace("map", "edit", "metrics"), [launchWorkspace]);
+  const openCoverageWorkspace = useCallback(() => launchWorkspace("map", "coverage", "metrics"), [launchWorkspace]);
+  const openCameraWall = useCallback(() => launchWorkspace("wall", "camera_wall", "metrics"), [launchWorkspace]);
 
-  const openPathReplay = () => {
+  const openPathReplay = useCallback(() => {
     launchWorkspace("replay", "replay", "timeline");
     if (activeWorkflowId === "audit") setActiveWorkflowStep(2);
-  };
+  }, [launchWorkspace, activeWorkflowId, setActiveWorkflowStep]);
 
-  const openCompareFixes = () => {
+  const openCompareFixes = useCallback(() => {
     launchWorkspace("compare", "compare", "beforeafter");
     if (activeWorkflowId === "audit") setActiveWorkflowStep(4);
-  };
+  }, [launchWorkspace, activeWorkflowId, setActiveWorkflowStep]);
 
-  const openReport = () => {
+  const openReport = useCallback(() => {
     launchWorkspace("report", "report", "report");
     if (activeWorkflowId === "audit") setActiveWorkflowStep(5);
-  };
+  }, [launchWorkspace, activeWorkflowId, setActiveWorkflowStep]);
 
-  const openIssues = () => launchWorkspace("map", "edit", "issues");
+  const openIssues = useCallback(() => launchWorkspace("map", "edit", "issues"), [launchWorkspace]);
 
-  const runSimulation = () => {
+  const runSimulation = useCallback(() => {
     runSimulationFromStore();
     if (activeWorkflowId !== "idle") {
       const workflowSteps: Partial<Record<string, number>> = {
@@ -79,9 +83,30 @@ export function useStudioNavigation(): ProductViewHandlers {
       setActiveWorkflowStep(workflowSteps[activeWorkflowId] ?? 1);
     }
     launchWorkspace("map", "coverage", "metrics");
-  };
+  }, [runSimulationFromStore, activeWorkflowId, setActiveWorkflowStep, launchWorkspace]);
 
-  const openScanWizard = () => {
+  const openReferenceWorkspace = useCallback(() => {
+    setActiveWorkflow("reference");
+    setActiveWorkflowStep(0);
+
+    const referenceRecord =
+      referenceScenes.find((ref) => ref.name.toLowerCase().includes("open studio"))
+      ?? referenceScenes[0];
+
+    if (referenceRecord) {
+      setScene(referenceRecord);
+      setLaunchNotice(`Loaded reference scene: ${referenceRecord.name}`);
+      setDemoMode(false);
+      setDemoStep(0);
+      openCoverageWorkspace();
+      return;
+    }
+
+    setLaunchNotice("No reference scene is available.");
+    openCoverageWorkspace();
+  }, [referenceScenes, setScene, setLaunchNotice, setDemoMode, setDemoStep, openCoverageWorkspace, setActiveWorkflow, setActiveWorkflowStep]);
+
+  const openScanWizard = useCallback(() => {
     if (!confirmWorkspaceReplacement("start scan intake")) return;
     setActiveWorkflow("scan");
     setActiveWorkflowStep(0);
@@ -102,9 +127,9 @@ export function useStudioNavigation(): ProductViewHandlers {
     });
     setLaunchNotice("Guided photo marking opened. You control candidate marking, review, and draft creation.");
     navigate("scan_site");
-  };
+  }, [confirmWorkspaceReplacement, setActiveWorkflow, setActiveWorkflowStep, recordOperationalEvidenceEvent, scene, historyDepth, setLaunchNotice, navigate]);
 
-  const openGuidedScanAssistant = () => {
+  const openGuidedScanAssistant = useCallback(() => {
     if (!confirmWorkspaceReplacement("start guided scan intake")) return;
     setActiveWorkflow("scan");
     setActiveWorkflowStep(0);
@@ -125,59 +150,38 @@ export function useStudioNavigation(): ProductViewHandlers {
     });
     setLaunchNotice("Guided capture reconstruction opened. Upload photos to run the reconstruction pipeline.");
     navigate("scan_site", "guided");
-  };
+  }, [confirmWorkspaceReplacement, setActiveWorkflow, setActiveWorkflowStep, recordOperationalEvidenceEvent, scene, historyDepth, setLaunchNotice, navigate]);
 
-  const openReferenceWorkspace = () => {
-    setActiveWorkflow("reference");
-    setActiveWorkflowStep(0);
-    const referenceRecord =
-      savedProjects.find((project) => project.scene.source === "demo" && project.scene.name.toLowerCase().includes("open studio"))
-      ?? savedProjects.find((project) => project.scene.source === "demo" && project.folder === "Featured")
-      ?? savedProjects.find((project) => project.scene.source === "demo");
-
-    if (referenceRecord) {
-      setScene(referenceRecord.scene);
-      setLaunchNotice(`Loaded reference scene: ${referenceRecord.scene.name}`);
-      setDemoMode(false);
-      setDemoStep(0);
-      openCoverageWorkspace();
-      return;
-    }
-
-    setLaunchNotice("No seeded reference workspace is available. Continue with current scene.");
-    openCoverageWorkspace();
-  };
-
-  const startDesignFlow = () => {
+  const startDesignFlow = useCallback(() => {
     if (!confirmWorkspaceReplacement("create a new scene")) return;
     setActiveWorkflow("design");
     setActiveWorkflowStep(0);
     navigate("manual_builder");
-  };
+  }, [confirmWorkspaceReplacement, setActiveWorkflow, setActiveWorkflowStep, navigate]);
 
-  const openFloorPlanFlow = () => {
+  const openFloorPlanFlow = useCallback(() => {
     if (!confirmWorkspaceReplacement("import a floor plan")) return;
     setActiveWorkflow("floor_plan");
     setActiveWorkflowStep(0);
     navigate("floor_plan_import");
-  };
+  }, [confirmWorkspaceReplacement, setActiveWorkflow, setActiveWorkflowStep, navigate]);
 
-  const handleImportScene = () => {
+  const handleImportScene = useCallback(() => {
     if (!confirmWorkspaceReplacement("import a scene JSON")) return;
     fileInputRef.current?.click();
-  };
+  }, [confirmWorkspaceReplacement]);
 
-  const openScene = (nextScene = scene) => {
+  const openScene = useCallback((nextScene = scene) => {
     setScene(nextScene);
     openStudio();
-  };
+  }, [setScene, openStudio, scene]);
 
-  const createDraftFromScene = (scene: SecurityScene, source: import("@/lib/site-compiler").SiteIntakeSource, sourceArtifacts: string[] = []) => {
-    const session = createSiteIntakeSession(scene, source, sourceArtifacts);
+  const createDraftFromScene = useCallback((nextScene: SecurityScene, source: SceneIntakeSource, sourceArtifacts: string[] = []) => {
+    const session = createSiteIntakeSession(nextScene, source, sourceArtifacts);
     setSiteIntakeSession(session);
-  };
+  }, [setSiteIntakeSession]);
 
-  const approveIntakeSession = () => {
+  const approveIntakeSession = useCallback(() => {
     const session = useStudioStore.getState().siteIntakeSession;
     if (!session?.draft) return;
     const promotion = promoteToActiveScene(session);
@@ -189,6 +193,9 @@ export function useStudioNavigation(): ProductViewHandlers {
     const approvedScene = promotion.result.scene;
     approvedScene.changeLog = [...approvedScene.changeLog, ...promotion.result.provenanceLog];
     setScene(approvedScene);
+
+    saveSceneToStorage();
+
     recordOperationalEvidenceEvent({
       kind: "scan_compiled",
       title: "Site intake draft approved",
@@ -206,6 +213,7 @@ export function useStudioNavigation(): ProductViewHandlers {
         `Draft id: ${session.draft.id}`,
         `Source artifacts: ${session.draft.provenance.sourceArtifacts.join(", ") || "none"}`,
         `Warnings: ${session.draft.warnings.length}`,
+        "Workspace automatically saved on approval.",
       ],
     });
 
@@ -214,25 +222,25 @@ export function useStudioNavigation(): ProductViewHandlers {
       runSimulationFromStore();
       launchWorkspace("map", "coverage", "metrics");
       if (promotion.result.canRecommend) {
-        setLaunchNotice("Draft approved and activated. Baseline simulation started from the approved scene.");
+        setLaunchNotice("Draft approved, saved, and activated. Baseline simulation started from the approved scene.");
       } else {
-        setLaunchNotice("Draft approved for advisory workflow. Baseline simulation started; recommendations remain review-gated.");
+        setLaunchNotice("Draft approved, saved, and activated. Baseline simulation started; recommendations remain review-gated.");
       }
     } else {
       launchWorkspace("map", "edit", "metrics");
-      setLaunchNotice("Draft approved and activated. Add missing camera/zone prerequisites, then run baseline simulation.");
+      setLaunchNotice("Draft approved, saved, and activated. Add missing camera/zone prerequisites, then run baseline simulation.");
     }
-  };
+  }, [setScene, saveSceneToStorage, recordOperationalEvidenceEvent, scene, historyDepth, setSiteIntakeSession, runSimulationFromStore, launchWorkspace, setLaunchNotice]);
 
-  const rejectIntakeSession = () => {
+  const rejectIntakeSession = useCallback(() => {
     setSiteIntakeSession(null);
-  };
+  }, [setSiteIntakeSession]);
 
-  const approveAndRunBaseline = () => {
+  const approveAndRunBaseline = useCallback(() => {
     approveIntakeSession();
-  };
+  }, [approveIntakeSession]);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -256,7 +264,7 @@ export function useStudioNavigation(): ProductViewHandlers {
     };
     reader.readAsText(file);
     event.target.value = "";
-  };
+  }, [createDraftFromScene, navigate]);
 
   return {
     openStudio,

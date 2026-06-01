@@ -83,8 +83,9 @@ import {
   type ModelEvalRunRecord,
   type ModelEvalSuiteResult,
 } from "@/agents/model-eval";
-import { buildPromptRegistrySnapshot, type PromptRegistrySnapshot } from "@/agents/prompt-registry";
+import { buildPromptRegistrySnapshot, type PromptRegistrySnapshot, type PromptRegistryStage } from "@/agents/prompt-registry";
 import type { AiActionTelemetryStage } from "@sentineltwin/agents";
+export type { AiActionTelemetryStage };
 
 const DEFAULT_LAYERS = {
   cameras: true, camera_cones: true, obstructions: true, lights: true,
@@ -154,7 +155,7 @@ export type PromptRegistryHistorySource = "startup" | "manual" | "model_eval";
 export type PromptRegistryHistoryRecord = PromptRegistrySnapshot & { id: string; source: PromptRegistryHistorySource; note?: string | null; };
 export type AiProviderGovernanceHistorySource = "startup" | "selection" | "policy" | "manual" | "eval";
 export type AiProviderGovernanceHistoryRecord = AiProviderGovernanceSummary & { id: string; observedAt: number; source: AiProviderGovernanceHistorySource; note?: string | null; };
-export type AiActionTelemetryRecord = { id: string; stage: AiActionTelemetryStage; providerId: AiProviderSelection["providerId"]; providerLabel: string; model: string; promptId?: string | null; promptVersion?: string | null; promptTitle?: string | null; promptAgent?: string | null; promptStage?: "command" | "counterfactual" | "report" | "draft" | null; promptOutputSchema?: string | null; localOnlyMode: boolean; cloudAvailable: boolean; timestamp: number; durationMs: number; estimatedPromptTokens: number; estimatedCompletionTokens: number; estimatedTotalTokens: number; tokenSource: "estimated" | "usage"; status: "success" | "error"; note?: string | null; };
+export type AiActionTelemetryRecord = { id: string; stage: AiActionTelemetryStage; providerId: AiProviderSelection["providerId"]; providerLabel: string; model: string; promptId?: string | null; promptVersion?: string | null; promptTitle?: string | null; promptAgent?: string | null; promptStage?: PromptRegistryStage | null; promptOutputSchema?: string | null; localOnlyMode: boolean; cloudAvailable: boolean; timestamp: number; durationMs: number; estimatedPromptTokens: number; estimatedCompletionTokens: number; estimatedTotalTokens: number; tokenSource: "estimated" | "usage"; status: "success" | "error"; note?: string | null; };
 
 function makeSensorLiveEventId(timestamp: number): string {
   return `sensor_live_${timestamp.toString(36)}_${Math.random().toString(36).slice(2, 8)}`;

@@ -1,6 +1,6 @@
 # Session Context
 
-- Generated: 2026-06-01T17:39:32Z
+- Generated: 2026-06-01T17:58:02Z
 - Project: `SentinelTwin`
 - Provider: `local`
 - Model: `BAAI/bge-m3`
@@ -62,20 +62,6 @@ _Fast mode (--skip-index): retrieval skipped to keep startup non-blocking. Run `
 - Collection: `projects_workspace_shared`
 - Query: `knowledge graph memory learning feedback loops autoresearch semantic taste graph`
 _Fast mode (--skip-index): retrieval skipped to keep startup non-blocking. Run `/Users/pranay/Projects/agent-start --project SentinelTwin` for full retrieval, or set `AGENT_START_SKIP_INDEX_RETRIEVE=1` if you want retrieval with skip-index._
-
-
----
-## Agent Collaboration Style
-
-Pranay expects the agent to act as a genuine technical collaborator, not an instruction executor:
-- Have and express opinions on design, naming, logic, test quality
-- Push back when something is wrong - don't just flag it, fix it with a rationale
-- Catch bugs proactively without waiting to be asked
-- Discuss tradeoffs directly: here is why X is wrong and Y is better
-- The goal is two engineers reviewing each other's work, not a contractor following a spec
-
-This applies to code review, test quality, naming, architecture boundaries, commit grouping strategy, and anything that would affect the project long-term.
-_Collection check timed out. Retry shortly._
 
 
 ---

@@ -1390,11 +1390,14 @@ function ToolPlacementFloor({
     ],
   );
 
+  const sceneRef = useRef(scene);
+  sceneRef.current = scene;
+
   useEffect(() => {
     const onMouseUp = () => {
       if (!selectionDrag) return;
       const bounds = normalizeBounds(selectionDrag.startWorld, selectionDrag.currentWorld);
-      const ids = getSceneSelectionIds(scene, bounds);
+      const ids = getSceneSelectionIds(sceneRef.current, bounds);
       if (ids.length > 0) {
         setSelectedNodes(ids);
       } else {
@@ -1407,7 +1410,7 @@ function ToolPlacementFloor({
     return () => {
       window.removeEventListener("mouseup", onMouseUp);
     };
-  }, [clearSelection, scene, selectionDrag, setSelectedNodes, setSelectionDrag]);
+  }, [clearSelection, selectionDrag, setSelectedNodes, setSelectionDrag]);
 
   const tooltipText = useMemo(() => {
     if (activeTool === "wall" && wallLength > 0) {
@@ -2035,10 +2038,10 @@ export function WorkspaceCanvas() {
   }, [contextMenu]);
 
   useEffect(() => {
-    if (!layerVisibility.heatmap || !simulationResult?.coverageCells?.length) {
+    if (!layerVisibility.heatmap) {
       setHeatmapHover(null);
     }
-  }, [layerVisibility.heatmap, setHeatmapHover, simulationResult?.coverageCells?.length]);
+  }, [layerVisibility.heatmap, setHeatmapHover]);
 
   const handleHeatmapHover = useCallback((cell: CoverageCellResult, event: ThreeEvent<PointerEvent>) => {
     setHeatmapHover({

@@ -35,18 +35,33 @@ describe("CameraWallView", () => {
     expect(source).toContain("covered •");
     expect(source).toContain("Route Context {activePath.label}");
     expect(source).toContain("Best feed");
-    expect(source).toContain("const pathTimeS = activePathResult && activePathResult.totalDurationS > 0");
-    expect(source).toContain("Replay ${pathTimeS.toFixed(1)}s / ${activePathResult.totalDurationS.toFixed(1)}s");
+    expect(source).toContain("const safePathDuration = clampPathDuration(activePathResult?.totalDurationS);");
+    expect(source).toContain("const pathTimeS = safePathDuration * safeReplayProgress;");
+    expect(source).toContain("Replay ${pathTimeS.toFixed(1)}s / ${safePathDuration.toFixed(1)}s");
     expect(source).toContain("Current Replay");
     expect(source).toContain("Actor visible now");
     expect(source).toContain("Actor lost now");
     expect(source).toContain("replayStateByCameraId");
-    expect(source).toContain("event.event === \"visible\"");
-    expect(source).toContain("event.event === \"lost\"");
-    expect(source).toContain("event.event === \"quality_change\"");
     expect(source).toContain("simulationResult.pathResults.find");
     expect(source).toContain("cameraResultById");
     expect(source).toContain("visibilityByCamera");
     expect(source).toContain("--st-full-canvas-safe-top");
+  });
+
+  test("uses shared replay contract utilities and avoids local replay helper duplication", () => {
+    const source = readFileSync(cameraWallPath, "utf8");
+
+    expect(source).toContain('from "@/components/view/camera-view-utils"');
+    expect(source).toContain("clampPathDuration,");
+    expect(source).toContain("clampReplayProgress,");
+    expect(source).toContain("orderCamerasForReplayPlayback,");
+    expect(source).toContain("buildReplayStateByCameraAtTime,");
+    expect(source).toContain("return orderCamerasForReplayPlayback(scene.cameras, selectedId, selectedCameraId);");
+    expect(source).not.toContain("function clampReplayProgress(progress: number)");
+    expect(source).not.toContain("function clampPathDuration(durationS: number | undefined)");
+    expect(source).not.toContain("function buildReplayStateByCameraAtTime(");
+    expect(source).toContain("const safeReplayProgress = clampReplayProgress(pathReplay.progress);");
+    expect(source).toContain("const replayStateByCameraId = useMemo<Record<string, CameraReplayState | null>>(() =>");
+    expect(source).toContain("buildReplayStateByCameraAtTime(activePathResult?.timeline, pathTimeS);");
   });
 });

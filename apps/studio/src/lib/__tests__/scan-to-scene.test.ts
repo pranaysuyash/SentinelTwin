@@ -2,6 +2,9 @@ import { describe, expect, test } from "bun:test";
 
 import {
   compileScanSessionToScene,
+  assessScanDraftReadiness,
+  type ScanCompilationWarning,
+  summarizeScanProvenance,
   createScanCandidate,
   createScanSession,
 } from "@/lib/scan-to-scene";
@@ -167,6 +170,69 @@ describe("scan-to-scene", () => {
     expect(warnings.some((warning) => warning.code === "NO_WALL")).toBe(true);
   });
 
+  test("persists permanent operational mode and default assumptions in compiled scan scene", () => {
+    const session = createScanSession("Mode Assumption", 10, 8, 3);
+    session.imageDataUrl = "data:image/png;base64,AA==";
+    session.imageName = "mode-default.png";
+    session.candidates = [
+      { ...createScanCandidate("camera", [0.2, 0.2], 0), confidence: 0.9 },
+      { ...createScanCandidate("critical_zone", [0.7, 0.7], 1), confidence: 0.9 },
+      { ...createScanCandidate("door", [0.5, 0.05], 2), confidence: 0.9 },
+      { ...createScanCandidate("obstruction", [0.6, 0.6], 3), confidence: 0.9 },
+      { ...createScanCandidate("wall", [0.2, 0.5], 4), confidence: 0.9 },
+    ];
+
+    const { scene } = compileScanSessionToScene(session);
+    expect(scene.assumptions.operationalMode).toBe("permanent");
+    expect(scene.changeLog.some((note) => note.includes("Operational mode: permanent."))).toBe(true);
+  });
+
+  test("raises temporary perimeter warning when temporary event mode has no perimeter or entry-control markers", () => {
+    const session = createScanSession("Temporary Perimeter", 10, 8, 3);
+    session.imageDataUrl = "data:image/png;base64,AA==";
+    session.imageName = "temporary-event.png";
+    session.operationalMode = "temporary_event";
+    session.operationalContext = {
+      isEmergencyWindow: true,
+      requiresTemporaryPerimeterLockdown: true,
+      notes: "VIP sweep. Close side door after entry team arrives.",
+    };
+    session.candidates = [
+      { ...createScanCandidate("camera", [0.2, 0.2], 0), confidence: 0.9 },
+      { ...createScanCandidate("critical_zone", [0.7, 0.7], 1), confidence: 0.9 },
+    ];
+
+    const { scene, warnings } = compileScanSessionToScene(session);
+    expect(scene.assumptions.operationalContext).toMatchObject({
+      isEmergencyWindow: true,
+      requiresTemporaryPerimeterLockdown: true,
+      notes: "VIP sweep. Close side door after entry team arrives.",
+    });
+    expect(warnings.some((warning) => warning.code === "TEMPORARY_PERIMETER")).toBe(true);
+    expect(warnings.find((warning) => warning.code === "TEMPORARY_PERIMETER")?.severity).toBe("warning");
+    expect(warnings.some((warning) => warning.code === "SCENARIO_ESCALATION_REQUIRED")).toBe(true);
+    expect(warnings.find((warning) => warning.code === "SCENARIO_ESCALATION_REQUIRED")?.severity).toBe("warning");
+    expect(warnings.find((warning) => warning.code === "SCENARIO_ESCALATION_REQUIRED")?.suggestedAction).toContain("evidence");
+  });
+
+  test("keeps scenario escalation advisory when temporary event has normal context and explicit boundary markers", () => {
+    const session = createScanSession("Temporary Controlled", 10, 8, 3);
+    session.imageDataUrl = "data:image/png;base64,AA==";
+    session.imageName = "temporary-controlled.png";
+    session.operationalMode = "temporary_event";
+    session.candidates = [
+      { ...createScanCandidate("camera", [0.2, 0.2], 0), confidence: 0.9 },
+      { ...createScanCandidate("critical_zone", [0.7, 0.7], 1), confidence: 0.9 },
+      { ...createScanCandidate("door", [0.5, 0.05], 2), confidence: 0.9 },
+    ];
+
+    const { warnings, readiness } = compileScanSessionToScene(session);
+    expect(warnings.some((warning) => warning.code === "TEMPORARY_PERIMETER")).toBe(false);
+    expect(warnings.some((warning) => warning.code === "SCENARIO_ESCALATION_REQUIRED")).toBe(false);
+    expect(readiness.canRecommend).toBe(false);
+    expect(readiness.level).toBe("review-required");
+  });
+
   test("uses dimension hints for obstruction candidates", () => {
     const session = createScanSession("Dim Hints", 10, 8, 3);
     session.imageDataUrl = "data:image/png;base64,AA==";
@@ -213,5 +279,79 @@ describe("scan-to-scene", () => {
     const { scene } = compileScanSessionToScene(session);
     expect(scene.obstructions).toHaveLength(1);
     expect(scene.obstructions[0]?.dimensions).toEqual([1.2, 1.2, 0.7]);
+  });
+
+  test("classifies a complete high-confidence scan draft as deploy-ready", () => {
+    const session = createScanSession("Deploy-ready Scan", 12, 9, 3.2);
+    session.imageDataUrl = "data:image/png;base64,AA==";
+    session.imageName = "deploy-ready.png";
+    session.candidates = [
+      { ...createScanCandidate("camera", [0.2, 0.2], 0), confidence: 0.93 },
+      { ...createScanCandidate("critical_zone", [0.7, 0.7], 1), confidence: 0.91 },
+      { ...createScanCandidate("door", [0.5, 0.05], 2), confidence: 0.92 },
+      { ...createScanCandidate("obstruction", [0.5, 0.5], 3), confidence: 0.9 },
+      { ...createScanCandidate("wall", [0.02, 0.5], 4), confidence: 0.95 },
+      { ...createScanCandidate("path_point", [0.4, 0.2], 5), confidence: 0.94 },
+      { ...createScanCandidate("path_point", [0.8, 0.7], 6), confidence: 0.95 },
+    ];
+
+    const { readiness } = compileScanSessionToScene(session);
+    expect(readiness.level).toBe("deploy-ready");
+    expect(readiness.canRecommend).toBe(true);
+    expect(readiness.canSimulate).toBe(true);
+    expect(readiness.blockingWarnings).toHaveLength(0);
+  });
+
+  test("keeps review-required when recommendations are available but medium confidence or advisory warnings exist", () => {
+    const session = createScanSession("Review Scan", 12, 9, 3.2);
+    session.imageDataUrl = "data:image/png;base64,AA==";
+    session.imageName = "review.png";
+    session.candidates = [
+      { ...createScanCandidate("camera", [0.2, 0.2], 0), confidence: 0.68 },
+      { ...createScanCandidate("critical_zone", [0.7, 0.7], 1), confidence: 0.66 },
+      { ...createScanCandidate("counter", [0.55, 0.6], 2), confidence: 0.67 },
+      { ...createScanCandidate("door", [0.5, 0.05], 3), confidence: 0.65 },
+    ];
+
+    const { readiness, provenance } = compileScanSessionToScene(session);
+    expect(readiness.level).toBe("review-required");
+    expect(readiness.canRecommend).toBe(false);
+    expect(provenance.confidenceLevel).toBe("medium");
+    expect(readiness.advisoryWarnings.length).toBeGreaterThan(0);
+  });
+
+  test("requires insufficient when key scan evidence is missing", () => {
+    const session = createScanSession("Insufficient Scan", 10, 8, 3);
+    session.imageDataUrl = "data:image/png;base64,AA==";
+    session.imageName = "insufficient.png";
+    session.candidates = [
+      { ...createScanCandidate("door", [0.5, 0.05], 0), confidence: 0.91 },
+      { ...createScanCandidate("critical_zone", [0.7, 0.7], 1), confidence: 0.91 },
+    ];
+
+    const { readiness } = compileScanSessionToScene(session);
+    expect(readiness.level).toBe("insufficient");
+    expect(readiness.canRecommend).toBe(false);
+    expect(readiness.blockingWarnings.some((warning) => warning.code === "NO_CAMERA")).toBe(true);
+  });
+
+  test("allows direct readiness assessment from session + warnings", () => {
+    const session = createScanSession("Explicit Readiness", 10, 8, 3);
+    session.imageDataUrl = "data:image/png;base64,AA==";
+    session.imageName = "manual.png";
+    session.candidates = [
+      { ...createScanCandidate("camera", [0.2, 0.2], 0), confidence: 0.9 },
+      { ...createScanCandidate("critical_zone", [0.7, 0.7], 1), confidence: 0.9 },
+      { ...createScanCandidate("obstruction", [0.5, 0.5], 2), confidence: 0.9 },
+    ];
+    const warnings: Array<ScanCompilationWarning> = [
+      { code: "NO_WALL", message: "No wall markers accepted; using the room dimensions to build a rectangular shell.", severity: "info" },
+    ];
+
+    const explicit = assessScanDraftReadiness(session, warnings, { allowDeployOnWarning: true });
+    expect(explicit.level).toBe("deploy-ready");
+    expect(explicit.canRecommend).toBe(true);
+    const summary = summarizeScanProvenance(session);
+    expect(summary.totalCandidates).toBe(3);
   });
 });

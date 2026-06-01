@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, type ChangeEvent } from "react";
 
 import { useProductViewStore, type ProductView } from "@/store/product-view-store";
 import { useStudioStore } from "@/store/studio-store";
@@ -51,6 +51,7 @@ export type ProductViewHandlers = {
   // JSON import state
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   importError: string | null;
+  handleFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
 };
 
 type ProductViewRouterProps = {
@@ -98,6 +99,7 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
   const duplicateSavedScene = useStudioStore((s) => s.duplicateSavedScene);
   const renameSavedScene = useStudioStore((s) => s.renameSavedScene);
   const siteIntakeSession = useStudioStore((s) => s.siteIntakeSession);
+  const activeRole = useStudioStore((s) => s.workspaceGovernance.activeRole);
   const currentResult = simulationResult ?? scene.simulation ?? null;
 
   const formatClock = (ts: number | null | undefined) => {
@@ -319,6 +321,7 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
           navigate("product_home");
         }}
         onRunBaselineSimulation={handlers.approveAndRunBaseline}
+        activeRole={activeRole}
       />
     );
   }

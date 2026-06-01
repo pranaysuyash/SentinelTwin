@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { startTransition, useEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useSimulation } from "@/hooks/use-simulation";
 import { useStudioKeyboard } from "@/hooks/use-studio-keyboard";
@@ -164,18 +164,21 @@ export default function StudioShell() {
     window.localStorage.setItem("sentineltwin_ui_density", uiDensity);
   }, [uiDensity, uiTheme]);
 
-  useEffect(() => {
+  const effectiveRightPanelMode = useMemo(() => {
     if (!rightRailAutoSetRef.current) {
-      rightRailAutoSetRef.current = true;
-      if (!selectedNodeId && rightPanelMode === "inspector") {
-        setRightPanelMode("security_status");
-      }
-      return;
+      if (!selectedNodeId && rightPanelMode === "inspector") return "security_status";
+    } else if (selectedNodeId && rightPanelMode === "security_status") {
+      return "inspector";
     }
-    if (selectedNodeId && rightPanelMode === "security_status") {
-      setRightPanelMode("inspector");
+    return rightPanelMode;
+  }, [selectedNodeId, rightPanelMode]);
+
+  useEffect(() => {
+    rightRailAutoSetRef.current = true;
+    if (effectiveRightPanelMode !== rightPanelMode) {
+      setRightPanelMode(effectiveRightPanelMode);
     }
-  }, [rightPanelMode, selectedNodeId, setRightPanelMode]);
+  }, [effectiveRightPanelMode, rightPanelMode, setRightPanelMode]);
 
   useEffect(() => {
     if (viewMode !== "camera_view") return;

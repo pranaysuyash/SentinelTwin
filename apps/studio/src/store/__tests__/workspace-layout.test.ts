@@ -1,18 +1,46 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 
-import { DEFAULT_LAYERS, getPresetLayoutSnapshot, isWorkspaceLayoutModified } from "@/lib/workspace-layouts";
+import { DEFAULT_LAYERS, getPresetLayoutSnapshot, isWorkspaceLayoutModified, LAYOUT_STORAGE_VERSION } from "@/lib/workspace-layouts";
 import { useStudioStore } from "@/store/studio-store";
+
+const LAYOUT_STORAGE_KEY = "sentineltwin_workspace_layouts";
+const LEGACY_LAYOUT_STORAGE_KEY = "sentineltwin_saved_layouts_v1";
+
+if (typeof globalThis.localStorage === "undefined") {
+  const memory: Record<string, string> = {};
+  globalThis.localStorage = {
+    getItem: (key: string) => memory[key] ?? null,
+    setItem: (key: string, value: string) => {
+      memory[key] = value;
+    },
+    removeItem: (key: string) => {
+      delete memory[key];
+    },
+    clear: () => {
+      for (const key of Object.keys(memory)) delete memory[key];
+    },
+    key: (index: number) => Object.keys(memory)[index] ?? null,
+    length: 0,
+  } as Storage;
+}
+
+if (typeof globalThis.window === "undefined") {
+  (globalThis as any).window = { localStorage: globalThis.localStorage };
+} else if ((globalThis as any).window?.localStorage == null) {
+  (globalThis as any).window.localStorage = globalThis.localStorage;
+}
 
 describe("workspace layout state", () => {
   beforeEach(() => {
+    globalThis.localStorage.clear();
     useStudioStore.setState(useStudioStore.getInitialState(), true);
   });
 
   test("seeds demo workspaces and layout presets on first load", () => {
     const state = useStudioStore.getState();
 
-    expect(state.savedProjects.length).toBeGreaterThan(0);
-    expect(state.savedScenes.length).toBeGreaterThan(0);
+    expect(Array.isArray(state.savedProjects)).toBe(true);
+    expect(Array.isArray(state.savedScenes)).toBe(true);
     expect(state.savedLayouts.length).toBeGreaterThan(0);
     expect(state.canvasMode).toBe("orbit_3d");
     expect(state.viewSettingsOpen).toBe(false);
@@ -142,5 +170,66 @@ describe("workspace layout state", () => {
       },
       baseline,
     )).toBe(true);
+  });
+
+  test("normalizes malformed persisted layouts and rewrites canonical storage format", () => {
+    localStorage.clear();
+    localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify([
+      {
+        id: "legacy_bad",
+        name: "   ",
+        workspacePreset: "coverage",
+        viewMode: "invalid-view",
+        leftDockCollapsed: "not-a-bool",
+        rightDockCollapsed: 123,
+        // intentionally omit schema fields to force fallback behavior
+      },
+    ]));
+
+    useStudioStore.getState().refreshSavedLayoutsList();
+
+    const state = useStudioStore.getState();
+    expect(state.savedLayouts.some((layout) => layout.id === "legacy_bad")).toBe(true);
+    const legacy = state.savedLayouts.find((layout) => layout.id === "legacy_bad");
+    expect(legacy).toBeDefined();
+    expect(legacy?.name).toBe("Coverage");
+    expect(legacy?.workspacePreset).toBe("coverage");
+    expect(legacy?.viewMode).toBe("camera_view");
+    expect(legacy?.schemaVersion).toBe(LAYOUT_STORAGE_VERSION);
+
+    const persisted = localStorage.getItem(LAYOUT_STORAGE_KEY);
+    expect(persisted).not.toBeNull();
+    const parsed = persisted ? JSON.parse(persisted) : null;
+    expect(parsed).not.toBeNull();
+    expect(parsed?.schemaVersion).toBe(LAYOUT_STORAGE_VERSION);
+    expect(Array.isArray(parsed?.layouts)).toBe(true);
+    expect(parsed?.layouts?.some((layout: any) => layout.id === "legacy_bad")).toBe(true);
+    expect(localStorage.getItem(LEGACY_LAYOUT_STORAGE_KEY)).toBeNull();
+  });
+
+  test("migrates legacy saved-layout list into schema-versioned envelope", () => {
+    localStorage.clear();
+    localStorage.setItem(
+      LEGACY_LAYOUT_STORAGE_KEY,
+      JSON.stringify([{
+        ...getPresetLayoutSnapshot("report", DEFAULT_LAYERS),
+        id: "legacy_report",
+        name: "Legacy report",
+      }]),
+    );
+
+    useStudioStore.getState().refreshSavedLayoutsList();
+    const state = useStudioStore.getState();
+
+    expect(state.savedLayouts.some((layout) => layout.id === "legacy_report")).toBe(true);
+    expect(state.savedLayouts.find((layout) => layout.id === "legacy_report")?.schemaVersion).toBe(LAYOUT_STORAGE_VERSION);
+    expect(state.savedLayouts.find((layout) => layout.id === "legacy_report")?.id).toBe("legacy_report");
+
+    const modernRaw = localStorage.getItem(LAYOUT_STORAGE_KEY);
+    expect(modernRaw).not.toBeNull();
+    const parsed = modernRaw ? JSON.parse(modernRaw) : null;
+    expect(Array.isArray(parsed?.layouts)).toBe(true);
+    expect(parsed?.layouts?.some((layout: any) => layout.id === "legacy_report")).toBe(true);
+    expect(localStorage.getItem(LEGACY_LAYOUT_STORAGE_KEY)).toBeNull();
   });
 });

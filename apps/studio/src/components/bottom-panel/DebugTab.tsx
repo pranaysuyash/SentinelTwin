@@ -36,6 +36,7 @@ import {
 import type { AiProviderSelection } from "@/agents/provider-selection";
 import {
   compareModelEvalRuns,
+  getCloudRequiredFixtureCount,
   summarizeModelEvalRun,
   type ModelEvalSuiteResult,
 } from "@/agents/model-eval";
@@ -1126,11 +1127,20 @@ export function DebugTab() {
   const summary = sceneIntelligenceGraph.summary;
   const sourceEntries = Object.entries(summary.sourceCounts).filter(([, count]) => count > 0);
   const journalEntries = operationalEvidenceJournal?.entries ?? [];
-  const journalAppendCount = journalEntries.filter((entry) => entry.kind === "append").length;
-  const journalMergeCount = journalEntries.filter((entry) => entry.kind === "merge").length;
-  const journalReplaceCount = journalEntries.filter((entry) => entry.kind === "replace").length;
+  const journalCounts = journalEntries.reduce(
+    (counts, entry) => {
+      if (entry.kind === "append") counts.append += 1;
+      else if (entry.kind === "merge") counts.merge += 1;
+      else counts.replace += 1;
+      return counts;
+    },
+    { append: 0, merge: 0, replace: 0 },
+  );
+  const { append: journalAppendCount, merge: journalMergeCount, replace: journalReplaceCount } = journalCounts;
   const runtime = diagnosticBundle.runtime;
-  const currentModelEvalRecord = modelEvalReport ? summarizeModelEvalRun(modelEvalReport) : null;
+  const currentModelEvalRecord = modelEvalReport
+    ? summarizeModelEvalRun(modelEvalReport, getCloudRequiredFixtureCount(modelEvalReport.fixtures))
+    : null;
   const latestModelEvalRun = modelEvalHistory[0] ?? currentModelEvalRecord;
   const previousModelEvalRun = modelEvalHistory[1] ?? null;
   const modelEvalComparison = useMemo(

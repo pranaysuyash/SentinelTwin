@@ -7,7 +7,6 @@ import type {
 } from "@/lib/scan-artifacts";
 import {
   addWarning,
-  addCandidateWarning,
   captureModeLabel,
   operationalModeLabel,
 } from "@/lib/scan-artifacts";
@@ -84,6 +83,26 @@ export type CandidateCompileResult = {
 
 const RECONSTRUCTION_SOURCE_LABEL = "AI-assisted reconstruction";
 
+type ScenarioEnvelope = {
+  active: boolean;
+  profileId: string;
+  profileLabel: string;
+  scope: "temporary_event" | "temporary_perimeter" | "vip_visit" | "maintenance" | "incident_response" | "other";
+  startAt: number;
+  endAt: number;
+  requiresTemporaryPerimeterLockdown: boolean;
+  requiresStaffingLockdown: boolean;
+  rollBackRequired: boolean;
+  temporaryControls: string[];
+  rollBackPlan: Array<{
+    action: string;
+    description: string;
+    mandatory: boolean;
+    evidenceHint?: string;
+  }>;
+  notes: string[];
+};
+
 function worldPositionFromCandidate(
   candidate: ScanCandidate,
   roomWidthM: number,
@@ -96,6 +115,80 @@ function worldPositionFromCandidate(
   const px = Math.max(0.35, Math.min(roomWidthM - 0.35, candidate.imagePoint[0] * roomWidthM));
   const pz = Math.max(0.35, Math.min(roomDepthM - 0.35, candidate.imagePoint[1] * roomDepthM));
   return [px, 0, pz];
+}
+
+function buildTemporaryEventEnvelope(session: ScanCaptureSession): ScenarioEnvelope {
+  const startAt = session.createdAt;
+  const endAt = session.updatedAt || session.createdAt + 4 * 60 * 60 * 1000;
+  const durationMins = Math.max(15, Math.round((endAt - startAt) / 60000));
+  return {
+    active: true,
+    profileId: `${session.id}:temporary-event`,
+    profileLabel: "Temporary event profile",
+    scope: session.operationalContext?.isEmergencyWindow ? "incident_response" : "temporary_event",
+    startAt,
+    endAt,
+    requiresTemporaryPerimeterLockdown: Boolean(session.operationalContext?.requiresTemporaryPerimeterLockdown),
+    requiresStaffingLockdown: Boolean(session.operationalContext?.isEmergencyWindow),
+    rollBackRequired: true,
+    temporaryControls: session.operationalContext?.requiresTemporaryPerimeterLockdown
+      ? [
+          "temporary perimeter lockdown enabled",
+          "entry gating set to event policy",
+          "temporary staffing checks enabled",
+        ]
+      : ["event-only controls recorded"],
+    rollBackPlan: [
+      {
+        action: "remove_temporary_controls",
+        description: "Disable event-only perimeter and staffing controls before restoring baseline posture.",
+        mandatory: true,
+        evidenceHint: "Attach before/after checklist with photos and signoff timestamp.",
+      },
+      {
+        action: "confirm_baseline_readiness",
+        description: `Run a normal-mode replay check after ${durationMins} minute event window to confirm baseline posture.`,
+        mandatory: false,
+      },
+    ],
+    notes: [
+      `Event duration target: ${durationMins} minute(s).`,
+      ...(session.operationalContext?.notes?.trim() ? [session.operationalContext.notes.trim()] : []),
+    ],
+  };
+}
+
+function formatOperationalContextNotes(session: ScanCaptureSession): string[] {
+  const contextNotes = [`Operational mode: ${session.operationalMode}.`];
+  if (session.operationalContext?.isEmergencyWindow) {
+    contextNotes.push("Operational context: emergency window is active.");
+  }
+  if (session.operationalContext?.requiresTemporaryPerimeterLockdown) {
+    contextNotes.push("Operational context: temporary perimeter lockdown required.");
+  }
+  if (session.operationalContext?.notes?.trim()) {
+    contextNotes.push(`Operational notes: ${session.operationalContext.notes.trim()}`);
+  }
+  if (session.operationalMode === "temporary_event") {
+    const envelope = buildTemporaryEventEnvelope(session);
+    contextNotes.push(`Scenario envelope: ${envelope.profileLabel} (${envelope.scope}).`);
+    if (envelope.rollBackRequired) {
+      contextNotes.push("Scenario teardown required before returning to permanent posture.");
+    }
+  }
+  return contextNotes;
+}
+
+function hasTemporaryBoundaryControls(session: ScanCaptureSession): boolean {
+  return session.candidates.some((candidate) => (
+    (candidate.status === "accepted" || candidate.status === "edited")
+    && (candidate.kind === "wall" || candidate.kind === "door" || candidate.kind === "entry_point")
+  ));
+}
+
+function hasScenarioEscalationInputs(session: ScanCaptureSession): boolean {
+  if (session.operationalMode !== "temporary_event") return false;
+  return Boolean(session.operationalContext?.isEmergencyWindow || session.operationalContext?.requiresTemporaryPerimeterLockdown);
 }
 
 function dimensionsFromCandidate(candidate: ScanCandidate): [number, number, number] | null {
@@ -312,6 +405,24 @@ export function compileReconstructionToScene(
   }
 
   scene.entryPoints = mergeEntryPoints(explicitEntryPoints, doorEntryPoints);
+  const hasTemporaryPerimeterMarker = hasTemporaryBoundaryControls(session);
+  const requiresScenarioEscalation = hasScenarioEscalationInputs(session);
+  if (session.operationalMode === "temporary_event" && !hasTemporaryPerimeterMarker) {
+    compileWarnings.push({
+      code: "TEMPORARY_PERIMETER",
+      message: "Temporary event mode should include explicit perimeter or entry control markers before recommendation review.",
+      severity: "warning",
+      suggestedAction: "Add wall, door, or entry-point candidates to represent temporary control points.",
+    });
+  }
+  if (requiresScenarioEscalation) {
+    compileWarnings.push({
+      code: "SCENARIO_ESCALATION_REQUIRED",
+      message: "Scenario escalation required: emergency/perimeter context in temporary operations requires administrator review and control evidence before recommendations can be published.",
+      severity: "warning",
+      suggestedAction: "Collect perimeter/staffing control evidence and route this draft through escalation review.",
+    });
+  }
 
   const confidenceValues = accepted.map((c) => c.confidence);
   const avgConfidence =
@@ -338,8 +449,16 @@ export function compileReconstructionToScene(
           (m) => `Scale anchor: ${m.label}=${m.valueM}m [${m.source}]`,
         )
       : []),
+    ...formatOperationalContextNotes(session),
     ...session.warnings.map((w) => `Reconstruction warning: ${w.code} ${w.message}`),
   ];
+  scene.assumptions.operationalMode = session.operationalMode;
+  if (session.operationalMode === "temporary_event") {
+    scene.assumptions.operationalScenarioEnvelope = buildTemporaryEventEnvelope(session);
+  }
+  if (session.operationalContext && Object.keys(session.operationalContext).length > 0) {
+    scene.assumptions.operationalContext = session.operationalContext;
+  }
 
   const parsed = safeParseSecurityScene(scene);
   if (!parsed.success) {
@@ -368,10 +487,7 @@ export function compileReconstructionToScene(
   const result = compileScanToSiteResult(validated, [
     `Reconstruction pipeline: ${accepted.length} accepted, ${rejected.length} rejected, ${session.photos.length} photos.`,
     `Capture mode: ${captureModeLabel(session.captureMode)}.`,
-    `Operational mode: ${operationalModeLabel(session.operationalMode)}.`,
-    ...(session.operationalContext?.notes
-      ? [`Operational context: ${session.operationalContext.notes}.`]
-      : []),
+    session.operationalMode === "temporary_event" ? "Operational mode: temporary event profile applied." : `Operational mode: ${operationalModeLabel(session.operationalMode)}.`,
     ...(session.knownMeasurements.length > 0
       ? [`Scale anchors: ${session.knownMeasurements.map((m) => `${m.label}=${m.valueM}m`).join(", ")}`]
       : []),
@@ -408,11 +524,6 @@ export function compileReconstructionToSiteTwinDraft(
   draft.assumptions.push({
     label: "Capture mode",
     value: captureModeLabel(session.captureMode),
-    source: "user",
-  });
-  draft.assumptions.push({
-    label: "Operational mode",
-    value: operationalModeLabel(session.operationalMode),
     source: "user",
   });
   return draft;

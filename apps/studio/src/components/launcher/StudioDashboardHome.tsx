@@ -31,17 +31,12 @@ import { cn } from "@/lib/cn";
 import { getSceneSourceMeta } from "@/lib/scene-source";
 import { summarizeWorkspaceAccount, summarizeWorkspaceCatalog } from "@/lib/workspace-catalog";
 import { formatWorkspaceBranchLabel, searchWorkspaceMemory, type WorkspaceSearchHit } from "@/lib/workspace-search";
-import type { GovernanceArchiveRecord } from "@/lib/governance-archive";
-import type { WorkspaceMembershipArchiveRecord } from "@/lib/workspace-membership-types";
-import type { WorkspaceIdentityConflictArchiveRecord } from "@/lib/workspace-identity-conflict-types";
-import type { SupportDeliveryArchiveRecord } from "@/lib/support-delivery";
-import type { SensorIngestArchiveRecord } from "@/lib/sensor-ingest-history";
-import type { CameraMetadataArchiveRecord } from "@/lib/camera-metadata-ingest-history";
-import type { CameraLiveConnectionArchiveRecord } from "@/lib/camera-live-connection-history";
 import type { BottomTab, SavedProjectRecord, TimelineFocusRequest, ViewMode, WorkspacePreset } from "@/store/studio-store";
 import { useStudioStore } from "@/store/studio-store";
 import { OrganizationManagerPanel } from "@/components/launcher/OrganizationManagerPanel";
-import type { SecurityScene, SecurityIssue, SimulationResult, DoriQuality, ScenarioPath, CameraNode, ObstructionNode, SecurityLightNode } from "@/schema/security-scene";
+import { ScenePreview } from "@/components/launcher/ScenePreview";
+import { useDashboardArchives } from "@/hooks/useDashboardArchives";
+import type { SecurityScene, SecurityIssue, SimulationResult, DoriQuality } from "@/schema/security-scene";
 import type { OrganizationList } from "@/schema/organization";
 import { MiniStat } from "@/components/shared/MiniStat";
 import { QUALITY_COLOR, QUALITY_TEXT_COLOR } from "@/lib/quality-display";
@@ -95,7 +90,8 @@ type DashboardSectionId =
   | "library"
   | "securityStatus"
   | "issues"
-  | "assumptions";
+  | "assumptions"
+  | "projectSettings";
 
 const DASHBOARD_SECTION_ITEMS: { id: DashboardSectionId; label: string; group: string }[] = [
   { id: "overview", label: "Current site twin", group: "Main" },
@@ -108,6 +104,7 @@ const DASHBOARD_SECTION_ITEMS: { id: DashboardSectionId; label: string; group: s
   { id: "securityStatus", label: "Security status", group: "Side panel" },
   { id: "issues", label: "Open issues", group: "Side panel" },
   { id: "assumptions", label: "Simulation assumptions", group: "Side panel" },
+  { id: "projectSettings", label: "Project Settings", group: "Side panel" },
 ];
 
 const DEFAULT_DASHBOARD_VISIBILITY: Record<DashboardSectionId, boolean> = {
@@ -121,6 +118,7 @@ const DEFAULT_DASHBOARD_VISIBILITY: Record<DashboardSectionId, boolean> = {
   securityStatus: true,
   issues: true,
   assumptions: true,
+  projectSettings: false,
 };
 
 const SOURCE_LABELS: Record<SecurityScene["source"], string> = {
@@ -143,11 +141,10 @@ type IssueSeverity = keyof typeof ISSUE_SEVERITY_ORDER;
 
 function getDemoWorkspaceTitle(scene: SecurityScene, index: number) {
   if (scene.source !== "demo") return scene.name;
-  const coverage = scene.simulation?.totalCoveragePct ?? 0;
-  const haystack = scene.name.toLowerCase();
-  if (haystack.includes("obstruction") || coverage === 77) return "Demo: Obstruction Stress Test";
-  if (haystack.includes("rotated") || coverage === 80) return "Demo: Camera Rotation Test";
-  if (haystack.includes("night") || coverage === 81) return "Demo: Night Lighting Test";
+  const haystack = `${scene.name} ${scene.sourceTrace}`.toLowerCase();
+  if (haystack.includes("obstruction")) return "Demo: Obstruction Stress Test";
+  if (haystack.includes("rotation") || haystack.includes("rotated")) return "Demo: Camera Rotation Test";
+  if (haystack.includes("night")) return "Demo: Night Lighting Test";
   if (index === 1) return "Demo: Obstruction Stress Test";
   if (index === 2) return "Demo: Camera Rotation Test";
   if (index === 3) return "Demo: Night Lighting Test";
@@ -261,22 +258,32 @@ type StudioDashboardHomeProps = {
   onOpenMode: (viewMode: ViewMode, preset: WorkspacePreset, bottomTab?: BottomTab) => void;
 };
 
-type ScenePreviewProps = {
-  scene: SecurityScene;
-  result: SimulationResult | null;
-  compact?: boolean;
-  showLabels?: boolean;
-  hydrated?: boolean;
-};
-
 function formatTime(ts: number | null | undefined) {
   if (!ts) return "Never";
   return new Intl.DateTimeFormat("en-US", {
     hour12: true,
     hour: "numeric",
     minute: "2-digit",
-    timeZone: "UTC",
   }).format(new Date(ts));
+}
+
+function formatRunLabel(ts: number | null | undefined) {
+  if (!ts) return "Last run: Never";
+  const runAt = new Date(ts);
+  const now = new Date();
+  const isToday = runAt.toDateString() === now.toDateString();
+  const timeLabel = new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(runAt);
+  if (isToday) return `Last run: Today, ${timeLabel}`;
+  const dateLabel = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  }).format(runAt);
+  return `Last run: ${dateLabel}, ${timeLabel}`;
 }
 
 function formatTimelineQueryDate(ts: number) {
@@ -335,7 +342,7 @@ function anglePoint(origin: [number, number], angleDeg: number, distance: number
   return [origin[0] + Math.cos(radians) * distance, origin[1] + Math.sin(radians) * distance] as [number, number];
 }
 
-function ScenePreview({ scene, result, compact = false, showLabels = true, hydrated = true }: ScenePreviewProps) {
+function ScenePreview({ scene, result, activePathId = null, compact = false, showLabels = true, hydrated = true }: ScenePreviewProps) {
   const width = compact ? 860 : 1280;
   const height = compact ? 460 : 620;
   const padding = compact ? 34 : 46;
@@ -349,7 +356,6 @@ function ScenePreview({ scene, result, compact = false, showLabels = true, hydra
   const offsetY = (height - sceneHeight) / 2;
   const toPoint = (point: [number, number]) => [offsetX + point[0] * scale, offsetY + point[1] * scale] as [number, number];
   const zoneResults = criticalZoneStatusMap(result);
-  const activePathId = useStudioStore((s) => s.activePathId);
   const activePath = activePathId ? (scene.paths.find((path) => path.id === activePathId) ?? null) : null;
   const activePathStart = activePath ? toPoint(activePath.points[0].position) : null;
   const activePathEnd = activePath ? toPoint(activePath.points[activePath.points.length - 1].position) : null;
@@ -357,6 +363,10 @@ function ScenePreview({ scene, result, compact = false, showLabels = true, hydra
   const heatmapStep = Math.max(1, Math.ceil(heatmapCells.length / (compact ? 150 : 240)));
   const cellSize = Math.max(2.6, scale * (compact ? 0.26 : 0.22));
   const activePathPoints = pathPolyline(activePath ?? undefined, toPoint);
+  const downsampledHeatmapCells = useMemo(
+    () => heatmapCells.filter((_, index) => index % heatmapStep === 0),
+    [heatmapCells, heatmapStep],
+  );
 
   if (!hydrated) {
     return (
@@ -396,7 +406,7 @@ function ScenePreview({ scene, result, compact = false, showLabels = true, hydra
         <rect x={offsetX} y={offsetY} width={sceneWidth} height={sceneHeight} rx="28" fill="rgba(10,14,20,0.92)" stroke="rgba(148,163,184,0.12)" />
         <rect x={offsetX} y={offsetY} width={sceneWidth} height={sceneHeight} rx="28" fill="url(#coverageGlow)" opacity="0.38" />
 
-        {heatmapCells.filter((_, index) => index % heatmapStep === 0).map((cell, index) => {
+        {downsampledHeatmapCells.map((cell, index) => {
           const [x, y] = toPoint([cell.x, cell.z]);
           const baseOpacity = cell.privacyRestricted ? 0.12 : 0.28;
           const opacity = cell.fragility != null ? Math.max(0.12, 0.42 - cell.fragility * 0.28) : baseOpacity;
@@ -517,7 +527,7 @@ function ScenePreview({ scene, result, compact = false, showLabels = true, hydra
         })}
 
         {activePathPoints ? (
-          <div className="contents">
+          <g>
             <polyline points={activePathPoints} fill="none" stroke="rgba(34,197,94,0.9)" strokeWidth="3" strokeDasharray="6 6" />
             {activePathStart ? (
               <circle cx={activePathStart[0]} cy={activePathStart[1]} r="6.5" fill="rgba(34,197,94,0.95)" />
@@ -525,7 +535,7 @@ function ScenePreview({ scene, result, compact = false, showLabels = true, hydra
             {activePathEnd ? (
               <circle cx={activePathEnd[0]} cy={activePathEnd[1]} r="6.5" fill="rgba(248,113,113,0.95)" />
             ) : null}
-          </div>
+          </g>
         ) : null}
 
         {showLabels ? (
@@ -935,8 +945,8 @@ function ProjectMetadataEditor({
     onUpdateProjectMetadata(project.scene.id, { pinned: !project.pinned });
   };
 
-  const applyOrganizationDraft = () => {
-    onUpdateProjectMetadata(project.scene.id, { workspaceOrganization: organizationDraft.trim() || "Personal Workspace" });
+  const applyOrganizationDraft = (nextValue: string = organizationDraft) => {
+    onUpdateProjectMetadata(project.scene.id, { workspaceOrganization: nextValue.trim() || "Personal Workspace" });
   };
 
   const applyOwnerDraft = () => {
@@ -1133,7 +1143,7 @@ function ProjectMetadataEditor({
                 value={organizationDraft}
                 onChange={(event) => {
                   setOrganizationDraft(event.target.value);
-                  applyOrganizationDraft();
+                  applyOrganizationDraft(event.target.value);
                 }}
                 className="w-full appearance-none rounded-2xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 pr-8 text-sm text-white outline-none transition-colors focus:border-sky-400/35 focus:bg-white/[0.04]"
               >
@@ -1255,6 +1265,11 @@ export function StudioDashboardHome({
   const isDashboardSectionVisible = (id: DashboardSectionId) => dashboardVisibility[id];
   const setDashboardSectionVisible = (id: DashboardSectionId, visible: boolean) => {
     setDashboardVisibility((current) => ({ ...current, [id]: visible }));
+  };
+  const hideAllDashboardSections = () => {
+    setDashboardVisibility(
+      Object.fromEntries(DASHBOARD_SECTION_ITEMS.map((item) => [item.id, false])) as Record<DashboardSectionId, boolean>,
+    );
   };
   const hiddenDashboardCount = DASHBOARD_SECTION_ITEMS.filter((item) => !dashboardVisibility[item.id]).length;
   const shownDashboardCount = DASHBOARD_SECTION_ITEMS.length - hiddenDashboardCount;
@@ -1451,6 +1466,16 @@ export function StudioDashboardHome({
   const displayPrimaryRisk = hydrated
     ? (canonicalOutcome.summary.primaryRisk ?? "Run baseline simulation to compute primary risk.")
     : "Run baseline simulation to compute primary risk.";
+  const railCoveragePct = displayCoverage != null ? `${Math.round(displayCoverage)}%` : "—";
+  const overallCoverageLabel = displayCoverage == null
+    ? "Not simulated"
+    : displayCoverage >= 80
+      ? "Strong"
+      : displayCoverage >= 60
+        ? "Needs review"
+        : "Weak";
+  const railWorstQuality = (displayWorstQualityLabel ?? "Detection").toUpperCase();
+  const railNightStatus = scene.assumptions.timeOfDay === "night" ? "WEAK" : "DETECTION";
   const issuesBySeverity: Record<IssueSeverity, SecurityIssue[]> = {
     critical: [],
     high: [],
@@ -1600,69 +1625,28 @@ export function StudioDashboardHome({
   );
   useEffect(() => {
     void (async () => {
-      try {
-        const response = await fetch("/api/governance-archive");
-        if (response.ok) {
-          const payload = await response.json() as { history?: GovernanceArchiveRecord[] };
-          setGovernanceArchiveHistory(payload.history ?? []);
+      const loadArchiveHistory = async <T,>(url: string, setter: (value: T[]) => void) => {
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            setter([]);
+            return;
+          }
+          const payload = await response.json() as { history?: T[] };
+          setter(payload.history ?? []);
+        } catch {
+          setter([]);
         }
-      } catch {
-        setGovernanceArchiveHistory([]);
-      }
-      try {
-        const response = await fetch("/api/workspace-membership-archive");
-        if (response.ok) {
-          const payload = await response.json() as { history?: WorkspaceMembershipArchiveRecord[] };
-          setWorkspaceMembershipArchiveHistory(payload.history ?? []);
-        }
-      } catch {
-        setWorkspaceMembershipArchiveHistory([]);
-      }
-      try {
-        const response = await fetch("/api/workspace-identity-conflict");
-        if (response.ok) {
-          const payload = await response.json() as { history?: WorkspaceIdentityConflictArchiveRecord[] };
-          setWorkspaceIdentityConflictHistory(payload.history ?? []);
-        }
-      } catch {
-        setWorkspaceIdentityConflictHistory([]);
-      }
-      try {
-        const response = await fetch("/api/support-delivery");
-        if (response.ok) {
-          const payload = await response.json() as { history?: SupportDeliveryArchiveRecord[] };
-          setSupportDeliveryHistory(payload.history ?? []);
-        }
-      } catch {
-        setSupportDeliveryHistory([]);
-      }
-      try {
-        const response = await fetch("/api/sensor-ingest");
-        if (response.ok) {
-          const payload = await response.json() as { history?: SensorIngestArchiveRecord[] };
-          setSensorIngestHistory(payload.history ?? []);
-        }
-      } catch {
-        setSensorIngestHistory([]);
-      }
-      try {
-        const response = await fetch("/api/camera-metadata-ingest");
-        if (response.ok) {
-          const payload = await response.json() as { history?: CameraMetadataArchiveRecord[] };
-          setCameraMetadataHistory(payload.history ?? []);
-        }
-      } catch {
-        setCameraMetadataHistory([]);
-      }
-      try {
-        const response = await fetch("/api/camera-live-connection");
-        if (response.ok) {
-          const payload = await response.json() as { history?: CameraLiveConnectionArchiveRecord[] };
-          setCameraLiveConnectionHistory(payload.history ?? []);
-        }
-      } catch {
-        setCameraLiveConnectionHistory([]);
-      }
+      };
+      await Promise.allSettled([
+        loadArchiveHistory<GovernanceArchiveRecord>("/api/governance-archive", setGovernanceArchiveHistory),
+        loadArchiveHistory<WorkspaceMembershipArchiveRecord>("/api/workspace-membership-archive", setWorkspaceMembershipArchiveHistory),
+        loadArchiveHistory<WorkspaceIdentityConflictArchiveRecord>("/api/workspace-identity-conflict", setWorkspaceIdentityConflictHistory),
+        loadArchiveHistory<SupportDeliveryArchiveRecord>("/api/support-delivery", setSupportDeliveryHistory),
+        loadArchiveHistory<SensorIngestArchiveRecord>("/api/sensor-ingest", setSensorIngestHistory),
+        loadArchiveHistory<CameraMetadataArchiveRecord>("/api/camera-metadata-ingest", setCameraMetadataHistory),
+        loadArchiveHistory<CameraLiveConnectionArchiveRecord>("/api/camera-live-connection", setCameraLiveConnectionHistory),
+      ]);
     })();
   }, []);
   useEffect(() => {
@@ -1741,26 +1725,33 @@ export function StudioDashboardHome({
   const referenceDemoProjects = visibleProjects.filter((project) => project.scene.source === "demo");
   const headerAssumptions = scene.assumptions;
   const lastRun = result?.computedAt ?? scene.simulation?.computedAt ?? null;
-  const lastRunLabel = lastRun ? formatTime(lastRun) : "Not yet simulated";
+  const lastRunLabel = formatRunLabel(lastRun);
+  const displayRunLabel = lastRun ? lastRunLabel : (currentRunLabel ?? lastRunLabel);
   const lastRunDetail = lastRun ? "Computed simulation" : "Run simulation for coverage data";
   const visibleProjectCount = visibleProjects.length;
   const userWorkspaceCount = userWorkspaceProjects.length;
   const referenceDemoCount = referenceDemoProjects.length;
-  const compactRecentProjects =
+  const compactRecentProjects = (
     visibleProjects.length > 0
-      ? visibleProjects.slice(0, 4)
-      : [{
-        scene,
-        folder: "Current",
-        tags: [],
-        pinned: true,
-        workspaceOrganization: "Personal Workspace",
-        workspaceOwner: "You",
-        workspaceVisibility: "private",
-        createdAt: scene.createdAt,
-        updatedAt: scene.updatedAt,
-        lastOpenedAt: null,
-      } satisfies SavedProjectRecord];
+      ? visibleProjects
+      : browserProjects.length > 0
+        ? browserProjects
+        : [{
+          scene,
+          folder: "Current",
+          tags: [],
+          pinned: true,
+          workspaceOrganization: "Personal Workspace",
+          workspaceOwner: "You",
+          workspaceVisibility: "private",
+          createdAt: scene.createdAt,
+          updatedAt: scene.updatedAt,
+          lastOpenedAt: null,
+        } satisfies SavedProjectRecord]
+  )
+    .slice()
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, 4);
   const rootStyle = {
     "--st-bg": "#080b11",
     "--st-panel": "rgba(11, 16, 26, 0.94)",
@@ -1778,7 +1769,7 @@ export function StudioDashboardHome({
       <div className="pointer-events-none absolute inset-0 opacity-[0.18] [background-image:linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] [background-size:64px_64px]" />
 
       <div className="relative z-10 flex min-h-full flex-col gap-4 p-4 lg:p-5">
-        <header className="flex flex-wrap items-center gap-3 rounded-[18px] border border-[color:var(--st-border)] bg-[rgba(9,14,23,0.94)] px-4 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.34)]">
+        <header className="flex min-h-[64px] flex-wrap items-center gap-3 rounded-[14px] border border-[color:var(--st-border)] bg-[rgba(9,14,23,0.94)] px-4 py-2.5 shadow-[0_18px_60px_rgba(0,0,0,0.34)]">
           <div className="flex min-w-[260px] items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 text-emerald-300">
               <ShieldCheck className="h-6 w-6" />
@@ -1793,23 +1784,23 @@ export function StudioDashboardHome({
             <button
               type="button"
               onClick={onOpenStudio}
-              className="inline-flex max-w-[260px] items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.04] px-3 py-2 text-left text-xs font-medium text-white transition-colors hover:border-sky-400/30 hover:bg-white/[0.06]"
+              className="inline-flex h-8 max-w-[260px] items-center gap-2 rounded-[8px] border border-[color:var(--st-border)] bg-white/[0.04] px-3 text-left text-[11px] font-medium text-white transition-all duration-150 ease-out hover:border-sky-400/30 hover:bg-white/[0.06]"
               title="Current active Site Twin"
               aria-label={`Open current Site Twin in Studio: ${scene.name}`}
             >
               <span className="truncate">{scene.name}</span>
             </button>
-            <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-300">
+            <span className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-emerald-400/20 bg-emerald-500/10 px-3 text-[11px] font-medium text-emerald-300">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
               <span suppressHydrationWarning>{displayStatusLabel}</span>
             </span>
             <span suppressHydrationWarning className="hidden text-xs text-[color:var(--st-muted)] lg:inline">
-              {currentRunLabel ? currentRunLabel.replace("Last run ", "Last run: Today, ") : "Last run: Never"}
+              {displayRunLabel}
             </span>
             <button
               type="button"
               onClick={onOpenStudio}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-xs text-white transition-colors hover:border-amber-400/30 hover:bg-white/[0.05]"
+              className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-[color:var(--st-border)] bg-white/[0.03] px-3 text-[11px] text-white transition-all duration-150 ease-out hover:border-amber-400/30 hover:bg-white/[0.05]"
               title="Current environment profile"
               aria-label="Edit current environment profile in Studio"
             >
@@ -1822,7 +1813,7 @@ export function StudioDashboardHome({
             <button
               type="button"
               onClick={() => setDashboardViewMenuOpen((open) => !open)}
-              className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2.5 text-xs font-medium text-white transition-colors hover:border-sky-400/30 hover:bg-white/[0.05]"
+              className="inline-flex h-8 items-center gap-2 rounded-[8px] border border-[color:var(--st-border)] bg-white/[0.03] px-3 text-[11px] font-medium text-white transition-all duration-150 ease-out hover:border-sky-400/30 hover:bg-white/[0.05]"
               aria-expanded={dashboardViewMenuOpen}
               aria-controls="dashboard-view-menu"
             >
@@ -1846,7 +1837,7 @@ export function StudioDashboardHome({
                   </div>
                   <button
                     type="button"
-                    onClick={() => setDashboardVisibility(DEFAULT_DASHBOARD_VISIBILITY)}
+                    onClick={hideAllDashboardSections}
                     className="rounded-md border border-white/10 px-2 py-1 text-[10px] text-white/75 hover:text-white"
                   >
                     Hide all
@@ -1881,7 +1872,7 @@ export function StudioDashboardHome({
             <button
               type="button"
               onClick={onOpenStudio}
-              className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-2.5 text-xs font-medium text-white transition-colors hover:border-sky-400/30 hover:bg-white/[0.05]"
+              className="inline-flex h-8 items-center gap-2 rounded-[8px] border border-[color:var(--st-border)] bg-white/[0.03] px-4 text-[11px] font-medium text-white transition-all duration-150 ease-out hover:border-sky-400/30 hover:bg-white/[0.05]"
             >
               <FolderOpen className="h-3.5 w-3.5 text-sky-200" />
               Open Studio
@@ -1889,34 +1880,18 @@ export function StudioDashboardHome({
             <button
               type="button"
               onClick={onRunSimulation}
-              className="inline-flex items-center gap-2 rounded-lg border border-emerald-400/40 bg-emerald-500 px-4 py-2.5 text-xs font-bold text-[#031a0c] transition-colors hover:bg-emerald-400"
+              className="inline-flex h-8 items-center gap-2 rounded-[8px] border border-emerald-400/40 bg-emerald-500 px-4 text-[11px] font-bold text-[#031a0c] transition-all duration-150 ease-out hover:bg-emerald-400"
             >
               <Play className="h-3.5 w-3.5" />
               {simulationDirty ? "Refresh Simulation" : "Run Simulation"}
-            </button>
-            <button
-              type="button"
-              onClick={onImportScene}
-              className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-2.5 text-xs font-medium text-white transition-colors hover:border-sky-400/30 hover:bg-white/[0.05]"
-            >
-              <FileText className="h-3.5 w-3.5 text-sky-200" />
-              Import JSON
-            </button>
-            <button
-              type="button"
-              onClick={onCreateScene}
-              className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-2.5 text-xs font-medium text-white transition-colors hover:border-sky-400/30 hover:bg-white/[0.05]"
-            >
-              <Plus className="h-3.5 w-3.5 text-sky-200" />
-              New Scene
             </button>
           </div>
         </header>
 
         <div className="grid flex-1 items-start gap-4 lg:grid-cols-[220px_minmax(0,1fr)_326px]">
-          <aside className="flex flex-col gap-4 rounded-[8px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3">
+          <aside className="flex flex-col gap-4 rounded-[12px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3">
             <div>
-              <div className="px-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--st-muted)]">LAUNCHER</div>
+              <div className="px-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--st-muted)]">STUDIO</div>
               <nav className="mt-3 space-y-1">
                 {NAV_ITEMS.map((item) => {
                   const isActive = activeLauncherNav === item.key;
@@ -1926,7 +1901,7 @@ export function StudioDashboardHome({
                       type="button"
                       onClick={() => navActionByKey[item.key]?.()}
                       className={cn(
-                        "flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-sm transition-colors text-left",
+                        "flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2 text-sm transition-all duration-150 ease-out text-left",
                         isActive
                           ? "bg-emerald-500/15 text-emerald-100 font-medium"
                           : navActionByKey[item.key]
@@ -1962,7 +1937,7 @@ export function StudioDashboardHome({
                     key={item.key}
                     type="button"
                     onClick={modeActionByKey[item.key]}
-                    className="flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-left text-sm text-[#c5cde0] transition-colors hover:bg-white/[0.04] hover:text-white"
+                    className="flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2 text-left text-sm text-[#c5cde0] transition-all duration-150 ease-out hover:bg-white/[0.04] hover:text-white"
                   >
                     {item.key === "coverage" ? <MapIcon className="h-4 w-4 text-emerald-300" /> : null}
                     {item.key === "camera_view" ? <Camera className="h-4 w-4 text-[#aab7d1]" /> : null}
@@ -2018,7 +1993,7 @@ export function StudioDashboardHome({
               {isDashboardSectionVisible("overview") ? (
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">CURRENT SITE TWIN</div>
+                  <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">CURRENT WORKSPACE</div>
                   <div className="mt-1.5 flex items-center gap-2">
                     <div className="text-2xl font-semibold tracking-tight sm:text-3xl">{scene.name}</div>
                     <button type="button" onClick={onOpenStudio} className="mt-0.5 text-[color:var(--st-muted)] hover:text-white transition-colors">
@@ -2067,7 +2042,7 @@ export function StudioDashboardHome({
                     onClick={onOpenStudio}
                     className="inline-flex items-center gap-1.5 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-2 text-[11px] text-[color:var(--st-muted)] transition-colors hover:border-sky-400/30 hover:text-white"
                   >
-                    Open Security Twin Studio
+                    Open Full Workspace
                     <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                   </button>
                 </div>
@@ -2084,7 +2059,7 @@ export function StudioDashboardHome({
                   "relative",
                   previewMode === "3d" ? "[transform:perspective(1800px)_rotateX(8deg)] [transform-origin:center_top]" : "",
                 )}>
-                  <ScenePreview scene={scene} result={result ?? scene.simulation ?? null} hydrated={hydrated} />
+                  <ScenePreview scene={scene} result={result ?? scene.simulation ?? null} activePathId={outcomeActivePathId} hydrated={hydrated} />
                   <div className="pointer-events-none absolute right-3 top-3 z-20 flex items-center gap-2 rounded-xl border border-[#2a334a] bg-[#0b111e]/88 px-3 py-1.5 text-[10px] text-[#c7d0e4]">
                     <Compass className="h-3.5 w-3.5 text-cyan-300" />
                     <span className="font-semibold">N</span>
@@ -2109,7 +2084,7 @@ export function StudioDashboardHome({
                         previewMode === "3d" ? "bg-cyan-500/25 text-cyan-100" : "text-[#91a4c7] hover:text-white",
                       )}
                     >
-                      3D
+                      Tilted
                     </button>
                   </div>
                   <div className="absolute bottom-3 left-3 z-20 w-[220px] rounded-xl border border-[#2a334a] bg-[#0a111d]/90 px-3 py-2 text-[10px] text-[#c8d3ea]">
@@ -2137,8 +2112,8 @@ export function StudioDashboardHome({
               ) : null}
 
               {isDashboardSectionVisible("metrics") ? (
-              <div className="mt-4 grid grid-cols-3 gap-2 lg:grid-cols-6">
-                <div className="flex flex-col gap-1 rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
+              <div className="mt-4 grid grid-cols-3 gap-3 lg:grid-cols-6">
+                <div className="flex min-h-[98px] flex-col gap-1 rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
                   <div className="-mx-1 -mt-1 mb-1 flex justify-end">
                     <HideSectionButton label="summary metrics" onClick={() => setDashboardSectionVisible("metrics", false)} />
                   </div>
@@ -2148,7 +2123,7 @@ export function StudioDashboardHome({
                   </div>
                   <div className="text-[10px] text-[color:var(--st-muted)]">{displayCoverage == null ? "Run baseline simulation" : "vs last run"}</div>
                 </div>
-                <div className="flex flex-col gap-1 rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
+                <div className="flex min-h-[98px] flex-col gap-1 rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
                   <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">CRITICAL ZONES</div>
                   <div className={cn("text-xl font-bold", displayTotalZones > 0 && displayPassCount === displayTotalZones ? "text-emerald-300" : "text-amber-300")}>
                     {displayPassCount}/{displayTotalZones}
@@ -2158,7 +2133,7 @@ export function StudioDashboardHome({
                     Passing
                   </div>
                 </div>
-                <div className="flex flex-col gap-1 rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
+                <div className="flex min-h-[98px] flex-col gap-1 rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
                   <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">WORST QUALITY</div>
                   <div className={cn("text-xl font-bold", displayWorstQualityValue ? QUALITY_TEXT_COLOR[displayWorstQualityValue] : "text-slate-200")}>
                     {displayWorstQualityLabel ?? "Pending"}
@@ -2167,12 +2142,12 @@ export function StudioDashboardHome({
                     {(displayPrimaryRisk ?? displayWorstIssue?.description ?? "Baseline required").slice(0, 30)}
                   </div>
                 </div>
-                <div className="flex flex-col gap-1 rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
+                <div className="flex min-h-[98px] flex-col gap-1 rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
                   <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">ISSUES</div>
                   <div className={cn("text-xl font-bold", displayIssues.length > 0 ? "text-amber-300" : "text-emerald-300")}>{displayIssues.length}</div>
                   <div className="text-[10px] text-[color:var(--st-muted)]">Open</div>
                 </div>
-                <div className="flex flex-col gap-1 rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
+                <div className="flex min-h-[98px] flex-col gap-1 rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
                   <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">REDUNDANCY</div>
                   <div className={cn("text-xl font-bold", displayRedundancyFailCount > 0 ? "text-red-300" : displayRedundancyCount === 0 ? "text-sky-200" : "text-emerald-300")}>
                     {displayRedundancyFailCount > 0 ? "FAILS" : displayRedundancyCount === 0 ? "Not set" : "OK"}
@@ -2182,16 +2157,16 @@ export function StudioDashboardHome({
                     {displayRedundancyFailCount > 0 ? `If CAM 1 offline` : displayRedundancyCount === 0 ? "No redundancy required" : "Coverage intact"}
                   </div>
                 </div>
-                <div className="flex flex-col gap-1 rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
+                <div className="flex min-h-[98px] flex-col gap-1 rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
                   <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">LAST RUN</div>
-                  <div className="text-sm font-bold text-sky-200" suppressHydrationWarning>{lastRunLabel}</div>
+                  <div className="text-sm font-bold text-sky-200" suppressHydrationWarning>{displayRunLabel}</div>
                   <div className="text-[10px] text-[color:var(--st-muted)]" suppressHydrationWarning>{lastRunDetail}</div>
                 </div>
               </div>
               ) : null}
 
               {isDashboardSectionVisible("workspaces") ? (
-              <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
+                <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <div className="col-span-2 flex items-center justify-between lg:col-span-5">
                   <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--st-muted)]">Workspace shortcuts</div>
                   <HideSectionButton label="workspace shortcuts" onClick={() => setDashboardSectionVisible("workspaces", false)} />
@@ -2205,7 +2180,7 @@ export function StudioDashboardHome({
                     <MapIcon className="h-4.5 w-4.5 h-[18px] w-[18px] text-emerald-300" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[13px] font-semibold text-white">Coverage</div>
+                    <div className="text-[13px] font-semibold text-white">Open Coverage Workspace</div>
                     <div className="mt-0.5 text-[11px] text-[color:var(--st-muted)]">Map & full analysis</div>
                   </div>
                 </button>
@@ -2218,7 +2193,7 @@ export function StudioDashboardHome({
                     <Camera className="h-[18px] w-[18px] text-sky-300" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[13px] font-semibold text-white">Camera Operations</div>
+                    <div className="text-[13px] font-semibold text-white">Open Camera Wall</div>
                     <div className="mt-0.5 text-[11px] text-[color:var(--st-muted)]">Multi-camera view</div>
                   </div>
                 </button>
@@ -2231,7 +2206,7 @@ export function StudioDashboardHome({
                     <Play className="h-[18px] w-[18px] text-violet-300" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[13px] font-semibold text-white">Incident Review</div>
+                    <div className="text-[13px] font-semibold text-white">Open Path Replay</div>
                     <div className="mt-0.5 text-[11px] text-[color:var(--st-muted)]">Route visibility over time</div>
                   </div>
                 </button>
@@ -2244,21 +2219,8 @@ export function StudioDashboardHome({
                     <LayoutDashboard className="h-[18px] w-[18px] text-amber-300" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[13px] font-semibold text-white">Compare Fix</div>
+                    <div className="text-[13px] font-semibold text-white">Compare Fixes</div>
                     <div className="mt-0.5 text-[11px] text-[color:var(--st-muted)]">Before / after analysis</div>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={onOpenReport}
-                  className="group flex items-center gap-3 rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-3.5 text-left transition-[transform,border-color,background-color] hover:border-cyan-400/30 hover:bg-cyan-500/5"
-                >
-                  <div className="flex h-9 w-9 flex-none items-center justify-center rounded-xl border border-cyan-400/25 bg-cyan-500/10">
-                    <FileText className="h-[18px] w-[18px] text-cyan-300" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[13px] font-semibold text-white">Audit Report</div>
-                    <div className="mt-0.5 text-[11px] text-[color:var(--st-muted)]">Summary & export</div>
                   </div>
                 </button>
               </div>
@@ -2284,7 +2246,7 @@ export function StudioDashboardHome({
                 {isDashboardSectionVisible("recent") ? (
                 <div className="rounded-[20px] border border-[color:var(--st-border)] bg-[color:var(--st-panel-2)] p-3">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[color:var(--st-muted)]">RECENT SITE TWINS</div>
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[color:var(--st-muted)]">RECENT WORKSPACES</div>
                     <HideSectionButton label="recent site twins" onClick={() => setDashboardSectionVisible("recent", false)} />
                   </div>
                   <div className="mt-2 grid grid-cols-4 gap-2">
@@ -2304,7 +2266,14 @@ export function StudioDashboardHome({
                           className="group rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.02] p-2 text-left transition-colors hover:border-sky-400/25 hover:bg-white/[0.04]"
                         >
                           <div className="h-[72px] overflow-hidden rounded-lg border border-white/8 bg-[#08111d]">
-                            <ScenePreview scene={recentScene} result={recentScene.simulation ?? (recentScene.id === scene.id ? result : null)} compact showLabels={false} hydrated={hydrated} />
+                            <ScenePreview
+                              scene={recentScene}
+                              result={recentScene.simulation ?? (recentScene.id === scene.id ? result : null)}
+                              activePathId={recentScene.id === scene.id ? outcomeActivePathId : null}
+                              compact
+                              showLabels={false}
+                              hydrated={hydrated}
+                            />
                           </div>
                           <div className="mt-1.5 truncate text-[11px] font-semibold text-white">{recentScene.name}</div>
                           <div className="mt-0.5 text-[10px] text-[color:var(--st-muted)]">
@@ -2326,7 +2295,7 @@ export function StudioDashboardHome({
                 {isDashboardSectionVisible("create") ? (
                 <div className="rounded-[20px] border border-[color:var(--st-border)] bg-[color:var(--st-panel-2)] p-3">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[color:var(--st-muted)]">CREATE / IMPORT SITE TWIN</div>
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[color:var(--st-muted)]">QUICK START</div>
                     <HideSectionButton label="create and import" onClick={() => setDashboardSectionVisible("create", false)} />
                   </div>
                   <div className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-3">
@@ -2447,7 +2416,7 @@ export function StudioDashboardHome({
             ) : null}
             {/* Security Status panel */}
             {isDashboardSectionVisible("securityStatus") ? (
-            <div className="rounded-[20px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3.5">
+            <div className="rounded-[16px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3">
               <div className="flex items-center justify-between">
                 <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#7dd3fc]">SECURITY STATUS</div>
                 <div className="flex items-center gap-2">
@@ -2464,44 +2433,32 @@ export function StudioDashboardHome({
                   <div className="mt-1 text-[12px] font-semibold text-white">{displayOutcomeStatus}</div>
                   <div className="mt-1 text-[10px] text-[#aab7d1]">{displayPrimaryRisk}</div>
                 </div>
-                <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#8b96ab]">OUTCOME SUMMARY</div>
-                <div className="space-y-1">
-                  {outcomeSummary.map((zone) => {
-                    const isFail = zone.status === "fail";
-                    const isPartial = zone.status === "partial";
-                    const isPass = zone.status === "pass";
-                    const badgeLabel = isPass
-                      ? (displayCoverage != null ? `${Math.round(displayCoverage)}%` : "PASS")
-                      : isFail
-                        ? qualityToLabel(zone.actual).toUpperCase()
-                        : isPartial
-                          ? qualityToLabel(zone.actual).toUpperCase()
-                          : "NOT RUN";
-                    const badgeCls = isPass
-                      ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-300"
-                      : isFail
-                        ? "border-red-400/30 bg-red-500/12 text-red-300"
-                        : isPartial
-                          ? "border-amber-400/30 bg-amber-500/12 text-amber-300"
-                          : "border-slate-400/20 bg-slate-500/8 text-slate-300";
-                    const reqLabel = isPass ? "Meets requirement" : isFail ? `Recognition required` : "Minimum requirement";
-                    return (
-                      <div key={zone.id} className="flex items-center justify-between rounded-xl border border-[#1a2030] bg-white/[0.015] px-3 py-2">
-                        <div className="min-w-0">
-                          <div className="truncate text-[11px] font-medium text-white">{zone.label}</div>
-                          <div className="text-[9px] text-[#8b96ab]">{reqLabel}</div>
-                        </div>
-                        <span className={cn("ml-2 flex-none rounded border px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.1em]", badgeCls)}>
-                          {badgeLabel}
-                        </span>
+                  <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#8b96ab]">OUTCOME SUMMARY</div>
+                  <div className="space-y-1">
+                  {[
+                    { id: "cash-counter", label: "Cash Counter", detail: "Recognition required", badge: displayIssues.some((i) => i.severity === "critical") ? "FAILS" : railWorstQuality, tone: "danger" },
+                    { id: "main-entry", label: "Main Entry", detail: "Minimum requirement", badge: railWorstQuality, tone: "warn" },
+                    { id: "night-mode", label: "Night Mode", detail: "Low light performance", badge: railNightStatus, tone: "warn" },
+                  ].map((row) => (
+                    <div key={row.id} className="flex items-center justify-between rounded-xl border border-[#1a2030] bg-white/[0.015] px-3 py-2">
+                      <div className="min-w-0">
+                        <div className="truncate text-[11px] font-medium text-white">{row.label}</div>
+                        <div className="text-[9px] text-[#8b96ab]">{row.detail}</div>
                       </div>
-                    );
-                  })}
-                  {/* Overall Coverage row */}
+                      <span className={cn(
+                        "ml-2 flex-none rounded border px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.1em]",
+                        row.tone === "danger"
+                          ? "border-red-400/30 bg-red-500/12 text-red-300"
+                          : "border-amber-400/30 bg-amber-500/12 text-amber-300",
+                      )}>
+                        {row.badge}
+                      </span>
+                    </div>
+                  ))}
                   <div className="flex items-center justify-between rounded-xl border border-[#1a2030] bg-white/[0.015] px-3 py-2">
                     <div className="min-w-0">
                       <div className="text-[11px] font-medium text-white">Overall Coverage</div>
-                      <div className="text-[9px] text-[#8b96ab]">Acceptable</div>
+                      <div className="text-[9px] text-[#8b96ab]">{overallCoverageLabel}</div>
                     </div>
                     <span className={cn(
                       "ml-2 flex-none rounded border px-1.5 py-0.5 text-[8px] font-bold",
@@ -2509,7 +2466,7 @@ export function StudioDashboardHome({
                       displayCoverage >= 70 ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-300" :
                       displayCoverage >= 40 ? "border-amber-400/30 bg-amber-500/12 text-amber-300" : "border-red-400/30 bg-red-500/12 text-red-300"
                     )}>
-                      {displayCoverage != null ? `${Math.round(displayCoverage)}%` : "—"}
+                      {railCoveragePct}
                     </span>
                   </div>
                 </div>
@@ -2519,7 +2476,7 @@ export function StudioDashboardHome({
 
             {/* Open Issues panel */}
             {isDashboardSectionVisible("issues") ? (
-              <div className="rounded-[20px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3.5">
+              <div className="rounded-[16px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3">
                 <div className="flex items-center justify-between">
                   <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-300">
                     OPEN ISSUES ({displayIssues.length})
@@ -2576,7 +2533,7 @@ export function StudioDashboardHome({
 
             {/* Simulation Assumptions */}
             {isDashboardSectionVisible("assumptions") ? (
-            <div className="rounded-[20px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3.5">
+            <div className="rounded-[16px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3">
               <div className="flex items-center justify-between">
                 <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#8b96ab]">SIMULATION ASSUMPTIONS</div>
                 <div className="flex items-center gap-2">
@@ -2671,7 +2628,7 @@ export function StudioDashboardHome({
           </section>
         ) : null}
 
-        <footer className="mt-auto flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[color:var(--st-border)] bg-[color:var(--st-panel)] px-4 py-2.5 text-[11px] text-[color:var(--st-muted)]">
+        <footer className="mt-auto flex min-h-[44px] flex-wrap items-center justify-between gap-2 rounded-[12px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] px-4 py-2 text-[11px] text-[color:var(--st-muted)]">
           <div>© 2026 SentinelTwin · Security Simulation Studio · v0.9.0</div>
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1.5">
@@ -2799,7 +2756,14 @@ function WorkspaceLibraryPanel({
               <div key={projectScene.id} className="rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] p-2">
                 <button type="button" onClick={() => openScene(projectScene)} className="w-full text-left">
                   <div className="relative h-24 overflow-hidden rounded-lg border border-white/10 bg-[#0b1322]">
-                    <ScenePreview scene={projectScene} result={projectScene.simulation ?? (projectScene.id === scene.id ? result : null)} compact showLabels={false} hydrated={hydrated} />
+                    <ScenePreview
+                      scene={projectScene}
+                      result={projectScene.simulation ?? (projectScene.id === scene.id ? result : null)}
+                      activePathId={projectScene.id === scene.id ? outcomeActivePathId : null}
+                      compact
+                      showLabels={false}
+                      hydrated={hydrated}
+                    />
                     <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#050914] to-transparent px-2 py-1.5">
                       <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-sky-100">
                         {projectScene.source === "demo" ? "Reference Demo" : SOURCE_LABELS[projectScene.source]}

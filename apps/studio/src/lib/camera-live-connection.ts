@@ -17,51 +17,42 @@ export type CameraLiveAuthChallengeScheme = "basic" | "digest" | "bearer" | "tok
 const LIVE_SESSION_TTL_MS = 120_000;
 
 const CameraLiveConnectionRecordSchema = z.object({
-  cameraId: z.string().min(1).optional(),
-  cameraName: z.string().min(1).optional(),
-  liveFeedUrl: z.string().url().optional().nullable(),
-  liveFeedLabel: z.string().min(1).optional().nullable(),
-  liveConnectionMode: z.enum(["rtsp", "mjpeg", "http", "onvif", "proxy"]).optional(),
-  liveConnectionStatus: z.enum(["disconnected", "connecting", "connected", "error"]).optional(),
-  authMode: z.enum(["none", "basic", "digest", "token", "cookie", "onvif_digest", "proxy_passthrough"]).optional(),
-  authState: z.enum(["unauthenticated", "authenticating", "authenticated", "failed"]).optional(),
-  authRealm: z.string().min(1).optional().nullable(),
-  authSessionId: z.string().min(1).optional().nullable(),
-  authSessionExpiresAt: z.number().int().nonnegative().optional().nullable(),
-  transportResponseStatus: z.number().int().optional().nullable(),
-  transportResponseStatusText: z.string().min(1).optional().nullable(),
-  authChallengeHeader: z.string().min(1).optional().nullable(),
-  authChallengeScheme: z.enum(["basic", "digest", "bearer", "token"]).optional().nullable(),
-  authChallengeRealm: z.string().min(1).optional().nullable(),
-  eventSubscriptionUri: z.string().min(1).optional().nullable(),
-  eventSubscriptionReference: z.string().min(1).optional().nullable(),
-  eventSubscriptionExpiresAt: z.number().int().nonnegative().optional().nullable(),
-  notes: z.string().min(1).optional().nullable(),
-  timestamp: z.number().int().nonnegative().optional(),
-}).refine((value) => Boolean(
-  value.cameraId
-  || value.cameraName
-  || value.liveFeedUrl
-  || value.liveFeedLabel
-  || value.liveConnectionMode
-  || value.liveConnectionStatus
-  || value.authMode
-  || value.authState
-  || value.authRealm
-  || value.authSessionId
-  || value.authSessionExpiresAt !== undefined
-  || value.transportResponseStatus !== undefined
-  || value.transportResponseStatusText
-  || value.authChallengeHeader
-  || value.authChallengeScheme
-  || value.authChallengeRealm
-  || value.eventSubscriptionUri
-  || value.eventSubscriptionReference
-  || value.eventSubscriptionExpiresAt !== undefined
-  || value.notes
-), {
-  message: "Provide at least one camera connection field.",
+  cameraId: z.string().min(1),
+  cameraName: z.string().min(1),
+  liveFeedUrl: z.string().url().nullable(),
+  liveFeedLabel: z.string().min(1).nullable(),
+  liveConnectionMode: z.enum(["rtsp", "mjpeg", "http", "onvif", "proxy"]).nullable(),
+  liveConnectionStatus: z.enum(["disconnected", "connecting", "connected", "error"]),
+  liveSessionId: z.string().min(1).nullable(),
+  liveSessionState: z.enum(["idle", "probing", "connected", "error"]).nullable(),
+  liveSessionStartedAt: z.number().int().nonnegative().nullable(),
+  liveSessionConfirmedAt: z.number().int().nonnegative().nullable(),
+  liveSessionExpiresAt: z.number().int().nonnegative().nullable(),
+  transportSessionId: z.string().min(1).nullable(),
+  transportSessionState: z.enum(["idle", "negotiating", "active", "closing", "error"]).nullable(),
+  lastHeartbeatAt: z.number().int().nonnegative().nullable(),
+  probeCount: z.number().int().nonnegative(),
+  protocolProfile: z.enum(["onvif_device", "rtsp_session", "mjpeg_stream", "http_poll", "proxy"]).nullable(),
+  authMode: z.enum(["none", "basic", "digest", "token", "cookie", "onvif_digest", "proxy_passthrough"]),
+  authState: z.enum(["unauthenticated", "authenticating", "authenticated", "failed"]),
+  authRealm: z.string().min(1).nullable(),
+  onvifUsername: z.string().nullable().optional(),
+  onvifPassword: z.string().nullable().optional(),
+  authSessionId: z.string().min(1).nullable(),
+  authSessionExpiresAt: z.number().int().nonnegative().nullable(),
+  transportResponseStatus: z.number().int().nullable(),
+  transportResponseStatusText: z.string().min(1).nullable(),
+  authChallengeHeader: z.string().min(1).nullable(),
+  authChallengeScheme: z.enum(["basic", "digest", "bearer", "token"]).nullable(),
+  authChallengeRealm: z.string().min(1).nullable(),
+  eventSubscriptionUri: z.string().min(1).nullable(),
+  eventSubscriptionReference: z.string().min(1).nullable(),
+  eventSubscriptionExpiresAt: z.number().int().nonnegative().nullable(),
+  notes: z.string().min(1).nullable(),
+  timestamp: z.number().int().nonnegative(),
 });
+
+export type CameraLiveConnectionRecord = z.infer<typeof CameraLiveConnectionRecordSchema>;
 
 export const CameraLiveConnectionProbeRequestSchema = z.object({
   source: z.string().min(1).default("camera-inspector"),
@@ -112,41 +103,7 @@ export type CameraLiveConnectionProbeResponse = {
   liveFeedUrl: string | null;
   feedLabel: string | null;
   summary: string;
-  record: {
-    cameraId: string;
-    cameraName: string;
-    liveSessionId: string | null;
-    liveSessionState: "idle" | "probing" | "connected" | "error" | null;
-    liveSessionStartedAt: number | null;
-    liveSessionConfirmedAt: number | null;
-    liveSessionExpiresAt: number | null;
-    transportSessionId: string | null;
-    transportSessionState: "idle" | "negotiating" | "active" | "closing" | "error" | null;
-    lastHeartbeatAt: number | null;
-    probeCount: number;
-    protocolProfile: "onvif_device" | "rtsp_session" | "mjpeg_stream" | "http_poll" | "proxy" | null;
-    authMode: CameraLiveAuthMode;
-    authState: CameraLiveAuthState;
-    authRealm: string | null;
-    onvifUsername?: string | null;
-    onvifPassword?: string | null;
-    authSessionId: string | null;
-    authSessionExpiresAt: number | null;
-    transportResponseStatus: number | null;
-    transportResponseStatusText: string | null;
-    authChallengeHeader: string | null;
-    authChallengeScheme: CameraLiveAuthChallengeScheme;
-    authChallengeRealm: string | null;
-    eventSubscriptionUri: string | null;
-    eventSubscriptionReference: string | null;
-    eventSubscriptionExpiresAt: number | null;
-    liveFeedUrl: string | null;
-    liveFeedLabel: string | null;
-    liveConnectionMode: CameraLiveConnectionMode | null;
-    liveConnectionStatus: CameraLiveConnectionStatus;
-    notes: string | null;
-    timestamp: number;
-  };
+  record: CameraLiveConnectionRecord;
   errors: string[];
   sourceCount: number;
 };

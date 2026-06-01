@@ -4,6 +4,7 @@ import { MapPin } from "lucide-react";
 
 import { PathMap } from "@/components/map/PathMap";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
+import { clampPathDuration } from "@/components/view/camera-view-utils";
 import { QUALITY_RANK } from "@/lib/quality-display";
 import { pathLength } from "@/components/workspace/editing/editor-geometry";
 import { useStudioStore } from "@/store/studio-store";
@@ -24,10 +25,11 @@ export function ScenarioPathPanel() {
 
   const activePath = scene.paths.find((item) => item.id === activePathId) ?? null;
   const pathResult = activePath ? result?.pathResults.find((entry) => entry.pathId === activePath.id) : null;
+  const safePathDurationS = clampPathDuration(pathResult?.totalDurationS);
   const activePathLengthM = activePath ? pathLength(activePath.points.map((point) => point.position)) : 0;
   const activePathEstimatedSeconds = activePath && activePath.speedMps > 0 ? activePathLengthM / activePath.speedMps : 0;
-  const visiblePct = pathResult && pathResult.totalDurationS > 0
-    ? Math.round((pathResult.visibleDurationS / pathResult.totalDurationS) * 100)
+  const visiblePct = pathResult && safePathDurationS > 0
+    ? Math.round((pathResult.visibleDurationS / safePathDurationS) * 100)
     : null;
   const bestCamera =
     pathResult?.visibilityByCamera && Object.entries(pathResult.visibilityByCamera).length > 0
@@ -206,7 +208,7 @@ export function ScenarioPathPanel() {
           {activePath ? (
             <div className="grid grid-cols-3 gap-2">
               <Stat label="Waypoints" value={activePath.points.length} />
-              <Stat label="Path Duration" value={pathResult ? `${pathResult.totalDurationS.toFixed(1)}s` : "--"} />
+              <Stat label="Path Duration" value={pathResult && safePathDurationS > 0 ? `${safePathDurationS.toFixed(1)}s` : "--"} />
               <Stat
                 label="Visible"
                 value={visiblePct === null ? "--" : `${visiblePct}%`}

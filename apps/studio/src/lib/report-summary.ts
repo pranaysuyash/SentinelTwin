@@ -17,7 +17,10 @@ export type AudienceMode =
   | "auditor"
   | "insurer"
   | "installer"
-  | "privacy_reviewer";
+  | "privacy_reviewer"
+  | "consultant"
+  | "facilities_director"
+  | "operations_manager";
 
 /**
  * Returns the human-readable label for an audience mode.
@@ -29,6 +32,9 @@ export function audienceModeLabel(mode: AudienceMode): string {
     insurer: "Insurance Reviewer",
     installer: "Installer / Integrator",
     privacy_reviewer: "Privacy Reviewer",
+    consultant: "Security Consultant",
+    facilities_director: "Facilities Director",
+    operations_manager: "Operations Manager",
   };
   return labels[mode];
 }
@@ -44,6 +50,9 @@ export function audienceModeDescription(mode: AudienceMode): string {
     insurer: "Focused on verified coverage percentages, critical zone pass/fail status, and documented risk mitigation.",
     installer: "Focused on camera placement geometry, field-of-view calculations, and wiring / mounting recommendations.",
     privacy_reviewer: "Focused on privacy zone compliance, GDPR-relevant restricted coverage areas, and data minimisation posture.",
+    consultant: "Focused on consultative security posture, prioritized remediations, and decision-quality evidence for advisory delivery.",
+    facilities_director: "Focused on operational readiness, deployment sequencing, and facilities-level impact of security controls.",
+    operations_manager: "Focused on temporary/temporary-event controls, routing, staffing implications, and practical hardening steps.",
   };
   return descriptions[mode];
 }

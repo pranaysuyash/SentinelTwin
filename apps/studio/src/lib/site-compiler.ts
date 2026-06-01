@@ -34,6 +34,17 @@ export type ActionableWarning = {
   affectedNodeIds?: string[];
 };
 
+export type SiteTwinReadinessLevel = "deploy-ready" | "review-required" | "insufficient";
+
+export type SiteTwinDraftReadiness = {
+  level: SiteTwinReadinessLevel;
+  canSimulate: boolean;
+  canRecommend: boolean;
+  blockingWarnings: ActionableWarning[];
+  advisoryWarnings: ActionableWarning[];
+  summary: string;
+};
+
 export type MissingPrerequisite = {
   code: string;
   message: string;
@@ -77,6 +88,7 @@ export type SiteTwinDraft = {
     notes: string[];
     createdAt: number;
   };
+  readiness: SiteTwinDraftReadiness;
   suggestedNextActions: SuggestedNextAction[];
 };
 
@@ -114,6 +126,7 @@ export type SiteCompilerResult = {
   warnings: SiteCompilerWarning[];
   confidence: number | null;
   provenance: SiteCompilerProvenance;
+  readiness?: SiteTwinDraftReadiness;
 };
 
 const SOURCE_LABELS: Record<SiteIntakeSource, string> = {
@@ -303,6 +316,65 @@ function deriveMissingPrerequisites(scene: SecurityScene): MissingPrerequisite[]
   return missing;
 }
 
+function splitWarningsBySeverity(warnings: ActionableWarning[]) {
+  return {
+    blockingWarnings: warnings.filter((warning) => warning.severity === "blocking"),
+    advisoryWarnings: warnings.filter((warning) => warning.severity !== "blocking"),
+  };
+}
+
+function describeMinutes(totalMinutes: number): string {
+  const minutes = Math.max(0, Math.round(totalMinutes));
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hours}h ${mins > 0 ? `${mins}m` : ""}`.trim();
+}
+
+export function deriveSiteTwinDraftReadiness(
+  scene: SecurityScene,
+  warnings: ActionableWarning[],
+  options: { source?: SiteIntakeSource; confidence?: number | null } = {},
+): SiteTwinDraftReadiness {
+  const { blockingWarnings, advisoryWarnings } = splitWarningsBySeverity(warnings);
+  const { confidence } = options;
+  const hasCamera = scene.cameras.length > 0;
+  const hasCriticalZone = scene.criticalZones.length > 0;
+  const hasBlockingWarning = blockingWarnings.length > 0;
+  const canSimulate = hasCamera && hasCriticalZone && !hasBlockingWarning;
+
+  if (!hasCamera || !hasCriticalZone || hasBlockingWarning) {
+    const missingRequirements: string[] = [];
+    if (!hasCamera) missingRequirements.push("at least one camera");
+    if (!hasCriticalZone) missingRequirements.push("at least one critical zone");
+    if (hasBlockingWarning) missingRequirements.push("blocking warnings cleared");
+
+    return {
+      level: "insufficient",
+      canSimulate: false,
+      canRecommend: false,
+      blockingWarnings,
+      advisoryWarnings,
+      summary: `Insufficient for baseline simulation: ${missingRequirements.join(" + ")}.`,
+    };
+  }
+
+  const hasReviewTrigger = advisoryWarnings.length > 0 || (confidence != null && confidence < 0.75);
+  const canRecommend = !hasReviewTrigger;
+  const level: SiteTwinReadinessLevel = canRecommend ? "deploy-ready" : "review-required";
+
+  return {
+    level,
+    canSimulate,
+    canRecommend,
+    blockingWarnings,
+    advisoryWarnings,
+    summary: canRecommend
+      ? "Draft is deploy-ready. Baseline simulation and recommendations can proceed."
+      : "Draft is review-required: advisory warnings exist or confidence is below publish threshold.",
+  };
+}
+
 function deriveAssumptions(scene: SecurityScene, source: SiteIntakeSource): DraftAssumption[] {
   const assumptions: DraftAssumption[] = [];
   assumptions.push({
@@ -348,6 +420,79 @@ function deriveAssumptions(scene: SecurityScene, source: SiteIntakeSource): Draf
       confidence: 0.65,
     });
   }
+  if (scene.assumptions.operationalMode) {
+    assumptions.push({
+      label: "Operational mode",
+      value: scene.assumptions.operationalMode,
+      source: "user",
+    });
+  }
+  if (scene.assumptions.operationalContext) {
+    const context = scene.assumptions.operationalContext;
+    const contextBits: string[] = [];
+    if (context.isEmergencyWindow) contextBits.push("emergency_window");
+    if (context.requiresTemporaryPerimeterLockdown) contextBits.push("temporary_perimeter_lockdown");
+    if (context.notes) contextBits.push(context.notes.trim());
+    if (contextBits.length > 0) {
+      assumptions.push({
+        label: "Operational context",
+        value: contextBits.join(" · "),
+        source: "user",
+      });
+    }
+  }
+  if (scene.assumptions.operationalScenarioEnvelope) {
+    const envelope = scene.assumptions.operationalScenarioEnvelope;
+    const durationMinutes = Math.max(0, Math.round((envelope.endAt - envelope.startAt) / 60000));
+    const toIso = (value: number) => new Date(value).toISOString();
+    assumptions.push({
+      label: "Scenario envelope",
+      value: `${envelope.profileLabel} (${envelope.scope})`,
+      source: "user",
+    });
+    assumptions.push({
+      label: "Scenario window",
+      value: `${toIso(envelope.startAt)} → ${toIso(envelope.endAt)} (${describeMinutes(durationMinutes)})`,
+      source: "user",
+    });
+    assumptions.push({
+      label: "Scenario controls",
+      value: envelope.temporaryControls.length > 0
+        ? envelope.temporaryControls.join(" · ")
+        : "No temporary controls listed",
+      source: "user",
+    });
+    const mandatorySteps = envelope.rollBackPlan.filter((step) => step.mandatory);
+    const optionalSteps = envelope.rollBackPlan.filter((step) => !step.mandatory);
+    assumptions.push({
+      label: "Scenario teardown",
+      value: envelope.rollBackRequired
+        ? `required (${mandatorySteps.length} mandatory step${mandatorySteps.length === 1 ? "" : "s"})`
+        : "optional",
+      source: "user",
+    });
+    if (mandatorySteps.length > 0) {
+      assumptions.push({
+        label: "Teardown mandatory steps",
+        value: mandatorySteps.map((step) => step.description).join(" · "),
+        source: "user",
+      });
+    }
+    if (optionalSteps.length > 0) {
+      assumptions.push({
+        label: "Teardown optional checks",
+        value: optionalSteps.map((step) => step.description).join(" · "),
+        source: "user",
+      });
+    }
+    if (envelope.notes.length > 0) {
+      assumptions.push({
+        label: "Scenario notes",
+        value: envelope.notes.join(" · "),
+        source: "user",
+      });
+    }
+  }
   return assumptions;
 }
 
@@ -355,11 +500,12 @@ function deriveNextActions(
   scene: SecurityScene,
   warnings: ActionableWarning[],
   source: SiteIntakeSource,
+  readiness: SiteTwinDraftReadiness,
 ): SuggestedNextAction[] {
   const hasCamera = scene.cameras.length > 0;
   const hasZone = scene.criticalZones.length > 0;
   const hasBlocking = warnings.some((w) => w.severity === "blocking");
-  const canBaseline = hasCamera && hasZone;
+  const canBaseline = readiness.canSimulate;
 
   const actions: SuggestedNextAction[] = [];
 
@@ -417,13 +563,16 @@ function deriveNextActions(
   }
 
   if (!hasBlocking) {
+    const canRecommend = readiness.canRecommend;
     actions.push({
-      label: "Approve and open in Studio",
+      label: canRecommend ? "Approve and open in Studio" : "Approve as review draft",
       action: "approve",
       enabled: true,
       reason: source === "ai_prompt"
         ? "AI draft review required before trusting as canonical scene."
-        : "Review complete. Scene can become the active site twin.",
+        : canRecommend
+          ? "Review complete. Scene can become the active site twin."
+          : "Review-required state accepted. Recommendations should remain advisory until explicit approval.",
     });
   }
 
@@ -480,6 +629,10 @@ export function compileToSiteTwinDraft(
     affectedNodeIds: w.affectedNodeIds,
   }));
   const confidence = result.confidence ?? 0.5;
+  const readiness = result.readiness ?? deriveSiteTwinDraftReadiness(scene, warnings, {
+    source: result.source,
+    confidence,
+  });
 
   return {
     id: `draft_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -497,13 +650,13 @@ export function compileToSiteTwinDraft(
       notes: result.provenance.notes,
       createdAt: Date.now(),
     },
-    suggestedNextActions: deriveNextActions(scene, warnings, result.source),
+    readiness,
+    suggestedNextActions: deriveNextActions(scene, warnings, result.source, readiness),
   };
 }
 
 export function canRunBaselineSimulation(draft: SiteTwinDraft): boolean {
-  return draft.entityCounts.cameras > 0 && draft.entityCounts.criticalZones > 0
-    && !draft.warnings.some((w) => w.severity === "blocking");
+  return draft.readiness.canSimulate;
 }
 
 export function compileBlankToSiteResult(name?: string): SiteCompilerResult {
@@ -511,11 +664,13 @@ export function compileBlankToSiteResult(name?: string): SiteCompilerResult {
   if (name) scene.name = name;
   scene.source = sourceToSceneSource("manual");
   const warnings = makeSiteCompilerWarnings(scene, ["Blank scene created. Add cameras, zones, and paths before running simulation."]);
+  const confidence = calculateConfidence(warnings);
   return {
     source: "manual",
     scene,
     warnings,
-    confidence: calculateConfidence(warnings),
+    confidence,
+    readiness: deriveSiteTwinDraftReadiness(scene, warnings, { source: "manual", confidence }),
     provenance: {
       source: "manual",
       label: SOURCE_LABELS.manual,
@@ -535,16 +690,18 @@ export function compileScanToSiteResult(
   const warnings = overrideWarnings ?? makeSiteCompilerWarnings(scene);
   const provenanceNotes = collectSceneProvenanceNotes(scene, ["Provenance:", "Scan evidence:", "Scan path:"]);
   const notes = ["Scene compiled from manual-assisted scan intake.", ...provenanceNotes, ...extraNotes];
+  const confidence = calculateConfidence(warnings);
   return {
     source: "scan",
     scene,
     warnings,
-    confidence: calculateConfidence(warnings),
+    confidence,
+    readiness: deriveSiteTwinDraftReadiness(scene, warnings, { source: "scan", confidence }),
     provenance: {
       source: "scan",
       label: SOURCE_LABELS.scan,
       notes,
-      confidence: calculateConfidence(warnings),
+      confidence,
     },
   };
 }
@@ -558,11 +715,13 @@ export function compileAiDraftToSiteResult(
   scene.source = sourceToSceneSource("ai_prompt");
   const warnings = overrideWarnings ?? makeSiteCompilerWarnings(scene);
   const notes = ["Scene generated from AI prompt draft.", ...extraNotes];
+  const confidence = calculateConfidence(warnings);
   return {
     source: "ai_prompt",
     scene,
     warnings,
-    confidence: calculateConfidence(warnings),
+    confidence,
+    readiness: deriveSiteTwinDraftReadiness(scene, warnings, { source: "ai_prompt", confidence }),
     provenance: {
       source: "ai_prompt",
       label: SOURCE_LABELS.ai_prompt,
@@ -583,16 +742,18 @@ export function compileFloorPlanToSiteResult(
   const warnings = overrideWarnings ?? makeSiteCompilerWarnings(scene);
   const provenanceNotes = collectSceneProvenanceNotes(scene, ["Floor plan import:", "Floor plan diagnostics:"]);
   const notes = ["Scene extracted from floor plan image.", ...provenanceNotes, ...extraNotes];
+  const confidence = floorConfidence ?? calculateConfidence(warnings);
   return {
     source: "floor_plan",
     scene,
     warnings,
-    confidence: floorConfidence ?? calculateConfidence(warnings),
+    confidence,
+    readiness: deriveSiteTwinDraftReadiness(scene, warnings, { source: "floor_plan", confidence }),
     provenance: {
       source: "floor_plan",
       label: SOURCE_LABELS.floor_plan,
       notes,
-      confidence: floorConfidence ?? calculateConfidence(warnings),
+      confidence,
     },
   };
 }
@@ -605,11 +766,13 @@ export function compileJsonToSiteResult(
 ): SiteCompilerResult {
   const parsed = safeParseSecurityScene(scene);
   if (!parsed.success) {
+    const warnings = [{ code: "INVALID_SCENE", message: `Imported SecurityScene failed schema validation: ${parsed.error.issues[0]?.message ?? "unknown error"}`, severity: "blocking" as const }];
     return {
       source: "json",
       scene,
-      warnings: [{ code: "INVALID_SCENE", message: `Imported SecurityScene failed schema validation: ${parsed.error.issues[0]?.message ?? "unknown error"}`, severity: "blocking" }],
+      warnings,
       confidence: 0,
+      readiness: deriveSiteTwinDraftReadiness(scene, warnings, { source: "json", confidence: 0 }),
       provenance: {
         source: "json",
         label: SOURCE_LABELS.json,
@@ -623,16 +786,18 @@ export function compileJsonToSiteResult(
   const fileNote = fileName ? `Imported from file: ${fileName}.` : "Imported from SecurityScene JSON.";
   const warnings = overrideWarnings ?? makeSiteCompilerWarnings(validScene);
   const notes = [fileNote, ...extraNotes];
+  const confidence = calculateConfidence(warnings);
   return {
     source: "json",
     scene: validScene,
     warnings,
-    confidence: calculateConfidence(warnings),
+    confidence,
+    readiness: deriveSiteTwinDraftReadiness(validScene, warnings, { source: "json", confidence }),
     provenance: {
       source: "json",
       label: SOURCE_LABELS.json,
       notes,
-      confidence: calculateConfidence(warnings),
+      confidence,
     },
   };
 }
@@ -646,16 +811,18 @@ export function compileCameraEvidenceToSiteResult(
   scene.source = sourceToSceneSource("camera_evidence");
   const warnings = overrideWarnings ?? makeSiteCompilerWarnings(scene);
   const notes = ["Scene compiled from camera evidence verification.", ...extraNotes];
+  const confidence = calculateConfidence(warnings);
   return {
     source: "camera_evidence",
     scene,
     warnings,
-    confidence: calculateConfidence(warnings),
+    confidence,
+    readiness: deriveSiteTwinDraftReadiness(scene, warnings, { source: "camera_evidence", confidence }),
     provenance: {
       source: "camera_evidence",
       label: SOURCE_LABELS.camera_evidence,
       notes,
-      confidence: calculateConfidence(warnings),
+      confidence,
     },
   };
 }
@@ -668,6 +835,7 @@ export function compileFootageVerifyToSiteResult(
   scene = cloneSecurityScene(scene);
   scene.source = sourceToSceneSource("camera_evidence");
   const warnings = overrideWarnings ?? makeSiteCompilerWarnings(scene);
+  const confidence = Math.min(1, (calculateConfidence(warnings) ?? 0.5) * 1.1);
   const notes = [
     "Scene updated from footage verification alignment.",
     "Footage verification: scenes prior to this edit are identified as pre-verification baselines; scenes after this edit should be treated as verified site evidence.",
@@ -677,12 +845,13 @@ export function compileFootageVerifyToSiteResult(
     source: "camera_evidence",
     scene,
     warnings,
-    confidence: Math.min(1, (calculateConfidence(warnings) ?? 0.5) * 1.1),
+    confidence,
+    readiness: deriveSiteTwinDraftReadiness(scene, warnings, { source: "camera_evidence", confidence }),
     provenance: {
       source: "camera_evidence",
       label: `${SOURCE_LABELS.camera_evidence} (Footage Verify)`,
       notes,
-      confidence: Math.min(1, (calculateConfidence(warnings) ?? 0.5) * 1.1),
+      confidence,
     },
   };
 }
@@ -751,6 +920,7 @@ export function createSiteIntakeSession(
     scene: candidateScene,
     warnings,
     confidence,
+    readiness: deriveSiteTwinDraftReadiness(candidateScene, warnings, { source, confidence }),
     provenance: {
       source,
       label: SOURCE_LABELS[source],
@@ -827,10 +997,10 @@ export function advanceSessionStage(
         error: "Cannot advance from review: no draft compiled. Use createSiteIntakeSession or compile the scene first.",
       };
     }
-    if (session.draft.warnings.some((w) => w.severity === "blocking")) {
+    if (!session.draft.readiness.canSimulate) {
       return {
         session,
-        error: "Cannot advance from review: blocking warnings must be resolved before compile.",
+        error: `Cannot advance from review: readiness level is ${session.draft.readiness.level}. Resolve blocking issues before compile.`,
       };
     }
   }
@@ -842,10 +1012,10 @@ export function advanceSessionStage(
         error: "Cannot advance to validated: no draft compiled.",
       };
     }
-    if (session.draft.warnings.some((w) => w.severity === "blocking")) {
+    if (!session.draft.readiness.canSimulate) {
       return {
         session,
-        error: "Cannot advance to validated: blocking warnings remain. Resolve before validation.",
+        error: `Cannot advance to validated: readiness level is ${session.draft.readiness.level}. Resolve blocking issues before validation.`,
       };
     }
   }
@@ -857,16 +1027,10 @@ export function advanceSessionStage(
         error: "Cannot advance to handoff: no draft to promote.",
       };
     }
-    if (session.draft.entityCounts.cameras === 0) {
+    if (!session.draft.readiness.canSimulate) {
       return {
         session,
-        error: "Cannot advance to handoff: at least one camera is required.",
-      };
-    }
-    if (session.draft.entityCounts.criticalZones === 0) {
-      return {
-        session,
-        error: "Cannot advance to handoff: at least one critical zone is required.",
+        error: "Cannot advance to handoff: readiness is insufficient for deployment context.",
       };
     }
   }

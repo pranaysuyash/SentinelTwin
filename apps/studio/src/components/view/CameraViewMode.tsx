@@ -31,6 +31,7 @@ import {
   findLatestTimelineEventForCameraAtTime,
   formatCameraTag,
   orderCamerasForReplayPlayback,
+  sampleCameraReplayPose,
 } from "@/components/view/camera-view-utils";
 
 function OfflineFeed({ camera: cam }: { camera: CameraNode }) {
@@ -76,15 +77,19 @@ export function CameraViewMode() {
   const recordOperationalEvidenceEvent = useStudioStore((s) => s.recordOperationalEvidenceEvent);
 
   const orderedCameras = useMemo(
-    () => orderCamerasForReplayPlayback(scene.cameras, selectedId, selectedCameraId),
+    () => orderCamerasForReplayPlayback(scene.cameras, selectedCameraId, selectedId),
     [scene.cameras, selectedCameraId, selectedId],
+  );
+  const playbackOrderCameras = useMemo(
+    () => orderCamerasForReplayPlayback(scene.cameras),
+    [scene.cameras],
   );
   const replayCameraOrder = useMemo(
     () => new Map(orderedCameras.map((orderedCamera, index) => [orderedCamera.id, index])),
     [orderedCameras],
   );
-  const camera = orderedCameras.find((c) => c.id === selectedId)
-    ?? orderedCameras.find((c) => c.id === selectedCameraId)
+  const camera = orderedCameras.find((c) => c.id === selectedCameraId)
+    ?? orderedCameras.find((c) => c.id === selectedId)
     ?? orderedCameras[0]
     ?? null;
   const frameRootRef = useRef<HTMLDivElement | null>(null);
@@ -107,13 +112,13 @@ export function CameraViewMode() {
     if (!camera?.id) {
       return 0;
     }
-    const index = orderedCameras.findIndex((c) => c.id === camera.id);
+    const index = playbackOrderCameras.findIndex((c) => c.id === camera.id);
     return index < 0 ? 0 : index;
-  }, [camera?.id, orderedCameras]);
+  }, [camera?.id, playbackOrderCameras]);
   const setCameraByDelta = (delta: -1 | 1) => {
-    if (!camera || !orderedCameras.length) return;
-    const nextIndex = Math.max(0, Math.min(orderedCameras.length - 1, cameraIndex + delta));
-    const nextCamera = orderedCameras[nextIndex];
+    if (!camera || !playbackOrderCameras.length) return;
+    const nextIndex = Math.max(0, Math.min(playbackOrderCameras.length - 1, cameraIndex + delta));
+    const nextCamera = playbackOrderCameras[nextIndex];
     if (!nextCamera || nextCamera.id === camera.id) return;
     setSelectedCameraId(nextCamera.id);
     selectNode(nextCamera.id);
@@ -139,7 +144,7 @@ export function CameraViewMode() {
           : "brightness(0.78) contrast(1.22) saturate(1.1) sepia(0.08)";
   const safeReplayProgress = clampReplayProgress(pathReplay.progress);
   const safeReplayDurationS = clampPathDuration(activePathResult?.totalDurationS);
-  const pathTimeS = safeReplayDurationS > 0 ? safeReplayProgress * safeReplayDurationS : 0;
+  const pathTimeS = safeReplayDurationS * safeReplayProgress;
   const replayActorVisible = Boolean(
     activePath
       && activePathResult
@@ -222,6 +227,10 @@ export function CameraViewMode() {
     () => buildReplayStateByCameraAtTime(activePathResult?.timeline, pathTimeS),
     [activePathResult?.timeline, pathTimeS],
   );
+  const activeCameraReplayPose = useMemo(() => {
+    if (!camera) return null;
+    return sampleCameraReplayPose(camera, pathTimeS);
+  }, [camera, pathTimeS]);
   const activeCameraReplayState = camera ? replayStateByCameraId[camera.id] ?? null : null;
   const cameraPosition = useMemo<[number, number, number]>(
     () => (camera ? [camera.position[0], camera.position[1], camera.position[2]] : [0, 0, 0]),
@@ -353,7 +362,7 @@ export function CameraViewMode() {
             <Suspense fallback={<CanvasLoadingOverlay label="Loading camera view" />}>
               <SceneFeedGeometry theme={theme} showPrivacyZones />
             </Suspense>
-            <CameraRigLive camera={camera} />
+            <CameraRigLive camera={camera} poseOverride={activeCameraReplayPose ?? undefined} />
             <CameraViewFloorAim camera={camera} />
             <CameraPositionIndicator camera={camera} />
             {replayActorVisible && activePath ? (
@@ -419,7 +428,7 @@ export function CameraViewMode() {
             <CameraPathVisibilityOverlay
               cameraName={camera.name}
               visibleSeconds={visibilityForCurrentCamera.visibleS}
-              totalSeconds={activePathResult.totalDurationS}
+              totalSeconds={safeReplayDurationS}
               maxQuality={visibilityForCurrentCamera.maxQuality}
             />
           ) : null}

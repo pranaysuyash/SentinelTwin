@@ -40,4 +40,17 @@ describe("TimelineTab", () => {
     expect(source).not.toContain("requestAnimationFrame(tick)");
     expect(source).not.toContain("playbackAnchorRef");
   });
+
+  test("uses shared timeline duration and progress utilities", () => {
+    const source = readFileSync(timelineTabPath, "utf8");
+
+    expect(source).toContain("@/components/view/camera-view-utils");
+    expect(source).toContain("clampPathDuration");
+    expect(source).toContain("clampReplayProgress");
+    expect(source).toContain("sortTimelineEvents");
+    expect(source).toContain("findLatestTimelineEventAtOrBeforeTime");
+    expect(source).toContain("safeReplayProgress");
+    expect(source).toContain("totalDurationS");
+    expect(source).toContain("const currentEvent = useMemo(() => {");
+  });
 });

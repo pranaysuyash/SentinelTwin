@@ -23,6 +23,14 @@ import { useStudioStore } from "@/store/studio-store";
 import type { CameraNode, DoriQuality, SimulationResult } from "@/schema/security-scene";
 import { QUALITY_RANK } from "@/lib/quality-display";
 import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
+import {
+  clampPathDuration,
+  clampReplayProgress,
+  buildReplayStateByCameraAtTime,
+  orderCamerasForReplayPlayback,
+  sampleCameraReplayPose,
+  type CameraReplayPose,
+} from "@/components/view/camera-view-utils";
 
 const CAMERA_WALL_THEME = ENVIRONMENT_THEMES.day;
 type CameraWallLayoutMode = "auto" | "quad" | "overview" | "dense";
@@ -31,7 +39,6 @@ type CameraReplayState = {
   quality?: DoriQuality;
   reason?: string;
 };
-type CameraWallTimelineEvent = SimulationResult["pathResults"][number]["timeline"][number];
 type CameraWallLayoutSpec = {
   cameraSlots: number;
   gridClass: string;
@@ -91,61 +98,6 @@ function getEffectiveCameraWallLayout(
   if (cameraCount >= 12) return "dense";
   if (cameraCount >= 5) return "overview";
   return "quad";
-}
-
-function clampReplayProgress(progress: number) {
-  if (!Number.isFinite(progress)) return 0;
-  if (progress <= 0) return 0;
-  if (progress >= 1) return 1;
-  return progress;
-}
-
-function clampPathDuration(durationS: number | undefined) {
-  if (!Number.isFinite(durationS ?? NaN)) return 0;
-  return durationS! <= 0 ? 0 : durationS!;
-}
-
-function buildReplayStateByCameraAtTime(
-  timeline: CameraWallTimelineEvent[] | undefined,
-  pathTimeS: number,
-) {
-  if (!Array.isArray(timeline) || timeline.length === 0) return {};
-
-  const ordered = [...timeline].sort((a, b) => {
-    const byTime = a.timeS - b.timeS;
-    if (byTime !== 0) return byTime;
-    if (!a.cameraId || !b.cameraId) return 0;
-    return a.cameraId.localeCompare(b.cameraId);
-  });
-
-  const stateByCamera = new Map<string, CameraReplayState>();
-  for (const event of ordered) {
-    if (!event.cameraId || !Number.isFinite(event.timeS) || event.timeS > pathTimeS) continue;
-    const prev = stateByCamera.get(event.cameraId);
-    if (event.event === "visible") {
-      stateByCamera.set(event.cameraId, {
-        visible: true,
-        quality: event.quality,
-        reason: event.reason,
-      });
-      continue;
-    }
-    if (event.event === "lost") {
-      stateByCamera.set(event.cameraId, {
-        visible: false,
-        quality: event.quality,
-        reason: event.reason,
-      });
-      continue;
-    }
-    stateByCamera.set(event.cameraId, {
-      visible: prev?.visible ?? true,
-      quality: event.quality ?? prev?.quality,
-      reason: event.reason ?? prev?.reason,
-    });
-  }
-
-  return Object.fromEntries(Array.from(stateByCamera.entries()));
 }
 
 function LiveFeedOverlay({
@@ -279,6 +231,7 @@ const CameraFeedPanel = memo(function CameraFeedPanel({
   isSelected,
   isBestCamera = false,
   cameraResult,
+  replayPose,
   pathVisibility,
   replayState,
   timestampLabel,
@@ -287,6 +240,7 @@ const CameraFeedPanel = memo(function CameraFeedPanel({
   isSelected: boolean;
   isBestCamera?: boolean;
   cameraResult?: SimulationResult["cameraResults"][number] | null;
+  replayPose?: CameraReplayPose;
   pathVisibility?: {
     visibleS: number;
     totalDurationS: number;
@@ -321,7 +275,7 @@ const CameraFeedPanel = memo(function CameraFeedPanel({
             <Suspense fallback={<CanvasLoadingOverlay label="Loading wall feed" />}>
               <SceneFeedGeometry theme={CAMERA_WALL_THEME} showPrivacyZones />
             </Suspense>
-            <CameraRigFixed camera={camData} />
+            <CameraRigFixed camera={camData} poseOverride={replayPose} />
             <OrbitControls enablePan={false} enableZoom={false} enableRotate={false} />
           </Canvas>
           {/* Subtle scanline overlay for authenticity */}
@@ -496,6 +450,7 @@ const CameraSlotButton = memo(function CameraSlotButton({
   cameraResult,
   pathVisibility,
   replayState,
+  replayPose,
   className = "",
   timestampLabel,
 }: {
@@ -503,6 +458,7 @@ const CameraSlotButton = memo(function CameraSlotButton({
   isSelected: boolean;
   isBestCamera?: boolean;
   cameraResult?: SimulationResult["cameraResults"][number] | null;
+  replayPose?: CameraReplayPose;
   pathVisibility?: {
     visibleS: number;
     totalDurationS: number;
@@ -533,6 +489,7 @@ const CameraSlotButton = memo(function CameraSlotButton({
         cameraResult={cameraResult}
         pathVisibility={pathVisibility}
         replayState={replayState}
+        replayPose={replayPose}
         timestampLabel={timestampLabel}
       />
     </button>
@@ -551,15 +508,7 @@ export function CameraWallView() {
   const [freeRunningTimestamp, setFreeRunningTimestamp] = useState(() => Date.now());
 
   const cameras = useMemo(() => {
-    // Sort: selected first, then active, then online, then deterministic name order
-    const currentCamera = scene.cameras.some((cam) => cam.id === selectedId) ? selectedId : selectedCameraId;
-    return [...scene.cameras].sort((a, b) => {
-      if (a.id === currentCamera) return -1;
-      if (b.id === currentCamera) return 1;
-      if (a.status === "on" && b.status !== "on") return -1;
-      if (a.status !== "on" && b.status === "on") return 1;
-      return a.name.localeCompare(b.name);
-    });
+    return orderCamerasForReplayPlayback(scene.cameras, selectedCameraId, selectedId);
   }, [scene.cameras, selectedCameraId, selectedId]);
   const activePath = useMemo(() => {
     if (!scene.paths.length || !activePathId) return null;
@@ -605,12 +554,16 @@ export function CameraWallView() {
     return best?.[0] ?? null;
   }, [activePathResult, cameras]);
   const safeReplayProgress = clampReplayProgress(pathReplay.progress);
-  const pathTimeS = activePathResult && activePathResult.totalDurationS > 0
-    ? safeReplayProgress * activePathResult.totalDurationS
-    : 0;
+  const safePathDuration = clampPathDuration(activePathResult?.totalDurationS);
+  const pathTimeS = safePathDuration * safeReplayProgress;
   const replayStateByCameraId = useMemo<Record<string, CameraReplayState | null>>(() => {
     return buildReplayStateByCameraAtTime(activePathResult?.timeline, pathTimeS);
   }, [activePathResult, pathTimeS]);
+  const replayPoseByCameraId = useMemo<Record<string, CameraReplayPose>>(() => {
+    return Object.fromEntries(
+      cameras.map((cam) => [cam.id, sampleCameraReplayPose(cam, pathTimeS)]),
+    );
+  }, [cameras, pathTimeS]);
   const effectiveLayout = getEffectiveCameraWallLayout(layoutMode, cameras.length);
   const layoutSpec = CAMERA_WALL_LAYOUTS[effectiveLayout];
   const visibleCount = Math.min(layoutSpec.cameraSlots, cameras.length);
@@ -619,15 +572,13 @@ export function CameraWallView() {
   const viewCount = layoutSpec.viewCount;
   const timestampLabel = syncTime
     ? activePathResult
-      ? `Replay ${pathTimeS.toFixed(1)}s / ${activePathResult.totalDurationS.toFixed(1)}s`
+      ? `Replay ${pathTimeS.toFixed(1)}s / ${safePathDuration.toFixed(1)}s`
       : formatWallTimestamp(simulationResult?.computedAt)
     : formatWallTimestamp(freeRunningTimestamp);
 
   useEffect(() => {
     if (syncTime) return;
-    queueMicrotask(() => {
-      setFreeRunningTimestamp(Date.now());
-    });
+    setFreeRunningTimestamp(Date.now());
     const timer = window.setInterval(() => {
       setFreeRunningTimestamp(Date.now());
     }, 1000);
@@ -776,6 +727,7 @@ export function CameraWallView() {
                 cameraResult={cameraResultById[cam.id] ?? null}
                 pathVisibility={pathVisibilityByCameraId[cam.id] ?? null}
                 replayState={replayStateByCameraId[cam.id] ?? null}
+                replayPose={replayPoseByCameraId[cam.id]}
                 timestampLabel={timestampLabel}
                 className="h-full w-full"
               />
@@ -796,6 +748,7 @@ export function CameraWallView() {
                 cameraResult={cameraResultById[cam.id] ?? null}
                 pathVisibility={pathVisibilityByCameraId[cam.id] ?? null}
                 replayState={replayStateByCameraId[cam.id] ?? null}
+                replayPose={replayPoseByCameraId[cam.id]}
                 timestampLabel={timestampLabel}
                 className="h-full w-full"
               />
@@ -816,6 +769,7 @@ export function CameraWallView() {
                 cameraResult={cameraResultById[cam.id] ?? null}
                 pathVisibility={pathVisibilityByCameraId[cam.id] ?? null}
                 replayState={replayStateByCameraId[cam.id] ?? null}
+                replayPose={replayPoseByCameraId[cam.id]}
                 timestampLabel={timestampLabel}
                 className="h-full w-full"
               />

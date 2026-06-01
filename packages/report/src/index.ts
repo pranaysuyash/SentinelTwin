@@ -6,7 +6,15 @@ export type {
   RedundancyMatrixReport,
 } from "./redundancy-matrix";
 
-export type ReportAudience = "operator" | "auditor" | "insurer" | "installer" | "privacy_reviewer";
+export type ReportAudience =
+  | "operator"
+  | "auditor"
+  | "insurer"
+  | "installer"
+  | "privacy_reviewer"
+  | "consultant"
+  | "facilities_director"
+  | "operations_manager";
 export type ReportVisibility = "internal" | "shared" | "privacy_safe";
 export type ReportStandardTemplateId =
   | "general-audit"
@@ -47,6 +55,22 @@ export function getReportStandardTemplates() {
 export function getReportExportPresets(): ReportExportPreset[] {
   return [
     {
+      id: "preset-facilities-director-internal",
+      title: "Facilities Director Internal",
+      audience: "facilities_director",
+      visibility: "internal",
+      templateId: "oodpcvs-audit",
+      summary: "Execution planning brief for operations handoff.",
+    },
+    {
+      id: "preset-consultant-shared",
+      title: "Consultant Shared",
+      audience: "consultant",
+      visibility: "shared",
+      templateId: "general-audit",
+      summary: "Consultative evidence packet for advisory review.",
+    },
+    {
       id: "preset-operator-internal",
       title: "Operator Internal",
       audience: "operator",
@@ -70,24 +94,140 @@ export function getReportExportPresets(): ReportExportPreset[] {
       templateId: "privacy-review",
       summary: "Redacted privacy-safe compliance report.",
     },
+    {
+      id: "preset-operations-manager-shared",
+      title: "Operations Manager Shared",
+      audience: "operations_manager",
+      visibility: "shared",
+      templateId: "installer-proposal",
+      summary: "Event and temporary-control readiness brief for operations planning.",
+    },
   ];
 }
 
 // ---- Constants ---- //
 
 const AUDIENCE_META: Record<string, { label: string; summary: string; framing: string; disclosureLevel: string; disclosureSummary: string; visibleSections: string[]; withheldSections: string[] }> = {
-  operator: { label: "Operator", summary: "Operational report for daily security teams.", framing: "Operational readiness and immediate actions.", disclosureLevel: "full_internal", disclosureSummary: "Complete operational detail retained.", visibleSections: ["coverage", "issues", "counterfactual", "timeline", "provenance"], withheldSections: [] },
-  auditor: { label: "Auditor", summary: "Controls, evidence, and standards compliance framing.", framing: "Evidence-backed compliance posture.", disclosureLevel: "partner_shared", disclosureSummary: "Sensitive implementation details reduced.", visibleSections: ["coverage", "issues", "assumptions", "provenance"], withheldSections: ["credentials", "internal_only_notes"] },
-  insurer: { label: "Insurer", summary: "Risk exposure summary with mitigation priorities.", framing: "Risk and mitigation delta with accountability trail.", disclosureLevel: "partner_shared", disclosureSummary: "Business-sensitive detail condensed.", visibleSections: ["coverage", "issues", "recommendations", "before_after"], withheldSections: ["internal_only_notes"] },
-  installer: { label: "Installer", summary: "Implementation-focused install and commissioning handoff.", framing: "Implementation packet for field execution.", disclosureLevel: "partner_shared", disclosureSummary: "Install-relevant detail prioritized.", visibleSections: ["recommendations", "camera_matrix", "zones", "commissioning"], withheldSections: ["internal_only_notes"] },
-  privacy_reviewer: { label: "Privacy Reviewer", summary: "Privacy-safe summary for governance review.", framing: "Privacy and governance-safe evidence digest.", disclosureLevel: "partner_shared", disclosureSummary: "Personal/sensitive details redacted.", visibleSections: ["coverage_summary", "privacy_zones", "governance"], withheldSections: ["identifiable_media", "credentials", "internal_only_notes"] },
+  operator: {
+    label: "Operator",
+    summary: "Operational report for daily security teams.",
+    framing: "Operational readiness and immediate actions.",
+    disclosureLevel: "full_internal",
+    disclosureSummary: "Complete operational detail retained.",
+    visibleSections: ["coverage", "issues", "counterfactual", "timeline", "provenance"],
+    withheldSections: [],
+  },
+  consultant: {
+    label: "Security Consultant",
+    summary: "Advisory consultative packet for risk and controls roadmap.",
+    framing: "Scenario-driven advisory recommendations with evidentiary framing.",
+    disclosureLevel: "partner_shared",
+    disclosureSummary: "Commercial advisory framing with implementation-sensitive details reduced.",
+    visibleSections: ["coverage", "issues", "assumptions", "provenance", "recommendations"],
+    withheldSections: ["credentials", "internal_only_notes"],
+  },
+  facilities_director: {
+    label: "Facilities Director",
+    summary: "Operations and facilities planning view for deployment readiness.",
+    framing: "Execution readiness, staffing impact, and deployment posture.",
+    disclosureLevel: "full_internal",
+    disclosureSummary: "Implementation context retained for operations planning.",
+    visibleSections: ["coverage", "issues", "recommendations", "timeline", "assumptions", "provenance"],
+    withheldSections: [],
+  },
+  operations_manager: {
+    label: "Operations Manager",
+    summary: "Temporary and event operations plan for staffing and controls.",
+    framing: "Event-oriented recommendations for temporary hardening and controls.",
+    disclosureLevel: "full_internal",
+    disclosureSummary: "Control-impact details retained for operations coordination.",
+    visibleSections: ["coverage", "issues", "recommendations", "counterfactual", "timeline"],
+    withheldSections: [],
+  },
+  auditor: {
+    label: "Auditor",
+    summary: "Controls, evidence, and standards compliance framing.",
+    framing: "Evidence-backed compliance posture.",
+    disclosureLevel: "partner_shared",
+    disclosureSummary: "Sensitive implementation details reduced.",
+    visibleSections: ["coverage", "issues", "assumptions", "provenance"],
+    withheldSections: ["credentials", "internal_only_notes"],
+  },
+  insurer: {
+    label: "Insurance Reviewer",
+    summary: "Risk exposure summary with mitigation priorities.",
+    framing: "Risk and mitigation delta with accountability trail.",
+    disclosureLevel: "partner_shared",
+    disclosureSummary: "Business-sensitive detail condensed.",
+    visibleSections: ["coverage", "issues", "recommendations", "before_after"],
+    withheldSections: ["internal_only_notes"],
+  },
+  installer: {
+    label: "Installer",
+    summary: "Implementation-focused install and commissioning handoff.",
+    framing: "Implementation packet for field execution.",
+    disclosureLevel: "partner_shared",
+    disclosureSummary: "Install-relevant detail prioritized.",
+    visibleSections: ["recommendations", "camera_matrix", "zones", "commissioning"],
+    withheldSections: ["internal_only_notes"],
+  },
+  privacy_reviewer: {
+    label: "Privacy Reviewer",
+    summary: "Privacy-safe summary for governance review.",
+    framing: "Privacy and governance-safe evidence digest.",
+    disclosureLevel: "partner_shared",
+    disclosureSummary: "Personal/sensitive details redacted.",
+    visibleSections: ["coverage_summary", "privacy_zones", "governance"],
+    withheldSections: ["identifiable_media", "credentials", "internal_only_notes"],
+  },
 };
 
 const AUDIENCE_POLICIES: Record<string, { disclosureLevel: string; visibleSections: string[]; withheldSections: string[]; disclosureSummary: string }> = {
-  full: { disclosureLevel: "full", visibleSections: ["coverage", "issues", "counterfactual", "timeline", "provenance", "operational_evidence", "truth_ladder"], withheldSections: [], disclosureSummary: "Complete operational detail retained." },
-  evidence_first: { disclosureLevel: "evidence_first", visibleSections: ["operational_evidence", "coverage", "provenance", "assumptions"], withheldSections: ["internal_only_notes"], disclosureSummary: "Evidence detail prioritized, internal notes reduced." },
-  privacy_minimized: { disclosureLevel: "privacy_minimized", visibleSections: ["coverage_summary", "privacy_zones", "privacy_masking", "governance"], withheldSections: ["operational_evidence", "identifiable_media", "credentials", "internal_only_notes"], disclosureSummary: "Personal and sensitive details redacted for privacy review." },
+  full: {
+    disclosureLevel: "full",
+    visibleSections: ["coverage", "issues", "counterfactual", "timeline", "provenance", "operational_evidence", "truth_ladder"],
+    withheldSections: [],
+    disclosureSummary: "Complete operational detail retained.",
+  },
+  consultant: {
+    disclosureLevel: "evidence_first",
+    visibleSections: ["operational_evidence", "coverage", "provenance", "assumptions", "recommendations"],
+    withheldSections: ["internal_only_notes"],
+    disclosureSummary: "Commercial advisory detail prioritized with operational context reduced.",
+  },
+  facilities_director: {
+    disclosureLevel: "full_internal",
+    visibleSections: ["coverage", "issues", "recommendations", "counterfactual", "timeline", "assumptions", "provenance"],
+    withheldSections: [],
+    disclosureSummary: "Operational deployment and planning context retained.",
+  },
+  operations_manager: {
+    disclosureLevel: "full_internal",
+    visibleSections: ["coverage", "issues", "recommendations", "counterfactual", "timeline", "operational_evidence"],
+    withheldSections: ["internal_only_notes"],
+    disclosureSummary: "Operations-focused recommendations with temporary-control context.",
+  },
+  evidence_first: {
+    disclosureLevel: "evidence_first",
+    visibleSections: ["operational_evidence", "coverage", "provenance", "assumptions"],
+    withheldSections: ["internal_only_notes"],
+    disclosureSummary: "Evidence detail prioritized, internal notes reduced.",
+  },
+  privacy_minimized: {
+    disclosureLevel: "privacy_minimized",
+    visibleSections: ["coverage_summary", "privacy_zones", "privacy_masking", "governance"],
+    withheldSections: ["operational_evidence", "identifiable_media", "credentials", "internal_only_notes"],
+    disclosureSummary: "Personal and sensitive details redacted for privacy review.",
+  },
 };
+
+function getAudiencePolicy(audience: ReportAudience) {
+  if (audience === "consultant") return AUDIENCE_POLICIES.consultant;
+  if (audience === "facilities_director" || audience === "operations_manager") return AUDIENCE_POLICIES[audience];
+  if (audience === "privacy_reviewer") return AUDIENCE_POLICIES.privacy_minimized;
+  if (audience === "auditor") return AUDIENCE_POLICIES.evidence_first;
+  return AUDIENCE_POLICIES.full;
+}
 
 const VISIBILITY_META: Record<string, { label: string; summary: string; framing: string }> = {
   internal: { label: "Internal", summary: "Full internal workspace context and evidence.", framing: "Unredacted internal operating mode." },
@@ -190,8 +330,23 @@ export function buildReportData(scene: any, simulationResult: any, options?: any
     if (sc.length > 0) return sc;
     return cr.slice(0, 1);
   })();
-  const title = opt.title ?? (audience === "operator" ? "Security Audit Evidence Report" : audience === "auditor" ? "Security Audit Evidence Report" : audience === "insurer" ? "Security Risk Exposure Brief" : audience === "installer" ? "Installation Acceptance Report" : audience === "privacy_reviewer" ? "Privacy Review Brief" : "Security Audit Evidence Report");
-  const policy = AUDIENCE_POLICIES[audience === "privacy_reviewer" ? "privacy_minimized" : audience === "auditor" ? "evidence_first" : audience === "insurer" ? "evidence_first" : "full"] ?? AUDIENCE_POLICIES.full;
+  const title = opt.title
+    ?? (audience === "operator"
+      ? "Security Audit Evidence Report"
+      : audience === "auditor" || audience === "consultant"
+        ? "Security Audit Evidence Report"
+        : audience === "insurer"
+          ? "Security Risk Exposure Brief"
+          : audience === "installer"
+            ? "Installation Acceptance Report"
+            : audience === "privacy_reviewer"
+              ? "Privacy Review Brief"
+              : audience === "facilities_director"
+                ? "Facilities Operations Report"
+                : audience === "operations_manager"
+                  ? "Operations Readiness Report"
+                  : "Security Audit Evidence Report");
+  const policy = getAudiencePolicy(audience);
   const template = (() => {
     const info = { "oodpcvs-audit": { standardLabel: "IEC 62676-4:2025", sections: ["Overview", "Scope", "Normative References", "OODPCVS Assessment", "Coverage Analysis", "Zone Requirements", "Conclusions"] }, "dori-audit": { standardLabel: "IEC 62676-4:2014 (DORI)", sections: ["Overview", "DORI Assessment", "Coverage Analysis", "Zone Requirements", "Conclusions"] }, "general-audit": { standardLabel: "IEC 62676-4:2025", sections: ["Overview", "Coverage Analysis", "Zone Requirements", "Conclusions"] } };
     const t = (info as any)[templateId] ?? info["general-audit"];

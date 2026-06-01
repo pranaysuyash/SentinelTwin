@@ -33,6 +33,20 @@
 - Keep selection tied to generic click handlers without button checks: rejected due to unpredictable right-click/auxiliary-device side effects.
 - Keep direct theme indexing without fallback: rejected due to avoidable render-time null references during malformed state transitions.
 
+## D-296 | 2026-06-01 | Centralize workspace-layout persistence migration in governance slice
+
+**Decision:** Persisted workspace layouts are now canonicalized through the governance-layer `workspace-layouts` helpers and loaded as versioned envelopes.
+
+**Rationale:**
+- Move load/normalize/repair flow to one path so layout persistence behaves consistently for seeds, user edits, and migrations.
+- Both legacy array payloads and current envelope payloads are normalized against `WorkspaceLayoutRecord` schema, then persisted as `{ schemaVersion: 2, layouts: [...] }`.
+- Legacy `sentineltwin_saved_layouts_v1` entries are migrated and removed during load.
+- `isWorkspaceLayoutModified` now uses canonicalized key-ordering, so persisted equivalence checks are stable across serialization order.
+
+**Alternatives rejected:**
+- Keep layout persistence logic duplicated in `layout-slice.ts`: rejected due to drift and stale migration behavior.
+- Keep mixed write formats: rejected because dual formats increase ambiguity in recovery and testing.
+
 
 ## D-244 | 2026-05-30 | Canonicalize site-intake source taxonomy and explicit draft activation
 

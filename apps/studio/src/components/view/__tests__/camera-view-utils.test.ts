@@ -1,12 +1,14 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  getPathReplayDurationS,
   buildReplayStateByCameraAtTime,
   clampPathDuration,
   clampReplayProgress,
   findLatestTimelineEventForCameraAtTime,
   findLatestTimelineEventAtOrBeforeTime,
   findNextTimelineEventAfterTime,
+  sampleCameraReplayPose,
   orderCamerasForReplayPlayback,
   sortTimelineEvents,
 } from "@/components/view/camera-view-utils";
@@ -40,6 +42,101 @@ describe("camera-view-utils", () => {
     expect(ordered.map((camera) => camera.id)).toEqual(["c4", "c2", "c3", "c1"]);
   });
 
+  test("samples static replay pose from fixed camera viewMotion", () => {
+    expect(sampleCameraReplayPose({
+      yawDeg: 47,
+      pitchDeg: -12,
+      viewMotion: {
+        movementMode: "fixed",
+        dwellSeconds: 0,
+        waypoints: [],
+      },
+    }, 5)).toEqual({
+      yawDeg: 47,
+      pitchDeg: -12,
+    });
+  });
+
+  test("samples sweep replay pose deterministically from sweep_h movement", () => {
+    expect(sampleCameraReplayPose({
+      yawDeg: 180,
+      pitchDeg: -30,
+      viewMotion: {
+        movementMode: "sweep_h",
+        dwellSeconds: 0,
+        waypoints: [],
+      },
+    }, 0)).toEqual({
+      yawDeg: 180,
+      pitchDeg: -30,
+    });
+
+    expect(sampleCameraReplayPose({
+      yawDeg: 180,
+      pitchDeg: -30,
+      viewMotion: {
+        movementMode: "sweep_h",
+        dwellSeconds: 0,
+        waypoints: [],
+      },
+    }, 2)).toMatchObject({
+      pitchDeg: -30,
+      pitchDeg: -30,
+    });
+    const poseAtTwoSeconds = sampleCameraReplayPose({
+      yawDeg: 180,
+      pitchDeg: -30,
+      viewMotion: {
+        movementMode: "sweep_h",
+        dwellSeconds: 0,
+        waypoints: [],
+      },
+    }, 2);
+    const normalizedYaw = ((poseAtTwoSeconds.yawDeg % 360) + 360) % 360;
+    expect(normalizedYaw).toBe(225);
+  });
+
+  test("samples replay pose from replay waypoint cycles", () => {
+    const poseAtThreeSeconds = sampleCameraReplayPose(
+      {
+        yawDeg: 0,
+        pitchDeg: 0,
+        viewMotion: {
+          movementMode: "preset_cycle",
+          dwellSeconds: 1,
+          waypoints: [
+            { yawDeg: 0, pitchDeg: 0, holdSeconds: 1 },
+            { yawDeg: 90, pitchDeg: 0, holdSeconds: 0 },
+          ],
+        },
+      },
+      3,
+    );
+
+    expect(poseAtThreeSeconds.yawDeg).toBeGreaterThanOrEqual(60);
+    expect(poseAtThreeSeconds.yawDeg).toBeLessThan(70);
+    expect(poseAtThreeSeconds.pitchDeg).toBe(0);
+
+    const poseAtSevenSeconds = sampleCameraReplayPose(
+      {
+        yawDeg: 0,
+        pitchDeg: 0,
+        viewMotion: {
+          movementMode: "preset_cycle",
+          dwellSeconds: 1,
+          waypoints: [
+            { yawDeg: 0, pitchDeg: 0, holdSeconds: 1 },
+            { yawDeg: 90, pitchDeg: 0, holdSeconds: 0 },
+          ],
+        },
+      },
+      7,
+    );
+
+    expect(Math.abs(poseAtSevenSeconds.pitchDeg - 0)).toBe(0);
+    expect(Math.abs(poseAtSevenSeconds.yawDeg)).toBeLessThan(1);
+  });
+
   test("clamps replay progress and durations", () => {
     expect(clampReplayProgress(-0.2)).toBe(0);
     expect(clampReplayProgress(0.47)).toBe(0.47);
@@ -50,6 +147,34 @@ describe("camera-view-utils", () => {
     expect(clampPathDuration(9.5)).toBe(9.5);
     expect(clampPathDuration(0)).toBe(0);
     expect(clampPathDuration(null)).toBe(0);
+  });
+
+  test("computes path replay duration from waypoints and speed", () => {
+    expect(
+      getPathReplayDurationS({
+        points: [
+          { position: [0, 0] },
+          { position: [3, 4] },
+          { position: [3, 0] },
+        ],
+        speedMps: 2,
+      }),
+    ).toBeCloseTo(4.5);
+
+    expect(
+      getPathReplayDurationS({
+        points: [
+          { position: [1, 1] },
+          { position: [4, 5] },
+        ],
+      }),
+    ).toBeCloseTo(4.1666666667, 6);
+
+    expect(
+      getPathReplayDurationS({
+        points: [{ position: [1, 1] }],
+      }),
+    ).toBe(0);
   });
 
   test("sorts timeline events by time then camera id", () => {

@@ -4,7 +4,7 @@ import { Html, OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { motion } from "framer-motion";
 import { ListRestart, Pause, Play, SkipBack, SkipForward } from "lucide-react";
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 import { QUALITY_ABBR, QUALITY_COLOR, QUALITY_RANK } from "@/lib/quality-display";
@@ -992,7 +992,9 @@ export function PathReplayView() {
   const [speed, setSpeed] = useState(pathReplaySpeed);
 
   useEffect(() => {
-    setSpeed(pathReplaySpeed);
+    startTransition(() => {
+      setSpeed(pathReplaySpeed);
+    });
   }, [pathReplaySpeed]);
 
   // Derived data
@@ -1154,39 +1156,40 @@ export function PathReplayView() {
   }, [currentIndex, progress, waypoints]);
 
   // Auto-advance time when playing
-  // Use a ref to track the "anchor" (time when playback was last resumed) so
-  // seeking while playing doesn't jump back to the pre-seek position.
+  // Use refs for values that change during animation to avoid effect re-triggering every frame.
   const playbackAnchorRef = useRef({ startWallTime: 0, startPlaybackTime: 0 });
   const lastSharedProgressPublishAtRef = useRef(0);
   const playbackRafRef = useRef<number | null>(null);
+  const currentTimeRef = useRef(0);
+  const totalDurationRef = useRef(0);
+  currentTimeRef.current = currentTime;
+  totalDurationRef.current = totalDuration;
 
   useEffect(() => {
-    if (!playing || totalDuration <= 0) return;
+    if (!playing || totalDurationRef.current <= 0) return;
 
     const startWallTime = performance.now();
-    playbackAnchorRef.current = { startWallTime, startPlaybackTime: safeCurrentTime };
+    playbackAnchorRef.current = { startWallTime, startPlaybackTime: currentTimeRef.current };
     lastSharedProgressPublishAtRef.current = startWallTime;
 
     const tick = (now: number) => {
       const elapsedWallSeconds = (now - playbackAnchorRef.current.startWallTime) / 1000;
       const nextTime = playbackAnchorRef.current.startPlaybackTime + elapsedWallSeconds * speed;
-      const clampedTime = Math.min(nextTime, totalDuration);
+      const clampedTime = Math.min(nextTime, totalDurationRef.current);
 
       setCurrentTime(clampedTime);
       const nowMs = performance.now();
       if (nowMs - lastSharedProgressPublishAtRef.current >= SHARED_REPLAY_PROGRESS_PUBLISH_INTERVAL_MS) {
         lastSharedProgressPublishAtRef.current = nowMs;
-        setPathReplayProgress(clampReplayProgress(totalDuration > 0 ? clampedTime / totalDuration : 0));
+        setPathReplayProgress(clampReplayProgress(totalDurationRef.current > 0 ? clampedTime / totalDurationRef.current : 0));
       }
 
-      if (clampedTime >= totalDuration) {
+      if (clampedTime >= totalDurationRef.current) {
         setPathReplayProgress(clampReplayProgress(1));
-        setCurrentTime(totalDuration);
+        setCurrentTime(totalDurationRef.current);
         setPlaying(false);
         setPathReplayPlaying(false);
-        if (playbackRafRef.current !== null) {
-          playbackRafRef.current = null;
-        }
+        playbackRafRef.current = null;
         return;
       }
 
@@ -1201,8 +1204,7 @@ export function PathReplayView() {
         playbackRafRef.current = null;
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playing, safeCurrentTime, setPathReplayPlaying, setPathReplayProgress, speed, totalDuration]);
+  }, [playing, speed, setPathReplayPlaying, setPathReplayProgress]);
 
   useEffect(() => {
     if (!followActor || !actorPosition || !controlsRef.current) return;

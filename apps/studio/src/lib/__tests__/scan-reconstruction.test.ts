@@ -201,6 +201,31 @@ describe("scan-reconstruction pipeline", () => {
       expect(result.scene.entryPoints).toHaveLength(1);
       expect(result.scene.entryPoints[0]?.label).toBe("Main Entry");
     });
+
+    test("adds temporary-event escalation warning when emergency/perimeter controls are required", () => {
+      const session = createScanCaptureSession("Emergency Temporary");
+      session.roomDimensions = { widthM: 10, depthM: 8, heightM: 3 };
+      session.operationalMode = "temporary_event";
+      session.operationalContext = {
+        isEmergencyWindow: true,
+        requiresTemporaryPerimeterLockdown: true,
+        notes: "VIP visit with temporary staff screening.",
+      };
+
+      const camCandidate = createScanCandidateFromArtifact("camera", [0.2, 0.2], "photo_1", 0.9);
+      camCandidate.status = "accepted";
+
+      const zoneCandidate = createScanCandidateFromArtifact("critical_zone", [0.7, 0.7], "photo_1", 0.8);
+      zoneCandidate.status = "accepted";
+
+      const entryCandidate = createScanCandidateFromArtifact("entry_point", [0.5, 0.05], "photo_1", 0.8);
+      entryCandidate.status = "accepted";
+
+      session.candidates = [camCandidate, zoneCandidate, entryCandidate];
+
+      const result = compileReconstructionToScene(session);
+      expect(result.compileWarnings.some((warning) => warning.code === "SCENARIO_ESCALATION_REQUIRED")).toBe(true);
+    });
   });
 
   describe("compileReconstructionToSiteTwinDraft", () => {

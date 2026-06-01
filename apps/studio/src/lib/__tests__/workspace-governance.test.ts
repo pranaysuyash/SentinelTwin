@@ -108,6 +108,28 @@ describe("workspace governance", () => {
       expect(roles).toEqual(["admin", "privacy_reviewer"]);
     });
 
+    test("requires admin for temporary emergency/perimeter scenario escalation", () => {
+      const scene = createMockScene({
+        assumptions: {
+          operationalMode: "temporary_event",
+          operationalContext: {
+            isEmergencyWindow: true,
+            requiresTemporaryPerimeterLockdown: true,
+          },
+        } as {
+          operationalMode: "temporary_event";
+          operationalContext: {
+            isEmergencyWindow: boolean;
+            requiresTemporaryPerimeterLockdown: boolean;
+          };
+        },
+      });
+      const governance = createDefaultWorkspaceGovernance();
+      const roles = resolveApprovalRoute(governance, scene);
+
+      expect(roles).toEqual(["admin"]);
+    });
+
     test("allows standard reviewer review for basic scenes without critical priority or privacy zones", () => {
       const scene = createMockScene();
       const governance = createDefaultWorkspaceGovernance();

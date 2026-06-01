@@ -462,6 +462,34 @@ export const simulationAssumptionsSchema = z.object({
   operatorExperience: z.enum(["novice", "trained", "expert"]).default("trained"),
   /** OODPCVS task criticality — adds margin above threshold for higher-risk tasks */
   taskCriticality: z.enum(["low", "standard", "high", "critical"]).default("standard"),
+  /** Operational scope for no-floor-plan intake and event rehearsal plans */
+  operationalMode: z.enum(["permanent", "temporary_event"]).optional(),
+  /** Operational assumptions that justify temporary mode and handling constraints */
+  operationalContext: z.object({
+    isEmergencyWindow: z.boolean().optional(),
+    requiresTemporaryPerimeterLockdown: z.boolean().optional(),
+    notes: z.string().optional(),
+  }).optional(),
+  /** Scenario envelope for temporary control events and teardown-first operating posture */
+  operationalScenarioEnvelope: z.object({
+    active: z.boolean(),
+    profileId: z.string(),
+    profileLabel: z.string(),
+    scope: z.enum(["temporary_event", "temporary_perimeter", "vip_visit", "maintenance", "incident_response", "other"]),
+    startAt: z.number().int().nonnegative(),
+    endAt: z.number().int().nonnegative(),
+    requiresTemporaryPerimeterLockdown: z.boolean().default(false),
+    requiresStaffingLockdown: z.boolean().default(false),
+    rollBackRequired: z.boolean().default(true),
+    temporaryControls: z.array(z.string()).default([]),
+    rollBackPlan: z.array(z.object({
+      action: z.string(),
+      description: z.string(),
+      mandatory: z.boolean().default(false),
+      evidenceHint: z.string().optional(),
+    })).default([]),
+    notes: z.array(z.string()).default([]),
+  }).optional(),
 });
 
 export const zoneResultSchema = z.object({
@@ -643,6 +671,15 @@ export const confidenceBandSchema = z.object({
   sensitiveTo: z.array(z.string()).default([]),
 });
 
+export const simulationPerformanceEnvelopeSchema = z.object({
+  samplingMode: z.enum(["default", "adaptive_area_capped"]),
+  requestedCellsPerMeter: z.number().positive(),
+  effectiveCellsPerMeter: z.number().positive(),
+  sceneAreaSqM: z.number().positive(),
+  estimatedCellCount: z.number().int().nonnegative(),
+  areaCapped: z.boolean(),
+});
+
 export const calibrationCameraPresetSchema = z.object({
   name: z.string(),
   resolutionWidthPx: z.number().positive(),
@@ -821,6 +858,7 @@ export const recommendationSchema = z.object({
 });
 
 export const simulationResultSchema = z.object({
+  performanceEnvelope: simulationPerformanceEnvelopeSchema.optional(),
   computedAt: z.number().int().nonnegative(),
   totalCoveragePct: z.number().min(0).max(100),
   blindspotPct: z.number().min(0).max(100),

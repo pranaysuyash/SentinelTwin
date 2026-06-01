@@ -28,6 +28,7 @@ import {
 import { cn } from "@/lib/cn";
 import { QUALITY_RANK, QUALITY_TEXT_COLOR } from "@/lib/quality-display";
 import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
+import { clampPathDuration, sortTimelineEvents } from "@/components/view/camera-view-utils";
 import type { SceneSnapshot, SimulationResult } from "@/schema/security-scene";
 
 type CoverageCell = SimulationResult["coverageCells"][number];
@@ -75,8 +76,18 @@ function computeMetrics(sim: SimulationResult | undefined, cells: CoverageCell[]
   const critZonePass = sim ? sim.criticalZoneResults.filter((z) => z.status === "pass").length : 0;
   const critZoneTotal = sim?.criticalZoneResults.length ?? 0;
   const critZonePct = critZoneTotal > 0 ? (critZonePass / critZoneTotal) * 100 : 0;
-  const visiblePathPct = sim ? (sim.pathResults.reduce((acc, path) => acc + (path.totalDurationS > 0 ? (path.visibleDurationS / path.totalDurationS) * 100 : 0), 0) / Math.max(sim.pathResults.length, 1)) : 0;
-  const lostPathPct = sim ? (sim.pathResults.reduce((acc, path) => acc + (path.totalDurationS > 0 ? (path.lostDurationS / path.totalDurationS) * 100 : 0), 0) / Math.max(sim.pathResults.length, 1)) : 0;
+  const visiblePathPct = sim
+    ? (sim.pathResults.reduce((acc, path) => {
+      const safeDurationS = clampPathDuration(path.totalDurationS);
+      return acc + (safeDurationS > 0 ? (path.visibleDurationS / safeDurationS) * 100 : 0);
+    }, 0) / Math.max(sim.pathResults.length, 1))
+    : 0;
+  const lostPathPct = sim
+    ? (sim.pathResults.reduce((acc, path) => {
+      const safeDurationS = clampPathDuration(path.totalDurationS);
+      return acc + (safeDurationS > 0 ? (path.lostDurationS / safeDurationS) * 100 : 0);
+    }, 0) / Math.max(sim.pathResults.length, 1))
+    : 0;
   return { covered, recognition, blindspot, cameras, critZonePct, critZoneTotal, visiblePathPct, lostPathPct };
 }
 
@@ -110,7 +121,8 @@ function qualityForScore(score: number) {
 
 function timelineSeries(pathResult: SimulationResult["pathResults"][number] | null) {
   if (!pathResult?.timeline?.length) return [];
-  return pathResult.timeline.map((event, index) => ({
+  const timeline = sortTimelineEvents(pathResult.timeline);
+  return timeline.map((event, index) => ({
     index,
     timeS: event.timeS,
     score: QUALITY_RANK[event.quality ?? "none"] ?? 0,
@@ -456,7 +468,12 @@ function QualityTrend({
         </div>
         <div className="rounded-lg border border-[#1d2330] bg-[#090d14] px-2 py-1.5">
           <div className="text-[#556076]">Path visibility</div>
-          <div className="mt-0.5 font-semibold text-[#d9e6ff]">{formatPct(((resultB?.visibleDurationS ?? resultA?.visibleDurationS ?? 0) / Math.max(resultB?.totalDurationS ?? resultA?.totalDurationS ?? 1, 1)) * 100)}</div>
+          <div className="mt-0.5 font-semibold text-[#d9e6ff]">
+            {formatPct(((resultB?.visibleDurationS ?? resultA?.visibleDurationS ?? 0) / Math.max(
+              clampPathDuration(resultB?.totalDurationS ?? resultA?.totalDurationS ?? 0),
+              1,
+            )) * 100)}
+          </div>
         </div>
       </div>
     </div>

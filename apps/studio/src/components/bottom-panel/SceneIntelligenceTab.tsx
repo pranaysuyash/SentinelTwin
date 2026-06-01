@@ -388,35 +388,24 @@ export function SceneIntelligenceTab() {
     ? selectedTimelineIndex / (evidenceTimeline.length - 1)
     : 0;
   const focusRequestPending = useRef(timelineFocusRequest);
+  const processedRequestId = useRef(0);
 
   useEffect(() => {
     if (!timelineFocusRequest) return;
-    focusRequestPending.current = timelineFocusRequest;
+    const request = timelineFocusRequest;
+    focusRequestPending.current = request;
+    processedRequestId.current = request.timestamp;
+
     startTransition(() => {
       setTimelineFocusRequest(null);
     });
-  }, [setTimelineFocusRequest, timelineFocusRequest]);
-
-  useEffect(() => {
-    const request = focusRequestPending.current;
-    if (!request) return;
-    focusRequestPending.current = null;
 
     startTransition(() => {
-      if (request.query) {
-        setEvidenceQuery(request.query);
-      }
-      if (request.branchLabel) {
-        setEvidenceBranchFilter(request.branchLabel);
-      }
-      if (request.provenanceNodeId) {
-        setSelectedNodeId(request.provenanceNodeId);
-      }
-      if (request.provenanceEdgeId) {
-        setSelectedEdgeId(request.provenanceEdgeId);
-      } else {
-        setSelectedEdgeId(null);
-      }
+      if (request.query) setEvidenceQuery(request.query);
+      if (request.branchLabel) setEvidenceBranchFilter(request.branchLabel);
+      if (request.provenanceNodeId) setSelectedNodeId(request.provenanceNodeId);
+      if (request.provenanceEdgeId) setSelectedEdgeId(request.provenanceEdgeId);
+      else setSelectedEdgeId(null);
     });
 
     const targetEvent = request.eventId
@@ -428,7 +417,6 @@ export function SceneIntelligenceTab() {
             const candidateBranch = (candidate.branchLabel ?? candidate.lifecycleStage ?? "manual").toLowerCase();
             if (candidateBranch !== targetBranch) return closest;
           }
-
           if (!closest) return candidate;
           return Math.abs(candidate.timestamp - targetTimestamp) < Math.abs(closest.timestamp - targetTimestamp) ? candidate : closest;
         }, null);
@@ -437,11 +425,8 @@ export function SceneIntelligenceTab() {
       startTransition(() => {
         setSelectedEvidenceEventId(targetEvent.id);
       });
-      return;
     }
-
-    if (operationalEvidenceEvents.length === 0) return;
-  }, [operationalEvidenceEvents]);
+  }, [setTimelineFocusRequest, timelineFocusRequest, operationalEvidenceEvents]);
   const selectedEvidenceReconstructionSummary = useMemo(
     () => (selectedEvidenceReconstructionScene ? summarizeSceneEvidence(selectedEvidenceReconstructionScene) : null),
     [selectedEvidenceReconstructionScene],

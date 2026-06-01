@@ -140,13 +140,19 @@ function computeZoneEvaluations(
 ) {
   const ownsEvaluator = !evaluator;
   const sceneEvaluator = evaluator ?? createCoverageEvaluator(scene);
+  const performanceEnvelope = getSimulationCellDensity(scene);
   try {
-    const coverageCells = sceneEvaluator.computeCoverageCells(4);
+    const coverageCells = sceneEvaluator.computeCoverageCells(performanceEnvelope.effectiveCellsPerMeter);
     const zoneEvaluations = scene.criticalZones.map((zone) =>
       evaluateZone(scene, sceneEvaluator, coverageCells, zone),
     );
 
-    return { coverageCells, zoneEvaluations, evaluator: sceneEvaluator };
+    return {
+      coverageCells,
+      zoneEvaluations,
+      evaluator: sceneEvaluator,
+      performanceEnvelope,
+    };
   } finally {
     if (ownsEvaluator) sceneEvaluator.dispose();
   }
@@ -257,6 +263,38 @@ function collectPrivacyCoverageIssues(
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
+}
+
+const BASE_COVERAGE_CELLS_PER_METER = 4;
+const TEMP_EVENT_COVERAGE_CELLS_PER_METER = 2.5;
+const MAX_SIMULATION_CELL_BUDGET = 160_000;
+
+type SimulationPerformanceEnvelope = {
+  samplingMode: "default" | "adaptive_area_capped";
+  requestedCellsPerMeter: number;
+  effectiveCellsPerMeter: number;
+  sceneAreaSqM: number;
+  estimatedCellCount: number;
+  areaCapped: boolean;
+};
+
+function getSimulationCellDensity(scene: SecurityScene): SimulationPerformanceEnvelope {
+  const requestedCellsPerMeter = scene.assumptions.operationalMode === "temporary_event"
+    ? TEMP_EVENT_COVERAGE_CELLS_PER_METER
+    : BASE_COVERAGE_CELLS_PER_METER;
+  const sceneAreaSqM = Math.max(0.01, scene.dimensions.width * scene.dimensions.depth);
+  const maxCellsPerMeterByBudget = Math.sqrt(MAX_SIMULATION_CELL_BUDGET / sceneAreaSqM);
+  const effectiveCellsPerMeter = Math.max(1, Math.min(requestedCellsPerMeter, maxCellsPerMeterByBudget));
+  const areaCapped = effectiveCellsPerMeter < requestedCellsPerMeter;
+
+  return {
+    samplingMode: areaCapped ? "adaptive_area_capped" : "default",
+    requestedCellsPerMeter,
+    effectiveCellsPerMeter: Number(effectiveCellsPerMeter.toFixed(2)),
+    sceneAreaSqM,
+    estimatedCellCount: Math.ceil(sceneAreaSqM * Math.pow(effectiveCellsPerMeter, 2)),
+    areaCapped,
+  };
 }
 
 function evaluateZone(
@@ -415,8 +453,21 @@ function simulateStudioInternal(
 ): SimulationResult {
   const evaluator = createCoverageEvaluator(scene);
   try {
-    const { coverageCells, zoneEvaluations } = computeZoneEvaluations(scene, evaluator);
-    return buildSimulationResult(scene, evaluator, coverageCells, zoneEvaluations, includeRecommendations, includeNovelAnalytics, includeFailureAnalysis);
+    const {
+      coverageCells,
+      zoneEvaluations,
+      performanceEnvelope,
+    } = computeZoneEvaluations(scene, evaluator);
+    return buildSimulationResult(
+      scene,
+      evaluator,
+      coverageCells,
+      zoneEvaluations,
+      includeRecommendations,
+      includeNovelAnalytics,
+      includeFailureAnalysis,
+      performanceEnvelope,
+    );
   } finally {
     evaluator.dispose();
   }
@@ -430,6 +481,7 @@ function buildSimulationResult(
   includeRecommendations: boolean,
   includeNovelAnalytics: boolean,
   includeFailureAnalysis: boolean,
+  performanceEnvelope?: SimulationPerformanceEnvelope,
 ): SimulationResult {
   const coverageThresholds = getQualityThresholds(scene);
   const fragility = computeCoverageFragility(
@@ -712,6 +764,7 @@ function buildSimulationResult(
   }
 
   return {
+    performanceEnvelope,
     computedAt: Date.now(),
     totalCoveragePct: Number(totalCoveragePct.toFixed(1)),
     blindspotPct: Number(blindspotPct.toFixed(1)),
@@ -784,13 +837,27 @@ export function simulateStudioAsync(
   options?: { includeRecommendations?: boolean; yieldEvery?: number },
 ): Promise<SimulationResult> {
   const includeRecommendations = options?.includeRecommendations ?? true;
+  const performanceEnvelope = getSimulationCellDensity(scene);
   const evaluator = createCoverageEvaluator(scene);
-  return evaluator.computeCoverageCellsAsync(4, scene.assumptions.personHeightM, options?.yieldEvery)
+  return evaluator.computeCoverageCellsAsync(
+    performanceEnvelope.effectiveCellsPerMeter,
+    scene.assumptions.personHeightM,
+    options?.yieldEvery,
+  )
     .then((coverageCells) => {
       const zoneEvaluations = scene.criticalZones.map((zone) =>
         evaluateZone(scene, evaluator, coverageCells, zone),
       );
-      const result = buildSimulationResult(scene, evaluator, coverageCells, zoneEvaluations, includeRecommendations, true, true);
+      const result = buildSimulationResult(
+        scene,
+        evaluator,
+        coverageCells,
+        zoneEvaluations,
+        includeRecommendations,
+        true,
+        true,
+        performanceEnvelope,
+      );
       evaluator.dispose();
       return result;
     })

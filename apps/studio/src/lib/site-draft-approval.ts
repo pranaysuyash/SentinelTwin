@@ -1,5 +1,5 @@
 import { safeParseSecurityScene } from "@/schema/security-scene";
-import type { ActionableWarning, SiteIntakeSession, SiteTwinDraft } from "@/lib/site-compiler";
+import { deriveSiteTwinDraftReadiness, type ActionableWarning, type SiteIntakeSession, type SiteTwinDraft } from "@/lib/site-compiler";
 import { makeSiteCompilerWarnings } from "@/lib/site-compiler";
 
 export type SiteDraftApprovalResult =
@@ -7,6 +7,9 @@ export type SiteDraftApprovalResult =
       success: true;
       scene: import("@/schema/security-scene").SecurityScene;
       baselineReady: boolean;
+      canRecommend: boolean;
+      readinessLevel: SiteTwinDraft["readiness"]["level"];
+      readinessSummary: string;
       warnings: ActionableWarning[];
       provenanceLog: string[];
     }
@@ -26,9 +29,12 @@ export function approveSiteTwinDraft(draft: SiteTwinDraft): SiteDraftApprovalRes
 
   const approvedScene = parsed.data;
   const warnings = makeSiteCompilerWarnings(approvedScene);
-  const baselineReady = approvedScene.cameras.length > 0
-    && approvedScene.criticalZones.length > 0
-    && !warnings.some((warning) => warning.severity === "blocking");
+  const readiness = draft.readiness ?? deriveSiteTwinDraftReadiness(approvedScene, warnings, {
+    source: draft.source,
+    confidence: draft.confidence,
+  });
+  const baselineReady = readiness.canSimulate;
+  const canRecommend = readiness.canRecommend;
   const provenanceLog = [
     `Site intake approval: source=${draft.source} draft=${draft.id} confidence=${Math.round(draft.confidence * 100)}%`,
     `Site intake entities: walls=${draft.entityCounts.walls} cameras=${draft.entityCounts.cameras} zones=${draft.entityCounts.criticalZones} paths=${draft.entityCounts.paths}`,
@@ -42,11 +48,14 @@ export function approveSiteTwinDraft(draft: SiteTwinDraft): SiteDraftApprovalRes
 
   return {
     success: true,
-    scene: approvedScene,
-    baselineReady,
-    warnings,
-    provenanceLog,
-  };
+      scene: approvedScene,
+      baselineReady,
+      canRecommend,
+      readinessLevel: readiness.level,
+      readinessSummary: readiness.summary,
+      warnings,
+      provenanceLog,
+    };
 }
 
 export type PromoteToActiveSceneResult = {

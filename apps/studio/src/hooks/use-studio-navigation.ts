@@ -9,11 +9,7 @@ import { createSiteIntakeSession } from "@/lib/site-compiler";
 import { promoteToActiveScene } from "@/lib/site-draft-approval";
 import { parseImportSceneDraft } from "@/lib/import-scene-draft";
 
-export function useStudioNavigation(): ProductViewHandlers & {
-  handleFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  importError: string | null;
-  fileInputRef: React.RefObject<HTMLInputElement | null>;
-} {
+export function useStudioNavigation(): ProductViewHandlers {
   const navigate = useProductViewStore((s) => s.navigate);
 
   const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
@@ -217,7 +213,11 @@ export function useStudioNavigation(): ProductViewHandlers & {
     if (promotion.result.baselineReady) {
       runSimulationFromStore();
       launchWorkspace("map", "coverage", "metrics");
-      setLaunchNotice("Draft approved and activated. Baseline simulation started from the approved scene.");
+      if (promotion.result.canRecommend) {
+        setLaunchNotice("Draft approved and activated. Baseline simulation started from the approved scene.");
+      } else {
+        setLaunchNotice("Draft approved for advisory workflow. Baseline simulation started; recommendations remain review-gated.");
+      }
     } else {
       launchWorkspace("map", "edit", "metrics");
       setLaunchNotice("Draft approved and activated. Add missing camera/zone prerequisites, then run baseline simulation.");

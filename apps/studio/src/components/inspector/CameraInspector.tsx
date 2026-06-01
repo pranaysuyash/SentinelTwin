@@ -20,7 +20,7 @@ import type { CameraLiveConnectionProbeResponse } from "@/lib/camera-live-connec
 import type { CameraLiveConnectionArchiveRecord } from "@/lib/camera-live-connection-history";
 import type { CameraMetadataIngestResponse } from "@/lib/camera-metadata-live-ingest";
 import { QUALITY_COLOR, QUALITY_LABEL } from "@/lib/quality-display";
-import type { CameraNode, DoriQuality, SimulationAssumptions } from "@/schema/security-scene";
+import type { CameraNode, CameraMotionWaypoint, DoriQuality, SimulationAssumptions } from "@/schema/security-scene";
 import { qualityToScore } from "@sentineltwin/core";
 import { type InspectorTab, useStudioStore } from "@/store/studio-store";
 import { computeOperationalEvidenceFusionSummary } from "@/lib/sensor-fusion";
@@ -30,6 +30,7 @@ import {
   describeCameraPreset,
   findBestCameraPreset,
   getCameraPreset,
+  type CameraPresetId,
 } from "@/components/workspace/camera-preset-utils";
 import { validateCameraInstallability } from "@/lib/installability-validator";
 import type { InstallabilityResult } from "@/lib/installability-validator";
@@ -269,10 +270,7 @@ export function CameraInspector() {
   }, []);
 
   useEffect(() => {
-    queueMicrotask(() => {
-      void refreshCameraMetadataHistory();
-    });
-    // Intentional: refresh when the operator switches cameras so the archive stays in view.
+    void refreshCameraMetadataHistory();
   }, [refreshCameraMetadataHistory]);
 
   const refreshCameraLiveConnectionHistory = useCallback(async () => {
@@ -292,24 +290,22 @@ export function CameraInspector() {
   }, [cameraId]);
 
   useEffect(() => {
-    queueMicrotask(() => {
-      void refreshCameraLiveConnectionHistory();
-    });
+    void refreshCameraLiveConnectionHistory();
   }, [refreshCameraLiveConnectionHistory]);
 
+  // Re-initialize local connection state when the operator switches cameras
   useEffect(() => {
-    queueMicrotask(() => {
-      setLiveConnectionUrl((prev) => prev !== (camera?.liveFeedUrl ?? "") ? (camera?.liveFeedUrl ?? "") : prev);
-      setLiveConnectionLabel((prev) => prev !== (camera?.liveFeedLabel ?? "Primary live feed") ? (camera?.liveFeedLabel ?? "Primary live feed") : prev);
-      setLiveConnectionMode((prev) => prev !== (camera?.liveConnectionMode ?? "onvif") ? (camera?.liveConnectionMode ?? "onvif") : prev);
-      setLiveConnectionStatus((prev) => prev !== (camera?.liveConnectionStatus ?? "disconnected") ? (camera?.liveConnectionStatus ?? "disconnected") : prev);
-      setLiveConnectionOnvifUsername((prev) => prev !== (camera?.onvifUsername ?? "") ? (camera?.onvifUsername ?? "") : prev);
-      setLiveConnectionOnvifPassword((prev) => prev !== (camera?.onvifPassword ?? "") ? (camera?.onvifPassword ?? "") : prev);
-      setLiveConnectionNotes((prev) => prev !== "" ? "" : prev);
-      setLiveConnectionStatusMessage((prev) => prev !== null ? null : prev);
-      setLiveConnectionError((prev) => prev !== null ? null : prev);
-    });
-  }, [cameraId, camera?.liveFeedLabel, camera?.liveFeedUrl, camera?.liveConnectionMode, camera?.liveConnectionStatus, camera?.notes, camera?.onvifPassword, camera?.onvifUsername]);
+    setLiveConnectionUrl(camera?.liveFeedUrl ?? "");
+    setLiveConnectionLabel(camera?.liveFeedLabel ?? "Primary live feed");
+    setLiveConnectionMode(camera?.liveConnectionMode ?? "onvif");
+    setLiveConnectionStatus(camera?.liveConnectionStatus ?? "disconnected");
+    setLiveConnectionOnvifUsername(camera?.onvifUsername ?? "");
+    setLiveConnectionOnvifPassword(camera?.onvifPassword ?? "");
+    setLiveConnectionNotes("");
+    setLiveConnectionStatusMessage(null);
+    setLiveConnectionError(null);
+    setLiveConnectionLoading(false);
+  }, [cameraId]);
 
   const placementPreset = getCameraPreset(cameraPresetId);
   const bestPreset = camera ? findBestCameraPreset(camera) : null;
@@ -1380,7 +1376,7 @@ export function CameraInspector() {
                   <select
                     value={camera.presetId ?? ""}
                     onChange={(event) => {
-                      const selectedPresetId = event.target.value || null;
+                      const selectedPresetId = (event.target.value || null) as CameraPresetId | null;
                       const selectedPreset = selectedPresetId ? getCameraPreset(selectedPresetId) : null;
                       setCameraPresetId(selectedPresetId);
                       if (selectedPreset) {
@@ -1461,7 +1457,12 @@ export function CameraInspector() {
                                 <span className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Easing</span>
                                 <select
                                   value={waypoint.easing ?? ""}
-                                  onChange={(event) => setWaypoint(index, { easing: event.target.value || undefined })}
+                                  onChange={(event) => {
+                                    const nextEasing = event.target.value as CameraMotionWaypoint["easing"] | "";
+                                    setWaypoint(index, {
+                                      easing: nextEasing === "" ? undefined : nextEasing,
+                                    });
+                                  }}
                                   className="rounded-md border border-[#24283a] bg-[#0b0f17] px-1.5 py-0.5 text-[9px] font-medium text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
                                 >
                                   {WAYPOINT_EASING_OPTIONS.map((option) => (

@@ -8,6 +8,7 @@ import { spawn } from "node:child_process";
 const PORT = 3000;
 const HOST = "127.0.0.1";
 const mode = process.argv[2];
+const devBundler = (process.env.STUDIO_DEV_BUNDLER ?? "turbopack").toLowerCase();
 
 if (!mode || !["dev", "start"].includes(mode)) {
   console.error("Usage: node ./scripts/run-fixed-port.mjs <dev|start>");
@@ -41,6 +42,8 @@ if (alreadyRunning) {
 }
 
 async function ensureDevBootstrapArtifacts({ cleanPages = false } = {}) {
+  if (devBundler === "turbopack") return;
+
   if (mode !== "dev") return;
 
   const nextDir = path.join(process.cwd(), ".next");
@@ -55,6 +58,16 @@ async function ensureDevBootstrapArtifacts({ cleanPages = false } = {}) {
 
   await fs.mkdir(devPagesDir, { recursive: true });
   await fs.mkdir(devCacheDir, { recursive: true });
+
+  async function writeIfMissing(filePath, contents) {
+    try {
+      await fs.access(filePath);
+      return;
+    } catch {
+      await fs.mkdir(path.dirname(filePath), { recursive: true });
+      await fs.writeFile(filePath, `${contents}\n`);
+    }
+  }
 
   const routesManifestPath = path.join(devDir, "routes-manifest.json");
   const routesManifest = {
@@ -101,7 +114,7 @@ async function ensureDevBootstrapArtifacts({ cleanPages = false } = {}) {
     skipProxyUrlNormalize: false,
   };
 
-  await fs.writeFile(routesManifestPath, `${JSON.stringify(routesManifest, null, 2)}\n`);
+  await writeIfMissing(routesManifestPath, JSON.stringify(routesManifest, null, 2));
 
   const prerenderManifestPath = path.join(devDir, "prerender-manifest.json");
   const prerenderManifest = {
@@ -168,7 +181,7 @@ async function ensureDevBootstrapArtifacts({ cleanPages = false } = {}) {
       previewModeEncryptionKey: "bootstrap-preview-mode-encryption-key",
     },
   };
-  await fs.writeFile(prerenderManifestPath, `${JSON.stringify(prerenderManifest, null, 2)}\n`);
+  await writeIfMissing(prerenderManifestPath, JSON.stringify(prerenderManifest, null, 2));
 
   const middlewareManifestPath = path.join(devServerDir, "middleware-manifest.json");
   const middlewareManifest = {
@@ -177,11 +190,57 @@ async function ensureDevBootstrapArtifacts({ cleanPages = false } = {}) {
     functions: {},
     sortedMiddleware: [],
   };
-  await fs.writeFile(middlewareManifestPath, `${JSON.stringify(middlewareManifest, null, 2)}\n`);
+  await writeIfMissing(middlewareManifestPath, JSON.stringify(middlewareManifest, null, 2));
+
+  const appPathsManifestPath = path.join(devServerDir, "app-paths-manifest.json");
+  const appPathsManifest = {
+    "/page": "app/page.js",
+    "/_not-found": "app/not-found.js",
+    "/_error": "app/page.js",
+  };
+  await writeIfMissing(appPathsManifestPath, JSON.stringify(appPathsManifest, null, 2));
+
+  const appBuildManifestPath = path.join(devServerDir, "app", "build-manifest.json");
+  const appBuildManifest = {
+    "pages": {},
+    "devFiles": [],
+    "polyfillFiles": [
+      "static/chunks/009k_next_dist_build_polyfills_polyfill-nomodule.js",
+    ],
+    "lowPriorityFiles": [],
+    "rootMainFiles": [],
+    "ampFirstPages": [],
+  };
+  await writeIfMissing(appBuildManifestPath, JSON.stringify(appBuildManifest, null, 2));
+
+  const pageBuildManifestPath = path.join(devServerDir, "app", "page", "build-manifest.json");
+  const pageBuildManifest = {
+    devFiles: [],
+    ampDevFiles: [],
+    polyfillFiles: [
+      "static/chunks/009k_next_dist_build_polyfills_polyfill-nomodule.js",
+    ],
+    lowPriorityFiles: [],
+    rootMainFiles: [
+      "static/chunks/[turbopack]_browser_dev_hmr-client_hmr-client_ts_0j0oemo._.js",
+      "static/chunks/009k_next_dist_compiled_next-devtools_index_0z7gsmq.js",
+      "static/chunks/009k_next_dist_compiled_react-dom_0isg2b9._.js",
+      "static/chunks/009k_next_dist_compiled_react-server-dom-turbopack_05098jq._.js",
+      "static/chunks/009k_next_dist_compiled_0wt-3nb._.js",
+      "static/chunks/009k_next_dist_client_0x9d1-q._.js",
+      "static/chunks/009k_next_dist_0.~rjop._.js",
+      "static/chunks/0i4a_@swc_helpers_cjs_0hvz.20._.js",
+      "static/chunks/apps_studio_0rqeker._.js",
+      "static/chunks/turbopack-apps_studio_0snlx.8._.js",
+    ],
+    pages: {},
+    ampFirstPages: [],
+  };
+  await writeIfMissing(pageBuildManifestPath, JSON.stringify(pageBuildManifest, null, 2));
 
   const documentShimPath = path.join(devServerDir, "pages", "_document.js");
   const documentShim = `'use strict';\n\nconst documentModule = require('next/dist/pages/_document');\nconst document = documentModule.default || documentModule;\n\nmodule.exports = document;\n`;
-  await fs.writeFile(documentShimPath, documentShim);
+  await writeIfMissing(documentShimPath, documentShim);
 
   const devStaticDir = path.join(devDir, "static");
   const staticAliasDir = path.join(nextDir, "static");
@@ -229,10 +288,8 @@ async function ensureProductionBootstrapArtifacts() {
   }
 }
 
-await ensureDevBootstrapArtifacts({ cleanPages: true });
 await ensureProductionBootstrapArtifacts();
 
-const devBundler = (process.env.STUDIO_DEV_BUNDLER ?? "turbopack").toLowerCase();
 const devArgs = devBundler === "webpack"
   ? ["dev", "--webpack", "-p", String(PORT)]
   : ["dev", "--turbopack", "-p", String(PORT)];
@@ -247,7 +304,9 @@ const child = spawn(process.execPath, [localNextBinary, ...nextArgs], {
   stdio: "inherit",
 });
 
-if (mode === "dev") {
+if (mode === "dev" && devBundler === "turbopack") {
+  await ensureDevBootstrapArtifacts({ cleanPages: true });
+
   for (const delayMs of [1000, 3000, 7000, 15000, 30000, 45000]) {
     setTimeout(() => {
       ensureDevBootstrapArtifacts().catch((error) => {

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { compareModelEvalRuns, runModelEvalSuite, summarizeModelEvalRun } from "@/agents/model-eval";
+import { compareModelEvalRuns, getCloudRequiredFixtureCount, runModelEvalSuite, summarizeModelEvalRun } from "@/agents/model-eval";
 import type { ModelPrompt, ModelProvider, ModelResponse } from "@sentineltwin/agents";
 import { normalizeAiProviderSelection } from "@sentineltwin/agents";
 
@@ -184,7 +184,7 @@ describe("model eval suite", () => {
         false,
       );
 
-      const summary = summarizeModelEvalRun(report);
+      const summary = summarizeModelEvalRun(report, getCloudRequiredFixtureCount(report.fixtures));
       const comparison = compareModelEvalRuns(
         { ...summary, summary: { ...summary.summary, failed: 1, passed: 4 }, fixtureSummaries: summary.fixtureSummaries.map((fixture) => ({ ...fixture, durationMs: fixture.durationMs + 25 })) },
         summary,

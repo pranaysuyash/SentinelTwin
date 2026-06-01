@@ -1,20 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
+import { clampPathDuration, getPathReplayDurationS } from "@/components/view/camera-view-utils";
 import { useStudioStore } from "@/store/studio-store";
 
 const PATH_REPLAY_PROGRESS_PUBLISH_INTERVAL_MS = 1000 / 24;
-
-function getPathReplayDurationS(path: { points: Array<{ position: [number, number] }>; speedMps?: number }) {
-  if (path.points.length < 2) return 0;
-  let distanceM = 0;
-  for (let index = 1; index < path.points.length; index += 1) {
-    const [x0, z0] = path.points[index - 1]!.position;
-    const [x1, z1] = path.points[index]!.position;
-    distanceM += Math.hypot(x1 - x0, z1 - z0);
-  }
-  return distanceM / Math.max(path.speedMps ?? 1.2, 0.01);
-}
 
 export default function PathReplayClock() {
   const paths = useStudioStore((s) => s.scene.paths);
@@ -32,7 +22,7 @@ export default function PathReplayClock() {
     () => (activePathId ? paths.find((path) => path.id === activePathId) ?? null : null),
     [activePathId, paths],
   );
-  const totalDurationS = useMemo(() => (activePath ? getPathReplayDurationS(activePath) : 0), [activePath]);
+  const totalDurationS = useMemo(() => clampPathDuration(getPathReplayDurationS(activePath)), [activePath]);
 
   useEffect(() => {
     progressRef.current = progress;

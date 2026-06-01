@@ -6539,76 +6539,78 @@ All relevant decisions and analysis are already captured in:
 
 ### Thread 98A: No-floor-plan discussion task graph (Dimension A exploration)
 
-**Status:** Open, ordered by dependency and parallelism.
+**Status:** Open. Split into a stage matrix to separate what is realizable now, what is stage-gated, and what is deferred.
 
-**Objective:** Keep exploration open while clarifying execution path for `"No floor plan needed"` promise.
+**Objective:** Keep `"No floor plan needed"` scoped as a production-intent, staged capability while preserving simulation trust.
 
-#### 1) Sequenced task graph (dependencies and parallel tracks)
+#### Dimension A: No-floor-plan pipeline stages (Stage gate matrix)
 
-1. Intake contract definition (Task 1)
-   - Define minimum required inputs before simulation.
-   - Define explicit defaults vs mandatory fields.
-   - Outputs: intake schema + required-risk declaration.
-   - Blocks: capture heuristics, draft arbitration, confidence policy.
+| Stage | Stage goal | What ships now | What remains open | Concrete owner |
+|---|---|---|---|---|
+| A1 Intake bootstrap | Start from phone-based or assisted manual input without CAD | `scan` workflow exists in launcher + draft approval guard + guided-marking scaffold (`SiteIntakeHub`, `ScanSiteWizard`, scan event trail) | Formal minimum-input contract is not fully codified as a single schema note | Studio product + store layer |
+| A2 Geometry confidence model | Convert provisional scan input into confidence-graded scenes | `scan-to-scene` compile output + provenance summary + warning counts + session warnings now mapped into canonical `SiteTwinReadiness` (`deploy-ready` / `review-required` / `insufficient`) | `scan` readiness is canonical, but role-specific policy policy matrix remains open | Simulation + scene compiler + evidence trail |
+| A3 Scenario arbitration | Require explicit analyst action before hardening | `SiteDraftReview`, explicit approval actions, and workflow confirmation hooks are wired | Scenario-level escalation for temporary emergency/perimeter workflows is now implemented and routes through admin escalation | Workflow + governance + trust surfaces |
+| A4 Simulation-first output | Produce deterministic blind-spot ranking before recommendations | Coverage/adversarial outputs run from draft scene; blind-region outputs, ranking, and readiness metadata are available; review-stage severity language is role-tiered | Blind-spot ranking still mixes scene-accuracy and scenario assumptions if input is sparse | Simulation + narrative layer |
+| A5 Temporary ops mode | Model short-duration control events (VIP/emergency/perimeter) | Scene branches and archive/route replay semantics can represent alternate states | Operational-mode schema is now wired from scan session into `SecurityScene.assumptions`; escalation remains open only for legal/commercial guidance and policy text | Governance + policy + archive model |
+| A6 Temporary/permanent split | Separate day-to-day posture from event posture and support teardown | `operationalMode`, `operationalContext`, and durable `operationalScenarioEnvelope` are now persisted for scan + reconstruction; teardown requirement is visible in assumptions and review | Legal/commercial wording for temporary postures remains open | Simulation + workflow + evidence |
+| A7 Evidence export + decision hardening | Convert advisory outputs into role-specific artifact | Report pipeline includes evidence continuity, audience mapping, and assumption visibility across analyst-facing surfaces | Public/commercial language split still needs final legal/commercial copy review | Report + product |
+| A8 Scale path hardening | Extend from one room to facility scope | `workspace membership`, route tracing, and scale-aware storage model already in use; adaptive simulation envelope is now explicit | Remaining question: whether temporary-event caps should be stricter than permanent by default | Platform + simulation infra |
+| A9 Decision lock | Publish and stop drift on scope | No-floor-plan stage matrix locked at A6/A9 with explicit envelope + teardown contract and temporary/permanent split | Stage refinement shifts to A8/A10 scale, legal/commercial wording closure, and deferred acceleration patterns | Product + architecture board |
 
-2. Confidence policy for provisional geometry (Task 2)
-   - Define readiness thresholds and warning levels.
-   - Define required/optional assumptions and what to refuse vs warn.
-   - Outputs: confidence taxonomies and recommendation gating.
-   - Blocks: blind-spot output semantics, evidence artifact standardization.
+#### Dimension A implementation sequencing
 
-3. Capture-to-scene strategy design (Task 3 + Task 4)
-   - Design minimal guided capture path.
-   - Decide first-pass geometry model (zone-first vs rooms-first vs wall-first).
-   - Outputs: capture sequence + reconstruction acceptance model.
-   - Parallelizable with: Task 1 and Task 2 once interface contract is stable.
+1. Finalize A1 + A2 as a single canonical intake-and-confidence contract in code/docs (single source of truth for required vs assumed fields).
+2. Use A2 policy in A3 and A4: simulation must never emit hard recommendations when confidence class is `insufficient`.
+3. Pilot A5/A6 using one event profile (e.g., VIP sweep) with explicit apply/teardown events.
+4. Finalize A7 language split for consultant/facilities director/output stakeholders before A9.
+5. Resolve A8 scale benchmark for scan-derived scenes and decide default safe limits for v1.
 
-4. Arbitration and review loop (Task 5)
-   - Define approval actions (approve, approve with assumptions, request more data).
-   - Outputs: interaction model for consultant/director trust.
-   - Depends on Tasks 1, 2, 3.
+#### Open decision hooks tied to Dimension A
 
-5. Simulation-to-recommendation path (Task 6)
-   - Define Stage-1 output shape: blind spots ranked with ranking rationale.
-   - Define ranking dimensions and role-targeted phrasing.
-   - Depends on Tasks 1, 2, and 4.
+- What minimum no-floor-plan input is required before calling the result advisory-safe?
+- Who owns confidence gating decisions when confidence conflicts with operator urgency?
+- Should temporary ops be represented as scene deltas, scenario envelopes, or branch-first workflow runs?
+- What minimum evidence is required to mark a draft publishable by role?
 
-6. Temporary/permanent differentiation (Task 7 + Task 8)
-   - Explore mode representations: scene branch vs delta layer vs scenario envelope.
-   - Define VIP/event workflow states and teardown semantics.
-   - Outputs: temporary-mode model option and constraints.
-   - Can run in parallel with Task 6 once Task 5 proves what data simulation needs.
+#### Direct implementation follow-up from this matrix
 
-7. Scale and evidence hardening (Task 9 + Task 10)
-   - Validate room-to-campus behavior and artifact quality.
-   - Define standard report payload for consultants and facilities directors.
-   - Depends on Task 5 and Task 6.
+- Convert existing discussion into a concrete matrix in `Docs/todos/goal2.md` or a new no-floor-plan readiness checklist for Stage A.
+- Add an explicit acceptance checklist tied to `scan` sessions so advisors can tell if a draft is `deploy-ready`, `review-required`, or `insufficient`.
+- Follow-up artifact added: `Docs/todos/no-floor-plan-readiness-checklist.md` (Dimension A gates and policy state).
 
-8. Uncertainty reconciliation and decision gate (Task 11)
-   - Define final policy for publishable / review-needed / insufficient.
-   - Decide when to block automation and force manual escalation.
-   - Depends on Tasks 2, 6, and 7.
+### Thread 98B: Workspace layout persistence and migration hardening
 
-9. Final synthesis checkpoint (Task 12)
-   - Consolidate outcomes into v1/staged/deferred buckets.
-   - Resolve any contradictions before any hard scope-lock decision.
+**Status:** Implementing.
 
-#### 2) Parallelization opportunities
+**Focus:** make layout state restore deterministic across sessions, environments, and malformed writes.
 
-- Track 1 (product trust): Task 1 -> Task 2 -> Task 5
-- Track 2 (capture reality): Task 3 -> Task 4 -> Task 6
-- Track 3 (temporal operations): Task 7 -> Task 8 -> Task 10
-- Track 4 (governance): Task 11 and Task 12 after core data contracts are stable
+**Findings (2026-06-01):**
+- Workspace layout persistence now loads from a typed canonical record set (`WorkspaceLayoutRecord`) and writes a versioned envelope.
+- Legacy storage key `sentineltwin_saved_layouts_v1` is migrating to canonical key `sentineltwin_workspace_layouts` with `schemaVersion: 2`, then removed after repair.
+- `buildSeededLayouts` and `normalizeSavedLayoutRecords` are used as recovery boundaries for corrupted or empty local payloads.
+- `isWorkspaceLayoutModified` uses canonicalized JSON comparison so property order drift in storage no longer generates false positives.
 
-#### 3) Open decision hooks to monitor
+**Open follow-up experiments:**
+- Track how many real users run with legacy payload remnants after release and how often migration falls back to seeded layouts.
+- Add telemetry/logging for migration paths (`valid envelope`, `legacy list`, `repaired`, `reseeded`) before forcing a second release.
+- Evaluate whether future schema increments should include per-field deprecation metadata or migration transforms at payload-level.
 
-- What minimum no-floor-plan input guarantees non-fragile blind-spot ranking?
-- How aggressive should confidence gating be for consultant-facing outputs?
-- Do temporary modes belong in scene layer deltas or scenario envelopes?
-- What constitutes publishable evidence versus advisory-only guidance in v1?
+### Thread 98C: Deterministic replay camera-motion rendering
 
-#### 4) Immediate next action (if continuing from this thread)
+**Status:** Implementing.
 
-Run a 2x2 walkthrough of tasks: 
-1) Intake contract (Task 1) and 2) confidence policy as a pair; then
-2) use those decisions to prototype Task 3 + 4 in the existing scan draft architecture.
+**Question:** can camera feed POVs be deterministic from scene schema alone during replay, without live PTZ state?
+
+**What we implemented:**
+- Reused `CameraNode.viewMotion` as the authoritative motion program during replay.
+- Added deterministic sampling utilities in `apps/studio/src/components/view/camera-view-utils.ts` for:
+  - waypoint interpolation with holds/transition timing,
+  - sweep fallback when waypoints are absent,
+  - pose override plumbing into both `CameraRigLive` and `CameraRigFixed`.
+- Updated camera feed mode to use sampled pose in both single-camera and wall layouts.
+- Began unit coverage for replay pose sampling behavior.
+
+**What to add next (open):**
+- Add a dedicated camera motion fixture pack in `Docs/` with canonical offline/online, sweep/waypoint examples.
+- Add one explicit QA fixture proving non-PTZ cameras remain static while waypoint PTZ cameras animate on replay.
+- Decide whether legacy `tracking` fallback behavior should become explicit keyframed tracking behavior instead of sinusoid approximation.

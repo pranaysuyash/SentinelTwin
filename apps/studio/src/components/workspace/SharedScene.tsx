@@ -507,19 +507,36 @@ export function SceneObstructions({
         const isShelf = obs.obstructionType === "shelf";
         const color = OBSTRUCTION_COLORS[obs.obstructionType] ?? OBSTRUCTION_COLORS.other;
         const highlightBox = new THREE.BoxGeometry(w * 1.02, h * 1.02, d * 1.02);
-        const interactionHandlers = makeSceneNodeHandlers({
-          nodeId: obs.id,
-          selectable: true,
-          selectNode: storeSelect,
-          toggleSelectedNode,
-          onSelect,
-        });
+        const handleSelect = (id: string) => {
+          const selectTarget = onSelect ?? storeSelect;
+          selectTarget(id);
+        };
+
+        const pointerSelectHandler = (event: ThreeEvent<MouseEvent>) => {
+          if (!isPrimaryMouseEvent(event)) return;
+          const isRangeSelect = event.shiftKey || event.metaKey || event.ctrlKey;
+          if (isRangeSelect) {
+            toggleSelectedNode(obs.id);
+          }
+        };
+
+        const interactionHandlers = {
+          onPointerDown: pointerSelectHandler,
+          onContextMenu: onContextMenu
+            ? (event: ThreeEvent<MouseEvent>) => {
+              event.stopPropagation();
+              event.nativeEvent.preventDefault();
+              onContextMenu(obs.id, event);
+            }
+            : undefined,
+        };
 
         return (
           <group
             key={obs.id}
             position={sanitizePoint3D(obs.position, [w / 2, h / 2, d / 2])}
             rotation={[0, (resolveSafeNumber(obs.rotationYDeg, 0) * Math.PI) / 180, 0]}
+            onClick={(e) => { e.stopPropagation(); handleSelect(obs.id); }}
             {...interactionHandlers}
           >
             <mesh castShadow receiveShadow>

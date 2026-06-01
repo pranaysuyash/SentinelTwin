@@ -6,6 +6,13 @@ import { useMemo, useState } from "react";
 import { cn } from "@/lib/cn";
 import { CoverageRibbon } from "@/components/map/CoverageRibbon";
 import { MapCanvas } from "@/components/map/MapCanvas";
+import {
+  clampPathDuration,
+  clampReplayProgress,
+  findLatestTimelineEventAtOrBeforeTime,
+  findNextTimelineEventAfterTime,
+  sortTimelineEvents,
+} from "@/components/view/camera-view-utils";
 import { MAP_COLORS, qualityColor } from "@/components/map/map-colors";
 import { pathLengthM, pointOnPathAtProgress, samplePathQuality } from "@/components/map/path-quality";
 import { QUALITY_LABEL, QUALITY_RANK } from "@/lib/quality-display";
@@ -32,19 +39,6 @@ function mapLayerFlagsFromStore(layerVis: Record<string, boolean>) {
     coverage: layerVis.heatmap,
     labels: layerVis.labels,
   };
-}
-
-function findLastAtOrBefore<T extends { timeS: number }>(items: T[], timeS: number) {
-  for (let index = items.length - 1; index >= 0; index -= 1) {
-    if (items[index]!.timeS <= timeS) {
-      return items[index]!;
-    }
-  }
-  return null;
-}
-
-function findNextAfter<T extends { timeS: number }>(items: T[], timeS: number) {
-  return items.find((item) => item.timeS > timeS) ?? null;
 }
 
 export function PathMap({
@@ -78,17 +72,21 @@ export function PathMap({
     if (!activePath) return null;
     return result?.pathResults.find((entry) => entry.pathId === activePath.id) ?? null;
   }, [activePath, result?.pathResults]);
+  const timelineEvents = useMemo(() => sortTimelineEvents(pathResult?.timeline), [pathResult?.timeline]);
+  const safeDurationS = useMemo(() => clampPathDuration(pathResult?.totalDurationS), [pathResult?.totalDurationS]);
+  const safeReplayProgress = clampReplayProgress(pathReplay.progress);
+  const safeCurrentTime = safeDurationS > 0 ? safeDurationS * safeReplayProgress : 0;
 
   const pathLength = activePath ? pathLengthM(activePath) : 0;
   const estSeconds = activePath ? pathLength / activePath.speedMps : 0;
-  const visiblePct = pathResult && pathResult.totalDurationS > 0
-    ? Math.round((pathResult.visibleDurationS / pathResult.totalDurationS) * 100)
+  const visiblePct = pathResult && safeDurationS > 0
+    ? Math.round((pathResult.visibleDurationS / safeDurationS) * 100)
     : null;
 
   const replayActor = useMemo(() => {
     if (!activePath) return null;
-    return pointOnPathAtProgress(activePath, pathReplay.progress);
-  }, [activePath, pathReplay.progress]);
+    return pointOnPathAtProgress(activePath, safeReplayProgress);
+  }, [activePath, safeReplayProgress]);
 
   const pathSamples = useMemo(() => {
     if (!activePath) return [];
@@ -103,7 +101,7 @@ export function PathMap({
     [mapPanX, mapPanY, mapZoom],
   );
 
-  const currentTime = pathResult ? pathResult.totalDurationS * pathReplay.progress : 0;
+  const currentTime = safeCurrentTime;
   const currentSampleIndex = useMemo(() => {
     if (!pathSamples.length) return -1;
     let winner = 0;
@@ -120,8 +118,8 @@ export function PathMap({
   const [selectedSegmentIndex, setSelectedSegmentIndex] = useState<number | null>(null);
   const detailIndex = selectedSegmentIndex ?? currentSampleIndex;
   const detailSample = detailIndex >= 0 ? pathSamples[Math.min(detailIndex, Math.max(pathSamples.length - 1, 0))] ?? null : null;
-  const currentEvent = pathResult ? findLastAtOrBefore(pathResult.timeline, currentTime) : null;
-  const nextEvent = pathResult ? findNextAfter(pathResult.timeline, currentTime) : null;
+  const currentEvent = findLatestTimelineEventAtOrBeforeTime(timelineEvents, safeCurrentTime);
+  const nextEvent = findNextTimelineEventAfterTime(timelineEvents, safeCurrentTime);
   const currentQualityLabel = detailSample ? QUALITY_LABEL[detailSample.quality] : "No path";
   const currentQualityColor = detailSample ? qualityColor(detailSample.quality) : MAP_COLORS.quality.none;
 
@@ -193,8 +191,8 @@ export function PathMap({
           if (!activePath || pathId !== activePath.id) return;
           setSelectedSegmentIndex(index);
           const sample = pathSamples[index];
-          if (pathResult && sample && pathResult.totalDurationS > 0) {
-            setPathReplayProgress(Math.max(0, Math.min(1, sample.timeS / pathResult.totalDurationS)));
+          if (safeDurationS > 0 && sample) {
+            setPathReplayProgress(clampReplayProgress(sample.timeS / safeDurationS));
           }
         }}
         onMapClick={(point) => {
@@ -256,18 +254,18 @@ export function PathMap({
       <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
         <div className="mb-1.5 flex items-center justify-between">
           <span className="text-[9px] uppercase tracking-[0.18em] text-[#556076]">Coverage Ribbon</span>
-          <span className="text-[9px] text-[#8f9bb1]">{pathResult?.timeline.length ?? 0} events</span>
+          <span className="text-[9px] text-[#8f9bb1]">{timelineEvents.length} events</span>
         </div>
 
         <CoverageRibbon path={activePath} coverageCells={result?.coverageCells ?? []} stepM={0.25} />
       </div>
 
       <PathEventsList
-        timeline={pathResult?.timeline ?? []}
+        timeline={timelineEvents}
         currentTime={currentTime}
         onSeek={(timeS) => {
-          if (!pathResult || pathResult.totalDurationS <= 0) return;
-          setPathReplayProgress(Math.max(0, Math.min(1, timeS / pathResult.totalDurationS)));
+          if (!pathResult || safeDurationS <= 0) return;
+          setPathReplayProgress(clampReplayProgress(timeS / safeDurationS));
         }}
       />
 
@@ -345,7 +343,7 @@ function CurrentPathStatePanel({
           return (bData?.visibleS ?? 0) - (aData?.visibleS ?? 0);
         })[0]
     : null;
-  const upcomingRiskEvent = pathResult?.timeline.find((event) => event.timeS > currentTime && event.event === "lost") ?? nextEvent;
+  const upcomingRiskEvent = timelineEvents.find((event) => event.timeS > currentTime && event.event === "lost") ?? nextEvent;
 
   return (
     <div className="mt-2 rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">

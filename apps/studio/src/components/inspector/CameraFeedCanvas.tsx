@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn";
 import "@/lib/three-compat";
 import type { CameraNode, DoriQuality, SecurityScene } from "@/schema/security-scene";
 import { computeOperationalEvidenceFusionSummary, computeSensorFusionSummary } from "@/lib/sensor-fusion";
+import { samplePathQuality } from "@/components/map/path-quality";
 import { qualityToScore } from "@sentineltwin/core";
 import { useStudioStore } from "@/store/studio-store";
 import { PathActor, CoverageSegmentPath } from "@/components/workspace/SharedScene";
@@ -233,7 +234,7 @@ function CameraFeedScene({
 }: {
   camera: CameraNode;
   pathState: { currentIndex: number; segmentProgress: number } | null;
-  selectedPathWaypoints: Array<{ position: [number, number]; detectionQuality: string }>;
+  selectedPathWaypoints: Array<{ position: [number, number]; detectionQuality: DoriQuality }>;
   selectedPathPositions: [number, number][];
   overlayOptions: FeedOverlayOptions;
 }) {
@@ -305,11 +306,20 @@ export function CameraFeedCanvas({
     [selectedPath],
   );
   const pathWaypoints = useMemo(
-    () => selectedPath?.points.map((point) => ({
-      position: point.position,
-      detectionQuality: point.action ?? selectedPath.label,
-    })) ?? [],
-    [selectedPath],
+    () => {
+      if (!selectedPath || result?.coverageCells?.length === 0) {
+        return (selectedPath?.points ?? []).map((point) => ({
+          position: point.position,
+          detectionQuality: "none" as DoriQuality,
+        }));
+      }
+
+      return samplePathQuality(selectedPath, result?.coverageCells ?? [], 0.25).map((sample) => ({
+        position: sample.position,
+        detectionQuality: sample.quality,
+      }));
+    },
+    [selectedPath, result?.coverageCells],
   );
 
   if (!camera) return null;

@@ -118,6 +118,10 @@ type CameraNode = {
     }[];
   };
 
+  // Replay-time synthesis behavior for camera-feed rendering
+  // During deterministic replay playback, `viewMotion` is interpreted as a normalized PTZ keyframe sequence.
+  // The renderer can sample a pose at any playback timestamp without mutating stored yaw/pitch.
+
   // Collision layer (three-layer entity model)
   collisionLayer?: {
     visualMesh: boolean;        // presence in 3D scene

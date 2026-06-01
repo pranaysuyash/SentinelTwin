@@ -8,6 +8,8 @@
   },
   "scripts": {
     "dev": "node ./scripts/run-fixed-port.mjs dev",
+    "dev:turbopack": "STUDIO_DEV_BUNDLER=turbopack node ./scripts/run-fixed-port.mjs dev",
+    "dev:webpack": "STUDIO_DEV_BUNDLER=webpack node ./scripts/run-fixed-port.mjs dev",
     "build": "rm -rf .next && NEXT_PRIVATE_WORKER_THREADS=false next build --turbopack --experimental-app-only",
     "start": "node ./scripts/run-fixed-port.mjs start",
     "clean": "rm -rf .next",

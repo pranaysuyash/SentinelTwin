@@ -6,7 +6,10 @@ export const reportAudienceSchema = z.enum([
   "auditor",
   "insurer",
   "installer",
-  "privacy_reviewer"
+  "privacy_reviewer",
+  "consultant",
+  "facilities_director",
+  "operations_manager",
 ]);
 
 export const reportVisibilitySchema = z.enum([

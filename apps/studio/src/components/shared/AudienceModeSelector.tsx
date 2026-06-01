@@ -10,6 +10,9 @@ import {
 
 const AUDIENCE_MODES: AudienceMode[] = [
   "operator",
+  "consultant",
+  "facilities_director",
+  "operations_manager",
   "auditor",
   "insurer",
   "installer",

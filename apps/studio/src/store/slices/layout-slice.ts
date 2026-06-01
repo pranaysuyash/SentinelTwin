@@ -1,5 +1,6 @@
 import {
   getPresetLayoutSnapshot,
+  DEFAULT_LAYERS,
   isWorkspaceLayoutModified,
   PRESET_BOTTOM_DRAWER_MODES,
   PRESET_CANVAS_MODES,
@@ -85,34 +86,12 @@ export type LayerVisibility = Record<LayerId, boolean>;
 
 type DockSnapshot = WorkspaceLayoutSnapshot;
 
-type WorkspaceLayoutRecord = WorkspaceLayoutSnapshot & {
-  id: string;
-  name: string;
-  createdAt: number;
-};
-
 // ── Storage keys ──
 
 const UI_THEME_STORAGE_KEY = "sentineltwin_ui_theme";
 const UI_DENSITY_STORAGE_KEY = "sentineltwin_ui_density";
-const LAYOUT_STORAGE_KEY = "sentineltwin_workspace_layouts";
-const LEGACY_LAYOUT_STORAGE_KEY = "sentineltwin_saved_layouts_v1";
 
 // ── Module-level constants ──
-
-const DEFAULT_LAYERS: LayerVisibility = {
-  cameras: true,
-  camera_cones: true,
-  obstructions: true,
-  lights: true,
-  critical_zones: true,
-  privacy_zones: true,
-  paths: true,
-  heatmap: true,
-  grid: true,
-  walls_floors: true,
-  labels: true,
-};
 
 const DEFAULT_DOCK_SIZES = PRESET_LAYOUT_SIZES.edit;
 
@@ -147,36 +126,6 @@ function loadUiDensity(): UiDensity {
   const raw = window.localStorage.getItem(UI_DENSITY_STORAGE_KEY);
   if (raw === "compact" || raw === "comfortable") return raw;
   return "normal";
-}
-
-function loadSavedLayoutsFromStorage(): WorkspaceLayoutRecord[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(LAYOUT_STORAGE_KEY);
-    const source = raw ?? localStorage.getItem(LEGACY_LAYOUT_STORAGE_KEY);
-    if (!source) return [];
-    const parsed = JSON.parse(source);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (candidate): candidate is WorkspaceLayoutRecord =>
-        typeof candidate === "object" &&
-        candidate !== null &&
-        "id" in candidate &&
-        "name" in candidate &&
-        "viewMode" in candidate &&
-        "workspacePreset" in candidate,
-    );
-  } catch {
-    return [];
-  }
-}
-
-function persistSavedLayouts(layouts: WorkspaceLayoutRecord[]) {
-  try {
-    localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(layouts));
-  } catch {
-    // Storage full or unavailable — silently fail
-  }
 }
 
 // ── Pure helper functions ──
@@ -333,37 +282,18 @@ function getInitialViewMode(): ViewMode {
   return "map";
 }
 
-function buildSeededLayouts(): WorkspaceLayoutRecord[] {
-  const seeds: WorkspaceLayoutRecord[] = [];
-  const presets: WorkspacePreset[] = ["edit", "coverage", "camera_wall", "replay", "compare", "report"];
-  presets.forEach((preset, index) => {
-    const layout = buildPresetDockLayout(preset);
-    seeds.push({
-      id: `seeded_layout_${preset}`,
-      name: preset.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-      ...layout,
-      createdAt: Date.now() + index * 60_000,
-    });
-  });
-  return seeds;
-}
-
 // ── Initial values (computed once at module scope via lazy init) ──
 
 let _initialized = false;
 let _initialViewMode: ViewMode = "map";
 let _initialWorkspacePreset: WorkspacePreset = "edit";
 let _initialLayout: DockSnapshot = null!;
-let _initialSavedLayouts: WorkspaceLayoutRecord[] = [];
-let _initialSeededLayouts: WorkspaceLayoutRecord[] = [];
 
 function ensureInitialized() {
   if (_initialized) return;
   _initialViewMode = getInitialViewMode();
   _initialWorkspacePreset = viewModeToPreset(_initialViewMode);
   _initialLayout = buildPresetDockLayout(_initialWorkspacePreset);
-  _initialSavedLayouts = loadSavedLayoutsFromStorage();
-  _initialSeededLayouts = buildSeededLayouts();
   _initialized = true;
 }
 

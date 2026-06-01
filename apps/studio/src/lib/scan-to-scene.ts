@@ -2,6 +2,7 @@ import { createCameraNode, createCriticalZoneNode, createDoorNode, createEntryPo
 import { selectHighestPriorityCriticalZone } from "@/lib/critical-zone-selection";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 import { safeParseSecurityScene } from "@/schema/security-scene";
+import type { ScanOperationalContext, ScanOperationalMode } from "@/lib/scan-artifacts";
 import type {
   CameraNode,
   CriticalZoneNode,
@@ -57,6 +58,8 @@ export type ScanSession = {
   cameraMountType: "wall" | "ceiling";
   lightMountType: "ceiling" | "wall";
   criticalZoneNightRequired: boolean;
+  operationalMode: ScanOperationalMode;
+  operationalContext?: ScanOperationalContext;
   imageDataUrl: string | null;
   imageName: string | null;
   imageWidthPx: number | null;
@@ -93,12 +96,45 @@ export type ScanCompilationWarningCode =
   | "NO_ENTRY"
   | "NO_OBSTRUCTION"
   | "NO_WALL"
-  | "NO_PATH";
+  | "NO_PATH"
+  | "TEMPORARY_PERIMETER"
+  | "SCENARIO_ESCALATION_REQUIRED";
 
 export type ScanCompilationWarning = {
   code: ScanCompilationWarningCode;
   message: string;
   severity?: "info" | "warning" | "blocking";
+};
+
+type ScenarioEnvelope = {
+  active: boolean;
+  profileId: string;
+  profileLabel: string;
+  scope: "temporary_event" | "temporary_perimeter" | "vip_visit" | "maintenance" | "incident_response" | "other";
+  startAt: number;
+  endAt: number;
+  requiresTemporaryPerimeterLockdown: boolean;
+  requiresStaffingLockdown: boolean;
+  rollBackRequired: boolean;
+  temporaryControls: string[];
+  rollBackPlan: Array<{
+    action: string;
+    description: string;
+    mandatory: boolean;
+    evidenceHint?: string;
+  }>;
+  notes: string[];
+};
+
+export type ScanDraftReadinessLevel = "deploy-ready" | "review-required" | "insufficient";
+
+export type ScanDraftReadiness = {
+  level: ScanDraftReadinessLevel;
+  canSimulate: boolean;
+  canRecommend: boolean;
+  blockingWarnings: ScanCompilationWarning[];
+  advisoryWarnings: ScanCompilationWarning[];
+  summary: string;
 };
 
 export type ScanCompileOptions = {
@@ -187,6 +223,47 @@ function scanCandidateLabel(candidate: ScanCandidate) {
   return candidate.label.trim() || candidate.kind.replace(/_/g, " ");
 }
 
+function buildTemporaryEventEnvelope(session: ScanSession): ScenarioEnvelope {
+  const startAt = session.createdAt;
+  const endAt = session.updatedAt || session.createdAt + 4 * 60 * 60 * 1000;
+  const durationMins = Math.max(15, Math.round((endAt - startAt) / 60000));
+  return {
+    active: true,
+    profileId: `${session.id}:temporary-event`,
+    profileLabel: "Temporary event profile",
+    scope: session.operationalContext?.isEmergencyWindow ? "incident_response" : "temporary_event",
+    startAt,
+    endAt,
+    requiresTemporaryPerimeterLockdown: Boolean(session.operationalContext?.requiresTemporaryPerimeterLockdown),
+    requiresStaffingLockdown: Boolean(session.operationalContext?.isEmergencyWindow),
+    rollBackRequired: true,
+    temporaryControls: session.operationalContext?.requiresTemporaryPerimeterLockdown
+      ? [
+          "temporary perimeter lockdown enabled",
+          "entry gating set to event policy",
+          "temporary staffing checks enabled",
+        ]
+      : ["event-only controls recorded"],
+    rollBackPlan: [
+      {
+        action: "remove_temporary_controls",
+        description: "Disable event-only perimeter and staffing controls before restoring baseline posture.",
+        mandatory: true,
+        evidenceHint: "Attach before/after checklist with photos and signoff timestamp.",
+      },
+      {
+        action: "confirm_baseline_readiness",
+        description: `Run a normal-mode replay check after ${durationMins} minute event window to confirm baseline posture.`,
+        mandatory: false,
+      },
+    ],
+    notes: [
+      `Event duration target: ${durationMins} minute(s).`,
+      ...(session.operationalContext?.notes?.trim() ? [session.operationalContext.notes.trim()] : []),
+    ],
+  };
+}
+
 function obstructionTypeFor(candidate: ScanCandidate): ObstructionNode["obstructionType"] {
   switch (candidate.kind) {
     case "counter":
@@ -233,6 +310,61 @@ export function summarizeScanProvenance(session: ScanSession): ScanCompilationPr
     confidenceLevel,
     sourceCounts,
     summary: `Manual-assisted scan compiled ${accepted.length}/${session.candidates.length} accepted candidates at ${Math.round(averageConfidence * 100)}% average confidence.`,
+  };
+}
+
+export function assessScanDraftReadiness(
+  session: ScanSession,
+  warnings: ScanCompilationWarning[],
+  options: { allowDeployOnWarning?: boolean } = {},
+): ScanDraftReadiness {
+  const { allowDeployOnWarning = false } = options;
+  const blockingWarnings = warnings.filter((warning) => warning.severity === "blocking");
+  const advisoryWarnings = warnings.filter((warning) => warning.severity !== "blocking");
+  const totalAccepted = session.candidates.filter((candidate) => candidate.status === "accepted" || candidate.status === "edited").length;
+  const hasCamera = session.candidates.some((candidate) => (candidate.kind === "camera") && (candidate.status === "accepted" || candidate.status === "edited"));
+  const hasCriticalZone = session.candidates.some((candidate) => (candidate.kind === "critical_zone" || candidate.kind === "counter") && (candidate.status === "accepted" || candidate.status === "edited"));
+  const hasObstruction = session.candidates.some((candidate) => (
+    candidate.status === "accepted" || candidate.status === "edited"
+  ) && ["obstruction", "cupboard", "counter", "shelf"].includes(candidate.kind));
+
+  const isSparseData = totalAccepted < 2 || !hasCamera || !hasCriticalZone;
+  const provenance = summarizeScanProvenance(session);
+  const requiresScenarioEscalation = warnings.some((warning) => warning.code === "SCENARIO_ESCALATION_REQUIRED");
+
+  if (blockingWarnings.length > 0 || isSparseData || provenance.confidenceLevel === "low") {
+    return {
+      level: "insufficient",
+      canSimulate: true,
+      canRecommend: false,
+      blockingWarnings,
+      advisoryWarnings,
+      summary: "Blocking missing inputs or low confidence. Run additional capture/review before producing recommendations.",
+    };
+  }
+
+  const shouldReview = advisoryWarnings.length > 0 || provenance.confidenceLevel === "medium" || !hasObstruction;
+  if ((shouldReview || requiresScenarioEscalation) && !allowDeployOnWarning) {
+    const escalationSummary = requiresScenarioEscalation
+      ? "Scenario escalation required: emergency/perimeter workflows require explicit operational controls before recommendation can move to deploy-ready."
+      : null;
+    return {
+      level: "review-required",
+      canSimulate: true,
+      canRecommend: false,
+      blockingWarnings,
+      advisoryWarnings,
+      summary: escalationSummary ?? "Simulation valid; recommendation requires review due to warning or medium confidence.",
+    };
+  }
+
+  return {
+    level: "deploy-ready",
+    canSimulate: true,
+    canRecommend: true,
+    blockingWarnings,
+    advisoryWarnings,
+    summary: "Scene meets readiness policy for advisory recommendations.",
   };
 }
 
@@ -365,6 +497,12 @@ export function createScanSession(roomName: string, widthM = 10, depthM = 8, hei
     cameraMountType: "wall",
     lightMountType: "ceiling",
     criticalZoneNightRequired: true,
+    operationalMode: "permanent",
+    operationalContext: {
+      isEmergencyWindow: false,
+      requiresTemporaryPerimeterLockdown: false,
+      notes: "",
+    },
     imageDataUrl: null,
     imageName: null,
     imageWidthPx: null,
@@ -500,10 +638,43 @@ function mergeEntryPoints(
   return merged;
 }
 
+function formatOperationalContextNotes(session: ScanSession): string[] {
+  const contextNotes = [`Operational mode: ${session.operationalMode}.`];
+  if (session.operationalContext?.isEmergencyWindow) {
+    contextNotes.push("Operational context: emergency window is active.");
+  }
+  if (session.operationalContext?.requiresTemporaryPerimeterLockdown) {
+    contextNotes.push("Operational context: temporary perimeter lockdown required.");
+  }
+  if (session.operationalContext?.notes?.trim()) {
+    contextNotes.push(`Operational notes: ${session.operationalContext.notes.trim()}`);
+  }
+  if (session.operationalMode === "temporary_event") {
+    const envelope = buildTemporaryEventEnvelope(session);
+    contextNotes.push(`Scenario envelope: ${envelope.profileLabel} (${envelope.scope}).`);
+    if (envelope.rollBackRequired) {
+      contextNotes.push("Scenario teardown required before returning to permanent posture.");
+    }
+  }
+  return contextNotes;
+}
+
+function hasScenarioEscalationInputs(session: ScanSession): boolean {
+  if (session.operationalMode !== "temporary_event") return false;
+  return Boolean(session.operationalContext?.isEmergencyWindow || session.operationalContext?.requiresTemporaryPerimeterLockdown);
+}
+
+function hasTemporaryBoundaryControls(session: ScanSession): boolean {
+  return session.candidates.some((candidate) => (
+    (candidate.status === "accepted" || candidate.status === "edited")
+    && (candidate.kind === "wall" || candidate.kind === "door" || candidate.kind === "entry_point")
+  ));
+}
+
 export function compileScanSessionToScene(
   session: ScanSession,
   options: ScanCompileOptions = {},
-): { scene: SecurityScene; provenance: ScanCompilationProvenance; warnings: ScanCompilationWarning[] } {
+): { scene: SecurityScene; provenance: ScanCompilationProvenance; warnings: ScanCompilationWarning[]; readiness: ScanDraftReadiness } {
   const provenance = summarizeScanProvenance(session);
   const scene = createBlankSecurityScene();
   const explicitEntryPoints: EntryPointNode[] = [];
@@ -588,26 +759,82 @@ export function compileScanSessionToScene(
     warnings.push({ code: "NO_WALL", message: "No wall markers accepted; using the room dimensions to build a rectangular shell.", severity: "info" });
   }
   if (scene.paths.length === 0) warnings.push({ code: "NO_PATH", message: "No path points created; add path points or enable auto entry-to-zone path.", severity: "info" });
+  const hasTemporaryPerimeterMarker = hasTemporaryBoundaryControls(session);
+  const requiresScenarioEscalation = hasScenarioEscalationInputs(session);
+  if (session.operationalMode === "temporary_event" && !hasTemporaryPerimeterMarker) {
+    warnings.push({
+      code: "TEMPORARY_PERIMETER",
+      message: "Temporary event mode should include explicit perimeter or entry control markers before recommendations can be treated as advisory.",
+      severity: "warning",
+    });
+  }
+  if (requiresScenarioEscalation) {
+    warnings.push({
+      code: "SCENARIO_ESCALATION_REQUIRED",
+      message: "Scenario escalation required: emergency/perimeter context in temporary operations requires administrator review and evidence of controls before deployment-ready recommendations.",
+      severity: "warning",
+      suggestedAction: "Route to admin for escalation and attach staffing/perimeter control evidence in the same draft.",
+    });
+  }
+
+  scene.assumptions.operationalMode = session.operationalMode;
+  if (session.operationalMode === "temporary_event") {
+    scene.assumptions.operationalScenarioEnvelope = buildTemporaryEventEnvelope(session);
+  }
+  if (session.operationalContext && Object.keys(session.operationalContext).length > 0) {
+    scene.assumptions.operationalContext = session.operationalContext;
+  }
+  scene.changeLog = [...scene.changeLog, ...formatOperationalContextNotes(session)];
 
   const parsed = safeParseSecurityScene(scene);
   if (!parsed.success) {
     throw new Error(`Compiled scan scene failed schema validation: ${parsed.error.issues[0]?.message ?? "unknown error"}`);
   }
 
-  return { scene: parsed.data, provenance, warnings };
+  return {
+    scene: parsed.data,
+    provenance,
+    warnings,
+    readiness: assessScanDraftReadiness(session, warnings),
+  };
 }
 
 export function compileScanSessionToCompilerResult(
   session: ScanSession,
   options: ScanCompileOptions = {},
 ): SiteCompilerResult {
-  const { scene, warnings: scanWarnings } = compileScanSessionToScene(session, options);
+  const { scene, warnings: scanWarnings, readiness } = compileScanSessionToScene(session, options);
+  const mapScanWarnings = (scanWarning: ScanCompilationWarning): SiteCompilerWarning => ({
+    code: scanWarning.code,
+    message: scanWarning.message,
+    severity: scanWarning.severity ?? "warning",
+  });
+  const toActionableWarnings = (scanWarning: ScanCompilationWarning[]) => (
+    scanWarning.map((warning) => ({
+      code: warning.code,
+      message: warning.message,
+      severity: warning.severity ?? "warning",
+    }))
+  );
   const compilerWarnings: SiteCompilerWarning[] = [
-    ...scanWarnings.map((w): SiteCompilerWarning => ({
-      code: w.code,
-      message: w.message,
-      severity: w.severity ?? "warning",
-    })),
+    ...scanWarnings.map(mapScanWarnings),
   ];
-  return compileScanToSiteResult(scene, ["Scan candidates compiled via scan-to-scene pipeline."], compilerWarnings);
+  const operationalNotes = formatOperationalContextNotes(session);
+  const compilerResult = compileScanToSiteResult(
+    scene,
+    ["Scan candidates compiled via scan-to-scene pipeline.", ...operationalNotes],
+    compilerWarnings,
+  );
+
+  return {
+    ...compilerResult,
+    readiness: {
+      level: readiness.level,
+      canSimulate: readiness.canSimulate,
+      canRecommend: readiness.canRecommend,
+      blockingWarnings: toActionableWarnings(readiness.blockingWarnings),
+      advisoryWarnings: toActionableWarnings(readiness.advisoryWarnings),
+      summary: readiness.summary,
+    },
+  };
 }

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const panelPath = "./src/components/bottom-panel/ScenarioPathPanel.tsx";
+const panelPath = "/Users/pranay/Projects/SentinelTwin/apps/studio/src/components/bottom-panel/ScenarioPathPanel.tsx";
 
 describe("ScenarioPathPanel", () => {
   test("wires Play Path to replay mode and timeline", () => {
@@ -44,5 +44,15 @@ describe("ScenarioPathPanel", () => {
     expect(source).toContain("No path selected");
     expect(source).toContain("No simulation yet");
     expect(source).toContain("Run Simulation");
+  });
+
+  test("uses shared duration clamping utility for path duration math", () => {
+    const source = readFileSync(panelPath, "utf8");
+
+    expect(source).toContain("@/components/view/camera-view-utils");
+    expect(source).toContain("clampPathDuration");
+    expect(source).toContain("safePathDurationS");
+    expect(source).toContain("visiblePct = pathResult && safePathDurationS > 0");
+    expect(source).toContain("Path Duration" );
   });
 });

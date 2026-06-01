@@ -78,6 +78,7 @@ import {
 import {
   loadModelEvalHistoryFromRaw,
   serializeModelEvalHistory,
+  getCloudRequiredFixtureCount,
   summarizeModelEvalRun,
   type ModelEvalRunRecord,
   type ModelEvalSuiteResult,
@@ -738,7 +739,7 @@ export function createTelemetrySlice(set: any, get: any): TelemetrySlice {
 
     recordModelEvalRun: (report) =>
       set((state: any) => {
-        const nextHistory = [summarizeModelEvalRun(report), ...state.modelEvalHistory].slice(0, 12);
+        const nextHistory = [summarizeModelEvalRun(report, getCloudRequiredFixtureCount(report.fixtures)), ...state.modelEvalHistory].slice(0, 12);
         persistModelEvalHistory(nextHistory);
         const nextPromptRegistryHistory = [
           createPromptRegistryHistoryRecord(report.promptRegistry, "model_eval", "Captured from model eval run."),

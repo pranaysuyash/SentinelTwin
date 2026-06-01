@@ -45,7 +45,16 @@ function safeParseCatalogState(raw: string | null): ReportCatalogState {
 function normalizeCustomPreset(value: Partial<ReportCatalogPreset> | null | undefined): ReportCatalogPreset | null {
   if (!value || typeof value !== "object") return null;
   if (typeof value.id !== "string" || typeof value.title !== "string") return null;
-  if (value.audience !== "operator" && value.audience !== "auditor" && value.audience !== "insurer" && value.audience !== "installer" && value.audience !== "privacy_reviewer") {
+  if (
+    value.audience !== "operator"
+    && value.audience !== "auditor"
+    && value.audience !== "insurer"
+    && value.audience !== "installer"
+    && value.audience !== "privacy_reviewer"
+    && value.audience !== "consultant"
+    && value.audience !== "facilities_director"
+    && value.audience !== "operations_manager"
+  ) {
     return null;
   }
   if (value.visibility !== "internal" && value.visibility !== "shared" && value.visibility !== "privacy_safe") {

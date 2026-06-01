@@ -79,6 +79,11 @@ import {
   PRESET_BOTTOM_DRAWER_MODES,
   PRESET_PINNED_MODULES,
   PRESET_LAYOUT_SIZES,
+  buildSeededLayouts,
+  normalizeSavedLayoutRecords,
+  LAYOUT_STORAGE_VERSION,
+  DEFAULT_LAYERS,
+  type WorkspaceLayoutRecord,
   type WorkspaceLayoutSnapshot,
 } from "@/lib/workspace-layouts";
 import {
@@ -142,8 +147,16 @@ function persistWorkspaceAccount(account: WorkspaceAccountProfile) {
 function persistSavedProjects(projects: any[]) {
   try { localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(projects)); } catch {}
 }
-function persistSavedLayouts(layouts: any[]) {
-  try { localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(layouts)); } catch {}
+function persistSavedLayouts(layouts: WorkspaceLayoutRecord[]) {
+  try {
+    localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify({
+      schemaVersion: LAYOUT_STORAGE_VERSION,
+      layouts,
+    }));
+    localStorage.removeItem(LEGACY_LAYOUT_STORAGE_KEY);
+    return true;
+  } catch {}
+  return false;
 }
 function persistOperationalEvidenceEvents(events: OperationalEvidenceEvent[]) {
   try { localStorage.setItem(OPERATIONAL_EVIDENCE_STORAGE_KEY, JSON.stringify(events)); } catch {}
@@ -181,11 +194,47 @@ function createDraftBranchRecord(id: string, label: string, authorId: string): B
   return { id, label, state: "draft", createdAt: now, updatedAt: now, authorId };
 }
 
-const DEFAULT_LAYERS = {
-  cameras: true, camera_cones: true, obstructions: true, lights: true,
-  critical_zones: true, privacy_zones: true, paths: true, heatmap: true,
-  grid: true, walls_floors: true, labels: true,
-};
+const WORKSPACE_PRESETS: WorkspaceLayoutRecord["workspacePreset"][] = [
+  "edit",
+  "coverage",
+  "camera_wall",
+  "replay",
+  "compare",
+  "report",
+  "debug",
+  "focus",
+];
+
+const ANALYSIS_TAB_ORDER = [
+  "metrics",
+  "issues",
+  "sensors",
+  "timeline",
+  "temporal",
+  "beforeafter",
+  "assumptions",
+  "governance",
+  "provenance",
+  "redundancy",
+  "counterfactual",
+  "threat",
+  "report",
+  "debug",
+  "novel",
+  "outcome",
+  "help",
+  "budgeting",
+] as const;
+
+type AnalysisTab = (typeof ANALYSIS_TAB_ORDER)[number];
+
+function getFirstEnabledAnalysisTab(
+  enabledAnalysisModules: Record<string, boolean>,
+  preferred?: string | null,
+): AnalysisTab {
+  if (preferred && enabledAnalysisModules[preferred]) return preferred as AnalysisTab;
+  return ANALYSIS_TAB_ORDER.find((tab) => enabledAnalysisModules[tab]) ?? "metrics";
+}
 
 function buildLayoutStatePatch(layout: any): any {
   return {
@@ -218,6 +267,82 @@ function cloneSceneWithChangeLog(scene: SecurityScene, changeLog: string[]) {
 
 function cloneSceneWithAppendedChangeLog(scene: SecurityScene, entry: string) {
   return cloneSceneWithChangeLog(scene, [...scene.changeLog, entry]);
+}
+
+function normalizeStoredLayouts(raw: unknown, fallbackTime = Date.now()): WorkspaceLayoutRecord[] {
+  const parsed = normalizeSavedLayoutRecords(raw);
+  const normalized = parsed
+    .filter((layout) => WORKSPACE_PRESETS.includes(layout.workspacePreset))
+    .map((layout) => ({
+      ...layout,
+      schemaVersion: LAYOUT_STORAGE_VERSION,
+      name: layout.name.trim(),
+      createdAt: Number.isFinite(layout.createdAt) ? layout.createdAt : fallbackTime,
+    }));
+  return normalized.length > 0 ? normalized : buildSeededLayouts(fallbackTime);
+}
+
+function readStoredLayoutPayload(raw: unknown, fallbackTime: number): WorkspaceLayoutRecord[] {
+  if (isPlainObject(raw) && raw !== null && typeof raw === "object") {
+    if (Array.isArray((raw as any).layouts)) {
+      return normalizeStoredLayouts((raw as any).layouts, fallbackTime);
+    }
+  }
+  if (Array.isArray(raw)) return normalizeStoredLayouts(raw, fallbackTime);
+  return buildSeededLayouts(fallbackTime);
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function makeUniqueLayoutName(rawName: string, existingLayouts: WorkspaceLayoutRecord[]): string {
+  const normalizedTarget = rawName.trim().toLowerCase();
+  const existing = new Set(existingLayouts.map((layout) => layout.name.toLowerCase()));
+  if (!existing.has(normalizedTarget)) return rawName;
+  let suffix = 2;
+  let candidate = `${rawName} (${suffix})`;
+  while (existing.has(candidate.toLowerCase())) {
+    suffix += 1;
+    candidate = `${rawName} (${suffix})`;
+  }
+  return candidate;
+}
+
+function parseStoragePayload(raw: string | null): unknown {
+  if (raw == null) return undefined;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+}
+
+function buildCanonicalSavedLayoutFromState(state: any): WorkspaceLayoutRecord {
+  return {
+    id: `layout_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+    name: state.name,
+    workspacePreset: state.workspacePreset,
+    viewMode: state.viewMode,
+    canvasMode: state.canvasMode,
+    leftDockCollapsed: state.leftDockCollapsed,
+    rightDockCollapsed: state.rightDockCollapsed,
+    bottomDockCollapsed: state.bottomDockCollapsed,
+    leftDockSizePx: state.leftDockSizePx,
+    rightDockSizePx: state.rightDockSizePx,
+    bottomDockSizePx: state.bottomDockSizePx,
+    visibleComponents: { ...state.visibleComponents },
+    enabledAnalysisModules: { ...state.enabledAnalysisModules },
+    layerVisibility: { ...state.layerVisibility },
+    rightPanelMode: state.rightPanelMode,
+    bottomDrawerMode: state.bottomDrawerMode,
+    pinnedAnalysisModule: state.pinnedAnalysisModule,
+    overlayDensity: state.overlayDensity,
+    showDebugOverlays: state.showDebugOverlays,
+    clientDemoOptions: { ...state.clientDemoOptions },
+    createdAt: Date.now(),
+    schemaVersion: LAYOUT_STORAGE_VERSION,
+  };
 }
 
 export interface GovernanceSlice {
@@ -321,6 +446,7 @@ export interface GovernanceSlice {
 export function createGovernanceSlice(set: any, get: any): GovernanceSlice {
   const initialAccess = createDefaultWorkspaceAccessState();
   const initialGovernance = createDefaultWorkspaceGovernance();
+  const initialSavedLayouts = loadLayoutsFromStorage();
   const initialAccount = createDefaultWorkspaceAccountProfile({
     primaryOrganization: "Personal Workspace",
     primaryOwner: "You",
@@ -359,7 +485,7 @@ export function createGovernanceSlice(set: any, get: any): GovernanceSlice {
     fixSandboxDraftScene: null,
     fixSandboxDiff: { camerasChanged: 0, zonesAffected: 0, needsRecompute: true },
 
-    savedLayouts: [],
+    savedLayouts: initialSavedLayouts,
 
     addReportCatalogPreset: (input) => set((state: any) => {
       const preset = createReportCatalogPreset(input);
@@ -1060,29 +1186,20 @@ export function createGovernanceSlice(set: any, get: any): GovernanceSlice {
       const trimmed = name.trim();
       if (!trimmed) return null;
       const state = get();
-      const next: any = {
-        id: `layout_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
-        name: trimmed,
-        viewMode: state.viewMode, canvasMode: state.canvasMode,
-        workspacePreset: state.workspacePreset,
-        leftDockCollapsed: state.leftDockCollapsed,
-        rightDockCollapsed: state.rightDockCollapsed,
-        bottomDockCollapsed: state.bottomDockCollapsed,
-        leftDockSizePx: state.leftDockSizePx,
-        rightDockSizePx: state.rightDockSizePx,
-        bottomDockSizePx: state.bottomDockSizePx,
-        visibleComponents: { ...state.visibleComponents },
-        enabledAnalysisModules: { ...state.enabledAnalysisModules },
-        rightPanelMode: state.rightPanelMode,
-        bottomDrawerMode: state.bottomDrawerMode,
-        pinnedAnalysisModule: state.pinnedAnalysisModule,
-        layerVisibility: { ...state.layerVisibility },
-        overlayDensity: state.overlayDensity,
-        showDebugOverlays: state.showDebugOverlays,
-        clientDemoOptions: { ...state.clientDemoOptions },
-        createdAt: Date.now(),
-      };
-      const savedLayouts = [next, ...state.savedLayouts.filter((l: any) => l.id !== next.id)];
+      const normalizedName = makeUniqueLayoutName(
+        trimmed,
+        state.savedLayouts.map((layout: WorkspaceLayoutRecord) => layout as WorkspaceLayoutRecord),
+      );
+      const next = buildCanonicalSavedLayoutFromState({
+        ...state,
+        name: normalizedName,
+      });
+      const exists = state.savedLayouts.find((layout: WorkspaceLayoutRecord) => (
+        layout.name === normalizedName
+        && !isWorkspaceLayoutModified(layout, next)
+      ));
+      if (exists) return exists;
+      const savedLayouts = [next, ...state.savedLayouts.filter((l: WorkspaceLayoutRecord) => l.id !== next.id)];
       persistSavedLayouts(savedLayouts);
       set({ savedLayouts });
       return next;
@@ -1092,8 +1209,10 @@ export function createGovernanceSlice(set: any, get: any): GovernanceSlice {
       const layout = get().savedLayouts.find((entry: any) => entry.id === layoutId);
       if (!layout) return;
       const patch = buildLayoutStatePatch(layout);
-      const bottomTab = layout.pinnedAnalysisModule && layout.enabledAnalysisModules[layout.pinnedAnalysisModule]
-        ? layout.pinnedAnalysisModule : viewModeToBottomTab(layout.viewMode);
+      const bottomTab = getFirstEnabledAnalysisTab(
+        layout.enabledAnalysisModules as Record<BottomTab, boolean>,
+        layout.pinnedAnalysisModule,
+      );
       set({
         ...patch, focusMode: layout.workspacePreset === "focus",
         previousLayout: null, layerVisibility: { ...layout.layerVisibility },
@@ -1196,14 +1315,27 @@ function loadProjectsFromStorage(): any[] {
   } catch { return []; }
 }
 
-function loadLayoutsFromStorage(): any[] {
-  if (typeof window === "undefined") return [];
+function loadLayoutsFromStorage(): WorkspaceLayoutRecord[] {
+  if (typeof window === "undefined") return buildSeededLayouts();
+
+  const fallbackTime = Date.now();
   try {
-    const raw = localStorage.getItem(LAYOUT_STORAGE_KEY);
-    const source = raw ?? localStorage.getItem(LEGACY_LAYOUT_STORAGE_KEY);
-    if (!source) return [];
-    return JSON.parse(source);
-  } catch { return []; }
+    const legacyValue = localStorage.getItem(LEGACY_LAYOUT_STORAGE_KEY);
+    const modernValue = localStorage.getItem(LAYOUT_STORAGE_KEY);
+    const source = modernValue ?? legacyValue;
+    const parsed = parseStoragePayload(source);
+    const normalized = readStoredLayoutPayload(parsed, fallbackTime);
+    const next = normalized.length > 0 ? normalized : buildSeededLayouts(fallbackTime);
+    if (source !== null) {
+      persistSavedLayouts(next);
+      return next;
+    }
+    return next;
+  } catch {
+    const fallback = buildSeededLayouts(fallbackTime);
+    persistSavedLayouts(fallback);
+    return fallback;
+  }
 }
 
 function persistFixSandboxState(active: boolean, baseline: SecurityScene | null, draft: SecurityScene | null) {

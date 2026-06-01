@@ -5,6 +5,7 @@ export type WorkspaceRole =
   | "installer"
   | "insurer"
   | "privacy_reviewer"
+  | "operations_manager"
   | "admin";
 
 export type WorkspaceApprovalMode = "open" | "review_required";
@@ -24,6 +25,7 @@ export const WORKSPACE_ROLES: WorkspaceRole[] = [
   "installer",
   "insurer",
   "privacy_reviewer",
+  "operations_manager",
   "admin",
 ];
 
@@ -65,6 +67,19 @@ type GovernanceSceneZone = {
 type GovernanceSceneContext = {
   criticalZones?: GovernanceSceneZone[] | null;
   privacyZones?: unknown[] | null;
+  assumptions?: {
+    operationalMode?: "permanent" | "temporary_event";
+    operationalContext?: {
+      isEmergencyWindow?: boolean;
+      requiresTemporaryPerimeterLockdown?: boolean;
+    };
+    operationalScenarioEnvelope?: {
+      active?: boolean;
+      requiresTemporaryPerimeterLockdown?: boolean;
+      requiresStaffingLockdown?: boolean;
+      scope?: "temporary_event" | "temporary_perimeter" | "vip_visit" | "maintenance" | "incident_response" | "other";
+    };
+  } | null;
 };
 
 export function capitalizeLabel(value: string) {
@@ -143,10 +158,24 @@ function hasPrivacyExposure(scene?: GovernanceSceneContext | null) {
   return Boolean(scene?.privacyZones && scene.privacyZones.length > 0);
 }
 
+function requiresScenarioEscalation(scene?: GovernanceSceneContext | null) {
+  if (scene?.assumptions?.operationalMode !== "temporary_event") return false;
+  const context = scene.assumptions?.operationalContext;
+  const envelope = scene.assumptions?.operationalScenarioEnvelope;
+  return Boolean(
+    context?.isEmergencyWindow ||
+      context?.requiresTemporaryPerimeterLockdown ||
+      envelope?.requiresTemporaryPerimeterLockdown ||
+      envelope?.requiresStaffingLockdown ||
+      envelope?.scope === "vip_visit" ||
+      envelope?.scope === "incident_response",
+  );
+}
+
 export function resolveApprovalRoute(governance: WorkspaceGovernanceState, scene?: GovernanceSceneContext | null): WorkspaceRole[] {
   if (governance.approvalMode === "open") return ["operator", "reviewer", "admin"];
 
-  const requiresAdmin = hasHighPriorityCriticalZone(scene);
+  const requiresAdmin = hasHighPriorityCriticalZone(scene) || requiresScenarioEscalation(scene);
   const requiresPrivacyReview = hasPrivacyExposure(scene);
 
   if (requiresAdmin) {

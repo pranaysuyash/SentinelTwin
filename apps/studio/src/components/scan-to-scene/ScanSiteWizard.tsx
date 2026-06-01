@@ -549,6 +549,12 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
     try {
       const compiled = compileScanSessionToScene(session, { autoCreateEntryToZonePath: autoCreatePath });
       setCompileWarnings(compiled.warnings);
+      const compileNotes = [
+        `${session.operationalMode === "permanent" ? "Permanent" : "Temporary"} operation mode selected for this scan.`,
+        ...(session.operationalContext?.isEmergencyWindow ? ["Emergency response window active."] : []),
+        ...(session.operationalContext?.requiresTemporaryPerimeterLockdown ? ["Temporary perimeter lockdown requested."] : []),
+        ...(session.operationalContext?.notes ? [`Operational notes: ${session.operationalContext.notes}`] : []),
+      ];
       recordOperationalEvidenceEvent({
         kind: "scan_session_compiled",
         title: isGuided ? "Guided scan assistant compiled" : "Scan session compiled",
@@ -569,6 +575,7 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
         notes: [
           `Accepted ${compiled.provenance.acceptedCandidates} of ${compiled.provenance.totalCandidates} candidates.`,
           `Rejected ${compiled.provenance.rejectedCandidates} candidates during compile.`,
+          ...compileNotes,
         ],
       });
       onCompile?.(compiled.scene, compiled.provenance, compiled.warnings);
@@ -1263,6 +1270,61 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                       <option value="no">No</option>
                     </select>
                   </label>
+                  <label className="block">
+                    <span className="text-[11px] text-[#9db0d0]">Operational mode</span>
+                    <select
+                      value={session.operationalMode}
+                      onChange={(event) => updateSession({ operationalMode: event.target.value as ScanSession["operationalMode"] })}
+                      className="mt-1 w-full rounded-xl border border-[#243049] bg-[#0a0f17] px-3 py-2 text-sm text-[#e3ebf8] outline-none focus:border-cyan-500/50"
+                    >
+                      <option value="permanent">Permanent controls</option>
+                      <option value="temporary_event">Temporary / event controls</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div className="rounded-xl border border-[#243049] bg-[#0a0f17] p-3 space-y-2">
+                  <label className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] text-[#9db0d0]">Emergency response window</span>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(session.operationalContext?.isEmergencyWindow)}
+                      onChange={(event) => updateSession({
+                        operationalContext: {
+                          ...session.operationalContext,
+                          isEmergencyWindow: event.target.checked,
+                        },
+                      })}
+                    />
+                  </label>
+                  <label className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] text-[#9db0d0]">Temporary perimeter lockdown required</span>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(session.operationalContext?.requiresTemporaryPerimeterLockdown)}
+                      onChange={(event) => updateSession({
+                        operationalContext: {
+                          ...session.operationalContext,
+                          requiresTemporaryPerimeterLockdown: event.target.checked,
+                        },
+                      })}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-[11px] text-[#9db0d0]">Operational notes</span>
+                    <textarea
+                      value={session.operationalContext?.notes ?? ""}
+                      onChange={(event) => updateSession({
+                        operationalContext: {
+                          ...session.operationalContext,
+                          notes: event.target.value,
+                        },
+                      })}
+                      className="mt-1 w-full rounded-xl border border-[#243049] bg-[#09111f] px-3 py-2 text-xs text-[#dce6f5] outline-none"
+                      rows={3}
+                      placeholder="Record access, staffing, perimeter, or timing assumptions for temporary control."
+                    />
+                  </label>
                 </div>
 
                 <div className="rounded-xl border border-cyan-500/15 bg-cyan-500/8 p-3 text-xs text-cyan-100/90">
@@ -1305,6 +1367,12 @@ export function ScanSiteWizard({ onClose, onCompile, mode = "manual" }: ScanSite
                 <div className="rounded-xl border border-[#243049] bg-[#0a0f17] p-3">
                   <div className="text-[11px] text-[#8192b1]">Source</div>
                   <div className="mt-1 text-sm font-medium text-cyan-200">Manual scan</div>
+                </div>
+                <div className="rounded-xl border border-[#243049] bg-[#0a0f17] p-3">
+                  <div className="text-[11px] text-[#8192b1]">Operational mode</div>
+                  <div className="mt-1 text-sm font-medium text-cyan-200">
+                    {session.operationalMode === "permanent" ? "Permanent" : "Temporary / event"}
+                  </div>
                 </div>
               </div>
               <div className="mt-3 rounded-xl border border-[#243049] bg-[#0a0f17] p-3 text-[11px] text-[#9db0d0]">

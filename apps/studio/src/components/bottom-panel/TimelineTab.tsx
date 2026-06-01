@@ -10,6 +10,12 @@ import { distance2D, lerp2D } from "@sentineltwin/core";
 import { QUALITY_ORDER } from "@sentineltwin/core";
 import { VisibilityTimeline } from "@/components/view/VisibilityTimeline";
 import { ExplainBadge } from "@/components/shared/ExplainBadge";
+import {
+  clampPathDuration,
+  clampReplayProgress,
+  findLatestTimelineEventAtOrBeforeTime,
+  sortTimelineEvents,
+} from "@/components/view/camera-view-utils";
 import type { DoriQuality, ScenarioPath, SimulationResult } from "@/schema/security-scene";
 import { useStudioStore } from "@/store/studio-store";
 
@@ -46,7 +52,7 @@ function samplePathPosition(path: ScenarioPath, timeS: number) {
   return path.points[path.points.length - 1]!.position;
 }
 
-function buildRows(path: ScenarioPath, result: SimulationResult["pathResults"][number] | null) {
+function buildRows(path: ScenarioPath, timeline: SimulationResult["pathResults"][number]["timeline"] | undefined) {
   const rows: Array<{
     timeS: number;
     position: [number, number] | null;
@@ -58,9 +64,9 @@ function buildRows(path: ScenarioPath, result: SimulationResult["pathResults"][n
     reason?: string;
   }> = [];
 
-  if (!result) return rows;
+  if (!timeline) return rows;
 
-  for (const evt of result.timeline) {
+  for (const evt of timeline) {
     const normalizedQuality = evt.quality ?? (evt.event === "lost" ? "none" : "detection");
     const severity = normalizedQuality === "none"
       ? "high"
@@ -95,7 +101,7 @@ function buildQualityRibbon(result: SimulationResult["pathResults"][number] | nu
 
   const slots = 20;
   const slotW = durationS / slots;
-  const timeline = [...result.timeline].sort((a, b) => a.timeS - b.timeS);
+  const timeline = sortTimelineEvents(result.timeline);
 
   return Array.from({ length: slots }, (_, index) => {
     const start = index * slotW;
@@ -141,22 +147,25 @@ export function TimelineTab() {
   }, [activePath, result]);
 
   const [subTab, setSubTab] = useState<"timeline" | "events" | "quality" | "edits">("timeline");
-  const totalDuration = activePathResult?.totalDurationS ?? 0;
-  const currentTime = totalDuration > 0 ? pathReplay.progress * totalDuration : 0;
+  const totalDurationS = clampPathDuration(activePathResult?.totalDurationS);
+  const safeReplayProgress = clampReplayProgress(pathReplay.progress);
+  const currentTime = totalDurationS > 0 ? totalDurationS * safeReplayProgress : 0;
+  const timelineEvents = useMemo(() => sortTimelineEvents(activePathResult?.timeline), [activePathResult?.timeline]);
 
   useEffect(() => {
     setPathReplayPlaying(false);
     setPathReplayProgress(0);
   }, [activePath?.id, setPathReplayPlaying, setPathReplayProgress]);
 
-  const rows = useMemo(() => (activePath ? buildRows(activePath, activePathResult) : []), [activePath, activePathResult]);
+  const rows = useMemo(() => (activePath ? buildRows(activePath, timelineEvents) : []), [activePath, timelineEvents]);
   const cameraSummary = useMemo(() => buildCameraSummary(activePathResult), [activePathResult]);
-  const qualityRibbon = useMemo(() => buildQualityRibbon(activePathResult, totalDuration), [activePathResult, totalDuration]);
+  const qualityRibbon = useMemo(() => buildQualityRibbon(activePathResult, totalDurationS), [activePathResult, totalDurationS]);
   const currentEvent = useMemo(() => {
-    if (!rows.length) return null;
-    const pastEvents = rows.filter((row) => row.timeS <= currentTime);
-    return pastEvents[pastEvents.length - 1] ?? rows[0] ?? null;
-  }, [currentTime, rows]);
+    if (!timelineEvents.length) return null;
+    const found = findLatestTimelineEventAtOrBeforeTime(timelineEvents, currentTime);
+    if (!found) return null;
+    return rows.find((row) => row.timeS === found.timeS && row.event === found.event && row.quality === found.quality) ?? null;
+  }, [currentTime, rows, timelineEvents]);
   const highRiskEvents = useMemo(() => {
     const candidates = rows.filter((row) => row.severity === "high" || row.quality === "none");
     return candidates.slice(0, 6);
@@ -182,8 +191,8 @@ export function TimelineTab() {
 
   const bestCamera = cameraSummary[0];
   const leadCameraName = bestCamera ? (camerasById[bestCamera.cameraId] ?? bestCamera.cameraId) : null;
-  const visiblePct = activePathResult && activePathResult.totalDurationS > 0
-    ? Math.round((activePathResult.visibleDurationS / activePathResult.totalDurationS) * 100)
+  const visiblePct = activePathResult && totalDurationS > 0
+    ? Math.round((activePathResult.visibleDurationS / totalDurationS) * 100)
     : 0;
   const visibleCameraSummary = cameraSummary.slice(0, 4);
   const focusLabel = pathReplayFollowActor
@@ -193,10 +202,9 @@ export function TimelineTab() {
       : "No strong lead camera yet";
 
   const handleSeek = useCallback((seconds: number) => {
-    if (totalDuration <= 0) return;
-    const clamped = Math.max(0, Math.min(seconds, totalDuration));
-    setPathReplayProgress(clamped / totalDuration);
-  }, [setPathReplayProgress, totalDuration]);
+    if (totalDurationS <= 0) return;
+    setPathReplayProgress(clampReplayProgress(seconds / totalDurationS));
+  }, [setPathReplayProgress, totalDurationS]);
 
   const handleReset = useCallback(() => {
     setPathReplayPlaying(false);
@@ -204,11 +212,11 @@ export function TimelineTab() {
   }, [setPathReplayPlaying, setPathReplayProgress]);
 
   const handlePlayPause = useCallback(() => {
-    if (currentTime >= totalDuration && totalDuration > 0) {
+    if (currentTime >= totalDurationS && totalDurationS > 0) {
       setPathReplayProgress(0);
     }
     setPathReplayPlaying(!pathReplay.playing);
-  }, [currentTime, pathReplay.playing, setPathReplayPlaying, setPathReplayProgress, totalDuration]);
+  }, [currentTime, pathReplay.playing, setPathReplayPlaying, setPathReplayProgress, totalDurationS]);
 
   if (!result || !activePath) {
     return (
@@ -264,7 +272,7 @@ export function TimelineTab() {
           </button>
           <button
             type="button"
-            onClick={() => handleSeek(Math.min(totalDuration, currentTime + 2))}
+            onClick={() => handleSeek(Math.min(totalDurationS, currentTime + 2))}
             className="flex h-6 w-6 items-center justify-center rounded bg-[#1a1d26] transition-colors hover:bg-[#1e2235]"
             title="Skip forward 2s"
           >
@@ -277,14 +285,14 @@ export function TimelineTab() {
             className="group relative h-4 flex-1 cursor-pointer"
             onClick={(event) => {
               const rect = event.currentTarget.getBoundingClientRect();
-              const pct = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-              handleSeek(pct * totalDuration);
+              const raw = (event.clientX - rect.left) / rect.width;
+              handleSeek(clampReplayProgress(raw) * totalDurationS);
             }}
           >
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#1a1d26]">
               <div
                 className="h-full rounded-full bg-green-500/70 transition-all duration-100"
-                style={{ width: `${pathReplay.progress * 100}%` }}
+                style={{ width: `${safeReplayProgress * 100}%` }}
               />
             </div>
             {qualityRibbon.length > 0 ? (
@@ -304,12 +312,12 @@ export function TimelineTab() {
             ) : null}
             <div
               className="pointer-events-none absolute top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-green-400 shadow"
-              style={{ left: `calc(${pathReplay.progress * 100}% - 5px)` }}
+              style={{ left: `calc(${safeReplayProgress * 100}% - 5px)` }}
             />
           </div>
 
           <div className="min-w-[96px] text-right font-mono text-[10px] text-[#8b96ab]">
-            {formatTime(currentTime)} / {formatTime(totalDuration)}
+            {formatTime(currentTime)} / {formatTime(totalDurationS)}
           </div>
         </div>
 
@@ -428,7 +436,7 @@ export function TimelineTab() {
                 <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#7dd3fc]">Replay Status</div>
                 <div className="mt-1 text-[10px] font-medium text-[#d5e0f5]">{pathReplay.playing ? "Playing" : "Paused"}</div>
                 <div className="mt-1 text-[9px] text-[#5b667c]">
-                  {formatTime(currentTime)} / {formatTime(totalDuration)} · {pathReplay.speed.toFixed(1)}x
+                  {formatTime(currentTime)} / {formatTime(totalDurationS)} · {pathReplay.speed.toFixed(1)}x
                 </div>
               </div>
               <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] px-2.5 py-2 sm:col-span-2 xl:col-span-4">

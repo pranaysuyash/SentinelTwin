@@ -21,6 +21,7 @@ export type ModelEvalFixtureResult = {
   durationMs: number;
   checks: ModelEvalCheck[];
   outputPreview: string;
+  requiresCloud?: boolean;
   skippedReason?: string;
 };
 
@@ -327,6 +328,7 @@ export async function evaluateFixture(
       summary: "Skipped because cloud-backed AI is unavailable under the current provider policy.",
       prompt: fixture.prompt,
       durationMs: Date.now() - startedAt,
+      requiresCloud: fixture.requiresCloud === true,
       checks: [makeCheck("Provider availability", false, "Cloud-backed AI is unavailable.")],
       outputPreview: "Skipped",
       skippedReason: localOnlyMode
@@ -346,6 +348,7 @@ export async function evaluateFixture(
       summary: payload.summary,
       prompt: fixture.prompt,
       durationMs: Math.max(0, Date.now() - startedAt),
+      requiresCloud: fixture.requiresCloud === true,
       checks: payload.checks,
       outputPreview: payload.outputPreview,
     };
@@ -359,6 +362,7 @@ export async function evaluateFixture(
       summary: "Fixture execution failed.",
       prompt: fixture.prompt,
       durationMs: Math.max(0, Date.now() - startedAt),
+      requiresCloud: fixture.requiresCloud === true,
       checks: [makeCheck("Execution", false, message)],
       outputPreview: message,
     };

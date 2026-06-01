@@ -101,6 +101,18 @@ describe("CameraViewMode", () => {
     expect(combinedSource).toContain("Auth:");
     expect(combinedSource).toContain("Auth session:");
     expect(combinedSource).toContain("Challenge:");
+    expect(source).toContain('from "@/components/view/camera-view-utils"');
+    expect(source).toContain("buildReplayStateByCameraAtTime,");
+    expect(source).toContain("clampPathDuration,");
+    expect(source).toContain("clampReplayProgress,");
+    expect(source).toContain("orderCamerasForReplayPlayback,");
+    expect(source).toContain("const safeReplayDurationS = clampPathDuration(activePathResult?.totalDurationS);");
+    expect(source).toContain("const pathTimeS = safeReplayDurationS * safeReplayProgress;");
+    expect(source).toContain("totalSeconds={safeReplayDurationS}");
+    expect(source).not.toContain("function clampReplayProgress(progress");
+    expect(source).not.toContain("function clampPathDuration(durationS");
+    expect(source).not.toContain("return orderCamerasForReplayPlayback");
+    expect(source).not.toContain("const safeReplayDurationS = activePathResult?.totalDurationS > 0");
     expect(source).toContain("st-camera-view-safe-zone");
     expect(source).toContain("--st-full-canvas-safe-top");
   });

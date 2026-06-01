@@ -226,3 +226,151 @@ editing the base documents in-place.
 3. Create/update one addendum per topic with: what was resolved, where cross-references live,
    and the verification evidence.
 4. Optionally add cross-reference banners to high-traffic base docs so readers find the addendum.
+
+## D-043 | 2026-06-01 | Dimension A no-floor-plan readiness contract becomes canonical
+
+**Decision:** Promote `SiteTwinDraftReadiness` to a canonical, cross-flow contract for all draft intake paths (`scan`, AI draft, floor-plan, JSON, manual, camera evidence), and gate approval/simulation messaging through this single readiness policy.
+
+**Rationale:**
+- Dimension-A work requires explicit go/no-go behavior for `scan` and advisory versus production-safe recommendation output.
+- Previous enforcement used scattered warning checks, causing mixed behavior across flows.
+- Simulation trust requires one policy signal that combines prerequisites, warning severity, and confidence.
+
+**Canonical behavior now required:**
+1. `SiteCompilerResult` carries readiness (`deploy-ready`, `review-required`, `insufficient`).
+2. `SiteTwinDraft` carries readiness into review and approval surfaces without translation drift.
+3. Approval remains blocked only when readiness is `insufficient`; `review-required` remains allowed as advisory.
+4. `Docs/exploration/EXPLORATION_MAP.md` Thread 98A tracks this as an implemented stage gate tied to the checklist.
+
+**Updated in this pass:**
+- `apps/studio/src/lib/site-compiler.ts`
+- `apps/studio/src/lib/site-draft-approval.ts`
+- `apps/studio/src/components/site-intake/SiteDraftReview.tsx`
+- `apps/studio/src/app/page.tsx`
+- `apps/studio/src/hooks/use-studio-navigation.ts`
+- `apps/studio/src/lib/scan-to-scene.ts`
+- `Docs/exploration/EXPLORATION_MAP.md`
+- `Docs/todos/no-floor-plan-readiness-checklist.md`
+
+**Open follow-up (kept):**
+- Role-aware policy thresholds (`security consultant` vs `facilities director`).
+- Scenario-layer and temporary-mode semantics for emergency/perimeter workflows.
+
+## D-044 | 2026-06-01 | Dimension-A role-aware review policy is now additive, not schema-breaking
+
+**Decision:** Implement role-aware recommendation posture in the no-floor-plan review lane without changing
+`WorkspaceRole` or introducing backend role extensions.
+
+**Rationale:**
+- Users identified a concrete v1 gap: recommendations were readable but not yet tailored to
+  `security consultant` versus `facilities director` consumer expectations.
+- Dimension-A required a deterministic advisory-vs-production-safe narrative at the review gate
+  while preserving current readiness gates (`canSimulate` / `canRecommend`).
+- No new API or schema changes were needed; the policy can be enforced by read-only UI policy mapping.
+
+**Behavior now required at `SiteDraftReview`:**
+1. Resolution of active role into a persona policy (`consultant`, `facilities_director`, `operations_manager`, `auditor` family mapping).
+2. Approval-action labels now indicate the intended consumer posture (e.g., advisory draft vs operations readiness draft) when `review-required`.
+3. Readiness message block now explains impact in role-specific language:
+   - consultant-oriented language emphasizes evidence-signoff and client advisory posture,
+   - facilities/operator-oriented language emphasizes deployment planning sequencing,
+   - audit/insurer-oriented language emphasizes evidence readiness and packet controls.
+4. Insufficient state remains hard-blocked for hard recommendations in all personas.
+
+**Code anchors updated in this pass:**
+- `apps/studio/src/components/site-intake/SiteDraftReview.tsx`
+- `apps/studio/src/components/product/ProductViewRouter.tsx`
+
+**Remaining follow-up:** Extend the same role-posture split to report/export surfaces and temporary-control scenario escalation (A5/A6/A7).
+
+## D-045 | 2026-06-01 | Dimension-A temporary/permanent split enters scan assumptions contract
+
+**Decision:** Treat operational profile as first-class no-floor-plan context in scan mode by persisting
+`operationalMode` and `operationalContext` in `ScanSession`, `SecurityScene.assumptions`, and draft assumptions.
+
+**Rationale:** Temporary operations (VIP sweeps, emergency readiness, event control windows) were discussed as
+the next frontier for no-floor-plan intake, but earlier pipeline paths treated this as workflow discipline only.
+Dimension-A requires explicit evidence of whether a scene is baseline or temporary when recommending actions.
+
+**Canonical behavior now required:**
+1. `ScanSession` always carries an explicit operational mode with optional context fields.
+2. `compileScanSessionToScene` persists this data into `scene.assumptions`.
+3. Temporary mode lacking perimeter / entry-control markers emits `TEMPORARY_PERIMETER` warning.
+4. `site-compiler` includes operational assumptions in `SiteTwinDraft.assumptions`, and scan provenance notes include
+operational context lines for evidence continuity.
+
+**Updated in this pass:**
+- `apps/studio/src/lib/scan-to-scene.ts`
+- `apps/studio/src/schema/security-scene.ts`
+- `apps/studio/src/lib/site-compiler.ts`
+- `apps/studio/src/components/scan-to-scene/ScanSiteWizard.tsx`
+- `apps/studio/src/lib/__tests__/scan-to-scene.test.ts`
+- `Docs/todos/no-floor-plan-readiness-checklist.md`
+- `Docs/exploration/EXPLORATION_MAP.md`
+
+**Open follow-up (kept):**
+- Define and implement a durable scenario envelope/teardown workflow for A6 (apply, verify, retire temporary controls).
+- Decide whether temporary operational assumptions should become a first-class event profile in all intake paths, not scan-only.
+
+## D-046 | 2026-06-01 | Dimension-A temporary envelope + teardown lock added for scan and reconstruction
+
+**Decision:** Finalize the temporary-event contract across both scan-to-scene pipelines by persisting a durable
+`operationalScenarioEnvelope` in `SecurityScene.assumptions`, including required controls, rollback plan, and
+scenario windowing. Use this envelope in draft assumptions and review surfaces so temporary posture is explicit
+before recommendations move from advisory to production sequencing.
+
+**Rationale:**
+- A6 required a concrete split between permanent and temporary posture with evidence that rollback is enforced.
+- Reconstruction and scan flows were diverging in operational metadata depth; both must produce equivalent
+  assumptions output so the intake contract is stable.
+- Review UI currently supports deterministic, role-aware policy messaging, so temporary control evidence must be
+  visible at the same gate.
+
+**Canonical behavior now required:**
+1. In `compileScanSessionToScene` and `compileReconstructionToScene`, assign `scene.assumptions.operationalMode` and optional
+   `scene.assumptions.operationalContext` when available.
+2. In temporary mode, populate `scene.assumptions.operationalScenarioEnvelope` with profile metadata, control list,
+   and mandatory rollback requirements before compile validation.
+3. In `deriveAssumptions`, emit scenario envelope, window, controls, mandatory teardown, and optional rollback steps
+   as structured draft assumptions.
+4. In review UI, show temporary scenario assumptions in a dedicated operational block so temporary posture is visible at approval.
+
+**Updated in this pass:**
+- `apps/studio/src/lib/scan-reconstruction.ts`
+- `apps/studio/src/lib/site-compiler.ts`
+- `apps/studio/src/components/site-intake/SiteDraftReview.tsx`
+- `Docs/todos/no-floor-plan-readiness-checklist.md`
+- `Docs/exploration/EXPLORATION_MAP.md`
+- `Docs/decisions/DECISION_LOG_ADDENDUM.md`
+
+**Open follow-up (kept):**
+- Define and validate the rollout/teardown "done" signal in the operator evidence packet (artifact checklist, signoff, timestamp).
+
+## D-047 | 2026-06-01 | Dimension-A scenario arbitration includes temporary escalation path
+
+**Decision:** Add explicit scenario-level escalation for temporary emergency/perimeter workflows across scan
+compilation and governance so temporary-mode advisories remain visible and enforce admin-aware review routes.
+
+**Rationale:** Temporary-event scenes could be operationally dangerous if treated as deploy-ready simply because
+base coverage gates pass. Scenario context (emergency window, temporary perimeter, staffing lockdown) must drive a stronger
+approval posture regardless of coverage math.
+
+**Canonical behavior now required:**
+1. `scan-to-scene` and `scan-reconstruction` emit `SCENARIO_ESCALATION_REQUIRED` for temporary emergency/perimeter
+   context during compile.
+2. Escalation warnings keep `readiness.canRecommend = false` and preserve `canSimulate = true` so planners can run
+   deterministic simulation without prematurely approving deployment-ready recommendations.
+3. `resolveApprovalRoute` treats scenario escalation as admin-gated review for publish workflows.
+4. `SiteDraftReview` exposes an explicit scenario escalation block with scope/control/rollback visibility for operators.
+
+**Updated in this pass:**
+- `apps/studio/src/lib/scan-to-scene.ts`
+- `apps/studio/src/lib/scan-reconstruction.ts`
+- `apps/studio/src/lib/scan-artifacts.ts`
+- `apps/studio/src/lib/workspace-governance.ts`
+- `apps/studio/src/components/site-intake/SiteDraftReview.tsx`
+- `apps/studio/src/lib/__tests__/scan-to-scene.test.ts`
+- `apps/studio/src/lib/__tests__/scan-reconstruction.test.ts`
+- `apps/studio/src/lib/__tests__/workspace-governance.test.ts`
+- `Docs/todos/no-floor-plan-readiness-checklist.md`
+- `Docs/exploration/EXPLORATION_MAP.md`

@@ -31,6 +31,7 @@ import {
   type WorkspaceGovernanceState,
   type WorkspaceSceneStatus,
 } from "@/lib/workspace-governance";
+import type { CameraPresetId } from "@/components/workspace/camera-preset-utils";
 
 function resetWorkspaceGovernanceForDraft(governance: WorkspaceGovernanceState): WorkspaceGovernanceState {
   return {
@@ -767,7 +768,7 @@ export interface SceneSlice {
   activeTool: ActiveTool;
   sensorPlacementType: SensorNode["sensorType"];
   editor: EditorDraft;
-  cameraPresetId: string | null;
+  cameraPresetId: CameraPresetId | null;
   heatmapHover: HeatmapHoverState | null;
   heatmapMode: HeatmapMode;
   environmentMode: "day" | "night" | "dusk";
@@ -832,7 +833,7 @@ export interface SceneSlice {
 
   setActiveTool: (tool: ActiveTool) => void;
   setSensorPlacementType: (sensorType: SensorNode["sensorType"]) => void;
-  setCameraPresetId: (presetId: string | null) => void;
+  setCameraPresetId: (presetId: CameraPresetId | null) => void;
   setHeatmapMode: (mode: HeatmapMode) => void;
   setHeatmapHover: (hover: HeatmapHoverState | null) => void;
   setEnvironmentMode: (mode: "day" | "night" | "dusk") => void;
@@ -1744,4 +1745,3 @@ export const createSceneSlice = (set: any, get: any): SceneSlice => {
   },
 };
 };
-

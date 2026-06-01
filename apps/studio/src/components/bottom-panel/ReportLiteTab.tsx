@@ -26,6 +26,7 @@ import {
   type ReportStandardTemplateId,
   type ReportVisibility,
 } from "@sentineltwin/report";
+import { type WorkspaceRole } from "@/lib/workspace-governance";
 import {
   buildReportCatalogPresets,
   createReportCatalogPreset,
@@ -57,6 +58,21 @@ type InfrastructureEstimate = {
   nvrChannels: number;
 };
 
+const ROLE_TO_REPORT_AUDIENCE: Record<WorkspaceRole, ReportAudience> = {
+  operator: "facilities_director",
+  reviewer: "consultant",
+  installer: "operations_manager",
+  insurer: "auditor",
+  auditor: "auditor",
+  privacy_reviewer: "privacy_reviewer",
+  admin: "facilities_director",
+  operations_manager: "operations_manager",
+};
+
+function getDefaultReportAudience(activeRole: WorkspaceRole) {
+  return ROLE_TO_REPORT_AUDIENCE[activeRole] ?? "operator";
+}
+
 export function ReportLiteTab() {
   const result = useStudioStore((s) => s.simulationResult);
   const scene = useStudioStore((s) => s.scene);
@@ -65,6 +81,7 @@ export function ReportLiteTab() {
   const operationalEvidenceEvents = useStudioStore((s) => s.operationalEvidenceEvents);
   const compareVisualEvidence = useStudioStore((s) => s.compareVisualEvidence);
   const compareReportSelection = useStudioStore((s) => s.compareReportSelection);
+  const workspaceGovernance = useStudioStore((s) => s.workspaceGovernance);
   const activePathId = useStudioStore((s) => s.activePathId);
   const { runReportGeneration } = useAiCommand();
   const [aiReport, setAiReport] = useState<SecurityReport | null>(null);
@@ -72,10 +89,13 @@ export function ReportLiteTab() {
   const [reportMode, setReportMode] = useState<"single" | "compare">(compareReportSelection ? "compare" : "single");
   const defaultTemplateId: ReportStandardTemplateId = scene.assumptions.doriStandard === "oodpcvs_2025" ? "oodpcvs-audit" : "dori-audit";
   const [reportCatalogState, setReportCatalogState] = useState<ReportCatalogState>(() => loadReportCatalogState());
-  const [reportAudience, setReportAudience] = useState<ReportAudience>("operator");
+  const [reportAudience, setReportAudience] = useState<ReportAudience>(() => getDefaultReportAudience(workspaceGovernance.activeRole));
   const [reportVisibility, setReportVisibility] = useState<ReportVisibility>("internal");
   const [reportTemplateId, setReportTemplateId] = useState<ReportStandardTemplateId>(defaultTemplateId);
-  const [presetNameDraft, setPresetNameDraft] = useState("Operator Evidence");
+  const [presetNameDraft, setPresetNameDraft] = useState(() => {
+    const defaultAudience = getDefaultReportAudience(workspaceGovernance.activeRole);
+    return `${getReportAudienceProfile(defaultAudience).label} Evidence`;
+  });
   const [snapshotAId, setSnapshotAId] = useState<string | null>(null);
   const [snapshotBId, setSnapshotBId] = useState<string | null>(null);
   const activePath = scene.paths.find((path) => path.id === activePathId) ?? null;
@@ -153,6 +173,15 @@ export function ReportLiteTab() {
       };
     });
   }, [result, scene.criticalZones]);
+
+  useEffect(() => {
+    if (selectedCatalogPreset) return;
+    const nextDefaultAudience = getDefaultReportAudience(workspaceGovernance.activeRole);
+    if (nextDefaultAudience === reportAudience) return;
+    setReportAudience(nextDefaultAudience);
+    syncCatalogSelection(nextDefaultAudience, reportVisibility, reportTemplateId);
+  }, [selectedCatalogPreset, reportAudience, reportTemplateId, reportVisibility, workspaceGovernance.activeRole]);
+
   const installerHandoffMarkdown = useMemo(() => {
     const lines = [
       "# SentinelTwin Installer Handoff",
@@ -620,12 +649,15 @@ export function ReportLiteTab() {
               }}
               className="rounded border border-[#24283a] bg-[#111521] px-2 py-0.5 text-[9px] text-[#d2d9e8]"
             >
-              <option value="operator">Operator</option>
-              <option value="auditor">Auditor</option>
-              <option value="insurer">Insurer</option>
-              <option value="installer">Installer</option>
-              <option value="privacy_reviewer">Privacy reviewer</option>
-            </select>
+            <option value="operator">Operator</option>
+            <option value="consultant">Security Consultant</option>
+            <option value="facilities_director">Facilities Director</option>
+            <option value="auditor">Auditor</option>
+            <option value="insurer">Insurer</option>
+            <option value="installer">Installer</option>
+            <option value="operations_manager">Operations Manager</option>
+            <option value="privacy_reviewer">Privacy reviewer</option>
+          </select>
           </label>
           <label className="flex items-center gap-1 rounded border border-[#1e2130] bg-[#0f141f] px-2 py-1 text-[9px] text-[#8090a8]">
             Visibility

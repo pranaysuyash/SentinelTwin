@@ -115,6 +115,20 @@ The camera-feed panel renders the simulated camera's first-person view.
 Implementation: A secondary `<Canvas>` component in R3F, rendering the same scene from a
 `THREE.PerspectiveCamera` locked to the simulated camera's position and orientation.
 
+### Deterministic PTZ replay feed synthesis
+
+For replay and verification modes, camera feed poses are not sampled from live telemetry.
+Instead, they are deterministically synthesized from `CameraNode.viewMotion` at the
+current replay timestamp:
+
+- `fixed` -> static yaw/pitch from `camera.yawDeg`/`pitchDeg`.
+- `preset_cycle`, `sweep_h`, `sweep_v`, `tracking` with 2+ waypoints -> waypoint interpolation with hold/transition timing and speed constraints.
+- Sweep-only modes without waypoints -> periodic sinusoidal sweep (`±45°` yaw, `±30°` pitch).
+
+The sampled pose is then applied as an optional override to both
+`CameraRigLive` (single camera view) and `CameraRigFixed` (camera wall tiles),
+while the stored `CameraNode` orientation remains unchanged.
+
 ```typescript
 <CameraFeedCanvas
   cameraNode={selectedCamera}

@@ -72,6 +72,188 @@ export type WorkspaceLayoutSnapshot = {
   };
 };
 
+export type WorkspaceLayoutRecord = WorkspaceLayoutSnapshot & {
+  id: string;
+  name: string;
+  createdAt: number;
+  schemaVersion: number;
+};
+
+export const LAYOUT_STORAGE_VERSION = 2;
+
+type UnknownRecord = Record<string, unknown>;
+
+const WORKSPACE_PRESETS: WorkspacePreset[] = [
+  "edit",
+  "coverage",
+  "camera_wall",
+  "replay",
+  "compare",
+  "report",
+  "debug",
+  "focus",
+];
+
+const PRESET_NAME_BY_KEY: Record<WorkspacePreset, string> = {
+  edit: "Edit",
+  coverage: "Coverage",
+  camera_wall: "Camera Wall",
+  replay: "Replay",
+  compare: "Compare",
+  report: "Report",
+  debug: "Debug",
+  focus: "Focus",
+};
+
+function isPlainObject(value: unknown): value is UnknownRecord {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isWorkspacePreset(value: unknown): value is WorkspacePreset {
+  return typeof value === "string" && (WORKSPACE_PRESETS as readonly string[]).includes(value);
+}
+
+function isViewMode(value: unknown): value is ViewMode {
+  return value === "map" || value === "wall" || value === "replay" || value === "camera_view" || value === "compare" || value === "report";
+}
+
+function isCanvasMode(value: unknown): value is CanvasMode {
+  return value === "orbit_3d" || value === "topdown_2d";
+}
+
+function isBottomTab(value: unknown): value is BottomTab {
+  return typeof value === "string" && ANALYSIS_MODULE_IDS.includes(value as BottomTab);
+}
+
+function isBottomDrawer(value: unknown): value is BottomDrawerMode {
+  return value === "tabs" || value === "single_module" || value === "hidden";
+}
+
+function isRightPanelMode(value: unknown): value is RightPanelMode {
+  return value === "inspector"
+    || value === "security_status"
+    || value === "issues"
+    || value === "recommendations"
+    || value === "assumptions"
+    || value === "camera_controls"
+    || value === "bulk_camera"
+    || value === "governance";
+}
+
+function isOverlayDensity(value: unknown): value is OverlayDensity {
+  return value === "all" || value === "compact" || value === "minimal";
+}
+
+function clampNumber(value: unknown, fallback: number): number {
+  const candidate = Number(value);
+  return Number.isFinite(candidate) ? candidate : fallback;
+}
+
+function coerceBoolean(value: unknown, fallback: boolean): boolean {
+  return typeof value === "boolean" ? value : fallback;
+}
+
+function coerceNonEmptyString(value: unknown, fallback: string): string {
+  if (typeof value !== "string") return fallback;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : fallback;
+}
+
+function cloneRecordMap<T extends string>(baseline: Record<T, boolean>, raw?: UnknownRecord): Record<T, boolean> {
+  const next = { ...baseline } as Record<T, boolean>;
+  if (!isPlainObject(raw)) return next;
+  for (const key of Object.keys(next) as T[]) {
+    if (typeof raw[key] === "boolean") next[key] = raw[key];
+  }
+  return next;
+}
+
+function normalizeWorkspaceLayoutRecordCandidate(candidate: UnknownRecord): WorkspaceLayoutRecord | null {
+  const preset = isWorkspacePreset(candidate.workspacePreset) ? candidate.workspacePreset : "edit";
+  const presetSnapshot = getPresetLayoutSnapshot(preset, DEFAULT_LAYERS);
+  const normalized = {
+    viewMode: isViewMode(candidate.viewMode) ? candidate.viewMode : presetSnapshot.viewMode,
+    workspacePreset: preset,
+    canvasMode: isCanvasMode(candidate.canvasMode) ? candidate.canvasMode : presetSnapshot.canvasMode,
+    leftDockCollapsed: coerceBoolean(candidate.leftDockCollapsed, presetSnapshot.leftDockCollapsed),
+    rightDockCollapsed: coerceBoolean(candidate.rightDockCollapsed, presetSnapshot.rightDockCollapsed),
+    bottomDockCollapsed: coerceBoolean(candidate.bottomDockCollapsed, presetSnapshot.bottomDockCollapsed),
+    leftDockSizePx: Math.round(clampNumber(candidate.leftDockSizePx, presetSnapshot.leftDockSizePx)),
+    rightDockSizePx: Math.round(clampNumber(candidate.rightDockSizePx, presetSnapshot.rightDockSizePx)),
+    bottomDockSizePx: Math.round(clampNumber(candidate.bottomDockSizePx, presetSnapshot.bottomDockSizePx)),
+    visibleComponents: cloneRecordMap(presetSnapshot.visibleComponents, candidate.visibleComponents as UnknownRecord),
+    enabledAnalysisModules: cloneRecordMap(presetSnapshot.enabledAnalysisModules, candidate.enabledAnalysisModules as UnknownRecord),
+    layerVisibility: cloneRecordMap(presetSnapshot.layerVisibility, candidate.layerVisibility as UnknownRecord),
+    rightPanelMode: isRightPanelMode(candidate.rightPanelMode) ? candidate.rightPanelMode : presetSnapshot.rightPanelMode,
+    bottomDrawerMode: isBottomDrawer(candidate.bottomDrawerMode) ? candidate.bottomDrawerMode : presetSnapshot.bottomDrawerMode,
+    pinnedAnalysisModule: isBottomTab(candidate.pinnedAnalysisModule) ? candidate.pinnedAnalysisModule : presetSnapshot.pinnedAnalysisModule,
+    overlayDensity: isOverlayDensity(candidate.overlayDensity) ? candidate.overlayDensity : presetSnapshot.overlayDensity,
+    showDebugOverlays: coerceBoolean(candidate.showDebugOverlays, presetSnapshot.showDebugOverlays),
+    clientDemoOptions: {
+      hideDebugModules: coerceBoolean((candidate.clientDemoOptions as UnknownRecord)?.hideDebugModules, presetSnapshot.clientDemoOptions.hideDebugModules),
+      simplifiedLabels: coerceBoolean((candidate.clientDemoOptions as UnknownRecord)?.simplifiedLabels, presetSnapshot.clientDemoOptions.simplifiedLabels),
+      criticalIssuesOnly: coerceBoolean((candidate.clientDemoOptions as UnknownRecord)?.criticalIssuesOnly, presetSnapshot.clientDemoOptions.criticalIssuesOnly),
+      lockLayout: coerceBoolean((candidate.clientDemoOptions as UnknownRecord)?.lockLayout, presetSnapshot.clientDemoOptions.lockLayout),
+    },
+  };
+  const id = coerceNonEmptyString(candidate.id, `layout_${Math.random().toString(36).slice(2, 9)}`);
+  const createdAt = clampNumber(candidate.createdAt, Date.now());
+  const createdName = coerceNonEmptyString(candidate.name, PRESET_NAME_BY_KEY[normalized.workspacePreset]);
+  return {
+    ...normalized,
+    id,
+    name: createdName,
+    createdAt,
+    schemaVersion: typeof candidate.schemaVersion === "number" ? candidate.schemaVersion : LAYOUT_STORAGE_VERSION,
+  };
+}
+
+export function normalizeSavedLayoutRecords(raw: unknown): WorkspaceLayoutRecord[] {
+  if (!isPlainObject(raw) && !Array.isArray(raw)) return [];
+  if (Array.isArray(raw)) {
+    return raw
+      .map((entry) => (isPlainObject(entry) ? normalizeWorkspaceLayoutRecordCandidate(entry) : null))
+      .filter((layout): layout is WorkspaceLayoutRecord => layout !== null);
+  }
+
+  const payload = raw as UnknownRecord;
+  if (Array.isArray(payload.layouts)) {
+    return payload.layouts
+      .map((entry) => (isPlainObject(entry) ? normalizeWorkspaceLayoutRecordCandidate(entry) : null))
+      .filter((layout): layout is WorkspaceLayoutRecord => layout !== null);
+  }
+
+  return [];
+}
+
+export function buildSeededLayouts(baseTime = Date.now()): WorkspaceLayoutRecord[] {
+  return ["edit", "coverage", "camera_wall", "replay", "compare", "report"].map((preset, index) => {
+    const layout = getPresetLayoutSnapshot(preset, DEFAULT_LAYERS);
+    return {
+      id: `seeded_layout_${preset}`,
+      name: PRESET_NAME_BY_KEY[preset],
+      schemaVersion: LAYOUT_STORAGE_VERSION,
+      createdAt: baseTime + index * 60_000,
+      ...layout,
+    };
+  });
+}
+
+function canonicalize(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => canonicalize(entry));
+  }
+  if (isPlainObject(value)) {
+    const keys = Object.keys(value).sort();
+    const out: UnknownRecord = {};
+    keys.forEach((key) => {
+      out[key] = canonicalize(value[key]);
+    });
+    return out;
+  }
+  return value;
+}
+
 const BASE_COMPONENT_VISIBILITY: Record<WorkspaceComponentId, boolean> = {
   coverage_legend: true,
   north_compass: true,
@@ -281,5 +463,5 @@ export function isWorkspaceLayoutModified(
   current: WorkspaceLayoutSnapshot,
   baseline: WorkspaceLayoutSnapshot,
 ) {
-  return JSON.stringify(current) !== JSON.stringify(baseline);
+  return JSON.stringify(canonicalize(current)) !== JSON.stringify(canonicalize(baseline));
 }

@@ -9,6 +9,7 @@ import {
 import type { SiteIntakeSession, ActionableWarning, SiteTwinDraft, SuggestedNextAction, SiteIntakeSource } from "@/lib/site-compiler";
 import { canRunBaselineSimulation, compileToSiteTwinDraft, SITE_SOURCE_MATURITY } from "@/lib/site-compiler";
 import type { SecurityScene } from "@/schema/security-scene";
+import { type WorkspaceRole } from "@/lib/workspace-governance";
 
 const severityIcon: Record<ActionableWarning["severity"], React.ReactNode> = {
   blocking: <XCircle className="h-3.5 w-3.5 text-red-400" />,
@@ -47,6 +48,7 @@ type SiteDraftReviewProps = {
   onReject: () => void;
   onEdit?: () => void;
   onRunBaselineSimulation?: () => void;
+  activeRole: WorkspaceRole;
 };
 
 const SOURCE_APPROVAL_LABELS: Record<SiteIntakeSource, string> = {
@@ -66,6 +68,100 @@ const SOURCE_BLOCKED_LABELS: Record<SiteIntakeSource, string> = {
   manual: "Add prerequisites first",
   camera_evidence: "Capture evidence first",
 };
+
+type ReviewPersona = "consultant" | "facilities_director" | "operations_manager" | "auditor";
+
+type PersonaPolicy = {
+  roleLabel: string;
+  deployMessage: string;
+  reviewMessage: string;
+  insufficientMessage: string;
+  approveSuffix: {
+    deploy: string;
+    review: string;
+  };
+};
+
+const PERSONA_BY_ROLE: Record<WorkspaceRole, ReviewPersona> = {
+  operator: "facilities_director",
+  reviewer: "consultant",
+  installer: "operations_manager",
+  insurer: "auditor",
+  privacy_reviewer: "auditor",
+  operations_manager: "operations_manager",
+  admin: "facilities_director",
+};
+
+const PERSONA_POLICY: Record<ReviewPersona, PersonaPolicy> = {
+  consultant: {
+    roleLabel: "Security Consultant",
+    deployMessage:
+      "Consulting posture: simulation findings can support evidence-backed recommendations only after explicit analyst sign-off.",
+    reviewMessage:
+      "Consulting posture: ranking is valid, but operational recommendations should remain advisory until final validation.",
+    insufficientMessage:
+      "Hard recommendations are blocked for consultant outputs. Resolve blocking prerequisites and rerun review first.",
+    approveSuffix: {
+      deploy: "for Client Advisory Readiness",
+      review: "as Consultant Review Draft",
+    },
+  },
+  facilities_director: {
+    roleLabel: "Facilities Director",
+    deployMessage:
+      "Operational posture: proceed to deployment planning once prerequisites pass and rollout sequencing is approved.",
+    reviewMessage:
+      "Operational posture: findings are useful for planning, but this draft is advisory until high-confidence prerequisites pass.",
+    insufficientMessage:
+      "Do not operationalize yet. Resolve blocking prerequisites and rerun review before perimeter, staffing, or policy changes.",
+    approveSuffix: {
+      deploy: "for Operations Readiness",
+      review: "as Operations Review Draft",
+    },
+  },
+  operations_manager: {
+    roleLabel: "Operations Manager",
+    deployMessage:
+      "Ops posture: use this as routing and staffing prep, then promote after practical checks and change control.",
+    reviewMessage:
+      "Ops posture: findings are helpful for event planning, but advisory limits still apply until confidence clears.",
+    insufficientMessage:
+      "No event deployment decisions yet. Resolve blocking prerequisites before temporary controls are applied.",
+    approveSuffix: {
+      deploy: "for Ops Readiness Draft",
+      review: "as Temporary Controls Review Draft",
+    },
+  },
+  auditor: {
+    roleLabel: "Auditor/Insurer",
+    deployMessage:
+      "Audit posture: this can support evidence prep once prerequisite checks are complete and signatures are attached.",
+    reviewMessage:
+      "Audit posture: this draft is consultative until evidence, assumptions, and confidence are finalized.",
+    insufficientMessage:
+      "Audit-grade recommendations are blocked. Fix blockers and re-run review before use for claims or compliance packets.",
+    approveSuffix: {
+      deploy: "for Evidence Packet Draft",
+      review: "as Evidence Review Draft",
+    },
+  },
+};
+
+function isTemporaryScenarioEscalation(scene: SecurityScene): boolean {
+  if (scene.assumptions.operationalMode !== "temporary_event") return false;
+  const context = scene.assumptions.operationalContext;
+  const envelope = scene.assumptions.operationalScenarioEnvelope;
+  return Boolean(
+    context?.isEmergencyWindow ||
+      context?.requiresTemporaryPerimeterLockdown ||
+      envelope?.requiresTemporaryPerimeterLockdown ||
+      envelope?.requiresStaffingLockdown,
+  );
+}
+
+function resolvePersonaPolicy(role: WorkspaceRole): PersonaPolicy {
+  return PERSONA_POLICY[PERSONA_BY_ROLE[role]];
+}
 
 type XzPoint = [number, number];
 
@@ -253,7 +349,14 @@ function DraftSceneMiniPreview({ scene, warnings }: { scene: SecurityScene; warn
   );
 }
 
-export function SiteDraftReview({ session, onApprove, onReject, onEdit, onRunBaselineSimulation }: SiteDraftReviewProps) {
+export function SiteDraftReview({
+  session,
+  onApprove,
+  onReject,
+  onEdit,
+  onRunBaselineSimulation,
+  activeRole,
+}: SiteDraftReviewProps) {
   const result = session.result;
 
   if (!result) {
@@ -267,12 +370,28 @@ export function SiteDraftReview({ session, onApprove, onReject, onEdit, onRunBas
   const draft = session.draft ?? compileToSiteTwinDraft(result);
   const hasBlockers = draft.warnings.some((w) => w.severity === "blocking");
   const canBaseline = canRunBaselineSimulation(draft);
+  const readiness = draft.readiness;
+  const hasReviewRequired = readiness.level === "review-required";
+  const isInsufficient = readiness.level === "insufficient";
   const confidencePct = Math.round(draft.confidence * 100);
   const confidenceColor = draft.confidenceLabel === "high" ? "text-emerald-300" : draft.confidenceLabel === "medium" ? "text-amber-300" : "text-red-300";
   const sourceInfo = SITE_SOURCE_MATURITY[draft.source];
+  const personaPolicy = resolvePersonaPolicy(activeRole);
+  const isScenarioEscalation = isTemporaryScenarioEscalation(draft.scene) || draft.warnings.some((warning) => warning.code === "SCENARIO_ESCALATION_REQUIRED");
+  const scenarioAssumptions = draft.assumptions.filter((assumption) => {
+    const label = assumption.label.toLowerCase();
+    return label.startsWith("scenario") || label.startsWith("teardown");
+  });
+  const readinessColor = readiness.level === "deploy-ready"
+    ? "text-emerald-300"
+    : readiness.level === "review-required"
+      ? "text-amber-300"
+      : "text-red-300";
   const approveLabel = hasBlockers
     ? (SOURCE_BLOCKED_LABELS[draft.source] ?? "Fix warnings before approving")
-    : (SOURCE_APPROVAL_LABELS[draft.source] ?? "Approve & Open in Studio");
+    : readiness.canRecommend
+      ? `${SOURCE_APPROVAL_LABELS[draft.source] ?? "Approve"} (${personaPolicy.approveSuffix.deploy})`
+      : `${SOURCE_APPROVAL_LABELS[draft.source] ?? "Approve"} (${personaPolicy.approveSuffix.review})`;
 
   return (
     <div className="flex h-full w-full flex-col overflow-y-auto" style={{ background: "var(--bg)" }}>
@@ -400,17 +519,32 @@ export function SiteDraftReview({ session, onApprove, onReject, onEdit, onRunBas
             </div>
 
             <div className="rounded-2xl border border-[color:var(--border)] bg-white/[0.03] p-4">
-              <div className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--text-dim)]">Source</div>
-              <div className="mt-2 space-y-1 text-[12px] text-[color:var(--text-muted)]">
-                <div className="flex items-center gap-1">
-                  {SOURCE_ICONS[draft.source]}
-                  <span>Mode: <span className="text-white">{draft.source}</span></span>
+                <div className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--text-dim)]">Source</div>
+                <div className="mt-2 space-y-1 text-[12px] text-[color:var(--text-muted)]">
+                  <div className="flex items-center gap-1">
+                    {SOURCE_ICONS[draft.source]}
+                    <span>Mode: <span className="text-white">{draft.source}</span></span>
                 </div>
                 <div>Label: <span className="text-white">{draft.provenance.sourceLabel}</span></div>
                 <div>Status: <span className={sourceInfo.status === "Working" ? "text-emerald-300" : "text-violet-300"}>{sourceInfo.status}</span></div>
                 <div className="pt-1 text-[10px] leading-5 text-[color:var(--text-dim)]">{sourceInfo.description}</div>
                 <div className="pt-1">Confidence: <span className={confidenceColor}>{confidencePct}% ({draft.confidenceLabel})</span></div>
                 <div>Baseline sim: <span className={canBaseline ? "text-emerald-300" : "text-amber-300"}>{canBaseline ? "Ready" : "Not ready"}</span></div>
+                <div>
+                  Readiness:{" "}
+                  <span className={readinessColor}>
+                    {readiness.level === "deploy-ready" ? "deploy-ready" : readiness.level === "review-required" ? "review-required" : "insufficient"}
+                  </span>
+                  {readiness.summary ? ` · ${readiness.summary}` : ""}
+                </div>
+                <div className="pt-1 text-amber-100">
+                  <span className="font-semibold">{personaPolicy.roleLabel} policy:</span>{" "}
+                  {isInsufficient
+                    ? personaPolicy.insufficientMessage
+                    : hasReviewRequired
+                      ? personaPolicy.reviewMessage
+                      : personaPolicy.deployMessage}
+                </div>
               </div>
             </div>
 
@@ -437,6 +571,37 @@ export function SiteDraftReview({ session, onApprove, onReject, onEdit, onRunBas
                     </div>
                   ))}
                 </div>
+              </div>
+            ) : null}
+
+            {scenarioAssumptions.length > 0 ? (
+              <div className="rounded-2xl border border-violet-300/30 bg-violet-500/[0.03] p-4">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-violet-300">Operational Scenario</div>
+                <div className="mt-2 space-y-1 text-[12px]">
+                  {scenarioAssumptions.map((assumption, i) => (
+                    <div key={`${assumption.label}-${i}`} className="flex items-start gap-2">
+                      <span className="mt-0.5 text-[10px] uppercase tracking-[0.1em] text-violet-200/80">[{assumption.label}]</span>
+                      <span className="text-[color:var(--text-muted)]">{assumption.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {isScenarioEscalation ? (
+              <div className="rounded-2xl border border-amber-300/40 bg-amber-500/[0.04] p-4">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-amber-300">Scenario escalation required</div>
+                <div className="mt-2 text-[12px] text-amber-100">
+                  Temporary perimeter/emergency context is active. This draft remains advisory-only until explicit admin escalation and control evidence are captured.
+                </div>
+                {draft.scene.assumptions.operationalScenarioEnvelope ? (
+                  <ul className="mt-2 space-y-1 text-[12px] text-[color:var(--text-muted)]">
+                    <li>Scope: {draft.scene.assumptions.operationalScenarioEnvelope.scope.replace("_", " ")}.</li>
+                    <li>Controls required: {draft.scene.assumptions.operationalScenarioEnvelope.temporaryControls.join(" · ") || "none listed"}.</li>
+                    <li>
+                      Teardown required: {draft.scene.assumptions.operationalScenarioEnvelope.rollBackRequired ? "yes" : "no"}.
+                    </li>
+                  </ul>
+                ) : null}
               </div>
             ) : null}
 

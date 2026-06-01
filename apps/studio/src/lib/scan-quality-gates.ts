@@ -6,7 +6,8 @@ export type QualityGate =
   | "MULTI_PHOTO_REQUIRED"
   | "SCALE_ANCHOR_REQUIRED"
   | "DEPTH_DATA_REQUIRED"
-  | "MIN_CANDIDATE_CONFIDENCE";
+  | "MIN_CANDIDATE_CONFIDENCE"
+  | "TEMPORARY_EVENT_PERIMETER";
 
 export type QualityGateResult = {
   gate: QualityGate;
@@ -67,6 +68,12 @@ export const QUALITY_GATE_DEFINITIONS: Array<{
     required: false,
     defaultThreshold: 0.4,
     description: "Candidates below the confidence threshold are flagged.",
+  },
+  {
+    gate: "TEMPORARY_EVENT_PERIMETER",
+    label: "Temporary Event Perimeter",
+    required: false,
+    description: "Temporary events should include explicit entry-point/perimeter markers.",
   },
 ];
 
@@ -162,6 +169,26 @@ export function evaluateQualityGates(
       : `${lowConfCandidates.length} candidate(s) below confidence threshold ${minConfidence}.`,
     value: lowConfCandidates.length,
     threshold: minConfidence,
+  });
+
+  const hasEventBoundary = session.candidates.some(
+    (c) =>
+      (c.status === "accepted" || c.status === "edited") &&
+      (c.kind === "entry_point" || c.kind === "door"),
+  );
+  gates.push({
+    gate: "TEMPORARY_EVENT_PERIMETER",
+    label: "Temporary Event Perimeter",
+    passed: session.operationalMode !== "temporary_event" || hasEventBoundary,
+    required: overrides?.TEMPORARY_EVENT_PERIMETER?.required ?? false,
+    message:
+      session.operationalMode !== "temporary_event"
+        ? "Not applicable: this is a permanent/ongoing deployment."
+        : hasEventBoundary
+          ? "Entry points / perimeter markers captured for temporary setup."
+          : "No entry points or perimeter markers captured for temporary-event setup.",
+    value: hasEventBoundary ? "captured" : "missing",
+    threshold: "entry_point_or_door",
   });
 
   const requiredFailed = gates.filter((g) => g.required && !g.passed);

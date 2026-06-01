@@ -41,7 +41,7 @@ function buildBasicScene() {
       id: "zone_counter",
       nodeType: "critical_zone",
       label: "Counter",
-      targetType: "person",
+      targetType: "person_detection",
       polygon: [
         [2, 1.5],
         [4, 1.5],

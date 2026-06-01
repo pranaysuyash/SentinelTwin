@@ -11,6 +11,8 @@ describe("CameraInspector", () => {
     expect(source).toContain("CameraSpecImport");
     expect(source).toContain("recordOperationalEvidenceEvent");
     expect(source).toContain("evidenceEvents");
+    expect(source).toContain("Camera Motion");
+    expect(source).toContain("setViewMotion({");
     expect(source).toContain("ONVIF relay");
   });
 });

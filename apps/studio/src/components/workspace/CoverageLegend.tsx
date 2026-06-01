@@ -1,9 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown, ChevronUp, Eye, EyeOff, Filter, Layers, Crosshair, Sigma, Grid3x3, Shield, Sun, Target } from "lucide-react";
+import { type ReactNode, useState } from "react";
+import { ChevronDown, ChevronUp, EyeOff, Filter, Layers, Sigma, Shield, Sun, Target } from "lucide-react";
 import { MAP_COLORS } from "@/components/map/map-colors";
 import { useStudioStore, type OverlayDensity, type OverlayFilterId, type HeatmapMode } from "@/store/studio-store";
+
+type LegendModeLevel = { label: string; range: string; detail: string; color: string };
+type CoverageLegendConfig = {
+  mode: HeatmapMode;
+  label: string;
+  icon: ReactNode;
+  description: string;
+  levels: LegendModeLevel[];
+  legendNote?: string;
+};
 
 const QUALITY_LEVELS = [
   { label: "Identify a person", range: "250+ PPM", detail: "clear face/detail evidence", color: "#3b82f6" },
@@ -27,8 +37,17 @@ const LIGHTING_LEVELS = [
   { label: "Dark", range: "<12%", detail: "No useful light", color: "#1c2435" },
 ];
 
-const MODE_CONFIG: { mode: HeatmapMode; label: string; icon: React.ReactNode; description: string; levels: { label: string; range: string; detail: string; color: string }[]; legendNote?: string }[] = [
-  {
+const MODE_ORDER: HeatmapMode[] = [
+  "quality",
+  "fragility",
+  "lighting",
+  "overlap",
+  "contribution",
+  "blindspots",
+] as const;
+
+const MODE_CONFIG: Record<HeatmapMode, CoverageLegendConfig> = {
+  quality: {
     mode: "quality",
     label: "Quality",
     icon: <Target className="h-3 w-3" />,
@@ -36,7 +55,7 @@ const MODE_CONFIG: { mode: HeatmapMode; label: string; icon: React.ReactNode; de
     levels: QUALITY_LEVELS,
     legendNote: "PPM means pixels per meter at that floor cell. Higher PPM means clearer faces, bodies, and evidence; lower PPM means the camera may only detect movement or miss the spot.",
   },
-  {
+  fragility: {
     mode: "fragility",
     label: "Fragility",
     icon: <Shield className="h-3 w-3" />,
@@ -44,7 +63,7 @@ const MODE_CONFIG: { mode: HeatmapMode; label: string; icon: React.ReactNode; de
     levels: FRAGILITY_LEVELS,
     legendNote: "Fragile cells are near a quality boundary. A small camera move, obstruction, or lighting change can turn them from pass to fail.",
   },
-  {
+  lighting: {
     mode: "lighting",
     label: "Lighting",
     icon: <Sun className="h-3 w-3" />,
@@ -52,7 +71,7 @@ const MODE_CONFIG: { mode: HeatmapMode; label: string; icon: React.ReactNode; de
     levels: LIGHTING_LEVELS,
     legendNote: "Bright cells have usable light. Shadow or dark cells are blocked or underlit, so night coverage can fail even when a camera points there.",
   },
-  {
+  overlap: {
     mode: "overlap",
     label: "Overlap",
     icon: <Layers className="h-3 w-3" />,
@@ -65,7 +84,7 @@ const MODE_CONFIG: { mode: HeatmapMode; label: string; icon: React.ReactNode; de
     ],
     legendNote: "Overlap shows redundancy. One camera means a single point of failure; two or more cameras give backup evidence.",
   },
-  {
+  contribution: {
     mode: "contribution",
     label: "Contribution",
     icon: <Sigma className="h-3 w-3" />,
@@ -78,7 +97,7 @@ const MODE_CONFIG: { mode: HeatmapMode; label: string; icon: React.ReactNode; de
     ],
     legendNote: "Contribution highlights dependency. High contribution areas are the cells most affected if that camera is moved, blocked, or offline.",
   },
-  {
+  blindspots: {
     mode: "blindspots",
     label: "Blindspots",
     icon: <EyeOff className="h-3 w-3" />,
@@ -89,7 +108,16 @@ const MODE_CONFIG: { mode: HeatmapMode; label: string; icon: React.ReactNode; de
     ],
     legendNote: "Blindspot view removes quality levels and shows the yes/no question: can any camera see this spot?",
   },
-];
+};
+
+const HEATMAP_ACTIVE_BG_BY_MODE: Record<HeatmapMode, string> = {
+  quality: "rgba(30, 41, 59, 0.85)",
+  fragility: "rgba(127, 29, 29, 0.45)",
+  lighting: "rgba(202, 138, 4, 0.32)",
+  overlap: "rgba(30, 64, 175, 0.35)",
+  contribution: "rgba(21, 128, 61, 0.35)",
+  blindspots: "rgba(127, 29, 29, 0.35)",
+};
 
 const DENSITY_OPTIONS: { value: OverlayDensity; label: string }[] = [
   { value: "all", label: "All" },
@@ -114,7 +142,7 @@ export function CoverageLegend() {
   const setOverlayFilter = useStudioStore((s) => s.setOverlayFilter);
   const hasResult = useStudioStore((s) => !!s.simulationResult);
 
-  const activeConfig = MODE_CONFIG.find((c) => c.mode === heatmapMode) ?? MODE_CONFIG[0];
+  const activeConfig = MODE_CONFIG[heatmapMode];
   const [collapsed, setCollapsed] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -157,19 +185,9 @@ export function CoverageLegend() {
           {/* Mode toggle grid — only when simulation data is present */}
           {hasResult ? (
             <div className="mb-2 grid grid-cols-3 gap-0.5 rounded-md overflow-hidden border border-[#2a3246]">
-              {MODE_CONFIG.map((config) => {
+              {MODE_ORDER.map((mode) => {
+                const config = MODE_CONFIG[mode];
                 const isActive = heatmapMode === config.mode;
-                const activeBg = config.mode === "fragility"
-                  ? "rgba(127, 29, 29, 0.45)"
-                  : config.mode === "lighting"
-                    ? "rgba(202, 138, 4, 0.32)"
-                    : config.mode === "overlap"
-                    ? "rgba(30, 64, 175, 0.35)"
-                    : config.mode === "contribution"
-                      ? "rgba(21, 128, 61, 0.35)"
-                      : config.mode === "blindspots"
-                        ? "rgba(127, 29, 29, 0.35)"
-                        : "rgba(30, 41, 59, 0.85)";
                 return (
                   <button
                     key={config.mode}
@@ -179,7 +197,7 @@ export function CoverageLegend() {
                     aria-label={`${config.label} heatmap`}
                     className="flex flex-col items-center gap-0.5 py-0.5 text-[7px] font-semibold tracking-wide transition-colors"
                     title={config.description}
-                    style={isActive ? { background: activeBg, color: MAP_COLORS.panelText } : { color: "#3a4158" }}
+                    style={isActive ? { background: HEATMAP_ACTIVE_BG_BY_MODE[config.mode], color: MAP_COLORS.panelText } : { color: "#3a4158" }}
                   >
                     {config.icon}
                     <span className="leading-none">{config.label}</span>

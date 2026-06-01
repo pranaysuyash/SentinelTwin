@@ -56,6 +56,8 @@ type NodeFactoryOptions = {
 
 type CameraFactoryOptions = NodeFactoryOptions & {
   name?: string;
+  presetId?: string;
+  viewMotion?: CameraNode["viewMotion"];
   yawDeg?: number;
   pitchDeg?: number;
   rollDeg?: number;
@@ -181,6 +183,8 @@ export function createCameraNode(
     rangeM: options?.rangeM ?? 12,
     resolutionMP: options?.resolutionMP ?? 4,
     lensType: options?.lensType ?? "fixed",
+    presetId: options?.presetId,
+    viewMotion: options?.viewMotion ?? { movementMode: "fixed", dwellSeconds: 0, waypoints: [] },
     status: options?.status ?? "on",
     nightMode: options?.nightMode ?? "none",
     irRangeM: options?.irRangeM ?? 15,

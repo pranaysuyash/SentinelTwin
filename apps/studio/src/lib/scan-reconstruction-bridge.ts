@@ -1,4 +1,10 @@
-import type { PhotoArtifact, ScanCaptureSession, ScanCandidate } from "@/lib/scan-artifacts";
+import type {
+  PhotoArtifact,
+  ScanCaptureSession,
+  ScanCandidate,
+  ScanOperationalContext,
+  ScanOperationalMode,
+} from "@/lib/scan-artifacts";
 import {
   createScanCaptureSession,
   createPhotoArtifact,
@@ -22,20 +28,38 @@ export type CapturePhotoInput = {
   role?: string;
 };
 
+export type FullReconstructionOptions = {
+  roomDimensions?: {
+    widthM?: number;
+    depthM?: number;
+    heightM?: number;
+  };
+  knownMeasurements?: Array<{ label: string; valueM: number; source: "user" | "estimated" }>;
+  operationalMode?: ScanOperationalMode;
+  operationalContext?: ScanOperationalContext;
+};
+
 export async function runFullReconstruction(
   sceneName: string,
   photos: CapturePhotoInput[],
-  roomDimensions?: { widthM?: number; depthM?: number; heightM?: number },
-  knownMeasurements?: Array<{ label: string; valueM: number; source: "user" | "estimated" }>,
+  options?: FullReconstructionOptions,
 ): Promise<RunResult<ReconstructionRunReport>> {
-  const session = createScanCaptureSession(sceneName, "ai_assisted");
+  const session = createScanCaptureSession(
+    sceneName,
+    "ai_assisted",
+    options?.operationalMode ?? "permanent",
+  );
 
-  if (roomDimensions) {
-    session.roomDimensions = roomDimensions;
+  if (options?.roomDimensions) {
+    session.roomDimensions = options.roomDimensions;
   }
 
-  if (knownMeasurements) {
-    session.knownMeasurements = knownMeasurements;
+  if (options?.knownMeasurements) {
+    session.knownMeasurements = options.knownMeasurements;
+  }
+
+  if (options?.operationalContext) {
+    session.operationalContext = options.operationalContext;
   }
 
   for (const photoInput of photos) {

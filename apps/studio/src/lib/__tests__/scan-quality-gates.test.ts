@@ -24,6 +24,7 @@ describe("scan-quality-gates", () => {
       expect(gateCodes).toContain("MULTI_PHOTO_REQUIRED");
       expect(gateCodes).toContain("DEPTH_DATA_REQUIRED");
       expect(gateCodes).toContain("MIN_CANDIDATE_CONFIDENCE");
+      expect(gateCodes).toContain("TEMPORARY_EVENT_PERIMETER");
     });
 
     test("CAMERAS_REQUIRED and CRITICAL_ZONES_REQUIRED are required", () => {
@@ -136,6 +137,19 @@ describe("scan-quality-gates", () => {
       });
       const relaxedConfGate = reportRelaxed.gates.find((g) => g.gate === "MIN_CANDIDATE_CONFIDENCE");
       expect(relaxedConfGate?.passed).toBe(true);
+    });
+
+    test("warns when temporary events skip perimeter markers", () => {
+      const session = createScanCaptureSession("Temporary", "guided_capture", "temporary_event");
+      session.photos = [createPhotoArtifact("data:img/png;base64,a", "a.png", 100, 100)];
+      const camCandidate = createScanCandidateFromArtifact("camera", [0.2, 0.2], "photo_1", 0.9);
+      camCandidate.status = "accepted";
+      session.candidates = [camCandidate];
+      const report = evaluateQualityGates(session);
+
+      const perimeterGate = report.gates.find((g) => g.gate === "TEMPORARY_EVENT_PERIMETER");
+      expect(perimeterGate?.passed).toBe(false);
+      expect(perimeterGate?.message).toContain("No entry points");
     });
   });
 

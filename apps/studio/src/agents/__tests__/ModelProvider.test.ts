@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 
-import { RateLimiter, TokenTracker, retryWithFallback } from "@/agents/providers/AgentConfig";
+import { RateLimiter, TokenTracker, retryWithFallback } from "@sentineltwin/agents";
 
 describe("RateLimiter", () => {
   it("allows requests within limit", () => {

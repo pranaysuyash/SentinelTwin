@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 
-import { CoordinatorAgent, ConversationMemory, type AgentTask, type AgentResult } from "@/agents/CoordinatorAgent";
+import { CoordinatorAgent, ConversationMemory } from "@sentineltwin/agents";
+import type { AgentTask, AgentResult } from "@sentineltwin/agents";
 
 describe("ConversationMemory", () => {
   let memory: ConversationMemory;

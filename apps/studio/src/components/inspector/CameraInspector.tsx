@@ -88,6 +88,22 @@ const LIVE_CONNECTION_STATUS_OPTIONS = [
   { value: "error", label: "Error" },
 ] as const;
 
+const VIEW_MOTION_MODE_OPTIONS = [
+  { value: "fixed", label: "Fixed" },
+  { value: "sweep_h", label: "Horizontal sweep" },
+  { value: "sweep_v", label: "Vertical sweep" },
+  { value: "preset_cycle", label: "Preset cycle" },
+  { value: "tracking", label: "Tracking" },
+] as const;
+
+const WAYPOINT_EASING_OPTIONS = [
+  { value: "", label: "None" },
+  { value: "linear", label: "Linear" },
+  { value: "ease_in", label: "Ease in" },
+  { value: "ease_out", label: "Ease out" },
+  { value: "ease_in_out", label: "Ease in/out" },
+] as const;
+
 type CameraViewMode = "normal" | "ir" | "low_light" | "thermal";
 
 const VIEW_MODES: Array<{ value: CameraViewMode; label: string }> = [
@@ -166,6 +182,7 @@ export function CameraInspector() {
   const setWorkspacePreset = useStudioStore((s) => s.setWorkspacePreset);
   const setViewMode = useStudioStore((s) => s.setViewMode);
   const setCameraPresetId = useStudioStore((s) => s.setCameraPresetId);
+  const cameraPresetId = useStudioStore((s) => s.cameraPresetId);
   const allCameraMetadataEvents = useStudioStore((s) => s.cameraMetadataEvents);
   const recordCameraMetadataEvent = useStudioStore((s) => s.recordCameraMetadataEvent);
   const recordCameraLiveConnectionEvent = useStudioStore((s) => s.recordCameraLiveConnectionEvent);
@@ -294,7 +311,7 @@ export function CameraInspector() {
     });
   }, [cameraId, camera?.liveFeedLabel, camera?.liveFeedUrl, camera?.liveConnectionMode, camera?.liveConnectionStatus, camera?.notes, camera?.onvifPassword, camera?.onvifUsername]);
 
-  const placementPreset = getCameraPreset();
+  const placementPreset = getCameraPreset(cameraPresetId);
   const bestPreset = camera ? findBestCameraPreset(camera) : null;
   const recCount = camera ? (result?.recommendations ?? []).filter(
     (r) => !r.affectedNodeId || r.affectedNodeId === camera.id,
@@ -349,6 +366,65 @@ export function CameraInspector() {
     : (camera?.name ?? "Camera");
   const targetDoriRanges = camera ? computeDoriRanges(camera, scene.assumptions.pixelsPerMeter) : null;
   const safeTargetDoriRanges = targetDoriRanges ?? { det: 0, obs: 0, recog: 0, ident: 0 };
+  const cameraViewMotion = camera?.viewMotion ?? {
+    movementMode: "fixed",
+    dwellSeconds: 0,
+    waypoints: [],
+  };
+
+  const setViewMotion = (patch: Partial<CameraNode["viewMotion"]>) => {
+    if (!camera) return;
+    const nextMovementMode = patch.movementMode ?? cameraViewMotion.movementMode;
+    const nextDwellSeconds = Math.max(0, patch.dwellSeconds ?? cameraViewMotion.dwellSeconds);
+    const nextWaypoints = patch.waypoints ?? cameraViewMotion.waypoints;
+    const nextPatrolRouteId = patch.patrolRouteId ?? cameraViewMotion.patrolRouteId;
+    const nextPatrolSpeed = patch.patrolSpeedDegPerS ?? cameraViewMotion.patrolSpeedDegPerS;
+
+    updateNode(camera.id, {
+      viewMotion: {
+        movementMode: nextMovementMode,
+        dwellSeconds: Number.isFinite(nextDwellSeconds) ? nextDwellSeconds : 0,
+        patrolRouteId: nextPatrolRouteId,
+        patrolSpeedDegPerS: nextPatrolSpeed,
+        waypoints: nextWaypoints,
+      },
+    });
+  };
+
+  const setWaypoint = (
+    index: number,
+    patch: Partial<CameraNode["viewMotion"]["waypoints"][number]>,
+  ) => {
+    if (!camera) return;
+    const nextWaypoints = [...(cameraViewMotion.waypoints ?? [])];
+    const existing = nextWaypoints[index];
+    if (!existing) return;
+    nextWaypoints[index] = {
+      ...existing,
+      ...patch,
+      holdSeconds: patch.holdSeconds === undefined ? existing.holdSeconds : Math.max(0, patch.holdSeconds),
+    };
+    setViewMotion({ waypoints: nextWaypoints });
+  };
+
+  const addWaypoint = () => {
+    if (!camera) return;
+    const nextWaypoints = [...(cameraViewMotion.waypoints ?? [])];
+    nextWaypoints.push({
+      yawDeg: camera.yawDeg,
+      pitchDeg: camera.pitchDeg,
+      holdSeconds: 2,
+      easing: "linear",
+    });
+    setViewMotion({ waypoints: nextWaypoints });
+  };
+
+  const removeWaypoint = (index: number) => {
+    const nextWaypoints = [...(cameraViewMotion.waypoints ?? [])];
+    nextWaypoints.splice(index, 1);
+    setViewMotion({ waypoints: nextWaypoints });
+  };
+
   const feedOverlayOptions = {
     doriLabels: viewToggles.overlays && viewToggles.dori,
     pathActor: viewToggles.overlays && viewToggles.path,
@@ -1277,6 +1353,131 @@ export function CameraInspector() {
                     );
                   })}
                 </div>
+              </div>
+            </SectionCard>
+
+            <SectionCard title="Camera Motion" helpText="Define how this camera moves so replay and coverage use time-aware behavior." helpTitle="Camera motion help">
+              <div className="space-y-2">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <PropSelect
+                    label="Movement mode"
+                    value={cameraViewMotion.movementMode}
+                    options={VIEW_MOTION_MODE_OPTIONS}
+                    onChange={(value) => setViewMotion({ movementMode: value as CameraNode["viewMotion"]["movementMode"] })}
+                  />
+                  <NumberInput
+                    label="Dwell seconds"
+                    value={cameraViewMotion.dwellSeconds ?? 0}
+                    min={0}
+                    step={0.25}
+                    unit="s"
+                    onChange={(value) => setViewMotion({ dwellSeconds: Math.max(0, value) })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between gap-2 border-b border-[#181c27] pb-2">
+                  <span className="text-[10px] text-[#6a748b]">Preset ID</span>
+                  <select
+                    value={camera.presetId ?? ""}
+                    onChange={(event) => {
+                      const selectedPresetId = event.target.value || null;
+                      const selectedPreset = selectedPresetId ? getCameraPreset(selectedPresetId) : null;
+                      setCameraPresetId(selectedPresetId);
+                      if (selectedPreset) {
+                        updateNode(camera.id, applyCameraPreset(selectedPreset));
+                      } else {
+                        updateNode(camera.id, { presetId: undefined });
+                      }
+                    }}
+                    className="rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] font-medium text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
+                  >
+                    <option value="">Custom / no preset</option>
+                    {CAMERA_PRESETS.map((preset) => (
+                      <option key={preset.id} value={preset.id}>
+                        {preset.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="border-b border-[#181c27] pb-2 last:border-b-0 last:pb-0">
+                    <label className="mb-1 flex items-center justify-between gap-3">
+                      <span className="text-[10px] text-[#6a748b]">Patrol route ID</span>
+                      <input
+                        type="text"
+                        value={cameraViewMotion.patrolRouteId ?? ""}
+                        onChange={(event) => setViewMotion({ patrolRouteId: event.target.value || undefined })}
+                        placeholder="optional"
+                        className="h-7 w-44 rounded-md border border-[#24283a] bg-[#111521] px-2 py-1 text-[10px] text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50"
+                      />
+                    </label>
+                  </div>
+                  <NumberInput
+                    label="Patrol speed"
+                    value={cameraViewMotion.patrolSpeedDegPerS ?? 0}
+                    min={0.1}
+                    step={1}
+                    unit="deg/s"
+                    onChange={(value) => setViewMotion({ patrolSpeedDegPerS: value })}
+                  />
+                </div>
+
+                {cameraViewMotion.movementMode !== "fixed" ? (
+                  <div className="space-y-2 rounded-lg border border-[#1f2536] bg-[#111521] px-2 py-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <div className="text-[10px] font-semibold text-[#e6ebf7]">Patrol waypoints</div>
+                        <div className="text-[8px] text-[#556076]">Optional timeline points for sweep or tracking paths</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={addWaypoint}
+                        className="rounded-md border border-blue-500/20 bg-blue-500/12 px-2 py-1 text-[9px] font-semibold text-blue-200 transition-colors hover:border-blue-400/35 hover:bg-blue-500/20"
+                      >
+                        + Add waypoint
+                      </button>
+                    </div>
+
+                    {cameraViewMotion.waypoints.length > 0 ? (
+                      <div className="space-y-2">
+                        {cameraViewMotion.waypoints.map((waypoint, index) => (
+                          <div key={`${waypoint.yawDeg}-${waypoint.pitchDeg}-${index}`} className="space-y-2 rounded-lg border border-[#1f2536] bg-[#0b0f17] p-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[9px] font-semibold text-[#7b889f]">Waypoint {index + 1}</span>
+                              <button
+                                type="button"
+                                onClick={() => removeWaypoint(index)}
+                                className="rounded-md border border-red-500/20 bg-red-500/10 px-2 py-0.5 text-[8px] font-semibold text-red-200 transition-colors hover:border-red-400/35 hover:bg-red-500/20"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                            <div className="grid gap-2 sm:grid-cols-4">
+                              <NumberInput label="Yaw" value={waypoint.yawDeg} step={1} unit="°" onChange={(value) => setWaypoint(index, { yawDeg: value })} />
+                              <NumberInput label="Pitch" value={waypoint.pitchDeg} step={1} unit="°" onChange={(value) => setWaypoint(index, { pitchDeg: value })} />
+                              <NumberInput label="Hold" value={waypoint.holdSeconds} min={0} step={0.25} unit="s" onChange={(value) => setWaypoint(index, { holdSeconds: value })} />
+                              <label className="flex items-center justify-between gap-1 rounded-md border border-[#1f2536] bg-[#111521] px-2 py-1">
+                                <span className="text-[8px] uppercase tracking-[0.16em] text-[#556076]">Easing</span>
+                                <select
+                                  value={waypoint.easing ?? ""}
+                                  onChange={(event) => setWaypoint(index, { easing: event.target.value || undefined })}
+                                  className="rounded-md border border-[#24283a] bg-[#0b0f17] px-1.5 py-0.5 text-[9px] font-medium text-[#d2d9e8] outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/50 transition-colors hover:border-[#32384d]"
+                                >
+                                  {WAYPOINT_EASING_OPTIONS.map((option) => (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                  ))}
+                                </select>
+                              </label>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-[9px] text-[#6a748b]">No waypoints defined. Add points only for sweep / patrol logic.</div>
+                    )}
+                  </div>
+                ) : null}
               </div>
             </SectionCard>
 

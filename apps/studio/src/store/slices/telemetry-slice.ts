@@ -83,6 +83,7 @@ import {
   type ModelEvalSuiteResult,
 } from "@/agents/model-eval";
 import { buildPromptRegistrySnapshot, type PromptRegistrySnapshot } from "@/agents/prompt-registry";
+import type { AiActionTelemetryStage } from "@sentineltwin/agents";
 
 const DEFAULT_LAYERS = {
   cameras: true, camera_cones: true, obstructions: true, lights: true,
@@ -148,7 +149,6 @@ export type ExternalLogEntrySeverity = "info" | "warning" | "error";
 export type ExternalLogEntry = { id: string; timestamp: number; source: ExternalLogEntrySource; title: string; details: string; raw: string; lineCount: number; severity: ExternalLogEntrySeverity; };
 export type ExternalLogEntryInput = Omit<ExternalLogEntry, "id" | "timestamp"> & { timestamp?: number; };
 
-export type AiActionTelemetryStage = "command_parse" | "counterfactual" | "report_generation" | "ai_draft";
 export type PromptRegistryHistorySource = "startup" | "manual" | "model_eval";
 export type PromptRegistryHistoryRecord = PromptRegistrySnapshot & { id: string; source: PromptRegistryHistorySource; note?: string | null; };
 export type AiProviderGovernanceHistorySource = "startup" | "selection" | "policy" | "manual" | "eval";

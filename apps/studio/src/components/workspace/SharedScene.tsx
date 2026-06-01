@@ -6,6 +6,7 @@ import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 
 import type {
+  DoriQuality,
   CoverageCellResult,
   DoorNode,
   ObstructionNode,
@@ -14,6 +15,138 @@ import type {
 } from "@/schema/security-scene";
 import { DORI_THRESHOLDS } from "@sentineltwin/core";
 import { useStudioStore } from "@/store/studio-store";
+import { isPrimaryMouseEvent } from "@/components/workspace/workspace-canvas-utils";
+
+type HeatmapMode = "quality" | "lighting" | "fragility" | "overlap" | "contribution" | "blindspots";
+
+type CoverageSegmentWaypoint = {
+  position: [number, number];
+  detectionQuality: DoriQuality;
+};
+
+type PrivacyZone = {
+  id: string;
+  label: string;
+  polygon: [number, number][];
+  restriction: "no_video" | "restricted_view" | "masked_area";
+};
+
+type CameraEvaluation = NonNullable<CoverageCellResult["cameraEvaluations"]>[string];
+
+type SceneNodeInteractionOptions = {
+  nodeId: string;
+  selectable: boolean;
+  selectNode: (nodeId: string) => void;
+  toggleSelectedNode: (nodeId: string) => void;
+  onSelect?: (nodeId: string) => void;
+  onContextMenu?: (nodeId: string, event: ThreeEvent<MouseEvent>) => void;
+};
+
+export type Point2 = [number, number];
+export type Point3 = [number, number, number];
+export type SceneLightingOverride = Partial<EnvironmentTheme & { intensityScale: number }>;
+
+export const SCENE_LIGHT_PRESETS = {
+  day: "day",
+  dusk: "dusk",
+  night: "night",
+} as const;
+
+export function resolveSafeNumber(value: unknown, fallback: number): number {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+export function clampPositiveNumber(value: unknown, min = 0, fallback = 0): number {
+  return Math.max(min, resolveSafeNumber(value, fallback));
+}
+
+export function sanitizePoint2D(point: unknown, fallback: Point2 = [0, 0]): Point2 {
+  if (!Array.isArray(point) || point.length < 2) return fallback;
+  return [resolveSafeNumber(point[0], fallback[0]), resolveSafeNumber(point[1], fallback[1])];
+}
+
+export function sanitizePoint3D(point: unknown, fallback: Point3 = [0, 0, 0]): Point3 {
+  if (!Array.isArray(point) || point.length < 3) return fallback;
+  return [
+    resolveSafeNumber(point[0], fallback[0]),
+    resolveSafeNumber(point[1], fallback[1]),
+    resolveSafeNumber(point[2], fallback[2]),
+  ];
+}
+
+function isFinitePoint2(point: unknown): point is Point2 {
+  return Array.isArray(point) && point.length >= 2 && Number.isFinite(point[0]) && Number.isFinite(point[1]);
+}
+
+export function sanitizeDimensions(values: unknown, fallback: Point3 = [1, 1, 1]): Point3 {
+  if (!Array.isArray(values) || values.length < 3) return fallback;
+  return [
+    clampPositiveNumber(values[0], 0.02, fallback[0]),
+    clampPositiveNumber(values[1], 0.02, fallback[1]),
+    clampPositiveNumber(values[2], 0.02, fallback[2]),
+  ];
+}
+
+export function sanitizeScenePath(points: ReadonlyArray<unknown>): Point2[] {
+  return points
+    .filter(isFinitePoint2)
+    .map((point) => sanitizePoint2D(point));
+}
+
+function resolveTheme(theme: EnvironmentTheme | keyof typeof SCENE_LIGHT_PRESETS): EnvironmentTheme {
+  const fallbackTheme = ENVIRONMENT_THEMES.day;
+  if (typeof theme === "string") {
+    return ENVIRONMENT_THEMES[theme] ?? fallbackTheme;
+  }
+  return theme ?? fallbackTheme;
+}
+
+function useSelectedNodeIdSet(): Set<string> {
+  const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
+  return useMemo(() => new Set(selectedNodeIds.filter((nodeId) => typeof nodeId === "string")), [selectedNodeIds]);
+}
+
+function makeSceneNodeHandlers({
+  nodeId,
+  selectable,
+  selectNode,
+  toggleSelectedNode,
+  onSelect,
+  onContextMenu,
+}: SceneNodeInteractionOptions) {
+  if (!selectable) {
+    return {};
+  }
+
+  const handlePointerDown = (event: ThreeEvent<MouseEvent>) => {
+    if (!isPrimaryMouseEvent(event)) return;
+    event.stopPropagation();
+    const isRangeSelect = event.shiftKey || event.metaKey || event.ctrlKey;
+    if (isRangeSelect) {
+      toggleSelectedNode(nodeId);
+      return;
+    }
+    if (onSelect) {
+      onSelect(nodeId);
+      return;
+    }
+    selectNode(nodeId);
+  };
+
+  const handleContextMenu = onContextMenu
+    ? (event: ThreeEvent<MouseEvent>) => {
+      event.stopPropagation();
+      event.nativeEvent.preventDefault();
+      onContextMenu(nodeId, event);
+    }
+    : undefined;
+
+  return {
+    onPointerDown: handlePointerDown,
+    onContextMenu: handleContextMenu,
+  };
+}
 
 // ── Environment themes ──
 
@@ -43,24 +176,55 @@ export const ENVIRONMENT_THEMES = {
 
 export type EnvironmentTheme = (typeof ENVIRONMENT_THEMES)[keyof typeof ENVIRONMENT_THEMES];
 
+const WALL_MATERIAL = {
+  selected: "#93c5fd",
+  glass: "#dceeff",
+  solid: "#f0f2f6",
+};
+
+const DOOR_MATERIAL = {
+  selected: "#60a5fa",
+  locked: "#b45309",
+  default: "#8b5e34",
+};
+
+const WINDOW_MATERIAL = {
+  selected: "#93c5fd",
+  reflective: "#e5f0ff",
+  default: "#cfe5ff",
+};
+
 // ── Lighting ──
 
-export function SceneLighting({ theme }: { theme: EnvironmentTheme }) {
+export function SceneLighting({ theme, intensityScale = 1, overrides }: {
+  theme: EnvironmentTheme | keyof typeof SCENE_LIGHT_PRESETS;
+  intensityScale?: number;
+  overrides?: SceneLightingOverride;
+}) {
+  const safeTheme = resolveTheme(theme);
+  const safeScale = resolveSafeNumber(intensityScale, 1);
+  const appliedTheme = {
+    background: typeof overrides?.background === "string" ? overrides.background : safeTheme.background,
+    ambient: clampPositiveNumber((overrides?.ambient ?? safeTheme.ambient) * safeScale, 0, safeTheme.ambient * safeScale),
+    hemisphere: clampPositiveNumber((overrides?.hemisphere ?? safeTheme.hemisphere) * safeScale, 0, safeTheme.hemisphere * safeScale),
+    directional: clampPositiveNumber((overrides?.directional ?? safeTheme.directional) * safeScale, 0, safeTheme.directional * safeScale),
+    fill: clampPositiveNumber((overrides?.fill ?? safeTheme.fill) * safeScale, 0, safeTheme.fill * safeScale),
+  };
   return (
     <>
-      <color attach="background" args={[theme.background]} />
-      <fog attach="fog" args={[theme.background, 22, 44]} />
-      <ambientLight intensity={theme.ambient} />
-      <hemisphereLight groundColor="#1a2030" color="#e8f0ff" intensity={theme.hemisphere} />
+      <color attach="background" args={[appliedTheme.background]} />
+      <fog attach="fog" args={[appliedTheme.background, 22, 44]} />
+      <ambientLight intensity={appliedTheme.ambient} />
+      <hemisphereLight groundColor="#1a2030" color="#e8f0ff" intensity={appliedTheme.hemisphere} />
       {/* Main key light — no shadows to prevent dark corners */}
       <directionalLight
         position={[10, 16, 10]}
-        intensity={theme.directional}
+        intensity={appliedTheme.directional}
         color="#f5f8ff"
         castShadow={false}
       />
       {/* Fill light from opposite side */}
-      <directionalLight position={[-8, 10, -10]} intensity={theme.fill} color="#c8d8ff" />
+      <directionalLight position={[-8, 10, -10]} intensity={appliedTheme.fill} color="#c8d8ff" />
       {/* Warm ceiling point lights spread across the room */}
       <pointLight position={[2.5, 2.8, 1.8]} intensity={2.5} distance={10} color="#fff4d0" />
       <pointLight position={[7.5, 2.8, 5.5]} intensity={2.5} distance={10} color="#fff4d0" />
@@ -77,21 +241,35 @@ export function SceneFloor({
   width,
   depth,
   showGrid = true,
+  gridCellSize = 0.25,
+  gridSectionsMultiplier = 4,
+  gridColor = "#c8c0b4",
+  gridSectionColor = "#d8d0c8",
 }: {
   width: number;
   depth: number;
   showGrid?: boolean;
+  gridCellSize?: number;
+  gridSectionsMultiplier?: number;
+  gridColor?: string;
+  gridSectionColor?: string;
 }) {
+  const safeWidth = clampPositiveNumber(width, 0.1, 0.1);
+  const safeDepth = clampPositiveNumber(depth, 0.1, 0.1);
+  const safeCellSize = clampPositiveNumber(gridCellSize, 0.05, 0.25);
+  const safeSectionsMultiplier = Math.max(1, Math.round(resolveSafeNumber(gridSectionsMultiplier, 4)));
+  const maxDimension = Math.max(safeWidth, safeDepth);
+  const gridDivisions = Math.max(2, Math.max(1, Math.floor((maxDimension + 2) / safeCellSize)) * safeSectionsMultiplier);
   return (
     <>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[width / 2, -0.0015, depth / 2]}>
-        <planeGeometry args={[width, depth]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[safeWidth / 2, -0.0015, safeDepth / 2]}>
+        <planeGeometry args={[safeWidth, safeDepth]} />
         <meshStandardMaterial color="#ede5d8" roughness={0.85} />
       </mesh>
       {showGrid && (
         <gridHelper
-          args={[Math.max(width, depth) + 1.5, (Math.max(width, depth) + 2) * 4, "#c8c0b4", "#d8d0c8"]}
-          position={[width / 2, 0.002, depth / 2]}
+          args={[Math.max(maxDimension, 0.2) + 1.5, gridDivisions, gridColor, gridSectionColor]}
+          position={[safeWidth / 2, 0.002, safeDepth / 2]}
         />
       )}
     </>
@@ -111,41 +289,41 @@ export function SceneWalls({
 }) {
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
-  const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
+  const selectedNodeIdSet = useSelectedNodeIdSet();
   return (
     <>
       {walls.map((wall) => {
-        const dx = wall.end[0] - wall.start[0];
-        const dz = wall.end[1] - wall.start[1];
+        const start = sanitizePoint2D(wall.start);
+        const end = sanitizePoint2D(wall.end);
+        if (!start || !end) return null;
+
+        const dx = end[0] - start[0];
+        const dz = end[1] - start[1];
         const length = Math.hypot(dx, dz);
+        if (!Number.isFinite(length) || length < 0.001) return null;
         const angle = Math.atan2(dz, dx);
-        const cx = (wall.start[0] + wall.end[0]) / 2;
-        const cz = (wall.start[1] + wall.end[1]) / 2;
+        const cx = (start[0] + end[0]) / 2;
+        const cz = (start[1] + end[1]) / 2;
         const isGlass = wall.material === "glass";
-        const isSelected = selectedNodeIds.includes(wall.id);
+        const isSelected = selectedNodeIdSet.has(wall.id);
+        const interactionHandlers = makeSceneNodeHandlers({
+          nodeId: wall.id,
+          selectable,
+          selectNode,
+          toggleSelectedNode,
+          onContextMenu,
+        });
         return (
           <group
             key={wall.id}
-            position={[cx, wall.heightM / 2, cz]}
-          rotation={[0, -angle, 0]}
-          onClick={selectable ? (e) => {
-            e.stopPropagation();
-            if (e.shiftKey || e.metaKey || e.ctrlKey) {
-              toggleSelectedNode(wall.id);
-              return;
-            }
-            selectNode(wall.id);
-          } : undefined}
-          onContextMenu={onContextMenu ? (event) => {
-            event.stopPropagation();
-            event.nativeEvent.preventDefault();
-            onContextMenu(wall.id, event);
-          } : undefined}
-        >
+            position={[cx, clampPositiveNumber(wall.heightM, 0.02, 1) / 2, cz]}
+            rotation={[0, -angle, 0]}
+            {...interactionHandlers}
+          >
             <mesh>
-            <boxGeometry args={[length, wall.heightM, 0.18]} />
+            <boxGeometry args={[length, clampPositiveNumber(wall.heightM, 0.02, 1), 0.18]} />
             <meshStandardMaterial
-              color={isSelected ? "#93c5fd" : isGlass ? "#dceeff" : "#f0f2f6"}
+              color={isSelected ? WALL_MATERIAL.selected : isGlass ? WALL_MATERIAL.glass : WALL_MATERIAL.solid}
               transparent={isGlass}
               opacity={isGlass ? 0.22 : isSelected ? 0.96 : 1}
               roughness={isGlass ? 0.08 : 0.65}
@@ -156,7 +334,7 @@ export function SceneWalls({
             </mesh>
             {isSelected && (
               <lineSegments>
-                <edgesGeometry args={[new THREE.BoxGeometry(length * 1.03, wall.heightM * 1.03, 0.22)]} />
+                <edgesGeometry args={[new THREE.BoxGeometry(length * 1.03, clampPositiveNumber(wall.heightM, 0.02, 1) * 1.03, 0.22)]} />
                 <lineBasicMaterial color="#93c5fd" transparent opacity={0.9} />
               </lineSegments>
             )}
@@ -180,37 +358,32 @@ export function SceneDoors({
 }) {
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
-  const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
+  const selectedNodeIdSet = useSelectedNodeIdSet();
   return (
     <>
       {doors.map((door) => {
-        const [width, height, thickness] = door.dimensions;
+        const [width, height, thickness] = sanitizeDimensions(door.dimensions, [0.9, 2.1, 0.1]);
         const isOpen = door.state === "open";
         const isLocked = door.state === "locked";
-        const isSelected = selectedNodeIds.includes(door.id);
+        const isSelected = selectedNodeIdSet.has(door.id);
+        const interactionHandlers = makeSceneNodeHandlers({
+          nodeId: door.id,
+          selectable,
+          selectNode,
+          toggleSelectedNode,
+          onContextMenu,
+        });
 
         return (
         <group
             key={door.id}
-          position={door.position}
-          onClick={selectable ? (e) => {
-            e.stopPropagation();
-            if (e.shiftKey || e.metaKey || e.ctrlKey) {
-              toggleSelectedNode(door.id);
-              return;
-            }
-            selectNode(door.id);
-          } : undefined}
-          onContextMenu={onContextMenu ? (event) => {
-            event.stopPropagation();
-            event.nativeEvent.preventDefault();
-            onContextMenu(door.id, event);
-          } : undefined}
+          position={sanitizePoint3D(door.position, [width / 2, height / 2, thickness / 2])}
+            {...interactionHandlers}
         >
             <mesh rotation={[0, 0, 0]} castShadow receiveShadow visible={!isOpen}>
               <boxGeometry args={[width, height, Math.max(thickness, 0.08)]} />
               <meshStandardMaterial
-                color={isSelected ? "#60a5fa" : isLocked ? "#b45309" : "#8b5e34"}
+                color={isSelected ? DOOR_MATERIAL.selected : isLocked ? DOOR_MATERIAL.locked : DOOR_MATERIAL.default}
                 roughness={0.72}
                 metalness={0.08}
                 transparent
@@ -251,39 +424,34 @@ export function SceneWindows({
 }) {
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
-  const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
+  const selectedNodeIdSet = useSelectedNodeIdSet();
   return (
     <>
       {windows.map((window) => {
-        const [width, height, thickness] = window.dimensions;
+        const [width, height, thickness] = sanitizeDimensions(window.dimensions, [1.2, 1.2, 0.08]);
         const isOpen = window.state === "open";
         const isCurtain = window.state === "curtain";
         const isReflective = window.state === "reflective";
         const opacity = isOpen ? 0.1 : isCurtain ? 0.22 : isReflective ? 0.38 : 0.24;
-        const isSelected = selectedNodeIds.includes(window.id);
+        const isSelected = selectedNodeIdSet.has(window.id);
+        const interactionHandlers = makeSceneNodeHandlers({
+          nodeId: window.id,
+          selectable,
+          selectNode,
+          toggleSelectedNode,
+          onContextMenu,
+        });
 
         return (
         <group
             key={window.id}
-          position={window.position}
-          onClick={selectable ? (e) => {
-            e.stopPropagation();
-            if (e.shiftKey || e.metaKey || e.ctrlKey) {
-              toggleSelectedNode(window.id);
-              return;
-            }
-            selectNode(window.id);
-          } : undefined}
-          onContextMenu={onContextMenu ? (event) => {
-            event.stopPropagation();
-            event.nativeEvent.preventDefault();
-            onContextMenu(window.id, event);
-          } : undefined}
+          position={sanitizePoint3D(window.position, [width / 2, height / 2, 0])}
+            {...interactionHandlers}
         >
             <mesh castShadow receiveShadow visible={!isOpen}>
             <boxGeometry args={[width, height, Math.max(thickness, 0.05)]} />
             <meshStandardMaterial
-              color={isSelected ? "#93c5fd" : isReflective ? "#e5f0ff" : "#cfe5ff"}
+              color={isSelected ? WINDOW_MATERIAL.selected : isReflective ? WINDOW_MATERIAL.reflective : WINDOW_MATERIAL.default}
               transparent
               opacity={isSelected ? Math.min(0.45, opacity + 0.1) : opacity}
               roughness={isReflective ? 0.05 : 0.15}
@@ -328,29 +496,31 @@ export function SceneObstructions({
   onContextMenu?: (id: string, event: ThreeEvent<MouseEvent>) => void;
 }) {
   const storeSelect = useStudioStore((s) => s.selectNode);
-  const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
-  const handleSelect = onSelect ?? storeSelect;
+  const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
+  const selectedNodeIdSet = useSelectedNodeIdSet();
 
   return (
     <>
       {obstructions.map((obs) => {
-        const [w, d, h] = obs.dimensions;
-        const isSelected = selectedId === obs.id || selectedNodeIds.includes(obs.id);
+        const [w, d, h] = sanitizeDimensions(obs.dimensions, [1.2, 1, 1]);
+        const isSelected = selectedId === obs.id || selectedNodeIdSet.has(obs.id);
         const isShelf = obs.obstructionType === "shelf";
         const color = OBSTRUCTION_COLORS[obs.obstructionType] ?? OBSTRUCTION_COLORS.other;
         const highlightBox = new THREE.BoxGeometry(w * 1.02, h * 1.02, d * 1.02);
+        const interactionHandlers = makeSceneNodeHandlers({
+          nodeId: obs.id,
+          selectable: true,
+          selectNode: storeSelect,
+          toggleSelectedNode,
+          onSelect,
+        });
 
         return (
           <group
             key={obs.id}
-            position={obs.position}
-            rotation={[0, (obs.rotationYDeg * Math.PI) / 180, 0]}
-            onClick={(e) => { e.stopPropagation(); handleSelect(obs.id); }}
-            onContextMenu={onContextMenu ? (event) => {
-              event.stopPropagation();
-              event.nativeEvent.preventDefault();
-              onContextMenu(obs.id, event);
-            } : undefined}
+            position={sanitizePoint3D(obs.position, [w / 2, h / 2, d / 2])}
+            rotation={[0, (resolveSafeNumber(obs.rotationYDeg, 0) * Math.PI) / 180, 0]}
+            {...interactionHandlers}
           >
             <mesh castShadow receiveShadow>
               <boxGeometry args={[w, h, d]} />
@@ -397,32 +567,45 @@ export function PathActor({ waypoints, currentIndex, progress }: {
   progress: number;
 }) {
   const groupRef = useRef<THREE.Group>(null!);
-  const propsRef = useRef({ waypoints, currentIndex, progress });
+  const safeWaypoints = sanitizeScenePath(waypoints);
+  const propsRef = useRef({ waypoints: safeWaypoints, currentIndex, progress });
+  const directionRef = useRef(0);
 
   useEffect(() => {
-    propsRef.current = { waypoints, currentIndex, progress };
-  }, [waypoints, currentIndex, progress]);
+    propsRef.current = { waypoints: safeWaypoints, currentIndex: Math.max(0, currentIndex), progress };
+  }, [safeWaypoints, currentIndex, progress]);
 
   useFrame(() => {
     const { waypoints: wps, currentIndex: idx, progress: prog } = propsRef.current;
     if (!groupRef.current || wps.length < 2) return;
 
+    const segmentIndex = Math.min(idx, wps.length - 2);
+    if (segmentIndex < 0) {
+      groupRef.current.position.set(wps[0]![0], 0.02, wps[0]![1]);
+      groupRef.current.rotation.y = 0;
+      return;
+    }
+
+    const clampedProg = Math.max(0, Math.min(1, prog));
     let x: number, z: number, dx = 0, dz = 0;
-    if (idx >= wps.length - 1) {
+    if (segmentIndex >= wps.length - 1) {
       x = wps[wps.length - 1]![0];
       z = wps[wps.length - 1]![1];
     } else {
-      const a = wps[idx]!;
-      const b = wps[Math.min(idx + 1, wps.length - 1)]!;
+      const a = wps[segmentIndex]!;
+      const b = wps[Math.min(segmentIndex + 1, wps.length - 1)]!;
       dx = b[0] - a[0];
       dz = b[1] - a[1];
-      x = a[0] + dx * prog;
-      z = a[1] + dz * prog;
+      x = a[0] + dx * clampedProg;
+      z = a[1] + dz * clampedProg;
+      const segmentLength = Math.hypot(dx, dz);
+      if (segmentLength > 0.0001) {
+        directionRef.current = Math.atan2(dx, dz);
+      }
     }
 
     groupRef.current.position.set(x, 0.02, z);
-    const angle = Math.atan2(dx, dz);
-    groupRef.current.rotation.y = angle;
+    groupRef.current.rotation.y = directionRef.current;
   });
 
   return (
@@ -475,7 +658,8 @@ const HEATMAP_COLOR_STOPS = [
   { ppm: DORI_THRESHOLDS.identification, color: new THREE.Color("#3b82f6") },
 ] as const;
 
-const TILE_FLOOR_RGB: Record<string, [number, number, number]> = {
+type LegacyDoriQuality = "identification" | "recognition" | "observation" | "detection" | "none";
+const TILE_FLOOR_RGB: Record<LegacyDoriQuality, [number, number, number]> = {
   identification: [0.16, 0.44, 0.98],
   recognition: [0.10, 0.78, 0.30],
   observation: [0.98, 0.79, 0.16],
@@ -483,8 +667,32 @@ const TILE_FLOOR_RGB: Record<string, [number, number, number]> = {
   none: [0.56, 0.19, 0.19],
 };
 
+function qualityToBaseHeatmapColor(quality: DoriQuality): [number, number, number] {
+  switch (quality) {
+    case "identification":
+      return TILE_FLOOR_RGB.identification;
+    case "recognition":
+      return TILE_FLOOR_RGB.recognition;
+    case "observation":
+      return TILE_FLOOR_RGB.observation;
+    case "detection":
+      return TILE_FLOOR_RGB.detection;
+    default:
+      return TILE_FLOOR_RGB.none;
+  }
+}
+
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}
+
+function clampPpm(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, value);
+}
+
 function lerpColorRgb(a: THREE.Color, b: THREE.Color, t: number): [number, number, number] {
-  const clamped = Math.max(0, Math.min(1, t));
+  const clamped = clamp01(t);
   return [
     a.r + (b.r - a.r) * clamped,
     a.g + (b.g - a.g) * clamped,
@@ -493,16 +701,17 @@ function lerpColorRgb(a: THREE.Color, b: THREE.Color, t: number): [number, numbe
 }
 
 function heatmapColorFromPpm(ppm: number): [number, number, number] {
-  if (!Number.isFinite(ppm) || ppm <= HEATMAP_COLOR_STOPS[0].ppm) {
-    return lerpColorRgb(HEATMAP_COLOR_STOPS[0].color, HEATMAP_COLOR_STOPS[1].color, Math.max(0, ppm / Math.max(1, HEATMAP_COLOR_STOPS[1].ppm)));
+  const clampedPpm = clampPpm(ppm);
+  if (clampedPpm <= HEATMAP_COLOR_STOPS[0].ppm) {
+    return lerpColorRgb(HEATMAP_COLOR_STOPS[0].color, HEATMAP_COLOR_STOPS[1].color, clampedPpm / Math.max(1, HEATMAP_COLOR_STOPS[1].ppm));
   }
 
   for (let index = 1; index < HEATMAP_COLOR_STOPS.length; index += 1) {
     const prev = HEATMAP_COLOR_STOPS[index - 1];
     const next = HEATMAP_COLOR_STOPS[index];
-    if (ppm <= next.ppm) {
+    if (clampedPpm <= next.ppm) {
       const span = Math.max(1, next.ppm - prev.ppm);
-      return lerpColorRgb(prev.color, next.color, (ppm - prev.ppm) / span);
+      return lerpColorRgb(prev.color, next.color, (clampedPpm - prev.ppm) / span);
     }
   }
 
@@ -516,9 +725,15 @@ export function CoverageTileFloor({ cells }: { cells: CoverageCellResult[] }) {
 
   useEffect(() => {
     const mesh = meshRef.current;
-    if (!mesh || cells.length === 0) return;
+    if (!mesh) return;
+    if (cells.length === 0) {
+      mesh.count = 0;
+      return;
+    }
+    mesh.count = cells.length;
 
     cells.forEach((cell, index) => {
+      if (!Number.isFinite(cell.x) || !Number.isFinite(cell.z)) return;
       mat.current.setPosition(cell.x, 0.01, cell.z);
       mesh.setMatrixAt(index, mat.current);
       const rgb = cell.quality === "none"
@@ -555,6 +770,23 @@ function fragilityRGB(fragility: number): [number, number, number] {
   return [0.97, (1 - s) * 0.63, 0.09 * (1 - s)];
 }
 
+function getCellEvaluations(cell: CoverageCellResult): CameraEvaluation[] {
+  return Object.values(cell.cameraEvaluations ?? {});
+}
+
+function getBestVisibleEvaluation(cell: CoverageCellResult): CameraEvaluation | undefined {
+  return getCellEvaluations(cell).reduce<CameraEvaluation | undefined>((best, evaluation) => {
+    if (!best) return evaluation;
+    if (!evaluation.visible && best.visible) return best;
+    if (evaluation.visible && !best.visible) return evaluation;
+    if ((evaluation.lightLevel ?? 0) * (evaluation.visible ? 1 : 0.35) - (evaluation.lightingPenalty ?? 0)
+      > (best.lightLevel ?? 0) * (best.visible ? 1 : 0.35) - (best.lightingPenalty ?? 0)) {
+      return evaluation;
+    }
+    return best;
+  }, undefined);
+}
+
 export function CoverageHeatmapInstanced({
   cells,
   mode = "quality",
@@ -562,7 +794,7 @@ export function CoverageHeatmapInstanced({
   onClearHover,
 }: {
   cells: CoverageCellResult[];
-  mode?: "quality" | "lighting" | "fragility" | "overlap" | "contribution" | "blindspots";
+  mode?: HeatmapMode;
   onHoverCell?: (cell: CoverageCellResult, event: ThreeEvent<PointerEvent>) => void;
   onClearHover?: () => void;
 }) {
@@ -571,32 +803,28 @@ export function CoverageHeatmapInstanced({
   const col = useRef(new THREE.Color());
 
   const visibleCells = useMemo(() => {
+    const safeCells = cells.filter((cell) => Number.isFinite(cell.x) && Number.isFinite(cell.z));
     if (mode === "fragility") {
-      return cells.filter((c) => c.fragility != null && c.quality !== "none");
+      return safeCells.filter((c) => c.fragility != null && Number.isFinite(c.fragility) && c.quality !== "none");
     }
-    return cells;
+    return safeCells;
   }, [cells, mode]);
 
   const overlapRGB = useCallback((coveringCount: number): [number, number, number] => {
-    if (coveringCount >= 3) return [0.23, 0.51, 0.96]; // blue
-    if (coveringCount === 2) return [0.13, 0.78, 0.30]; // green
-    if (coveringCount === 1) return [0.98, 0.79, 0.16]; // yellow
+    const safeCount = Number.isFinite(coveringCount) ? Math.max(0, Math.round(coveringCount)) : 0;
+    if (safeCount >= 3) return [0.23, 0.51, 0.96]; // blue
+    if (safeCount === 2) return [0.13, 0.78, 0.30]; // green
+    if (safeCount === 1) return [0.98, 0.79, 0.16]; // yellow
     return [0.94, 0.27, 0.27]; // red
   }, []);
 
   const lightingRGB = useCallback((cell: CoverageCellResult): [number, number, number] => {
-    const evaluations = Object.values(cell.cameraEvaluations ?? {});
-    const bestEvaluation = evaluations.reduce<(typeof evaluations)[number] | undefined>((best, evaluation) => {
-      if (!best) return evaluation;
-      const bestScore = (best.lightLevel ?? 0) * (best.visible ? 1 : 0.35) - (best.lightingPenalty ?? 0);
-      const evaluationScore = (evaluation.lightLevel ?? 0) * (evaluation.visible ? 1 : 0.35) - (evaluation.lightingPenalty ?? 0);
-      return evaluationScore > bestScore ? evaluation : best;
-    }, undefined);
+    const bestEvaluation = getBestVisibleEvaluation(cell);
 
     if (!bestEvaluation) return [0.22, 0.24, 0.30];
 
     const lightLevel = bestEvaluation.lightLevel ?? 0;
-    const shadowed = (bestEvaluation.shadowedBy ?? []).length > 0;
+    const shadowed = Array.isArray(bestEvaluation.shadowedBy) && bestEvaluation.shadowedBy.length > 0;
     if (shadowed && lightLevel < 0.35) return [0.70, 0.13, 0.13];
     if (lightLevel >= 0.65) return [1.00, 0.88, 0.28];
     if (lightLevel >= 0.35) return [0.97, 0.58, 0.16];
@@ -605,7 +833,8 @@ export function CoverageHeatmapInstanced({
   }, []);
 
   const contributionRGB = useCallback((cell: CoverageCellResult): [number, number, number] => {
-    const evaluations = Object.values(cell.cameraEvaluations ?? {}).filter((evaluation) => evaluation.visible && evaluation.ppm > 0);
+    const evaluations = getCellEvaluations(cell)
+      .filter((evaluation) => evaluation.visible && Number.isFinite(evaluation.ppm) && evaluation.ppm > 0);
     if (evaluations.length === 0) return [0.42, 0.45, 0.51];
 
     const totalPpm = evaluations.reduce((sum, evaluation) => sum + evaluation.ppm, 0);
@@ -621,8 +850,8 @@ export function CoverageHeatmapInstanced({
   }, []);
 
   const lightingAwareQualityRGB = useCallback((cell: CoverageCellResult): [number, number, number] => {
-    const rgb = cell.quality === "none" ? TILE_FLOOR_RGB.none : heatmapColorFromPpm(cell.ppm);
-    const evaluations = Object.values(cell.cameraEvaluations ?? {});
+    const rgb = qualityToBaseHeatmapColor(cell.quality);
+    const evaluations = getCellEvaluations(cell);
     const bestEvaluation = evaluations.reduce<(typeof evaluations)[number] | undefined>((best, evaluation) => {
       if (!best) return evaluation;
       return evaluation.ppm > best.ppm ? evaluation : best;
@@ -634,15 +863,15 @@ export function CoverageHeatmapInstanced({
     const shadowed = (bestEvaluation.shadowedBy ?? []).length > 0;
     const lightingPenalty = bestEvaluation.lightingPenalty ?? 0;
 
-    if (shadowed && lightingPenalty > 0.2) {
+    if (shadowed && Number.isFinite(lightingPenalty) && lightingPenalty > 0.2) {
       return [rgb[0] * 0.52 + 0.38, rgb[1] * 0.38, rgb[2] * 0.38];
     }
 
-    if (lightLevel < 0.12 && lightingPenalty > 0.5) {
+    if (lightLevel < 0.12 && Number.isFinite(lightingPenalty) && lightingPenalty > 0.5) {
       return [rgb[0] * 0.55, rgb[1] * 0.55, rgb[2] * 0.65 + 0.08];
     }
 
-    if ((bestEvaluation.illuminatedBy ?? []).length > 0) {
+    if (Array.isArray(bestEvaluation.illuminatedBy) && bestEvaluation.illuminatedBy.length > 0) {
       return [Math.min(1, rgb[0] * 1.08 + 0.06), Math.min(1, rgb[1] * 1.06 + 0.04), rgb[2] * 0.94];
     }
 
@@ -657,10 +886,16 @@ export function CoverageHeatmapInstanced({
   }, []);
 
   const heatmapOpacity = mode === "blindspots" ? 0.62 : 0.88;
+  const hoveredCellIndexRef = useRef<number | null>(null);
 
   useEffect(() => {
     const mesh = meshRef.current;
-    if (!mesh || visibleCells.length === 0) return;
+    if (!mesh) return;
+    if (visibleCells.length === 0) {
+      mesh.count = 0;
+      return;
+    }
+    mesh.count = visibleCells.length;
 
     visibleCells.forEach((cell, index) => {
       mat.current.setPosition(cell.x, 0.014, cell.z);
@@ -692,12 +927,15 @@ export function CoverageHeatmapInstanced({
   const handlePointerMove = useCallback((event: ThreeEvent<PointerEvent>) => {
     if (!onHoverCell) return;
     if (typeof event.instanceId !== "number") return;
+    if (hoveredCellIndexRef.current === event.instanceId) return;
+    hoveredCellIndexRef.current = event.instanceId;
     const cell = visibleCells[event.instanceId];
     if (!cell) return;
     onHoverCell(cell, event);
   }, [onHoverCell, visibleCells]);
 
   const clearHover = useCallback(() => {
+    hoveredCellIndexRef.current = null;
     onClearHover?.();
   }, [onClearHover]);
 
@@ -723,7 +961,7 @@ export function CoverageHeatmapInstanced({
 // ── Coverage-quality colored path segments ──
 // Each segment is colored by the DORI quality at its start waypoint.
 
-const QUALITY_SEGMENT_COLORS: Record<string, string> = {
+const QUALITY_SEGMENT_COLORS: Partial<Record<DoriQuality, string>> = {
   identification: "#3b82f6",
   recognition:    "#22c55e",
   observation:    "#eab308",
@@ -731,13 +969,14 @@ const QUALITY_SEGMENT_COLORS: Record<string, string> = {
   none:           "#ef4444",
 };
 
-export function CoverageSegmentPath({ waypoints }: { waypoints: { position: [number, number]; detectionQuality: string }[] }) {
-  // Build individual line segments via useMemo — avoid creating THREE objects on every render
-  // Early return after useMemo to comply with Rules of Hooks.
+export function CoverageSegmentPath({ waypoints }: { waypoints: CoverageSegmentWaypoint[] }) {
+  // Build individual line segments via useMemo and dispose old Three.js resources.
   const segments = useMemo(() => {
-    if (waypoints.length < 2) return [];
-    return waypoints.slice(0, -1).map((curr, i) => {
-      const next = waypoints[i + 1];
+    const safeWaypoints = waypoints.filter((waypoint) => sanitizePoint2D(waypoint.position).every(Number.isFinite));
+    if (safeWaypoints.length < 2) return [];
+    return safeWaypoints.slice(0, -1).map((curr, i) => {
+      const next = safeWaypoints[i + 1];
+      if (!next) return null;
       const color = QUALITY_SEGMENT_COLORS[curr.detectionQuality] ?? "#ef4444";
       const arr = new Float32Array([
         curr.position[0], 0.045, curr.position[1],
@@ -747,8 +986,17 @@ export function CoverageSegmentPath({ waypoints }: { waypoints: { position: [num
       geo.setAttribute("position", new THREE.BufferAttribute(arr, 3));
       const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color }));
       return { line, key: i };
-    });
+    }).filter((segment): segment is { line: THREE.Line; key: number } => segment !== null);
   }, [waypoints]);
+
+  useEffect(() => {
+    return () => {
+      segments.forEach(({ line }) => {
+        if (line.geometry) line.geometry.dispose();
+        if (line.material instanceof THREE.Material) line.material.dispose();
+      });
+    };
+  }, [segments]);
 
   if (segments.length === 0) return null;
 
@@ -763,12 +1011,15 @@ export function CoverageSegmentPath({ waypoints }: { waypoints: { position: [num
 
 // ── Privacy Zones ──
 
-function PrivacyZoneMesh({ zone }: { zone: { id: string; label: string; polygon: [number, number][]; restriction: string } }) {
+function PrivacyZoneMesh({ zone }: { zone: PrivacyZone }) {
   const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
-  const isSelected = selectedNodeIds.includes(zone.id);
+  const isSelected = useMemo(() => {
+    const selectedNodeIdSet = new Set(selectedNodeIds);
+    return selectedNodeIdSet.has(zone.id);
+  }, [selectedNodeIds, zone.id]);
   const shape = useMemo(() => {
     const s = new THREE.Shape();
-    const pts = zone.polygon;
+    const pts = zone.polygon.filter((point) => sanitizePoint2D(point).every(Number.isFinite));
     if (pts.length < 3) return s;
     s.moveTo(pts[0][0], pts[0][1]);
     for (let i = 1; i < pts.length; i++) {
@@ -784,8 +1035,15 @@ function PrivacyZoneMesh({ zone }: { zone: { id: string; label: string; polygon:
       ? "#f59e0b"
       : "#8b5cf6";
 
-  const cx = zone.polygon.reduce((sum, [x]) => sum + x, 0) / zone.polygon.length;
-  const cz = zone.polygon.reduce((sum, [, z]) => sum + z, 0) / zone.polygon.length;
+  const safePolygon = zone.polygon.filter((point) => sanitizePoint2D(point).every(Number.isFinite));
+  const cx = safePolygon.length ? safePolygon.reduce((sum, [x]) => sum + x, 0) / safePolygon.length : 0;
+  const cz = safePolygon.length ? safePolygon.reduce((sum, [, z]) => sum + z, 0) / safePolygon.length : 0;
+
+  if (safePolygon.length < 3) {
+    return null;
+  }
+  const safeCx = Number.isFinite(cx) ? cx : 0;
+  const safeCz = Number.isFinite(cz) ? cz : 0;
 
   return (
     <group>
@@ -800,27 +1058,44 @@ function PrivacyZoneMesh({ zone }: { zone: { id: string; label: string; polygon:
         <lineBasicMaterial color={isSelected ? "#93c5fd" : restrictionColor} transparent opacity={isSelected ? 0.88 : 0.5} />
       </lineSegments>
       {/* Label sprite */}
-      <PrivacyZoneLabel position={[cx, 0.5, cz]} text={zone.label} color={restrictionColor} />
+      <PrivacyZoneLabel position={[safeCx, 0.5, safeCz]} text={zone.label} color={restrictionColor} />
     </group>
   );
 }
 
 function PrivacyZoneLabel({ position, text, color }: { position: [number, number, number]; text: string; color: string }) {
   const texture = useMemo(() => {
+    if (typeof document === "undefined") return null;
     const canvas = document.createElement("canvas");
-    canvas.width = 256;
-    canvas.height = 32;
+    const width = Math.max(240, text.length * 11 + 72);
+    const height = 48;
+    canvas.width = width;
+    canvas.height = height;
     const ctx = canvas.getContext("2d")!;
-    ctx.font = "bold 14px Inter, system-ui, sans-serif";
-    ctx.fillStyle = color.replace("#", "rgba(") + ", 0.7)".replace("rgba(#ef4444", "rgba(239, 68, 68");
-    // Simpler approach: use a dark background label
-    ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+    ctx.font = "600 14px Arial, Helvetica, sans-serif";
+    const sanitizedColor = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(color) ? color : "#94a3b8";
+    ctx.fillStyle = "rgba(2, 6, 23, 0.52)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = color;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
     ctx.textAlign = "center";
-    ctx.fillText(text, 128, 22);
-    return new THREE.CanvasTexture(canvas);
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, canvas.width / 2, canvas.height / 2 + 1);
+    ctx.strokeStyle = sanitizedColor;
+    ctx.lineWidth = 1;
+    ctx.strokeText(text, canvas.width / 2, canvas.height / 2 + 1);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
   }, [text, color]);
+
+  useEffect(() => {
+    if (!texture) return;
+    return () => {
+      texture.dispose();
+    };
+  }, [texture]);
+
+  if (!texture) return null;
 
   return (
     <sprite position={position} scale={[1.6, 0.2, 1]}>
@@ -834,7 +1109,7 @@ export function ScenePrivacyZones({
   onSelect,
   onContextMenu,
 }: {
-  zones: { id: string; label: string; polygon: [number, number][]; restriction: string }[];
+  zones: PrivacyZone[];
   onSelect?: (id: string) => void;
   onContextMenu?: (id: string, event: ThreeEvent<MouseEvent>) => void;
 }) {
@@ -843,23 +1118,14 @@ export function ScenePrivacyZones({
   return (
     <>
       {zones.map((zone) => (
-        <group
-          key={zone.id}
-          onClick={(event) => {
-            event.stopPropagation();
-            if (event.shiftKey || event.metaKey || event.ctrlKey) {
-              toggleSelectedNode(zone.id);
-              return;
-            }
-            onSelect?.(zone.id);
-            if (!onSelect) selectNode(zone.id);
-          }}
-          onContextMenu={onContextMenu ? (event) => {
-            event.stopPropagation();
-            event.nativeEvent.preventDefault();
-            onContextMenu(zone.id, event);
-          } : undefined}
-        >
+        <group key={zone.id} {...makeSceneNodeHandlers({
+          nodeId: zone.id,
+          selectable: true,
+          selectNode,
+          toggleSelectedNode,
+          onSelect,
+          onContextMenu,
+        })}>
           <PrivacyZoneMesh zone={zone} />
         </group>
       ))}
@@ -886,11 +1152,15 @@ export function ScenePathLine({
 }) {
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
   const selectNode = useStudioStore((s) => s.selectNode);
-  const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
-  const isSelected = Boolean(id && selectedNodeIds.includes(id));
+  const selectedNodeIdSet = useSelectedNodeIdSet();
+  const isSelected = Boolean(id && selectedNodeIdSet.has(id));
+  const safePoints = sanitizeScenePath(points);
+  if (safePoints.length < 2) {
+    return null;
+  }
   const geometry = useMemo(() => {
-    const arr = new Float32Array(points.length * 3);
-    points.forEach(([x, z], index) => {
+    const arr = new Float32Array(safePoints.length * 3);
+    safePoints.forEach(([x, z], index) => {
       arr[index * 3] = x;
       arr[index * 3 + 1] = 0.045;
       arr[index * 3 + 2] = z;
@@ -898,7 +1168,7 @@ export function ScenePathLine({
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.BufferAttribute(arr, 3));
     return geo;
-  }, [points]);
+  }, [safePoints]);
 
   const line = useMemo(() => {
     const dashedLine = new THREE.Line(
@@ -909,32 +1179,28 @@ export function ScenePathLine({
     return dashedLine;
   }, [color, geometry, isSelected]);
 
-  const start = points[0];
-  const end = points[points.length - 1];
+  useEffect(() => () => {
+    line.geometry.dispose();
+    if (line.material instanceof THREE.Material) {
+      line.material.dispose();
+    }
+  }, [line]);
+
+  const start = safePoints[0];
+  const end = safePoints[safePoints.length - 1];
 
   return (
     <group
-      onClick={(event) => {
-        event.stopPropagation();
-        if (id && onSelect) {
-          if (event.shiftKey || event.metaKey || event.ctrlKey) {
-            toggleSelectedNode(id);
-            return;
-          }
-          onSelect(id);
-        } else if (id) {
-          if (event.shiftKey || event.metaKey || event.ctrlKey) {
-            toggleSelectedNode(id);
-          } else {
-            selectNode(id);
-          }
-        }
-      }}
-      onContextMenu={id && onContextMenu ? (event) => {
-        event.stopPropagation();
-        event.nativeEvent.preventDefault();
-        onContextMenu(id, event);
-      } : undefined}
+      {...(id
+        ? makeSceneNodeHandlers({
+          nodeId: id,
+          selectable: true,
+          selectNode,
+          toggleSelectedNode,
+          onSelect,
+          onContextMenu,
+        })
+        : {})}
     >
       <primitive object={line} />
       {showMarkers && start && (
@@ -950,10 +1216,10 @@ export function ScenePathLine({
         </mesh>
       )}
       {isSelected && start && end && (
-        <Html position={[(start[0] + end[0]) / 2, 0.16, (start[1] + end[1]) / 2]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
-          <div className="rounded border border-[#f59e0b]/40 bg-[#1b1205]/88 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em] text-[#fdba74]">
-            Selected path
-          </div>
+          <Html position={[(start[0] + end[0]) / 2, 0.16, (start[1] + end[1]) / 2]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
+            <div className="rounded border border-[#f59e0b]/40 bg-[#1b1205]/88 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em] text-[#fdba74]">
+              Selected path
+            </div>
         </Html>
       )}
     </group>

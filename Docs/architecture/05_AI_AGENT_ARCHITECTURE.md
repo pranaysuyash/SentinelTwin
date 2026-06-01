@@ -1,6 +1,6 @@
 # AI Agent Architecture
 
-**Status:** Design — 2026-05-25
+**Status:** Implemented — 2026-06-01 (extracted to `@sentineltwin/agents` package)
 
 ---
 

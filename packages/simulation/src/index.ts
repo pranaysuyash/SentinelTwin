@@ -30,7 +30,16 @@ export { pathLengthM, pointOnPathAtProgress, samplePathQuality, groupPathQuality
 export type { Point2, CoverageCellLike, PathQualitySample, PathQualityBand } from "./path-quality";
 
 // Adversarial path
-export { computeAdversarialPath } from "./adversarial-path";
+export { computeAdversarialPath, type ComputeAdversarialPathOptions } from "./adversarial-path";
+export {
+  selectHighestPriorityCriticalZone,
+  selectCounterCriticalZone,
+  selectAdversarialTargetZone,
+  explainAdversarialTargetSelection,
+  type CriticalZoneSelectionDecision,
+  type CriticalZoneSelectionOptions,
+  type CriticalZoneSelectionPolicy,
+} from "./critical-zone-selection";
 
 // Blind spot analysis
 export { analyseBlindSpotTopology } from "./blind-spot-topology";

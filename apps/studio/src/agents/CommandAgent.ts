@@ -1,21 +1,16 @@
-import { sceneOperationArraySchema } from "@/schema/SceneOperation";
-import type { SceneOperation } from "@/schema/SceneOperation";
-import { PROMPT_REGISTRY } from "@/agents/prompt-registry";
+import { sceneOperationArraySchema } from "@sentineltwin/core";
+import type { SceneOperation } from "@sentineltwin/core";
+import { PROMPT_REGISTRY } from "@sentineltwin/agents";
 import { validateSceneOperationsAgainstScene } from "@/lib/scene-operation-validator";
-import type { SecurityScene } from "@/schema/security-scene";
-import type { ModelProvider } from "./providers/ModelProvider";
+import type { SecurityScene } from "@sentineltwin/core";
+import type { ModelProvider } from "@sentineltwin/agents";
 
-/**
- * Lightweight summary of the current scene — never send full SecurityScene JSON
- * to the model for command parsing (too large, mostly irrelevant).
- */
 export interface SceneContextSummary {
   cameraNames: string[];
   obstructionLabels: string[];
   lightNames: string[];
   zoneLabels: string[];
   activeCameraCount: number;
-  /** Matches simulationAssumptionsSchema.timeOfDay */
   currentTimeOfDay: "day" | "night" | "custom";
   dimensions: { width: number; depth: number; height: number };
 }
@@ -33,9 +28,6 @@ export type CommandParseResult = {
   requiresConfirmation: boolean;
 };
 
-/**
- * Parse a natural language command into structured scene operations.
- */
 export async function parseCommand(
   userText: string,
   sceneContext: SceneContextSummary,

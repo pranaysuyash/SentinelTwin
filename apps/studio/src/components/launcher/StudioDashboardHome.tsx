@@ -1040,19 +1040,29 @@ function ProjectMetadataEditor({
           <MiniStat
             label="Coverage"
             value={selectedProjectCoverage != null ? `${Math.round(selectedProjectCoverage)}%` : "—"}
-            accent={selectedProjectCoverage != null ? coverageTone(selectedProjectCoverage) : "text-white"}
+            valueClassName={selectedProjectCoverage != null ? coverageTone(selectedProjectCoverage) : "text-white"}
             detail="Saved workspace snapshot"
           />
           <MiniStat
             label="Issues"
             value={`${selectedProjectIssues.length}`}
-            accent={selectedProjectIssues.length > 0 ? "text-amber-300" : "text-emerald-300"}
+            valueClassName={selectedProjectIssues.length > 0 ? "text-amber-300" : "text-emerald-300"}
             detail={selectedProjectIssues[0] ? selectedProjectIssues[0].description : "No saved issues"}
           />
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-          <MiniStat label="Cameras" value={`${selectedProjectScene.cameras.length}`} accent="text-sky-200" detail="Saved scene cameras" />
-          <MiniStat label="Zones" value={`${selectedProjectScene.criticalZones.length}`} accent="text-sky-200" detail="Critical zones tracked" />
+          <MiniStat
+            label="Cameras"
+            value={`${selectedProjectScene.cameras.length}`}
+            valueClassName="text-sky-200"
+            detail="Saved scene cameras"
+          />
+          <MiniStat
+            label="Zones"
+            value={`${selectedProjectScene.criticalZones.length}`}
+            valueClassName="text-sky-200"
+            detail="Critical zones tracked"
+          />
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           <button

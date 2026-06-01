@@ -4,6 +4,36 @@
 
 ---
 
+## D-294 | 2026-06-01 | Deterministic seek-aware path replay timing loop
+
+**Decision:** Path replay playback in `PathReplayView.tsx` now uses a requestAnimationFrame-based timeline loop with an explicit time anchor so slider scrubbing while playing reuses the same loop without stutter or timeline drift.
+
+**Rationale:**
+- The previous motion-driven timeline restarted from stale internal state when seeking mid-playback and could visually jump on scrub.
+- A deterministic tick loop keeps playback time authoritative in React state while preserving seek updates from user controls.
+- Geometry generation in replay now reuses a single shared segment step constant and avoids hard-coded literals, making movement sampling behavior explicit.
+- Immediate disposal of dynamically created cone and collision-line geometries prevents scene-object churn across re-renders in long replay sessions.
+
+**Alternatives rejected:**
+- Keep Framer Motion `animate` in place with seek re-initialization logic only: rejected due to repeated restarts and fragile timing behavior.
+- Pause-and-restart playback state on every slider move: rejected because it produced perceived stutter and broke continuous visibility state updates during scrub.
+
+---
+
+## D-295 | 2026-06-01 | Add primary-button gating for scene interactions and harden scene-theme fallback
+
+**Decision:** Three.js scene nodes now gate selection actions on primary-pointer input (`button === 0`) and resolve invalid themes through a day-theme fallback.
+
+**Rationale:**
+- Selection and context actions in `WorkspaceCanvas` and `SharedScene` should behave consistently regardless of input device and prevent non-primary click paths from mutating studio selection state.
+- Workspace scene sizing and environment parameters can drift to malformed values during rapid edits or partially hydrated scenes; hard clamps and theme fallback behavior keep scene renderers stable and deterministic.
+- `SceneLighting`/`resolveTheme` now uses an explicit fallback so unknown presets cannot produce undefined reads and crash the render branch.
+
+**Alternatives rejected:**
+- Keep selection tied to generic click handlers without button checks: rejected due to unpredictable right-click/auxiliary-device side effects.
+- Keep direct theme indexing without fallback: rejected due to avoidable render-time null references during malformed state transitions.
+
+
 ## D-244 | 2026-05-30 | Canonicalize site-intake source taxonomy and explicit draft activation
 
 **Decision:** Canonical site-intake sources are now fixed to:
@@ -4784,3 +4814,68 @@ Fixed the `CameraLiveConnectionEventRecord` and `WorkspaceApprovalRouteSummary` 
   - `apps/studio/src/hooks/use-studio-bootstrap.ts` — initialization effects extracted from page.tsx
   - `apps/studio/src/app/page.tsx` — ~30 lines, down from 444
 - Alternatives rejected: Keep monolithic file (audit finding confirmed the obesity risk), split into more granular slices (6 is the sweet spot; more would increase composition boilerplate), use Redux or Jotai instead of Zustand slices (Zustand slice pattern requires zero new dependencies and preserves all existing selectors), use React Context (no selector optimization, re-render issues).
+
+---
+
+## D-291 — Extract `@sentineltwin/agents` package; add LocalProvider, SceneUnderstandingAgent, tool calling
+
+- Date: 2026-06-01
+- Status: Accepted
+- Context: The AI agent pipeline (~85% complete) lived entirely inside `apps/studio/src/agents/` with no shared package, making reuse impossible for CLI, server, or other consumers. Three missing components were documented in architecture: LocalProvider for air-gapped deployments, SceneUnderstandingAgent for scene comprehension, and tool calling support. The provider abstraction lacked image input support.
+- Decision: Create `packages/agents/` as `@sentineltwin/agents` with:
+  1. **Full provider abstraction** — `ModelProvider` interface with `complete`, `completeStreaming`, `completeStructured`, and optional `completeWithTools` methods. Three cloud providers (OpenAI, Gemini, Qwen) plus new `LocalProvider` (Ollama-compatible local inference).
+  2. **All agent implementations** — `CommandAgent`, `CounterfactualAgent`, `ReportAgent`, `CoordinatorAgent` + `ConversationMemory`, `SceneUnderstandingAgent` (new) for structured scene analysis.
+  3. **Infrastructure** — `AgentConfig`, `TokenTracker`, `RateLimiter`, `retryWithFallback`, `provider-selection.ts`, `prompt-registry.ts`, `model-eval.ts` framework.
+  4. **Tool calling** — `completeWithTools()` method on `ModelProvider` interface, implemented in all four providers. `ToolDefinition`, `ToolCall`, `ToolCallResult` types added.
+  5. **Image input** — `ImageInput` type added to `ModelPrompt` for future VLM support.
+  6. **New prompt entries** — `scene_understanding` entry in prompt registry (5 total entries).
+  7. **Backward compatibility** — All existing `apps/studio/src/agents/` files replaced with re-exports from `@sentineltwin/agents`. Studio `tsconfig.json` and `package.json` updated to reference the new package.
+- Rationale: Agent code must be reusable across the monorepo (CLI, server, future consumers). Local inference is required for air-gapped deployments and offline development. SceneUnderstandingAgent fills the documented gap between the VLM pipeline and structured analysis output. Tool calling is the standard pattern for agentic workflows — having it in the interface enables future RouterAgent and OptimizationAgent implementations without breaking existing consumers.
+- Consequence: `@sentineltwin/agents` is now a proper Turborepo package with its own build, typecheck, and dependency graph. Studio imports remain backward-compatible through re-export files. The package depends on `@sentineltwin/core` (SceneOperation schemas) and `zod`. All 34 agent tests pass. 840/856 total studio tests pass (16 pre-existing failures outside blast radius).
+- Key files:
+  - `packages/agents/package.json`, `packages/agents/tsconfig.json` — package scaffolding
+  - `packages/agents/src/providers/ModelProvider.ts` — interface with image input + tool calling
+  - `packages/agents/src/providers/LocalProvider.ts` — new Ollama-compatible provider
+  - `packages/agents/src/scene-understanding-agent.ts` — new agent
+  - `packages/agents/src/counterfactual-agent.ts`, `report-agent.ts` — extracted from app
+  - `packages/agents/src/coordinator.ts`, `provider-selection.ts`, `prompt-registry.ts`, `model-eval.ts` — framework components
+  - `packages/agents/src/index.ts` — barrel exports
+  - `apps/studio/src/agents/*.ts` — replaced with re-exports (backward compat)
+  - `apps/studio/tsconfig.json` — added `@sentineltwin/agents` path alias
+  - `apps/studio/package.json` — added `@sentineltwin/agents` dependency
+- Alternatives rejected: Keep agents in app (blocks reuse), extract only providers without agents (incomplete abstraction — agents are tightly coupled to providers), add LocalProvider to app only (package extraction was the goal), use OpenAI-specific tool calling without abstraction (would break Gemini and Qwen parity), skip SceneUnderstandingAgent (architecture doc lists it as V0.2+ — implementing baseline now reduces later friction).
+
+## D-292 | 2026-06-01 | Harmonize workspace interactions and make blindspot warnings resilient
+
+- Date: 2026-06-01
+- Status: Accepted
+- Context: Workspace object interaction had duplicated pointer behavior across cameras, sensors, and zones, and blindspot warnings used a single fragile split-based label parse.
+- Decision: Standardize selection/click/context behavior in `WorkspaceCanvas.tsx` through a shared local handler path (`makeWorkspaceNodeHandlers`), centralize cursor control, and derive selection from `selectedNodeIds` sets. Replace direct description splitting with obstruction lookup that uses parsed label matching plus fallback heuristics.
+- Rationale: The UI interaction surface now has one reliable contract for range-select, select, and context actions, reducing behavior drift across nodes. Heuristic warning matching keeps the warning layer stable while preserving compatibility with existing simulation outputs.
+- Alternatives rejected: Keep component-by-component cursor and pointer logic (high regression risk in event ordering), keep direct `" is obstructing"` split as the only matcher (highly brittle across copy/pipeline changes).
+- Consequence: Operator interactions for cameras/sensors/critical zones are more consistent with fewer duplicate handlers, and obstruction warnings are less likely to disappear due to message format differences. The long-term fix remains adding explicit obstruction IDs to blindspot issue payloads.
+
+## D-293 - Editor geometry edit helpers should fail safe for malformed geometry/state
+
+- Date: 2026-06-01
+- Status: Accepted
+- Context: In editor authoring paths, several workspace geometry helpers assumed valid points and wall geometry; malformed coordinates or scene dimensions caused silent `NaN` propagation and brittle edge cases during wall creation, snapping, and nearest-wall checks.
+- Decision: Harden `apps/studio/src/components/workspace/editing/editor-geometry.ts` with deterministic input validation and explicit no-op/fallback contracts for malformed geometry: introduce shared `WallSegment` typing, guard all numeric inputs, sanitize/normalize finite points, clamp safely, and return explicit sentinel values (`Infinity`, `[]`, `null`) on invalid state.
+- Rationale: Scene-editing utility functions are foundational to all wall and path interactions. A single bad point from UI/state drift should not cascade into unstable editing behavior; defensive geometry utilities preserve operator trust and make failures diagnosable.
+- Consequence: Geometry helpers now reject invalid points deterministically, avoid undefined behavior under bad state, and keep tests aligned to failure semantics with added cases in `apps/studio/src/components/workspace/editing/__tests__/editor-geometry.test.ts`.
+- Alternatives rejected: Skip guards and rely on callers for input hygiene (insufficient for long-lived interactive UIs), convert to throwing exceptions on invalid input (too disruptive for interactive workflows without clear recovery paths).
+- Key files:
+  - `apps/studio/src/components/workspace/editing/editor-geometry.ts` — hardened geometry helpers, typed wall segment path, finite-point guardrails
+  - `apps/studio/src/components/workspace/editing/__tests__/editor-geometry.test.ts` — expanded failure-path coverage for clamp/snap/shift/path and wall projection
+
+## D-294 - Shared scene rendering and interaction safety for 3D authoring
+
+- Date: 2026-06-01
+- Status: Accepted
+- Context: The shared 3D scene renderer (`SharedScene.tsx`) accepted malformed geometry/state directly, which could cascade into render artifacts during scene editing and live simulation overlays.
+- Decision: Add defensive geometry sanitization, node-selection hook consolidation, lifecycle-aware resource cleanup, and explicit lighting preset extensibility in `apps/studio/src/components/workspace/SharedScene.tsx`. Add helper-level tests for sanitation paths in `apps/studio/src/components/workspace/__tests__/SharedScene.test.ts`.
+- Rationale: Scene rendering is the operator trust layer for scene creation. Any malformed values should be contained with explicit fallbacks and deterministic behavior rather than NaN propagation.
+- Consequence: Walls/doors/windows/obstructions/paths/privacy zones/heatmaps now skip or normalize malformed payloads; selection state reads are consolidated through reusable selectors; textures and ephemeral path geometries clean up deterministically.
+- Key files:
+  - `apps/studio/src/components/workspace/SharedScene.tsx`
+  - `apps/studio/src/components/workspace/__tests__/SharedScene.test.ts`

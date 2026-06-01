@@ -5,7 +5,7 @@ import type {
 } from "@sentineltwin/core";
 import { pointInPolygon, polygonCenter, getDetectionProbability } from "@sentineltwin/core";
 import { buildCoverageGrid, QUALITY_ORDER } from "@sentineltwin/core";
-import { selectHighestPriorityCriticalZone } from "./critical-zone-selection";
+import { selectAdversarialTargetZone, type CriticalZoneSelectionOptions } from "./critical-zone-selection";
 
 type CoverageCellLookup = {
   x: number;
@@ -53,6 +53,12 @@ function nearestNode(target: [number, number], nodes: NavNode[]) {
  * risk posture differs significantly from the reference scenes.
  */
 const EXPOSURE_MULTIPLIER = 4;
+export type ComputeAdversarialPathOptions = {
+  /**
+   * Controls which critical zone is treated as the adversarial target.
+   */
+  targetSelection?: CriticalZoneSelectionOptions;
+};
 
 /**
  * Octile distance heuristic for A* — admissible on an 8-directional grid.
@@ -73,21 +79,15 @@ function octileDistance(
 export function computeAdversarialPath(
   scene: SecurityScene,
   coverageCells: CoverageCellLookup[],
+  options: ComputeAdversarialPathOptions = {},
 ): AdversarialPathResult | undefined {
   const { cells, cols, rows, cellSize } = buildCoverageGrid(scene, 4);
 
   // Build an O(1) lookup keyed by the same key the coverage-grid uses
   // so we never fall through to the O(n²) linear scan fallback.
   const coverageByKey = new Map<string, CoverageCellLookup>();
-  const coverageFallback = new Map<string, CoverageCellLookup>();
   for (const cc of coverageCells) {
     coverageByKey.set(`${cc.x.toFixed(2)}:${cc.z.toFixed(2)}`, cc);
-  }
-  // Pre-index coverage cells by their own id if available, for the rare case
-  // the grid cell ids don't match the toFixed(2) key exactly.
-  for (let i = 0; i < coverageCells.length; i++) {
-    const cc = coverageCells[i];
-    coverageFallback.set(`cfb_${i}`, cc);
   }
 
   const nodes: NavNode[] = cells.map((cell) => {
@@ -127,7 +127,7 @@ export function computeAdversarialPath(
     scene.entryPoints[0]?.position ?? [scene.dimensions.width / 2, scene.dimensions.depth],
     nodes.filter((node) => node.walkable),
   );
-  const zone = selectHighestPriorityCriticalZone(scene);
+  const zone = selectAdversarialTargetZone(scene, options.targetSelection);
   const goal = zone
     ? nearestNode(polygonCenter(zone.polygon), nodes.filter((node) => node.walkable))
     : undefined;

@@ -16,6 +16,7 @@ import {
   captureModeLabel,
   captureModeDescription,
   SCAN_CAPTURE_STEPS,
+  operationalModeLabel,
 } from "@/lib/scan-artifacts";
 
 describe("scan-artifacts - data model", () => {
@@ -24,6 +25,7 @@ describe("scan-artifacts - data model", () => {
       const session = createScanCaptureSession("Test Shop");
       expect(session.sceneName).toBe("Test Shop");
       expect(session.captureMode).toBe("guided_capture");
+      expect(session.operationalMode).toBe("permanent");
       expect(session.captureSteps).toHaveLength(SCAN_CAPTURE_STEPS.length);
       expect(session.knownMeasurements).toHaveLength(2);
       expect(session.photos).toHaveLength(0);
@@ -40,6 +42,12 @@ describe("scan-artifacts - data model", () => {
     test("creates a session with ai_assisted mode", () => {
       const session = createScanCaptureSession("Lobby", "ai_assisted");
       expect(session.captureMode).toBe("ai_assisted");
+    });
+
+    test("creates a session with temporary_event operational mode", () => {
+      const session = createScanCaptureSession("Emergency Hall", "ai_assisted", "temporary_event");
+      expect(session.operationalMode).toBe("temporary_event");
+      expect(operationalModeLabel(session.operationalMode)).toBe("Temporary Event");
     });
 
     test("uses trimmed scene name", () => {

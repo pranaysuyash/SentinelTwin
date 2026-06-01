@@ -155,11 +155,20 @@ export type ScanWarning = {
 };
 
 export type CaptureMode = "manual_assisted" | "guided_capture" | "ai_assisted";
+export type ScanOperationalMode = "permanent" | "temporary_event";
+
+export type ScanOperationalContext = {
+  isEmergencyWindow?: boolean;
+  requiresTemporaryPerimeterLockdown?: boolean;
+  notes?: string;
+};
 
 export type ScanCaptureSession = {
   id: string;
   sceneName: string;
   captureMode: CaptureMode;
+  operationalMode: ScanOperationalMode;
+  operationalContext?: ScanOperationalContext;
   captureSteps: ScanCaptureStep[];
   roomDimensions?: {
     widthM?: number;
@@ -220,12 +229,14 @@ function makeId(prefix: string) {
 export function createScanCaptureSession(
   sceneName: string,
   captureMode: CaptureMode = "guided_capture",
+  operationalMode: ScanOperationalMode = "permanent",
 ): ScanCaptureSession {
   const now = Date.now();
   return {
     id: makeId("cap"),
     sceneName: sceneName.trim() || "Site Capture",
     captureMode,
+    operationalMode,
     captureSteps: SCAN_CAPTURE_STEPS.map((step) => ({ ...step })),
     knownMeasurements: [...DEFAULT_KNOWN_MEASUREMENTS],
     photos: [],
@@ -407,6 +418,13 @@ export function captureModeLabel(mode: CaptureMode): string {
     case "manual_assisted": return "Manual-Assisted";
     case "guided_capture": return "Guided Capture";
     case "ai_assisted": return "AI-Assisted";
+  }
+}
+
+export function operationalModeLabel(mode: ScanOperationalMode): string {
+  switch (mode) {
+    case "permanent": return "Permanent";
+    case "temporary_event": return "Temporary Event";
   }
 }
 

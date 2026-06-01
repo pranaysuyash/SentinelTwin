@@ -20,6 +20,8 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
+      "@sentineltwin/agents": ["../../packages/agents/src/index.ts"],
+      "@sentineltwin/agents/*": ["../../packages/agents/src/*"],
       "@sentineltwin/core": ["../../packages/core/src/index.ts"],
       "@sentineltwin/core/*": ["../../packages/core/src/*"],
       "@sentineltwin/simulation": ["../../packages/simulation/src/index.ts"],

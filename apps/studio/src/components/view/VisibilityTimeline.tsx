@@ -1,12 +1,33 @@
 "use client";
 
-import { useMemo } from "react";
+import { type MouseEvent, useMemo } from "react";
 
 import { QUALITY_ABBR, QUALITY_COLOR } from "@/lib/quality-display";
 import type { DoriQuality } from "@/schema/security-scene";
 import type { PathVisibilityResult } from "@/schema/security-scene";
+import { useStudioStore } from "@/store/studio-store";
+import {
+  clampPathDuration,
+  orderCamerasForReplayPlayback,
+  sortTimelineEvents,
+} from "@/components/view/camera-view-utils";
 
 // ── Quality colors ──
+const MIN_TIMELINE_BAR_WIDTH_PCT = 0.5;
+
+type TimelineQuality = DoriQuality | "none";
+type TimelineSegment = {
+  leftPct: number;
+  widthPct: number;
+  quality: TimelineQuality;
+  timeS: number;
+};
+
+type TimelineRow = {
+  camId: string;
+  camData: PathVisibilityResult["visibilityByCamera"][string] | undefined;
+  segments: TimelineSegment[];
+};
 
 // ── Props ──
 
@@ -19,30 +40,76 @@ interface VisibilityTimelineProps {
 // ── Component ──
 
 export function VisibilityTimeline({ pathResult, currentTime, onSeek }: VisibilityTimelineProps) {
+  const sceneCameras = useStudioStore((state) => state.scene.cameras);
+  const activeSceneCameraId = useStudioStore((state) => state.selectedCameraId);
+  const activeNodeId = useStudioStore((state) => state.selectedNodeId);
+
   // ── All hooks must be before any early return (React rule) ──
 
-  const cameras = useMemo(() =>
-    Object.keys(pathResult?.visibilityByCamera ?? {}).sort(),
-  [pathResult]);
+  const cameras = useMemo(() => {
+    const visibilityCameraIds = Object.keys(pathResult?.visibilityByCamera ?? {});
+    if (!visibilityCameraIds.length) return [];
+    const visibilityCameraIdSet = new Set(visibilityCameraIds);
 
-  const totalDuration = useMemo(() =>
-    pathResult?.totalDurationS || 1,
-  [pathResult]);
+    const ordered = orderCamerasForReplayPlayback(
+      sceneCameras,
+      activeNodeId,
+      activeSceneCameraId,
+    ).map((camera) => camera.id);
+    const orderedSet = new Set(ordered);
+    const prioritized = ordered.filter((id) => visibilityCameraIdSet.has(id));
+    const fallback = visibilityCameraIds
+      .filter((id) => !orderedSet.has(id))
+      .sort();
 
-  // Build timeline rows per camera
-  const cameraRows = useMemo(() => {
-    if (!pathResult || pathResult.timeline.length === 0) return [];
+    return [...prioritized, ...fallback];
+  }, [activeNodeId, activeSceneCameraId, pathResult?.visibilityByCamera, sceneCameras]);
+
+  const timelineEvents = useMemo(() => {
+    if (!pathResult) return [] as PathVisibilityResult["timeline"][number][];
+    return sortTimelineEvents(pathResult.timeline);
+  }, [pathResult?.timeline]);
+
+  const totalDuration = useMemo(() => {
+    const timelineEnd = timelineEvents.at(-1)?.timeS ?? 0;
+    const candidateDuration = pathResult?.totalDurationS;
+    return Math.max(
+      clampPathDuration(candidateDuration),
+      clampPathDuration(timelineEnd),
+    );
+  }, [pathResult?.totalDurationS, timelineEvents]);
+
+  const safeCurrentTime = useMemo(
+    () => {
+      if (!Number.isFinite(currentTime)) return 0;
+      const safe = clampPathDuration(currentTime);
+      return totalDuration > 0 ? Math.min(safe, totalDuration) : 0;
+    },
+    [currentTime, totalDuration],
+  );
+
+  const currentTimePercent = useMemo(
+    () => (totalDuration > 0 ? (safeCurrentTime / totalDuration) * 100 : 0),
+    [safeCurrentTime, totalDuration],
+  );
+
+  const cameraRows = useMemo((): TimelineRow[] => {
+    if (totalDuration <= 0) return [];
+    if (!pathResult || timelineEvents.length === 0) return [];
 
     return cameras.map((camId) => {
       const camData = pathResult.visibilityByCamera[camId];
-      const segments: { leftPct: number; widthPct: number; quality: string; timeS: number }[] = [];
+      const cameraEvents = timelineEvents.filter((event) => event.cameraId === camId);
+      const segments: TimelineSegment[] = [];
       let prevTime = 0;
-      let prevQuality: string | null = null;
+      let prevQuality: TimelineQuality = "none";
 
-      for (const event of pathResult.timeline) {
-        if (event.cameraId !== camId) continue;
-        const segmentDuration = event.timeS - prevTime;
-        if (segmentDuration > 0 && prevQuality !== null) {
+      for (const rawEvent of cameraEvents) {
+        const clampedTime = Math.min(clampPathDuration(rawEvent.timeS), totalDuration);
+        if (clampedTime < prevTime) continue;
+
+        const segmentDuration = clampedTime - prevTime;
+        if (segmentDuration > 0) {
           segments.push({
             leftPct: (prevTime / totalDuration) * 100,
             widthPct: (segmentDuration / totalDuration) * 100,
@@ -50,12 +117,24 @@ export function VisibilityTimeline({ pathResult, currentTime, onSeek }: Visibili
             timeS: prevTime,
           });
         }
-        prevTime = event.timeS;
-        prevQuality = event.quality ?? prevQuality;
+
+        prevTime = clampedTime;
+
+        if (rawEvent.event === "lost") {
+          prevQuality = "none";
+          continue;
+        }
+
+        if (rawEvent.event === "visible" || rawEvent.event === "quality_change") {
+          prevQuality = rawEvent.quality ?? prevQuality;
+          if (!prevQuality) prevQuality = "none";
+          continue;
+        }
+
+        prevQuality = rawEvent.quality ?? prevQuality ?? "none";
       }
 
-      // Remaining segment from last event to end
-      if (prevTime < totalDuration && prevQuality !== null) {
+      if (prevTime < totalDuration) {
         segments.push({
           leftPct: (prevTime / totalDuration) * 100,
           widthPct: ((totalDuration - prevTime) / totalDuration) * 100,
@@ -64,22 +143,37 @@ export function VisibilityTimeline({ pathResult, currentTime, onSeek }: Visibili
         });
       }
 
-      // Initial segment from time 0 to first event (show as "none" / lost)
-      const firstEvent = pathResult.timeline.find((e) => e.cameraId === camId);
-      if (firstEvent && firstEvent.timeS > 0) {
-        segments.unshift({
-          leftPct: 0,
-          widthPct: (firstEvent.timeS / totalDuration) * 100,
-          quality: "none",
-          timeS: 0,
-        });
+      const mergedSegments: TimelineSegment[] = [];
+      for (const segment of segments) {
+        const prev = mergedSegments[mergedSegments.length - 1];
+        if (prev && prev.quality === segment.quality) {
+          prev.widthPct += segment.widthPct;
+          continue;
+        }
+        mergedSegments.push({ ...segment });
       }
 
-      return { camId, camData, segments };
-    });
-  }, [cameras, pathResult, totalDuration]);
+      return {
+        camId,
+        camData,
+        segments: mergedSegments,
+      };
+    }).filter((row) => row.segments.length > 0);
+  }, [cameras, pathResult, timelineEvents, totalDuration]);
 
-  if (!pathResult || pathResult.timeline.length === 0) {
+  const hasNoTimeline = !pathResult || totalDuration <= 0 || timelineEvents.length === 0 || cameraRows.length === 0;
+
+  const handleSeek = (event: MouseEvent<HTMLDivElement>) => {
+    if (!onSeek) return;
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const pct = (event.clientX - rect.left) / rect.width;
+    const safePct = Number.isFinite(pct) ? Math.min(Math.max(pct, 0), 1) : 0;
+    const safeTotalDuration = totalDuration > 0 ? totalDuration : 0;
+    onSeek(safePct * safeTotalDuration);
+  };
+
+  if (hasNoTimeline) {
     return (
       <div className="rounded-xl border border-[#1f2536] bg-[#0b0f17] p-2.5">
         <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#4a5568]">Camera Visibility</div>
@@ -109,7 +203,8 @@ export function VisibilityTimeline({ pathResult, currentTime, onSeek }: Visibili
         {/* Current time playhead line */}
         <div
           className="absolute top-0 z-10 h-full w-0.5 bg-[#93c5fd] shadow-[0_0_6px_rgba(147,197,253,0.6)]"
-          style={{ left: `${(currentTime / totalDuration) * 100}%`, pointerEvents: "none" }}
+          style={{ left: `${currentTimePercent}%`, pointerEvents: "none" }}
+          title={`${safeCurrentTime.toFixed(1)}s`}
         />
 
         {/* Camera rows */}
@@ -126,24 +221,19 @@ export function VisibilityTimeline({ pathResult, currentTime, onSeek }: Visibili
                 {/* Timeline bar (clickable for seeking) */}
                 <div
                   className="relative h-4 flex-1 cursor-pointer overflow-hidden rounded-md border border-[#202536] bg-[#111521]"
-                  onClick={(e) => {
-                    if (!onSeek) return;
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const pct = (e.clientX - rect.left) / rect.width;
-                    onSeek(pct * totalDuration);
-                  }}
+                  onClick={handleSeek}
                 >
                   {row.segments.map((seg, si) => (
                     <div
-                      key={si}
+                      key={`${row.camId}-${seg.timeS}-${si}`}
                       className="absolute top-0 h-full transition-opacity hover:opacity-80"
                       style={{
                         left: `${seg.leftPct}%`,
-                        width: `${Math.max(seg.widthPct, 0.5)}%`,
-                        backgroundColor: seg.quality === "none" || !seg.quality
+                        width: `${Math.max(seg.widthPct, MIN_TIMELINE_BAR_WIDTH_PCT)}%`,
+                        backgroundColor: seg.quality === "none"
                           ? "#ef4444"
                           : QUALITY_COLOR[seg.quality as DoriQuality] ?? "#ef4444",
-                        opacity: seg.quality === "none" || !seg.quality ? 0.35 : 0.7,
+                        opacity: seg.quality === "none" ? 0.35 : 0.7,
                       }}
                       title={`${seg.quality ? QUALITY_ABBR[seg.quality as DoriQuality] ?? seg.quality : "none"} at ${seg.timeS.toFixed(1)}s`}
                     />
@@ -171,6 +261,9 @@ export function VisibilityTimeline({ pathResult, currentTime, onSeek }: Visibili
           </span>
           <span>
             Events: <span className="text-[#8b96ab] font-mono">{pathResult.timeline.length}</span>
+          </span>
+          <span>
+            t: <span className="text-[#8bc0ff] font-mono">{safeCurrentTime.toFixed(1)}s</span>
           </span>
         </div>
       )}

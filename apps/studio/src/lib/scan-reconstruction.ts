@@ -5,7 +5,12 @@ import type {
   ScanCandidateWarning,
   ScanCandidateKind,
 } from "@/lib/scan-artifacts";
-import { addWarning, addCandidateWarning, captureModeLabel } from "@/lib/scan-artifacts";
+import {
+  addWarning,
+  addCandidateWarning,
+  captureModeLabel,
+  operationalModeLabel,
+} from "@/lib/scan-artifacts";
 import type { SiteTwinDraft, SiteCompilerResult } from "@/lib/site-compiler";
 import { compileScanToSiteResult, compileToSiteTwinDraft } from "@/lib/site-compiler";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
@@ -362,7 +367,11 @@ export function compileReconstructionToScene(
 
   const result = compileScanToSiteResult(validated, [
     `Reconstruction pipeline: ${accepted.length} accepted, ${rejected.length} rejected, ${session.photos.length} photos.`,
-    `Capture mode: ${session.captureMode}.`,
+    `Capture mode: ${captureModeLabel(session.captureMode)}.`,
+    `Operational mode: ${operationalModeLabel(session.operationalMode)}.`,
+    ...(session.operationalContext?.notes
+      ? [`Operational context: ${session.operationalContext.notes}.`]
+      : []),
     ...(session.knownMeasurements.length > 0
       ? [`Scale anchors: ${session.knownMeasurements.map((m) => `${m.label}=${m.valueM}m`).join(", ")}`]
       : []),
@@ -399,6 +408,11 @@ export function compileReconstructionToSiteTwinDraft(
   draft.assumptions.push({
     label: "Capture mode",
     value: captureModeLabel(session.captureMode),
+    source: "user",
+  });
+  draft.assumptions.push({
+    label: "Operational mode",
+    value: operationalModeLabel(session.operationalMode),
     source: "user",
   });
   return draft;

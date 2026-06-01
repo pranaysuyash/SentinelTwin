@@ -436,3 +436,39 @@ The report exports already carry provenance and evidence summaries, but the prod
 - Apartment lobby (80m², 6 cameras, 6 lights, 12800 cells) — <2s full sim
 - Warehouse (500m², 12 cameras, 20 lights, 32000 cells) — <10s full sim
 **Related:** Thread 2b, `scene-hash.ts` for stale-result prevention.
+
+### Q-038: Blindspot warning attribution contract
+**Status:** Open
+**Priority:** Medium
+**Context:** Blindspot issues are currently mapped to obstructions through label heuristics, which is stable for current copy but brittle under wording changes and localization.
+**Questions:**
+- Should blindspot issues carry explicit `obstructionId` (or `obstructionIds`) in simulation output?
+- If explicit IDs are added, how do we migrate saved/legacy scenes and historical simulation artifacts that only contain text labels?
+- Can we preserve backward compatibility by keeping legacy label fields as fallback while adding deterministic IDs for new runs?
+**Decision needed before V0.2:** Whether to make obstruction linkage a required stable contract or an optional extension to avoid breaking existing consumers.
+
+### Q-039: Replay timing model consistency across scene modes
+**Status:** Open
+**Priority:** Medium
+**Context:** Path replay now has a deterministic playback loop and scrub behavior in `PathReplayView`, but Camera View and future replayed wall modes still use different timing approaches.
+**Implementation context (2026-06-01):** `PathReplayView` now normalizes playback waypoints to a strict, zero-based timeline so interpolation and scrub positions are deterministic across generated segments and collision-corrected samples. This is intentionally implemented as a local stabilization before a shared-clock extraction.
+**Implementation context (2026-06-01):** `VisibilityTimeline.tsx` now consumes sorted, duration-clamped camera events and merges adjacent identical-quality segments so its per-camera bars stay visually stable when event order, duplicate timestamps, or lost/visible transitions are non-ideal.
+**Questions:**
+- Should SentinelTwin expose one canonical playback clock hook for all replay-like time flows (path replay, visibility timeline, multi-camera replay)?
+- What should that shared contract expose: absolute wall time, normalized progress, event callbacks, and scrub policy?
+- Which view modes should subscribe to a shared timeline and which should remain local for interactive overrides?
+- Should the shared clock support recording/replay of external playback controls (for screenshot capture and deterministic QA artifacts)?
+
+**Thread status (2026-06-01):**
+- `CameraWallView.tsx` and `CameraViewMode.tsx` now apply sorted, time-clipped timeline event resolution for replay overlays and use deterministic ordering for replay-facing camera selection; both consume shared utilities in `camera-view-utils.ts`.
+- Next step is to extract a shared hook with deterministic event folding and layout metadata and consume it from `PathReplayView`, `CameraWallView`, and `VisibilityTimeline` to avoid duplicated playback interpretation.
+
+### Q-040: Report freshness contract for scene edits
+**Status:** Open
+**Priority:** Medium
+**Context:** The report surface now hides certain derived metrics when `SimulationResult.computedAt` is older than `scene.updatedAt`, but there is no explicit contract for what happens to each metric and action source.
+**Questions:**
+- Should every report metric carry its own freshness state (`fresh`, `stale`, `missing`) instead of a view-level gate?
+- Should we move from time-based staleness (`computedAt + buffer`) to scene-hash exactness checks using `simulationResult.sceneHash` and a canonical scene snapshot fingerprint for strictness?
+- Should report actions remain actionable but labeled `requires_recompute` with reason codes for telemetry, export, and evidence surfaces?
+- What should be the exact UI copy and escalation for stale-but-visible metrics in long sessions where no immediate simulation is expected?

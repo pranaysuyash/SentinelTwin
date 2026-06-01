@@ -1,7 +1,7 @@
 # Exploration Map — SentinelTwin
 
 **This is a living document. Append findings. Never replace.**
-**Last updated:** 2026-06-01 (Simulation engine maturity Thread 2b — calibration, confidence, hashing, scenarios, counterfactuals, sensitivity) — previous: Scan/reconstruction pipeline foundation: artifact data model, adapter interfaces, reconstruction compiler, quality gates, 73 new tests; Dedicated lighting/shadow overlay mode added on top of heatmap lighting/shadow implementation; Heatmap lighting/shadow implementation — camera PPM now combines independent security-light illumination, obstruction-cast light shadows, and camera line-of-sight; Physics engine audit — zero implementation across entire codebase, deferred to V0.2, no new action needed; Checkpoint compare/report pivots + launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Sensor provenance + runtime health surfacing; Sensor fusion preview + workspace access policy surfacing; Digital twin simulation physics: PTZ movement, BRDF reflectivity, dynamic lighting, view distance, placement constraints, scene fidelity, occlusion culling, camera feed synthesis, real-time feedback
+**Last updated:** 2026-06-01 (Phase 14: @sentineltwin/agents package extraction + LocalProvider + SceneUnderstandingAgent + tool calling) — previous: Simulation engine maturity Thread 2b — calibration, confidence, hashing, scenarios, counterfactuals, sensitivity; Scan/reconstruction pipeline foundation: artifact data model, adapter interfaces, reconstruction compiler, quality gates, 73 new tests; Dedicated lighting/shadow overlay mode added on top of heatmap lighting/shadow implementation; Heatmap lighting/shadow implementation — camera PPM now combines independent security-light illumination, obstruction-cast light shadows, and camera line-of-sight; Physics engine audit — zero implementation across entire codebase, deferred to V0.2, no new action needed; Checkpoint compare/report pivots + launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Launcher exact-checkpoint badges + sensor provenance + runtime health surfacing; Sensor provenance + runtime health surfacing; Sensor fusion preview + workspace access policy surfacing; Digital twin simulation physics: PTZ movement, BRDF reflectivity, dynamic lighting, view distance, placement constraints, scene fidelity, occlusion culling, camera feed synthesis, real-time feedback
 
 ---
 
@@ -117,7 +117,34 @@ The audit feedback identified 8 maturity tracks needed. All are now implemented.
 - Add worker-based async simulation for large scenes
 - Add incremental recompute for fast edit feedback
 
+### Thread 2c: Report trust boundaries
+
+**Status:** In-progress in UI surfacing (2026-06-01).
+**Focus:** prevent stale simulation outputs from driving report actions and confidence metrics.
+**Findings:**
+- `ReportView` now computes a scene freshness gate using `SimulationResult.computedAt` versus `scene.updatedAt` and hides stale-derived derived metrics (coverage entropy, posture variation, uncertainty, redundancy) until a fresh run exists.
+- Decision-priority cards are intentionally degraded to a single stale/outdated action when scene edits occur after the last simulation run.
+- A dedicated freshness pill now makes simulation freshness explicit in the report header, and the Report Lite badge now reads “Simulation stale” vs “Run simulation to populate.”
+**Long-term follow-up:**
+- Add per-metric freshness reason text (`fresh`, `requires simulation`, `requires recompute`) when confidence bands are still displayed.
+- Replace the fixed staleness buffer with scene-hash-based exact match checks once report-side evidence caching is normalized.
+
+### Thread 2d: Scene interaction determinism (3D workspace)
+
+**Status:** Implemented in code (2026-06-01).
+
+**What was hardended:**
+- Workspace 3D interactions now explicitly use primary-button gating for object selection, reducing accidental selection/drag side effects from auxiliary buttons and non-primary pointer devices.
+- Shared scene theme resolution now has explicit fallback protection for invalid presets, preventing undefined theme reads under malformed UI state.
+- Privacy-zone texture rendering now guards `document` access and safely returns a no-op in non-DOM contexts, preventing SSR/test-time crashes.
+
+**Open follow-up ideas:**
+- Add an explicit `pointerDown` vs `pointerUp` interaction policy doc in `Docs/product/` so operator behavior is predictable across desktop touchpads, pens, and trackpads.
+- Add a scene interaction contract test harness for non-primary pointer events and invalid theme values.
+- Add a small utility-level unit test suite in `apps/studio/src/components/workspace/sharedscene.test.ts` for interaction/interaction guard behavior.
+
 ---
+
 
 ### Thread 3: Adversarial Path Simulation
 **Status:** Designed. Details in architecture/04.
@@ -237,6 +264,27 @@ Late 2025/early 2026 saw FCC enforcement escalation.
 ---
 
 ### Thread 11: Insurance Risk as Distribution Channel
+
+### Thread 12: Workspace interaction and blindspot attribution resilience
+
+**Status:** Implemented in workspace canvas (2026-06-01), partially complete in data contract.
+**Findings:**
+- Divergent selection handling in `WorkspaceCanvas.tsx` increased maintenance risk; we now centralize node selection/context behavior via local shared handlers and a single cursor helper.
+- `selectedNodeId`-driven checks were insufficient for multi-select consistency in overlay rendering; set-based `selectedNodeIds` membership now drives selected-state visuals across critical zones, cameras, camera cones, paths, and sensors.
+- Blindspot warnings had brittle parsing (`split(" is obstructing")`) and could fail silently when issue copy changed. We added robust label matching:
+  - direct extracted label match,
+  - normalized fuzzy match on obstruction labels,
+  - token-based fallback match.
+- Short-term stability is improved without breaking existing schema.
+
+**Long-term follow-up:**
+- Add explicit obstruction linkage to blindspot issues in simulation output (e.g., `affectedObstructionIds` or `issue.obstructionId`) to remove heuristic matching and keep explainability deterministic.
+- Add a focused regression fixture for warning mapping (simulation issue text variants + obstructions names) to prevent regressions across localization and copy changes.
+
+**Code anchors:** `apps/studio/src/components/workspace/WorkspaceCanvas.tsx`
+
+**Decision trace:** `Docs/decisions/DECISION_LOG.md` D-292
+
 **Status:** Research complete. Details in ADJACENT_SPACE_TAM_INDUSTRY.md section 3.
 **Key finding refined (May 2026 research):**
 - There is NO industry-wide mandate requiring camera coverage documentation for commercial
@@ -6363,3 +6411,204 @@ All relevant decisions and analysis are already captured in:
 **Decision:** Motion One (WAAPI) is the primary engine for complex timeline choreography (path replay, multi-step sequences). Framer Motion is the primary engine for React UI state transitions. Native R3F useFrame + Three.js curves is the primary engine for simple 3D path traversal.
 **Why it matters:** This ensures SentinelTwin remains strictly compliant with open-source licensing without sacrificing animation fidelity.
  - Browser-native share support is now available on the main archive/compare handoff surfaces via a shared helper that uses `navigator.share` when possible and clipboard copy as fallback, so the existing link builders now reach a native share surface instead of only copy/open buttons.
+
+---
+
+### Thread 89 — Phase 14: AI Agent Pipeline — Package Extraction, LocalProvider, SceneUnderstandingAgent, Tool Calling (2026-06-01)
+
+**Status:** Complete. `@sentineltwin/agents` package extracted, 4 provider implementations (3 cloud + local), 5 agent types, full eval suite, all 34 tests pass.
+
+**What was built:**
+- `packages/agents/` — new Turborepo package with `package.json`, `tsconfig.json`, barrel exports
+- `ModelProvider` interface — added `ImageInput`, `ToolDefinition`, `ToolCall`, `completeWithTools()` method
+- `OpenAIProvider`, `GeminiProvider`, `QwenProvider` — re-exported from app with tool calling implementation
+- `LocalProvider` — new Ollama-compatible provider for air-gapped/local deployments
+- `SceneUnderstandingAgent` — structured scene analysis with schema validation
+- `CoordinatorAgent` + `ConversationMemory`, provider-selection, prompt-registry (5 entries), model-eval framework
+- Backward-compatible re-exports in `apps/studio/src/agents/` — all existing imports continue to work
+- Studio `tsconfig.json` and `package.json` updated to reference `@sentineltwin/agents`
+
+**Key findings:**
+- Package extraction was clean because providers and agent infrastructure had zero React/DOM dependencies
+- Tool calling was additive to the interface — existing structured output consumers unaffected
+- LocalProvider needed special handling (no API key check, Ollama's local API endpoint, streaming over NDJSON)
+- SceneUnderstandingAgent's prompt needed defensive framing to avoid "evasion/bypass/defeat" language
+- Backward-compatible re-exports required no changes to 66+ import sites across the app
+
+**Remaining gaps (documented in architecture):**
+- Voice/audio support (deferred — no current user-facing voice workflow)
+- RouterAgent for intent classification (deferred — CoordinatorAgent handles routing directly)
+- OptimizationAgent for combinatorial optimization (deferred — V0.3)
+- Per-model prompt tuning (single prompt per agent currently)
+- Prompt versioning for A/B testing
+- CoordinatorAgent runs in React (not a worker — acknowledged in D-036)
+- Conversation memory is in-memory only (no persistence — acknowledged in D-036)
+
+### Thread 90: Adversarial path targeting policy (2026-06-01)
+
+**Status:** Implemented in code and expanded (`packages/simulation/src/critical-zone-selection.ts`, `packages/simulation/src/adversarial-path.ts`, `packages/simulation/src/__tests__/critical-zone-selection.test.ts`).
+
+**Key finding:** Adversarial target selection is now deterministic and explicit:
+- selection order is first by required quality, then by critical zone priority, then lexical tie-breakers;
+- cash-counter targeting detects explicit `targetType: "cash_counter_activity"` before label-pattern heuristics, reducing accidental mis-targeting from free-form labels;
+- selection policy is now configurable via `requiredQuality-first`, `priority-first`, `counter-first`, and each run emits structured decision metadata through `explainAdversarialTargetSelection`;
+- the selector is now a named adversarial target policy (`selectAdversarialTargetZone`) and exported from `packages/simulation/src/index.ts` for reuse.
+
+**Open:** How should policy defaults vary by workflow profile (retail-first, asset-protection, logistics, multi-entrance facilities)?
+
+### Thread 94: Path Replay determinism and scrub continuity (2026-06-01)
+
+**Status:** Implemented in `apps/studio/src/components/view/PathReplayView.tsx`.
+
+**Current finding:** Playback now uses a deterministic RAF anchor loop for wall-clock progression and supports seek while playing by re-anchoring the loop without restarting animation internals. Path replay sample generation now uses an explicit segment spacing constant, explicit geometry cleanup for dynamic frustum/collision buffers, and deterministic sample sanitization (strictly increasing timeline, collision sample metadata preserved, zero-based alignment).
+
+**Follow-up:**
+- Extract the timing loop into a reusable hook (`usePathReplayClock`) before Camera Wall/Path View parity work extends beyond this component.
+- Add a regression test plan for "scrub while playing" (monotonic progression, no dropped updates, no jump-back).
+- Add a shared playback-contract review after Camera View/Wall/Replay overlays so path scrub bands, camera feed overlays, and path actor share one contract for:
+  - source timeline provenance (path result vs adversarial summary),
+  - normalized origin (`t=0` anchoring),
+  - segment continuity policy when repeated timestamps appear,
+  - and deterministic collision-corrected waypoint metadata for QA artifact replay.
+- `VisibilityTimeline.tsx` now aligns to the same event-order contract by sorting timeline events, clamping playhead/seek bounds to timeline duration, and merging adjacent same-quality segments; this makes scrub, row-level segment bars, and summary metrics robust when camera events arrive unsorted, duplicate, or include lost transitions.
+
+### Thread 95: Camera Wall replay-state contracts and deterministic layout composition (2026-06-01)
+
+**Status:** Implemented in `apps/studio/src/components/view/CameraWallView.tsx`.
+
+**Current finding:** Camera Wall now resolves replay states from a sorted, time-clipped timeline at the current path-playhead before rendering each tile, and camera slot selection uses deterministic ordering (`selected/active/online/name`) rather than implicit input order. Layout composition is now driven from explicit specs (`4`, `6`, `16` view modes) so empty slots and hidden-cam counts stay coherent across mode changes.
+
+**Next:**
+- Evaluate if this same layout-spec approach should become a shared contract for future wall/map mosaic presenters (e.g., scenario split views).
+- Add a non-string source-of-truth test for layout-slot count consistency so we don’t overfill grid rows at view boundaries.
+
+### Thread 97: Camera View replay determinism and ordering contract (2026-06-01)
+
+**Status:** Implemented in `apps/studio/src/components/view/CameraViewMode.tsx` and `apps/studio/src/components/view/camera-view-utils.ts`.
+
+**Current finding:** Camera View now uses the same deterministic ordering and replay-state fold approach as Camera Wall:
+- Path playback math is bounded (`progress × duration`) with explicit clamping and replay actor display gating against zero-duration paths.
+- Active timeline event lookup now resolves through a stable timeline fold (`findLatestTimelineEventForCameraAtTime`), avoiding implicit dependence on source order.
+- Camera header indexing now always resolves from a normalized active camera, preventing next/previous lockup when selected camera IDs are stale.
+
+**Current finding (motion schema-to-UI bridge):** Camera inspector now offers first-class movement editing (`movementMode`, `dwellSeconds`, optional patrol fields, and waypoint timeline edits) and keeps node `presetId` synchronized when applying presets in inspector and preset utility paths. This is a direct operator-facing bridge for the existing schema fields.
+
+**Status (foundational schema):** `@sentineltwin/core` and `@sentineltwin/studio` camera factories now accept `presetId` and `viewMotion` and set motion defaults when unspecified (`movementMode: fixed`, no dwell, empty waypoints).
+
+**Next:**
+- Promote shared replay contract helpers to `PathReplayView` and `VisibilityTimeline` and keep the camera-mode contract in one shared timeline utility.
+- Validate that all camera creation call sites use `createCameraNode` so `presetId`/`viewMotion` stays synchronized across Studio and core flows.
+
+## Thread: SharedScene render robustness and creation controls (2026-06-01)
+- Scope: `apps/studio/src/components/workspace/SharedScene.tsx`
+- Finding: Implemented defensive scene rendering path for malformed geometry/state while preserving editor interactions.
+- Added: path-safety helpers (`sanitizeScenePath`), scene-level numeric sanitizers, and lighting-preset override support for scene creation exploration.
+- Follow-up: Add an interaction registry for node-specific affordance contracts and a reusable path replay quality overlay panel with scenario deltas.
+
+### Thread 98: No-floor-plan intake and temporary perimeter use-cases (exploration)
+
+**Status:** Open and exploratory.
+
+**Current discussion signals:**
+- Primary commercial intents are shaped around two core users:
+  - Security consultants (auditable recommendations, reportability, scenario replay, evidence continuity).
+  - Facilities directors (cost-aware operational hardening, practical deployment sequencing, temporary and permanent controls).
+- The product goal is being explored as scale-continuous: from one-room to multi-acre/asset campus.
+- There is explicit intent to keep the model useful for both:
+  - Persistent environments (baseline hardening and steady-state posture).
+  - Event or visit-driven temporary control modes (VIP sweeps, emergency readiness, temporary perimeter + staffing controls).
+
+**Exploration hypotheses to keep separate from locked scope:**
+- The same `SecurityScene` model can host both permanent and temporary profiles if we keep scenario/state deltas as first-class overlays.
+- “No floor plan needed” may imply a phased intake strategy:
+  - Phase A: coarse scene sketch + manual safety-critical inputs.
+  - Phase B: guided walk/capture enrichment with quality gates.
+  - Phase C: scene confidence and blind-spot risk ranking before hard-failing assumptions.
+- “Before failure” is not only a single simulation pass; it may require:
+  - confidence-aware output (explicit confidence and assumptions),
+  - scenario stress-testing (night/perimeter/access-control/offline-camera variants),
+  - and ranked remediation candidates with implementation constraints.
+
+**Code-adjacent next probes suggested by this thread:**
+- How to represent temporary perimeter and staffing constraints without polluting permanent scene state (delta layers vs forked scene copies).
+- Minimal trustful walkthrough path from walk-through inputs to simulation-valid draft (what can ship first for real utility).
+- Whether emergency workflows should be modeled as scenario profiles, dedicated event profiles, or dedicated temporary scene layers.
+
+**Next research outcome sought:**
+- A documented decision matrix on what is "realizable in v1", "requires staged build", and "deferred", while preserving ability to scale from room-level to campus-level twins.
+
+### Thread 98A: No-floor-plan discussion task graph (Dimension A exploration)
+
+**Status:** Open, ordered by dependency and parallelism.
+
+**Objective:** Keep exploration open while clarifying execution path for `"No floor plan needed"` promise.
+
+#### 1) Sequenced task graph (dependencies and parallel tracks)
+
+1. Intake contract definition (Task 1)
+   - Define minimum required inputs before simulation.
+   - Define explicit defaults vs mandatory fields.
+   - Outputs: intake schema + required-risk declaration.
+   - Blocks: capture heuristics, draft arbitration, confidence policy.
+
+2. Confidence policy for provisional geometry (Task 2)
+   - Define readiness thresholds and warning levels.
+   - Define required/optional assumptions and what to refuse vs warn.
+   - Outputs: confidence taxonomies and recommendation gating.
+   - Blocks: blind-spot output semantics, evidence artifact standardization.
+
+3. Capture-to-scene strategy design (Task 3 + Task 4)
+   - Design minimal guided capture path.
+   - Decide first-pass geometry model (zone-first vs rooms-first vs wall-first).
+   - Outputs: capture sequence + reconstruction acceptance model.
+   - Parallelizable with: Task 1 and Task 2 once interface contract is stable.
+
+4. Arbitration and review loop (Task 5)
+   - Define approval actions (approve, approve with assumptions, request more data).
+   - Outputs: interaction model for consultant/director trust.
+   - Depends on Tasks 1, 2, 3.
+
+5. Simulation-to-recommendation path (Task 6)
+   - Define Stage-1 output shape: blind spots ranked with ranking rationale.
+   - Define ranking dimensions and role-targeted phrasing.
+   - Depends on Tasks 1, 2, and 4.
+
+6. Temporary/permanent differentiation (Task 7 + Task 8)
+   - Explore mode representations: scene branch vs delta layer vs scenario envelope.
+   - Define VIP/event workflow states and teardown semantics.
+   - Outputs: temporary-mode model option and constraints.
+   - Can run in parallel with Task 6 once Task 5 proves what data simulation needs.
+
+7. Scale and evidence hardening (Task 9 + Task 10)
+   - Validate room-to-campus behavior and artifact quality.
+   - Define standard report payload for consultants and facilities directors.
+   - Depends on Task 5 and Task 6.
+
+8. Uncertainty reconciliation and decision gate (Task 11)
+   - Define final policy for publishable / review-needed / insufficient.
+   - Decide when to block automation and force manual escalation.
+   - Depends on Tasks 2, 6, and 7.
+
+9. Final synthesis checkpoint (Task 12)
+   - Consolidate outcomes into v1/staged/deferred buckets.
+   - Resolve any contradictions before any hard scope-lock decision.
+
+#### 2) Parallelization opportunities
+
+- Track 1 (product trust): Task 1 -> Task 2 -> Task 5
+- Track 2 (capture reality): Task 3 -> Task 4 -> Task 6
+- Track 3 (temporal operations): Task 7 -> Task 8 -> Task 10
+- Track 4 (governance): Task 11 and Task 12 after core data contracts are stable
+
+#### 3) Open decision hooks to monitor
+
+- What minimum no-floor-plan input guarantees non-fragile blind-spot ranking?
+- How aggressive should confidence gating be for consultant-facing outputs?
+- Do temporary modes belong in scene layer deltas or scenario envelopes?
+- What constitutes publishable evidence versus advisory-only guidance in v1?
+
+#### 4) Immediate next action (if continuing from this thread)
+
+Run a 2x2 walkthrough of tasks: 
+1) Intake contract (Task 1) and 2) confidence policy as a pair; then
+2) use those decisions to prototype Task 3 + 4 in the existing scan draft architecture.

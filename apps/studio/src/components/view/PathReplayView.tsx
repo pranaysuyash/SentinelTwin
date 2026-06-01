@@ -2,7 +2,7 @@
 
 import { Html, OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { animate, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { ListRestart, Pause, Play, SkipBack, SkipForward } from "lucide-react";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
@@ -34,10 +34,24 @@ import { getCameraColorForId } from "@/lib/camera-colors";
 import { buildCoverageGrid } from "@sentineltwin/core";
 import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
+import {
+  buildReplayStateByCameraAtTime,
+  clampPathDuration,
+  clampReplayProgress,
+  findLatestTimelineEventAtOrBeforeTime,
+  findNextTimelineEventAfterTime,
+  sortTimelineEvents,
+} from "@/components/view/camera-view-utils";
 
 // ── Shared scene ──
 
 const PATH_REPLAY_THEME = ENVIRONMENT_THEMES.day;
+const REPLAY_SPEED_OPTIONS = [0.5, 1, 2, 4] as const;
+const SHARED_REPLAY_PROGRESS_PUBLISH_INTERVAL_MS = 1000 / 24;
+const MIN_PATH_SEGMENT_DURATION_DISTANCE_M = 0.22;
+const MIN_PATH_SPEED_MPS = 0.01;
+const MIN_PLAYBACK_STEP_SECONDS = 2;
+const MIN_PLAYBACK_WAYPOINT_TIME_GAP_S = 0.0001;
 
 function SceneView() {
   const scene = useStudioStore((s) => s.scene);
@@ -97,6 +111,10 @@ function getPlaybackPosition(
 
   for (let i = 0; i < wps.length - 1; i++) {
     const segmentDuration = (wps[i + 1].timeS ?? 0) - (wps[i].timeS ?? 0);
+    if (segmentDuration <= 0) {
+      continue;
+    }
+
     if (currentTime >= cumulativeTime && currentTime < cumulativeTime + segmentDuration) {
       const segProgress = segmentDuration > 0
         ? (currentTime - cumulativeTime) / segmentDuration
@@ -110,7 +128,10 @@ function getPlaybackPosition(
 }
 
 function buildPlaybackWaypoints(path: ScenarioPath) {
+  if (path.points.length < 2) return [];
+
   const waypoints: { position: [number, number]; timeS: number }[] = [];
+  const safeSpeedMps = getSafePathSpeedMps(path.speedMps);
   let elapsed = 0;
 
   for (let index = 0; index < path.points.length; index += 1) {
@@ -121,7 +142,7 @@ function buildPlaybackWaypoints(path: ScenarioPath) {
         current.position[0] - previous.position[0],
         current.position[1] - previous.position[1],
       );
-      elapsed += segmentLength / Math.max(path.speedMps, 0.01);
+      elapsed += segmentLength / safeSpeedMps;
     }
 
     waypoints.push({
@@ -131,6 +152,38 @@ function buildPlaybackWaypoints(path: ScenarioPath) {
   }
 
   return waypoints;
+}
+
+function getSafePathSpeedMps(speedMps: number | undefined) {
+  return Number.isFinite(speedMps) && speedMps > 0 ? speedMps : MIN_PATH_SPEED_MPS;
+}
+
+function sanitizeReplayWaypointsForPlayback(rawWaypoints: { position: [number, number]; timeS: number; }[]) {
+  if (!rawWaypoints.length) return [];
+
+  const normalized: { position: [number, number]; timeS: number }[] = [];
+  let lastTime = Number.NEGATIVE_INFINITY;
+
+  for (const sample of rawWaypoints) {
+    const [x, z] = sample.position;
+    if (!Number.isFinite(x) || !Number.isFinite(z)) continue;
+    if (!Number.isFinite(sample.timeS) || sample.timeS < 0) continue;
+
+    const timeS = Math.max(sample.timeS, lastTime + MIN_PLAYBACK_WAYPOINT_TIME_GAP_S);
+    if (normalized.length > 0) {
+      const previous = normalized[normalized.length - 1]!;
+      if (previous.position[0] === x && previous.position[1] === z && Math.abs(previous.timeS - timeS) < MIN_PLAYBACK_WAYPOINT_TIME_GAP_S) {
+        continue;
+      }
+    }
+
+    normalized.push({ position: sample.position, timeS });
+    lastTime = timeS;
+  }
+
+  // Keep scrub + metrics zero-based and stable across upstream timing inputs.
+  const startTime = normalized[0]?.timeS ?? 0;
+  return normalized.map((sample) => ({ ...sample, timeS: Math.max(0, sample.timeS - startTime) }));
 }
 
 function pointInsideOrientedRect(
@@ -180,6 +233,10 @@ function findNearestWalkablePoint(
   point: [number, number],
   walkableCells: { x: number; z: number; walkable: boolean }[],
 ) {
+  if (walkableCells.length === 0) {
+    return point;
+  }
+
   let closest = walkableCells[0] ?? null;
   let best = Number.POSITIVE_INFINITY;
 
@@ -232,7 +289,7 @@ function buildLegalizedReplayWaypoints(
       next.position[0] - current.position[0],
       next.position[1] - current.position[1],
     );
-    const steps = Math.max(1, Math.ceil(segmentDistance / 0.22));
+    const steps = Math.max(1, Math.ceil(segmentDistance / MIN_PATH_SEGMENT_DURATION_DISTANCE_M));
     const startStep = index === 0 ? 0 : 1;
 
     for (let step = startStep; step < steps; step += 1) {
@@ -280,20 +337,20 @@ function formatSecondsShort(seconds: number) {
   return `${minutes}:${remaining.toString().padStart(2, "0")}`;
 }
 
+function formatTime(seconds: number) {
+  if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 
 function ReplayCameraConeItem({
   camera,
 }: {
   camera: ReturnType<typeof useStudioStore.getState>["scene"]["cameras"][number];
 }) {
-  const {
-    range,
-    radius,
-    centerPos,
-    quaternion,
-    color,
-    coneEdgeSource,
-  } = useMemo(() => {
+  const coneMemo = useMemo(() => {
     const direction = getYawPitchDirection(camera.yawDeg, camera.pitchDeg);
     const forward = new THREE.Vector3(direction.x, direction.y, direction.z).normalize();
     const nextRange = Math.min(camera.rangeM, 12);
@@ -302,26 +359,33 @@ function ReplayCameraConeItem({
     const nextQuaternion = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, -1, 0), forward);
     const cameraColor = getCameraColorForId(camera.id);
     const nextColor = camera.status === "on" ? cameraColor : "#64748b";
-    const nextConeEdgeSource = new THREE.ConeGeometry(nextRadius, nextRange, 24, 1, false);
+    const coneGeometry = new THREE.ConeGeometry(nextRadius, nextRange, 24, 1, false);
+    const nextConeEdgeSource = new THREE.EdgesGeometry(coneGeometry);
 
     return {
-      range: nextRange,
-      radius: nextRadius,
       centerPos: nextCenterPos,
       quaternion: nextQuaternion,
       color: nextColor,
+      coneGeometry,
       coneEdgeSource: nextConeEdgeSource,
     };
   }, [camera.fovHorizontalDeg, camera.id, camera.pitchDeg, camera.position, camera.rangeM, camera.status, camera.yawDeg]);
 
+  useEffect(() => () => {
+    coneMemo.coneGeometry.dispose();
+    coneMemo.coneEdgeSource.dispose();
+  }, [coneMemo]);
+
+  const { centerPos, quaternion, color, coneGeometry, coneEdgeSource } = coneMemo;
+
   return (
     <group>
       <mesh position={centerPos} quaternion={quaternion}>
-        <coneGeometry args={[radius, range, 24, 1, false]} />
+        <primitive attach="geometry" object={coneGeometry} />
         <meshBasicMaterial color={color} transparent opacity={0.18} side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
       <lineSegments position={centerPos} quaternion={quaternion}>
-        <edgesGeometry args={[coneEdgeSource]} />
+        <primitive attach="geometry" object={coneEdgeSource} />
         <lineBasicMaterial color={color} transparent opacity={0.6} />
       </lineSegments>
     </group>
@@ -369,6 +433,12 @@ function ReplayCollisionMarkers({
     );
     return geometry;
   }, [firstCollision]);
+
+  useEffect(() => () => {
+    if (collisionLine) {
+      collisionLine.dispose();
+    }
+  }, [collisionLine]);
 
   if (!firstCollision) return null;
 
@@ -428,12 +498,6 @@ function PlaybackControls({
   const progress = duration > 0 ? currentTime / duration : 0;
   const isEnd = currentTime >= duration && duration > 0;
 
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    return `${m}:${s.toString().padStart(2, "0")}`;
-  };
-
   return (
     <motion.div
       initial={{ y: 40, opacity: 0 }}
@@ -487,9 +551,9 @@ function PlaybackControls({
             initial="rest"
             whileHover="hover"
             whileTap="tap"
-            onClick={() => onSeek(Math.max(0, currentTime - 2))}
+            onClick={() => onSeek(Math.max(0, currentTime - MIN_PLAYBACK_STEP_SECONDS))}
             className="flex h-7 w-7 items-center justify-center rounded-md text-[#5b667c] hover:bg-[#1a2333] hover:text-white"
-            title="Skip back 2s"
+            title={`Skip back ${MIN_PLAYBACK_STEP_SECONDS}s`}
           >
             <SkipBack className="h-3.5 w-3.5" />
           </motion.button>
@@ -519,9 +583,9 @@ function PlaybackControls({
             initial="rest"
             whileHover="hover"
             whileTap="tap"
-            onClick={() => onSeek(Math.min(duration, currentTime + 2))}
+            onClick={() => onSeek(Math.min(duration, currentTime + MIN_PLAYBACK_STEP_SECONDS))}
             className="flex h-7 w-7 items-center justify-center rounded-md text-[#5b667c] hover:bg-[#1a2333] hover:text-white"
-            title="Skip forward 2s"
+            title={`Skip forward ${MIN_PLAYBACK_STEP_SECONDS}s`}
           >
             <SkipForward className="h-3.5 w-3.5" />
           </motion.button>
@@ -529,7 +593,7 @@ function PlaybackControls({
 
         {/* Center: time display */}
         <div className="flex items-center gap-3">
-          <motion.span
+      <motion.span
             key={currentTime}
             initial={{ opacity: 0.5 }}
             animate={{ opacity: 1 }}
@@ -541,8 +605,8 @@ function PlaybackControls({
 
         {/* Right: speed selector */}
         <div className="flex items-center gap-0.5">
-          {[0.5, 1, 2, 4].map((s) => (
-            <motion.button
+            {REPLAY_SPEED_OPTIONS.map((s) => (
+              <motion.button
               key={s}
               variants={controlBtnVariants}
               initial="rest"
@@ -706,8 +770,8 @@ function InfoOverlay({
 }: {
   pathLabel: string;
   waypointCount: number;
-  exposureScore: number;
-  criticalZoneReachableAlongRoute: boolean;
+  exposureScore?: number;
+  criticalZoneReachableAlongRoute?: boolean;
   qualityBands: QualityExposure;
   collisionCount: number;
   firstCollisionLabel?: string;
@@ -719,6 +783,10 @@ function InfoOverlay({
   nextEventLabel?: string;
 }) {
   const maxExposure = Math.max(...EXPOSURE_KEYS.map((k) => qualityBands[k] ?? 0), 1);
+  const exposureLabel = typeof exposureScore === "number" ? exposureScore.toFixed(1) : "—";
+  const hasCoverageRisk = criticalZoneReachableAlongRoute === true;
+  const hasCoverageSummary = typeof criticalZoneReachableAlongRoute === "boolean"
+    || typeof exposureScore === "number";
 
   return (
     <motion.div
@@ -730,7 +798,7 @@ function InfoOverlay({
     >
       <div className="mb-2.5 flex items-center gap-3">
         <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#5b667c]">{pathLabel}</div>
-        {criticalZoneReachableAlongRoute && (
+        {hasCoverageRisk && (
           <span className="rounded-md bg-red-500/15 px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-[0.12em] text-red-400">
             Critical Zone Reachable
           </span>
@@ -745,12 +813,16 @@ function InfoOverlay({
         </div>
         <div>
           <div className="text-[8px] text-[#5b667c]">Exposure</div>
-          <div className="mt-0.5 text-[11px] font-mono font-semibold text-[#f43f5e]">{exposureScore.toFixed(1)}</div>
+          <div className="mt-0.5 text-[11px] font-mono font-semibold text-[#f43f5e]">{exposureLabel}</div>
         </div>
         <div>
           <div className="text-[8px] text-[#5b667c]">Status</div>
-          <div className={`mt-0.5 text-[11px] font-semibold ${criticalZoneReachableAlongRoute ? "text-red-400" : "text-[#5b667c]"}`}>
-            {criticalZoneReachableAlongRoute ? "Coverage Failure Risk" : "Route Covered"}
+          <div className={`mt-0.5 text-[11px] font-semibold ${hasCoverageRisk ? "text-red-400" : "text-[#5b667c]"}`}>
+            {hasCoverageSummary
+              ? hasCoverageRisk
+                ? "Coverage Failure Risk"
+                : "Route Covered"
+              : "Summary pending"}
           </div>
         </div>
       </div>
@@ -822,12 +894,16 @@ function InfoOverlay({
 
 // ── Empty state ──
 
-function EmptyReplayState() {
+function EmptyReplayState({ showActivePathHint }: { showActivePathHint: boolean }) {
   return (
     <div className="flex h-full items-center justify-center bg-[#07090d]">
       <RunSimulationPrompt
         className="px-4"
-        message="Run the shared simulation to generate a coverage failure path for replay."
+        message={
+          showActivePathHint
+            ? "Run the shared simulation, then pick a path or return to Coverage Failure Path to replay."
+            : "Run the shared simulation to generate a coverage failure path for replay."
+        }
       />
     </div>
   );
@@ -886,8 +962,6 @@ function CurrentVisibilityPanel({
 
 // ── Main Path Replay View ──
 
-const SHARED_REPLAY_PROGRESS_PUBLISH_INTERVAL_MS = 1000 / 24;
-
 export function PathReplayView() {
   const scene = useStudioStore((s) => s.scene);
   const result = useStudioStore((s) => s.simulationResult);
@@ -900,6 +974,7 @@ export function PathReplayView() {
   const setPathReplayPlaying = useStudioStore((s) => s.setPathReplayPlaying);
   const setPathReplayProgress = useStudioStore((s) => s.setPathReplayProgress);
   const setPathReplaySpeed = useStudioStore((s) => s.setPathReplaySpeed);
+  const pathReplaySpeed = useStudioStore((s) => s.pathReplay.speed);
   const followActor = useStudioStore((s) => s.pathReplay.followActor);
   const coverageFailurePath = result?.adversarialPath;
   const activePath = useMemo(() => {
@@ -914,7 +989,11 @@ export function PathReplayView() {
   // Playback state
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [speed, setSpeed] = useState(1);
+  const [speed, setSpeed] = useState(pathReplaySpeed);
+
+  useEffect(() => {
+    setSpeed(pathReplaySpeed);
+  }, [pathReplaySpeed]);
 
   // Derived data
   const playbackWaypoints = useMemo(() => {
@@ -927,9 +1006,13 @@ export function PathReplayView() {
   }, [activePath, coverageFailurePath]);
 
   const replaySamples = useMemo(
-    () => buildLegalizedReplayWaypoints(playbackWaypoints, scene),
+    () => sanitizeReplayWaypointsForPlayback(
+      buildLegalizedReplayWaypoints(playbackWaypoints, scene),
+    ),
     [playbackWaypoints, scene],
   );
+  const hasReplaySummary = Boolean(coverageFailurePath);
+  const replayDurationS = replaySamples[replaySamples.length - 1]?.timeS ?? 0;
 
   const waypoints: [number, number][] = useMemo(
     () => replaySamples.map((wp) => wp.position),
@@ -944,14 +1027,34 @@ export function PathReplayView() {
     return pathLength(activePath.points.map((point) => point.position));
   }, [activePath]);
   const estimatedTimeS = useMemo(() => {
-    if (!activePath || activePath.speedMps <= 0) return 0;
-    return pathLengthM / activePath.speedMps;
+    if (!activePath) return 0;
+    return pathLengthM / getSafePathSpeedMps(activePath.speedMps);
   }, [activePath, pathLengthM]);
   const selectedPathLabel = activePath?.label ?? "Coverage Failure Path";
+  const timelineEvents = useMemo(() => sortTimelineEvents(activePathResult?.timeline), [activePathResult?.timeline]);
+  const totalDuration = clampPathDuration(
+    activePathResult?.totalDurationS
+      ?? coverageFailurePath?.totalDurationS
+      ?? replayDurationS
+      ?? 0,
+  );
+  const safeCurrentTime = useMemo(() => {
+    const safe = clampPathDuration(currentTime);
+    return totalDuration > 0 ? Math.min(safe, totalDuration) : 0;
+  }, [currentTime, totalDuration]);
+  const currentTimelineEvent = useMemo(
+    () => findLatestTimelineEventAtOrBeforeTime(timelineEvents, safeCurrentTime),
+    [timelineEvents, safeCurrentTime],
+  );
+  const nextTimelineEvent = useMemo(
+    () => findNextTimelineEventAfterTime(timelineEvents, safeCurrentTime),
+    [timelineEvents, safeCurrentTime],
+  );
 
   // Coverage bands data for the scrub bar (full waypoint objects with quality)
   const coverageBands = useMemo(() => {
     if (activePath) {
+      if (!result?.coverageCells?.length) return [];
       return samplePathQuality(activePath, result?.coverageCells ?? [], 0.25).map((sample) => ({
         position: sample.position,
         timeS: sample.timeS,
@@ -972,7 +1075,7 @@ export function PathReplayView() {
 
   // Quality exposure breakdown for info overlay
   const qualityExposure = useMemo((): QualityExposure => {
-    const base = coverageFailurePath?.detectionQualityExposure ?? {};
+    const base = hasReplaySummary ? coverageFailurePath?.detectionQualityExposure ?? {} : {};
     return {
       detection: base.detection ?? 0,
       observation: base.observation ?? 0,
@@ -980,7 +1083,7 @@ export function PathReplayView() {
       identification: base.identification ?? 0,
       ...base,
     };
-  }, [coverageFailurePath]);
+  }, [coverageFailurePath, hasReplaySummary]);
   const collisionCount = useMemo(
     () => replaySamples.filter((sample) => sample.collided).length,
     [replaySamples],
@@ -989,18 +1092,10 @@ export function PathReplayView() {
     () => replaySamples.find((sample) => sample.collided) ?? null,
     [replaySamples],
   );
-  const criticalZoneReachableAlongRoute =
-    coverageFailurePath?.criticalZoneReachable ?? false;
-  const currentTimelineEvent = useMemo(() => {
-    if (!activePathResult?.timeline?.length) return null;
-    const events = activePathResult.timeline.filter((event) => event.timeS <= currentTime);
-    return events[events.length - 1] ?? activePathResult.timeline[0] ?? null;
-  }, [activePathResult, currentTime]);
-  const nextTimelineEvent = useMemo(() => {
-    if (!activePathResult?.timeline?.length) return null;
-    return activePathResult.timeline.find((event) => event.timeS > currentTime) ?? null;
-  }, [activePathResult, currentTime]);
-  const currentQualityLabel = currentTimelineEvent?.quality?.toUpperCase() ?? (coverageFailurePath ? "Route replay" : undefined);
+  const criticalZoneReachableAlongRoute = hasReplaySummary
+    ? coverageFailurePath?.criticalZoneReachable ?? false
+    : undefined;
+  const currentQualityLabel = currentTimelineEvent?.quality?.toUpperCase() ?? (hasReplaySummary ? "Route replay" : undefined);
   const currentSegmentLabel = currentTimelineEvent?.reason
     ?? (currentTimelineEvent?.event === "lost"
       ? "Visibility loss"
@@ -1022,30 +1117,10 @@ export function PathReplayView() {
     return scene.cameras.find((camera) => camera.id === best[0])?.name ?? best[0];
   }, [activePathResult, scene.cameras]);
   const replayCameraStateSummary = useMemo(() => {
-    if (!activePathResult?.timeline?.length) {
+    if (!timelineEvents.length) {
       return { visibleNow: [] as ReplayCameraStateSummary[], lostNow: [] as ReplayCameraStateSummary[] };
     }
-    const stateByCamera = new Map<string, { visible: boolean; quality?: DoriQuality; reason?: string }>();
-    for (const event of activePathResult.timeline) {
-      if (event.timeS > currentTime || !event.cameraId) continue;
-      const previous = stateByCamera.get(event.cameraId);
-      if (event.event === "visible") {
-        stateByCamera.set(event.cameraId, { visible: true, quality: event.quality, reason: event.reason });
-        continue;
-      }
-      if (event.event === "lost") {
-        stateByCamera.set(event.cameraId, { visible: false, quality: event.quality, reason: event.reason });
-        continue;
-      }
-      if (event.event === "quality_change") {
-        stateByCamera.set(event.cameraId, {
-          visible: previous?.visible ?? true,
-          quality: event.quality ?? previous?.quality,
-          reason: event.reason ?? previous?.reason,
-        });
-      }
-    }
-
+    const stateByCamera = buildReplayStateByCameraAtTime(timelineEvents, safeCurrentTime);
     const entries: ReplayCameraStateSummary[] = Array.from(stateByCamera.entries()).map(([cameraId, state]) => ({
       cameraId,
       cameraName: scene.cameras.find((camera) => camera.id === cameraId)?.name ?? cameraId,
@@ -1060,16 +1135,10 @@ export function PathReplayView() {
       visibleNow: entries.filter((entry) => entry.visible).sort(sortByPriority),
       lostNow: entries.filter((entry) => !entry.visible).sort(sortByPriority),
     };
-  }, [activePathResult, currentTime, scene.cameras]);
-
-  const totalDuration =
-    activePathResult?.totalDurationS
-    ?? coverageFailurePath?.totalDurationS
-    ?? playbackWaypoints[playbackWaypoints.length - 1]?.timeS
-    ?? 0;
+  }, [scene.cameras, timelineEvents, safeCurrentTime]);
 
   // Find current segment index + progress based on elapsed time.
-  const { currentIndex, progress } = getPlaybackPosition(playbackWaypoints, currentTime);
+  const { currentIndex, progress } = getPlaybackPosition(replaySamples, safeCurrentTime);
   const actorPosition = useMemo<[number, number] | null>(() => {
     if (waypoints.length === 0) return null;
     if (currentIndex >= waypoints.length - 1) return waypoints[waypoints.length - 1] ?? null;
@@ -1089,39 +1158,51 @@ export function PathReplayView() {
   // seeking while playing doesn't jump back to the pre-seek position.
   const playbackAnchorRef = useRef({ startWallTime: 0, startPlaybackTime: 0 });
   const lastSharedProgressPublishAtRef = useRef(0);
+  const playbackRafRef = useRef<number | null>(null);
 
   useEffect(() => {
-    // currentTime intentionally excluded from deps below: captured once when playback starts.
     if (!playing || totalDuration <= 0) return;
 
-    // Reset anchor when playback starts or restarts
-    const startPlaybackTime = currentTime;
-    playbackAnchorRef.current = { startWallTime: performance.now(), startPlaybackTime };
+    const startWallTime = performance.now();
+    playbackAnchorRef.current = { startWallTime, startPlaybackTime: safeCurrentTime };
+    lastSharedProgressPublishAtRef.current = startWallTime;
 
-    const remainingTime = totalDuration - startPlaybackTime;
-    const animationDuration = remainingTime / speed;
+    const tick = (now: number) => {
+      const elapsedWallSeconds = (now - playbackAnchorRef.current.startWallTime) / 1000;
+      const nextTime = playbackAnchorRef.current.startPlaybackTime + elapsedWallSeconds * speed;
+      const clampedTime = Math.min(nextTime, totalDuration);
 
-    const controls = animate(startPlaybackTime, totalDuration, {
-      duration: animationDuration,
-      ease: "linear",
-      onUpdate: (latest) => {
-        setCurrentTime(latest);
-        const now = performance.now();
-        if (now - lastSharedProgressPublishAtRef.current >= SHARED_REPLAY_PROGRESS_PUBLISH_INTERVAL_MS) {
-          lastSharedProgressPublishAtRef.current = now;
-          setPathReplayProgress(totalDuration > 0 ? Math.min(latest / totalDuration, 1) : 0);
-        }
-      },
-      onComplete: () => {
-        setPathReplayProgress(1);
+      setCurrentTime(clampedTime);
+      const nowMs = performance.now();
+      if (nowMs - lastSharedProgressPublishAtRef.current >= SHARED_REPLAY_PROGRESS_PUBLISH_INTERVAL_MS) {
+        lastSharedProgressPublishAtRef.current = nowMs;
+        setPathReplayProgress(clampReplayProgress(totalDuration > 0 ? clampedTime / totalDuration : 0));
+      }
+
+      if (clampedTime >= totalDuration) {
+        setPathReplayProgress(clampReplayProgress(1));
+        setCurrentTime(totalDuration);
         setPlaying(false);
         setPathReplayPlaying(false);
+        if (playbackRafRef.current !== null) {
+          playbackRafRef.current = null;
+        }
+        return;
       }
-    });
 
-    return () => controls.stop();
+      playbackRafRef.current = requestAnimationFrame(tick);
+    };
+
+    playbackRafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (playbackRafRef.current !== null) {
+        cancelAnimationFrame(playbackRafRef.current);
+        playbackRafRef.current = null;
+      }
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playing, setPathReplayPlaying, setPathReplayProgress, speed, totalDuration]);
+  }, [playing, safeCurrentTime, setPathReplayPlaying, setPathReplayProgress, speed, totalDuration]);
 
   useEffect(() => {
     if (!followActor || !actorPosition || !controlsRef.current) return;
@@ -1139,26 +1220,26 @@ export function PathReplayView() {
 
   // Play/pause toggle
   const handlePlayPause = useCallback(() => {
-    if (currentTime >= totalDuration && totalDuration > 0) {
+    if (safeCurrentTime >= totalDuration && totalDuration > 0) {
       // At end, reset first
       setCurrentTime(0);
-      setPathReplayProgress(0);
+      setPathReplayProgress(clampReplayProgress(0));
     }
     setPlaying((prev) => {
       const next = !prev;
       setPathReplayPlaying(next);
       if (!next) {
-        setPathReplayProgress(totalDuration > 0 ? Math.min(currentTime / totalDuration, 1) : 0);
+        setPathReplayProgress(clampReplayProgress(totalDuration > 0 ? safeCurrentTime / totalDuration : 0));
       }
       return next;
     });
-  }, [currentTime, setPathReplayPlaying, setPathReplayProgress, totalDuration]);
+  }, [safeCurrentTime, setPathReplayPlaying, setPathReplayProgress, totalDuration]);
 
   // Seek
   const handleSeek = useCallback((t: number) => {
-    const clamped = Math.min(t, totalDuration);
+    const clamped = clampPathDuration(Math.min(t, totalDuration));
     setCurrentTime(clamped);
-    setPathReplayProgress(totalDuration > 0 ? Math.min(clamped / totalDuration, 1) : 0);
+    setPathReplayProgress(clampReplayProgress(totalDuration > 0 ? clamped / totalDuration : 0));
     setPlaying((prev) => {
       // Re-anchor RAF if currently playing (seek-while-playing edge case)
       if (prev) {
@@ -1191,8 +1272,8 @@ export function PathReplayView() {
     setPathReplaySpeed(nextSpeed);
   }, [setPathReplaySpeed]);
 
-  if (!coverageFailurePath || waypoints.length < 2) {
-    return <EmptyReplayState />;
+  if (waypoints.length < 2) {
+    return <EmptyReplayState showActivePathHint={Boolean(scene.paths.length)} />;
   }
 
   return (
@@ -1259,26 +1340,24 @@ export function PathReplayView() {
         </div>
       </div>
 
-      {coverageFailurePath && (
         <InfoOverlay
           pathLabel={selectedPathLabel}
           waypointCount={waypoints.length}
-          exposureScore={coverageFailurePath.totalExposureScore}
+          exposureScore={hasReplaySummary ? coverageFailurePath?.totalExposureScore : undefined}
           criticalZoneReachableAlongRoute={criticalZoneReachableAlongRoute}
           qualityBands={qualityExposure}
           collisionCount={collisionCount}
-          firstCollisionLabel={firstCollision?.blockedBy}
-          firstCollisionTimeS={firstCollision?.timeS}
-          currentTime={currentTime}
-          currentSegmentLabel={currentSegmentLabel}
-          currentQualityLabel={currentQualityLabel}
-          bestCameraLabel={bestCameraLabel}
-          nextEventLabel={nextTimelineEvent?.reason ?? nextTimelineEvent?.event?.replace(/_/g, " ")}
-        />
-      )}
+        firstCollisionLabel={firstCollision?.blockedBy}
+        firstCollisionTimeS={firstCollision?.timeS}
+        currentTime={safeCurrentTime}
+        currentSegmentLabel={currentSegmentLabel}
+        currentQualityLabel={currentQualityLabel}
+        bestCameraLabel={bestCameraLabel}
+        nextEventLabel={nextTimelineEvent?.reason ?? nextTimelineEvent?.event?.replace(/_/g, " ")}
+      />
       {activePathResult ? (
         <CurrentVisibilityPanel
-          currentTime={currentTime}
+          currentTime={safeCurrentTime}
           visibleNow={replayCameraStateSummary.visibleNow}
           lostNow={replayCameraStateSummary.lostNow}
         />
@@ -1328,7 +1407,7 @@ export function PathReplayView() {
 
       <PlaybackControls
         playing={playing}
-        currentTime={currentTime}
+        currentTime={safeCurrentTime}
         duration={totalDuration}
         onPlayPause={handlePlayPause}
         onSeek={handleSeek}
@@ -1342,7 +1421,7 @@ export function PathReplayView() {
       <div className="absolute bottom-25 left-3 right-3 z-10">
         <VisibilityTimeline
           pathResult={activePathResult}
-          currentTime={currentTime}
+          currentTime={safeCurrentTime}
           onSeek={handleSeek}
         />
       </div>

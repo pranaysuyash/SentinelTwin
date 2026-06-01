@@ -13,7 +13,7 @@ import {
   type CameraPreset,
 } from "./camera-preset-utils";
 
-const PRESET_ICONS: Record<CameraPreset["id"], React.ReactNode> = {
+const PRESET_ICONS: Partial<Record<CameraPreset["id"], React.ReactNode>> = {
   dome_indoor: <Expand className="h-3.5 w-3.5" />,
   bullet_outdoor: <Crosshair className="h-3.5 w-3.5" />,
   ptz_professional: <RotateCw className="h-3.5 w-3.5" />,

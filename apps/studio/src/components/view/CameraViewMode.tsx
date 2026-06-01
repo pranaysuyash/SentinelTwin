@@ -4,7 +4,7 @@ import Image from "next/image";
 import { PerspectiveCamera } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { ArrowLeft, Camera as CameraIcon, CircleSmall, VideoOff } from "lucide-react";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useMemo, useRef, useState } from "react";
 
 import { useStudioStore } from "@/store/studio-store";
 import "@/lib/three-compat";
@@ -24,7 +24,14 @@ import { alignmentQualityLabel } from "@/components/view/camera-verification-uti
 import { computeOperationalEvidenceFusionSummary, computeSensorFusionSummary } from "@/lib/sensor-fusion";
 import type { CameraNode, DoriQuality } from "@/schema/security-scene";
 import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
-import { formatCameraTag } from "@/components/view/camera-view-utils";
+import {
+  buildReplayStateByCameraAtTime,
+  clampPathDuration,
+  clampReplayProgress,
+  findLatestTimelineEventForCameraAtTime,
+  formatCameraTag,
+  orderCamerasForReplayPlayback,
+} from "@/components/view/camera-view-utils";
 
 function OfflineFeed({ camera: cam }: { camera: CameraNode }) {
   return (
@@ -68,8 +75,17 @@ export function CameraViewMode() {
   const removeCameraVerificationSnapshot = useStudioStore((s) => s.removeCameraVerificationSnapshot);
   const recordOperationalEvidenceEvent = useStudioStore((s) => s.recordOperationalEvidenceEvent);
 
-  const camera = scene.cameras.find((c) => c.id === selectedId)
-    ?? scene.cameras.find((c) => c.id === selectedCameraId)
+  const orderedCameras = useMemo(
+    () => orderCamerasForReplayPlayback(scene.cameras, selectedId, selectedCameraId),
+    [scene.cameras, selectedCameraId, selectedId],
+  );
+  const replayCameraOrder = useMemo(
+    () => new Map(orderedCameras.map((orderedCamera, index) => [orderedCamera.id, index])),
+    [orderedCameras],
+  );
+  const camera = orderedCameras.find((c) => c.id === selectedId)
+    ?? orderedCameras.find((c) => c.id === selectedCameraId)
+    ?? orderedCameras[0]
     ?? null;
   const frameRootRef = useRef<HTMLDivElement | null>(null);
   const verification = useCameraVerificationWorkflow({
@@ -87,7 +103,21 @@ export function CameraViewMode() {
     recordOperationalEvidenceEvent,
   });
   const cameraId = camera?.id ?? null;
-  const cameraIndex = useMemo(() => scene.cameras.findIndex((c) => c.id === camera?.id), [camera?.id, scene.cameras]);
+  const cameraIndex = useMemo(() => {
+    if (!camera?.id) {
+      return 0;
+    }
+    const index = orderedCameras.findIndex((c) => c.id === camera.id);
+    return index < 0 ? 0 : index;
+  }, [camera?.id, orderedCameras]);
+  const setCameraByDelta = (delta: -1 | 1) => {
+    if (!camera || !orderedCameras.length) return;
+    const nextIndex = Math.max(0, Math.min(orderedCameras.length - 1, cameraIndex + delta));
+    const nextCamera = orderedCameras[nextIndex];
+    if (!nextCamera || nextCamera.id === camera.id) return;
+    setSelectedCameraId(nextCamera.id);
+    selectNode(nextCamera.id);
+  };
   const activePath = useMemo(() => {
     if (!scene.paths.length || !activePathId) return null;
     return scene.paths.find((path) => path.id === activePathId) ?? null;
@@ -107,10 +137,15 @@ export function CameraViewMode() {
         : feedMode === "low_light"
           ? "brightness(0.65) contrast(1.1) saturate(0.8)"
           : "brightness(0.78) contrast(1.22) saturate(1.1) sepia(0.08)";
-  const pathTimeS = activePathResult && activePathResult.totalDurationS > 0
-    ? pathReplay.progress * activePathResult.totalDurationS
-    : 0;
-  const replayActorVisible = Boolean(activePath && activePathResult && (pathReplay.playing || pathReplay.progress > 0));
+  const safeReplayProgress = clampReplayProgress(pathReplay.progress);
+  const safeReplayDurationS = clampPathDuration(activePathResult?.totalDurationS);
+  const pathTimeS = safeReplayDurationS > 0 ? safeReplayProgress * safeReplayDurationS : 0;
+  const replayActorVisible = Boolean(
+    activePath
+      && activePathResult
+      && safeReplayDurationS > 0
+      && (pathReplay.playing || safeReplayProgress > 0),
+  );
   const visibilityForCurrentCamera = useMemo(() => {
     if (!activePathResult || !camera) return null;
     return activePathResult.visibilityByCamera[camera.id] ?? null;
@@ -142,13 +177,23 @@ export function CameraViewMode() {
     const bearing = (Math.atan2(dx, dz) * 180) / Math.PI;
     const angleDeg = Math.abs((((bearing - camera.yawDeg) % 360) + 540) % 360 - 180);
     const currentQuality = camResult.qualityByZone[selectedCriticalZone.id] ?? "none";
+    const cameraOrder = replayCameraOrder;
     let bestCameraNameEntry: { cameraId: string; quality: string } | null = null;
     for (const entry of result?.cameraResults ?? []) {
       const candidate = {
         cameraId: entry.cameraId,
         quality: entry.qualityByZone[selectedCriticalZone.id] ?? "none",
       };
-      if (!bestCameraNameEntry || QUALITY_RANK[candidate.quality as DoriQuality] > QUALITY_RANK[bestCameraNameEntry.quality as DoriQuality]) {
+      const existingOrder = bestCameraNameEntry ? cameraOrder.get(bestCameraNameEntry.cameraId) ?? Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER;
+      const candidateOrder = cameraOrder.get(candidate.cameraId) ?? Number.MAX_SAFE_INTEGER;
+      const bestQualityRank = QUALITY_RANK[bestCameraNameEntry?.quality as DoriQuality] ?? QUALITY_RANK.none;
+      const candidateQualityRank = QUALITY_RANK[candidate.quality as DoriQuality] ?? QUALITY_RANK.none;
+
+      if (
+        !bestCameraNameEntry
+        || candidateQualityRank > bestQualityRank
+        || (candidateQualityRank === bestQualityRank && candidateOrder < existingOrder)
+      ) {
         bestCameraNameEntry = candidate;
       }
     }
@@ -167,15 +212,17 @@ export function CameraViewMode() {
       reasonLine,
       bestCameraName: bestCameraNameEntry ? (scene.cameras.find((entry) => entry.id === bestCameraNameEntry.cameraId)?.name ?? bestCameraNameEntry.cameraId) : camera.name,
     };
-  }, [camera, camResult, result, scene.cameras, selectedCriticalZone, zoneResult?.status]);
+  }, [camera, camResult, replayCameraOrder, result, scene.cameras, selectedCriticalZone, zoneResult?.status]);
 
   const activeCameraTimelineEvent = useMemo(() => {
     if (!activePathResult?.timeline?.length || !camera) return null;
-    const events = activePathResult.timeline.filter(
-      (event) => event.timeS <= pathTimeS && (!event.cameraId || event.cameraId === camera.id),
-    );
-    return events[events.length - 1] ?? null;
-  }, [activePathResult, camera, pathTimeS]);
+    return findLatestTimelineEventForCameraAtTime(activePathResult.timeline, pathTimeS, camera.id);
+  }, [activePathResult?.timeline, camera, pathTimeS]);
+  const replayStateByCameraId = useMemo(
+    () => buildReplayStateByCameraAtTime(activePathResult?.timeline, pathTimeS),
+    [activePathResult?.timeline, pathTimeS],
+  );
+  const activeCameraReplayState = camera ? replayStateByCameraId[camera.id] ?? null : null;
   const cameraPosition = useMemo<[number, number, number]>(
     () => (camera ? [camera.position[0], camera.position[1], camera.position[2]] : [0, 0, 0]),
     [camera],
@@ -218,6 +265,8 @@ export function CameraViewMode() {
 
   const replayQualityLabel = activeCameraTimelineEvent?.quality
     ? activeCameraTimelineEvent.quality.toUpperCase()
+    : activeCameraReplayState?.quality
+      ? activeCameraReplayState.quality.toUpperCase()
     : visibilityForCurrentCamera?.maxQuality
       ? visibilityForCurrentCamera.maxQuality.toUpperCase()
       : undefined;
@@ -256,42 +305,32 @@ export function CameraViewMode() {
   }
   return (
     <div ref={frameRootRef} className="st-camera-view-safe-zone relative h-full w-full overflow-hidden bg-[#07090d]">
+      <style>{`
+        .st-camera-view-safe-zone > .absolute.top-3 {
+          top: var(--st-full-canvas-safe-top, 4.25rem);
+        }
+        .st-camera-view-safe-zone > .absolute.top-24 {
+          top: calc(var(--st-full-canvas-safe-top, 4.25rem) + 5.25rem);
+        }
+      `}</style>
+      <CameraHeader
+        camera={camera}
+        index={cameraIndex}
+        total={orderedCameras.length}
+        cameras={orderedCameras}
+        onPrevious={() => {
+          setCameraByDelta(-1);
+        }}
+        onNext={() => {
+          setCameraByDelta(1);
+        }}
+        onSelect={(id) => {
+          setSelectedCameraId(id);
+          selectNode(id);
+        }}
+      />
       {camera.status === "on" ? (
         <>
-          <style>{`
-            .st-camera-view-safe-zone > .absolute.top-3 {
-              top: var(--st-full-canvas-safe-top, 4.25rem);
-            }
-            .st-camera-view-safe-zone > .absolute.top-24 {
-              top: calc(var(--st-full-canvas-safe-top, 4.25rem) + 5.25rem);
-            }
-          `}</style>
-          <CameraHeader
-            camera={camera}
-            index={cameraIndex < 0 ? 0 : cameraIndex}
-            total={scene.cameras.length}
-            cameras={scene.cameras}
-            onPrevious={() => {
-              const nextIndex = Math.max(0, (cameraIndex < 0 ? 0 : cameraIndex) - 1);
-              const nextCamera = scene.cameras[nextIndex];
-              if (nextCamera) {
-                setSelectedCameraId(nextCamera.id);
-                selectNode(nextCamera.id);
-              }
-            }}
-            onNext={() => {
-              const nextIndex = Math.min(scene.cameras.length - 1, (cameraIndex < 0 ? 0 : cameraIndex) + 1);
-              const nextCamera = scene.cameras[nextIndex];
-              if (nextCamera) {
-                setSelectedCameraId(nextCamera.id);
-                selectNode(nextCamera.id);
-              }
-            }}
-            onSelect={(id) => {
-              setSelectedCameraId(id);
-              selectNode(id);
-            }}
-          />
           <Canvas
             camera={{
               position: camera.position,

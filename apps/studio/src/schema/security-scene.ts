@@ -43,6 +43,29 @@ export const geometryValiditySchema = z.enum([
 const point3Schema = z.tuple([z.number(), z.number(), z.number()]);
 const point2Schema = z.tuple([z.number(), z.number()]);
 
+export const cameraMovementModeSchema = z.enum([
+  "fixed",
+  "sweep_h",
+  "sweep_v",
+  "preset_cycle",
+  "tracking",
+]);
+
+export const cameraMotionWaypointSchema = z.object({
+  yawDeg: z.number(),
+  pitchDeg: z.number(),
+  holdSeconds: z.number().min(0),
+  easing: z.enum(["linear", "ease_in", "ease_out", "ease_in_out"]).optional(),
+});
+
+export const cameraViewMotionSchema = z.object({
+  movementMode: cameraMovementModeSchema.default("fixed"),
+  dwellSeconds: z.number().min(0).default(0),
+  patrolRouteId: z.string().optional(),
+  patrolSpeedDegPerS: z.number().positive().optional(),
+  waypoints: z.array(cameraMotionWaypointSchema).default([]),
+});
+
 export const wallNodeSchema = z.object({
   id: z.string().startsWith("wall_"),
   nodeType: z.literal("wall"),
@@ -147,6 +170,8 @@ export const cameraNodeSchema = z.object({
   resolutionHeight: z.number().positive().optional(),
   lensType: z.enum(["fixed", "varifocal", "fisheye", "panoramic"]),
   focalLengthMm: z.number().positive().optional(),
+  presetId: z.string().optional(),
+  viewMotion: cameraViewMotionSchema.default({ movementMode: "fixed", dwellSeconds: 0, waypoints: [] }),
   status: z.enum(["on", "off", "blocked", "dirty", "malfunctioning"]),
   nightMode: z.enum(["none", "ir", "low_light", "thermal"]),
   irRangeM: z.number().min(0),
@@ -881,6 +906,9 @@ export type SensorNode = z.infer<typeof sensorNodeSchema>;
 export type EntryPointNode = z.infer<typeof entryPointNodeSchema>;
 export type PathPoint = z.infer<typeof pathPointSchema>;
 export type ScenarioPath = z.infer<typeof scenarioPathSchema>;
+export type CameraMovementMode = z.infer<typeof cameraMovementModeSchema>;
+export type CameraMotionWaypoint = z.infer<typeof cameraMotionWaypointSchema>;
+export type CameraViewMotion = z.infer<typeof cameraViewMotionSchema>;
 export type SimulationAssumptions = z.infer<typeof simulationAssumptionsSchema>;
 export type ZoneResult = z.infer<typeof zoneResultSchema>;
 export type QualityThresholds = z.infer<typeof qualityThresholdSchema>;

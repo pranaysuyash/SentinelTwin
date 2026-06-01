@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
 import { compareModelEvalRuns, runModelEvalSuite, summarizeModelEvalRun } from "@/agents/model-eval";
-import type { ModelPrompt, ModelProvider, ModelResponse } from "@/agents/providers/ModelProvider";
-import { normalizeAiProviderSelection } from "@/agents/provider-selection";
+import type { ModelPrompt, ModelProvider, ModelResponse } from "@sentineltwin/agents";
+import { normalizeAiProviderSelection } from "@sentineltwin/agents";
 
 function buildMockProvider(): ModelProvider {
   return {
@@ -135,7 +135,7 @@ describe("model eval suite", () => {
       expect(report.summary.passed).toBe(5);
       expect(report.provider.providerLabel).toContain("OpenAI");
       expect(report.governance.activeProviderId).toBe("openai");
-      expect(report.promptRegistry.total).toBe(4);
+      expect(report.promptRegistry.total).toBe(5);
       expect(report.promptRegistry.registryDigest).toContain("command_parse");
       expect(report.fixtures.some((fixture) => fixture.id === "model_layout_draft" && fixture.status === "pass")).toBe(true);
     } finally {

@@ -228,6 +228,9 @@ describe("scan-reconstruction pipeline", () => {
 
       const modeAssumption = draft.assumptions.find((a) => a.label === "Capture mode");
       expect(modeAssumption?.value).toBe("Guided Capture");
+
+      const operationalModeAssumption = draft.assumptions.find((a) => a.label === "Operational mode");
+      expect(operationalModeAssumption?.value).toBe("Permanent");
     });
 
     test("includes scale anchors in assumptions when present", () => {
@@ -439,6 +442,22 @@ describe("scan-reconstruction pipeline", () => {
       expect(result.warnings).toBeDefined();
       expect(result.provenance.source).toBe("scan");
       expect(result.provenance.notes).toBeDefined();
+    });
+
+    test("includes operational mode in compiled provenance notes", () => {
+      const session = createScanCaptureSession("Result Test", "guided_capture", "temporary_event");
+      session.roomDimensions = { widthM: 12, depthM: 9, heightM: 3.2 };
+
+      const camCandidate = createScanCandidateFromArtifact("camera", [0.18, 0.2], "photo_1", 0.84);
+      camCandidate.status = "accepted";
+
+      const zoneCandidate = createScanCandidateFromArtifact("critical_zone", [0.61, 0.66], "photo_1", 0.76);
+      zoneCandidate.status = "accepted";
+
+      session.candidates = [camCandidate, zoneCandidate];
+
+      const result = compileReconstructionToSiteResult(session);
+      expect(result.provenance.notes.join(" ")).toContain("Operational mode: Temporary Event");
     });
 
     test("handles empty session gracefully", () => {

@@ -31,6 +31,18 @@ type CameraReplayState = {
   quality?: DoriQuality;
   reason?: string;
 };
+type CameraWallTimelineEvent = SimulationResult["pathResults"][number]["timeline"][number];
+type CameraWallLayoutSpec = {
+  cameraSlots: number;
+  gridClass: string;
+  viewCount: number;
+};
+const CAMERA_WALL_LAYOUTS: Record<CameraWallLayoutMode, CameraWallLayoutSpec> = {
+  auto: { cameraSlots: 3, gridClass: "grid-cols-2 grid-rows-2", viewCount: 4 },
+  quad: { cameraSlots: 3, gridClass: "grid-cols-2 grid-rows-2", viewCount: 4 },
+  overview: { cameraSlots: 5, gridClass: "grid-cols-3 grid-rows-2", viewCount: 6 },
+  dense: { cameraSlots: 15, gridClass: "grid-cols-4 grid-rows-4", viewCount: 16 },
+};
 
 /** Short label like "CAM 1" from camera name */
 function shortTag(name: string) {
@@ -79,6 +91,61 @@ function getEffectiveCameraWallLayout(
   if (cameraCount >= 12) return "dense";
   if (cameraCount >= 5) return "overview";
   return "quad";
+}
+
+function clampReplayProgress(progress: number) {
+  if (!Number.isFinite(progress)) return 0;
+  if (progress <= 0) return 0;
+  if (progress >= 1) return 1;
+  return progress;
+}
+
+function clampPathDuration(durationS: number | undefined) {
+  if (!Number.isFinite(durationS ?? NaN)) return 0;
+  return durationS! <= 0 ? 0 : durationS!;
+}
+
+function buildReplayStateByCameraAtTime(
+  timeline: CameraWallTimelineEvent[] | undefined,
+  pathTimeS: number,
+) {
+  if (!Array.isArray(timeline) || timeline.length === 0) return {};
+
+  const ordered = [...timeline].sort((a, b) => {
+    const byTime = a.timeS - b.timeS;
+    if (byTime !== 0) return byTime;
+    if (!a.cameraId || !b.cameraId) return 0;
+    return a.cameraId.localeCompare(b.cameraId);
+  });
+
+  const stateByCamera = new Map<string, CameraReplayState>();
+  for (const event of ordered) {
+    if (!event.cameraId || !Number.isFinite(event.timeS) || event.timeS > pathTimeS) continue;
+    const prev = stateByCamera.get(event.cameraId);
+    if (event.event === "visible") {
+      stateByCamera.set(event.cameraId, {
+        visible: true,
+        quality: event.quality,
+        reason: event.reason,
+      });
+      continue;
+    }
+    if (event.event === "lost") {
+      stateByCamera.set(event.cameraId, {
+        visible: false,
+        quality: event.quality,
+        reason: event.reason,
+      });
+      continue;
+    }
+    stateByCamera.set(event.cameraId, {
+      visible: prev?.visible ?? true,
+      quality: event.quality ?? prev?.quality,
+      reason: event.reason ?? prev?.reason,
+    });
+  }
+
+  return Object.fromEntries(Array.from(stateByCamera.entries()));
 }
 
 function LiveFeedOverlay({
@@ -484,14 +551,14 @@ export function CameraWallView() {
   const [freeRunningTimestamp, setFreeRunningTimestamp] = useState(() => Date.now());
 
   const cameras = useMemo(() => {
-    // Sort: selected first, then active, then offline
+    // Sort: selected first, then active, then online, then deterministic name order
+    const currentCamera = scene.cameras.some((cam) => cam.id === selectedId) ? selectedId : selectedCameraId;
     return [...scene.cameras].sort((a, b) => {
-      const currentCamera = scene.cameras.some((cam) => cam.id === selectedId) ? selectedId : selectedCameraId;
       if (a.id === currentCamera) return -1;
       if (b.id === currentCamera) return 1;
       if (a.status === "on" && b.status !== "on") return -1;
       if (a.status !== "on" && b.status === "on") return 1;
-      return 0;
+      return a.name.localeCompare(b.name);
     });
   }, [scene.cameras, selectedCameraId, selectedId]);
   const activePath = useMemo(() => {
@@ -507,6 +574,7 @@ export function CameraWallView() {
     [simulationResult],
   );
   const pathVisibilityByCameraId = useMemo(() => {
+    const safeDuration = clampPathDuration(activePathResult?.totalDurationS);
     const visibility = activePathResult?.visibilityByCamera ?? {};
     return Object.fromEntries(
       Object.entries(visibility).map(([cameraId, entry]) => [
@@ -514,7 +582,7 @@ export function CameraWallView() {
         entry
           ? {
               visibleS: entry.visibleS,
-              totalDurationS: activePathResult?.totalDurationS ?? 0,
+              totalDurationS: safeDuration,
               maxQuality: entry.maxQuality,
             }
           : null,
@@ -525,53 +593,30 @@ export function CameraWallView() {
     if (!activePathResult) return null;
     const entries = Object.entries(activePathResult.visibilityByCamera);
     if (entries.length === 0) return null;
+    const cameraOrder = new Map(cameras.map((camera, index) => [camera.id, index]));
     const best = entries.sort((a, b) => {
       const qualityDiff = QUALITY_RANK[(b[1]?.maxQuality ?? "none") as keyof typeof QUALITY_RANK] - QUALITY_RANK[(a[1]?.maxQuality ?? "none") as keyof typeof QUALITY_RANK];
       if (qualityDiff !== 0) return qualityDiff;
-      return (b[1]?.visibleS ?? 0) - (a[1]?.visibleS ?? 0);
+      if ((b[1]?.visibleS ?? 0) !== (a[1]?.visibleS ?? 0)) {
+        return (b[1]?.visibleS ?? 0) - (a[1]?.visibleS ?? 0);
+      }
+      return (cameraOrder.get(a[0]) ?? Number.MAX_SAFE_INTEGER) - (cameraOrder.get(b[0]) ?? Number.MAX_SAFE_INTEGER);
     })[0];
     return best?.[0] ?? null;
-  }, [activePathResult]);
+  }, [activePathResult, cameras]);
+  const safeReplayProgress = clampReplayProgress(pathReplay.progress);
   const pathTimeS = activePathResult && activePathResult.totalDurationS > 0
-    ? pathReplay.progress * activePathResult.totalDurationS
+    ? safeReplayProgress * activePathResult.totalDurationS
     : 0;
   const replayStateByCameraId = useMemo<Record<string, CameraReplayState | null>>(() => {
-    if (!activePathResult?.timeline?.length) return {};
-    const states = new Map<string, CameraReplayState>();
-    for (const event of activePathResult.timeline) {
-      if (event.timeS > pathTimeS || !event.cameraId) continue;
-      const prev = states.get(event.cameraId);
-      if (event.event === "visible") {
-        states.set(event.cameraId, {
-          visible: true,
-          quality: event.quality,
-          reason: event.reason,
-        });
-        continue;
-      }
-      if (event.event === "lost") {
-        states.set(event.cameraId, {
-          visible: false,
-          quality: event.quality,
-          reason: event.reason,
-        });
-        continue;
-      }
-      if (event.event === "quality_change") {
-        states.set(event.cameraId, {
-          visible: prev?.visible ?? true,
-          quality: event.quality ?? prev?.quality,
-          reason: event.reason ?? prev?.reason,
-        });
-      }
-    }
-    return Object.fromEntries(Array.from(states.entries()));
+    return buildReplayStateByCameraAtTime(activePathResult?.timeline, pathTimeS);
   }, [activePathResult, pathTimeS]);
   const effectiveLayout = getEffectiveCameraWallLayout(layoutMode, cameras.length);
-  const visibleCount = effectiveLayout === "quad" ? 4 : effectiveLayout === "overview" ? 5 : 15;
+  const layoutSpec = CAMERA_WALL_LAYOUTS[effectiveLayout];
+  const visibleCount = Math.min(layoutSpec.cameraSlots, cameras.length);
   const visible = cameras.slice(0, visibleCount);
   const hiddenCount = Math.max(0, cameras.length - visible.length);
-  const viewCount = effectiveLayout === "quad" ? 4 : effectiveLayout === "overview" ? 6 : 16;
+  const viewCount = layoutSpec.viewCount;
   const timestampLabel = syncTime
     ? activePathResult
       ? `Replay ${pathTimeS.toFixed(1)}s / ${activePathResult.totalDurationS.toFixed(1)}s`
@@ -719,90 +764,69 @@ export function CameraWallView() {
         </div>
       </div>
 
-      {effectiveLayout === "dense" ? (
-        <div className="grid flex-1 grid-cols-4 grid-rows-4 gap-2.5">
-          {visible.map((cam) => (
-            <CameraSlotButton
-              key={cam.id}
-              camera={cam}
-              isSelected={cam.id === selectedId}
-              isBestCamera={cam.id === bestCameraId}
-              cameraResult={cameraResultById[cam.id] ?? null}
-              pathVisibility={pathVisibilityByCameraId[cam.id] ?? null}
-              replayState={replayStateByCameraId[cam.id] ?? null}
-              timestampLabel={timestampLabel}
-              className="h-full w-full"
-            />
-          ))}
-          {Array.from({ length: Math.max(0, visibleCount - visible.length) }).map((_, index) => (
-            <EmptySlot key={`dense-empty-${index}`} />
-          ))}
-          <WallOverviewPanel />
-        </div>
-      ) : effectiveLayout === "overview" && visible.length >= 5 ? (
-        <div className="grid flex-1 grid-cols-3 grid-rows-2 gap-2.5">
-          {visible.slice(0, 5).map((cam) => (
-            <CameraSlotButton
-              key={cam.id}
-              camera={cam}
-              isSelected={cam.id === selectedId}
-              isBestCamera={cam.id === bestCameraId}
-              cameraResult={cameraResultById[cam.id] ?? null}
-              pathVisibility={pathVisibilityByCameraId[cam.id] ?? null}
-              replayState={replayStateByCameraId[cam.id] ?? null}
-              timestampLabel={timestampLabel}
-              className="h-full w-full"
-            />
-          ))}
-          <WallOverviewPanel />
-        </div>
-      ) : (
-        <div className="grid flex-1 grid-cols-2 grid-rows-2 gap-2.5">
-          {visible[0] ? (
-            <CameraSlotButton
-              camera={visible[0]}
-              isSelected={visible[0].id === selectedId}
-              isBestCamera={visible[0].id === bestCameraId}
-              cameraResult={cameraResultById[visible[0].id] ?? null}
-              pathVisibility={pathVisibilityByCameraId[visible[0].id] ?? null}
-              replayState={replayStateByCameraId[visible[0].id] ?? null}
-              timestampLabel={timestampLabel}
-              className="h-full w-full"
-            />
-          ) : (
-            <EmptySlot />
-          )}
-          {visible[1] ? (
-            <CameraSlotButton
-              camera={visible[1]}
-              isSelected={visible[1].id === selectedId}
-              isBestCamera={visible[1].id === bestCameraId}
-              cameraResult={cameraResultById[visible[1].id] ?? null}
-              pathVisibility={pathVisibilityByCameraId[visible[1].id] ?? null}
-              replayState={replayStateByCameraId[visible[1].id] ?? null}
-              timestampLabel={timestampLabel}
-              className="h-full w-full"
-            />
-          ) : (
-            <EmptySlot />
-          )}
-          {visible[2] ? (
-            <CameraSlotButton
-              camera={visible[2]}
-              isSelected={visible[2].id === selectedId}
-              isBestCamera={visible[2].id === bestCameraId}
-              cameraResult={cameraResultById[visible[2].id] ?? null}
-              pathVisibility={pathVisibilityByCameraId[visible[2].id] ?? null}
-              replayState={replayStateByCameraId[visible[2].id] ?? null}
-              timestampLabel={timestampLabel}
-              className="h-full w-full"
-            />
-          ) : (
-            <EmptySlot />
-          )}
-          <WallOverviewPanel />
-        </div>
-      )}
+      <div className={`grid flex-1 gap-2.5 ${layoutSpec.gridClass}`}>
+        {effectiveLayout === "dense" ? (
+          <>
+            {visible.map((cam) => (
+              <CameraSlotButton
+                key={cam.id}
+                camera={cam}
+                isSelected={cam.id === selectedId}
+                isBestCamera={cam.id === bestCameraId}
+                cameraResult={cameraResultById[cam.id] ?? null}
+                pathVisibility={pathVisibilityByCameraId[cam.id] ?? null}
+                replayState={replayStateByCameraId[cam.id] ?? null}
+                timestampLabel={timestampLabel}
+                className="h-full w-full"
+              />
+            ))}
+            {Array.from({ length: Math.max(0, layoutSpec.cameraSlots - visible.length) }).map((_, index) => (
+              <EmptySlot key={`dense-empty-${index}`} />
+            ))}
+            <WallOverviewPanel />
+          </>
+        ) : effectiveLayout === "overview" ? (
+          <>
+            {visible.map((cam) => (
+              <CameraSlotButton
+                key={cam.id}
+                camera={cam}
+                isSelected={cam.id === selectedId}
+                isBestCamera={cam.id === bestCameraId}
+                cameraResult={cameraResultById[cam.id] ?? null}
+                pathVisibility={pathVisibilityByCameraId[cam.id] ?? null}
+                replayState={replayStateByCameraId[cam.id] ?? null}
+                timestampLabel={timestampLabel}
+                className="h-full w-full"
+              />
+            ))}
+            {Array.from({ length: Math.max(0, layoutSpec.cameraSlots - visible.length) }).map((_, index) => (
+              <EmptySlot key={`overview-empty-${index}`} />
+            ))}
+            <WallOverviewPanel />
+          </>
+        ) : (
+          <>
+            {visible.map((cam) => (
+              <CameraSlotButton
+                key={cam.id}
+                camera={cam}
+                isSelected={cam.id === selectedId}
+                isBestCamera={cam.id === bestCameraId}
+                cameraResult={cameraResultById[cam.id] ?? null}
+                pathVisibility={pathVisibilityByCameraId[cam.id] ?? null}
+                replayState={replayStateByCameraId[cam.id] ?? null}
+                timestampLabel={timestampLabel}
+                className="h-full w-full"
+              />
+            ))}
+            {Array.from({ length: Math.max(0, layoutSpec.cameraSlots - visible.length) }).map((_, index) => (
+              <EmptySlot key={`quad-empty-${index}`} />
+            ))}
+            <WallOverviewPanel />
+          </>
+        )}
+      </div>
     </div>
   );
 }

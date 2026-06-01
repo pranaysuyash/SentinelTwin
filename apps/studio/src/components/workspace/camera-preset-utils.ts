@@ -1,11 +1,9 @@
 import type { CameraNode } from "@/schema/security-scene";
-import { useStudioStore } from "@/store/studio-store";
 
 export interface CameraPreset {
-  id: string;
+  id: CameraPresetId;
   label: string;
   description: string;
-  icon: React.ReactNode;
   fovHorizontalDeg: number;
   mountType: "wall" | "ceiling" | "pole" | "corner";
   lensType: "fixed" | "varifocal" | "fisheye" | "panoramic";
@@ -16,12 +14,24 @@ export interface CameraPreset {
   irRangeM: number;
 }
 
-export const CAMERA_PRESETS: CameraPreset[] = [
+export const CAMERA_PRESET_IDS = [
+  "dome_indoor",
+  "bullet_outdoor",
+  "ptz_professional",
+  "fisheye_360",
+  "thermal_perimeter",
+  "low_light_indoor",
+  "license_plate",
+  "panoramic_wide",
+] as const;
+
+export type CameraPresetId = (typeof CAMERA_PRESET_IDS)[number];
+
+export const CAMERA_PRESETS = [
   {
     id: "dome_indoor",
     label: "Indoor Dome",
     description: "2MP, 90° FOV, ceiling mount, 15m range",
-    icon: null,
     fovHorizontalDeg: 90,
     mountType: "ceiling",
     lensType: "varifocal",
@@ -35,7 +45,6 @@ export const CAMERA_PRESETS: CameraPreset[] = [
     id: "bullet_outdoor",
     label: "Bullet",
     description: "5MP, 60° FOV, wall mount, 30m range, IR",
-    icon: null,
     fovHorizontalDeg: 60,
     mountType: "wall",
     lensType: "fixed",
@@ -49,7 +58,6 @@ export const CAMERA_PRESETS: CameraPreset[] = [
     id: "ptz_professional",
     label: "PTZ",
     description: "8MP, 55°–4.5° zoom, pan/tilt/zoom, pole mount",
-    icon: null,
     fovHorizontalDeg: 55,
     mountType: "pole",
     lensType: "varifocal",
@@ -63,7 +71,6 @@ export const CAMERA_PRESETS: CameraPreset[] = [
     id: "fisheye_360",
     label: "Fisheye 360°",
     description: "12MP, 180° FOV, ceiling mount, 12m range",
-    icon: null,
     fovHorizontalDeg: 180,
     mountType: "ceiling",
     lensType: "fisheye",
@@ -77,7 +84,6 @@ export const CAMERA_PRESETS: CameraPreset[] = [
     id: "thermal_perimeter",
     label: "Thermal Perimeter",
     description: "0.3MP thermal, 24° FOV, pole mount, 100m range",
-    icon: null,
     fovHorizontalDeg: 24,
     mountType: "pole",
     lensType: "fixed",
@@ -91,7 +97,6 @@ export const CAMERA_PRESETS: CameraPreset[] = [
     id: "low_light_indoor",
     label: "Low-Light Indoor",
     description: "6MP, 100° FOV, corner mount, 20m range, low-light sensor",
-    icon: null,
     fovHorizontalDeg: 100,
     mountType: "corner",
     lensType: "varifocal",
@@ -105,7 +110,6 @@ export const CAMERA_PRESETS: CameraPreset[] = [
     id: "license_plate",
     label: "License Plate",
     description: "8MP, 30° telephoto, wall mount, 25m range, LPR-optimized",
-    icon: null,
     fovHorizontalDeg: 30,
     mountType: "wall",
     lensType: "fixed",
@@ -119,7 +123,6 @@ export const CAMERA_PRESETS: CameraPreset[] = [
     id: "panoramic_wide",
     label: "Panoramic Wide",
     description: "20MP, 360° panoramic, ceiling mount, 15m range",
-    icon: null,
     fovHorizontalDeg: 360,
     mountType: "ceiling",
     lensType: "panoramic",
@@ -129,44 +132,66 @@ export const CAMERA_PRESETS: CameraPreset[] = [
     ptz: false,
     irRangeM: 10,
   },
-];
+] as const satisfies ReadonlyArray<CameraPreset>;
+
+const CAMERA_PRESET_BY_ID = CAMERA_PRESETS.reduce((acc, preset) => {
+  acc[preset.id] = preset;
+  return acc;
+}, {} as Record<CameraPresetId, CameraPreset>);
+
+const SCORE_WEIGHTS = {
+  mountType: 4,
+  lensType: 3,
+  nightMode: 2,
+  ptz: 2,
+  fov: 3,
+  range: 2,
+  resolution: 2,
+} as const;
+
+function proximityScore(candidate: number, target: number, bucket: number) {
+  const delta = Math.abs(candidate - target);
+  return Math.max(0, bucket - Math.min(bucket, delta / (bucket * 10)));
+}
 
 function matchPresetScore(camera: CameraNode, preset: CameraPreset): number {
   let score = 0;
-  if (camera.mountType === preset.mountType) score += 4;
-  if (camera.lensType === preset.lensType) score += 3;
-  if (camera.nightMode === preset.nightMode) score += 2;
-  if (camera.ptz === preset.ptz) score += 2;
-  const fovDelta = Math.abs(camera.fovHorizontalDeg - preset.fovHorizontalDeg);
-  score += Math.max(0, 3 - Math.min(3, fovDelta / 30));
-  const rangeDelta = Math.abs(camera.rangeM - preset.rangeM);
-  score += Math.max(0, 2 - Math.min(2, rangeDelta / 20));
-  const resolutionDelta = Math.abs(camera.resolutionMP - preset.resolutionMP);
-  score += Math.max(0, 2 - Math.min(2, resolutionDelta / 4));
+  if (camera.mountType === preset.mountType) score += SCORE_WEIGHTS.mountType;
+  if (camera.lensType === preset.lensType) score += SCORE_WEIGHTS.lensType;
+  if (camera.nightMode === preset.nightMode) score += SCORE_WEIGHTS.nightMode;
+  if (camera.ptz === preset.ptz) score += SCORE_WEIGHTS.ptz;
+  score += proximityScore(camera.fovHorizontalDeg, preset.fovHorizontalDeg, SCORE_WEIGHTS.fov);
+  score += proximityScore(camera.rangeM, preset.rangeM, SCORE_WEIGHTS.range);
+  score += proximityScore(camera.resolutionMP, preset.resolutionMP, SCORE_WEIGHTS.resolution);
   return score;
 }
 
 export function findBestCameraPreset(camera: CameraNode): CameraPreset | null {
   if (!CAMERA_PRESETS.length) return null;
   return CAMERA_PRESETS
-    .map((preset) => ({ preset, score: matchPresetScore(camera, preset) }))
-    .sort((a, b) => b.score - a.score)[0]?.preset ?? null;
+    .reduce<{ preset: CameraPreset; score: number } | null>((best, preset) => {
+      const score = matchPresetScore(camera, preset);
+      if (!best) return { preset, score };
+      if (score > best.score) return { preset, score };
+      if (score < best.score) return best;
+      return preset.id < best.preset.id ? { preset, score } : best;
+    }, null)?.preset ?? null;
 }
 
 export function describeCameraPreset(preset: CameraPreset): string {
-  return `${preset.resolutionMP}MP · ${preset.fovHorizontalDeg}° · ${preset.mountType} · ${preset.nightMode === "none" ? "day only" : preset.nightMode}`;
+  const nightModeLabel = preset.nightMode === "none" ? "day only" : preset.nightMode;
+  return `${preset.resolutionMP}MP · ${preset.fovHorizontalDeg}° FOV · ${preset.mountType} · ${nightModeLabel}`;
 }
 
-export function getCameraPreset(cameraPresetId: string | null = useStudioStore.getState().cameraPresetId) {
+export function getCameraPreset(cameraPresetId: CameraPresetId | null | undefined) {
   if (!cameraPresetId) return null;
-  return CAMERA_PRESETS.find((preset) => preset.id === cameraPresetId) ?? null;
+  return CAMERA_PRESET_BY_ID[cameraPresetId] ?? null;
 }
 
-export function applyCameraPreset(
-  preset: CameraPreset | null,
-): Partial<import("@/schema/security-scene").CameraNode> {
+export function applyCameraPreset(preset: CameraPreset | null): Partial<CameraNode> {
   if (!preset) return {};
   return {
+    presetId: preset.id,
     fovHorizontalDeg: preset.fovHorizontalDeg,
     mountType: preset.mountType as "wall" | "ceiling" | "pole" | "corner" | "desk",
     lensType: preset.lensType as "fixed" | "varifocal" | "fisheye" | "panoramic",

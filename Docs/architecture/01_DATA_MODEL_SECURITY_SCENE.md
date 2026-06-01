@@ -105,6 +105,18 @@ type CameraNode = {
 
   // Presets
   presetId?: string;             // references camera preset library
+  viewMotion?: {
+    movementMode: "fixed" | "sweep_h" | "sweep_v" | "preset_cycle" | "tracking";
+    dwellSeconds: number;        // seconds between planned motion segments
+    patrolRouteId?: string;      // optional patrol route reference
+    patrolSpeedDegPerS?: number; // optional rotational speed
+    waypoints: {
+      yawDeg: number;
+      pitchDeg: number;
+      holdSeconds: number;       // time held at each waypoint
+      easing?: "linear" | "ease_in" | "ease_out" | "ease_in_out";
+    }[];
+  };
 
   // Collision layer (three-layer entity model)
   collisionLayer?: {

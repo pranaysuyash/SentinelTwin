@@ -10,6 +10,7 @@ import {
   type AnyEditableNode,
   type CameraNode,
   type CoverageCellResult,
+  type ObstructionNode,
   type SecurityIssue,
   type SensorNode,
 } from "@/schema/security-scene";
@@ -66,6 +67,11 @@ import {
 import { CameraPresetPicker } from "./CameraPresetPicker";
 import { applyCameraPreset, getCameraPreset } from "./camera-preset-utils";
 import { getCameraColorForId } from "@/lib/camera-colors";
+import {
+  findObstructionForBlindspotIssue,
+  isPrimaryMouseEvent,
+  sanitizeSceneDimensions,
+} from "./workspace-canvas-utils";
 import "@/lib/three-compat";
 import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
 
@@ -130,47 +136,117 @@ function isTypingTarget(target: EventTarget | null): boolean {
   return target.isContentEditable || tagName === "input" || tagName === "textarea" || tagName === "select";
 }
 
+function setWorkspaceCursor(cursor: "pointer" | "default") {
+  if (typeof document === "undefined") return;
+  document.body.style.cursor = cursor;
+}
+
+type WorkspaceNodeInteractionOptions = {
+  nodeId: string;
+  selectable: boolean;
+  selectNode: (nodeId: string) => void;
+  toggleSelectedNode: (nodeId: string) => void;
+  onSelect?: (nodeId: string) => void;
+  onContextMenu?: (nodeId: string, event: ThreeEvent<MouseEvent>) => void;
+};
+
+function makeWorkspaceNodeHandlers({
+  nodeId,
+  selectable,
+  selectNode,
+  toggleSelectedNode,
+  onSelect,
+  onContextMenu,
+}: WorkspaceNodeInteractionOptions) {
+  if (!selectable) {
+    return {};
+  }
+
+  const handlePointerDown = (event: ThreeEvent<MouseEvent>) => {
+    if (!isPrimaryMouseEvent(event)) return;
+    event.stopPropagation();
+    const isRangeSelect = event.shiftKey || event.metaKey || event.ctrlKey;
+    if (isRangeSelect) {
+      toggleSelectedNode(nodeId);
+      return;
+    }
+    if (onSelect) {
+      onSelect(nodeId);
+      return;
+    }
+    selectNode(nodeId);
+  };
+
+  const handleContextMenu = onContextMenu
+    ? (event: ThreeEvent<MouseEvent>) => {
+      event.stopPropagation();
+      event.nativeEvent.preventDefault();
+      onContextMenu(nodeId, event);
+    }
+    : undefined;
+
+  return {
+    onPointerDown: handlePointerDown,
+    onContextMenu: handleContextMenu,
+  };
+}
+
 function getSelectionAnchor(node: AnyEditableNode): [number, number, number] | null {
+  const toFinite = (value: unknown, fallback: number): number => (typeof value === "number" && Number.isFinite(value)
+    ? value
+    : fallback);
+
+  const centroid2D = (points: [number, number][]) => {
+    if (!Array.isArray(points) || points.length === 0) return [0, 0] as [number, number];
+
+    let sumX = 0;
+    let sumZ = 0;
+    let count = 0;
+
+    for (const point of points) {
+      if (!Array.isArray(point) || point.length < 2) continue;
+      const x = toFinite(point[0], NaN);
+      const z = toFinite(point[1], NaN);
+      if (!Number.isFinite(x) || !Number.isFinite(z)) continue;
+      sumX += x;
+      sumZ += z;
+      count += 1;
+    }
+
+    if (count === 0) return [0, 0];
+    return [sumX / count, sumZ / count];
+  };
+
   if (node.nodeType === "camera" || node.nodeType === "security_light" || node.nodeType === "sensor" || node.nodeType === "obstruction" || node.nodeType === "door" || node.nodeType === "window") {
+    if (!Array.isArray(node.position) || node.position.length < 3) return null;
     return [node.position[0], node.position[1], node.position[2]];
   }
 
   if (node.nodeType === "entry_point") {
+    if (!Array.isArray(node.position) || node.position.length < 2) return null;
     return [node.position[0], 0.06, node.position[1]];
   }
 
   if (node.nodeType === "wall") {
+    if (!Array.isArray(node.start) || !Array.isArray(node.end)) return null;
     return [
-      (node.start[0] + node.end[0]) / 2,
-      node.heightM / 2,
-      (node.start[1] + node.end[1]) / 2,
+      (toFinite(node.start[0], 0) + toFinite(node.end[0], 0)) / 2,
+      toFinite(node.heightM, 1.8) / 2,
+      (toFinite(node.start[1], 0) + toFinite(node.end[1], 0)) / 2,
     ];
   }
 
   if (node.nodeType === "critical_zone" || node.nodeType === "privacy_zone") {
-    const centroid = node.polygon.reduce(
-      (acc, [x, z]) => {
-        acc[0] += x;
-        acc[1] += z;
-        return acc;
-      },
-      [0, 0] as [number, number],
-    );
-    const count = Math.max(1, node.polygon.length);
-    return [centroid[0] / count, 0.05, centroid[1] / count];
+    const [cx, cz] = centroid2D(node.polygon);
+    return [cx, 0.05, cz];
   }
 
   if (node.nodeType === "path") {
-    const centroid = node.points.reduce(
-      (acc, point) => {
-        acc[0] += point.position[0];
-        acc[1] += point.position[1];
-        return acc;
-      },
-      [0, 0] as [number, number],
-    );
-    const count = Math.max(1, node.points.length);
-    return [centroid[0] / count, 0.05, centroid[1] / count];
+    const [cx, cz] = centroid2D(node.points.map((point) => {
+      if (!point || !Array.isArray(point.position) || point.position.length < 2) return [0, 0];
+      return [point.position[0], point.position[1]];
+    }));
+    return [cx, 0.05, cz];
   }
 
   return null;
@@ -246,6 +322,13 @@ function CameraFrustum({
   const studioViewMode = useStudioStore((s) => s.setViewMode);
   const [hovered, setHovered] = useState(false);
   const lastClickTime = useRef(0);
+  const selectionHandlers = makeWorkspaceNodeHandlers({
+    nodeId: camera.id,
+    selectable: true,
+    selectNode,
+    toggleSelectedNode,
+    onContextMenu,
+  });
 
   const handleDoubleClick = useCallback(() => {
     setSelectedCameraId(camera.id);
@@ -278,14 +361,13 @@ function CameraFrustum({
     lineRef.current?.computeLineDistances();
   }, [isSuggested]);
 
-  const handleSelect = (event: ThreeEvent<MouseEvent>) => {
-    event.stopPropagation();
-    if (event.shiftKey || event.metaKey || event.ctrlKey) {
-      toggleSelectedNode(camera.id);
+  const handlePointerDown = (event: ThreeEvent<MouseEvent>) => {
+    if (!isPrimaryMouseEvent(event)) return;
+    const isRangeSelect = event.shiftKey || event.metaKey || event.ctrlKey;
+    selectionHandlers.onPointerDown?.(event);
+    if (isRangeSelect) {
       return;
     }
-    selectNode(camera.id);
-
     const now = Date.now();
     if (now - lastClickTime.current < 350) {
       handleDoubleClick();
@@ -300,19 +382,15 @@ function CameraFrustum({
 
   return (
     <group
-      onPointerDown={handleSelect}
-      onContextMenu={onContextMenu ? (event) => {
-        event.stopPropagation();
-        event.nativeEvent.preventDefault();
-        onContextMenu(camera.id, event);
-      } : undefined}
+      onPointerDown={handlePointerDown}
+      {...selectionHandlers}
       onPointerOver={() => {
         setHovered(true);
-        document.body.style.cursor = "pointer";
+        setWorkspaceCursor("pointer");
       }}
       onPointerOut={() => {
         setHovered(false);
-        document.body.style.cursor = "default";
+        setWorkspaceCursor("default");
       }}
       scale={hovered ? 1.04 : 1}
     >
@@ -375,38 +453,26 @@ function CameraMarker({
   const showLabel = layers.labels && cameraLabelsVisible;
   const labelCompact = overlayDensity === "compact";
   const showOnlyOnHover = overlayDensity === "minimal";
-
-  const handleSelect = (event: ThreeEvent<MouseEvent>) => {
-    event.stopPropagation();
-    if (event.shiftKey || event.metaKey || event.ctrlKey) {
-      toggleSelectedNode(camera.id);
-      return;
-    }
-    selectNode(camera.id);
-  };
+  const selectionHandlers = makeWorkspaceNodeHandlers({
+    nodeId: camera.id,
+    selectable: true,
+    selectNode,
+    toggleSelectedNode,
+    onContextMenu,
+  });
 
   return (
     <group
       position={[px, py, pz]}
       scale={hovered ? 1.12 : selected ? 1.08 : 1}
-      onContextMenu={onContextMenu ? (event) => {
-        event.stopPropagation();
-        event.nativeEvent.preventDefault();
-        onContextMenu(camera.id, event);
-      } : undefined}
-      onPointerEnter={() => {
-        setHovered(true);
-        document.body.style.cursor = "pointer";
-      }}
-      onPointerLeave={() => {
-        setHovered(false);
-        document.body.style.cursor = "default";
-      }}
+      {...selectionHandlers}
       onPointerOver={() => {
-        document.body.style.cursor = "pointer";
+        setHovered(true);
+        setWorkspaceCursor("pointer");
       }}
       onPointerOut={() => {
-        document.body.style.cursor = "default";
+        setHovered(false);
+        setWorkspaceCursor("default");
       }}
     >
       {selected && (
@@ -428,10 +494,8 @@ function CameraMarker({
         </mesh>
       )}
 
-      <group
-        onPointerDown={handleSelect}
-      >
-        <mesh position={[0, 0, 0]} onPointerDown={handleSelect}>
+      <group>
+        <mesh position={[0, 0, 0]}>
           <sphereGeometry args={[0.32, 16, 16]} />
           <meshBasicMaterial transparent opacity={0} />
         </mesh>
@@ -540,10 +604,11 @@ function SensorMarkers({
   onContextMenu?: (id: string, event: ThreeEvent<MouseEvent>) => void;
 }) {
   const scene = useStudioStore((s) => s.scene);
-  const selected = useStudioStore((s) => s.selectedNodeId);
+  const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
   const selectNode = useStudioStore((s) => s.selectNode);
   const toggleSelectedNode = useStudioStore((s) => s.toggleSelectedNode);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const selectedNodeIdSet = useMemo(() => new Set(selectedNodeIds), [selectedNodeIds]);
 
   const colorMap: Record<SensorNode["sensorType"], string> = {
     motion: "#60a5fa",
@@ -560,31 +625,26 @@ function SensorMarkers({
       {scene.sensors.map((sensor) => {
         const color = colorMap[sensor.sensorType];
         const isHovered = hoveredId === sensor.id;
-        const isSelected = selected === sensor.id;
+        const isSelected = selectedNodeIdSet.has(sensor.id);
         return (
           <group
             key={sensor.id}
             position={sensor.position}
-            onPointerDown={(event) => {
-              event.stopPropagation();
-              if (event.shiftKey || event.metaKey || event.ctrlKey) {
-                toggleSelectedNode(sensor.id);
-                return;
-              }
-              selectNode(sensor.id);
-            }}
-            onContextMenu={onContextMenu ? (event) => {
-              event.stopPropagation();
-              event.nativeEvent.preventDefault();
-        onContextMenu(sensor.id, event);
-            } : undefined}
+            {...makeWorkspaceNodeHandlers({
+              nodeId: sensor.id,
+              selectable: true,
+              selectNode,
+              toggleSelectedNode,
+              onSelect: undefined,
+              onContextMenu,
+            })}
             onPointerOver={() => {
               setHoveredId(sensor.id);
-              document.body.style.cursor = "pointer";
+              setWorkspaceCursor("pointer");
             }}
             onPointerOut={() => {
               setHoveredId((current) => (current === sensor.id ? null : current));
-              document.body.style.cursor = "default";
+              setWorkspaceCursor("default");
             }}
             scale={isHovered ? 1.06 : 1}
           >
@@ -651,22 +711,14 @@ function CriticalZoneOverlay({
 
   return (
     <group
-      onClick={(event) => {
-        event.stopPropagation();
-        if (event.shiftKey || event.metaKey || event.ctrlKey) {
-          toggleSelectedNode(zone.id);
-          return;
-        }
-        onSelect?.(zone.id);
-        if (!onSelect) {
-          selectNode(zone.id);
-        }
-      }}
-      onContextMenu={onContextMenu ? (event) => {
-        event.stopPropagation();
-        event.nativeEvent.preventDefault();
-        onContextMenu(zone.id, event);
-      } : undefined}
+      {...makeWorkspaceNodeHandlers({
+        nodeId: zone.id,
+        selectable: true,
+        selectNode,
+        toggleSelectedNode,
+        onSelect,
+        onContextMenu,
+      })}
     >
       <mesh position={[cx, 0.012, cz]}>
         <boxGeometry args={[w, 0.01, d]} />
@@ -745,12 +797,18 @@ function SceneGeometry({
   const selected = useStudioStore((s) => s.selectedNodeId);
   const selectNode = useStudioStore((s) => s.selectNode);
   const layers = useStudioStore((s) => s.layerVisibility);
+  const selectedNodeIds = useStudioStore((s) => s.selectedNodeIds);
+  const selectedNodeIdSet = useMemo(() => new Set(selectedNodeIds), [selectedNodeIds]);
+
+  const [width, depth] = useMemo(
+    () => sanitizeSceneDimensions(scene.dimensions.width, scene.dimensions.depth, 0.5),
+    [scene.dimensions.depth, scene.dimensions.width],
+  );
 
   const heatmapMode = useStudioStore((s) => s.heatmapMode);
   const pathLabelsVisible = useStudioStore((s) => s.overlayFilters.pathLabels);
-  const { width, depth } = scene.dimensions;
-  // Data-driven: one warning per blindspot issue, positioned above the matching obstruction.
-  // Label is extracted from the issue description (format: "<Label> is obstructing coverage in: ...").
+  // Data-driven: one warning per blindspot issue, positioned above the matched obstruction.
+  // Obstruction matching first prefers the canonical parsed label, then robust fallback heuristics.
   const blockingIssues = result?.issues.filter((issue) => issue.category === "blindspot") ?? [];
   const entryDoor = scene.entryPoints[0];
 
@@ -795,9 +853,8 @@ function SceneGeometry({
       {layers.lights ? <CeilingLightMarkers onContextMenu={onObjectContextMenu} /> : null}
 
       {blockingIssues.map((issue) => {
-        const obsLabel = issue.description.split(" is obstructing")[0] ?? "";
-        const matchingObs = scene.obstructions.find((obs) => obs.label === obsLabel);
-        if (!matchingObs || !layers.labels) return null;
+        const matchingObs = findObstructionForBlindspotIssue(issue, scene.obstructions);
+        if (!layers.labels || !matchingObs) return null;
         const [ox, oy, oz] = matchingObs.position;
         const [, , obsHeight] = matchingObs.dimensions;
         const warningY = oy + obsHeight / 2 + 0.35;
@@ -824,7 +881,7 @@ function SceneGeometry({
         <CriticalZoneOverlay
           key={zone.id}
           zone={zone}
-          selected={selected === zone.id}
+          selected={selectedNodeIdSet.has(zone.id)}
           onSelect={selectNode}
           onContextMenu={onObjectContextMenu}
           result={result?.criticalZoneResults.find((entry) => entry.zoneId === zone.id)}
@@ -833,8 +890,8 @@ function SceneGeometry({
 
       {entryDoor ? <EntryDoorLabel position={entryDoor.position} /> : null}
 
-      {layers.cameras ? scene.cameras.map((cam) => <CameraMarker key={cam.id} camera={cam} selected={selected === cam.id} onContextMenu={onObjectContextMenu} />) : null}
-      {layers.camera_cones ? scene.cameras.map((cam) => <CameraFrustum key={`frust_${cam.id}`} camera={cam} selected={selected === cam.id} onContextMenu={onObjectContextMenu} />) : null}
+      {layers.cameras ? scene.cameras.map((cam) => <CameraMarker key={cam.id} camera={cam} selected={selectedNodeIdSet.has(cam.id)} onContextMenu={onObjectContextMenu} />) : null}
+      {layers.camera_cones ? scene.cameras.map((cam) => <CameraFrustum key={`frust_${cam.id}`} camera={cam} selected={selectedNodeIdSet.has(cam.id)} onContextMenu={onObjectContextMenu} />) : null}
 
       {layers.paths && pathLabelsVisible
         ? scene.paths.map((path) => (
@@ -844,7 +901,7 @@ function SceneGeometry({
             points={path.points.map((point) => point.position)}
             onSelect={selectNode}
             onContextMenu={onObjectContextMenu}
-            color={selected === path.id ? "#f59e0b" : undefined}
+            color={selectedNodeIdSet.has(path.id) ? "#f59e0b" : undefined}
           />
         ))
         : null}
@@ -897,7 +954,10 @@ function SceneFrameRig() {
   const canvasViewResetTick = useStudioStore((s) => s.canvasViewResetTick);
   const focusRequest = useStudioStore((s) => s.focusScenePointRequest);
   const clearFocusRequest = useStudioStore((s) => s.setFocusScenePointRequest);
-  const { width: sceneWidth, depth: sceneDepth } = scene.dimensions;
+  const [sceneWidth, sceneDepth] = useMemo(
+    () => sanitizeSceneDimensions(scene.dimensions.width, scene.dimensions.depth, 0.5),
+    [scene.dimensions.depth, scene.dimensions.width],
+  );
   const previousTarget = useRef<THREE.Vector3 | null>(null);
 
   useEffect(() => {
@@ -1024,6 +1084,7 @@ function ToolPlacementFloor({
   const setDraftPathPoints = useStudioStore((s) => s.setDraftPathPoints);
   const setEditorMode = useStudioStore((s) => s.setEditorMode);
   const setActiveTool = useStudioStore((s) => s.setActiveTool);
+  const cameraPresetId = useStudioStore((s) => s.cameraPresetId);
   const { camera, size } = useThree();
 
   const [hoverPos, setHoverPos] = useState<THREE.Vector3 | null>(null);
@@ -1032,7 +1093,10 @@ function ToolPlacementFloor({
   const lastHoverRef = useRef<[number, number] | null>(null);
   const hasEntryPointsRef = useRef(scene.entryPoints.length > 0);
   const raycaster = useMemo(() => new THREE.Raycaster(), []);
-  const { width: sceneWidth, depth: sceneDepth } = scene.dimensions;
+  const [sceneWidth, sceneDepth] = useMemo(
+    () => sanitizeSceneDimensions(scene.dimensions.width, scene.dimensions.depth, 0.5),
+    [scene.dimensions.depth, scene.dimensions.width],
+  );
   const snapEngine = useMemo(() => makeSnapEngine(scene, {
     snapEnabled: editor.snapEnabled,
     snapDistanceM: editor.snapDistanceM,
@@ -1057,6 +1121,8 @@ function ToolPlacementFloor({
 
   const getFloorPoint = useCallback(
     (event: ThreeEvent<MouseEvent>): THREE.Vector3 | null => {
+      if (event.nativeEvent.button !== 0) return null;
+      if (!size.width || !size.height || !sceneWidth || !sceneDepth) return null;
       const ndc = new THREE.Vector2(
         (event.nativeEvent.clientX / size.width) * 2 - 1,
         -(event.nativeEvent.clientY / size.height) * 2 + 1,
@@ -1189,6 +1255,7 @@ function ToolPlacementFloor({
 
   const handlePointerDown = useCallback(
     (event: ThreeEvent<MouseEvent>) => {
+      if (!isPrimaryMouseEvent(event)) return;
       if (activeTool === "select") {
         if (event.nativeEvent.shiftKey || event.nativeEvent.metaKey || event.nativeEvent.ctrlKey) {
           const point = getFloorPoint(event);
@@ -1226,7 +1293,7 @@ function ToolPlacementFloor({
       }
 
       if (activeTool === "camera") {
-        const preset = getCameraPreset();
+        const preset = getCameraPreset(cameraPresetId);
         const node = createCameraNode([pos[0], 2.8, pos[2]]);
         if (preset) {
           const presetOverrides = applyCameraPreset(preset);
@@ -1303,6 +1370,7 @@ function ToolPlacementFloor({
       commitDraftPath,
       commitDraftPolygon,
       clearSelection,
+      cameraPresetId,
       draftPathPoints,
       draftPolygonPoints,
       draftWallStart,
@@ -1850,11 +1918,15 @@ export function WorkspaceCanvas() {
   const simulationResult = useStudioStore((s) => s.simulationResult);
   const editorMode = useStudioStore((s) => s.editor.editorMode);
   const theme = ENVIRONMENT_THEMES[envMode] ?? ENVIRONMENT_THEMES.day;
+  const [sceneWidth, sceneDepth] = useMemo(
+    () => sanitizeSceneDimensions(scene.dimensions.width, scene.dimensions.depth, 0.5),
+    [scene.dimensions.depth, scene.dimensions.width],
+  );
   const [selectionDrag, setSelectionDrag] = useState<SelectionDragState | null>(null);
   const [contextMenu, setContextMenu] = useState<ObjectContextMenuState | null>(null);
   const frame = useMemo(
-    () => getMapFrame(scene.dimensions.width, scene.dimensions.depth),
-    [scene.dimensions.depth, scene.dimensions.width],
+    () => getMapFrame(sceneWidth, sceneDepth),
+    [sceneDepth, sceneWidth],
   );
   const isTopDown = canvasMode === "topdown_2d";
   const canvasCamera = useMemo(
@@ -1979,6 +2051,10 @@ export function WorkspaceCanvas() {
   const clearHeatmapHover = useCallback(() => {
     setHeatmapHover(null);
   }, [setHeatmapHover]);
+
+  useEffect(() => () => {
+    setWorkspaceCursor("default");
+  }, []);
 
   return (
     <div className="absolute inset-0 overflow-hidden bg-[#07090d]">

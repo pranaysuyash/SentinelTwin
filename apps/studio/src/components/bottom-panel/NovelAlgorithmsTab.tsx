@@ -10,6 +10,7 @@ import { computeCoverageEntropy } from "@sentineltwin/simulation";
 import { computeCoverageTimeBudget } from "@sentineltwin/simulation";
 import { computeCoveragePostureVariation } from "@sentineltwin/simulation";
 import { computeCoverageUncertainty } from "@sentineltwin/simulation";
+import { TruthBadge } from "@/components/shared/TruthBadge";
 import { useStudioStore } from "@/store/studio-store";
 import type { DoriQuality } from "@/schema/security-scene";
 
@@ -200,6 +201,10 @@ export function NovelAlgorithmsTab() {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2 overflow-y-auto p-2">
+      <div className="flex items-center gap-2 px-1 py-0.5">
+        <TruthBadge label="simulated" />
+        <span className="text-[9px] uppercase tracking-[0.16em] text-[#556076]">Advanced Risk Algorithms</span>
+      </div>
       <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-5">
         <StatCard
           icon={<Sigma className="h-3.5 w-3.5" />}

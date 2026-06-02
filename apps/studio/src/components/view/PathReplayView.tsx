@@ -471,11 +471,11 @@ function ReplayCollisionMarkers({
           <lineBasicMaterial color="#f97316" transparent opacity={0.85} />
         </lineSegments>
       )}
-      <Html position={[firstCollision.rawPosition[0], 0.55, firstCollision.rawPosition[1]]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
+      <SceneHtml position={[firstCollision.rawPosition[0], 0.55, firstCollision.rawPosition[1]]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
         <div className="rounded-md border border-[#f97316]/50 bg-black/80 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-[#fdba74]">
           Collision corrected
         </div>
-      </Html>
+      </SceneHtml>
     </group>
   );
 }
@@ -657,7 +657,7 @@ function CameraMarkers() {
               <cylinderGeometry args={[0.1, 0.1, 0.06, 14]} />
               <meshStandardMaterial color={cameraColor} emissive={cameraColor} emissiveIntensity={0.4} roughness={0.34} metalness={0.65} />
             </mesh>
-            <Html position={[0, 0.28, 0]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
+            <SceneHtml position={[0, 0.28, 0]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
               <div
                 style={{
                   background: "rgba(10,13,19,0.85)",
@@ -672,7 +672,7 @@ function CameraMarkers() {
               >
                 {cam.name}
               </div>
-            </Html>
+            </SceneHtml>
           </group>
         );
       })}

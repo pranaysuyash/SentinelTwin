@@ -22,7 +22,8 @@ describe("ReportLiteTab", () => {
     expect(source).toContain("Compare provenance:");
     expect(source).toContain("Print");
     expect(source).toContain("Report Summary");
-    expect(source).toContain("Truth: Computed");
+    expect(source).toContain("TruthBadge");
+    expect(source).toContain('label="computed"');
     expect(source).toContain("buildReportSummaryLines");
     expect(source).toContain("getReportStandardTemplates");
     expect(source).toContain("Save preset");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ChangeEvent } from "react";
+import { useEffect, useRef, type ChangeEvent } from "react";
 
 import { useProductViewStore, type ProductView } from "@/store/product-view-store";
 import { useStudioStore } from "@/store/studio-store";
@@ -106,6 +106,21 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
   const siteIntakeSession = useStudioStore((s) => s.siteIntakeSession);
   const activeRole = useStudioStore((s) => s.workspaceGovernance.activeRole);
   const currentResult = simulationResult ?? scene.simulation ?? null;
+
+  // First-time user routing: if the user has no workspace and no cameras in the
+  // active scene, send them to the Site Intake Hub (the canonical first
+  // full-product entry screen per the design pack) instead of an empty dashboard.
+  // Fires once on first mount; respects explicit navigation back to product_home.
+  // Uses a ref (not state) so we don't trigger an extra render after the redirect.
+  const hasRedirectedToIntakeRef = useRef(false);
+  useEffect(() => {
+    if (hasRedirectedToIntakeRef.current) return;
+    if (productView !== "product_home") return;
+    if (savedProjects.length === 0 && scene.cameras.length === 0) {
+      navigate("site_intake");
+      hasRedirectedToIntakeRef.current = true;
+    }
+  }, [productView, savedProjects, scene.cameras.length, navigate]);
 
   const formatClock = (ts: number | null | undefined) => {
     if (!ts) return null;

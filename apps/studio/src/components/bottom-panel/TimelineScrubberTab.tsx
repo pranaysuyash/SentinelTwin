@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useStudioStore } from "@/store/studio-store";
 import { History, Play, RotateCcw, Clock } from "lucide-react";
 import { SurfaceButton } from "@/components/shared/SurfaceButton";
+import { TruthBadge } from "@/components/shared/TruthBadge";
 import { reconstructSceneFromEvidence } from "@/lib/operational-evidence";
 
 export function TimelineScrubberTab() {
@@ -40,6 +41,7 @@ export function TimelineScrubberTab() {
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-[#1e2130] p-3">
         <div className="flex items-center gap-2">
+          <TruthBadge label="simulated" />
           <History className="h-4 w-4 text-emerald-500" />
           <span className="text-[11px] font-semibold text-white">Temporal Operational Twin (Timeline Scrubber)</span>
         </div>

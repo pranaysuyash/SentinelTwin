@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/cn";
 import { ExplainBadge } from "./ExplainBadge";
-import { TruthBadge } from "./TruthBadge";
+import { TruthBadge, type TruthLabel } from "./TruthBadge";
 
 interface SectionCardProps {
   children: React.ReactNode;
@@ -12,7 +12,7 @@ interface SectionCardProps {
   helpText?: string;
   helpLabel?: string;
   helpTitle?: string;
-  truthLabel?: "simulated" | "inferred" | "real" | "placeholder";
+  truthLabel?: TruthLabel;
 }
 
 export function SectionCard({ children, className, padding = "md", title, helpText, helpLabel, helpTitle, truthLabel }: SectionCardProps) {

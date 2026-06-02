@@ -2,6 +2,7 @@
 
 import { Copy, GitCompare, Share2 } from "lucide-react";
 import { useState } from "react";
+import { TruthBadge } from "@/components/shared/TruthBadge";
 import { DonutChart } from "@/components/shared/DonutChart";
 import { QualityBar } from "@/components/shared/QualityBar";
 import { buildSecurityOutcomeDelta } from "@/lib/security-outcome/security-outcome-model";
@@ -192,6 +193,7 @@ function BeforeAfterTabContent() {
     <div className="h-full flex flex-col overflow-hidden">
       {/* Header strip */}
       <div className="flex items-center gap-3 px-3 py-1 border-b border-[#1e2130] flex-shrink-0">
+        <TruthBadge label="simulated" />
         <span className="text-[8px] font-semibold uppercase tracking-[0.14em] text-[#4a5568]">
           Key Metrics Comparison
         </span>

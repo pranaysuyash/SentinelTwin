@@ -1,6 +1,7 @@
 "use client";
 
 import { Info } from "lucide-react";
+import { TruthBadge } from "@/components/shared/TruthBadge";
 import { useStudioStore } from "@/store/studio-store";
 import type { SimulationAssumptions, DoriQuality } from "@/schema/security-scene";
 import { OODPCVS_THRESHOLDS } from "@sentineltwin/core";
@@ -41,6 +42,10 @@ export function AssumptionsTab() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="p-2 space-y-3">
+
+        <div className="flex items-center gap-2 mb-2">
+          <TruthBadge label="simulated" />
+        </div>
 
         {/* Disclaimer */}
         <div className="flex gap-2 p-2 rounded-lg bg-blue-950/30 border border-blue-800/30">

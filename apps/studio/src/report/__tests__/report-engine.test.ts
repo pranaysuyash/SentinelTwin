@@ -1077,6 +1077,7 @@ describe("exportAsText", () => {
           severity: "high",
           description: "Entrance coverage gap",
           area: "entrance",
+          category: "quality_fail",
           recommendation: "Add a camera",
         },
       ],

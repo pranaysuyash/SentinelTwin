@@ -35,18 +35,27 @@ export type ReportExportPreset = {
   summary: string;
 };
 
+type ReportTemporalTwin = {
+  publishedCheckpointCount: number;
+  latestPublishedCheckpoint: { title: string };
+  latestPublishedCheckpointProvenance: { isExactSnapshot: boolean; sourceEventTitle: string };
+  latestPublishedCheckpointAgeMs: number;
+};
+
 export type ReportData = {
   sceneId: string;
   siteName: string;
   sceneName: string;
   title: string;
   createdAt: number;
+  generatedAt: number;
   simulation: SimulationResult;
   options: ReportBuildOptions;
   dimensions: { width: number; depth: number; height: number };
   audience: ReportAudience;
   audienceLabel: string;
   audienceFraming: string;
+  visibilityLabel: string;
   audiencePolicy: {
     disclosureLevel: string;
     visibleSections: string[];
@@ -54,7 +63,16 @@ export type ReportData = {
     disclosureSummary: string;
   };
   standardsRef: string;
-  template: { id: string; standardLabel: string; sections: string[] };
+  template: {
+    id: string;
+    title: string;
+    standardLabel: string;
+    summary: string;
+    audienceHint: string;
+    focusAreas: string[];
+    evidenceAnchors: string[];
+    sections: { title: string; detail: string }[];
+  };
   summary: Record<string, number>;
   zones: ReportZoneEntry[];
   cameras: ReportCameraEntry[];
@@ -62,9 +80,10 @@ export type ReportData = {
   recommendations: ReportRecommendationEntry[];
   codeCompliant: boolean;
   meetsModeledZoneRequirements: boolean;
+  evidenceLedger: { id: string; timestamp: number; title: string; details: string; actor: string; confidence: number | string }[];
   evidenceTrail: { changeLogEntryCount: number; evidenceEntryCount: number; sensorEvidenceCount: number; recentEntries: ReportEvidenceEntry[] };
-  truthLadder: { nodeCount: number; reviewedNodeCount: number; verifiedNodeCount: number; sourceTraceCount: number; suspectGeometryCount: number; invalidGeometryCount: number; summary: string };
-  provenance: { sceneSourceLabel: string; sceneSource: string; nodeCount: number; sourceNotes: string[]; confidenceNotes: string[] };
+  truthLadder: { nodeCount: number; reviewedNodeCount: number; reviewedCoveragePct: number; verifiedNodeCount: number; sourceTraceCount: number; sourceTraceCoveragePct: number; suspectGeometryCount: number; invalidGeometryCount: number; summary: string };
+  provenance: { sceneSourceLabel: string; sceneSource: string; nodeCount: number; edgeCount: number; revisionDepth: number; snapshotCount: number; sourceCounts: Record<string, number>; sourceNotes: string[]; confidenceNotes: string[] };
   novelAlgorithms: {
     coverageEntropy: { cellCount: number; entropyScore: number; dominantQuality: string };
     coverageUncertainty: { sampleCount: number; averageUncertainty: number; highUncertaintyPct: number };
@@ -72,10 +91,18 @@ export type ReportData = {
     blindRegions: unknown[];
     blindSpotFingerprint: { regions?: unknown[]; fingerprint: string; regionCount?: number; signature?: string; [key: string]: unknown };
     placementOracle: { bestScore?: number; candidateCount: number; sampleCount: number; [key: string]: unknown };
+    [key: string]: unknown;
+  };
+  assumptions: {
+    doriStandard: string;
+    personHeightM: number;
+    vehicleHeightM: number;
+    timeOfDay: string;
+    ppm: { detection: number; observation: number; recognition: number; identification: number };
   };
   commercialContext: ReportAudienceCommercialFraming;
   redundancyMatrix: { cameraRows: ReportCameraRow[]; vulnerableZones: ReportVulnerableZone[] };
-  temporalTwin?: Record<string, unknown>;
+  temporalTwin?: ReportTemporalTwin;
   temporalProfile?: { vulnerabilityWindowCount?: number; safestPeriods?: unknown[]; worstCoverage?: number; [key: string]: unknown };
   adversarialPath?: { exposureScore?: number; detectionProbability?: number; totalDistance?: number; waypoints?: unknown[]; [key: string]: unknown };
   findings: unknown[];
@@ -110,16 +137,23 @@ type ReportZoneEntry = {
   targetRequirementPpmThreshold: string;
   targetRequirementRationale: string;
   coveragePct: number;
+  requiredQuality: string;
+  actualQuality: string;
   coveringCameras: string[];
 };
 
 type ReportCameraEntry = {
   id: string;
+  name: string;
   coveragePct: number;
   zonesCovered: string[];
   bestZoneQuality: string;
   zonesFailed: number;
   topZoneQuality: string;
+  status: string;
+  privacyMaskingEnabled: boolean;
+  ndaaCompliant: boolean;
+  issues: unknown[];
 };
 
 type ReportIssueEntry = {
@@ -135,17 +169,19 @@ type ReportRecommendationEntry = {
   costCategory: string;
   verified: boolean;
   type: string;
+  estimatedImpact: string;
 };
 
 type ReportEvidenceEntry = {
   title?: string;
   published?: boolean;
   createdAt?: number;
-  confidence?: string;
+  confidence?: number | string;
   details?: string;
   anchorId?: string;
   description?: string;
   evidenceUri?: string;
+  when?: string;
 };
 
 type ReportCameraRow = {
@@ -154,14 +190,23 @@ type ReportCameraRow = {
   singlePointZones: string[];
   redundantZones: string[];
   vulnerableZones: string[];
+  status: string;
+  coveragePct: number;
+  criticalityLabel: string;
+  criticalityScore: number;
+  soleCoverageZones: { label: string }[];
+  coveredZones: { label: string; isSole: boolean }[];
 };
 
 type ReportVulnerableZone = {
   zoneId: string;
   zoneLabel: string;
+  label: string;
   requiredQuality: string;
   actualQuality: string;
+  status: string;
   coveringCameras: string[];
+  coveringCameraNames: string[];
 };
 
 type ReportZoneChange = {
@@ -477,7 +522,7 @@ function evidenceTrail(cl: string[], sid?: string) {
     const p = e.replace("Evidence:", "").split("|");
     const t = (p[1] ?? "Unknown event").trim();
     const d = (p[2] ?? "").trim();
-    return { title: t, description: d, confidence: (p[3]?.trim()?.toLowerCase() === "low" ? "low" : p[3]?.trim()?.toLowerCase() === "medium" ? "medium" : "high") as "high" | "medium" | "low", anchorId: `evidence-${i}`, evidenceUri: sid ? `scene:${sid}:report:${i}` : `evidence://entry/${i}`, details: d };
+    return { title: t, description: d, confidence: (p[3]?.trim()?.toLowerCase() === "low" ? "low" : p[3]?.trim()?.toLowerCase() === "medium" ? "medium" : "high") as "high" | "medium" | "low", anchorId: `evidence-${i}`, evidenceUri: sid ? `scene:${sid}:report:${i}` : `evidence://entry/${i}`, details: d, when: p[0]?.trim() ?? t };
   });
   return { changeLogEntryCount: cl.length, evidenceEntryCount: ev.length, sensorEvidenceCount: se.length, recentEntries: re };
 }
@@ -490,7 +535,7 @@ function truthLadder(scene: SecurityScene) {
   const sg = all.filter((n) => n.geometryValidity === "suspect").length;
   const iv = all.filter((n) => n.geometryValidity === "invalid").length;
   const n = all.length;
-  return { nodeCount: n, reviewedNodeCount: r, verifiedNodeCount: v, sourceTraceCount: st, suspectGeometryCount: sg, invalidGeometryCount: iv, summary: v === n ? `${n}/${n} nodes fully verified.` : `${v}/${n} nodes verified, ${st} with source traces.` };
+  return { nodeCount: n, reviewedNodeCount: r, reviewedCoveragePct: n > 0 ? (r / n) * 100 : 0, verifiedNodeCount: v, sourceTraceCount: st, sourceTraceCoveragePct: n > 0 ? (st / n) * 100 : 0, suspectGeometryCount: sg, invalidGeometryCount: iv, summary: v === n ? `${n}/${n} nodes fully verified.` : `${v}/${n} nodes verified, ${st} with source traces.` };
 }
 
 // ---- buildReportData ---- //
@@ -519,20 +564,20 @@ export function buildReportData(scene: SecurityScene, simulationResult: Simulati
   const zones = cr.map((z) => {
     const zn = scene.criticalZones?.find((x) => x.id === z.zoneId);
     const tq = z.requiredQuality ?? zn?.requiredQuality ?? "recognition";
-    return { id: z.zoneId, label: z.label ?? zn?.label ?? z.zoneId, status: z.status ?? "fail", targetType: zn?.targetType ?? "person_detection", targetRequirementQuality: tq, targetRequirementPpmThreshold: tq === "recognition" ? "medium" : tq === "identification" ? "high" : "low", targetRequirementRationale: `Zone requires ${tq} quality.`, coveragePct: 0, coveringCameras: z.coveringCameras ?? [] };
+    return { id: z.zoneId, label: z.label ?? zn?.label ?? z.zoneId, status: z.status ?? "fail", targetType: zn?.targetType ?? "person_detection", targetRequirementQuality: tq, targetRequirementPpmThreshold: tq === "recognition" ? "medium" : tq === "identification" ? "high" : "low", targetRequirementRationale: `Zone requires ${tq} quality.`, coveragePct: 0, requiredQuality: tq, actualQuality: z.actualQuality ?? "none", coveringCameras: z.coveringCameras ?? [] };
   });
   const cameras = (sim.cameraResults ?? []).map((c) => {
     const zc = c.qualityByZone ? Object.keys(c.qualityByZone) : [];
     const zf = zc.filter((zid) => (QUALITY_RANK[c.qualityByZone?.[zid] ?? "none"] ?? 0) < 2);
     const best = zc.length > 0 ? zc.reduce((b, zid) => (QUALITY_RANK[c.qualityByZone?.[zid] ?? "none"] ?? 0) > (QUALITY_RANK[b] ?? 0) ? zid : b, "none") : "none";
-    return { id: c.cameraId, coveragePct: c.coveragePct ?? 0, zonesCovered: zc, bestZoneQuality: best, zonesFailed: zf.length, topZoneQuality: best };
+    return { id: c.cameraId, name: c.cameraId, coveragePct: c.coveragePct ?? 0, zonesCovered: zc, bestZoneQuality: best, zonesFailed: zf.length, topZoneQuality: best, status: "active", privacyMaskingEnabled: false, ndaaCompliant: false, issues: [] };
   });
   const issues = (sim.issues ?? []).map((i) => ({
     severity: i.severity ?? (i.category === "blindspot" ? "high" : "medium"), description: i.description ?? "Unknown issue",
     area: i.affectedZones[0] ?? "general", category: i.category ?? "quality_fail", recommendation: i.description ?? "",
   }));
   const recs = (sim.recommendations ?? []).map((r) => ({
-    description: r.description ?? "No description", costCategory: r.costCategory ?? "medium", verified: r.verified === true || r.verified === false ? r.verified : false, type: r.type ?? "other",
+    description: r.description ?? "No description", costCategory: r.costCategory ?? "medium", verified: r.verified === true || r.verified === false ? r.verified : false, type: r.type ?? "other", estimatedImpact: r.estimatedImpact ?? "",
   }));
   const novelAlgorithms = {
     coverageEntropy: sim.coverageEntropy ?? { cellCount: 1, entropyScore: 0.5, dominantQuality: "observation" },
@@ -566,9 +611,9 @@ export function buildReportData(scene: SecurityScene, simulationResult: Simulati
                   : "Security Audit Evidence Report");
   const policy = getAudiencePolicy(audience);
   const template = (() => {
-    const info = { "oodpcvs-audit": { standardLabel: "IEC 62676-4:2025", sections: ["Overview", "Scope", "Normative References", "OODPCVS Assessment", "Coverage Analysis", "Zone Requirements", "Conclusions"] }, "dori-audit": { standardLabel: "IEC 62676-4:2014 (DORI)", sections: ["Overview", "DORI Assessment", "Coverage Analysis", "Zone Requirements", "Conclusions"] }, "general-audit": { standardLabel: "IEC 62676-4:2025", sections: ["Overview", "Coverage Analysis", "Zone Requirements", "Conclusions"] } };
+    const info = { "oodpcvs-audit": { title: "OODPCVS Audit", standardLabel: "IEC 62676-4:2025", summary: "Full OODPCVS assessment against IEC 62676-4:2025", audienceHint: "Regulatory and compliance audiences", focusAreas: ["coverage", "zones", "oodpcvs"], evidenceAnchors: ["zone-analysis", "camera-analysis"], sections: [{ title: "Overview", detail: "Scene overview and scope" }, { title: "Scope", detail: "Assessment scope" }, { title: "Normative References", detail: "IEC 62676-4:2025" }, { title: "OODPCVS Assessment", detail: "OODPCVS quality levels" }, { title: "Coverage Analysis", detail: "Coverage metrics per camera and zone" }, { title: "Zone Requirements", detail: "Zone-level quality requirements" }, { title: "Conclusions", detail: "Findings and recommendations" }] }, "dori-audit": { title: "DORI Audit", standardLabel: "IEC 62676-4:2014 (DORI)", summary: "DORI assessment for legacy compliance", audienceHint: "Legacy system audits and upgrade planning", focusAreas: ["dori", "coverage", "zones"], evidenceAnchors: ["dori-assessment", "zone-analysis"], sections: [{ title: "Overview", detail: "DORI scene overview" }, { title: "DORI Assessment", detail: "DORI quality levels per camera" }, { title: "Coverage Analysis", detail: "Coverage metrics" }, { title: "Zone Requirements", detail: "Zone-level DORI requirements" }, { title: "Conclusions", detail: "Summary" }] }, "general-audit": { title: "General Audit", standardLabel: "IEC 62676-4:2025", summary: "General security audit report", audienceHint: "General-purpose security review", focusAreas: ["coverage", "zones"], evidenceAnchors: ["coverage-analysis", "zone-analysis"], sections: [{ title: "Overview", detail: "Scene overview" }, { title: "Coverage Analysis", detail: "Coverage metrics" }, { title: "Zone Requirements", detail: "Zone-level requirements" }, { title: "Conclusions", detail: "Findings" }] } };
     const t = info[templateId as keyof typeof info] ?? info["general-audit"];
-    return { id: templateId, standardLabel: t.standardLabel, sections: t.sections };
+    return { id: templateId, title: t.title, standardLabel: t.standardLabel, summary: t.summary, audienceHint: t.audienceHint, focusAreas: t.focusAreas, evidenceAnchors: t.evidenceAnchors, sections: t.sections };
   })();
   const temporalTwin = (() => {
     if (!opt.operationalEvidenceEvents) return undefined;
@@ -586,23 +631,28 @@ export function buildReportData(scene: SecurityScene, simulationResult: Simulati
     legalBoundaryMessage: commercialFraming.legalBoundaryMessage,
   };
 
+  const nodeCount = [...(scene?.walls ?? []), ...(scene?.cameras ?? []), ...(scene?.obstructions ?? []), ...(scene?.criticalZones ?? [])].length;
+  const visibilityLabel = opt.visibility === "privacy_safe" ? "Privacy Safe" : opt.visibility === "shared" ? "Shared" : "Internal";
+  const sa = scene?.assumptions ?? {};
   return {
-    sceneId: scene?.id ?? "scene", siteName: scene?.name ?? "Untitled Scene", title, createdAt: Date.now(),
+    sceneId: scene?.id ?? "scene", siteName: scene?.name ?? "Untitled Scene", title, createdAt: Date.now(), generatedAt: Date.now(),
     simulation: sim, options: opt, dimensions: scene?.dimensions ?? { width: 0, depth: 0, height: 0 },
     audience, audienceLabel: AUDIENCE_META[audience]?.label ?? audience,
-    audienceFraming: AUDIENCE_META[audience]?.framing ?? "",
+    audienceFraming: AUDIENCE_META[audience]?.framing ?? "", visibilityLabel,
     audiencePolicy: { disclosureLevel: policy.disclosureLevel, visibleSections: policy.visibleSections, withheldSections: policy.withheldSections, disclosureSummary: policy.disclosureSummary },
     standardsRef: "IEC 62676-4:2025", template, summary, zones, cameras, issues,
     recommendations: recs, codeCompliant: compliant, meetsModeledZoneRequirements: compliant,
+    evidenceLedger: (sim.issues ?? []).map((i, idx) => ({ id: `ev_${idx}_${Date.now()}`, timestamp: Date.now(), title: i.description ?? "Unknown", details: i.description ?? "", actor: "system", confidence: i.severity ?? "medium" })),
     evidenceTrail: evidenceTrail(scene?.changeLog ?? [], scene?.id),
     truthLadder: truthLadder(scene),
-    provenance: { sceneSourceLabel: sourceLabel(scene?.source ?? "manual"), sceneSource: scene?.source ?? "manual", nodeCount: [...(scene?.walls ?? []), ...(scene?.cameras ?? []), ...(scene?.obstructions ?? []), ...(scene?.criticalZones ?? [])].length, sourceNotes: [`Scene source: ${scene?.source ?? "manual"}`], confidenceNotes: [] },
+    provenance: { sceneSourceLabel: sourceLabel(scene?.source ?? "manual"), sceneSource: scene?.source ?? "manual", nodeCount, edgeCount: Math.max(0, nodeCount - 1), revisionDepth: scene?.changeLog?.length ?? 0, snapshotCount: scene?.snapshots?.length ?? 0, sourceCounts: { manual: scene?.source === "manual" ? 1 : 0, scan: scene?.source === "scan" ? 1 : 0, demo: scene?.source === "demo" ? 1 : 0, ai: scene?.source === "ai" ? 1 : 0 }, sourceNotes: [`Scene source: ${scene?.source ?? "manual"}`], confidenceNotes: [] },
+    assumptions: { doriStandard: (sa as any).doriStandard ?? "dori_2014", personHeightM: (sa as any).personHeightM ?? 1.7, vehicleHeightM: (sa as any).vehicleHeightM ?? 1.5, timeOfDay: (sa as any).timeOfDay ?? "day", ppm: { detection: (sa as any).pixelsPerMeter?.detection ?? 25, observation: (sa as any).pixelsPerMeter?.observation ?? 62.5, recognition: (sa as any).pixelsPerMeter?.recognition ?? 125, identification: (sa as any).pixelsPerMeter?.identification ?? 250 } },
     novelAlgorithms,
     commercialContext: audienceCommercialContext,
-    redundancyMatrix: { cameraRows: (sim.cameraResults ?? []).map((c) => ({ cameraId: c.cameraId, cameraName: c.cameraId, singlePointZones: [], redundantZones: [], vulnerableZones: [] })), vulnerableZones: vulnerableZones.map((z) => ({ zoneId: z.zoneId, zoneLabel: z.label ?? z.zoneId, requiredQuality: z.requiredQuality ?? "recognition", actualQuality: z.actualQuality ?? "none", coveringCameras: z.coveringCameras ?? [] })) },
+    redundancyMatrix: { cameraRows: (sim.cameraResults ?? []).map((c) => ({ cameraId: c.cameraId, cameraName: c.cameraId, singlePointZones: [], redundantZones: [], vulnerableZones: [], status: "active", coveragePct: c.coveragePct ?? 0, criticalityLabel: "standard", criticalityScore: 5, soleCoverageZones: [], coveredZones: [] })), vulnerableZones: vulnerableZones.map((z) => ({ zoneId: z.zoneId, zoneLabel: z.label ?? z.zoneId, label: z.label ?? z.zoneId, requiredQuality: z.requiredQuality ?? "recognition", actualQuality: z.actualQuality ?? "none", status: z.status ?? "fail", coveringCameras: z.coveringCameras ?? [], coveringCameraNames: z.coveringCameras ?? [] })) },
     temporalTwin, temporalProfile: opt.temporalProfile ? { vulnerabilityWindowCount: opt.temporalProfile.vulnerabilityWindowCount ?? 0, safestPeriods: opt.temporalProfile.safestPeriods ?? [], worstCoverage: opt.temporalProfile.worstCoverage ?? 0 } : undefined,
     adversarialPath: opt.adversarialPath ? { exposureScore: opt.adversarialPath.exposureScore ?? 0, detectionProbability: opt.adversarialPath.detectionProbability ?? 0, totalDistance: opt.adversarialPath.totalDistance ?? 0, waypoints: opt.adversarialPath.waypoints ?? [] } : undefined,
-    findings: [], sceneName: scene?.name ?? "Untitled Scene", visibility: "internal",
+    findings: [], sceneName: scene?.name ?? "Untitled Scene", visibility: opt.visibility ?? "internal",
   };
 }
 
@@ -724,7 +774,7 @@ export function exportAsHtml(report: ReportData): string {
   let zt = ""; if ((report.zones ?? []).length > 0) { zt = "<table><thead><tr><th>Zone</th><th>Status</th><th>Required Quality</th></tr></thead><tbody>"; for (const z of report.zones ?? []) zt += `<tr><td>${esc(z.label)}</td><td>${esc(z.status)}</td><td>${esc(z.targetRequirementQuality)}</td></tr>`; zt += "</tbody></table>"; }
   let cr = ""; for (const c of report.cameras ?? []) cr += `<tr><td>${esc(c.id)}</td><td>${c.coveragePct}%</td><td>${esc(c.bestZoneQuality)}</td><td>${c.zonesFailed}</td></tr>`;
   let ih = ""; for (const issue of report.issues ?? []) ih += `<li><strong>[${esc(issue.severity)}]</strong> ${esc(issue.description)}</li>`;
-  let eeh = ""; for (const entry of et.recentEntries ?? []) eeh += `<tr><td><a id="${entry.anchorId ?? "evidence-0"}">${esc(entry.title ?? "")}</a></td><td>${esc(entry.description ?? "")}</td><td>${esc(entry.confidence ?? "high")}</td></tr>`;
+  let eeh = ""; for (const entry of et.recentEntries ?? []) eeh += `<tr><td><a id="${entry.anchorId ?? "evidence-0"}">${esc(entry.title ?? "")}</a></td><td>${esc(entry.description ?? "")}</td><td>${esc(String(entry.confidence ?? "high"))}</td></tr>`;
   return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>${esc(report.siteName ?? report.sceneName ?? "Untitled Scene")} — Report</title></head><body>
 <h1>${esc(report.title ?? "Security Audit Report")}</h1><p>Scene: ${esc(report.siteName ?? report.sceneName ?? "Untitled Scene")}</p>
 <h2>Compliance</h2><p><strong>IEC 62676-4:2025</strong></p><p>${s.zonesPassing === s.zonesTotal ? "Meets modeled zone requirements" : "Does not fully meet modeled zone requirements"}</p>

@@ -1,6 +1,7 @@
 "use client";
 
 import { QUALITY_ABBR, QUALITY_COLOR } from "@/lib/quality-display";
+import { TruthBadge } from "@/components/shared/TruthBadge";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { useStudioStore } from "@/store/studio-store";
 
@@ -69,6 +70,7 @@ export function RedundancyTab() {
 
       {/* ── Stats strip ─────────────────────────────────────────────────── */}
       <div className="flex flex-shrink-0 items-center gap-3 border-b border-[#1e2130] bg-[#090c12] px-3 py-1">
+        <TruthBadge label="simulated" />
 
         {/* Redundancy score ring */}
         <div className="flex items-center gap-2">

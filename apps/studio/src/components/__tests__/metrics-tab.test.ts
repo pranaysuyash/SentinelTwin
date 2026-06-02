@@ -9,7 +9,8 @@ describe("MetricsTab", () => {
 
     expect(source).toContain("Fragility");
     expect(source).toContain("Overall Coverage (Detection)");
-    expect(source).toContain("Truth: Simulated");
+    expect(source).toContain("TruthBadge");
+    expect(source).toContain('label="simulated"');
     expect(source).toContain("Critical Zones");
     expect(source).toContain("Average Quality (Walkable)");
     expect(source).toContain("Worst Area Quality");

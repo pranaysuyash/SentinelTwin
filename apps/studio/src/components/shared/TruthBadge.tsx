@@ -1,7 +1,7 @@
-import { ShieldCheck, BrainCircuit, Activity, HelpCircle } from "lucide-react";
+import { ShieldCheck, BrainCircuit, Activity, HelpCircle, Database, Radio } from "lucide-react";
 import { cn } from "@/lib/cn";
 
-export type TruthLabel = "simulated" | "inferred" | "real" | "placeholder";
+export type TruthLabel = "computed" | "inferred" | "imported" | "simulated" | "placeholder" | "live";
 
 interface TruthBadgeProps {
   label: TruthLabel;
@@ -11,6 +11,11 @@ interface TruthBadgeProps {
 
 export function TruthBadge({ label, className, showText = true }: TruthBadgeProps) {
   const config = {
+    computed: {
+      color: "text-cyan-400 bg-cyan-950/30 border-cyan-900/50",
+      icon: Database,
+      text: "Computed",
+    },
     simulated: {
       color: "text-blue-400 bg-blue-950/30 border-blue-900/50",
       icon: Activity,
@@ -20,6 +25,16 @@ export function TruthBadge({ label, className, showText = true }: TruthBadgeProp
       color: "text-purple-400 bg-purple-950/30 border-purple-900/50",
       icon: BrainCircuit,
       text: "Inferred",
+    },
+    imported: {
+      color: "text-indigo-400 bg-indigo-950/30 border-indigo-900/50",
+      icon: Database,
+      text: "Imported",
+    },
+    live: {
+      color: "text-emerald-400 bg-emerald-950/30 border-emerald-900/50",
+      icon: Radio,
+      text: "Live",
     },
     real: {
       color: "text-emerald-400 bg-emerald-950/30 border-emerald-900/50",

@@ -12,6 +12,7 @@ import { ENVIRONMENT_THEMES } from "@/components/workspace/SharedScene";
 import { QUALITY_RANK } from "@/lib/quality-display";
 import { CameraRigLive, SceneFeedGeometry } from "@/components/view/SceneFeedCanvas";
 import { CameraControlStrip } from "@/components/view/CameraControlStrip";
+import { DoriBandArcs } from "@/components/view/DoriBandArcs";
 import { LiveFeedHUD } from "@/components/view/camera-live-feed-hud";
 import { VerificationPanel as SharedVerificationPanel } from "@/components/view/camera-verification-panel";
 import { CameraHeader, CameraModeFilter, CameraPathVisibilityOverlay, BottomControlStrip, DoriInsightCard, ReplayStatusOverlay, type CameraFeedMode, type OverlayFlags } from "@/components/view/camera-view-chrome";
@@ -364,6 +365,7 @@ export function CameraViewMode() {
             </Suspense>
             <CameraRigLive camera={camera} poseOverride={activeCameraReplayPose ?? undefined} />
             <CameraViewFloorAim camera={camera} />
+            {flags.dori ? <DoriBandArcs camera={camera} /> : null}
             <CameraPositionIndicator camera={camera} />
             {replayActorVisible && activePath ? (
               <ReplayActor path={activePath} progress={pathReplay.progress} />

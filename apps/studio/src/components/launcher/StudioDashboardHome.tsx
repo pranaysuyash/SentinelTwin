@@ -279,12 +279,12 @@ function coverageTone(pct: number) {
   return "text-red-300";
 }
 
-function countLabel(count: number, singular: string, plural = `${singular}s`) {
-  return `${count} ${count === 1 ? singular : plural}`;
-}
-
 function criticalZoneStatusMap(result: SimulationResult | null) {
   return new Map(result?.criticalZoneResults.map((zone) => [zone.zoneId, zone]) ?? []);
+}
+
+function countLabel(count: number, singular: string, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
 }
 
 function anglePoint(origin: [number, number], angleDeg: number, distance: number) {
@@ -292,8 +292,7 @@ function anglePoint(origin: [number, number], angleDeg: number, distance: number
   return [origin[0] + Math.cos(radians) * distance, origin[1] + Math.sin(radians) * distance] as [number, number];
 }
 
-function WorkspaceMiniPreview({ scene, result, hydrated = true }: { scene: SecurityScene; result: SimulationResult | null; hydrated?: boolean }) {
-  const width = 320;
+function WorkspaceMiniPreview({ scene, result, hydrated = true, width = 320 }: { scene: SecurityScene; result: SimulationResult | null; hydrated?: boolean; width?: number }) {
   const height = 156;
   const padding = 12;
   const scale = Math.min((width - padding * 2) / scene.dimensions.width, (height - padding * 2) / scene.dimensions.depth);
@@ -404,198 +403,6 @@ function WorkspaceMiniPreview({ scene, result, hydrated = true }: { scene: Secur
         </text>
       </svg>
     </div>
-  );
-}
-
-function ActionButton({
-  icon,
-  label,
-  description,
-  onClick,
-  variant = "secondary",
-  className,
-}: {
-  icon?: ReactNode;
-  label: string;
-  description?: string;
-  onClick: () => void;
-  variant?: "primary" | "secondary" | "ghost";
-  className?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "group flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition-[transform,border-color,box-shadow,background-color] duration-200 hover:-translate-y-0.5",
-        variant === "primary"
-          ? "border-sky-400/30 bg-sky-500/12 text-sky-50 shadow-[0_12px_36px_rgba(14,165,233,0.10)] hover:border-sky-300/45 hover:bg-sky-500/16"
-          : variant === "ghost"
-            ? "border-transparent bg-transparent text-[color:var(--st-text)] hover:border-[color:var(--st-border)] hover:bg-white/[0.03]"
-            : "border-[color:var(--st-border)] bg-[color:var(--st-panel)] text-[color:var(--st-text)] hover:border-[rgba(79,183,255,0.35)] hover:bg-[color:var(--st-panel-2)]",
-        className,
-      )}
-    >
-      <div className="min-w-0">
-        <div className="flex items-center gap-2 text-sm font-semibold">
-          {icon ? <span className="text-[color:var(--st-accent)]">{icon}</span> : null}
-          <span>{label}</span>
-        </div>
-        {description ? <div className="mt-1 text-[11px] leading-4 text-[color:var(--st-muted)]">{description}</div> : null}
-      </div>
-      <ArrowRight className="h-4 w-4 flex-none text-[color:var(--st-accent)] transition-transform duration-200 group-hover:translate-x-1" />
-    </button>
-  );
-}
-
-function LaunchStatusRow({
-  label,
-  value,
-  detail,
-  tone,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-  tone: "emerald" | "amber" | "sky" | "violet";
-}) {
-  const toneClasses: Record<typeof tone, string> = {
-    emerald: "border-emerald-400/18 bg-emerald-500/10 text-emerald-100",
-    amber: "border-amber-400/18 bg-amber-500/10 text-amber-100",
-    sky: "border-sky-400/18 bg-sky-500/10 text-sky-100",
-    violet: "border-violet-400/18 bg-violet-500/10 text-violet-100",
-  };
-
-  return (
-    <div className={cn("rounded-2xl border px-3 py-2", toneClasses[tone])}>
-      <div className="flex items-center justify-between gap-3">
-        <div className="text-[10px] uppercase tracking-[0.18em] text-white/60">{label}</div>
-        <div className="text-[11px] font-semibold text-white">{value}</div>
-      </div>
-      <div className="mt-1 text-[11px] leading-4 text-white/75">{detail}</div>
-    </div>
-  );
-}
-
-function SceneStarterCard({
-  icon,
-  title,
-  description,
-  hint,
-  badge,
-  status,
-  ctaLabel = "Start",
-  tone,
-  onClick,
-  variant = "secondary",
-}: {
-  icon?: ReactNode;
-  title: string;
-  description: string;
-  hint: string;
-  badge: string;
-  status?: string;
-  ctaLabel?: string;
-  tone: StarterTone;
-  onClick: () => void;
-  variant?: "primary" | "secondary";
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "group flex min-h-[136px] flex-col justify-between rounded-[24px] border p-4 text-left transition-[transform,border-color,box-shadow,background-color] duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(0,0,0,0.18)]",
-        variant === "primary"
-          ? "border-sky-400/30 bg-sky-500/12 text-sky-50 shadow-[0_12px_36px_rgba(14,165,233,0.12)] hover:border-sky-300/45 hover:bg-sky-500/16"
-          : "border-[color:var(--st-border)] bg-white/[0.03] text-[color:var(--st-text)] hover:border-[rgba(79,183,255,0.35)] hover:bg-[color:var(--st-panel-2)]",
-      )}
-      >
-        <div className={cn("mb-3 overflow-hidden rounded-[18px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-2", STARTER_PREVIEW_CLASS[tone])}>
-          <div className="flex h-[46px] items-end justify-between gap-2">
-            <div className="flex items-end gap-1">
-              <span className="h-3.5 w-8 rounded-md border border-white/12 bg-white/8" />
-              <span className="h-5 w-3 rounded-md border border-white/12 bg-white/8" />
-              <span className="h-2.5 w-5 rounded-md border border-white/12 bg-white/8" />
-            </div>
-            <div className="flex items-end gap-1.5">
-              {tone === "blank" ? <span className="h-7 w-7 rounded-full border border-dashed border-sky-300/40 bg-sky-500/10" /> : null}
-              {tone === "import" ? <span className="h-7 w-7 rounded-lg border border-cyan-300/30 bg-cyan-500/10" /> : null}
-              {tone === "scan" ? <span className="h-6 w-10 rounded-md border border-emerald-300/30 bg-emerald-500/10" /> : null}
-              {tone === "ai" ? <span className="h-7 w-7 rounded-full border border-violet-300/30 bg-violet-500/10" /> : null}
-            </div>
-          </div>
-        </div>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">
-            <span className="text-[color:var(--st-accent)]">{icon}</span>
-            <span>{badge}</span>
-            {status ? (
-              <span className="whitespace-nowrap rounded-full border border-amber-400/25 bg-amber-500/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-amber-200">
-                {status}
-              </span>
-            ) : null}
-          </div>
-          <div className="mt-2 text-lg font-semibold tracking-tight">{title}</div>
-          <div className="mt-1 text-[11px] leading-4 text-[color:var(--st-muted)]">{description}</div>
-        </div>
-        <ArrowRight className="h-4 w-4 flex-none text-[color:var(--st-accent)] transition-transform duration-200 group-hover:translate-x-1" />
-      </div>
-      <div className="mt-5 flex items-center justify-between gap-3">
-        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] text-[color:var(--st-muted)]">
-          {hint}
-        </span>
-        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--st-muted)]">{ctaLabel}</span>
-      </div>
-    </button>
-  );
-}
-
-function WorkspaceSeedCard({
-  icon,
-  title,
-  description,
-  badge,
-  tone,
-  onClick,
-}: {
-  icon?: ReactNode;
-  title: string;
-  description: string;
-  badge: string;
-  tone: StarterTone;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group flex min-h-[92px] flex-col justify-between rounded-[20px] border border-[color:var(--st-border)] bg-white/[0.03] p-3 text-left transition-[transform,border-color,box-shadow,background-color] duration-200 hover:-translate-y-0.5 hover:border-[rgba(79,183,255,0.35)] hover:bg-[color:var(--st-panel-2)]"
-    >
-      <div className={cn("mb-2 overflow-hidden rounded-[14px] border border-white/8 p-2", STARTER_PREVIEW_CLASS[tone])}>
-        <div className="flex h-[34px] items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <span className="h-3 w-8 rounded-md border border-white/10 bg-white/8" />
-            <span className="h-5 w-5 rounded-md border border-white/10 bg-white/8" />
-          </div>
-          <span className="rounded-full border border-white/10 bg-black/12 px-2 py-0.5 text-[9px] text-[color:var(--st-text)]/80">
-            {badge}
-          </span>
-        </div>
-      </div>
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">
-            <span className="text-[color:var(--st-accent)]">{icon}</span>
-            <span>{badge}</span>
-          </div>
-          <div className="mt-1 text-sm font-semibold text-white">{title}</div>
-        </div>
-        <ArrowRight className="h-4 w-4 flex-none text-[color:var(--st-accent)] transition-transform duration-200 group-hover:translate-x-1" />
-      </div>
-      <div className="mt-2 text-[11px] leading-4 text-[color:var(--st-muted)]">{description}</div>
-    </button>
   );
 }
 
@@ -1262,66 +1069,6 @@ export function StudioDashboardHome({
           </div>
         </header>
 
-        {hydrated && savedProjects.length === 0 && scene.cameras.length === 0 && !showWorkspaceLibrary ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-8 py-16 lg:flex-row">
-            <div className="max-w-lg">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-400/30 bg-emerald-500/10 shadow-[0_0_32px_rgba(16,185,129,0.15)]">
-                <ShieldCheck className="h-7 w-7 text-emerald-400" />
-              </div>
-              <h1 className="mt-6 text-[28px] font-bold tracking-tight text-white">
-                Your first site twin awaits
-              </h1>
-              <p className="mt-3 max-w-md text-[14px] leading-6 text-[color:var(--st-muted)]">
-                SentinelTwin turns floor plans, photos, or a blank canvas into a live security
-                simulation. Model your site, review camera coverage, trace route exposure, and
-                generate compliance evidence — all in one workspace.
-              </p>
-              <div className="mt-8 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={onCreateScene}
-                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-sky-400/30 bg-sky-500/12 px-5 text-[13px] font-semibold text-white shadow-[0_8px_24px_rgba(14,165,233,0.12)] transition-all hover:bg-sky-500/20 hover:shadow-[0_12px_32px_rgba(14,165,233,0.18)]"
-                >
-                  <Plus className="h-4 w-4" />
-                  Blank Scene
-                </button>
-                <button
-                  type="button"
-                  onClick={onScanSite}
-                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-5 text-[13px] font-semibold text-[color:var(--st-text)] transition-all hover:border-emerald-400/30 hover:bg-white/[0.06] hover:text-white"
-                >
-                  <ScanSearch className="h-4 w-4 text-emerald-400" />
-                  Scan a Site
-                </button>
-                <button
-                  type="button"
-                  onClick={onOpenReferenceSites}
-                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-5 text-[13px] font-semibold text-[color:var(--st-text)] transition-all hover:border-violet-400/30 hover:bg-white/[0.06] hover:text-white"
-                >
-                  <LayoutDashboard className="h-4 w-4 text-violet-400" />
-                  Explore Reference
-                </button>
-                <button
-                  type="button"
-                  onClick={onImportScene}
-                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-5 text-[13px] font-semibold text-[color:var(--st-text)] transition-all hover:border-cyan-400/30 hover:bg-white/[0.06] hover:text-white"
-                >
-                  <FileUp className="h-4 w-4 text-cyan-400" />
-                  Import File
-                </button>
-              </div>
-            </div>
-            <div className="hidden w-px self-stretch bg-gradient-to-b from-transparent via-[color:var(--st-border)] to-transparent lg:block" />
-            <div className="max-w-xs rounded-2xl border border-[color:var(--st-border)] bg-white/[0.02] p-5">
-              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-200">Start screen</div>
-              <div className="mt-1 text-[11px] leading-5 text-[color:var(--st-muted)]">
-                This quick-get-started view appears automatically when you don&apos;t have any
-                saved site twins yet. As soon as you create or open one, it remembers where
-                you left off.
-              </div>
-            </div>
-          </div>
-        ) : (
         <div className="grid flex-1 items-start gap-4 lg:grid-cols-[220px_minmax(0,1fr)_326px]">
           <aside className="flex flex-col gap-3 rounded-[12px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3">
             <div>
@@ -1693,7 +1440,6 @@ export function StudioDashboardHome({
             ) : null}
           </aside>
         </div>
-        )}
 
         {footerPanel ? (
           <section className="rounded-2xl border border-[color:var(--st-border)] bg-[color:var(--st-panel)] px-4 py-3 text-[11px] text-[color:var(--st-muted)]">

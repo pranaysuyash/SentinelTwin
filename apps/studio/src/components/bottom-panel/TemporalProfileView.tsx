@@ -2,6 +2,7 @@
 
 import { AlertTriangle, Clock, Shield, ShieldAlert, Sun, Moon, Sunset, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import { TruthBadge } from "@/components/shared/TruthBadge";
 import { useStudioStore } from "@/store/studio-store";
 import { computeTemporalProfile } from "@sentineltwin/simulation";
 import type { HourlySecuritySnapshot, TemporalAnomalyWindow, VulnerabilityWindow } from "@/schema/security-scene";
@@ -320,6 +321,7 @@ export function TemporalProfileView() {
       {/* Header row */}
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-[#1e2130] flex-shrink-0">
         <div className="flex items-center gap-2">
+          <TruthBadge label="simulated" />
           <Clock className="w-3.5 h-3.5 text-green-400" />
           <span className="text-[10px] font-semibold text-[#c7d0e4]">Temporal Security Profile</span>
           {temporalProfile && (

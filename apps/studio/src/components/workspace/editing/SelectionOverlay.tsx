@@ -16,11 +16,11 @@ export function SelectionOverlay({ center, label, showSnap = false }: {
         <meshBasicMaterial color="#93c5fd" transparent opacity={showSnap ? 0.8 : 0.45} />
       </mesh>
       {label ? (
-        <Html position={[center[0], 0.09, center[1]]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
+        <SceneHtml position={[center[0], 0.09, center[1]]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
           <div className="rounded-md border border-[#2b3a58] bg-[#0b0f17]/90 px-2 py-0.5 text-[8px] font-semibold text-[#d2d9e8] shadow-[0_8px_20px_rgba(0,0,0,0.22)]">
             {label}
           </div>
-        </Html>
+        </SceneHtml>
       ) : null}
     </group>
   );

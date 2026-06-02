@@ -1242,11 +1242,11 @@ export function ScenePathLine({
         </mesh>
       )}
       {isSelected && start && end && (
-          <Html position={[(start[0] + end[0]) / 2, 0.16, (start[1] + end[1]) / 2]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
+          <SceneHtml position={[(start[0] + end[0]) / 2, 0.16, (start[1] + end[1]) / 2]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
             <div className="rounded border border-[#f59e0b]/40 bg-[#1b1205]/88 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em] text-[#fdba74]">
               Selected path
             </div>
-        </Html>
+        </SceneHtml>
       )}
     </group>
   );

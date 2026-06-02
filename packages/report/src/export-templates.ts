@@ -1,4 +1,3 @@
-// @ts-nocheck — TODO: integrate with current buildReportData output shape
 import type { ReportData } from "./index";
 
 function formatHour(hour: number): string {

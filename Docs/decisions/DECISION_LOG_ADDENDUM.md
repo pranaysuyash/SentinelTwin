@@ -400,3 +400,36 @@ audiences in the report generation package.
 - `packages/report/src/index.ts`
 - `Docs/todos/no-floor-plan-readiness-checklist.md`
 - `Docs/exploration/EXPLORATION_MAP.md`
+
+## D-296 | 2026-06-02 | Workspace & site creation system — read-only code-base exploration
+
+**Decision:** Document the full workspace/site creation surface as it exists today, in a single
+durable exploration document, as a launchpad for any new component touching creation flows.
+
+**Rationale:**
+- A future component was being designed against an inferred model. The cost of guessing was
+  drift. D-015 (documentation-first) requires we write it down.
+- The creation surface is broad: 6 source types × 6 intake methods × 12+ node types × 5 prompt
+  stages × 4 view modes × 9 store slices × 9 localStorage keys × 24 context actions × 4 context
+  action groups. A 1-page reference is the only way to keep mental model in sync.
+- D-296 deliberately adds a *new* durable doc rather than overloading
+  `Docs/todos/CURRENT_IMPLEMENTATION_STATE.md` (which tracks shipping state) or
+  `Docs/todos/FULL_VISION_GAP_INVENTORY.md` (which sequences next slices). This is a
+  read-only surface reference, distinct in kind.
+- D-296 establishes a *naming convention* for future exploration docs:
+  `Docs/exploration/EXPLORATION_<TOPIC>_<YYYY-MM-DD>.md`. The
+  `Docs/exploration/THREEJS_3D_RENDERING_SKILLS_INVENTORY_2026-05-29.md` and
+  `Docs/exploration/KENNEY_SENTINELTWIN_ASSET_PLAN_2026-05-27.md` precedents
+  confirm this is the right pattern.
+
+**Canonical behavior now required:**
+1. Any new component touching creation flows reads the new doc first.
+2. EXPLORATION_MAP.md gains Thread 99 (a one-paragraph summary with a link to the durable doc)
+   and never replaces prior threads (per the existing "append, don't replace" rule).
+3. New Q-041, Q-042, Q-043 are filed in `OPEN_QUESTIONS_ADDENDUM.md` (P0/P1) as structural
+   tensions surfaced by the read.
+
+**Updated in this pass:**
+- `Docs/exploration/EXPLORATION_WORKSPACE_CREATION_2026-06-02.md` (new)
+- `Docs/exploration/EXPLORATION_MAP.md` (Thread 99 appended)
+- `Docs/decisions/OPEN_QUESTIONS_ADDENDUM.md` (Q-019, Q-020, Q-021 added)

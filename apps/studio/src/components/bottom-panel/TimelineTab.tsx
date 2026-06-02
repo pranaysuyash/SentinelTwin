@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/cn";
 import { QUALITY_BAR_COLOR, QUALITY_LABEL, QUALITY_RANK, QUALITY_SHORT_LABEL } from "@/lib/quality-display";
 import { QualityBadge } from "@/components/shared/QualityBadge";
+import { TruthBadge } from "@/components/shared/TruthBadge";
 import { distance2D, lerp2D } from "@sentineltwin/core";
 import { QUALITY_ORDER } from "@sentineltwin/core";
 import { VisibilityTimeline } from "@/components/view/VisibilityTimeline";
@@ -231,6 +232,7 @@ export function TimelineTab() {
       <div className="flex flex-wrap items-center gap-2 border-b border-[#1e2130] px-3 py-2">
         <div className="flex items-center gap-1.5">
           <Route className="h-3.5 w-3.5 text-[#60a5fa]" />
+          <TruthBadge label="simulated" className="mr-1" />
           <select
             value={activePath.id}
             onChange={(event) => setActivePathId(event.target.value)}

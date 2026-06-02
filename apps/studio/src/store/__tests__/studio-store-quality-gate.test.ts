@@ -203,8 +203,8 @@ describe("studio store quality gate", () => {
 
     expect(useStudioStore.getState().compareReportSelection).toBeTruthy();
 
-    const compareSceneA = snapshots[0]?.scene ?? scene;
-    const compareSceneB = snapshots[1]?.scene ?? scene;
+    const compareSceneA = (snapshots[0]?.scene ?? scene) as SecurityScene;
+    const compareSceneB = (snapshots[1]?.scene ?? scene) as SecurityScene;
     const compare = buildCompareReportData(
       compareSceneA,
       snapshots[0]?.simulation ?? baselineResult,

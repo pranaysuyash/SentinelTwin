@@ -277,11 +277,11 @@ function SelectionHighlights() {
   return (
     <>
       {selectedNodeIds.length > 1 && firstSelectionAnchor ? (
-        <Html position={[firstSelectionAnchor[0], firstSelectionAnchor[1] + 0.55, firstSelectionAnchor[2]]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
+        <SceneHtml position={[firstSelectionAnchor[0], firstSelectionAnchor[1] + 0.55, firstSelectionAnchor[2]]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
           <div className="rounded-full border border-sky-300/35 bg-[#08111e]/92 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-sky-200 shadow-[0_10px_24px_rgba(0,0,0,0.25)]">
             {selectedNodeIds.length} selected
           </div>
-        </Html>
+        </SceneHtml>
       ) : null}
       {selectedNodeIds.map((id, index) => {
         const node = nodesById.get(id);
@@ -295,11 +295,11 @@ function SelectionHighlights() {
               <ringGeometry args={[isPrimary ? 0.18 : 0.14, isPrimary ? 0.28 : 0.22, 20]} />
               <meshBasicMaterial color={isPrimary ? "#93c5fd" : "#60a5fa"} transparent opacity={0.75} />
             </mesh>
-            <Html position={[anchor[0], anchor[1] + 0.2, anchor[2]]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
+            <SceneHtml position={[anchor[0], anchor[1] + 0.2, anchor[2]]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
               <div className="rounded border border-[#2b3a58] bg-[#0b0f17]/90 px-1.5 py-0.5 text-[8px] font-semibold text-[#d2d9e8]">
                 {isPrimary ? "Primary" : `+${index}`}
               </div>
-            </Html>
+            </SceneHtml>
           </group>
         );
       })}
@@ -417,14 +417,14 @@ function CameraFrustum({
         )}
       </lineSegments>
       {(selected || hovered) && (
-        <Html position={[centerPos.x, centerPos.y + range * 0.58, centerPos.z]} center distanceFactor={11} style={{ pointerEvents: "none" }}>
+        <SceneHtml position={[centerPos.x, centerPos.y + range * 0.58, centerPos.z]} center distanceFactor={11} style={{ pointerEvents: "none" }}>
           <div className={cn(
             "rounded-full border px-2 py-0.5 text-[9px] font-semibold tracking-wide shadow-lg",
             selected ? "border-sky-300/70 bg-sky-400/15 text-sky-100" : "border-white/15 bg-black/45 text-sky-100",
           )}>
             {selected ? "Selected" : "Click to select"}
           </div>
-        </Html>
+        </SceneHtml>
       )}
     </group>
   );
@@ -516,7 +516,7 @@ function CameraMarker({
       </group>
 
       {showLabel && (selected || hovered || !showOnlyOnHover) && (
-        <Html position={[0, 0.34, 0]} center distanceFactor={11} style={{ pointerEvents: "none", whiteSpace: "nowrap" }}>
+        <SceneHtml position={[0, 0.34, 0]} center distanceFactor={11} style={{ pointerEvents: "none", whiteSpace: "nowrap" }}>
           <CameraLabelCard
             name={camera.name}
             resolutionMP={camera.resolutionMP}
@@ -528,12 +528,12 @@ function CameraMarker({
             compact={labelCompact}
             isSuggested={camera.tags?.includes("suggested")}
           />
-        </Html>
+        </SceneHtml>
       )}
 
       {/* In minimal mode, always show a small dot indicator for quick location */}
       {showOnlyOnHover && !selected ? (
-        <Html position={[0, 0.18, 0]} center distanceFactor={14} style={{ pointerEvents: "none" }}>
+        <SceneHtml position={[0, 0.18, 0]} center distanceFactor={14} style={{ pointerEvents: "none" }}>
           <div
             style={{
               width: 4,
@@ -544,7 +544,7 @@ function CameraMarker({
               boxShadow: `0 0 3px ${cameraColor}`,
             }}
           />
-        </Html>
+        </SceneHtml>
       ) : null}
     </group>
   );
@@ -729,7 +729,7 @@ function CriticalZoneOverlay({
         <lineBasicMaterial color={selected ? "#93c5fd" : color} transparent opacity={selected ? 0.95 : 0.72} />
       </lineSegments>
       {zoneLabelsVisible && (selected || overlayDensity !== "minimal") && (
-        <Html position={[cx, 0.05, cz]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
+        <SceneHtml position={[cx, 0.05, cz]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
           <CriticalZoneLabelCard
             label={zone.label}
             requiredQuality={zone.requiredQuality}
@@ -739,7 +739,7 @@ function CriticalZoneOverlay({
             badgeText={badgeText}
             compact={overlayDensity === "compact"}
           />
-        </Html>
+        </SceneHtml>
       )}
     </group>
   );
@@ -762,12 +762,12 @@ function ObstructionWarning({
   const affectedCamera = scene.cameras.find((camera) => camera.id === issue.affectedCameras[0]);
 
   return (
-    <Html position={position} center distanceFactor={12} style={{ pointerEvents: "none" }}>
+    <SceneHtml position={position} center distanceFactor={12} style={{ pointerEvents: "none" }}>
       <ObstructionWarningCard
         obstructionLabel={obstructionLabel}
         affectedCameraName={affectedCamera?.name}
       />
-    </Html>
+    </SceneHtml>
   );
 }
 
@@ -777,9 +777,9 @@ function EntryDoorLabel({ position }: { position: [number, number] }) {
   if (!layers.labels || !entryChipsVisible) return null;
 
   return (
-    <Html position={[position[0], 0.14, position[1]]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
+    <SceneHtml position={[position[0], 0.14, position[1]]} center distanceFactor={12} style={{ pointerEvents: "none" }}>
       <EntryDoorChip label="ENTRY DOOR" />
-    </Html>
+    </SceneHtml>
   );
 }
 
@@ -1600,7 +1600,7 @@ function ToolPlacementFloor({
           </mesh>
 
           {/* Tool label above */}
-          <Html position={[0, 0.35, 0]} center distanceFactor={10} style={{ pointerEvents: "none" }}>
+          <SceneHtml position={[0, 0.35, 0]} center distanceFactor={10} style={{ pointerEvents: "none" }}>
             <div
               style={{
                 display: "inline-flex",
@@ -1622,7 +1622,7 @@ function ToolPlacementFloor({
                 {tooltipDisplay}
               </span>
             </div>
-          </Html>
+          </SceneHtml>
         </group>
       )}
 

@@ -6,6 +6,7 @@ import { Badge } from "@/components/shared/Badge";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { qualityToScore } from "@sentineltwin/core";
 import { computeCoverageEntropy } from "@sentineltwin/simulation";
+import { TruthBadge } from "@/components/shared/TruthBadge";
 import { truthLabelDetail } from "@/lib/truth-labels";
 import { QUALITY_COLOR } from "@/lib/quality-display";
 import { getTargetRequirementInfo } from "@/lib/target-quality-requirements";
@@ -171,14 +172,10 @@ export function MetricsTab() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div
-        className="flex items-center justify-between border-b border-[#1e2130] px-3 py-2 text-[9px] text-[#8090a8] shrink-0"
-        aria-label="Truth: Simulated"
-        title="Derived from the current scene and simulation state."
-      >
+      <div className="flex items-center justify-between border-b border-[#1e2130] px-3 py-2 text-[9px] text-[#8090a8] shrink-0">
         <div className="flex items-center gap-2">
           <span className="font-semibold uppercase tracking-[0.14em] text-[#c7d0e4]">Truth:</span>
-          <span className="rounded border border-sky-500/20 bg-sky-500/10 px-1.5 py-0.5 text-sky-200">Simulated</span>
+          <TruthBadge label="simulated" />
         </div>
         <div className="max-w-[32rem] truncate text-right" title={truthLabelDetail("simulated")}>{truthLabelDetail("simulated")}</div>
       </div>

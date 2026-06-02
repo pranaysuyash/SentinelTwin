@@ -168,9 +168,8 @@ export const TRUST_AUDIT_SURFACES: TrustAuditSurface[] = [
     surface: "Metrics truth labeling",
     file: "src/components/bottom-panel/MetricsTab.tsx",
     requiredPhrases: [
-      "Truth",
-      "Simulated",
-      "Derived from the current scene and simulation state.",
+      "TruthBadge",
+      'label="simulated"',
     ],
     forbiddenPhrases: ["placeholder", "stub"],
   },
@@ -178,9 +177,9 @@ export const TRUST_AUDIT_SURFACES: TrustAuditSurface[] = [
     surface: "Report truth labeling",
     file: "src/components/bottom-panel/ReportLiteTab.tsx",
     requiredPhrases: [
-      "Truth",
-      "Computed",
-      "Derived from the current scene and simulation state.",
+      "TruthBadge",
+      'label="computed"',
+      'label="inferred"',
     ],
     forbiddenPhrases: ["placeholder", "stub"],
   },
@@ -494,6 +493,148 @@ export const TRUST_AUDIT_SURFACES: TrustAuditSurface[] = [
       "DraftAssumption",
     ],
     forbiddenPhrases: ["stub", "placeholder"],
+  },
+  {
+    surface: "Timeline tab truth badge",
+    file: "src/components/bottom-panel/TimelineTab.tsx",
+    requiredPhrases: [
+      "TruthBadge",
+      'label="simulated"',
+    ],
+    forbiddenPhrases: [],
+  },
+  {
+    surface: "Issues tab truth badge",
+    file: "src/components/bottom-panel/IssuesTab.tsx",
+    requiredPhrases: [
+      "TruthBadge",
+      'label="simulated"',
+    ],
+    forbiddenPhrases: [],
+  },
+  {
+    surface: "Before-after tab truth badge",
+    file: "src/components/bottom-panel/BeforeAfterTab.tsx",
+    requiredPhrases: [
+      "TruthBadge",
+      'label="simulated"',
+    ],
+    forbiddenPhrases: [],
+  },
+  {
+    surface: "Scenario path panel truth badge",
+    file: "src/components/bottom-panel/ScenarioPathPanel.tsx",
+    requiredPhrases: [
+      "TruthBadge",
+      'label="simulated"',
+    ],
+    forbiddenPhrases: [],
+  },
+  {
+    surface: "Novel algorithms tab truth badge",
+    file: "src/components/bottom-panel/NovelAlgorithmsTab.tsx",
+    requiredPhrases: [
+      "TruthBadge",
+      'label="simulated"',
+    ],
+    forbiddenPhrases: [],
+  },
+  {
+    surface: "Redundancy tab truth badge",
+    file: "src/components/bottom-panel/RedundancyTab.tsx",
+    requiredPhrases: [
+      "TruthBadge",
+      'label="simulated"',
+    ],
+    forbiddenPhrases: [],
+  },
+  {
+    surface: "Temporal profile view truth badge",
+    file: "src/components/bottom-panel/TemporalProfileView.tsx",
+    requiredPhrases: [
+      "TruthBadge",
+      'label="simulated"',
+    ],
+    forbiddenPhrases: [],
+  },
+  {
+    surface: "Threat analysis panel truth badge",
+    file: "src/components/bottom-panel/ThreatAnalysisPanel.tsx",
+    requiredPhrases: [
+      "TruthBadge",
+      'label="simulated"',
+    ],
+    forbiddenPhrases: [],
+  },
+  {
+    surface: "Scene intelligence tab truth badge",
+    file: "src/components/bottom-panel/SceneIntelligenceTab.tsx",
+    requiredPhrases: [
+      "TruthBadge",
+      'label="simulated"',
+    ],
+    forbiddenPhrases: [],
+  },
+  {
+    surface: "Assumptions tab truth badge",
+    file: "src/components/bottom-panel/AssumptionsTab.tsx",
+    requiredPhrases: [
+      "TruthBadge",
+      'label="simulated"',
+    ],
+    forbiddenPhrases: [],
+  },
+  {
+    surface: "Camera status summary panel truth badge",
+    file: "src/components/bottom-panel/CameraStatusSummaryPanel.tsx",
+    requiredPhrases: [
+      "TruthBadge",
+      'label="simulated"',
+    ],
+    forbiddenPhrases: [],
+  },
+  {
+    surface: "Counterfactual panel truth badge",
+    file: "src/components/bottom-panel/CounterfactualPanel.tsx",
+    requiredPhrases: [
+      "TruthBadge",
+      'label="simulated"',
+    ],
+    forbiddenPhrases: [],
+  },
+  {
+    surface: "Coverage budget tab truth badge",
+    file: "src/components/bottom-panel/CoverageBudgetTab.tsx",
+    requiredPhrases: [
+      "TruthBadge",
+    ],
+    forbiddenPhrases: [],
+  },
+  {
+    surface: "Redundancy matrix panel truth badge",
+    file: "src/components/bottom-panel/RedundancyMatrixPanel.tsx",
+    requiredPhrases: [
+      "TruthBadge",
+    ],
+    forbiddenPhrases: [],
+  },
+  {
+    surface: "Timeline scrubber tab truth badge",
+    file: "src/components/bottom-panel/TimelineScrubberTab.tsx",
+    requiredPhrases: [
+      "TruthBadge",
+    ],
+    forbiddenPhrases: [],
+  },
+  {
+    surface: "Sensors tab truth labels",
+    file: "src/components/bottom-panel/SensorsTab.tsx",
+    requiredPhrases: [
+      'truthLabel="simulated"',
+      'truthLabel="imported"',
+      'truthLabel="inferred"',
+    ],
+    forbiddenPhrases: [],
   },
 ];
 

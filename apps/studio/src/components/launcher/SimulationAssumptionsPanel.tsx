@@ -14,6 +14,12 @@ type SceneAssumptions = {
   personHeightM: number;
   timeOfDay: string;
   nightPenaltyMode: string;
+  pixelsPerMeter: {
+    detection: number;
+    observation: number;
+    recognition: number;
+    identification: number;
+  };
 };
 
 export type SimulationAssumptionsPanelProps = {
@@ -51,7 +57,7 @@ export function SimulationAssumptionsPanel({
         </div>
         <div className="flex items-center justify-between">
           <span className="text-[10px] text-[#8b96ab]">Grid Resolution</span>
-          <span className="text-[10px] font-medium text-[#c5cde0]">0.25 m</span>
+          <span className="text-[10px] font-medium text-[#c5cde0]">{sceneAssumptions.pixelsPerMeter.detection} / {sceneAssumptions.pixelsPerMeter.observation} / {sceneAssumptions.pixelsPerMeter.recognition} / {sceneAssumptions.pixelsPerMeter.identification} PPM</span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-[10px] text-[#8b96ab]">Glass Handling</span>

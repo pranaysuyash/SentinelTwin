@@ -1,0 +1,905 @@
+# Workspace & Site Creation — Code-Base Exploration (2026-06-02)
+
+> Status: **read-only exploration**. No code changes. This document is the
+> single durable reference for the workspace/site creation surface of
+> SentinelTwin at a specific point in time, and is intended to be the
+> launchpad for any new component touching creation flows.
+
+---
+
+## 0. Purpose & Scope
+
+The user requested an exhaustive exploration of SentinelTwin's
+**workspace/site creation system** to inform a not-yet-specified new
+component. The surface spans:
+
+1. The full object taxonomy (`SecurityScene` schema).
+2. All ways a scene can be created (site intake, scan, AI draft, floor
+   plan, JSON import, manual, presets, demo, camera evidence).
+3. All settings, presets, and store/slice fields that act on a scene.
+4. All "beyond-Three.js" surfaces — persistence, AI, governance, audit,
+   evidence, reports, simulation, deployment, and live integrations.
+5. The full edit surface (draw tools, snap, selection, transforms, context
+   actions, overlays).
+
+The new component has **not** been defined by the user. This document
+characterises the full surface so any later component can be evaluated
+against current reality rather than guessed at.
+
+---
+
+## 1. Truth-at-Time-of-Writing Notice
+
+Canonical sources of truth (per `SentinelTwin/AGENTS.md`):
+
+- `Docs/architecture/00..10_*.md` for architecture.
+- `Docs/decisions/DECISION_LOG.md` (D-001..D-297+ in the addendum
+  chain) for binding decisions. **Addenda supersede base docs (D-028).**
+- `Docs/decisions/OPEN_QUESTIONS.md` + addendum for unresolved
+  decisions.
+- `packages/core/src` for canonical `SecurityScene` and
+  `SceneOperation` schemas.
+- `apps/studio/src` for React/R3F surface and the older duplicate
+  schema (see D-296, Q-020 in §13).
+
+Key decision numbers currently active:
+
+- **D-001** — fork `pascalorg/editor` (MIT). Parked, not installed.
+- **D-010** — Apache 2.0 license posture.
+- **D-011** — Framer Motion (MIT) instead of GSAP.
+- **D-012** — OODPCVS (12-level) default, DORI (4-level) legacy.
+- **D-017** — camera evidence wiring pattern.
+- **D-019** — local-first vs server-side compute (open before AI call
+  layer).
+- **D-021** — text-to-scene scope (open before V0.2).
+- **D-022** — multi-sensor scope (open before V1 data model freeze).
+- **D-028** — addendums supersede base docs.
+- **D-285** — landmark binding confidence from normalized geometric
+  fit.
+- **D-286** — package builds via forced `tsc -b --force`.
+- **D-295** — primary-button gating + day-theme fallback in
+  `WorkspaceCanvas`/`SharedScene`.
+- **D-296, D-297** — recent (see addendum).
+
+Open questions (P0/P1):
+
+- **Q-001** — Pascal `AnyNode` extension point (P0).
+- **Q-019** — Pascal fork reactivation conditions (P0, see §13).
+- **Q-020** — `packages/core` vs `apps/studio/schema` duplication
+  (P0, see §13).
+- **Q-021** — unified creation component vs entry-point-specific
+  growth (P1, see §13).
+- **Q-032** — confidence numeric vs categorical representation.
+- **Q-033** — scan-derived geometry uncertainty.
+- **Q-034** — critical zone sampling strategy.
+- **Q-035** — benchmark scene set for regression.
+
+---
+
+## 2. First-Principles Conceptual Model
+
+SentinelTwin is **not** a CCTV planner. It is a live digital twin of
+physical security where cameras, lights, obstructions, access points,
+time, lighting, and human movement are all editable variables in a
+continuous risk model. The product loop is:
+
+> `Edit scene → recompute coverage → show security impact → explain what
+> changed → recommend fixes`
+
+A **workspace** is the user's environment (`@pascalapp/core`-style
+hierarchy: Site → Building → Level, **parked** per D-001, see §3.5).
+A **scene** is the single canonical editable surface within a
+workspace: one room / one floor plan, one `SecurityScene` document.
+A **scenario** is a deterministic snapshot of scene + lighting + time +
+camera/light status used for simulation. A **simulation result** is the
+output of running `simulateStudio(scene, scenario)`.
+
+The "AI proposes, simulation verifies, AI explains" rule (D-005 in
+`05_AI_AGENT_ARCHITECTURE.md`) means **no AI model ever returns
+recommendations directly**; AI outputs are structured `SceneOperation[]`
+that get re-verified by the simulation engine before the user sees
+deltas.
+
+The system is **model-agnostic but OpenAI-switch-ready**; the
+`ModelProvider` interface abstracts 4 providers (`openai`, `gemini`,
+`qwen`, `local`). All AI is gated by a `localOnlyMode` policy and a
+rate-limit evaluator.
+
+The deployment matrix is **3-tier** (`10_PRODUCT_HARDENING_OPERABILITY.md`):
+local-only (IndexedDB, air-gapped), self-hosted (Docker Compose +
+Postgres + MinIO), cloud-assisted (Vercel + RDS + S3 + SQS/Redis).
+
+---
+
+## 3. SecurityScene — Canonical Truth
+
+### 3.1 Source taxonomy (6 values)
+
+`sceneSourceSchema` in `packages/core/src/schema/security-scene.ts`:
+
+| Source | Meaning | Production state |
+|---|---|---|
+| `manual` | User authored | Working |
+| `ai` | Generated by `AI Layout Draft` agent (prompt `model_layout_draft` v2) | Working |
+| `scan` | Produced from `ScanSiteWizard` / `ReconstructionCandidatePanel` | Working |
+| `import` | Loaded from a JSON file | Working |
+| `preset` | Loaded from `SCENE_TEMPLATES` (`apps/studio/src/lib/scene-templates.ts`) | Working |
+| `demo` | Loaded from `sample-security-scene-import.json` or `sample-site-twins/*` | Working |
+
+Mirror intake-side taxonomy in `SiteIntakeSource`
+(`apps/studio/src/lib/site-compiler.ts`): `scan`, `ai_prompt`,
+`floor_plan`, `json`, `manual`, `camera_evidence` (the last is
+`Prototype` per the matrix).
+
+### 3.2 Review status (5 values)
+
+`reviewStatusSchema`: `unreviewed` (default) | `accepted` |
+`corrected` | `calibrated` | `verified`. AI-drafted nodes are
+**forced** to `unreviewed` with a populated `sourceTrace` and
+`geometryValidity` (per the `model_layout_draft` v2 system prompt).
+
+### 3.3 Node type taxonomy (12+ types)
+
+Confirmed across `apps/studio/src/components/workspace/editing/selection-geometry.ts`,
+`node-factory.ts` (both copies), and `packages/core/src/lib/node-factory.ts`:
+
+| `nodeType` | `id` prefix | Min fields | Notes |
+|---|---|---|---|
+| `wall` | `wall_` | `start`, `end` (Point2) | Snapped endpoints |
+| `door` | `door_` | `position` (3D), `wallId?`, `openClose`, `locked` | Toggle open/lock |
+| `window` | `window_` | `position` (3D), `wallId?`, `openClose` | Toggle open |
+| `camera` | `cam_` | `position` (3D), `yawDeg`, `pitchDeg`, `fovHorizontalDeg`, `rangeM`, `resolutionMP`, `mountType`, `status`, `liveTransport?` | 5 mount types; 5 status states; live transport/auth fields when inferred |
+| `obstruction` | `obs_` | `position` (3D), `dimensions` ([w,h,d]), `kind` (shelf/desk/cabinet/...) | "Vision collider" |
+| `security_light` | `light_` | `position` (3D), `on`, `lumen?`, `beamDeg?` | Day/night modulation |
+| `sensor` | `sensor_` | `position` (3D), `sensorType` (D-022 multi-type) | Multi-sensor not yet frozen |
+| `critical_zone` | `zone_` | `label`, `polygon` (Point2[]), `requiredQuality` (DORI/OODPCVS) | Drives gating |
+| `privacy_zone` | `privacy_` | `label`, `polygon` (Point2[]) | Redacts camera coverage |
+| `entry_point` | `entry_` | `position` (Point2), `kind` | Visible in overlays |
+| `path` (`ScenarioPath`) | `path_` | `points[]` (`{position, timeS?, dwellMs?}`), `speedMps?`, `kind` (normal/coverage_failure) | Used by PathReplay & Compare |
+| `comment` | `comment_` | `text`, `position` | Annotation |
+| `patrolRoute` | `patrolRoute_` | waypoints (camera motion) | Camera as agent |
+| `patrolRoutePoint` | (sub-record) | waypoint ref | |
+| `snap` (transient) | `snap_` | (engine-internal) | |
+| `scene` (transient) | `scene_` | (root) | |
+| `sugg` (AI-suggested) | `sugg_` | (transient) | |
+| `mismatch` (evidence) | `mismatch_` | (transient) | |
+| `evidence` (evidence) | `evidence_` | (transient) | |
+| (truncated) | | | full prefix list in `packages/core/src/schema/security-scene.ts` line 70 |
+
+`AnyEditableNode` is the discriminated union of the persistent types;
+`{wall, door, window, camera, security_light, sensor, obstruction,
+critical_zone, privacy_zone, entry_point, path}` is the canonical
+11-type set used by `selection-geometry.ts` for hit-testing and
+`object-context-actions.ts` for right-click menus.
+
+### 3.4 Quality taxonomy
+
+- `DoriQualitySchema` (13 values): `none` + 4 DORI (`detection`,
+  `observation`, `recognition`, `identification`) + 8 OODPCVS
+  (`overview`, `outline`, `discern`, `perceive`, `characterize`,
+  `validate`, `scrutinize`, + the legacy 4 above).
+- DORI/OODPCVS thresholds
+  (`packages/core/src/simulation/dori.ts`): detection=25/12,
+  observation=62.5/32, recognition=125/96, identification=250/192;
+  7-level OODPCVS quality score max.
+- Per-target required quality lives in
+  `packages/core/src/lib/target-quality-requirements.ts`
+  (`TARGET_QUALITY_REQUIREMENTS` keyed by `targetType`).
+
+### 3.5 Pascal hierarchy (parked, D-001)
+
+Pascal's `Site`/`Building`/`Level` is referenced in
+`02_PASCAL_EDITOR_INTEGRATION.md` and the SceneOperation union, but
+`@pascal-app/core` is **not installed** in `node_modules`. The fork is
+parked; current implementation flattens to a single `SecurityScene`
+with a `dimensions: {width, depth, heightM}` field. A
+`zLevel`/multi-floor surface is **not yet shipped** (open in Q-001,
+re-activation in Q-019).
+
+### 3.6 Schema duplication (drift risk)
+
+`apps/studio/src/schema/security-scene.ts` is a **duplicate** of
+`packages/core/src/schema/security-scene.ts`. Both are imported by
+client code. Drift is currently suppressed by `D-286` (forced
+`tsc -b --force`). **Flagged in Q-020** (P0): this should converge.
+
+### 3.7 SceneOperation — the AI mutation contract
+
+`packages/core/src/schema/SceneOperation.ts` is a discriminated union
+of atomic mutations. Known operations (from `command_parse` v1 prompt
++ zod schema):
+
+- `move_camera`, `rotate_camera`, `change_camera_fov`,
+  `toggle_camera`
+- `move_obstruction`, `resize_obstruction`, `rotate_obstruction`,
+  `add_obstruction`
+- `add_light`, `toggle_light`
+- `set_time_of_day`
+- `save_snapshot`
+- `generate_report`
+- `run_coverage_failure_analysis` / `run_adversarial` (legacy alias)
+
+`applySceneOperation.ts` is the **single mutator** for non-UI scene
+ops. UI mutations flow through `scene-slice.ts` actions. AI must
+return `SceneOperation[]` and the simulation re-verifies the delta
+before the user sees the result (D-005).
+
+---
+
+## 4. Site Intake Pipeline (creation → active SecurityScene)
+
+```
+Source Material
+   │ (image / video / 3D scan / JSON / prompt / hand-drawn)
+   ▼
+SiteIntakeSession (apps/studio/src/components/site-intake/SiteIntakeHub.tsx)
+   │   • 6 source types
+   │   • per-source working/preview/prototype gate
+   ▼
+SiteCompilerResult (apps/studio/src/lib/site-compiler.ts)
+   │   • normalize → SiteTwinDraft
+   │   • compute SiteTwinDraftReadiness.level
+   │     {deploy-ready | review-required | insufficient}
+   │   • emit SiteDraftWarning[] (severity: info|warn|blocker)
+   │   • gates canSimulate / canRecommend
+   ▼
+SiteDraftApprovalResult (apps/studio/src/lib/site-draft-approval.ts)
+   │   • review-first promotion
+   ▼
+active SecurityScene (loaded into studio-store scene-slice)
+   │   • scene.source = one of the 6 source values
+   │   • scene.reviewStatus populated per-node
+   │   • AI-drafted nodes get source="ai", reviewStatus="unreviewed"
+   │   • every generated node sets sourceTrace + geometryValidity
+   │   • cameras get live transport/auth fields when inferred
+   ▼
+useSimulation() → simulateStudio() → simulation result
+   │   • auto-recompute on simulationDirty, 400ms debounce
+   │   • scene edits → snapshot diff → counterfactual candidates
+   ▼
+User sees live impact
+```
+
+### 4.1 Site intake surface
+
+- `SiteIntakeHub.tsx` is the **single hub** for all 6 intake sources
+  (scan, ai_prompt, floor_plan, json, manual, camera_evidence). Each
+  tile is a button that starts a sub-flow:
+  - Scan → `ScanSiteWizard` → `ReconstructionCandidatePanel`
+    → `ImportReview` (7-stage `GuidedCaptureAssistant`).
+  - AI prompt → `AiLayoutDraftView` (in
+    `apps/studio/src/components/product/AiLayoutDraftView.tsx`),
+    backed by `apps/studio/src/lib/ai-layout-draft.ts` →
+    `draftSceneFromPrompt` → zod `layoutDraftSchema`.
+  - Floor plan → `floor-plan-import.ts` (image-based).
+  - JSON → direct file load.
+  - Manual → `SceneBuilderWizard` (4-step: blank / template / floor
+    plan / live scan).
+  - Camera evidence → Prototype (per intake matrix); uses
+    `camera-evidence-workflow.ts` patterns but the route is not
+    surfaced in `SiteIntakeHub` tiles.
+
+- `SiteDraftReview.tsx` is the **single review step** for any drafted
+  scene. It shows severity icons, blocker warnings, and a per-fix
+  action chip.
+
+### 4.2 Two-tier floor plan pipeline (D-019 / `09_FLOORPLAN_PIPELINE.md`)
+
+- Tier 1: local MiniCPM-V 4.6 — semantic pass (classification, OCR,
+  room detection, confidence flag).
+- Tier 2: cloud VLM — geometry pass (wall extraction). Cost/latency
+  optimisation.
+
+### 4.3 Sample fixtures (Working)
+
+- `apps/studio/public/sample-security-scene-import.json` — sample
+  retail, 10×8×3m, 4 cameras, 2 critical zones.
+- `apps/studio/public/sample-site-twins/jewelry-store-site-twin.json` —
+  jewelry store, 12×8×3.2m, glass front. Mirror contract documented in
+  `sample-site-twins/README.md`.
+
+---
+
+## 5. Node Factories & Templates
+
+### 5.1 ID prefix + counter pattern
+
+`packages/core/src/lib/node-factory.ts` and
+`apps/studio/src/lib/node-factory.ts` both use a per-prefix counter
+(`cam_${n}`, `light_${n}`, etc.) to guarantee unique IDs per
+session. Both files exist; **packages/core is canonical** (Q-020).
+
+### 5.2 Scene templates
+
+`apps/studio/src/lib/scene-templates.ts` exports
+`SCENE_TEMPLATES: { key, label, scene, ... }[]`. Each template has a
+`create()` builder that returns a full `SecurityScene`. Known entries
+are pre-built for the dashboard's "Quick Start" carousel.
+
+### 5.3 Skeleton
+
+`createBlankSecurityScene()` in
+`apps/studio/src/lib/scene-skeleton.ts` returns a baseline: 10×8×3m
+rectangle with 4 walls, no cameras, no zones.
+
+---
+
+## 6. Edit Surface
+
+### 6.1 Tool rail (`LeftPanel.tsx`)
+
+11 placement/utility tools matching the 11+ node factories:
+- Select, Measure, Comment (utility)
+- Wall, Door, Window (structural)
+- Camera, Obstruction, Security Light, Sensor, Critical Zone, Privacy
+  Zone, Path (functional)
+- (Truncated in prior read — full list lives at
+  `apps/studio/src/components/left-panel/LeftPanel.tsx`)
+
+Plus: Layers panel, MiniMap, library/search.
+
+### 6.2 Draw tools (`apps/studio/src/components/workspace/editing/`)
+
+- `WallDrawTool.tsx` (41 lines) — preview + length + angle.
+- `PolygonDrawTool.tsx` (49 lines) — closed-loop polygon (zones).
+- `PathDrawTool.tsx` (42 lines) — ordered waypoints.
+- `SnapEngine.ts` (143 lines) — grid + wall + wall-endpoint snap with
+  `SnapOptions { snapEnabled, snapDistanceM, gridSnapM }`.
+- `SelectionOverlay.tsx` (27 lines) — ring + label badge.
+
+### 6.3 Snap & geometry
+
+- `editor-geometry.ts` (211 lines): `pointDistance`, `clampToScene`,
+  `snapValue`, `snapPoint`, `insertPointAtIndex`,
+  `removePointAtIndex`, `insertPolygonVertex`,
+  `removePolygonVertex`, `removePathPoint`, `angleDegBetween`,
+  `applyShiftLock`, `segmentProjection`, `nearestPointOnWall`,
+  `pathLength`. The **canonical 2D math library** for the editor.
+- `selection-geometry.ts` (116 lines): `getNodeSelectionBounds(node)`
+  per nodeType and `getSceneSelectionIds(scene, bounds)`. Confirms
+  the 11-type selection taxonomy.
+
+### 6.4 Transform handles
+
+`TransformHandles.tsx` (748 lines) — move / rotate / scale gizmos
+with per-nodeType affordance. (Read pending for full surface.)
+
+### 6.5 Context actions (24 actions, 4 groups)
+
+`object-context-actions.ts` (691 lines) +
+`ObjectContextMenu.tsx` (169 lines):
+
+- `ContextActionId` is a 24-value union (focus, duplicate, delete,
+  open_camera_view, aim_at_selected_zone, snap_camera_wall/ceiling/
+  pole, move_forward/back/left/right, move_up/down, rotate_left/right,
+  flip, snap_to_wall, door_toggle_open_close, door_toggle_lock,
+  window_toggle_open_close, wall_reverse, path_reverse).
+- `ContextMenuModel` has `title`, `subtitle`, `accent` (per
+  nodeType), and grouped actions.
+- `ContextActionPlan` discriminated union: `none` | `patch` |
+  `duplicate` | `delete` | `focus` | `camera_view`.
+- Move step: `MOVE_STEP_M = 0.25`; height: `HEIGHT_STEP_M = 0.15`;
+  rotate: `ROTATE_STEP_DEG = 15`.
+
+### 6.6 Overlay cards (`apps/studio/src/components/workspace/overlays/`)
+
+- `CameraLabelCard.tsx` (121 lines) — name + resolution + mount + status.
+- `CriticalZoneLabelCard.tsx` (55 lines) — label + required quality + pass/fail badge.
+- `EntryDoorChip.tsx` (22 lines) — purple chip.
+- `ObstructionWarningCard.tsx` (18 lines) — "Blocking camera view" warning.
+- `SceneFloatingCard.tsx` (75 lines) — base shell for R3F `Html` overlays.
+
+### 6.7 View-specific surface (`apps/studio/src/components/view/`)
+
+- `PathReplayView.tsx` (1448 lines) — actor playback along a path with
+  collision legalisation (`buildLegalizedReplayWaypoints`), wall
+  collision detection, timeline events, `PathActor` mesh, replay
+  cones, scrubber, camera markers, collision markers, exposure
+  bands. Uses `framer-motion` and a 1000/24 ms replay progress publish
+  interval. Default speed 1.2 m/s, options [0.5, 1, 2, 4].
+- `CompareView.tsx` (1448 lines) — dual snapshot compare with
+  coverage metrics, camera DORI deltas, quality trend, changed
+  objects panel, evidence export, share link
+  (`buildCompareShareLink`). Owns `ComparisonExport` JSON format.
+- `CameraWallView.tsx` (785 lines) — grid of camera feeds
+  (auto/quad/overview/dense layouts), `shortTag(name)` from
+  regex, replay state per camera.
+- `CameraViewMode.tsx` (568 lines) — single-camera POV with floor
+  aim, scene chrome, verification panel.
+- `VisibilityTimeline.tsx` (274 lines) — per-camera quality bands
+  over time, ordered by `orderCamerasForReplayPlayback`, segments
+  built from `timelineEvents` filtering per camera.
+- `ReportView.tsx` (398 lines) — generated report preview (read
+  pending for full surface).
+- `CameraControlStrip.tsx` (275 lines), `ViewModeBar.tsx` (190
+  lines), `camera-live-feed-hud.tsx` (18.5 KB) — chrome.
+- `camera-verification-workflow.ts` (30 KB) — backend logic for
+  live camera verification.
+- `camera-view-utils.ts` (11.3 KB) — shared utilities
+  (`buildReplayStateByCameraAtTime`, `clampPathDuration`,
+  `getPathReplayDurationS`, `clampReplayProgress`,
+  `findLatestTimelineEventAtOrBeforeTime`,
+  `findNextTimelineEventAfterTime`, `sortTimelineEvents`,
+  `orderCamerasForReplayPlayback`, `sampleCameraReplayPose`).
+
+---
+
+## 7. Settings Taxonomy
+
+### 7.1 TopBar (`apps/studio/src/components/layout/TopBar.tsx`)
+
+- Scene selector dropdown (loads from `savedScenes` / branches).
+- Undo / Redo (per `snapshot-slice`).
+- Branch indicator + lifecycle chip.
+- Workspace preset dropdown (`WorkspacePreset`).
+- Import / Export buttons.
+- Branch snapshot capture.
+
+### 7.2 ViewSettingsModal (`apps/studio/src/components/layout/ViewSettingsModal.tsx`)
+
+7 view modes + AI provider + camera presets + theme.
+
+### 7.3 Workspace presets
+
+`WorkspacePreset` (4) + `BottomTab` (analysis tabs)
+`ANALYSIS_TAB_ORDER` from `governance-slice.ts` line 211–232.
+
+### 7.4 Theme + scene lighting
+
+- `ENVIRONMENT_THEMES` (`day` / `night` / `dusk` / `incident`) in
+  `SharedScene.tsx`.
+- `SCENE_LIGHT_PRESETS` (per same file).
+- `set_time_of_day` is a `SceneOperation` (`day` | `night` | `dusk`).
+
+### 7.5 Heatmap modes
+
+`HeatmapMode` (`quality` | `lighting` | `fragility` | `overlap` |
+`contribution` | `blindspots`).
+
+### 7.6 AI provider + eval
+
+- `AiProviderSelection` = `openai` | `gemini` | `qwen` | `local`.
+- `localOnlyMode` policy flag gates cloud-required fixtures.
+- `ModelEvalSuiteResult` tracks per-fixture pass/fail/skip + stage
+  budgets + prompt registry snapshot + run history
+  (`ModelEvalRunRecord[]`).
+
+---
+
+## 8. Beyond-Three.js Surfaces
+
+These are the systems the new component will have to coexist with
+(extend, not duplicate).
+
+### 8.1 Persistence
+
+9 localStorage keys (from `governance-slice.ts` + `useAutosave`):
+
+| Key | Owner | Shape |
+|---|---|---|
+| `sentineltwin_autosave_v1` | `useAutosave` | full SecurityScene (3s debounce, 24h max age) |
+| `sentineltwin_saved_scenes` | legacy | saved scenes |
+| `sentineltwin_saved_projects_v2` | governance | saved projects |
+| `sentineltwin_workspace_layouts` | governance | saved layouts |
+| `sentineltwin_saved_layouts_v1` | legacy | saved layouts |
+| `sentineltwin_workspace_governance_v1` | governance | workspace state |
+| `sentineltwin_workspace_access_v1` | governance | access policy |
+| `sentineltwin_workspace_account_v1` | governance | account profile |
+| `sentineltwin_fix_sandbox_v1` | governance | fix sandbox state |
+| `sentineltwin_operational_evidence_v1` | governance | evidence events |
+
+Share links: `parseArchiveHandoffLink`, `parseCompareShareLink`,
+`parseTimelineShareLink` for cross-session handoffs.
+
+### 8.2 AI infrastructure (`packages/agents/src/`)
+
+- 5 agent roles: `command`, `counterfactual`, `report`, `coordinator`,
+  `scene_understanding`.
+- 4 providers: `OpenAIProvider`, `GeminiProvider`, `QwenProvider`,
+  `LocalProvider` — all implement `ModelProvider`
+  (`complete` / `completeStreaming` / `completeStructured` /
+  `completeWithTools`).
+- 5 prompts in `PROMPT_REGISTRY`:
+  - `command_parse` v1 (CommandAgent) → `SceneOperation[]`
+  - `counterfactual_candidates` v1 (CounterfactualAgent) →
+    `CounterfactualCandidate[]`
+  - `report_generation` v1 (ReportAgent) → `SecurityReport`
+  - `model_layout_draft` v2 (AI Layout Draft) → SecurityScene
+    blueprint (forces `source="ai"`, `reviewStatus="unreviewed"`,
+    `sourceTrace`, `geometryValidity`, `evidenceArtifacts`,
+    `mismatchReports`; cameras include live transport/auth fields when
+    inferred)
+  - `scene_understanding` v1 (SceneUnderstandingAgent) →
+    `SceneUnderstandingResult`
+- 5 prompt stages: `command` | `counterfactual` | `report` | `draft`
+  | `scene_understanding`. 4 telemetry stages:
+  `command_parse` | `counterfactual` | `report_generation` | `ai_draft`.
+- `CoordinatorAgent` is a thin dispatcher over a
+  `Map<AgentRole, …>` registry; `globalCoordinator` is a
+  process-level singleton; `ConversationMemory` rolls into a summary
+  at 8k tokens.
+- `ModelEval` harness: 6 fixture kinds
+  (`baseline` | `command` | `counterfactual` | `report` | `draft` |
+  `scene_understanding`), 3 statuses (`pass` | `fail` | `skip`),
+  stage budgets (max-failures 0, expected-skips for cloud-required
+  fixtures), history persistence
+  (`loadModelEvalHistoryFromRaw` / `serializeModelEvalHistory`),
+  trend comparison (`compareModelEvalRuns` → `Improved` |
+  `Regressed` | `Stable`).
+
+### 8.3 AI in app code
+
+- `use-ai-command.ts` (49,885 bytes): primary AI-driven scene edit
+  entry point. `AiCommandStatus` state union
+  (`idle` | `parsing` | `applying` | `preview` | `error` | `success`
+  | `candidates`). Wires `parseOfflineCommand`,
+  `evaluateAiRateLimit`, `formatRetryHint`,
+  `recordAiRateLimitUsage`, prompt-registry lineage, simulation
+  re-verify via `simulateStudio`, and `applySceneOperation` dispatch.
+- `use-simulation.ts` (39 lines): 400ms debounce on
+  `simulationDirty` × `autoRecompute`.
+- `apps/studio/src/app/api/ai/{model-eval,draft-scene,report,counterfactuals,command}` — REST surface for AI.
+
+### 8.4 Governance (`apps/studio/src/store/slices/enterprise/governance-slice.ts`, 1463 lines)
+
+- `WorkspaceGovernanceState`, `WorkspaceAccessState`,
+  `WorkspaceAccountProfile` (default-role + plan).
+- `Organization` + `OrganizationList` (multi-tenant shape).
+- `ReportCatalogState` + `ReportCatalogPreset`.
+- `BranchRecord` lifecycle:
+  `draft → review → approved → published` (terminal). All
+  transitions are explicit; `published` requires a snapshot.
+- `createDraftBranch`, `switchBranch`, `submitForReview`,
+  `approveBranch`, `rejectBranch`, `updateBranchLifecycle`.
+- `setWorkspaceRole`, `setWorkspaceApprovalMode`,
+  `setWorkspaceActiveMember`, `setWorkspaceAccessMode`,
+  `syncWorkspaceMembershipSnapshot`, `setWorkspaceAccountProfile`.
+- `requestSceneReview`, `approveSceneReview`, `rejectSceneReview`,
+  `addSceneAnnotation`.
+- `setScene`, `createNewScene`, `saveSceneToStorage`,
+  `saveSceneAsWorkspace`, `loadScenesFromStorage`,
+  `refreshSavedScenesList`, `deleteSavedScene`,
+  `updateSavedSceneMetadata`, `duplicateSavedScene`,
+  `renameSavedScene`.
+- `addReferenceScene`, `loadReferenceScene`,
+  `duplicateReferenceToWorkspace`.
+- `setCameraViewVerificationIntent`,
+  `upsertCameraVerificationSnapshot`,
+  `removeCameraVerificationSnapshot`.
+- `enterFixSandbox`, `exitFixSandbox`, `applyFixSandbox`.
+- `refreshSavedLayoutsList`, `saveCurrentLayoutAs`,
+  `applySavedLayout`, `deleteSavedLayout`.
+
+### 8.5 Evidence + reports (`packages/report/src/`)
+
+- 8 `ReportAudience` values: `operator`, `auditor`, `insurer`,
+  `installer`, `privacy_reviewer`, `consultant`,
+  `facilities_director`, `operations_manager`.
+- 3 `ReportVisibility`: `internal` | `shared` | `privacy_safe`.
+- 6 `ReportStandardTemplateId`:
+  `general-audit` | `installer-proposal` | `insurer-brief` |
+  `privacy-review` | `oodpcvs-audit` | `dori-audit`.
+- `buildRedundancyMatrixReport(scene, result)` returns
+  `RedundancyMatrixReport | null`: per-zone status
+  (`uncovered` | `single_point_failure` | `redundant`) and
+  per-camera `criticalityScore` (0–10) with
+  `criticalityLabel` (`Critical` ≥7 | `Important` ≥4 | `Redundant`).
+- `buildReportEvidenceBundle`, `stringifyReportEvidenceBundle` —
+  reproducible evidence packages for compliance.
+
+### 8.6 Simulation surface (`packages/simulation/src/index.ts`)
+
+- `simulateStudio` / `simulateStudioAsync` / `simulateStudioLite` —
+  primary entry points.
+- Modules: `coverage` (with `getQualityShare`,
+  `getIdentificationAreaPct`, `getRecognitionAreaPct`), `odpcvs`
+  (with `computeOODPCVSQuality`, `meetsOODPCVSRequirement`),
+  `mount-model` (with `computeMountTiltPenalty`),
+  `vision-collider-mesh`, `path-analysis`, `adversarial-path`
+  (coverage-failure path), `confidence`, `calibration`,
+  `scene-hash`, `provenance-label`, `coverage-uncertainty`,
+  `occlusion-blame`, `temporal`, `material-behavior`,
+  `scenario-batch`, `counterfactual-search`,
+  `assumption-sensitivity`, `simulation-cache`, `adaptive-grid`.
+
+### 8.7 REST surface (`apps/studio/src/app/api/`)
+
+- `camera-live-connection` — live camera transport (Working).
+- `camera-live-session-health` — session health (Working).
+- `workspace-control-plane` — multi-tenant control (Working).
+- `workspace-membership-archive` — membership (Working).
+- `workspace-identity-conflict` — conflict resolution (Working).
+- `workspace-approval-route` — approval (Working).
+- `truth-audit` — evidence audit (Working).
+- `support-ingest`, `support-delivery` — support (Working).
+- `ai/{model-eval, draft-scene, report, counterfactuals, command}` —
+  AI dispatch (Working).
+- `health` — system health (Working).
+
+### 8.8 Live camera transport (D-017)
+
+`CameraNode` may carry `liveTransport`,
+`transportResponseStatus`, `authChallengeHeader`,
+`authChallengeScheme`, `authChallengeRealm`. The
+`camera-evidence-workflow.ts` (30 KB) and
+`camera-verification-workflow.ts` (30 KB) modules own the live
+transport + verification flow.
+
+### 8.9 Deployment matrix (`10_PRODUCT_HARDENING_OPERABILITY.md`)
+
+- **Local-only**: IndexedDB, air-gapped. Single-user, no server.
+- **Self-hosted**: Docker Compose + Postgres + MinIO. Multi-user.
+- **Cloud-assisted**: Vercel + RDS + S3 + SQS/Redis. Full SaaS.
+
+The surface in `app/api/*` is for self-hosted and cloud-assisted
+deployments; local-only is a pure-client path.
+
+---
+
+## 9. Store Composition
+
+`apps/studio/src/store/studio-store.ts` composes 9 slices:
+
+| Slice | File | Size | Owns |
+|---|---|---|---|
+| `core.scene` | `slices/core/scene-slice.ts` | ~56 KB | active scene, edits, source |
+| `core.simulation` | `slices/core/simulation-slice.ts` | — | result, dirty flag, auto-recompute |
+| `core.layout` | `slices/core/layout-slice.ts` | — | workspace preset, BottomTab, panel sizes |
+| `core.snapshot` | `slices/core/snapshot-slice.ts` | — | SceneSnapshot[], save/load |
+| `core.replay` | `slices/core/replay-slice.ts` | — | path-replay progress, follow actor |
+| `core.comparison` | `slices/core/comparison-slice.ts` | — | compare report selection, visual evidence, orbit sync |
+| `enterprise.workflow` | `slices/enterprise/workflow-slice.ts` | — | workflow / handoff state |
+| `enterprise.telemetry` | `slices/enterprise/telemetry-slice.ts` | — | AI telemetry, run history |
+| `enterprise.governance` | `slices/enterprise/governance-slice.ts` | 1463 lines | branches, access, account, organizations, reports, saved scenes, references, fix sandbox, layouts |
+
+Plus `product-view-store.ts` with 14 `ProductView` values.
+
+---
+
+## 10. Sample Fixtures
+
+Both `Working`:
+
+- `apps/studio/public/sample-security-scene-import.json` — sample
+  retail, 10×8×3m, 4 cameras, 2 critical zones. Used by
+  `SAMPLE_SECURITY_SCENE_IMPORT_URL`.
+- `apps/studio/public/sample-site-twins/jewelry-store-site-twin.json`
+  — jewelry store, 12×8×3.2m, glass front, custom entry, mix of
+  ceiling and wall cameras. Mirror contract documented in
+  `sample-site-twins/README.md`. Used by
+  `JEWELRY_STORE_SITE_TWIN_IMPORT_URL`.
+
+---
+
+## 11. What's Not Yet Shipped
+
+1. **Multi-floor (zLevel) scenes** — Q-001.
+2. **Live Pascal hierarchy activation** — Q-019, depends on
+   Q-001.
+3. **Camera-evidence intake as a first-class tile in `SiteIntakeHub`** —
+   currently `Prototype`.
+4. **Schema de-duplication** — Q-020 (P0).
+5. **AI draft v3 (deeper provenance + multi-turn edit history)** —
+   prompt `model_layout_draft` is on v2.
+6. **Live camera verification in the workspace** — D-017 wiring
+   exists, but the verification panel is only visible inside
+   `CameraViewMode`/`CameraControlStrip`.
+7. **Reusable "creation flow" component** — current intake is
+   distributed across `SceneBuilderWizard`, `ScanSiteWizard`,
+   `GuidedCaptureAssistant`, `SiteIntakeHub`, `AiLayoutDraftView`,
+   `ImportReview` — Q-021.
+8. **Multi-sensor (`sensor_`)** — D-022 not yet frozen; the
+   `sensor` nodeType has a `sensorType` field but the data model is
+   not yet specified.
+9. **Numeric confidence (Q-032)** — current "confidence" fields
+   appear to be categorical.
+10. **Scan-geometry uncertainty visualisation (Q-033)**.
+11. **Critical zone sampling strategy (Q-034)**.
+12. **Regression benchmark scene set (Q-035)**.
+
+---
+
+## 12. First-Principles Gap Inventory
+
+The user asked for a 1st-principles look at the surface. The
+following are structural tensions that any new component should
+respect (or actively resolve):
+
+1. **Two schemas, one truth.** `packages/core` vs
+   `apps/studio/schema` for the same `SecurityScene` definition.
+   Drift is suppressed by forced `tsc -b --force`. Q-020 is the
+   convergence.
+2. **Intake is distributed, not composed.** The 6 intake sources
+   have 5 entry-point components (no shared
+   `IntakeSession`-shaped shell) and one centralised
+   `SiteIntakeHub` that delegates. A new "creation component" should
+   either be a thinner wrapper or a compositional shell that owns
+   the per-source contract.
+3. **AI and simulation are coupled, but the boundary is in two
+   places.** `use-ai-command` does AI→simulate; `useSimulation` does
+   scene-edit→simulate. Both call `simulateStudio`, but the
+   re-verification is the rule (D-005) so the new component should
+   follow the same loop.
+4. **Editor state lives in two stores.** `studio-store` (scene +
+   simulation + branches + …) and `product-view-store` (current
+   view). Selection state lives in `studio-store`; modal state
+   lives locally. New components should pick a side explicitly.
+5. **Persistence is fragmented.** 9 localStorage keys + share
+   links + (when cloud-assisted) server-side via the API surface.
+   Any new component that adds a new persistence shape must
+   integrate with `governance-slice` (or have a strong reason not
+   to).
+6. **Pascal's `AnyNode` is the canonical extension point, but
+   Pascal is parked.** A new component that adds a nodeType must
+   extend the duplicate schema, the canonical schema, and the
+   `AnyEditableNode` union in `selection-geometry.ts` — Q-001
+   implies the Pascal path will eventually own this, but until
+   then, the contract lives in `packages/core` (Q-020).
+7. **"AI proposes, simulation verifies, AI explains" is the
+   non-negotiable rule.** A new component that returns AI
+   recommendations to the user without simulation re-verification
+   is a regression.
+8. **DORI/OODPCVS are 13+1 quality levels.** Any new component that
+   shows a single "quality" number flattens this. Use the
+   `QUALITY_RANK` from `quality-display` (referenced in
+   `PathReplayView`, `CompareView`, `CameraWallView`).
+9. **Heatmap modes are 6.** A new component that adds a 7th must
+   register it in `SharedScene` and propagate through
+   `CameraViewMode`, `CameraWallView`, `PathReplayView`.
+10. **Defensive framing only** — never "evasion", "bypass",
+    "defeat" in any output language. Every prompt in
+    `PROMPT_REGISTRY` enforces this; new components that generate
+    copy must enforce the same.
+11. **Open-source posture (D-010):** no GPL/AGPL/CC BY-NC/BSL
+    deps. Current stack: Next 16.2.6 (MIT), React 19.2.6 (MIT),
+    Three.js 0.184 (MIT), Zustand 5 (MIT), Zod 4 (MIT), Framer
+    Motion 12.40 (MIT), Lucide-React 1.16 (ISC).
+12. **Truth-at-time-of-writing wins over greenfield design.** Any
+    new component that wants to introduce a new way of doing
+    something (e.g. a different scene-source taxonomy) must
+    reconcile with the existing 6-source taxonomy first.
+
+---
+
+## 13. New Component's Opportunity
+
+A new component in this space will be evaluated against:
+
+- **Where it sits on the creation flow** (`SiteIntakeHub` /
+  `SceneBuilderWizard` / inline in `WorkspaceCanvas` / after the
+  draft is approved / in `ReferenceSitesView` / in a new tile).
+- **Which source it owns** (one of the 6, or a new one with
+  compatibility requirements).
+- **Whether it adds a nodeType** (must update
+  `packages/core/src/schema/security-scene.ts` +
+  `apps/studio/src/schema/security-scene.ts` +
+  `selection-geometry.ts` + `object-context-actions.ts` +
+  `node-factory.ts` (both copies) + prompt registry if it
+  appears in `model_layout_draft` v2 output).
+- **Whether it produces `SceneOperation[]` or a full
+  `SecurityScene` draft** (proposed then verified, or replaced).
+- **Whether it extends `governance-slice` or has its own
+  persistence** (governance-slice is the canonical
+  workspace-scope state; new persistence is a regression risk).
+- **Whether it surfaces a heatmap mode, a view, or a tool**
+  (each is a registered extension point with a fan-out of
+  consumers).
+- **Whether it ships with model-eval fixtures** (every prompt in
+  `PROMPT_REGISTRY` has a corresponding `ModelEvalFixture`).
+- **Whether it respects local-only policy** (`localOnlyMode`
+  must gate any cloud-required behaviour).
+- **Whether it conforms to defensive-framing language rules**.
+
+The next concrete step before any new component is built is to
+pick a target slot from the 6-intake sources and a target output
+shape (`SceneOperation[]` vs `SecurityScene` draft) and a
+persistence story. Until then, this document is the surface to
+read against.
+
+---
+
+## 14. Source Index (read in this session)
+
+Full file list read (counts in parens):
+
+### Architecture / decisions / exploration
+- `Docs/decisions/DECISION_LOG.md` (tail, ~200 lines)
+- `Docs/decisions/OPEN_QUESTIONS.md` (tail, ~100 lines)
+- `Docs/decisions/DECISION_LOG_ADDENDUM.md` (full, 402 lines)
+- `Docs/decisions/OPEN_QUESTIONS_ADDENDUM.md` (full, 66 lines)
+- `Docs/context/origin/INDEX.md`
+- `Docs/todos/CURRENT_IMPLEMENTATION_STATE.md` (full)
+- `Docs/todos/FULL_VISION_GAP_INVENTORY.md` (full)
+- `Docs/exploration/EXPLORATION_MAP.md` (in 3 chunks + tail)
+- `Docs/architecture/02_PASCAL_EDITOR_INTEGRATION.md`
+- `Docs/architecture/05_AI_AGENT_ARCHITECTURE.md`
+- `Docs/architecture/09_FLOORPLAN_PIPELINE.md`
+- `Docs/architecture/10_PRODUCT_HARDENING_OPERABILITY.md`
+
+### Core schema + simulation
+- `packages/core/src/index.ts`
+- `packages/core/src/lib/node-factory.ts`
+- `packages/core/src/lib/scene-source.ts`
+- `packages/core/src/lib/target-quality-requirements.ts`
+- `packages/core/src/simulation/dori.ts`
+- `packages/core/src/simulation/grid.ts`
+- `packages/core/src/simulation/geometry.ts`
+- `packages/core/src/schema/SceneOperation.ts`
+
+### Agents
+- `packages/agents/src/{index, coordinator, provider-selection, types}.ts`
+- `packages/agents/src/providers/{ModelProvider, AgentConfig}.ts`
+- `packages/agents/src/scene-understanding-agent.ts`
+- `packages/agents/src/prompt-registry.ts` (full, 183 lines)
+- `packages/agents/src/counterfactual-agent.ts` (full, 82 lines)
+- `packages/agents/src/report-agent.ts` (full, 122 lines)
+- `packages/agents/src/model-eval.ts` (full, 370 lines)
+
+### Simulation surface
+- `packages/simulation/src/index.ts`
+
+### Reports
+- `packages/report/src/index.ts`
+- `packages/report/src/export-templates.ts`
+- `packages/report/src/redundancy-matrix.ts` (full, 129 lines)
+
+### App
+- `apps/studio/AGENTS.md`
+- `apps/studio/package.json`
+- `apps/studio/src/schema/security-scene.ts` (older duplicate)
+- `apps/studio/src/lib/{scene-skeleton, node-factory, scene-templates, ai-layout-draft, floor-plan-import, site-compiler, site-draft-approval, scenario-presets, scene-intelligence-graph, branch-lifecycle, scan-to-scene, applySceneOperation, scene-source}.ts`
+- `apps/studio/src/hooks/{useAutosave, use-studio-navigation, use-studio-bootstrap, use-ai-command, use-simulation}.ts`
+- `apps/studio/src/agents/{prompt-registry, CoordinatorAgent, provider-selection}.ts` (re-export shims)
+- `apps/studio/src/app/{page, layout, studio/page}.tsx`
+
+### Components
+- `apps/studio/src/components/scan-to-scene/{SceneBuilderWizard, ScanSiteWizard, GuidedCaptureAssistant, ImportReview, floor-plan-extraction-config}.tsx`
+- `apps/studio/src/components/site-intake/{SiteIntakeHub, SiteDraftReview}.tsx`
+- `apps/studio/src/components/product/{ProductViewRouter, AiLayoutDraftView, SettingsView, ReferenceSitesView}.tsx`
+- `apps/studio/src/components/launcher/{StudioDashboardHome, QuickStartSection, ProjectStartLauncher}.tsx`
+- `apps/studio/src/components/layout/{TopBar, ViewSettingsModal}.tsx`
+- `apps/studio/src/components/left-panel/LeftPanel.tsx`
+- `apps/studio/src/components/workspace/{WorkspaceCanvas, SharedScene}.tsx`
+- `apps/studio/src/components/workspace/overlays/{CameraLabelCard, CriticalZoneLabelCard, EntryDoorChip, ObstructionWarningCard, SceneFloatingCard}.tsx`
+- `apps/studio/src/components/workspace/editing/{PathDrawTool, PolygonDrawTool, WallDrawTool, SelectionOverlay, SnapEngine, editor-geometry, selection-geometry, ObjectContextMenu, object-context-actions}.ts(x)`
+- `apps/studio/src/components/reconstruction/ReconstructionCandidatePanel.tsx`
+- `apps/studio/src/components/view/{PathReplayView, CompareView, CameraWallView, VisibilityTimeline, ReportView, CameraViewMode, ViewModeBar, CameraControlStrip}.tsx` (heads + key exports)
+- `apps/studio/src/components/view/camera-view-utils.ts` (key exports)
+
+### Store
+- `apps/studio/src/store/studio-store.ts`
+- `apps/studio/src/store/slices/core/scene-slice.ts` (~56 KB)
+- `apps/studio/src/store/slices/enterprise/governance-slice.ts` (heads + key exports, 1463 lines)
+- `apps/studio/src/store/product-view-store.ts`
+
+### Sample fixtures
+- `apps/studio/public/sample-security-scene-import.json`
+- `apps/studio/public/sample-site-twins/jewelry-store-site-twin.json`
+- `apps/studio/public/sample-site-twins/README.md`
+
+### Pending reads (not blocking exploration)
+- `TransformHandles.tsx` (748 lines, full body)
+- `governance-slice.ts` (full body, currently heads + key exports)
+- `LeftPanel.tsx` (full body)
+- `view/ReportView.tsx` (full body)
+- `app/api/*` route handlers (full bodies)
+- `lib/scene-intelligence-graph.ts` (full body)
+- `lib/scenario-presets.ts` (full body)
+- `lib/bakeoff-bridge.ts` (read in earlier session)
+
+---
+
+## 15. Closing
+
+The current SentinelTwin creation surface is **complete in
+breadth but not yet in depth**: every source has a path, every
+node type has a factory, every AI stage has a prompt, every
+report has a template, every view has a route. The next
+opportunities are **depth** (Q-001 multi-floor, Q-019 Pascal
+reactivation, Q-020 schema convergence, Q-021 unified creation
+component) rather than **breadth** (a new source type).
+
+A new component should pick **one** of: a new source type, a
+new node type, a new view, a new heatmap mode, a new prompt
+stage, or a new governance surface. The system has placeholders
+for each.

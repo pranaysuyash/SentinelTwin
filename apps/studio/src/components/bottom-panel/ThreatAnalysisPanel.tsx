@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { QUALITY_ABBR, QUALITY_COLOR } from "@/lib/quality-display";
+import { TruthBadge } from "@/components/shared/TruthBadge";
 import { ExposureBar } from "@/components/shared/ExposureBar";
 import { StatCard } from "@/components/shared/StatCard";
 import { useStudioStore } from "@/store/studio-store";
@@ -94,6 +95,7 @@ export function ThreatAnalysisPanel() {
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
+          <TruthBadge label="simulated" />
           <ShieldAlert className="h-4 w-4 shrink-0 text-rose-400" />
           <div className="min-w-0">
             <span className="block text-[11px] font-semibold text-[#c7d0e4]">Route Exposure Review</span>

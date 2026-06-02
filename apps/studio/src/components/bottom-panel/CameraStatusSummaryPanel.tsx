@@ -2,6 +2,7 @@
 
 import { DonutChart } from "@/components/shared/DonutChart";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
+import { TruthBadge } from "@/components/shared/TruthBadge";
 import { cn } from "@/lib/cn";
 import { QUALITY_RANK, QUALITY_SHORT_LABEL, QUALITY_TEXT_COLOR } from "@/lib/quality-display";
 import { useStudioStore } from "@/store/studio-store";
@@ -26,6 +27,7 @@ export function CameraStatusSummaryPanel() {
       {/* Left: Camera Status Table */}
       <div className="flex flex-1 min-w-0 flex-col overflow-hidden border-r border-[#1e2130]">
         <div className="flex items-center gap-2 border-b border-[#1e2130] px-3 py-1.5">
+          <TruthBadge label="simulated" />
           <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#5a6478]">
             Camera Status Summary
           </span>

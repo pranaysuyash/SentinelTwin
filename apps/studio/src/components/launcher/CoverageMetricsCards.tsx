@@ -71,7 +71,11 @@ export function CoverageMetricsCards({
         <div className={cn("text-xl font-bold tracking-tight", displayCoverage != null ? coverageTone(displayCoverage) : "text-slate-200")}>
           {displayCoverage != null ? `${Math.round(displayCoverage)}%` : "Pending"}
         </div>
-        <div className="text-[10px] text-[color:var(--st-muted)]">{displayCoverage == null ? "Run baseline simulation" : "vs last run"}</div>
+        <div className="text-[10px] text-[color:var(--st-muted)]" suppressHydrationWarning>
+          {displayCoverage == null
+            ? "Run baseline simulation"
+            : lastRunDetail ?? `Updated ${displayRunLabel}`}
+        </div>
       </div>
       <div className="flex min-h-[98px] flex-col gap-1 rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
         <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">CRITICAL ZONES</div>

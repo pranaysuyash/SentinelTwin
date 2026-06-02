@@ -2,6 +2,7 @@
 
 import { AlertCircle, AlertTriangle, ChevronRight, Eye, EyeOff, Info, ShieldAlert, Wrench } from "lucide-react";
 import { useState } from "react";
+import { TruthBadge } from "@/components/shared/TruthBadge";
 import { useStudioStore } from "@/store/studio-store";
 import { Badge } from "@/components/shared/Badge";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
@@ -120,6 +121,10 @@ export function IssuesTab() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="p-2 space-y-1.5">
+        <div className="flex items-center justify-between">
+          <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#556076]">Issues</span>
+          <TruthBadge label="simulated" />
+        </div>
         <div className="rounded-lg border border-[#1e2130] bg-[#0b1018] px-2.5 py-2 text-[10px] text-[#b9c7df]">
           Outcome status: {outcome.summary.status.replace(/_/g, " ")}
           {outcome.summary.primaryRisk ? ` · Primary risk: ${outcome.summary.primaryRisk}` : ""}

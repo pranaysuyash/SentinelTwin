@@ -2,6 +2,7 @@
 
 import { MapPin } from "lucide-react";
 
+import { TruthBadge } from "@/components/shared/TruthBadge";
 import { PathMap } from "@/components/map/PathMap";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { clampPathDuration } from "@/components/view/camera-view-utils";
@@ -71,9 +72,12 @@ export function ScenarioPathPanel() {
   return (
     <div className="flex h-[208px] flex-shrink-0 flex-col border-t border-[#1e2130] bg-[#0d1017]">
       <div className="flex h-8 items-center justify-between border-b border-[#1e2130] px-3">
-        <div>
-          <div className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#4a5568]">Scenario / Path</div>
-          <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Route analysis surface</div>
+        <div className="flex items-center gap-2">
+          <TruthBadge label="simulated" />
+          <div>
+            <div className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#4a5568]">Scenario / Path</div>
+            <div className="text-[8px] uppercase tracking-[0.18em] text-[#556076]">Route analysis surface</div>
+          </div>
         </div>
         <MapPin className="h-3 w-3 text-[#4a5568]" />
       </div>

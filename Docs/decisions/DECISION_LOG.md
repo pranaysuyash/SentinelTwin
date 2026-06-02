@@ -4928,3 +4928,44 @@ Fixed the `CameraLiveConnectionEventRecord` and `WorkspaceApprovalRouteSummary` 
 - `apps/studio/src/app/page.tsx` — delegates to `useStudioNavigation()`
 - `apps/studio/src/components/layout/TopBar.tsx` — create/scan now navigate to product views
 - `apps/studio/src/components/product/ReferenceSitesView.tsx` — reads from `referenceScenes` instead of `savedProjects`
+
+## D-298 | 2026-06-02 | Empty-state routing — delete ad-hoc dashboard hero, route first-time users to SiteIntakeHub
+
+**Decision:** First-time user entry flows now route through the canonical SiteIntakeHub instead of rendering an ad-hoc welcome hero on the dashboard.
+
+1. **Delete the conditional welcome hero in `StudioDashboardHome.tsx`** — removed the `hydrated && savedProjects.length === 0 && scene.cameras.length === 0 && !showWorkspaceLibrary` conditional opener plus the `<div className="border-b border-[#1e2130] bg-gradient-to-b from-[#0e1422] to-[#0a0e18]">` hero block. All icon imports (Plus, FileUp, ScanSearch, ShieldCheck, LayoutDashboard) remain in use elsewhere in the file.
+
+2. **Add first-time auto-redirect in `ProductViewRouter.tsx`** — when `productView === "product_home"` and `savedProjects.length === 0` and `scene.cameras.length === 0`, navigate to `"site_intake"` once on first mount. Implemented with `useRef` (not `useState`) to avoid `react-hooks/set-state-in-effect` and the extra render. Respects explicit user navigation back to `product_home`.
+
+**Rationale:**
+- The hero was a marketing voice on a cockpit surface — it duplicated the canonical "QUICK START" subpanel in `QuickStartSection.tsx`, hid the dashboard scaffolding (project list, recent activity, coverage KPIs), and made the empty state feel like a setup wizard. The SentinelTwin design contract explicitly bans setup-wizard tone.
+- The SiteIntakeHub is the canonical first full-product entry screen per the design pack (§22). Routing there ensures the empty state is a real product surface, not a marketing one.
+- `useRef` (not `useState`) for the one-shot flag is first-principles: state changes trigger re-renders, refs don't. The redirect only needs to fire once per component lifetime, not drive UI.
+- `FirstRunGuide` and `ProjectStartLauncher` are preserved because they serve the editor (first time inside the studio, not first time in the product) and the job-first intake respectively — different surfaces, different contexts.
+
+**Alternatives rejected:**
+- Keep the hero and route to intake separately: rejected — two ways to do the same thing, drift risk.
+- Add a `<Navigate to="site_intake" />` declarative redirect: rejected — needs route-level abstraction we don't have; effect-based redirect with `useRef` is the canonical pattern for cross-store coordinated routing.
+- Use `useState` for the redirect flag: rejected — causes an extra render and triggers `react-hooks/set-state-in-effect` lint rule.
+
+**Key files:**
+- `apps/studio/src/components/launcher/StudioDashboardHome.tsx` — hero removed (was lines 1257–1316 + closing `)}` on line 1503 in pre-edit numbering)
+- `apps/studio/src/components/product/ProductViewRouter.tsx` — auto-redirect at lines 110–123, `useState` → `useRef` in import on line 3
+
+## D-299 | 2026-06-02 | Coverage KPI subtitle must not claim a comparison the store cannot compute
+
+**Decision:** `CoverageMetricsCards.tsx` Coverage card subtitle no longer shows static "vs last run" text. It now shows the real `lastRunDetail` ("Computed simulation") when a run exists, or the existing "Run baseline simulation" CTA when pending.
+
+**Rationale:**
+- The previous text claimed a comparison ("vs last run") that no code computed. The store has no `simulationHistory` / `previousRun` field, so the delta was not just unshown — it was nonexistent. Showing "vs last run" without a delta is a trust bug: it tells the user a value is changing when nothing is.
+- First-principles: don't claim what you can't deliver. Either show a real delta or admit the state. The "Computed simulation" detail is honest because the caller (`StudioDashboardHome.tsx:911`) actually produces it from a real `computedAt` timestamp.
+- Long-term answer is a `simulationHistory` field on `scene.simulation` so the dashboard can show a real delta. Logged in `OPEN_QUESTIONS.md` as a follow-up. The immediate fix is to stop the lie.
+
+**Alternatives rejected:**
+- Compute a fake delta from `lastRun` vs now: rejected — time is not delta.
+- Add a "First run / Baseline set" toggle: rejected — adds complexity for a transient state; the LAST RUN card already shows the timestamp, so the Coverage card can reuse `lastRunDetail`.
+- Hide the subtitle entirely: rejected — useful real-time signal ("Computed simulation") is worth showing; just don't claim a comparison.
+
+**Key files:**
+- `apps/studio/src/components/launcher/CoverageMetricsCards.tsx` — line 74 subtitle now uses `lastRunDetail ?? `Updated ${displayRunLabel}``, with `suppressHydrationWarning` for SSR safety
+

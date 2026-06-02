@@ -40,6 +40,7 @@ import {
 } from "@/lib/report-catalog";
 import { summarizeSceneTruthLadder } from "@/lib/truth-ladder";
 import { QUALITY_RANK } from "@/lib/quality-display";
+import { TruthBadge } from "@/components/shared/TruthBadge";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
 import { useStudioStore } from "@/store/studio-store";
 import { buildReportSummaryLines } from "@/lib/report-summary";
@@ -817,14 +818,10 @@ export function ReportLiteTab() {
         ) : null}
         {reportSummary ? (
           <div className="mb-3 rounded-xl border border-[#1e2130] bg-[#0b1018] p-3">
-            <div
-              className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-[#1e2130] bg-[#0f141f] px-2 py-1.5 text-[9px] text-[#8b96ab]"
-              aria-label="Truth: Computed"
-              title="Derived from the current scene and simulation state."
-            >
+            <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-[#1e2130] bg-[#0f141f] px-2 py-1.5 text-[9px] text-[#8b96ab]">
               <div className="flex items-center gap-2">
                 <span className="font-semibold uppercase tracking-[0.14em] text-[#c7d0e4]">Truth:</span>
-                <span className="rounded border border-sky-500/20 bg-sky-500/10 px-1.5 py-0.5 text-sky-200">Computed</span>
+                <TruthBadge label="computed" />
               </div>
               <div className="max-w-[28rem] truncate text-right" title={truthLabelDetail("computed")}>{truthLabelDetail("computed")}</div>
             </div>
@@ -872,8 +869,9 @@ export function ReportLiteTab() {
               <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#7f8da8]">Truth Ladder</div>
               <div className="text-[9px] text-[#6f7f9d]">Node review, source trace, and geometry validity status for the current scene.</div>
             </div>
-            <div className="rounded border border-sky-500/20 bg-sky-500/10 px-2 py-1 text-[9px] text-sky-200">
-              {truthLadder.summary}
+            <div className="flex items-center gap-2">
+              <TruthBadge label="inferred" />
+              <span className="text-[9px] text-sky-200">{truthLadder.summary}</span>
             </div>
           </div>
           <div className="grid gap-1.5 text-[10px] text-[#b9c7df] md:grid-cols-2 xl:grid-cols-3">

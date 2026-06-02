@@ -2,6 +2,7 @@
 
 import { Loader2, ShieldAlert, Zap } from "lucide-react";
 
+import { TruthBadge } from "@/components/shared/TruthBadge";
 import { useStudioStore } from "@/store/studio-store";
 import { cn } from "@/lib/cn";
 
@@ -91,6 +92,7 @@ export function RedundancyMatrixPanel() {
     <div className="flex h-full flex-col overflow-hidden">
       {/* Summary bar */}
       <div className="flex items-center gap-3 border-b border-[#1e2130] bg-[#0d1017] px-3 py-2">
+        <TruthBadge label="simulated" />
         <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#4a5568]">
           Redundancy Matrix
         </span>

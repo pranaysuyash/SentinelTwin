@@ -5,6 +5,7 @@ import { ArrowUpDown, CheckCircle2, Lightbulb, Loader2, Sparkles, X } from "luci
 import { useCallback, useState } from "react";
 
 import type { CounterfactualCandidate } from "@/agents/CounterfactualAgent";
+import { TruthBadge } from "@/components/shared/TruthBadge";
 import { useAiCommand } from "@/hooks/use-ai-command";
 import { cn } from "@/lib/cn";
 import { useStudioStore } from "@/store/studio-store";
@@ -160,6 +161,9 @@ export function CounterfactualPanel() {
 
   return (
     <div className="flex h-full flex-col p-2">
+      <div className="flex items-center gap-2 mb-2">
+        <TruthBadge label="simulated" />
+      </div>
       {/* Constraints input */}
       <div className="flex items-center gap-2">
         <input

@@ -272,7 +272,7 @@ export function SensorsTab() {
           </div>
         </div>
 
-        <SectionCard title="Placement">
+        <SectionCard title="Placement" truthLabel="simulated">
           <div className="space-y-2">
             <div className="grid grid-cols-2 gap-1.5">
               {(Object.keys(SENSOR_TYPE_LABELS) as SensorNode["sensorType"][]).map((sensorType) => {
@@ -314,7 +314,7 @@ export function SensorsTab() {
           </div>
         </SectionCard>
 
-        <SectionCard title="Live Signals">
+        <SectionCard title="Live Signals" truthLabel="simulated">
           {selectedSensor ? (
             <div className="space-y-2">
               <div className="rounded-lg border border-cyan-500/15 bg-cyan-500/8 px-3 py-2">
@@ -406,7 +406,7 @@ export function SensorsTab() {
           )}
         </SectionCard>
 
-        <SectionCard title="Live Event Feed">
+        <SectionCard title="Live Event Feed" truthLabel="simulated">
           <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
             <div className="rounded-lg border border-[#1f2536] bg-[#0b0f17] px-2 py-2">
               <div className="text-[9px] uppercase tracking-[0.14em] text-[#546078]">Triggers</div>
@@ -493,7 +493,7 @@ export function SensorsTab() {
           ) : null}
         </SectionCard>
 
-        <SectionCard title="Live Metadata Intake">
+        <SectionCard title="Live Metadata Intake" truthLabel="simulated">
           <div className="space-y-2">
             <div className="rounded-lg border border-[#24304a] bg-[#0f1320] px-3 py-2 text-[10px] leading-relaxed text-[#7a869f]">
               Paste JSON arrays or newline-delimited JSON sensor records here. Matching sensor ids or labels are resolved into the canonical live evidence trail.
@@ -537,7 +537,7 @@ export function SensorsTab() {
           </div>
         </SectionCard>
 
-        <SectionCard title="External Feed Bridge">
+        <SectionCard title="External Feed Bridge" truthLabel="inferred">
           <div className="space-y-2">
             <div className="rounded-lg border border-[#24304a] bg-[#0f1320] px-3 py-2 text-[10px] leading-relaxed text-[#7a869f]">
               Pull JSON or NDJSON from a live feed URL through the same ingest boundary. This is the bridge toward ONVIF, webhook, or BMS metadata without changing the scene model.
@@ -587,7 +587,7 @@ export function SensorsTab() {
           </div>
         </SectionCard>
 
-        <SectionCard title="Ingest History">
+        <SectionCard title="Ingest History" truthLabel="imported">
           <div className="space-y-2 text-[10px] text-[#9aa7c2]">
             <div className="flex items-center justify-between">
               <span className="uppercase tracking-[0.16em] text-[#64708a]">Sensor ingest archive</span>
@@ -636,7 +636,7 @@ export function SensorsTab() {
           </div>
         </div>
 
-        <SectionCard title="Sensor Types">
+        <SectionCard title="Sensor Types" truthLabel="simulated">
           <div className="space-y-1.5">
             {(Object.keys(SENSOR_TYPE_LABELS) as SensorNode["sensorType"][]).map((sensorType) => (
               <div key={sensorType} className="flex items-center justify-between gap-2 rounded-lg border border-[#1f2536] bg-[#0f1320] px-2 py-1.5">
@@ -650,7 +650,7 @@ export function SensorsTab() {
           </div>
         </SectionCard>
 
-        <SectionCard title="Sensor Inventory">
+        <SectionCard title="Sensor Inventory" truthLabel="simulated">
           <div className="space-y-2">
             {scene.sensors.length === 0 ? (
               <div className="rounded-lg border border-dashed border-[#24304a] bg-[#0f1320] px-3 py-3 text-[10px] leading-relaxed text-[#7a869f]">

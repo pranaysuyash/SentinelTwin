@@ -281,11 +281,11 @@ function HandleSphere({
         <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.4} roughness={0.3} />
       </mesh>
       {label ? (
-        <Html center position={[0, 0.18, 0]} style={{ pointerEvents: "none" }}>
+        <SceneHtml center position={[0, 0.18, 0]} style={{ pointerEvents: "none" }}>
           <div className="rounded border border-[#24304a] bg-[#0b0f17]/90 px-1.5 py-0.5 text-[8px] font-semibold text-[#d2d9e8]">
             {label}
           </div>
-        </Html>
+        </SceneHtml>
       ) : null}
     </group>
   );
@@ -735,11 +735,11 @@ export function TransformHandles() {
             label={`P${index + 1}`}
           />
         ))}
-        <Html position={[center[0], 0.22, center[1]]} center style={{ pointerEvents: "none" }}>
+        <SceneHtml position={[center[0], 0.22, center[1]]} center style={{ pointerEvents: "none" }}>
           <div className="rounded border border-[#24304a] bg-[#0b0f17]/90 px-2 py-1 text-[8px] font-semibold text-[#d2d9e8]">
             {pathLength(points).toFixed(2)}m
           </div>
-        </Html>
+        </SceneHtml>
       </group>
     );
   }

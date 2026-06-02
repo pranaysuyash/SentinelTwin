@@ -4,6 +4,7 @@ import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import { Share2 } from "lucide-react";
 
 import { Badge } from "@/components/shared/Badge";
+import { TruthBadge } from "@/components/shared/TruthBadge";
 import { cn } from "@/lib/cn";
 import { buildSceneIntelligenceGraph } from "@/lib/scene-intelligence-graph";
 import {
@@ -793,6 +794,7 @@ export function SceneIntelligenceTab() {
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="border-b border-[#1e2130] px-3 py-2">
         <div className="flex flex-wrap items-center gap-2">
+          <TruthBadge label="simulated" />
           <Badge variant="blue" dot>
             Provenance spine
           </Badge>

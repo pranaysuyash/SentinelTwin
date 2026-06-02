@@ -12,9 +12,10 @@
  *     0.85 → direct hardware alarms  (MotionAlarm, DigitalInput, GlobalSceneChange)
  *     0.70 → rule-engine events       (CellMotionDetector, VehicleDetector)
  *     0.60 → unrecognised topics      (unknown mapping)
- *
- * TODO(4.7): When a real server-side event bus or pub-sub exists, call
- * `publishOperationalEvidenceEvent(event)` here instead of the call-site comment.
+ * Note: Mapper functions are pure — they return event objects but never publish
+ * them. Callers (camera-metadata-live-ingest.ts, telemetry-slice.ts) are
+ * responsible for persisting and, when a server-side event bus exists, calling
+ * the publish infrastructure.
  */
 
 import type { OperationalEvidenceEventInput } from "@/lib/operational-evidence";

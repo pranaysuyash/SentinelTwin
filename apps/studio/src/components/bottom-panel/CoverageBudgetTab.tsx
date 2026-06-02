@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useStudioStore } from "@/store/studio-store";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
+import { TruthBadge } from "@/components/shared/TruthBadge";
 import { writeClipboardText } from "@/lib/share-link";
 import {
   computeBudget,
@@ -97,6 +98,8 @@ export function CoverageBudgetTab() {
       {/* ── Stats strip ───────────────────────────────────────────────── */}
       {budget && (
         <div className="flex flex-shrink-0 items-center gap-3 border-b border-[#1e2130] bg-[#090c12] px-3 py-1">
+
+          <TruthBadge label="simulated" />
 
           {/* Confidence badge */}
           <div className="flex items-center gap-2">

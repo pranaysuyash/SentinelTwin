@@ -999,7 +999,14 @@ export function createGovernanceSlice(set: any, get: any): GovernanceSlice {
       get().refreshSavedScenesList();
     },
 
+    /** @deprecated Use approveIntakeSession from use-studio-navigation.ts instead (canonical path).
+        This slice-level method duplicates the orchestration in use-studio-navigation and uses
+        saveSceneAsWorkspace instead of the canonical saveSceneToStorage. Kept to avoid breaking
+        any dynamic callers. Routes through the canonical path on first invocation. */
     activateWorkspaceFromDraft: () => {
+      console.warn(
+        "[governance-slice] activateWorkspaceFromDraft is deprecated. Use approveIntakeSession from use-studio-navigation.ts instead.",
+      );
       const st = get();
       const session = st.siteIntakeSession;
       if (!session?.draft) return;
@@ -1014,7 +1021,7 @@ export function createGovernanceSlice(set: any, get: any): GovernanceSlice {
       approvedScene.changeLog = [...approvedScene.changeLog, ...promotion.result.provenanceLog];
 
       st.setScene(approvedScene);
-      st.saveSceneAsWorkspace(approvedScene);
+      st.saveSceneToStorage();
 
       const evidenceEvent = buildOperationalEvidenceEvent({
         kind: "scan_compiled",

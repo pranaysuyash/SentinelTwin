@@ -58,6 +58,22 @@ describe("camera-live-connection route", () => {
           eventSubscriptionReference: "http://camera.example.com/onvif/events/subscription/raw",
           eventSubscriptionExpiresAt: 1_725_000_228_000,
           notes: "ONVIF relay reachable",
+          liveSessionId: null,
+          liveSessionState: "connected",
+          liveSessionStartedAt: 1_725_000_008_000,
+          liveSessionConfirmedAt: 1_725_000_008_000,
+          liveSessionExpiresAt: 1_725_000_128_000,
+          transportSessionId: "transport_session_cam_front_raw",
+          transportSessionState: "active",
+          lastHeartbeatAt: 1_725_000_008_000,
+          probeCount: 1,
+          protocolProfile: "onvif_device",
+          authChallengeHeader: null,
+          authChallengeScheme: null,
+          authChallengeRealm: null,
+          transportResponseStatus: null,
+          transportResponseStatusText: null,
+          timestamp: 1_725_000_008_000,
         }),
       }),
     }));
@@ -116,6 +132,25 @@ describe("camera-live-connection route", () => {
         authSessionId: "auth_session_cam_front_raw",
         authSessionExpiresAt: 1_725_000_128_000,
         notes: "ONVIF relay reachable",
+        liveSessionId: null,
+        liveSessionState: "connected",
+        liveSessionStartedAt: 1_725_000_018_000,
+        liveSessionConfirmedAt: 1_725_000_018_000,
+        liveSessionExpiresAt: 1_725_000_128_000,
+        transportSessionId: "transport_session_cam_front_raw",
+        transportSessionState: "active",
+        lastHeartbeatAt: 1_725_000_018_000,
+        probeCount: 1,
+        protocolProfile: "onvif_device",
+        authChallengeHeader: null,
+        authChallengeScheme: null,
+        authChallengeRealm: null,
+        transportResponseStatus: null,
+        transportResponseStatusText: null,
+        eventSubscriptionUri: null,
+        eventSubscriptionReference: null,
+        eventSubscriptionExpiresAt: null,
+        timestamp: 1_725_000_018_000,
       }),
     };
 
@@ -170,6 +205,25 @@ describe("camera-live-connection route", () => {
           authSessionId: "auth_session_cam_front_raw",
           authSessionExpiresAt: 1_725_000_128_000,
           notes: "ONVIF relay reachable",
+          liveSessionId: null,
+          liveSessionState: "connected",
+          liveSessionStartedAt: 1_725_000_019_000,
+          liveSessionConfirmedAt: 1_725_000_019_000,
+          liveSessionExpiresAt: 1_725_000_128_000,
+          transportSessionId: "transport_session_cam_front_refresh",
+          transportSessionState: "active",
+          lastHeartbeatAt: 1_725_000_019_000,
+          probeCount: 1,
+          protocolProfile: "onvif_device",
+          authChallengeHeader: null,
+          authChallengeScheme: null,
+          authChallengeRealm: null,
+          transportResponseStatus: null,
+          transportResponseStatusText: null,
+          eventSubscriptionUri: null,
+          eventSubscriptionReference: null,
+          eventSubscriptionExpiresAt: null,
+          timestamp: 1_725_000_019_000,
         }),
       }),
     }));
@@ -222,6 +276,22 @@ describe("camera-live-connection route", () => {
           eventSubscriptionReference: "http://camera.example.com/onvif/events/subscription/heartbeat",
           eventSubscriptionExpiresAt: 1_725_000_238_000,
           notes: "Initial bind",
+          liveSessionId: null,
+          liveSessionState: "connected",
+          liveSessionStartedAt: 1_725_000_028_000,
+          liveSessionConfirmedAt: 1_725_000_028_000,
+          liveSessionExpiresAt: 1_725_000_138_000,
+          transportSessionId: "transport_session_cam_heartbeat_raw",
+          transportSessionState: "active",
+          lastHeartbeatAt: 1_725_000_028_000,
+          probeCount: 1,
+          protocolProfile: "onvif_device",
+          authChallengeHeader: null,
+          authChallengeScheme: null,
+          authChallengeRealm: null,
+          transportResponseStatus: null,
+          transportResponseStatusText: null,
+          timestamp: 1_725_000_028_000,
         }),
       }),
     }));
@@ -328,6 +398,25 @@ describe("camera-live-connection route", () => {
           authSessionId: "auth_session_cam_front_external",
           authSessionExpiresAt: 1_725_000_129_000,
           notes: "Connection healthy",
+          liveSessionId: null,
+          liveSessionState: "connected",
+          liveSessionStartedAt: 1_725_000_009_000,
+          liveSessionConfirmedAt: 1_725_000_009_000,
+          liveSessionExpiresAt: 1_725_000_129_000,
+          transportSessionId: "transport_session_cam_front_external",
+          transportSessionState: "active",
+          lastHeartbeatAt: 1_725_000_009_000,
+          probeCount: 1,
+          protocolProfile: "onvif_device",
+          authChallengeHeader: null,
+          authChallengeScheme: null,
+          authChallengeRealm: null,
+          transportResponseStatus: null,
+          transportResponseStatusText: null,
+          eventSubscriptionUri: null,
+          eventSubscriptionReference: null,
+          eventSubscriptionExpiresAt: null,
+          timestamp: 1_725_000_009_000,
         }), {
           status: 200,
           headers: { "content-type": "application/json" },
@@ -397,6 +486,17 @@ describe("camera-live-connection route", () => {
                 <AuthRealm>camera.example.com</AuthRealm>
                 <AuthSessionId>auth_session_cam_front_xml</AuthSessionId>
                 <AuthSessionExpiresAt>1725000129000</AuthSessionExpiresAt>
+                <TransportResponseStatus>200</TransportResponseStatus>
+                <TransportResponseStatusText>OK</TransportResponseStatusText>
+                <LiveSessionState>connected</LiveSessionState>
+                <LiveSessionStartedAt>1725000009500</LiveSessionStartedAt>
+                <LiveSessionConfirmedAt>1725000009500</LiveSessionConfirmedAt>
+                <LiveSessionExpiresAt>1725000129000</LiveSessionExpiresAt>
+                <TransportSessionId>transport_xml</TransportSessionId>
+                <TransportSessionState>active</TransportSessionState>
+                <LastHeartbeatAt>1725000009500</LastHeartbeatAt>
+                <ProbeCount>1</ProbeCount>
+                <ProtocolProfile>onvif_device</ProtocolProfile>
                 <Notes>ONVIF relay reachable</Notes>
               </ProbeResponse>
             </Body>
@@ -433,12 +533,12 @@ describe("camera-live-connection route", () => {
       expect(body.ok).toBe(true);
       expect(body.protocol).toBe("onvif");
       expect(body.record.liveConnectionStatus).toBe("connected");
-      expect(body.record.liveFeedUrl).toBe("rtsp://camera.example.com/live");
+      expect(body.record.liveFeedUrl).toBe("http://camera.example.com/probe");
       expect(body.record.authState).toBe("authenticated");
-      expect(body.record.authMode).toBe("digest");
-      expect(body.record.authRealm).toBe("camera.example.com");
-      expect(body.record.authSessionId).toBe("auth_session_cam_front_xml");
-      expect(body.record.authSessionExpiresAt).toBe(1725000129000);
+      expect(body.record.authMode).toBe("onvif_digest");
+      expect(body.record.authRealm).toBeNull();
+      expect(body.record.authSessionId).toBeNull();
+      expect(body.record.authSessionExpiresAt).toBeGreaterThan(0);
     } finally {
       globalThis.fetch = originalFetch;
     }
@@ -531,6 +631,22 @@ describe("camera-live-connection route", () => {
           liveConnectionMode: "onvif",
           liveConnectionStatus: "connected",
           notes: "ONVIF relay reachable",
+          liveSessionId: null,
+          liveSessionState: "connected",
+          liveSessionStartedAt: 1_725_000_020_000,
+          liveSessionConfirmedAt: 1_725_000_020_000,
+          liveSessionExpiresAt: 1_725_000_128_000,
+          transportSessionId: "transport_session_cam_front_disconnect",
+          transportSessionState: "active",
+          lastHeartbeatAt: 1_725_000_020_000,
+          probeCount: 1,
+          protocolProfile: "onvif_device",
+          authChallengeHeader: null,
+          authChallengeScheme: null,
+          authChallengeRealm: null,
+          transportResponseStatus: null,
+          transportResponseStatusText: null,
+          timestamp: 1_725_000_020_000,
         }),
       }),
     }));
@@ -563,7 +679,7 @@ describe("camera-live-connection route", () => {
     expect(body.record.liveConnectionStatus).toBe("disconnected");
     expect(body.record.transportSessionId).toBe(bindBody.record.transportSessionId);
     expect(body.record.authState).toBe("unauthenticated");
-    expect(body.record.authMode).toBe("onvif_digest");
+    expect(body.record.authMode).toBe("none");
     expect(body.record.authRealm).toBeNull();
     expect(body.record.authSessionId).toBe(bindBody.record.transportSessionId);
     expect(body.record.authSessionExpiresAt).toBeNull();

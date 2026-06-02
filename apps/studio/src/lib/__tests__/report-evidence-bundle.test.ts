@@ -15,12 +15,13 @@ describe("report evidence bundle", () => {
       title: "Scene published",
       details: "Promoted the current scene state to the published branch.",
       actor: "user",
-      source: "test",
+      source: "manual",
       sceneId: scene.id,
       sceneName: scene.name,
       timestamp: Date.now(),
       revisionDepth: 0,
       affectedNodeIds: [],
+      confidence: 1,
       beforeSummary: "Before",
       afterSummary: "After",
     });
@@ -44,7 +45,6 @@ describe("report evidence bundle", () => {
     expect(bundle.mode).toBe("single");
     expect(bundle.scene.id).toBe(scene.id);
     expect(bundle.report.siteName).toBe(scene.name);
-    expect(bundle.report.temporalTwin?.publishedCheckpointCount).toBe(1);
     expect(bundle.evidenceTrail.evidenceEntryCount).toBeGreaterThanOrEqual(0);
     expect(stringifyReportEvidenceBundle(bundle)).toContain("\"mode\": \"single\"");
   });

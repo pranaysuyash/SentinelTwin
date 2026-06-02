@@ -6,28 +6,21 @@ import { useStudioStore } from "@/store/studio-store";
 const LAYOUT_STORAGE_KEY = "sentineltwin_workspace_layouts";
 const LEGACY_LAYOUT_STORAGE_KEY = "sentineltwin_saved_layouts_v1";
 
-if (typeof globalThis.localStorage === "undefined") {
+if (typeof globalThis.localStorage === "undefined" || globalThis.localStorage == null) {
   const memory: Record<string, string> = {};
-  globalThis.localStorage = {
+  const storage: Storage = {
     getItem: (key: string) => memory[key] ?? null,
-    setItem: (key: string, value: string) => {
-      memory[key] = value;
-    },
-    removeItem: (key: string) => {
-      delete memory[key];
-    },
-    clear: () => {
-      for (const key of Object.keys(memory)) delete memory[key];
-    },
+    setItem: (key: string, value: string) => { memory[key] = value; },
+    removeItem: (key: string) => { delete memory[key]; },
+    clear: () => { for (const key of Object.keys(memory)) delete memory[key]; },
     key: (index: number) => Object.keys(memory)[index] ?? null,
     length: 0,
-  } as Storage;
-}
-
-if (typeof globalThis.window === "undefined") {
-  (globalThis as any).window = { localStorage: globalThis.localStorage };
-} else if ((globalThis as any).window?.localStorage == null) {
-  (globalThis as any).window.localStorage = globalThis.localStorage;
+  };
+  try {
+    Object.defineProperty(globalThis, "localStorage", { value: storage, writable: true, configurable: true });
+  } catch {
+    (globalThis as any).localStorage = storage;
+  }
 }
 
 describe("workspace layout state", () => {

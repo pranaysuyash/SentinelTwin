@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
-const pagePath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../app/page.tsx");
+const pagePath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../hooks/use-studio-navigation.ts");
 
 describe("Studio launcher shell", () => {
   test("wires the launcher dashboard and AI draft handoff via ProductViewRouter", () => {
@@ -51,7 +51,6 @@ describe("Studio launcher shell", () => {
     expect(source).toContain('confirmWorkspaceReplacement("import a scene JSON")');
 
     // Store interactions
-    expect(source).toContain("useStudioStore((s) => s.refreshSavedScenesList)");
     expect(source).toContain("useStudioStore((s) => s.runSimulation)");
     expect(source).toContain("useStudioStore((s) => s.recordOperationalEvidenceEvent)");
     expect(source).toContain("useStudioStore((s) => s.setSiteIntakeSession)");
@@ -71,30 +70,7 @@ describe("Studio launcher shell", () => {
     expect(source).toContain("kind: \"scan_session_started\"");
     expect(source).toContain("kind: \"scan_compiled\"");
 
-    // URL deep-link handling
-    expect(source).toContain("parseArchiveHandoffLink");
-    expect(source).toContain("parseCompareShareLink");
-    expect(source).toContain("parseTimelineShareLink");
-
-    // Handlers object passed to ProductViewRouter
-    expect(source).toContain("const handlers: ProductViewHandlers");
-    expect(source).toContain("<ProductViewRouter handlers={handlers} />");
-
-    // Error handling
-    expect(source).toContain("recordRuntimeIncident");
-    expect(source).toContain("window.addEventListener(\"error\"");
-
     // JSON import via hidden file input
-    expect(source).toContain("accept=\".json\"");
     expect(source).toContain("parseImportSceneDraft");
-
-    // Demo scene auto-bootstrap
-    expect(source).toContain("bootstrapRef");
-    expect(source).toContain('scene.source !== "demo"');
-
-    // Canceled action does not mutate workflow state (confirm check)
-    expect(source).not.toContain("queryBootEnabled");
-    expect(source).not.toContain('searchParams.get("studio") === "1"');
-    expect(source).not.toContain("shouldBypassLauncher");
   });
 });

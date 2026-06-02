@@ -109,12 +109,14 @@ export function TopBar() {
   const zoneCount = scene.criticalZones.length;
   const criticalZoneTargetType = useStudioStore((s) => s.criticalZoneTargetType);
   const savedScenes = useStudioStore((s) => s.savedScenes);
+  const referenceScenes = useStudioStore((s) => s.referenceScenes);
   const setScene = useStudioStore((s) => s.setScene);
   const importScene = useStudioStore((s) => s.importScene);
   const saveSceneToStorage = useStudioStore((s) => s.saveSceneToStorage);
   const deleteSavedScene = useStudioStore((s) => s.deleteSavedScene);
   const duplicateSavedScene = useStudioStore((s) => s.duplicateSavedScene);
   const renameSavedScene = useStudioStore((s) => s.renameSavedScene);
+  const duplicateReferenceToWorkspace = useStudioStore((s) => s.duplicateReferenceToWorkspace);
   const refreshSavedScenesList = useStudioStore((s) => s.refreshSavedScenesList);
   const exportScene = useStudioStore((s) => s.exportScene);
   const running = useStudioStore((s) => s.simulationRunning);
@@ -305,12 +307,13 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
           </button>
           {sceneOpen && (
             <div
-              className="absolute left-0 top-full z-[420] mt-1 w-56 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
+              className="absolute left-0 top-full z-[420] mt-1 w-64 rounded-xl border border-[#202536] bg-[#0f1320] p-1.5 shadow-2xl shadow-black/35"
               onMouseLeave={() => setSceneOpen(false)}
             >
-              {/* Saved scenes from localStorage */}
-              {savedScenes.length > 0 && (
+              {/* User workspaces from localStorage */}
+              {savedScenes.length > 0 ? (
                 <>
+                  <div className="px-2.5 pb-1 text-[9px] font-bold uppercase tracking-[0.2em] text-[#6f7f9d]">Your Workspaces</div>
                   {savedScenes.map((saved) => (
                     <div key={saved.id} className="group flex items-center gap-0.5">
                       <button type="button"
@@ -358,9 +361,44 @@ const handleFileSelected = useCallback((event: React.ChangeEvent<HTMLInputElemen
                   ))}
                   <div className="my-1 border-t border-[#1e2130]" />
                 </>
-              )}
-              {savedScenes.length === 0 && (
-                <div className="px-2.5 py-2 text-[11px] text-[#6f7f9d]">No saved site twins yet</div>
+              ) : null}
+
+              {/* Reference scenes */}
+              {referenceScenes.length > 0 ? (
+                <>
+                  <div className="px-2.5 pb-1 text-[9px] font-bold uppercase tracking-[0.2em] text-[#6f7f9d]">
+                    Reference Scenes
+                    <span className="ml-1.5 font-normal normal-case text-[#55617b]">(duplicate to edit)</span>
+                  </div>
+                  {referenceScenes.map((ref) => (
+                    <div key={ref.id} className="group flex items-center gap-0.5">
+                      <button type="button"
+                        onClick={() => {
+                          duplicateReferenceToWorkspace(ref.id);
+                          setSceneOpen(false);
+                        }}
+                        className="flex-1 truncate rounded-lg px-2.5 py-2 text-left text-[11px] text-[#8a96ab] transition-colors hover:bg-[#171c2b] hover:text-white"
+                      >
+                        {ref.name}
+                      </button>
+                      <button type="button"
+                        onClick={() => {
+                          duplicateReferenceToWorkspace(ref.id);
+                          setSceneOpen(false);
+                        }}
+                        className="rounded-lg px-1.5 py-2 text-[10px] text-sky-400 opacity-60 transition-colors hover:opacity-100"
+                        title="Duplicate reference as workspace"
+                      >
+                        ⧉
+                      </button>
+                    </div>
+                  ))}
+                  <div className="my-1 border-t border-[#1e2130]" />
+                </>
+              ) : null}
+
+              {savedScenes.length === 0 && referenceScenes.length === 0 && (
+                <div className="px-2.5 py-3 text-[11px] text-[#6f7f9d]">No saved site twins yet</div>
               )}
 
               <div className="space-y-0.5">

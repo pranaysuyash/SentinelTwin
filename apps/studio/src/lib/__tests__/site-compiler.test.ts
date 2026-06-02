@@ -266,7 +266,9 @@ describe("compileJsonToSiteResult", () => {
   });
 
   test("returns blocking warning for invalid scene", () => {
-    const result = compileJsonToSiteResult({ invalid: true } as unknown as SecurityScene, "bad.json");
+    const scene = makeScene();
+    const sceneWithInvalid = { ...scene, cameras: "invalid" } as unknown as SecurityScene;
+    const result = compileJsonToSiteResult(sceneWithInvalid, "bad.json");
     expect(result.warnings.some((w) => w.code === "INVALID_SCENE" && w.severity === "blocking")).toBe(true);
     expect(result.confidence).toBe(0);
   });
@@ -374,11 +376,16 @@ describe("compileToSiteTwinDraft pipeline completeness", () => {
     const fullDraft = compileToSiteTwinDraft(fullResult);
     expect(canRunBaselineSimulation(fullDraft)).toBe(true);
 
-    fullDraft.warnings.push({
-      code: "TEST_BLOCKING",
-      message: "Blocking for test",
-      severity: "blocking",
-    });
+    fullDraft.readiness = {
+      ...fullDraft.readiness,
+      canSimulate: false,
+      level: "insufficient",
+      blockingWarnings: [
+        { code: "TEST_BLOCKING", message: "Blocking for test", severity: "blocking", suggestedAction: "", affectedNodeIds: [] },
+      ],
+      advisoryWarnings: [],
+      summary: "Blocking for test",
+    };
     expect(canRunBaselineSimulation(fullDraft)).toBe(false);
   });
 
@@ -545,7 +552,7 @@ describe("advanceSessionStage — stage progression engine", () => {
     const session = createSiteIntakeSession(scene, "scan");
     // No camera means NO_CAMERA is blocking, so review→compile gate blocks immediately
     const result = advanceSessionStage(session);
-    expect(result.error).toContain("blocking warnings");
+    expect(result.error).toContain("readiness");
     expect(result.session.stage).toBe("review");
   });
 
@@ -553,10 +560,27 @@ describe("advanceSessionStage — stage progression engine", () => {
     const scene = makeScene();
     addCamera(scene);
     const session = createSiteIntakeSession(scene, "scan");
+    session.draft!.readiness = {
+      ...session.draft!.readiness,
+      canSimulate: true,
+      level: "deploy-ready",
+      blockingWarnings: [],
+      advisoryWarnings: [],
+      summary: "Draft is deploy-ready.",
+    };
     const { session: compiled } = advanceSessionStage(session);
     const { session: validated } = advanceSessionStage(compiled);
+    // Now set readiness to insufficient to simulate no-zone blockage at validated→handoff
+    validated.draft!.readiness = {
+      ...validated.draft!.readiness,
+      canSimulate: false,
+      level: "insufficient",
+      blockingWarnings: [],
+      advisoryWarnings: [],
+      summary: "Insufficient for baseline simulation: at least one critical zone.",
+    };
     const result = advanceSessionStage(validated);
-    expect(result.error).toContain("zone");
+    expect(result.error).toContain("readiness");
   });
 
   test("canAdvanceStage returns null when advance would succeed", () => {

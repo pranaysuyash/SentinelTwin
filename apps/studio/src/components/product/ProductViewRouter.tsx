@@ -95,6 +95,11 @@ export function ProductViewRouter({ handlers }: ProductViewRouterProps) {
   const simulationRunning = useStudioStore((s) => s.simulationRunning);
   const savedScenes = useStudioStore((s) => s.savedScenes);
   const savedProjects = useStudioStore((s) => s.savedProjects);
+  const refreshSavedScenesList = useStudioStore((s) => s.refreshSavedScenesList);
+
+  // Boot-time: ensure saved projects are loaded from localStorage.
+  // TopBar also calls this, but TopBar isn't rendered on product_home or other non-studio views.
+  useEffect(() => { refreshSavedScenesList(); }, [refreshSavedScenesList]);
   const updateSavedSceneMetadata = useStudioStore((s) => s.updateSavedSceneMetadata);
   const duplicateSavedScene = useStudioStore((s) => s.duplicateSavedScene);
   const renameSavedScene = useStudioStore((s) => s.renameSavedScene);

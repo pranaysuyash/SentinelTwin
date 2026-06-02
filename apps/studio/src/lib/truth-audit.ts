@@ -37,9 +37,9 @@ export const TRUST_AUDIT_SURFACES: TrustAuditSurface[] = [
   },
   {
     surface: "Guided scan kickoff",
-    file: "src/app/page.tsx",
+    file: "src/hooks/use-studio-navigation.ts",
     requiredPhrases: [
-      "const openGuidedScanAssistant = () => {",
+      "const openGuidedScanAssistant = useCallback(() => {",
       "Guided scan assistant started",
       "Opened guided scan assistant from the launcher.",
     ],
@@ -474,7 +474,7 @@ export const TRUST_AUDIT_SURFACES: TrustAuditSurface[] = [
       "Assumptions",
       "Next Actions",
       "suggestedAction",
-      "Approve & Open in Studio",
+      "Approve as Canonical Twin",
     ],
     forbiddenPhrases: ["stub", "placeholder"],
   },

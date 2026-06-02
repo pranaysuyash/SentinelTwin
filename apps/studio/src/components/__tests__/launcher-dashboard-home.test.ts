@@ -16,7 +16,6 @@ describe("Studio dashboard launcher surface", () => {
     expect(source).toContain("Run Simulation");
     expect(source).toContain("Coverage");
     expect(source).toContain("SITE TWIN MEMORY SEARCH");
-    expect(source).toContain("Open Report");
     expect(source).toContain("setTimelineFocusRequest");
     expect(source).toContain("branch:");
     expect(source).toContain("after:");
@@ -30,7 +29,8 @@ describe("Studio dashboard launcher surface", () => {
     expect(source).toContain("const displayPassCount = hydrated ? passCount : 0;");
     expect(source).toContain("const displayIssues = hydrated ? issues : [];");
     expect(source).toContain("const displayRedundancyFailCount = hydrated ? redundancyFailCount : 0;");
-    expect(source).toContain("displayPassCount}/{displayTotalZones");
-    expect(source).toContain("displayIssues.length");
+    expect(source).toContain("displayPassCount={displayPassCount}");
+    expect(source).toContain("displayTotalZones={displayTotalZones}");
+    expect(source).toContain("displayIssues={displayIssues}");
   });
 });

@@ -9,7 +9,7 @@ describe("ViewSettingsModal", () => {
 
     expect(source).toContain('import { AI_PROVIDER_OPTIONS, describeAiProviderSelection, getProviderOption, normalizeAiProviderSelection } from "@/agents/provider-selection";');
     expect(source).toContain("AI Provider");
-    expect(source).toContain('import { CAMERA_PRESETS } from "@/components/workspace/camera-preset-utils";');
+    expect(source).toContain('import { CAMERA_PRESETS, cameraPresetIcon } from "@/components/workspace/camera-preset-utils";');
     expect(source).toContain("Camera Preset Library");
     expect(source).toContain("setCameraPresetId(cameraPresetId === preset.id ? null : preset.id)");
     expect(source).toContain("providerInfo.providerLabel");

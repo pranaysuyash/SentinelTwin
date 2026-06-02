@@ -13,7 +13,7 @@ describe("Root routing contract", () => {
 
     // Root page uses ProductViewRouter instead of modal flags
     expect(source).toContain("ProductViewRouter");
-    expect(source).toContain("const handlers: ProductViewHandlers");
+    expect(source).toContain("const handlers = useStudioNavigation();");
     // Default product view is product_home
     expect(source).not.toContain("const [enterStudio, setEnterStudio] = useState(false)");
     expect(source).not.toContain("if (enterStudio) {");

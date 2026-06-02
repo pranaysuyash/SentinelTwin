@@ -16,10 +16,10 @@ describe("Studio shell launcher handoff", () => {
   test("defaults the right rail to security status until an object is selected", () => {
     const source = readFileSync(studioShellPath, "utf8");
 
-    expect(source).toContain('if (!selectedNodeId && rightPanelMode === "inspector")');
-    expect(source).toContain('setRightPanelMode("security_status")');
+    expect(source).toContain('if (!selectedNodeId && rightPanelMode === "inspector") return "security_status"');
     expect(source).toContain('if (selectedNodeId && rightPanelMode === "security_status")');
-    expect(source).toContain('setRightPanelMode("inspector")');
+    expect(source).toContain('return "inspector"');
+    expect(source).toContain('setRightPanelMode(effectiveRightPanelMode)');
   });
 
   test("keeps report mode in dock layout while replay, camera, and wall stay full-canvas", () => {

@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 
 const routerPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../product/ProductViewRouter.tsx");
 const pagePath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../app/page.tsx");
+const navigationPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../hooks/use-studio-navigation.ts");
 const aiDraftPath = resolve(fileURLToPath(new URL(".", import.meta.url)), "../product/AiLayoutDraftView.tsx");
 
 describe("Site Draft activation gate contract", () => {
@@ -35,7 +36,7 @@ describe("Site Draft activation gate contract", () => {
   });
 
   test("confirmation happens before workflow mutation in scan launch handlers", () => {
-    const source = readFileSync(pagePath, "utf8");
+    const source = readFileSync(navigationPath, "utf8");
     const scanConfirm = source.indexOf("if (!confirmWorkspaceReplacement(\"start scan intake\")) return;");
     const scanWorkflow = source.indexOf("setActiveWorkflow(\"scan\");");
     expect(scanConfirm).toBeGreaterThan(-1);
@@ -48,7 +49,7 @@ describe("Site Draft activation gate contract", () => {
   });
 
   test("draft creation path does not directly activate scene before approval", () => {
-    const source = readFileSync(pagePath, "utf8");
+    const source = readFileSync(navigationPath, "utf8");
     const createDraftStart = source.indexOf("const createDraftFromScene =");
     const createDraftEnd = source.indexOf("const approveIntakeSession =", createDraftStart);
     const createDraftBody = source.slice(createDraftStart, createDraftEnd);
@@ -65,7 +66,7 @@ describe("Site Draft activation gate contract", () => {
   });
 
   test("JSON import path creates review draft and routes to site_draft_review", () => {
-    const source = readFileSync(pagePath, "utf8");
+    const source = readFileSync(navigationPath, "utf8");
     expect(source).toContain("parseImportSceneDraft");
     expect(source).toContain("createDraftFromScene(parsedDraft.scene, parsedDraft.source, [file.name]);");
     expect(source).toContain("navigate(\"site_draft_review\");");

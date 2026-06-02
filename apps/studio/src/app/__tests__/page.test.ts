@@ -2,11 +2,11 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const pagePath = join(import.meta.dir, "../page.tsx");
+const bootstrapPath = join(import.meta.dir, "../../hooks/use-studio-bootstrap.ts");
 
 describe("Studio page share-link bootstrap", () => {
   test("restores timeline and compare share links into the studio shell", () => {
-    const source = readFileSync(pagePath, "utf8");
+    const source = readFileSync(bootstrapPath, "utf8");
 
     expect(source).toContain("parseCompareShareLink");
     expect(source).toContain("parseArchiveHandoffLink");

@@ -33,7 +33,6 @@ import type { BottomTab, SavedProjectRecord, TimelineFocusRequest, ViewMode, Wor
 import { useStudioStore } from "@/store/studio-store";
 import { OrganizationManagerPanel } from "@/components/launcher/OrganizationManagerPanel";
 import { ScenePreview } from "@/components/launcher/ScenePreview";
-import { ProjectMetadataEditor } from "@/components/launcher/ProjectMetadataEditor";
 import { SecurityStatusPanel } from "@/components/launcher/SecurityStatusPanel";
 import { OpenIssuesPanel } from "@/components/launcher/OpenIssuesPanel";
 import { SimulationAssumptionsPanel } from "@/components/launcher/SimulationAssumptionsPanel";
@@ -41,7 +40,6 @@ import { ProjectSettingsPanel } from "@/components/launcher/ProjectSettingsPanel
 import { WorkspaceLibraryPanel } from "@/components/launcher/WorkspaceLibraryPanel";
 import { useDashboardArchives } from "@/hooks/useDashboardArchives";
 import type { SecurityScene, SecurityIssue, SimulationResult, DoriQuality } from "@/schema/security-scene";
-import type { OrganizationList } from "@/schema/organization";
 import { QUALITY_TEXT_COLOR } from "@/lib/quality-display";
 
 import { selectSecurityOutcomeFromStore } from "@/lib/security-outcome/security-outcome-selectors";
@@ -947,10 +945,11 @@ export function StudioDashboardHome({
     isArchiveLoading,
     hasArchiveLoadFailures,
     archiveLoadFailureCount,
+    archiveLoadFailureSources,
+    archiveLoadFailureLabels,
+    archiveLoadInProgressLabels,
   } = useDashboardArchives();
   const workspaceAccountProfile = useStudioStore((s) => s.workspaceAccount);
-  const setWorkspaceAccountProfile = useStudioStore((s) => s.setWorkspaceAccountProfile);
-  const resetWorkspaceAccountProfile = useStudioStore((s) => s.resetWorkspaceAccountProfile);
   const organizations = useStudioStore((s) => s.organizations);
   const activeOrganizationId = useStudioStore((s) => s.activeOrganizationId);
   const setActiveOrganization = useStudioStore((s) => s.setActiveOrganization);
@@ -1043,6 +1042,7 @@ export function StudioDashboardHome({
   useEffect(() => {
     if (!onOpenScene && !onOpenDemoScene) return;
     if (scene.cameras.length > 0) return;
+    if (savedProjects.length === 0) return;
     const fallbackScene = savedProjects.find((project) => project.scene.source === "demo" && project.scene.cameras.length > 0)
       ?? savedProjects.find((project) => project.scene.cameras.length > 0);
     if (fallbackScene && onOpenScene) {
@@ -1290,6 +1290,66 @@ export function StudioDashboardHome({
           </div>
         </header>
 
+        {hydrated && savedProjects.length === 0 && scene.cameras.length === 0 && !showWorkspaceLibrary ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-8 py-16 lg:flex-row">
+            <div className="max-w-lg">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-400/30 bg-emerald-500/10 shadow-[0_0_32px_rgba(16,185,129,0.15)]">
+                <ShieldCheck className="h-7 w-7 text-emerald-400" />
+              </div>
+              <h1 className="mt-6 text-[28px] font-bold tracking-tight text-white">
+                Your first site twin awaits
+              </h1>
+              <p className="mt-3 max-w-md text-[14px] leading-6 text-[color:var(--st-muted)]">
+                SentinelTwin turns floor plans, photos, or a blank canvas into a live security
+                simulation. Model your site, review camera coverage, trace route exposure, and
+                generate compliance evidence — all in one workspace.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={onCreateScene}
+                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-sky-400/30 bg-sky-500/12 px-5 text-[13px] font-semibold text-white shadow-[0_8px_24px_rgba(14,165,233,0.12)] transition-all hover:bg-sky-500/20 hover:shadow-[0_12px_32px_rgba(14,165,233,0.18)]"
+                >
+                  <Plus className="h-4 w-4" />
+                  Blank Scene
+                </button>
+                <button
+                  type="button"
+                  onClick={onScanSite}
+                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-5 text-[13px] font-semibold text-[color:var(--st-text)] transition-all hover:border-emerald-400/30 hover:bg-white/[0.06] hover:text-white"
+                >
+                  <ScanSearch className="h-4 w-4 text-emerald-400" />
+                  Scan a Site
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenReferenceSites}
+                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-5 text-[13px] font-semibold text-[color:var(--st-text)] transition-all hover:border-violet-400/30 hover:bg-white/[0.06] hover:text-white"
+                >
+                  <LayoutDashboard className="h-4 w-4 text-violet-400" />
+                  Explore Reference
+                </button>
+                <button
+                  type="button"
+                  onClick={onImportScene}
+                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-[color:var(--st-border)] bg-white/[0.03] px-5 text-[13px] font-semibold text-[color:var(--st-text)] transition-all hover:border-cyan-400/30 hover:bg-white/[0.06] hover:text-white"
+                >
+                  <FileUp className="h-4 w-4 text-cyan-400" />
+                  Import File
+                </button>
+              </div>
+            </div>
+            <div className="hidden w-px self-stretch bg-gradient-to-b from-transparent via-[color:var(--st-border)] to-transparent lg:block" />
+            <div className="max-w-xs rounded-2xl border border-[color:var(--st-border)] bg-white/[0.02] p-5">
+              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-200">Start screen</div>
+              <div className="mt-1 text-[11px] leading-5 text-[color:var(--st-muted)]">
+                This quick-get-started view appears automatically when you don&apos;t have any
+                saved site twins yet. As soon as you create or open one, it remembers where
+                you left off.
+              </div>
+            </div>
+          </div>
+        ) : (
         <div className="grid flex-1 items-start gap-4 lg:grid-cols-[220px_minmax(0,1fr)_326px]">
           <aside className="flex flex-col gap-3 rounded-[12px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3">
             <div>
@@ -1502,59 +1562,23 @@ export function StudioDashboardHome({
               </div>
               ) : null}
 
-              {isDashboardSectionVisible("metrics") ? (
-              <div className="mt-4 grid grid-cols-3 gap-3 lg:grid-cols-6">
-                <div className="flex min-h-[98px] flex-col gap-1 rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
-                  <div className="-mx-1 -mt-1 mb-1 flex justify-end">
-                    <HideSectionButton label="summary metrics" onClick={() => setDashboardSectionVisible("metrics", false)} />
-                  </div>
-                  <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">COVERAGE</div>
-                  <div className={cn("text-xl font-bold tracking-tight", displayCoverage != null ? coverageTone(displayCoverage) : "text-slate-200")}>
-                    {displayCoverage != null ? `${Math.round(displayCoverage)}%` : "Pending"}
-                  </div>
-                  <div className="text-[10px] text-[color:var(--st-muted)]">{displayCoverage == null ? "Run baseline simulation" : "vs last run"}</div>
-                </div>
-                <div className="flex min-h-[98px] flex-col gap-1 rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
-                  <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">CRITICAL ZONES</div>
-                  <div className={cn("text-xl font-bold", displayTotalZones > 0 && displayPassCount === displayTotalZones ? "text-emerald-300" : "text-amber-300")}>
-                    {displayPassCount}/{displayTotalZones}
-                  </div>
-                  <div className="flex items-center gap-1 text-[10px] text-[color:var(--st-muted)]">
-                    {displayTotalZones > 0 && displayPassCount < displayTotalZones ? <TriangleAlert className="h-3 w-3 text-amber-400" /> : null}
-                    Passing
-                  </div>
-                </div>
-                <div className="flex min-h-[98px] flex-col gap-1 rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
-                  <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">WORST QUALITY</div>
-                  <div className={cn("text-xl font-bold", displayWorstQualityValue ? QUALITY_TEXT_COLOR[displayWorstQualityValue] : "text-slate-200")}>
-                    {displayWorstQualityLabel ?? "Pending"}
-                  </div>
-                  <div className="truncate text-[10px] text-[color:var(--st-muted)]">
-                    {(displayPrimaryRisk ?? displayWorstIssue?.description ?? "Baseline required").slice(0, 30)}
-                  </div>
-                </div>
-                <div className="flex min-h-[98px] flex-col gap-1 rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
-                  <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">ISSUES</div>
-                  <div className={cn("text-xl font-bold", displayIssues.length > 0 ? "text-amber-300" : "text-emerald-300")}>{displayIssues.length}</div>
-                  <div className="text-[10px] text-[color:var(--st-muted)]">Open</div>
-                </div>
-                <div className="flex min-h-[98px] flex-col gap-1 rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
-                  <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">REDUNDANCY</div>
-                  <div className={cn("text-xl font-bold", displayRedundancyFailCount > 0 ? "text-red-300" : displayRedundancyCount === 0 ? "text-sky-200" : "text-emerald-300")}>
-                    {displayRedundancyFailCount > 0 ? "FAILS" : displayRedundancyCount === 0 ? "Not set" : "OK"}
-                  </div>
-                  <div className="flex items-center gap-1 text-[10px] text-[color:var(--st-muted)]">
-                    {displayRedundancyFailCount > 0 ? <TriangleAlert className="h-3 w-3 text-red-400" /> : null}
-                    {displayRedundancyFailCount > 0 ? `If CAM 1 offline` : displayRedundancyCount === 0 ? "No redundancy required" : "Coverage intact"}
-                  </div>
-                </div>
-                <div className="flex min-h-[98px] flex-col gap-1 rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5">
-                  <div className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">LAST RUN</div>
-                  <div className="text-sm font-bold text-sky-200" suppressHydrationWarning>{displayRunLabel}</div>
-                  <div className="text-[10px] text-[color:var(--st-muted)]" suppressHydrationWarning>{lastRunDetail}</div>
-                </div>
-              </div>
-              ) : null}
+              <CoverageMetricsCards
+                displayCoverage={displayCoverage}
+                coverageTone={coverageTone}
+                displayPassCount={displayPassCount}
+                displayTotalZones={displayTotalZones}
+                displayWorstQualityValue={displayWorstQualityValue}
+                QUALITY_TEXT_COLOR={QUALITY_TEXT_COLOR}
+                displayWorstQualityLabel={displayWorstQualityLabel}
+                displayPrimaryRisk={displayPrimaryRisk}
+                displayWorstIssue={displayWorstIssue}
+                displayIssues={displayIssues}
+                displayRedundancyFailCount={displayRedundancyFailCount}
+                displayRedundancyCount={displayRedundancyCount}
+                displayRunLabel={displayRunLabel}
+                lastRunDetail={lastRunDetail}
+                onHide={() => setDashboardSectionVisible("metrics", false)}
+              />
 
               {isDashboardSectionVisible("workspaces") ? (
                 <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -1625,6 +1649,8 @@ export function StudioDashboardHome({
                   isArchiveLoading={isArchiveLoading}
                   hasArchiveLoadFailures={hasArchiveLoadFailures}
                   archiveLoadFailureCount={archiveLoadFailureCount}
+                  archiveLoadFailureSources={archiveLoadFailureLabels}
+                  archiveLoadLoadingSources={archiveLoadInProgressLabels}
                   setTimelineFocusRequest={setTimelineFocusRequest}
                   onOpenReport={onOpenReport}
                   onOpenMode={onOpenMode}
@@ -1837,6 +1863,7 @@ export function StudioDashboardHome({
             ) : null}
           </aside>
         </div>
+        )}
 
         {footerPanel ? (
           <section className="rounded-2xl border border-[color:var(--st-border)] bg-[color:var(--st-panel)] px-4 py-3 text-[11px] text-[color:var(--st-muted)]">

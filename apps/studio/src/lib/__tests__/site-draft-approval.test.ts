@@ -79,6 +79,7 @@ describe("approveSiteTwinDraft", () => {
   test("does not mark baseline ready when prerequisites are missing", () => {
     const draft = createDraft();
     draft.scene.cameras = [];
+    draft.readiness = undefined as unknown as typeof draft.readiness;
     const result = approveSiteTwinDraft(draft);
     expect(result.success).toBe(true);
     if (!result.success) return;

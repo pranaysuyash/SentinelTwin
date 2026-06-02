@@ -17,11 +17,9 @@ describe("product home affordance contract", () => {
     expect(source).toContain('title="Current environment profile"');
     expect(source).toContain("Open current Site Twin in Studio:");
     expect(source).toContain('aria-label="Edit current environment profile in Studio"');
-    expect(source).toContain('aria-label="Open organization and account switcher"');
-    expect(source).toContain('onClick={() => setShowOrgManager(true)}');
+    expect(source).toContain('onSetShowOrgManager={() => setShowOrgManager(true)}');
     expect(source).not.toContain('aria-label="Open scene selector"');
     expect(source).not.toContain('aria-label="Open environment mode menu"');
-    expect(source).not.toContain('<svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">');
   });
 
   test("wires footer feedback and help controls to lightweight panels", () => {

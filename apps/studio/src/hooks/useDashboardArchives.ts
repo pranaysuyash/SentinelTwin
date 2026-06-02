@@ -37,6 +37,20 @@ export type UseDashboardArchivesReturn = {
   isArchiveLoading: boolean;
   hasArchiveLoadFailures: boolean;
   archiveLoadFailureCount: number;
+  archiveLoadFailureSources: DashboardArchiveLoadKey[];
+  archiveLoadInProgressSources: DashboardArchiveLoadKey[];
+  archiveLoadFailureLabels: string[];
+  archiveLoadInProgressLabels: string[];
+};
+
+const ARCHIVE_LABELS: Record<DashboardArchiveLoadKey, string> = {
+  governance: "Governance",
+  workspaceMembership: "Workspace Membership",
+  workspaceIdentityConflict: "Workspace Identity",
+  supportDelivery: "Support Delivery",
+  sensorIngest: "Sensor Ingest",
+  cameraMetadata: "Camera Metadata",
+  cameraLiveConnection: "Camera Live Connection",
 };
 
 const EMPTY_OBJECT: DashboardArchiveLoadStateMap = {
@@ -124,6 +138,25 @@ export function useDashboardArchives(): UseDashboardArchivesReturn {
 
   const hasArchiveLoadFailures = archiveLoadFailureCount > 0;
 
+  const archiveLoadFailureSources = useMemo(
+    () =>
+      Object.entries(archiveLoadState)
+        .filter(([, status]) => status === "error")
+        .map(([key]) => key as DashboardArchiveLoadKey),
+    [archiveLoadState],
+  );
+
+  const archiveLoadInProgressSources = useMemo(
+    () =>
+      Object.entries(archiveLoadState)
+        .filter(([, status]) => status === "loading")
+        .map(([key]) => key as DashboardArchiveLoadKey),
+    [archiveLoadState],
+  );
+
+  const archiveLoadFailureLabels = archiveLoadFailureSources.map((source) => ARCHIVE_LABELS[source]);
+  const archiveLoadInProgressLabels = archiveLoadInProgressSources.map((source) => ARCHIVE_LABELS[source]);
+
   return {
     governanceArchiveHistory,
     workspaceMembershipArchiveHistory,
@@ -137,5 +170,9 @@ export function useDashboardArchives(): UseDashboardArchivesReturn {
     isArchiveLoading,
     hasArchiveLoadFailures,
     archiveLoadFailureCount,
+    archiveLoadFailureSources,
+    archiveLoadInProgressSources,
+    archiveLoadFailureLabels,
+    archiveLoadInProgressLabels,
   };
 }

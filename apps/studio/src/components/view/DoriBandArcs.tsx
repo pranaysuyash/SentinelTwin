@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import * as THREE from "three";
 
 import type { CameraNode } from "@/schema/security-scene";
 
@@ -51,7 +50,7 @@ export function DoriBandArcs({ camera }: { camera: CameraNode }) {
   const arcs = useMemo(() => {
     return Object.entries(DORI_PPM_THRESHOLDS)
       .filter(([key]) => distances[key as keyof typeof distances] > 0.5)
-      .map(([key, _threshold]) => {
+      .map(([key]) => {
         const radius = distances[key as keyof typeof distances];
         return {
           radius,

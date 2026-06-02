@@ -908,7 +908,15 @@ export function StudioDashboardHome({
   const lastRun = result?.computedAt ?? scene.simulation?.computedAt ?? null;
   const lastRunLabel = formatRunLabel(lastRun);
   const displayRunLabel = lastRun ? lastRunLabel : (currentRunLabel ?? lastRunLabel);
-  const lastRunDetail = lastRun ? "Computed simulation" : "Run simulation for coverage data";
+  const previousCoverage = scene.previousSimulation?.totalCoveragePct ?? null;
+  const coverageDelta = previousCoverage !== null && displayCoverage !== null
+    ? displayCoverage - previousCoverage
+    : null;
+  const lastRunDetail = lastRun
+    ? coverageDelta !== null
+      ? `${coverageDelta > 0 ? "+" : ""}${coverageDelta.toFixed(1)}% vs last run`
+      : "First run — no prior data"
+    : "Run simulation for coverage data";
   const visibleProjectCount = visibleProjects.length;
   const userWorkspaceCount = userWorkspaceProjects.length;
   const referenceDemoCount = referenceDemoProjects.length;

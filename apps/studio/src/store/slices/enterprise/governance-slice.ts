@@ -1402,7 +1402,7 @@ function buildSceneReplacementPatch(
 }
 
 function loadProjectsFromStorage(): any[] {
-  if (typeof window === "undefined") return [];
+  if (typeof globalThis.localStorage === "undefined") return [];
   try {
     const raw = localStorage.getItem(PROJECT_STORAGE_KEY);
     if (raw) return JSON.parse(raw);
@@ -1428,7 +1428,7 @@ function loadProjectsFromStorage(): any[] {
 }
 
 function loadLayoutsFromStorage(): WorkspaceLayoutRecord[] {
-  if (typeof window === "undefined") return buildSeededLayouts();
+  if (typeof globalThis.localStorage === "undefined") return buildSeededLayouts();
 
   const fallbackTime = Date.now();
   try {

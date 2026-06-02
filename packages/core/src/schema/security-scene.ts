@@ -1114,6 +1114,7 @@ const securitySceneBaseSchema = z.object({
   calibrationConstants: calibrationConstantsSchema.optional(),
   timeSchedule: timeScheduleSchema.optional(),
   simulation: simulationResultSchema.optional(),
+  previousSimulation: simulationResultSchema.optional(),
   temporalProfile: temporalSecurityProfileSchema.optional(),
   changeLog: z.array(z.string()).default([]),
   source: sceneSourceSchema,

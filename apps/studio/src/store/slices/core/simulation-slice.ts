@@ -73,6 +73,7 @@ function buildSimulationState(
   operationalEvidenceEvents: OperationalEvidenceEvent[],
 ) {
   const nextScene = cloneSecurityScene(scene);
+  nextScene.previousSimulation = scene.simulation;
   nextScene.simulation = result;
   nextScene.updatedAt = Date.now();
   const temporalProfile = computeTemporalProfile(nextScene as never);

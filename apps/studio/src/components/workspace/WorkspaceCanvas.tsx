@@ -74,6 +74,7 @@ import {
 } from "./workspace-canvas-utils";
 import "@/lib/three-compat";
 import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
+import { SceneHtml } from "@/components/shared/SceneHtml";
 
 function getMapFrame(width: number, depth: number) {
   const centerX = width / 2;

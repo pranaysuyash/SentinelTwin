@@ -907,6 +907,7 @@ const securitySceneBaseSchema = z.object({
   assumptions: simulationAssumptionsSchema,
   timeSchedule: timeScheduleSchema.optional(),
   simulation: simulationResultSchema.optional(),
+  previousSimulation: simulationResultSchema.optional(),
   temporalProfile: temporalSecurityProfileSchema.optional(),
   changeLog: z.array(z.string()).default([]),
   source: sceneSourceSchema,

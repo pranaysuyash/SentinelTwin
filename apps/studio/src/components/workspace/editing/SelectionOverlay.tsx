@@ -1,4 +1,5 @@
 import { Html } from "@react-three/drei";
+import { SceneHtml } from "@/components/shared/SceneHtml";
 
 import type { Point2 } from "./editor-geometry";
 

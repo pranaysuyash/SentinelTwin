@@ -15,6 +15,7 @@ import type {
 } from "@/schema/security-scene";
 import { DORI_THRESHOLDS } from "@sentineltwin/core";
 import { useStudioStore } from "@/store/studio-store";
+import { SceneHtml } from "@/components/shared/SceneHtml";
 import { isPrimaryMouseEvent } from "@/components/workspace/workspace-canvas-utils";
 
 type HeatmapMode = "quality" | "lighting" | "fragility" | "overlap" | "contribution" | "blindspots";

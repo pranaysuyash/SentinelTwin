@@ -34,6 +34,7 @@ import { getCameraColorForId } from "@/lib/camera-colors";
 import { buildCoverageGrid } from "@sentineltwin/core";
 import { CanvasLoadingOverlay } from "@/components/shared/CanvasLoadingOverlay";
 import { RunSimulationPrompt } from "@/components/shared/RunSimulationPrompt";
+import { SceneHtml } from "@/components/shared/SceneHtml";
 import {
   buildReplayStateByCameraAtTime,
   clampPathDuration,

@@ -1,7 +1,7 @@
 "use client";
 
 import { Html } from "@react-three/drei";
-
+import { SceneHtml } from "@/components/shared/SceneHtml";
 import { pointOnPathAtProgress } from "@/components/map/path-quality";
 import type { SecurityScene } from "@/schema/security-scene";
 

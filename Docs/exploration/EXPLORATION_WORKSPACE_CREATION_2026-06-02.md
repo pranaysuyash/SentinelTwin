@@ -877,19 +877,200 @@ Full file list read (counts in parens):
 - `apps/studio/public/sample-site-twins/jewelry-store-site-twin.json`
 - `apps/studio/public/sample-site-twins/README.md`
 
-### Pending reads (not blocking exploration)
-- `TransformHandles.tsx` (748 lines, full body)
-- `governance-slice.ts` (full body, currently heads + key exports)
-- `LeftPanel.tsx` (full body)
-- `view/ReportView.tsx` (full body)
-- `app/api/*` route handlers (full bodies)
-- `lib/scene-intelligence-graph.ts` (full body)
-- `lib/scenario-presets.ts` (full body)
-- `lib/bakeoff-bridge.ts` (read in earlier session)
+### Completed reads (all previously pending, read 2026-06-02)
+- `TransformHandles.tsx` (749 lines, full body): 12 handle kinds (`move`/`rotate`/`height`/`pitch`/`scale_x`/`scale_z`/`wall_start`/`wall_end`/`vertex`/`path_point`/`path_insert`/`polygon_insert`); per-nodeType render + `DragState` with world-space client tracking; `updateDraft` dispatches per handle; group selection for translate only; `removeVertexPoint` enforces min 3 polygon / 2 path points.
+- `governance-slice.ts` (1463 lines, full body): Every governance mutation emits an `OperationalEvidenceEvent` with full provenance. ~40 actions with 10 localStorage keys. Scene management: `saveSceneToStorage` (projects with folder/tags[8]/visibility), `duplicateSavedScene` (workspace count quota guard), `renameSavedScene` (demo scenes blocked). Fix sandbox: enter clones scene as baseline+draft, exit restores baseline, apply commits draft+snapshot+runs sim. `activateWorkspaceFromDraft` is deprecated — routes through `approveIntakeSession` from `use-studio-navigation`.
+- `LeftPanel.tsx` (364 lines, full body): 11 tools with keyboard shortcuts (`V`/`C`/`B`/`L`/`Y`/`P`/`Z`/`D`/`W`/`M`/`T`); 11 layers; tool presets saved to `sentineltwin_tool_presets_v1` localStorage; snapping settings (min 0.05 step 0.05 snap distance, min 0.1 step 0.1 grid size).
+- `view/ReportView.tsx` (398 lines, full body): Uses `computeCoverageEntropy`, `computeCoveragePostureVariation`, `computeCoverageUncertainty` (sampleCount=2); 4 stat groups (Operational Snapshot, Model Confidence, Temporal and Privacy, Resilience and Sensors); stale simulation detects via `computedAt + 1500ms >= updatedAt`; top 3 recs, top 2 issues, 5 action limit, 120 char metric cap.
+- `lib/scene-intelligence-graph.ts` (308 lines, full body): Provenance graph with 6 node kinds (`scene`/`source`/`entity`/`assumption`/`simulation`/`snapshot`) and 5 edge kinds (`contains`/`originates_from`/`assesses`/`covers`/`validated_by`); 10 entity collections; per-item `source` field tracked; operational evidence events drive node history.
+- `lib/scenario-presets.ts` (107 lines, full body): 6 built-in presets (`day_entry`/`night_entry`/`camera_failure`/`light_failure`/`door_open`/`obstruction_added`); each overrides timeOfDay + camera status + light status + environmentRisks (backlight/glare/overexposed).
+- `lib/bakeoff-bridge.ts` (287 lines, full body): Converts ML model predictions (`BakeoffPrediction` with wall/obstruction/zone segments) into `SecurityScene` with `source="ai"`, `reviewStatus="unreviewed"`, `version="0.1.0"`, `changeLog` entry. Maps model class names to canonical types (shelf→shelf, counter→counter, cash_register→cash_counter_activity). Uses `makeId()` for timestamp+random IDs.
 
 ---
 
-## 15. Closing
+## 15. External Landscape — What's Possible Beyond Current Code
+
+Research was done (2026-06-02) into the broader physical security
+design software market and adjacent technologies. This section
+documents what **already exists in other tools** and what
+**emerging technology enables**, to inform the new component's
+design.
+
+### 15.1 Competitive landscape (CCTV design software)
+
+The market has 3 tiers:
+
+**Tier 1: Professional engineering tools**
+- **JVSG IP Video System Design Tool** (Windows, paid): deepest
+  feature set — 20,000 camera DB, 2D/3D Camera FOV, IEC 62676-4:2025
+  OODPCVS, cable path planning, automatic BOM + quotation export,
+  DWG/DXF/AutoCAD export, multi-vendor. SentinelTwin's closest
+  functional cousin but Windows-only, no AI simulation.
+- **VideoCAD** (Windows, paid): hyper-detailed engineering settings,
+  lens distortion simulation. Niche; steep learning curve.
+
+**Tier 2: Web-based / cloud tools**
+- **IPVM Calculator** (web, free): 1.4M cameras calculated, 12,000+
+  camera models, Google Maps integration, FOV + DORI zones. No 3D,
+  no simulation. The industry's default "first sketch" tool.
+- **Axis Site Designer** (web, free): floor plan import, camera
+  placement with coverage visualization, storage/bandwidth calc,
+  BOM generation, VMS export (Axis Camera Station, Genetec,
+  Milestone). Brand-locked to Axis. Offline-capable (saves to
+  browser localStorage).
+- **CCTV Design Tool** (web, paid): basic FoV preview, Linux-friendly.
+- **System Surveyor** (web + mobile, paid): field-first — on-site
+  photo capture, camera annotation, cable route drawing, cloud
+  sharing. Designed for site walkthroughs, not engineering.
+
+**Tier 3: Vendor-locked tools**
+- Bosch DesignHub, Avigilon System Design Tool, Hikvision HiTools
+  Designer, Dahua DHTools Designer. All brand-specific, basic FoV
+  planning, no multi-vendor support.
+
+**BeamUp AI** (enterprise security digital twin): closest product
+vision match to SentinelTwin — AI-powered security optimization for
+enterprise facilities. Proprietary, no public pricing, requires
+their full platform.
+
+### 15.2 What competitors do that SentinelTwin doesn't (gap by gap)
+
+| Feature | Available in | SentinelTwin status |
+|---|---|---|
+| Large camera model database (12k+) | IPVM, JVSG, Axis SD | None — no camera DB |
+| Google Maps/satellite for outdoor sites | IPVM Calculator | None |
+| Mobile/tablet field survey (on-site photo capture) | System Surveyor | None |
+| Cable path planning + length calc | JVSG, System Surveyor | None |
+| Auto BOM + quotation with pricing | JVSG, Axis SD | None |
+| DWG/DXF/AutoCAD export | JVSG | None |
+| Multi-brand VMS export (Genetec, Milestone) | Axis SD, JVSG | None |
+| Lens distortion simulation | VideoCAD | None |
+| AI-optimized camera placement | BeamUp, research papers | None — AI proposes, sim verifies |
+| Live PTZ control for verification | VMS integration | Partial — camera-view-utils |
+
+### 15.3 What SentinelTwin does that competitors don't
+
+| Capability | SentinelTwin | Competitors |
+|---|---|---|
+| OODPCVS (IEC 62676-4:2025) 7-level quality | ✅ Shipped | JVSG has it; no one else |
+| Adversarial path simulation | ✅ Shipped | None |
+| Temporal simulation (24h coverage profile) | ✅ Shipped | None |
+| AI counterfactual remediation | ✅ Shipped | BeamUp claims AI; not verified |
+| Coverage uncertainty quantification | ✅ Shipped | None |
+| Fragility / K-robustness analysis | ✅ Shipped | None |
+| Privacy zone simulation (GDPR-wash) | ✅ Shipped | None |
+| 3D digital twin (not just plan view) | ✅ Shipped | JVSG has 3D, no simulation |
+| Multi-provider AI (4 model providers) | ✅ Shipped | None |
+| Local-only / air-gapped deployment | ✅ Shipped | Only Axis SD offline-capable |
+| Full 3D R3F rendering pipeline | ✅ Shipped | JVSG/Win only; others 2D only |
+| Self-hosted + cloud dual deployment | ✅ Shipped | Only cloud (IPVM, CCTV DT) or Windows (JVSG) |
+
+### 15.4 Emerging technologies (not shipped, worth evaluating)
+
+**3D Gaussian Splatting (3DGS)** — a survey paper
+(`arXiv:2401.03890`) and a defense-specific ISR paper (Stanford
+CS231n, 2024) both demonstrate 3DGS for security and surveillance
+applications. MIT-licensed implementations exist. If viable, this
+could replace the current 2-tier floor plan pipeline (MiniCPM-V
+→ cloud VLM) with a single phone-video → 3DGS → security scene
+pipeline. Open question.
+
+**LiDAR scanning (Polycam, CamPlan, iPhone Pro)** — tools like
+Polycam (`poly.cam`) and CamPlan (`camplan.ai`) generate floor
+plans from iPhone LiDAR scans. Polycam has a "Floor Plan Editor"
+(released March 2026) that lets users scan a space and get an
+AI-generated floor plan. The `ReconstructionCandidatePanel`
+already exists in SentinelTwin's `ScanSiteWizard`; this would
+extend it with LiDAR-derived wall/obstruction/zone data.
+
+**BIM/IFC import** — `web-ifc` (MIT, WASM/JS) parses IFC files
+in the browser. If IFC files contain wall/door/window/room
+geometries (Q-023), this becomes a 7th creation source that's
+high-value for enterprise deployments where BIM exists.
+
+**Multi-camera calibration from video** — structure-from-motion
+pipelines (COLMAP, MIT-licensed alternatives) can derive camera
+positions from overlapping security camera feeds. This would let
+the system bootstrap from a working VMS installation without
+manual scene modeling. Not yet evaluated.
+
+**Live PTZ camera integration** — the `camera-live-connection`
+and `camera-live-session-health` API endpoints exist but are not
+surfaced in the creation flow. A creation component that
+auto-discovers ONVIF cameras on the network and imports their
+positions (from PTZ home positions or calibration) would
+significantly reduce manual setup for existing installations.
+
+### 15.5 Unexplored creation methods (new sources)
+
+Based on the external research, 5 new intake sources are
+plausible and technically feasible:
+
+1. **`bim`** — IFC file import via `web-ifc` (MIT). Walls, doors,
+   windows, room geometry from architectural models.
+2. **`lidar`** — iPhone LiDAR scan via Polycam/CamPlan protocol
+   or direct `ARKit` export. Floor plans + room dimensions.
+3. **`vms_discovery`** — ONVIF camera discovery on local network.
+   Imports camera positions, names, models, and MAC addresses.
+4. **`maps`** — Google Maps / OpenStreetMap integration for
+   outdoor camera planning (perimeter, parking lots). Creates
+   scene from real-world geo coordinates.
+5. **`photo_walk`** — Sequential photos or video walkthrough
+   → 3DGS scene reconstruction. A single session instead of the
+   current 7-stage `GuidedCaptureAssistant`.
+
+These would each require: a new `SiteIntakeSource` entry,
+a new tile in `SiteIntakeHub`, a new section in
+`site-compiler.ts`, and a `SecurityScene.source` value (per §3.1).
+Per Q-043, a unified creation shell would reduce the per-source
+integration cost.
+
+### 15.6 What should be done (priority-ordered)
+
+1. **Camera DB** — Without a vendor camera model database,
+   coverage calculations use user-supplied resolution + FOV +
+   range. Every competitor ships with a built-in camera DB.
+   Lightest path: bracket via `@sentineltwin/core` with a
+   `CameraModel { vendor, model, sensorSize, resolutions,
+   fovRange }` interface; populate with top-50 models embedded
+   JSON; the rest fetched live from a CDN-hosted index.
+
+2. **Mobile field survey** — System Surveyor's model (on-site
+   photo capture, camera annotation, cloud sharing) is the
+   highest-value add for field integrators. The
+   `GuidedCaptureAssistant` (7-stage) could be paired with a
+   lightweight "photo tag" flow that creates camera nodes on a
+   blank scene from phone photos with EXIF data.
+
+3. **BIM/IFC import** — Low-effest path to enterprise adoption.
+   `web-ifc` (MIT) works in-browser. Map IFC `IfcWall` →
+   `WallNode`, `IfcDoor` → `DoorNode`, `IfcSpace` → room
+   dimensions. Requires no server-side pipeline.
+
+4. **Google Maps / satellite outdoor** — IPVM Calculator's most
+   used feature. A "New Outdoor Site" creation path that starts
+   from a geolocation, creates a blank scene with scale derived
+   from satellite imagery, and places cameras with real-world
+   GPS orientation.
+
+5. **Auto BOM and quotation** — The `@sentineltwin/report`
+   package already has 6 report templates, 8 audiences, and
+   `RedundancyMatrixReport`. Adding a BOM template is a natural
+   extension: camera count × model → pricing → PDF export.
+
+6. **Multi-brand VMS export** — The `packages/report/src/`
+   export templates could include an Axis Optimizer / Milestone
+   / Genetec configuration export. Axis already exports to this
+   format. SentinelTwin's scene → camera list → VMS config
+   mapping is straightforward.
+
+7. **3DGS for scene reconstruction** — R&D track, not V0.x.
+   Requires evaluating MIT-licensed implementations, training
+   data, and integration with `ReconstructionCandidatePanel`.
+
+---
+
+## 16. Closing
 
 The current SentinelTwin creation surface is **complete in
 breadth but not yet in depth**: every source has a path, every

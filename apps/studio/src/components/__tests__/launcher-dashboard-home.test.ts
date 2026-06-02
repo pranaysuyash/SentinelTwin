@@ -15,7 +15,7 @@ describe("Studio dashboard launcher surface", () => {
     expect(source).toContain("Security Simulation Studio");
     expect(source).toContain("Run Simulation");
     expect(source).toContain("Coverage");
-    expect(source).toContain("SITE TWIN MEMORY SEARCH");
+    expect(source).toContain("SiteTwinSearchBar");
     expect(source).toContain("setTimelineFocusRequest");
     expect(source).toContain("branch:");
     expect(source).toContain("after:");

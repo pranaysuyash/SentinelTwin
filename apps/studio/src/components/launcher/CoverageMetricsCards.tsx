@@ -1,7 +1,7 @@
 "use client";
 
-import { cn } from "@/lib/utils";
-import type { SceneIssue } from "@sentineltwin/core";
+import { cn } from "@/lib/cn";
+import type { SecurityIssue } from "@/schema/security-scene";
 import { TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { HideSectionButton } from "./HideSectionButton";
@@ -21,7 +21,7 @@ export interface CoverageMetricsCardsProps {
   /** Total zones. */
   displayTotalZones: number;
   /** Worst quality value. */
-  displayWorstQualityValue?: string;
+  displayWorstQualityValue?: string | null;
   /** Map DORI/OODPCVS level -> tailwind text-* color class. */
   QUALITY_TEXT_COLOR: Record<string, string>;
   /** Label of the worst quality (e.g., "Identifying"). */
@@ -29,9 +29,9 @@ export interface CoverageMetricsCardsProps {
   /** User-defined primary risk or null. */
   displayPrimaryRisk: string | null;
   /** Worst open issue or null. */
-  displayWorstIssue: SceneIssue | null;
+  displayWorstIssue: SecurityIssue | null;
   /** List of open issues. */
-  displayIssues: SceneIssue[];
+  displayIssues: SecurityIssue[];
   /** Number of redundancy tests that failed. */
   displayRedundancyFailCount: number;
   /** Number of cameras with redundancy configured. */

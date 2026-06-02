@@ -16,14 +16,11 @@ import {
   Map as MapIcon,
   Play,
   Plus,
-  Radar,
   ScanSearch,
   Settings2,
   ShieldCheck,
   Sparkles,
   Sun,
-  Zap,
-  TriangleAlert,
 } from "lucide-react";
 
 import { cn } from "@/lib/cn";
@@ -38,6 +35,11 @@ import { OpenIssuesPanel } from "@/components/launcher/OpenIssuesPanel";
 import { SimulationAssumptionsPanel } from "@/components/launcher/SimulationAssumptionsPanel";
 import { ProjectSettingsPanel } from "@/components/launcher/ProjectSettingsPanel";
 import { WorkspaceLibraryPanel } from "@/components/launcher/WorkspaceLibraryPanel";
+import { CoverageMetricsCards } from "@/components/launcher/CoverageMetricsCards";
+import { QuickStartSection } from "@/components/launcher/QuickStartSection";
+import { SiteTwinSearchBar } from "@/components/launcher/SiteTwinSearchBar";
+import { DashboardOpenHint } from "@/components/launcher/DashboardOpenHint";
+import { HideSectionButton } from "@/components/launcher/HideSectionButton";
 import { useDashboardArchives } from "@/hooks/useDashboardArchives";
 import type { SecurityScene, SecurityIssue, SimulationResult, DoriQuality } from "@/schema/security-scene";
 import { QUALITY_TEXT_COLOR } from "@/lib/quality-display";
@@ -443,36 +445,6 @@ function ActionButton({
       </div>
       <ArrowRight className="h-4 w-4 flex-none text-[color:var(--st-accent)] transition-transform duration-200 group-hover:translate-x-1" />
     </button>
-  );
-}
-
-function DashboardOpenHint({
-  title,
-  description,
-  actions,
-}: {
-  title: string;
-  description: string;
-  actions: { id: DashboardSectionId; label: string; onClick: () => void }[];
-}) {
-  return (
-    <section className="rounded-[20px] border border-dashed border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
-      <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-sky-200">{title}</div>
-      <div className="mt-1 max-w-2xl text-xs leading-5 text-[color:var(--st-muted)]">{description}</div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {actions.map((action) => (
-          <button
-            key={action.id}
-            type="button"
-            onClick={action.onClick}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-sky-400/25 bg-sky-500/10 px-3 py-1.5 text-[11px] font-medium text-sky-100 transition-colors hover:border-sky-300/40 hover:bg-sky-500/16"
-          >
-            <Eye className="h-3 w-3" />
-            {action.label}
-          </button>
-        ))}
-      </div>
-    </section>
   );
 }
 
@@ -1562,6 +1534,7 @@ export function StudioDashboardHome({
               </div>
               ) : null}
 
+              {isDashboardSectionVisible("metrics") ? (
               <CoverageMetricsCards
                 displayCoverage={displayCoverage}
                 coverageTone={coverageTone}
@@ -1579,195 +1552,52 @@ export function StudioDashboardHome({
                 lastRunDetail={lastRunDetail}
                 onHide={() => setDashboardSectionVisible("metrics", false)}
               />
-
-              {isDashboardSectionVisible("workspaces") ? (
-                <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <div className="col-span-2 flex items-center justify-between lg:col-span-5">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--st-muted)]">Workspace shortcuts</div>
-                  <HideSectionButton label="workspace shortcuts" onClick={() => setDashboardSectionVisible("workspaces", false)} />
-                </div>
-                <button
-                  type="button"
-                  onClick={onOpenCoverageWorkspace}
-                  className="group flex items-center gap-3 rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-3.5 text-left transition-[transform,border-color,background-color] hover:border-emerald-400/30 hover:bg-emerald-500/5"
-                >
-                  <div className="flex h-9 w-9 flex-none items-center justify-center rounded-xl border border-emerald-400/25 bg-emerald-500/10">
-                    <MapIcon className="h-4.5 w-4.5 h-[18px] w-[18px] text-emerald-300" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[13px] font-semibold text-white">Open Coverage Workspace</div>
-                    <div className="mt-0.5 text-[11px] text-[color:var(--st-muted)]">Map & full analysis</div>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={onOpenCameraWall}
-                  className="group flex items-center gap-3 rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-3.5 text-left transition-[transform,border-color,background-color] hover:border-sky-400/30 hover:bg-sky-500/5"
-                >
-                  <div className="flex h-9 w-9 flex-none items-center justify-center rounded-xl border border-sky-400/25 bg-sky-500/10">
-                    <Camera className="h-[18px] w-[18px] text-sky-300" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[13px] font-semibold text-white">Open Camera Wall</div>
-                    <div className="mt-0.5 text-[11px] text-[color:var(--st-muted)]">Multi-camera view</div>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={onOpenPathReplay}
-                  className="group flex items-center gap-3 rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-3.5 text-left transition-[transform,border-color,background-color] hover:border-violet-400/30 hover:bg-violet-500/5"
-                >
-                  <div className="flex h-9 w-9 flex-none items-center justify-center rounded-xl border border-violet-400/25 bg-violet-500/10">
-                    <Play className="h-[18px] w-[18px] text-violet-300" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[13px] font-semibold text-white">Open Path Replay</div>
-                    <div className="mt-0.5 text-[11px] text-[color:var(--st-muted)]">Route visibility over time</div>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={onOpenCompareFixes}
-                  className="group flex items-center gap-3 rounded-[18px] border border-[color:var(--st-border)] bg-white/[0.03] px-4 py-3.5 text-left transition-[transform,border-color,background-color] hover:border-amber-400/30 hover:bg-amber-500/5"
-                >
-                  <div className="flex h-9 w-9 flex-none items-center justify-center rounded-xl border border-amber-400/25 bg-amber-500/10">
-                    <LayoutDashboard className="h-[18px] w-[18px] text-amber-300" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[13px] font-semibold text-white">Compare Fixes</div>
-                    <div className="mt-0.5 text-[11px] text-[color:var(--st-muted)]">Before / after analysis</div>
-                  </div>
-                </button>
-              </div>
               ) : null}
 
-              {showWorkspaceLibrary && isDashboardSectionVisible("library") ? (
-                <SiteTwinSearchBar
-                  workspaceMemoryQuery={workspaceMemoryQuery}
-                  setWorkspaceMemoryQuery={setWorkspaceMemoryQuery}
-                  workspaceMemoryResults={workspaceMemoryResults}
-                  isArchiveLoading={isArchiveLoading}
-                  hasArchiveLoadFailures={hasArchiveLoadFailures}
-                  archiveLoadFailureCount={archiveLoadFailureCount}
-                  archiveLoadFailureSources={archiveLoadFailureLabels}
-                  archiveLoadLoadingSources={archiveLoadInProgressLabels}
-                  setTimelineFocusRequest={setTimelineFocusRequest}
-                  onOpenReport={onOpenReport}
-                  onOpenMode={onOpenMode}
-                  savedProjects={savedProjects}
-                  onOpenScene={onOpenScene}
-                  onOpenStudio={onOpenStudio}
-                  scene={scene}
-                />
-              ) : null}
-
-              {(isDashboardSectionVisible("recent") || isDashboardSectionVisible("create")) ? (
-              <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
-                {isDashboardSectionVisible("recent") ? (
-                <div className="rounded-[16px] border border-[color:var(--st-border)] bg-[color:var(--st-panel-2)] p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[color:var(--st-muted)]">RECENT WORKSPACES</div>
-                    <HideSectionButton label="recent site twins" onClick={() => setDashboardSectionVisible("recent", false)} />
-                  </div>
-                  <div className="mt-2 grid grid-cols-4 gap-2">
-                    {compactRecentProjects.map((project) => {
-                      const recentScene = project.scene;
-                      const recentCoverage = hydrated
-                        ? recentScene.simulation?.totalCoveragePct ?? (recentScene.id === scene.id ? coverage : null)
-                        : null;
-                      const recentIssues = hydrated
-                        ? recentScene.simulation?.issues.length ?? (recentScene.id === scene.id ? issues.length : 0)
-                        : 0;
-                      return (
-                        <button
-                          key={recentScene.id}
-                          type="button"
-                          onClick={() => onOpenScene?.(recentScene)}
-                          className="group rounded-[12px] border border-[color:var(--st-border)] bg-white/[0.02] p-2 text-left transition-colors hover:border-sky-400/25 hover:bg-white/[0.04]"
-                        >
-                          <div className="h-[72px] overflow-hidden rounded-lg border border-white/8 bg-[#08111d]">
-                            <ScenePreview
-                              scene={recentScene}
-                              result={recentScene.simulation ?? (recentScene.id === scene.id ? result : null)}
-                              activePathId={recentScene.id === scene.id ? outcomeActivePathId : null}
-                              compact
-                              showLabels={false}
-                              hydrated={hydrated}
-                            />
-                          </div>
-                          <div className="mt-1.5 truncate text-[11px] font-semibold text-white">{recentScene.name}</div>
-                          <div className="mt-0.5 text-[10px] text-[color:var(--st-muted)]">
-                            {recentCoverage != null ? `${Math.round(recentCoverage)}% coverage` : "Pending"}
-                          </div>
-                          <div className="text-[10px] text-[color:var(--st-muted)]">
-                            {recentIssues} issues
-                          </div>
-                          <div suppressHydrationWarning className="mt-0.5 text-[9px] text-[color:var(--st-muted)]/70">
-                            {formatTime(project.updatedAt)}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                ) : null}
-
-                {isDashboardSectionVisible("create") ? (
-                <div className="rounded-[16px] border border-[color:var(--st-border)] bg-[color:var(--st-panel-2)] p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[color:var(--st-muted)]">QUICK START</div>
-                    <HideSectionButton label="create and import" onClick={() => setDashboardSectionVisible("create", false)} />
-                  </div>
-                  <div className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-4">
-                    <button
-                      type="button"
-                      onClick={onCreateScene}
-                      className="flex flex-col items-center gap-2 rounded-[12px] border border-[color:var(--st-border)] bg-white/[0.025] px-3 py-3 text-center transition-colors hover:border-sky-400/30 hover:bg-white/[0.04]"
-                    >
-                      <Plus className="h-5 w-5 text-sky-300" />
-                      <div>
-                        <div className="text-[12px] font-semibold text-white">New Blank Scene</div>
-                        <div className="mt-0.5 text-[10px] text-[color:var(--st-muted)]">Start from scratch</div>
-                      </div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={onImportScene}
-                      className="flex flex-col items-center gap-2 rounded-[12px] border border-[color:var(--st-border)] bg-white/[0.025] px-3 py-3 text-center transition-colors hover:border-sky-400/30 hover:bg-white/[0.04]"
-                    >
-                      <FileUp className="h-5 w-5 text-cyan-300" />
-                      <div>
-                        <div className="text-[12px] font-semibold text-white">Import Scene JSON</div>
-                        <div className="mt-0.5 text-[10px] text-[color:var(--st-muted)]">From file</div>
-                      </div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={onScanSite}
-                      className="flex flex-col items-center gap-2 rounded-[12px] border border-[color:var(--st-border)] bg-white/[0.025] px-3 py-3 text-center transition-colors hover:border-sky-400/30 hover:bg-white/[0.04]"
-                    >
-                      <ScanSearch className="h-5 w-5 text-emerald-300" />
-                      <div>
-                        <div className="text-[12px] font-semibold text-white">Scan a Site</div>
-                        <div className="mt-0.5 text-[10px] text-[color:var(--st-muted)]">Upload site photos</div>
-                      </div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={onAiDraft}
-                      className="flex flex-col items-center gap-2 rounded-[12px] border border-[color:var(--st-border)] bg-white/[0.025] px-3 py-3 text-center transition-colors hover:border-violet-400/30 hover:bg-white/[0.04]"
-                    >
-                      <Sparkles className="h-5 w-5 text-violet-300" />
-                      <div>
-                        <div className="text-[12px] font-semibold text-white">AI Layout Draft</div>
-                        <div className="mt-0.5 text-[10px] text-[color:var(--st-muted)]">Generate layout</div>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-                ) : null}
-              </div>
-              ) : null}
+              <QuickStartSection
+                showWorkspaces={isDashboardSectionVisible("workspaces")}
+                showRecent={isDashboardSectionVisible("recent")}
+                showCreate={isDashboardSectionVisible("create")}
+                onHideWorkspaces={() => setDashboardSectionVisible("workspaces", false)}
+                onHideRecent={() => setDashboardSectionVisible("recent", false)}
+                onHideCreate={() => setDashboardSectionVisible("create", false)}
+                onOpenCoverageWorkspace={onOpenCoverageWorkspace}
+                onOpenCameraWall={onOpenCameraWall}
+                onOpenPathReplay={onOpenPathReplay}
+                onOpenCompareFixes={onOpenCompareFixes}
+                compactRecentProjects={compactRecentProjects}
+                hydrated={hydrated}
+                scene={scene}
+                coverage={coverage}
+                result={result ?? scene.simulation ?? null}
+                outcomeActivePathId={outcomeActivePathId}
+                issues={issues}
+                onOpenScene={onOpenScene}
+                onCreateScene={onCreateScene}
+                onImportScene={onImportScene}
+                onScanSite={onScanSite}
+                onAiDraft={onAiDraft}
+                showWorkspaceLibrary={showWorkspaceLibrary && isDashboardSectionVisible("library")}
+                librarySlot={
+                  <SiteTwinSearchBar
+                    workspaceMemoryQuery={workspaceMemoryQuery}
+                    setWorkspaceMemoryQuery={setWorkspaceMemoryQuery}
+                    workspaceMemoryResults={workspaceMemoryResults}
+                    isArchiveLoading={isArchiveLoading}
+                    hasArchiveLoadFailures={hasArchiveLoadFailures}
+                    archiveLoadFailureCount={archiveLoadFailureCount}
+                    archiveLoadFailureSources={archiveLoadFailureLabels}
+                    archiveLoadLoadingSources={archiveLoadInProgressLabels}
+                    setTimelineFocusRequest={setTimelineFocusRequest}
+                    onOpenReport={onOpenReport}
+                    onOpenMode={onOpenMode}
+                    savedProjects={savedProjects}
+                    onOpenScene={onOpenScene}
+                    onOpenStudio={onOpenStudio}
+                    scene={scene}
+                  />
+                }
+              />
             </div>
             ) : null}
 
@@ -1950,142 +1780,3 @@ export function StudioDashboardHome({
   );
 }
 
-function HideSectionButton({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="inline-flex h-6 items-center rounded-[7px] border border-[color:var(--st-border)] bg-white/[0.03] px-2 text-[10px] text-[color:var(--st-muted)] transition-colors hover:border-sky-400/25 hover:text-white"
-      aria-label={`Hide ${label}`}
-      title={`Hide ${label}`}
-    >
-      Hide
-    </button>
-  );
-}
-
-
-type SiteTwinSearchBarProps = {
-  workspaceMemoryQuery: string;
-  setWorkspaceMemoryQuery: (value: string) => void;
-  workspaceMemoryResults: WorkspaceSearchHit[];
-  isArchiveLoading: boolean;
-  hasArchiveLoadFailures: boolean;
-  archiveLoadFailureCount: number;
-  setTimelineFocusRequest: (request: TimelineFocusRequest | null) => void;
-  onOpenReport: () => void;
-  onOpenMode: (viewMode: ViewMode, preset: WorkspacePreset, bottomTab?: BottomTab) => void;
-  savedProjects: SavedProjectRecord[];
-  onOpenScene?: (scene: SecurityScene) => void;
-  onOpenStudio: () => void;
-  scene: SecurityScene;
-};
-
-function SiteTwinSearchBar({
-  workspaceMemoryQuery,
-  setWorkspaceMemoryQuery,
-  workspaceMemoryResults,
-  isArchiveLoading,
-  hasArchiveLoadFailures,
-  archiveLoadFailureCount,
-  setTimelineFocusRequest,
-  onOpenReport,
-  onOpenMode,
-  savedProjects,
-  onOpenScene,
-  onOpenStudio,
-  scene,
-}: SiteTwinSearchBarProps) {
-  const [expanded, setExpanded] = useState(false);
-  const hasQuery = workspaceMemoryQuery.trim().length > 0;
-  const openHit = (hit: WorkspaceSearchHit) => {
-    if (hit.kind === "report") {
-      onOpenReport();
-      return;
-    }
-
-    if (hit.kind === "evidence" || hit.kind === "archive") {
-      if (hit.routeTab) {
-        onOpenMode("map", "coverage", hit.routeTab);
-      } else {
-        onOpenMode("map", "coverage", "timeline");
-      }
-      setTimelineFocusRequest({
-        timestamp: hit.timestamp,
-        query: workspaceMemoryQuery.trim() || hit.title,
-        branchLabel: hit.branchLabel ?? null,
-        eventId: hit.timelineEventId ?? null,
-        source: "launcher",
-      });
-      return;
-    }
-
-    if (hit.kind === "workspace") {
-      const target = savedProjects.find((project) => project.scene.id === hit.sceneId)?.scene
-        ?? (hit.sceneId === scene.id ? scene : null);
-      if (target) {
-        onOpenScene?.(target);
-      }
-      onOpenStudio();
-    }
-  };
-
-  return (
-    <section className="mt-4 rounded-[16px] border border-[color:var(--st-border)] bg-[color:var(--st-panel-2)] p-2.5">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">
-          <Radar className="h-3.5 w-3.5 text-sky-300" />
-          SITE TWIN MEMORY SEARCH
-        </div>
-        <div className="flex flex-wrap items-center gap-1 text-[9px] text-[color:var(--st-muted)]">
-          {isArchiveLoading ? <span className="rounded-full border border-sky-400/25 bg-sky-500/10 px-2 py-0.5">Loading archive sources</span> : null}
-          {hasArchiveLoadFailures ? (
-            <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-amber-100">
-              {archiveLoadFailureCount} archive source(s) failed
-            </span>
-          ) : null}
-        </div>
-        <button
-          type="button"
-          onClick={() => setExpanded((value) => !value)}
-          className="rounded-md border border-[color:var(--st-border)] bg-white/[0.03] px-2 py-1 text-[10px] text-[#c9d5eb] hover:border-sky-400/35 hover:text-white"
-        >
-          {expanded || hasQuery ? "Hide" : "Search"}
-        </button>
-      </div>
-      {expanded || hasQuery ? (
-        <div className="mt-2 space-y-1.5">
-          <div className="rounded-lg border border-[color:var(--st-border)] bg-white/[0.03] px-2.5 py-2">
-            <input
-              value={workspaceMemoryQuery}
-              onChange={(event) => setWorkspaceMemoryQuery(event.target.value)}
-              placeholder="Search Site Twin history, evidence, archives, and reports..."
-              className="w-full bg-transparent text-xs text-white placeholder:text-[color:var(--st-muted)] focus:outline-none"
-            />
-          </div>
-          {workspaceMemoryResults.length > 0 ? workspaceMemoryResults.map((hit) => (
-            <button
-              key={hit.id}
-              type="button"
-              onClick={() => openHit(hit)}
-              className="w-full rounded-xl border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2 text-left transition-colors hover:border-sky-400/30 hover:bg-white/[0.05]"
-            >
-              <div className="flex items-center gap-2">
-                <span className="rounded-full border border-sky-400/30 bg-sky-500/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.16em] text-sky-200">
-                  {hit.kind}
-                </span>
-                <span className="truncate text-xs font-semibold text-white">{hit.title}</span>
-              </div>
-              <div className="mt-1 text-[10px] text-[color:var(--st-muted)]">{hit.summary}</div>
-              <div className="mt-1 text-[10px] text-[#9db0cf]">{hit.targetSummary}</div>
-            </button>
-          )) : hasQuery ? (
-            <div className="rounded-xl border border-dashed border-[color:var(--st-border)] px-3 py-2 text-[10px] text-[color:var(--st-muted)]">
-              No matching Site Twin memory found for this query.
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-    </section>
-  );
-}

@@ -4,7 +4,7 @@ import type { SecurityScene, SimulationResult } from "@/schema/security-scene";
 export function buildEvidenceBundleJson(report: ReportData, scene: SecurityScene, simulation: SimulationResult) {
   return {
     metadata: {
-      generatedAt: report.generatedAt,
+      generatedAt: report.createdAt,
       sceneId: report.sceneId,
       title: report.title,
       audience: report.audience,
@@ -15,7 +15,7 @@ export function buildEvidenceBundleJson(report: ReportData, scene: SecurityScene
     truthLadder: report.truthLadder,
     evidenceTrail: report.evidenceTrail,
     temporalTwin: report.temporalTwin,
-    assumptions: report.assumptions,
+    assumptions: scene.assumptions,
     truthChecks: {
       forensicGuarantees: false,
       truthChecksPassed: scene.snapshots !== undefined && scene.snapshots.length > 0

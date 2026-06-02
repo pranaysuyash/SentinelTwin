@@ -2,15 +2,17 @@
 
 import { useMemo } from "react";
 import { cn } from "@/lib/cn";
-import { coverageTone } from "@/lib/coverage-toning";
 import { getDemoWorkspaceDetail, getDemoWorkspaceTitle } from "@/lib/workspace-catalog";
-import { formatDoriStandard } from "@/lib/format-dori-standard";
-import { HideSectionButton } from "@/components/launcher/HideSectionButton";
 import { ScenePreview } from "@/components/launcher/ScenePreview";
 import type { SavedProjectRecord } from "@/store/studio-store";
-import type { SecurityScene, SimulationResult, DoriQuality } from "@/schema/security-scene";
+import type { SecurityScene, SimulationResult } from "@/schema/security-scene";
 
-// Define these locally to keep extracted component standalone
+function coverageTone(pct: number) {
+  if (pct >= 80) return "text-emerald-300";
+  if (pct >= 60) return "text-amber-300";
+  return "text-red-300";
+}
+
 const SOURCE_LABELS: Record<string, string> = {
   demo: "Reference Demo",
   user: "My Sites",
@@ -41,7 +43,7 @@ export type WorkspaceLibraryPanelProps = {
   onScanSite?: () => void;
   onGuidedScanAssistant?: () => void;
   onAiDraft?: () => void;
-  onUpdateProjectMetadata?: StudioDashboardHomeProps["onUpdateProjectMetadata"];
+  onUpdateProjectMetadata?: (sceneId: string, patch: Partial<Pick<SavedProjectRecord, "folder" | "tags" | "pinned" | "workspaceOrganization" | "workspaceOwner" | "workspaceVisibility" | "lastOpenedAt">>) => void;
   onDuplicateProject?: (sceneId: string) => void;
   onRenameProject?: (sceneId: string, nextName: string) => void;
   onSelectProject?: (id: string | null) => void;
@@ -69,6 +71,7 @@ export function WorkspaceLibraryPanel({
   onAiDraft,
   onDuplicateProject,
   onRenameProject,
+  onUpdateProjectMetadata,
 }: WorkspaceLibraryPanelProps) {
   const projectRecords = (visibleProjects ?? savedProjects).slice(0, 8);
   const projects = projectRecords.length > 0
@@ -157,3 +160,18 @@ export function WorkspaceLibraryPanel({
                 </button>
                 <div className="mt-2 flex flex-wrap gap-1 text-[9px]">
                   <button type="button" onClick={() => openScene(projectScene)} className="rounded border border-emerald-400/25 bg-emerald-500/10 px-1.5 py-0.5 text-emerald-100">Open Studio</button>
+                  <button type="button" onClick={() => onRenameProject?.(projectScene.id, `${projectScene.name} Copy`)} className="rounded border border-white/15 px-1.5 py-0.5 text-white/80">Duplicate</button>
+                  <button type="button" onClick={() => onDuplicateProject?.(projectScene.id)} className="rounded border border-white/15 px-1.5 py-0.5 text-white/80">Quick Rename</button>
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="col-span-full rounded-[16px] border border-dashed border-[color:var(--st-border)] bg-white/[0.02] px-3 py-4 text-xs text-[color:var(--st-muted)]">
+            No projects yet. Use Create Site Twin, Scan, Import, or Layout Draft to get started.
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}

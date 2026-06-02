@@ -6,6 +6,8 @@ export type {
   RedundancyMatrixReport,
 } from "./redundancy-matrix";
 
+import type { SecurityScene, SimulationResult, DoriQuality } from "@sentineltwin/core";
+
 export type ReportAudience =
   | "operator"
   | "auditor"
@@ -33,8 +35,146 @@ export type ReportExportPreset = {
   summary: string;
 };
 
-export type ReportData = any;
-export type CompareReportData = any;
+export type ReportData = {
+  sceneId: string;
+  siteName: string;
+  sceneName: string;
+  title: string;
+  createdAt: number;
+  simulation: SimulationResult;
+  options: ReportBuildOptions;
+  dimensions: { width: number; depth: number; height: number };
+  audience: ReportAudience;
+  audienceLabel: string;
+  audienceFraming: string;
+  audiencePolicy: {
+    disclosureLevel: string;
+    visibleSections: string[];
+    withheldSections: string[];
+    disclosureSummary: string;
+  };
+  standardsRef: string;
+  template: { id: string; standardLabel: string; sections: string[] };
+  summary: Record<string, number>;
+  zones: ReportZoneEntry[];
+  cameras: ReportCameraEntry[];
+  issues: ReportIssueEntry[];
+  recommendations: ReportRecommendationEntry[];
+  codeCompliant: boolean;
+  meetsModeledZoneRequirements: boolean;
+  evidenceTrail: { changeLogEntryCount: number; evidenceEntryCount: number; sensorEvidenceCount: number; recentEntries: ReportEvidenceEntry[] };
+  truthLadder: { nodeCount: number; reviewedNodeCount: number; verifiedNodeCount: number; sourceTraceCount: number; suspectGeometryCount: number; invalidGeometryCount: number; summary: string };
+  provenance: { sceneSourceLabel: string; sceneSource: string; nodeCount: number; sourceNotes: string[]; confidenceNotes: string[] };
+  novelAlgorithms: {
+    coverageEntropy: { cellCount: number; entropyScore: number; dominantQuality: string };
+    coverageUncertainty: { sampleCount: number; averageUncertainty: number; highUncertaintyPct: number };
+    postureVariation: { profiles: { label: string; coveragePct: number }[]; largestDrop: number };
+    blindRegions: unknown[];
+    blindSpotFingerprint: { regions?: unknown[]; fingerprint: string; regionCount?: number; signature?: string; [key: string]: unknown };
+    placementOracle: { bestScore?: number; candidateCount: number; sampleCount: number; [key: string]: unknown };
+  };
+  commercialContext: ReportAudienceCommercialFraming;
+  redundancyMatrix: { cameraRows: ReportCameraRow[]; vulnerableZones: ReportVulnerableZone[] };
+  temporalTwin?: Record<string, unknown>;
+  temporalProfile?: { vulnerabilityWindowCount?: number; safestPeriods?: unknown[]; worstCoverage?: number; [key: string]: unknown };
+  adversarialPath?: { exposureScore?: number; detectionProbability?: number; totalDistance?: number; waypoints?: unknown[]; [key: string]: unknown };
+  findings: unknown[];
+  visibility: ReportVisibility;
+  _isCompareSide?: boolean;
+};
+
+export type CompareReportData = {
+  before: ReportData;
+  after: ReportData;
+  options: ReportBuildOptions;
+  deltas: { totalCoveragePctDelta: number; zonesPassedDelta: number };
+  zoneChanges: ReportZoneChange[];
+};
+
+type ReportBuildOptions = {
+  audience?: ReportAudience;
+  templateId?: ReportStandardTemplateId;
+  title?: string;
+  visibility?: ReportVisibility;
+  operationalEvidenceEvents?: ReportEvidenceEntry[];
+  temporalProfile?: { vulnerabilityWindowCount?: number; safestPeriods?: unknown[]; worstCoverage?: number; [key: string]: unknown };
+  adversarialPath?: { exposureScore?: number; detectionProbability?: number; totalDistance?: number; waypoints?: unknown[]; [key: string]: unknown };
+};
+
+type ReportZoneEntry = {
+  id: string;
+  label: string;
+  status: string;
+  targetType: string;
+  targetRequirementQuality: string;
+  targetRequirementPpmThreshold: string;
+  targetRequirementRationale: string;
+  coveragePct: number;
+  coveringCameras: string[];
+};
+
+type ReportCameraEntry = {
+  id: string;
+  coveragePct: number;
+  zonesCovered: string[];
+  bestZoneQuality: string;
+  zonesFailed: number;
+  topZoneQuality: string;
+};
+
+type ReportIssueEntry = {
+  severity: string;
+  description: string;
+  area: string;
+  category: string;
+  recommendation: string;
+};
+
+type ReportRecommendationEntry = {
+  description: string;
+  costCategory: string;
+  verified: boolean;
+  type: string;
+};
+
+type ReportEvidenceEntry = {
+  title?: string;
+  published?: boolean;
+  createdAt?: number;
+  confidence?: string;
+  details?: string;
+  anchorId?: string;
+  description?: string;
+  evidenceUri?: string;
+};
+
+type ReportCameraRow = {
+  cameraId: string;
+  cameraName: string;
+  singlePointZones: string[];
+  redundantZones: string[];
+  vulnerableZones: string[];
+};
+
+type ReportVulnerableZone = {
+  zoneId: string;
+  zoneLabel: string;
+  requiredQuality: string;
+  actualQuality: string;
+  coveringCameras: string[];
+};
+
+type ReportZoneChange = {
+  zoneId: string;
+  zoneLabel: string;
+  changed: boolean;
+  beforeQuality: string;
+  afterQuality: string;
+  beforeStatus: string;
+  afterStatus: string;
+  coveringCamerasBefore: string[];
+  coveringCamerasAfter: string[];
+};
 
 type ReportAudienceCommercialFraming = {
   distributionMessage: string;
@@ -342,50 +482,56 @@ function evidenceTrail(cl: string[], sid?: string) {
   return { changeLogEntryCount: cl.length, evidenceEntryCount: ev.length, sensorEvidenceCount: se.length, recentEntries: re };
 }
 
-function truthLadder(scene: any) {
+function truthLadder(scene: SecurityScene) {
   const all = [...(scene.walls ?? []), ...(scene.cameras ?? []), ...(scene.obstructions ?? []), ...(scene.criticalZones ?? []), ...(scene.doors ?? []), ...(scene.windows ?? [])];
-  const r = all.filter((n: any) => n.reviewStatus !== "unreviewed").length;
-  const v = all.filter((n: any) => n.reviewStatus === "verified" || n.reviewStatus === "calibrated").length;
-  const st = all.filter((n: any) => n.sourceTrace && n.sourceTrace.length > 0).length;
-  const sg = all.filter((n: any) => n.geometryValidity === "suspect").length;
-  const iv = all.filter((n: any) => n.geometryValidity === "invalid").length;
+  const r = all.filter((n) => n.reviewStatus !== "unreviewed").length;
+  const v = all.filter((n) => n.reviewStatus === "verified" || n.reviewStatus === "calibrated").length;
+  const st = all.filter((n) => n.sourceTrace && n.sourceTrace.length > 0).length;
+  const sg = all.filter((n) => n.geometryValidity === "suspect").length;
+  const iv = all.filter((n) => n.geometryValidity === "invalid").length;
   const n = all.length;
   return { nodeCount: n, reviewedNodeCount: r, verifiedNodeCount: v, sourceTraceCount: st, suspectGeometryCount: sg, invalidGeometryCount: iv, summary: v === n ? `${n}/${n} nodes fully verified.` : `${v}/${n} nodes verified, ${st} with source traces.` };
 }
 
 // ---- buildReportData ---- //
 
-export function buildReportData(scene: any, simulationResult: any, options?: any): ReportData {
+export function buildReportData(scene: SecurityScene, simulationResult: SimulationResult, options?: ReportBuildOptions): ReportData {
   const opt = options ?? {};
-  const sim = simulationResult ?? {};
+  type SimExtended = SimulationResult & {
+    coverageEntropy?: { cellCount: number; entropyScore: number; dominantQuality: string };
+    coverageUncertainty?: { sampleCount: number; averageUncertainty: number; highUncertaintyPct: number };
+    coveragePostureVariation?: { profiles: { label: string; coveragePct: number }[]; largestDrop: number };
+    analysedBlindSpots?: unknown[];
+  };
+  const sim = (simulationResult ?? {}) as SimExtended;
   const audience = opt.audience ?? "operator";
   const templateId = opt.templateId ?? "general-audit";
   const cr = sim.criticalZoneResults ?? [];
-  const zonesFailing = cr.filter((z: any) => z.status !== "pass").length;
+  const zonesFailing = cr.filter((z) => z.status !== "pass").length;
   const compliant = zonesFailing === 0;
   const summary = {
     totalCoveragePct: sim.totalCoveragePct ?? 0, blindspotPct: sim.blindspotPct ?? 0,
     recognitionAreaPct: sim.recognitionAreaPct ?? 0, identificationAreaPct: sim.identificationAreaPct ?? 0,
-    zonesTotal: cr.length, zonesPassing: cr.filter((z: any) => z.status === "pass").length,
+    zonesTotal: cr.length, zonesPassing: cr.filter((z) => z.status === "pass").length,
     sensorCount: scene?.sensors?.length ?? 0, issuesCount: sim.issues?.length ?? 0,
     recommendationsCount: sim.recommendations?.length ?? 0, coveragePct: sim.totalCoveragePct ?? 0,
   };
-  const zones = (cr).map((z: any) => {
-    const zn = scene.criticalZones?.find((x: any) => x.id === z.zoneId);
+  const zones = cr.map((z) => {
+    const zn = scene.criticalZones?.find((x) => x.id === z.zoneId);
     const tq = z.requiredQuality ?? zn?.requiredQuality ?? "recognition";
     return { id: z.zoneId, label: z.label ?? zn?.label ?? z.zoneId, status: z.status ?? "fail", targetType: zn?.targetType ?? "person_detection", targetRequirementQuality: tq, targetRequirementPpmThreshold: tq === "recognition" ? "medium" : tq === "identification" ? "high" : "low", targetRequirementRationale: `Zone requires ${tq} quality.`, coveragePct: 0, coveringCameras: z.coveringCameras ?? [] };
   });
-  const cameras = (sim.cameraResults ?? []).map((c: any) => {
+  const cameras = (sim.cameraResults ?? []).map((c) => {
     const zc = c.qualityByZone ? Object.keys(c.qualityByZone) : [];
-    const zf = zc.filter((zid: string) => (QUALITY_RANK[c.qualityByZone?.[zid] ?? "none"] ?? 0) < 2);
-    const best = zc.length > 0 ? zc.reduce((b: string, zid: string) => (QUALITY_RANK[c.qualityByZone?.[zid] ?? "none"] ?? 0) > (QUALITY_RANK[b] ?? 0) ? zid : b, "none") : "none";
+    const zf = zc.filter((zid) => (QUALITY_RANK[c.qualityByZone?.[zid] ?? "none"] ?? 0) < 2);
+    const best = zc.length > 0 ? zc.reduce((b, zid) => (QUALITY_RANK[c.qualityByZone?.[zid] ?? "none"] ?? 0) > (QUALITY_RANK[b] ?? 0) ? zid : b, "none") : "none";
     return { id: c.cameraId, coveragePct: c.coveragePct ?? 0, zonesCovered: zc, bestZoneQuality: best, zonesFailed: zf.length, topZoneQuality: best };
   });
-  const issues = (sim.issues ?? []).map((i: any) => ({
+  const issues = (sim.issues ?? []).map((i) => ({
     severity: i.severity ?? (i.category === "blindspot" ? "high" : "medium"), description: i.description ?? "Unknown issue",
-    area: i.zoneId ?? i.area ?? "general", category: i.category ?? "quality_fail", recommendation: i.description ?? "",
+    area: i.affectedZones[0] ?? "general", category: i.category ?? "quality_fail", recommendation: i.description ?? "",
   }));
-  const recs = (sim.recommendations ?? []).map((r: any) => ({
+  const recs = (sim.recommendations ?? []).map((r) => ({
     description: r.description ?? "No description", costCategory: r.costCategory ?? "medium", verified: r.verified === true || r.verified === false ? r.verified : false, type: r.type ?? "other",
   }));
   const novelAlgorithms = {
@@ -396,9 +542,9 @@ export function buildReportData(scene: any, simulationResult: any, options?: any
     placementOracle: sim.placementOracle ?? { bestScore: 0.7, candidateCount: 1, sampleCount: 1 },
   };
   const vulnerableZones = (() => {
-    const fz = cr.filter((z: any) => z.status !== "pass");
+    const fz = cr.filter((z) => z.status !== "pass");
     if (fz.length > 0) return fz;
-    const sc = cr.filter((z: any) => (z.coveringCameras ?? []).length <= 1);
+    const sc = cr.filter((z) => (z.coveringCameras ?? []).length <= 1);
     if (sc.length > 0) return sc;
     return cr.slice(0, 1);
   })();
@@ -421,12 +567,12 @@ export function buildReportData(scene: any, simulationResult: any, options?: any
   const policy = getAudiencePolicy(audience);
   const template = (() => {
     const info = { "oodpcvs-audit": { standardLabel: "IEC 62676-4:2025", sections: ["Overview", "Scope", "Normative References", "OODPCVS Assessment", "Coverage Analysis", "Zone Requirements", "Conclusions"] }, "dori-audit": { standardLabel: "IEC 62676-4:2014 (DORI)", sections: ["Overview", "DORI Assessment", "Coverage Analysis", "Zone Requirements", "Conclusions"] }, "general-audit": { standardLabel: "IEC 62676-4:2025", sections: ["Overview", "Coverage Analysis", "Zone Requirements", "Conclusions"] } };
-    const t = (info as any)[templateId] ?? info["general-audit"];
+    const t = info[templateId as keyof typeof info] ?? info["general-audit"];
     return { id: templateId, standardLabel: t.standardLabel, sections: t.sections };
   })();
   const temporalTwin = (() => {
     if (!opt.operationalEvidenceEvents) return undefined;
-    const pe = opt.operationalEvidenceEvents.filter((e: any) => e.published === true);
+    const pe = (opt.operationalEvidenceEvents ?? []).filter((e) => e.published === true);
     const lp = pe[pe.length - 1];
     if (!lp) return undefined;
     return { publishedCheckpointCount: pe.length, latestPublishedCheckpoint: { title: lp.title ?? "Published checkpoint" }, latestPublishedCheckpointProvenance: { isExactSnapshot: true, sourceEventTitle: lp.title ?? "Published checkpoint" }, latestPublishedCheckpointAgeMs: Date.now() - (lp.createdAt ?? Date.now()) };
@@ -453,7 +599,7 @@ export function buildReportData(scene: any, simulationResult: any, options?: any
     provenance: { sceneSourceLabel: sourceLabel(scene?.source ?? "manual"), sceneSource: scene?.source ?? "manual", nodeCount: [...(scene?.walls ?? []), ...(scene?.cameras ?? []), ...(scene?.obstructions ?? []), ...(scene?.criticalZones ?? [])].length, sourceNotes: [`Scene source: ${scene?.source ?? "manual"}`], confidenceNotes: [] },
     novelAlgorithms,
     commercialContext: audienceCommercialContext,
-    redundancyMatrix: { cameraRows: (sim.cameraResults ?? []).map((c: any) => ({ cameraId: c.cameraId, cameraName: c.cameraId, singlePointZones: [], redundantZones: [], vulnerableZones: [] })), vulnerableZones: vulnerableZones.map((z: any) => ({ zoneId: z.zoneId, zoneLabel: z.label ?? z.zoneId, requiredQuality: z.requiredQuality ?? "recognition", actualQuality: z.actualQuality ?? "none", coveringCameras: z.coveringCameras ?? [] })) },
+    redundancyMatrix: { cameraRows: (sim.cameraResults ?? []).map((c) => ({ cameraId: c.cameraId, cameraName: c.cameraId, singlePointZones: [], redundantZones: [], vulnerableZones: [] })), vulnerableZones: vulnerableZones.map((z) => ({ zoneId: z.zoneId, zoneLabel: z.label ?? z.zoneId, requiredQuality: z.requiredQuality ?? "recognition", actualQuality: z.actualQuality ?? "none", coveringCameras: z.coveringCameras ?? [] })) },
     temporalTwin, temporalProfile: opt.temporalProfile ? { vulnerabilityWindowCount: opt.temporalProfile.vulnerabilityWindowCount ?? 0, safestPeriods: opt.temporalProfile.safestPeriods ?? [], worstCoverage: opt.temporalProfile.worstCoverage ?? 0 } : undefined,
     adversarialPath: opt.adversarialPath ? { exposureScore: opt.adversarialPath.exposureScore ?? 0, detectionProbability: opt.adversarialPath.detectionProbability ?? 0, totalDistance: opt.adversarialPath.totalDistance ?? 0, waypoints: opt.adversarialPath.waypoints ?? [] } : undefined,
     findings: [], sceneName: scene?.name ?? "Untitled Scene", visibility: "internal",
@@ -463,23 +609,23 @@ export function buildReportData(scene: any, simulationResult: any, options?: any
 /** @deprecated Use buildCompareReportData instead */
 export const buildCompareReport = buildCompareReportData;
 
-export function buildCompareReportData(sceneA: any, resultA: any, sceneB: any, resultB: any, options?: any): CompareReportData {
+export function buildCompareReportData(sceneA: SecurityScene, resultA: SimulationResult, sceneB: SecurityScene, resultB: SimulationResult, options?: ReportBuildOptions): CompareReportData {
   const before = buildReportData(sceneA, resultA, options);
   const after = buildReportData(sceneB, resultB, options);
   const zonesA = resultA?.criticalZoneResults ?? [];
   const zonesB = resultB?.criticalZoneResults ?? [];
-  const zoneChanges = zonesA.map((za: any) => {
-    const zb = zonesB.find((z: any) => z.zoneId === za.zoneId);
+  const zoneChanges = zonesA.map((za) => {
+    const zb = zonesB.find((z) => z.zoneId === za.zoneId);
     return { zoneId: za.zoneId, zoneLabel: za.label ?? za.zoneId, changed: (za.status === "pass") !== (zb?.status === "pass"), beforeQuality: za.actualQuality ?? "none", afterQuality: zb?.actualQuality ?? "none", beforeStatus: za.status ?? "fail", afterStatus: zb?.status ?? "fail", coveringCamerasBefore: za.coveringCameras ?? [], coveringCamerasAfter: zb?.coveringCameras ?? [] };
   });
   return {
     before, after, options: options ?? {},
-    deltas: { totalCoveragePctDelta: Number(((resultB?.totalCoveragePct ?? 0) - (resultA?.totalCoveragePct ?? 0)).toFixed(1)), zonesPassedDelta: zonesB.filter((z: any) => z.status === "pass").length - zonesA.filter((z: any) => z.status === "pass").length },
+    deltas: { totalCoveragePctDelta: Number(((resultB?.totalCoveragePct ?? 0) - (resultA?.totalCoveragePct ?? 0)).toFixed(1)), zonesPassedDelta: zonesB.filter((z) => z.status === "pass").length - zonesA.filter((z) => z.status === "pass").length },
     zoneChanges,
   };
 }
 
-export function applyReportVisibility<T>(report: any, visibility: ReportVisibility): any {
+export function applyReportVisibility<T extends ReportData>(report: T, visibility: ReportVisibility): T {
   const framing = getAudienceCommercialFraming(report.audience ?? "operator");
   const withContext = {
     ...report,
@@ -495,7 +641,7 @@ export function applyReportVisibility<T>(report: any, visibility: ReportVisibili
     ...withContext,
     visibility: "shared",
     provenance: { ...report.provenance, confidenceNotes: [], sourceNotes: report.provenance?.sourceNotes ?? [] },
-    evidenceTrail: { ...report.evidenceTrail, recentEntries: (report.evidenceTrail?.recentEntries ?? []).map((e: any) => ({ ...e, confidence: "withheld", details: "Redacted in shared export." })) },
+    evidenceTrail: { ...report.evidenceTrail, recentEntries: (report.evidenceTrail?.recentEntries ?? []).map((e) => ({ ...e, confidence: "withheld", details: "Redacted in shared export." })) },
   };
   if (visibility === "privacy_safe")
     return {
@@ -511,7 +657,7 @@ function esc(s: string): string { return s.replace(/&/g, "&amp;").replace(/</g, 
 
 // ---- Markdown export ---- //
 
-export function exportAsMarkdown(report: any): string {
+export function exportAsMarkdown(report: ReportData): string {
   const s = report.summary ?? {};
   const lines: string[] = [];
   lines.push(`# ${report.title ?? "Security Audit Report"}`, `**Scene:** ${report.siteName ?? report.sceneName ?? "Untitled Scene"}`);
@@ -573,12 +719,12 @@ export function exportAsMarkdown(report: any): string {
 
 // ---- HTML export ---- //
 
-export function exportAsHtml(report: any): string {
+export function exportAsHtml(report: ReportData): string {
   const sid = report.sceneId ?? ""; const s = report.summary ?? {}; const novel = report.novelAlgorithms ?? {}; const tl = report.truthLadder ?? {}; const et = report.evidenceTrail ?? {}; const redun = report.redundancyMatrix ?? {};
   let zt = ""; if ((report.zones ?? []).length > 0) { zt = "<table><thead><tr><th>Zone</th><th>Status</th><th>Required Quality</th></tr></thead><tbody>"; for (const z of report.zones ?? []) zt += `<tr><td>${esc(z.label)}</td><td>${esc(z.status)}</td><td>${esc(z.targetRequirementQuality)}</td></tr>`; zt += "</tbody></table>"; }
   let cr = ""; for (const c of report.cameras ?? []) cr += `<tr><td>${esc(c.id)}</td><td>${c.coveragePct}%</td><td>${esc(c.bestZoneQuality)}</td><td>${c.zonesFailed}</td></tr>`;
   let ih = ""; for (const issue of report.issues ?? []) ih += `<li><strong>[${esc(issue.severity)}]</strong> ${esc(issue.description)}</li>`;
-  let eeh = ""; for (const entry of et.recentEntries ?? []) eeh += `<tr><td><a id="${entry.anchorId ?? "evidence-0"}">${esc(entry.title)}</a></td><td>${esc(entry.description ?? "")}</td><td>${esc(entry.confidence ?? "high")}</td></tr>`;
+  let eeh = ""; for (const entry of et.recentEntries ?? []) eeh += `<tr><td><a id="${entry.anchorId ?? "evidence-0"}">${esc(entry.title ?? "")}</a></td><td>${esc(entry.description ?? "")}</td><td>${esc(entry.confidence ?? "high")}</td></tr>`;
   return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>${esc(report.siteName ?? report.sceneName ?? "Untitled Scene")} — Report</title></head><body>
 <h1>${esc(report.title ?? "Security Audit Report")}</h1><p>Scene: ${esc(report.siteName ?? report.sceneName ?? "Untitled Scene")}</p>
 <h2>Compliance</h2><p><strong>IEC 62676-4:2025</strong></p><p>${s.zonesPassing === s.zonesTotal ? "Meets modeled zone requirements" : "Does not fully meet modeled zone requirements"}</p>
@@ -599,9 +745,9 @@ ${eeh ? `<table><thead><tr><th>Event</th><th>Details</th><th>Confidence</th></tr
 <h2>Coverage Uncertainty</h2><p>${novel.coverageUncertainty?.sampleCount ?? 0} samples</p>
 <h2>Coverage Entropy</h2><p>dominant quality: ${novel.coverageEntropy?.dominantQuality ?? "none"}</p>
 <h2>Coverage Posture Variation</h2><p>largest drop: ${novel.postureVariation?.largestDrop ?? 0}</p>
-<h2>Blind Spot Topology</h2><p>critical: ${(novel.blindRegions ?? []).filter((r: any) => r.severity === "critical").length}</p>
+<h2>Blind Spot Topology</h2><p>critical: ${((novel.blindRegions as Record<string, unknown>[] | undefined) ?? []).filter((r) => (r as Record<string, unknown>).severity === "critical").length}</p>
 <h2>Blind Spot Fingerprint</h2><p>Fingerprint: ${novel.blindSpotFingerprint?.fingerprint ?? "unknown"}</p><p>Regions: ${(novel.blindSpotFingerprint?.regions ?? []).length}</p>
-<h2>Redundancy Matrix</h2><p>Vulnerable Zones: ${(redun.vulnerableZones ?? []).length}</p><p>Single-point zones: ${(redun.vulnerableZones ?? []).filter((z: any) => (z.coveringCameras ?? []).length <= 1).length}</p>
+<h2>Redundancy Matrix</h2><p>Vulnerable Zones: ${(redun.vulnerableZones ?? []).length}</p><p>Single-point zones: ${(redun.vulnerableZones ?? []).filter((z) => (z.coveringCameras ?? []).length <= 1).length}</p>
 <h2><div>Sensors</div></h2><p>Total: ${s.sensorCount ?? 0}</p>
 ${report.adversarialPath ? `<h2>Coverage Failure Replay</h2><p>Exposure score: ${report.adversarialPath.exposureScore}</p>` : ""}
 ${report.temporalProfile ? `<h2>Temporal Security Profile</h2><p>Vulnerability windows: ${report.temporalProfile.vulnerabilityWindowCount}</p>` : ""}
@@ -611,7 +757,7 @@ ${report.temporalProfile ? `<h2>Temporal Security Profile</h2><p>Vulnerability w
 
 // ---- Text export ---- //
 
-export function exportAsText(report: any): string {
+export function exportAsText(report: ReportData): string {
   const s = report.summary ?? {};
   const lines: string[] = [];
   lines.push(`SentinelTwin Report — ${report.siteName ?? report.sceneName ?? "Untitled Scene"}`, "");
@@ -635,7 +781,7 @@ export function exportAsText(report: any): string {
   if (novel.blindSpotFingerprint) { lines.push(`Blind Spot Fingerprint: Fingerprint: ${novel.blindSpotFingerprint.fingerprint ?? "unknown"}`, `Blind Spot Fingerprint: Regions: ${(novel.blindSpotFingerprint.regions ?? []).length}`); }
   if (novel.placementOracle) lines.push(`Placement Oracle: Best score ${novel.placementOracle.bestScore ?? 0}`);
   if (novel.blindRegions && novel.blindRegions.length > 0) lines.push("Blind Spot Topology: critical regions present");
-  lines.push("", "=== REDUNDANCY MATRIX ===", `SPOF zones: ${(report.redundancyMatrix?.vulnerableZones ?? []).filter((z: any) => (z.coveringCameras ?? []).length <= 1).length}`, "Camera matrix: active", "");
+  lines.push("", "=== REDUNDANCY MATRIX ===", `SPOF zones: ${(report.redundancyMatrix?.vulnerableZones ?? []).filter((z) => (z.coveringCameras ?? []).length <= 1).length}`, "Camera matrix: active", "");
   lines.push("=== PROVENANCE ===", `Source: ${report.provenance?.sceneSourceLabel ?? "Unknown"}`, "Source Counts: " + (report.provenance?.nodeCount ?? 0) + " nodes", "");
   const tl = report.truthLadder ?? {};
   lines.push("=== TRUTH LADDER ===", `Reviewed Nodes: ${tl.reviewedNodeCount ?? 0}/${tl.nodeCount ?? 0}`, "");
@@ -648,7 +794,7 @@ export function exportAsText(report: any): string {
 
 // ---- Compare exports ---- //
 
-export function exportCompareAsMarkdown(compare: any): string {
+export function exportCompareAsMarkdown(compare: CompareReportData): string {
   const b = compare.before ?? {}; const a = compare.after ?? {}; const d = compare.deltas ?? {};
   const lines = ["# Before/After Comparison", ""];
   if (compare.options?.audience) lines.push(`**Audience:** ${compare.options.audience === "auditor" ? "Auditor" : compare.options.audience}`, "");
@@ -666,7 +812,7 @@ export function exportCompareAsMarkdown(compare: any): string {
   return lines.join("\n");
 }
 
-export function exportCompareAsHtml(compare: any, _visuals?: any): string {
+export function exportCompareAsHtml(compare: CompareReportData, _visuals?: unknown): string {
   const b = compare.before ?? {}; const a = compare.after ?? {}; const d = compare.deltas ?? {};
   const sB = b.sceneId ?? ""; const sA = a.sceneId ?? "";
   return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Before/After Comparison</title></head><body>

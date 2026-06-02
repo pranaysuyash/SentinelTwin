@@ -40,10 +40,6 @@ export const SCENE_SOURCE_META: Record<
   },
 };
 
-export function normalizeSceneSource(source: SecurityScene["source"]): SecurityScene["source"] {
-  return source;
-}
-
 export function getSceneSourceMeta(source: SecurityScene["source"]) {
-  return SCENE_SOURCE_META[normalizeSceneSource(source)];
+  return SCENE_SOURCE_META[source];
 }

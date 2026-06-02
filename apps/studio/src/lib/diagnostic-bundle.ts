@@ -529,7 +529,16 @@ export function stringifyDiagnosticBundle(bundle: DiagnosticBundle) {
 
 export function buildSupportBundle(input: SupportBundleInput): SupportBundle {
   const diagnostic = buildDiagnosticBundle(input);
-  const report = input.simulationResult ? buildReportData(input.scene, input.simulationResult, { operationalEvidenceEvents: input.operationalEvidenceEvents }) : null;
+  const report = input.simulationResult ? buildReportData(input.scene, input.simulationResult, {
+    operationalEvidenceEvents: input.operationalEvidenceEvents.map((event) => ({
+      title: event.title,
+      description: event.details,
+      details: event.details,
+      anchorId: event.id,
+      published: event.lifecycleStage === "published",
+      createdAt: event.timestamp,
+    })),
+  }) : null;
   const reportEvidence = report
     ? buildReportEvidenceBundle({
         scene: input.scene,

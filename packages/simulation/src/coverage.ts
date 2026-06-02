@@ -157,41 +157,8 @@ function getLightOcclusion(
   raycaster: THREE.Raycaster,
   visionMesh: VisionColliderMesh,
 ) {
-  const pseudoLightCamera: CameraNode = {
-    id: light.id,
-    nodeType: "camera",
-    name: light.name,
-    position: light.position,
-    yawDeg: light.yawDeg ?? 0,
-    pitchDeg: light.pitchDeg ?? -45,
-    rollDeg: 0,
-    mountType: "ceiling",
-    mountHeightM: light.position[1],
-    fovHorizontalDeg: light.coneDeg ?? 360,
-    fovVerticalDeg: 180,
-    rangeM: light.rangeM,
-    resolutionMP: 1,
-    resolutionWidth: 1000,
-    resolutionHeight: 1000,
-    lensType: "fixed",
-    status: "on",
-    nightMode: "none",
-    irRangeM: 0,
-    thermalCapable: false,
-    ptz: false,
-    clarity: "excellent",
-    source: "manual",
-    reviewStatus: "unreviewed",
-    sourceTrace: "coverage-light-occlusion",
-    geometryValidity: "valid",
-    ndaaCompliant: true,
-    privacyMaskingEnabled: false,
-    tags: [],
-    viewMotion: { movementMode: "fixed", dwellSeconds: 0, waypoints: [] },
-  };
-
   const target = new THREE.Vector3(cell.x, targetHeightM, cell.z);
-  return assessOcclusion(pseudoLightCamera, target, raycaster, visionMesh);
+  return assessOcclusion(light, target, raycaster, visionMesh);
 }
 
 /**
@@ -319,13 +286,15 @@ function getLightingContext(
   };
 }
 
-function getClarityMultiplier(camera: CameraNode) {
-  return {
-    poor: 0.4,
-    average: 0.68,
-    good: 0.9,
-    excellent: 1,
-  }[camera.clarity];
+const CLARITY_MULTIPLIER: Record<CameraNode["clarity"], number> = {
+  poor: 0.4,
+  average: 0.68,
+  good: 0.9,
+  excellent: 1,
+};
+
+function getClarityMultiplier(camera: CameraNode): number {
+  return CLARITY_MULTIPLIER[camera.clarity] ?? 1;
 }
 
 function getYawPitchTowardTarget(origin: [number, number, number], target: THREE.Vector3) {
@@ -407,14 +376,16 @@ function makeEmptyEvaluation(overrides: Partial<CameraEvaluation> & { reasonCode
   };
 }
 
+type Positional = { position: [number, number, number] };
+
 function assessOcclusion(
-  camera: CameraNode,
+  source: Positional,
   target: THREE.Vector3,
   raycaster: THREE.Raycaster,
   visionMesh: VisionColliderMesh,
   ignoredSourceIds: Set<string> = new Set<string>(),
 ) {
-  const origin = new THREE.Vector3(...camera.position);
+  const origin = new THREE.Vector3(...source.position);
   const direction = target.clone().sub(origin).normalize();
   const distance = origin.distanceTo(target);
 
@@ -459,93 +430,35 @@ function assessOcclusion(
   };
 }
 
-function evaluateCameraAgainstCell(
-  scene: SecurityScene,
+type PpmPenaltyResult = {
+  ppm: number;
+  edgePenaltyMultiplier: number;
+  clarityMultiplier: number;
+  materialTransmission: number;
+  glarePenalty: number;
+  lightingPenalty: number;
+  lightingContext: ReturnType<typeof getLightingContext>;
+  reasonCodes: Set<string>;
+};
+
+function computePpmPenalties(
+  basePpm: number,
   camera: CameraNode,
+  scene: SecurityScene,
   cell: GridCell,
+  distance: number,
+  hAngle: number,
+  vAngle: number,
+  occlusion: ReturnType<typeof assessOcclusion>,
   targetHeightM: number,
   raycaster: THREE.Raycaster,
   visionMesh: VisionColliderMesh,
-  ignoredSourceIds: Set<string> = new Set<string>(),
-): CameraEvaluation {
-  if (camera.status !== "on") {
-    return makeEmptyEvaluation({
-      withinRange: true,
-      lightLevel: scene.assumptions.timeOfDay === "day" ? 1 : 0,
-      reasonCodes: ["CAMERA_OFF"],
-    });
-  }
-
-  const origin = new THREE.Vector3(...camera.position);
-  const target = new THREE.Vector3(cell.x, targetHeightM, cell.z);
-  const distance = origin.distanceTo(target);
-  if (distance > camera.rangeM) {
-    return makeEmptyEvaluation({
-      withinRange: false,
-      distanceM: distance,
-      lightLevel: scene.assumptions.timeOfDay === "day" ? 1 : 0,
-      reasonCodes: ["OUT_OF_RANGE"],
-    });
-  }
-
-  const direction = target.clone().sub(origin).normalize();
-  const targetYaw = THREE.MathUtils.radToDeg(Math.atan2(direction.x, -direction.z));
-  const targetPitch = THREE.MathUtils.radToDeg(
-    Math.atan2(direction.y, Math.hypot(direction.x, direction.z)),
-  );
-  const hAngle = normalizeAngle(targetYaw - camera.yawDeg);
-  const vAngle = targetPitch - camera.pitchDeg;
-
-  if (
-    Math.abs(hAngle) > camera.fovHorizontalDeg / 2 ||
-    Math.abs(vAngle) > camera.fovVerticalDeg / 2
-    ) {
-    return makeEmptyEvaluation({
-      withinRange: true,
-      distanceM: distance,
-      hAngleDeg: hAngle,
-      vAngleDeg: vAngle,
-      lightLevel: scene.assumptions.timeOfDay === "day" ? 1 : 0,
-      reasonCodes: ["OUT_OF_FOV"],
-    });
-  }
-
-  const occlusion = assessOcclusion(camera, target, raycaster, visionMesh, ignoredSourceIds);
-
-  if (occlusion.blocked) {
-    return makeEmptyEvaluation({
-      blockedBy: occlusion.blockedBy,
-      inFov: true,
-      withinRange: true,
-      distanceM: distance,
-      hAngleDeg: hAngle,
-      vAngleDeg: vAngle,
-      materialTransmission: 0,
-      lightLevel: scene.assumptions.timeOfDay === "day" ? 1 : 0,
-      reasonCodes: ["BLOCKED_BY_SOLID"],
-    });
-  }
-
-  const basePpm = computePixelDensity(camera, distance);
+): PpmPenaltyResult {
   let ppm = basePpm;
   const edgeAngle = Math.max(Math.abs(hAngle), Math.abs(vAngle));
   const reasonCodes = new Set<string>();
   let edgePenaltyMultiplier = 1;
 
-  /**
-   * Edge-of-FOV penalty — models optical resolution falloff toward the
-   * periphery of a typical varifocal security lens.
-   *
-   * Angle is the max of |hAngle| and |vAngle| away from the optical axis:
-   *   > 55° → severe falloff (extreme periphery)
-   *   > 42° → significant falloff
-   *   > 28° → moderate falloff
-   *   ≤ 28° → negligible (within the central ~56° region)
-   *
-   * At the most severe angle (≥55°), the calibration's lens-specific
-   * edge falloff factor replaces the default 0.42 to account for
-   * varying optical quality across lens types.
-   */
   const edgeCal = getEdgeFalloffFactor(camera, getCalibration(scene));
 
   if (edgeAngle > 55) {
@@ -588,7 +501,6 @@ function evaluateCameraAgainstCell(
   if (glarePenalty > 0) {
     reasonCodes.add("GLARE_RISK");
   }
-
   ppm *= 1 - glarePenalty;
 
   const lightingContext = getLightingContext(camera, cell, scene, targetHeightM, raycaster, visionMesh);
@@ -607,39 +519,122 @@ function evaluateCameraAgainstCell(
   if (envRisks.overexposedZones) {
     reasonCodes.add("OVEREXPOSED_ZONE");
   }
-
   if (lightingContext.illuminatedBy.length > 0) {
     reasonCodes.add("ILLUMINATED_BY_LIGHT");
   }
-
   if (lightingContext.shadowedBy.length > 0) {
     reasonCodes.add("LIGHT_SHADOWED_BY_OBSTRUCTION");
   }
 
   ppm *= 1 - lightingPenalty;
-  const finalPpmMultiplier = basePpm > 0 ? ppm / basePpm : 0;
+
+  return {
+    ppm,
+    edgePenaltyMultiplier,
+    clarityMultiplier,
+    materialTransmission,
+    glarePenalty,
+    lightingPenalty,
+    lightingContext,
+    reasonCodes,
+  };
+}
+
+function evaluateCameraAgainstCell(
+  scene: SecurityScene,
+  camera: CameraNode,
+  cell: GridCell,
+  targetHeightM: number,
+  raycaster: THREE.Raycaster,
+  visionMesh: VisionColliderMesh,
+  ignoredSourceIds: Set<string> = new Set<string>(),
+): CameraEvaluation {
+  if (camera.status !== "on") {
+    return makeEmptyEvaluation({
+      withinRange: true,
+      lightLevel: scene.assumptions.timeOfDay === "day" ? 1 : 0,
+      reasonCodes: ["CAMERA_OFF"],
+    });
+  }
+
+  const origin = new THREE.Vector3(...camera.position);
+  const target = new THREE.Vector3(cell.x, targetHeightM, cell.z);
+  const distance = origin.distanceTo(target);
+  if (distance > camera.rangeM) {
+    return makeEmptyEvaluation({
+      withinRange: false,
+      distanceM: distance,
+      lightLevel: scene.assumptions.timeOfDay === "day" ? 1 : 0,
+      reasonCodes: ["OUT_OF_RANGE"],
+    });
+  }
+
+  const direction = target.clone().sub(origin).normalize();
+  const targetYaw = THREE.MathUtils.radToDeg(Math.atan2(direction.x, -direction.z));
+  const targetPitch = THREE.MathUtils.radToDeg(
+    Math.atan2(direction.y, Math.hypot(direction.x, direction.z)),
+  );
+  const hAngle = normalizeAngle(targetYaw - camera.yawDeg);
+  const vAngle = targetPitch - camera.pitchDeg;
+
+  if (
+    Math.abs(hAngle) > camera.fovHorizontalDeg / 2 ||
+    Math.abs(vAngle) > camera.fovVerticalDeg / 2
+  ) {
+    return makeEmptyEvaluation({
+      withinRange: true,
+      distanceM: distance,
+      hAngleDeg: hAngle,
+      vAngleDeg: vAngle,
+      lightLevel: scene.assumptions.timeOfDay === "day" ? 1 : 0,
+      reasonCodes: ["OUT_OF_FOV"],
+    });
+  }
+
+  const occlusion = assessOcclusion(camera, target, raycaster, visionMesh, ignoredSourceIds);
+
+  if (occlusion.blocked) {
+    return makeEmptyEvaluation({
+      blockedBy: occlusion.blockedBy,
+      inFov: true,
+      withinRange: true,
+      distanceM: distance,
+      hAngleDeg: hAngle,
+      vAngleDeg: vAngle,
+      materialTransmission: 0,
+      lightLevel: scene.assumptions.timeOfDay === "day" ? 1 : 0,
+      reasonCodes: ["BLOCKED_BY_SOLID"],
+    });
+  }
+
+  const basePpm = computePixelDensity(camera, distance);
+  const penalties = computePpmPenalties(
+    basePpm, camera, scene, cell, distance, hAngle, vAngle,
+    occlusion, targetHeightM, raycaster, visionMesh,
+  );
+
+  const finalPpmMultiplier = basePpm > 0 ? penalties.ppm / basePpm : 0;
 
   const isOodpcvs = scene.assumptions.doriStandard === "oodpcvs_2025";
   const quality: DoriQuality = isOodpcvs
     ? computeOODPCVSQuality(
-        ppm,
+        penalties.ppm,
         scene.assumptions.sceneComplexity,
         scene.assumptions.operatorExperience,
         scene.assumptions.taskCriticality,
       )
-    : ppmToQuality(ppm, scene.assumptions.pixelsPerMeter);
+    : ppmToQuality(penalties.ppm, scene.assumptions.pixelsPerMeter);
 
   if (isOodpcvs) {
-    reasonCodes.add("OODPCVS_MODE");
+    penalties.reasonCodes.add("OODPCVS_MODE");
   }
-
   if (quality === "none") {
-    reasonCodes.add("LOW_PPM");
+    penalties.reasonCodes.add("LOW_PPM");
   }
 
   return {
     quality,
-    ppm,
+    ppm: penalties.ppm,
     probability: getDetectionProbability(quality),
     visible: true,
     blockedBy: occlusion.blockedBy,
@@ -648,16 +643,16 @@ function evaluateCameraAgainstCell(
     distanceM: distance,
     hAngleDeg: hAngle,
     vAngleDeg: vAngle,
-    edgePenaltyMultiplier,
-    clarityMultiplier,
-    materialTransmission,
-    glarePenalty,
-    lightingPenalty,
-    lightLevel: lightingContext.lightLevel,
-    illuminatedBy: lightingContext.illuminatedBy,
-    shadowedBy: lightingContext.shadowedBy,
+    edgePenaltyMultiplier: penalties.edgePenaltyMultiplier,
+    clarityMultiplier: penalties.clarityMultiplier,
+    materialTransmission: penalties.materialTransmission,
+    glarePenalty: penalties.glarePenalty,
+    lightingPenalty: penalties.lightingPenalty,
+    lightLevel: penalties.lightingContext.lightLevel,
+    illuminatedBy: penalties.lightingContext.illuminatedBy,
+    shadowedBy: penalties.lightingContext.shadowedBy,
     finalPpmMultiplier,
-    reasonCodes: [...reasonCodes],
+    reasonCodes: [...penalties.reasonCodes],
   };
 }
 
@@ -930,35 +925,30 @@ export function getQualityShare(cells: CellComputation[], quality: DoriQuality, 
   return (cellsToCount.filter((cell) => cell.quality === quality).length / cellsToCount.length) * 100;
 }
 
+function getAreaPctAboveThreshold(
+  cells: CellComputation[],
+  thresholdField: "recognition" | "identification",
+  thresholds: { detection: number; observation: number; recognition: number; identification: number } = DORI_THRESHOLDS,
+  includeOnlyCoverageIncluded = false,
+): number {
+  const cellsToCount = includeOnlyCoverageIncluded ? cells.filter((cell) => cell.coverageIncluded) : cells;
+  if (cellsToCount.length === 0) return 0;
+  const minPpm = thresholds[thresholdField];
+  return (cellsToCount.filter((cell) => cell.ppm >= minPpm).length / cellsToCount.length) * 100;
+}
+
 export function getRecognitionAreaPct(
   cells: CellComputation[],
   thresholds: { detection: number; observation: number; recognition: number; identification: number } = DORI_THRESHOLDS,
   includeOnlyCoverageIncluded = false,
-) {
-  const cellsToCount = includeOnlyCoverageIncluded ? cells.filter((cell) => cell.coverageIncluded) : cells;
-
-  if (cellsToCount.length === 0) return 0;
-  return (
-    (cellsToCount.filter((cell) => {
-      const score = cell.ppm;
-      return score >= thresholds.recognition;
-    }).length /
-      cellsToCount.length) *
-    100
-  );
+): number {
+  return getAreaPctAboveThreshold(cells, "recognition", thresholds, includeOnlyCoverageIncluded);
 }
 
 export function getIdentificationAreaPct(
   cells: CellComputation[],
   thresholds: { detection: number; observation: number; recognition: number; identification: number } = DORI_THRESHOLDS,
   includeOnlyCoverageIncluded = false,
-) {
-  const cellsToCount = includeOnlyCoverageIncluded ? cells.filter((cell) => cell.coverageIncluded) : cells;
-
-  if (cellsToCount.length === 0) return 0;
-  return (
-    (cellsToCount.filter((cell) => cell.ppm >= thresholds.identification).length /
-      cellsToCount.length) *
-    100
-  );
+): number {
+  return getAreaPctAboveThreshold(cells, "identification", thresholds, includeOnlyCoverageIncluded);
 }

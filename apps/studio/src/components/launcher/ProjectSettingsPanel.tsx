@@ -25,7 +25,7 @@ export type ProjectSettingsPanelProps = {
   selectedProjectRecord: SavedProjectRecord | null;
   onSetShowOrgManager: () => void;
   onHide: () => void;
-  onUpdateProjectMetadata: (projectId: string, metadata: { name?: string; notes?: string }) => void;
+  onUpdateProjectMetadata: (sceneId: string, patch: Partial<Pick<SavedProjectRecord, "folder" | "tags" | "pinned" | "workspaceOrganization" | "workspaceOwner" | "workspaceVisibility" | "lastOpenedAt">>) => void;
   onDuplicateProject: (sceneId: string) => SavedProjectRecord | null;
   onRenameProject: (sceneId: string, nextName: string) => SavedProjectRecord | null;
   onSelectProject: (id: string | null) => void;

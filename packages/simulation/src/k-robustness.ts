@@ -48,11 +48,14 @@ export function computeKRobustness(scene: SecurityScene, maxK = MAX_K): KRobustn
     let foundViable = false;
 
     for (const subset of getSubsets(cameras, k)) {
-      const modified: SecurityScene = cloneSecuritySceneSimulation(scene);
-      for (const cam of subset) {
-        const target = modified.cameras.find((c) => c.id === cam.id);
-        if (target) target.status = "off" as const;
-      }
+      const disabledIds = new Set(subset.map((c) => c.id));
+      const cloned = cloneSecuritySceneSimulation(scene);
+      const modified: SecurityScene = {
+        ...cloned,
+        cameras: cloned.cameras.map((c) =>
+          disabledIds.has(c.id) ? { ...c, status: "off" as const } : c,
+        ),
+      };
 
       const cells = computeCoverageCells(modified);
       const path = computeAdversarialPath(modified, cells);

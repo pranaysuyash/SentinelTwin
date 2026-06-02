@@ -79,6 +79,18 @@ export function ReportLiteTab() {
   const snapshots = useStudioStore((s) => s.snapshots);
   const temporalProfile = useStudioStore((s) => s.temporalProfile);
   const operationalEvidenceEvents = useStudioStore((s) => s.operationalEvidenceEvents);
+  const reportEvidenceEntries = useMemo(
+    () => operationalEvidenceEvents.map((event) => ({
+      title: event.title,
+      description: event.details,
+      details: event.details,
+      anchorId: event.id,
+      published: event.lifecycleStage === "published",
+      createdAt: event.timestamp,
+      confidence: event.confidence != null ? `${Math.round(event.confidence * 100)}%` : undefined,
+    })),
+    [operationalEvidenceEvents],
+  );
   const compareVisualEvidence = useStudioStore((s) => s.compareVisualEvidence);
   const compareReportSelection = useStudioStore((s) => s.compareReportSelection);
   const workspaceGovernance = useStudioStore((s) => s.workspaceGovernance);
@@ -116,7 +128,7 @@ export function ReportLiteTab() {
     () =>
       (result
         ? buildReportData(scene, result, {
-            operationalEvidenceEvents,
+            operationalEvidenceEvents: reportEvidenceEntries,
             audience: reportAudience,
             visibility: reportVisibility,
             templateId: reportTemplateId,
@@ -293,7 +305,7 @@ export function ReportLiteTab() {
     [hasCompareSimulation, reportAudience, reportTemplateId, reportVisibility, snapshotA, snapshotB],
   );
   const compareExportReport = useMemo(
-    () => (compareReport ? applyReportVisibility(compareReport, reportVisibility) : null),
+    () => (compareReport ? applyReportVisibility(compareReport as never as Parameters<typeof applyReportVisibility>[0], reportVisibility) as never as Parameters<typeof exportCompareAsMarkdown>[0] : null),
     [compareReport, reportVisibility],
   );
   const compareMarkdown = compareExportReport ? exportCompareAsMarkdown(compareExportReport) : "";

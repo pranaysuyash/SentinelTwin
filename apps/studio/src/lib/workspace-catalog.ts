@@ -1,4 +1,5 @@
 import { type OrganizationEntitlements, type OrganizationQuotas, createDefaultOrganization } from "@/schema/organization";
+import type { SecurityScene } from "@/schema/security-scene";
 
 type WorkspaceVisibility = "private" | "shared" | "published";
 
@@ -286,4 +287,18 @@ export function summarizeWorkspaceAccount(savedProjects: SavedProjectRecord[], a
       "Billing, invites, and ownership transfer remain open.",
     ],
   };
+}
+
+export function getDemoWorkspaceTitle(scene: SecurityScene, index: number): string {
+  if (scene.source === "demo" && scene.name.toLowerCase().includes("retail")) return "Retail Store Reference";
+  if (scene.source === "demo" && scene.name.toLowerCase().includes("office")) return "Office Lobby Reference";
+  if (scene.source === "demo" && scene.name.toLowerCase().includes("warehouse")) return "Warehouse Reference";
+  return scene.name || `Workspace ${index + 1}`;
+}
+
+export function getDemoWorkspaceDetail(scene: SecurityScene, defaultDetail: string, index: number): string {
+  if (scene.source === "demo" && scene.name.toLowerCase().includes("retail")) return "Small retail shop with 5 cameras, 1 critical zone, and 1 entry point. Configured for coverage analysis.";
+  if (scene.source === "demo" && scene.name.toLowerCase().includes("office")) return "Office lobby with 3 cameras, reception desk zone, and glass wall obstructions.";
+  if (scene.source === "demo" && scene.name.toLowerCase().includes("warehouse")) return "Warehouse layout with 8 cameras, high-rack obstructions, and 3 critical zones.";
+  return defaultDetail;
 }

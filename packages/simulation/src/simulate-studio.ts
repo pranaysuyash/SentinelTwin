@@ -297,6 +297,48 @@ function getSimulationCellDensity(scene: SecurityScene): SimulationPerformanceEn
   };
 }
 
+type CellSampleResult = {
+  bestQuality: DoriQuality;
+  blockingLabels: Set<string>;
+  cameraQualityById: Record<string, DoriQuality>;
+};
+
+function sampleCellCoverage(
+  cell: CellComputation,
+  scene: SecurityScene,
+  evaluator: ReturnType<typeof createCoverageEvaluator>,
+  sampleHeightsM: number[],
+  sampleMode: TargetSamplingMode,
+  excludedCameraId: string | undefined,
+  initialCameraQuality: Record<string, DoriQuality>,
+): CellSampleResult {
+  let cellBest: DoriQuality = "none";
+  const cellBlocking = new Set<string>();
+  const cameraQualityById = { ...initialCameraQuality };
+
+  for (const camera of scene.cameras) {
+    if (camera.id === excludedCameraId) continue;
+
+    const sampleQualities = sampleHeightsM.map((height) => {
+      const evaluation =
+        cell.cameraEvaluations?.[camera.id]
+          ?? evaluator.evaluatePoint(camera, [cell.x, cell.z], height);
+
+      if (evaluation.blockedBy) {
+        cellBlocking.add(evaluation.blockedBy);
+      }
+
+      return evaluation.quality;
+    });
+
+    const evaluationQuality = aggregateQualitySamples(sampleQualities, sampleMode);
+    cameraQualityById[camera.id] = maxQuality(cameraQualityById[camera.id], evaluationQuality);
+    cellBest = maxQuality(cellBest, evaluationQuality);
+  }
+
+  return { bestQuality: cellBest, blockingLabels: cellBlocking, cameraQualityById };
+}
+
 function evaluateZone(
   scene: SecurityScene,
   evaluator: ReturnType<typeof createCoverageEvaluator>,
@@ -314,39 +356,23 @@ function evaluateZone(
   );
   const blockingLabels = new Set<string>();
 
+  let accumulatedCameraQuality = cameraQualityById;
+
   for (const cell of zoneCells) {
-    let cellBest: DoriQuality = "none";
-    const cellBlocking = new Set<string>();
-
-    for (const camera of scene.cameras) {
-      if (camera.id === excludedCameraId) continue;
-
-      const sampleQualities = sampleHeightsM.map((height) => {
-        const evaluation =
-          cell.cameraEvaluations?.[camera.id]
-            ?? evaluator.evaluatePoint(camera, [cell.x, cell.z], height);
-
-        if (evaluation.blockedBy) {
-          cellBlocking.add(evaluation.blockedBy);
-        }
-
-        return evaluation.quality;
-      });
-
-      const evaluationQuality = aggregateQualitySamples(sampleQualities, profile.sampleMode);
-      cameraQualityById[camera.id] = maxQuality(cameraQualityById[camera.id], evaluationQuality);
-      cellBest = maxQuality(cellBest, evaluationQuality);
-    }
-
-    cellQualities.push({ quality: cellBest });
-    cellBlocking.forEach((label) => blockingLabels.add(label));
+    const result = sampleCellCoverage(
+      cell, scene, evaluator, sampleHeightsM, profile.sampleMode,
+      excludedCameraId, accumulatedCameraQuality,
+    );
+    accumulatedCameraQuality = result.cameraQualityById;
+    cellQualities.push({ quality: result.bestQuality });
+    result.blockingLabels.forEach((label) => blockingLabels.add(label));
   }
 
   const actualQuality = getZoneQuality(cellQualities);
-  const coveringCameras = Object.entries(cameraQualityById)
+  const coveringCameras = Object.entries(accumulatedCameraQuality)
     .filter(([, quality]) => quality !== "none")
     .map(([cameraId]) => cameraId);
-  const redundancyCameraCount = Object.values(cameraQualityById).filter(
+  const redundancyCameraCount = Object.values(accumulatedCameraQuality).filter(
     (quality) => qualityToScore(quality) >= qualityToScore(zone.requiredQuality),
   ).length;
   const status =
@@ -378,7 +404,7 @@ function evaluateZone(
     status,
     failureReasons,
     blockingLabels: Array.from(blockingLabels),
-    cameraQualityById,
+    cameraQualityById: accumulatedCameraQuality,
   };
 }
 

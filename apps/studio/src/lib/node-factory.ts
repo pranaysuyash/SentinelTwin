@@ -16,35 +16,32 @@ import type {
 } from "@/schema/security-scene";
 import { getDefaultQualityForTarget } from "@/lib/target-quality-requirements";
 
-let _camCounter = 0;
-let _obsCounter = 0;
-let _lightCounter = 0;
-let _wallCounter = 0;
-let _doorCounter = 0;
-let _windowCounter = 0;
-let _criticalZoneCounter = 0;
-let _privacyZoneCounter = 0;
-let _entryCounter = 0;
-let _pathCounter = 0;
-let _sensorCounter = 0;
+type CounterState = {
+  cam: number;
+  obs: number;
+  light: number;
+  wall: number;
+  door: number;
+  window: number;
+  criticalZone: number;
+  privacyZone: number;
+  entry: number;
+  path: number;
+  sensor: number;
+};
 
-function makeId(prefix: string) {
+function createCounterState(): CounterState {
+  return { cam: 0, obs: 0, light: 0, wall: 0, door: 0, window: 0, criticalZone: 0, privacyZone: 0, entry: 0, path: 0, sensor: 0 };
+}
+
+const counters: CounterState = createCounterState();
+
+function makeId(prefix: string): string {
   return `${prefix}_${crypto.randomUUID()}`;
 }
 
-/** Reset all internal counters to zero. Useful for test isolation. */
-export function resetNodeCounters(): void {
-  _camCounter = 0;
-  _obsCounter = 0;
-  _lightCounter = 0;
-  _wallCounter = 0;
-  _doorCounter = 0;
-  _windowCounter = 0;
-  _criticalZoneCounter = 0;
-  _privacyZoneCounter = 0;
-  _entryCounter = 0;
-  _pathCounter = 0;
-  _sensorCounter = 0;
+function resetNodeCounters(): void {
+  Object.assign(counters, createCounterState());
 }
 
 // ── Common options shape used by all factory functions ──
@@ -167,11 +164,11 @@ export function createCameraNode(
   position: [number, number, number],
   options?: CameraFactoryOptions,
 ): CameraNode {
-  _camCounter += 1;
+  counters.cam += 1;
   return {
     id: makeId("cam"),
     nodeType: "camera",
-    name: options?.name ?? `Camera ${_camCounter}`,
+    name: options?.name ?? `Camera ${counters.cam}`,
     position,
     yawDeg: options?.yawDeg ?? 180,
     pitchDeg: options?.pitchDeg ?? -20,
@@ -222,7 +219,7 @@ export function createObstructionNode(
   obstructionType: ObstructionNode["obstructionType"] = "other",
   options?: ObstructionFactoryOptions,
 ): ObstructionNode {
-  _obsCounter += 1;
+  counters.obs += 1;
   const labelMap: Record<string, string> = {
     shelf: "Shelf",
     cupboard: "Cupboard",
@@ -264,11 +261,11 @@ export function createSecurityLightNode(
   position: [number, number, number],
   options?: LightFactoryOptions,
 ): SecurityLightNode {
-  _lightCounter += 1;
+  counters.light += 1;
   return {
     id: makeId("light"),
     nodeType: "security_light",
-    name: options?.name ?? `Light ${_lightCounter}`,
+    name: options?.name ?? `Light ${counters.light}`,
     lightType: options?.lightType ?? "ceiling",
     position,
     status: options?.status ?? "on",
@@ -289,7 +286,7 @@ export function createSensorNode(
   sensorType: SensorNode["sensorType"] = "motion",
   options?: SensorFactoryOptions,
 ): SensorNode {
-  _sensorCounter += 1;
+  counters.sensor += 1;
 
   const labelMap: Record<SensorNode["sensorType"], string> = {
     motion: "Motion Sensor",
@@ -304,7 +301,7 @@ export function createSensorNode(
   return {
     id: makeId("sensor"),
     nodeType: "sensor",
-    label: `${labelMap[sensorType]} ${_sensorCounter}`,
+    label: `${labelMap[sensorType]} ${counters.sensor}`,
     sensorType,
     position,
     state: options?.state ?? "active",
@@ -321,7 +318,7 @@ export function createWallNode(
   end: [number, number],
   options?: WallFactoryOptions,
 ): WallNode {
-  _wallCounter += 1;
+  counters.wall += 1;
   const wallHeightM = options?.wallHeightM ?? 3;
   const thicknessM = options?.thicknessM ?? 0.18;
   const material = options?.material ?? "solid";
@@ -329,7 +326,7 @@ export function createWallNode(
   return {
     id: makeId("wall"),
     nodeType: "wall",
-    label: `Wall ${_wallCounter}`,
+    label: `Wall ${counters.wall}`,
     start,
     end,
     heightM: wallHeightM,
@@ -348,12 +345,12 @@ export function createDoorNode(
   wallId?: string,
   options?: DoorFactoryOptions,
 ): DoorNode {
-  _doorCounter += 1;
+  counters.door += 1;
 
   return {
     id: makeId("door"),
     nodeType: "door",
-    label: `Door ${_doorCounter}`,
+    label: `Door ${counters.door}`,
     position,
     dimensions: options?.dimensions ?? [0.9, 2.1, 0.08],
     state: options?.state ?? "closed",
@@ -370,13 +367,13 @@ export function createWindowNode(
   wallId?: string,
   options?: WindowFactoryOptions,
 ): WindowNode {
-  _windowCounter += 1;
+  counters.window += 1;
   const sillHeightM = options?.sillHeightM ?? 1.4;
 
   return {
     id: makeId("window"),
     nodeType: "window",
-    label: `Window ${_windowCounter}`,
+    label: `Window ${counters.window}`,
     position: [position[0], sillHeightM, position[2]],
     dimensions: options?.dimensions ?? [1.2, 1.0, 0.06],
     state: options?.state ?? "closed_glass",
@@ -398,12 +395,12 @@ export function createCriticalZoneNode(
     throw new Error("Critical zone requires at least 3 points.");
   }
 
-  _criticalZoneCounter += 1;
+  counters.criticalZone += 1;
 
   return {
     id: makeId("zone"),
     nodeType: "critical_zone",
-    label: `Critical Zone ${_criticalZoneCounter}`,
+    label: `Critical Zone ${counters.criticalZone}`,
     polygon,
     heightM: options?.heightM ?? 2,
     priority: options?.priority ?? "high",
@@ -427,12 +424,12 @@ export function createPrivacyZoneNode(
     throw new Error("Privacy zone requires at least 3 points.");
   }
 
-  _privacyZoneCounter += 1;
+  counters.privacyZone += 1;
 
   return {
     id: makeId("privacy"),
     nodeType: "privacy_zone",
-    label: `Privacy Zone ${_privacyZoneCounter}`,
+    label: `Privacy Zone ${counters.privacyZone}`,
     polygon,
     restriction: options?.restriction ?? "restricted_view",
     regulation: options?.regulation ?? "manual",
@@ -447,12 +444,12 @@ export function createEntryPointNode(
   position: [number, number],
   options?: EntryPointFactoryOptions,
 ): EntryPointNode {
-  _entryCounter += 1;
+  counters.entry += 1;
 
   return {
     id: makeId("entry"),
     nodeType: "entry_point",
-    label: `Entry ${_entryCounter}`,
+    label: `Entry ${counters.entry}`,
     position,
     source: options?.source ?? "manual",
     reviewStatus: options?.reviewStatus ?? "unreviewed",
@@ -469,12 +466,12 @@ export function createScenarioPathNode(
     throw new Error("Path requires at least two points.");
   }
 
-  _pathCounter += 1;
+  counters.path += 1;
 
   return {
     id: makeId("path"),
     nodeType: "path",
-    label: options?.label ?? `Path ${_pathCounter}`,
+    label: options?.label ?? `Path ${counters.path}`,
     actorType: options?.actorType ?? "person",
     points,
     speedMps: options?.speedMps ?? 1.2,

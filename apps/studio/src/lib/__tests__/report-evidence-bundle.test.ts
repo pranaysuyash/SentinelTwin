@@ -10,27 +10,29 @@ describe("report evidence bundle", () => {
   test("packages a single report with its evidence trail", () => {
     const scene = createSmallRetailShopScene();
     const result = simulateStudio(scene);
+    const evidenceEvent = buildOperationalEvidenceEvent({
+      kind: "scene_published",
+      title: "Scene published",
+      details: "Promoted the current scene state to the published branch.",
+      actor: "user",
+      source: "test",
+      sceneId: scene.id,
+      sceneName: scene.name,
+      timestamp: Date.now(),
+      revisionDepth: 0,
+      affectedNodeIds: [],
+      beforeSummary: "Before",
+      afterSummary: "After",
+    });
     const report = buildReportData(scene, result, {
-      operationalEvidenceEvents: [
-        buildOperationalEvidenceEvent({
-          kind: "scene_published",
-          title: "Scene published",
-          details: "Promoted the current scene state to the published branch.",
-          actor: "user",
-          source: scene.source,
-          sceneId: scene.id,
-          sceneName: scene.name,
-          revisionDepth: scene.changeLog.length,
-          affectedNodeIds: [],
-          confidence: 0.98,
-          branchLabel: "published",
-          lifecycleStage: "published",
-          published: true,
-          beforeSummary: "Before publish",
-          afterSummary: "After publish",
-          sceneSnapshot: scene,
-        }),
-      ],
+      operationalEvidenceEvents: [{
+        title: evidenceEvent.title,
+        description: evidenceEvent.details,
+        details: evidenceEvent.details,
+        anchorId: evidenceEvent.id,
+        published: false,
+        createdAt: evidenceEvent.timestamp,
+      }],
     });
     const bundle = buildReportEvidenceBundle({
       scene,

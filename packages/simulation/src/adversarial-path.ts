@@ -53,6 +53,66 @@ function nearestNode(target: [number, number], nodes: NavNode[]) {
  * risk posture differs significantly from the reference scenes.
  */
 const EXPOSURE_MULTIPLIER = 4;
+
+type QueueEntry = { id: string; cost: number; heuristic: number };
+
+class MinHeap {
+  private heap: QueueEntry[] = [];
+
+  get length(): number {
+    return this.heap.length;
+  }
+
+  push(entry: QueueEntry): void {
+    this.heap.push(entry);
+    this.siftUp(this.heap.length - 1);
+  }
+
+  pop(): QueueEntry | undefined {
+    if (this.heap.length === 0) return undefined;
+    const top = this.heap[0];
+    const last = this.heap.pop()!;
+    if (this.heap.length > 0) {
+      this.heap[0] = last;
+      this.siftDown(0);
+    }
+    return top;
+  }
+
+  private siftUp(i: number): void {
+    while (i > 0) {
+      const parent = (i - 1) >> 1;
+      if (this.f(i) < this.f(parent)) {
+        [this.heap[i], this.heap[parent]] = [this.heap[parent], this.heap[i]];
+        i = parent;
+      } else {
+        break;
+      }
+    }
+  }
+
+  private siftDown(i: number): void {
+    const n = this.heap.length;
+    while (true) {
+      let smallest = i;
+      const left = 2 * i + 1;
+      const right = 2 * i + 2;
+      if (left < n && this.f(left) < this.f(smallest)) smallest = left;
+      if (right < n && this.f(right) < this.f(smallest)) smallest = right;
+      if (smallest !== i) {
+        [this.heap[i], this.heap[smallest]] = [this.heap[smallest], this.heap[i]];
+        i = smallest;
+      } else {
+        break;
+      }
+    }
+  }
+
+  private f(i: number): number {
+    return this.heap[i].cost + this.heap[i].heuristic;
+  }
+}
+
 export type ComputeAdversarialPathOptions = {
   /**
    * Controls which critical zone is treated as the adversarial target.
@@ -140,7 +200,8 @@ export function computeAdversarialPath(
     nodes.map((n) => [n.id, octileDistance(n.x, n.z, goal.x, goal.z, cellSize)] as const),
   );
   const previous = new Map<string, string>();
-  const queue = [{ id: start.id, cost: 0, heuristic: goalHeuristicCache.get(start.id) ?? 0 }];
+  const queue = new MinHeap();
+  queue.push({ id: start.id, cost: 0, heuristic: goalHeuristicCache.get(start.id) ?? 0 });
 
   // Pre-compute neighbor lookups per node so getNeighbors never searches
   const neighborCache = new Map<string, NavNode[]>();
@@ -168,9 +229,7 @@ export function computeAdversarialPath(
   }
 
   while (queue.length > 0) {
-    // Sort by f = cost + heuristic (A*)
-    queue.sort((a, b) => a.cost + a.heuristic - (b.cost + b.heuristic));
-    const current = queue.shift()!;
+    const current = queue.pop()!;
 
     if (current.id === goal.id) break;
 

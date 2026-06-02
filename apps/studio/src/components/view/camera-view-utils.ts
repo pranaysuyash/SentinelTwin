@@ -257,13 +257,11 @@ export function clampPathDuration(durationS: number | null | undefined) {
   return durationS! <= 0 ? 0 : durationS!;
 }
 
-export function orderCamerasForReplayPlayback<
-  T extends { id: string; name: string; status: string },
->(
-  cameras: ReadonlyArray<T>,
+export function orderCamerasForReplayPlayback(
+  cameras: ReadonlyArray<CameraNode>,
   selectedCameraId?: string | null,
   activeCameraId?: string | null,
-): T[] {
+): CameraNode[] {
   const active = selectedCameraId || activeCameraId || null;
   return [...cameras].sort((a, b) => {
     if (active) {

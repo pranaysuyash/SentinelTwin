@@ -4893,3 +4893,38 @@ Fixed the `CameraLiveConnectionEventRecord` and `WorkspaceApprovalRouteSummary` 
 - Key files:
   - `apps/studio/src/components/workspace/SharedScene.tsx`
   - `apps/studio/src/components/workspace/__tests__/SharedScene.test.ts`
+
+## D-297 | 2026-06-02 | User workspace creation lifecycle hardening — stop booting from demo, auto-persist on approval, wire TopBar creation to product router
+
+**Decision:** Fix six structural issues in the workspace creation lifecycle:
+
+1. **Stop booting the app with the retail demo as the active scene** — `scene-slice.ts` now initializes with `createBlankSecurityScene()` instead of the retail shop demo. The demo is seeded into a new `referenceScenes` array in the governance slice.
+
+2. **Auto-persist on draft approval** — `approveIntakeSession` in `use-studio-navigation.ts` now calls `saveSceneToStorage()` after `setScene()`, so approved workspaces immediately appear in "Your Workspaces" without requiring a manual save action.
+
+3. **Wire TopBar create/scan to product navigation** — The Create button and "New Site Twin" / "Scan a Site" dropdown items now call `navigateProductView("manual_builder")` / `navigateProductView("scan_site")` instead of mounting orphaned modals without `onBuild`/`onCompile` handlers.
+
+4. **Unify page.tsx and use-studio-navigation.ts** — `page.tsx` now delegates all handler logic to `useStudioNavigation()`. The hook is the single canonical orchestration provider.
+
+5. **Add canonical `activateWorkspaceFromDraft` action** — A new store action in governance-slice that promotes the draft, saves as workspace, persists evidence, clears the session, and navigates to the correct mode — all in one call.
+
+6. **Separate reference demos from user workspaces** — Added `referenceScenes: SecurityScene[]` to the governance slice, seeded with `createSmallRetailShopScene()`. Reference sites view updated to read from `referenceScenes` instead of `savedProjects`. Added `duplicateReferenceToWorkspace` action.
+
+**Rationale:**
+- The app should present a clean "Create your first site twin" experience, not a pre-loaded demo as the active workspace.
+- Users should not need to discover a hidden "Save" menu item after approving a draft — persistence should be automatic.
+- The TopBar's "Create" and "Scan" modals were effectively broken: they showed UI but never routed through the draft-review pipeline because `onBuild`/`onCompile` were not passed.
+- Having two copies of the same orchestration logic (`page.tsx` and `use-studio-navigation.ts`) is a maintenance risk.
+- Demos and user workspaces are fundamentally different product concepts and should not share the same data model.
+
+**Alternatives rejected:**
+- Incremental fix (just add `onBuild` to TopBar): rejected per principle that the whole create→draft→review→approve→persist pipeline should work end-to-end, not be patched in one place.
+- Keep demo in both `savedProjects` and `referenceScenes` for backward compat: rejected because it perpetuates the data-model entanglement. The `source === "demo"` filter in downstream components will still work for user-duplicated workspaces.
+
+**Key files:**
+- `apps/studio/src/store/slices/core/scene-slice.ts` — initial scene changed from small-retail-shop to blank
+- `apps/studio/src/store/slices/enterprise/governance-slice.ts` — added `referenceScenes`, `activateWorkspaceFromDraft`, `saveSceneAsWorkspace`, `duplicateReferenceToWorkspace`, `addReferenceScene`, `loadReferenceScene`
+- `apps/studio/src/hooks/use-studio-navigation.ts` — canonical handler provider; approval now calls `saveSceneToStorage()`
+- `apps/studio/src/app/page.tsx` — delegates to `useStudioNavigation()`
+- `apps/studio/src/components/layout/TopBar.tsx` — create/scan now navigate to product views
+- `apps/studio/src/components/product/ReferenceSitesView.tsx` — reads from `referenceScenes` instead of `savedProjects`

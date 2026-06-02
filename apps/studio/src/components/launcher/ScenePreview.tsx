@@ -92,7 +92,7 @@ export function ScenePreview({ scene, result, activePathId = null, compact = fal
   if (!hydrated) {
     return (
       <div className={cn(
-        "relative overflow-hidden rounded-[28px] border border-[color:var(--st-border)] bg-[radial-gradient(circle_at_20%_0%,rgba(59,130,246,0.11),transparent_40%),radial-gradient(circle_at_85%_10%,rgba(16,185,129,0.09),transparent_30%),linear-gradient(180deg,rgba(11,14,21,0.98),rgba(11,14,21,0.86))]",
+        "relative overflow-hidden rounded-[20px] border border-[color:var(--st-border)] bg-[radial-gradient(circle_at_20%_0%,rgba(59,130,246,0.11),transparent_40%),radial-gradient(circle_at_85%_10%,rgba(16,185,129,0.09),transparent_30%),linear-gradient(180deg,rgba(11,14,21,0.98),rgba(11,14,21,0.86))]",
         compact ? "min-h-[290px]" : "min-h-[340px]",
       )}>
         <div className="absolute inset-0 opacity-60 [background-image:linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)] [background-size:44px_44px]" />
@@ -109,7 +109,7 @@ export function ScenePreview({ scene, result, activePathId = null, compact = fal
 
   return (
     <div className={cn(
-      "relative overflow-hidden rounded-[28px] border border-[color:var(--st-border)] bg-[radial-gradient(circle_at_20%_0%,rgba(59,130,246,0.11),transparent_40%),radial-gradient(circle_at_85%_10%,rgba(16,185,129,0.09),transparent_30%),linear-gradient(180deg,rgba(11,14,21,0.98),rgba(11,14,21,0.86))",
+      "relative overflow-hidden rounded-[20px] border border-[color:var(--st-border)] bg-[radial-gradient(circle_at_20%_0%,rgba(59,130,246,0.11),transparent_40%),radial-gradient(circle_at_85%_10%,rgba(16,185,129,0.09),transparent_30%),linear-gradient(180deg,rgba(11,14,21,0.98),rgba(11,14,21,0.86))",
       compact ? "min-h-[290px]" : "min-h-[340px]",
     )}>
       <div className="absolute inset-0 opacity-60 [background-image:linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)] [background-size:44px_44px]" />
@@ -124,9 +124,9 @@ export function ScenePreview({ scene, result, activePathId = null, compact = fal
           </filter>
         </defs>
 
-        <rect x={offsetX} y={offsetY} width={sceneWidth} height={sceneHeight} rx="28" fill="rgba(10,14,20,0.92)" stroke="rgba(148,163,184,0.12)" />
+        <rect x={offsetX} y={offsetY} width={sceneWidth} height={sceneHeight} rx="16" fill="rgba(10,14,20,0.92)" stroke="rgba(148,163,184,0.12)" />
         <rect x={offsetX} y={offsetY + sceneHeight * 0.62} width={sceneWidth} height={sceneHeight * 0.38} rx="20" fill="rgba(245,158,11,0.08)" />
-        <rect x={offsetX} y={offsetY} width={sceneWidth} height={sceneHeight} rx="28" fill="url(#coverageGlow)" opacity="0.38" />
+        <rect x={offsetX} y={offsetY} width={sceneWidth} height={sceneHeight} rx="16" fill="url(#coverageGlow)" opacity="0.38" />
 
         {downsampledHeatmapCells.map((cell, index) => {
           const [x, y] = toPoint([cell.x, cell.z]);

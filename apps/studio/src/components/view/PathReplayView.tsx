@@ -155,8 +155,8 @@ function buildPlaybackWaypoints(path: ScenarioPath) {
   return waypoints;
 }
 
-function getSafePathSpeedMps(speedMps: number | undefined) {
-  return Number.isFinite(speedMps) && speedMps > 0 ? speedMps : DEFAULT_PATH_SPEED_MPS;
+function getSafePathSpeedMps(speedMps: number | undefined): number {
+  return (Number.isFinite(speedMps) && speedMps! > 0 ? speedMps! : DEFAULT_PATH_SPEED_MPS) ?? DEFAULT_PATH_SPEED_MPS;
 }
 
 type ReplaySample = {

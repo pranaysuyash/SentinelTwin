@@ -39,7 +39,7 @@ describe("camera-view-utils", () => {
       { id: "c4", name: "Gamma", status: "off" as const },
     ];
 
-    const ordered = orderCamerasForReplayPlayback(input, "c4", "c1");
+    const ordered = orderCamerasForReplayPlayback(input as any, "c4", "c1");
     expect(ordered.map((camera) => camera.id)).toEqual(["c4", "c2", "c3", "c1"]);
   });
 

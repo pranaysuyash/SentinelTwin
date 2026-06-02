@@ -37,8 +37,8 @@ const PRIORITY_WEIGHT: Record<CriticalZoneNode["priority"], number> = {
   critical: 3,
 } as const;
 
-const COUNTER_MATCH_TARGET_TYPES = new Set(["cash_counter_activity"]);
-const COUNTER_LABEL_PATTERNS = [
+const COUNTER_MATCH_TARGET_TYPES: readonly CriticalZoneNode["targetType"][] = ["cash_counter_activity"] as const;
+const COUNTER_LABEL_PATTERNS: readonly RegExp[] = [
   /\bcounter\b/i,
   /\bcash\b/i,
   /\bcheckout\b/i,
@@ -63,7 +63,7 @@ function normalizeOptions(options: CriticalZoneSelectionOptions = {}): Required<
 }
 
 function isCounterCriticalZone(zone: CriticalZoneNode, options: Required<CriticalZoneSelectionOptions>): boolean {
-  const targetTypes = new Set(options.counterTargetTypes);
+  const targetTypes = new Set<CriticalZoneNode["targetType"]>(options.counterTargetTypes);
   if (targetTypes.has(zone.targetType)) return true;
 
   const haystack = `${zone.label} ${zone.id}`.toLowerCase();

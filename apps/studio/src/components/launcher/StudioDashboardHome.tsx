@@ -35,6 +35,10 @@ import { OrganizationManagerPanel } from "@/components/launcher/OrganizationMana
 import { ScenePreview } from "@/components/launcher/ScenePreview";
 import { ProjectMetadataEditor } from "@/components/launcher/ProjectMetadataEditor";
 import { SecurityStatusPanel } from "@/components/launcher/SecurityStatusPanel";
+import { OpenIssuesPanel } from "@/components/launcher/OpenIssuesPanel";
+import { SimulationAssumptionsPanel } from "@/components/launcher/SimulationAssumptionsPanel";
+import { ProjectSettingsPanel } from "@/components/launcher/ProjectSettingsPanel";
+import { WorkspaceLibraryPanel } from "@/components/launcher/WorkspaceLibraryPanel";
 import { useDashboardArchives } from "@/hooks/useDashboardArchives";
 import type { SecurityScene, SecurityIssue, SimulationResult, DoriQuality } from "@/schema/security-scene";
 import type { OrganizationList } from "@/schema/organization";
@@ -154,33 +158,6 @@ function getDemoWorkspaceDetail(scene: SecurityScene, fallbackDetail: string, in
   if (title.includes("Rotation")) return "Small camera aim changes shift the floor risk map.";
   if (title.includes("Night")) return "Lighting and shadows change which cells remain useful evidence.";
   return "Reference retail layout with cameras, zones, paths, lights, and coverage scores.";
-}
-
-function issueSeverityLabel(severity: SecurityIssue["severity"]) {
-  switch (severity) {
-    case "critical":
-      return "Critical";
-    case "high":
-      return "High";
-    case "medium":
-      return "Medium";
-    case "low":
-    default:
-      return "Low";
-  }
-}
-
-function issueSeverityTone(severity: SecurityIssue["severity"]) {
-  switch (severity) {
-    case "critical":
-      return "text-red-300";
-    case "high":
-      return "text-orange-300";
-    case "medium":
-      return "text-amber-300";
-    default:
-      return "text-sky-300";
-  }
 }
 
 const DORI_QUALITY_ORDER: Record<DoriQuality, number> = {
@@ -467,21 +444,6 @@ function ActionButton({
         {description ? <div className="mt-1 text-[11px] leading-4 text-[color:var(--st-muted)]">{description}</div> : null}
       </div>
       <ArrowRight className="h-4 w-4 flex-none text-[color:var(--st-accent)] transition-transform duration-200 group-hover:translate-x-1" />
-    </button>
-  );
-}
-
-function HideSectionButton({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="inline-flex items-center gap-1 rounded-md border border-[color:var(--st-border)] bg-white/[0.03] px-2 py-1 text-[10px] font-medium text-[color:var(--st-muted)] transition-colors hover:border-sky-400/35 hover:text-white"
-      aria-label={`Hide ${label}`}
-      title={`Hide ${label}`}
-    >
-      <EyeOff className="h-3 w-3" />
-      Hide
     </button>
   );
 }
@@ -1079,6 +1041,17 @@ export function StudioDashboardHome({
     ],
   );
   useEffect(() => {
+    if (!onOpenScene && !onOpenDemoScene) return;
+    if (scene.cameras.length > 0) return;
+    const fallbackScene = savedProjects.find((project) => project.scene.source === "demo" && project.scene.cameras.length > 0)
+      ?? savedProjects.find((project) => project.scene.cameras.length > 0);
+    if (fallbackScene && onOpenScene) {
+      onOpenScene(fallbackScene.scene);
+      return;
+    }
+    onOpenDemoScene?.();
+  }, [onOpenDemoScene, onOpenScene, savedProjects, scene.cameras.length]);
+  useEffect(() => {
     queueMicrotask(() => {
       setHydrated(true);
     });
@@ -1197,15 +1170,15 @@ export function StudioDashboardHome({
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(56,189,248,0.12),transparent_30%),radial-gradient(circle_at_80%_8%,rgba(16,185,129,0.08),transparent_28%),radial-gradient(circle_at_50%_100%,rgba(245,158,11,0.06),transparent_26%)]" />
       <div className="pointer-events-none absolute inset-0 opacity-[0.18] [background-image:linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] [background-size:64px_64px]" />
 
-      <div className="relative z-10 flex min-h-full flex-col gap-4 p-4 lg:p-5">
-        <header className="flex min-h-[64px] flex-wrap items-center gap-3 rounded-[14px] border border-[color:var(--st-border)] bg-[rgba(9,14,23,0.94)] px-4 py-2.5 shadow-[0_18px_60px_rgba(0,0,0,0.34)]">
+      <div className="relative z-10 flex min-h-full flex-col gap-3 p-3 lg:p-4">
+        <header className="flex min-h-[58px] flex-wrap items-center gap-2.5 rounded-[12px] border border-[color:var(--st-border)] bg-[rgba(9,14,23,0.94)] px-3 py-2 shadow-[0_18px_60px_rgba(0,0,0,0.34)]">
           <div className="flex min-w-[260px] items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 text-emerald-300">
-              <ShieldCheck className="h-6 w-6" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-[10px] border border-emerald-400/30 bg-emerald-500/10 text-emerald-300">
+              <ShieldCheck className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <div className="truncate text-xl font-semibold tracking-tight text-white">SentinelTwin Studio</div>
-              <div className="truncate text-[12px] text-[color:var(--st-muted)]">Security Simulation Workspace</div>
+              <div className="truncate text-[30px] leading-none font-semibold tracking-tight text-white">SentinelTwin Studio</div>
+              <div className="truncate text-[11px] text-[color:var(--st-muted)]">Security Simulation Workspace</div>
             </div>
           </div>
 
@@ -1318,7 +1291,7 @@ export function StudioDashboardHome({
         </header>
 
         <div className="grid flex-1 items-start gap-4 lg:grid-cols-[220px_minmax(0,1fr)_326px]">
-          <aside className="flex flex-col gap-4 rounded-[12px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3">
+          <aside className="flex flex-col gap-3 rounded-[12px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3">
             <div>
               <div className="px-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--st-muted)]">STUDIO</div>
               <nav className="mt-3 space-y-1">
@@ -1386,8 +1359,8 @@ export function StudioDashboardHome({
 
 
             <div className="mt-auto rounded-[10px] border border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2.5 text-[10px] text-[color:var(--st-muted)]">
-              <div className="text-[10px] uppercase tracking-[0.18em] text-white">Project control surface</div>
-              <div className="mt-1 text-[10px]">Open Project Settings on the right to manage workspace metadata and organization controls.</div>
+              <div className="text-[12px] font-semibold text-white">Personal Workspace</div>
+              <div className="mt-0.5 text-[10px]">free</div>
             </div>
           </aside>
 
@@ -1407,13 +1380,13 @@ export function StudioDashboardHome({
               />
             ) : null}
             {hasMainDashboardPanel ? (
-            <div className="rounded-[28px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4 shadow-[0_24px_70px_rgba(0,0,0,0.30)]">
+            <div className="rounded-[24px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3.5 shadow-[0_24px_70px_rgba(0,0,0,0.30)]">
               {isDashboardSectionVisible("overview") ? (
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--st-muted)]">CURRENT WORKSPACE</div>
-                  <div className="mt-1.5 flex items-center gap-2">
-                    <div className="text-2xl font-semibold tracking-tight sm:text-3xl">{scene.name}</div>
+                  <div className="mt-1 flex items-center gap-2">
+                    <div className="text-[41px] leading-[1.05] font-semibold tracking-tight">{scene.name}</div>
                     <button type="button" onClick={onOpenStudio} className="mt-0.5 text-[color:var(--st-muted)] hover:text-white transition-colors">
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" /></svg>
                     </button>
@@ -1468,7 +1441,7 @@ export function StudioDashboardHome({
               ) : null}
 
               {isDashboardSectionVisible("preview") ? (
-              <div className="mt-4 overflow-hidden rounded-[24px] border border-white/[0.05] bg-black/[0.15]">
+              <div className="mt-3 overflow-hidden rounded-[20px] border border-white/[0.05] bg-black/[0.15]">
                 <div className="flex items-center justify-between border-b border-white/[0.05] px-3 py-2">
                   <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--st-muted)]">Map preview</div>
                   <HideSectionButton label="map preview" onClick={() => setDashboardSectionVisible("preview", false)} />
@@ -1665,7 +1638,7 @@ export function StudioDashboardHome({
               {(isDashboardSectionVisible("recent") || isDashboardSectionVisible("create")) ? (
               <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
                 {isDashboardSectionVisible("recent") ? (
-                <div className="rounded-[20px] border border-[color:var(--st-border)] bg-[color:var(--st-panel-2)] p-3">
+                <div className="rounded-[16px] border border-[color:var(--st-border)] bg-[color:var(--st-panel-2)] p-3">
                   <div className="flex items-center justify-between gap-2">
                     <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[color:var(--st-muted)]">RECENT WORKSPACES</div>
                     <HideSectionButton label="recent site twins" onClick={() => setDashboardSectionVisible("recent", false)} />
@@ -1684,7 +1657,7 @@ export function StudioDashboardHome({
                           key={recentScene.id}
                           type="button"
                           onClick={() => onOpenScene?.(recentScene)}
-                          className="group rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.02] p-2 text-left transition-colors hover:border-sky-400/25 hover:bg-white/[0.04]"
+                          className="group rounded-[12px] border border-[color:var(--st-border)] bg-white/[0.02] p-2 text-left transition-colors hover:border-sky-400/25 hover:bg-white/[0.04]"
                         >
                           <div className="h-[72px] overflow-hidden rounded-lg border border-white/8 bg-[#08111d]">
                             <ScenePreview
@@ -1714,7 +1687,7 @@ export function StudioDashboardHome({
                 ) : null}
 
                 {isDashboardSectionVisible("create") ? (
-                <div className="rounded-[20px] border border-[color:var(--st-border)] bg-[color:var(--st-panel-2)] p-3">
+                <div className="rounded-[16px] border border-[color:var(--st-border)] bg-[color:var(--st-panel-2)] p-3">
                   <div className="flex items-center justify-between gap-2">
                     <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[color:var(--st-muted)]">QUICK START</div>
                     <HideSectionButton label="create and import" onClick={() => setDashboardSectionVisible("create", false)} />
@@ -1723,7 +1696,7 @@ export function StudioDashboardHome({
                     <button
                       type="button"
                       onClick={onCreateScene}
-                      className="flex flex-col items-center gap-2 rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.025] px-3 py-3.5 text-center transition-colors hover:border-sky-400/30 hover:bg-white/[0.04]"
+                      className="flex flex-col items-center gap-2 rounded-[12px] border border-[color:var(--st-border)] bg-white/[0.025] px-3 py-3 text-center transition-colors hover:border-sky-400/30 hover:bg-white/[0.04]"
                     >
                       <Plus className="h-5 w-5 text-sky-300" />
                       <div>
@@ -1734,7 +1707,7 @@ export function StudioDashboardHome({
                     <button
                       type="button"
                       onClick={onImportScene}
-                      className="flex flex-col items-center gap-2 rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.025] px-3 py-3.5 text-center transition-colors hover:border-sky-400/30 hover:bg-white/[0.04]"
+                      className="flex flex-col items-center gap-2 rounded-[12px] border border-[color:var(--st-border)] bg-white/[0.025] px-3 py-3 text-center transition-colors hover:border-sky-400/30 hover:bg-white/[0.04]"
                     >
                       <FileUp className="h-5 w-5 text-cyan-300" />
                       <div>
@@ -1745,7 +1718,7 @@ export function StudioDashboardHome({
                     <button
                       type="button"
                       onClick={onScanSite}
-                      className="flex flex-col items-center gap-2 rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.025] px-3 py-3.5 text-center transition-colors hover:border-sky-400/30 hover:bg-white/[0.04]"
+                      className="flex flex-col items-center gap-2 rounded-[12px] border border-[color:var(--st-border)] bg-white/[0.025] px-3 py-3 text-center transition-colors hover:border-sky-400/30 hover:bg-white/[0.04]"
                     >
                       <ScanSearch className="h-5 w-5 text-emerald-300" />
                       <div>
@@ -1756,7 +1729,7 @@ export function StudioDashboardHome({
                     <button
                       type="button"
                       onClick={onAiDraft}
-                      className="flex flex-col items-center gap-2 rounded-[14px] border border-[color:var(--st-border)] bg-white/[0.025] px-3 py-3.5 text-center transition-colors hover:border-violet-400/30 hover:bg-white/[0.04]"
+                      className="flex flex-col items-center gap-2 rounded-[12px] border border-[color:var(--st-border)] bg-white/[0.025] px-3 py-3 text-center transition-colors hover:border-violet-400/30 hover:bg-white/[0.04]"
                     >
                       <Sparkles className="h-5 w-5 text-violet-300" />
                       <div>
@@ -1828,178 +1801,39 @@ export function StudioDashboardHome({
               />
             ) : null}
 
-            {/* Open Issues panel */}
             {isDashboardSectionVisible("issues") ? (
-              <div className="rounded-[16px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3">
-                <div className="flex items-center justify-between">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-300">
-                    OPEN ISSUES ({displayIssues.length})
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button type="button" onClick={onOpenIssues} className="text-[10px] text-sky-300 hover:text-sky-200">
-                      View all
-                    </button>
-                    <HideSectionButton label="open issues" onClick={() => setDashboardSectionVisible("issues", false)} />
-                  </div>
-                </div>
-                {displayIssues.length > 0 ? (
-                <div className="mt-2 space-y-1">
-                  {displayIssues.slice(0, 4).map((issue, index) => (
-                    <button
-                      key={`issue-${index}`}
-                      type="button"
-                      onClick={onOpenIssues}
-                      className="group w-full rounded-xl border border-[#1a2030] bg-white/[0.015] p-2.5 text-left transition-colors hover:border-amber-400/20 hover:bg-amber-500/5"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className={cn("h-2 w-2 flex-none rounded-full",
-                              issue.severity === "critical" ? "bg-red-400" :
-                              issue.severity === "high" ? "bg-orange-400" :
-                              issue.severity === "medium" ? "bg-amber-400" : "bg-sky-400"
-                            )} />
-                            <span className={cn("text-[9px] font-bold uppercase tracking-[0.12em]", issueSeverityTone(issue.severity))}>
-                              {issueSeverityLabel(issue.severity)}
-                            </span>
-                          </div>
-                          <div className="mt-1 text-[10px] leading-[1.4] text-[#c5cde0]">{issue.description}</div>
-                        </div>
-                        <ArrowRight className="mt-0.5 h-3.5 w-3.5 flex-none text-[color:var(--st-muted)] opacity-40 transition-opacity group-hover:opacity-100" />
-                      </div>
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={onOpenIssues}
-                    className="w-full rounded-xl border border-dashed border-[color:var(--st-border)] px-3 py-2 text-[10px] text-[#8b96ab] transition-colors hover:text-white"
-                  >
-                    See all issues &amp; recommendations
-                  </button>
-                </div>
-                ) : (
-                  <div className="mt-2 rounded-xl border border-[#1a2030] bg-white/[0.015] px-3 py-2 text-[10px] leading-4 text-[#8b96ab]">
-                    No open issues in the latest review. Run a fresh review after changes to confirm the current site state.
-                  </div>
-                )}
-              </div>
+              <OpenIssuesPanel
+                displayIssues={displayIssues}
+                onOpenIssues={onOpenIssues}
+                onHide={() => setDashboardSectionVisible("issues", false)}
+              />
             ) : null}
 
             {/* Simulation Assumptions */}
             {isDashboardSectionVisible("assumptions") ? (
-            <div className="rounded-[16px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3">
-              <div className="flex items-center justify-between">
-                <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#8b96ab]">SIMULATION ASSUMPTIONS</div>
-                <div className="flex items-center gap-2">
-                  <button type="button" onClick={onOpenStudio} className="text-[10px] text-sky-300 hover:text-sky-200">Edit</button>
-                  <HideSectionButton label="simulation assumptions" onClick={() => setDashboardSectionVisible("assumptions", false)} />
-                </div>
-              </div>
-              <div className="mt-2 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-[#8b96ab]">DORI Model</span>
-                  <span className="text-[10px] font-medium text-[#c5cde0]">{formatDoriStandard(sceneAssumptions.doriStandard)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-[#8b96ab]">Person Height</span>
-                  <span className="text-[10px] font-medium text-[#c5cde0]">{sceneAssumptions.personHeightM} m</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-[#8b96ab]">Lighting</span>
-                  <span className="text-[10px] font-medium text-[#c5cde0]">{sceneAssumptions.timeOfDay === "night" ? "Night Mode" : sceneAssumptions.timeOfDay === "custom" ? "Custom" : "Day Mode"}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-[#8b96ab]">Grid Resolution</span>
-                  <span className="text-[10px] font-medium text-[#c5cde0]">0.25 m</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-[#8b96ab]">Glass Handling</span>
-                  <span className="text-[10px] font-medium text-[#c5cde0]">{sceneAssumptions.nightPenaltyMode === "none" ? "Standard" : "Adjusted"}</span>
-                </div>
-              </div>
-              <button type="button" onClick={onOpenStudio} className="mt-3 w-full text-center text-[10px] text-[#8b96ab] hover:text-white transition-colors">
-                View all assumptions
-              </button>
-            </div>
+              <SimulationAssumptionsPanel
+                sceneAssumptions={sceneAssumptions}
+                onOpenStudio={onOpenStudio}
+                onHide={() => setDashboardSectionVisible("assumptions", false)}
+              />
             ) : null}
 
             {/* Project Settings */}
             {isDashboardSectionVisible("projectSettings") ? (
-              <section className="rounded-[16px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-200">Project Settings</div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowOrgManager(true)}
-                      className="rounded-lg border border-sky-400/25 bg-sky-500/10 px-2.5 py-1 text-[10px] font-medium text-sky-100 transition-colors hover:bg-sky-500/16"
-                    >
-                      Open workspace admin
-                    </button>
-                    <HideSectionButton
-                      label="project settings"
-                      onClick={() => setDashboardSectionVisible("projectSettings", false)}
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-3 rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] p-3">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[color:var(--st-muted)]">Workspace + account context</div>
-                  <div className="mt-2 space-y-2 text-[10px] text-[color:var(--st-muted)]">
-                    <div className="flex flex-wrap gap-1">
-                      <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-1">Catalog: {workspaceCatalog.scopeLabel}</span>
-                      <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-1">Workspace count: {workspaceCatalog.workspaceCount}</span>
-                      <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-1">Pinned: {workspaceCatalog.pinnedCount}</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-1">Primary org: {workspaceCatalog.primaryOrganization}</span>
-                      <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-1">Primary owner: {workspaceCatalog.primaryOwner}</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-1">Account: {workspaceAccountSummary.accountName}</span>
-                      <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-1">Plan: {workspaceAccountSummary.planLabel}</span>
-                      <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-1">Quota: {workspaceAccountSummary.softQuotaLabel}</span>
-                    </div>
-                    <div className="rounded-[12px] border border-white/10 bg-white/[0.03] px-2 py-1">
-                      <div className="text-[9px] uppercase tracking-[0.16em] text-[color:var(--st-muted)]">Policy scope</div>
-                      <div>{workspaceAccountSummary.scopeDetail}</div>
-                    </div>
-                  </div>
-                </div>
-
-                {organizations.length > 0 ? (
-                  <label className="mt-3 block">
-                    <span className="text-[10px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">Active organization</span>
-                    <select
-                      value={activeOrganizationId ?? ""}
-                      onChange={(event) => setActiveOrganization(event.target.value || null)}
-                      className="mt-1 w-full rounded-lg border border-[color:var(--st-border)] bg-white/[0.04] px-3 py-2 text-[11px] text-white outline-none transition-colors focus:border-sky-400/35"
-                    >
-                      <option value="" className="bg-[#0b0f17] text-white">Use workspace primary</option>
-                      {organizations.map((organization) => (
-                        <option key={organization.id} value={organization.id} className="bg-[#0b0f17] text-white">
-                          {organization.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                ) : null}
-
-                {selectedProjectRecord ? (
-                  <ProjectMetadataEditor
-                    project={selectedProjectRecord}
-                    onUpdateProjectMetadata={onUpdateProjectMetadata}
-                    onDuplicateProject={onDuplicateProject}
-                    onRenameProject={onRenameProject}
-                    onSelectProject={setSelectedProjectId}
-                    organizations={organizations}
-                  />
-                ) : (
-                  <div className="mt-3 rounded-[12px] border border-dashed border-[color:var(--st-border)] bg-white/[0.02] px-3 py-2 text-[10px] text-[color:var(--st-muted)]">
-                    No workspace selected. Open a Workspace from the library to edit project metadata.
-                  </div>
-                )}
-              </section>
+              <ProjectSettingsPanel
+                workspaceCatalog={workspaceCatalog}
+                workspaceAccountSummary={workspaceAccountSummary}
+                organizations={organizations}
+                activeOrganizationId={activeOrganizationId}
+                onChangeOrganization={setActiveOrganization}
+                selectedProjectRecord={selectedProjectRecord}
+                onSetShowOrgManager={() => setShowOrgManager(true)}
+                onHide={() => setDashboardSectionVisible("projectSettings", false)}
+                onUpdateProjectMetadata={onUpdateProjectMetadata}
+                onDuplicateProject={onDuplicateProject}
+                onRenameProject={onRenameProject}
+                onSelectProject={setSelectedProjectId}
+              />
             ) : null}
           </aside>
         </div>
@@ -2089,158 +1923,20 @@ export function StudioDashboardHome({
   );
 }
 
-type WorkspaceLibraryPanelProps = {
-  scene: SecurityScene;
-  result: SimulationResult | null;
-  hydrated: boolean;
-  activePathId: string | null;
-  savedScenes: SecurityScene[];
-  savedProjects: SavedProjectRecord[];
-  visibleProjects?: SavedProjectRecord[];
-  activeSource?: ProjectSourceFilter;
-  onOpenStudio?: () => void;
-  onOpenCoverageWorkspace?: () => void;
-  onOpenReport?: () => void;
-  onOpenScene?: (scene: SecurityScene) => void;
-  onOpenDemoScene?: () => void;
-  onCreateScene?: () => void;
-  onImportFloorPlan?: () => void;
-  onImportScene?: () => void;
-  onScanSite?: () => void;
-  onGuidedScanAssistant?: () => void;
-  onAiDraft?: () => void;
-  onUpdateProjectMetadata?: StudioDashboardHomeProps["onUpdateProjectMetadata"];
-  onDuplicateProject?: (sceneId: string) => void;
-  onRenameProject?: (sceneId: string, nextName: string) => void;
-};
-
-function WorkspaceLibraryPanel({
-  scene,
-  result,
-  hydrated,
-  activePathId,
-  savedScenes,
-  savedProjects,
-  visibleProjects,
-  activeSource = "All",
-  onOpenStudio,
-  onOpenCoverageWorkspace,
-  onOpenReport,
-  onOpenScene,
-  onOpenDemoScene,
-  onCreateScene,
-  onImportFloorPlan,
-  onImportScene,
-  onScanSite,
-  onGuidedScanAssistant,
-  onAiDraft,
-  onUpdateProjectMetadata,
-  onDuplicateProject,
-  onRenameProject,
-}: WorkspaceLibraryPanelProps) {
-  const projectRecords = (visibleProjects ?? savedProjects).slice(0, 8);
-  const projects = projectRecords.length > 0
-    ? projectRecords.map((entry) => entry.scene)
-    : activeSource === "All"
-      ? savedScenes.slice(0, 8)
-      : [];
-  const libraryTitle = activeSource === "demo" ? "Demo Site Twins" : "Project Site Twins";
-  const libraryDescription = activeSource === "demo"
-    ? "Reference scenarios with different coverage outcomes. Open one to show how edits, camera aim, lighting, and obstructions change the simulation."
-    : "Resume a project, compare saved site twins, or start a new intake path from the dashboard.";
-
-  const openScene = (target: SecurityScene) => {
-    onOpenScene?.(target);
-    onOpenStudio?.();
-  };
-
+function HideSectionButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <section className="mt-4 rounded-[24px] border border-[color:var(--st-border)] bg-[color:var(--st-panel)] p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <div className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--st-muted)]">{libraryTitle}</div>
-          <div className="mt-1 text-xs text-[color:var(--st-muted)]">
-            {libraryDescription}
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2 text-[10px]">
-          <button type="button" onClick={onCreateScene} className="rounded-full border border-sky-400/30 bg-sky-500/10 px-2.5 py-1 text-sky-100">Create Site Twin</button>
-          <button type="button" onClick={onImportScene} className="rounded-full border border-white/15 bg-white/[0.03] px-2.5 py-1 text-white/90">Import Site Twin Data</button>
-          <button type="button" onClick={onImportFloorPlan} className="rounded-full border border-white/15 bg-white/[0.03] px-2.5 py-1 text-white/90">Floor Plan</button>
-          <button type="button" onClick={onScanSite} className="rounded-full border border-white/15 bg-white/[0.03] px-2.5 py-1 text-white/90">Scan Site</button>
-          <button type="button" onClick={onGuidedScanAssistant} className="rounded-full border border-white/15 bg-white/[0.03] px-2.5 py-1 text-white/90">Guided Scan</button>
-          <button type="button" onClick={onAiDraft} className="rounded-full border border-white/15 bg-white/[0.03] px-2.5 py-1 text-white/90">Layout Draft</button>
-          <button type="button" onClick={onOpenCoverageWorkspace} className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1 text-emerald-100">Open Coverage</button>
-          <button type="button" onClick={onOpenReport} className="rounded-full border border-amber-400/25 bg-amber-500/10 px-2.5 py-1 text-amber-100">Open Report</button>
-          <button type="button" onClick={onOpenDemoScene} className="rounded-full border border-violet-400/25 bg-violet-500/10 px-2.5 py-1 text-violet-100">Load Demo</button>
-        </div>
-      </div>
-
-      <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-        {projects.length > 0 ? (
-            projects.map((projectScene, index) => {
-              const coveragePct = projectScene.simulation?.totalCoveragePct ?? null;
-              const issueCount = projectScene.simulation?.issues.length ?? 0;
-              const displayTitle = getDemoWorkspaceTitle(projectScene, index);
-              const displayDetail = getDemoWorkspaceDetail(
-                projectScene,
-                `${projectScene.cameras.length} cameras · ${projectScene.criticalZones.length} zones`,
-                index,
-              );
-              return (
-              <div key={projectScene.id} className="rounded-[16px] border border-[color:var(--st-border)] bg-white/[0.02] p-2">
-                <button type="button" onClick={() => openScene(projectScene)} className="w-full text-left">
-                  <div className="relative h-24 overflow-hidden rounded-lg border border-white/10 bg-[#0b1322]">
-                    <ScenePreview
-                      scene={projectScene}
-                      result={projectScene.simulation ?? (projectScene.id === scene.id ? result : null)}
-                      activePathId={projectScene.id === scene.id ? activePathId : null}
-                      compact
-                      showLabels={false}
-                      hydrated={hydrated}
-                    />
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#050914] to-transparent px-2 py-1.5">
-                      <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-sky-100">
-                        {projectScene.source === "demo" ? "Reference Demo" : SOURCE_LABELS[projectScene.source]}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-2 flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="truncate text-[12px] font-semibold text-white">{displayTitle}</div>
-                      <div className="mt-0.5 line-clamp-2 text-[10px] leading-4 text-[color:var(--st-muted)]">{displayDetail}</div>
-                    </div>
-                    <span className={cn(
-                      "flex-none rounded-md border px-1.5 py-0.5 text-[10px] font-bold",
-                      coveragePct == null ? "border-slate-400/20 bg-slate-500/10 text-slate-200" : coverageTone(coveragePct),
-                    )}>
-                      {coveragePct != null ? `${Math.round(coveragePct)}%` : "Run"}
-                    </span>
-                  </div>
-                  <div className="mt-2 grid grid-cols-3 gap-1 text-[9px] text-[color:var(--st-muted)]">
-                    <span className="rounded border border-white/10 bg-white/[0.03] px-1.5 py-1">{projectScene.cameras.length} cams</span>
-                    <span className="rounded border border-white/10 bg-white/[0.03] px-1.5 py-1">{projectScene.criticalZones.length} zones</span>
-                    <span className="rounded border border-white/10 bg-white/[0.03] px-1.5 py-1">{issueCount} issues</span>
-                  </div>
-                </button>
-                <div className="mt-2 flex flex-wrap gap-1 text-[9px]">
-                  <button type="button" onClick={() => openScene(projectScene)} className="rounded border border-emerald-400/25 bg-emerald-500/10 px-1.5 py-0.5 text-emerald-100">Open Studio</button>
-                  <button type="button" onClick={() => onRenameProject?.(projectScene.id, `${projectScene.name} Copy`)} className="rounded border border-white/15 px-1.5 py-0.5 text-white/80">Quick Rename</button>
-                  <button type="button" onClick={() => onDuplicateProject?.(projectScene.id)} className="rounded border border-white/15 px-1.5 py-0.5 text-white/80">Duplicate</button>
-                  <button type="button" onClick={() => onUpdateProjectMetadata?.(projectScene.id, { lastOpenedAt: Date.now() })} className="rounded border border-white/15 px-1.5 py-0.5 text-white/80">Mark Opened</button>
-                </div>
-              </div>
-              );
-            })
-          ) : (
-            <div className="col-span-full rounded-[16px] border border-dashed border-[color:var(--st-border)] bg-white/[0.02] px-3 py-4 text-xs text-[color:var(--st-muted)]">
-              No saved Site Twins yet. Start with Create Site Twin, Scan, Import, or Layout Draft.
-            </div>
-          )}
-      </div>
-    </section>
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex h-6 items-center rounded-[7px] border border-[color:var(--st-border)] bg-white/[0.03] px-2 text-[10px] text-[color:var(--st-muted)] transition-colors hover:border-sky-400/25 hover:text-white"
+      aria-label={`Hide ${label}`}
+      title={`Hide ${label}`}
+    >
+      Hide
+    </button>
   );
 }
+
 
 type SiteTwinSearchBarProps = {
   workspaceMemoryQuery: string;

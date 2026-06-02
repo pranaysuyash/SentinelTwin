@@ -47,22 +47,11 @@ describe("workspace governance", () => {
 
   describe("resolveApprovalRoute", () => {
     const createMockScene = (overrides?: Partial<SecurityScene>): SecurityScene => ({
+      ...createBlankSecurityScene(),
       id: "test-scene",
       name: "Test Scene",
-      source: "manual",
-      reviewStatus: "unreviewed",
-      sourceTrace: "",
-      geometryValidity: "valid",
-      cameras: [],
-      securityLights: [],
-      obstructions: [],
-      criticalZones: [],
-      privacyZones: [],
-      paths: [],
-      sensors: [],
-      snapshots: [],
       ...overrides,
-    } as SecurityScene);
+    });
 
     test("requires privacy_reviewer review if there are privacy zones", () => {
       const scene = createMockScene({ privacyZones: [{ id: "p1", type: "privacy_zone", position: [0,0,0], scale: [1,1,1] } as unknown as PrivacyZoneNode] });
@@ -109,19 +98,15 @@ describe("workspace governance", () => {
     });
 
     test("requires admin for temporary emergency/perimeter scenario escalation", () => {
+      const baseScene = createBlankSecurityScene();
       const scene = createMockScene({
         assumptions: {
+          ...baseScene.assumptions,
           operationalMode: "temporary_event",
           operationalContext: {
             isEmergencyWindow: true,
             requiresTemporaryPerimeterLockdown: true,
           },
-        } as {
-          operationalMode: "temporary_event";
-          operationalContext: {
-            isEmergencyWindow: boolean;
-            requiresTemporaryPerimeterLockdown: boolean;
-          };
         },
       });
       const governance = createDefaultWorkspaceGovernance();
@@ -144,13 +129,12 @@ describe("workspace governance", () => {
       ...createDefaultWorkspaceGovernance(),
       activeRole: "reviewer" as const,
     };
-    const scene = {
+    const scene: SecurityScene = {
       ...createBlankSecurityScene(),
       id: "test-scene",
       name: "Critical Scene",
-      source: "manual" as const,
       criticalZones: [{ id: "c1", type: "critical_zone", position: [0, 0, 0], scale: [1, 1, 1], priority: "critical" } as unknown as CriticalZoneNode],
-    } as unknown as SecurityScene;
+    };
 
     expect(canPublishWorkspaceScene(governance, scene)).toBe(false);
     expect(canPublishWorkspaceScene({ ...governance, activeRole: "admin" }, scene)).toBe(true);

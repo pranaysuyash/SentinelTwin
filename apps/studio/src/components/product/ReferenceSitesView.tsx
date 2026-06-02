@@ -172,30 +172,32 @@ export function ReferenceSitesView() {
 
   const [filter, setFilter] = useState<"all" | "retail" | "office" | "warehouse">("all");
 
-  const referenceDemos = useMemo(
-    () => referenceScenes,
-    [referenceScenes],
-  );
+  const duplicateReferenceToWorkspace = useStudioStore((s) => s.duplicateReferenceToWorkspace);
+
   const filteredReferenceProjects = useMemo(
-    () => referenceProjects.filter((project) => filter === "all" || siteCategory(project.scene) === filter),
-    [filter, referenceProjects],
+    () => referenceScenes.filter((scene) => filter === "all" || siteCategory(scene) === filter),
+    [filter, referenceScenes],
   );
   const categoryCounts = useMemo(
-    () => referenceProjects.reduce<Record<typeof filter, number>>((acc, project) => {
+    () => referenceScenes.reduce<Record<typeof filter, number>>((acc, scene) => {
       acc.all += 1;
-      acc[siteCategory(project.scene)] += 1;
+      acc[siteCategory(scene)] += 1;
       return acc;
     }, { all: 0, retail: 0, office: 0, warehouse: 0 }),
-    [referenceProjects],
+    [referenceScenes],
   );
 
-  const openReferenceScene = (scene: SecurityScene) => {
+  const openReferenceScene = useCallback((scene: SecurityScene) => {
     setScene(scene);
     setWorkspacePreset("coverage");
     setViewMode("map");
     setBottomTab("metrics");
     navigate("studio");
-  };
+  }, [setScene, setWorkspacePreset, setViewMode, setBottomTab, navigate]);
+
+  const handleDuplicate = useCallback((scene: SecurityScene) => {
+    duplicateReferenceToWorkspace(scene.id);
+  }, [duplicateReferenceToWorkspace]);
 
   const categories = [
     { id: "all" as const, label: "All References" },
@@ -222,7 +224,7 @@ export function ReferenceSitesView() {
         </div>
         <div className="ml-auto flex items-center gap-2">
           <span className="rounded-full border border-[color:var(--st-border)] bg-white/[0.03] px-3 py-1 text-[10px] text-[color:var(--text-muted)]">
-            {referenceProjects.length} scenes
+            {referenceScenes.length} scenes
           </span>
         </div>
       </header>
@@ -251,31 +253,41 @@ export function ReferenceSitesView() {
       <div className="flex-1 overflow-y-auto px-5 py-4">
         {filteredReferenceProjects.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filteredReferenceProjects.map((record) => (
-              <SceneCard
-                key={record.scene.id}
-                record={record}
-                onOpen={openReferenceScene}
-              />
+            {filteredReferenceProjects.map((scene) => (
+              <div key={scene.id} className="relative group">
+                <SceneCard
+                  scene={scene}
+                  onOpen={openReferenceScene}
+                  onDuplicate={handleDuplicate}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleDuplicate(scene)}
+                  title="Duplicate as workspace"
+                  className="absolute right-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-lg border border-sky-400/30 bg-sky-500/20 text-sky-200 opacity-0 shadow-lg backdrop-blur-sm transition-all hover:bg-sky-500/30 group-hover:opacity-100"
+                >
+                  <Copy className="h-3 w-3" />
+                </button>
+              </div>
             ))}
           </div>
         ) : (
           <div className="flex h-full items-center justify-center">
             <div className="rounded-2xl border border-white/10 bg-black/20 px-6 py-8 text-center">
               <div className="text-sm font-medium text-white">
-                {referenceProjects.length > 0 ? "No matches in this category" : "No reference scenes"}
+                {referenceScenes.length > 0 ? "No matches in this category" : "No reference scenes"}
               </div>
               <div className="mt-2 text-xs text-[color:var(--text-muted)]">
-                {referenceProjects.length > 0
+                {referenceScenes.length > 0
                   ? "Choose another reference category, or return home to create a new site twin."
                   : "Run the app to seed reference scenes, or create a workspace from Product Home."}
               </div>
               <button
                 type="button"
-                onClick={() => referenceProjects.length > 0 ? setFilter("all") : navigate("product_home")}
+                onClick={() => referenceScenes.length > 0 ? setFilter("all") : navigate("product_home")}
                 className="mt-4 rounded-xl border border-sky-400/25 bg-sky-500/12 px-4 py-2 text-xs font-medium text-sky-100 transition-colors hover:bg-sky-500/20"
               >
-                {referenceProjects.length > 0 ? "Show All References" : "Return to Product Home"}
+                {referenceScenes.length > 0 ? "Show All References" : "Return to Product Home"}
               </button>
             </div>
           </div>

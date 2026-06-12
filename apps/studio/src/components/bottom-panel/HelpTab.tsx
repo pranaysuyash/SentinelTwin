@@ -101,6 +101,7 @@ const SHORTCUT_GROUPS = [
       { keys: "4", action: "Path Replay" },
       { keys: "5", action: "Compare" },
       { keys: "6", action: "Report Lite" },
+      { keys: "7", action: "Analytics Dashboard" },
     ],
   },
   {

@@ -128,6 +128,10 @@ function makeSceneNodeHandlers({
 
   const handlePointerDown = (event: ThreeEvent<MouseEvent>) => {
     if (!isPrimaryMouseEvent(event)) return;
+    // Placement tools own the pointer: walls/doors/windows must not swallow
+    // placement clicks while the user is placing objects.
+    const activeTool = useStudioStore.getState().activeTool;
+    if (activeTool !== "select" && activeTool !== "measure" && activeTool !== "comment") return;
     event.stopPropagation();
     const isRangeSelect = event.shiftKey || event.metaKey || event.ctrlKey;
     if (isRangeSelect) {
@@ -514,6 +518,11 @@ export function SceneObstructions({
         const isShelf = obs.obstructionType === "shelf";
         const color = OBSTRUCTION_COLORS[obs.obstructionType] ?? OBSTRUCTION_COLORS.other;
         const highlightBox = new THREE.BoxGeometry(w * 1.02, h * 1.02, d * 1.02);
+        const placementToolActive = () => {
+          const activeTool = useStudioStore.getState().activeTool;
+          return activeTool !== "select" && activeTool !== "measure" && activeTool !== "comment";
+        };
+
         const handleSelect = (id: string) => {
           const selectTarget = onSelect ?? storeSelect;
           selectTarget(id);
@@ -543,7 +552,11 @@ export function SceneObstructions({
             key={obs.id}
             position={sanitizePoint3D(obs.position, [w / 2, h / 2, d / 2])}
             rotation={[0, (resolveSafeNumber(obs.rotationYDeg, 0) * Math.PI) / 180, 0]}
-            onClick={(e) => { e.stopPropagation(); handleSelect(obs.id); }}
+            onClick={(e) => {
+              if (placementToolActive()) return;
+              e.stopPropagation();
+              handleSelect(obs.id);
+            }}
             {...interactionHandlers}
           >
             <mesh castShadow receiveShadow>

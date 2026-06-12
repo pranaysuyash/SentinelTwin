@@ -4969,3 +4969,63 @@ Fixed the `CameraLiveConnectionEventRecord` and `WorkspaceApprovalRouteSummary` 
 **Key files:**
 - `apps/studio/src/components/launcher/CoverageMetricsCards.tsx` — line 74 subtitle now uses `lastRunDetail ?? `Updated ${displayRunLabel}``, with `suppressHydrationWarning` for SSR safety
 
+
+## D-300 | 2026-06-12 | Simulation execution moves off the main thread via a dedicated Web Worker with deterministic fallback
+
+**Decision:** `runSimulation` (and the fix-sandbox recompute) no longer call the engine directly. They route through a canonical runner, `apps/studio/src/lib/simulation-runner.ts`, which prefers a dedicated module Web Worker (`apps/studio/src/workers/simulation.worker.ts`) and falls back to the existing `simulateStudioAsync` cooperative-yield main-thread path when workers are unavailable (SSR, tests, bootstrap failure). The worker also computes the 24h temporal profile in the same run, so `buildSimulationState` no longer recomputes `computeTemporalProfile` synchronously on the main thread after every simulation.
+
+**Rationale:**
+- Non-negotiable rule 3 made the simulation layer worker-safe from day one, but nothing ever actually ran it in a worker. Every recompute (BVH raycasting + 96-snapshot temporal profile) blocked the R3F frame loop and editor interactions.
+- The temporal profile recompute after every run was the largest hidden main-thread cost; moving it into the same worker round-trip removes it without adding a second pipeline.
+- One execution pipeline: all store entry points run through `runStudioSimulation`. No parallel simulation paths, per the no-duplicate-pipelines rule.
+- Next 16 / Turbopack natively bundle `new Worker(new URL(...), { type: "module" })` (verified against the bundled Next docs and a production build).
+
+**Verification:** Production build succeeds with the worker chunk; runtime-verified in the browser by instrumenting `Worker.prototype.postMessage` and observing the scene payload posted on Recompute (Tier 4). Fallback path covered by `src/lib/__tests__/simulation-runner.test.ts` (same deterministic result as the sync engine). Execution path (`web worker` vs `main thread`) is recorded in the runtime incident trail for observability.
+
+**Key files:**
+- `apps/studio/src/lib/simulation-runner.ts` — canonical runner, worker lifecycle, fallback
+- `apps/studio/src/lib/simulation-run-core.ts` — shared pure payload types + temporal helper (no DOM/React)
+- `apps/studio/src/workers/simulation.worker.ts` — worker entry
+- `apps/studio/src/store/slices/core/simulation-slice.ts` — `runSimulation` + sandbox path now use the runner; `buildSimulationState` accepts a precomputed temporal profile
+
+**Revisit when:** simulation cancellation/progress streaming is needed (worker protocol already has request ids), or when the engine moves to `packages/simulation` worker exports for other shells.
+
+## D-301 | 2026-06-12 | Security Analytics Dashboard is a first-class view mode backed by a pure derivation model
+
+**Decision:** A new `analytics` ViewMode renders `AnalyticsDashboardView`, an interactive command-center dashboard. All numbers come from `buildSecurityAnalyticsModel` (`apps/studio/src/lib/security-analytics.ts`), a pure, headless derivation over canonical store state: simulation result, temporal profile, evidence ledger, and snapshots. No new state, no parallel truth.
+
+**Rationale:**
+- Analytics were scattered across bottom-panel tabs (Metrics, Novel, Temporal, Redundancy, Provenance); there was no single surface that answers "how secure is this site, and what should I do next?" at a glance.
+- Every dashboard element drills into the canonical surface that explains it: KPI cards open the relevant bottom tab, the 24h chart click scrubs `setTemporalScrub` (scene follows), camera leaderboard rows open Camera View with the camera selected, occlusion offenders select the obstruction and open counterfactuals.
+- The model is a pure function with direct tests against the real engine output, so dashboard truth cannot drift from simulation truth.
+- Truth labeling follows the existing trust idiom ("Truth: Simulated · deterministic engine output").
+
+**Implementation notes:**
+- `setViewMode` previously let the preset layout patch overwrite the requested mode (worked only because the six legacy modes mapped 1:1 to presets). It now honors the requested mode explicitly; analytics reuses the `coverage` dock layout. Initial boot honors `?mode=` for analytics too.
+- View key `7`, ViewModeBar secondary option, ViewSettingsModal main-view entry, Help/Shortcuts copy all updated.
+
+**Verification:** 6 model tests in `src/lib/__tests__/security-analytics.test.ts` (engine-backed), runtime-verified in production build with the retail reference scene (KPIs, 24h night-dip chart, DORI bands, leaderboard, drill-through to Camera View observed in browser, Tier 4).
+
+**Revisit when:** the report/export surface should embed the same analytics model, or when org-level multi-site analytics arrive (model is already UI-free and portable).
+
+## D-302 | 2026-06-12 | Drag-to-aim camera placement with live POV preview ("what will this camera see")
+
+**Decision:** Camera placement is now a drag-to-aim interaction: pointerdown anchors the camera, dragging steers the yaw with a live FOV wedge on the floor, pointerup commits (plain click keeps the preset/default yaw). While the camera tool is active, a picture-in-picture `PlacementPreviewPanel` renders the canonical scene from the hover/aim pose — the user sees exactly what the camera would see before it exists. Aim state is canonical editor state (`editor.placementAim` in the scene slice), so the 3D wedge, HUD label, and preview panel can never disagree.
+
+**Companion fixes in the same blast radius:**
+- **Selection no longer swallows placement clicks.** Camera frustums/markers/walls/obstructions used to `stopPropagation` on pointerdown even while a placement tool was active — frustum cones alone can blanket the entire floor, making placement nearly impossible on a populated scene. `makeWorkspaceNodeHandlers`, `makeSceneNodeHandlers`, and the obstruction click handler now yield to active placement tools (select/measure/comment keep selection behavior).
+- **Preset pickers default to collapsed** — the expanded grid covered most of the canvas at narrow widths, blocking the very placement it configures.
+- Orbit rotate is disabled while the camera tool is active so left-drag aims instead of orbiting (pan/zoom unaffected).
+- QA hook: `?qa=1` exposes the store on `window.__sentinelStudioStore` for scripted browser verification.
+
+**Verification (Tier 4):** Store-instrumented browser run on the production build: pointerdown set `placementAim` anchor [6,4]; drag updated yaw to 84°; pointerup created the camera at [6, 2.8, 4] with `yawDeg: 84`, selected it, and emitted "Camera placed facing 84°". Screenshot evidence of the aim label, FOV wedge, and the preview panel in AIMING state. Aim-yaw math has direct unit coverage round-tripped against `getYawPitchDirection` (`aim-yaw.test.ts`).
+
+**Key files:** `workspace-canvas-utils.ts` (`computeAimYawDeg`, thresholds), `WorkspaceCanvas.tsx` (aim lifecycle, `AimFovWedge`), `PlacementPreviewPanel.tsx`, `SharedScene.tsx` + handler gates, `scene-slice.ts` (`placementAim`, `setPlacementAim`).
+
+## D-303 | 2026-06-12 | Obstruction object library with custom dimensions
+
+**Decision:** Obstruction placement now goes through a canonical object library (`src/lib/obstruction-presets.ts`): Shelf, Counter, Cupboard, Pillar, Glass Display Case, Partition, Vehicle, Tree/Planter, and Custom Object with user-entered width/depth/height. Each preset maps onto the existing `ObstructionNode` contract — dimensions use the canonical `[width, depth, height]` order, materials/visionTransmission/glare/IR flags feed the deterministic engine directly. A store-backed `ObstructionPresetPicker` mirrors the camera preset picker idiom; the placement ghost shows the true preset footprint; placement centers the node at `height/2`.
+
+**Verification (Tier 4):** Browser-verified on the production build: placing with the Glass Display preset created a node with dims [1.5, 0.6, 1.2], material `glass`, visionTransmission 0.7, y=0.6, and triggered an automatic worker recompute. Catalog validity is regression-tested against the Zod schema (`obstruction-presets.test.ts`).
+
+**Also in this pass:** Analytics dashboard animation polish — KPI entrance stagger + count-up values, chart path draw-in (framer-motion `pathLength`), DORI band grow-in, hover/tap micro-interactions.

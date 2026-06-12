@@ -65,9 +65,15 @@ import {
   createSensorNode,
 } from "@/lib/node-factory";
 import { CameraPresetPicker } from "./CameraPresetPicker";
+import { ObstructionPresetPicker } from "./ObstructionPresetPicker";
+import { PlacementPreviewPanel } from "./PlacementPreviewPanel";
 import { applyCameraPreset, getCameraPreset } from "./camera-preset-utils";
+import { getObstructionPreset, resolvePresetDimensions } from "@/lib/obstruction-presets";
 import { getCameraColorForId } from "@/lib/camera-colors";
 import {
+  AIM_DRAG_THRESHOLD_M,
+  computeAimYawDeg,
+  DEFAULT_PLACEMENT_YAW_DEG,
   findObstructionForBlindspotIssue,
   isPrimaryMouseEvent,
   sanitizeSceneDimensions,
@@ -165,6 +171,11 @@ function makeWorkspaceNodeHandlers({
 
   const handlePointerDown = (event: ThreeEvent<MouseEvent>) => {
     if (!isPrimaryMouseEvent(event)) return;
+    // While a placement tool is active, objects must not swallow placement
+    // clicks (camera frustums alone can blanket the whole floor). Let the
+    // event fall through to the placement floor instead of selecting.
+    const activeTool = useStudioStore.getState().activeTool;
+    if (activeTool !== "select" && activeTool !== "measure" && activeTool !== "comment") return;
     event.stopPropagation();
     const isRangeSelect = event.shiftKey || event.metaKey || event.ctrlKey;
     if (isRangeSelect) {
@@ -526,7 +537,8 @@ function CameraMarker({
             status={camera.status}
             selected={selected}
             hovered={hovered}
-            compact={labelCompact}
+            // Progressive disclosure: compact chip at rest, full card on intent.
+            compact={labelCompact && !selected && !hovered}
             isSuggested={camera.tags?.includes("suggested")}
           />
         </SceneHtml>
@@ -738,7 +750,7 @@ function CriticalZoneOverlay({
             borderColor={color}
             badgeBg={badgeBg}
             badgeText={badgeText}
-            compact={overlayDensity === "compact"}
+            compact={overlayDensity === "compact" && !selected}
           />
         </SceneHtml>
       )}
@@ -1077,8 +1089,11 @@ function ToolPlacementFloor({
   const criticalZoneTargetType = useStudioStore((s) => s.criticalZoneTargetType);
   const sensorPlacementType = useStudioStore((s) => s.sensorPlacementType);
   const editor = useStudioStore((s) => s.editor);
-  const { draftWallStart, draftPolygonPoints, draftPathPoints, hoverPoint } = editor;
+  const { draftWallStart, draftPolygonPoints, draftPathPoints, hoverPoint, placementAim } = editor;
   const setEditorHoverPoint = useStudioStore((s) => s.setEditorHoverPoint);
+  const setPlacementAim = useStudioStore((s) => s.setPlacementAim);
+  const obstructionPresetId = useStudioStore((s) => s.obstructionPresetId);
+  const customObstructionDimensions = useStudioStore((s) => s.customObstructionDimensions);
   const setEditorFeedbackMessage = useStudioStore((s) => s.setEditorFeedbackMessage);
   const setDraftWallStart = useStudioStore((s) => s.setDraftWallStart);
   const setDraftPolygonPoints = useStudioStore((s) => s.setDraftPolygonPoints);
@@ -1092,6 +1107,9 @@ function ToolPlacementFloor({
   const [isHovering, setIsHovering] = useState(false);
   const floorRef = useRef<THREE.Mesh>(null!);
   const lastHoverRef = useRef<[number, number] | null>(null);
+  const aimDraggedRef = useRef(false);
+  const placementAimRef = useRef(placementAim);
+  placementAimRef.current = placementAim;
   const hasEntryPointsRef = useRef(scene.entryPoints.length > 0);
   const raycaster = useMemo(() => new THREE.Raycaster(), []);
   const [sceneWidth, sceneDepth] = useMemo(
@@ -1160,6 +1178,19 @@ function ToolPlacementFloor({
       const point = getFloorPoint(event);
       if (!point) return;
 
+      // While aiming a camera, the cursor steers the yaw instead of the hover ghost.
+      if (activeTool === "camera" && placementAim) {
+        const yawDeg = computeAimYawDeg(placementAim.anchor, [point.x, point.z]);
+        const distance = Math.hypot(point.x - placementAim.anchor[0], point.z - placementAim.anchor[1]);
+        if (distance >= AIM_DRAG_THRESHOLD_M) {
+          aimDraggedRef.current = true;
+          if (yawDeg !== placementAim.yawDeg) {
+            setPlacementAim({ anchor: placementAim.anchor, yawDeg });
+          }
+        }
+        return;
+      }
+
       const basePoint = snapEngine.snapToGrid([point.x, point.z]);
       const generalProfile = snapEngine.snapForPlacement(basePoint, false);
       let snapped = basePoint;
@@ -1189,7 +1220,7 @@ function ToolPlacementFloor({
         setHoverPos(new THREE.Vector3(snapped[0], 0.02, snapped[1]));
       }
     },
-    [activeTool, draftWallStart, getFloorPoint, isPlacing, selectionDrag, setEditorFeedbackMessage, setEditorHoverPoint, setSelectionDrag, snapEngine],
+    [activeTool, draftWallStart, getFloorPoint, isPlacing, placementAim, selectionDrag, setEditorFeedbackMessage, setEditorHoverPoint, setPlacementAim, setSelectionDrag, snapEngine],
   );
 
   const commitDraftPolygon = useCallback(() => {
@@ -1294,17 +1325,21 @@ function ToolPlacementFloor({
       }
 
       if (activeTool === "camera") {
-        const preset = getCameraPreset(cameraPresetId);
-        const node = createCameraNode([pos[0], 2.8, pos[2]]);
-        if (preset) {
-          const presetOverrides = applyCameraPreset(preset);
-          Object.assign(node, presetOverrides);
-        }
-        addNode(node);
-        setEditorFeedbackMessage(null);
-        selectNode(node.id);
+        // Start drag-to-aim: anchor here, yaw follows the cursor until release.
+        aimDraggedRef.current = false;
+        setPlacementAim({ anchor: [workingSnap[0], workingSnap[1]], yawDeg: DEFAULT_PLACEMENT_YAW_DEG });
+        setEditorFeedbackMessage("Drag to aim · release to place");
       } else if (activeTool === "obstruction") {
-        const node = createObstructionNode([pos[0], 1, pos[2]]);
+        const preset = getObstructionPreset(obstructionPresetId);
+        const dimensions = resolvePresetDimensions(preset, customObstructionDimensions);
+        const node = createObstructionNode([pos[0], dimensions[2] / 2, pos[2]], preset.obstructionType, {
+          dimensions,
+          material: preset.material,
+          visionTransmission: preset.visionTransmission,
+          glareRisk: preset.glareRisk,
+          nightIRReflective: preset.nightIRReflective,
+          movable: preset.movable,
+        });
         addNode(node);
         setEditorFeedbackMessage(null);
         selectNode(node.id);
@@ -1371,13 +1406,14 @@ function ToolPlacementFloor({
       commitDraftPath,
       commitDraftPolygon,
       clearSelection,
-      cameraPresetId,
+      customObstructionDimensions,
       draftPathPoints,
       draftPolygonPoints,
       draftWallStart,
       getFloorPoint,
       hoverPoint,
       isPlacing,
+      obstructionPresetId,
       scene.assumptions.wallHeightM,
       sensorPlacementType,
       selectNode,
@@ -1386,6 +1422,7 @@ function ToolPlacementFloor({
       setDraftWallStart,
       setEditorMode,
       setEditorFeedbackMessage,
+      setPlacementAim,
       setSelectionDrag,
       snapEngine,
     ],
@@ -1412,6 +1449,30 @@ function ToolPlacementFloor({
       window.removeEventListener("mouseup", onMouseUp);
     };
   }, [clearSelection, selectionDrag, setSelectedNodes, setSelectionDrag]);
+
+  // Commit the aimed camera when the pointer is released anywhere.
+  useEffect(() => {
+    if (!placementAim) return;
+    const onPointerUp = () => {
+      const aim = placementAimRef.current;
+      if (!aim) return;
+      const preset = getCameraPreset(cameraPresetId);
+      const node = createCameraNode([aim.anchor[0], 2.8, aim.anchor[1]]);
+      if (preset) {
+        Object.assign(node, applyCameraPreset(preset));
+      }
+      if (aimDraggedRef.current) {
+        node.yawDeg = aim.yawDeg;
+      }
+      addNode(node);
+      selectNode(node.id);
+      setPlacementAim(undefined);
+      setEditorFeedbackMessage(aimDraggedRef.current ? `Camera placed facing ${aim.yawDeg}°` : null);
+      aimDraggedRef.current = false;
+    };
+    window.addEventListener("pointerup", onPointerUp);
+    return () => window.removeEventListener("pointerup", onPointerUp);
+  }, [addNode, cameraPresetId, placementAim, selectNode, setEditorFeedbackMessage, setPlacementAim]);
 
   const tooltipText = useMemo(() => {
     if (activeTool === "wall" && wallLength > 0) {
@@ -1524,7 +1585,12 @@ function ToolPlacementFloor({
   ]);
 
   const ghostColor = TOOL_GHOST_COLORS[activeTool] ?? TOOL_GHOST_COLORS.default;
-  const visibleHoverPos = activeTool === "select" ? null : hoverPos;
+  const visibleHoverPos = activeTool === "select" || placementAim ? null : hoverPos;
+  const ghostCameraPreset = getCameraPreset(cameraPresetId);
+  const ghostFovDeg = ghostCameraPreset?.fovHorizontalDeg ?? 90;
+  const ghostRangeM = ghostCameraPreset?.rangeM ?? 12;
+  const ghostObstructionPreset = getObstructionPreset(obstructionPresetId);
+  const ghostObstructionDims = resolvePresetDimensions(ghostObstructionPreset, customObstructionDimensions);
 
   return (
     <>
@@ -1570,6 +1636,7 @@ function ToolPlacementFloor({
                 <boxGeometry args={[0.12, 0.06, 0.14]} />
                 <meshBasicMaterial color={ghostColor} transparent opacity={0.35} />
               </mesh>
+              <AimFovWedge yawDeg={DEFAULT_PLACEMENT_YAW_DEG} fovDeg={ghostFovDeg} rangeM={ghostRangeM} color={ghostColor} opacity={0.1} />
             </>
           ) : activeTool === "sensor" ? (
             <>
@@ -1583,8 +1650,8 @@ function ToolPlacementFloor({
               </mesh>
             </>
           ) : activeTool === "obstruction" ? (
-            <mesh position={[0, 1, 0]}>
-              <boxGeometry args={[1, 2, 0.5]} />
+            <mesh position={[0, ghostObstructionDims[2] / 2, 0]}>
+              <boxGeometry args={[ghostObstructionDims[0], ghostObstructionDims[2], ghostObstructionDims[1]]} />
               <meshBasicMaterial color={ghostColor} transparent opacity={0.28} wireframe />
             </mesh>
           ) : (
@@ -1627,10 +1694,79 @@ function ToolPlacementFloor({
         </group>
       )}
 
+      {/* Drag-to-aim ghost: anchored camera with live FOV wedge following the cursor */}
+      {activeTool === "camera" && placementAim ? (
+        <group position={[placementAim.anchor[0], 0.03, placementAim.anchor[1]]}>
+          <mesh>
+            <cylinderGeometry args={[0.18, 0.18, 0.08, 18]} />
+            <meshBasicMaterial color={ghostColor} transparent opacity={0.6} />
+          </mesh>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.005, 0]}>
+            <ringGeometry args={[0.15, 0.3, 24]} />
+            <meshBasicMaterial color={ghostColor} transparent opacity={0.7} />
+          </mesh>
+          <AimFovWedge yawDeg={placementAim.yawDeg} fovDeg={ghostFovDeg} rangeM={ghostRangeM} color={ghostColor} opacity={0.22} />
+          <SceneHtml position={[0, 0.4, 0]} center distanceFactor={10} style={{ pointerEvents: "none" }}>
+            <div
+              style={{
+                background: "rgba(0,0,0,0.78)",
+                border: `1.5px solid ${ghostColor}`,
+                borderRadius: 6,
+                padding: "3px 8px",
+                fontSize: 9,
+                fontWeight: 600,
+                color: ghostColor,
+                whiteSpace: "nowrap",
+                backdropFilter: "blur(4px)",
+              }}
+            >
+              {`Aim ${placementAim.yawDeg}° · release to place`}
+            </div>
+          </SceneHtml>
+        </group>
+      ) : null}
+
       {activeTool === "measure" && isHovering && hoverPoint ? (
         <SelectionOverlay center={hoverPoint} label={tooltipText} showSnap />
       ) : null}
     </>
+  );
+}
+
+/**
+ * Flat field-of-view wedge on the floor showing where a camera will look.
+ * Default orientation faces -Z (engine yaw 0); rotated to the live aim yaw.
+ */
+function AimFovWedge({
+  yawDeg,
+  fovDeg,
+  rangeM,
+  color,
+  opacity,
+}: {
+  yawDeg: number;
+  fovDeg: number;
+  rangeM: number;
+  color: string;
+  opacity: number;
+}) {
+  const shape = useMemo(() => {
+    const wedge = new THREE.Shape();
+    const half = (Math.min(fovDeg, 170) / 2) * (Math.PI / 180);
+    const radius = Math.max(1, Math.min(rangeM * 0.6, 7));
+    wedge.moveTo(0, 0);
+    wedge.absarc(0, 0, radius, Math.PI / 2 - half, Math.PI / 2 + half, false);
+    wedge.lineTo(0, 0);
+    return wedge;
+  }, [fovDeg, rangeM]);
+
+  return (
+    <group rotation={[0, -(yawDeg * Math.PI) / 180, 0]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+        <shapeGeometry args={[shape]} />
+        <meshBasicMaterial color={color} transparent opacity={opacity} side={THREE.DoubleSide} depthWrite={false} />
+      </mesh>
+    </group>
   );
 }
 
@@ -1921,6 +2057,8 @@ export function WorkspaceCanvas() {
   const layerVisibility = useStudioStore((s) => s.layerVisibility);
   const simulationResult = useStudioStore((s) => s.simulationResult);
   const editorMode = useStudioStore((s) => s.editor.editorMode);
+  const isAimingCamera = useStudioStore((s) => Boolean(s.editor.placementAim));
+  const rootActiveTool = useStudioStore((s) => s.activeTool);
   const theme = ENVIRONMENT_THEMES[envMode] ?? ENVIRONMENT_THEMES.day;
   const [sceneWidth, sceneDepth] = useMemo(
     () => sanitizeSceneDimensions(scene.dimensions.width, scene.dimensions.depth, 0.5),
@@ -2084,8 +2222,12 @@ export function WorkspaceCanvas() {
       {visibleComponents.camera_preset_picker ? (
         <div className="absolute left-1/2 top-12 z-10 -translate-x-1/2">
           <CameraPresetPicker />
+          <ObstructionPresetPicker />
         </div>
       ) : null}
+
+      {/* Live "what will this camera see" preview while placing/aiming */}
+      <PlacementPreviewPanel />
 
       <Canvas
         shadows="percentage"
@@ -2144,8 +2286,8 @@ export function WorkspaceCanvas() {
 
         <OrbitControls
           makeDefault
-          enabled={editorMode !== "transforming"}
-          enableRotate={!isTopDown}
+          enabled={editorMode !== "transforming" && !isAimingCamera}
+          enableRotate={!isTopDown && rootActiveTool !== "camera"}
           target={[frame.target.x, frame.target.y, frame.target.z]}
           minDistance={5.5}
           maxDistance={40}

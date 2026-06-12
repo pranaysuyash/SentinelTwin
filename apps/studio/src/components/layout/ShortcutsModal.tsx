@@ -9,7 +9,7 @@ export default function ShortcutsModal({ onClose }: { onClose: () => void }) {
     { keys: "Enter", action: "Complete wall / path / zone" },
     { keys: "Delete", action: "Remove selected objects" },
     { keys: "← → ↑ ↓", action: "Nudge selected objects" },
-    { keys: "1 – 6", action: "Switch View Mode (Map, Camera, Wall, Replay, Compare, Report Lite)" },
+    { keys: "1 – 7", action: "Switch View Mode (Map, Camera, Wall, Replay, Compare, Report Lite, Analytics)" },
     { keys: "V", action: "Select tool" },
     { keys: "C", action: "Place Camera tool" },
     { keys: "B", action: "Place Obstruction tool" },

@@ -23,7 +23,7 @@ describe("Studio shell shortcuts", () => {
     expect(constantsSource).toContain('m: "measure"');
     expect(constantsSource).toContain('t: "comment"');
 
-    expect(shortcutsSource).toContain('keys: "1 – 6"');
+    expect(shortcutsSource).toContain('keys: "1 – 7"');
     expect(shortcutsSource).toContain('keys: "Enter"');
     expect(shortcutsSource).toContain('keys: "Delete"');
     expect(shortcutsSource).toContain('keys: "← → ↑ ↓"');

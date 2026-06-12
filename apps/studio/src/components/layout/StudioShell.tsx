@@ -110,6 +110,15 @@ export default function StudioShell() {
     queueMicrotask(() => setHydrated(true));
   }, []);
 
+  // QA hook: expose the store for browser automation when explicitly requested
+  // via ?qa=1. Used by scripted UI verification (no effect for normal users).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (new URLSearchParams(window.location.search).get("qa") === "1") {
+      (window as unknown as Record<string, unknown>).__sentinelStudioStore = useStudioStore;
+    }
+  }, []);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const media = window.matchMedia("(max-width: 720px)");
@@ -122,7 +131,7 @@ export default function StudioShell() {
   useEffect(() => {
     const mode = new URLSearchParams(window.location.search).get("mode");
     if (!mode) return;
-    if (mode !== "map" && mode !== "wall" && mode !== "replay" && mode !== "camera_view" && mode !== "compare" && mode !== "report") return;
+    if (mode !== "map" && mode !== "wall" && mode !== "replay" && mode !== "camera_view" && mode !== "compare" && mode !== "report" && mode !== "analytics") return;
     setViewMode(mode as ViewMode);
   }, []);
 

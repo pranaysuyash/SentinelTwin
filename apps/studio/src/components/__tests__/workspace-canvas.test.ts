@@ -23,7 +23,9 @@ describe("WorkspaceCanvas obstruction selection", () => {
     expect(workspaceSource).toContain('{visibleComponents.camera_preset_picker ? (');
     expect(sharedSceneSource).toContain('const storeSelect = useStudioStore((s) => s.selectNode);');
     expect(sharedSceneSource).toContain('selectedId === obs.id');
-    expect(sharedSceneSource).toContain('onClick={(e) => { e.stopPropagation(); handleSelect(obs.id); }}');
+    expect(sharedSceneSource).toContain("handleSelect(obs.id);");
+    // Selection must yield to active placement tools so objects cannot swallow placement clicks.
+    expect(sharedSceneSource).toContain("if (placementToolActive()) return;");
     expect(sharedSceneSource).toContain('emissive={isSelected ? "#1e3a5f" : "#000000"}');
     expect(sharedSceneSource).toContain("<lineSegments>");
   });
@@ -32,9 +34,13 @@ describe("WorkspaceCanvas obstruction selection", () => {
     const workspaceSource = readFileSync(workspaceCanvasPath, "utf8");
 
     expect(workspaceSource).toContain('if (activeTool === "camera")');
-    expect(workspaceSource).toContain('const node = createCameraNode([pos[0], 2.8, pos[2]]);');
+    // Camera placement is drag-to-aim: pointerdown anchors, pointerup commits.
+    expect(workspaceSource).toContain("setPlacementAim({ anchor: [workingSnap[0], workingSnap[1]], yawDeg: DEFAULT_PLACEMENT_YAW_DEG });");
+    expect(workspaceSource).toContain("const node = createCameraNode([aim.anchor[0], 2.8, aim.anchor[1]]);");
     expect(workspaceSource).toContain('if (activeTool === "obstruction")');
-    expect(workspaceSource).toContain('const node = createObstructionNode([pos[0], 1, pos[2]]);');
+    // Obstruction placement uses the canonical object library presets.
+    expect(workspaceSource).toContain("const preset = getObstructionPreset(obstructionPresetId);");
+    expect(workspaceSource).toContain("const node = createObstructionNode([pos[0], dimensions[2] / 2, pos[2]], preset.obstructionType, {");
     expect(workspaceSource).toContain('if (activeTool === "light")');
     expect(workspaceSource).toContain('const node = createSecurityLightNode([pos[0], 2.8, pos[2]]);');
     expect(workspaceSource).toContain('if (activeTool === "sensor")');

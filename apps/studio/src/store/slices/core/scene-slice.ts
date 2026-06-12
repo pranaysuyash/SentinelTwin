@@ -79,6 +79,8 @@ export type EditorDraft = {
   draftPolygonPoints: [number, number][];
   draftPathPoints: [number, number][];
   hoverPoint?: [number, number];
+  /** Drag-to-aim state while placing a camera: anchor is the click point, yawDeg follows the cursor. */
+  placementAim?: { anchor: [number, number]; yawDeg: number };
   feedbackMessage: string | null;
   snapEnabled: boolean;
   snapDistanceM: number;
@@ -767,6 +769,8 @@ export interface SceneSlice {
   sensorPlacementType: SensorNode["sensorType"];
   editor: EditorDraft;
   cameraPresetId: CameraPresetId | null;
+  obstructionPresetId: string;
+  customObstructionDimensions: [number, number, number];
   heatmapHover: HeatmapHoverState | null;
   heatmapMode: HeatmapMode;
   environmentMode: "day" | "night" | "dusk";
@@ -819,6 +823,7 @@ export interface SceneSlice {
   setDraftPolygonPoints: (points: [number, number][]) => void;
   setDraftPathPoints: (points: [number, number][]) => void;
   setEditorHoverPoint: (point?: [number, number]) => void;
+  setPlacementAim: (aim?: { anchor: [number, number]; yawDeg: number }) => void;
   setEditorFeedbackMessage: (message: string | null) => void;
   setSnapEnabled: (enabled: boolean) => void;
   setSnapDistanceM: (value: number) => void;
@@ -828,6 +833,8 @@ export interface SceneSlice {
   setActiveTool: (tool: ActiveTool) => void;
   setSensorPlacementType: (sensorType: SensorNode["sensorType"]) => void;
   setCameraPresetId: (presetId: CameraPresetId | null) => void;
+  setObstructionPresetId: (presetId: string) => void;
+  setCustomObstructionDimensions: (dimensions: [number, number, number]) => void;
   setHeatmapMode: (mode: HeatmapMode) => void;
   setHeatmapHover: (hover: HeatmapHoverState | null) => void;
   setEnvironmentMode: (mode: "day" | "night" | "dusk") => void;
@@ -913,6 +920,8 @@ export const createSceneSlice = (set: any, get: any): SceneSlice => {
     selectedHandle: undefined,
   },
   cameraPresetId: null,
+  obstructionPresetId: "shelf",
+  customObstructionDimensions: [1, 0.5, 1.8],
   heatmapHover: null,
   heatmapMode: "quality",
   environmentMode: "day",
@@ -1466,6 +1475,8 @@ export const createSceneSlice = (set: any, get: any): SceneSlice => {
 
   setEditorHoverPoint: (point) => set((s: Record<string, unknown>) => ({ editor: { ...(s.editor as EditorDraft), hoverPoint: point } })),
 
+  setPlacementAim: (aim) => set((s: Record<string, unknown>) => ({ editor: { ...(s.editor as EditorDraft), placementAim: aim } })),
+
   setEditorFeedbackMessage: (message) => set((s: Record<string, unknown>) => ({ editor: { ...(s.editor as EditorDraft), feedbackMessage: message } })),
 
   setSnapEnabled: (enabled) => set((s: Record<string, unknown>) => ({ editor: { ...(s.editor as EditorDraft), snapEnabled: enabled } })),
@@ -1488,6 +1499,7 @@ export const createSceneSlice = (set: any, get: any): SceneSlice => {
       draftPolygonPoints: [],
       draftPathPoints: [],
       hoverPoint: undefined,
+      placementAim: undefined,
       feedbackMessage: null,
       selectedHandle: undefined,
     },
@@ -1496,6 +1508,10 @@ export const createSceneSlice = (set: any, get: any): SceneSlice => {
   setSensorPlacementType: (sensorPlacementType) => set({ sensorPlacementType }),
 
   setCameraPresetId: (presetId) => set({ cameraPresetId: presetId }),
+
+  setObstructionPresetId: (presetId) => set({ obstructionPresetId: presetId }),
+
+  setCustomObstructionDimensions: (dimensions) => set({ customObstructionDimensions: dimensions }),
 
   setHeatmapMode: (mode) => set({ heatmapMode: mode }),
 

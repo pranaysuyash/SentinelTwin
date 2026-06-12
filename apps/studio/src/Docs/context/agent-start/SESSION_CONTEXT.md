@@ -1,6 +1,6 @@
 # Session Context
 
-- Generated: 2026-05-31T07:31:36Z
+- Generated: 2026-06-08T11:14:07Z
 - Project: `SentinelTwin/apps/studio/src`
 - Provider: `local`
 - Model: `BAAI/bge-m3`
@@ -10,8 +10,8 @@
 ## Project Motto
 
 - File: `/Users/pranay/Projects/SentinelTwin/apps/studio/src/motto_v2.md`
-- Source: `/Users/pranay/Projects/motto_v2.md`
-- Sync status: `synced from /Users/pranay/Projects/motto_v2.md`
+- Source: `/Users/pranay/Projects/motto_v3.md`
+- Sync status: `synced from /Users/pranay/Projects/motto_v3.md`
 - Guidance: read this before implementation or review on this project.
 
 ## Project-Focused Retrieval

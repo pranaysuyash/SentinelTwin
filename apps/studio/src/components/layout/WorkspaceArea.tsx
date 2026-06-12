@@ -8,6 +8,7 @@ import { CameraViewMode } from "@/components/view/CameraViewMode";
 import { PathReplayView } from "@/components/view/PathReplayView";
 import { CompareView } from "@/components/view/CompareView";
 import { ReportView } from "@/components/view/ReportView";
+import { AnalyticsDashboardView } from "@/components/view/AnalyticsDashboardView";
 
 export default function WorkspaceArea() {
   const viewMode = useStudioStore((s) => s.viewMode);
@@ -28,6 +29,7 @@ export default function WorkspaceArea() {
         {viewMode === "replay" && <PathReplayView />}
         {viewMode === "compare" && <CompareView />}
         {viewMode === "report" && <ReportView />}
+        {viewMode === "analytics" && <AnalyticsDashboardView />}
       </motion.div>
     </AnimatePresence>
   );

@@ -23,6 +23,7 @@ const MAIN_VIEWS: ViewOption[] = [
   { id: "replay", label: "Route Replay", description: "Timeline-first path replay and visibility analysis.", viewMode: "replay", preset: "replay" },
   { id: "compare", label: "Before / After", description: "Baseline vs fix comparison workflow.", viewMode: "compare", preset: "compare" },
   { id: "report", label: "Report Workspace", description: "Client-facing report and evidence summary.", viewMode: "report", preset: "report" },
+  { id: "analytics", label: "Analytics Dashboard", description: "Interactive KPI, temporal, and resilience analytics.", viewMode: "analytics", preset: "coverage" },
   { id: "focus", label: "Focus / Reference", description: "Minimal chrome presentation layout.", viewMode: "map", preset: "focus" },
 ];
 

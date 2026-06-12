@@ -2,18 +2,20 @@ Use sources in this order:
 1) /Users/pranay/AGENTS.md
 2) /Users/pranay/Projects/AGENTS.md
 3) SentinelTwin/AGENTS.md or SentinelTwin/CLAUDE.md (if present)
-4) SentinelTwin/motto_v2.md (project operating motto synced from /Users/pranay/Projects/motto_v2.md, if present)
-5) Other repo-local agent instructions if present, including QWEN.md, CODEX.md, copilot-instructions.md, .cursorrules, and tool-specific guidance
-6) Project-local docs/prompts/worklogs under SentinelTwin
-7) SentinelTwin/Docs/context/AGENT_INTELLIGENCE_GRAPH.md (if present)
-8) SentinelTwin/Docs/context/agent-start/SESSION_CONTEXT.md
-9) /Users/pranay/Projects/workspace_memory/sources/...
+4) SentinelTwin/motto_v3.md (canonical project operating motto synced from /Users/pranay/Downloads/motto_v3.md, if present)
+5) SentinelTwin/motto_v2.md (legacy compatibility bridge to motto_v3.md, if present)
+6) Other repo-local agent instructions if present, including QWEN.md, CODEX.md, copilot-instructions.md, .cursorrules, and tool-specific guidance
+7) Project-local docs/prompts/worklogs under SentinelTwin
+8) SentinelTwin/Docs/context/AGENT_INTELLIGENCE_GRAPH.md (if present)
+9) SentinelTwin/Docs/context/agent-start/SESSION_CONTEXT.md
+10) /Users/pranay/Projects/workspace_memory/sources/...
 
 Rules:
 - Cite concrete file paths for decisions or constraints.
 - If sources conflict, show the conflict and ask before proceeding.
 - Prefer latest dated docs when available.
-- Treat SentinelTwin/motto_v2.md as the project operating motto whenever it exists.
+- Treat SentinelTwin/motto_v3.md as the canonical project operating motto whenever it exists.
+- Treat SentinelTwin/motto_v2.md as a compatibility bridge only; if it conflicts with motto_v3.md, rerun /Users/pranay/Projects/agent-start.
 - Treat SentinelTwin/.agent/* as compatibility mirrors only.
 - Begin with a read-only status and drift check: inspect current code, docs, worklogs, and relevant repo status because parallel agents may have changed the ground truth.
 - Before editing and before finalizing, re-check the files and docs you rely on, then adapt to newer evidence.

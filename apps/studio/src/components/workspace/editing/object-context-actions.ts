@@ -80,6 +80,48 @@ export type ContextActionPlan =
   | { kind: "focus"; point: [number, number]; message?: string }
   | { kind: "camera_view"; cameraId: string; message?: string };
 
+export interface ContextActionPlanHandlers {
+  patchNode: (nodeId: string, patch: Partial<AnyEditableNode>) => void;
+  duplicateNode: (nodeId: string) => void;
+  removeNode: (nodeId: string) => void;
+  focusPoint: (point: [number, number]) => void;
+  openCameraView: (cameraId: string) => void;
+  showMessage: (message: string | null) => void;
+}
+
+/**
+ * Canonical executor for a contextual action plan. Shared by the right-click
+ * menu and the floating selection task bar so both surfaces apply identical
+ * behavior for the same plan.
+ */
+export function applyContextActionPlan(
+  nodeId: string,
+  plan: ContextActionPlan,
+  handlers: ContextActionPlanHandlers,
+) {
+  switch (plan.kind) {
+    case "patch":
+      handlers.patchNode(nodeId, plan.patch);
+      break;
+    case "duplicate":
+      handlers.duplicateNode(nodeId);
+      break;
+    case "delete":
+      handlers.removeNode(nodeId);
+      break;
+    case "focus":
+      handlers.focusPoint(plan.point);
+      break;
+    case "camera_view":
+      handlers.openCameraView(plan.cameraId);
+      break;
+    case "none":
+    default:
+      break;
+  }
+  handlers.showMessage(plan.message ?? null);
+}
+
 const MOVE_STEP_M = 0.25;
 const HEIGHT_STEP_M = 0.15;
 const ROTATE_STEP_DEG = 15;

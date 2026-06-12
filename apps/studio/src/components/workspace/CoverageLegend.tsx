@@ -143,7 +143,8 @@ export function CoverageLegend() {
   const hasResult = useStudioStore((s) => !!s.simulationResult);
 
   const activeConfig = MODE_CONFIG[heatmapMode];
-  const [collapsed, setCollapsed] = useState(false);
+  // Collapsed by default: the legend is reference material, not primary chrome.
+  const [collapsed, setCollapsed] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
 
   return (

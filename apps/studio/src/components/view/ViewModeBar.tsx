@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Camera, FileText, GitCompare, LayoutDashboard, Monitor, Play } from "lucide-react";
+import { BarChart3, Camera, FileText, GitCompare, LayoutDashboard, Monitor, Play } from "lucide-react";
 import { startTransition, useEffect, useState } from "react";
 
 import { MAP_COLORS } from "@/components/map/map-colors";
@@ -19,6 +19,7 @@ const PRIMARY_VIEW_OPTIONS: { mode: ViewMode; label: string; icon: React.ReactNo
 const SECONDARY_VIEW_OPTIONS: { mode: ViewMode; label: string; icon: React.ReactNode }[] = [
   { mode: "compare", label: "Compare View", icon: <GitCompare className="h-3.5 w-3.5" /> },
   { mode: "report", label: "Report View", icon: <FileText className="h-3.5 w-3.5" /> },
+  { mode: "analytics", label: "Analytics", icon: <BarChart3 className="h-3.5 w-3.5" /> },
 ];
 
 const tabVariants = {

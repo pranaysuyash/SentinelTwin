@@ -882,3 +882,23 @@ The following issues were fixed to reach 0 typed errors (only pre-existing TS700
 - Product language constraint: failure reasons map technical causes to human-readable text (e.g. "Blocked by Shelf 1" → "Shelf 1 blocks the camera's line of sight") ✅
 - Model uses defensive framing throughout: "coverage failure analysis", no "optimal evasion" or "bypass security" language ✅
 - Verification labeling distinguishes `verified_by_simulation`, `not_yet_tested`, `requires_user_input`, `assumption_based` — never claims "AI certainty" or "100% guaranteed" ✅
+
+## Addendum (2026-06-12): Analytics Dashboard + Simulation Worker + structural notes
+
+- **Structural drift note:** the simulation engine, agents, report, and core schema now live in `packages/simulation`, `packages/agents`, `packages/report`, `packages/core` (the monorepo split landed); earlier sections of this doc that reference `apps/studio/src/simulation/` as the engine home are historical. The studio app re-imports via `@sentineltwin/*`. The store is also now slice-based (`src/store/slices/core/*`, `src/store/slices/enterprise/*`).
+- **New `analytics` view mode** (`AnalyticsDashboardView`): interactive security analytics command center backed by the pure `buildSecurityAnalyticsModel` derivation (`src/lib/security-analytics.ts`). KPI drill-through, clickable 24h coverage chart that scrubs the temporal twin, DORI distribution, issue severity, camera leaderboard → Camera View, occlusion offenders → counterfactual, placement-oracle callout, snapshot trend, evidence-ledger activity, resilience panel. Reachable via ViewModeBar, key `7`, `?mode=analytics`, View Settings. 6 engine-backed model tests. Runtime-verified on the production build with the retail reference scene ✅
+- **Simulation now runs in a Web Worker** (`src/workers/simulation.worker.ts` via `src/lib/simulation-runner.ts`), computing coverage + the 24h temporal profile off the main thread in one round-trip, with a deterministic `simulateStudioAsync` fallback for SSR/tests. Execution path is recorded in the runtime incident trail. Runtime-verified via instrumented `postMessage` in the production build ✅ (D-300)
+- **Bug fix:** `setViewMode` no longer lets the preset layout patch overwrite the requested view mode; initial boot honors `?mode=` for all modes (D-301).
+- **Test/keyboard updates:** view keys are now `1–7`; shortcut copy and the `studio-shell-shortcuts` source-contract test updated. Suite: 920 pass / 0 fail; typecheck clean; production build green.
+- See `Docs/exploration/DEEP_ANALYSIS_BEST_IN_CLASS_2026-06-12.md` for the full audit, potential assessment, and next-leverage ordering, and D-300/D-301 in the decision log.
+
+## Addendum (2026-06-12, second pass): Interactive scene creator upgrades
+
+- **Drag-to-aim camera placement** (D-302): pointerdown anchors, drag steers yaw with a live floor FOV wedge + "Aim N° · release to place" HUD, pointerup commits. Plain click keeps preset/default yaw. Aim state is canonical (`editor.placementAim`). Browser-verified end-to-end on the production build ✅
+- **Live placement POV preview** (`PlacementPreviewPanel`): while the camera tool is active, a PIP canvas renders the canonical scene from the hover/aim pose (pose, yaw, FOV, preset label, Hover/Aiming badge) — "what will this camera see" before placement ✅
+- **Object library for obstructions** (D-303): 8 real-world presets + custom dimensions, store-backed picker, engine-true materials/transmission, ghost shows true footprint ✅
+- **Selection vs placement conflict fixed**: object meshes (frustums, markers, walls, obstructions) no longer swallow pointerdown while a placement tool is active — previously frustum cones made floor placement nearly impossible on populated scenes ✅
+- **Preset pickers default collapsed** (they could cover the whole canvas at narrow widths); orbit-rotate disabled while camera tool active so left-drag aims ✅
+- **Analytics dashboard animation polish**: KPI stagger + count-up, chart draw-in, DORI band grow-in, hover/tap micro-interactions ✅
+- **QA hook**: `?qa=1` exposes the store as `window.__sentinelStudioStore` for scripted browser verification ✅
+- Suite: 929 pass / 0 fail; typecheck clean; production build green; Tier 4 browser evidence for aim cycle, library placement, preview panel, and worker auto-recompute after placement.

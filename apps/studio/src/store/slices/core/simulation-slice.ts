@@ -1,6 +1,7 @@
-import type { SecurityScene, SimulationResult, SceneSnapshot, TemporalSecurityProfile, CounterfactualPlan, CounterfactualConstraint, CameraNode, ObstructionNode } from "@/schema/security-scene";
+import type { SecurityScene, SimulationResult, TemporalSecurityProfile, CounterfactualPlan, CounterfactualConstraint, CameraNode, ObstructionNode } from "@/schema/security-scene";
 import { cloneSecurityScene } from "@/schema/security-scene";
-import { simulateStudio, simulateStudioAsync, computeTemporalProfile } from "@sentineltwin/simulation";
+import { simulateStudio, computeTemporalProfile } from "@sentineltwin/simulation";
+import { runStudioSimulation } from "@/lib/simulation-runner";
 import {
   buildOperationalEvidenceEvent,
   confidenceLabel,
@@ -71,12 +72,13 @@ function buildSimulationState(
   revisionDepth: number,
   snapshotCount: number,
   operationalEvidenceEvents: OperationalEvidenceEvent[],
+  precomputedTemporalProfile?: TemporalSecurityProfile | null,
 ) {
   const nextScene = cloneSecurityScene(scene);
   nextScene.previousSimulation = scene.simulation;
   nextScene.simulation = result;
   nextScene.updatedAt = Date.now();
-  const temporalProfile = computeTemporalProfile(nextScene as never);
+  const temporalProfile = precomputedTemporalProfile ?? computeTemporalProfile(nextScene as never);
 
   return {
     scene: nextScene,
@@ -205,10 +207,10 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
     if (state.fixSandboxActive && state.fixSandboxDraftScene) {
       const draftSnapshot = cloneSecurityScene(state.fixSandboxDraftScene);
       set({ simulationRunning: true });
-      setTimeout(() => {
+      setTimeout(async () => {
         try {
           const start = performance.now();
-          const result = simulateStudio(draftSnapshot);
+          const { result } = await runStudioSimulation(draftSnapshot, { includeTemporalProfile: false });
           const durationMs = Math.round(performance.now() - start);
           set({
             simulationResult: result,
@@ -251,7 +253,7 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
     setTimeout(async () => {
       try {
         const start = performance.now();
-        const result = await simulateStudioAsync(sceneSnapshot, { yieldEvery: 50 });
+        const { result, temporalProfile, executionPath } = await runStudioSimulation(sceneSnapshot);
         const durationMs = Math.round(performance.now() - start);
 
         if (get().scene.updatedAt !== sceneVersion) {
@@ -262,7 +264,7 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
 
         const current = get();
         const evidenceEvent = buildSimulationEvidenceEvent(current.scene, result, durationMs, current.historyPast.length, current.simulationResult);
-        const nextState = buildSimulationState(current.scene, result, durationMs, current.historyPast.length, current.snapshots.length, current.operationalEvidenceEvents);
+        const nextState = buildSimulationState(current.scene, result, durationMs, current.historyPast.length, current.snapshots.length, current.operationalEvidenceEvents, temporalProfile);
         const nextSceneSnapshot = cloneSecurityScene(nextState.scene);
         const nextEvents = [...current.operationalEvidenceEvents, evidenceEvent];
         persistOperationalEvidenceEvents(nextEvents);
@@ -278,7 +280,7 @@ export const createSimulationSlice = (set: any, get: any): SimulationSlice => ({
           category: "performance_trace",
           severity: durationMs >= 1000 ? "warning" : "info",
           title: "Simulation run",
-          details: `Simulation completed in ${durationMs} ms with ${result.issues.length} issue${result.issues.length === 1 ? "" : "s"}.`,
+          details: `Simulation completed in ${durationMs} ms with ${result.issues.length} issue${result.issues.length === 1 ? "" : "s"} (${executionPath === "worker" ? "web worker" : "main thread"}).`,
           durationMs,
           action: "simulate",
           path: "/studio",

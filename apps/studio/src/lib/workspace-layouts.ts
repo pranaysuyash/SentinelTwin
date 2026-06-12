@@ -448,7 +448,7 @@ export function getPresetLayoutSnapshot(preset: WorkspacePreset, layerVisibility
     rightPanelMode: PRESET_RIGHT_PANEL_MODES[preset],
     bottomDrawerMode: PRESET_BOTTOM_DRAWER_MODES[preset],
     pinnedAnalysisModule: PRESET_PINNED_MODULES[preset],
-    overlayDensity: preset === "debug" ? "all" : preset === "focus" ? "compact" : "all",
+    overlayDensity: preset === "debug" ? "all" : "compact",
     showDebugOverlays: preset === "debug",
     clientDemoOptions: {
       hideDebugModules: preset === "focus" || preset === "camera_wall",

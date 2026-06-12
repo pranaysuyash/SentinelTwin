@@ -17,6 +17,25 @@ export function isPrimaryMouseEvent(event: PointerMouseEvent): boolean {
   return event.nativeEvent.button === 0;
 }
 
+/** Minimum drag distance (meters) before a camera placement drag counts as aiming. */
+export const AIM_DRAG_THRESHOLD_M = 0.25;
+
+/** Default camera yaw used when a camera is placed with a plain click (matches the factory default). */
+export const DEFAULT_PLACEMENT_YAW_DEG = 180;
+
+/**
+ * Yaw (degrees, 0–359) that points a camera from `anchor` toward `target`
+ * on the floor plane, matching the engine convention in
+ * `getYawPitchDirection` (yaw 0 faces -Z, 90 faces +X).
+ */
+export function computeAimYawDeg(anchor: [number, number], target: [number, number]): number {
+  const dx = target[0] - anchor[0];
+  const dz = target[1] - anchor[1];
+  if (Math.abs(dx) < 1e-6 && Math.abs(dz) < 1e-6) return DEFAULT_PLACEMENT_YAW_DEG;
+  const yaw = Math.atan2(dx, -dz) * (180 / Math.PI);
+  return Math.round(((yaw % 360) + 360) % 360) % 360;
+}
+
 export function sanitizeSceneDimensions(width: number, depth: number, fallback: number = DEFAULT_SCENE_DIMENSION_FLOOR): [number, number] {
   const safeWidth = Number.isFinite(width) ? width : fallback;
   const safeDepth = Number.isFinite(depth) ? depth : fallback;

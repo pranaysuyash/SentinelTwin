@@ -162,7 +162,7 @@ export function useStudioKeyboard() {
       return;
     }
 
-    // View mode keys: 1-6
+    // View mode keys: 1-7
     if (VIEW_MODE_KEYS[e.key]) {
       const nextMode = VIEW_MODE_KEYS[e.key];
       if (viewMode !== nextMode) {

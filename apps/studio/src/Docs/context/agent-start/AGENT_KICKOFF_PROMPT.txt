@@ -2,7 +2,7 @@ Use sources in this order:
 1) /Users/pranay/AGENTS.md
 2) /Users/pranay/Projects/AGENTS.md
 3) SentinelTwin/apps/studio/src/AGENTS.md or SentinelTwin/apps/studio/src/CLAUDE.md (if present)
-4) SentinelTwin/apps/studio/src/motto_v2.md (project operating motto synced from /Users/pranay/Projects/motto_v2.md, if present)
+4) SentinelTwin/apps/studio/src/motto_v2.md (project operating motto synced from /Users/pranay/Projects/motto_v3.md, if present)
 5) Other repo-local agent instructions if present, including QWEN.md, CODEX.md, copilot-instructions.md, .cursorrules, and tool-specific guidance
 6) Project-local docs/prompts/worklogs under SentinelTwin/apps/studio/src
 7) SentinelTwin/apps/studio/src/Docs/context/AGENT_INTELLIGENCE_GRAPH.md (if present)

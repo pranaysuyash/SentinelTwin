@@ -6666,3 +6666,24 @@ All relevant decisions and analysis are already captured in:
 - Convergence paths: which of (a) deleting `apps/studio/src/schema/security-scene.ts`, (b) re-export shim only, (c) Pascal `AnyNode` reactivation wins the schema-duplication question.
 - Add a 7th "creation flow" provider slot in `SiteIntakeHub` for any future source that needs a different sub-flow than the existing 5.
 - A canonical "creation flow" component shell (Q-021) that owns the per-source contract could subsume `SceneBuilderWizard` + `ScanSiteWizard` + `GuidedCaptureAssistant` + `SiteIntakeHub` + `AiLayoutDraftView` + `ImportReview`.
+
+## Security Analytics Command Center + Off-Thread Simulation (2026-06-12)
+
+- **Source:** Full-repo deep analysis session (`DEEP_ANALYSIS_BEST_IN_CLASS_2026-06-12.md`).
+- **What landed:** `analytics` view mode with a pure, engine-tested derivation model (`apps/studio/src/lib/security-analytics.ts`) and an interactive dashboard (`AnalyticsDashboardView.tsx`); simulation + temporal profile moved into a Web Worker with deterministic fallback (`simulation-runner.ts`, `simulation.worker.ts`). Decisions D-300/D-301.
+- **Why it matters:** the dashboard is the first single surface that answers "how secure, what changed, what next" — the decision layer over the simulation moat. The worker unlocks larger scenes and keeps the canvas interactive during recompute, and its request-id protocol is the seed for progress streaming and cancellation.
+- **Open threads worth pursuing next:**
+  1. Embed the analytics model into report exports (model is UI-free; charts as inline SVG).
+  2. Worker progress/cancellation messages; cancel stale runs instead of post-hoc discard.
+  3. Multi-site/org analytics once the org/account slice lands (gap inventory §8).
+  4. Live sensor/camera evidence deltas in the dashboard activity panel (simulated vs observed).
+  5. "Coverage CI": KPI regression alerts when a scene edit reduces coverage vs last snapshot.
+
+## Interactive Scene Creator: Aim-to-Place + Live POV (2026-06-12)
+
+- **Landed:** drag-to-aim camera placement with live FOV wedge, PIP "what will this camera see" preview, obstruction object library with custom dims, placement-vs-selection event fix, collapsed-by-default preset pickers, dashboard animation pass (D-302/D-303).
+- **Next unique-feature candidates (in leverage order):**
+  1. **First-person walk mode** — WASD/pointer-lock walk through the twin as an intruder/guard with a live "visible to Camera N at <quality>" HUD computed from the coverage evaluator at the walker's position. Turns the verification engine into a felt experience; no competitor has it.
+  2. **Aim-time coverage delta** — while aiming, show the projected coverage gain (placement-oracle-lite for the held pose) in the preview panel footer.
+  3. **Drag-to-aim for lights and sensors** — same interaction grammar; light aiming previews illumination footprint at night.
+  4. **Object library extension to walls/doors** — parametric presets (double door, roller shutter, glass storefront) through the same picker idiom.

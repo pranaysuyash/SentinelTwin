@@ -37,7 +37,9 @@ export function CameraPresetPicker() {
   const setSelectedPresetId = useStudioStore((s) => s.setCameraPresetId);
   const selectedPreset = getCameraPresetImpl(selectedPresetId);
 
-  const [collapsed, setCollapsed] = React.useState(false);
+  // Collapsed by default: the expanded grid can cover most of the canvas at
+  // narrow widths, blocking the placement clicks it exists to support.
+  const [collapsed, setCollapsed] = React.useState(true);
 
   if (activeTool !== "camera") return null;
 

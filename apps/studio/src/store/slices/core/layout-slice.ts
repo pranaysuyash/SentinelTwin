@@ -11,7 +11,7 @@ import {
   type WorkspaceLayoutSnapshot,
 } from "@/lib/workspace-layouts";
 
-export type ViewMode = "map" | "wall" | "replay" | "camera_view" | "compare" | "report";
+export type ViewMode = "map" | "wall" | "replay" | "camera_view" | "compare" | "report" | "analytics";
 export type CanvasMode = "orbit_3d" | "topdown_2d";
 export type DockSide = "left" | "right" | "bottom";
 export type RightPanelMode =
@@ -142,6 +142,8 @@ function buildPresetDockLayout(preset: WorkspacePreset): DockSnapshot {
 }
 
 function viewModeToPreset(mode: ViewMode): WorkspacePreset {
+  // Analytics reuses the analysis-first coverage layout; it has no dedicated preset.
+  if (mode === "analytics") return "coverage";
   const match = (Object.entries(PRESET_VIEW_MODES) as [WorkspacePreset, ViewMode][]).find(
     ([, presetViewMode]) => presetViewMode === mode,
   );
@@ -159,6 +161,8 @@ function viewModeToBottomTab(mode: ViewMode): BottomTab {
       return "beforeafter";
     case "report":
       return "report";
+    case "analytics":
+      return "metrics";
     case "wall":
     default:
       return "metrics";
@@ -276,7 +280,7 @@ function buildLayoutStatePatch(layout: DockSnapshot): {
 function getInitialViewMode(): ViewMode {
   if (typeof window === "undefined") return "map";
   const mode = new URLSearchParams(window.location.search).get("mode");
-  if (mode === "wall" || mode === "replay" || mode === "camera_view" || mode === "compare" || mode === "report" || mode === "map") {
+  if (mode === "wall" || mode === "replay" || mode === "camera_view" || mode === "compare" || mode === "report" || mode === "analytics" || mode === "map") {
     return mode;
   }
   return "map";
@@ -363,8 +367,8 @@ export const createLayoutSlice = (set: any, get: any, store: any): LayoutSlice =
   ensureInitialized();
 
   return {
-    viewMode: _initialLayout.viewMode,
-    bottomTab: viewModeToBottomTab(_initialLayout.viewMode),
+    viewMode: _initialViewMode,
+    bottomTab: viewModeToBottomTab(_initialViewMode),
     workspacePreset: _initialLayout.workspacePreset,
     canvasMode: _initialLayout.canvasMode,
     canvasViewResetTick: 0,
@@ -404,6 +408,8 @@ export const createLayoutSlice = (set: any, get: any, store: any): LayoutSlice =
       const autoTab = getFirstEnabledAnalysisTab(layout.enabledAnalysisModules, viewModeToBottomTab(mode));
       set({
         ...patch,
+        // The preset supplies the dock layout, but the requested mode always wins.
+        viewMode: mode,
         focusMode: false,
         previousLayout: null,
         bottomTab: autoTab,

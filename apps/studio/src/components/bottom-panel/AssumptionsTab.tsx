@@ -110,7 +110,7 @@ export function AssumptionsTab() {
                     : "bg-[#0d0f17] border border-[#1e2130] text-[#59637a] hover:text-[#9da8c0]"
                 }`}
               >
-                {std === "dori_2014" ? "DORI 2014" : "IEC 62676-4:2025 (OODPCVS)"}
+                {std === "dori_2014" ? "2014 (legacy)" : "2025 (latest)"}
               </button>
             ))}
           </div>
@@ -119,11 +119,11 @@ export function AssumptionsTab() {
         {/* PPM Thresholds */}
         <div>
           <div className="text-[9px] font-semibold text-[#3a4158] uppercase tracking-widest mb-1.5">
-            {assumptions.doriStandard === "oodpcvs_2025" ? "Quality Thresholds (px/m)" : "Quality Thresholds (px/m)"}
+            Resolution thresholds <span className="font-normal normal-case text-[7px] text-[#2d3750]">(px/m)</span>
           </div>
           {assumptions.doriStandard === "oodpcvs_2025" ? (
             <div className="grid grid-cols-4 gap-1">
-              <div className="col-span-4 text-[8px] text-[#4a5568] mb-1">Standard-defined IEC 62676-4:2025 (7 levels)</div>
+              <div className="col-span-4 text-[8px] text-[#4a5568] mb-1">Levels from IEC 62676-4:2025</div>
               {OODPCVS_DISPLAY_THRESHOLDS.map(({ level, ppm }) => (
                 <div key={level} className="text-center">
                   <div className="text-[8px] text-[#4a5568] capitalize mb-0.5">{level}</div>
@@ -149,19 +149,22 @@ export function AssumptionsTab() {
 
         {/* Night Penalty */}
         <div>
-          <div className="text-[9px] font-semibold text-[#3a4158] uppercase tracking-widest mb-1.5">Night Penalty Mode</div>
+          <div className="text-[9px] font-semibold text-[#3a4158] uppercase tracking-widest mb-1.5">
+            Night-time visibility
+            <span className="ml-1.5 normal-case text-[7px] font-normal text-[#3a4158]">(Night Penalty Mode)</span>
+          </div>
           <div className="flex gap-1">
             {(["none", "simple", "detailed"] as const).map((mode) => (
               <button type="button"
                 key={mode}
                 onClick={() => update("nightPenaltyMode", mode)}
-                className={`flex-1 py-1 text-[9px] rounded transition-colors capitalize ${
+                className={`flex-1 py-1 text-[9px] rounded transition-colors ${
                   assumptions.nightPenaltyMode === mode
                     ? "bg-purple-600/30 border border-purple-500/40 text-purple-300"
                     : "bg-[#0d0f17] border border-[#1e2130] text-[#59637a] hover:text-[#9da8c0]"
                 }`}
               >
-                {mode}
+                {mode === "none" ? "Off" : mode === "simple" ? "Basic" : "Full model"}
               </button>
             ))}
           </div>

@@ -4,10 +4,12 @@ import { LazyMotion, domAnimation, m, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
   ArrowUpDown,
+  BookmarkPlus,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
   Cpu,
+  GitCompare,
   Lightbulb,
   Loader2,
   RotateCcw,
@@ -320,6 +322,8 @@ export function CounterfactualPanel() {
   const [aiCandidates, setAiCandidates] = useState<CounterfactualCandidate[]>([]);
   const [showBatchCompare, setShowBatchCompare] = useState(false);
 
+  const [lastAppliedLabel, setLastAppliedLabel] = useState<string | null>(null);
+
   // Deterministic engine path (from store)
   const counterfactualPlans = useStudioStore((s) => s.counterfactualPlans);
   const activeCounterfactualPlanId = useStudioStore((s) => s.activeCounterfactualPlanId);
@@ -327,6 +331,9 @@ export function CounterfactualPanel() {
   const previewCounterfactualPlan = useStudioStore((s) => s.previewCounterfactualPlan);
   const applyCounterfactualPlan = useStudioStore((s) => s.applyCounterfactualPlan);
   const revertCounterfactualPreview = useStudioStore((s) => s.revertCounterfactualPreview);
+  const saveSnapshot = useStudioStore((s) => s.saveSnapshot);
+  const snapshots = useStudioStore((s) => s.snapshots);
+  const setBottomTab = useStudioStore((s) => s.setBottomTab);
   const hasResult = useStudioStore((s) => s.simulationResult !== null);
 
   // AI path (existing)
@@ -366,8 +373,49 @@ export function CounterfactualPanel() {
     );
   }
 
+  const hasBaseline = snapshots.length > 0;
+
   return (
     <div className="flex h-full flex-col p-2">
+      {/* Save-as-baseline row — seeds the Before/After comparison */}
+      {!hasBaseline && (
+        <div className="mb-2 flex items-center gap-2 rounded-lg border border-amber-500/15 bg-amber-500/5 px-2.5 py-1.5">
+          <BookmarkPlus className="size-3 shrink-0 text-amber-400/70" />
+          <p className="flex-1 text-[9px] text-[#7a8090]">
+            Save a baseline snapshot before applying fixes to enable Before/After comparison.
+          </p>
+          <button
+            type="button"
+            onClick={() => saveSnapshot("Baseline")}
+            className="shrink-0 rounded-md border border-amber-500/25 bg-amber-500/10 px-2 py-1 text-[9px] font-medium text-amber-300 hover:bg-amber-500/15"
+          >
+            Save Baseline
+          </button>
+        </div>
+      )}
+
+      {/* Post-apply CTA: jump to Before/After */}
+      {lastAppliedLabel && (
+        <div className="mb-2 flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/8 px-2.5 py-1.5">
+          <CheckCircle2 className="size-3 shrink-0 text-emerald-400" />
+          <p className="flex-1 text-[9px] text-emerald-300/80">
+            <span className="font-medium text-emerald-300">{lastAppliedLabel}</span> applied.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              saveSnapshot(`After: ${lastAppliedLabel}`);
+              setBottomTab("beforeafter");
+              setLastAppliedLabel(null);
+            }}
+            className="shrink-0 flex items-center gap-1 rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2 py-1 text-[9px] font-medium text-emerald-300 hover:bg-emerald-500/15"
+          >
+            <GitCompare className="size-3" />
+            Compare
+          </button>
+        </div>
+      )}
+
       {/* Mode toggle + truth badge */}
       <div className="mb-2 flex items-center gap-2">
         <TruthBadge label="simulated" />
@@ -486,7 +534,7 @@ export function CounterfactualPanel() {
                 plan={plan}
                 isActive={plan.planId === activeCounterfactualPlanId}
                 onPreview={() => previewCounterfactualPlan(plan.planId)}
-                onApply={() => applyCounterfactualPlan(plan.planId)}
+                onApply={() => { applyCounterfactualPlan(plan.planId); setLastAppliedLabel(plan.label); }}
                 onRevert={revertCounterfactualPreview}
               />
             ))}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { generateAndRankCounterfactuals } from "../counterfactual-engine";
+import { generateAndRankCounterfactuals } from "../counterfactual-runner";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 import { simulateStudioLite } from "@sentineltwin/simulation";
 import { createCameraNode, createObstructionNode, createCriticalZoneNode } from "@/lib/node-factory";

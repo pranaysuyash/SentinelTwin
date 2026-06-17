@@ -109,6 +109,8 @@ import {
 import { computeTemporalProfile } from "@sentineltwin/simulation";
 import { createBlankSecurityScene } from "@/lib/scene-skeleton";
 import { createSmallRetailShopScene } from "@/demo-scenes/small-retail-shop";
+import { createOfficeLobbyScene } from "@/demo-scenes/office-lobby";
+import { createWarehouseScene } from "@/demo-scenes/warehouse";
 import { validateSceneGeometry } from "@/lib/scene-validation";
 import type { ArchiveHandoffRequest } from "@/lib/archive-handoff-link";
 import {
@@ -467,7 +469,7 @@ export function createGovernanceSlice(set: any, get: any): GovernanceSlice {
 
     savedScenes: [],
     savedProjects: [],
-    referenceScenes: [createSmallRetailShopScene()],
+    referenceScenes: [createSmallRetailShopScene(), createOfficeLobbyScene(), createWarehouseScene()],
 
     cameraViewVerificationIntent: null,
     cameraVerificationSnapshots: {},

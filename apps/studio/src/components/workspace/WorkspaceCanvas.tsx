@@ -1985,6 +1985,8 @@ export function WorkspaceCanvas() {
   const isAimingCamera = useStudioStore((s) => Boolean(s.editor.placementAim));
   const rootActiveTool = useStudioStore((s) => s.activeTool);
   const setActiveTool = useStudioStore((s) => s.setActiveTool);
+  const setScene = useStudioStore((s) => s.setScene);
+  const referenceScenes = useStudioStore((s) => s.referenceScenes);
   const theme = ENVIRONMENT_THEMES[envMode] ?? ENVIRONMENT_THEMES.day;
   const [sceneWidth, sceneDepth] = useMemo(
     () => sanitizeSceneDimensions(scene.dimensions.width, scene.dimensions.depth, 0.5),
@@ -2144,26 +2146,46 @@ export function WorkspaceCanvas() {
       {/* Empty-state guide: shown only in map view when no cameras exist */}
       {scene.cameras.length === 0 && rootActiveTool === "select" && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-          <button
-            type="button"
-            className="pointer-events-auto flex flex-col items-center gap-3 rounded-2xl border border-[#1e2536] bg-[#0b0f1a]/85 px-7 py-5 text-center backdrop-blur-sm transition-colors hover:border-[#2d3a54] hover:bg-[#0f1422]/95"
-            onClick={() => setActiveTool("camera")}
-          >
-            <div className="flex size-11 items-center justify-center rounded-xl border border-[#1e2840] bg-[#111828]">
-              <Camera className="h-5 w-5 text-blue-400" />
-            </div>
-            <div>
-              <p className="text-[12px] font-semibold text-[#c8d5ee]">Add your first camera</p>
-              <p className="mt-1 text-[9px] leading-relaxed text-[#4d5c7a]">
-                Click here to activate the camera tool
-                <br />
-                or press{" "}
-                <kbd className="rounded border border-[#2a3652] bg-[#0e1525] px-1 py-0.5 font-mono text-[8px] text-[#7a9bcc]">
-                  C
-                </kbd>
-              </p>
-            </div>
-          </button>
+          <div className="pointer-events-auto flex flex-col items-center gap-4">
+            <button
+              type="button"
+              className="flex flex-col items-center gap-3 rounded-2xl border border-[#1e2536] bg-[#0b0f1a]/85 px-7 py-5 text-center backdrop-blur-sm transition-colors hover:border-[#2d3a54] hover:bg-[#0f1422]/95"
+              onClick={() => setActiveTool("camera")}
+            >
+              <div className="flex size-11 items-center justify-center rounded-xl border border-[#1e2840] bg-[#111828]">
+                <Camera className="h-5 w-5 text-blue-400" />
+              </div>
+              <div>
+                <p className="text-[12px] font-semibold text-[#c8d5ee]">Add your first camera</p>
+                <p className="mt-1 text-[9px] leading-relaxed text-[#4d5c7a]">
+                  Click here to activate the camera tool
+                  <br />
+                  or press{" "}
+                  <kbd className="rounded border border-[#2a3652] bg-[#0e1525] px-1 py-0.5 font-mono text-[8px] text-[#7a9bcc]">
+                    C
+                  </kbd>
+                </p>
+              </div>
+            </button>
+
+            {referenceScenes.length > 0 && (
+              <div className="flex flex-col items-center gap-2">
+                <p className="text-[9px] text-[#3a4560]">or try a demo scene</p>
+                <div className="flex items-center gap-2">
+                  {referenceScenes.slice(0, 3).map((ref) => (
+                    <button
+                      key={ref.id}
+                      type="button"
+                      onClick={() => setScene(ref)}
+                      className="rounded-lg border border-[#1e2536] bg-[#0b0f1a]/80 px-3 py-1.5 text-[9px] text-[#7a8fac] backdrop-blur-sm transition-colors hover:border-[#2d3a54] hover:text-[#b0c0d8]"
+                    >
+                      {ref.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

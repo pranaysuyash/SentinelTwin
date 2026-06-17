@@ -51,7 +51,8 @@ const CONFIDENCE_LEVEL_STYLE: Record<string, { bg: string; text: string; border:
 
 function ConfidenceCard({ confidence, zones }: { confidence: ConfidenceBand; zones: { status: string }[] }) {
   const style = CONFIDENCE_LEVEL_STYLE[confidence.level] ?? CONFIDENCE_LEVEL_STYLE.none;
-  const summary = formatConfidenceSummary(confidence, zones as Parameters<typeof formatConfidenceSummary>[1]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const summary = formatConfidenceSummary(confidence, zones as any);
   return (
     <div className="rounded-xl border border-[#1a2030] bg-[#0b0f17] px-3 py-2.5">
       <div className="mb-2 flex items-center justify-between">

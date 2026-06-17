@@ -12,7 +12,7 @@ import {
 } from "@/lib/operational-evidence";
 import { serializeOperationalEvidenceJournal } from "@/lib/operational-evidence-journal";
 import { buildSceneIntelligenceGraph, type SceneIntelligenceGraph } from "@/lib/scene-intelligence-graph";
-import { generateAndRankCounterfactuals } from "@/simulation/counterfactual-engine";
+import { generateAndRankCounterfactuals } from "@/simulation/counterfactual-runner";
 
 const OPERATIONAL_EVIDENCE_STORAGE_KEY = "sentineltwin_operational_evidence_v1";
 

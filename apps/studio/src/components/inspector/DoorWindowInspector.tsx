@@ -54,7 +54,7 @@ export function DoorWindowInspector({ node }: { node: DoorNode | WindowNode }) {
           />
           {isWindow ? (
             <NumberInput
-              label="Transmission"
+              label="Light through (%)"
               value={node.visionTransmission}
               min={0}
               max={1}

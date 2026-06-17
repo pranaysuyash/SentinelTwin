@@ -52,7 +52,7 @@ export function WallInspector() {
           />
           <NumberInput label="Height" value={wall.heightM} min={1.2} step={0.1} unit="m" onChange={(value) => updateNode(wall.id, { heightM: value })} />
           <NumberInput label="Thickness" value={wall.thicknessM} min={0.05} step={0.01} unit="m" onChange={(value) => updateNode(wall.id, { thicknessM: value })} />
-          <NumberInput label="Transmission" value={wall.visionTransmission} min={0} max={1} step={0.05} onChange={(value) => updateNode(wall.id, { visionTransmission: value })} />
+          <NumberInput label="Light through (%)" value={wall.visionTransmission} min={0} max={1} step={0.05} onChange={(value) => updateNode(wall.id, { visionTransmission: value })} />
         </SectionCard>
       </div>
 

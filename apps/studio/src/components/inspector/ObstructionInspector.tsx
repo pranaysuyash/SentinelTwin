@@ -198,7 +198,7 @@ export function ObstructionInspector() {
               visionTransmission: VISION_TRANSMISSION[value as ObstructionNode["material"]] ?? 0,
             })}
           />
-          <Field label="Vision Transmission" value={`${Math.round((obs.visionTransmission ?? 0) * 100)}%`} />
+          <Field label="Camera sees through" value={`${Math.round((obs.visionTransmission ?? 0) * 100)}%`} />
           <Field label="Movable" value={obs.movable ? "Yes" : "No"} />
         </SectionCard>
       </div>

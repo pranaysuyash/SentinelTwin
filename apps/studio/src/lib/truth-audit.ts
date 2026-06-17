@@ -636,6 +636,27 @@ export const TRUST_AUDIT_SURFACES: TrustAuditSurface[] = [
     ],
     forbiddenPhrases: [],
   },
+  {
+    surface: "Scenario comparison panel truth badge",
+    file: "src/components/bottom-panel/ScenarioComparisonPanel.tsx",
+    requiredPhrases: [
+      "TruthBadge",
+      'label="simulated"',
+      "runScenarioComparison",
+      "runAssumptionSensitivity",
+    ],
+    forbiddenPhrases: [],
+  },
+  {
+    surface: "Metrics confidence card wiring",
+    file: "src/components/bottom-panel/MetricsTab.tsx",
+    requiredPhrases: [
+      "ConfidenceCard",
+      "overallConfidence",
+      "formatConfidenceSummary",
+    ],
+    forbiddenPhrases: [],
+  },
 ];
 
 function readSurface(rootDir: string, surface: TrustAuditSurface) {

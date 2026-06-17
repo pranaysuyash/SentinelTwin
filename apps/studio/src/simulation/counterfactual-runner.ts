@@ -1,3 +1,40 @@
+/**
+ * Studio-side counterfactual runner.
+ *
+ * The codebase has three counterfactual surfaces that share a common
+ * goal but live in different packages for different reasons:
+ *
+ * 1. `packages/simulation/src/counterfactual-search.ts` —
+ *    `computeCounterfactualSearch` is the *algorithmic* baseline.
+ *    It enumerates candidate action plans, runs the simulation
+ *    engine against each, and ranks by coverage gain. Deterministic,
+ *    no AI, runs in the Web Worker.
+ *
+ * 2. `packages/agents/src/counterfactual-agent.ts` —
+ *    `proposeCounterfactuals` is the *AI* proposer. It takes the
+ *    issue summary and scene summary, asks the configured model for
+ *    natural-language candidate fixes, and returns them as
+ *    structured SceneOperation arrays. Cloud-backed; can be disabled
+ *    by local-only mode.
+ *
+ * 3. THIS FILE — `counterfactual-runner.ts` — is the *studio*
+ *    wrapper. It coordinates the deterministic search, applies the
+ *    studio's local constraint model, runs each plan through
+ *    `simulateStudio` to measure impact, and surfaces the ranked
+ *    plans for the CounterfactualPanel UI.
+ *
+ * The three surfaces don't compete; they cooperate. The runner
+ * (this file) is the only one the studio store calls directly. The
+ * agent proposer is reached from `/api/ai/counterfactuals`. The
+ * algorithmic search is exported for use by both the runner and
+ * any future AI-driven scorer.
+ *
+ * File naming: the previous name was `counterfactual-engine.ts`,
+ * which collided with `@sentineltwin/simulation`'s role as the
+ * canonical simulation engine. The rename to `counterfactual-runner`
+ * makes it clear that this file *runs* counterfactuals in the
+ * studio, it does not own the engine.
+ */
 import {
   type SecurityScene,
   type SimulationResult,
